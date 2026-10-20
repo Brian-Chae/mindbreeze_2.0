@@ -155,6 +155,9 @@ app = FastAPI(
     description="뇌파 기반 심리상담·명상 통합 서비스 플랫폼 API",
     version="0.1.0",
     lifespan=lifespan,
+    docs_url=None if settings.environment == "production" else "/docs",
+    redoc_url=None if settings.environment == "production" else "/redoc",
+    openapi_url=None if settings.environment == "production" else "/openapi.json",
 )
 
 # SDD-210: 허용 오리진은 CORS_ALLOWED_ORIGINS 로 주입(미설정 시 기존 기본 목록 — app/core/cors.py).

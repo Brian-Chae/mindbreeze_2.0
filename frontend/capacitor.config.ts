@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.looxidlabs.mindbreeze',
+  appId: 'com.looxidlabs.mindbreeze2',
   appName: 'MIND BREEZE',
   webDir: 'dist',
   plugins: {

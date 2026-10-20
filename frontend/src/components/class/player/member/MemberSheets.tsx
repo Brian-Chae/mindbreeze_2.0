@@ -1,3 +1,5 @@
+import { isNativeApp } from '../../../../lib/native/platform';
+import { PermissionGuide } from '../../../native/permission-guide';
 // SDD-208 M3 — 회원 시트 본문 5종: 내 상태 · 채팅 · 조용한 신호 · 소리 · 기기. 시트 틀(PlayerSheet)은 공용이고 여기는 안쪽만 그린다.
 // 모든 문구는 시안 member.html 원문. D3: 소리 시트에 BGM 행을 두지 않는다(진행 중 BGM 무재생 정책).
 import type { CSSProperties, ReactNode } from 'react';
@@ -27,7 +29,7 @@ function emptyModel(band: BandUi): EmptyModel {
     case 'pending': return { icon: 'bluetooth', title: '밴드를 연결하는 중이에요', text: '연결되면 내 상태가 여기에 나타나요.', button: '기기에서 보기' };
     case 'leadoff': return { icon: 'alert', title: '접촉을 확인해 주세요', text: '밴드가 피부에 닿으면 상태가 다시 나타나요.', button: '확인 방법 보기' };
     case 'lost': return { icon: 'wifiOff', title: '다시 연결하는 중이에요', text: '연결되면 이어서 보여 드려요.', button: '기기에서 보기' };
-    case 'unsupported': return { icon: 'bluetooth', title: '밴드 없이 참여 중이에요', text: 'Chrome 또는 Edge로 열면 내 상태를 볼 수 있어요.', button: '기기에서 보기' };
+    case 'unsupported': return { icon: 'bluetooth', title: '밴드 없이 참여 중이에요', text: isNativeApp() ? '기기 설정에서 Bluetooth 권한을 확인해 주세요.' : 'Chrome 또는 Edge로 열면 내 상태를 볼 수 있어요.', button: '기기에서 보기' };
     default: return { icon: 'bluetooth', title: '밴드 없이 참여 중이에요', text: 'LINK BAND를 연결하면 내 몸과 마음의 상태를 볼 수 있어요.', button: '기기에서 연결하기' };
   }
 }
@@ -306,8 +308,8 @@ function DeviceSheet({ props }: { props: MemberClassViewProps }) {
   if (input.band === 'unsupported') {
     return (
       <>
-        <DevTop icon="info" title="이 브라우저에서는 연결이 안 돼요" sub="Safari·Firefox는 밴드 연결을 지원하지 않아요" />
-        {note('Chrome 또는 Edge로 열면 연결할 수 있어요. 지금은 밴드 없이도 수업에 참여할 수 있어요.')}
+        <DevTop icon="info" title={isNativeApp() ? "Bluetooth 권한을 확인해 주세요" : "이 브라우저에서는 연결이 안 돼요"} sub={isNativeApp() ? "기기 설정에서 Bluetooth와 앱 권한을 허용해 주세요" : "Safari·Firefox는 밴드 연결을 지원하지 않아요"} />
+        {note(isNativeApp() ? '기기 설정에서 권한을 확인해 주세요. 밴드 없이도 수업에 참여할 수 있어요.' : 'Chrome 또는 Edge로 열면 연결할 수 있어요. 지금은 밴드 없이도 수업에 참여할 수 있어요.')}
         <button type="button" className="mp-pill mp-pill--block" onClick={actions.onBandContinue}>밴드 없이 계속</button>
       </>
     );
@@ -317,10 +319,12 @@ function DeviceSheet({ props }: { props: MemberClassViewProps }) {
     <>
       <DevTop icon="bluetooth" title="연결된 기기 없음" sub="밴드 없이도 수업에 참여할 수 있어요" />
       {errorLine}
-      <button type="button" className="mp-pill mp-pill--primary mp-pill--block" onClick={actions.onBandConnect}>
-        {device.isMock ? '시뮬레이션 시작' : 'LINK BAND 연결'}
-      </button>
-      {note('Chrome·Edge에서 연결할 수 있어요 (Safari·Firefox 미지원)')}
+      <PermissionGuide kind="bluetooth" onContinue={actions.onBandConnect}>{request =>
+        <button type="button" className="mp-pill mp-pill--primary mp-pill--block" onClick={request}>
+          {device.isMock ? '시뮬레이션 시작' : 'LINK BAND 연결'}
+        </button>
+      }</PermissionGuide>
+      {note(isNativeApp() ? 'LINK BAND 연결 시 Bluetooth 권한을 사용해요. 거부해도 밴드 없이 참여할 수 있어요.' : 'Chrome·Edge에서 연결할 수 있어요 (Safari·Firefox 미지원)')}
     </>
   );
 }
