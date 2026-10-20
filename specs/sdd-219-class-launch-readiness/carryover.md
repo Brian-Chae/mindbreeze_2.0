@@ -40,3 +40,20 @@
 |---|---|
 | 출시 필수 (타 담당/선행 필요) | T9 연결(218 병합 후), 대시보드 상담 행 혼입(T8) |
 | 후속 | T10 일괄 조회 API(실측 결과에 따름), 클래스 단위 센터 대시보드, `total_classes` 의미 교정, 알림·메일 세션→회차 용어 정리 |
+
+---
+
+## 218 병합 후 T9·T10 처리 결과 (rebase 후)
+
+### T9 — 리포트 탭 연결 (구현 완료)
+- `class-session-detail.tsx` 의 `ClassTeamReports` 자리를 신규 `class-report-tab.tsx`(`ClassReportTab`)로 교체. 래퍼가 완료 회차만 `useMemo` 로 고정해 `useSessionReportRows` → `ClassReportManage` 에 넘긴다. 노출 조건(`!isHost && (admin||instructor) && completed`)은 그대로.
+- 주의 3가지:
+  1. **sessions useMemo 고정** — 해결(래퍼 내부, 테스트 있음).
+  2. **조회 실패 삼킴** — 해결. 실패 회차 수를 `failedCount` 로 반환하고 `ClassReportManage` 의 `loadError` 로 경고(빈 목록과 구분).
+  3. **출석·결석 0 하드코딩** — 부분 해결. 0 으로 채우지 않고 `null` → "출석 집계 미확인" 표시로 변경. **실제 출석 수는 미해결**: 회차별 `sessionSummary` 호출을 더하면 호출이 2배가 되고 신규 구현 금지 범위라 후속. **참여자 이름 null** 도 미해결: 회차 리포트 목록 응답(`{id,type,status}`)에 이름이 없어 '참여자'로 표시된다(일괄 작업 결과 행은 report_id 앞 8자). 후속: 서버가 이름을 내려주거나 일괄 조회에서 포함.
+- B3: `class-report-job.tsx` — 작업이 `completed` 인데 `pending` 건이 남으면 "아직 처리되지 않았어요 … 직접 다시 시도" 안내를 노출. 자동 이어 처리·Celery 이관 없음.
+- 회차 상세에서 `ClassTeamReports`(읽기 전용 본문 열람)가 빠져 강사가 리포트 본문을 이 화면에서 못 본다. 컴포넌트·sdd216 테스트는 남겨 두었다. 본문 열람 경로를 어디에 둘지는 판단 필요(관리 화면에서 건별 열람 링크 추가가 후속 후보). 또 관리 화면은 클래스 단위인데 회차 상세에 놓였다 — 클래스 상세 리포트 탭으로의 이동은 후속 판단(지시에 따라 회차 상세에 연결).
+
+### T10 — 20회차 호출 수 (vitest 측정, `sdd219-report-tab.test.tsx`)
+- 20회차 완료 클래스에서 리포트 탭 진입 시 `classOperationsApi.reports` = **20회**(회차당 1회, `Promise.all` 병렬). 동일 `sessions` 로 재렌더하면 추가 호출 0.
+- 서버 일괄 조회(클래스 단위 리포트 목록)는 현재 없음 → 신규 구현하지 않음. 응답시간은 vitest 로 측정 불가 → dev 실측(B4) 필요. 판정 후속: 임계 초과 시 일괄 조회 API 추가, 이름·출석 수도 함께 내려주면 위 미해결 두 가지가 같이 풀린다.

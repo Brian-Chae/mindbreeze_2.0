@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { classOperationsApi } from '../../../lib/api/class-operations';
 import {
   classReportsApi,
   newOperationKey,
@@ -21,8 +20,9 @@ export interface SessionReportRow {
   order: number;
   scheduled_at: string | null;
   host_name: string | null;
-  attended: number;
-  absent: number;
+  /** 출석 집계를 알 수 없으면 null. 0 으로 대신 채우지 않는다. */
+  attended: number | null;
+  absent: number | null;
   reports: {
     id: string;
     participant_name: string | null;
@@ -107,10 +107,13 @@ export function ClassReportManage({
   classId,
   rows,
   loading,
+  loadError,
 }: {
   classId: string;
   rows: SessionReportRow[];
   loading?: boolean;
+  /** 일부 회차 조회가 실패했을 때의 안내. 빈 목록과 구분해서 보여준다. */
+  loadError?: string;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -256,6 +259,12 @@ export function ClassReportManage({
         ))}
       </div>
 
+      {loadError && (
+        <p role="alert" className="text-sm text-[#8A3A1F]">
+          {loadError}
+        </p>
+      )}
+
       {loading ? (
         <p role="status">리포트 현황을 불러오는 중이에요.</p>
       ) : visibleRows.length === 0 ? (
@@ -285,8 +294,10 @@ export function ClassReportManage({
                         : '일정 미정'}
                     </b>
                     <span className="text-sm text-[#6F6F6F]">
-                      {row.host_name ? `진행 ${row.host_name} 지도사` : '진행자 미배정'} · 출석{' '}
-                      {row.attended} / 결석 {row.absent}
+                      {row.host_name ? `진행 ${row.host_name} 지도사` : '진행자 미배정'} ·{' '}
+                      {row.attended === null || row.absent === null
+                        ? '출석 집계 미확인'
+                        : `출석 ${row.attended} / 결석 ${row.absent}`}
                     </span>
                   </span>
                   <span className="min-w-[96px] text-sm text-[#6F6F6F]">
@@ -376,56 +387,4 @@ export function ClassReportManage({
       )}
     </section>
   );
-}
-
-/** 회차 목록과 건별 상태를 한 번에 읽어 R1 행으로 만든다. */
-export function useSessionReportRows(
-  classId: string,
-  sessions: { id: string; seq: number | null; scheduled_at: string | null; host?: { name: string | null } | null }[],
-): { rows: SessionReportRow[]; loading: boolean; error: string } {
-  const [rows, setRows] = useState<SessionReportRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const generation = useRef(0);
-
-  useEffect(() => {
-    const version = ++generation.current;
-    setLoading(true);
-    setError('');
-    void Promise.all(
-      sessions.map(async (session, index) => {
-        const result = await classOperationsApi.reports(classId, session.id).catch(() => ({ reports: [] }));
-        return {
-          session_id: session.id,
-          order: session.seq ?? index + 1,
-          scheduled_at: session.scheduled_at,
-          host_name: session.host?.name ?? null,
-          attended: 0,
-          absent: 0,
-          reports: result.reports
-            .filter((r) => r.type === 'client')
-            .map((r) => ({
-              id: r.id,
-              participant_name: null,
-              status: r.status,
-              selectable: r.status === 'pending_review' || r.status === 'completed',
-            })),
-        } satisfies SessionReportRow;
-      }),
-    )
-      .then((value) => {
-        if (version === generation.current) setRows(value);
-      })
-      .catch((e) => {
-        if (version === generation.current) setError(operationError(e));
-      })
-      .finally(() => {
-        if (version === generation.current) setLoading(false);
-      });
-    return () => {
-      generation.current += 1;
-    };
-  }, [classId, sessions]);
-
-  return { rows, loading, error };
 }
