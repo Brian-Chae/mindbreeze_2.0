@@ -49,8 +49,12 @@ router = APIRouter(prefix="/classes", tags=["classes"])
 def queue_class_effects(result, background_tasks, db):
     from app.services.class_effect_service import dispatch_class_effects
 
+    from app.services.class_membership_service import live_session
+
     cls = db.get(Class, UUID(result["class_id"]))
-    if cls is not None and (cls.recurrence_rule or {}).get("start_now"):
+    if cls is not None and (
+        (cls.recurrence_rule or {}).get("start_now") or live_session(db, cls)
+    ):
         background_tasks.add_task(dispatch_class_effects, result["class_id"])
     return result
 
@@ -270,11 +274,13 @@ def invite_emails(
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ) -> dict:
-    from app.services.class_membership_service import invite_emails
+    from app.services.class_membership_service import invite_emails, live_session
 
     def apply(cls, actor, data):
         rows = invite_emails(db, cls, payload.emails, actor.id)
+        live = live_session(db, cls)
         return {
+            "current_session_id": str(live.id) if live else None,
             "invitations": [
                 {"id": str(r.id), "email": r.email_norm, "status": r.status}
                 for r in rows
@@ -551,7 +557,7 @@ def invite_members(
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ) -> dict:
-    from app.services.class_membership_service import invite_members
+    from app.services.class_membership_service import invite_members, live_session
 
     def apply(cls, actor, data):
         members = invite_members(
@@ -562,7 +568,11 @@ def invite_members(
             datetime.now(timezone.utc),
             reactivate=payload.reactivate,
         )
-        return {"member_ids": [str(m.id) for m in members]}
+        live = live_session(db, cls)
+        return {
+            "member_ids": [str(m.id) for m in members],
+            "current_session_id": str(live.id) if live else None,
+        }
 
     result = writes.mutate_class(
         db, current_user["id"], class_id, payload, "invite", apply, "invite"

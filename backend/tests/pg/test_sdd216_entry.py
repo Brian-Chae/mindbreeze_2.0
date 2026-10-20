@@ -72,9 +72,11 @@ def test_legacy_enter_respects_removed_membership_and_counselor_scope(pg_session
 
     a, b, cls, rows = setup_class(pg_session)
     row = rows[0]
-    row.status = "open"
     member = user(pg_session, role="client")
+    # SDD-223: 열린 회차에 초대하면 참여자가 즉시 생기므로, 회차를 열기 전에 초대한 뒤 참여자를 비운다.
     membership = invite_members(pg_session, cls, [member.id], a.id, NOW)[0]
+    pg_session.query(SessionParticipant).filter_by(session_id=row.id).delete()
+    row.status = "open"
     membership.status = "removed"
     pg_session.commit()
     for uid in (member.id, b.id):
