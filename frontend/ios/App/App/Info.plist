@@ -56,6 +56,11 @@
 			</array>
 		</dict>
 	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>bluetooth-central</string>
+		<string>audio</string>
+	</array>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>선택한 LINK BAND를 연결하고 뇌파 데이터를 수신하기 위해 Bluetooth를 사용합니다.</string>
 </dict>

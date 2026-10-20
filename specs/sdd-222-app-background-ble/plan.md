@@ -263,3 +263,13 @@ removeAllListeners(): Promise<void>
 2. 화면 끄고 5분·20분: BLE 유지, WebView 타이머 스로틀링 여부(B.2) — M3·M4.
 3. 제조사 절전(삼성 등)에서 서비스가 죽는지 → 죽으면 B.4 구현 여부 결정.
 4. `BLUETOOTH_CONNECT` 거부 상태에서 FGS 시작 실패 처리 — Track J 가드 확인.
+
+## 부록 C. Track I (iOS) 구현 결과
+
+- `Info.plist`: `UIBackgroundModes` = `bluetooth-central`, `audio` 추가(기존 키 보존). `plutil -lint` OK.
+- `AppDelegate.swift`: `didFinishLaunching` 에서 `configureAudioSession()` 호출 — `AVAudioSession` 카테고리 `.playback`, 모드 `.default`, 옵션 없음(`mixWithOthers` 미사용, 실기기 확인 후 결정), `setActive(true)`. 실패는 `NSLog` 만 하고 앱 시작을 막지 않음. 기존 push 토큰·URL·userActivity 처리 메서드 변경 없음.
+- Xcode capability: `project.pbxproj` 의 `SystemCapabilities` 에는 Push 만 선언됨. Background Modes 는 `Info.plist` 값이 실제 동작 기준이며 pbxproj 는 수정하지 않음(Xcode UI 의 체크박스는 표시용).
+- 인터럽트(전화 등) 종료 후 세션 재활성화는 plan 범위에 없어 미구현 — 실기기 M8 결과에 따라 후속 판단.
+- 검증: `swiftc -parse`(AppDelegate) OK, AVAudioSession 호출 시그니처 iOS 시뮬레이터 SDK 타입체크 OK. 전체 `xcodebuild` 는 `node_modules` 미설치로 SPM 해석 실패(환경 사유).
+- 스토어 사유 문구(audio·bluetooth-central)는 §8 과 spec D2/R5 에 일치함.
+- 실기기 필요(미수행): verify M7(잠금 중 BLE notify 지속), M8(잠금·앱 전환 중 음성 유지).
