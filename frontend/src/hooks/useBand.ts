@@ -175,7 +175,7 @@ export interface UseBandOptions {
    * sessionId가 비어 있어도 연결·지표 갱신이 동작한다.
    */
   observationOnly?: boolean;
-  /** true면 VITE_USE_MOCK_EEG와 무관하게 mockDataGenerator 경로 사용 */
+  /** true=예시, false=실측 강제. 미지정 시에만 환경 설정을 따른다. */
   forceMock?: boolean;
 }
 
@@ -329,10 +329,12 @@ export function useBand({
   enabled = true,
   skipAuth = false,
   entryCredential = null,
-  observationOnly = false,
-  forceMock = false,
+  observationOnly: requestedObservationOnly = false,
+  forceMock,
 }: UseBandOptions): UseBandResult {
-  const isMock = forceMock || envMockEeg();
+  const isMock = forceMock ?? envMockEeg();
+  // 예시 데이터는 호출자의 옵션과 관계없이 영속 경로에서 격리한다.
+  const observationOnly = requestedObservationOnly || isMock;
   const isSupported = isMock || isWebBluetoothSupported();
 
   const [connectionState, setConnectionState] = useState<BandConnectionState>(() => {
@@ -1012,8 +1014,21 @@ export function useBand({
       setUploadStatus('idle');
       setConnectedElapsedSec(0);
       setSensors(INITIAL_SENSORS);
+      if (isMock) {
+        clearBuffers();
+        setRawIndices(null);
+        setCurrentEfficiency(null);
+        setFocusIndex(null);
+        setStressIndex(null);
+        setBandPowers(null);
+        setChartPoints([]);
+        setHeartRate(null);
+        setRespiratoryRate(null);
+        setSdnn(null);
+        setRmssd(null);
+      }
     }
-  }, [drainPendingQueue, flushRawChunk, isSupported, stopMock]);
+  }, [clearBuffers, drainPendingQueue, flushRawChunk, isMock, isSupported, stopMock]);
 
   const markConnected = useCallback(() => {
     connectedAtRef.current = Date.now();

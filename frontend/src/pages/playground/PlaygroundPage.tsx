@@ -25,21 +25,33 @@ import {
 import { useBand } from '../../hooks/useBand';
 import { getActiveModelCache, refreshActiveModel } from '../../lib/eeg/eegPersonalScore';
 import { useAuthStore } from '../../stores/authStore';
+import { useMeditationSessionStore } from '../../stores/useMeditationSessionStore';
 import type { PlaygroundLogEntry } from '../../types/playground';
 
 const DEFAULT_TREND_METRICS = ['focusIndex', 'relaxationIndex', 'stressIndex'];
 const MAX_LOGS = 500;
 
 export default function PlaygroundPage() {
-  const user = useAuthStore((s) => s.user);
-  const isPlatformAdmin = user?.role === 'platform_admin';
   const [useMock, setUseMock] = useState(false);
+  return <PlaygroundView key={String(useMock)} useMock={useMock} onToggleMock={() => setUseMock((value) => !value)} />;
+}
+
+function PlaygroundView({ useMock, onToggleMock }: { useMock: boolean; onToggleMock: () => void }) {
+  const user = useAuthStore((s) => s.user);
+  const isPlatformAdmin = import.meta.env.DEV && user?.role === 'platform_admin';
   const band = useBand({
     sessionId: 'playground-observation',
     participantId: null,
     observationOnly: true,
     forceMock: useMock,
   });
+
+  const initialConnect = useRef(band.connect);
+  useEffect(() => {
+    useMeditationSessionStore.getState().reset();
+    if (useMock) void initialConnect.current().then(() => useMeditationSessionStore.getState().start());
+    return () => useMeditationSessionStore.getState().reset();
+  }, [useMock]);
 
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>(DEFAULT_TREND_METRICS);
   const [debugPaused, setDebugPaused] = useState(false);
@@ -112,9 +124,9 @@ export default function PlaygroundPage() {
       : null;
 
   return (
-    <AppShell title="플레이그라운드">
+    <AppShell title="체험 및 밴드 신호">
       <div className="mx-auto max-w-6xl space-y-4">
-        {!isPlatformAdmin && (
+        {import.meta.env.DEV && !isPlatformAdmin && (
           <div className="rounded-2xl border border-[#EFEFEF] bg-white px-4 py-3">
             <p className="text-xs text-[#6F6F6F]">
               현재 적용된 표준 모델:{' '}
@@ -129,9 +141,11 @@ export default function PlaygroundPage() {
           </div>
         )}
 
-        <ConnectionPanel band={band} useMock={useMock} onToggleMock={() => setUseMock((v) => !v)} />
+        {band.isMock && <div role="status" className="sticky top-0 z-10 rounded-xl bg-amber-100 p-3 font-semibold">예시 데이터입니다 · 실제 측정값이 아닙니다</div>}
+        <p>추정 참고 지표 · <a href="/measurement-guide">측정 방법 안내</a></p>
+        <ConnectionPanel band={band} useMock={band.isMock} onToggleMock={() => { void band.disconnect().then(onToggleMock); }} />
 
-        <CalibrationPanel connected={connected} rawIndices={band.rawIndices} />
+        {import.meta.env.DEV && <CalibrationPanel connected={connected} rawIndices={band.rawIndices} />}
 
         {isPlatformAdmin && (
           <NormalizationPanel
@@ -190,13 +204,13 @@ export default function PlaygroundPage() {
 
         <PlaygroundMeditationSimulator band={band} connected={connected} />
 
-        <DebugPanel
+        {import.meta.env.DEV && <DebugPanel
           logs={logs}
           snapshot={snapshot}
           onClearLogs={() => setLogs([])}
           paused={debugPaused}
           onTogglePause={() => setDebugPaused((v) => !v)}
-        />
+        />}
       </div>
     </AppShell>
   );
