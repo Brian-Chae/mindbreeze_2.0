@@ -26,3 +26,19 @@ export const deleteMyAccount = (body: { password?: string; reauth_proof?: string
 /** 비로그인 공개 삭제 요청 접수 — 계정 존재 여부와 무관하게 같은 응답. */
 export const submitAccountDeletionRequest = (email: string): Promise<{ accepted: boolean }> =>
   apiClient.post('/account-deletion/requests', { email }, { skipAuth: true });
+
+export interface ConsentStateItem {
+  agreed: boolean;
+  version: string | null;
+  agreed_at: string | null;
+  withdrawn_at: string | null;
+}
+
+export type AccountConsentState = Record<'tos' | 'privacy' | 'sensitive' | 'eeg' | 'research', ConsentStateItem>;
+
+/** 설정 > 개인정보: 필수·선택 동의 현재 상태 */
+export const getMyConsents = (): Promise<AccountConsentState> => apiClient.get('/users/me/consents');
+
+/** 선택 동의(뇌파 수집·연구 활용) 변경/철회. 보낸 항목만 바뀐다. 실패하면 던진다(성공으로 표시하지 않는다). */
+export const updateMyConsents = (body: { eeg?: boolean; research?: boolean }): Promise<AccountConsentState> =>
+  apiClient.put('/users/me/consents', body);

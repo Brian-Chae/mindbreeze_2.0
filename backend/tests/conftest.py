@@ -132,14 +132,45 @@ def _isolate_external_storage_credentials():
 #   birth_date 를 보내지 않으므로, 테스트 클라이언트가 프론트의 필수 입력을 흉내 내 기본값을 채운다.
 #   (EntryAwareClient 뿐 아니라 테스트가 직접 만든 TestClient 도 같은 규칙을 따르도록 기반 클래스에서 보정한다.)
 #   연령 검증 자체를 검증하는 테스트는 헤더 ``X-Test-Strict-Signup: 1`` 로 이 보정을 끈다.
-_SIGNUP_BIRTH_DATE_PATHS = ("/auth/register/client", "/auth/register", "/auth/google", "/auth/apple")
+_SIGNUP_BIRTH_DATE_PATHS = (
+    "/auth/register/client", "/auth/register", "/auth/google", "/auth/apple", "/signup-applications/individual-counselor",
+)
 _original_testclient_request = TestClient.request
+
+
+def _drop_fixture_profile(response) -> None:
+    """보정으로 채운 생년월일 때문에 새로 생긴 빈 ClientProfile 을 지운다.
+
+    SDD-220 이전 fixture 는 성별·생년월일 없이 가입해 ClientProfile 이 없는 상태에서 시작했고, 일부 테스트가 그 뒤에
+    자기 프로필 행을 직접 넣는다. 보정이 만든 프로필(성별 없음 + 기본 생년월일)만 지워 그 출발 상태를 되살린다.
+    """
+    try:
+        from datetime import date as _date
+
+        from app.core.database import get_db
+        from app.main import app as _app
+        from app.models.client_profile import ClientProfile
+
+        user_id = response.json()["user"]["id"]
+        db = next(_app.dependency_overrides[get_db]())
+        try:
+            db.query(ClientProfile).filter(
+                ClientProfile.user_id == user_id,
+                ClientProfile.gender.is_(None),
+                ClientProfile.birth_date == _date(1990, 1, 1),
+            ).delete(synchronize_session=False)
+            db.commit()
+        finally:
+            db.close()
+    except Exception:  # noqa: BLE001 — 테스트 보정일 뿐이므로 실패해도 원 응답을 그대로 돌려준다
+        pass
 
 
 def _request_with_signup_defaults(self, method, url, **kwargs):
     headers = {str(k).lower(): v for k, v in (kwargs.get("headers") or {}).items()}
     body = kwargs.get("json")
     path = str(url).split("?")[0]
+    injected_birth = False
     if (
         str(method).upper() == "POST"
         and isinstance(body, dict)
@@ -148,7 +179,25 @@ def _request_with_signup_defaults(self, method, url, **kwargs):
         and any(path.endswith(p) for p in _SIGNUP_BIRTH_DATE_PATHS)
     ):
         kwargs["json"] = {**body, "birth_date": "1990-01-01"}
-    return _original_testclient_request(self, method, url, **kwargs)
+        injected_birth = path.endswith("/auth/register/client")
+    # SDD-220(F1): 회차 입장은 녹음·녹화 필수 동의가 있어야 한다. 기존 입장 fixture 는 이를 보내지 않으므로
+    #   프론트의 필수 체크를 흉내 내 동의를 실어 보낸다. F1 검증 테스트는 ``X-Test-Strict-Recording: 1`` 로 끈다.
+    if (
+        str(method).upper() == "POST"
+        and "x-test-strict-recording" not in headers
+        and (path.endswith("/sessions/enter") or (path.endswith("/enter") and "/sessions/" in path))
+    ):
+        # 뇌파 수집 선택도 사전 선택 UI 의 "동의"를 흉내 낸다(기존 fixture 의 EEG 업로드가 계속 동작하도록).
+        consent = {"recording_consent": True, "recording_notice_version": "rec-1", "eeg_collection_consent": True}
+        body = kwargs.get("json")
+        if body is None and kwargs.get("data") is None and kwargs.get("content") is None and kwargs.get("files") is None:
+            kwargs["json"] = consent
+        elif isinstance(body, dict) and "recording_consent" not in body:
+            kwargs["json"] = {**body, **consent}
+    response = _original_testclient_request(self, method, url, **kwargs)
+    if injected_birth and response.status_code == 201:
+        _drop_fixture_profile(response)
+    return response
 
 
 TestClient.request = _request_with_signup_defaults

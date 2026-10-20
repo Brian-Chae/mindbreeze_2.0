@@ -516,6 +516,9 @@ def guest_entry(db,class_id,session_id,token,command,now=None):
         if len(matches)!=1:raise _error('member_access_revoked',403)
         p=matches[0]
         if s.status not in ('open','in_progress') or p.removed_at or p.waitlist_cancelled_at or p.is_waitlisted or p.attendance_status=='withdrawn':raise _error('member_access_revoked',403)
+        # SDD-220(F1): 회차 녹음·녹화 동의가 저장되기 전에는 입장 자격(entry_credential)을 내주지 않는다.
+        from app.services.recording_consent_service import is_recorded
+        if not is_recorded(p):raise _error('RECORDING_CONSENT_REQUIRED',403)
         if member.status=='active' and cls.status=='active' and grant.scope=='activity':
             pass
         elif member.status=='completed' and cls.status in ('active','completed') and cls.schedule_mode=='fixed' and grant.scope=='read':

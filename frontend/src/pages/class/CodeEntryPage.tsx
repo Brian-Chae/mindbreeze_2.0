@@ -7,6 +7,7 @@ import { ProfileEntryView, type EntrySummary } from '../../components/class/flow
 import { ApiError } from '../../lib/api/client';
 import { getClientProfile } from '../../lib/api/client-profile';
 import { enterByCode, entryFromResult, saveEntry, verifyEntryCode, type EntryGender } from '../../lib/api/class-flow';
+import { RECORDING_NOTICE_VERSION, isRecordingConsentRequired } from '../../lib/class/flow/recording-consent';
 import { formatStartLabel, maskEmail } from '../../lib/class/flow/member-format';
 import { setEntryHandoff } from '../../lib/class/flow/member-handoff';
 import {
@@ -45,6 +46,8 @@ export default function CodeEntryPage() {
   const [errors, setErrors] = useState<EntryProfileErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // SDD-220 F1 — 녹음·녹화 필수 동의(체크 전에는 입장 불가)
+  const [recordingConsent, setRecordingConsent] = useState(false);
   const aliveRef = useRef(true);
 
   useEffect(() => {
@@ -138,7 +141,12 @@ export default function CodeEntryPage() {
     if (Object.keys(found).length > 0) return;
     setSubmitting(true);
     try {
-      const result = await enterByCode(toEnterPayload(digits, draft, mode));
+      // SDD-220 F1: 녹음·녹화 필수 동의를 체크한 경우에만 이 요청이 만들어진다(서버가 다시 검증).
+      const result = await enterByCode({
+        ...toEnterPayload(digits, draft, mode),
+        recording_consent: recordingConsent,
+        recording_notice_version: RECORDING_NOTICE_VERSION,
+      });
       if (!aliveRef.current) return;
       const entry = entryFromResult(result);
       if (!entry) {
@@ -154,6 +162,11 @@ export default function CodeEntryPage() {
       navigate(`/class/${encodeURIComponent(entry.sessionId)}/enter`, { replace: true });
     } catch (error) {
       if (!aliveRef.current) return;
+      if (isRecordingConsentRequired(error)) {
+        setRecordingConsent(false);
+        setSubmitError('녹음·녹화 동의가 필요해요. 동의를 확인해 주세요');
+        return;
+      }
       if (error instanceof ApiError && error.status === 422) {
         setSubmitError('입력한 정보를 다시 확인해 주세요');
         return;
@@ -171,7 +184,7 @@ export default function CodeEntryPage() {
     } finally {
       if (aliveRef.current) setSubmitting(false);
     }
-  }, [digits, draft, memberName, mode, navigate, submitting]);
+  }, [digits, draft, memberName, mode, navigate, submitting, recordingConsent]);
 
   if (step === 'class' && classInfo) {
     return <MemberFlowFrame title="클래스 가입" onBack={() => { if (!submitting) setStep('code'); }} colClassName="fm-narrow"
@@ -195,6 +208,8 @@ export default function CodeEntryPage() {
         errors={errors}
         submitError={submitError}
         submitting={submitting}
+        recordingConsent={recordingConsent}
+        onRecordingConsentChange={setRecordingConsent}
         onChange={(patch) => {
           setDraft((prev) => ({ ...prev, ...patch }));
           setErrors({});

@@ -22,7 +22,10 @@ import { useEntryPrep } from '../../hooks/useEntryPrep';
 import { useWaitingRoomPresence } from '../../hooks/useWaitingRoomPresence';
 import { useEntryState } from '../../hooks/useEntryState';
 import { useEntrySurvey } from '../../hooks/useEntrySurvey';
-import { cancelWaitlist, clearEntry, enterInvitedSession, entryFromResult, loadEntry, saveEntry, type StoredEntry } from '../../lib/api/class-flow';
+import { cancelWaitlist, clearEntry, enterInvitedSession, entryFromResult, loadEntry, saveEntry, setEegCollectionConsent, type StoredEntry } from '../../lib/api/class-flow';
+import { RecordingConsentGateView } from '../../components/class/flow/member/RecordingConsentGateView';
+import { EEG_COLLECTION_NOTICE_VERSION, RECORDING_NOTICE_VERSION, isRecordingConsentRequired } from '../../lib/class/flow/recording-consent';
+import { isAiEnabled } from '../../lib/feature-flags';
 import { durationMinutes, formatStartLabel, formatWhen, maskEmail } from '../../lib/class/flow/member-format';
 import { takeEntryHandoff } from '../../lib/class/flow/member-handoff';
 import {
@@ -59,6 +62,14 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
   const [entryChecked, setEntryChecked] = useState(entry !== null);
   const [invitationError, setInvitationError] = useState<FlowStateKind | null>(null);
   const [invitationAttempt, setInvitationAttempt] = useState(0);
+  // SDD-220 F1 — 서버가 녹음·녹화 동의 없음으로 거부하면 동의 화면을 먼저 보여 준다(동의 전에는 입장 자격이 없다)
+  const [recordingGate, setRecordingGate] = useState(false);
+  // 뇌파 수집 선택 현황 — undefined 면(구 응답) 사전 선택 화면을 띄우지 않고, true 면 이미 동의한 것이라 건너뛴다.
+  const [eegChoiceOverride, setEegChoiceOverride] = useState<boolean | null | undefined>(undefined);
+  const eegChoice = eegChoiceOverride !== undefined ? eegChoiceOverride : entry?.eegCollectionConsented;
+  const [recordingChecked, setRecordingChecked] = useState(false);
+  const [recordingSubmitting, setRecordingSubmitting] = useState(false);
+  const [recordingError, setRecordingError] = useState<string | null>(null);
   const [machine, dispatch] = useReducer(entryReducer, undefined, initialEntryState);
   const [handoff] = useState(() => takeEntryHandoff(sessionId));
   const handoffName = handoff?.displayName ?? '';
@@ -89,6 +100,10 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
       })
       .catch((error: unknown) => {
         if (cancelled) return;
+        if (isRecordingConsentRequired(error)) {
+          setRecordingGate(true);
+          return;
+        }
         // 초대 자격이 없는 이메일 수신자는 코드로 확인한다. 통신 장애는 재시도할 수 있게 구분한다.
         if (error instanceof ApiError && (error.status === 401 || error.status === 403)) return;
         setInvitationError(deriveFlowStateKind({ error, online: navigator.onLine }));
@@ -175,6 +190,26 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
     }
   }, [cancelling, sessionId, entry, navigate]);
 
+  const confirmRecordingConsent = useCallback(async (): Promise<void> => {
+    if (recordingSubmitting || !recordingChecked) return;
+    setRecordingSubmitting(true);
+    setRecordingError(null);
+    try {
+      const result = await enterInvitedSession(sessionId, { recordingConsent: true, recordingNoticeVersion: RECORDING_NOTICE_VERSION });
+      const next = entryFromResult(result);
+      if (next?.sessionId === sessionId) {
+        saveEntry(next);
+        setEntry(next);
+        setRecordingGate(false);
+      }
+    } catch {
+      // 저장에 실패하면 동의한 것으로 보지 않는다 — 입장도 열리지 않는다.
+      setRecordingError('동의를 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      setRecordingSubmitting(false);
+    }
+  }, [recordingSubmitting, recordingChecked, sessionId]);
+
   const retry = useCallback(() => {
     dispatch({ type: 'resume' });
     void refresh();
@@ -182,6 +217,10 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
 
   if (!entry) {
     if (!entryChecked) return <p role="status">입장 정보를 확인하고 있어요.</p>;
+    if (recordingGate) {
+      return <RecordingConsentGateView title="클래스" checked={recordingChecked} submitting={recordingSubmitting} error={recordingError}
+        onChange={setRecordingChecked} onConfirm={() => void confirmRecordingConsent()} onBack={() => navigate(homePath)} />;
+    }
     if (invitationError) {
       return <MemberStateScreen kind={invitationError} classTitle="클래스" whenLabel={null}
         onPrimary={() => invitationError === 'closed' || invitationError === 'cancelled'
@@ -293,6 +332,7 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
     return (
       <NoticeStepView
         sessionType={info.sessionType} place={place} size={size} bandMode={bandMode} title={title} hostName={info.hostName} retentionDays={RETENTION_DAYS}
+        aiEnabled={isAiEnabled()}
         reportChoice={prep.draft.reportChoice} researchConsent={prep.draft.researchConsent} researchSaveFailed={prep.draft.researchSaveFailed}
         steps={stepsView}
         onReportChoice={prep.chooseReport}
@@ -340,6 +380,10 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
         bandMode={bandMode} place={place} steps={stepsView}
         startedRemaining={startedOpen ? remainingPrepLabels(steps, 'c') : null}
         onBandChange={setBandSnapshot}
+        onEegChoice={eegChoice === undefined || eegChoice === true ? undefined : async (agree) => {
+          await setEegCollectionConsent(sessionId, entry.credential, { consented: agree, noticeVersion: EEG_COLLECTION_NOTICE_VERSION });
+          setEegChoiceOverride(agree);
+        }}
         onDone={(outcome) => {
           prep.patch({ bandOutcome: outcome });
           dispatch({ type: 'next', steps });

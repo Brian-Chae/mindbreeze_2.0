@@ -5,6 +5,7 @@ import { CircleAlert, Clock, Mail, User } from 'lucide-react';
 import { GENDER_OPTIONS, isProfilePristine, type EntryProfileDraft, type EntryProfileErrors, type EntryProfileMode } from '../../../../lib/class/flow/member-entry';
 import { FlowButton, FlowCard } from '../shared/flow-primitives';
 import { MemberFlowFrame } from './MemberFlowFrame';
+import { RecordingConsentCheck } from './RecordingConsentCheck';
 
 export interface EntrySummary {
   title: string;
@@ -24,6 +25,9 @@ interface ProfileEntryViewProps {
   onChange: (patch: Partial<EntryProfileDraft>) => void;
   onSubmit: () => void;
   onBack: () => void;
+  /** SDD-220 F1 — 녹음·녹화 필수 동의. 넘기면 체크 전에는 입장 버튼이 비활성이다. */
+  recordingConsent?: boolean;
+  onRecordingConsentChange?: (checked: boolean) => void;
 }
 
 /** 라벨 줄 오른쪽에 붙는 인라인 오류 — 오류가 생겨도 폼 높이가 늘지 않아 하단 버튼을 밀지 않는다 */
@@ -36,9 +40,10 @@ function FieldHead({ children, error }: { children: ReactNode; error: string | u
   return <div className="fm-label-row">{children}<FieldError text={error} /></div>;
 }
 
-export function ProfileEntryView({ summary, mode, draft, errors, submitError, submitting, backdropSrc, onChange, onSubmit, onBack }: ProfileEntryViewProps) {
+export function ProfileEntryView({ summary, mode, draft, errors, submitError, submitting, backdropSrc, onChange, onSubmit, onBack, recordingConsent, onRecordingConsentChange }: ProfileEntryViewProps) {
   const member = mode === 'member';
-  const disabled = submitting || (!member && isProfilePristine(draft));
+  const needsRecordingConsent = onRecordingConsentChange !== undefined && !recordingConsent;
+  const disabled = submitting || needsRecordingConsent || (!member && isProfilePristine(draft));
   return (
     <MemberFlowFrame
       backdropSrc={backdropSrc}
@@ -113,6 +118,11 @@ export function ProfileEntryView({ summary, mode, draft, errors, submitError, su
           <div className={`fm-fnote left${member ? ' span2' : ''}`}><Mail size={16} aria-hidden="true" />리포트는 입력한 이메일로 보내 드려요</div>
         </section>
       </FlowCard>
+      {onRecordingConsentChange ? (
+        <FlowCard size="sm">
+          <RecordingConsentCheck checked={Boolean(recordingConsent)} onChange={onRecordingConsentChange} />
+        </FlowCard>
+      ) : null}
     </MemberFlowFrame>
   );
 }

@@ -44,6 +44,12 @@ async function type(el: HTMLInputElement, value: string): Promise<void> {
 async function click(el: HTMLElement): Promise<void> {
   await act(async () => { el.click(); });
 }
+/** SDD-220 F1 — 입장 전 녹음·녹화 필수 동의 체크 */
+async function agreeRecording(): Promise<void> {
+  const box = qa<HTMLElement>('[role="checkbox"]').find((el) => (el.textContent ?? '').includes('녹음·녹화에 동의해요'));
+  if (!box) throw new Error('녹음·녹화 동의 체크가 없습니다');
+  await click(box);
+}
 
 beforeEach(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -186,9 +192,14 @@ describe('/join 컨테이너', () => {
     await type(document.getElementById('fm-birth') as HTMLInputElement, '1990.03.12');
     await type(document.getElementById('fm-email') as HTMLInputElement, 'jieun@example.com');
     await type(document.getElementById('fm-email2') as HTMLInputElement, 'jieun@example.com');
+    expect(btn('입장하기').disabled).toBe(true); // 녹음·녹화 필수 동의 전에는 입장할 수 없다
+    await agreeRecording();
     await click(btn('입장하기'));
 
-    expect(enterByCode).toHaveBeenCalledWith({ code: '0042', name: '지은', gender: 'female', birth_date: '1990-03-12', email: 'jieun@example.com' });
+    expect(enterByCode).toHaveBeenCalledWith({
+      code: '0042', name: '지은', gender: 'female', birth_date: '1990-03-12', email: 'jieun@example.com',
+      recording_consent: true, recording_notice_version: 'rec-1',
+    });
     expect(document.querySelector('[data-testid="path"]')?.textContent).toBe('/class/s1/enter');
     const stored = window.sessionStorage.getItem('mb_entry_s1') ?? '';
     expect(stored).toContain('cred-xyz');
@@ -205,6 +216,7 @@ describe('/join 컨테이너', () => {
     await click(btn('코드 확인'));
     await type(document.getElementById('fm-name') as HTMLInputElement, '지은');
     await type(document.getElementById('fm-email') as HTMLInputElement, 'jieun@');
+    await agreeRecording();
     await click(btn('입장하기'));
     expect(enterByCode).not.toHaveBeenCalled();
     expect(text()).toContain('이메일 형식을 확인해 주세요');
@@ -222,6 +234,7 @@ describe('/join 컨테이너', () => {
     await type(document.getElementById('fm-birth') as HTMLInputElement, '1990.03.12');
     await type(document.getElementById('fm-email') as HTMLInputElement, 'jieun@example.com');
     await type(document.getElementById('fm-email2') as HTMLInputElement, 'jieun@example.com');
+    await agreeRecording();
     await click(btn('입장하기'));
     expect(text()).toContain('입장 코드를 입력해 주세요');
     expect(text()).toContain('코드를 확인해 주세요');

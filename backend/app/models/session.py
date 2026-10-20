@@ -222,6 +222,16 @@ class SessionParticipant(Base):
     report_consent_override: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     research_consent_override: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     research_origin_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    # SDD-220(F1): 회차별 녹음·녹화 필수 동의. 저장에 성공한 뒤에만 입장 자격·LiveKit 토큰이 나간다.
+    #   consent_audio/consent_eeg(내보내기·리포트 의미)와 별개이며 서로 추정하지 않는다.
+    recording_consented: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    recording_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    recording_notice_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # SDD-220: 뇌파 수집 선택 동의(밴드 연결 사전 선택). NULL=이 기능 이전 행(미확인), False=거부, True=동의.
+    #   리포트 제외/연구 거부와 무관하며, 거부(False)면 서버가 EEG 업로드 권한을 막는다.
+    eeg_collection_consented: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    eeg_collection_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    eeg_notice_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
     superseded_by_participant_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), index=True)
 
     session = relationship("Session", back_populates="participants", foreign_keys=[session_id])

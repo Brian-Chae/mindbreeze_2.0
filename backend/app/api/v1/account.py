@@ -17,7 +17,7 @@ from app.core.database import get_db
 from app.core.redis import get_redis
 from app.core.security import verify_password
 from app.models.user import User
-from app.services import account_deletion_service, social_reauth_service
+from app.services import account_deletion_service, privacy_consent_service, social_reauth_service
 from app.services.signup_policy_service import api_error
 
 logger = logging.getLogger(__name__)
@@ -50,6 +50,13 @@ class ReauthResponse(BaseModel):
 class DeleteAccountRequest(BaseModel):
     password: str | None = None
     reauth_proof: str | None = None
+
+
+class OptionalConsentUpdate(BaseModel):
+    """선택 동의 변경 — 보낸 항목만 바뀐다(생략=유지). 필수 동의는 여기서 바꾸지 않는다."""
+
+    eeg: bool | None = None
+    research: bool | None = None
 
 
 class PublicDeletionRequest(BaseModel):
@@ -88,6 +95,22 @@ async def reauth(
         redis, str(user.id), social_reauth_service.PURPOSE_ACCOUNT_DELETION, google_token=google_token
     )
     return ReauthResponse(reauth_proof=proof, expires_in=social_reauth_service.PROOF_TTL_SECONDS)
+
+
+@router.get("/me/consents")
+async def get_my_consents(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """설정 > 개인정보: 필수·선택 동의 현재 상태."""
+    return privacy_consent_service.get_state(db, uuid.UUID(current_user["id"]))
+
+
+@router.put("/me/consents")
+async def update_my_consents(
+    req: OptionalConsentUpdate,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """뇌파 수집·연구 활용 선택 동의 변경/철회. 저장에 실패하면 5xx 로 응답해 화면이 성공을 표시하지 않게 한다."""
+    return privacy_consent_service.set_optional(db, uuid.UUID(current_user["id"]), eeg=req.eeg, research=req.research)
 
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
