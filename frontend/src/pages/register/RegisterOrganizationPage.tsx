@@ -1,3 +1,4 @@
+import { NativeOrganizationGate } from '../../components/routing/native-organization-gate';
 // 기관 가입 상담 신청 — 접수만 하며 계정·기관을 만들지 않는다 (SDD-073)
 
 import { useRef, useState, type FormEvent } from 'react';
@@ -14,6 +15,10 @@ const inputClass =
   'w-full h-11 px-4 rounded-xl bg-surface-raised border border-border-default text-sm text-ink-primary placeholder:text-ink-tertiary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 disabled:opacity-60';
 
 export default function RegisterOrganizationPage() {
+  return <NativeOrganizationGate><OrganizationApplicationForm /></NativeOrganizationGate>;
+}
+
+function OrganizationApplicationForm() {
   const [organizationName, setOrganizationName] = useState('');
   const [contactName, setContactName] = useState('');
   const [phone, setPhone] = useState('');

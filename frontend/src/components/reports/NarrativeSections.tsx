@@ -1,3 +1,5 @@
+import { WellnessNotice } from '../legal/wellness-notice';
+import { WELLNESS_DISCLAIMER } from '../../lib/legal-copy';
 // SDD-045: 디자인 정본의 레이아웃과 SVG에 실제 측정 시계열을 연결한다.
 import { useId, type MouseEvent } from 'react';
 import { METRIC_DEFINITIONS, metricChangeInterpretation, metricDirectionGuide, type MetricId, type MetricNarrative } from '../../lib/report/narrative';
@@ -238,7 +240,7 @@ export default function NarrativeSections({ narrative, session, isSample = false
       window.scrollTo({ top: 0, behavior: 'instant' });
     }
   };
-  return <div className="narrative-report" data-testid="narrative-sections">
+  return <div className="narrative-report" data-testid="narrative-sections"><WellnessNotice />
     <header className="topbar"><a className="brand" href="#cover" onClick={navigateSection}>mind breeze<span style={{ fontWeight: 400 }}> / 몸·마음 리포트</span></a>{isSample && <span className="sample-tag">디자인 미리보기 · 예시 데이터</span>}</header>
     <div className="layout">
     <aside className="sidebar" aria-label="리포트 탐색">
@@ -303,7 +305,7 @@ export default function NarrativeSections({ narrative, session, isSample = false
       <p>명상마다 흐름은 달라질 수 있어요.<br />오늘 느꼈던 나의 감각 하나를 기억해 두면 어떨까요?</p>
       <div className="practice practice-body"><span className="practice-icon" aria-hidden="true">↘</span><div><span className="practice-label">몸을 위한 다음 제안</span><strong>시작할 때, 몸이 머무를 시간을 주세요</strong><p>다음에는 처음 1분을 편안히 자리 잡는 시간으로 가져보세요. 어깨의 힘을 내려놓고, 평소의 호흡이 오가는 감각을 느껴봐요.</p></div></div>
       <div className="practice"><span className="practice-icon" aria-hidden="true">↗</span><div><span className="practice-label">마음을 위한 다음 제안</span><strong>알아차린 순간, 다시 호흡으로 돌아와요</strong><p>5분만 나에게 머물러보세요. 생각이 다른 곳으로 향해도 괜찮아요. 알아차렸다면, 지금의 호흡에 부드럽게 주의를 돌려봐요.</p></div></div>
-      <p className="closing-message">{narrative.closing}</p><p className="closing-note">이 기록은 자기 이해를 돕기 위한 참고 자료이며,<br />의학적 진단이나 치료를 대신하지 않습니다.</p>
+      <p className="closing-message">{narrative.closing}</p><p className="closing-note">{WELLNESS_DISCLAIMER}</p>
     </section>
     <footer className="footer"><span className="brand">mind breeze</span><a href="#cover" onClick={navigateSection}>처음으로 돌아가기 ↑</a></footer>
     </div></div>

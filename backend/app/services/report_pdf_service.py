@@ -139,7 +139,7 @@ h3 {{ font-size: {13 * scale}pt; margin-bottom: 3mm; }}
 <section><div class="cover"><p class="eyebrow">01 · 나의 명상 여정</p>
 <svg class="art" viewBox="0 0 240 240" aria-hidden="true"><g fill="none" stroke="#5F0080" opacity=".24"><ellipse cx="120" cy="120" rx="95" ry="44" transform="rotate(-32 120 120)"/><ellipse cx="120" cy="120" rx="84" ry="57" transform="rotate(-32 120 120)"/><circle cx="120" cy="120" r="70"/></g><circle cx="187" cy="76" r="9" fill="#59CE90"/></svg>
 <h1>나에게 돌아온 시간,<br>몸과 마음의 이야기</h1><p class="lead">분주했던 하루에서 한 걸음 물러나,<br>오늘 나에게 일어난 작은 변화를 만나보세요.</p>
-<div class="meta"><strong>{title}</strong><br>{name} · {date_label}<br>비교 구간: 명상 시작(전반) {half_label} ↔ 마무리(후반) {half_label}</div></div>
+<p class="note">집중도·이완도·스트레스는 추정 참고 지표입니다. <a href="https://mindbreeze.looxidlabs.com/measurement-guide">측정 방법과 한계</a></p><div class="meta"><strong>{title}</strong><br>{name} · {date_label}<br>비교 구간: 명상 시작(전반) {half_label} ↔ 마무리(후반) {half_label}</div></div>
 <div class="journey"><p class="eyebrow">02 · 종합 여정</p><h2>오늘의 몸과 마음을 돌아보며</h2><p class="copy">{fields['journey']}</p></div>
 {chips}<table class="steps journey-stages"><tr><td>처음 · 0분<br><strong>잠시 멈추기</strong><br>자리에 몸을 맡기고</td><td>중간 · {half_label}<br><strong>호흡에 머물기</strong><br>지금의 감각을 따라</td><td>마지막 · {end_label}<br><strong>나에게 돌아오기</strong><br>몸과 마음을 살피며</td></tr></table>
 <p class="note">이 기록은 이번 세션에서 관찰한 흐름을 담습니다. 측정 자료가 없는 경우에는 변화를 단정하지 않습니다.</p></section>
@@ -152,7 +152,7 @@ h3 {{ font-size: {13 * scale}pt; margin-bottom: 3mm; }}
 <section><p class="eyebrow">05 · 마무리</p><h2>오늘의 작은 쉼을,<br>내일의 나에게도</h2><p class="lead">명상마다 흐름은 달라질 수 있어요.<br>오늘 느꼈던 나의 감각 하나를 기억해 두면 어떨까요?</p>
 <div class="practice"><p class="eyebrow">몸을 위한 다음 제안</p><h3>시작할 때, 몸이 머무를 시간을 주세요</h3><p>다음에는 처음 1분을 편안히 자리 잡는 시간으로 가져보세요. 어깨의 힘을 내려놓고, 평소의 호흡이 오가는 감각을 느껴봐요.</p></div>
 <div class="practice mind"><p class="eyebrow">마음을 위한 다음 제안</p><h3>알아차린 순간, 다시 호흡으로 돌아와요</h3><p>5분만 나에게 머물러보세요. 생각이 다른 곳으로 향해도 괜찮아요. 알아차렸다면, 지금의 호흡에 부드럽게 주의를 돌려봐요.</p></div>
-<p class="closing-message copy">{fields['closing']}</p><p class="note">이 기록은 자기 이해를 돕기 위한 참고 자료이며,<br>의학적 진단이나 치료를 대신하지 않습니다.</p></section>
+<p class="closing-message copy">{fields['closing']}</p><p class="note">본 서비스와 LINK BAND는 의료기기가 아니며, 의학적 진단·치료·처방을 대신하지 않습니다.</p></section>
 </body></html>'''
 
 
