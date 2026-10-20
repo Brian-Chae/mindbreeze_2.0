@@ -23,7 +23,7 @@ export function memberDate(field: DisplayField<string>): string | undefined {
 // 같은 소유 파일에서 회원 표시 규칙을 공유한다. 컴포넌트 외 export는 새로고침 경계에서 제외한다.
 // eslint-disable-next-line react-refresh/only-export-components
 export function memberStatus(field: DisplayField<string>): string | undefined {
-  const labels: Record<string, string> = { active: '진행 중', scheduled: '예정', in_progress: '진행 중', completed: '완료', cancelled: '취소', closed: '종료', draft: '준비 중' };
+  const labels: Record<string, string> = { active: '진행 중', ready: '준비 중', open: '입장 가능', scheduled: '예정', in_progress: '진행 중', completed: '완료', cancelled: '취소', closed: '종료', draft: '준비 중' };
   const value = memberValue(field);
   return value ? labels[value] : undefined;
 }
