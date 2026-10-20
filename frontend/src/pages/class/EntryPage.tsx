@@ -1,6 +1,6 @@
 // SDD-209 M1 — `/class/:sessionId/enter` 참가자 입장 흐름 오케스트레이터(입장 자격 기반, 로그인 불필요).
 // FM05 입장 확인 → (M2~M5 준비 마법사) → (M6 시작 대기) → (M7 대기열) → 진행 화면 → (M8 종료) 를 하나의 상태 머신으로 돌린다.
-import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Key } from 'lucide-react';
 import { FlowStateScreen } from '../../components/class/flow/shared/FlowStateScreen';
@@ -88,6 +88,8 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
   const [eegChoiceOverride, setEegChoiceOverride] = useState<boolean | null | undefined>(undefined);
   const eegChoice = eegChoiceOverride !== undefined ? eegChoiceOverride : entry?.eegCollectionConsented;
   const [recordingChecked, setRecordingChecked] = useState(false);
+  const recordingCheckedRef = useRef(false);
+  recordingCheckedRef.current = recordingChecked;
   const [recordingSubmitting, setRecordingSubmitting] = useState(false);
   const [recordingError, setRecordingError] = useState<string | null>(null);
   const [machine, dispatch] = useReducer(entryReducer, undefined, initialEntryState);
@@ -109,7 +111,10 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
     let cancelled = false;
     setEntryChecked(false);
     setInvitationError(null);
-    void enterInvitedSession(sessionId)
+    // 이미 동의를 체크했다면(열리기 전 대기 후 재시도) 동의를 함께 보내 동의 화면을 다시 띄우지 않는다.
+    void (recordingCheckedRef.current
+      ? enterInvitedSession(sessionId, { recordingConsent: true, recordingNoticeVersion: RECORDING_NOTICE_VERSION })
+      : enterInvitedSession(sessionId))
       .then((result) => {
         if (cancelled) return;
         const next = entryFromResult(result);
@@ -135,6 +140,13 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
       cancelled = true;
     };
   }, [entry, sessionId, isAuthenticated, invitationAttempt]);
+
+  // 회차가 열리기 전(notyet)에는 30초마다 다시 시도해 열리면 이어서 입장한다.
+  useEffect(() => {
+    if (invitationError !== 'notyet') return undefined;
+    const timer = window.setInterval(() => setInvitationAttempt((attempt) => attempt + 1), 30_000);
+    return () => window.clearInterval(timer);
+  }, [invitationError]);
 
   const terminalState = machine.phase === 'state' && (machine.stateKind === 'cancelled' || machine.stateKind === 'closed' || machine.stateKind === 'entry-expired');
   const polling = entry !== null && machine.phase !== 'end' && !terminalState;
@@ -226,7 +238,14 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
         setEntry(next);
         setRecordingGate(false);
       }
-    } catch {
+    } catch (error: unknown) {
+      // 회차가 아직 열리지 않았으면 동의 저장 실패가 아니다 — '아직 열리지 않았어요' 화면으로 보낸다.
+      const kind = deriveFlowStateKind({ error, online: navigator.onLine });
+      if (kind === 'notyet' || kind === 'closed' || kind === 'cancelled') {
+        setRecordingGate(false);
+        setInvitationError(kind);
+        return;
+      }
       // 저장에 실패하면 동의한 것으로 보지 않는다 — 입장도 열리지 않는다.
       setRecordingError('동의를 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
     } finally {

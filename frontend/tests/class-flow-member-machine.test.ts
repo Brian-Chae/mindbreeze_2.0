@@ -148,3 +148,14 @@ describe('entryReducer — 입장 상태 머신', () => {
     expect(s.phase).toBe('confirm');
   });
 });
+
+// 회차가 아직 열리지 않았을 때 서버 409 session_not_open → '아직 열리지 않았어요'(오류·동의 실패 아님)
+import { ApiError as NotOpenApiError } from '../src/lib/api/client';
+import { deriveFlowStateKind as deriveKindNotOpen } from '../src/lib/class/flow/member-machine';
+import { it as itNotOpen, expect as expectNotOpen } from 'vitest';
+itNotOpen('409 session_not_open 은 notyet 상태로 본다', () => {
+  const err = new NotOpenApiError(409, 'Conflict', { detail: { code: 'session_not_open' } });
+  expectNotOpen(deriveKindNotOpen({ error: err, online: true })).toBe('notyet');
+  const other = new NotOpenApiError(409, 'Conflict', { detail: '다른 충돌' });
+  expectNotOpen(deriveKindNotOpen({ error: other, online: true })).toBe('error');
+});
