@@ -603,14 +603,54 @@ def list_session_reports(
     )
     if not allowed:
         raise HTTPException(403, detail={"code": "report_read_forbidden"})
+    from app.models.session import SessionParticipant
+
+    rows = (
+        db.query(Report.id, Report.type, Report.status, Report.user_id, Report.participant_id)
+        .filter(Report.session_id == session_id)
+        .order_by(Report.created_at, Report.id)
+        .all()
+    )
+    # SDD-219: 참여자 이름(회원=users.name, 게스트=guest_name)과 회차 출석 집계를 가산한다(기존 필드 불변).
+    participants = (
+        db.query(
+            SessionParticipant.id,
+            SessionParticipant.user_id,
+            SessionParticipant.guest_name,
+            SessionParticipant.attendance_status,
+        )
+        .filter(SessionParticipant.session_id == session_id)
+        .all()
+    )
+    user_ids = {r.user_id for r in rows if r.user_id} | {p.user_id for p in participants if p.user_id}
+    user_names = (
+        {u.id: u.name for u in db.query(User.id, User.name).filter(User.id.in_(user_ids)).all()}
+        if user_ids
+        else {}
+    )
+    by_participant = {p.id: p for p in participants}
+
+    def _name(row) -> str | None:
+        part = by_participant.get(row.participant_id) if row.participant_id else None
+        uid = row.user_id or (part.user_id if part else None)
+        if uid and uid in user_names:
+            return user_names[uid]
+        return part.guest_name if part and part.guest_name else None
+
     return {
         "reports": [
-            {"id": str(row.id), "type": row.type, "status": row.status}
-            for row in db.query(Report.id, Report.type, Report.status)
-            .filter(Report.session_id == session_id)
-            .order_by(Report.created_at, Report.id)
-            .all()
-        ]
+            {
+                "id": str(row.id),
+                "type": row.type,
+                "status": row.status,
+                "participant_name": _name(row) if row.type == "client" else None,
+            }
+            for row in rows
+        ],
+        "attendance": {
+            "attended": sum(1 for p in participants if p.attendance_status == "attended"),
+            "absent": sum(1 for p in participants if p.attendance_status == "absent"),
+        },
     }
 
 

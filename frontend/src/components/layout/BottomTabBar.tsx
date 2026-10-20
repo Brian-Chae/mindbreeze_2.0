@@ -5,6 +5,7 @@ import { useChatStore } from '../../stores/chatStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { useReportStore } from '../../stores/reportStore';
 import { term, type TermKey } from '../../lib/terms';
+import { isCounselingEnabled } from '../../lib/feature-flags';
 
 interface TabItem {
   to: string;
@@ -32,10 +33,13 @@ function tabItemsForRole(role: UserRole | null | undefined): TabItem[] {
     { to: '/reports?status=pending', key: 'report', icon: ICONS.report },
   ];
   const isClient = role === 'client';
+  const counselingTab: TabItem[] = isCounselingEnabled()
+    ? [{ to: isClient ? '/app/counseling' : '/counseling', key: isClient ? 'my-counseling' : 'counseling', icon: ICONS.users }]
+    : []; // SDD-219: 상담 비공개 시 탭 제거. 남은 탭은 flex-1 로 균등 배치된다.
   return [
     { to: homePathForRole(role), key: 'home', icon: ICONS.home },
     { to: isClient ? '/app/classes' : '/classes', key: isClient ? 'my-class' : 'class', icon: ICONS.calendar },
-    { to: isClient ? '/app/counseling' : '/counseling', key: isClient ? 'my-counseling' : 'counseling', icon: ICONS.users },
+    ...counselingTab,
     isClient ? { to: '/app/reports', key: 'report', icon: ICONS.report } : { to: '/chat', key: 'chat', icon: ICONS.message },
   ];
 }

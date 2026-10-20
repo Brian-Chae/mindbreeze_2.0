@@ -121,6 +121,7 @@ export function ClassReportJobPanel({
   const succeeded = job.items.filter((i) => i.state === 'succeeded').length;
   const failed = job.items.filter((i) => i.state === 'failed');
   const excluded = job.items.filter((i) => i.state === 'excluded');
+  const pending = job.items.filter((i) => i.state === 'pending');
   const processed = succeeded + failed.length + excluded.length;
   const actionLabel = { approve: '승인', regenerate: '재생성', resend_email: '메일 재발송' }[job.action];
 
@@ -184,6 +185,12 @@ export function ClassReportJobPanel({
           <ItemRow key={item.report_id} item={item} name={names?.[item.report_id]} />
         ))}
       </ul>
+
+      {job.status === 'completed' && pending.length > 0 && (
+        <p role="status" className="text-sm text-[#8A3A1F]">
+          {pending.length}건이 아직 처리되지 않았어요. 자동으로 이어서 처리하지 않으니, 잠시 후 목록에서 해당 건을 다시 선택해 직접 다시 시도해 주세요.
+        </p>
+      )}
 
       {error && (
         <p role="alert" className="text-sm text-[#8A3A1F]">

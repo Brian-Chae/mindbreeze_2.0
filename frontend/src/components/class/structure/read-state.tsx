@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { TermArea } from '../../../lib/terms';
+import { isCounselingEnabled } from '../../../lib/feature-flags';
 
 export interface ReadStateViewProps {
   status: 'loading' | 'empty' | 'error' | 'not_found' | 'success';
@@ -20,7 +21,7 @@ export function ReadStateView({ status, area = 'meditation', backTo, onRetry, ch
     <div className="cs-read-state" role={status === 'error' ? 'alert' : 'status'} aria-busy={status === 'loading'}>
       <p>{message}</p>
       {status === 'error' && onRetry && <button type="button" onClick={onRetry}>다시 시도</button>}
-      {status === 'not_found' && <Link to={backTo ?? (area === 'counseling' ? '/counseling' : '/classes')}>목록으로 돌아가기</Link>}
+      {status === 'not_found' && <Link to={backTo ?? (area === 'counseling' && isCounselingEnabled() ? '/counseling' : '/classes')}>목록으로 돌아가기</Link>}
     </div>
   );
 }

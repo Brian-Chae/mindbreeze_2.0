@@ -4,6 +4,8 @@ import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { MemoryRouter, useLocation, useParams } from 'react-router-dom';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
+// SDD-219: 상담 공개(플래그 on) 기준의 기존 동작을 검증한다.
+vi.stubEnv('VITE_COUNSELING_ENABLED', 'true');
 import SidebarNav from '../src/components/layout/SidebarNav';
 import HostTabs from '../src/components/layout/BottomTabBar';
 import MemberTabs from '../src/components/client/BottomTabBar';

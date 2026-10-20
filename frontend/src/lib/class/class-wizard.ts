@@ -2,6 +2,7 @@
 // 근거: plan §1.2 FH02a~e, designs/class-flow-redesign/host-a.html (stepA~stepE).
 import type { CreateSessionPayload, LinkbandMode, LocationType, ParticipantMode, SessionType } from '../api/session';
 import type { FlowPlace, FlowSize } from './flow/types';
+import { isCounselingEnabled } from '../feature-flags';
 
 export const WIZARD_STEP_COUNT = 5;
 export type WizardStep = 1 | 2 | 3 | 4 | 5;
@@ -87,6 +88,11 @@ export const WIZARD_TYPES: ReadonlyArray<{ id: WizardType; label: string }> = [
   { id: 'meditation', label: '명상' },
   { id: 'other', label: '기타' },
 ];
+
+/** SDD-219: 상담 비공개 시 임상·최면 유형을 선택지에서 제외한다(라벨 조회용 WIZARD_TYPES 는 유지). */
+export function wizardTypeOptions(): ReadonlyArray<{ id: WizardType; label: string }> {
+  return isCounselingEnabled() ? WIZARD_TYPES : WIZARD_TYPES.filter((t) => t.id !== 'clinical' && t.id !== 'hypnosis');
+}
 
 export const BAND_LABEL: Readonly<Record<LinkbandMode, string>> = {
   none: 'LINK BAND 사용 안 함',
@@ -238,8 +244,21 @@ export function memberLimit(draft: WizardDraft): number {
   return draft.size === 'solo' ? 1 : draft.capacity;
 }
 
+/**
+ * SDD-219: 상담 비공개 중에는 명상이 아닌 유형의 1:1 편성을 막는다.
+ * 서버 분류기가 custom 1:1 을 상담 관계로 분류하므로(session_classifier) 화면에서 입구를 닫는다.
+ */
+export function isSoloAllowed(type: WizardType): boolean {
+  return isCounselingEnabled() || type === 'meditation';
+}
+
 function withDraft(state: WizardState, patch: Partial<WizardDraft>): WizardState {
-  return { ...state, draft: { ...state.draft, ...patch } };
+  const draft = { ...state.draft, ...patch };
+  if (draft.size === 'solo' && !isSoloAllowed(draft.type)) {
+    const guarded = { ...draft, size: 'group' as const };
+    return { ...state, draft: { ...guarded, members: trimMembers(guarded) } };
+  }
+  return { ...state, draft };
 }
 
 function withUi(state: WizardState, patch: Partial<WizardUi>): WizardState {
@@ -371,7 +390,7 @@ const REMIND_OFFSETS: Readonly<Record<WizardRemind, number[]>> = { off: [], day:
 
 export function buildCreatePayload(draft: WizardDraft, base: Date, force: boolean): CreateSessionPayload {
   const locationType: LocationType = draft.place;
-  const participantMode: ParticipantMode = draft.size === 'solo' ? 'one_on_one' : 'group';
+  const participantMode: ParticipantMode = draft.size === 'solo' && isSoloAllowed(draft.type) ? 'one_on_one' : 'group';
   const start = scheduledStart(draft, base);
   const type: SessionType = draft.type === 'other' ? 'custom' : draft.type;
   const address = locationType === 'offline' ? draft.address.trim() : '';

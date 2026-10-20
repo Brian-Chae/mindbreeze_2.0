@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, type ReactElement } from 'react';
+import { CounselingGate } from './components/routing/counseling-gate';
 import { useStatusBar } from './lib/native/use-status-bar';
 import { isNativeApp } from './lib/native/platform';
 import { initNativeKeyboard } from './lib/native/keyboard';
@@ -179,8 +180,8 @@ const router = createBrowserRouter(
         <Route path="/class-members/:classId" element={<GuestClassMembershipPage />} />
         <Route path="/app/classes" element={<RoleGuard role="client"><MemberClassesPage /></RoleGuard>} />
         <Route path="/app/classes/:classId" element={<RoleGuard role="client"><MemberClassDetailPage /></RoleGuard>} />
-        <Route path="/app/counseling" element={<RoleGuard role="client"><CounselingListPage role="member" /></RoleGuard>} />
-        <Route path="/app/counseling/:relationshipId" element={<RoleGuard role="client"><CounselingDetailPage role="member" /></RoleGuard>} />
+        <Route path="/app/counseling" element={<CounselingGate area="member"><RoleGuard role="client"><CounselingListPage role="member" /></RoleGuard></CounselingGate>} />
+        <Route path="/app/counseling/:relationshipId" element={<CounselingGate area="member"><RoleGuard role="client"><CounselingDetailPage role="member" /></RoleGuard></CounselingGate>} />
         <Route path="/app/sessions" element={<RoleGuard role="client"><Navigate to="/app/classes" replace /></RoleGuard>} />
         <Route path="/app/*" element={<RoleGuard role="client"><ClientAppPage /></RoleGuard>} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -218,10 +219,10 @@ const router = createBrowserRouter(
         <Route path="/classes/:classId/schedule" element={<RoleGuard role={['counselor', 'org_admin']}><HostClassDetailPage /></RoleGuard>} />
         {/* 기존 상세가 읽는 내부 파라미터 이름 id를 유지한다(값은 회차 식별자다). */}
         <Route path="/classes/:classId/sessions/:id" element={<RoleGuard role={['counselor', 'org_admin']}><SessionDetailPage /></RoleGuard>} />
-        <Route path="/counseling" element={<RoleGuard role={['counselor', 'org_admin']}><CounselingListPage role="host" /></RoleGuard>} />
-        <Route path="/counseling/new" element={<RoleGuard role={['counselor', 'org_admin']}><CreateWizardContainer /></RoleGuard>} />
-        <Route path="/counseling/:relationshipId" element={<RoleGuard role={['counselor', 'org_admin']}><CounselingDetailPage role="host" /></RoleGuard>} />
-        <Route path="/counseling/:relationshipId/sessions/:id" element={<RoleGuard role={['counselor', 'org_admin']}><SessionDetailPage /></RoleGuard>} />
+        <Route path="/counseling" element={<CounselingGate area="host"><RoleGuard role={['counselor', 'org_admin']}><CounselingListPage role="host" /></RoleGuard></CounselingGate>} />
+        <Route path="/counseling/new" element={<CounselingGate area="host"><RoleGuard role={['counselor', 'org_admin']}><CreateWizardContainer /></RoleGuard></CounselingGate>} />
+        <Route path="/counseling/:relationshipId" element={<CounselingGate area="host"><RoleGuard role={['counselor', 'org_admin']}><CounselingDetailPage role="host" /></RoleGuard></CounselingGate>} />
+        <Route path="/counseling/:relationshipId/sessions/:id" element={<CounselingGate area="host"><RoleGuard role={['counselor', 'org_admin']}><SessionDetailPage /></RoleGuard></CounselingGate>} />
         {/* SDD-088: /live 는 하위 호환 리다이렉트, 실제 화면은 /player */}
         <Route path="/sessions/:id/live" element={<SessionLivePage />} />
         <Route path="/sessions/:id/player" element={<ClassPlayerPage />} />

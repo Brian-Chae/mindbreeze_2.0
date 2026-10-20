@@ -1,4 +1,6 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
+// SDD-219: 상담 공개(플래그 on) 기준의 기존 동작을 검증한다.
+vi.stubEnv('VITE_COUNSELING_ENABLED', 'true');
 import { dashboardSessionArea, dashboardSessionPath } from '../src/lib/class-structure/dashboard-navigation';
 it('실제 명상 부모를 가진 일정은 명상 칩과 부모 회차 경로를 사용한다', () => {
   const row = { id: 's1', class_id: 'c1', counseling_relationship_id: null, area: 'meditation' };

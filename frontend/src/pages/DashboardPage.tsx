@@ -15,6 +15,7 @@ import type { SessionType } from '../lib/api/session';
 import { listChatRooms, type ChatRoom } from '../lib/api/chat';
 import { listNotifications, type NotificationDto } from '../lib/api/notifications';
 import { dashboardSessionArea, dashboardSessionPath } from '../lib/class-structure/dashboard-navigation';
+import { isCounselingEnabled } from '../lib/feature-flags';
 import { useAuthStore } from '../stores/authStore';
 
 const TYPE_LABELS: Record<SessionType, string> = {
@@ -180,9 +181,14 @@ export default function DashboardPage() {
   }, [fetchDashboard]);
 
   // ── 파생 데이터 ────────────────────────────────────────────────
-  const liveClasses = useMemo(
-    () => data?.classes.filter((c) => c.status === 'in_progress' || c.status === 'open') ?? [],
+  // SDD-219: 상담 비공개 시 상담 영역 행(area=counseling)은 목록·카드에서 제외한다.
+  const visibleClasses = useMemo(
+    () => (data?.classes ?? []).filter((c) => isCounselingEnabled() || dashboardSessionArea(c) !== '상담'),
     [data],
+  );
+  const liveClasses = useMemo(
+    () => visibleClasses.filter((c) => c.status === 'in_progress' || c.status === 'open') ?? [],
+    [visibleClasses],
   );
   // 검토 대기 = 승인 게이트(pending_review)에 있는 리포트 수 (백엔드 집계).
   // 클래스 완료 여부·기록 존재 여부와 무관하게 실제 검토중 리포트 수와 일치해야 한다.
@@ -192,7 +198,7 @@ export default function DashboardPage() {
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
     return (
-      data?.classes
+      visibleClasses
         .filter((c) => {
           if (!c.scheduled_at) return false;
           const d = new Date(c.scheduled_at);
@@ -200,21 +206,21 @@ export default function DashboardPage() {
         })
         .sort((a, b) => new Date(a.scheduled_at!).getTime() - new Date(b.scheduled_at!).getTime()) ?? []
     );
-  }, [data]);
+  }, [visibleClasses]);
 
   const upcomingSessions = useMemo(() => {
     const now = new Date();
     return (
-      data?.classes
+      visibleClasses
         .filter((c) => c.scheduled_at && new Date(c.scheduled_at) >= now && c.status !== 'cancelled')
         .sort((a, b) => new Date(a.scheduled_at!).getTime() - new Date(b.scheduled_at!).getTime())
         .slice(0, 5) ?? []
     );
-  }, [data]);
+  }, [visibleClasses]);
 
   const scheduledClasses = useMemo(
-    () => data?.classes.filter((c) => c.status === 'scheduled' || c.status === 'ready') ?? [],
-    [data],
+    () => visibleClasses.filter((c) => c.status === 'scheduled' || c.status === 'ready') ?? [],
+    [visibleClasses],
   );
 
   // ── 다음 세션 (포인트 카드) ────────────────────────────────────
@@ -222,14 +228,14 @@ export default function DashboardPage() {
   const nextSession = useMemo<ClassSummary | null>(() => {
     if (!data) return null;
     if (liveClasses.length > 0) return liveClasses[0];
-    const upcoming = data.classes
+    const upcoming = visibleClasses
       .filter((c) => c.scheduled_at && new Date(c.scheduled_at) >= new Date() && c.status !== 'cancelled')
       .sort((a, b) => new Date(a.scheduled_at!).getTime() - new Date(b.scheduled_at!).getTime());
     return upcoming[0] ?? null;
-  }, [data, liveClasses]);
+  }, [data, visibleClasses, liveClasses]);
   const pastClasses = useMemo(
-    () => data?.classes.filter((c) => c.status === 'completed' || c.status === 'cancelled') ?? [],
-    [data],
+    () => visibleClasses.filter((c) => c.status === 'completed' || c.status === 'cancelled') ?? [],
+    [visibleClasses],
   );
 
   const recentChats = useMemo(() => {
@@ -496,7 +502,7 @@ export default function DashboardPage() {
                   전체 보기
                 </Link>
               </div>
-              {data.classes.length === 0 ? (
+              {visibleClasses.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-[#E8E3EC] p-12 text-center">
                   <p className="text-[#6F6F6F] text-sm mb-4">아직 진행한 클래스가 없습니다.</p>
                   <Link

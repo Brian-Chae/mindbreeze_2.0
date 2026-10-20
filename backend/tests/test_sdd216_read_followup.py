@@ -404,7 +404,7 @@ def test_회차_리포트_목록은_기존_팀열람과_관리자_권한을_따�
         )
         db.add(report)
         db.flush()
-        expected = {"id": str(report.id), "type": "counselor", "status": "completed"}
+        expected = {"id": str(report.id), "type": "counselor", "status": "completed", "participant_name": None}
         pid, rid = participant.id, report.id
         db.commit()
     path = f'/api/v1/classes/{ids["cls"]}/sessions/{ids["session"]}/reports'
@@ -412,7 +412,7 @@ def test_회차_리포트_목록은_기존_팀열람과_관리자_권한을_따�
         login(name)
         response = client.get(path)
         assert response.status_code == 200, response.text
-        assert response.json() == {"reports": [expected]}
+        assert response.json() == {"reports": [expected], "attendance": {"attended": 0, "absent": 0}}
     for name, status in (("member", 403), ("outsider", 404), ("guest", 403)):
         login(name)
         assert client.get(path).status_code == status

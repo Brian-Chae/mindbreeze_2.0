@@ -1,13 +1,15 @@
+import { isCounselingEnabled } from '../feature-flags';
 import type { ClassId, RelationshipId, SessionId, StructureRole } from './read-model';
 
 const validId = (value: string | null | undefined): value is string => typeof value === 'string' && value.trim().length > 0;
 export const classListPath = (role: StructureRole): string => role === 'member' ? '/app/classes' : '/classes';
-export const counselingListPath = (role: StructureRole): string => role === 'member' ? '/app/counseling' : '/counseling';
+// SDD-219: 상담 비공개 시 상담 경로는 클래스 홈으로 대체한다.
+export const counselingListPath = (role: StructureRole): string => !isCounselingEnabled() ? classListPath(role) : role === 'member' ? '/app/counseling' : '/counseling';
 export function classPath(role: StructureRole, id: ClassId | null | undefined): string {
   return validId(id) ? `${classListPath(role)}/${encodeURIComponent(id)}` : classListPath(role);
 }
 export function counselingPath(role: StructureRole, id: RelationshipId | null | undefined): string {
-  return validId(id) ? `${counselingListPath(role)}/${encodeURIComponent(id)}` : counselingListPath(role);
+  return validId(id) && isCounselingEnabled() ? `${counselingListPath(role)}/${encodeURIComponent(id)}` : counselingListPath(role);
 }
 export function classSessionPath(role: StructureRole, parent: ClassId | null | undefined, id: SessionId | null | undefined): string {
   if (!validId(parent) || !validId(id)) return classListPath(role);
@@ -15,7 +17,7 @@ export function classSessionPath(role: StructureRole, parent: ClassId | null | u
     : `${classPath(role, parent)}/sessions/${encodeURIComponent(id)}`;
 }
 export function counselingSessionPath(role: StructureRole, parent: RelationshipId | null | undefined, id: SessionId | null | undefined): string {
-  if (!validId(parent) || !validId(id)) return counselingListPath(role);
+  if (!isCounselingEnabled() || !validId(parent) || !validId(id)) return counselingListPath(role);
   return role === 'member' ? `${counselingPath(role, parent)}?sessionId=${encodeURIComponent(id)}`
     : `${counselingPath(role, parent)}/sessions/${encodeURIComponent(id)}`;
 }
