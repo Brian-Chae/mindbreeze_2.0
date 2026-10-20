@@ -160,7 +160,7 @@
 .cs-wizard .w-count span { font-size: var(--fs-13); color: var(--tx-mid); }
 .cs-wizard .w-count b { color: var(--tx-hi); font-size: var(--fs-15); }
 .cs-wizard .w-count .fl-btn { min-height: 44px; padding: 0 16px; font-size: var(--fs-13); }
-.cs-wizard .w-plist { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.cs-wizard .w-plist { flex: 1; min-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
 .cs-wizard .w-prow { display: grid; grid-template-columns: 40px minmax(0, 1fr) 32px; gap: 16px; align-items: center; min-height: 64px; padding: 8px 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); width: 100%; text-align: left; flex: none; }
 .cs-wizard .w-prow[disabled] { opacity: 0.4; }
 .cs-wizard .w-prow .av { width: 40px; height: 40px; border-radius: var(--r-pill); background: rgba(255,255,255,0.14); font-weight: 700; display: grid; place-items: center; }
@@ -309,7 +309,7 @@
 .cs-wizard .fl-banner span{flex:1}.cs-wizard .fl-banner>button{display:grid;place-items:center;min-width:44px;min-height:44px}
 .cs-wizard .cw-member-picker{display:flex;flex-direction:column;gap:16px;flex:1;min-height:0;color:var(--tx-hi)}
 .cs-wizard .class-member-picker__search{min-height:52px;border-radius:16px;background:rgba(255,255,255,.1);border:1px solid var(--sheet-border);color:var(--tx-hi);padding:0 16px;font-size:15px;width:100%}
-.cs-wizard .class-member-picker__list{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:8px}
+.cs-wizard .class-member-picker__list{flex:1;min-height:320px;overflow:auto;display:flex;flex-direction:column;gap:8px}
 .cs-wizard .class-member-picker__row{min-height:64px;padding:8px 16px;border-radius:16px;background:rgba(255,255,255,.08);border:1px solid var(--sheet-border);display:flex;gap:16px;align-items:center;text-align:left;width:100%;flex:none}
 .cs-wizard .class-member-picker__row[aria-pressed=true]{border-color:var(--mb-lavender)}
 .cs-wizard .class-member-picker__avatar{width:40px;height:40px;display:grid;place-items:center;border-radius:9999px;background:rgba(255,255,255,.14);font-weight:700;flex:none}
@@ -317,7 +317,7 @@
 .cs-wizard .w-inwrap>.ic{width:20px;height:20px}
 @media (min-width:1194px) and (orientation:landscape){.cs-wizard .w-scrim{align-items:stretch;justify-content:flex-end}.cs-wizard .w-sheet{width:480px;max-height:100dvh;border-radius:24px 0 0 24px}.cs-wizard .w-sbody.sc{flex:1}.cs-wizard .w-sfoot{flex:none}}
 /* 작은 높이에서도 입력과 하단 이동을 유지한다. 정상 높이에서는 목록만 스크롤한다. */
-@media (max-height:640px){.cs-wizard .fl-body{justify-content:flex-start;overflow:auto}.cs-wizard .fl-body>.fl-col{flex:none;min-height:min-content}.cs-wizard .w-wlist,.cs-wizard .w-plist,.cs-wizard .class-member-picker__list{max-height:220px;flex:none}.cs-wizard .fl-foot{padding-top:8px}.cs-wizard .w-card{padding:16px}}
+@media (max-height:640px){.cs-wizard .fl-body{justify-content:flex-start;overflow:auto}.cs-wizard .fl-body>.fl-col{flex:none;min-height:min-content}.cs-wizard .w-wlist{max-height:220px;flex:none}.cs-wizard.w-wiz .fl-body.w-fill .fl-col{flex:none;min-height:min-content;max-height:none}.cs-wizard.w-wiz .w-plist,.cs-wizard.w-wiz .class-member-picker__list{flex:1 0 320px;max-height:320px}.cs-wizard .fl-foot{padding-top:8px}.cs-wizard .w-card{padding:16px}}
 @media (max-width:599px){.cs-wizard .w-codebig{font-size:32px;letter-spacing:4px}.cs-wizard .w-coderow{gap:8px}.cs-wizard .w-stepper{gap:0;padding:0}.cs-wizard .w-sched{gap:12px}.cs-wizard .w-days button span{width:36px;height:36px}.cs-wizard .w-wrow{gap:8px}.cs-wizard .w-2col{gap:16px}}
 .cs-wizard .cw-member-picker.space-y-3>*+*{margin-top:0}
 .cs-wizard .cw-member-picker>label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}

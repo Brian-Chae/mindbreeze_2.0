@@ -108,8 +108,9 @@ export function resolveMicUi(input: { micOn: boolean; failure: MediaFailureReaso
   return input.micOn ? 'on' : 'off';
 }
 
-export function resolveCamUi(input: { camOn: boolean; failure: MediaFailureReason | null; videoState: VideoRecorderState }): CamUi {
+/** LiveKit 로컬 트랙이 있으면 별도 녹화기 오류로 셀프뷰를 숨기지 않는다. */
+export function resolveCamUi(input: { camOn: boolean; failure: MediaFailureReason | null; videoState: VideoRecorderState; hasLocalTrack?: boolean }): CamUi {
   if (input.failure === 'notfound') return 'nodevice';
-  if (input.failure === 'denied' || input.videoState === 'error') return 'denied';
+  if (input.failure === 'denied' || (input.videoState === 'error' && !input.hasLocalTrack)) return 'denied';
   return input.camOn ? 'on' : 'off';
 }

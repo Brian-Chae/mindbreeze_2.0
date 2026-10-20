@@ -87,6 +87,16 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 describe('SDD-217 셀프뷰 원본 교체', () => {
+  it('SDD-224: 같은 SDK 트랙에서 폴백 스트림만 바뀌면 재attach하지 않는다', async () => {
+    const attach = vi.spyOn(sdkTrack, 'attach');
+    const view = (stream: MediaStream) => <HostSelfView cam="on" mic="on" big={false} stream={stream} track={sdkTrack} netBad={false} onPress={() => undefined} />;
+    await act(async () => root.render(view(new CameraStream() as unknown as MediaStream)));
+    const element = video();
+    await act(async () => root.render(view(new CameraStream() as unknown as MediaStream)));
+    expect(video()).toBe(element);
+    expect(attach).toHaveBeenCalledTimes(1);
+    expect(detachEvents).toBe(0);
+  });
   it('NV-01: 같은 SDK 트랙의 restartTrack 뒤 새 카메라 원본을 표시한다', async () => {
     await render();
     expect(displayedTracks()[0].id).toBe('first');
