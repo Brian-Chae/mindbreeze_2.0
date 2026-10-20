@@ -64,7 +64,7 @@ describe('MC01 회원 홈', () => {
     expect(view.querySelectorAll('[role="alert"]')).toHaveLength(1);
     expect(view.textContent).toContain('확인된 다음 일정');
     expect(view.textContent).toContain(failed === 'classes' ? '이상담' : '호흡 명상 · 3회차');
-    flushSync(() => view.querySelector('button')?.click());
+    flushSync(() => view.querySelector<HTMLButtonElement>('[role="alert"] button')?.click());
     expect(hooks.retry).toHaveBeenCalledTimes(1);
   });
   it.each(['classes', 'counseling', 'both'] as const)('%s 빈 목록도 두 영역 링크를 유지한다', (empty) => {

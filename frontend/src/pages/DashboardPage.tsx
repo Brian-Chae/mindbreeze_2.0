@@ -18,6 +18,17 @@ import { dashboardSessionArea, dashboardSessionPath } from '../lib/class-structu
 import { isCounselingEnabled } from '../lib/feature-flags';
 import { useAuthStore } from '../stores/authStore';
 import { AiOnly } from '../components/routing/ai-gate';
+import { ClickableCard, CardAction } from '../components/dashboard/clickable-card';
+import { NotificationRow } from '../components/dashboard/notification-row';
+import { StatTile } from '../components/dashboard/stat-tile';
+import {
+  PARTICIPANTS_TILE_TARGET,
+  REVIEW_TILE_TARGET,
+  TODAY_TILE_TARGET,
+  liveTileHint,
+  liveTileTarget,
+} from '../lib/dashboard/home-links';
+import { liveClasses as pickLiveClasses, pendingReviewTotal, todayRemaining } from '../lib/dashboard/home-stats';
 
 const TYPE_LABELS: Record<SessionType, string> = {
   clinical: '임상심리상담',
@@ -108,11 +119,15 @@ function ClassCard({ cls, onEnter }: { cls: ClassSummary; onEnter?: (id: string)
   const isLive = cls.status === 'in_progress' || cls.status === 'open';
   const showRecordLink = cls.has_record || cls.has_summary;
   return (
-    <div className="relative bg-white border border-[#E8E3EC] rounded-2xl p-4 space-y-3 hover:border-[#D2AEFC] hover:shadow-sm hover:-translate-y-0.5 transition">
+    <ClickableCard
+      to={dashboardSessionPath(cls)}
+      label={cls.title || '제목 없음'}
+      className="bg-white border border-[#E8E3EC] rounded-2xl p-4 space-y-3 hover:border-[#C9B0E8] transition-colors"
+    >
       <div className="flex items-start justify-between gap-3">
-        <Link to={dashboardSessionPath(cls)} aria-label={`${cls.title || '제목 없음'} 상세 보기`} className="font-bold text-[15px] text-[#1F1F1F] hover:text-[#5F0080] truncate after:absolute after:inset-0 after:rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080]">
+        <span className="font-bold text-[15px] text-[#1F1F1F] group-hover:text-[#5F0080] truncate">
           {cls.title || '제목 없음'}
-        </Link>
+        </span>
         <StatusBadge status={cls.status} />
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -123,7 +138,7 @@ function ClassCard({ cls, onEnter }: { cls: ClassSummary; onEnter?: (id: string)
         </span>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {cls.access_code && <AccessCodeCell code={cls.access_code} />}
+        {cls.access_code && <CardAction><AccessCodeCell code={cls.access_code} /></CardAction>}
         {isLive && onEnter && (
           <button
             type="button"
@@ -142,7 +157,7 @@ function ClassCard({ cls, onEnter }: { cls: ClassSummary; onEnter?: (id: string)
           기록 보기 →
         </Link>
       )}
-    </div>
+    </ClickableCard>
   );
 }
 
@@ -187,27 +202,12 @@ export default function DashboardPage() {
     () => (data?.classes ?? []).filter((c) => isCounselingEnabled() || dashboardSessionArea(c) !== '상담'),
     [data],
   );
-  const liveClasses = useMemo(
-    () => visibleClasses.filter((c) => c.status === 'in_progress' || c.status === 'open') ?? [],
-    [visibleClasses],
-  );
+  const liveClasses = useMemo(() => pickLiveClasses(visibleClasses), [visibleClasses]);
   // 검토 대기 = 승인 게이트(pending_review)에 있는 리포트 수 (백엔드 집계).
   // 클래스 완료 여부·기록 존재 여부와 무관하게 실제 검토중 리포트 수와 일치해야 한다.
-  const pendingReviewCount = data?.pending_review_count ?? 0;
-  const todaySessions = useMemo(() => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
-    return (
-      visibleClasses
-        .filter((c) => {
-          if (!c.scheduled_at) return false;
-          const d = new Date(c.scheduled_at);
-          return d >= today && d < tomorrow && c.status !== 'cancelled';
-        })
-        .sort((a, b) => new Date(a.scheduled_at!).getTime() - new Date(b.scheduled_at!).getTime()) ?? []
-    );
-  }, [visibleClasses]);
+  // SDD-221: 화면에 보이는(상담 제외) 행 기준으로 합산해 목록과 일치시킨다.
+  const pendingReviewCount = useMemo(() => pendingReviewTotal(visibleClasses), [visibleClasses]);
+  const todaySessions = useMemo(() => todayRemaining(visibleClasses, new Date()), [visibleClasses]);
 
   const upcomingSessions = useMemo(() => {
     const now = new Date();
@@ -277,6 +277,10 @@ export default function DashboardPage() {
       /* 클립보드 실패 시 무시 */
     }
   };
+
+  const handleNotificationRead = useCallback((id: string) => {
+    setNotifications((prev) => prev.map((x) => (x.id === id ? { ...x, is_read: true } : x)));
+  }, []);
 
   const handleEnterLive = useCallback(
     (id: string) => navigate(`/sessions/${id}/player`),
@@ -462,10 +466,11 @@ export default function DashboardPage() {
                       ? new Date(cls.scheduled_at).toDateString() === new Date().toDateString()
                       : false;
                     return (
-                      <Link
+                      <ClickableCard
                         key={cls.id}
                         to={dashboardSessionPath(cls)}
-                        className="flex items-center gap-3 border-b border-[#F0ECF2] py-4 last:border-0 hover:bg-[#FAF7FC] cursor-pointer transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080]"
+                        label={cls.title || '제목 없음'}
+                        className="flex items-center gap-3 border-b border-[#F0ECF2] py-4 last:border-0 hover:bg-[#FAF7FC]"
                       >
                         <div className="w-[76px] shrink-0">
                           <div className="text-[15px] font-extrabold text-[#1F1F1F]">
@@ -488,7 +493,7 @@ export default function DashboardPage() {
                           </div>
                         </div>
                         <StatusBadge status={cls.status} />
-                      </Link>
+                      </ClickableCard>
                     );
                   })}
                 </div>
@@ -554,34 +559,27 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-6 lg:gap-6 min-w-0">
             {/* 요약 타일 */}
             <div className="grid grid-cols-2 gap-3">
-              <Link to="/classes" className="rounded-2xl border border-[#E8E3EC] bg-white p-4 hover:border-[#D2AEFC] hover:shadow-sm hover:-translate-y-0.5 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080]">
-                <div className="text-[12px] font-semibold text-[#6F6F6F]">진행 중</div>
-                <div className="mt-2 text-[30px] font-extrabold tracking-tight text-[#1F8A5B]">
-                  {data.in_progress_classes}
-                </div>
-                <div className="mt-1 text-[12px] font-bold text-[#5F0080]">입장하기 →</div>
-              </Link>
-              <Link to="/reports" className="rounded-2xl border border-[#E8E3EC] bg-white p-4 hover:border-[#D2AEFC] hover:shadow-sm hover:-translate-y-0.5 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080]">
-                <div className="text-[12px] font-semibold text-[#6F6F6F]">검토 대기</div>
-                <div className="mt-2 text-[30px] font-extrabold tracking-tight text-[#5F0080]">
-                  {pendingReviewCount}
-                </div>
-                <div className="mt-1 text-[12px] font-bold text-[#5F0080]">리포트 검토 →</div>
-              </Link>
-              <Link to="/classes" className="rounded-2xl border border-[#E8E3EC] bg-white p-4 hover:border-[#D2AEFC] hover:shadow-sm hover:-translate-y-0.5 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080]">
-                <div className="text-[12px] font-semibold text-[#6F6F6F]">오늘 예정</div>
-                <div className="mt-2 text-[30px] font-extrabold tracking-tight text-[#1F1F1F]">
-                  {todaySessions.length}
-                </div>
-                <div className="mt-1 text-[12px] font-bold text-[#5F0080]">일정 보기 →</div>
-              </Link>
-              <Link to="/clients" className="rounded-2xl border border-[#E8E3EC] bg-white p-4 hover:border-[#D2AEFC] hover:shadow-sm hover:-translate-y-0.5 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080]">
-                <div className="text-[12px] font-semibold text-[#6F6F6F]">총 참여자</div>
-                <div className="mt-2 text-[30px] font-extrabold tracking-tight text-[#1F1F1F]">
-                  {data.total_participants.toLocaleString('ko-KR')}
-                </div>
-                <div className="mt-1 text-[12px] font-bold text-[#5F0080]">회원 관리 →</div>
-              </Link>
+              <StatTile
+                label="진행 중"
+                value={liveClasses.length}
+                to={liveTileTarget(liveClasses)}
+                hint={liveTileHint(liveClasses.length)}
+                valueClassName="text-[#1F8A5B]"
+              />
+              <StatTile
+                label="검토 대기"
+                value={pendingReviewCount}
+                to={REVIEW_TILE_TARGET}
+                hint="리포트 검토 →"
+                valueClassName="text-[#5F0080]"
+              />
+              <StatTile label="오늘 예정" value={todaySessions.length} to={TODAY_TILE_TARGET} hint="일정 보기 →" />
+              <StatTile
+                label="총 참여자"
+                value={data.total_participants.toLocaleString('ko-KR')}
+                to={PARTICIPANTS_TILE_TARGET}
+                hint="내담자 관리 →"
+              />
             </div>
 
             {/* 최근 대화 */}
@@ -642,14 +640,13 @@ export default function DashboardPage() {
               {recentNotifications.length > 0 ? (
                 <div className="rounded-2xl border border-[#E8E3EC] bg-white px-5">
                   {recentNotifications.map((n) => (
-                    <Link key={n.id} to="/notifications" className="flex items-start gap-3 border-b border-[#F0ECF2] py-3.5 last:border-0 hover:bg-[#FAF7FC] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080]">
-                      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#5F0080]" />
-                      <div className="min-w-0 flex-1">
-                        <div className="text-[13px] text-[#1F1F1F]">{n.title}</div>
-                        {n.body && <div className="truncate text-[12px] text-[#6F6F6F]">{n.body}</div>}
-                        <div className="text-[12px] text-[#767676]">{relativeTime(n.created_at)}</div>
-                      </div>
-                    </Link>
+                    <NotificationRow
+                      key={n.id}
+                      notification={n}
+                      role={user?.role}
+                      timeLabel={relativeTime(n.created_at)}
+                      onRead={handleNotificationRead}
+                    />
                   ))}
                 </div>
               ) : (

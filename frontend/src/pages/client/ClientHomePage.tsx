@@ -94,7 +94,7 @@ function SummaryTiles({
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="mh-summary grid grid-cols-2 gap-3">
       {tiles.map((t) => (
         <button
           key={t.label}
@@ -323,12 +323,12 @@ export default function ClientHomePage({ hideHero = false }: { hideHero?: boolea
   // ── 렌더 ────────────────────────────────────────────────────────
 
   if (loading) {
-    return <div className="py-12 text-center text-[#6F6F6F] text-sm">불러오는 중...</div>;
+    return <div className="mh-legacy-state py-12 text-center text-[#6F6F6F] text-sm">불러오는 중...</div>;
   }
 
   if (error) {
     return (
-      <section className="bg-white border border-[#E8E3EC] rounded-2xl p-6 text-center" role="alert">
+      <section className="mh-legacy-state bg-white border border-[#E8E3EC] rounded-2xl p-6 text-center" role="alert">
         <p className="text-sm text-red-600 mb-4">{error}</p>
         <button
           type="button"
@@ -341,10 +341,22 @@ export default function ClientHomePage({ hideHero = false }: { hideHero?: boolea
     );
   }
 
+  const summaryTiles = (
+    <SummaryTiles
+      dDay={dDay}
+      newReportCount={newReportCount}
+      weekClassCount={weekClassCount}
+      completedCount={completedCount}
+      onOpenNext={openHeroDetail}
+      onOpenReports={() => navigate('/app/reports')}
+      onOpenClasses={() => navigate('/app/classes')}
+    />
+  );
+
   return (
-    <div className="sh-scope mx-auto grid w-full max-w-[1200px] grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+    <div className={`${hideHero ? 'mh-legacy' : ''} sh-scope mx-auto grid w-full max-w-[1200px] grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]`}>
       {/* ── 좌측 컬럼 ── */}
-      <div className="flex min-w-0 flex-col gap-6">
+      <div className="mh-main flex min-w-0 flex-col gap-6">
         {/* 다음 클래스 히어로 (항상 표시) — 참여코드 값·복사 UI 는 두지 않는다 */}
         {hideHero ? null : heroData ? (
           <ClassHero data={heroData} action={heroAction} onAction={openHeroClass} busy={enteringId !== null} />
@@ -463,18 +475,12 @@ export default function ClientHomePage({ hideHero = false }: { hideHero?: boolea
         </section>
       </div>
 
+      {hideHero && summaryTiles}
+
       {/* ── 우측 레일 ── */}
-      <div className="flex min-w-0 flex-col gap-6 lg:gap-5">
+      <div className="mh-rail flex min-w-0 flex-col gap-6 lg:gap-5">
         {/* 요약 타일 */}
-        <SummaryTiles
-          dDay={dDay}
-          newReportCount={newReportCount}
-          weekClassCount={weekClassCount}
-          completedCount={completedCount}
-          onOpenNext={openHeroDetail}
-          onOpenReports={() => navigate('/app/reports')}
-          onOpenClasses={() => navigate('/app/classes')}
-        />
+        {!hideHero && summaryTiles}
 
         {/* 담당 상담사 */}
         {primaryCounselor && (

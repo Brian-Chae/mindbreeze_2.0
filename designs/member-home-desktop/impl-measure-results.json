@@ -1,0 +1,924 @@
+{
+  "rows": [
+    {
+      "width": 1280,
+      "mode": "1",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1060,
+      "heroWidth": 980,
+      "widths": [
+        280
+      ],
+      "heights": [
+        304
+      ],
+      "tiles": [
+        152
+      ],
+      "snap": "x mandatory",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "mode": "2",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1060,
+      "heroWidth": 980,
+      "widths": [
+        280
+      ],
+      "heights": [
+        304
+      ],
+      "tiles": [
+        152
+      ],
+      "snap": "x mandatory",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "mode": "3",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1060,
+      "heroWidth": 980,
+      "widths": [
+        280
+      ],
+      "heights": [
+        304
+      ],
+      "tiles": [
+        152
+      ],
+      "snap": "x mandatory",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "mode": "7",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1060,
+      "heroWidth": 980,
+      "widths": [
+        280
+      ],
+      "heights": [
+        304
+      ],
+      "tiles": [
+        152
+      ],
+      "snap": "x mandatory",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "mode": "empty",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1060,
+      "heroWidth": 980,
+      "widths": [],
+      "heights": [],
+      "tiles": [
+        152
+      ],
+      "snap": null,
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "mode": "error",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1060,
+      "heroWidth": 980,
+      "widths": [],
+      "heights": [],
+      "tiles": [
+        152
+      ],
+      "snap": null,
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "mode": "loading",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1060,
+      "heroWidth": 980,
+      "widths": [],
+      "heights": [],
+      "tiles": [
+        152
+      ],
+      "snap": null,
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "mode": "legacy-error",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1060,
+      "heroWidth": 980,
+      "widths": [
+        280
+      ],
+      "heights": [
+        304
+      ],
+      "tiles": [],
+      "snap": "x mandatory",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "mode": "legacy-loading",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1060,
+      "heroWidth": 980,
+      "widths": [
+        280
+      ],
+      "heights": [
+        304
+      ],
+      "tiles": [],
+      "snap": "x mandatory",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "mode": "1",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1220,
+      "heroWidth": 1140,
+      "widths": [
+        280
+      ],
+      "heights": [
+        304
+      ],
+      "tiles": [
+        152
+      ],
+      "snap": "x mandatory",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "mode": "2",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1220,
+      "heroWidth": 1140,
+      "widths": [
+        280
+      ],
+      "heights": [
+        304
+      ],
+      "tiles": [
+        152
+      ],
+      "snap": "x mandatory",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "mode": "3",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1220,
+      "heroWidth": 1140,
+      "widths": [
+        280
+      ],
+      "heights": [
+        304
+      ],
+      "tiles": [
+        152
+      ],
+      "snap": "x mandatory",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "mode": "7",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1220,
+      "heroWidth": 1140,
+      "widths": [
+        280
+      ],
+      "heights": [
+        304
+      ],
+      "tiles": [
+        152
+      ],
+      "snap": "x mandatory",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "mode": "empty",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1220,
+      "heroWidth": 1140,
+      "widths": [],
+      "heights": [],
+      "tiles": [
+        152
+      ],
+      "snap": null,
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "mode": "error",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1220,
+      "heroWidth": 1140,
+      "widths": [],
+      "heights": [],
+      "tiles": [
+        152
+      ],
+      "snap": null,
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "mode": "loading",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1220,
+      "heroWidth": 1140,
+      "widths": [],
+      "heights": [],
+      "tiles": [
+        152
+      ],
+      "snap": null,
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "mode": "legacy-error",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1220,
+      "heroWidth": 1140,
+      "widths": [
+        280
+      ],
+      "heights": [
+        304
+      ],
+      "tiles": [],
+      "snap": "x mandatory",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "mode": "legacy-loading",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1220,
+      "heroWidth": 1140,
+      "widths": [
+        280
+      ],
+      "heights": [
+        304
+      ],
+      "tiles": [],
+      "snap": "x mandatory",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1920,
+      "mode": "1",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1280,
+      "heroWidth": 1200,
+      "widths": [
+        280
+      ],
+      "heights": [
+        304
+      ],
+      "tiles": [
+        152
+      ],
+      "snap": "x mandatory",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1920,
+      "mode": "2",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1280,
+      "heroWidth": 1200,
+      "widths": [
+        280
+      ],
+      "heights": [
+        304
+      ],
+      "tiles": [
+        152
+      ],
+      "snap": "x mandatory",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1920,
+      "mode": "3",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1280,
+      "heroWidth": 1200,
+      "widths": [
+        280
+      ],
+      "heights": [
+        304
+      ],
+      "tiles": [
+        152
+      ],
+      "snap": "x mandatory",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1920,
+      "mode": "7",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1280,
+      "heroWidth": 1200,
+      "widths": [
+        280
+      ],
+      "heights": [
+        304
+      ],
+      "tiles": [
+        152
+      ],
+      "snap": "x mandatory",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1920,
+      "mode": "empty",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1280,
+      "heroWidth": 1200,
+      "widths": [],
+      "heights": [],
+      "tiles": [
+        152
+      ],
+      "snap": null,
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1920,
+      "mode": "error",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1280,
+      "heroWidth": 1200,
+      "widths": [],
+      "heights": [],
+      "tiles": [
+        152
+      ],
+      "snap": null,
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1920,
+      "mode": "loading",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1280,
+      "heroWidth": 1200,
+      "widths": [],
+      "heights": [],
+      "tiles": [
+        152
+      ],
+      "snap": null,
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1920,
+      "mode": "legacy-error",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1280,
+      "heroWidth": 1200,
+      "widths": [
+        280
+      ],
+      "heights": [
+        304
+      ],
+      "tiles": [],
+      "snap": "x mandatory",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 1920,
+      "mode": "legacy-loading",
+      "overflow": 0,
+      "align": 0,
+      "mainWidth": 1280,
+      "heroWidth": 1200,
+      "widths": [
+        280
+      ],
+      "heights": [
+        304
+      ],
+      "tiles": [],
+      "snap": "x mandatory",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 834,
+      "mode": "1",
+      "overflow": 0,
+      "align": null,
+      "mainWidth": 566,
+      "heroWidth": 566,
+      "widths": [
+        275
+      ],
+      "heights": [
+        247.1875
+      ],
+      "tiles": [
+        125
+      ],
+      "snap": "none",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 834,
+      "mode": "2",
+      "overflow": 0,
+      "align": null,
+      "mainWidth": 566,
+      "heroWidth": 566,
+      "widths": [
+        275
+      ],
+      "heights": [
+        275.1875
+      ],
+      "tiles": [
+        125
+      ],
+      "snap": "none",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 834,
+      "mode": "3",
+      "overflow": 0,
+      "align": null,
+      "mainWidth": 566,
+      "heroWidth": 566,
+      "widths": [
+        275
+      ],
+      "heights": [
+        275.1875,
+        247.1875
+      ],
+      "tiles": [
+        125
+      ],
+      "snap": "none",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 834,
+      "mode": "7",
+      "overflow": 0,
+      "align": null,
+      "mainWidth": 566,
+      "heroWidth": 566,
+      "widths": [
+        275
+      ],
+      "heights": [
+        275.1875,
+        247.1875
+      ],
+      "tiles": [
+        125
+      ],
+      "snap": "none",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 834,
+      "mode": "empty",
+      "overflow": 0,
+      "align": null,
+      "mainWidth": 566,
+      "heroWidth": 566,
+      "widths": [],
+      "heights": [],
+      "tiles": [
+        125
+      ],
+      "snap": null,
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 834,
+      "mode": "error",
+      "overflow": 0,
+      "align": null,
+      "mainWidth": 566,
+      "heroWidth": 566,
+      "widths": [],
+      "heights": [],
+      "tiles": [
+        125
+      ],
+      "snap": null,
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 834,
+      "mode": "loading",
+      "overflow": 0,
+      "align": null,
+      "mainWidth": 566,
+      "heroWidth": 566,
+      "widths": [],
+      "heights": [],
+      "tiles": [
+        125
+      ],
+      "snap": null,
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 834,
+      "mode": "legacy-error",
+      "overflow": 0,
+      "align": null,
+      "mainWidth": 566,
+      "heroWidth": 566,
+      "widths": [
+        275
+      ],
+      "heights": [
+        275.1875,
+        247.1875
+      ],
+      "tiles": [],
+      "snap": "none",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 834,
+      "mode": "legacy-loading",
+      "overflow": 0,
+      "align": null,
+      "mainWidth": 566,
+      "heroWidth": 566,
+      "widths": [
+        275
+      ],
+      "heights": [
+        275.1875,
+        247.1875
+      ],
+      "tiles": [],
+      "snap": "none",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 390,
+      "mode": "1",
+      "overflow": 0,
+      "align": null,
+      "mainWidth": 358,
+      "heroWidth": 358,
+      "widths": [
+        358
+      ],
+      "heights": [
+        239.1875
+      ],
+      "tiles": [
+        125
+      ],
+      "snap": "none",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 390,
+      "mode": "2",
+      "overflow": 0,
+      "align": null,
+      "mainWidth": 358,
+      "heroWidth": 358,
+      "widths": [
+        358
+      ],
+      "heights": [
+        239.1875,
+        267.1875
+      ],
+      "tiles": [
+        125
+      ],
+      "snap": "none",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 390,
+      "mode": "3",
+      "overflow": 0,
+      "align": null,
+      "mainWidth": 358,
+      "heroWidth": 358,
+      "widths": [
+        358
+      ],
+      "heights": [
+        239.1875,
+        267.1875
+      ],
+      "tiles": [
+        125
+      ],
+      "snap": "none",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 390,
+      "mode": "7",
+      "overflow": 0,
+      "align": null,
+      "mainWidth": 358,
+      "heroWidth": 358,
+      "widths": [
+        358
+      ],
+      "heights": [
+        239.1875,
+        267.1875
+      ],
+      "tiles": [
+        125
+      ],
+      "snap": "none",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 390,
+      "mode": "empty",
+      "overflow": 0,
+      "align": null,
+      "mainWidth": 358,
+      "heroWidth": 358,
+      "widths": [],
+      "heights": [],
+      "tiles": [
+        125
+      ],
+      "snap": null,
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 390,
+      "mode": "error",
+      "overflow": 0,
+      "align": null,
+      "mainWidth": 358,
+      "heroWidth": 358,
+      "widths": [],
+      "heights": [],
+      "tiles": [
+        125
+      ],
+      "snap": null,
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 390,
+      "mode": "loading",
+      "overflow": 0,
+      "align": null,
+      "mainWidth": 358,
+      "heroWidth": 358,
+      "widths": [],
+      "heights": [],
+      "tiles": [
+        125
+      ],
+      "snap": null,
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 390,
+      "mode": "legacy-error",
+      "overflow": 0,
+      "align": null,
+      "mainWidth": 358,
+      "heroWidth": 358,
+      "widths": [
+        358
+      ],
+      "heights": [
+        239.1875,
+        267.1875
+      ],
+      "tiles": [],
+      "snap": "none",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    },
+    {
+      "width": 390,
+      "mode": "legacy-loading",
+      "overflow": 0,
+      "align": null,
+      "mainWidth": 358,
+      "heroWidth": 358,
+      "widths": [
+        358
+      ],
+      "heights": [
+        239.1875,
+        267.1875
+      ],
+      "tiles": [],
+      "snap": "none",
+      "counseling": false,
+      "keyboard": true,
+      "buttons": true,
+      "pass": true
+    }
+  ],
+  "errors": []
+}
