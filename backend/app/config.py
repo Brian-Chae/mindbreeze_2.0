@@ -35,6 +35,23 @@ class Settings(BaseSettings):
     class_rolling_enabled: bool = False
     class_team_read_enabled: bool = False
 
+    # SDD-220: AI 기능(루시·STT·요약·AI 초안) 서버 차단 스위치. 기본 비활성 — 꺼져 있으면 외부 LLM 호출 0건.
+    #   단일 판정 위치는 app/core/ai_features.py(호출 시점마다 이 값을 읽는다, import 시 캐싱 금지).
+    ai_features_enabled: bool = False
+
+    # SDD-220: Sign in with Apple. aud 허용 목록은 쉼표 구분(iOS 번들 ID + 웹 Services ID).
+    #   개인키(.p8)는 파일 경로 또는 PEM 문자열 — 값은 로그·응답에 싣지 않는다.
+    apple_client_ids: str = ""
+    apple_team_id: str = ""
+    apple_key_id: str = ""
+    apple_private_key: str = ""
+    # SDD-220: Apple revoke 용 refresh token 암호화 키(Fernet). 비어 있으면 토큰을 저장하지 않고 revoke 를 outbox 에 남긴다.
+    social_token_encryption_key: str = ""
+
+    # SDD-220: 회원 탈퇴 후 영구 삭제 스위프. 기본 비활성 — dry-run 검토·운영 승인 후 켠다.
+    account_deletion_sweep_enabled: bool = False
+    account_deletion_grace_days: int = 30
+
     # Database
     database_url: str = "postgresql://localhost:5432/mindbreeze_dev"
 

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, type ReactElement } from 'react';
 import { CounselingGate } from './components/routing/counseling-gate';
+import { isAiEnabled, isDesignRoutesEnabled } from './lib/feature-flags';
 import { useStatusBar } from './lib/native/use-status-bar';
 import { isNativeApp } from './lib/native/platform';
 import { initNativeKeyboard } from './lib/native/keyboard';
@@ -115,6 +116,8 @@ function RoleRouter() {
 /** 구 AI 대화 경로(/agent, 푸시 딥링크) → 채팅 목록의 루시(AI) 채널 */
 function LegacyAgentRedirect() {
   const location = useLocation();
+  // SDD-220: AI 비공개면 루시 채널 대신 채팅 목록으로 보낸다.
+  if (!isAiEnabled()) return <Navigate to="/chat" replace />;
   return <Navigate to={`/chat/lucy${location.search}`} replace />;
 }
 
@@ -229,14 +232,19 @@ const router = createBrowserRouter(
         <Route path="/sessions/:id/record" element={<SessionRecordPage />} />
         <Route path="/chat" element={<RoleGuard><ChatPage /></RoleGuard>} />
         <Route path="/chat/:roomId" element={<RoleGuard><ChatPage /></RoleGuard>} />
-        <Route path="/design" element={<DesignIndexPage />} />
-        <Route path="/design/homepage" element={<HomepagePage />} />
-        <Route path="/design/app" element={<OperatorAppPage />} />
-        <Route path="/design/user-app" element={<UserAppPage />} />
-        <Route path="/design/report" element={<ReportPage />} />
-        <Route path="/design/docs" element={<DocsPage />} />
-        <Route path="/design/class-player" element={<ClassPlayerCasesPage />} />
-        <Route path="/design/class-flow" element={<ClassFlowCasesPage />} />
+        {/* SDD-220: 디자인 시안 경로는 운영 빌드에서 등록하지 않는다(심사 노출 방지). */}
+        {isDesignRoutesEnabled() && (
+          <>
+            <Route path="/design" element={<DesignIndexPage />} />
+            <Route path="/design/homepage" element={<HomepagePage />} />
+            <Route path="/design/app" element={<OperatorAppPage />} />
+            <Route path="/design/user-app" element={<UserAppPage />} />
+            <Route path="/design/report" element={<ReportPage />} />
+            <Route path="/design/docs" element={<DocsPage />} />
+            <Route path="/design/class-player" element={<ClassPlayerCasesPage />} />
+            <Route path="/design/class-flow" element={<ClassFlowCasesPage />} />
+          </>
+        )}
         <Route path="/admin" element={<PlatformAdminRoute><Navigate to="/admin/orgs" replace /></PlatformAdminRoute>} />
         <Route path="/reports" element={<RoleGuard role={['counselor', 'org_admin']}><ReportListPage /></RoleGuard>} />
         <Route path="/reports/sample" element={<ReportSamplePage />} />

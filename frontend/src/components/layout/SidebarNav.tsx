@@ -8,7 +8,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { useReportStore } from '../../stores/reportStore';
 import { term, type TermKey } from '../../lib/terms';
-import { isCounselingEnabled } from '../../lib/feature-flags';
+import { isAiEnabled, isCounselingEnabled } from '../../lib/feature-flags';
 
 interface NavItem {
   to: string;
@@ -162,6 +162,8 @@ export default function SidebarNav({
   const counselorUnread = useCounselorAgentStore((state) => state.unread);
   useEffect(() => {
     if (user?.role !== 'counselor' || role === 'client') return;
+    // SDD-220: AI 비공개면 루시 미읽음·체크인 위험 조회를 하지 않는다.
+    if (!isAiEnabled()) return;
     let active = true;
     let fetching = false;
     useCounselorAgentStore.getState().setUnread(0);
@@ -224,7 +226,7 @@ export default function SidebarNav({
     let count: number;
     switch (key) {
       case 'chat':
-        count = (chatBadge ?? 0) + (user?.role === 'counselor' && role !== 'client' ? counselorUnread + openRisk : agentBadge ?? 0);
+        count = (chatBadge ?? 0) + (!isAiEnabled() ? 0 : user?.role === 'counselor' && role !== 'client' ? counselorUnread + openRisk : agentBadge ?? 0);
         break;
       case 'notification':
         count = Math.max(notificationBadge ?? 0, sessionBadge ?? 0);
