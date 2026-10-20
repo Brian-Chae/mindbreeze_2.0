@@ -115,6 +115,8 @@ function toScoredIndices(raw: BandRawIndices): BandRawIndices {
 }
 
 const FEATURE_FLUSH_MS = 5000;
+/** SDD-222 G6: BLE 콜백 경로 raw flush 최소 간격 */
+const CALLBACK_FLUSH_MIN_INTERVAL_MS = 5000;
 /** SDD-112: REST 폴백 재전송 배치 상한(1분치) — 거대 큐를 5초 주기로 나눠 drain */
 const RETRANSMIT_BATCH_MAX = 60;
 /** SDD-113: 세션 경과시간 기반 window_index 영속 base 키 */
@@ -435,6 +437,10 @@ export function useBand({
   rawEnqueueRef.current = rawUpload.enqueueChunk;
   const rawDrainRef = useRef(rawUpload.drain);
   rawDrainRef.current = rawUpload.drain;
+  const rawFlushRef = useRef(rawUpload.flush);
+  rawFlushRef.current = rawUpload.flush;
+  /** SDD-222 G6: BLE 콜백 경로 flush 의 마지막 시각(throttle 기준) */
+  const lastCallbackFlushAtRef = useRef(0);
 
   const rawSamplesRef = useRef<RawEegSample[]>([]);
   const rawChunkIndexRef = useRef(0);
@@ -469,6 +475,14 @@ export function useBand({
       }
       if (rawSamplesRef.current.length >= RAW_SAMPLES_PER_CHUNK) {
         flushRawChunk();
+      }
+      // SDD-222 G6: 백그라운드에서 setInterval flush 가 멈춰도 BLE 수신이 살아 있는 동안은
+      // 업로드가 진행되도록 콜백 경로에서도 최소 5초 간격으로 flush 한다.
+      // 중복 전송은 useEegRawUpload 의 flushingRef 가드가 막는다.
+      const now = Date.now();
+      if (now - lastCallbackFlushAtRef.current >= CALLBACK_FLUSH_MIN_INTERVAL_MS) {
+        lastCallbackFlushAtRef.current = now;
+        void rawFlushRef.current().catch((err) => logger.warn('콜백 경로 raw flush 실패', err));
       }
     },
     [flushRawChunk],

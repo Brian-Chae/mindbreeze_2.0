@@ -11,6 +11,10 @@ const ble = vi.hoisted(() => ({
   cached: null as string | null,
   disconnectSvc: vi.fn(async () => undefined),
 }));
+const stream = vi.hoisted(() => ({
+  onEEGData: null as null | ((d: { fp1: number; fp2: number }[]) => void),
+  flush: vi.fn(async () => undefined),
+}));
 const gap = vi.hoisted(() => ({
   open: vi.fn(), recordAttempt: vi.fn(), close: vi.fn(() => null), getOpenGap: vi.fn(() => null), getClosedGaps: vi.fn(() => []),
 }));
@@ -57,7 +61,9 @@ vi.mock('../src/lib/eeg/bluetoothService', () => ({
 vi.mock('../src/lib/eeg/StreamProcessor', () => ({
   StreamProcessor: class {
     setBluetoothService() {}
-    setCallbacks() {}
+    setCallbacks(cb: { onEEGData?: (d: { fp1: number; fp2: number }[]) => void }) {
+      stream.onEEGData = cb.onEEGData ?? null;
+    }
     setStoreCallbacks() {}
     async start() {}
     cleanup() {}
@@ -74,7 +80,7 @@ vi.mock('../src/lib/socket', async (original) => ({
   subscribeSessionLiveEegFeature: () => () => undefined,
 }));
 vi.mock('../src/hooks/useEegRawUpload', () => ({
-  useEegRawUpload: () => ({ enqueueChunk: vi.fn(), drain: vi.fn(), flush: vi.fn() }),
+  useEegRawUpload: () => ({ enqueueChunk: vi.fn(async () => undefined), drain: vi.fn(), flush: stream.flush }),
 }));
 vi.mock('../src/lib/session-live/feature-queue', () => ({
   enqueueFeature: vi.fn(), listPendingFeatures: async () => [], removeAckedFeature: vi.fn(),
@@ -115,6 +121,7 @@ beforeEach(() => {
   ble.connectImpl.mockReset().mockResolvedValue(undefined);
   gap.open.mockClear(); gap.recordAttempt.mockClear(); gap.close.mockClear();
   policy.delays.length = 0;
+  stream.flush.mockClear(); stream.onEEGData = null;
   life.resume.length = 0; life.pause.length = 0; life.verify.mockReset().mockResolvedValue(true);
   root = createRoot(document.createElement('div'));
 });
@@ -262,5 +269,33 @@ describe('useBand 복귀 시 BLE 확인 (V8)', () => {
     await mountAndConnect();
     life.verify.mockRejectedValue(new Error('probe boom'));
     await expect(fireResume()).resolves.not.toThrow();
+  });
+});
+
+describe('BLE 콜백 throttle flush (G6, V15·V16)', () => {
+  const samples = (n: number) => Array.from({ length: n }, () => ({ fp1: 1, fp2: 2 }));
+  const feed = (n = 5) => act(async () => { stream.onEEGData?.(samples(n)); });
+
+  it('V15 5초 안에 콜백이 여러 번 와도 flush 는 최대 1회, 5초 경과 후 다시 허용된다', async () => {
+    await mountAndConnect();
+    for (let i = 0; i < 20; i++) await feed();
+    expect(stream.flush).toHaveBeenCalledTimes(1);
+    await act(async () => { vi.setSystemTime(Date.now() + 4900); });
+    await feed();
+    expect(stream.flush).toHaveBeenCalledTimes(1);
+    await act(async () => { vi.setSystemTime(Date.now() + 200); });
+    await feed();
+    expect(stream.flush).toHaveBeenCalledTimes(2);
+  });
+
+  it('V16 setInterval 이 멈춘(타이머 미진행) 상태에서도 BLE 콜백만으로 flush 가 계속 호출된다', async () => {
+    await mountAndConnect();
+    await feed();
+    for (let i = 1; i <= 3; i++) {
+      // 타이머는 한 번도 진행시키지 않고 시계만 앞으로 — 백그라운드 스로틀 상황 재현
+      await act(async () => { vi.setSystemTime(Date.now() + 5100); });
+      await feed();
+    }
+    expect(stream.flush).toHaveBeenCalledTimes(4);
   });
 });
