@@ -176,3 +176,37 @@ describe('background-session — iOS·웹', () => {
     expect(h.calls).toEqual([]);
   });
 });
+
+describe('background-session — 상담사(호스트) 마이크 타입 (V33·V34·V41, H10)', () => {
+  it('V33 microphone 옵션이면 connectedDevice|microphone(144)으로 시작한다', async () => {
+    const m = await load();
+    await m.startBackgroundSession({ microphone: true });
+    expect(m.FGS_TYPE_MICROPHONE).toBe(128);
+    expect((h.start.mock.calls[0][0] as { serviceType: number }).serviceType).toBe(144);
+  });
+
+  it('V34·V41 옵션이 없거나 microphone=false 면 connectedDevice(16)만 쓴다', async () => {
+    const m = await load();
+    await m.startBackgroundSession({ microphone: false });
+    expect((h.start.mock.calls[0][0] as { serviceType: number }).serviceType).toBe(16);
+  });
+
+  it('H10 마이크 타입 시작이 실패하면(권한 거부) connectedDevice 만으로 재시도해 BLE 유지를 보장한다', async () => {
+    h.start.mockRejectedValueOnce(new Error('SecurityException: RECORD_AUDIO')).mockResolvedValue(undefined);
+    const m = await load();
+    await expect(m.startBackgroundSession({ microphone: true })).resolves.toBeUndefined();
+    expect(h.start).toHaveBeenCalledTimes(2);
+    expect((h.start.mock.calls[0][0] as { serviceType: number }).serviceType).toBe(144);
+    expect((h.start.mock.calls[1][0] as { serviceType: number }).serviceType).toBe(16);
+    await m.stopBackgroundSession();
+    expect(h.stop).toHaveBeenCalledTimes(1); // 실행 중으로 기록됐으므로 종료가 실제 호출된다
+  });
+
+  it('웹에서는 microphone 옵션이 있어도 플러그인을 로드하지 않는다', async () => {
+    h.platform = 'web';
+    const m = await load();
+    await m.startBackgroundSession({ microphone: true });
+    expect(h.start).not.toHaveBeenCalled();
+    expect(h.pluginImports).toBe(0);
+  });
+});

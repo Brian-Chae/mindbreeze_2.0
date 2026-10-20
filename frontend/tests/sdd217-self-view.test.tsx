@@ -15,6 +15,7 @@ vi.mock('@livekit/components-react', async () => {
     RoomAudioRenderer: () => null,
     useConnectionState: () => 'connected',
     useLocalParticipant: () => ({ localParticipant: null }),
+    useRoomContext: () => ({ state: "connected", localParticipant: null }),
     useTracks: () => livekit.tracks,
   };
 });

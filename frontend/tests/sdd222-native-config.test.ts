@@ -8,17 +8,17 @@ const manifest = readFileSync(join(root, 'android/app/src/main/AndroidManifest.x
 const plist = readFileSync(join(root, 'ios/App/App/Info.plist'), 'utf-8');
 
 describe('SDD-222 V29 AndroidManifest', () => {
-  it.each(['FOREGROUND_SERVICE', 'FOREGROUND_SERVICE_CONNECTED_DEVICE', 'WAKE_LOCK'])(
+  it.each(['FOREGROUND_SERVICE', 'FOREGROUND_SERVICE_CONNECTED_DEVICE', 'FOREGROUND_SERVICE_MICROPHONE', 'WAKE_LOCK', 'RECORD_AUDIO'])(
     '권한 %s 선언',
     (name) => {
       expect(manifest).toContain(`android:name="android.permission.${name}"`);
     },
   );
 
-  it('포그라운드 서비스가 connectedDevice 타입·비공개로 선언된다', () => {
+  it('포그라운드 서비스가 connectedDevice|microphone 타입·비공개로 선언된다 (T-A4, D3)', () => {
     const match = manifest.match(/<service[^>]*AndroidForegroundService[^>]*>/s);
     expect(match).not.toBeNull();
-    expect(match![0]).toContain('android:foregroundServiceType="connectedDevice"');
+    expect(match![0]).toContain('android:foregroundServiceType="connectedDevice|microphone"');
     expect(match![0]).toContain('android:exported="false"');
   });
 
