@@ -22,10 +22,10 @@
 | T-J8 | `useWakeLock` 네이티브 KeepAwake 분기(웹 경로 불변) | 완료 | `b822d15c` |
 | T-J9 | Android FGS 제어(`background-session`, `useBackgroundSession`), EntryPage 연결, 배터리 최적화 안내 모달, 웹 번들 가드 테스트 | 완료 | `760735be` `d6d930c4` `fb9e022d` |
 | T-X | V29·V30 네이티브 설정 정적 검증 테스트 | 완료 | `bfa8a304` |
-| **T-A4** | (D3) `FOREGROUND_SERVICE_MICROPHONE`, `connectedDevice\|microphone` | **미구현** — develop 의 Manifest 는 `connectedDevice` 단독 | — |
-| **T-J10** | (D3) 상담사 화면 백그라운드 세션·LiveKit 복구·음원 재동기화 | **미구현** — `useBackgroundSession` 은 `EntryPage`(회원)에만 연결, `ClassPlayerPage` 호스트 연결 없음 | — |
+| T-A4 | (D3) `FOREGROUND_SERVICE_MICROPHONE` 권한, 서비스 `foregroundServiceType="connectedDevice\|microphone"`(`RECORD_AUDIO` 기존 재사용) | 완료 (Manifest XML 문법만 확인, `assembleDevDebug` 미수행) | 2026-10-20 `sdd/222-host-background` |
+| T-J10 | (D3) `useBackgroundSession(active, role, microphone)`, `useHostBackgroundSession`(ClassPlayerPage 연결), `recoverHostLiveKit`+`HostLiveKitBridge` 복귀 처리, `useClassAudioPlayer` 복귀 재동기화, 복귀 시 경과 시각 즉시 재계산 | 완료 (vitest 목 기준) | 2026-10-20 `sdd/222-host-background` |
 
-D3(상담사 화면 포함)은 spec 범위에 추가(`4f9c1252`, 문서만)됐으나 구현 커밋이 없다. 따라서 이번 통합본은 **회원 앱 화면(G1~G6)만** 적용된 상태다.
+D3(상담사 화면 포함)은 spec 범위에 추가(`4f9c1252`)됐고, 통합본(`8a24a400`)에는 구현이 없어 회원 앱 화면(G1~G6)만 적용돼 있었다. 이후 `sdd/222-host-background` 브랜치에서 T-A4·T-J10 을 구현했다(아래 §D3 구현 기록).
 
 ---
 
@@ -55,7 +55,28 @@ SDD-220~224 를 같은 날 develop 에 일괄 통합했다. 병합 커밋: 223 `
 ## 3. 남은 일 · 이월
 
 1. **실기기 검증(차단)**: Android 14+ FGS 시작·LOW 알림, 화면 끄고 5·20분 BLE 유지, 제조사 절전에서 서비스 생존, iOS 잠금 중 BLE notify(M7)·음성 유지(M8), 밴드 off/on 재연결(M10).
-2. **D3 상담사 화면**: T-A4·T-J10 구현과 verify V33~V41·H1~H12 검증이 남았다.
+2. **D3 상담사 화면**: 구현·vitest 는 끝났다. verify H1~H12 는 **실기기 미수행**. V37·V40·ClassPlayerPage 연결은 정적/목 검증이다(아래).
 3. 배터리 최적화 설정 화면 이동 버튼은 제안만 있고 구현하지 않았다(부록 B.4, 실기기 결과 후 결정).
 4. iOS 인터럽트(전화 등) 종료 후 세션 재활성화는 범위 밖으로 미구현(M8 결과에 따라 후속).
 5. 스토어 제출 사유 문구(plan §8) 승인 필요.
+
+---
+
+## D3 구현 기록 (T-A4·T-J10, `sdd/222-host-background`)
+
+- **Manifest**: `FOREGROUND_SERVICE_MICROPHONE` 추가, 서비스 타입 `connectedDevice|microphone`. XML 파싱 OK. Gradle 빌드는 수행하지 않음.
+- **background-session**: `startBackgroundSession({ microphone })` — 온라인 호스트는 `16|128`(144), 그 외·회원은 `16`. 마이크 타입 시작이 거부되면(권한 거부, H10) `connectedDevice` 로 재시도해 BLE 유지를 우선한다. 실행 중에는 타입을 바꾸지 않는다(멱등).
+- **훅**: `useBackgroundSession(active, role='member', microphone=false)` — 회원은 옵션 없이 호출(기존 동작 불변). `useHostBackgroundSession` 이 `isHost && (isLobby||isRunning)` 로 `ClassPlayerPage` 에서 호출, `online` 이면 마이크 타입.
+- **복귀 순서**: 소켓(order 10, 기존) → LiveKit 확인·재연결(50, 끊김 상태일 때만 `LiveKitRoom` key 증가로 재마운트) → 카메라 `setCameraEnabled(true)`(camOn 일 때) → 음원 `seek` 재발행(60, 재생 중일 때만, blocked 면 엔진 resume 후) → 경과 시각 즉시 재계산. 단계별 독립 try/catch. 신규 `lib/native/host-resume-recovery.ts`.
+- **웹**: `subscribeAppResume` 은 비네이티브에서 no-op, `background-session` 은 Android 외 no-op 이라 웹 경로는 불변. 웹 번들 가드 테스트 통과.
+- **테스트**: 신규 5개 파일(+기존 3개 확장) — host-resume-recovery 6, host-livekit-bridge-resume 4, class-audio-resume 4, host-background-session 7, background-session +4, use-background-session +4, native-config 갱신. 기존 host 컨테이너 테스트 3개의 livekit 목에 `useRoomContext` 추가(Bridge 가 사용).
+- **전체 vitest**: 2426 중 2414 통과 / 12 실패. 실패는 develop 기준선과 동일한 7개 파일(`agent-counselor-page`·`chat-message-deeplink`·`font-scale` 5건 + `*-browser/pdf.test.cjs` 가 dev 서버(5175) 연결 거부로 7건)이며 이번 변경과 무관(변경 stash 후 앞 3개 파일 동일 5건 실패 확인). `npx tsc -b` 오류 없음, `npx vite build --mode dev` 성공.
+- **V별 검증 수준**: V33·V34·V35·V41 훅/목, V36·V37·V38 `recoverHostLiveKit`·Bridge 컴포넌트 목, V39 오디오 훅 목, V40 은 `useBand` 의 `enabled: !observationOnly` 를 정적으로 확인(기존 코드, 런타임 테스트 아님), `ClassPlayerPage` 연결은 정적(소스 문자열) 확인.
+- **실기기 미수행**: H1~H12 전부(화면 끄기 5·20분, 알림 탭, 전화 수신 복귀, 마이크 거부, 오프라인 대면 등).
+
+### 남은 위험 · 이월
+1. 복귀 시 음원 재발행은 소켓 재연결 직후 실행되므로 소켓이 아직 붙지 않았으면 `sendAudioSync` 가 실패(false)할 수 있다(heartbeat 가 다음 주기에 수렴). 실기기 H4 에서 확인 필요.
+2. LiveKit 재마운트는 기존 토큰을 재사용한다. 토큰 만료 시 재연결이 실패할 수 있다(별도 재발급 경로 없음).
+3. 호스트 화면에는 배터리 최적화 안내 모달을 연결하지 않았다(`BatteryGuideDialog` 가 `EntryPage` 내부 컴포넌트). 필요하면 공용 컴포넌트로 추출 후 후속.
+4. Android 14+ 에서 `microphone` 타입은 `RECORD_AUDIO` 런타임 권한 보유가 시작 조건 — 거부 시 `connectedDevice` 로 폴백하나 이 경우 백그라운드 음성 송출은 OS 가 막을 수 있다(H10 실기기).
+5. 스토어 제출 사유 문구(plan §8)의 `microphone` 항목 승인 필요.
