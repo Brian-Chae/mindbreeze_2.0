@@ -74,7 +74,7 @@ await cou('내담자 검색: 없는 이름 → 결과 없음', async (p) => {
   await box.fill('zzzz-없는사람'); await box.press('Enter'); await p.waitForTimeout(1500);
   if ((await bodyText(p)).includes('e2e-client@e2e.looxidlabs.com')) throw new Error('검색 필터가 동작하지 않음');
 });
-await cou('내담자 초대: 폼 노출 (제출 안 함)', async (p) => { await expectText(p, '/clients/invite', '내담자 초대', '초대 링크 생성'); });
+await cou('내담자 초대: 폼 노출 (제출 안 함)', async (p) => { await expectText(p, '/clients/invite', '회원 초대', '초대 링크 생성'); });
 await cou('클래스: 목록·클래스 만들기 버튼(달력·타임라인 없음)', async (p) => {
   const text = await expectText(p, '/sessions', '클래스 만들기');
   if (/예약 만들기|타임라인|달력/.test(text)) throw new Error('캘린더·예약 모달 문구가 남아 있음');
