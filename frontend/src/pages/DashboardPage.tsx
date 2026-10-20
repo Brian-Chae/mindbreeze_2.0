@@ -292,7 +292,7 @@ export default function DashboardPage() {
             to="/classes"
             className="h-11 inline-flex items-center px-4 rounded-full border border-[#DDD0EA] bg-white text-[#5F0080] font-semibold text-sm hover:bg-[#F5EDFC] transition-colors"
           >
-            세션 목록
+            클래스 목록
           </Link>
           <Link
             to="/classes/new"
