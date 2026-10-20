@@ -48,7 +48,7 @@ export default function ClientListPage() {
       })
       .catch((err) => {
         if (cancelled) return;
-        setError(err instanceof ApiError ? err.message : '내담자 목록을 불러오지 못했습니다');
+        setError(err instanceof ApiError ? err.message : '회원 목록을 불러오지 못했습니다');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -68,7 +68,7 @@ export default function ClientListPage() {
 
   if (user && user.role !== 'counselor' && user.role !== 'org_admin') {
     return (
-      <AppShell title="내담자">
+      <AppShell title="회원">
         <div className="flex items-center justify-center py-24">
           <div className="max-w-md text-center">
             <h1 className="text-xl font-bold mb-2 text-[#1F1F1F]">접근 권한이 없습니다</h1>
@@ -87,17 +87,17 @@ export default function ClientListPage() {
       onClick={() => setShowInvite(true)}
       className="mb-btn"
     >
-      내담자 초대
+      회원 초대
     </button>
   );
 
   return (
-    <AppShell title="내담자" sub="CLIENTS" rightSlot={rightSlot}>
+    <AppShell title="회원" sub="CLIENTS" rightSlot={rightSlot}>
       <div className="max-w-5xl mx-auto space-y-6">
         <form onSubmit={handleSearch} className="flex gap-2">
           <input
             type="text"
-            aria-label="내담자 검색"
+            aria-label="회원 검색"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="이름 또는 이메일 검색"
@@ -115,7 +115,7 @@ export default function ClientListPage() {
 
         {!loading && !error && clients.length === 0 && (
           <div className="bg-white rounded-[20px] border border-[#EFEFEF] p-12 text-center text-[#6F6F6F]">
-            등록된 내담자가 없습니다.
+            등록된 회원이 없습니다.
           </div>
         )}
 

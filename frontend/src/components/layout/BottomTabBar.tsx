@@ -52,7 +52,7 @@ interface BottomTabBarProps {
 
 export default function BottomTabBar({ onMoreClick, role }: BottomTabBarProps) {
   const { pathname } = useLocation();
-  const morePaths = role === 'platform_admin' ? ['/notifications', '/settings', '/playground'] : role === 'client' ? ['/app/chat', '/app/notifications', '/app/profile'] : ['/reports', '/notifications', '/settings', '/playground', '/org/counselors'];
+  const morePaths = role === 'platform_admin' ? ['/notifications', '/settings', '/playground'] : role === 'client' ? ['/app/chat', '/app/notifications', '/app/profile'] : ['/clients', '/reports', '/notifications', '/settings', '/playground', '/org/counselors'];
   const moreActive = morePaths.some((path) => pathname === path || pathname.startsWith(`${path}/`));
   const tabItems = tabItemsForRole(role);
   const chatUnread = useChatStore((s) =>

@@ -1,7 +1,7 @@
 /* 새 읽기 화면에서만 쓰는 소프트 셸. 기존 전역 토큰은 유지한다. */
 .cs-structure { height: 100%; min-height: 0; color: #26232b; font-size: 14px; }
 .cs-structure [data-shell-variant="structure"] { overflow: hidden; background: #f7f5f9; }
-.cs-structure [data-shell-variant="structure"] > aside { min-height: 0; overflow-y: auto; background: #fff; }
+.cs-structure [data-shell-variant="structure"] > aside { min-height: 0; overflow-y: auto; }
 .cs-structure .cs-structure-content { display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; padding: 24px; }
 .cs-structure .cs-structure-scroll { width: 100%; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
 .cs-structure .cs-read-state { display: flex; min-height: 240px; padding: 32px 16px; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; }
@@ -15,21 +15,9 @@
   .cs-structure [data-shell-variant="structure"] > header { height: 56px; }
 }
 
-@media (min-width: 768px) {
-  .cs-structure [data-shell-variant="structure"] { grid-template-columns: 220px minmax(0, 1fr); }
-}
-
 /* SDD-216 시안 토큰: structure 셸 안에만 적용한다. */
 .cs-structure { --cs-brand: #5F0080; --cs-cream: #F5EDFC; --cs-ink: #1F1F1F; --cs-muted: #6F6F6F; --cs-line: #ECE6F0; --cs-surface: #F7F4F0; }
 .cs-structure [data-shell-variant="structure"] { background: var(--cs-surface); }
-.cs-structure [data-shell-variant="structure"] [data-sidebar-root] { padding: 24px 16px; gap: 16px; }
-.cs-structure [data-shell-variant="structure"] [data-sidebar-brand] { padding: 8px 0 16px; }
-.cs-structure [data-shell-variant="structure"] [data-sidebar-brand] img { width: 40px; height: 18px; }
-.cs-structure [data-shell-variant="structure"] [data-sidebar-menu] { gap: 8px; }
-.cs-structure [data-shell-variant="structure"] [data-sidebar-menu] > a { min-height: 48px; padding: 12px 16px; gap: 16px; border-radius: 9999px; font-size: 15px; font-weight: 600; box-shadow: none; }
-.cs-structure [data-shell-variant="structure"] [data-sidebar-menu] > a[aria-current="page"] { background: var(--cs-cream); color: var(--cs-brand); }
-.cs-structure [data-shell-variant="structure"] [data-sidebar-menu] > a:not([aria-current]):hover { background: #F7F4FA; }
-.cs-structure [data-shell-variant="structure"] [data-sidebar-profile] { background: var(--cs-cream); border-radius: 16px; padding: 16px; }
 .cs-structure .cs-class-list { container: class-list / inline-size; display: grid; gap: 12px; }
 .cs-structure .cs-class-columns { display: none; }
 .cs-structure .cs-class-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); grid-template-areas: "identity identity" "next host" "progress progress" "state state"; gap: 16px; padding: 16px; border: 1px solid var(--cs-line); border-radius: 16px; background: #fff; color: var(--cs-ink); align-items: start; }

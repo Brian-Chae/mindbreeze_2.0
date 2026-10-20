@@ -76,9 +76,9 @@ export default function ClientInvitePage() {
         </button>
 
         <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h1 className="text-2xl font-semibold mb-2">내담자 초대</h1>
+          <h1 className="text-2xl font-semibold mb-2">회원 초대</h1>
           <p className="text-sm text-gray-500 mb-6">
-            초대할 내담자의 이메일을 입력하면 초대 링크가 생성됩니다.
+            초대할 회원의 이메일을 입력하면 초대 링크가 생성됩니다.
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -125,7 +125,7 @@ export default function ClientInvitePage() {
                 </button>
               </div>
               <p className="text-xs text-gray-600 mt-2">
-                내담자에게 이 링크를 공유하면 가입 후 자동으로 연결됩니다.
+                회원에게 이 링크를 공유하면 가입 후 자동으로 연결됩니다.
               </p>
             </div>
           )}

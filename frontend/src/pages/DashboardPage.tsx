@@ -95,7 +95,7 @@ function AccessCodeCell({ code }: { code: string | null }) {
       <button
         type="button"
         onClick={() => void handleCopy()}
-        className="px-3 py-2 min-h-[40px] rounded-lg bg-[#F5EDFC] text-[#5F0080] text-[13px] font-semibold hover:bg-[#EBDEF7] transition-colors"
+        className="relative z-10 px-3 py-2 min-h-[40px] rounded-lg bg-[#F5EDFC] text-[#5F0080] text-[13px] font-semibold hover:bg-[#EBDEF7] transition-colors"
       >
         {copied ? '복사됨' : '복사'}
       </button>
@@ -107,9 +107,9 @@ function ClassCard({ cls, onEnter }: { cls: ClassSummary; onEnter?: (id: string)
   const isLive = cls.status === 'in_progress' || cls.status === 'open';
   const showRecordLink = cls.has_record || cls.has_summary;
   return (
-    <div className="bg-white border border-[#E8E3EC] rounded-2xl p-4 space-y-3">
+    <div className="relative bg-white border border-[#E8E3EC] rounded-2xl p-4 space-y-3 hover:border-[#D2AEFC] hover:shadow-sm hover:-translate-y-0.5 transition">
       <div className="flex items-start justify-between gap-3">
-        <Link to={dashboardSessionPath(cls)} className="font-bold text-[15px] text-[#1F1F1F] hover:text-[#5F0080] truncate">
+        <Link to={dashboardSessionPath(cls)} aria-label={`${cls.title || '제목 없음'} 상세 보기`} className="font-bold text-[15px] text-[#1F1F1F] hover:text-[#5F0080] truncate after:absolute after:inset-0 after:rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080]">
           {cls.title || '제목 없음'}
         </Link>
         <StatusBadge status={cls.status} />
@@ -127,7 +127,7 @@ function ClassCard({ cls, onEnter }: { cls: ClassSummary; onEnter?: (id: string)
           <button
             type="button"
             onClick={() => onEnter(cls.id)}
-            className="ml-auto rounded-lg bg-[#5F0080] px-4 py-2 min-h-[40px] text-[13px] font-bold text-white hover:bg-[#4B0066] transition-colors"
+            className="relative z-10 ml-auto rounded-lg bg-[#5F0080] px-4 py-2 min-h-[40px] text-[13px] font-bold text-white hover:bg-[#4B0066] transition-colors"
           >
             입장
           </button>
@@ -136,7 +136,7 @@ function ClassCard({ cls, onEnter }: { cls: ClassSummary; onEnter?: (id: string)
       {showRecordLink && (
         <Link
           to={`/sessions/${cls.id}/record`}
-          className="inline-flex text-[13px] font-bold text-[#5F0080] hover:underline"
+          className="relative z-10 inline-flex text-[13px] font-bold text-[#5F0080] hover:underline"
         >
           기록 보기 →
         </Link>
@@ -289,13 +289,13 @@ export default function DashboardPage() {
       rightSlot={
         <div className="flex items-center gap-2">
           <Link
-            to="/sessions"
+            to="/classes"
             className="h-11 inline-flex items-center px-4 rounded-full border border-[#DDD0EA] bg-white text-[#5F0080] font-semibold text-sm hover:bg-[#F5EDFC] transition-colors"
           >
             세션 목록
           </Link>
           <Link
-            to="/sessions/new"
+            to="/classes/new"
             className="h-11 inline-flex items-center px-[18px] rounded-full bg-[#5F0080] text-white font-semibold text-sm hover:bg-[#4B0066] transition-colors"
           >
             + 새 클래스
@@ -414,7 +414,7 @@ export default function DashboardPage() {
                     </p>
                     <div className="mt-auto flex flex-wrap items-center gap-2 pt-4">
                       <Link
-                        to="/sessions/new"
+                        to="/classes/new"
                         className="rounded-lg bg-white px-5 py-2.5 text-[15px] font-extrabold text-[#5F0080] min-h-[44px] hover:bg-[#F5EDFC] transition-colors"
                       >
                         클래스 바로 열기
@@ -458,9 +458,10 @@ export default function DashboardPage() {
                       ? new Date(cls.scheduled_at).toDateString() === new Date().toDateString()
                       : false;
                     return (
-                      <div
+                      <Link
                         key={cls.id}
-                        className="flex items-center gap-3 border-b border-[#F0ECF2] py-4 last:border-0"
+                        to={dashboardSessionPath(cls)}
+                        className="flex items-center gap-3 border-b border-[#F0ECF2] py-4 last:border-0 hover:bg-[#FAF7FC] cursor-pointer transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080]"
                       >
                         <div className="w-[76px] shrink-0">
                           <div className="text-[15px] font-extrabold text-[#1F1F1F]">
@@ -474,7 +475,7 @@ export default function DashboardPage() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-[15px] font-bold text-[#1F1F1F]">
-                            <Link to={dashboardSessionPath(cls)}>{cls.title || '제목 없음'}</Link>
+                            {cls.title || '제목 없음'}
                           </div>
                           <div className="truncate text-[12px] text-[#6F6F6F]">
                             {dashboardSessionArea(cls) && <span className="mr-2 inline-flex rounded-full bg-[#F0EAF6] px-2 py-0.5 text-[11px] font-semibold text-[#665185]" aria-label="일정 영역">{dashboardSessionArea(cls)}</span>}
@@ -483,7 +484,7 @@ export default function DashboardPage() {
                           </div>
                         </div>
                         <StatusBadge status={cls.status} />
-                      </div>
+                      </Link>
                     );
                   })}
                 </div>
@@ -498,7 +499,7 @@ export default function DashboardPage() {
             <section>
               <div className="mb-4 flex items-baseline justify-between">
                 <h2 className="font-extrabold text-[18px] text-[#1F1F1F] tracking-tight">내 클래스</h2>
-                <Link to="/sessions" className="text-[13px] font-bold text-[#5F0080] hover:underline">
+                <Link to="/classes" className="text-[13px] font-bold text-[#5F0080] hover:underline">
                   전체 보기
                 </Link>
               </div>
@@ -506,7 +507,7 @@ export default function DashboardPage() {
                 <div className="rounded-2xl border border-dashed border-[#E8E3EC] p-12 text-center">
                   <p className="text-[#6F6F6F] text-sm mb-4">아직 진행한 클래스가 없습니다.</p>
                   <Link
-                    to="/sessions/new"
+                    to="/classes/new"
                     className="inline-flex h-10 px-5 items-center rounded-xl bg-[#F5EDFC] text-[#5F0080] font-semibold text-sm hover:bg-[#EBDEF7] transition-colors"
                   >
                     클래스 만들기
@@ -549,34 +550,34 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-6 lg:gap-6 min-w-0">
             {/* 요약 타일 */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-[#E8E3EC] bg-white p-4">
+              <Link to="/classes" className="rounded-2xl border border-[#E8E3EC] bg-white p-4 hover:border-[#D2AEFC] hover:shadow-sm hover:-translate-y-0.5 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080]">
                 <div className="text-[12px] font-semibold text-[#6F6F6F]">진행 중</div>
                 <div className="mt-2 text-[30px] font-extrabold tracking-tight text-[#1F8A5B]">
                   {data.in_progress_classes}
                 </div>
                 <div className="mt-1 text-[12px] font-bold text-[#5F0080]">입장하기 →</div>
-              </div>
-              <div className="rounded-2xl border border-[#E8E3EC] bg-white p-4">
+              </Link>
+              <Link to="/reports" className="rounded-2xl border border-[#E8E3EC] bg-white p-4 hover:border-[#D2AEFC] hover:shadow-sm hover:-translate-y-0.5 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080]">
                 <div className="text-[12px] font-semibold text-[#6F6F6F]">검토 대기</div>
                 <div className="mt-2 text-[30px] font-extrabold tracking-tight text-[#5F0080]">
                   {pendingReviewCount}
                 </div>
                 <div className="mt-1 text-[12px] font-bold text-[#5F0080]">리포트 검토 →</div>
-              </div>
-              <div className="rounded-2xl border border-[#E8E3EC] bg-white p-4">
+              </Link>
+              <Link to="/classes" className="rounded-2xl border border-[#E8E3EC] bg-white p-4 hover:border-[#D2AEFC] hover:shadow-sm hover:-translate-y-0.5 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080]">
                 <div className="text-[12px] font-semibold text-[#6F6F6F]">오늘 예정</div>
                 <div className="mt-2 text-[30px] font-extrabold tracking-tight text-[#1F1F1F]">
                   {todaySessions.length}
                 </div>
                 <div className="mt-1 text-[12px] font-bold text-[#5F0080]">일정 보기 →</div>
-              </div>
-              <div className="rounded-2xl border border-[#E8E3EC] bg-white p-4">
+              </Link>
+              <Link to="/clients" className="rounded-2xl border border-[#E8E3EC] bg-white p-4 hover:border-[#D2AEFC] hover:shadow-sm hover:-translate-y-0.5 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080]">
                 <div className="text-[12px] font-semibold text-[#6F6F6F]">총 참여자</div>
                 <div className="mt-2 text-[30px] font-extrabold tracking-tight text-[#1F1F1F]">
                   {data.total_participants.toLocaleString('ko-KR')}
                 </div>
-                <div className="mt-1 text-[12px] font-bold text-[#5F0080]">내담자 관리 →</div>
-              </div>
+                <div className="mt-1 text-[12px] font-bold text-[#5F0080]">회원 관리 →</div>
+              </Link>
             </div>
 
             {/* 최근 대화 */}
@@ -593,7 +594,7 @@ export default function DashboardPage() {
                     <Link
                       key={room.id}
                       to={`/chat/${room.id}`}
-                      className="flex w-full items-start gap-3 border-b border-[#F0ECF2] py-3.5 text-left last:border-0"
+                      className="flex w-full items-start gap-3 border-b border-[#F0ECF2] py-3.5 text-left last:border-0 hover:bg-[#FAF7FC] transition-colors"
                     >
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#5F0080] to-[#8A4FB8] text-[12px] font-bold text-white">
                         {(room.display_name || room.peer_name || '내').charAt(0)}
@@ -637,14 +638,14 @@ export default function DashboardPage() {
               {recentNotifications.length > 0 ? (
                 <div className="rounded-2xl border border-[#E8E3EC] bg-white px-5">
                   {recentNotifications.map((n) => (
-                    <div key={n.id} className="flex items-start gap-3 border-b border-[#F0ECF2] py-3.5 last:border-0">
+                    <Link key={n.id} to="/notifications" className="flex items-start gap-3 border-b border-[#F0ECF2] py-3.5 last:border-0 hover:bg-[#FAF7FC] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080]">
                       <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#5F0080]" />
                       <div className="min-w-0 flex-1">
                         <div className="text-[13px] text-[#1F1F1F]">{n.title}</div>
                         {n.body && <div className="truncate text-[12px] text-[#6F6F6F]">{n.body}</div>}
                         <div className="text-[12px] text-[#767676]">{relativeTime(n.created_at)}</div>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               ) : (
