@@ -10,6 +10,7 @@ import { ReadStateView } from './read-state';
 import { ClassHostRequests } from './class-host-requests';
 import { ClassHostCorrection } from './class-host-correction';
 import { ClassReportTab } from './class-report-tab';
+import { ClassTeamReports } from './class-team-reports';
 import { ClassTeamRecord } from './class-team-record';
 import { ClassObserverView } from './class-observer-view';
 import { ClassSessionCancel } from './class-session-cancel';
@@ -87,6 +88,8 @@ export function ClassSessionDetail({ classId, sessionId }: { classId: string; se
         {!admin && !isHost && instructor && ['lead', 'assistant'].includes(instructor.role) && ['open', 'in_progress'].includes(session.status) && <ClassObserverView key={sessionId} classId={classId} sessionId={sessionId}/>}
         {manager && session.status === 'completed' && <ClassHostCorrection classId={classId} sessionId={sessionId} revision={detail.revision} stateVersion={session.state_version} instructors={detail.host_view?.instructors.filter(i => i.status === 'active') ?? []} onSaved={retry}/>}
         {!isHost && (admin || instructor) && session.status === 'completed' && <ClassReportTab key={`reports:${classId}`} classId={classId} sessions={state.status === 'success' ? state.data.sessions.sessions : []}/>}
+        {/* SDD-219: 리포트 본문 열람(회차 단위)은 기존 화면을 유지한다. 관리 화면(클래스 단위)과 함께 노출 */}
+        {!isHost && (admin || instructor) && session.status === 'completed' && <ClassTeamReports key={`reports:${sessionId}`} classId={classId} sessionId={sessionId}/>}
         {!admin && !isHost && instructor && session.status === 'completed' && <ClassTeamRecord key={sessionId} sessionId={sessionId}/>}
         <div className="co-refresh"><button className={operationButton} onClick={retry}><RefreshCw size={16} aria-hidden="true"/>상태 새로고침</button><Link className={operationButton} to={`/classes/${classId}/sessions`}>회차 목록</Link></div>
         {admin && <p className="co-note">센터 관리자는 편성과 재배정을 대행할 수 있어요. 수업 진행·기록 수정·리포트 승인은 진행 지도사가 맡아요.</p>}
