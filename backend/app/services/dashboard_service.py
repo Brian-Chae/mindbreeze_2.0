@@ -170,7 +170,11 @@ def counselor_dashboard(user_id: str, db: DBSession) -> dict:
 
     # SDD-095: 클래스 템플릿(is_template=True)은 실제 진행 클래스가 아니므로 집계·목록에서 제외한다.
     sessions = _sorted_sessions(
-        db.query(Session).filter(Session.host_id == uid, Session.is_template.is_(False))
+        db.query(Session).filter(
+            Session.host_id == uid,
+            Session.is_template.is_(False),
+            Session.counseling_relationship_id.is_(None),  # SDD-225: 상담 세션은 클래스 홈 통계에서 제외
+        )
     )
     summaries = _build_summaries(sessions, db)
 
@@ -231,6 +235,7 @@ def org_dashboard(user_id: str, db: DBSession) -> dict:
             db.query(Session).filter(
                 Session.host_id.in_(counselor_ids),
                 Session.is_template.is_(False),  # SDD-095: 템플릿은 기관 집계에서 제외
+                Session.counseling_relationship_id.is_(None),  # SDD-225: 상담 세션 제외
             )
         )
         if counselor_ids
