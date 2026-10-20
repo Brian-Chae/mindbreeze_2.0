@@ -19,6 +19,8 @@ changed = set(git("diff", "--name-only", f"{base}...HEAD")) | set(git("diff", "-
 be = sorted(f for f in changed if f.startswith("backend/") and f.endswith(".py"))
 fe = sorted(f for f in changed if f.startswith("frontend/src/") and re.search(r"\.(tsx?|css)$", f))
 rc = 0
+venv_py = root / "backend/venv/bin/python"
+py = str(venv_py) if venv_py.exists() else sys.executable
 
 if be:
     tests = {f[len("backend/"):] for f in be if f.startswith("backend/tests/") and Path(root, f).exists()}
@@ -35,7 +37,7 @@ if be:
         print("⚠ 마이그레이션 변경 감지 — PG 검증은 PR CI(backend-pg-smoke)에서 확인됩니다.")
     if tests:
         print(f"[backend] 관련 테스트 {len(tests)}개 파일 실행")
-        rc |= subprocess.call(["python3", "-m", "pytest", "-q", "--tb=short", *sorted(tests)], cwd=root / "backend")
+        rc |= subprocess.call([py, "-m", "pytest", "-q", "--tb=short", *sorted(tests)], cwd=root / "backend")
     else:
         print("[backend] 관련 테스트 없음 (app 모듈을 import 하는 테스트를 찾지 못함)")
 if fe:
