@@ -57,3 +57,8 @@
 ### T10 — 20회차 호출 수 (vitest 측정, `sdd219-report-tab.test.tsx`)
 - 20회차 완료 클래스에서 리포트 탭 진입 시 `classOperationsApi.reports` = **20회**(회차당 1회, `Promise.all` 병렬). 동일 `sessions` 로 재렌더하면 추가 호출 0.
 - 서버 일괄 조회(클래스 단위 리포트 목록)는 현재 없음 → 신규 구현하지 않음. 응답시간은 vitest 로 측정 불가 → dev 실측(B4) 필요. 판정 후속: 임계 초과 시 일괄 조회 API 추가, 이름·출석 수도 함께 내려주면 위 미해결 두 가지가 같이 풀린다.
+
+
+## 결정 기록 (2026-10-20)
+- 홈 통계 합계에 상담 세션이 섞이는지(C1)는 **추후 확인**으로 이월한다(Brian). 현재 상담 데이터가 거의 없고 진입점이 닫혀 있어 출시 위험은 낮다. 확인 시 `dashboard_service.py` 의 `counselor_dashboard`·`org_dashboard` 집계에 `counseling_relationship_id IS NULL` 필터를 검토한다.
+- 출석·결석 수와 참여자 이름은 회차 리포트 목록 API 에 가산 필드로 추가했다(PR #22).
