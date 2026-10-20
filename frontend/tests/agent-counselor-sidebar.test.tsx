@@ -3,6 +3,8 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { expect, it, vi } from 'vitest';
+// SDD-220: 이 테스트는 AI 공개(on) 계약을 검증한다 — 기본값이 off 로 바뀌어 모듈 수준에서 켠다(단언 불변).
+vi.stubEnv('VITE_AI_ENABLED', 'true');
 import SidebarNav from '../src/components/layout/SidebarNav';
 import { useCounselorAgentStore } from '../src/stores/agent-counselor-store';
 vi.mock('../src/stores/authStore', () => ({ useAuthStore: (selector: (state: { user: { id: string; role: string; name: string } }) => unknown) => selector({ user: { id: 'c1', role: 'counselor', name: '상담사' } }) }));

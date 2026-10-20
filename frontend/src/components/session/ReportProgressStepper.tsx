@@ -12,6 +12,7 @@ import {
   type ReportProgressDto,
   type ReportStepState,
 } from '../../lib/api/reports';
+import { isAiEnabled } from '../../lib/feature-flags';
 
 interface ReportProgressStepperProps {
   progress: ReportProgressDto | null;
@@ -70,24 +71,33 @@ function stepGlyph(state: ReportStepState, index: number): string {
 /** 현재 진행 단계 문구 */
 function statusCopy(progress: ReportProgressDto): { title: string; body: string } {
   const { generation_status, stage, reason } = progress;
-  const stageLabel = REPORT_PROGRESS_STEP_LABELS[stage] ?? '';
+  const aiOn = isAiEnabled();
+  // SDD-220: AI 비공개면 STT·요약 단계명 대신 '리포트 생성' 으로 안내한다.
+  const stageLabel = aiOn || (stage !== 'stt' && stage !== 'summary')
+    ? REPORT_PROGRESS_STEP_LABELS[stage] ?? ''
+    : '리포트 생성';
 
   if (generation_status === 'ready') {
     return {
       title: '리포트가 준비되었습니다',
-      body: '세션 기록과 AI 리포트를 확인할 수 있어요.',
+      body: aiOn ? '세션 기록과 AI 리포트를 확인할 수 있어요.' : '세션 기록과 리포트를 확인할 수 있어요.',
     };
   }
   if (generation_status === 'partial') {
     return {
       title: '리포트가 일부만 준비되었습니다',
-      body: reportProgressReasonLabel(reason) ?? '일부 내용만 담겨 있어요. 전사문은 기록에서 확인할 수 있어요.',
+      // 사유 문구에 AI 표현이 섞여 있어 비공개일 때는 일반 문구만 쓴다.
+      body: aiOn
+        ? reportProgressReasonLabel(reason) ?? '일부 내용만 담겨 있어요. 전사문은 기록에서 확인할 수 있어요.'
+        : '일부 내용만 담겨 있어요.',
     };
   }
   if (generation_status === 'processing') {
     return {
       title: `${stageLabel} 진행 중…`,
-      body: 'AI가 세션을 정리하고 있어요. 화면은 자동으로 갱신됩니다.',
+      body: aiOn
+        ? 'AI가 세션을 정리하고 있어요. 화면은 자동으로 갱신됩니다.'
+        : '세션을 정리하고 있어요. 화면은 자동으로 갱신됩니다.',
     };
   }
   return {
@@ -107,6 +117,10 @@ export function ReportProgressStepper({
   const c = TONE_CLASSES[tone];
   const done = isReportGenerationDone(progress.generation_status);
   const copy = statusCopy(progress);
+  // SDD-220: AI 비공개면 음성 인식(STT)·AI 요약 단계는 진행 막대에서 뺀다(녹음 저장·리포트 완료는 유지).
+  const visibleSteps = isAiEnabled()
+    ? progress.steps
+    : progress.steps.filter((step) => step.key !== 'stt' && step.key !== 'summary');
 
   return (
     <div
@@ -128,7 +142,7 @@ export function ReportProgressStepper({
 
       {/* 스텝 바 */}
       <div className="mt-4 flex flex-wrap items-center gap-1.5">
-        {progress.steps.map((step, i) => {
+        {visibleSteps.map((step, i) => {
           const isDone = step.state === 'done';
           const stateClass =
             step.state === 'done'

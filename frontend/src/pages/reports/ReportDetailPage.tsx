@@ -8,6 +8,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import AppShell from '../../components/layout/AppShell';
 import ReportDetailView from '../../components/reports/ReportDetailView';
 import { getReport, type ReportDto } from '../../lib/api/reports';
+import { isAiEnabled } from '../../lib/feature-flags';
 
 export default function ReportDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -28,7 +29,7 @@ export default function ReportDetailPage() {
 
   if (loading) {
     return (
-      <AppShell title="리포트 상세" sub="AI REPORT DETAIL">
+      <AppShell title="리포트 상세" sub={isAiEnabled() ? 'AI REPORT DETAIL' : 'REPORT DETAIL'}>
         <div className="text-[#6F6F6F]">불러오는 중...</div>
       </AppShell>
     );
@@ -36,7 +37,7 @@ export default function ReportDetailPage() {
 
   if (error && !report) {
     return (
-      <AppShell title="리포트 상세" sub="AI REPORT DETAIL">
+      <AppShell title="리포트 상세" sub={isAiEnabled() ? 'AI REPORT DETAIL' : 'REPORT DETAIL'}>
         <div className="p-4 rounded-xl bg-red-50 text-red-700 text-sm mb-4">{error}</div>
         <button
           type="button"

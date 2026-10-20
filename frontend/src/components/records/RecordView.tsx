@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { RecordResponse, TranscriptResponse } from '../../lib/api/audio';
-import { ENABLE_STT_AI_RECORD } from '../../lib/features';
+import { isSttAiRecordVisible } from '../../lib/features';
 import { AISummaryTab } from './AISummaryTab';
 import { TranscriptTab } from './TranscriptTab';
 import { CounselorNotesTab } from './CounselorNotesTab';
@@ -21,7 +21,8 @@ export function RecordView({ record, transcript, onUpdated }: Props) {
   // SDD-085 G5 확장: 오디오 분석 신뢰도 낮으면 AI 요약 탭 숨김 — 원본 전사문·상담사 메모만
   const isLowConfidence = record.ai_summary?.transcript_confidence === 'low';
   // STT AI 기록 MVP 비활성 — AI 요약·전사문 탭을 노출하지 않고 상담사 메모만 남긴다.
-  const showSttTabs = ENABLE_STT_AI_RECORD;
+  // SDD-220: AI 비공개면 위 조건과 무관하게 AI 요약·전사문 탭을 숨긴다(AND).
+  const showSttTabs = isSttAiRecordVisible();
   const [tab, setTab] = useState<TabId>(
     showSttTabs ? (isManual ? 'notes' : isLowConfidence ? 'transcript' : 'summary') : 'notes',
   );

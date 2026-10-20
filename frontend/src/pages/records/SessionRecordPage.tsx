@@ -11,6 +11,10 @@ import { getSession, type SessionDto, type SessionType } from '../../lib/api/ses
 import { useRecordSocket, RECORD_STATUS_LABELS, type RecordStatus } from '../../hooks/useRecordSocket';
 import { useReportProgress } from '../../hooks/useReportProgress';
 import { ReportProgressStepper } from '../../components/session/ReportProgressStepper';
+import { isAiEnabled } from '../../lib/feature-flags';
+
+// SDD-220: AI 비공개면 'AI' 표기 없이 '기록지' 로 보인다.
+const recordPageTitle = (): string => (isAiEnabled() ? 'AI 기록지' : '기록지');
 
 const TYPE_LABELS: Record<SessionType, string> = {
   clinical: '임상심리상담',
@@ -298,7 +302,7 @@ export default function SessionRecordPage() {
 
   if (error) {
     return (
-      <AppShell title="AI 기록지" sub="클래스 기록">
+      <AppShell title={recordPageTitle()} sub="클래스 기록">
         <div className="space-y-3">
           <div role="alert" className="p-3 rounded-xl bg-[#FDECEC] text-[#B3261E] text-sm">
             {error}
@@ -313,7 +317,7 @@ export default function SessionRecordPage() {
 
   if (loading && !record) {
     return (
-      <AppShell title="AI 기록지" sub="클래스 기록">
+      <AppShell title={recordPageTitle()} sub="클래스 기록">
         <div className="text-[#6F6F6F] text-sm">기록지 로딩 중...</div>
       </AppShell>
     );
@@ -321,7 +325,7 @@ export default function SessionRecordPage() {
 
   if (!record) {
     return (
-      <AppShell title="AI 기록지" sub="클래스 기록">
+      <AppShell title={recordPageTitle()} sub="클래스 기록">
         <div className="space-y-3">
           <p role="alert" className="text-sm text-[#6F6F6F]">기록지를 불러올 수 없습니다.</p>
           <button type="button" onClick={retryLoad} className="mb-btn text-sm">
@@ -333,7 +337,7 @@ export default function SessionRecordPage() {
   }
 
   return (
-    <AppShell title="AI 기록지" sub="클래스 기록">
+    <AppShell title={recordPageTitle()} sub="클래스 기록">
       <div className="space-y-4 max-w-4xl">
         {sessionError && (
           <div
@@ -360,8 +364,10 @@ export default function SessionRecordPage() {
           <div className="rounded-2xl border border-[#F5E2B8] bg-amber-50 p-5 text-sm text-[#8A6B1F]">
             <p className="font-semibold">수동 기록 모드</p>
             <p className="mt-1">
-              이 세션은 마이크를 사용하지 않아 AI 자동 기록(전사·요약)이 없습니다. 아래에
-              상담사 노트를 직접 작성해주세요.
+              {isAiEnabled()
+                ? '이 세션은 마이크를 사용하지 않아 AI 자동 기록(전사·요약)이 없습니다.'
+                : '이 세션은 마이크를 사용하지 않아 자동 기록이 없습니다.'}{' '}
+              아래에 상담사 노트를 직접 작성해주세요.
             </p>
           </div>
         )}
