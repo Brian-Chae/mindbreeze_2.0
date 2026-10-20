@@ -20,6 +20,7 @@ export class CapacitorBleAdapter implements BluetoothProvider {
 
   constructor() {
     this.platform = getPlatform() === 'android' ? 'android' : 'ios';
+    activeAdapter = this;
   }
 
   onConnectionLost(callback: () => void): void {
@@ -139,6 +140,37 @@ export class CapacitorBleAdapter implements BluetoothProvider {
     return this.connectedDevices.has(deviceId);
   }
 
+  /**
+   * 앱 복귀 시 실제 연결 상태 확인 (SDD-222 G1).
+   * 백그라운드 중 OS 가 연결을 끊어도 해제 이벤트가 유실될 수 있어 로컬 Set 만으로는 알 수 없다.
+   * 배터리 특성 read 를 프로브로 사용하며, 실패하면 connectionLost 와 같은 경로로 재연결을 유도한다.
+   * 이 어댑터가 연결로 알고 있지 않은 기기는 검증 대상이 아니므로 프로브 없이 false.
+   */
+  async verifyConnection(deviceId: string): Promise<boolean> {
+    if (!this.connectedDevices.has(deviceId)) return false;
+    try {
+      await BleClient.read(deviceId, BATTERY_SERVICE_UUID, BATTERY_LEVEL_CHAR_UUID);
+      return true;
+    } catch {
+      // 이미 연결 해제 이벤트가 처리된 경우(중복 방지)에는 콜백을 다시 부르지 않는다.
+      if (!this.connectedDevices.has(deviceId)) return false;
+      this.connectionAttempts.delete(deviceId);
+      this.connectedDevices.delete(deviceId);
+      try {
+        await BleClient.disconnect(deviceId);
+      } catch {
+        // 이미 끊긴 연결의 정리 실패는 무시
+      }
+      this.connectionLost();
+      return false;
+    }
+  }
+
+  /** 현재 연결로 알고 있는 기기 ID 목록 (복귀 시 검증용) */
+  getConnectedDeviceIds(): string[] {
+    return [...this.connectedDevices];
+  }
+
   async getBatteryLevel(deviceId: string): Promise<number> {
     try {
       const result = await BleClient.read(
@@ -152,6 +184,20 @@ export class CapacitorBleAdapter implements BluetoothProvider {
       return 0;
     }
   }
+}
+
+// 가장 최근에 만든 어댑터 — useBand 가 provider 인스턴스에 접근하지 않고도 복귀 시 연결 확인
+let activeAdapter: CapacitorBleAdapter | null = null;
+
+/**
+ * 활성 네이티브 어댑터의 연결 기기를 검증한다.
+ * @returns true=정상, false=끊김 감지(재연결 트리거됨), null=검증할 연결 없음(웹·미연결)
+ */
+export async function verifyActiveBleConnection(): Promise<boolean | null> {
+  const ids = activeAdapter?.getConnectedDeviceIds() ?? [];
+  if (!activeAdapter || ids.length === 0) return null;
+  const results = await Promise.all(ids.map((id) => activeAdapter!.verifyConnection(id)));
+  return results.every(Boolean);
 }
 
 // BLE 표준 UUID
