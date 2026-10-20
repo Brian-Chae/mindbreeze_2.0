@@ -17,6 +17,7 @@ import { EndContainer } from '../../components/class/flow/member/EndContainer';
 import { MemberClassContainer } from '../../components/class/player/member/MemberClassContainer';
 import { WaitlistView } from '../../components/class/flow/member/WaitlistView';
 import { WaitStartContainer } from '../../components/class/flow/member/WaitStartContainer';
+import { useBackgroundSession } from '../../hooks/useBackgroundSession';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { useEntryPrep } from '../../hooks/useEntryPrep';
 import { useWaitingRoomPresence } from '../../hooks/useWaitingRoomPresence';
@@ -36,6 +37,25 @@ import { useAuthStore } from '../../stores/authStore';
 
 /** 방침(/privacy)과 같은 보관 기간 — 환경 변수로 달리 표시하지 않는다 */
 const RETENTION_DAYS = RAW_RETENTION_DAYS;
+
+/** Android 첫 수업 입장 시 1회 — 제조사 절전 기능이 백그라운드 서비스를 멈출 수 있어 설정 안내를 한다(SDD-222 R4). */
+function BatteryGuideDialog({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-5">
+      <div role="dialog" aria-modal="true" aria-label="배터리 최적화 안내" className="w-full max-w-sm rounded-2xl bg-white p-5 text-neutral-900">
+        <h2 className="text-lg font-semibold">화면이 꺼져도 수업이 끊기지 않게 해 주세요</h2>
+        <p className="mt-2 text-sm leading-relaxed">
+          일부 휴대폰은 절전 기능 때문에 화면이 꺼지면 앱을 멈출 수 있어요.
+          설정 &gt; 앱 &gt; MIND BREEZE &gt; 배터리에서 &apos;제한 없음&apos;(또는 &apos;최적화하지 않음&apos;)으로 바꿔 주세요.
+        </p>
+        <div className="mt-4 flex gap-2">
+          <button type="button" className="flex-1 rounded-xl bg-neutral-900 py-3 text-sm font-medium text-white" onClick={onClose}>확인</button>
+          <button type="button" className="flex-1 rounded-xl bg-neutral-100 py-3 text-sm font-medium" onClick={onClose}>건너뛰기</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function bandModeOf(mode: string | undefined): FlowBandMode {
   return mode === 'none' ? 'none' : mode === 'required' ? 'req' : 'opt';
@@ -133,7 +153,11 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
   const displayName = handoffName || (isAuthenticated && user ? user.name : '참가자');
 
   // 대기·진행 중에는 화면이 꺼지지 않게 한다(class-join-page 와 같은 기준)
-  useWakeLock(machine.phase === 'wait' || machine.phase === 'live');
+  const classActive = machine.phase === 'wait' || machine.phase === 'live';
+  useWakeLock(classActive);
+  // SDD-222: 같은 구간에서 앱 백그라운드 유지(Android Foreground Service). 종료·이탈·언마운트 시 훅이 반드시 종료한다.
+  const { batteryGuideOpen, dismissBatteryGuide } = useBackgroundSession(classActive);
+  const batteryGuide = batteryGuideOpen ? <BatteryGuideDialog onClose={dismissBatteryGuide} /> : null;
 
   // 준비 중(마법사·시작 대기)인 동안 상담사 로비에 내 준비 현황을 알린다. 대기열·진행·종료·상태 화면에서는 보내지 않는다.
   const presenceReadiness = useMemo(
@@ -230,6 +254,7 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
     // 진행 화면은 입장 자격으로 상태·상담사 영상·밴드 업로드·손들기 소유를 증명한다(6자리 코드·참여자 토큰 경로 없음)
     return (
       <div className="min-h-screen bg-black">
+        {batteryGuide}
         <MemberClassContainer
           title={info.title}
           startedAt={serverState?.started_at ?? info.startedAt}
@@ -281,12 +306,15 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
   }
   if (machine.phase === 'wait') {
     return (
-      <WaitStartContainer
-        place={place} size={size} bandMode={bandMode} title={title} hostName={info.hostName} scheduledAt={info.scheduledAt}
-        address={info.locationType === 'offline' ? info.locationAddress : null}
-        onRecheck={() => dispatch({ type: 'recheck' })}
-        onExit={exit}
-      />
+      <>
+        {batteryGuide}
+        <WaitStartContainer
+          place={place} size={size} bandMode={bandMode} title={title} hostName={info.hostName} scheduledAt={info.scheduledAt}
+          address={info.locationType === 'offline' ? info.locationAddress : null}
+          onRecheck={() => dispatch({ type: 'recheck' })}
+          onExit={exit}
+        />
+      </>
     );
   }
   if (machine.phase === 'wizard' && machine.step === 'a') {
