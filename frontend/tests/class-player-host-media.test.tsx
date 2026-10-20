@@ -31,6 +31,7 @@ vi.mock('@livekit/components-react', () => ({
     return <i data-testid="lk-audio" />;
   },
   useLocalParticipant: () => ({ localParticipant: livekit.local }),
+  useRoomContext: () => ({ state: "connected", localParticipant: livekit.local }),
   useConnectionState: () => livekit.state,
   useTracks: () => livekit.tracks,
 }));

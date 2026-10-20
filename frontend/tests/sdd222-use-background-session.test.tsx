@@ -5,13 +5,13 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const h = vi.hoisted(() => ({
-  start: vi.fn(async () => undefined),
+  start: vi.fn(async (..._a: unknown[]) => undefined),
   stop: vi.fn(async () => undefined),
   resume: [] as { cb: () => void | Promise<void>; order?: number }[],
   platform: 'android' as 'android' | 'ios' | 'web',
 }));
 vi.mock('../src/lib/native/background-session', () => ({
-  startBackgroundSession: () => h.start(),
+  startBackgroundSession: (...a: unknown[]) => h.start(...a),
   stopBackgroundSession: () => h.stop(),
 }));
 vi.mock('../src/lib/native/platform', () => ({
@@ -112,5 +112,40 @@ describe('배터리 최적화 안내', () => {
     const spy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked'); });
     await expect(render(true)).resolves.not.toThrow();
     spy.mockRestore();
+  });
+});
+
+describe('useBackgroundSession — 역할 인자 (V33·V34·V41)', () => {
+  let optsSeen: unknown[] = [];
+  beforeEach(() => { optsSeen = []; });
+  it('호스트+마이크 사용이면 microphone 옵션으로 시작한다', async () => {
+    h.start.mockImplementation((async (...a: unknown[]) => { optsSeen.push(a[0]); }) as never);
+    function HostHarness() { last = useBackgroundSession(true, 'host', true); return null; }
+    await act(async () => root.render(<HostHarness />));
+    expect(optsSeen[0]).toEqual({ microphone: true });
+  });
+
+  it('호스트 오프라인(마이크 불필요)이면 microphone=false 로 시작한다', async () => {
+    h.start.mockImplementation((async (...a: unknown[]) => { optsSeen.push(a[0]); }) as never);
+    function HostHarness() { last = useBackgroundSession(true, 'host', false); return null; }
+    await act(async () => root.render(<HostHarness />));
+    expect(optsSeen[0]).toEqual({ microphone: false });
+  });
+
+  it('회원(기본 역할)은 마이크 옵션 없이 시작한다', async () => {
+    h.start.mockImplementation((async (...a: unknown[]) => { optsSeen.push(a[0]); }) as never);
+    await render(true);
+    expect(optsSeen[0]).toBeUndefined();
+  });
+
+  it('호스트도 복귀 시 같은 옵션으로 시작을 재시도하고 종료는 동일하다', async () => {
+    h.start.mockImplementation((async (...a: unknown[]) => { optsSeen.push(a[0]); }) as never);
+    function HostHarness() { last = useBackgroundSession(true, 'host', true); return null; }
+    await act(async () => root.render(<HostHarness />));
+    await act(async () => { await h.resume[0].cb(); });
+    expect(optsSeen).toEqual([{ microphone: true }, { microphone: true }]);
+    await act(async () => root.unmount());
+    expect(h.stop).toHaveBeenCalledTimes(1);
+    root = createRoot(document.createElement('div'));
   });
 });
