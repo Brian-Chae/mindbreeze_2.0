@@ -19,6 +19,7 @@ interface ToolsSheetProps {
   accessCode: string;
   codeCopied: boolean;
   onCopyCode: () => void;
+  onInvite?: () => void;
   /** 내 밴드 줄 부제(연결됨·미착용 …) */
   selfBandText: string;
   onOpenMyband: () => void;
@@ -31,10 +32,11 @@ const SORTS: readonly { key: HostSort; label: string }[] = [
 ];
 
 export function ToolsSheet({
-  sort, onSort, showHandsFirst, handsFirst, onHandsFirst, table, onTable, accessCode, codeCopied, onCopyCode, selfBandText, onOpenMyband,
+  sort, onSort, showHandsFirst, handsFirst, onHandsFirst, table, onTable, accessCode, codeCopied, onCopyCode, selfBandText, onOpenMyband, onInvite,
 }: ToolsSheetProps) {
   return (
     <div className="hp-sheet">
+      {onInvite && <button type="button" className="hp-btn min-h-[44px] min-w-[44px]" onClick={onInvite}>회원 초대</button>}
       <HostSection label="정렬">
         <div className="hp-segs" role="radiogroup" aria-label="정렬">
           {SORTS.map((s) => (

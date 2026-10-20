@@ -44,10 +44,11 @@ export interface InviteSheetProps {
   reminding?: boolean;
   onCopyCode: () => void;
   onRemind: (participantIds: string[]) => void;
+  canInvite?: boolean;
   onInviteAdd: () => void;
 }
 
-export function InviteSheetBody({ invited, inRoom, away, code, codeCopied = false, reminding = false, onCopyCode, onRemind, onInviteAdd }: InviteSheetProps) {
+export function InviteSheetBody({ invited, inRoom, away, code, codeCopied = false, reminding = false, canInvite = true, onCopyCode, onRemind, onInviteAdd }: InviteSheetProps) {
   const allIn = away.length === 0;
   const targets = remindTargets(away);
   return (
@@ -95,7 +96,7 @@ export function InviteSheetBody({ invited, inRoom, away, code, codeCopied = fals
         <FlowButton kind="primary" disabled={targets.length === 0 || reminding} onClick={() => onRemind(targets)}>
           <Bell size={20} aria-hidden="true" />{targets.length === 0 ? '다시 알릴 회원이 없어요' : `${targets.length}명에게 다시 알림`}
         </FlowButton>
-        <FlowButton kind="soft" onClick={onInviteAdd}><UserPlus size={20} aria-hidden="true" />초대 추가</FlowButton>
+        {canInvite && <FlowButton kind="soft" onClick={onInviteAdd}><UserPlus size={20} aria-hidden="true" />초대 추가</FlowButton>}
       </div>
     </>
   );
