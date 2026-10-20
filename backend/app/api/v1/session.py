@@ -14,6 +14,7 @@ from app.core.database import get_db
 from app.core.redis import get_redis
 from app.schemas.class_scheduling import TransitionConfirmation
 from app.schemas.session import (
+    RecordingConsentRequest,
     ReportEmailRequest,
     ReportEmailResponse,
     EEGFeatureBatchRequest,
@@ -21,7 +22,10 @@ from app.schemas.session import (
     EnterRequest,
     EnterResponse,
     EnterVerifyRequest,
+    EegCollectionConsentRequest,
     EnterVerifyResponse,
+    EntryConsentBody,
+    EntryConsentState,
     EntryStateResponse,
     InviteEmailListResponse,
     InviteEmailRequest,
@@ -61,6 +65,7 @@ from app.services import (
     class_read_service,
     eeg_raw_service,
     eeg_rollup_service,
+    recording_consent_service,
     report_email_service,
     research_consent_service,
     session_email_invite_service,
@@ -160,6 +165,10 @@ async def enter_session(
                 birth_date=_parse_date(payload.birth_date) if payload.birth_date else None,
                 email=payload.email,
                 entry_credential=x_entry_credential or payload.entry_credential,
+                recording_consent=payload.recording_consent,
+                recording_notice_version=payload.recording_notice_version,
+                eeg_collection_consent=payload.eeg_collection_consent,
+                eeg_notice_version=payload.eeg_notice_version,
             )
         )
     except HTTPException as exc:
@@ -467,11 +476,70 @@ def get_participant_livekit_token(
 @router.post("/{session_id}/enter", response_model=EnterResponse)
 def enter_invited_session(
     session_id: str,
+    body: EntryConsentBody | None = None,
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
-    """초대받은 로그인 회원의 편의 입장 — 초대 행이 있을 때만(없으면 403 + 코드 입장 안내)."""
-    return session_service.enter_session_as_invited(session_id, current_user["id"], db)
+    """초대받은 로그인 회원의 편의 입장 — 초대 행이 있을 때만(없으면 403 + 코드 입장 안내).
+
+    SDD-220(F1): 회차 녹음·녹화 동의(body.recording_consent)가 저장돼야 입장 자격이 나간다.
+    """
+    consents = body or EntryConsentBody()
+    return session_service.enter_session_as_invited(
+        session_id,
+        current_user["id"],
+        db,
+        recording_consent=consents.recording_consent,
+        recording_notice_version=consents.recording_notice_version,
+        eeg_collection_consent=consents.eeg_collection_consent,
+        eeg_notice_version=consents.eeg_notice_version,
+    )
+
+
+@router.get("/{session_id}/entry/consents", response_model=EntryConsentState)
+def get_entry_consents(
+    session_id: str,
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-220: 본인 회차 동의 상태(녹음·녹화 필수 / 뇌파 수집 선택)."""
+    return recording_consent_service.get_entry_consents(
+        session_id, db, entry_credential=x_entry_credential,
+        current_user_id=current_user["id"] if current_user else None,
+    )
+
+
+@router.put("/{session_id}/entry/recording-consent", response_model=EntryConsentState)
+def put_recording_consent(
+    session_id: str,
+    payload: RecordingConsentRequest,
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-220(F1): 입장 후 재접속·구 참여자의 회차 녹음·녹화 동의 저장. 거부(false)는 기록만 하며 LiveKit 토큰은 나가지 않는다."""
+    return recording_consent_service.set_recording_consent(
+        session_id, payload.consented, payload.notice_version, db,
+        entry_credential=x_entry_credential,
+        current_user_id=current_user["id"] if current_user else None,
+    )
+
+
+@router.put("/{session_id}/entry/eeg-consent", response_model=EntryConsentState)
+def put_eeg_collection_consent(
+    session_id: str,
+    payload: EegCollectionConsentRequest,
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-220: 밴드 연결 전 뇌파 수집 선택. 리포트 반영/연구 선택과 별개로 저장한다."""
+    return recording_consent_service.set_eeg_collection_consent(
+        session_id, payload.consented, payload.notice_version, db,
+        entry_credential=x_entry_credential,
+        current_user_id=current_user["id"] if current_user else None,
+    )
 
 
 @router.get("/{session_id}/research-consent", response_model=ResearchConsentResponse)

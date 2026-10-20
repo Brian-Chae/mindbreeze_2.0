@@ -183,6 +183,7 @@ def create_individual_counselor_application(
     specialties: str | None,
     inquiry: str | None,
     db: Session,
+    birth_date: str | None = None,
 ) -> SignupApplication:
     """개인 상담사 신청 — 신청 + 개인 기관 + pending 상담사 + 프로필을 원자적으로 생성.
 
@@ -205,6 +206,12 @@ def create_individual_counselor_application(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="이름을 입력해야 합니다",
         )
+
+    # SDD-220: 신규 계정 생성 공통 검증 — 탈퇴 처리 중 이메일(F2)·만 14세 확인을 신청 경로에서도 우회할 수 없다.
+    from app.services import signup_policy_service
+
+    signup_policy_service.assert_email_not_pending_deletion(db, email_norm)
+    birth = signup_policy_service.validate_birth_date(birth_date, required=True)
 
     existing_user = (
         db.query(User).filter(func.lower(User.email) == email_norm).first()
@@ -253,6 +260,7 @@ def create_individual_counselor_application(
         org_id=org.id,
         status="pending",
         verified_tier="email",
+        birth_date=birth,
     )
     db.add(user)
     db.flush()

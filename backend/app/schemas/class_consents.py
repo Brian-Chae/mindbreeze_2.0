@@ -1,5 +1,5 @@
 """클래스 본인 선택 동의 입력. 필드 누락은 기존값 보존이다."""
-from pydantic import Field, model_validator
+from pydantic import BaseModel, Field, model_validator
 from app.schemas.class_membership import MemberCommand
 
 
@@ -20,3 +20,10 @@ class ClassConsentCommand(MemberCommand):
 
 class ClassResearchWithdrawalCommand(MemberCommand):
     reason: str = Field(min_length=1,max_length=1000)
+
+
+class ClassSessionRecordingConsent(BaseModel):
+    """SDD-220(F1): 회차별 녹음·녹화 필수 동의 — 입장 자격을 받기 전(회원 로그인/게스트 멤버 자격)에 저장한다."""
+
+    consented: bool
+    notice_version: str | None = Field(default=None, min_length=1, max_length=20)

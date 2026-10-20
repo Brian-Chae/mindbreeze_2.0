@@ -3,6 +3,7 @@
 import { useDialogA11y } from '../../hooks/useDialogA11y';
 import { PrivacyPolicyLink } from '../legal/PrivacyPolicyLink';
 import { RAW_RETENTION_DAYS } from '../../lib/privacy-policy';
+import { isAiEnabled } from '../../lib/feature-flags';
 
 interface Props {
   open: boolean;
@@ -13,6 +14,8 @@ interface Props {
 export function ConsentModal({ open, onConfirm, onCancel }: Props) {
   const dialogRef = useDialogA11y(open, onCancel);
   if (!open) return null;
+  // SDD-220: AI 기능이 꺼져 있으면 "AI 기록지" 문구 없이 녹음만 안내한다(서버도 STT·요약을 큐에 넣지 않는다).
+  const aiEnabled = isAiEnabled();
   return (
     <div
       ref={dialogRef}
@@ -27,10 +30,12 @@ export function ConsentModal({ open, onConfirm, onCancel }: Props) {
           음성 녹음 동의가 필요합니다
         </h2>
         <p className="mt-3 text-sm text-neutral-600 dark:text-neutral-400">
-          이 세션의 음성을 녹음하고 AI 기록지 자동 생성을 위해 사용합니다. 동의하지 않으시면 수동 기록 모드로 진행됩니다.
+          {aiEnabled
+            ? '이 세션의 음성을 녹음하고 AI 기록지 자동 생성을 위해 사용합니다. 동의하지 않으시면 수동 기록 모드로 진행됩니다.'
+            : '이 세션의 음성을 녹음해 클래스 기록으로 보관합니다. 동의하지 않으시면 수동 기록 모드로 진행됩니다.'}
         </p>
         <ul className="mt-4 list-disc space-y-1 pl-5 text-xs text-neutral-500 dark:text-neutral-400">
-          <li>녹음 데이터는 STT/요약 처리 후 클래스 종료일부터 {RAW_RETENTION_DAYS}일이 지나면 삭제됩니다</li>
+          <li>{aiEnabled ? '녹음 데이터는 STT/요약 처리 후 ' : '녹음 데이터는 '}클래스 종료일부터 {RAW_RETENTION_DAYS}일이 지나면 삭제됩니다</li>
           <li>본인 세션과 담당 상담사만 접근할 수 있습니다</li>
           <li>언제든지 녹음을 중지할 수 있습니다</li>
           <li><PrivacyPolicyLink>개인정보 처리방침</PrivacyPolicyLink>에서 자세한 내용을 확인할 수 있습니다</li>

@@ -27,6 +27,8 @@ from app.models.onboarding_progress import OnboardingProgress
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
 from app.schemas.auth import (
+    AppleAuthRequest,
+    AppleChallengeResponse,
     ClientProfileResponse,
     ClientProfileUpdate,
     ConsentRequest,
@@ -60,7 +62,9 @@ from app.services import (
     otp_service,
     password_reset_service,
     refresh_token_service,
+    signup_policy_service,
 )
+from app.services import apple_auth_service
 from app.tasks.email import send_otp_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -220,6 +224,7 @@ async def register(req: RegisterRequest, db: Session = Depends(get_db)):
         consents=req.consents,
         db=db,
         remember_me=req.remember_me,
+        birth_date=req.birth_date,
     )
     return user
 
@@ -303,19 +308,6 @@ async def verify_email_otp(
 # B2: 역할별 가입 (상담사 / 내담자)
 # ---------------------------------------------------------------------------
 
-def _validate_consents(consents: ConsentRequest) -> None:
-    if not consents.tos or not consents.privacy:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="서비스 이용약관/개인정보 처리방침 동의는 필수입니다",
-        )
-    if not consents.sensitive:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="민감정보 처리에 동의해야 가입할 수 있습니다",
-        )
-
-
 def _create_user_with_role(
     *,
     role: str,
@@ -327,8 +319,11 @@ def _create_user_with_role(
     db: Session,
     remember_me: bool = True,
     commit: bool = True,
+    birth_date: str | None = None,
 ) -> tuple[User, str, str]:
-    """공통 가입 처리 — User + Consent 3종 생성, 토큰 발급.
+    """공통 가입 처리 — User + Consent(필수 3종 + 선택 2종) 생성, 토큰 발급.
+
+    SDD-220: 만 14세 확인·필수 동의·탈퇴 처리 중 이메일(F2)을 서버에서 공통 검증한다.
 
     DATA-03: commit=False 이면 User/Consent/RefreshToken 을 flush 만 하고,
     호출부(register_client)가 나머지 가입 단계와 함께 단일 트랜잭션으로 커밋한다.
@@ -347,7 +342,9 @@ def _create_user_with_role(
             detail="이메일 검증 토큰과 가입 이메일이 일치하지 않습니다",
         )
 
-    _validate_consents(consents)
+    birth = signup_policy_service.validate_new_account(
+        db, email=verified_email, birth_date=birth_date, consents=consents
+    )
 
     existing = db.query(User).filter(func.lower(User.email) == verified_email).first()
     if existing:
@@ -359,16 +356,12 @@ def _create_user_with_role(
         name=name,
         role=role,
         verified_tier="email",
+        birth_date=birth,
     )
     db.add(user)
     db.flush()
 
-    for ctype, agreed in (
-        ("tos", consents.tos),
-        ("privacy", consents.privacy),
-        ("sensitive", consents.sensitive),
-    ):
-        db.add(Consent(user_id=user.id, type=ctype, agreed=agreed))
+    signup_policy_service.record_consents(db, user.id, consents)
 
     if commit:
         db.commit()
@@ -435,7 +428,6 @@ async def register_client(
     from app.services import client_service, onboarding_service, signup_application_service
 
     # 사용자 생성 전에 실패 가능한 입력을 먼저 검증한다 (불완전 가입 방지)
-    birth = _parse_birth_date(req.birth_date)
     matched_counselor = None
     if not req.invite_token and req.counselor_code:
         matched_counselor, _, _ = signup_application_service.validate_counselor_code(
@@ -454,7 +446,10 @@ async def register_client(
         db=db,
         remember_me=req.remember_me,
         commit=False,
+        birth_date=req.birth_date,
     )
+    # SDD-220: 연령·동의 검증은 _create_user_with_role 가 끝냈다. 프로필 동기화에는 검증된 값을 쓴다.
+    birth = user.birth_date
 
     # SDD-073: 가입 정보 저장 — User.phone + ClientProfile(gender/birth_date)
     phone = (req.phone or "").strip() or None
@@ -472,7 +467,7 @@ async def register_client(
         onboarding_service.save_step(
             str(user.id),
             2,
-            {"gender": req.gender, "birth_date": req.birth_date, "concerns": [], "interests": []},
+            {"gender": req.gender, "birth_date": birth.isoformat() if birth else None, "concerns": [], "interests": []},
             db,
         )
 
@@ -849,6 +844,11 @@ async def google_auth(
         )
 
     if user:
+        # SDD-220(F2): 탈퇴 처리 중 계정은 소셜로도 복구·재가입할 수 없다.
+        if user.status == "deleted":
+            raise signup_policy_service.api_error(
+                409, "ACCOUNT_DELETION_PENDING", "탈퇴 처리 중인 이메일이에요. 영구 삭제가 끝난 뒤 다시 가입할 수 있어요"
+            )
         # MB2-AUTH-01: 기존 계정도 로그인/refresh 와 동일하게 suspended/pending 을 차단한다.
         # (비활성화 실효성 — Google OAuth 로 정지 계정 세션을 발급하지 못하게 한다.)
         _ensure_account_active(user)
@@ -874,13 +874,10 @@ async def google_auth(
         # SEC-04: 신규 Google 가입은 약관·민감정보 동의를 명시적으로 확인해야 한다.
         #   동의 없이 True 일괄 기록하던 기존 동작은 민감정보 처리 동의(개인정보보호법)를
         #   사용자 확인 없이 취득하는 문제가 있어 차단한다.
-        if req.consents is None or not (
-            req.consents.tos and req.consents.privacy and req.consents.sensitive
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="서비스 이용약관·개인정보 처리방침·민감정보 처리에 모두 동의해야 가입할 수 있습니다",
-            )
+        # SDD-220: 만 14세 확인(생년월일)·필수 동의를 이메일 가입과 같은 서버 규칙으로 검증한다(신규 생성만).
+        birth = signup_policy_service.validate_new_account(
+            db, email=email, birth_date=req.birth_date, consents=req.consents
+        )
         # 신규 Google 사용자 생성 (내담자)
         rand_pw = secrets.token_urlsafe(32)
         user = User(
@@ -890,17 +887,13 @@ async def google_auth(
             role=role,
             auth_provider="google",
             verified_tier="email",
+            birth_date=birth,
         )
         db.add(user)
         db.flush()
 
-        # 약관 동의 — 사용자가 명시적으로 동의한 항목만 기록한다.
-        for ctype, agreed in (
-            ("tos", req.consents.tos),
-            ("privacy", req.consents.privacy),
-            ("sensitive", req.consents.sensitive),
-        ):
-            db.add(Consent(user_id=user.id, type=ctype, agreed=agreed))
+        # 약관 동의 — 사용자가 명시적으로 동의한 항목만 기록한다(선택 동의는 제출값 그대로).
+        signup_policy_service.record_consents(db, user.id, req.consents)
         db.commit()
         db.refresh(user)
 
@@ -938,6 +931,182 @@ async def google_auth(
         response, refresh_token_str, remember_me=req.remember_me, request=request
     )
     return response
+
+
+# ---------------------------------------------------------------------------
+# Sign in with Apple (SDD-220)
+# ---------------------------------------------------------------------------
+
+@router.post("/apple/challenge", response_model=AppleChallengeResponse)
+async def apple_challenge(redis: Redis = Depends(get_redis)):
+    """Apple 로그인 시작 — 서버가 일회용 nonce 를 발급한다(클라이언트 임의 nonce 는 신뢰하지 않는다)."""
+    nonce = await apple_auth_service.issue_challenge(redis)
+    return AppleChallengeResponse(nonce=nonce, expires_in=apple_auth_service.NONCE_TTL_SECONDS)
+
+
+def _split_apple_name(name: str | None, email: str) -> str:
+    clean = " ".join((name or "").split())
+    return clean[:100] if clean else email.split("@")[0]
+
+
+@router.post("/apple", response_model=LoginResponse)
+async def apple_auth(
+    request: Request,
+    req: AppleAuthRequest,
+    db: Session = Depends(get_db),
+    redis: Redis = Depends(get_redis),
+):
+    """Apple id_token 검증 → sub 기준 find-or-create → JWT 발급.
+
+    - 위조·만료·claim/nonce 불일치·nonce 재사용: 401 APPLE_TOKEN_INVALID (사용자/토큰 생성 0).
+    - 공급자(JWKS) 장애: 503 APPLE_UNAVAILABLE (인증 우회 없음).
+    - 같은 sub 재로그인: 200 (생년월일·동의 불필요, 최초 이름 유지).
+    - 같은 이메일의 기존 계정이 있고 sub 연결이 없으면 자동 병합하지 않고 409 ACCOUNT_LINK_REQUIRED.
+    - 신규 생성에서만 만 14세·필수 동의를 검사한다(422). 검증 실패 시 nonce 는 소비하지 않아 같은 토큰으로 재제출할 수 있다.
+    """
+    import secrets
+
+    from app.models.account_deletion import SocialIdentity
+    from sqlalchemy.exc import IntegrityError
+
+    def _invalid() -> HTTPException:
+        return signup_policy_service.api_error(401, "APPLE_TOKEN_INVALID", "Apple 인증 정보가 올바르지 않아요. 다시 시도해 주세요")
+
+    try:
+        claims = await apple_auth_service.verify_id_token(req.id_token)
+    except apple_auth_service.AppleTokenInvalid:
+        raise _invalid()
+    except apple_auth_service.AppleUnavailable:
+        raise signup_policy_service.api_error(503, "APPLE_UNAVAILABLE", "Apple 인증 서버에 연결할 수 없어요. 잠시 후 다시 시도해 주세요")
+    if not apple_auth_service.nonce_claim_matches(claims, req.nonce):
+        raise _invalid()
+
+    subject = str(claims["sub"])
+    client_id = claims["_client_id"]
+    requested_role = req.role or ""
+    wants_elevated = requested_role in ("counselor", "org_admin", "platform_admin")
+
+    identity = (
+        db.query(SocialIdentity)
+        .filter(SocialIdentity.provider == "apple", SocialIdentity.subject == subject)
+        .first()
+    )
+    user: User | None = None
+    new_account = False
+
+    if identity is not None:
+        user = db.query(User).filter(User.id == identity.user_id).first()
+        if user is None:
+            raise _invalid()
+        if user.status == "deleted":
+            raise signup_policy_service.api_error(
+                409, "ACCOUNT_DELETION_PENDING", "탈퇴 처리 중인 계정이에요. 영구 삭제가 끝난 뒤 다시 가입할 수 있어요"
+            )
+        _ensure_account_active(user)
+        _ensure_login_role(user, req.role)
+    else:
+        raw_email = (claims.get("email") or "").strip().lower()
+        if not raw_email:
+            raise signup_policy_service.api_error(422, "APPLE_EMAIL_REQUIRED", "Apple 계정에서 이메일을 확인할 수 없어요")
+        signup_policy_service.assert_email_not_pending_deletion(db, raw_email)
+        existing = db.query(User).filter(func.lower(User.email) == raw_email).first()
+        if existing is not None:
+            # 이메일만 같다는 이유로 병합·승격하지 않는다 — 기존 방식으로 로그인한 뒤 연결하도록 안내한다.
+            raise signup_policy_service.api_error(
+                409, "ACCOUNT_LINK_REQUIRED", "이미 같은 이메일로 가입된 계정이 있어요. 기존 방법으로 로그인한 뒤 연결해 주세요"
+            )
+        if wants_elevated:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="사전 등록된 계정이 없습니다. 관리자에게 문의하세요.",
+            )
+        birth = signup_policy_service.validate_new_account(
+            db, email=raw_email, birth_date=req.birth_date, consents=req.consents
+        )
+        new_account = True
+
+    # 검증을 모두 통과한 뒤에만 nonce 를 소비한다(원자적 1회) — 병렬 replay 도 성공은 최대 1건.
+    if not await apple_auth_service.consume_challenge(redis, req.nonce):
+        raise _invalid()
+
+    if new_account:
+        refresh_plain = None
+        if req.authorization_code:
+            refresh_plain = await apple_auth_service.exchange_authorization_code(req.authorization_code, client_id)
+        user = User(
+            email=raw_email,
+            password_hash=hash_password(secrets.token_urlsafe(32)),
+            name=_split_apple_name(req.name, raw_email),
+            role="client",
+            auth_provider="apple",
+            verified_tier="email",
+            birth_date=birth,
+        )
+        db.add(user)
+        try:
+            db.flush()
+            db.add(
+                SocialIdentity(
+                    user_id=user.id,
+                    provider="apple",
+                    subject=subject,
+                    email=raw_email,
+                    client_id=client_id,
+                    encrypted_refresh_token=apple_auth_service.encrypt_token(refresh_plain),
+                )
+            )
+            signup_policy_service.record_consents(db, user.id, req.consents)
+            db.commit()
+        except IntegrityError:
+            # 같은 sub/이메일의 동시 최초 가입 — 고유 제약이 사용자 1명을 보장하고, 진 쪽은 기존 계정으로 로그인한다.
+            db.rollback()
+            identity = (
+                db.query(SocialIdentity)
+                .filter(SocialIdentity.provider == "apple", SocialIdentity.subject == subject)
+                .first()
+            )
+            user = db.query(User).filter(User.id == identity.user_id).first() if identity else None
+            if user is None:
+                raise signup_policy_service.api_error(
+                    409, "ACCOUNT_LINK_REQUIRED", "이미 같은 이메일로 가입된 계정이 있어요. 기존 방법으로 로그인한 뒤 연결해 주세요"
+                )
+            new_account = False
+        else:
+            db.refresh(user)
+
+    assert user is not None
+    if new_account and req.invite_token:
+        _apply_invite_token(req.invite_token, user, db)
+
+    access_token = create_access_token(subject=str(user.id))
+    refresh_token_str = refresh_token_service.issue_refresh_token(
+        str(user.id), db, remember=req.remember_me
+    )
+    response = JSONResponse(
+        content=LoginResponse(
+            user=_to_user_response(user),
+            access_token=access_token,
+        ).model_dump(mode="json"),
+    )
+    _set_refresh_cookie(
+        response, refresh_token_str, remember_me=req.remember_me, request=request
+    )
+    return response
+
+
+def _apply_invite_token(invite_token: str, user: User, db: Session) -> None:
+    """초대 링크로 가입한 소셜 신규 사용자를 초대 상담사에 연결한다(Google 과 같은 규칙)."""
+    from app.services import client_service
+
+    client_service.link_invited_client(invite_token, user, db)
+    db.refresh(user)
+    progress = onboarding_service.get_progress(str(user.id), db)
+    saved_steps = progress.steps or {}
+    for n in (1, 2, 3, 4):
+        if f"step{n}" not in saved_steps:
+            progress.current_step = n
+            break
+    db.commit()
 
 
 # ---------------------------------------------------------------------------
@@ -994,6 +1163,8 @@ async def update_user_me(
         if req.birth_date is not None:
             # MB2-AUTH-04: 가입 경로와 동일하게 미래 날짜를 차단한다 (_parse_birth_date 단일 진실).
             profile.birth_date = _parse_birth_date(req.birth_date)
+            # SDD-220: users.birth_date 와 ClientProfile.birth_date 를 한 값으로 유지한다(이중 진실 방지).
+            user.birth_date = profile.birth_date
 
     # AUTHZ-01: 온보딩 완료 플래그는 여기서 세우지 않는다 (전용 완료 엔드포인트로만 처리).
     db.commit()
@@ -1128,6 +1299,7 @@ async def update_client_profile(
     if req.birth_date is not None:
         # MB2-AUTH-04: 가입 경로와 동일하게 미래 날짜를 차단한다 (_parse_birth_date 단일 진실).
         profile.birth_date = _parse_birth_date(req.birth_date)
+        user.birth_date = profile.birth_date  # SDD-220: 이중 진실 방지
     if req.concerns is not None:
         profile.concerns = req.concerns
     if req.interests is not None:

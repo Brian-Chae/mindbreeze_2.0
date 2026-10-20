@@ -694,6 +694,11 @@ def create_org_with_admin(
     db.add(org)
     db.flush()
 
+    # SDD-220(F2): 탈퇴 처리 중인 이메일로는 기관 관리자 계정을 만들 수 없다.
+    from app.services import signup_policy_service
+
+    signup_policy_service.assert_email_not_pending_deletion(db, email)
+
     admin = User(
         email=email,
         # 초대 수락 전까지 아무도 알 수 없는 난수 — 실질적으로 로그인 불가
@@ -806,6 +811,11 @@ async def invite_counselor(
         return existing, invite_sent
 
     await org_invite_service.check_counselor_send_cooldown(str(org.id), redis)
+
+    # SDD-220(F2): 탈퇴 처리 중인 이메일로는 초대 계정을 만들 수 없다.
+    from app.services import signup_policy_service
+
+    signup_policy_service.assert_email_not_pending_deletion(db, email_norm)
 
     user = User(
         email=email_norm,

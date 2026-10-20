@@ -1870,6 +1870,8 @@ def join_session(session_id: str, user_id: str, user_name: str, db: DBSession) -
             if s.status != "in_progress":
                 raise HTTPException(400, detail="현재 세션에 입장할 수 없는 상태입니다")
             require_eligible(db, entered)
+            from app.services.recording_consent_service import require_recording_consent
+            require_recording_consent(entered)  # SDD-220(F1): 구 join 경로도 같은 동의 검증을 거친다
             if not s.webrtc_room_id:
                 s.webrtc_room_id = uuid.uuid4()
             token = generate_livekit_token(str(s.webrtc_room_id), user_name, user_id)
@@ -1913,6 +1915,9 @@ def join_session(session_id: str, user_id: str, user_name: str, db: DBSession) -
         .filter(SessionParticipant.session_id == s.id, SessionParticipant.user_id == _to_uuid(user_id))
         .first()
     )
+    if entered is not None:
+        from app.services.recording_consent_service import require_recording_consent
+        require_recording_consent(entered)  # SDD-220(F1)
     if entered is not None and entered.entered_at is None:
         entered.entered_at = _now()
         db.commit()
@@ -1970,6 +1975,7 @@ def _enter_response(s: Session, participant: SessionParticipant | None, db: DBSe
         "participant_id": str(participant.id) if participant is not None else None,
         "is_guest": is_guest,
         "is_waitlisted": bool(participant.is_waitlisted) if participant is not None else False,
+        "eeg_collection_consented": participant.eeg_collection_consented if participant is not None else None,
         # 참여자 PII(성별·생년월일)는 입장 응답에 싣지 않는다.
         "session": _with_chat_room(_serialize(s, include_participant_pii=False), s.id, db),
     }
@@ -1988,6 +1994,61 @@ def _mark_entered(participant: SessionParticipant) -> None:
     mark_entered(db, session, participant, _now())
 
 
+def _precheck_recording_consent(
+    s: Session,
+    db: DBSession,
+    *,
+    member_uid: UUID | None,
+    entry_credential: str | None,
+    granted: bool,
+) -> None:
+    """SDD-220(F1): 입장 처리(참여자 생성·멤버십·입장 자격) 이전에 회차별 녹음·녹화 동의를 확인한다.
+
+    이번 요청에서 동의했거나, 이 회차의 본인 참여자 행에 동의가 이미 저장돼 있으면 통과한다.
+    아니면 아무것도 쓰기 전에 403 RECORDING_CONSENT_REQUIRED 로 거부한다(다음 단계·자격·토큰 0).
+    """
+    from app.services import entry_credential_service
+    from app.services.recording_consent_service import is_recorded, recording_required
+
+    if granted:
+        return
+    existing: SessionParticipant | None = None
+    if member_uid is not None:
+        existing = (
+            db.query(SessionParticipant)
+            .filter(SessionParticipant.session_id == s.id, SessionParticipant.user_id == member_uid)
+            .first()
+        )
+    elif entry_credential:
+        try:
+            existing = entry_credential_service.resolve_participant(db, entry_credential, s.id, include_cancelled=True)
+        except HTTPException:
+            existing = None
+    if not is_recorded(existing):
+        raise recording_required()
+
+
+def _apply_entry_consents(
+    db: DBSession,
+    participant: SessionParticipant,
+    *,
+    recording_consent: bool | None,
+    recording_notice_version: str | None,
+    eeg_collection_consent: bool | None,
+    eeg_notice_version: str | None,
+) -> None:
+    """입장 요청에 실린 동의를 참여자 행에 저장한다(커밋은 호출자). 뇌파 수집은 리포트/연구 선택과 별개로 기록한다."""
+    from app.services import recording_consent_service as rcs
+
+    if recording_consent and not rcs.is_recorded(participant):
+        rcs.apply_recording_consent(participant, recording_notice_version)
+    if eeg_collection_consent is not None:
+        rcs.apply_eeg_choice(participant, eeg_collection_consent, eeg_notice_version)
+    elif participant.eeg_collection_consented is None:
+        # 첫 입장에서 따로 고르지 않았다 — 회원은 계정 설정값, 비회원은 미동의(true 로 추정하지 않는다).
+        rcs.apply_eeg_choice(participant, rcs.account_eeg_consent(db, participant.user_id), None)
+
+
 def _enter_resolved(
     s: Session,
     db: DBSession,
@@ -1999,11 +2060,25 @@ def _enter_resolved(
     email: str | None = None,
     entry_credential: str | None = None,
     require_invite: bool = False,
+    recording_consent: bool | None = None,
+    recording_notice_version: str | None = None,
+    eeg_collection_consent: bool | None = None,
+    eeg_notice_version: str | None = None,
 ) -> dict:
     """확인된 활성 클래스에 참여자를 만들거나 되살려 입장 자격과 함께 돌려준다."""
     from app.services import entry_credential_service
 
     member_uid = _to_uuid(user_id) if user_id else None
+    if not (member_uid is not None and s.host_id == member_uid):
+        _precheck_recording_consent(
+            s, db, member_uid=member_uid, entry_credential=entry_credential, granted=bool(recording_consent)
+        )
+    consent_kwargs = dict(
+        recording_consent=recording_consent,
+        recording_notice_version=recording_notice_version,
+        eeg_collection_consent=eeg_collection_consent,
+        eeg_notice_version=eeg_notice_version,
+    )
     membership=None
     if s.class_id:
         parent=db.query(Class).filter_by(id=s.class_id).first()
@@ -2091,6 +2166,7 @@ def _enter_resolved(
             promoted = _promote_waitlist_all(s, db)
         if membership is not None:
             participant.member_id=membership.id
+        _apply_entry_consents(db, participant, **consent_kwargs)
         _mark_entered(participant)
         db.commit()
         db.refresh(s)
@@ -2143,6 +2219,7 @@ def _enter_resolved(
             participant.birth_date = birth_date
             participant.report_email = clean_email
     db.flush()
+    _apply_entry_consents(db, participant, **consent_kwargs)
     if participant.is_waitlisted:
         promoted = _promote_waitlist_all(s, db)
     _mark_entered(participant)
@@ -2163,16 +2240,31 @@ def enter_session(
     birth_date: date | None = None,
     email: str | None = None,
     entry_credential: str | None = None,
+    recording_consent: bool | None = None,
+    recording_notice_version: str | None = None,
+    eeg_collection_consent: bool | None = None,
+    eeg_notice_version: str | None = None,
 ) -> dict:
     """코드로 입장 — 로그인·초대 행 없이 가능. 성공 시 클래스/참여자 범위의 입장 자격을 발급한다."""
     s = _get_session_by_code(code, db)
     return _enter_resolved(
         s, db, user_id=user_id, name=name, gender=gender, birth_date=birth_date,
         email=email, entry_credential=entry_credential,
+        recording_consent=recording_consent, recording_notice_version=recording_notice_version,
+        eeg_collection_consent=eeg_collection_consent, eeg_notice_version=eeg_notice_version,
     )
 
 
-def enter_session_as_invited(session_id: str, user_id: str, db: DBSession) -> dict:
+def enter_session_as_invited(
+    session_id: str,
+    user_id: str,
+    db: DBSession,
+    *,
+    recording_consent: bool | None = None,
+    recording_notice_version: str | None = None,
+    eeg_collection_consent: bool | None = None,
+    eeg_notice_version: str | None = None,
+) -> dict:
     """초대받은 로그인 회원의 편의 경로 — 초대 행이 있을 때만 코드 없이 입장한다(입장 조건이 아님)."""
     sid = _to_uuid(session_id)
     s = db.query(Session).filter(Session.id == sid, Session.is_template.is_(False)).first()
@@ -2180,7 +2272,11 @@ def enter_session_as_invited(session_id: str, user_id: str, db: DBSession) -> di
         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
     if s.status in _CLOSED_STATUSES:
         raise HTTPException(status_code=409, detail="종료된 클래스에는 입장할 수 없어요")
-    return _enter_resolved(s, db, user_id=user_id, require_invite=True)
+    return _enter_resolved(
+        s, db, user_id=user_id, require_invite=True,
+        recording_consent=recording_consent, recording_notice_version=recording_notice_version,
+        eeg_collection_consent=eeg_collection_consent, eeg_notice_version=eeg_notice_version,
+    )
 
 
 def revoke_entry_credential(entry_credential: str | None, db: DBSession) -> None:
@@ -2215,6 +2311,9 @@ def participant_livekit_token(
     )
     from app.services.class_attendance_service import require_eligible
     require_eligible(db, participant, allow_excused=False)
+    # SDD-220(F1): 회차 녹음·녹화 동의가 저장된 참여자에게만 토큰을 발급한다.
+    from app.services.recording_consent_service import require_recording_consent
+    require_recording_consent(participant)
     # LIVE-04: 완료/취소된 세션에서는 토큰을 발급하지 않는다.
     if s.status in _CLOSED_STATUSES:
         raise HTTPException(status_code=400, detail="종료된 세션입니다")
@@ -3242,6 +3341,9 @@ def resolve_upload_participant(
         participant_id=participant_id,
     )
     _assert_upload_eligible(participant)
+    # SDD-220: 뇌파 수집을 거부한 참여자는 리포트 반영과 무관하게 EEG 업로드(REST·WS)를 받지 않는다.
+    from app.services.recording_consent_service import assert_eeg_upload_allowed
+    assert_eeg_upload_allowed(participant)
     return participant
 
 

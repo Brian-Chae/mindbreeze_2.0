@@ -19,6 +19,8 @@ export interface IndividualCounselorApplicationPayload {
   display_name?: string;
   specialties?: string;
   inquiry?: string;
+  /** SDD-220: 신규 계정 생성이므로 만 14세 확인용 생년월일(YYYY-MM-DD) */
+  birth_date?: string;
   consents: { privacy: boolean };
 }
 

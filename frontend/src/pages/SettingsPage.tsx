@@ -19,6 +19,8 @@ import { useAuthStore } from '../stores/authStore';
 import { eventLabel } from '../lib/notification-format';
 import WebPushCard from '../components/settings/WebPushCard';
 import { PrivacyPolicyLink } from '../components/legal/PrivacyPolicyLink';
+import { AccountDeletionSection } from '../components/settings/account-deletion';
+import { PrivacyConsentsSection } from '../components/settings/privacy-consents';
 
 function Toggle({ enabled, onChange }: { enabled: boolean; onChange: () => void }) {
   return (
@@ -305,6 +307,9 @@ export default function SettingsPage() {
             ))}
           </div>
         ) : null}
+
+        <PrivacyConsentsSection />
+        <AccountDeletionSection />
 
         {/* 푸터 */}
         <div className="text-center text-[12px] text-[#9B9B9B] py-4">

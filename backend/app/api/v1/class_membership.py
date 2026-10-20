@@ -65,7 +65,8 @@ def cancel_makeup(class_id: UUID, assignment_id: UUID, payload: MemberCommand, c
     return guest_cancel_makeup(db, class_id, assignment_id, x_class_member_credential, payload)
 
 
-from app.schemas.class_consents import ClassConsentCommand, ClassResearchWithdrawalCommand
+from app.schemas.class_consents import ClassConsentCommand, ClassResearchWithdrawalCommand, ClassSessionRecordingConsent
+from app.schemas.session import EntryConsentState
 
 
 @router.get('/{class_id}/me/consents')
@@ -78,6 +79,13 @@ def own_consents(class_id: UUID, current_user: dict | None = Depends(get_current
 def update_own_consents(class_id: UUID, payload: ClassConsentCommand, current_user: dict | None = Depends(get_current_user_optional), db: Session = Depends(get_db), x_class_member_credential: str | None = Header(default=None, alias='X-Class-Member-Credential')):
     from app.services.class_member_consent_service import update_consents
     return update_consents(db,class_id,payload.model_dump(mode='json',exclude_unset=True),user_id=current_user['id'] if current_user else None,member_credential=x_class_member_credential)
+
+
+@router.put('/{class_id}/sessions/{session_id}/me/recording-consent', response_model=EntryConsentState)
+def put_session_recording_consent(class_id: UUID, session_id: UUID, payload: ClassSessionRecordingConsent, current_user: dict | None = Depends(get_current_user_optional), db: Session = Depends(get_db), x_class_member_credential: str | None = Header(default=None, alias='X-Class-Member-Credential')):
+    """SDD-220(F1): 회차 녹음·녹화 필수 동의 저장(입장 자격 발급 전). 로그인 회원 또는 멤버 자격으로 본인 확인."""
+    from app.services.class_member_consent_service import set_session_recording_consent
+    return set_session_recording_consent(db,class_id,session_id,payload.consented,payload.notice_version,user_id=current_user['id'] if current_user else None,member_credential=x_class_member_credential)
 
 
 @router.post('/{class_id}/me/research-withdrawal')
