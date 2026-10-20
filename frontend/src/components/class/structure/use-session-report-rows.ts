@@ -30,13 +30,13 @@ export function useSessionReportRows(
           order: session.seq ?? index + 1,
           scheduled_at: session.scheduled_at,
           host_name: session.host?.name ?? null,
-          attended: null,
-          absent: null,
+          attended: result?.attendance?.attended ?? null,
+          absent: result?.attendance?.absent ?? null,
           reports: (result?.reports ?? [])
             .filter((r) => r.type === 'client')
             .map((r) => ({
               id: r.id,
-              participant_name: null,
+              participant_name: r.participant_name ?? null,
               status: r.status,
               selectable: r.status === 'pending_review' || r.status === 'completed',
             })),

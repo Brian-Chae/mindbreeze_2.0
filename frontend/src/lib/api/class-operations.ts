@@ -12,7 +12,7 @@ export const classOperationsApi = {
   changeInstructor: (id: string, userId: string, command: WriteCommand & { role: 'lead' | 'assistant' | 'guest'; scope_session_id?: string }) => apiClient.patch<unknown>(`${path(id)}/instructors/${encodeURIComponent(userId)}`, command),
   removeInstructor: (id: string, userId: string, command: WriteCommand) => apiClient.delete<unknown>(`${path(id)}/instructors/${encodeURIComponent(userId)}`, { body: command }),
   transition: (id: string, command: WriteCommand & { action: 'complete' | 'cancel' | 'archive' | 'restore' | 'hide' }) => apiClient.post<unknown>(`${path(id)}/transition`, command),
-  reports: (id: string, sessionId: string) => apiClient.get<{ reports: { id: string; type: 'counselor' | 'client'; status: string }[] }>(`${path(id)}/sessions/${encodeURIComponent(sessionId)}/reports`),
+  reports: (id: string, sessionId: string) => apiClient.get<{ reports: { id: string; type: 'counselor' | 'client'; status: string; participant_name?: string | null }[]; attendance?: { attended: number; absent: number } }>(`${path(id)}/sessions/${encodeURIComponent(sessionId)}/reports`),
   correctHost: (id: string, sessionId: string, command: WriteCommand & { expected_state_version: number; mode: 'correct' | 'note'; candidate_host_id?: string; displayed_host_name?: string }) => apiClient.post<unknown>(`${path(id)}/sessions/${encodeURIComponent(sessionId)}/host-correction`, command),
   observe: (id: string, sessionId: string) => apiClient.post<Observation>(`${path(id)}/sessions/${encodeURIComponent(sessionId)}/observe`),
 };

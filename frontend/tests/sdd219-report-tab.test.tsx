@@ -65,6 +65,21 @@ describe('리포트 탭 연결', () => {
     expect(container.textContent).not.toContain('출석 0');
   });
 
+  it('서버가 출석 집계·참여자 이름을 내려주면 그대로 표시한다', async () => {
+    reportsMock.mockResolvedValue({
+      reports: [{ id: 'r1', type: 'client', status: 'pending_review', participant_name: '김회원' }],
+      attendance: { attended: 5, absent: 2 },
+    });
+    await render(<ClassReportTab classId="c1" sessions={makeSessions(1)} />);
+    expect(container.textContent).toContain('출석 5 / 결석 2');
+    // 참여자 이름은 회차를 펼치면 보인다.
+    await act(async () => {
+      container.querySelector<HTMLButtonElement>('button[aria-expanded]')?.click();
+    });
+    expect(container.textContent).toContain('김회원');
+    expect(container.textContent).not.toContain('출석 집계 미확인');
+  });
+
   it('회차 조회 실패를 빈 목록으로 삼키지 않고 안내한다', async () => {
     reportsMock.mockRejectedValueOnce(new Error('boom')).mockResolvedValue({ reports: [] });
     await render(<ClassReportTab classId="c1" sessions={makeSessions(2)} />);
