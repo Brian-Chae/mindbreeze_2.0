@@ -210,3 +210,56 @@ removeAllListeners(): Promise<void>
 - `android/capacitor.settings.gradle`, `android/app/capacitor.build.gradle`: keep-awake + foreground-service 프로젝트 2개 추가.
 - `ios/App/CapApp-SPM/Package.swift`: `CapacitorCommunityKeepAwake` 추가(foreground-service 는 Android 전용이라 없음).
 - `capacitor.config.ts`: 변경 없음(플러그인 설정 불필요).
+
+---
+
+## 부록 B. Track A (Android) 결과 — T-A1 ~ T-A3
+
+> 2026-10-20, `node_modules/@capacitor/android@8.3.4` 소스와 실제 `assembleDevDebug` 병합 Manifest 로 확인. 실기기 검증 전 단계.
+
+### B.1 T-A1 — Manifest·리소스 (적용 완료)
+
+- `AndroidManifest.xml`: `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_CONNECTED_DEVICE`, `WAKE_LOCK` 추가. `<service …AndroidForegroundService foregroundServiceType="connectedDevice" exported="false"/>` 선언. `location` 타입·`SYSTEM_ALERT_WINDOW` 는 넣지 않음. `POST_NOTIFICATIONS` 는 기존 선언 재사용.
+- `res/drawable/ic_stat_mindbreeze.xml`: 24dp 벡터, 단색 흰색(물결 두 줄). **JS 의 `smallIcon` 값은 `'ic_stat_mindbreeze'`**.
+- `res/values/strings.xml`: `bg_session_title`(명상 클래스 진행 중), `bg_session_channel_name`(수업 진행 알림) 추가. 플러그인은 JS 에서 문자열을 받으므로 현재는 참고용이며, Track J 가 문구를 하드코딩해도 무방(두 값은 일치시킬 것).
+- 확인: 병합 Manifest(`merged_manifests/devDebug`)에 권한 3종과 서비스(`connectedDevice`)가 반영됨. 병합 후 `SYSTEM_ALERT_WINDOW`·`FOREGROUND_SERVICE_LOCATION` 없음.
+
+### B.2 T-A2 — Capacitor 의 WebView 타이머 정지 여부 (소스 분석)
+
+- 호출 경로: `BridgeActivity.onPause()` → `Bridge.onPause()` → `cordovaWebView.handlePause(keepRunning)`. `keepRunning = shouldKeepRunning() || activityResultCallback != null`.
+- `Bridge.shouldKeepRunning()` 는 `preferences.getBoolean("KeepRunning", true)` — **기본 true**. 이 앱의 `capacitor.config.ts`·Manifest·리소스 어디에도 `KeepRunning=false` 설정이 없다.
+- `MockCordovaWebViewImpl.handlePause`: `keepRunning` 이 false 일 때만 `setPaused(true)`(= `webView.onPause()` + `pauseTimers()`). **즉 Capacitor 는 액티비티 pause/stop 시 WebView 타이머를 멈추지 않는다.** `BridgeActivity` 의 다른 어디에서도 `pauseTimers`/`WebView.onPause` 를 호출하지 않음.
+- `onResume` 에서는 `setPaused(false)`(= `onResume()`+`resumeTimers()`)를 항상 호출하므로 복귀 시 타이머는 확실히 재개된다.
+- **결론: `MainActivity` 변경 없음(코드 수정 안 함).** `onPause` 후 `resumeTimers()` 를 추가해도 Capacitor 경로상 멈춘 적이 없으므로 효과가 없고, `resumeTimers` 는 앱 내 모든 WebView 에 영향을 주는 전역 호출이라 부작용만 남는다.
+- **남은 위험(실기기에서만 확인 가능)**: Capacitor 가 아닌 **Chromium 렌더러 자체의 백그라운드 타이머 스로틀링**(화면 꺼짐/백그라운드 시 페이지 hidden → 타이머 1초 정렬, 5분 이후 intensive throttling 으로 분 단위 지연 가능). 오디오 재생·WebRTC(LiveKit) 연결이 있으면 완화되지만 보장되지 않는다. FGS 는 프로세스 우선순위만 올릴 뿐 이를 해제하지 못한다. 대응은 이미 plan §3.5(G6, BLE 콜백 기반 throttle flush)로 설계됨.
+  - **실기기 판정(verify M3·M4)**: 화면 끄고 20분간 서버 raw 수신 간격이 주기 flush 간격(원래 값)을 유지하는지 확인. 분 단위로 늘어나면 스로틀링 확정 → G6 경로가 실제로 채우는지 확인하고, 부족하면 후속으로 `WebView` 가시성 유지(예: `webView.onResume()` 주기 호출은 비권장) 대신 **네이티브 쪽 flush 버퍼링**을 검토.
+
+### B.3 T-A3 — SDK 버전 요건 (변경 없음)
+
+| 항목 | 현재 | 요건 | 판정 |
+|---|---|---|---|
+| `compileSdkVersion` | 36 | `FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE`(API 29+)·Android 14 권한 상수 참조 가능 = 34+ | 충족 |
+| `targetSdkVersion` | 36 | 34+ 이면 타입 선언 필수 정책이 적용되므로 선언이 **반드시** 필요(적용 완료). Play 신규 앱 요건도 충족 | 충족 |
+| `minSdkVersion` | 24 | 플러그인은 SDK≥29 에서만 `serviceType` 전달(API 24~28 은 타입 없이 시작) | 문제 없음 |
+
+- `build.gradle`·`variables.gradle` **수정 없음**.
+- 참고(Android 15, targetSdk 35+): `connectedDevice` 타입은 `dataSync`/`mediaProcessing` 과 달리 **런타임 시간 제한(timeout)이 없다.** 단 Android 12+ 는 **앱이 백그라운드일 때 FGS 시작이 금지**되므로 반드시 수업 입장(포그라운드) 시점에 시작해야 한다(Track J: `EntryPage` 의 `wait|live` 진입 시 호출 — 계획과 일치).
+- 런타임 선행조건(Track J): `connectedDevice` FGS 는 `BLUETOOTH_CONNECT` 등 런타임 권한이 허용돼 있어야 시작된다. 미허용 시 `SecurityException` → `startForegroundService` 호출부에서 try/catch 후 서비스 없이 계속(웹과 동일 동작) 처리 권장.
+
+### B.4 배터리 최적화 설정 화면 이동 — 제안만 (구현 안 함)
+
+- 기존 의존성(`@capacitor/app`, `bluetooth-le`, `capacitor-android-foreground-service`, `keep-awake`, `push-notifications` 등)에는 **Android 설정 인텐트를 여는 API 가 없다.** `App.openUrl` 은 URL 스킴용이라 `android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS` 를 안정적으로 열지 못한다.
+- 필요하다고 Brian 이 판단하면(= 실기기 M3 에서 제조사 절전으로 서비스가 죽는 경우) **최소 구현안**: `MainActivity.java` 에 `@CapacitorPlugin(name="BatterySettings")` 내부 클래스 1개를 두고 `onCreate` 에서 `registerPlugin()`, 메서드 `openBatterySettings()` 가 `Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)`(권한 불필요, 실패 시 `ACTION_APPLICATION_DETAILS_SETTINGS` 로 폴백) 를 `startActivity`. JS 는 `registerPlugin<{openBatterySettings():Promise<void>}>('BatterySettings')` 로 호출. 이 경우 Track A 담당 파일(`MainActivity.java`) 안에서 끝나 다른 트랙과 겹치지 않는다.
+- `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` 권한(다이얼로그 직접 요청)은 Play 정책 심사 위험으로 **쓰지 않는다**(plan §2 유지).
+- 현 시점 판단: FGS(connectedDevice) 만으로 대부분 기기에서 유지될 것으로 예상되므로 **실기기 결과가 나오기 전까지 구현하지 않는다.** T-J9 의 안내 모달은 우선 문구 안내만(설정 앱 수동 이동) 두고, 버튼 동작은 이 제안이 승인되면 연결.
+
+### B.5 빌드 검증 기록
+
+- `frontend` 에서 `npm install --legacy-peer-deps` 후, 빌드를 위해 `dist/index.html` 더미와 `npx cap sync android` 를 실행(생성물은 모두 gitignore 대상, 추적 파일 변경 없음). `cd frontend/android && ./gradlew assembleDevDebug` → **BUILD SUCCESSFUL**, `app/build/outputs/apk/dev/debug/app-dev-debug.apk` 생성.
+
+### B.6 실기기 필요 항목 (Track A 관련)
+
+1. Android 14 이상 실기기에서 `startForegroundService(serviceType=16)` 가 예외 없이 시작되고 알림이 **조용히**(LOW) 표시되는지 — verify V22/M 계열.
+2. 화면 끄고 5분·20분: BLE 유지, WebView 타이머 스로틀링 여부(B.2) — M3·M4.
+3. 제조사 절전(삼성 등)에서 서비스가 죽는지 → 죽으면 B.4 구현 여부 결정.
+4. `BLUETOOTH_CONNECT` 거부 상태에서 FGS 시작 실패 처리 — Track J 가드 확인.

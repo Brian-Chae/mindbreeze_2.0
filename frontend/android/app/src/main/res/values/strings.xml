@@ -4,4 +4,6 @@
     <string name="title_activity_main">MIND BREEZE</string>
     <string name="package_name">com.looxidlabs.mindbreeze</string>
     <string name="custom_url_scheme">com.looxidlabs.mindbreeze</string>
+    <string name="bg_session_title">명상 클래스 진행 중</string>
+    <string name="bg_session_channel_name">수업 진행 알림</string>
 </resources>
