@@ -120,18 +120,10 @@ def _deliver(db, intent, now):
         if intent.session_id
         else None
     )
-    instant_session = None
-    if (cls.recurrence_rule or {}).get("start_now"):
-        instant_session = (
-            db.query(Session)
-            .filter(
-                Session.class_id == cls.id,
-                Session.status.in_(("open", "in_progress")),
-                Session.hidden_at.is_(None),
-            )
-            .order_by(Session.seq)
-            .first()
-        )
+    # 열린 회차가 있으면 start_now 여부와 무관하게 "지금 입장 가능" 안내를 붙인다(SDD-223).
+    from app.services.class_membership_service import live_session
+
+    instant_session = live_session(db, cls)
     if intent.kind == "live_access_reconcile":
         import asyncio
         from app.services.class_access_service import reconcile_observers

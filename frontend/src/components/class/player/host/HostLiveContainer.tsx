@@ -94,6 +94,7 @@ export interface HostLiveContainerProps {
   band: ContainerBand;
   status: { error: string | null; endFailed: boolean; ending: boolean; onRetryEnd: () => void };
   end: { open: boolean; onRequest: () => void; onConfirm: () => void; onCancel: () => void };
+  onInvite?: () => void;
   codeCopy: { copied: boolean; onCopy: () => void };
   onClose: () => void;
   /** 대기실 준비 현황 패널(WaitingRoomReadinessPanel) — 구독이 켜져 있을 때만 페이지가 만든다 */
@@ -310,6 +311,7 @@ export function HostLiveContainer(props: HostLiveContainerProps) {
     toggleCam: media.toggleCam,
     recheckPermission,
     copyCode: codeCopy.onCopy,
+    invite: props.onInvite,
     connectSelfBand: () => void band.connect(),
     disconnectSelfBand: () => void band.disconnect(),
   };

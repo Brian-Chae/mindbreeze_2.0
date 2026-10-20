@@ -11,6 +11,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import { getClass, type ClassDetailDto } from '../../lib/api/class-structure';
+import { asClassId } from '../../lib/class-structure/read-model';
+import { MemberInviteSheet } from '../../components/class/flow/host/MemberInviteSheet';
 import {
   getSession,
   getSessionLiveMetrics,
@@ -325,6 +328,8 @@ export default function ClassPlayerPage() {
     micOn: true,
   });
   const [codeCopied, setCodeCopied] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteDetail, setInviteDetail] = useState<ClassDetailDto | null>(null);
   /** SDD-094: 발언권 부여/해제 요청 진행 중인 participant_id */
   const [speakingBusyId, setSpeakingBusyId] = useState<string | null>(null);
   /** SDD-095: 상담사 채팅 토글 요청 진행 중 */
@@ -350,6 +355,17 @@ export default function ClassPlayerPage() {
   const liveKit = useLiveKit(id);
   const currentUserId = useAuthStore((s) => s.user?.id ?? null);
   const isHost = Boolean(session && currentUserId && session.host_id === currentUserId);
+
+  const inviteClassId = isHost && (session?.status === 'open' || session?.status === 'in_progress') ? session.class_id : null;
+  useEffect(() => {
+    const controller = new AbortController();
+    setInviteDetail(null); setInviteOpen(false);
+    if (inviteClassId) void getClass(asClassId(inviteClassId), controller.signal)
+      .then(detail => { if (!controller.signal.aborted) setInviteDetail(detail); })
+      .catch(() => { /* 권한을 확인하지 못하면 초대 진입점을 숨긴다. */ });
+    return () => controller.abort();
+  }, [inviteClassId, id, currentUserId]);
+  const canInvite = Boolean(inviteClassId && inviteDetail?.id === inviteClassId && inviteDetail.status === 'active' && inviteDetail.capabilities?.invite === true);
 
   const recorder = useAudioRecorder({
     sessionId: id ?? '',
@@ -1285,11 +1301,23 @@ export default function ClassPlayerPage() {
       />
     ) : null;
 
+  const memberInviteSheet = canInvite && inviteDetail ? (
+    <MemberInviteSheet key={`${id}:${inviteDetail.id}`} open={inviteOpen} detail={inviteDetail}
+      code={session.access_code} codeCopied={codeCopied} onCopyCode={() => void handleCopyCode()}
+      onClose={() => setInviteOpen(false)} onSaved={async () => {
+        const [detail] = await Promise.all([
+          getClass(asClassId(inviteDetail.id)), refreshSession(), refreshMetrics(),
+        ]);
+        if (id && isCurrentRoute(id)) setInviteDetail(detail);
+        return detail;
+      }} />
+  ) : null;
+
   /* ─── ③ 라이브 씬(호스트): 새 진행 화면(SDD-208). 훅·핸들러는 이 페이지가 한 번만 만들고 컨테이너는 값만 받는다 ─── */
   if (isRunning && isHost) {
     return (
       <>
-        <HostLiveContainer
+        <div inert={canInvite && inviteOpen}><HostLiveContainer
           session={session}
           hostUserId={currentUserId}
           hostParticipantId={hostParticipantId}
@@ -1330,9 +1358,11 @@ export default function ClassPlayerPage() {
             onConfirm: () => void finishSession(),
             onCancel: () => setEndModalOpen(false),
           }}
+          onInvite={canInvite ? () => setInviteOpen(true) : undefined}
           codeCopy={{ copied: codeCopied, onCopy: () => void handleCopyCode() }}
           onClose={() => navigate('/sessions')}
-        />
+        /></div>
+        {memberInviteSheet}
         {consentModal}
         {leaveGuardModal}
       </>
@@ -1369,7 +1399,7 @@ export default function ClassPlayerPage() {
     } as const;
     return (
       <>
-        <HostPrepContainer
+        <div inert={canInvite && inviteOpen}><HostPrepContainer
           phase={phase}
           stateKind={closedInfo ? (closedInfo.waiting > 0 ? 'closed' : 'closed-0') : 'closed-revisit'}
           title={session.title || '제목 없는 클래스'}
@@ -1408,7 +1438,8 @@ export default function ClassPlayerPage() {
               .catch(() => setRemindResults((prev) => new Map([...prev, ...participantIds.map((pid) => [pid, 'failed'] as const)])))
               .finally(() => setReminding(false));
           }}
-          onInviteAdd={() => navigate(`/sessions/${session.id}`)}
+          canInvite={canInvite}
+          onInviteAdd={() => setInviteOpen(true)}
           onCopyCode={() => void handleCopyCode()}
           codeCopied={codeCopied}
           sheets={{
@@ -1485,7 +1516,8 @@ export default function ClassPlayerPage() {
                 .catch(() => setError('같은 설정으로 새 클래스를 만들지 못했어요'));
             } else navigate(action === 'home' ? '/dashboard' : '/sessions');
           }}
-        />
+        /></div>
+        {memberInviteSheet}
         {error ? (
           <div role="alert" className="fixed left-1/2 top-4 z-[70] w-[min(92vw,420px)] -translate-x-1/2 rounded-xl border border-[#F5C2C0] bg-[#FDECEC] p-3.5 text-sm text-[#B3261E]">
             {error}

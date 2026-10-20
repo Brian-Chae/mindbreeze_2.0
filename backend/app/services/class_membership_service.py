@@ -45,6 +45,21 @@ def _occupied_seats(db, cls, participants, exclude_id=None):
     return len(occupied)
 
 
+def live_session(db, cls):
+    """지금 입장 가능한 현재 회차(대기실·진행 중). start_now 여부와 무관하게 회차 상태로 판정한다."""
+    return (
+        db.query(Session)
+        .filter(
+            Session.class_id == cls.id,
+            Session.session_kind == "regular",
+            Session.status.in_(("open", "in_progress")),
+            Session.hidden_at.is_(None),
+        )
+        .order_by(Session.seq)
+        .first()
+    )
+
+
 def ensure_expected(db, cls, sessions, members=None):
     # 호출자가 Class 잠금을 소유한다. 기존 초대·편성 경로도 같은 잠금 순서를 쓴다.
     locked_members = (
@@ -127,9 +142,10 @@ def invite_members(
                     Session.status.in_(("ready", "scheduled")),
                     Session.scheduled_at >= now,
                 ),
+                # 진행 중 클래스에서 초대된 회원도 현재 회차에 바로 입장한다(SDD-223).
                 and_(
-                    bool((cls.recurrence_rule or {}).get("start_now")),
                     Session.status.in_(("open", "in_progress")),
+                    Session.hidden_at.is_(None),
                 ),
             ),
             Session.session_kind == "regular",
@@ -368,7 +384,7 @@ def _activate_future(db, cls, member, sessions, now):
     from app.services.class_conflict_service import utc
     for session in sessions:
         future = session.status in ("ready", "scheduled") and session.scheduled_at and utc(session.scheduled_at) >= now and session.started_at is None
-        instant = bool((cls.recurrence_rule or {}).get("start_now")) and session.status in ("open", "in_progress")
+        instant = session.status in ("open", "in_progress") and session.hidden_at is None
         if session.session_kind != "regular" or not (future or instant):
             continue
         participants = db.query(SessionParticipant).filter(SessionParticipant.session_id == session.id).execution_options(include_removed=True).order_by(SessionParticipant.id).populate_existing().with_for_update().all()
