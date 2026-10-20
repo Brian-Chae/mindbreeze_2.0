@@ -13,6 +13,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session as DBSession
 
+from app.core.ai_features import is_ai_enabled
 from app.models.agent import AgentMemoryItem
 from app.services import agent_guard, agent_llm
 
@@ -148,6 +149,9 @@ def extract_and_store(
     db: DBSession, *, client_id: UUID, texts: list[tuple[str, str]], commit: bool = False
 ) -> list[AgentMemoryItem]:
     """추출+저장 한 묶음. 실패해도 예외를 밖으로 던지지 않는다."""
+    # SDD-220: AI off — 외부 호출·신규 추출 행 0.
+    if not is_ai_enabled():
+        return []
     try:
         candidates = extract_candidates(texts)
         if not candidates:

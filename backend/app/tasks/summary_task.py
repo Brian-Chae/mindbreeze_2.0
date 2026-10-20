@@ -38,6 +38,11 @@ def _call_gemini_text(prompt: str, *, json_mode: bool = True, timeout: int = 120
 
     키 미설정·네트워크·응답 형식 문제 시 예외를 그대로 전파한다 — 호출부가 폴백/실패를 결정.
     """
+    # SDD-220: 네트워크 직전 단일 가드 — AI off 면 호출 0건(재시도 대상 아님).
+    from app.core.ai_features import require_ai_enabled
+
+    require_ai_enabled()
+
     if not settings.gemini_api_key:
         raise RuntimeError("gemini_api_key not set")
 
@@ -103,6 +108,11 @@ def _call_narrative_llm(
     from app.services.report_narrative import build_narrative_signature, fallback_narrative
 
     fallback = fallback_narrative(metrics_summary)
+    # SDD-220: AI off — LLM 캐시도 읽지 않고 규칙 서사만 쓴다(캐시 쓰기도 하지 않는다).
+    from app.core.ai_features import is_ai_enabled
+
+    if not is_ai_enabled():
+        return fallback
     # SUM-5TH-08: 일부 지표의 direction 이 None(비교 불가)이면 전체 시그니처가 None 이 되어
     # 캐시를 아예 쓰지 못했다(같은 입력을 매번 재계산·폴백 재생성). 결측을 '?' 로 표시한
     # 부분 시그니처로도 캐시 키를 만들어 반복 호출을 막는다(null 을 stable 로 오인하지 않는다).
@@ -262,6 +272,17 @@ def run_summary_inline(session_id: str, db: DBSession) -> None:
     session = db.query(Session).filter(Session.id == sid).first()
     if not record or not session:
         logger.warning("[summary_task] not found: %s", session_id)
+        return
+
+    # SDD-220: AI off — 이미 큐에 적재된 작업도 외부 호출 없이 skip 한다(retry 0).
+    from app.core.ai_features import is_ai_enabled
+
+    if not is_ai_enabled():
+        logger.info("[summary_task] AI 기능 off — 요약 스킵: %s", session_id)
+        if record.status == "processing":
+            record.status = "completed"
+            db.commit()
+        _emit_report_progress(session_id, db)
         return
 
     # SDD-085 가드: 수동 기록 모드(마이크 오프)는 요약 대상 아님
