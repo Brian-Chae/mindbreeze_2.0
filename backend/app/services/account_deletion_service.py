@@ -191,6 +191,21 @@ def delete_account(
     )
     db.add(ledger)
     _queue_revoke(db, user, identities, google_token_enc, current)
+    # 연구 철회 원장을 먼저 만든다 — 이후 삭제로 가명 ID 근거를 잃어도 Spark 철회 확인을 추적할 수 있다(중복 요청 0).
+    from app.services import privacy_consent_service
+
+    privacy_consent_service._withdraw_research(db, user.id, current)
+
+    # 접근 정리가 지우는 행 중 객체 키를 가진 것(자격 증빙 파일)은 키를 잃기 전에 삭제 대상 원장에 옮겨 둔다.
+    from app.models.account_deletion import AccountDeletionObject
+    from app.models.credential import Credential
+
+    db.flush()  # ledger.id 확정
+    for (key,) in db.query(Credential.s3_key).filter(Credential.user_id == user.id).all():
+        if key:
+            db.add(AccountDeletionObject(
+                ledger_id=ledger.id, object_key=key, kind="local" if key.startswith("/") else "s3", status="pending"
+            ))
 
     # 접근 권한·소속·알림·로그인 토큰 정리(관리자 삭제와 같은 규칙, 커밋 없음).
     admin_service.remove_account_access(db, user.id)

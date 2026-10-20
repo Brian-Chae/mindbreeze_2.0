@@ -51,6 +51,12 @@ SESSIONS_SCOPE_KEEP = frozenset({
     "research_export_items", "research_withdrawal_requests", "retention_sweep_runs", "signup_applications",
     "user_org_memberships", "users", "verification_audits",
 })
+# SDD-220: 소셜 연결(users FK)·탈퇴 원장·소셜 해제 outbox·공개 삭제 요청은 계정 영역이라 sessions 범위에서 보존한다.
+#   (삭제 원장은 영구 삭제 완료의 근거이므로 개발 초기화로 지우지 않는다.)
+SESSIONS_SCOPE_KEEP = SESSIONS_SCOPE_KEEP | frozenset({
+    "social_identities", "social_revoke_outbox", "account_deletion_ledger",
+    "account_deletion_objects", "account_deletion_requests",
+})
 
 
 class ResetGuardError(RuntimeError):

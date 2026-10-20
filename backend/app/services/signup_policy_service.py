@@ -14,6 +14,8 @@ from fastapi import HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+# 삭제 원장 모델을 모듈 로드 시점에 등록한다(models/__init__.py 등록 전에도 Base.metadata 에 포함되도록).
+from app.models.account_deletion import AccountDeletionLedger
 from app.models.consent import Consent
 from app.models.user import User
 
@@ -117,8 +119,6 @@ def assert_email_not_pending_deletion(db: Session, email: str) -> None:
     (원장이 purged 가 되기 전에는 날짜가 30일을 넘었어도 계속 차단). 관리자 삭제처럼 원본 이메일이
     남은 deleted 행도 함께 차단한다.
     """
-    from app.models.account_deletion import AccountDeletionLedger
-
     existing = db.query(User).filter(func.lower(User.email) == normalize_email(email)).first()
     pending_ledger = (
         db.query(AccountDeletionLedger.id)

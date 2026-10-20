@@ -573,6 +573,11 @@ def create_client(
             detail="활성 상태(인증 완료)의 상담사에게만 회원을 배정할 수 있습니다",
         )
 
+    # SDD-220(F2): 탈퇴 처리 중인 이메일로는 초대 계정도 만들 수 없다.
+    from app.services import signup_policy_service
+
+    signup_policy_service.assert_email_not_pending_deletion(db, normalized_email)
+
     # 4. pending 내담자 계정 생성 — 비밀번호는 난수(초대 메일로만 활성화)
     client = User(
         email=normalized_email,

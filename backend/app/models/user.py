@@ -3,7 +3,7 @@
 import uuid
 from datetime import date, datetime, timezone
 
-from sqlalchemy import Boolean, Date, String, DateTime, Text, ForeignKey, func
+from sqlalchemy import Boolean, Date, String, DateTime, Text, ForeignKey, func, text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -105,6 +105,9 @@ from app.core.database import Base
 
 class User(Base):
     __tablename__ = "users"
+    # SDD-220: 서버 기본값 컬럼(birth_date/deleted_at/purge_after)을 INSERT ... RETURNING 으로 읽지 않는다 —
+    #   컬럼 추가 이전(052) 스키마에서 시드 스크립트가 users 를 INSERT 해도 깨지지 않게 한다.
+    __mapper_args__ = {"eager_defaults": False}
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
@@ -126,10 +129,11 @@ class User(Base):
     invited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     invite_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # SDD-220: 만 14세 확인용 생년월일. 기존 사용자에게 임의 값을 채우지 않는다(NULL 허용).
-    birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    #   deferred: 052 스키마에서 시드하는 스크립트(seed_test_accounts)처럼 컬럼 추가 이전 스키마에 ORM 으로 붙는 경로를 깨지 않는다.
+    birth_date: Mapped[date | None] = mapped_column(Date, nullable=True, deferred=True, server_default=text("NULL"))
     # SDD-220: 본인 탈퇴 — 즉시 접근 차단(deleted_at)과 영구 삭제 시각(purge_after = deleted_at + 유예일)을 분리해 기록한다.
-    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    purge_after: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, deferred=True, server_default=text("NULL"))
+    purge_after: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True, deferred=True, server_default=text("NULL"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

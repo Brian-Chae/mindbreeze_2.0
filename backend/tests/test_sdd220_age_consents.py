@@ -226,3 +226,60 @@ def test_ts14_게시_버전이_바뀌면_제출_당시_값이_저장(client, mon
     assert client.post(REGISTER, json=email_register_payload("ver@x.com")).status_code == 201
     rows = {c.type: c.version for c in _db().query(Consent).all()}
     assert rows["tos"] == "2.0" and rows["privacy"] == "1.0"
+
+
+# ── TS13: 진행자(개인 상담사) 신청·초대 경로 ─────────────────────────────
+
+IND = "/api/v1/signup-applications/individual-counselor"
+
+
+def _ind_payload(email, **over):
+    from app.services import email_verify_service
+
+    payload = {
+        "name": "김개인", "email": email,
+        "email_verify_token": email_verify_service.generate_email_verify_token(email),
+        "consents": {"privacy": True}, "birth_date": "1990-05-01",
+    }
+    payload.update(over)
+    return payload
+
+
+def test_ts13_개인상담사_신청도_연령과_탈퇴이메일을_서버가_검증(client, monkeypatch):
+    from app.tasks import report_email_task
+
+    monkeypatch.setattr(report_email_task.signup_notice_task, "apply_async", lambda *a, **kw: None)
+    for i, (over, code) in enumerate((({"birth_date": "2012-10-21"}, "AGE_RESTRICTED"), ({"birth_date": None}, "BIRTH_DATE_REQUIRED"),
+                       ({"birth_date": "2999-01-01"}, "INVALID_BIRTH_DATE"))):
+        payload = _ind_payload(f"ind{i}@x.com", **over)  # 같은 이메일 재신청 쿨다운(429)을 피한다
+        if over["birth_date"] is None:
+            payload.pop("birth_date")
+        res = client.post(IND, json=payload)
+        assert res.status_code == 422 and res.json()["detail"]["code"] == code, res.text
+    assert _db().query(User).count() == 0
+
+    ok = client.post(IND, json=_ind_payload("ind@x.com", birth_date="2012-10-20"))
+    assert ok.status_code == 201, ok.text
+    assert str(_db().query(User).filter_by(email="ind@x.com").first().birth_date) == "2012-10-20"
+
+
+def test_ts13_탈퇴처리중_이메일은_개인상담사_신청과_관리자_초대로_계정을_만들_수_없다(client, monkeypatch):
+    from app.models.account_deletion import AccountDeletionLedger
+    from app.services import account_deletion_service as svc, signup_policy_service
+    from app.tasks import report_email_task
+
+    monkeypatch.setattr(report_email_task.signup_notice_task, "apply_async", lambda *a, **kw: None)
+    db = _db()
+    db.add(AccountDeletionLedger(user_id=uuid4_(), email_hash=signup_policy_service.email_hash("gone@x.com"), role="client",
+                                 deleted_at=datetime.now(timezone.utc), purge_after=datetime.now(timezone.utc), status="requested"))
+    db.commit()
+    res = client.post(IND, json=_ind_payload("GONE@x.com"))
+    assert res.status_code == 409 and res.json()["detail"]["code"] == "ACCOUNT_DELETION_PENDING"
+    assert db.query(User).count() == 0
+    assert svc.hash_email("gone@x.com") == signup_policy_service.email_hash("GONE@x.com ")
+
+
+def uuid4_():
+    import uuid
+
+    return uuid.uuid4()
