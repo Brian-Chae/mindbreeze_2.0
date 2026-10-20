@@ -202,7 +202,7 @@
 .hp-tile .pz-ring { --ring: var(--rs); }
 .hp-tile .pz-ring[data-tone="idle"] .pz-ring__trk, .hp-tile .pz-ring[data-tone="lost"] .pz-ring__trk { stroke-width: 5; stroke-dasharray: 2 9; stroke-linecap: round; }
 .hp-tile .pz-ring[data-tone="idle"] .pz-ring__trk { stroke: rgba(255, 255, 255, 0.3); }
-.hp-ring-num { font-size: var(--rf); font-weight: 700; line-height: 1; }
+.hp-ring-num { font-size: var(--rf); font-weight: 700; line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums; max-width: 100%; overflow: hidden; text-overflow: clip; }
 .hp-ring-label { margin-top: 3px; font-size: var(--fs-12); font-weight: 600; color: var(--tx-hi); line-height: 1; }
 .hp-ring-nb { font-size: var(--fs-13); font-weight: 600; color: var(--tx-mid); }
 .hp-ring-nb[data-warn="true"] { color: var(--mb-coral); }

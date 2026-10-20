@@ -28,6 +28,8 @@ export interface HostMetricExtra {
 
 const EXTRA_FRESH_MS = 10_000;
 
+const rounded = (value: number | null): number | null => value === null ? null : Math.round(value);
+
 const finite = (value: number | null | undefined): number | null =>
   typeof value === 'number' && Number.isFinite(value) ? value : null;
 
@@ -48,14 +50,14 @@ export function hostMetricValues(row: SessionLiveMetric, extra: HostMetricExtra 
   const valid = row.band_connected && row.device_status === 'ok' && !isEegStale(row.last_eeg_at, nowMs);
   const extraValid = valid && extra !== undefined && nowMs - extra.at < EXTRA_FRESH_MS;
   return toHostMetricValues({
-    relaxation: valid ? finite(row.current_efficiency) : null,
+    relaxation: rounded(valid ? finite(row.current_efficiency) : null),
     // BPM·호흡·HRV 는 행(4초 폴링) 우선, extras(WS) 폴백 — 폴링이 WS 패치를 덮어도 깜빡이지 않는다
-    heartRate: valid ? finite(row.heart_rate) ?? (extraValid ? extra.heartRate : null) : null,
-    respiratoryRate: valid ? finite(row.respiratory_rate) ?? (extraValid ? extra.respiratoryRate : null) : null,
-    focus: extraValid ? extra.focus : null,
-    emotionalStability: extraValid ? extra.emotionalStability : null,
+    heartRate: rounded(valid ? finite(row.heart_rate) ?? (extraValid ? extra.heartRate : null) : null),
+    respiratoryRate: rounded(valid ? finite(row.respiratory_rate) ?? (extraValid ? extra.respiratoryRate : null) : null),
+    focus: rounded(extraValid ? extra.focus : null),
+    emotionalStability: rounded(extraValid ? extra.emotionalStability : null),
     // 회원 화면과 같은 SDNN 기준(rmssd 혼용 금지)
-    hrv: valid ? finite(row.sdnn) ?? (extraValid ? extra.hrv : null) : null,
+    hrv: rounded(valid ? finite(row.sdnn) ?? (extraValid ? extra.hrv : null) : null),
   });
 }
 

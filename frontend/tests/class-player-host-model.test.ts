@@ -65,6 +65,17 @@ describe('hostMetricValues — 현행 hostValues 규칙을 새 지표 키로', (
     expect(v).toEqual({ focus: 68, relaxation: 70, emotional: 74, bpm: 72, respiration: 14, hrv: 52 });
   });
 
+  it('행과 extras 의 모든 소수 지표를 정수로 반올림하고 null 은 유지한다', () => {
+    expect(hostMetricValues(
+      row({ current_efficiency: 72.6666, heart_rate: 71.234, respiratory_rate: 13.8, sdnn: 45.55 }),
+      extra({ focus: 68.6, emotionalStability: 74.4 }), NOW,
+    )).toEqual({ focus: 69, relaxation: 73, emotional: 74, bpm: 71, respiration: 14, hrv: 46 });
+    expect(hostMetricValues(
+      row({ current_efficiency: null, heart_rate: null, respiratory_rate: null, sdnn: null }),
+      extra({ focus: null, emotionalStability: null, heartRate: 71.234, respiratoryRate: 13.8, hrv: 45.55 }), NOW,
+    )).toEqual({ focus: null, relaxation: null, emotional: null, bpm: 71, respiration: 14, hrv: 46 });
+  });
+
   it('행 값이 비면 10초 이내 extras 로 BPM·호흡·HRV 를 채운다', () => {
     const v = hostMetricValues(row({ heart_rate: null, respiratory_rate: null, sdnn: null }), extra(), NOW);
     expect([v.bpm, v.respiration, v.hrv]).toEqual([71, 13, 50]);

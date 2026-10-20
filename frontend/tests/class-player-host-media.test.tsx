@@ -272,12 +272,14 @@ describe('마이크·카메라 UI 상태 판정', () => {
     expect(resolveMicUi({ micOn: true, failure: null, recorderState: 'error' })).toBe('denied');
   });
 
-  it('카메라: 권한 거부는 denied, 기기 없음은 nodevice, 영상 녹화 오류는 denied', () => {
+  it('카메라: 권한·기기 실패를 표시하고 로컬 트랙이 있으면 녹화 오류와 분리한다', () => {
     expect(resolveCamUi({ camOn: true, failure: null, videoState: 'idle' })).toBe('on');
     expect(resolveCamUi({ camOn: false, failure: null, videoState: 'idle' })).toBe('off');
     expect(resolveCamUi({ camOn: true, failure: 'denied', videoState: 'idle' })).toBe('denied');
     expect(resolveCamUi({ camOn: true, failure: 'notfound', videoState: 'idle' })).toBe('nodevice');
     expect(resolveCamUi({ camOn: true, failure: null, videoState: 'error' })).toBe('denied');
+    expect(resolveCamUi({ camOn: true, failure: null, videoState: 'error', hasLocalTrack: true })).toBe('on');
+    expect(resolveCamUi({ camOn: false, failure: null, videoState: 'error', hasLocalTrack: true })).toBe('off');
   });
 });
 
