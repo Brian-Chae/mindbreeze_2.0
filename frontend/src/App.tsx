@@ -74,6 +74,11 @@ const ClientManagementPage = lazy(() => import('./pages/admin/ClientManagementPa
 const AdminOrgManagementPage = lazy(() => import('./pages/admin/OrgManagementPage'));
 const SignupApplicationsPage = lazy(() => import('./pages/admin/SignupApplicationsPage'));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
+// SDD-220: 약관·위기 도움·측정 안내·계정 삭제 요청(공개 경로)
+const TermsPage = lazy(() => import('./pages/terms-page').then((m) => ({ default: m.TermsPage })));
+const CrisisHelpPage = lazy(() => import('./pages/crisis-help-page').then((m) => ({ default: m.CrisisHelpPage })));
+const MeasurementGuidePage = lazy(() => import('./pages/measurement-guide-page').then((m) => ({ default: m.MeasurementGuidePage })));
+const AccountDeletionPage = lazy(() => import('./pages/account-deletion-page'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const NotificationCenterPage = lazy(() => import('./pages/notifications/NotificationCenterPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
@@ -170,6 +175,10 @@ const router = createBrowserRouter(
         <Route path="/class/:sessionId/enter" element={<ClassEntryPage />} />
         <Route path="/o/:org_code" element={<OrgPublicPage />} />
         <Route path="/privacy" element={<PrivacyPolicyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/crisis-help" element={<CrisisHelpPage />} />
+        <Route path="/measurement-guide" element={<MeasurementGuidePage />} />
+        <Route path="/account-deletion" element={<AccountDeletionPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/login/client" element={<ClientLoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

@@ -7,7 +7,7 @@ from alembic import op
 
 revision = "e036a0000060"
 # 통합 때 감독자가 e036a0000059(ⓒ) 뒤로 변경한다.
-down_revision = "e036a0000058"
+down_revision = "e036a0000059"
 branch_labels = None
 depends_on = None
 
