@@ -1,7 +1,7 @@
 # SDD-222 Plan — 앱 백그라운드 BLE·서버 통신 유지
 
 - 상태: Stage ② Plan (구현은 Stage ③ Verify 승인 후)
-- 선행: `spec.md` (D1·D2 확정)
+- 선행: `spec.md` (D1·D2·D3 확정 — 상담사 화면 포함)
 - 원칙: 앱(Capacitor) 한정. 웹 경로는 `isNativeApp()` 분기로 기존 동작 100% 유지. 백엔드 변경 없음.
 
 ## 1. 아키텍처 개요
@@ -60,6 +60,12 @@
 - 적용: 회원 수업 참여 경로 `EntryPage.tsx` 의 기존 `useWakeLock(machine.phase === 'wait' || 'live')` 와 같은 조건. 수업 종료·이탈·언마운트·로그아웃 시 반드시 종료.
 - 배터리 최적화 제외 안내: 첫 수업 입장 시 1회 안내 모달(건너뛰기 가능, 이후 설정에서 다시 열기). 설정 화면 이동은 `background-session.ts` 가 래핑. 문구는 한글, 비전문가가 이해할 수 있게.
 
+### 3.4a 상담사 화면 추가 처리 (G7, D3)
+- **적용**: `ClassPlayerPage.tsx` 의 기존 `useWakeLock(isLobby || isRunning)` 와 같은 조건에서 호스트일 때만 `useBackgroundSession` 을 호출한다. 훅에 역할 인자(`member|host`)를 추가해 호스트는 FGS 타입을 `connectedDevice|microphone`(숫자 `16|128`)으로 시작한다. 오프라인 대면 수업은 마이크를 쓰지 않으므로 `connectedDevice` 만.
+- **복귀 시 순서(호스트)**: ① 세션 소켓 재연결·재join ② LiveKit 연결 확인, 끊겼으면 기존 재시도 경로(`retryKey`) ③ 카메라가 켜짐 상태였다면 `setCameraEnabled(true)` 재호출(`HostLiveKitBridge`) ④ `useClassAudioPlayer` 재생 위치를 `sendAudioSync` 로 재발행 ⑤ 진행 시각은 서버 기준으로 재계산(`setInterval` 누적 오차 방지). 각 단계 독립 try/catch.
+- 마이크 송출 유지는 FGS(`microphone`)·iOS `audio` 모드가 담당하므로 별도 JS 처리 없음. 전화 수신 등 오디오 포커스 상실 시 ②에서 복구.
+- 호스트 밴드 관찰(`observationOnly`)은 §3.2 재연결을 그대로 쓰되 `useEegRawUpload` 는 호출하지 않는다.
+
 ### 3.5 JS 타이머 스로틀 대비 (G6)
 - `useBand.ts` 의 raw 수신 콜백(`handleRawEegData`)에서 `flush` 를 **throttle(최소 5초 간격)** 로 병행 호출 — 타이머가 멈춰도 BLE 콜백이 오는 동안 업로드가 진행된다. `flushingRef` 가드로 중복 전송 방지, 기존 주기 flush 는 유지.
 - 하트비트(30초)는 타이머 의존이므로 resume 시 즉시 1회 발송.
@@ -89,7 +95,7 @@
 | **J0 선행(공통 JS, 1명)** | `frontend/package.json`, `frontend/package-lock.json`, `frontend/capacitor.config.ts`, `cap sync` 가 생성하는 `android/capacitor.settings.gradle`·`android/app/capacitor.build.gradle`·`ios/App/CapApp-SPM/Package.swift` | 그 외 모두 |
 | **A Android** | `frontend/android/app/src/main/AndroidManifest.xml`, `.../java/com/looxidlabs/mindbreeze/MainActivity.java`, `frontend/android/app/src/main/res/**`, `frontend/android/app/build.gradle`, `frontend/android/variables.gradle` | `frontend/src/**`, `frontend/ios/**`, `package*.json` |
 | **I iOS** | `frontend/ios/App/App/Info.plist`, `frontend/ios/App/App/AppDelegate.swift`, `frontend/ios/App/App.xcodeproj/**`(capability 일치 확인 시에만) | `frontend/src/**`, `frontend/android/**`, `package*.json` |
-| **J 공통 JS** | `frontend/src/lib/native/app-lifecycle.ts`(신규), `.../background-session.ts`(신규), `frontend/src/hooks/useAppResume.ts`(신규), `.../useBackgroundSession.ts`(신규), `.../useWakeLock.ts`, `.../useSessionLiveSocket.ts`, `.../useEegRawUpload.ts`, `.../useBand.ts`, `frontend/src/lib/ble/reconnect-policy.ts`(신규), `.../capacitor-ble-adapter.ts`, `frontend/src/lib/eeg/ble-gap-log.ts`(신규), `frontend/src/lib/socket.ts`, `frontend/src/pages/class/EntryPage.tsx`, 해당 테스트 파일 | `frontend/ios/**`, `frontend/android/**`, `package*.json` |
+| **J 공통 JS** | `frontend/src/lib/native/app-lifecycle.ts`(신규), `.../background-session.ts`(신규), `frontend/src/hooks/useAppResume.ts`(신규), `.../useBackgroundSession.ts`(신규), `.../useWakeLock.ts`, `.../useSessionLiveSocket.ts`, `.../useEegRawUpload.ts`, `.../useBand.ts`, `frontend/src/lib/ble/reconnect-policy.ts`(신규), `.../capacitor-ble-adapter.ts`, `frontend/src/lib/eeg/ble-gap-log.ts`(신규), `frontend/src/lib/socket.ts`, `frontend/src/pages/class/EntryPage.tsx`, `frontend/src/pages/sessions/ClassPlayerPage.tsx`(D3), `frontend/src/components/class/player/host/HostLiveKitBridge.tsx`(D3), `frontend/src/hooks/useClassAudioPlayer.ts`(D3, 재동기화 추가 시에만), 해당 테스트 파일 | `frontend/ios/**`, `frontend/android/**`, `package*.json` |
 
 > `useBand.ts`(1500줄)는 J 트랙 내 **한 명이** 맡는다. 여러 트랙이 자주 만지는 백엔드 파일(`branch-management.md` §3)은 이번 SDD 에서 건드리지 않는다.
 
@@ -112,9 +118,11 @@
 | **T-J7** | J | `useBand` BLE 콜백 throttle flush(G6) | T-J6 | vitest(fake timers) |
 | **T-J8** | J | `useWakeLock` 네이티브 분기(KeepAwake), 웹 경로 불변 | T-J0 | vitest(플랫폼 목, 웹 회귀 테스트 포함) |
 | **T-J9** | J | `background-session.ts`, `useBackgroundSession.ts`, `EntryPage` 연결, 배터리 최적화 안내 모달 | T-A1(플러그인 인터페이스), T-J5 | vitest(플랫폼·플러그인 목, 멱등·종료 보장) |
+| **T-A4** | A | **(D3)** Manifest 에 `FOREGROUND_SERVICE_MICROPHONE` 권한 추가, 서비스 `foregroundServiceType="connectedDevice|microphone"` 로 확장(부록 B 의 기존 `connectedDevice` 단독 선언 개정). `RECORD_AUDIO` 는 기존 재사용 | T-A1 | V29 확장, `assembleDevDebug` |
+| **T-J10** | J | **(D3)** `useBackgroundSession` 역할 인자 추가, `ClassPlayerPage` 호스트 연결, 복귀 시 LiveKit 확인·카메라 복구(`HostLiveKitBridge`)·음원 재동기화·진행 시각 보정 | T-J6, T-J9, T-A4 | vitest(LiveKit·플랫폼 목) |
 | **T-X** | 통합 | `sdd/222-integrate` 병합, `npm test && npm run build`, 실기기 verify 수행 | 전 트랙 | verify.md 전체 |
 
-의존 그래프: `T-J0` → {A1→A2/A3, I1→I2, J1·J2→J3→J4, J5→J6→J7, J8, J9} → `T-X`. A·I·J 트랙은 T-J0 이후 **병렬 가능**(담당 경로가 겹치지 않음). T-J9 는 Android 플러그인 호출 인터페이스(T-J0 스파이크 결과)에 의존.
+의존 그래프: `T-J0` → {A1→A2/A3→A4, I1→I2, J1·J2→J3→J4, J5→J6→J7, J8, J9→J10(A4 필요)} → `T-X`. A·I·J 트랙은 T-J0 이후 **병렬 가능**(담당 경로가 겹치지 않음). T-J9 는 Android 플러그인 호출 인터페이스(T-J0 스파이크 결과)에 의존.
 
 ## 6. 테스트 전략
 
@@ -132,7 +140,7 @@
 ## 8. 스토어 제출 사유 문구 (초안, 승인 대상)
 
 - **iOS `audio`**: "온라인 명상 수업의 음성 안내를 화면이 꺼지거나 다른 앱을 사용하는 중에도 끊김 없이 전달하기 위함." / **`bluetooth-central`**: "수업 중 착용한 뇌파 측정 기기(LINK BAND)와의 BLE 연결을 유지하기 위함."
-- **Android `connectedDevice`**: "수업 중 착용한 뇌파 측정 기기와의 블루투스 연결 및 실시간 데이터 전송을 화면이 꺼진 상태에서도 유지하기 위함."
+- **Android `connectedDevice`**: "수업 중 착용한 뇌파 측정 기기와의 블루투스 연결 및 실시간 데이터 전송을 화면이 꺼진 상태에서도 유지하기 위함." / **`microphone`**(상담사): "상담사가 진행하는 온라인 명상 수업의 음성 안내를 화면이 꺼진 상태에서도 참여자에게 송출하기 위함."
 
 ## 9. 롤백
 
