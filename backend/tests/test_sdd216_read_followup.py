@@ -362,7 +362,7 @@ def test_홈_일정은_유형_추정_없이_실제_부모와_영역을_반환한
         )
         db.add(counseling)
         db.commit()
-        relationship_id, counseling_id = str(relationship.id), str(counseling.id)
+        counseling_id = str(counseling.id)
     login("lead")
     response = client.get("/api/v1/dashboard/counselor")
     assert response.status_code == 200, response.text
@@ -371,9 +371,8 @@ def test_홈_일정은_유형_추정_없이_실제_부모와_영역을_반환한
     assert rows[ids["session"]]["area"] == "meditation"
     assert rows[ids["session"]]["counseling_relationship_id"] is None
     assert rows[ids["session"]]["seq"] == 1
-    assert rows[counseling_id]["class_id"] is None
-    assert rows[counseling_id]["counseling_relationship_id"] == relationship_id
-    assert rows[counseling_id]["area"] == "counseling"
+    # SDD-225: 상담 세션은 클래스 홈 목록·통계에서 제외한다(상담 화면은 별도 API).
+    assert counseling_id not in rows
 
 
 def test_회차_리포트_목록은_기존_팀열람과_관리자_권한을_따른다(
