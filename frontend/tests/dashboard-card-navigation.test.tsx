@@ -18,14 +18,15 @@ it('일정·요약·알림 전체가 링크이며 클래스 보조 동작과 링
     const section = (title: string) => [...container.querySelectorAll('section')].find(s => s.querySelector('h2')?.textContent === title)!;
     const schedule = section('오늘 · 다가오는 일정').querySelector('a')!;
     expect(schedule.getAttribute('href')).toBe('/classes/c1/sessions/s1');
-    expect(schedule.textContent).toContain('참여 3명');
-    for (const [label, path] of [['입장하기 →', '/classes'], ['리포트 검토 →', '/reports'], ['일정 보기 →', '/classes'], ['회원 관리 →', '/clients']]) {
+    expect(schedule.parentElement?.textContent).toContain('참여 3명');
+    for (const [label, path] of [['입장하기 →', '/sessions/s1/player'], ['리포트 검토 →', '/reports?status=pending'], ['일정 보기 →', '/classes'], ['회원 관리 →', '/clients']]) {
       const link = [...container.querySelectorAll('a')].find(a => a.textContent?.includes(label));
       expect(link?.getAttribute('href')).toBe(path);
     }
     expect(section('새 알림').querySelector('a')?.textContent).toBe('전체');
-    expect([...section('새 알림').querySelectorAll('a')].find(a => a.textContent?.includes('수업 알림'))?.getAttribute('href')).toBe('/notifications');
-    const cardLink = section('내 클래스').querySelector('a[aria-label="호흡 수업 상세 보기"]');
+    // SDD-221: 알림 행은 읽음 처리 후 대상 화면으로 이동하는 버튼
+    expect([...section('새 알림').querySelectorAll('button')].some(b => b.textContent?.includes('수업 알림'))).toBe(true);
+    const cardLink = section('내 클래스').querySelector('a[aria-label="호흡 수업"]');
     expect(cardLink?.getAttribute('href')).toBe('/classes/c1/sessions/s1');
     expect(container.querySelector('a a, a button, button a')).toBeNull();
     const writeText = vi.fn().mockResolvedValue(undefined);

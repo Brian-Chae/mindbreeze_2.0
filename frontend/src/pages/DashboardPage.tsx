@@ -578,7 +578,7 @@ export default function DashboardPage() {
                 label="총 참여자"
                 value={data.total_participants.toLocaleString('ko-KR')}
                 to={PARTICIPANTS_TILE_TARGET}
-                hint="내담자 관리 →"
+                hint="회원 관리 →"
               />
             </div>
 
