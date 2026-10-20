@@ -1321,7 +1321,8 @@ async def broadcast_waiting_room(session_id: str, payload: dict) -> None:
     대기 인원은 상담사 관제용이므로 공용 룸(`:all`)이나 참여자 본인 룸으로는 내보내지 않는다.
     """
     sio = _get_sio()
-    await _refresh_instructor_rooms(session_id, force=True)
+    # 대기실 heartbeat(회원당 15초)마다 호출되므로 force 하지 않는다(throttle 적용).
+    await _refresh_instructor_rooms(session_id)
     room = _room_host(session_id)
     await sio.emit(
         "waiting_room_changed",
