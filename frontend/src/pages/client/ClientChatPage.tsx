@@ -16,6 +16,7 @@ import { RoomSettingsModal } from '../../components/chat/RoomSettingsModal';
 import { useChatSortPreference } from '../../hooks/useChatSortPreference';
 import AiAgentPage from './ai-agent-page';
 import { useAgentStore } from '../../stores/agent-store';
+import { isAiEnabled } from '../../lib/feature-flags';
 import { sortRooms, chatRoomDisplayName, lastMessagePreview, formatChatTime } from '../../lib/chat-sort';
 
 /** 상담사 이름에서 이니셜 추출 (최대 2글자) */
@@ -112,7 +113,14 @@ export default function ClientChatPage() {
     };
   }, [setRooms]);
 
-  const isLucy = paramRoomId === LUCY_ROOM_ID;
+  // SDD-220: AI 비공개일 때는 루시 채널·embedded agent 를 만들지 않고, 직접 URL 은 일반 채팅으로 돌려보낸다.
+  const aiEnabled = isAiEnabled();
+  const isLucy = aiEnabled && paramRoomId === LUCY_ROOM_ID;
+
+  useEffect(() => {
+    if (!aiEnabled && paramRoomId === LUCY_ROOM_ID) navigate('/app/chat', { replace: true });
+  }, [aiEnabled, paramRoomId, navigate]);
+
   const selectedRoom: ChatRoomDto | null = useMemo(() => {
     if (!paramRoomId || paramRoomId === LUCY_ROOM_ID) return null;
     return (
@@ -149,6 +157,7 @@ export default function ClientChatPage() {
             }`}
           >
             <ChatSortToggle {...sortPreference} />
+            {aiEnabled && (
             <button
               type="button"
               onClick={() => navigate(`/app/chat/${LUCY_ROOM_ID}`)}
@@ -168,6 +177,7 @@ export default function ClientChatPage() {
                 </span>
               )}
             </button>
+            )}
             {loading ? (
               <div className="p-6 text-center text-sm text-[#6F6F6F]">불러오는 중...</div>
             ) : error ? (

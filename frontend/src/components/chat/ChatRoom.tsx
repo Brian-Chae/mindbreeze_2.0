@@ -1,6 +1,6 @@
 // 채팅방 — iOS 모바일 대응 재구현 + WebSocket 실시간
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { listChatMessages, listChatMessagesAround, sendChatMessage, markRoomRead, markMessagesRead, type ChatMessage } from '../../lib/api/chat';
+import { CHAT_REPORT_CONTACT_EMAIL, isChatBlockedError, listChatMessages, listChatMessagesAround, listChatRooms, sendChatMessage, markRoomRead, markMessagesRead, type ChatMessage } from '../../lib/api/chat';
 import { useChatStore } from '../../stores/chatStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
@@ -10,6 +10,7 @@ import { useKeyboardHeight } from '../../hooks/useKeyboardHeight';
 import { useAutoScroll } from '../../hooks/useAutoScroll';
 import { ChatTextarea } from './ChatTextarea';
 import { MessageBubble } from './MessageBubble';
+import { ReportDialog } from './report-dialog';
 import { SystemMessage } from './SystemMessage';
 import type { Socket } from 'socket.io-client';
 
@@ -76,6 +77,12 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
   const updateSenderName = useChatStore((s) => s.updateSenderName);
   const clearRoomUnread = useChatStore((s) => s.clearRoomUnread);
   const setActiveRoom = useChatStore((s) => s.setActiveRoom);
+  const applyBlock = useChatStore((s) => s.applyBlock);
+  const setRooms = useChatStore((s) => s.setRooms);
+  const room = useChatStore((s) => s.rooms.find((r) => r.id === roomId));
+  // SDD-220: 서버가 내려준 상호 차단 상태. 차단된 1:1 방은 입력을 막는다(서버도 403 으로 거부).
+  const blocked = room?.room_type === 'direct' && room.is_blocked === true;
+  const [reportTarget, setReportTarget] = useState<{ userId: string; name: string; messageId?: string } | null>(null);
 
   const [dismissedTarget, setDismissedTarget] = useState<string | null>(null);
   const target = dismissedTarget === `${roomId}:${targetMessageId}` ? undefined : targetMessageId;
@@ -317,6 +324,12 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
         setFailedContent(null);
         scrollToBottom();
       } catch (err: unknown) {
+        if (isChatBlockedError(err)) {
+          // 차단된 상대에게는 다시 보내도 같은 결과이므로 재전송 버튼을 두지 않는다.
+          useChatStore.getState().updateRoom(roomId, { is_blocked: true });
+          setError('차단된 상대와는 대화할 수 없습니다');
+          return;
+        }
         setFailedContent(content);
         setError(err instanceof Error ? err.message : '전송 실패');
       }
@@ -324,8 +337,21 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
     [input, roomId, appendMessage, scrollToBottom, target, loading, targetError],
   );
 
+  const canReportPeer = room?.room_type === 'direct' && !!room.peer_id && !room.peer_deleted && !blocked;
+
   return (
     <div className="flex flex-col h-full min-h-0 bg-white">
+      {canReportPeer && room?.peer_id && (
+        <div className="flex justify-end px-4 pt-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => setReportTarget({ userId: room.peer_id as string, name: room.peer_name || peerName || '상대방' })}
+            className="text-xs text-[#6F6F6F] underline"
+          >
+            상대방 신고
+          </button>
+        </div>
+      )}
       {target && !loading && (
         <div className="px-4 py-2 text-sm bg-purple-50 shrink-0" role="status">
           {targetError ?? '알림의 메시지 위치를 보고 있습니다.'}
@@ -369,6 +395,9 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
                   senderName={senderName}
                   showSender={showSender}
                   groupStart={groupStart}
+                  onReport={!isMine && m.sender_id
+                    ? () => setReportTarget({ userId: m.sender_id as string, name: senderName || '상대방', messageId: m.id })
+                    : undefined}
                 />
               );
             // 메시지에 ref 등록 + data-message-id (IntersectionObserver용)
@@ -414,6 +443,13 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
         </div>
       )}
 
+      {blocked && (
+        <div role="status" className="px-4 py-2 text-xs text-[#6F6F6F] bg-[#F8F8FB] shrink-0">
+          신고하여 서로 메시지를 주고받을 수 없는 상대예요. 문의:{' '}
+          <a href={`mailto:${CHAT_REPORT_CONTACT_EMAIL}`} className="text-[#5F0080] underline">{CHAT_REPORT_CONTACT_EMAIL}</a>
+        </div>
+      )}
+
       {/* 입력창 */}
       <div
         className="border-t border-[#EFEFEF] p-3 bg-white shrink-0"
@@ -422,7 +458,7 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
         <div className="mx-auto flex w-full max-w-[760px] items-end gap-2">
         <ChatTextarea
           textareaRef={inputRef}
-          disabled={!!target && (loading || !!targetError)}
+          disabled={blocked || (!!target && (loading || !!targetError))}
           value={input}
           onChange={setInput}
           onSend={() => void handleSend()}
@@ -431,13 +467,28 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
         <button
           type="button"
           onClick={() => void handleSend()}
-          disabled={!input.trim() || (!!target && (loading || !!targetError))}
+          disabled={blocked || !input.trim() || (!!target && (loading || !!targetError))}
           className="mb-btn shrink-0 disabled:opacity-50"
         >
           전송
         </button>
         </div>
       </div>
+      {reportTarget && (
+        <ReportDialog
+          targetUserId={reportTarget.userId}
+          targetName={reportTarget.name}
+          roomId={roomId}
+          messageId={reportTarget.messageId}
+          onClose={() => setReportTarget(null)}
+          onReported={(result) => {
+            if (!result.blocked) return;
+            // 즉시 캐시에서 상대 콘텐츠를 지우고, 그룹 방 preview 등은 서버 기준으로 다시 받는다.
+            applyBlock(reportTarget.userId);
+            void listChatRooms().then((res) => setRooms(res.rooms)).catch(() => { /* 조용히 실패 */ });
+          }}
+        />
+      )}
     </div>
   );
 }
