@@ -31,6 +31,8 @@ class ClassSummary(BaseModel):
     record_status: str | None = None
     has_summary: bool = False
     report_count: int = 0
+    # SDD-221: 승인 대기(pending_review) 리포트 수. 스키마에 없어 응답에서 제거되던 필드.
+    pending_review_count: int = 0
 
 
 class CounselorDashboardResponse(BaseModel):
@@ -44,6 +46,7 @@ class CounselorDashboardResponse(BaseModel):
     in_progress_classes: int = 0
     completed_classes: int = 0
     total_participants: int = 0
+    pending_review_count: int = 0
     classes: list[ClassSummary] = []
 
 

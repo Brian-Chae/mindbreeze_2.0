@@ -82,3 +82,26 @@ def test_본인이_host이면서_팀_강사여도_중복되지_않고_건수가_
     assert data["total_classes"] == 1
     assert data["pending_review_count"] == 1
     assert data["classes"][0]["report_count"] == 1
+
+
+def test_HTTP_응답에_검토_대기_수가_포함된다(client):
+    """서비스 함수가 계산해도 응답 스키마에 필드가 없으면 FastAPI 가 지워 FE 타일이 항상 0 이 된다."""
+    from app.api.deps import get_current_user
+    from app.main import app
+
+    with database.SessionLocal() as db:
+        org, lead, assistant, parent = world(db)
+        s1 = _session(db, lead, parent, 1)
+        s2 = _session(db, lead, parent, 2)
+        db.add(Report(session_id=s1.id, status="pending_review", type="client", content={}))
+        db.add(Report(session_id=s2.id, status="pending_review", type="client", content={}))
+        db.commit()
+        lead_id = str(lead.id)
+
+    app.dependency_overrides[get_current_user] = lambda: {"id": lead_id, "role": "counselor"}
+    try:
+        body = client.get("/api/v1/dashboard/counselor").json()
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+    assert body["pending_review_count"] == 2
+    assert sorted(c["pending_review_count"] for c in body["classes"]) == [1, 1]
