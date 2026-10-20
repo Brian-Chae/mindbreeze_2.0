@@ -1,0 +1,2236 @@
+{
+  "browser": "Playwright Chromium headless shell",
+  "timestamp": "2026-10-20T04:14:32.056Z",
+  "rows": [
+    {
+      "width": 1280,
+      "variant": "a",
+      "state": "success",
+      "count": 1,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 960,
+      "mainWidth": 616,
+      "railWidth": 320,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": "x mandatory",
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 1280,
+      "variant": "a",
+      "state": "success",
+      "count": 2,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 960,
+      "mainWidth": 616,
+      "railWidth": 320,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": "x mandatory",
+      "gaps": [
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 1280,
+      "variant": "a",
+      "state": "success",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 960,
+      "mainWidth": 616,
+      "railWidth": 320,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 260,
+      "snap": "x mandatory",
+      "gaps": [
+        16,
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 1280,
+      "variant": "a",
+      "state": "success",
+      "count": 7,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 960,
+      "mainWidth": 616,
+      "railWidth": 320,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 1444,
+      "snap": "x mandatory",
+      "gaps": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 1280,
+      "variant": "a",
+      "state": "empty",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 960,
+      "mainWidth": 616,
+      "railWidth": 320,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 1280,
+      "variant": "a",
+      "state": "loading",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 960,
+      "mainWidth": 616,
+      "railWidth": 320,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 1280,
+      "variant": "a",
+      "state": "error",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 960,
+      "mainWidth": 616,
+      "railWidth": 320,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 1280,
+      "variant": "b",
+      "state": "success",
+      "count": 1,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 960,
+      "mainWidth": 616,
+      "railWidth": 320,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": "x mandatory",
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 1280,
+      "variant": "b",
+      "state": "success",
+      "count": 2,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 960,
+      "mainWidth": 616,
+      "railWidth": 320,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": "x mandatory",
+      "gaps": [
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 1280,
+      "variant": "b",
+      "state": "success",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 960,
+      "mainWidth": 616,
+      "railWidth": 320,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": "x mandatory",
+      "gaps": [
+        16,
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 1280,
+      "variant": "b",
+      "state": "success",
+      "count": 7,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 960,
+      "mainWidth": 616,
+      "railWidth": 320,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 1100,
+      "snap": "x mandatory",
+      "gaps": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 1280,
+      "variant": "b",
+      "state": "empty",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 960,
+      "mainWidth": 616,
+      "railWidth": 320,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 1280,
+      "variant": "b",
+      "state": "loading",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 960,
+      "mainWidth": 616,
+      "railWidth": 320,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 1280,
+      "variant": "b",
+      "state": "error",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 960,
+      "mainWidth": 616,
+      "railWidth": 320,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 1440,
+      "variant": "a",
+      "state": "success",
+      "count": 1,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1120,
+      "mainWidth": 776,
+      "railWidth": 320,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": "x mandatory",
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 1440,
+      "variant": "a",
+      "state": "success",
+      "count": 2,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1120,
+      "mainWidth": 776,
+      "railWidth": 320,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": "x mandatory",
+      "gaps": [
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 1440,
+      "variant": "a",
+      "state": "success",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1120,
+      "mainWidth": 776,
+      "railWidth": 320,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 100,
+      "snap": "x mandatory",
+      "gaps": [
+        16,
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 1440,
+      "variant": "a",
+      "state": "success",
+      "count": 7,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1120,
+      "mainWidth": 776,
+      "railWidth": 320,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 1284,
+      "snap": "x mandatory",
+      "gaps": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 1440,
+      "variant": "a",
+      "state": "empty",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1120,
+      "mainWidth": 776,
+      "railWidth": 320,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 1440,
+      "variant": "a",
+      "state": "loading",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1120,
+      "mainWidth": 776,
+      "railWidth": 320,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 1440,
+      "variant": "a",
+      "state": "error",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1120,
+      "mainWidth": 776,
+      "railWidth": 320,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 1440,
+      "variant": "b",
+      "state": "success",
+      "count": 1,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1120,
+      "mainWidth": 776,
+      "railWidth": 320,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": "x mandatory",
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 1440,
+      "variant": "b",
+      "state": "success",
+      "count": 2,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1120,
+      "mainWidth": 776,
+      "railWidth": 320,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": "x mandatory",
+      "gaps": [
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 1440,
+      "variant": "b",
+      "state": "success",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1120,
+      "mainWidth": 776,
+      "railWidth": 320,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": "x mandatory",
+      "gaps": [
+        16,
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 1440,
+      "variant": "b",
+      "state": "success",
+      "count": 7,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1120,
+      "mainWidth": 776,
+      "railWidth": 320,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 940,
+      "snap": "x mandatory",
+      "gaps": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 1440,
+      "variant": "b",
+      "state": "empty",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1120,
+      "mainWidth": 776,
+      "railWidth": 320,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 1440,
+      "variant": "b",
+      "state": "loading",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1120,
+      "mainWidth": 776,
+      "railWidth": 320,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 1440,
+      "variant": "b",
+      "state": "error",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1120,
+      "mainWidth": 776,
+      "railWidth": 320,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 1920,
+      "variant": "a",
+      "state": "success",
+      "count": 1,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1200,
+      "mainWidth": 824,
+      "railWidth": 352,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": "x mandatory",
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 1920,
+      "variant": "a",
+      "state": "success",
+      "count": 2,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1200,
+      "mainWidth": 824,
+      "railWidth": 352,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": "x mandatory",
+      "gaps": [
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 1920,
+      "variant": "a",
+      "state": "success",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1200,
+      "mainWidth": 824,
+      "railWidth": 352,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 52,
+      "snap": "x mandatory",
+      "gaps": [
+        16,
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 1920,
+      "variant": "a",
+      "state": "success",
+      "count": 7,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1200,
+      "mainWidth": 824,
+      "railWidth": 352,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 1236,
+      "snap": "x mandatory",
+      "gaps": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 1920,
+      "variant": "a",
+      "state": "empty",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1200,
+      "mainWidth": 824,
+      "railWidth": 352,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 1920,
+      "variant": "a",
+      "state": "loading",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1200,
+      "mainWidth": 824,
+      "railWidth": 352,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 1920,
+      "variant": "a",
+      "state": "error",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1200,
+      "mainWidth": 824,
+      "railWidth": 352,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 1920,
+      "variant": "b",
+      "state": "success",
+      "count": 1,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1200,
+      "mainWidth": 824,
+      "railWidth": 352,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": "x mandatory",
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 1920,
+      "variant": "b",
+      "state": "success",
+      "count": 2,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1200,
+      "mainWidth": 824,
+      "railWidth": 352,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": "x mandatory",
+      "gaps": [
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 1920,
+      "variant": "b",
+      "state": "success",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1200,
+      "mainWidth": 824,
+      "railWidth": 352,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": "x mandatory",
+      "gaps": [
+        16,
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 1920,
+      "variant": "b",
+      "state": "success",
+      "count": 7,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1200,
+      "mainWidth": 824,
+      "railWidth": 352,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 860,
+      "snap": "x mandatory",
+      "gaps": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 1920,
+      "variant": "b",
+      "state": "empty",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1200,
+      "mainWidth": 824,
+      "railWidth": 352,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 1920,
+      "variant": "b",
+      "state": "loading",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1200,
+      "mainWidth": 824,
+      "railWidth": 352,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 1920,
+      "variant": "b",
+      "state": "error",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 1200,
+      "mainWidth": 824,
+      "railWidth": 352,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 834,
+      "variant": "a",
+      "state": "success",
+      "count": 1,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 786,
+      "mainWidth": 462,
+      "railWidth": 300,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": "x mandatory",
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 834,
+      "variant": "a",
+      "state": "success",
+      "count": 2,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 786,
+      "mainWidth": 462,
+      "railWidth": 300,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 118,
+      "snap": "x mandatory",
+      "gaps": [
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 834,
+      "variant": "a",
+      "state": "success",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 786,
+      "mainWidth": 462,
+      "railWidth": 300,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 414,
+      "snap": "x mandatory",
+      "gaps": [
+        16,
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 834,
+      "variant": "a",
+      "state": "success",
+      "count": 7,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 786,
+      "mainWidth": 462,
+      "railWidth": 300,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 1598,
+      "snap": "x mandatory",
+      "gaps": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 834,
+      "variant": "a",
+      "state": "empty",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 786,
+      "mainWidth": 462,
+      "railWidth": 300,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 834,
+      "variant": "a",
+      "state": "loading",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 786,
+      "mainWidth": 462,
+      "railWidth": 300,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 834,
+      "variant": "a",
+      "state": "error",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 786,
+      "mainWidth": 462,
+      "railWidth": 300,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 834,
+      "variant": "b",
+      "state": "success",
+      "count": 1,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 786,
+      "mainWidth": 462,
+      "railWidth": 300,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": "x mandatory",
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 834,
+      "variant": "b",
+      "state": "success",
+      "count": 2,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 786,
+      "mainWidth": 462,
+      "railWidth": 300,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": "x mandatory",
+      "gaps": [
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 834,
+      "variant": "b",
+      "state": "success",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 786,
+      "mainWidth": 462,
+      "railWidth": 300,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 90,
+      "snap": "x mandatory",
+      "gaps": [
+        16,
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 834,
+      "variant": "b",
+      "state": "success",
+      "count": 7,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 786,
+      "mainWidth": 462,
+      "railWidth": 300,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 1274,
+      "snap": "x mandatory",
+      "gaps": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 834,
+      "variant": "b",
+      "state": "empty",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 786,
+      "mainWidth": 462,
+      "railWidth": 300,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 834,
+      "variant": "b",
+      "state": "loading",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 786,
+      "mainWidth": 462,
+      "railWidth": 300,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 834,
+      "variant": "b",
+      "state": "error",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 786,
+      "mainWidth": 462,
+      "railWidth": 300,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "variant": "a",
+      "state": "success",
+      "count": 1,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 350,
+      "mainWidth": 350,
+      "railWidth": 350,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": "x mandatory",
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 390,
+      "variant": "a",
+      "state": "success",
+      "count": 2,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 350,
+      "mainWidth": 350,
+      "railWidth": 350,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 230,
+      "snap": "x mandatory",
+      "gaps": [
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 390,
+      "variant": "a",
+      "state": "success",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 350,
+      "mainWidth": 350,
+      "railWidth": 350,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 526,
+      "snap": "x mandatory",
+      "gaps": [
+        16,
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 390,
+      "variant": "a",
+      "state": "success",
+      "count": 7,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 350,
+      "mainWidth": 350,
+      "railWidth": 350,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 1710,
+      "snap": "x mandatory",
+      "gaps": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 390,
+      "variant": "a",
+      "state": "empty",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 350,
+      "mainWidth": 350,
+      "railWidth": 350,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "variant": "a",
+      "state": "loading",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 350,
+      "mainWidth": 350,
+      "railWidth": 350,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "variant": "a",
+      "state": "error",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 350,
+      "mainWidth": 350,
+      "railWidth": 350,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "variant": "b",
+      "state": "success",
+      "count": 1,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 350,
+      "mainWidth": 350,
+      "railWidth": 350,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": "x mandatory",
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 390,
+      "variant": "b",
+      "state": "success",
+      "count": 2,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 350,
+      "mainWidth": 350,
+      "railWidth": 350,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 230,
+      "snap": "x mandatory",
+      "gaps": [
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 390,
+      "variant": "b",
+      "state": "success",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 350,
+      "mainWidth": 350,
+      "railWidth": 350,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 526,
+      "snap": "x mandatory",
+      "gaps": [
+        16,
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 390,
+      "variant": "b",
+      "state": "success",
+      "count": 7,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 350,
+      "mainWidth": 350,
+      "railWidth": 350,
+      "cardWidths": [
+        280
+      ],
+      "cardHeights": [
+        304
+      ],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 1710,
+      "snap": "x mandatory",
+      "gaps": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "hiddenCounseling": true,
+      "navigation": {
+        "startDisabled": true,
+        "endDisabled": true,
+        "lastVisible": true,
+        "tabVisible": true
+      },
+      "errors": []
+    },
+    {
+      "width": 390,
+      "variant": "b",
+      "state": "empty",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 350,
+      "mainWidth": 350,
+      "railWidth": 350,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "variant": "b",
+      "state": "loading",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 350,
+      "mainWidth": 350,
+      "railWidth": 350,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "variant": "b",
+      "state": "error",
+      "count": 3,
+      "pass": true,
+      "overflow": 0,
+      "escaped": 0,
+      "overlaps": 0,
+      "align": 0,
+      "heroWidth": 350,
+      "mainWidth": 350,
+      "railWidth": 350,
+      "cardWidths": [],
+      "cardHeights": [],
+      "tileHeights": [
+        152
+      ],
+      "scrollMax": 0,
+      "snap": null,
+      "gaps": [],
+      "hiddenCounseling": true,
+      "navigation": null,
+      "errors": []
+    }
+  ]
+}

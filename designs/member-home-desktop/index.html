@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SDD-221 · 회원 홈 데스크톱 비교</title>
+<link rel="stylesheet" href="style.css">
+<header class="review">
+<strong>SDD-221 · 회원 홈 시안</strong>
+<label>배치 <select id="variant">
+<option value="a">A · 주 영역 + 요약 레일</option>
+<option value="b">B · 전폭 요약 + 클래스 줄</option>
+</select>
+</label>
+<label>내 클래스 <select id="count">
+<option>1</option>
+<option>2</option>
+<option selected>3</option>
+<option>7</option>
+</select>
+</label>
+<label>상태 <select id="state">
+<option value="success">정상</option>
+<option value="empty">데이터 없음</option>
+<option value="loading">로딩</option>
+<option value="error">오류</option>
+</select>
+</label>
+<a href="?variant=a&count=3">A 직접 열기</a>
+<a href="?variant=b&count=3">B 직접 열기</a>
+<a href="measure.md">DOM 측정 기록</a>
+<p id="description">
+</p>
+<small>정적 시안 · 표시 값은 가상 데이터 · 서비스 링크는 목적지 표기만 제공하며 실제 이동/API 호출 없음</small>
+</header>
+<div class="shell">
+<aside class="nav">
+<strong>MIND BREEZE</strong>
+<nav>
+<span class="active">홈</span>
+<span>클래스</span>
+<span>리포트</span>
+<span>대화</span>
+<span>알림</span>
+</nav>
+<small>김민지님</small>
+</aside>
+<div class="workspace">
+<header class="topbar">안녕하세요, 김민지님</header>
+<main id="dashboard">
+</main>
+</div>
+</div>
+<div id="notice" role="status">
+</div>
+<script src="prototype.js">
+</script>
+</html>
