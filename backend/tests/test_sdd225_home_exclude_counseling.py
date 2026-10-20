@@ -7,6 +7,7 @@ import pytest
 from app.api.deps import get_current_user
 from app.core import database
 from app.main import app
+from app.models.class_program import Class
 from app.models.counseling import CounselingRelationship
 from app.models.record import Report
 from app.models.session import Session, SessionParticipant
@@ -91,7 +92,7 @@ def test_상담사_홈은_클래스_회차만_센다(client, seeded):
     body = _get(client, seeded["lead"], "counselor", "/api/v1/dashboard/counselor")
     assert {c["id"] for c in body["classes"]} == seeded["class_ids"]
     assert all(c["area"] == "meditation" for c in body["classes"])
-    assert body["total_classes"] == 2
+    assert body["total_classes"] == 1  # 한 클래스의 2회차 = 클래스 1개 (후속)
     assert body["in_progress_classes"] == 1
     assert body["completed_classes"] == 1
     assert body["total_participants"] == 1
@@ -101,11 +102,53 @@ def test_상담사_홈은_클래스_회차만_센다(client, seeded):
 def test_기관_홈은_클래스_회차만_센다(client, seeded):
     body = _get(client, seeded["admin"], "org_admin", "/api/v1/dashboard/org")
     assert {c["id"] for c in body["classes"]} == seeded["class_ids"]
-    assert body["total_classes"] == 2
+    assert body["total_classes"] == 1  # 한 클래스의 2회차 = 클래스 1개 (후속)
     assert body["in_progress_classes"] == 1
     assert body["completed_classes"] == 1
     assert body["total_participants"] == 1
     lead_stat = next(c for c in body["counselors"] if c["id"] == seeded["lead"])
-    assert lead_stat["class_count"] == 2
+    assert lead_stat["class_count"] == 1
     assert lead_stat["participant_count"] == 1
     assert lead_stat["completed_count"] == 1
+
+
+@pytest.fixture
+def seeded_distinct(client):
+    """한 클래스 3회차 + 다른 클래스 1회차 + 레거시 단건(class_id 없음) 1건."""
+    with database.SessionLocal() as db:
+        org, lead, _other, parent = world(db)
+        admin = user(db, org, role="org_admin")
+        parent2 = Class(
+            created_by=lead.id,
+            organization_id=org.id,
+            organization_attribution_known=True,
+            title="다른 명상",
+            default_duration_min=60,
+        )
+        db.add(parent2)
+        db.flush()
+        _class_session(db, lead, parent, 1, "in_progress")
+        _class_session(db, lead, parent, 2, "completed")
+        _class_session(db, lead, parent, 3, "scheduled")
+        _class_session(db, lead, parent2, 1, "completed")
+        legacy = _class_session(db, lead, parent, 9, "scheduled")
+        legacy.class_id = None
+        db.commit()
+        return {"lead": str(lead.id), "admin": str(admin.id)}
+
+
+def test_상담사_홈_total_classes는_고유_클래스_수(client, seeded_distinct):
+    body = _get(client, seeded_distinct["lead"], "counselor", "/api/v1/dashboard/counselor")
+    assert len(body["classes"]) == 5  # 목록은 회차 행 그대로
+    assert body["total_classes"] == 3
+    assert body["in_progress_classes"] == 1
+    assert body["completed_classes"] == 2
+
+
+def test_기관_홈_total_classes와_class_count는_고유_클래스_수(client, seeded_distinct):
+    body = _get(client, seeded_distinct["admin"], "org_admin", "/api/v1/dashboard/org")
+    assert len(body["classes"]) == 5
+    assert body["total_classes"] == 3
+    assert body["completed_classes"] == 2
+    lead_stat = next(c for c in body["counselors"] if c["id"] == seeded_distinct["lead"])
+    assert lead_stat["class_count"] == 3

@@ -46,7 +46,7 @@ def test_팀_강사로만_속한_클래스_회차가_홈_목록과_집계에_포
     data = _dash(assistant_id)
     ids = [c["id"] for c in data["classes"]]
     assert sorted(ids) == sorted([str(mine_id), str(others_id)])  # 중복 없이 합집합
-    assert data["total_classes"] == 2
+    assert data["total_classes"] == 1  # SDD-225 후속: 같은 클래스의 2회차 = 클래스 1개
     assert data["in_progress_classes"] == 1
     row = next(c for c in data["classes"] if c["id"] == str(others_id))
     assert row["participant_count"] == 1
