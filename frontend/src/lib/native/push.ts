@@ -20,6 +20,7 @@ export function allowedPushDeeplink(value: unknown): string | null {
 export interface PushSession {
   ready: Promise<void>;
   stop: () => Promise<void>;
+  requestPermission?: () => Promise<boolean>;
 }
 
 // 로그아웃은 인증 토큰 폐기 전에 이 함수를 호출한다.
@@ -29,9 +30,18 @@ export async function revokePushRegistration(): Promise<void> {
   await session?.stop();
 }
 
+/** 설정의 사전 안내 확인 후에만 호출한다. */
+export async function requestPushPermission(): Promise<boolean> {
+  const session = currentSession;
+  if (!session) return false;
+  await session.ready;
+  return await session.requestPermission?.() ?? false;
+}
+
 export function startPushRegistration(
   navigate: (path: string) => void,
   refreshNotifications: () => void,
+  requestOnStart = true,
 ): PushSession {
   let stopped = false;
   let token: string | null = null;
@@ -39,7 +49,23 @@ export function startPushRegistration(
   const handles: PluginListenerHandle[] = [];
   let stopPromise: Promise<void> | null = null;
   const platform = getPlatform();
+  let permissionRequest: Promise<boolean> | null = null;
+  const requestPermission = (): Promise<boolean> => {
+    permissionRequest ??= (async () => {
+      if (stopped) return false;
+      let permission = await PushNotifications.checkPermissions();
+      if (stopped) return false;
+      if (permission.receive === 'prompt' || permission.receive === 'prompt-with-rationale') {
+        permission = await PushNotifications.requestPermissions();
+      }
+      if (stopped || permission.receive !== 'granted') return false;
+      await PushNotifications.register();
+      return true;
+    })().finally(() => { permissionRequest = null; });
+    return permissionRequest;
+  };
   const session: PushSession = {
+    requestPermission,
     ready: Promise.resolve(),
     stop: () => {
       stopPromise ??= (async () => {
@@ -89,12 +115,12 @@ export function startPushRegistration(
       if (!stopped && path) navigate(path);
     }));
     if (stopped) return;
-    let permission = await PushNotifications.checkPermissions();
-    if (stopped) return;
-    if (permission.receive === 'prompt' || permission.receive === 'prompt-with-rationale') {
-      permission = await PushNotifications.requestPermissions();
+    // 시작 시에는 이미 허용한 기기만 재등록하고 새 권한 창을 열지 않는다.
+    if (requestOnStart) await requestPermission();
+    else {
+      const permission = await PushNotifications.checkPermissions();
+      if (!stopped && permission.receive === 'granted') await PushNotifications.register();
     }
-    if (!stopped && permission.receive === 'granted') await PushNotifications.register();
   })().catch(() => { /* 권한·네이티브 초기화 실패가 로그인을 막지 않는다. */ });
   return session;
 }

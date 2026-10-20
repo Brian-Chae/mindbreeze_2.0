@@ -1,3 +1,6 @@
+import { isNativeApp } from '../../lib/native/platform';
+import { requestPushPermission } from '../../lib/native/push';
+import { PermissionGuide } from '../native/permission-guide';
 import { useCallback, useEffect, useState } from 'react';
 import {
   disableWebPushByUser,
@@ -15,6 +18,30 @@ const STATE_HINT: Record<WebPushState, string> = {
 };
 
 export default function WebPushCard() {
+  return isNativeApp() ? <NativePushCard /> : <BrowserPushCard />;
+}
+
+function NativePushCard() {
+  const [message, setMessage] = useState('새 메시지와 클래스 초대를 이 기기로 받아요.');
+  const [busy, setBusy] = useState(false);
+  const enable = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const granted = await requestPushPermission();
+      setMessage(granted ? '앱 알림을 켰어요.' : '기기 설정에서 알림 권한을 허용한 뒤 다시 시도해 주세요.');
+    } catch { setMessage('알림 설정을 바꾸지 못했어요. 잠시 후 다시 시도해 주세요.'); }
+    finally { setBusy(false); }
+  };
+  return <section className="rounded-2xl border bg-white p-6" aria-label="앱 알림">
+    <h3 className="font-bold">앱 알림</h3><p role="status">{message}</p>
+    <PermissionGuide kind="notifications" onContinue={() => { void enable(); }}>
+      {(request) => <button type="button" disabled={busy} onClick={request}>알림 허용하기</button>}
+    </PermissionGuide>
+  </section>;
+}
+
+function BrowserPushCard() {
   const [state, setState] = useState<WebPushState | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
