@@ -58,7 +58,7 @@ async function isBleConnectAllowed(): Promise<boolean> {
 async function ensureNotificationPermission(fgs: ForegroundServiceModule): Promise<void> {
   try {
     const { display } = await fgs.ForegroundService.checkPermissions();
-    if (display === 'prompt' || display === 'prompt-with-rationale') {
+    if (display === 'prompt') {
       await fgs.ForegroundService.requestPermissions();
     }
   } catch (error: unknown) {

@@ -20,7 +20,7 @@ export class CapacitorBleAdapter implements BluetoothProvider {
 
   constructor() {
     this.platform = getPlatform() === 'android' ? 'android' : 'ios';
-    activeAdapter = this;
+    registerActiveAdapter(this);
   }
 
   onConnectionLost(callback: () => void): void {
@@ -188,6 +188,9 @@ export class CapacitorBleAdapter implements BluetoothProvider {
 
 // 가장 최근에 만든 어댑터 — useBand 가 provider 인스턴스에 접근하지 않고도 복귀 시 연결 확인
 let activeAdapter: CapacitorBleAdapter | null = null;
+function registerActiveAdapter(adapter: CapacitorBleAdapter): void {
+  activeAdapter = adapter;
+}
 
 /**
  * 활성 네이티브 어댑터의 연결 기기를 검증한다.
