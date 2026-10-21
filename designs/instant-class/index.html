@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MIND BREEZE · 즉시 클래스(지금 바로 시작) 시안</title>
+<link rel="stylesheet" href="../class-player-redesign/tokens.css">
+<link rel="stylesheet" href="../class-flow-redesign/flow-base.css">
+<style>
+/* ── 갤러리 ── */
+body { background: #0c0614; padding: 40px; font-family: var(--font); }
+.g-h { color: var(--tx-hi); font-size: 28px; font-weight: 800; margin: 0 0 6px; }
+.g-d { color: var(--tx-mid); font-size: 15px; margin: 0 0 32px; }
+.g-sec { margin: 0 0 56px; }
+.g-sec h2 { color: var(--tx-hi); font-size: 18px; margin: 0 0 6px; }
+.g-sec p.n { color: var(--tx-lo); font-size: 13px; margin: 0 0 16px; line-height: 1.6; max-width: 960px; }
+.g-row { display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap; }
+.frame { position: relative; overflow: hidden; border-radius: 16px; border: 1px solid rgba(255,255,255,.12); flex: none; }
+.frame.d { width: 1280px; height: 800px; }
+.frame.m { width: 390px; height: 844px; border-radius: 36px; }
+.frame .fl-root, .frame .sh-root { width: 100%; height: 100%; }
+.scale { transform-origin: top left; }
+.wrap-d { width: 896px; height: 560px; } .wrap-d .frame { transform: scale(.7); transform-origin: top left; }
+.wrap-m { width: 312px; height: 676px; } .wrap-m .frame { transform: scale(.8); transform-origin: top left; }
+.cap { color: var(--tx-mid); font-size: 13px; margin-top: 10px; font-weight: 600; }
+
+/* ── 공통 ── */
+.w-ico { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.w-ico.s20 { width: 20px; height: 20px; } .w-ico.s16 { width: 16px; height: 16px; }
+
+/* 시작 카드 */
+.w-startcards { display: flex; flex-direction: column; gap: 16px; }
+.w-startcard { display: grid; grid-template-columns: 56px minmax(0,1fr) auto; gap: 16px; align-items: center; padding: 24px 20px; border-radius: var(--r-sheet); background: var(--sheet-bg-strong); border: 1px solid var(--sheet-border); min-height: 112px; text-align: left; }
+.w-startcard .ico { width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,.12); display: grid; place-items: center; }
+.w-startcard .tx { display: flex; flex-direction: column; gap: 8px; }
+.w-startcard .tx b { font-size: var(--fs-18); font-weight: 700; }
+.w-startcard .tx span { font-size: var(--fs-13); color: var(--tx-mid); line-height: 20px; }
+.w-startcard.hot { background: linear-gradient(135deg, rgba(95,0,128,.92), rgba(110,26,140,.78)); border-color: rgba(210,174,252,.55); box-shadow: 0 0 0 4px rgba(179,115,239,.18); }
+.w-startcard.hot .ico { background: var(--mb-mint); color: #2A0838; }
+.w-startcard.hot .tx span { color: #E9DAF7; }
+.w-badge { font-size: 12px; font-weight: 700; padding: 6px 10px; border-radius: 999px; background: rgba(1,240,200,.16); color: var(--mb-mint); white-space: nowrap; }
+.w-divider { display: flex; align-items: center; gap: 12px; color: var(--tx-lo); font-size: 13px; }
+.w-divider::before, .w-divider::after { content: ""; flex: 1; height: 1px; background: var(--sheet-border); }
+
+/* 즉시 폼 */
+.w-form { display: flex; flex-direction: column; gap: 20px; }
+.w-inwrap { position: relative; }
+.w-inwrap .w-ico { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--tx-lo); }
+.w-inwrap .fl-input { padding-left: 48px; }
+.w-hint { font-size: 12px; color: var(--tx-lo); display: flex; gap: 6px; align-items: center; }
+.w-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.w-chips button { min-height: 44px; padding: 0 18px; border-radius: 999px; background: rgba(255,255,255,.1); border: 1px solid var(--sheet-border); font-size: 15px; font-weight: 600; }
+.w-chips button.on { background: var(--mb-purple); border-color: transparent; color: #fff; }
+.w-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.fl-seg > button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.w-more { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 16px; border-radius: var(--r-card); background: rgba(255,255,255,.06); border: 1px solid var(--sheet-border); font-size: 14px; color: var(--tx-mid); width: 100%; }
+.w-more .grow { flex: 1; text-align: left; }
+.w-more b { color: var(--tx-hi); font-weight: 600; }
+.w-remember { display: flex; gap: 10px; align-items: center; padding: 10px 14px; border-radius: 12px; background: rgba(1,240,200,.08); border: 1px solid rgba(1,240,200,.25); color: #BFF5EA; font-size: 13px; }
+.w-invite { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 16px; border-radius: var(--r-card); border: 1px dashed rgba(255,255,255,.25); font-size: 14px; color: var(--tx-mid); width: 100%; }
+.w-invite b { color: var(--tx-hi); }
+.w-invite .grow { flex: 1; text-align: left; display: flex; flex-direction: column; gap: 2px; }
+.w-cta { height: 60px; font-size: 17px; }
+.w-cta .w-ico { color: var(--mb-mint); }
+.w-ctanote { text-align: center; font-size: 12px; color: var(--tx-lo); }
+.w-sel { height: 52px; border-radius: var(--r-card); background: rgba(255,255,255,.1); border: 1px solid var(--sheet-border); display: flex; align-items: center; gap: 12px; padding: 0 16px; font-size: 15px; }
+.w-sel .av { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,.16); display: grid; place-items: center; font-size: 13px; font-weight: 700; }
+.w-sel .grow { flex: 1; }
+.w-sel.empty { border: 1px dashed var(--warn); color: var(--warn); }
+
+/* 레이아웃: 데스크톱 2열 (좌 폼 / 우 요약) */
+.w-split { display: grid; grid-template-columns: minmax(0, 560px) 320px; gap: 24px; align-items: start; }
+.w-sum { display: flex; flex-direction: column; gap: 14px; }
+.w-sum h3 { margin: 0; font-size: 15px; color: var(--tx-mid); font-weight: 600; }
+.w-sumline { display: flex; gap: 12px; align-items: center; font-size: 14px; }
+.w-sumline .w-ico { color: var(--mb-pale); }
+.w-steps3 { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.w-steps3 div { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: var(--tx-mid); line-height: 1.5; }
+.w-steps3 i { flex: none; width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,.12); font-style: normal; font-size: 12px; font-weight: 700; display: grid; place-items: center; color: var(--tx-hi); }
+
+/* 열렸어요(공유) */
+.w-live { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: rgba(1,240,200,.14); color: var(--mb-mint); font-size: 13px; font-weight: 700; align-self: center; }
+.w-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mb-mint); box-shadow: 0 0 0 4px rgba(1,240,200,.2); }
+.w-share { display: grid; grid-template-columns: 1fr 168px; gap: 24px; align-items: center; }
+.w-code { font-size: 56px; font-weight: 800; letter-spacing: .14em; line-height: 1; }
+.w-codecol { display: flex; flex-direction: column; gap: 14px; }
+.w-qr { width: 168px; height: 168px; border-radius: 16px; background: #fff; padding: 12px; }
+.w-qr svg { width: 100%; height: 100%; }
+.w-btnrow { display: flex; gap: 8px; flex-wrap: wrap; }
+.w-btnrow .fl-btn { min-height: 44px; padding: 0 16px; font-size: 14px; }
+.w-joined { display: flex; align-items: center; gap: 12px; }
+.w-avs { display: flex; }
+.w-avs span { width: 36px; height: 36px; border-radius: 50%; border: 2px solid #2a1638; margin-left: -8px; display: grid; place-items: center; font-size: 13px; font-weight: 700; background: #6E1A8C; }
+.w-avs span:first-child { margin-left: 0; }
+.w-avs span:nth-child(2) { background: #3b6e64; } .w-avs span:nth-child(3) { background: #8a5a3a; }
+
+/* 셸(라이트) 진입점 */
+.w-brand { display: flex; align-items: center; gap: 8px; padding: 8px 16px 24px; color: var(--mb-purple); font-weight: 800; font-size: 18px; }
+.w-nav { display: flex; flex-direction: column; gap: 6px; }
+.w-nav span { display: flex; align-items: center; gap: 14px; min-height: 46px; padding: 0 16px; border-radius: 999px; font-size: 15px; font-weight: 600; color: var(--ink); }
+.w-nav span.on { background: var(--mb-purple-cream); color: var(--mb-purple); }
+.w-headbtns { display: flex; gap: 8px; }
+.sh-btn .w-ico { color: var(--mb-mint); }
+.sh-btn.line .w-ico { color: var(--mb-purple); }
+.w-quick { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 24px; align-items: center; }
+.w-quick h2 { margin: 0 0 8px; font-size: 22px; font-weight: 800; }
+.w-quick p { margin: 0; font-size: 14px; color: var(--tx-mid); }
+.w-quick .sh-btn { min-height: 56px; padding: 0 28px; font-size: 16px; background: #fff; color: var(--mb-purple); }
+.w-quick .sh-btn .w-ico { color: var(--mb-purple); }
+.w-table { width: 100%; border-collapse: collapse; font-size: 14px; color: var(--ink); }
+.w-table th { text-align: left; font-size: 12px; color: var(--ink-mid); font-weight: 600; padding: 10px 12px; border-bottom: 1px solid var(--shell-line); }
+.w-table td { padding: 14px 12px; border-bottom: 1px solid var(--shell-line); }
+.w-instant { background: #E3F8F2 !important; color: #0B6B55 !important; }
+.w-search { display: flex; gap: 8px; align-items: center; }
+.w-search .box { flex: 1; height: 40px; border-radius: 12px; border: 1px solid var(--shell-line); background: #fff; display: flex; align-items: center; gap: 8px; padding: 0 12px; color: var(--ink-lo); font-size: 14px; }
+.w-search .ft { height: 40px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--shell-line); background: #fff; font-size: 13px; color: var(--ink-mid); display: inline-flex; align-items: center; }
+.w-search .ft.on { border-color: var(--mb-purple); color: var(--mb-purple); background: var(--mb-purple-cream); }
+.w-link { color: var(--mb-purple); font-weight: 700; font-size: 13px; display: inline-flex; gap: 4px; align-items: center; }
+
+/* 모바일 */
+.frame.m .fl-body { justify-content: flex-start; padding-top: 8px; overflow-y: auto; }
+.frame.m .w-2col { grid-template-columns: 1fr; }
+.frame.m .w-code { font-size: 44px; }
+.frame.m .w-share { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+.frame.m .w-qr { width: 140px; height: 140px; }
+.frame.m .w-btnrow { justify-content: center; }
+.frame.m .fl-top { grid-template-columns: 56px 1fr 56px; }
+
+/* ── IC-06 회원 초대 시트 ── */
+.w-scrim { position: absolute; inset: 0; z-index: 8; background: rgba(12,6,20,.6); display: flex; align-items: stretch; justify-content: flex-end; }
+.w-sheet { width: 480px; height: 100%; background: rgba(24,12,36,.97); border-left: 1px solid var(--sheet-border); border-radius: 24px 0 0 24px; display: flex; flex-direction: column; }
+.frame.m .w-scrim { align-items: flex-end; justify-content: center; }
+.frame.m .w-sheet { width: 100%; height: 88%; border-radius: 24px 24px 0 0; border-left: 0; border-top: 1px solid var(--sheet-border); }
+.w-grab { width: 40px; height: 5px; border-radius: 9px; background: rgba(255,255,255,.3); margin: 10px auto 0; flex: none; }
+.w-shead { display: flex; align-items: center; gap: 12px; padding: 20px 24px 12px; flex: none; }
+.w-shead h2 { margin: 0; font-size: 18px; font-weight: 800; flex: 1; }
+.w-shead .fl-iconbtn { width: 40px; height: 40px; }
+.w-sbody { flex: 1; min-height: 0; overflow: hidden; padding: 4px 24px 12px; display: flex; flex-direction: column; gap: 14px; }
+.w-sfoot { flex: none; padding: 16px 24px 24px; border-top: 1px solid var(--sheet-border); display: flex; flex-direction: column; gap: 10px; }
+.w-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; border-radius: 14px; background: rgba(255,255,255,.06); }
+.w-tabs button { min-height: 40px; border-radius: 10px; font-size: 14px; font-weight: 600; color: var(--tx-mid); display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.w-tabs button.on { background: rgba(255,255,255,.14); color: var(--tx-hi); }
+.w-picked { display: flex; flex-wrap: wrap; gap: 6px; }
+.w-picked span { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 8px 0 12px; border-radius: 999px; background: rgba(179,115,239,.22); border: 1px solid rgba(210,174,252,.4); font-size: 13px; font-weight: 600; }
+.w-picked .w-ico { width: 14px; height: 14px; color: var(--tx-mid); }
+.w-grp { font-size: 12px; font-weight: 700; color: var(--tx-lo); display: flex; justify-content: space-between; align-items: center; }
+.w-grp a { color: var(--mb-pale); font-weight: 600; }
+.w-mlist { display: flex; flex-direction: column; gap: 6px; }
+.w-m { display: grid; grid-template-columns: 40px minmax(0,1fr) auto; gap: 12px; align-items: center; min-height: 60px; padding: 8px 12px; border-radius: 14px; background: rgba(255,255,255,.05); border: 1px solid transparent; }
+.w-m.on { background: rgba(179,115,239,.14); border-color: rgba(210,174,252,.45); }
+.w-m .av { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 14px; background: #6E1A8C; }
+.w-m .nm { font-size: 15px; font-weight: 700; display: block; }
+.w-m .em { font-size: 12px; color: var(--tx-lo); display: block; margin-top: 3px; }
+.w-cb { width: 24px; height: 24px; border-radius: 7px; border: 2px solid rgba(255,255,255,.35); display: grid; place-items: center; }
+.w-m.on .w-cb { background: var(--mb-lavender); border-color: var(--mb-lavender); color: #24082f; }
+.w-m.dis { opacity: .55; }
+.w-tag { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: rgba(1,240,200,.14); color: var(--mb-mint); margin-left: 6px; vertical-align: 1px; }
+.w-tag.mute { background: rgba(255,255,255,.1); color: var(--tx-mid); }
+.w-erow { display: grid; grid-template-columns: 36px minmax(0,1fr) auto; gap: 12px; align-items: center; min-height: 52px; padding: 6px 12px; border-radius: 12px; background: rgba(255,255,255,.05); font-size: 14px; }
+.w-erow .av { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,.1); display: grid; place-items: center; color: var(--tx-mid); }
+.w-erow .st { font-size: 12px; color: var(--tx-lo); }
+.w-emailin { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.w-emailin .fl-btn { min-height: 52px; }
+.w-msg { border-radius: 14px; background: rgba(255,255,255,.06); border: 1px solid var(--sheet-border); padding: 14px 16px; font-size: 13px; line-height: 1.6; color: var(--tx-mid); }
+.w-msg b { color: var(--tx-hi); }
+.w-ways { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.w-way { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 8px; border-radius: 14px; background: rgba(255,255,255,.06); border: 1px solid var(--sheet-border); font-size: 13px; font-weight: 600; }
+.w-way i { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.1); font-style: normal; }
+.w-way.kakao i { background: #FEE500; color: #191600; font-weight: 800; font-size: 13px; }
+.w-cnt { display: flex; justify-content: space-between; font-size: 13px; color: var(--tx-mid); }
+.w-cnt b { color: var(--tx-hi); }
+.w-toast { position: absolute; left: 50%; transform: translateX(-50%); top: 72px; z-index: 6; display: flex; gap: 10px; align-items: center; padding: 12px 18px; border-radius: 999px; background: rgba(12,40,34,.95); border: 1px solid rgba(1,240,200,.45); color: #CFF8EF; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.w-toast .w-ico { color: var(--mb-mint); }
+.w-ilist { display: flex; flex-direction: column; gap: 8px; }
+.w-irow { display: flex; align-items: center; gap: 12px; font-size: 14px; }
+.w-irow .grow { flex: 1; }
+.w-st { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+.w-st.in { background: rgba(1,240,200,.14); color: var(--mb-mint); }
+.w-st.wait { background: rgba(255,255,255,.1); color: var(--tx-mid); }
+.w-st.fail { background: var(--warn-bg); color: var(--warn); border: 1px dashed var(--warn); }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+  <symbol id="i-video" viewBox="0 0 24 24"><path d="m22 8-6 4 6 4V8z"/><rect x="2" y="6" width="14" height="12" rx="2"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-userplus" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l4 2"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></symbol>
+  <symbol id="i-door" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+  <symbol id="i-msg" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></symbol>
+  <symbol id="i-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></symbol>
+</svg>
+
+<h1 class="g-h">즉시 클래스 — 지금 바로 시작</h1>
+<p class="g-d">준비 없이 지금 열어야 하는 명상 수업을 버튼 2번으로 엽니다. 기획: <code>docs/즉시-클래스-기획.md</code></p>
+
+<!-- ───── IC-01 진입점 ───── -->
+<section class="g-sec">
+  <h2>IC-01 · 진입점 — 클래스 목록(데스크톱)</h2>
+  <p class="n">목록 상단에 '지금 바로 시작' 카드를 고정. 헤더 버튼은 '지금 바로 시작'(주) + '새 클래스 만들기'(보조). 즉시 클래스는 목록에서 '즉석' 칩으로 구분하고, 끝난 즉석 클래스는 '다시 열기'로 같은 설정 재사용. 홈 대시보드의 '클래스 만들기' 자리에도 같은 주 버튼 배치.</p>
+  <div class="wrap-d"><div class="frame d">
+    <div class="sh-root">
+      <aside class="sh-side">
+        <div class="w-brand">MIND BREEZE</div>
+        <div class="w-nav">
+          <span><svg class="w-ico s20"><use href="#i-home"/></svg>홈</span>
+          <span class="on"><svg class="w-ico s20"><use href="#i-cal"/></svg>클래스</span>
+          <span><svg class="w-ico s20"><use href="#i-users"/></svg>회원</span>
+          <span><svg class="w-ico s20"><use href="#i-msg"/></svg>채팅</span>
+        </div>
+      </aside>
+      <main class="sh-main">
+        <div class="sh-head">
+          <h1 class="sh-title">클래스</h1>
+          <div class="w-headbtns">
+            <button class="sh-btn line"><svg class="w-ico s20"><use href="#i-plus"/></svg>새 클래스 만들기</button>
+            <button class="sh-btn"><svg class="w-ico s20"><use href="#i-zap"/></svg>지금 바로 시작</button>
+          </div>
+        </div>
+        <div class="sh-scroll">
+          <div class="sh-hero w-quick" style="background-image:url(../class-flow-redesign/assets/bg/background5.webp)">
+            <div><h2>준비 없이 지금 수업을 열어야 하나요?</h2><p>이름·일정 입력 없이 바로 대기실을 열고 코드로 회원을 들여보내요. 지난번 설정(30분 · 온라인 · 정원 10명)을 그대로 써요.</p></div>
+            <button class="sh-btn"><svg class="w-ico s20"><use href="#i-zap"/></svg>지금 바로 시작</button>
+          </div>
+          <div class="w-search">
+            <div class="box"><svg class="w-ico s16"><use href="#i-search"/></svg>클래스 이름·강사 검색</div>
+            <span class="ft on">전체</span><span class="ft">진행 중</span><span class="ft">예정</span><span class="ft">즉석</span><span class="ft">지난 클래스</span>
+          </div>
+          <div class="sh-card" style="padding:0 8px">
+            <table class="w-table">
+              <thead><tr><th>클래스</th><th>유형</th><th>일정</th><th>강사</th><th>멤버</th><th></th></tr></thead>
+              <tbody>
+                <tr><td><b>즉석 명상 · 10월 21일 오후 3:20</b></td><td><span class="sh-chip w-instant"><svg class="w-ico s16"><use href="#i-zap"/></svg>즉석</span></td><td><span class="sh-chip live">대기실 열림</span></td><td>채용욱</td><td>3/10</td><td><span class="w-link">진행 화면<svg class="w-ico s16"><use href="#i-right"/></svg></span></td></tr>
+                <tr><td><b>MBSR 가을 8주</b></td><td><span class="sh-chip">정해진 횟수</span></td><td>매주 화 19:00 · 3/8회</td><td>채용욱</td><td>12/12</td><td><span class="w-link">상세<svg class="w-ico s16"><use href="#i-right"/></svg></span></td></tr>
+                <tr><td><b>점심 명상</b></td><td><span class="sh-chip">계속 이어져요</span></td><td>매주 월·수·금 12:30</td><td>김지도</td><td>8/15</td><td><span class="w-link">상세<svg class="w-ico s16"><use href="#i-right"/></svg></span></td></tr>
+                <tr><td><b>즉석 명상 · 10월 17일 오전 10:05</b></td><td><span class="sh-chip w-instant"><svg class="w-ico s16"><use href="#i-zap"/></svg>즉석</span></td><td><span class="sh-chip mute">완료 · 30분</span></td><td>채용욱</td><td>5/10</td><td><span class="w-link"><svg class="w-ico s16"><use href="#i-history"/></svg>다시 열기</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div></div>
+  <div class="cap">1280 × 800 · 70% 축소</div>
+</section>
+
+<!-- ───── IC-02 시작 선택 ───── -->
+<section class="g-sec">
+  <h2>IC-02 · 시작 선택 — 기존 화면에 '지금 바로 시작' 카드 추가</h2>
+  <p class="n">현재 '어떻게 시작할까요?' 화면 맨 위에 강조 카드 1개를 추가. 기존 두 카드는 '미리 편성하기' 구분선 아래로 이동. 목록·홈의 '지금 바로 시작' 버튼은 이 화면을 건너뛰고 IC-03으로 바로 들어간다.</p>
+  <div class="wrap-d"><div class="frame d">
+    <main class="fl-root">
+      <div class="fl-backdrop" style="background-image:url(../class-flow-redesign/assets/bg/background5.webp)"></div>
+      <div class="fl-layer">
+        <header class="fl-top"><div class="fl-top-l"><button class="fl-iconbtn"><svg class="w-ico"><use href="#i-x"/></svg></button></div><div class="fl-top-title">클래스 만들기</div><div class="fl-top-r"></div></header>
+        <div class="fl-body"><div class="fl-col">
+          <h1 class="fl-h1">어떻게 시작할까요?</h1>
+          <p class="fl-sub">지금 바로 열거나, 일정을 정해 미리 편성해요.</p>
+          <div class="w-startcards">
+            <button class="w-startcard hot"><span class="ico"><svg class="w-ico"><use href="#i-zap"/></svg></span><span class="tx"><b>지금 바로 시작해요</b><span>입력 없이 대기실을 열고 코드로 회원을 들여보내요</span></span><span class="w-badge">약 10초</span></button>
+            <div class="w-divider">미리 편성하기</div>
+            <button class="w-startcard"><span class="ico"><svg class="w-ico"><use href="#i-plus"/></svg></span><span class="tx"><b>처음부터 만들어요</b><span>이름·일정·강사를 새로 정해요</span></span><span></span></button>
+            <button class="w-startcard"><span class="ico"><svg class="w-ico"><use href="#i-copy"/></svg></span><span class="tx"><b>지난 클래스 그대로 시작해요</b><span>요일·시각·횟수·강사 배정을 가져와요</span></span><span></span></button>
+          </div>
+        </div></div>
+        <footer class="fl-foot"><div class="fl-col"><button class="fl-btn ghost">목록으로 돌아가기</button></div></footer>
+      </div>
+    </main>
+  </div></div>
+  <div class="cap">1280 × 800 · 70% 축소</div>
+</section>
+
+<!-- ───── IC-03 즉시 한 화면 ───── -->
+<section class="g-sec">
+  <h2>IC-03 · 즉시 클래스 한 화면 — 상담사 / 센터 관리자</h2>
+  <p class="n">모든 값이 기본값으로 채워져 있어 바로 [지금 열기]만 누르면 된다. 이름은 자동(수정 가능), 소요 시간은 칩, 정원·LINK BAND·녹음·채팅은 '더보기'에 접어 두고 요약만 표시. 회원 초대는 선택(열린 뒤에도 가능). 관리자 화면은 '진행 지도사' 1개만 추가로 필수.</p>
+  <div class="g-row">
+    <div>
+      <div class="wrap-d"><div class="frame d">
+        <main class="fl-root">
+          <div class="fl-backdrop" style="background-image:url(../class-flow-redesign/assets/bg/background4.webp)"></div>
+          <div class="fl-layer">
+            <header class="fl-top"><div class="fl-top-l"><button class="fl-iconbtn"><svg class="w-ico"><use href="#i-x"/></svg></button></div><div class="fl-top-title">지금 바로 시작</div><div class="fl-top-r"></div></header>
+            <div class="fl-body"><div class="w-split">
+              <section class="fl-card strong w-form">
+                <h1 class="fl-h1" style="text-align:left">지금 바로 열어요</h1>
+                <div class="w-remember"><svg class="w-ico s20"><use href="#i-history"/></svg><span>지난 즉석 클래스 설정을 불러왔어요</span></div>
+                <div class="fl-field"><span class="fl-label">클래스 이름</span>
+                  <div class="w-inwrap"><svg class="w-ico s20"><use href="#i-pen"/></svg><input class="fl-input" value="즉석 명상 · 10월 21일 오후 3:20"></div>
+                  <span class="w-hint">비워 두면 이 이름으로 만들어요</span></div>
+                <div class="fl-field"><span class="fl-label">소요 시간</span>
+                  <div class="w-chips"><button>20분</button><button class="on">30분</button><button>45분</button><button>60분</button><button>직접 입력</button></div></div>
+                <div class="fl-field"><span class="fl-label">진행 방식</span>
+                  <div class="fl-seg"><button class="on"><svg class="w-ico s20"><use href="#i-video"/></svg>온라인</button><button><svg class="w-ico s20"><use href="#i-pin"/></svg>오프라인(대면)</button></div></div>
+                <button class="w-more"><svg class="w-ico s20"><use href="#i-sliders"/></svg><span class="grow">더보기 · <b>정원 10명 · LINK BAND 선택 · 녹음 켬 · 채팅 끔</b></span><svg class="w-ico s20"><use href="#i-down"/></svg></button>
+                <button class="w-invite"><svg class="w-ico s20"><use href="#i-userplus"/></svg><span class="grow"><b>회원 초대 (선택)</b><span>지금 골라도, 열린 뒤에 코드로 들여보내도 돼요</span></span><svg class="w-ico s20"><use href="#i-right"/></svg></button>
+              </section>
+              <aside class="fl-card w-sum">
+                <h3>열면 이렇게 돼요</h3>
+                <div class="w-sumline"><svg class="w-ico s20"><use href="#i-clock"/></svg>지금 · 30분 · 1회</div>
+                <div class="w-sumline"><svg class="w-ico s20"><use href="#i-users"/></svg>채용욱 진행 · 정원 10명</div>
+                <div class="w-steps3">
+                  <div><i>1</i>대기실이 바로 열려요. 수업 시작은 진행 화면에서 직접 눌러요.</div>
+                  <div><i>2</i>클래스 코드·QR·링크로 회원을 들여보내요.</div>
+                  <div><i>3</i>수업 중에도 회원을 초대할 수 있어요.</div>
+                </div>
+                <button class="fl-btn primary block w-cta"><svg class="w-ico"><use href="#i-zap"/></svg>지금 열기</button>
+                <span class="w-ctanote">나중에 이름·설정을 바꿀 수 있어요</span>
+              </aside>
+            </div></div>
+          </div>
+        </main>
+      </div></div>
+      <div class="cap">상담사 · 1280 × 800 · 70% 축소</div>
+    </div>
+    <div>
+      <div class="wrap-d"><div class="frame d">
+        <main class="fl-root">
+          <div class="fl-backdrop" style="background-image:url(../class-flow-redesign/assets/bg/background4.webp)"></div>
+          <div class="fl-layer">
+            <header class="fl-top"><div class="fl-top-l"><button class="fl-iconbtn"><svg class="w-ico"><use href="#i-x"/></svg></button></div><div class="fl-top-title">지금 바로 시작</div><div class="fl-top-r"></div></header>
+            <div class="fl-body"><div class="w-split">
+              <section class="fl-card strong w-form">
+                <h1 class="fl-h1" style="text-align:left">지금 바로 열어요</h1>
+                <div class="fl-field"><span class="fl-label">진행 지도사 · 필수</span>
+                  <div class="w-sel empty"><svg class="w-ico s20"><use href="#i-alert"/></svg><span class="grow">지금 진행할 지도사를 골라 주세요</span><svg class="w-ico s20"><use href="#i-down"/></svg></div>
+                  <span class="w-hint">지금 다른 수업 중인 지도사는 '수업 중'으로 표시돼요</span></div>
+                <div class="fl-field"><span class="fl-label">클래스 이름</span>
+                  <div class="w-inwrap"><svg class="w-ico s20"><use href="#i-pen"/></svg><input class="fl-input" value="즉석 명상 · 10월 21일 오후 3:20"></div></div>
+                <div class="fl-field"><span class="fl-label">소요 시간</span>
+                  <div class="w-chips"><button>20분</button><button class="on">30분</button><button>45분</button><button>60분</button><button>직접 입력</button></div></div>
+                <div class="fl-field"><span class="fl-label">진행 방식</span>
+                  <div class="fl-seg"><button class="on"><svg class="w-ico s20"><use href="#i-video"/></svg>온라인</button><button><svg class="w-ico s20"><use href="#i-pin"/></svg>오프라인(대면)</button></div></div>
+                <button class="w-more"><svg class="w-ico s20"><use href="#i-sliders"/></svg><span class="grow">더보기 · <b>정원 10명 · LINK BAND 선택 · 녹음 켬</b></span><svg class="w-ico s20"><use href="#i-down"/></svg></button>
+              </section>
+              <aside class="fl-card w-sum">
+                <h3>열면 이렇게 돼요</h3>
+                <div class="w-sumline"><svg class="w-ico s20"><use href="#i-clock"/></svg>지금 · 30분 · 1회</div>
+                <div class="w-sumline"><svg class="w-ico s20"><use href="#i-users"/></svg>진행 지도사 미선택</div>
+                <div class="w-steps3">
+                  <div><i>1</i>대기실이 열리고 지도사에게 알림이 가요.</div>
+                  <div><i>2</i>클래스 코드를 회원에게 전달해 주세요.</div>
+                </div>
+                <button class="fl-btn primary block w-cta" disabled><svg class="w-ico"><use href="#i-zap"/></svg>지금 열기</button>
+                <span class="w-ctanote">진행 지도사를 고르면 열 수 있어요</span>
+              </aside>
+            </div></div>
+          </div>
+        </main>
+      </div></div>
+      <div class="cap">센터 관리자 · 진행 지도사 필수</div>
+    </div>
+  </div>
+</section>
+
+<!-- ───── IC-04 열렸어요 ───── -->
+<section class="g-sec">
+  <h2>IC-04 · 열렸어요 — 코드 공유 후 대기실로</h2>
+  <p class="n">생성 즉시 이 화면. 코드를 크게, QR(현장 대면 수업용), 링크 복사, 회원 초대를 한 곳에. 입장한 회원이 실시간으로 표시되고, 상담사는 [대기실로 들어가기] 1클릭으로 진행 화면 이동(관리자는 '회차 확인').</p>
+  <div class="wrap-d"><div class="frame d">
+    <main class="fl-root">
+      <div class="fl-backdrop" style="background-image:url(../class-flow-redesign/assets/bg/background5.webp)"></div>
+      <div class="fl-layer">
+        <header class="fl-top"><div class="fl-top-l"><button class="fl-iconbtn"><svg class="w-ico"><use href="#i-x"/></svg></button></div><div class="fl-top-title">즉석 명상 · 10월 21일 오후 3:20</div><div class="fl-top-r"></div></header>
+        <div class="fl-body"><div class="fl-col">
+          <span class="w-live"><span class="w-dot"></span>대기실이 열렸어요</span>
+          <h1 class="fl-h1">회원에게 코드를 알려 주세요</h1>
+          <section class="fl-card strong w-share">
+            <div class="w-codecol">
+              <span class="fl-label">클래스 코드</span>
+              <strong class="w-code">K7Q4</strong>
+              <div class="w-btnrow">
+                <button class="fl-btn soft"><svg class="w-ico s20"><use href="#i-copy"/></svg>코드 복사</button>
+                <button class="fl-btn soft"><svg class="w-ico s20"><use href="#i-link"/></svg>입장 링크 복사</button>
+                <button class="fl-btn soft"><svg class="w-ico s20"><use href="#i-userplus"/></svg>회원 초대</button>
+              </div>
+            </div>
+            <div class="w-qr"><svg viewBox="0 0 21 21" shape-rendering="crispEdges"><path fill="#1F1F1F" d="M0 0h7v7H0zM1 1v5h5V1zM2 2h3v3H2zM14 0h7v7h-7zM15 1v5h5V1zM16 2h3v3h-3zM0 14h7v7H0zM1 15v5h5v-5zM2 16h3v3H2zM8 0h2v2H8zM11 1h2v3h-2zM9 3h1v3H9zM8 8h3v1H8zM12 8h2v2h-2zM0 8h2v1H0zM3 9h3v2H3zM15 8h3v2h-3zM19 9h2v3h-2zM8 11h2v3H8zM11 12h3v1h-3zM16 12h2v2h-2zM8 15h1v2H8zM10 16h3v2h-3zM14 14h2v3h-2zM17 15h4v1h-4zM18 17h1v4h-1zM14 19h3v2h-3zM10 19h2v2h-2zM20 19h1v2h-1z"/></svg></div>
+          </section>
+          <section class="fl-card w-joined">
+            <div class="w-avs"><span>김</span><span>이</span><span>박</span></div>
+            <span style="flex:1;font-size:15px"><b>3명</b> <span style="color:var(--tx-mid)">이 대기실에 들어왔어요 · 정원 10명</span></span>
+          </section>
+        </div></div>
+        <footer class="fl-foot"><div class="fl-col">
+          <button class="fl-btn primary block w-cta"><svg class="w-ico"><use href="#i-door"/></svg>대기실로 들어가기</button>
+          <button class="fl-btn ghost">클래스 목록</button>
+        </div></footer>
+      </div>
+    </main>
+  </div></div>
+  <div class="cap">1280 × 800 · 70% 축소</div>
+</section>
+
+<!-- ───── IC-06 회원 초대 ───── -->
+<section class="g-sec">
+  <h2>IC-06 · 회원 초대 — IC-04에서 [회원 초대]를 눌렀을 때</h2>
+  <p class="n">데스크톱은 오른쪽 사이드 시트(코드 화면이 그대로 보이게), 모바일은 아래에서 올라오는 시트. 탭 2개: <b>회원</b>(센터 회원 검색·선택 → 앱 알림 '지금 입장할 수 있어요'), <b>이메일</b>(비회원 포함 → 입장 링크+코드 메일). 문자·카카오톡 공유는 유료 발송이라 이번 범위에서 제외(코드·링크 복사로 대체). 회원 탭은 '최근 함께한 회원'을 맨 위에 둬 검색 없이 바로 체크. 이미 들어온 회원은 '입장함'으로 비활성. 정원 넘으면 선택 막힘. 보내고 나면 시트가 닫히고 IC-04에 초대 상태(입장함/초대 보냄/실패·다시 보내기)가 붙는다.</p>
+  <div class="g-row">
+    <!-- 회원 탭 -->
+    <div>
+      <div class="wrap-d"><div class="frame d">
+        <main class="fl-root">
+          <div class="fl-backdrop" style="background-image:url(../class-flow-redesign/assets/bg/background5.webp)"></div>
+          <div class="fl-layer">
+            <header class="fl-top"><div class="fl-top-l"><button class="fl-iconbtn"><svg class="w-ico"><use href="#i-x"/></svg></button></div><div class="fl-top-title">즉석 명상 · 10월 21일 오후 3:20</div><div class="fl-top-r"></div></header>
+            <div class="fl-body" style="padding-right:500px"><div class="fl-col">
+              <span class="w-live"><span class="w-dot"></span>대기실이 열렸어요</span>
+              <section class="fl-card strong w-share"><div class="w-codecol"><span class="fl-label">클래스 코드</span><strong class="w-code">K7Q4</strong></div><div class="w-qr"><svg viewBox="0 0 21 21" shape-rendering="crispEdges"><path fill="#1F1F1F" d="M0 0h7v7H0zM1 1v5h5V1zM2 2h3v3H2zM14 0h7v7h-7zM15 1v5h5V1zM16 2h3v3h-3zM0 14h7v7H0zM1 15v5h5v-5zM2 16h3v3H2zM8 0h2v2H8zM11 1h2v3h-2zM9 3h1v3H9zM8 8h3v1H8zM12 8h2v2h-2zM0 8h2v1H0zM3 9h3v2H3zM15 8h3v2h-3zM19 9h2v3h-2zM8 11h2v3H8zM11 12h3v1h-3zM16 12h2v2h-2zM8 15h1v2H8zM10 16h3v2h-3zM14 14h2v3h-2zM17 15h4v1h-4zM18 17h1v4h-1zM14 19h3v2h-3zM10 19h2v2h-2zM20 19h1v2h-1z"/></svg></div></section>
+            </div></div>
+          </div>
+          <div class="w-scrim"><section class="w-sheet">
+            <div class="w-shead"><h2>회원 초대</h2><button class="fl-iconbtn"><svg class="w-ico s20"><use href="#i-x"/></svg></button></div>
+            <div class="w-sbody">
+              <div class="w-tabs"><button class="on"><svg class="w-ico s16"><use href="#i-users"/></svg>회원</button><button><svg class="w-ico s16"><use href="#i-msg"/></svg>이메일</button></div>
+              <div class="w-inwrap"><svg class="w-ico s20"><use href="#i-search"/></svg><input class="fl-input" placeholder="이름이나 정확한 이메일로 찾아요"></div>
+              <div class="w-picked"><span>정하늘<svg class="w-ico"><use href="#i-x"/></svg></span><span>최유진<svg class="w-ico"><use href="#i-x"/></svg></span></div>
+              <div class="w-grp"><span>최근 함께한 회원</span><a>모두 선택</a></div>
+              <div class="w-mlist">
+                <div class="w-m on"><span class="av">정</span><span><span class="nm">정하늘<span class="w-tag mute">지난 즉석 명상</span></span><span class="em">ha***@gmail.com</span></span><span class="w-cb"><svg class="w-ico s16"><use href="#i-check"/></svg></span></div>
+                <div class="w-m on"><span class="av" style="background:#3b6e64">최</span><span><span class="nm">최유진</span><span class="em">yu***@naver.com</span></span><span class="w-cb"><svg class="w-ico s16"><use href="#i-check"/></svg></span></div>
+                <div class="w-m"><span class="av" style="background:#8a5a3a">한</span><span><span class="nm">한서연</span><span class="em">se***@looxid.com</span></span><span class="w-cb"></span></div>
+                <div class="w-m dis"><span class="av">김</span><span><span class="nm">김민지<span class="w-tag">입장함</span></span><span class="em">mi***@gmail.com</span></span><span class="w-cb"></span></div>
+              </div>
+            </div>
+            <div class="w-sfoot">
+              <div class="w-cnt"><span>선택 <b>2명</b> · 입장 3명 · 정원 10명</span><span>앱 알림으로 보내요</span></div>
+              <button class="fl-btn primary block"><svg class="w-ico s20"><use href="#i-userplus"/></svg>2명 초대하기</button>
+            </div>
+          </section></div>
+        </main>
+      </div></div>
+      <div class="cap">회원 탭 · 데스크톱 오른쪽 시트</div>
+    </div>
+
+    <!-- 이메일 탭 -->
+    <div>
+      <div class="wrap-d"><div class="frame d">
+        <main class="fl-root">
+          <div class="fl-backdrop" style="background-image:url(../class-flow-redesign/assets/bg/background5.webp)"></div>
+          <div class="fl-layer">
+            <header class="fl-top"><div class="fl-top-l"><button class="fl-iconbtn"><svg class="w-ico"><use href="#i-x"/></svg></button></div><div class="fl-top-title">즉석 명상 · 10월 21일 오후 3:20</div><div class="fl-top-r"></div></header>
+            <div class="fl-body" style="padding-right:500px"><div class="fl-col">
+              <span class="w-live"><span class="w-dot"></span>대기실이 열렸어요</span>
+              <section class="fl-card strong w-share"><div class="w-codecol"><span class="fl-label">클래스 코드</span><strong class="w-code">K7Q4</strong></div><div class="w-qr"><svg viewBox="0 0 21 21" shape-rendering="crispEdges"><path fill="#1F1F1F" d="M0 0h7v7H0zM1 1v5h5V1zM2 2h3v3H2zM14 0h7v7h-7zM15 1v5h5V1zM16 2h3v3h-3zM0 14h7v7H0zM1 15v5h5v-5zM2 16h3v3H2zM8 0h2v2H8zM11 1h2v3h-2zM9 3h1v3H9zM8 8h3v1H8zM12 8h2v2h-2zM0 8h2v1H0zM3 9h3v2H3zM15 8h3v2h-3zM19 9h2v3h-2zM8 11h2v3H8zM11 12h3v1h-3zM16 12h2v2h-2zM8 15h1v2H8zM10 16h3v2h-3zM14 14h2v3h-2zM17 15h4v1h-4zM18 17h1v4h-1zM14 19h3v2h-3zM10 19h2v2h-2zM20 19h1v2h-1z"/></svg></div></section>
+            </div></div>
+          </div>
+          <div class="w-scrim"><section class="w-sheet">
+            <div class="w-shead"><h2>회원 초대</h2><button class="fl-iconbtn"><svg class="w-ico s20"><use href="#i-x"/></svg></button></div>
+            <div class="w-sbody">
+              <div class="w-tabs"><button><svg class="w-ico s16"><use href="#i-users"/></svg>회원</button><button class="on"><svg class="w-ico s16"><use href="#i-msg"/></svg>이메일</button></div>
+              <div class="w-emailin"><div class="w-inwrap"><svg class="w-ico s20"><use href="#i-msg"/></svg><input class="fl-input" placeholder="name@example.com"></div><button class="fl-btn soft"><svg class="w-ico s20"><use href="#i-plus"/></svg>추가</button></div>
+              <span class="w-hint">여러 주소는 쉼표·줄바꿈으로 붙여 넣어도 돼요</span>
+              <div class="w-mlist">
+                <div class="w-erow"><span class="av"><svg class="w-ico s16"><use href="#i-msg"/></svg></span><span>park.jw@company.co.kr</span><svg class="w-ico s20" style="color:var(--tx-lo)"><use href="#i-x"/></svg></div>
+                <div class="w-erow"><span class="av"><svg class="w-ico s16"><use href="#i-msg"/></svg></span><span>lee.sm@gmail.com <span class="st">· 센터 회원이에요 → 앱 알림도 함께</span></span><svg class="w-ico s20" style="color:var(--tx-lo)"><use href="#i-x"/></svg></div>
+              </div>
+              <div class="w-msg"><b>메일에 들어가는 내용</b><br>채용욱 지도사가 '즉석 명상' 수업을 열었어요. 지금 입장할 수 있어요.<br>[바로 입장하기] 버튼 · 참여 코드 <b>K7Q4</b></div>
+            </div>
+            <div class="w-sfoot">
+              <div class="w-cnt"><span>이메일 <b>2명</b></span><span>입장 링크와 코드를 보내요</span></div>
+              <button class="fl-btn primary block"><svg class="w-ico s20"><use href="#i-msg"/></svg>2명에게 메일 보내기</button>
+            </div>
+          </section></div>
+        </main>
+      </div></div>
+      <div class="cap">이메일 탭 · 비회원도 초대</div>
+    </div>
+  </div>
+
+  <div class="g-row" style="margin-top:32px">
+    <!-- 보낸 뒤 -->
+    <div>
+      <div class="wrap-d"><div class="frame d">
+        <main class="fl-root">
+          <div class="fl-backdrop" style="background-image:url(../class-flow-redesign/assets/bg/background5.webp)"></div>
+          <div class="fl-layer">
+            <header class="fl-top"><div class="fl-top-l"><button class="fl-iconbtn"><svg class="w-ico"><use href="#i-x"/></svg></button></div><div class="fl-top-title">즉석 명상 · 10월 21일 오후 3:20</div><div class="fl-top-r"></div></header>
+            <div class="w-toast"><svg class="w-ico s20"><use href="#i-check"/></svg>2명에게 초대를 보냈어요</div>
+            <div class="fl-body"><div class="fl-col">
+              <span class="w-live"><span class="w-dot"></span>대기실이 열렸어요</span>
+              <section class="fl-card strong w-share" style="padding:20px 24px">
+                <div class="w-codecol"><span class="fl-label">클래스 코드</span><strong class="w-code" style="font-size:44px">K7Q4</strong>
+                  <div class="w-btnrow"><button class="fl-btn soft"><svg class="w-ico s20"><use href="#i-copy"/></svg>코드 복사</button><button class="fl-btn soft"><svg class="w-ico s20"><use href="#i-link"/></svg>입장 링크 복사</button><button class="fl-btn soft"><svg class="w-ico s20"><use href="#i-userplus"/></svg>회원 초대</button></div></div>
+                <div class="w-qr" style="width:132px;height:132px"><svg viewBox="0 0 21 21" shape-rendering="crispEdges"><path fill="#1F1F1F" d="M0 0h7v7H0zM1 1v5h5V1zM2 2h3v3H2zM14 0h7v7h-7zM15 1v5h5V1zM16 2h3v3h-3zM0 14h7v7H0zM1 15v5h5v-5zM2 16h3v3H2zM8 0h2v2H8zM11 1h2v3h-2zM9 3h1v3H9zM8 8h3v1H8zM12 8h2v2h-2zM0 8h2v1H0zM3 9h3v2H3zM15 8h3v2h-3zM19 9h2v3h-2zM8 11h2v3H8zM11 12h3v1h-3zM16 12h2v2h-2zM8 15h1v2H8zM10 16h3v2h-3zM14 14h2v3h-2zM17 15h4v1h-4zM18 17h1v4h-1zM14 19h3v2h-3zM10 19h2v2h-2zM20 19h1v2h-1z"/></svg></div>
+              </section>
+              <section class="fl-card w-ilist" style="padding:16px 20px">
+                <div class="w-grp"><span>입장 3명 · 초대 3명 · 정원 10명</span></div>
+                <div class="w-irow"><span class="grow">김민지 · 이수아 · 박지원</span><span class="w-st in">입장함</span></div>
+                <div class="w-irow"><span class="grow">정하늘 · 최유진 <span style="color:var(--tx-lo);font-size:12px">앱 알림</span></span><span class="w-st wait">초대 보냄</span></div>
+                <div class="w-irow"><span class="grow">park.jw@company.co.kr <span style="color:var(--tx-lo);font-size:12px">메일</span></span><span class="w-st fail">보내지 못함</span><button class="fl-btn soft" style="min-height:32px;padding:0 12px;font-size:12px">다시 보내기</button></div>
+              </section>
+            </div></div>
+            <footer class="fl-foot"><div class="fl-col"><button class="fl-btn primary block w-cta"><svg class="w-ico"><use href="#i-door"/></svg>대기실로 들어가기</button></div></footer>
+          </div>
+        </main>
+      </div></div>
+      <div class="cap">보낸 뒤 · IC-04에 초대 상태 표시</div>
+    </div>
+
+    <!-- 모바일 -->
+    <div>
+      <div class="wrap-m"><div class="frame m">
+        <main class="fl-root">
+          <div class="fl-backdrop" style="background-image:url(../class-flow-redesign/assets/bg/background5.webp)"></div>
+          <div class="fl-layer">
+            <header class="fl-top"><div class="fl-top-l"><button class="fl-iconbtn"><svg class="w-ico"><use href="#i-x"/></svg></button></div><div class="fl-top-title">즉석 명상</div><div class="fl-top-r"></div></header>
+            <div class="fl-body"><div class="fl-col"><span class="w-live"><span class="w-dot"></span>대기실이 열렸어요</span><section class="fl-card strong" style="text-align:center"><strong class="w-code" style="font-size:44px">K7Q4</strong></section></div></div>
+          </div>
+          <div class="w-scrim"><section class="w-sheet">
+            <div class="w-grab"></div>
+            <div class="w-shead" style="padding:12px 20px 8px"><h2>회원 초대</h2><button class="fl-iconbtn"><svg class="w-ico s20"><use href="#i-x"/></svg></button></div>
+            <div class="w-sbody" style="padding:4px 20px 8px">
+              <div class="w-tabs"><button class="on">회원</button><button>이메일</button></div>
+              <div class="w-inwrap"><svg class="w-ico s20"><use href="#i-search"/></svg><input class="fl-input" placeholder="이름·이메일로 찾아요"></div>
+              <div class="w-grp"><span>최근 함께한 회원</span><a>모두 선택</a></div>
+              <div class="w-mlist">
+                <div class="w-m on"><span class="av">정</span><span><span class="nm">정하늘</span><span class="em">ha***@gmail.com</span></span><span class="w-cb"><svg class="w-ico s16"><use href="#i-check"/></svg></span></div>
+                <div class="w-m on"><span class="av" style="background:#3b6e64">최</span><span><span class="nm">최유진</span><span class="em">yu***@naver.com</span></span><span class="w-cb"><svg class="w-ico s16"><use href="#i-check"/></svg></span></div>
+                <div class="w-m"><span class="av" style="background:#8a5a3a">한</span><span><span class="nm">한서연</span><span class="em">se***@looxid.com</span></span><span class="w-cb"></span></div>
+                <div class="w-m dis"><span class="av">김</span><span><span class="nm">김민지<span class="w-tag">입장함</span></span></span><span class="w-cb"></span></div>
+              </div>
+            </div>
+            <div class="w-sfoot" style="padding:12px 20px 20px"><button class="fl-btn primary block">2명 초대하기</button></div>
+          </section></div>
+        </main>
+      </div></div>
+      <div class="cap">모바일 · 하단 시트</div>
+    </div>
+  </div>
+</section>
+
+<!-- ───── IC-05 모바일 ───── -->
+<section class="g-sec">
+  <h2>IC-05 · 모바일(390px)</h2>
+  <p class="n">같은 구성 세로 배치. [지금 열기]·[대기실로 들어가기]는 하단 고정. 요약 카드는 모바일에서 생략.</p>
+  <div class="g-row">
+    <div><div class="wrap-m"><div class="frame m">
+      <main class="fl-root">
+        <div class="fl-backdrop" style="background-image:url(../class-flow-redesign/assets/bg/background4.webp)"></div>
+        <div class="fl-layer">
+          <header class="fl-top"><div class="fl-top-l"><button class="fl-iconbtn"><svg class="w-ico"><use href="#i-x"/></svg></button></div><div class="fl-top-title">지금 바로 시작</div><div class="fl-top-r"></div></header>
+          <div class="fl-body"><div class="fl-col">
+            <section class="fl-card strong w-form" style="padding:20px">
+              <div class="w-remember"><svg class="w-ico s20"><use href="#i-history"/></svg><span>지난 설정을 불러왔어요</span></div>
+              <div class="fl-field"><span class="fl-label">클래스 이름</span>
+                <div class="w-inwrap"><svg class="w-ico s20"><use href="#i-pen"/></svg><input class="fl-input" value="즉석 명상 · 10월 21일 오후 3:20"></div></div>
+              <div class="fl-field"><span class="fl-label">소요 시간</span>
+                <div class="w-chips"><button>20분</button><button class="on">30분</button><button>45분</button><button>60분</button><button>직접</button></div></div>
+              <div class="fl-field"><span class="fl-label">진행 방식</span>
+                <div class="fl-seg"><button class="on"><svg class="w-ico s20"><use href="#i-video"/></svg>온라인</button><button><svg class="w-ico s20"><use href="#i-pin"/></svg>대면</button></div></div>
+              <button class="w-more"><svg class="w-ico s20"><use href="#i-sliders"/></svg><span class="grow">더보기 · <b>정원 10명 외</b></span><svg class="w-ico s20"><use href="#i-down"/></svg></button>
+              <button class="w-invite"><svg class="w-ico s20"><use href="#i-userplus"/></svg><span class="grow"><b>회원 초대 (선택)</b></span><svg class="w-ico s20"><use href="#i-right"/></svg></button>
+            </section>
+          </div></div>
+          <footer class="fl-foot"><div class="fl-col"><button class="fl-btn primary block w-cta"><svg class="w-ico"><use href="#i-zap"/></svg>지금 열기</button></div></footer>
+        </div>
+      </main>
+    </div></div><div class="cap">IC-03 모바일</div></div>
+
+    <div><div class="wrap-m"><div class="frame m">
+      <main class="fl-root">
+        <div class="fl-backdrop" style="background-image:url(../class-flow-redesign/assets/bg/background5.webp)"></div>
+        <div class="fl-layer">
+          <header class="fl-top"><div class="fl-top-l"><button class="fl-iconbtn"><svg class="w-ico"><use href="#i-x"/></svg></button></div><div class="fl-top-title">즉석 명상</div><div class="fl-top-r"></div></header>
+          <div class="fl-body"><div class="fl-col">
+            <span class="w-live"><span class="w-dot"></span>대기실이 열렸어요</span>
+            <h1 class="fl-h1" style="font-size:20px">회원에게 코드를 알려 주세요</h1>
+            <section class="fl-card strong w-share" style="padding:20px">
+              <div class="w-codecol" style="align-items:center">
+                <span class="fl-label">클래스 코드</span>
+                <strong class="w-code">K7Q4</strong>
+              </div>
+              <div class="w-qr"><svg viewBox="0 0 21 21" shape-rendering="crispEdges"><path fill="#1F1F1F" d="M0 0h7v7H0zM1 1v5h5V1zM2 2h3v3H2zM14 0h7v7h-7zM15 1v5h5V1zM16 2h3v3h-3zM0 14h7v7H0zM1 15v5h5v-5zM2 16h3v3H2zM8 0h2v2H8zM11 1h2v3h-2zM9 3h1v3H9zM8 8h3v1H8zM12 8h2v2h-2zM0 8h2v1H0zM3 9h3v2H3zM15 8h3v2h-3zM19 9h2v3h-2zM8 11h2v3H8zM11 12h3v1h-3zM16 12h2v2h-2zM8 15h1v2H8zM10 16h3v2h-3zM14 14h2v3h-2zM17 15h4v1h-4zM18 17h1v4h-1zM14 19h3v2h-3zM10 19h2v2h-2zM20 19h1v2h-1z"/></svg></div>
+              <div class="w-btnrow">
+                <button class="fl-btn soft"><svg class="w-ico s20"><use href="#i-copy"/></svg>코드</button>
+                <button class="fl-btn soft"><svg class="w-ico s20"><use href="#i-link"/></svg>링크</button>
+                <button class="fl-btn soft"><svg class="w-ico s20"><use href="#i-userplus"/></svg>초대</button>
+              </div>
+            </section>
+            <section class="fl-card w-joined" style="padding:16px">
+              <div class="w-avs"><span>김</span><span>이</span><span>박</span></div>
+              <span style="font-size:14px"><b>3명</b> 입장 · 정원 10명</span>
+            </section>
+          </div></div>
+          <footer class="fl-foot"><div class="fl-col"><button class="fl-btn primary block w-cta"><svg class="w-ico"><use href="#i-door"/></svg>대기실로 들어가기</button></div></footer>
+        </div>
+      </main>
+    </div></div><div class="cap">IC-04 모바일</div></div>
+  </div>
+</section>
+
+</body>
+</html>

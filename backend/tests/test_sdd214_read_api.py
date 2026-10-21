@@ -324,6 +324,7 @@ def test_클래스_목록_호스트_시점_필드와_진행률(client, world):
     assert set(item) == {
         "id", "title", "status", "schedule_mode", "planned_session_count", "area",
         "progress", "session_count", "next_session", "has_open_session",
+        "is_instant",  # SDD-226 가산
     }
     assert item["id"] == str(world["c1"].id)
     assert item["area"] == "meditation"

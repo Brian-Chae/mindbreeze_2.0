@@ -187,6 +187,8 @@ def _class_summary(cls: Class, rows: list, names: dict, now: datetime) -> dict:
             else None
         ),
         "has_open_session": any(r.status in _OPEN_STATUSES for r in rows),
+        # SDD-226: '지금 바로 시작'으로 만든 즉석 클래스 구분(목록 칩·다시 열기)
+        "is_instant": (cls.recurrence_rule or {}).get("start_now") is True,
     }
 
 
