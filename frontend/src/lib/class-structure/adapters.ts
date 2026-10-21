@@ -19,6 +19,7 @@ export interface SessionReadModel {
   reportStatus: DisplayField<string>;
 }
 export interface ClassReadModel {
+  is_instant?: boolean;
   id: ClassId;
   title: DisplayField<string>;
   status: DisplayField<string>;
@@ -86,7 +87,7 @@ export function adaptClassSessions(rows: readonly ClassSessionDto[]): SessionRea
 export function adaptMemberClass(row: ClassSummaryDto | ClassDetailDto): ClassReadModel {
   const detail = 'location_type' in row ? row : undefined;
   return {
-    id: asClassId(row.id), title: text(row.title), status: text(row.status), scheduleMode: text(row.schedule_mode),
+    is_instant: row.is_instant, id: asClassId(row.id), title: text(row.title), status: text(row.status), scheduleMode: text(row.schedule_mode),
     plannedSessionCount: displayField(row.planned_session_count), sessionCount: displayField(row.session_count),
     progress: displayField(row.progress && Number.isFinite(row.progress.completed) && Number.isFinite(row.progress.total)
       ? { completed: row.progress.completed, total: row.progress.total } : null),

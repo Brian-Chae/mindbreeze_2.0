@@ -20,6 +20,6 @@ export function ClassCreateAction() {
   }, [scope, userRole]);
   const classes = 'inline-flex min-h-11 items-center rounded-xl bg-purple-800 px-4 py-2 text-sm font-semibold text-white';
   return result?.scope === scope && result.enabled
-    ? <Link className={classes} to="/classes/new">새 클래스 만들기</Link>
+    ? <div className="flex flex-wrap gap-2"><Link className="inline-flex min-h-11 items-center rounded-xl border border-purple-200 px-4 py-2 text-sm font-semibold text-purple-800" to="/classes/new">새 클래스 만들기</Link><Link className={classes} to="/classes/now">지금 바로 시작</Link></div>
     : <button className={`${classes} opacity-45`} disabled title="서버의 편성 활성화와 개설 권한을 확인해요">{result?.scope === scope ? '편성 준비 중' : '편성 확인 중…'}</button>;
 }

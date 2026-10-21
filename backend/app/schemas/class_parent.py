@@ -54,6 +54,7 @@ class ClassSummary(BaseModel):
     session_count: int
     next_session: NextSession | None = None
     has_open_session: bool
+    is_instant: bool = False
 
 
 class ClassInstructorInfo(BaseModel):

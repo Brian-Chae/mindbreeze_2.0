@@ -422,7 +422,7 @@ export default function DashboardPage() {
                     </p>
                     <div className="mt-auto flex flex-wrap items-center gap-2 pt-4">
                       <Link
-                        to="/classes/new"
+                        to="/classes/now"
                         className="rounded-lg bg-white px-5 py-2.5 text-[15px] font-extrabold text-[#5F0080] min-h-[44px] hover:bg-[#F5EDFC] transition-colors"
                       >
                         클래스 바로 열기

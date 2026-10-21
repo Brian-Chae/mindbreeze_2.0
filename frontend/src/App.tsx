@@ -47,6 +47,7 @@ const OrgManagementPage = lazy(() => import('./pages/org/OrgManagementPage'));
 const OrgCounselorsPage = lazy(() => import('./pages/org/OrgCounselorsPage'));
 const MyRequestsPage = lazy(() => import('./pages/org/MyRequestsPage'));
 const CredentialDashboardPage = lazy(() => import('./pages/credentials/CredentialDashboardPage'));
+const InstantClassPage = lazy(() => import('./pages/classes/instant-class-page').then((m) => ({ default: m.InstantClassPage })));
 const ClassSchedulingWizard = lazy(() => import('./pages/classes/class-scheduling-wizard').then((m) => ({ default: m.ClassSchedulingWizard })));
 const CreateWizardContainer = lazy(() => import('./components/class/flow/host/CreateWizardContainer').then((m) => ({ default: m.CreateWizardContainer })));
 const SessionDetailPage = lazy(() => import('./pages/sessions/SessionDetailPage'));
@@ -223,6 +224,7 @@ const router = createBrowserRouter(
         <Route path="/sessions/new" element={<RoleGuard role={['counselor', 'org_admin']}><Navigate to="/classes/new" replace /></RoleGuard>} />
         <Route path="/sessions/:id" element={<RoleGuard role={['counselor', 'org_admin']}><LegacySessionRedirect /></RoleGuard>} />
         <Route path="/classes" element={<RoleGuard role={['counselor', 'org_admin']}><HostClassesPage /></RoleGuard>} />
+        <Route path="/classes/now" element={<RoleGuard role={['counselor', 'org_admin']}><InstantClassPage /></RoleGuard>} />
         <Route path="/classes/new" element={<RoleGuard role={['counselor', 'org_admin']}><ClassSchedulingWizard /></RoleGuard>} />
         <Route path="/classes/:classId" element={<RoleGuard role={['counselor', 'org_admin']}><HostClassDetailPage /></RoleGuard>} />
         <Route path="/classes/:classId/sessions" element={<RoleGuard role={['counselor', 'org_admin']}><HostClassDetailPage /></RoleGuard>} />

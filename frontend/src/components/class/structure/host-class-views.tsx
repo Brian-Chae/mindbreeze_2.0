@@ -28,13 +28,13 @@ export function ClassCard({ model }: { model: HostClassReadModel }) {
     const status = fieldValue(model.status);
     const mode = fieldValue(model.scheduleMode);
     const count = fieldValue(model.plannedSessionCount);
-    return <Link data-class-card to={classPath('host', model.id)} className="cs-class-row">
-        <div className="cs-class-identity"><span className="cs-class-icon"><Leaf size={24} aria-hidden="true"/></span><div><h2><ReadField value={fieldValue(model.title)}/></h2><p><LabelField field={model.scheduleMode}/>{mode === 'fixed' && count != null ? ` ${count}회` : ''}</p></div></div>
+    return <div className="relative"><Link data-class-card to={classPath('host', model.id)} className="cs-class-row">
+        <div className="cs-class-identity"><span className="cs-class-icon"><Leaf size={24} aria-hidden="true"/></span><div><h2><ReadField value={fieldValue(model.title)}/>{model.is_instant && <span className="ml-2 rounded-full bg-purple-100 px-2 py-1 text-xs font-medium text-purple-800">즉석</span>}</h2><p><LabelField field={model.scheduleMode}/>{mode === 'fixed' && count != null ? ` ${count}회` : ''}</p></div></div>
         <div className="cs-class-next"><span className="cs-class-key">다음 회차</span>{next ? <><strong>{fieldValue(next.seq) == null ? '다음 일정' : `${fieldValue(next.seq)}회차`}</strong><small><DateField field={next.scheduledAt}/></small></> : <strong>{status === 'completed' ? '모두 마쳤어요' : status === 'draft' ? '아직 공개 전' : '다음 일정 없음'}</strong>}</div>
         <ProgressView model={model}/>
         <div className="cs-class-host"><span className="cs-class-key">진행 지도사</span><strong><ReadField value={next ? fieldValue(next.hostName) : undefined}/></strong>{next && fieldValue(next.hostName) === undefined && <small>진행 지도사를 확인해 주세요</small>}</div>
         <div className="cs-class-state"><span className={`cs-state-chip ${status === 'completed' || status === 'cancelled' || status === 'draft' ? 'cs-muted-chip' : ''}`}><LabelField field={model.status}/></span>{fieldValue(model.hasOpenSession) === true && <span className="cs-state-chip cs-open-chip">열려 있는 회차</span>}</div>
-    </Link>;
+    </Link>{model.is_instant && status === 'completed' && <Link className="mb-3 inline-flex min-h-11 items-center rounded-xl border border-purple-200 px-4 text-sm font-semibold text-purple-800" to={`/classes/now?from=${encodeURIComponent(model.id)}`}>다시 열기</Link>}</div>;
 }
 export function NextClassView({ model, showClassTitle = false }: { model: HostClassReadModel; showClassTitle?: boolean }) {
     const next = fieldValue(model.nextSession);

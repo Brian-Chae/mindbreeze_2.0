@@ -6,6 +6,7 @@ export interface SessionBriefDto { id: string; seq: number | null; scheduled_at:
 export interface NextSessionDto extends SessionBriefDto { host: UserBriefDto | null }
 export interface ProgressDto { completed: number; total: number }
 export interface ClassSummaryDto {
+  is_instant?: boolean;
   membership?: import('./class-operations').MembershipMember | null;
   attendance_summary?: import('./class-operations').MyMembership['attendance_summary'] | null;
   id: string; title: string | null; status: string; schedule_mode: string;
