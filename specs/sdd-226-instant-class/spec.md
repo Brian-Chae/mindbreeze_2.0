@@ -25,7 +25,7 @@
    - 관리자: 진행 지도사 1명 필수. 상담사: 본인.
    - 지난 즉석 설정 기억: localStorage 키 `mb:instant-class:last:{userId}` (시간·방식·주소·정원·LINK BAND·녹음·영상·채팅·관리자의 지도사). 이름·초대 대상은 저장 안 함.
    - [지금 열기] = 기존 `schedulingApi.preview` → `create(status:'active', start_now:true)` 계약 재사용. 충돌 시 경고 시트 1번 → '그대로 열기'(기존 force+fingerprint).
-2. 공유 화면(IC-04): 대기실 열림 배지, 클래스 코드 크게, QR(입장 경로 `/join` URL; 코드 미포함), 코드 복사·입장 링크 복사·회원 초대, 초대 상태 목록(이메일 발송 상태 `ClassInstantInviteStatus` 재사용 + 회원 초대 결과), 상담사 [대기실로 들어가기] → `/sessions/{id}/player`, 관리자 [회차 확인] → `/classes/{cid}/sessions/{sid}`.
+2. 공유 화면(IC-04): 대기실 열림 배지, 클래스 코드 크게, 코드 복사·입장 링크 복사(링크=`{VITE_PUBLIC_APP_URL|origin}/class/{sessionId}/enter`, 코드 미포함, QR 없음)·회원 초대, 초대 상태 목록(이메일 발송 상태 `ClassInstantInviteStatus` 재사용 + 회원 초대 결과), 상담사 [대기실로 들어가기] → `/sessions/{id}/player`, 관리자 [회차 확인] → `/classes/{cid}/sessions/{sid}`.
 3. 회원 초대 시트(IC-06): 탭 2개(회원/이메일). 회원=`classOperationsApi.inviteMembers`, 이메일=`schedulingApi.inviteEmails`. 정원 초과 선택 차단. 보낸 뒤 시트 닫고 토스트+상태.
 4. 진입점: 클래스 목록 헤더 '지금 바로 시작'(주)+'새 클래스 만들기', 목록 상단 안내 카드, 홈 대시보드 '클래스 바로 열기' → `/classes/now`, 마법사 시작 화면 맨 위 강조 카드(IC-02).
 5. 목록: 즉석 클래스 '즉석' 칩·필터, 완료된 즉석 클래스에 '다시 열기'(→ `/classes/now?from={id}`, 상세의 설정으로 초기값).
@@ -37,5 +37,5 @@
 
 ## 4. 제약
 - LINK BAND 없이 동일 동작. 수업 시작·녹음 자동 시작 없음(기존 start_now 계약).
-- URL·QR에 코드·이메일 넣지 않음. 실제 메일 발송 테스트 금지(대역).
+- URL에 코드·이메일 넣지 않음. 실제 메일 발송 테스트 금지(대역).
 - 모바일 390px 넘침 0, 하단 CTA 고정.

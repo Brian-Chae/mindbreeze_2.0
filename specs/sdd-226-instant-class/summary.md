@@ -9,7 +9,7 @@
 - `/classes/now` 한 화면에서 기본 30분·온라인·정원 10명으로 개설. 관리자 진행 지도사 필수, 오프라인 주소 필수.
 - KST 자동 제목, 사용자별 설정 저장/복원, `?from=` 상세 설정 재사용. 이름·초대 대상은 저장하지 않음.
 - 기존 `defaultSchedule` / `scheduleProblems` 및 preview→create 계약 재사용. fixed·1회·start_now·all_one 1명, 충돌 확인 시 force/fingerprint, 같은 요청 재시도 operation_key 유지.
-- 공유 화면에서 코드·링크 복사·실제 QR 생성. URL/QR은 코드 없는 `${location.origin}/join`. 자동 이동 없이 상담사는 player, 관리자는 회차 확인.
+- 공유 화면에서 코드·링크 복사(QR 제외 — 사용자 결정). 링크는 코드 없는 `{VITE_PUBLIC_APP_URL|origin}/class/{sessionId}/enter`(앱·웹 공용), 링크로 열면 코드 입력(/join)으로 안내. 자동 이동 없이 상담사는 player, 관리자는 회차 확인.
 - 회원/이메일 두 탭 초대. 기존 picker와 이메일 발송 상태 컴포넌트 재사용. 게스트 포함 현재 정원 계산, 인원 확인 실패 차단, 네트워크 재시도 명령 유지, stale revision 재조회, 관리자 대행 사유 입력.
 - 목록/대시보드/기존 마법사 진입점, 즉석 칩·필터 및 완료 클래스 다시 열기 추가. 마법사 기존 상태 로직은 수정하지 않음.
 - 시안의 background4/5 및 기존 몰입형 토큰 재사용. 모바일 고정 CTA, 가로 대형 화면 오른쪽 초대 시트, 나머지는 하단 시트.
@@ -29,7 +29,6 @@
 - `frontend/src/lib/api/class-structure.ts`
 - `frontend/src/pages/classes/class-scheduling-wizard.tsx`
 - `frontend/src/pages/DashboardPage.tsx`
-- `frontend/package.json`, `frontend/package-lock.json` (`qrcode`, `@types/qrcode`)
 - `frontend/tests/instant-class-model.test.ts`
 - `frontend/tests/instant-class-entry.test.tsx`
 - `frontend/tests/instant-class-page.test.tsx`
@@ -49,11 +48,11 @@
   - `font-scale.test.ts` 1개: `DashboardPage.tsx:490` 기존 11px 글씨. 이번 수정은 425행 링크만.
   - `org-counselor-management-browser.test.cjs` 1개, `org-management-browser.test.cjs` 2개: 기존 브라우저 harness 요소 탐색 timeout.
   - `report-modal-pdf.test.cjs` 2개, `report-server-pdf.test.cjs` 2개: 별도 앱 서버 연결 `fetch failed`.
-- 설치: 요청한 `npm ci`는 기존 Storybook 8/Vite 8 peer 충돌로 ERESOLVE. `npm ci --legacy-peer-deps`로 622개 설치 후 QR 의존성 추가. 기존 의존성 취약점 자동 수정은 하지 않음.
+- 설치: 요청한 `npm ci`는 기존 Storybook 8/Vite 8 peer 충돌로 ERESOLVE. `npm ci --legacy-peer-deps`로 설치. 기존 의존성 취약점 자동 수정은 하지 않음.
 - 독립 검증자가 실제 Chrome headless에서 모든 API를 대역 처리하여 확인:
   - 390×844 IC03/IC04 `scrollWidth=390`, CTA 하단 유지.
   - IC06 390×844 하단, 1194×834 가로 x714/폭480 오른쪽, 834×1194 세로 하단.
-  - 입력 없는 생성→공유 유지, 코드/QR URL/player 링크, 관리자 미선택 차단→선택 활성, 오프라인 주소 차단.
+  - 입력 없는 생성→공유 유지, 코드/회차 입장 URL/player 링크, 관리자 미선택 차단→선택 활성, 오프라인 주소 차단.
   - 충돌 시트 1개→force/fingerprint, 비공개 제목 숨김, 회원 초대 revision/reactivate/operation_key, 시트 닫힘/토스트.
   - 모바일 5개 시간 칩 및 진행 방식 한 줄. 개발 StrictMode의 취소된 초기 응답 오류도 방지.
 - 로컬 검증 기록: `/tmp/sdd226-focused-final.log`, `/tmp/sdd226-build-final.log`, `/tmp/sdd226-all-tests-final.log`, `/tmp/sdd226-browser-final.log`. 스크린샷 `/tmp/sdd226-ic03-390.png`, `/tmp/sdd226-ic04-390.png`, `/tmp/sdd226-ic06-390.png`, `/tmp/sdd226-ic06-1194.png` (임시 파일).

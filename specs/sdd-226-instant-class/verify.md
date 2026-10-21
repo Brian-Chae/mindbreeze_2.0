@@ -12,7 +12,7 @@
 | V08 | 오프라인 | 주소 없으면 차단, 지난 주소 복원 | Vitest |
 | V09 | 충돌 | 미리보기 충돌 시 시트 1회 → '그대로 열기'가 force+fingerprint 전송 | Vitest |
 | V10 | 중복 생성 방지 | 연타·재시도 시 같은 operation_key, 클래스 1개 | Vitest |
-| V11 | 공유 화면 | 코드 표시·복사, 링크/QR에 코드·이메일 없음, 상담사 → `/sessions/{id}/player` | Vitest |
+| V11 | 공유 화면 | 코드 표시·복사, 링크에 코드·이메일 없음, QR 없음, 링크=회차 입장 주소, 상담사 → `/sessions/{id}/player` | Vitest |
 | V12 | 초대 시트 | 회원 탭 inviteMembers, 이메일 탭 inviteEmails, 정원 초과 차단, 실패 시 재시도, 문자·카카오 없음 | Vitest |
 | V13 | 진입점 | 목록 헤더·안내 카드·대시보드·마법사 시작 카드 모두 `/classes/now` | Vitest/정적 |
 | V14 | 목록 | '즉석' 칩·필터, 완료 즉석 '다시 열기' → `?from=` 초기값 반영 | Vitest |
