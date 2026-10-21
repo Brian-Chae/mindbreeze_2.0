@@ -66,3 +66,11 @@
 - BE `is_instant` 제공 작업은 다른 트랙 소유이며 변경하지 않음. Brian 최종 리뷰 대기.
 - 시작부터 존재한 미추적 `designs/instant-class/standalone.html`은 유지하고 커밋에서 제외.
 - 로컬 커밋만 수행. push·배포·머지·삭제·실제 메일 발송 없음.
+
+## 감독 재검증 (2026-10-21)
+
+- 핵심 코드 리뷰: `instant-class-page.tsx`, `instant-class-model.ts` — start_now·1회·all_one, 충돌 force+fingerprint, operation_key 재사용, 생성 후 이메일 실패 시 클래스 유지·재시도 확인. 이상 없음.
+- 초점 Vitest 재실행: 10파일 214개 통과. BE `test_sdd226_instant_flag.py` 2개 통과(+sdd214 50개 포함 52개).
+- `npm run build` 재실행 성공.
+- 전체 테스트의 비브라우저 실패 5개(agent-counselor 2, chat-deeplink 2, font-scale 1)는 **develop 원본에서도 같은 5개 실패** — 이번 변경과 무관한 기존 결함 확인.
+- 남은 확인: 실제 dev 서버(BE+DB)에서 2클릭 생성→대기실→회원 입장. 배포 후 확인.
