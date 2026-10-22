@@ -34,7 +34,7 @@ export function ClassCard({ model }: { model: HostClassReadModel }) {
         <ProgressView model={model}/>
         <div className="cs-class-host"><span className="cs-class-key">진행 지도사</span><strong><ReadField value={next ? fieldValue(next.hostName) : undefined}/></strong>{next && fieldValue(next.hostName) === undefined && <small>진행 지도사를 확인해 주세요</small>}</div>
         <div className="cs-class-state"><span className={`cs-state-chip ${status === 'completed' || status === 'cancelled' || status === 'draft' ? 'cs-muted-chip' : ''}`}><LabelField field={model.status}/></span>{fieldValue(model.hasOpenSession) === true && <span className="cs-state-chip cs-open-chip">열려 있는 회차</span>}</div>
-    </Link>{model.is_instant && status === 'completed' && <Link className="mb-3 inline-flex min-h-11 items-center rounded-xl border border-purple-200 px-4 text-sm font-semibold text-purple-800" to={`/classes/now?from=${encodeURIComponent(model.id)}`}>다시 열기</Link>}</div>;
+    </Link>{model.is_instant && status === 'completed' && <Link className="cs-reopen-link" to={`/classes/now?from=${encodeURIComponent(model.id)}`}>다시 열기</Link>}</div>;
 }
 export function NextClassView({ model, showClassTitle = false }: { model: HostClassReadModel; showClassTitle?: boolean }) {
     const next = fieldValue(model.nextSession);
