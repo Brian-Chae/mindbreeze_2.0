@@ -349,3 +349,16 @@
 
 /* 손들기·손 내리기 실패 안내 — 화면 하단에 짧게 띄운다 */
 .mp-hand-error { position: fixed; left: 50%; bottom: 88px; transform: translateX(-50%); z-index: 50; margin: 0; padding: 8px 14px; border-radius: 12px; background: rgba(0, 0, 0, 0.78); font-size: var(--fs-13); line-height: 18px; color: var(--mb-coral); }
+
+/* SDD-234: 회원 진행 화면·시트의 보조 정보. 실제 채팅 컴포넌트 내부는 D 소유다. */
+@media (max-width: 767px) {
+  .mp-trend__label, .mp-pip__chip, .mp-pip__issue-text, .mp-mypip__deny,
+  .mp-grp-tag, .mp-grp-tag b, .mp-mring__mv i, .mp-status-note,
+  .mp-msg__who, .mp-now__tx span, .mp-dev-top__tx span, .mp-stat span,
+  .mp-raw > span, .mp-signal .player-signal::after {
+    font-size: var(--mobile-type-caption-size); line-height: var(--mobile-type-caption-leading);
+  }
+  .mp-mbtn { font-size: var(--mobile-type-label-size); line-height: var(--mobile-type-label-leading); }
+  .mp-info__tx p, .mp-info__tx ol, .mp-empty p, .mp-chat__note,
+  .mp-note, .mp-band-error { font-size: var(--mobile-type-compact-size); line-height: var(--mobile-type-compact-leading); }
+}
