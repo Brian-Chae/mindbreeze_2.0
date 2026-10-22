@@ -82,6 +82,9 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
   const [entryChecked, setEntryChecked] = useState(entry !== null);
   const [invitationError, setInvitationError] = useState<FlowStateKind | null>(null);
   const [invitationAttempt, setInvitationAttempt] = useState(0);
+  // 열리기 전(notyet) 재시도 중에는 '확인 중' 문구로 바꾸지 않고 상태 카드를 유지한다(깜빡임 방지).
+  const keepNotYetRef = useRef(false);
+  keepNotYetRef.current = invitationError === 'notyet';
   // SDD-220 F1 — 서버가 녹음·녹화 동의 없음으로 거부하면 동의 화면을 먼저 보여 준다(동의 전에는 입장 자격이 없다)
   const [recordingGate, setRecordingGate] = useState(false);
   // 뇌파 수집 선택 현황 — undefined 면(구 응답) 사전 선택 화면을 띄우지 않고, true 면 이미 동의한 것이라 건너뛴다.
@@ -109,8 +112,10 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
       return undefined;
     }
     let cancelled = false;
-    setEntryChecked(false);
-    setInvitationError(null);
+    if (!keepNotYetRef.current) {
+      setEntryChecked(false);
+      setInvitationError(null);
+    }
     // 이미 동의를 체크했다면(열리기 전 대기 후 재시도) 동의를 함께 보내 동의 화면을 다시 띄우지 않는다.
     void (recordingCheckedRef.current
       ? enterInvitedSession(sessionId, { recordingConsent: true, recordingNoticeVersion: RECORDING_NOTICE_VERSION })
