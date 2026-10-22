@@ -21,16 +21,17 @@ import { useBackgroundSession } from '../../hooks/useBackgroundSession';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { useEntryPrep } from '../../hooks/useEntryPrep';
 import { useWaitingRoomPresence } from '../../hooks/useWaitingRoomPresence';
+import { useNow } from '../../hooks/useNow';
 import { useEntryState } from '../../hooks/useEntryState';
 import { useEntrySurvey } from '../../hooks/useEntrySurvey';
 import { cancelWaitlist, clearEntry, enterInvitedSession, entryFromResult, loadEntry, saveEntry, setEegCollectionConsent, type StoredEntry } from '../../lib/api/class-flow';
 import { RecordingConsentGateView } from '../../components/class/flow/member/RecordingConsentGateView';
 import { EEG_COLLECTION_NOTICE_VERSION, RECORDING_NOTICE_VERSION, isRecordingConsentRequired } from '../../lib/class/flow/recording-consent';
 import { isAiEnabled } from '../../lib/feature-flags';
-import { durationMinutes, formatStartLabel, formatWhen, maskEmail } from '../../lib/class/flow/member-format';
+import { durationMinutes, formatStartLabel, formatWhen, maskEmail, preOpenCountdown } from '../../lib/class/flow/member-format';
 import { takeEntryHandoff } from '../../lib/class/flow/member-handoff';
 import {
-  buildSteps, deriveEnterStage, deriveFlowStateKind, entryReducer, initialEntryState, startedSheetApplies, type FlowStateKind,
+  buildSteps, deriveEnterStage, deriveFlowStateKind, entryReducer, initialEntryState, notYetScheduledAt, startedSheetApplies, type FlowStateKind,
 } from '../../lib/class/flow/member-machine';
 import { RAW_RETENTION_DAYS } from '../../lib/privacy-policy';
 import { buildSummaryRows, remainingPrepLabels, type SurveyOutcome } from '../../lib/class/flow/member-prep';
@@ -82,6 +83,8 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
   const [entryChecked, setEntryChecked] = useState(entry !== null);
   const [invitationError, setInvitationError] = useState<FlowStateKind | null>(null);
   const [invitationAttempt, setInvitationAttempt] = useState(0);
+  // SDD-231: 열리기 전(409)일 때 서버가 알려 준 시작 예정 시각 — 남은 시간 표시용
+  const [notYetAt, setNotYetAt] = useState<string | null>(null);
   // 열리기 전(notyet) 재시도 중에는 '확인 중' 문구로 바꾸지 않고 상태 카드를 유지한다(깜빡임 방지).
   const keepNotYetRef = useRef(false);
   keepNotYetRef.current = invitationError === 'notyet';
@@ -136,7 +139,9 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
         }
         // 초대 자격이 없는 이메일 수신자는 코드로 확인한다. 통신 장애는 재시도할 수 있게 구분한다.
         if (error instanceof ApiError && (error.status === 401 || error.status === 403)) return;
-        setInvitationError(deriveFlowStateKind({ error, online: navigator.onLine }));
+        const kind = deriveFlowStateKind({ error, online: navigator.onLine });
+        if (kind === 'notyet') setNotYetAt(notYetScheduledAt(error));
+        setInvitationError(kind);
       })
       .finally(() => {
         if (!cancelled) setEntryChecked(true);
@@ -179,6 +184,10 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
   }, [failureKind, sessionId]);
 
   const info = entry?.classInfo;
+  // SDD-231: 시작 전 남은 시간(10분 초과일 때만 문구) — 열리기 전 두 화면에서만 1초마다 갱신
+  const showingNotYet = (!entry && invitationError === 'notyet') || (machine.phase === 'confirm' && machine.stage === 'unopened');
+  const now = useNow(showingNotYet);
+  const countdown = preOpenCountdown(entry ? (info?.scheduledAt ?? null) : notYetAt, now);
   const title = info?.title ?? '클래스';
   const homePath = isAuthenticated ? '/app' : '/';
   const listPath = isAuthenticated ? '/app/sessions' : '/';
@@ -208,7 +217,8 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
     participantId: entry?.participantId ?? null,
     nickname: displayName,
     readiness: presenceReadiness,
-    enabled: entry !== null && (machine.phase === 'wizard' || machine.phase === 'wait'),
+    // SDD-231: 열리기 전 대기(확인 화면·unopened)에서도 상담사 로비에 대기 중임을 알린다.
+    enabled: entry !== null && (machine.phase === 'wizard' || machine.phase === 'wait' || (machine.phase === 'confirm' && machine.stage === 'unopened')),
     skipAuth: !isAuthenticated,
     entryCredential: entry?.credential ?? null,
   });
@@ -248,6 +258,7 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
       const kind = deriveFlowStateKind({ error, online: navigator.onLine });
       if (kind === 'notyet' || kind === 'closed' || kind === 'cancelled') {
         setRecordingGate(false);
+        if (kind === 'notyet') setNotYetAt(notYetScheduledAt(error));
         setInvitationError(kind);
         return;
       }
@@ -270,7 +281,7 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
         onChange={setRecordingChecked} onConfirm={() => void confirmRecordingConsent()} onBack={() => navigate(homePath)} />;
     }
     if (invitationError) {
-      return <MemberStateScreen kind={invitationError} classTitle="클래스" whenLabel={null}
+      return <MemberStateScreen kind={invitationError} classTitle="클래스" whenLabel={formatWhen(notYetAt, now)} countdown={invitationError === 'notyet' ? countdown : null}
         onPrimary={() => invitationError === 'closed' || invitationError === 'cancelled'
           ? navigate(listPath) : setInvitationAttempt((attempt) => attempt + 1)}
         onSecondary={() => navigate(homePath)} />;
@@ -487,6 +498,7 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
       displayName={displayName}
       identitySource={entry.isGuest ? 'input' : 'account'}
       wait={machine.stage === 'unopened'}
+      countdown={countdown}
       onEnter={() => dispatch({ type: 'enter' })}
       onBack={() => navigate('/join')}
     />

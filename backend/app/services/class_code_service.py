@@ -94,6 +94,22 @@ def exhausted_http_error() -> HTTPException:
     )
 
 
+_PRE_OPEN_STATUSES = ("ready", "scheduled")
+
+
+def pre_open_entry_allowed(session: Session, now=None) -> bool:
+    """SDD-231: 열리기 전(ready/scheduled) 예약 회차가 대기실 입장 허용 구간(시작 예정 -lead ~ +grace)인지."""
+    from datetime import datetime, timedelta, timezone
+    from app.config import settings
+
+    if session.status not in _PRE_OPEN_STATUSES or session.scheduled_at is None or session.started_at is not None:
+        return False
+    at = session.scheduled_at if session.scheduled_at.tzinfo else session.scheduled_at.replace(tzinfo=timezone.utc)
+    now = now or datetime.now(timezone.utc)
+    return (at - timedelta(minutes=settings.class_pre_open_entry_lead_minutes)
+            <= now <= at + timedelta(minutes=settings.class_pre_open_entry_grace_minutes))
+
+
 def find_enterable_session(db: DBSession, code: str | None) -> Session | None:
     """입장 가능한 활성 클래스를 코드로 찾는다. 어떤 이유로든 없으면 ``None``(사유 비구분)."""
     normalized = normalize_class_code(code)
@@ -103,7 +119,13 @@ def find_enterable_session(db: DBSession, code: str | None) -> Session | None:
     if parent is not None and parent.recurrence_rule:
         sessions = db.query(Session).filter(Session.class_id==parent.id,
             Session.status.in_(("open","in_progress")), Session.is_template.is_(False)).all()
-        return sessions[0] if len(sessions)==1 else None
+        if sessions:
+            return sessions[0] if len(sessions)==1 else None
+        # SDD-231: 열린 회차가 없으면 대기실 입장 허용 구간의 예정 회차가 정확히 1개일 때만 허용한다.
+        upcoming = [r for r in db.query(Session).filter(Session.class_id==parent.id,
+            Session.status.in_(_PRE_OPEN_STATUSES), Session.is_template.is_(False),
+            Session.hidden_at.is_(None)).all() if pre_open_entry_allowed(r)]
+        return upcoming[0] if len(upcoming)==1 else None
     return (
         db.query(Session)
         .filter(

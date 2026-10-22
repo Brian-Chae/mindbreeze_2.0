@@ -59,6 +59,12 @@ export function deriveFlowStateKind(input: { error?: unknown; status?: SessionSt
   return 'error';
 }
 
+/** 409 session_not_open 오류가 실어 보낸 시작 예정 시각(ISO). 없으면 null — SDD-231 */
+export function notYetScheduledAt(error: unknown): string | null {
+  const value = (error as { data?: { detail?: { scheduled_at?: unknown } } } | null)?.data?.detail?.scheduled_at;
+  return typeof value === 'string' ? value : null;
+}
+
 export type EntryPhase = 'confirm' | 'wizard' | 'wait' | 'waitlist' | 'live' | 'end' | 'state';
 
 export interface EntryMachineState {

@@ -19,13 +19,15 @@ interface EntryConfirmViewProps {
   identitySource: 'account' | 'input';
   /** 아직 열리지 않았다 — 열리면 자동으로 입장한다 */
   wait: boolean;
+  /** SDD-231: 시작까지 10분 초과일 때만 `시작까지 32분 남았어요` — 없으면 일반 대기 문구 */
+  countdown?: string | null;
   backdropSrc?: string;
   onEnter: () => void;
   onBack?: () => void;
 }
 
 export function EntryConfirmView({
-  title, startLabel, hostName, address, place, size, bandMode, displayName, identitySource, wait, backdropSrc, onEnter, onBack,
+  title, startLabel, hostName, address, place, size, bandMode, displayName, identitySource, wait, countdown = null, backdropSrc, onEnter, onBack,
 }: EntryConfirmViewProps) {
   return (
     <MemberFlowFrame
@@ -38,7 +40,7 @@ export function EntryConfirmView({
         <>
           <div className="fm-fnote">
             {wait ? <Clock size={16} aria-hidden="true" /> : <CircleCheck size={16} aria-hidden="true" />}
-            {wait ? '열리면 자동으로 입장해요 · 이 화면을 열어 두세요' : '지금 입장할 수 있어요 · 준비는 2분이면 끝나요'}
+            {wait ? (countdown ? `${countdown}${startLabel ? ` · ${startLabel}` : ''} · 이 화면을 열어 두세요` : '열리면 자동으로 입장해요 · 이 화면을 열어 두세요') : '지금 입장할 수 있어요 · 준비는 2분이면 끝나요'}
           </div>
           {wait ? (
             <FlowButton kind="primary" disabled>열리면 자동으로 입장해요</FlowButton>

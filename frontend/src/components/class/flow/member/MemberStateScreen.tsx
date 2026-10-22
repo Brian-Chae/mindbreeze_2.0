@@ -59,12 +59,14 @@ interface MemberStateScreenProps {
   classTitle: string;
   /** `오늘 오후 3:00` — 취소·미오픈 카드의 일정 줄 */
   whenLabel: string | null;
+  /** SDD-231: 미오픈 카드에 보여 줄 남은 시간(`시작까지 3시간 남았어요`). 없으면 생략 */
+  countdown?: string | null;
   backdropSrc?: string;
   onPrimary: () => void;
   onSecondary: () => void;
 }
 
-export function MemberStateScreen({ kind, classTitle, whenLabel, backdropSrc, onPrimary, onSecondary }: MemberStateScreenProps) {
+export function MemberStateScreen({ kind, classTitle, whenLabel, countdown = null, backdropSrc, onPrimary, onSecondary }: MemberStateScreenProps) {
   const copy = COPY[kind];
   const [secondLabel, secondValue] = copy.secondRow(whenLabel);
   return (
@@ -72,7 +74,7 @@ export function MemberStateScreen({ kind, classTitle, whenLabel, backdropSrc, on
       icon={copy.icon}
       warn={copy.warn}
       heading={copy.heading}
-      lead={copy.lead(whenLabel)}
+      lead={kind === 'notyet' && countdown ? <>{copy.lead(whenLabel)}<br />{countdown}</> : copy.lead(whenLabel)}
       info={[{ label: '클래스', value: classTitle }, { label: secondLabel, value: secondValue }]}
       note={copy.note}
       primary={{ label: copy.primary, onClick: onPrimary }}

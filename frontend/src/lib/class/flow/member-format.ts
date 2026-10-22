@@ -48,6 +48,24 @@ export function startsInLabel(iso: string | null, now: Date = new Date()): strin
   return rest === 0 ? `약 ${hours}시간 뒤에 시작해요` : `약 ${hours}시간 ${rest}분 뒤에 시작해요`;
 }
 
+/** 시작까지 이 분 수를 넘게 남았을 때만 남은 시간을 따로 안내한다(SDD-231) */
+export const PRE_OPEN_COUNTDOWN_THRESHOLD_MIN = 10;
+
+/** `32분`, `1시간 30분`, `2시간` — 분 단위 남은 시간 */
+export function formatRemaining(minutes: number): string {
+  if (minutes < 60) return `${minutes}분`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours}시간` : `${hours}시간 ${rest}분`;
+}
+
+/** SDD-231: 시작까지 10분 초과 남았으면 `시작까지 32분 남았어요`, 아니면(10분 이하·지남·시각 모름) null */
+export function preOpenCountdown(iso: string | null, now: Date = new Date()): string | null {
+  const minutes = minutesUntil(iso, now);
+  if (minutes === null || minutes <= PRE_OPEN_COUNTDOWN_THRESHOLD_MIN) return null;
+  return `시작까지 ${formatRemaining(minutes)} 남았어요`;
+}
+
 /** 앞 2글자만 보이는 이메일 마스킹: `se***@example.com`. 이메일 형식이 아니면 null */
 export function maskEmail(email: string): string | null {
   const at = email.indexOf('@');
