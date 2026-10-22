@@ -44,6 +44,33 @@ describe('상담사 무음 신호 토스트 정책', () => {
     expect(p.update(snapshot({ signals: hard }), 2200)?.message).toContain('조금 어려워요 1');
     expect(p.update(snapshot({ signals: hard }), 8100)).toBeNull();
   });
+  it('표시 중 일부 신호 TTL 만료와 일부 손내림을 즉시 문구에 반영한다', () => {
+    const p = new HostSignalToastPolicy();
+    const good = { a: { type: 'following' as const, at: -6000 } };
+    const mixed = { ...good, b: { type: 'difficult' as const, at: 100 } };
+    p.update(snapshot({ signals: good }), 0);
+    p.update(snapshot({ signals: mixed }), 100);
+    expect(p.update(snapshot({ signals: mixed }), 2100)?.message).toContain('잘 따라가요 1');
+    expect(p.update(snapshot({ signals: mixed }), 4000)?.message).not.toContain('잘 따라가요');
+    expect(p.update(snapshot({ signals: mixed }), 10100)).toBeNull();
+    const h = new HostSignalToastPolicy(); h.update(snapshot(), 0);
+    h.update(snapshot({ hands: ['a', 'b'] }), 100);
+    h.update(snapshot({ hands: ['a', 'b'] }), 2100);
+    expect(h.update(snapshot({ hands: ['b'] }), 2200)?.message).toBe('손들기 · 대기 1명');
+  });
+  it('준비된 P1 손들기를 먼저 표시하고 10초 이상 지연된 P2는 폐기한다', () => {
+    const p = new HostSignalToastPolicy(); p.update(snapshot(), 0);
+    const good = { a: { type: 'following' as const, at: 100 } };
+    p.update(snapshot({ signals: good }), 100);
+    p.update(snapshot({ signals: good, hands: ['a'] }), 200);
+    expect(p.update(snapshot({ signals: good, hands: ['a'] }), 2200)?.topic).toBe('hands');
+    const q = new HostSignalToastPolicy(); q.update(snapshot(), 0);
+    q.update(snapshot({ signals: good, blocked: true }), 100);
+    // 다른 사람의 기존 신호가 남아 있어도 지연된 긍정 알림은 재생하지 않는다.
+    const remaining = { ...good, b: { type: 'following' as const, at: 5000 } };
+    q.update(snapshot({ signals: remaining, blocked: true }), 5000);
+    expect(q.update(snapshot({ signals: remaining }), 10100)).toBeNull();
+  });
   it('입장 대기를 3초 묶고 한 장만 표시한다', () => {
     const p = new HostSignalToastPolicy(); p.update(snapshot(), 0);
     p.update(snapshot({ queue: ['a'] }), 100);

@@ -37,16 +37,19 @@ export class HostSignalToastPolicy {
       const old = prev.signals[id];
       return now - value.at < SIGNAL_ACTIVE_MS && (!old || old.at !== value.at || old.type !== value.type);
     }).length);
+    const counts = countSignals(input.signals, now);
+    const priority = (topic: SignalTopic) => topic === 'signals' && !counts.difficult && !counts.resting ? 2 : 1;
     const valid = (topic: SignalTopic) => topic === 'hands' ? input.hands.length > 0 : topic === 'queue' ? input.queue.length > 0 : countSignals(input.signals, now).total > 0;
     this.pending = this.pending.filter((p) => {
       if (p.ids) {
         const active = p.topic === 'hands' ? input.hands : input.queue;
         p.ids = p.ids.filter((id) => active.includes(id)); p.count = p.ids.length;
       }
-      return p.count > 0 && p.topic !== input.sheet && valid(p.topic);
+      return p.count > 0 && p.topic !== input.sheet && valid(p.topic) && !(priority(p.topic) === 2 && now - p.at >= 10_000);
     });
     if (this.current && (this.current.topic === input.sheet || !valid(this.current.topic) || (this.pausedAt === null && now - this.current.at >= this.current.durationMs))) this.dismiss();
     if (this.current) {
+      this.current.message = this.current.topic === 'hands' ? `손들기 · 대기 ${input.hands.length}명` : this.current.topic === 'queue' ? `입장 대기 ${input.queue.length}명` : `조용한 신호 · ${signalCountParts(counts).join(' · ')}`;
       const matching = this.pending.find((p) => p.topic === this.current?.topic);
       if (matching) {
         const counts = countSignals(input.signals, now);
@@ -58,6 +61,7 @@ export class HostSignalToastPolicy {
     }
     if (input.blocked) return null;
     if (!this.current) {
+      this.pending.sort((a, b) => priority(a.topic) - priority(b.topic) || a.at - b.at);
       const index = this.pending.findIndex((p) => now - p.at >= (p.topic === 'queue' ? 3000 : 2000) && (p.topic !== 'signals' || now - this.lastQuietAt >= 10_000));
       if (index >= 0) {
         const [p] = this.pending.splice(index, 1);
