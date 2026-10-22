@@ -87,6 +87,8 @@ export interface ActiveSignal {
   type: ClassSignalType;
   /** 수신 시각(epoch ms) — 카드 표시·집계 TTL 판정 기준 */
   at: number;
+  /** 중복·역순 수신 억제용 서버 시각. 화면/로그에 출력하지 않는다. */
+  sourceAt?: number;
 }
 
 export type SignalMap = Readonly<Record<string, ActiveSignal>>;
@@ -143,4 +145,17 @@ export function signalCountParts(counts: ClassSignalCounts): string[] {
   return CLASS_SIGNAL_TYPES.filter((type) => counts[type] > 0).map(
     (type) => `${CLASS_SIGNAL_META[type].icon} ${CLASS_SIGNAL_META[type].label} ${counts[type]}`,
   );
+}
+
+/** WS 재전송은 TTL을 연장하지 않는다. 구 payload는 짧은 중복 억제 창을 적용한다. */
+export function receiveSignal(map: SignalMap, participantId: string, type: ClassSignalType, serverAt: string | null | undefined, now: number): SignalMap {
+  if (!participantId) return map;
+  const parsed = serverAt ? Date.parse(serverAt) : NaN;
+  const sourceAt = Number.isFinite(parsed) ? parsed : undefined;
+  const previous = map[participantId];
+  if (sourceAt !== undefined) {
+    if (now - sourceAt >= SIGNAL_ACTIVE_MS || sourceAt > now + SIGNAL_ACTIVE_MS) return map;
+    if (previous?.sourceAt !== undefined && sourceAt <= previous.sourceAt) return map;
+  } else if (previous?.type === type && now - previous.at < 500) return map;
+  return { ...map, [participantId]: { type, at: now, ...(sourceAt === undefined ? {} : { sourceAt }) } };
 }

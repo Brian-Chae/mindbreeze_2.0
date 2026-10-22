@@ -48,6 +48,24 @@ export function PlayerSheet({ open, title, sub, tall, onClose, pz = 'sheet', foo
     if (!open) return undefined;
     const onKeyDown = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') onCloseRef.current();
+      if (e.key !== 'Tab') return;
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      const focusable = [...dialog.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+      )].filter((element) => !element.closest('[hidden], [inert]') && element.getAttribute('aria-hidden') !== 'true');
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (!first || !last) {
+        e.preventDefault();
+        dialog.focus();
+      } else if (e.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement) || document.activeElement === dialog)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement) || document.activeElement === dialog)) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     const onPointerDown = (e: Event): void => {
       const target = e.target;
@@ -55,7 +73,7 @@ export function PlayerSheet({ open, title, sub, tall, onClose, pz = 'sheet', foo
       if (!dismissOnOutside) return;
       if (dialogRef.current?.contains(target)) return;
       // 도크에서 다른 항목을 눌러 시트를 바꾸는 동작, 위에 뜬 다른 모달 안의 조작은 닫기로 보지 않는다
-      if (target.closest('[data-pz="dock"]')) return;
+      if (target.closest('[data-pz="dock"], .hp-signalbar')) return;
       const modal = target.closest('[aria-modal="true"]');
       if (modal && modal !== dialogRef.current) return;
       onCloseRef.current();
