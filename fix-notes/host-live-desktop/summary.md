@@ -24,7 +24,7 @@
 
 - vitest 18파일262개 통과: host player, SDD235, quiet, toast, 회원 hostvideo. 토스트16개 포함. 전체 저장소 테스트는 실행하지 않음.
 - tsc --noEmit -p tsconfig.app.json 통과. 변경 TS/TSX eslint 통과.
-- npm run build -- --config ../fix-notes/host-live-desktop/vite-check.config.ts: .env 접근을 막는 envDir override만 사용. 동적 import/500kB chunk 경고는 변경 밖 기존 번들 구조.
+- npm run build -- --config ../fix-notes/host-live-desktop/vite-check.config.ts: .env 접근을 막는 envDir override만 사용. 빌드는 exit0이나 design-system tokens.css @import 해석 경고와 동적 import/500kB chunk 경고가 남는다. 해당 공용 import/번들 구조는 이번 변경 밖이다.
 - 지정 Google Chrome executable, 실제 /design/class-player C13/HostCaseHarness. 서버/API/socket 요청 차단, 가상 데이터.
 - 390/768/1280/1440 × 없음/손1/손여럿/quiet/status =20상태 PNG+JSON. 5영역경계 오차1px이내, self폭-높이×16/9 오차1px이내·높이불변, overflow0, pageerror0, 도크4, 간격14px.
 - 별도 browser-assertions:320 포함5폭 확대16:9/넘침0, 수업상태→체크인 펼침→Escape→포커스 복귀 확인.
