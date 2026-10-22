@@ -169,7 +169,7 @@ describe('ClientHomePage — FM01', () => {
   });
   it('코드로 입장하기 → /join', async () => {
     await renderHome([session({ status: 'scheduled', scheduled_at: L(20, 15) })]);
-    await act(async () => { q<HTMLButtonElement>('[data-testid="enter-with-code"]')!.click(); });
+    await act(async () => { q<HTMLElement>('[data-testid="enter-with-code"]')!.click(); });
     expect(document.querySelector('[data-testid="where"]')!.textContent).toBe('/join');
   });
   it('예정 클래스 히어로의 클래스 보기 → 상세', async () => {
