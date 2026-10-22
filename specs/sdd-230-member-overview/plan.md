@@ -52,3 +52,11 @@
 - 상세: 메모는 본인 연결이 있을 때만. 메모 저장 API 는 기존대로 본인 연결만(관리자의 기관 회원 메모 저장은 403).
 - FE: 라우트 `/clients*` 는 이미 org_admin 허용, 사이드바 org_admin 메뉴에 `/clients` 존재 → 확인만. 목록에 '담당 상담사' 열·필터(관리자만), 상세는 메모 영역 조건부.
 - 파일: `backend/app/services/client_overview_service.py`, `client_service.py`, `schemas/client.py`, `api/v1/client.py`, 테스트 `backend/tests/test_sdd230_org_admin_scope.py`, FE `lib/api/clients.ts`, `ClientListPage.tsx`, `ClientProfilePage.tsx`, `frontend/tests/sdd230-org-admin-scope.test.tsx`.
+
+## 6. 1-3단계 — 기관 소속 상담사 연결 회원 + 회원/비회원 (Stage ②, 마이그레이션 없음)
+- `client_overview_service.py`: `org_linked_client_ids(db, orgs)`(active 소속 상담사 × active 링크 × 역할 client) 추가. `org_scope(db, orgs)` → `(member_ids, linked_ids)`. `require_client_access` 는 `member ∪ linked` 로 허용. 목록 모집단 = 본인 연결 ∪ member ∪ linked.
+- 판정: 관리자 호출에서 `member_type = 'member' if id ∈ org_member_ids else 'non_member'`(§12). 필터 `member_type` 은 `(u,p)` 행 필터로 total 과 일치. 상담사 호출은 `null`.
+- 상세 응답: 관리자일 때 `member_type` 추가(헤더 배지). 메모 정책 불변(비연결 → null).
+- 활동·리포트 접근 세션은 §11 그대로(기관 명상 클래스 세션만, 회원용 리포트만) → 상담 기록·상담사용 리포트 계속 제외.
+- 스키마 `ClientSummary.member_type`, `ClientProfileResponse.member_type`, 쿼리 `member_type`. FE: 배지·필터·상세 헤더 배지·설명(관리자만).
+- 파일: `client_overview_service.py`, `client_service.py`, `schemas/client.py`, `api/v1/client.py`, 테스트 `backend/tests/test_sdd230_org_link_members.py`, FE `lib/api/clients.ts`, `ClientListPage.tsx`, `ClientProfilePage.tsx`, `frontend/tests/sdd230-org-link-members.test.tsx`.
