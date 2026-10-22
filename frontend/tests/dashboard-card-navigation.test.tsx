@@ -20,7 +20,7 @@ it('일정·요약·알림 전체가 링크이며 클래스 보조 동작과 링
     const schedule = section('오늘 · 다가오는 일정').querySelector('a')!;
     expect(schedule.getAttribute('href')).toBe('/classes/c1/sessions/s1');
     expect(schedule.parentElement?.textContent).toContain('참여 3명');
-    for (const [label, path] of [['회차 상세 →', '/classes/c1/sessions/s1'], ['리포트 검토 →', '/reports?status=pending'], ['일정 보기 →', '/classes'], ['회원 관리 →', '/clients']]) {
+    for (const [label, path] of [['입장하기 →', '/sessions/s1/player'], ['리포트 검토 →', '/reports?status=pending'], ['일정 보기 →', '/classes'], ['회원 관리 →', '/clients']]) {
       const link = [...container.querySelectorAll('a')].find(a => a.textContent?.includes(label));
       expect(link?.getAttribute('href')).toBe(path);
     }

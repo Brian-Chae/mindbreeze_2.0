@@ -15,7 +15,6 @@ import { adaptHostClass } from '../lib/class-structure/adapters';
 import { classPath } from '../lib/class-structure/navigation';
 import {
   HOME_CLASS_LIMIT,
-  liveTileDetailTarget,
   pickHeroSession,
   pickPastRows,
   pickScheduleRows,
@@ -42,6 +41,8 @@ import {
   PARTICIPANTS_TILE_TARGET,
   REVIEW_TILE_TARGET,
   TODAY_TILE_TARGET,
+  liveTileHint,
+  liveTileTarget,
 } from '../lib/dashboard/home-links';
 import { liveClasses as pickLiveClasses, pendingReviewTotal, todayRemaining } from '../lib/dashboard/home-stats';
 
@@ -348,8 +349,8 @@ export default function DashboardPage() {
             <StatTile
               label="진행 중 회차"
               value={liveClasses.length}
-              to={liveTileDetailTarget(liveClasses, dashboardSessionPath)}
-              hint={liveClasses.length > 0 ? '회차 상세 →' : '클래스 목록 →'}
+              to={liveTileTarget(liveClasses)}
+              hint={liveTileHint(liveClasses.length)}
               valueClassName="text-[#1F8A5B]"
             />
             <StatTile

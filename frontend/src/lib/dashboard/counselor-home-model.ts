@@ -32,11 +32,6 @@ export function pickPastRows(rows: readonly ClassSummary[], limit = 4): ClassSum
   return rows.filter((c) => c.status === 'completed' || c.status === 'cancelled').sort((a, b) => time(b) - time(a)).slice(0, limit);
 }
 
-/** 진행 중 타일 목적지: 1개면 해당 회차 상세(홈에서 바로 입장하지 않는다), 아니면 클래스 목록. */
-export function liveTileDetailTarget(live: readonly ClassSummary[], detailPath: (row: ClassSummary) => string): string {
-  return live.length === 1 ? detailPath(live[0]) : '/classes';
-}
-
 const ENDED = new Set(['completed', 'closed', 'cancelled']);
 function nextTime(model: ClassReadModel): number {
   const next = model.nextSession.kind === 'value' ? model.nextSession.value : null;
