@@ -826,6 +826,12 @@ def get_report(report_id: str, user_id: str | None, db: DBSession, *, member_cre
         from app.services.class_read_service import require_own_approved_report
         from app.services.class_access_service import without_raw_material
         member, participant = require_own_approved_report(db, report, session, user_id=user_id, member_credential=member_credential)
+        # 클래스 회원 본인 리포트도 최초 열람 시 읽음 처리한다 — 이 분기가 일찍 반환해
+        #   읽음 마킹이 빠져 하단 탭 배지·NEW 가 계속 남던 문제. (본인 소유·승인 완료는 위에서 검사됨)
+        if not report.is_read:
+            report.is_read = True
+            db.add(report)
+            db.commit()
         result = _serialize(report, session, subjective=_subjective_for_report(report, db))
         result = without_raw_material(result)
         result.update(pdf_url=None, report_email=None, generation_error=None)
