@@ -1,0 +1,9 @@
+// frontend 디렉터리에서 실행. configFile:false/envFile:false로 환경 파일·원격 프록시를 로드하지 않는다.
+import { createServer } from '/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/vite/dist/node/index.js';
+import react from '/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/@vitejs/plugin-react/dist/index.js';
+import {execFileSync} from 'node:child_process';
+const root='/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-checkin-design/frontend';
+for(const baseline of [true,false]){
+ const server=await createServer({root,configFile:false,envFile:false,plugins:[{name:'baseline',enforce:'pre',load(id){if(id.endsWith('/flow/fixtures/member-survey.ts')){let source=execFileSync('git',['show','077501ef8043297bd1e9dd0e14249eeaf081f7dc:frontend/'+id.slice(root.length+1)],{cwd:root,encoding:'utf8'});source=source.replace("import { createElement }","import { createElement, useState }").replace('createElement(SurveyStepView, {','createElement(SurveyMock, {').replace('draft: draftFor(question)','draft: emptySurveyDraft()').replace('backdropSrc: ctx.backdropSrc','backdropSrc: \"/images/background3.webp\"');return source+`\nfunction SurveyMock(props: import('../../../../components/class/flow/member/SurveyStepView').SurveyStepViewProps) { const [draft,setDraft]=useState(props.draft); return createElement(SurveyStepView,{...props,draft,onSelect:(axis,value)=>setDraft(d=>({...d,answers:{...d.answers,[axis]:value}}))}); }`; } if(baseline && /\/(SurveyStepView.tsx|MemberFlowFrame.tsx|member-flow.css)$/.test(id))return execFileSync('git',['show','077501ef8043297bd1e9dd0e14249eeaf081f7dc:frontend/'+id.slice(root.length+1)],{cwd:root,encoding:'utf8'});}},react()],server:{host:'127.0.0.1',port:baseline?5187:5188,strictPort:true},resolve:{alias:{'@':root+'/src'}},cacheDir:'/tmp/checkin-vite-'+baseline});await server.listen();
+}
+console.log('ready');

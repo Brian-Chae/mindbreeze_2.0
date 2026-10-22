@@ -1,0 +1,5130 @@
+[
+  {
+    "id": "before-mobile-focus-unselected",
+    "minimum": 1.25,
+    "textMeasurements": [
+      {
+        "text": "지금 집중은 어떤가요?",
+        "ratio": 3.529,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          162,
+          120,
+          105
+        ]
+      },
+      {
+        "text": "가장 가까운 느낌을 하나 골라 주세요.",
+        "ratio": 1.93,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          180,
+          134,
+          111
+        ]
+      },
+      {
+        "text": "집중",
+        "ratio": 3.032,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          179,
+          130,
+          106
+        ]
+      },
+      {
+        "text": "편안함",
+        "ratio": 1.25,
+        "foreground": [
+          154,
+          144,
+          166
+        ],
+        "worstBackground": [
+          162,
+          122,
+          107
+        ]
+      },
+      {
+        "text": "감정",
+        "ratio": 2.337,
+        "foreground": [
+          154,
+          144,
+          166
+        ],
+        "worstBackground": [
+          88,
+          87,
+          99
+        ]
+      },
+      {
+        "text": "전할 말",
+        "ratio": 2.403,
+        "foreground": [
+          154,
+          144,
+          166
+        ],
+        "worstBackground": [
+          85,
+          85,
+          102
+        ]
+      },
+      {
+        "text": "매우 산만",
+        "ratio": 2.683,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          185,
+          141,
+          119
+        ]
+      },
+      {
+        "text": "산만",
+        "ratio": 3.581,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          163,
+          118,
+          104
+        ]
+      },
+      {
+        "text": "보통",
+        "ratio": 3.293,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          169,
+          125,
+          103
+        ]
+      },
+      {
+        "text": "집중",
+        "ratio": 3.583,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          161,
+          119,
+          102
+        ]
+      },
+      {
+        "text": "매우 집중",
+        "ratio": 3.952,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          150,
+          113,
+          101
+        ]
+      },
+      {
+        "text": "다음",
+        "ratio": 12.33,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "worstBackground": [
+          85,
+          30,
+          85
+        ]
+      },
+      {
+        "text": "건너뛰기",
+        "ratio": 9.339,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          49,
+          31,
+          42
+        ]
+      }
+    ]
+  },
+  {
+    "id": "before-mobile-focus-selected",
+    "minimum": 1.25,
+    "textMeasurements": [
+      {
+        "text": "지금 집중은 어떤가요?",
+        "ratio": 3.529,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          162,
+          120,
+          105
+        ]
+      },
+      {
+        "text": "가장 가까운 느낌을 하나 골라 주세요.",
+        "ratio": 1.93,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          180,
+          134,
+          111
+        ]
+      },
+      {
+        "text": "집중",
+        "ratio": 3.032,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          179,
+          130,
+          106
+        ]
+      },
+      {
+        "text": "편안함",
+        "ratio": 1.25,
+        "foreground": [
+          154,
+          144,
+          166
+        ],
+        "worstBackground": [
+          162,
+          122,
+          107
+        ]
+      },
+      {
+        "text": "감정",
+        "ratio": 2.337,
+        "foreground": [
+          154,
+          144,
+          166
+        ],
+        "worstBackground": [
+          88,
+          87,
+          99
+        ]
+      },
+      {
+        "text": "전할 말",
+        "ratio": 2.403,
+        "foreground": [
+          154,
+          144,
+          166
+        ],
+        "worstBackground": [
+          85,
+          85,
+          102
+        ]
+      },
+      {
+        "text": "매우 산만",
+        "ratio": 2.683,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          185,
+          141,
+          119
+        ]
+      },
+      {
+        "text": "산만",
+        "ratio": 3.581,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          163,
+          118,
+          104
+        ]
+      },
+      {
+        "text": "보통",
+        "ratio": 3.293,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          169,
+          125,
+          103
+        ]
+      },
+      {
+        "text": "집중",
+        "ratio": 10.651,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          95,
+          0,
+          128
+        ]
+      },
+      {
+        "text": "매우 집중",
+        "ratio": 3.952,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          150,
+          113,
+          101
+        ]
+      },
+      {
+        "text": "다음",
+        "ratio": 11.678,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "worstBackground": [
+          95,
+          0,
+          128
+        ]
+      },
+      {
+        "text": "건너뛰기",
+        "ratio": 9.339,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          49,
+          31,
+          42
+        ]
+      }
+    ]
+  },
+  {
+    "id": "before-mobile-emotion-unselected",
+    "minimum": 1.93,
+    "textMeasurements": [
+      {
+        "text": "지금 기분은 어떤가요?",
+        "ratio": 3.529,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          162,
+          120,
+          105
+        ]
+      },
+      {
+        "text": "가장 가까운 느낌을 하나 골라 주세요.",
+        "ratio": 1.93,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          180,
+          134,
+          111
+        ]
+      },
+      {
+        "text": "집중",
+        "ratio": 2.01,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          179,
+          130,
+          106
+        ]
+      },
+      {
+        "text": "편안함",
+        "ratio": 2.296,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          162,
+          122,
+          107
+        ]
+      },
+      {
+        "text": "감정",
+        "ratio": 6.474,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          88,
+          87,
+          99
+        ]
+      },
+      {
+        "text": "전할 말",
+        "ratio": 2.403,
+        "foreground": [
+          154,
+          144,
+          166
+        ],
+        "worstBackground": [
+          85,
+          85,
+          102
+        ]
+      },
+      {
+        "text": "매우 부정적",
+        "ratio": 2.552,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          189,
+          145,
+          124
+        ]
+      },
+      {
+        "text": "부정적",
+        "ratio": 3.581,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          163,
+          118,
+          104
+        ]
+      },
+      {
+        "text": "보통",
+        "ratio": 3.293,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          169,
+          125,
+          103
+        ]
+      },
+      {
+        "text": "긍정적",
+        "ratio": 3.583,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          161,
+          119,
+          102
+        ]
+      },
+      {
+        "text": "매우 긍정적",
+        "ratio": 3.952,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          150,
+          113,
+          101
+        ]
+      },
+      {
+        "text": "다음",
+        "ratio": 12.33,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "worstBackground": [
+          85,
+          30,
+          85
+        ]
+      },
+      {
+        "text": "건너뛰기",
+        "ratio": 9.339,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          49,
+          31,
+          42
+        ]
+      }
+    ]
+  },
+  {
+    "id": "before-mobile-emotion-selected",
+    "minimum": 1.93,
+    "textMeasurements": [
+      {
+        "text": "지금 기분은 어떤가요?",
+        "ratio": 3.529,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          162,
+          120,
+          105
+        ]
+      },
+      {
+        "text": "가장 가까운 느낌을 하나 골라 주세요.",
+        "ratio": 1.93,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          180,
+          134,
+          111
+        ]
+      },
+      {
+        "text": "집중",
+        "ratio": 2.01,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          179,
+          130,
+          106
+        ]
+      },
+      {
+        "text": "편안함",
+        "ratio": 2.296,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          162,
+          122,
+          107
+        ]
+      },
+      {
+        "text": "감정",
+        "ratio": 6.474,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          88,
+          87,
+          99
+        ]
+      },
+      {
+        "text": "전할 말",
+        "ratio": 2.403,
+        "foreground": [
+          154,
+          144,
+          166
+        ],
+        "worstBackground": [
+          85,
+          85,
+          102
+        ]
+      },
+      {
+        "text": "매우 부정적",
+        "ratio": 2.552,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          189,
+          145,
+          124
+        ]
+      },
+      {
+        "text": "부정적",
+        "ratio": 3.581,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          163,
+          118,
+          104
+        ]
+      },
+      {
+        "text": "보통",
+        "ratio": 3.293,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          169,
+          125,
+          103
+        ]
+      },
+      {
+        "text": "긍정적",
+        "ratio": 10.651,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          95,
+          0,
+          128
+        ]
+      },
+      {
+        "text": "매우 긍정적",
+        "ratio": 3.952,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          150,
+          113,
+          101
+        ]
+      },
+      {
+        "text": "다음",
+        "ratio": 11.678,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "worstBackground": [
+          95,
+          0,
+          128
+        ]
+      },
+      {
+        "text": "건너뛰기",
+        "ratio": 9.339,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          49,
+          31,
+          42
+        ]
+      }
+    ]
+  },
+  {
+    "id": "before-mobile-code-unselected",
+    "minimum": 4.296,
+    "textMeasurements": [
+      {
+        "text": "코드로 입장",
+        "ratio": 11.694,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          7,
+          52,
+          87
+        ]
+      },
+      {
+        "text": "입장 코드를 입력해 주세요",
+        "ratio": 12.484,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          43,
+          43,
+          69
+        ]
+      },
+      {
+        "text": "상담사가 알려 준 숫자 4자리예요",
+        "ratio": 8.143,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          46,
+          44,
+          68
+        ]
+      },
+      {
+        "text": "숫자 4자리를 모두 입력하면 확인할 수 있어요",
+        "ratio": 9.843,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          32,
+          29,
+          54
+        ]
+      },
+      {
+        "text": "로그인 없이 입장할 수 있어요",
+        "ratio": 4.296,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          87,
+          87,
+          101
+        ]
+      },
+      {
+        "text": "코드 확인",
+        "ratio": 10.353,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "worstBackground": [
+          87,
+          47,
+          108
+        ]
+      }
+    ]
+  },
+  {
+    "id": "before-mobile-notice-unselected",
+    "minimum": 4.23,
+    "textMeasurements": [
+      {
+        "text": "시작 전에 확인해 주세요",
+        "ratio": 9.371,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          7,
+          68,
+          106
+        ]
+      },
+      {
+        "text": "채용욱 상담사와 함께하는 마음챙김 명상 · 4회차",
+        "ratio": 5.704,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          7,
+          74,
+          113
+        ]
+      },
+      {
+        "text": "온라인",
+        "ratio": 5.831,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          34,
+          101,
+          136
+        ]
+      },
+      {
+        "text": "그룹",
+        "ratio": 5.838,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          31,
+          101,
+          137
+        ]
+      },
+      {
+        "text": "기록 안내",
+        "ratio": 16.359,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          22,
+          22,
+          33
+        ]
+      },
+      {
+        "text": "자세히 보기 ↗",
+        "ratio": 8.194,
+        "foreground": [
+          210,
+          155,
+          232
+        ],
+        "worstBackground": [
+          22,
+          22,
+          33
+        ]
+      },
+      {
+        "text": "기록되는 것",
+        "ratio": 9.389,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          42,
+          32,
+          51
+        ]
+      },
+      {
+        "text": "녹음·뇌파·영상",
+        "ratio": 14.158,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          42,
+          32,
+          51
+        ]
+      },
+      {
+        "text": "원본 보관",
+        "ratio": 9.389,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          42,
+          32,
+          51
+        ]
+      },
+      {
+        "text": "90일 후 삭제",
+        "ratio": 14.158,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          42,
+          32,
+          51
+        ]
+      },
+      {
+        "text": "뇌파: 밴드 착용 시에만",
+        "ratio": 10.413,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          27,
+          26,
+          36
+        ]
+      },
+      {
+        "text": "영상: 카메라 켤 때만",
+        "ratio": 10.413,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          27,
+          26,
+          36
+        ]
+      },
+      {
+        "text": "리포트 반영",
+        "ratio": 15.629,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          29,
+          26,
+          36
+        ]
+      },
+      {
+        "text": "자세히 보기 ↗",
+        "ratio": 7.829,
+        "foreground": [
+          210,
+          155,
+          232
+        ],
+        "worstBackground": [
+          29,
+          26,
+          36
+        ]
+      },
+      {
+        "text": "반영하지 않아요",
+        "ratio": 10.651,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          95,
+          0,
+          128
+        ]
+      },
+      {
+        "text": "반영해요",
+        "ratio": 11.61,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          53,
+          49,
+          57
+        ]
+      },
+      {
+        "text": "반영하지 않아도 참여할 수 있어요",
+        "ratio": 10.239,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          31,
+          27,
+          36
+        ]
+      },
+      {
+        "text": "연구 데이터 활용",
+        "ratio": 16.08,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          27,
+          23,
+          33
+        ]
+      },
+      {
+        "text": "선택",
+        "ratio": 8.159,
+        "foreground": [
+          210,
+          155,
+          232
+        ],
+        "worstBackground": [
+          25,
+          22,
+          31
+        ]
+      },
+      {
+        "text": "자세히 보기 ↗",
+        "ratio": 8.229,
+        "foreground": [
+          210,
+          155,
+          232
+        ],
+        "worstBackground": [
+          24,
+          21,
+          31
+        ]
+      },
+      {
+        "text": "비식별 뇌파·맥박·움직임 데이터와 지표,",
+        "ratio": 16.131,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          26,
+          23,
+          32
+        ]
+      },
+      {
+        "text": "암호화한 이름 ID·성별·생년·월을",
+        "ratio": 16.131,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          26,
+          23,
+          32
+        ]
+      },
+      {
+        "text": "삭제 기한 없이 보관",
+        "ratio": 12.917,
+        "foreground": [
+          234,
+          212,
+          244
+        ],
+        "worstBackground": [
+          26,
+          22,
+          31
+        ]
+      },
+      {
+        "text": "철회: 운영팀 요청 · 미동의도 참여 가능",
+        "ratio": 16.288,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          25,
+          22,
+          31
+        ]
+      },
+      {
+        "text": "동의해요",
+        "ratio": 13.164,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          44,
+          40,
+          49
+        ]
+      },
+      {
+        "text": "(선택)",
+        "ratio": 6.594,
+        "foreground": [
+          210,
+          155,
+          232
+        ],
+        "worstBackground": [
+          44,
+          40,
+          49
+        ]
+      },
+      {
+        "text": "확인하고 계속하기",
+        "ratio": 11.678,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "worstBackground": [
+          95,
+          0,
+          128
+        ]
+      },
+      {
+        "text": "리포트 반영은 클래스가 끝나기 전까지 바꿀 수 있어요.",
+        "ratio": 4.23,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          88,
+          88,
+          102
+        ]
+      },
+      {
+        "text": "개인정보 처리방침 보기",
+        "ratio": 5.039,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          79,
+          76,
+          92
+        ]
+      }
+    ]
+  },
+  {
+    "id": "after-mobile-focus-unselected",
+    "minimum": 8.128,
+    "textMeasurements": [
+      {
+        "text": "클래스 입장 준비",
+        "ratio": 15.871,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          32,
+          22,
+          40
+        ]
+      },
+      {
+        "text": "지금 집중은 어떤가요?",
+        "ratio": 14.369,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          41,
+          31,
+          48
+        ]
+      },
+      {
+        "text": "가장 가까운 느낌을 하나 골라 주세요.",
+        "ratio": 14.06,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          46,
+          32,
+          46
+        ]
+      },
+      {
+        "text": "집중",
+        "ratio": 13.067,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          54,
+          37,
+          49
+        ]
+      },
+      {
+        "text": "편안함",
+        "ratio": 9.345,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          45,
+          32,
+          47
+        ]
+      },
+      {
+        "text": "감정",
+        "ratio": 9.705,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          37,
+          30,
+          49
+        ]
+      },
+      {
+        "text": "전할 말",
+        "ratio": 9.759,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          35,
+          30,
+          49
+        ]
+      },
+      {
+        "text": "매우 산만",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "산만",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "보통",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "집중",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "매우 집중",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "다음",
+        "ratio": 8.128,
+        "foreground": [
+          81,
+          65,
+          93
+        ],
+        "worstBackground": [
+          245,
+          237,
+          252
+        ]
+      },
+      {
+        "text": "건너뛰기",
+        "ratio": 12.323,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          63,
+          40,
+          46
+        ]
+      }
+    ]
+  },
+  {
+    "id": "after-mobile-focus-selected",
+    "minimum": 9.345,
+    "textMeasurements": [
+      {
+        "text": "클래스 입장 준비",
+        "ratio": 15.871,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          32,
+          22,
+          40
+        ]
+      },
+      {
+        "text": "지금 집중은 어떤가요?",
+        "ratio": 14.369,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          41,
+          31,
+          48
+        ]
+      },
+      {
+        "text": "가장 가까운 느낌을 하나 골라 주세요.",
+        "ratio": 14.06,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          46,
+          32,
+          46
+        ]
+      },
+      {
+        "text": "집중",
+        "ratio": 13.067,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          54,
+          37,
+          49
+        ]
+      },
+      {
+        "text": "편안함",
+        "ratio": 9.345,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          45,
+          32,
+          47
+        ]
+      },
+      {
+        "text": "감정",
+        "ratio": 9.705,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          37,
+          30,
+          49
+        ]
+      },
+      {
+        "text": "전할 말",
+        "ratio": 9.759,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          35,
+          30,
+          49
+        ]
+      },
+      {
+        "text": "매우 산만",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "산만",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "보통",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "집중",
+        "ratio": 11.678,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "worstBackground": [
+          95,
+          0,
+          128
+        ]
+      },
+      {
+        "text": "매우 집중",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "다음",
+        "ratio": 11.678,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "worstBackground": [
+          95,
+          0,
+          128
+        ]
+      },
+      {
+        "text": "건너뛰기",
+        "ratio": 12.323,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          63,
+          40,
+          46
+        ]
+      }
+    ]
+  },
+  {
+    "id": "after-mobile-emotion-unselected",
+    "minimum": 8.128,
+    "textMeasurements": [
+      {
+        "text": "클래스 입장 준비",
+        "ratio": 15.871,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          32,
+          22,
+          40
+        ]
+      },
+      {
+        "text": "지금 기분은 어떤가요?",
+        "ratio": 14.369,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          41,
+          31,
+          48
+        ]
+      },
+      {
+        "text": "가장 가까운 느낌을 하나 골라 주세요.",
+        "ratio": 14.06,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          46,
+          32,
+          46
+        ]
+      },
+      {
+        "text": "집중",
+        "ratio": 8.665,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          54,
+          37,
+          49
+        ]
+      },
+      {
+        "text": "편안함",
+        "ratio": 9.345,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          45,
+          32,
+          47
+        ]
+      },
+      {
+        "text": "감정",
+        "ratio": 14.635,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          37,
+          30,
+          49
+        ]
+      },
+      {
+        "text": "전할 말",
+        "ratio": 9.759,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          35,
+          30,
+          49
+        ]
+      },
+      {
+        "text": "매우 부정적",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "부정적",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "보통",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "긍정적",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "매우 긍정적",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "다음",
+        "ratio": 8.128,
+        "foreground": [
+          81,
+          65,
+          93
+        ],
+        "worstBackground": [
+          245,
+          237,
+          252
+        ]
+      },
+      {
+        "text": "건너뛰기",
+        "ratio": 12.323,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          63,
+          40,
+          46
+        ]
+      }
+    ]
+  },
+  {
+    "id": "after-mobile-emotion-selected",
+    "minimum": 8.665,
+    "textMeasurements": [
+      {
+        "text": "클래스 입장 준비",
+        "ratio": 15.871,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          32,
+          22,
+          40
+        ]
+      },
+      {
+        "text": "지금 기분은 어떤가요?",
+        "ratio": 14.369,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          41,
+          31,
+          48
+        ]
+      },
+      {
+        "text": "가장 가까운 느낌을 하나 골라 주세요.",
+        "ratio": 14.06,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          46,
+          32,
+          46
+        ]
+      },
+      {
+        "text": "집중",
+        "ratio": 8.665,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          54,
+          37,
+          49
+        ]
+      },
+      {
+        "text": "편안함",
+        "ratio": 9.345,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          45,
+          32,
+          47
+        ]
+      },
+      {
+        "text": "감정",
+        "ratio": 14.635,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          37,
+          30,
+          49
+        ]
+      },
+      {
+        "text": "전할 말",
+        "ratio": 9.759,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          35,
+          30,
+          49
+        ]
+      },
+      {
+        "text": "매우 부정적",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "부정적",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "보통",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "긍정적",
+        "ratio": 11.678,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "worstBackground": [
+          95,
+          0,
+          128
+        ]
+      },
+      {
+        "text": "매우 긍정적",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "다음",
+        "ratio": 11.678,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "worstBackground": [
+          95,
+          0,
+          128
+        ]
+      },
+      {
+        "text": "건너뛰기",
+        "ratio": 12.323,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          63,
+          40,
+          46
+        ]
+      }
+    ]
+  },
+  {
+    "id": "after-mobile-code-unselected",
+    "minimum": 4.296,
+    "textMeasurements": [
+      {
+        "text": "코드로 입장",
+        "ratio": 11.694,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          7,
+          52,
+          87
+        ]
+      },
+      {
+        "text": "입장 코드를 입력해 주세요",
+        "ratio": 12.484,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          43,
+          43,
+          69
+        ]
+      },
+      {
+        "text": "상담사가 알려 준 숫자 4자리예요",
+        "ratio": 8.143,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          46,
+          44,
+          68
+        ]
+      },
+      {
+        "text": "숫자 4자리를 모두 입력하면 확인할 수 있어요",
+        "ratio": 9.843,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          32,
+          29,
+          54
+        ]
+      },
+      {
+        "text": "로그인 없이 입장할 수 있어요",
+        "ratio": 4.296,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          87,
+          87,
+          101
+        ]
+      },
+      {
+        "text": "코드 확인",
+        "ratio": 10.353,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "worstBackground": [
+          87,
+          47,
+          108
+        ]
+      }
+    ]
+  },
+  {
+    "id": "after-mobile-notice-unselected",
+    "minimum": 4.23,
+    "textMeasurements": [
+      {
+        "text": "시작 전에 확인해 주세요",
+        "ratio": 9.371,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          7,
+          68,
+          106
+        ]
+      },
+      {
+        "text": "채용욱 상담사와 함께하는 마음챙김 명상 · 4회차",
+        "ratio": 5.704,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          7,
+          74,
+          113
+        ]
+      },
+      {
+        "text": "온라인",
+        "ratio": 5.831,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          34,
+          101,
+          136
+        ]
+      },
+      {
+        "text": "그룹",
+        "ratio": 5.838,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          31,
+          101,
+          137
+        ]
+      },
+      {
+        "text": "기록 안내",
+        "ratio": 16.359,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          22,
+          22,
+          33
+        ]
+      },
+      {
+        "text": "자세히 보기 ↗",
+        "ratio": 8.194,
+        "foreground": [
+          210,
+          155,
+          232
+        ],
+        "worstBackground": [
+          22,
+          22,
+          33
+        ]
+      },
+      {
+        "text": "기록되는 것",
+        "ratio": 9.389,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          42,
+          32,
+          51
+        ]
+      },
+      {
+        "text": "녹음·뇌파·영상",
+        "ratio": 14.158,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          42,
+          32,
+          51
+        ]
+      },
+      {
+        "text": "원본 보관",
+        "ratio": 9.389,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          42,
+          32,
+          51
+        ]
+      },
+      {
+        "text": "90일 후 삭제",
+        "ratio": 14.158,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          42,
+          32,
+          51
+        ]
+      },
+      {
+        "text": "뇌파: 밴드 착용 시에만",
+        "ratio": 10.413,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          27,
+          26,
+          36
+        ]
+      },
+      {
+        "text": "영상: 카메라 켤 때만",
+        "ratio": 10.413,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          27,
+          26,
+          36
+        ]
+      },
+      {
+        "text": "리포트 반영",
+        "ratio": 15.629,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          29,
+          26,
+          36
+        ]
+      },
+      {
+        "text": "자세히 보기 ↗",
+        "ratio": 7.829,
+        "foreground": [
+          210,
+          155,
+          232
+        ],
+        "worstBackground": [
+          29,
+          26,
+          36
+        ]
+      },
+      {
+        "text": "반영하지 않아요",
+        "ratio": 10.651,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          95,
+          0,
+          128
+        ]
+      },
+      {
+        "text": "반영해요",
+        "ratio": 11.61,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          53,
+          49,
+          57
+        ]
+      },
+      {
+        "text": "반영하지 않아도 참여할 수 있어요",
+        "ratio": 10.239,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          31,
+          27,
+          36
+        ]
+      },
+      {
+        "text": "연구 데이터 활용",
+        "ratio": 16.08,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          27,
+          23,
+          33
+        ]
+      },
+      {
+        "text": "선택",
+        "ratio": 8.159,
+        "foreground": [
+          210,
+          155,
+          232
+        ],
+        "worstBackground": [
+          25,
+          22,
+          31
+        ]
+      },
+      {
+        "text": "자세히 보기 ↗",
+        "ratio": 8.229,
+        "foreground": [
+          210,
+          155,
+          232
+        ],
+        "worstBackground": [
+          24,
+          21,
+          31
+        ]
+      },
+      {
+        "text": "비식별 뇌파·맥박·움직임 데이터와 지표,",
+        "ratio": 16.131,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          26,
+          23,
+          32
+        ]
+      },
+      {
+        "text": "암호화한 이름 ID·성별·생년·월을",
+        "ratio": 16.131,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          26,
+          23,
+          32
+        ]
+      },
+      {
+        "text": "삭제 기한 없이 보관",
+        "ratio": 12.917,
+        "foreground": [
+          234,
+          212,
+          244
+        ],
+        "worstBackground": [
+          26,
+          22,
+          31
+        ]
+      },
+      {
+        "text": "철회: 운영팀 요청 · 미동의도 참여 가능",
+        "ratio": 16.288,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          25,
+          22,
+          31
+        ]
+      },
+      {
+        "text": "동의해요",
+        "ratio": 13.164,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          44,
+          40,
+          49
+        ]
+      },
+      {
+        "text": "(선택)",
+        "ratio": 6.594,
+        "foreground": [
+          210,
+          155,
+          232
+        ],
+        "worstBackground": [
+          44,
+          40,
+          49
+        ]
+      },
+      {
+        "text": "확인하고 계속하기",
+        "ratio": 11.678,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "worstBackground": [
+          95,
+          0,
+          128
+        ]
+      },
+      {
+        "text": "리포트 반영은 클래스가 끝나기 전까지 바꿀 수 있어요.",
+        "ratio": 4.23,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          88,
+          88,
+          102
+        ]
+      },
+      {
+        "text": "개인정보 처리방침 보기",
+        "ratio": 5.039,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          79,
+          76,
+          92
+        ]
+      }
+    ]
+  },
+  {
+    "id": "before-desktop-focus-unselected",
+    "minimum": 1.404,
+    "textMeasurements": [
+      {
+        "text": "지금 집중은 어떤가요?",
+        "ratio": 5.632,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          114,
+          92,
+          92
+        ]
+      },
+      {
+        "text": "가장 가까운 느낌을 하나 골라 주세요.",
+        "ratio": 3.373,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          123,
+          98,
+          98
+        ]
+      },
+      {
+        "text": "집중",
+        "ratio": 3.235,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          176,
+          124,
+          102
+        ]
+      },
+      {
+        "text": "편안함",
+        "ratio": 1.404,
+        "foreground": [
+          154,
+          144,
+          166
+        ],
+        "worstBackground": [
+          156,
+          112,
+          102
+        ]
+      },
+      {
+        "text": "감정",
+        "ratio": 2.38,
+        "foreground": [
+          154,
+          144,
+          166
+        ],
+        "worstBackground": [
+          85,
+          86,
+          101
+        ]
+      },
+      {
+        "text": "전할 말",
+        "ratio": 2.352,
+        "foreground": [
+          154,
+          144,
+          166
+        ],
+        "worstBackground": [
+          84,
+          87,
+          104
+        ]
+      },
+      {
+        "text": "매우 산만",
+        "ratio": 2.996,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          179,
+          131,
+          111
+        ]
+      },
+      {
+        "text": "산만",
+        "ratio": 3.584,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          163,
+          118,
+          103
+        ]
+      },
+      {
+        "text": "보통",
+        "ratio": 3.319,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          169,
+          124,
+          104
+        ]
+      },
+      {
+        "text": "집중",
+        "ratio": 3.54,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          162,
+          120,
+          101
+        ]
+      },
+      {
+        "text": "매우 집중",
+        "ratio": 4.025,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          151,
+          111,
+          96
+        ]
+      },
+      {
+        "text": "다음",
+        "ratio": 12.239,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "worstBackground": [
+          87,
+          30,
+          83
+        ]
+      },
+      {
+        "text": "건너뛰기",
+        "ratio": 9.515,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          48,
+          29,
+          42
+        ]
+      }
+    ]
+  },
+  {
+    "id": "before-desktop-focus-selected",
+    "minimum": 1.404,
+    "textMeasurements": [
+      {
+        "text": "지금 집중은 어떤가요?",
+        "ratio": 5.632,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          114,
+          92,
+          92
+        ]
+      },
+      {
+        "text": "가장 가까운 느낌을 하나 골라 주세요.",
+        "ratio": 3.373,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          123,
+          98,
+          98
+        ]
+      },
+      {
+        "text": "집중",
+        "ratio": 3.235,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          176,
+          124,
+          102
+        ]
+      },
+      {
+        "text": "편안함",
+        "ratio": 1.404,
+        "foreground": [
+          154,
+          144,
+          166
+        ],
+        "worstBackground": [
+          156,
+          112,
+          102
+        ]
+      },
+      {
+        "text": "감정",
+        "ratio": 2.38,
+        "foreground": [
+          154,
+          144,
+          166
+        ],
+        "worstBackground": [
+          85,
+          86,
+          101
+        ]
+      },
+      {
+        "text": "전할 말",
+        "ratio": 2.352,
+        "foreground": [
+          154,
+          144,
+          166
+        ],
+        "worstBackground": [
+          84,
+          87,
+          104
+        ]
+      },
+      {
+        "text": "매우 산만",
+        "ratio": 2.996,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          179,
+          131,
+          111
+        ]
+      },
+      {
+        "text": "산만",
+        "ratio": 3.584,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          163,
+          118,
+          103
+        ]
+      },
+      {
+        "text": "보통",
+        "ratio": 3.319,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          169,
+          124,
+          104
+        ]
+      },
+      {
+        "text": "집중",
+        "ratio": 10.651,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          95,
+          0,
+          128
+        ]
+      },
+      {
+        "text": "매우 집중",
+        "ratio": 4.025,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          151,
+          111,
+          96
+        ]
+      },
+      {
+        "text": "다음",
+        "ratio": 11.678,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "worstBackground": [
+          95,
+          0,
+          128
+        ]
+      },
+      {
+        "text": "건너뛰기",
+        "ratio": 9.515,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          48,
+          29,
+          42
+        ]
+      }
+    ]
+  },
+  {
+    "id": "before-desktop-emotion-unselected",
+    "minimum": 2.145,
+    "textMeasurements": [
+      {
+        "text": "지금 기분은 어떤가요?",
+        "ratio": 5.632,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          114,
+          92,
+          92
+        ]
+      },
+      {
+        "text": "가장 가까운 느낌을 하나 골라 주세요.",
+        "ratio": 3.373,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          123,
+          98,
+          98
+        ]
+      },
+      {
+        "text": "집중",
+        "ratio": 2.145,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          176,
+          124,
+          102
+        ]
+      },
+      {
+        "text": "편안함",
+        "ratio": 2.58,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          156,
+          112,
+          102
+        ]
+      },
+      {
+        "text": "감정",
+        "ratio": 6.593,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          85,
+          86,
+          101
+        ]
+      },
+      {
+        "text": "전할 말",
+        "ratio": 2.352,
+        "foreground": [
+          154,
+          144,
+          166
+        ],
+        "worstBackground": [
+          84,
+          87,
+          104
+        ]
+      },
+      {
+        "text": "매우 부정적",
+        "ratio": 2.946,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          179,
+          133,
+          111
+        ]
+      },
+      {
+        "text": "부정적",
+        "ratio": 3.584,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          163,
+          118,
+          103
+        ]
+      },
+      {
+        "text": "보통",
+        "ratio": 3.319,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          169,
+          124,
+          104
+        ]
+      },
+      {
+        "text": "긍정적",
+        "ratio": 3.493,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          163,
+          121,
+          102
+        ]
+      },
+      {
+        "text": "매우 긍정적",
+        "ratio": 4.025,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          151,
+          111,
+          96
+        ]
+      },
+      {
+        "text": "다음",
+        "ratio": 12.239,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "worstBackground": [
+          87,
+          30,
+          83
+        ]
+      },
+      {
+        "text": "건너뛰기",
+        "ratio": 9.515,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          48,
+          29,
+          42
+        ]
+      }
+    ]
+  },
+  {
+    "id": "before-desktop-emotion-selected",
+    "minimum": 2.145,
+    "textMeasurements": [
+      {
+        "text": "지금 기분은 어떤가요?",
+        "ratio": 5.632,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          114,
+          92,
+          92
+        ]
+      },
+      {
+        "text": "가장 가까운 느낌을 하나 골라 주세요.",
+        "ratio": 3.373,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          123,
+          98,
+          98
+        ]
+      },
+      {
+        "text": "집중",
+        "ratio": 2.145,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          176,
+          124,
+          102
+        ]
+      },
+      {
+        "text": "편안함",
+        "ratio": 2.58,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          156,
+          112,
+          102
+        ]
+      },
+      {
+        "text": "감정",
+        "ratio": 6.593,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          85,
+          86,
+          101
+        ]
+      },
+      {
+        "text": "전할 말",
+        "ratio": 2.352,
+        "foreground": [
+          154,
+          144,
+          166
+        ],
+        "worstBackground": [
+          84,
+          87,
+          104
+        ]
+      },
+      {
+        "text": "매우 부정적",
+        "ratio": 2.946,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          179,
+          133,
+          111
+        ]
+      },
+      {
+        "text": "부정적",
+        "ratio": 3.584,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          163,
+          118,
+          103
+        ]
+      },
+      {
+        "text": "보통",
+        "ratio": 3.319,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          169,
+          124,
+          104
+        ]
+      },
+      {
+        "text": "긍정적",
+        "ratio": 10.651,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          95,
+          0,
+          128
+        ]
+      },
+      {
+        "text": "매우 긍정적",
+        "ratio": 4.025,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          151,
+          111,
+          96
+        ]
+      },
+      {
+        "text": "다음",
+        "ratio": 11.678,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "worstBackground": [
+          95,
+          0,
+          128
+        ]
+      },
+      {
+        "text": "건너뛰기",
+        "ratio": 9.515,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          48,
+          29,
+          42
+        ]
+      }
+    ]
+  },
+  {
+    "id": "before-desktop-code-unselected",
+    "minimum": 4.386,
+    "textMeasurements": [
+      {
+        "text": "코드로 입장",
+        "ratio": 11.731,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          8,
+          52,
+          85
+        ]
+      },
+      {
+        "text": "입장 코드를 입력해 주세요",
+        "ratio": 12.366,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          43,
+          44,
+          69
+        ]
+      },
+      {
+        "text": "상담사가 알려 준 숫자 4자리예요",
+        "ratio": 8.143,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          46,
+          44,
+          68
+        ]
+      },
+      {
+        "text": "숫자 4자리를 모두 입력하면 확인할 수 있어요",
+        "ratio": 9.397,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          36,
+          33,
+          57
+        ]
+      },
+      {
+        "text": "로그인 없이 입장할 수 있어요",
+        "ratio": 4.386,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          84,
+          86,
+          101
+        ]
+      },
+      {
+        "text": "코드 확인",
+        "ratio": 10.578,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "worstBackground": [
+          85,
+          46,
+          106
+        ]
+      }
+    ]
+  },
+  {
+    "id": "before-desktop-notice-unselected",
+    "minimum": 4.329,
+    "textMeasurements": [
+      {
+        "text": "시작 전에 확인해 주세요",
+        "ratio": 7.541,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          5,
+          83,
+          125
+        ]
+      },
+      {
+        "text": "채용욱 상담사와 함께하는 마음챙김 명상 · 4회차",
+        "ratio": 4.329,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          17,
+          93,
+          134
+        ]
+      },
+      {
+        "text": "온라인",
+        "ratio": 4.668,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          53,
+          116,
+          152
+        ]
+      },
+      {
+        "text": "그룹",
+        "ratio": 4.595,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          54,
+          117,
+          154
+        ]
+      },
+      {
+        "text": "기록 안내",
+        "ratio": 16.17,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          24,
+          23,
+          34
+        ]
+      },
+      {
+        "text": "자세히 보기 ↗",
+        "ratio": 8.037,
+        "foreground": [
+          210,
+          155,
+          232
+        ],
+        "worstBackground": [
+          24,
+          24,
+          35
+        ]
+      },
+      {
+        "text": "기록되는 것",
+        "ratio": 9.389,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          42,
+          32,
+          51
+        ]
+      },
+      {
+        "text": "녹음·뇌파·영상",
+        "ratio": 14.158,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          42,
+          32,
+          51
+        ]
+      },
+      {
+        "text": "원본 보관",
+        "ratio": 9.389,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          42,
+          32,
+          51
+        ]
+      },
+      {
+        "text": "90일 후 삭제",
+        "ratio": 14.158,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          42,
+          32,
+          51
+        ]
+      },
+      {
+        "text": "뇌파: 밴드 착용 시에만",
+        "ratio": 10.365,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          29,
+          26,
+          36
+        ]
+      },
+      {
+        "text": "영상: 카메라 켤 때만",
+        "ratio": 10.365,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          29,
+          26,
+          36
+        ]
+      },
+      {
+        "text": "리포트 반영",
+        "ratio": 15.455,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          31,
+          27,
+          35
+        ]
+      },
+      {
+        "text": "자세히 보기 ↗",
+        "ratio": 7.798,
+        "foreground": [
+          210,
+          155,
+          232
+        ],
+        "worstBackground": [
+          31,
+          26,
+          35
+        ]
+      },
+      {
+        "text": "반영하지 않아요",
+        "ratio": 10.651,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          95,
+          0,
+          128
+        ]
+      },
+      {
+        "text": "반영해요",
+        "ratio": 12.187,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          48,
+          46,
+          55
+        ]
+      },
+      {
+        "text": "반영하지 않아도 참여할 수 있어요",
+        "ratio": 10.434,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          30,
+          25,
+          34
+        ]
+      },
+      {
+        "text": "연구 데이터 활용",
+        "ratio": 15.568,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          31,
+          26,
+          35
+        ]
+      },
+      {
+        "text": "선택",
+        "ratio": 7.761,
+        "foreground": [
+          210,
+          155,
+          232
+        ],
+        "worstBackground": [
+          30,
+          27,
+          35
+        ]
+      },
+      {
+        "text": "자세히 보기 ↗",
+        "ratio": 7.818,
+        "foreground": [
+          210,
+          155,
+          232
+        ],
+        "worstBackground": [
+          30,
+          26,
+          35
+        ]
+      },
+      {
+        "text": "비식별 뇌파·맥박·움직임 데이터와 지표,",
+        "ratio": 15.607,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          30,
+          26,
+          35
+        ]
+      },
+      {
+        "text": "암호화한 이름 ID·성별·생년·월을",
+        "ratio": 16.428,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          24,
+          21,
+          31
+        ]
+      },
+      {
+        "text": "삭제 기한 없이 보관",
+        "ratio": 12.945,
+        "foreground": [
+          234,
+          212,
+          244
+        ],
+        "worstBackground": [
+          25,
+          22,
+          31
+        ]
+      },
+      {
+        "text": "철회: 운영팀 요청 · 미동의도 참여 가능",
+        "ratio": 16.58,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          23,
+          20,
+          30
+        ]
+      },
+      {
+        "text": "동의해요",
+        "ratio": 13.381,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          42,
+          39,
+          48
+        ]
+      },
+      {
+        "text": "(선택)",
+        "ratio": 6.764,
+        "foreground": [
+          210,
+          155,
+          232
+        ],
+        "worstBackground": [
+          42,
+          38,
+          48
+        ]
+      },
+      {
+        "text": "확인하고 계속하기",
+        "ratio": 11.678,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "worstBackground": [
+          95,
+          0,
+          128
+        ]
+      },
+      {
+        "text": "리포트 반영은 클래스가 끝나기 전까지 바꿀 수 있어요.",
+        "ratio": 4.46,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          86,
+          84,
+          100
+        ]
+      },
+      {
+        "text": "개인정보 처리방침 보기",
+        "ratio": 5.143,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          77,
+          75,
+          90
+        ]
+      }
+    ]
+  },
+  {
+    "id": "after-desktop-focus-unselected",
+    "minimum": 8.128,
+    "textMeasurements": [
+      {
+        "text": "클래스 입장 준비",
+        "ratio": 15.889,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          32,
+          22,
+          39
+        ]
+      },
+      {
+        "text": "지금 집중은 어떤가요?",
+        "ratio": 13.177,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          54,
+          36,
+          49
+        ]
+      },
+      {
+        "text": "가장 가까운 느낌을 하나 골라 주세요.",
+        "ratio": 13.932,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          46,
+          33,
+          47
+        ]
+      },
+      {
+        "text": "집중",
+        "ratio": 11.779,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          64,
+          44,
+          51
+        ]
+      },
+      {
+        "text": "편안함",
+        "ratio": 8.994,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          51,
+          34,
+          48
+        ]
+      },
+      {
+        "text": "감정",
+        "ratio": 9.705,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          37,
+          30,
+          49
+        ]
+      },
+      {
+        "text": "전할 말",
+        "ratio": 9.693,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          37,
+          30,
+          50
+        ]
+      },
+      {
+        "text": "매우 산만",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "산만",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "보통",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "집중",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "매우 집중",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "다음",
+        "ratio": 8.128,
+        "foreground": [
+          81,
+          65,
+          93
+        ],
+        "worstBackground": [
+          245,
+          237,
+          252
+        ]
+      },
+      {
+        "text": "건너뛰기",
+        "ratio": 12.442,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          63,
+          39,
+          45
+        ]
+      }
+    ]
+  },
+  {
+    "id": "after-desktop-focus-selected",
+    "minimum": 8.994,
+    "textMeasurements": [
+      {
+        "text": "클래스 입장 준비",
+        "ratio": 15.889,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          32,
+          22,
+          39
+        ]
+      },
+      {
+        "text": "지금 집중은 어떤가요?",
+        "ratio": 13.177,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          54,
+          36,
+          49
+        ]
+      },
+      {
+        "text": "가장 가까운 느낌을 하나 골라 주세요.",
+        "ratio": 13.932,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          46,
+          33,
+          47
+        ]
+      },
+      {
+        "text": "집중",
+        "ratio": 11.779,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          64,
+          44,
+          51
+        ]
+      },
+      {
+        "text": "편안함",
+        "ratio": 8.994,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          51,
+          34,
+          48
+        ]
+      },
+      {
+        "text": "감정",
+        "ratio": 9.705,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          37,
+          30,
+          49
+        ]
+      },
+      {
+        "text": "전할 말",
+        "ratio": 9.693,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          37,
+          30,
+          50
+        ]
+      },
+      {
+        "text": "매우 산만",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "산만",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "보통",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "집중",
+        "ratio": 11.678,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "worstBackground": [
+          95,
+          0,
+          128
+        ]
+      },
+      {
+        "text": "매우 집중",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "다음",
+        "ratio": 11.678,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "worstBackground": [
+          95,
+          0,
+          128
+        ]
+      },
+      {
+        "text": "건너뛰기",
+        "ratio": 12.442,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          63,
+          39,
+          45
+        ]
+      }
+    ]
+  },
+  {
+    "id": "after-desktop-emotion-unselected",
+    "minimum": 7.811,
+    "textMeasurements": [
+      {
+        "text": "클래스 입장 준비",
+        "ratio": 15.889,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          32,
+          22,
+          39
+        ]
+      },
+      {
+        "text": "지금 기분은 어떤가요?",
+        "ratio": 13.177,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          54,
+          36,
+          49
+        ]
+      },
+      {
+        "text": "가장 가까운 느낌을 하나 골라 주세요.",
+        "ratio": 13.932,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          46,
+          33,
+          47
+        ]
+      },
+      {
+        "text": "집중",
+        "ratio": 7.811,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          64,
+          44,
+          51
+        ]
+      },
+      {
+        "text": "편안함",
+        "ratio": 8.994,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          51,
+          34,
+          48
+        ]
+      },
+      {
+        "text": "감정",
+        "ratio": 14.635,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          37,
+          30,
+          49
+        ]
+      },
+      {
+        "text": "전할 말",
+        "ratio": 9.693,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          37,
+          30,
+          50
+        ]
+      },
+      {
+        "text": "매우 부정적",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "부정적",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "보통",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "긍정적",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "매우 긍정적",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "다음",
+        "ratio": 8.128,
+        "foreground": [
+          81,
+          65,
+          93
+        ],
+        "worstBackground": [
+          245,
+          237,
+          252
+        ]
+      },
+      {
+        "text": "건너뛰기",
+        "ratio": 12.442,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          63,
+          39,
+          45
+        ]
+      }
+    ]
+  },
+  {
+    "id": "after-desktop-emotion-selected",
+    "minimum": 7.811,
+    "textMeasurements": [
+      {
+        "text": "클래스 입장 준비",
+        "ratio": 15.889,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          32,
+          22,
+          39
+        ]
+      },
+      {
+        "text": "지금 기분은 어떤가요?",
+        "ratio": 13.177,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          54,
+          36,
+          49
+        ]
+      },
+      {
+        "text": "가장 가까운 느낌을 하나 골라 주세요.",
+        "ratio": 13.932,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          46,
+          33,
+          47
+        ]
+      },
+      {
+        "text": "집중",
+        "ratio": 7.811,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          64,
+          44,
+          51
+        ]
+      },
+      {
+        "text": "편안함",
+        "ratio": 8.994,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          51,
+          34,
+          48
+        ]
+      },
+      {
+        "text": "감정",
+        "ratio": 14.635,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          37,
+          30,
+          49
+        ]
+      },
+      {
+        "text": "전할 말",
+        "ratio": 9.693,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          37,
+          30,
+          50
+        ]
+      },
+      {
+        "text": "매우 부정적",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "부정적",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "보통",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "긍정적",
+        "ratio": 11.678,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "worstBackground": [
+          95,
+          0,
+          128
+        ]
+      },
+      {
+        "text": "매우 긍정적",
+        "ratio": 15.067,
+        "foreground": [
+          36,
+          27,
+          46
+        ],
+        "worstBackground": [
+          247,
+          244,
+          240
+        ]
+      },
+      {
+        "text": "다음",
+        "ratio": 11.678,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "worstBackground": [
+          95,
+          0,
+          128
+        ]
+      },
+      {
+        "text": "건너뛰기",
+        "ratio": 12.442,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          63,
+          39,
+          45
+        ]
+      }
+    ]
+  },
+  {
+    "id": "after-desktop-code-unselected",
+    "minimum": 4.386,
+    "textMeasurements": [
+      {
+        "text": "코드로 입장",
+        "ratio": 11.731,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          8,
+          52,
+          85
+        ]
+      },
+      {
+        "text": "입장 코드를 입력해 주세요",
+        "ratio": 12.366,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          43,
+          44,
+          69
+        ]
+      },
+      {
+        "text": "상담사가 알려 준 숫자 4자리예요",
+        "ratio": 8.143,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          46,
+          44,
+          68
+        ]
+      },
+      {
+        "text": "숫자 4자리를 모두 입력하면 확인할 수 있어요",
+        "ratio": 9.397,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          36,
+          33,
+          57
+        ]
+      },
+      {
+        "text": "로그인 없이 입장할 수 있어요",
+        "ratio": 4.386,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          84,
+          86,
+          101
+        ]
+      },
+      {
+        "text": "코드 확인",
+        "ratio": 10.578,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "worstBackground": [
+          85,
+          46,
+          106
+        ]
+      }
+    ]
+  },
+  {
+    "id": "after-desktop-notice-unselected",
+    "minimum": 4.329,
+    "textMeasurements": [
+      {
+        "text": "시작 전에 확인해 주세요",
+        "ratio": 7.541,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          5,
+          83,
+          125
+        ]
+      },
+      {
+        "text": "채용욱 상담사와 함께하는 마음챙김 명상 · 4회차",
+        "ratio": 4.329,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          17,
+          93,
+          134
+        ]
+      },
+      {
+        "text": "온라인",
+        "ratio": 4.668,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          53,
+          116,
+          152
+        ]
+      },
+      {
+        "text": "그룹",
+        "ratio": 4.595,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          54,
+          117,
+          154
+        ]
+      },
+      {
+        "text": "기록 안내",
+        "ratio": 16.17,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          24,
+          23,
+          34
+        ]
+      },
+      {
+        "text": "자세히 보기 ↗",
+        "ratio": 8.037,
+        "foreground": [
+          210,
+          155,
+          232
+        ],
+        "worstBackground": [
+          24,
+          24,
+          35
+        ]
+      },
+      {
+        "text": "기록되는 것",
+        "ratio": 9.389,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          42,
+          32,
+          51
+        ]
+      },
+      {
+        "text": "녹음·뇌파·영상",
+        "ratio": 14.158,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          42,
+          32,
+          51
+        ]
+      },
+      {
+        "text": "원본 보관",
+        "ratio": 9.389,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          42,
+          32,
+          51
+        ]
+      },
+      {
+        "text": "90일 후 삭제",
+        "ratio": 14.158,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          42,
+          32,
+          51
+        ]
+      },
+      {
+        "text": "뇌파: 밴드 착용 시에만",
+        "ratio": 10.365,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          29,
+          26,
+          36
+        ]
+      },
+      {
+        "text": "영상: 카메라 켤 때만",
+        "ratio": 10.365,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          29,
+          26,
+          36
+        ]
+      },
+      {
+        "text": "리포트 반영",
+        "ratio": 15.455,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          31,
+          27,
+          35
+        ]
+      },
+      {
+        "text": "자세히 보기 ↗",
+        "ratio": 7.798,
+        "foreground": [
+          210,
+          155,
+          232
+        ],
+        "worstBackground": [
+          31,
+          26,
+          35
+        ]
+      },
+      {
+        "text": "반영하지 않아요",
+        "ratio": 10.651,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          95,
+          0,
+          128
+        ]
+      },
+      {
+        "text": "반영해요",
+        "ratio": 12.187,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          48,
+          46,
+          55
+        ]
+      },
+      {
+        "text": "반영하지 않아도 참여할 수 있어요",
+        "ratio": 10.434,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          30,
+          25,
+          34
+        ]
+      },
+      {
+        "text": "연구 데이터 활용",
+        "ratio": 15.568,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          31,
+          26,
+          35
+        ]
+      },
+      {
+        "text": "선택",
+        "ratio": 7.761,
+        "foreground": [
+          210,
+          155,
+          232
+        ],
+        "worstBackground": [
+          30,
+          27,
+          35
+        ]
+      },
+      {
+        "text": "자세히 보기 ↗",
+        "ratio": 7.818,
+        "foreground": [
+          210,
+          155,
+          232
+        ],
+        "worstBackground": [
+          30,
+          26,
+          35
+        ]
+      },
+      {
+        "text": "비식별 뇌파·맥박·움직임 데이터와 지표,",
+        "ratio": 15.607,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          30,
+          26,
+          35
+        ]
+      },
+      {
+        "text": "암호화한 이름 ID·성별·생년·월을",
+        "ratio": 16.428,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          24,
+          21,
+          31
+        ]
+      },
+      {
+        "text": "삭제 기한 없이 보관",
+        "ratio": 12.945,
+        "foreground": [
+          234,
+          212,
+          244
+        ],
+        "worstBackground": [
+          25,
+          22,
+          31
+        ]
+      },
+      {
+        "text": "철회: 운영팀 요청 · 미동의도 참여 가능",
+        "ratio": 16.58,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          23,
+          20,
+          30
+        ]
+      },
+      {
+        "text": "동의해요",
+        "ratio": 13.381,
+        "foreground": [
+          247,
+          244,
+          240
+        ],
+        "worstBackground": [
+          42,
+          39,
+          48
+        ]
+      },
+      {
+        "text": "(선택)",
+        "ratio": 6.764,
+        "foreground": [
+          210,
+          155,
+          232
+        ],
+        "worstBackground": [
+          42,
+          38,
+          48
+        ]
+      },
+      {
+        "text": "확인하고 계속하기",
+        "ratio": 11.678,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "worstBackground": [
+          95,
+          0,
+          128
+        ]
+      },
+      {
+        "text": "리포트 반영은 클래스가 끝나기 전까지 바꿀 수 있어요.",
+        "ratio": 4.46,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          86,
+          84,
+          100
+        ]
+      },
+      {
+        "text": "개인정보 처리방침 보기",
+        "ratio": 5.143,
+        "foreground": [
+          207,
+          198,
+          214
+        ],
+        "worstBackground": [
+          77,
+          75,
+          90
+        ]
+      }
+    ]
+  }
+]
