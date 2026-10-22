@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>로그인 화면 코드 입장 — 시안</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Pretendard, -apple-system, sans-serif; background: #F4F2F7; color: #1F1F1F; padding: 40px 24px 80px; }
+  .page-head { max-width: 1280px; margin: 0 auto 28px; }
+  .page-head h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+  .page-head p { margin-top: 8px; color: #555; font-size: 14px; line-height: 1.7; }
+  .board { display: flex; gap: 36px; justify-content: center; flex-wrap: wrap; max-width: 1400px; margin: 0 auto; }
+  .col { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 375px; }
+  .label { font-size: 15px; font-weight: 800; color: #5F0080; }
+  .label small { display: block; font-size: 12px; font-weight: 500; color: #666; margin-top: 4px; line-height: 1.5; text-align: center; }
+  .note { width: 100%; background: #fff; border-radius: 14px; padding: 14px 16px; font-size: 12.5px; line-height: 1.7; color: #444; }
+  .note b { color: #1F1F1F; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; margin-right: 4px; }
+  .tag.good { background: #E8F6EE; color: #1A7F45; } .tag.bad { background: #FDECEC; color: #B42318; }
+
+  /* 기기 화면 375×760 */
+  .phone { position: relative; width: 375px; height: 760px; border-radius: 36px; overflow: hidden; box-shadow: 0 20px 50px rgba(40,0,60,.25); border: 8px solid #111; }
+  .phone .bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .phone .shade { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,.2), rgba(0,0,0,.6)); }
+  .screen { position: absolute; inset: 0; overflow-y: auto; color: #fff; padding: 64px 22px 28px; display: flex; flex-direction: column; align-items: center; scrollbar-width: none; }
+  .screen::-webkit-scrollbar { display: none; }
+  .status { position: absolute; top: 0; left: 0; right: 0; height: 40px; z-index: 5; display: flex; justify-content: space-between; align-items: center; padding: 0 26px; font-size: 13px; font-weight: 700; color: #fff; }
+  .brand { position: absolute; left: 22px; top: 44px; display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 16px; letter-spacing: -0.04em; }
+  .inv { filter: brightness(0) invert(1); }
+  .sym { margin-top: 30px; margin-bottom: 14px; }
+  h2.title { font-size: 25px; font-weight: 800; letter-spacing: -0.02em; text-align: center; }
+  .wrap { width: 100%; margin-top: 20px; display: flex; flex-direction: column; gap: 12px; }
+  .tabs { display: grid; grid-template-columns: repeat(3, 1fr); background: rgba(0,0,0,.2); border-radius: 99px; padding: 4px; }
+  .tabs span { text-align: center; padding: 10px 0; border-radius: 99px; font-size: 13px; font-weight: 600; }
+  .tabs .on { background: #fff; color: #5F0080; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; }
+  .desc { text-align: center; font-size: 13px; color: rgba(255,255,255,.9); }
+  .btn { height: 48px; border-radius: 99px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 14.5px; font-weight: 600; width: 100%; border: 0; }
+  .btn.white { background: #fff; color: #5F0080; border: 1px solid rgba(255,255,255,.3); }
+  .btn.apple { background: #000; color: #fff; }
+  .btn.purple { background: #5F0080; color: #fff; }
+  .btn.ghost { background: rgba(255,255,255,.12); color: #fff; border: 1.5px solid rgba(255,255,255,.75); backdrop-filter: blur(8px); }
+  .div { display: flex; align-items: center; gap: 10px; font-size: 12px; color: rgba(255,255,255,.8); }
+  .div::before, .div::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,.3); }
+  .lbl { font-size: 13px; }
+  .inp { height: 46px; border-radius: 99px; background: #fff; border: 1px solid #DDDEE7; }
+  .links { text-align: center; font-size: 13px; text-decoration: underline; }
+  .links.b { font-weight: 600; }
+  .fine { text-align: center; font-size: 11px; color: rgba(255,255,255,.8); text-decoration: underline; }
+  .hl { outline: 3px dashed #FFD84D; outline-offset: 5px; border-radius: 18px; position: relative; }
+  .hl::after { content: attr(data-new); position: absolute; right: -6px; top: -16px; background: #FFD84D; color: #3A2A00; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 99px; }
+
+  /* A안 카드 */
+  .codecard { width: 100%; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.35); border-radius: 20px; padding: 16px; backdrop-filter: blur(10px); display: flex; align-items: center; gap: 12px; }
+  .codecard .ic { width: 42px; height: 42px; border-radius: 12px; background: rgba(255,255,255,.95); display: grid; place-items: center; flex-shrink: 0; }
+  .codecard .t { font-size: 14.5px; font-weight: 800; }
+  .codecard .s { font-size: 12px; color: rgba(255,255,255,.85); margin-top: 3px; }
+  .codecard .go { margin-left: auto; height: 36px; padding: 0 14px; border-radius: 99px; background: #fff; color: #5F0080; font-weight: 700; font-size: 13px; display: flex; align-items: center; white-space: nowrap; }
+
+  /* C안 코드칸 */
+  .codepanel { width: 100%; background: rgba(255,255,255,.95); color: #1F1F1F; border-radius: 22px; padding: 16px; }
+  .codepanel .t { font-size: 14px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
+  .codepanel .s { font-size: 12px; color: #666; margin-top: 3px; }
+  .cells { display: flex; gap: 8px; margin-top: 12px; }
+  .cells span { flex: 1; height: 50px; border-radius: 12px; border: 1.5px solid #DDDEE7; display: grid; place-items: center; font-size: 22px; font-weight: 800; color: #5F0080; }
+  .cells span.act { border-color: #5F0080; box-shadow: 0 0 0 3px rgba(95,0,128,.15); }
+  .cells .enter { flex: 1.3; background: #5F0080; color: #fff; border: 0; font-size: 14px; font-weight: 700; }
+
+  /* /join 화면 */
+  .join { background: linear-gradient(170deg, #EDE4F3, #F8F5FA 55%, #EAF1EE); color: #1F1F1F; }
+  .join .status { color: #1F1F1F; }
+  .join-top { position: absolute; top: 40px; left: 0; right: 0; height: 48px; display: flex; align-items: center; padding: 0 14px; gap: 8px; font-weight: 700; font-size: 15px; }
+  .join-top .back { width: 34px; height: 34px; border-radius: 99px; background: #fff; display: grid; place-items: center; font-size: 18px; }
+  .join .card { margin-top: 70px; width: 100%; background: #fff; border-radius: 24px; padding: 28px 20px; text-align: center; box-shadow: 0 10px 30px rgba(95,0,128,.08); }
+  .join .card h3 { font-size: 20px; font-weight: 800; margin-top: 14px; }
+  .join .card p { font-size: 13px; color: #666; margin-top: 6px; }
+  .join .cells span { height: 60px; font-size: 26px; }
+  .join .hint { margin-top: 14px; font-size: 12.5px; color: #666; }
+  .join .foot { position: absolute; left: 22px; right: 22px; bottom: 28px; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+  .join .foot .fn { font-size: 12.5px; color: #555; }
+  .flow { max-width: 1280px; margin: 44px auto 0; background: #fff; border-radius: 18px; padding: 22px 26px; font-size: 13.5px; line-height: 1.9; }
+  .flow h3 { font-size: 16px; margin-bottom: 8px; }
+  .flow table { border-collapse: collapse; width: 100%; margin-top: 8px; font-size: 13px; }
+  .flow th, .flow td { border-bottom: 1px solid #eee; padding: 8px 10px; text-align: left; vertical-align: top; }
+  .flow th { background: #FAF7FC; color: #5F0080; }
+
+  .floatbar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; padding: 28px 16px 32px; background: linear-gradient(to top, rgba(20,0,30,.85) 60%, rgba(20,0,30,0)); }
+  .floatbar .codecard { background: rgba(255,255,255,.96); color: #1F1F1F; border: 0; box-shadow: 0 10px 28px rgba(0,0,0,.35); }
+  .floatbar .codecard .s { color: #666; }
+  .floatbar .codecard .ic { background: #F3E9F8; }
+  .floatbar .codecard .go { background: #5F0080; color: #fff; }
+  .homebar { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); width: 120px; height: 4px; border-radius: 4px; background: rgba(255,255,255,.8); z-index: 7; }
+  .padzone { width: 100%; height: 132px; flex-shrink: 0; border: 1.5px dashed rgba(255,216,77,.8); border-radius: 14px; display: grid; place-items: center; text-align: center; padding: 0 12px; font-size: 11px; color: #FFD84D; font-weight: 700; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <h1>로그인 화면 코드 입장 — 디자인 시안</h1>
+  <p>앱은 랜딩 없이 로그인 화면부터 열려 계정 없는 참여자가 클래스에 들어갈 방법이 없습니다. <b>확정 방향</b>: 회원 탭에서만 화면 하단에 <b>코드로 입장</b> 카드를 떠 있게(플로팅) 고정하고, 카드가 폼을 가리지 않도록 스크롤 아래 여백을 넉넉히 둡니다. 상담사·기관 탭에는 없습니다.
+  노란 점선 = 새로 추가되는 부분. 기기 화면 안은 스크롤됩니다(실제 휴대폰 첫 화면 높이 기준).<br>
+  기획서: <code>docs/로그인-화면-코드입장-기획.md</code></p>
+</div>
+
+<div class="board">
+<div class="col"><div class="label">① 회원 탭 · 첫 화면<small>이메일·비밀번호 위 → 간편 로그인 아래, 하단에 코드 입장 카드 고정</small></div><div class="phone">
+      <img class="bg" src="assets/background3.jpg" alt="" /><div class="shade"></div>
+      <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="screen">
+        <div class="brand"><img class="inv" src="assets/logo_symbol_dark.svg" width="24" alt="" />Mind Breeze</div>
+        <img class="sym inv" src="assets/logo_symbol_dark.svg" width="56" alt="" />
+        <h2 class="title">MIND BREEZE 로그인</h2>
+        <div class="wrap">
+          <div class="tabs"><span class="on">회원</span><span class="">상담사</span><span class="">기관</span></div>
+          <p class="desc">상담과 명상을 이용하는 회원을 위한 로그인입니다.</p>
+          <span class="lbl">이메일</span><div class="inp"></div>
+          <span class="lbl">비밀번호</span><div class="inp"></div>
+          <div class="btn purple">이메일로 회원 로그인</div>
+          <div class="links">비밀번호 찾기 · <b>회원가입</b></div>
+          <div class="div">간편 로그인</div>
+          <div class="btn white"><img src="assets/icon_google.svg" width="18" alt="" />Google로 회원 로그인</div>
+          <div class="btn apple"> Apple로 계속하기</div>
+          <div class="fine">개인정보 처리방침</div>
+          <div class="padzone">하단 여백 (카드 높이 + 홈 바 + 여유)<br>끝까지 내리면 마지막 링크가 카드에 안 가려짐</div>
+        </div>
+      </div>
+      <div class="floatbar"><div class="codecard hl" data-new="신규 · 회원 탭만">
+            <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5F0080" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></svg></div>
+            <div><div class="t">입장 코드가 있나요?</div><div class="s">로그인 없이 바로 들어가요</div></div>
+            <div class="go">코드로 입장</div></div></div><div class="homebar"></div>
+    </div><div class="note">첫 화면에서 스크롤 없이 바로 보임. 카드 뒤 어두운 그라데이션으로 폼과 구분.<br>누르면 기존 <b>/join</b> 코드 입력 화면.</div></div>
+<div class="col"><div class="label">② 회원 탭 · 끝까지 스크롤<small>노란 점선 여백만큼 더 올라가 마지막 링크까지 보임</small></div><div class="phone">
+      <img class="bg" src="assets/background3.jpg" alt="" /><div class="shade"></div>
+      <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="screen" data-scroll-end="1">
+        <div class="brand"><img class="inv" src="assets/logo_symbol_dark.svg" width="24" alt="" />Mind Breeze</div>
+        <img class="sym inv" src="assets/logo_symbol_dark.svg" width="56" alt="" />
+        <h2 class="title">MIND BREEZE 로그인</h2>
+        <div class="wrap">
+          <div class="tabs"><span class="on">회원</span><span class="">상담사</span><span class="">기관</span></div>
+          <p class="desc">상담과 명상을 이용하는 회원을 위한 로그인입니다.</p>
+          <span class="lbl">이메일</span><div class="inp"></div>
+          <span class="lbl">비밀번호</span><div class="inp"></div>
+          <div class="btn purple">이메일로 회원 로그인</div>
+          <div class="links">비밀번호 찾기 · <b>회원가입</b></div>
+          <div class="div">간편 로그인</div>
+          <div class="btn white"><img src="assets/icon_google.svg" width="18" alt="" />Google로 회원 로그인</div>
+          <div class="btn apple"> Apple로 계속하기</div>
+          <div class="fine">개인정보 처리방침</div>
+          <div class="padzone">하단 여백 (카드 높이 + 홈 바 + 여유)<br>끝까지 내리면 마지막 링크가 카드에 안 가려짐</div>
+        </div>
+      </div>
+      <div class="floatbar"><div class="codecard hl" data-new="신규 · 회원 탭만">
+            <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5F0080" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></svg></div>
+            <div><div class="t">입장 코드가 있나요?</div><div class="s">로그인 없이 바로 들어가요</div></div>
+            <div class="go">코드로 입장</div></div></div><div class="homebar"></div>
+    </div><div class="note">여백 = 카드 높이 + 기기 하단 안전영역 + 여유 약 24px.<br>이메일·비밀번호 입력 중(키보드 표시)에는 카드를 숨기고, 키보드가 내려가면 다시 표시.</div></div>
+<div class="col"><div class="label">③ 상담사 탭 (기관 탭 동일)<small>코드 입장 없음 · 기존 화면 그대로</small></div><div class="phone">
+      <img class="bg" src="assets/background3.jpg" alt="" /><div class="shade"></div>
+      <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="screen">
+        <div class="brand"><img class="inv" src="assets/logo_symbol_dark.svg" width="24" alt="" />Mind Breeze</div>
+        <img class="sym inv" src="assets/logo_symbol_dark.svg" width="56" alt="" />
+        <h2 class="title">MIND BREEZE 로그인</h2>
+        <div class="wrap">
+          <div class="tabs"><span class="">회원</span><span class="on">상담사</span><span class="">기관</span></div>
+          <p class="desc">상담사 계정으로 세션과 회원을 관리하세요.</p>
+          <span class="lbl">이메일</span><div class="inp"></div>
+          <span class="lbl">비밀번호</span><div class="inp"></div>
+          <div class="btn purple">상담사 로그인</div>
+          <div class="div">또는</div>
+          <div class="btn white"><img src="assets/icon_google.svg" width="18" alt="" />Google로 상담사 로그인</div>
+          <div class="btn apple"> Apple로 계속하기</div>
+          <div class="links">비밀번호 찾기</div>
+          <div class="links b">상담사 가입</div>
+          <div class="fine">개인정보 처리방침</div>
+        </div>
+      </div>
+      <div class="homebar"></div>
+    </div><div class="note">상담사·기관은 코드 입장 대상이 아니므로 노출하지 않음. 탭을 바꾸면 카드가 사라짐.<br>플랫폼 관리자 로그인에도 없음.</div></div>
+<!-- 이어지는 화면 -->
+  <div class="col">
+    <div class="label">공통 · 다음 화면 (기존 /join, 변경 없음)<small>회원 탭 카드를 누르면 이 화면. 뒤로 가기 → 로그인 화면</small></div>
+    <div class="phone join">
+      <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="join-top"><span class="back">‹</span>코드로 입장</div>
+      <div class="screen" style="color:#1F1F1F">
+        <div class="card">
+          <img src="assets/logo_symbol_dark.svg" width="48" alt="" />
+          <h3>입장 코드를 입력해 주세요</h3>
+          <p>상담사가 알려 준 숫자 4자리예요</p>
+          <div class="cells" style="margin-top:20px"><span>3</span><span>7</span><span class="act"></span><span></span></div>
+          <div class="hint">🔑 숫자 4자리를 모두 입력하면 확인할 수 있어요</div>
+        </div>
+      </div>
+      <div class="foot">
+        <div class="fn">↪ 로그인 없이 입장할 수 있어요</div>
+        <div class="btn purple" style="opacity:.55">코드 확인</div>
+      </div>
+    </div>
+    <div class="note">
+      이후: 클래스 정보 확인 + 이름·이메일·성별·생년월일 + 녹음·녹화 동의 → 대기실.<br>
+      코드는 주소창·저장소에 남기지 않음(기존 원칙 유지).
+    </div>
+  </div>
+</div>
+
+
+<div class="flow">
+  <h3>동작 정리</h3>
+  <table>
+    <tr><th>항목</th><th>내용</th></tr>
+    <tr><td>노출</td><td>회원 탭에서만. 상담사·기관 탭, 플랫폼 관리자 로그인에는 없음</td></tr>
+    <tr><td>위치</td><td>화면 하단 고정(플로팅). 기기 하단 안전영역(홈 바)만큼 띄움</td></tr>
+    <tr><td>스크롤 여백</td><td>회원 탭 폼 아래에 카드 높이 + 안전영역 + 여유만큼 빈 공간 → 끝까지 내리면 모든 링크가 카드 위로 올라옴</td></tr>
+    <tr><td>키보드</td><td>이메일·비밀번호 입력 중에는 카드 숨김(입력칸 가림 방지)</td></tr>
+    <tr><td>누르면</td><td>기존 /join 코드 입력 → 개인정보·녹음 동의 → 대기실. 뒤로 가기 → 회원 로그인 화면</td></tr>
+    <tr><td>웹/앱</td><td>둘 다 같은 동작(웹 로그인 화면으로 직접 들어온 회원도 사용)</td></tr>
+  </table>
+</div>
+<script>document.querySelectorAll('[data-scroll-end]').forEach(e=>e.scrollTop=e.scrollHeight);</script>
+</body>
+</html>
