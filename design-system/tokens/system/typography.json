@@ -352,5 +352,117 @@
         "$type": "dimension"
       }
     }
+  },
+  "mobile": {
+    "type": {
+      "caption": {
+        "size": {
+          "$value": "13px",
+          "$type": "dimension"
+        },
+        "leading": {
+          "$value": "20px",
+          "$type": "dimension"
+        }
+      },
+      "label": {
+        "size": {
+          "$value": "14px",
+          "$type": "dimension"
+        },
+        "leading": {
+          "$value": "20px",
+          "$type": "dimension"
+        }
+      },
+      "compact": {
+        "size": {
+          "$value": "15px",
+          "$type": "dimension"
+        },
+        "leading": {
+          "$value": "24px",
+          "$type": "dimension"
+        }
+      },
+      "body": {
+        "size": {
+          "$value": "16px",
+          "$type": "dimension"
+        },
+        "leading": {
+          "$value": "26px",
+          "$type": "dimension"
+        }
+      },
+      "subtitle": {
+        "size": {
+          "$value": "18px",
+          "$type": "dimension"
+        },
+        "leading": {
+          "$value": "27px",
+          "$type": "dimension"
+        }
+      },
+      "title": {
+        "size": {
+          "$value": "22px",
+          "$type": "dimension"
+        },
+        "leading": {
+          "$value": "30px",
+          "$type": "dimension"
+        }
+      },
+      "hero": {
+        "size": {
+          "$value": "24px",
+          "$type": "dimension"
+        },
+        "leading": {
+          "$value": "32px",
+          "$type": "dimension"
+        }
+      },
+      "number": {
+        "size": {
+          "$value": "28px",
+          "$type": "dimension"
+        },
+        "leading": {
+          "$value": "34px",
+          "$type": "dimension"
+        }
+      }
+    },
+    "touch": {
+      "minimum": {
+        "$value": "44px",
+        "$type": "dimension"
+      },
+      "control": {
+        "$value": "48px",
+        "$type": "dimension"
+      }
+    },
+    "space": {
+      "inline": {
+        "$value": "8px",
+        "$type": "dimension"
+      },
+      "card-gap": {
+        "$value": "12px",
+        "$type": "dimension"
+      },
+      "inset": {
+        "$value": "16px",
+        "$type": "dimension"
+      },
+      "section": {
+        "$value": "24px",
+        "$type": "dimension"
+      }
+    }
   }
 }

@@ -6,3 +6,8 @@
 .floating-bottom-nav__icon{position:relative;display:grid;place-items:center}
 .floating-bottom-nav__badge{position:absolute;top:-5px;right:-9px;box-sizing:border-box;min-width:16px;height:16px;padding:0 2px;border:2px solid #201427;border-radius:15px;background:#b3264b;color:#fff;font-size:10px;line-height:12px;text-align:center}
 @media(min-width:768px){.floating-bottom-nav{display:none}}
+
+/* SDD-234: 모바일 메뉴 라벨만 확대하며 기존 플로팅 높이/색상은 유지한다. */
+@media(max-width:767px){
+  .floating-bottom-nav>a,.floating-bottom-nav>button{font-size:var(--mobile-type-caption-size);line-height:var(--mobile-type-caption-leading)}
+}
