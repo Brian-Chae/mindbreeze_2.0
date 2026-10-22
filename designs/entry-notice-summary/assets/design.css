@@ -6,3 +6,5 @@
 @media(min-width:768px){.foot{margin-top:16px}}
 .desktop-comparison{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:20px}.desktop-comparison figure{margin:0}.desktop-comparison img{display:block;width:100%;border:1px solid #4e3c5b;border-radius:12px}.desktop-comparison figcaption{margin-bottom:8px}@media(max-width:767px){.desktop-comparison{grid-template-columns:1fr}}
 @media(max-width:767px){.condition-break{display:block}.condition-break span{display:none}}
+/* A 마무리: 조건 안내를 짧은 병렬 항목으로 묶는다. */
+.condition-pills{display:flex;flex-wrap:wrap;gap:4px 12px}.condition-pills span{white-space:nowrap}.compact-conditions>p{margin-top:4px}.a .research-copy{font-weight:400}@media(min-width:768px){.condition-pills{justify-content:center}}
