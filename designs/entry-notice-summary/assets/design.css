@@ -5,3 +5,4 @@
 @media(max-width:767px){.checkrow small{width:96px}}
 @media(min-width:768px){.foot{margin-top:16px}}
 .desktop-comparison{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:20px}.desktop-comparison figure{margin:0}.desktop-comparison img{display:block;width:100%;border:1px solid #4e3c5b;border-radius:12px}.desktop-comparison figcaption{margin-bottom:8px}@media(max-width:767px){.desktop-comparison{grid-template-columns:1fr}}
+@media(max-width:767px){.condition-break{display:block}.condition-break span{display:none}}

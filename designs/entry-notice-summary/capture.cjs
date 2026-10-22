@@ -31,5 +31,6 @@ const root=__dirname,url='file://'+path.join(root,'index.html');
   await page.close();
  }
  const page=await browser.newPage({viewport:{width:1440,height:1340},deviceScaleFactor:1});await page.route(/^https?:/,r=>r.abort());await page.goto(url);await page.waitForTimeout(300);await page.screenshot({path:path.join(root,'screenshots/comparison-1440.png')});
+ await page.locator('.desktop-comparison').screenshot({path:path.join(root,'screenshots/desktop-comparison.png')});
  fs.writeFileSync(path.join(root,'verification.json'),JSON.stringify(results,null,2));console.log(JSON.stringify(results,null,2));await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});
