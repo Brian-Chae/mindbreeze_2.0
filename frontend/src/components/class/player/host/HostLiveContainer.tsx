@@ -277,6 +277,8 @@ export function HostLiveContainer(props: HostLiveContainerProps) {
     const update = () => setSignalToast(toastPolicy.current.update({
       sessionId: session.id, connected: live.socketConnected && browserOnline,
       hands: participants.filter((p) => p.hand).map((p) => p.id),
+      handNames: Object.fromEntries(participants.map((p) => [p.id, p.name])),
+      speakingCount: participants.filter((p) => p.speaking).length,
       queue: queue.map((p) => p.id), signals: freshSignals, sheet: ui.sheet,
       blocked: Boolean(status.error || liveKit.error || end.open),
     }, Date.now()));
@@ -395,14 +397,18 @@ export function HostLiveContainer(props: HostLiveContainerProps) {
         queue={queue}
         speakingPanel={speakingPanel}
         signalToast={signalToast ? <HostSignalToast toast={signalToast}
-          onOpen={(topic) => { uiActions.openSheet(topic); toastPolicy.current.dismiss(); setSignalToast(null); }}
-          onDismiss={() => { toastPolicy.current.dismiss(); setSignalToast(null); }}
+          onOpen={(topic) => { uiActions.openSheet(topic); toastPolicy.current.dismiss(topic); }}
+          onDismiss={(topic) => { toastPolicy.current.dismiss(topic); setSignalToast((current) => {
+            const rows = current?.rows?.filter((row) => row.topic !== topic) ?? [];
+            return rows.length ? { ...rows[0], rows } : null;
+          }); }}
           onPause={() => toastPolicy.current.pause(Date.now())}
           onResume={() => toastPolicy.current.resume(Date.now())}
         /> : null}
         readinessPanel={waitingEntries.length ? readinessPanel : undefined}
         preCheckins={preCheckins}
         quietSignals={signalCounts}
+        quietSignalEntries={freshSignals}
         selfBand={selfBandSheet}
         chat={{
           unread: chatUnread,
