@@ -3,6 +3,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ChevronRight } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
 import OrgRemovedNoticeDialog from '../components/org/OrgRemovedNoticeDialog';
 import { StatusBadge } from '../components/session/StatusBadge';
@@ -455,11 +456,11 @@ export default function DashboardPage() {
 
             <div className="ch-rail">
               {/* 최근 대화 */}
-              <section className="ch-panel" aria-label="최근 대화">
+              <section className="ch-panel home-rail-card" aria-label="최근 대화">
                 <div className="mb-3 flex items-center justify-between">
                   <h2>최근 대화</h2>
-                  <Link to="/chat" className="inline-flex min-h-[44px] items-center text-[13px] font-bold text-[#5F0080] hover:underline">
-                    전체
+                  <Link to="/chat" className="home-rail-link inline-flex min-h-[44px] items-center text-[15px] font-bold text-[#5F0080] hover:underline">
+                    전체<ChevronRight size={14} aria-hidden="true" />
                   </Link>
                 </div>
                 {recentChats.length > 0 ? (
@@ -468,14 +469,14 @@ export default function DashboardPage() {
                       <Link
                         key={room.id}
                         to={`/chat/${room.id}`}
-                        className="flex w-full items-start gap-3 border-b border-[#F0ECF2] py-3.5 text-left last:border-0 hover:bg-[#FAF7FC] transition-colors"
+                        className="flex min-h-[56px] w-full items-start gap-3 border-b border-[#F0ECF2] py-3.5 text-left last:border-0 hover:bg-[#FAF7FC] transition-colors"
                       >
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#5F0080] to-[#8A4FB8] text-[12px] font-bold text-white">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#5F0080] to-[#8A4FB8] text-[12px] font-bold text-white">
                           {(room.display_name || room.peer_name || '내').charAt(0)}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[13px] font-bold text-[#1F1F1F]">
+                            <span className="text-[16px] font-semibold text-[#1F1F1F]">
                               {room.display_name || room.peer_name || '내담자'}
                             </span>
                             {(room.unread_count ?? 0) > 0 && (
@@ -484,27 +485,27 @@ export default function DashboardPage() {
                               </span>
                             )}
                           </div>
-                          <div className="truncate text-[13px] text-[#6F6F6F]">
+                          <div className="truncate text-[15px] text-[#6F6F6F]">
                             {room.last_message?.content || '새로운 대화가 없습니다'}
                           </div>
                         </div>
-                        <span className="shrink-0 text-[12px] text-[#767676]">{relativeTime(room.last_message_at ?? null)}</span>
+                        <span className="shrink-0 text-[13px] text-[#767676]">{relativeTime(room.last_message_at ?? null)}</span>
                       </Link>
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-[#E8E3EC] py-8 text-center text-sm text-[#6F6F6F]">
+                  <div className="py-1 text-left text-[15px] text-[#6F6F6F]">
                     대화가 없습니다
                   </div>
                 )}
               </section>
 
               {/* 새 알림 */}
-              <section className="ch-panel" aria-label="새 알림">
+              <section className="ch-panel home-rail-card" aria-label="새 알림">
                 <div className="mb-3 flex items-center justify-between">
                   <h2>새 알림</h2>
-                  <Link to="/notifications" className="inline-flex min-h-[44px] items-center text-[13px] font-bold text-[#5F0080] hover:underline">
-                    전체
+                  <Link to="/notifications" className="home-rail-link inline-flex min-h-[44px] items-center text-[15px] font-bold text-[#5F0080] hover:underline">
+                    전체<ChevronRight size={14} aria-hidden="true" />
                   </Link>
                 </div>
                 {recentNotifications.length > 0 ? (
@@ -520,7 +521,7 @@ export default function DashboardPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-[#E8E3EC] py-8 text-center text-sm text-[#6F6F6F]">
+                  <div className="py-1 text-left text-[15px] text-[#6F6F6F]">
                     새로운 알림이 없습니다
                   </div>
                 )}

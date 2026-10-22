@@ -2,7 +2,7 @@
 import { createElement, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // SDD-219: 상담 공개(플래그 on) 기준의 기존 동작을 검증한다.
 vi.stubEnv('VITE_COUNSELING_ENABLED', 'true');
@@ -54,6 +54,10 @@ beforeEach(() => {
 });
 afterEach(() => cleanup?.());
 
+function LocationMarker() {
+  return <output data-testid="rail-location">{useLocation().pathname}</output>;
+}
+
 describe('회원 홈 기존 섹션 복원', () => {
   it('인사말과 기존 8개 영역을 새 히어로와 함께 렌더한다', async () => {
     const view = await render(<MemberStructureHomePage />);
@@ -67,6 +71,19 @@ describe('회원 홈 기존 섹션 복원', () => {
     expect(view.textContent).toContain('박상담');
     expect(view.textContent).toContain('안녕하세요 메시지');
     expect(view.textContent).toContain('새 알림 제목');
+  });
+  it('레일은 상담사 대화 버튼과 전체 알림 행 클릭을 제공한다', async () => {
+    const view = await render(<><MemberStructureHomePage /><LocationMarker /></>);
+    const rail = view.querySelector('.mh-rail')!;
+    expect([...rail.querySelectorAll('button')].some(b => b.textContent?.includes('대화하기'))).toBe(true);
+    const notification = [...rail.querySelectorAll('button')].find(b => b.textContent?.includes('새 알림 제목'));
+    expect(notification).toBeDefined();
+    expect(notification?.querySelector('button')).toBeNull();
+    const chatButton = [...rail.querySelectorAll('button')].find(b => b.textContent?.includes('대화하기'))!;
+    await act(async () => chatButton.click());
+    expect(view.querySelector('[data-testid="rail-location"]')?.textContent).toBe('/app/chat');
+    await act(async () => notification!.click());
+    expect(view.querySelector('[data-testid="rail-location"]')?.textContent).toBe('/app/notifications');
   });
   it('상태 카드 바로 다음에 내 클래스가 DOM 순서로 온다', async () => {
     const view = await render(<MemberStructureHomePage />);

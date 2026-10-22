@@ -484,11 +484,11 @@ export default function ClientHomePage({ hideHero = false, classSections }: { hi
 
         {/* 담당 상담사 */}
         {primaryCounselor && (
-          <section className={`${CARD_CLS} p-5`}>
+          <section className={`${CARD_CLS} home-rail-card p-5`}>
             <div className={SECTION_HEAD_CLS}>
               <h2 className={SECTION_TITLE_CLS}>담당 상담사</h2>
-              <button type="button" onClick={() => navigate('/app/chat')} className={LINK_CLS}>
-                상담 신청 <ChevronRight size={14} aria-hidden="true" className="inline" />
+              <button type="button" onClick={() => navigate('/app/chat')} className={`${LINK_CLS} home-rail-link`}>
+                대화하기 <ChevronRight size={14} aria-hidden="true" className="inline" />
               </button>
             </div>
             <div className="flex items-center gap-3">
@@ -496,18 +496,18 @@ export default function ClientHomePage({ hideHero = false, classSections }: { hi
                 {primaryCounselor.name?.charAt(0) ?? '상'}
               </div>
               <div className="min-w-0">
-                <div className="text-[15px] font-bold text-[#1F1F1F]">{primaryCounselor.name}</div>
-                <div className="text-[13px] text-[#6F6F6F]">임상·최면심리상담 전문</div>
+                <div className="text-[16px] font-semibold text-[#1F1F1F]">{primaryCounselor.name}</div>
+                <div className="text-[15px] text-[#6F6F6F]">임상·최면심리상담 전문</div>
               </div>
             </div>
           </section>
         )}
 
         {/* 최근 대화 */}
-        <section className={`${CARD_CLS} p-5`}>
+        <section className={`${CARD_CLS} home-rail-card p-5`}>
           <div className={SECTION_HEAD_CLS}>
             <h2 className={SECTION_TITLE_CLS}>최근 대화</h2>
-            <button type="button" onClick={() => navigate('/app/chat')} className={LINK_CLS}>
+            <button type="button" onClick={() => navigate('/app/chat')} className={`${LINK_CLS} home-rail-link`}>
               전체 <ChevronRight size={14} aria-hidden="true" className="inline" />
             </button>
           </div>
@@ -518,14 +518,14 @@ export default function ClientHomePage({ hideHero = false, classSections }: { hi
                   key={room.id}
                   type="button"
                   onClick={() => openChat(room.id)}
-                  className="flex w-full items-start gap-3 border-b border-[#F0ECF2] py-3 text-left last:border-0"
+                  className="flex min-h-[56px] w-full items-start gap-3 border-b border-[#F0ECF2] py-3 text-left last:border-0"
                 >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#5F0080] to-[#8A4FB8] text-[13px] font-bold text-white">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#5F0080] to-[#8A4FB8] text-[13px] font-bold text-white">
                     {(room.display_name || room.peer_name || '상').charAt(0)}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[13px] font-bold text-[#1F1F1F]">
+                      <span className="text-[16px] font-semibold text-[#1F1F1F]">
                         {room.display_name || room.peer_name || '상담사'}
                       </span>
                       {(room.unread_count ?? 0) > 0 && (
@@ -534,44 +534,44 @@ export default function ClientHomePage({ hideHero = false, classSections }: { hi
                         </span>
                       )}
                     </div>
-                    <div className="mt-0.5 truncate text-[13px] text-[#6F6F6F]">
+                    <div className="mt-0.5 truncate text-[15px] text-[#6F6F6F]">
                       {room.last_message?.content || '새로운 대화가 없습니다'}
                     </div>
                   </div>
-                  <span className="shrink-0 text-[12px] text-[#767676]">
+                  <span className="shrink-0 text-[13px] text-[#767676]">
                     {relativeTime(room.last_message_at ?? null)}
                   </span>
                 </button>
               ))}
             </div>
           ) : (
-            <div className="py-8 text-center text-sm text-[#6F6F6F]">대화가 없습니다</div>
+            <div className="py-1 text-left text-[15px] text-[#6F6F6F]">대화가 없습니다</div>
           )}
         </section>
 
         {/* 새 알림 */}
-        <section className={`${CARD_CLS} flex flex-1 flex-col p-5`}>
+        <section className={`${CARD_CLS} home-rail-card p-5`}>
           <div className={SECTION_HEAD_CLS}>
             <h2 className={SECTION_TITLE_CLS}>새 알림</h2>
-            <button type="button" onClick={() => navigate('/app/notifications')} className={LINK_CLS}>
+            <button type="button" onClick={() => navigate('/app/notifications')} className={`${LINK_CLS} home-rail-link`}>
               전체 <ChevronRight size={14} aria-hidden="true" className="inline" />
             </button>
           </div>
           {recentNotifications.length > 0 ? (
-            <div className="flex flex-1 flex-col">
+            <div>
               {recentNotifications.map((n) => (
-                <div key={n.id} className="flex items-start gap-3 border-b border-[#F0ECF2] py-3 last:border-0">
+                <button key={n.id} type="button" onClick={() => navigate('/app/notifications')} className="flex min-h-[56px] w-full items-start gap-3 border-b border-[#F0ECF2] py-3 text-left last:border-0 hover:bg-[#FAF7FC] focus-visible:ring-2 focus-visible:ring-[#5F0080]">
                   <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#5F0080]" />
                   <div className="min-w-0 flex-1">
-                    <div className="text-[13px] text-[#1F1F1F]">{n.title}</div>
-                    {n.body && <div className="truncate text-[12px] text-[#6F6F6F]">{n.body}</div>}
-                    <div className="text-[12px] text-[#767676]">{relativeTime(n.created_at)}</div>
+                    <div className="text-[16px] font-semibold text-[#1F1F1F]">{n.title}</div>
+                    {n.body && <div className="truncate text-[15px] text-[#6F6F6F]">{n.body}</div>}
+                    <div className="text-[13px] text-[#767676]">{relativeTime(n.created_at)}</div>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           ) : (
-            <div className="flex flex-1 items-center justify-center py-8 text-center text-sm text-[#6F6F6F]">
+            <div className="py-1 text-left text-[15px] text-[#6F6F6F]">
               새로운 알림이 없습니다
             </div>
           )}

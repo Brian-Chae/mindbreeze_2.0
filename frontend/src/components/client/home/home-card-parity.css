@@ -50,3 +50,7 @@
 @media(min-width:1600px){.cs-structure .mc-stack.mh-home{grid-template-columns:minmax(0,1fr) 352px}}
 
 @media(min-width:768px) and (max-width:1023px){[data-shell-variant]>section>div:has(>.ch-home){padding:24px}}
+
+/* 회원·상담사 홈의 보조 카드는 내용 높이를 사용한다. */
+:is(.cs-structure .mh-home,.ch-home) section.home-rail-card{min-height:0;flex:none;align-self:start;width:100%}
+:is(.mh-home,.ch-home) .home-rail-link{display:inline-flex;align-items:center;justify-content:flex-end;gap:4px;min-width:44px;min-height:44px;font-size:15px}

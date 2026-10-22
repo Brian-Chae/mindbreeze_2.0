@@ -1,0 +1,1142 @@
+[
+  {
+    "width": 390,
+    "role": "client",
+    "mode": "dev",
+    "panels": [
+      {
+        "text": "담당 상담사상담 신청 샘샘플 상담사임상·최면심리상담 전문",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "height": 200,
+        "minHeight": "200px",
+        "borderRadius": "20px",
+        "padding": "24px"
+      },
+      {
+        "text": "최근 대화전체 샘샘플 상담사2다음 시간에도 편안하게 이야기 나눠요.5시간 전",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "height": 200,
+        "minHeight": "200px",
+        "borderRadius": "20px",
+        "padding": "24px"
+      },
+      {
+        "text": "새 알림전체 명상 기록이 도착했습니다오늘의 변화와 다음 수업 안내를 확인해 보세요.5시간 전명상 기록이 도착했습니다오늘의 변화와 다음 수업 안내를 확인해 보세요.5시간 전명상 기록이 도착했습니다오늘의 변화와 다음 수업 안내를 확인해 보세요.5시간 전",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "height": 350.5,
+        "minHeight": "200px",
+        "borderRadius": "20px",
+        "padding": "24px"
+      }
+    ],
+    "rows": [
+      {
+        "text": "상담 신청",
+        "fontSize": "13px",
+        "fontWeight": "700",
+        "height": 44,
+        "minHeight": "44px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "전체",
+        "fontSize": "13px",
+        "fontWeight": "700",
+        "height": 44,
+        "minHeight": "44px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "샘샘플 상담사2다음 시간에도 편안하게 이야기 나눠요.5시간 전",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "height": 65,
+        "minHeight": "44px",
+        "borderRadius": "0px",
+        "padding": "12px 0px"
+      },
+      {
+        "text": "전체",
+        "fontSize": "13px",
+        "fontWeight": "700",
+        "height": 44,
+        "minHeight": "44px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      }
+    ],
+    "avatars": [
+      {
+        "text": "샘",
+        "fontSize": "13px",
+        "fontWeight": "700",
+        "height": 40,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px"
+      },
+      {
+        "text": "샘",
+        "fontSize": "13px",
+        "fontWeight": "700",
+        "height": 32,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px"
+      }
+    ],
+    "text": [
+      {
+        "text": "담당 상담사",
+        "fontSize": "18px",
+        "fontWeight": "800",
+        "height": 38,
+        "minHeight": "auto",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "샘",
+        "fontSize": "13px",
+        "fontWeight": "700",
+        "height": 40,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px"
+      },
+      {
+        "text": "샘플 상담사",
+        "fontSize": "15px",
+        "fontWeight": "700",
+        "height": 22.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "임상·최면심리상담 전문",
+        "fontSize": "13px",
+        "fontWeight": "400",
+        "height": 19.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "최근 대화",
+        "fontSize": "18px",
+        "fontWeight": "800",
+        "height": 38,
+        "minHeight": "auto",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "샘",
+        "fontSize": "13px",
+        "fontWeight": "700",
+        "height": 32,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px"
+      },
+      {
+        "text": "샘플 상담사",
+        "fontSize": "13px",
+        "fontWeight": "700",
+        "height": 19.5,
+        "minHeight": "auto",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "2",
+        "fontSize": "12px",
+        "fontWeight": "800",
+        "height": 18,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px 6px"
+      },
+      {
+        "text": "다음 시간에도 편안하게 이야기 나눠요.",
+        "fontSize": "13px",
+        "fontWeight": "400",
+        "height": 19.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "5시간 전",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "auto",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "새 알림",
+        "fontSize": "18px",
+        "fontWeight": "800",
+        "height": 38,
+        "minHeight": "auto",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "height": 8,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px"
+      },
+      {
+        "text": "명상 기록이 도착했습니다",
+        "fontSize": "13px",
+        "fontWeight": "400",
+        "height": 19.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "오늘의 변화와 다음 수업 안내를 확인해 보세요.",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "5시간 전",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "height": 8,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px"
+      },
+      {
+        "text": "명상 기록이 도착했습니다",
+        "fontSize": "13px",
+        "fontWeight": "400",
+        "height": 19.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "오늘의 변화와 다음 수업 안내를 확인해 보세요.",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "5시간 전",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "height": 8,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px"
+      },
+      {
+        "text": "명상 기록이 도착했습니다",
+        "fontSize": "13px",
+        "fontWeight": "400",
+        "height": 19.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "오늘의 변화와 다음 수업 안내를 확인해 보세요.",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "5시간 전",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      }
+    ],
+    "scrollWidth": 390,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "role": "counselor",
+    "mode": "dev",
+    "panels": [
+      {
+        "text": "최근 대화전체샘샘플 상담사2다음 시간에도 편안하게 이야기 나눠요.5시간 전",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "height": 200,
+        "minHeight": "200px",
+        "borderRadius": "20px",
+        "padding": "24px"
+      },
+      {
+        "text": "새 알림전체명상 기록이 도착했습니다오늘의 변화와 다음 수업 안내를 확인해 보세요.5시간 전명상 기록이 도착했습니다오늘의 변화와 다음 수업 안내를 확인해 보세요.5시간 전명상 기록이 도착했습니다오늘의 변화와 다음 수업 안내를 확인해 보세요.5시간 전",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "height": 358.5,
+        "minHeight": "200px",
+        "borderRadius": "20px",
+        "padding": "24px"
+      }
+    ],
+    "rows": [
+      {
+        "text": "전체",
+        "fontSize": "13px",
+        "fontWeight": "700",
+        "height": 44,
+        "minHeight": "44px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "샘샘플 상담사2다음 시간에도 편안하게 이야기 나눠요.5시간 전",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "height": 67,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "14px 0px"
+      },
+      {
+        "text": "전체",
+        "fontSize": "13px",
+        "fontWeight": "700",
+        "height": 44,
+        "minHeight": "44px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "명상 기록이 도착했습니다오늘의 변화와 다음 수업 안내를 확인해 보세요.5시간 전",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "height": 84.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "14px 0px"
+      },
+      {
+        "text": "명상 기록이 도착했습니다오늘의 변화와 다음 수업 안내를 확인해 보세요.5시간 전",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "height": 84.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "14px 0px"
+      },
+      {
+        "text": "명상 기록이 도착했습니다오늘의 변화와 다음 수업 안내를 확인해 보세요.5시간 전",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "height": 83.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "14px 0px"
+      }
+    ],
+    "avatars": [
+      {
+        "text": "샘",
+        "fontSize": "12px",
+        "fontWeight": "700",
+        "height": 32,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px"
+      }
+    ],
+    "text": [
+      {
+        "text": "최근 대화",
+        "fontSize": "18px",
+        "fontWeight": "800",
+        "height": 38,
+        "minHeight": "auto",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "샘",
+        "fontSize": "12px",
+        "fontWeight": "700",
+        "height": 32,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px"
+      },
+      {
+        "text": "샘플 상담사",
+        "fontSize": "13px",
+        "fontWeight": "700",
+        "height": 19.5,
+        "minHeight": "auto",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "2",
+        "fontSize": "12px",
+        "fontWeight": "800",
+        "height": 18,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px 6px"
+      },
+      {
+        "text": "다음 시간에도 편안하게 이야기 나눠요.",
+        "fontSize": "13px",
+        "fontWeight": "400",
+        "height": 19.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "5시간 전",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "auto",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "새 알림",
+        "fontSize": "18px",
+        "fontWeight": "800",
+        "height": 38,
+        "minHeight": "auto",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "height": 8,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px"
+      },
+      {
+        "text": "명상 기록이 도착했습니다",
+        "fontSize": "13px",
+        "fontWeight": "400",
+        "height": 19.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "오늘의 변화와 다음 수업 안내를 확인해 보세요.",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "5시간 전",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "height": 8,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px"
+      },
+      {
+        "text": "명상 기록이 도착했습니다",
+        "fontSize": "13px",
+        "fontWeight": "400",
+        "height": 19.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "오늘의 변화와 다음 수업 안내를 확인해 보세요.",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "5시간 전",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "height": 8,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px"
+      },
+      {
+        "text": "명상 기록이 도착했습니다",
+        "fontSize": "13px",
+        "fontWeight": "400",
+        "height": 19.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "오늘의 변화와 다음 수업 안내를 확인해 보세요.",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "5시간 전",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      }
+    ],
+    "scrollWidth": 390,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "role": "client",
+    "mode": "dev",
+    "panels": [
+      {
+        "text": "담당 상담사상담 신청 샘샘플 상담사임상·최면심리상담 전문",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "height": 200,
+        "minHeight": "200px",
+        "borderRadius": "20px",
+        "padding": "24px"
+      },
+      {
+        "text": "최근 대화전체 샘샘플 상담사2다음 시간에도 편안하게 이야기 나눠요.5시간 전",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "height": 200,
+        "minHeight": "200px",
+        "borderRadius": "20px",
+        "padding": "24px"
+      },
+      {
+        "text": "새 알림전체 명상 기록이 도착했습니다오늘의 변화와 다음 수업 안내를 확인해 보세요.5시간 전명상 기록이 도착했습니다오늘의 변화와 다음 수업 안내를 확인해 보세요.5시간 전명상 기록이 도착했습니다오늘의 변화와 다음 수업 안내를 확인해 보세요.5시간 전",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "height": 350.5,
+        "minHeight": "200px",
+        "borderRadius": "20px",
+        "padding": "24px"
+      }
+    ],
+    "rows": [
+      {
+        "text": "상담 신청",
+        "fontSize": "13px",
+        "fontWeight": "700",
+        "height": 44,
+        "minHeight": "44px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "전체",
+        "fontSize": "13px",
+        "fontWeight": "700",
+        "height": 44,
+        "minHeight": "44px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "샘샘플 상담사2다음 시간에도 편안하게 이야기 나눠요.5시간 전",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "height": 65,
+        "minHeight": "44px",
+        "borderRadius": "0px",
+        "padding": "12px 0px"
+      },
+      {
+        "text": "전체",
+        "fontSize": "13px",
+        "fontWeight": "700",
+        "height": 44,
+        "minHeight": "44px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      }
+    ],
+    "avatars": [
+      {
+        "text": "샘",
+        "fontSize": "13px",
+        "fontWeight": "700",
+        "height": 40,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px"
+      },
+      {
+        "text": "샘",
+        "fontSize": "13px",
+        "fontWeight": "700",
+        "height": 32,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px"
+      }
+    ],
+    "text": [
+      {
+        "text": "담당 상담사",
+        "fontSize": "18px",
+        "fontWeight": "800",
+        "height": 27,
+        "minHeight": "auto",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "샘",
+        "fontSize": "13px",
+        "fontWeight": "700",
+        "height": 40,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px"
+      },
+      {
+        "text": "샘플 상담사",
+        "fontSize": "15px",
+        "fontWeight": "700",
+        "height": 22.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "임상·최면심리상담 전문",
+        "fontSize": "13px",
+        "fontWeight": "400",
+        "height": 19.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "최근 대화",
+        "fontSize": "18px",
+        "fontWeight": "800",
+        "height": 27,
+        "minHeight": "auto",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "샘",
+        "fontSize": "13px",
+        "fontWeight": "700",
+        "height": 32,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px"
+      },
+      {
+        "text": "샘플 상담사",
+        "fontSize": "13px",
+        "fontWeight": "700",
+        "height": 19.5,
+        "minHeight": "auto",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "2",
+        "fontSize": "12px",
+        "fontWeight": "800",
+        "height": 18,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px 6px"
+      },
+      {
+        "text": "다음 시간에도 편안하게 이야기 나눠요.",
+        "fontSize": "13px",
+        "fontWeight": "400",
+        "height": 19.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "5시간 전",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "auto",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "새 알림",
+        "fontSize": "18px",
+        "fontWeight": "800",
+        "height": 27,
+        "minHeight": "auto",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "height": 8,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px"
+      },
+      {
+        "text": "명상 기록이 도착했습니다",
+        "fontSize": "13px",
+        "fontWeight": "400",
+        "height": 19.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "오늘의 변화와 다음 수업 안내를 확인해 보세요.",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "5시간 전",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "height": 8,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px"
+      },
+      {
+        "text": "명상 기록이 도착했습니다",
+        "fontSize": "13px",
+        "fontWeight": "400",
+        "height": 19.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "오늘의 변화와 다음 수업 안내를 확인해 보세요.",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "5시간 전",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "height": 8,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px"
+      },
+      {
+        "text": "명상 기록이 도착했습니다",
+        "fontSize": "13px",
+        "fontWeight": "400",
+        "height": 19.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "오늘의 변화와 다음 수업 안내를 확인해 보세요.",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "5시간 전",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      }
+    ],
+    "scrollWidth": 1440,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "role": "counselor",
+    "mode": "dev",
+    "panels": [
+      {
+        "text": "최근 대화전체샘샘플 상담사2다음 시간에도 편안하게 이야기 나눠요.5시간 전",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "height": 200,
+        "minHeight": "200px",
+        "borderRadius": "20px",
+        "padding": "24px"
+      },
+      {
+        "text": "새 알림전체명상 기록이 도착했습니다오늘의 변화와 다음 수업 안내를 확인해 보세요.5시간 전명상 기록이 도착했습니다오늘의 변화와 다음 수업 안내를 확인해 보세요.5시간 전명상 기록이 도착했습니다오늘의 변화와 다음 수업 안내를 확인해 보세요.5시간 전",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "height": 358.5,
+        "minHeight": "200px",
+        "borderRadius": "20px",
+        "padding": "24px"
+      }
+    ],
+    "rows": [
+      {
+        "text": "전체",
+        "fontSize": "13px",
+        "fontWeight": "700",
+        "height": 44,
+        "minHeight": "44px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "샘샘플 상담사2다음 시간에도 편안하게 이야기 나눠요.5시간 전",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "height": 67,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "14px 0px"
+      },
+      {
+        "text": "전체",
+        "fontSize": "13px",
+        "fontWeight": "700",
+        "height": 44,
+        "minHeight": "44px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "명상 기록이 도착했습니다오늘의 변화와 다음 수업 안내를 확인해 보세요.5시간 전",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "height": 84.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "14px 0px"
+      },
+      {
+        "text": "명상 기록이 도착했습니다오늘의 변화와 다음 수업 안내를 확인해 보세요.5시간 전",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "height": 84.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "14px 0px"
+      },
+      {
+        "text": "명상 기록이 도착했습니다오늘의 변화와 다음 수업 안내를 확인해 보세요.5시간 전",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "height": 83.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "14px 0px"
+      }
+    ],
+    "avatars": [
+      {
+        "text": "샘",
+        "fontSize": "12px",
+        "fontWeight": "700",
+        "height": 32,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px"
+      }
+    ],
+    "text": [
+      {
+        "text": "최근 대화",
+        "fontSize": "18px",
+        "fontWeight": "800",
+        "height": 38,
+        "minHeight": "auto",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "샘",
+        "fontSize": "12px",
+        "fontWeight": "700",
+        "height": 32,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px"
+      },
+      {
+        "text": "샘플 상담사",
+        "fontSize": "13px",
+        "fontWeight": "700",
+        "height": 19.5,
+        "minHeight": "auto",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "2",
+        "fontSize": "12px",
+        "fontWeight": "800",
+        "height": 18,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px 6px"
+      },
+      {
+        "text": "다음 시간에도 편안하게 이야기 나눠요.",
+        "fontSize": "13px",
+        "fontWeight": "400",
+        "height": 19.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "5시간 전",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "auto",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "새 알림",
+        "fontSize": "18px",
+        "fontWeight": "800",
+        "height": 38,
+        "minHeight": "auto",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "height": 8,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px"
+      },
+      {
+        "text": "명상 기록이 도착했습니다",
+        "fontSize": "13px",
+        "fontWeight": "400",
+        "height": 19.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "오늘의 변화와 다음 수업 안내를 확인해 보세요.",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "5시간 전",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "height": 8,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px"
+      },
+      {
+        "text": "명상 기록이 도착했습니다",
+        "fontSize": "13px",
+        "fontWeight": "400",
+        "height": 19.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "오늘의 변화와 다음 수업 안내를 확인해 보세요.",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "5시간 전",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "height": 8,
+        "minHeight": "auto",
+        "borderRadius": "9999px",
+        "padding": "0px"
+      },
+      {
+        "text": "명상 기록이 도착했습니다",
+        "fontSize": "13px",
+        "fontWeight": "400",
+        "height": 19.5,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "오늘의 변화와 다음 수업 안내를 확인해 보세요.",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      },
+      {
+        "text": "5시간 전",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 18,
+        "minHeight": "0px",
+        "borderRadius": "0px",
+        "padding": "0px"
+      }
+    ],
+    "scrollWidth": 1440,
+    "errors": []
+  }
+]
