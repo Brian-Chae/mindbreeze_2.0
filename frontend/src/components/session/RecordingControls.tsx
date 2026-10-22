@@ -64,6 +64,7 @@ export function RecordingControls({ state, elapsedSec, onStart, onPause, onResum
             <button
               type="button"
               onClick={onStop}
+              data-rec-action="stop"
               className="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900"
             >
               녹음 종료
@@ -82,6 +83,7 @@ export function RecordingControls({ state, elapsedSec, onStart, onPause, onResum
             <button
               type="button"
               onClick={onStop}
+              data-rec-action="stop"
               className="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900"
             >
               녹음 종료

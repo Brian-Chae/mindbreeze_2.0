@@ -340,6 +340,10 @@
 .hp-legacy [class*="bg-[#FDF6E5]"] { background: rgba(179, 115, 239, 0.2) !important; border-color: var(--mb-lavender) !important; }
 .hp-legacy [class*="bg-[#F2F3F8]"] { background: var(--hp-fill) !important; color: var(--tx-hi) !important; }
 .hp-legacy [class*="bg-[#F2212133]"] { background: rgba(240, 96, 93, 0.18) !important; color: #FFC9C6 !important; }
+/* 녹음 종료는 위험 동작 — 어두운 시트에서 붉은 계열로 표시한다(시스템 다크모드의 dark:bg-neutral-100 흰 버튼 방지). */
+.hp-legacy button[data-rec-action="stop"], .hp-btn[data-rec-action="stop"] { background: #D9443F !important; border: 1px solid #D9443F !important; color: #FFFFFF !important; font-weight: 600; }
+.hp-legacy button[data-rec-action="stop"]:hover, .hp-btn[data-rec-action="stop"]:hover { background: #C23A35 !important; border-color: #C23A35 !important; }
+.hp-legacy button[data-rec-action="stop"]:focus-visible, .hp-btn[data-rec-action="stop"]:focus-visible { outline: 2px solid #FFC9C6; outline-offset: 2px; }
 /* 마커 추가 버튼(bg-amber-500 + 흰 글자)은 어두운 시트 위에서 대비가 2:1 이하라 브랜드 보라로 바꾼다 */
 .hp-legacy [class*="bg-amber-500"] { background: var(--mb-purple) !important; color: #fff !important; }
 .hp-legacy .grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px !important; }
