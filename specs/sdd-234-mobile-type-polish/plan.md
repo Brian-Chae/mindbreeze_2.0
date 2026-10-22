@@ -8,7 +8,7 @@
 
 - `design-system/tokens/system/typography.json`, `design-system/build/outputs/{css,tailwind,ts}/*` 생성물, `DESIGN.md`
 - `frontend/tailwind.config.cjs`, `frontend/src/index.css`, 신규 `frontend/src/mobile-foundation.css`
-- `frontend/src/components/layout/{AppShell, floating-bottom-nav}.tsx` (공백 없는 실제 파일명 `AppShell.tsx`, `floating-bottom-nav.tsx`), `floating-bottom-nav.css`
+- `frontend/src/components/layout/{AppShell,floating-bottom-nav}.tsx` (공백 없는 실제 파일명 `AppShell.tsx`, `floating-bottom-nav.tsx`), `floating-bottom-nav.css`
 - `frontend/src/components/client/ClientShell.tsx`
 - `specs/sdd-234-mobile-type-polish/*`, 측정·검증 산출물
 - StructureShell은 기존 AppShell/ClientShell 기반을 그대로 상속. `structure-shell.css`는 화면 규칙도 포함하므로 B 단독 소유로 넘긴다. 공통 CSS는 셸 고유 클래스만 대상으로 하여 카드 스타일을 침범하지 않는다.
@@ -24,6 +24,7 @@
 - `pages/client/{member-structure-home-page,ClientHomePage}.tsx`
 - `pages/DashboardPage.tsx`, `components/dashboard/*.{tsx,css}`
 - `components/client/home/{member-class-strip.tsx,member-home-layout.css,home-card-parity.css}`
+- `components/client/code-entry-button.tsx` (B에서도 사용하지만 A만 수정)
 - `components/class/flow/shell/MemberHomeView.tsx`
 
 작업:
@@ -54,6 +55,7 @@
 - `pages/reports/*.{tsx,css}`
 - `pages/client/{ClientReportListPage,ClientReportDetailModal}.tsx`
 - `components/reports/*.{tsx,css}`
+- `components/legal/wellness-notice.tsx` (공유 안내 스타일은 C만 수정, 문구 불변)
 
 작업:
 - [ ] 목록 메타/배지 13+, 제목 18+, 서사·본문 16/26. 모달 헤더/닫기·필터·다운로드 터치 44+.
@@ -72,6 +74,13 @@
 - [ ] 방 헤더·메시지 간격 8/12/16, 긴 한글·URL 줄바꿈과 모바일 키보드 높이 확인.
 - [ ] **별도 `fix/class-chat-dark-theme`의 `ChatRoom.tsx`, `ClassChatPanel.tsx`와 충돌 가능. 해당 FIX 반영 상태를 통합 담당과 확인한 뒤 스타일 hunk만 순차 적용. 색상·테마 조건·기능을 덮어쓰지 않는다.**
 - [ ] --area=D after + chat 관련 vitest. 목록/방 + 클래스 채팅 패널 추가 캡처, 390 하한·768/1440 유지.
+
+## 공통 토큰 사용 계약
+
+- `mobile:text-mb-{caption,label,compact,body,subtitle,title,hero,number}`: 767px 이하에서만 적용. 데스크톱 클래스는 기존 그대로 둔다.
+- CSS는 `@media(max-width:767px)` 안에서 `var(--mobile-type-body-size)` / `var(--mobile-type-body-leading)` 사용.
+- `--mobile-touch-minimum=44px`, `--mobile-touch-control=48px`. 공통 입력 최소 높이48은 기존 16px 입력 글꼴 가드와 함께 적용(checkbox/radio/range/file/hidden 제외).
+- 전역 카드/본문 확대는 없음. StructureShell의 본문 크기 조정은 B, 홈 parity는 A.
 
 ## 측정 실행
 

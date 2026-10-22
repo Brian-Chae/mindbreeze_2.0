@@ -10,6 +10,7 @@ const area = arg('area', 'all').toUpperCase();
 const phase = arg('phase', 'audit');
 if (!['ALL','A','B','C','D'].includes(area) || !/^[a-z0-9-]+$/i.test(phase)) throw Error('잘못된 area/phase');
 const widths = arg('widths','390,768,1440').split(',').map(Number);
+if(widths.some(x=>!Number.isInteger(x)||x<320||x>3840))throw Error('widths는 320~3840 정수');
 const out = path.join(__dirname, 'screens', phase);
 if(fs.existsSync(out)&&fs.readdirSync(out).length&&!process.argv.includes('--overwrite'))throw Error('기존 측정 보존: 새 phase를 쓰거나 의도한 재측정에만 --overwrite 사용');
 const counselors = [{id:'sample-host',name:'샘플 상담사',profile_image:null}];
@@ -58,7 +59,7 @@ async function collect(page) {
  return page.evaluate(()=>{
   const visible = el => {const c=getComputedStyle(el),r=el.getBoundingClientRect();return c.display!=='none'&&c.visibility!=='hidden'&&Number(c.opacity)!==0&&r.width>0&&r.height>0&&!el.closest('[aria-hidden="true"], [inert]');};
   const selector = el => {const parts=[];while(el&&el!==document.body){const siblings=el.parentElement?[...el.parentElement.children].filter(x=>x.tagName===el.tagName):[];parts.unshift(el.tagName.toLowerCase()+`:nth-of-type(${siblings.indexOf(el)+1})`);el=el.parentElement;}return 'body > '+parts.join(' > ');};
-  const base = el => {const c=getComputedStyle(el),r=el.getBoundingClientRect();return {selector:selector(el),class:typeof el.className==='string'?el.className:'',text:(el.getAttribute('aria-label')||el.textContent||el.getAttribute('placeholder')||'').trim().slice(0,160),fontSize:parseFloat(c.fontSize),lineHeight:c.lineHeight,fontWeight:c.fontWeight,fontFamily:c.fontFamily,width:r.width,height:r.height,x:r.x,y:r.y,padding:c.padding,margin:c.margin,gap:c.gap};};
+  const base = el => {const c=getComputedStyle(el),r=el.getBoundingClientRect();return {tag:el.tagName.toLowerCase(),inputType:el.getAttribute('type'),selector:selector(el),class:typeof el.className==='string'?el.className:'',text:(el.getAttribute('aria-label')||el.textContent||el.getAttribute('placeholder')||'').trim().slice(0,160),fontSize:parseFloat(c.fontSize),lineHeight:c.lineHeight,fontWeight:c.fontWeight,fontFamily:c.fontFamily,width:r.width,height:r.height,x:r.x,y:r.y,padding:c.padding,margin:c.margin,gap:c.gap};};
   const scope=document.querySelector('dialog:modal')||document.body;
   const all=[...scope.querySelectorAll('*')].filter(visible);
   // 직접 텍스트 노드가 있는 요소만 세어 부모·자식 중복을 피한다. SVG text, 입력 placeholder 포함.
@@ -100,7 +101,8 @@ async function collect(page) {
   fs.writeFileSync(path.join(out,file+'.json'),JSON.stringify(result,null,2));results.push(result);
   console.log(JSON.stringify({name,width,failure,errors,unknown:result.unknown,...metrics.summary}));await page.close();
  }
- fs.writeFileSync(path.join(out,`summary-${area.toLowerCase()}.json`),JSON.stringify(results.map(({texts,touches,spacing,violations,...rest})=>rest),null,2));
- if(results.some(x=>x.failure||x.errors.length))process.exitCode=1;
+ const saved=fs.readdirSync(out).filter(f=>/^[ABCD]-.+-\d+\.json$/.test(f)&&(area==='ALL'||f.startsWith(area+'-'))).sort().map(f=>JSON.parse(fs.readFileSync(path.join(out,f),'utf8')));
+ fs.writeFileSync(path.join(out,`summary-${area.toLowerCase()}.json`),JSON.stringify(saved.map(({texts,touches,spacing,violations,...rest})=>rest),null,2));
+ if(results.some(x=>x.failure||x.errors.length||x.unknown.length))process.exitCode=1;
  }finally{await browser.close();await server.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
