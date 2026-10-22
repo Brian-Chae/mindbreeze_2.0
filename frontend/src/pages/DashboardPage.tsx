@@ -23,6 +23,7 @@ import {
 import '../components/class/structure/structure-shell.css';
 import '../components/client/home/member-home-layout.css';
 import '../components/dashboard/counselor-home.css';
+import '../components/client/home/home-card-parity.css';
 import {
   getCounselorDashboard,
   type ClassSummary,
@@ -253,7 +254,7 @@ export default function DashboardPage() {
       title={`안녕하세요, ${displayName}님`}
       sub={orgLabel}
       rightSlot={
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="ch-header-actions flex flex-wrap items-center gap-2">
           <Link
             to="/classes"
             className="h-11 inline-flex items-center px-4 rounded-full border border-[#DDD0EA] bg-white text-[#5F0080] font-semibold text-sm hover:bg-[#F5EDFC] transition-colors"

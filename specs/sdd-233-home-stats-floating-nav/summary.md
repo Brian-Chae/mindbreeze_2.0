@@ -43,3 +43,46 @@
 - 전체 테스트 로그는218파일 중212통과/6실패, 2541건 중2530통과/11실패. workflow의 테스트는 비차단이므로 CI 성공과 전체 테스트 통과를 구분한다.
 - 직전 SDD-232 PR CI https://github.com/Brian-Chae/mindbreeze_2.0/actions/runs/39763466182 와 실패 테스트 이름11개가 정확히 일치함을 대조했다(기준2515통과/11실패). 이번 추가 테스트15개는 통과.
 - 기존 실패6파일: agent-counselor-page.test.tsx(2), chat-message-deeplink.test.ts(2), org-counselor-management-browser.test.cjs(1), org-management-browser.test.cjs(2), report-modal-pdf.test.cjs(2), report-server-pdf.test.cjs(2). 입력 요소 기대 불일치와 로컬5175 미실행/브라우저 timeout. 범위 밖 수정하지 않음.
+
+## 2026-10-22 — 실제 앱 셸 카드 표현 회귀 수정
+
+### 원인 확정
+- `DashboardPage.tsx`는 `AppShell` 기본 variant를 직접 렌더한다. `.cs-structure`는 `StructureShell`이 생성하는 조상이며 상담사 `/dashboard`에는 없다. 회원 `/app`은 `StructureShell → ClientShell` 안이다.
+- 이전 `counselor-home.css:2`의 `.cs-structure .ch-home`이 매칭되지 않아 `--ch-radius`, `--ch-line`, display/gap/max-width가 빠졌다. `MemberClassStyles`의 `.cs-structure .mc-*`도 상담사 카드에 적용되지 않았다.
+- 실제 라우트 Chrome RED: 상담사 hero/tile/classCard radius0, hero→review gap0. 회원 대비 클래스 border·chip·progress까지 누락됐다. 기존 mock이 실제 셸의 선택자 전제까지 검사하지 못한 회귀다.
+
+### 수정과 보존 범위
+- `home-card-parity.css`에서 두 홈의 radius20/section24/border/shadow 및 hero/chip/CTA, 상태4개, 클래스, 패널 규격을 공유한다. 상담사 선택자는 `.cs-structure`에 의존하지 않는다.
+- 회원 모바일에도 요청한 공통 규격을 적용: hero min240/padding24, 상태152/padding18, 클래스304/padding24. 하단 패널은 공통 최소높이200/padding24이며 내용이 많으면 자연스럽게 늘어난다. 실제 내용 높이를 고정하거나 잘라내지 않는다.
+- 히어로 CTA는 양쪽48px·전체 폭, 타이틀24px. 검토배너 radius20/border/shadow, 모바일 버튼44px·내용 폭. 헤더3개는 390px에서 왼쪽 한 줄로 정렬한다.
+- AppShell 여백과 홈 여백이 중복되지 않게 하며 콘텐츠 최대폭1200을 공유한다. 기존 >=1600 보조열352 보존, 768~1023 상담사 본문 패딩24로 회원과 일치.
+- TSX는 CSS import와 헤더 식별 className만 변경. 문구·링크·순서·데이터·상태카드 위치·클래스4개 제한·플로팅 메뉴 기능은 유지.
+
+### 실제 셸 브라우저 검증
+- `node specs/sdd-233-home-stats-floating-nav/parity.cjs` 및 `--built` 실행. Chrome headless, API 합성 데이터만 응답하고 외부 네트워크 차단. Vite envDir는 빈 임시 디렉터리로 지정해 저장소 .env를 읽지 않는다.
+- 최종 PNG/JSON은 npm build 산출물을 preview한 `--built` 결과. 실제 `/app`·`/dashboard`를 로드하며 셸을 mock하거나 `.cs-structure`를 주입하지 않는다.
+- 상담사 structureAncestor=false, 회원=true. 390/1440 각각 상태4개·클래스4개 전부 및 회원4/상담사3개 패널의 규격 검사. panel 최소높이/스타일은 전체 비교, 내용에 따른 높이 차이는 허용한다(현재 fixture에서는 모든 패널200).
+- `getComputedStyle` 측정: 아래 각 셀의 회원/상담사 차이0. 높이는 현재 합성 데이터 기준이며 hero min-height240, 패널 min-height200을 별도 검사한다.
+
+| 항목 | 390 회원 / 상담사 | 1440 회원 / 상담사 |
+|---|---|---|
+| 히어로 폭 | 358 / 358 | 1120 / 1120 |
+| 히어로 높이 | 263.188 / 263.188 | 263.188 / 263.188 |
+| hero/tile/class/panel radius | 20 / 20 | 20 / 20 |
+| hero/tile/class/panel padding | 24·18·24·24 / 동일 | 24·18·24·24 / 동일 |
+| tile/class/panel 높이 | 152·304·200 / 동일 | 152·304·200 / 동일 |
+| section gap / hero→review | 24 / 24 | 24 / 24 |
+| 상태카드 간격 | 12 / 12 | 16 / 16 |
+
+- tile/panel border1px #e8e3ec, class border1px #e8e2ed, shadow `0 2px 8px #35213f06` 양쪽 동일. chip/CTA radius·height·padding·border·shadow도 비교 통과.
+- JS오류0, 페이지 가로 넘침0, 클래스4개 유지. `screens/parity-390.png`, `parity-1440.png`는 실제 화면 두 개를 나란히 배치. `parity-{폭}-{member|counselor}{|-classes|-panels}.png`는 홈 상단/클래스/패널 캡처. `screens/parity.json`은 전체 측정값.
+- 독립 검증자 발견 사항(데스크톱 여백80px 중복, >=1600 열 덮어쓰기, 첫 카드만 측정)을 모두 수정 후 재리뷰에서 차단 이슈 없음 확인.
+
+### 테스트·잔여 한계
+- 관련 vitest: 10파일70건 통과(홈 component/layout/stats, 회원 overview/legacy, 상담사 홈, 카드·세션 navigation, class-flow-shell-home, floating-nav).
+- `tsc -p tsconfig.app.json --noEmit`, 변경 TSX eslint, `node --check parity.cjs`, `git diff --check` 통과.
+- `npm run build -- --config /tmp/sdd233-check-config.mts` 통과. 임시 config는 기존 vite config를 재사용하되 빈 envDir와 기존 캡처와 같은 design-system alias만 지정. 기존 dynamic import/큰 chunk 경고는 남음.
+- 전체 vitest: 변경 후와 HEAD 제품 파일로 돌린 기준선 모두 **209통과/12실패 파일, 2513통과/4실패 테스트**로 동일. 이번 변경의 신규 실패 없음.
+  - 실제 실패4: `agent-counselor-page.test.tsx`의 브리핑 CTA/입력창2건, `chat-message-deeplink.test.ts`의 missing/failure2건.
+  - 별도 실행용 파일 수집 오류10: `e2e/class-fixture.test.mjs`, `e2e/class-structure/{read,visual}.spec.ts`, `tests/{login-role,narrative-sections,org-counselor-management-browser,org-management-api,org-management-browser,report-modal-pdf,report-server-pdf}.test.cjs`.
+- 실제 iPhone/Safari·실 API·긴 실제 콘텐츠 검증은 하지 않았다. 빌드된 실제 앱 셸+mock Chrome 증거와 구분한다. 서버/DB/.env 접근·메일·머지·develop 푸시·배포 없음.

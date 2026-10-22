@@ -30,3 +30,15 @@
 - mock Chrome 회원·상담사390/430/1440, PNG18개. JS오류/가로넘침0. 두홈6개→4카드·전체 보기(6) 확인.
 - 바66px/좌우16px/아래12px, 마지막 콘텐츠 간격 회원37.6px/상담사21.7px. safe-area34 모의에서도 동일 간격.
 - 실 iOS/실API는 미실행으로 구분하여 summary 인계. 관리자는 공통 셸 DOM/CSS·역할별 테스트로 확인, 별도 관리자 브라우저 캡처 없음.
+
+## 10/22 카드 회귀 — 수정 전 추가 검증 계약
+- 실제 AppShell `/dashboard`에 `.cs-structure`가 없어도 스타일이 적용된다.
+- 실제 ClientShell `/app`과 390/1440에서 hero/chip/button/tile/classCard/panel의 computed radius/height/min-height/padding/border/shadow가 일치한다.
+- 섹션 gap24, 히어로→검토배너24, 4개 클래스, 가로 넘침0, JS오류0을 `parity.cjs`가 assert한다.
+- `screens/parity-*.png`에 두 홈 개별·나란히 캡처, `parity.json`에 측정값을 저장한다.
+- 스타일만 변경하며 기존 동작 테스트와 tsc/eslint/build를 통과한다. 실제 iPhone Safari 검증과 mock Chrome 증거를 구분한다.
+
+### 카드 회귀 실행 결과
+- 실제 셸 RED에서 상담사 radius0/gap0 재현 후 공통 스타일 적용, DEV 및 BUILD Chrome 390/1440 비교 GREEN.
+- 히어로 폭358/1120, 높이263.188, 상태152, 클래스304, 패널200(합성 데이터), radius20/padding24·18·24·24/gap24 양쪽 일치. 모든 상태·클래스·패널 규격 비교, 가로 넘침/JS오류0.
+- 관련70건/tsc/eslint/build 통과. 전체 vitest 기준선과 수정 후 동일12파일4건 실패(상세 summary). 독립 리뷰 지적3건 수정 후 차단 이슈 없음.

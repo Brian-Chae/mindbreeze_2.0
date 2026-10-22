@@ -1,6 +1,7 @@
 import { HOME_CLASS_LIMIT } from '../../lib/dashboard/counselor-home-model';
 import { MemberClassStrip } from '../../components/client/home/member-class-strip';
 import '../../components/client/home/member-home-layout.css';
+import '../../components/client/home/home-card-parity.css';
 import { Link } from 'react-router-dom';
 import { isCounselingEnabled } from '../../lib/feature-flags';
 import { useAuthStore } from '../../stores/authStore';
