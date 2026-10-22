@@ -407,7 +407,10 @@ def _member_rows(db, cls, member):
 def _participation_scope(db, member, originals, session, participant):
     starts = [m.joined_at for m in originals if m.joined_at]
     scheduled = _aware(session.scheduled_at) if session.scheduled_at else None
-    if scheduled and starts and scheduled < min(_aware(stamp) for stamp in starts):
+    # 가입 전 회차 판정은 회차가 '끝난' 시각 기준이다. 즉석 클래스는 scheduled_at 이 클래스 생성 시각이라
+    # 회원이 항상 그 뒤에 가입하므로, 예정 시각으로 비교하면 진행 중 입장한 회원도 before_join 으로 막힌다.
+    cutoff = _aware(session.ended_at) if session.ended_at else scheduled
+    if cutoff and starts and cutoff < min(_aware(stamp) for stamp in starts):
         return "before_join"
     # 과거 참가 근거는 최근 재가입/이탈 시각에 의해 사라지지 않는다.
     if participant is not None and participant.attendance_status in ("attended", "absent", "excused"):

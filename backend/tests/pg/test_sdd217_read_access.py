@@ -281,3 +281,14 @@ def test_t10_cancelled_target_keeps_cancellable_reservation_without_counting_it(
     assert data['capabilities']['cancel_makeup'] is True
     assert data['makeup']['id']==str(a.id)
     summary=c.get(f'/api/v1/classes/{cls.id}/me/membership',headers=h).json()['attendance_summary'];assert summary['makeup_reserved']==0
+
+
+def test_instant_joined_during_session_reads_own_report(pg_session,monkeypatch):
+    """즉석 클래스: 회차 scheduled_at(생성 시각) 뒤에 가입해 진행 중 입장·출석한 회원은 본인 리포트를 연다."""
+    db=pg_session;_,_,cls,o,m,ss=scene(db)
+    s=ss[0];s.scheduled_at=NOW-timedelta(hours=1);s.started_at=NOW-timedelta(hours=1);s.ended_at=NOW-timedelta(minutes=10)
+    m.joined_at=NOW-timedelta(minutes=50);m.activated_at=m.joined_at
+    r=report(db,s,participant(db,m,s));db.commit();c=http(db,monkeypatch)
+    res=c.get(f'/api/v1/reports/{r.id}',headers=bearer(o));assert res.status_code==200,res.text
+    a=c.get(f'/api/v1/classes/{cls.id}/me/attendance',headers=bearer(o)).json()['sessions']
+    assert a[0]['participation_scope']=='eligible'
