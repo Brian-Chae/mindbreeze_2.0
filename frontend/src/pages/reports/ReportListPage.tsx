@@ -333,7 +333,7 @@ export default function ReportListPage() {
         aria-label={autoApprove ? '자동 승인' : '수동 승인'}
         disabled={toggleDisabled}
         onClick={() => void handleToggleAutoApprove()}
-        className={`mobile:min-h-11 mobile:min-w-11 relative w-11 h-6 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+        className={`mobile:min-h-11 mobile:min-w-11 mobile:py-2.5 mobile:bg-clip-content relative w-11 h-6 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
           autoApprove ? 'bg-[#5F0080]' : 'bg-[#D4D4D4]'
         }`}
       >

@@ -46,3 +46,21 @@ it.each([390, 767])('%ipx 긴 서사·미측정 리포트는 글자와 터치 �
   expect(await page.locator('body').textContent()).toContain(report.content!.counselor_comment);
   await page.close();
 });
+
+it('390px에서 글자 200% 확대 후에도 긴 서사와 마지막 동작에 접근한다', async () => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await page.setContent(`<style>${css}</style>${renderToStaticMarkup(<ClientReportViewer report={report} onClose={() => {}} />)}`);
+  await page.evaluate(() => {
+    // 부모·자식이 중복 확대되지 않도록 원래 계산값을 먼저 수집한다.
+    const sizes = [...document.querySelectorAll<HTMLElement>('body *')].map(el => ({ el, size: parseFloat(getComputedStyle(el).fontSize), leading: parseFloat(getComputedStyle(el).lineHeight) }));
+    for (const { el, size, leading } of sizes) {
+      el.style.fontSize = `${size * 2}px`;
+      if (Number.isFinite(leading)) el.style.lineHeight = `${leading * 2}px`;
+    }
+  });
+  await page.getByRole('link', { name: 'PDF 다운로드' }).scrollIntoViewIfNeeded();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const box = await page.getByRole('link', { name: 'PDF 다운로드' }).boundingBox();
+  expect(box && box.x >= 0 && box.x + box.width <= 390 && box.y >= 0 && box.y < 844).toBe(true);
+  await page.close();
+});
