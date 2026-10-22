@@ -88,7 +88,7 @@ async function collect(page) {
   await page.route('**/*',route=>{const u=new URL(route.request().url());if(u.pathname.startsWith('/api/')){const data=fixture(u.pathname,role);if(data===undefined)unknown.push(u.pathname);return route.fulfill({status:data===undefined?404:200,json:data??{detail:'측정 fixture 미등록'}});}if(!['127.0.0.1','localhost'].includes(u.hostname))return route.abort();if(u.pathname.startsWith('/socket.io'))return route.fulfill({status:503,body:''});return route.continue();});
   await page.routeWebSocket(/socket\.io/,socket=>socket.close());
   let failure=null;
-  try{await page.goto('http://127.0.0.1:5444'+url);if(ready==='case'){await page.waitForFunction(()=>window.__ready===true,{},{timeout:15000});if(await page.getByText('케이스 미등록',{exact:true}).count())throw Error('케이스 미등록');}else await page.locator(ready).first().waitFor({timeout:15000});await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(250);}catch(e){failure=e.message;}
+  try{await page.goto('http://127.0.0.1:5444'+url);if(ready==='case'){await page.waitForFunction(()=>window.__ready===true,{},{timeout:15000});if(await page.getByText('케이스 미등록',{exact:true}).count())throw Error('케이스 미등록');}else await page.locator(ready).filter({visible:true}).first().waitFor({timeout:15000});await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(250);}catch(e){failure=e.message;}
   const metrics=await collect(page);
   const file=`${group}-${name}-${width}`;
   fs.writeFileSync(path.join(out,file+'.json'),JSON.stringify({area:group,name,role,url,width,failure,errors,unknown,...metrics},null,2));
