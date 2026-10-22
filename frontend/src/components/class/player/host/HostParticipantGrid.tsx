@@ -63,11 +63,12 @@ function HostTile({ p, metric, allOff, netBad, pressed, onSelect }: {
 
   if (allOff) {
     return (
-      <button type="button" className="hp-tile" data-pz="tile" data-away="true" data-band="off" data-participant-id={p.id}
-        aria-pressed={pressed} aria-label={`${p.name} ${checkinLabel(p)} ${presenceLabel(p)}`} onClick={() => onSelect(p.id)}>
+      <button type="button" className="hp-tile" data-pz="tile" data-away="true" data-band="off" data-hand={p.hand ? 'true' : undefined} data-speaking={p.speaking ? 'true' : undefined} data-participant-id={p.id}
+        aria-pressed={pressed} aria-label={`${p.name} ${checkinLabel(p)} ${presenceLabel(p)}${p.hand ? ", 손들었어요" : ""}${p.speaking ? ", 말하는 중" : ""}`} onClick={() => onSelect(p.id)}>
+        {badge ? <span className="hp-tile__badge" data-kind={badge} aria-hidden="true">{badge === 'speak' ? <Mic strokeWidth={2} /> : <Hand strokeWidth={2} />}</span> : null}
         <div className="hp-avring"><span className="hp-avt">{p.name.slice(0, 1)}</span></div>
         <span className="hp-tile__nm">{p.name}</span>
-        <span className="hp-tile__st"><i className="hp-dot" data-state="off" />{checkinLabel(p)} · {presenceLabel(p)}</span>
+        <span className="hp-tile__st"><i className="hp-dot" data-state="off" />{p.speaking ? '말하는 중' : p.hand ? '손듦 · 대기 중' : `${checkinLabel(p)} · ${presenceLabel(p)}`}</span>
       </button>
     );
   }
@@ -102,13 +103,15 @@ function HostTile({ p, metric, allOff, netBad, pressed, onSelect }: {
   const label = leadoff ? `${p.name} 접촉 불량` : lost ? `${p.name} 연결 끊김` : `${p.name} 밴드 미착용`;
   return (
     <button type="button" className="hp-tile" data-pz="tile" data-band={p.band} data-participant-id={p.id}
-      data-away={leadoff ? undefined : 'true'} aria-pressed={pressed} aria-label={label} onClick={() => onSelect(p.id)}>
+      data-hand={p.hand ? 'true' : undefined} data-speaking={p.speaking ? 'true' : undefined}
+      data-away={leadoff ? undefined : 'true'} aria-pressed={pressed} aria-label={`${label}${p.hand ? ", 손들었어요" : ""}${p.speaking ? ", 말하는 중" : ""}`} onClick={() => onSelect(p.id)}>
+      {badge ? <span className="hp-tile__badge" data-kind={badge} aria-hidden="true">{badge === 'speak' ? <Mic strokeWidth={2} /> : <Hand strokeWidth={2} />}</span> : null}
       <StatusRing variant="mini" fraction={null} tone={ringTone} ariaLabel={label}>
         <span className="hp-ring-nb" data-warn={leadoff || lost ? 'true' : undefined}>{nb}</span>
       </StatusRing>
       <span className="hp-tile__nm">{p.name}</span>
       <span className="hp-tile__st" data-tone={leadoff ? 'warn' : undefined}>
-        <i className="hp-dot" data-state={DOT_STATE[p.band]} />{statusText}
+        <i className="hp-dot" data-state={DOT_STATE[p.band]} />{p.speaking ? '말하는 중' : p.hand ? '손듦 · 대기 중' : statusText}
       </span>
     </button>
   );

@@ -141,10 +141,11 @@ describe('HostLiveContainer — 뷰 모델 조립', () => {
     expect(text(one('[data-pz="ttl"]'))).toContain('/ 30:00');
   });
 
-  it('손든 회원 칩과 밴드 요약이 라이브 행에서 나온다', async () => {
+  it('상시 손들기와 수업 상태의 밴드 요약이 라이브 행에서 나온다', async () => {
     await render(<HostLiveContainer {...baseProps()} />);
-    const line = text(one('[data-pz="chipline"]'));
-    expect(line).toContain('손든 회원 1');
+    expect(text(one('[data-signal="hands"]'))).toContain('손들기 1');
+    await click(one('.hp-status-open'));
+    const line = text(sheet());
     expect(line).toContain('연결 2');
     expect(line).toContain('미착용 1');
   });
@@ -312,7 +313,7 @@ describe('발언권·채팅·녹음 연결', () => {
   it('손든 회원 시트의 발언권 부여가 페이지 핸들러로 간다', async () => {
     const props = baseProps();
     await render(<HostLiveContainer {...props} />);
-    await click(buttonByText('손든 회원 1', one('[data-pz="chipline"]') ?? document));
+    await click(one('[data-signal="hands"]'));
     const grant = all('button', sheet() ?? document).find((b) => text(b) === '발언권 부여');
     await click(grant ?? null);
     expect(props.speaking.onSet).toHaveBeenCalledWith('p2', true);

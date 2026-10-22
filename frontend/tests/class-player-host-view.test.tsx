@@ -91,9 +91,9 @@ describe('상담사 뷰 — C01 기본', () => {
     expect(labels).toEqual(['지표 기준', '채팅', '미디어', '체크인', '도구']);
   });
 
-  it('칩 줄에는 연결 5 · 미착용 2 · 끊김 1 요약이 있다', async () => {
-    await renderCase('C01');
-    const line = text(one('[data-pz="chipline"]'));
+  it('수업 상태 시트에는 연결 5 · 미착용 2 · 끊김 1 요약이 있다', async () => {
+    await renderCase('C01', 'sheet=alerts');
+    const line = text(one('[data-pz="sheet"]'));
     expect(line).toContain('연결 5');
     expect(line).toContain('미착용 2');
     expect(line).toContain('끊김 1');
