@@ -1,0 +1,37 @@
+{
+  "vitest": {
+    "files": 7,
+    "passed": 62,
+    "exitCode": 0,
+    "scope": "related"
+  },
+  "tsc": {
+    "command": "npx tsc --noEmit -p tsconfig.app.json",
+    "exitCode": 0
+  },
+  "eslint": {
+    "scope": [
+      "src/components/layout/AppShell.tsx",
+      "src/components/client/ClientShell.tsx",
+      "src/components/layout/floating-bottom-nav.tsx"
+    ],
+    "exitCode": 0
+  },
+  "foundation": {
+    "screens": 60,
+    "mobileChecks": 108,
+    "desktopChecks": 120,
+    "failures": 0
+  },
+  "tokens": {
+    "widths": [
+      390,
+      767,
+      768,
+      1440
+    ],
+    "failures": 0
+  },
+  "independentReview": "passed",
+  "fullVitestRun": false
+}
