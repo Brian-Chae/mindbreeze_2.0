@@ -92,7 +92,7 @@ describe('FM04 코드 입력', () => {
   });
   it('오류 문구는 하나뿐이다(없는·틀린·종료 구분 없음)', async () => {
     await render(<CodeEntryView digits="0047" status="error" memberName={null} onChange={noop} onSubmit={noop} onBack={noop} />);
-    expect(qa('[role="alert"]').map((e) => e.textContent)).toEqual(['코드를 확인해 주세요']);
+    expect(qa('[role="alert"]').map((e) => e.textContent)).toEqual(['코드를 확인해 주세요. 4자리를 다시 입력해 주세요']);
   });
   it('붙여넣기는 숫자만 4자리로 받는다', async () => {
     const onChange = vi.fn();
@@ -162,17 +162,23 @@ describe('/join 컨테이너', () => {
   it('코드는 문자열 그대로(0042) 확인하고, 틀린 코드(404)와 제한(429)·서버 오류를 구분해 안내한다', async () => {
     verifyEntryCode.mockRejectedValueOnce(new ApiError(404, '세션을 찾을 수 없습니다', null));
     await renderPage();
+    // 4자리를 다 넣으면 버튼 없이 바로 확인한다
     await enterCode('0042');
-    await click(btn('코드 확인'));
+    expect(verifyEntryCode).toHaveBeenCalledTimes(1);
     expect(verifyEntryCode).toHaveBeenCalledWith('0042');
     expect(text()).toContain('코드를 확인해 주세요');
+    // 틀린 코드면 칸을 비우고 첫 칸에 커서를 둬 바로 다시 입력하게 한다
+    expect(qa<HTMLInputElement>('input').map((i) => i.value).join('')).toBe('');
+    expect(document.activeElement).toBe(qa('input')[0]);
 
     verifyEntryCode.mockRejectedValueOnce(new ApiError(422, '형식', null));
-    await click(btn('코드 확인'));
+    await enterCode('0042');
+    expect(verifyEntryCode).toHaveBeenCalledTimes(2);
     expect(text()).toContain('코드를 확인해 주세요');
 
     verifyEntryCode.mockRejectedValueOnce(new ApiError(429, '제한', null));
-    await click(btn('코드 확인'));
+    await enterCode('0042');
+    expect(verifyEntryCode).toHaveBeenCalledTimes(3);
     expect(text()).toContain('잠시 후 다시 시도해 주세요');
   });
 
@@ -184,7 +190,6 @@ describe('/join 컨테이너', () => {
     });
     await renderPage();
     await enterCode('0042');
-    await click(btn('코드 확인'));
     expect(text()).toContain('정보를 입력해 주세요');
 
     await type(document.getElementById('fm-name') as HTMLInputElement, '지은');
@@ -213,7 +218,6 @@ describe('/join 컨테이너', () => {
     verifyEntryCode.mockResolvedValue({ title: '명상', scheduled_at: null, host_name: null });
     await renderPage();
     await enterCode('0042');
-    await click(btn('코드 확인'));
     await type(document.getElementById('fm-name') as HTMLInputElement, '지은');
     await type(document.getElementById('fm-email') as HTMLInputElement, 'jieun@');
     await agreeRecording();
@@ -228,7 +232,6 @@ describe('/join 컨테이너', () => {
     enterByCode.mockRejectedValue(new ApiError(404, '세션을 찾을 수 없습니다', null));
     await renderPage();
     await enterCode('0042');
-    await click(btn('코드 확인'));
     await type(document.getElementById('fm-name') as HTMLInputElement, '지은');
     await click(qa('[role="radio"]')[1] as HTMLElement);
     await type(document.getElementById('fm-birth') as HTMLInputElement, '1990.03.12');
