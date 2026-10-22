@@ -118,9 +118,25 @@ export default function CodeEntryPage() {
     } catch (error) {
       if (!aliveRef.current) return;
       const failure = classifyCodeError(error);
+      // 없는·틀린 코드면 칸을 비워 바로 다시 입력하게 한다(경고는 유지).
+      if (failure === 'invalid') setDigits('');
       setStatus(failure === 'invalid' ? 'error' : failure === 'throttled' ? 'throttled' : 'unavailable');
     }
   }, [digits, status, isAuthenticated, user?.role]);
+
+  // 4자리를 다 입력하면 버튼 없이 바로 확인한다(키보드를 내리고 버튼을 누르지 않아도 됨).
+  // 같은 코드로는 한 번만 자동 확인한다 — 다음 단계에서 뒤로 왔을 때 되돌아 넘어가지 않게.
+  const autoSubmittedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (step !== 'code') return;
+    if (!isCompleteCode(digits)) {
+      autoSubmittedRef.current = null;
+      return;
+    }
+    if (status !== 'idle' || autoSubmittedRef.current === digits) return;
+    autoSubmittedRef.current = digits;
+    void submitCode();
+  }, [digits, status, step, submitCode]);
 
   const joinClass = async () => {
     if (!classInfo || submitting) return;
@@ -188,6 +204,7 @@ export default function CodeEntryPage() {
       if (failure === 'invalid') {
         // 그 사이 코드가 닫혔다 — 코드 입력으로 돌아간다(구분 없는 같은 안내)
         setStep('code');
+        setDigits('');
         setStatus('error');
       } else if (failure === 'throttled') {
         setSubmitError('잠시 후 다시 시도해 주세요');

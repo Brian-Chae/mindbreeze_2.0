@@ -17,7 +17,7 @@ beforeEach(() => { Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); });
 function Location() { const loc = useLocation(); return <p>{loc.pathname}{loc.search}</p>; }
 async function click(text: string) { const button = [...container.querySelectorAll('button')].find((b) => b.textContent === text); expect(button).toBeDefined(); await act(async () => button!.click()); }
-async function start() { await act(async () => root.render(<MemoryRouter><Routes><Route path="/" element={<CodeEntryPage />} /><Route path="/app/classes/:id" element={<Location />} /><Route path="/class/:sid/enter" element={<Location />} /><Route path="/app" element={<Location />} /></Routes></MemoryRouter>)); await click('코드 채우기'); await click('확인'); }
+async function start() { await act(async () => root.render(<MemoryRouter><Routes><Route path="/" element={<CodeEntryPage />} /><Route path="/app/classes/:id" element={<Location />} /><Route path="/class/:sid/enter" element={<Location />} /><Route path="/app" element={<Location />} /></Routes></MemoryRouter>)); await click('코드 채우기'); /* 4자리가 차면 자동 확인 */ }
 it('미래 일정만 있어도 확인 후 회원 가입하고 클래스 상세로 이동한다', async () => {
   mocks.post.mockResolvedValueOnce({ class_id: 'c1', title: '주간 명상', sessions: [], next_session: { session_id: 's2', scheduled_at: '2030-01-01T09:00:00Z', status: 'scheduled', seq: 2 } }).mockResolvedValueOnce({ class_id: 'c1', member_id: 'm1', status: 'active' });
   await start(); expect(container.textContent).toContain('주간 명상'); expect(mocks.verify).not.toHaveBeenCalled();
