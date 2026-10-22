@@ -520,13 +520,6 @@ export default function ReportListPage() {
 
   return (
     <AppShell title="리포트" sub={isAiEnabled() ? 'AI REPORTS' : 'REPORTS'} rightSlot={!loading ? rightSlot : undefined}>
-      {!loading && (
-        <div className="mb-4 md:hidden flex items-center gap-3 flex-wrap">
-          {autoApproveToggle}
-          {bulkApproveButton}
-          {sampleLink}
-        </div>
-      )}
       {autoApproveError && (
         <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm">{autoApproveError}</div>
       )}
