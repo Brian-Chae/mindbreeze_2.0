@@ -86,3 +86,59 @@ def test_개인정보_파기된_참여자는_비움(client):
     db.commit()
     res = _get(client, host, report)
     assert res.json()["report_email"] is None
+
+
+def test_회원_리포트_승인시_계정_이메일로_자동_발송(client, monkeypatch):
+    """회원도 이메일(아이디)로 리포트 메일을 받는다 — 승인 → 예약 → 계정 이메일로 발송."""
+    from unittest.mock import Mock
+
+    from app.models.record import Report
+    from app.models.session import SessionParticipant
+    from app.services import report_email_service, report_service
+
+    email = f"Member-{uuid4().hex[:8]}@test.com"
+    host, pid, rid = _seed(client, member_email=email, guest_email=None)
+    db = _db()
+    try:
+        report = db.get(Report, rid)
+        report.status = "pending_review"
+        db.commit()
+        sender = Mock(return_value=True)
+        monkeypatch.setattr(report_email_service, "send_report_email", sender)
+        monkeypatch.setattr(
+            report_email_service, "enqueue_report_email", lambda r: report_email_service.deliver_report_email(r, db)
+        )
+        report_service.approve_report(str(rid), host["id"], db)
+        participant = db.get(SessionParticipant, pid)
+        db.refresh(participant)
+        assert sender.call_count == 1
+        assert sender.call_args.args[0] == email.lower()
+        assert participant.report_email == email.lower()
+        assert participant.report_email_sent_at is not None
+    finally:
+        db.close()
+
+
+def test_리포트_제외한_회원에게는_발송_안함(client, monkeypatch):
+    from unittest.mock import Mock
+
+    from app.models.record import Report
+    from app.models.session import SessionParticipant
+    from app.services import report_email_service, report_service
+
+    email = f"member-{uuid4().hex[:8]}@test.com"
+    host, pid, rid = _seed(client, member_email=email, guest_email=None)
+    db = _db()
+    try:
+        db.get(SessionParticipant, pid).report_included = False
+        db.get(Report, rid).status = "pending_review"
+        db.commit()
+        sender = Mock(return_value=True)
+        monkeypatch.setattr(report_email_service, "send_report_email", sender)
+        monkeypatch.setattr(
+            report_email_service, "enqueue_report_email", lambda r: report_email_service.deliver_report_email(r, db)
+        )
+        report_service.approve_report(str(rid), host["id"], db)
+        sender.assert_not_called()
+    finally:
+        db.close()

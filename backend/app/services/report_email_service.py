@@ -181,7 +181,9 @@ def deliver_report_email(report_id: str, db: DBSession) -> str:
         SessionParticipant.id == report.participant_id,
         SessionParticipant.session_id == report.session_id,
     ).populate_existing().with_for_update().first()
-    if not participant or participant.pii_scrubbed_at is not None or not participant.report_email:
+    from app.services.report_service import fill_member_report_email
+
+    if not participant or not fill_member_report_email(participant, db):
         return "unavailable"
     if not participant.report_included:
         # SDD-209(B3): 제외 참가자에게는 발송하지 않는다.

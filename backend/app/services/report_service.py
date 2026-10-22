@@ -148,6 +148,20 @@ def _effective_report_email(participant: SessionParticipant | None, db: DBSessio
     return db.query(User.email).filter(User.id == participant.user_id).scalar()
 
 
+def fill_member_report_email(participant: SessionParticipant | None, db: DBSession) -> str | None:
+    """회원 참여자의 report_email 이 비어 있으면 계정 이메일로 채운다(자동 발송·열람 링크 검증용).
+
+    이메일은 아이디라 회원도 리포트 메일을 받는다. 비회원·파기 참여자는 건드리지 않는다.
+    """
+    if participant is None or participant.pii_scrubbed_at is not None:
+        return None
+    if not participant.report_email and participant.user_id is not None:
+        email = db.query(User.email).filter(User.id == participant.user_id).scalar()
+        if email:
+            participant.report_email = email.strip().lower()
+    return participant.report_email
+
+
 def _serialize(
     report: Report,
     session: Session | None = None,
@@ -1050,7 +1064,7 @@ def _enqueue_client_email_on_approval(report: Report, db: DBSession) -> None:
         )
         .first()
     )
-    if participant is None or not participant.report_email:
+    if not fill_member_report_email(participant, db):
         return
     if participant.report_email_sent_at is not None:
         return
