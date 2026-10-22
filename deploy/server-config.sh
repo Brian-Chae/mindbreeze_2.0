@@ -11,7 +11,7 @@ set +x
 WEB_HOST="${1:?WEB_HOST}"; API_HOST="${2:?API_HOST}"; PUBLIC_IP="${3:?PUBLIC_IP}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REGION="${AWS_DEFAULT_REGION:-ap-northeast-1}"; export AWS_DEFAULT_REGION="$REGION"
-LIVEKIT_VERSION="${LIVEKIT_VERSION:-1.8.0}"   # dev 서버와 동일 버전
+LIVEKIT_VERSION="${LIVEKIT_VERSION:-1.13.10}"   # dev 서버와 동일 버전(2026-10-22 1.8.0→1.13.10: livekit-client 2.19 와 협상 실패 해소)
 SSM_PREFIX="/mindbreeze/prod"
 [ "$(id -u)" = "0" ] || { echo "root 로 실행하세요" >&2; exit 2; }
 log() { echo "[server-config] $*"; }
