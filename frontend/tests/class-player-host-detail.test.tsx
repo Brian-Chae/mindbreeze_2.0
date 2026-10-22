@@ -69,7 +69,8 @@ describe('H3 1:1 카드(C05·C06)', () => {
     const strip = text(one('[data-pz="mstrip"]'));
     expect(strip).toContain('강조해서 보는 지표');
     expect(strip).not.toContain('그룹 평균');
-    expect(text(one('[data-pz="chipline"]'))).toContain('밴드 연결됨');
+    await click(one('.hp-status-open'));
+    expect(text(sheet())).toContain('밴드 연결됨');
   });
 
   it('C05: 회원이 카메라를 켜지 않았으면 회원 영상 자리가 DOM 에 없다(확정 결정 #1)', async () => {

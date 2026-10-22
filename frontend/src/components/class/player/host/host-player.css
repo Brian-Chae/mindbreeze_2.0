@@ -331,6 +331,8 @@
 /* 기존 라이트 테마 컴포넌트(SpeakingRightsPanel·SessionMonitorSummary)를 어두운 시트 안에 맞춘다 — 터치 44px·글자 12px 이상 보장 */
 .hp-legacy { display: flex; flex-direction: column; gap: 8px; }
 .hp-legacy button { min-height: var(--tap); min-width: var(--tap); }
+.hp-legacy .mb-btn--ghost { color: var(--tx-hi); border-color: var(--hp-line); background: rgba(255, 255, 255, .08); }
+.hp-legacy [role="alert"] { color: #FFC9C6; }
 .hp-legacy section { background: var(--hp-fill) !important; border-color: var(--hp-line) !important; }
 .hp-legacy [class*="text-[#1F1F1F]"] { color: var(--tx-hi) !important; }
 .hp-legacy [class*="text-[#6F6F6F]"], .hp-legacy [class*="text-[#9B9B9B]"] { color: var(--tx-mid) !important; }
@@ -466,3 +468,25 @@
 .hp-entry-dialog p { color: var(--tx-mid); font-size: var(--fs-15); min-height: 24px; }
 .hp-entry-dialog__actions { display: flex; justify-content: center; gap: 12px; margin: 24px 0 12px; }
 .hp-entry-dialog__actions button { min-height: 44px; min-width: 64px; padding: 0 12px; border: 1px solid var(--sheet-border); border-radius: 12px; }
+
+/* SDD-235: 도크와 같은 그리드 행에 쌓아 본문 높이에서 신호 줄 76px을 확보한다. */
+.hp-mobile-signals { height: 76px; flex: none; padding-block: 6px; }
+.hp-signalbar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; height: 100%; }
+.hp-signalbar button { min-width: 0; min-height: 44px; display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding: 8px 12px; border: 1px solid var(--mb-lavender); border-radius: 14px; background: #30213d; text-align: left; color: var(--tx-hi); }
+.hp-signalbar button[data-empty="true"] { opacity: .58; border-color: var(--hp-line); background: #211a29; }
+.hp-signalbar button[aria-pressed="true"] { outline: 2px solid var(--mb-lavender); outline-offset: -3px; }
+.hp-signalbar button:focus-visible, .hp-status-open:focus-visible { outline: 2px solid var(--mb-lavender); outline-offset: 2px; }
+.hp-signalbar span { display: flex; flex-direction: column; gap: 2px; }
+.hp-signalbar b { font-size: 15px; line-height: 20px; }
+.hp-signalbar small { font-size: 13px; line-height: 18px; color: var(--tx-mid); }
+.hp-desktop-signals { display: none; }
+.hp-statusline { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.hp-statusline > .hp-chipline { flex: 1; min-width: 0; }
+.hp-status-open { flex: none; min-height: 44px; padding: 8px 12px; border: 1px solid var(--hp-line); border-radius: 24px; background: #211a29; font-size: 13px; }
+.hp-signal-toast-slot { position: absolute; top: 0; left: 0; right: 0; z-index: 10; }
+.hp-signals-sheet .hp-note { font-size: 15px; }
+.hp-sheet .hp-row__tx small, .hp-legacy [class*="text-xs"] { font-size: 13px; }
+.hp-shell[data-sheet-mode="side"] .hp-mobile-signals { display: none; }
+.hp-shell[data-sheet-mode="side"] .hp-desktop-signals { display: block; flex: none; }
+.hp-shell[data-sheet-mode="side"] .hp-desktop-signals .hp-signalbar button { padding: 5px 12px; }
+.hp-shell[data-sheet-mode="side"] .hp-desktop-signals .hp-signalbar small { display: block; }

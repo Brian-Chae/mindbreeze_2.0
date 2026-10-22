@@ -71,7 +71,7 @@ import {
   countSignals,
   isClassSignalType,
   pruneSignals,
-  recordSignal,
+  receiveSignal,
   SIGNAL_ACTIVE_MS,
   type ActiveSignal,
 } from '../../lib/class/quiet-signal';
@@ -652,7 +652,7 @@ export default function ClassPlayerPage() {
       if (!id || (event.session_id && event.session_id !== id)) return;
       if (!event.participant_id || !isClassSignalType(event.signal_type)) return;
       const at = Date.now();
-      setQuietSignals((prev) => recordSignal(prev, event.participant_id, event.signal_type, at));
+      setQuietSignals((prev) => receiveSignal(prev, event.participant_id, event.signal_type, event.at, at));
     },
     [id],
   );
@@ -1334,6 +1334,10 @@ export default function ClassPlayerPage() {
           checkins={sessionCheckins}
           waitingEntries={waitingRoom.entries}
           quietSignals={quietSignals}
+          onHandLowered={(participantId) => {
+            if (!id || !isCurrentRoute(id)) return;
+            setMetrics((previous) => previous.map((row) => row.participant_id === participantId ? { ...row, raise_hand: false } : row));
+          }}
           live={{
             socketConnected: liveSocket.isConnected,
             metricsPollFailing,

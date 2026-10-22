@@ -449,7 +449,10 @@ def lower_hand(
     current_user: dict | None = Depends(get_current_user_optional),
     db: DBSession = Depends(get_db),
 ):
-    """참여자 손 내리기(손들기 취소) — raise_hand=False. 인가는 raise-hand 와 같다. 멱등."""
+    """손 내리기 — raise_hand=False. 본인(로그인/입장 자격) 또는 진행자(set_speaking 과 같은 인가). 멱등.
+
+    응답 lowered_by: self|host. 타인·비진행자는 403.
+    """
     return session_service.lower_hand(
         session_id,
         participant_id,

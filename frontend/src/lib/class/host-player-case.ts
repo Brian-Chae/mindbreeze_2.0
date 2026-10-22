@@ -16,7 +16,7 @@ export type HostPhase = 'live' | 'confirm' | 'ending';
 export type HostSort = 'join' | 'low' | 'high';
 
 export const HOST_SHEET_KEYS = [
-  'metric', 'chat', 'media', 'checkin', 'tools', 'hands', 'actions', 'queue', 'alerts', 'myband', 'permcam', 'permmic', 'detail',
+  'metric', 'chat', 'media', 'checkin', 'tools', 'hands', 'signals', 'actions', 'queue', 'alerts', 'myband', 'permcam', 'permmic', 'detail',
 ] as const;
 export type HostSheetKey = (typeof HOST_SHEET_KEYS)[number];
 
@@ -337,7 +337,7 @@ export function chipTarget(chip: HostChip): { sheet: HostSheetKey } | { act: 'ha
     case 'speak': case 'hands': return { sheet: 'hands' };
     case 'actions': return { sheet: 'actions' };
     case 'queue': return { sheet: 'queue' };
-    case 'signals': return { sheet: 'checkin' };
+    case 'signals': return { sheet: 'signals' };
     case 'myband': return { sheet: 'myband' };
     case 'first': return { act: 'handsfirst' };
     case 'filter': return { sheet: 'actions' };

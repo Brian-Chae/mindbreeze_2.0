@@ -1,11 +1,12 @@
 // SDD-208 — 화면 틀: 배경 / 상단 바 / 본문 / (바텀 시트) / 도크 / (사이드 시트).
 // 시트가 열리면 상단 바·본문만 inert 로 만들고 도크는 계속 눌리게 둔다(도크에서 시트를 바꾸거나 닫을 수 있어야 한다).
-import type { ReactNode } from 'react';
+import type { FocusEventHandler, ReactNode } from 'react';
 import { useSheetMode, type SheetMode } from './sheet-mode';
 import './player-shared.css';
 
 interface PlayerShellProps {
   place: 'online' | 'offline';
+  onFocusCapture?: FocusEventHandler<HTMLDivElement>;
   sheetOpen: boolean;
   top: ReactNode;
   /** 도크 위에 미디어 줄을 함께 쌓을 수 있다. SDD-209: 생략하면 도크 영역 자체를 렌더하지 않는다 */
@@ -22,12 +23,13 @@ interface PlayerShellProps {
   children: ReactNode;
 }
 
-export function PlayerShell({ place, sheetOpen, top, dock, sheet, backdrop, className, flow = false, sheetMode, children }: PlayerShellProps) {
+export function PlayerShell({ place, sheetOpen, top, dock, sheet, backdrop, className, flow = false, sheetMode, onFocusCapture, children }: PlayerShellProps) {
   const responsiveMode = useSheetMode();
   const mode = sheetMode ?? responsiveMode;
   return (
     <div
       className={className ? `pz-root pz-shell ${className}` : 'pz-root pz-shell'}
+      onFocusCapture={onFocusCapture}
       data-pz="app"
       data-place={place}
       data-sheet-open={sheetOpen ? 'true' : 'false'}

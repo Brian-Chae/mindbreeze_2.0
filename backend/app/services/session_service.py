@@ -2772,9 +2772,15 @@ def lower_hand(
         raise HTTPException(status_code=400, detail="종료된 세션입니다")
 
     participant = _get_participant_in_session(sid, participant_id, db)
-    _authorize_participant_access(
-        participant, db, entry_credential=entry_credential, current_user_id=current_user_id
-    )
+    # SDD-235: 진행자(set_speaking 과 같은 인가)는 다른 참여자의 손도 내릴 수 있다.
+    #   진행자가 아니면 기존 본인(로그인/입장 자격) 인가로 폴백 — 타인·비진행자는 403.
+    if _is_speaking_manager(s, current_user_id, db):
+        lowered_by = "host"
+    else:
+        _authorize_participant_access(
+            participant, db, entry_credential=entry_credential, current_user_id=current_user_id
+        )
+        lowered_by = "self"
 
     if participant.raise_hand:
         participant.raise_hand = False
@@ -2787,7 +2793,21 @@ def lower_hand(
         "raise_hand": participant.raise_hand,
         "speaking": participant.speaking,
         "can_publish": _compute_can_publish(s, participant),
+        "lowered_by": lowered_by,
     }
+
+
+def _is_speaking_manager(s: Session, user_id: str | None, db: DBSession) -> bool:
+    """set_speaking 과 같은 진행자 판정 — 세션 호스트 + LIVE_METRICS_READ 인가 통과.
+
+    호스트가 아니면 False. 호스트인데 인가 거부면 authorize_session 의 예외를 그대로 올린다.
+    """
+    if not user_id or s.host_id != _to_uuid(user_id):
+        return False
+    from app.services.session_authz import authorize_session
+
+    authorize_session(db, user_id, s, SessionAction.LIVE_METRICS_READ)
+    return True
 
 
 def set_speaking(

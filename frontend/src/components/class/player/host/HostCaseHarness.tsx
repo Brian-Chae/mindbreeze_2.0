@@ -17,6 +17,7 @@ import { registerCasePatch, type PlayerCaseContext } from '../../../../lib/class
 import { EndSessionModal } from '../../../player/EndSessionModal';
 import { MarkerButton } from '../../../session/MarkerButton';
 import { SpeakingRightsPanel } from '../../../session/SpeakingRightsPanel';
+import { HostSignalToast } from './HostSignalToast';
 import { HostEndingCard } from './HostEndingCard';
 import type { HostMediaProps } from './HostMediaSheet';
 import { HostLiveView, type HostLiveActions } from './HostLiveView';
@@ -73,7 +74,14 @@ function FakeChat({ messages, onSend }: { messages: readonly HostChatMessage[]; 
 
 export function HostCaseHarness({ spec, ctx }: HostCaseHarnessProps) {
   const { ui, actions: uiActions } = useHostUi(spec.ui);
-  const [participants, setParticipants] = useState<readonly HostParticipant[]>(spec.input.participants);
+  const signalDemo = ctx.params.get('signalsDemo');
+  const [participants, setParticipants] = useState<readonly HostParticipant[]>(() => signalDemo
+    ? spec.input.participants.map((participant, index) => ({ ...participant, name: `샘플 회원 ${String.fromCharCode(65 + index)}`, hand: signalDemo !== 'none' && signalDemo !== 'signals' && index === 0, speaking: false }))
+    : spec.input.participants);
+  const [toastVisible, setToastVisible] = useState(signalDemo === 'toast');
+  const quietCounts = signalDemo && ['signals', 'toast', 'quiet'].includes(signalDemo)
+    ? { following: 1, difficult: 2, resting: 1 }
+    : { following: 0, difficult: 0, resting: 0 };
   const [mic, setMic] = useState<MicUi>(spec.input.mic);
   const [cam, setCam] = useState<CamUi>(spec.input.cam);
   const [rec, setRec] = useState<HostRec | null>(spec.input.rec);
@@ -143,6 +151,7 @@ export function HostCaseHarness({ spec, ctx }: HostCaseHarnessProps) {
     <SpeakingRightsPanel
       participants={participants.map(toLiveRow)}
       busyId={null}
+      onLowerHand={(id) => setParticipants((previous) => previous.map((participant) => participant.id === id ? { ...participant, hand: false } : participant))}
       onGrant={(id) => setSpeaking(id, true)}
       onRevoke={(id) => setSpeaking(id, false)}
     />
@@ -174,7 +183,8 @@ export function HostCaseHarness({ spec, ctx }: HostCaseHarnessProps) {
       queue={spec.input.queue}
       speakingPanel={speakingPanel}
       preCheckins={spec.meta.preCheckins}
-      quietSignals={{ following: 0, difficult: 0, resting: 0 }}
+      quietSignals={quietCounts}
+      signalToast={toastVisible ? <HostSignalToast toast={{ topic: 'signals', message: '조용한 신호 4건 · 조금 어려워요 2 · 잠시 쉴게요 1 · 잘 따라가요 1', durationMs: 6000 }} onOpen={(topic) => { setToastVisible(false); uiActions.openSheet(topic); }} onDismiss={() => setToastVisible(false)} /> : null}
       selfBand={selfBand ?? HOST_SELF_BAND_NONE}
       chat={{
         unread: spec.meta.unread,
