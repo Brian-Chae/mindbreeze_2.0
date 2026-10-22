@@ -135,13 +135,12 @@ describe('MemberMediaRow', () => {
     await act(async () => { buttonByText('손들기')?.click(); });
     expect(actions.onRaiseHand).toHaveBeenCalledTimes(1);
   });
-  it('M03: 손들기 대기는 취소 버튼 없이 상태만 보여 준다(B1 미적용)', async () => {
+  it('M03: 손들기 대기는 "손 내리기" 활성 버튼 — 누르면 콜백', async () => {
     const actions = { ...noopActions, onRaiseHand: vi.fn() };
     await render(<MemberMediaRow c={deriveMemberCase(memberInput({ mode: 'group', mic: 'muted', hand: 'waiting' }))} sheetOpen={false} actions={actions} />);
-    expect(buttonByText('손들었어요')?.getAttribute('aria-disabled')).toBe('true');
-    expect(document.body.textContent).not.toContain('취소');
-    await act(async () => { buttonByText('손들었어요')?.click(); });
-    expect(actions.onRaiseHand).not.toHaveBeenCalled();
+    expect(buttonByText('손 내리기')?.getAttribute('aria-disabled')).not.toBe('true');
+    await act(async () => { buttonByText('손 내리기')?.click(); });
+    expect(actions.onRaiseHand).toHaveBeenCalledTimes(1);
   });
   it('M04: "말하는 중"(상태) + "말하기 종료"(버튼) → 종료 콜백', async () => {
     const actions = { ...noopActions, onEndSpeaking: vi.fn() };
@@ -217,6 +216,8 @@ interface ControlsOverride {
   raisedHand?: boolean;
   speakerOn?: boolean;
   raiseHand?: () => Promise<void>;
+  lowerHand?: () => Promise<void>;
+  raiseHandError?: string | null;
 }
 
 function Controls({ override = {} }: { override?: ControlsOverride }) {
@@ -231,6 +232,8 @@ function Controls({ override = {} }: { override?: ControlsOverride }) {
       speaking={p.speaking}
       raisedHand={p.raisedHand}
       raiseHand={p.raiseHand ?? (async () => undefined)}
+      lowerHand={p.lowerHand}
+      raiseHandError={p.raiseHandError}
       speakerOn={p.speakerOn}
     >
       {(m: MemberMediaBinding) => (
@@ -328,10 +331,18 @@ describe('MemberMediaControls — 그룹 손들기·발언권', () => {
     await act(async () => { buttonByText('손들기')?.click(); });
     expect(raiseHand).toHaveBeenCalledTimes(1);
   });
-  it('M03: 대기 중에는 취소 버튼이 없다', async () => {
-    await render(<Controls override={{ mode: 'group', canPublish: false, raisedHand: true }} />);
-    expect(labels()).toEqual(['뮤트 중', '손들었어요']);
-    expect(document.body.textContent).not.toContain('취소');
+  it('M03: 대기 중 "손 내리기" → lowerHand() 1회, raiseHand() 호출 없음', async () => {
+    const raiseHand = vi.fn(async () => undefined);
+    const lowerHand = vi.fn(async () => undefined);
+    await render(<Controls override={{ mode: 'group', canPublish: false, raisedHand: true, raiseHand, lowerHand }} />);
+    expect(labels()).toEqual(['뮤트 중', '손 내리기']);
+    await act(async () => { buttonByText('손 내리기')?.click(); });
+    expect(lowerHand).toHaveBeenCalledTimes(1);
+    expect(raiseHand).not.toHaveBeenCalled();
+  });
+  it('M03b: 손 내리기 실패 안내를 보여 준다', async () => {
+    await render(<Controls override={{ mode: 'group', canPublish: false, raisedHand: true, raiseHandError: '손을 내리지 못했어요' }} />);
+    expect(q('[data-pz="hand-error"]')?.textContent).toBe('손을 내리지 못했어요');
   });
   it('M04: 말하기 종료 = 로컬 마이크 끄기(B2 미적용) → 다시 뮤트·손들기, 서버 호출 없음', async () => {
     const raiseHand = vi.fn(async () => undefined);

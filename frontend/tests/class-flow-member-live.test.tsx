@@ -17,7 +17,7 @@ vi.mock('../src/lib/api/client', async (importOriginal) => ({
 }));
 
 import { joinSessionLive } from '../src/lib/socket';
-import { postEntryFeatures, raiseEntryHand, saveEntry } from '../src/lib/api/class-flow';
+import { lowerEntryHand, postEntryFeatures, raiseEntryHand, saveEntry } from '../src/lib/api/class-flow';
 import { useMemberLiveKit } from '../src/hooks/useMemberLiveKit';
 
 let root: Root;
@@ -55,6 +55,8 @@ describe('입장 자격 전달', () => {
     expect(post).toHaveBeenCalledWith('/sessions/s1/features', { participant_id: 'p1', features: [] }, { skipAuth: true, headers: { 'X-Entry-Credential': 'cred' } });
     await raiseEntryHand('s1', 'p1', 'cred');
     expect(post).toHaveBeenLastCalledWith('/sessions/s1/participants/p1/raise-hand', undefined, { skipAuth: true, headers: { 'X-Entry-Credential': 'cred' } });
+    await lowerEntryHand('s1', 'p1', 'cred');
+    expect(post).toHaveBeenLastCalledWith('/sessions/s1/participants/p1/lower-hand', undefined, { skipAuth: true, headers: { 'X-Entry-Credential': 'cred' } });
   });
 });
 

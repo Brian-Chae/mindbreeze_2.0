@@ -1,7 +1,7 @@
 // SDD-208 M2 — 회원 미디어 컨트롤(LiveKit 연동). 방(LiveKitRoom)은 화면 밖에 두고, 화면(children)은 방이 다시 만들어져도 유지한다.
 //  - 회원 영상은 기본 비공개(spec 결정 #1): LiveKitRoom video={false}. 카메라는 회원이 켠 경우에만 setCameraEnabled(true).
 //  - 켜 두려는 마음(micWanted·camWanted)은 이 컴포넌트가 보관한다 — 발언권 변경 등으로 방이 재마운트돼도(key 변경) 다시 적용된다.
-//  - B1(손들기 취소)·B2(말하기 종료) 서버 API 미적용: 취소 버튼 없음, "말하기 종료" = 로컬 마이크 끄기.
+//  - B2(말하기 종료) 서버 API 미적용(손들기 취소는 lower-hand API 사용): "말하기 종료" = 로컬 마이크 끄기.
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { LiveKitRoom, RoomAudioRenderer, useConnectionState, useLocalParticipant, useTracks } from '@livekit/components-react';
 import { ConnectionState, MediaDeviceFailure, Track } from 'livekit-client';
@@ -38,6 +38,10 @@ interface MemberMediaControlsProps {
   speaking: boolean;
   raisedHand: boolean;
   raiseHand: () => Promise<void>;
+  /** 손 내리기(손들기 취소) — 대기 중 같은 버튼을 다시 누르면 호출 */
+  lowerHand?: () => Promise<void>;
+  /** 손들기·손 내리기 실패 안내(짧은 문구) */
+  raiseHandError?: string | null;
   /** 상담사 음성 듣기 */
   speakerOn: boolean;
   children: (binding: MemberMediaBinding) => ReactNode;
@@ -91,7 +95,7 @@ function RoomBridge({ canPublish, micWanted, camWanted, onSnapshot, onCameraErro
 }
 
 export function MemberMediaControls({
-  place, mode, token, serverUrl, canPublish, speaking, raisedHand, raiseHand, speakerOn, children,
+  place, mode, token, serverUrl, canPublish, speaking, raisedHand, raiseHand, lowerHand, raiseHandError, speakerOn, children,
 }: MemberMediaControlsProps) {
   const [micWanted, setMicWanted] = useState(true);
   const [camWanted, setCamWanted] = useState(false);
@@ -132,10 +136,17 @@ export function MemberMediaControls({
   useEffect(() => {
     raiseHandRef.current = raiseHand;
   });
+  const lowerHandRef = useRef(lowerHand);
+  useEffect(() => {
+    lowerHandRef.current = lowerHand;
+  });
+  // 손든 대기 중(발언권 전)에 다시 누르면 손을 내린다 — 서버에 취소를 알린 뒤 idle 로 돌아간다
+  const waiting = raisedHand && !granted;
   const onRaiseHand = useCallback((): void => {
     if (granted) setMicWanted(true);
+    else if (waiting) void lowerHandRef.current?.();
     else void raiseHandRef.current();
-  }, [granted]);
+  }, [granted, waiting]);
 
   const media = deriveMemberMedia({ place, mode, canPublish, speaking, raisedHand, micWanted, camWanted, micFailure, camFailure });
   const hostVideo = live.hostTrack ? <MemberTrackVideo track={live.hostTrack} className="mp-pip__video" /> : null;
@@ -169,6 +180,7 @@ export function MemberMediaControls({
         </LiveKitRoom>
       ) : null}
       {children(binding)}
+      {raiseHandError ? <p className="mp-hand-error" role="alert" data-pz="hand-error">{raiseHandError}</p> : null}
     </>
   );
 }

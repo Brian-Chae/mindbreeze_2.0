@@ -40,7 +40,7 @@ const h = vi.hoisted(() => {
     lk: {
       token: 'tok' as string | null, canPublish: true, error: null as string | null, notReady: false, attemptCount: 0, serverUrl: 'wss://lk.test',
       speaking: false, raisedHand: false, raising: false, raiseHandError: null as string | null,
-      connect: vi.fn(async () => undefined), disconnect: vi.fn(), raiseHand: vi.fn(async () => undefined), roomId: null, loading: false,
+      connect: vi.fn(async () => undefined), disconnect: vi.fn(), raiseHand: vi.fn(async () => undefined), lowerHand: vi.fn(async () => undefined), roomId: null, loading: false,
     },
     lkOptions: [] as Array<Record<string, unknown>>,
     audio: { state: { track: null as { title: string } | null, playing: false, positionSec: 0, durationSec: null, volume: 0.6, blocked: false, synced: false, drift: 0 }, setVolume: vi.fn(), resume: vi.fn() },
@@ -202,6 +202,7 @@ beforeEach(() => {
   Object.assign(h.lk, { token: 'tok', canPublish: true, speaking: false, raisedHand: false, error: null, notReady: false, attemptCount: 0 });
   h.lk.connect.mockClear();
   h.lk.raiseHand.mockClear();
+  h.lk.lowerHand.mockClear();
   Object.assign(h.audio.state, { track: null, volume: 0.6, blocked: false, synced: false });
   h.audio.setVolume.mockClear();
   h.audio.resume.mockClear();
@@ -558,6 +559,16 @@ describe('LiveKit·미디어 연결', () => {
     expect(qa('[data-pz="mbtn"]').map((b) => b.textContent)).toEqual(['뮤트 중', '손들기']);
     await act(async () => { buttonByText('손들기')?.click(); });
     expect(h.lk.raiseHand).toHaveBeenCalledTimes(1);
+  });
+  it('손든 대기 중 "손 내리기"를 누르면 lowerHand 를 호출한다(raiseHand 아님)', async () => {
+    h.lk.canPublish = false;
+    h.lk.raisedHand = true;
+    await render(<Container participantMode="group" maxParticipants={10} />);
+    expect(qa('[data-pz="mbtn"]').map((b) => b.textContent)).toEqual(['뮤트 중', '손 내리기']);
+    await act(async () => { buttonByText('손 내리기')?.click(); });
+    expect(h.lk.lowerHand).toHaveBeenCalledTimes(1);
+    expect(h.lk.raiseHand).not.toHaveBeenCalled();
+    h.lk.raisedHand = false;
   });
   it('온라인 그룹 20명 초과: 수신 전용 — 마이크·카메라·손들기 없음', async () => {
     h.lk.canPublish = false;

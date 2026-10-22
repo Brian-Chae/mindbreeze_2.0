@@ -438,6 +438,27 @@ def raise_hand(
     )
 
 
+@router.post(
+    "/{session_id}/participants/{participant_id}/lower-hand",
+    response_model=SpeakingStateResponse,
+)
+def lower_hand(
+    session_id: str,
+    participant_id: str,
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """참여자 손 내리기(손들기 취소) — raise_hand=False. 인가는 raise-hand 와 같다. 멱등."""
+    return session_service.lower_hand(
+        session_id,
+        participant_id,
+        db,
+        entry_credential=x_entry_credential,
+        current_user_id=current_user["id"] if current_user else None,
+    )
+
+
 @router.get("/{session_id}/entry-state", response_model=EntryStateResponse)
 def get_entry_state(
     session_id: str,

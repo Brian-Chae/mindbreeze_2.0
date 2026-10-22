@@ -73,7 +73,7 @@ export function MemberCaseDemo({ initial }: MemberCaseDemoProps) {
     onHeroChange: setHero,
     onToggleMic: () => patch({ mic: input.mic === 'on' ? 'off' : 'on' }),
     onToggleCam: () => patch({ cam: input.cam === 'on' ? 'off' : 'on' }),
-    onRaiseHand: () => patch({ hand: 'waiting' }),
+    onRaiseHand: () => patch({ hand: input.hand === 'waiting' ? 'idle' : 'waiting' }),
     onEndSpeaking: () => patch({ hand: 'idle', mic: 'muted' }),
     onBandConnect: () => patch({ band: 'pending' }),
     onBandDisconnect: () => patch({ band: 'off' }),
