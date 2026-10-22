@@ -26,7 +26,7 @@ Stage ② (2026-10-22). 입력: `spec.md`(확정 A/A/A), `designs/counselor-home
 
 ## 어댑터/결정
 - 히어로: 진행 중(in_progress/open) 우선, 없으면 가장 가까운 미래 예정(취소 제외). CTA 대상은 `dashboardSessionPath(row)`(회차 상세). 입장·시작 API 호출 없음.
-- 진행 중 타일: 1개면 해당 회차 상세, 복수면 `/classes`. `liveTileTarget`(player 직행)은 홈에서 쓰지 않음(함수는 보존).
+- 진행 중 타일(Brian 10/22 변경): 기존 `liveTileTarget`/`liveTileHint` 그대로 사용 — 1개면 `/sessions/:id/player`, 2개 이상·0개는 `/classes`. 히어로만 회차 상세 경유.
 - 회차 보조 기능(입장 코드 복사, 참여/게스트 수, 기록 보기)은 일정 행·지난 회차에서 유지. 입장은 상세 경유.
 - 카드 진행률은 서버 `progress`만 사용(새 합산 없음). 참여자 수는 카드에서 생략.
 - 스타일: 새 토큰 없음, 기존 색상 값 사용.

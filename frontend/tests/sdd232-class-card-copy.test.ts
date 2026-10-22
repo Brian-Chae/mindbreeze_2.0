@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { classCardCopy } from '../src/lib/class-structure/class-card-copy';
 import { adaptMemberClass } from '../src/lib/class-structure/adapters';
 import type { ClassSummaryDto } from '../src/lib/api/class-structure';
-import { pickHeroSession, pickScheduleRows, sortHomeClasses, liveTileDetailTarget } from '../src/lib/dashboard/counselor-home-model';
+import { pickHeroSession, pickScheduleRows, sortHomeClasses } from '../src/lib/dashboard/counselor-home-model';
 import type { ClassSummary } from '../src/lib/api/dashboard';
 
 const base = { id: 'c1', title: '호흡', status: 'active', schedule_mode: 'fixed', planned_session_count: 4, area: 'meditation', progress: { completed: 1, total: 4 }, session_count: 4, next_session: null, has_open_session: false } as unknown as ClassSummaryDto;
@@ -46,12 +46,6 @@ describe('SDD-232 홈 모델', () => {
     const rows = Array.from({ length: 8 }, (_, i) => row({ id: `s${i}`, scheduled_at: `2026-10-${23 + i}T01:00:00Z` }));
     const out = pickScheduleRows([...rows, row({ id: 'live', status: 'open' }), row({ id: 'done', status: 'completed', scheduled_at: '2026-10-23T01:00:00Z' })], now);
     expect(out).toHaveLength(5); expect(out[0].id).toBe('live'); expect(out.some((r) => r.id === 'done')).toBe(false);
-  });
-  it('진행 타일: 1개면 상세, 복수·0이면 목록', () => {
-    const path = (r: ClassSummary) => `/d/${r.id}`;
-    expect(liveTileDetailTarget([row({ id: 'a' })], path)).toBe('/d/a');
-    expect(liveTileDetailTarget([row({ id: 'a' }), row({ id: 'b' })], path)).toBe('/classes');
-    expect(liveTileDetailTarget([], path)).toBe('/classes');
   });
   it('클래스 정렬: 활성 → 열린 회차 → 다음 시각 → 종료 뒤, 입력 불변', () => {
     const m = (id: string, patch: Partial<ClassSummaryDto>) => adaptMemberClass({ ...base, id, ...patch });
