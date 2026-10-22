@@ -29,7 +29,7 @@ export function ClassCard({ model }: { model: HostClassReadModel }) {
     const mode = fieldValue(model.scheduleMode);
     const count = fieldValue(model.plannedSessionCount);
     return <div className="relative"><Link data-class-card to={classPath('host', model.id)} className="cs-class-row">
-        <div className="cs-class-identity"><span className="cs-class-icon"><Leaf size={24} aria-hidden="true"/></span><div><h2><ReadField value={fieldValue(model.title)}/>{model.is_instant && <span className="ml-2 rounded-full bg-purple-100 px-2 py-1 text-xs font-medium text-purple-800">즉석</span>}</h2><p><LabelField field={model.scheduleMode}/>{mode === 'fixed' && count != null ? ` ${count}회` : ''}</p></div></div>
+        <div className="cs-class-identity"><span className="cs-class-icon"><Leaf size={24} aria-hidden="true"/></span><div><h2><ReadField value={fieldValue(model.title)}/>{model.is_instant && <span className="ml-2 rounded-full bg-purple-100 px-2 py-1 text-xs mobile:text-mb-caption font-medium text-purple-800">즉석</span>}</h2><p><LabelField field={model.scheduleMode}/>{mode === 'fixed' && count != null ? ` ${count}회` : ''}</p></div></div>
         <div className="cs-class-next"><span className="cs-class-key">다음 회차</span>{next ? <><strong>{fieldValue(next.seq) == null ? '다음 일정' : `${fieldValue(next.seq)}회차`}</strong><small><DateField field={next.scheduledAt}/></small></> : <strong>{status === 'completed' ? '모두 마쳤어요' : status === 'draft' ? '아직 공개 전' : '다음 일정 없음'}</strong>}</div>
         <ProgressView model={model}/>
         <div className="cs-class-host"><span className="cs-class-key">진행 지도사</span><strong><ReadField value={next ? fieldValue(next.hostName) : undefined}/></strong>{next && fieldValue(next.hostName) === undefined && <small>진행 지도사를 확인해 주세요</small>}</div>
@@ -53,7 +53,7 @@ export function NextClassView({ model, showClassTitle = false }: { model: HostCl
 export function HostSessionViews({ classId, sessions }: { classId: ClassId; sessions: SessionReadModel[] }) {
     const [timeline, setTimeline] = useState(false);
     const number = (session: SessionReadModel) => fieldValue(session.seq) === undefined ? <ReadField/> : `${fieldValue(session.seq)}회차`;
-    const status = (session: SessionReadModel) => <><LabelField field={session.status}/>{fieldValue(session.sessionKind) === 'makeup' && ' · 보강'}{['needs_reassign','pending_ack'].includes(fieldValue(session.hostState)??'')&&<span className="ml-2 rounded-full bg-amber-50 px-2 py-1 text-xs text-amber-900"><LabelField field={session.hostState}/></span>}</>;
+    const status = (session: SessionReadModel) => <><LabelField field={session.status}/>{fieldValue(session.sessionKind) === 'makeup' && ' · 보강'}{['needs_reassign','pending_ack'].includes(fieldValue(session.hostState)??'')&&<span className="ml-2 rounded-full bg-amber-50 px-2 py-1 text-xs mobile:text-mb-caption text-amber-900"><LabelField field={session.hostState}/></span>}</>;
     return (
         <section>
             <div className="mb-5 flex flex-wrap gap-2" role="group" aria-label="회차 보기 방식">
@@ -77,7 +77,7 @@ export function HostSessionViews({ classId, sessions }: { classId: ClassId; sess
             ) : (
                 <div role="table" aria-label="회차 목록" className="rounded-2xl border border-gray-200 bg-white">
                     <div role="row" className="sr-only md:not-sr-only md:grid md:grid-cols-4 md:gap-3 md:p-5">
-                        {['회차', '일시', '진행 지도사', '상태'].map(label => <div role="columnheader" key={label} className="text-xs text-gray-500">{label}</div>)}
+                        {['회차', '일시', '진행 지도사', '상태'].map(label => <div role="columnheader" key={label} className="text-xs mobile:text-mb-caption text-gray-500">{label}</div>)}
                     </div>
                     {sessions.map(session => (
                         <div role="row" className="grid gap-3 border-b border-gray-100 p-5 last:border-0 md:grid-cols-4" key={session.id}>

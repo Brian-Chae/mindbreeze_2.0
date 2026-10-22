@@ -73,3 +73,12 @@
 .cs-structure .cs-open-hero h2 { color: #F7F4F0; }
 .cs-structure .cs-class-hero .cs-hero-when,
 .cs-structure .cs-open-hero > p { color: #CFC6D6; }
+
+/* SDD-234: 클래스 전용 선택자만 보정한다. 홈 카드와 공통 셸은 제외한다. */
+@media (max-width: 767px) {
+  .cs-structure .cs-state-chip { font-size: var(--mobile-type-caption-size); line-height: var(--mobile-type-caption-leading); }
+  .cs-structure .cs-class-key { font-size: var(--mobile-type-label-size); line-height: var(--mobile-type-label-leading); }
+  .cs-structure .cs-class-identity h2 { font-size: var(--mobile-type-subtitle-size); line-height: var(--mobile-type-subtitle-leading); }
+  .cs-structure .cs-class-row strong { font-size: var(--mobile-type-compact-size); line-height: var(--mobile-type-compact-leading); }
+  .cs-structure .cs-hero-guide p, .cs-structure .cs-hero-actions p { font-size: var(--mobile-type-compact-size); line-height: var(--mobile-type-compact-leading); }
+}

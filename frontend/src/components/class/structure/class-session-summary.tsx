@@ -29,7 +29,7 @@ const DIRECTION_FILL = {
 function Tally({ label, value, tone }: { label: string; value: number; tone: string }) {
   return (
     <div className="w-20 rounded-xl border border-[#ECE6F0] bg-white py-2 text-center">
-      <span className="block text-xs font-semibold text-[#9B9B9B]">{label}</span>
+      <span className="block text-xs mobile:text-mb-caption font-semibold text-[#9B9B9B]">{label}</span>
       <span className={`mt-1 block text-sm font-bold ${tone}`}>{value}명</span>
     </div>
   );
@@ -56,7 +56,7 @@ function DirectionBar({
           ) : null,
         )}
       </div>
-      <ul className="flex flex-wrap gap-4 text-xs text-[#6F6F6F]">
+      <ul className="flex flex-wrap gap-4 text-xs mobile:text-mb-caption text-[#6F6F6F]">
         {order.map((key) => (
           <li key={key} className="inline-flex items-center gap-1.5">
             <span className={`inline-block h-2.5 w-2.5 rounded-sm ${DIRECTION_FILL[key]}`} aria-hidden />

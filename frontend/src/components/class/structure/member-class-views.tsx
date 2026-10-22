@@ -56,6 +56,19 @@ export function MemberClassStyles() {
 .cs-structure .mc-facts dt{font-size:12px;color:#716779;margin-bottom:4px}
 .cs-structure .mc-facts dd{margin:0;font-size:14px}
 @media(max-width:767px){.cs-structure .mc-grid{grid-template-columns:1fr}.cs-structure .mc-card{padding:20px}.cs-structure .mc-hero h2{font-size:24px}}
+/* SDD-234: 같은 스타일을 쓰는 A 홈(.mh-home)은 제외한다. */
+@media(max-width:767px){
+ .cs-structure .mc-stack:not(.mh-home) .mc-chip{font-size:var(--mobile-type-caption-size);line-height:var(--mobile-type-caption-leading)}
+ .cs-structure .mc-stack:not(.mh-home) .mc-muted,
+ .cs-structure .mc-stack:not(.mh-home) .mc-facts dd,
+ .cs-structure .mc-stack:not(.mh-home) .mc-next strong{font-size:var(--mobile-type-compact-size);line-height:var(--mobile-type-compact-leading)}
+ .cs-structure .mc-stack:not(.mh-home) .mc-facts dt,
+ .cs-structure .mc-stack:not(.mh-home) .mc-link{font-size:var(--mobile-type-label-size);line-height:var(--mobile-type-label-leading)}
+ .cs-structure .mc-stack:not(.mh-home) .mc-card h2,
+ .cs-structure .mc-stack:not(.mh-home) .mc-card h3{font-size:var(--mobile-type-subtitle-size);line-height:var(--mobile-type-subtitle-leading)}
+ .cs-structure .mc-stack:not(.mh-home) .mc-hero h2{font-size:var(--mobile-type-hero-size);line-height:var(--mobile-type-hero-leading)}
+ .cs-structure .mc-stack:not(.mh-home) .mc-primary{min-height:var(--mobile-touch-control)}
+}
 `}</style>;
 }
 export function MemberProgress({ model }: { model: ClassReadModel }) {

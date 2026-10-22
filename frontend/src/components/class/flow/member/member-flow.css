@@ -225,3 +225,10 @@
 
 /* 체크인 시트(3축 + 한 줄 소감 + 버튼)는 공용 상한(58dvh)보다 크다 — 시트 안 중첩 스크롤을 만들지 않도록 회원 흐름 시트만 상한을 올린다 */
 .pz-shell.fm-member[data-sheet-mode="bottom"] .pz-sheet[data-pz="flow-sheet"] { max-height: min(86dvh, 640px); }
+
+/* SDD-234: 설문·동의·준비 과정의 보조 문구와 입력. */
+@media (max-width: 767px) {
+  .pz-root .fm-ft, .pz-root .fm-failhint, .pz-root .fm-label-row .fm-err { font-size: var(--mobile-type-caption-size); line-height: var(--mobile-type-caption-leading); }
+  .pz-root .fm-input { font-size: var(--mobile-type-body-size); line-height: var(--mobile-type-body-leading); min-height: var(--mobile-touch-control); }
+  .pz-root .fm-mini { font-size: var(--mobile-type-label-size); line-height: var(--mobile-type-label-leading); }
+}

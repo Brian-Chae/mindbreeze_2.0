@@ -1,0 +1,914 @@
+[
+  {
+    "area": "B",
+    "name": "host-band-sheet",
+    "role": "counselor",
+    "url": "/design/class-flow?screen=FH06a&case=band-bad-lr",
+    "width": 1440,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "standalone-flow/player",
+    "scrollWidth": 1440,
+    "sectionGaps": [],
+    "distributions": {
+      "fontSize": {
+        "12": 5,
+        "13": 10,
+        "18": 2
+      },
+      "lineHeight": {
+        "18px": 2,
+        "19.5px": 3,
+        "20px": 4,
+        "24px": 8
+      },
+      "fontWeight": {
+        "400": 8,
+        "600": 1,
+        "700": 8
+      }
+    },
+    "summary": {
+      "textCount": 17,
+      "minFont": 12,
+      "smallTextCount": 5,
+      "smallTextRatio": 29.4,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  },
+  {
+    "area": "B",
+    "name": "host-band-sheet",
+    "role": "counselor",
+    "url": "/design/class-flow?screen=FH06a&case=band-bad-lr",
+    "width": 390,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "standalone-flow/player",
+    "scrollWidth": 390,
+    "sectionGaps": [],
+    "distributions": {
+      "fontSize": {
+        "13": 11,
+        "15": 4,
+        "18": 2
+      },
+      "lineHeight": {
+        "19.5px": 5,
+        "20px": 3,
+        "24px": 9
+      },
+      "fontWeight": {
+        "400": 8,
+        "600": 1,
+        "700": 8
+      }
+    },
+    "summary": {
+      "textCount": 17,
+      "minFont": 13,
+      "smallTextCount": 0,
+      "smallTextRatio": 0,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  },
+  {
+    "area": "B",
+    "name": "host-band-sheet",
+    "role": "counselor",
+    "url": "/design/class-flow?screen=FH06a&case=band-bad-lr",
+    "width": 768,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "standalone-flow/player",
+    "scrollWidth": 768,
+    "sectionGaps": [],
+    "distributions": {
+      "fontSize": {
+        "12": 5,
+        "13": 10,
+        "18": 2
+      },
+      "lineHeight": {
+        "18px": 2,
+        "19.5px": 3,
+        "20px": 4,
+        "24px": 8
+      },
+      "fontWeight": {
+        "400": 8,
+        "600": 1,
+        "700": 8
+      }
+    },
+    "summary": {
+      "textCount": 17,
+      "minFont": 12,
+      "smallTextCount": 5,
+      "smallTextRatio": 29.4,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  },
+  {
+    "area": "B",
+    "name": "host-invite-sheet",
+    "role": "counselor",
+    "url": "/design/class-flow?screen=FH06a&case=invite",
+    "width": 1440,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "standalone-flow/player",
+    "scrollWidth": 1440,
+    "sectionGaps": [],
+    "distributions": {
+      "fontSize": {
+        "13": 5,
+        "15": 7,
+        "18": 1
+      },
+      "lineHeight": {
+        "16px": 4,
+        "19.5px": 1,
+        "22.5px": 3,
+        "24px": 5
+      },
+      "fontWeight": {
+        "400": 4,
+        "600": 1,
+        "700": 8
+      }
+    },
+    "summary": {
+      "textCount": 13,
+      "minFont": 13,
+      "smallTextCount": 0,
+      "smallTextRatio": 0,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  },
+  {
+    "area": "B",
+    "name": "host-invite-sheet",
+    "role": "counselor",
+    "url": "/design/class-flow?screen=FH06a&case=invite",
+    "width": 390,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "standalone-flow/player",
+    "scrollWidth": 390,
+    "sectionGaps": [],
+    "distributions": {
+      "fontSize": {
+        "13": 4,
+        "14": 1,
+        "15": 7,
+        "18": 1
+      },
+      "lineHeight": {
+        "16px": 4,
+        "20px": 1,
+        "22.5px": 3,
+        "24px": 5
+      },
+      "fontWeight": {
+        "400": 4,
+        "600": 1,
+        "700": 8
+      }
+    },
+    "summary": {
+      "textCount": 13,
+      "minFont": 13,
+      "smallTextCount": 0,
+      "smallTextRatio": 0,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  },
+  {
+    "area": "B",
+    "name": "host-invite-sheet",
+    "role": "counselor",
+    "url": "/design/class-flow?screen=FH06a&case=invite",
+    "width": 768,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "standalone-flow/player",
+    "scrollWidth": 768,
+    "sectionGaps": [],
+    "distributions": {
+      "fontSize": {
+        "13": 5,
+        "15": 7,
+        "18": 1
+      },
+      "lineHeight": {
+        "16px": 4,
+        "19.5px": 1,
+        "22.5px": 3,
+        "24px": 5
+      },
+      "fontWeight": {
+        "400": 4,
+        "600": 1,
+        "700": 8
+      }
+    },
+    "summary": {
+      "textCount": 13,
+      "minFont": 13,
+      "smallTextCount": 0,
+      "smallTextRatio": 0,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  },
+  {
+    "area": "B",
+    "name": "member-consent",
+    "role": "client",
+    "url": "/design/class-flow?screen=FM06a&case=on-group-opt-member",
+    "width": 1440,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "standalone-flow/player",
+    "scrollWidth": 1440,
+    "sectionGaps": [
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > section:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > section:nth-of-type(2)",
+        "verticalGap": 16
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > section:nth-of-type(2)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > section:nth-of-type(3)",
+        "verticalGap": -226
+      }
+    ],
+    "distributions": {
+      "fontSize": {
+        "13": 12,
+        "15": 11,
+        "18": 3,
+        "32": 1
+      },
+      "lineHeight": {
+        "20px": 12,
+        "22.5px": 3,
+        "24px": 8,
+        "27px": 3,
+        "42px": 1
+      },
+      "fontWeight": {
+        "400": 14,
+        "500": 2,
+        "600": 5,
+        "700": 5,
+        "800": 1
+      }
+    },
+    "summary": {
+      "textCount": 27,
+      "minFont": 13,
+      "smallTextCount": 0,
+      "smallTextRatio": 0,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  },
+  {
+    "area": "B",
+    "name": "member-consent",
+    "role": "client",
+    "url": "/design/class-flow?screen=FM06a&case=on-group-opt-member",
+    "width": 390,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "standalone-flow/player",
+    "scrollWidth": 390,
+    "sectionGaps": [
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > section:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > section:nth-of-type(2)",
+        "verticalGap": 8
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > section:nth-of-type(2)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > section:nth-of-type(3)",
+        "verticalGap": 8
+      }
+    ],
+    "distributions": {
+      "fontSize": {
+        "13": 13,
+        "15": 10,
+        "18": 3,
+        "22": 1
+      },
+      "lineHeight": {
+        "20px": 13,
+        "22.5px": 3,
+        "24px": 7,
+        "27px": 3,
+        "30px": 1
+      },
+      "fontWeight": {
+        "400": 14,
+        "500": 2,
+        "600": 5,
+        "700": 5,
+        "800": 1
+      }
+    },
+    "summary": {
+      "textCount": 27,
+      "minFont": 13,
+      "smallTextCount": 0,
+      "smallTextRatio": 0,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  },
+  {
+    "area": "B",
+    "name": "member-consent",
+    "role": "client",
+    "url": "/design/class-flow?screen=FM06a&case=on-group-opt-member",
+    "width": 768,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "standalone-flow/player",
+    "scrollWidth": 768,
+    "sectionGaps": [
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > section:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > section:nth-of-type(2)",
+        "verticalGap": 16
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > section:nth-of-type(2)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > section:nth-of-type(3)",
+        "verticalGap": -226
+      }
+    ],
+    "distributions": {
+      "fontSize": {
+        "13": 12,
+        "15": 11,
+        "18": 3,
+        "32": 1
+      },
+      "lineHeight": {
+        "20px": 12,
+        "22.5px": 3,
+        "24px": 8,
+        "27px": 3,
+        "42px": 1
+      },
+      "fontWeight": {
+        "400": 14,
+        "500": 2,
+        "600": 5,
+        "700": 5,
+        "800": 1
+      }
+    },
+    "summary": {
+      "textCount": 27,
+      "minFont": 13,
+      "smallTextCount": 0,
+      "smallTextRatio": 0,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  },
+  {
+    "area": "B",
+    "name": "member-consent-detail",
+    "role": "client",
+    "url": "/design/class-flow?screen=FM06a&case=on-group-opt-member",
+    "width": 1440,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "standalone-flow/player",
+    "scrollWidth": 1440,
+    "sectionGaps": [],
+    "distributions": {
+      "fontSize": {
+        "15": 1,
+        "16": 5,
+        "18": 3
+      },
+      "lineHeight": {
+        "22.5px": 1,
+        "24px": 1,
+        "26px": 5,
+        "27px": 2
+      },
+      "fontWeight": {
+        "400": 2,
+        "600": 5,
+        "700": 2
+      }
+    },
+    "summary": {
+      "textCount": 9,
+      "minFont": 15,
+      "smallTextCount": 0,
+      "smallTextRatio": 0,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  },
+  {
+    "area": "B",
+    "name": "member-consent-detail",
+    "role": "client",
+    "url": "/design/class-flow?screen=FM06a&case=on-group-opt-member",
+    "width": 390,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "standalone-flow/player",
+    "scrollWidth": 390,
+    "sectionGaps": [],
+    "distributions": {
+      "fontSize": {
+        "15": 1,
+        "16": 5,
+        "18": 3
+      },
+      "lineHeight": {
+        "22.5px": 1,
+        "24px": 1,
+        "26px": 5,
+        "27px": 2
+      },
+      "fontWeight": {
+        "400": 2,
+        "600": 5,
+        "700": 2
+      }
+    },
+    "summary": {
+      "textCount": 9,
+      "minFont": 15,
+      "smallTextCount": 0,
+      "smallTextRatio": 0,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  },
+  {
+    "area": "B",
+    "name": "member-consent-detail",
+    "role": "client",
+    "url": "/design/class-flow?screen=FM06a&case=on-group-opt-member",
+    "width": 768,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "standalone-flow/player",
+    "scrollWidth": 768,
+    "sectionGaps": [],
+    "distributions": {
+      "fontSize": {
+        "15": 1,
+        "16": 5,
+        "18": 3
+      },
+      "lineHeight": {
+        "22.5px": 1,
+        "24px": 1,
+        "26px": 5,
+        "27px": 2
+      },
+      "fontWeight": {
+        "400": 2,
+        "600": 5,
+        "700": 2
+      }
+    },
+    "summary": {
+      "textCount": 9,
+      "minFont": 15,
+      "smallTextCount": 0,
+      "smallTextRatio": 0,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  },
+  {
+    "area": "B",
+    "name": "member-device-sheet",
+    "role": "client",
+    "url": "/design/class-player?role=member&case=M02&sheet=device",
+    "width": 1440,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "standalone-flow/player",
+    "scrollWidth": 1440,
+    "sectionGaps": [],
+    "distributions": {
+      "fontSize": {
+        "12": 10,
+        "13": 3,
+        "15": 4,
+        "18": 1
+      },
+      "lineHeight": {
+        "16px": 12,
+        "19.5px": 1,
+        "20px": 4,
+        "24px": 1
+      },
+      "fontWeight": {
+        "400": 12,
+        "600": 5,
+        "700": 1
+      }
+    },
+    "summary": {
+      "textCount": 18,
+      "minFont": 12,
+      "smallTextCount": 10,
+      "smallTextRatio": 55.6,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  },
+  {
+    "area": "B",
+    "name": "member-device-sheet",
+    "role": "client",
+    "url": "/design/class-player?role=member&case=M02&sheet=device",
+    "width": 390,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "standalone-flow/player",
+    "scrollWidth": 390,
+    "sectionGaps": [],
+    "distributions": {
+      "fontSize": {
+        "13": 11,
+        "15": 4,
+        "18": 1
+      },
+      "lineHeight": {
+        "19.5px": 1,
+        "20px": 14,
+        "24px": 1
+      },
+      "fontWeight": {
+        "400": 10,
+        "600": 5,
+        "700": 1
+      }
+    },
+    "summary": {
+      "textCount": 16,
+      "minFont": 13,
+      "smallTextCount": 0,
+      "smallTextRatio": 0,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  },
+  {
+    "area": "B",
+    "name": "member-device-sheet",
+    "role": "client",
+    "url": "/design/class-player?role=member&case=M02&sheet=device",
+    "width": 768,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "standalone-flow/player",
+    "scrollWidth": 768,
+    "sectionGaps": [],
+    "distributions": {
+      "fontSize": {
+        "12": 10,
+        "13": 3,
+        "15": 4,
+        "18": 1
+      },
+      "lineHeight": {
+        "16px": 12,
+        "19.5px": 1,
+        "20px": 4,
+        "24px": 1
+      },
+      "fontWeight": {
+        "400": 12,
+        "600": 5,
+        "700": 1
+      }
+    },
+    "summary": {
+      "textCount": 18,
+      "minFont": 12,
+      "smallTextCount": 10,
+      "smallTextRatio": 55.6,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  },
+  {
+    "area": "B",
+    "name": "member-long",
+    "role": "client",
+    "url": "/app/classes/sample-class",
+    "width": 1440,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "structure",
+    "scrollWidth": 1440,
+    "sectionGaps": [
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1)",
+        "verticalGap": 20
+      }
+    ],
+    "distributions": {
+      "fontSize": {
+        "12": 5,
+        "15": 9,
+        "18": 1,
+        "22": 1,
+        "24": 2,
+        "28": 9,
+        "36": 1,
+        "40": 2
+      },
+      "lineHeight": {
+        "18px": 5,
+        "22.5px": 9,
+        "27px": 1,
+        "33px": 1,
+        "36px": 2,
+        "42px": 3,
+        "47.6px": 6,
+        "56px": 2,
+        "76px": 1
+      },
+      "fontWeight": {
+        "400": 11,
+        "500": 6,
+        "600": 5,
+        "700": 7,
+        "800": 1
+      }
+    },
+    "summary": {
+      "textCount": 30,
+      "minFont": 12,
+      "smallTextCount": 5,
+      "smallTextRatio": 16.7,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  },
+  {
+    "area": "B",
+    "name": "member-long",
+    "role": "client",
+    "url": "/app/classes/sample-class",
+    "width": 390,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "structure",
+    "scrollWidth": 390,
+    "sectionGaps": [
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1)",
+        "verticalGap": 20
+      }
+    ],
+    "distributions": {
+      "fontSize": {
+        "13": 5,
+        "18": 1,
+        "22": 1,
+        "26": 2,
+        "28": 3,
+        "30": 6,
+        "36": 3
+      },
+      "lineHeight": {
+        "20px": 5,
+        "27px": 1,
+        "30px": 1,
+        "40px": 5,
+        "48px": 6,
+        "54px": 2,
+        "76px": 1
+      },
+      "fontWeight": {
+        "400": 12,
+        "600": 4,
+        "700": 3,
+        "800": 2
+      }
+    },
+    "summary": {
+      "textCount": 21,
+      "minFont": 13,
+      "smallTextCount": 0,
+      "smallTextRatio": 0,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  },
+  {
+    "area": "B",
+    "name": "member-long",
+    "role": "client",
+    "url": "/app/classes/sample-class",
+    "width": 768,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "structure",
+    "scrollWidth": 768,
+    "sectionGaps": [
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1)",
+        "verticalGap": 20
+      }
+    ],
+    "distributions": {
+      "fontSize": {
+        "12": 5,
+        "15": 9,
+        "18": 1,
+        "22": 1,
+        "24": 2,
+        "28": 9,
+        "36": 1,
+        "40": 2
+      },
+      "lineHeight": {
+        "18px": 5,
+        "22.5px": 9,
+        "27px": 1,
+        "33px": 1,
+        "36px": 2,
+        "42px": 3,
+        "47.6px": 6,
+        "56px": 2,
+        "76px": 1
+      },
+      "fontWeight": {
+        "400": 11,
+        "500": 6,
+        "600": 5,
+        "700": 7,
+        "800": 1
+      }
+    },
+    "summary": {
+      "textCount": 30,
+      "minFont": 12,
+      "smallTextCount": 5,
+      "smallTextRatio": 16.7,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  },
+  {
+    "area": "B",
+    "name": "member-status-sheet",
+    "role": "client",
+    "url": "/design/class-player?role=member&case=M02&sheet=status",
+    "width": 1440,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "standalone-flow/player",
+    "scrollWidth": 1440,
+    "sectionGaps": [],
+    "distributions": {
+      "fontSize": {
+        "12": 16,
+        "13": 8,
+        "18": 7
+      },
+      "lineHeight": {
+        "14px": 6,
+        "16px": 12,
+        "18px": 6,
+        "20px": 6,
+        "24px": 1
+      },
+      "fontWeight": {
+        "400": 22,
+        "700": 9
+      }
+    },
+    "summary": {
+      "textCount": 31,
+      "minFont": 12,
+      "smallTextCount": 16,
+      "smallTextRatio": 51.6,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  },
+  {
+    "area": "B",
+    "name": "member-status-sheet",
+    "role": "client",
+    "url": "/design/class-player?role=member&case=M02&sheet=status",
+    "width": 390,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "standalone-flow/player",
+    "scrollWidth": 390,
+    "sectionGaps": [],
+    "distributions": {
+      "fontSize": {
+        "13": 21,
+        "18": 7
+      },
+      "lineHeight": {
+        "18px": 6,
+        "20px": 21,
+        "24px": 1
+      },
+      "fontWeight": {
+        "400": 19,
+        "700": 9
+      }
+    },
+    "summary": {
+      "textCount": 28,
+      "minFont": 13,
+      "smallTextCount": 0,
+      "smallTextRatio": 0,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  },
+  {
+    "area": "B",
+    "name": "member-status-sheet",
+    "role": "client",
+    "url": "/design/class-player?role=member&case=M02&sheet=status",
+    "width": 768,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "standalone-flow/player",
+    "scrollWidth": 768,
+    "sectionGaps": [],
+    "distributions": {
+      "fontSize": {
+        "12": 16,
+        "13": 8,
+        "18": 7
+      },
+      "lineHeight": {
+        "14px": 6,
+        "16px": 12,
+        "18px": 6,
+        "20px": 6,
+        "24px": 1
+      },
+      "fontWeight": {
+        "400": 22,
+        "700": 9
+      }
+    },
+    "summary": {
+      "textCount": 31,
+      "minFont": 12,
+      "smallTextCount": 16,
+      "smallTextRatio": 51.6,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  }
+]

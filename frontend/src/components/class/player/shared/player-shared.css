@@ -204,3 +204,10 @@
 .pz-sheet__sub { margin-left: 8px; font-size: var(--fs-12); font-weight: 400; color: var(--tx-lo); }
 .pz-sheet__body { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.25) transparent; }
 .pz-sheet__foot { flex: none; display: flex; flex-direction: column; gap: 8px; padding-top: 8px; }
+
+/* SDD-234: 상담사 진행 화면은 기존 도크 치수를 그대로 보존한다. */
+@media (max-width: 767px) {
+  .pz-root:not(.hp-shell) .pz-dk { font-size: var(--mobile-type-caption-size); line-height: var(--mobile-type-caption-leading); }
+  .pz-root:not(.hp-shell) .pz-sheet__sub,
+  .pz-root:not(.hp-shell) .pz-ring__sub { font-size: var(--mobile-type-caption-size); line-height: var(--mobile-type-caption-leading); }
+}
