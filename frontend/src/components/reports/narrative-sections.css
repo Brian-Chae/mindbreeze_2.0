@@ -53,3 +53,92 @@
 .narrative-report .dual-bar .bar-dir.up{color:#00b394}
 .narrative-report .dual-bar .bar-dir.down{color:#e5484d}
 .narrative-report .dual-bar .bar-dir.stable{color:var(--gray)}
+
+/* SDD-234: 서사·메타·조작을 의미별 모바일 토큰으로 구분한다. 인쇄와 데스크톱은 유지한다. */
+@media screen and (max-width: 767px) {
+  .narrative-report {
+    font-size: var(--mobile-type-body-size);
+    line-height: var(--mobile-type-body-leading);
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+  .narrative-report h1, .narrative-report .cover h1 {
+    font-size: var(--mobile-type-title-size);
+    line-height: var(--mobile-type-title-leading);
+    letter-spacing: 0;
+  }
+  .narrative-report h2, .narrative-report h3, .narrative-report .distribution h3 {
+    font-size: var(--mobile-type-subtitle-size);
+    line-height: var(--mobile-type-subtitle-leading);
+    letter-spacing: 0;
+  }
+  .narrative-report .caption, .narrative-report figcaption,
+  .narrative-report .eyebrow, .narrative-report .sample-tag,
+  .narrative-report .session dt, .narrative-report .quality,
+  .narrative-report .stage .caption, .narrative-report .badge,
+  .narrative-report .legend-ends, .narrative-report .practice-label,
+  .narrative-report .closing-note, .narrative-report .chart-empty,
+  .narrative-report .metric-copy .avg-label, .narrative-report .metric-copy .delta-pill,
+  .narrative-report .metric-copy .avg-unit, .narrative-report .delta span,
+  .narrative-report svg text {
+    font-size: var(--mobile-type-caption-size);
+    line-height: var(--mobile-type-caption-leading);
+    letter-spacing: 0;
+  }
+  .narrative-report .cover-lead, .narrative-report .journey-quote,
+  .narrative-report .section-note, .narrative-report .legend-panel p,
+  .narrative-report .distribution p, .narrative-report .practice p,
+  .narrative-report .closing .closing-message,
+  .narrative-report .metric-copy > p:not(.delta) {
+    font-size: var(--mobile-type-body-size);
+    line-height: var(--mobile-type-body-leading);
+  }
+  .narrative-report .session dd, .narrative-report .stage strong,
+  .narrative-report .summary-chip, .narrative-report .metric-copy .delta-row {
+    font-size: var(--mobile-type-compact-size);
+    line-height: var(--mobile-type-compact-leading);
+  }
+  .narrative-report .metric-copy .avg-value, .narrative-report .delta {
+    font-size: var(--mobile-type-number-size);
+    line-height: var(--mobile-type-number-leading);
+  }
+  .narrative-report .brand, .narrative-report .footer .brand,
+  .narrative-report .footer a, .narrative-report .legend-panel summary {
+    font-size: var(--mobile-type-label-size);
+    line-height: var(--mobile-type-label-leading);
+    min-height: var(--mobile-touch-minimum);
+    min-width: var(--mobile-touch-minimum);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .narrative-report .topbar, .narrative-report .footer { padding: 16px; gap: 8px; flex-wrap: wrap; }
+  .narrative-report .layout { padding: 0; }
+  .narrative-report section { padding: 24px 16px; }
+  .narrative-report .session, .narrative-report .journey-quote,
+  .narrative-report .metric, .narrative-report .distribution,
+  .narrative-report .legend-panel, .narrative-report .practice { padding: 16px; }
+  .narrative-report .metric, .narrative-report .distribution { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .narrative-report .session dl { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .narrative-report .journey-stages { gap: 12px; }
+  .narrative-report .journey-summary { gap: 8px; }
+  .narrative-report .summary-chip { padding: 8px 12px; gap: 8px; }
+  .narrative-report .practice { gap: 16px; }
+  .narrative-report .metric-copy .avg-row, .narrative-report .metric-copy .delta-row { flex-wrap: wrap; }
+  .report-sample-toolbar { padding: 12px 16px; gap: 12px; }
+  .report-sample-toolbar h2 {
+    font-size: var(--mobile-type-subtitle-size);
+    line-height: var(--mobile-type-subtitle-leading);
+    white-space: normal;
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+  .report-sample-toolbar button {
+    flex-shrink: 0;
+    min-height: var(--mobile-touch-minimum);
+    min-width: var(--mobile-touch-minimum);
+    font-size: var(--mobile-type-label-size);
+    line-height: var(--mobile-type-label-leading);
+  }
+}

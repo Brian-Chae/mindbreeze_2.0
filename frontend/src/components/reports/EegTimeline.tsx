@@ -31,12 +31,12 @@ export default function EegTimeline({ data, dense = false }: EegTimelineProps) {
   return (
     <section className="rounded-2xl border border-[#EFEFEF] bg-white p-5">
       <div className="mb-4">
-        <p className="font-mono text-[12px] uppercase tracking-widest text-[#5F0080]/70">
+        <p className="font-mono text-[12px] mobile:text-mb-caption uppercase tracking-widest text-[#5F0080]/70">
           eeg timeline
         </p>
-        <h3 className="mt-1 text-[15px] font-bold text-[#1F1F1F]">뇌파 트렌드</h3>
+        <h3 className="mobile:[overflow-wrap:anywhere] mt-1 text-[15px] mobile:text-mb-subtitle font-bold text-[#1F1F1F]">뇌파 트렌드</h3>
         {!dense && (
-          <p className="mt-1 text-[12px] text-[#6F6F6F]">
+          <p className="mt-1 text-[12px] mobile:text-mb-caption text-[#6F6F6F]">
             세션 중 집중·이완·스트레스 추이 (참고)
           </p>
         )}
@@ -92,7 +92,7 @@ export default function EegTimeline({ data, dense = false }: EegTimelineProps) {
 
       <div className="mt-4 flex items-center justify-center gap-5">
         {CHANNELS.map((ch) => (
-          <div key={ch.key} className="flex items-center gap-1.5 text-[12px] text-[#5A5A5A]">
+          <div key={ch.key} className="flex items-center gap-1.5 text-[12px] mobile:text-mb-caption text-[#5A5A5A]">
             <span className={`h-0.5 w-3 ${ch.legendBg}`} />
             {ch.label}
           </div>

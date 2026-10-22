@@ -38,11 +38,11 @@ export default function ReportDetailPage() {
   if (error && !report) {
     return (
       <AppShell title="리포트 상세" sub={isAiEnabled() ? 'AI REPORT DETAIL' : 'REPORT DETAIL'}>
-        <div className="p-4 rounded-xl bg-red-50 text-red-700 text-sm mb-4">{error}</div>
+        <div className="p-4 rounded-xl bg-red-50 text-red-700 text-sm mobile:text-mb-body mb-4">{error}</div>
         <button
           type="button"
           onClick={() => navigate('/reports')}
-          className="mb-btn mb-btn-secondary text-[15px] px-5 py-2.5 rounded-xl"
+          className="mobile:min-h-11 mobile:min-w-11 mb-btn mb-btn-secondary text-[15px] mobile:text-mb-label px-5 py-2.5 rounded-xl"
         >
           목록으로
         </button>

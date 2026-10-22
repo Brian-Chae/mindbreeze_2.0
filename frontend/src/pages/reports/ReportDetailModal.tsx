@@ -73,7 +73,7 @@ export function ReportDetailModal({ reportId, onClose, onReportChange }: ReportD
       }}
     >
       <div className="report-sample-toolbar">
-        <h2 id="report-detail-modal-title" className="truncate">
+        <h2 id="report-detail-modal-title" className="mobile:[overflow-wrap:anywhere] truncate">
           {title}
         </h2>
         <button type="button" onClick={onClose} autoFocus aria-label="리포트 닫기">
@@ -82,17 +82,17 @@ export function ReportDetailModal({ reportId, onClose, onReportChange }: ReportD
       </div>
       <div className="report-sample-scroll">
         {loading && (
-          <div className="p-8 text-[#6F6F6F] text-sm" role="status">
+          <div className="p-8 mobile:p-4 text-[#6F6F6F] text-sm mobile:text-mb-body" role="status">
             불러오는 중...
           </div>
         )}
         {!loading && error && !report && (
-          <div className="p-6 space-y-4">
-            <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>
+          <div className="p-6 mobile:p-4 space-y-4">
+            <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm mobile:text-mb-body">{error}</div>
             <button
               type="button"
               onClick={onClose}
-              className="mb-btn mb-btn-secondary text-[15px] px-5 py-2.5 rounded-xl"
+              className="mobile:min-h-11 mobile:min-w-11 mb-btn mb-btn-secondary text-[15px] mobile:text-mb-label px-5 py-2.5 rounded-xl"
             >
               닫기
             </button>
