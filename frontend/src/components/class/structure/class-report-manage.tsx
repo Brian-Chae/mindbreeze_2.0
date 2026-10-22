@@ -45,7 +45,7 @@ function StatusChip({ status }: { status: ReportStatusKey }) {
   const style = REPORT_STATUS[status];
   return (
     <span
-      className={`inline-flex min-h-[32px] items-center gap-2 px-3 text-xs font-bold ${style.className}`}
+      className={`inline-flex min-h-[32px] items-center gap-2 px-3 text-xs mobile:text-mb-caption font-bold ${style.className}`}
     >
       {style.label}
     </span>
@@ -349,7 +349,7 @@ export function ClassReportManage({
       {selected.size > 0 && (
         <div className="sticky bottom-4 flex flex-wrap items-center gap-3 rounded-2xl bg-[#2A1536] px-4 py-3 text-[#F7F4F0] shadow-lg">
           <b className="text-sm">리포트 {selected.size}건 선택</b>
-          <span className="flex-1 text-xs text-[#CFC6D6]">
+          <span className="flex-1 text-xs mobile:text-mb-caption text-[#CFC6D6]">
             선택한 대상은 실행 직전에 다시 확인해요. 결석·미대상 건은 자동으로 빠져요.
           </span>
           <button
