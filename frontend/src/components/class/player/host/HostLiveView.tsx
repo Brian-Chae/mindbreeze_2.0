@@ -1,7 +1,7 @@
 import type { LocalVideoTrack } from 'livekit-client';
 // SDD-208 H1·H2 — 상담사 진행 중 화면(뷰). props 만 받는 순수 컴포넌트라 서버·BLE·LiveKit 없이 픽스처로 렌더·측정할 수 있다.
 // 구성: 상단 바 → (배너) → 헤드 행(지표 띠 + 셀프뷰/요약 패널) → 칩 줄 → 세로 스크롤 그리드 → 도크, 시트는 도크·칩·타일에서 연다.
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { Activity, ClipboardCheck, MessageCircle, Hand, ArrowUpRight, Mic, SlidersHorizontal, Video } from 'lucide-react';
 import {
   filterHostParticipants,
@@ -122,6 +122,7 @@ function selfBandText(band: HostSelfBand): string {
 export function HostLiveView(props: HostLiveViewProps) {
   const { hostCase, participants, ui, uiActions, meta, queue, speakingPanel, readinessPanel, preCheckins, quietSignals, selfBand, chat, media, errorBanners, codeCopied, selfStream, selfTrack, memberStream, trendOf, actions, backdropSrc } = props;
   const sheetMode = useSheetMode();
+  const signalOpener = useRef<HTMLElement | null>(null);
   const [range, setRange] = useState<string | null>(null);
   const metric = metricByKey(ui.metric);
   const visible = filterHostParticipants(participants, ui.filter);
@@ -214,7 +215,7 @@ export function HostLiveView(props: HostLiveViewProps) {
   })();
 
   const sheet = sheetSpec ? (
-    <PlayerSheet open title={sheetSpec.title} sub={sheetSpec.subtitle} tall={sheetSpec.tall} onClose={uiActions.closeSheet}>
+    <PlayerSheet open returnFocusRef={signalOpener} title={sheetSpec.title} sub={sheetSpec.subtitle} tall={sheetSpec.tall} onClose={uiActions.closeSheet}>
       {props.signalToast}
       {sheetSpec.body}
     </PlayerSheet>
@@ -235,6 +236,9 @@ export function HostLiveView(props: HostLiveViewProps) {
 
   return (
     <PlayerShell
+      onFocusCapture={(event) => {
+        if (event.target instanceof HTMLElement && !event.target.closest('[role="dialog"]')) signalOpener.current = event.target;
+      }}
       className="hp-shell"
       place={hostCase.loc}
       sheetOpen={sheet !== null}

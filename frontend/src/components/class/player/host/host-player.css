@@ -331,6 +331,8 @@
 /* 기존 라이트 테마 컴포넌트(SpeakingRightsPanel·SessionMonitorSummary)를 어두운 시트 안에 맞춘다 — 터치 44px·글자 12px 이상 보장 */
 .hp-legacy { display: flex; flex-direction: column; gap: 8px; }
 .hp-legacy button { min-height: var(--tap); min-width: var(--tap); }
+.hp-legacy .mb-btn--ghost { color: var(--tx-hi); border-color: var(--hp-line); background: rgba(255, 255, 255, .08); }
+.hp-legacy [role="alert"] { color: #FFC9C6; }
 .hp-legacy section { background: var(--hp-fill) !important; border-color: var(--hp-line) !important; }
 .hp-legacy [class*="text-[#1F1F1F]"] { color: var(--tx-hi) !important; }
 .hp-legacy [class*="text-[#6F6F6F]"], .hp-legacy [class*="text-[#9B9B9B]"] { color: var(--tx-mid) !important; }
