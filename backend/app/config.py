@@ -179,6 +179,10 @@ class Settings(BaseSettings):
     #   올릴 때 다른 파이프라인 비용을 건드리지 않는다. 기본값은 flash(기존 동작 유지).
     agent_llm_model: str = "gemini-2.5-flash"
 
+    # SDD-231: 예약 클래스 회차가 열리기 전 대기실 입장 허용 구간(시작 예정 시각 기준, 분)
+    class_pre_open_entry_lead_minutes: int = 180
+    class_pre_open_entry_grace_minutes: int = 180
+
     # LiveKit WebRTC
     livekit_host: str = "ws://localhost:7880"
     livekit_api_key: str = "devkey"

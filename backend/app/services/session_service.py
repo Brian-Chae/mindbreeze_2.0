@@ -1856,6 +1856,14 @@ def generate_livekit_token(
     return token.to_jwt()
 
 
+def _session_not_open_detail(s: Session) -> dict:
+    """SDD-231: 화면이 남은 시간을 보여 줄 수 있게 시작 예정 시각을 함께 싣는다(상태 코드·code 는 그대로)."""
+    detail: dict = {"code": "session_not_open"}
+    if s.scheduled_at is not None:
+        detail["scheduled_at"] = s.scheduled_at.isoformat()
+    return detail
+
+
 def join_session(session_id: str, user_id: str, user_name: str, db: DBSession) -> dict:
     """세션 참여자 입장 처리 — 상태 전이 + WebRTC 룸 ID 생성 + LiveKit 토큰 발급"""
     s = get_session_authorized(db, session_id, user_id, SessionAction.SESSION_JOIN)
@@ -1864,7 +1872,7 @@ def join_session(session_id: str, user_id: str, user_name: str, db: DBSession) -
         from app.services.class_attendance_service import mark_entered, require_eligible
         parent, s = lock_class_session(db, s, user_id)
         if parent and parent.recurrence_rule and s.status not in ("open", "in_progress"):
-            raise HTTPException(409, detail={"code": "session_not_open"})
+            raise HTTPException(409, detail=_session_not_open_detail(s))
         entered = db.query(SessionParticipant).filter_by(session_id=s.id, user_id=_to_uuid(user_id)).first()
         if entered is not None:
             if s.status != "in_progress":
@@ -2080,6 +2088,7 @@ def _enter_resolved(
         eeg_notice_version=eeg_notice_version,
     )
     membership=None
+    pre_open=False  # SDD-231: 열리기 전 대기실 입장이면 출석(entered_at)을 남기지 않는다
     if s.class_id:
         parent=db.query(Class).filter_by(id=s.class_id).first()
         if parent and parent.recurrence_rule:
@@ -2087,8 +2096,10 @@ def _enter_resolved(
             from app.services.session_authz import authorize_session
             from app.services.class_membership_service import invite_members
             parent,s=lock_class_session(db,s,member_uid)
-            if s.status not in ("open","in_progress"):
-                raise HTTPException(409,detail={"code":"session_not_open"})
+            # SDD-231: 열리기 전이라도 허용 구간이면 대기실 입장은 받는다(미디어·출석은 열린 뒤).
+            pre_open = s.status not in ("open","in_progress") and class_code_service.pre_open_entry_allowed(s)
+            if s.status not in ("open","in_progress") and not pre_open:
+                raise HTTPException(409,detail=_session_not_open_detail(s))
             if member_uid==s.host_id:
                 authorize_session(db,member_uid,s,SessionAction.SESSION_JOIN)
             elif member_uid:
@@ -2167,7 +2178,8 @@ def _enter_resolved(
         if membership is not None:
             participant.member_id=membership.id
         _apply_entry_consents(db, participant, **consent_kwargs)
-        _mark_entered(participant)
+        if not pre_open:
+            _mark_entered(participant)
         db.commit()
         db.refresh(s)
         _notify_participant_changed(s, db)
@@ -2222,7 +2234,8 @@ def _enter_resolved(
     _apply_entry_consents(db, participant, **consent_kwargs)
     if participant.is_waitlisted:
         promoted = _promote_waitlist_all(s, db)
-    _mark_entered(participant)
+    if not pre_open:
+        _mark_entered(participant)
     db.commit()
     db.refresh(s)
     _notify_participant_changed(s, db)
@@ -2317,6 +2330,9 @@ def participant_livekit_token(
     # LIVE-04: 완료/취소된 세션에서는 토큰을 발급하지 않는다.
     if s.status in _CLOSED_STATUSES:
         raise HTTPException(status_code=400, detail="종료된 세션입니다")
+    # SDD-231: 열리기 전 대기실 입장자는 회차가 열릴 때까지 미디어 토큰을 받지 못한다.
+    if s.class_id and s.status in ("ready", "scheduled"):
+        raise HTTPException(status_code=409, detail=_session_not_open_detail(s))
     if not s.webrtc_room_id:
         raise HTTPException(status_code=400, detail="아직 상담사 화상이 시작되지 않았습니다")
 
@@ -2333,6 +2349,13 @@ def participant_livekit_token(
 
     # SDD-094: 발언권 기반 송신 규칙 — 온라인 + (1:1 상시 또는 그룹≤20 & speaking=True).
     can_publish = _compute_can_publish(s, participant)
+
+    # SDD-231: 열리기 전 사전 입장자는 입장 시각·출석이 비어 있다 — 실제 라이브 입장(토큰 발급)에서 최초 1회 기록한다.
+    if s.class_id and participant.entered_at is None:
+        from app.services.class_attendance_service import mark_entered
+        mark_entered(db, s, participant, _now())
+        db.commit()
+        _notify_participant_changed(s, db)
 
     token = generate_livekit_token(
         room_name=str(s.webrtc_room_id),
