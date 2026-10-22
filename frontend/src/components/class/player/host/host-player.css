@@ -454,7 +454,7 @@
 /* 코드는 상단에서 원문으로 표시하고 확대 화면에서 복사한다. */
 .hp-entry-code { grid-column: 2; grid-row: 1; justify-self: end; min-width: 0; }
 .hp-entry-code__open { display: flex; align-items: center; justify-content: flex-end; gap: 7px; min-height: 44px; padding: 0; color: inherit; background: none; border: 0; white-space: nowrap; }
-.hp-entry-code__label { font-size: 12px; opacity: .72; }
+.hp-entry-code__label { font-size: 13px; opacity: .72; }
 .hp-entry-code__digits { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 20px; font-weight: 500; letter-spacing: 1.4px; color: var(--mb-pale); }
 .hp-entry-code__copy { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; min-width: 60px; padding: 0 8px; border: 1px solid var(--sheet-border); border-radius: 10px; background: var(--hp-fill); font-size: var(--fs-13); white-space: nowrap; }
 @media (max-width: 599px) {
@@ -489,7 +489,7 @@
 
 
 /* A안: 상단·헤드·참가자·신호·도크가 동일한 1000px 컬럼을 공유한다. */
-.hp-shell { --pz-col: 1000px; }
+.hp-shell { --pz-col: 1000px; --fs-12: 13px; }
 .hp-shell > .pz-shell__top { width: min(100%, 1000px); justify-self: center; }
 .hp-statusline { justify-content: space-between; }
 .hp-participant-heading { flex: none; font-size: 15px; font-weight: 600; }
@@ -506,8 +506,8 @@
 .hp-topbar .hp-time > span, .hp-topbar .hp-topbar-stats { font-size: 13px; }
 @media (max-width: 599px) {
   .hp-head .hp-mstrip { padding: 8px; gap: 6px; }
-  .hp-head .hp-mstrip__mg { display: none; }
-  .hp-head .hp-mstrip__avg { display: none; }
+  .hp-head .hp-mstrip { flex-wrap: wrap; }
+  .hp-head .hp-mstrip__avg { margin-left: auto; }
   .hp-head .hp-mstrip__nm { white-space: normal; overflow-wrap: anywhere; }
   .hp-topbar .hp-end { font-size: 13px; }
 }
