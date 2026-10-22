@@ -158,7 +158,7 @@ export default function ChatPage() {
             <button
               type="button"
               onClick={() => setShowCreate(true)}
-              className="w-full h-11 rounded-xl bg-[#5F0080] text-white font-semibold text-sm hover:bg-[#4B0066] transition-colors"
+              className="w-full h-11 mobile:h-12 rounded-xl bg-[#5F0080] text-white font-semibold text-sm mobile:text-mb-body hover:bg-[#4B0066] transition-colors"
             >
               + 새 채팅방
             </button>
@@ -172,24 +172,24 @@ export default function ChatPage() {
             aria-current={isLucy ? 'page' : undefined}
             className={`flex w-full items-center gap-3 px-5 py-4 text-left border-b border-[#EFEFEF] transition-colors ${isLucy ? 'bg-[#F5EDFC]' : 'bg-[#FBF8FD] hover:bg-[#F5EDFC]'}`}
           >
-            <div className="w-11 h-11 rounded-full bg-[#5F0080] ring-2 ring-[#01f0c8]/60 flex items-center justify-center text-white text-sm font-bold shrink-0">루시</div>
+            <div className="w-11 h-11 rounded-full bg-[#5F0080] ring-2 ring-[#01f0c8]/60 flex items-center justify-center text-white text-sm mobile:text-mb-label font-bold shrink-0">루시</div>
             <div className="flex-1 min-w-0">
-              <span className="font-bold text-[15px] text-[#1F1F1F]">루시 (AI)</span>
-              <p className="text-[12px] text-[#6F6F6F] truncate mt-0.5">아침 브리핑 · 저녁 정리 · 내담자 피드백</p>
+              <span className="font-bold text-[15px] mobile:text-mb-body text-[#1F1F1F]">루시 (AI)</span>
+              <p className="text-[12px] mobile:text-mb-compact text-[#6F6F6F] truncate mt-0.5">아침 브리핑 · 저녁 정리 · 내담자 피드백</p>
             </div>
             {agentUnread > 0 && (
-              <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-[#5F0080] text-white text-[11px] font-bold inline-flex items-center justify-center font-mono shrink-0">
+              <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-[#5F0080] text-white text-[11px] mobile:text-mb-caption mobile:min-w-[22px] mobile:h-[22px] font-bold inline-flex items-center justify-center font-mono shrink-0">
                 {agentUnread}
               </span>
             )}
           </button>
           )}
           {loading ? (
-            <div className="p-6 text-center text-sm text-[#6F6F6F]">불러오는 중…</div>
+            <div className="p-6 text-center text-sm mobile:text-mb-compact text-[#6F6F6F]">불러오는 중…</div>
           ) : error ? (
-            <div className="p-6 text-center text-sm text-red-500">{error}</div>
+            <div className="p-6 text-center text-sm mobile:text-mb-compact text-red-500">{error}</div>
           ) : rooms.length === 0 ? (
-            <div className="p-6 text-center text-sm text-[#6F6F6F]">
+            <div className="p-6 text-center text-sm mobile:text-mb-compact text-[#6F6F6F]">
               아직 채팅방이 없습니다.<br />
               <span className="text-[#5F0080]">+ 새 채팅방</span> 버튼으로 시작하세요.
             </div>
@@ -209,19 +209,19 @@ export default function ChatPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-bold text-[15px] text-[#1F1F1F] truncate">
+                          <span className="font-bold text-[15px] mobile:text-mb-body text-[#1F1F1F] truncate">
                             {roomLabel(room)}
                           </span>
-                          <span className="text-[12px] text-[#6F6F6F] font-mono shrink-0">
+                          <span className="text-[12px] mobile:text-mb-caption text-[#6F6F6F] font-mono shrink-0">
                             {formatChatTime(room.last_message_at ?? room.last_message?.created_at ?? room.created_at)}
                           </span>
                         </div>
-                        <p className="text-[12px] text-[#6F6F6F] truncate mt-0.5">
+                        <p className="text-[12px] mobile:text-mb-compact text-[#6F6F6F] truncate mt-0.5">
                           {lastMessagePreview(room, roomSub(room))}
                         </p>
                       </div>
                       {room.unread_count > 0 && (
-                        <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-[#5F0080] text-white text-[11px] font-bold inline-flex items-center justify-center font-mono shrink-0">
+                        <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-[#5F0080] text-white text-[11px] mobile:text-mb-caption mobile:min-w-[22px] mobile:h-[22px] font-bold inline-flex items-center justify-center font-mono shrink-0">
                           {room.unread_count}
                         </span>
                       )}
@@ -260,18 +260,18 @@ export default function ChatPage() {
               </div>
             </>
           ) : paramRoomId && !loading ? (
-            <div className="flex-1 flex items-center justify-center text-sm text-[#6F6F6F]">
+            <div className="flex-1 flex items-center justify-center text-sm mobile:text-mb-compact text-[#6F6F6F]">
               채팅방을 찾을 수 없습니다.
             </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-sm text-[#6F6F6F]">
+            <div className="flex-1 flex items-center justify-center text-sm mobile:text-mb-compact text-[#6F6F6F]">
               왼쪽에서 대화를 선택하세요.
             </div>
           )}
         </main>
       </div>
 
-      {status && <p role="status" className="fixed bottom-20 left-1/2 z-50 -translate-x-1/2 max-w-[calc(100vw-2rem)] rounded-xl bg-[#5F0080] px-4 py-3 text-sm text-white break-words">{status}</p>}
+      {status && <p role="status" className="fixed bottom-20 left-1/2 z-50 -translate-x-1/2 max-w-[calc(100vw-2rem)] rounded-xl bg-[#5F0080] px-4 py-3 text-sm mobile:text-mb-compact text-white break-words">{status}</p>}
       {settingsRoom && <RoomSettingsModal key={settingsRoom.id} room={settingsRoom} onClose={() => setSettingsRoom(null)} onSaved={setStatus} onInvite={(room) => openInvite(room, true)} />}
       {inviteRoom && <InviteMemberModal key={inviteRoom.id} room={inviteRoom} onClose={() => {
         if (returnToSettings) setSettingsRoom(useChatStore.getState().rooms.find((room) => room.id === inviteRoom.id) ?? inviteRoom);

@@ -44,12 +44,10 @@ function DateSeparator({ iso }: { iso: string }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'center', margin: '16px 0 8px' }}>
       <span
+        className="chat-date-sep"
         style={{
-          fontSize: '12px',
           color: 'var(--chat-muted, #8E8E93)',
           background: 'var(--chat-surface, #F2F2F7)',
-          borderRadius: '12px',
-          padding: '4px 12px',
         }}
       >
         {formatDateLabel(iso)}
@@ -345,20 +343,20 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent, tone
   return (
     <div data-chat-tone={tone} className="chat-room flex flex-col h-full min-h-0 bg-white">
       {canReportPeer && room?.peer_id && (
-        <div className="flex justify-end px-4 pt-2 shrink-0">
+        <div className="flex justify-end px-4 pt-2 mobile:pt-1 shrink-0">
           <button
             type="button"
             onClick={() => setReportTarget({ userId: room.peer_id as string, name: room.peer_name || peerName || '상대방' })}
-            className="text-xs text-[#6F6F6F] underline"
+            className="chat-room__peer-report text-xs text-[#6F6F6F] underline"
           >
             상대방 신고
           </button>
         </div>
       )}
       {target && !loading && (
-        <div className="px-4 py-2 text-sm bg-purple-50 shrink-0" role="status">
+        <div className="px-4 py-2 text-sm mobile:text-mb-compact bg-purple-50 shrink-0" role="status">
           {targetError ?? '알림의 메시지 위치를 보고 있습니다.'}
-          <button type="button" onClick={showRecent} className="ml-3 text-[#5F0080] underline">최근 대화 보기</button>
+          <button type="button" onClick={showRecent} className="ml-3 text-[#5F0080] underline mobile:min-h-11">최근 대화 보기</button>
         </div>
       )}
       {/* 메시지 리스트 */}
@@ -369,9 +367,9 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent, tone
       >
         <div className="mx-auto w-full max-w-[760px]">
         {loading ? (
-          <div className="text-center text-gray-500 py-4">{target ? '메시지 위치를 찾고 있습니다' : '메시지를 불러오는 중…'}</div>
+          <div className="text-center text-gray-500 py-4 mobile:text-mb-compact">{target ? '메시지 위치를 찾고 있습니다' : '메시지를 불러오는 중…'}</div>
         ) : targetError ? null : msgList.length === 0 ? (
-          <div className="text-center text-gray-500 py-4">아직 메시지가 없습니다</div>
+          <div className="text-center text-gray-500 py-4 mobile:text-mb-compact">아직 메시지가 없습니다</div>
         ) : (
           msgList.map((m, idx, arr) => {
             const showDateSep =
@@ -432,7 +430,7 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent, tone
       </div>
 
       {error && (
-        <div role="alert" className="px-4 py-1.5 text-xs text-red-600 bg-red-50 shrink-0 flex items-center justify-between gap-2">
+        <div role="alert" className="px-4 py-1.5 text-xs mobile:text-mb-compact text-red-600 bg-red-50 shrink-0 flex items-center justify-between gap-2">
           <span className="min-w-0 flex-1 truncate">{error}</span>
           {failedContent && (
             <button
@@ -447,7 +445,7 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent, tone
       )}
 
       {blocked && (
-        <div role="status" className="px-4 py-2 text-xs text-[#6F6F6F] bg-[#F8F8FB] shrink-0">
+        <div role="status" className="px-4 py-2 text-xs mobile:text-mb-compact text-[#6F6F6F] bg-[#F8F8FB] shrink-0">
           신고하여 서로 메시지를 주고받을 수 없는 상대예요. 문의:{' '}
           <a href={`mailto:${CHAT_REPORT_CONTACT_EMAIL}`} className="text-[#5F0080] underline">{CHAT_REPORT_CONTACT_EMAIL}</a>
         </div>

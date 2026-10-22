@@ -186,11 +186,11 @@ export function RoomSettingsModal({ room, onClose, onSaved, onInvite }: Props) {
       <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-busy={loading || busy}
         className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
-          <h2 id={titleId} className="text-lg font-bold text-[#1F1F1F]">채팅방 설정</h2>
+          <h2 id={titleId} className="text-lg mobile:text-mb-subtitle font-bold text-[#1F1F1F]">채팅방 설정</h2>
           <button ref={closeRef} type="button" aria-label="채팅방 설정 닫기" disabled={busy} onClick={requestClose} className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F2F3F8] text-[#6F6F6F] focus-visible:ring-2 focus-visible:ring-[#5F0080] disabled:opacity-50">✕</button>
         </div>
-        {loading ? <p role="status" className="py-8 text-center text-sm text-[#6F6F6F]">채팅방 정보를 불러오는 중...</p> : detail && <>
-          <dl className="mb-5 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 rounded-xl bg-[#F8F8FB] p-4 text-sm">
+        {loading ? <p role="status" className="py-8 text-center text-sm mobile:text-mb-compact text-[#6F6F6F]">채팅방 정보를 불러오는 중...</p> : detail && <>
+          <dl className="mb-5 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 rounded-xl bg-[#F8F8FB] p-4 text-sm mobile:text-mb-compact">
             <dt className="text-[#6F6F6F]">표시 이름</dt><dd className="break-words text-[#1F1F1F]">{roomLabel(detail)}</dd>
             <dt className="text-[#6F6F6F]">방 종류</dt><dd>{detail.room_type === 'direct' ? '1:1 채팅' : detail.room_type === 'group' ? '그룹 채팅' : '세션 채팅'}</dd>
             <dt className="text-[#6F6F6F]">생성일</dt><dd>{formatDate(detail.created_at)}</dd>
@@ -199,34 +199,34 @@ export function RoomSettingsModal({ room, onClose, onSaved, onInvite }: Props) {
             {detail.room_type === 'session' && <><dt className="text-[#6F6F6F]">세션 제목</dt><dd>{detail.session_title || '제목 없음'}</dd><dt className="text-[#6F6F6F]">예정일</dt><dd>{formatDate(detail.session_scheduled_at)}</dd></>}
           </dl>
           <form onSubmit={(event) => { event.preventDefault(); void save(); }}>
-            <label htmlFor={nameId} className="mb-2 block text-sm font-semibold text-[#1F1F1F]">채팅방 이름</label>
+            <label htmlFor={nameId} className="mb-2 block text-sm mobile:text-mb-compact font-semibold text-[#1F1F1F]">채팅방 이름</label>
             <input id={nameId} value={name} onChange={(event) => { setName(event.target.value); setNotice(null); }} readOnly={!canRename} disabled={busy}
               placeholder={detail.room_type === 'direct' ? detail.peer_name || '1:1 채팅' : detail.room_type === 'session' ? detail.session_title || '제목 없음' : '그룹 채팅'}
               aria-describedby={`${nameId}-help`} aria-invalid={canRename && dirty && invalidName}
-              className="w-full rounded-xl border border-[#DDDEE7] px-3.5 py-2.5 text-sm text-[#1F1F1F] outline-none read-only:bg-[#F2F3F8] focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/15 disabled:opacity-50" />
-            <p id={`${nameId}-help`} className="mt-2 text-xs text-[#6F6F6F]">{canRename ? '1~120자 · 모든 참여자에게 표시되는 이름입니다.' : detail.room_type === 'session' ? disabledReasons.session_managed : disabledReasons[detail.rename_disabled_reason ?? 'not_host'] || '이 채팅방의 이름은 변경할 수 없습니다.'}</p>
-            {canRename && dirty && invalidName && <p className="mt-2 text-xs text-red-600">공백만 있는 이름, 줄바꿈·제어문자는 사용할 수 없으며 이름은 1~120자여야 합니다.</p>}
-            {canRename && <button type="submit" disabled={busy || invalidName || !dirty} className="mt-4 h-11 w-full rounded-xl bg-[#5F0080] text-sm font-semibold text-white hover:bg-[#4B0066] disabled:opacity-50">{busy ? '처리 중...' : '이름 저장'}</button>}
+              className="w-full rounded-xl border border-[#DDDEE7] px-3.5 py-2.5 text-sm mobile:text-mb-compact text-[#1F1F1F] outline-none read-only:bg-[#F2F3F8] focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/15 disabled:opacity-50" />
+            <p id={`${nameId}-help`} className="mt-2 text-xs mobile:text-mb-caption text-[#6F6F6F]">{canRename ? '1~120자 · 모든 참여자에게 표시되는 이름입니다.' : detail.room_type === 'session' ? disabledReasons.session_managed : disabledReasons[detail.rename_disabled_reason ?? 'not_host'] || '이 채팅방의 이름은 변경할 수 없습니다.'}</p>
+            {canRename && dirty && invalidName && <p className="mt-2 text-xs mobile:text-mb-caption text-red-600">공백만 있는 이름, 줄바꿈·제어문자는 사용할 수 없으며 이름은 1~120자여야 합니다.</p>}
+            {canRename && <button type="submit" disabled={busy || invalidName || !dirty} className="mt-4 h-11 w-full rounded-xl bg-[#5F0080] text-sm mobile:text-mb-compact font-semibold text-white hover:bg-[#4B0066] disabled:opacity-50">{busy ? '처리 중...' : '이름 저장'}</button>}
           </form>
           {canInvite && <section aria-label="회원 초대" className="mt-6 border-t border-[#EFEFEF] pt-4">
-            {detail.room_type === 'direct' && <p className="mb-2 text-xs text-[#6F6F6F]">새 그룹방에 회원을 초대합니다. 기존 1:1 채팅은 유지됩니다.</p>}
-            <button type="button" disabled={busy} onClick={() => { if (dirty) setInvitePending(true); else onInvite?.(detail); }} className="rounded-lg px-3 py-2 text-sm font-semibold text-[#5F0080] hover:bg-[#F5EDFC] disabled:opacity-50">회원 초대</button>
-            {invitePending && dirty && <div role="status" className="mt-2 rounded-xl bg-[#F5EDFC] p-3 text-sm">
+            {detail.room_type === 'direct' && <p className="mb-2 text-xs mobile:text-mb-caption text-[#6F6F6F]">새 그룹방에 회원을 초대합니다. 기존 1:1 채팅은 유지됩니다.</p>}
+            <button type="button" disabled={busy} onClick={() => { if (dirty) setInvitePending(true); else onInvite?.(detail); }} className="rounded-lg px-3 py-2 text-sm mobile:text-mb-compact font-semibold text-[#5F0080] hover:bg-[#F5EDFC] disabled:opacity-50">회원 초대</button>
+            {invitePending && dirty && <div role="status" className="mt-2 rounded-xl bg-[#F5EDFC] p-3 text-sm mobile:text-mb-compact">
               <p>이름 변경을 저장하거나 취소한 뒤 초대해 주세요.</p>
               <button type="button" disabled={busy || invalidName} onClick={() => void save()} className="mr-3 mt-2 rounded-lg px-2 py-2 font-semibold text-[#5F0080] disabled:opacity-50">이름 저장 후 초대</button>
               <button type="button" disabled={busy} onClick={() => { setName(originalName); onInvite?.(detail); }} className="mt-2 rounded-lg px-2 py-2 text-[#5F0080] disabled:opacity-50">변경 취소 후 초대</button>
             </div>}
           </section>}
           {canManage && <section aria-label="그룹 참여자 관리" className="mt-6 border-t border-[#EFEFEF] pt-4">
-            <h3 className="mb-3 text-sm font-semibold">그룹 참여자</h3>
-            <p className="mb-2 text-xs text-[#6F6F6F]">방장(나)은 내보낼 수 없습니다.</p>
-            {participantsLoading ? <p role="status" className="text-sm text-[#6F6F6F]">참여자를 불러오는 중...</p> : participantsReady && <ul className="max-h-48 divide-y divide-[#EFEFEF] overflow-y-auto rounded-xl border border-[#EFEFEF]">{participants.map((participant) => <li key={participant.user_id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm"><span className="min-w-0 truncate">{participant.name || '이름 정보 없음'}{participant.user_id === detail.host_id ? ' (방장)' : ''}</span>{participant.user_id !== detail.host_id && <button type="button" disabled={busy} aria-label={`${participant.name || '참여자'} 내보내기`} onClick={() => void changeParticipants(participant.user_id)} className="shrink-0 rounded-lg px-2 py-2 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50">내보내기</button>}</li>)}{participants.length === 0 && <li className="p-3 text-sm text-[#6F6F6F]">등록된 참여자가 없습니다.</li>}</ul>}
-            {participantsError && <div role="alert" className="mt-2 text-sm text-red-600">{participantsError}<button type="button" disabled={busy || participantsLoading} onClick={() => void loadParticipants()} className="ml-2 underline disabled:opacity-50">다시 조회</button></div>}
+            <h3 className="mb-3 text-sm mobile:text-mb-compact font-semibold">그룹 참여자</h3>
+            <p className="mb-2 text-xs mobile:text-mb-caption text-[#6F6F6F]">방장(나)은 내보낼 수 없습니다.</p>
+            {participantsLoading ? <p role="status" className="text-sm mobile:text-mb-compact text-[#6F6F6F]">참여자를 불러오는 중...</p> : participantsReady && <ul className="max-h-48 divide-y divide-[#EFEFEF] overflow-y-auto rounded-xl border border-[#EFEFEF]">{participants.map((participant) => <li key={participant.user_id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm mobile:text-mb-compact"><span className="min-w-0 truncate">{participant.name || '이름 정보 없음'}{participant.user_id === detail.host_id ? ' (방장)' : ''}</span>{participant.user_id !== detail.host_id && <button type="button" disabled={busy} aria-label={`${participant.name || '참여자'} 내보내기`} onClick={() => void changeParticipants(participant.user_id)} className="shrink-0 rounded-lg px-2 py-2 text-xs mobile:text-mb-caption text-red-600 hover:bg-red-50 disabled:opacity-50">내보내기</button>}</li>)}{participants.length === 0 && <li className="p-3 text-sm mobile:text-mb-compact text-[#6F6F6F]">등록된 참여자가 없습니다.</li>}</ul>}
+            {participantsError && <div role="alert" className="mt-2 text-sm mobile:text-mb-compact text-red-600">{participantsError}<button type="button" disabled={busy || participantsLoading} onClick={() => void loadParticipants()} className="ml-2 underline disabled:opacity-50">다시 조회</button></div>}
           </section>}
         </>}
-        {error && <p role="alert" className="mt-3 text-sm text-red-600">{error}</p>}
-        {!loading && !detail && <button type="button" onClick={() => setReload((previous) => previous + 1)} className="mt-3 rounded-lg bg-[#F5EDFC] px-4 py-2 text-sm text-[#5F0080]">다시 시도</button>}
-        {notice && <p role="status" className="mt-3 text-sm text-[#5F0080]">{notice}</p>}
+        {error && <p role="alert" className="mt-3 text-sm mobile:text-mb-compact text-red-600">{error}</p>}
+        {!loading && !detail && <button type="button" onClick={() => setReload((previous) => previous + 1)} className="mt-3 rounded-lg bg-[#F5EDFC] px-4 py-2 text-sm mobile:text-mb-compact text-[#5F0080]">다시 시도</button>}
+        {notice && <p role="status" className="mt-3 text-sm mobile:text-mb-compact text-[#5F0080]">{notice}</p>}
       </div>
     </div>, document.body,
   );
