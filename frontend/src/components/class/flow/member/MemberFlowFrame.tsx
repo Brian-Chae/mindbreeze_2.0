@@ -35,12 +35,13 @@ interface MemberFlowFrameProps {
   foot?: ReactNode;
   sheet?: ReactNode;
   sheetOpen?: boolean;
+  sheetMode?: 'side' | 'bottom';
   children: ReactNode;
 }
 
 export function MemberFlowFrame({
   place = 'online', backdropSrc, title, steps, onBack, backLabel = '이전', onExit, exitLabel = '나가기',
-  wizard = false, colClassName, foot, sheet = null, sheetOpen = false, children,
+  wizard = false, colClassName, foot, sheet = null, sheetOpen = false, sheetMode, children,
 }: MemberFlowFrameProps) {
   const center = steps ? <FlowSteps total={steps.total} current={steps.current} /> : <span className="fm-title">{title ?? ''}</span>;
   return (
@@ -49,6 +50,7 @@ export function MemberFlowFrame({
       flow
       className={wizard ? 'fl-root fm-member fm-wizard' : 'fl-root fm-member'}
       sheetOpen={sheetOpen}
+      sheetMode={sheetMode}
       backdrop={<PlayerBackdrop imageSrc={backdropSrc} />}
       top={
         <PlayerTopBar
