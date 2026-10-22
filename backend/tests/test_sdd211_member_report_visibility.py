@@ -895,7 +895,7 @@ def test_RX13_report_status_와_WS_report_progress_상태문자열_Phase0_불변
     후속(Phase 5)에서 회원 컨텍스트를 분리하면 이 테스트를 개정한다.
     """
     from app.services import report_progress_service as rps
-    from app.ws import record_namespace
+    from app.ws import sync_emit
 
     env = _scenario(client, ("pending_review",))
     sid = env["sids"]["pending_review"]
@@ -906,10 +906,11 @@ def test_RX13_report_status_와_WS_report_progress_상태문자열_Phase0_불변
 
     captured: list[JsonDict] = []
 
-    async def fake_broadcast(session_id: str, payload: JsonDict) -> None:
+    def fake_sync_emit(session_id: str, payload: JsonDict) -> bool:
         captured.append(payload)
+        return True
 
-    monkeypatch.setattr(record_namespace, "broadcast_report_progress", fake_broadcast)
+    monkeypatch.setattr(sync_emit, "emit_report_progress_sync", fake_sync_emit)
     db = _db()
     try:
         payload = rps.emit_report_progress(sid, db)
