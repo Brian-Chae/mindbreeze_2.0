@@ -18,11 +18,18 @@ const { pathToFileURL } = require('node:url');
     const visible=e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0};
     const buttons=[...document.querySelectorAll('button')].filter(visible);
     const badTouch=buttons.filter(e=>{const r=e.getBoundingClientRect();return r.width<44||r.height<44}).map(e=>e.textContent);
-    return {overflow:document.documentElement.scrollWidth>innerWidth,badTouch,blur:[...document.querySelectorAll('*')].some(e=>{const s=getComputedStyle(e);return s.backdropFilter!=='none'||s.filter.includes('blur(')}),top:rect('.top'),head:rect('.head'),grid:rect('.participants'),signals:rect('.signals'),dock:rect('.dock'),toast:rect('.toast'),errors:[]};
+    const textElements=[...document.querySelectorAll('.screen *, .sheet *')].filter(e=>visible(e)&&[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim()));
+    const minFont=Math.min(...textElements.map(e=>parseFloat(getComputedStyle(e).fontSize)));
+    const primary=[...document.querySelectorAll('.tile b,.signals b,.toast-main b,.sheet p:not(.secondary)')].filter(visible);
+    const minPrimary=Math.min(...primary.map(e=>parseFloat(getComputedStyle(e).fontSize)));
+    return {minFont:Number.isFinite(minFont)?minFont:null,minPrimary:Number.isFinite(minPrimary)?minPrimary:null,overflow:document.documentElement.scrollWidth>innerWidth,badTouch,blur:[...document.querySelectorAll('*')].some(e=>{const s=getComputedStyle(e);return s.backdropFilter!=='none'||s.filter.includes('blur(')}),top:rect('.top'),head:rect('.head'),grid:rect('.participants'),signals:rect('.signals'),dock:rect('.dock'),toast:rect('.toast'),errors:[]};
    });
-   if(metrics.overflow||metrics.blur||metrics.badTouch.length||errors.length)throw new Error(JSON.stringify({variant,state,width,...metrics,errors}));
+   if((metrics.minFont!==null&&metrics.minFont<13)||(metrics.minPrimary!==null&&metrics.minPrimary<15)||metrics.overflow||metrics.blur||metrics.badTouch.length||errors.length)throw new Error(JSON.stringify({variant,state,width,...metrics,errors}));
    if(variant!=='current'){
     for(const key of ['head','grid','signals','dock'])if(Math.abs(metrics[key].x-metrics.top.x)>1||Math.abs(metrics[key].width-metrics.top.width)>1)throw new Error(`정렬 불일치 ${variant}/${key}`);
+    await page.locator('.participants').evaluate(e=>e.scrollTop=e.scrollHeight);
+    const lastBottom=await page.locator('.tile').last().evaluate(e=>e.getBoundingClientRect().bottom);
+    if(lastBottom>metrics.signals.top+1)throw new Error('마지막 타일 도달 불가');
     if(metrics.grid.bottom>metrics.signals.top+1)throw new Error('참가자 영역 가림');
     if(Math.abs(metrics.dock.top-metrics.signals.bottom-8)>1)throw new Error('신호 줄 위치 오류');
    }
@@ -30,6 +37,7 @@ const { pathToFileURL } = require('node:url');
   }
   for(const variant of ['A','B']){
    await page.goto(`${base}?variant=${variant}`);
+   if(variant==='B'){ await page.getByRole('button',{name:'지표 기준 열기'}).click(); await page.getByRole('dialog',{name:'지표 기준',exact:true}).waitFor(); await page.keyboard.press('Escape'); }
    await page.getByRole('button',{name:'수업 상태',exact:true}).click();
    await page.getByText('체크인 응답 보기').click();
    await page.getByText('지은 · 차분해요').waitFor({state:'visible'});
