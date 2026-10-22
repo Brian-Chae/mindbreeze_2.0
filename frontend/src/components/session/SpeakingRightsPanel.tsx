@@ -11,6 +11,9 @@ interface SpeakingRightsPanelProps {
   busyId: string | null;
   onGrant: (participantId: string) => void;
   onRevoke: (participantId: string) => void;
+  onLowerHand?: (participantId: string) => void;
+  lowerHandBusyId?: string | null;
+  lowerHandError?: { participantId: string; message: string } | null;
 }
 
 /** 손들기 → 발언 중 → 나머지 순으로 정렬 (동일 순위는 이름순) */
@@ -41,11 +44,15 @@ const ParticipantRow = memo(function ParticipantRow({
   busy,
   onGrant,
   onRevoke,
+  onLowerHand,
+  lowerHandError,
 }: {
   row: SessionLiveMetric;
   busy: boolean;
   onGrant: (participantId: string) => void;
   onRevoke: (participantId: string) => void;
+  onLowerHand?: (participantId: string) => void;
+  lowerHandError?: string;
 }) {
   const canToggle = !isSyntheticParticipantId(row.participant_id);
   return (
@@ -57,49 +64,63 @@ const ParticipantRow = memo(function ParticipantRow({
       }`}
     >
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-[#1F1F1F]">
+        <p className="truncate text-[15px] font-semibold text-[#1F1F1F]">
           {row.display_name || (row.is_guest ? '게스트' : '참가자')}
         </p>
         <div className="mt-0.5 flex flex-wrap items-center gap-1">
           {row.is_guest && (
-            <span className="rounded-full bg-[#F2F3F8] px-1.5 py-0.5 text-[12px] font-medium text-[#6F6F6F]">
+            <span className="rounded-full bg-[#F2F3F8] px-1.5 py-0.5 text-[13px] font-medium text-[#6F6F6F]">
               게스트
             </span>
           )}
           {row.raise_hand && (
-            <span className="rounded-full bg-[#F5E2B8] px-1.5 py-0.5 text-[12px] font-semibold text-[#8A6B1F]">
+            <span className="rounded-full bg-[#F5E2B8] px-1.5 py-0.5 text-[13px] font-semibold text-[#8A6B1F]">
               🙋 손들기
             </span>
           )}
           {row.speaking && (
-            <span className="rounded-full bg-[#59CE9026] px-1.5 py-0.5 text-[12px] font-semibold text-[#2F9E68]">
+            <span className="rounded-full bg-[#59CE9026] px-1.5 py-0.5 text-[13px] font-semibold text-[#2F9E68]">
               🎤 발언 중
             </span>
           )}
           {!row.raise_hand && !row.speaking && (
-            <span className="text-[12px] font-medium text-[#9B9B9B]">발언권 없음</span>
+            <span className="text-[13px] font-medium text-[#9B9B9B]">발언권 없음</span>
           )}
         </div>
       </div>
-      {row.speaking ? (
-        <button
-          type="button"
-          onClick={() => onRevoke(row.participant_id)}
-          disabled={busy || !canToggle}
-          className="mb-btn mb-btn--ghost !px-3 !py-1.5 text-xs disabled:cursor-not-allowed"
-        >
-          {busy ? '처리 중…' : '발언권 해제'}
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={() => onGrant(row.participant_id)}
-          disabled={busy || !canToggle}
-          className="mb-btn !px-3 !py-1.5 text-xs disabled:cursor-not-allowed"
-        >
-          {busy ? '처리 중…' : '발언권 부여'}
-        </button>
-      )}
+      <div className="flex shrink-0 flex-col gap-1.5">
+        {row.raise_hand && onLowerHand && (
+          <button
+            type="button"
+            aria-label={`${row.display_name || '참가자'} 손 내리기`}
+            onClick={() => onLowerHand(row.participant_id)}
+            disabled={busy || !canToggle}
+            className="mb-btn mb-btn--ghost min-h-11 !px-3 !py-1.5 text-[13px] disabled:cursor-not-allowed"
+          >
+            {busy ? '처리 중…' : '손 내리기'}
+          </button>
+        )}
+        {row.speaking ? (
+          <button
+            type="button"
+            onClick={() => onRevoke(row.participant_id)}
+            disabled={busy || !canToggle}
+            className="mb-btn mb-btn--ghost !px-3 !py-1.5 min-h-11 text-[13px] disabled:cursor-not-allowed"
+          >
+            {busy ? '처리 중…' : '발언권 해제'}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onGrant(row.participant_id)}
+            disabled={busy || !canToggle}
+            className="mb-btn !px-3 !py-1.5 min-h-11 text-[13px] disabled:cursor-not-allowed"
+          >
+            {busy ? '처리 중…' : '발언권 부여'}
+          </button>
+        )}
+        {lowerHandError && <p role="alert" className="max-w-40 text-[13px] text-[#B42318]">{lowerHandError}</p>}
+      </div>
     </div>
   );
 });
@@ -109,6 +130,9 @@ export function SpeakingRightsPanel({
   busyId,
   onGrant,
   onRevoke,
+  onLowerHand,
+  lowerHandBusyId,
+  lowerHandError,
 }: SpeakingRightsPanelProps) {
   const rows = useMemo(() => sortForSpeaking(participants), [participants]);
   const raisedCount = participants.filter((p) => p.raise_hand).length;
@@ -119,10 +143,10 @@ export function SpeakingRightsPanel({
   return (
     <section className="rounded-2xl border border-[#EFEFEF] bg-[#FAFAFA] p-3">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-[12px] font-mono uppercase tracking-wider text-[#6F6F6F]">
+        <h3 className="text-[13px] font-mono uppercase tracking-wider text-[#6F6F6F]">
           발언권 관리
         </h3>
-        <div className="flex items-center gap-1.5 text-[12px] font-semibold">
+        <div className="flex items-center gap-1.5 text-[13px] font-semibold">
           {raisedCount > 0 && (
             <span className="rounded-full bg-[#F5E2B8] px-2 py-0.5 text-[#8A6B1F]">
               🙋 손들기 {raisedCount}명
@@ -140,9 +164,11 @@ export function SpeakingRightsPanel({
           <ParticipantRow
             key={row.participant_id}
             row={row}
-            busy={busyId === row.participant_id}
+            busy={busyId === row.participant_id || lowerHandBusyId === row.participant_id}
             onGrant={onGrant}
             onRevoke={onRevoke}
+            onLowerHand={onLowerHand}
+            lowerHandError={lowerHandError?.participantId === row.participant_id ? lowerHandError.message : undefined}
           />
         ))}
       </div>
