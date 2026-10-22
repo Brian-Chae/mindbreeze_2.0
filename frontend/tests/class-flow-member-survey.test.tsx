@@ -101,7 +101,20 @@ describe('FM06b 화면', () => {
     expect(onSelect).toHaveBeenCalledWith('arousal', 4);
     await render(<SurveyStepView {...survey({ question: 1, draft: { answers: { arousal: 4, valence: null, emotion: null }, note: '' }, onSelect })} />);
     expect(btn('다음')!.disabled).toBe(false);
+    expect(qa<HTMLButtonElement>('[role="radio"]').map((r) => r.tabIndex)).toEqual([-1, -1, -1, 0, -1]);
     expect(qa('[role="radio"]').map((r) => r.getAttribute('aria-checked'))).toEqual(['false', 'false', 'false', 'true', 'false']);
+  });
+  it('현재 문항을 알리고 방향키·Home·End로 원래 값을 선택하고 포커스를 옮긴다', async () => {
+    const onSelect = vi.fn();
+    await render(<SurveyStepView {...survey({ onSelect })} />);
+    expect(document.querySelector('.fm-ax[aria-current="step"]')?.textContent).toBe('집중');
+    const radios = qa<HTMLButtonElement>('[role="radio"]');
+    expect(radios.map((r) => r.tabIndex)).toEqual([0, -1, -1, -1, -1]);
+    for (const [index, key, target, value] of [[0, 'ArrowRight', 1, 2], [1, 'End', 4, 5], [4, 'ArrowDown', 0, 1], [0, 'ArrowLeft', 4, 5], [4, 'Home', 0, 1]] as const) {
+      await act(async () => { radios[index]!.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true })); });
+      expect(onSelect).toHaveBeenLastCalledWith('arousal', value);
+      expect(document.activeElement).toBe(radios[target]);
+    }
   });
   it('q4: 전할 말(선택) · 글자 수 · 200자 제한 · 남기고 계속하기/건너뛰기', async () => {
     const onNote = vi.fn();
