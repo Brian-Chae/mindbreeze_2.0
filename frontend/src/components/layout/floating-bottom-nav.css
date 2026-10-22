@@ -1,0 +1,8 @@
+/* SDD-233 확정 B안: safe-area 밖으로 떠 있는 작은 라벨 메뉴. */
+.floating-bottom-nav{position:fixed;left:16px;right:16px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:30;display:flex;height:66px;box-sizing:border-box;padding:6px;border:1px solid #36253e;border-radius:999px;background:#201427;box-shadow:0 8px 32px #26103224}
+.floating-bottom-nav>a,.floating-bottom-nav>button{position:relative;display:flex;flex:1;min-width:0;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:0;border-radius:999px;background:transparent;color:#c9becf;font-size:12px;line-height:16px;text-decoration:none}
+.floating-bottom-nav [aria-current="page"]{background:#563365;color:#fff;font-weight:800}
+.floating-bottom-nav>a:focus-visible,.floating-bottom-nav>button:focus-visible{outline:3px solid #b05cd0;outline-offset:3px}
+.floating-bottom-nav__icon{position:relative;display:grid;place-items:center}
+.floating-bottom-nav__badge{position:absolute;top:-5px;right:-9px;box-sizing:border-box;min-width:16px;height:16px;padding:0 2px;border:2px solid #201427;border-radius:15px;background:#b3264b;color:#fff;font-size:10px;line-height:12px;text-align:center}
+@media(min-width:768px){.floating-bottom-nav{display:none}}

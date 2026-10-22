@@ -1,5 +1,5 @@
 /* SDD-232 — 상담사 홈 레이아웃. .ch-home 안에서만 적용한다. 새 색상 토큰 없음(회원 홈·shell-kit 값 재사용). */
-.cs-structure .ch-home{--ch-radius:20px;--ch-line:#e8e3ec;display:flex;flex-direction:column;gap:20px;width:100%;max-width:1280px;margin:0 auto;padding:0 0 32px;min-width:0}
+.ch-home{--ch-radius:20px;--ch-line:#e8e3ec;display:flex;flex-direction:column;gap:20px;width:100%;max-width:1280px;margin:0 auto;padding:0 0 32px;min-width:0}
 .ch-home>*{min-width:0}
 .ch-home .ch-hero{border-radius:var(--ch-radius);min-height:0}
 .ch-home .ch-hero__title{font-size:26px;overflow-wrap:anywhere}
@@ -32,7 +32,7 @@
 .ch-home .ch-row{overflow-wrap:anywhere}
 .ch-home .ch-past summary{display:flex;align-items:center;min-height:44px;cursor:pointer;font-size:13px;color:#6f6f6f}
 @media(min-width:768px){
-.cs-structure .ch-home{gap:24px}
+.ch-home{gap:24px}
 .ch-home .ch-hero__title{font-size:30px}
 .ch-home .ch-hero__cta{width:auto;min-width:200px;align-self:flex-start}
 .ch-home .ch-review{flex-direction:row;align-items:center;justify-content:space-between;padding:16px 24px}

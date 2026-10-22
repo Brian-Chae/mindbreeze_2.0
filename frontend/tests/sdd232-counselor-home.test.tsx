@@ -70,3 +70,13 @@ it('공통 카드: 기본은 회원 경로, href 주입 시 상담사 경로, �
   expect(host.textContent).not.toContain('데이터 없음');
   expect(host.textContent).not.toContain('0/0');
 });
+
+it('홈 클래스는 최대 4장이고 전체 보기에는 총수를 유지한다', async () => {
+  mocks.dashboard.mockResolvedValue(dash([]));
+  mocks.classes.mockReturnValue({ status: 'success', data: { classes: Array.from({ length: 7 }, (_, i) => ({ id: `c${i}`, title: `클래스 ${i}`, status: 'active', progress: { completed: 0, total: 8 }, next_session: null })), total: 7 } });
+  const { box, unmount } = await mount();
+  const section = box.querySelector('section[aria-label="내 클래스"]')!;
+  expect(section.querySelectorAll('article')).toHaveLength(4);
+  expect(section.textContent).toContain('전체 보기 (7)');
+  await unmount();
+});

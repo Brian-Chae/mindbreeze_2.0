@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({ home: vi.fn() }));
 vi.mock('../src/hooks/use-class-structure', () => ({ useMixedHome: mocks.home }));
 vi.mock('../src/hooks/use-client-counselors', () => ({ useClientCounselors: vi.fn() }));
 vi.mock('../src/components/class/structure/structure-shell', () => ({ StructureShell: ({ children }: { children: React.ReactNode }) => <main className="cs-structure">{children}</main> }));
-vi.mock('../src/pages/client/ClientHomePage', () => ({ default: () => <div className="mh-legacy" /> }));
+vi.mock('../src/pages/client/ClientHomePage', () => ({ default: ({ classSections }: { classSections?: React.ReactNode }) => <div className="mh-legacy">{classSections}</div> }));
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
 vi.stubGlobal('matchMedia', () => ({ matches: true }));
@@ -24,12 +24,13 @@ async function render(count: number, status = 'success') {
 it.each([1, 2, 3, 7])('%i개 카드가 공통 격자의 스크롤 줄에 배치된다', async (count) => {
   const el = await render(count);
   expect(el.querySelector('.mh-home')).not.toBeNull();
-  expect(el.querySelectorAll('.mh-track > .mc-card')).toHaveLength(count);
+  expect(el.querySelectorAll('.mh-track > .mc-card')).toHaveLength(Math.min(count, 4));
+  if (count > 4) expect(el.querySelector('.mh-classes .mc-link')?.textContent).toBe(`전체 보기 (${count})`);
   expect(el.querySelector('[aria-label="이전 클래스"]')).not.toBeNull();
   expect(el.querySelector('[aria-label="다음 클래스"]')).not.toBeNull();
 });
 it('키보드 포커스를 받은 카드를 화면 안으로 이동한다', async () => {
-  const el = await render(7); const link = el.querySelectorAll<HTMLAnchorElement>('.mh-track a')[6];
+  const el = await render(7); const link = el.querySelectorAll<HTMLAnchorElement>('.mh-track a')[3];
   const scroll = vi.fn(); link.closest('article')!.scrollIntoView = scroll;
   await act(async () => link.focus());
   expect(scroll).toHaveBeenCalledWith({ block: 'nearest', inline: 'start', behavior: 'instant' });

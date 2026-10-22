@@ -1,7 +1,7 @@
 // 내담자 홈 — 행동 중심 재설계 (SDD-187) + 클래스 사전 흐름(SDD-209 FM01)
 // 데스크톱 2컬럼: 좌측(다음 클래스 히어로 → 초대 → 이번 주 클래스 → 코드로 입장하기 → 내 리포트) / 우측(요약 타일 → 담당 상담사 → 대화 → 알림)
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { type ReactNode, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CalendarDays, ChevronRight } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
@@ -117,7 +117,7 @@ function SummaryTiles({
 
 // ── 메인 ──────────────────────────────────────────────────────────
 
-export default function ClientHomePage({ hideHero = false }: { hideHero?: boolean } = {}) {
+export default function ClientHomePage({ hideHero = false, classSections }: { hideHero?: boolean; classSections?: ReactNode } = {}) {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const counselors: Counselor[] = useMemo(() => user?.counselors ?? [], [user?.counselors]);
@@ -323,12 +323,12 @@ export default function ClientHomePage({ hideHero = false }: { hideHero?: boolea
   // ── 렌더 ────────────────────────────────────────────────────────
 
   if (loading) {
-    return <div className="mh-legacy-state py-12 text-center text-[#6F6F6F] text-sm">불러오는 중...</div>;
+    return <>{classSections}<div className="mh-legacy-state py-12 text-center text-[#6F6F6F] text-sm">불러오는 중...</div></>;
   }
 
   if (error) {
     return (
-      <section className="mh-legacy-state bg-white border border-[#E8E3EC] rounded-2xl p-6 text-center" role="alert">
+      <>{classSections}<section className="mh-legacy-state bg-white border border-[#E8E3EC] rounded-2xl p-6 text-center" role="alert">
         <p className="text-sm text-red-600 mb-4">{error}</p>
         <button
           type="button"
@@ -337,7 +337,7 @@ export default function ClientHomePage({ hideHero = false }: { hideHero?: boolea
         >
           다시 시도
         </button>
-      </section>
+      </section></>
     );
   }
 
@@ -355,6 +355,8 @@ export default function ClientHomePage({ hideHero = false }: { hideHero?: boolea
 
   return (
     <div className={`${hideHero ? 'mh-legacy' : ''} sh-scope mx-auto grid w-full max-w-[1200px] grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]`}>
+      {hideHero && summaryTiles}
+      {classSections}
       {/* ── 좌측 컬럼 ── */}
       <div className="mh-main flex min-w-0 flex-col gap-6">
         {/* 다음 클래스 히어로 (항상 표시) — 참여코드 값·복사 UI 는 두지 않는다 */}
@@ -474,8 +476,6 @@ export default function ClientHomePage({ hideHero = false }: { hideHero?: boolea
           )}
         </section>
       </div>
-
-      {hideHero && summaryTiles}
 
       {/* ── 우측 레일 ── */}
       <div className="mh-rail flex min-w-0 flex-col gap-6 lg:gap-5">

@@ -73,7 +73,7 @@ afterEach(async () => {
 });
 
 function badgeOf(el: Element): string | null {
-  const texts = Array.from(el.querySelectorAll('span.rounded-full')).map((s) => s.textContent ?? '');
+  const texts = Array.from(el.querySelectorAll('span.rounded-full, .floating-bottom-nav__badge')).map((s) => s.textContent ?? '');
   return texts.find((t) => t !== '') ?? null;
 }
 function sidebarEntries(): Entry[] {
@@ -142,6 +142,7 @@ describe('FE-NAV-01 사이드바 라벨·경로 골든(역할 4종)', () => {
     state.user = { id: 'u4', role: 'platform_admin', name: '테스트', email: 'a@example.com' };
     await renderSidebar();
     expect(sidebarEntries()).toEqual([
+      ['/chat', '채팅'], ['/notifications', '알림'], ['/settings', '설정'],
       ['/admin/orgs', '기관 관리'], ['/admin/applications', '가입 신청'], ['/admin/users', '상담사 관리'],
       ['/admin/clients', '회원 관리'], ['/playground', '플레이그라운드'],
     ]);
@@ -155,11 +156,11 @@ describe('FE-NAV-01 사이드바 라벨·경로 골든(역할 4종)', () => {
 
 describe('FE-NAV-02 상담사·관리자 하단 탭 라벨·경로 골든', () => {
   const cases: [UserRole | undefined, Entry[]][] = [
-    ['counselor', [['/dashboard', '홈'], ['/classes', '클래스'], ['/counseling', '상담'], ['/chat', '채팅']]],
-    ['org_admin', [['/dashboard/org', '홈'], ['/classes', '클래스'], ['/counseling', '상담'], ['/chat', '채팅']]],
-    ['platform_admin', [['/admin/orgs', '홈'], ['/classes', '클래스'], ['/chat', '채팅'], ['/reports?status=pending', '리포트']]],
-    ['client', [['/app', '홈'], ['/app/classes', '내 클래스'], ['/app/counseling', '내 상담'], ['/app/reports', '리포트']]],
-    [undefined, [['/dashboard', '홈'], ['/classes', '클래스'], ['/counseling', '상담'], ['/chat', '채팅']]],
+    ['counselor', [['/dashboard', '홈'], ['/classes', '클래스'], ['/counseling', '상담'], ['/chat', '대화']]],
+    ['org_admin', [['/dashboard/org', '홈'], ['/classes', '클래스'], ['/counseling', '상담'], ['/chat', '대화']]],
+    ['platform_admin', [['/admin/orgs', '홈'], ['/admin/applications', '가입 신청'], ['/admin/users', '사용자'], ['/chat', '대화']]],
+    ['client', [['/app', '홈'], ['/app/classes', '내 클래스'], ['/app/counseling', '상담'], ['/app/reports', '리포트']]],
+    [undefined, [['/dashboard', '홈'], ['/classes', '클래스'], ['/counseling', '상담'], ['/chat', '대화']]],
   ];
   for (const [role, expected] of cases) {
     it(`role=${role ?? '미지정'}`, async () => {
@@ -174,8 +175,8 @@ describe('FE-NAV-02 상담사·관리자 하단 탭 라벨·경로 골든', () =
 describe('FE-NAV-03 회원 하단 탭 라벨·이동 골든', () => {
   it('버튼 라벨과 이동 경로', async () => {
     await renderClientTabs();
-    const buttons = Array.from(container.querySelectorAll('nav > button'));
-    expect(buttons.map(tabLabel)).toEqual(['홈', '내 클래스', '내 상담', '리포트', '더보기']);
+    const buttons = Array.from(container.querySelectorAll('nav > a, nav > button'));
+    expect(buttons.map(tabLabel)).toEqual(['홈', '내 클래스', '상담', '리포트', '더보기']);
     const expectedPaths = ['/app', '/app/classes', '/app/counseling', '/app/reports'];
     for (const [index, path] of expectedPaths.entries()) {
       await act(async () => { buttons[index].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); });
@@ -228,19 +229,19 @@ describe('FE-NAV-05 배지 현행값', () => {
     state.reportUnread = 7;
     state.pendingReview = 2;
     await renderLayoutTabs('counselor');
-    expect(tabBadges()).toEqual({ 홈: null, 클래스: null, 상담: null, 채팅: '4', 더보기: '6' });
-    expect(container.querySelector('nav > button')?.getAttribute('aria-label')).toBe('더보기 6건');
+    expect(tabBadges()).toEqual({ 홈: null, 클래스: null, 상담: null, 대화: '4', 더보기: '5' });
+    expect(container.querySelector('nav > button')?.getAttribute('aria-label')).toBe('더보기 5건');
     await renderLayoutTabs('client');
-    expect(tabBadges()).toEqual({ 홈: null, '내 클래스': null, '내 상담': null, 리포트: '7', 더보기: '8' });
+    expect(tabBadges()).toEqual({ 홈: null, '내 클래스': null, 상담: null, 리포트: '7', 더보기: '9+' });
     state.sessionInvites = new Array(10).fill(0);
     await renderLayoutTabs('org_admin');
-    expect(tabBadges()).toEqual({ 홈: null, 클래스: null, 상담: null, 채팅: '4', 더보기: '9+' });
+    expect(tabBadges()).toEqual({ 홈: null, 클래스: null, 상담: null, 대화: '4', 더보기: '9+' });
     expect(container.querySelector('nav > button')?.getAttribute('aria-label')).toBe('더보기 12건');
     state.sessionInvites = [];
     state.notificationUnread = 0;
     state.pendingReview = 0;
     await renderLayoutTabs('org_admin');
-    expect(tabBadges()).toEqual({ 홈: null, 클래스: null, 상담: null, 채팅: '4', 더보기: null });
+    expect(tabBadges()).toEqual({ 홈: null, 클래스: null, 상담: null, 대화: '4', 더보기: null });
   });
   it('회원 하단 탭: 리포트는 미열람, 더보기는 채팅·루시·공통 알림 합산', async () => {
     state.sessionInvites = [1];
@@ -249,9 +250,9 @@ describe('FE-NAV-05 배지 현행값', () => {
     state.reportUnread = 12;
     await renderClientTabs();
     const badges = Object.fromEntries(
-      Array.from(container.querySelectorAll('nav > button')).map((el) => [tabLabel(el), badgeOf(el)]),
+      Array.from(container.querySelectorAll('nav > a, nav > button')).map((el) => [tabLabel(el), badgeOf(el)]),
     );
-    expect(badges).toEqual({ 홈: null, '내 클래스': null, '내 상담': null, 리포트: '9+', 더보기: '8' });
+    expect(badges).toEqual({ 홈: null, '내 클래스': null, 상담: null, 리포트: '9+', 더보기: '8' });
   });
 });
 

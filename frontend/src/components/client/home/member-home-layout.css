@@ -6,11 +6,12 @@
 .mh-home>*{min-width:0}
 .mh-home>[data-testid="class-hero"]{grid-column:1/-1;grid-row:1;border-radius:var(--mh-radius);min-height:240px}
 .mh-home .mh-legacy{display:contents}
-.mh-home .mh-rail{display:flex;grid-column:2;grid-row:4;gap:var(--mh-space)}
+.mh-home .mh-rail{display:flex;grid-column:2;grid-row:5;gap:var(--mh-space)}
 .mh-home .mh-summary{grid-column:1/-1;grid-row:2;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
 .mh-home .mh-summary>button{height:152px;border-radius:var(--mh-radius);padding:18px;box-shadow:var(--mh-shadow)}
+.mh-home .mh-counseling{grid-column:1/-1;grid-row:4}
 .mh-home .mh-classes{grid-column:1/-1;grid-row:3}
-.mh-home .mh-main{grid-column:1;grid-row:4;gap:var(--mh-space)}
+.mh-home .mh-main{grid-column:1;grid-row:5;gap:var(--mh-space)}
 .mh-home .mh-rail>section{grid-column:2}
 .mh-home .mh-main>section,.mh-home .mh-rail>section{border:1px solid var(--mh-border);border-radius:var(--mh-radius);background:#fff;padding:var(--mh-space);box-shadow:var(--mh-shadow);min-width:0}
 .mh-home .mh-main h2,.mh-home .mh-rail h2,.mh-home .mc-heading{font-size:18px;line-height:1.5;font-weight:800;margin:0}

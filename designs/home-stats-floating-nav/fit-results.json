@@ -1,0 +1,509 @@
+[
+  {
+    "role": "member",
+    "mode": "current",
+    "width": 390,
+    "scrollWidth": 390,
+    "columns": "173px 173px",
+    "statsBeforeClasses": "panel",
+    "visualStatsClassGap": -1025.5625,
+    "nav": "flex",
+    "errors": []
+  },
+  {
+    "role": "member",
+    "mode": "current",
+    "width": 430,
+    "scrollWidth": 430,
+    "columns": "193px 193px",
+    "statsBeforeClasses": "panel",
+    "visualStatsClassGap": -1025.5625,
+    "nav": "flex",
+    "errors": []
+  },
+  {
+    "role": "member",
+    "mode": "current",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "columns": "268px 268px 268px 268px",
+    "statsBeforeClasses": "panel",
+    "visualStatsClassGap": 24,
+    "nav": "none",
+    "errors": []
+  },
+  {
+    "role": "member",
+    "mode": "proposed",
+    "width": 390,
+    "scrollWidth": 390,
+    "columns": "173px 173px",
+    "statsBeforeClasses": "classes",
+    "visualStatsClassGap": 20,
+    "nav": "flex",
+    "errors": []
+  },
+  {
+    "role": "member",
+    "mode": "proposed",
+    "width": 430,
+    "scrollWidth": 430,
+    "columns": "193px 193px",
+    "statsBeforeClasses": "classes",
+    "visualStatsClassGap": 20,
+    "nav": "flex",
+    "errors": []
+  },
+  {
+    "role": "member",
+    "mode": "proposed",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "columns": "268px 268px 268px 268px",
+    "statsBeforeClasses": "classes",
+    "visualStatsClassGap": 24,
+    "nav": "none",
+    "errors": []
+  },
+  {
+    "role": "counselor",
+    "mode": "current",
+    "width": 390,
+    "scrollWidth": 390,
+    "columns": "173px 173px",
+    "statsBeforeClasses": "classes",
+    "visualStatsClassGap": 20,
+    "nav": "flex",
+    "errors": []
+  },
+  {
+    "role": "counselor",
+    "mode": "current",
+    "width": 430,
+    "scrollWidth": 430,
+    "columns": "193px 193px",
+    "statsBeforeClasses": "classes",
+    "visualStatsClassGap": 20,
+    "nav": "flex",
+    "errors": []
+  },
+  {
+    "role": "counselor",
+    "mode": "current",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "columns": "268px 268px 268px 268px",
+    "statsBeforeClasses": "classes",
+    "visualStatsClassGap": 24,
+    "nav": "none",
+    "errors": []
+  },
+  {
+    "role": "counselor",
+    "mode": "proposed",
+    "width": 390,
+    "scrollWidth": 390,
+    "columns": "173px 173px",
+    "statsBeforeClasses": "classes",
+    "visualStatsClassGap": 20,
+    "nav": "flex",
+    "errors": []
+  },
+  {
+    "role": "counselor",
+    "mode": "proposed",
+    "width": 430,
+    "scrollWidth": 430,
+    "columns": "193px 193px",
+    "statsBeforeClasses": "classes",
+    "visualStatsClassGap": 20,
+    "nav": "flex",
+    "errors": []
+  },
+  {
+    "role": "counselor",
+    "mode": "proposed",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "columns": "268px 268px 268px 268px",
+    "statsBeforeClasses": "classes",
+    "visualStatsClassGap": 24,
+    "nav": "none",
+    "errors": []
+  },
+  {
+    "style": "A",
+    "labels": 0,
+    "safe": 0,
+    "width": 390,
+    "scrollWidth": 390,
+    "lastBottom": 744.125,
+    "barTop": 770,
+    "gap": 25.875,
+    "tabCount": 5,
+    "hasAriaLabels": true
+  },
+  {
+    "style": "A",
+    "labels": 1,
+    "safe": 0,
+    "width": 390,
+    "scrollWidth": 390,
+    "lastBottom": 744.125,
+    "barTop": 766,
+    "gap": 21.875,
+    "tabCount": 5,
+    "hasAriaLabels": true
+  },
+  {
+    "style": "B",
+    "labels": 0,
+    "safe": 0,
+    "width": 390,
+    "scrollWidth": 390,
+    "lastBottom": 744.125,
+    "barTop": 770,
+    "gap": 25.875,
+    "tabCount": 5,
+    "hasAriaLabels": true
+  },
+  {
+    "style": "B",
+    "labels": 1,
+    "safe": 0,
+    "width": 390,
+    "scrollWidth": 390,
+    "lastBottom": 744.125,
+    "barTop": 766,
+    "gap": 21.875,
+    "tabCount": 5,
+    "hasAriaLabels": true
+  },
+  {
+    "style": "A",
+    "labels": 0,
+    "safe": 0,
+    "width": 430,
+    "scrollWidth": 430,
+    "lastBottom": 744.125,
+    "barTop": 770,
+    "gap": 25.875,
+    "tabCount": 5,
+    "hasAriaLabels": true
+  },
+  {
+    "style": "A",
+    "labels": 1,
+    "safe": 0,
+    "width": 430,
+    "scrollWidth": 430,
+    "lastBottom": 744.125,
+    "barTop": 766,
+    "gap": 21.875,
+    "tabCount": 5,
+    "hasAriaLabels": true
+  },
+  {
+    "style": "B",
+    "labels": 0,
+    "safe": 0,
+    "width": 430,
+    "scrollWidth": 430,
+    "lastBottom": 744.125,
+    "barTop": 770,
+    "gap": 25.875,
+    "tabCount": 5,
+    "hasAriaLabels": true
+  },
+  {
+    "style": "B",
+    "labels": 1,
+    "safe": 0,
+    "width": 430,
+    "scrollWidth": 430,
+    "lastBottom": 744.125,
+    "barTop": 766,
+    "gap": 21.875,
+    "tabCount": 5,
+    "hasAriaLabels": true
+  },
+  {
+    "style": "A",
+    "labels": 0,
+    "safe": 34,
+    "width": 390,
+    "scrollWidth": 390,
+    "lastBottom": 710.125,
+    "barTop": 736,
+    "gap": 25.875,
+    "tabCount": 5,
+    "hasAriaLabels": true
+  },
+  {
+    "style": "A",
+    "labels": 1,
+    "safe": 34,
+    "width": 390,
+    "scrollWidth": 390,
+    "lastBottom": 710.125,
+    "barTop": 732,
+    "gap": 21.875,
+    "tabCount": 5,
+    "hasAriaLabels": true
+  },
+  {
+    "style": "B",
+    "labels": 0,
+    "safe": 34,
+    "width": 390,
+    "scrollWidth": 390,
+    "lastBottom": 710.125,
+    "barTop": 736,
+    "gap": 25.875,
+    "tabCount": 5,
+    "hasAriaLabels": true
+  },
+  {
+    "style": "B",
+    "labels": 1,
+    "safe": 34,
+    "width": 390,
+    "scrollWidth": 390,
+    "lastBottom": 710.125,
+    "barTop": 732,
+    "gap": 21.875,
+    "tabCount": 5,
+    "hasAriaLabels": true
+  },
+  {
+    "style": "A",
+    "labels": 0,
+    "safe": 34,
+    "width": 430,
+    "scrollWidth": 430,
+    "lastBottom": 710.125,
+    "barTop": 736,
+    "gap": 25.875,
+    "tabCount": 5,
+    "hasAriaLabels": true
+  },
+  {
+    "style": "A",
+    "labels": 1,
+    "safe": 34,
+    "width": 430,
+    "scrollWidth": 430,
+    "lastBottom": 710.125,
+    "barTop": 732,
+    "gap": 21.875,
+    "tabCount": 5,
+    "hasAriaLabels": true
+  },
+  {
+    "style": "B",
+    "labels": 0,
+    "safe": 34,
+    "width": 430,
+    "scrollWidth": 430,
+    "lastBottom": 710.125,
+    "barTop": 736,
+    "gap": 25.875,
+    "tabCount": 5,
+    "hasAriaLabels": true
+  },
+  {
+    "style": "B",
+    "labels": 1,
+    "safe": 34,
+    "width": 430,
+    "scrollWidth": 430,
+    "lastBottom": 710.125,
+    "barTop": 732,
+    "gap": 21.875,
+    "tabCount": 5,
+    "hasAriaLabels": true
+  },
+  {
+    "audit": "role-menu",
+    "role": "member",
+    "counsel": 0,
+    "tabs": [
+      "홈",
+      "내 클래스",
+      "대화",
+      "리포트",
+      "더보기"
+    ],
+    "drawer": [
+      "홈",
+      "내 클래스",
+      "대화",
+      "리포트",
+      "알림",
+      "프로필",
+      "로그아웃"
+    ]
+  },
+  {
+    "audit": "role-menu",
+    "role": "member",
+    "counsel": 1,
+    "tabs": [
+      "홈",
+      "내 클래스",
+      "상담",
+      "리포트",
+      "더보기"
+    ],
+    "drawer": [
+      "홈",
+      "내 클래스",
+      "상담",
+      "대화",
+      "리포트",
+      "알림",
+      "프로필",
+      "로그아웃"
+    ]
+  },
+  {
+    "audit": "role-menu",
+    "role": "counselor",
+    "counsel": 0,
+    "tabs": [
+      "홈",
+      "클래스",
+      "리포트",
+      "대화",
+      "더보기"
+    ],
+    "drawer": [
+      "홈",
+      "클래스",
+      "회원 관리",
+      "대화",
+      "리포트",
+      "플레이그라운드",
+      "알림",
+      "설정",
+      "로그아웃"
+    ]
+  },
+  {
+    "audit": "role-menu",
+    "role": "counselor",
+    "counsel": 1,
+    "tabs": [
+      "홈",
+      "클래스",
+      "상담",
+      "대화",
+      "더보기"
+    ],
+    "drawer": [
+      "홈",
+      "클래스",
+      "회원 관리",
+      "상담",
+      "대화",
+      "리포트",
+      "플레이그라운드",
+      "알림",
+      "설정",
+      "로그아웃"
+    ]
+  },
+  {
+    "audit": "role-menu",
+    "role": "org",
+    "counsel": 0,
+    "tabs": [
+      "홈",
+      "클래스",
+      "리포트",
+      "대화",
+      "더보기"
+    ],
+    "drawer": [
+      "홈",
+      "클래스",
+      "회원 관리",
+      "대화",
+      "상담사 관리",
+      "리포트",
+      "알림",
+      "설정",
+      "로그아웃"
+    ]
+  },
+  {
+    "audit": "role-menu",
+    "role": "org",
+    "counsel": 1,
+    "tabs": [
+      "홈",
+      "클래스",
+      "상담",
+      "대화",
+      "더보기"
+    ],
+    "drawer": [
+      "홈",
+      "클래스",
+      "회원 관리",
+      "상담",
+      "대화",
+      "상담사 관리",
+      "리포트",
+      "알림",
+      "설정",
+      "로그아웃"
+    ]
+  },
+  {
+    "audit": "role-menu",
+    "role": "platform",
+    "counsel": 0,
+    "tabs": [
+      "홈",
+      "가입 신청",
+      "사용자",
+      "대화",
+      "더보기"
+    ],
+    "drawer": [
+      "홈(기관)",
+      "가입 신청",
+      "사용자",
+      "내담자 관리",
+      "대화",
+      "플레이그라운드",
+      "알림",
+      "설정",
+      "로그아웃"
+    ]
+  },
+  {
+    "audit": "role-menu",
+    "role": "platform",
+    "counsel": 1,
+    "tabs": [
+      "홈",
+      "가입 신청",
+      "사용자",
+      "대화",
+      "더보기"
+    ],
+    "drawer": [
+      "홈(기관)",
+      "가입 신청",
+      "사용자",
+      "내담자 관리",
+      "대화",
+      "플레이그라운드",
+      "알림",
+      "설정",
+      "로그아웃"
+    ]
+  }
+]

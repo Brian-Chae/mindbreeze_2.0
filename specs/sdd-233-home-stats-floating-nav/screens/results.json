@@ -1,0 +1,372 @@
+[
+  {
+    "role": "client",
+    "width": 390,
+    "cardCount": 4,
+    "scrollWidth": 390,
+    "stats": {
+      "x": 16,
+      "y": 419.1875,
+      "width": 358,
+      "height": 262,
+      "top": 419.1875,
+      "right": 374,
+      "bottom": 681.1875,
+      "left": 16
+    },
+    "classes": {
+      "x": 16,
+      "y": 705.1875,
+      "width": 358,
+      "height": 1066.75,
+      "top": 705.1875,
+      "right": 374,
+      "bottom": 1771.9375,
+      "left": 16
+    },
+    "columns": "173px 173px",
+    "nav": {
+      "display": "flex",
+      "color": "rgb(32, 20, 39)",
+      "rect": {
+        "x": 16,
+        "y": 766,
+        "width": 358,
+        "height": 66,
+        "top": 766,
+        "right": 374,
+        "bottom": 832,
+        "left": 16
+      },
+      "labels": [
+        "홈",
+        "내 클래스",
+        "대화",
+        "1리포트",
+        "더보기"
+      ]
+    },
+    "end": {
+      "navTop": 766,
+      "scrollers": [
+        {
+          "className": "cs-structure-scroll",
+          "paddingBottom": "100px",
+          "scrollTop": 1810,
+          "scrollHeight": 2498,
+          "clientHeight": 688,
+          "lastBottom": 728.4375
+        }
+      ]
+    },
+    "safe34": {
+      "barBottom": 798,
+      "barTop": 732,
+      "lastBottom": 694.4375,
+      "paddingBottom": "134px"
+    },
+    "errors": []
+  },
+  {
+    "role": "client",
+    "width": 430,
+    "cardCount": 4,
+    "scrollWidth": 430,
+    "stats": {
+      "x": 16,
+      "y": 419.1875,
+      "width": 398,
+      "height": 262,
+      "top": 419.1875,
+      "right": 414,
+      "bottom": 681.1875,
+      "left": 16
+    },
+    "classes": {
+      "x": 16,
+      "y": 705.1875,
+      "width": 398,
+      "height": 1066.75,
+      "top": 705.1875,
+      "right": 414,
+      "bottom": 1771.9375,
+      "left": 16
+    },
+    "columns": "193px 193px",
+    "nav": {
+      "display": "flex",
+      "color": "rgb(32, 20, 39)",
+      "rect": {
+        "x": 16,
+        "y": 766,
+        "width": 398,
+        "height": 66,
+        "top": 766,
+        "right": 414,
+        "bottom": 832,
+        "left": 16
+      },
+      "labels": [
+        "홈",
+        "내 클래스",
+        "대화",
+        "1리포트",
+        "더보기"
+      ]
+    },
+    "end": {
+      "navTop": 766,
+      "scrollers": [
+        {
+          "className": "cs-structure-scroll",
+          "paddingBottom": "100px",
+          "scrollTop": 1810,
+          "scrollHeight": 2498,
+          "clientHeight": 688,
+          "lastBottom": 728.4375
+        }
+      ]
+    },
+    "safe34": {
+      "barBottom": 798,
+      "barTop": 732,
+      "lastBottom": 694.4375,
+      "paddingBottom": "134px"
+    },
+    "errors": []
+  },
+  {
+    "role": "client",
+    "width": 1440,
+    "cardCount": 4,
+    "scrollWidth": 1440,
+    "stats": {
+      "x": 280,
+      "y": 391.1875,
+      "width": 1120,
+      "height": 152,
+      "top": 391.1875,
+      "right": 1400,
+      "bottom": 543.1875,
+      "left": 280
+    },
+    "classes": {
+      "x": 280,
+      "y": 567.1875,
+      "width": 1120,
+      "height": 436,
+      "top": 567.1875,
+      "right": 1400,
+      "bottom": 1003.1875,
+      "left": 280
+    },
+    "columns": "268px 268px 268px 268px",
+    "nav": {
+      "display": "none",
+      "color": "rgb(32, 20, 39)",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0,
+        "left": 0
+      },
+      "labels": [
+        "홈",
+        "내 클래스",
+        "대화",
+        "1리포트",
+        "더보기"
+      ]
+    },
+    "errors": []
+  },
+  {
+    "role": "counselor",
+    "width": 390,
+    "cardCount": 4,
+    "scrollWidth": 390,
+    "stats": {
+      "x": 16,
+      "y": 598.796875,
+      "width": 358,
+      "height": 268,
+      "top": 598.796875,
+      "right": 374,
+      "bottom": 866.796875,
+      "left": 16
+    },
+    "classes": {
+      "x": 16,
+      "y": 866.796875,
+      "width": 358,
+      "height": 420,
+      "top": 866.796875,
+      "right": 374,
+      "bottom": 1286.796875,
+      "left": 16
+    },
+    "columns": "173px 173px",
+    "nav": {
+      "display": "flex",
+      "color": "rgb(32, 20, 39)",
+      "rect": {
+        "x": 16,
+        "y": 766,
+        "width": 358,
+        "height": 66,
+        "top": 766,
+        "right": 374,
+        "bottom": 832,
+        "left": 16
+      },
+      "labels": [
+        "홈",
+        "클래스",
+        "1리포트",
+        "대화",
+        "더보기"
+      ]
+    },
+    "end": {
+      "navTop": 766,
+      "scrollers": [
+        {
+          "className": "flex-1 min-h-0 bg-[#F7F4F0] overflow-auto px-4 py-4 md:px-8 md:py-6 lg:px-10 lg:pt-8 lg:pb-10 pb-[calc(100px+env(safe-area-inset-bottom,0px))] md:pb-0",
+          "paddingBottom": "100px",
+          "scrollTop": 1117,
+          "scrollHeight": 1782,
+          "clientHeight": 665,
+          "lastBottom": 744.296875
+        }
+      ]
+    },
+    "safe34": {
+      "barBottom": 798,
+      "barTop": 732,
+      "lastBottom": 710.296875,
+      "paddingBottom": "134px"
+    },
+    "errors": []
+  },
+  {
+    "role": "counselor",
+    "width": 430,
+    "cardCount": 4,
+    "scrollWidth": 430,
+    "stats": {
+      "x": 16,
+      "y": 598.796875,
+      "width": 398,
+      "height": 268,
+      "top": 598.796875,
+      "right": 414,
+      "bottom": 866.796875,
+      "left": 16
+    },
+    "classes": {
+      "x": 16,
+      "y": 866.796875,
+      "width": 398,
+      "height": 420,
+      "top": 866.796875,
+      "right": 414,
+      "bottom": 1286.796875,
+      "left": 16
+    },
+    "columns": "193px 193px",
+    "nav": {
+      "display": "flex",
+      "color": "rgb(32, 20, 39)",
+      "rect": {
+        "x": 16,
+        "y": 766,
+        "width": 398,
+        "height": 66,
+        "top": 766,
+        "right": 414,
+        "bottom": 832,
+        "left": 16
+      },
+      "labels": [
+        "홈",
+        "클래스",
+        "1리포트",
+        "대화",
+        "더보기"
+      ]
+    },
+    "end": {
+      "navTop": 766,
+      "scrollers": [
+        {
+          "className": "flex-1 min-h-0 bg-[#F7F4F0] overflow-auto px-4 py-4 md:px-8 md:py-6 lg:px-10 lg:pt-8 lg:pb-10 pb-[calc(100px+env(safe-area-inset-bottom,0px))] md:pb-0",
+          "paddingBottom": "100px",
+          "scrollTop": 1117,
+          "scrollHeight": 1782,
+          "clientHeight": 665,
+          "lastBottom": 744.296875
+        }
+      ]
+    },
+    "safe34": {
+      "barBottom": 798,
+      "barTop": 732,
+      "lastBottom": 710.296875,
+      "paddingBottom": "134px"
+    },
+    "errors": []
+  },
+  {
+    "role": "counselor",
+    "width": 1440,
+    "cardCount": 4,
+    "scrollWidth": 1440,
+    "stats": {
+      "x": 280,
+      "y": 461,
+      "width": 1120,
+      "height": 128,
+      "top": 461,
+      "right": 1400,
+      "bottom": 589,
+      "left": 280
+    },
+    "classes": {
+      "x": 280,
+      "y": 589,
+      "width": 1120,
+      "height": 424,
+      "top": 589,
+      "right": 1400,
+      "bottom": 1013,
+      "left": 280
+    },
+    "columns": "268px 268px 268px 268px",
+    "nav": {
+      "display": "none",
+      "color": "rgb(32, 20, 39)",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0,
+        "left": 0
+      },
+      "labels": [
+        "홈",
+        "클래스",
+        "1리포트",
+        "대화",
+        "더보기"
+      ]
+    },
+    "errors": []
+  }
+]

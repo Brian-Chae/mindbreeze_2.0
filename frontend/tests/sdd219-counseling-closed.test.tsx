@@ -25,7 +25,7 @@ vi.mock('../src/lib/api/class-structure', async (importOriginal) => ({
   getCounseling: api.getCounseling,
 }));
 vi.mock('../src/components/class/structure/structure-shell', () => ({ StructureShell: ({ children }: { children: ReactNode }) => <main>{children}</main> }));
-vi.mock('../src/pages/client/ClientHomePage', () => ({ default: () => null }));
+vi.mock('../src/pages/client/ClientHomePage', () => ({ default: ({ classSections }: { classSections?: React.ReactNode }) => <>{classSections}</> }));
 vi.mock('../src/hooks/use-client-counselors', () => ({ useClientCounselors: () => undefined }));
 
 let cleanup: (() => void) | undefined;
@@ -37,7 +37,6 @@ function render(node: ReactNode, path = '/') {
   cleanup = () => { flushSync(() => root.unmount()); container.remove(); };
   return container;
 }
-const hrefs = (view: HTMLElement): string[] => Array.from(view.querySelectorAll('a')).map((a) => a.getAttribute('href') ?? '');
 const setRole = (role: 'counselor' | 'org_admin' | 'client') => useAuthStore.setState({
   isInitialized: true, isAuthenticated: true,
   user: { id: role, role, name: '사용자', counselors: [] } as unknown as NonNullable<ReturnType<typeof useAuthStore.getState>['user']>,
@@ -74,13 +73,13 @@ describe.each([
     expect(host.querySelector('a[href="/classes"]')).not.toBeNull();
     const member = render(<MemberTabs onMoreClick={() => undefined} />, '/app');
     const memberText = member.textContent ?? '';
-    expect(memberText.includes('내 상담')).toBe(open);
+    expect(memberText.includes('상담')).toBe(open);
     // 균등 배치: 모든 탭이 flex-1
     const nav = member.querySelector('nav')!;
     for (const el of Array.from(nav.children)) expect(el.className).toContain('flex-1');
     const hostNav = host.querySelector('nav')!;
     for (const el of Array.from(hostNav.children)) expect(el.className).toContain('flex-1');
-    expect(hostNav.children.length).toBe(open ? 5 : 4);
+    expect(hostNav.children.length).toBe(5);
   });
   it('A6 회원 홈 내 상담 영역·조회', async () => {
     setRole('client');
