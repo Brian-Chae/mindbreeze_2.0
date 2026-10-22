@@ -1,0 +1,909 @@
+{
+  "browser": "155.0.8059.85",
+  "engine": "Google Chrome headless / Playwright",
+  "source": "file:// · 고정 데이터 HTML; 현재 구성은 코드 기반 재구성",
+  "date": "2026-10-22",
+  "total": 28,
+  "failed": 0,
+  "errors": [],
+  "interactions": [
+    {
+      "width": 1440,
+      "name": "캐러셀 다음",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "name": "캐러셀 이전",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "name": "상담사 코드 펼침",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "name": "새 클래스 목적지 안내",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "name": "클래스 부분 실패 재시도",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "name": "현재 구성 전환",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "name": "제안 복귀",
+      "pass": true
+    },
+    {
+      "width": 1194,
+      "name": "캐러셀 다음",
+      "pass": true
+    },
+    {
+      "width": 1194,
+      "name": "캐러셀 이전",
+      "pass": true
+    },
+    {
+      "width": 1194,
+      "name": "상담사 코드 펼침",
+      "pass": true
+    },
+    {
+      "width": 1194,
+      "name": "새 클래스 목적지 안내",
+      "pass": true
+    },
+    {
+      "width": 1194,
+      "name": "클래스 부분 실패 재시도",
+      "pass": true
+    },
+    {
+      "width": 1194,
+      "name": "현재 구성 전환",
+      "pass": true
+    },
+    {
+      "width": 1194,
+      "name": "제안 복귀",
+      "pass": true
+    },
+    {
+      "width": 834,
+      "name": "캐러셀 다음",
+      "pass": true
+    },
+    {
+      "width": 834,
+      "name": "캐러셀 이전",
+      "pass": true
+    },
+    {
+      "width": 834,
+      "name": "상담사 코드 펼침",
+      "pass": true
+    },
+    {
+      "width": 834,
+      "name": "새 클래스 목적지 안내",
+      "pass": true
+    },
+    {
+      "width": 834,
+      "name": "클래스 부분 실패 재시도",
+      "pass": true
+    },
+    {
+      "width": 834,
+      "name": "현재 구성 전환",
+      "pass": true
+    },
+    {
+      "width": 834,
+      "name": "제안 복귀",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "캐러셀 다음",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "캐러셀 이전",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "상담사 코드 펼침",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "새 클래스 목적지 안내",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "클래스 부분 실패 재시도",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "현재 구성 전환",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "제안 복귀",
+      "pass": true
+    }
+  ],
+  "results": [
+    {
+      "view": "current",
+      "state": "normal",
+      "width": 1440,
+      "height": 1000,
+      "screenshot": "screenshots/current-normal-1440x1000.png",
+      "viewport": 1440,
+      "documentWidth": 1440,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "예정",
+      "sectionOrder": [
+        "prototype-label",
+        "old-grid",
+        "foot"
+      ],
+      "carousel": null
+    },
+    {
+      "view": "proposed",
+      "state": "normal",
+      "width": 1440,
+      "height": 1000,
+      "screenshot": "screenshots/proposed-normal-1440x1000.png",
+      "viewport": 1440,
+      "documentWidth": 1440,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "예정",
+      "sectionOrder": [
+        "prototype-label",
+        "hero",
+        "reports",
+        "stats",
+        "classes",
+        "work",
+        "foot"
+      ],
+      "carousel": {
+        "client": 1136,
+        "scroll": 1172
+      }
+    },
+    {
+      "view": "proposed",
+      "state": "empty",
+      "width": 1440,
+      "height": 1000,
+      "screenshot": "screenshots/proposed-empty-1440x1000.png",
+      "viewport": 1440,
+      "documentWidth": 1440,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "기록 보기",
+      "sectionOrder": [
+        "prototype-label",
+        "hero",
+        "stats",
+        "classes",
+        "work",
+        "foot"
+      ],
+      "carousel": null
+    },
+    {
+      "view": "proposed",
+      "state": "partial",
+      "width": 1440,
+      "height": 1000,
+      "screenshot": "screenshots/proposed-partial-1440x1000.png",
+      "viewport": 1440,
+      "documentWidth": 1440,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "예정",
+      "sectionOrder": [
+        "prototype-label",
+        "hero",
+        "reports",
+        "stats",
+        "classes",
+        "work",
+        "foot"
+      ],
+      "carousel": null
+    },
+    {
+      "view": "proposed",
+      "state": "missing",
+      "width": 1440,
+      "height": 1000,
+      "screenshot": "screenshots/proposed-missing-1440x1000.png",
+      "viewport": 1440,
+      "documentWidth": 1440,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "예정",
+      "sectionOrder": [
+        "prototype-label",
+        "hero",
+        "reports",
+        "stats",
+        "classes",
+        "work",
+        "foot"
+      ],
+      "carousel": {
+        "client": 1136,
+        "scroll": 1172
+      }
+    },
+    {
+      "view": "proposed",
+      "state": "live",
+      "width": 1440,
+      "height": 1000,
+      "screenshot": "screenshots/proposed-live-1440x1000.png",
+      "viewport": 1440,
+      "documentWidth": 1440,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "진행 중",
+      "sectionOrder": [
+        "prototype-label",
+        "hero",
+        "reports",
+        "stats",
+        "classes",
+        "work",
+        "foot"
+      ],
+      "carousel": {
+        "client": 1136,
+        "scroll": 1172
+      }
+    },
+    {
+      "view": "proposed",
+      "state": "long",
+      "width": 1440,
+      "height": 1000,
+      "screenshot": "screenshots/proposed-long-1440x1000.png",
+      "viewport": 1440,
+      "documentWidth": 1440,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "예정",
+      "sectionOrder": [
+        "prototype-label",
+        "hero",
+        "reports",
+        "stats",
+        "classes",
+        "work",
+        "foot"
+      ],
+      "carousel": {
+        "client": 1136,
+        "scroll": 1172
+      }
+    },
+    {
+      "view": "current",
+      "state": "normal",
+      "width": 1194,
+      "height": 834,
+      "screenshot": "screenshots/current-normal-1194x834.png",
+      "viewport": 1194,
+      "documentWidth": 1194,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "예정",
+      "sectionOrder": [
+        "prototype-label",
+        "old-grid",
+        "foot"
+      ],
+      "carousel": null
+    },
+    {
+      "view": "proposed",
+      "state": "normal",
+      "width": 1194,
+      "height": 834,
+      "screenshot": "screenshots/proposed-normal-1194x834.png",
+      "viewport": 1194,
+      "documentWidth": 1194,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "예정",
+      "sectionOrder": [
+        "prototype-label",
+        "hero",
+        "reports",
+        "stats",
+        "classes",
+        "work",
+        "foot"
+      ],
+      "carousel": {
+        "client": 890,
+        "scroll": 1172
+      }
+    },
+    {
+      "view": "proposed",
+      "state": "empty",
+      "width": 1194,
+      "height": 834,
+      "screenshot": "screenshots/proposed-empty-1194x834.png",
+      "viewport": 1194,
+      "documentWidth": 1194,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "기록 보기",
+      "sectionOrder": [
+        "prototype-label",
+        "hero",
+        "stats",
+        "classes",
+        "work",
+        "foot"
+      ],
+      "carousel": null
+    },
+    {
+      "view": "proposed",
+      "state": "partial",
+      "width": 1194,
+      "height": 834,
+      "screenshot": "screenshots/proposed-partial-1194x834.png",
+      "viewport": 1194,
+      "documentWidth": 1194,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "예정",
+      "sectionOrder": [
+        "prototype-label",
+        "hero",
+        "reports",
+        "stats",
+        "classes",
+        "work",
+        "foot"
+      ],
+      "carousel": null
+    },
+    {
+      "view": "proposed",
+      "state": "missing",
+      "width": 1194,
+      "height": 834,
+      "screenshot": "screenshots/proposed-missing-1194x834.png",
+      "viewport": 1194,
+      "documentWidth": 1194,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "예정",
+      "sectionOrder": [
+        "prototype-label",
+        "hero",
+        "reports",
+        "stats",
+        "classes",
+        "work",
+        "foot"
+      ],
+      "carousel": {
+        "client": 890,
+        "scroll": 1172
+      }
+    },
+    {
+      "view": "proposed",
+      "state": "live",
+      "width": 1194,
+      "height": 834,
+      "screenshot": "screenshots/proposed-live-1194x834.png",
+      "viewport": 1194,
+      "documentWidth": 1194,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "진행 중",
+      "sectionOrder": [
+        "prototype-label",
+        "hero",
+        "reports",
+        "stats",
+        "classes",
+        "work",
+        "foot"
+      ],
+      "carousel": {
+        "client": 890,
+        "scroll": 1172
+      }
+    },
+    {
+      "view": "proposed",
+      "state": "long",
+      "width": 1194,
+      "height": 834,
+      "screenshot": "screenshots/proposed-long-1194x834.png",
+      "viewport": 1194,
+      "documentWidth": 1194,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "예정",
+      "sectionOrder": [
+        "prototype-label",
+        "hero",
+        "reports",
+        "stats",
+        "classes",
+        "work",
+        "foot"
+      ],
+      "carousel": {
+        "client": 890,
+        "scroll": 1172
+      }
+    },
+    {
+      "view": "current",
+      "state": "normal",
+      "width": 834,
+      "height": 1194,
+      "screenshot": "screenshots/current-normal-834x1194.png",
+      "viewport": 834,
+      "documentWidth": 834,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "예정",
+      "sectionOrder": [
+        "prototype-label",
+        "old-grid",
+        "foot"
+      ],
+      "carousel": null
+    },
+    {
+      "view": "proposed",
+      "state": "normal",
+      "width": 834,
+      "height": 1194,
+      "screenshot": "screenshots/proposed-normal-834x1194.png",
+      "viewport": 834,
+      "documentWidth": 834,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "예정",
+      "sectionOrder": [
+        "prototype-label",
+        "hero",
+        "reports",
+        "stats",
+        "classes",
+        "work",
+        "foot"
+      ],
+      "carousel": {
+        "client": 586,
+        "scroll": 1172
+      }
+    },
+    {
+      "view": "proposed",
+      "state": "empty",
+      "width": 834,
+      "height": 1194,
+      "screenshot": "screenshots/proposed-empty-834x1194.png",
+      "viewport": 834,
+      "documentWidth": 834,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "기록 보기",
+      "sectionOrder": [
+        "prototype-label",
+        "hero",
+        "stats",
+        "classes",
+        "work",
+        "foot"
+      ],
+      "carousel": null
+    },
+    {
+      "view": "proposed",
+      "state": "partial",
+      "width": 834,
+      "height": 1194,
+      "screenshot": "screenshots/proposed-partial-834x1194.png",
+      "viewport": 834,
+      "documentWidth": 834,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "예정",
+      "sectionOrder": [
+        "prototype-label",
+        "hero",
+        "reports",
+        "stats",
+        "classes",
+        "work",
+        "foot"
+      ],
+      "carousel": null
+    },
+    {
+      "view": "proposed",
+      "state": "missing",
+      "width": 834,
+      "height": 1194,
+      "screenshot": "screenshots/proposed-missing-834x1194.png",
+      "viewport": 834,
+      "documentWidth": 834,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "예정",
+      "sectionOrder": [
+        "prototype-label",
+        "hero",
+        "reports",
+        "stats",
+        "classes",
+        "work",
+        "foot"
+      ],
+      "carousel": {
+        "client": 586,
+        "scroll": 1172
+      }
+    },
+    {
+      "view": "proposed",
+      "state": "live",
+      "width": 834,
+      "height": 1194,
+      "screenshot": "screenshots/proposed-live-834x1194.png",
+      "viewport": 834,
+      "documentWidth": 834,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "진행 중",
+      "sectionOrder": [
+        "prototype-label",
+        "hero",
+        "reports",
+        "stats",
+        "classes",
+        "work",
+        "foot"
+      ],
+      "carousel": {
+        "client": 586,
+        "scroll": 1172
+      }
+    },
+    {
+      "view": "proposed",
+      "state": "long",
+      "width": 834,
+      "height": 1194,
+      "screenshot": "screenshots/proposed-long-834x1194.png",
+      "viewport": 834,
+      "documentWidth": 834,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "예정",
+      "sectionOrder": [
+        "prototype-label",
+        "hero",
+        "reports",
+        "stats",
+        "classes",
+        "work",
+        "foot"
+      ],
+      "carousel": {
+        "client": 586,
+        "scroll": 1172
+      }
+    },
+    {
+      "view": "current",
+      "state": "normal",
+      "width": 390,
+      "height": 844,
+      "screenshot": "screenshots/current-normal-390x844.png",
+      "viewport": 390,
+      "documentWidth": 390,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "예정",
+      "sectionOrder": [
+        "prototype-label",
+        "old-grid",
+        "foot"
+      ],
+      "carousel": null
+    },
+    {
+      "view": "proposed",
+      "state": "normal",
+      "width": 390,
+      "height": 844,
+      "screenshot": "screenshots/proposed-normal-390x844.png",
+      "viewport": 390,
+      "documentWidth": 390,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "예정",
+      "sectionOrder": [
+        "prototype-label",
+        "hero",
+        "reports",
+        "stats",
+        "classes",
+        "work",
+        "foot"
+      ],
+      "carousel": {
+        "client": 358,
+        "scroll": 1360
+      }
+    },
+    {
+      "view": "proposed",
+      "state": "empty",
+      "width": 390,
+      "height": 844,
+      "screenshot": "screenshots/proposed-empty-390x844.png",
+      "viewport": 390,
+      "documentWidth": 390,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "기록 보기",
+      "sectionOrder": [
+        "prototype-label",
+        "hero",
+        "stats",
+        "classes",
+        "work",
+        "foot"
+      ],
+      "carousel": null
+    },
+    {
+      "view": "proposed",
+      "state": "partial",
+      "width": 390,
+      "height": 844,
+      "screenshot": "screenshots/proposed-partial-390x844.png",
+      "viewport": 390,
+      "documentWidth": 390,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "예정",
+      "sectionOrder": [
+        "prototype-label",
+        "hero",
+        "reports",
+        "stats",
+        "classes",
+        "work",
+        "foot"
+      ],
+      "carousel": null
+    },
+    {
+      "view": "proposed",
+      "state": "missing",
+      "width": 390,
+      "height": 844,
+      "screenshot": "screenshots/proposed-missing-390x844.png",
+      "viewport": 390,
+      "documentWidth": 390,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "예정",
+      "sectionOrder": [
+        "prototype-label",
+        "hero",
+        "reports",
+        "stats",
+        "classes",
+        "work",
+        "foot"
+      ],
+      "carousel": {
+        "client": 358,
+        "scroll": 1360
+      }
+    },
+    {
+      "view": "proposed",
+      "state": "live",
+      "width": 390,
+      "height": 844,
+      "screenshot": "screenshots/proposed-live-390x844.png",
+      "viewport": 390,
+      "documentWidth": 390,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "진행 중",
+      "sectionOrder": [
+        "prototype-label",
+        "hero",
+        "reports",
+        "stats",
+        "classes",
+        "work",
+        "foot"
+      ],
+      "carousel": {
+        "client": 358,
+        "scroll": 1360
+      }
+    },
+    {
+      "view": "proposed",
+      "state": "long",
+      "width": 390,
+      "height": 844,
+      "screenshot": "screenshots/proposed-long-390x844.png",
+      "viewport": 390,
+      "documentWidth": 390,
+      "pageOverflow": 0,
+      "overlaps": [],
+      "smallTargets": [],
+      "smallText": [],
+      "outside": [],
+      "fontLoaded": true,
+      "firstScheduleStatus": "예정",
+      "sectionOrder": [
+        "prototype-label",
+        "hero",
+        "reports",
+        "stats",
+        "classes",
+        "work",
+        "foot"
+      ],
+      "carousel": {
+        "client": 358,
+        "scroll": 1360
+      }
+    }
+  ]
+}
