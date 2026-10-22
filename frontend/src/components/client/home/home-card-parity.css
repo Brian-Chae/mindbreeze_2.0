@@ -54,3 +54,40 @@
 /* 회원·상담사 홈의 보조 카드는 내용 높이를 사용한다. */
 :is(.cs-structure .mh-home,.ch-home) section.home-rail-card{min-height:0;flex:none;align-self:start;width:100%}
 :is(.mh-home,.ch-home) .home-rail-link{display:inline-flex;align-items:center;justify-content:flex-end;gap:4px;min-width:44px;min-height:44px;font-size:15px}
+
+/* SDD-234 A: 홈 내부에만 모바일 의미 토큰을 적용한다. 오른쪽 레일 규격은 유지한다. */
+@media(max-width:767px){
+  :is(.cs-structure .mh-home,.ch-home) .sh-hero__title{
+    font-size:var(--mobile-type-hero-size);line-height:var(--mobile-type-hero-leading)
+  }
+  :is(.cs-structure .mh-home,.ch-home) :is(.sh-hchip,.mc-chip){
+    font-size:var(--mobile-type-caption-size);line-height:var(--mobile-type-caption-leading);padding:4px 12px
+  }
+  :is(.cs-structure .mh-home,.ch-home) :is(.sh-hbox__tx,.sh-hbox__tx b,.sh-hbox__tx span,.ch-hero__sub){
+    font-size:var(--mobile-type-compact-size);line-height:var(--mobile-type-compact-leading)
+  }
+  :is(.cs-structure .mh-home,.ch-home) :is(.sh-hcta,.mc-link,.ch-heading a,.ch-review a,.ch-past summary){
+    font-size:var(--mobile-type-label-size);line-height:var(--mobile-type-label-leading);min-height:var(--mobile-touch-minimum);min-width:var(--mobile-touch-minimum)
+  }
+  :is(.cs-structure .mh-home,.ch-home) .sh-hcta{min-height:var(--mobile-touch-control)}
+  :is(.cs-structure .mh-home,.ch-home) :is(.mh-track h3,.mc-heading,.ch-heading h2){
+    font-size:var(--mobile-type-subtitle-size);line-height:var(--mobile-type-subtitle-leading)
+  }
+  :is(.cs-structure .mh-home,.ch-home) :is(.mc-muted,.mc-next,.mc-next strong){
+    font-size:var(--mobile-type-compact-size);line-height:var(--mobile-type-compact-leading)
+  }
+  :is(.cs-structure .mh-home,.ch-home) .mc-progress{margin:8px 0}
+  :is(.cs-structure .mh-home,.ch-home) .mc-next strong{margin-bottom:4px}
+  :is(.cs-structure .mh-home,.ch-home) .mh-scroll-tools small{
+    font-size:var(--mobile-type-caption-size);line-height:var(--mobile-type-caption-leading)
+  }
+  /* 두 줄 메타도 동일한 박스 높이를 확보한다. 장문은 자연스럽게 확장한다. */
+  :is(.cs-structure .mh-home,.ch-home) .sh-hbox{min-height:68px}
+  .ch-header-actions{gap:8px}
+  .ch-header-actions a{
+    font-size:var(--mobile-type-label-size);line-height:var(--mobile-type-label-leading);height:var(--mobile-touch-control);min-height:var(--mobile-touch-control)
+  }
+  .ch-home .ch-row>span{
+    font-size:var(--mobile-type-caption-size);line-height:var(--mobile-type-caption-leading)
+  }
+}

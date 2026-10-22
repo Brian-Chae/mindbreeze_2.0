@@ -58,7 +58,7 @@ export function ChatTextarea({ value, onChange, onSend, placeholder, ariaLabel, 
         }
       }}
       style={{ maxHeight: MAX_HEIGHT }}
-      className="flex-1 min-w-0 min-h-11 resize-none overflow-y-auto px-4 py-[9px] leading-6 rounded-xl border border-[#DDDEE7] bg-white text-base text-[#1F1F1F] placeholder:text-[#9CA0AE] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-purple-900/15 transition"
+      className="flex-1 min-w-0 min-h-11 mobile:min-h-12 resize-none overflow-y-auto px-4 py-[9px] mobile:py-2.5 leading-6 rounded-xl border border-[#DDDEE7] bg-white text-base mobile:text-mb-body text-[#1F1F1F] placeholder:text-[#9CA0AE] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-purple-900/15 transition"
     />
   );
 }

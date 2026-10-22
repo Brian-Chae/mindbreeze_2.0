@@ -79,21 +79,21 @@ export function ClientReportDetailModal({ reportId, sessionId, onClose, onReport
       onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
     >
       <div className="report-sample-toolbar">
-        <h2 id={titleId} className="truncate">{report?.session_title || '리포트 상세'}</h2>
+        <h2 id={titleId} className="mobile:[overflow-wrap:anywhere] truncate">{report?.session_title || '리포트 상세'}</h2>
         <button type="button" onClick={onClose} aria-label="리포트 닫기">
           닫기 <span aria-hidden="true">×</span>
         </button>
       </div>
       <div className="report-sample-scroll">
-        {loading && <div className="p-8 text-[#6F6F6F] text-sm" role="status">불러오는 중...</div>}
-        {!loading && error && <div className="m-6 p-3 rounded-xl bg-red-50 text-red-700 text-sm" role="alert">{error}</div>}
+        {loading && <div className="p-8 mobile:p-4 text-[#6F6F6F] text-sm mobile:text-mb-body" role="status">불러오는 중...</div>}
+        {!loading && error && <div className="m-6 p-3 rounded-xl bg-red-50 text-red-700 text-sm mobile:text-mb-body" role="alert">{error}</div>}
         {!loading && report && isReportInReview(report) && (
           <div className="flex flex-col items-center gap-3 px-6 py-16 text-center" data-testid="report-in-review">
-            <span className="inline-flex items-center rounded-full bg-[#F5EDFC] px-2.5 py-1 text-[12px] font-bold text-[#5F0080]">
+            <span className="inline-flex items-center rounded-full bg-[#F5EDFC] px-2.5 py-1 text-[12px] mobile:text-mb-caption font-bold text-[#5F0080]">
               {REPORT_IN_REVIEW_BADGE}
             </span>
-            <p className="text-[15px] text-[#1F1F1F]">{REPORT_IN_REVIEW_NOTICE}</p>
-            {isReportDelayed(report) && <p className="text-[13px] text-[#6F6F6F]">{REPORT_IN_REVIEW_DELAYED_NOTICE}</p>}
+            <p className="text-[15px] mobile:text-mb-body text-[#1F1F1F]">{REPORT_IN_REVIEW_NOTICE}</p>
+            {isReportDelayed(report) && <p className="text-[13px] mobile:text-mb-caption text-[#6F6F6F]">{REPORT_IN_REVIEW_DELAYED_NOTICE}</p>}
           </div>
         )}
         {!loading && report && !isReportInReview(report) && <ClientReportViewer report={report} onClose={onClose} />}

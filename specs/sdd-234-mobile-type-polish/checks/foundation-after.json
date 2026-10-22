@@ -1,0 +1,7 @@
+{
+  "phase": "after",
+  "screenCount": 60,
+  "mobileChecks": 108,
+  "desktopChecks": 120,
+  "failures": []
+}

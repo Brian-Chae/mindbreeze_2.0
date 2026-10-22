@@ -1,0 +1,4 @@
+npx tsc --noEmit -p tsconfig.app.json: exit 0
+변경 제품 TSX 5파일 + 신규 테스트 eslint: exit 0
+git diff --check: exit 0
+독립 리뷰: 소유 범위/모바일 한정/레일 유지/데스크톱 JSON 동일 확인. 중요 결함 없음. 200% 전체 카드 접근성 검증 한계 명시.

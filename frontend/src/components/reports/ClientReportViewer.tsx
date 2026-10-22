@@ -16,8 +16,8 @@ import {
 
 function SummaryCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white border border-[#EFEFEF] rounded-2xl p-6">
-      <h3 className="text-[15px] font-bold text-[#1F1F1F] mb-4 flex items-center gap-2">
+    <div className="bg-white border border-[#EFEFEF] rounded-2xl p-6 mobile:p-4">
+      <h3 className="mobile:[overflow-wrap:anywhere] text-[15px] mobile:text-mb-subtitle font-bold text-[#1F1F1F] mb-4 flex items-center gap-2">
         <span className="w-1.5 h-1.5 rounded-sm bg-[#5F0080]" />
         {title}
       </h3>
@@ -59,7 +59,7 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
         {displayNarrative && <NarrativeSections narrative={displayNarrative} showCover={false} />}
 
         {aiRecordUnavailable && (
-          <div className="rounded-2xl border border-[#EFEFEF] bg-white p-5 text-sm text-[#6F6F6F]">
+          <div className="rounded-2xl border border-[#EFEFEF] bg-white p-5 text-sm mobile:text-mb-body text-[#6F6F6F]">
             {aiRecordReasonText}
           </div>
         )}
@@ -67,7 +67,7 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
         {/* SDD-087 — 상담사 코멘트 (있을 때만) */}
         {counselorComment && (
           <SummaryCard title="상담사 코멘트">
-            <p className="text-[15px] text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
+            <p className="mobile:[overflow-wrap:anywhere] text-[15px] mobile:text-mb-body text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
               {counselorComment}
             </p>
           </SummaryCard>
@@ -85,7 +85,7 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
 
         {!aiRecordUnavailable && isSttAiRecordVisible() && summary && (
           <SummaryCard title="AI 요약">
-            <p className="text-[15px] text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
+            <p className="mobile:[overflow-wrap:anywhere] text-[15px] mobile:text-mb-body text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
               {summary}
             </p>
           </SummaryCard>
@@ -99,10 +99,10 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
                   key={i}
                   className="bg-gradient-to-br from-[#F5EDFC] to-white border border-[#EFEFEF] rounded-xl p-4"
                 >
-                  <div className="text-[12px] text-[#6F6F6F] font-mono mb-1">
+                  <div className="text-[12px] mobile:text-mb-caption text-[#6F6F6F] font-mono mb-1">
                     INSIGHT {String(i + 1).padStart(2, '0')}
                   </div>
-                  <p className="text-[15px] text-[#1F1F1F] leading-relaxed">{insight}</p>
+                  <p className="text-[15px] mobile:text-mb-body text-[#1F1F1F] leading-relaxed">{insight}</p>
                 </div>
               ))}
             </div>
@@ -122,10 +122,10 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
           </div>
         )}
 
-        <div className="flex items-center gap-3 pt-4 border-t border-[#EFEFEF]">
+        <div className="flex mobile:flex-wrap items-center gap-3 pt-4 border-t border-[#EFEFEF]">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 rounded-xl bg-white border border-[#EFEFEF] text-[15px] text-[#1F1F1F] hover:bg-[#F5F5F5] transition-colors"
+            className="mobile:min-h-11 mobile:min-w-11 px-5 py-2.5 rounded-xl bg-white border border-[#EFEFEF] text-[15px] mobile:text-mb-label text-[#1F1F1F] hover:bg-[#F5F5F5] transition-colors"
           >
             {closeLabel}
           </button>
@@ -135,7 +135,7 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
               href={report.pdf_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-5 py-2.5 rounded-xl bg-white border border-[#EFEFEF] text-[15px] text-[#1F1F1F] hover:bg-[#F5F5F5] transition-colors"
+              className="mobile:min-h-11 mobile:min-w-11 mobile:inline-flex mobile:items-center px-5 py-2.5 rounded-xl bg-white border border-[#EFEFEF] text-[15px] mobile:text-mb-label text-[#1F1F1F] hover:bg-[#F5F5F5] transition-colors"
             >
               PDF 다운로드
             </a>
@@ -150,14 +150,14 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
                   body: 'PDF 생성 기능은 추후 제공됩니다.',
                 })
               }
-              className="px-5 py-2.5 rounded-xl bg-white border border-[#EFEFEF] text-[15px] text-[#1F1F1F] hover:bg-[#F5F5F5] transition-colors"
+              className="mobile:min-h-11 mobile:min-w-11 px-5 py-2.5 rounded-xl bg-white border border-[#EFEFEF] text-[15px] mobile:text-mb-label text-[#1F1F1F] hover:bg-[#F5F5F5] transition-colors"
             >
               PDF 생성 (준비 중)
             </button>
           ) : null}
         </div>
 
-        <p className="text-center text-[12px] text-[#9B9B9B] pb-4">
+        <p className="text-center text-[12px] mobile:text-mb-caption text-[#9B9B9B] pb-4">
           본 리포트는 의료 진단이 아닌 두뇌건강 관리 목적의 참고 자료입니다.
         </p>
       </div>

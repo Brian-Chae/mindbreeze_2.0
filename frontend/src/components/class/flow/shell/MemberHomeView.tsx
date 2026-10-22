@@ -31,7 +31,7 @@ interface MemberHomeViewProps {
 export function HomeSectionList({ section, onOpenClass }: { section: HomeSection; onOpenClass: (id: string) => void }) {
   return (
     <>
-      <div className="sh-sec"><h2>{section.title}</h2><span>{section.rows.length}개</span></div>
+      <div className="sh-sec"><h2 className="mobile:!text-mb-subtitle">{section.title}</h2><span className="mobile:!text-mb-caption">{section.rows.length}개</span></div>
       {section.rows.length > 0
         ? section.rows.map((row) => <ClassRow key={row.id} data={row} onOpen={onOpenClass} />)
         : section.empty ? <EmptyRow {...section.empty} /> : null}
@@ -41,7 +41,7 @@ export function HomeSectionList({ section, onOpenClass }: { section: HomeSection
 
 export function EnterByCodeLink({ onClick }: { onClick: () => void }) {
   return (
-    <button type="button" className="sh-link" data-testid="enter-with-code" onClick={onClick}>
+    <button type="button" className="sh-link mobile:!min-h-12 mobile:!text-mb-label" data-testid="enter-with-code" onClick={onClick}>
       <Key size={20} aria-hidden="true" />코드로 입장하기
     </button>
   );

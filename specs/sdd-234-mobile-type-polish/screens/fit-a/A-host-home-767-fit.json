@@ -1,0 +1,77 @@
+{
+  "fit": [
+    {
+      "class": "block rounded-2xl border border-[#E8E3EC] bg-white p-4 transition-colors hover:border-[#C9B0E8] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5F0080]",
+      "height": 152,
+      "bottomInset": 47,
+      "scrollHeight": 150,
+      "clientHeight": 150,
+      "padding": "18px"
+    },
+    {
+      "class": "block rounded-2xl border border-[#E8E3EC] bg-white p-4 transition-colors hover:border-[#C9B0E8] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5F0080]",
+      "height": 152,
+      "bottomInset": 47,
+      "scrollHeight": 150,
+      "clientHeight": 150,
+      "padding": "18px"
+    },
+    {
+      "class": "block rounded-2xl border border-[#E8E3EC] bg-white p-4 transition-colors hover:border-[#C9B0E8] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5F0080]",
+      "height": 152,
+      "bottomInset": 47,
+      "scrollHeight": 150,
+      "clientHeight": 150,
+      "padding": "18px"
+    },
+    {
+      "class": "block rounded-2xl border border-[#E8E3EC] bg-white p-4 transition-colors hover:border-[#C9B0E8] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5F0080]",
+      "height": 152,
+      "bottomInset": 47,
+      "scrollHeight": 150,
+      "clientHeight": 150,
+      "padding": "18px"
+    },
+    {
+      "class": "mc-card",
+      "height": 304,
+      "bottomInset": 25,
+      "scrollHeight": 302,
+      "clientHeight": 302,
+      "padding": "24px"
+    },
+    {
+      "class": "mc-card",
+      "height": 304,
+      "bottomInset": 25,
+      "scrollHeight": 302,
+      "clientHeight": 302,
+      "padding": "24px"
+    },
+    {
+      "class": "mc-card",
+      "height": 304,
+      "bottomInset": 25,
+      "scrollHeight": 302,
+      "clientHeight": 302,
+      "padding": "24px"
+    },
+    {
+      "class": "mc-card",
+      "height": 304,
+      "bottomInset": 25,
+      "scrollHeight": 302,
+      "clientHeight": 302,
+      "padding": "24px"
+    }
+  ],
+  "stress": {
+    "scrollWidth": 767,
+    "cta": [
+      {
+        "width": 687,
+        "height": 48
+      }
+    ]
+  }
+}

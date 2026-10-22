@@ -177,7 +177,7 @@ describe('조용한 신호 시트', () => {
     expect(labels).toEqual(['잘 따라가요', '조금 어려워요', '잠시 쉴게요']);
     await act(async () => { qa('[data-pz="sheet"] .player-signal')[0].click(); });
     expect(actions.onSignal).toHaveBeenCalledWith('following');
-    expect(sheetEl()?.textContent).toContain('지금 상태를 조용히 알려 주세요 · 상담사에게만 보여요');
+    expect(sheetEl()?.textContent).toContain('선택한 상태와 이름이 상담사에게만 보여요');
     expect(sheetEl()?.textContent).toContain('상담사에게 조용히 전달했어요');
   });
 });

@@ -123,7 +123,7 @@ export default function ClientShell({
       </aside>
 
       {/* 모바일 헤더 */}
-      <header className="md:hidden h-14 flex items-center justify-between px-4 border-b border-[#EFEFEF] bg-white shrink-0">
+      <header className="mb-shell-topbar md:hidden h-14 flex items-center justify-between px-4 border-b border-[#EFEFEF] bg-white shrink-0">
         <button
           type="button"
           aria-label="메뉴 열기"
@@ -243,11 +243,11 @@ export default function ClientShell({
           <div className="md:hidden px-4 pt-4 pb-2 flex items-end justify-between gap-3">
             <div className="min-w-0">
               {sub && (
-                <div className="text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">
+                <div className="mb-shell-subtitle text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">
                   {sub}
                 </div>
               )}
-              <div className="font-bold text-[18px] text-[#1F1F1F] tracking-tight mt-0.5 truncate">
+              <div className="mb-shell-title font-bold text-[18px] text-[#1F1F1F] tracking-tight mt-0.5 truncate">
                 {title}
               </div>
             </div>

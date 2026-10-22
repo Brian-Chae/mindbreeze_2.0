@@ -26,8 +26,8 @@ export function ChatMobileHeader({ title, sub, onBack, rightSlot }: Props) {
         </svg>
       </button>
       <div className="min-w-0 flex-1">
-        <h1 className="truncate text-[16px] font-bold leading-[22px] text-[#1F1F1F]">{title}</h1>
-        {sub && <p className="truncate text-[12px] leading-[16px] text-[#6F6F6F]">{sub}</p>}
+        <h1 className="truncate text-[16px] mobile:text-mb-body font-bold leading-[22px] text-[#1F1F1F]">{title}</h1>
+        {sub && <p className="truncate text-[12px] mobile:text-mb-caption leading-[16px] text-[#6F6F6F]">{sub}</p>}
       </div>
       {rightSlot && <div className="shrink-0 flex items-center">{rightSlot}</div>}
     </div>

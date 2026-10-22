@@ -3,7 +3,7 @@
 import { Link } from 'react-router-dom';
 import { Key } from 'lucide-react';
 
-const BASE = 'inline-flex h-11 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-4 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5F0080] focus-visible:ring-offset-2';
+const BASE = 'mobile:!min-h-12 mobile:text-mb-label inline-flex h-11 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-4 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5F0080] focus-visible:ring-offset-2';
 const VARIANT = {
   primary: 'bg-[#5F0080] text-white hover:bg-[#4B0066]',
   secondary: 'border border-[#5F0080] bg-white text-[#5F0080] hover:bg-[#F5EDFC]',

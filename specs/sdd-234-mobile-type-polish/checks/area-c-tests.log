@@ -1,0 +1,49 @@
+
+ RUN  v5.0.2 /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd234-c-report/frontend
+
+
+ Test Files  10 passed (10)
+      Tests  96 passed (96)
+   Start at  00:46:25
+   Duration  6.70s (tests 38%, import 28%, environment 25%, transform 8%, setup 1%)
+
+    Isolate  10 workers spawned · ~205ms startup each (spawn + environment, per file)
+             at least ~1.85s faster with isolate: false — reuses workers across files instead of one per file
+
+12:46:32 AM [vite] (client) Re-optimizing dependencies because vite config has changed
+
+warn - The `min-*` and `max-*` variants are not supported with a `screens` configuration containing objects.
+TAP version 13
+# Subtest: 하단 액션과 본문 전용 PDF (수신 주소: saved@example.com)
+ok 1 - 하단 액션과 본문 전용 PDF (수신 주소: saved@example.com)
+  ---
+  duration_ms: 2530.557
+  type: 'test'
+  ...
+# Subtest: 하단 액션과 본문 전용 PDF (수신 주소: 없음)
+ok 2 - 하단 액션과 본문 전용 PDF (수신 주소: 없음)
+  ---
+  duration_ms: 2310.662583
+  type: 'test'
+  ...
+# Subtest: detail: 서버 파일 다운로드와 실패 복구
+ok 3 - detail: 서버 파일 다운로드와 실패 복구
+  ---
+  duration_ms: 2365.659875
+  type: 'test'
+  ...
+# Subtest: email: 서버 파일 다운로드와 실패 복구
+ok 4 - email: 서버 파일 다운로드와 실패 복구
+  ---
+  duration_ms: 2297.478167
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 9946.806459

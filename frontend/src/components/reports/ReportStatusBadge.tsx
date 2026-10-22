@@ -96,7 +96,7 @@ export function ReportStatusChip({ status, sentAt, className = '' }: ReportStatu
     <span
       data-testid="report-status-chip"
       data-status={resolved}
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-bold ${chipTone(resolved)} ${className}`.trim()}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] mobile:text-mb-caption font-bold ${chipTone(resolved)} ${className}`.trim()}
     >
       <StatusDot status={resolved} />
       {label}
@@ -123,16 +123,16 @@ export default function ReportStatusBadge({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-lg border border-black/5 bg-white/80 px-2.5 py-1 text-[12px] font-bold tracking-wide">
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-black/5 bg-white/80 px-2.5 py-1 text-[12px] mobile:text-mb-caption font-bold tracking-wide">
               <StatusDot status={status} />
               {label}
             </span>
-            <span className="font-mono text-[12px] uppercase tracking-wider opacity-60">
+            <span className="font-mono text-[12px] mobile:text-mb-caption uppercase tracking-wider opacity-60">
               {status}
             </span>
           </div>
           {hint && (
-            <p className="mt-2 text-[12px] leading-relaxed opacity-90">{hint}</p>
+            <p className="mt-2 text-[12px] mobile:text-mb-caption leading-relaxed opacity-90">{hint}</p>
           )}
         </div>
 
@@ -141,10 +141,10 @@ export default function ReportStatusBadge({
             data-testid="report-data-credibility"
             className="shrink-0 rounded-lg border border-black/5 bg-white/80 px-3 py-2 text-right"
           >
-            <div className="font-mono text-[12px] uppercase tracking-wider opacity-50">
+            <div className="font-mono text-[12px] mobile:text-mb-caption uppercase tracking-wider opacity-50">
               data_credibility
             </div>
-            <div className="mt-0.5 text-[12px] font-semibold">{credibility.label}</div>
+            <div className="mt-0.5 text-[12px] mobile:text-mb-caption font-semibold">{credibility.label}</div>
           </div>
         )}
       </div>

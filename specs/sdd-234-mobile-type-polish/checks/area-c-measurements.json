@@ -1,0 +1,137 @@
+{
+  "rows": [
+    {
+      "file": "C-host-report-1440.json",
+      "compared": 1672,
+      "scrollWidth": 1440,
+      "textCount": 106,
+      "minFont": 10,
+      "smallTextCount": 49,
+      "smallTextRatio": 46.2,
+      "smallTouchCount": 9,
+      "narrowTouchCount": 0
+    },
+    {
+      "file": "C-host-report-390.json",
+      "compared": 0,
+      "scrollWidth": 390,
+      "textCount": 84,
+      "minFont": 13,
+      "smallTextCount": 0,
+      "smallTextRatio": 0,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    },
+    {
+      "file": "C-host-report-768.json",
+      "compared": 1474,
+      "scrollWidth": 768,
+      "textCount": 94,
+      "minFont": 10,
+      "smallTextCount": 42,
+      "smallTextRatio": 44.7,
+      "smallTouchCount": 4,
+      "narrowTouchCount": 0
+    },
+    {
+      "file": "C-host-reports-1440.json",
+      "compared": 869,
+      "scrollWidth": 1440,
+      "textCount": 52,
+      "minFont": 10,
+      "smallTextCount": 24,
+      "smallTextRatio": 46.2,
+      "smallTouchCount": 12,
+      "narrowTouchCount": 1
+    },
+    {
+      "file": "C-host-reports-390.json",
+      "compared": 0,
+      "scrollWidth": 390,
+      "textCount": 28,
+      "minFont": 13,
+      "smallTextCount": 0,
+      "smallTextRatio": 0,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    },
+    {
+      "file": "C-host-reports-768.json",
+      "compared": 869,
+      "scrollWidth": 768,
+      "textCount": 52,
+      "minFont": 10,
+      "smallTextCount": 24,
+      "smallTextRatio": 46.2,
+      "smallTouchCount": 12,
+      "narrowTouchCount": 1
+    },
+    {
+      "file": "C-member-report-1440.json",
+      "compared": 1100,
+      "scrollWidth": 1440,
+      "textCount": 72,
+      "minFont": 11,
+      "smallTextCount": 35,
+      "smallTextRatio": 48.6,
+      "smallTouchCount": 9,
+      "narrowTouchCount": 0
+    },
+    {
+      "file": "C-member-report-390.json",
+      "compared": 0,
+      "scrollWidth": 390,
+      "textCount": 62,
+      "minFont": 13,
+      "smallTextCount": 0,
+      "smallTextRatio": 0,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    },
+    {
+      "file": "C-member-report-768.json",
+      "compared": 935,
+      "scrollWidth": 768,
+      "textCount": 62,
+      "minFont": 12,
+      "smallTextCount": 29,
+      "smallTextRatio": 46.8,
+      "smallTouchCount": 5,
+      "narrowTouchCount": 0
+    },
+    {
+      "file": "C-member-reports-1440.json",
+      "compared": 572,
+      "scrollWidth": 1440,
+      "textCount": 35,
+      "minFont": 10,
+      "smallTextCount": 16,
+      "smallTextRatio": 45.7,
+      "smallTouchCount": 5,
+      "narrowTouchCount": 1
+    },
+    {
+      "file": "C-member-reports-390.json",
+      "compared": 0,
+      "scrollWidth": 390,
+      "textCount": 22,
+      "minFont": 13,
+      "smallTextCount": 0,
+      "smallTextRatio": 0,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    },
+    {
+      "file": "C-member-reports-768.json",
+      "compared": 572,
+      "scrollWidth": 768,
+      "textCount": 35,
+      "minFont": 10,
+      "smallTextCount": 16,
+      "smallTextRatio": 45.7,
+      "smallTouchCount": 5,
+      "narrowTouchCount": 1
+    }
+  ],
+  "failures": []
+}

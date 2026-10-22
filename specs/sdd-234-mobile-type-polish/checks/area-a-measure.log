@@ -1,0 +1,9 @@
+12:42:14 AM [vite] (client) Re-optimizing dependencies because vite config has changed
+
+warn - The `min-*` and `max-*` variants are not supported with a `screens` configuration containing objects.
+{"name":"member-home","width":390,"failure":null,"errors":[],"unknown":[],"textCount":79,"minFont":12,"smallTextCount":1,"smallTextRatio":1.3,"smallTouchCount":0,"narrowTouchCount":0}
+{"name":"host-home","width":390,"failure":null,"errors":[],"unknown":[],"textCount":77,"minFont":12,"smallTextCount":2,"smallTextRatio":2.6,"smallTouchCount":0,"narrowTouchCount":0}
+{"name":"member-home","width":768,"failure":null,"errors":[],"unknown":[],"textCount":88,"minFont":12,"smallTextCount":20,"smallTextRatio":22.7,"smallTouchCount":0,"narrowTouchCount":0}
+{"name":"host-home","width":768,"failure":null,"errors":[],"unknown":[],"textCount":87,"minFont":10,"smallTextCount":25,"smallTextRatio":28.7,"smallTouchCount":0,"narrowTouchCount":1}
+{"name":"member-home","width":1440,"failure":null,"errors":[],"unknown":[],"textCount":91,"minFont":11.2,"smallTextCount":21,"smallTextRatio":23.1,"smallTouchCount":0,"narrowTouchCount":0}
+{"name":"host-home","width":1440,"failure":null,"errors":[],"unknown":[],"textCount":87,"minFont":10,"smallTextCount":25,"smallTextRatio":28.7,"smallTouchCount":0,"narrowTouchCount":0}

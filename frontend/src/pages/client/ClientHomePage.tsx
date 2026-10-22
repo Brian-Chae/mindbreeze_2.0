@@ -102,11 +102,11 @@ function SummaryTiles({
           onClick={t.onClick}
           className="rounded-2xl border border-[#E8E3EC] bg-white p-4 text-left shadow-sm transition-all hover:border-[#DDD0EA] hover:shadow-md hover:-translate-y-0.5"
         >
-          <div className="text-[12px] font-semibold text-[#6F6F6F]">{t.label}</div>
-          <div className={`mt-2 text-[30px] font-extrabold tracking-tight ${t.purple ? 'text-[#5F0080]' : 'text-[#1F1F1F]'}`}>
+          <div className="text-[12px] mobile:text-mb-label font-semibold text-[#6F6F6F]">{t.label}</div>
+          <div className={`mt-2 text-[30px] mobile:text-mb-number font-extrabold tracking-tight ${t.purple ? 'text-[#5F0080]' : 'text-[#1F1F1F]'}`}>
             {t.value}
           </div>
-          <div className="mt-1 flex items-center gap-1 text-[12px] font-bold text-[#5F0080]">
+          <div className="mt-1 flex items-center gap-1 text-[12px] mobile:text-mb-label font-bold text-[#5F0080]">
             {t.action} <ChevronRight size={14} aria-hidden="true" />
           </div>
         </button>
@@ -323,17 +323,17 @@ export default function ClientHomePage({ hideHero = false, classSections }: { hi
   // ── 렌더 ────────────────────────────────────────────────────────
 
   if (loading) {
-    return <>{classSections}<div className="mh-legacy-state py-12 text-center text-[#6F6F6F] text-sm">불러오는 중...</div></>;
+    return <>{classSections}<div className="mh-legacy-state py-12 text-center text-[#6F6F6F] text-sm mobile:text-mb-compact">불러오는 중...</div></>;
   }
 
   if (error) {
     return (
       <>{classSections}<section className="mh-legacy-state bg-white border border-[#E8E3EC] rounded-2xl p-6 text-center" role="alert">
-        <p className="text-sm text-red-600 mb-4">{error}</p>
+        <p className="text-sm mobile:text-mb-compact text-red-600 mb-4">{error}</p>
         <button
           type="button"
           onClick={() => setReloadKey((k) => k + 1)}
-          className="rounded-xl px-5 py-2.5 text-sm font-semibold bg-[#5F0080] text-white hover:bg-[#4B0066] transition-colors"
+          className="mobile:min-h-12 rounded-xl px-5 py-2.5 text-sm mobile:text-mb-compact font-semibold bg-[#5F0080] text-white hover:bg-[#4B0066] transition-colors"
         >
           다시 시도
         </button>
@@ -372,7 +372,7 @@ export default function ClientHomePage({ hideHero = false, classSections }: { hi
           <section>
             <div className={SECTION_HEAD_CLS}>
               <h2 className={SECTION_TITLE_CLS}>초대된 클래스</h2>
-              <span className="font-mono text-[12px] text-[#6F6F6F]">{invitedSessions.length}건</span>
+              <span className="font-mono text-[12px] mobile:text-mb-caption text-[#6F6F6F]">{invitedSessions.length}건</span>
             </div>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {invitedSessions.map((s) => (
@@ -402,8 +402,8 @@ export default function ClientHomePage({ hideHero = false, classSections }: { hi
               <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-[#F5EDFC] text-[#5F0080]">
                 <CalendarDays size={20} aria-hidden="true" />
               </div>
-              <p className="text-[15px] font-bold text-[#1F1F1F]">이번 주 예정된 클래스가 없어요</p>
-              <p className="mt-1 text-[13px] text-[#6F6F6F]">상담사에게 클래스를 신청해 보세요.</p>
+              <p className="text-[15px] mobile:text-mb-compact font-bold text-[#1F1F1F]">이번 주 예정된 클래스가 없어요</p>
+              <p className="mt-1 text-[13px] mobile:text-mb-compact text-[#6F6F6F]">상담사에게 클래스를 신청해 보세요.</p>
               <button
                 type="button"
                 onClick={() => navigate('/app/classes', { state: { openApply: true } })}
@@ -419,7 +419,7 @@ export default function ClientHomePage({ hideHero = false, classSections }: { hi
         <section>
           <div className={SECTION_HEAD_CLS}>
             <h2 className={SECTION_TITLE_CLS}>내 리포트</h2>
-            <button type="button" onClick={() => navigate('/app/reports')} className={LINK_CLS}>
+            <button type="button" onClick={() => navigate('/app/reports')} className={`${LINK_CLS} mobile:min-h-11 mobile:min-w-11 mobile:text-mb-label`}>
               전체 보기 <ChevronRight size={14} aria-hidden="true" className="inline" />
             </button>
           </div>
@@ -439,26 +439,26 @@ export default function ClientHomePage({ hideHero = false, classSections }: { hi
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         {isNew && (
-                          <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[12px] font-bold text-white">
+                          <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[12px] mobile:text-mb-caption font-bold text-white">
                             NEW
                           </span>
                         )}
-                        <span className="truncate text-[15px] font-bold text-[#1F1F1F]">
+                        <span className="truncate text-[15px] mobile:text-mb-compact font-bold text-[#1F1F1F]">
                           {r.session_title || '리포트'}
                         </span>
                       </div>
-                      <p className="mt-0.5 text-[12px] text-[#6F6F6F]">
+                      <p className="mt-0.5 text-[12px] mobile:text-mb-caption text-[#6F6F6F]">
                         {formatDate(r.created_at)} · 몸·마음 변화 리포트
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
                       {inReview && (
-                        <span className="inline-flex items-center rounded-full bg-[#F5EDFC] px-2 py-0.5 text-[12px] font-bold text-[#5F0080]">
+                        <span className="inline-flex items-center rounded-full bg-[#F5EDFC] px-2 py-0.5 text-[12px] mobile:text-mb-label font-bold text-[#5F0080]">
                           {REPORT_IN_REVIEW_BADGE}
                         </span>
                       )}
                       {generation === 'processing' && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-[#F5EDFC] px-2 py-0.5 text-[12px] font-bold text-[#5F0080]">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[#F5EDFC] px-2 py-0.5 text-[12px] mobile:text-mb-label font-bold text-[#5F0080]">
                           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
                           생성 중
                         </span>
@@ -470,7 +470,7 @@ export default function ClientHomePage({ hideHero = false, classSections }: { hi
               })}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-[#E8E3EC] py-10 text-center text-sm text-[#6F6F6F]">
+            <div className="rounded-2xl border border-dashed border-[#E8E3EC] py-10 text-center text-sm mobile:text-mb-compact text-[#6F6F6F]">
               아직 리포트가 없어요
             </div>
           )}

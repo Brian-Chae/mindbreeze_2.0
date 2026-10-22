@@ -76,11 +76,11 @@ export function ReportDialog({ targetUserId, targetName, roomId, messageId, onCl
         aria-labelledby={titleId}
         className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl"
       >
-        <h2 id={titleId} className="text-base font-bold text-[#1F1F1F]">
+        <h2 id={titleId} className="text-base mobile:text-mb-body font-bold text-[#1F1F1F]">
           {done ? '신고가 접수되었어요' : `${targetName} 님 신고`}
         </h2>
         {done ? (
-          <div className="mt-3 space-y-3 text-sm text-[#1F1F1F]">
+          <div className="mt-3 space-y-3 text-sm mobile:text-mb-compact text-[#1F1F1F]">
             <p>이제 서로 메시지를 주고받을 수 없고, 상대의 기존 메시지도 보이지 않아요.</p>
             <p className="text-[#6F6F6F]">
               추가로 알리실 내용이 있으면{' '}
@@ -92,20 +92,20 @@ export function ReportDialog({ targetUserId, targetName, roomId, messageId, onCl
             <button
               type="button"
               onClick={onClose}
-              className="w-full rounded-xl bg-[#5F0080] px-4 py-3 text-sm font-semibold text-white hover:bg-[#4B0066]"
+              className="w-full rounded-xl bg-[#5F0080] px-4 py-3 mobile:min-h-12 text-sm mobile:text-mb-compact font-semibold text-white hover:bg-[#4B0066]"
             >
               확인
             </button>
           </div>
         ) : (
-          <div className="mt-3 space-y-3 text-sm">
+          <div className="mt-3 space-y-3 text-sm mobile:text-mb-compact">
             <p className="text-[#6F6F6F]">
               신고하면 상대와 서로 메시지를 주고받을 수 없게 돼요. 사유는 선택 사항이에요.
             </p>
             <fieldset className="space-y-2">
               <legend className="sr-only">신고 사유(선택)</legend>
               {CHAT_REPORT_REASONS.map((item) => (
-                <label key={item.value} className="flex items-center gap-2">
+                <label key={item.value} className="flex items-center gap-2 mobile:min-h-11">
                   <input
                     type="radio"
                     name={`${titleId}-reason`}
@@ -127,7 +127,7 @@ export function ReportDialog({ targetUserId, targetName, roomId, messageId, onCl
                 type="button"
                 onClick={onClose}
                 disabled={busy}
-                className="flex-1 rounded-xl border border-[#DDDEE7] px-4 py-3 text-sm disabled:opacity-50"
+                className="flex-1 rounded-xl border border-[#DDDEE7] px-4 py-3 mobile:min-h-12 text-sm mobile:text-mb-compact disabled:opacity-50"
               >
                 취소
               </button>
@@ -135,7 +135,7 @@ export function ReportDialog({ targetUserId, targetName, roomId, messageId, onCl
                 type="button"
                 onClick={() => void submit()}
                 disabled={busy}
-                className="flex-1 rounded-xl bg-[#5F0080] px-4 py-3 text-sm font-semibold text-white hover:bg-[#4B0066] disabled:opacity-50"
+                className="flex-1 rounded-xl bg-[#5F0080] px-4 py-3 mobile:min-h-12 text-sm mobile:text-mb-compact font-semibold text-white hover:bg-[#4B0066] disabled:opacity-50"
               >
                 {busy ? '접수 중…' : '신고하고 차단'}
               </button>

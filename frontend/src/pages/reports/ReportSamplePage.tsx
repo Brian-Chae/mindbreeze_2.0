@@ -72,7 +72,7 @@ export default function ReportSamplePage() {
       rightSlot={
         <Link
           to="/reports"
-          className="inline-flex min-h-[44px] items-center text-[13px] font-semibold text-[#5F0080] hover:underline"
+          className="inline-flex min-h-[44px] items-center text-[13px] mobile:text-mb-label font-semibold text-[#5F0080] hover:underline"
         >
           목록으로
         </Link>
@@ -81,10 +81,10 @@ export default function ReportSamplePage() {
       <div className="max-w-[1160px] mx-auto space-y-6">
         {/* 샘플 배지 */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-[12px] font-bold bg-[#F5EDFC] text-[#5F0080] border border-[#E8D9F5]">
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-[12px] mobile:text-mb-caption font-bold bg-[#F5EDFC] text-[#5F0080] border border-[#E8D9F5]">
             샘플 리포트
           </span>
-          <span className="text-[12px] text-[#6F6F6F]">
+          <span className="text-[12px] mobile:text-mb-caption text-[#6F6F6F]">
             실제 세션 데이터가 아닙니다. 규칙 기반 서사 미리보기입니다.
           </span>
         </div>

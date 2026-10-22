@@ -30,7 +30,7 @@ export function SensorTracker({ leadOff, className = '', colors = DEFAULT_ELECTR
       key={name}
       data-state={s}
       style={{
-        position: 'absolute', top: 0, left: `${leftPct}%`, transform: 'translateX(-50%)', fontSize: 12, lineHeight: '20px',
+        position: 'absolute', top: 0, left: `${leftPct}%`, transform: 'translateX(-50%)', fontSize: 'var(--sensor-caption-size, 12px)', lineHeight: '20px',
         whiteSpace: 'nowrap', color: s === 'bad' ? '#F7F4F0' : '#CFC6D6', fontWeight: s === 'bad' ? 700 : 400,
       }}
     >
@@ -40,6 +40,8 @@ export function SensorTracker({ leadOff, className = '', colors = DEFAULT_ELECTR
 
   return (
     <div className={className} style={WRAP} data-pz="flow-electrodes">
+      {/* SDD-234: 모달에서도 동일하게 적용하고 768px 이상은 기존 12px을 유지한다. */}
+      <style>{`@media (max-width: 767px) { [data-pz="flow-electrodes"] { --sensor-caption-size: var(--mobile-type-caption-size); } }`}</style>
       <svg
         viewBox="0 0 288 64"
         width="100%"
@@ -70,8 +72,8 @@ export function SensorTracker({ leadOff, className = '', colors = DEFAULT_ELECTR
           <rect x="219" y="20" width="30" height="22" rx="11" stroke="#606276" strokeWidth="2" />
           <rect x="222" y="23" width="24" height="16" rx="8" fill={fill(e.right)} />
         </g>
-        <text x="24" y="38" fill="#EFEFEF" fontSize="12" fontFamily="sans-serif">L</text>
-        <text x="256" y="38" fill="#EFEFEF" fontSize="12" fontFamily="sans-serif">R</text>
+        <text x="24" y="38" fill="#EFEFEF" fontSize="var(--sensor-caption-size, 12px)" fontFamily="sans-serif">L</text>
+        <text x="256" y="38" fill="#EFEFEF" fontSize="var(--sensor-caption-size, 12px)" fontFamily="sans-serif">R</text>
       </svg>
       <div style={LABEL_ROW} data-pz="flow-electrode-labels">
         {label((54 / 288) * 100, '왼쪽', e.left)}

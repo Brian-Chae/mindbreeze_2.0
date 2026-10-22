@@ -50,7 +50,7 @@ function fixture(p, role) {
  await page.evaluate(()=>document.fonts.ready);
  const metrics=await page.evaluate(()=>{
  const home=document.querySelector('.mh-home,.ch-home');
- const style=(el)=>{const c=getComputedStyle(el);return Object.fromEntries(['borderRadius','height','minHeight','padding','borderWidth','borderColor','boxShadow','gap'].map(k=>[k,c[k]]));};
+ const style=(el)=>{const c=getComputedStyle(el);return {...Object.fromEntries(['borderRadius','height','minHeight','padding','borderWidth','borderColor','boxShadow','gap'].map(k=>[k,c[k]])),rail:el.classList.contains('home-rail-card')};};
  const get=(s)=>{const el=home.querySelector(s);if(!el)throw Error('missing '+s);return style(el);};
  const all=(s)=>[...home.querySelectorAll(s)].map(style);
  const hero=home.querySelector('.sh-hero').getBoundingClientRect();
@@ -79,9 +79,12 @@ function fixture(p, role) {
  const [m,c]=results.filter(x=>x.width===width);
  for(const part of ['hero','chip','button','tile','classCard','panel'])for(const key of ['borderRadius','height','minHeight','padding','borderWidth','borderColor','boxShadow'])if(m[part][key]!==c[part][key])failures.push(`${width} ${part}.${key}: ${m[part][key]} != ${c[part][key]}`);
  for(const group of ['tilesAll','classesAll','panelsAll']){
- const expected=m[group][0];
+ const expected=m[group].find((card)=>!card.rail)??m[group][0];
  const keys=group==='panelsAll'?['borderRadius','minHeight','padding','borderWidth','borderColor','boxShadow']:['borderRadius','height','padding','borderWidth','borderColor','boxShadow'];
- for(const x of [m,c])for(const [index,card] of x[group].entries())for(const key of keys)if(card[key]!==expected[key])failures.push(`${width} ${x.role} ${group}[${index}].${key}: ${card[key]} != ${expected[key]}`);
+ for(const x of [m,c])for(const [index,card] of x[group].entries())for(const key of keys){
+   // PR #60: 레일 카드(.home-rail-card)는 내용 높이에 맞춘다 — 최소 높이 0을 따로 확인한다.
+   if(group==='panelsAll'&&key==='minHeight'&&card.rail){if(card.minHeight!=='0px')failures.push(`${width} ${x.role} rail[${index}].minHeight: ${card.minHeight} != 0px`);continue;}
+   if(card[key]!==expected[key])failures.push(`${width} ${x.role} ${group}[${index}].${key}: ${card[key]} != ${expected[key]}`);}
  }
  if(m.tilesAll.length!==4||c.tilesAll.length!==4)failures.push(width+' 상태카드 개수');
  if(m.heroWidth!==c.heroWidth)failures.push(width+' hero width '+m.heroWidth+' != '+c.heroWidth);
