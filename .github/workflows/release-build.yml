@@ -5,7 +5,8 @@
 # 트리거: 수동(workflow_dispatch) 또는 태그 release-*.  운영에는 아무 영향이 없다(산출물 보관만).
 #
 # 게이트(하나라도 실패하면 릴리스를 만들지 않는다):
-#   1) alembic head 정확히 1개  2) 백엔드 pytest  3) 프론트 tsc·build(prod 설정)
+#   0) SDD-229: E2E(스모크·여정·회귀·전수, e2e-smoke.yml) — 대상은 dev 서버(릴리스할 커밋이 dev 에 배포돼 있어야 함)
+#   1) alembic head 정확히 1개  2) 백엔드 전체 pytest  3) 프론트 tsc·build(prod 설정)
 #   4) 산출물에 dev 주소·역할 시뮬레이션 흔적 0건(허용목록은 deploy/ci/dev-leak-allowlist.txt)
 # 파괴적 마이그레이션은 막지 않고 MANIFEST·요약에 경고로 남긴다(deploy-prod 가 별도 확인 요구).
 #
@@ -56,7 +57,15 @@ env:
   PROD_API_HOST: ${{ github.event.inputs.api_host || 'api.mindbreeze.looxidlabs.com' }}
 
 jobs:
+  # SDD-229: 운영 릴리스 전 E2E 게이트(dev 배포에서 옮겨 옴). 실패하면 build 가 실행되지 않는다.
+  e2e:
+    uses: ./.github/workflows/e2e-smoke.yml
+    with:
+      ref: ${{ github.event.inputs.ref || github.ref }}
+    secrets: inherit
+
   build:
+    needs: [e2e]
     runs-on: ubuntu-latest
     permissions:
       contents: read

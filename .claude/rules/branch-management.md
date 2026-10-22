@@ -49,5 +49,10 @@ main (운영 릴리스 전용)
 ## 5. CI·테스트 실행 시점
 
 - 작업 브랜치(`sdd/**`·`fix/**`·`feature/**`) push 에서는 CI 가 돌지 않는다. 작업 중에는 로컬에서 `scripts/test-changed` (변경 파일 관련 테스트만)를 쓴다.
-- `develop` 대상 **PR 생성·갱신 시 전체 CI 1회**(backend 전체 pytest 포함)가 머지 게이트다. 새 push 가 오면 이전 실행은 취소된다.
-- `develop` push(머지·빠른 수정)는 frontend 검증 + PG 마이그레이션 스모크만 돌고, 배포(Deploy Dev) 후 e2e-smoke 가 이어진다.
+- `develop` 대상 **PR 생성·갱신 시 CI 1회**가 머지 게이트다. 새 push 가 오면 이전 실행은 취소된다.
+  - SDD-229: 바뀐 영역만 검증한다. 프론트 변경 없음 → frontend skip / 백엔드 변경 없음 → backend skip /
+    백엔드 일부 변경 → 관련 테스트만 / 공통 영역(core·models·config·main·deps·conftest·requirements·alembic) 변경 → 전체.
+    선택 규칙은 `scripts/test-changed`(로컬과 CI 공용). CI 파일이나 그 스크립트가 바뀌면 전부 돈다.
+- `develop` push(머지·빠른 수정)는 바뀐 영역의 frontend 검증 + PG 마이그레이션 스모크만 돌고, Deploy Dev 가 배포한다.
+- **E2E(e2e-smoke)는 dev 배포에서 돌지 않는다.** 운영 릴리스 빌드(Release Build)의 첫 게이트로만 돈다(대상 dev 서버). 필요하면 수동 실행(`gh workflow run "E2E Smoke (dev)"`).
+- 운영 릴리스 빌드는 백엔드 **전체** pytest + E2E 를 통과해야 산출물을 만든다(최종 안전망).

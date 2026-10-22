@@ -2,7 +2,12 @@
 # MIND BREEZE 2.0 — CI
 # 정책(SDD 마무리 시점에만 전체 검증):
 #   - 작업 브랜치(sdd/**, fix/**, feature/** 등) push 에서는 돌지 않는다. 로컬은 scripts/test-changed 사용.
-#   - develop 대상 PR(생성·갱신) = 전체 CI 1회 → 머지 게이트.
+#   - develop 대상 PR(생성·갱신) = 머지 게이트. SDD-229: 바뀐 영역만 검증한다(changes 잡이 선택).
+#       · frontend/ 변경 없음 → frontend 잡 skip
+#       · backend 변경 없음 → backend skip / 일부 변경 → 관련 테스트만 / 공통 영역 변경 → 전체
+#       · backend/app·alembic·tests/pg·requirements 변경 없음 → backend-pg-smoke skip
+#       · 선택 규칙은 scripts/test-changed. 이 파일이나 그 스크립트가 바뀌면 전부 실행.
+#       · 최종 안전망: Release Build(운영 릴리스) 가 백엔드 전체 pytest + E2E 를 돈다.
 #   - develop 직접 push(빠른 수정)·머지 push = 가벼운 검증만(전체 pytest 제외). 배포는 deploy-dev 가 담당.
 #   - 같은 브랜치/PR 에서 새 실행이 시작되면 이전 실행은 취소한다.
 # ─────────────────────────────────────────
@@ -22,7 +27,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # SDD-229: 바뀐 파일로 실행할 잡·백엔드 테스트 범위를 고른다.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.sel.outputs.frontend }}
+      backend_mode: ${{ steps.sel.outputs.backend_mode }}
+      backend_tests: ${{ steps.sel.outputs.backend_tests }}
+      pg: ${{ steps.sel.outputs.pg }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 변경 파일 → 실행 범위 선택
+        id: sel
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            # PR 은 base 와 합친 머지 커밋이 체크아웃된다 → 첫 부모(base) 대비 = PR 변경분
+            git diff --name-only HEAD^1 HEAD > "$RUNNER_TEMP/changed.txt"
+          elif [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            git diff --name-only "$BEFORE" HEAD > "$RUNNER_TEMP/changed.txt"
+          else
+            # 비교 기준이 없으면 전부 실행
+            echo ".github/workflows/ci-feature.yml" > "$RUNNER_TEMP/changed.txt"
+          fi
+          echo "변경 파일 $(wc -l < "$RUNNER_TEMP/changed.txt")개"
+          python3 scripts/test-changed --ci --files-from "$RUNNER_TEMP/changed.txt"
+
   frontend:
+    needs: [changes]
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -68,8 +106,10 @@ jobs:
           npm test -- --passWithNoTests
 
   backend:
-    # 전체 pytest(약 20분)는 PR 게이트에서만 실행한다. develop push 는 건너뛴다.
-    if: github.event_name == 'pull_request'
+    # 전체 pytest(약 25분)는 PR 게이트에서만, 백엔드가 바뀌었을 때만 실행한다. develop push 는 건너뛴다.
+    # SDD-229: backend_mode=related 면 관련 테스트 파일만, full 이면 전체.
+    needs: [changes]
+    if: github.event_name == 'pull_request' && needs.changes.outputs.backend_mode != 'none'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -93,18 +133,31 @@ jobs:
           pip install -r requirements.txt
 
       - name: Test
+        env:
+          MODE: ${{ needs.changes.outputs.backend_mode }}
+          TESTS: ${{ needs.changes.outputs.backend_tests }}
         run: |
           cd backend
           # test_real_pdf_metric_pages는 정확 4페이지 검증으로 macOS 보정된 내용이
           # Linux 폰트 메트릭에서 3~5페이지로 어긋나 422를 띄움. Linux 재보정 전까지 제외.
-          pytest -q --tb=short --ignore=tests/test_sprint4_integration.py \
-            --deselect=tests/test_sdd070_pdf_metrics.py::test_real_pdf_metric_pages
+          DESELECT=--deselect=tests/test_sdd070_pdf_metrics.py::test_real_pdf_metric_pages
+          read -ra SELECTED <<< "$TESTS"
+          if [ "$MODE" = "related" ] && [ "${#SELECTED[@]}" -gt 0 ]; then
+            echo "관련 테스트만 실행: ${#SELECTED[@]}개 파일"
+            # 선택 목록에 해당 파일이 없으면 deselect 인자가 무시된다
+            pytest -q --tb=short "$DESELECT" "${SELECTED[@]}"
+          else
+            pytest -q --tb=short --ignore=tests/test_sprint4_integration.py "$DESELECT"
+          fi
 
   backend-pg-smoke:
     # SDD-211(P1): 테스트는 SQLite create_all 이라 마이그레이션이 CI 어디서도 PostgreSQL 로 실행되지 않았다.
-    # 빈 PG 에 alembic 체인을 처음부터 적용해 head 단일성·적용 가능성을 항상 확인한다(paths 필터 없음).
+    # 빈 PG 에 alembic 체인을 처음부터 적용해 head 단일성·적용 가능성을 확인한다.
     # 이 잡 실패 = dev 배포(deploy-dev.yml)에서도 마이그레이션이 실패한다. 차단 효력은 브랜치 보호의
     # 필수 상태 점검 등록(저장소 설정)이 있어야 생긴다 — deploy-dev 는 ci-feature 를 needs 하지 않는다.
+    # SDD-229: backend/app·alembic·tests/pg·requirements 가 바뀌었을 때만 실행한다.
+    needs: [changes]
+    if: needs.changes.outputs.pg == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     services:

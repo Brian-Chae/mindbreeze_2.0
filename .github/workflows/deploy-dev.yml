@@ -4,6 +4,8 @@
 # 방식: systemd (Docker 미사용) — SDD-014 아키텍처 정합
 #   · 프론트: GitHub에서 빌드 → nginx 루트(/home/ubuntu/mindbreeze/dist) 교체
 #   · 백엔드: 소스 SCP 전송 → (venv 이미 서버에 존재) → alembic upgrade → systemctl restart
+# SDD-229: E2E 는 dev 배포에서 돌지 않는다(운영 릴리스 빌드 release-build.yml 에서만 + 수동 실행).
+#          requirements.txt 가 바뀌지 않았으면 시스템 패키지·pip 설치를 건너뛴다.
 # ─────────────────────────────────────────
 
 name: Deploy Dev
@@ -212,6 +214,7 @@ jobs:
             if [ ! -x venv/bin/python ]; then
               python3 -m venv venv
               venv/bin/pip install --upgrade pip
+              rm -f .requirements.sha256   # 새 venv 는 반드시 설치
             fi
 
             # 4.5 GEMINI_API_KEY 주입 (secrets → .env.dev, 없으면 추가·있으면 갱신)
@@ -238,9 +241,17 @@ jobs:
               echo 'DEBUG=false' >> ./.env.dev
             fi
             # SDD-070: PDF 렌더러 시스템 의존성. 글꼴은 app/assets/fonts에도 포함한다.
-            sudo apt-get update -qq
-            sudo apt-get install -y --no-install-recommends libcairo2 libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 fonts-noto-cjk
-            venv/bin/pip install -q -r requirements.txt
+            # SDD-229: requirements.txt 해시가 직전 설치와 같으면 apt·pip 설치를 건너뛴다(배포당 약 1분).
+            #   해시 파일은 설치가 성공한 뒤에만 기록한다 → 설치 실패 시 다음 배포에서 다시 설치한다.
+            REQ_HASH=$(sha256sum requirements.txt | cut -d' ' -f1)
+            if [ -f .requirements.sha256 ] && [ "$(cat .requirements.sha256)" = "$REQ_HASH" ]; then
+              echo "requirements.txt 변경 없음 — 패키지 설치 생략"
+            else
+              sudo apt-get update -qq
+              sudo apt-get install -y --no-install-recommends libcairo2 libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 fonts-noto-cjk
+              venv/bin/pip install -q -r requirements.txt
+              echo "$REQ_HASH" > .requirements.sha256
+            fi
             venv/bin/python -c "from weasyprint import HTML; from pathlib import Path; assert Path('app/assets/fonts/NotoSansKR.ttf').is_file()"
 
             # 4. DB 마이그레이션 — .env.dev 전체 source 대신 필요한 변수만 추출
@@ -374,8 +385,3 @@ jobs:
           curl -sf https://dev.mindbreeze.looxidlabs.com/ -o /dev/null && echo "frontend 200 OK"
           curl -sf https://dev-api.mindbreeze.looxidlabs.com/health/ready && echo " ← api ready OK"
 
-  # SDD-204: 배포 성공 직후 스모크 E2E (실패 시 텔레그램 알림). 배포 자체의 성공/실패에는 영향 없음.
-  e2e-smoke:
-    needs: [deploy]
-    uses: ./.github/workflows/e2e-smoke.yml
-    secrets: inherit

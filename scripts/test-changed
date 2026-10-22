@@ -1,48 +1,250 @@
 #!/usr/bin/env python3
-"""변경된 파일과 관련된 테스트만 로컬에서 실행한다 (전체 CI 는 PR 단계에서만 돈다).
+"""변경된 파일과 관련된 테스트만 고른다 (로컬 실행 + PR CI 선택 공용).
 
-사용: scripts/test-changed [기준브랜치=origin/develop]
-- backend: 바뀐 backend/app/**/*.py 를 import 하는 tests/*.py (+ 바뀐 테스트 파일 자체)만 pytest
-- frontend: 바뀐 frontend/src 파일에 관련된 vitest (vitest related)
-- 마이그레이션(alembic) 변경 시 tests/pg 는 CI 에서 확인하므로 안내만 출력
+사용:
+  scripts/test-changed [기준브랜치=origin/develop]       # 로컬: 고른 테스트를 바로 실행
+  scripts/test-changed --ci --files-from <목록파일>      # CI: 선택 결과를 GITHUB_OUTPUT 형식으로 출력(실행 안 함)
+
+선택 규칙 (SDD-229):
+- backend 공통 영역(core·models·config·main·deps·conftest·requirements·alembic 등) 변경 → 전체(full)
+- 그 외 backend/app 변경 → 바뀐 모듈을 import 하는 모듈까지 2단계 넓힌 뒤, 그 모듈을 import 하거나
+  그 라우터 URL(/api/v1/<prefix>)을 부르는 테스트만(related). 관련 테스트 0개·60% 이상이면 전체.
+- CI 설정·이 스크립트가 바뀌면 전부 실행한다.
+- tests/pg 는 PG 잡(backend-pg-smoke) 담당이라 여기서 고르지 않는다.
 """
-import re, subprocess, sys
+import ast
+import os
+import re
+import subprocess
+import sys
 from pathlib import Path
 
-root = Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip())
-base = sys.argv[1] if len(sys.argv) > 1 else "origin/develop"
+ROOT = Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip())
+BE = ROOT / "backend"
+FULL_RATIO = 0.6
+MAX_DEPTH = 2  # 역 import 확장 단계 수
+EXCLUDED_TESTS = {"tests/test_sprint4_integration.py"}  # 기존 CI 와 동일하게 제외
 
-def git(*a):
-    return subprocess.check_output(["git", *a], text=True, cwd=root).splitlines()
+# 바뀌면 백엔드 전체를 돌리는 경로(접두어 일치)
+BACKEND_FULL_PREFIXES = (
+    "backend/requirements.txt",
+    "backend/alembic",
+    "backend/app/core/",
+    "backend/app/models/",
+    "backend/app/config.py",
+    "backend/app/main.py",
+    "backend/app/api/deps.py",
+    "backend/app/api/v1/__init__.py",
+    "backend/tests/fixtures/",
+)
+# 모두를 다시 돌려야 하는 CI 관련 파일
+ALL_PREFIXES = (".github/workflows/ci-feature.yml", "scripts/test-changed")
+# PG 스모크(마이그레이션·PG 테스트)를 돌릴 경로
+PG_PREFIXES = ("backend/app/", "backend/alembic", "backend/tests/pg/", "backend/requirements.txt", "backend/scripts/reset_dev_data.py")
+# 역 import 확장을 멈추는 집계 모듈(모든 라우터를 모으므로 확장하면 전부가 걸린다)
+AGGREGATORS = {"app.main", "app.api.v1", "app"}
 
-changed = set(git("diff", "--name-only", f"{base}...HEAD")) | set(git("diff", "--name-only", "HEAD")) | set(git("ls-files", "--others", "--exclude-standard"))
-be = sorted(f for f in changed if f.startswith("backend/") and f.endswith(".py"))
-fe = sorted(f for f in changed if f.startswith("frontend/src/") and re.search(r"\.(tsx?|css)$", f))
-rc = 0
-venv_py = root / "backend/venv/bin/python"
-py = str(venv_py) if venv_py.exists() else sys.executable
 
-if be:
-    tests = {f[len("backend/"):] for f in be if f.startswith("backend/tests/") and Path(root, f).exists()}
-    mods = [f[len("backend/"):-3].replace("/", ".").removesuffix(".__init__") for f in be if f.startswith("backend/app/")]
-    if mods:
-        pats = [re.compile(r"\b" + re.escape(m) + r"\b|from " + re.escape(m.rsplit(".", 1)[0]) + r" import .*\b" + re.escape(m.rsplit(".", 1)[1]) + r"\b") for m in mods]
-        for t in Path(root, "backend/tests").rglob("test_*.py"):
-            if "/pg/" in str(t):
+def mod_name(rel: str) -> str:
+    """backend 기준 상대경로 → 모듈 이름 (app/x/y.py → app.x.y, 패키지 __init__ → 패키지)."""
+    return rel[:-3].replace("/", ".").removesuffix(".__init__")
+
+
+def imports_of(path: Path, own_mod: str, known: frozenset = frozenset()) -> set[str]:
+    """파일이 import 하는 모듈 이름. 함수 안 import 포함.
+
+    from a.b import c → a.b.c 가 모듈(known)이면 a.b.c 만, 아니면(함수·클래스 등) a.b 를 의존으로 본다.
+    (패키지 __init__ 를 거쳐 모든 서비스가 서로 엮이는 과대 확장을 막는다.)
+    """
+    try:
+        tree = ast.parse(path.read_text(errors="ignore"))
+    except SyntaxError:
+        return set()
+    pkg = own_mod.rsplit(".", 1)[0] if "." in own_mod else ""
+    out: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            out.update(a.name for a in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            base = node.module or ""
+            if node.level:
+                parts = pkg.split(".") if pkg else []
+                if node.level > 1:
+                    parts = parts[: len(parts) - (node.level - 1)]
+                base = ".".join(p for p in [*parts, base] if p)
+            if base:
+                for a in node.names:
+                    sub = f"{base}.{a.name}"
+                    if sub in known:
+                        out.add(sub)
+                    else:
+                        out.add(base)
+                        out.add(sub)
+    return out
+
+
+def router_prefixes(path: Path) -> list[str]:
+    """라우터 파일의 APIRouter(prefix=...) 값들 → '/api/v1/...' 형태."""
+    txt = path.read_text(errors="ignore")
+    return [p if p.startswith("/api/") else "/api/v1" + p
+            for p in re.findall(r'APIRouter\(\s*prefix\s*=\s*"([^"]+)"', txt)]
+
+
+def all_test_files() -> list[str]:
+    files = []
+    for t in sorted((BE / "tests").rglob("test_*.py")):
+        rel = str(t.relative_to(BE))
+        if rel.startswith("tests/pg/") or rel in EXCLUDED_TESTS:
+            continue
+        files.append(rel)
+    return files
+
+
+def select(changed: list[str]) -> dict:
+    changed = sorted(set(changed))
+    res = {"frontend": False, "backend_mode": "none", "backend_tests": [], "pg": False, "reason": ""}
+    if any(f.startswith(ALL_PREFIXES) for f in changed):
+        res.update(frontend=True, backend_mode="full", pg=True, reason="CI 설정/선택 스크립트 변경")
+        return res
+    res["frontend"] = any(f.startswith("frontend/") for f in changed)
+    res["pg"] = any(f.startswith(PG_PREFIXES) for f in changed)
+    be = [f for f in changed if f.startswith("backend/") and not f.startswith("backend/tests/pg/")]
+    # 테스트에 영향이 없는 backend 경로(배포 유닛 파일·부하 테스트·문서)는 무시한다
+    be = [f for f in be if not f.startswith(("backend/deploy/", "backend/scripts/loadtest/")) and not f.endswith(".md")]
+    if not be:
+        return res
+
+    full_hits = [f for f in be if f.startswith(BACKEND_FULL_PREFIXES) or f.endswith("conftest.py")
+                 or re.match(r"backend/app/[^/]+/__init__\.py$", f)]
+    if full_hits:
+        res.update(backend_mode="full", reason=f"공통 영역 변경: {full_hits[0]}")
+        return res
+    non_py_app = [f for f in be if f.startswith("backend/app/") and not f.endswith(".py")]
+    if non_py_app:
+        res.update(backend_mode="full", reason=f"app 비-파이썬 파일 변경: {non_py_app[0]}")
+        return res
+
+    # app 모듈 import 그래프 (역방향)
+    app_files = {mod_name(str(p.relative_to(BE))): p for p in (BE / "app").rglob("*.py")}
+    known = frozenset(app_files)
+    rev: dict[str, set[str]] = {}
+    for m, p in app_files.items():
+        for imp in imports_of(p, m, known):
+            rev.setdefault(imp, set()).add(m)
+
+    seeds = {mod_name(f[len("backend/"):]) for f in be if f.startswith("backend/app/")}
+    # 바뀐 모듈에서 MAX_DEPTH 단계까지만 역방향으로 넓힌다. 이 저장소는 import 가 촘촘해(ws·chat·report 경유)
+    # 끝까지 따라가면 클래스·세션 서비스 하나만 바뀌어도 전체가 걸린다. 더 먼 간접 영향은 Release Build 의
+    # 전체 pytest 가 잡는다.
+    closure, frontier = set(seeds), set(seeds)
+    for _ in range(MAX_DEPTH):
+        nxt = set()
+        for m in frontier:
+            if m in AGGREGATORS:
                 continue
-            txt = t.read_text(errors="ignore")
-            if any(p.search(txt) for p in pats):
-                tests.add(str(t.relative_to(root / "backend")))
-    if any("alembic/versions" in f for f in be):
-        print("⚠ 마이그레이션 변경 감지 — PG 검증은 PR CI(backend-pg-smoke)에서 확인됩니다.")
-    if tests:
-        print(f"[backend] 관련 테스트 {len(tests)}개 파일 실행")
-        rc |= subprocess.call([py, "-m", "pytest", "-q", "--tb=short", *sorted(tests)], cwd=root / "backend")
+            nxt |= {u for u in rev.get(m, ()) if u not in closure}
+        closure |= nxt
+        frontier = nxt
+    closure -= AGGREGATORS
+
+    prefixes: list[str] = []
+    for m in closure:
+        if m.startswith("app.api.") and m in app_files:
+            prefixes += router_prefixes(app_files[m])
+    url_pats = [re.compile(re.escape(p) + r"(?![\w-])") for p in sorted(set(prefixes))]
+
+    # 루트 cron 스크립트·테스트 헬퍼 등 app 밖 .py 변경은 그것을 import 하는 테스트로
+    extra_mods = {mod_name(f[len("backend/"):]) for f in be
+                  if f.endswith(".py") and not f.startswith("backend/app/")
+                  and not re.search(r"/test_[^/]+\.py$", f)}
+    extra_mods |= {m.split(".")[-1] for m in extra_mods}  # 루트 스크립트는 'import sweep_x' 로 불린다
+    non_app_changed = [f for f in be if not f.startswith("backend/app/")]
+
+    tests = set()
+    candidates = all_test_files()
+    for rel in candidates:
+        path = BE / rel
+        if f"backend/{rel}" in changed:
+            tests.add(rel)
+            continue
+        imps = imports_of(path, mod_name(rel), known)
+        if imps & (closure | extra_mods):
+            tests.add(rel)
+            continue
+        if url_pats:
+            txt = path.read_text(errors="ignore")
+            if any(p.search(txt) for p in url_pats):
+                tests.add(rel)
+
+    # 바뀐 테스트 파일이 삭제된 경우는 고를 것이 없다(그 자체로는 실행할 테스트 없음)
+    if not tests and not seeds and not extra_mods:
+        return res
+    if not tests:
+        res.update(backend_mode="full", reason="관련 테스트를 찾지 못함 → 안전하게 전체")
+    elif len(tests) >= FULL_RATIO * len(candidates):
+        res.update(backend_mode="full", reason=f"관련 테스트 {len(tests)}/{len(candidates)} ≥ {int(FULL_RATIO * 100)}% → 전체")
     else:
-        print("[backend] 관련 테스트 없음 (app 모듈을 import 하는 테스트를 찾지 못함)")
-if fe:
-    print(f"[frontend] 관련 vitest 실행 ({len(fe)}개 파일)")
-    rc |= subprocess.call(["npx", "vitest", "related", "--run", "--passWithNoTests", *[f[len("frontend/"):] for f in fe]], cwd=root / "frontend")
-if not be and not fe:
-    print("변경된 backend/frontend 소스가 없습니다.")
-sys.exit(rc)
+        res.update(backend_mode="related", backend_tests=sorted(tests),
+                   reason=f"관련 테스트 {len(tests)}/{len(candidates)}개 (확장 모듈 {len(closure)}개, app 밖 변경 {len(non_app_changed)}개)")
+    return res
+
+
+def git_changed(base: str) -> list[str]:
+    def g(*a):
+        return subprocess.check_output(["git", *a], text=True, cwd=ROOT).splitlines()
+    return sorted(set(g("diff", "--name-only", f"{base}...HEAD")) | set(g("diff", "--name-only", "HEAD"))
+                  | set(g("ls-files", "--others", "--exclude-standard")))
+
+
+def main() -> int:
+    args = sys.argv[1:]
+    if "--ci" in args:
+        src = args[args.index("--files-from") + 1]
+        changed = [ln.strip() for ln in Path(src).read_text().splitlines() if ln.strip()]
+        r = select(changed)
+        lines = [f"frontend={'true' if r['frontend'] else 'false'}", f"backend_mode={r['backend_mode']}",
+                 f"pg={'true' if r['pg'] else 'false'}", f"backend_tests={' '.join(r['backend_tests'])}"]
+        out = os.environ.get("GITHUB_OUTPUT")
+        if out:
+            with open(out, "a") as fh:
+                fh.write("\n".join(lines) + "\n")
+        print("\n".join(lines[:3]))
+        print(f"사유: {r['reason'] or '-'}")
+        for t in r["backend_tests"]:
+            print(f"  - {t}")
+        summ = os.environ.get("GITHUB_STEP_SUMMARY")
+        if summ:
+            with open(summ, "a") as fh:
+                fh.write(f"### CI 선택 (SDD-229)\n- 변경 파일 {len(changed)}개\n"
+                         f"- frontend: {r['frontend']} / backend: {r['backend_mode']} / pg: {r['pg']}\n"
+                         f"- 사유: {r['reason'] or '-'}\n")
+                fh.write("".join(f"  - `{t}`\n" for t in r["backend_tests"]))
+        return 0
+
+    base = args[0] if args else "origin/develop"
+    changed = git_changed(base)
+    r = select(changed)
+    rc = 0
+    venv_py = BE / "venv/bin/python"
+    py = str(venv_py) if venv_py.exists() else sys.executable
+    if any("alembic/versions" in f for f in changed):
+        print("⚠ 마이그레이션 변경 감지 — PG 검증은 PR CI(backend-pg-smoke)에서 확인됩니다.")
+    print(f"[선택] backend={r['backend_mode']} ({r['reason'] or '-'})")
+    if r["backend_mode"] == "full":
+        rc |= subprocess.call([py, "-m", "pytest", "-q", "--tb=short",
+                               "--ignore=tests/test_sprint4_integration.py", "--ignore=tests/pg"], cwd=BE)
+    elif r["backend_mode"] == "related":
+        print(f"[backend] 관련 테스트 {len(r['backend_tests'])}개 파일 실행")
+        rc |= subprocess.call([py, "-m", "pytest", "-q", "--tb=short", *r["backend_tests"]], cwd=BE)
+    fe = [f for f in changed if f.startswith("frontend/src/") and re.search(r"\.(tsx?|css)$", f)]
+    if fe:
+        print(f"[frontend] 관련 vitest 실행 ({len(fe)}개 파일)")
+        rc |= subprocess.call(["npx", "vitest", "related", "--run", "--passWithNoTests",
+                               *[f[len("frontend/"):] for f in fe]], cwd=ROOT / "frontend")
+    if r["backend_mode"] == "none" and not fe:
+        print("변경된 backend/frontend 소스가 없습니다.")
+    return rc
+
+
+if __name__ == "__main__":
+    sys.exit(main())
