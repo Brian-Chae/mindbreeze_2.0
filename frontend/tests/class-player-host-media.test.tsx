@@ -334,6 +334,17 @@ describe('미디어 시트 — 온라인(C07·C09)', () => {
     expect(one('input[placeholder="마커 메모 입력"]', s ?? document)).not.toBeNull();
   });
 
+  it('녹음 종료 버튼은 위험 동작 표식(data-rec-action=stop)을 달고 어두운 시트의 붉은 스타일을 받는다', async () => {
+    await renderCase('C11', 'sheet=media');
+    const stop = buttonByText('녹음 종료', sheet() ?? document);
+    expect(stop?.getAttribute('data-rec-action')).toBe('stop');
+    expect(stop?.closest('.hp-legacy')).not.toBeNull();
+    const { readFileSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    const css = readFileSync(resolve(process.cwd(), 'src/components/class/player/host/host-player.css'), 'utf-8');
+    expect(css).toMatch(/\.hp-legacy button\[data-rec-action="stop"\][^{]*\{[^}]*background: #D9443F !important[^}]*color: #FFFFFF !important/);
+  });
+
   it('녹음 전: 녹음 시작 버튼', async () => {
     await renderCase('C01', 'sheet=media');
     expect(buttonByText('녹음 시작', sheet() ?? document)).not.toBeNull();
