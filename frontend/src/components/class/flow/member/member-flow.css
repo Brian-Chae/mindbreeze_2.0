@@ -23,8 +23,9 @@
 /* FM04 코드 입력 */
 .pz-root .fm-code-card { display: flex; flex-direction: column; gap: 16px; align-items: stretch; }
 .pz-root .fm-code-card .fl-sub { margin-top: -8px; }
-.pz-root .fm-codebox { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-.pz-root .fm-codebox > span { height: 64px; border-radius: 12px; background: rgba(255, 255, 255, 0.1); border: 1px solid var(--sheet-border); display: block; }
+/* 숫자 칸은 세로가 더 긴 비율(64×84) — 가로로 눌려 보이지 않게 칸 폭을 고정하고 가운데 정렬 */
+.pz-root .fm-codebox { display: grid; grid-template-columns: repeat(4, minmax(0, 64px)); justify-content: center; gap: 16px; }
+.pz-root .fm-codebox > span { aspect-ratio: 64 / 84; height: auto; border-radius: 12px; background: rgba(255, 255, 255, 0.1); border: 1px solid var(--sheet-border); display: block; }
 .pz-root .fm-codebox > span[data-active="true"] { border: 2px solid var(--mb-lavender); }
 .pz-root .fm-codebox > span[data-bad="true"] { border: 2px solid var(--warn); background: var(--warn-bg); }
 .pz-root .fm-codebox input { display: block; width: 100%; height: 100%; padding: 0; border: 0; background: transparent; color: var(--tx-hi); text-align: center; font: inherit; font-size: var(--fs-36); font-weight: 800; border-radius: 12px; }
