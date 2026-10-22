@@ -5,6 +5,7 @@ import { isCounselingEnabled } from '../../lib/feature-flags';
 import { useAuthStore } from '../../stores/authStore';
 import { heroBackdrop } from '../../components/class/flow/shell/shell-data';
 import '../../components/class/flow/shell/shell-kit.css';
+import { CodeEntryButton } from '../../components/client/code-entry-button';
 import ClientHomePage from './ClientHomePage';
 import { useClientCounselors } from '../../hooks/use-client-counselors';
 import { useMixedHome } from '../../hooks/use-class-structure';
@@ -25,7 +26,7 @@ export function MemberStructureHomePage() {
   const counseling = model.counseling.status === 'success' ? model.counseling.data.relationships : [];
   const counselingEnabled = isCounselingEnabled();
   const name = useAuthStore((state) => state.user?.name);
-  return <StructureShell role="member" title={`안녕하세요, ${name ?? '내담자'}님`}><MemberClassStyles /><div className="mc-stack mh-home">
+  return <StructureShell role="member" title={`안녕하세요, ${name ?? '내담자'}님`} rightSlot={<CodeEntryButton />}><MemberClassStyles /><div className="mc-stack mh-home">
     <section className="sh-scope sh-hero" data-testid="class-hero" aria-label="다음 일정" data-area={next?.area}>
       {next && <div className="sh-hero__bg" style={{ backgroundImage: `url(${heroBackdrop(next.sessionId)})` }} aria-hidden="true" />}
       <div className="sh-hero__in">

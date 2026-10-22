@@ -60,7 +60,8 @@ describe('회원 홈 기존 섹션 복원', () => {
     expect(view.querySelector('h1')?.textContent).toBe('안녕하세요, 홍길동님');
     const heads = [...view.querySelectorAll('h2')].map((h) => h.textContent);
     for (const name of ['초대된 클래스', '이번 주 클래스', '내 리포트', '담당 상담사', '최근 대화', '새 알림', '내 클래스', '내 상담']) expect(heads).toContain(name);
-    expect(view.querySelector('[data-testid="enter-with-code"]')?.textContent).toContain('코드로 입장하기');
+    expect(view.querySelector('a[data-testid="enter-with-code"]')?.getAttribute('href')).toBe('/join');
+    expect(view.querySelector('a[data-testid="enter-with-code"]')?.textContent).toBe('코드로 바로 입장');
     expect(view.textContent).toContain('초대받은 호흡 명상');
     expect(view.textContent).toContain('지난 명상 리포트');
     expect(view.textContent).toContain('박상담');
@@ -92,6 +93,11 @@ describe('회원 홈 기존 섹션 복원', () => {
 
 describe('내 클래스 신청 진입', () => {
   beforeEach(() => api.classes.mockReturnValue({ state: { status: 'success', data: { classes: [classRow], total: 1 } }, retry: vi.fn() }));
+  it('상단에 코드로 바로 입장(→ /join)과 클래스 신청하기가 나란히 있다', async () => {
+    const view = await render(<MemberClassesPage />, '/app/classes');
+    expect(view.querySelector('a[data-testid="enter-with-code"]')?.getAttribute('href')).toBe('/join');
+    expect(view.querySelector('a[data-testid="enter-with-code"]')?.textContent).toBe('코드로 바로 입장');
+  });
   it('클래스 신청하기를 누르면 상담사를 고르는 신청 시트가 열리고 신청 메시지를 보낸다', async () => {
     const view = await render(<MemberClassesPage />, '/app/classes');
     const button = [...view.querySelectorAll('button')].find((b) => b.textContent?.includes('클래스 신청하기'));

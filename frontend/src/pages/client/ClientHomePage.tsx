@@ -12,7 +12,7 @@ import { useEnterClass } from '../../hooks/useEnterClass';
 import { memberChipKey } from '../../lib/class/class-labels';
 import { ClassHero, ClassHeroEmpty } from '../../components/class/flow/shell/ClassHero';
 import { ClassRow } from '../../components/class/flow/shell/ClassRow';
-import { EnterByCodeLink } from '../../components/class/flow/shell/MemberHomeView';
+import { CodeEntryButton } from '../../components/client/code-entry-button';
 import { heroBackdrop, toClassRowData, toHeroData } from '../../components/class/flow/shell/shell-data';
 import '../../components/class/flow/shell/shell-kit.css';
 import { listReports, type ReportDto } from '../../lib/api/reports';
@@ -358,6 +358,7 @@ export default function ClientHomePage({ hideHero = false }: { hideHero?: boolea
       {/* ── 좌측 컬럼 ── */}
       <div className="mh-main flex min-w-0 flex-col gap-6">
         {/* 다음 클래스 히어로 (항상 표시) — 참여코드 값·복사 UI 는 두지 않는다 */}
+        {hideHero ? null : <div className="flex justify-end"><CodeEntryButton /></div>}
         {hideHero ? null : heroData ? (
           <ClassHero data={heroData} action={heroAction} onAction={openHeroClass} busy={enteringId !== null} />
         ) : (
@@ -410,7 +411,6 @@ export default function ClientHomePage({ hideHero = false }: { hideHero?: boolea
               </button>
             </div>
           )}
-          <EnterByCodeLink onClick={() => navigate('/join')} />
         </section>
 
         {/* 내 리포트 */}

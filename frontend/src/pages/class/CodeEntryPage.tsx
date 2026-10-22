@@ -30,6 +30,19 @@ function toBirthText(value: string | null | undefined): string {
   return value ? value.slice(0, 10).replace(/-/g, '.') : '';
 }
 
+/** 클래스 가입 실패 사유별 안내 — 원인을 알 수 있는 것은 구체적으로 알려 준다 */
+function joinErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    const code = (error.data as { detail?: { code?: string } } | null)?.detail?.code;
+    if (error.status === 403) return '이 계정으로는 클래스에 가입할 수 없어요.';
+    if (error.status === 429) return '잠시 후 다시 시도해 주세요.';
+    if (code === 'class_capacity') return '정원이 찼어요. 내 클래스에서 대기 신청을 해 주세요.';
+    if (code === 'waitlist_precedes') return '먼저 신청한 대기자가 있어요. 내 클래스에서 대기 상태를 확인해 주세요.';
+    if (code === 'member_reinvite_required') return '이전에 참여가 종료된 클래스예요. 지도사에게 다시 초대를 요청해 주세요.';
+  }
+  return '가입하지 못했어요. 코드를 확인하거나 다시 시도해 주세요.';
+}
+
 export default function CodeEntryPage() {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -118,14 +131,14 @@ export default function CodeEntryPage() {
     try {
       await joinClassCode(classInfo.class_id, digits, controller.signal);
       if (!aliveRef.current) return;
+      // 가입(이미 가입한 회원은 그대로 통과) 후: 열린 회차가 하나면 입장 화면까지, 아니면 클래스 상세에서 고른다.
       const session = classInfo.sessions.length === 1 ? classInfo.sessions[0] : null;
-      navigate(`/app/classes/${encodeURIComponent(classInfo.class_id)}${session ? `?sessionId=${encodeURIComponent(session.session_id)}` : ''}`, { replace: true });
+      navigate(session
+        ? `/class/${encodeURIComponent(session.session_id)}/enter`
+        : `/app/classes/${encodeURIComponent(classInfo.class_id)}`, { replace: true });
     } catch (error) {
       if (!aliveRef.current) return;
-      setSubmitError(error instanceof ApiError && error.status === 403
-        ? '이 계정으로는 클래스에 가입할 수 없어요.'
-        : error instanceof ApiError && error.status === 429
-          ? '잠시 후 다시 시도해 주세요.' : '가입하지 못했어요. 코드를 확인하거나 다시 시도해 주세요.');
+      setSubmitError(joinErrorMessage(error));
     } finally {
       if (aliveRef.current) setSubmitting(false);
     }
@@ -227,7 +240,12 @@ export default function CodeEntryPage() {
       memberName={memberName}
       onChange={changeDigits}
       onSubmit={() => void submitCode()}
-      onBack={() => navigate(-1)}
+      onBack={() => {
+        // 주소창·새 탭으로 바로 들어와 돌아갈 기록이 없으면 회원은 홈으로, 비회원은 첫 화면으로 보낸다.
+        const idx = (window.history.state as { idx?: number } | null)?.idx;
+        if (typeof idx === 'number' && idx > 0) navigate(-1);
+        else navigate(isAuthenticated && user?.role === 'client' ? '/app' : '/', { replace: true });
+      }}
     />
   );
 }
