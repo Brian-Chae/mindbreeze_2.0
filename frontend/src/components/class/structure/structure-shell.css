@@ -26,6 +26,10 @@
 .cs-structure .cs-class-identity { grid-area: identity; display: grid; grid-template-columns: 44px minmax(0,1fr); align-items: center; gap: 16px; min-width: 0; }
 .cs-structure .cs-class-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 16px; background: var(--cs-cream); color: var(--cs-brand); }
 .cs-structure .cs-class-identity h2 { font-size: 15px; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
+/* 클래스 제목은 한 줄 — '즉석' 칩을 앞에 두고 넘치면 말줄임(…). 칩은 줄바꿈되지 않는다. */
+.cs-structure .cs-class-identity h2.cs-class-title { display: flex; align-items: center; gap: 8px; min-width: 0; overflow-wrap: normal; }
+.cs-structure .cs-class-title__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-structure .cs-instant-chip { flex: none; white-space: nowrap; border-radius: 999px; background: #F3E8FF; color: #6B21A8; padding: 2px 8px; font-size: 12px; font-weight: 600; line-height: 18px; }
 .cs-structure .cs-class-identity p { margin-top: 8px; color: var(--cs-muted); font-size: 13px; }
 .cs-structure .cs-class-next { grid-area: next; }
 .cs-structure .cs-class-progress { grid-area: progress; }
@@ -47,7 +51,7 @@
 .cs-structure .cs-muted-chip { background: #F0ECF3; color: var(--cs-muted); }
 .cs-structure .cs-open-chip { background: #E3F8F2; color: #0B6B55; }
 @container class-list (min-width: 760px) {
-  .cs-structure .cs-class-columns, .cs-structure .cs-class-row { grid-template-columns: minmax(0,2.2fr) minmax(0,1.5fr) minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1.5fr); }
+  .cs-structure .cs-class-columns, .cs-structure .cs-class-row { grid-template-columns: minmax(0,3fr) minmax(0,1.3fr) minmax(0,1.3fr) minmax(0,1.1fr) minmax(0,1.3fr); }
   .cs-structure .cs-class-columns { display: grid; gap: 16px; padding: 0 16px; font-size: 13px; font-weight: 600; color: var(--cs-muted); }
   .cs-structure .cs-class-row { grid-template-areas: "identity next progress host state"; align-items: center; }
   .cs-structure .cs-class-row .cs-class-key { display: none; }
