@@ -1,0 +1,74 @@
+[
+  {
+    "role": "member",
+    "width": 768,
+    "field": "texts",
+    "same": true
+  },
+  {
+    "role": "member",
+    "width": 768,
+    "field": "touches",
+    "same": true
+  },
+  {
+    "role": "member",
+    "width": 768,
+    "field": "spacing",
+    "same": true
+  },
+  {
+    "role": "member",
+    "width": 1440,
+    "field": "texts",
+    "same": true
+  },
+  {
+    "role": "member",
+    "width": 1440,
+    "field": "touches",
+    "same": true
+  },
+  {
+    "role": "member",
+    "width": 1440,
+    "field": "spacing",
+    "same": true
+  },
+  {
+    "role": "host",
+    "width": 768,
+    "field": "texts",
+    "same": true
+  },
+  {
+    "role": "host",
+    "width": 768,
+    "field": "touches",
+    "same": true
+  },
+  {
+    "role": "host",
+    "width": 768,
+    "field": "spacing",
+    "same": true
+  },
+  {
+    "role": "host",
+    "width": 1440,
+    "field": "texts",
+    "same": true
+  },
+  {
+    "role": "host",
+    "width": 1440,
+    "field": "touches",
+    "same": true
+  },
+  {
+    "role": "host",
+    "width": 1440,
+    "field": "spacing",
+    "same": true
+  }
+]

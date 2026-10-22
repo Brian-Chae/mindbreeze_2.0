@@ -23,6 +23,8 @@ for (const role of ['member', 'host']) {
     expect(m.scrollWidth).toBeLessThanOrEqual(390);
     expect(m.violations.smallTouch).toEqual([]);
     expect(m.violations.narrowTouch).toEqual([]);
+    const primary = m.touches.find(x => x.text === (role === 'member' ? '코드로 바로 입장' : '지금 바로 시작'));
+    expect(primary?.height).toBeGreaterThanOrEqual(48);
     // PR #60 유지 대상: 기존 레일의 아바타 이니셜/읽지 않은 개수만 제외한다.
     const remaining = m.violations.smallText.filter(x => !(x.text === '1' && x.class.includes('rounded-full')) && !(x.text === '샘' && x.class.includes('h-10')));
     expect(remaining.map(x => [x.text, x.fontSize])).toEqual([]);
