@@ -12,6 +12,7 @@ import { ChatTextarea } from './ChatTextarea';
 import { MessageBubble } from './MessageBubble';
 import { ReportDialog } from './report-dialog';
 import { SystemMessage } from './SystemMessage';
+import './chat-room.css';
 import type { Socket } from 'socket.io-client';
 
 // ---- 날짜 포맷 유틸 (KST 기준) ----
@@ -45,8 +46,8 @@ function DateSeparator({ iso }: { iso: string }) {
       <span
         style={{
           fontSize: '12px',
-          color: '#8E8E93',
-          background: '#F2F2F7',
+          color: 'var(--chat-muted, #8E8E93)',
+          background: 'var(--chat-surface, #F2F2F7)',
           borderRadius: '12px',
           padding: '4px 12px',
         }}
@@ -59,13 +60,15 @@ function DateSeparator({ iso }: { iso: string }) {
 
 interface Props {
   roomId: string;
+  /** 클래스 시트에서만 dark를 지정한다. 일반 채팅은 기존 light 유지. */
+  tone?: 'light' | 'dark';
   targetMessageId?: string;
   onShowRecent?: () => void;
   /** 상대방 이름 (직접 채팅에서 표시용). 미지정 시 sender_id 기반 "사용자" */
   peerName?: string;
 }
 
-export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Props) {
+export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent, tone = 'light' }: Props) {
   const user = useAuthStore((s) => s.user);
   const messages = useChatStore((s) => s.messagesByRoom[roomId]);
   // store는 최신순 저장 → 일반 flex-col용으로 오래된 순으로 뒤집기
@@ -340,7 +343,7 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
   const canReportPeer = room?.room_type === 'direct' && !!room.peer_id && !room.peer_deleted && !blocked;
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-white">
+    <div data-chat-tone={tone} className="chat-room flex flex-col h-full min-h-0 bg-white">
       {canReportPeer && room?.peer_id && (
         <div className="flex justify-end px-4 pt-2 shrink-0">
           <button
@@ -452,7 +455,7 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
 
       {/* 입력창 */}
       <div
-        className="border-t border-[#EFEFEF] p-3 bg-white shrink-0"
+        className="chat-room__composer border-t border-[#EFEFEF] p-3 bg-white shrink-0"
         style={{ paddingBottom: `calc(0.75rem + ${keyboardHeight}px)` }}
       >
         <div className="mx-auto flex w-full max-w-[760px] items-end gap-2">
@@ -468,7 +471,7 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
           type="button"
           onClick={() => void handleSend()}
           disabled={blocked || !input.trim() || (!!target && (loading || !!targetError))}
-          className="mb-btn shrink-0 disabled:opacity-50"
+          className="chat-room__send mb-btn shrink-0 disabled:opacity-50"
         >
           전송
         </button>

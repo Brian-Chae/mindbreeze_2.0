@@ -10,7 +10,7 @@ import { getChatRoom, getSessionChatRoom, type ChatMessage, type ChatRoom } from
 
 /** ChatRoom은 별도로 검증하므로 패널이 방을 넘기는지만 확인한다 */
 vi.mock('../src/components/chat/ChatRoom', () => ({
-  ChatRoom: ({ roomId }: { roomId: string }) => `CHAT_ROOM:${roomId}`,
+  ChatRoom: ({ roomId, tone = 'light' }: { roomId: string; tone?: string }) => createElement('div', { 'data-chat-tone': tone }, `CHAT_ROOM:${roomId}`),
 }));
 vi.mock('../src/lib/api/chat', () => ({ getChatRoom: vi.fn(), getSessionChatRoom: vi.fn() }));
 
@@ -148,4 +148,12 @@ it('미인증(게스트)이면 채팅 패널을 숨긴다', async () => {
   useAuthStore.setState({ isAuthenticated: false, accessToken: null, user: null });
   await render(createElement(Harness, { enabled: true, roomId: 'session-room' }));
   expect(container.textContent).toBe('');
+});
+
+it('embedded 클래스 시트만 어두운 테마를 요청하고 일반 패널은 밝게 유지한다', async () => {
+  const props = { sessionId: 'session-1', enabled: true, roomId: 'session-room', collapsed: false, onCollapsedChange: vi.fn() };
+  await render(createElement(ClassChatPanel, { ...props, embedded: true }));
+  expect(container.querySelector('[data-chat-tone]')?.getAttribute('data-chat-tone')).toBe('dark');
+  await render(createElement(ClassChatPanel, props));
+  expect(container.querySelector('[data-chat-tone]')?.getAttribute('data-chat-tone')).toBe('light');
 });

@@ -36,8 +36,10 @@ it('채팅 말풍선은 본문 15px·시간 12px·이름 13px을 쓴다', () => 
   for (const f of ['MessageBubble.tsx', 'agent-bubble.tsx']) {
     const src = readFileSync(join(SRC, 'components/chat', f), 'utf-8');
     expect(src).toMatch(/fontSize: '15px'/); // 본문
-    expect(src).toMatch(/fontSize: '13px', color: '#6F6F6F'/); // 이름
-    expect(src).toMatch(/fontSize: '12px', color: '#6F6F6F'/); // 시간(대비 5:1)
+    // 공용 말풍선은 테마 변수와 기존 light 폴백, AI 말풍선은 기존 색을 유지한다.
+    const muted = f === 'MessageBubble.tsx' ? 'var(--chat-muted, #6F6F6F)' : '#6F6F6F';
+    expect(src).toContain(`fontSize: '13px', color: '${muted}'`); // 이름
+    expect(src).toContain(`fontSize: '12px', color: '${muted}'`); // 시간
     expect(src).not.toMatch(/#9CA0AE'?, flexShrink/); // 낮은 대비 시간색 금지
     expect(src).toMatch(/maxWidth: '80%'/);
   }

@@ -1,0 +1,48 @@
+/* 클래스 embedded 시트만 적용. 일반 채팅은 기존 밝은 색 폴백을 사용한다. */
+.chat-room[data-chat-tone="dark"] {
+  --chat-text: var(--tx-hi, #F7F4F0);
+  --chat-muted: var(--tx-mid, #CFC6D6);
+  --chat-accent: var(--mb-lavender, #B373EF);
+  --chat-surface: rgba(255, 255, 255, 0.08);
+  --chat-mine: #5F0080;
+  --chat-system-time-opacity: 1;
+  background: var(--sheet-bg, rgba(24, 12, 36, 0.58));
+  color: var(--chat-text);
+  border: 1px solid var(--sheet-border, rgba(255, 255, 255, 0.14));
+  border-radius: var(--r-card, 16px);
+  overflow: hidden;
+  color-scheme: dark;
+}
+.chat-room[data-chat-tone="dark"] .chat-room__composer {
+  background: var(--chat-surface);
+  border-color: var(--sheet-border, rgba(255, 255, 255, 0.14));
+}
+.chat-room[data-chat-tone="dark"] textarea {
+  background: var(--sheet-bg, rgba(24, 12, 36, 0.58));
+  color: var(--chat-text);
+  border-color: var(--chat-muted);
+}
+.chat-room[data-chat-tone="dark"] textarea::placeholder { color: var(--chat-muted); }
+.chat-room[data-chat-tone="dark"] textarea:focus {
+  border-color: var(--chat-accent);
+  box-shadow: 0 0 0 2px var(--chat-accent);
+}
+.chat-room[data-chat-tone="dark"] .chat-room__send {
+  background: var(--chat-mine);
+  color: var(--chat-text);
+  border: 1px solid var(--chat-accent);
+}
+.chat-room[data-chat-tone="dark"] .chat-room__send:disabled {
+  background: var(--chat-surface);
+  color: var(--chat-muted);
+  border-color: var(--sheet-border, rgba(255, 255, 255, 0.14));
+  opacity: 1;
+}
+.chat-room[data-chat-tone="dark"] :is(.text-gray-500, .text-\[\#6F6F6F\]) { color: var(--chat-muted); }
+.chat-room[data-chat-tone="dark"] .text-\[\#5F0080\] { color: var(--chat-accent); }
+.chat-room[data-chat-tone="dark"] :is(.bg-purple-50, .bg-\[\#F8F8FB\], .bg-purple-100) {
+  background: var(--chat-surface);
+  color: var(--chat-text);
+}
+.chat-room[data-chat-tone="dark"] [role="alert"] { background: #381c32; color: #ffc5ce; }
+.chat-room[data-chat-tone="dark"] [role="alert"] button { color: #ffc5ce; }

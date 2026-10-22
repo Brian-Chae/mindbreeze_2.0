@@ -65,7 +65,7 @@ export function MessageBubble({ message, isMine, senderName, showSender, groupSt
               {unread}
             </span>
           )}
-          <span style={{ fontSize: '12px', color: '#6F6F6F', flexShrink: 0, marginBottom: '6px' }}>
+          <span style={{ fontSize: '12px', color: 'var(--chat-muted, #6F6F6F)', flexShrink: 0, marginBottom: '6px' }}>
             {timeStr}
           </span>
         </>
@@ -79,13 +79,13 @@ export function MessageBubble({ message, isMine, senderName, showSender, groupSt
                 width: '32px',
                 height: '32px',
                 borderRadius: '50%',
-                background: '#E8E0F0',
+                background: 'var(--chat-surface, #E8E0F0)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: '13px',
                 fontWeight: 700,
-                color: '#5F0080',
+                color: 'var(--chat-accent, #5F0080)',
               }}
             >
               {senderName ? getInitial(senderName) : '?'}
@@ -96,7 +96,7 @@ export function MessageBubble({ message, isMine, senderName, showSender, groupSt
       <div style={{ maxWidth: '80%' }}>
         {/* 상대방 이름 (첫 메시지만) */}
         {!isMine && showSender && senderName && (
-          <div style={{ fontSize: '13px', color: '#6F6F6F', marginBottom: '3px', marginLeft: '2px' }}>
+          <div style={{ fontSize: '13px', color: 'var(--chat-muted, #6F6F6F)', marginBottom: '3px', marginLeft: '2px' }}>
             {senderName}
           </div>
         )}
@@ -107,15 +107,15 @@ export function MessageBubble({ message, isMine, senderName, showSender, groupSt
           lineHeight: 1.5,
           whiteSpace: 'pre-wrap',
           wordBreak: 'break-word',
-          background: isMine ? '#5F0080' : '#F5EDFC',
-          color: isMine ? '#fff' : '#1F1F1F',
+          background: isMine ? 'var(--chat-mine, #5F0080)' : 'var(--chat-surface, #F5EDFC)',
+          color: isMine ? '#fff' : 'var(--chat-text, #1F1F1F)',
         }}>
           {content}
         </div>
       </div>
       {/* 상대 메시지: 시간 오른쪽 */}
       {!isMine && (
-        <span style={{ fontSize: '12px', color: '#6F6F6F', flexShrink: 0, marginBottom: '4px' }}>
+        <span style={{ fontSize: '12px', color: 'var(--chat-muted, #6F6F6F)', flexShrink: 0, marginBottom: '4px' }}>
           {timeStr}
         </span>
       )}
@@ -124,7 +124,7 @@ export function MessageBubble({ message, isMine, senderName, showSender, groupSt
           type="button"
           onClick={onReport}
           aria-label="이 메시지 신고"
-          style={{ fontSize: '12px', color: '#6F6F6F', flexShrink: 0, marginBottom: '4px', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          style={{ fontSize: '12px', color: 'var(--chat-muted, #6F6F6F)', flexShrink: 0, marginBottom: '4px', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
         >
           신고
         </button>

@@ -1,0 +1,729 @@
+{
+  "measurements": [
+    {
+      "name": "class-empty",
+      "tone": "dark",
+      "root": {
+        "background": "rgba(24, 12, 36, 0.58)",
+        "color": "rgb(247, 244, 240)",
+        "border": "rgba(255, 255, 255, 0.14)"
+      },
+      "input": {
+        "background": "rgba(24, 12, 36, 0.58)",
+        "color": "rgb(247, 244, 240)",
+        "border": "rgb(207, 198, 214)"
+      },
+      "placeholder": "rgb(207, 198, 214)",
+      "placeholderContrast": 10.6,
+      "send": {
+        "background": "rgba(255, 255, 255, 0.08)",
+        "color": "rgb(207, 198, 214)",
+        "border": "rgba(255, 255, 255, 0.14)"
+      },
+      "overflow": false,
+      "textContrast": [
+        {
+          "text": "아직 메시지가 없습니다",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            24,
+            12,
+            37
+          ],
+          "ratio": 11.34
+        },
+        {
+          "text": "전송",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            60,
+            50,
+            70
+          ],
+          "ratio": 7.35
+        }
+      ]
+    },
+    {
+      "name": "class-messages",
+      "tone": "dark",
+      "root": {
+        "background": "rgba(24, 12, 36, 0.58)",
+        "color": "rgb(247, 244, 240)",
+        "border": "rgba(255, 255, 255, 0.14)"
+      },
+      "input": {
+        "background": "rgba(24, 12, 36, 0.58)",
+        "color": "rgb(247, 244, 240)",
+        "border": "rgb(207, 198, 214)"
+      },
+      "placeholder": "rgb(207, 198, 214)",
+      "placeholderContrast": 10.6,
+      "send": {
+        "background": "rgba(255, 255, 255, 0.08)",
+        "color": "rgb(207, 198, 214)",
+        "border": "rgba(255, 255, 255, 0.14)"
+      },
+      "overflow": false,
+      "textContrast": [
+        {
+          "text": "2026년 10월 22일 목요일 오전",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            43,
+            32,
+            54
+          ],
+          "ratio": 9.35
+        },
+        {
+          "text": "샘플 클래스 채팅",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            43,
+            32,
+            54
+          ],
+          "ratio": 9.35
+        },
+        {
+          "text": "01:00",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            43,
+            32,
+            54
+          ],
+          "ratio": 9.35
+        },
+        {
+          "text": "샘",
+          "color": "rgb(179, 115, 239)",
+          "background": [
+            43,
+            32,
+            54
+          ],
+          "ratio": 4.87
+        },
+        {
+          "text": "샘플 상담사",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            24,
+            12,
+            37
+          ],
+          "ratio": 11.34
+        },
+        {
+          "text": "편안하게 호흡해 보세요.",
+          "color": "rgb(247, 244, 240)",
+          "background": [
+            43,
+            32,
+            54
+          ],
+          "ratio": 14.1
+        },
+        {
+          "text": "오전 10:1",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            24,
+            12,
+            37
+          ],
+          "ratio": 11.34
+        },
+        {
+          "text": "신고",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            24,
+            12,
+            37
+          ],
+          "ratio": 11.34
+        },
+        {
+          "text": "오전 10:2",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            24,
+            12,
+            37
+          ],
+          "ratio": 11.34
+        },
+        {
+          "text": "함께해 주셔서 감사합니다.",
+          "color": "rgb(255, 255, 255)",
+          "background": [
+            95,
+            0,
+            128
+          ],
+          "ratio": 11.68
+        },
+        {
+          "text": "전송",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            60,
+            50,
+            70
+          ],
+          "ratio": 7.35
+        }
+      ]
+    },
+    {
+      "name": "class-host-live",
+      "tone": "dark",
+      "root": {
+        "background": "rgba(24, 12, 36, 0.58)",
+        "color": "rgb(247, 244, 240)",
+        "border": "rgba(255, 255, 255, 0.14)"
+      },
+      "input": {
+        "background": "rgba(24, 12, 36, 0.58)",
+        "color": "rgb(247, 244, 240)",
+        "border": "rgb(207, 198, 214)"
+      },
+      "placeholder": "rgb(207, 198, 214)",
+      "placeholderContrast": 10.6,
+      "send": {
+        "background": "rgba(255, 255, 255, 0.08)",
+        "color": "rgb(207, 198, 214)",
+        "border": "rgba(255, 255, 255, 0.14)"
+      },
+      "overflow": false,
+      "textContrast": [
+        {
+          "text": "2026년 10월 22일 목요일 오전",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            43,
+            32,
+            54
+          ],
+          "ratio": 9.35
+        },
+        {
+          "text": "샘플 클래스 채팅",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            43,
+            32,
+            54
+          ],
+          "ratio": 9.35
+        },
+        {
+          "text": "01:00",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            43,
+            32,
+            54
+          ],
+          "ratio": 9.35
+        },
+        {
+          "text": "샘",
+          "color": "rgb(179, 115, 239)",
+          "background": [
+            43,
+            32,
+            54
+          ],
+          "ratio": 4.87
+        },
+        {
+          "text": "샘플 상담사",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            24,
+            12,
+            37
+          ],
+          "ratio": 11.34
+        },
+        {
+          "text": "편안하게 호흡해 보세요.",
+          "color": "rgb(247, 244, 240)",
+          "background": [
+            43,
+            32,
+            54
+          ],
+          "ratio": 14.1
+        },
+        {
+          "text": "오전 10:1",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            24,
+            12,
+            37
+          ],
+          "ratio": 11.34
+        },
+        {
+          "text": "신고",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            24,
+            12,
+            37
+          ],
+          "ratio": 11.34
+        },
+        {
+          "text": "오전 10:2",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            24,
+            12,
+            37
+          ],
+          "ratio": 11.34
+        },
+        {
+          "text": "함께해 주셔서 감사합니다.",
+          "color": "rgb(255, 255, 255)",
+          "background": [
+            95,
+            0,
+            128
+          ],
+          "ratio": 11.68
+        },
+        {
+          "text": "전송",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            60,
+            50,
+            70
+          ],
+          "ratio": 7.35
+        }
+      ]
+    },
+    {
+      "name": "class-member",
+      "tone": "dark",
+      "root": {
+        "background": "rgba(24, 12, 36, 0.58)",
+        "color": "rgb(247, 244, 240)",
+        "border": "rgba(255, 255, 255, 0.14)"
+      },
+      "input": {
+        "background": "rgba(24, 12, 36, 0.58)",
+        "color": "rgb(247, 244, 240)",
+        "border": "rgb(207, 198, 214)"
+      },
+      "placeholder": "rgb(207, 198, 214)",
+      "placeholderContrast": 10.6,
+      "send": {
+        "background": "rgba(255, 255, 255, 0.08)",
+        "color": "rgb(207, 198, 214)",
+        "border": "rgba(255, 255, 255, 0.14)"
+      },
+      "overflow": false,
+      "textContrast": [
+        {
+          "text": "2026년 10월 22일 목요일 오전",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            43,
+            32,
+            54
+          ],
+          "ratio": 9.35
+        },
+        {
+          "text": "샘플 클래스 채팅",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            43,
+            32,
+            54
+          ],
+          "ratio": 9.35
+        },
+        {
+          "text": "01:00",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            43,
+            32,
+            54
+          ],
+          "ratio": 9.35
+        },
+        {
+          "text": "샘",
+          "color": "rgb(179, 115, 239)",
+          "background": [
+            43,
+            32,
+            54
+          ],
+          "ratio": 4.87
+        },
+        {
+          "text": "샘플 상담사",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            24,
+            12,
+            37
+          ],
+          "ratio": 11.34
+        },
+        {
+          "text": "편안하게 호흡해 보세요.",
+          "color": "rgb(247, 244, 240)",
+          "background": [
+            43,
+            32,
+            54
+          ],
+          "ratio": 14.1
+        },
+        {
+          "text": "오전 10:1",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            24,
+            12,
+            37
+          ],
+          "ratio": 11.34
+        },
+        {
+          "text": "신고",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            24,
+            12,
+            37
+          ],
+          "ratio": 11.34
+        },
+        {
+          "text": "오전 10:2",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            24,
+            12,
+            37
+          ],
+          "ratio": 11.34
+        },
+        {
+          "text": "함께해 주셔서 감사합니다.",
+          "color": "rgb(255, 255, 255)",
+          "background": [
+            95,
+            0,
+            128
+          ],
+          "ratio": 11.68
+        },
+        {
+          "text": "전송",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            60,
+            50,
+            70
+          ],
+          "ratio": 7.35
+        }
+      ]
+    },
+    {
+      "name": "class-typing",
+      "tone": "dark",
+      "root": {
+        "background": "rgba(24, 12, 36, 0.58)",
+        "color": "rgb(247, 244, 240)",
+        "border": "rgba(255, 255, 255, 0.14)"
+      },
+      "input": {
+        "background": "rgba(24, 12, 36, 0.58)",
+        "color": "rgb(247, 244, 240)",
+        "border": "rgb(179, 115, 239)"
+      },
+      "placeholder": "rgb(207, 198, 214)",
+      "placeholderContrast": 10.6,
+      "send": {
+        "background": "rgb(95, 0, 128)",
+        "color": "rgb(247, 244, 240)",
+        "border": "rgb(179, 115, 239)"
+      },
+      "overflow": false,
+      "textContrast": [
+        {
+          "text": "2026년 10월 22일 목요일 오전",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            43,
+            32,
+            54
+          ],
+          "ratio": 9.35
+        },
+        {
+          "text": "샘플 클래스 채팅",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            43,
+            32,
+            54
+          ],
+          "ratio": 9.35
+        },
+        {
+          "text": "01:00",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            43,
+            32,
+            54
+          ],
+          "ratio": 9.35
+        },
+        {
+          "text": "샘",
+          "color": "rgb(179, 115, 239)",
+          "background": [
+            43,
+            32,
+            54
+          ],
+          "ratio": 4.87
+        },
+        {
+          "text": "샘플 상담사",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            24,
+            12,
+            37
+          ],
+          "ratio": 11.34
+        },
+        {
+          "text": "편안하게 호흡해 보세요.",
+          "color": "rgb(247, 244, 240)",
+          "background": [
+            43,
+            32,
+            54
+          ],
+          "ratio": 14.1
+        },
+        {
+          "text": "오전 10:1",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            24,
+            12,
+            37
+          ],
+          "ratio": 11.34
+        },
+        {
+          "text": "신고",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            24,
+            12,
+            37
+          ],
+          "ratio": 11.34
+        },
+        {
+          "text": "오전 10:2",
+          "color": "rgb(207, 198, 214)",
+          "background": [
+            24,
+            12,
+            37
+          ],
+          "ratio": 11.34
+        },
+        {
+          "text": "함께해 주셔서 감사합니다.",
+          "color": "rgb(255, 255, 255)",
+          "background": [
+            95,
+            0,
+            128
+          ],
+          "ratio": 11.68
+        },
+        {
+          "text": "오늘 수업 감사합니다",
+          "color": "rgb(247, 244, 240)",
+          "background": [
+            32,
+            20,
+            44
+          ],
+          "ratio": 15.98
+        },
+        {
+          "text": "전송",
+          "color": "rgb(247, 244, 240)",
+          "background": [
+            95,
+            0,
+            128
+          ],
+          "ratio": 10.65
+        }
+      ]
+    },
+    {
+      "name": "general-light",
+      "tone": "light",
+      "root": {
+        "background": "rgb(255, 255, 255)",
+        "color": "rgb(31, 31, 31)",
+        "border": "rgb(239, 239, 239)"
+      },
+      "input": {
+        "background": "rgb(255, 255, 255)",
+        "color": "rgb(31, 31, 31)",
+        "border": "rgb(221, 222, 231)"
+      },
+      "placeholder": "rgb(156, 160, 174)",
+      "placeholderContrast": 2.61,
+      "send": {
+        "background": "rgb(221, 222, 231)",
+        "color": "rgb(162, 163, 173)",
+        "border": "rgb(162, 163, 173)"
+      },
+      "overflow": false,
+      "textContrast": [
+        {
+          "text": "2026년 10월 22일 목요일 오전",
+          "color": "rgb(142, 142, 147)",
+          "background": [
+            242,
+            242,
+            247
+          ],
+          "ratio": 2.92
+        },
+        {
+          "text": "샘플 클래스 채팅",
+          "color": "rgb(111, 111, 111)",
+          "background": [
+            242,
+            243,
+            248
+          ],
+          "ratio": 4.53
+        },
+        {
+          "text": "01:00",
+          "color": "rgb(111, 111, 111)",
+          "background": [
+            242,
+            243,
+            248
+          ],
+          "ratio": 4.53
+        },
+        {
+          "text": "샘",
+          "color": "rgb(95, 0, 128)",
+          "background": [
+            232,
+            224,
+            240
+          ],
+          "ratio": 9.09
+        },
+        {
+          "text": "샘플 상담사",
+          "color": "rgb(111, 111, 111)",
+          "background": [
+            255,
+            255,
+            255
+          ],
+          "ratio": 5.02
+        },
+        {
+          "text": "편안하게 호흡해 보세요.",
+          "color": "rgb(31, 31, 31)",
+          "background": [
+            245,
+            237,
+            252
+          ],
+          "ratio": 14.44
+        },
+        {
+          "text": "오전 10:1",
+          "color": "rgb(111, 111, 111)",
+          "background": [
+            255,
+            255,
+            255
+          ],
+          "ratio": 5.02
+        },
+        {
+          "text": "신고",
+          "color": "rgb(111, 111, 111)",
+          "background": [
+            255,
+            255,
+            255
+          ],
+          "ratio": 5.02
+        },
+        {
+          "text": "오전 10:2",
+          "color": "rgb(111, 111, 111)",
+          "background": [
+            255,
+            255,
+            255
+          ],
+          "ratio": 5.02
+        },
+        {
+          "text": "함께해 주셔서 감사합니다.",
+          "color": "rgb(255, 255, 255)",
+          "background": [
+            95,
+            0,
+            128
+          ],
+          "ratio": 11.68
+        },
+        {
+          "text": "전송",
+          "color": "rgb(162, 163, 173)",
+          "background": [
+            221,
+            222,
+            231
+          ],
+          "ratio": 1.87
+        }
+      ]
+    }
+  ],
+  "errors": []
+}
