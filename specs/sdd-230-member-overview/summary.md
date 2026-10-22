@@ -28,3 +28,12 @@
 - 비공개 메모는 상담사 개인 메모라 관리자 비연결 회원에선 `memo=null`·`memo_editable=false`, 저장 API 403. FE는 메모 영역 숨김.
 - FE: 목록에 관리자 전용 '담당 상담사' 열(표·카드)·필터(URL `counselor`). 라우트·사이드바(org_admin `/clients`)는 기존 그대로 확인.
 - 테스트: pytest 신규 10(A1~A9) + 회귀 포함 117 통과, vitest 신규 4 + 기존 개요 9 통과, tsc 오류 0. 프론트 전체 실행 시 기존 실패 11건(org-management-browser 등 6파일)은 변경 전 동일 — 이번 범위 무관.
+
+## 1-3단계 — 기관 소속 상담사 연결 회원 포함 + 회원/비회원 구분 (2026-10-22, 마이그레이션 없음)
+- **포함 기준 추가**: 관리 기관에 active 소속(`UserOrgMembership`)이고 계정이 active인 상담사의 active `ClientCounselorLink` 회원(role client)도 기관관리자 목록·상세·activity·reports·reveal에 포함 (`org_linked_client_ids`, `org_scope_ids`). 소속 없음·left·invited·계정 비활성 상담사, 종료 링크, 개인상담소만 소속인 상담사의 회원은 제외. 상담사의 개인상담소 회원이 섞여도 포함(Brian 결정 ①).
+- **회원/비회원 판정** (`member_type_of`): 기관 클래스 active 멤버 또는 기관 귀속 active 상담관계 회원 → `member`, 상담사 연결로만 포함 → `non_member`. 상담사 호출은 `null`.
+- **노출 제한 유지**: 비회원도 기관 명상 클래스 세션 활동·회원용 리포트만. 상담 세션·상담사용 리포트·AI 안부·비공개 메모 비노출(테스트 L6).
+- **API**: `GET /clients?member_type=member|non_member`(그 외 422), 목록·상세 응답에 `member_type`.
+- **화면**: 관리자 목록에 `회원`/`비회원` 배지(표·카드), `회원 구분` 필터(URL `member_type`), 설명문(회원 = 기관 클래스 또는 기관 상담에 등록된 회원 / 비회원 = 기관 상담사와 연결만 되어 있고 기관에는 아직 등록되지 않은 사람), 상세 헤더 배지+설명.
+- **게스트 조사**: 코드 입장 게스트는 `ClassMember(kind='guest', user_id=None)`로 `User` 행이 없고, 모집단(`User` 기반, `kind='member'`·user_id 필수)에 들어오지 않음 → 목록의 비회원 대상 0명. 기본 해석 유지.
+- **테스트**: pytest 신규 7(L1~L7) + 인접 회귀 포함 41 통과, vitest 신규 4 + 기존 개요·관리자 범위 13 통과, tsc 오류 0.

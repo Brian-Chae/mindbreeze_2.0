@@ -121,6 +121,7 @@ def list_clients(
     class_id: str | None = None,
     active_within_days: int | None = None,
     counselor_filter_id: str | None = None,
+    member_type: str | None = None,
 ) -> tuple[list[dict], int, list[dict], list[dict]]:
     """내담자 목록 + 서버 검색·필터 + 페이징 (SDD-230 개요 집계).
 
@@ -130,7 +131,7 @@ def list_clients(
 
     data = client_overview_service.list_clients_overview(
         counselor_id, q, page, size, class_id, active_within_days, db,
-        counselor_filter_id=counselor_filter_id,
+        counselor_filter_id=counselor_filter_id, member_type=member_type,
     )
     return data["clients"], data["total"], data["class_options"], data["counselor_options"]
 
@@ -168,6 +169,7 @@ def get_client_profile(
         # 메모는 상담사 개인 메모 — 본인 연결이 없는 기관관리자에게는 노출하지 않는다.
         "memo": link.memo if link else None,
         "memo_editable": link is not None,
+        "member_type": client_overview_service.profile_member_type(db, counselor_id, user.id),
     }
 
 

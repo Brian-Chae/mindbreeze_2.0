@@ -3,8 +3,10 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import AppShell from '../../components/layout/AppShell';
 import InviteModal from '../../components/clients/InviteModal';
 import { useAuthStore } from '../../stores/authStore';
-import { listClients, type ClientClassRef, type ClientCounselorRef, type ClientListItem } from '../../lib/api/clients';
+import { listClients, type ClientClassRef, type ClientCounselorRef, type ClientListItem, type MemberType } from '../../lib/api/clients';
 import { ApiError } from '../../lib/api/client';
+import MemberTypeBadge from '../../components/clients/MemberTypeBadge';
+import { MEMBER_TYPE_HELP } from '../../lib/clients/member-type';
 import {
   ACTIVE_WITHIN_OPTIONS,
   ageLabel,
@@ -84,6 +86,7 @@ function ClientTable({ clients, showCounselor }: { clients: ClientListItem[]; sh
                   {c.name}
                   <span className="text-[12px] font-normal text-[#6F6F6F]">{c.email}</span>
                 </Link>
+                {showCounselor && <div><MemberTypeBadge type={c.member_type} /></div>}
               </th>
               <td className="px-4 py-3 text-[#1F1F1F]">{genderLabel(c.gender)}</td>
               <td className="px-4 py-3 text-[#1F1F1F]">{ageLabel(c.age)}</td>
@@ -113,6 +116,7 @@ function ClientCards({ clients, showCounselor }: { clients: ClientListItem[]; sh
                 {c.name}
                 <span className="truncate text-[12px] font-normal text-[#6F6F6F]">{c.email}</span>
               </Link>
+              {showCounselor && <div><MemberTypeBadge type={c.member_type} /></div>}
               <p className="text-[13px] text-[#6F6F6F]">
                 {genderLabel(c.gender)} · {ageLabel(c.age)} · <span className="font-mono">{c.phone_masked ?? '미입력'}</span>
               </p>
@@ -140,6 +144,8 @@ export default function ClientListPage() {
   const searchTerm = params.get('q') ?? '';
   const classId = params.get('class') ?? '';
   const counselorId = params.get('counselor') ?? '';
+  const memberTypeParam = params.get('member_type');
+  const memberType: MemberType | '' = memberTypeParam === 'member' || memberTypeParam === 'non_member' ? memberTypeParam : '';
   const days = params.get('days') ? Number(params.get('days')) : null;
   const group: GroupMode = params.get('group') === 'class' ? 'class' : 'none';
   const page = Math.max(1, Number(params.get('page')) || 1);
@@ -180,6 +186,7 @@ export default function ClientListPage() {
       class_id: classId || undefined,
       active_within_days: days ?? undefined,
       counselor_id: isOrgAdmin && counselorId ? counselorId : undefined,
+      member_type: isOrgAdmin && memberType ? memberType : undefined,
     })
       .then((res) => {
         if (cancelled) return;
@@ -198,7 +205,7 @@ export default function ClientListPage() {
     return () => {
       cancelled = true;
     };
-  }, [searchTerm, classId, counselorId, days, page, size, reloadKey, isAuthenticated, user?.role, isOrgAdmin]);
+  }, [searchTerm, classId, counselorId, memberType, days, page, size, reloadKey, isAuthenticated, user?.role, isOrgAdmin]);
 
   // 로그아웃 시 메모리 캐시 폐기
   useEffect(() => {
@@ -209,7 +216,7 @@ export default function ClientListPage() {
   }, [isAuthenticated]);
 
   const groups = useMemo(() => groupClients(clients, group), [clients, group]);
-  const hasFilter = Boolean(searchTerm || classId || counselorId || days || group !== 'none');
+  const hasFilter = Boolean(searchTerm || classId || counselorId || memberType || days || group !== 'none');
 
   const handleSearch = (e: FormEvent) => {
     e.preventDefault();
@@ -274,6 +281,12 @@ export default function ClientListPage() {
           </div>
         </div>
 
+        {isOrgAdmin && (
+          <p className="text-[13px] text-[#6F6F6F]" data-testid="member-type-help">
+            <b>회원</b> = {MEMBER_TYPE_HELP.member} · <b>비회원</b> = {MEMBER_TYPE_HELP.non_member}
+          </p>
+        )}
+
         <section aria-label="검색과 필터" className="rounded-[20px] border border-[#E6E3E6] bg-white p-5">
           <form onSubmit={handleSearch} className="flex gap-2">
             <input
@@ -300,6 +313,20 @@ export default function ClientListPage() {
                 ))}
               </select>
             </label>
+            {isOrgAdmin && (
+              <label className="grid min-w-[145px] flex-1 gap-1.5 text-[12px] text-[#6F6F6F]">
+                회원 구분
+                <select
+                  className={fieldClass}
+                  value={memberType}
+                  onChange={(e) => patchParams({ member_type: e.target.value || null })}
+                >
+                  <option value="">전체</option>
+                  <option value="member">회원</option>
+                  <option value="non_member">비회원</option>
+                </select>
+              </label>
+            )}
             {isOrgAdmin && (
               <label className="grid min-w-[145px] flex-1 gap-1.5 text-[12px] text-[#6F6F6F]">
                 담당 상담사

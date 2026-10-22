@@ -17,6 +17,8 @@ import {
 } from '../../lib/api/clients';
 import { ApiError } from '../../lib/api/client';
 import { useRequireAuth, useRequireRole } from '../../hooks/useAuth';
+import MemberTypeBadge from '../../components/clients/MemberTypeBadge';
+import { MEMBER_TYPE_HELP } from '../../lib/clients/member-type';
 import { isAiEnabled } from '../../lib/feature-flags';
 import { ACTIVITY_LABELS, ageLabel, formatKst, genderLabel } from '../../lib/clients/overview';
 
@@ -218,6 +220,12 @@ export default function ClientProfilePage() {
             <div className="min-w-0">
               <h1 className="truncate text-2xl font-semibold text-[#1F1F1F]">{profile.name}</h1>
               <p className="truncate text-sm text-[#6F6F6F]">{profile.email}</p>
+              {profile.member_type && (
+                <p className="mt-1 flex flex-wrap items-center gap-2 text-[12px] text-[#6F6F6F]">
+                  <MemberTypeBadge type={profile.member_type} />
+                  <span data-testid="member-type-desc">{MEMBER_TYPE_HELP[profile.member_type]}</span>
+                </p>
+              )}
             </div>
           </div>
           <dl className="mt-5 grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
