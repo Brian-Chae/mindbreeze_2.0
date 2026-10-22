@@ -4,6 +4,7 @@ import type { ClassReadModel, SessionReadModel } from '../../../lib/class-struct
 import type { DisplayField } from '../../../lib/class-structure/read-model';
 import { classPath } from '../../../lib/class-structure/navigation';
 import { ReadField } from './read-state';
+import { classCardCopy } from '../../../lib/class-structure/class-card-copy';
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const membershipLabels:Record<string,string>={active:'참여 중',waitlisted:'대기 중',left:'탈퇴',removed:'참여 해제',completed:'수료',withdrawn:'참여 종료'};
@@ -27,6 +28,9 @@ export function memberStatus(field: DisplayField<string>): string | undefined {
   const value = memberValue(field);
   return value ? labels[value] : undefined;
 }
+function memberDate0(iso: string): string | undefined {
+  return memberDate({ kind: 'value', value: iso });
+}
 export function MemberClassStyles() {
   return <style>{`
 .cs-structure .mc-stack{display:flex;flex-direction:column;gap:20px;max-width:1040px;margin:0 auto;padding-bottom:16px}
@@ -40,6 +44,8 @@ export function MemberClassStyles() {
 .cs-structure .mc-link{display:inline-flex;align-items:center;justify-content:center;padding:10px 16px;border-radius:12px;color:#5f0080;background:#f4edf8;text-decoration:none;font-size:14px;font-weight:600}
 .cs-structure .mc-primary{background:#5f0080;color:#fff;margin-top:16px}
 .cs-structure .mc-card-link{display:block;text-decoration:none;color:inherit}
+.cs-structure .mc-chip-row{display:flex;flex-wrap:wrap;gap:6px;min-height:28px}
+.cs-structure .mc-next strong{display:block;font-size:14px;color:#292231;margin-bottom:2px}
 .cs-structure .mc-chip{display:inline-block;border-radius:20px;background:#f1edf5;color:#655173;padding:5px 10px;font-size:12px}
 .cs-structure .mc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 .cs-structure .mc-progress{height:6px;overflow:hidden;background:#eee7f3;border-radius:6px;margin:10px 0}
@@ -61,13 +67,19 @@ export function MemberProgress({ model }: { model: ClassReadModel }) {
 export function MemberSessionMeta({ session }: { session: SessionReadModel }) {
   return <div className="mc-muted"><div><ReadField value={memberDate(session.scheduledAt)} /></div><div>지도사 · <ReadField value={memberValue(session.hostName)} /></div></div>;
 }
-export function MemberClassCard({ model, membership }: { model: ClassReadModel; membership?: MembershipMember | null }) {
-  const next = memberValue(model.nextSession);
-  return <article className="mc-card"><Link className="mc-card-link" to={classPath('member', model.id)}>
-    <span className="mc-chip"><ReadField value={memberStatus(model.status)} /></span>
-    {membership && <span className="mc-chip">{membershipLabels[membership.status] ?? membership.status}{membership.waitlist_position != null ? ` · ${membership.waitlist_position}번` : ''}</span>}
-    <h3><ReadField value={memberValue(model.title)} /></h3><MemberProgress model={model} />
-    <p className="mc-muted">다음 회차 · <ReadField value={next && memberValue(next.seq) != null ? `${memberValue(next.seq)}회차` : undefined} /></p>
-    {next ? <MemberSessionMeta session={next} /> : <ReadField />}
+export function MemberClassCard({ model, membership, href }: { model: ClassReadModel; membership?: MembershipMember | null; href?: string }) {
+  // SDD-232: 빈 값은 카드용 문구 규칙으로 처리한다(회원·상담사 공통). href 가 없으면 회원 경로를 쓴다.
+  const copy = classCardCopy(model, memberDate0);
+  const status = memberStatus(model.status);
+  return <article className="mc-card"><Link className="mc-card-link" to={href ?? classPath('member', model.id)}>
+    <span className="mc-chip-row">{status && <span className="mc-chip">{status}</span>}
+      {membership && <span className="mc-chip">{membershipLabels[membership.status] ?? membership.status}{membership.waitlist_position != null ? ` · ${membership.waitlist_position}번` : ''}</span>}</span>
+    <h3>{copy.title}</h3>
+    {copy.progress ? <div className="mc-muted">클래스 진행 {copy.progress.completed}/{copy.progress.total}
+      <div className="mc-progress" role="progressbar" aria-label="클래스 진행" aria-valuemin={0} aria-valuemax={copy.progress.total} aria-valuenow={copy.progress.completed}><div className="mc-progress-fill" style={{ width: `${Math.max(0, Math.min(100, copy.progress.completed / copy.progress.total * 100))}%` }} /></div></div>
+      : copy.completedOnly !== null ? <div className="mc-muted">완료한 회차 {copy.completedOnly}회</div> : null}
+    <div className="mc-muted mc-next"><strong>{copy.nextHeadline}</strong>
+      {copy.nextDetail && <div>{copy.nextDetail}</div>}
+      {copy.host && <div>지도사 · {copy.host}</div>}</div>
   </Link></article>;
 }
