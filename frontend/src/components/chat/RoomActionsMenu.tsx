@@ -50,12 +50,12 @@ export function RoomActionsMenu({ room, onSettings, onInvite }: Props) {
       <button ref={buttonRef} type="button" aria-label={`${title} 메뉴`} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined}
         onClick={() => setOpen((previous) => !previous)} onKeyDown={(event) => {
           if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); setOpen(true); }
-        }} className="flex h-10 w-10 items-center justify-center rounded-lg text-xl text-[#6F6F6F] hover:bg-[#F5EDFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5F0080]">⋯</button>
+        }} className="flex h-10 w-10 mobile:h-11 mobile:w-11 items-center justify-center rounded-lg text-xl text-[#6F6F6F] hover:bg-[#F5EDFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5F0080]">⋯</button>
       {open && <div id={menuId} role="menu" className="absolute right-0 top-full z-20 w-36 rounded-xl border border-[#DDDEE7] bg-white p-1 shadow-lg">
         {canInvite && <button role="menuitem" type="button" onClick={() => { buttonRef.current?.focus(); setOpen(false); onInvite?.(); }}
-          className="w-full rounded-lg px-3 py-2 text-left text-sm text-[#5F0080] hover:bg-[#F5EDFC] focus:bg-[#F5EDFC] focus:outline-none">회원 초대</button>}
+          className="w-full rounded-lg px-3 py-2 mobile:min-h-11 text-left text-sm mobile:text-mb-compact text-[#5F0080] hover:bg-[#F5EDFC] focus:bg-[#F5EDFC] focus:outline-none">회원 초대</button>}
         <button ref={itemRef} role="menuitem" type="button" onClick={() => { buttonRef.current?.focus(); setOpen(false); onSettings(); }}
-          className="w-full rounded-lg px-3 py-2 text-left text-sm text-[#1F1F1F] hover:bg-[#F5EDFC] focus:bg-[#F5EDFC] focus:outline-none">채팅방 설정</button>
+          className="w-full rounded-lg px-3 py-2 mobile:min-h-11 text-left text-sm mobile:text-mb-compact text-[#1F1F1F] hover:bg-[#F5EDFC] focus:bg-[#F5EDFC] focus:outline-none">채팅방 설정</button>
       </div>}
     </div>
   );

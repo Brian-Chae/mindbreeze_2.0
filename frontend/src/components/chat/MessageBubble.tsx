@@ -48,24 +48,16 @@ export function MessageBubble({ message, isMine, senderName, showSender, groupSt
   const unread = calcUnreadCount(message);
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: isMine ? 'flex-end' : 'flex-start',
-        alignItems: 'flex-end',
-        gap: '6px',
-        margin: groupStart ? '18px 0 3px' : '3px 0',
-      }}
-    >
+    <div className={`chat-msg__row ${isMine ? 'chat-msg__row--mine' : 'chat-msg__row--peer'} ${groupStart ? 'chat-msg__row--start' : ''}`}>
       {/* 내 메시지: 안읽은 사람 수 + 시간 왼쪽 */}
       {isMine && (
         <>
           {unread > 0 && (
-            <span style={{ fontSize: '12px', color: '#F5B041', flexShrink: 0, marginBottom: '6px', fontWeight: 500 }}>
+            <span className="chat-msg__unread" style={{ color: '#F5B041', marginBottom: '6px' }}>
               {unread}
             </span>
           )}
-          <span style={{ fontSize: '12px', color: 'var(--chat-muted, #6F6F6F)', flexShrink: 0, marginBottom: '6px' }}>
+          <span className="chat-msg__time" style={{ color: 'var(--chat-muted, #6F6F6F)', marginBottom: '6px' }}>
             {timeStr}
           </span>
         </>
@@ -75,6 +67,7 @@ export function MessageBubble({ message, isMine, senderName, showSender, groupSt
         <div style={{ width: '32px', flexShrink: 0, alignSelf: showSender ? 'flex-start' : 'flex-end', marginBottom: '2px' }}>
           {showSender ? (
             <div
+              className="chat-msg__avatar"
               style={{
                 width: '32px',
                 height: '32px',
@@ -83,7 +76,6 @@ export function MessageBubble({ message, isMine, senderName, showSender, groupSt
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '13px',
                 fontWeight: 700,
                 color: 'var(--chat-accent, #5F0080)',
               }}
@@ -93,29 +85,26 @@ export function MessageBubble({ message, isMine, senderName, showSender, groupSt
           ) : null}
         </div>
       )}
-      <div style={{ maxWidth: '80%' }}>
+      <div className="chat-msg__body">
         {/* 상대방 이름 (첫 메시지만) */}
         {!isMine && showSender && senderName && (
-          <div style={{ fontSize: '13px', color: 'var(--chat-muted, #6F6F6F)', marginBottom: '3px', marginLeft: '2px' }}>
+          <div className="chat-msg__name" style={{ color: 'var(--chat-muted, #6F6F6F)' }}>
             {senderName}
           </div>
         )}
-        <div style={{
-          padding: '8px 14px',
-          borderRadius: '16px',
-          fontSize: '15px',
-          lineHeight: 1.5,
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-word',
-          background: isMine ? 'var(--chat-mine, #5F0080)' : 'var(--chat-surface, #F5EDFC)',
-          color: isMine ? '#fff' : 'var(--chat-text, #1F1F1F)',
-        }}>
+        <div
+          className="chat-msg__bubble"
+          style={{
+            background: isMine ? 'var(--chat-mine, #5F0080)' : 'var(--chat-surface, #F5EDFC)',
+            color: isMine ? '#fff' : 'var(--chat-text, #1F1F1F)',
+          }}
+        >
           {content}
         </div>
       </div>
       {/* 상대 메시지: 시간 오른쪽 */}
       {!isMine && (
-        <span style={{ fontSize: '12px', color: 'var(--chat-muted, #6F6F6F)', flexShrink: 0, marginBottom: '4px' }}>
+        <span className="chat-msg__time" style={{ color: 'var(--chat-muted, #6F6F6F)', marginBottom: '4px' }}>
           {timeStr}
         </span>
       )}
@@ -124,7 +113,8 @@ export function MessageBubble({ message, isMine, senderName, showSender, groupSt
           type="button"
           onClick={onReport}
           aria-label="이 메시지 신고"
-          style={{ fontSize: '12px', color: 'var(--chat-muted, #6F6F6F)', flexShrink: 0, marginBottom: '4px', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          className="chat-msg__report"
+          style={{ color: 'var(--chat-muted, #6F6F6F)' }}
         >
           신고
         </button>
