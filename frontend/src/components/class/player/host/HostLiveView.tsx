@@ -2,7 +2,7 @@ import type { LocalVideoTrack } from 'livekit-client';
 // SDD-208 H1·H2 — 상담사 진행 중 화면(뷰). props 만 받는 순수 컴포넌트라 서버·BLE·LiveKit 없이 픽스처로 렌더·측정할 수 있다.
 // 구성: 상단 바 → (배너) → 헤드 행(지표 띠 + 셀프뷰/요약 패널) → 칩 줄 → 세로 스크롤 그리드 → 도크, 시트는 도크·칩·타일에서 연다.
 import { useRef, useState, type ReactNode } from 'react';
-import { Activity, ClipboardCheck, MessageCircle, Hand, ArrowUpRight, Mic, SlidersHorizontal, Video } from 'lucide-react';
+import { Activity, MessageCircle, Hand, ArrowUpRight, Mic, SlidersHorizontal, Video } from 'lucide-react';
 import {
   filterHostParticipants,
   HOST_BAND_TEXT,
@@ -17,6 +17,7 @@ import {
   type HostSelfBand,
   type HostSheetKey,
 } from '../../../../lib/class/host-player-case';
+import type { SignalMap } from '../../../../lib/class/quiet-signal';
 import type { PlayerMetricKey } from '../../../../lib/class/player-case';
 import { PlayerBackdrop } from '../shared/PlayerBackdrop';
 import { PlayerDock, type DockItem } from '../shared/PlayerDock';
@@ -89,6 +90,7 @@ export interface HostLiveViewProps {
   readinessPanel?: ReactNode;
   preCheckins: readonly HostPreCheckin[];
   quietSignals: HostQuietSignalCounts;
+  quietSignalEntries?: SignalMap;
   selfBand: HostSelfBand;
   chat: HostChatProps;
   /** 미디어(온라인)/녹음(오프라인) 시트 내용 */
@@ -146,13 +148,12 @@ export function HostLiveView(props: HostLiveViewProps) {
       </button>
     </div>
   );
-  const secondaryChips = hostCase.chips.filter((chip) => !['hands', 'speak', 'signals', 'band', 'first'].includes(chip.key));
+  const secondaryChips = hostCase.chips.filter((chip) => !['hands', 'speak', 'signals', 'band', 'first', 'checkin'].includes(chip.key));
 
   const dockItems: DockItem[] = [
     { key: 'metric', label: '지표 기준', icon: icon(Activity) },
     { key: 'chat', label: '채팅', icon: icon(MessageCircle), badge: ui.sheet === 'chat' ? 0 : chat.unread },
     { key: 'media', label: hostCase.mediaDockLabel, icon: icon(online ? Video : Mic) },
-    { key: 'checkin', label: '체크인', icon: icon(ClipboardCheck) },
     { key: 'tools', label: '도구', icon: icon(SlidersHorizontal) },
   ];
 
@@ -180,7 +181,7 @@ export function HostLiveView(props: HostLiveViewProps) {
           ),
         };
       case 'signals':
-        return { title: '조용한 신호', subtitle: '이름 없이 집계 · 최근 10초', body: <SignalsSheet counts={quietSignals} onCheckin={() => uiActions.openSheet('checkin')} /> };
+        return { title: '조용한 신호', subtitle: '최근 10초 · 회원별 최신 선택', body: <SignalsSheet counts={quietSignals} signals={props.quietSignalEntries} onCheckin={() => uiActions.openSheet('alerts')} /> };
       case 'hands':
         return { title: `손든 회원 ${handCount}`, body: <HandsSheet panel={speakingPanel} /> };
       case 'actions':
@@ -188,7 +189,7 @@ export function HostLiveView(props: HostLiveViewProps) {
       case 'queue':
         return { title: `입장 대기 ${queue.length}`, body: <QueueSheet queue={queue} readinessPanel={readinessPanel} /> };
       case 'alerts':
-        return { title: '수업 상태', body: <AlertsSheet chips={hostCase.chips} onSheet={uiActions.openSheet} onToggleHandsFirst={() => uiActions.setHandsFirst(!ui.handsFirst)} /> };
+        return { title: '수업 상태', body: <AlertsSheet checkinSummary={summarizeCheckins(participants)} preCheckins={preCheckins} onDetail={uiActions.openDetail} chips={hostCase.chips} onSheet={uiActions.openSheet} onToggleHandsFirst={() => uiActions.setHandsFirst(!ui.handsFirst)} /> };
       case 'myband':
         return { title: '내 밴드', body: <MybandSheet band={selfBand} onConnect={actions.connectSelfBand} onDisconnect={actions.disconnectSelfBand} /> };
       case 'media':
@@ -266,7 +267,7 @@ export function HostLiveView(props: HostLiveViewProps) {
             <HostBanner banner={hostCase.banner} onSheet={uiActions.openSheet} onToggleMic={actions.toggleMic} onRetry={actions.retryNetwork} />
           ) : null}
         </NoticeOverlay>
-        <div className="hp-head" data-pz="head" data-big={camBig ? 'true' : undefined}>
+        <div className="hp-head" data-pz="head" data-selfview={hostCase.headSlot === 'selfview' ? 'true' : undefined} data-big={camBig ? 'true' : undefined}>
           {strip}
           {hostCase.headSlot === 'selfview' ? (
             <HostSelfView
@@ -277,7 +278,7 @@ export function HostLiveView(props: HostLiveViewProps) {
             <HostSummaryPanel summary={hostCase.summary} />
           ) : null}
         </div>
-        <div className="hp-statusline"><div className="hp-desktop-signals">{signalButtons}</div><HostChipLine
+        <div className="hp-statusline"><span className="hp-participant-heading">참가자 {participants.length}명</span><HostChipLine
           chips={secondaryChips}
           range={range}
           handlers={{
