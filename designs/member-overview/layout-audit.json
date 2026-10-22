@@ -1,0 +1,502 @@
+{
+  "browser": "155.0.8059.85",
+  "source": "가상 데이터 정적 HTML, file:// 로만 확인",
+  "screens": [
+    {
+      "view": "table",
+      "width": 1440,
+      "file": "table-1440.png",
+      "errors": [],
+      "viewport": 1440,
+      "pageWidth": 1440,
+      "pageOverflow": false,
+      "tableInternalScroll": false,
+      "regions": [
+        {
+          "selector": "intro",
+          "x": 276,
+          "y": 132,
+          "w": 1128,
+          "h": 93.75
+        },
+        {
+          "selector": "filters",
+          "x": 276,
+          "y": 251.75,
+          "w": 1128,
+          "h": 174.59375
+        },
+        {
+          "selector": "listbar",
+          "x": 276,
+          "y": 446.34375,
+          "w": 1128,
+          "h": 37.1875
+        },
+        {
+          "selector": "results",
+          "x": 276,
+          "y": 495.53125,
+          "w": 1128,
+          "h": 663.1875
+        },
+        {
+          "selector": "footnote",
+          "x": 276,
+          "y": 1182.71875,
+          "w": 1128,
+          "h": 37.1875
+        }
+      ],
+      "clipped": [],
+      "font": "\"Pretendard Variable\", Pretendard, \"Noto Sans KR\", -apple-system, \"system-ui\", system-ui, sans-serif",
+      "pretendardLoaded": true
+    },
+    {
+      "view": "cards",
+      "width": 1440,
+      "file": "cards-1440.png",
+      "errors": [],
+      "viewport": 1440,
+      "pageWidth": 1440,
+      "pageOverflow": false,
+      "tableInternalScroll": false,
+      "regions": [
+        {
+          "selector": "intro",
+          "x": 276,
+          "y": 132,
+          "w": 1128,
+          "h": 93.75
+        },
+        {
+          "selector": "filters",
+          "x": 276,
+          "y": 251.75,
+          "w": 1128,
+          "h": 174.59375
+        },
+        {
+          "selector": "listbar",
+          "x": 276,
+          "y": 446.34375,
+          "w": 1128,
+          "h": 37.1875
+        },
+        {
+          "selector": "results",
+          "x": 276,
+          "y": 495.53125,
+          "w": 1128,
+          "h": 683.6875
+        },
+        {
+          "selector": "footnote",
+          "x": 276,
+          "y": 1203.21875,
+          "w": 1128,
+          "h": 37.1875
+        }
+      ],
+      "clipped": [],
+      "font": "\"Pretendard Variable\", Pretendard, \"Noto Sans KR\", -apple-system, \"system-ui\", system-ui, sans-serif",
+      "pretendardLoaded": true
+    },
+    {
+      "view": "detail",
+      "width": 1440,
+      "file": "detail-1440.png",
+      "errors": [],
+      "viewport": 1440,
+      "pageWidth": 1440,
+      "pageOverflow": false,
+      "tableInternalScroll": false,
+      "regions": [
+        {
+          "selector": "detailheader",
+          "x": 277,
+          "y": 191,
+          "w": 1126,
+          "h": 176.1875
+        },
+        {
+          "selector": "privacy",
+          "x": 277,
+          "y": 367.1875,
+          "w": 1126,
+          "h": 47.59375
+        },
+        {
+          "selector": "statstrip",
+          "x": 277,
+          "y": 414.78125,
+          "w": 1126,
+          "h": 93.6875
+        },
+        {
+          "selector": "detailgrid",
+          "x": 276,
+          "y": 531.46875,
+          "w": 1128,
+          "h": 1157.359375
+        },
+        {
+          "selector": "footnote",
+          "x": 276,
+          "y": 1712.828125,
+          "w": 1128,
+          "h": 37.1875
+        }
+      ],
+      "clipped": [],
+      "font": "\"Pretendard Variable\", Pretendard, \"Noto Sans KR\", -apple-system, \"system-ui\", system-ui, sans-serif",
+      "pretendardLoaded": true
+    },
+    {
+      "view": "table",
+      "width": 1194,
+      "file": "table-1194.png",
+      "errors": [],
+      "viewport": 1194,
+      "pageWidth": 1194,
+      "pageOverflow": false,
+      "tableInternalScroll": true,
+      "regions": [
+        {
+          "selector": "intro",
+          "x": 266,
+          "y": 128,
+          "w": 902,
+          "h": 93.75
+        },
+        {
+          "selector": "filters",
+          "x": 266,
+          "y": 247.75,
+          "w": 902,
+          "h": 174.59375
+        },
+        {
+          "selector": "listbar",
+          "x": 266,
+          "y": 442.34375,
+          "w": 902,
+          "h": 37.1875
+        },
+        {
+          "selector": "results",
+          "x": 266,
+          "y": 491.53125,
+          "w": 902,
+          "h": 663.1875
+        },
+        {
+          "selector": "footnote",
+          "x": 266,
+          "y": 1178.71875,
+          "w": 902,
+          "h": 37.1875
+        }
+      ],
+      "clipped": [],
+      "font": "\"Pretendard Variable\", Pretendard, \"Noto Sans KR\", -apple-system, \"system-ui\", system-ui, sans-serif",
+      "pretendardLoaded": true
+    },
+    {
+      "view": "cards",
+      "width": 1194,
+      "file": "cards-1194.png",
+      "errors": [],
+      "viewport": 1194,
+      "pageWidth": 1194,
+      "pageOverflow": false,
+      "tableInternalScroll": false,
+      "regions": [
+        {
+          "selector": "intro",
+          "x": 266,
+          "y": 128,
+          "w": 902,
+          "h": 93.75
+        },
+        {
+          "selector": "filters",
+          "x": 266,
+          "y": 247.75,
+          "w": 902,
+          "h": 174.59375
+        },
+        {
+          "selector": "listbar",
+          "x": 266,
+          "y": 442.34375,
+          "w": 902,
+          "h": 37.1875
+        },
+        {
+          "selector": "results",
+          "x": 266,
+          "y": 491.53125,
+          "w": 902,
+          "h": 1033.53125
+        },
+        {
+          "selector": "footnote",
+          "x": 266,
+          "y": 1549.0625,
+          "w": 902,
+          "h": 37.1875
+        }
+      ],
+      "clipped": [],
+      "font": "\"Pretendard Variable\", Pretendard, \"Noto Sans KR\", -apple-system, \"system-ui\", system-ui, sans-serif",
+      "pretendardLoaded": true
+    },
+    {
+      "view": "detail",
+      "width": 1194,
+      "file": "detail-1194.png",
+      "errors": [],
+      "viewport": 1194,
+      "pageWidth": 1194,
+      "pageOverflow": false,
+      "tableInternalScroll": false,
+      "regions": [
+        {
+          "selector": "detailheader",
+          "x": 267,
+          "y": 187,
+          "w": 900,
+          "h": 240.1875
+        },
+        {
+          "selector": "privacy",
+          "x": 267,
+          "y": 427.1875,
+          "w": 900,
+          "h": 47.59375
+        },
+        {
+          "selector": "statstrip",
+          "x": 267,
+          "y": 474.78125,
+          "w": 900,
+          "h": 93.6875
+        },
+        {
+          "selector": "detailgrid",
+          "x": 266,
+          "y": 591.46875,
+          "w": 902,
+          "h": 1149.359375
+        },
+        {
+          "selector": "footnote",
+          "x": 266,
+          "y": 1764.828125,
+          "w": 902,
+          "h": 37.1875
+        }
+      ],
+      "clipped": [],
+      "font": "\"Pretendard Variable\", Pretendard, \"Noto Sans KR\", -apple-system, \"system-ui\", system-ui, sans-serif",
+      "pretendardLoaded": true
+    },
+    {
+      "view": "table",
+      "width": 390,
+      "file": "table-390.png",
+      "errors": [],
+      "viewport": 390,
+      "pageWidth": 390,
+      "pageOverflow": false,
+      "tableInternalScroll": true,
+      "regions": [
+        {
+          "selector": "intro",
+          "x": 16,
+          "y": 100,
+          "w": 358,
+          "h": 151.890625
+        },
+        {
+          "selector": "filters",
+          "x": 16,
+          "y": 271.890625,
+          "w": 358,
+          "h": 303.1875
+        },
+        {
+          "selector": "listbar",
+          "x": 16,
+          "y": 595.078125,
+          "w": 358,
+          "h": 34.09375
+        },
+        {
+          "selector": "results",
+          "x": 16,
+          "y": 641.171875,
+          "w": 358,
+          "h": 676.234375
+        },
+        {
+          "selector": "footnote",
+          "x": 16,
+          "y": 1341.40625,
+          "w": 358,
+          "h": 34.09375
+        }
+      ],
+      "clipped": [],
+      "font": "\"Pretendard Variable\", Pretendard, \"Noto Sans KR\", -apple-system, \"system-ui\", system-ui, sans-serif",
+      "pretendardLoaded": true
+    },
+    {
+      "view": "cards",
+      "width": 390,
+      "file": "cards-390.png",
+      "errors": [],
+      "viewport": 390,
+      "pageWidth": 390,
+      "pageOverflow": false,
+      "tableInternalScroll": false,
+      "regions": [
+        {
+          "selector": "intro",
+          "x": 16,
+          "y": 100,
+          "w": 358,
+          "h": 151.890625
+        },
+        {
+          "selector": "filters",
+          "x": 16,
+          "y": 271.890625,
+          "w": 358,
+          "h": 303.1875
+        },
+        {
+          "selector": "listbar",
+          "x": 16,
+          "y": 595.078125,
+          "w": 358,
+          "h": 34.09375
+        },
+        {
+          "selector": "results",
+          "x": 16,
+          "y": 641.171875,
+          "w": 358,
+          "h": 2059.0625
+        },
+        {
+          "selector": "footnote",
+          "x": 16,
+          "y": 2724.234375,
+          "w": 358,
+          "h": 34.09375
+        }
+      ],
+      "clipped": [],
+      "font": "\"Pretendard Variable\", Pretendard, \"Noto Sans KR\", -apple-system, \"system-ui\", system-ui, sans-serif",
+      "pretendardLoaded": true
+    },
+    {
+      "view": "detail",
+      "width": 390,
+      "file": "detail-390.png",
+      "errors": [],
+      "viewport": 390,
+      "pageWidth": 390,
+      "pageOverflow": false,
+      "tableInternalScroll": false,
+      "regions": [
+        {
+          "selector": "detailheader",
+          "x": 17,
+          "y": 155,
+          "w": 356,
+          "h": 239.828125
+        },
+        {
+          "selector": "privacy",
+          "x": 17,
+          "y": 394.828125,
+          "w": 356,
+          "h": 63.09375
+        },
+        {
+          "selector": "statstrip",
+          "x": 17,
+          "y": 457.921875,
+          "w": 356,
+          "h": 170.1875
+        },
+        {
+          "selector": "detailgrid",
+          "x": 16,
+          "y": 645.109375,
+          "w": 358,
+          "h": 2296.03125
+        },
+        {
+          "selector": "footnote",
+          "x": 16,
+          "y": 2965.140625,
+          "w": 358,
+          "h": 51.140625
+        }
+      ],
+      "clipped": [],
+      "font": "\"Pretendard Variable\", Pretendard, \"Noto Sans KR\", -apple-system, \"system-ui\", system-ui, sans-serif",
+      "pretendardLoaded": true
+    }
+  ],
+  "interactions": [
+    {
+      "name": "이름 검색 1명",
+      "passed": true
+    },
+    {
+      "name": "카드 전환 후 검색 유지",
+      "passed": true
+    },
+    {
+      "name": "초기화 6명",
+      "passed": true
+    },
+    {
+      "name": "온라인 필터 2명",
+      "passed": true
+    },
+    {
+      "name": "클래스 그룹",
+      "passed": true
+    },
+    {
+      "name": "회원 상세 이동",
+      "passed": true
+    },
+    {
+      "name": "상담 타임라인 필터",
+      "passed": true
+    },
+    {
+      "name": "기간 다음 유형 교집합",
+      "passed": true
+    },
+    {
+      "name": "유형 다음 기간 교집합",
+      "passed": true
+    },
+    {
+      "name": "목록 복귀 필터 유지",
+      "passed": true
+    },
+    {
+      "name": "빈 검색 결과",
+      "passed": true
+    }
+  ]
+}

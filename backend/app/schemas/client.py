@@ -3,12 +3,31 @@
 from pydantic import BaseModel, EmailStr, Field
 
 
+class ClientClassRef(BaseModel):
+    id: str
+    title: str
+
+
+class ClientCounselorRef(BaseModel):
+    id: str
+    name: str | None = None
+
+
 class ClientSummary(BaseModel):
     id: str
     name: str
     email: str
     concerns: list[str] = []
     last_session_at: str | None = None
+    # SDD-230: 가산 필드 — 연락처는 서버 마스킹 값만 내려간다.
+    gender: str | None = None
+    age: int | None = None
+    phone_masked: str | None = None
+    classes: list[ClientClassRef] = []
+    # 기관관리자 전용(상담사 호출에서는 빈 배열)
+    counselors: list[ClientCounselorRef] = []
+    last_activity_at: str | None = None
+    last_activity_source: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -17,6 +36,8 @@ class ClientListResponse(BaseModel):
     clients: list[ClientSummary]
     total: int
     page: int
+    class_options: list[ClientClassRef] = []
+    counselor_options: list[ClientCounselorRef] = []
 
 
 class ClientProfileResponse(BaseModel):
@@ -31,8 +52,67 @@ class ClientProfileResponse(BaseModel):
     bio: str | None = None
     profile_image_url: str | None = None
     memo: str | None = None
+    # SDD-230: phone/birth_date 는 기본 응답에서 항상 null — 원문은 contact-reveal 로만 열람한다.
+    phone_masked: str | None = None
+    age: int | None = None
+    # 기관관리자가 비연결 기관 회원을 볼 때 False — 상담사 개인 메모 보호.
+    memo_editable: bool = True
 
     model_config = {"from_attributes": True}
+
+
+class ContactRevealResponse(BaseModel):
+    phone: str | None = None
+    birth_date: str | None = None
+
+
+class ClientActivityItem(BaseModel):
+    id: str
+    type: str
+    occurred_at: str
+    title: str
+    class_title: str | None = None
+    session_id: str | None = None
+    note: str | None = None
+
+
+class ClientActivityResponse(BaseModel):
+    items: list[ClientActivityItem]
+    next_cursor: str | None = None
+    ai_included: bool = False
+
+
+class ClientReportItem(BaseModel):
+    id: str
+    session_id: str
+    title: str
+    type: str
+    type_label: str
+    status: str
+    status_label: str
+    occurred_at: str | None = None
+    created_at: str | None = None
+
+
+class ClientChangeMetric(BaseModel):
+    key: str
+    label: str
+    delta: float | None = None
+    direction: str | None = None
+
+
+class ClientChangeItem(BaseModel):
+    report_id: str
+    title: str
+    occurred_at: str | None = None
+    state: str
+    summary: str
+    metrics: list[ClientChangeMetric] = []
+
+
+class ClientReportsResponse(BaseModel):
+    reports: list[ClientReportItem]
+    changes: list[ClientChangeItem]
 
 
 class MemoRequest(BaseModel):
