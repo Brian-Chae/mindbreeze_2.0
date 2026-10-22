@@ -113,6 +113,9 @@ def mark_entered(db, session, participant, now=None):
     from app.models.class_program import Class
     if participant.is_waitlisted:
         return
+    # 운영 세션은 autoflush=False — 호출자가 메모리에만 바꾼 동의·멤버 연결이 아래 lock_participants 의
+    # populate_existing 재조회에 덮이지 않도록 먼저 DB 로 내보낸다(녹음 동의 유실 → 회원 LiveKit 토큰 403 방지).
+    db.flush()
     require_eligible(db, participant)
     cls = db.get(Class, session.class_id) if session.class_id else None
     if cls is None or participant.member_id is None:
