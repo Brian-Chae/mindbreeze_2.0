@@ -20,6 +20,8 @@ interface ToolsSheetProps {
   codeCopied: boolean;
   onCopyCode: () => void;
   onInvite?: () => void;
+  /** 수업을 종료하지 않고 화면만 나간다 */
+  onLeave?: () => void;
   /** 내 밴드 줄 부제(연결됨·미착용 …) */
   selfBandText: string;
   onOpenMyband: () => void;
@@ -32,7 +34,7 @@ const SORTS: readonly { key: HostSort; label: string }[] = [
 ];
 
 export function ToolsSheet({
-  sort, onSort, showHandsFirst, handsFirst, onHandsFirst, table, onTable, accessCode, codeCopied, onCopyCode, selfBandText, onOpenMyband, onInvite,
+  sort, onSort, showHandsFirst, handsFirst, onHandsFirst, table, onTable, accessCode, codeCopied, onCopyCode, selfBandText, onOpenMyband, onInvite, onLeave,
 }: ToolsSheetProps) {
   return (
     <div className="hp-sheet">
@@ -73,6 +75,7 @@ export function ToolsSheet({
         </div>
         <p className="hp-code__hint">참가자에게 직접 알려 주세요</p>
       </HostSection>
+      {onLeave && <button type="button" className="hp-btn" data-variant="ghost" onClick={onLeave}>클래스 화면 나가기</button>}
     </div>
   );
 }

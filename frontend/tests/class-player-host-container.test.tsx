@@ -381,11 +381,13 @@ describe('발언권·채팅·녹음 연결', () => {
     expect(props.codeCopy.onCopy).toHaveBeenCalledTimes(1);
   });
 
-  it('닫기 버튼은 페이지의 onClose 를 부른다', async () => {
+  it('도구의 화면 나가기는 페이지 onClose를 호출하고 수업 종료는 하지 않는다', async () => {
     const props = baseProps();
     await render(<HostLiveContainer {...props} />);
-    await click(one('[data-pz="btn-close"]'));
+    await click(all('[data-pz="dk"]')[4]);
+    await click(buttonByText('클래스 화면 나가기', sheet() ?? document));
     expect(props.onClose).toHaveBeenCalledTimes(1);
+    expect(props.end.onRequest).not.toHaveBeenCalled();
   });
 });
 
