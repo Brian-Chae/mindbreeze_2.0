@@ -22,3 +22,19 @@
 | V18 | 레이아웃 390/1194/1440: 페이지 가로 넘침 0, 표 내부 스크롤, 이름 열 고정, 터치 44px | 0 | Chrome headless 측정 + 스크린샷 |
 | V19 | 접근성: 이름은 링크, 토글 aria-pressed, 로딩·오류·빈 상태 | 존재 | vitest |
 | V20 | 기존 회귀: test_client.py, test_mb2_relations_consistency.py, agent_checkin 테스트, tsc | 통과 | pytest/tsc |
+
+## 1-2단계 — 기관관리자 범위 (구현 전 작성)
+
+| ID | 시나리오 | 기대 | 확인 |
+|---|---|---|---|
+| A1 | 기관 클래스 active 멤버/기관 귀속 active 상담관계 회원이 기관관리자 목록·상세·activity·reports·reveal 에 접근 | 200, total 포함 | pytest |
+| A2 | 타 기관 관리자 → 우리 기관 회원 상세/activity/reports/reveal | 403, 목록 미포함 | pytest |
+| A3 | 개인상담소(kind=individual) 귀속 클래스·상담관계 회원, 귀속 불명(known=False), 링크만 있는 회원 | 기관관리자에게 미노출(403) | pytest |
+| A4 | 다중 기관 관리자: 두 기관 회원 모두 노출, 관리자 권한 없는 3번째 기관 회원은 미노출. 한 기관 membership 이 left/비활성이면 그 기관 회원 미노출 | 정확 | pytest |
+| A5 | 상담사(role=counselor) 범위 불변: 같은 기관 회원이라도 본인 active 연결 아니면 403, 목록은 연결 회원만 | 불변 | pytest(기존 V1/V2 + 신규) |
+| A6 | 기관관리자 상세 memo 는 null(타 상담사 메모 비노출), 메모 저장 403. 본인 연결 회원이면 본인 메모 | 정책대로 | pytest |
+| A7 | 기관관리자 activity/reports: 명상 클래스 세션 활동만, 상담 세션·상담사용 리포트·AI 안부 제외, 다른 참여자 행 미노출 | 제외 | pytest |
+| A8 | 목록 `counselors`(관리 기관 소속 담당 상담사)·`counselor_id` 필터가 total 과 일치. 상담사 호출엔 필드 비어 있음 | 일치 | pytest |
+| A9 | contact-reveal: 기관 회원 허용, 비회원 403, 감사 로그에 원문 없음 | 정책대로 | pytest |
+| A10 | FE: 관리자 목록에 담당 상담사 열·필터 노출, 상담사엔 미노출. 상세 관리자(비연결)는 메모 영역 숨김. 접속·점수 문구 없음 | 동작 | vitest |
+| A11 | 회귀: test_sdd230_member_overview, test_client, test_mb2_relations_consistency, tsc, 관련 vitest | 통과 | pytest/tsc/vitest |

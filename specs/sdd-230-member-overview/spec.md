@@ -131,3 +131,22 @@
 - 현재 상담사 화면의 `AppShell.tsx` 밝은 캔버스 #F7F4F0·사이드바 #F5EDFC·브랜드 #5F0080·흰 패널·20px 라운드와 mb-tokens.css/Tailwind preset의 Pretendard 계열을 재사용. DESIGN.md의 다크 Clinical Garden과 현행 라이트 화면 사이 불일치를 확인했고, 이번 요청의 기존 상담사 화면 재사용을 우선했다. 전역 토큰 변경 없음.
 - 접속/활동/변화 값은 전부 명시된 가상 예시. 접속 미지원·미입력·비공개·밴드 미착용 상태를 포함. 새 AI 생성/실제 분석 아님.
 - 화면 증거와 재현 방법: `designs/member-overview/README.md`, `capture.cjs`, `layout-audit.json` 참조. 정적 시안 증거는 API·권한·실기기 동작 증거가 아니다.
+
+## 11. 1-2단계 — 기관관리자 범위 (Brian 결정 2026-10-22)
+
+결정: ① 기관관리자는 자기 기관 전체 회원을 목록·상세·활동·리포트에서 본다(기존: 본인 active 연결 회원만). ② 이메일은 마스킹하지 않고 그대로 노출(현행 유지). ③ 열람 감사의 DB 보관은 출시 이후(이번엔 로그 유지, 마이그레이션 없음).
+
+### '기관 전체 회원' 정의 (최소·안전)
+- 관리 기관 = 본인이 `UserOrgMembership(role=org_admin, status=active)` 이고 `User.role=org_admin·active`, 기관 `deactivated_at is null`, 기관 `kind != individual` 인 모든 기관(다중 기관이면 전부, `User.org_id` 미사용). 근거 패턴: `class_access_service.active_membership`, `class_read_service._visible_session_filter`.
+- 기관 회원 = 아래 중 하나. **모두 `organization_attribution_known=True` 이고 `organization_id ∈ 관리 기관`인 데이터만** 인정한다(귀속 추정 금지).
+  1. 기관 클래스(`Class`, 상태 draft·archived 제외)의 active `ClassMember` (role=client).
+  2. 기관 귀속 `CounselingRelationship(status=active)` 의 `client_user_id`.
+- 제외: 개인상담소(kind=individual)에 귀속된 클래스·상담관계 회원, 귀속 불명(known=False) 데이터, 단순 `ClientCounselorLink` 만 있는 회원(링크에 org_id 없음 → 귀속 추정 불가). → 결정 필요 사항으로 보고.
+- 상담사(role=counselor)·그 외 역할은 **기존 범위 불변**(본인 active 연결만).
+
+### 기관관리자가 볼 수 있는 내용
+- 목록: 기관 회원 ∪ 본인 active 연결 회원. 소속 클래스는 기관 클래스 전체. 신규 필드 `counselors`(담당 상담사: 해당 관리 기관 소속 상담사와의 active 연결, 이름만)·`counselor_options`, 필터 `counselor_id`.
+- 활동·리포트: 기관 귀속 **명상 클래스 세션**(type=meditation, class_id 있음)의 해당 회원 참여자 행만. 상담(counseling) 세션·상담사용 리포트·AI 안부(상담사 개인 데이터)는 제외. 클라이언트용 리포트의 상태·변화 서사만(원문/미디어 없음, 점수 없음). 본인 연결 회원의 본인 접근 세션은 기존 상담사 규칙 그대로(합집합).
+- 연락처 열람(contact-reveal): 같은 권한 규칙(기관 회원 또는 본인 연결). 감사 로그에 역할 추가, 원문 미기록.
+- 비공개 메모: 상담사 개인 메모(`ClientCounselorLink.memo`)이므로 **기관관리자에게 노출하지 않는다**. 본인이 직접 연결한 회원의 본인 메모만 표시·저장. 기관 회원 상세에서는 `memo=null`, 메모 입력 영역은 숨김.
+- 권한 오류: 타 기관·개인상담소·비회원은 기존과 같이 403.

@@ -43,3 +43,12 @@
 - 390: 표 내부 수평 스크롤 + 이름 열 고정. 카드 단일 열. 페이지 가로 넘침 금지.
 - 점수·종합점수·순위 표시 없음. 접속 열·필터·그룹 없음.
 - 검색·필터·그룹·페이지는 URL 쿼리(`q, class, days, group, page`)에 저장해 뒤로가기 복원. 연락처·생년월일은 URL/스토리지에 저장하지 않음.
+
+## 5. 1-2단계 — 기관관리자 범위 (Stage ②, 마이그레이션 없음)
+- 모듈: `client_overview_service.py` 에 `admin_org_ids(db, me)`·`org_member_ids(db, orgs)`·`require_client_access(db, me, client_id)` 추가. 정의는 spec §11.
+- 분기: 조회자 `role == org_admin` 일 때만 관리 기관 계산. 관리 기관이 없거나 상담사면 기존 경로 그대로(회귀 없음).
+- 접근 세션: 기존 상담사 접근 세션 ∪ 관리 기관 귀속 명상 클래스 세션. 후자 전용 세션은 리포트를 client 유형만, 상담/AI 이벤트 제외.
+- 목록: 모집단 = 본인 active 연결 ∪ 기관 회원. 소속 클래스 = 내 클래스 ∪ 관리 기관 클래스. `counselors`·`counselor_options`·`counselor_id` 필터는 관리자 호출에서만 채움.
+- 상세: 메모는 본인 연결이 있을 때만. 메모 저장 API 는 기존대로 본인 연결만(관리자의 기관 회원 메모 저장은 403).
+- FE: 라우트 `/clients*` 는 이미 org_admin 허용, 사이드바 org_admin 메뉴에 `/clients` 존재 → 확인만. 목록에 '담당 상담사' 열·필터(관리자만), 상세는 메모 영역 조건부.
+- 파일: `backend/app/services/client_overview_service.py`, `client_service.py`, `schemas/client.py`, `api/v1/client.py`, 테스트 `backend/tests/test_sdd230_org_admin_scope.py`, FE `lib/api/clients.ts`, `ClientListPage.tsx`, `ClientProfilePage.tsx`, `frontend/tests/sdd230-org-admin-scope.test.tsx`.
