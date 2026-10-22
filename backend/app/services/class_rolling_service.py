@@ -172,3 +172,45 @@ def finish_class_if_due(db, cls, now):
         )
     db.flush()
     return True
+
+
+def close_cancelled_instant_class(db, cls, now):
+    """즉석 클래스(start_now)의 정규 회차가 한 번도 완료되지 않고 전부 취소되면 부모도 취소로 닫는다.
+
+    호출자가 클래스 잠금을 소유한다. 회차만 취소되고 부모·멤버가 active 로 남아
+    회원 화면에 '참여 중'으로 고착되던 문제를 막는다. 완료 회차가 있으면 손대지 않는다(NV-12).
+    """
+    from app.models.class_program import ClassMember
+    from app.services.class_write_service import effect
+
+    if cls.status != "active" or (cls.recurrence_rule or {}).get("start_now") is not True:
+        return False
+    rows = (
+        db.query(Session)
+        .filter_by(class_id=cls.id)
+        .order_by(Session.id)
+        .with_for_update()
+        .all()
+    )
+    regular = [r for r in rows if r.session_kind == "regular"]
+    if not regular or any(r.status != "cancelled" for r in regular):
+        return False
+    if any(r.status in ("open", "in_progress") for r in rows):
+        return False
+    cls.status = "cancelled"
+    cls.revision += 1
+    # 클래스 수동 취소(class_write_service transition)와 같은 멤버 마감 규칙을 따른다.
+    for member in (
+        db.query(ClassMember).filter_by(class_id=cls.id, status="active").all()
+    ):
+        member.status = "completed"
+        member.completed_at = now
+        effect(
+            db,
+            cls,
+            "class_cancelled",
+            f"close:{cls.id}:{cls.revision}:{member.id}",
+            {"recipient_id": str(member.user_id)},
+        )
+    db.flush()
+    return True

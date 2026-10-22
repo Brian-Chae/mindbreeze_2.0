@@ -1192,6 +1192,10 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession,
         if parent and action == "end" and s.session_kind == "regular":
             from app.services.class_rolling_service import finish_class_if_due
             finish_class_if_due(db,parent,now)
+        if parent and action == "cancel" and s.session_kind == "regular":
+            # 즉석 클래스의 유일한 회차가 취소되면 부모·멤버도 닫는다(회원 '참여 중' 고착 방지).
+            from app.services.class_rolling_service import close_cancelled_instant_class
+            close_cancelled_instant_class(db,parent,now)
         db.commit()
     except Exception:
         db.rollback()

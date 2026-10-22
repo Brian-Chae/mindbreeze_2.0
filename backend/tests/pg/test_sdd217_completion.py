@@ -148,3 +148,47 @@ def test_nv10_real_http_end_then_host_and_member_reads(pg_session):
             response = client.get('/api/v1/classes')
             assert response.status_code == 200, response.text
             assert next(item for item in response.json()['classes'] if item['id'] == str(cls.id))['status'] == 'completed'
+
+
+# 즉석 클래스 회차 취소 → 부모·멤버가 active 로 남아 회원 '참여 중' 고착(버그 리포트 2026-10-22)
+@pytest.mark.parametrize('start', ['open', 'ready'])
+def test_instant_only_session_cancel_closes_parent_and_member(pg_session, start):
+    host, cls, member, row, participant = instant(pg_session)
+    cls.recurrence_rule = {'start_now': True}
+    row.status = start; row.started_at = None
+    pg_session.commit()
+    assert service.transition_status(str(row.id), str(host.id), 'cancel', pg_session)['status'] == 'cancelled'
+    pg_session.expire_all()
+    assert (cls.status, cls.revision, member.status, member.completed_at) == ('cancelled', 2, 'completed', NOW)
+    assert pg_session.query(ClassEffect).filter_by(class_id=cls.id, kind='class_cancelled').count() == 1
+    assert pg_session.query(ClassEffect).filter_by(class_id=cls.id, kind='class_completed').count() == 0
+    from app.services.class_read_service import list_classes
+    result, _ = list_classes(str(member.user_id), pg_session)
+    item = next(i for i in result if i['id'] == str(cls.id))
+    assert item['status'] == 'cancelled' and item['membership']['status'] == 'completed'
+
+
+def test_non_instant_fixed_cancel_keeps_parent_active(pg_session):
+    """일반 고정형 클래스는 회차를 모두 취소해도 자동으로 닫지 않는다(기존 동작 유지)."""
+    host, cls, member, row, participant = instant(pg_session)
+    cls.recurrence_rule = {'start_now': False}
+    row.status = 'open'; row.started_at = None
+    pg_session.commit()
+    service.transition_status(str(row.id), str(host.id), 'cancel', pg_session)
+    pg_session.expire_all()
+    assert cls.status == 'active' and member.status == 'active'
+
+
+def test_maintenance_closes_already_stuck_instant_class(pg_session, monkeypatch):
+    """배포 전에 이미 회차만 취소된 즉석 클래스는 유지 작업(cron)이 정리한다."""
+    from app.config import settings
+    from app.services import class_operations_service as ops
+    monkeypatch.setattr(settings, 'class_scheduling_enabled', True)
+    monkeypatch.setattr(ops, 'sweep_class_operations', lambda *a: None)
+    host, cls, member, row, participant = instant(pg_session)
+    cls.recurrence_rule = {'start_now': True}
+    row.status = 'cancelled'; row.started_at = None
+    pg_session.commit()
+    ops.maintain_classes(pg_session, now=NOW, class_ids=[cls.id])
+    pg_session.expire_all()
+    assert cls.status == 'cancelled' and member.status == 'completed'
