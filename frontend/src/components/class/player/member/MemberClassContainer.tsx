@@ -409,6 +409,8 @@ export function MemberClassContainer({
       speaking={liveKit.speaking}
       raisedHand={liveKit.raisedHand}
       raiseHand={liveKit.raiseHand}
+      lowerHand={liveKit.lowerHand}
+      raiseHandError={liveKit.raiseHandError}
       speakerOn={speakerOn}
     >
       {(media) => <MemberLiveScreen shared={shared} controls={controls} media={media} />}

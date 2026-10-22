@@ -346,3 +346,6 @@
 /* 종료 화면 시트 안의 기존 라이트 톤 패널(리포트 이메일 신청·사후 체크인)을 밝은 카드로 감싸 어두운 시트에서도 읽히게 한다 */
 .mp-legacy-panel { padding: 16px; border-radius: var(--r-card); background: var(--mb-purple-cream); color: var(--mb-label-70, #1f1f1f); }
 .mp-legacy-panel :is(h1, h2, h3, p):not([class]) { color: var(--mb-label-70, #1f1f1f); }
+
+/* 손들기·손 내리기 실패 안내 — 화면 하단에 짧게 띄운다 */
+.mp-hand-error { position: fixed; left: 50%; bottom: 88px; transform: translateX(-50%); z-index: 50; margin: 0; padding: 8px 14px; border-radius: 12px; background: rgba(0, 0, 0, 0.78); font-size: var(--fs-13); line-height: 18px; color: var(--mb-coral); }

@@ -2724,6 +2724,45 @@ def raise_hand(
     }
 
 
+def lower_hand(
+    session_id: str,
+    participant_id: str,
+    db: DBSession,
+    *,
+    entry_credential: str | None = None,
+    current_user_id: str | None = None,
+) -> dict:
+    """참여자 손 내리기(손들기 취소) — raise_hand=False 로 바꾸고 호스트/본인에게 통지한다.
+
+    raise_hand 와 같은 인가(본인 로그인 또는 입장 자격)·종료 세션 검사를 적용한다.
+    이미 내려가 있으면 멱등 성공(통지 없음). 발언 중(speaking) 상태는 건드리지 않는다.
+    """
+    sid = _to_uuid(session_id)
+    s = db.query(Session).filter(Session.id == sid).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+    if s.status in ("completed", "cancelled"):
+        raise HTTPException(status_code=400, detail="종료된 세션입니다")
+
+    participant = _get_participant_in_session(sid, participant_id, db)
+    _authorize_participant_access(
+        participant, db, entry_credential=entry_credential, current_user_id=current_user_id
+    )
+
+    if participant.raise_hand:
+        participant.raise_hand = False
+        db.commit()
+        db.refresh(participant)
+        _notify_speaking_changed(sid, participant)
+
+    return {
+        "participant_id": str(participant.id),
+        "raise_hand": participant.raise_hand,
+        "speaking": participant.speaking,
+        "can_publish": _compute_can_publish(s, participant),
+    }
+
+
 def set_speaking(
     session_id: str,
     host_id: str,

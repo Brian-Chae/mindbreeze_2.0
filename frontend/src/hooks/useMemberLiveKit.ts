@@ -6,7 +6,7 @@
 import { resolveLiveKitUrl } from '../lib/livekit-url';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, tokenStorage } from '../lib/api/client';
-import { getEntryLiveKitToken, raiseEntryHand } from '../lib/api/class-flow';
+import { getEntryLiveKitToken, lowerEntryHand, raiseEntryHand } from '../lib/api/class-flow';
 import {
   getActiveSessionLiveSocket,
   getSessionLiveSocket,
@@ -49,6 +49,8 @@ export function useMemberLiveKit({
   /** SDD-094: 발언권(송출) 부여 상태 — speaking_changed 로 갱신 */
   const [speaking, setSpeaking] = useState(false);
   const [raising, setRaising] = useState(false);
+  /** 손들기·손 내리기 중복 호출 방지(state 는 렌더 뒤에야 반영되므로 ref 로 즉시 막는다) */
+  const raisingRef = useRef(false);
   const [raiseError, setRaiseError] = useState<string | null>(null);
 
   const connect = useCallback(async () => {
@@ -132,7 +134,8 @@ export function useMemberLiveKit({
 
   /** SDD-094: 손들기 — 상담사가 발언권을 부여할 때까지 대기 상태로 둔다 */
   const raiseHand = useCallback(async (): Promise<void> => {
-    if (!sessionId || !participantId || !entryCredential) return;
+    if (!sessionId || !participantId || !entryCredential || raisingRef.current) return;
+    raisingRef.current = true;
     setRaising(true);
     setRaiseError(null);
     try {
@@ -141,6 +144,24 @@ export function useMemberLiveKit({
     } catch (e) {
       setRaiseError(e instanceof Error ? e.message : '손들기에 실패했습니다');
     } finally {
+      raisingRef.current = false;
+      setRaising(false);
+    }
+  }, [sessionId, participantId, entryCredential]);
+
+  /** 손 내리기(손들기 취소) — 실패하면 손든 상태를 그대로 두고 오류만 남긴다. 진행 중 연타는 무시 */
+  const lowerHand = useCallback(async (): Promise<void> => {
+    if (!sessionId || !participantId || !entryCredential || raisingRef.current) return;
+    raisingRef.current = true;
+    setRaising(true);
+    setRaiseError(null);
+    try {
+      await lowerEntryHand(sessionId, participantId, entryCredential);
+      setRaisedHand(false);
+    } catch {
+      setRaiseError('손을 내리지 못했어요. 잠시 후 다시 눌러 주세요');
+    } finally {
+      raisingRef.current = false;
       setRaising(false);
     }
   }, [sessionId, participantId, entryCredential]);
@@ -162,5 +183,6 @@ export function useMemberLiveKit({
     raising,
     raiseHandError: raiseError,
     raiseHand,
+    lowerHand,
   };
 }

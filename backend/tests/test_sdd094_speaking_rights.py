@@ -235,3 +235,88 @@ def test_12_손들기_세션불일치_404(client):
     # 다른 세션 ID 로 손들기 → 참여자 미존재 404
     res = _raise_hand(client, other, joined["participant_id"], token=joined["entry_credential"])
     assert res.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# 손 내리기(손들기 취소) — lower-hand
+# ---------------------------------------------------------------------------
+
+
+def _lower_hand(client, cls, pid, *, token=None, headers=None):
+    hdr = dict(headers or {})
+    if token is not None:
+        hdr["X-Entry-Credential"] = token
+    return client.post(
+        f"/api/v1/sessions/{cls['id']}/participants/{pid}/lower-hand", headers=hdr
+    )
+
+
+def test_13_입장자격_손내리기_성공_멱등(client):
+    counselor = _register(client, "s094c13@test.com")
+    cls, joined = _grant_group_guest(client, counselor)
+    pid, cred = joined["participant_id"], joined["entry_credential"]
+
+    assert _raise_hand(client, cls, pid, token=cred).json()["raise_hand"] is True
+
+    res = _lower_hand(client, cls, pid, token=cred)
+    assert res.status_code == 200, res.text
+    assert res.json()["raise_hand"] is False
+    assert res.json()["speaking"] is False
+
+    # 이미 내려가 있어도 멱등 성공
+    res = _lower_hand(client, cls, pid, token=cred)
+    assert res.status_code == 200, res.text
+    assert res.json()["raise_hand"] is False
+
+
+def test_14_로그인회원_본인_손내리기_200_타인_403(client):
+    counselor = _register(client, "s094c14@test.com")
+    member_a = _register(client, "s094m14a@test.com", role="client")
+    member_b = _register(client, "s094m14b@test.com", role="client")
+    cls, _ = _grant_group_guest(client, counselor)
+    pid_a = _join_member(client, cls, member_a)
+    _join_member(client, cls, member_b)
+
+    assert _raise_hand(client, cls, pid_a, headers=member_a["h"]).status_code == 200
+
+    # 타인이 대리로 내리기 → 403, 손은 그대로
+    assert _lower_hand(client, cls, pid_a, headers=member_b["h"]).status_code == 403
+
+    res = _lower_hand(client, cls, pid_a, headers=member_a["h"])
+    assert res.status_code == 200, res.text
+    assert res.json()["raise_hand"] is False
+
+
+def test_15_손내리기_자격없음_거부(client):
+    counselor = _register(client, "s094c15@test.com")
+    cls, joined = _grant_group_guest(client, counselor)
+    res = _lower_hand(client, cls, joined["participant_id"], token="")
+    assert res.status_code == 401
+    res = _lower_hand(client, cls, joined["participant_id"], token="forged-credential")
+    assert res.status_code in (401, 403)
+
+
+def test_16_발언중에는_손내리기가_speaking을_건드리지_않는다(client):
+    counselor = _register(client, "s094c16@test.com")
+    cls, joined = _grant_group_guest(client, counselor)
+    pid, cred = joined["participant_id"], joined["entry_credential"]
+
+    assert _set_speaking(client, cls, pid, True, headers=counselor["h"]).status_code == 200
+    res = _lower_hand(client, cls, pid, token=cred)
+    assert res.status_code == 200, res.text
+    assert res.json()["speaking"] is True
+    assert res.json()["raise_hand"] is False
+
+
+def test_17_종료된_세션_손내리기_400(client):
+    counselor = _register(client, "s094c17@test.com")
+    cls, joined = _grant_group_guest(client, counselor)
+    pid, cred = joined["participant_id"], joined["entry_credential"]
+    assert _raise_hand(client, cls, pid, token=cred).status_code == 200
+
+    from tests.test_mb2_low_fixes import _complete_session
+
+    _complete_session(cls)
+
+    res = _lower_hand(client, cls, pid, token=cred)
+    assert res.status_code == 400

@@ -239,6 +239,16 @@ export async function raiseEntryHand(sessionId: string, participantId: string, c
   );
 }
 
+/** 손 내리기(손들기 취소) — 손들기와 같은 인가. 이미 내려가 있어도 성공(멱등) */
+export async function lowerEntryHand(sessionId: string, participantId: string, credential: string | null): Promise<void> {
+  await prepareMemberToken();
+  await apiClient.post<unknown>(
+    `/sessions/${encodeURIComponent(sessionId)}/participants/${encodeURIComponent(participantId)}/lower-hand`,
+    undefined,
+    entryRequestOptions(credential),
+  );
+}
+
 /* ───────────────────────── 입장 자격 저장 (탭 단위) ───────────────────────── */
 
 /** 새로고침 뒤 화면을 다시 그리기 위한 클래스 요약 — 개인정보가 아니다(제목·시각·방식 설정) */
