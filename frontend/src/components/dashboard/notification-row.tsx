@@ -33,13 +33,13 @@ export function NotificationRow({ notification: n, role, timeLabel, onRead }: No
     <button
       type="button"
       onClick={() => void handleClick()}
-      className="flex w-full items-start gap-3 border-b border-[#F0ECF2] py-3.5 text-left last:border-0 hover:bg-[#FAF7FC] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5F0080]"
+      className="flex min-h-[56px] w-full items-start gap-3 border-b border-[#F0ECF2] py-3.5 text-left last:border-0 hover:bg-[#FAF7FC] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5F0080]"
     >
       <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#5F0080]" />
       <div className="min-w-0 flex-1">
-        <div className="text-[13px] text-[#1F1F1F]">{n.title}</div>
-        {n.body && <div className="truncate text-[12px] text-[#6F6F6F]">{n.body}</div>}
-        <div className="text-[12px] text-[#767676]">{timeLabel}</div>
+        <div className="text-[16px] font-semibold text-[#1F1F1F]">{n.title}</div>
+        {n.body && <div className="truncate text-[15px] text-[#6F6F6F]">{n.body}</div>}
+        <div className="text-[13px] text-[#767676]">{timeLabel}</div>
       </div>
     </button>
   );
