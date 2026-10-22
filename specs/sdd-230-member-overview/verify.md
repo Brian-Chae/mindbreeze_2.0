@@ -38,3 +38,17 @@
 | A9 | contact-reveal: 기관 회원 허용, 비회원 403, 감사 로그에 원문 없음 | 정책대로 | pytest |
 | A10 | FE: 관리자 목록에 담당 상담사 열·필터 노출, 상담사엔 미노출. 상세 관리자(비연결)는 메모 영역 숨김. 접속·점수 문구 없음 | 동작 | vitest |
 | A11 | 회귀: test_sdd230_member_overview, test_client, test_mb2_relations_consistency, tsc, 관련 vitest | 통과 | pytest/tsc/vitest |
+
+## 1-3단계 — 기관 소속 상담사 연결 회원 + 회원/비회원 (구현 전 작성)
+
+| ID | 시나리오 | 기대 | 확인 |
+|---|---|---|---|
+| L1 | 기관 소속(active) 상담사의 active 링크 회원(클래스·기관 상담관계 없음) → 기관관리자 목록·상세·activity·reports·reveal | 200, 목록 포함, `member_type=non_member` | pytest |
+| L2 | 비소속 상담사 / membership left·invited / 계정 비활성 상담사 / 종료(ended) 링크 / 개인상담소만 소속 상담사의 연결 회원 | 목록 미포함, 상세 등 403 | pytest |
+| L3 | 타 기관 관리자 → L1 회원 | 403, 목록 미포함 | pytest |
+| L4 | 기관 클래스 멤버·기관 귀속 상담관계 회원은 `member`, 같은 회원이 상담사 링크도 있으면 `member`(중복 없이 1행) | 라벨 정확 | pytest |
+| L5 | `member_type` 필터 member/non_member/전체가 total·행과 일치. 상담사 호출은 `member_type=null`, 필터 무시 | 일치 | pytest |
+| L6 | 비회원도 상담 세션 활동·상담사용 리포트·AI 안부·비공개 메모 비노출. 상담사 개인상담소 회원 섞여도 포함(결정 ①) | 제외 유지 | pytest |
+| L7 | 상담사 본인 범위 불변(같은 기관 다른 상담사 회원 403), 다중 기관 합집합 | 불변 | pytest |
+| L8 | FE: 관리자 목록 배지 회원/비회원·필터·설명 노출, 상담사엔 없음. 상세 헤더 배지. 점수·접속 문구 없음 | 동작 | vitest |
+| L9 | 회귀: test_sdd230_org_admin_scope, test_sdd230_member_overview, test_client, tsc | 통과 | pytest/tsc |

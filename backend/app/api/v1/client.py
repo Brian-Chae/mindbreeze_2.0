@@ -30,6 +30,7 @@ def list_clients(
     class_id: str | None = Query(None),
     active_within_days: int | None = Query(None, ge=1, le=365),
     counselor_id: str | None = Query(None),
+    member_type: str | None = Query(None, pattern="^(member|non_member)$"),
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -38,7 +39,7 @@ def list_clients(
     clients, total, class_options, counselor_options = client_service.list_clients(
         current_user["id"], q, page, size, db,
         class_id=class_id, active_within_days=active_within_days,
-        counselor_filter_id=counselor_id,
+        counselor_filter_id=counselor_id, member_type=member_type,
     )
     return ClientListResponse(
         clients=clients, total=total, page=page, class_options=class_options,

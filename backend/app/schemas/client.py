@@ -26,6 +26,8 @@ class ClientSummary(BaseModel):
     classes: list[ClientClassRef] = []
     # 기관관리자 전용(상담사 호출에서는 빈 배열)
     counselors: list[ClientCounselorRef] = []
+    # 기관관리자 전용: member(기관 회원) / non_member(기관 상담사와 연결만). 상담사 호출은 None.
+    member_type: str | None = None
     last_activity_at: str | None = None
     last_activity_source: str | None = None
 
@@ -57,6 +59,7 @@ class ClientProfileResponse(BaseModel):
     age: int | None = None
     # 기관관리자가 비연결 기관 회원을 볼 때 False — 상담사 개인 메모 보호.
     memo_editable: bool = True
+    member_type: str | None = None
 
     model_config = {"from_attributes": True}
 

@@ -12,6 +12,8 @@ export interface ClientCounselorRef {
   name: string | null;
 }
 
+export type MemberType = 'member' | 'non_member';
+
 export interface ClientListItem {
   id: string;
   name: string;
@@ -25,6 +27,8 @@ export interface ClientListItem {
   classes?: ClientClassRef[];
   // 기관관리자 호출에서만 채워진다(상담사는 빈 배열).
   counselors?: ClientCounselorRef[];
+  // 기관관리자 호출에서만: member(기관 회원) / non_member(기관 상담사와 연결만). 상담사는 null.
+  member_type?: MemberType | null;
   last_activity_at?: string | null;
   last_activity_source?: string | null;
 }
@@ -53,6 +57,7 @@ export interface ClientProfile {
   age?: number | null;
   // false: 기관관리자가 비연결 기관 회원을 보는 중 — 상담사 개인 메모 영역을 숨긴다.
   memo_editable?: boolean;
+  member_type?: MemberType | null;
 }
 
 export type ActivityType = 'session' | 'checkin' | 'measurement' | 'ai_checkin';
@@ -130,6 +135,7 @@ export interface ListClientsParams {
   class_id?: string;
   active_within_days?: number;
   counselor_id?: string;
+  member_type?: MemberType;
 }
 
 export const listClients = (params: ListClientsParams = {}): Promise<ClientListResponse> => {
@@ -140,6 +146,7 @@ export const listClients = (params: ListClientsParams = {}): Promise<ClientListR
   if (params.class_id) search.set('class_id', params.class_id);
   if (params.active_within_days) search.set('active_within_days', String(params.active_within_days));
   if (params.counselor_id) search.set('counselor_id', params.counselor_id);
+  if (params.member_type) search.set('member_type', params.member_type);
   const qs = search.toString();
   return apiClient.get<ClientListResponse>(`/clients${qs ? `?${qs}` : ''}`);
 };

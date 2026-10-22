@@ -18,7 +18,7 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 from sqlalchemy import or_
-from sqlalchemy.orm import Session as DBSession
+from sqlalchemy.orm import Session as DBSession, aliased
 
 from app.core.ai_features import is_ai_enabled
 from app.models.agent import AgentCheckin
@@ -254,13 +254,59 @@ def org_member_ids(db: DBSession, org_ids: list[UUID]) -> set[UUID]:
     return clients
 
 
+def org_linked_client_ids(db: DBSession, org_ids: list[UUID]) -> set[UUID]:
+    """관리 기관에 active 소속된 상담사와 active 연결(ClientCounselorLink)된 회원(역할 client 만).
+
+    기관 클래스·기관 귀속 상담관계가 없어도 포함한다(SDD-230 1-3단계). 상담사의 개인상담소 회원이 섞여도 허용.
+    소속 없음·left/invited·계정 비활성 상담사, 종료된 링크는 제외한다.
+    """
+    if not org_ids:
+        return set()
+    counselor = aliased(User)
+    rows = (
+        db.query(ClientCounselorLink.client_id)
+        .join(UserOrgMembership, UserOrgMembership.user_id == ClientCounselorLink.counselor_id)
+        .join(counselor, counselor.id == ClientCounselorLink.counselor_id)
+        .join(User, User.id == ClientCounselorLink.client_id)
+        .filter(
+            ClientCounselorLink.status == "active",
+            UserOrgMembership.org_id.in_(org_ids),
+            UserOrgMembership.status == "active",
+            counselor.status == "active",
+            User.role == "client",
+        )
+        .distinct()
+        .all()
+    )
+    return {c for (c,) in rows}
+
+
+def org_scope_ids(db: DBSession, org_ids: list[UUID]) -> tuple[set[UUID], set[UUID]]:
+    """(기관 회원, 상담사 연결로만 포함 가능한 회원 포함 전체). 전체 = 회원 ∪ 상담사 연결."""
+    members = org_member_ids(db, org_ids)
+    return members, members | org_linked_client_ids(db, org_ids)
+
+
+def member_type_of(client_id, members: set[UUID]) -> str:
+    """회원/비회원 판정 — 기관 클래스·기관 귀속 상담관계 근거가 있으면 member, 아니면 non_member."""
+    return "member" if client_id in members else "non_member"
+
+
+def profile_member_type(db: DBSession, viewer_id, client_id) -> str | None:
+    """상세 헤더 배지용. 기관관리자만 값이 있고 상담사는 None."""
+    orgs = admin_org_ids(db, viewer_id)
+    if not orgs:
+        return None
+    return member_type_of(_uuid(client_id), org_member_ids(db, orgs))
+
+
 def require_client_access(db: DBSession, viewer_id, client_id) -> ClientCounselorLink | None:
     """본인 active 연결이 있으면 그 링크, 없으면 기관관리자의 기관 회원일 때 None, 아니면 403."""
     try:
         return require_active_link(db, viewer_id, client_id)
     except HTTPException:
         orgs = admin_org_ids(db, viewer_id)
-        if orgs and _uuid(client_id) in org_member_ids(db, orgs):
+        if orgs and _uuid(client_id) in org_scope_ids(db, orgs)[1]:
             return None
         raise
 
@@ -461,13 +507,14 @@ def list_clients_overview(
     active_within_days: int | None,
     db: DBSession,
     counselor_filter_id: str | None = None,
+    member_type: str | None = None,
 ) -> dict:
     me = _uuid(counselor_id)
     orgs = admin_org_ids(db, me)
     own_ids = db.query(ClientCounselorLink.client_id).filter(
         ClientCounselorLink.counselor_id == me, ClientCounselorLink.status == "active"
     )
-    org_ids_set = org_member_ids(db, orgs) if orgs else set()
+    org_members, org_ids_set = org_scope_ids(db, orgs) if orgs else (set(), set())
     population = User.id.in_(own_ids)
     if org_ids_set:
         population = or_(population, User.id.in_(org_ids_set))
@@ -480,6 +527,8 @@ def list_clients_overview(
         like = f"%{q}%"
         query = query.filter((User.name.ilike(like)) | (User.email.ilike(like)))
     rows = query.order_by(User.name, User.id).all()
+    if orgs and member_type in ("member", "non_member"):
+        rows = [(u, p) for u, p in rows if member_type_of(u.id, org_members) == member_type]
     ids = [u.id for u, _ in rows]
 
     # 관리자용 담당 상담사 — 관리 기관에 active 소속인 상담사와의 active 연결만(이름만 노출).
@@ -546,6 +595,7 @@ def list_clients_overview(
             "phone_masked": mask_phone(user.phone),
             "classes": classes.get(user.id, []),
             "counselors": counselors_by_client.get(user.id, []),
+            "member_type": member_type_of(user.id, org_members) if orgs else None,
             "last_activity_at": _iso(act["_at"]) if act else None,
             "last_activity_source": _source_label(act) if act else None,
             "last_session_at": _iso(a.get("session")),
