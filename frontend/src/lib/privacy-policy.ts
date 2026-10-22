@@ -31,7 +31,7 @@ export const PROCESSOR_DISCLOSURES: ProcessorDisclosure[] = [
   { service: 'AWS S3', purpose: '기록 파일과 리포트 저장', data: '음성·영상·뇌파 원본, 리포트 파일', country: '기본 설정은 일본 도쿄, 실제 운영 저장 위치 확인 필요', timingAndMethod: '업로드·조회 시 암호화 통신', retention: '기록 원본 90일, 탈퇴 개인 자료 30일; 수탁자 계약·백업 보유기간 확인 필요' },
   { service: 'Resend', purpose: '안내 및 리포트 이메일 발송', data: '수신 이메일, 안내 본문, 리포트 열람 링크', country: '실제 처리 국가 확인 필요', timingAndMethod: '이메일 발송 시 암호화 통신', retention: '수탁자 계약 보유기간 확인 필요' },
   { service: 'FCM', purpose: '푸시 알림 전송', data: '기기 푸시 토큰, 알림 내용', country: '실제 처리 국가 확인 필요', timingAndMethod: '알림 전송 시 암호화 통신', retention: '수탁자 계약 보유기간 확인 필요' },
-  { service: 'LiveKit', purpose: '실시간 음성·영상 전달', data: '참여자 식별 정보, 음성·영상', country: '실제 운영 서버 국가 확인 필요', timingAndMethod: '클래스 참여 중 암호화 통신', retention: '운영 방식과 수탁자 계약 보유기간 확인 필요' },
+  { service: 'LiveKit', purpose: '실시간 음성·영상 전달', data: '참여자 식별 정보, 음성·영상', country: '대한민국(운영 서버 위치)', timingAndMethod: '클래스 참여 중 암호화 통신', retention: '운영 방식과 수탁자 계약 보유기간 확인 필요' },
 ];
 
 export const PRIVACY_ARTICLES: PrivacyArticle[] = [
