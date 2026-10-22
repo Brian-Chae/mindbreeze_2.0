@@ -231,6 +231,7 @@ Brian 요청 → Phase 1 (docs/) ──[승인]──→ Phase 2 (designs/) ─�
 - 기능·SDD 작업은 `sdd/<NNN>-<슬러그>` 브랜치 + 전용 워크트리에서 하고 PR로 develop에 합친다. 빠른 수정만 develop 직접 푸시 가능.
 - SDD 번호는 `scripts/sdd new "한글 제목" <영문-슬러그> --worktree` 로만 발급한다(`specs/.sdd-counter` 폐기). 제목은 한글(spec 첫 줄 `# SDD-NNN — 제목`, PR `[SDD-NNN] 제목`).
 - 전체 규칙: `.claude/rules/branch-management.md`
+- 워크스페이스 운영(TASK BOX·상시 창구·카드): `.claude/rules/taskbox.md` — 메인 체크아웃에서 코드 수정 금지, 코드 변경은 카드(워크트리)에서만.
 
 ## 작업 방식·승인 규칙 (필수, 2026-10-19)
 > 어느 에이전트(Claude·Codex·Hermes)가 일하든 동일하게 적용한다. 새 세션은 이 절을 먼저 읽는다.
