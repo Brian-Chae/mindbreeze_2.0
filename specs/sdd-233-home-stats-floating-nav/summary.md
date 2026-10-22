@@ -27,7 +27,7 @@
 - `node specs/sdd-233-home-stats-floating-nav/capture.cjs` →Chrome headless, 실제 React+합성API. 회원·상담사390/430/1440 총6화면, PNG18개. JS오류0/가로넘침0. 두홈6개→4카드·전체 보기(6) DOM assertion.
 - 모바일 바66px/좌우16px/아래12px. 끝까지 스크롤한 마지막 요소와 바 간격 회원37.6px/상담사21.7px. safe-area34 모의에서도 동일. 1440 바숨김·카드4열. screens/results.json 원자료.
 - 캡처는 빈 임시 envDir로 .env 로드 차단, 모든 API mock·외부 요청 차단. 개발 CSS import 문제는 캡처용 resolve.alias로 repo/design-system 연결. 제품 코드 변경 없음. 초기 HMR WebSocket 차단 오류는 Socket.IO만 차단하도록 좁혀 해결, 최종 JS오류0.
-- 기존 테스트 실패 없음(의도한 구조/라벨/배지 기대 갱신 후 관련 전체 통과). 전체 프런트 스위트 미실행. 실iOS·실API·EEG·LiveKit, 별도 관리자 브라우저 캡처 미실행.
+- 로컬 관련 테스트 실패 없음(의도한 구조/라벨/배지 기대 갱신 후 관련 전체 통과). 로컬 전체 프런트 스위트 미실행. 실iOS·실API·EEG·LiveKit, 별도 관리자 브라우저 캡처 미실행.
 - 원본 node_modules 심링크만 사용 후 제거, 커밋 제외.
 
 ## dev 확인 시나리오
@@ -36,3 +36,10 @@
 3. iOS390/430 회전·툴바·키보드·홈 인디케이터에서 마지막CTA 가림없음과 클래스진행/대화방 바숨김 확인. 데스크톱1440 사이드바 유지.
 
 결정 필요 사항 없음. PR머지·develop push·배포는 수행하지 않으며 DEPLOY 창구 담당.
+
+## PR CI 결과
+- PR #50: https://github.com/Brian-Chae/mindbreeze_2.0/pull/50
+- 구현 커밋85fb028b CI: https://github.com/Brian-Chae/mindbreeze_2.0/actions/runs/39767343702 — 성공. Type Check/Lint/Build 통과, 백엔드 변경 없어 skip.
+- 전체 테스트 로그는218파일 중212통과/6실패, 2541건 중2530통과/11실패. workflow의 테스트는 비차단이므로 CI 성공과 전체 테스트 통과를 구분한다.
+- 직전 SDD-232 PR CI https://github.com/Brian-Chae/mindbreeze_2.0/actions/runs/39763466182 와 실패 테스트 이름11개가 정확히 일치함을 대조했다(기준2515통과/11실패). 이번 추가 테스트15개는 통과.
+- 기존 실패6파일: agent-counselor-page.test.tsx(2), chat-message-deeplink.test.ts(2), org-counselor-management-browser.test.cjs(1), org-management-browser.test.cjs(2), report-modal-pdf.test.cjs(2), report-server-pdf.test.cjs(2). 입력 요소 기대 불일치와 로컬5175 미실행/브라우저 timeout. 범위 밖 수정하지 않음.
