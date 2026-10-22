@@ -17,9 +17,9 @@ export function StatTile({ label, value, to, hint, valueClassName = 'text-[#1F1F
       aria-label={`${label} ${value}, ${hint.replace(/\s*→$/, '')}`}
       className="block rounded-2xl border border-[#E8E3EC] bg-white p-4 transition-colors hover:border-[#C9B0E8] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5F0080]"
     >
-      <div className="text-[12px] font-semibold text-[#6F6F6F]">{label}</div>
-      <div className={`mt-2 text-[30px] font-extrabold tracking-tight ${valueClassName}`}>{value}</div>
-      <div className="mt-1 text-[12px] font-bold text-[#5F0080]">{hint}</div>
+      <div className="text-[12px] mobile:text-mb-label font-semibold text-[#6F6F6F]">{label}</div>
+      <div className={`mt-2 text-[30px] mobile:text-mb-number font-extrabold tracking-tight ${valueClassName}`}>{value}</div>
+      <div className="mt-1 text-[12px] mobile:text-mb-label font-bold text-[#5F0080]">{hint}</div>
     </Link>
   );
 }

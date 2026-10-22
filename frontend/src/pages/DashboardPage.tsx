@@ -97,7 +97,7 @@ function AccessCodeCell({ code }: { code: string | null }) {
       <button
         type="button"
         onClick={() => void handleCopy()}
-        className="relative z-10 px-3 py-2 min-h-[40px] rounded-lg bg-[#F5EDFC] text-[#5F0080] text-[13px] font-semibold hover:bg-[#EBDEF7] transition-colors"
+        className="relative z-10 px-3 py-2 min-h-[40px] mobile:min-h-11 mobile:min-w-11 rounded-lg bg-[#F5EDFC] text-[#5F0080] text-[13px] font-semibold hover:bg-[#EBDEF7] transition-colors"
       >
         {copied ? '복사됨' : '복사'}
       </button>
@@ -117,15 +117,15 @@ function SessionRow({ cls, showTime }: { cls: ClassSummary; showTime: boolean })
       className="ch-row flex items-center gap-3 border-b border-[#F0ECF2] py-4 last:border-0 hover:bg-[#FAF7FC]"
     >
       <div className="w-[76px] shrink-0">
-        <div className="text-[15px] font-extrabold text-[#1F1F1F]">{showTime ? formatTime(cls.scheduled_at) : ''}</div>
-        <div className="text-[12px] font-semibold text-[#767676]">
+        <div className="text-[15px] mobile:text-mb-compact font-extrabold text-[#1F1F1F]">{showTime ? formatTime(cls.scheduled_at) : ''}</div>
+        <div className="text-[12px] mobile:text-mb-caption font-semibold text-[#767676]">
           {cls.scheduled_at ? `${new Date(cls.scheduled_at).getMonth() + 1}/${new Date(cls.scheduled_at).getDate()}` : ''}
         </div>
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[15px] font-bold text-[#1F1F1F]">{cls.title || '제목 없음'}</div>
-        <div className="text-[12px] text-[#6F6F6F]">
-          {area && <span className="mr-2 inline-flex rounded-full bg-[#F0EAF6] px-2 py-0.5 text-[12px] font-semibold text-[#665185]" aria-label="일정 영역">{area}</span>}
+        <div className="truncate text-[15px] mobile:text-mb-compact font-bold text-[#1F1F1F]">{cls.title || '제목 없음'}</div>
+        <div className="text-[12px] mobile:text-mb-caption text-[#6F6F6F]">
+          {area && <span className="mr-2 inline-flex rounded-full bg-[#F0EAF6] px-2 py-0.5 text-[12px] mobile:text-mb-caption font-semibold text-[#665185]" aria-label="일정 영역">{area}</span>}
           참여 {cls.participant_count}명{cls.guest_count > 0 && ` · 게스트 ${cls.guest_count}`}
           {isToday ? ' · 오늘' : ''}
         </div>
@@ -259,13 +259,13 @@ export default function DashboardPage() {
         <div className="ch-header-actions flex flex-wrap items-center gap-2">
           <Link
             to="/classes/now"
-            className="h-11 inline-flex items-center px-4 rounded-full border border-[#DDD0EA] bg-white text-[#5F0080] font-semibold text-sm hover:bg-[#F5EDFC] transition-colors"
+            className="h-11 inline-flex items-center px-4 rounded-full border border-[#DDD0EA] bg-white text-[#5F0080] font-semibold text-sm mobile:text-mb-compact hover:bg-[#F5EDFC] transition-colors"
           >
             지금 바로 시작
           </Link>
           <Link
             to="/classes/new"
-            className="h-11 inline-flex items-center px-[18px] rounded-full bg-[#5F0080] text-white font-semibold text-sm hover:bg-[#4B0066] transition-colors"
+            className="h-11 inline-flex items-center px-[18px] rounded-full bg-[#5F0080] text-white font-semibold text-sm mobile:text-mb-compact hover:bg-[#4B0066] transition-colors"
           >
             + 새 클래스
           </Link>
@@ -276,17 +276,17 @@ export default function DashboardPage() {
       {/* SDD-220: AI 비공개면 루시 브리핑 CTA 를 mount 하지 않는다 */}
       <AiOnly>
         <Link to="/chat/lucy" className="mb-4 flex items-center justify-between rounded-2xl bg-[#F5EDFC] p-4 text-[#5F0080]">
-          <span><strong>루시 (AI) 브리핑</strong><span className="ml-3 text-sm">오늘 일정과 내담자 피드백 확인</span></span><span aria-hidden="true">→</span>
+          <span><strong>루시 (AI) 브리핑</strong><span className="ml-3 text-sm mobile:text-mb-compact">오늘 일정과 내담자 피드백 확인</span></span><span aria-hidden="true">→</span>
         </Link>
       </AiOnly>
 
       {error && (
-        <div className="mb-4 flex flex-col gap-2 rounded-xl bg-[#FDECEC] p-3 text-sm text-[#B3261E] sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-4 flex flex-col gap-2 rounded-xl bg-[#FDECEC] p-3 text-sm mobile:text-mb-compact text-[#B3261E] sm:flex-row sm:items-center sm:justify-between">
           <span>{error}</span>
           <button
             type="button"
             onClick={() => void fetchDashboard()}
-            className="shrink-0 self-start rounded-lg border border-[#B3261E]/40 bg-white px-3 py-1.5 text-[13px] font-semibold text-[#B3261E] transition-colors hover:bg-[#F9D9D9] sm:self-auto"
+            className="mobile:min-h-11 shrink-0 self-start rounded-lg border border-[#B3261E]/40 bg-white px-3 py-1.5 text-[13px] font-semibold text-[#B3261E] transition-colors hover:bg-[#F9D9D9] sm:self-auto"
           >
             다시 시도
           </button>
@@ -296,8 +296,8 @@ export default function DashboardPage() {
       {showProfileBanner && (
         <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#DDD0EA] bg-[#F5EDFC] p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-[15px] font-bold text-[#5F0080]">프로필을 완성해보세요</p>
-            <p className="mt-1 text-[13px] text-[#6F6F6F]">
+            <p className="text-[15px] mobile:text-mb-compact font-bold text-[#5F0080]">프로필을 완성해보세요</p>
+            <p className="mt-1 text-[13px] mobile:text-mb-compact text-[#6F6F6F]">
               자격증명·경력 등은 원하실 때 설정에서 입력하실 수 있습니다.
             </p>
           </div>
@@ -305,14 +305,14 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={() => navigate('/onboarding/counselor')}
-              className="h-9 rounded-xl bg-[#5F0080] px-4 text-[13px] font-semibold text-white hover:bg-[#4B0066] transition-colors"
+              className="mobile:min-h-11 h-9 rounded-xl bg-[#5F0080] px-4 text-[13px] font-semibold text-white hover:bg-[#4B0066] transition-colors"
             >
               프로필 완성하기
             </button>
             <button
               type="button"
               onClick={() => setProfileBannerDismissed(true)}
-              className="h-9 rounded-xl border border-[#C9B0E8] bg-white px-4 text-[13px] font-semibold text-[#6F6F6F] hover:bg-[#EFE3FA] transition-colors"
+              className="mobile:min-h-11 h-9 rounded-xl border border-[#C9B0E8] bg-white px-4 text-[13px] font-semibold text-[#6F6F6F] hover:bg-[#EFE3FA] transition-colors"
             >
               닫기
             </button>
@@ -321,7 +321,7 @@ export default function DashboardPage() {
       )}
 
       {loading ? (
-        <div className="text-[#6F6F6F] text-sm">불러오는 중...</div>
+        <div className="text-[#6F6F6F] text-sm mobile:text-mb-compact">불러오는 중...</div>
       ) : data ? (
         <div className="ch-home">
           <MemberClassStyles />
@@ -335,8 +335,8 @@ export default function DashboardPage() {
           {pendingReviewCount > 0 && (
             <div className="ch-review">
               <div>
-                <p className="text-[15px] font-bold text-[#1F1F1F]">리포트 검토 대기 {pendingReviewCount}건</p>
-                <p className="mt-1 text-[13px] text-[#6F6F6F]">기록이 완료된 회차의 리포트를 검토해주세요.</p>
+                <p className="text-[15px] mobile:text-mb-compact font-bold text-[#1F1F1F]">리포트 검토 대기 {pendingReviewCount}건</p>
+                <p className="mt-1 text-[13px] mobile:text-mb-compact text-[#6F6F6F]">기록이 완료된 회차의 리포트를 검토해주세요.</p>
               </div>
               <Link to={REVIEW_TILE_TARGET}>리포트 검토</Link>
             </div>
@@ -383,7 +383,7 @@ export default function DashboardPage() {
               <div className="mt-3">
                 <Link
                   to="/classes/new"
-                  className="inline-flex h-11 px-5 items-center rounded-xl bg-[#F5EDFC] text-[#5F0080] font-semibold text-sm hover:bg-[#EBDEF7] transition-colors"
+                  className="inline-flex h-11 px-5 items-center rounded-xl bg-[#F5EDFC] text-[#5F0080] font-semibold text-sm mobile:text-mb-compact hover:bg-[#EBDEF7] transition-colors"
                 >
                   클래스 만들기
                 </Link>
@@ -397,7 +397,7 @@ export default function DashboardPage() {
               <section className="ch-panel" aria-label="오늘 · 다가오는 일정">
                 <div className="mb-3 flex items-baseline justify-between">
                   <h2>오늘 · 다가오는 일정</h2>
-                  <span className="font-mono text-[12px] text-[#6F6F6F]">오늘 {todaySessions.length}건</span>
+                  <span className="font-mono text-[12px] mobile:text-mb-caption text-[#6F6F6F]">오늘 {todaySessions.length}건</span>
                 </div>
                 {upcomingSessions.length > 0 ? (
                   <div>
@@ -406,7 +406,7 @@ export default function DashboardPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-[#E8E3EC] py-10 text-center text-sm text-[#6F6F6F]">
+                  <div className="rounded-2xl border border-dashed border-[#E8E3EC] py-10 text-center text-sm mobile:text-mb-compact text-[#6F6F6F]">
                     예정된 일정이 없습니다
                   </div>
                 )}
@@ -428,11 +428,11 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     onClick={() => setCodeOpen((v) => !v)}
-                    className="flex w-full items-center justify-between text-left"
+                    className="mobile:min-h-11 flex w-full items-center justify-between text-left"
                   >
                     <div>
-                      <div className="text-[12px] font-semibold text-[#6F6F6F]">내 상담사 코드</div>
-                      <div className="mt-0.5 font-mono text-[15px] font-extrabold tracking-[0.14em] text-[#5F0080]">
+                      <div className="text-[12px] mobile:text-mb-caption font-semibold text-[#6F6F6F]">내 상담사 코드</div>
+                      <div className="mt-0.5 font-mono text-[15px] mobile:text-mb-compact font-extrabold tracking-[0.14em] text-[#5F0080]">
                         {codeOpen ? counselorCode : counselorCode.slice(0, 2) + '••••'}
                       </div>
                     </div>
@@ -443,11 +443,11 @@ export default function DashboardPage() {
                       <button
                         type="button"
                         onClick={() => void handleCopyCounselorCode()}
-                        className="rounded-lg border border-[#C9B0E8] bg-white px-4 py-2 min-h-[44px] text-sm font-bold text-[#5F0080] hover:bg-[#EFE3FA] transition-colors"
+                        className="rounded-lg border border-[#C9B0E8] bg-white px-4 py-2 min-h-[44px] text-sm mobile:text-mb-compact font-bold text-[#5F0080] hover:bg-[#EFE3FA] transition-colors"
                       >
                         {codeCopied ? '복사됨' : '복사'}
                       </button>
-                      <p className="text-[12px] text-[#6F6F6F]">내담자에게 이 코드를 공유하면 상담 관계가 연결됩니다.</p>
+                      <p className="text-[12px] mobile:text-mb-caption text-[#6F6F6F]">내담자에게 이 코드를 공유하면 상담 관계가 연결됩니다.</p>
                     </div>
                   )}
                 </section>
