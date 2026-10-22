@@ -28,7 +28,7 @@ it('손든 사람에게만 손 내리기를 제공하고 기존 발언권 조치
   expect(button('발언권 해제')).toBeDefined();
   await act(async () => button('손 내리기')?.click());
   expect(lowered).toEqual(['p1']);
-  expect(container.textContent).toContain('🙋 손들기');
+  expect(container.textContent).toContain('손들기');
 });
 
 it('손 내리기 처리 중에는 같은 행의 중복 조치를 막고 실패를 행에 안내한다', async () => {
@@ -37,5 +37,25 @@ it('손 내리기 처리 중에는 같은 행의 중복 조치를 막고 실패�
   await act(async () => root.render(<SpeakingRightsPanel participants={[row]} busyId={null} onGrant={vi.fn()} onRevoke={vi.fn()} onLowerHand={vi.fn()} lowerHandError={{ participantId: 'p1', message: '손을 내리지 못했어요. 다시 시도해 주세요.' }} />));
   expect(container.querySelector('[role="alert"]')?.textContent).toContain('다시 시도');
   expect(button('손 내리기')?.disabled).toBe(false);
-  expect(container.textContent).toContain('🙋 손들기');
+  expect(container.textContent).toContain('손들기');
+});
+
+it('손든 회원과 발언권 있는 회원을 이름순으로 구분하고 두 상태인 행은 한 번만 표시한다', async () => {
+  await act(async () => root.render(<SpeakingRightsPanel participants={[
+    { ...row, participant_id: 'both', display_name: '하늘', speaking: true },
+    { ...row, participant_id: 'hand', display_name: '가람' },
+    { ...row, participant_id: 'speaker', display_name: '나래', raise_hand: false, speaking: true },
+    { ...row, participant_id: 'other', display_name: '다온', raise_hand: false },
+  ]} busyId={null} onGrant={vi.fn()} onRevoke={vi.fn()} onLowerHand={vi.fn()} />));
+  const hands = container.querySelector('[data-speaking-group="hands"]');
+  const speakers = container.querySelector('[data-speaking-group="speakers"]');
+  expect(hands?.textContent).toContain('손든 회원 2');
+  expect(speakers?.textContent).toContain('발언권 있는 회원');
+  expect([...hands?.querySelectorAll('[data-participant-id]') ?? []].map(e => e.getAttribute('data-participant-id'))).toEqual(['hand', 'both']);
+  expect(container.querySelectorAll('[data-participant-id="both"]')).toHaveLength(1);
+  expect(container.querySelector('[data-participant-id="both"]')?.textContent).toContain('손 내리기');
+  expect(container.querySelector('[data-participant-id="both"]')?.textContent).toContain('발언권 해제');
+  expect(container.textContent).toContain('발언권 있음');
+  expect(container.textContent).not.toContain('발언 중');
+  expect(container.textContent).not.toMatch(/\p{Extended_Pictographic}/u);
 });

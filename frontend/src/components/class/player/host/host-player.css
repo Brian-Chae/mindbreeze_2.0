@@ -484,9 +484,7 @@
 .hp-signal-toast-slot { position: absolute; top: 0; left: 0; right: 0; z-index: 10; }
 .hp-signals-sheet .hp-note { font-size: 15px; }
 .hp-sheet .hp-row__tx small, .hp-legacy [class*="text-xs"] { font-size: 13px; }
-@media (min-width: 1000px) {
-  .hp-mobile-signals { display: none; }
-  .hp-desktop-signals { display: block; flex: none; }
-  .hp-desktop-signals .hp-signalbar button { padding: 5px 12px; }
-  .hp-desktop-signals .hp-signalbar small { display: block; }
-}
+.hp-shell[data-sheet-mode="side"] .hp-mobile-signals { display: none; }
+.hp-shell[data-sheet-mode="side"] .hp-desktop-signals { display: block; flex: none; }
+.hp-shell[data-sheet-mode="side"] .hp-desktop-signals .hp-signalbar button { padding: 5px 12px; }
+.hp-shell[data-sheet-mode="side"] .hp-desktop-signals .hp-signalbar small { display: block; }

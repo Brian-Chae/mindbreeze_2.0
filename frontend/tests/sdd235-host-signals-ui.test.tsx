@@ -46,3 +46,14 @@ it('전원 미착용이어도 손듦과 발언권을 타일에 표시한다', as
     expect(node.querySelector('[data-hand="true"]')?.getAttribute('aria-label')).toContain('손들었어요');
   } finally { await act(async () => root.unmount()); node.remove(); }
 });
+
+it('1024 세로 화면도 바텀 시트 판정으로 모바일 신호 줄을 사용한다', async () => {
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: 1366 });
+  await withCase('C01', async (node) => {
+    expect(node.querySelector('.hp-shell')?.getAttribute('data-sheet-mode')).toBe('bottom');
+    expect(node.querySelector('.hp-mobile-signals [data-signal="hands"]')).not.toBeNull();
+  });
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: 1000 });
+});
