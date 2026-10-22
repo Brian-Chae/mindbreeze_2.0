@@ -22,8 +22,9 @@
 
 소유:
 - `pages/client/{member-structure-home-page,ClientHomePage}.tsx`
-- `pages/DashboardPage.tsx`, `pages/dashboard-page.css` (실제 import 경로를 확인하여 아래 파일 목록 보완)
+- `pages/DashboardPage.tsx`, `components/dashboard/*.{tsx,css}`
 - `components/client/home/{member-class-strip.tsx,member-home-layout.css,home-card-parity.css}`
+- `components/class/flow/shell/MemberHomeView.tsx`
 
 작업:
 - [ ] --area=A before를 확인하고 12px 이하 칩·상태·헤더 작업 버튼을 의미별 13/14/15로 교체.
@@ -78,7 +79,7 @@
 node specs/sdd-234-mobile-type-polish/measure.cjs --area=A --phase=after-a --widths=390,768,1440
 ```
 
-area=all/A/B/C/D, phase는 새 출력 디렉토리 이름. before는 기준 보존. 결과: `screens/<phase>/<영역>-<화면>-<폭>.{json,png}`, 내부 스크롤 끝 추가 PNG, summary JSON. 실패 exit는 렌더/JS 오류 기준이며 작은 글자·터치 후보는 JSON을 반드시 검토한다. 하니스는 서비스 API/기기 검증을 대체하지 않는다.
+area=all/A/B/C/D, phase는 새 출력 디렉토리 이름. before는 기준 보존. 결과: `screens/<phase>/<영역>-<화면>-<폭>.{json,png}`, 내부 스크롤 끝 추가 PNG, summary JSON. 기존 phase는 덮어쓰기 방지(의도한 재측정만 --overwrite). 본문 15/16px 의미 판정은 워커의 수동 검토 대상이다. 실패 exit는 렌더/JS 오류 기준이며 작은 글자·터치 후보는 JSON을 반드시 검토한다. 하니스는 서비스 API/기기 검증을 대체하지 않는다.
 
 ## 검토 우선순위
 
