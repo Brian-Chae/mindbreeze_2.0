@@ -1,0 +1,131 @@
+{
+  "browser": "155.0.8059.85",
+  "results": [
+    {
+      "width": 1440,
+      "scrollWidth": 1440,
+      "variants": [
+        {
+          "id": "A",
+          "width": 95.5,
+          "height": 63.65625,
+          "ratio": 1.5002454590083456,
+          "font": "35.8125px",
+          "cardWidth": 480,
+          "contained": true
+        },
+        {
+          "id": "B",
+          "width": 64,
+          "height": 84,
+          "ratio": 0.7619047619047619,
+          "font": "36px",
+          "cardWidth": 480,
+          "contained": true
+        },
+        {
+          "id": "C",
+          "width": 56,
+          "height": 64,
+          "ratio": 0.875,
+          "font": "36px",
+          "cardWidth": 480,
+          "contained": true
+        },
+        {
+          "id": "D",
+          "width": 60,
+          "height": 68,
+          "ratio": 0.8823529411764706,
+          "font": "36px",
+          "cardWidth": 480,
+          "contained": true
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "scrollWidth": 390,
+      "variants": [
+        {
+          "id": "A",
+          "width": 65,
+          "height": 43.328125,
+          "ratio": 1.5001803101334295,
+          "font": "24.375px",
+          "cardWidth": 358,
+          "contained": true
+        },
+        {
+          "id": "B",
+          "width": 64,
+          "height": 84,
+          "ratio": 0.7619047619047619,
+          "font": "36px",
+          "cardWidth": 358,
+          "contained": true
+        },
+        {
+          "id": "C",
+          "width": 56,
+          "height": 64,
+          "ratio": 0.875,
+          "font": "36px",
+          "cardWidth": 358,
+          "contained": true
+        },
+        {
+          "id": "D",
+          "width": 60,
+          "height": 68,
+          "ratio": 0.8823529411764706,
+          "font": "36px",
+          "cardWidth": 358,
+          "contained": true
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "scrollWidth": 320,
+      "variants": [
+        {
+          "id": "A",
+          "width": 47.5,
+          "height": 31.65625,
+          "ratio": 1.5004935834155972,
+          "font": "17.8125px",
+          "cardWidth": 288,
+          "contained": true
+        },
+        {
+          "id": "B",
+          "width": 47.5,
+          "height": 62.34375,
+          "ratio": 0.7619047619047619,
+          "font": "26.7188px",
+          "cardWidth": 288,
+          "contained": true
+        },
+        {
+          "id": "C",
+          "width": 47.5,
+          "height": 54.28125,
+          "ratio": 0.8750719631548647,
+          "font": "30.5357px",
+          "cardWidth": 288,
+          "contained": true
+        },
+        {
+          "id": "D",
+          "width": 47.5,
+          "height": 53.828125,
+          "ratio": 0.8824383164005806,
+          "font": "28.5px",
+          "cardWidth": 288,
+          "contained": true
+        }
+      ]
+    }
+  ]
+}

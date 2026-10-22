@@ -23,12 +23,14 @@
 /* FM04 코드 입력 */
 .pz-root .fm-code-card { display: flex; flex-direction: column; gap: 16px; align-items: stretch; }
 .pz-root .fm-code-card .fl-sub { margin-top: -8px; }
-/* 숫자 칸은 세로가 더 긴 비율(64×84) — 가로로 눌려 보이지 않게 칸 폭을 고정하고 가운데 정렬 */
-.pz-root .fm-codebox { display: grid; grid-template-columns: repeat(4, minmax(0, 64px)); justify-content: center; gap: 16px; }
-.pz-root .fm-codebox > span { aspect-ratio: 64 / 84; height: auto; border-radius: 12px; background: rgba(255, 255, 255, 0.1); border: 1px solid var(--sheet-border); display: block; }
+/* 숫자 칸은 균형형 비율(60×68) — 최대 폭을 제한하고 좁은 카드에서는 비율을 유지해 축소 */
+.pz-root .fm-codebox { display: grid; grid-template-columns: repeat(4, minmax(0, 60px)); justify-content: center; gap: 16px; }
+.pz-root .fm-codebox > span { aspect-ratio: 60 / 68; height: auto; border-radius: 12px; background: rgba(255, 255, 255, 0.1); border: 1px solid var(--sheet-border); display: block; }
 .pz-root .fm-codebox > span[data-active="true"] { border: 2px solid var(--mb-lavender); }
 .pz-root .fm-codebox > span[data-bad="true"] { border: 2px solid var(--warn); background: var(--warn-bg); }
 .pz-root .fm-codebox input { display: block; width: 100%; height: 100%; padding: 0; border: 0; background: transparent; color: var(--tx-hi); text-align: center; font: inherit; font-size: var(--fs-36); font-weight: 800; border-radius: 12px; }
+/* 모바일 전역 입력 규칙의 !important와 속성 선택자 우선순위를 넘어 36px을 보존한다. */
+.pz-root .fm-codebox input[type="text"][inputmode="numeric"][autocomplete="off"][maxlength] { font-size: var(--fs-36) !important; }
 .pz-root .fm-codebox input:disabled { opacity: 0.6; }
 .pz-root .fm-hint { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; font-size: var(--fs-13); color: var(--tx-mid); text-align: center; }
 .pz-root .fm-hint[data-bad="true"] { color: var(--warn); font-weight: 600; }
