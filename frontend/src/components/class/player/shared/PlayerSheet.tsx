@@ -3,7 +3,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { IconCircleButton } from './IconCircleButton';
-import { useSheetMode } from './sheet-mode';
+import { useSheetMode, type SheetMode } from './sheet-mode';
 import './player-shared.css';
 
 interface PlayerSheetProps {
@@ -22,11 +22,14 @@ interface PlayerSheetProps {
   closeLabel?: string;
   /** SDD-209: 바깥 pointerdown 으로 닫을지(기본 true). 확인이 필요한 시트는 false */
   dismissOnOutside?: boolean;
+  /** 이 화면에서만 시트 배치를 고정한다. 생략하면 기존 반응형 판정. */
+  sheetMode?: SheetMode;
   children: ReactNode;
 }
 
-export function PlayerSheet({ open, title, sub, tall, onClose, pz = 'sheet', footer, closeLabel = '닫기', dismissOnOutside = true, children }: PlayerSheetProps) {
-  const mode = useSheetMode();
+export function PlayerSheet({ open, title, sub, tall, onClose, pz = 'sheet', footer, closeLabel = '닫기', dismissOnOutside = true, sheetMode, children }: PlayerSheetProps) {
+  const responsiveMode = useSheetMode();
+  const mode = sheetMode ?? responsiveMode;
   const dialogRef = useRef<HTMLElement>(null);
   const onCloseRef = useRef(onClose);
   useEffect(() => {
