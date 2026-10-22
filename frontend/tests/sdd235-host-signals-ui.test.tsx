@@ -16,22 +16,22 @@ async function withCase(id: string, check: (node: HTMLDivElement) => Promise<voi
   try { await check(node); } finally { await act(async () => root.unmount()); node.remove(); }
 }
 describe('SDD235 상시 신호 진입점', () => {
-  it('0건도 흐린 활성 버튼으로 독립 익명 시트를 연다', async () => withCase('C01', async (node) => {
+  it('0건도 흐린 활성 버튼으로 독립 신호 시트를 연다', async () => withCase('C01', async (node) => {
     const button = node.querySelector<HTMLButtonElement>('[data-signal="quiet"]');
     expect(button).not.toBeNull(); expect(button?.dataset.empty).toBe('true'); expect(button?.disabled).toBe(false);
     await act(async () => button?.click());
     const sheet = node.querySelector('[data-pz="sheet"]');
-    expect(sheet?.textContent).toContain('익명'); expect(sheet?.textContent).toContain('아직 없어요');
+    expect(sheet?.textContent).toContain('상담사에게만'); expect(sheet?.textContent).not.toContain('익명'); expect(sheet?.textContent).toContain('아직 없어요');
     expect(sheet?.textContent).not.toContain('민준');
     const checkin = [...(sheet?.querySelectorAll('button') ?? [])].find((item) => item.textContent?.includes('체크인 요약 보기'));
     await act(async () => checkin?.click());
-    expect(node.querySelector('[data-pz="sheet"]')?.getAttribute('aria-label')).toBe('체크인 요약');
+    expect(node.querySelector('[data-pz="sheet"]')?.getAttribute('aria-label')).toBe('수업 상태');
   }));
   it('손들기와 발언권 건수를 보여주며 중복 칩을 숨긴다', async () => withCase('C02', async (node) => {
     expect(node.querySelector('[data-signal="hands"]')?.textContent).toContain('2');
     expect(node.querySelector('[data-signal="hands"]')?.textContent).toContain('발언권');
     expect(node.querySelector('[data-pz="chipline"]')?.textContent).not.toContain('손든 회원 2');
-    expect(node.querySelectorAll('[data-pz="dk"]')).toHaveLength(5);
+    expect(node.querySelectorAll('[data-pz="dk"]')).toHaveLength(4);
   }));
 });
 

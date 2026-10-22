@@ -454,7 +454,7 @@
 /* 코드는 상단에서 원문으로 표시하고 확대 화면에서 복사한다. */
 .hp-entry-code { grid-column: 2; grid-row: 1; justify-self: end; min-width: 0; }
 .hp-entry-code__open { display: flex; align-items: center; justify-content: flex-end; gap: 7px; min-height: 44px; padding: 0; color: inherit; background: none; border: 0; white-space: nowrap; }
-.hp-entry-code__label { font-size: 12px; opacity: .72; }
+.hp-entry-code__label { font-size: 13px; opacity: .72; }
 .hp-entry-code__digits { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 20px; font-weight: 500; letter-spacing: 1.4px; color: var(--mb-pale); }
 .hp-entry-code__copy { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; min-width: 60px; padding: 0 8px; border: 1px solid var(--sheet-border); border-radius: 10px; background: var(--hp-fill); font-size: var(--fs-13); white-space: nowrap; }
 @media (max-width: 599px) {
@@ -479,14 +479,47 @@
 .hp-signalbar span { display: flex; flex-direction: column; gap: 2px; }
 .hp-signalbar b { font-size: 15px; line-height: 20px; }
 .hp-signalbar small { font-size: 13px; line-height: 18px; color: var(--tx-mid); }
-.hp-desktop-signals { display: none; }
+
 .hp-statusline { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .hp-statusline > .hp-chipline { flex: 1; min-width: 0; }
 .hp-status-open { flex: none; min-height: 44px; padding: 8px 12px; border: 1px solid var(--hp-line); border-radius: 24px; background: #211a29; font-size: 13px; }
-.hp-signal-toast-slot { position: absolute; top: 0; left: 0; right: 0; z-index: 10; }
+.hp-signal-toast-slot { position: relative; flex: none; min-height: 0; max-height: min(224px, 32dvh); overflow-y: auto; }
 .hp-signals-sheet .hp-note { font-size: 15px; }
 .hp-sheet .hp-row__tx small, .hp-legacy [class*="text-xs"] { font-size: 13px; }
-.hp-shell[data-sheet-mode="side"] .hp-mobile-signals { display: none; }
-.hp-shell[data-sheet-mode="side"] .hp-desktop-signals { display: block; flex: none; }
-.hp-shell[data-sheet-mode="side"] .hp-desktop-signals .hp-signalbar button { padding: 5px 12px; }
-.hp-shell[data-sheet-mode="side"] .hp-desktop-signals .hp-signalbar small { display: block; }
+
+
+/* A안: 상단·헤드·참가자·신호·도크가 동일한 1000px 컬럼을 공유한다. */
+.hp-shell { --pz-col: 1000px; --fs-12: 13px; }
+.hp-shell > .pz-shell__top { width: min(100%, 1000px); justify-self: center; }
+.hp-statusline { justify-content: space-between; }
+.hp-participant-heading { flex: none; font-size: 15px; font-weight: 600; }
+.hp-status-open { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; font-size: 15px; }
+.hp-status-checkin p { display: flex; justify-content: space-between; gap: 8px; font-size: 15px; }
+.hp-status-checkin summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; font-size: 15px; color: var(--mb-lavender); }
+.hp-status-checkin summary::after { content: '＋'; margin-left: auto; }
+.hp-status-checkin details[open] > summary::after { content: '−'; }
+/* 높이값은 기존 반응형 값을 유지하며 영상·꺼짐 자리 모두 정확히 16:9다. */
+.hp-head[data-selfview="true"] { grid-template-columns: minmax(120px, 1fr) calc(var(--hh) * 16 / 9); }
+.hp-head[data-selfview="true"][data-big="true"] { grid-template-columns: minmax(120px, 1fr) calc(var(--hhb) * 16 / 9); }
+.hp-head[data-selfview="true"] .hp-selfview { width: 100%; aspect-ratio: 16 / 9; }
+.hp-head .hp-mstrip__lb, .hp-head .hp-mstrip__rot, .hp-head .hp-mstrip__avg small,
+.hp-topbar .hp-time > span, .hp-topbar .hp-topbar-stats { font-size: 13px; }
+@media (max-width: 599px) {
+  .hp-head .hp-mstrip { padding: 8px; gap: 6px; }
+  .hp-head .hp-mstrip { flex-wrap: wrap; }
+  .hp-head .hp-mstrip__avg { margin-left: auto; }
+  .hp-head .hp-mstrip__nm { white-space: normal; overflow-wrap: anywhere; }
+  .hp-topbar .hp-end { font-size: 13px; }
+}
+/* 120px 배너 최소폭을 확보할 수 없으면 두 행으로 전환하되 각 카드 높이는 유지한다. */
+@media (max-width: 359px) {
+  .hp-head[data-selfview="true"] { grid-template-columns: minmax(0, 1fr); height: calc(var(--hh) * 2 + 8px); }
+  .hp-head[data-selfview="true"] > * { height: var(--hh); }
+  .hp-head[data-selfview="true"] .hp-selfview { width: calc(var(--hh) * 16 / 9); justify-self: end; }
+}
+/* 확대 셀프뷰도 배너 최소폭과 충돌하면 세로 배치해 가로 넘침을 막는다. */
+@media (max-width: 479px) {
+  .hp-head[data-selfview="true"][data-big="true"] { grid-template-columns: minmax(0, 1fr); height: calc(var(--hhb) * 2 + 8px); }
+  .hp-head[data-selfview="true"][data-big="true"] > * { height: var(--hhb); }
+  .hp-head[data-selfview="true"][data-big="true"] .hp-selfview { width: calc(var(--hhb) * 16 / 9); justify-self: end; }
+}

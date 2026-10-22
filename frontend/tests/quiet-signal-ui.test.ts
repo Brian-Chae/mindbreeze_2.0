@@ -71,6 +71,7 @@ describe('QuietSignalButtons', () => {
     await render(createElement(QuietSignalButtons, { onSend }));
 
     // 라벨은 메타 정본(signal icon은 Lucide, 텍스트는 라벨만)
+    expect(text()).toContain('선택한 상태와 이름이 상담사에게만 보여요');
     expect(button('잘 따라가요')).toBeDefined();
     expect(button('조금 어려워요')).toBeDefined();
     expect(button('잠시 쉴게요')).toBeDefined();

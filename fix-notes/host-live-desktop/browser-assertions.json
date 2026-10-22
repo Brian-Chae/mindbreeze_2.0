@@ -1,0 +1,51 @@
+{
+  "states": 20,
+  "allPassed": true,
+  "extras": [
+    {
+      "width": 320,
+      "expanded": {
+        "width": 298.65625,
+        "height": 168,
+        "overflow": 0
+      },
+      "focusReturn": true
+    },
+    {
+      "width": 390,
+      "expanded": {
+        "width": 298.65625,
+        "height": 168,
+        "overflow": 0
+      },
+      "focusReturn": true
+    },
+    {
+      "width": 768,
+      "expanded": {
+        "width": 355.546875,
+        "height": 200,
+        "overflow": 0
+      },
+      "focusReturn": true
+    },
+    {
+      "width": 1280,
+      "expanded": {
+        "width": 312.875,
+        "height": 176,
+        "overflow": 0
+      },
+      "focusReturn": true
+    },
+    {
+      "width": 1440,
+      "expanded": {
+        "width": 312.875,
+        "height": 176,
+        "overflow": 0
+      },
+      "focusReturn": true
+    }
+  ]
+}

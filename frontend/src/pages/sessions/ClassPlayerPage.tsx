@@ -644,7 +644,7 @@ export default function ClassPlayerPage() {
 
   // ── 개선 5: 무음 시그널 ──────────────────────────────────────────
   // 회원이 발언권 없이 보낸 상태 신호(휘발성)를 참여자별 최신 1건으로 보관한다.
-  // 카드 배지는 CSS 페이드(수 초)로 사라지고, 상단에는 유형별 집계만 남는다.
+  // 상담사에게만 이름·최신 선택을 표시하며 TTL 만료 시 함께 제거한다.
   const [quietSignals, setQuietSignals] = useState<Record<string, ActiveSignal>>({});
 
   const handleQuietSignal = useCallback(
@@ -652,7 +652,7 @@ export default function ClassPlayerPage() {
       if (!id || (event.session_id && event.session_id !== id)) return;
       if (!event.participant_id || !isClassSignalType(event.signal_type)) return;
       const at = Date.now();
-      setQuietSignals((prev) => receiveSignal(prev, event.participant_id, event.signal_type, event.at, at));
+      setQuietSignals((prev) => receiveSignal(prev, event.participant_id, event.signal_type, event.at, at, event.display_name));
     },
     [id],
   );
@@ -661,7 +661,7 @@ export default function ClassPlayerPage() {
   useEffect(() => {
     const timer = window.setInterval(() => {
       setQuietSignals((prev) => pruneSignals(prev, Date.now(), SIGNAL_ACTIVE_MS));
-    }, 1000);
+    }, 200);
     return () => window.clearInterval(timer);
   }, []);
 

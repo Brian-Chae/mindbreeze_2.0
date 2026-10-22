@@ -394,7 +394,7 @@ describe('발언권·채팅·녹음 연결', () => {
     const props = baseProps();
     await render(<HostLiveContainer {...props} />);
     expect(text(one('[data-pz="chipline"]'))).not.toContain('내 밴드');
-    await click(all('[data-pz="dk"]')[4]);
+    await click(buttonByText('도구', one('[data-pz="dock"]') ?? document));
     await click(all('button', sheet() ?? document).find((b) => text(b) === '보기') ?? null);
     await click(buttonByText('밴드 연결', sheet() ?? document));
     // SDD-220 TS26: OS 권한 요청 전 사전 안내를 거친다(확인 전에는 연결하지 않는다).
@@ -412,7 +412,7 @@ describe('발언권·채팅·녹음 연결', () => {
   it('코드 복사는 페이지 핸들러를 부른다', async () => {
     const props = baseProps();
     await render(<HostLiveContainer {...props} />);
-    await click(all('[data-pz="dk"]')[4]);
+    await click(buttonByText('도구', one('[data-pz="dock"]') ?? document));
     await click(buttonByText('코드 복사', sheet() ?? document));
     expect(props.codeCopy.onCopy).toHaveBeenCalledTimes(1);
   });
@@ -420,7 +420,7 @@ describe('발언권·채팅·녹음 연결', () => {
   it('도구의 화면 나가기는 페이지 onClose를 호출하고 수업 종료는 하지 않는다', async () => {
     const props = baseProps();
     await render(<HostLiveContainer {...props} />);
-    await click(all('[data-pz="dk"]')[4]);
+    await click(buttonByText('도구', one('[data-pz="dock"]') ?? document));
     await click(buttonByText('클래스 화면 나가기', sheet() ?? document));
     expect(props.onClose).toHaveBeenCalledTimes(1);
     expect(props.end.onRequest).not.toHaveBeenCalled();

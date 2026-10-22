@@ -1,0 +1,1158 @@
+[
+  {
+    "width": 390,
+    "state": "none",
+    "gap": 14,
+    "self": {
+      "x": 174.890625,
+      "y": 112,
+      "width": 199.109375,
+      "height": 112,
+      "right": 374,
+      "bottom": 224
+    },
+    "head": {
+      "x": 16,
+      "y": 112,
+      "width": 358,
+      "height": 112,
+      "right": 374,
+      "bottom": 224
+    },
+    "top": {
+      "x": 16,
+      "y": 16,
+      "width": 358,
+      "height": 88,
+      "right": 374,
+      "bottom": 104
+    },
+    "participants": {
+      "x": 16,
+      "y": 284,
+      "width": 358,
+      "height": 392,
+      "right": 374,
+      "bottom": 676
+    },
+    "signals": {
+      "x": 16,
+      "y": 690,
+      "width": 358,
+      "height": 64,
+      "right": 374,
+      "bottom": 754
+    },
+    "dock": {
+      "x": 16,
+      "y": 768,
+      "width": 358,
+      "height": 60,
+      "right": 374,
+      "bottom": 828
+    },
+    "overflow": 0,
+    "dockItems": 4,
+    "dialogs": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "state": "hand-one",
+    "gap": 14,
+    "toast": "지은님이 손을 들었어요 현재 대기 1명 · 발언권 0명지은님이 손을 들었어요현재 대기 1명 · 발언권 0명×",
+    "self": {
+      "x": 174.890625,
+      "y": 112,
+      "width": 199.109375,
+      "height": 112,
+      "right": 374,
+      "bottom": 224
+    },
+    "head": {
+      "x": 16,
+      "y": 112,
+      "width": 358,
+      "height": 112,
+      "right": 374,
+      "bottom": 224
+    },
+    "top": {
+      "x": 16,
+      "y": 16,
+      "width": 358,
+      "height": 88,
+      "right": 374,
+      "bottom": 104
+    },
+    "participants": {
+      "x": 16,
+      "y": 354,
+      "width": 358,
+      "height": 322,
+      "right": 374,
+      "bottom": 676
+    },
+    "signals": {
+      "x": 16,
+      "y": 690,
+      "width": 358,
+      "height": 64,
+      "right": 374,
+      "bottom": 754
+    },
+    "dock": {
+      "x": 16,
+      "y": 768,
+      "width": 358,
+      "height": 60,
+      "right": 374,
+      "bottom": 828
+    },
+    "overflow": 0,
+    "dockItems": 4,
+    "dialogs": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "state": "hand-many",
+    "gap": 14,
+    "toast": "지은 외 2명이 손을 들었어요 현재 대기 3명 · 발언권 0명지은 외 2명이 손을 들었어요현재 대기 3명 · 발언권 0명×",
+    "self": {
+      "x": 174.890625,
+      "y": 112,
+      "width": 199.109375,
+      "height": 112,
+      "right": 374,
+      "bottom": 224
+    },
+    "head": {
+      "x": 16,
+      "y": 112,
+      "width": 358,
+      "height": 112,
+      "right": 374,
+      "bottom": 224
+    },
+    "top": {
+      "x": 16,
+      "y": 16,
+      "width": 358,
+      "height": 88,
+      "right": 374,
+      "bottom": 104
+    },
+    "participants": {
+      "x": 16,
+      "y": 354,
+      "width": 358,
+      "height": 322,
+      "right": 374,
+      "bottom": 676
+    },
+    "signals": {
+      "x": 16,
+      "y": 690,
+      "width": 358,
+      "height": 64,
+      "right": 374,
+      "bottom": 754
+    },
+    "dock": {
+      "x": 16,
+      "y": 768,
+      "width": 358,
+      "height": 60,
+      "right": 374,
+      "bottom": 828
+    },
+    "overflow": 0,
+    "dockItems": 4,
+    "dialogs": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "state": "quiet",
+    "gap": 14,
+    "toast": "서연 · 잠시 쉴게요 전체: 어려워요 2 · 잠시 쉴게요 1서연 · 잠시 쉴게요전체: 어려워요 2 · 잠시 쉴게요 1×",
+    "self": {
+      "x": 174.890625,
+      "y": 112,
+      "width": 199.109375,
+      "height": 112,
+      "right": 374,
+      "bottom": 224
+    },
+    "head": {
+      "x": 16,
+      "y": 112,
+      "width": 358,
+      "height": 112,
+      "right": 374,
+      "bottom": 224
+    },
+    "top": {
+      "x": 16,
+      "y": 16,
+      "width": 358,
+      "height": 88,
+      "right": 374,
+      "bottom": 104
+    },
+    "participants": {
+      "x": 16,
+      "y": 354,
+      "width": 358,
+      "height": 322,
+      "right": 374,
+      "bottom": 676
+    },
+    "signals": {
+      "x": 16,
+      "y": 690,
+      "width": 358,
+      "height": 64,
+      "right": 374,
+      "bottom": 754
+    },
+    "dock": {
+      "x": 16,
+      "y": 768,
+      "width": 358,
+      "height": 60,
+      "right": 374,
+      "bottom": 828
+    },
+    "overflow": 0,
+    "dockItems": 4,
+    "dialogs": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "state": "status",
+    "gap": 14,
+    "self": {
+      "x": 174.890625,
+      "y": 112,
+      "width": 199.109375,
+      "height": 112,
+      "right": 374,
+      "bottom": 224
+    },
+    "head": {
+      "x": 16,
+      "y": 112,
+      "width": 358,
+      "height": 112,
+      "right": 374,
+      "bottom": 224
+    },
+    "top": {
+      "x": 16,
+      "y": 16,
+      "width": 358,
+      "height": 88,
+      "right": 374,
+      "bottom": 104
+    },
+    "participants": {
+      "x": 16,
+      "y": 284,
+      "width": 358,
+      "height": 0,
+      "right": 374,
+      "bottom": 284
+    },
+    "signals": {
+      "x": 16,
+      "y": 690,
+      "width": 358,
+      "height": 64,
+      "right": 374,
+      "bottom": 754
+    },
+    "dock": {
+      "x": 16,
+      "y": 768,
+      "width": 358,
+      "height": 60,
+      "right": 374,
+      "bottom": 828
+    },
+    "overflow": 0,
+    "dockItems": 4,
+    "dialog": "수업 상태자가 체크인 응답 6 / 6명체크인 응답 펼치기자가 체크인 응답6 / 6명마음의 날씨잔잔해요 2조금 들떠 있어요 1기타 3몸 상태편안해요 2어깨에 힘이 들어가요 1기타 3수면7시간 · 푹 잤어요 16시간 · 보통 1기타 4살펴볼 응답하늘어깨가 많이 뻐근해요유진거의 못 잤어요입장 전 체크인 · 2명서연집중 4 · 집중편안함 4 · 편안감정 4 · 긍정적“오늘은 천천히 시작하고 싶어요”서아집중 3 · 보통편안함 2 · 불편감정 3 · 보통밴드 연결 0 · 미착용 6 · 끊김 0",
+    "dialogs": 1,
+    "errors": []
+  },
+  {
+    "width": 768,
+    "state": "none",
+    "gap": 14,
+    "self": {
+      "x": 502.234375,
+      "y": 117,
+      "width": 241.765625,
+      "height": 136,
+      "right": 744,
+      "bottom": 253
+    },
+    "head": {
+      "x": 24,
+      "y": 117,
+      "width": 720,
+      "height": 136,
+      "right": 744,
+      "bottom": 253
+    },
+    "top": {
+      "x": 24,
+      "y": 16,
+      "width": 720,
+      "height": 93,
+      "right": 744,
+      "bottom": 109
+    },
+    "participants": {
+      "x": 24,
+      "y": 313,
+      "width": 720,
+      "height": 515,
+      "right": 744,
+      "bottom": 828
+    },
+    "signals": {
+      "x": 24,
+      "y": 842,
+      "width": 720,
+      "height": 64,
+      "right": 744,
+      "bottom": 906
+    },
+    "dock": {
+      "x": 24,
+      "y": 920,
+      "width": 720,
+      "height": 64,
+      "right": 744,
+      "bottom": 984
+    },
+    "overflow": 0,
+    "dockItems": 4,
+    "dialogs": 0,
+    "errors": []
+  },
+  {
+    "width": 768,
+    "state": "hand-one",
+    "gap": 14,
+    "toast": "지은님이 손을 들었어요 현재 대기 1명 · 발언권 0명지은님이 손을 들었어요현재 대기 1명 · 발언권 0명×",
+    "self": {
+      "x": 502.234375,
+      "y": 117,
+      "width": 241.765625,
+      "height": 136,
+      "right": 744,
+      "bottom": 253
+    },
+    "head": {
+      "x": 24,
+      "y": 117,
+      "width": 720,
+      "height": 136,
+      "right": 744,
+      "bottom": 253
+    },
+    "top": {
+      "x": 24,
+      "y": 16,
+      "width": 720,
+      "height": 93,
+      "right": 744,
+      "bottom": 109
+    },
+    "participants": {
+      "x": 24,
+      "y": 383,
+      "width": 720,
+      "height": 445,
+      "right": 744,
+      "bottom": 828
+    },
+    "signals": {
+      "x": 24,
+      "y": 842,
+      "width": 720,
+      "height": 64,
+      "right": 744,
+      "bottom": 906
+    },
+    "dock": {
+      "x": 24,
+      "y": 920,
+      "width": 720,
+      "height": 64,
+      "right": 744,
+      "bottom": 984
+    },
+    "overflow": 0,
+    "dockItems": 4,
+    "dialogs": 0,
+    "errors": []
+  },
+  {
+    "width": 768,
+    "state": "hand-many",
+    "gap": 14,
+    "toast": "지은 외 2명이 손을 들었어요 현재 대기 3명 · 발언권 0명지은 외 2명이 손을 들었어요현재 대기 3명 · 발언권 0명×",
+    "self": {
+      "x": 502.234375,
+      "y": 117,
+      "width": 241.765625,
+      "height": 136,
+      "right": 744,
+      "bottom": 253
+    },
+    "head": {
+      "x": 24,
+      "y": 117,
+      "width": 720,
+      "height": 136,
+      "right": 744,
+      "bottom": 253
+    },
+    "top": {
+      "x": 24,
+      "y": 16,
+      "width": 720,
+      "height": 93,
+      "right": 744,
+      "bottom": 109
+    },
+    "participants": {
+      "x": 24,
+      "y": 383,
+      "width": 720,
+      "height": 445,
+      "right": 744,
+      "bottom": 828
+    },
+    "signals": {
+      "x": 24,
+      "y": 842,
+      "width": 720,
+      "height": 64,
+      "right": 744,
+      "bottom": 906
+    },
+    "dock": {
+      "x": 24,
+      "y": 920,
+      "width": 720,
+      "height": 64,
+      "right": 744,
+      "bottom": 984
+    },
+    "overflow": 0,
+    "dockItems": 4,
+    "dialogs": 0,
+    "errors": []
+  },
+  {
+    "width": 768,
+    "state": "quiet",
+    "gap": 14,
+    "toast": "서연 · 잠시 쉴게요 전체: 어려워요 2 · 잠시 쉴게요 1서연 · 잠시 쉴게요전체: 어려워요 2 · 잠시 쉴게요 1×",
+    "self": {
+      "x": 502.234375,
+      "y": 117,
+      "width": 241.765625,
+      "height": 136,
+      "right": 744,
+      "bottom": 253
+    },
+    "head": {
+      "x": 24,
+      "y": 117,
+      "width": 720,
+      "height": 136,
+      "right": 744,
+      "bottom": 253
+    },
+    "top": {
+      "x": 24,
+      "y": 16,
+      "width": 720,
+      "height": 93,
+      "right": 744,
+      "bottom": 109
+    },
+    "participants": {
+      "x": 24,
+      "y": 383,
+      "width": 720,
+      "height": 445,
+      "right": 744,
+      "bottom": 828
+    },
+    "signals": {
+      "x": 24,
+      "y": 842,
+      "width": 720,
+      "height": 64,
+      "right": 744,
+      "bottom": 906
+    },
+    "dock": {
+      "x": 24,
+      "y": 920,
+      "width": 720,
+      "height": 64,
+      "right": 744,
+      "bottom": 984
+    },
+    "overflow": 0,
+    "dockItems": 4,
+    "dialogs": 0,
+    "errors": []
+  },
+  {
+    "width": 768,
+    "state": "status",
+    "gap": 14,
+    "self": {
+      "x": 502.234375,
+      "y": 117,
+      "width": 241.765625,
+      "height": 136,
+      "right": 744,
+      "bottom": 253
+    },
+    "head": {
+      "x": 24,
+      "y": 117,
+      "width": 720,
+      "height": 136,
+      "right": 744,
+      "bottom": 253
+    },
+    "top": {
+      "x": 24,
+      "y": 16,
+      "width": 720,
+      "height": 93,
+      "right": 744,
+      "bottom": 109
+    },
+    "participants": {
+      "x": 24,
+      "y": 313,
+      "width": 720,
+      "height": 0,
+      "right": 744,
+      "bottom": 313
+    },
+    "signals": {
+      "x": 24,
+      "y": 842,
+      "width": 720,
+      "height": 64,
+      "right": 744,
+      "bottom": 906
+    },
+    "dock": {
+      "x": 24,
+      "y": 920,
+      "width": 720,
+      "height": 64,
+      "right": 744,
+      "bottom": 984
+    },
+    "overflow": 0,
+    "dockItems": 4,
+    "dialog": "수업 상태자가 체크인 응답 6 / 6명체크인 응답 펼치기자가 체크인 응답6 / 6명마음의 날씨잔잔해요 2조금 들떠 있어요 1기타 3몸 상태편안해요 2어깨에 힘이 들어가요 1기타 3수면7시간 · 푹 잤어요 16시간 · 보통 1기타 4살펴볼 응답하늘어깨가 많이 뻐근해요유진거의 못 잤어요입장 전 체크인 · 2명서연집중 4 · 집중편안함 4 · 편안감정 4 · 긍정적“오늘은 천천히 시작하고 싶어요”서아집중 3 · 보통편안함 2 · 불편감정 3 · 보통밴드 연결 0 · 미착용 6 · 끊김 0",
+    "dialogs": 1,
+    "errors": []
+  },
+  {
+    "width": 1280,
+    "state": "none",
+    "gap": 14,
+    "self": {
+      "x": 926.671875,
+      "y": 117,
+      "width": 213.328125,
+      "height": 120,
+      "right": 1140,
+      "bottom": 237
+    },
+    "head": {
+      "x": 140,
+      "y": 117,
+      "width": 1000,
+      "height": 120,
+      "right": 1140,
+      "bottom": 237
+    },
+    "top": {
+      "x": 140,
+      "y": 16,
+      "width": 1000,
+      "height": 93,
+      "right": 1140,
+      "bottom": 109
+    },
+    "participants": {
+      "x": 140,
+      "y": 297,
+      "width": 1000,
+      "height": 531,
+      "right": 1140,
+      "bottom": 828
+    },
+    "signals": {
+      "x": 140,
+      "y": 842,
+      "width": 1000,
+      "height": 64,
+      "right": 1140,
+      "bottom": 906
+    },
+    "dock": {
+      "x": 140,
+      "y": 920,
+      "width": 1000,
+      "height": 64,
+      "right": 1140,
+      "bottom": 984
+    },
+    "overflow": 0,
+    "dockItems": 4,
+    "dialogs": 0,
+    "errors": []
+  },
+  {
+    "width": 1280,
+    "state": "hand-one",
+    "gap": 14,
+    "toast": "지은님이 손을 들었어요 현재 대기 1명 · 발언권 0명지은님이 손을 들었어요현재 대기 1명 · 발언권 0명×",
+    "self": {
+      "x": 926.671875,
+      "y": 117,
+      "width": 213.328125,
+      "height": 120,
+      "right": 1140,
+      "bottom": 237
+    },
+    "head": {
+      "x": 140,
+      "y": 117,
+      "width": 1000,
+      "height": 120,
+      "right": 1140,
+      "bottom": 237
+    },
+    "top": {
+      "x": 140,
+      "y": 16,
+      "width": 1000,
+      "height": 93,
+      "right": 1140,
+      "bottom": 109
+    },
+    "participants": {
+      "x": 140,
+      "y": 367,
+      "width": 1000,
+      "height": 461,
+      "right": 1140,
+      "bottom": 828
+    },
+    "signals": {
+      "x": 140,
+      "y": 842,
+      "width": 1000,
+      "height": 64,
+      "right": 1140,
+      "bottom": 906
+    },
+    "dock": {
+      "x": 140,
+      "y": 920,
+      "width": 1000,
+      "height": 64,
+      "right": 1140,
+      "bottom": 984
+    },
+    "overflow": 0,
+    "dockItems": 4,
+    "dialogs": 0,
+    "errors": []
+  },
+  {
+    "width": 1280,
+    "state": "hand-many",
+    "gap": 14,
+    "toast": "지은 외 2명이 손을 들었어요 현재 대기 3명 · 발언권 0명지은 외 2명이 손을 들었어요현재 대기 3명 · 발언권 0명×",
+    "self": {
+      "x": 926.671875,
+      "y": 117,
+      "width": 213.328125,
+      "height": 120,
+      "right": 1140,
+      "bottom": 237
+    },
+    "head": {
+      "x": 140,
+      "y": 117,
+      "width": 1000,
+      "height": 120,
+      "right": 1140,
+      "bottom": 237
+    },
+    "top": {
+      "x": 140,
+      "y": 16,
+      "width": 1000,
+      "height": 93,
+      "right": 1140,
+      "bottom": 109
+    },
+    "participants": {
+      "x": 140,
+      "y": 367,
+      "width": 1000,
+      "height": 461,
+      "right": 1140,
+      "bottom": 828
+    },
+    "signals": {
+      "x": 140,
+      "y": 842,
+      "width": 1000,
+      "height": 64,
+      "right": 1140,
+      "bottom": 906
+    },
+    "dock": {
+      "x": 140,
+      "y": 920,
+      "width": 1000,
+      "height": 64,
+      "right": 1140,
+      "bottom": 984
+    },
+    "overflow": 0,
+    "dockItems": 4,
+    "dialogs": 0,
+    "errors": []
+  },
+  {
+    "width": 1280,
+    "state": "quiet",
+    "gap": 14,
+    "toast": "서연 · 잠시 쉴게요 전체: 어려워요 2 · 잠시 쉴게요 1서연 · 잠시 쉴게요전체: 어려워요 2 · 잠시 쉴게요 1×",
+    "self": {
+      "x": 926.671875,
+      "y": 117,
+      "width": 213.328125,
+      "height": 120,
+      "right": 1140,
+      "bottom": 237
+    },
+    "head": {
+      "x": 140,
+      "y": 117,
+      "width": 1000,
+      "height": 120,
+      "right": 1140,
+      "bottom": 237
+    },
+    "top": {
+      "x": 140,
+      "y": 16,
+      "width": 1000,
+      "height": 93,
+      "right": 1140,
+      "bottom": 109
+    },
+    "participants": {
+      "x": 140,
+      "y": 367,
+      "width": 1000,
+      "height": 461,
+      "right": 1140,
+      "bottom": 828
+    },
+    "signals": {
+      "x": 140,
+      "y": 842,
+      "width": 1000,
+      "height": 64,
+      "right": 1140,
+      "bottom": 906
+    },
+    "dock": {
+      "x": 140,
+      "y": 920,
+      "width": 1000,
+      "height": 64,
+      "right": 1140,
+      "bottom": 984
+    },
+    "overflow": 0,
+    "dockItems": 4,
+    "dialogs": 0,
+    "errors": []
+  },
+  {
+    "width": 1280,
+    "state": "status",
+    "gap": 14,
+    "self": {
+      "x": 609.078125,
+      "y": 117,
+      "width": 213.328125,
+      "height": 120,
+      "right": 822.40625,
+      "bottom": 237
+    },
+    "head": {
+      "x": 24,
+      "y": 117,
+      "width": 798.40625,
+      "height": 120,
+      "right": 822.40625,
+      "bottom": 237
+    },
+    "top": {
+      "x": 24,
+      "y": 16,
+      "width": 798.40625,
+      "height": 93,
+      "right": 822.40625,
+      "bottom": 109
+    },
+    "participants": {
+      "x": 24,
+      "y": 297,
+      "width": 798.40625,
+      "height": 531,
+      "right": 822.40625,
+      "bottom": 828
+    },
+    "signals": {
+      "x": 24,
+      "y": 842,
+      "width": 798.40625,
+      "height": 64,
+      "right": 822.40625,
+      "bottom": 906
+    },
+    "dock": {
+      "x": 24,
+      "y": 920,
+      "width": 798.40625,
+      "height": 64,
+      "right": 822.40625,
+      "bottom": 984
+    },
+    "overflow": 0,
+    "dockItems": 4,
+    "dialog": "수업 상태자가 체크인 응답 6 / 6명체크인 응답 펼치기자가 체크인 응답6 / 6명마음의 날씨잔잔해요 2조금 들떠 있어요 1기타 3몸 상태편안해요 2어깨에 힘이 들어가요 1기타 3수면7시간 · 푹 잤어요 16시간 · 보통 1기타 4살펴볼 응답하늘어깨가 많이 뻐근해요유진거의 못 잤어요입장 전 체크인 · 2명서연집중 4 · 집중편안함 4 · 편안감정 4 · 긍정적“오늘은 천천히 시작하고 싶어요”서아집중 3 · 보통편안함 2 · 불편감정 3 · 보통밴드 연결 0 · 미착용 6 · 끊김 0",
+    "dialogs": 1,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "state": "none",
+    "gap": 14,
+    "self": {
+      "x": 1006.671875,
+      "y": 117,
+      "width": 213.328125,
+      "height": 120,
+      "right": 1220,
+      "bottom": 237
+    },
+    "head": {
+      "x": 220,
+      "y": 117,
+      "width": 1000,
+      "height": 120,
+      "right": 1220,
+      "bottom": 237
+    },
+    "top": {
+      "x": 220,
+      "y": 16,
+      "width": 1000,
+      "height": 93,
+      "right": 1220,
+      "bottom": 109
+    },
+    "participants": {
+      "x": 220,
+      "y": 297,
+      "width": 1000,
+      "height": 531,
+      "right": 1220,
+      "bottom": 828
+    },
+    "signals": {
+      "x": 220,
+      "y": 842,
+      "width": 1000,
+      "height": 64,
+      "right": 1220,
+      "bottom": 906
+    },
+    "dock": {
+      "x": 220,
+      "y": 920,
+      "width": 1000,
+      "height": 64,
+      "right": 1220,
+      "bottom": 984
+    },
+    "overflow": 0,
+    "dockItems": 4,
+    "dialogs": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "state": "hand-one",
+    "gap": 14,
+    "toast": "지은님이 손을 들었어요 현재 대기 1명 · 발언권 0명지은님이 손을 들었어요현재 대기 1명 · 발언권 0명×",
+    "self": {
+      "x": 1006.671875,
+      "y": 117,
+      "width": 213.328125,
+      "height": 120,
+      "right": 1220,
+      "bottom": 237
+    },
+    "head": {
+      "x": 220,
+      "y": 117,
+      "width": 1000,
+      "height": 120,
+      "right": 1220,
+      "bottom": 237
+    },
+    "top": {
+      "x": 220,
+      "y": 16,
+      "width": 1000,
+      "height": 93,
+      "right": 1220,
+      "bottom": 109
+    },
+    "participants": {
+      "x": 220,
+      "y": 367,
+      "width": 1000,
+      "height": 461,
+      "right": 1220,
+      "bottom": 828
+    },
+    "signals": {
+      "x": 220,
+      "y": 842,
+      "width": 1000,
+      "height": 64,
+      "right": 1220,
+      "bottom": 906
+    },
+    "dock": {
+      "x": 220,
+      "y": 920,
+      "width": 1000,
+      "height": 64,
+      "right": 1220,
+      "bottom": 984
+    },
+    "overflow": 0,
+    "dockItems": 4,
+    "dialogs": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "state": "hand-many",
+    "gap": 14,
+    "toast": "지은 외 2명이 손을 들었어요 현재 대기 3명 · 발언권 0명지은 외 2명이 손을 들었어요현재 대기 3명 · 발언권 0명×",
+    "self": {
+      "x": 1006.671875,
+      "y": 117,
+      "width": 213.328125,
+      "height": 120,
+      "right": 1220,
+      "bottom": 237
+    },
+    "head": {
+      "x": 220,
+      "y": 117,
+      "width": 1000,
+      "height": 120,
+      "right": 1220,
+      "bottom": 237
+    },
+    "top": {
+      "x": 220,
+      "y": 16,
+      "width": 1000,
+      "height": 93,
+      "right": 1220,
+      "bottom": 109
+    },
+    "participants": {
+      "x": 220,
+      "y": 367,
+      "width": 1000,
+      "height": 461,
+      "right": 1220,
+      "bottom": 828
+    },
+    "signals": {
+      "x": 220,
+      "y": 842,
+      "width": 1000,
+      "height": 64,
+      "right": 1220,
+      "bottom": 906
+    },
+    "dock": {
+      "x": 220,
+      "y": 920,
+      "width": 1000,
+      "height": 64,
+      "right": 1220,
+      "bottom": 984
+    },
+    "overflow": 0,
+    "dockItems": 4,
+    "dialogs": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "state": "quiet",
+    "gap": 14,
+    "toast": "서연 · 잠시 쉴게요 전체: 어려워요 2 · 잠시 쉴게요 1서연 · 잠시 쉴게요전체: 어려워요 2 · 잠시 쉴게요 1×",
+    "self": {
+      "x": 1006.671875,
+      "y": 117,
+      "width": 213.328125,
+      "height": 120,
+      "right": 1220,
+      "bottom": 237
+    },
+    "head": {
+      "x": 220,
+      "y": 117,
+      "width": 1000,
+      "height": 120,
+      "right": 1220,
+      "bottom": 237
+    },
+    "top": {
+      "x": 220,
+      "y": 16,
+      "width": 1000,
+      "height": 93,
+      "right": 1220,
+      "bottom": 109
+    },
+    "participants": {
+      "x": 220,
+      "y": 367,
+      "width": 1000,
+      "height": 461,
+      "right": 1220,
+      "bottom": 828
+    },
+    "signals": {
+      "x": 220,
+      "y": 842,
+      "width": 1000,
+      "height": 64,
+      "right": 1220,
+      "bottom": 906
+    },
+    "dock": {
+      "x": 220,
+      "y": 920,
+      "width": 1000,
+      "height": 64,
+      "right": 1220,
+      "bottom": 984
+    },
+    "overflow": 0,
+    "dockItems": 4,
+    "dialogs": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "state": "status",
+    "gap": 14,
+    "self": {
+      "x": 758.671875,
+      "y": 117,
+      "width": 213.328125,
+      "height": 120,
+      "right": 972,
+      "bottom": 237
+    },
+    "head": {
+      "x": 24,
+      "y": 117,
+      "width": 948,
+      "height": 120,
+      "right": 972,
+      "bottom": 237
+    },
+    "top": {
+      "x": 24,
+      "y": 16,
+      "width": 948,
+      "height": 93,
+      "right": 972,
+      "bottom": 109
+    },
+    "participants": {
+      "x": 24,
+      "y": 297,
+      "width": 948,
+      "height": 531,
+      "right": 972,
+      "bottom": 828
+    },
+    "signals": {
+      "x": 24,
+      "y": 842,
+      "width": 948,
+      "height": 64,
+      "right": 972,
+      "bottom": 906
+    },
+    "dock": {
+      "x": 24,
+      "y": 920,
+      "width": 948,
+      "height": 64,
+      "right": 972,
+      "bottom": 984
+    },
+    "overflow": 0,
+    "dockItems": 4,
+    "dialog": "수업 상태자가 체크인 응답 6 / 6명체크인 응답 펼치기자가 체크인 응답6 / 6명마음의 날씨잔잔해요 2조금 들떠 있어요 1기타 3몸 상태편안해요 2어깨에 힘이 들어가요 1기타 3수면7시간 · 푹 잤어요 16시간 · 보통 1기타 4살펴볼 응답하늘어깨가 많이 뻐근해요유진거의 못 잤어요입장 전 체크인 · 2명서연집중 4 · 집중편안함 4 · 편안감정 4 · 긍정적“오늘은 천천히 시작하고 싶어요”서아집중 3 · 보통편안함 2 · 불편감정 3 · 보통밴드 연결 0 · 미착용 6 · 끊김 0",
+    "dialogs": 1,
+    "errors": []
+  }
+]

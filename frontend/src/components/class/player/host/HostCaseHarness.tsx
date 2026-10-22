@@ -1,6 +1,6 @@
 // SDD-208 — 케이스 하니스(/design/class-player)용 상담사 화면 래퍼. 픽스처 입력을 로컬 상태로 들고 있어 시안처럼 눌러 볼 수 있다.
 // 서버·소켓·LiveKit 을 전혀 쓰지 않으므로 케이스를 결정적으로 렌더·측정한다. 발언권·녹음·마커는 실제 컴포넌트를 그대로 쓴다.
-import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Send } from 'lucide-react';
 import type { SessionLiveMetric } from '../../../../lib/api/session';
 import {
@@ -17,6 +17,8 @@ import { registerCasePatch, type PlayerCaseContext } from '../../../../lib/class
 import { EndSessionModal } from '../../../player/EndSessionModal';
 import { MarkerButton } from '../../../session/MarkerButton';
 import { SpeakingRightsPanel } from '../../../session/SpeakingRightsPanel';
+import { HostSignalToastPolicy, type SignalSnapshot, type SignalToast } from './host-signal-toast';
+import type { SignalMap } from '../../../../lib/class/quiet-signal';
 import { HostSignalToast } from './HostSignalToast';
 import { HostEndingCard } from './HostEndingCard';
 import type { HostMediaProps } from './HostMediaSheet';
@@ -76,11 +78,25 @@ export function HostCaseHarness({ spec, ctx }: HostCaseHarnessProps) {
   const { ui, actions: uiActions } = useHostUi(spec.ui);
   const signalDemo = ctx.params.get('signalsDemo');
   const [participants, setParticipants] = useState<readonly HostParticipant[]>(() => signalDemo
-    ? spec.input.participants.map((participant, index) => ({ ...participant, name: `샘플 회원 ${String.fromCharCode(65 + index)}`, hand: signalDemo !== 'none' && signalDemo !== 'signals' && index === 0, speaking: false }))
+    ? spec.input.participants.map((participant, index) => ({ ...participant, name: ['지은', '민수', '서연', '도윤', '하늘', '유진'][index] ?? '참가자', hand: ['hand', 'hand-one', 'hand-many', 'toast'].includes(signalDemo) && index < (signalDemo === 'hand-many' ? 3 : 1), speaking: false }))
     : spec.input.participants);
-  const [toastVisible, setToastVisible] = useState(signalDemo === 'toast');
+  const demoPolicy = useRef<HostSignalToastPolicy | null>(null);
+  const [demoToast, setDemoToast] = useState<SignalToast | null>(null);
+  const [quietSignalEntries] = useState<SignalMap>((): SignalMap => signalDemo && ['signals', 'toast', 'quiet'].includes(signalDemo) ? { a: { type: 'difficult', at: Date.now(), displayName: '지은' }, b: { type: 'difficult', at: Date.now(), displayName: '민수' }, c: { type: 'resting', at: Date.now() + 1, displayName: '서연' } } : {});
+  useEffect(() => {
+    if (!signalDemo) return;
+    const policy = new HostSignalToastPolicy();
+    demoPolicy.current = policy;
+    const now = Date.now();
+    const snapshot: SignalSnapshot = { sessionId: 'harness', connected: true, hands: [], queue: [], signals: {}, sheet: null, blocked: false };
+    policy.update(snapshot, now);
+    const next = { ...snapshot, hands: participants.filter(p => p.hand).map(p => p.id), handNames: Object.fromEntries(participants.map(p => [p.id, p.name])), speakingCount: 0, signals: quietSignalEntries };
+    setDemoToast(policy.update(next, now + 2));
+    const timer = setInterval(() => setDemoToast(policy.update(next, Date.now())), 200);
+    return () => clearInterval(timer);
+  }, [signalDemo, participants, quietSignalEntries]);
   const quietCounts = signalDemo && ['signals', 'toast', 'quiet'].includes(signalDemo)
-    ? { following: 1, difficult: 2, resting: 1 }
+    ? { following: 0, difficult: 2, resting: 1 }
     : { following: 0, difficult: 0, resting: 0 };
   const [mic, setMic] = useState<MicUi>(spec.input.mic);
   const [cam, setCam] = useState<CamUi>(spec.input.cam);
@@ -184,7 +200,8 @@ export function HostCaseHarness({ spec, ctx }: HostCaseHarnessProps) {
       speakingPanel={speakingPanel}
       preCheckins={spec.meta.preCheckins}
       quietSignals={quietCounts}
-      signalToast={toastVisible ? <HostSignalToast toast={{ topic: 'signals', message: '조용한 신호 4건 · 조금 어려워요 2 · 잠시 쉴게요 1 · 잘 따라가요 1', durationMs: 6000 }} onOpen={(topic) => { setToastVisible(false); uiActions.openSheet(topic); }} onDismiss={() => setToastVisible(false)} /> : null}
+      quietSignalEntries={quietSignalEntries}
+      signalToast={demoToast ? <HostSignalToast toast={demoToast} onOpen={(topic) => { demoPolicy.current?.dismiss(topic); setDemoToast(null); uiActions.openSheet(topic); }} onDismiss={(topic) => { demoPolicy.current?.dismiss(topic); setDemoToast(null); }} onPause={() => demoPolicy.current?.pause(Date.now())} onResume={() => demoPolicy.current?.resume(Date.now())} /> : null}
       selfBand={selfBand ?? HOST_SELF_BAND_NONE}
       chat={{
         unread: spec.meta.unread,
