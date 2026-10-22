@@ -18,8 +18,8 @@
 
 | 신호 | 현재 데스크톱 | 현재 모바일 390px | 확인 / 조치 탭 수 |
 |---|---|---|---|
-| 손들기 대기 | 손든 회원 칩, 참가자 상태, HandsSheet | 칩이 +N 뒤로 접힘; 보이는 참가자 타일의 상태만 확인 가능 | 칩 노출 1/2, 접힘 2/3; 상세 조치에는 HandsSheet 필요 |
-| 발언권 있음 | 첫 발언자 이름 칩·회수 버튼, 타일, HandsSheet 전체 목록 | 이름·회수도 접힐 수 있음 | 0(칩)/1(회수), 접힘 시 2/3 |
+| 손들기 대기 | 손든 회원 칩, 밴드 상태별 타일 표시, HandsSheet | 칩이 +N 뒤로 접힘; 전원 밴드 미착용이면 타일 손들기 표시도 없음 | 칩 노출 1/2, 접힘 2/3; 상세 조치에는 HandsSheet 필요 |
+| 발언권 있음 | 첫 발언자 이름 칩·회수 버튼, 타일, HandsSheet 전체 목록 | 이름·회수도 접힘; 전원 미착용 타일에는 발언 상태도 없음 | 0(칩)/1(회수), 접힘 시 2/3 |
 | 조용한 신호 | 양수일 때 합계 칩 → CheckinSheet 하단 익명 집계 | +N → 신호 열기, 또는 도크 체크인 → 아래 스크롤 | 칩 1, 접힘 2; 도크 1 + 스크롤 |
 | 체크인 | 전원 밴드 없음일 때 응답 n/m 칩, 도크 체크인 | 같은 구조 | 요약 1, 개인 상세 2 |
 | 입장 대기 | 대기 칩 → QueueSheet | +N에 접힐 수 있음 | 노출 1, 접힘 2 (조치는 시트에서 추가 탭) |
@@ -31,7 +31,7 @@
 
 ### +N의 실제 의미와 원인
 
-`host-player-case.ts`의 칩 생성 순서: rec → checkin(전원 밴드 없음) → speak → hands → actions → queue → signals → myband → first → filter → band. 마지막 range는 선택 항목이다. `fitChipCount`는 선택 항목을 먼저 빼고 뒤에서부터 폭에 맞춰 접는다. 손들기 우선순위 보호는 없다. `+N`은 새 이벤트/사람 수가 아니라 **숨겨진 칩 그룹 수**다. 발언자 그룹에는 회수 버튼까지 포함된다. 정확한 N은 이름·상태·렌더된 폭에 따라 변한다.
+`host-player-case.ts`의 칩 생성 순서: rec → checkin(전원 밴드 없음) → speak → hands → actions → queue → signals → myband → first → filter → band. 마지막 range는 선택 항목이다. `fitChipCount`는 선택 항목을 먼저 빼고 뒤에서부터 폭에 맞춰 접는다. 손들기 우선순위 보호는 없다. `+N`은 새 이벤트/사람 수가 아니라 **숨겨진 칩 그룹 수**다. 발언자 그룹에는 회수 버튼까지 포함된다. 정확한 N은 이름·상태·렌더된 폭에 따라 변한다. 특히 `HostParticipantGrid`의 allOff 분기는 손들기/발언권 상태 대신 체크인·접속 상태만 표시한다. Brian의 전원 밴드 미착용 화면에서는 타일도 보완 수단이 되지 않는다. 제안은 미착용 타일에도 손들기/발언권 보조 상태를 유지한다.
 
 `HostChipLine`의 +N은 AlertsSheet를 연다. `chipTarget('signals')`는 체크인으로 연결하며, CheckinSheet의 신호 영역은 체크인/입장 전 응답 뒤에 있고 합계가 0이면 사라진다. `chipTarget('band')`는 null이라 알림 전체에서도 제외된다.
 
@@ -101,7 +101,7 @@ UI는 이름 없이 집계하지만 현 `class:signal` payload에는 participant
 
 ## 예상 구현 범위 (승인 이후)
 
-1. 프런트: HostLiveView/Container, HostChipLine, host-player-case, useHostUi에 고정 신호 진입점과 별도 신호 시트 연결. 체크인/상태 시트 정리. SpeakingRightsPanel에 손 내리기·처리/실패 상태 추가.
+1. 프런트: HostLiveView/Container, HostChipLine, host-player-case, useHostUi에 고정 신호 진입점과 별도 신호 시트 연결. 체크인/상태 시트 정리, HostParticipantGrid의 allOff 타일 신호 누락 보완. SpeakingRightsPanel에 손 내리기·처리/실패 상태 추가.
 2. 이벤트 계층: ClassPlayerPage/useSessionLiveSocket 주변의 신규 이벤트→순수 알림 정책→HostSignalToast 연결. 기존 오류 배너와 우선순위 조율, chat 배지는 재사용.
 3. 백엔드: lower-hand 호스트 인가 확장 및 기존 speaking_changed 통지 재사용. 프런트 API 연결. 서버 자격·세션 경계 회귀 검증.
 4. 검증: 묶음·중복·TTL·같은 총합에서 종류 변경·재연결·자기 조치·퇴장·다중 발언권·API 실패·미지원 수업·밴드 미착용·390px/1440px·확대 글자·키보드·스크린리더. 실제 iPhone, 서버 이벤트, LiveKit 마이크 동작은 후속 통합 검증 항목.
@@ -126,3 +126,11 @@ UI는 이름 없이 집계하지만 현 `class:signal` payload에는 participant
 - `frontend/src/components/chat/ClassChatPanel.tsx`: 안읽음 배지.
 - `backend/app/services/session_service.py`: lower_hand, set_speaking, _authorize_participant_access.
 - `backend/app/ws/session_live_namespace.py`: class:signal 호스트 전용 휘발성 이벤트.
+
+## 시안과 검증 자료
+
+- `designs/host-mobile-signals/index.html`: 현재 구조 재현 + A/B, 7개 상태, 시트·조치 샘플.
+- `designs/host-mobile-signals/README.md`: 비교 방법, 자산 출처, 검증 범위·한계.
+- `designs/host-mobile-signals/screenshots/`: Chrome headless 390×844 / 1440×1000, 총 42장.
+- `designs/host-mobile-signals/validation.json`, `capture.cjs`: 화면·조작 검증 결과와 재현 스크립트.
+- Spec 및 디자인 독립 검토 후 데스크톱 현행 칩 유지·현재 +N/발언권 경로·포커스 복귀 보완. 자동 토스트 정책은 아직 제품 구현/검증하지 않았다.
