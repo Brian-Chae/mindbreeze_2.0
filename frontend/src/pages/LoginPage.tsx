@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
+import { KeyRound } from 'lucide-react';
 import { isNativeApp } from '../lib/native/platform';
 import { nativeGoogleIdToken } from '../lib/native/google';
 import { useAuthStore } from '../stores/authStore';
@@ -44,6 +45,8 @@ export default function LoginPage() {
   const [pending, setPending] = useState<'email' | 'google' | null>(null);
   // 「로그인 상태 유지」 — 기본 체크. 해제 시 백엔드가 세션 쿠키로 발급한다.
   const [rememberMe, setRememberMe] = useState(true);
+  // SDD-227: 이메일·비밀번호 입력 중(키보드 표시)에는 하단 코드 입장 카드를 숨긴다.
+  const [typing, setTyping] = useState(false);
   // SEC-04 / FUNC-10: Google 동의 — 백엔드는 '신규 가입'에만 동의를 요구한다.
   // 기존 사용자는 체크 없이 통과하므로, 신규 가입 422를 받은 뒤에만 체크박스를 노출한다.
   const [googleConsent, setGoogleConsent] = useState(false);
@@ -234,7 +237,9 @@ export default function LoginPage() {
       onNeedsSignupInfo={() => setNeedsGoogleConsent(true)}
       onError={setError} />
   );
-  const divider = <div className="flex items-center gap-3 text-[13px] text-white/80"><span className="h-px flex-1 bg-white/30" />또는<span className="h-px flex-1 bg-white/30" /></div>;
+  const dividerWith = (label: string) => <div className="flex items-center gap-3 text-[13px] text-white/80"><span className="h-px flex-1 bg-white/30" />{label}<span className="h-px flex-1 bg-white/30" /></div>;
+  const divider = dividerWith('또는');
+  const isClient = !isAdmin && loginRole === 'client';
   const inputClass = 'h-[52px] w-full rounded-full border border-[#DDDEE7] bg-white px-5 text-[15px] text-[#1F1F1F] outline-none focus:ring-2 focus:ring-[#5F0080] disabled:opacity-50';
   const rememberMeField = (
     <div className="flex flex-col gap-1">
@@ -251,9 +256,9 @@ export default function LoginPage() {
   const emailForm = (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       <label htmlFor="login-email" className="text-sm">이메일</label>
-      <input id="login-email" type="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} disabled={busy} className={inputClass} />
+      <input id="login-email" type="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} onFocus={() => setTyping(true)} onBlur={() => setTyping(false)} disabled={busy} className={inputClass} />
       <label htmlFor="login-password" className="text-sm">비밀번호</label>
-      <input id="login-password" type="password" required autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} disabled={busy} className={inputClass} />
+      <input id="login-password" type="password" required autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} onFocus={() => setTyping(true)} onBlur={() => setTyping(false)} disabled={busy} className={inputClass} />
       {rememberMeField}
       <button type="submit" disabled={busy || !email || !password} className="mt-1 h-[52px] rounded-full bg-[#5F0080] text-[15px] font-semibold hover:bg-[#4B0066] disabled:opacity-60">{pending === 'email' ? '로그인 중…' : config.submit}</button>
     </form>
@@ -277,15 +282,18 @@ export default function LoginPage() {
               tabIndex={loginRole === tab.role ? 0 : -1} disabled={busy} onClick={() => selectTab(index)} onKeyDown={(event) => handleTabKey(event, index)}
               className={`rounded-full px-2 py-3 text-sm font-semibold disabled:opacity-60 ${loginRole === tab.role ? 'bg-white text-[#5F0080] underline decoration-2 underline-offset-4' : 'text-white hover:bg-white/10'}`}>{tab.label}</button>)}
           </div>}
-          <section role={isAdmin ? undefined : 'tabpanel'} id={`login-panel-${loginRole}`} aria-labelledby={isAdmin ? undefined : `login-tab-${loginRole}`} aria-busy={busy} className="flex flex-col gap-4">
+          <section role={isAdmin ? undefined : 'tabpanel'} id={`login-panel-${loginRole}`} aria-labelledby={isAdmin ? undefined : `login-tab-${loginRole}`} aria-busy={busy} className={`flex flex-col gap-4 ${isClient ? 'pb-[calc(8.5rem+env(safe-area-inset-bottom))]' : ''}`}>
             <p className="text-center text-sm text-white/90">{isAdmin ? 'Google Workspace 계정으로 로그인하세요.' : config.description}</p>
-            {!isAdmin && loginRole === 'client' && <>{googleButton}{appleButton}{needsGoogleConsent && googleConsentField}{divider}{emailForm}</>}
+            {/* SDD-227: 회원 탭은 이메일 로그인을 위에, 간편 로그인(Google·Apple)을 아래에 둔다. */}
+            {isClient && <>{emailForm}
+              <p className="text-center text-sm"><Link to="/forgot-password" className="underline">비밀번호 찾기</Link><span aria-hidden="true" className="mx-2 text-white/60">·</span><Link to="/register?role=client" className="font-semibold underline">회원가입</Link></p>
+              {dividerWith('간편 로그인')}{googleButton}{appleButton}{needsGoogleConsent && googleConsentField}</>}
             {!isAdmin && loginRole === 'counselor' && <>{emailForm}{divider}{googleButton}{appleButton}<p className="text-center text-xs text-white/80">Google·Apple 로그인은 기존 상담사 계정만 이용할 수 있습니다.</p></>}
             {!isAdmin && loginRole === 'org_admin' && emailForm}
             {isAdmin && <>{rememberMeField}{googleButton}</>}
             {error && <p role="alert" className="rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-red-900/30">{error}</p>}
-            {!isAdmin && <Link to="/forgot-password" className="text-center text-sm underline">비밀번호 찾기</Link>}
-            {(loginRole === 'client' || loginRole === 'counselor') && <Link to={`/register?role=${loginRole}`} className="text-center text-sm font-semibold underline">{loginRole === 'client' ? '회원가입' : '상담사 가입'}</Link>}
+            {!isAdmin && !isClient && <Link to="/forgot-password" className="text-center text-sm underline">비밀번호 찾기</Link>}
+            {loginRole === 'counselor' && <Link to="/register?role=counselor" className="text-center text-sm font-semibold underline">상담사 가입</Link>}
             {isAdmin && <Link to="/login?role=client" className="text-center text-sm underline">일반 로그인으로 돌아가기</Link>}
             <p className="text-center text-xs text-white/80"><PrivacyPolicyLink>개인정보 처리방침</PrivacyPolicyLink></p>
           </section>
@@ -296,6 +304,22 @@ export default function LoginPage() {
           )}
         </div>
       </div>
+      {/* SDD-227: 회원 탭 전용 — 로그인 없이 코드로 클래스 입장(앱은 랜딩이 없어 유일한 진입점). 코드는 URL에 싣지 않는다. */}
+      {isClient && !typing && (
+        <div className="fixed inset-x-0 bottom-0 z-20 bg-gradient-to-t from-[#14001E]/85 from-60% to-transparent px-4 pt-7 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <Link to="/join" data-testid="login-code-entry"
+            className="mx-auto flex w-full max-w-[400px] items-center gap-3 rounded-[20px] bg-white/95 p-4 text-[#1F1F1F] shadow-[0_10px_28px_rgba(0,0,0,0.35)] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
+            <span className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-xl bg-[#F3E9F8]">
+              <KeyRound size={22} color="#5F0080" aria-hidden="true" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[15px] font-extrabold">입장 코드가 있나요?</span>
+              <span className="mt-0.5 block text-xs text-[#666]">로그인 없이 바로 들어가요</span>
+            </span>
+            <span className="ml-auto flex h-9 shrink-0 items-center whitespace-nowrap rounded-full bg-[#5F0080] px-3.5 text-[13px] font-bold text-white">코드로 입장</span>
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
