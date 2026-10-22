@@ -37,6 +37,7 @@ const COMBOS = [
 describe.each(COMBOS)('AI=$ai × 상담=$counseling', ({ ai, counseling, aiOpen, counselingOpen }) => {
   beforeEach(() => {
     vi.stubEnv('VITE_AI_ENABLED', ai ?? '');
+    vi.stubEnv('VITE_STT_ENABLED', ai ?? ''); // SDD-228: AI 와 함께 움직이는 기존 계약
     vi.stubEnv('VITE_COUNSELING_ENABLED', counseling ?? '');
   });
 

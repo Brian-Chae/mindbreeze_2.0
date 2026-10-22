@@ -24,6 +24,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session as DBSession
 
 from app.config import settings
+from app.core.ai_features import is_stt_enabled
 from app.models.record import Report, SessionRecord
 
 logger = logging.getLogger(__name__)
@@ -75,6 +76,7 @@ _STEP_WEIGHTS: dict[str, float] = {
 REASON_MIC_OFF = "mic_off"
 REASON_LOW_CONFIDENCE = "low_confidence"
 REASON_NO_TRANSCRIPT = "no_transcript"
+REASON_STT_DISABLED = "stt_disabled"  # SDD-228: STT 미제공 빌드 — 녹음만 저장, 전사 없음(정상)
 REASON_STT_FAILED = "stt_failed"
 REASON_SUMMARY_FAILED = "summary_failed"
 REASON_REPORT_FAILED = "report_failed"
@@ -133,7 +135,7 @@ def _derive_reason(record: SessionRecord | None, reports: list[Report]) -> str |
         "recording",
         "processing",
     ):
-        return REASON_NO_TRANSCRIPT
+        return REASON_NO_TRANSCRIPT if is_stt_enabled() else REASON_STT_DISABLED
     return None
 
 
@@ -156,6 +158,9 @@ def _stt_step_state(record: SessionRecord | None, save_state: str) -> str:
         return STEP_SKIPPED
     if _has_transcript(record):
         return STEP_DONE
+    # SDD-228: STT 미제공 빌드 — 단계 자체가 없다(건너뜀). 요약 단계도 따라서 건너뜀.
+    if not is_stt_enabled() and record_status in ("processing", "completed", "failed"):
+        return STEP_SKIPPED
     if record_status == "failed":
         return STEP_FAILED
     if record_status in ("processing",):
@@ -328,6 +333,9 @@ def generation_status_for_content(content: dict, record: SessionRecord | None) -
     - AI 요약 실패(summary_failed) → partial
     """
     ai_record = content.get("ai_record") if isinstance(content, dict) else None
+    # SDD-228: STT 미제공 빌드의 '전사 없음'은 결함이 아니므로 ready 로 마감한다(마이크 오프 등은 기존대로 partial).
+    if isinstance(ai_record, dict) and ai_record.get("reason") == REASON_STT_DISABLED:
+        return GENERATION_READY
     if not isinstance(ai_record, dict) or ai_record.get("status") != "available":
         return GENERATION_PARTIAL
     if _ai_summary(record).get("summary_failed"):

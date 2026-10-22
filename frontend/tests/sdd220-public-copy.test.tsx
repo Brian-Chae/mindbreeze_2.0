@@ -68,11 +68,13 @@ describe('SDD-220 공개 정책', () => {
   });
   it('AI off 랜딩은 제공 약속과 금지 문구가 없고 on에서는 소개한다', () => {
     vi.stubEnv('VITE_AI_ENABLED', 'false');
+    vi.stubEnv('VITE_STT_ENABLED', 'false');
     const view = show(<LandingPage />);
     expect(document.body.textContent).not.toMatch(/AI|위험 신호/);
     expect(findPublicCopyViolations(document.body.textContent ?? '')).toEqual([]);
     view.unmount();
     vi.stubEnv('VITE_AI_ENABLED', 'true');
+    vi.stubEnv('VITE_STT_ENABLED', 'true');
     show(<LandingPage />);
     expect(document.body.textContent).toContain('AI');
   });

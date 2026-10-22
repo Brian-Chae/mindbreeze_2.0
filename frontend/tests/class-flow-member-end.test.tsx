@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // SDD-220: 이 테스트는 AI 공개(on) 문구를 검증한다 — 기본값 off 라 모듈 수준에서 켠다(단언 불변).
 vi.stubEnv('VITE_AI_ENABLED', 'true');
+vi.stubEnv('VITE_STT_ENABLED', 'true'); // SDD-228: 받아쓰기 on 계약
 import { EndView, type EndViewProps } from '../src/components/class/flow/member/EndView';
 import { durationMinutes, maskEmail } from '../src/lib/class/flow/member-format';
 import { emptySurveyDraft } from '../src/lib/class/flow/member-survey';

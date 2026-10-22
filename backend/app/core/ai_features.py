@@ -14,6 +14,7 @@ from fastapi import HTTPException, status
 from app.config import settings
 
 AI_FEATURES_DISABLED_CODE = "AI_FEATURES_DISABLED"
+STT_DISABLED_CODE = "STT_DISABLED"
 
 
 class AiFeaturesDisabled(Exception):
@@ -26,6 +27,20 @@ class AiFeaturesDisabled(Exception):
 def is_ai_enabled() -> bool:
     """현재 AI 기능 사용 여부 — 호출 시점의 설정을 읽는다."""
     return settings.ai_features_enabled is True
+
+
+def is_stt_enabled() -> bool:
+    """음성 받아쓰기(STT·전사 기반 요약) 사용 여부 — SDD-228. AI 전체 스위치와 STT 전용 스위치의 AND.
+
+    STT 만 끄고 리포트 AI 초안 등 다른 AI 는 유지할 수 있다. 호출 시점의 설정을 읽는다.
+    """
+    return settings.ai_features_enabled is True and settings.stt_enabled is True
+
+
+def require_stt_enabled() -> None:
+    """STT 외부 호출 직전 가드 — 꺼져 있으면 AiFeaturesDisabled(재시도 대상 아님)."""
+    if not is_stt_enabled():
+        raise AiFeaturesDisabled(STT_DISABLED_CODE)
 
 
 def require_ai_enabled() -> None:

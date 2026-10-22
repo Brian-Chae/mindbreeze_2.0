@@ -53,9 +53,10 @@ class GeminiTransientError(RuntimeError):
 def _gemini_request_once(url: str, headers: dict, body: dict, timeout: int) -> dict:
     """Gemini POST 1회. 일시 오류는 GeminiTransientError, 영구 오류는 그대로 전파한다."""
     # SDD-220: 네트워크 직전 단일 가드 — AI off 면 호출 0건(재시도 대상 아님).
-    from app.core.ai_features import require_ai_enabled
+    from app.core.ai_features import require_ai_enabled, require_stt_enabled
 
     require_ai_enabled()
+    require_stt_enabled()  # SDD-228
 
     import httpx
 
@@ -117,9 +118,10 @@ def _call_whisper(chunk_paths: list[str]) -> dict:
     구분이 소실됐음을 상위에서 기록할 수 있게 한다.
     """
     # SDD-220: 네트워크 직전 단일 가드 — AI off 면 호출 0건.
-    from app.core.ai_features import require_ai_enabled
+    from app.core.ai_features import require_ai_enabled, require_stt_enabled
 
     require_ai_enabled()
+    require_stt_enabled()  # SDD-228
 
     openai_api_key = settings.openai_api_key
     if not openai_api_key:
@@ -509,10 +511,11 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
 
     # SDD-220: AI off — 이미 큐에 적재된 작업도 외부 호출 없이 skip 한다(retry 0).
     #   녹음 원본은 보존하고, 저장 완료(completed)로 마감해 리포트 단계가 이어지게 한다.
-    from app.core.ai_features import is_ai_enabled
+    #   SDD-228: STT 전용 스위치(stt_enabled)도 같은 경로로 스킵한다.
+    from app.core.ai_features import is_stt_enabled
 
-    if not is_ai_enabled():
-        logger.info("[stt_task] AI 기능 off — STT 스킵: %s", session_id)
+    if not is_stt_enabled():
+        logger.info("[stt_task] AI/STT 기능 off — STT 스킵: %s", session_id)
         if record.status == "processing":
             record.status = "completed"
             db.commit()

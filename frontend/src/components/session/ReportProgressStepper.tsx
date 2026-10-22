@@ -13,6 +13,7 @@ import {
   type ReportStepState,
 } from '../../lib/api/reports';
 import { isAiEnabled } from '../../lib/feature-flags';
+import { isSttProgressVisible } from '../../lib/features';
 
 interface ReportProgressStepperProps {
   progress: ReportProgressDto | null;
@@ -72,8 +73,10 @@ function stepGlyph(state: ReportStepState, index: number): string {
 function statusCopy(progress: ReportProgressDto): { title: string; body: string } {
   const { generation_status, stage, reason } = progress;
   const aiOn = isAiEnabled();
+  // SDD-228: 받아쓰기(STT) 비공개면 AI가 켜져 있어도 STT·요약 단계명과 전사 안내 문구를 노출하지 않는다.
+  const sttOn = isSttProgressVisible();
   // SDD-220: AI 비공개면 STT·요약 단계명 대신 '리포트 생성' 으로 안내한다.
-  const stageLabel = aiOn || (stage !== 'stt' && stage !== 'summary')
+  const stageLabel = sttOn || (stage !== 'stt' && stage !== 'summary')
     ? REPORT_PROGRESS_STEP_LABELS[stage] ?? ''
     : '리포트 생성';
 
@@ -87,7 +90,7 @@ function statusCopy(progress: ReportProgressDto): { title: string; body: string 
     return {
       title: '리포트가 일부만 준비되었습니다',
       // 사유 문구에 AI 표현이 섞여 있어 비공개일 때는 일반 문구만 쓴다.
-      body: aiOn
+      body: sttOn
         ? reportProgressReasonLabel(reason) ?? '일부 내용만 담겨 있어요. 전사문은 기록에서 확인할 수 있어요.'
         : '일부 내용만 담겨 있어요.',
     };
@@ -118,7 +121,8 @@ export function ReportProgressStepper({
   const done = isReportGenerationDone(progress.generation_status);
   const copy = statusCopy(progress);
   // SDD-220: AI 비공개면 음성 인식(STT)·AI 요약 단계는 진행 막대에서 뺀다(녹음 저장·리포트 완료는 유지).
-  const visibleSteps = isAiEnabled()
+  // SDD-228: STT 전용 스위치(받아쓰기 비공개)에서도 같은 단계를 뺀다.
+  const visibleSteps = isSttProgressVisible()
     ? progress.steps
     : progress.steps.filter((step) => step.key !== 'stt' && step.key !== 'summary');
 
