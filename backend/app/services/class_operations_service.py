@@ -5,7 +5,11 @@ from datetime import datetime, timezone
 from app.config import settings
 from app.models.class_program import Class, ClassInstructor
 from app.services.class_instructor_service import sweep_class_operations
-from app.services.class_rolling_service import finish_class_if_due, roll_forward
+from app.services.class_rolling_service import (
+    close_cancelled_instant_class,
+    finish_class_if_due,
+    roll_forward,
+)
 from app.services.class_schedule_service import KST
 from app.services.class_write_service import lock_users
 
@@ -39,7 +43,8 @@ def maintain_classes(db, now=None, class_ids=None):
                 .first()
             )
             if cls:
-                finish_class_if_due(db, cls, now)
+                # 이미 회차만 취소된 채 남은 즉석 클래스도 유지 작업에서 정리한다.
+                finish_class_if_due(db, cls, now) or close_cancelled_instant_class(db, cls, now)
                 from app.models.session import Session
                 from app.services.class_access_service import queue_live_reconcile
 
