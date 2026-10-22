@@ -505,6 +505,9 @@ class SpeakingStateResponse(BaseModel):
     # 부여 시 raise_hand 는 자동 해제된다(한 흐름) — 클라이언트 정합용으로 함께 내린다.
     can_publish: bool = False
 
+    # SDD-235: lower-hand 에서만 채움 — 누가 내렸는지(self=본인, host=진행자). 그 외 null.
+    lowered_by: Literal["self", "host"] | None = None
+
 
 # ---------------------------------------------------------------------------
 # SDD-021: 클래스 시작 프로세스 1.0 패리티
