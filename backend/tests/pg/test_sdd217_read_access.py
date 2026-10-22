@@ -292,3 +292,19 @@ def test_instant_joined_during_session_reads_own_report(pg_session,monkeypatch):
     res=c.get(f'/api/v1/reports/{r.id}',headers=bearer(o));assert res.status_code==200,res.text
     a=c.get(f'/api/v1/classes/{cls.id}/me/attendance',headers=bearer(o)).json()['sessions']
     assert a[0]['participation_scope']=='eligible'
+
+
+def test_class_member_report_marks_read_on_open(pg_session,monkeypatch):
+    """[MB261022][FIX] 클래스 회원 본인 리포트를 열면 is_read=true — 하단 탭 배지·NEW 가 남지 않는다."""
+    db=pg_session;org,host,cls,o,m,ss=scene(db);p=participant(db,m,ss[1]);own=report(db,ss[1],p)
+    other=user(db,org,role='client');om=ClassMember(class_id=cls.id,user_id=other.id,status='active',joined_via='code');db.add(om);db.flush();foreign=report(db,ss[1],participant(db,om,ss[1]))
+    pending=report(db,ss[0],participant(db,m,ss[0]),status='pending_review');db.commit();c=http(db,monkeypatch);h=bearer(o)
+    assert own.is_read is False
+    r=c.get(f'/api/v1/reports/{own.id}',headers=h);assert r.status_code==200,r.text
+    db.refresh(own);assert own.is_read is True
+    lst=c.get('/api/v1/reports',headers=h);assert lst.status_code==200,lst.text
+    row=[x for x in lst.json()['reports'] if x['id']==str(own.id)];assert row and row[0]['is_read'] is True
+    # 남의 리포트·승인 전 리포트는 읽음 처리하지 않는다
+    assert c.get(f'/api/v1/reports/{foreign.id}',headers=h).status_code==404
+    assert c.get(f'/api/v1/reports/{pending.id}',headers=h).status_code==404
+    db.refresh(foreign);db.refresh(pending);assert foreign.is_read is False and pending.is_read is False
