@@ -4,7 +4,7 @@
   "role": "client",
   "url": "/app/reports",
   "width": 768,
-  "failure": "locator.waitFor: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('text=샘플 명상 기록').first() to be visible\u001b[22m\n\u001b[2m    29 × locator resolved to hidden <span class=\"font-bold text-[15px] text-[#1F1F1F] truncate\">샘플 명상 기록</span>\u001b[22m\n",
+  "failure": null,
   "errors": [],
   "unknown": [],
   "shell": "default",
