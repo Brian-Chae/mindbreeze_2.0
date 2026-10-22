@@ -223,12 +223,13 @@ export default function DashboardPage() {
       .slice(0, 3);
   }, [notifications]);
 
-  const displayName = data?.counselor_name ?? user?.name ?? '상담사';
+  // 인사말은 이름만 간단히 보여 준다(역할 표기 '(상담사)' 등은 뺀다).
+  const displayName = (data?.counselor_name ?? user?.name ?? '상담사').replace(/\s*\([^)]*\)\s*$/, '') || '상담사';
   const orgLabel =
     data?.org_kind === 'individual'
       ? '내 개인 상담소'
       : data?.org_name
-        ? `${data.org_name} 소속`
+        ? data.org_name
         : 'MY CLASSES';
   const counselorCode = user?.counselor_code ?? null;
   const showProfileBanner =
@@ -255,12 +256,6 @@ export default function DashboardPage() {
       sub={orgLabel}
       rightSlot={
         <div className="ch-header-actions flex flex-wrap items-center gap-2">
-          <Link
-            to="/classes"
-            className="h-11 inline-flex items-center px-4 rounded-full border border-[#DDD0EA] bg-white text-[#5F0080] font-semibold text-sm hover:bg-[#F5EDFC] transition-colors"
-          >
-            클래스 목록
-          </Link>
           <Link
             to="/classes/now"
             className="h-11 inline-flex items-center px-4 rounded-full border border-[#DDD0EA] bg-white text-[#5F0080] font-semibold text-sm hover:bg-[#F5EDFC] transition-colors"
