@@ -29,3 +29,13 @@
 ## 남은 확인
 - 실제 iOS·Android 기기에서 홈 바·키보드 동작(네이티브 빌드 후).
 - dev 서버에서 실제 클래스 코드로 게스트 입장 끝까지(배포 후).
+
+## dev 배포 검증 (2026-10-22)
+- 머지: PR #31 → develop 머지 커밋 `86b42b4c`. Deploy Dev run 39730511374 성공 (https://github.com/Brian-Chae/mindbreeze_2.0/actions/runs/39730511374).
+- 방법: 시스템 Chrome(playwright channel:'chrome', 375x667)으로 https://dev.mindbreeze.looxidlabs.com 확인. 카드는 lazy 청크에 있어 index 번들 grep은 0건이므로 렌더된 화면으로 판정.
+- 통과: `/login` 회원 탭에 '입장 코드가 있나요?' 카드 표시.
+- 통과: 회원 탭 순서 이메일 로그인 → 비밀번호 찾기·회원가입 → 간편 로그인(Google) → 개인정보 처리방침 → 코드로 입장 카드.
+- 통과: `/login?role=counselor` 에는 카드 없음.
+- 통과: 카드 클릭 → `/join` 코드 입력 화면(숫자 4자리, '코드 확인').
+- 미완료(차단): 실제 게스트 코드 입장 끝까지. counselor@test.com 이 dev에서 활성 조직 멤버십이 없어 클래스 생성이 409 `active_membership_required`, 보유 클래스·세션도 0건이라 4자리 코드를 확보하지 못함. 테스트 클래스는 만들지 않음.
+- 후속: 멤버십이 있는 계정(E2E 상담사 등) 또는 dev DB에 멤버십 부여(OPS, 승인 필요) 후 재검증.
