@@ -25,13 +25,15 @@
 .ch-home .ch-review{border:1px solid var(--home-line);border-radius:var(--home-radius);box-shadow:var(--home-shadow);padding:18px;gap:12px}
 .ch-home .ch-review a{align-self:flex-start;flex-shrink:0;min-height:44px;padding:0 16px;border-radius:9999px}
 .ch-home .ch-work{gap:var(--home-space)}
-/* 다른 AppShell에 영향을 주지 않고 3개 작업을 왼쪽부터 한 줄로 표시한다. */
+/* 상담사 홈 헤더: 왼쪽 소속·인사말, 오른쪽 작업 버튼을 한 줄에 둔다(다른 AppShell 영향 없음). */
 [data-shell-variant]:has(.ch-home)>section>div:has(>.ch-header-actions),
 [data-shell-variant]:has(.ch-home)>section>div:has(>div>.ch-header-actions){align-items:center}
 @media(max-width:767px){
-[data-shell-variant]:has(.ch-home)>section>div:has(>div>.ch-header-actions)>div:has(>.ch-header-actions){margin-left:0;width:100%;justify-content:flex-start}
-.ch-header-actions{width:100%;flex-wrap:nowrap;gap:6px}
-.ch-header-actions a{white-space:nowrap;font-size:12px;padding:0 12px}
+[data-shell-variant]:has(.ch-home)>section>div:has(>div>.ch-header-actions){flex-wrap:nowrap;align-items:center}
+[data-shell-variant]:has(.ch-home)>section>div:has(>div>.ch-header-actions)>div:first-child>div:last-child{white-space:normal;overflow:visible;text-overflow:clip;word-break:keep-all}
+[data-shell-variant]:has(.ch-home)>section>div:has(>div>.ch-header-actions)>div:has(>.ch-header-actions){flex-shrink:0;margin-left:auto}
+.ch-header-actions{flex-wrap:nowrap;gap:6px}
+.ch-header-actions a{white-space:nowrap;font-size:12px;padding:0 12px;height:40px}
 }
 @media(min-width:1024px){
 .cs-structure .cs-structure-content:has(.mh-home){padding:0}
