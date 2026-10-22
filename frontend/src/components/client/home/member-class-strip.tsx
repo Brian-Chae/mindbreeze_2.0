@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { ClassReadModel } from '../../../lib/class-structure/adapters';
 import { MemberClassCard } from '../../class/structure/member-class-views';
 
-export function MemberClassStrip({ classes }: { classes: ClassReadModel[] }) {
+/** hrefFor 를 주면 카드 이동 경로를 바꾼다(상담사 홈). 생략하면 회원 경로. */
+export function MemberClassStrip({ classes, hrefFor }: { classes: ClassReadModel[]; hrefFor?: (model: ClassReadModel) => string }) {
   const track = useRef<HTMLDivElement>(null);
   const [edges, setEdges] = useState({ start: true, end: true });
   function update() {
@@ -22,7 +23,7 @@ export function MemberClassStrip({ classes }: { classes: ClassReadModel[] }) {
         onFocus={(event) => {
           if (window.matchMedia('(min-width:1024px)').matches) event.target.closest('article')?.scrollIntoView({ block: 'nearest', inline: 'start', behavior: 'instant' });
         }}>
-        {classes.map((item) => <MemberClassCard key={item.id} model={item} />)}
+        {classes.map((item) => <MemberClassCard key={item.id} model={item} href={hrefFor?.(item)} />)}
       </div>
       <div className="mh-edge mh-edge-right" hidden={edges.end} aria-hidden="true" />
     </div>
