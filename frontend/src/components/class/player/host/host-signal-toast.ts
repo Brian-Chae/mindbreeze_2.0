@@ -1,4 +1,9 @@
-import { countSignals, signalCountParts, SIGNAL_ACTIVE_MS, type SignalMap } from '../../../../lib/class/quiet-signal';
+import { countSignals, CLASS_SIGNAL_META, SIGNAL_ACTIVE_MS, type ClassSignalCounts, type ClassSignalType, type SignalMap } from '../../../../lib/class/quiet-signal';
+const TOAST_SIGNAL_ORDER: readonly ClassSignalType[] = ['difficult', 'resting', 'following'];
+const signalToastParts = (counts: ClassSignalCounts): string[] => TOAST_SIGNAL_ORDER
+  .filter((type) => counts[type] > 0)
+  .map((type) => `${CLASS_SIGNAL_META[type].label} ${counts[type]}`);
+
 export type SignalTopic = 'hands' | 'signals' | 'queue';
 export interface SignalSnapshot {
   sessionId: string; connected: boolean; hands: readonly string[]; queue: readonly string[];
@@ -49,11 +54,11 @@ export class HostSignalToastPolicy {
     });
     if (this.current && (this.current.topic === input.sheet || !valid(this.current.topic) || (this.pausedAt === null && now - this.current.at >= this.current.durationMs))) this.dismiss();
     if (this.current) {
-      this.current.message = this.current.topic === 'hands' ? `손들기 · 대기 ${input.hands.length}명` : this.current.topic === 'queue' ? `입장 대기 ${input.queue.length}명` : `조용한 신호 · ${signalCountParts(counts).join(' · ')}`;
+      this.current.message = this.current.topic === 'hands' ? `손들기 · 대기 ${input.hands.length}명` : this.current.topic === 'queue' ? `입장 대기 ${input.queue.length}명` : `조용한 신호 · ${signalToastParts(counts).join(' · ')}`;
       const matching = this.pending.find((p) => p.topic === this.current?.topic);
       if (matching) {
         const counts = countSignals(input.signals, now);
-        this.current.message = matching.topic === 'hands' ? `손들기 · 대기 ${input.hands.length}명` : matching.topic === 'queue' ? `입장 대기 ${input.queue.length}명` : `조용한 신호 · ${signalCountParts(counts).join(' · ')}`;
+        this.current.message = matching.topic === 'hands' ? `손들기 · 대기 ${input.hands.length}명` : matching.topic === 'queue' ? `입장 대기 ${input.queue.length}명` : `조용한 신호 · ${signalToastParts(counts).join(' · ')}`;
         // 최초 표시 기준만 사용하여 연속 이벤트가 표시 시간을 무한 연장하지 않는다.
         if (matching.topic === 'signals' && (counts.difficult || counts.resting)) this.current.durationMs = 6000;
         this.pending = this.pending.filter((p) => p !== matching);
@@ -67,7 +72,7 @@ export class HostSignalToastPolicy {
         const [p] = this.pending.splice(index, 1);
         const counts = countSignals(input.signals, now);
         const durationMs = p.topic === 'signals' && !counts.difficult && !counts.resting ? 4000 : 6000;
-        const message = p.topic === 'hands' ? `새 손들기 ${p.count}명 · 대기 ${input.hands.length}명` : p.topic === 'queue' ? `새 입장 대기 ${p.count}명 · 대기 ${input.queue.length}명` : `조용한 신호 · ${signalCountParts(counts).join(' · ')}`;
+        const message = p.topic === 'hands' ? `새 손들기 ${p.count}명 · 대기 ${input.hands.length}명` : p.topic === 'queue' ? `새 입장 대기 ${p.count}명 · 대기 ${input.queue.length}명` : `조용한 신호 · ${signalToastParts(counts).join(' · ')}`;
         this.current = { topic: p.topic, message, durationMs, at: now };
         if (p.topic === 'signals') this.lastQuietAt = now;
       }

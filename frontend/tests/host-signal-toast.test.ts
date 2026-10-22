@@ -16,6 +16,7 @@ describe('상담사 무음 신호 토스트 정책', () => {
     p.update(snapshot({ signals: { secret: { type: 'difficult', at: 100 } } }), 100);
     const toast = p.update(snapshot({ signals: { secret: { type: 'difficult', at: 100 } } }), 2100);
     expect(toast?.message).toContain('조금 어려워요 1');
+    expect(toast?.message).not.toMatch(/[🌿💧🌙]/u);
     expect(JSON.stringify(toast)).not.toContain('secret');
     expect(toast?.durationMs).toBe(6000);
     expect(p.update(snapshot(), 10100)).toBeNull();
@@ -50,7 +51,7 @@ describe('상담사 무음 신호 토스트 정책', () => {
     const mixed = { ...good, b: { type: 'difficult' as const, at: 100 } };
     p.update(snapshot({ signals: good }), 0);
     p.update(snapshot({ signals: mixed }), 100);
-    expect(p.update(snapshot({ signals: mixed }), 2100)?.message).toContain('잘 따라가요 1');
+    expect(p.update(snapshot({ signals: mixed }), 2100)?.message).toBe('조용한 신호 · 조금 어려워요 1 · 잘 따라가요 1');
     expect(p.update(snapshot({ signals: mixed }), 4000)?.message).not.toContain('잘 따라가요');
     expect(p.update(snapshot({ signals: mixed }), 10100)).toBeNull();
     const h = new HostSignalToastPolicy(); h.update(snapshot(), 0);
