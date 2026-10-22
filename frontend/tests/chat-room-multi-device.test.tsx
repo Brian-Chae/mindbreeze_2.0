@@ -91,3 +91,12 @@ it('다른 방의 메시지는 무시한다', async () => {
   await act(async () => { socket.listeners.new_message({ ...msg('other-room', 'peer'), room_id: 'another' }); });
   expect(messagesOf()).toHaveLength(0);
 });
+
+it('일반 채팅은 기본 light이고 클래스용 dark를 명시적으로 선택할 수 있다', async () => {
+  expect(container.querySelector('.chat-room')?.getAttribute('data-chat-tone')).toBe('light');
+  expect(container.querySelector('.chat-room')?.classList.contains('bg-white')).toBe(true);
+  await act(async () => { root.render(createElement(ChatRoom, { roomId: 'room', tone: 'dark' })); });
+  expect(container.querySelector('.chat-room')?.getAttribute('data-chat-tone')).toBe('dark');
+  expect(container.textContent).toContain('아직 메시지가 없습니다');
+  expect(container.querySelector('textarea')?.placeholder).toBe('메시지를 입력하세요');
+});

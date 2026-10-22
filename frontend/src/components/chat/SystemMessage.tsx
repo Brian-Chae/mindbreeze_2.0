@@ -13,15 +13,15 @@ export function SystemMessage({ content, createdAt }: Props) {
       <div style={{
         padding: '4px 12px',
         fontSize: '12px',
-        color: '#6F6F6F',
-        background: '#F2F3F8',
+        color: 'var(--chat-muted, #6F6F6F)',
+        background: 'var(--chat-surface, #F2F3F8)',
         borderRadius: '999px',
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
       }}>
         <span>{content ?? ''}</span>
-        <span style={{ opacity: 0.7 }}>{timeStr}</span>
+        <span style={{ opacity: 'var(--chat-system-time-opacity, 0.7)' }}>{timeStr}</span>
       </div>
     </div>
   );
