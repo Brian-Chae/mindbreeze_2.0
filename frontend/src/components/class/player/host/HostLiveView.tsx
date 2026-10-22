@@ -152,6 +152,7 @@ export function HostLiveView(props: HostLiveViewProps) {
           title: '도구',
           body: (
             <ToolsSheet
+              onLeave={actions.close}
               sort={ui.sort} onSort={uiActions.setSort}
               showHandsFirst={online && !hostCase.solo} handsFirst={ui.handsFirst} onHandsFirst={uiActions.setHandsFirst}
               table={ui.table} onTable={uiActions.setTable}
@@ -221,10 +222,12 @@ export function HostLiveView(props: HostLiveViewProps) {
       top={
         <HostTopBar
           title={meta.title}
+          accessCode={meta.accessCode}
+          codeCopied={codeCopied}
+          onCopyCode={actions.copyCode}
           elapsedSec={meta.elapsedSec}
           durationMin={meta.durationMin}
           stats={hostCase.solo ? null : hostCase.stats}
-          onClose={actions.close}
           onEnd={actions.end}
           endDisabled={meta.ending}
         />

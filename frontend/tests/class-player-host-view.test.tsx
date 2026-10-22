@@ -42,16 +42,16 @@ afterEach(async () => {
 });
 
 describe('상담사 뷰 — C01 기본', () => {
-  it('상단 바에 닫기·제목·함께한 시간/계획 시간·접속 인원·종료가 있다', async () => {
+  it('상단 바는 X 없이 제목·함께한 시간/계획 시간·접속 인원·종료를 두고 나가기는 도구에 있다', async () => {
     await renderCase('C01');
     expect(one('[data-pz="top"]')).not.toBeNull();
-    expect(one('[data-pz="btn-close"]')?.getAttribute('aria-label')).toBe('클래스 화면 닫기');
+    expect(one('[data-pz="btn-close"]')).toBeNull();
     expect(one('[data-pz="btn-end"]')?.getAttribute('aria-label')).toBe('클래스 종료');
     const title = text(one('[data-pz="ttl"]'));
     expect(title).toContain('마음챙김 명상수업');
     expect(title).toContain('12:34');
     expect(title).toContain('30:00');
-    expect(title).toContain('접속 7/8');
+    expect(text(one('.hp-topbar-stats')).replace(/\s/g, '')).toBe('접속7/8');
   });
 
   it('지표 띠에 지금 보는 지표명(큰 글자)과 그룹 평균이 있다', async () => {
@@ -114,11 +114,11 @@ describe('상담사 뷰 — 스크롤 그리드(C18)', () => {
     expect(css).not.toMatch(/pagination/);
   });
 
-  it('마지막 행 가운데 정렬(justify-content:center)과 상단 바 시간 숫자 15px→18px 규칙이 CSS 에 있다', () => {
+  it('마지막 행 가운데 정렬과 확정 상단바 시간 스타일이 CSS 에 있다', () => {
     const css = readFileSync(resolve(__dirname, '../src/components/class/player/host/host-player.css'), 'utf8');
     expect(css).toMatch(/\.hp-grid\s*\{[^}]*justify-content:\s*center/);
-    expect(css).toMatch(/\.hp-time b\s*\{[^}]*font-size:\s*var\(--fs-15\)/);
-    expect(css).toMatch(/@media \(min-width: 1000px\)[\s\S]*?\.hp-time b\s*\{[^}]*font-size:\s*var\(--fs-18\)/);
+    expect(css).toMatch(/\.hp-time b\s*\{[^}]*font-size:\s*16px/);
+    expect(css).toMatch(/\.hp-topbar\s*\{[^}]*border-radius:\s*var\(--r-sheet\)/);
   });
 });
 
