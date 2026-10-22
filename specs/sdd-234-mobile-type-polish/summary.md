@@ -48,3 +48,16 @@ node specs/sdd-234-mobile-type-polish/test-related.cjs
 `950bbdc8` — 모바일 토큰 원본·CSS/TS 출력, Tailwind mobile 변형, index.css·mobile-foundation.css, AppShell/ClientShell, floating-bottom-nav.css, DESIGN.md (10파일).
 
 최종 독립 재검증도 60/108/120 실패0. 관련 vitest 최종 재실행 62/62. 상세 결과는 checks/에 보존했다.
+
+## 2단계 통합 (10/23, 감독)
+
+- 영역 브랜치 4개(sdd/234-a-home `cb70335b`, b-class `f5eabf41`, c-report `79d32820`, d-chat `fea84a11`)를 공통 기반 위에 병합. 충돌 0.
+- 통합 중 고친 기존 테스트 3건(제품 코드 변경 없음):
+  - `class-player-member-sheets.test.tsx`: PR #62에서 바뀐 조용한 신호 안내 문구('선택한 상태와 이름이 상담사에게만 보여요')로 기대값 갱신. develop에서도 실패하던 건.
+  - `font-scale.test.ts`: D가 말풍선 크기를 인라인 → `chat-room.css` 클래스로 옮김에 따라, 데스크톱 기본값(15/13/12px·최대폭 80%)과 muted 색 폴백을 CSS·컴포넌트에서 확인하도록 변경.
+  - `specs/sdd-233-home-stats-floating-nav/parity.cjs`: PR #60 레일 카드(`.home-rail-card`)는 일반 패널 최소높이 200 비교에서 빼고 최소높이 0을 따로 확인. 두 홈 390·1440 실패 0.
+- 통합 측정 `screens/after-integrated` (390·768·1440, 20화면×3):
+  - 390px 12px 이하 글자 241 → 3(홈 레일 배지·아바타 — PR #60 유지 대상), 최소 글자 11~12 → 13(홈 12 유지 요소 제외), 44px 미만 터치 → 채팅 목록 정렬 체크박스 1(라벨 전체 44px 터치라 실사용 충족). 렌더/JS 오류 0.
+  - 768·1440: 현재 develop을 같은 하니스로 측정한 기준과 비교해 40개 화면 분포 차이 0(데스크톱 불변). 원래 before와의 차이 6건은 그 사이 develop에 들어간 PR #60·#62 때문.
+- 검증: tsc 0, 빌드 통과(.env 미로드 Node API). 전체 vitest 2,631 중 실패 11 — 모두 develop 동일 실패(agent-counselor-page, chat-message-deeplink, org-*browser, report-*pdf; 로컬 서버 필요한 브라우저 테스트 포함).
+- 남은 확인: 실기기(iOS 키보드·safe-area·200% 확대), 클래스 안 채팅 패널 실측.

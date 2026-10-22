@@ -2,7 +2,7 @@
   {
     "width": 390,
     "role": "client",
-    "mode": "build",
+    "mode": "dev",
     "tilesAll": [
       {
         "borderRadius": "20px",
@@ -12,7 +12,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -22,7 +23,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -32,7 +34,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -42,7 +45,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       }
     ],
     "classesAll": [
@@ -54,7 +58,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 226, 237)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -64,7 +69,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 226, 237)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -74,7 +80,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 226, 237)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -84,7 +91,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 226, 237)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       }
     ],
     "panelsAll": [
@@ -96,7 +104,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "8px"
+        "gap": "8px",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -106,60 +115,66 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
-        "height": "200px",
-        "minHeight": "200px",
+        "height": "140.5px",
+        "minHeight": "0px",
         "padding": "24px",
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": true
       },
       {
         "borderRadius": "20px",
-        "height": "200px",
-        "minHeight": "200px",
+        "height": "140.5px",
+        "minHeight": "0px",
         "padding": "24px",
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": true
       }
     ],
     "structureAncestor": true,
     "shell": "structure",
     "hero": {
       "borderRadius": "20px",
-      "height": "263.188px",
+      "height": "276px",
       "minHeight": "240px",
       "padding": "24px",
       "borderWidth": "0px",
       "borderColor": "rgb(239, 239, 239)",
       "boxShadow": "none",
-      "gap": "normal"
+      "gap": "normal",
+      "rail": false
     },
     "chip": {
       "borderRadius": "9999px",
       "height": "32px",
       "minHeight": "32px",
-      "padding": "0px 12px",
+      "padding": "4px 12px",
       "borderWidth": "1px",
       "borderColor": "rgba(255, 255, 255, 0.24)",
       "boxShadow": "none",
-      "gap": "6px"
+      "gap": "6px",
+      "rail": false
     },
     "button": {
       "borderRadius": "9999px",
       "height": "48px",
-      "minHeight": "48px",
+      "minHeight": "44px",
       "padding": "0px",
       "borderWidth": "0px",
       "borderColor": "rgb(239, 239, 239)",
       "boxShadow": "none",
-      "gap": "8px"
+      "gap": "8px",
+      "rail": false
     },
     "tile": {
       "borderRadius": "20px",
@@ -169,7 +184,8 @@
       "borderWidth": "1px",
       "borderColor": "rgb(232, 227, 236)",
       "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-      "gap": "normal"
+      "gap": "normal",
+      "rail": false
     },
     "classCard": {
       "borderRadius": "20px",
@@ -179,7 +195,8 @@
       "borderWidth": "1px",
       "borderColor": "rgb(232, 226, 237)",
       "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-      "gap": "normal"
+      "gap": "normal",
+      "rail": false
     },
     "panel": {
       "borderRadius": "20px",
@@ -189,7 +206,8 @@
       "borderWidth": "1px",
       "borderColor": "rgb(232, 227, 236)",
       "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-      "gap": "8px"
+      "gap": "8px",
+      "rail": false
     },
     "home": "24px",
     "tiles": "12px",
@@ -202,7 +220,7 @@
   {
     "width": 390,
     "role": "counselor",
-    "mode": "build",
+    "mode": "dev",
     "tilesAll": [
       {
         "borderRadius": "20px",
@@ -212,7 +230,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -222,7 +241,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -232,7 +252,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -242,7 +263,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       }
     ],
     "classesAll": [
@@ -254,7 +276,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 226, 237)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -264,7 +287,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 226, 237)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -274,7 +298,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 226, 237)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -284,7 +309,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 226, 237)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       }
     ],
     "panelsAll": [
@@ -296,60 +322,66 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
-        "height": "200px",
-        "minHeight": "200px",
+        "height": "136.5px",
+        "minHeight": "0px",
         "padding": "24px",
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": true
       },
       {
         "borderRadius": "20px",
-        "height": "200px",
-        "minHeight": "200px",
+        "height": "136.5px",
+        "minHeight": "0px",
         "padding": "24px",
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": true
       }
     ],
     "structureAncestor": false,
     "shell": "default",
     "hero": {
       "borderRadius": "20px",
-      "height": "263.188px",
+      "height": "276px",
       "minHeight": "240px",
       "padding": "24px",
       "borderWidth": "0px",
       "borderColor": "rgb(239, 239, 239)",
       "boxShadow": "none",
-      "gap": "normal"
+      "gap": "normal",
+      "rail": false
     },
     "chip": {
       "borderRadius": "9999px",
       "height": "32px",
       "minHeight": "32px",
-      "padding": "0px 12px",
+      "padding": "4px 12px",
       "borderWidth": "1px",
       "borderColor": "rgba(255, 255, 255, 0.24)",
       "boxShadow": "none",
-      "gap": "6px"
+      "gap": "6px",
+      "rail": false
     },
     "button": {
       "borderRadius": "9999px",
       "height": "48px",
-      "minHeight": "48px",
+      "minHeight": "44px",
       "padding": "0px",
       "borderWidth": "0px",
       "borderColor": "rgb(239, 239, 239)",
       "boxShadow": "none",
-      "gap": "8px"
+      "gap": "8px",
+      "rail": false
     },
     "tile": {
       "borderRadius": "20px",
@@ -359,7 +391,8 @@
       "borderWidth": "1px",
       "borderColor": "rgb(232, 227, 236)",
       "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-      "gap": "normal"
+      "gap": "normal",
+      "rail": false
     },
     "classCard": {
       "borderRadius": "20px",
@@ -369,7 +402,8 @@
       "borderWidth": "1px",
       "borderColor": "rgb(232, 226, 237)",
       "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-      "gap": "normal"
+      "gap": "normal",
+      "rail": false
     },
     "panel": {
       "borderRadius": "20px",
@@ -379,7 +413,8 @@
       "borderWidth": "1px",
       "borderColor": "rgb(232, 227, 236)",
       "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-      "gap": "normal"
+      "gap": "normal",
+      "rail": false
     },
     "home": "24px",
     "tiles": "12px",
@@ -392,7 +427,7 @@
   {
     "width": 1440,
     "role": "client",
-    "mode": "build",
+    "mode": "dev",
     "tilesAll": [
       {
         "borderRadius": "20px",
@@ -402,7 +437,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -412,7 +448,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -422,7 +459,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -432,7 +470,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       }
     ],
     "classesAll": [
@@ -444,7 +483,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 226, 237)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -454,7 +494,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 226, 237)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -464,7 +505,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 226, 237)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -474,7 +516,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 226, 237)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       }
     ],
     "panelsAll": [
@@ -486,7 +529,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "8px"
+        "gap": "8px",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -496,27 +540,30 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
-        "height": "200px",
-        "minHeight": "200px",
+        "height": "140.5px",
+        "minHeight": "0px",
         "padding": "24px",
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": true
       },
       {
         "borderRadius": "20px",
-        "height": "200px",
-        "minHeight": "200px",
+        "height": "140.5px",
+        "minHeight": "0px",
         "padding": "24px",
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": true
       }
     ],
     "structureAncestor": true,
@@ -529,7 +576,8 @@
       "borderWidth": "0px",
       "borderColor": "rgb(239, 239, 239)",
       "boxShadow": "none",
-      "gap": "normal"
+      "gap": "normal",
+      "rail": false
     },
     "chip": {
       "borderRadius": "9999px",
@@ -539,7 +587,8 @@
       "borderWidth": "1px",
       "borderColor": "rgba(255, 255, 255, 0.24)",
       "boxShadow": "none",
-      "gap": "6px"
+      "gap": "6px",
+      "rail": false
     },
     "button": {
       "borderRadius": "9999px",
@@ -549,7 +598,8 @@
       "borderWidth": "0px",
       "borderColor": "rgb(239, 239, 239)",
       "boxShadow": "none",
-      "gap": "8px"
+      "gap": "8px",
+      "rail": false
     },
     "tile": {
       "borderRadius": "20px",
@@ -559,7 +609,8 @@
       "borderWidth": "1px",
       "borderColor": "rgb(232, 227, 236)",
       "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-      "gap": "normal"
+      "gap": "normal",
+      "rail": false
     },
     "classCard": {
       "borderRadius": "20px",
@@ -569,7 +620,8 @@
       "borderWidth": "1px",
       "borderColor": "rgb(232, 226, 237)",
       "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-      "gap": "normal"
+      "gap": "normal",
+      "rail": false
     },
     "panel": {
       "borderRadius": "20px",
@@ -579,7 +631,8 @@
       "borderWidth": "1px",
       "borderColor": "rgb(232, 227, 236)",
       "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-      "gap": "8px"
+      "gap": "8px",
+      "rail": false
     },
     "home": "24px",
     "tiles": "16px",
@@ -592,7 +645,7 @@
   {
     "width": 1440,
     "role": "counselor",
-    "mode": "build",
+    "mode": "dev",
     "tilesAll": [
       {
         "borderRadius": "20px",
@@ -602,7 +655,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -612,7 +666,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -622,7 +677,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -632,7 +688,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       }
     ],
     "classesAll": [
@@ -644,7 +701,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 226, 237)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -654,7 +712,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 226, 237)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -664,7 +723,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 226, 237)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
@@ -674,7 +734,8 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 226, 237)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       }
     ],
     "panelsAll": [
@@ -686,27 +747,30 @@
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": false
       },
       {
         "borderRadius": "20px",
-        "height": "200px",
-        "minHeight": "200px",
+        "height": "136.5px",
+        "minHeight": "0px",
         "padding": "24px",
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": true
       },
       {
         "borderRadius": "20px",
-        "height": "200px",
-        "minHeight": "200px",
+        "height": "136.5px",
+        "minHeight": "0px",
         "padding": "24px",
         "borderWidth": "1px",
         "borderColor": "rgb(232, 227, 236)",
         "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-        "gap": "normal"
+        "gap": "normal",
+        "rail": true
       }
     ],
     "structureAncestor": false,
@@ -719,7 +783,8 @@
       "borderWidth": "0px",
       "borderColor": "rgb(239, 239, 239)",
       "boxShadow": "none",
-      "gap": "normal"
+      "gap": "normal",
+      "rail": false
     },
     "chip": {
       "borderRadius": "9999px",
@@ -729,7 +794,8 @@
       "borderWidth": "1px",
       "borderColor": "rgba(255, 255, 255, 0.24)",
       "boxShadow": "none",
-      "gap": "6px"
+      "gap": "6px",
+      "rail": false
     },
     "button": {
       "borderRadius": "9999px",
@@ -739,7 +805,8 @@
       "borderWidth": "0px",
       "borderColor": "rgb(239, 239, 239)",
       "boxShadow": "none",
-      "gap": "8px"
+      "gap": "8px",
+      "rail": false
     },
     "tile": {
       "borderRadius": "20px",
@@ -749,7 +816,8 @@
       "borderWidth": "1px",
       "borderColor": "rgb(232, 227, 236)",
       "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-      "gap": "normal"
+      "gap": "normal",
+      "rail": false
     },
     "classCard": {
       "borderRadius": "20px",
@@ -759,7 +827,8 @@
       "borderWidth": "1px",
       "borderColor": "rgb(232, 226, 237)",
       "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-      "gap": "normal"
+      "gap": "normal",
+      "rail": false
     },
     "panel": {
       "borderRadius": "20px",
@@ -769,7 +838,8 @@
       "borderWidth": "1px",
       "borderColor": "rgb(232, 227, 236)",
       "boxShadow": "rgba(53, 33, 63, 0.024) 0px 2px 8px 0px",
-      "gap": "normal"
+      "gap": "normal",
+      "rail": false
     },
     "home": "24px",
     "tiles": "16px",
