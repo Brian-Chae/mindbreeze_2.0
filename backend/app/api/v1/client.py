@@ -29,15 +29,20 @@ def list_clients(
     size: int = Query(20, ge=1, le=100),
     class_id: str | None = Query(None),
     active_within_days: int | None = Query(None, ge=1, le=365),
+    counselor_id: str | None = Query(None),
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    clients, total, class_options = client_service.list_clients(
+    if current_user.get("role") not in ("counselor", "org_admin"):
+        raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
+    clients, total, class_options, counselor_options = client_service.list_clients(
         current_user["id"], q, page, size, db,
         class_id=class_id, active_within_days=active_within_days,
+        counselor_filter_id=counselor_id,
     )
     return ClientListResponse(
-        clients=clients, total=total, page=page, class_options=class_options
+        clients=clients, total=total, page=page, class_options=class_options,
+        counselor_options=counselor_options,
     )
 
 

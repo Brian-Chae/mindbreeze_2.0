@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import AppShell from '../../components/layout/AppShell';
 import InviteModal from '../../components/clients/InviteModal';
 import { useAuthStore } from '../../stores/authStore';
-import { listClients, type ClientClassRef, type ClientListItem } from '../../lib/api/clients';
+import { listClients, type ClientClassRef, type ClientCounselorRef, type ClientListItem } from '../../lib/api/clients';
 import { ApiError } from '../../lib/api/client';
 import {
   ACTIVE_WITHIN_OPTIONS,
@@ -53,7 +53,12 @@ function ActivityCell({ c }: { c: ClientListItem }) {
   );
 }
 
-function ClientTable({ clients }: { clients: ClientListItem[] }) {
+function CounselorCell({ counselors }: { counselors?: ClientCounselorRef[] }) {
+  if (!counselors || counselors.length === 0) return <span className="text-[#9CA0AE]">담당 없음</span>;
+  return <span className="text-[#1F1F1F]">{counselors.map((c) => c.name ?? '이름 없음').join(', ')}</span>;
+}
+
+function ClientTable({ clients, showCounselor }: { clients: ClientListItem[]; showCounselor: boolean }) {
   return (
     <div className="overflow-x-auto" data-testid="client-table-scroll" tabIndex={0} aria-label="회원 표 (가로 스크롤)">
       <table className="w-full min-w-[860px] border-collapse text-left text-sm">
@@ -65,6 +70,7 @@ function ClientTable({ clients }: { clients: ClientListItem[] }) {
             <th scope="col" className="px-4 py-3 font-semibold">연락처</th>
             <th scope="col" className="px-4 py-3 font-semibold">최근 활동</th>
             <th scope="col" className="px-4 py-3 font-semibold">소속 클래스</th>
+            {showCounselor && <th scope="col" className="px-4 py-3 font-semibold">담당 상담사</th>}
           </tr>
         </thead>
         <tbody>
@@ -84,6 +90,7 @@ function ClientTable({ clients }: { clients: ClientListItem[] }) {
               <td className="px-4 py-3 font-mono text-[13px] text-[#1F1F1F]">{c.phone_masked ?? '미입력'}</td>
               <td className="px-4 py-3"><ActivityCell c={c} /></td>
               <td className="px-4 py-3"><ClassChips classes={c.classes} /></td>
+              {showCounselor && <td className="px-4 py-3"><CounselorCell counselors={c.counselors} /></td>}
             </tr>
           ))}
         </tbody>
@@ -92,7 +99,7 @@ function ClientTable({ clients }: { clients: ClientListItem[] }) {
   );
 }
 
-function ClientCards({ clients }: { clients: ClientListItem[] }) {
+function ClientCards({ clients, showCounselor }: { clients: ClientListItem[]; showCounselor: boolean }) {
   return (
     <ul className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 xl:grid-cols-3">
       {clients.map((c) => (
@@ -111,6 +118,9 @@ function ClientCards({ clients }: { clients: ClientListItem[] }) {
               </p>
               <div className="mt-3"><ActivityCell c={c} /></div>
               <div className="mt-3"><ClassChips classes={c.classes} /></div>
+              {showCounselor && (
+                <p className="mt-2 text-[13px] text-[#6F6F6F]">담당 상담사 · <CounselorCell counselors={c.counselors} /></p>
+              )}
             </div>
           </div>
         </li>
@@ -129,6 +139,7 @@ export default function ClientListPage() {
   const [params, setParams] = useSearchParams();
   const searchTerm = params.get('q') ?? '';
   const classId = params.get('class') ?? '';
+  const counselorId = params.get('counselor') ?? '';
   const days = params.get('days') ? Number(params.get('days')) : null;
   const group: GroupMode = params.get('group') === 'class' ? 'class' : 'none';
   const page = Math.max(1, Number(params.get('page')) || 1);
@@ -138,6 +149,8 @@ export default function ClientListPage() {
   const [query, setQuery] = useState(searchTerm);
   const [clients, setClients] = useState<ClientListItem[]>([]);
   const [classOptions, setClassOptions] = useState<ClientClassRef[]>([]);
+  const [counselorOptions, setCounselorOptions] = useState<ClientCounselorRef[]>([]);
+  const isOrgAdmin = user?.role === 'org_admin';
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -166,12 +179,14 @@ export default function ClientListPage() {
       size,
       class_id: classId || undefined,
       active_within_days: days ?? undefined,
+      counselor_id: isOrgAdmin && counselorId ? counselorId : undefined,
     })
       .then((res) => {
         if (cancelled) return;
         setClients(res.clients);
         setTotal(res.total);
         setClassOptions(res.class_options ?? []);
+        setCounselorOptions(res.counselor_options ?? []);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -183,7 +198,7 @@ export default function ClientListPage() {
     return () => {
       cancelled = true;
     };
-  }, [searchTerm, classId, days, page, size, reloadKey, isAuthenticated, user?.role]);
+  }, [searchTerm, classId, counselorId, days, page, size, reloadKey, isAuthenticated, user?.role]);
 
   // 로그아웃 시 메모리 캐시 폐기
   useEffect(() => {
@@ -194,7 +209,7 @@ export default function ClientListPage() {
   }, [isAuthenticated]);
 
   const groups = useMemo(() => groupClients(clients, group), [clients, group]);
-  const hasFilter = Boolean(searchTerm || classId || days || group !== 'none');
+  const hasFilter = Boolean(searchTerm || classId || counselorId || days || group !== 'none');
 
   const handleSearch = (e: FormEvent) => {
     e.preventDefault();
@@ -285,6 +300,21 @@ export default function ClientListPage() {
                 ))}
               </select>
             </label>
+            {isOrgAdmin && (
+              <label className="grid min-w-[145px] flex-1 gap-1.5 text-[12px] text-[#6F6F6F]">
+                담당 상담사
+                <select
+                  className={fieldClass}
+                  value={counselorId}
+                  onChange={(e) => patchParams({ counselor: e.target.value || null })}
+                >
+                  <option value="">전체</option>
+                  {counselorOptions.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name ?? '이름 없음'}</option>
+                  ))}
+                </select>
+              </label>
+            )}
             <label className="grid min-w-[145px] flex-1 gap-1.5 text-[12px] text-[#6F6F6F]">
               최근 활동
               <select
@@ -354,7 +384,7 @@ export default function ClientListPage() {
                     {g.title} <span className="text-[13px] font-normal text-[#6F6F6F]">{g.clients.length}명</span>
                   </h2>
                 )}
-                {view === 'table' ? <ClientTable clients={g.clients} /> : <ClientCards clients={g.clients} />}
+                {view === 'table' ? <ClientTable clients={g.clients} showCounselor={isOrgAdmin} /> : <ClientCards clients={g.clients} showCounselor={isOrgAdmin} />}
               </section>
             ))}
           </>

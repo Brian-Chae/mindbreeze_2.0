@@ -21,3 +21,10 @@
 - vitest: `sdd230-member-overview.test.tsx` 9 + 관련 파일 포함 173 통과. `npx tsc -p tsconfig.app.json --noEmit` 오류 0.
 - 전체 vitest 전량은 550초 내 미완료(직렬 실행) → 관련 파일만 실행.
 - Chrome headless 12장(표/카드/그룹/상세 × 1440/1194/390, API mock·가상 데이터): 페이지 가로 넘침 0, JS 오류 0, 접속·점수 문구 0. 표 내부 스크롤은 390만 발생(의도). 증빙: `screens/`.
+
+## 1-2단계 — 기관관리자 범위 (2026-10-22, 마이그레이션 없음)
+- **'기관 전체 회원' 정의**: 내가 관리하는 일반 기관(`UserOrgMembership` role=org_admin·active, 기관 활성, `kind != individual`, 다중 기관 전부; `User.org_id` 미사용) 안에서 ① 귀속 확정(`organization_attribution_known`) 기관 클래스(draft·archived 제외)의 active 멤버 ② 기관 귀속 active 상담관계(placeholder 제외)의 회원(role=client). 개인상담소·귀속 불명·링크만 있는 회원은 제외. 상담사는 기존 범위 불변.
+- API: `GET /clients`(관리자 모집단 = 본인 연결 ∪ 기관 회원, `counselor_id` 필터, `counselors`·`counselor_options`), 상세/activity/reports/contact-reveal은 `require_client_access`(본인 연결 → 기관 회원 → 403) 공통. 관리자 전용 세션은 기관 명상 클래스 세션만, 회원용 리포트만, AI 안부·상담 세션 제외.
+- 비공개 메모는 상담사 개인 메모라 관리자 비연결 회원에선 `memo=null`·`memo_editable=false`, 저장 API 403. FE는 메모 영역 숨김.
+- FE: 목록에 관리자 전용 '담당 상담사' 열(표·카드)·필터(URL `counselor`). 라우트·사이드바(org_admin `/clients`)는 기존 그대로 확인.
+- 테스트: pytest 신규 10(A1~A9) + 회귀 포함 117 통과, vitest 신규 4 + 기존 개요 9 통과, tsc 오류 0. 프론트 전체 실행 시 기존 실패 11건(org-management-browser 등 6파일)은 변경 전 동일 — 이번 범위 무관.

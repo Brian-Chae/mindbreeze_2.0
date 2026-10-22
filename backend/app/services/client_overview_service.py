@@ -1,7 +1,9 @@
 """SDD-230 회원 개요 — 목록 보강·활동 타임라인·리포트/변화 집계 (1단계: 접속 제외).
 
 지켜야 할 경계:
-- 모집단은 내(상담사) active ClientCounselorLink 회원뿐이다. 모든 조회가 이 연결로 먼저 제한된다.
+- 모집단은 내(상담사) active ClientCounselorLink 회원이다. 모든 조회가 이 연결로 먼저 제한된다.
+- 예외(1-2단계): 기관관리자는 자기가 관리하는 기관의 회원(기관 귀속이 확정된 클래스 멤버·상담관계)도 본다.
+  개인상담소·귀속 불명·타 기관 회원은 제외한다(spec §11).
 - 활동·리포트는 내가 접근 가능한 세션(호스트/활성 강사/내 상담관계)에서 **해당 회원 참여자 행**만 읽는다.
   같은 세션의 다른 참여자 행·리포트는 조회하지 않는다.
 - 예정 일정·리포트 생성/수정은 활동이 아니다. 미측정은 0으로 보간하지 않는다.
@@ -24,6 +26,8 @@ from app.models.class_program import Class, ClassInstructor, ClassMember
 from app.models.client_counselor_link import ClientCounselorLink
 from app.models.client_profile import ClientProfile
 from app.models.counseling import CounselingRelationship
+from app.models.organization import Organization
+from app.models.user_org_membership import UserOrgMembership
 from app.models.record import EEGRecord, Report
 from app.models.session import Session, SessionParticipant
 from app.models.user import User
@@ -175,6 +179,92 @@ def require_active_link(db: DBSession, counselor_id, client_id) -> ClientCounsel
     return link
 
 
+def admin_org_ids(db: DBSession, me) -> list[UUID]:
+    """내가 관리하는 일반 기관(active org_admin 소속, 비활성·개인상담소 제외). User.org_id 는 쓰지 않는다."""
+    me = _uuid(me)
+    user = db.get(User, me)
+    if user is None or user.role != "org_admin" or user.status != "active":
+        return []
+    rows = (
+        db.query(UserOrgMembership.org_id)
+        .join(Organization, Organization.id == UserOrgMembership.org_id)
+        .filter(
+            UserOrgMembership.user_id == me,
+            UserOrgMembership.role == "org_admin",
+            UserOrgMembership.status == "active",
+            Organization.deactivated_at.is_(None),
+            Organization.kind != "individual",
+        )
+        .all()
+    )
+    return [r for (r,) in rows]
+
+
+def _admin_class_ids(db: DBSession, org_ids: list[UUID]) -> set[UUID]:
+    if not org_ids:
+        return set()
+    rows = (
+        db.query(Class.id)
+        .filter(
+            Class.organization_id.in_(org_ids),
+            Class.organization_attribution_known.is_(True),
+            Class.status.notin_(("draft", "archived")),
+        )
+        .all()
+    )
+    return {c for (c,) in rows}
+
+
+def org_member_ids(db: DBSession, org_ids: list[UUID]) -> set[UUID]:
+    """기관 회원 = 기관 클래스 active 멤버 ∪ 기관 귀속 active 상담관계의 회원(역할 client 만)."""
+    if not org_ids:
+        return set()
+    class_ids = _admin_class_ids(db, org_ids)
+    found: set[UUID] = set()
+    if class_ids:
+        found |= {
+            u
+            for (u,) in db.query(ClassMember.user_id)
+            .filter(
+                ClassMember.class_id.in_(class_ids),
+                ClassMember.status == "active",
+                ClassMember.kind == "member",
+                ClassMember.user_id.isnot(None),
+            )
+            .all()
+        }
+    found |= {
+        u
+        for (u,) in db.query(CounselingRelationship.client_user_id)
+        .filter(
+            CounselingRelationship.organization_id.in_(org_ids),
+            CounselingRelationship.organization_attribution_known.is_(True),
+            CounselingRelationship.status == "active",
+            CounselingRelationship.is_placeholder.is_(False),
+            CounselingRelationship.client_user_id.isnot(None),
+        )
+        .all()
+    }
+    if not found:
+        return found
+    clients = {
+        u
+        for (u,) in db.query(User.id).filter(User.id.in_(found), User.role == "client").all()
+    }
+    return clients
+
+
+def require_client_access(db: DBSession, viewer_id, client_id) -> ClientCounselorLink | None:
+    """본인 active 연결이 있으면 그 링크, 없으면 기관관리자의 기관 회원일 때 None, 아니면 403."""
+    try:
+        return require_active_link(db, viewer_id, client_id)
+    except HTTPException:
+        orgs = admin_org_ids(db, viewer_id)
+        if orgs and _uuid(client_id) in org_member_ids(db, orgs):
+            return None
+        raise
+
+
 def _my_class_ids(db: DBSession, me: UUID) -> set[UUID]:
     owned = {c for (c,) in db.query(Class.id).filter(Class.created_by == me).all()}
     taught = {
@@ -198,13 +288,36 @@ def _accessible_sessions(db: DBSession, me: UUID) -> dict[UUID, Session]:
     return {s.id: s for s in rows}
 
 
+def _admin_only_sessions(db: DBSession, me: UUID, base: dict[UUID, Session]) -> dict[UUID, Session]:
+    """기관관리자 전용 추가 세션 — 관리 기관 귀속 클래스의 명상 세션(상담 세션 제외)."""
+    class_ids = _admin_class_ids(db, admin_org_ids(db, me))
+    if not class_ids:
+        return {}
+    rows = (
+        db.query(Session)
+        .filter(
+            Session.is_template.is_(False),
+            Session.type == "meditation",
+            Session.class_id.in_(class_ids),
+        )
+        .all()
+    )
+    return {s.id: s for s in rows if s.id not in base}
+
+
 def _participant_rows(db: DBSession, me: UUID, client_ids: list[UUID]):
-    """(participant, session) — 내가 접근 가능한 세션 × 대상 회원 본인 행만."""
+    """(participant, session) — 내가 접근 가능한 세션 × 대상 회원 본인 행만.
+
+    기관관리자는 관리 기관 명상 클래스 세션이 추가되며, 이 세션(admin_only)의 리포트는 회원용만 읽는다.
+    """
     if not client_ids:
-        return [], {}
+        return [], {}, set()
     sessions = _accessible_sessions(db, me)
+    extra = _admin_only_sessions(db, me, sessions)
+    if extra:
+        sessions = {**sessions, **extra}
     if not sessions:
-        return [], sessions
+        return [], sessions, set()
     parts = (
         db.query(SessionParticipant)
         .filter(
@@ -214,7 +327,7 @@ def _participant_rows(db: DBSession, me: UUID, client_ids: list[UUID]):
         )
         .all()
     )
-    return parts, sessions
+    return parts, sessions, set(extra.keys())
 
 
 # ───────────────────────── 활동 집계 ─────────────────────────
@@ -228,7 +341,7 @@ def _class_titles(db: DBSession, class_ids: set[UUID]) -> dict[UUID, str]:
 def collect_events(db: DBSession, me: UUID, client_ids: list[UUID], *, since: datetime | None = None) -> list[dict]:
     """대상 회원들의 실제 활동 이벤트. 이벤트 dict 의 client_id 로 회원을 구분한다."""
     events: list[dict] = []
-    parts, sessions = _participant_rows(db, me, client_ids)
+    parts, sessions, _ = _participant_rows(db, me, client_ids)
     titles = _class_titles(db, {s.class_id for s in sessions.values() if s.class_id})
 
     def title_of(s: Session) -> tuple[str, str | None]:
@@ -315,7 +428,7 @@ def member_classes(db: DBSession, me: UUID, client_ids: list[UUID]) -> dict[UUID
     """회원 → 내가 접근 가능한 클래스(회원 연결만으로 모든 클래스를 노출하지 않는다)."""
     if not client_ids:
         return {}
-    mine = _my_class_ids(db, me)
+    mine = _my_class_ids(db, me) | _admin_class_ids(db, admin_org_ids(db, me))
     if not mine:
         return {}
     rows = (
@@ -347,19 +460,57 @@ def list_clients_overview(
     class_id: str | None,
     active_within_days: int | None,
     db: DBSession,
+    counselor_filter_id: str | None = None,
 ) -> dict:
     me = _uuid(counselor_id)
+    orgs = admin_org_ids(db, me)
+    own_ids = db.query(ClientCounselorLink.client_id).filter(
+        ClientCounselorLink.counselor_id == me, ClientCounselorLink.status == "active"
+    )
+    org_ids_set = org_member_ids(db, orgs) if orgs else set()
+    population = User.id.in_(own_ids)
+    if org_ids_set:
+        population = or_(population, User.id.in_(org_ids_set))
     query = (
         db.query(User, ClientProfile)
-        .join(ClientCounselorLink, ClientCounselorLink.client_id == User.id)
         .outerjoin(ClientProfile, ClientProfile.user_id == User.id)
-        .filter(ClientCounselorLink.counselor_id == me, ClientCounselorLink.status == "active")
+        .filter(population)
     )
     if q:
         like = f"%{q}%"
         query = query.filter((User.name.ilike(like)) | (User.email.ilike(like)))
     rows = query.order_by(User.name, User.id).all()
     ids = [u.id for u, _ in rows]
+
+    # 관리자용 담당 상담사 — 관리 기관에 active 소속인 상담사와의 active 연결만(이름만 노출).
+    counselors_by_client: dict[UUID, list[dict]] = {}
+    counselor_options: dict[str, str] = {}
+    if orgs and ids:
+        link_rows = (
+            db.query(ClientCounselorLink.client_id, User.id, User.name)
+            .join(User, User.id == ClientCounselorLink.counselor_id)
+            .join(UserOrgMembership, UserOrgMembership.user_id == User.id)
+            .filter(
+                ClientCounselorLink.client_id.in_(ids),
+                ClientCounselorLink.status == "active",
+                UserOrgMembership.org_id.in_(orgs),
+                UserOrgMembership.status == "active",
+                User.status == "active",
+            )
+            .distinct()
+            .all()
+        )
+        for cid, uid, name in link_rows:
+            counselors_by_client.setdefault(cid, []).append({"id": str(uid), "name": name})
+            counselor_options[str(uid)] = name
+        for v in counselors_by_client.values():
+            v.sort(key=lambda c: c["name"] or "")
+        if counselor_filter_id:
+            rows = [
+                (u, p) for u, p in rows
+                if any(c["id"] == counselor_filter_id for c in counselors_by_client.get(u.id, []))
+            ]
+            ids = [u.id for u, _ in rows]
 
     classes = member_classes(db, me, ids)
     options: dict[str, str] = {}
@@ -394,6 +545,7 @@ def list_clients_overview(
             "age": calc_age(profile.birth_date, today) if profile else None,
             "phone_masked": mask_phone(user.phone),
             "classes": classes.get(user.id, []),
+            "counselors": counselors_by_client.get(user.id, []),
             "last_activity_at": _iso(act["_at"]) if act else None,
             "last_activity_source": _source_label(act) if act else None,
             "last_session_at": _iso(a.get("session")),
@@ -404,6 +556,9 @@ def list_clients_overview(
         "class_options": sorted(
             ({"id": i, "title": t} for i, t in options.items()), key=lambda c: c["title"]
         ),
+        "counselor_options": sorted(
+            ({"id": i, "name": n} for i, n in counselor_options.items()), key=lambda c: c["name"] or ""
+        ),
     }
 
 
@@ -411,7 +566,7 @@ def list_clients_overview(
 
 def reveal_contact(db: DBSession, counselor_id: str, client_id: str) -> dict:
     """연락처·생년월일 원문 열람. 호출마다 active 연결을 재검사하고 원문 없이 감사 로그를 남긴다."""
-    require_active_link(db, counselor_id, client_id)
+    require_client_access(db, counselor_id, client_id)
     user = db.get(User, _uuid(client_id))
     profile = db.query(ClientProfile).filter(ClientProfile.user_id == _uuid(client_id)).first()
     audit_logger.info(
@@ -434,7 +589,7 @@ def get_activity(
     limit: int,
     cursor: str | None,
 ) -> dict:
-    require_active_link(db, counselor_id, client_id)
+    require_client_access(db, counselor_id, client_id)
     me, cid = _uuid(counselor_id), _uuid(client_id)
     since = datetime.now(timezone.utc) - timedelta(days=days)
     wanted = [t for t in (types or ACTIVITY_TYPES) if t in ACTIVITY_TYPES]
@@ -459,9 +614,9 @@ def get_activity(
 
 
 def get_reports(db: DBSession, counselor_id: str, client_id: str) -> dict:
-    require_active_link(db, counselor_id, client_id)
+    require_client_access(db, counselor_id, client_id)
     me, cid = _uuid(counselor_id), _uuid(client_id)
-    parts, sessions = _participant_rows(db, me, [cid])
+    parts, sessions, admin_only = _participant_rows(db, me, [cid])
     part_by_id = {p.id: p for p in parts}
     if not part_by_id:
         return {"reports": [], "changes": []}
@@ -475,6 +630,9 @@ def get_reports(db: DBSession, counselor_id: str, client_id: str) -> dict:
     for r in rows:
         p = part_by_id[r.participant_id]
         s = sessions[p.session_id]
+        # 기관관리자 전용 세션은 회원용 리포트만 — 상담사용 리포트는 읽지 않는다.
+        if s.id in admin_only and r.type != "client":
+            continue
         occurred = _aware(s.started_at) or _aware(s.scheduled_at) or _aware(r.created_at)
         label = REPORT_STATUS_LABELS.get(r.status, "생성 중")
         if r.generation_status == "processing" and r.status != "completed":

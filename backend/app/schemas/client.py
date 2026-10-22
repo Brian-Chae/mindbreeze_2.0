@@ -8,6 +8,11 @@ class ClientClassRef(BaseModel):
     title: str
 
 
+class ClientCounselorRef(BaseModel):
+    id: str
+    name: str | None = None
+
+
 class ClientSummary(BaseModel):
     id: str
     name: str
@@ -19,6 +24,8 @@ class ClientSummary(BaseModel):
     age: int | None = None
     phone_masked: str | None = None
     classes: list[ClientClassRef] = []
+    # 기관관리자 전용(상담사 호출에서는 빈 배열)
+    counselors: list[ClientCounselorRef] = []
     last_activity_at: str | None = None
     last_activity_source: str | None = None
 
@@ -30,6 +37,7 @@ class ClientListResponse(BaseModel):
     total: int
     page: int
     class_options: list[ClientClassRef] = []
+    counselor_options: list[ClientCounselorRef] = []
 
 
 class ClientProfileResponse(BaseModel):
@@ -47,6 +55,8 @@ class ClientProfileResponse(BaseModel):
     # SDD-230: phone/birth_date 는 기본 응답에서 항상 null — 원문은 contact-reveal 로만 열람한다.
     phone_masked: str | None = None
     age: int | None = None
+    # 기관관리자가 비연결 기관 회원을 볼 때 False — 상담사 개인 메모 보호.
+    memo_editable: bool = True
 
     model_config = {"from_attributes": True}
 

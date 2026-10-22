@@ -120,37 +120,29 @@ def list_clients(
     db: Session,
     class_id: str | None = None,
     active_within_days: int | None = None,
-) -> tuple[list[dict], int, list[dict]]:
-    """상담사 본인의 내담자 목록 + 서버 검색·필터 + 페이징 (SDD-230 개요 집계)."""
+    counselor_filter_id: str | None = None,
+) -> tuple[list[dict], int, list[dict], list[dict]]:
+    """내담자 목록 + 서버 검색·필터 + 페이징 (SDD-230 개요 집계).
+
+    상담사는 본인 active 연결 회원, 기관관리자는 거기에 관리 기관 회원을 더한다.
+    """
     from app.services import client_overview_service
 
     data = client_overview_service.list_clients_overview(
-        counselor_id, q, page, size, class_id, active_within_days, db
+        counselor_id, q, page, size, class_id, active_within_days, db,
+        counselor_filter_id=counselor_filter_id,
     )
-    return data["clients"], data["total"], data["class_options"]
+    return data["clients"], data["total"], data["class_options"], data["counselor_options"]
 
 
 def get_client_profile(
     client_id: str, counselor_id: str, db: Session
 ) -> dict:
-    """내담자 프로필 상세 (본인 내담자만)"""
+    """내담자 프로필 상세 (본인 active 연결 회원 + 기관관리자의 관리 기관 회원)"""
     from app.services import client_overview_service
 
-    link = (
-        db.query(ClientCounselorLink)
-        .filter(
-            ClientCounselorLink.client_id == UUID(client_id),
-            ClientCounselorLink.counselor_id == UUID(counselor_id),
-            # SEC-09: active 연결만 허용 — 종료된 연결로는 접근 불가 (IDOR 방지).
-            ClientCounselorLink.status == "active",
-        )
-        .first()
-    )
-    if not link:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="접근 권한이 없습니다",
-        )
+    # SEC-09: active 연결만 허용(IDOR 방지). 기관관리자는 관리 기관 회원도 허용하며 이때 link=None.
+    link = client_overview_service.require_client_access(db, counselor_id, client_id)
 
     user = db.query(User).filter(User.id == client_id).first()
     profile = (
@@ -173,7 +165,9 @@ def get_client_profile(
         "interests": profile.interests if profile else [],
         "bio": profile.bio if profile else None,
         "profile_image_url": profile.profile_image_url if profile else None,
-        "memo": link.memo,
+        # 메모는 상담사 개인 메모 — 본인 연결이 없는 기관관리자에게는 노출하지 않는다.
+        "memo": link.memo if link else None,
+        "memo_editable": link is not None,
     }
 
 

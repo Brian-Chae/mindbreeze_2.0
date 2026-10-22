@@ -408,6 +408,7 @@ export default function ClientProfilePage() {
         {/* SDD-220: AI 비공개면 체크인 패널(조회 포함)을 mount 하지 않는다 */}
         {isAiEnabled() && id && user?.role === 'counselor' && <AgentCheckinPanel key={id} clientId={id} />}
 
+        {profile?.memo_editable !== false && (
         <section aria-label="상담사 비공개 메모" className={panel}>
           <h2 className="mb-2 text-lg font-semibold">상담사 비공개 메모</h2>
           <p className="mb-3 text-xs text-gray-500">회원에게 공개되지 않습니다.</p>
@@ -433,6 +434,7 @@ export default function ClientProfilePage() {
             {memoError && <span id="client-memo-error" role="alert" className="text-sm text-red-600">{memoError}</span>}
           </div>
         </section>
+        )}
       </div>
     </AppShell>
   );
