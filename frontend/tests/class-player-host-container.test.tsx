@@ -24,6 +24,9 @@ vi.mock('@livekit/components-react', () => ({
   useTracks: () => [],
 }));
 
+const handApi = vi.hoisted(() => ({ lowerEntryHand: vi.fn() }));
+vi.mock('../src/lib/api/class-flow', async (importOriginal) => ({ ...(await importOriginal<typeof import('../src/lib/api/class-flow')>()), lowerEntryHand: handApi.lowerEntryHand }));
+
 const chat = vi.hoisted(() => ({ last: {} as Record<string, unknown> }));
 vi.mock('../src/components/chat/ClassChatPanel', async () => {
   const { useEffect } = await import('react');
@@ -116,6 +119,7 @@ beforeEach(async () => {
     value: vi.fn().mockReturnValue({ matches: true, addEventListener: () => undefined, removeEventListener: () => undefined }),
   });
   livekit.local = { setMicrophoneEnabled: vi.fn().mockResolvedValue(undefined), setCameraEnabled: vi.fn().mockResolvedValue(undefined) };
+  handApi.lowerEntryHand.mockReset();
   livekit.state = 'connected';
   livekit.roomProps = {};
   container = document.createElement('div');
@@ -310,6 +314,37 @@ describe('마이크 끄기 = LiveKit mute + AI 기록 일시정지 (P7)', () => 
 });
 
 describe('발언권·채팅·녹음 연결', () => {
+  it('상담사 손 내리기는 기존 API에 세션·참가자·null 자격을 전달하고 중복을 막으며 성공 후에만 행을 갱신한다', async () => {
+    let resolveRequest: (() => void) | undefined;
+    handApi.lowerEntryHand.mockImplementation(() => new Promise<void>((resolve) => { resolveRequest = resolve; }));
+    const onHandLowered = vi.fn();
+    await render(<HostLiveContainer {...baseProps({ onHandLowered })} />);
+    await click(one('[data-signal="hands"]'));
+    await click(buttonByText('손 내리기', sheet() ?? document));
+    expect(handApi.lowerEntryHand).toHaveBeenCalledWith('s1', 'p2', null);
+    expect(onHandLowered).not.toHaveBeenCalled();
+    const button = all('button', sheet() ?? document).find((b) => text(b).includes('손 내리기') || text(b).includes('처리 중'));
+    expect(button).toBeDefined();
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    await act(async () => { button?.click(); });
+    expect(handApi.lowerEntryHand).toHaveBeenCalledTimes(1);
+    await act(async () => { resolveRequest?.(); });
+    expect(onHandLowered).toHaveBeenCalledExactlyOnceWith('p2');
+  });
+
+  it('손 내리기 API 실패는 손든 상태를 유지하고 재시도 안내를 표시한다', async () => {
+    handApi.lowerEntryHand.mockRejectedValue(new Error('forbidden'));
+    const onHandLowered = vi.fn();
+    await render(<HostLiveContainer {...baseProps({ onHandLowered })} />);
+    await click(one('[data-signal="hands"]'));
+    await click(buttonByText('손 내리기', sheet() ?? document));
+    expect(onHandLowered).not.toHaveBeenCalled();
+    expect(text(sheet())).toContain('손을 내리지 못했어요. 다시 시도해 주세요.');
+    expect(text(one('[data-signal="hands"]'))).toContain('손들기 1');
+    await click(buttonByText('손 내리기', sheet() ?? document));
+    expect(handApi.lowerEntryHand).toHaveBeenCalledTimes(2);
+  });
+
   it('손든 회원 시트의 발언권 부여가 페이지 핸들러로 간다', async () => {
     const props = baseProps();
     await render(<HostLiveContainer {...props} />);
