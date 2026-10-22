@@ -132,6 +132,36 @@ def _counselor_name(
     return host.name if host else None
 
 
+def _effective_report_email(participant: SessionParticipant | None, db: DBSession) -> str | None:
+    """리포트 수신 이메일 — 비회원은 입장 때 입력한 report_email, 회원은 계정 이메일.
+
+    회원(user_id 있음)이 로그인 상태로 코드 입장하면 report_email 을 따로 받지 않아 None 이다.
+    이메일은 아이디라 회원·비회원 모두 리포트에 남아야 하므로 계정 이메일로 채운다.
+    개인정보 파기(pii_scrubbed_at)된 참여자는 비운다.
+    """
+    if participant is None or participant.pii_scrubbed_at is not None:
+        return None
+    if participant.report_email:
+        return participant.report_email
+    if participant.user_id is None:
+        return None
+    return db.query(User.email).filter(User.id == participant.user_id).scalar()
+
+
+def fill_member_report_email(participant: SessionParticipant | None, db: DBSession) -> str | None:
+    """회원 참여자의 report_email 이 비어 있으면 계정 이메일로 채운다(자동 발송·열람 링크 검증용).
+
+    이메일은 아이디라 회원도 리포트 메일을 받는다. 비회원·파기 참여자는 건드리지 않는다.
+    """
+    if participant is None or participant.pii_scrubbed_at is not None:
+        return None
+    if not participant.report_email and participant.user_id is not None:
+        email = db.query(User.email).filter(User.id == participant.user_id).scalar()
+        if email:
+            participant.report_email = email.strip().lower()
+    return participant.report_email
+
+
 def _serialize(
     report: Report,
     session: Session | None = None,
@@ -827,7 +857,7 @@ def get_report(report_id: str, user_id: str | None, db: DBSession, *, member_cre
     result = _serialize(
         report,
         session,
-        participant.report_email if participant else None,
+        _effective_report_email(participant, db),
         subjective=_subjective_for_report(report, db),
     )
     # SDD-211(R6-X1): 회원이 승인 전 리포트를 열면 마스킹 200 을 주고, 읽음 처리하지 않는다
@@ -1034,7 +1064,7 @@ def _enqueue_client_email_on_approval(report: Report, db: DBSession) -> None:
         )
         .first()
     )
-    if participant is None or not participant.report_email:
+    if not fill_member_report_email(participant, db):
         return
     if participant.report_email_sent_at is not None:
         return

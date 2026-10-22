@@ -457,7 +457,9 @@ def _maybe_enqueue_client_report_email(report: Report, db: DBSession) -> None:
         )
         .first()
     )
-    if participant is None or not participant.report_email:
+    from app.services.report_service import fill_member_report_email
+
+    if not fill_member_report_email(participant, db):
         return
     if participant.report_email_sent_at is not None:
         return
