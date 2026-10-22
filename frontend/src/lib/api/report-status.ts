@@ -191,6 +191,7 @@ export const REPORT_PROGRESS_REASON_LABELS: Record<string, string> = {
   mic_off: '마이크를 사용하지 않아 AI 요약 없이 기록만 남겼어요.',
   low_confidence: '음성 분석 신뢰도가 낮아 AI 요약은 제공하지 않아요.',
   no_transcript: '음성에서 말을 찾지 못해 AI 요약을 만들지 못했어요.',
+  stt_disabled: '이번 버전은 녹음과 영상 다시보기만 제공해요.',
   stt_failed: '음성 인식에 실패해 AI 요약을 만들지 못했어요.',
   summary_failed: 'AI 요약 생성에 실패했어요. 전사문은 확인할 수 있어요.',
   report_failed: '리포트 생성 중 오류가 발생했어요.',

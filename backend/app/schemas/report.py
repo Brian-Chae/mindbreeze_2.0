@@ -119,7 +119,7 @@ class ReportStatusResponse(BaseModel):
     stage: str
     # 0~100 진행률
     progress: int
-    # partial/차단 사유 (mic_off | low_confidence | no_transcript | stt_failed | summary_failed | report_failed)
+    # partial/차단 사유 (mic_off | low_confidence | no_transcript | stt_disabled | stt_failed | summary_failed | report_failed)
     reason: str | None = None
     # 승인 게이트 상태(참고) — 리포트별 상태가 갈리면 null
     report_status: str | None = None

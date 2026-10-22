@@ -275,10 +275,11 @@ def run_summary_inline(session_id: str, db: DBSession) -> None:
         return
 
     # SDD-220: AI off — 이미 큐에 적재된 작업도 외부 호출 없이 skip 한다(retry 0).
-    from app.core.ai_features import is_ai_enabled
+    #   SDD-228: 전사 기반 요약은 STT 스위치가 꺼져 있으면 전사가 없으므로 함께 스킵한다.
+    from app.core.ai_features import is_stt_enabled
 
-    if not is_ai_enabled():
-        logger.info("[summary_task] AI 기능 off — 요약 스킵: %s", session_id)
+    if not is_stt_enabled():
+        logger.info("[summary_task] AI/STT 기능 off — 요약 스킵: %s", session_id)
         if record.status == "processing":
             record.status = "completed"
             db.commit()

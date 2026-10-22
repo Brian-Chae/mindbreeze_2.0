@@ -11,7 +11,7 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
-from app.core.ai_features import is_ai_enabled
+from app.core.ai_features import is_stt_enabled
 from app.config import settings
 from app.models.session import Session, SessionParticipant
 from app.models.record import SessionRecord, AudioChunk
@@ -213,8 +213,8 @@ def _build_pipeline_tasks(session_id, has_recording, needs_video_merge, needs_re
         from app.tasks.video_task import merge_video_chunks_task
 
         tasks.append(merge_video_chunks_task.si(str(session_id)))
-    # SDD-220: AI off — STT·요약 작업은 큐에 넣지 않는다(영상 병합·리포트 작업은 유지).
-    if has_recording and is_ai_enabled():
+    # SDD-220/228: AI·STT off — STT·요약 작업은 큐에 넣지 않는다(영상 병합·리포트 작업은 유지).
+    if has_recording and is_stt_enabled():
         from app.tasks.stt_task import stt_task
         from app.tasks.summary_task import summary_task
 
@@ -249,7 +249,7 @@ def finalize_on_session_end(session_id: UUID, db: DBSession) -> None:
     has_recording = record is not None and record.status in ("recording", "processing")
     # SDD-220: AI off — 녹음 원본은 보존하고 전사·요약 없이 저장 완료(completed)로 마감한다.
     #   has_recording 은 그대로 둬 outbox/리포트 의도(녹음 있음)를 유지하고, 체인에서만 STT·요약을 뺀다.
-    if has_recording and record is not None and not is_ai_enabled():
+    if has_recording and record is not None and not is_stt_enabled():
         if record.status == "recording":
             record.recording_ended_at = _now()
         record.status = "completed"

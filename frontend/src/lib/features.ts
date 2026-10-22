@@ -17,13 +17,26 @@ import { isAiEnabled } from './feature-flags';
  */
 export const ENABLE_STT_AI_RECORD = false;
 
+/**
+ * SDD-228 — 받아쓰기(STT) 공개 여부. 빌드 시 VITE_STT_ENABLED === 'true' 일 때만 공개(기본 비공개).
+ * 서버 STT_ENABLED 와 짝으로 켠다(재공개 = 두 값 변경 후 재배포). 영상·음성 재생과는 무관하다.
+ */
+export function isSttEnabled(): boolean {
+  return import.meta.env.VITE_STT_ENABLED === 'true';
+}
+
 // ─────────────────────────────────────────────────────────────
 // SDD-220 — AI 비공개(isAiEnabled) 와 결합한 파생 판정·문구
 // ─────────────────────────────────────────────────────────────
 
-/** 전사·AI 요약 화면 노출 — 기존 STT 비공개 조건과 AI 플래그 둘 다 참일 때만(AND). */
+/** SDD-228 — 리포트 진행 스텝퍼의 받아쓰기·요약 단계 노출. AI 공개 AND STT 공개일 때만(레거시 상수와 무관). */
+export function isSttProgressVisible(): boolean {
+  return isAiEnabled() && isSttEnabled();
+}
+
+/** 전사·AI 요약 화면 노출 — 기존 STT 비공개 조건·AI 플래그·STT 플래그(SDD-228) 모두 참일 때만(AND). */
 export function isSttAiRecordVisible(): boolean {
-  return ENABLE_STT_AI_RECORD && isAiEnabled();
+  return ENABLE_STT_AI_RECORD && isAiEnabled() && isSttEnabled();
 }
 
 /**
@@ -31,6 +44,10 @@ export function isSttAiRecordVisible(): boolean {
  * (녹음·영상·수동 메모는 그대로 사용 가능).
  */
 export function aiRecordUnavailableText(reason: string | null | undefined): string {
+  // SDD-228: 받아쓰기(STT) 미제공 빌드의 '전사 없음'은 마이크 꺼짐이 아니다 — 별도 사유로 안내한다.
+  if (reason === 'stt_disabled') {
+    return '이 세션은 음성 녹음과 영상 다시보기를 제공하며, 음성 기록(전사)은 제공하지 않습니다.';
+  }
   if (!isAiEnabled()) {
     return reason === 'mic_off'
       ? '이 세션은 마이크를 사용하지 않아 자동 기록이 없습니다.'

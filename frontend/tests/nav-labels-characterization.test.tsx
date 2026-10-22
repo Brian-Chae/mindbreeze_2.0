@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 vi.stubEnv('VITE_COUNSELING_ENABLED', 'true');
 // SDD-220: 이 테스트는 AI 공개(on) 계약을 검증한다 — 기본값이 off 로 바뀌어 모듈 수준에서 켠다(단언 불변).
 vi.stubEnv('VITE_AI_ENABLED', 'true');
+vi.stubEnv('VITE_STT_ENABLED', 'true'); // SDD-228: 받아쓰기 on 계약
 
 const state = vi.hoisted(() => ({
   user: { id: 'u1', role: 'counselor', name: '테스트', email: 'a@example.com' } as { id: string; role: string; name: string; email: string } | null,

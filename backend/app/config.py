@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     #   단일 판정 위치는 app/core/ai_features.py(호출 시점마다 이 값을 읽는다, import 시 캐싱 금지).
     ai_features_enabled: bool = False
 
+    # SDD-228: 음성 받아쓰기(STT·화자분리·전사 기반 요약) 전용 스위치. 기본 비활성 — 꺼져 있으면
+    #   녹음·영상은 저장·재생하되 STT/요약 외부 API 호출 0건, 종료 후 리포트가 전사 없이 바로 생성된다.
+    #   ai_features_enabled 와 AND 로 판정한다(app/core/ai_features.py::is_stt_enabled). 재활성 = STT_ENABLED=true.
+    stt_enabled: bool = False
+
     # SDD-220: Sign in with Apple. aud 허용 목록은 쉼표 구분(iOS 번들 ID + 웹 Services ID).
     #   개인키(.p8)는 파일 경로 또는 PEM 문자열 — 값은 로그·응답에 싣지 않는다.
     apple_client_ids: str = ""

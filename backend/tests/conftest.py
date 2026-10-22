@@ -322,6 +322,8 @@ def _ai_features_enabled_for_legacy_tests(monkeypatch):
     from app.config import settings
 
     monkeypatch.setattr(settings, "ai_features_enabled", True)
+    # SDD-228: STT 전용 스위치도 기존 테스트는 on 계약으로 실행한다(off 는 test_sdd228_stt_switch.py).
+    monkeypatch.setattr(settings, "stt_enabled", True)
 
 
 @pytest.fixture

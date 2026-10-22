@@ -101,7 +101,10 @@ def _ai_record_block(record: SessionRecord | None) -> dict:
     if record is not None and _ai_summary(record).get("transcript_confidence") == "low":
         return {"status": "not_available", "reason": "low_confidence"}
     if record is None or not (record.transcript and record.transcript.strip()):
-        return {"status": "not_available", "reason": "no_transcript"}
+        # SDD-228: STT 미제공 빌드는 '말이 없음'이 아니라 별도 사유(stt_disabled)로 구분한다.
+        from app.core.ai_features import is_stt_enabled
+
+        return {"status": "not_available", "reason": "no_transcript" if is_stt_enabled() else "stt_disabled"}
     return {"status": "available"}
 
 
