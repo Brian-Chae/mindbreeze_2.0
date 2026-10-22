@@ -198,7 +198,7 @@ export default function ClientListPage() {
     return () => {
       cancelled = true;
     };
-  }, [searchTerm, classId, counselorId, days, page, size, reloadKey, isAuthenticated, user?.role]);
+  }, [searchTerm, classId, counselorId, days, page, size, reloadKey, isAuthenticated, user?.role, isOrgAdmin]);
 
   // 로그아웃 시 메모리 캐시 폐기
   useEffect(() => {
