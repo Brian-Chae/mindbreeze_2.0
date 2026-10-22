@@ -3,7 +3,7 @@ import type { ClassSummary } from '../api/dashboard';
 import type { ClassReadModel } from '../class-structure/adapters';
 import { liveClasses } from './home-stats';
 
-export const HOME_CLASS_LIMIT = 8;
+export const HOME_CLASS_LIMIT = 4;
 export const HOME_SCHEDULE_LIMIT = 5;
 
 /** 히어로: 진행 중(in_progress/open) 우선, 없으면 가장 가까운 미래 예정(취소·완료 제외). */

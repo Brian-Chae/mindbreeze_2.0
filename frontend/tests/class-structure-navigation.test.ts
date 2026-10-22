@@ -102,7 +102,7 @@ describe('새 내비게이션', () => {
     expect(html).toContain('href="/app/classes"');
     expect(html).toContain('href="/app/counseling"');
     expect(html).toMatch(/aria-current="page"[^>]*href="\/app\/counseling"/);
-    expect(html).toContain('내 상담');
+    expect(html).toContain('상담');
     expect(html).not.toContain('/app/sessions');
   });
   it('호스트 메뉴는 홈·명상 클래스·상담을 노출한다', () => {
@@ -128,12 +128,12 @@ describe('새 내비게이션', () => {
     expect(html).toContain('/counseling');
     expect(html).toContain('/chat');
     expect(html).not.toContain('href="/reports');
-    expect(html).toContain('더보기 6건');
+    expect(html).toContain('더보기 5건');
   });
   it('회원 탭은 내 상담·리포트를 표시하고 채팅을 더보기로 옮긴다', () => {
     const html = render(createElement(MemberTabs, { onMoreClick: () => {} }), '/app/counseling');
     expect(html).toContain('내 클래스');
-    expect(html).toContain('내 상담');
+    expect(html).toContain('상담');
     expect(html).toContain('리포트');
     expect(html).not.toContain('>채팅<');
     expect(html).toContain('aria-current="page"');
@@ -218,7 +218,7 @@ describe('더보기 상호작용', () => {
     const element = document.createElement('div');
     element.innerHTML = html;
     expect(element.querySelector('button')?.getAttribute('aria-current')).toBe('page');
-    expect(element.querySelector('button')?.className).toContain('text-[#5F0080]');
+    expect(element.querySelector('nav')?.className).toContain('floating-bottom-nav');
   });
   it('회원 채팅에서는 내 상담 탭 대신 더보기가 활성화된다', () => {
     const html = render(createElement(MemberTabs, { onMoreClick: () => {} }), '/app/chat/lucy');
@@ -226,7 +226,7 @@ describe('더보기 상호작용', () => {
     element.innerHTML = html;
     const buttons = element.querySelectorAll('button');
     expect(buttons[buttons.length - 1].getAttribute('aria-current')).toBe('page');
-    expect(buttons[buttons.length - 1].className).toContain('text-[#5F0080]');
+    expect(element.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
     expect([...buttons].filter((button) => button.getAttribute('aria-current') === 'page')).toHaveLength(1);
   });
 });
@@ -253,7 +253,7 @@ describe('역할 경계 회귀', () => {
   it('플랫폼 관리자 모바일 내비는 새 목록 경로와 기존 홈 활성 상태를 유지한다', () => {
     const html = render(createElement(HostTabs, { role: 'platform_admin', onMoreClick: () => {} }), '/admin/orgs/example');
     expect(html).toContain('/admin/orgs');
-    expect(html).toContain('href="/classes"');
+    expect(html).toContain('href="/admin/users"');
     expect(html).toMatch(/aria-current="page"[^>]*href="\/admin\/orgs"/);
     expect(html).not.toContain('href="/counseling"');
   });

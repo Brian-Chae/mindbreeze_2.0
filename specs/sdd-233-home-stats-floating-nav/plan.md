@@ -25,26 +25,26 @@
 - 데스크톱 상담 공개 시 grid 충돌.
 
 ## Task 1 메뉴·셸
-- [ ] 역할별 5탭, 활성·배지·Drawer 접근·숨김 테스트를 먼저 추가/갱신하고 RED 확인.
-- [ ] 공통 pill 표현(aria-label/current, 포커스, 채워진 활성 아이콘) 구현.
-- [ ] 직접 탭 배지를 더보기에서 제외, 알림 합산 제외, 기존 초대 의미 보존.
-- [ ] 모든 셸 실제 스크롤 소유자 하단 예약 및 플랫폼 Drawer 접근 보강.
-- [ ] 관련 vitest GREEN, diff 검토.
+- [x] 역할별 5탭, 활성·배지·Drawer 접근·숨김 테스트를 먼저 추가/갱신하고 RED 확인.
+- [x] 공통 pill 표현(aria-label/current, 포커스, 채워진 활성 아이콘) 구현.
+- [x] 직접 탭 배지를 더보기에서 제외, 알림 합산 제외, 기존 초대 의미 보존.
+- [x] 모든 셸 실제 스크롤 소유자 하단 예약 및 플랫폼 Drawer 접근 보강.
+- [x] 관련 vitest GREEN, diff 검토.
 
 ## Task 2 회원 카드
-- [ ] 카드→내 클래스 DOM 인접 및 값/링크 보존 회귀 테스트 RED.
-- [ ] ClientHomePage에 클래스/상담 슬롯을 전달해 기존 summaryTiles 다음에 렌더. 기존 fallback 유지.
-- [ ] 데스크톱 grid 배치 충돌 제거, 상담사 원본 불변 확인.
-- [ ] 관련 홈/셸 회귀 GREEN.
+- [x] 카드→내 클래스 DOM 인접 및 값/링크 보존 회귀 테스트 RED.
+- [x] ClientHomePage에 클래스/상담 슬롯을 전달해 기존 summaryTiles 다음에 렌더. 기존 fallback 유지.
+- [x] 데스크톱 grid 배치 충돌 제거, 상담사 원본 불변 확인.
+- [x] 관련 홈/셸 회귀 GREEN.
 
 ## Task 3 검증·인계
-- [ ] 관련 vitest, tsc, 변경 파일 eslint(CI react-hooks), build.
-- [ ] API mock Chrome 회원·상담사 390/430/1440 캡처 및 nav 확대, 실제 가림/색상/탭 검사.
-- [ ] 독립 검증자가 diff·테스트 재확인. 문제 수정 후 재검증.
-- [ ] summary 작성, 임시 심링크 제거, feat(sdd-233) 커밋, 브랜치 push, PR 생성·CI 확인. 머지·배포 금지.
+- [x] 관련 vitest, tsc, 변경 파일 eslint(CI react-hooks), build.
+- [x] API mock Chrome 회원·상담사 390/430/1440 캡처 및 nav 확대, 실제 가림/색상/탭 검사.
+- [x] 독립 검증자가 diff·테스트 재확인. 문제 수정 후 재검증.
+- [x] summary 작성, 임시 심링크 제거, feat(sdd-233) 커밋, 브랜치 push, PR 생성·CI 확인. 머지·배포 금지.
 
 ## Task 4 추가 확정: 홈 클래스 최대 4개
 - 담당: 구현 워커. `frontend/src/lib/dashboard/counselor-home-model.ts`의 `HOME_CLASS_LIMIT` 8→4, 회원 홈에서도 import하여 공유.
-- [ ] 5개 이상 데이터에서 두 홈의 카드 4개와 전체 총수 표시 테스트 RED.
-- [ ] 상담사 기존 정렬·전체 보기 표시 유지. 회원 기존 정렬이 없다면 원래 순서 그대로 slice. 회원 `전체 보기 (N)` 추가(4개 초과만).
-- [ ] 관련 회귀 GREEN 및 캡처 합성 데이터 5개 이상으로 화면 확인.
+- [x] 5개 이상 데이터에서 두 홈의 카드 4개와 전체 총수 표시 테스트 RED.
+- [x] 상담사 기존 정렬·전체 보기 표시 유지. 회원 기존 정렬이 없다면 원래 순서 그대로 slice. 회원 `전체 보기 (N)` 추가(4개 초과만).
+- [x] 관련 회귀 GREEN 및 캡처 합성 데이터 5개 이상으로 화면 확인.

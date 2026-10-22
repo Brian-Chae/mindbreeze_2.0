@@ -11,7 +11,8 @@
 .cs-structure button:focus-visible, .cs-structure a:focus-visible { outline: 2px solid #7c3aed; outline-offset: 2px; }
 .cs-structure [class~="text-[10px]"] { font-size: 12px; }
 @media (max-width: 767px) {
-  .cs-structure .cs-structure-content { padding: 16px 16px calc(72px + env(safe-area-inset-bottom, 0px)); }
+  .cs-structure .cs-structure-content { padding: 16px; }
+  .cs-structure .cs-structure-scroll { box-sizing: border-box; padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
   .cs-structure [data-shell-variant="structure"] > header { height: 56px; }
 }
 

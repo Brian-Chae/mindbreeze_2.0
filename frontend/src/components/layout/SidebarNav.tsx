@@ -131,6 +131,9 @@ const CLIENT_NAV_ITEMS: NavItem[] = [
 ];
 
 const ADMIN_NAV_ITEMS: NavItem[] = [
+  { to: '/chat', key: 'chat', icon: ICONS.message },
+  { to: '/notifications', key: 'notification', icon: ICONS.bell },
+  { to: '/settings', key: 'setting', icon: ICONS.settings },
   { to: '/admin/orgs', key: 'admin-orgs', icon: ICONS.users },
   { to: '/admin/applications', key: 'admin-applications', icon: ICONS.report },
   { to: '/admin/users', key: 'admin-users', icon: ICONS.users },

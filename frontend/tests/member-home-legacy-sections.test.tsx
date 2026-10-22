@@ -68,6 +68,10 @@ describe('회원 홈 기존 섹션 복원', () => {
     expect(view.textContent).toContain('안녕하세요 메시지');
     expect(view.textContent).toContain('새 알림 제목');
   });
+  it('상태 카드 바로 다음에 내 클래스가 DOM 순서로 온다', async () => {
+    const view = await render(<MemberStructureHomePage />);
+    expect(view.querySelector('.mh-summary')?.nextElementSibling?.getAttribute('aria-label')).toBe('내 클래스');
+  });
   it('새 히어로는 class-hero 하나만 있고 클래스명 · N회차를 보여 준다', async () => {
     const view = await render(<MemberStructureHomePage />);
     const heroes = view.querySelectorAll('[data-testid="class-hero"]');
