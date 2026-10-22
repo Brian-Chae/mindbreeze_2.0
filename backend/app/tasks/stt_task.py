@@ -447,11 +447,12 @@ def _assess_transcript_confidence(segments: list[dict], audio_duration_sec: floa
     return "high"
 
 
-async def _emit_status(session_id: str, status: str, detail: dict | None = None):
+def _emit_status(session_id: str, status: str, detail: dict | None = None):
     """WebSocket으로 처리 상태 브로드캐스트."""
     try:
-        from app.ws.record_namespace import broadcast_record_status
-        await broadcast_record_status(session_id, status, detail)
+        from app.ws.sync_emit import emit_record_status_sync
+
+        emit_record_status_sync(session_id, status, detail)
     except Exception:
         logger.warning("[stt_task] WebSocket emit failed: %s", status)
 
@@ -501,8 +502,6 @@ def _notify_low_confidence(session: Session | None, db: DBSession) -> None:
 
 def run_stt_inline(session_id: str, db: DBSession) -> None:
     """동기 실행용 헬퍼 — Celery 비활성 환경/테스트에서 직접 호출."""
-    import asyncio
-
     sid = UUID(session_id)
     record = db.query(SessionRecord).filter(SessionRecord.session_id == sid).first()
     if not record:
@@ -535,7 +534,7 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
     if record.recording_started_at and record.recording_ended_at:
         audio_duration_sec = (record.recording_ended_at - record.recording_started_at).total_seconds()
 
-    asyncio.run(_emit_status(session_id, "merging"))
+    _emit_status(session_id, "merging")
     # SDD-095: 세션 종료 → 녹음 저장 완료/STT 진행을 진행 스텝퍼에 반영
     _emit_report_progress(session_id, db)
 
@@ -556,11 +555,11 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
         logger.warning("[stt_task] 오디오 청크 없음 — STT 미실행(manual, 기록 없음): %s", session_id)
         record.status = "manual"
         db.commit()
-        asyncio.run(_emit_status(session_id, "manual", {"reason": "no_audio_chunks"}))
+        _emit_status(session_id, "manual", {"reason": "no_audio_chunks"})
         _emit_report_progress(session_id, db)
         return
 
-    asyncio.run(_emit_status(session_id, "transcribing"))
+    _emit_status(session_id, "transcribing")
     _emit_report_progress(session_id, db)
     # STT-5TH-01: Gemini 실패를 일시/영구로 구분한다.
     #   - 일시 오류(backoff 재시도 소진 후): Whisper 폴백(비용 발생) 수행.
@@ -576,7 +575,7 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
             logger.exception("[stt_task] Whisper failed — STT 실패 처리: %s", exc2)
             record.status = "failed"
             db.commit()
-            asyncio.run(_emit_status(session_id, "failed", {"reason": "stt_failed"}))
+            _emit_status(session_id, "failed", {"reason": "stt_failed"})
             _emit_report_progress(session_id, db)
             # CEL-RETRY-01: 일시 오류(공급자 다운 등)로 폴백까지 실패한 경우, 실패를
             # durable 하게 마킹한 뒤 재시도 가능한 예외를 전파한다 — 여기서 조용히 return 하면
@@ -587,11 +586,11 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
         logger.exception("[stt_task] Gemini 영구 오류 — STT 실패 처리(폴백 생략): %s", exc)
         record.status = "failed"
         db.commit()
-        asyncio.run(_emit_status(session_id, "failed", {"reason": "stt_failed"}))
+        _emit_status(session_id, "failed", {"reason": "stt_failed"})
         _emit_report_progress(session_id, db)
         return
 
-    asyncio.run(_emit_status(session_id, "diarizing"))
+    _emit_status(session_id, "diarizing")
     segments = result.get("segments", [])
     confidence = _assess_transcript_confidence(segments, audio_duration_sec)
 

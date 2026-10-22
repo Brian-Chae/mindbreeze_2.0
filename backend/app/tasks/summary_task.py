@@ -246,10 +246,11 @@ def _call_gemini_summary(session_type: str, transcript: str | None) -> dict:
     return parsed
 
 
-async def _emit_status(session_id: str, status: str, detail: dict | None = None):
+def _emit_status(session_id: str, status: str, detail: dict | None = None):
     try:
-        from app.ws.record_namespace import broadcast_record_status
-        await broadcast_record_status(session_id, status, detail)
+        from app.ws.sync_emit import emit_record_status_sync
+
+        emit_record_status_sync(session_id, status, detail)
     except Exception:
         logger.warning("[summary_task] WebSocket emit failed: %s", status)
 
@@ -265,8 +266,6 @@ def _emit_report_progress(session_id: str, db: DBSession) -> None:
 
 
 def run_summary_inline(session_id: str, db: DBSession) -> None:
-    import asyncio
-
     sid = UUID(session_id)
     record = db.query(SessionRecord).filter(SessionRecord.session_id == sid).first()
     session = db.query(Session).filter(Session.id == sid).first()
@@ -299,7 +298,7 @@ def run_summary_inline(session_id: str, db: DBSession) -> None:
         if record.status == "processing":
             record.status = "failed"
             db.commit()
-        asyncio.run(_emit_status(session_id, "failed", {"reason": "no_transcript"}))
+        _emit_status(session_id, "failed", {"reason": "no_transcript"})
         _emit_report_progress(session_id, db)
         return
 
@@ -311,11 +310,11 @@ def run_summary_inline(session_id: str, db: DBSession) -> None:
         if record.status == "processing":
             record.status = "completed"
             db.commit()
-        asyncio.run(_emit_status(session_id, "completed", {"reason": "low_confidence"}))
+        _emit_status(session_id, "completed", {"reason": "low_confidence"})
         _emit_report_progress(session_id, db)
         return
 
-    asyncio.run(_emit_status(session_id, "summarizing"))
+    _emit_status(session_id, "summarizing")
     # SDD-095: AI 요약 단계 진행 표시
     _emit_report_progress(session_id, db)
 
@@ -326,7 +325,7 @@ def run_summary_inline(session_id: str, db: DBSession) -> None:
         # 전파해 Celery autoretry(backoff)로 재시도한다. status 는 processing 으로 남겨
         # 재시도가 이어받을 수 있게 한다(영구 실패가 아니므로 completed 마킹 금지).
         logger.warning("[summary_task] Gemini 일시 오류 — 재시도 위임: %s", session_id)
-        asyncio.run(_emit_status(session_id, "summarizing", {"retryable": True}))
+        _emit_status(session_id, "summarizing", {"retryable": True})
         raise
     except Exception as exc:
         # SDD-085 G5: 허위 요약을 저장하지 않는다 — 전사문은 유지하고 요약 실패로 마감.
@@ -336,7 +335,7 @@ def run_summary_inline(session_id: str, db: DBSession) -> None:
         record.ai_summary = summary
         record.status = "completed"
         db.commit()
-        asyncio.run(_emit_status(session_id, "completed", {"reason": "summary_failed"}))
+        _emit_status(session_id, "completed", {"reason": "summary_failed"})
         _emit_report_progress(session_id, db)
         return
 
@@ -346,7 +345,7 @@ def run_summary_inline(session_id: str, db: DBSession) -> None:
     record.status = "completed"
     db.commit()
 
-    asyncio.run(_emit_status(session_id, "completed", {"headline": result.get("headline")}))
+    _emit_status(session_id, "completed", {"headline": result.get("headline")})
     logger.info("[summary_task] Summary complete for session %s", session_id)
     # SDD-095: 요약 완료 → 리포트 생성 단계로 넘어감을 진행 스텝퍼에 반영
     _emit_report_progress(session_id, db)

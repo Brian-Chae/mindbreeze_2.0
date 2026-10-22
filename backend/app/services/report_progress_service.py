@@ -16,7 +16,6 @@
 스텝 계약(프론트 스텝퍼와 1:1) — save(녹음 저장) → stt → summary → ready(완료)
 """
 
-import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
@@ -408,25 +407,18 @@ def sweep_stale_reports(db: DBSession, *, commit: bool = True) -> list[str]:
     return list(dict.fromkeys(affected))
 
 
-async def _broadcast(session_id: str, payload: dict) -> None:
-    from app.ws.record_namespace import broadcast_report_progress
-
-    await broadcast_report_progress(session_id, payload)
-
-
 def emit_report_progress(session_id: str | UUID, db: DBSession) -> dict:
     """진행 상태를 계산해 `report:progress` 로 브로드캐스트하고 페이로드를 반환한다.
 
-    Celery 태스크(동기)에서 호출되므로 asyncio.run 으로 1회성 emit 을 수행한다.
-    이미 이벤트 루프가 돌고 있으면(비동기 컨텍스트) 브로드캐스트만 건너뛴다 —
-    상태 파생·DB 반영은 호출부가 이미 마쳤다.
+    Celery 태스크·FastAPI 스레드풀(동기)에서 호출되므로, 이벤트 루프를 새로 만들지 않고
+    동기 외부 프로세스 emit(app.ws.sync_emit)으로 Redis 에 publish 한다.
     """
     sid = _sid(session_id)
     payload = compute_report_progress(sid, db)
     try:
-        asyncio.run(_broadcast(str(sid), payload))
-    except RuntimeError:
-        logger.debug("[report_progress] 이벤트 루프 내부 — 브로드캐스트 생략: %s", sid)
+        from app.ws.sync_emit import emit_report_progress_sync
+
+        emit_report_progress_sync(str(sid), payload)
     except Exception:  # noqa: BLE001 — WS 실패가 파이프라인을 막지 않는다.
         logger.warning("[report_progress] 브로드캐스트 실패: %s", sid, exc_info=True)
     return payload
