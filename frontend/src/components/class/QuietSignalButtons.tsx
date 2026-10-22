@@ -58,7 +58,7 @@ export function QuietSignalButtons({ onSend }: QuietSignalButtonsProps) {
 
   return (
     <section className="player-signals" aria-label="조용한 상태 신호">
-      <p className="player-signals-hint">지금 상태를 조용히 알려 주세요 · 상담사에게만 보여요</p>
+      <p className="player-signals-hint">선택한 상태와 이름이 상담사에게만 보여요</p>
       <div className="player-signals-row">
         {CLASS_SIGNAL_TYPES.map((type) => {
           const meta = CLASS_SIGNAL_META[type];
