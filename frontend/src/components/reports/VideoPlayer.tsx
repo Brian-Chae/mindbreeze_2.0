@@ -85,14 +85,14 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
 
     if (loading) {
       return (
-        <div className="flex min-h-[180px] items-center justify-center rounded-xl bg-[#111] text-sm text-[#9B9B9B]">
+        <div className="flex min-h-[180px] items-center justify-center rounded-xl bg-[#111] text-sm mobile:text-mb-body text-[#9B9B9B]">
           영상 로드 중...
         </div>
       );
     }
     if (error || !url) {
       return (
-        <div className="flex min-h-[180px] flex-col items-center justify-center gap-2 rounded-xl bg-[#111] text-sm text-[#9B9B9B]">
+        <div className="flex min-h-[180px] flex-col items-center justify-center gap-2 rounded-xl bg-[#111] text-sm mobile:text-mb-body text-[#9B9B9B]">
           <span>🎥</span>
           <span>{error ?? '녹화된 영상이 없습니다.'}</span>
         </div>

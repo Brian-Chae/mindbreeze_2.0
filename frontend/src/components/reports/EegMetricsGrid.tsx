@@ -39,23 +39,23 @@ function MetricCard({
         dense ? 'px-3 py-2.5' : 'px-4 py-3'
       }`}
     >
-      <div className="mb-1.5 font-mono text-[12px] uppercase tracking-wider text-[#9B9B9B]">
+      <div className="mb-1.5 font-mono text-[12px] mobile:text-mb-caption uppercase tracking-wider text-[#9B9B9B]">
         {label}
       </div>
       <div
         className={`font-bold tracking-tight ${
           value === null
-            ? 'text-[13px] text-[#9B9B9B]'
+            ? 'text-[13px] mobile:text-mb-caption text-[#9B9B9B]'
             : dense
-              ? 'text-[16px] text-[#5F0080]'
+              ? 'text-[16px] mobile:text-mb-body text-[#5F0080]'
               : 'text-[18px] text-[#5F0080]'
         }`}
       >
         {display}
       </div>
-      <p className="mt-2 text-[12px] leading-relaxed text-[#5A5A5A]">{description}</p>
+      <p className="mt-2 text-[12px] mobile:text-mb-caption leading-relaxed text-[#5A5A5A]">{description}</p>
       {value !== null && (
-        <div className="mt-0.5 font-mono text-[12px] text-[#B0B0B0]">/ 100</div>
+        <div className="mt-0.5 font-mono text-[12px] mobile:text-mb-caption text-[#B0B0B0]">/ 100</div>
       )}
     </div>
   );
@@ -85,20 +85,20 @@ export default function EegMetricsGrid({
     <section className="rounded-2xl border border-[#EFEFEF] bg-white p-5">
       <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
         <div>
-          <p className="font-mono text-[12px] uppercase tracking-widest text-[#5F0080]/70">
+          <p className="font-mono text-[12px] mobile:text-mb-caption uppercase tracking-widest text-[#5F0080]/70">
             몸·마음 신호
           </p>
-          <h3 className="mt-1 text-[15px] font-bold text-[#1F1F1F]">
+          <h3 className="mobile:[overflow-wrap:anywhere] mt-1 text-[15px] mobile:text-mb-subtitle font-bold text-[#1F1F1F]">
             {isCounselor ? '뇌파 신호 7가지 참고' : '뇌파 신호 참고'}
           </h3>
           {compact && (
-            <p className="mt-0.5 text-[12px] text-[#9B9B9B]">
+            <p className="mt-0.5 text-[12px] mobile:text-mb-caption text-[#9B9B9B]">
               서사·변화량이 우선이며, 점수는 보조 참고용입니다.
             </p>
           )}
         </div>
         {isCounselor && eeg.reliability !== null && (
-          <span className="font-mono text-[12px] text-[#26724B]">
+          <span className="font-mono text-[12px] mobile:text-mb-caption text-[#26724B]">
             reliability {eeg.reliability.toFixed(2)}
           </span>
         )}
@@ -120,7 +120,7 @@ export default function EegMetricsGrid({
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="mt-3 w-full rounded-lg border border-[#EFEFEF] bg-[#F5EDFC]/60 px-3 py-2 text-[12px] font-medium text-[#5F0080] transition-colors hover:bg-[#F5EDFC]"
+          className="mobile:min-h-11 mobile:min-w-11 mt-3 w-full rounded-lg border border-[#EFEFEF] bg-[#F5EDFC]/60 px-3 py-2 text-[12px] mobile:text-mb-label font-medium text-[#5F0080] transition-colors hover:bg-[#F5EDFC]"
         >
           {expanded ? '간단히 보기' : '더보기'}
         </button>

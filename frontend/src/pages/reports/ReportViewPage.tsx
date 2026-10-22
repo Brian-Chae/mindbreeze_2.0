@@ -82,10 +82,10 @@ export default function ReportViewPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center p-6">
+      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center p-6 mobile:p-4">
         <div className="text-center">
           <div className="inline-block w-8 h-8 border-2 border-[#5F0080] border-t-transparent rounded-full animate-spin mb-3" />
-          <p className="text-[#6F6F6F] text-sm">리포트를 불러오는 중...</p>
+          <p className="text-[#6F6F6F] text-sm mobile:text-mb-body">리포트를 불러오는 중...</p>
         </div>
       </div>
     );
@@ -93,9 +93,9 @@ export default function ReportViewPage() {
 
   if (error || !report) {
     return (
-      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center p-6">
-        <div className="max-w-md w-full bg-white rounded-2xl border border-[#EFEFEF] p-8 text-center">
-          <p className="text-[12px] font-bold tracking-[1.5px] text-[#5F0080] mb-4">
+      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center p-6 mobile:p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl border border-[#EFEFEF] p-8 mobile:p-4 text-center">
+          <p className="text-[12px] mobile:text-mb-caption font-bold tracking-[1.5px] text-[#5F0080] mb-4">
             MIND BREEZE
           </p>
           <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-[#F5EDFC] flex items-center justify-center">
@@ -115,10 +115,10 @@ export default function ReportViewPage() {
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
           </div>
-          <h1 className="text-[18px] font-bold text-[#1F1F1F] mb-2">
+          <h1 className="mobile:text-mb-title mobile:[overflow-wrap:anywhere] text-[18px] font-bold text-[#1F1F1F] mb-2">
             리포트를 열 수 없습니다
           </h1>
-          <p className="text-[15px] text-[#6F6F6F] leading-relaxed" role="alert">
+          <p className="text-[15px] mobile:text-mb-body text-[#6F6F6F] leading-relaxed" role="alert">
             {error ?? '리포트 데이터가 없습니다.'}
           </p>
         </div>
@@ -138,21 +138,21 @@ export default function ReportViewPage() {
     <div className="min-h-screen bg-[#FAFAFA]">
       <header className="border-b border-[#EFEFEF] bg-white">
         <div className="max-w-4xl mx-auto px-5 py-4 flex items-center gap-2">
-          <span className="text-[13px] font-extrabold tracking-wide text-[#5F0080]">
+          <span className="text-[13px] mobile:text-mb-caption font-extrabold tracking-wide text-[#5F0080]">
             MIND BREEZE
           </span>
-          <span className="text-[12px] text-[#9B9B9B]">· 몸·마음 리포트</span>
+          <span className="text-[12px] mobile:text-mb-caption text-[#9B9B9B]">· 몸·마음 리포트</span>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-5 py-8 space-y-6">
         <div className="flex justify-end">
           <button type="button" onClick={handleDownload} disabled={downloading} aria-busy={downloading}
-            className="inline-flex items-center min-h-[44px] border border-[#E8D9F5] bg-white text-[#5F0080] font-medium px-5 py-2.5 rounded-xl disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#5F0080]">
+            className="mobile:min-h-11 mobile:min-w-11 inline-flex items-center min-h-[44px] border border-[#E8D9F5] bg-white text-[#5F0080] font-medium px-5 py-2.5 rounded-xl disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#5F0080]">
             {downloading ? 'PDF 준비 중...' : 'PDF 다운로드'}
           </button>
         </div>
-        {downloadError && <p role="alert" className="text-sm text-red-600">{downloadError}</p>}
+        {downloadError && <p role="alert" className="text-sm mobile:text-mb-body text-red-600">{downloadError}</p>}
         <ReportCoverSection report={report} adapted={adapted} />
         {displayNarrative && <NarrativeSections narrative={displayNarrative} />}
         {subjective && (
@@ -163,7 +163,7 @@ export default function ReportViewPage() {
             eegMeasured={eegMeasured}
           />
         )}
-        <p className="text-center text-[12px] text-[#9B9B9B] pb-8">
+        <p className="text-center text-[12px] mobile:text-mb-caption text-[#9B9B9B] pb-8">
           본 리포트는 의료 진단이 아닌 두뇌건강 관리 목적의 참고 자료입니다.
         </p>
       </main>
