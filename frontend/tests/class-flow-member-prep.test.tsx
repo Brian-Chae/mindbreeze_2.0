@@ -78,11 +78,50 @@ describe('요약 행 (buildSummaryRows)', () => {
   });
 });
 
+async function openNoticeSheet(label: string): Promise<void> {
+  const button = document.querySelector<HTMLButtonElement>(`button[aria-label="${label} 자세히 보기"]`);
+  expect(button).not.toBeNull();
+  await act(async () => { button!.focus(); button!.click(); });
+}
+async function closeNoticeSheet(): Promise<void> {
+  await act(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); });
+}
+
 describe('FM06a 고지·리포트 반영 선택·연구 동의', () => {
+  it('세 상세 시트는 하단에 열리고 Escape로 닫혀 포커스가 돌아오며 선택을 바꾸지 않는다', async () => {
+    const onReportChoice = vi.fn(); const onResearchChange = vi.fn();
+    await render(<NoticeStepView {...notice({ onReportChoice, onResearchChange })} />);
+    expect(text()).not.toContain('전사 원문');
+    for (const label of ['기록 안내', '리포트 반영', '연구 데이터 활용']) {
+      await openNoticeSheet(label);
+      expect(qa('[role="dialog"]')).toHaveLength(1);
+      expect(qa('[role="dialog"]')[0]!.getAttribute('data-mode')).toBe('bottom');
+      expect(qa('.pz-shell__stage')[0]!.hasAttribute('inert')).toBe(true);
+      await closeNoticeSheet();
+      expect(qa('[role="dialog"]')).toHaveLength(0);
+      expect(document.activeElement?.getAttribute('aria-label')).toBe(`${label} 자세히 보기`);
+    }
+    expect(onReportChoice).not.toHaveBeenCalled(); expect(onResearchChange).not.toHaveBeenCalled();
+  });
+  it('명상이 아닌 클래스에는 원문에 없는 열람 권한을 추정하지 않는다', async () => {
+    await render(<NoticeStepView {...notice({ sessionType: 'clinical' })} />);
+    expect(qa('.notice-tiles > div')).toHaveLength(2);
+    expect(text()).not.toContain('진행 상담사');
+    await openNoticeSheet('기록 안내');
+    expect(text()).not.toContain('클래스의 진행 지도사');
+  });
+  it.each(['online', 'offline'] as const)('AI 비공개 %s 녹음 원문을 보존한다', async (place) => {
+    await render(<NoticeStepView {...notice({ place, aiEnabled: false })} />);
+    await openNoticeSheet('기록 안내');
+    expect(text()).not.toContain('AI');
+    expect(text()).toContain(place === 'online' ? '음성을 녹음해 클래스 기록으로 보관해요' : '현장 대화를 녹음해 클래스 기록으로 보관해요');
+  });
+
   it('고지 영역: 녹음과 AI 기록 · 뇌파 · 영상 · 보관 기간(서버 값)', async () => {
     await render(<NoticeStepView {...notice()} />);
     expect(text()).toContain('시작 전에 확인해 주세요');
     expect(text()).toContain('채용욱 상담사와 함께하는 마음챙김 명상 · 4회차');
+    await openNoticeSheet('기록 안내');
     expect(text()).toContain('녹음과 AI 기록');
     expect(text()).toContain('음성을 녹음하고 AI가 기록지를 만들어요');
     expect(text()).toContain('뇌파 측정(LINK BAND를 쓸 때만)');
@@ -91,14 +130,19 @@ describe('FM06a 고지·리포트 반영 선택·연구 동의', () => {
   });
   it('밴드 사용 안 함이면 뇌파 안내가 없고, 오프라인이면 대면·현장 녹음 문구·영상 안내 없음', async () => {
     await render(<NoticeStepView {...notice({ bandMode: 'none', size: 'solo' })} />);
+    await openNoticeSheet('기록 안내');
     expect(text()).not.toContain('뇌파 측정');
+    await closeNoticeSheet();
     await render(<NoticeStepView {...notice({ place: 'offline', steps: { total: 4, current: 0 } })} />);
+    await openNoticeSheet('기록 안내');
     expect(text()).toContain('현장 대화를 녹음하고 AI가 기록지를 만들어요');
     expect(text()).not.toContain('영상(카메라를 켤 때만)');
     expect(qa('.fl-chip').map((c) => c.textContent)).toContain('대면');
   });
   it('보관 기간을 모르면 기간 숫자를 지어내지 않는다', async () => {
     await render(<NoticeStepView {...notice({ retentionDays: null })} />);
+    expect(text()).toContain('정해진 기간 후 삭제');
+    await openNoticeSheet('기록 안내');
     expect(text()).not.toMatch(/\d+일이 지나면/);
     expect(text()).toContain('정해진 기간이 지나면 삭제돼요');
   });
@@ -108,8 +152,10 @@ describe('FM06a 고지·리포트 반영 선택·연구 동의', () => {
     await render(<NoticeStepView {...notice({ onReportChoice, onNext })} />);
     const radios = qa('[role="radio"]');
     expect(radios.map((r) => [r.textContent, r.getAttribute('aria-checked')])).toEqual([['반영하지 않아요', 'true'], ['반영해요', 'false']]);
+    await openNoticeSheet('리포트 반영');
     expect(text()).toContain('반영하지 않아도 클래스에는 그대로 참여할 수 있어요');
     expect(text()).toContain('이미 보낸 리포트는 되돌릴 수 없어요');
+    await closeNoticeSheet();
     await act(async () => { (radios[1] as HTMLElement).click(); });
     expect(onReportChoice).toHaveBeenCalledWith('included');
 
@@ -131,6 +177,7 @@ describe('FM06a 고지·리포트 반영 선택·연구 동의', () => {
     expect(box).toHaveLength(1);
     expect(box[0]!.getAttribute('aria-checked')).toBe('false');
     expect(box[0]!.textContent).toContain('동의해요');
+    await openNoticeSheet('연구 데이터 활용');
     expect(text()).toContain('연구 목적 데이터 활용에 동의할까요? (선택)');
     for (const line of [
       '동의하면 비식별 처리한 뇌파·맥박·움직임 데이터와 지표, 암호화한 이름 ID·성별·생년·월이 삭제 기한 없이 계속 보관돼요',
@@ -139,6 +186,7 @@ describe('FM06a 고지·리포트 반영 선택·연구 동의', () => {
       '철회하려면 운영팀에 요청해 주세요',
       '비식별 처리해도 다른 정보와 결합하면 본인을 알아볼 가능성이 완전히 없지는 않아요',
     ]) expect(text()).toContain(line);
+    await closeNoticeSheet();
     await act(async () => { (box[0] as HTMLElement).click(); });
     expect(onResearchChange).toHaveBeenCalledWith(true);
     expect(onReportChoice).not.toHaveBeenCalled();

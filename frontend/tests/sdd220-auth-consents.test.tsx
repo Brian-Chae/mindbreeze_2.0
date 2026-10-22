@@ -1,5 +1,7 @@
+// @vitest-environment jsdom
 // SDD-220 트랙 ⓒ — 가입 연령·동의·Apple 버튼·탈퇴/동의 UI 계약 (TS12~TS15, TS16, TS20, TS24 프론트 부분)
-import { createElement } from 'react';
+import { act, createElement } from 'react';
+import { createRoot } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { expect, test, vi } from 'vitest';
@@ -133,18 +135,28 @@ test('서버의 RECORDING_CONSENT_REQUIRED 403 만 동의 화면으로 이어진
   expect(isRecordingConsentRequired(new ApiError(401, 'x', { detail: { code: 'RECORDING_CONSENT_REQUIRED' } }))).toBe(false);
 });
 
-test('고지 화면: AI 꺼짐이면 “녹음과 AI 기록” 대신 “녹음”만 안내한다', () => {
+test('고지 화면: AI 꺼짐이면 “녹음과 AI 기록” 대신 “녹음”만 안내한다', async () => {
   const base = {
     place: 'online' as const, size: 'group' as const, bandMode: 'opt' as const, title: '명상', hostName: '진행자', retentionDays: 90,
     reportChoice: 'excluded' as const, researchConsent: false, researchSaveFailed: false, steps: { total: 5, current: 0 },
     onReportChoice: () => {}, onResearchChange: () => {}, onNext: () => {}, onBack: () => {}, onExit: () => {},
   };
-  const off = renderToStaticMarkup(createElement(NoticeStepView, { ...base, aiEnabled: false }));
-  expect(off).not.toContain('AI 기록');
-  expect(off).not.toContain('AI가 기록지를');
-  expect(off).toContain('녹음');
-  const on = renderToStaticMarkup(createElement(NoticeStepView, base));
-  expect(on).toContain('녹음과 AI 기록');
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  Object.defineProperty(window, 'matchMedia', { configurable: true, value: () => ({ matches: true }) });
+  const box = document.createElement('div'); const root = createRoot(box);
+  try {
+    await act(async () => root.render(createElement(NoticeStepView, { ...base, aiEnabled: false })));
+    await act(async () => box.querySelector<HTMLButtonElement>('[aria-label="기록 안내 자세히 보기"]')!.click());
+    const off = box.textContent ?? '';
+    expect(off).not.toContain('AI 기록');
+    expect(off).not.toContain('AI가 기록지를');
+    expect(off).toContain('녹음');
+    await act(async () => root.render(createElement(NoticeStepView, base)));
+    const on = box.textContent ?? '';
+    expect(on).toContain('녹음과 AI 기록');
+  } finally {
+    await act(async () => root.unmount());
+  }
 });
 
 test('뇌파 수집 선택 화면: 동의/미동의 둘 다 계속할 수 있고, 리포트·연구와 별개임을 알린다', () => {

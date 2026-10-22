@@ -1,0 +1,317 @@
+
+> frontend@1.0.0 build
+> tsc -b && vite build
+
+vite v8.0.13 building client environment for production...
+[2Ktransforming...Unable to resolve `@import "../design-system/build/outputs/css/tokens.css"` from /Users/brianyongwookchae/.paseo/worktrees/11h17zc0/fix-entry-notice-summary/frontend/src
+✓ 3116 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/mb-design/assets/icons/close.svg                                 0.43 kB │ gzip:   0.25 kB
+dist/mb-design/assets/icons/logo.svg                                  0.50 kB │ gzip:   0.30 kB
+dist/mb-design/assets/icons/circle_checked.svg                        0.78 kB │ gzip:   0.44 kB
+dist/mb-design/assets/icons/arrow_forward.svg                         0.84 kB │ gzip:   0.49 kB
+dist/index.html                                                       0.91 kB │ gzip:   0.61 kB
+dist/mb-design/assets/icons/circle_unchecked.svg                      1.05 kB │ gzip:   0.51 kB
+dist/mb-design/assets/icons/arrow_back.svg                            1.20 kB │ gzip:   0.62 kB
+dist/mb-design/assets/icons/icon_google.svg                           1.28 kB │ gzip:   0.59 kB
+dist/mb-design/assets/icons/icon_apple.svg                            1.58 kB │ gzip:   0.81 kB
+dist/mb-design/assets/icons/ble_disconnected.svg                      1.62 kB │ gzip:   0.78 kB
+dist/mb-design/assets/icons/thumbs_down_selected.svg                  1.70 kB │ gzip:   0.87 kB
+dist/mb-design/assets/icons/thumbs_up_selected.svg                    1.70 kB │ gzip:   0.86 kB
+dist/mb-design/assets/icons/thumbs_down.svg                           1.72 kB │ gzip:   0.88 kB
+dist/mb-design/assets/icons/thumbs_up.svg                             1.72 kB │ gzip:   0.87 kB
+dist/mb-design/assets/icons/ble_connected.svg                         1.85 kB │ gzip:   0.77 kB
+dist/mb-design/assets/logo_symbol_dark.svg                            2.33 kB │ gzip:   1.16 kB
+dist/mb-design/assets/favicon_symbol.svg                              2.39 kB │ gzip:   1.18 kB
+dist/sw.js                                                            2.46 kB
+dist/favicon.svg                                                      2.48 kB │ gzip:   1.24 kB
+dist/mb-design/assets/logo_symbol_dark_inner.svg                      2.89 kB │ gzip:   1.36 kB
+dist/mb-design/assets/favicon_symbol_inner.svg                        2.92 kB │ gzip:   1.36 kB
+dist/icons.svg                                                        5.03 kB │ gzip:   2.11 kB
+dist/apple-touch-icon.png                                             5.35 kB
+dist/mb-design/assets/landing/link-band-600.webp                      9.22 kB
+dist/mb-design/assets/landing/hero-480.webp                          11.11 kB
+dist/mb-design/assets/images/male_background.png                     11.19 kB
+dist/mb-design/assets/images/female_background.png                   11.53 kB
+dist/mb-design/assets/landing/hero-800.webp                          25.35 kB
+dist/images/background8.webp                                         26.77 kB
+dist/images/background3.webp                                         35.07 kB
+dist/images/background2.webp                                         39.83 kB
+dist/mb-design/assets/landing/link-band-1200.webp                    44.54 kB
+dist/images/reports/report_sample_1.png                              74.07 kB
+dist/mb-design/assets/images/report_sample_1.png                     74.07 kB
+dist/images/reports/report_sample_3.png                             103.04 kB
+dist/images/background1.webp                                        103.78 kB
+dist/images/reports/report_sample_2.png                             115.64 kB
+dist/mb-design/assets/images/report_sample_2.png                    115.64 kB
+dist/images/reports/report_sample_4.png                             124.63 kB
+dist/images/reports/report_sample_5.png                             126.54 kB
+dist/images/reports/report_sample_6.png                             127.36 kB
+dist/mb-design/assets/images/device_register.png                    129.56 kB
+dist/images/background5.webp                                        145.19 kB
+dist/images/background9.webp                                        157.16 kB
+dist/images/background4.webp                                        175.33 kB
+dist/images/background7.webp                                        184.25 kB
+dist/mb-design/assets/images/thumbnail4.jpg                         342.84 kB
+dist/mb-design/assets/brand_story_brainwaves.png                    390.29 kB
+dist/images/background10.webp                                       395.11 kB
+dist/images/background6.webp                                        437.66 kB
+dist/mb-design/assets/images/thumbnail3.jpg                         545.31 kB
+dist/mb-design/assets/images/thumbnail2.jpg                         566.37 kB
+dist/mb-design/assets/images/thumbnail1.jpg                         573.98 kB
+dist/mb-design/assets/images/portrait_05_woman_sunset_white.png     710.65 kB
+dist/mb-design/assets/images/background3.jpg                        722.80 kB
+dist/linkband-detail-1.png                                          815.74 kB
+dist/mb-design/assets/images/background5.jpg                      1,310.96 kB
+dist/mb-design/assets/images/portrait_03_woman_robe.png           1,701.18 kB
+dist/mb-design/assets/images/portrait_06_woman_purple_sunset.png  2,094.46 kB
+dist/bgm/bgm-ambient.mp3                                          2,202.68 kB
+dist/bgm/bgm-forest.mp3                                           2,202.68 kB
+dist/bgm/bgm-healing-432.mp3                                      2,202.68 kB
+dist/bgm/bgm-morning-birds.mp3                                    2,202.68 kB
+dist/bgm/bgm-ocean.mp3                                            2,202.68 kB
+dist/bgm/bgm-piano.mp3                                            2,202.68 kB
+dist/bgm/bgm-rain.mp3                                             2,202.68 kB
+dist/bgm/bgm-singing-bowl.mp3                                     2,202.68 kB
+dist/bgm/bgm-string-drone.mp3                                     2,202.68 kB
+dist/bgm/bgm-wind-chime.mp3                                       2,202.68 kB
+dist/mb-design/assets/images/portrait_01_warm_sweater.png         2,212.11 kB
+dist/bgm/bgm-piano.flac                                           2,258.50 kB
+dist/mb-design/assets/images/portrait_04_young_man_warm.png       2,262.35 kB
+dist/mb-design/assets/images/portrait_02_young_man_concrete.png   2,325.92 kB
+dist/bgm/bgm-rain.flac                                            2,841.32 kB
+dist/bgm/bgm-wind-chime.flac                                      3,011.64 kB
+dist/bgm/bgm-healing-432.flac                                     3,238.02 kB
+dist/bgm/bgm-singing-bowl.flac                                    3,413.00 kB
+dist/bgm/bgm-ambient.flac                                         3,786.53 kB
+dist/mb-design/assets/images/feature_link_headbands.png           4,135.74 kB
+dist/bgm/bgm-string-drone.flac                                    4,367.43 kB
+dist/bgm/bgm-morning-birds.flac                                   4,429.15 kB
+dist/bgm/bgm-forest.flac                                          4,492.03 kB
+dist/bgm/bgm-ocean.flac                                           4,561.39 kB
+dist/videos/band_guide.mp4                                        4,840.48 kB
+dist/mb-design/assets/images/feature_inhale_mountain.png          5,833.28 kB
+dist/mb-design/assets/images/hero_landing.png                     7,238.96 kB
+dist/assets/style-xrp-CPYw.css                                      382.08 kB │ gzip:  66.03 kB
+dist/assets/_store-design-disabled-DozE0Cwc.js                        0.04 kB │ gzip:   0.06 kB
+dist/assets/dashboard-CV4JURrP.js                                     0.12 kB │ gzip:   0.11 kB
+dist/assets/client-profile-DTmPbVFm.js                                0.14 kB │ gzip:   0.12 kB
+dist/assets/counselor-DCga9xgF.js                                     0.14 kB │ gzip:   0.13 kB
+dist/assets/ClientLoginPage-0TNSAh-I.js                               0.14 kB │ gzip:   0.14 kB
+dist/assets/minus-BHD46Nge.js                                         0.15 kB │ gzip:   0.15 kB
+dist/assets/check-BbBn9Lvr.js                                         0.16 kB │ gzip:   0.16 kB
+dist/assets/session-status-CEjqFsuc.js                                0.16 kB │ gzip:   0.17 kB
+dist/assets/chevron-left-oijv3ySf.js                                  0.17 kB │ gzip:   0.17 kB
+dist/assets/chevron-right-BRE2PCyJ.js                                 0.17 kB │ gzip:   0.16 kB
+dist/assets/consents-Dr6qfn-7.js                                      0.17 kB │ gzip:   0.12 kB
+dist/assets/plus-DmPjONQ7.js                                          0.19 kB │ gzip:   0.17 kB
+dist/assets/x-BAAwEl1p.js                                             0.19 kB │ gzip:   0.17 kB
+dist/assets/clock-xKRhc6fe.js                                         0.20 kB │ gzip:   0.19 kB
+dist/assets/SessionLivePage-CYaIfWOf.js                               0.21 kB │ gzip:   0.17 kB
+dist/assets/play-D98WZgbn.js                                          0.23 kB │ gzip:   0.20 kB
+dist/assets/read-model-w68kZ93d.js                                    0.23 kB │ gzip:   0.21 kB
+dist/assets/user-DdoI0ItM.js                                          0.23 kB │ gzip:   0.20 kB
+dist/assets/user-round-DN3V0qqh.js                                    0.24 kB │ gzip:   0.21 kB
+dist/assets/circle-check-CGeMc2Hc.js                                  0.25 kB │ gzip:   0.21 kB
+dist/assets/mail-DiRhtyZR.js                                          0.25 kB │ gzip:   0.22 kB
+dist/assets/moon-CZ7gxhvz.js                                          0.25 kB │ gzip:   0.22 kB
+dist/assets/PrivacyPolicyLink-DAYIArvW.js                             0.26 kB │ gzip:   0.24 kB
+dist/assets/door-closed-CoGjlyCK.js                                   0.26 kB │ gzip:   0.21 kB
+dist/assets/bookmark-7LWqSG1G.js                                      0.27 kB │ gzip:   0.22 kB
+dist/assets/log-in-BHfBvjGV.js                                        0.27 kB │ gzip:   0.21 kB
+dist/assets/activity-CY8EbuEi.js                                      0.27 kB │ gzip:   0.22 kB
+dist/assets/copy-B_Yc21OK.js                                          0.27 kB │ gzip:   0.23 kB
+dist/assets/message-circle-D58o-7gA.js                                0.28 kB │ gzip:   0.23 kB
+dist/assets/calendar-B1HiXwWh.js                                      0.29 kB │ gzip:   0.22 kB
+dist/assets/key-BjSDqqjj.js                                           0.30 kB │ gzip:   0.24 kB
+dist/assets/signup-Ck3kGzWX.js                                        0.30 kB │ gzip:   0.20 kB
+dist/assets/use-client-counselors-DdlMGmwR.js                         0.31 kB │ gzip:   0.24 kB
+dist/assets/pencil-C_ZOiIYc.js                                        0.31 kB │ gzip:   0.25 kB
+dist/assets/esm-pkAy43dn.js                                           0.31 kB │ gzip:   0.22 kB
+dist/assets/class-code-Dh7MJwaf.js                                    0.32 kB │ gzip:   0.24 kB
+dist/assets/send-G7WRXbsb.js                                          0.33 kB │ gzip:   0.25 kB
+dist/assets/triangle-alert-zNVr-MzK.js                                0.33 kB │ gzip:   0.25 kB
+dist/assets/sessionStore-GAQ-Z8Lr.js                                  0.33 kB │ gzip:   0.19 kB
+dist/assets/leaf-CjWztanB.js                                          0.34 kB │ gzip:   0.26 kB
+dist/assets/esm-R2hjyauY.js                                           0.34 kB │ gzip:   0.23 kB
+dist/assets/user-plus-wLhIH4XL.js                                     0.35 kB │ gzip:   0.26 kB
+dist/assets/calendar-x-BvPpi8W_.js                                    0.37 kB │ gzip:   0.25 kB
+dist/assets/door-open-Q2Ug1h8t.js                                     0.39 kB │ gzip:   0.27 kB
+dist/assets/useLeaveGuard-CoLKHSz_.js                                 0.40 kB │ gzip:   0.27 kB
+dist/assets/token-expiry-BDx4iU0j.js                                  0.40 kB │ gzip:   0.28 kB
+dist/assets/class-flow-host-Bjfl-vDz.js                               0.42 kB │ gzip:   0.22 kB
+dist/assets/link-DPS0rtp3.js                                          0.43 kB │ gzip:   0.28 kB
+dist/assets/print-report-CuIGHaJg.js                                  0.44 kB │ gzip:   0.32 kB
+dist/assets/useAuth-B37XRXXW.js                                       0.44 kB │ gzip:   0.28 kB
+dist/assets/mic-CzqE6d5k.js                                           0.45 kB │ gzip:   0.30 kB
+dist/assets/sliders-horizontal-BeHcrX26.js                            0.46 kB │ gzip:   0.26 kB
+dist/assets/StatusBadge-CGMKyy1t.js                                   0.51 kB │ gzip:   0.36 kB
+dist/assets/calendar-days-KhiJf8lD.js                                 0.53 kB │ gzip:   0.29 kB
+dist/assets/structure-shell-C9cZ9I_G.js                               0.54 kB │ gzip:   0.32 kB
+dist/assets/audio-6BU98n8y.js                                         0.55 kB │ gzip:   0.33 kB
+dist/assets/video-Cs5tyEBv.js                                         0.60 kB │ gzip:   0.39 kB
+dist/assets/onboarding-DAZDHOaP.js                                    0.61 kB │ gzip:   0.24 kB
+dist/assets/ellipsis-B39pgiIG.js                                      0.64 kB │ gzip:   0.44 kB
+dist/assets/upload-CNCR7umV.js                                        0.66 kB │ gzip:   0.43 kB
+dist/assets/age-Dr1uqTY0.js                                           0.66 kB │ gzip:   0.46 kB
+dist/assets/class-operation-feedback-DSiqxogg.js                      0.67 kB │ gzip:   0.44 kB
+dist/assets/code-entry-button-CpKih0Bg.js                             0.68 kB │ gzip:   0.46 kB
+dist/assets/counseling-list-page-CIVNIzDA.js                          0.68 kB │ gzip:   0.42 kB
+dist/assets/app-lifecycle-CyHieAhQ.js                                 0.74 kB │ gzip:   0.51 kB
+dist/assets/video-msE-mXpf.js                                         0.80 kB │ gzip:   0.46 kB
+dist/assets/features-DYQkH6v5.js                                      0.83 kB │ gzip:   0.44 kB
+dist/assets/web-Dz_xR-wl.js                                           0.84 kB │ gzip:   0.40 kB
+dist/assets/NotFoundPage-DiWpWROL.js                                  0.85 kB │ gzip:   0.50 kB
+dist/assets/navigation-Bfm_Dpy0.js                                    0.86 kB │ gzip:   0.39 kB
+dist/assets/counseling-detail-page-xcTBBF6z.js                        0.86 kB │ gzip:   0.46 kB
+dist/assets/org-DdQO_a_o.js                                           0.88 kB │ gzip:   0.41 kB
+dist/assets/file-text-x_FEeyOW.js                                     0.89 kB │ gzip:   0.48 kB
+dist/assets/upload-helper-CJ-C70SI.js                                 0.92 kB │ gzip:   0.58 kB
+dist/assets/crisis-help-page-CBNApXwH.js                              1.05 kB │ gzip:   0.68 kB
+dist/assets/clients-DLkV1_Wh.js                                       1.06 kB │ gzip:   0.48 kB
+dist/assets/class-scheduling-Dnt0sXND.js                              1.08 kB │ gzip:   0.42 kB
+dist/assets/measurement-guide-page-CPoNnHIm.js                        1.12 kB │ gzip:   0.79 kB
+dist/assets/StepIndicator-BJHQqOkY.js                                 1.12 kB │ gzip:   0.58 kB
+dist/assets/web-CfUc54B2.js                                           1.15 kB │ gzip:   0.46 kB
+dist/assets/useDialogA11y-x740ifnJ.js                                 1.24 kB │ gzip:   0.61 kB
+dist/assets/ReportDetailPage-3pVjY2rJ.js                              1.25 kB │ gzip:   0.71 kB
+dist/assets/NotificationCard-D2inbW9Q.js                              1.31 kB │ gzip:   0.59 kB
+dist/assets/account-deletion-copy-D3N4qk7h.js                         1.33 kB │ gzip:   0.85 kB
+dist/assets/checkin-CiGPoChL.js                                       1.36 kB │ gzip:   0.66 kB
+dist/assets/ShellSheet-DZICrXua.js                                    1.42 kB │ gzip:   0.67 kB
+dist/assets/member-format-X8bzf1RE.js                                 1.51 kB │ gzip:   0.74 kB
+dist/assets/permission-guide-AhFpGdyG.js                              1.57 kB │ gzip:   0.87 kB
+dist/assets/chat-joXDqyNM.js                                          1.60 kB │ gzip:   0.78 kB
+dist/assets/class-structure-Cku9tRoI.js                               1.60 kB │ gzip:   0.81 kB
+dist/assets/OtpInput-vYPdXPqv.js                                      1.62 kB │ gzip:   0.89 kB
+dist/assets/member-prep-Dl6-tzzA.js                                   1.65 kB │ gzip:   0.90 kB
+dist/assets/AISummaryTab-C7EbEl7l.js                                  1.70 kB │ gzip:   0.81 kB
+dist/assets/OrgRemovedNoticeDialog-B9Ej030Q.js                        1.77 kB │ gzip:   1.04 kB
+dist/assets/admin-x91-aERJ.js                                         1.82 kB │ gzip:   0.71 kB
+dist/assets/HostFlowFrame-DMAoOdGm.js                                 1.84 kB │ gzip:   0.94 kB
+dist/assets/PrivacyPolicyPage-CwQlZavm.js                             1.88 kB │ gzip:   0.83 kB
+dist/assets/EegTimeline-BRjUOWCt.js                                   1.95 kB │ gzip:   0.99 kB
+dist/assets/ApplySheet-jgbH28Y7.js                                    2.03 kB │ gzip:   0.97 kB
+dist/assets/member-handoff-uJ0Iys_8.js                                2.08 kB │ gzip:   1.12 kB
+dist/assets/overview--BmXWNX3.js                                      2.19 kB │ gzip:   1.30 kB
+dist/assets/class-operation-state-Bwum4jt6.js                         2.26 kB │ gzip:   1.24 kB
+dist/assets/account-deletion-page-B-fQ3U7m.js                         2.39 kB │ gzip:   1.26 kB
+dist/assets/class-operations-BYrkMLCV.js                              2.40 kB │ gzip:   0.75 kB
+dist/assets/ConsentCheckList-PjfsyBmb.js                              2.43 kB │ gzip:   0.98 kB
+dist/assets/RegisterPage-B_9oXFV8.js                                  2.47 kB │ gzip:   1.13 kB
+dist/assets/MyRequestsPage-CvVqfRbk.js                                2.50 kB │ gzip:   1.17 kB
+dist/assets/capacitor-ble-adapter-CZYnFuXk.js                         2.52 kB │ gzip:   1.01 kB
+dist/assets/notification-format-DpKlxb1u.js                           2.55 kB │ gzip:   1.12 kB
+dist/assets/ThemeToggle-SWvSoGX4.js                                   2.62 kB │ gzip:   1.11 kB
+dist/assets/StatusChip-BVU0z8pq.js                                    2.67 kB │ gzip:   1.22 kB
+dist/assets/terms-page-oYAhguzY.js                                    2.71 kB │ gzip:   1.28 kB
+dist/assets/ReportCoverSection-CeUJ1JRN.js                            2.85 kB │ gzip:   1.27 kB
+dist/assets/ReportSamplePage-nHcY8j63.js                              2.91 kB │ gzip:   1.49 kB
+dist/assets/web-bluetooth-adapter-D7fl5_en.js                         2.92 kB │ gzip:   0.97 kB
+dist/assets/membership-operation-state-Dy8NQuEx.js                    2.97 kB │ gzip:   1.50 kB
+dist/assets/adapters-C3SFWWRv.js                                      3.04 kB │ gzip:   1.21 kB
+dist/assets/createLucideIcon-BctnXhmD.js                              3.09 kB │ gzip:   1.48 kB
+dist/assets/ForgotPasswordPage-qxxGQIS8.js                            3.20 kB │ gzip:   1.34 kB
+dist/assets/chatStore-HWa-gAF7.js                                     3.24 kB │ gzip:   1.32 kB
+dist/assets/ClientInvitePage-bLRIjwk_.js                              3.43 kB │ gzip:   1.58 kB
+dist/assets/SubjectiveCheckinCard-DUr6pR6L.js                         3.60 kB │ gzip:   1.37 kB
+dist/assets/ClientReportViewer-CDIDDABF.js                            3.71 kB │ gzip:   1.62 kB
+dist/assets/class-flow-oMz_uxXi.js                                    3.81 kB │ gzip:   1.25 kB
+dist/assets/counseling-views-DSX8KGyC.js                              3.87 kB │ gzip:   1.40 kB
+dist/assets/MemberFlowFrame-BVR8IbRy.js                               3.93 kB │ gzip:   1.95 kB
+dist/assets/class-member-picker-BsXTH19Q.js                           4.07 kB │ gzip:   1.88 kB
+dist/assets/structure-shell-BwS1tHUK.js                               4.09 kB │ gzip:   1.91 kB
+dist/assets/home-card-parity-Bc7mk_Or.js                              4.16 kB │ gzip:   1.64 kB
+dist/assets/MembershipInvitePage-Bqod7Ys8.js                          4.19 kB │ gzip:   1.65 kB
+dist/assets/ReportViewPage-jJbKjfFC.js                                4.23 kB │ gzip:   1.91 kB
+dist/assets/member-structure-home-page-BJwUs4Pw.js                    4.29 kB │ gzip:   1.59 kB
+dist/assets/OrgSearchPage-CZ61xOuw.js                                 4.31 kB │ gzip:   1.77 kB
+dist/assets/ClientEssentialsPage-B2XN8l-s.js                          4.50 kB │ gzip:   1.72 kB
+dist/assets/member-class-detail-page-tRbNvyNx.js                      4.60 kB │ gzip:   1.78 kB
+dist/assets/ResetPasswordPage-CNQkBEbY.js                             4.61 kB │ gzip:   1.70 kB
+dist/assets/useSessionLiveSocket-D9_25cTn.js                          4.62 kB │ gzip:   1.78 kB
+dist/assets/NotificationCenterPage-CEcf1WAM.js                        4.87 kB │ gzip:   1.92 kB
+dist/assets/scheduling-model-C1-VEVXX.js                              4.90 kB │ gzip:   2.33 kB
+dist/assets/AdminReviewListPage-Do1gtT5p.js                           5.02 kB │ gzip:   2.10 kB
+dist/assets/host-classes-page-DQqhpdgE.js                             5.11 kB │ gzip:   2.32 kB
+dist/assets/ReportProgressStepper-DidWs7GK.js                         5.89 kB │ gzip:   2.43 kB
+dist/assets/InviteLandingPage-JlmdLDmf.js                             5.98 kB │ gzip:   2.57 kB
+dist/assets/member-class-views-CFDq-KlP.js                            6.05 kB │ gzip:   2.32 kB
+dist/assets/EegMetricsGrid-DsJHXSZk.js                                6.08 kB │ gzip:   2.48 kB
+dist/assets/SetPasswordPage-7hYllOnq.js                               6.09 kB │ gzip:   2.37 kB
+dist/assets/list-Dn_NX8xZ.js                                          6.17 kB │ gzip:   2.60 kB
+dist/assets/class-instant-invite-status-07XEAn9E.js                   6.40 kB │ gzip:   2.62 kB
+dist/assets/member-classes-page-CrbjoJx4.js                           6.54 kB │ gzip:   2.78 kB
+dist/assets/AppShell-BVrGqPAC.js                                      6.59 kB │ gzip:   2.50 kB
+dist/assets/OrgManagementPage-DkxFDY_j.js                             6.65 kB │ gzip:   2.37 kB
+dist/assets/PlayerTopBar-PsI6XoVg.js                                  6.95 kB │ gzip:   2.43 kB
+dist/assets/guest-class-membership-page-xpdTslez.js                   7.09 kB │ gzip:   2.68 kB
+dist/assets/ClientShell-DoId9WXR.js                                   7.51 kB │ gzip:   3.14 kB
+dist/assets/RegisterOrganizationPage-_GThpXkz.js                      7.55 kB │ gzip:   2.70 kB
+dist/assets/CredentialDashboardPage-B9iITmjd.js                       7.57 kB │ gzip:   2.59 kB
+dist/assets/web-DvCcbRf7.js                                           7.74 kB │ gzip:   2.28 kB
+dist/assets/privacy-consents-dyHaXcAm.js                              8.57 kB │ gzip:   3.03 kB
+dist/assets/esm-udX-u6Zv.js                                           8.65 kB │ gzip:   2.42 kB
+dist/assets/host-class-views-GXzCAhDc.js                              8.77 kB │ gzip:   2.98 kB
+dist/assets/CounselorOnboardingPage-BQ_QfQrv.js                       8.96 kB │ gzip:   2.85 kB
+dist/assets/AdminReviewDetailPage-CHlVEMvs.js                         9.36 kB │ gzip:   2.87 kB
+dist/assets/shell-data-Cqwl2wQu.js                                    9.52 kB │ gzip:   3.32 kB
+dist/assets/UserManagementPage-CKkYpx07.js                            9.67 kB │ gzip:   2.90 kB
+dist/assets/counselor-info-editor-Ym_NUU6U.js                        10.46 kB │ gzip:   3.06 kB
+dist/assets/OrgPublicPage-BL24Shrw.js                                10.87 kB │ gzip:   3.23 kB
+dist/assets/member-operations-DwVQi9cq.js                            11.25 kB │ gzip:   3.81 kB
+dist/assets/SignupApplicationsPage-Ca-M-sEn.js                       11.27 kB │ gzip:   3.27 kB
+dist/assets/RegisterCounselorPage-D4wWcPGC.js                        11.35 kB │ gzip:   3.37 kB
+dist/assets/privacy-policy-Duur3URF.js                               11.72 kB │ gzip:   4.33 kB
+dist/assets/RegisterClientPage-DCtqtml2.js                           12.41 kB │ gzip:   3.69 kB
+dist/assets/web-CAwxiio_.js                                          13.27 kB │ gzip:   3.93 kB
+dist/assets/CodeEntryPage-DelRugDn.js                                13.99 kB │ gzip:   4.95 kB
+dist/assets/OrgCounselorsPage-uzLZ7dFp.js                            14.32 kB │ gzip:   4.43 kB
+dist/assets/SessionRecordPage-Dv897jCF.js                            14.45 kB │ gzip:   4.85 kB
+dist/assets/useNotificationSocket-RI0EfgJT.js                        15.26 kB │ gzip:   5.62 kB
+dist/assets/LoginPage-DaesHxyu.js                                    15.64 kB │ gzip:   5.68 kB
+dist/assets/ChatRoom-_mji0NOP.js                                     17.00 kB │ gzip:   6.35 kB
+dist/assets/ClientProfilePage-DSk11jtO.js                            17.01 kB │ gzip:   5.20 kB
+dist/assets/ClientListPage-Tjvson0L.js                               17.30 kB │ gzip:   5.26 kB
+dist/assets/DashboardPage-CwswIWgD.js                                17.84 kB │ gzip:   5.62 kB
+dist/assets/ClientOnboardingPage-Dz33btks.js                         19.02 kB │ gzip:   5.09 kB
+dist/assets/ClientManagementPage-D9gwz49E.js                         19.86 kB │ gzip:   5.05 kB
+dist/assets/ClientHomePage-wdMPNAtx.js                               20.11 kB │ gzip:   5.89 kB
+dist/assets/NarrativeSections-Bd4vT7-f.js                            20.42 kB │ gzip:   6.38 kB
+dist/assets/reports-DEVxYLeI.js                                      21.02 kB │ gzip:   7.33 kB
+dist/assets/OrgDashboardPage-DVdH_0oa.js                             21.15 kB │ gzip:   4.86 kB
+dist/assets/actions-Bon4Y1gt.js                                      21.19 kB │ gzip:   7.24 kB
+dist/assets/instant-class-page-DA36RhM6.js                           21.41 kB │ gzip:   7.07 kB
+dist/assets/ReportListPage-BcFk9X2C.js                               22.75 kB │ gzip:   6.51 kB
+dist/assets/ReportDetailView-DyzyGV1e.js                             26.46 kB │ gzip:   8.52 kB
+dist/assets/CreateWizardContainer-BB3f7mzB.js                        28.81 kB │ gzip:   9.09 kB
+dist/assets/SettingsPage-Cc-BLvVr.js                                 32.15 kB │ gzip:   6.63 kB
+dist/assets/member-presence-d7qvO3y3.js                              38.38 kB │ gzip:  13.45 kB
+dist/assets/class-scheduling-wizard-COb9RsLE.js                      40.26 kB │ gzip:  11.42 kB
+dist/assets/OrgManagementPage-BSdh9m8t.js                            41.39 kB │ gzip:  10.32 kB
+dist/assets/ChatPage-CVdYh9iC.js                                     43.71 kB │ gzip:  12.55 kB
+dist/assets/apple-CUSIGEyN.js                                        49.35 kB │ gzip:  12.75 kB
+dist/assets/host-class-detail-page-DOWYsU0y.js                       57.87 kB │ gzip:  14.31 kB
+dist/assets/ClientAppPage-DnIPOwrg.js                                62.06 kB │ gzip:  17.41 kB
+dist/assets/SessionDetailPage-Ba5m8M4k.js                            68.10 kB │ gzip:  19.64 kB
+dist/assets/PlaygroundPage-DB8OZOYz.js                               73.41 kB │ gzip:  20.78 kB
+dist/assets/useBand-ujLBgvOu.js                                     113.12 kB │ gzip:  33.36 kB
+dist/assets/EntryPage-GLu8Wbop.js                                   123.45 kB │ gzip:  36.91 kB
+dist/assets/ClassPlayerPage-DkCM5G_n.js                             190.00 kB │ gzip:  54.98 kB
+dist/assets/LineChart-TvXRE_C6.js                                   345.72 kB │ gzip: 101.74 kB
+dist/assets/index-By7vFic7.js                                       430.36 kB │ gzip: 137.42 kB
+dist/assets/components-DqcPwJ_9-yfzRwpes.js                         514.27 kB │ gzip: 135.57 kB
+
+[33m[INEFFECTIVE_DYNAMIC_IMPORT] [0msrc/stores/notificationStore.ts is dynamically imported by src/stores/authStore.ts but also statically imported by src/components/chat/ChatRoom.tsx, src/components/client/BottomTabBar.tsx, src/components/client/ClientShell.tsx, src/components/layout/AppShell.tsx, src/components/layout/BottomTabBar.tsx, ..., dynamic import will not move module into another chunk.
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[33m[INEFFECTIVE_DYNAMIC_IMPORT] [0msrc/lib/native/push.ts is dynamically imported by src/stores/authStore.ts but also statically imported by src/components/settings/WebPushCard.tsx, src/lib/native/use-push-registration.ts, src/lib/web-push.ts, dynamic import will not move module into another chunk.
+
+[33m[INEFFECTIVE_DYNAMIC_IMPORT] [0msrc/lib/web-push.ts is dynamically imported by src/stores/authStore.ts but also statically imported by src/components/settings/WebPushCard.tsx, src/lib/native/use-push-registration.ts, dynamic import will not move module into another chunk.
+
+✓ built in 1.75s
