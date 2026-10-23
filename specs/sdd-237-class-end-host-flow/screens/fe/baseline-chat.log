@@ -1,0 +1,35 @@
+
+ RUN  v5.0.2 /private/tmp/sdd237-baseline-e4e22b00/frontend
+
+ ❯ tests/chat-message-deeplink.test.ts (6 tests | 2 failed) 121ms
+   × 대상 missing이면 최근 대화로 돌아갈 수 있다 10ms
+   × 대상 failure이면 최근 대화로 돌아갈 수 있다 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/chat-message-deeplink.test.ts > 대상 missing이면 최근 대화로 돌아갈 수 있다
+ FAIL  tests/chat-message-deeplink.test.ts > 대상 failure이면 최근 대화로 돌아갈 수 있다
+AssertionError: expected undefined to be true // Object.is equality
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ❯ tests/chat-message-deeplink.test.ts:56:54
+     54|   const button = [...container.querySelectorAll('button')].find((item)…
+     55|   expect(button).toBeDefined();
+     56|   expect(container.querySelector('input')?.disabled).toBe(true);
+       |                                                      ^
+     57|   await act(async () => button!.click());
+     58|   expect(container.textContent).toContain('본문 recent');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 4 passed (6)
+   Start at  22:00:36
+   Duration  1.37s (transform 37%, environment 36%, tests 13%, import 12%, setup 1%, worker 1%)
+
