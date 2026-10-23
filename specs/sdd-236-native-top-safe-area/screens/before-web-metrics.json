@@ -1,0 +1,1712 @@
+[
+  {
+    "engine": "chromium",
+    "width": 390,
+    "height": 844,
+    "screen": "login",
+    "metrics": {
+      "screen": "login",
+      "path": "/login",
+      "innerHeight": 844,
+      "innerWidth": 390,
+      "dpr": 1,
+      "safe": {
+        "top": "0px",
+        "left": "0px",
+        "right": "0px"
+      },
+      "html": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "body": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "root": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "bodyBackground": "rgb(255, 255, 255)",
+      "buttons": [
+        {
+          "label": "회원",
+          "x": 28,
+          "y": 227.140625,
+          "width": 111.328125,
+          "height": 46
+        },
+        {
+          "label": "상담사",
+          "x": 139.328125,
+          "y": 227.140625,
+          "width": 111.328125,
+          "height": 46
+        },
+        {
+          "label": "기관",
+          "x": 250.65625,
+          "y": 227.140625,
+          "width": 111.34375,
+          "height": 46
+        },
+        {
+          "label": "이메일로 회원 로그인",
+          "x": 24,
+          "y": 589.140625,
+          "width": 342,
+          "height": 52
+        },
+        {
+          "label": "Google로 회원 로그인",
+          "x": 24,
+          "y": 730.640625,
+          "width": 342,
+          "height": 52
+        }
+      ]
+    }
+  },
+  {
+    "engine": "chromium",
+    "width": 390,
+    "height": 844,
+    "screen": "home",
+    "metrics": {
+      "screen": "home",
+      "path": "/app",
+      "innerHeight": 844,
+      "innerWidth": 390,
+      "dpr": 1,
+      "safe": {
+        "top": "0px",
+        "left": "0px",
+        "right": "0px"
+      },
+      "html": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "body": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "root": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "bodyBackground": "rgb(255, 255, 255)",
+      "buttons": [
+        {
+          "label": "메뉴 열기",
+          "x": 8,
+          "y": 5.5,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "홈으로 이동",
+          "x": 125.0625,
+          "y": 5.5,
+          "width": 139.890625,
+          "height": 44
+        },
+        {
+          "label": "알림",
+          "x": 338,
+          "y": 5.5,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "다음 클래스까지-클래스 보기",
+          "x": 16,
+          "y": 422,
+          "width": 173,
+          "height": 152
+        },
+        {
+          "label": "새 리포트0바로 확인",
+          "x": 201,
+          "y": 422,
+          "width": 173,
+          "height": 152
+        },
+        {
+          "label": "이번 주 클래스0목록 보기",
+          "x": 16,
+          "y": 586,
+          "width": 173,
+          "height": 152
+        },
+        {
+          "label": "완료 클래스0리포트 보기",
+          "x": 201,
+          "y": 586,
+          "width": 173,
+          "height": 152
+        },
+        {
+          "label": "클래스 신청하기",
+          "x": 138.171875,
+          "y": 1322,
+          "width": 113.65625,
+          "height": 44
+        },
+        {
+          "label": "전체 보기",
+          "x": 280.140625,
+          "y": 1465,
+          "width": 68.859375,
+          "height": 44
+        },
+        {
+          "label": "전체",
+          "x": 305,
+          "y": 1705,
+          "width": 44,
+          "height": 44
+        }
+      ]
+    }
+  },
+  {
+    "engine": "chromium",
+    "width": 390,
+    "height": 844,
+    "screen": "class",
+    "metrics": {
+      "screen": "class",
+      "path": "/design/class-player",
+      "innerHeight": 844,
+      "innerWidth": 390,
+      "dpr": 1,
+      "safe": {
+        "top": "0px",
+        "left": "0px",
+        "right": "0px"
+      },
+      "html": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "body": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "root": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "bodyBackground": "rgb(255, 255, 255)",
+      "buttons": [
+        {
+          "label": "나가기",
+          "x": 16,
+          "y": 22,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "채용욱 상담사 영상 — 누르면 크게 보기",
+          "x": 91,
+          "y": 133.65625,
+          "width": 96,
+          "height": 128
+        },
+        {
+          "label": "마이크 켜짐",
+          "x": 16,
+          "y": 716,
+          "width": 175,
+          "height": 44
+        },
+        {
+          "label": "카메라 켜짐",
+          "x": 199,
+          "y": 716,
+          "width": 175,
+          "height": 44
+        },
+        {
+          "label": "내 상태",
+          "x": 21,
+          "y": 773,
+          "width": 68,
+          "height": 50
+        },
+        {
+          "label": "채팅, 안읽음 2",
+          "x": 91,
+          "y": 773,
+          "width": 68,
+          "height": 50
+        },
+        {
+          "label": "조용한 신호",
+          "x": 161,
+          "y": 773,
+          "width": 68,
+          "height": 50
+        },
+        {
+          "label": "소리",
+          "x": 231,
+          "y": 773,
+          "width": 68,
+          "height": 50
+        },
+        {
+          "label": "기기",
+          "x": 301,
+          "y": 773,
+          "width": 68,
+          "height": 50
+        }
+      ]
+    }
+  },
+  {
+    "engine": "chromium",
+    "width": 844,
+    "height": 390,
+    "screen": "login",
+    "metrics": {
+      "screen": "login",
+      "path": "/login",
+      "innerHeight": 390,
+      "innerWidth": 844,
+      "dpr": 1,
+      "safe": {
+        "top": "0px",
+        "left": "0px",
+        "right": "0px"
+      },
+      "html": {
+        "x": 0,
+        "y": 0,
+        "width": 844,
+        "height": 390
+      },
+      "body": {
+        "x": 0,
+        "y": 0,
+        "width": 844,
+        "height": 390
+      },
+      "root": {
+        "x": 0,
+        "y": 0,
+        "width": 844,
+        "height": 390
+      },
+      "bodyBackground": "rgb(255, 255, 255)",
+      "buttons": [
+        {
+          "label": "회원",
+          "x": 246,
+          "y": 227.140625,
+          "width": 117.328125,
+          "height": 46
+        },
+        {
+          "label": "상담사",
+          "x": 363.328125,
+          "y": 227.140625,
+          "width": 117.328125,
+          "height": 46
+        },
+        {
+          "label": "기관",
+          "x": 480.65625,
+          "y": 227.140625,
+          "width": 117.34375,
+          "height": 46
+        },
+        {
+          "label": "이메일로 회원 로그인",
+          "x": 242,
+          "y": 589.140625,
+          "width": 360,
+          "height": 52
+        },
+        {
+          "label": "Google로 회원 로그인",
+          "x": 242,
+          "y": 730.640625,
+          "width": 360,
+          "height": 52
+        }
+      ]
+    }
+  },
+  {
+    "engine": "chromium",
+    "width": 844,
+    "height": 390,
+    "screen": "home",
+    "metrics": {
+      "screen": "home",
+      "path": "/app",
+      "innerHeight": 390,
+      "innerWidth": 844,
+      "dpr": 1,
+      "safe": {
+        "top": "0px",
+        "left": "0px",
+        "right": "0px"
+      },
+      "html": {
+        "x": 0,
+        "y": 0,
+        "width": 844,
+        "height": 390
+      },
+      "body": {
+        "x": 0,
+        "y": 0,
+        "width": 844,
+        "height": 390
+      },
+      "root": {
+        "x": 0,
+        "y": 0,
+        "width": 844,
+        "height": 390
+      },
+      "bodyBackground": "rgb(255, 255, 255)",
+      "buttons": [
+        {
+          "label": "로그아웃",
+          "x": 20,
+          "y": 575,
+          "width": 199,
+          "height": 44
+        },
+        {
+          "label": "알림",
+          "x": 768,
+          "y": 15.5,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "다음 클래스까지-클래스 보기",
+          "x": 264,
+          "y": 364,
+          "width": 272,
+          "height": 152
+        },
+        {
+          "label": "새 리포트0바로 확인",
+          "x": 548,
+          "y": 364,
+          "width": 272,
+          "height": 152
+        },
+        {
+          "label": "이번 주 클래스0목록 보기",
+          "x": 264,
+          "y": 528,
+          "width": 272,
+          "height": 152
+        },
+        {
+          "label": "완료 클래스0리포트 보기",
+          "x": 548,
+          "y": 528,
+          "width": 272,
+          "height": 152
+        },
+        {
+          "label": "클래스 신청하기",
+          "x": 485.171875,
+          "y": 1260,
+          "width": 113.65625,
+          "height": 44
+        },
+        {
+          "label": "전체 보기",
+          "x": 730.0625,
+          "y": 1403,
+          "width": 64.9375,
+          "height": 44
+        },
+        {
+          "label": "전체",
+          "x": 751,
+          "y": 1641,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "전체",
+          "x": 751,
+          "y": 1805.5,
+          "width": 44,
+          "height": 44
+        }
+      ]
+    }
+  },
+  {
+    "engine": "chromium",
+    "width": 844,
+    "height": 390,
+    "screen": "class",
+    "metrics": {
+      "screen": "class",
+      "path": "/design/class-player",
+      "innerHeight": 390,
+      "innerWidth": 844,
+      "dpr": 1,
+      "safe": {
+        "top": "0px",
+        "left": "0px",
+        "right": "0px"
+      },
+      "html": {
+        "x": 0,
+        "y": 0,
+        "width": 844,
+        "height": 390
+      },
+      "body": {
+        "x": 0,
+        "y": 0,
+        "width": 844,
+        "height": 390
+      },
+      "root": {
+        "x": 0,
+        "y": 0,
+        "width": 844,
+        "height": 390
+      },
+      "bodyBackground": "rgb(255, 255, 255)",
+      "buttons": [
+        {
+          "label": "나가기",
+          "x": 24,
+          "y": 22,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "채용욱 상담사 영상 — 누르면 크게 보기",
+          "x": 214,
+          "y": -43,
+          "width": 200,
+          "height": 120
+        },
+        {
+          "label": "마이크 켜짐",
+          "x": 102,
+          "y": 258,
+          "width": 316,
+          "height": 44
+        },
+        {
+          "label": "카메라 켜짐",
+          "x": 426,
+          "y": 258,
+          "width": 316,
+          "height": 44
+        },
+        {
+          "label": "내 상태",
+          "x": 107,
+          "y": 315,
+          "width": 124.390625,
+          "height": 54
+        },
+        {
+          "label": "채팅, 안읽음 2",
+          "x": 233.390625,
+          "y": 315,
+          "width": 124.40625,
+          "height": 54
+        },
+        {
+          "label": "조용한 신호",
+          "x": 359.796875,
+          "y": 315,
+          "width": 124.390625,
+          "height": 54
+        },
+        {
+          "label": "소리",
+          "x": 486.1875,
+          "y": 315,
+          "width": 124.40625,
+          "height": 54
+        },
+        {
+          "label": "기기",
+          "x": 612.59375,
+          "y": 315,
+          "width": 124.40625,
+          "height": 54
+        }
+      ]
+    }
+  },
+  {
+    "engine": "chromium",
+    "width": 1440,
+    "height": 900,
+    "screen": "login",
+    "metrics": {
+      "screen": "login",
+      "path": "/login",
+      "innerHeight": 900,
+      "innerWidth": 1440,
+      "dpr": 1,
+      "safe": {
+        "top": "0px",
+        "left": "0px",
+        "right": "0px"
+      },
+      "html": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "body": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "root": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "bodyBackground": "rgb(255, 255, 255)",
+      "buttons": [
+        {
+          "label": "회원",
+          "x": 544,
+          "y": 227.140625,
+          "width": 117.328125,
+          "height": 46
+        },
+        {
+          "label": "상담사",
+          "x": 661.328125,
+          "y": 227.140625,
+          "width": 117.328125,
+          "height": 46
+        },
+        {
+          "label": "기관",
+          "x": 778.65625,
+          "y": 227.140625,
+          "width": 117.34375,
+          "height": 46
+        },
+        {
+          "label": "이메일로 회원 로그인",
+          "x": 540,
+          "y": 589.140625,
+          "width": 360,
+          "height": 52
+        },
+        {
+          "label": "Google로 회원 로그인",
+          "x": 540,
+          "y": 730.640625,
+          "width": 360,
+          "height": 52
+        }
+      ]
+    }
+  },
+  {
+    "engine": "chromium",
+    "width": 1440,
+    "height": 900,
+    "screen": "home",
+    "metrics": {
+      "screen": "home",
+      "path": "/app",
+      "innerHeight": 900,
+      "innerWidth": 1440,
+      "dpr": 1,
+      "safe": {
+        "top": "0px",
+        "left": "0px",
+        "right": "0px"
+      },
+      "html": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "body": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "root": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "bodyBackground": "rgb(255, 255, 255)",
+      "buttons": [
+        {
+          "label": "로그아웃",
+          "x": 20,
+          "y": 759.5,
+          "width": 199,
+          "height": 46.5
+        },
+        {
+          "label": "알림",
+          "x": 1364,
+          "y": 15.5,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "다음 클래스까지-클래스 보기",
+          "x": 280,
+          "y": 372,
+          "width": 268,
+          "height": 152
+        },
+        {
+          "label": "새 리포트0바로 확인",
+          "x": 564,
+          "y": 372,
+          "width": 268,
+          "height": 152
+        },
+        {
+          "label": "이번 주 클래스0목록 보기",
+          "x": 848,
+          "y": 372,
+          "width": 268,
+          "height": 152
+        },
+        {
+          "label": "완료 클래스0리포트 보기",
+          "x": 1132,
+          "y": 372,
+          "width": 268,
+          "height": 152
+        },
+        {
+          "label": "클래스 신청하기",
+          "x": 611.171875,
+          "y": 1097,
+          "width": 113.65625,
+          "height": 44
+        },
+        {
+          "label": "전체 보기",
+          "x": 966.0625,
+          "y": 1240,
+          "width": 64.9375,
+          "height": 44
+        },
+        {
+          "label": "전체",
+          "x": 1331,
+          "y": 901,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "전체",
+          "x": 1331,
+          "y": 1065.5,
+          "width": 44,
+          "height": 44
+        }
+      ]
+    }
+  },
+  {
+    "engine": "chromium",
+    "width": 1440,
+    "height": 900,
+    "screen": "class",
+    "metrics": {
+      "screen": "class",
+      "path": "/design/class-player",
+      "innerHeight": 900,
+      "innerWidth": 1440,
+      "dpr": 1,
+      "safe": {
+        "top": "0px",
+        "left": "0px",
+        "right": "0px"
+      },
+      "html": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "body": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "root": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "bodyBackground": "rgb(255, 255, 255)",
+      "buttons": [
+        {
+          "label": "나가기",
+          "x": 24,
+          "y": 22,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "채용욱 상담사 영상 — 누르면 크게 보기",
+          "x": 512,
+          "y": 88,
+          "width": 200,
+          "height": 120
+        },
+        {
+          "label": "마이크 켜짐",
+          "x": 400,
+          "y": 768,
+          "width": 316,
+          "height": 44
+        },
+        {
+          "label": "카메라 켜짐",
+          "x": 724,
+          "y": 768,
+          "width": 316,
+          "height": 44
+        },
+        {
+          "label": "내 상태",
+          "x": 405,
+          "y": 825,
+          "width": 124.390625,
+          "height": 54
+        },
+        {
+          "label": "채팅, 안읽음 2",
+          "x": 531.390625,
+          "y": 825,
+          "width": 124.40625,
+          "height": 54
+        },
+        {
+          "label": "조용한 신호",
+          "x": 657.796875,
+          "y": 825,
+          "width": 124.390625,
+          "height": 54
+        },
+        {
+          "label": "소리",
+          "x": 784.1875,
+          "y": 825,
+          "width": 124.40625,
+          "height": 54
+        },
+        {
+          "label": "기기",
+          "x": 910.59375,
+          "y": 825,
+          "width": 124.40625,
+          "height": 54
+        }
+      ]
+    }
+  },
+  {
+    "engine": "webkit",
+    "width": 390,
+    "height": 844,
+    "screen": "login",
+    "metrics": {
+      "screen": "login",
+      "path": "/login",
+      "innerHeight": 844,
+      "innerWidth": 390,
+      "dpr": 1,
+      "safe": {
+        "top": "0px",
+        "left": "0px",
+        "right": "0px"
+      },
+      "html": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "body": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "root": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "bodyBackground": "rgb(255, 255, 255)",
+      "buttons": [
+        {
+          "label": "회원",
+          "x": 28,
+          "y": 227.140625,
+          "width": 111.328125,
+          "height": 46
+        },
+        {
+          "label": "상담사",
+          "x": 139.328125,
+          "y": 227.140625,
+          "width": 111.328125,
+          "height": 46
+        },
+        {
+          "label": "기관",
+          "x": 250.65625,
+          "y": 227.140625,
+          "width": 111.328125,
+          "height": 46
+        },
+        {
+          "label": "이메일로 회원 로그인",
+          "x": 24,
+          "y": 589.140625,
+          "width": 342,
+          "height": 52
+        },
+        {
+          "label": "Google로 회원 로그인",
+          "x": 24,
+          "y": 730.640625,
+          "width": 342,
+          "height": 52
+        }
+      ]
+    }
+  },
+  {
+    "engine": "webkit",
+    "width": 390,
+    "height": 844,
+    "screen": "home",
+    "metrics": {
+      "screen": "home",
+      "path": "/app",
+      "innerHeight": 844,
+      "innerWidth": 390,
+      "dpr": 1,
+      "safe": {
+        "top": "0px",
+        "left": "0px",
+        "right": "0px"
+      },
+      "html": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "body": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "root": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "bodyBackground": "rgb(255, 255, 255)",
+      "buttons": [
+        {
+          "label": "메뉴 열기",
+          "x": 8,
+          "y": 5.5,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "홈으로 이동",
+          "x": 125.046875,
+          "y": 5.5,
+          "width": 139.890625,
+          "height": 44
+        },
+        {
+          "label": "알림",
+          "x": 337.984375,
+          "y": 5.5,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "다음 클래스까지-클래스 보기",
+          "x": 16,
+          "y": 422,
+          "width": 173,
+          "height": 152
+        },
+        {
+          "label": "새 리포트0바로 확인",
+          "x": 201,
+          "y": 422,
+          "width": 173,
+          "height": 152
+        },
+        {
+          "label": "이번 주 클래스0목록 보기",
+          "x": 16,
+          "y": 586,
+          "width": 173,
+          "height": 152
+        },
+        {
+          "label": "완료 클래스0리포트 보기",
+          "x": 201,
+          "y": 586,
+          "width": 173,
+          "height": 152
+        },
+        {
+          "label": "클래스 신청하기",
+          "x": 138.171875,
+          "y": 1322,
+          "width": 113.65625,
+          "height": 44
+        },
+        {
+          "label": "전체 보기",
+          "x": 280.140625,
+          "y": 1465,
+          "width": 68.859375,
+          "height": 44
+        },
+        {
+          "label": "전체",
+          "x": 305,
+          "y": 1705,
+          "width": 44,
+          "height": 44
+        }
+      ]
+    }
+  },
+  {
+    "engine": "webkit",
+    "width": 390,
+    "height": 844,
+    "screen": "class",
+    "metrics": {
+      "screen": "class",
+      "path": "/design/class-player",
+      "innerHeight": 844,
+      "innerWidth": 390,
+      "dpr": 1,
+      "safe": {
+        "top": "0px",
+        "left": "0px",
+        "right": "0px"
+      },
+      "html": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "body": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "root": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "bodyBackground": "rgb(255, 255, 255)",
+      "buttons": [
+        {
+          "label": "나가기",
+          "x": 16,
+          "y": 22,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "채용욱 상담사 영상 — 누르면 크게 보기",
+          "x": 91,
+          "y": 133.65625,
+          "width": 96,
+          "height": 128
+        },
+        {
+          "label": "마이크 켜짐",
+          "x": 16,
+          "y": 716,
+          "width": 175,
+          "height": 44
+        },
+        {
+          "label": "카메라 켜짐",
+          "x": 199,
+          "y": 716,
+          "width": 175,
+          "height": 44
+        },
+        {
+          "label": "내 상태",
+          "x": 21,
+          "y": 773,
+          "width": 68,
+          "height": 50
+        },
+        {
+          "label": "채팅, 안읽음 2",
+          "x": 91,
+          "y": 773,
+          "width": 68,
+          "height": 50
+        },
+        {
+          "label": "조용한 신호",
+          "x": 161,
+          "y": 773,
+          "width": 68,
+          "height": 50
+        },
+        {
+          "label": "소리",
+          "x": 231,
+          "y": 773,
+          "width": 68,
+          "height": 50
+        },
+        {
+          "label": "기기",
+          "x": 301,
+          "y": 773,
+          "width": 68,
+          "height": 50
+        }
+      ]
+    }
+  },
+  {
+    "engine": "webkit",
+    "width": 844,
+    "height": 390,
+    "screen": "login",
+    "metrics": {
+      "screen": "login",
+      "path": "/login",
+      "innerHeight": 390,
+      "innerWidth": 844,
+      "dpr": 1,
+      "safe": {
+        "top": "0px",
+        "left": "0px",
+        "right": "0px"
+      },
+      "html": {
+        "x": 0,
+        "y": 0,
+        "width": 844,
+        "height": 390
+      },
+      "body": {
+        "x": 0,
+        "y": 0,
+        "width": 844,
+        "height": 390
+      },
+      "root": {
+        "x": 0,
+        "y": 0,
+        "width": 844,
+        "height": 390
+      },
+      "bodyBackground": "rgb(255, 255, 255)",
+      "buttons": [
+        {
+          "label": "회원",
+          "x": 246,
+          "y": 227.140625,
+          "width": 117.328125,
+          "height": 46
+        },
+        {
+          "label": "상담사",
+          "x": 363.328125,
+          "y": 227.140625,
+          "width": 117.328125,
+          "height": 46
+        },
+        {
+          "label": "기관",
+          "x": 480.65625,
+          "y": 227.140625,
+          "width": 117.328125,
+          "height": 46
+        },
+        {
+          "label": "이메일로 회원 로그인",
+          "x": 242,
+          "y": 589.140625,
+          "width": 360,
+          "height": 52
+        },
+        {
+          "label": "Google로 회원 로그인",
+          "x": 242,
+          "y": 730.640625,
+          "width": 360,
+          "height": 52
+        }
+      ]
+    }
+  },
+  {
+    "engine": "webkit",
+    "width": 844,
+    "height": 390,
+    "screen": "home",
+    "metrics": {
+      "screen": "home",
+      "path": "/app",
+      "innerHeight": 390,
+      "innerWidth": 844,
+      "dpr": 1,
+      "safe": {
+        "top": "0px",
+        "left": "0px",
+        "right": "0px"
+      },
+      "html": {
+        "x": 0,
+        "y": 0,
+        "width": 844,
+        "height": 390
+      },
+      "body": {
+        "x": 0,
+        "y": 0,
+        "width": 844,
+        "height": 390
+      },
+      "root": {
+        "x": 0,
+        "y": 0,
+        "width": 844,
+        "height": 390
+      },
+      "bodyBackground": "rgb(255, 255, 255)",
+      "buttons": [
+        {
+          "label": "로그아웃",
+          "x": 20,
+          "y": 575,
+          "width": 199,
+          "height": 44
+        },
+        {
+          "label": "알림",
+          "x": 768,
+          "y": 15.5,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "다음 클래스까지-클래스 보기",
+          "x": 264,
+          "y": 364,
+          "width": 272,
+          "height": 152
+        },
+        {
+          "label": "새 리포트0바로 확인",
+          "x": 548,
+          "y": 364,
+          "width": 272,
+          "height": 152
+        },
+        {
+          "label": "이번 주 클래스0목록 보기",
+          "x": 264,
+          "y": 528,
+          "width": 272,
+          "height": 152
+        },
+        {
+          "label": "완료 클래스0리포트 보기",
+          "x": 548,
+          "y": 528,
+          "width": 272,
+          "height": 152
+        },
+        {
+          "label": "클래스 신청하기",
+          "x": 485.171875,
+          "y": 1260,
+          "width": 113.65625,
+          "height": 44
+        },
+        {
+          "label": "전체 보기",
+          "x": 730.0625,
+          "y": 1403,
+          "width": 64.9375,
+          "height": 44
+        },
+        {
+          "label": "전체",
+          "x": 751,
+          "y": 1641,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "전체",
+          "x": 751,
+          "y": 1805.5,
+          "width": 44,
+          "height": 44
+        }
+      ]
+    }
+  },
+  {
+    "engine": "webkit",
+    "width": 844,
+    "height": 390,
+    "screen": "class",
+    "metrics": {
+      "screen": "class",
+      "path": "/design/class-player",
+      "innerHeight": 390,
+      "innerWidth": 844,
+      "dpr": 1,
+      "safe": {
+        "top": "0px",
+        "left": "0px",
+        "right": "0px"
+      },
+      "html": {
+        "x": 0,
+        "y": 0,
+        "width": 844,
+        "height": 390
+      },
+      "body": {
+        "x": 0,
+        "y": 0,
+        "width": 844,
+        "height": 390
+      },
+      "root": {
+        "x": 0,
+        "y": 0,
+        "width": 844,
+        "height": 390
+      },
+      "bodyBackground": "rgb(255, 255, 255)",
+      "buttons": [
+        {
+          "label": "나가기",
+          "x": 24,
+          "y": 22,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "채용욱 상담사 영상 — 누르면 크게 보기",
+          "x": 214,
+          "y": -43,
+          "width": 200,
+          "height": 120
+        },
+        {
+          "label": "마이크 켜짐",
+          "x": 102,
+          "y": 258,
+          "width": 316,
+          "height": 44
+        },
+        {
+          "label": "카메라 켜짐",
+          "x": 426,
+          "y": 258,
+          "width": 316,
+          "height": 44
+        },
+        {
+          "label": "내 상태",
+          "x": 107,
+          "y": 315,
+          "width": 124.40625,
+          "height": 54
+        },
+        {
+          "label": "채팅, 안읽음 2",
+          "x": 233.40625,
+          "y": 315,
+          "width": 124.40625,
+          "height": 54
+        },
+        {
+          "label": "조용한 신호",
+          "x": 359.8125,
+          "y": 315,
+          "width": 124.40625,
+          "height": 54
+        },
+        {
+          "label": "소리",
+          "x": 486.21875,
+          "y": 315,
+          "width": 124.40625,
+          "height": 54
+        },
+        {
+          "label": "기기",
+          "x": 612.625,
+          "y": 315,
+          "width": 124.40625,
+          "height": 54
+        }
+      ]
+    }
+  },
+  {
+    "engine": "webkit",
+    "width": 1440,
+    "height": 900,
+    "screen": "login",
+    "metrics": {
+      "screen": "login",
+      "path": "/login",
+      "innerHeight": 900,
+      "innerWidth": 1440,
+      "dpr": 1,
+      "safe": {
+        "top": "0px",
+        "left": "0px",
+        "right": "0px"
+      },
+      "html": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "body": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "root": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "bodyBackground": "rgb(255, 255, 255)",
+      "buttons": [
+        {
+          "label": "회원",
+          "x": 544,
+          "y": 227.140625,
+          "width": 117.328125,
+          "height": 46
+        },
+        {
+          "label": "상담사",
+          "x": 661.328125,
+          "y": 227.140625,
+          "width": 117.328125,
+          "height": 46
+        },
+        {
+          "label": "기관",
+          "x": 778.65625,
+          "y": 227.140625,
+          "width": 117.328125,
+          "height": 46
+        },
+        {
+          "label": "이메일로 회원 로그인",
+          "x": 540,
+          "y": 589.140625,
+          "width": 360,
+          "height": 52
+        },
+        {
+          "label": "Google로 회원 로그인",
+          "x": 540,
+          "y": 730.640625,
+          "width": 360,
+          "height": 52
+        }
+      ]
+    }
+  },
+  {
+    "engine": "webkit",
+    "width": 1440,
+    "height": 900,
+    "screen": "home",
+    "metrics": {
+      "screen": "home",
+      "path": "/app",
+      "innerHeight": 900,
+      "innerWidth": 1440,
+      "dpr": 1,
+      "safe": {
+        "top": "0px",
+        "left": "0px",
+        "right": "0px"
+      },
+      "html": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "body": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "root": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "bodyBackground": "rgb(255, 255, 255)",
+      "buttons": [
+        {
+          "label": "로그아웃",
+          "x": 20,
+          "y": 759.5,
+          "width": 199,
+          "height": 46.5
+        },
+        {
+          "label": "알림",
+          "x": 1364,
+          "y": 15.5,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "다음 클래스까지-클래스 보기",
+          "x": 280,
+          "y": 372,
+          "width": 268,
+          "height": 152
+        },
+        {
+          "label": "새 리포트0바로 확인",
+          "x": 564,
+          "y": 372,
+          "width": 268,
+          "height": 152
+        },
+        {
+          "label": "이번 주 클래스0목록 보기",
+          "x": 848,
+          "y": 372,
+          "width": 268,
+          "height": 152
+        },
+        {
+          "label": "완료 클래스0리포트 보기",
+          "x": 1132,
+          "y": 372,
+          "width": 268,
+          "height": 152
+        },
+        {
+          "label": "클래스 신청하기",
+          "x": 611.171875,
+          "y": 1097,
+          "width": 113.65625,
+          "height": 44
+        },
+        {
+          "label": "전체 보기",
+          "x": 966.0625,
+          "y": 1240,
+          "width": 64.9375,
+          "height": 44
+        },
+        {
+          "label": "전체",
+          "x": 1331,
+          "y": 901,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "전체",
+          "x": 1331,
+          "y": 1065.5,
+          "width": 44,
+          "height": 44
+        }
+      ]
+    }
+  },
+  {
+    "engine": "webkit",
+    "width": 1440,
+    "height": 900,
+    "screen": "class",
+    "metrics": {
+      "screen": "class",
+      "path": "/design/class-player",
+      "innerHeight": 900,
+      "innerWidth": 1440,
+      "dpr": 1,
+      "safe": {
+        "top": "0px",
+        "left": "0px",
+        "right": "0px"
+      },
+      "html": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "body": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "root": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "bodyBackground": "rgb(255, 255, 255)",
+      "buttons": [
+        {
+          "label": "나가기",
+          "x": 24,
+          "y": 22,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "채용욱 상담사 영상 — 누르면 크게 보기",
+          "x": 512,
+          "y": 88,
+          "width": 200,
+          "height": 120
+        },
+        {
+          "label": "마이크 켜짐",
+          "x": 400,
+          "y": 768,
+          "width": 316,
+          "height": 44
+        },
+        {
+          "label": "카메라 켜짐",
+          "x": 724,
+          "y": 768,
+          "width": 316,
+          "height": 44
+        },
+        {
+          "label": "내 상태",
+          "x": 405,
+          "y": 825,
+          "width": 124.40625,
+          "height": 54
+        },
+        {
+          "label": "채팅, 안읽음 2",
+          "x": 531.40625,
+          "y": 825,
+          "width": 124.40625,
+          "height": 54
+        },
+        {
+          "label": "조용한 신호",
+          "x": 657.8125,
+          "y": 825,
+          "width": 124.40625,
+          "height": 54
+        },
+        {
+          "label": "소리",
+          "x": 784.21875,
+          "y": 825,
+          "width": 124.40625,
+          "height": 54
+        },
+        {
+          "label": "기기",
+          "x": 910.625,
+          "y": 825,
+          "width": 124.40625,
+          "height": 54
+        }
+      ]
+    }
+  }
+]
