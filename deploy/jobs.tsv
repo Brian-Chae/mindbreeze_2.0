@@ -18,4 +18,4 @@ research_export	research_export_cron.py	*-*-* 03:30:00 UTC	3600	0	SDD-209 연구
 report_backlog_probe	report_backlog_probe_cron.py	*-*-* *:*:00 UTC	55	1	SDD-212 종료 파이프라인 적체 지표 수집(로그, 게시는 설정 승인 후)
 class_operations	class_operations_cron.py	*-*-* *:*:00 UTC	55	1	SDD-216 요청 만료·마무리·전달 의도 처리 — 편성 스위치 off면 실행 없음
 class_rolling	class_rolling_cron.py	*-*-* *:00:00 UTC	1800	1	SDD-216 정기 편성 보충 — 내부 KST 02시·편성/롤링 스위치 확인
-account_deletion_sweep	account_deletion_sweep_cron.py	*-*-* *:00/10:00 UTC	600	1	SDD-220 소셜 연결 해제 재시도·삭제 요청 알림 + 탈퇴 30일 영구 삭제 — 승인 전 비활성(enabled=0). 켜도 ACCOUNT_DELETION_SWEEP_ENABLED=false 면 영구 삭제는 dry-run 보고만
+account_deletion_sweep	account_deletion_sweep_cron.py	*-*-* *:00/10:00 UTC	600	1	SDD-220 소셜 연결 해제 재시도·삭제 요청 알림 + 탈퇴 30일 영구 삭제 — 타이머는 활성(enabled=1). ACCOUNT_DELETION_SWEEP_ENABLED=false 인 동안 영구 삭제는 dry-run 보고만
