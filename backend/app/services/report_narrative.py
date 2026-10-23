@@ -70,6 +70,39 @@ def build_narrative_signature(summary: dict) -> str | None:
     return "".join(SIGNATURE_DIRECTION[direction] for direction in directions)
 
 
+def segment_halves(windows: list) -> list[tuple[list, list]]:
+    """실행 세그먼트(play_group_id)별 (early, late) 윈도우 — 세그먼트마다 독립 시간축의 중간점.
+
+    None(레거시)은 단일 세그먼트로 취급되어 기존 결과가 유지된다. 클래스 통계(SDD-237)도
+    같은 분할 규칙을 쓰도록 공용 함수로 둔다.
+    """
+    segments: dict[str | None, list] = {}
+    for w in windows:
+        segments.setdefault(getattr(w, "play_group_id", None), []).append(w)
+
+    halves: list[tuple[list, list]] = []
+    for seg_windows in segments.values():
+        midpoint = ((min(w.window_index for w in seg_windows)
+                     + max(w.window_index for w in seg_windows)) / 2
+                    if seg_windows else 0)
+        halves.append((
+            [w for w in seg_windows if w.window_index < midpoint],
+            [w for w in seg_windows if w.window_index >= midpoint],
+        ))
+    return halves
+
+
+def direction_for_change(early: float | None, late: float | None, threshold: float | None) -> str | None:
+    """전반→후반 방향. 임계(절대값, 없으면 변화율 5%) 미만이면 stable. 결측이면 None."""
+    if early is None or late is None:
+        return None
+    delta = late - early
+    pct = delta / abs(early) * 100 if early != 0 else None
+    stable = (abs(delta) < threshold if threshold is not None else
+              (abs(pct) < 5 if pct is not None else delta == 0))
+    return "stable" if stable else ("up" if delta > 0 else "down")
+
+
 def build_metrics_summary(windows: list, session_status: str) -> dict:
     """시간 범위의 중간을 기준으로 나누며, 지표별 결측 제거는 분할 후 수행한다.
 
@@ -82,22 +115,7 @@ def build_metrics_summary(windows: list, session_status: str) -> dict:
     """
     mixed = len({getattr(w, "participant_id", None) for w in windows}) > 1
 
-    # 실행 세그먼트(play_group_id)별로 분리한다 — None(레거시)은 단일 세그먼트로 취급.
-    segments: dict[str | None, list] = {}
-    for w in windows:
-        segments.setdefault(getattr(w, "play_group_id", None), []).append(w)
-
-    # 실행 세그먼트(play_group_id)별 (early, late) 윈도우 — 세그먼트마다 독립 시간축의 중간점.
-    # None(레거시)은 단일 세그먼트로 취급되어 기존 결과가 유지된다.
-    segment_halves: list[tuple[list, list]] = []
-    for seg_windows in segments.values():
-        midpoint = ((min(w.window_index for w in seg_windows)
-                     + max(w.window_index for w in seg_windows)) / 2
-                    if seg_windows else 0)
-        segment_halves.append((
-            [w for w in seg_windows if w.window_index < midpoint],
-            [w for w in seg_windows if w.window_index >= midpoint],
-        ))
+    segment_halves_ = segment_halves(windows)
 
     def _half_mean(half: list, attr: str, group: str):
         return mean([
@@ -112,15 +130,11 @@ def build_metrics_summary(windows: list, session_status: str) -> dict:
         for key, (attr, threshold) in mapping.items():
             # 세그먼트별로 평균을 낸 뒤 세그먼트 평균을 동일 가중으로 합친다. 세그먼트를
             # 합쳐 원천을 평균하면 실행 구간 간 표본 수 차이가 전후 방향을 왜곡한다.
-            early = mean([_half_mean(eh, attr, group) for eh, _ in segment_halves])
-            late = mean([_half_mean(lh, attr, group) for _, lh in segment_halves])
+            early = mean([_half_mean(eh, attr, group) for eh, _ in segment_halves_])
+            late = mean([_half_mean(lh, attr, group) for _, lh in segment_halves_])
             delta = late - early if early is not None and late is not None else None
             pct = delta / abs(early) * 100 if delta is not None and early != 0 else None
-            direction = None
-            if delta is not None:
-                stable = (abs(delta) < threshold if threshold is not None else
-                          (abs(pct) < 5 if pct is not None else delta == 0))
-                direction = "stable" if stable else ("up" if delta > 0 else "down")
+            direction = direction_for_change(early, late, threshold)
             result[group][key] = {"early": early, "late": late, "delta": delta,
                                   "percent_change": pct, "direction": direction}
     return result

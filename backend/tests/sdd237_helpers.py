@@ -90,3 +90,29 @@ def add_record(db, session, notes: str | None) -> SessionRecord:
     db.add(rec)
     db.commit()
     return rec
+
+
+def start_ms(session) -> int:
+    """SQLite 는 tz 없는 datetime 을 돌려주므로 UTC 로 간주해 epoch(ms) 를 만든다(서비스와 같은 규칙)."""
+    started = session.started_at
+    if started.tzinfo is None:
+        started = started.replace(tzinfo=timezone.utc)
+    return int(started.timestamp() * 1000)
+
+
+def add_windows(db, session, participant, n, *, start_offset=0, quality="valid", seg=None,
+                focus=2.0, relax=1.0, emo=0.5, hr=70.0, rr=14.0, sdnn=40.0, ms=None):
+    """participant 에게 1초 간격 윈도우 n개를 넣는다. device_timestamp_ms = 수업 시작 + 오프셋."""
+    from app.models.eeg_feature import EEGFeatureWindow
+
+    base_ms = start_ms(session)
+    for i in range(n):
+        idx = start_offset + i
+        db.add(EEGFeatureWindow(
+            id=uuid.uuid4(), session_id=session.id, participant_id=participant.id,
+            user_id=participant.user_id, play_group_id=seg, window_index=idx, quality=quality,
+            device_timestamp_ms=(base_ms + idx * 1000) if ms is None else ms + i * 1000,
+            focus_index=focus(i) if callable(focus) else focus,
+            relaxation_index=relax, emotional_stability=emo,
+            heart_rate=hr, respiratory_rate=rr, sdnn=sdnn))
+    db.commit()
