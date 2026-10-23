@@ -5,7 +5,7 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 const { pathToFileURL } = require('node:url');
 const { chromium } = require('/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/playwright');
-const screens=['current-end','current-record','overview','participants','notes','waiting','failed','partial','report','counseling','biosignal-worn','biosignal-partial','biosignal-pending','biosignal-quality','biosignal-lost','biosignal-unworn','notes-skipped','auto-summary','auto-settings'];
+const screens=['current-end','current-record','overview','participants','notes','waiting','failed','partial','report','counseling','biosignal-worn','biosignal-partial','biosignal-pending','biosignal-quality','biosignal-lost','biosignal-unworn','notes-skipped','auto-summary','auto-summary-zero','biosignal-single','auto-settings'];
 const out=path.join(__dirname,'screenshots');
 const url=pathToFileURL(path.join(__dirname,'index.html')).href;
 (async()=>{
@@ -29,6 +29,38 @@ const url=pathToFileURL(path.join(__dirname,'index.html')).href;
     assert(stats.scrollWidth<=width,`${screen}-${width} 가로 넘침`);assert(stats.minText>=13,`${screen}-${width} 13px 미만`);assert.equal(stats.smallControls.length,0,`${screen}-${width} 터치 영역`);
     results.push({screen,width,...stats});
    }
+   // 대표님 결정: 풀폭 1열·카드 내부 1줄/2줄, 1명 집계 비노출, 유예 분기.
+   for(const screen of ['biosignal-worn','counseling','biosignal-single']){
+    await page.goto(url+'?check=layout#'+screen);
+    const layout=await page.locator('.bio-metric').evaluateAll(cards=>cards.map(card=>({x:card.getBoundingClientRect().x,width:card.getBoundingClientRect().width,y:card.getBoundingClientRect().y,rows:[...card.querySelectorAll('dl>div')].map(e=>e.getBoundingClientRect().y)})));
+    assert.equal(layout.length,6);
+    assert(layout.every(c=>c.x===layout[0].x&&c.width===layout[0].width));
+    assert(layout.every((c,i)=>i===0||c.y>layout[i-1].y));
+    assert(layout.every(c=>new Set(c.rows).size===(width===390?2:1)));
+   }
+   for(const screen of ['biosignal-single','biosignal-lost']){
+    await page.goto(url+'?check=single#'+screen);
+    assert.equal(await page.locator('.bio-value').filter({hasText:'—'}).count(),6);
+    assert.equal(await page.locator('.bio-metric').filter({hasText:'측정 1명 — 참여자별 결과에서 확인'}).count(),6);
+    assert.equal(await page.locator('.bio-metric dl>div:nth-child(2) dd').filter({hasText:'—'}).count(),6);
+   }
+   await page.goto(url+'?check=zero#auto-summary-zero');
+   assert.equal(await page.locator('#hold-policy').count(),0);
+   assert.match(await page.locator('#auto-policy-card').innerText(),/자동 승인 즉시 적용/);
+   assert.doesNotMatch(await page.locator('#auto-policy-card').innerText(),/승인 예정/);
+   await page.goto(url+'?check=settings#auto-settings');
+   for(const id of ['counsel','meditation']){
+    assert.equal(await page.locator('#'+id+'-grace').inputValue(),'0');
+    assert.deepEqual(await page.locator('#'+id+'-grace option').evaluateAll(es=>es.map(e=>e.value)),['0','5','10','30']);
+    await page.locator('#'+id+'-policy').selectOption('off');assert(await page.locator('#'+id+'-grace').isDisabled());
+    await page.locator('#'+id+'-policy').selectOption('on');assert(await page.locator('#'+id+'-grace').isEnabled());
+   }
+   await page.locator('#meditation-grace').selectOption('10');await page.locator('#prompt-policy').selectOption('off');
+   await page.locator('#save-policy').click();assert.match(await page.locator('#dialog-body').innerText(),/명상: 자동 승인 켜짐 · 유예 10분/);
+   await page.getByRole('button',{name:'시안에서 전환 확인',exact:true}).click();await page.getByRole('button',{name:'확인',exact:true}).click();
+   await page.goto(url+'?check=prompt-off#biosignal-worn');await page.evaluate(()=>localStorage.setItem('sdd237-demo-prompt-seen','no'));await page.reload();
+   assert.equal(await page.locator('#record-prompt').count(),0);assert.equal(await page.locator('#quiet-record').count(),1);
+   await page.evaluate(()=>localStorage.setItem('sdd237-demo-prompt-off','false'));
    // 6지표·결측·개인 추이와 펼침 표를 별도로 검증한다.
    await page.goto(url+'?check=bio#biosignal-worn');
    assert.equal(await page.locator('.bio-metric').count(),6);
@@ -59,7 +91,7 @@ const url=pathToFileURL(path.join(__dirname,'index.html')).href;
     assert.equal((a+c)/2,expectedMeans[j]);
     assert.equal(parseFloat(await cards.nth(j).locator('.bio-value').innerText()),expectedMeans[j]);
     assert.match(await cards.nth(j).innerText(),new RegExp(`${Math.min(a,c)}–${Math.max(a,c)}`));
-    const halves=(await cards.nth(j).locator('dd').nth(2).innerText()).match(/-?\d+/g).map(Number);
+    const halves=(await cards.nth(j).locator('dd').nth(2).evaluate(e=>e.firstChild.textContent)).match(/-?\d+/g).map(Number);
     assert.equal(halves[1]-halves[0],expectedDeltas[j]);
     assert.equal(await rows.nth(1).locator('td').nth(j).innerText(),'—');
     assert.equal(await rows.nth(3).locator('td').nth(j).innerText(),'—');
@@ -74,6 +106,7 @@ const url=pathToFileURL(path.join(__dirname,'index.html')).href;
    // 새 측정 사례에서 결과로 이동해도 측정·분석 상태를 보존한다.
    await page.goto(url+'?check=worn#biosignal-worn');await page.locator('#biosignal-summary [data-go="participants"]').click();assert.match(await page.locator('[data-person="샘플 참여자 B"]').innerText(),/측정 완료/);
    await page.goto(url+'?check=pending#biosignal-pending');await page.locator('.hero [data-go="participants"]').click();assert.equal(await page.locator('[data-go^="report-"]').count(),0);
+   await page.goto(url+'?check=single-people#biosignal-single');await page.locator('#biosignal-summary [data-go="participants"]').click();assert.equal(await page.locator('td[data-label="생체신호"]').filter({hasText:'측정 완료'}).count(),1);await page.locator('[data-go="report-0"]').click();assert.match(await page.locator('.readout').innerText(),/측정하지 않았습니다/);
    // 참여자 검색과 필터가 실제로 행을 줄이는지 확인한다.
    await page.goto(url+'?check=participants#participants');await page.locator('#filter').selectOption('review');assert.equal(await page.locator('tbody tr:visible').count(),2);
    await page.locator('#search').fill('C');assert.equal(await page.locator('tbody tr:visible').count(),1);
@@ -101,8 +134,8 @@ const url=pathToFileURL(path.join(__dirname,'index.html')).href;
    await context.close();
   }
   assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
-  const report={chrome:browser.version(),viewports:[390,1440],screenshots:48,results,interactionChecks:['6지표·부분 결측·회차 추이','표/격자 평균·범위·전후 차이 독립 대조','결측 상태 서사·시간 미표시','한 번 안내·비워두기·재열기 비노출','자동 승인 보류·설정 확인','검색/필터','미저장 이탈 경고','저장 실패 입력 보존','저장 성공·탭 이동 복원','0명/미착용/연결 단절','승인 확인 시안 상태'],pageErrors:errors,externalRequests:external};
+  const report={chrome:browser.version(),viewports:[390,1440],screenshots:52,results,interactionChecks:['카드 1열·통계 데스크톱 1줄/모바일 2줄','측정 1명 평균·범위 비노출','유예 0분 보류 없음·영역별 0/5/10/30 설정','안내 끄기 후 재진입','6지표·부분 결측·회차 추이','표/격자 평균·범위·전후 차이 독립 대조','결측 상태 서사·시간 미표시','한 번 안내·비워두기·재열기 비노출','자동 승인 보류·설정 확인','검색/필터','미저장 이탈 경고','저장 실패 입력 보존','저장 성공·탭 이동 복원','0명/미착용/연결 단절','승인 확인 시안 상태'],pageErrors:errors,externalRequests:external};
   fs.writeFileSync(path.join(__dirname,'validation.json'),JSON.stringify(report,null,2)+'\n');
-  console.log(JSON.stringify({screenshots:48,screens:results.length,checks:'PASS',pageErrors:errors.length,externalRequests:external.length}));
+  console.log(JSON.stringify({screenshots:52,screens:results.length,checks:'PASS',pageErrors:errors.length,externalRequests:external.length}));
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});

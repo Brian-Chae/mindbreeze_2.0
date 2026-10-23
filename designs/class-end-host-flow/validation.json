@@ -4,7 +4,7 @@
     390,
     1440
   ],
-  "screenshots": 48,
+  "screenshots": 52,
   "results": [
     {
       "screen": "current-end",
@@ -133,6 +133,20 @@
       "smallControls": []
     },
     {
+      "screen": "auto-summary-zero",
+      "width": 390,
+      "scrollWidth": 390,
+      "minText": 13,
+      "smallControls": []
+    },
+    {
+      "screen": "biosignal-single",
+      "width": 390,
+      "scrollWidth": 390,
+      "minText": 13,
+      "smallControls": []
+    },
+    {
       "screen": "auto-settings",
       "width": 390,
       "scrollWidth": 390,
@@ -266,6 +280,20 @@
       "smallControls": []
     },
     {
+      "screen": "auto-summary-zero",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "minText": 13,
+      "smallControls": []
+    },
+    {
+      "screen": "biosignal-single",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "minText": 13,
+      "smallControls": []
+    },
+    {
       "screen": "auto-settings",
       "width": 1440,
       "scrollWidth": 1440,
@@ -274,6 +302,10 @@
     }
   ],
   "interactionChecks": [
+    "카드 1열·통계 데스크톱 1줄/모바일 2줄",
+    "측정 1명 평균·범위 비노출",
+    "유예 0분 보류 없음·영역별 0/5/10/30 설정",
+    "안내 끄기 후 재진입",
     "6지표·부분 결측·회차 추이",
     "표/격자 평균·범위·전후 차이 독립 대조",
     "결측 상태 서사·시간 미표시",
