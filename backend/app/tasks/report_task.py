@@ -566,6 +566,12 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
                 content["report_scope"] = report_scope.scope_marker(scope)
             else:
                 content = _counselor_content(session, record, eeg_block)
+        # SDD-237: 명상 클래스 회차의 상담사용 리포트만 클래스 통계 블록을 추가한다(상담 도메인은 무변경).
+        if report.type != "client":
+            from app.services.report_service import report_domain
+
+            if report_domain(session) == "meditation":
+                _attach_class_report(content, previous_content, session, db)
         # SDD-027: 분석 성공 → 승인 게이트(pending_review) 로 전이 + 신뢰도 파생
         report.data_credibility = _derive_data_credibility(eeg_block)
         # RPT-REGEN-005: 이미 승인된 리포트는 재생성 후에도 승인(completed)을 유지한다.
@@ -635,6 +641,11 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
     ):
         content["counselor_comment"] = prev_comment
 
+    # SDD-237: 생성 실패 스텁이 상담사 수정본이 든 클래스 블록을 지우지 않도록 이월한다.
+    prev_class_report = prev.get("class_report")
+    if report.type != "client" and isinstance(prev_class_report, dict) and "class_report" not in content:
+        content["class_report"] = prev_class_report
+
     report.content = content
     # SDD-095: 최종 생성 상태 — ai_record 가용(전사+요약)이면 ready, 아니면 partial.
     # 승인 게이트(report.status)와는 독립 축이다.
@@ -645,6 +656,23 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
     # FUNC-04: 비동기 생성 완료 — 신청된 내담자(client) 리포트면 메일 발송을 예약한다.
     _maybe_enqueue_client_report_email(report, db)
     return report
+
+
+def _attach_class_report(content: dict, previous_content, session: Session, db: DBSession) -> None:
+    """SDD-237: 명상 클래스 회차의 상담사용 리포트에 클래스 통계·규칙 서사 블록(`class_report`)을 저장한다.
+
+    통계는 결정론이며 AI 는 부르지 않는다(AI 서사는 별도 Celery 태스크). 이전 블록의 상담사 수정본·AI 초안은 이월한다.
+    계산이 실패해도 리포트 상태는 바꾸지 않는다 — 이전 블록이 있으면 그대로 두고, 없으면 error 블록을 둔다.
+    """
+    from app.services import class_report_narrative
+
+    prev = previous_content.get("class_report") if isinstance(previous_content, dict) else None
+    prev = prev if isinstance(prev, dict) else None
+    try:
+        content["class_report"] = class_report_narrative.build_block(db, session, prev)
+    except Exception:  # noqa: BLE001 — 통계 실패가 리포트 생성·승인 상태를 흔들지 않게 한다.
+        logger.exception("[report_task] class_report 계산 실패: session_id=%s", session.id)
+        content["class_report"] = prev if prev is not None else class_report_narrative.error_block()
 
 
 def _mark_pipeline_failure(session_id: str, db: DBSession, exc: Exception) -> None:
