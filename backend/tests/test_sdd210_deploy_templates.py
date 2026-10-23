@@ -145,15 +145,17 @@ DEV_CRON_14 = {
 # SDD-212: 운영 전용 추가 timer(dev 서버 cron 에는 없음) — 적체 감시.
 PROD_ONLY_JOBS = {"report_backlog_probe"}
 CLASS_JOBS = {"class_operations", "class_rolling"}
+# SDD-220: 탈퇴 스위프 타이머는 켠다(소셜 연결 해제 재시도·삭제 요청 알림). 영구 삭제는 ACCOUNT_DELETION_SWEEP_ENABLED=false 라 dry-run 보고만 한다.
+ACCOUNT_DELETION_JOB = {"account_deletion_sweep"}
 
 
 def test_jobs_tsv_는_dev_cron_14개를_활성으로_포함하고_SDD209_2종은_비활성이다():
     jobs = render.load_jobs(DEPLOY / "jobs.tsv")
     enabled = {j["name"] for j in jobs if j["enabled"] == "1"}
-    assert enabled == DEV_CRON_14 | PROD_ONLY_JOBS | CLASS_JOBS
+    assert enabled == DEV_CRON_14 | PROD_ONLY_JOBS | CLASS_JOBS | ACCOUNT_DELETION_JOB
     disabled = {j["name"] for j in jobs if j["enabled"] == "0"}
-    # SDD-220: 탈퇴 30일 영구 삭제 작업은 운영 승인 전 비활성으로 등록한다.
-    assert disabled == {"retention_sweep", "research_export", "account_deletion_sweep"}
+    # 기본 삭제 스위프·연구 내보내기는 운영 승인 전 비활성이다.
+    assert disabled == {"retention_sweep", "research_export"}
 
 
 def test_jobs_tsv_스크립트가_실제로_존재한다():
@@ -173,7 +175,7 @@ def test_jobs_tsv_주기가_dev_cron_과_같다():
 
 def test_활성_작업_수만큼_timer_와_타임아웃_드롭인이_생성된다(rendered):
     timers = sorted(p.name for p in (rendered / "etc/systemd/system").glob("mindbreeze-job-*.timer"))
-    assert len(timers) == 14 + len(PROD_ONLY_JOBS) + len(CLASS_JOBS)
+    assert len(timers) == 14 + len(PROD_ONLY_JOBS) + len(CLASS_JOBS) + len(ACCOUNT_DELETION_JOB)
     assert not (rendered / "etc/systemd/system/mindbreeze-job-retention_sweep.timer").exists()
     t = (rendered / "etc/systemd/system/mindbreeze-job-process_email_outbox.timer").read_text()
     assert "Unit=mindbreeze-job@process_email_outbox.service" in t and "Persistent=false" in t
