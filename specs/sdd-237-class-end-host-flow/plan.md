@@ -495,3 +495,26 @@ AI 태스크: 필드별 검증 통과 시 ai_draft 갱신 + (source!=edited이�
 
 ## 7. 완료 정의
 spec + plan + verify + summary 4종 존재, [verify.md](verify.md) 전 항목 통과 기록, `pytest`(PG 포함)·`vitest`·`tsc`·`npm run build` 통과, 390/1440 실제 화면 확인, 상담 회귀 0, 실제 AI 호출 0(테스트).
+
+---
+
+## 8. 계약 변경 · 구현 확정 정의 (BE 워커, 2026-10-23)
+
+> 구현 중 plan 문구가 모호하거나 코드 사실과 어긋나 확정한 항목. FE 응답 계약(§4)의 **필드명·구조는 바꾸지 않았다.** 아래 중 ①만 스키마 허용값이 넓어진 계약 변경이고 나머지는 정의 확정이다.
+
+| # | 구분 | 내용 | 근거 |
+|---|---|---|---|
+| ① | **계약 변경(허용값 확대)** | `block.participants[].state`가 `excluded`도 허용한다(§2.1 참여자 상태 표에는 있었으나 §4.2 예시에 없었음). BE는 현재 `excluded` 행을 블록에 **내보내지 않고**(제외자는 집계 기여 0, 참여자 표는 응답 `participants[]`가 따로 담당), FE 목 fixture에는 `excluded` 행이 있어 스키마가 허용한다. | FE fixture 계약 테스트 |
+| ② | 정의 확정 | 대표 상태 `partial`은 **측정자가 리포트 대상의 절반 이하**(`measured×2 ≤ included`)일 때만이다. 과반이 측정했으면 `status="measured"`이고 미착용은 `flags=["partial"]`로만 알린다(§4.1 예시 `attended 6·included 5·measured 4`가 `measured`+`flags:["partial"]`인 것과 정합). | §2.1 표 ↔ §4.1 예시 충돌 해소 |
+| ③ | 정의 확정 | 지표 `state`: 측정 ≥2→`ok`, 측정자 ≥2인 클래스에서 그 지표 <2→`poor_signal`(`missing_reason:"signal_insufficient"`), 클래스 측정자 1명→`single`, 측정자 0→`unworn`/`lost`(사유 `not_worn`/`connection_lost`), 정규화 버전 혼재(마음 지표)→`missing`(`normalization_mismatch`), 출석 0→`missing`(`no_participants`). `ok`인데 비교 인원 <2면 평균·범위는 있고 전후·방향은 `null`(`missing_reason:"compare_insufficient"`). | §2.1 |
+| ④ | 정의 확정 | 요약 `chips[].state`: 지표 `ok`+방향 있음→`ok`, `ok`인데 방향 없음·`missing`·`unworn`·`lost`→`missing`, `single`/`poor_signal`은 그대로. | §4.1 |
+| ⑤ | 정의 확정 | `report.state`는 `ready｜processing｜error` 3값. 생성 대기/처리 중이거나 리포트 행이 없으면 `processing`, 리포트가 `error`이고 블록도 없으면 `error`, 그 밖은 `ready`(블록 `status:"error"`여도 `ready`). | §4.1 |
+| ⑥ | 정의 확정 | `approval.counts`: `generating`=생성 대기/처리 중 또는 `pending_analysis`, `pending_review`=검토 대기 전체, `approved`=`completed`, `error`, `no_data_manual`=자동 승인 **켬**인데 측정 자료 없는 `pending_review`(부분집합). 대상 = 리포트 반영 포함·결석 아님인 참여자의 `type=client` 리포트. | §4.8 |
+| ⑦ | 정의 확정 | 열람 오류 순서: 404(회차 없음) → 403 `report_read_forbidden` → 400 `not_class_session` → 409 `not_completed`. 수정 PATCH 순서: 404 → 403 `narrative_edit_forbidden` → 400 → 409 `not_completed` → 422 `field_not_editable`(키 규칙) → 409 `report_not_ready` → 409 `edit_conflict` → 422 `empty_text｜text_too_long｜invalid_text`. 모든 오류 본문은 `{"detail":{"code":…}}`이며 `edit_conflict`는 `detail.value`에 최신 필드를 싣는다. | §4.3·§4.5 |
+| ⑧ | 정의 확정 | `base_edited_at` 충돌 검사는 **요청 본문에 키가 있을 때만** 한다(`null`=‘아직 수정본 없음’을 기대). 키가 없으면 검사하지 않는다. `edited_at`은 마이크로초 포함 ISO(`…%f Z`). | §4.5 |
+| ⑨ | 정의 확정 | 수정 저장 필드의 AI 초안 보존: 저장 형태에 `ai_draft_input_hash`(AI 초안이 만들어진 통계 해시), `edited_input_hash`를 둔다(응답 `PresentedField`에는 노출하지 않음). 통계가 바뀌면 수정되지 않은 AI 초안은 버리고, 수정된 필드는 `ai_draft`를 보존하되 되돌리기는 해시가 맞을 때만 `ai`로, 아니면 규칙 문장으로 복원한다. | §4.6 |
+| ⑩ | 정의 확정 | AI 출력 빈 문자열은 **필드 단위** 폐기(스키마 불일치는 필수 키 누락·타입 오류·`metrics` 비객체일 때만 전 필드 폐기). 지표 문장은 입력 방향과 같은 방향어가 반드시 있어야 채택. 숫자는 `counts.measured·attended` 값만 허용. | §3.5 |
+| ⑪ | 구현 위치 | AI 서사 enqueue는 ‘체인 끝’ 대신 `generate_report_inline` 직후(상담사용 클래스 리포트에 한해, AI 켜짐 + 이 입력으로 미시도일 때만)에 둔다 — 체인·HTTP 재생성·일괄 재생성을 한 곳에서 덮고, 같은 입력 해시면 태스크가 호출 0건으로 끝난다. | §2.4 |
+| ⑫ | 구현 위치 | 일괄 작업 type 가드는 `classify_target`에만 둔다(`accept_job` 쿼리 필터는 넣지 않음) — 필터를 넣으면 상담사용 대상이 항목 없이 사라져 `excluded/not_target` 이력이 남지 않는다. | §4.8 |
+| ⑬ | 소유권 표 밖 파일 | `backend/app/services/report_narrative.py`에 전후 분할·방향 판정 공용 헬퍼(`segment_halves`, `direction_for_change`)를 추출했다(기존 `build_metrics_summary`는 이를 호출하도록만 바꿈 — 무작위 입력 40종으로 원본 구현과 동일 결과 검증). 복사 금지 원칙 이행을 위한 최소 변경. | §2.1 재사용 규칙 |
+| ⑭ | 마이그레이션 | `e036a0000061` (users.show_session_note_prompt, sessions.note_prompt_seen_at/dismissed_at), 다운그레이드 포함, 헤드 1개. | §4.7 |

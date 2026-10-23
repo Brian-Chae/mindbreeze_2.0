@@ -122,7 +122,7 @@ class BlockParticipantMetric(_Strict):
 
 class BlockParticipant(_Strict):
     participant_id: str
-    state: Literal["measured", "unworn", "poor_signal", "lost"]
+    state: Literal["measured", "unworn", "poor_signal", "lost", "excluded"]
     metrics: dict[str, BlockParticipantMetric]
 
 
