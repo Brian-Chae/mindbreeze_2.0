@@ -82,6 +82,11 @@ def classify_target(
     if session is None:
         return "excluded", "not_target"
 
+    # SDD-237: 일괄 작업은 회원 리포트(client)만 대상이다. 상담사용 클래스 리포트는 발송·승인 대상이 아니며
+    #   participant_id 가 '첫 참여자'로 고정돼 있어 결석 판정 등 엉뚱한 사유가 붙으므로 권한 검사보다 먼저 거른다.
+    if report.type != "client":
+        return "excluded", "not_target"
+
     # 실행 시점에 권한을 다시 본다 (verify A10).
     if is_lead:
         authorized = actor is not None and actor.status == "active"
