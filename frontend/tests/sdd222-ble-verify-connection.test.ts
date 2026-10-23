@@ -11,7 +11,7 @@ vi.mock('@capacitor-community/bluetooth-le', () => ({
   BleClient: {
     initialize: vi.fn(), requestDevice: vi.fn(), connect: vi.fn(), disconnect: vi.fn(),
     getServices: vi.fn(), startNotifications: vi.fn(), stopNotifications: vi.fn(),
-    read: vi.fn(), write: vi.fn(),
+    read: vi.fn(), write: vi.fn(), getConnectedDevices: vi.fn(),
   },
 }));
 
@@ -21,6 +21,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
   vi.mocked(Capacitor.getPlatform).mockReturnValue('android');
+  vi.mocked(BleClient.getConnectedDevices).mockResolvedValue([]);
 });
 
 describe('CapacitorBleAdapter.verifyConnection', () => {
@@ -72,5 +73,44 @@ describe('verifyActiveBleConnection', () => {
     vi.mocked(BleClient.read).mockRejectedValue(new Error('gone'));
     await expect(verifyActiveBleConnection()).resolves.toBe(false);
     expect(onLost).toHaveBeenCalledTimes(1);
+  });
+});
+
+// 배터리 read 오류와 실제 BLE 단절은 별개다.
+describe('복귀 검증이 정상 연결을 끊지 않는다', () => {
+  it.each(['ios', 'android'])('%s에서 배터리 read가 실패해도 OS 연결 중이면 유지한다', async platform => {
+    vi.mocked(Capacitor.getPlatform).mockReturnValue(platform);
+    const adapter = new CapacitorBleAdapter();
+    const lost = vi.fn();
+    adapter.onConnectionLost(lost);
+    await adapter.connect(deviceId);
+    vi.mocked(BleClient.read).mockRejectedValue(new Error('Battery service unavailable'));
+    vi.mocked(BleClient.getConnectedDevices).mockResolvedValue([{ deviceId, name: 'LXB' }]);
+    for (let i = 0; i < 3; i++) await expect(adapter.verifyConnection(deviceId)).resolves.toBe(true);
+    expect(await adapter.isConnected(deviceId)).toBe(true);
+    expect(BleClient.getConnectedDevices).toHaveBeenCalledWith(['df7b5d95-3afe-00a1-084c-b50895ef4f95']);
+    expect(BleClient.disconnect).not.toHaveBeenCalled();
+    expect(lost).not.toHaveBeenCalled();
+  });
+  it('OS 조회도 실패하면 단절로 단정하여 해제하지 않는다', async () => {
+    const adapter = new CapacitorBleAdapter();
+    await adapter.connect(deviceId);
+    vi.mocked(BleClient.read).mockRejectedValue(new Error('busy'));
+    vi.mocked(BleClient.getConnectedDevices).mockRejectedValue(new Error('unavailable'));
+    await adapter.verifyConnection(deviceId);
+    expect(await adapter.isConnected(deviceId)).toBe(true);
+    expect(BleClient.disconnect).not.toHaveBeenCalled();
+  });
+  it('이전 연결의 늦은 read 실패는 새 연결을 해제하지 않는다', async () => {
+    const adapter = new CapacitorBleAdapter();
+    await adapter.connect(deviceId);
+    let fail!: (reason: Error) => void;
+    vi.mocked(BleClient.read).mockImplementationOnce(() => new Promise((_resolve, reject) => { fail = reject; }));
+    const check = adapter.verifyConnection(deviceId);
+    await adapter.connect(deviceId);
+    fail(new Error('old connection closed'));
+    await check;
+    expect(await adapter.isConnected(deviceId)).toBe(true);
+    expect(BleClient.disconnect).not.toHaveBeenCalled();
   });
 });

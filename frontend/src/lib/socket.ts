@@ -398,17 +398,20 @@ export const getSessionLiveSocket = (token: string | null = null): Socket => {
   // SDD-107: 살아있는 소켓은 재사용하고, 토큰이 바뀌어도 끊지 않는다 — auth만 갱신한다.
   // (재연결이 필요해지면 다음 핸드셰이크에서 새 토큰이 적용된다. 토큰 갱신 시 disconnect가
   //  다른 훅의 리스너를 고아로 만들어 flapping 을 일으키던 문제를 제거한다.)
-  if (sessionLiveSocket && !sessionLiveSocket.disconnected) {
-    if (sessionLiveToken !== token) {
+  // disconnected는 최초 연결/자동 재연결 중에도 true다. 객체를 버리면 기존 구독자가 고아가 된다.
+  if (sessionLiveSocket) {
+    const tokenChanged = sessionLiveToken !== token;
+    if (tokenChanged) {
       sessionLiveToken = token;
       sessionLiveSocket.auth = token ? { token } : {};
+      sessionLiveTokenRefreshAttempted = false;
+    }
+    // 서버 종료/인증 거부는 자동 재연결(active)이 꺼진다. 같은 객체에서 재개한다.
+    // refresh 실패 뒤 동일 토큰으로 매번 재시도하는 루프는 유지하지 않는다.
+    if (sessionLiveSocket.disconnected && !sessionLiveSocket.active && !sessionLiveTokenRefreshAttempted) {
+      sessionLiveSocket.connect();
     }
     return sessionLiveSocket;
-  }
-
-  if (sessionLiveSocket) {
-    sessionLiveSocket.disconnect();
-    sessionLiveSocket = null;
   }
 
   sessionLiveToken = token;
