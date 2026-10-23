@@ -1,0 +1,6 @@
+[
+{"variant":"before","authenticated":true,"refreshEnd":153,"chunksEnd":222,"firstApi":479,"gapMs":257},
+{"variant":"before","authenticated":false,"refreshEnd":119,"chunksEnd":null,"firstApi":null,"gapMs":null},
+{"variant":"after","authenticated":true,"refreshEnd":140,"chunksEnd":149,"firstApi":183,"gapMs":34},
+{"variant":"after","authenticated":false,"refreshEnd":112,"chunksEnd":121,"firstApi":null,"gapMs":null}
+]

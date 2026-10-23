@@ -24,7 +24,6 @@ import { LegacySessionRedirect } from './components/routing/legacy-session-redir
 // 랜딩에서 사용하지 않는 화면과 분석 라이브러리는 해당 경로를 열 때 불러온다.
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const ClientLoginPage = lazy(() => import('./pages/ClientLoginPage'));
-const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 const RegisterClientPage = lazy(() => import('./pages/register/RegisterClientPage'));
 const RegisterCounselorPage = lazy(() => import('./pages/register/RegisterCounselorPage'));
@@ -37,7 +36,6 @@ const MembershipInvitePage = lazy(() => import('./pages/MembershipInvitePage'));
 const CounselorOnboardingPage = lazy(() => import('./pages/onboarding/CounselorOnboardingPage'));
 const ClientOnboardingPage = lazy(() => import('./pages/onboarding/ClientOnboardingPage'));
 const ClientEssentialsPage = lazy(() => import('./pages/onboarding/ClientEssentialsPage'));
-const ClientListPage = lazy(() => import('./pages/clients/ClientListPage'));
 const ClientProfilePage = lazy(() => import('./pages/clients/ClientProfilePage'));
 const ClientInvitePage = lazy(() => import('./pages/clients/ClientInvitePage'));
 const InviteLandingPage = lazy(() => import('./pages/clients/InviteLandingPage'));
@@ -55,7 +53,6 @@ const SessionLivePage = lazy(() => import('./pages/sessions/SessionLivePage'));
 // SDD-088: 독립형 클래스 플레이어 (풀스크린, AppShell 밖)
 const ClassPlayerPage = lazy(() => import('./pages/sessions/ClassPlayerPage'));
 const SessionRecordPage = lazy(() => import('./pages/records/SessionRecordPage'));
-const ChatPage = lazy(() => import('./pages/chat/ChatPage'));
 const DesignIndexPage = lazy(() => import('./pages/design/DesignIndexPage'));
 const HomepagePage = lazy(() => import('./pages/design/HomepagePage'));
 const OperatorAppPage = lazy(() => import('./pages/design/OperatorAppPage'));
@@ -64,7 +61,6 @@ const ReportPage = lazy(() => import('./pages/design/ReportPage'));
 const DocsPage = lazy(() => import('./pages/design/DocsPage'));
 const ClassPlayerCasesPage = lazy(() => import('./pages/design/ClassPlayerCasesPage'));
 const ClassFlowCasesPage = lazy(() => import('./pages/design/ClassFlowCasesPage'));
-const ReportListPage = lazy(() => import('./pages/reports/ReportListPage'));
 const ReportSamplePage = lazy(() => import('./pages/reports/ReportSamplePage'));
 const ReportDetailPage = lazy(() => import('./pages/reports/ReportDetailPage'));
 const ReportViewPage = lazy(() => import('./pages/reports/ReportViewPage'));
@@ -84,7 +80,6 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const NotificationCenterPage = lazy(() => import('./pages/notifications/NotificationCenterPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const ClientAppPage = lazy(() => import('./pages/client/ClientAppPage'));
-const HostClassesPage = lazy(() => import('./pages/classes/host-classes-page').then((module) => ({ default: module.HostClassesPage })));
 const HostClassDetailPage = lazy(() => import('./pages/classes/host-class-detail-page').then((module) => ({ default: module.HostClassDetailPage })));
 const MemberStructureHomePage = lazy(() => import('./pages/client/member-structure-home-page').then((module) => ({ default: module.MemberStructureHomePage })));
 const GuestClassMembershipPage = lazy(() => import('./pages/client/guest-class-membership-page').then(module => ({ default: module.GuestClassMembershipPage })));
@@ -151,15 +146,10 @@ function PlatformAdminRoute({ children }: { children: ReactElement }) {
   return children;
 }
 
-/** 데이터 라우터 루트 — 인증 초기화 + Suspense 셸 */
+/** 데이터 라우터 루트 — 부가 화면의 Suspense 셸. 주요 목록은 라우터가 청크를 먼저 준비한다. */
 function RootLayout() {
-  const initialize = useAuthStore((s) => s.initialize);
   useStatusBar();
   useEffect(() => { void initNativeKeyboard(); }, []);
-
-  useEffect(() => {
-    initialize();
-  }, [initialize]);
 
   return (
     <Suspense fallback={<div role="status" className="flex min-h-screen items-center justify-center bg-[#FAF8FB] text-sm text-[#5F0080]">화면을 불러오는 중이에요.</div>}>
@@ -202,12 +192,18 @@ const router = createBrowserRouter(
         <Route path="/set-password" element={<SetPasswordPage />} />
         <Route path="/membership-invite" element={<MembershipInvitePage />} />
         <Route path="/agent" element={<RoleGuard role="counselor"><LegacyAgentRedirect /></RoleGuard>} />
-        <Route path="/dashboard" element={<RoleGuard role="counselor"><DashboardPage /></RoleGuard>} />
+        <Route path="/dashboard" lazy={async () => {
+          const module = await import('./pages/DashboardPage');
+          return { element: <RoleGuard role="counselor"><module.default /></RoleGuard> };
+        }} />
         <Route path="/dashboard/org" element={<RoleGuard role="org_admin"><OrgDashboardPage /></RoleGuard>} />
         <Route path="/onboarding/counselor" element={<CounselorOnboardingPage />} />
         <Route path="/onboarding/client" element={<ClientOnboardingPage />} />
         <Route path="/onboarding/client/essentials" element={<ClientEssentialsPage />} />
-        <Route path="/clients" element={<RoleGuard role={['counselor', 'org_admin']}><ClientListPage /></RoleGuard>} />
+        <Route path="/clients" lazy={async () => {
+          const module = await import('./pages/clients/ClientListPage');
+          return { element: <RoleGuard role={['counselor', 'org_admin']}><module.default /></RoleGuard> };
+        }} />
         <Route path="/clients/invite" element={<RoleGuard role={['counselor', 'org_admin']}><ClientInvitePage /></RoleGuard>} />
         <Route path="/clients/:id" element={<RoleGuard role={['counselor', 'org_admin']}><ClientProfilePage /></RoleGuard>} />
         <Route path="/invite/:token" element={<InviteLandingPage />} />
@@ -223,7 +219,10 @@ const router = createBrowserRouter(
         <Route path="/sessions" element={<RoleGuard role={['counselor', 'org_admin']}><Navigate to="/classes" replace /></RoleGuard>} />
         <Route path="/sessions/new" element={<RoleGuard role={['counselor', 'org_admin']}><Navigate to="/classes/new" replace /></RoleGuard>} />
         <Route path="/sessions/:id" element={<RoleGuard role={['counselor', 'org_admin']}><LegacySessionRedirect /></RoleGuard>} />
-        <Route path="/classes" element={<RoleGuard role={['counselor', 'org_admin']}><HostClassesPage /></RoleGuard>} />
+        <Route path="/classes" lazy={async () => {
+          const module = await import('./pages/classes/host-classes-page');
+          return { element: <RoleGuard role={['counselor', 'org_admin']}><module.HostClassesPage /></RoleGuard> };
+        }} />
         <Route path="/classes/now" element={<RoleGuard role={['counselor', 'org_admin']}><InstantClassPage /></RoleGuard>} />
         <Route path="/classes/new" element={<RoleGuard role={['counselor', 'org_admin']}><ClassSchedulingWizard /></RoleGuard>} />
         <Route path="/classes/:classId" element={<RoleGuard role={['counselor', 'org_admin']}><HostClassDetailPage /></RoleGuard>} />
@@ -241,8 +240,14 @@ const router = createBrowserRouter(
         <Route path="/sessions/:id/live" element={<SessionLivePage />} />
         <Route path="/sessions/:id/player" element={<ClassPlayerPage />} />
         <Route path="/sessions/:id/record" element={<SessionRecordPage />} />
-        <Route path="/chat" element={<RoleGuard><ChatPage /></RoleGuard>} />
-        <Route path="/chat/:roomId" element={<RoleGuard><ChatPage /></RoleGuard>} />
+        <Route path="/chat" lazy={async () => {
+          const module = await import('./pages/chat/ChatPage');
+          return { element: <RoleGuard><module.default /></RoleGuard> };
+        }} />
+        <Route path="/chat/:roomId" lazy={async () => {
+          const module = await import('./pages/chat/ChatPage');
+          return { element: <RoleGuard><module.default /></RoleGuard> };
+        }} />
         {/* SDD-220: 디자인 시안 경로는 운영 빌드에서 등록하지 않는다(심사 노출 방지). */}
         {isDesignRoutesEnabled() && (
           <>
@@ -257,7 +262,10 @@ const router = createBrowserRouter(
           </>
         )}
         <Route path="/admin" element={<PlatformAdminRoute><Navigate to="/admin/orgs" replace /></PlatformAdminRoute>} />
-        <Route path="/reports" element={<RoleGuard role={['counselor', 'org_admin']}><ReportListPage /></RoleGuard>} />
+        <Route path="/reports" lazy={async () => {
+          const module = await import('./pages/reports/ReportListPage');
+          return { element: <RoleGuard role={['counselor', 'org_admin']}><module.default /></RoleGuard> };
+        }} />
         <Route path="/reports/sample" element={<ReportSamplePage />} />
         <Route path="/reports/:id" element={<RoleGuard role={['counselor', 'org_admin']}><ReportDetailPage /></RoleGuard>} />
         <Route

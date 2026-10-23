@@ -62,6 +62,7 @@ type AccessTokenListener = (token: string | null) => void;
 const accessTokenListeners = new Set<AccessTokenListener>();
 
 function setAccessToken(next: string | null): void {
+  if (next === null) { sharedReadEpoch += 1; invalidateSharedReads(); }
   accessToken = next;
   // API7-03: tokenStorage 를 access token 의 단일 소스로 두고, 변경을 구독자에게 전파한다.
   // (authStore.accessToken 미러가 401 자동 갱신을 놓쳐 소켓이 만료 토큰을 들고 있던 문제 해소)
@@ -272,15 +273,73 @@ export function formatErrorDetail(detail: unknown): string | null {
   return null;
 }
 
+// 메뉴 공통 데이터만 짧게 재사용한다. 화면 데이터·상세·PDF는 대상이 아니다.
+interface SharedRead { promise: Promise<unknown>; expiresAt: number }
+const sharedReads = new Map<string, SharedRead>();
+let sharedReadScope: string | null = null;
+let sharedReadEpoch = 0;
+const SHARED_READ_TTL_MS = 30_000;
+const isSharedRead = (path: string): boolean =>
+  /^(?:\/notifications(?:\/unread-count)?|\/chat\/rooms|\/classes\/instructor-candidates)(?:\?|$)/.test(path);
+
+/** 소켓·계정 변경 시 진행 중 응답도 격리해 과거 배지가 다시 적용되지 않게 한다. */
+export function invalidateSharedReads(resource?: 'notifications' | 'chat', settledOnly = false): void {
+  for (const [path, entry] of sharedReads) {
+    if (resource && !path.startsWith(`/${resource}`)) continue;
+    if (settledOnly && entry.expiresAt === Infinity) continue;
+    sharedReads.delete(path);
+  }
+}
+
+function readScope(): string | null {
+  try { return localStorage.getItem(PERSISTED_USER_KEY); } catch { return null; }
+}
+
+function sharedRead<T>(path: string, options: RequestOptions): Promise<T> {
+  const scope = readScope();
+  if (scope !== sharedReadScope) {
+    sharedReadScope = scope;
+    sharedReadEpoch += 1;
+    invalidateSharedReads();
+  }
+  let entry = sharedReads.get(path);
+  if (!entry || entry.expiresAt <= Date.now()) {
+    const epoch = sharedReadEpoch;
+    const created: SharedRead = { promise: Promise.resolve(), expiresAt: Infinity };
+    sharedReads.set(path, created);
+    // caller의 abort는 아래 request에서 처리한다. 공유 네트워크는 별도로 유지한다.
+    created.promise = requestActive<T>(path, { ...options, signal: undefined }).then(data => {
+      if (epoch !== sharedReadEpoch || scope !== readScope()) throw new DOMException('만료된 계정 조회', 'AbortError');
+      // 소켓/변경 요청과 겹친 소비자는 실패시키지 않고 최신 조회에 합류시킨다.
+      if (sharedReads.get(path) !== created) return sharedRead<T>(path, options);
+      created.expiresAt = Date.now() + SHARED_READ_TTL_MS;
+      return data;
+    }, error => {
+      if (sharedReads.get(path) === created) sharedReads.delete(path);
+      throw error;
+    });
+    entry = created;
+  }
+  // 소비자의 상태 처리에서 객체를 변경해도 다음 조회에 전파하지 않는다.
+  return entry.promise.then(data => structuredClone(data) as T);
+}
+
 /** 호출자 취소는 공유 인증 갱신을 끊지 않고 해당 요청만 즉시 종료한다. */
 function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { signal } = options;
   if (signal?.aborted) return Promise.reject(new DOMException('요청 취소', 'AbortError'));
-  if (!signal) return requestActive<T>(path, options);
+  const method = options.method ?? 'GET';
+  const mutation = !['GET', 'HEAD', 'OPTIONS'].includes(method);
+  if (mutation) invalidateSharedReads();
+  const active = method === 'GET' && !options.skipAuth && !options.headers && !options.responseType && isSharedRead(path)
+    ? sharedRead<T>(path, options)
+    : requestActive<T>(path, options);
+  const result = mutation ? active.finally(() => invalidateSharedReads()) : active;
+  if (!signal) return result;
   return new Promise<T>((resolve, reject) => {
     const abort = () => reject(new DOMException('요청 취소', 'AbortError'));
     signal.addEventListener('abort', abort, { once: true });
-    requestActive<T>(path, options).then(resolve, reject)
+    result.then(resolve, reject)
       .finally(() => signal.removeEventListener('abort', abort));
   });
 }
