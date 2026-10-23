@@ -2,7 +2,7 @@
 // 3탭 (AI 요약 / 전사문 / 상담사 메모) + WebSocket 실시간 처리 상태
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import AppShell from '../../components/layout/AppShell';
 import { StatusBadge } from '../../components/session/StatusBadge';
 import { RecordView } from '../../components/records/RecordView';
@@ -351,6 +351,9 @@ export default function SessionRecordPage() {
           </div>
         )}
         {session && <ClassMetaCard session={session} />}
+        {session?.class_id && session.status === 'completed' && (
+          <Link className="inline-flex min-h-11 items-center text-[15px] mobile:text-mb-body text-[#5F0080] underline underline-offset-4" to={`/sessions/${session.id}/summary`}>회차 요약으로</Link>
+        )}
 
         {/* SDD-095: 리포트 생성 진행 스텝퍼 우선 — 계약 미수신 시 기존 처리 표시로 폴백 */}
         {reportProgress ? (

@@ -20,6 +20,7 @@ import { eventLabel } from '../lib/notification-format';
 import WebPushCard from '../components/settings/WebPushCard';
 import { PrivacyPolicyLink } from '../components/legal/PrivacyPolicyLink';
 import { AccountDeletionSection } from '../components/settings/account-deletion';
+import { SessionNotePromptToggle } from '../components/settings/session-note-prompt-toggle';
 import { PrivacyConsentsSection } from '../components/settings/privacy-consents';
 
 function Toggle({ enabled, onChange }: { enabled: boolean; onChange: () => void }) {
@@ -308,6 +309,7 @@ export default function SettingsPage() {
           </div>
         ) : null}
 
+        {isCounselorLike && <SessionNotePromptToggle />}
         <PrivacyConsentsSection />
         <AccountDeletionSection />
 

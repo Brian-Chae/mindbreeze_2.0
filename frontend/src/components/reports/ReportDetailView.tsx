@@ -1,6 +1,7 @@
 // 리포트 상세 본문 — 페이지/모달 공용 (SDD-064)
 // Cover → 서사 → 상담 본문 → EEG → 액션 → 재발송(client only)
 
+import { ClassReportLoader } from '../class-report/ClassNarrativeReport';
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { downloadReportPdf } from '../../lib/report/print-report';
@@ -293,6 +294,10 @@ export default function ReportDetailView({
         )}
       </div>
   );
+
+  if (report.type === 'counselor' && report.content?.class_report) {
+    return <ClassReportLoader sessionId={report.session_id} />;
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 print:max-w-none print:[&_.report-main]:overflow-visible print:[&_.narrative-report_section]:break-inside-auto print:[&_.metric]:break-inside-avoid">

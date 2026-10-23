@@ -48,7 +48,20 @@ const toSessionParticipant = (metric: SessionLiveMetric): SessionParticipant => 
 
 export default function SessionDetailPage() {
   const { classId, id } = useParams<{ classId: string; id: string }>();
-  return classId && id ? <ClassSessionDetail classId={classId} sessionId={id}/> : <LegacySessionDetailPage/>;
+  return classId && id ? <><CompletedClassSummaryLink classId={classId} sessionId={id} /><ClassSessionDetail classId={classId} sessionId={id}/></> : <LegacySessionDetailPage/>;
+}
+/** 직접 클래스 회차 URL에서도 서버가 확인한 완료 회차에만 요약 링크를 보인다. */
+function CompletedClassSummaryLink({ classId, sessionId }: { classId: string; sessionId: string }) {
+  const [completed, setCompleted] = useState(false);
+  useEffect(() => {
+    let active = true;
+    setCompleted(false);
+    void getSession(sessionId).then((session) => {
+      if (active) setCompleted(session.class_id === classId && session.status === 'completed');
+    }).catch(() => { /* 상세 화면이 조회 오류를 안내한다. */ });
+    return () => { active = false; };
+  }, [classId, sessionId]);
+  return completed ? <div className="px-6 pt-4"><a className="inline-flex min-h-11 items-center text-[15px] mobile:text-mb-body text-[#5F0080] underline underline-offset-4" href={`/sessions/${sessionId}/summary`}>회차 요약으로</a></div> : null;
 }
 function LegacySessionDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -310,7 +323,10 @@ function LegacySessionDetailPage() {
 
   const data = useMemo(() => (session ? toHostDetailData(session, { mailInvites: mailInputs }) : null), [session, mailInputs]);
 
-  if (session?.class_id) return <ClassSessionDetail classId={session.class_id} sessionId={session.id}/>;
+  if (session?.class_id) return <>
+    {session.status === 'completed' && <div className="px-6 pt-4"><a className="inline-flex min-h-11 items-center text-[15px] mobile:text-mb-body text-[#5F0080] underline underline-offset-4" href={`/sessions/${session.id}/summary`}>회차 요약으로</a></div>}
+    <ClassSessionDetail classId={session.class_id} sessionId={session.id}/>
+  </>;
 
   if (error && !session) {
     return (
