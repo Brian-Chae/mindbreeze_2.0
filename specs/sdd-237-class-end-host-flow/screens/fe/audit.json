@@ -1,0 +1,329 @@
+{
+  "findings": [
+    {
+      "screen": "summary",
+      "state": "normal",
+      "width": 390,
+      "file": "summary-normal-390.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "summary",
+      "state": "single",
+      "width": 390,
+      "file": "summary-single-390.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "summary",
+      "state": "unworn",
+      "width": 390,
+      "file": "summary-unworn-390.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "summary",
+      "state": "pending",
+      "width": 390,
+      "file": "summary-pending-390.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "summary",
+      "state": "partial",
+      "width": 390,
+      "file": "summary-partial-390.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "summary",
+      "state": "poor",
+      "width": 390,
+      "file": "summary-poor-390.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "summary",
+      "state": "lost",
+      "width": 390,
+      "file": "summary-lost-390.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "summary",
+      "state": "error",
+      "width": 390,
+      "file": "summary-error-390.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "summary",
+      "state": "zero",
+      "width": 390,
+      "file": "summary-zero-390.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "class-report",
+      "state": "normal",
+      "width": 390,
+      "file": "class-report-normal-390.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "class-report",
+      "state": "single",
+      "width": 390,
+      "file": "class-report-single-390.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "class-report",
+      "state": "unworn",
+      "width": 390,
+      "file": "class-report-unworn-390.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "class-report",
+      "state": "pending",
+      "width": 390,
+      "file": "class-report-pending-390.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "class-report",
+      "state": "partial",
+      "width": 390,
+      "file": "class-report-partial-390.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "class-report",
+      "state": "poor",
+      "width": 390,
+      "file": "class-report-poor-390.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "class-report",
+      "state": "lost",
+      "width": 390,
+      "file": "class-report-lost-390.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "class-report",
+      "state": "error",
+      "width": 390,
+      "file": "class-report-error-390.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "class-report",
+      "state": "zero",
+      "width": 390,
+      "file": "class-report-zero-390.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "summary",
+      "state": "normal",
+      "width": 1440,
+      "file": "summary-normal-1440.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "summary",
+      "state": "single",
+      "width": 1440,
+      "file": "summary-single-1440.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "summary",
+      "state": "unworn",
+      "width": 1440,
+      "file": "summary-unworn-1440.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "summary",
+      "state": "pending",
+      "width": 1440,
+      "file": "summary-pending-1440.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "summary",
+      "state": "partial",
+      "width": 1440,
+      "file": "summary-partial-1440.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "summary",
+      "state": "poor",
+      "width": 1440,
+      "file": "summary-poor-1440.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "summary",
+      "state": "lost",
+      "width": 1440,
+      "file": "summary-lost-1440.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "summary",
+      "state": "error",
+      "width": 1440,
+      "file": "summary-error-1440.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "summary",
+      "state": "zero",
+      "width": 1440,
+      "file": "summary-zero-1440.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "class-report",
+      "state": "normal",
+      "width": 1440,
+      "file": "class-report-normal-1440.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "class-report",
+      "state": "single",
+      "width": 1440,
+      "file": "class-report-single-1440.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "class-report",
+      "state": "unworn",
+      "width": 1440,
+      "file": "class-report-unworn-1440.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "class-report",
+      "state": "pending",
+      "width": 1440,
+      "file": "class-report-pending-1440.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "class-report",
+      "state": "partial",
+      "width": 1440,
+      "file": "class-report-partial-1440.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "class-report",
+      "state": "poor",
+      "width": 1440,
+      "file": "class-report-poor-1440.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "class-report",
+      "state": "lost",
+      "width": 1440,
+      "file": "class-report-lost-1440.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "class-report",
+      "state": "error",
+      "width": 1440,
+      "file": "class-report-error-1440.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    },
+    {
+      "screen": "class-report",
+      "state": "zero",
+      "width": 1440,
+      "file": "class-report-zero-1440.png",
+      "overflow": false,
+      "smallText": [],
+      "smallTouch": []
+    }
+  ],
+  "errors": []
+}
