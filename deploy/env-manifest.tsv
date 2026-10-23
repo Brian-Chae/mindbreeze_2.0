@@ -12,6 +12,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES	static	1	2880	현행 dev 와 동일(코드 기본값
 REFRESH_TOKEN_EXPIRE_DAYS	static	1	14	
 RETENTION_SWEEP_ENABLED	static	1	false	SDD-209 — 방침 반영·별도 승인 전 활성 금지
 RESEARCH_EXPORT_ENABLED	static	1	false	SDD-209 — 방침 반영·별도 승인 전 활성 금지
+ACCOUNT_DELETION_SWEEP_ENABLED	static	1	false	SDD-220 — 탈퇴 30일 영구 삭제. dry-run 보고 확인·대표 승인 후 true 로 변경(타이머는 enabled=1, false 이면 dry-run 보고만)
 DATABASE_URL	ssm	1		RDS prod 엔드포인트(SSL)
 DATABASE_URL_SYNC	ssm	1		마이그레이션·precheck 용 동기 URL
 REDIS_URL	ssm	1		redis://127.0.0.1:6379/0
