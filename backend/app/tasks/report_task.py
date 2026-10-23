@@ -653,6 +653,7 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
     db.commit()
     db.refresh(report)
     _emit_report_progress(str(report.session_id), db)
+    _maybe_enqueue_class_narrative(report, session)
     # FUNC-04: 비동기 생성 완료 — 신청된 내담자(client) 리포트면 메일 발송을 예약한다.
     _maybe_enqueue_client_report_email(report, db)
     return report
@@ -673,6 +674,27 @@ def _attach_class_report(content: dict, previous_content, session: Session, db: 
     except Exception:  # noqa: BLE001 — 통계 실패가 리포트 생성·승인 상태를 흔들지 않게 한다.
         logger.exception("[report_task] class_report 계산 실패: session_id=%s", session.id)
         content["class_report"] = prev if prev is not None else class_report_narrative.error_block()
+
+
+def _maybe_enqueue_class_narrative(report: Report, session: Session) -> None:
+    """SDD-237: 상담사용 클래스 리포트에 AI 서사가 필요하면 별도 Celery 태스크를 예약한다(best-effort).
+
+    AI 지연·실패·브로커 장애가 리포트 생성·승인을 막지 않는다. 같은 입력 해시로 이미 시도했으면 예약하지 않는다.
+    """
+    if report.type == "client" or not isinstance(report.content, dict):
+        return
+    block = report.content.get("class_report")
+    if not isinstance(block, dict):
+        return
+    try:
+        from app.core.ai_features import is_ai_enabled
+        from app.services import class_report_narrative
+        from app.tasks import class_report_task
+
+        if is_ai_enabled() and class_report_narrative.ai_call_needed(block):
+            class_report_task.enqueue_class_report_narrative(str(session.id))
+    except Exception:  # noqa: BLE001
+        logger.exception("[report_task] AI 서사 예약 실패: session_id=%s", session.id)
 
 
 def _mark_pipeline_failure(session_id: str, db: DBSession, exc: Exception) -> None:

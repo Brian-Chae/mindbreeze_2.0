@@ -13,9 +13,11 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from typing import Literal
+import re
+from typing import Iterable, Literal
 
 from app.services.class_report_stats_service import METRIC_KEYS
+from app.services.report_narrative import FORBIDDEN_TERMS, MAX_METRIC_SENTENCE_LEN, validate_metric_sentence
 
 logger = logging.getLogger(__name__)
 
@@ -390,6 +392,263 @@ def revert_edit(fields: dict, key: str, input_hash: str) -> dict:
     f.update(edited_text=None, edited_by=None, edited_at=None, edited_input_hash=None,
              source="ai" if ai_valid else "rule")
     return out
+
+
+# ───────────────────────── AI 서사 (입력 · 프롬프트 · 검증) ─────────────────────────
+#
+# AI 는 headline · 소제목 2개 · 지표 문장 6개(필드 최대 9개)만 쓰고, 숫자·이름·상태 문구·참여자 줄은 쓰지 않는다.
+# 입력은 이름 없는 클래스 집계뿐이다(상담사 수정 문장·비공개 메모·전사·개인 값·ID 는 절대 포함하지 않는다).
+
+# AI 를 부르는 상태. unworn/pending/error/zero/lost/single 은 AI 가 말할 변화가 없어 호출 0건(규칙 문장).
+AI_CALL_STATUSES = ("measured", "partial", "poor_signal")
+AI_MAX_LEN = {"headline": 120, "body_subtitle": 100, "mind_subtitle": 100, "metric": MAX_METRIC_SENTENCE_LEN}
+
+CLASS_FORBIDDEN_TERMS = (
+    "종합", "순위", "상위", "하위", "우수", "부족", "양호", "불량", "좋아졌", "나빠졌", "주의가 필요",
+    "개선", "악화", "회복", "호전", "완화", "치료", "진단", "증상", "효과", "질환", "우울", "불안 장애",
+    "잘하", "당신", "여러분",
+)
+
+CLASS_NARRATIVE_PROMPT_V1 = """당신은 명상 수업을 관찰한 내용을 상담사에게 전달하는 기록 보조입니다.
+아래 JSON은 한 회차 수업의 집계 결과입니다. 이 값만 근거로 한국어로 짧게 서술하세요.
+
+규칙
+1. 변화의 방향과 흐름만 말합니다. "높아졌어요 / 낮아졌어요 / 비슷했어요 / 빨라졌어요 / 느려졌어요" 같은 관찰 표현을 쓰세요.
+2. 점수, 등급, 순위, 좋다/나쁘다, 잘했다/부족하다, 개선/악화/회복, 효과, 치료, 진단, 증상 같은 평가·의학 표현을 쓰지 마세요.
+3. 원인을 단정하지 마세요. 입력에 없는 지표, 사람, 수치를 만들지 마세요.
+4. 숫자를 쓰지 마세요. 단, 측정 인원은 "측정한 N명"처럼 입력의 counts 값 그대로만 쓸 수 있습니다.
+5. 입력의 missing 에 있는 지표는 언급하지 마세요.
+6. direction 이 up 이면 높아짐/빨라짐, down 이면 낮아짐/느려짐, stable 이면 비슷함만 쓰고 반대로 쓰지 마세요.
+7. "SDNN, RMSSD, PPG, 정규화, 점수, 스코어" 같은 전문 용어는 쓰지 말고 HRV는 "심박 간격의 변화"라고 쓰세요.
+8. 독자는 상담사입니다. 참여자에게 말하듯 "당신/여러분"을 쓰지 말고 관찰 문장으로 쓰세요.
+
+반환 형식(JSON만):
+{"headline": "...", "body_subtitle": "...", "mind_subtitle": "...",
+ "metrics": {"focus":"...","relaxation":"...","emotional":"...","bpm":"...","respiration":"...","hrv":"..."}}
+- headline: 수업 전체를 이어서 읽히는 1단락(2~3문장 이내, 120자 이내)
+- body_subtitle: 호흡·심박·심박 간격의 변화를 잇는 1~2문장(100자 이내)
+- mind_subtitle: 집중·이완·감정균형을 잇는 1~2문장(100자 이내)
+- metrics 각 값: 해당 지표 하나의 방향을 말하는 60자 이내 한 문장
+
+자료:
+{input_json}
+"""
+
+
+def _ai_included_keys(block: dict) -> list[str]:
+    return [k for k in METRIC_KEYS if _compared(block, k)]
+
+
+def build_ai_input(block: dict) -> dict | None:
+    """LLM 에 보낼 이름 없는 집계. 호출 대상이 아니거나 말할 변화가 없으면 None(규칙 문장, 호출 0)."""
+    if block.get("status") not in AI_CALL_STATUSES:
+        return None
+    included = _ai_included_keys(block)
+    if not included:
+        return None
+    scope = block.get("scope") or {}
+    metrics = {}
+    agreement = {}
+    for key in included:
+        m = block["metrics"][key]
+        metrics[key] = {"unit": m.get("unit"), "compared": m.get("compared"),
+                        "early": round(m["early"], 1), "late": round(m["late"], 1), "direction": m["direction"]}
+        if m.get("agreement"):
+            agreement[key] = dict(m["agreement"])
+    return {
+        "session_kind": "meditation_class",
+        "duration_min": scope.get("duration_min"),
+        "counts": {"measured": scope.get("measured"), "attended": scope.get("attended")},
+        "state": block.get("status"),
+        "flags": list(block.get("flags") or []),
+        "metrics": metrics,
+        "missing": [k for k in METRIC_KEYS if k not in included],
+        "agreement": agreement,
+    }
+
+
+def ai_input_hash(data: dict) -> str:
+    raw = json.dumps(data, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
+
+
+def ai_call_needed(block: dict) -> bool:
+    """회차당 1회 — 같은 입력(해시)으로 이미 시도했으면(성공·실패 불문) 다시 부르지 않는다."""
+    data = build_ai_input(block)
+    if data is None:
+        return False
+    attempt = (block.get("narrative") or {}).get("ai_attempt")
+    return not (isinstance(attempt, dict) and attempt.get("hash") == ai_input_hash(data))
+
+
+def build_prompt(data: dict) -> str:
+    return CLASS_NARRATIVE_PROMPT_V1.replace(
+        "{input_json}", json.dumps(data, ensure_ascii=False, sort_keys=True))
+
+
+_UP = ("높아", "빨라", "커졌", "커지", "늘어", "올랐", "올라", "증가")
+_DOWN = ("낮아", "느려", "작아졌", "작아지", "줄어", "내려", "감소")
+_STABLE = ("비슷", "유지", "일정", "고르게")
+_CALM = ("차분해지", "차분해졌", "느긋")      # 몸 지표(호흡·심박)의 '내려가는 쪽' 맥락어
+_BODY_CALM_KEYS = ("respiration", "bpm")
+_HRV_WORDS = ("심박 간격", "심박간격", "심박변이", "HRV")
+_LABEL_TOKENS = {"focus": ("집중",), "relaxation": ("이완",), "emotional": ("정서", "감정"),
+                 "respiration": ("호흡",), "bpm": ("심박", "맥박")}
+_NUMBER = re.compile(r"\d+(?:[.,]\d+)?")
+_EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
+_UUIDISH = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-")
+_NAME_ADDRESS = re.compile(r"[가-힣]{2,4}님")
+_CLAUSE_SPLIT = re.compile(r"[.,;!?·]|(?<=고) ")
+
+
+def _mentioned(clause: str) -> set[str]:
+    found = set()
+    if any(w in clause for w in _HRV_WORDS):
+        found.add("hrv")
+    rest = clause
+    for w in _HRV_WORDS:
+        rest = rest.replace(w, "")
+    for key, tokens in _LABEL_TOKENS.items():
+        if any(t in rest for t in tokens):
+            found.add(key)
+    return found
+
+
+def _words(clause: str, key: str) -> tuple[bool, bool, bool]:
+    up = any(w in clause for w in _UP)
+    down = any(w in clause for w in _DOWN) or (key in _BODY_CALM_KEYS and any(w in clause for w in _CALM))
+    stable = any(w in clause for w in _STABLE)
+    return up, down, stable
+
+
+def _direction_ok(text: str, directions: dict[str, str]) -> bool:
+    """절 단위로 언급된 지표의 방향어가 입력 direction 과 모순되지 않는지(반대 방향어만 있으면 모순)."""
+    for clause in (c for c in _CLAUSE_SPLIT.split(text) if c and c.strip()):
+        for key in _mentioned(clause):
+            want = directions.get(key)
+            if want is None:
+                continue
+            up, down, stable = _words(clause, key)
+            if want == "up" and down and not up:
+                return False
+            if want == "down" and up and not down:
+                return False
+            if want == "stable" and (up or down):
+                return False
+    return True
+
+
+def _check_field(key: str, text, data: dict, names: Iterable[str]) -> bool:
+    if not isinstance(text, str):
+        return False
+    t = text.strip()
+    if not t:
+        return False
+    metric_key = key[len("metric."):] if key.startswith("metric.") else None
+    limit = AI_MAX_LEN["metric"] if metric_key else AI_MAX_LEN[key]
+    if len(t) > limit:
+        return False
+    upper = t.upper()
+    if any(term.upper() in upper for term in CLASS_FORBIDDEN_TERMS + FORBIDDEN_TERMS):
+        return False
+    counts = data.get("counts") or {}
+    allowed_numbers = {str(counts.get("measured")), str(counts.get("attended"))}
+    if any(n not in allowed_numbers for n in _NUMBER.findall(t)):
+        return False
+    if _EMAIL.search(t) or _UUIDISH.search(t) or _NAME_ADDRESS.search(t):
+        return False
+    if any(len(n) >= 2 and n in t for n in names):
+        return False
+    directions = {k: m["direction"] for k, m in data["metrics"].items()}
+    missing = set(data.get("missing") or [])
+    if _mentioned(t) & missing:
+        return False
+    if not _direction_ok(t, directions):
+        return False
+    if metric_key:
+        if not validate_metric_sentence(t, directions.get(metric_key)):
+            return False
+        up, down, stable = _words(t, metric_key)
+        own = {"up": up, "down": down, "stable": stable}[directions[metric_key]]
+        if not own:
+            return False
+    if key == "headline" and data.get("state") == "partial" and f"측정한 {counts.get('measured')}명" not in t:
+        return False
+    return True
+
+
+def eligible_ai_keys(data: dict) -> list[str]:
+    keys = ["headline"]
+    if any(k in data["metrics"] for k in ("respiration", "bpm", "hrv")):
+        keys.append("body_subtitle")
+    if any(k in data["metrics"] for k in ("focus", "relaxation", "emotional")):
+        keys.append("mind_subtitle")
+    keys += [f"metric.{k}" for k in METRIC_KEYS if k in data["metrics"]]
+    return keys
+
+
+def schema_ok(raw) -> bool:
+    """필수 키(headline·body_subtitle·mind_subtitle 문자열, metrics 객체)가 갖춰졌는지."""
+    return (
+        isinstance(raw, dict)
+        and all(isinstance(raw.get(k), str) for k in ("headline", "body_subtitle", "mind_subtitle"))
+        and isinstance(raw.get("metrics"), dict)
+    )
+
+
+def parse_ai_response(text: str) -> dict | None:
+    """JSON 문자열 → dict. 코드펜스가 섞여도 한 번 벗겨 본다. 실패하면 None."""
+    if not isinstance(text, str):
+        return None
+    t = text.strip()
+    if t.startswith("```"):
+        t = re.sub(r"^```(?:json)?\s*|\s*```$", "", t).strip()
+    try:
+        value = json.loads(t)
+    except (TypeError, ValueError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def validate_fields(raw, data: dict, *, names: Iterable[str] = ()) -> tuple[dict[str, str], list[str]]:
+    """AI 출력을 필드 단위로 검증한다. (채택 {필드키: 문장}, 폐기 [필드키]).
+
+    스키마가 맞지 않으면 전 필드 폐기(규칙 문장). 그 밖의 검증 실패는 해당 필드만 폐기하고 나머지는 채택한다.
+    names 는 서버 내부의 참여자 이름 목록 — 외부로 보내지 않고 출력과의 부분 일치 검사에만 쓴다.
+    """
+    eligible = eligible_ai_keys(data)
+    if not schema_ok(raw):
+        return {}, eligible
+    names = tuple(n for n in names if isinstance(n, str))
+    accepted: dict[str, str] = {}
+    rejected: list[str] = []
+    for key in eligible:
+        text = raw["metrics"].get(key[len("metric."):]) if key.startswith("metric.") else raw.get(key)
+        if _check_field(key, text, data, names):
+            accepted[key] = text.strip()
+        else:
+            rejected.append(key)
+    return accepted, rejected
+
+
+def apply_ai_result(block: dict, accepted: dict[str, str], rejected: list[str], *, ai_hash: str,
+                    outcome: str, model: str | None, now_iso: str) -> dict:
+    """AI 결과를 블록에 반영한다. 수정본(source=edited)의 text/source 는 건드리지 않고 ai_draft 만 갱신한다."""
+    narr = dict(block.get("narrative") or {})
+    fields = {k: dict(v) for k, v in (narr.get("fields") or {}).items()}
+    stats_hash = narr.get("input_hash") or compute_input_hash(block)
+    for key, text in accepted.items():
+        field = fields.get(key)
+        if field is None:
+            continue
+        field["ai_draft"] = text
+        field["ai_draft_input_hash"] = stats_hash
+        if field.get("source") != "edited":
+            field["source"] = "ai"
+    narr.update(fields=fields, model=model, generated_at=now_iso,
+                ai_attempt={"hash": ai_hash, "outcome": outcome, "at": now_iso},
+                fallback_fields=[k for k in rejected if k in fields])
+    return {**block, "narrative": narr}
 
 
 # ───────────────────────── 블록 조립 ─────────────────────────

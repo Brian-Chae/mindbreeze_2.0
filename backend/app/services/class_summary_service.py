@@ -208,8 +208,10 @@ def _report_info(report: Report | None, block: dict | None) -> dict:
 
 
 def narrative_pending(block: dict | None) -> bool:
-    """AI 서사가 곧 채워질 예정인지 — AI 태스크(B7) 연결 전에는 항상 False."""
-    return False
+    """AI 서사가 곧 채워질 예정인지 — AI 가 켜져 있고 아직 이 입력으로 시도하지 않았을 때만 True."""
+    from app.core.ai_features import is_ai_enabled
+
+    return bool(block) and is_ai_enabled() and narrative.ai_call_needed(block)
 
 
 def _block_of(report: Report | None) -> dict | None:

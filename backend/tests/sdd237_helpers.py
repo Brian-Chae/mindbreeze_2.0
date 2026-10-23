@@ -93,6 +93,11 @@ def add_record(db, session, notes: str | None) -> SessionRecord:
     return rec
 
 
+def _v(value, i):
+    """값 또는 인덱스 함수."""
+    return value(i) if callable(value) else value
+
+
 def start_ms(session) -> int:
     """SQLite 는 tz 없는 datetime 을 돌려주므로 UTC 로 간주해 epoch(ms) 를 만든다(서비스와 같은 규칙)."""
     started = session.started_at
@@ -113,7 +118,33 @@ def add_windows(db, session, participant, n, *, start_offset=0, quality="valid",
             id=uuid.uuid4(), session_id=session.id, participant_id=participant.id,
             user_id=participant.user_id, play_group_id=seg, window_index=idx, quality=quality,
             device_timestamp_ms=(base_ms + idx * 1000) if ms is None else ms + i * 1000,
-            focus_index=focus(i) if callable(focus) else focus,
-            relaxation_index=relax, emotional_stability=emo,
-            heart_rate=hr, respiratory_rate=rr, sdnn=sdnn))
+            focus_index=_v(focus, i), relaxation_index=_v(relax, i), emotional_stability=_v(emo, i),
+            heart_rate=_v(hr, i), respiratory_rate=_v(rr, i), sdnn=_v(sdnn, i)))
     db.commit()
+
+
+# ── 통계 블록 합성 빌더 (DB 없이 서사 규칙·AI 입력 검증에 쓴다) ───────────────
+def make_block(status="measured", directions=None, measured=4, attended=6, included=5, flags=(),
+               duration_min=45, participants=None):
+    from app.services.class_report_stats_service import METRIC_KEYS, METRIC_UNITS
+
+    directions = directions or {}
+    metrics = {}
+    for key in METRIC_KEYS:
+        unit = METRIC_UNITS[key]
+        if key in directions:
+            early, late = (14.0, 12.0) if key == "respiration" else (50.0, 60.0)
+            metrics[key] = {"unit": unit, "state": "ok", "measured": measured, "compared": measured,
+                            "mean": (early + late) / 2, "min": early, "max": late, "early": early,
+                            "late": late, "delta": late - early, "direction": directions[key],
+                            "valid_min": 30.0, "valid_ratio": 0.8, "agreement": None,
+                            "missing_reason": None, "series": []}
+        else:
+            metrics[key] = {"unit": unit, "state": "missing", "measured": 0, "compared": 0, "mean": None,
+                            "min": None, "max": None, "early": None, "late": None, "delta": None,
+                            "direction": None, "valid_min": None, "valid_ratio": None, "agreement": None,
+                            "missing_reason": "no_signal", "series": []}
+    return {"schema_version": 1, "status": status, "flags": list(flags), "normalization_version": "v1",
+            "scope": {"attended": attended, "measured": measured, "included": included,
+                      "duration_min": duration_min, "bucket_min": 5, "split_min": duration_min / 2},
+            "metrics": metrics, "participants": participants or []}
