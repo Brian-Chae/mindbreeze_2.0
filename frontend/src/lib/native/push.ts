@@ -12,6 +12,9 @@ export function allowedPushDeeplink(value: unknown): string | null {
   const path = value.split(/[?#]/, 1)[0];
   if (path.split('/').some((part) => part === '.' || part === '..')) return null;
   return path === '/app' || path.startsWith('/app/') || path === '/agent'
+    || path === '/reports' || path === '/notifications'
+    || /^\/(?:sessions|classes)\/[a-zA-Z0-9_-]+$/.test(path)
+    || /^\/class\/[a-zA-Z0-9_-]+\/enter$/.test(path)
     || path === '/chat' || path.startsWith('/chat/')
     || /^\/classes\/[a-zA-Z0-9_-]+\/sessions\/[a-zA-Z0-9_-]+$/.test(path)
     ? value : null;
@@ -113,6 +116,13 @@ export function startPushRegistration(
       const data = action.notification.data as Record<string, unknown> | undefined;
       const path = allowedPushDeeplink(data?.deeplink);
       if (!stopped && path) navigate(path);
+    }));
+    handles.push(await App.addListener('appStateChange', ({ isActive }) => {
+      if (!isActive || stopped) return;
+      // 네트워크·인증 오류 후 재시도. 권한 팝업은 사용자 동작에서만 연다.
+      void PushNotifications.checkPermissions().then(async (permission) => {
+        if (!stopped && permission.receive === 'granted') await PushNotifications.register();
+      }).catch(() => {});
     }));
     if (stopped) return;
     // 시작 시에는 이미 허용한 기기만 재등록하고 새 권한 창을 열지 않는다.

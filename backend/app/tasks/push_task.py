@@ -23,7 +23,8 @@ from app.core.celery_app import celery_app
 from app.models.notification_outbox import NotificationOutbox
 from app.services import device_service, push_service, web_push_service
 
-logger = logging.getLogger(__name__)
+# API에서는 uvicorn의 INFO 핸들러를 상속한다. cron 결과는 진입점에서도 출력한다.
+logger = logging.getLogger("uvicorn.error.push")
 
 MAX_ATTEMPTS = 3
 EXPIRE_AFTER_HOURS = 24
@@ -194,7 +195,8 @@ def dispatch_push_now() -> None:
 
     def _run() -> None:
         try:
-            process_push_outbox(limit=20)
+            result = process_push_outbox(limit=20)
+            logger.info("[OUTBOX-PUSH] immediate result=%s", result)
         except Exception:  # noqa: BLE001 — 즉시 발송 실패는 cron 이 재시도한다
             logger.exception("[OUTBOX-PUSH] 즉시 발송 실패")
 
