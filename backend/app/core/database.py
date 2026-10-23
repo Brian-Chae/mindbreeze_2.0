@@ -5,7 +5,26 @@ from sqlalchemy.orm import DeclarativeBase, Session as ORMSession, sessionmaker,
 
 from app.config import settings
 
-engine = create_engine(settings.database_url, echo=settings.debug)
+def build_engine_kwargs(database_url: str) -> dict:
+    """create_engine 인자 — 풀 설정은 PostgreSQL(QueuePool)에만 적용한다.
+
+    SQLite 인메모리(StaticPool/SingletonThreadPool)는 pool_size·max_overflow 를 받지 않아
+    TypeError 가 나므로 테스트 환경에서는 기본 인자만 쓴다.
+    """
+    kwargs: dict = {"echo": settings.debug}
+    if database_url.startswith("sqlite"):
+        return kwargs
+    kwargs.update(
+        pool_size=settings.db_pool_size,
+        max_overflow=settings.db_max_overflow,
+        pool_timeout=settings.db_pool_timeout,
+        pool_pre_ping=settings.db_pool_pre_ping,
+        pool_recycle=settings.db_pool_recycle,
+    )
+    return kwargs
+
+
+engine = create_engine(settings.database_url, **build_engine_kwargs(settings.database_url))
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
