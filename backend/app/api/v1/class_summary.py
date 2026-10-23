@@ -10,10 +10,32 @@ from sqlalchemy.orm import Session as DBSession
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
-from app.schemas.class_report import NotePromptClaimResponse, NotePromptDismissResponse
+from app.schemas.class_report import (
+    ClassReportResponse, ClassSummaryResponse, NotePromptClaimResponse, NotePromptDismissResponse,
+)
 from app.services import class_summary_service as svc
 
 router = APIRouter(prefix="/sessions", tags=["class-summary"])
+
+
+@router.get("/{session_id}/class-summary", response_model=ClassSummaryResponse)
+def get_class_summary(
+    session_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    """명상 클래스 회차 요약(S0·S1·S2·S6). 읽기 전용."""
+    return svc.build_summary(db, session_id, current_user["id"])
+
+
+@router.get("/{session_id}/class-report", response_model=ClassReportResponse)
+def get_class_report(
+    session_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    """상담사용 클래스 리포트(R1~R5). 읽기 전용."""
+    return svc.build_class_report(db, session_id, current_user["id"])
 
 
 @router.post("/{session_id}/note-prompt/claim", response_model=NotePromptClaimResponse)

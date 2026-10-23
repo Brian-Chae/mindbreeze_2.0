@@ -43,7 +43,8 @@ def build_class_world(db, *, members=3, status="completed", duration_min=45, end
     host = make_user(db, name="채 상담사", org=org, **(host_extra or {}))
     cls = Class(
         id=uuid.uuid4(), organization_id=org.id, created_by=host.id, title="아침 호흡 명상",
-        status="active", default_duration_min=duration_min, recurrence_rule="FREQ=WEEKLY")
+        status="active", default_duration_min=duration_min, recurrence_rule="FREQ=WEEKLY",
+        organization_attribution_known=True)
     db.add(cls)
     db.flush()
     db.add(ClassInstructor(id=uuid.uuid4(), class_id=cls.id, user_id=host.id, role="lead"))
