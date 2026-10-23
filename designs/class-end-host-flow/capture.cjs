@@ -5,7 +5,7 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 const { pathToFileURL } = require('node:url');
 const { chromium } = require('/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/playwright');
-const screens=['current-end','current-record','overview','participants','notes','waiting','failed','partial','report','counseling'];
+const screens=['current-end','current-record','overview','participants','notes','waiting','failed','partial','report','counseling','eeg-worn','eeg-partial','eeg-pending','eeg-quality','eeg-lost','notes-skipped','auto-summary','auto-settings'];
 const out=path.join(__dirname,'screenshots');
 const url=pathToFileURL(path.join(__dirname,'index.html')).href;
 (async()=>{
@@ -17,7 +17,7 @@ const url=pathToFileURL(path.join(__dirname,'index.html')).href;
    await context.route(/^https?:/,route=>{external.push(route.request().url());return route.abort()});
    const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
    for(const screen of screens){
-    await page.goto(url+'?screen='+screen+'#'+screen);await page.locator('#app main').waitFor();assert.equal(await page.locator('#screen-select').inputValue(),screen);await page.evaluate(()=>document.fonts.ready);
+    await page.goto(url+'?screen='+screen+'#'+screen);if(['overview','eeg-worn','eeg-partial','eeg-pending'].includes(screen)){await page.evaluate(()=>localStorage.setItem('sdd237-demo-prompt-seen','no'));await page.reload();}await page.locator('#app main').waitFor();assert.equal(await page.locator('#screen-select').inputValue(),screen);await page.evaluate(()=>document.fonts.ready);
     await page.screenshot({path:path.join(out,`${screen}-${width}.png`),fullPage:true});
     const stats=await page.evaluate(()=>{
       const visible=e=>{const r=e.getBoundingClientRect(),c=getComputedStyle(e);return r.width>0&&r.height>0&&c.display!=='none'&&c.visibility!=='hidden'};
@@ -29,6 +29,15 @@ const url=pathToFileURL(path.join(__dirname,'index.html')).href;
     assert(stats.scrollWidth<=width,`${screen}-${width} 가로 넘침`);assert(stats.minText>=13,`${screen}-${width} 13px 미만`);assert.equal(stats.smallControls.length,0,`${screen}-${width} 터치 영역`);
     results.push({screen,width,...stats});
    }
+   // 한 번 안내 → 비워두기 → 재진입·새로고침 후 비노출.
+   await page.goto(url+'?check=prompt#eeg-worn');await page.evaluate(()=>localStorage.setItem('sdd237-demo-prompt-seen','no'));await page.reload();
+   await page.locator('#skip-notes').click();assert.equal(await page.locator('#record-prompt').count(),0);
+   await page.goto(url+'?check=prompt-again#eeg-worn');await page.reload();assert.equal(await page.locator('#record-prompt').count(),0);assert.equal(await page.locator('#quiet-record').count(),1);
+   await page.goto(url+'?check=policy#auto-summary');await page.locator('#hold-policy').click();assert.match(await page.locator('#hold-policy').innerText(),/보류됨/);
+   await page.locator('[data-go="auto-settings"]').click();await page.locator('#save-policy').click();await page.getByRole('button',{name:'시안에서 전환 확인',exact:true}).click();assert.match(await page.locator('#dialog-body').innerText(),/실제 설정은 변경하지/);await page.getByRole('button',{name:'확인',exact:true}).click();
+   // 새 측정 사례에서 결과로 이동해도 측정·분석 상태를 보존한다.
+   await page.goto(url+'?check=worn#eeg-worn');await page.locator('#eeg-summary [data-go="participants"]').click();assert.match(await page.locator('[data-person="샘플 참여자 B"]').innerText(),/측정 완료/);
+   await page.goto(url+'?check=pending#eeg-pending');await page.locator('.hero [data-go="participants"]').click();assert.equal(await page.locator('[data-go^="report-"]').count(),0);
    // 참여자 검색과 필터가 실제로 행을 줄이는지 확인한다.
    await page.goto(url+'?check=participants#participants');await page.locator('#filter').selectOption('review');assert.equal(await page.locator('tbody tr:visible').count(),2);
    await page.locator('#search').fill('C');assert.equal(await page.locator('tbody tr:visible').count(),1);
@@ -56,8 +65,8 @@ const url=pathToFileURL(path.join(__dirname,'index.html')).href;
    await context.close();
   }
   assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
-  const report={chrome:browser.version(),viewports:[390,1440],screenshots:28,results,interactionChecks:['검색/필터','미저장 이탈 경고','저장 실패 입력 보존','저장 성공·탭 이동 복원','0명/미착용/연결 단절','승인 확인 시안 상태'],pageErrors:errors,externalRequests:external};
+  const report={chrome:browser.version(),viewports:[390,1440],screenshots:44,results,interactionChecks:['한 번 안내·비워두기·재열기 비노출','자동 승인 보류·설정 확인','검색/필터','미저장 이탈 경고','저장 실패 입력 보존','저장 성공·탭 이동 복원','0명/미착용/연결 단절','승인 확인 시안 상태'],pageErrors:errors,externalRequests:external};
   fs.writeFileSync(path.join(__dirname,'validation.json'),JSON.stringify(report,null,2)+'\n');
-  console.log(JSON.stringify({screenshots:28,screens:results.length,checks:'PASS',pageErrors:errors.length,externalRequests:external.length}));
+  console.log(JSON.stringify({screenshots:44,screens:results.length,checks:'PASS',pageErrors:errors.length,externalRequests:external.length}));
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});
