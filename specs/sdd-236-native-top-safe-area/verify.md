@@ -19,15 +19,15 @@
 - [ ] 세로→가로→세로 회전 후 흰 띠·누적 inset·잘림 없음.
 - [ ] 로그인 상태 전환 후 상태바 아이콘 대비와 헤더 색이 적절하다.
 - [ ] 실패 재현 테스트 RED → 최소 수정 → GREEN. 기존 native 테스트를 유지한다.
-- [ ] `npx tsc --noEmit -p tsconfig.app.json` 통과.
+- [x] `npx tsc --noEmit -p tsconfig.app.json` 통과.
 - [ ] Chromium/WebKit 390×844, 844×390, 1440×900 웹 회귀 없음.
 - [ ] Android 기기/에뮬레이터 검증 또는 명시적 미검증. 근거 없는 Android 수정 없음.
 - [ ] 독립 검증자가 diff/측정값/테스트 출력을 재확인.
 
 ## 반출·정리
 
-- [ ] 임시 AppDelegate, Firebase 제외, Package.swift/Package.resolved 부수 변경 없음.
-- [ ] pbxproj/build.gradle 버전 번호 변경 없음, 실제 업로드 없음.
-- [ ] node_modules 심링크만 제거, 커밋에 포함하지 않음.
-- [ ] summary에 원인 확정 여부·전후 수치·기기/OS·실기기 미검증을 정확히 기재.
+- [x] 임시 AppDelegate, Firebase 제외, Package.swift/Package.resolved 부수 변경 없음.
+- [x] pbxproj/build.gradle 버전 번호 변경 없음, 실제 업로드 없음.
+- [x] node_modules 심링크만 제거, 커밋에 포함하지 않음.
+- [x] summary에 원인 확정 여부·전후 수치·기기/OS·실기기 미검증을 정확히 기재.
 - [ ] 전용 브랜치만 push, develop 대상 PR. 머지·배포 금지.

@@ -39,4 +39,4 @@
 - 캡처는 simctl이 외장 SSD에 직접 저장하지 못해 `/tmp`에 저장 후 `screens/`로 복사한다.
 - `cap sync`는 심링크 node_modules의 realpath로 Package.swift를 바꾼다. 해당 부수 변경과 Package.resolved는 복원한다.
 - 기존 xcodebuild 빌드 캐시는 `/tmp/sdd236-derived`. 이 App.app은 진단 전용 임시 코드·드라이버를 포함하므로 배포/업로드 금지. 다음 실측도 진단 전용으로 쓰며 제품 빌드 때 반드시 새 build→sync를 수행한다.
-- `/tmp/sdd236-instrument.py`, `/tmp/sdd236-driver.js`, `/tmp/sdd236-web.mjs`가 진단 도구 원본. 웹 드라이버는 이 디렉터리 tools에도 보존.
+- `tools/instrument-ios.py`, `tools/offline-driver.js`, `tools/web-baseline.mjs`에 진단 도구를 보존했다. instrument는 AppDelegate에 진단 코드를 주입하므로 진단 후 해당 파일을 반드시 복원한다. 제품 빌드/배포에 포함하지 않는다.
