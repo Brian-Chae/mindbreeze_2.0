@@ -2,6 +2,14 @@
 # 변수: WEB_HOST, API_HOST, CERT_NAME, PREFIX
 # 점검 모드: /etc/nginx/mindbreeze-maintenance.d/*.conf 를 두면 아래 server 블록에 include 된다(없으면 무시).
 
+# 정적 파일·API 응답 압축 (http 컨텍스트 — 웹·API server 블록 공통 적용)
+# `gzip on;` 은 Ubuntu 기본 /etc/nginx/nginx.conf 에 이미 있어 여기 다시 쓰면 nginx -t 가 duplicate 오류를 낸다.
+gzip_vary on;
+gzip_proxied any;
+gzip_comp_level 6;
+gzip_min_length 1024;
+gzip_types text/plain text/css text/javascript application/javascript application/json application/xml image/svg+xml application/manifest+json;
+
 map $http_upgrade $mb_connection_upgrade {
     default upgrade;
     ''      close;
