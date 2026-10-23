@@ -1,0 +1,118 @@
+{
+  "session": {
+    "id": "5b0a0000-0000-4000-8000-000000000001",
+    "class_name": "아침 호흡 명상",
+    "seq": 3,
+    "ended_at": "2026-10-23T09:45:10Z",
+    "duration_min": 45
+  },
+  "report": {
+    "id": null,
+    "generation_status": "processing",
+    "state": "processing",
+    "narrative_pending": true
+  },
+  "block": null,
+  "participants": [
+    {
+      "participant_id": "p_1",
+      "display_name": "김하늘",
+      "kind": "member",
+      "order": 1,
+      "included": true,
+      "exclusion": null,
+      "measurement": "unworn",
+      "report": {
+        "id": "r_p_1",
+        "generation": "processing",
+        "approval": "pending_analysis",
+        "delivery": "not_requested"
+      },
+      "narrative_field": "participant.p_1"
+    },
+    {
+      "participant_id": "p_2",
+      "display_name": "이바다",
+      "kind": "member",
+      "order": 2,
+      "included": true,
+      "exclusion": null,
+      "measurement": "unworn",
+      "report": {
+        "id": "r_p_2",
+        "generation": "processing",
+        "approval": "pending_analysis",
+        "delivery": "not_requested"
+      },
+      "narrative_field": "participant.p_2"
+    },
+    {
+      "participant_id": "p_3",
+      "display_name": "박나무",
+      "kind": "member",
+      "order": 3,
+      "included": true,
+      "exclusion": null,
+      "measurement": "unworn",
+      "report": {
+        "id": "r_p_3",
+        "generation": "processing",
+        "approval": "pending_analysis",
+        "delivery": "not_requested"
+      },
+      "narrative_field": "participant.p_3"
+    },
+    {
+      "participant_id": "p_4",
+      "display_name": "정새봄",
+      "kind": "member",
+      "order": 4,
+      "included": true,
+      "exclusion": null,
+      "measurement": "unworn",
+      "report": {
+        "id": "r_p_4",
+        "generation": "processing",
+        "approval": "pending_analysis",
+        "delivery": "not_requested"
+      },
+      "narrative_field": "participant.p_4"
+    },
+    {
+      "participant_id": "p_5",
+      "display_name": "윤여름",
+      "kind": "member",
+      "order": 5,
+      "included": true,
+      "exclusion": null,
+      "measurement": "unworn",
+      "report": {
+        "id": "r_p_5",
+        "generation": "processing",
+        "approval": "pending_analysis",
+        "delivery": "not_requested"
+      },
+      "narrative_field": "participant.p_5"
+    },
+    {
+      "participant_id": "p_6",
+      "display_name": "한가을",
+      "kind": "member",
+      "order": 6,
+      "included": false,
+      "exclusion": "not_included",
+      "measurement": "excluded",
+      "report": {
+        "id": null,
+        "generation": "processing",
+        "approval": "pending_analysis",
+        "delivery": "not_requested"
+      },
+      "narrative_field": "participant.p_6"
+    }
+  ],
+  "capabilities": {
+    "can_edit_narrative": true
+  },
+  "fetched_at": "2026-10-23T09:47:00Z"
+}
