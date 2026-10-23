@@ -54,6 +54,8 @@ const SessionDetailPage = lazy(() => import('./pages/sessions/SessionDetailPage'
 const SessionLivePage = lazy(() => import('./pages/sessions/SessionLivePage'));
 // SDD-088: 독립형 클래스 플레이어 (풀스크린, AppShell 밖)
 const ClassPlayerPage = lazy(() => import('./pages/sessions/ClassPlayerPage'));
+const SessionSummaryPage = lazy(() => import('./pages/sessions/session-summary-page'));
+const ClassReportPage = lazy(() => import('./pages/sessions/class-report-page'));
 const SessionRecordPage = lazy(() => import('./pages/records/SessionRecordPage'));
 const ChatPage = lazy(() => import('./pages/chat/ChatPage'));
 const DesignIndexPage = lazy(() => import('./pages/design/DesignIndexPage'));
@@ -240,6 +242,8 @@ const router = createBrowserRouter(
         {/* SDD-088: /live 는 하위 호환 리다이렉트, 실제 화면은 /player */}
         <Route path="/sessions/:id/live" element={<SessionLivePage />} />
         <Route path="/sessions/:id/player" element={<ClassPlayerPage />} />
+        <Route path="/sessions/:id/summary" element={<RoleGuard role={['counselor', 'org_admin']}><SessionSummaryPage /></RoleGuard>} />
+        <Route path="/sessions/:id/class-report" element={<RoleGuard role={['counselor', 'org_admin']}><ClassReportPage /></RoleGuard>} />
         <Route path="/sessions/:id/record" element={<SessionRecordPage />} />
         <Route path="/chat" element={<RoleGuard><ChatPage /></RoleGuard>} />
         <Route path="/chat/:roomId" element={<RoleGuard><ChatPage /></RoleGuard>} />
