@@ -4,7 +4,7 @@
     390,
     1440
   ],
-  "screenshots": 44,
+  "screenshots": 48,
   "results": [
     {
       "screen": "current-end",
@@ -77,35 +77,42 @@
       "smallControls": []
     },
     {
-      "screen": "eeg-worn",
+      "screen": "biosignal-worn",
       "width": 390,
       "scrollWidth": 390,
       "minText": 13,
       "smallControls": []
     },
     {
-      "screen": "eeg-partial",
+      "screen": "biosignal-partial",
       "width": 390,
       "scrollWidth": 390,
       "minText": 13,
       "smallControls": []
     },
     {
-      "screen": "eeg-pending",
+      "screen": "biosignal-pending",
       "width": 390,
       "scrollWidth": 390,
       "minText": 13,
       "smallControls": []
     },
     {
-      "screen": "eeg-quality",
+      "screen": "biosignal-quality",
       "width": 390,
       "scrollWidth": 390,
       "minText": 13,
       "smallControls": []
     },
     {
-      "screen": "eeg-lost",
+      "screen": "biosignal-lost",
+      "width": 390,
+      "scrollWidth": 390,
+      "minText": 13,
+      "smallControls": []
+    },
+    {
+      "screen": "biosignal-unworn",
       "width": 390,
       "scrollWidth": 390,
       "minText": 13,
@@ -203,35 +210,42 @@
       "smallControls": []
     },
     {
-      "screen": "eeg-worn",
+      "screen": "biosignal-worn",
       "width": 1440,
       "scrollWidth": 1440,
       "minText": 13,
       "smallControls": []
     },
     {
-      "screen": "eeg-partial",
+      "screen": "biosignal-partial",
       "width": 1440,
       "scrollWidth": 1440,
       "minText": 13,
       "smallControls": []
     },
     {
-      "screen": "eeg-pending",
+      "screen": "biosignal-pending",
       "width": 1440,
       "scrollWidth": 1440,
       "minText": 13,
       "smallControls": []
     },
     {
-      "screen": "eeg-quality",
+      "screen": "biosignal-quality",
       "width": 1440,
       "scrollWidth": 1440,
       "minText": 13,
       "smallControls": []
     },
     {
-      "screen": "eeg-lost",
+      "screen": "biosignal-lost",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "minText": 13,
+      "smallControls": []
+    },
+    {
+      "screen": "biosignal-unworn",
       "width": 1440,
       "scrollWidth": 1440,
       "minText": 13,
@@ -260,6 +274,9 @@
     }
   ],
   "interactionChecks": [
+    "6지표·부분 결측·회차 추이",
+    "표/격자 평균·범위·전후 차이 독립 대조",
+    "결측 상태 서사·시간 미표시",
     "한 번 안내·비워두기·재열기 비노출",
     "자동 승인 보류·설정 확인",
     "검색/필터",
