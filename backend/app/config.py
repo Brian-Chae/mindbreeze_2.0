@@ -59,6 +59,19 @@ class Settings(BaseSettings):
 
     # Database
     database_url: str = "postgresql://localhost:5432/mindbreeze_dev"
+    # DB 커넥션 풀 — 프로세스(웹 1 + Celery 자식 프로세스 각각)마다 따로 생긴다.
+    #   RDS max_connections 를 모르므로 보수적으로 10+10(프로세스당 최대 20).
+    #   웹: anyio 스레드풀(40)이 동시에 DB 를 쓸 수 있으나 요청 대부분이 짧아 20이면 충분.
+    #   Celery 자식(email 2·exports 1·main 1·report 2·stt 2 = 8)은 태스크당 1~2개만 쓴다.
+    #   → 평상시 합계 약 25~40, 이론 상한은 웹 20 + 자식 8 x 20 = 180 (RDS 소형 ≈ 112~225 이므로 확인 필요).
+    db_pool_size: int = 10
+    db_max_overflow: int = 10
+    # 연결 대기 상한(초). 기존 SQLAlchemy 기본값(30초) 유지.
+    db_pool_timeout: int = 30
+    # RDS 유휴 연결 끊김·재기동 후 죽은 커넥션 사용 방지
+    db_pool_pre_ping: bool = True
+    # 30분마다 연결 재생성(방화벽·RDS 유휴 타임아웃 대비)
+    db_pool_recycle: int = 1800
 
     # Redis
     redis_url: str = "redis://localhost:6379/0"
