@@ -374,6 +374,24 @@ def present_field(key: str, field: dict, input_hash: str, names: dict[str, str] 
     }
 
 
+def apply_edit(fields: dict, key: str, text: str, user_id: str, input_hash: str, edited_at: str) -> dict:
+    """상담사 수정 저장 — edited_* 를 기록하고 source=edited. rule_text·ai_draft 는 그대로 보존한다."""
+    out = {k: dict(v) for k, v in fields.items()}
+    out[key].update(edited_text=text, edited_by=user_id, edited_at=edited_at,
+                    edited_input_hash=input_hash, source="edited")
+    return out
+
+
+def revert_edit(fields: dict, key: str, input_hash: str) -> dict:
+    """수정본을 비우고 초안으로 복원 — 현재 입력과 맞는 AI 초안이 있으면 ai, 아니면 규칙 문장."""
+    out = {k: dict(v) for k, v in fields.items()}
+    f = out[key]
+    ai_valid = bool(f.get("ai_draft")) and f.get("ai_draft_input_hash") == input_hash
+    f.update(edited_text=None, edited_by=None, edited_at=None, edited_input_hash=None,
+             source="ai" if ai_valid else "rule")
+    return out
+
+
 # ───────────────────────── 블록 조립 ─────────────────────────
 
 def error_block() -> dict:

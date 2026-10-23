@@ -11,7 +11,8 @@ from sqlalchemy.orm import Session as DBSession
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.schemas.class_report import (
-    ClassReportResponse, ClassSummaryResponse, NotePromptClaimResponse, NotePromptDismissResponse,
+    ClassReportResponse, ClassSummaryResponse, NarrativeEditRequest, NarrativeEditResponse,
+    NotePromptClaimResponse, NotePromptDismissResponse,
 )
 from app.services import class_summary_service as svc
 
@@ -55,3 +56,16 @@ def dismiss_note_prompt(
     db: DBSession = Depends(get_db),
 ) -> dict:
     return {"dismissed_at": svc.dismiss_note_prompt(db, session_id, current_user["id"])}
+
+
+@router.patch("/{session_id}/class-report/narrative", response_model=NarrativeEditResponse)
+def edit_class_report_narrative(
+    session_id: UUID,
+    payload: NarrativeEditRequest,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    """서사 문장 1개를 수정하거나 AI/규칙 초안으로 되돌린다. 수치·그래프·상태 문구는 수정할 수 없다."""
+    return svc.edit_narrative(
+        db, session_id, current_user["id"], field=payload.field, text=payload.text, revert=payload.revert,
+        base_edited_at=payload.base_edited_at, check_base="base_edited_at" in payload.model_fields_set)

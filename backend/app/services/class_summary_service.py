@@ -488,3 +488,88 @@ def build_class_report(db: DBSession, session_id, viewer_id) -> dict:
         "capabilities": {"can_edit_narrative": can_edit_narrative(db, viewer, session)},
         "fetched_at": _now(),
     }
+
+
+# ─────────────────────────── 서사 문장 수정 ───────────────────────────
+
+def _validate_text(text: str | None, key: str) -> str:
+    cleaned = (text or "").strip()
+    if not cleaned:
+        raise _api_error(422, "empty_text")
+    if any(ord(ch) < 32 and ch not in "\n\t" or ord(ch) == 127 for ch in cleaned):
+        raise _api_error(422, "invalid_text")
+    if len(cleaned) > narrative.max_len_for(key):
+        raise _api_error(422, "text_too_long")
+    return cleaned
+
+
+def edit_narrative(db: DBSession, session_id, viewer_id, *, field: str, text: str | None, revert: bool,
+                   base_edited_at: str | None, check_base: bool) -> dict:
+    """서사 문장 1개 수정/되돌리기. 리포트 행을 잠가 동시 수정을 직렬화하고, 승인·메일·알림·AI 는 건드리지 않는다.
+
+    '올리기' = 리포트에 저장(상담사·기관관리자 열람)일 뿐 회원 발송과 무관하다.
+    """
+    from app.services.report_service import report_domain
+
+    session = db.query(Session).filter(Session.id == _to_uuid(session_id)).first()
+    if session is None:
+        raise _api_error(404, "session_not_found")
+    viewer = db.query(User).filter(User.id == _to_uuid(viewer_id)).first()
+    if viewer is None or not can_edit_narrative(db, viewer, session):
+        raise _api_error(403, "narrative_edit_forbidden")
+    if report_domain(session) != "meditation":
+        raise _api_error(400, "not_class_session")
+    if session.status != "completed":
+        raise _api_error(409, "not_completed")
+    if not narrative.is_editable_key(field):
+        raise _api_error(422, "field_not_editable")
+
+    report = _counselor_report(db, session.id)
+    if report is None:
+        raise _api_error(409, "report_not_ready")
+    # 행 잠금 후 최신 내용을 다시 읽는다(SQLite 는 FOR UPDATE 를 무시하지만 단일 쓰기라 안전).
+    report = (
+        db.query(Report).filter(Report.id == report.id).with_for_update().populate_existing().one()
+    )
+    block = _block_of(report)
+    if block is None:
+        raise _api_error(409, "report_not_ready")
+    narr = block.get("narrative") or {}
+    fields = narr.get("fields") or {}
+    if field not in fields:
+        raise _api_error(422, "field_not_editable")
+    input_hash = narr.get("input_hash") or narrative.compute_input_hash(block)
+    names = {str(viewer.id): viewer.name}
+
+    if check_base and fields[field].get("edited_at") != base_edited_at:
+        detail = {"code": "edit_conflict",
+                  "value": narrative.present_field(field, fields[field], input_hash,
+                                                   {**names, **_editor_names(db, block)})}
+        raise HTTPException(status_code=409, detail=detail)
+
+    if revert:
+        new_fields = narrative.revert_edit(fields, field, input_hash) if fields[field].get("edited_text") else fields
+    else:
+        cleaned = _validate_text(text, field)
+        new_fields = narrative.apply_edit(
+            fields, field, cleaned, str(viewer.id), input_hash,
+            _now().strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
+
+    if new_fields is not fields:
+        content = dict(report.content)
+        content["class_report"] = {**block, "narrative": {**narr, "fields": new_fields}}
+        report.content = content
+        db.commit()
+        # 감사 로그에는 키·사용자·시각만 남긴다 — 문장 원문과 이름은 남기지 않는다.
+        logger.info("[class_report] narrative %s field=%s user_id=%s at=%s",
+                    "revert" if revert else "edit", field, viewer.id, _now().isoformat())
+    return {
+        "field": field,
+        "value": narrative.present_field(field, new_fields[field], input_hash,
+                                         {**names, **_editor_names_from_fields(db, new_fields)}),
+        "fetched_at": _now(),
+    }
+
+
+def _editor_names_from_fields(db: DBSession, fields: dict) -> dict[str, str]:
+    return _editor_names(db, {"narrative": {"fields": fields}})
