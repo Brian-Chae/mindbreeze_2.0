@@ -1,0 +1,4 @@
+import type { ClassSummaryResponse } from '../../lib/class-report/types';
+export function HeadcountStrip({ headcount }: { headcount: ClassSummaryResponse['headcount'] }) {
+  return <section id="summary-attendance" data-section="S2"><div className="ss-number">02 / 함께한 사람들</div><h2>함께한 시간을 기록해요.</h2><dl className="ss-headcount">{[['참석', headcount.attended], ['측정', headcount.measured], ['리포트 대상', headcount.report_targets]].map(([label, count]) => <div key={label}><dt>{label}</dt><dd>{count == null ? '확인 중' : `${count}명`}</dd></div>)}</dl><p className="ss-caption">{headcount.measured == null ? '측정 인원을 확인하고 있어요.' : headcount.attended === 0 ? '이번 회차에는 참석 기록이 없어요.' : headcount.attended === headcount.measured ? `참석한 ${headcount.attended}명 모두 측정했어요.` : `참석한 ${headcount.attended}명 중 ${headcount.measured}명이 LINK BAND로 측정했어요. 측정하지 않은 사람은 기록·리포트만 이어져요.`} 지표별 측정 인원은 리포트의 각 카드에서 확인해요.</p></section>;
+}
