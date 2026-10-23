@@ -124,6 +124,10 @@ class User(Base):
     auto_approve_report: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False, server_default="false"
     )
+    # SDD-237: 클래스 종료 후 '진행 기록 남기기' 1회 안내를 모든 회차에서 끌 수 있다(기본 켜짐).
+    show_session_note_prompt: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False, server_default="true"
+    )
     auth_provider: Mapped[str] = mapped_column(String(20), default="email", nullable=False, server_default="email")  # "email" | "google" | "apple"
     # SDD-017: 초대(pending) 계정의 초대 시각·만료 시각. 초대 관리 목록에서 상태/만료 뱃지에 사용한다.
     invited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
