@@ -1,5 +1,68 @@
 # SDD-237 — 클래스 종료 후 상담사 흐름 시안
 
+## 명상 클래스 서사형 v2 — 10/23 최종 기획 반영
+
+- **기본 진입: [명상 클래스 서사형 v2](index.html#narr-normal)**. 기존 시안은 화면 선택기에 그대로 보존했다. `counseling` 화면·기존 캡처는 변경하지 않았다.
+- 기준: `class-narrative.md` **137a21ff**, 이후 **90991be2**의 AI 허용·상담사용 클래스 리포트 결정 및 `counselor-class-report.md` §2.6. 문서는 읽기만 했으며 `specs/`를 수정하지 않았다.
+- **요약**: S0 종료 헤더 → S1 AI 한 줄·6지표 방향 칩 → S2 참석/측정/리포트 대상 → 클래스 리포트 동선 → S6 승인·선택 기록·다음 회차.
+- **상담사용 클래스 리포트**: S1~S5를 같은 합성 데이터로 표시. 몸→마음 순서, 시간축 그래프, 문장 아래 접힌 6지표 근거, 참여자 검색·상태 필터·개인 상세. 업무 S6는 넣지 않는다. `narr-report`(완료), `narr-report-pending`(생성 중).
+- 서사에 **AI 요약 · 상담사 검토용**과 근거 링크. 통계로 만든 S3 문구·상태 문구에는 AI 라벨을 붙이지 않는다. 실제 AI 호출 없이 채택 문장을 가정한 합성 예시다.
+- 회원 리포트 실제 소스 6개를 확인했다: `NarrativeSections.tsx`, `ClientReportViewer.tsx`, `narrative-sections.css`, `EegTimeline.tsx`, `EegMetricsGrid.tsx`, `ReportCoverSection.tsx`. 라이트 퍼플 커버·편집형 타이포·번호 목차·전후 비교를 가져왔고, 판정 문구·정상 범위 띠는 적용하지 않았다.
+
+### 상태와 동작
+
+| 요약 화면 키 | 상태 | 리포트 상세의 차이 |
+|---|---|---|
+| `narr-normal` | 참석·측정 4명 | 6지표·마음 3선 / 몸 개별 3축 |
+| `narr-partial` | 참석 4명·측정 2명 | 측정자만 집계, 전체 대표 아님 표기 |
+| `narr-single` | 측정 1명 | 6행 유지, 클래스 평균·범위·변화·그래프 숨김 |
+| `narr-poor` | 몸 신호 부족 | 몸 3지표 `—`, 마음만 서술·표시 |
+| `narr-lost` | 일부 연결 유실 | 10–15분 비교 1명 구간 선·범위 비표시 |
+| `narr-unworn` | 미착용 | S3 짧은 안내, S4 측정 없음 1장 |
+| `narr-pending` | 분석 중 | 인원 확인 중, 6지표 `—`, 열기 비활성 |
+| `narr-error` | 요약 조회 실패 | 오류 안내·읽기 재시도, 참여자는 별도 조회 예시 |
+| `narr-zero` | 참석 0명 | S3~S5 없음, 요약에는 다음 회차·목록만 |
+
+- 요약의 근거 링크·참여자 결과 버튼은 **같은 상태의 클래스 리포트 해당 섹션**으로 이동한다. `?report-state=single#narr-report`처럼 상태를 URL에 유지해 새로고침에도 평균이 나타나지 않는다.
+- 5분 버킷 6개와 전반/후반 평균을 한 합성 시계열에서 계산한다. 15분 경계, 마음 0–100%, 몸은 각각 단위·축, 선택 구간의 수치는 그래프 아래 표시한다. 개인 평균 범위 띠는 선택 표시이며 개인 선을 겹치지 않는다.
+- 지표 상세: 전후 2막대 + 80px 시간 추이 + 측정/비교 인원·개인 범위·유효 시간. 지표 식별색은 spec §5.E.1을 따른다. 상태/방향의 우열 색은 없다.
+- 검토 도구에서 유예 0/10분 전환: 0분은 ‘자동 승인 즉시 적용’·보류 없음, 10분은 19:40 예정·이번 회차 보류. 상담사용 리포트는 승인 대상 집계와 분리한다.
+- 진행 기록은 선택. 안내를 본 회차는 재진입 때 숨기며 ‘비워두기’·‘전체 회차 안내 끄기’를 체험할 수 있다. `localStorage`에는 합성 시안의 안내 플래그만 저장한다. 기록 본문은 메모리에만 있으며 서버 저장이 아니다.
+
+### 대표 캡처
+
+Google Chrome, 모바일 390×844 / 데스크톱 1440×1000, DPR 1, fullPage PNG. **v2 신규 44장**. 기존 52장과 과거 보존 10장은 그대로다.
+
+| 화면 | 데스크톱 1440 | 모바일 390 |
+|---|---|---|
+| 정상 회차 요약 | [normal-1440](screenshots/narrative-normal-1440.png) | [normal-390](screenshots/narrative-normal-390.png) |
+| 클래스 리포트 완료 · 그래프 | [report-1440](screenshots/narrative-report-1440.png) | [report-390](screenshots/narrative-report-390.png) |
+| 클래스 리포트 생성 중 | [pending-1440](screenshots/narrative-report-pending-1440.png) | [pending-390](screenshots/narrative-report-pending-390.png) |
+| 측정 1명 요약 | [single-1440](screenshots/narrative-single-1440.png) | [single-390](screenshots/narrative-single-390.png) |
+| 측정 1명 리포트 | [report-single-1440](screenshots/narrative-report-single-1440.png) | [report-single-390](screenshots/narrative-report-single-390.png) |
+| 미착용 요약 | [unworn-1440](screenshots/narrative-unworn-1440.png) | [unworn-390](screenshots/narrative-unworn-390.png) |
+| 미착용 리포트 | [report-unworn-1440](screenshots/narrative-report-unworn-1440.png) | [report-unworn-390](screenshots/narrative-report-unworn-390.png) |
+| 몸 그래프 탭 | [body-1440](screenshots/narrative-body-1440.png) | [body-390](screenshots/narrative-body-390.png) |
+| 지표 근거 펼침 · 범위 | [evidence-1440](screenshots/narrative-evidence-1440.png) | [evidence-390](screenshots/narrative-evidence-390.png) |
+| 참여자별 상세 펼침 | [detail-1440](screenshots/narrative-participant-detail-1440.png) | [detail-390](screenshots/narrative-participant-detail-390.png) |
+| 유예 10분 | [grace-1440](screenshots/narrative-grace-1440.png) | [grace-390](screenshots/narrative-grace-390.png) |
+
+나머지 상태도 `screenshots/narrative-{상태}-{폭}.png`, 리포트는 `narrative-report-{상태}-{폭}.png`로 캡처했다. 정상 리포트만 `narrative-report-{폭}.png`다.
+
+### 검증 및 기획과의 차이
+
+- 실행: `node designs/class-end-host-flow/capture-narrative.cjs`. 원본 저장소 `frontend/node_modules/playwright`와 `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome` 사용. HTTP 요청 차단, file URL로 실행.
+- [검증 JSON](narrative-validation.json): 9상태 × 요약/리포트 × 2폭 = **36화면**. 가로 넘침 0, 최소 글자 13px, 조작 44×44px 이상. 페이지 오류·외부 HTTP 요청 0.
+- 수치 독립 재계산, 0–100 차트 좌표, 결측 구간의 선 끊김, 몸/마음 탭, 근거 펼침, 검색, 구간값, 유예/보류, 1회 안내 재진입, 예외 리포트 상태·새로고침을 실제 브라우저에서 검사했다.
+- 기존 상담 `#app`은 137a21ff 소스와 같은 안내 상태로 맞춰 **390/1440 픽셀 동일** 확인. 상담 캡처 파일은 생성·수정하지 않았으며 비교는 메모리 버퍼만 사용했다. 구현자와 별도 검토자의 읽기전용 검토를 거쳤다.
+- **의도한 차이**: 설치·제품 코드 변경 없는 정적 HTML 시안이므로 Recharts 대신 동일 축·수치를 쓰는 SVG를 사용한다. 원시 1초 신호/이동평균·서버 집계·실제 AI 호출은 구현하지 않고 5분 집계 합성 데이터로 표현한다. 선택 항목인 참여자 행 미니 차트와 방향 분포 건수는 생략하고 상세 펼침으로 연결했다.
+- 버튼은 최신 감독 지시의 **‘상담사 클래스 리포트 열기’**를 사용했다(기획의 ‘클래스 리포트 전체 보기’와 동일 동선). 초기 S0~S6 한 페이지 요구는 최신 90991be2 §2.6의 요약/리포트 분리로 대체했다.
+- 제품 코드·서버·DB·환경파일·메일·실제 AI 미사용. 이 결과는 디자인 시안 검증이며 제품 동작·운영 검증이 아니다. PR·머지·develop 푸시·배포 없음.
+
+---
+
+## 기존 시안 기록 (보존)
+
 - **검토용 프로토타입**. 제품 구현 없음. 모든 이름·시간·인원·리포트는 합성 샘플이다.
 - [HTML 열기](index.html) · [기획안](../../specs/sdd-237-class-end-host-flow/spec.md)
 - HTML을 Chrome에서 직접 열면 된다. 서버·로그인·설치·환경파일이 필요 없다.
@@ -24,7 +87,7 @@
 
 ## 캡처 목록
 
-Chrome / 1x / 모바일 390×844, 데스크톱 1440×1000 viewport의 **fullPage PNG**. 콘텐츠 길이에 따라 파일 높이는 다르다. 현재 캡처 52장.
+Chrome / 1x / 모바일 390×844, 데스크톱 1440×1000 viewport의 **fullPage PNG**. 콘텐츠 길이에 따라 파일 높이는 다르다. 기존 시안 캡처 52장 (v2 별도).
 
 | 화면 | 390px | 1440px |
 |---|---|---|
