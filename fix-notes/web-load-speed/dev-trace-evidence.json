@@ -1,0 +1,434 @@
+{
+  "reference": "dev /classes auth/refresh 요청 시작 = 0ms; 개인 정보와 전체 URL을 제거한 CDP 이벤트",
+  "events": [
+    {
+      "msAfterRefreshStart": 54.434,
+      "event": "FunctionCall",
+      "durationMs": 2.286,
+      "functionName": "",
+      "lineNumber": 9,
+      "columnNumber": 123174
+    },
+    {
+      "msAfterRefreshStart": 56.732,
+      "event": "FunctionCall",
+      "durationMs": 0.007,
+      "functionName": "",
+      "lineNumber": 9,
+      "columnNumber": 123174
+    },
+    {
+      "msAfterRefreshStart": 57.1,
+      "event": "Layout",
+      "durationMs": 0.557
+    },
+    {
+      "msAfterRefreshStart": 57.716,
+      "event": "Paint",
+      "durationMs": 0.037
+    },
+    {
+      "msAfterRefreshStart": 57.726,
+      "event": "Paint",
+      "durationMs": 0.026
+    },
+    {
+      "msAfterRefreshStart": 57.947,
+      "event": "FunctionCall",
+      "durationMs": 0.133,
+      "functionName": "ee",
+      "lineNumber": 2,
+      "columnNumber": 91915
+    },
+    {
+      "msAfterRefreshStart": 58.082,
+      "event": "FunctionCall",
+      "durationMs": 0.003,
+      "functionName": "",
+      "lineNumber": 9,
+      "columnNumber": 123174
+    },
+    {
+      "msAfterRefreshStart": 58.105,
+      "event": "FunctionCall",
+      "durationMs": 0.034,
+      "functionName": "ee",
+      "lineNumber": 2,
+      "columnNumber": 91915
+    },
+    {
+      "msAfterRefreshStart": 58.136,
+      "event": "TimerInstall",
+      "durationMs": 0.0,
+      "timerId": 2,
+      "timeout": 297
+    },
+    {
+      "msAfterRefreshStart": 58.14,
+      "event": "FunctionCall",
+      "durationMs": 0.001,
+      "functionName": "",
+      "lineNumber": 9,
+      "columnNumber": 123174
+    },
+    {
+      "msAfterRefreshStart": 81.8,
+      "event": "Layout",
+      "durationMs": 0.282
+    },
+    {
+      "msAfterRefreshStart": 82.18,
+      "event": "Paint",
+      "durationMs": 0.047
+    },
+    {
+      "msAfterRefreshStart": 85.408,
+      "event": "Layout",
+      "durationMs": 0.275
+    },
+    {
+      "msAfterRefreshStart": 85.799,
+      "event": "Paint",
+      "durationMs": 0.184
+    },
+    {
+      "msAfterRefreshStart": 86.99,
+      "event": "Layout",
+      "durationMs": 0.267
+    },
+    {
+      "msAfterRefreshStart": 103.787,
+      "event": "Paint",
+      "durationMs": 0.06
+    },
+    {
+      "msAfterRefreshStart": 108.2,
+      "event": "FunctionCall",
+      "durationMs": 0.023,
+      "functionName": "",
+      "lineNumber": 9,
+      "columnNumber": 123174
+    },
+    {
+      "msAfterRefreshStart": 108.287,
+      "event": "FunctionCall",
+      "durationMs": 1.762,
+      "functionName": "ee",
+      "lineNumber": 2,
+      "columnNumber": 91915
+    },
+    {
+      "msAfterRefreshStart": 110.042,
+      "event": "TimerInstall",
+      "durationMs": 0.0,
+      "timerId": 3,
+      "timeout": 245
+    },
+    {
+      "msAfterRefreshStart": 110.138,
+      "event": "FunctionCall",
+      "durationMs": 0.004,
+      "functionName": "",
+      "lineNumber": 9,
+      "columnNumber": 123174
+    },
+    {
+      "msAfterRefreshStart": 148.416,
+      "event": "TimerInstall",
+      "durationMs": 0.0,
+      "timerId": 4,
+      "timeout": 0
+    },
+    {
+      "msAfterRefreshStart": 148.667,
+      "event": "FunctionCall",
+      "durationMs": 0.026,
+      "functionName": "e.onload",
+      "lineNumber": 10,
+      "columnNumber": 36895
+    },
+    {
+      "msAfterRefreshStart": 148.694,
+      "event": "FunctionCall",
+      "durationMs": 0.014,
+      "functionName": "",
+      "lineNumber": 9,
+      "columnNumber": 123174
+    },
+    {
+      "msAfterRefreshStart": 149.195,
+      "event": "Layout",
+      "durationMs": 0.025
+    },
+    {
+      "msAfterRefreshStart": 149.272,
+      "event": "TimerFire",
+      "durationMs": 0.034,
+      "timerId": 4
+    },
+    {
+      "msAfterRefreshStart": 149.275,
+      "event": "FunctionCall",
+      "durationMs": 0.03,
+      "functionName": "",
+      "lineNumber": 308,
+      "columnNumber": 503
+    },
+    {
+      "msAfterRefreshStart": 149.326,
+      "event": "FunctionCall",
+      "durationMs": 0.073,
+      "functionName": "ee",
+      "lineNumber": 2,
+      "columnNumber": 91915
+    },
+    {
+      "msAfterRefreshStart": 149.4,
+      "event": "FunctionCall",
+      "durationMs": 0.002,
+      "functionName": "",
+      "lineNumber": 9,
+      "columnNumber": 123174
+    },
+    {
+      "msAfterRefreshStart": 149.424,
+      "event": "FunctionCall",
+      "durationMs": 0.014,
+      "functionName": "up",
+      "lineNumber": 10,
+      "columnNumber": 28400
+    },
+    {
+      "msAfterRefreshStart": 149.442,
+      "event": "FunctionCall",
+      "durationMs": 0.003,
+      "functionName": "up",
+      "lineNumber": 10,
+      "columnNumber": 28400
+    },
+    {
+      "msAfterRefreshStart": 149.447,
+      "event": "FunctionCall",
+      "durationMs": 0.003,
+      "functionName": "up",
+      "lineNumber": 10,
+      "columnNumber": 28400
+    },
+    {
+      "msAfterRefreshStart": 149.454,
+      "event": "FunctionCall",
+      "durationMs": 0.959,
+      "functionName": "ee",
+      "lineNumber": 2,
+      "columnNumber": 91915
+    },
+    {
+      "msAfterRefreshStart": 150.409,
+      "event": "TimerInstall",
+      "durationMs": 0.0,
+      "timerId": 5,
+      "timeout": 205
+    },
+    {
+      "msAfterRefreshStart": 150.415,
+      "event": "FunctionCall",
+      "durationMs": 0.002,
+      "functionName": "",
+      "lineNumber": 9,
+      "columnNumber": 123174
+    },
+    {
+      "msAfterRefreshStart": 150.447,
+      "event": "FunctionCall",
+      "durationMs": 0.005,
+      "functionName": "up",
+      "lineNumber": 10,
+      "columnNumber": 28400
+    },
+    {
+      "msAfterRefreshStart": 150.455,
+      "event": "FunctionCall",
+      "durationMs": 0.001,
+      "functionName": "up",
+      "lineNumber": 10,
+      "columnNumber": 28400
+    },
+    {
+      "msAfterRefreshStart": 150.459,
+      "event": "FunctionCall",
+      "durationMs": 0.001,
+      "functionName": "up",
+      "lineNumber": 10,
+      "columnNumber": 28400
+    },
+    {
+      "msAfterRefreshStart": 356.808,
+      "event": "TimerFire",
+      "durationMs": 0.473,
+      "timerId": 5
+    },
+    {
+      "msAfterRefreshStart": 356.83,
+      "event": "FunctionCall",
+      "durationMs": 0.439,
+      "functionName": "yu",
+      "lineNumber": 9,
+      "columnNumber": 112132
+    },
+    {
+      "msAfterRefreshStart": 357.274,
+      "event": "FunctionCall",
+      "durationMs": 0.004,
+      "functionName": "",
+      "lineNumber": 9,
+      "columnNumber": 123174
+    },
+    {
+      "msAfterRefreshStart": 358.873,
+      "event": "Layout",
+      "durationMs": 17.146
+    },
+    {
+      "msAfterRefreshStart": 376.578,
+      "event": "Paint",
+      "durationMs": 1.236
+    },
+    {
+      "msAfterRefreshStart": 376.59,
+      "event": "Paint",
+      "durationMs": 1.169
+    },
+    {
+      "msAfterRefreshStart": 376.703,
+      "event": "Layout",
+      "durationMs": 0.008
+    },
+    {
+      "msAfterRefreshStart": 377.76,
+      "event": "Paint",
+      "durationMs": 0.004
+    },
+    {
+      "msAfterRefreshStart": 377.764,
+      "event": "Paint",
+      "durationMs": 0.042
+    },
+    {
+      "msAfterRefreshStart": 377.806,
+      "event": "Paint",
+      "durationMs": 0.006
+    },
+    {
+      "msAfterRefreshStart": 378.053,
+      "event": "FunctionCall",
+      "durationMs": 4.978,
+      "functionName": "ee",
+      "lineNumber": 2,
+      "columnNumber": 91915
+    },
+    {
+      "msAfterRefreshStart": 378.331,
+      "event": "TimerInstall",
+      "durationMs": 0.0,
+      "timerId": 6,
+      "timeout": 15000
+    },
+    {
+      "msAfterRefreshStart": 378.677,
+      "event": "TimerInstall",
+      "durationMs": 0.0,
+      "timerId": 7,
+      "timeout": 15000
+    },
+    {
+      "msAfterRefreshStart": 379.379,
+      "event": "TimerInstall",
+      "durationMs": 0.0,
+      "timerId": 8,
+      "timeout": 20000
+    },
+    {
+      "msAfterRefreshStart": 379.429,
+      "event": "TimerInstall",
+      "durationMs": 0.0,
+      "timerId": 9,
+      "timeout": 15000
+    },
+    {
+      "msAfterRefreshStart": 381.102,
+      "event": "TimerInstall",
+      "durationMs": 0.0,
+      "timerId": 10,
+      "timeout": 15000
+    },
+    {
+      "msAfterRefreshStart": 381.312,
+      "event": "TimerInstall",
+      "durationMs": 0.0,
+      "timerId": 11,
+      "timeout": 15000
+    },
+    {
+      "msAfterRefreshStart": 381.476,
+      "event": "TimerInstall",
+      "durationMs": 0.0,
+      "timerId": 12,
+      "timeout": 15000
+    },
+    {
+      "msAfterRefreshStart": 383.052,
+      "event": "TimerInstall",
+      "durationMs": 0.0,
+      "timerId": 13,
+      "timeout": 15000
+    },
+    {
+      "msAfterRefreshStart": 383.422,
+      "event": "FunctionCall",
+      "durationMs": 0.032,
+      "functionName": "up",
+      "lineNumber": 10,
+      "columnNumber": 28400
+    },
+    {
+      "msAfterRefreshStart": 383.457,
+      "event": "FunctionCall",
+      "durationMs": 0.015,
+      "functionName": "up",
+      "lineNumber": 10,
+      "columnNumber": 28400
+    },
+    {
+      "msAfterRefreshStart": 383.481,
+      "event": "FunctionCall",
+      "durationMs": 0.005,
+      "functionName": "up",
+      "lineNumber": 10,
+      "columnNumber": 28400
+    },
+    {
+      "msAfterRefreshStart": 383.488,
+      "event": "FunctionCall",
+      "durationMs": 0.002,
+      "functionName": "up",
+      "lineNumber": 10,
+      "columnNumber": 28400
+    },
+    {
+      "msAfterRefreshStart": 383.494,
+      "event": "FunctionCall",
+      "durationMs": 0.004,
+      "functionName": "up",
+      "lineNumber": 10,
+      "columnNumber": 28400
+    },
+    {
+      "msAfterRefreshStart": 383.5,
+      "event": "FunctionCall",
+      "durationMs": 0.002,
+      "functionName": "up",
+      "lineNumber": 10,
+      "columnNumber": 28400
+    }
+  ]
+}

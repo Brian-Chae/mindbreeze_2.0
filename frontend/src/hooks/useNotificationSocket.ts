@@ -6,11 +6,15 @@ import { useAuthStore } from '../stores/authStore';
 import { useNotificationStore } from '../stores/notificationStore';
 import { useChatStore } from '../stores/chatStore';
 import { getChatRoom } from '../lib/api/chat';
+import { invalidateSharedReads } from '../lib/api/client';
 import type { NotificationExtra } from '../lib/api/notifications';
 // HOOK-STATE-01 / WS-05: /chat 소켓은 getChatSocket() 싱글톤을 재사용한다.
 // io()로 직접 생성하면 채팅 화면(ChatRoom·ClassChatPanel)과 함께 /chat 네임스페이스가
 // 2중 연결되고, cleanup 의 socket.off(event) 가 공유 소켓의 다른 리스너까지 제거한다.
 import { getChatSocket } from '../lib/socket';
+
+// 최초 연결은 seed 요청을 공유하고, 재연결은 놓친 이벤트를 복구한다.
+const connectedSockets = new WeakSet<Socket>();
 
 export function useNotificationSocket() {
   const token = useAuthStore((s) => s.accessToken);
@@ -32,6 +36,11 @@ export function useNotificationSocket() {
 
     const handleConnect = (): void => {
       if (import.meta.env.DEV) console.log('[WS] socket.io connected');
+      // 최초 연결은 진행 중 seed만 공유한다. 완료된 seed는 연결 직전 누락을 재확인한다.
+      const firstConnection = !connectedSockets.has(socket);
+      invalidateSharedReads('notifications', firstConnection);
+      invalidateSharedReads('chat', firstConnection);
+      connectedSockets.add(socket);
       useNotificationStore.getState().setWsConnected(true);
       fetch();
       // 세션 초대 목록도 연결 시 새로고침 — 홈/세션 화면의 "초대된 클래스" 카드용
@@ -49,8 +58,11 @@ export function useNotificationSocket() {
     };
 
     const handleNewNotification = (data: { id?: string; type?: string; title?: string; body?: string; extra?: NotificationExtra | null }): void => {
-      // 알림 도착 → unread count 갱신
+      // 수신 직전 진행 중이던 조회까지 폐기하고 최신 배지를 즉시 가져온다.
+      invalidateSharedReads('notifications');
+      if (data.type === 'chat') invalidateSharedReads('chat');
       fetch();
+      void useNotificationStore.getState().refreshSessionInvites();
       // 세션 초대 알림 → 홈/세션 화면 "초대된 클래스" 카드에 실시간 반영
       if (data.extra?.event_type === 'session_invited') {
         const sessionId =
@@ -98,6 +110,12 @@ export function useNotificationSocket() {
       }
     };
 
+    // 선택한 방의 메시지/읽음/프로필 이벤트도 다음 메뉴의 목록 재사용을 무효화한다.
+    const invalidateRooms = () => invalidateSharedReads('chat');
+    socket.on('new_message', invalidateRooms);
+    socket.on('messages_read', invalidateRooms);
+    socket.on('profile_updated', invalidateRooms);
+    if (socket.connected) connectedSockets.add(socket);
     socket.on('connect', handleConnect);
     socket.on('connect_error', handleConnectError);
     socket.on('disconnect', handleDisconnect);
@@ -111,6 +129,9 @@ export function useNotificationSocket() {
       disposed = true;
       // 공유 싱글톤이므로 disconnect 하지 않고 이 훅이 등록한 리스너만 해제한다.
       // (socket.off(event) 단독 호출은 다른 컴포넌트의 리스너까지 제거한다.)
+      socket.off('new_message', invalidateRooms);
+      socket.off('messages_read', invalidateRooms);
+      socket.off('profile_updated', invalidateRooms);
       socket.off('new_notification', handleNewNotification);
       socket.off('connect', handleConnect);
       socket.off('connect_error', handleConnectError);

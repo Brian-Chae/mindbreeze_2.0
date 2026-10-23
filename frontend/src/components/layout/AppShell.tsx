@@ -58,9 +58,12 @@ export default function AppShell({
   // 채팅방 목록 불러오기 (사이드바 뱃지용)
   const setRooms = useChatStore((s) => s.setRooms);
   useEffect(() => {
+    const snapshot = useChatStore.getState().rooms;
+    let active = true;
     listChatRooms()
-      .then((res) => setRooms(res.rooms))
+      .then((res) => { if (active) setRooms(res.rooms, snapshot); })
       .catch(() => { /* 조용히 실패 */ });
+    return () => { active = false; };
   }, [setRooms]);
 
   // 리포트 미읽음 수 초기 로드 (사이드바·하단 탭 공용 배지)
