@@ -50,7 +50,7 @@ const url=pathToFileURL(path.join(__dirname,'index.html')).href;
    assert.doesNotMatch(await page.locator('#auto-policy-card').innerText(),/승인 예정/);
    await page.goto(url+'?check=settings#auto-settings');
    for(const id of ['counsel','meditation']){
-    assert.equal(await page.locator('#'+id+'-grace').inputValue(),'10');
+    assert.equal(await page.locator('#'+id+'-grace').inputValue(),'0');
     assert.deepEqual(await page.locator('#'+id+'-grace option').evaluateAll(es=>es.map(e=>e.value)),['0','5','10','30']);
     await page.locator('#'+id+'-policy').selectOption('off');assert(await page.locator('#'+id+'-grace').isDisabled());
     await page.locator('#'+id+'-policy').selectOption('on');assert(await page.locator('#'+id+'-grace').isEnabled());
