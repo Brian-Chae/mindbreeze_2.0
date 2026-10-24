@@ -230,3 +230,48 @@ A가 model/schema/migration을 모두 소유한다. C가 필요한 DB 변경은 
 3. v1 float32와 raw-v2 컨테이너의 schema dispatch, 추가 raw/packet/sample-map/raw-derived/display-status 경로, stream/segment 분리 파일명, `[from,to)`와 bin extra range를 확인해야 한다. ACC30Hz 고정·native25Hz 자동 재라벨은 금지다.
 4. 기본 가명 반출은 session 상대시각·alias만 사용한다. 원 UUID/tick/UTC 포함 raw bin은 무손실 권한 없으면 차단 또는 명시적 redacted_packet_view로 제공한다. 가명 feature device_timestamp_ms는 null, 기본 화면은 participant_player(없으면 session_player)다.
 5. 해결한 리뷰 지적: 기존 quality/소수ms 보존, ACC 파형 보관분리, ADC24/lead-off/MB 환산계수, B0 파라미터, 다중 stream/segment/view 종료 순번, 상세 null 사유, 6지표 원천 매핑, EEG fixture coverage4 정합. 추가 G1 차단사항 없음.
+
+
+## 8. T01 실행 결과 — FIX #89 인수(2026-10-24, 워커 A)
+
+- **인수 대상:** `fix/eeg-raw-ack-loss` 최종 commit `9501fc59`(develop `371789b0`에 PR #89로 머지). 본 브랜치 `sdd/244-a-server`에는 `587ba302`(origin/fix/eeg-raw-ack-loss 머지)로 포함되어 있다.
+- **FIX BE 변경(전부 확장 지점):**
+  - `schemas/eeg.py`: `RawAckResult{chunk_id, upload_status, checksum, size_bytes}` 추가, `RawAckResponse.chunks[]`(기본 빈 리스트) 추가. 기존 `acked/failed/eeg_record_id/file_count` 유지.
+  - `services/eeg_raw_service.py::ack_upload`: 응답에 요청 순서대로 청크별 결과를 담는다. DB commit 후 응답하며 재ACK도 `uploaded`를 돌려준다. 마이그레이션 없음.
+  - 테스트: `tests/test_sdd027_rollup_raw_report.py` test_08(청크별 ACK, 재ACK 동일 응답)·mixed uploaded/failed.
+- **244 확장 규칙(중복 구현 금지):** v2 ACK의 항목별 결과는 FIX의 `chunks[]` 구조(chunk_id/status/checksum/size)를 확장해 쓰고 v1 라우트 응답 형태는 건드리지 않는다. FIX 큐/상태 머신은 B 소유로 확장한다.
+- **FIX 요약에서 244가 이어받는 한계:** 서버 HEAD는 존재·크기만 확인(SHA-256 재검증 없음), 자격증명 미설정(stub) 시 검증 건너뜀 → T04가 v2 경로에 SHA-256 검증과 불변 object key를 추가한다. v1 경로의 의미는 바꾸지 않는다.
+- **회귀 확인:** `pytest tests/test_sdd027_rollup_raw_report.py tests/test_sdd244_contracts.py tests/test_sdd244_decoder.py` → **128 passed**(A02/A03 legacy 기준선). FIX 회귀 실패 없음.
+- 충돌 파일 예약: 위 소유권 표(A)의 BE 경로만 수정한다. FE 파일은 B 소유.
+
+
+## 9. T04~T06 실행 결과 — 서버 수집·산출물·종료 판정 (2026-10-24, 워커 A)
+
+| Task | 커밋 | 마이그레이션 | 내용 |
+|---|---|---|---|
+| T04 선행 | `90edd067`, `b3e9ee15` | – | API wrapper 스키마(`schemas/biosignal.py` 하단, G1 DTO 불변) + `contracts/api-v1.md`, alias↔UUID 규칙 |
+| T04 | `8fc42276` | M1 `e036a0244001` | raw v2 presign/검증 ACK(세 신호), capability, identity 확장, stream/segment/gap/close/manifest 원장 |
+| T05 | `dc2babad` | M2 `e036a0244002` | artifact(feature/raw_derived/indices/normalization/algorithm) presign/ACK, 1Hz 스냅샷·정규화 색인, 기존 feature 미전달 필드 연결 |
+| T06 | `b40bca3f` | M3 `e036a0244003` | gap/close intent API, manifest revision 판정·조회, 연구 영수증/삭제 outbox 스키마(서비스 제외), revision 불변 트리거 |
+
+- **DB**: alembic head 1개(`e036a0244003`). 로컬 임시 PG16(저장소 밖 `/tmp`, 운영/개발 DB 아님)에서 빈 DB→head, 구 head에 legacy 행 시드 후 upgrade(행·기본값 보존), downgrade(v2 데이터 있으면 거부)·재upgrade를 확인했다. 큰 테이블 잠금/장시간 rewrite 계측은 하지 않았다(`lock_timeout 5s`, 상수 default 컬럼 추가만).
+- **불변성**: presign은 SigV4로 `x-amz-checksum-sha256`·SSE·content-type을 서명한다(오프라인 서명 검증). **실제 S3/MinIO에서 다른 바이트 재PUT 거절, HEAD `ChecksumSHA256` 반환, 버전 ID는 검증하지 못했다**(모의 저장소만). 저장소가 체크섬을 돌려주지 않으면 서버가 ≤1MiB를 스트리밍해 직접 SHA-256을 검증한다. 검증 불가(스텁/자격증명 없음)는 `failed`(`verification_unavailable`)로 두므로 로컬 스텁 환경에서는 v2 ACK가 성공하지 않는다.
+- **소유권 표 밖 수정(불가피, 분류 누락 테스트가 실패해서)**: `services/dev_data_reset.py`(세션 초기화 범위 분류), `services/account_deletion_sweep_service.py`(탈퇴 시 참여자 소유 테이블·객체 열 분류), `tests/pg/test_pg_migration_schema.py`(테이블 수 단언 95→107). 모두 신규 테이블 등록만 한 additive 변경이다.
+- **T04 커밋 시점 한계**: 위 `test_pg_migration_schema` 테이블 수 단언은 T04 커밋(`8fc42276`)에서는 PG로 돌리지 않아 갱신하지 못했고 T05 커밋에서 정정했다.
+- **RED**: T04는 테스트를 먼저 작성해 구현 전 `10 failed, 7 errors`를 확인했다. T05·T06 테스트는 구현 모듈이 없는 상태에서 작성했으나 구현 전 별도 RED 실행 로그는 남기지 않았다(모듈 부재로 import 실패 자명).
+
+### 검증 수치
+| 범위 | 결과 |
+|---|---|
+| 신규 SQLite 테스트 | ingest 18 + artifacts 10 + manifest 10 (모두 통과) |
+| 신규 PG 테스트 | `pg/test_sdd244_schema` 14 + `pg/test_sdd244_ingest` 3 (모두 통과) |
+| 백엔드 전체(SQLite) | **4140 passed, 485 skipped, 0 failed** (600s, FIX 기준 3991 passed/468 skipped) |
+| PG 전체(`tests/pg`, 빈 DB→head) | **493 passed** |
+| 계약(G1) | `test_sdd244_contracts` 58 passed (변경 없음) |
+
+### 미구현·한계(후속 인계)
+- PG 위 **API 전 구간(인가 포함)** 시험은 하지 않았다(PG 시험은 service 레벨, 부모 FK는 replica 모드로 생략). 인가·소유 검증은 SQLite API 시험.
+- 연구 영수증/삭제 outbox/연구 item 컬럼은 **스키마만**이다. 서비스·정책(C의 T13/T14)과 실제 객체 삭제는 없다. `biosignal_artifacts` 객체 90일 삭제(raw_derived)·`object_deletion_outbox` 사용은 C가 구현해야 한다. 기존 `retention_sweep_service`/`research_export_service`/`media_cleanup_service`/`original_deletion_service`는 `eeg_raw_chunks`를 `schema_version`/`signal_type` 구분 없이 읽는다 — v2(PPG/ACC 포함) 행이 v1 디코더로 들어가지 않도록 **C가 `schema_version='1.0'`(또는 `segment_id='legacy'`) 필터를 넣어야 한다**. `biosignal_artifacts.object_key`도 삭제 대상 열에 추가해야 한다(계정 삭제는 반영함).
+- feature 객체 안의 `raw_artifact_id_alias` 같은 참조는 객체를 파싱하지 않아 **서버가 해석 검증하지 않는다**(indices→feature alias만 검증).
+- 신호별 연구 동의 범위는 정의되지 않아 capability에서 PPG/ACC는 `unknown`.
+- report 생성(`report_task`)은 이제 `faa`/`total_neural_activity` 컬럼 값을 실제로 받는다(이전엔 항상 NULL) — 새 데이터의 리포트 점수 입력이 달라질 수 있다.

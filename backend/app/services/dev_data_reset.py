@@ -38,6 +38,13 @@ SESSIONS_SCOPE_DELETE = frozenset({
     # SDD-220: 채팅 신고·차단(chat_rooms/messages FK 에 종속)도 채팅과 함께 정리한다.
     "chat_reports", "chat_blocks",
 })
+# SDD-244 M1: 생체신호 수집 원장(sessions/참가자 FK 종속)도 세션 초기화 범위에 포함한다.
+SESSIONS_SCOPE_DELETE = SESSIONS_SCOPE_DELETE | frozenset({
+    "biosignal_streams", "biosignal_segments", "biosignal_gap_events", "biosignal_close_intents",
+    "biosignal_manifest_revisions", "biosignal_manifest_current",
+    # SDD-244 M2: 산출물 원장·화면 스냅샷·feature alias 색인(세션 종속). 정규화 모델 snapshot 은 전역 content-addressed 라 보존.
+    "biosignal_artifacts", "biosignal_feature_aliases", "display_snapshots",
+})
 
 # scope=sessions 에서 보존하는 테이블(계정·기관·인증·에이전트·연구·감사).
 SESSIONS_SCOPE_KEEP = frozenset({
@@ -56,6 +63,8 @@ SESSIONS_SCOPE_KEEP = frozenset({
 # SDD-220: 소셜 연결(users FK)·탈퇴 원장·소셜 해제 outbox·공개 삭제 요청은 계정 영역이라 sessions 범위에서 보존한다.
 #   (삭제 원장은 영구 삭제 완료의 근거이므로 개발 초기화로 지우지 않는다.)
 SESSIONS_SCOPE_KEEP = SESSIONS_SCOPE_KEEP | frozenset({
+    "research_signal_receipts", "object_deletion_outbox",  # SDD-244 M3: FK 없는 연구 영수증·삭제 outbox 는 초기화로 지우지 않는다
+    "normalization_snapshots",  # SDD-244 M2: 전역 content-addressed 정규화 모델 snapshot(세션 비종속)
     "social_identities", "social_revoke_outbox", "account_deletion_ledger",
     "account_deletion_objects", "account_deletion_requests",
 })

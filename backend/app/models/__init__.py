@@ -147,8 +147,8 @@ from app.models.retention_sweep_run import RetentionSweepRun
 __all__ += ["RetentionSweepRun"]
 
 # SDD-209 B13: 연구 DB 내보내기 배치
-from app.models.research_export import ResearchExportBatch, ResearchExportItem
-__all__ += ["ResearchExportBatch", "ResearchExportItem"]
+from app.models.research_export import ResearchExportBatch, ResearchExportItem, ResearchSignalReceipt, ObjectDeletionOutbox
+__all__ += ["ResearchExportBatch", "ResearchExportItem", "ResearchSignalReceipt", "ObjectDeletionOutbox"]
 
 # SDD-216: 편성 트랜잭션과 진행자 요청
 from app.models.class_scheduling import ClassOperation, ClassEffect, ClassEmailInvite, SessionHostRequest, SessionHostNote
@@ -168,3 +168,15 @@ __all__ += [
 
 from app.models.class_report_job import ClassReportJob, ClassReportJobItem
 __all__ += ['ClassReportJob', 'ClassReportJobItem']
+
+# SDD-244 M1: 생체신호 stream/segment/gap/종료 의도/manifest revision
+from app.models.biosignal import (
+    BiosignalStream, BiosignalSegment, BiosignalGapEvent, BiosignalCloseIntent,
+    BiosignalManifestRevision, BiosignalManifestCurrent, BiosignalArtifact, BiosignalFeatureAlias,
+    DisplaySnapshot, NormalizationSnapshotRow,
+)
+__all__ += [
+    "BiosignalStream", "BiosignalSegment", "BiosignalGapEvent", "BiosignalCloseIntent",
+    "BiosignalManifestRevision", "BiosignalManifestCurrent", "BiosignalArtifact", "BiosignalFeatureAlias",
+    "DisplaySnapshot", "NormalizationSnapshotRow",
+]

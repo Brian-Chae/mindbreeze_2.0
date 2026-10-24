@@ -94,6 +94,16 @@ PARTICIPANT_OWNED: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "reports": (("participant_id",), ("user_id",)),
     "session_presence_leases": (("participant_id",), ()),
     "class_makeup_assignments": (("source_participant_id", "target_participant_id"), ()),
+    # SDD-244 M1: 생체신호 수집 원장(참여자 FK). raw 객체 키는 eeg_raw_chunks 의 object_key 로 이미 원장에 기록된다.
+    "biosignal_streams": (("participant_id",), ()),
+    "biosignal_gap_events": (("participant_id",), ()),
+    "biosignal_close_intents": (("participant_id",), ()),
+    "biosignal_manifest_revisions": (("participant_id",), ()),
+    "biosignal_manifest_current": (("participant_id",), ()),
+    # SDD-244 M2: 산출물 원장·화면 스냅샷(객체 키는 OBJECT_COLUMNS 에 등록)
+    "biosignal_artifacts": (("participant_id",), ()),
+    "biosignal_feature_aliases": (("participant_id",), ()),
+    "display_snapshots": (("participant_id",), ()),
 }
 
 # 타인과 공유되는 행에서 탈퇴자 참조만 NULL 로 바꾼다(nullable FK).
@@ -143,6 +153,7 @@ MEMBER_SCRUB = {"guest_name": None, "gender": None, "birth_date": None, "report_
 OBJECT_COLUMNS: tuple[tuple[str, str, str], ...] = (
     ("eeg_records", "s3_key", "s3"),
     ("eeg_raw_chunks", "object_key", "s3"),
+    ("biosignal_artifacts", "object_key", "s3"),
     ("reports", "pdf_url", "url"),
     ("credentials", "s3_key", "s3"),
     ("data_export_jobs", "object_key", "s3"),
