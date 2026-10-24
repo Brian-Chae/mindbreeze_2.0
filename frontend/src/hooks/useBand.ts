@@ -45,6 +45,7 @@ import {
   type RawEegSample,
 } from '../lib/session-live/raw-encoder';
 import { useEegRawUpload, type EnqueueRawChunkInput } from './useEegRawUpload';
+import { useBiosignalCapture } from './useBiosignalCapture';
 import {
   deviceStatusFromLeadOff,
   normalizeSignalQuality01,
@@ -445,6 +446,17 @@ export function useBand({
   rawDrainRef.current = rawUpload.drain;
   const rawFlushRef = useRef(rawUpload.flush);
   rawFlushRef.current = rawUpload.flush;
+  // SDD-244: EEG·PPG·ACC 원문 선수집(v2). 서버 capability 확인 전·미동의·관찰 전용이면 아무 것도 하지 않는다.
+  const biosignal = useBiosignalCapture({
+    sessionId,
+    participantId,
+    enabled: !observationOnly && Boolean(sessionId && participantId),
+    connected: connectionState === 'connected',
+    skipAuth,
+    entryCredential,
+  });
+  const biosignalCloseRef = useRef(biosignal.close);
+  biosignalCloseRef.current = biosignal.close;
   /** SDD-222 G6: BLE 콜백 경로 flush 의 마지막 시각(throttle 기준) */
   const lastCallbackFlushAtRef = useRef(0);
 
@@ -1092,6 +1104,8 @@ export function useBand({
     }
 
     if (!observationOnlyRef.current) {
+      // SDD-244: 명시 해제는 종료 의도(close intent)를 먼저 로컬에 기록한다. 실패해도 기존 drain은 계속한다.
+      await biosignalCloseRef.current('band_disconnect').catch(() => null);
       await flushRawChunk();
       await drainPendingQueue();
       await rawDrainRef.current(15_000);
