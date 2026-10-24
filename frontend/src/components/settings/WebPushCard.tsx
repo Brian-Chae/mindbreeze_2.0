@@ -29,7 +29,7 @@ function NativePushCard() {
     setBusy(true);
     try {
       const granted = await requestPushPermission();
-      setMessage(granted ? '앱 알림을 켰어요.' : '기기 설정에서 알림 권한을 허용한 뒤 다시 시도해 주세요.');
+      setMessage(granted ? '알림 권한을 허용했어요. 수신되지 않으면 앱을 다시 열어 주세요.' : '기기 설정에서 알림 권한을 허용한 뒤 다시 시도해 주세요.');
     } catch { setMessage('알림 설정을 바꾸지 못했어요. 잠시 후 다시 시도해 주세요.'); }
     finally { setBusy(false); }
   };

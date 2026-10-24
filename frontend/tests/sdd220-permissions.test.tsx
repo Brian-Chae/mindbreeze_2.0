@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ request: vi.fn(async () => ({ receive: 'granted' })), check: vi.fn(async () => ({ receive: 'prompt' })), register: vi.fn(async () => {}) }));
 vi.mock('../src/lib/native/platform', () => ({ isNativeApp: () => true, getPlatform: () => 'ios' }));
-vi.mock('@capacitor/app', () => ({ App: { getInfo: async () => ({ version: '1.0.0' }) } }));
+vi.mock('@capacitor/app', () => ({ App: { getInfo: async () => ({ version: '1.0.0' }), addListener: async () => ({ remove: async () => {} }) } }));
 vi.mock('@capacitor/push-notifications', () => ({ PushNotifications: { addListener: async () => ({ remove: async () => {} }), checkPermissions: mocks.check, requestPermissions: mocks.request, register: mocks.register } }));
 vi.mock('../src/lib/api/client', () => ({ apiClient: { post: vi.fn(), delete: vi.fn() } }));
 vi.mock('../src/stores/authStore', () => ({ useAuthStore: (selector: (state: unknown) => unknown) => selector({ isAuthenticated: true, user: { id: 'fixture' } }) }));

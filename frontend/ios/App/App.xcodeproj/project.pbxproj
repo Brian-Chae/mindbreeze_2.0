@@ -323,7 +323,7 @@
                 CODE_SIGN_STYLE = Automatic;
                 DEVELOPMENT_TEAM = XJDDLS7BEH;
                 CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 4;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -348,7 +348,7 @@
                 CODE_SIGN_STYLE = Automatic;
                 DEVELOPMENT_TEAM = XJDDLS7BEH;
                 CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 4;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (

@@ -7,7 +7,7 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 // CI 에서 -PversionCode=N -PversionName=x.y.z 로 주입한다.
-def appVersionCode = (project.findProperty("versionCode") ?: "2").toInteger()
+def appVersionCode = (project.findProperty("versionCode") ?: "5").toInteger()
 def appVersionName = (project.findProperty("versionName") ?: "1.0.0").toString()
 
 android {

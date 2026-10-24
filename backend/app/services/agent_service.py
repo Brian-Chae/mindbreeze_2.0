@@ -321,6 +321,20 @@ def _enqueue_notifications(
     except Exception:  # noqa: BLE001 — 알림 실패가 메시지 생성을 막지 않는다
         logger.exception("[agent_service] 인앱 알림 적재 실패: message_id=%s", message.id)
 
+    if message.kind == "report_ready" and message.ref_type == "report":
+        user = db.get(User, user_id)
+        if not user or not notification_service.get_user_preferences(user)["push"].get("report_ready", False):
+            return
+        # 승인 알림이 이미 담당하는 리포트는 루시 메시지까지 두 번 푸시하지 않는다.
+        # sent/skipped 등도 재생성하지 않는다. 인앱 OFF로 notification_id가 없어도 조회한다.
+        existing = db.query(NotificationOutbox.id).filter(
+            NotificationOutbox.user_id == user_id,
+            NotificationOutbox.channel == "push",
+            NotificationOutbox.payload["deeplink"].astext == f"/app/reports?report={message.ref_id}",
+        ).first()
+        if existing:
+            return
+
     # 푸시 Outbox — payload 에 PII·상담 내용 없음(TS15).
     db.add(
         NotificationOutbox(
