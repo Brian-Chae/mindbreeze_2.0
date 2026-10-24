@@ -10,7 +10,7 @@ import { buildDisplaySnapshot, DisplayRecorder } from '../src/lib/biosignal/disp
 import type { NormalizationModelDto } from '../src/lib/api/normalization-api';
 const scope = { accountId: 'review', sessionId: 'session', participantId: 'p', deviceAlias: 'band' };
 beforeEach(() => { globalThis.indexedDB = new IDBFactory(); Object.defineProperty(globalThis, 'crypto', { value: webcrypto, configurable: true }); });
-async function setup() { const queue = new BiosignalQueue(scope, 'tab'); const session = new BiosignalCaptureSession({ queue }); await session.start(); return { queue, session }; }
+async function setup(options: Partial<ConstructorParameters<typeof BiosignalCaptureSession>[0]> = {}) { const queue = new BiosignalQueue(scope, 'tab', () => 10000); const session = new BiosignalCaptureSession({ queue, now: () => 10000, ...options }); await session.start(); return { queue, session }; }
 const win = (signal: SampleWindow['signal'], segmentId = 'segment'): SampleWindow => ({ signal, streamId: `stream-${signal}`, segmentId, first: 0, end: 1, rate: 250, anchorUtcUs: '0', anchorRelUs: '0' });
 const model = (id: number): NormalizationModelDto => ({ id, version: String(id), n_samples: 10, is_active: true, created_at: '', params: {} });
 it.each([1, 2])('H01: %i번째 신호 묶음 저장 실패에도 미처리 신호와 오류를 보존', async failure => {
@@ -45,17 +45,26 @@ it('H02: 표시 tick은 flush 이전에도 journal에 보존되고 새 recorder�
  const { queue, session } = await setup(); let now = 1000;
  const recorder = new DisplayRecorder({ queue, session, viewKind: 'participant_player', sourceFeature: () => null, now: () => now });
  await recorder.start(null); now += 1000; recorder.tick(null, false); await recorder.persist();
- const restored = new DisplayRecorder({ queue, session, viewKind: 'participant_player', sourceFeature: () => null });
+ const restored = new DisplayRecorder({ queue, session, viewKind: 'participant_player', sourceFeature: () => null, now: () => now });
  await restored.start(null); await restored.flush(true);
  expect((await queue.objects()).filter(o => o.kind === 'indices')).toHaveLength(1);
 });
 
 it('H04: 패킷 tick 1초 공백은 시간축을 압축하지 않고 segment와 packet_gap으로 보존', async () => {
- const { queue, session } = await setup();
+ // 저장 시각을 동일하게 고정하고 UUID 키 순서를 수신 순서와 반대로 만든다.
+ let id = 100;
+ const { queue, session } = await setup({ createId: () => `${String(id--).padStart(8, '0')}-0000-4000-8000-000000000000` });
  for (const n of [0, 1]) { const bytes = new Uint8Array(74); new DataView(bytes.buffer).setUint32(0, n * 32768, true); session.receive(parseRawPacket('eeg', new DataView(bytes.buffer), String(10000000 + n * 1000000), String(1000000 + n * 1000000))); }
  await session.close('end'); const objects = (await queue.objects()).filter(o => o.kind === 'raw');
  expect(objects).toHaveLength(2);
- const headers = objects.map(o => (o.meta as import('../src/lib/api/biosignal').RawMeta).header);
+ // 큐의 저장 순서가 아니라 원문 packet_seq로 수신 순서를 검증한다.
+ const headers = objects.map(o => {
+  const bytes = Buffer.from(o.payload); const headerLength = bytes.readUInt32LE(8);
+  const header = (o.meta as import('../src/lib/api/biosignal').RawMeta).header;
+  const section = header.sections[2];
+  const packet = JSON.parse(bytes.subarray(12 + headerLength + section.offset, 12 + headerLength + section.offset + section.length).toString().trim().split('\n')[0]);
+  return { header, packetSeq: packet.packet_seq as number };
+ }).sort((a, b) => a.packetSeq - b.packetSeq).map(o => o.header);
  expect(BigInt(headers[1].anchor.utc_us!) - BigInt(headers[0].anchor.utc_us!)).toBe(1000000n);
  expect(session.sampleWindow('eeg', 10)?.anchorUtcUs).toBe(headers[1].anchor.utc_us);
  const gap = (await queue.pendingEvents()).find(e => e.event.event_type === 'gap' && e.event.reason === 'packet_gap')!.event;
@@ -110,4 +119,39 @@ it('M02: 모델 변경 첫 record 호출은 새 값·새 모델·호출 시각�
  const pending = recorder.record(rendered,true,model(2)); now = 9000; await pending; await recorder.flush(true);
  const row = JSON.parse(gunzipSync(Buffer.from((await queue.objects()).find(o=>o.kind==='indices')!.payload)).toString().trim());
  expect(row.normalization.version).toBe('2'); expect(row.displayed_at_us).toBe('2000000'); expect(row.focus.value).toBe(70);
+});
+
+
+it('H04: 재연결 중 wall clock 역행은 음수 단절 gap 대신 별도 clock_reset으로 보존', async () => {
+ let now = 10000;
+ const { queue, session } = await setup({ now: () => now });
+ session.receive(parseRawPacket('eeg', new DataView(new Uint8Array(74).buffer), '10000000', '1000000'));
+ session.markDisconnected(); now = 9000; session.markReconnected();
+ await session.flush();
+ const gaps = (await queue.pendingEvents()).map(e => e.event).filter(e => e.event_type === 'gap');
+ expect(gaps).toEqual(expect.arrayContaining([
+  expect.objectContaining({ reason: 'ble_disconnect', start_us: '10000000', end_us: null, observed_or_estimated: 'unknown' }),
+  expect.objectContaining({ reason: 'clock_reset', start_us: '9000000', end_us: '10000000' }),
+ ]));
+ for (const gap of gaps) if (gap.end_us !== null) expect(BigInt(gap.end_us)).toBeGreaterThanOrEqual(BigInt(gap.start_us));
+});
+
+it('H04: 영속 경계는 음수 gap을 거절하고 순번도 소비하지 않는다', async () => {
+ const { queue } = await setup();
+ await expect(queue.addGap({ event_id: crypto.randomUUID(), discovered_at_us: '10000000', signal: 'eeg', stream_id: crypto.randomUUID(), segment_id: crypto.randomUUID(), start_us: '10000000', end_us: '9000000', reason: 'packet_gap', observed_or_estimated: 'observed', expected_samples: null, received_samples: null, reconnect_count: 0 })).rejects.toThrow('negative_gap');
+ expect(await queue.lastGapSequence()).toBeNull();
+ expect(await queue.pendingEvents()).toHaveLength(0);
+});
+
+
+it('H04: 패킷 UTC 역행은 정렬된 clock_reset gap으로 남긴다', async () => {
+ const { queue, session } = await setup();
+ for (const n of [0, 1]) {
+  const bytes = new Uint8Array(74); new DataView(bytes.buffer).setUint32(0, n * 32768, true);
+  session.receive(parseRawPacket('eeg', new DataView(bytes.buffer), String(10000000 - n * 1000000), String(1000000 + n * 1000000)));
+ }
+ await session.close('end');
+ expect((await queue.pendingEvents()).map(e => e.event)).toEqual(expect.arrayContaining([
+  expect.objectContaining({ reason: 'clock_reset', start_us: '8964000', end_us: '10004000' }),
+ ]));
 });

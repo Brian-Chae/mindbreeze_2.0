@@ -54,3 +54,32 @@ focused 로그 `/tmp/sdd244-review-focused.log`: **17파일, 261 통과, 실패0
 - H03: cleanup의 봉인/flush/lease 반환이 끝나기 전에 새 mount가 lease를 얻으려던 경합을 scope별 Promise barrier로 직렬화했다. startup 중 취소도 lease 반환 완료까지 기다리며, 다른 탭 lease 점유는 inactive 대신 stopped/lease_lost로 표시한다. 의도적으로 cleanup을 지연한 즉시 remount 테스트 **RED→GREEN**.
 - M02: 렌더 후 effect에서 활성 모델 캐시를 다시 읽던 마지막 경계를 없앴다. `useBand`가 모델 사본을 고정하고 `scoreIndices(raw, model)`로 계산한 값과 함께 반환한다. Member recorder는 그 사본만 전달한다. 모델 A의 표시 값이 남은 상태에서 effect 전 캐시 B로 교체하는 테스트 **RED→GREEN**.
 - 경계 재현 로그: `/tmp/sdd244-review-boundary-red.log` 2실패 → `/tmp/sdd244-review-boundary-green.log` 2통과. 최종 focused는 **17파일 261통과**, 최종 tsc 종료0.
+
+
+## H04 간헐 실패 후속 수정 (2026-10-24)
+
+- 직접 원인은 **테스트의 순서 가정**. 수정 전 `sdd244-review-core.test.ts:59`의 실패값은 gap 길이가 아니라 raw 헤더 anchor 차이다. `durable-queue.ts:190,211-214`는 실시간 밀리초 createdAt으로 정렬하므로 동률이면 IndexedDB의 UUID alias 키 순서가 유지된다. 부하/실행 속도에 따라 동률 여부가 달라졌고 랜덤 UUID가 헤더 순서를 뒤집었다. packet tick/host UTC/monotonic 입력 자체는 이미 명시적 합성 값이며 공유 상태나 receive 비동기 순서 경합이 원인이 아니다.
+- 재현: queue 시계를 10000ms에 고정하고 앞 8자리가 감소하는 유효 UUID를 주입했다. 기존 배열 인덱스 검증이 정확히 `expected -1000000n to be 1000000n`으로 실패(`/tmp/sdd244-h04-order-red.log`). 수정은 저장 배열이나 anchor값으로 정렬하지 않고 실제 raw binary packet_map의 `packet_seq`로 수신 순서를 식별한다. 1초 anchor 차이, 960ms packet_gap, feature window anchor 검증을 유지했다.
+- 별도 **제품 결함**: 수정 전 `capture-session.ts:292-301` 재연결은 Date.now 역행 시 음수 ble_disconnect gap을 그대로 만들었다. `durable-queue.ts:168`에도 영속화 방어가 없었다. 재연결 역행은 길이 미상 ble_disconnect와 정렬된 clock_reset을 따로 남기고, segment 역행도 clock_reset으로 분류한다. 모든 addGap 호출은 저장/순번 소비 전에 음수 구간을 거절한다. 제품 회귀 3건을 RED에서 확인한 뒤 GREEN으로 전환했다(`/tmp/sdd244-h04-red.log`, `/tmp/sdd244-h04-green.log`).
+- 다른 SDD244 테스트를 `Date.now/performance.now/setTimeout/objects` 패턴으로 조사했다(`/tmp/sdd244-h04-clock-audit.log`). review-core 복원 recorder도 동일 시계로 맞췄다. capture-hook의 30/100/120ms 완료 추정은 실제 DisplayRecorder 초기화, ACK receipt·빈 큐·전송 완료 이벤트 조건으로 교체했다. fake-indexeddb 비동기 완료까지 멈추는 전역 fake timer 대신 주입 시계와 상태 조건 대기를 사용했다. 알고리즘 시간 검증은 이미 fake timer, 나머지 raw clock 검증은 명시적 UTC/monotonic 입력이었다.
+- 독립 검증자는 구현 diff를 읽고 관련 2파일 **20/20 통과**를 별도 실행했다(`/tmp/sdd244-h04-independent-review.log`). 실제 BLE/기기/서버 검증은 수행하지 않았다.
+
+
+### 최종 검증
+
+- 사용자 지정 명령 그대로 실행: `npx vitest run tests/sdd244-*.test.ts* tests/raw-chunk-queue.test.ts tests/use-eeg-raw-upload.test.tsx tests/sdd222-*.test.ts*` → **10/10회 성공, 매회 30파일·280건, 합계 2,800/2,800 통과**. `/tmp/sdd244-h04-exact-{1..10}.log`. 기존 `/tmp/sdd244-vitest.config.mts` 설정으로 선행한 별도 10회도 동일하게 성공했다.
+- `npx tsc --noEmit -p tsconfig.app.json` 종료 0(`/tmp/sdd244-h04-tsc-final.log`). `npm run build` 종료 0(`/tmp/sdd244-h04-build.log`, 기존 청크 크기·동적 import 경고).
+- 전체 vitest(`npx vitest run --config /tmp/sdd244-vitest.config.mts`) **258파일 통과·8파일 실패, 2,933통과·17실패**(`/tmp/sdd244-h04-full.log`). 기존 `/tmp/sdd244-t11-full.log`의 실패 파일과 17개 테스트 이름을 스크립트로 전부 대조해 정확히 일치했다(`/tmp/sdd244-h04-baseline-compare.json`). 이전 전체 로그의 통과 수 2,904와는 테스트 추가로 다르며 전체 성공이라고 주장하지 않는다.
+
+| 기존/현재 동일 실패 파일 | 실패 건수 |
+|---|---:|
+| agent-counselor-page.test.tsx | 2 |
+| chat-message-deeplink.test.ts | 2 |
+| org-counselor-management-browser.test.cjs | 1 |
+| org-management-browser.test.cjs | 2 |
+| report-modal-pdf.test.cjs | 2 |
+| report-server-pdf.test.cjs | 2 |
+| sdd220-native-release.test.ts | 2 |
+| sdd234-a-mobile-home.test.tsx | 4 |
+
+- 전체 테스트가 생성한 `specs/sdd-234-mobile-type-polish` 추적 산출물은 요청대로 `git checkout -- specs/sdd-234-mobile-type-polish`로 원복했다. 백엔드 변경 없음.

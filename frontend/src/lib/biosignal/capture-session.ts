@@ -196,7 +196,7 @@ export class BiosignalCaptureSession {
     this.enqueue(async () => {
       try {
         await this.queue.addGap({ event_id: this.createId(), discovered_at_us: this.nowUs(), signal, stream_id: streamId, segment_id: oldSegment, start_us: BigInt(gapStart) <= BigInt(utcUs) ? gapStart : utcUs, end_us: BigInt(gapStart) <= BigInt(utcUs) ? utcUs : gapStart,
-          reason: (reason ?? 'reanchor') as GapEvent['reason'], observed_or_estimated: 'observed', expected_samples: null, received_samples: null, reconnect_count: this.reconnects });
+          reason: BigInt(utcUs) < BigInt(gapStart) ? 'clock_reset' : (reason ?? 'reanchor') as GapEvent['reason'], observed_or_estimated: 'observed', expected_samples: null, received_samples: null, reconnect_count: this.reconnects });
       } catch { this.stop('journal_failed', signal, s, utcUs); }
     });
   }
@@ -297,8 +297,16 @@ export class BiosignalCaptureSession {
     for (const [signal, s] of this.states) {
       if (!s.segmentId) continue;
       const streamId = s.streamId, segmentId = s.segmentId;
-      this.enqueue(async () => { try { await this.queue.addGap({ event_id: this.createId(), discovered_at_us: end, signal, stream_id: streamId, segment_id: segmentId, start_us: start, end_us: end,
-        reason: 'ble_disconnect', observed_or_estimated: 'observed', expected_samples: null, received_samples: null, reconnect_count: this.reconnects }); } catch { /* stop 경로가 기록 */ } });
+      this.enqueue(async () => {
+        const reversed = BigInt(end) < BigInt(start);
+        const base = { discovered_at_us: end, signal, stream_id: streamId, segment_id: segmentId,
+          expected_samples: null, received_samples: null, reconnect_count: this.reconnects };
+        // UTC 역행으로 단절 길이를 알 수 없으므로 열린 gap과 시계 변경을 따로 보존한다.
+        await this.queue.addGap({ ...base, event_id: this.createId(), start_us: start, end_us: reversed ? null : end,
+          reason: 'ble_disconnect', observed_or_estimated: reversed ? 'unknown' : 'observed' });
+        if (reversed) await this.queue.addGap({ ...base, event_id: this.createId(), start_us: end, end_us: start,
+          reason: 'clock_reset', observed_or_estimated: 'observed' });
+      });
     }
   }
 

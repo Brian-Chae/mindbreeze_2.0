@@ -57,6 +57,12 @@ npx tsc --noEmit -p tsconfig.app.json
 - 영향: 패킷 bytes/tick은 남지만 정본 헤더로 복원하는 sample timestamp와 feature source window가 틀린다. BLE 단절 후 tick이 계속 흐르는 경우에도 발생할 수 있다.
 - 수정 제안: packet tick으로 기대 첫 샘플 시각을 검증하고 공백은 gap+새 segment 또는 계약상 명시적 시간 매핑으로 표현한다. 합성 손실 패킷을 넣어 decoder/feature 시각까지 대조한다.
 
+#### H04 후속 감독 재검증 (2026-10-24)
+
+- 간헐 `-1000000n`은 gap 부호가 아닌 테스트의 헤더 배열 순서 오류였다. createdAt 동률 + 역순 UUID로 결정적으로 RED 재현했고, 실제 원문 packet_seq로 헤더를 식별해 기존 1초/960ms/feature anchor 검증을 유지했다.
+- 별개로 재연결 wall clock 역행의 실제 음수 gap 저장 결함을 확인했다. addGap 영속 경계에서 음수 구간을 거절하고, 재연결은 unknown ble_disconnect + clock_reset, segment 역행은 clock_reset으로 보존한다. 제품 경계 3건 RED→GREEN.
+- 자세한 원인·파일:행·검증 로그 및 전체 실패 대조는 `frontend/tests/sdd244-review-fix-log.md`의 H04 후속 절에 기록한다.
+
 ### H05 — quota·journal·lease 실패로 v2 기록이 중단되어도 화면에는 실패 상태가 전달되지 않는다
 
 - 근거: `capture-session.ts:163-167,195-204,281-287`은 기록을 중단한다. `useBiosignalCapture.ts:164-180`은 stopReason/quotaWarning/pendingCount/blockedCount/resumeBlocked를 반환하지만, `useBand.ts:456-467,1728-1743`은 이를 소비 화면에 노출하지 않고 recordDisplay만 전달한다.

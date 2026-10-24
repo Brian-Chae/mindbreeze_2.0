@@ -168,3 +168,11 @@ plan의 raw v2는 ADC와 환산값을 함께 보존하므로 spec 초기 가정�
 ### 이번 문서 검토 기록(제품 검증과 별개)
 
 2026-10-24 작성자와 읽기 전용 독립 검토자가 spec·research·plan·verify를 대조했다. ACK 후 유효 URL 재PUT 불변성과 종료 expected set의 raw-derived/model/gap 누락 위험을 보완했다. 문서 정적 검사에서 Task18개·각2~5시간·합계75시간(A19/B28/C28), 담당 경로 패턴58개 소유권 중복0, A01~A13 모두 존재, 실행 완료 체크0, 문서 상대링크와 기존 담당 파일 존재를 확인했다. 변경 범위는 plan.md·verify.md 두 파일이며 spec/research는 변경하지 않았다. 이 결과는 문서 정합성 증거이며 제품·DB·실기기·업로드·다운로드 테스트 결과가 아니다.
+
+
+## H04 간헐 실패 후속 검증 (2026-10-24, 구현 전)
+
+- [x] 동일 createdAt + 역순 UUID로 기존 H04 실패를 결정적으로 재현하고 수신 packet_seq로 검증한다.
+- [x] 재연결 wall clock 역행에서 음수 gap을 재현하고 별도 clock_reset 및 unknown 단절 구간을 확인한다.
+- [x] 영속 gap 경계에서 음수 구간 거절과 순번 미소비를 확인한다.
+- [x] 관련 묶음 10회, tsc, 전체 vitest 기존 8파일 17건 대조, build, 독립 diff 리뷰.

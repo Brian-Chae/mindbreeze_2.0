@@ -166,6 +166,8 @@ export class BiosignalQueue {
 
   /** gap 순번은 회차 단위로 영속 증가한다(재시작해도 되돌아가지 않음). */
   async addGap(gap: Omit<GapEvent, 'sequence' | 'event_type'>): Promise<GapEvent> {
+    // 역방향 구간은 저장하지 않고 순번도 소비하지 않는다.
+    if (gap.end_us !== null && BigInt(gap.end_us) < BigInt(gap.start_us)) throw new Error('negative_gap');
     const key = `${this.scopeKey}|gapseq`;
     return this.write(['gaps', 'next_indices'], async tx => {
       const counter = tx.objectStore('next_indices');
