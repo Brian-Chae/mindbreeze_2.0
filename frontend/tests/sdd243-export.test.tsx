@@ -21,7 +21,7 @@ describe('SDD-243 다운로드',()=>{
  const documentDescriptor=Object.getOwnPropertyDescriptor(globalThis,'document')!;
  Object.defineProperty(globalThis,'document',{value:undefined,configurable:true});
  let html='';try{html=renderToStaticMarkup(<ExportDialog target={{scope:'session',targetId:'session',label:'호흡 1회차'}} isOrgAdmin onClose={()=>{}}/>);}finally{Object.defineProperty(globalThis,'document',documentDescriptor);}
- expect(html).toContain('가명 ID'); expect(html).toContain('EEG'); expect(html).toContain('PPG');expect(html).toContain('ACC'); expect(html).toContain('원본 bin'); expect(html).not.toContain('value="research"');
+ expect(html).toContain('가명 ID'); expect(html).toContain('뇌파'); expect(html).toContain('맥파');expect(html).toContain('움직임'); expect(html).toContain('원본 파일(.bin)'); expect(html).not.toContain('재인증'); expect(html).not.toContain('dc-policy'); expect(html).not.toContain('manifest'); expect(html).not.toContain('value="research"');
  });
 });
 
@@ -39,17 +39,17 @@ it('범위를 바꿀 때 사용하는 기관 쿼리는 jobs와 감사에 공통 
 it('preview 제외 확인과 credential POST proof를 통과한 뒤 생성한다',async()=>{
  const host=document.createElement('div'); document.body.append(host); const root=createRoot(host);
  const client={...exportApi,preview:vi.fn().mockResolvedValue({...preview,expires_at:'2099-01-01T00:00:00Z'}),reauth:vi.fn().mockResolvedValue({proof:'server-proof',expires_at:'2099-01-01T00:00:00Z'}),create:vi.fn().mockResolvedValue(status)};
- await act(async()=>{root.render(<ExportDialog target={{scope:'session',targetId:'session',label:'1회차'}} client={client} onClose={()=>{}}/>);});
+ await act(async()=>{root.render(<ExportDialog target={{scope:'session',targetId:'session',label:'1회차'}} client={client} limits={{reauth_required:true}} onClose={()=>{}}/>);});
  const dialog=document.querySelector('[role=dialog]')!;
  expect(dialog.parentElement?.parentElement).toBe(document.body);
  expect(host.querySelector('[role=dialog]')).toBeNull();
  const button=(text:string)=>Array.from(dialog.querySelectorAll('button')).find(x=>x.textContent===text)!;
  const input=(element:HTMLInputElement|HTMLTextAreaElement,value:string)=>{const proto=element instanceof HTMLTextAreaElement?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value')!.set!.call(element,value);element.dispatchEvent(new Event('input',{bubbles:true}));};
  await act(async()=>{input(dialog.querySelector('textarea')!,'운영 확인');});
- await act(async()=>{button('범위 미리보기').click();});
+ await act(async()=>{button('다운로드할 데이터 확인').click();});
  expect(button('다운로드 작업 생성').disabled).toBe(true);
- await act(async()=>{Array.from(dialog.querySelectorAll('input[type=checkbox]')).find(x=>x.parentElement?.textContent?.includes('제외 범위를'))!.dispatchEvent(new MouseEvent('click',{bubbles:true})); input(dialog.querySelector('input[type=password]')!,'credential');});
- await act(async()=>{button('재인증 요청').click();});
+ await act(async()=>{Array.from(dialog.querySelectorAll('input[type=checkbox]')).find(x=>x.parentElement?.textContent?.includes('제외되는 내용을'))!.dispatchEvent(new MouseEvent('click',{bubbles:true})); input(dialog.querySelector('input[type=password]')!,'credential');});
+ await act(async()=>{button('본인 확인 요청').click();});
  expect(client.reauth).toHaveBeenCalledWith({credential:'credential',request_hash:preview.request_hash,scope_org_id:undefined},undefined);
  expect(button('다운로드 작업 생성').disabled).toBe(false);
  await act(async()=>{button('다운로드 작업 생성').click();});
@@ -73,15 +73,15 @@ it('재인증 도중 취소하면 늦은 proof로 part URL을 발급하지 않�
  const client={...exportApi,jobs:vi.fn().mockResolvedValue({items:[{...status,expires_at:'2099-01-01T00:00:00Z'}],next_cursor:null}),reauth:vi.fn(()=>new Promise<{proof:string;expires_at:string}>(resolve=>{resolveProof=resolve;})),download:vi.fn()};
  const host=document.createElement('div');document.body.append(host);const root=createRoot(host);
  const button=(text:string)=>Array.from(host.querySelectorAll('button')).find(x=>x.textContent===text)!;
- await act(async()=>root.render(<ExportJobs client={client}/>));
- await act(async()=>button('part1 링크 발급').click());
+ await act(async()=>root.render(<ExportJobs client={client} reauthRequired/>));
+ await act(async()=>button('파일 1 다운로드').click());
  await act(async()=>{const input=host.querySelector('input')!;Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!.set!.call(input,'credential');input.dispatchEvent(new Event('input',{bubbles:true}));});
- await act(async()=>button('재인증 후 링크 발급').click());
+ await act(async()=>button('본인 확인 후 다운로드').click());
  await act(async()=>button('취소').click());
  await act(async()=>resolveProof({proof:'late',expires_at:'2099-01-01T00:00:00Z'}));
  expect(client.download).not.toHaveBeenCalled();
- await act(async()=>button('part1 링크 발급').click());
- expect(button('재인증 후 링크 발급').disabled).toBe(true);
+ await act(async()=>button('파일 1 다운로드').click());
+ expect(button('본인 확인 후 다운로드').disabled).toBe(true);
  await act(async()=>root.unmount());host.remove();
 });
 it('작업 새로고침은 재인증 입력을 유지하고 cursor로 다음 작업을 조회한다',async()=>{
@@ -89,9 +89,9 @@ it('작업 새로고침은 재인증 입력을 유지하고 cursor로 다음 작
  const client={...exportApi,jobs:vi.fn().mockResolvedValue({items:[{...status,expires_at:'2099-01-01T00:00:00Z'}],next_cursor:'next'})};
  const host=document.createElement('div');document.body.append(host);const root=createRoot(host);
  const button=(text:string)=>Array.from(host.querySelectorAll('button')).find(x=>x.textContent===text)!;
- await act(async()=>root.render(<ExportJobs client={client}/>));await act(async()=>button('part1 링크 발급').click());
+ await act(async()=>root.render(<ExportJobs client={client} reauthRequired/>));await act(async()=>button('파일 1 다운로드').click());
  await act(async()=>{const input=host.querySelector('input')!;Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!.set!.call(input,'credential');input.dispatchEvent(new Event('input',{bubbles:true}));});
- await act(async()=>button('새로고침').click());expect(host.querySelector('input')!.value).toBe('credential');expect(button('재인증 후 링크 발급').disabled).toBe(false);
+ await act(async()=>button('새로고침').click());expect(host.querySelector('input')!.value).toBe('credential');expect(button('본인 확인 후 다운로드').disabled).toBe(false);
  await act(async()=>button('작업 더 보기').click());expect(client.jobs).toHaveBeenLastCalledWith(undefined,'next');
  await act(async()=>root.unmount());host.remove();
 });

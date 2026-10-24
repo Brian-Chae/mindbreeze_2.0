@@ -14,7 +14,7 @@ export function waveformSeries(data: WaveformResponse, channel: WaveformChannel)
 }
 export function SignalWaveform({ data }: { data: WaveformResponse }) {
  if (data.availability !== 'available' || data.method === 'none') return <div className="dc-measure-empty"><h3>{data.signal_type.toUpperCase()} · 미수집 / 원파형 없음</h3><p>{data.unavailable_reason ?? data.availability}</p><p>파생 지표 보유 여부와 원파형 수집 여부는 다릅니다. 미수집을 0으로 표시하지 않습니다.</p></div>;
- return <div><p className="dc-measure-note">{data.nominal_rate_hz ?? '미확인'} Hz · {data.method === 'raw' ? '원본 해상도' : 'min/max envelope'} · 원천 {data.source_sample_count.toLocaleString()}개 / 표시 {data.returned_count.toLocaleString()}개 · 상대 초 · revision {data.manifest_revision ?? '미확인'}</p>
+ return <div><p className="dc-measure-note">{data.nominal_rate_hz ?? '미확인'} Hz · {data.method === 'raw' ? '원본 해상도' : '최소·최대 요약선'} · 전체 {data.source_sample_count.toLocaleString()}개 중 {data.returned_count.toLocaleString()}개 표시 · 경과 초 기준</p>
  {data.channels.map(channel => {
  const series=waveformSeries(data,channel);
  const points=series.flatMap((segment,i)=>segment.map(point=>({ seconds:point.seconds, [`s${i}_value`]:point.value, [`s${i}_min`]:point.min, [`s${i}_max`]:point.max })));

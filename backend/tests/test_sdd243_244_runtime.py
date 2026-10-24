@@ -109,7 +109,7 @@ def _package(ctx, consent: bool, include=frozenset({'eeg_raw', 'ppg_raw'})):
     from app.models.session import SessionParticipant
     db = _db()
     part = db.get(SessionParticipant, UUID(ctx['pid']))
-    part.consent_eeg = consent
+    part.consent_eeg = part.eeg_collection_consented = consent
     db.commit()
     scope = pkg.PackageScope('class-C01', 'session-001_date-withheld', 'P01', 'S001', 1)
     target = SimpleNamespace(job_id=None, session_id=UUID(ctx['sid']), participant_id=UUID(ctx['pid']), manifest_revision=1)

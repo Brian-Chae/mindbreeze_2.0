@@ -28,6 +28,7 @@ from app.models.session import Session, SessionParticipant
 from app.models.user import User
 from app.models.user_org_membership import UserOrgMembership
 from app.schemas import data_center as dc
+from app.services.recording_consent_service import eeg_export_consented
 from app.services.data_center_policy import (ResolvedContext, _active_facilitator_member, aware, class_in_scope,
                                              deny, not_found, scoped_participants, scoped_sessions, session_in_scope)
 
@@ -659,7 +660,7 @@ def session_participants(db: DBSession, context: ResolvedContext, session_id: UU
         stat = stats[p.id]
         band_used = bool(p.band_connected) or stat.has_data
         measurement = 'available' if stat.has_data else ('not_collected' if band_used else 'band_not_used')
-        consent = 'agreed' if p.consent_eeg else 'none'
+        consent = 'agreed' if eeg_export_consented(p, has_data=stat.has_data) else 'none'
         reason = None
         if measurement != 'available':
             reason = measurement
@@ -762,7 +763,7 @@ def measurement_detail(db: DBSession, context: ResolvedContext, session_id: UUID
     return dc.MeasurementDetail(
         session_id=session_id, participant_id=participant_id, alias=participant_aliases(db, [session_id]).get(part.id, '?'),
         as_of=now(), manifest_revision=None, manifest_state='not_connected', signals=_signals(stat, band_used),
-        feature_windows=dc.Count(value=stat.feature_total), consent='agreed' if part.consent_eeg else 'none',
+        feature_windows=dc.Count(value=stat.feature_total), consent='agreed' if eeg_export_consented(part, has_data=stat.has_data) else 'none',
         retention_deadline=(stat.raw_first + timedelta(days=RAW_RETENTION_DAYS)) if stat.raw_first else None,
         allowed_formats=['csv', 'parquet'], band_used=band_used,
         default_view='participant_player' if stat.feature_total else 'unavailable')

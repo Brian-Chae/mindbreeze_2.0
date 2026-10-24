@@ -23,7 +23,8 @@ from app.models.session import Session, SessionParticipant
 from app.schemas import data_center as dc
 from app.services.data_center_policy import ResolvedContext, aware, deny, not_found, require_platform, scoped_participants, \
     scoped_sessions
-from app.services.data_center_query import (SESSION_TIME, filters_hash, kst_range, now, page, paginate)
+from app.services.data_center_query import (SESSION_TIME, filters_hash, kst_range, measure_stats, now, page, paginate)
+from app.services.recording_consent_service import eeg_export_consent_clause, eeg_export_consented
 
 # retention_sweep_service 의 규칙을 복제(드리프트 테스트로 동일성 검증)
 NO_GATE_STATES = ('acked', 'withdrawn', 'blocked_withdrawn', 'not_applicable')
@@ -79,15 +80,16 @@ def list_consents(db: DBSession, context: ResolvedContext, query: dc.DataCenterQ
         return page(items, nxt, total, as_of, flt)
     q = scoped_participants(db, context).join(Session, Session.id == SessionParticipant.session_id)
     if query.status == 'agreed':
-        q = q.filter(SessionParticipant.consent_eeg.is_(True))
+        q = q.filter(eeg_export_consent_clause())
     elif query.status == 'none':
-        q = q.filter(SessionParticipant.consent_eeg.is_(False))
+        q = q.filter(~eeg_export_consent_clause())
     q = _range(q, SESSION_TIME, query)
     total = q.count()
     rows, nxt, as_of = paginate(q, SESSION_TIME, SessionParticipant.id, query, flt, desc=query.sort != 'time_asc')
+    stats = measure_stats(db, [p.id for p, _ in rows])
     items = [dc.ConsentItem(
         scope='collection', session_id=p.session_id, participant_id=p.id, subject_ref=ref('P', p.id),
-        notice_version=None, state='agreed' if p.consent_eeg else 'none', at=aware(p.joined_at)) for p, _ in rows]
+        notice_version=None, state='agreed' if eeg_export_consented(p, has_data=stats[p.id].has_data) else 'none', at=aware(p.joined_at)) for p, _ in rows]
     return page(items, nxt, total, as_of, flt)
 
 

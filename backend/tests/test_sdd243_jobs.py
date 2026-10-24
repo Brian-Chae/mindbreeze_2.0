@@ -30,6 +30,7 @@ class OkVerifier:
 @pytest.fixture
 def env(client, world, db, dc_enabled, monkeypatch):
     monkeypatch.setattr(export_reauth, '_verifier', OkVerifier())
+    monkeypatch.setattr(settings, 'data_center_export_reauth_required', True)  # 스위치 켜짐 = 기존 SDD-243 동작
     sent: list[UUID] = []
     monkeypatch.setattr(dcx, 'enqueue_job', lambda job_id: sent.append(job_id))
     for sess, part in ((world.s_a1, world.p_a1_c), (world.s_a1, world.p_a1_c2), (world.s_a2, world.p_a2_c),
@@ -263,11 +264,11 @@ def test_create_reauthorizes_after_preview(client, env, db, monkeypatch):
     w = env
     # (a) 동의 철회
     t = new_preview(client, w.admin_a, 'session', w.s_a1.id)['preview_token']
-    w.p_a1_c.consent_eeg = False
+    w.p_a1_c.consent_eeg = w.p_a1_c.eeg_collection_consented = False
     db.commit()
     r = create(client, w.admin_a, t)
     assert r.status_code == 409 and r.json()['detail']['code'] == 'scope_changed'
-    w.p_a1_c.consent_eeg = True
+    w.p_a1_c.consent_eeg = w.p_a1_c.eeg_collection_consented = True
     db.commit()
     # (b) 참여자 제거
     t = new_preview(client, w.admin_a, 'session', w.s_a1.id)['preview_token']
@@ -432,10 +433,10 @@ def test_worker_dispatch_and_failure_modes(client, env, db, monkeypatch):
     assert job.status == 'ready_with_warnings' and job.warnings == ['누락 확인됨']
     # 실행 시점 재인가: 동의 철회 → scope_changed
     jid = make_job(client, w, 'w3')
-    w.p_a1_c.consent_eeg = False
+    w.p_a1_c.consent_eeg = w.p_a1_c.eeg_collection_consented = False
     db.commit()
     assert run(db, jid).error_code == 'scope_changed'
-    w.p_a1_c.consent_eeg = True
+    w.p_a1_c.consent_eeg = w.p_a1_c.eeg_collection_consented = True
     db.commit()
     # 소속 해제 → access_revoked
     jid = make_job(client, w, 'w4')

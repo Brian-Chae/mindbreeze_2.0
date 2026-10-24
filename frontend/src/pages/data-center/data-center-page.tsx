@@ -804,7 +804,7 @@ export function DataCenterWorkspace({
               </aside>
             )}
             {renderExports ? renderExports(context, exportSelection, tab, () => setExportSelection(null)) : <>
-              {tab==="jobs"&&<ExportJobs orgId={orgId} refreshKey={exportRefresh}/>}
+              {tab==="jobs"&&<ExportJobs orgId={orgId} reauthRequired={context.limits.reauth_required===true} refreshKey={exportRefresh}/>}
               {tab==="audits"&&<ExportAudits orgId={orgId} refreshKey={exportRefresh}/>}
               {exportSelection&&<ExportDialog target={{scope:exportSelection.scope,targetId:exportSelection.id,label:exportSelection.label,sessionIds:exportSelection.sessionIds,participantIds:exportSelection.participantIds,sessionId:exportSelection.sessionId,fromUs:exportSelection.fromUs,toUs:exportSelection.toUs,dateFrom:exportSelection.dateFrom,dateTo:exportSelection.dateTo}} orgId={orgId} isOrgAdmin={context.role==="org_admin"} canExportIdentified={context.capabilities.can_export_identified} canResearch={context.capabilities.can_research} limits={context.limits} onClose={()=>setExportSelection(null)} onViewJobs={()=>changeTab("jobs")} onCreated={()=>{setExportRefresh(previous=>previous+1);changeTab("jobs");}}/>}
             </>}

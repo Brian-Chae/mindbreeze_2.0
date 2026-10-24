@@ -23,7 +23,7 @@ export interface DataCenterContext {
     can_research: boolean;
     can_export_identified: boolean;
   };
-  limits: { member_facilitator_max_sessions: number; provisional: boolean };
+  limits: { member_facilitator_max_sessions: number; provisional: boolean; reauth_required?: boolean; artifact_ttl_seconds?: number; url_ttl_seconds?: number };
 }
 export interface ClassItem {
   class_id: string;

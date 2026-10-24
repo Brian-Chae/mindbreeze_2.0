@@ -17,6 +17,7 @@ from app.models.class_membership import ClassMakeupAssignment
 from app.models.class_program import Class, ClassMember
 from app.models.record import Report
 from app.models.session import Session, SessionParticipant
+from app.services.recording_consent_service import eeg_export_consented
 
 logger = logging.getLogger(__name__)
 
@@ -181,7 +182,7 @@ def _measurement_state(content: dict, participant) -> str:
         status = "valid" if eeg.get("available") is True else "not_measured"
     if status == "valid":
         return "measured"
-    if participant is not None and not participant.consent_eeg:
+    if participant is not None and not eeg_export_consented(participant):
         return "not_consented"
     if eeg.get("reason") == "data_loss" or eeg.get("data_loss"):
         return "data_lost"

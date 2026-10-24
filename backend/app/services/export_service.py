@@ -17,6 +17,7 @@ from app.models.session import Session, SessionParticipant
 from app.models.user import User
 from app.schemas.data_export import DataExportCreate
 from app.services import storage_service
+from app.services.recording_consent_service import eeg_export_consented
 from app.services.export_package import build_package, sha256_file
 
 logger = logging.getLogger(__name__)
@@ -75,9 +76,9 @@ def authorize(db: DBSession, user_id: UUID, session_id: UUID, participant_id: UU
     if session.status != 'completed':
         raise HTTPException(409, '종료된 세션만 다운로드할 수 있습니다')
     # 동의가 없는 경우에만 저장 원천을 확인한다. 미측정 메타데이터는 다운로드 가능하다.
-    if not participant.consent_eeg:
-        feature = db.query(EEGFeatureWindow.id).filter(EEGFeatureWindow.session_id == session.id,
-                                                     EEGFeatureWindow.participant_id == participant.id).first()
+    feature = db.query(EEGFeatureWindow.id).filter(EEGFeatureWindow.session_id == session.id,
+                                                 EEGFeatureWindow.participant_id == participant.id).first()
+    if not eeg_export_consented(participant, has_data=feature is not None):
         reports = db.query(Report.content).filter(Report.session_id == session.id, Report.participant_id == participant.id)
         sensitive_report = any(isinstance(content, dict) and isinstance(content.get('eeg'), dict)
                                and any(content['eeg'].get(key) for key in ('metrics', 'timeline', 'narrative'))
@@ -105,7 +106,7 @@ def create_export(db: DBSession, user_id: UUID, session_id: UUID, participant_id
         raise HTTPException(429, '진행 중인 데이터 다운로드 작업이 있습니다')
     job = DataExportJob(user_id=user_id, requester_role=user.role, session_id=session_id, participant_id=participant_id,
                         include=payload.include, purpose=payload.purpose, idempotency_key=idempotency_key,
-                        request_hash=fingerprint, consent_eeg=participant.consent_eeg,
+                        request_hash=fingerprint, consent_eeg=eeg_export_consented(participant),
                         expires_at=now() + timedelta(hours=24), updated_at=now())
     db.add(job)
     db.flush()
@@ -134,7 +135,7 @@ def get_job(db: DBSession, export_id: UUID, user_id: UUID) -> DataExportJob:
     # EXPORT-LOCK-007: 상태 조회(GET)는 읽기 전용 경로다. 매 폴링마다 User/Session/Participant
     #   행에 FOR UPDATE 를 걸면 다운로드 상태 폴링이 서로 잠금 경합을 일으킨다 → lock=False.
     _, _, participant = authorize(db, user_id, job.session_id, job.participant_id, lock=False)
-    if job.consent_eeg and not participant.consent_eeg:
+    if job.consent_eeg and not eeg_export_consented(participant, has_data=True):
         raise HTTPException(403, 'EEG 동의가 변경되어 다운로드할 수 없습니다')
     if utc(job.expires_at) <= now() and job.status != 'expired':
         job.status = 'expired'
@@ -203,7 +204,7 @@ def run_export(export_id: UUID, db: DBSession) -> None:
             db.connection(execution_options={'isolation_level': 'REPEATABLE READ'})
         job = db.get(DataExportJob, export_id, populate_existing=True)
         user, session, participant = authorize(db, job.user_id, job.session_id, job.participant_id)
-        if job.consent_eeg and not participant.consent_eeg:
+        if job.consent_eeg and not eeg_export_consented(participant, has_data=True):
             raise HTTPException(403, 'consent_changed')
         if utc(job.expires_at) <= now():
             raise ValueError('expired')
@@ -221,7 +222,7 @@ def run_export(export_id: UUID, db: DBSession) -> None:
             db.expire_all()
             job = db.get(DataExportJob, export_id)
             user, _, participant = authorize(db, job.user_id, job.session_id, job.participant_id, lock=True)
-            if job.consent_eeg and not participant.consent_eeg:
+            if job.consent_eeg and not eeg_export_consented(participant, has_data=True):
                 raise HTTPException(403, 'consent_changed')
             if utc(job.expires_at) <= now():
                 raise ValueError('expired')

@@ -37,7 +37,7 @@ describe('SDD243 측정', () => {
  it('원 feature 소수와 null을 보존한다', () => {
   const html = renderToStaticMarkup(<FeatureTable data={features} />);
   expect(html).toContain('1.234567890123');
-  expect(html).toContain('null · 미수집/산출 불가');
+  expect(html).toContain('값 없음');
  });
  it('HRV를 SDNN으로 표기하고 출처와 모델을 표시한다', () => {
   const html = renderToStaticMarkup(<IndicesChart data={indices as IndicesPage} />);
@@ -71,8 +71,8 @@ describe('측정 선택과 요청 수명',()=>{
   const wave=mockApis(); const element=document.createElement('div'); const root=createRoot(element);
   await act(async()=>{root.render(<MeasurementDetail sessionId="s" participantId="p"/>);});
   expect(element.textContent).toContain('참여자 P01');
-  expect(element.textContent).toContain('manifest available');
-  expect(element.textContent).toContain('feature 900');
+  expect(element.textContent).toContain('뇌파 수집 동의');
+  expect(element.textContent).toContain('분석 값 900');
   for(const value of ['30','60']) {
    await act(async()=>{const select=element.querySelector('select')!;select.value=value;select.dispatchEvent(new Event('change',{bubbles:true}));});
    expect(wave.mock.calls.at(-1)?.[2]).toEqual({fromUs:'0',toUs:`${value}000000`});

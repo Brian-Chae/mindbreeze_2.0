@@ -40,7 +40,7 @@ const setProvider = (auth_provider: string) =>
 
 async function openToReauth(client: typeof exportApi) {
   await act(async () => {
-    root.render(<ExportDialog target={{ scope: 'session', targetId: 's', label: '1회차' }} client={client} onClose={() => {}} />);
+    root.render(<ExportDialog target={{ scope: 'session', targetId: 's', label: '1회차' }} client={client} limits={{ reauth_required: true }} onClose={() => {}} />);
   });
   const dialog = document.querySelector('[role=dialog]')!;
   const input = (el: HTMLTextAreaElement, v: string) => {
@@ -49,9 +49,9 @@ async function openToReauth(client: typeof exportApi) {
   };
   await act(async () => input(dialog.querySelector('textarea')!, '운영 확인'));
   const button = (t: string) => Array.from(dialog.querySelectorAll('button')).find((x) => x.textContent === t);
-  await act(async () => button('범위 미리보기')!.click());
+  await act(async () => button('다운로드할 데이터 확인')!.click());
   await act(async () => {
-    Array.from(dialog.querySelectorAll('input[type=checkbox]')).find((x) => x.parentElement?.textContent?.includes('제외 범위를'))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    Array.from(dialog.querySelectorAll('input[type=checkbox]')).find((x) => x.parentElement?.textContent?.includes('제외되는 내용을'))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   });
   return { dialog, button };
 }
