@@ -17,6 +17,6 @@
 - [x] 관련 vitest RED/GREEN + 전체 기준선 대비 신규 실패0
 - [x] tsc / eslint / build (백엔드 수정 시 pytest)
 - [x] 390px/1440px 4역할 설정·메뉴·알림·체험 캡처와 직접 이미지 확인
-- [ ] summary·기능 커밋·브랜치 push·develop 대상 PR URL
+- [x] summary·기능 커밋·브랜치 push·develop 대상 PR URL
 
 검증 수준: 단위/소스/합성 API 브라우저. 실제 서버·DB·BLE·알림 발송·계정삭제 실행은 미검증이며 summary의 한계를 따른다.

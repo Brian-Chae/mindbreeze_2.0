@@ -1,6 +1,7 @@
 # SDD-242 — 하단 메뉴 더보기를 설정으로 변경·링크밴드 플레이그라운드 진입
 
 - 상태: 구현·로컬 검증 완료, Stage ⑦ 최종 Brian 리뷰 대기.
+- PR: https://github.com/Brian-Chae/mindbreeze_2.0/pull/84 (base develop). 기능 커밋 `b0f7e55a`, 작업 브랜치 push 완료.
 - 시작 HEAD: `5d1d0a0f` (사용자 기재 `023269cf` 이후 시안 아이콘 변경 포함). 작업 시작 전 `git fetch origin develop` + `git merge --no-edit origin/develop`: Already up to date.
 - 구현 전 plan·verify 커밋: `dbe9bf6b`. Brian의 10/24 결정과 구현 지시를 승인으로 적용했고 추가 승인 질문 없이 진행했다.
 - 백엔드·서버·DB·환경파일 변경0. 삭제·메일·네이티브 빌드·develop 푸시·PR 머지·배포 없음.
