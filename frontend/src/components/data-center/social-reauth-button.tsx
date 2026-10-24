@@ -1,19 +1,13 @@
 // 데이터 센터 반출 본인 확인 — 이메일은 비밀번호, 구글·애플은 해당 서비스로 다시 로그인해 받은 1회용 proof.
 // 탈퇴 화면(account-deletion.tsx)과 같은 웹·네이티브(Capacitor) 소셜 경로를 쓴다.
 import { useGoogleLogin } from '@react-oauth/google';
-import { useAuthStore } from '../../stores/authStore';
 import { reauthForDataExport } from '../../lib/api/account';
 import { apiErrorCode, requestAppleChallenge } from '../../lib/api/auth';
 import { isNativeApp } from '../../lib/native/platform';
 import { nativeGoogleIdToken } from '../../lib/native/google';
 import { isAppleLoginAvailable, nativeAppleCredential } from '../../lib/native/apple';
 
-export type ReauthProvider = 'email' | 'google' | 'apple';
-
-export function useExportReauthProvider(): ReauthProvider {
-  const provider = useAuthStore((s) => s.user?.auth_provider);
-  return provider === 'google' || provider === 'apple' ? provider : 'email';
-}
+import type { ReauthProvider } from './use-export-reauth-provider';
 
 interface SocialProps {
   provider: Exclude<ReauthProvider, 'email'>;

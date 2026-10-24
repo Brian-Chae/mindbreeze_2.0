@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { exportApi, exportError, type ExportClient, type ExportStatus } from '../../lib/api/data-center-export';
-import { ReauthMethod, useExportReauthProvider } from './social-reauth-button';
+import { ReauthMethod } from './social-reauth-button';
+import { useExportReauthProvider } from './use-export-reauth-provider';
 import './export.css';
 const labels:Record<string,string>={queued:'대기',preparing:'준비 중',ready:'준비 완료',ready_with_warnings:'제외 항목 있음',failed:'실패',expired:'만료',cancelled:'취소',pending:'대기',building:'생성 중'};
 export interface ExportJobsProps {orgId?:string;refreshKey?:number;client?:ExportClient}
