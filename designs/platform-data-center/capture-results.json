@@ -165,6 +165,20 @@
       "clipped": []
     },
     {
+      "name": "1440-class-sessions",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-session-participants",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
       "name": "1440-download-bulk",
       "width": 1440,
       "pageOverflow": 0,
@@ -180,6 +194,188 @@
     },
     {
       "name": "1440-detail-unworn",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-class-list",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-class-download",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-class-download-policy",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-zip-preview",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-member-limit",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-member-batch",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-member-dates",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-member-download",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-facilitator-limit",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-facilitator-batch",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-facilitator-dates",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-facilitator-download",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "org_admin-class-list",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "org_admin-menu",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "org_admin-sessions",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "org_admin-participants",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "org_admin-measurement-detail",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "org_admin-download",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "org_admin-download-policy",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "org_admin-download-created",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "org_admin-audit",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "org_admin-facilitator-limit",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "org_admin-facilitator-batch",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "org_admin-member-zip",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "org_admin-users",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-platform-org-audit",
       "width": 1440,
       "pageOverflow": 0,
       "overlap": [],
@@ -268,7 +464,7 @@
       "pass": true
     },
     {
-      "name": "다중 선택 2건",
+      "name": "동일 회차 참여자 2명 선택",
       "pass": true
     },
     {
@@ -277,6 +473,134 @@
     },
     {
       "name": "밴드 미사용 원본 다운로드 차단",
+      "pass": true
+    },
+    {
+      "name": "클래스 변경 시 고유 회차 목록",
+      "pass": true
+    },
+    {
+      "name": "클래스 예상 용량 및 독립 ZIP 분할 수",
+      "pass": true
+    },
+    {
+      "name": "ZIP 가명 폴더와 메타 표시",
+      "pass": true
+    },
+    {
+      "name": "미측정 제외 확인 전 요청 차단",
+      "pass": true
+    },
+    {
+      "name": "클래스 전체 작업 생성",
+      "pass": true
+    },
+    {
+      "name": "완료 작업 part별 링크",
+      "pass": true
+    },
+    {
+      "name": "member 118회차 전체 요청 차단",
+      "pass": true
+    },
+    {
+      "name": "member 1~50회차 묶음 허용",
+      "pass": true
+    },
+    {
+      "name": "member 마지막 묶음 18회차",
+      "pass": true
+    },
+    {
+      "name": "member 날짜 변경 시 묶음 초기화",
+      "pass": true
+    },
+    {
+      "name": "member 역전 기간 차단",
+      "pass": true
+    },
+    {
+      "name": "facilitator 118회차 전체 요청 차단",
+      "pass": true
+    },
+    {
+      "name": "facilitator 1~50회차 묶음 허용",
+      "pass": true
+    },
+    {
+      "name": "facilitator 마지막 묶음 18회차",
+      "pass": true
+    },
+    {
+      "name": "facilitator 날짜 변경 시 묶음 초기화",
+      "pass": true
+    },
+    {
+      "name": "facilitator 역전 기간 차단",
+      "pass": true
+    },
+    {
+      "name": "클래스→회차→참여자→그래프 탐색",
+      "pass": true
+    },
+    {
+      "name": "그래프에서 회차 참여자로 복귀",
+      "pass": true
+    },
+    {
+      "name": "기관 전용 탭 구성",
+      "pass": true
+    },
+    {
+      "name": "기관명·자기 기관 클래스",
+      "pass": true
+    },
+    {
+      "name": "기관 연구 목적 선택 없음",
+      "pass": true
+    },
+    {
+      "name": "기관 식별 포함은 결정 대기 명시",
+      "pass": true
+    },
+    {
+      "name": "기관 작업에 플랫폼 작업 없음",
+      "pass": true
+    },
+    {
+      "name": "기관 감사는 본인 기관만",
+      "pass": true
+    },
+    {
+      "name": "기관 상담사는 타기관 회차 제외 후59회차",
+      "pass": true
+    },
+    {
+      "name": "기관 마지막 묶음9회차",
+      "pass": true
+    },
+    {
+      "name": "기관 회원 ZIP에 타인 참여자 없음",
+      "pass": true
+    },
+    {
+      "name": "기관 사용자 목록 타기관 제외",
+      "pass": true
+    },
+    {
+      "name": "플랫폼이 기관관리자 반출 감사 조회",
+      "pass": true
+    },
+    {
+      "name": "기관 직접 전용탭 진입도 시안에서 제한",
+      "pass": true
+    },
+    {
+      "name": "검색 후 회차 진입 전체 참여자 선택",
+      "pass": true
+    },
+    {
+      "name": "선택 회차 세션·날짜 상세 일치",
       "pass": true
     }
   ],
