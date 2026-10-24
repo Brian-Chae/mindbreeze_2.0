@@ -17,16 +17,9 @@ export function useMobileMenuSwipe(role: UserRole | null | undefined, blocked: b
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const [message, setMessage] = useState('');
-  const [showHint, setShowHint] = useState(false);
-  const hintKey = `mb-mobile-menu-swipe-hint:${accountKey ?? 'session'}:${role ?? ''}`;
-  const dismissHint = () => {
-    setShowHint(false);
-    try { sessionStorage.setItem(hintKey, '1'); } catch { /* 저장 불가여도 메뉴 이동은 유지한다. */ }
-  };
 
   useEffect(() => {
     if (getSwipeRootIndex(pathname, getMobileMenuTabs(role, isCounselingEnabled())) < 0 || blocked) return;
-    try { setShowHint(sessionStorage.getItem(hintKey) !== '1'); } catch { setShowHint(true); }
     if (pendingFocus?.path === pathname.replace(/\/+$/, '')) {
       const label = pendingFocus.label;
       pendingFocus = null;
@@ -34,7 +27,7 @@ export function useMobileMenuSwipe(role: UserRole | null | undefined, blocked: b
       const title = containerRef.current?.closest('section')?.querySelector<HTMLElement>('[data-mobile-swipe-title]') ?? containerRef.current;
       if (title) { title.setAttribute('tabindex', '-1'); title.focus({ preventScroll: true }); }
     }
-  }, [pathname, role, blocked, hintKey]);
+  }, [pathname, role, blocked]);
 
   useEffect(() => {
     const root = containerRef.current;
@@ -217,5 +210,5 @@ export function useMobileMenuSwipe(role: UserRole | null | undefined, blocked: b
     // drawer 등 React 상태 변경은 이벤트를 기다리지 않고 진행 중 드래그도 취소한다.
     if (blocked) containerRef.current?.dispatchEvent(new Event('pointercancel'));
   }, [blocked]);
-  return { containerRef, message, showHint, dismissHint };
+  return { containerRef, message };
 }

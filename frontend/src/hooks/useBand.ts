@@ -44,7 +44,7 @@ import {
   RAW_SAMPLES_PER_CHUNK,
   type RawEegSample,
 } from '../lib/session-live/raw-encoder';
-import { useEegRawUpload } from './useEegRawUpload';
+import { useEegRawUpload, type EnqueueRawChunkInput } from './useEegRawUpload';
 import {
   deviceStatusFromLeadOff,
   normalizeSignalQuality01,
@@ -450,31 +450,84 @@ export function useBand({
 
   const rawSamplesRef = useRef<RawEegSample[]>([]);
   const rawChunkIndexRef = useRef(0);
+  const rawStreamIdRef = useRef<string | null>(null);
+  if (!rawStreamIdRef.current) {
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    rawStreamIdRef.current = `raw-${Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')}`;
+  }
+  const rawStagedRef = useRef<{ input: EnqueueRawChunkInput; sampleCount: number } | null>(null);
+  const rawPersistingRef = useRef<Promise<void> | null>(null);
   const rawChunkStartMsRef = useRef<number | null>(null);
+  const rawGenerationRef = useRef(0);
+  const rawOwnerRef = useRef({ sessionId, participantId, enqueue: rawUpload.enqueueChunk });
 
-  const flushRawChunk = useCallback(() => {
-    const samples = rawSamplesRef.current;
-    if (samples.length === 0 || !streamIdRef.current) return;
-    const startMs = rawChunkStartMsRef.current ?? Date.now();
-    const endMs = Date.now();
-    const payload = encodeRawChunk(samples);
-    void rawEnqueueRef
-      .current({
-        streamId: streamIdRef.current,
-        chunkIndex: rawChunkIndexRef.current,
-        startedAt: new Date(startMs).toISOString(),
-        endedAt: new Date(endMs).toISOString(),
-        payload,
-      })
-      .catch((err) => logger.warn('raw chunk 적재 실패', err));
-    rawChunkIndexRef.current += 1;
+  // 종료/소유 세션 전환에서는 실패한 staged 뒤의 샘플도 모두 hook의 메모리 큐로 인계한다.
+  const handoffRawMemory = useCallback(() => {
+    let offset = 0;
+    let index = rawChunkIndexRef.current;
+    const staged = rawStagedRef.current;
+    const enqueue = rawOwnerRef.current.enqueue;
+    while (offset < rawSamplesRef.current.length) {
+      const samples = rawSamplesRef.current.slice(offset, offset + RAW_SAMPLES_PER_CHUNK);
+      const input = offset === 0 && staged ? staged.input : {
+        streamId: rawStreamIdRef.current!, chunkIndex: index,
+        startedAt: new Date(rawChunkStartMsRef.current ?? Date.now()).toISOString(),
+        endedAt: new Date().toISOString(), payload: encodeRawChunk(samples),
+      };
+      void enqueue(input).catch((err) => logger.warn('raw 종료 적재 실패 — hook 메모리 사본 유지', err));
+      offset += offset === 0 && staged ? staged.sampleCount : samples.length;
+      index += 1;
+    }
+    rawGenerationRef.current += 1;
+    rawChunkIndexRef.current = index;
     rawSamplesRef.current = [];
+    rawStagedRef.current = null;
     rawChunkStartMsRef.current = null;
+    rawPersistingRef.current = null;
+  }, []);
+
+  const flushRawChunk = useCallback((): Promise<void> => {
+    if (rawPersistingRef.current) return rawPersistingRef.current;
+    const generation = rawGenerationRef.current;
+    const enqueue = rawOwnerRef.current.enqueue;
+    const persist = async () => {
+      while (rawSamplesRef.current.length > 0 && generation === rawGenerationRef.current) {
+        if (!rawStagedRef.current) {
+          const samples = rawSamplesRef.current.slice(0, RAW_SAMPLES_PER_CHUNK);
+          rawStagedRef.current = {
+            sampleCount: samples.length,
+            input: {
+              streamId: rawStreamIdRef.current!, chunkIndex: rawChunkIndexRef.current,
+              startedAt: new Date(rawChunkStartMsRef.current ?? Date.now()).toISOString(),
+              endedAt: new Date().toISOString(), payload: encodeRawChunk(samples),
+            },
+          };
+        }
+        const staged = rawStagedRef.current;
+        try {
+          // 실패 시 샘플·고정 payload 모두 유지. hook도 재마운트용 메모리 사본을 보존한다.
+          await enqueue(staged.input);
+          if (generation !== rawGenerationRef.current) return;
+        } catch (err) {
+          logger.warn('raw chunk 적재 실패 — 메모리 사본 유지', err);
+          return;
+        }
+        rawSamplesRef.current = rawSamplesRef.current.slice(staged.sampleCount);
+        rawChunkIndexRef.current += 1;
+        rawStagedRef.current = null;
+        rawChunkStartMsRef.current = rawSamplesRef.current.length ? Date.now() : null;
+      }
+    };
+    const promise = persist().finally(() => { if (generation === rawGenerationRef.current) rawPersistingRef.current = null; });
+    rawPersistingRef.current = promise;
+    return promise;
   }, []);
 
   const handleRawEegData = useCallback(
     (data: { fp1: number; fp2: number }[]) => {
       if (observationOnlyRef.current || !streamIdRef.current) return;
+      if (rawOwnerRef.current.sessionId !== sessionId || rawOwnerRef.current.participantId !== participantId) handoffRawMemory();
+      if (rawSamplesRef.current.length === 0) rawOwnerRef.current = { sessionId, participantId, enqueue: rawEnqueueRef.current };
       if (rawChunkStartMsRef.current == null) rawChunkStartMsRef.current = Date.now();
       for (const s of data) {
         rawSamplesRef.current.push({ fp1: s.fp1, fp2: s.fp2 });
@@ -491,7 +544,7 @@ export function useBand({
         void rawFlushRef.current().catch((err) => logger.warn('콜백 경로 raw flush 실패', err));
       }
     },
-    [flushRawChunk],
+    [flushRawChunk, handoffRawMemory, sessionId, participantId],
   );
 
   const eegWaveformRef = useRef<BandEegWaveform>({ fp1: [], fp2: [] });
@@ -1039,7 +1092,7 @@ export function useBand({
     }
 
     if (!observationOnlyRef.current) {
-      flushRawChunk();
+      await flushRawChunk();
       await drainPendingQueue();
       await rawDrainRef.current(15_000);
     }
@@ -1373,8 +1426,8 @@ export function useBand({
         logger.warn('복귀 시 BLE 연결 확인 실패', err);
       }
     },
-    onPause: () => {
-      if (!observationOnlyRef.current && collectingRef.current) flushRawChunk();
+    onPause: async () => {
+      if (!observationOnlyRef.current && collectingRef.current) await flushRawChunk();
     },
   });
 
@@ -1387,6 +1440,7 @@ export function useBand({
   useEffect(() => {
     mountedRef.current = true;
     return () => {
+      if (!observationOnlyRef.current) handoffRawMemory();
       mountedRef.current = false;
       connectionAttemptRef.current += 1;
       collectingRef.current = false;
@@ -1413,7 +1467,7 @@ export function useBand({
       // 컴포넌트 unmount/remount로 연결이 끊기지 않도록 disconnect를 호출하지 않는다.
       // 명시적 종료(resetJoin)에서 bluetoothService.disconnect()로 정리한다.
     };
-  }, [stopMock]);
+  }, [stopMock, handoffRawMemory]);
 
   // 준비 단계 이후 소유자가 없는 대기 중 끊겼어도 이전 기기를 이어받는다.
   // 수동 해제는 기기 캐시를 지우므로 재연결하지 않으며, 새 선택창도 띄우지 않는다.

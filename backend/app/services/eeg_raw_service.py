@@ -243,6 +243,11 @@ def ack_upload(
     return {
         "session_id": str(sid),
         "acked": acked,
+        "chunks": [
+            {"chunk_id": str(chunk_id), "upload_status": by_id[chunk_id].upload_status,
+             "checksum": by_id[chunk_id].checksum, "size_bytes": by_id[chunk_id].size_bytes}
+            for chunk_id in wanted_ids
+        ],
         "failed": failed,
         "eeg_record_id": str(record.id) if record else None,
         "file_count": record.file_count if record else 0,
