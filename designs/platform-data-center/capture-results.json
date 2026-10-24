@@ -1,0 +1,158 @@
+{
+  "date": "2026-10-24",
+  "browser": "155.0.8059.85",
+  "source": "합성 HTML file:// / 외부 요청 차단",
+  "results": [
+    {
+      "name": "1440-overview",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-users",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-measurements",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-research",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-retention",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-standards",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-research-consents",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-research-batches",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-retention-candidates",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-retention-deletion",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-standards-baselines",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-users-revealed",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-users-grouped",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-empty",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "390-users",
+      "width": 390,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "390-users-detail",
+      "width": 390,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    }
+  ],
+  "checks": [
+    {
+      "name": "개별 개인정보 열람",
+      "pass": true
+    },
+    {
+      "name": "대상 변경 시 재마스킹",
+      "pass": true
+    },
+    {
+      "name": "기관별 그룹핑",
+      "pass": true
+    },
+    {
+      "name": "상태 필터",
+      "pass": true
+    },
+    {
+      "name": "빈 상태 초기화",
+      "pass": true
+    },
+    {
+      "name": "탭 이동 시 재마스킹",
+      "pass": true
+    },
+    {
+      "name": "모바일 상세 열기",
+      "pass": true
+    },
+    {
+      "name": "모바일 닫기 시 원문 폐기",
+      "pass": true
+    },
+    {
+      "name": "모바일 상세 닫기",
+      "pass": true
+    }
+  ],
+  "errors": []
+}
