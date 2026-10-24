@@ -114,6 +114,76 @@
       "pageOverflow": 0,
       "overlap": [],
       "clipped": []
+    },
+    {
+      "name": "1440-measurement-detail",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-detail-ppg",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-detail-acc",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-download-dialog",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-download-created",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-download-jobs",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-download-audit",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-download-bulk",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-download-blocked",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-detail-unworn",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
     }
   ],
   "checks": [
@@ -151,6 +221,62 @@
     },
     {
       "name": "모바일 상세 닫기",
+      "pass": true
+    },
+    {
+      "name": "측정 메타 기본 비공개",
+      "pass": true
+    },
+    {
+      "name": "측정 메타 개별 열람",
+      "pass": true
+    },
+    {
+      "name": "원파형 확대 범위 변경",
+      "pass": true
+    },
+    {
+      "name": "원파형 구간 선택",
+      "pass": true
+    },
+    {
+      "name": "원파형 시간 이동",
+      "pass": true
+    },
+    {
+      "name": "ppg 미저장 안내",
+      "pass": true
+    },
+    {
+      "name": "acc 미저장 안내",
+      "pass": true
+    },
+    {
+      "name": "빈 사유·재인증 미선택 제출 차단",
+      "pass": true
+    },
+    {
+      "name": "Parquet 합성 작업 생성",
+      "pass": true
+    },
+    {
+      "name": "만료 작업 다운로드 차단",
+      "pass": true
+    },
+    {
+      "name": "감사에 요청자·사유·차단 기록",
+      "pass": true
+    },
+    {
+      "name": "다중 선택 2건",
+      "pass": true
+    },
+    {
+      "name": "비회원 포함 연구 일괄 차단",
+      "pass": true
+    },
+    {
+      "name": "밴드 미사용 원본 다운로드 차단",
       "pass": true
     }
   ],
