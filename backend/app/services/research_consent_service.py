@@ -175,6 +175,10 @@ def set_own_consent(
         participant_id=participant_id,
     )
 
+    # 기관·학교 여부를 추정하지 않고 모든 비회원을 제외한다. 이전 동의의 철회는 허용한다.
+    if p.user_id is None and consented:
+        raise HTTPException(status_code=403, detail="비회원 참여는 연구 활용 대상이 아닙니다")
+
     if s.class_id:
         p.research_consent_override = True
     row = _get_consent(p.id, db)
@@ -357,6 +361,9 @@ def admin_withdraw(name: str, birth_date: date, reason: str, admin_id: uuid.UUID
 
 def copy_class_choice(db, participant, member):
     """O3 원선택을 기존 current/event 계약으로 복사한다. commit은 호출자 소유."""
+    # 과거 guest 원선택이 true여도 새 회차 연구 동의로 복사하지 않는다.
+    if participant.user_id is None or member.user_id is None:
+        return
     row = _get_consent(participant.id, db)
     previous = bool(row and row.consented)
     previous_origin = row.origin_id if row else None

@@ -25,7 +25,7 @@ const CODE_CASES: Record<string, CodeCase> = {
 };
 
 const EMPTY: EntryProfileDraft = { name: '', gender: null, birth: '', email: '', emailConfirm: '' };
-const FILLED: EntryProfileDraft = { name: DEMO.guestName, gender: 'female', birth: '1990.03.12', email: 'jieun@example.com', emailConfirm: 'jieun@example.com' };
+const FILLED: EntryProfileDraft = { name: DEMO.guestName, gender: 'female', birth: '1990-03', email: 'jieun@example.com', emailConfirm: 'jieun@example.com' };
 
 interface ProfileCase {
   draft: EntryProfileDraft;
@@ -39,7 +39,7 @@ const PROFILE_CASES: Record<string, ProfileCase> = {
   filled: { draft: FILLED, errors: {}, member: false, description: '모두 입력' },
   error: {
     draft: { name: '', gender: 'female', birth: '1990.13', email: 'jieun@', emailConfirm: '' },
-    errors: { name: '이름을 입력해 주세요', birth: '생년월일을 다시 확인해 주세요', email: '이메일 형식을 확인해 주세요' },
+    errors: { name: '이름을 입력해 주세요', birth: '생년월을 다시 확인해 주세요', email: '이메일 형식을 확인해 주세요' },
     member: false,
     description: '필수 누락·형식 오류 인라인 문구',
   },

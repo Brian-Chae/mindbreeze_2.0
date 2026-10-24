@@ -112,6 +112,8 @@ def update_consents(db,class_id,command,*,user_id=None,member_credential=None,no
     if hasattr(command,'model_dump'):
         command=command.model_dump(mode='json',exclude_unset=True)
     def apply(cls,member,data):
+        if member.user_id is None and data.get('research_consented') is True:
+            raise _error('guest_research_not_applicable')
         report_changed='report_included_default' in data and data['report_included_default']!=member.report_included_default
         notice_changed='research_notice_version' in data and data['research_notice_version']!=member.research_notice_version
         if notice_changed and data.get('research_consented') is not True:

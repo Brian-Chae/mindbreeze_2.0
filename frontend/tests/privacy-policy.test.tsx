@@ -44,7 +44,7 @@ describe('/privacy 페이지', () => {
     const text = renderPage();
     expect(text).toContain('2026년 10월 24일');
     // SDD-220: 탈퇴 30일 삭제·선택 동의·위탁 고지를 반영한 2.0 으로 개정
-    expect(text).toContain('버전 2.1');
+    expect(text).toContain('버전 2.2');
     expect(container.querySelector('h1')?.textContent).toBe('개인정보 처리방침');
   });
 
@@ -82,8 +82,10 @@ describe('/privacy 페이지', () => {
     // 4 재식별 위험
     expect(text).toContain('본인을 알아볼 가능성이 완전히 없다고는 할 수 없습니다');
     // 5 비회원 개인정보(이름·성별·생년월일·이메일, 리포트 발송)
-    expect(text).toContain('이름, 성별, 생년월일, 이메일');
+    expect(text).toContain('이름(별명·반 번호 가능), 성별, 생년월(연·월), 이메일');
     expect(text).toContain('리포트 이메일 발송');
+    expect(text).toContain('보호자의 서면 동의를 확보할 책임');
+    expect(text).toContain('비회원 참여자의 데이터는 연구 활용 대상에서 제외');
     // 6 4자리 입장 코드
     expect(text).toContain('4자리 숫자 입장 코드');
     // 7 시행일·개정 이력

@@ -33,7 +33,7 @@ import {
 } from '../src/lib/class/flow/member-entry';
 
 const GOOD: EntryProfileDraft = {
-  name: '지은', gender: 'female', birth: '1990.03.12', email: 'jieun@example.com', emailConfirm: 'jieun@example.com',
+  name: '지은', gender: 'female', birth: '1990-03', email: 'jieun@example.com', emailConfirm: 'jieun@example.com',
 };
 
 beforeEach(() => {
@@ -65,30 +65,30 @@ describe('코드 입력 순수 로직', () => {
 });
 
 describe('개인정보 입력 검증', () => {
-  it('생년월일은 연.월.일/연-월-일/숫자 8자리를 ISO 로 바꾸고 달력에 없는 날짜는 거부한다', () => {
-    expect(birthToIso('1990.03.12')).toBe('1990-03-12');
-    expect(birthToIso('1990-3-2')).toBe('1990-03-02');
-    expect(birthToIso('19900312')).toBe('1990-03-12');
-    expect(birthToIso('1990.13')).toBeNull();
-    expect(birthToIso('1990.02.30')).toBeNull();
-    expect(birthToIso('2999.01.01')).toBeNull();
-    expect(birthToIso('')).toBeNull();
+  it('생년월은 연월만 받고 미래월·잘못된 월·일자 포함 입력을 거부한다', () => {
+    expect(birthToIso('2018-03')).toBe('2018-03');
+    expect(birthToIso('1990.3')).toBe('1990-03');
+    expect(birthToIso('199003')).toBe('1990-03');
+    for (const value of ['1990.13', '1990-00', '1899-12', '1990-03-12', '']) expect(birthToIso(value)).toBeNull();
+    expect(birthToIso('2026-10', new Date('2026-10-01T00:00:00Z'))).toBe('2026-10');
+    expect(birthToIso('2026-11', new Date('2026-10-24T00:00:00Z'))).toBeNull();
+    expect(validateEntryProfile({ ...GOOD, name: '3반 2번', birth: '2018-03' }, 'guest')).toEqual({});
   });
   it('필수 누락·형식 오류·이메일 불일치를 항목별 인라인 문구로 돌려준다', () => {
     expect(validateEntryProfile(GOOD, 'guest')).toEqual({});
     const bad = validateEntryProfile({ name: ' ', gender: null, birth: '1990.13', email: 'jieun@', emailConfirm: '' }, 'guest');
     expect(bad.name).toBe('이름을 입력해 주세요');
     expect(bad.gender).toBe('성별을 선택해 주세요');
-    expect(bad.birth).toBe('생년월일을 다시 확인해 주세요');
+    expect(bad.birth).toBe('생년월을 다시 확인해 주세요');
     expect(bad.email).toBe('이메일 형식을 확인해 주세요');
     expect(validateEntryProfile({ ...GOOD, emailConfirm: 'jieun@exampel.com' }, 'guest').emailConfirm).toBe('이메일이 서로 달라요');
   });
   it('로그인 회원은 이메일 재입력과 성별·생년월일 입력을 요구하지 않는다', () => {
     expect(validateEntryProfile({ ...emptyProfileDraft(), name: '지은', email: 'jieun@example.com' }, 'member')).toEqual({});
   });
-  it('요청 바디는 코드 문자열 그대로(선행 0) + 프로필(ISO 생년월일)', () => {
+  it('요청 바디는 코드 문자열 그대로(선행 0) + 프로필(연월만)', () => {
     expect(toEnterPayload('0042', GOOD, 'guest')).toEqual({
-      code: '0042', name: '지은', gender: 'female', birth_date: '1990-03-12', email: 'jieun@example.com',
+      code: '0042', name: '지은', gender: 'female', birth_year_month: '1990-03', email: 'jieun@example.com',
     });
     expect(toEnterPayload('0042', GOOD, 'member')).toEqual({ code: '0042' });
   });

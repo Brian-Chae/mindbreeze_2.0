@@ -393,7 +393,7 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
   }
   if (machine.phase === 'wizard' && machine.step === 'a') {
     return (
-      <NoticeStepView
+      <NoticeStepView researchAllowed={!entry.isGuest}
         sessionType={info.sessionType} place={place} size={size} bandMode={bandMode} title={title} hostName={info.hostName} retentionDays={RETENTION_DAYS}
         aiEnabled={isAiEnabled()}
         reportChoice={prep.draft.reportChoice} researchConsent={prep.draft.researchConsent} researchSaveFailed={prep.draft.researchSaveFailed}
@@ -478,7 +478,7 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
     return (
       <ReadySummaryView
         place={place} displayName={displayName} steps={stepsView}
-        rows={buildSummaryRows({ place, bandMode, draft: prep.draft })}
+        rows={buildSummaryRows({ place, bandMode, draft: prep.draft }).filter((row) => !entry.isGuest || row.key !== 'research')}
         onGoto={(step) => dispatch({ type: 'goto', step, fromSummary: true })}
         onReady={() => dispatch({ type: 'finishPrep' })}
         onBack={() => dispatch({ type: 'back', steps })}

@@ -22,6 +22,11 @@ describe('SDD-220 공개 정책', () => {
   it('약관에 연령, 제재, 탈퇴와 운영 책임자를 고지한다', () => {
     show(<TermsPage />);
     for (const text of ['14세', '30일', '채용욱', '금지행위']) expect(document.body.textContent).toContain(text);
+    expect(document.body.textContent).toContain('회원가입은 만 14세 이상');
+    expect(document.body.textContent).toContain('학교·기관');
+    expect(document.body.textContent).toContain('보호자의 서면 동의');
+    expect(document.body.textContent).toContain('만 14세 미만도 비회원으로 코드 입장');
+    expect(document.body.textContent).not.toContain('만 14세 이상 이용할 수 있습니다');
   });
   it('방침은 선택 동의와 탈퇴, 위탁, 광고 미사용을 구분한다', () => {
     const text = JSON.stringify(PRIVACY_ARTICLES);

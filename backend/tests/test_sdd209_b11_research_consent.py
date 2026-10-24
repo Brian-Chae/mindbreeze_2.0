@@ -47,7 +47,20 @@ def _group(client, host, cap=10):
 def _guest(client, cls, name="김연구", birth="1990-05-17", **kw):
     r = enter_guest(client, cls["access_code"], name, birth_date=birth, **kw)
     assert r.status_code == 200, r.text
-    return r.json()
+    result = r.json()
+    # 기존 연구 도메인 검증의 이름·생일 입력은 보존하되 회원 동의 주체로 구성한다.
+    from app.models.user import User
+    from app.models.session import SessionParticipant
+    db = _db()
+    try:
+        user = User(email=f"subject-{uuid.uuid4().hex}@test.com", name=name, role="client", password_hash="x")
+        db.add(user)
+        db.flush()
+        db.get(SessionParticipant, uuid.UUID(result['participant_id'])).user_id = user.id
+        db.commit()
+    finally:
+        db.close()
+    return result
 
 
 def _cred(j):

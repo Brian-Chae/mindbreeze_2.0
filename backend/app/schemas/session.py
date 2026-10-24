@@ -278,12 +278,13 @@ class EnterVerifyResponse(BaseModel):
 
 
 class EnterRequest(BaseModel):
-    """SDD-209(B5a): 코드 + 개인정보로 입장. 비로그인은 이름·성별·생년월일·이메일 필수, 로그인 회원은 생략 가능."""
+    """SDD-209(B5a): 코드 + 개인정보로 입장. 비로그인은 이름·성별·생년월·이메일 필수, 로그인 회원은 생략 가능. 이전 생년월일 요청도 호환."""
 
     code: str = Field(..., max_length=64)
     name: str | None = Field(None, min_length=1, max_length=100)
     gender: Literal["male", "female", "other"] | None = None
-    birth_date: str | None = None
+    birth_date: str | None = None  # 이전 클라이언트 요청 호환
+    birth_year_month: str | None = None
     email: EmailStr | None = None
     # 복귀: 이전에 받은 입장 자격(헤더 X-Entry-Credential 로도 전달 가능). 이름 일치로는 인계하지 않는다.
     entry_credential: str | None = None
@@ -293,6 +294,13 @@ class EnterRequest(BaseModel):
     # SDD-220: 뇌파 수집 선택(밴드 연결 사전 선택). 생략하면 회원은 계정 동의값, 비회원은 미동의로 둔다.
     eeg_collection_consent: bool | None = None
     eeg_notice_version: str | None = Field(None, min_length=1, max_length=20)
+
+    @model_validator(mode="after")
+    def normalize_guest_birth(self) -> "EnterRequest":
+        if self.birth_year_month is not None:
+            from app.schemas.guest_birth import parse_guest_birth_year_month
+            self.birth_date = parse_guest_birth_year_month(self.birth_year_month).isoformat()
+        return self
 
 
 class EntryConsentBody(BaseModel):

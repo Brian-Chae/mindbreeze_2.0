@@ -34,7 +34,7 @@ export const GENDER_OPTIONS: ReadonlyArray<{ value: EntryGender; label: string }
 export interface EntryProfileDraft {
   name: string;
   gender: EntryGender | null;
-  /** 화면 입력 그대로(전체 일자). 서버가 연·월만 보관한다 */
+  /** 비회원은 연월만 입력한다. 회원의 기존 일자 표시는 읽기 전용이다 */
   birth: string;
   email: string;
   emailConfirm: string;
@@ -56,20 +56,18 @@ export interface EntryProfileErrors {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-/** `1990.03.12`·`1990-3-2`·`19900312` → `1990-03-12`. 달력에 없는 날짜·미래·1900 이전은 null */
+/** 비회원 생년월 입력을 YYYY-MM으로 정규화한다. 일자와 미래월은 받지 않는다. */
 export function birthToIso(raw: string, now: Date = new Date()): string | null {
   const text = raw.trim();
-  const compact = /^(\d{4})(\d{2})(\d{2})$/.exec(text);
-  const separated = /^(\d{4})([.\-/])(\d{1,2})\2(\d{1,2})$/.exec(text);
-  if (!compact && !separated) return null;
-  const year = Number(compact ? compact[1] : separated?.[1]);
-  const month = Number(compact ? compact[2] : separated?.[3]);
-  const day = Number(compact ? compact[3] : separated?.[4]);
-  if (year < 1900 || month < 1 || month > 12 || day < 1) return null;
-  const probe = new Date(Date.UTC(year, month - 1, day));
-  if (probe.getUTCFullYear() !== year || probe.getUTCMonth() !== month - 1 || probe.getUTCDate() !== day) return null;
-  if (probe.getTime() > now.getTime()) return null;
-  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  const compact = /^(\d{4})(\d{2})$/.exec(text);
+  const separated = /^(\d{4})[.\-/](\d{1,2})$/.exec(text);
+  const match = compact ?? separated;
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  if (year < 1900 || month < 1 || month > 12) return null;
+  if (year > now.getFullYear() || (year === now.getFullYear() && month > now.getMonth() + 1)) return null;
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}`;
 }
 
 /** 항목별 인라인 오류(해요체). 로그인 회원은 계정 값을 쓰므로 검증하지 않는다 */
@@ -78,7 +76,7 @@ export function validateEntryProfile(draft: EntryProfileDraft, mode: EntryProfil
   const errors: EntryProfileErrors = {};
   if (draft.name.trim().length === 0 || draft.name.trim().length > 100) errors.name = '이름을 입력해 주세요';
   if (draft.gender === null) errors.gender = '성별을 선택해 주세요';
-  if (birthToIso(draft.birth) === null) errors.birth = '생년월일을 다시 확인해 주세요';
+  if (birthToIso(draft.birth) === null) errors.birth = '생년월을 다시 확인해 주세요';
   if (!EMAIL_RE.test(draft.email.trim())) errors.email = '이메일 형식을 확인해 주세요';
   else if (draft.email.trim().toLowerCase() !== draft.emailConfirm.trim().toLowerCase()) errors.emailConfirm = '이메일이 서로 달라요';
   return errors;
@@ -97,7 +95,7 @@ export function toEnterPayload(code: string, draft: EntryProfileDraft, mode: Ent
     code,
     name: draft.name.trim(),
     gender: draft.gender ?? undefined,
-    birth_date: birth ?? undefined,
+    birth_year_month: birth ?? undefined,
     email: draft.email.trim(),
   };
 }
