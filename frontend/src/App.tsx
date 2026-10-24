@@ -66,6 +66,7 @@ const ClassFlowCasesPage = lazy(() => import('./pages/design/ClassFlowCasesPage'
 const ReportSamplePage = lazy(() => import('./pages/reports/ReportSamplePage'));
 const ReportDetailPage = lazy(() => import('./pages/reports/ReportDetailPage'));
 const ReportViewPage = lazy(() => import('./pages/reports/ReportViewPage'));
+const DataCenterPage = lazy(() => import('./pages/data-center/data-center-page'));
 const AdminReviewListPage = lazy(() => import('./pages/admin/AdminReviewListPage'));
 const AdminReviewDetailPage = lazy(() => import('./pages/admin/AdminReviewDetailPage'));
 const UserManagementPage = lazy(() => import('./pages/admin/UserManagementPage'));
@@ -217,6 +218,8 @@ const router = createBrowserRouter(
         <Route path="/org/requests" element={<RoleGuard><MyRequestsPage /></RoleGuard>} />
         {/* SDD-082: static 세그먼트가 :org_id 보다 우선 매칭됨 */}
         <Route path="/org/counselors" element={<RoleGuard role="org_admin"><OrgCounselorsPage /></RoleGuard>} />
+        <Route path="/org/data-center" element={<RoleGuard role="org_admin"><DataCenterPage /></RoleGuard>} />
+        <Route path="/admin/data-center" element={<PlatformAdminRoute><DataCenterPage /></PlatformAdminRoute>} />
         <Route path="/org/:org_id" element={<OrgManagementPage />} />
         <Route path="/credentials" element={<RoleGuard role={['counselor', 'org_admin']}><CredentialDashboardPage /></RoleGuard>} />
         <Route path="/sessions" element={<RoleGuard role={['counselor', 'org_admin']}><Navigate to="/classes" replace /></RoleGuard>} />
