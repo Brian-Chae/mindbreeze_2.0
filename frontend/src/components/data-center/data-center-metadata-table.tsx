@@ -70,6 +70,7 @@ const labels: Record<string, string> = {
   research_hold: "연구 보류",
   unknown_deadline: "기한 미확인",
 };
+// eslint-disable-next-line react-refresh/only-export-components
 export function metadataProjection(item: MetadataItem): {
   key: string;
   cells: string[];

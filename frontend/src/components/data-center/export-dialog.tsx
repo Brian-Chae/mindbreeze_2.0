@@ -11,6 +11,7 @@ function ExportDialogContent({target,orgId,isOrgAdmin=false,canExportIdentified=
  const busyRef=useRef(false);
  const idempotencyKey=useRef(crypto.randomUUID());
  const epoch=useRef(0), closeRef=useRef<HTMLButtonElement>(null);
+ // eslint-disable-next-line react-hooks/exhaustive-deps -- 언마운트 시 진행 중 작업 세대를 무효화하려고 ref 현재값을 증가시킨다
  useEffect(()=>{closeRef.current?.focus();const timer=setInterval(()=>setClock(Date.now()),1000);return()=>{epoch.current++;clearInterval(timer);};},[]);
  const change=(next:ExportRequest)=>{epoch.current++;busyRef.current=false;setBusy(false);idempotencyKey.current=crypto.randomUUID();setRequest(next);setPreview(null);setProof(null);setConfirmed(false);setCredential('');setError('');};
  const run=async(action:()=>Promise<void>)=>{if(busyRef.current)return;busyRef.current=true;const generation=epoch.current;setBusy(true);setError('');try{await action();}catch(e){if(generation===epoch.current){const info=exportError(e);setError(info.message);setActiveJob(info.jobId);}}finally{if(generation===epoch.current){busyRef.current=false;setBusy(false);}}};

@@ -136,7 +136,6 @@ export class BiosignalCaptureSession {
     s.lastReceivedUtcUs = packet.receivedUtcUs;
     const rows = packet.rows.length;
     let tickUnwrapped: string | null = null;
-    let reason: string | null = null;
     if (packet.tickRaw !== null) {
       let obs = s.clock.observe(packet.tickRaw, packet.receivedUtcUs, packet.receivedMonotonicUs);
       const tick = BigInt(obs.unwrappedTick);
@@ -145,7 +144,7 @@ export class BiosignalCaptureSession {
       const packetGap = !obs.reason && elapsedUs !== null && Math.abs(elapsedUs - expectedUs) > 2_000_000 / RATES[signal];
       if (packetGap) { s.clock.reanchor(); obs = s.clock.observe(packet.tickRaw, packet.receivedUtcUs, packet.receivedMonotonicUs); }
       s.lastTick = BigInt(obs.unwrappedTick);
-      tickUnwrapped = obs.unwrappedTick; reason = packetGap ? 'packet_gap' : obs.reason;
+      tickUnwrapped = obs.unwrappedTick; const reason = packetGap ? 'packet_gap' : obs.reason;
       if (obs.segmentId !== s.segmentId) {
         if (s.segmentId) this.rollSegment(signal, s, reason, sampleTimeUs(0, { numerator: RATES[signal], denominator: 1 }, Math.max(0, rows - 1), obs.mappedUtcUs));
         s.segmentId = obs.segmentId; s.nextSample = 0; s.unsealedSamples = 0; s.unsealedBytes = 0;

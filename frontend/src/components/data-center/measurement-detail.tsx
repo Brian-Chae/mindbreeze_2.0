@@ -35,6 +35,7 @@ function MeasurementDetailBody({ sessionId, participantId, orgId, onClose, onSel
    measurementApi.spectrum(...options).then(value=>publish('spectrum',value)).catch(fail),
   ];
   void Promise.all(requests).then(()=>{ if (!controller.signal.aborted && generation.current === request) setLoading(false); });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- 범위·탭 전환/언마운트 시 늦은 응답을 폐기하려고 세대를 증가시킨다
   return ()=>{ controller.abort(); generation.current++; };
  },[sessionId,participantId,orgId,range,tab]);
  function selectRange(from: number,to: number) {

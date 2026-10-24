@@ -7,6 +7,7 @@ export function ExportJobs(props:ExportJobsProps){return <ExportJobsBody key={pr
 function ExportJobsBody({orgId,refreshKey=0,client=exportApi}:ExportJobsProps){
  const [now,setNow]=useState(Date.now()),[jobs,setJobs]=useState<ExportStatus[]>([]),[cursor,setCursor]=useState<string|null>(null),[error,setError]=useState(''),[refresh,setRefresh]=useState(0),[selected,setSelected]=useState<{job:ExportStatus;partId:string}|null>(null),[credential,setCredential]=useState(''),[busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[loading,setLoading]=useState(false);
  const scopeEpoch=useRef(0),deliveryEpoch=useRef(0),deliveryBusy=useRef(false);
+ // eslint-disable-next-line react-hooks/exhaustive-deps -- 언마운트 시 진행 중 조회·발급 세대를 무효화하려고 ref 현재값을 증가시킨다
  useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),1000);return()=>{clearInterval(timer);scopeEpoch.current++;deliveryEpoch.current++;};},[]);
  useEffect(()=>{let active=true;const generation=scopeEpoch.current;setLoading(true);client.jobs(orgId).then(result=>{if(active&&generation===scopeEpoch.current){setJobs(result.items);setCursor(result.next_cursor);setError('');}}).catch(e=>{if(active&&generation===scopeEpoch.current)setError(exportError(e).message);}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[orgId,refreshKey,refresh,client]);
  useEffect(()=>{if(!jobs.some(j=>['queued','preparing'].includes(j.status)))return;const timer=setTimeout(()=>setRefresh(x=>x+1),5000);return()=>clearTimeout(timer);},[jobs]);

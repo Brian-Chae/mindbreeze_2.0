@@ -37,6 +37,8 @@ export function useDataCenter<T>(
             });
         });
     return () => controller.abort();
+    // requestKey 는 path+key 로 파생되므로 의존성에 중복해 넣지 않는다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [path, key]);
   return state.requestKey === requestKey
     ? state

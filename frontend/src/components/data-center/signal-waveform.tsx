@@ -1,6 +1,7 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { WaveformResponse, WaveformChannel } from '../../lib/api/data-center-measurement';
 // segment마다 독립 dataKey를 부여해 동일 시간축에서 경계 연결을 차단한다.
+// eslint-disable-next-line react-refresh/only-export-components
 export function waveformSeries(data: WaveformResponse, channel: WaveformChannel) {
  return data.segments.map(segment => data.t_us.slice(segment.point_start, segment.point_end).flatMap((time, offset) => {
   const index = segment.point_start + offset;

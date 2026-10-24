@@ -54,7 +54,7 @@ export interface SnapshotContext {
 export const DISPLAY_PIPELINE_VERSION = 'member-player-1hz-v1';
 export const B0_VERSION = 'haru-constants-v2-B0';
 const MIND = ['focus', 'relaxation', 'emotional'] as const;
-const BODY = ['bpm', 'respiration', 'hrv'] as const;
+type BodyMetric = 'bpm' | 'respiration' | 'hrv';
 const short = (id: string) => id.replace(/-/g, '');
 
 /** MemberStage·MemberSheets와 같은 표시 규칙(반올림 정수, 비유한값은 미표시). 두 화면이 이 함수를 쓴다. */
@@ -100,7 +100,7 @@ export function buildDisplaySnapshot(input: RenderedMetrics | null, ctx: Snapsho
       provenance_reason: local && eegFeature ? null : remote ? 'remote_fallback_server_relaxation' : 'local_feature_not_collected',
       null_reason: null, normalization_source: remote ? 'unavailable' : ctx.normalization?.[key]?.source ?? 'unavailable', ...flags };
   };
-  const body = (key: (typeof BODY)[number]): DisplayMetricRow => {
+  const body = (key: BodyMetric): DisplayMetricRow => {
     if (input.displayedKeys && !input.displayedKeys.includes(key)) return blank('not_rendered');
     const raw = input.values[key], value = displayedInteger(raw);
     if (value === null || value < 0) return blank(nullReason(key), flags);
