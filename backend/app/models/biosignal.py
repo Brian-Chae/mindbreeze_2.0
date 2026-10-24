@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
-    BigInteger, CheckConstraint, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint, func,
+    BigInteger, CheckConstraint, DateTime, Float, ForeignKey, Index, Integer, String, UniqueConstraint, func, text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -139,3 +139,131 @@ class BiosignalManifestCurrent(Base):
     revision: Mapped[int] = mapped_column(Integer, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+
+class BiosignalArtifact(Base):
+    """raw 가 아닌 산출물(feature/raw_derived/indices/normalization/algorithm)의 업로드·검증 원장.
+
+    본문은 객체 저장소(내용 주소 key)에 있고 이 행은 메타·ACK 상태·scope·순번만 가진다.
+    """
+
+    __tablename__ = "biosignal_artifacts"
+    __table_args__ = (
+        UniqueConstraint("session_id", "participant_id", "artifact_alias", name="uq_biosignal_artifact_alias"),
+        CheckConstraint("artifact_kind IN ('feature','raw_derived','indices','normalization','algorithm')", name="ck_biosignal_artifact_kind"),
+        CheckConstraint("upload_status IN ('pending','uploaded','failed')", name="ck_biosignal_artifact_status"),
+        CheckConstraint("row_count >= 0 AND sequence >= 0 AND size_bytes > 0", name="ck_biosignal_artifact_counts"),
+        # 같은 scope+순번 슬롯에는 한 내용만 존재한다(NULL scope 도 같은 값으로 취급)
+        Index(
+            "uq_biosignal_artifact_slot", "session_id", "participant_id", "artifact_kind",
+            func.coalesce(text("stream_id"), text("''")), func.coalesce(text("segment_id"), text("''")),
+            func.coalesce(text("signal"), text("''")), func.coalesce(text("view_instance_id"), text("''")), "sequence",
+            unique=True,
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False, index=True)
+    participant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("session_participants.id", ondelete="CASCADE"), nullable=False)
+    artifact_alias: Mapped[str] = mapped_column(String(64), nullable=False)
+    artifact_kind: Mapped[str] = mapped_column(String(20), nullable=False)
+    signal: Mapped[str | None] = mapped_column(String(8))
+    stream_id: Mapped[str | None] = mapped_column(String(64))
+    segment_id: Mapped[str | None] = mapped_column(String(64))
+    view_instance_id: Mapped[str | None] = mapped_column(String(64))
+    play_group_id: Mapped[str | None] = mapped_column(String(64))
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    first_sequence: Mapped[int | None] = mapped_column(Integer)
+    last_sequence: Mapped[int | None] = mapped_column(Integer)
+    row_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    content_encoding: Mapped[str] = mapped_column(String(10), default="identity", nullable=False)
+    schema_version: Mapped[str] = mapped_column(String(40), nullable=False)
+    checksum: Mapped[str] = mapped_column(String(64), nullable=False)
+    uncompressed_sha256: Mapped[str | None] = mapped_column(String(64))
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    time_from_us: Mapped[int | None] = mapped_column(BigInteger)
+    time_to_us: Mapped[int | None] = mapped_column(BigInteger)
+    # 90일 raw-equivalent(raw_derived) / feature 정책 / 메타 정책 구분
+    retention_class: Mapped[str] = mapped_column(String(20), nullable=False)
+    object_key: Mapped[str] = mapped_column(String(500), nullable=False)
+    object_version_id: Mapped[str | None] = mapped_column(String(200))
+    upload_status: Mapped[str] = mapped_column(String(10), default="pending", nullable=False)
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    failure_reason: Mapped[str | None] = mapped_column(String(100))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class BiosignalFeatureAlias(Base):
+    """FeatureRecord.feature_id_alias → 포함 artifact (객체를 파싱하지 않고 업로드 요청의 목록으로 색인)."""
+
+    __tablename__ = "biosignal_feature_aliases"
+    __table_args__ = (UniqueConstraint("session_id", "participant_id", "feature_alias", name="uq_biosignal_feature_alias"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
+    participant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("session_participants.id", ondelete="CASCADE"), nullable=False)
+    feature_alias: Mapped[str] = mapped_column(String(64), nullable=False)
+    artifact_pk: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("biosignal_artifacts.id", ondelete="CASCADE"), nullable=False, index=True)
+
+
+class DisplaySnapshot(Base):
+    """당시 화면 6지표 1Hz 검색 원장(정본 snapshot 은 indices artifact 객체). stream/view/second 당 1행."""
+
+    __tablename__ = "display_snapshots"
+    __table_args__ = (
+        UniqueConstraint(
+            "session_id", "participant_id", "stream_alias", "view_instance_alias", "second_index",
+            name="uq_display_snapshot",
+        ),
+        Index("ix_display_snapshots_participant_time", "session_id", "participant_id", "t_rel_ms"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
+    participant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("session_participants.id", ondelete="CASCADE"), nullable=False)
+    artifact_pk: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("biosignal_artifacts.id", ondelete="CASCADE"), nullable=False, index=True)
+    stream_alias: Mapped[str] = mapped_column(String(64), nullable=False)
+    view_instance_alias: Mapped[str] = mapped_column(String(64), nullable=False)
+    view_instance_id: Mapped[str | None] = mapped_column(String(64))
+    view_kind: Mapped[str] = mapped_column(String(24), nullable=False)
+    second_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    t_rel_ms: Mapped[float] = mapped_column(Float, nullable=False)
+    play_group_id: Mapped[str | None] = mapped_column(String(64))
+    window_index: Mapped[int | None] = mapped_column(Integer)
+    displayed_at_us: Mapped[int | None] = mapped_column(BigInteger)
+    render_status: Mapped[str] = mapped_column(String(16), nullable=False)
+    source: Mapped[str] = mapped_column(String(20), nullable=False)
+    display_match: Mapped[str] = mapped_column(String(12), nullable=False)  # true/false/unverified
+    focus_value: Mapped[int | None] = mapped_column(Integer)
+    relaxation_value: Mapped[int | None] = mapped_column(Integer)
+    emotional_value: Mapped[int | None] = mapped_column(Integer)
+    bpm_value: Mapped[int | None] = mapped_column(Integer)
+    respiration_value: Mapped[int | None] = mapped_column(Integer)
+    hrv_value: Mapped[int | None] = mapped_column(Integer)  # SDNN(ms)
+    normalization_hash: Mapped[str | None] = mapped_column(String(64))
+    # 6지표가 가리킨 feature_id_alias 목록 — 종료 판정에서 해석 가능 여부를 검사한다
+    source_feature_aliases: Mapped[list | None] = mapped_column(JSONB)
+    display_pipeline_version: Mapped[str | None] = mapped_column(String(80))
+    unavailable_reason: Mapped[str | None] = mapped_column(String(100))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class NormalizationSnapshotRow(Base):
+    """정규화 모델 snapshot(content-addressed). 모델 변경은 새 행이며 과거 기록에 최신 모델을 적용하지 않는다."""
+
+    __tablename__ = "normalization_snapshots"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    params_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    model_id_alias: Mapped[str] = mapped_column(String(64), nullable=False)
+    version: Mapped[str] = mapped_column(String(80), nullable=False)
+    formula_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    content: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

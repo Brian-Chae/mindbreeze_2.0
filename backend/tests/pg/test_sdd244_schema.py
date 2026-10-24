@@ -147,3 +147,71 @@ def test_업그레이드_다운그레이드_legacy_보존(scratch_db):
     alembic_ok(url, "upgrade", "head")
     eng.dispose()
 
+
+# ── M2: 산출물 원장·화면 스냅샷·정규화 snapshot ──────────────────────────────
+
+
+def _artifact(conn, **over):
+    row = {
+        "id": uuid.uuid4(), "session_id": uuid.UUID(int=1), "participant_id": uuid.UUID(int=2),
+        "artifact_alias": f"A{uuid.uuid4().hex[:10]}", "artifact_kind": "feature", "signal": "eeg",
+        "stream_id": "st", "segment_id": "sg", "view_instance_id": None, "sequence": 0, "row_count": 1,
+        "schema_version": "feature-v1", "checksum": "a" * 64, "size_bytes": 10, "retention_class": "feature_policy",
+        "object_key": f"k-{uuid.uuid4()}",
+    }
+    row.update(over)
+    conn.execute(sa.text(f"INSERT INTO biosignal_artifacts ({', '.join(row)}) VALUES ({', '.join(':' + k for k in row)})"), row)
+
+
+def test_artifact_슬롯_유니크는_NULL_scope도_같은_값으로_본다(conn):
+    _artifact(conn, artifact_kind="normalization", signal=None, stream_id=None, segment_id=None)
+    with pytest.raises(IntegrityError):
+        with conn.begin_nested():
+            _artifact(conn, artifact_kind="normalization", signal=None, stream_id=None, segment_id=None)
+    _artifact(conn, artifact_kind="normalization", signal=None, stream_id=None, segment_id=None, sequence=1)
+    _artifact(conn)
+    with pytest.raises(IntegrityError):
+        with conn.begin_nested():
+            _artifact(conn, artifact_alias="same", sequence=5)
+            _artifact(conn, artifact_alias="same", sequence=6)  # alias 중복
+    with pytest.raises(IntegrityError):
+        with conn.begin_nested():
+            _artifact(conn, artifact_kind="bogus", sequence=9)
+
+
+def test_display_snapshot과_normalization_유니크(conn):
+    aid = uuid.uuid4()
+    _artifact(conn, id=aid, artifact_kind="indices", signal=None, segment_id=None, view_instance_id="v")
+    snap = {"id": uuid.uuid4(), "session_id": uuid.UUID(int=1), "participant_id": uuid.UUID(int=2), "artifact_pk": aid,
+            "stream_alias": "S", "view_instance_alias": "V", "view_kind": "participant_player", "second_index": 0,
+            "t_rel_ms": 0.0, "render_status": "rendered", "source": "displayed", "display_match": "true"}
+    sql = f"INSERT INTO display_snapshots ({', '.join(snap)}) VALUES ({', '.join(':' + k for k in snap)})"
+    conn.execute(sa.text(sql), snap)
+    with pytest.raises(IntegrityError):
+        with conn.begin_nested():
+            conn.execute(sa.text(sql), dict(snap, id=uuid.uuid4()))
+    conn.execute(sa.text(sql), dict(snap, id=uuid.uuid4(), second_index=1))
+    norm = "INSERT INTO normalization_snapshots (id, params_hash, model_id_alias, version, formula_version, content) VALUES (:i, :h, 'M', 'v', 'f', '{}')"
+    conn.execute(sa.text(norm), {"i": uuid.uuid4(), "h": "b" * 64})
+    with pytest.raises(IntegrityError):
+        with conn.begin_nested():
+            conn.execute(sa.text(norm), {"i": uuid.uuid4(), "h": "b" * 64})
+
+
+def test_M2_업그레이드_다운그레이드_왕복(scratch_db):
+    url = scratch_db("sdd244m2")
+    alembic_ok(url, "upgrade", "e036a0244001")
+    alembic_ok(url, "upgrade", "e036a0244002")
+    eng = sa.create_engine(url)
+    with eng.begin() as c:
+        cols = {r[0] for r in c.execute(sa.text("SELECT column_name FROM information_schema.columns WHERE table_name='eeg_feature_windows'"))}
+        assert {"source_feature_alias", "algorithm_version", "faa", "total_neural_activity"} <= cols
+        c.execute(sa.text("SET session_replication_role = replica"))
+        _artifact(c)
+    refused = run_alembic(url, "downgrade", "-1")
+    assert refused.returncode != 0 and "downgrade 거부" in (refused.stderr + refused.stdout)
+    with eng.begin() as c:
+        c.execute(sa.text("DELETE FROM biosignal_artifacts"))
+    alembic_ok(url, "downgrade", "-1")
+    alembic_ok(url, "upgrade", "head")
+    eng.dispose()

@@ -29,6 +29,15 @@ SIGNALS = ("eeg", "ppg", "acc")
 PRESIGN_EXPIRES_SEC = storage_service.PRESIGNED_PUT_DEFAULT_EXPIRES_IN
 
 
+RESERVED_ALIAS_PREFIXES = ("RAWMISSING-", "FEATMISSING-", "IDXMISSING-", "GAPMISSING-", "GAPUNEXPECTED")
+
+
+def check_alias_reserved(alias: str) -> None:
+    """서버가 manifest 에서 합성하는 alias(GAPS, *MISSING-*)는 클라이언트가 쓸 수 없다."""
+    if alias == "GAPS" or alias.startswith(RESERVED_ALIAS_PREFIXES):
+        raise HTTPException(status_code=422, detail="예약된 alias 입니다")
+
+
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -150,6 +159,16 @@ def presign_raw(session_id: str, payload: PresignRequest, db: DBSession, *, curr
 
     streams = {str(m.header.stream_id) for m in payload.chunks}
     aliases = {m.chunk_alias for m in payload.chunks}
+    for alias in aliases:
+        check_alias_reserved(alias)
+    from app.models.biosignal import BiosignalArtifact
+    clash = (
+        db.query(BiosignalArtifact.artifact_alias)
+        .filter(BiosignalArtifact.session_id == sid, BiosignalArtifact.participant_id == participant.id,
+                BiosignalArtifact.artifact_alias.in_(aliases)).all()
+    )
+    if clash:
+        raise _conflict("alias_conflict", [{"chunk_alias": a} for (a,) in clash])
     rows = (
         db.query(EEGRawChunk)
         .filter(

@@ -42,6 +42,8 @@ SESSIONS_SCOPE_DELETE = frozenset({
 SESSIONS_SCOPE_DELETE = SESSIONS_SCOPE_DELETE | frozenset({
     "biosignal_streams", "biosignal_segments", "biosignal_gap_events", "biosignal_close_intents",
     "biosignal_manifest_revisions", "biosignal_manifest_current",
+    # SDD-244 M2: 산출물 원장·화면 스냅샷·feature alias 색인(세션 종속). 정규화 모델 snapshot 은 전역 content-addressed 라 보존.
+    "biosignal_artifacts", "biosignal_feature_aliases", "display_snapshots",
 })
 
 # scope=sessions 에서 보존하는 테이블(계정·기관·인증·에이전트·연구·감사).
@@ -61,6 +63,7 @@ SESSIONS_SCOPE_KEEP = frozenset({
 # SDD-220: 소셜 연결(users FK)·탈퇴 원장·소셜 해제 outbox·공개 삭제 요청은 계정 영역이라 sessions 범위에서 보존한다.
 #   (삭제 원장은 영구 삭제 완료의 근거이므로 개발 초기화로 지우지 않는다.)
 SESSIONS_SCOPE_KEEP = SESSIONS_SCOPE_KEEP | frozenset({
+    "normalization_snapshots",  # SDD-244 M2: 전역 content-addressed 정규화 모델 snapshot(세션 비종속)
     "social_identities", "social_revoke_outbox", "account_deletion_ledger",
     "account_deletion_objects", "account_deletion_requests",
 })

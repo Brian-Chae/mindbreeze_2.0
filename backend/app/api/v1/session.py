@@ -63,6 +63,7 @@ from app.schemas.eeg import (
 )
 from app.schemas import biosignal as biosignal_schema
 from app.services import (
+    biosignal_artifact_service,
     biosignal_service,
     class_read_service,
     eeg_raw_service,
@@ -811,6 +812,38 @@ def ack_biosignal_raw(
 ):
     """SDD-244: raw v2 검증 ACK — 저장소 존재·크기·SHA-256 확인 항목만 uploaded."""
     return biosignal_service.ack_raw(
+        session_id, payload, db,
+        current_user_id=current_user["id"] if current_user else None,
+        entry_credential=x_entry_credential,
+    )
+
+
+@router.post("/{session_id}/biosignal-artifacts/presign", response_model=biosignal_schema.ArtifactPresignResponse)
+def presign_biosignal_artifacts(
+    session_id: str,
+    payload: biosignal_schema.ArtifactPresignRequest,
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-244: feature/raw_derived/indices/normalization/algorithm 객체 presign."""
+    return biosignal_artifact_service.presign(
+        session_id, payload, db,
+        current_user_id=current_user["id"] if current_user else None,
+        entry_credential=x_entry_credential,
+    )
+
+
+@router.post("/{session_id}/biosignal-artifacts/ack", response_model=biosignal_schema.ArtifactAckResponse)
+def ack_biosignal_artifacts(
+    session_id: str,
+    payload: biosignal_schema.ArtifactAckRequest,
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-244: 산출물 검증 ACK(indices/normalization 은 검색 원장 색인 포함)."""
+    return biosignal_artifact_service.ack(
         session_id, payload, db,
         current_user_id=current_user["id"] if current_user else None,
         entry_credential=x_entry_credential,

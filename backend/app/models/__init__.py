@@ -172,9 +172,11 @@ __all__ += ['ClassReportJob', 'ClassReportJobItem']
 # SDD-244 M1: 생체신호 stream/segment/gap/종료 의도/manifest revision
 from app.models.biosignal import (
     BiosignalStream, BiosignalSegment, BiosignalGapEvent, BiosignalCloseIntent,
-    BiosignalManifestRevision, BiosignalManifestCurrent,
+    BiosignalManifestRevision, BiosignalManifestCurrent, BiosignalArtifact, BiosignalFeatureAlias,
+    DisplaySnapshot, NormalizationSnapshotRow,
 )
 __all__ += [
     "BiosignalStream", "BiosignalSegment", "BiosignalGapEvent", "BiosignalCloseIntent",
-    "BiosignalManifestRevision", "BiosignalManifestCurrent",
+    "BiosignalManifestRevision", "BiosignalManifestCurrent", "BiosignalArtifact", "BiosignalFeatureAlias",
+    "DisplaySnapshot", "NormalizationSnapshotRow",
 ]
