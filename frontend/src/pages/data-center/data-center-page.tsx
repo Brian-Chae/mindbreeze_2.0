@@ -5,6 +5,10 @@ import {
   type InventoryItem,
 } from "../../components/data-center/data-center-metadata-table";
 import { MeasurementDetail } from "../../components/data-center/measurement-detail";
+import { ExportDialog } from "../../components/data-center/export-dialog";
+import { ExportJobs } from "../../components/data-center/export-jobs";
+import { ExportAudits } from "../../components/data-center/export-audits";
+import type { MeasurementSelection } from "../../lib/api/data-center-measurement";
 import AppShell from "../../components/layout/AppShell";
 import { useDataCenter } from "../../hooks/use-data-center";
 import {
@@ -23,11 +27,17 @@ import type {
 } from "../../lib/api/data-center";
 import "./data-center.css";
 export interface DataCenterSelection {
-  scope: "class" | "session" | "member" | "facilitator";
+  scope: "class" | "session" | "member" | "facilitator" | "participant";
   id: string;
   label: string;
   sessionIds?: string[];
   subjectType?: string;
+  participantIds?:string[];
+  sessionId?:string;
+  fromUs?:string;
+  toUs?:string;
+  dateFrom?:string;
+  dateTo?:string;
 }
 export interface DataCenterPageProps {
   renderMeasurement?: (
@@ -102,6 +112,10 @@ export function DataCenterWorkspace({
   const [dateTo, setDateTo] = useState("");
   const [exportSelection, setExportSelection] =
     useState<DataCenterSelection | null>(null);
+  const [selectedParticipants,setSelectedParticipants]=useState<string[]>([]);
+  const [selectedSessions,setSelectedSessions]=useState<string[]>([]);
+  const [measurementRange,setMeasurementRange]=useState<MeasurementSelection>({fromUs:'0',toUs:'10000000'});
+  const [exportRefresh,setExportRefresh]=useState(0);
   const revealGeneration = useRef(0);
   useEffect(
     () => () => {
@@ -118,6 +132,9 @@ export function DataCenterWorkspace({
     setContact(null);
     setMeasurement(null);
     setExportSelection(null);
+    setSelectedParticipants([]);
+    setSelectedSessions([]);
+    setMeasurementRange({fromUs:"0",toUs:"10000000"});
   }
   const params = {
     org_id: orgId,
@@ -190,7 +207,7 @@ export function DataCenterWorkspace({
     setQ("");
     setStatus("");
   }
-  const data = query.data;
+  const data = ["jobs","audits"].includes(tab)?null:query.data;
   const page =
     data && "items" in data
       ? { total: data.items.length, next_cursor: null, ...data }
@@ -218,18 +235,23 @@ export function DataCenterWorkspace({
     );
   let previousGroup: string | null = null;
   function exportTarget() {
+    if(tab!=="classes")return null;
+    if(measurement&&session)return {scope:"participant",id:measurement,sessionId:session.session_id,label:`${session.title} · 참여자 측정`,...measurementRange} as DataCenterSelection;
     if (subject)
       return {
         scope: mode === "facilitator" ? "facilitator" : "member",
         id: subject.subject_id,
         label: subject.display_name,
         subjectType: subject.subject_type,
+        sessionIds:selectedSessions.length?selectedSessions:undefined,
+        dateFrom:dateFrom||undefined,dateTo:dateTo||undefined,
       } as DataCenterSelection;
     if (session)
       return {
         scope: "session",
         id: session.session_id,
-        label: session.title,
+        label: selectedParticipants.length?`${session.title} · 선택 참여자 ${selectedParticipants.length}명`:session.title,
+        participantIds:selectedParticipants.length?selectedParticipants:undefined,
       } as DataCenterSelection;
     if (classItem)
       return {
@@ -311,16 +333,16 @@ export function DataCenterWorkspace({
             <div className="dc-section-heading">
               <div>
                 <h2>
-                  {tab === "classes"
+                  {measurement ? "측정 상세" : tab === "classes"
                     ? "클래스에서 회차로, 회차에서 참여자로"
                     : visibleDataCenterTabs(context).find((t) => t.key === tab)
                         ?.label}
                 </h2>
                 <p>
-                  밴드 미사용과 미수집을 구분하며, 없는 값을 0으로 표시하지
-                  않습니다.
+                  {measurement ? `${session?.title??""} · 참여자별 원파형과 당시 표시 이력` : "밴드 미사용과 미수집을 구분하며, 없는 값을 0으로 표시하지 않습니다."}
                 </p>
               </div>
+              {measurement&&<button onClick={()=>{setMeasurement(null);setMeasurementRange({fromUs:"0",toUs:"10000000"});setExportSelection(null);}}>← 참여자 목록</button>}
               {exportTarget() && (
                 <button
                   className="dc-primary"
@@ -330,7 +352,7 @@ export function DataCenterWorkspace({
                 </button>
               )}
             </div>
-            {tab === "classes" && (
+            {tab === "classes" && !measurement && (
               <div className="dc-subtabs">
                 {[
                   ["classes", "클래스 탐색"],
@@ -378,7 +400,7 @@ export function DataCenterWorkspace({
                 ))}
               </div>
             )}
-            {!["jobs", "audits"].includes(tab) && (
+            {!["jobs", "audits"].includes(tab) && !measurement && (
               <div className="dc-filters">
                 <label>
                   검색
@@ -430,7 +452,7 @@ export function DataCenterWorkspace({
                 </label>
               </div>
             )}
-            {mode !== "classes" && tab === "classes" && (
+            {mode !== "classes" && tab === "classes" && !measurement && (
               <div className="dc-filters">
                 <label>
                   시작일
@@ -467,7 +489,7 @@ export function DataCenterWorkspace({
                 </p>
               </div>
             )}
-            {(classItem || subject) && (
+            {(classItem || subject) && !measurement && (
               <div className="dc-breadcrumb">
                 <button onClick={reset}>
                   {mode === "classes" ? "클래스" : "사용자"} 목록
@@ -477,6 +499,7 @@ export function DataCenterWorkspace({
                   <>
                     <button
                       onClick={() => {
+                        discardSensitive();
                         setSession(null);
                         setMeasurement(null);
                         setCursor(undefined);
@@ -492,7 +515,7 @@ export function DataCenterWorkspace({
             {measurement && session ? (
               renderMeasurement?.(session.session_id, measurement, orgId, () =>
                 setMeasurement(null),
-              ) ?? <MeasurementDetail sessionId={session.session_id} participantId={measurement} orgId={orgId} onClose={()=>setMeasurement(null)} />
+              ) ?? <MeasurementDetail sessionId={session.session_id} participantId={measurement} orgId={orgId} onSelectionChange={setMeasurementRange} onClose={()=>{setMeasurement(null);setMeasurementRange({fromUs:"0",toUs:"10000000"});}} />
             ) : (
               <>
                 {query.loading && <p role="status">불러오는 중…</p>}
@@ -563,6 +586,7 @@ export function DataCenterWorkspace({
                                       <td>
                                         <button
                                           onClick={() => {
+                                            discardSensitive();
                                             setClass(item);
                                             setCursor(undefined);
                                           }}
@@ -604,6 +628,7 @@ export function DataCenterWorkspace({
                                       <td>
                                         <button
                                           onClick={() => {
+                                            discardSensitive();
                                             setSubject(item);
                                             setTab("classes");
                                             if (tab === "subjects")
@@ -625,9 +650,7 @@ export function DataCenterWorkspace({
                                   return (
                                     <tr key={item.session_id}>
                                       <td>
-                                        <strong>
-                                          {item.seq}회차 · {item.title}
-                                        </strong>
+                                        {subject ? <label><input type="checkbox" aria-label={`${item.seq}회차 선택`} checked={selectedSessions.includes(item.session_id)} disabled={!item.exportable} onChange={event=>{setExportSelection(null);setSelectedSessions(previous=>event.target.checked?[...previous,item.session_id]:previous.filter(id=>id!==item.session_id));}}/> {item.seq}회차 · {item.title}</label> : <strong>{item.seq}회차 · {item.title}</strong>}
                                         <small>
                                           {item.started_at
                                             ? new Date(
@@ -652,6 +675,7 @@ export function DataCenterWorkspace({
                                       <td>
                                         <button
                                           onClick={() => {
+                                            discardSensitive();
                                             setSession(item);
                                             setSubject(null);
                                             setCursor(undefined);
@@ -666,9 +690,7 @@ export function DataCenterWorkspace({
                                   return (
                                     <tr key={item.participant_id}>
                                       <td>
-                                        <strong>
-                                          {item.display_name || item.alias}
-                                        </strong>
+                                        <label><input type="checkbox" aria-label={`${item.display_name||item.alias} 참여자 선택`} checked={selectedParticipants.includes(item.participant_id)} disabled={!item.selectable} onChange={event=>{setExportSelection(null);setSelectedParticipants(previous=>event.target.checked?[...previous,item.participant_id]:previous.filter(id=>id!==item.participant_id));}}/> {item.display_name || item.alias}</label>
                                         <small>참여자</small>
                                       </td>
                                       <td>
@@ -685,9 +707,9 @@ export function DataCenterWorkspace({
                                       </td>
                                       <td>
                                         <button
-                                          onClick={() =>
-                                            setMeasurement(item.participant_id)
-                                          }
+                                          onClick={() => {
+                                            setMeasurementRange({fromUs:"0",toUs:"10000000"});setMeasurement(item.participant_id);
+                                          }}
                                         >
                                           측정 상세 →
                                         </button>
@@ -781,9 +803,11 @@ export function DataCenterWorkspace({
                 {revealError && <p role="alert">{revealError}</p>}
               </aside>
             )}
-            {renderExports?.(context, exportSelection, tab, () =>
-              setExportSelection(null),
-            )}
+            {renderExports ? renderExports(context, exportSelection, tab, () => setExportSelection(null)) : <>
+              {tab==="jobs"&&<ExportJobs orgId={orgId} refreshKey={exportRefresh}/>}
+              {tab==="audits"&&<ExportAudits orgId={orgId} refreshKey={exportRefresh}/>}
+              {exportSelection&&<ExportDialog target={{scope:exportSelection.scope,targetId:exportSelection.id,label:exportSelection.label,sessionIds:exportSelection.sessionIds,participantIds:exportSelection.participantIds,sessionId:exportSelection.sessionId,fromUs:exportSelection.fromUs,toUs:exportSelection.toUs,dateFrom:exportSelection.dateFrom,dateTo:exportSelection.dateTo}} orgId={orgId} isOrgAdmin={context.role==="org_admin"} canExportIdentified={context.capabilities.can_export_identified} canResearch={context.capabilities.can_research} limits={context.limits} onClose={()=>setExportSelection(null)} onViewJobs={()=>changeTab("jobs")} onCreated={()=>{setExportRefresh(previous=>previous+1);changeTab("jobs");}}/>}
+            </>}
           </section>
           <div className="dc-notice">
             현재 권한과 기관 범위에 포함된 데이터만 표시합니다. 상담 내용·비공개

@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MeasurementDetail } from '../src/components/data-center/measurement-detail';
+import detail from '../../specs/sdd-243-platform-data-center/contracts/fixtures/measurement-detail.json';
 import spectrum from '../../specs/sdd-243-platform-data-center/contracts/fixtures/spectrum.json';
 import waveform from '../../specs/sdd-243-platform-data-center/contracts/fixtures/waveform.json';
 import features from '../../specs/sdd-243-platform-data-center/contracts/fixtures/features.json';
@@ -60,6 +61,7 @@ Object.assign(globalThis,{ IS_REACT_ACT_ENVIRONMENT:true });
 afterEach(()=>vi.restoreAllMocks());
 describe('측정 선택과 요청 수명',()=>{
  function mockApis() {
+  vi.spyOn(apiClient,'get').mockResolvedValue(detail);
   vi.spyOn(measurementApi,'features').mockResolvedValue(features);
   vi.spyOn(measurementApi,'indices').mockResolvedValue(indices as IndicesPage);
   vi.spyOn(measurementApi,'spectrum').mockResolvedValue(spectrum);
@@ -68,6 +70,9 @@ describe('측정 선택과 요청 수명',()=>{
  it('10/30/60초 범위를 파형/feature/PSD가 공유한다', async()=>{
   const wave=mockApis(); const element=document.createElement('div'); const root=createRoot(element);
   await act(async()=>{root.render(<MeasurementDetail sessionId="s" participantId="p"/>);});
+  expect(element.textContent).toContain('참여자 P01');
+  expect(element.textContent).toContain('manifest available');
+  expect(element.textContent).toContain('feature 900');
   for(const value of ['30','60']) {
    await act(async()=>{const select=element.querySelector('select')!;select.value=value;select.dispatchEvent(new Event('change',{bubbles:true}));});
    expect(wave.mock.calls.at(-1)?.[2]).toEqual({fromUs:'0',toUs:`${value}000000`});
@@ -100,4 +105,18 @@ it('지표 시간축은 숫자 축이며 전부 null인 지표는 사유를 펼�
  const html=renderToStaticMarkup(<IndicesChart data={indices as IndicesPage} selection={{fromUs:'0',toUs:'10000000'}}/>);
  expect(html).toContain('data-axis-type="number"');
  expect(html).toContain('dc-index-unavailable');
+});
+
+it.each([
+ ['ppg',['red','ir'],'count',50],
+ ['acc',['x','y','z'],'g',25],
+] as const)('%s 수집 원파형은 모든 채널과 원 단위/샘플링률을 보존한다',(signal,names,unit,rate)=>{
+ const data={...waveform,signal_type:signal,method:'raw' as const,nominal_rate_hz:rate,channels:names.map(name=>({name,unit,values:[-1,2,null],min:null,max:null}))} as WaveformResponse;
+ const html=renderToStaticMarkup(<SignalWaveform data={data}/>);
+ for(const channel of data.channels) {
+  expect(html).toContain(`${channel.name} · ${unit}`);
+  expect(waveformSeries(data,channel)[0].map(point=>point.value)).toEqual([-1,2]);
+ }
+ expect(html).toContain(`${rate} Hz`);
+ expect(html).toContain('원본 해상도');
 });

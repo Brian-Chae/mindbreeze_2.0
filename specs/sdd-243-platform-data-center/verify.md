@@ -137,3 +137,13 @@ BE 변경에 models/config/migration/router가 포함되므로 focused 이후 �
 - 제품 시나리오 V01~V12: **전부 미실행**.
 - 확인 범위: spec/HTML/244 계약·decoder 정적 읽기, Task/경로·의존·마이그레이션·잠정 결정·검증 매핑 검토. 실제 서버/DB/장치 저장의 성공 증거가 아니다.
 - 문서 diff/공백·링크·미실행 체크박스·변경경로 검사는 커밋 전 수행하고 대화 최종 보고에 결과를 남긴다. 문서 완료는 Stage ②·③ 산출물 작성 완료만 의미한다.
+
+
+## 5. 승인된 FE 실행 결과 (2026-10-24)
+
+- 사용자 직접 요청으로 F01~F03 구현과 FE 검증을 수행했다. 위 §4의 “전부 미실행”은 문서 작성 당시 기록이며 현재 FE 실행 증거는 이 절과 summary를 따른다.
+- 신규 focused 34/34, 관련 메뉴 29/29, app tsc 및 production build 통과.
+- 실제 빌드+합성 fixture API+Chrome(channel:chrome), 플랫폼/기관 각각 1440·390에서 탐색·EEG/gap/PPG·ACC 미수집·feature·6지표·범위·단건/회차/클래스/회원/상담사 모달·제외확인·POST proof·작업 생성·작업/감사를 검증했다. 실제 웹소켓·외부 API는 캡처 스크립트에서 차단한다.
+- 모바일 하단 메뉴가 모달 CTA를 가리는 현상은 body portal로 수정하고 실제 Chrome 클릭으로 재검증. 체크박스는18px, 라벨 터치영역44px이며 대화상자 화면 내 배치 검사 포함.
+- V12의 실API/성능/244 웹 수신 조건, V01~V11의 BE/DB/ZIP/운영 검증은 수행하지 않아 복합 체크박스를 완료 처리하지 않았다.
+- 명령·건수·기존 실패17건과 근거 경로: [summary.md](summary.md), `captures-impl/{capture-results,verification-results}.json`.

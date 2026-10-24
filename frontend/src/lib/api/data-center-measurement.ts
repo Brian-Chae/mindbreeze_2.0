@@ -1,6 +1,11 @@
 import { apiClient } from './client';
 export type SignalType = 'eeg' | 'ppg' | 'acc';
 export interface MeasurementSelection { fromUs: string; toUs: string }
+export interface MeasurementMetadata {
+ session_id:string; participant_id:string; alias:string; as_of:string; manifest_revision:number|null; manifest_state:string;
+ signals:{signal:string;availability:string;unavailable_reason:string|null;sample_count:{value:number|null;partial:boolean;unavailable_reason:string|null}}[];
+ feature_windows:{value:number|null;partial:boolean;unavailable_reason:string|null};consent:string;retention_deadline:string|null;allowed_formats:string[];band_used:boolean;default_view:string;
+}
 export interface WaveformChannel { name: string; unit: string; values: (number | null)[] | null; min: (number | null)[] | null; max: (number | null)[] | null }
 export interface WaveformResponse {
  session_id: string; participant_id: string; signal_type: SignalType; availability: string; unavailable_reason: string | null;
@@ -22,6 +27,7 @@ function get<T>(s: string, p: string, resource: string, range: MeasurementSelect
  return apiClient.get<T>(`/data-center/measurements/${encodeURIComponent(s)}/${encodeURIComponent(p)}/${resource}?${query}`, { signal });
 }
 export const measurementApi = {
+ detail: (s:string,p:string,org?:string,abort?:AbortSignal)=>apiClient.get<MeasurementMetadata>(`/data-center/measurements/${encodeURIComponent(s)}/${encodeURIComponent(p)}${org?'?org_id='+encodeURIComponent(org):''}`,{signal:abort}),
  waveform: (s: string, p: string, range: MeasurementSelection, type: SignalType, org?: string, abort?: AbortSignal) => get<WaveformResponse>(s,p,'waveform',range,org,abort,{ signal_type:type, max_points:'2000' }),
  features: (s: string,p: string,range: MeasurementSelection,org?: string,abort?: AbortSignal,cursor?: string) => get<FeaturePage>(s,p,'features',range,org,abort,{ limit:'1000', ...(cursor ? { cursor } : {}) }),
  // B04 indices는 범위 필터를 지원하지 않아 페이지를 받은 뒤 화면에서 [from,to)로 좁힌다.
