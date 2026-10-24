@@ -1,0 +1,149 @@
+"""SDD-244 M1 PG 스키마·마이그레이션 (verify A01 PG, A03 PG, A13 legacy).
+
+운영/개발 DB 가 아닌 격리 로컬 PG 에서만 돈다(conftest 의 PG_SMOKE=1 + 로컬 호스트 가드).
+"""
+from __future__ import annotations
+
+import uuid
+
+import pytest
+import sqlalchemy as sa
+from sqlalchemy.exc import IntegrityError
+
+from tests.pg.conftest import alembic_ok, run_alembic
+
+pytestmark = pytest.mark.pg
+
+V2 = "mb-biosignal-raw-v2"
+
+
+def _insert(conn, **over):
+    row = {
+        "id": uuid.uuid4(), "session_id": over.pop("session_id", uuid.UUID(int=1)),
+        "participant_id": uuid.UUID(int=2), "stream_id": "s", "chunk_index": 0,
+        "object_key": f"k-{uuid.uuid4()}", "signal_type": "eeg", "segment_id": "legacy",
+        "schema_version": "1.0", "upload_status": "pending", "chunk_alias": None,
+        "sample_count": None,
+    }
+    row.update(over)
+    if row.pop("pre_m1", False):  # M1 이전 스키마에는 새 컬럼이 없다
+        for k in ("signal_type", "segment_id", "schema_version", "chunk_alias", "sample_count"):
+            row.pop(k)
+        row["schema_version"] = "1.0"
+    cols = ", ".join(row)
+    vals = ", ".join(f":{k}" for k in row)
+    conn.execute(sa.text(f"INSERT INTO eeg_raw_chunks ({cols}) VALUES ({vals})"), row)
+
+
+@pytest.fixture
+def conn(pg_conn):
+    pg_conn.execute(sa.text("SET LOCAL session_replication_role = replica"))  # 부모 행 없이 원장 제약만 검증
+    return pg_conn
+
+
+def _fails(conn, **over):
+    with pytest.raises(IntegrityError):
+        with conn.begin_nested():
+            _insert(conn, **over)
+
+
+def test_세_신호가_같은_stream_index를_공유하고_identity_중복은_거절(conn):
+    for signal in ("eeg", "ppg", "acc"):
+        _insert(conn, signal_type=signal, segment_id="seg-a", schema_version=V2)
+    _insert(conn, signal_type="eeg", segment_id="seg-b", schema_version=V2)  # 다른 segment
+    _fails(conn, signal_type="ppg", segment_id="seg-a", schema_version=V2)
+
+
+def test_legacy_v1_의미_유지_participant_null은_유니크_비대상(conn):
+    _insert(conn)
+    _fails(conn)  # 같은 (session, participant, stream, index) legacy 중복은 기존처럼 거절
+    _insert(conn, participant_id=None)
+    _insert(conn, participant_id=None)  # 기존에도 NULL participant 는 유니크 비교 대상이 아니었다
+
+
+def test_check_제약(conn):
+    _fails(conn, signal_type="emg")
+    _fails(conn, sample_count=-1)
+    _fails(conn, participant_id=None, schema_version=V2, segment_id="seg-x")
+
+
+def test_alias는_회차_참여자_안에서_유일하고_NULL은_제외(conn):
+    _insert(conn, chunk_index=1, chunk_alias="RAW-A", schema_version=V2, segment_id="s1")
+    _fails(conn, chunk_index=2, chunk_alias="RAW-A", schema_version=V2, segment_id="s1")
+    _insert(conn, chunk_index=3)
+    _insert(conn, chunk_index=4)  # alias NULL 다수 허용
+
+
+def test_동시_발급은_하나만_성공(pg_engine):
+    sid, pid = uuid.uuid4(), uuid.uuid4()
+    key = {"session_id": sid, "participant_id": pid}
+
+    def attempt(c, ident):
+        c.execute(sa.text("SET session_replication_role = replica"))
+        _insert(c, signal_type="ppg", segment_id="seg", schema_version=V2, chunk_index=7,
+                stream_id="stream-c", participant_id=pid, session_id=sid, object_key=f"k-{ident}")
+
+    a, b = pg_engine.connect(), pg_engine.connect()
+    ta, tb = a.begin(), b.begin()
+    try:
+        attempt(a, "a")
+        import threading
+        errors: list[Exception] = []
+
+        def second():
+            try:
+                attempt(b, "b")
+                tb.commit()
+            except IntegrityError as exc:
+                errors.append(exc)
+
+        th = threading.Thread(target=second)
+        th.start()
+        th.join(timeout=0.5)
+        assert th.is_alive()  # 첫 트랜잭션 commit 전까지 대기
+        ta.commit()
+        th.join(timeout=10)
+        assert len(errors) == 1
+    finally:
+        for c, t in ((a, ta), (b, tb)):
+            if t.is_active:
+                t.rollback()
+        with pg_engine.begin() as cleanup:
+            cleanup.execute(sa.text("DELETE FROM eeg_raw_chunks WHERE session_id = :s"), {"s": sid})
+        a.close()
+        b.close()
+        _ = key
+
+
+def test_신규_테이블_존재(conn):
+    names = {r[0] for r in conn.execute(sa.text("SELECT tablename FROM pg_tables WHERE schemaname='public'"))}
+    assert {"biosignal_streams", "biosignal_segments", "biosignal_gap_events", "biosignal_close_intents",
+            "biosignal_manifest_revisions", "biosignal_manifest_current"} <= names
+
+
+def test_업그레이드_다운그레이드_legacy_보존(scratch_db):
+    url = scratch_db("sdd244m1")
+    alembic_ok(url, "upgrade", "e036a0000061")
+    eng = sa.create_engine(url)
+    with eng.begin() as c:
+        c.execute(sa.text("SET session_replication_role = replica"))
+        _insert(c, pre_m1=True)
+        _insert(c, pre_m1=True, participant_id=None, chunk_index=1)
+    alembic_ok(url, "upgrade", "e036a0244001")
+    with eng.begin() as c:
+        rows = c.execute(sa.text("SELECT signal_type, segment_id, schema_version FROM eeg_raw_chunks")).all()
+        assert set(rows) == {("eeg", "legacy", "1.0")} and len(rows) == 2
+        c.execute(sa.text("SET session_replication_role = replica"))
+        _insert(c, signal_type="ppg", segment_id="s", schema_version=V2, chunk_index=5)
+    refused = run_alembic(url, "downgrade", "-1")
+    assert refused.returncode != 0 and "downgrade 거부" in (refused.stderr + refused.stdout)
+    with eng.begin() as c:
+        c.execute(sa.text("DELETE FROM eeg_raw_chunks WHERE signal_type='ppg'"))
+    alembic_ok(url, "downgrade", "-1")
+    with eng.begin() as c:
+        cols = {r[0] for r in c.execute(sa.text("SELECT column_name FROM information_schema.columns WHERE table_name='eeg_raw_chunks'"))}
+        assert "signal_type" not in cols
+        assert c.execute(sa.text("SELECT count(*) FROM eeg_raw_chunks")).scalar() == 2
+    alembic_ok(url, "upgrade", "head")
+    eng.dispose()
+

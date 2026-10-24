@@ -98,6 +98,9 @@ def presign_upload(
             .filter(
                 EEGRawChunk.session_id == sid,
                 EEGRawChunk.participant_id == participant.id,
+                # SDD-244: v1 은 legacy EEG 행만 다룬다(세 신호 v2 행 재사용·변조 금지)
+                EEGRawChunk.signal_type == "eeg",
+                EEGRawChunk.segment_id == "legacy",
                 EEGRawChunk.stream_id.in_(stream_ids),
                 EEGRawChunk.chunk_index.in_(chunk_indices),
             )
@@ -145,6 +148,8 @@ def presign_upload(
                     .filter(
                         EEGRawChunk.session_id == sid,
                         EEGRawChunk.participant_id == participant.id,
+                        EEGRawChunk.signal_type == "eeg",
+                        EEGRawChunk.segment_id == "legacy",
                         EEGRawChunk.stream_id == meta.stream_id,
                         EEGRawChunk.chunk_index == meta.chunk_index,
                     )
@@ -201,6 +206,7 @@ def ack_upload(
             EEGRawChunk.id.in_(wanted_ids),
             EEGRawChunk.session_id == sid,
             EEGRawChunk.participant_id == participant.id,
+            EEGRawChunk.segment_id == "legacy",  # SDD-244: v2 행은 biosignal-raw/ack 로만 확정
         )
         .all()
     )
@@ -270,6 +276,7 @@ def _sync_eeg_record(
         .filter(
             EEGRawChunk.session_id == sid,
             EEGRawChunk.participant_id == participant.id,
+            EEGRawChunk.signal_type == "eeg",  # SDD-244: PPG/ACC 는 EEG 파일 수에 섞지 않는다
             EEGRawChunk.upload_status == "uploaded",
         )
         .count()
@@ -344,6 +351,7 @@ def _refresh_eeg_record_file_count(sid: UUID, participant_id: UUID | None, db: D
         .filter(
             EEGRawChunk.session_id == sid,
             EEGRawChunk.participant_id == participant_id,
+            EEGRawChunk.signal_type == "eeg",
             EEGRawChunk.upload_status == "uploaded",
         )
         .count()

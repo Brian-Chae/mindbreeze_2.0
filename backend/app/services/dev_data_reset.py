@@ -38,6 +38,11 @@ SESSIONS_SCOPE_DELETE = frozenset({
     # SDD-220: 채팅 신고·차단(chat_rooms/messages FK 에 종속)도 채팅과 함께 정리한다.
     "chat_reports", "chat_blocks",
 })
+# SDD-244 M1: 생체신호 수집 원장(sessions/참가자 FK 종속)도 세션 초기화 범위에 포함한다.
+SESSIONS_SCOPE_DELETE = SESSIONS_SCOPE_DELETE | frozenset({
+    "biosignal_streams", "biosignal_segments", "biosignal_gap_events", "biosignal_close_intents",
+    "biosignal_manifest_revisions", "biosignal_manifest_current",
+})
 
 # scope=sessions 에서 보존하는 테이블(계정·기관·인증·에이전트·연구·감사).
 SESSIONS_SCOPE_KEEP = frozenset({

@@ -61,7 +61,9 @@ from app.schemas.eeg import (
     RawPresignRequest,
     RawPresignResponse,
 )
+from app.schemas import biosignal as biosignal_schema
 from app.services import (
+    biosignal_service,
     class_read_service,
     eeg_raw_service,
     eeg_rollup_service,
@@ -778,6 +780,54 @@ def ack_eeg_raw(
     """SDD-027: raw EEG 청크 업로드 완료 확인(ack) — EEGRecord.file_count 갱신."""
     return eeg_raw_service.ack_upload(
         session_id, payload, db,
+        current_user_id=current_user["id"] if current_user else None,
+        entry_credential=x_entry_credential,
+    )
+
+
+@router.post("/{session_id}/biosignal-raw/presign", response_model=biosignal_schema.PresignResponse)
+def presign_biosignal_raw(
+    session_id: str,
+    payload: biosignal_schema.PresignRequest,
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-244: EEG/PPG/ACC raw v2 청크 presign(내용 주소 key, SHA-256 서명 헤더 바인딩)."""
+    return biosignal_service.presign_raw(
+        session_id, payload, db,
+        current_user_id=current_user["id"] if current_user else None,
+        entry_credential=x_entry_credential,
+    )
+
+
+@router.post("/{session_id}/biosignal-raw/ack", response_model=biosignal_schema.AckResponse)
+def ack_biosignal_raw(
+    session_id: str,
+    payload: biosignal_schema.AckRequest,
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-244: raw v2 검증 ACK — 저장소 존재·크기·SHA-256 확인 항목만 uploaded."""
+    return biosignal_service.ack_raw(
+        session_id, payload, db,
+        current_user_id=current_user["id"] if current_user else None,
+        entry_credential=x_entry_credential,
+    )
+
+
+@router.get("/{session_id}/biosignal-capabilities", response_model=biosignal_schema.CapabilityResponse)
+def get_biosignal_capabilities(
+    session_id: str,
+    participant_id: UUID | None = None,
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-244: 클라이언트 v2 수집 가능 여부·신호별 업로드/연구 동의 상태."""
+    return biosignal_service.capabilities(
+        session_id, participant_id, db,
         current_user_id=current_user["id"] if current_user else None,
         entry_credential=x_entry_credential,
     )
