@@ -35,8 +35,8 @@ describe('6개 알림 스위치 저장 계약', () => {
     const button = host.querySelector<HTMLButtonElement>('[aria-label="일정·참여 이메일 알림"]')!;
     await act(async () => { button.click(); button.click(); });
     expect(save).not.toHaveBeenCalled();
-    expect(host.querySelector('[role=dialog]')?.textContent).toContain('세션 예약');
-    await act(async () => { const apply = [...host.querySelectorAll<HTMLButtonElement>('button')].find(item => item.textContent === '적용하기')!; apply.click(); apply.click(); });
+    expect(document.querySelector('[role=dialog]')?.textContent).toContain('세션 예약');
+    await act(async () => { const apply = [...document.querySelectorAll<HTMLButtonElement>('button')].find(item => item.textContent === '적용하기')!; apply.click(); apply.click(); });
     expect(save).toHaveBeenCalledExactlyOnceWith({ email: { session_booked: true, session_updated: true }, in_app: {} });
     expect([...host.querySelectorAll<HTMLButtonElement>('[role=switch]')].every((item) => item.disabled)).toBe(true);
     expect(button.getAttribute('aria-checked')).toBe('true');
@@ -52,7 +52,7 @@ describe('6개 알림 스위치 저장 계약', () => {
     await act(async () => root.render(<NotificationGroups />));
     const button = host.querySelector<HTMLButtonElement>('[aria-label="대화 이메일 알림"]')!;
     await act(async () => button.click());
-    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('button')].find(item => item.textContent === '적용하기')!.click());
+    await act(async () => [...document.querySelectorAll<HTMLButtonElement>('button')].find(item => item.textContent === '적용하기')!.click());
     expect(button.getAttribute('aria-checked')).toBe('true');
     expect(host.querySelector('[role=status]')?.textContent).toContain('저장했어요');
   });
@@ -81,8 +81,8 @@ describe('6개 알림 스위치 저장 계약', () => {
     const save = vi.spyOn(api, 'updatePreferences');
     await act(async () => root.render(<NotificationGroups />));
     await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="일정·참여 이메일 알림"]')!.click());
-    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('button')].find(item => item.textContent === '취소')!.click());
-    expect(host.querySelector('[role=dialog]')).toBeNull();
+    await act(async () => [...document.querySelectorAll<HTMLButtonElement>('button')].find(item => item.textContent === '취소')!.click());
+    expect(document.querySelector('[role=dialog]')).toBeNull();
     expect(save).not.toHaveBeenCalled();
     expect(host.querySelector('[aria-label="일정·참여 이메일 알림"]')?.getAttribute('aria-checked')).toBe('false');
   });
@@ -96,4 +96,31 @@ describe('6개 알림 스위치 저장 계약', () => {
     expect(save).toHaveBeenCalledExactlyOnceWith({email:{agent_message:true},in_app:{}});
   });
 
+  it('세부 설정에서 항목별로 켜고 끄면 그 묶음의 항목 값만 저장한다', async () => {
+    vi.spyOn(api, 'getPreferences').mockResolvedValue(structuredClone(sample));
+    const save = vi.spyOn(api, 'updatePreferences').mockImplementation(async (patch) => ({ ...sample, email: { ...sample.email, ...patch.email } }));
+    await act(async () => root.render(<NotificationGroups />));
+    const detail = [...host.querySelectorAll<HTMLButtonElement>('button')].find(item => item.textContent?.startsWith('세부 설정') && item.closest('div')?.textContent?.includes('이메일'))!;
+    expect(detail.textContent).toBe('세부 설정 1/2');
+    await act(async () => detail.click());
+    const dialog = document.querySelector('[role=dialog]')!;
+    expect(dialog.parentElement?.parentElement).toBe(document.body);
+    const booked = dialog.querySelector<HTMLButtonElement>('[aria-label="세션 예약 이메일 알림"]')!;
+    expect(booked.getAttribute('aria-checked')).toBe('true');
+    expect(dialog.querySelector('[aria-label="세션 변경 이메일 알림"]')?.getAttribute('aria-checked')).toBe('false');
+    await act(async () => booked.click());
+    expect(booked.getAttribute('aria-checked')).toBe('false');
+    expect(save).not.toHaveBeenCalled();
+    await act(async () => [...dialog.querySelectorAll<HTMLButtonElement>('button')].find(item => item.textContent === '적용하기')!.click());
+    expect(save).toHaveBeenCalledExactlyOnceWith({ email: { session_booked: false, session_updated: false }, in_app: {} });
+    expect(document.querySelector('[role=dialog]')).toBeNull();
+  });
+  it('세부 설정에서 바꾼 것 없이 적용하면 저장하지 않는다', async () => {
+    vi.spyOn(api, 'getPreferences').mockResolvedValue(structuredClone(sample));
+    const save = vi.spyOn(api, 'updatePreferences');
+    await act(async () => root.render(<NotificationGroups />));
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('button')].find(item => item.textContent?.startsWith('세부 설정'))!.click());
+    await act(async () => [...document.querySelectorAll<HTMLButtonElement>('button')].find(item => item.textContent === '적용하기')!.click());
+    expect(save).not.toHaveBeenCalled();
+  });
 });

@@ -1,23 +1,39 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useDialogA11y } from '../../hooks/useDialogA11y';
 import { getPreferences, updatePreferences, type NotificationPreferencesResponse } from '../../lib/api/notifications';
 import { EVENT_LABELS } from '../../lib/notification-format';
-import { COMPATIBILITY_EVENTS, NOTIFICATION_GROUPS, aggregateNotificationGroup, applyNotificationGroup, groupKeys, notificationGroupPatch, type NotificationChannel, type NotificationGroup } from '../../lib/notification-preference-groups';
+import { COMPATIBILITY_EVENTS, NOTIFICATION_GROUPS, aggregateNotificationGroup, groupKeys, type NotificationChannel, type NotificationGroup } from '../../lib/notification-preference-groups';
 import { SettingsSwitch } from './settings-switch';
 
-type PendingChange = { channel: NotificationChannel; group: NotificationGroup; next: boolean };
-function ChangeConfirmation({ pending, prefs, onConfirm, onCancel }: { pending: PendingChange; prefs: NotificationPreferencesResponse; onConfirm: () => void; onCancel: () => void }) {
+/** next 가 없으면 '세부 설정'으로 연 경우 — 현재 선택 그대로 시작한다. */
+type PendingChange = { channel: NotificationChannel; group: NotificationGroup; next?: boolean };
+function ChangeConfirmation({ pending, prefs, onConfirm, onCancel }: { pending: PendingChange; prefs: NotificationPreferencesResponse; onConfirm: (draft: Record<string, boolean>) => void; onCancel: () => void }) {
   const ref = useDialogA11y(true, onCancel);
   const titleId = useId();
-  return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+  const keys = groupKeys(prefs[pending.channel], pending.group);
+  // 항목별 초안 — 묶음 스위치로 열면 모두 next 로, 세부 설정으로 열면 현재값으로 시작한다.
+  const [draft, setDraft] = useState<Record<string, boolean>>(() => Object.fromEntries(keys.map((key) => [key, pending.next ?? prefs[pending.channel][key]])));
+  const allOn = keys.every((key) => draft[key]);
+  const channelLabel = pending.channel === 'email' ? '이메일' : '인앱';
+  const groupLabel = NOTIFICATION_GROUPS.find(group => group.id === pending.group)?.label;
+  // 화면 전환(transform) 안에서 fixed 가 갇혀 하단 메뉴 밑에 깔리지 않도록 body 로 띄운다.
+  return createPortal(<div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
     <section ref={ref} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} className="flex max-h-[85dvh] w-full max-w-md flex-col rounded-2xl bg-white p-5 shadow-xl">
-      <h3 id={titleId} className="text-lg font-bold">{NOTIFICATION_GROUPS.find(group => group.id === pending.group)?.label} · {pending.channel === 'email' ? '이메일' : '인앱'} 알림 {pending.next ? '켜기' : '끄기'}</h3>
-      <p className="my-3 text-sm">다음 알림의 수신 선택을 함께 바꿔요. 적용 전에는 기존 선택을 유지해요.</p>
-      <ul className="min-h-0 overflow-y-auto rounded-xl bg-[#F8F4FA] p-4 text-sm leading-7">{groupKeys(prefs[pending.channel], pending.group).map(key => <li key={key}>{EVENT_LABELS[key]}</li>)}</ul>
-      <div className="mt-4 flex justify-end gap-3"><button type="button" onClick={onCancel} className="min-h-11 rounded-xl px-4 text-[#6F6F6F]">취소</button><button type="button" onClick={onConfirm} className="min-h-12 rounded-xl bg-[#5B1A8A] px-5 font-bold text-white">적용하기</button></div>
+      <h3 id={titleId} className="text-lg font-bold">{groupLabel} · {channelLabel} 알림 세부 설정</h3>
+      <p className="my-3 text-sm text-[#6F6F6F]">받을 알림을 항목별로 고른 뒤 적용해요. 적용 전에는 기존 선택을 유지해요.</p>
+      <div className="flex min-h-12 items-center justify-between border-b border-[#EFEFEF] px-1 pb-2">
+        <span className="text-sm font-semibold">전체</span>
+        <SettingsSwitch label={`${groupLabel} ${channelLabel} 알림 전체`} checked={allOn ? true : keys.some((key) => draft[key]) ? 'mixed' : false} onChange={(next) => setDraft(Object.fromEntries(keys.map((key) => [key, next])))} />
+      </div>
+      <ul className="min-h-0 overflow-y-auto">{keys.map(key => <li key={key} className="flex min-h-12 items-center justify-between gap-3 border-b border-[#F3EEF5] px-1 last:border-0">
+        <span className="text-sm">{EVENT_LABELS[key] ?? key}</span>
+        <SettingsSwitch label={`${EVENT_LABELS[key] ?? key} ${channelLabel} 알림`} checked={draft[key]} onChange={(next) => setDraft((value) => ({ ...value, [key]: next }))} />
+      </li>)}</ul>
+      <div className="mt-4 flex justify-end gap-3"><button type="button" onClick={onCancel} className="min-h-11 rounded-xl px-4 text-[#6F6F6F]">취소</button><button type="button" onClick={() => onConfirm(draft)} className="min-h-12 rounded-xl bg-[#5B1A8A] px-5 font-bold text-white">적용하기</button></div>
     </section>
-  </div>;
+  </div>, document.body);
 }
 export default function NotificationGroups() {
   const userId = useAuthStore((state) => state.user?.id);
@@ -52,9 +68,11 @@ export default function NotificationGroups() {
       if (generation.current === current) { busy.current = false; setSaving(false); }
     }
   }
-  function confirm() {
+  function confirm(draft: Record<string, boolean>) {
     if (!prefs || !pending) return;
-    void save(notificationGroupPatch(prefs, pending.channel, pending.group, pending.next), applyNotificationGroup(prefs, pending.channel, pending.group, pending.next));
+    // 이 묶음 항목만 전송한다(다른 묶음·채널·push 는 서버 병합 계약으로 보존). 바뀐 것이 없으면 저장하지 않는다.
+    if (Object.entries(draft).every(([key, value]) => prefs[pending.channel][key] === value)) { setPending(null); return; }
+    void save({ email: {}, in_app: {}, [pending.channel]: draft }, { ...prefs, [pending.channel]: { ...prefs[pending.channel], ...draft } });
   }
   const compatibility = Object.entries(COMPATIBILITY_EVENTS).filter(([key]) => prefs && (key in prefs.email || key in prefs.in_app));
   return <section aria-label="목적별 알림 설정" className="space-y-5">
@@ -64,7 +82,7 @@ export default function NotificationGroups() {
     {prefs && NOTIFICATION_GROUPS.map((group) => <div key={group.id} className="border-b border-[#EFEFEF] pb-4 last:border-0">
       <h3 className="font-bold text-[#33213F]">{group.label}</h3><p className="mt-1 text-sm text-[#6F6F6F]">{group.description}</p>
       {(['email', 'in_app'] as const).map((channel) => <div key={channel} className="flex min-h-14 items-center justify-between gap-4">
-        <span>{channel === 'email' ? '이메일' : '인앱'}</span>
+        <span className="flex items-center gap-2">{channel === 'email' ? '이메일' : '인앱'}{groupKeys(prefs[channel], group.id).length > 0 && <button type="button" disabled={saving} onClick={() => setPending({channel, group: group.id})} className="min-h-11 px-1 text-[13px] font-semibold text-[#5B1A8A] underline-offset-2 hover:underline disabled:opacity-50">세부 설정 {groupKeys(prefs[channel], group.id).filter((key) => prefs[channel][key]).length}/{groupKeys(prefs[channel], group.id).length}</button>}</span>
         <SettingsSwitch label={`${group.label} ${channel === 'email' ? '이메일' : '인앱'} 알림`} checked={aggregateNotificationGroup(prefs[channel], group.id)} disabled={saving || groupKeys(prefs[channel], group.id).length === 0} onChange={(next) => setPending({channel, group: group.id, next})} />
       </div>)}
     </div>)}
