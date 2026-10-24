@@ -164,3 +164,39 @@ def test_indices_only_반출도_증빙_sidecar를_포함한다(ctx, real_runtime
     assert any(n.endswith('display-status.jsonl') for n in names)
     assert any(n.endswith('/indices.jsonl') for n in names)
     assert len(names) == len(set(names))
+
+
+# ── dev 활성화 · 운영 설정 ──────────────────────────────────────────────
+
+ROOT = BACKEND_ROOT.parent
+
+
+def test_데이터센터는_dev_환경에서만_기본_활성():
+    from app.config import Settings
+    assert Settings(_env_file=None, environment='development').data_center_enabled is True
+    assert Settings(_env_file=None, environment='production').data_center_enabled is False
+    assert Settings(_env_file=None).data_center_enabled is False  # 기본 환경은 production(fail-safe)
+
+
+def test_명시값은_환경과_무관하게_이긴다():
+    from app.config import Settings
+    assert Settings(_env_file=None, environment='development', data_center_enabled=False).data_center_enabled is False
+    assert Settings(_env_file=None, environment='production', data_center_enabled=True).data_center_enabled is True
+
+
+def test_dev_cron과_번들에_outbox_재전달이_등록된다():
+    cron = (ROOT / 'deploy/dev/register-crons.sh').read_text()
+    line = next(x for x in cron.splitlines() if x.startswith('(crontab') and 'process_data_export_outbox_cron' in x)
+    assert line.count("grep -v 'process_data_export_outbox_cron'") == 1  # 멱등 갱신
+    assert "'* * * * * cd /home/ubuntu/mindbreeze/backend" in line and 'DATABASE_URL' in line and 'REDIS_URL' in line
+    assert 'venv/bin/python process_data_export_outbox_cron.py >>' in line
+    assert (BACKEND_ROOT / 'process_data_export_outbox_cron.py').is_file()
+    assert 'backend/process_data_export_outbox_cron.py' in (ROOT / '.github/workflows/deploy-dev.yml').read_text()
+
+
+def test_데이터센터_메뉴가_플랫폼과_기관_관리자_내비에_있다():
+    nav = (ROOT / 'frontend/src/components/layout/SidebarNav.tsx').read_text()
+    assert '"/org/data-center"' in nav and '"/admin/data-center"' in nav
+    app = (ROOT / 'frontend/src/App.tsx').read_text()
+    assert 'path="/org/data-center"' in app and 'role="org_admin"' in app
+    assert 'path="/admin/data-center"' in app and 'PlatformAdminRoute' in app

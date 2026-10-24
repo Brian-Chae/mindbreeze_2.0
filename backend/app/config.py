@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -29,6 +30,17 @@ class Settings(BaseSettings):
         "env_file_encoding": "utf-8",
         "extra": "ignore",
     }
+
+    @model_validator(mode="after")
+    def _dev_environment_defaults(self) -> "Settings":
+        """SDD-243: 데이터 센터는 dev 배포(ENVIRONMENT=development)에서만 기본 활성이다.
+
+        deploy-dev 워크플로가 매 배포마다 .env.dev 의 ENVIRONMENT=development 를 보장하므로 서버 .env 를 따로 고치지 않아도 된다.
+        운영은 ENVIRONMENT=production(기본값)이라 꺼진 채이고, DATA_CENTER_ENABLED 를 명시하면 어느 환경이든 그 값이 이긴다(롤백 스위치).
+        """
+        if "data_center_enabled" not in self.model_fields_set and self.environment == "development":
+            self.data_center_enabled = True
+        return self
 
     # SDD-216: 두 차례 출시. 팀 본문은 개정 고지 UI 검증 후 활성화한다.
     class_scheduling_enabled: bool = False
