@@ -24,7 +24,8 @@ def load(name, path):
     return module
 
 
-schema = load('app.schemas.biosignal', ROOT / 'backend/app/schemas/biosignal.py')
+# 통합 pytest에서 이미 로드된 DTO를 바꾸면 클래스 동등성 검사가 깨진다.
+schema = sys.modules.get('app.schemas.biosignal') or load('app.schemas.biosignal', ROOT / 'backend/app/schemas/biosignal.py')
 
 
 @pytest.fixture
