@@ -2,7 +2,7 @@
 from datetime import date
 from typing import Literal
 from uuid import UUID
-from pydantic import BaseModel,ConfigDict,Field,EmailStr
+from pydantic import BaseModel,ConfigDict,Field,EmailStr,model_validator
 from app.schemas.class_membership import MemberCommand
 
 class GuestJoin(BaseModel):
@@ -11,7 +11,8 @@ class GuestJoin(BaseModel):
     operation_key:UUID
     guest_name:str=Field(min_length=1,max_length=100)
     gender:Literal['male','female','other']
-    birth_date:date
+    birth_date:date|None=None  # 이전 요청·데이터 호환, 새 연월 입력의 일자는 의미 없음
+    birth_year_month:str|None=None
     report_email:EmailStr=Field(max_length=320)
     report_included:bool=False
     notice_version:str|None=Field(default=None,max_length=20)
@@ -19,6 +20,18 @@ class GuestJoin(BaseModel):
     research_notice_version:str|None=Field(default=None,max_length=20)
     reminder_opt_in:bool=False
     join_mode:Literal['active','waitlist']='active'
+
+    @model_validator(mode='after')
+    def normalize_guest_input(self) -> "GuestJoin":
+        if self.birth_year_month is not None:
+            from app.schemas.guest_birth import parse_guest_birth_year_month
+            self.birth_date = parse_guest_birth_year_month(self.birth_year_month)
+        if self.birth_date is None:
+            raise ValueError('생년월을 입력해 주세요')
+        # 이전 앱이 true를 보내도 비회원은 연구 동의 주체가 아니다.
+        self.research_consented = False
+        self.research_notice_version = None
+        return self
 
 class GuestMergePreview(BaseModel):
     model_config=ConfigDict(extra='forbid')

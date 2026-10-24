@@ -1,6 +1,7 @@
-// SDD-209 M0 — FM04b 개인정보 입력(이름·성별·생년월일·이메일 + 재입력). 이메일 인증(OTP)은 없다.
+// SDD-209 M0 — FM04b 개인정보 입력(이름·성별·생년월·이메일 + 재입력). 이메일 인증(OTP)은 없다.
 // 로그인 회원은 계정 값을 읽기 전용으로 보여 주고 확인만 한다.
 import type { ReactNode } from 'react';
+import { BirthYearMonthWheel } from '../../../forms/birth-year-month-wheel';
 import { CircleAlert, Clock, Mail, User } from 'lucide-react';
 import { GENDER_OPTIONS, isProfilePristine, type EntryProfileDraft, type EntryProfileErrors, type EntryProfileMode } from '../../../../lib/class/flow/member-entry';
 import { FlowButton, FlowCard } from '../shared/flow-primitives';
@@ -72,9 +73,10 @@ export function ProfileEntryView({ summary, mode, draft, errors, submitError, su
             <FieldHead error={errors.name}><label className="fl-label" htmlFor="fm-name">이름</label></FieldHead>
             <input
               className="fm-input" id="fm-name" type="text" autoComplete="off" placeholder="이름을 입력해 주세요"
-              value={draft.name} readOnly={member} aria-invalid={errors.name ? true : undefined}
+              aria-describedby={!member ? 'fm-name-hint' : undefined} value={draft.name} readOnly={member} aria-invalid={errors.name ? true : undefined}
               onChange={(e) => onChange({ name: e.target.value })}
             />
+            {!member ? <p className="fm-ft" id="fm-name-hint">실명이 아니어도 됩니다(별명·반 번호 가능)</p> : null}
           </div>
           <div className="fm-field">
             <FieldHead error={errors.gender}><span className="fl-label" id="fm-gender-label">성별</span></FieldHead>
@@ -90,12 +92,9 @@ export function ProfileEntryView({ summary, mode, draft, errors, submitError, su
             </div>
           </div>
           <div className="fm-field">
-            <FieldHead error={errors.birth}><label className="fl-label" htmlFor="fm-birth">생년월일</label></FieldHead>
-            <input
-              className="fm-input" id="fm-birth" type="text" inputMode="numeric" autoComplete="off" placeholder="예: 1990.03.12"
-              value={draft.birth} readOnly={member} aria-invalid={errors.birth ? true : undefined}
-              onChange={(e) => onChange({ birth: e.target.value })}
-            />
+            <FieldHead error={errors.birth}><label className="fl-label" htmlFor="fm-birth">{member ? '생년월일' : '생년월'}</label></FieldHead>
+            {member ? <input className="fm-input" id="fm-birth" type="text" value={draft.birth} readOnly /> :
+              <BirthYearMonthWheel id="fm-birth" value={draft.birth} invalid={Boolean(errors.birth)} onChange={(birth) => onChange({ birth })} />}
           </div>
           <div className="fm-field">
             <FieldHead error={errors.email}><label className="fl-label" htmlFor="fm-email">이메일</label></FieldHead>

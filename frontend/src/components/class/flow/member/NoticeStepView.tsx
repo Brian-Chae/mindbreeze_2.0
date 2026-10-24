@@ -28,6 +28,8 @@ export interface NoticeStepViewProps {
   backdropSrc?: string;
   /** SDD-220 — AI 기능 공개 여부. false 면 "AI 기록" 문구 없이 "녹음"만 안내한다(기본 true = 기존 문구) */
   aiEnabled?: boolean;
+  /** 비회원은 연구 활용 대상이 아니므로 연구 동의를 노출하지 않는다 */
+  researchAllowed?: boolean;
   onReportChoice: (choice: 'included' | 'excluded') => void;
   onResearchChange: (consented: boolean) => void;
   onNext: () => void;
@@ -48,7 +50,7 @@ function NoticeRow({ icon, label, desc }: { icon: ReactNode; label: string; desc
 }
 
 export function NoticeStepView({
-  sessionType, place, size, bandMode, title, hostName, retentionDays, reportChoice, researchConsent, researchSaveFailed, steps, backdropSrc, aiEnabled = true,
+  sessionType, place, size, bandMode, title, hostName, retentionDays, reportChoice, researchConsent, researchSaveFailed, steps, backdropSrc, aiEnabled = true, researchAllowed = true,
   onReportChoice, onResearchChange, onNext, onBack, onExit,
 }: NoticeStepViewProps) {
   const [detail, setDetail] = useState<'record' | 'report' | 'research' | null>(null);
@@ -157,7 +159,7 @@ export function NoticeStepView({
           </div>
           <p className="notice-report-note">{confirmLine ?? '반영하지 않아도 참여할 수 있어요'}</p>
         </section>
-        <section className="notice-card" aria-label="연구 동의">
+        {researchAllowed ? <section className="notice-card" aria-label="연구 동의">
           <div className="notice-cardhead"><h2>연구 데이터 활용 <span>선택</span></h2><button type="button" className="notice-more" aria-label="연구 데이터 활용 자세히 보기" onClick={() => setDetail('research')}>자세히 보기 ↗</button></div>
           <p className="notice-research-copy">비식별 뇌파·맥박·움직임 데이터와 지표,<br />이름과 생년월일에서 생성한 HMAC 가명 ID·성별·생년·월을<br /><strong>삭제 기한 없이 보관</strong><br />철회: 운영팀 요청 · 미동의도 참여 가능</p>
           <p className="notice-research-copy">{RESEARCH_METADATA_NOTICE}</p>
@@ -165,7 +167,7 @@ export function NoticeStepView({
             <span className="fm-box"><Check aria-hidden="true" strokeWidth={3} /></span>동의해요 <span>(선택)</span>
           </button>
           {researchSaveFailed ? <p className="fm-failhint" role="status"><CircleAlert size={16} aria-hidden="true" /><span>연구 동의를 저장하지 못했어요. 미동의로 진행해요.</span></p> : null}
-        </section>
+        </section> : null}
       </div>
     </MemberFlowFrame>
   );

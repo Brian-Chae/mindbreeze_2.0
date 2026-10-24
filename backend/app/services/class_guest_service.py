@@ -133,6 +133,8 @@ def join_guest(db, class_id, command, now=None):
     from app.schemas.class_guests import GuestJoin
     try:
         data = GuestJoin.model_validate(_data(command)).model_dump(mode='json')
+        # 연월은 기존 DATE로 정규화했으므로 이전 요청의 멱등 해시 형식을 보존한다.
+        data.pop('birth_year_month', None)
     except ValidationError:
         raise _error('guest_input_invalid',422)
     try:

@@ -22,3 +22,13 @@ it('명상 고지는 강사팀 참관·사후 열람과 원본 제외를 표시�
  expect(box.textContent).toContain('이 클래스의 진행 지도사와 등록된 다른 지도사는'); expect(box.textContent).toContain('참관'); expect(box.textContent).toContain('전사 원문');
  await act(async()=>root.unmount());
 });
+
+it('비회원 안내는 연구 동의 UI를 제공하지 않고 회원은 제공한다', async () => {
+ const box=document.createElement('div');const root=createRoot(box);const noop=()=>undefined;
+ const props={place:'online' as const,size:'group' as const,bandMode:'none' as const,title:'명상',hostName:null,retentionDays:90,reportChoice:null,researchConsent:false,researchSaveFailed:false,steps:{total:5,current:0},onReportChoice:noop,onResearchChange:noop,onNext:noop,onBack:noop,onExit:noop};
+ await act(async()=>root.render(<NoticeStepView {...props} researchAllowed={false}/>));
+ expect(box.querySelector('[aria-label="연구 동의"]')).toBeNull();
+ await act(async()=>root.render(<NoticeStepView {...props} researchAllowed={true}/>));
+ expect(box.querySelector('[aria-label="연구 동의"]')).not.toBeNull();
+ await act(async()=>root.unmount());
+});

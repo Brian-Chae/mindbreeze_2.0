@@ -133,7 +133,11 @@ def queue_session(session_id: uuid.UUID, db: DBSession) -> int:
     """
     rows = (
         db.query(ResearchConsent)
+        .join(SessionParticipant, SessionParticipant.id == ResearchConsent.participant_id)
+        .execution_options(include_removed=True)
         .filter(
+            # 기관 정보 유무·구 동의 true와 무관하게 비회원 전부 제외한다.
+            SessionParticipant.user_id.isnot(None),
             ResearchConsent.session_id == session_id,
             ResearchConsent.consented.is_(True),
             ResearchConsent.withdrawn_at.is_(None),
@@ -407,7 +411,11 @@ def _participant_data(db: DBSession, consent: ResearchConsent, pseudo_p: str, ps
 def _pending_consents(db: DBSession, session_id: uuid.UUID) -> list[ResearchConsent]:
     rows = (
         db.query(ResearchConsent)
+        .join(SessionParticipant, SessionParticipant.id == ResearchConsent.participant_id)
+        .execution_options(include_removed=True)
         .filter(
+            # 기관 정보 유무·구 동의 true와 무관하게 비회원 전부 제외한다.
+            SessionParticipant.user_id.isnot(None),
             ResearchConsent.session_id == session_id,
             ResearchConsent.consented.is_(True),
             ResearchConsent.withdrawn_at.is_(None),
@@ -772,7 +780,9 @@ def run_export(db: DBSession, *, session_ids: list[uuid.UUID] | None = None, for
     if session_ids is None:
         session_ids = [
             sid for (sid,) in db.query(ResearchConsent.session_id)
-            .filter(ResearchConsent.export_state == STATE_PENDING, ResearchConsent.consented.is_(True))
+            .join(SessionParticipant, SessionParticipant.id == ResearchConsent.participant_id)
+            .execution_options(include_removed=True)
+            .filter(SessionParticipant.user_id.isnot(None), ResearchConsent.export_state == STATE_PENDING, ResearchConsent.consented.is_(True))
             .distinct().all()
         ]
     results = [export_session(db, sid) for sid in session_ids]
@@ -789,6 +799,17 @@ def verify_service_token(token: str | None) -> None:
         raise HTTPException(status_code=401, detail="서비스 토큰이 올바르지 않아요")
 
 
+def _batch_has_guest(db: DBSession, batch_id: uuid.UUID) -> bool:
+    """구버전이 만든 비회원 사본은 재전달하지 않는다. 기존 객체·기록은 삭제하지 않는다."""
+    return db.query(ResearchExportItem.id).join(
+        ResearchConsent, ResearchConsent.id == ResearchExportItem.consent_id
+    ).outerjoin(
+        SessionParticipant, SessionParticipant.id == ResearchConsent.participant_id
+    ).filter(
+        ResearchExportItem.batch_id == batch_id, SessionParticipant.user_id.is_(None)
+    ).execution_options(include_removed=True).first() is not None
+
+
 def list_uploaded_batches(db: DBSession) -> list[dict]:
     rows = (
         db.query(ResearchExportBatch)
@@ -799,7 +820,7 @@ def list_uploaded_batches(db: DBSession) -> list[dict]:
     return [
         {"batch_id": str(b.id), "prefix": b.prefix, "manifest_key": b.prefix + "manifest.json",
          "manifest_sha256": b.manifest_sha256, "file_count": b.file_count, "total_bytes": b.total_bytes}
-        for b in rows
+        for b in rows if not _batch_has_guest(db, b.id)
     ]
 
 
@@ -812,6 +833,8 @@ def ack_batch(db: DBSession, batch_id: str, sha256: str) -> dict:
     batch = db.query(ResearchExportBatch).filter(ResearchExportBatch.id == bid).with_for_update().first()
     if batch is None:
         raise HTTPException(status_code=404, detail="배치를 찾을 수 없어요")
+    if _batch_has_guest(db, batch.id):
+        raise HTTPException(status_code=409, detail="비회원 데이터가 포함된 배치는 반출 대상이 아닙니다")
     if batch.status == "acked":
         if not hmac.compare_digest((sha256 or "").lower(), batch.manifest_sha256 or ""):
             raise HTTPException(status_code=409, detail="sha256 이 일치하지 않아요")

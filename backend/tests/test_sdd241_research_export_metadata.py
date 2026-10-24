@@ -6,7 +6,7 @@ import uuid
 from datetime import timedelta
 import pyarrow.parquet as pq
 import pytest
-from tests.test_sdd209_b13_research_export import db, enabled, staging, _setup, _put_raw, T0
+from tests.test_sdd209_b13_research_export import db, enabled, staging, _setup, _put_raw, _research_user, T0
 from app.models.record import EEGRawChunk
 from app.models.research import ResearchConsent
 from app.models.session import SessionParticipant
@@ -71,7 +71,7 @@ def test_개인_시각_근거_불량은_null_사유(db, enabled, staging, bad, r
 
 def test_구동의와_신동의는_가명_namespace_분리(db, enabled, staging):
     s, p, c = setup_expanded(db, staging)
-    other = SessionParticipant(session_id=s.id, guest_name='구동의참가자')
+    other = SessionParticipant(session_id=s.id, user_id=_research_user(db, '구동의참가자').id, guest_name='구동의참가자')
     db.add(other)
     db.flush()
     db.add(ResearchConsent(session_id=s.id,participant_id=other.id,consented=True,research_subject_id='b'*64,key_version=1,notice_version='r5-1',export_state='pending'))

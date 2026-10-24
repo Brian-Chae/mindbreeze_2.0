@@ -136,6 +136,9 @@ jobs:
         env:
           MODE: ${{ needs.changes.outputs.backend_mode }}
           TESTS: ${{ needs.changes.outputs.backend_tests }}
+          # HTTP fakeredis와 별개인 Celery 연결도 테스트 프로세스 안에 격리한다.
+          CELERY_BROKER_URL: memory://
+          CELERY_RESULT_BACKEND: cache+memory://
         run: |
           cd backend
           # test_real_pdf_metric_pages는 정확 4페이지 검증으로 macOS 보정된 내용이

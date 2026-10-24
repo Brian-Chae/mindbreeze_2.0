@@ -2,6 +2,8 @@
 
 from datetime import date, datetime, timedelta, timezone
 
+import pytest
+
 from app.core.database import get_db
 from app.main import app
 from app.models.client_profile import ClientProfile
@@ -47,7 +49,8 @@ def _create_session(client, host: dict, title: str, hours: int) -> str:
     return response.json()["id"]
 
 
-def test_report_list_returns_guest_and_member_information_with_nulls(client):
+@pytest.mark.parametrize('guest_birth', [None, date(2018, 6, 1), date(1990, 5, 17)])
+def test_report_list_returns_guest_and_member_information_with_nulls(client, guest_birth):
     host = _register(client, "sdd065-host@test.com", "상담사", "counselor")
     member = _register(client, "sdd065-member@test.com", "회원 이름", "client")
     guest_session_id = _create_session(client, host, "게스트 세션", 1)
@@ -70,7 +73,7 @@ def test_report_list_returns_guest_and_member_information_with_nulls(client):
             session_id=guest_session_id,
             guest_name="게스트 이름",
             gender=None,
-            birth_date=None,
+            birth_date=guest_birth,
         )
         registered = SessionParticipant(
             session_id=member_session_id,
@@ -112,7 +115,7 @@ def test_report_list_returns_guest_and_member_information_with_nulls(client):
     assert reports["게스트 세션"] | {
         "participant_name": "게스트 이름",
         "gender": None,
-        "birth_date": None,
+        "birth_date": guest_birth.isoformat() if guest_birth else None,
         "is_guest": True,
     } == reports["게스트 세션"]
     assert reports["회원 세션"]["participant_name"] == "회원 이름"

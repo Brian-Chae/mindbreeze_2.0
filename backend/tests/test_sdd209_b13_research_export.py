@@ -78,6 +78,14 @@ def enabled(monkeypatch):
     monkeypatch.setattr(settings, "research_export_prefix", "research-export/")
 
 
+def _research_user(db, name=GUEST_NAME, email=None):
+    """연구 검증은 동의 주체인 회원으로 구성한다. 비회원 제외는 별도 회귀에서 검증한다."""
+    user = User(email=email or f"research-{uuid.uuid4().hex}@test.com", name=name, role="client", password_hash="x")
+    db.add(user)
+    db.flush()
+    return user
+
+
 def _setup(db, *, state="pending", consented=True, with_data=True, status="completed"):
     host = User(email=f"b13-{uuid.uuid4().hex[:8]}@test.com", name="호스트이름", role="counselor", password_hash="x")
     db.add(host)
@@ -89,8 +97,9 @@ def _setup(db, *, state="pending", consented=True, with_data=True, status="compl
     )
     db.add(s)
     db.flush()
+    subject = _research_user(db)
     p = SessionParticipant(
-        session_id=s.id, guest_name=GUEST_NAME, report_email=GUEST_EMAIL, gender="female",
+        session_id=s.id, user_id=subject.id, guest_name=GUEST_NAME, report_email=GUEST_EMAIL, gender="female",
         birth_date=date(1990, 5, 17), report_included=True,
     )
     db.add(p)
@@ -371,6 +380,7 @@ def test_BT69_종료_API가_큐_등록_훅을_호출한다(client, db, enabled):
     _open_class(client, cls, host["h"])
     res = enter_guest(client, cls["access_code"], "종료게스트")
     pid = res.json()["participant_id"]
+    db.get(SessionParticipant, uuid.UUID(pid)).user_id = _research_user(db, "종료회원").id
     db.add(RC(session_id=uuid.UUID(cls["id"]), participant_id=uuid.UUID(pid), consented=True,
               research_subject_id="b" * 64, key_version=1, export_state="not_applicable"))
     db.commit()
@@ -465,7 +475,7 @@ def test_BT71_다른_사람이_철회되면_유효한_건은_다음_배치로_�
 
     s, p, c1 = _setup(db)
     _put_raw(staging, s, p)
-    p2 = SessionParticipant(session_id=s.id, guest_name="두번째", report_included=True)
+    p2 = SessionParticipant(session_id=s.id, user_id=_research_user(db, "두번째").id, guest_name="두번째", report_included=True)
     db.add(p2)
     db.flush()
     c2 = ResearchConsent(session_id=s.id, participant_id=p2.id, consented=True, research_subject_id="c" * 64,

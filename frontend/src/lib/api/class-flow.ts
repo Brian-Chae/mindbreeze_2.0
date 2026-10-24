@@ -22,8 +22,10 @@ export interface EnterPayload {
   code: string;
   name?: string;
   gender?: EntryGender;
-  /** YYYY-MM-DD — 서버가 연·월만 보관한다 */
+  /** 기존 클라이언트 요청 호환용 YYYY-MM-DD */
   birth_date?: string;
+  /** 비회원 신규 입력: YYYY-MM, 일자는 수집하지 않는다 */
+  birth_year_month?: string;
   email?: string;
   /** SDD-220 F1 — 회차 녹음·녹화 필수 동의. 없으면 서버가 403 RECORDING_CONSENT_REQUIRED 로 거부한다 */
   recording_consent?: boolean;
