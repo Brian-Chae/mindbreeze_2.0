@@ -749,7 +749,7 @@ def cancel_batches_for_withdrawn(db: DBSession) -> int:
             c.id: c
             for c in db.query(ResearchConsent).filter(ResearchConsent.id.in_([i.consent_id for i in items])).all()
         }
-        if not any(_is_withdrawn(consents.get(i.consent_id)) for i in items):
+        if not any(_is_withdrawn(consents.get(i.consent_id)) or (i.bundle_schema_version=='research-v3' and signal_consent_status(db,consents.get(i.consent_id),'eeg','raw')=='withdrawn') for i in items):
             continue
         if any(i.bundle_schema_version == 'research-v3' for i in items):
             names=[f['name'] for i in items for f in i.rows.get('files',[])]
@@ -915,7 +915,8 @@ def _batch_scope_allowed(db: DBSession, bid) -> bool:
 def signal_research_hold(db: DBSession, session_id, participant_id, signal: str, kind: str, artifact_sha256: str) -> bool:
     """정확히 해당 artifact를 포함한 revision/hash 영수증만 인정한다. v2 ACK는 영향 없음."""
     consent=db.query(ResearchConsent).filter_by(session_id=session_id,participant_id=participant_id).first()
-    if signal_consent_status(db,consent,signal,kind)!='consented': return False
+    status=signal_consent_status(db,consent,signal,kind)
+    if signal!='eeg' or kind not in ('raw','feature') or status in ('not_consented','withdrawn'): return False
     receipts=db.query(ResearchSignalReceipt).filter_by(session_id=session_id,participant_id=participant_id,
         consent_id=consent.id,signal=signal,artifact_kind=kind,schema_version=SIGNAL_SCHEMA).filter(ResearchSignalReceipt.acked_at.isnot(None)).all()
     for receipt in receipts:
@@ -958,7 +959,8 @@ def export_signal_revision(db: DBSession, session_id, participant_id, revision: 
         # 내용 주소 객체를 전체 hash로 검증하므로 unversioned read 변조도 반출되지 않는다.
         return storage_service.download_bytes(key)
     files={}; manifest_files=[]; kinds=set(); transferred={}
-    for artifact in iter_export_artifacts(manifest,selection,policy,db=db,session_id=sid,participant_id=pid,reader=read,policy_check=check):
+    for artifact in iter_export_artifacts(manifest,selection,policy,db=db,session_id=sid,participant_id=pid,reader=read,policy_check=check,
+            retention_hold_check=lambda m,ref,p: signal_research_hold(db,sid,pid,'eeg',ref.artifact_kind,ref.sha256)):
         meta=artifact.metadata
         if meta.artifact_kind not in ('raw','feature'): continue
         blob=b''.join(artifact.iter_bytes())
@@ -983,7 +985,11 @@ def export_signal_revision(db: DBSession, session_id, participant_id, revision: 
     # 동의 잠금을 유지한 채 업로드·원장 확정. 철회가 먼저 commit되면 check에서 거부된다.
     for name,blob in {**files,'manifest.json':manifest_bytes}.items():
         if not check(manifest,None,policy): raise HTTPException(409,'consent_withdrawn')
-        if not storage_service.upload_bytes(batch.prefix+name,blob):
+        try:
+            uploaded=storage_service.upload_bytes(batch.prefix+name,blob)
+        except Exception:
+            uploaded=False
+        if not uploaded:
             _queue_signal_deletions(db,batch.prefix,[*files,'manifest.json'],'export_failed')
             batch.status='failed';batch.last_error='upload_failed';db.commit()
             raise ExportUploadError('signal_upload_failed')

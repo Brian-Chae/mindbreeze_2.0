@@ -4,6 +4,8 @@
 Spark 는 목록으로 적재할 배치를 찾아 스테이징 prefix 에서 pull 한 뒤 ack 로 회신한다(운영→Spark push 없음).
 """
 
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, Header
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DBSession
@@ -52,8 +54,8 @@ class SignalAckRequest(AckRequest):
 
 
 class SignalBuildRequest(BaseModel):
-    session_id: str
-    participant_id: str
+    session_id: UUID
+    participant_id: UUID
     revision: int = Field(gt=0)
     receiver_versions: list[str] = Field(default_factory=list, max_length=10)
 

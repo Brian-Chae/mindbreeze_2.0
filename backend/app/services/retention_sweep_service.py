@@ -76,7 +76,7 @@ def _eligible_sessions(
         .filter(
             SessionModel.status.in_(TARGET_STATUSES),
             SessionModel.is_template.is_(False),
-            ref < cutoff,
+            ref <= cutoff,
         )
         .execution_options(include_hidden=True)
     )
@@ -142,7 +142,7 @@ def _raw_stage(
     refs_all: list[str] = []
     for sid in eligible:
         eeg_rows = [
-            c for c in db.query(EEGRawChunk).filter(EEGRawChunk.session_id == sid).all()
+            c for c in db.query(EEGRawChunk).filter(EEGRawChunk.session_id == sid, EEGRawChunk.schema_version == "1.0", EEGRawChunk.signal_type == "eeg").all()
             if c.participant_id not in holds
         ]
         audio_rows = db.query(AudioChunk).filter(AudioChunk.session_id == sid).all()
@@ -195,7 +195,7 @@ def _raw_stage(
             remaining = (
                 db.query(EEGRawChunk)
                 .filter(EEGRawChunk.session_id == sid, EEGRawChunk.participant_id == pid,
-                        EEGRawChunk.upload_status == "uploaded")
+                        EEGRawChunk.upload_status == "uploaded", EEGRawChunk.signal_type == "eeg")
                 .count()
             )
             for rec in db.query(EEGRecord).filter(EEGRecord.session_id == sid, EEGRecord.participant_id == pid):
@@ -229,7 +229,7 @@ def _hold_stage(
     alert_after = timedelta(days=settings.retention_raw_days + settings.retention_hold_alert_days)
     newly_overdue: list[ResearchConsent] = []
     for pid, consent in holds.items():
-        chunks = db.query(EEGRawChunk).filter(EEGRawChunk.participant_id == pid).count()
+        chunks = db.query(EEGRawChunk).filter(EEGRawChunk.participant_id == pid, EEGRawChunk.schema_version == "1.0", EEGRawChunk.signal_type == "eeg").count()
         if chunks == 0:
             continue  # 지울 원본이 없으면 보류할 것도 없다
         rep["participants"] += 1
@@ -333,6 +333,8 @@ def run_retention_sweep(
         pii_eligible = _eligible_sessions(db, settings.retention_guest_pii_days, moment, apply_from)
         holds = _held_consents(db, list(raw_eligible))
         raw_rep, refs = _raw_stage(db, raw_eligible, holds, execute=execute)
+        biosignal_rep = sweep_biosignal_originals(db,now=moment,apply_from=apply_from,execute=execute)
+        deletion_rep = retry_object_deletions(db,now=moment) if execute else {"done":0,"retry":0}
         hold_rep = _hold_stage(db, raw_eligible, holds, moment, execute=execute)
         pii_rep = _pii_stage(db, pii_eligible, execute=execute)
         from app.services.class_member_consent_service import scrub_expired_guests
@@ -346,11 +348,11 @@ def run_retention_sweep(
 
         orphan_rep: dict | None = None
         if execute:
-            from app.services import eeg_raw_service
+            from app.tasks.eeg_raw_task import run_legacy_sweep
 
             orphan_rep = {
                 # 임시·고아만(보관 기간 없이): pending/failed EEG 청크, 부모 없는 미디어 청크
-                "eeg_raw": eeg_raw_service.sweep_stale_eeg_raw(db, retention_days=0),
+                "eeg_raw": run_legacy_sweep(db, retention_days=0),
                 "media": media_cleanup_service.sweep_stale_media(db, retention_days=36500),
             }
 
@@ -366,6 +368,8 @@ def run_retention_sweep(
                 "evaluated_at": moment.isoformat(),
             },
             "raw": raw_rep,
+            "biosignal": biosignal_rep,
+            "object_deletions": deletion_rep,
             "research_hold": hold_rep,
             "guest_pii": pii_rep,
             "orphan_cleanup": orphan_rep,
@@ -387,3 +391,101 @@ def run_retention_sweep(
         db.commit()
         logger.exception("[retention] 실행 실패: run_id=%s", run.id)
         raise
+
+
+# ── SDD-244: v2 원본/파형은 신호별 보류 + 재시도 가능한 삭제 원장 ──
+from app.models.biosignal import BiosignalArtifact
+from app.models.research_export import ObjectDeletionOutbox
+
+
+def sweep_biosignal_originals(db: DBSession, *, now: datetime, apply_from: datetime | None, execute: bool) -> dict:
+    """90일 기준은 회차 종료일(없으면 생성일). ACK 시각으로 보관을 연장하지 않는다.
+
+    호출자는 통합 sweep의 활성/하한/dry-run 게이트를 통과해야 execute=True를 준다.
+    원장 삭제와 outbox INSERT를 같은 commit에 담고 실제 객체는 별도 retry 단계가 지운다.
+    """
+    from app.services.research_export_service import signal_research_hold
+    eligible=_eligible_sessions(db,90,_aware(now),apply_from)
+    report={'candidates':0,'held':0,'queued':0,'bytes_known':0}
+    for sid in eligible:
+        for model in (EEGRawChunk,BiosignalArtifact):
+            query=db.query(model).filter(model.session_id==sid)
+            if model is EEGRawChunk:
+                query=query.filter(EEGRawChunk.schema_version!='1.0')
+            else:
+                query=query.filter(BiosignalArtifact.retention_class=='raw_90_days')
+            rows=query.with_for_update().all() if execute else query.all()
+            for row in rows:
+                signal=row.signal_type if model is EEGRawChunk else row.signal
+                kind='raw' if model is EEGRawChunk else row.artifact_kind
+                if execute:
+                    # 연구 ACK/철회와 같은 동의 행을 잠가 정책 판단과 원장 확정을 직렬화한다.
+                    db.query(ResearchConsent).filter_by(session_id=sid,participant_id=row.participant_id).populate_existing().with_for_update().first()
+                if signal_research_hold(db,sid,row.participant_id,signal,kind,row.checksum):
+                    report['held']+=1
+                    continue
+                report['candidates']+=1;report['bytes_known']+=row.size_bytes or 0
+                if not execute: continue
+                existing=db.query(ObjectDeletionOutbox).filter_by(object_key=row.object_key).first()
+                if existing is None:
+                    db.add(ObjectDeletionOutbox(object_key=row.object_key,source_table=model.__tablename__,reason='raw_retention_90_days',state='pending',
+                        tombstone={'kind':kind,'signal':signal,'sha256':row.checksum,'size_bytes':row.size_bytes}))
+                elif existing.state=='done':
+                    # 내용 주소 원본이 다시 등록돼도 과거 삭제 성공을 재사용하지 않는다.
+                    existing.state='pending';existing.completed_at=None;existing.next_attempt_at=None
+                # DB 행이 없어져도 immutable manifest와 tombstone은 남는다. 반출은 missing/outbox를 차단한다.
+                db.delete(row);report['queued']+=1
+            if execute:
+                db.flush()
+                if model is EEGRawChunk:
+                    for pid in {r.participant_id for r in rows if r.participant_id}:
+                        count=db.query(EEGRawChunk).filter_by(session_id=sid,participant_id=pid,signal_type='eeg',upload_status='uploaded').count()
+                        for record in db.query(EEGRecord).filter_by(session_id=sid,participant_id=pid): record.file_count=count
+                db.commit()
+    return report
+
+
+def _delete_retained_object(key: str) -> bool:
+    from app.services import storage_service
+    # 저장소 미설정은 실제 삭제 성공 증거가 아니다. outbox를 남겨 다음 실행에서 재시도한다.
+    if storage_service._s3_client() is None:
+        return False
+    return storage_service.delete_object_everywhere(key)
+
+
+def retry_object_deletions(db: DBSession, *, now: datetime | None = None, delete=None, limit: int = 500) -> dict:
+    """commit된 outbox만 소비. 작업 종료 후 lease 만료된 in_progress도 재시도한다."""
+    from sqlalchemy import or_
+    moment=_aware(now) if now else _now()
+    delete=delete or _delete_retained_object
+    report={'done':0,'retry':0}
+    ids=[rid for (rid,) in db.query(ObjectDeletionOutbox.id).filter(
+        ObjectDeletionOutbox.state.in_(('pending','in_progress')),
+        or_(ObjectDeletionOutbox.next_attempt_at.is_(None),ObjectDeletionOutbox.next_attempt_at<=moment)
+    ).order_by(ObjectDeletionOutbox.created_at,ObjectDeletionOutbox.id).limit(limit).all()]
+    for rid in ids:
+        row=db.query(ObjectDeletionOutbox).filter(ObjectDeletionOutbox.id==rid,
+            ObjectDeletionOutbox.state.in_(('pending','in_progress')),
+            or_(ObjectDeletionOutbox.next_attempt_at.is_(None),ObjectDeletionOutbox.next_attempt_at<=moment)
+        ).populate_existing().with_for_update(skip_locked=True).first()
+        if row is None: continue
+        row.state='in_progress';row.attempts+=1;row.next_attempt_at=moment+timedelta(minutes=5)
+        key=row.object_key;attempt=row.attempts
+        db.commit()  # 객체 삭제 전 영속 claim. 프로세스 종료 시에도 복구된다.
+        try:
+            success=delete(key) is True
+            error=None if success else 'object_delete_unconfirmed'
+        except Exception as exc:
+            success=False;error=type(exc).__name__  # 예외 본문에 object key/자격정보를 싣지 않는다.
+        row=db.query(ObjectDeletionOutbox).filter_by(id=rid).populate_existing().with_for_update().one()
+        if row.attempts!=attempt or row.state!='in_progress':
+            db.rollback();continue
+        if success:
+            row.state='done';row.completed_at=moment;row.next_attempt_at=None;row.last_error=None
+            report['done']+=1
+        else:
+            row.state='pending';row.last_error=error
+            row.next_attempt_at=moment+timedelta(seconds=min(86400,60*2**min(attempt,10)))
+            report['retry']+=1
+        db.commit()
+    return report
