@@ -787,6 +787,9 @@ PlayGroup = Annotated[str, Field(max_length=64)]
 
 class PresignChunk(Contract):
     """raw presign 요청 1건. identity/시간/profile은 header(RawHeader)가 정본이다."""
+    # 클라이언트가 만드는 업로드 alias(Alias 패턴). feature/indices가 이 raw를 가리킬 때
+    # (SourceWindow.raw_artifact_id_alias) 같은 문자열을 쓴다. 회차·참여자 안에서 유일.
+    chunk_alias: Alias
     header: RawHeader
     checksum: Sha256
     size_bytes: Annotated[int, Field(gt=12, le=MAX_OBJECT_BYTES, strict=True)]
@@ -801,6 +804,7 @@ class PresignRequest(Contract):
 
 class PresignItem(Contract):
     chunk_id: UUID
+    chunk_alias: Alias
     signal_type: Signal
     stream_id: UUID
     segment_id: UUID
@@ -837,6 +841,7 @@ class AckRequest(Contract):
 
 class AckResult(Contract):
     chunk_id: UUID
+    chunk_alias: Alias
     upload_status: UploadStatus
     checksum: Sha256
     size_bytes: Positive
@@ -864,6 +869,11 @@ class AckResponse(Contract):
 
 class ArtifactPresignChunk(Contract):
     """feature/raw_derived/indices/normalization/algorithm 객체 업로드 등록 1건."""
+    # 클라이언트가 만드는 업로드 alias. DerivedReference.artifact_id_alias 가 이 값을 가리킨다.
+    artifact_alias: Alias
+    # 이 객체(JSONL 묶음)에 들어 있는 FeatureRecord.feature_id_alias 목록.
+    # DisplayMetric.source_feature_id 해석에 쓰이며 서버는 객체를 파싱하지 않고 이 목록으로 색인한다.
+    feature_id_aliases: Annotated[list[Alias], Field(max_length=2000)] = Field(default_factory=list)
     artifact_kind: ArtifactKind
     stream_id: UUID | None
     segment_id: UUID | None
@@ -892,6 +902,7 @@ class ArtifactPresignRequest(Contract):
 
 class ArtifactPresignItem(Contract):
     artifact_id: UUID
+    artifact_alias: Alias
     artifact_kind: ArtifactKind
     sequence: NonNegative
     object_key: Text
@@ -922,6 +933,7 @@ class ArtifactAckRequest(Contract):
 
 class ArtifactAckResult(Contract):
     artifact_id: UUID
+    artifact_alias: Alias
     artifact_kind: ArtifactKind
     upload_status: UploadStatus
     checksum: Sha256
@@ -968,7 +980,8 @@ class GapEventIn(Contract):
 class ExpectedArtifactIn(Contract):
     """종료 시 서버가 원장과 대조할 산출물. id는 presign이 돌려준 chunk_id/artifact_id."""
     kind: Literal['raw'] | ArtifactKind
-    id: UUID
+    # presign 때 클라이언트가 정한 chunk_alias / artifact_alias. 서버가 원장에서 UUID로 해석한다.
+    alias: Alias
     sha256: Sha256
 
 
@@ -1001,7 +1014,7 @@ class CloseIntentIn(Contract):
     def distinct_scopes(self) -> Self:
         streams = {(s.stream_id, s.segment_id, s.signal) for s in self.streams}
         views = {(s.stream_id, s.view_instance_id) for s in self.snapshots}
-        refs = {(a.kind, a.id) for a in self.expected_artifacts}
+        refs = {(a.kind, a.alias) for a in self.expected_artifacts}
         if len(streams) != len(self.streams) or len(views) != len(self.snapshots) or len(refs) != len(self.expected_artifacts):
             raise ValueError('종료 순번/expected scope 중복')
         return self

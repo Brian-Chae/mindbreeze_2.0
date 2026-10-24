@@ -25,3 +25,11 @@ wrapper DTO 정본: `backend/app/schemas/biosignal.py` 하단 "T04 API wrapper" 
 - 구버전 서버는 위 경로가 404 → 클라이언트는 `GET /biosignal-capabilities` 404/`raw_schemas`에 `mb-biosignal-raw-v2` 없음이면 v2를 쓰지 않고 v1 경로만 쓴다.
 - artifact `kind=indices`는 ACK 시 서버가 객체(JSONL, `DisplaySnapshot` 행)를 검증·파싱해 1Hz 검색 원장에 반영하고 `indexed_rows`로 알린다. `kind=normalization`은 `NormalizationSnapshot`(params_hash 기준 content-addressed 등록).
 - 종료: `POST /biosignal-events`에 `close_intent`를 싣는다. `expected_artifacts`는 presign이 돌려준 `chunk_id`/`artifact_id`+sha256 전체 목록(raw·feature·raw_derived·indices·normalization·algorithm), gap 마지막 sequence 포함. 응답 `close_state`가 `complete`일 때만 완료; 미확인 항목은 `missing_artifacts`. 후발 ACK는 새 manifest revision을 만든다.
+
+## alias ↔ UUID 규칙 (B 요청 반영)
+- **클라이언트가 alias 문자열을 만든다**(`^[A-Z][A-Za-z0-9_-]{0,63}$`, 예: `RAW-EEG-<stream8>-<seg8>-000012`). raw 청크는 `PresignChunk.chunk_alias`, 그 외 산출물은 `ArtifactPresignChunk.artifact_alias`로 presign 때 보낸다. 회차·참여자 안에서 유일하며 같은 alias+같은 내용은 멱등(같은 UUID 반환), 같은 alias에 다른 내용/identity는 409 `alias_conflict`.
+- 서버는 presign/ACK 응답에 `chunk_alias`↔`chunk_id`, `artifact_alias`↔`artifact_id`를 항상 되돌려준다(UUID는 서버 내부 원장 키, 객체 안에는 쓰지 않는다).
+- **객체(JSONL/raw header) 안에는 alias만 쓴다.** `SourceWindow.raw_artifact_id_alias` = raw `chunk_alias`, `DerivedReference.artifact_id_alias` = raw_derived `artifact_alias`. 참조 대상이 아직 업로드되지 않았어도 alias는 미리 확정할 수 있다(같은 alias로 나중에 presign).
+- `DisplayMetric.source_feature_id` = `FeatureRecord.feature_id_alias`. feature 객체 presign 때 `feature_id_aliases[]`로 그 묶음에 든 feature_id_alias를 알리면 서버가 `feature_id_alias → artifact_id` 색인을 만든다(객체를 파싱하지 않음). 서버가 저장 시 UUID/artifact로 해석하며 해석 불가 alias는 manifest에 `unresolved_reference`로 남고 close intent가 `complete`가 되지 않는다.
+- close intent `expected_artifacts[]`는 `{kind, alias, sha256}`로 alias를 쓴다(UUID 불필요). `missing_artifacts`도 alias로 돌려준다.
+- 공개 manifest(`ManifestRevision`)의 `artifact_id_alias`는 업로드 alias와 같은 문자열을 쓰되 사용자/UUID/object key는 포함하지 않는다.
