@@ -1,6 +1,8 @@
 # SDD-244 — 생체신호 전체 저장 파이프라인 구현 계획
 
-> 실행 워커: 구현을 별도 승인받은 뒤 `superpowers:subagent-driven-development` 또는 `superpowers:executing-plans`로 Task별 RED → 구현 → 검증 → 독립 리뷰를 수행한다. 이번 산출물은 Stage ② Plan + Stage ③ Verify뿐이며 구현을 시작하지 않는다.
+> 원 계획 작성 시점(29c62915)의 실행 안내: 구현을 별도 승인받은 뒤 `superpowers:subagent-driven-development` 또는 `superpowers:executing-plans`로 Task별 RED → 구현 → 검증 → 독립 리뷰를 수행한다. 이번 산출물은 Stage ② Plan + Stage ③ Verify뿐이며 구현을 시작하지 않는다.
+
+- **T02 실행 갱신(2026-10-24): Brian 승인 후 T02/G1만 완료. 아래 원 계획의 “이번 문서 작업/미실행”은 작성 당시 기록이며, 현재 T02 결과와 검증 범위는 §7을 우선한다. T01·T03 이후는 미실행이다.**
 
 - 작성: 2026-10-24. 기준: `c5897f27`, `sdd/244-biosignal-raw-pipeline`.
 - 목표: 웹의 EEG·PPG·ACC 수신 원문, 전체 feature, 당시 화면 6지표를 복원 가능한 계약으로 보존하고 SDD-243의 MB 원본 ZIP에 공급한다.
@@ -94,7 +96,7 @@ BLE DataView 원문 복사
 
 ### G1 계약 동결(T02 종료)
 
-T02에서 typed DTO는 `backend/app/schemas/biosignal.py`에 먼저 정의하며 뒤 Task는 이 타입을 확장 없이 소비한다. T02의 아래 파일/fixture를 BE·FE와 SDD-243 소비자가 정적 리뷰한 commit을 **G1 계약 확정 commit**으로 기록한다. 지금은 계약 설계안이며 G1 달성을 주장하지 않는다. G1부터 SDD-243 UI·조회·인가·ZIP 개발은 fixture 기반으로 병렬 시작 가능하다. 실제 웹 데이터 인수는 W4 뒤, 앱 표시는 W5에서 해당 플랫폼 통과 뒤다. spec §5의 앱 검증 의존을 웹 출시 차단으로 확대하지 않는다.
+T02에서 typed DTO는 `backend/app/schemas/biosignal.py`에 먼저 정의하며 뒤 Task는 이 타입을 확장 없이 소비한다. T02의 아래 파일/fixture를 BE·FE와 SDD-243 소비자가 정적 리뷰한 commit을 **G1 계약 확정 commit**으로 기록한다. 원 계획 당시에는 설계안이었으며, T02 실행 후 G1 계약 확정 commit과 소비자 관점 리뷰를 §7에 기록했다. G1부터 SDD-243 UI·조회·인가·ZIP 개발은 fixture 기반으로 병렬 시작 가능하다. 실제 웹 데이터 인수는 W4 뒤, 앱 표시는 W5에서 해당 플랫폼 통과 뒤다. spec §5의 앱 검증 의존을 웹 출시 차단으로 확대하지 않는다.
 
 - 생성 예정: `specs/sdd-244-biosignal-raw-pipeline/contracts/{raw-v2.schema.json,manifest-v1.schema.json,feature-v1.schema.json,indices-v1.schema.json,field-dictionary-v1.json}` 및 `contracts/fixtures/`의 합성 bytes·기대 sample/CSV/manifest/error. T02 소유자는 A 한 명, 다른 워커는 읽기 전용.
 - Python 인터페이스(C 소유): `decode_raw_chunk(payload: bytes, metadata: RawChunkMeta) -> Iterator[DecodedSample]`; v1/v2 dispatch·unsupported schema 명시, full object hash 검증 후 row iterator, `DecodedSample`은 ADC/물리량/lead-off/sample/packet/time 근거를 보존한다.
@@ -142,7 +144,7 @@ A가 model/schema/migration을 모두 소유한다. C가 필요한 DB 변경은 
 | ID / 단계 | 담당·시간 | 산출·주요 경로(위 소유권 표의 경로 기준) | 의존성 / 검증 |
 |---|---|---|---|
 | T01 / W0 | A·2h | FIX 최종 diff/계약·회귀 인수, 충돌 파일 예약 | FIX 결과; A02/A03 legacy 회귀, 실패는 FIX 반환 |
-| T02 / W1 | A·4h | contracts schemas/dictionary/fixtures + 신규 schemas/biosignal.py, raw·ACK·manifest·artifact·indices typed DTO 동결 G1 | spec+본 plan; A01/A04/A05/A06/A10 fixture review |
+| T02 / W1 **완료(§7)** | A·4h | contracts schemas/dictionary/fixtures + 신규 schemas/biosignal.py, raw·ACK·manifest·artifact·indices typed DTO 동결 G1 | spec+본 plan; A01/A04/A05/A06/A10 fixture review |
 | T03 / W1 | C·4h | biosignal_decoder.py, test_sdd244_decoder.py; v1/v2 decode_raw_chunk | G1; A01/A04/A13, signed 경계·truncated·unsupported |
 | T04 / W2 | A·5h | M1+record/biosignal model, schemas/eeg/biosignal, eeg_raw_service/storage_service/session API의 세 신호 검증 ACK 확장 | T01+G1; A01~A03, test_sdd244_ingest/pg ingest |
 | T05 / W2 | A·4h | M2+feature/model snapshot/artifact 원장·API·기존 session_service/WS 미전달 필드 연결 | T04; A05/A06, legacy feature ACK 회귀 |
@@ -183,3 +185,48 @@ A가 model/schema/migration을 모두 소유한다. C가 필요한 DB 변경은 
 | migration 잠금/복수 head | A 단독 작성·격리 PG 업그레이드/구버전 공존 시험. 운영 실행/자동 downgrade 없음 |
 
 다음 실행 인계에는 FIX commit, G1 contract commit, 워커별 diff·RED/GREEN 로그, 웹/앱별 미실행 항목, 실제 capacity 표를 남긴다. Stage ④~⑥·summary 작성·배포는 이번 문서 작업 완료에 포함하지 않는다.
+
+
+## 7. T02 실행 결과 — G1 계약 동결(2026-10-24)
+
+- **G1 계약 확정 commit: `56fbc926b87f2085fd4f1b6537325eb75a39b50f`** — `feat(sdd-244): T02 데이터 계약 동결(G1)`.
+- 기준 plan `29c62915`, Brian 승인(유실 FIX 분리·웹 우선·MB 원본 ZIP 우선)에 따라 **T02만** 실행했다. 자기 커밋 해시의 순환 참조를 피하기 위해 이 해시 기록은 별도 문서 커밋으로 남긴다.
+- 산출: `contracts/{raw-v2,manifest-v1,feature-v1,indices-v1}.schema.json`, `field-dictionary-v1.json`, `README.md`, `generate-fixtures.py`, 합성 binary/CSV/JSON·inventory/error fixtures, `backend/app/schemas/biosignal.py`, `backend/tests/test_sdd244_contracts.py`.
+- [x] T02 RED 증거 [x] 구현 diff [x] GREEN/허용 범위 회귀 [x] 구현자와 분리한 읽기 전용 리뷰 및 감독 재검증.
+- T01 FIX 인수·T03 decoder·마이그레이션·서비스·프론트·업로더 파일은 변경하지 않았다. G1은 계약 개발 착수 기준이며 W4/W5·실제 저장/다운로드 인수 또는 SDD 전체 완료를 뜻하지 않는다. 구현 전 verify.md는 변경하지 않았다.
+
+### 확정 결정과 이유
+
+- raw-v2는 `MBRAW002` + LE32 header length + JSON + 무패딩 section, EEG 17B/PPG 8B/ACC 18B stride다. ADC 정본과 float32 당시 변환값·원문 packet·sample-map을 함께 보존한다. EEG250Hz·2ch, PPG50Hz red/ir, ACC parser 명목 유리수와 관측률/관측창/미확인 사유를 분리한다. native25Hz는 후보 header이며 장치 검증 증거가 아니다.
+- 신규 µs는 canonical int64 문자열, 시간은 index/유리수 rate로 계산하여 마지막 출력 때만 반올림한다. original tick·arrival과 계산 sample time은 별도다. gap은 upload_pending과 수집 손실을 구분하고 불명 손실량은 null이다.
+- 기존27개 이름·의미 유지: quality는 valid/degraded/invalid 문자열, 기존 device_timestamp_ms는 소수 ms number다. filteredData/SQI/magnitude는 raw-derived 참조로 분리한다. 상세 비유한값은 null+정확한 경로별 사유로 보존하며 NaN/Inf 자체는 거부한다.
+- 화면6은 집중/이완/감정균형/BPM/호흡/HRV만 저장한다. HRV는 SDNN(ms), RMSSD는 별도 feature다. 당시 표시 정수·입력·출처·gate/held/stale와 모델/알고리즘/표시 버전을 고정한다. B0에 없는 sigmoid 파라미터는 조작하지 않고 null+버전/사유로 기록한다.
+- close intent는 stream/segment/signal별 chunk/feature 순번과 수신수, stream/view별 snapshot 순번을 보존한다. expected artifact ID/hash·gap 순번 검증과 실제 원장/인가 대조의 책임을 분리한다. 후자는 T06에서 구현한다.
+- JSON Schema는 구조 계약이며 교차 필드 의미검증과 int64 bounds는 DTO/README 규칙도 적용해야 한다. 공개 manifest alias와 내부 UUID/object key를 분리하되, 실제 가명화·정책 집행은 후속 adapter와 SDD-243의 책임이다.
+
+### RED → GREEN 및 독립 확인
+
+| 검사 | 결과·증거 |
+|---|---|
+| 최초 RED | DTO/fixture 부재로 31 failed. 테스트를 먼저 작성한 뒤 구현. 도구 실행 기록에 출력 보존 |
+| 리뷰 수정 RED | 품질/시간/숫자/단위·wire/모델/원본참조·종료 scope/상세 null/사전 매핑의 추가 실패를 확인 후 수정. 최종 coverage 불일치도 `3 == 4` 실패 재현 후 수정 |
+| 계약 focused | `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=/tmp/sdd244-contract-deps <Python> -m pytest --noconftest backend/tests/test_sdd244_contracts.py -q` → **58 passed** |
+| 기존 순수 회귀 | backend cwd에서 `test_eeg_metrics.py`, `test_normalization_score.py`를 `--noconftest -k 'not test_report_active_model_and_serialization'`로 실행 → **49 passed, 1 deselected**. 변경 전/후 동일 |
+| 감독 통합 재실행 | 계약+위 기존 회귀 → **107 passed, 1 deselected, 1 warning**. Python audit hook으로 `.env` 파일 open·sqlite3.connect·socket.connect를 차단한 상태에서 실행. warning은 기존 passlib의 crypt 폐기 예고 |
+| 독립 리뷰어 재실행 | coverage 보정 직전 계약 **57 passed**, 구조/소비자 리뷰 차단사항 없음. 추가 coverage 테스트와 최종58은 감독이 직접 재검증 |
+| 재생성 | 계약 디렉터리21개 파일의 SHA-256을 재생성 전후 비교 → 전체 동일 |
+| diff | `git -c core.whitespace=cr-at-eol diff --cached --check` 통과. CSV는 RFC4180 CRLF를 의도적으로 유지 |
+
+검증 Python은 `/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/backend/venv/bin/python`(pytest/Pydantic 기존 환경), JSON Schema 검사기는 `/tmp/sdd244-contract-deps`의 jsonschema다. 제품 requirements·공통 conftest를 바꾸지 않았다.
+
+**미실행/한계:** 전체 backend pytest는 공통 fixture와 일부 테스트가 DB·환경설정을 사용하므로 이번 DB/.env 금지 범위에서 실행하지 않았다. DB 생성 테스트 `test_report_active_model_and_serialization` 1개를 명시적으로 제외했으며 전체 회귀 무결성을 주장하지 않는다. 실제 디코더·API·PG·스토리지·ZIP·브라우저·실기기·60분 용량 검증은 후속 Task 대상이다. 실제 바이너리/CSV 해시와 구조 예시용 `aaaa...` model/artifact placeholder를 README에서 구분했다. fixture는 업로드 가능한 실제 close intent가 아니다.
+
+### SDD-243 소비자 관점 자체·독립 리뷰
+
+입력은 SDD-243 `spec.md` §3.4, §4.3(다운로드 파일 구성)이며 해당 워크트리는 읽기만 했다. 실제 SDD-243 구현팀의 승인이나 통합 실행 결과를 대신하지 않는다.
+
+1. 기존 `features.csv` 27개+키, `indices.csv` 화면6+각 입력/정규화 메타, raw CSV 3종 컬럼을 대조했다. 사전 source_metric은 focus_index/relaxation_index/emotional_stability/heart_rate/respiratory_rate/sdnn으로 고정했다. 당시값 미확인은 null+display_history_missing/unverified, 재계산은 reconstructed/false다.
+2. `manifest-v1`은 **회차·참여자 revision**이다. 243은 이를 pin하고 별도 ZIP job/part manifest(전체 part 목록·완료 상태)를 조립해야 한다. root README/dictionary/manifest, 1GB=1,000,000,000B, 독립 part·중첩 ZIP 금지는 243 소유다.
+3. v1 float32와 raw-v2 컨테이너의 schema dispatch, 추가 raw/packet/sample-map/raw-derived/display-status 경로, stream/segment 분리 파일명, `[from,to)`와 bin extra range를 확인해야 한다. ACC30Hz 고정·native25Hz 자동 재라벨은 금지다.
+4. 기본 가명 반출은 session 상대시각·alias만 사용한다. 원 UUID/tick/UTC 포함 raw bin은 무손실 권한 없으면 차단 또는 명시적 redacted_packet_view로 제공한다. 가명 feature device_timestamp_ms는 null, 기본 화면은 participant_player(없으면 session_player)다.
+5. 해결한 리뷰 지적: 기존 quality/소수ms 보존, ACC 파형 보관분리, ADC24/lead-off/MB 환산계수, B0 파라미터, 다중 stream/segment/view 종료 순번, 상세 null 사유, 6지표 원천 매핑, EEG fixture coverage4 정합. 추가 G1 차단사항 없음.
