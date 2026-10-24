@@ -97,7 +97,7 @@ describe('FE-NAV-06 키-배지 결합: 사전 라벨을 바꿔도 배지는 해�
       <MemoryRouter><SidebarNav notificationBadge={2} chatBadge={1} reportBadge={3} sessionBadge={4} /></MemoryRouter>,
     ));
     expect(byLabel('nav a')).toEqual({
-      '기관 대시보드': null, 'XYZ-명상 클래스': null, 회원: null, 'XYZ-상담': null,
+      '데이터 센터': null, '기관 대시보드': null, 'XYZ-명상 클래스': null, 회원: null, 'XYZ-상담': null,
       'XYZ-채팅': '1', 'XYZ-구성원': null, 'XYZ-리포트': '3', 'XYZ-알림': '4', 설정: null,
     });
   });
@@ -123,7 +123,7 @@ describe('FE-NAV-07 드로어 경로', () => {
       <MemoryRouter><SidebarNav role="counselor" notificationBadge={4} /></MemoryRouter>,
     ));
     expect(byLabel('nav a')).toEqual({
-      '기관 대시보드': null, 'XYZ-명상 클래스': null, 회원: null, 'XYZ-상담': null,
+      '데이터 센터': null, '기관 대시보드': null, 'XYZ-명상 클래스': null, 회원: null, 'XYZ-상담': null,
       'XYZ-채팅': null, 'XYZ-구성원': null, 'XYZ-리포트': '5', 'XYZ-알림': '4', 설정: null,
     });
   });

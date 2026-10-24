@@ -126,7 +126,7 @@ describe('FE-NAV-01 사이드바 라벨·경로 골든(역할 4종)', () => {
     state.user = { id: 'u2', role: 'org_admin', name: '테스트', email: 'a@example.com' };
     await renderSidebar();
     expect(sidebarEntries()).toEqual([
-      ['/dashboard/org', '기관 대시보드'], ['/classes', '명상 클래스'], ['/clients', '회원'], ['/counseling', '상담'], ['/chat', '채팅'],
+      ['/org/data-center', '데이터 센터'], ['/dashboard/org', '기관 대시보드'], ['/classes', '명상 클래스'], ['/clients', '회원'], ['/counseling', '상담'], ['/chat', '채팅'],
       ['/org/counselors', '구성원'], ['/reports', '리포트'], ['/notifications', '알림'], ['/settings', '설정'],
     ]);
   });
@@ -142,7 +142,7 @@ describe('FE-NAV-01 사이드바 라벨·경로 골든(역할 4종)', () => {
     state.user = { id: 'u4', role: 'platform_admin', name: '테스트', email: 'a@example.com' };
     await renderSidebar();
     expect(sidebarEntries()).toEqual([
-      ['/chat', '채팅'], ['/notifications', '알림'], ['/settings', '설정'],
+      ['/admin/data-center', '데이터 센터'], ['/chat', '채팅'], ['/notifications', '알림'], ['/settings', '설정'],
       ['/admin/orgs', '기관 관리'], ['/admin/applications', '가입 신청'], ['/admin/users', '상담사 관리'],
       ['/admin/clients', '회원 관리'], ['/playground', '플레이그라운드'],
     ]);
@@ -197,7 +197,7 @@ describe('FE-NAV-05 배지 현행값', () => {
   it('사이드바: 알림·리포트·채팅 배지(비상담사: chatBadge + agentBadge)', async () => {
     state.user = { id: 'u2', role: 'org_admin', name: '테스트', email: 'a@example.com' };
     await renderSidebar({ notificationBadge: 12, reportBadge: 2, chatBadge: 1, agentBadge: 2, sessionBadge: 5 });
-    expect(sidebarBadges()).toEqual({ '기관 대시보드': null, '명상 클래스': null, 회원: null, 상담: null, 채팅: '3', 구성원: null, 리포트: '2', 알림: '9+', 설정: null });
+    expect(sidebarBadges()).toEqual({ '데이터 센터': null, '기관 대시보드': null, '명상 클래스': null, 회원: null, 상담: null, 채팅: '3', 구성원: null, 리포트: '2', 알림: '9+', 설정: null });
   });
   it('사이드바: 상담사 채팅 배지는 chatBadge + 루시 미읽음 + 위험(agentBadge 무시)', async () => {
     state.user = { id: 'u1', role: 'counselor', name: '테스트', email: 'a@example.com' };
@@ -303,4 +303,13 @@ describe('전체 메뉴 실제 접근과 역할별 리포트 배지', () => {
     await renderSidebar({ role: 'client', reportBadge: 0 });
     expect(sidebarBadges()).toEqual({ 홈: null, '내 클래스': null, '내 상담': null, 채팅: null, 리포트: null, 알림: null, 설정: null });
   });
+});
+
+it('데이터 센터에는 기관·플랫폼 관리자의 리포트 배지를 복제하지 않는다',async()=>{
+ for(const role of ['org_admin','platform_admin']){
+  state.user={id:'admin',role,name:'테스트',email:'admin@example.invalid'};
+  await renderSidebar({reportBadge:7});
+  expect(sidebarBadges()['데이터 센터']).toBeNull();
+  if(role==='org_admin')expect(sidebarBadges()['리포트']).toBe('7');
+ }
 });
