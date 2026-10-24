@@ -250,7 +250,6 @@ export default function AppShell({
         >
           {children}
         </div>
-        {swipe.showHint && <aside className="mobile-menu-swipe-hint" aria-label="메뉴 이동 안내"><p>본문을 좌우로 밀어 메뉴를 이동할 수 있어요</p><button type="button" onClick={swipe.dismissHint} aria-label="메뉴 이동 안내 닫기">닫기</button></aside>}
         <p className="sr-only" role="status" aria-live="polite">{swipe.message}</p>
         </div>
       </section>
