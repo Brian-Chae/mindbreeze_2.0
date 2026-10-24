@@ -33,6 +33,7 @@ from app.models.user import User
 from app.schemas import data_center as dc
 from app.schemas import data_export as de
 from app.services import export_reauth
+from app.services.recording_consent_service import eeg_export_consent_clause, eeg_export_consented
 from app.services.data_center_measurement import MeasurementBackend, ManifestView
 from app.services.data_center_policy import (ResolvedContext, aware, authorize_purpose, authorize_selection, deny, normalize_reason,
                                              not_found, resolve_context, scoped_participants, selection_sessions)
@@ -196,7 +197,7 @@ def preview_export(db: DBSession, context: ResolvedContext, request: de.DataCent
         session_has_target = False
         for p in parts:
             stat = stats[p.id]
-            if not p.consent_eeg:
+            if not eeg_export_consented(p, has_data=stat.has_data):
                 exclude('consent_missing', s.id, p.id)
                 continue
             if request.purpose == 'research' and research.get(p.id) != 'agreed':
@@ -367,7 +368,7 @@ def _revalidate_targets(db: DBSession, context: ResolvedContext, *, preview_id: 
     q = db.query(func.count(DataExportTarget.id))
     q = q.filter(DataExportTarget.job_id == job_id) if job_id else q.filter(DataExportTarget.preview_id == preview_id)
     total = q.scalar() or 0
-    valid_ids = scoped_participants(db, context).filter(SessionParticipant.consent_eeg.is_(True)).with_entities(
+    valid_ids = scoped_participants(db, context).filter(eeg_export_consent_clause()).with_entities(
         SessionParticipant.id).statement
     vq = db.query(func.count(DataExportTarget.id)).filter(DataExportTarget.participant_id.in_(valid_ids))
     vq = vq.filter(DataExportTarget.job_id == job_id) if job_id else vq.filter(DataExportTarget.preview_id == preview_id)

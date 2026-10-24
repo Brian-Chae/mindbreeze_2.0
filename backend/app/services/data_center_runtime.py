@@ -172,7 +172,11 @@ class RawExportSource:
         def check(manifest, reference, export_policy) -> bool:
             with self._db() as db:
                 participant = db.get(SessionParticipant, target.participant_id)
-                if participant is None or participant.consent_eeg is not True:
+                if participant is None:
+                    return False
+                from app.services.data_center_query import measure_stats
+                from app.services.recording_consent_service import eeg_export_consented
+                if not eeg_export_consented(participant, has_data=measure_stats(db, [participant.id])[participant.id].has_data):
                     return False
                 if policy.purpose == 'research':
                     consent = db.query(ResearchConsent).filter(ResearchConsent.participant_id == target.participant_id).first()

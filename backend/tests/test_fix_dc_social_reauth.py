@@ -22,6 +22,7 @@ REAUTH = '/api/v1/users/me/reauth'
 @pytest.fixture(autouse=True)
 def _routes(monkeypatch):
     ensure_account_routes()
+    monkeypatch.setattr(settings, 'data_center_export_reauth_required', True)
     monkeypatch.setattr(settings, 'apple_client_ids', APPLE_AUD)
     monkeypatch.setattr(settings, 'social_token_encryption_key', Fernet.generate_key().decode())
     apple_auth_service.reset_cache()

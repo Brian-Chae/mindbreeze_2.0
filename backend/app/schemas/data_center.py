@@ -90,6 +90,7 @@ class PolicyLimits(Contract):
     reason_min_length: int
     reason_max_length: int
     reauth_ttl_seconds: int
+    reauth_required: bool = False
     artifact_ttl_seconds: int
     url_ttl_seconds: int
     preview_ttl_seconds: int

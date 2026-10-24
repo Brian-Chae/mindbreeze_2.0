@@ -47,3 +47,5 @@
 .dc-export-backdrop .dc-export-dialog .dc-export-grid>label,.dc-export-backdrop .dc-export-dialog .dc-export-body>label:not(:has(>input[type=checkbox])){display:block;min-width:0}
 
 .dc-export-backdrop .dc-export-dialog select,.dc-export-backdrop .dc-export-dialog input:not([type=checkbox]),.dc-export-backdrop .dc-export-dialog textarea{display:block;box-sizing:border-box;min-width:0;max-width:100%;width:100%}
+
+.dc-export-primary{white-space:nowrap}

@@ -75,6 +75,37 @@ def assert_eeg_upload_allowed(participant: SessionParticipant) -> None:
         raise eeg_required()
 
 
+def eeg_export_consented(participant: SessionParticipant, *, has_data: bool = False) -> bool:
+    """데이터 센터·반출의 뇌파 동의 판정 — assert_eeg_upload_allowed 와 같은 규칙의 허용(True)/제외(False) 형태.
+
+    - eeg_collection_consented False: 명시 거부 → 제외 (옛 consent_eeg 값과 무관)
+    - True: 회차 입장 시 동의 → 허용
+    - NULL(기능 이전 행): 업로드가 허용됐던 행이므로 consent_eeg 가 True 이거나 저장된 측정이 있으면 허용
+    """
+    choice = participant.eeg_collection_consented
+    if choice is not None:
+        return choice is True
+    return bool(participant.consent_eeg) or has_data
+
+
+def eeg_export_consent_clause():
+    """eeg_export_consented 의 SQL 대응(SessionParticipant 기준). 측정 보유는 EEG 특징/원본 존재로 본다."""
+    from sqlalchemy import and_, exists, or_
+
+    from app.models.eeg_feature import EEGFeatureWindow
+    from app.models.record import EEGRawChunk
+
+    has_data = or_(
+        exists().where(EEGFeatureWindow.participant_id == SessionParticipant.id),
+        exists().where(and_(EEGRawChunk.participant_id == SessionParticipant.id, EEGRawChunk.upload_status == "uploaded")),
+    )
+    return or_(
+        SessionParticipant.eeg_collection_consented.is_(True),
+        and_(SessionParticipant.eeg_collection_consented.is_(None),
+             or_(SessionParticipant.consent_eeg.is_(True), has_data)),
+    )
+
+
 def sync_account_eeg_choice(db: DBSession, user_id: uuid.UUID, agreed: bool, *, now: datetime | None = None) -> int:
     """계정 설정에서 뇌파 동의를 바꾸면 종료 전 회차의 본인 참여자 행에도 같은 값을 맞춘다."""
     stamp = now or _now()

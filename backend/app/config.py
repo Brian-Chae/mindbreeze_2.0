@@ -140,6 +140,9 @@ class Settings(BaseSettings):
     data_center_reason_min_length: int = 2
     data_center_reason_max_length: int = 500
     data_center_reauth_ttl_seconds: int = 300
+    # 2026-10-24 대표 지시: 다운로드 직전 비밀번호 재인증은 기본 끈다(로그인 세션 + 사유 + 감사 + 범위 재검사로 충분).
+    # 켜면 SDD-243 의 5분 재인증(비밀번호/소셜)이 그대로 동작한다. 코드는 지우지 않고 이 스위치 뒤에 둔다.
+    data_center_export_reauth_required: bool = False
     data_center_artifact_ttl_seconds: int = 86400
     data_center_url_ttl_seconds: int = 60
     data_center_preview_ttl_seconds: int = 300

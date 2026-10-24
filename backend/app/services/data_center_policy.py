@@ -49,6 +49,7 @@ class DataCenterPolicy:
     reason_min_length: int
     reason_max_length: int
     reauth_ttl_seconds: int
+    reauth_required: bool
     artifact_ttl_seconds: int
     url_ttl_seconds: int
     preview_ttl_seconds: int
@@ -66,6 +67,7 @@ class DataCenterPolicy:
             require_reason=s.data_center_require_reason, require_audit=s.data_center_require_audit,
             reason_min_length=s.data_center_reason_min_length, reason_max_length=s.data_center_reason_max_length,
             reauth_ttl_seconds=s.data_center_reauth_ttl_seconds,
+            reauth_required=s.data_center_export_reauth_required,
             artifact_ttl_seconds=s.data_center_artifact_ttl_seconds, url_ttl_seconds=s.data_center_url_ttl_seconds,
             preview_ttl_seconds=s.data_center_preview_ttl_seconds,
             max_active_jobs_per_actor=s.data_center_max_active_jobs_per_actor,
@@ -83,7 +85,8 @@ class DataCenterPolicy:
             policy_version=self.policy_version, policy_hash=self.policy_hash,
             default_identity=self.default_identity, require_reason=self.require_reason,  # type: ignore[arg-type]
             reason_min_length=self.reason_min_length, reason_max_length=self.reason_max_length,
-            reauth_ttl_seconds=self.reauth_ttl_seconds, artifact_ttl_seconds=self.artifact_ttl_seconds,
+            reauth_ttl_seconds=self.reauth_ttl_seconds, reauth_required=self.reauth_required,
+            artifact_ttl_seconds=self.artifact_ttl_seconds,
             url_ttl_seconds=self.url_ttl_seconds, preview_ttl_seconds=self.preview_ttl_seconds,
             max_active_jobs_per_actor=self.max_active_jobs_per_actor,
             member_facilitator_max_sessions=self.member_facilitator_max_sessions, part_max_bytes=self.part_max_bytes,

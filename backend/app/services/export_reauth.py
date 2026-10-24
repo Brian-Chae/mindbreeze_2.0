@@ -111,6 +111,8 @@ def set_verifier(verifier: ProofVerifier | None) -> None:
 
 def verify_export_proof(db: DBSession, context: ResolvedContext, proof: str | None, *, request_hash: str | None = None,
                         job_id: UUID | None = None, purpose: str = '') -> None:
+    if not context.policy.reauth_required:  # 스위치 꺼짐(기본): 로그인 세션 + 사유 + 감사 + 범위 재검사만으로 진행
+        return
     if not proof:
         raise deny(403, 'reauth_required', '반출 전 재인증이 필요합니다')
     if _verifier is None:

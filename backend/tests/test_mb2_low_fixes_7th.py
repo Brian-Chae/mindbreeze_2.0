@@ -396,7 +396,7 @@ def test_mb_err_007_export_enqueue_failure_logged(client, monkeypatch, caplog):
         lambda *a, **k: (
             SimpleNamespace(role="counselor"),
             None,
-            SimpleNamespace(consent_eeg=False),
+            SimpleNamespace(consent_eeg=False, eeg_collection_consented=None),
         ),
     )
 

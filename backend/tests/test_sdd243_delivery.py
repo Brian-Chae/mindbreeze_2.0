@@ -20,6 +20,7 @@ PASSWORD = 'Str0ng!Pass-243'
 
 @pytest.fixture
 def env(client, world, db, dc_enabled, monkeypatch):
+    monkeypatch.setattr(settings, 'data_center_export_reauth_required', True)  # 스위치 켜짐 = 기존 SDD-243 동작
     for u in (world.admin_a, world.admin_ab, world.platform):
         u.password_hash = hash_password(PASSWORD)
         u.auth_provider = 'email'
@@ -169,11 +170,11 @@ def test_revocation_between_stages(client, env, db):
     jid, pid = ready_job(client, w, db)
     ok = url(client, w.admin_a, jid, pid, proof_for(client, w.admin_a, job_id=jid))
     assert ok.status_code == 200, ok.text
-    w.p_a1_c.consent_eeg = False
+    w.p_a1_c.consent_eeg = w.p_a1_c.eeg_collection_consented = False
     db.commit()
     r = url(client, w.admin_a, jid, pid, proof_for(client, w.admin_a, job_id=jid))
     assert r.status_code == 403 and r.json()['detail']['code'] == 'access_revoked'
-    w.p_a1_c.consent_eeg = True
+    w.p_a1_c.consent_eeg = w.p_a1_c.eeg_collection_consented = True
     db.commit()
     settings.data_center_url_ttl_seconds = 61
     try:
