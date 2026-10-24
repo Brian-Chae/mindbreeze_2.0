@@ -34,11 +34,11 @@ Brian의 2026-10-24 확정 D3에 따라 비회원 코드 입장과 장기 비회
 - RED: 백엔드 핵심 4실패/5통과로 연월 입력 거절·과거 비회원 연구 포함 재현, 프론트 11실패/62통과로 새 계약 재현. 추가 준비 요약·약관도 RED 확인 후 수정했다.
 - 관련 pytest: **97 passed**. 비회원·연구 동의·반출·SDD-241·리포트 목록 날짜를 포함한다.
 - 백엔드 전체: **3991 passed, 463 skipped, 79 warnings**, 실패 0(449.81초). SQLite 인메모리 및 격리된 저장소 테스트이며 PostgreSQL 검증이 아니다.
-- 관련 vitest: **9파일 125 passed**. 방침 금지어 검사 포함.
-- 전체 vitest: **249파일 2804 passed / 기존 4파일 10 failed**(총 253파일·2814테스트, 111.96초). 실패 파일은 `agent-counselor-page`, `chat-message-deeplink`, `sdd220-native-release`, `sdd234-a-mobile-home`이며 이외 신규 실패 0.
+- 관련 vitest(다이얼 포함): **11파일 146 passed**. 방침 금지어 검사 포함.
+- 전체 vitest: **250파일 2808 passed / 기존 4파일 10 failed**(총 254파일·2818테스트, 105.42초). 실패 파일은 `agent-counselor-page`, `chat-message-deeplink`, `sdd220-native-release`, `sdd234-a-mobile-home`이며 이외 신규 실패 0.
 - `npx tsc -b`, `npm run build`, `git diff --check` 통과. 기존 번들 크기·동적 import 경고는 남아 있다.
 - 의존성은 기존 Storybook/Vite peer 충돌 때문에 `npm ci --legacy-peer-deps`로 설치했으며 package/lock은 변경하지 않았다.
-- 브라우저 하네스의 Vite 8 모듈별 hash 불일치는 로컬 캐시를 유지한 채 본인 개발 서버만 재시작해 해결했다. 테스트 단언·제품 코드는 바꾸지 않았다. 별도 브라우저 4파일 7테스트 통과 후 전체를 다시 실행했다. 중간 실패·중단 실행은 최종 통과 증거로 사용하지 않는다.
+- 브라우저 하네스의 Vite 8 모듈별 hash 불일치는 로컬 캐시를 유지한 채 본인 개발 서버만 재시작해 해결했다. 테스트 단언·제품 코드는 바꾸지 않았다. 별도 브라우저 4파일 7테스트 통과 후 전체를 다시 실행했다. 후속 다이얼 전체 회귀에서는 디스크 metadata 덮어쓰기가 재현되어 검증 서버의 metadata 응답만 실행 중인 hash로 제공했다(`verification-env.md`). 중간 실패·중단 실행은 최종 통과 증거로 사용하지 않는다.
 
 ## 390px 직접 확인
 
@@ -59,3 +59,21 @@ Brian의 2026-10-24 확정 D3에 따라 비회원 코드 입장과 장기 비회
 - 과거 이미 외부에 적재된 사본은 회수·삭제하지 않았다. 과거 회원·비회원 혼합 업로드 배치도 안전상 전체 차단되어 회원분 재반출은 별도 운영 후속 과제다.
 - 보호자 서면 동의 확인은 기관 운영·계약 책임이며 앱이 동의서를 수집하거나 검증하지 않는다. 계약·동의서의 법적 적정성은 법무 검토가 필요하다.
 - 서버·실DB·.env·회원가입 정책 수정, 파일·데이터·브랜치 삭제, 메일 발송, 머지·develop push·배포는 하지 않았다. 로컬 Vite는 합성 화면 검증 용도로만 사용했다.
+
+## 전달
+
+- 구현 커밋: `90e9265c` (한글 메시지).
+- `git push -u origin fix/guest-institution-minor` 완료.
+- PR: https://github.com/Brian-Chae/mindbreeze_2.0/pull/85 (base: develop, 요청 제목 그대로).
+- 로컬 합성 검증용 Vite만 실행 후 종료했다.
+
+## 후속 요청: 연도·월 분리 다이얼
+
+- Brian의 후속 요청에 따라 단일 month 입력을 두 개의 독립 스크롤 다이얼로 교체했다. 공통 `BirthYearMonthWheel`을 코드 입장과 장기 비회원 폼에서 사용한다. 회원의 읽기 전용 생일 표시는 유지한다.
+- 각 다이얼은 44px 항목 3행, 중앙 선택 강조, 터치 스크롤·클릭·방향키·Home/End를 제공한다. 연도와 월을 모두 선택해야 YYYY-MM이 완성되며 미래월은 선택할 수 없다.
+- 미선택 상태와 부분 선택을 보존한다. 지연된 스크롤 타이머는 최신 상태를 참조하여 다른 열의 새 선택을 덮지 않는다. 어두운 입장 화면의 도움말은 기존 색상 토큰으로 대비를 유지한다.
+- 후속 plan·verify는 구현 전 `fb30a056`에 커밋했다. 다이얼 회귀 테스트의 구현 전 실패를 확인했고, 관련 11파일 **146 passed**, `tsc -b` 및 최종 build가 통과했다. 소스 및 대비 수정까지 독립 재리뷰에서 Important 0건.
+- 390px Chrome에서 연도 2018·월 3을 선택하고, 실제 스크롤 위치 변경으로 4월에 정착한 뒤 ArrowUp으로 3월을 다시 선택했다. 실제 전송은 여전히 `birth_year_month: 2018-03`이며 date/month 입력 0, 각 다이얼 1, overflow 0, pageerror 0이다. 외부 HTTP·WebSocket을 차단하며 로컬 Vite HMR만 허용한다.
+- `screenshots/entry-390.png`와 `membership-390.png`를 다이얼 화면으로 갱신하고 직접 확인했다. 실기기의 관성 스크롤 감각은 미검증이다. 백엔드는 후속 요청에서 수정하지 않았으므로 앞서 완료한 전체 pytest 결과가 유효하다.
+
+- 다이얼 포함 최종 전체 vitest: **2808 passed / 기존 4파일 10 failed**, 신규 실패 0. 최종 build·diff 검사 통과.

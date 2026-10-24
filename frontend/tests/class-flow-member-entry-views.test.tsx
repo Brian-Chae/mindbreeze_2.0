@@ -41,6 +41,12 @@ async function type(el: HTMLInputElement, value: string): Promise<void> {
     el.dispatchEvent(new Event('input', { bubbles: true }));
   });
 }
+async function chooseBirth(year: string, month: string): Promise<void> {
+  for (const [label, text] of [['출생 연도', year], ['출생 월', month]]) {
+    const wheel = document.querySelector(`[role="listbox"][aria-label="${label}"]`)!;
+    await act(async () => { Array.from(wheel.querySelectorAll<HTMLElement>('[role="option"]')).find(option => option.textContent === text)!.click(); });
+  }
+}
 async function click(el: HTMLElement): Promise<void> {
   await act(async () => { el.click(); });
 }
@@ -115,9 +121,10 @@ describe('FM04b 개인정보 입력', () => {
   const summary = { title: '마음챙김 명상', startLabel: '오늘 오후 3:00 시작', hostName: '채용욱' };
   it('이름·성별·생년월·이메일·이메일 확인 입력과 입장하기가 있고 인증 DOM 은 없다', async () => {
     await render(<ProfileEntryView summary={summary} mode="guest" draft={emptyProfileDraft()} errors={{}} submitError={null} submitting={false} onChange={noop} onSubmit={noop} onBack={noop} />);
-    expect(qa('input')).toHaveLength(4);
+    expect(qa('input')).toHaveLength(3);
     expect(text()).toContain('실명이 아니어도 됩니다(별명·반 번호 가능)');
-    expect(document.getElementById('fm-birth')?.getAttribute('type')).toBe('month');
+    expect(qa('[role="listbox"]')).toHaveLength(2);
+    expect(qa('input[type=month],input[type=date]')).toHaveLength(0);
     expect(text()).not.toContain('생년월일');
     expect(qa('[role="radio"]').map((r) => r.textContent)).toEqual(['여성', '남성', '선택 안 함']);
     expect(text()).toContain('채용욱 상담사');
@@ -197,7 +204,7 @@ describe('/join 컨테이너', () => {
 
     await type(document.getElementById('fm-name') as HTMLInputElement, '지은');
     await click(qa('[role="radio"]')[0] as HTMLElement);
-    await type(document.getElementById('fm-birth') as HTMLInputElement, '1990-03');
+    await chooseBirth('1990년', '3월');
     await type(document.getElementById('fm-email') as HTMLInputElement, 'jieun@example.com');
     await type(document.getElementById('fm-email2') as HTMLInputElement, 'jieun@example.com');
     expect(btn('입장하기').disabled).toBe(true); // 녹음·녹화 필수 동의 전에는 입장할 수 없다
@@ -237,7 +244,7 @@ describe('/join 컨테이너', () => {
     await enterCode('0042');
     await type(document.getElementById('fm-name') as HTMLInputElement, '지은');
     await click(qa('[role="radio"]')[1] as HTMLElement);
-    await type(document.getElementById('fm-birth') as HTMLInputElement, '1990-03');
+    await chooseBirth('1990년', '3월');
     await type(document.getElementById('fm-email') as HTMLInputElement, 'jieun@example.com');
     await type(document.getElementById('fm-email2') as HTMLInputElement, 'jieun@example.com');
     await agreeRecording();

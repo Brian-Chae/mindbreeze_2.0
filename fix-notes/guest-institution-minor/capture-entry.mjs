@@ -9,6 +9,12 @@ await mkdir(out, { recursive: true });
 const browser = await chromium.launch({ headless: true, channel: 'chrome' });
 try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
+  // HTTP 모킹과 별도로 WebSocket도 차단하여 외부 연결을 만들지 않는다.
+  await page.routeWebSocket('**/*', socket => {
+    const url = new URL(socket.url());
+    if ((url.hostname === '127.0.0.1' || url.hostname === 'localhost') && url.pathname === '/') socket.connectToServer();
+    else socket.close();
+  });
   const errors = [];
   const requests = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -37,14 +43,25 @@ try {
   await page.locator('#fm-name').waitFor();
   await page.locator('#fm-name').fill('3반 7번');
   await page.getByRole('radio', { name: '선택 안 함', exact: true }).click();
-  await page.locator('#fm-birth').fill('2018-03');
+  await page.getByRole('listbox', { name: '출생 연도', exact: true }).getByRole('option', { name: '2018년', exact: true }).click();
+  await page.getByRole('listbox', { name: '출생 월', exact: true }).getByRole('option', { name: '3월', exact: true }).click();
+  const monthDial = page.getByRole('listbox', { name: '출생 월', exact: true });
+  // 실제 스크롤 정착과 키보드 선택을 별도로 확인하고 3월로 돌린다.
+  await monthDial.evaluate(el => { el.scrollTop = 4 * 44; });
+  await page.waitForFunction(() => document.querySelector('[aria-label="출생 월"] [aria-selected="true"]')?.textContent === '4월');
+  await monthDial.press('ArrowUp');
+  await page.waitForFunction(() => document.querySelector('[aria-label="출생 월"] [aria-selected="true"]')?.textContent === '3월');
   await page.locator('#fm-email').fill('teacher@example.com');
   await page.locator('#fm-email2').fill('teacher@example.com');
   await page.getByRole('checkbox').click();
   const metrics = await page.evaluate(() => ({
     width: innerWidth, scrollWidth: document.documentElement.scrollWidth,
     nameHint: document.getElementById('fm-name-hint')?.textContent,
-    birthType: document.getElementById('fm-birth')?.getAttribute('type'),
+    yearDials: document.querySelectorAll('[role="listbox"][aria-label="출생 연도"]').length,
+    monthDials: document.querySelectorAll('[role="listbox"][aria-label="출생 월"]').length,
+    monthInputs: document.querySelectorAll('input[type="month"]').length,
+    selectedYear: document.querySelector('[aria-label="출생 연도"] [aria-selected="true"]')?.textContent,
+    selectedMonth: document.querySelector('[aria-label="출생 월"] [aria-selected="true"]')?.textContent,
     dateInputs: document.querySelectorAll('input[type="date"]').length,
     researchControls: [...document.querySelectorAll('button,label')].filter(e => /연구.*동의/.test(e.textContent)).length,
     hintFontSize: getComputedStyle(document.getElementById('fm-name-hint')).fontSize,
@@ -52,11 +69,15 @@ try {
   assert.equal(metrics.width, 390);
   assert.equal(metrics.scrollWidth, 390);
   assert.equal(metrics.nameHint, '실명이 아니어도 됩니다(별명·반 번호 가능)');
-  assert.equal(metrics.birthType, 'month');
+  assert.equal(metrics.yearDials, 1);
+  assert.equal(metrics.monthDials, 1);
+  assert.equal(metrics.monthInputs, 0);
+  assert.equal(metrics.selectedYear, '2018년');
+  assert.equal(metrics.selectedMonth, '3월');
   assert.equal(metrics.dateInputs, 0);
   assert.equal(metrics.researchControls, 0);
   await page.screenshot({ path: fileURLToPath(new URL('entry-consent-390.png', out)), fullPage: true });
-  await page.evaluate(() => { for (const e of document.querySelectorAll('*')) { if (e.scrollTop) e.scrollTop = 0; } });
+  await page.evaluate(() => { for (const e of document.querySelectorAll('*')) { if (e.scrollTop && e.getAttribute('role') !== 'listbox') e.scrollTop = 0; } });
   await page.screenshot({ path: fileURLToPath(new URL('entry-390.png', out)), fullPage: true });
   await page.getByRole('button', { name: '입장하기', exact: true }).click();
   await page.waitForURL(`**/class/${sid}/enter`);
@@ -74,7 +95,9 @@ try {
   await page.screenshot({ path: fileURLToPath(new URL('notice-390.png', out)), fullPage: true });
   await page.goto('http://127.0.0.1:5187/class-members/33333333-3333-4333-8333-333333333333');
   await page.getByLabel('이름', { exact: true }).waitFor();
-  assert.equal(await page.locator('input[type="month"]').count(), 1);
+  assert.equal(await page.getByRole('listbox', { name: '출생 연도', exact: true }).count(), 1);
+  assert.equal(await page.getByRole('listbox', { name: '출생 월', exact: true }).count(), 1);
+  assert.equal(await page.locator('input[type="month"]').count(), 0);
   assert.equal(await page.locator('input[type="date"]').count(), 0);
   assert.equal(await page.getByText('[선택] 연구 목적 활용 동의', { exact: true }).count(), 0);
   await page.screenshot({ path: fileURLToPath(new URL('membership-390.png', out)), fullPage: true });
