@@ -27,3 +27,9 @@ Brian의 후속 요청에 따라 생년월 단일 month 입력을 연도와 월�
 - 신규 guest 연구 사본 0건 및 PII 복사를 직접 검증하고, 과거 guest 동의는 명시적 legacy fixture로 구성하여 철회·증거 보존·배치 취소를 계속 검증한다.
 - HTTP 계약: guest 연구 true는 정책 금지 403, 회원 고지 누락 및 스키마 초과 필드는 422. 제품 코드는 근거 있는 회귀가 발견된 경우에만 수정한다.
 - PG 전체 및 백엔드 전체 pytest, 독립 diff 검토 후 같은 브랜치에 한글 커밋·push, PR CI 확인. 기존 데이터/파일 삭제·원격 DB·배포 없음.
+
+## CI backend 지연 후속 (2026-10-24)
+
+PG·frontend는 새 head에서 성공했으나 backend 관련139파일 실행이 오래 지속됐다. 이전 head도21분 실행 중11%에서 취소됨을 확인했다. 격리된 동일 리포트 테스트를 Redis 접속불가/메모리 환경으로 비교하여21.68초/2.55초(둘 다 통과)를 재현했고 faulthandler 스택은 Celery Redis 결과 백엔드의 reconnect/ensure 재시도를 가리킨다. HTTP fakeredis는 Celery broker/backend를 대체하지 않는다.
+
+CI backend Test 단계에만 CELERY_BROKER_URL=memory:// 및 CELERY_RESULT_BACKEND=cache+memory://를 지정한다. eager·제품 코드·동의 정책·테스트 선택/단언은 변경하지 않는다. 접속불가 Redis를 그대로 둔 채 이 환경으로 관련139파일 및 전체 pytest를 재검증하고 workflow 변경을 독립 리뷰한다. CI를 재실행하여 모든 잡의 최종 결과를 확인한다.

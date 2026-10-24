@@ -32,3 +32,10 @@
 - [x] HTTP guest 정책 금지 403, 회원 고지 누락422 및 정상200, extra422 확인.
 - [x] PG 전체 + 백엔드 전체 pytest 통과, 독립 검증 후 summary 기록.
 - 이후 같은 브랜치에 한글 커밋·push하고 실제 head의 CI 결과를 최종 답변으로 보고한다.
+
+## CI backend 지연 — 수정 전 검증 계획
+
+- [x] 동일 테스트의 접속불가 Redis/메모리 대조 및 재시도 스택 확인.
+- [ ] CI Test 단계에만 broker/backend 환경을 지정하고 실제 제품 설정·eager·단언 유지 확인.
+- [ ] 접속불가 Redis + 메모리 broker/backend로 관련139파일 및 전체 pytest 통과.
+- [ ] 독립 리뷰·한글 커밋·동일 브랜치 push 후 최종 CI 결과 확인.
