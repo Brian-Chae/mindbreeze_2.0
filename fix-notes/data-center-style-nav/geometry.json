@@ -1,0 +1,66 @@
+[
+  {
+    "width": 1440,
+    "path": "classes",
+    "viewportWidth": 1440,
+    "documentWidth": 1440,
+    "bodyWidth": 1440,
+    "overflows": []
+  },
+  {
+    "width": 1440,
+    "path": "data-center",
+    "viewportWidth": 1440,
+    "documentWidth": 1440,
+    "bodyWidth": 1440,
+    "overflows": [
+      {
+        "class": "dc-tabs",
+        "width": 1072,
+        "scrollWidth": 1072
+      },
+      {
+        "class": "dc-subtabs",
+        "width": 1030,
+        "scrollWidth": 1030
+      },
+      {
+        "class": "dc-table-wrap",
+        "width": 1028,
+        "scrollWidth": 1028
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "path": "classes",
+    "viewportWidth": 390,
+    "documentWidth": 390,
+    "bodyWidth": 390,
+    "overflows": []
+  },
+  {
+    "width": 390,
+    "path": "data-center",
+    "viewportWidth": 390,
+    "documentWidth": 390,
+    "bodyWidth": 390,
+    "overflows": [
+      {
+        "class": "dc-tabs",
+        "width": 330,
+        "scrollWidth": 830
+      },
+      {
+        "class": "dc-subtabs",
+        "width": 300,
+        "scrollWidth": 310
+      },
+      {
+        "class": "dc-table-wrap",
+        "width": 298,
+        "scrollWidth": 590
+      }
+    ]
+  }
+]

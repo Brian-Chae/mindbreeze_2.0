@@ -1,0 +1,80 @@
+/* 명상 클래스와 같은 Tailwind preset·모서리·간격을 모든 데이터 센터 화면에 적용한다. */
+:is(.dc, .dc-measurement, .dc-export-dialog, .dc-export-section) button {
+  @apply inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-800;
+  min-width: 44px;
+  min-height: 44px;
+  font-family: inherit;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+/* :where로 상태 특이도를 낮춰 primary/선택 탭의 색상이 일반 hover에 덮이지 않게 한다. */
+:is(.dc, .dc-measurement, .dc-export-dialog, .dc-export-section) button:where(:hover:not(:disabled)) {
+  @apply border-purple-200 bg-purple-50 text-purple-900;
+}
+
+.dc .dc-primary,
+:is(.dc-export-dialog, .dc-export-section) .dc-export-primary,
+:is(.dc, .dc-measurement) .dc-subtabs button[aria-pressed=true] {
+  @apply border-purple-800 bg-purple-800 font-semibold text-white;
+}
+
+.dc .dc-primary,
+:is(.dc-export-dialog, .dc-export-section) .dc-export-primary {
+  min-height: 48px;
+}
+
+.dc .dc-primary:where(:hover:not(:disabled)),
+:is(.dc-export-dialog, .dc-export-section) .dc-export-primary:where(:hover:not(:disabled)),
+:is(.dc, .dc-measurement) .dc-subtabs button[aria-pressed=true]:where(:hover:not(:disabled)) {
+  @apply border-purple-900 bg-purple-900 text-white;
+}
+
+:is(.dc, .dc-measurement) :is(.dc-tabs, .dc-measure-tabs) button {
+  @apply rounded-none border-0 border-b-2 border-transparent bg-transparent px-4 py-3 text-gray-700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+:is(.dc, .dc-measurement) :is(.dc-tabs, .dc-measure-tabs) button:is([aria-current=page], [aria-selected=true]) {
+  @apply border-purple-800 bg-transparent font-semibold text-purple-800;
+}
+
+:is(.dc, .dc-measurement) :is(.dc-tabs, .dc-measure-tabs) button:where(:hover:not(:disabled)) {
+  @apply bg-purple-50 text-purple-900;
+}
+
+:is(.dc, .dc-measurement, .dc-export-dialog, .dc-export-section) :is(input:not([type=checkbox]):not([type=radio]), select, textarea) {
+  @apply rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800;
+  min-height: 44px;
+  font-family: inherit;
+}
+
+:is(.dc, .dc-measurement, .dc-export-dialog, .dc-export-section) :is(button, input, select, textarea, summary):focus-visible {
+  outline: 2px solid #7c3aed;
+  outline-offset: 2px;
+}
+
+/* 불투명한 회색 조합으로 비활성 상태를 구분하면서 글자 대비를 유지한다. */
+:is(.dc, .dc-measurement, .dc-export-dialog, .dc-export-section) button:disabled,
+:is(.dc, .dc-measurement) :is(.dc-tabs, .dc-subtabs, .dc-measure-tabs) button:disabled,
+.dc .dc-primary:disabled,
+:is(.dc-export-dialog, .dc-export-section) .dc-export-primary:disabled {
+  @apply border-gray-400 bg-gray-100 text-gray-700;
+  opacity: 1;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.dc .dc-subtabs button { white-space: nowrap; flex-shrink: 0; }
+.dc .dc-measure-heading button { flex-shrink: 0; white-space: nowrap; }
+.dc .dc-breadcrumb button:where(:not(:disabled)) { @apply border-transparent bg-transparent text-purple-900; }
+.dc .dc-breadcrumb button:where(:hover:not(:disabled)) { @apply bg-purple-50; }
+.dc tr:where(:hover) td { background: #fcfaff; }
+.dc th { border-bottom: 1px solid #ece6f0; }
+
+@media (max-width: 640px) {
+  .dc .dc-section-heading .dc-primary { width: 100%; }
+  .dc-export-dialog footer .dc-export-primary { width: 100%; }
+  .dc .dc-pagination { flex-wrap: wrap; }
+}

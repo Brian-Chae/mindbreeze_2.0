@@ -1,2 +1,33 @@
-.dc-measurement{color:#30283a;min-width:0;margin-top:20px}.dc-measurement h2{font-size:22px;margin:0}.dc-measurement h3{font-size:17px;margin:0 0 12px}.dc-measurement p{line-height:1.65}.dc-measure-heading{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.dc-measurement button,.dc-measurement input,.dc-measurement select{font:inherit;min-height:44px;border:1px solid #e8e2ea;background:white;border-radius:8px;padding:8px 12px;color:#30283a}.dc-measurement button:disabled{opacity:.5}.dc-measure-tabs{display:flex;gap:8px;border-bottom:1px solid #e8e2ea;padding:12px 0;overflow:auto}.dc-measure-tabs button{white-space:nowrap}.dc-measure-tabs [aria-selected=true]{background:#5b1a8a;color:#fff}.dc-measure-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin:16px 0}.dc-measure-controls label{display:flex;flex-direction:column;gap:6px;font-size:13px}.dc-measure-controls input{width:110px}.dc-measure-note{background:#f1e8f8;color:#5a456c;border-radius:9px;padding:12px;font-size:13px;overflow-wrap:anywhere}.dc-measure-panel,.dc-spectrum{border:1px solid #e8e2ea;border-radius:12px;background:#fff;padding:18px;margin:16px 0}.dc-measure-empty{padding:30px 10px;color:#766d7d;text-align:center}.dc-wave-frame{width:100%;min-width:0}.dc-wave-segment{width:100%;min-width:0;margin:8px 0}.dc-wave-channel{margin:18px 0}.dc-wave-segment small{font-size:13px;color:#766d7d}.dc-indices-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.dc-index-card{min-width:0;border:1px solid #e8e2ea;border-radius:12px;background:white;padding:14px}.dc-index-card details{font-size:13px;overflow-wrap:anywhere}.dc-index-card summary{cursor:pointer;min-height:44px;padding:8px 0}.dc-measure-scroll{overflow:auto;max-height:460px}.dc-measure-scroll table{min-width:660px;width:100%;border-collapse:collapse;font-size:13px}.dc-measure-scroll th,.dc-measure-scroll td{padding:12px;text-align:left;border-bottom:1px solid #e8e2ea}.dc-measure-scroll th{background:#f6f3ee;position:sticky;top:0}@media(max-width:700px){.dc-indices-grid{grid-template-columns:1fr}.dc-measure-panel,.dc-spectrum{padding:12px}.dc-measure-controls{gap:8px}.dc-measure-controls input{width:100px}.dc-measure-heading h2{font-size:20px}.dc-measurement{width:100%}}
-.dc .dc-measure-tabs button[aria-selected=true]:hover{background:#5b1a8a;color:#fff}.dc-measure-heading button{flex-shrink:0;white-space:nowrap;min-width:44px}
+@import "./controls.css";
+
+.dc-measurement{color:#30283a;min-width:0;margin-top:20px}
+.dc-measurement h2{font-size:22px;margin:0}
+.dc-measurement h3{font-size:17px;margin:0 0 12px}
+.dc-measurement p{line-height:1.65}
+.dc-measure-heading{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+.dc-measure-tabs{display:flex;gap:8px;border-bottom:1px solid #e8e2ea;padding:12px 0;overflow:auto}
+.dc-measure-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin:16px 0}
+.dc-measure-controls label{display:flex;flex-direction:column;gap:6px;font-size:13px}
+.dc-measure-controls input{width:110px}
+.dc-measure-note{background:#f1e8f8;color:#5a456c;border-radius:9px;padding:12px;font-size:13px;overflow-wrap:anywhere}
+.dc-measure-panel,.dc-spectrum{border:1px solid #e8e2ea;border-radius:16px;background:#fff;padding:20px;margin:16px 0}
+.dc-measure-empty{padding:30px 10px;color:#766d7d;text-align:center}
+.dc-wave-frame{width:100%;min-width:0}
+.dc-wave-segment{width:100%;min-width:0;margin:8px 0}
+.dc-wave-channel{margin:18px 0}
+.dc-wave-segment small{font-size:13px;color:#766d7d}
+.dc-indices-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.dc-index-card{min-width:0;border:1px solid #e8e2ea;border-radius:16px;background:white;padding:16px}
+.dc-index-card details{font-size:13px;overflow-wrap:anywhere}
+.dc-index-card summary{cursor:pointer;min-height:44px;padding:8px 0}
+.dc-measure-scroll{overflow:auto;max-height:460px}
+.dc-measure-scroll table{min-width:660px;width:100%;border-collapse:collapse;font-size:13px}
+.dc-measure-scroll th,.dc-measure-scroll td{padding:12px;text-align:left;border-bottom:1px solid #e8e2ea}
+.dc-measure-scroll th{background:#fff;position:sticky;top:0}
+@media(max-width:700px){.dc-indices-grid{grid-template-columns:1fr}
+.dc-measure-panel,.dc-spectrum{padding:12px}
+.dc-measure-controls{gap:8px}
+.dc-measure-controls input{width:100px}
+.dc-measure-heading h2{font-size:20px}
+.dc-measurement{width:100%}
+}

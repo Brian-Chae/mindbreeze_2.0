@@ -126,8 +126,8 @@ describe('FE-NAV-01 사이드바 라벨·경로 골든(역할 4종)', () => {
     state.user = { id: 'u2', role: 'org_admin', name: '테스트', email: 'a@example.com' };
     await renderSidebar();
     expect(sidebarEntries()).toEqual([
-      ['/org/data-center', '데이터 센터'], ['/dashboard/org', '기관 대시보드'], ['/classes', '명상 클래스'], ['/clients', '회원'], ['/counseling', '상담'], ['/chat', '채팅'],
-      ['/org/counselors', '구성원'], ['/reports', '리포트'], ['/notifications', '알림'], ['/settings', '설정'],
+      ['/dashboard/org', '기관 대시보드'], ['/classes', '명상 클래스'], ['/clients', '회원'], ['/counseling', '상담'], ['/chat', '채팅'],
+      ['/org/counselors', '구성원'], ['/reports', '리포트'], ['/org/data-center', '데이터 센터'], ['/notifications', '알림'], ['/settings', '설정'],
     ]);
   });
   it('회원', async () => {
@@ -142,7 +142,7 @@ describe('FE-NAV-01 사이드바 라벨·경로 골든(역할 4종)', () => {
     state.user = { id: 'u4', role: 'platform_admin', name: '테스트', email: 'a@example.com' };
     await renderSidebar();
     expect(sidebarEntries()).toEqual([
-      ['/admin/data-center', '데이터 센터'], ['/chat', '채팅'], ['/notifications', '알림'], ['/settings', '설정'],
+      ['/chat', '채팅'], ['/admin/data-center', '데이터 센터'], ['/notifications', '알림'], ['/settings', '설정'],
       ['/admin/orgs', '기관 관리'], ['/admin/applications', '가입 신청'], ['/admin/users', '상담사 관리'],
       ['/admin/clients', '회원 관리'], ['/playground', '플레이그라운드'],
     ]);
