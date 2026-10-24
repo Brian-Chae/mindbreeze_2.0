@@ -16,6 +16,7 @@ const ble = vi.hoisted(() => ({
 const stream = vi.hoisted(() => ({
   onEEGData: null as null | ((d: { fp1: number; fp2: number }[]) => void),
   flush: vi.fn(async () => undefined),
+  enqueue: vi.fn<(input: { streamId: string; chunkIndex: number; payload: ArrayBuffer }) => Promise<void>>(),
 }));
 const gap = vi.hoisted(() => ({
   open: vi.fn(), recordAttempt: vi.fn(), close: vi.fn(() => null), getOpenGap: vi.fn(() => null), getClosedGaps: vi.fn(() => []),
@@ -83,7 +84,7 @@ vi.mock('../src/lib/socket', async (original) => ({
   subscribeSessionLiveEegFeature: () => () => undefined,
 }));
 vi.mock('../src/hooks/useEegRawUpload', () => ({
-  useEegRawUpload: () => ({ enqueueChunk: vi.fn(async () => undefined), drain: vi.fn(), flush: stream.flush }),
+  useEegRawUpload: () => ({ enqueueChunk: stream.enqueue, drain: vi.fn(), flush: stream.flush }),
 }));
 vi.mock('../src/lib/session-live/feature-queue', () => ({
   enqueueFeature: vi.fn(), listPendingFeatures: async () => [], removeAckedFeature: vi.fn(),
@@ -127,7 +128,7 @@ beforeEach(() => {
   ble.scan.mockReset().mockResolvedValue([{ id: 'd1', name: 'LXB' }]);
   gap.open.mockClear(); gap.recordAttempt.mockClear(); gap.close.mockClear();
   policy.delays.length = 0;
-  stream.flush.mockClear(); stream.onEEGData = null;
+  stream.flush.mockClear(); stream.onEEGData = null; stream.enqueue.mockReset().mockResolvedValue(undefined);
   life.resume.length = 0; life.pause.length = 0; life.verify.mockReset().mockResolvedValue(true);
   root = createRoot(document.createElement('div'));
 });
@@ -404,4 +405,40 @@ it('StrictMode 재마운트에서도 기존 연결의 스트림과 단절 콜백
   expect(stream.onEEGData).not.toBeNull();
   expect(ble.lost).not.toBeNull();
   expect(ble.connectImpl).not.toHaveBeenCalled();
+});
+
+describe('raw 메모리 버퍼 보존', () => {
+  it('enqueue 실패 후 동일 payload를 재시도하며 후속 샘플도 보존한다', async () => {
+    await mountAndConnect();
+    stream.enqueue.mockRejectedValueOnce(new Error('IDB quota'));
+    await act(async () => { stream.onEEGData?.(Array.from({ length: 250 }, () => ({ fp1: 1, fp2: 2 }))); });
+    await act(async () => { stream.onEEGData?.([{ fp1: 3, fp2: 4 }]); });
+    await act(async () => { await api.disconnect(); });
+    const calls = stream.enqueue.mock.calls.map(([input]) => input);
+    expect(new Float32Array(calls[1].payload)).toEqual(new Float32Array(calls[0].payload));
+    expect(calls[1].chunkIndex).toBe(calls[0].chunkIndex);
+    expect(new Float32Array(calls[2].payload)).toEqual(new Float32Array([3, 4]));
+  });
+  it('언마운트의 짧은 버퍼도 적재하고 재마운트는 별도 raw stream을 쓴다', async () => {
+    await mountAndConnect();
+    await act(async () => { stream.onEEGData?.([{ fp1: 1, fp2: 2 }]); });
+    await act(async () => root.render(null));
+    expect(stream.enqueue).toHaveBeenCalledTimes(1);
+    const first = stream.enqueue.mock.calls[0][0];
+    await act(async () => root.render(<Harness />));
+    await act(async () => { await api.connect(); });
+    await act(async () => { stream.onEEGData?.(Array.from({ length: 250 }, () => ({ fp1: 3, fp2: 4 }))); });
+    expect(stream.enqueue.mock.calls[1][0].streamId).not.toBe(first.streamId);
+    expect(first.streamId).not.toBe('s');
+  });
+});
+
+it('enqueue가 계속 실패해도 언마운트에서 staged 뒤의 샘플까지 메모리에 인계한다', async () => {
+ await mountAndConnect();
+ stream.enqueue.mockRejectedValue(new Error('IDB unavailable'));
+ await act(async () => { stream.onEEGData?.(Array.from({length:250},()=>({fp1:1,fp2:2}))); });
+ await act(async () => { stream.onEEGData?.([{fp1:3,fp2:4}]); });
+ await act(async () => root.render(null));
+ const payloads = stream.enqueue.mock.calls.map(([input]) => Array.from(new Float32Array(input.payload)));
+ expect(payloads).toContainEqual([3,4]);
 });

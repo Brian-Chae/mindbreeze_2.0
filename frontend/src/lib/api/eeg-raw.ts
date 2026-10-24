@@ -77,6 +77,8 @@ export interface EegRawAckRequest {
 export interface EegRawAckResponse {
   session_id: string;
   acked: number;
+  failed?: number;
+  chunks?: { chunk_id: string; upload_status: string; checksum: string | null; size_bytes: number | null }[];
   eeg_record_id: string | null;
   file_count: number;
 }
