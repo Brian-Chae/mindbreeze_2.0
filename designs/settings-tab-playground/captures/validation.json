@@ -1,0 +1,154 @@
+{
+  "captured": [
+    "client-before-390.png",
+    "client-after-390.png",
+    "counselor-before-390.png",
+    "counselor-after-390.png",
+    "org_admin-before-390.png",
+    "org_admin-after-390.png",
+    "platform_admin-before-390.png",
+    "platform_admin-after-390.png",
+    "nav-390.png",
+    "playground-390.png",
+    "notifications-expanded-390.png",
+    "privacy-expanded-390.png",
+    "consents-dialog-390.png",
+    "comparison-1440.png"
+  ],
+  "checks": [
+    {
+      "role": "client",
+      "view": "before",
+      "pageOverflow": false,
+      "overflow": [],
+      "smallTargets": []
+    },
+    {
+      "role": "client",
+      "view": "after",
+      "pageOverflow": false,
+      "overflow": [],
+      "smallTargets": []
+    },
+    {
+      "role": "client",
+      "navigationRoundTrip": true,
+      "groupCount": 5
+    },
+    {
+      "role": "counselor",
+      "view": "before",
+      "pageOverflow": false,
+      "overflow": [],
+      "smallTargets": []
+    },
+    {
+      "role": "counselor",
+      "view": "after",
+      "pageOverflow": false,
+      "overflow": [],
+      "smallTargets": []
+    },
+    {
+      "role": "counselor",
+      "navigationRoundTrip": true,
+      "groupCount": 5
+    },
+    {
+      "role": "org_admin",
+      "view": "before",
+      "pageOverflow": false,
+      "overflow": [],
+      "smallTargets": []
+    },
+    {
+      "role": "org_admin",
+      "view": "after",
+      "pageOverflow": false,
+      "overflow": [],
+      "smallTargets": []
+    },
+    {
+      "role": "org_admin",
+      "navigationRoundTrip": true,
+      "groupCount": 5
+    },
+    {
+      "role": "platform_admin",
+      "view": "before",
+      "pageOverflow": false,
+      "overflow": [],
+      "smallTargets": []
+    },
+    {
+      "role": "platform_admin",
+      "view": "after",
+      "pageOverflow": false,
+      "overflow": [],
+      "smallTargets": []
+    },
+    {
+      "role": "platform_admin",
+      "navigationRoundTrip": true,
+      "groupCount": 5
+    },
+    {
+      "groupStates": [
+        {
+          "label": "일정·참여 이메일",
+          "value": "일부 켜짐",
+          "mixedDisabled": true
+        },
+        {
+          "label": "일정·참여 인앱",
+          "value": "켜짐",
+          "mixedDisabled": true
+        },
+        {
+          "label": "대화 이메일",
+          "value": "꺼짐",
+          "mixedDisabled": true
+        },
+        {
+          "label": "대화 인앱",
+          "value": "켜짐",
+          "mixedDisabled": true
+        },
+        {
+          "label": "리포트·운영 이메일",
+          "value": "일부 켜짐",
+          "mixedDisabled": true
+        },
+        {
+          "label": "리포트·운영 인앱",
+          "value": "켜짐",
+          "mixedDisabled": true
+        }
+      ]
+    },
+    {
+      "viewport": 1440,
+      "pageOverflow": false,
+      "panels": [
+        397.328125,
+        397.328125,
+        397.34375
+      ]
+    },
+    {
+      "wholeMenuDialog": true
+    },
+    {
+      "eventCount": 47,
+      "channelControlCount": 94,
+      "emailDefaultOn": 12,
+      "proposedGroups": [
+        "일정·참여",
+        "리포트·운영",
+        "대화"
+      ]
+    }
+  ],
+  "errors": [],
+  "externalRequests": []
+}

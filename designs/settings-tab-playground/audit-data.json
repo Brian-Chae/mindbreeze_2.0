@@ -1,0 +1,284 @@
+[
+  {
+    "key": "session_booked",
+    "label": "세션 예약",
+    "email": true,
+    "group": "일정·참여"
+  },
+  {
+    "key": "session_updated",
+    "label": "세션 변경",
+    "email": true,
+    "group": "일정·참여"
+  },
+  {
+    "key": "session_cancelled",
+    "label": "세션 취소",
+    "email": true,
+    "group": "일정·참여"
+  },
+  {
+    "key": "session_invited",
+    "label": "세션 초대",
+    "email": true,
+    "group": "일정·참여"
+  },
+  {
+    "key": "verification_result",
+    "label": "검증 결과",
+    "email": true,
+    "group": "리포트·운영"
+  },
+  {
+    "key": "organization_verification_result",
+    "label": "기관 검증 결과",
+    "email": true,
+    "group": "리포트·운영"
+  },
+  {
+    "key": "verification_requested",
+    "label": "검증 요청",
+    "email": true,
+    "group": "리포트·운영"
+  },
+  {
+    "key": "organization_join_result",
+    "label": "기관 가입 결과",
+    "email": true,
+    "group": "리포트·운영"
+  },
+  {
+    "key": "organization_removed",
+    "label": "기관 제외",
+    "email": true,
+    "group": "리포트·운영"
+  },
+  {
+    "key": "account_suspended",
+    "label": "계정 정지",
+    "email": true,
+    "group": "리포트·운영"
+  },
+  {
+    "key": "account_reactivated",
+    "label": "계정 재활성화",
+    "email": true,
+    "group": "리포트·운영"
+  },
+  {
+    "key": "session_ready",
+    "label": "세션 준비 완료",
+    "email": false,
+    "group": "일정·참여"
+  },
+  {
+    "key": "session_opened",
+    "label": "세션 오픈",
+    "email": false,
+    "group": "일정·참여"
+  },
+  {
+    "key": "session_started",
+    "label": "세션 진행 시작",
+    "email": false,
+    "group": "일정·참여"
+  },
+  {
+    "key": "session_completed",
+    "label": "세션 완료",
+    "email": false,
+    "group": "일정·참여"
+  },
+  {
+    "key": "session_waitlist_promoted",
+    "label": "대기자 승격",
+    "email": false,
+    "group": "일정·참여"
+  },
+  {
+    "key": "session_participant_removed",
+    "label": "참여자 제외",
+    "email": false,
+    "group": "일정·참여"
+  },
+  {
+    "key": "session_deleted",
+    "label": "세션 삭제",
+    "email": false,
+    "group": "일정·참여"
+  },
+  {
+    "key": "chat_message",
+    "label": "채팅 메시지",
+    "email": false,
+    "group": "대화"
+  },
+  {
+    "key": "chat_room_created",
+    "label": "채팅방 개설",
+    "email": false,
+    "group": "대화"
+  },
+  {
+    "key": "chat_room_invited",
+    "label": "채팅방 초대",
+    "email": false,
+    "group": "대화"
+  },
+  {
+    "key": "chat_room_removed",
+    "label": "채팅방 제외",
+    "email": false,
+    "group": "대화"
+  },
+  {
+    "key": "report_review_requested",
+    "label": "리포트 검토 요청",
+    "email": false,
+    "group": "리포트·운영"
+  },
+  {
+    "key": "report_ready",
+    "label": "리포트 발행",
+    "email": true,
+    "group": "리포트·운영"
+  },
+  {
+    "key": "report_generation_failed",
+    "label": "리포트 생성 실패",
+    "email": false,
+    "group": "리포트·운영"
+  },
+  {
+    "key": "report_low_confidence",
+    "label": "리포트 신뢰도 낮음",
+    "email": false,
+    "group": "리포트·운영"
+  },
+  {
+    "key": "report_email_failed",
+    "label": "리포트 메일 발송 실패",
+    "email": false,
+    "group": "리포트·운영"
+  },
+  {
+    "key": "organization_join_requested",
+    "label": "기관 가입 신청",
+    "email": false,
+    "group": "리포트·운영"
+  },
+  {
+    "key": "organization_updated",
+    "label": "기관 정보 변경",
+    "email": false,
+    "group": "리포트·운영"
+  },
+  {
+    "key": "organization_deactivated",
+    "label": "기관 비활성화",
+    "email": false,
+    "group": "리포트·운영"
+  },
+  {
+    "key": "organization_reactivated",
+    "label": "기관 재활성화",
+    "email": false,
+    "group": "리포트·운영"
+  },
+  {
+    "key": "organization_role_changed",
+    "label": "기관 역할 변경",
+    "email": false,
+    "group": "리포트·운영"
+  },
+  {
+    "key": "counselor_profile_updated",
+    "label": "상담사 프로필 변경",
+    "email": false,
+    "group": "리포트·운영"
+  },
+  {
+    "key": "primary_admin_profile_updated",
+    "label": "대표 관리자 프로필 변경",
+    "email": false,
+    "group": "리포트·운영"
+  },
+  {
+    "key": "personal_office_opened",
+    "label": "개인상담소 개설",
+    "email": false,
+    "group": "리포트·운영"
+  },
+  {
+    "key": "class_invited",
+    "label": "클래스 초대",
+    "email": false,
+    "group": "일정·참여"
+  },
+  {
+    "key": "class_member_joined",
+    "label": "클래스 가입",
+    "email": false,
+    "group": "일정·참여"
+  },
+  {
+    "key": "class_session_added",
+    "label": "클래스 회차 추가",
+    "email": false,
+    "group": "일정·참여"
+  },
+  {
+    "key": "class_completed",
+    "label": "클래스 마무리",
+    "email": false,
+    "group": "일정·참여"
+  },
+  {
+    "key": "class_cancelled",
+    "label": "클래스 취소",
+    "email": false,
+    "group": "일정·참여"
+  },
+  {
+    "key": "session_host_assigned",
+    "label": "진행자 배정",
+    "email": false,
+    "group": "일정·참여"
+  },
+  {
+    "key": "session_host_change_requested",
+    "label": "진행자 변경 요청",
+    "email": false,
+    "group": "일정·참여"
+  },
+  {
+    "key": "session_host_change_resolved",
+    "label": "진행자 변경 요청 결과",
+    "email": false,
+    "group": "일정·참여"
+  },
+  {
+    "key": "session_host_transfer_requested",
+    "label": "진행자 양도 요청",
+    "email": false,
+    "group": "일정·참여"
+  },
+  {
+    "key": "session_host_changed",
+    "label": "진행자 변경",
+    "email": false,
+    "group": "일정·참여"
+  },
+  {
+    "key": "session_host_released",
+    "label": "진행자 해제",
+    "email": false,
+    "group": "일정·참여"
+  },
+  {
+    "key": "session_host_needed",
+    "label": "진행자 배정 필요",
+    "email": false,
+    "group": "일정·참여"
+  }
+]
