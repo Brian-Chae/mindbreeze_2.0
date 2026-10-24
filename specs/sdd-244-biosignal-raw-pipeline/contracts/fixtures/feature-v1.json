@@ -1,0 +1,513 @@
+[
+  {
+    "schema_version": "feature-v1",
+    "feature_id_alias": "Featureeeg",
+    "sequence": 0,
+    "signal": "eeg",
+    "play_group_id": null,
+    "window_index": 0,
+    "t_rel_ms": 0.0,
+    "computed_at_us": "1000000",
+    "measured_at_us": "0",
+    "algorithm": {
+      "algorithm_id": "mb-synthetic",
+      "algorithm_version": "fixture-v1",
+      "parameters_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "parameters": {
+        "synthetic": true
+      },
+      "filter_version": "fixture-v1",
+      "build": "sdd244-fixture"
+    },
+    "source_windows": [
+      {
+        "signal": "eeg",
+        "stream_alias": "Stream01",
+        "segment_alias": "Segment01",
+        "raw_artifact_id_alias": "Raw01",
+        "raw_sha256": "41919f132f015e9686b2972270663b4732e9e18d3456df719746c0b2f663efcb",
+        "first_sample_index": 0,
+        "end_sample_index_exclusive": 3,
+        "time_range": {
+          "from_us": "0",
+          "to_us": "100000"
+        },
+        "valid_sample_count": 3
+      }
+    ],
+    "scalars": {
+      "focus_index": 0.5,
+      "cognitive_load": null,
+      "relaxation_index": null,
+      "stress_index": null,
+      "emotional_stability": null,
+      "total_neural_activity": null,
+      "faa": null,
+      "hemispheric_balance": null,
+      "delta_power": null,
+      "theta_power": null,
+      "alpha_power": null,
+      "beta_power": null,
+      "gamma_power": null,
+      "total_power": null,
+      "meditation_level": null,
+      "attention_level": null,
+      "signal_quality": null,
+      "sdnn": 20.0,
+      "rmssd": 30.0,
+      "lf_power": null,
+      "hf_power": null,
+      "lf_hf_ratio": null,
+      "heart_rate": null,
+      "respiratory_rate": null,
+      "motion": null,
+      "quality": null,
+      "device_timestamp_ms": null
+    },
+    "scalar_null_reasons": {
+      "cognitive_load": "not_collected",
+      "relaxation_index": "not_collected",
+      "stress_index": "not_collected",
+      "emotional_stability": "not_collected",
+      "total_neural_activity": "not_collected",
+      "faa": "not_collected",
+      "hemispheric_balance": "not_collected",
+      "delta_power": "not_collected",
+      "theta_power": "not_collected",
+      "alpha_power": "not_collected",
+      "beta_power": "not_collected",
+      "gamma_power": "not_collected",
+      "total_power": "not_collected",
+      "meditation_level": "not_collected",
+      "attention_level": "not_collected",
+      "signal_quality": "not_collected",
+      "lf_power": "not_collected",
+      "hf_power": "not_collected",
+      "lf_hf_ratio": "not_collected",
+      "heart_rate": "not_collected",
+      "respiratory_rate": "not_collected",
+      "motion": "not_collected",
+      "quality": "not_collected",
+      "device_timestamp_ms": "not_collected"
+    },
+    "detail_null_reasons": {},
+    "eeg": {
+      "filteredData": {
+        "artifact_id_alias": "Derived01",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "field_path": "filteredData",
+        "first_sample_index": 0,
+        "sample_count": 3,
+        "availability": "available",
+        "unavailable_reason": null
+      },
+      "signalQuality": {
+        "overall": 95.0,
+        "fp1": 94.0,
+        "fp2": 96.0,
+        "sqi": {
+          "artifact_id_alias": "Derived01",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "field_path": "sqi",
+          "first_sample_index": 0,
+          "sample_count": 3,
+          "availability": "available",
+          "unavailable_reason": null
+        }
+      },
+      "bandPowers": {
+        "delta": 1.0,
+        "theta": 1.0,
+        "alpha": 1.0,
+        "beta": 1.0,
+        "gamma": 1.0
+      },
+      "brainState": {
+        "currentState": "neutral",
+        "confidence": 0.5,
+        "stateHistory": [
+          "neutral"
+        ],
+        "recommendations": null,
+        "metrics": null
+      },
+      "frequencySpectrum": {
+        "frequencies": [
+          1.0,
+          2.0
+        ],
+        "ch1Power": [
+          0.5,
+          0.25
+        ],
+        "ch2Power": [
+          0.25,
+          0.5
+        ],
+        "timestamp": 0.0
+      },
+      "indices": {
+        "focusIndex": 0.5,
+        "relaxationIndex": 0.5,
+        "stressIndex": 0.5,
+        "hemisphericBalance": 0.5,
+        "cognitiveLoad": 0.5,
+        "emotionalStability": 0.5,
+        "totalPower": 0.5,
+        "totalNeuralActivity": 0.5,
+        "faa": 0.5
+      },
+      "rawAnalysis": {
+        "ch1SQI": {
+          "artifact_id_alias": "Derived01",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "field_path": "ch1SQI",
+          "first_sample_index": 0,
+          "sample_count": 3,
+          "availability": "available",
+          "unavailable_reason": null
+        },
+        "ch2SQI": {
+          "artifact_id_alias": "Derived01",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "field_path": "ch2SQI",
+          "first_sample_index": 0,
+          "sample_count": 3,
+          "availability": "available",
+          "unavailable_reason": null
+        },
+        "overallSQI": {
+          "artifact_id_alias": "Derived01",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "field_path": "overallSQI",
+          "first_sample_index": 0,
+          "sample_count": 3,
+          "availability": "available",
+          "unavailable_reason": null
+        }
+      },
+      "channelBandPowers": null,
+      "channelBandPowers_reason": "not_emitted_by_current_processor"
+    },
+    "ppg": null,
+    "acc": null,
+    "quality": "synthetic"
+  },
+  {
+    "schema_version": "feature-v1",
+    "feature_id_alias": "Featureppg",
+    "sequence": 0,
+    "signal": "ppg",
+    "play_group_id": null,
+    "window_index": 0,
+    "t_rel_ms": 0.0,
+    "computed_at_us": "1000000",
+    "measured_at_us": "0",
+    "algorithm": {
+      "algorithm_id": "mb-synthetic",
+      "algorithm_version": "fixture-v1",
+      "parameters_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "parameters": {
+        "synthetic": true
+      },
+      "filter_version": "fixture-v1",
+      "build": "sdd244-fixture"
+    },
+    "source_windows": [
+      {
+        "signal": "ppg",
+        "stream_alias": "Stream01",
+        "segment_alias": "Segment01",
+        "raw_artifact_id_alias": "Raw01",
+        "raw_sha256": "4a098e3e00ddd85f547c5638cc0a967ac21202f0a1817be6a35d7e925874122f",
+        "first_sample_index": 0,
+        "end_sample_index_exclusive": 3,
+        "time_range": {
+          "from_us": "0",
+          "to_us": "100000"
+        },
+        "valid_sample_count": 3
+      }
+    ],
+    "scalars": {
+      "focus_index": 0.5,
+      "cognitive_load": null,
+      "relaxation_index": null,
+      "stress_index": null,
+      "emotional_stability": null,
+      "total_neural_activity": null,
+      "faa": null,
+      "hemispheric_balance": null,
+      "delta_power": null,
+      "theta_power": null,
+      "alpha_power": null,
+      "beta_power": null,
+      "gamma_power": null,
+      "total_power": null,
+      "meditation_level": null,
+      "attention_level": null,
+      "signal_quality": null,
+      "sdnn": 20.0,
+      "rmssd": 30.0,
+      "lf_power": null,
+      "hf_power": null,
+      "lf_hf_ratio": null,
+      "heart_rate": null,
+      "respiratory_rate": null,
+      "motion": null,
+      "quality": null,
+      "device_timestamp_ms": null
+    },
+    "scalar_null_reasons": {
+      "cognitive_load": "not_collected",
+      "relaxation_index": "not_collected",
+      "stress_index": "not_collected",
+      "emotional_stability": "not_collected",
+      "total_neural_activity": "not_collected",
+      "faa": "not_collected",
+      "hemispheric_balance": "not_collected",
+      "delta_power": "not_collected",
+      "theta_power": "not_collected",
+      "alpha_power": "not_collected",
+      "beta_power": "not_collected",
+      "gamma_power": "not_collected",
+      "total_power": "not_collected",
+      "meditation_level": "not_collected",
+      "attention_level": "not_collected",
+      "signal_quality": "not_collected",
+      "lf_power": "not_collected",
+      "hf_power": "not_collected",
+      "lf_hf_ratio": "not_collected",
+      "heart_rate": "not_collected",
+      "respiratory_rate": "not_collected",
+      "motion": "not_collected",
+      "quality": "not_collected",
+      "device_timestamp_ms": "not_collected"
+    },
+    "detail_null_reasons": {
+      "ppg.vitals.spo2": "not_emitted_by_current_processor"
+    },
+    "eeg": null,
+    "ppg": {
+      "filteredData": {
+        "artifact_id_alias": "Derived01",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "field_path": "filteredData",
+        "first_sample_index": 0,
+        "sample_count": 3,
+        "availability": "available",
+        "unavailable_reason": null
+      },
+      "signalQuality": {
+        "overall": 90.0,
+        "red": 89.0,
+        "ir": 91.0,
+        "sqi": {
+          "artifact_id_alias": "Derived01",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "field_path": "sqi",
+          "first_sample_index": 0,
+          "sample_count": 3,
+          "availability": "available",
+          "unavailable_reason": null
+        },
+        "redSQI": {
+          "artifact_id_alias": "Derived01",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "field_path": "redSQI",
+          "first_sample_index": 0,
+          "sample_count": 3,
+          "availability": "available",
+          "unavailable_reason": null
+        },
+        "irSQI": {
+          "artifact_id_alias": "Derived01",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "field_path": "irSQI",
+          "first_sample_index": 0,
+          "sample_count": 3,
+          "availability": "available",
+          "unavailable_reason": null
+        },
+        "overallSQI": {
+          "artifact_id_alias": "Derived01",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "field_path": "overallSQI",
+          "first_sample_index": 0,
+          "sample_count": 3,
+          "availability": "available",
+          "unavailable_reason": null
+        }
+      },
+      "vitals": {
+        "heartRate": 60.0,
+        "hrv": 12.0,
+        "spo2": null
+      },
+      "peakInfo": {
+        "peakCount": 3,
+        "avgPeakInterval": 1000.0,
+        "peakQuality": 0.9
+      },
+      "advancedHRV": {
+        "sdnn": 1.0,
+        "pnn50": 1.0,
+        "lfPower": 1.0,
+        "hfPower": 1.0,
+        "lfHfRatio": 1.0,
+        "stressIndex": 1.0,
+        "avnn": 1.0,
+        "pnn20": 1.0,
+        "sdsd": 1.0,
+        "hrMax": 1.0,
+        "hrMin": 1.0
+      },
+      "rrIntervals": [
+        980.0,
+        1000.0,
+        1020.0
+      ],
+      "beats": null,
+      "beats_reason": "not_emitted_by_current_processor"
+    },
+    "acc": null,
+    "quality": "synthetic"
+  },
+  {
+    "schema_version": "feature-v1",
+    "feature_id_alias": "Featureacc",
+    "sequence": 0,
+    "signal": "acc",
+    "play_group_id": null,
+    "window_index": 0,
+    "t_rel_ms": 0.0,
+    "computed_at_us": "1000000",
+    "measured_at_us": "0",
+    "algorithm": {
+      "algorithm_id": "mb-synthetic",
+      "algorithm_version": "fixture-v1",
+      "parameters_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "parameters": {
+        "synthetic": true
+      },
+      "filter_version": "fixture-v1",
+      "build": "sdd244-fixture"
+    },
+    "source_windows": [
+      {
+        "signal": "acc",
+        "stream_alias": "Stream01",
+        "segment_alias": "Segment01",
+        "raw_artifact_id_alias": "Raw01",
+        "raw_sha256": "d1bc8536f6fc34fab138b782213f54459d3877996aada06fb7dcd84d6d938ec6",
+        "first_sample_index": 0,
+        "end_sample_index_exclusive": 3,
+        "time_range": {
+          "from_us": "0",
+          "to_us": "100000"
+        },
+        "valid_sample_count": 3
+      }
+    ],
+    "scalars": {
+      "focus_index": 0.5,
+      "cognitive_load": null,
+      "relaxation_index": null,
+      "stress_index": null,
+      "emotional_stability": null,
+      "total_neural_activity": null,
+      "faa": null,
+      "hemispheric_balance": null,
+      "delta_power": null,
+      "theta_power": null,
+      "alpha_power": null,
+      "beta_power": null,
+      "gamma_power": null,
+      "total_power": null,
+      "meditation_level": null,
+      "attention_level": null,
+      "signal_quality": null,
+      "sdnn": 20.0,
+      "rmssd": 30.0,
+      "lf_power": null,
+      "hf_power": null,
+      "lf_hf_ratio": null,
+      "heart_rate": null,
+      "respiratory_rate": null,
+      "motion": null,
+      "quality": null,
+      "device_timestamp_ms": null
+    },
+    "scalar_null_reasons": {
+      "cognitive_load": "not_collected",
+      "relaxation_index": "not_collected",
+      "stress_index": "not_collected",
+      "emotional_stability": "not_collected",
+      "total_neural_activity": "not_collected",
+      "faa": "not_collected",
+      "hemispheric_balance": "not_collected",
+      "delta_power": "not_collected",
+      "theta_power": "not_collected",
+      "alpha_power": "not_collected",
+      "beta_power": "not_collected",
+      "gamma_power": "not_collected",
+      "total_power": "not_collected",
+      "meditation_level": "not_collected",
+      "attention_level": "not_collected",
+      "signal_quality": "not_collected",
+      "lf_power": "not_collected",
+      "hf_power": "not_collected",
+      "lf_hf_ratio": "not_collected",
+      "heart_rate": "not_collected",
+      "respiratory_rate": "not_collected",
+      "motion": "not_collected",
+      "quality": "not_collected",
+      "device_timestamp_ms": "not_collected"
+    },
+    "detail_null_reasons": {},
+    "eeg": null,
+    "ppg": null,
+    "acc": {
+      "filteredData": {
+        "artifact_id_alias": "Derived01",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "field_path": "filteredData",
+        "first_sample_index": 0,
+        "sample_count": 3,
+        "availability": "available",
+        "unavailable_reason": null
+      },
+      "magnitude": {
+        "artifact_id_alias": "Derived01",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "field_path": "magnitude",
+        "first_sample_index": 0,
+        "sample_count": 3,
+        "availability": "available",
+        "unavailable_reason": null
+      },
+      "activity": {
+        "type": "stationary",
+        "confidence": 1.0,
+        "intensity": 0.0
+      },
+      "movement": {
+        "avgMovement": 0.0,
+        "stdMovement": 0.0,
+        "maxMovement": 0.0,
+        "totalMovement": 0.0
+      },
+      "posture": {
+        "tiltAngle": 0.0,
+        "stability": 1.0,
+        "balance": 1.0
+      },
+      "signalQuality": {
+        "overall": 1.0,
+        "reliability": 1.0,
+        "consistency": 1.0
+      }
+    },
+    "quality": "synthetic"
+  }
+]
