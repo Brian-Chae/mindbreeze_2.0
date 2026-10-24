@@ -108,4 +108,8 @@ class EEGFeatureWindow(Base):
     respiratory_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
     motion: Mapped[float | None] = mapped_column(Float, nullable=True)
 
+    # SDD-244 M2: 상세 feature(JSONL) 원천 추적. 1Hz 검색 스칼라가 어느 emit 에서 왔는지(null 허용)
+    source_feature_alias: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    algorithm_version: Mapped[str | None] = mapped_column(String(40), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

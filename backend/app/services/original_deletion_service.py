@@ -55,13 +55,16 @@ def delete_session_originals(
               "merged_video_removed": False}
 
     if "eeg_raw" in chosen:
-        rows = db.query(EEGRawChunk).filter(EEGRawChunk.session_id == session.id).all()
+        rows = db.query(EEGRawChunk).filter(EEGRawChunk.session_id == session.id, EEGRawChunk.schema_version == "1.0", EEGRawChunk.signal_type == "eeg").all()
         refs += [r.object_key for r in rows if r.object_key]
         result["eeg_raw_chunks"] = len(rows)
         for row in rows:
             db.delete(row)
         for rec in db.query(EEGRecord).filter(EEGRecord.session_id == session.id).all():
-            rec.file_count = 0
+            rec.file_count = db.query(EEGRawChunk).filter(
+                EEGRawChunk.session_id == session.id, EEGRawChunk.participant_id == rec.participant_id,
+                EEGRawChunk.signal_type == "eeg", EEGRawChunk.upload_status == "uploaded",
+            ).count()
     if "audio" in chosen:
         rows = db.query(AudioChunk).filter(AudioChunk.session_id == session.id).all()
         refs += [r.file_path for r in rows if r.file_path]

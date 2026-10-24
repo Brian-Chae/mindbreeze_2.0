@@ -1,5 +1,6 @@
 // @ts-nocheck — link-band-sdk 이식본 (verbatim/noUnusedLocals 완화)
 import type { EEGDevice } from './types/eeg';
+import { captureRawPacket } from '../biosignal/raw-capture';
 import { StreamProcessor } from './StreamProcessor';
 import { TimestampSynchronizer } from './TimestampSynchronizer';
 import {
@@ -631,6 +632,7 @@ class LinkBandBluetoothService implements BluetoothEEGService {
   }
 
   private handleEEGData(dataView: DataView): void {
+    captureRawPacket('eeg', dataView);
     if (!dataView || dataView.byteLength < 8) return;
 
     try {
@@ -652,6 +654,7 @@ class LinkBandBluetoothService implements BluetoothEEGService {
   }
 
   private handlePPGData(dataView: DataView): void {
+    captureRawPacket('ppg', dataView);
     if (!dataView || dataView.byteLength < 8) return;
 
     try {
@@ -674,6 +677,7 @@ class LinkBandBluetoothService implements BluetoothEEGService {
   }
 
   private handleAccData(dataView: DataView): void {
+    captureRawPacket('acc', dataView);
     if (!dataView || dataView.byteLength < 10) return;
 
     try {

@@ -1,3 +1,6 @@
+import { BiosignalRecordingStatus } from '../../lib/biosignal/recording-status';
+import type { RenderedMetrics } from '../../lib/biosignal/display-snapshot';
+import { toHostParticipant } from '../../components/class/player/host/host-live-model';
 // SDD-088: 독립형 클래스 플레이어 — 클래스 = 가상의 방, 상태에 따라 씬이 전개된다.
 // 풀스크린(AppShell 밖) 단일 페이지. 상담사(host) 씬:
 //   ① 세팅(ready/scheduled): 내 영상·소리 점검 + [클래스 열기]   — SDD-209 HostPrepContainer
@@ -396,6 +399,7 @@ export default function ClassPlayerPage() {
   participationVersionRef.current.version = Math.max(participationVersionRef.current.version, participation.version);
 
   const band = useBand({
+    displayViewKind: 'session_player',
     sessionId: participation.revoked || !session ? '' : id ?? '',
     participantId: participation.revoked ? null : hostParticipantId,
     enabled: Boolean(id && hostParticipantId && !participation.revoked),
@@ -1179,6 +1183,23 @@ export default function ClassPlayerPage() {
     band.signalQualityLevel,
   ]);
 
+  // 상담사 화면의 본인 밴드 칩은 이완도만 표시한다. 나머지 지표를 보였다고 주장하지 않는다.
+  const displayRef = useRef<{ rendered: RenderedMetrics | null; visible: boolean; record: typeof band.recordDisplay }>({ rendered: null, visible: false, record: band.recordDisplay });
+  useEffect(() => {
+    const row = displayMetrics.find(item => item.participant_id === hostParticipantId);
+    const live = band.connectionState === 'connected';
+    const relaxation = live && row ? toHostParticipant(row, { nowMs: Date.now() }).values.relaxation : null;
+    displayRef.current = { record: band.recordDisplay, visible: isRunning && isHost && !participation.revoked && !inviteOpen, rendered: {
+      values: { focus: null, relaxation, emotional: null, bpm: null, respiration: null, hrv: null }, displayedKeys: live ? ['relaxation'] : [],
+      rawMind: { focus: null, relaxation: null, emotional: null }, live, remoteRelaxation: true, blocked: false, leadOff: band.deviceStatus === 'lead_off', stale: false,
+      lastEegAtMs: row?.last_eeg_at ? Date.parse(row.last_eeg_at) : null, quality: band.signalQualityLevel, respirationNullReason: null,
+    } };
+  });
+  useEffect(() => {
+    const timer = window.setInterval(() => { const view = displayRef.current; view.record(view.rendered, view.visible && document.visibilityState !== 'hidden'); }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const summary = useMemo(() => summarizeMetrics(displayMetrics), [displayMetrics]);
 
   // 실시간 수신 요약 — 스트리밍 중 / 수신 끊김 인원 (4초 폴링 리렌더 주기로 재평가)
@@ -1335,6 +1356,7 @@ export default function ClassPlayerPage() {
   if (isRunning && isHost) {
     return (
       <>
+        <BiosignalRecordingStatus state={band.recordingStatus} />
         <div inert={canInvite && inviteOpen}><HostLiveContainer
           session={session}
           hostUserId={currentUserId}
@@ -1421,6 +1443,7 @@ export default function ClassPlayerPage() {
     } as const;
     return (
       <>
+        <BiosignalRecordingStatus state={band.recordingStatus} />
         <div inert={canInvite && inviteOpen}><HostPrepContainer
           phase={phase}
           stateKind={closedInfo ? (closedInfo.waiting > 0 ? 'closed' : 'closed-0') : 'closed-revisit'}

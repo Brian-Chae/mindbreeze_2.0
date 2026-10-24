@@ -1,0 +1,320 @@
+[
+  {
+    "schema_version": "mb-biosignal-raw-v2",
+    "signal_type": "eeg",
+    "stream_id": "00000000-0000-4000-8000-000000000001",
+    "segment_id": "00000000-0000-4000-8000-000000000001",
+    "chunk_index": 0,
+    "parser_profile": {
+      "firmware": "unknown",
+      "device_model": "LINK-BAND-2.0-synthetic",
+      "profile_id": "mb-web-clock-v1",
+      "version": "1",
+      "parameters_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "platform": "synthetic",
+      "verification": "synthetic_only",
+      "packet_endian": "mixed",
+      "tick_hz": 32768,
+      "tick_bits": 32,
+      "header_anchor": "last_sample"
+    },
+    "rate": {
+      "numerator": 250,
+      "denominator": 1
+    },
+    "observed_rate": null,
+    "observed_rate_window_us": null,
+    "observed_rate_reason": "synthetic_not_device_measurement",
+    "channels": [
+      "fp1",
+      "fp2"
+    ],
+    "units": [
+      "uV",
+      "uV"
+    ],
+    "scale": [
+      0.04006426017255706,
+      0.04006426017255706
+    ],
+    "sample_count": 4,
+    "packet_count": 2,
+    "first_sample_index": 0,
+    "end_sample_index_exclusive": 4,
+    "time_basis": "host_estimated",
+    "anchor": {
+      "sample_index": 0,
+      "utc_us": "1780000000000000",
+      "monotonic_us": "2000000",
+      "relative_us": "0",
+      "device_tick_raw": "65536",
+      "device_tick_unwrapped": "65536",
+      "clock_segment_id": "00000000-0000-4000-8000-000000000001",
+      "uncertainty_us": null,
+      "rule": "anchor_plus_index_delta_over_rate"
+    },
+    "sections": [
+      {
+        "name": "samples",
+        "offset": 0,
+        "length": 68,
+        "row_stride": 17,
+        "encoding": "eeg-i32-i32-u8-f32-f32-le"
+      },
+      {
+        "name": "packets",
+        "offset": 68,
+        "length": 33,
+        "row_stride": 0,
+        "encoding": "bytes"
+      },
+      {
+        "name": "packet_map",
+        "offset": 101,
+        "length": 641,
+        "row_stride": 0,
+        "encoding": "utf8-jsonl"
+      }
+    ]
+  },
+  {
+    "schema_version": "mb-biosignal-raw-v2",
+    "signal_type": "ppg",
+    "stream_id": "00000000-0000-4000-8000-000000000001",
+    "segment_id": "00000000-0000-4000-8000-000000000001",
+    "chunk_index": 0,
+    "parser_profile": {
+      "firmware": "unknown",
+      "device_model": "LINK-BAND-2.0-synthetic",
+      "profile_id": "mb-web-clock-v1",
+      "version": "1",
+      "parameters_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "platform": "synthetic",
+      "verification": "synthetic_only",
+      "packet_endian": "mixed",
+      "tick_hz": 32768,
+      "tick_bits": 32,
+      "header_anchor": "last_sample"
+    },
+    "rate": {
+      "numerator": 50,
+      "denominator": 1
+    },
+    "observed_rate": null,
+    "observed_rate_window_us": null,
+    "observed_rate_reason": "synthetic_not_device_measurement",
+    "channels": [
+      "red",
+      "ir"
+    ],
+    "units": [
+      "ADC_count",
+      "ADC_count"
+    ],
+    "scale": [
+      1.0,
+      1.0
+    ],
+    "sample_count": 3,
+    "packet_count": 2,
+    "first_sample_index": 0,
+    "end_sample_index_exclusive": 3,
+    "time_basis": "host_estimated",
+    "anchor": {
+      "sample_index": 0,
+      "utc_us": "1780000000000000",
+      "monotonic_us": "2000000",
+      "relative_us": "0",
+      "device_tick_raw": "65536",
+      "device_tick_unwrapped": "65536",
+      "clock_segment_id": "00000000-0000-4000-8000-000000000001",
+      "uncertainty_us": null,
+      "rule": "anchor_plus_index_delta_over_rate"
+    },
+    "sections": [
+      {
+        "name": "samples",
+        "offset": 0,
+        "length": 24,
+        "row_stride": 8,
+        "encoding": "ppg-u32-u32-le"
+      },
+      {
+        "name": "packets",
+        "offset": 24,
+        "length": 23,
+        "row_stride": 0,
+        "encoding": "bytes"
+      },
+      {
+        "name": "packet_map",
+        "offset": 47,
+        "length": 641,
+        "row_stride": 0,
+        "encoding": "utf8-jsonl"
+      }
+    ]
+  },
+  {
+    "schema_version": "mb-biosignal-raw-v2",
+    "signal_type": "acc",
+    "stream_id": "00000000-0000-4000-8000-000000000001",
+    "segment_id": "00000000-0000-4000-8000-000000000001",
+    "chunk_index": 0,
+    "parser_profile": {
+      "firmware": "unknown",
+      "device_model": "LINK-BAND-2.0-synthetic",
+      "profile_id": "mb-web-clock-v1",
+      "version": "1",
+      "parameters_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "platform": "synthetic",
+      "verification": "synthetic_only",
+      "packet_endian": "mixed",
+      "tick_hz": 32768,
+      "tick_bits": 32,
+      "header_anchor": "last_sample"
+    },
+    "rate": {
+      "numerator": 30,
+      "denominator": 1
+    },
+    "observed_rate": null,
+    "observed_rate_window_us": null,
+    "observed_rate_reason": "synthetic_not_device_measurement",
+    "channels": [
+      "x",
+      "y",
+      "z"
+    ],
+    "units": [
+      "g",
+      "g",
+      "g"
+    ],
+    "scale": [
+      6.103515625e-05,
+      6.103515625e-05,
+      6.103515625e-05
+    ],
+    "sample_count": 3,
+    "packet_count": 2,
+    "first_sample_index": 0,
+    "end_sample_index_exclusive": 3,
+    "time_basis": "host_estimated",
+    "anchor": {
+      "sample_index": 0,
+      "utc_us": "1780000000000000",
+      "monotonic_us": "2000000",
+      "relative_us": "0",
+      "device_tick_raw": "65536",
+      "device_tick_unwrapped": "65536",
+      "clock_segment_id": "00000000-0000-4000-8000-000000000001",
+      "uncertainty_us": null,
+      "rule": "anchor_plus_index_delta_over_rate"
+    },
+    "sections": [
+      {
+        "name": "samples",
+        "offset": 0,
+        "length": 54,
+        "row_stride": 18,
+        "encoding": "acc-i16-i16-i16-f32-f32-f32-le"
+      },
+      {
+        "name": "packets",
+        "offset": 54,
+        "length": 23,
+        "row_stride": 0,
+        "encoding": "bytes"
+      },
+      {
+        "name": "packet_map",
+        "offset": 77,
+        "length": 641,
+        "row_stride": 0,
+        "encoding": "utf8-jsonl"
+      }
+    ]
+  },
+  {
+    "schema_version": "mb-biosignal-raw-v2",
+    "signal_type": "acc",
+    "stream_id": "00000000-0000-4000-8000-000000000001",
+    "segment_id": "00000000-0000-4000-8000-000000000001",
+    "chunk_index": 0,
+    "parser_profile": {
+      "firmware": "unknown",
+      "device_model": "LINK-BAND-2.0-synthetic",
+      "profile_id": "native-candidate-v1",
+      "version": "1",
+      "parameters_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "platform": "native-candidate",
+      "verification": "unverified",
+      "packet_endian": "unknown",
+      "tick_hz": 32768,
+      "tick_bits": 32,
+      "header_anchor": "first_sample"
+    },
+    "rate": {
+      "numerator": 25,
+      "denominator": 1
+    },
+    "observed_rate": null,
+    "observed_rate_window_us": null,
+    "observed_rate_reason": "native_device_not_verified",
+    "channels": [
+      "x",
+      "y",
+      "z"
+    ],
+    "units": [
+      "g",
+      "g",
+      "g"
+    ],
+    "scale": [
+      6.103515625e-05,
+      6.103515625e-05,
+      6.103515625e-05
+    ],
+    "sample_count": 3,
+    "packet_count": 2,
+    "first_sample_index": 0,
+    "end_sample_index_exclusive": 3,
+    "time_basis": "device_relative",
+    "anchor": {
+      "sample_index": 0,
+      "utc_us": null,
+      "monotonic_us": "2000000",
+      "relative_us": "0",
+      "device_tick_raw": "65536",
+      "device_tick_unwrapped": "65536",
+      "clock_segment_id": "00000000-0000-4000-8000-000000000001",
+      "uncertainty_us": null,
+      "rule": "anchor_plus_index_delta_over_rate"
+    },
+    "sections": [
+      {
+        "name": "samples",
+        "offset": 0,
+        "length": 54,
+        "row_stride": 18,
+        "encoding": "acc-i16-i16-i16-f32-f32-f32-le"
+      },
+      {
+        "name": "packets",
+        "offset": 54,
+        "length": 23,
+        "row_stride": 0,
+        "encoding": "bytes"
+      },
+      {
+        "name": "packet_map",
+        "offset": 77,
+        "length": 641,
+        "row_stride": 0,
+        "encoding": "utf8-jsonl"
+      }
+    ]
+  }
+]

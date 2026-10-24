@@ -1,0 +1,776 @@
+[
+  {
+    "schema_version": "manifest-v1",
+    "revision": 1,
+    "session_alias": "Session01",
+    "participant_alias": "Participant01",
+    "close_state": "complete",
+    "close_intent": {
+      "intent_id_alias": "Intent01",
+      "expected_artifacts": {
+        "Artifact0": "41919f132f015e9686b2972270663b4732e9e18d3456df719746c0b2f663efcb",
+        "Artifact1": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "Artifact2": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "Artifact3": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "Artifact4": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "Artifact5": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "Artifact6": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "streams": [
+        {
+          "stream_alias": "Stream01",
+          "segment_alias": "Segment01",
+          "signal": "eeg",
+          "last_chunk_sequence": 0,
+          "last_feature_sequence": 0,
+          "received_samples": 4
+        },
+        {
+          "stream_alias": "Stream01",
+          "segment_alias": "Segment02",
+          "signal": "eeg",
+          "last_chunk_sequence": 0,
+          "last_feature_sequence": 0,
+          "received_samples": 0
+        }
+      ],
+      "snapshots": [
+        {
+          "stream_alias": "Stream01",
+          "view_instance_alias": "View01",
+          "last_snapshot_sequence": 0
+        }
+      ],
+      "last_gap_sequence": 0,
+      "end_reason": "synthetic_close_after_unknown_tail"
+    },
+    "time_basis": "session_relative",
+    "default_view": "participant_player",
+    "streams": [
+      {
+        "stream_alias": "Stream01",
+        "segment_alias": "Segment01",
+        "signal": "eeg",
+        "profile": {
+          "firmware": "unknown",
+          "device_model": "LINK-BAND-2.0-synthetic",
+          "profile_id": "mb-web-clock-v1",
+          "version": "1",
+          "parameters_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "platform": "synthetic",
+          "verification": "synthetic_only",
+          "packet_endian": "mixed",
+          "tick_hz": 32768,
+          "tick_bits": 32,
+          "header_anchor": "last_sample"
+        },
+        "rate": {
+          "numerator": 250,
+          "denominator": 1
+        },
+        "observed_rate": null,
+        "observed_rate_window_us": null,
+        "observed_rate_reason": "synthetic_only",
+        "channels": [
+          "fp1",
+          "fp2"
+        ],
+        "units": [
+          "uV",
+          "uV"
+        ],
+        "time_basis": "session_relative"
+      }
+    ],
+    "signals": [
+      {
+        "signal": "eeg",
+        "availability": "available",
+        "unavailable_reason": null,
+        "expected_samples": null,
+        "acked_samples": 4,
+        "lost_samples": null,
+        "unknown_samples": true
+      },
+      {
+        "signal": "ppg",
+        "availability": "not_collected",
+        "unavailable_reason": "band_signal_not_collected",
+        "expected_samples": null,
+        "acked_samples": 0,
+        "lost_samples": null,
+        "unknown_samples": false
+      },
+      {
+        "signal": "acc",
+        "availability": "not_collected",
+        "unavailable_reason": "band_signal_not_collected",
+        "expected_samples": null,
+        "acked_samples": 0,
+        "lost_samples": null,
+        "unknown_samples": false
+      }
+    ],
+    "artifacts": [
+      {
+        "artifact_id_alias": "Artifact0",
+        "artifact_kind": "raw",
+        "path": "class-C01/session-001_date-withheld/participant-P01/raw/eeg/stream-S01/segment-001/chunk-000000.bin",
+        "schema_version": "mb-biosignal-raw-v2",
+        "dictionary_key": "raw",
+        "row_count": 4,
+        "size_bytes": 2202,
+        "sha256": "41919f132f015e9686b2972270663b4732e9e18d3456df719746c0b2f663efcb",
+        "uncompressed_sha256": null,
+        "time_range": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "selection": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "extra_range": [],
+        "retention": "raw_90_days",
+        "retention_deadline_us": null,
+        "consent_scope": [
+          "synthetic-only"
+        ],
+        "consent_version": "synthetic-v1",
+        "availability": "available",
+        "unavailable_reason": null,
+        "ack_state": "verified"
+      },
+      {
+        "artifact_id_alias": "Artifact1",
+        "artifact_kind": "feature",
+        "path": "class-C01/session-001_date-withheld/participant-P01/feature/fixture.json",
+        "schema_version": "feature-v1",
+        "dictionary_key": "feature",
+        "row_count": 1,
+        "size_bytes": 1,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "uncompressed_sha256": null,
+        "time_range": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "selection": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "extra_range": [],
+        "retention": "feature_policy",
+        "retention_deadline_us": null,
+        "consent_scope": [
+          "synthetic-only"
+        ],
+        "consent_version": "synthetic-v1",
+        "availability": "available",
+        "unavailable_reason": null,
+        "ack_state": "verified"
+      },
+      {
+        "artifact_id_alias": "Artifact2",
+        "artifact_kind": "raw_derived",
+        "path": "class-C01/session-001_date-withheld/participant-P01/raw_derived/fixture.json",
+        "schema_version": "raw_derived-v1",
+        "dictionary_key": "raw_derived",
+        "row_count": 1,
+        "size_bytes": 1,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "uncompressed_sha256": null,
+        "time_range": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "selection": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "extra_range": [],
+        "retention": "raw_90_days",
+        "retention_deadline_us": null,
+        "consent_scope": [
+          "synthetic-only"
+        ],
+        "consent_version": "synthetic-v1",
+        "availability": "available",
+        "unavailable_reason": null,
+        "ack_state": "verified"
+      },
+      {
+        "artifact_id_alias": "Artifact3",
+        "artifact_kind": "indices",
+        "path": "class-C01/session-001_date-withheld/participant-P01/indices/fixture.json",
+        "schema_version": "indices-v1",
+        "dictionary_key": "indices",
+        "row_count": 1,
+        "size_bytes": 1,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "uncompressed_sha256": null,
+        "time_range": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "selection": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "extra_range": [],
+        "retention": "feature_policy",
+        "retention_deadline_us": null,
+        "consent_scope": [
+          "synthetic-only"
+        ],
+        "consent_version": "synthetic-v1",
+        "availability": "available",
+        "unavailable_reason": null,
+        "ack_state": "verified"
+      },
+      {
+        "artifact_id_alias": "Artifact4",
+        "artifact_kind": "normalization",
+        "path": "class-C01/session-001_date-withheld/participant-P01/normalization/fixture.json",
+        "schema_version": "normalization-v1",
+        "dictionary_key": "normalization",
+        "row_count": 1,
+        "size_bytes": 1,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "uncompressed_sha256": null,
+        "time_range": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "selection": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "extra_range": [],
+        "retention": "feature_policy",
+        "retention_deadline_us": null,
+        "consent_scope": [
+          "synthetic-only"
+        ],
+        "consent_version": "synthetic-v1",
+        "availability": "available",
+        "unavailable_reason": null,
+        "ack_state": "verified"
+      },
+      {
+        "artifact_id_alias": "Artifact5",
+        "artifact_kind": "algorithm",
+        "path": "class-C01/session-001_date-withheld/participant-P01/algorithm/fixture.json",
+        "schema_version": "algorithm-v1",
+        "dictionary_key": "algorithm",
+        "row_count": 1,
+        "size_bytes": 1,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "uncompressed_sha256": null,
+        "time_range": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "selection": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "extra_range": [],
+        "retention": "feature_policy",
+        "retention_deadline_us": null,
+        "consent_scope": [
+          "synthetic-only"
+        ],
+        "consent_version": "synthetic-v1",
+        "availability": "available",
+        "unavailable_reason": null,
+        "ack_state": "verified"
+      },
+      {
+        "artifact_id_alias": "Artifact6",
+        "artifact_kind": "gap",
+        "path": "class-C01/session-001_date-withheld/participant-P01/gap/fixture.json",
+        "schema_version": "gap-v1",
+        "dictionary_key": "gap",
+        "row_count": 1,
+        "size_bytes": 1,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "uncompressed_sha256": null,
+        "time_range": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "selection": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "extra_range": [],
+        "retention": "feature_policy",
+        "retention_deadline_us": null,
+        "consent_scope": [
+          "synthetic-only"
+        ],
+        "consent_version": "synthetic-v1",
+        "availability": "available",
+        "unavailable_reason": null,
+        "ack_state": "verified"
+      }
+    ],
+    "gaps": [
+      {
+        "discovered_at_us": "1000000",
+        "event_id_alias": "Gap01",
+        "signal": "eeg",
+        "stream_alias": "Stream01",
+        "segment_alias": "Segment01",
+        "start_us": "1000000",
+        "end_us": null,
+        "reason": "process_terminated",
+        "observed_or_estimated": "unknown",
+        "expected_samples": null,
+        "received_samples": null,
+        "reconnect_count": 0,
+        "sequence": 0
+      }
+    ],
+    "models": [
+      {
+        "model_id_alias": "Model01",
+        "version": "synthetic-v1",
+        "params_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "focus": {
+          "m": null,
+          "s": null,
+          "direction": null,
+          "source": "b0",
+          "b0_version": "synthetic-b0-v1",
+          "fallback_reason": "synthetic_fixture"
+        },
+        "relaxation": {
+          "m": null,
+          "s": null,
+          "direction": null,
+          "source": "b0",
+          "b0_version": "synthetic-b0-v1",
+          "fallback_reason": "synthetic_fixture"
+        },
+        "emotional": {
+          "m": null,
+          "s": null,
+          "direction": null,
+          "source": "b0",
+          "b0_version": "synthetic-b0-v1",
+          "fallback_reason": "synthetic_fixture"
+        },
+        "formula_version": "fixture-v1",
+        "formula_constants": {
+          "center": 50.0,
+          "range": 50.0
+        },
+        "source": "b0",
+        "cached": false
+      }
+    ],
+    "algorithms": [
+      {
+        "algorithm_id": "mb-synthetic",
+        "algorithm_version": "fixture-v1",
+        "parameters_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "parameters": {
+          "synthetic": true
+        },
+        "filter_version": "fixture-v1",
+        "build": "sdd244-fixture"
+      }
+    ],
+    "policy_recheck_required": true,
+    "raw_packet_policy": "blocked_requires_redaction"
+  },
+  {
+    "schema_version": "manifest-v1",
+    "revision": 2,
+    "session_alias": "Session01",
+    "participant_alias": "Participant01",
+    "close_state": "pending_upload",
+    "close_intent": {
+      "intent_id_alias": "Intent01",
+      "expected_artifacts": {
+        "Artifact0": "41919f132f015e9686b2972270663b4732e9e18d3456df719746c0b2f663efcb",
+        "Artifact1": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "Artifact2": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "Artifact3": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "Artifact4": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "Artifact5": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "Artifact6": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "streams": [
+        {
+          "stream_alias": "Stream01",
+          "segment_alias": "Segment01",
+          "signal": "eeg",
+          "last_chunk_sequence": 0,
+          "last_feature_sequence": 0,
+          "received_samples": 4
+        },
+        {
+          "stream_alias": "Stream01",
+          "segment_alias": "Segment02",
+          "signal": "eeg",
+          "last_chunk_sequence": 0,
+          "last_feature_sequence": 0,
+          "received_samples": 0
+        }
+      ],
+      "snapshots": [
+        {
+          "stream_alias": "Stream01",
+          "view_instance_alias": "View01",
+          "last_snapshot_sequence": 0
+        }
+      ],
+      "last_gap_sequence": 0,
+      "end_reason": "synthetic_close_after_unknown_tail"
+    },
+    "time_basis": "session_relative",
+    "default_view": "participant_player",
+    "streams": [
+      {
+        "stream_alias": "Stream01",
+        "segment_alias": "Segment01",
+        "signal": "eeg",
+        "profile": {
+          "firmware": "unknown",
+          "device_model": "LINK-BAND-2.0-synthetic",
+          "profile_id": "mb-web-clock-v1",
+          "version": "1",
+          "parameters_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "platform": "synthetic",
+          "verification": "synthetic_only",
+          "packet_endian": "mixed",
+          "tick_hz": 32768,
+          "tick_bits": 32,
+          "header_anchor": "last_sample"
+        },
+        "rate": {
+          "numerator": 250,
+          "denominator": 1
+        },
+        "observed_rate": null,
+        "observed_rate_window_us": null,
+        "observed_rate_reason": "synthetic_only",
+        "channels": [
+          "fp1",
+          "fp2"
+        ],
+        "units": [
+          "uV",
+          "uV"
+        ],
+        "time_basis": "session_relative"
+      }
+    ],
+    "signals": [
+      {
+        "signal": "eeg",
+        "availability": "available",
+        "unavailable_reason": null,
+        "expected_samples": null,
+        "acked_samples": 4,
+        "lost_samples": null,
+        "unknown_samples": true
+      },
+      {
+        "signal": "ppg",
+        "availability": "not_collected",
+        "unavailable_reason": "band_signal_not_collected",
+        "expected_samples": null,
+        "acked_samples": 0,
+        "lost_samples": null,
+        "unknown_samples": false
+      },
+      {
+        "signal": "acc",
+        "availability": "not_collected",
+        "unavailable_reason": "band_signal_not_collected",
+        "expected_samples": null,
+        "acked_samples": 0,
+        "lost_samples": null,
+        "unknown_samples": false
+      }
+    ],
+    "artifacts": [
+      {
+        "artifact_id_alias": "Artifact0",
+        "artifact_kind": "raw",
+        "path": "class-C01/session-001_date-withheld/participant-P01/raw/eeg/stream-S01/segment-001/chunk-000000.bin",
+        "schema_version": "mb-biosignal-raw-v2",
+        "dictionary_key": "raw",
+        "row_count": 4,
+        "size_bytes": 2202,
+        "sha256": "41919f132f015e9686b2972270663b4732e9e18d3456df719746c0b2f663efcb",
+        "uncompressed_sha256": null,
+        "time_range": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "selection": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "extra_range": [],
+        "retention": "raw_90_days",
+        "retention_deadline_us": null,
+        "consent_scope": [
+          "synthetic-only"
+        ],
+        "consent_version": "synthetic-v1",
+        "availability": "available",
+        "unavailable_reason": null,
+        "ack_state": "verified"
+      },
+      {
+        "artifact_id_alias": "Artifact1",
+        "artifact_kind": "feature",
+        "path": "class-C01/session-001_date-withheld/participant-P01/feature/fixture.json",
+        "schema_version": "feature-v1",
+        "dictionary_key": "feature",
+        "row_count": 1,
+        "size_bytes": 1,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "uncompressed_sha256": null,
+        "time_range": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "selection": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "extra_range": [],
+        "retention": "feature_policy",
+        "retention_deadline_us": null,
+        "consent_scope": [
+          "synthetic-only"
+        ],
+        "consent_version": "synthetic-v1",
+        "availability": "available",
+        "unavailable_reason": null,
+        "ack_state": "verified"
+      },
+      {
+        "artifact_id_alias": "Artifact2",
+        "artifact_kind": "raw_derived",
+        "path": "class-C01/session-001_date-withheld/participant-P01/raw_derived/fixture.json",
+        "schema_version": "raw_derived-v1",
+        "dictionary_key": "raw_derived",
+        "row_count": 1,
+        "size_bytes": 1,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "uncompressed_sha256": null,
+        "time_range": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "selection": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "extra_range": [],
+        "retention": "raw_90_days",
+        "retention_deadline_us": null,
+        "consent_scope": [
+          "synthetic-only"
+        ],
+        "consent_version": "synthetic-v1",
+        "availability": "available",
+        "unavailable_reason": null,
+        "ack_state": "pending"
+      },
+      {
+        "artifact_id_alias": "Artifact3",
+        "artifact_kind": "indices",
+        "path": "class-C01/session-001_date-withheld/participant-P01/indices/fixture.json",
+        "schema_version": "indices-v1",
+        "dictionary_key": "indices",
+        "row_count": 1,
+        "size_bytes": 1,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "uncompressed_sha256": null,
+        "time_range": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "selection": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "extra_range": [],
+        "retention": "feature_policy",
+        "retention_deadline_us": null,
+        "consent_scope": [
+          "synthetic-only"
+        ],
+        "consent_version": "synthetic-v1",
+        "availability": "available",
+        "unavailable_reason": null,
+        "ack_state": "verified"
+      },
+      {
+        "artifact_id_alias": "Artifact4",
+        "artifact_kind": "normalization",
+        "path": "class-C01/session-001_date-withheld/participant-P01/normalization/fixture.json",
+        "schema_version": "normalization-v1",
+        "dictionary_key": "normalization",
+        "row_count": 1,
+        "size_bytes": 1,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "uncompressed_sha256": null,
+        "time_range": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "selection": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "extra_range": [],
+        "retention": "feature_policy",
+        "retention_deadline_us": null,
+        "consent_scope": [
+          "synthetic-only"
+        ],
+        "consent_version": "synthetic-v1",
+        "availability": "available",
+        "unavailable_reason": null,
+        "ack_state": "verified"
+      },
+      {
+        "artifact_id_alias": "Artifact5",
+        "artifact_kind": "algorithm",
+        "path": "class-C01/session-001_date-withheld/participant-P01/algorithm/fixture.json",
+        "schema_version": "algorithm-v1",
+        "dictionary_key": "algorithm",
+        "row_count": 1,
+        "size_bytes": 1,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "uncompressed_sha256": null,
+        "time_range": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "selection": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "extra_range": [],
+        "retention": "feature_policy",
+        "retention_deadline_us": null,
+        "consent_scope": [
+          "synthetic-only"
+        ],
+        "consent_version": "synthetic-v1",
+        "availability": "available",
+        "unavailable_reason": null,
+        "ack_state": "verified"
+      },
+      {
+        "artifact_id_alias": "Artifact6",
+        "artifact_kind": "gap",
+        "path": "class-C01/session-001_date-withheld/participant-P01/gap/fixture.json",
+        "schema_version": "gap-v1",
+        "dictionary_key": "gap",
+        "row_count": 1,
+        "size_bytes": 1,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "uncompressed_sha256": null,
+        "time_range": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "selection": {
+          "from_us": "0",
+          "to_us": "1000000"
+        },
+        "extra_range": [],
+        "retention": "feature_policy",
+        "retention_deadline_us": null,
+        "consent_scope": [
+          "synthetic-only"
+        ],
+        "consent_version": "synthetic-v1",
+        "availability": "available",
+        "unavailable_reason": null,
+        "ack_state": "verified"
+      }
+    ],
+    "gaps": [
+      {
+        "discovered_at_us": "1000000",
+        "event_id_alias": "Gap01",
+        "signal": "eeg",
+        "stream_alias": "Stream01",
+        "segment_alias": "Segment01",
+        "start_us": "1000000",
+        "end_us": null,
+        "reason": "process_terminated",
+        "observed_or_estimated": "unknown",
+        "expected_samples": null,
+        "received_samples": null,
+        "reconnect_count": 0,
+        "sequence": 0
+      }
+    ],
+    "models": [
+      {
+        "model_id_alias": "Model01",
+        "version": "synthetic-v1",
+        "params_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "focus": {
+          "m": null,
+          "s": null,
+          "direction": null,
+          "source": "b0",
+          "b0_version": "synthetic-b0-v1",
+          "fallback_reason": "synthetic_fixture"
+        },
+        "relaxation": {
+          "m": null,
+          "s": null,
+          "direction": null,
+          "source": "b0",
+          "b0_version": "synthetic-b0-v1",
+          "fallback_reason": "synthetic_fixture"
+        },
+        "emotional": {
+          "m": null,
+          "s": null,
+          "direction": null,
+          "source": "b0",
+          "b0_version": "synthetic-b0-v1",
+          "fallback_reason": "synthetic_fixture"
+        },
+        "formula_version": "fixture-v1",
+        "formula_constants": {
+          "center": 50.0,
+          "range": 50.0
+        },
+        "source": "b0",
+        "cached": false
+      }
+    ],
+    "algorithms": [
+      {
+        "algorithm_id": "mb-synthetic",
+        "algorithm_version": "fixture-v1",
+        "parameters_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "parameters": {
+          "synthetic": true
+        },
+        "filter_version": "fixture-v1",
+        "build": "sdd244-fixture"
+      }
+    ],
+    "policy_recheck_required": true,
+    "raw_packet_policy": "blocked_requires_redaction"
+  }
+]

@@ -9,6 +9,8 @@ import type { ProcessedEEGData } from './types/eeg';
 import { AnalysisMetricsService } from './AnalysisMetricsService';
 import type { ChunkMetadata } from './blePacketParser';
 import { createLogger } from "./logger";
+import type { SampleWindow } from '../biosignal/capture-session';
+import type { Scalars } from '../biosignal/feature-record';
 
 
 const logger = createLogger("StreamProc");
@@ -47,6 +49,10 @@ export interface SystemCallbacks {
   onProcessedACC?: (data: any) => void;
   onError?: (error: Error) => void;
   onStoreUpdate?: (action: string, ...args: unknown[]) => void;
+  /** SDD-244: 분석 시작 시점의 원창(마지막 count개 샘플) 조회 — 수집 중이 아니면 null */
+  onFeatureWindow?: (signal: 'eeg' | 'ppg' | 'acc', count: number) => SampleWindow | null;
+  /** SDD-244: 처리기 emit마다(1Hz 다운샘플 없이) 상세 결과 전체 전달 */
+  onFeatureEmit?: (signal: 'eeg' | 'ppg' | 'acc', data: Record<string, unknown>, window: SampleWindow | null, extras?: Partial<Scalars>) => void;
 }
 
 export interface PerformanceMetrics {
@@ -536,12 +542,21 @@ export class StreamProcessor {
     this.storeCallbacks = {};
   }
 
+  private featureWindow(signal: 'eeg' | 'ppg' | 'acc', count: number): SampleWindow | null {
+    try { return this.systemCallbacks.onFeatureWindow?.(signal, count) ?? null; } catch (error) { logger.warn('feature 원창 조회 실패', error); return null; }
+  }
+
+  private emitFeature(signal: 'eeg' | 'ppg' | 'acc', data: object, window: SampleWindow | null, extras?: Partial<Scalars>): void {
+    try { this.systemCallbacks.onFeatureEmit?.(signal, data as Record<string, unknown>, window, extras); } catch (error) { logger.warn('feature emit 전달 실패 — 기존 분석에는 영향 없음', error); }
+  }
+
   /**
    * 고급 EEG 처리 (비동기) - 직접 ProcessedDataStore 업데이트
    */
   private async performAdvancedEEGProcessing(bufferData: EEGDataPoint[]): Promise<void> {
     // STREAM-PERF-001: Morlet 재분석은 메인스레드를 블로킹한다 — in-flight 가드로 중복 방지.
     this.isAnalyzingEEG = true;
+    const featureWindow = this.featureWindow('eeg', bufferData.length);
     try {
       // bufferData는 이미 EEGDataPoint[]이므로 직접 사용
       const result = await this.eegProcessor.processEEGData(bufferData);
@@ -664,6 +679,8 @@ export class StreamProcessor {
                 hemisphericBalance: result.indices.hemisphericBalance,
                 // EEG-NUM-002: 좌우뇌 균형 점수화 정본 입력 FAA(로그비) — null(미측정) 보존.
                 faa: result.indices.faa,
+                // SDD-244: 누락돼 있던 DB 스칼라 total_neural_activity 연결(화면 지표 계산은 그대로)
+                totalNeuralActivity: result.indices.totalNeuralActivity,
                 cognitiveLoad: result.indices.cognitiveLoad,
                 emotionalStability: result.indices.emotionalStability,
                 attentionLevel: result.indices.focusIndex, // focusIndex를 attentionLevel로 사용
@@ -675,6 +692,8 @@ export class StreamProcessor {
           }
         }
         
+        this.emitFeature('eeg', result, featureWindow);
+
         // SystemCallbacks로 processed EEG 데이터 전달 (S3CloudStorageService 등)
         if (this.systemCallbacks.onProcessedEEG) {
           this.systemCallbacks.onProcessedEEG(transformedEEGData);
@@ -716,6 +735,7 @@ export class StreamProcessor {
       }
     }, 1000);
     
+    const featureWindow = this.featureWindow('ppg', bufferData.length);
     try {
       // bufferData는 이미 PPGDataPoint[]이므로 직접 사용
       const result = await this.ppgProcessor.processPPGData(bufferData);
@@ -757,6 +777,7 @@ export class StreamProcessor {
               currentSQI,
               isQualityGood,
               result.rrIntervals,
+              this.ppgProcessor.getRrEndTimestamps(result),
             );
           } catch (error) {
             logger.error('❌ PPG 분석 지표 생성 실패:', error);
@@ -765,6 +786,7 @@ export class StreamProcessor {
 
         // 2) AnalysisMetricsService getter로 실제 HRV 값 사용 (계산 불가 시 null 유지)
         const hrv = this.analysisMetricsService.getCurrentHRVMetrics();
+        this.emitFeature('ppg', result, featureWindow, { rmssd: hrv.rmssd, respiratory_rate: hrv.respiratoryRate, motion: hrv.motion });
 
         const ppgData = {
           filteredData: result.filteredData,
@@ -896,6 +918,7 @@ export class StreamProcessor {
       return;
     }
 
+    const featureWindow = this.featureWindow('acc', accData.length);
     try {
       // ACC 신호 처리
       const result = await this.accProcessor.processACCData(accData);
@@ -942,6 +965,8 @@ export class StreamProcessor {
           }
         }
         
+        this.emitFeature('acc', result, featureWindow, { motion: this.analysisMetricsService.getCurrentMotion() });
+
         // SystemCallbacks로 processed ACC 데이터 전달 (S3CloudStorageService 등)
         const accAnalysisData = {
           magnitude: magnitudeGraphData,

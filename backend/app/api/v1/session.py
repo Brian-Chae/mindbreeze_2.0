@@ -61,7 +61,11 @@ from app.schemas.eeg import (
     RawPresignRequest,
     RawPresignResponse,
 )
+from app.schemas import biosignal as biosignal_schema
 from app.services import (
+    biosignal_artifact_service,
+    biosignal_manifest_service,
+    biosignal_service,
     class_read_service,
     eeg_raw_service,
     eeg_rollup_service,
@@ -778,6 +782,119 @@ def ack_eeg_raw(
     """SDD-027: raw EEG 청크 업로드 완료 확인(ack) — EEGRecord.file_count 갱신."""
     return eeg_raw_service.ack_upload(
         session_id, payload, db,
+        current_user_id=current_user["id"] if current_user else None,
+        entry_credential=x_entry_credential,
+    )
+
+
+@router.post("/{session_id}/biosignal-raw/presign", response_model=biosignal_schema.PresignResponse)
+def presign_biosignal_raw(
+    session_id: str,
+    payload: biosignal_schema.PresignRequest,
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-244: EEG/PPG/ACC raw v2 청크 presign(내용 주소 key, SHA-256 서명 헤더 바인딩)."""
+    return biosignal_service.presign_raw(
+        session_id, payload, db,
+        current_user_id=current_user["id"] if current_user else None,
+        entry_credential=x_entry_credential,
+    )
+
+
+@router.post("/{session_id}/biosignal-raw/ack", response_model=biosignal_schema.AckResponse)
+def ack_biosignal_raw(
+    session_id: str,
+    payload: biosignal_schema.AckRequest,
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-244: raw v2 검증 ACK — 저장소 존재·크기·SHA-256 확인 항목만 uploaded."""
+    return biosignal_service.ack_raw(
+        session_id, payload, db,
+        current_user_id=current_user["id"] if current_user else None,
+        entry_credential=x_entry_credential,
+    )
+
+
+@router.post("/{session_id}/biosignal-artifacts/presign", response_model=biosignal_schema.ArtifactPresignResponse)
+def presign_biosignal_artifacts(
+    session_id: str,
+    payload: biosignal_schema.ArtifactPresignRequest,
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-244: feature/raw_derived/indices/normalization/algorithm 객체 presign."""
+    return biosignal_artifact_service.presign(
+        session_id, payload, db,
+        current_user_id=current_user["id"] if current_user else None,
+        entry_credential=x_entry_credential,
+    )
+
+
+@router.post("/{session_id}/biosignal-artifacts/ack", response_model=biosignal_schema.ArtifactAckResponse)
+def ack_biosignal_artifacts(
+    session_id: str,
+    payload: biosignal_schema.ArtifactAckRequest,
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-244: 산출물 검증 ACK(indices/normalization 은 검색 원장 색인 포함)."""
+    return biosignal_artifact_service.ack(
+        session_id, payload, db,
+        current_user_id=current_user["id"] if current_user else None,
+        entry_credential=x_entry_credential,
+    )
+
+
+@router.post("/{session_id}/biosignal-events", response_model=biosignal_schema.EventsResponse)
+def post_biosignal_events(
+    session_id: str,
+    payload: biosignal_schema.EventsRequest,
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-244: gap 이벤트·close intent 멱등 수신 → 원장 대조 후 manifest revision 판정."""
+    return biosignal_manifest_service.record_events(
+        session_id, payload, db,
+        current_user_id=current_user["id"] if current_user else None,
+        entry_credential=x_entry_credential,
+    )
+
+
+@router.get("/{session_id}/biosignal-manifest", response_model=biosignal_schema.ManifestResponse)
+def get_biosignal_manifest(
+    session_id: str,
+    participant_id: UUID | None = None,
+    revision: int | None = Query(None, ge=1),
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-244: 본인 회차 manifest 의 최신(또는 지정) revision. 공개 alias DTO."""
+    return biosignal_manifest_service.manifest_response(
+        session_id, participant_id, revision, db,
+        current_user_id=current_user["id"] if current_user else None,
+        entry_credential=x_entry_credential,
+    )
+
+
+@router.get("/{session_id}/biosignal-capabilities", response_model=biosignal_schema.CapabilityResponse)
+def get_biosignal_capabilities(
+    session_id: str,
+    participant_id: UUID | None = None,
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-244: 클라이언트 v2 수집 가능 여부·신호별 업로드/연구 동의 상태."""
+    return biosignal_service.capabilities(
+        session_id, participant_id, db,
         current_user_id=current_user["id"] if current_user else None,
         entry_credential=x_entry_credential,
     )
