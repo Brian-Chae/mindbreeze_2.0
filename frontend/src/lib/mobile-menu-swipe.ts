@@ -39,4 +39,9 @@ export function shouldCommitSwipe(dx: number, width: number, samples: SwipeSampl
   const velocity = (last.x - first.x) / (last.time - first.time);
   return Math.sign(velocity) === Math.sign(dx) && Math.abs(velocity) >= 0.5;
 }
+/** 메뉴 끝에서 이어서 넘기면 반대쪽 끝으로 순환한다(설정 → 홈, 홈 → 설정). */
+export function getSwipeTargetIndex(index: number, dx: number, length: number): number {
+  if (length < 2 || index < 0) return -1;
+  return (index + (dx < 0 ? 1 : -1) + length) % length;
+}
 export function resistSwipe(dx: number): number { return Math.sign(dx) * Math.min(32, Math.abs(dx) * 0.22); }

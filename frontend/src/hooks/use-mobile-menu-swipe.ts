@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { UserRole } from '../lib/api/auth';
 import { isCounselingEnabled } from '../lib/feature-flags';
-import { getMobileMenuTabs, getSwipeAxis, getSwipeRootIndex, resistSwipe, shouldCommitSwipe, type SwipeSample } from '../lib/mobile-menu-swipe';
+import { getMobileMenuTabs, getSwipeAxis, getSwipeRootIndex, getSwipeTargetIndex, resistSwipe, shouldCommitSwipe, type SwipeSample } from '../lib/mobile-menu-swipe';
 import { hasMobileSwipeProtection, hasSwipeDomProtection, isHorizontalSwipeRegion, isSwipeTargetExcluded, subscribeMobileSwipeProtection } from '../lib/mobile-menu-swipe-protection';
 import '../components/layout/mobile-menu-swipe.css';
 
@@ -97,7 +97,7 @@ export function useMobileMenuSwipe(role: UserRole | null | undefined, blocked: b
     };
     const render = () => {
       if (!active || !active.horizontal || reduced.matches) return;
-      const nextIndex = index + (active.dx < 0 ? 1 : -1);
+      const nextIndex = getSwipeTargetIndex(index, active.dx, tabs.length);
       makePreview(nextIndex);
       const offset = tabs[nextIndex] ? active.dx : resistSwipe(active.dx);
       page.style.transform = `translate3d(${offset}px,0,0)`;
@@ -134,7 +134,7 @@ export function useMobileMenuSwipe(role: UserRole | null | undefined, blocked: b
       if (!active.horizontal || protectedNow()) { cancel(); return; }
       active.dx = event.clientX - active.x;
       active.samples.push({ x: event.clientX, time: event.timeStamp });
-      const nextIndex = index + (active.dx < 0 ? 1 : -1);
+      const nextIndex = getSwipeTargetIndex(index, active.dx, tabs.length);
       const commit = Boolean(tabs[nextIndex]) && Math.abs(active.dx) >= Math.abs(event.clientY - active.y) * 1.5 && shouldCommitSwipe(active.dx, active.width, active.samples);
       const destination = commit ? tabs[nextIndex] : null;
       const width = active.width;
