@@ -6,6 +6,7 @@
 
 실행 예: cd backend && venv/bin/python retention_sweep_cron.py            # 설정에 따름(기본 dry-run)
          cd backend && venv/bin/python retention_sweep_cron.py --dry-run  # 활성 상태에서도 보고만
+         # 승인된 dev 크론: enabled=true + --retroactive (빈 적용 하한의 전체 소급)
 """
 import json
 import sys
@@ -16,9 +17,10 @@ from app.services.retention_sweep_service import run_retention_sweep
 
 def main(argv: list[str]) -> int:
     dry_run = True if "--dry-run" in argv else None
+    retroactive = "--retroactive" in argv
     db = SessionLocal()
     try:
-        report = run_retention_sweep(db, dry_run=dry_run, trigger="cron")
+        report = run_retention_sweep(db, dry_run=dry_run, trigger="cron", retroactive=retroactive)
         print(f"[retention_sweep] {json.dumps(report, ensure_ascii=False, default=str)}")
         return 0
     except Exception as exc:  # noqa: BLE001

@@ -39,3 +39,7 @@
 
 ## 수행하지 않은 작업
 머지·develop push·배포·서버/DB/.env 접근·실데이터 삭제·메일/알림 발송·실제 삭제 설정 활성화는 수행하지 않았다. 테스트 내 execute 설정은 격리된 fixture에서만 사용했다.
+
+## 10/24 후속 활성화 결정
+
+- Brian 승인: 릴리즈 전 dev 실삭제·기존 자료 소급 적용, 표준 baseline/model/constants 보호, 연구 A안·미ack 보류 유지. dev 크론만 enabled=true + 명시적 --retroactive로 빈 적용 하한 실행을 허용하며 운영 기본 차단은 유지한다. 상세 보호 판정·첫 실행 영향·검증은 [후속 summary](../../fix-notes/dev-retention-enable/summary.md) 참조. 이 결정은 위 최초 dry-run 준비 단계의 승인 대기 기록을 dev 범위에서 대체하며, 서버 배포·크론 실행은 이번 작업에서 하지 않는다.

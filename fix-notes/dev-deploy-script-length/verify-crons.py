@@ -31,9 +31,14 @@ registration = (ROOT / "deploy/dev/register-crons.sh").read_text()
 old_lines = [line for line in before.splitlines() if line.startswith("(crontab")]
 new_lines = [line for line in registration.splitlines() if line.startswith("(crontab")]
 assert len(old_lines) == 17
-assert old_lines == new_lines, "크론 등록 명령의 문자열이 바뀌었다"
-assert "retention_sweep_cron.py --dry-run >>" in registration
-assert "retention_sweep_cron.py >>" not in registration
+# Brian 10/24 승인: retention 한 줄의 실삭제/소급 옵션 변경만 허용한다.
+expected_lines = [line.replace(
+    "venv/bin/python retention_sweep_cron.py --dry-run",
+    "export RETENTION_SWEEP_ENABLED=true && venv/bin/python retention_sweep_cron.py --retroactive",
+) for line in old_lines]
+assert expected_lines == new_lines, "승인된 retention 외 크론 변경"
+assert "retention_sweep_cron.py --retroactive >>" in registration
+assert "retention_sweep_cron.py --dry-run >>" not in registration
 
 # 크론 이동과 호출 외 SSH 본문이 바뀌지 않았는지 독립 확인한다.
 start = before.index("# 5.5 알림")
@@ -62,7 +67,7 @@ with tempfile.TemporaryDirectory(prefix="mb-cron-compare-") as directory:
     root = Path(directory)
     for scenario in ("empty", "existing"):
         results = []
-        for label, commands in (("before", "\n".join(old_lines)), ("after", registration)):
+        for label, commands in (("before", "\n".join(expected_lines)), ("after", registration)):
             home = root / scenario / label
             home.mkdir(parents=True)
             state = home / "crontab-state"

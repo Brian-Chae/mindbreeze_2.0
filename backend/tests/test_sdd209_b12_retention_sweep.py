@@ -421,3 +421,58 @@ def test_sdd238_dry_run_reports_candidates_without_deletion_or_external_effects(
     assert unchanged_consent.export_state == "pending" and unchanged_consent.hold_alerted_at is None
     run = db.query(RetentionSweepRun).one()
     assert run.status == "completed" and run.mode == "dry_run" and run.trigger == "cron"
+
+
+@pytest.mark.parametrize("requested,expected_mode", [(None, "execute"), (True, "dry_run")])
+def test_dev_소급옵션_빈하한_표준데이터_보존(db, enabled, monkeypatch, deleted_refs, requested, expected_mode):
+    """세션 원본 삭제 중에도 독립 표준 측정값/분포 모델/상수를 보존한다."""
+    from pathlib import Path
+    from sqlalchemy import inspect
+    from app.models.normalization_baseline import NormalizationBaseline
+    from app.models.normalization_model import NormalizationModel
+    from app.services.retention_sweep_service import run_retention_sweep
+
+    monkeypatch.setattr(settings, "retention_apply_from", "")
+    host, old, *_ = _session_with_originals(db, ended_at=NOW - timedelta(days=1000))
+    baseline = NormalizationBaseline(user_id=str(host.id), closed={"alpha": 1.2}, open={"alpha": 0.8}, is_active=True)
+    model = NormalizationModel(version=1, n_samples=1, params={"alpha": {"mean": 1.0, "std": 0.2}}, is_active=True)
+    db.add_all([baseline, model])
+    db.commit()
+    def snapshot(row):
+        return {col.key: getattr(row, col.key) for col in inspect(type(row)).columns}
+    before = snapshot(baseline), snapshot(model)
+    constants = Path(__file__).resolve().parents[1] / "app/services/normalization_constants.json"
+    original_constants = constants.read_bytes()
+    report = run_retention_sweep(db, now=NOW, dry_run=requested, retroactive=True)
+    assert report["mode"] == expected_mode
+    assert report["cutoffs"]["apply_from"] is None
+    assert report["raw"]["deleted"]["eeg_raw_chunks"] == (4 if expected_mode == "execute" else 0)
+    db.expire_all()
+    assert db.query(NormalizationBaseline).count() == db.query(NormalizationModel).count() == 1
+    assert (snapshot(db.query(NormalizationBaseline).one()), snapshot(db.query(NormalizationModel).one())) == before
+    assert db.query(Session).filter_by(id=old.id).one()
+    assert constants.read_bytes() == original_constants
+
+
+def test_dev_소급옵션도_잘못된_하한은_차단(db, enabled, monkeypatch, deleted_refs):
+    monkeypatch.setattr(settings, "retention_apply_from", "invalid")
+    _session_with_originals(db)
+    from app.services.retention_sweep_service import run_retention_sweep
+    assert run_retention_sweep(db, now=NOW, retroactive=True)["mode"] == "dry_run"
+    assert not deleted_refs
+
+
+@pytest.mark.parametrize("args,expected_mode", [(["--retroactive"], "execute"), (["--retroactive", "--dry-run"], "dry_run")])
+def test_dev_cron_소급옵션이_서비스까지_전달된다(db, enabled, monkeypatch, capsys, deleted_refs, args, expected_mode):
+    import retention_sweep_cron
+    from app.services import retention_sweep_service
+    monkeypatch.setattr(retention_sweep_cron, "SessionLocal", lambda: db)
+    monkeypatch.setattr(retention_sweep_service, "_now", lambda: NOW)
+    monkeypatch.setattr(settings, "retention_apply_from", "")
+    _, session, *_ = _session_with_originals(db)
+    session_id = session.id
+    assert retention_sweep_cron.main(args) == 0
+    output = capsys.readouterr().out
+    assert f'"mode": "{expected_mode}"' in output
+    assert '"retroactive": true' in output
+    assert _counts(db, session_id)["eeg"] == (0 if expected_mode == "execute" else 4)
