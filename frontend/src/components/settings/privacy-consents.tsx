@@ -1,3 +1,4 @@
+import { RESEARCH_METADATA_NOTICE } from '../../lib/privacy-policy';
 // 설정 > 개인정보: 선택 동의(뇌파 수집·연구 활용) 확인·철회. 필수 동의와 회차 녹음·녹화 동의에는 영향이 없다.
 // 저장에 실패하면 화면을 바꾸지 않고(성공으로 표시하지 않고) 안내만 한다.
 
@@ -53,6 +54,7 @@ export function PrivacyConsentsSection() {
       </h3>
       <p className="text-[12px] text-[#6F6F6F] mb-4">
         동의하지 않아도 클래스와 리포트를 이용할 수 있어요. <PrivacyPolicyLink>개인정보 처리방침</PrivacyPolicyLink>
+        <span className="block">{RESEARCH_METADATA_NOTICE}</span>
       </p>
       {loadFailed ? (
         <div className="text-sm text-[#6F6F6F]">

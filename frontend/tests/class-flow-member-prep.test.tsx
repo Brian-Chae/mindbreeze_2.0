@@ -177,11 +177,22 @@ describe('FM06a 고지·리포트 반영 선택·연구 동의', () => {
     expect(box).toHaveLength(1);
     expect(box[0]!.getAttribute('aria-checked')).toBe('false');
     expect(box[0]!.textContent).toContain('동의해요');
+    const summary = qa('[aria-label="연구 동의"]')[0]!;
+    for (const field of ['진행자 실명·실제 계정 ID·역할', '측정 시작·종료 시각(UTC·한국시간)', '프로그램 유형·회차·운영 정보']) {
+      expect(summary.textContent).toContain(field);
+    }
     await openNoticeSheet('연구 데이터 활용');
     expect(text()).toContain('연구 목적 데이터 활용에 동의할까요? (선택)');
+    const detail = qa('.notice-detail')[0]!;
+    for (const field of ['진행자 실명·실제 계정 ID·역할', '측정 시작·종료 시각(UTC·한국시간)', '프로그램 유형·회차·운영 정보']) {
+      expect(detail.textContent).toContain(field);
+    }
     for (const line of [
-      '동의하면 비식별 처리한 뇌파·맥박·움직임 데이터와 지표, 암호화한 이름 ID·성별·생년·월이 삭제 기한 없이 계속 보관돼요',
-      '이메일·전화번호·이름·녹음 내용은 보관하지 않아요',
+      '동의하면 비식별 처리한 뇌파·맥박·움직임 데이터와 지표, 이름과 생년월일에서 생성한 HMAC 가명 ID·성별·생년·월이 삭제 기한 없이 계속 보관돼요',
+      '참여자 이름 원문·이메일·전화번호·생년월일의 일자·녹음 내용은 포함하지 않습니다.',
+      '진행자 실명·실제 계정 ID·역할',
+      '측정 시작·종료 시각(UTC·한국시간)',
+      '프로그램 유형·회차·운영 정보',
       '동의하지 않아도 클래스에 참여할 수 있어요',
       '철회하려면 운영팀에 요청해 주세요',
       '비식별 처리해도 다른 정보와 결합하면 본인을 알아볼 가능성이 완전히 없지는 않아요',

@@ -1,3 +1,4 @@
+import { RESEARCH_METADATA_NOTICE } from '../../../../lib/privacy-policy';
 // SDD-209 M2 — FM06a 시작 전에 확인해 주세요: 고지 + 리포트 반영 선택 + 연구 동의(별도 블록).
 // 어느 선택이든(고르지 않아도, 저장에 실패해도) 주 버튼은 항상 활성이고 입장·녹음·영상·뇌파 업로드를 막지 않는다.
 import { Activity, Check, CircleAlert, Clock, Mic, Users, Video } from 'lucide-react';
@@ -101,8 +102,8 @@ export function NoticeStepView({
               <p>리포트 반영은 클래스가 끝나기 전까지 바꿀 수 있어요.</p>
             </section> : detail === 'research' ? <section>
               <h3>연구 목적 데이터 활용에 동의할까요? (선택)</h3>
-                <p className="fm-ft">동의하면 비식별 처리한 뇌파·맥박·움직임 데이터와 지표, 암호화한 이름 ID·성별·생년·월이 삭제 기한 없이 계속 보관돼요</p>
-                <p className="fm-ft">이메일·전화번호·이름·녹음 내용은 보관하지 않아요</p>
+                <p className="fm-ft">동의하면 비식별 처리한 뇌파·맥박·움직임 데이터와 지표, 이름과 생년월일에서 생성한 HMAC 가명 ID·성별·생년·월이 삭제 기한 없이 계속 보관돼요</p>
+                <p className="fm-ft">{RESEARCH_METADATA_NOTICE}</p>
                 <p className="fm-ft">동의하지 않아도 클래스에 참여할 수 있어요</p>
                 <p className="fm-ft">철회하려면 운영팀에 요청해 주세요</p>
                 <p className="fm-ft">비식별 처리해도 다른 정보와 결합하면 본인을 알아볼 가능성이 완전히 없지는 않아요</p>
@@ -158,7 +159,8 @@ export function NoticeStepView({
         </section>
         <section className="notice-card" aria-label="연구 동의">
           <div className="notice-cardhead"><h2>연구 데이터 활용 <span>선택</span></h2><button type="button" className="notice-more" aria-label="연구 데이터 활용 자세히 보기" onClick={() => setDetail('research')}>자세히 보기 ↗</button></div>
-          <p className="notice-research-copy">비식별 뇌파·맥박·움직임 데이터와 지표,<br />암호화한 이름 ID·성별·생년·월을<br /><strong>삭제 기한 없이 보관</strong><br />철회: 운영팀 요청 · 미동의도 참여 가능</p>
+          <p className="notice-research-copy">비식별 뇌파·맥박·움직임 데이터와 지표,<br />이름과 생년월일에서 생성한 HMAC 가명 ID·성별·생년·월을<br /><strong>삭제 기한 없이 보관</strong><br />철회: 운영팀 요청 · 미동의도 참여 가능</p>
+          <p className="notice-research-copy">{RESEARCH_METADATA_NOTICE}</p>
           <button type="button" className="fm-check notice-consent" role="checkbox" aria-checked={researchConsent} onClick={() => onResearchChange(!researchConsent)}>
             <span className="fm-box"><Check aria-hidden="true" strokeWidth={3} /></span>동의해요 <span>(선택)</span>
           </button>

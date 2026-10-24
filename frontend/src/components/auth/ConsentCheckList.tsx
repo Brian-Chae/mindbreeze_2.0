@@ -1,3 +1,4 @@
+import { RESEARCH_METADATA_NOTICE } from '../../lib/privacy-policy';
 // 약관 동의 체크리스트 (필수 3종 + 선택 2종: 뇌파 수집·연구 활용)
 
 import { PrivacyPolicyLink } from '../legal/PrivacyPolicyLink';
@@ -99,6 +100,7 @@ export function ConsentCheckList({ consents, onChange }: ConsentCheckListProps) 
             </label>
             <p className="pl-11 pb-1 text-xs text-[var(--mb-fg-muted,#6F6F6F)]">
               동의하지 않아도 가입과 클래스 이용에는 영향이 없어요. 설정에서 언제든 바꿀 수 있어요.
+              {item.key === 'research' ? <span className="block">{RESEARCH_METADATA_NOTICE}</span> : null}
             </p>
           </li>
         ))}

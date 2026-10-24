@@ -30,7 +30,8 @@ from app.services.session_authz import SessionAction, get_session_authorized
 logger = logging.getLogger(__name__)
 
 # 서버가 기본으로 기록하는 고지 문구 버전(클라이언트가 보내지 않을 때)
-DEFAULT_NOTICE_VERSION = "r5-1"
+DEFAULT_NOTICE_VERSION = "r5-1"  # 버전 미전달은 구고지로 보존한다.
+EXPANDED_NOTICE_VERSION = "r5-2"
 
 STATE_NOT_APPLICABLE = "not_applicable"
 STATE_PENDING = "pending"
@@ -178,7 +179,10 @@ def set_own_consent(
         p.research_consent_override = True
     row = _get_consent(p.id, db)
     previous = bool(row and row.consented)
-    if consented == previous:
+    # 기존 true를 확장하는 것은 새 고지 버전을 명시하여 다시 선택한 경우뿐이다.
+    renewing = bool(consented and previous and notice_version == EXPANDED_NOTICE_VERSION
+                    and row.notice_version != EXPANDED_NOTICE_VERSION)
+    if consented == previous and not renewing:
         db.commit()
         return _view(p.id, row, changed=False)
 

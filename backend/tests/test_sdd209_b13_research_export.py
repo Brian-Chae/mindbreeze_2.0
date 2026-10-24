@@ -153,7 +153,7 @@ def test_BT63_동의_건만_번들_허용_필드_외_컬럼_0_생년월은_YYYY_
     result = _export(db, s)
     assert result["status"] == "uploaded", result
     files = _bundle(staging, result["batch_id"])
-    assert set(files) == {"sessions.parquet", "subjects.parquet", "eeg_raw.parquet", "features.parquet", "manifest.json"}
+    assert set(files) == {"sessions.parquet", "subjects.parquet", "eeg_raw.parquet", "features.parquet", "facilitators.parquet", "manifest.json"}
 
     from app.services.research_export_service import ALLOWED_COLUMNS
 
@@ -238,7 +238,7 @@ def test_BT65_manifest_해시_바이트_행수_일치_변조_시_ack_거부(db, 
     files = _bundle(staging, result["batch_id"])
     manifest = json.loads(files["manifest.json"])
     assert manifest["batch_id"] == result["batch_id"] and manifest["key_version"] == 1
-    assert manifest["schema_version"] == "1.0" and len(manifest["field_list_sha256"]) == 64
+    assert manifest["schema_version"] == "2.0" and len(manifest["field_list_sha256"]) == 64
     for f in manifest["files"]:
         blob = files[f["name"]]
         assert f["bytes"] == len(blob) and f["sha256"] == hashlib.sha256(blob).hexdigest()

@@ -23,10 +23,10 @@ SDD-238 A안(연구 사본 무기한 분리 보관, 서비스 원본 90일 정�
 ## 3. 데이터 계약
 
 - schema `2.0`, 기존 4개 Parquet에 `facilitators.parquet` 추가. 허용 필드 목록 해시와 파일별 sha256를 manifest에 기록한다.
-- sessions: 기존 type/participant_mode/location_type/linkband_mode/duration_min 유지. 시작·종료 UTC/KST 및 결측 사유, seq/session_kind, 클래스 schedule_mode/planned_session_count/default_duration_min 추가. 제목·설명·custom_type_name·주소·규칙 JSON은 제외한다.
+- sessions: 기존 type/participant_mode/location_type/linkband_mode/duration_min 유지. 시작·종료 UTC/KST 및 결측 사유, class_pseudo/seq/session_kind, 클래스 schedule_mode/planned_session_count/default_duration_min 추가. 제목·설명·custom_type_name·주소·규칙 JSON은 제외한다.
 - subjects: gender/birth_year_month 유지. raw chunk의 start_ms/end_ms로 개인 시작·종료 UTC/KST와 원천/결측 사유 추가. feature만으로 종료를 추정하거나 예약·입장·업로드 시각을 측정 시각으로 대체하지 않는다.
 - 시각 원천: sessions.started_at/ended_at; EEG raw는 `useEegRawUpload.ts`가 ISO startedAt/endedAt을 epoch ms로 업로드한다. 세션 구간과 타당한 epoch, 유한값·순서를 검증한다. 유효한 raw 근거가 없거나 시계가 불명확하면 null + 사유. 장비 물리 시계 정확성을 보장하지 않는다.
-- facilitators: session_pseudo, user_id, real_name, account_role, session_role. 실제 회차 host와 해당 회차 범위의 공동 진행자를 포함. 클래스 강사진 전체를 실제 출석 증빙처럼 표현하지 않고 관계 근거를 manifest에 명시한다. 현재 계정 역할/이름의 스냅샷이며 당시 값으로 소급 보장하지 않는다.
+- facilitators: session_pseudo, user_id, real_name, account_role, session_role. 실제 회차 host와 해당 회차 범위·추가/제거 기간이 겹치는 공동 진행자를 포함. 중도·종료 후 제거된 관계도 기간 근거가 있으면 포함하며, 제거 시각 미상/회차 전 제거/모순된 구간은 제외한다. 클래스 강사진 전체를 실제 출석 증빙처럼 표현하지 않고 관계 근거를 manifest에 명시한다. 현재 계정 역할/이름의 스냅샷이며 당시 값으로 소급 보장하지 않는다.
 - 허용 enum 검증: 기존 세션 enum, 성별, session_kind/schedule_mode, 진행자 계정 역할/회차 역할. 미지 값은 업로드 전에 실패.
 - `_scan_strings`는 참여자 이름·연락처와 자유기입 제목/메모 금지를 유지한다. 진행자 실명은 facilitators.real_name 셀만 예외로 하고 연락처 패턴 금지는 유지한다. 진행자 실명과 참여자 이름이 충돌하면 참여자 보호 우선으로 실패한다.
 - revision content_hash에 schema/허용목록/동의 범위/세션·개인 시각·프로그램·진행자·raw 메타·payload 해시를 포함한다. 내용 변경 탐지는 재반출 권한과 별개다.
