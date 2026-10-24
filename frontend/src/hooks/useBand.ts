@@ -46,7 +46,8 @@ import {
 } from '../lib/session-live/raw-encoder';
 import { useEegRawUpload, type EnqueueRawChunkInput } from './useEegRawUpload';
 import { useBiosignalCapture } from './useBiosignalCapture';
-import type { RenderedMetrics } from '../lib/biosignal/display-snapshot';
+import type { RecordingStatus } from '../lib/biosignal/recording-status';
+import type { RenderedMetrics, ViewKind } from '../lib/biosignal/display-snapshot';
 import {
   deviceStatusFromLeadOff,
   normalizeSignalQuality01,
@@ -75,7 +76,8 @@ import type {
   BandSpectrum,
   WaveformPoint,
 } from '../types/playground';
-import { refreshActiveModel, scoreIndices } from '../lib/eeg/eegPersonalScore';
+import type { NormalizationModelDto } from '../lib/api/normalization-api';
+import { getActiveModelCache, refreshActiveModel, scoreIndices } from '../lib/eeg/eegPersonalScore';
 
 const logger = createLogger('useBand');
 
@@ -92,7 +94,7 @@ let activeBandOwners = 0;
 let bandConnectInFlight = false;
 
 /** raw indices → 표시용 0~100 정규화 (활성 모델 > 코호트 B0) */
-function toScoredIndices(raw: BandRawIndices): BandRawIndices {
+function toScoredIndices(raw: BandRawIndices, model: NormalizationModelDto | null = getActiveModelCache()): BandRawIndices {
   const scores = scoreIndices({
     focusIndex: raw.focusIndex,
     relaxationIndex: raw.relaxationIndex,
@@ -105,7 +107,7 @@ function toScoredIndices(raw: BandRawIndices): BandRawIndices {
     // FAA(로그비)로 정규화해야 한다(FAA_ABS_P90 = 로그비 p90). faa 미제공이면
     // scoreIndices 가 hemisphericBalance 로 폴백한다.
     faa: raw.faa,
-  });
+  }, model);
   return {
     focusIndex: scores.focusIndex,
     relaxationIndex: scores.relaxationIndex,
@@ -172,6 +174,7 @@ export interface BandChartPoint {
 }
 
 export interface UseBandOptions {
+  displayViewKind?: ViewKind;
   sessionId: string;
   participantId: string | null;
   /** false면 연결/업로드 비활성 (명상 단계 진입 전 등) */
@@ -190,6 +193,8 @@ export interface UseBandOptions {
 }
 
 export interface UseBandResult {
+  normalizationModel: NormalizationModelDto | null;
+  recordingStatus: RecordingStatus;
   isSupported: boolean;
   isMock: boolean;
   connectionState: BandConnectionState;
@@ -346,6 +351,7 @@ export function useBand({
   entryCredential = null,
   observationOnly: requestedObservationOnly = false,
   forceMock,
+  displayViewKind,
 }: UseBandOptions): UseBandResult {
   const isMock = forceMock ?? envMockEeg();
   // 예시 데이터는 호출자의 옵션과 관계없이 영속 경로에서 격리한다.
@@ -458,6 +464,7 @@ export function useBand({
     participantId,
     enabled: !observationOnly && Boolean(sessionId && participantId),
     connected: connectionState === 'connected',
+    displayViewKind,
     skipAuth,
     entryCredential,
   });
@@ -1703,7 +1710,9 @@ export function useBand({
   // 연결되자마자 곧바로 끊기는 문제를 일으켰다. 연결 해제는 컴포넌트 unmount 정리(위 useEffect)와
   // 명시적 연결해제 버튼으로만 수행한다.
 
+  const normalizationModel = structuredClone(getActiveModelCache());
   return {
+    normalizationModel,
     isSupported,
     isMock,
     connectionState,
@@ -1731,7 +1740,7 @@ export function useBand({
     ppgWaveform,
     acc,
     rawIndices,
-    scoredIndices: rawIndices ? toScoredIndices(rawIndices) : null,
+    scoredIndices: rawIndices ? toScoredIndices(rawIndices, normalizationModel) : null,
     sensors,
     connectedElapsedSec,
     getEegWaveformSamples,
@@ -1741,5 +1750,6 @@ export function useBand({
     connect,
     disconnect,
     recordDisplay: biosignal.recordDisplay,
+    recordingStatus: biosignal,
   };
 }

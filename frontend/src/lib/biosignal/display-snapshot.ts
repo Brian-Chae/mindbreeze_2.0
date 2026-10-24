@@ -36,6 +36,8 @@ export interface DisplaySnapshotRow {
 /** 이번 렌더에서 뷰가 실제로 받은 값과 그 근거. */
 export interface RenderedMetrics {
   values: MetricValues;
+  displayedKeys?: readonly PlayerMetricKey[];
+  normalizationModel?: NormalizationModelDto | null;
   /** 정규화 전 raw 지수(display_input). 원격 fallback이면 null */
   rawMind: { focus: number | null; relaxation: number | null; emotional: number | null };
   live: boolean; remoteRelaxation: boolean; blocked: boolean; leadOff: boolean; stale: boolean;
@@ -53,7 +55,7 @@ export const DISPLAY_PIPELINE_VERSION = 'member-player-1hz-v1';
 export const B0_VERSION = 'haru-constants-v2-B0';
 const MIND = ['focus', 'relaxation', 'emotional'] as const;
 const BODY = ['bpm', 'respiration', 'hrv'] as const;
-const short = (id: string) => id.replace(/-/g, '').slice(0, 8);
+const short = (id: string) => id.replace(/-/g, '');
 
 /** MemberStage·MemberSheets와 같은 표시 규칙(반올림 정수, 비유한값은 미표시). 두 화면이 이 함수를 쓴다. */
 export function displayedInteger(raw: number | null | undefined): number | null {
@@ -69,7 +71,7 @@ export function buildDisplaySnapshot(input: RenderedMetrics | null, ctx: Snapsho
     schema_version: 'indices-v1' as const, stream_alias: `STREAM-${short(ctx.streamId)}`, view_instance_alias: `VIEW-${short(ctx.viewInstanceId)}`, view_kind: ctx.viewKind,
     second_index: secondIndex, t_rel_ms: secondIndex * 1000, play_group_id: null, window_index: secondIndex, hrv_metric: 'sdnn' as const,
   };
-  if (!input) {
+  if (!input || input.displayedKeys?.length === 0) {
     const m = blank('not_rendered');
     return { ...head, displayed_at_us: null, render_status: 'not_rendered', focus: m, relaxation: { ...m }, emotional: { ...m }, bpm: { ...m }, respiration: { ...m }, hrv: { ...m },
       normalization: null, algorithm: null, display_pipeline_version: null, source: 'unavailable', display_match: 'unverified', unavailable_reason: 'not_rendered' };
@@ -86,6 +88,7 @@ export function buildDisplaySnapshot(input: RenderedMetrics | null, ctx: Snapsho
   };
   const flags = { stale: input.stale, lead_off: input.leadOff, quality: input.quality, held: false };
   const mind = (key: (typeof MIND)[number]): DisplayMetricRow => {
+    if (input.displayedKeys && !input.displayedKeys.includes(key)) return blank('not_rendered');
     const raw = input.values[key], value = displayedInteger(raw);
     if (value === null) return { ...blank(nullReason(key), flags), event_age_ms: eegAge };
     const remote = key === 'relaxation' && input.remoteRelaxation;
@@ -95,9 +98,10 @@ export function buildDisplaySnapshot(input: RenderedMetrics | null, ctx: Snapsho
       measured_at_us: input.lastEegAtMs === null ? null : (BigInt(Math.round(input.lastEegAtMs)) * 1000n).toString(),
       source_feature_id: local ? eegFeature : null,
       provenance_reason: local && eegFeature ? null : remote ? 'remote_fallback_server_relaxation' : 'local_feature_not_collected',
-      null_reason: null, normalization_source: ctx.normalization?.[key]?.source ?? 'unavailable', ...flags };
+      null_reason: null, normalization_source: remote ? 'unavailable' : ctx.normalization?.[key]?.source ?? 'unavailable', ...flags };
   };
   const body = (key: (typeof BODY)[number]): DisplayMetricRow => {
+    if (input.displayedKeys && !input.displayedKeys.includes(key)) return blank('not_rendered');
     const raw = input.values[key], value = displayedInteger(raw);
     if (value === null || value < 0) return blank(nullReason(key), flags);
     return { input_source: input.live ? 'local_ble' : 'unavailable', event_age_ms: null, value, display_input: raw as number, normalized_output: null, measured_at_us: null,
@@ -157,17 +161,31 @@ export class DisplayRecorder {
   private normalization: NormalizationSnapshot | null = null;
   private algorithm: AlgorithmSnapshot | null = null;
   private rows: DisplaySnapshotRow[] = [];
-  private bundleSeq = 0;
+  private rowBundles = new Map<string, number>();
+  private writes: Promise<void> = Promise.resolve();
+  private persistenceError: unknown = null;
+  private rowScopes = new Map<string, { streamId: string; viewInstanceId: string }>();
   private modelSeen = false;
   private lastModel: NormalizationModelDto | null = null;
   private chain: Promise<void> = Promise.resolve();
+  private renderChain: Promise<void> = Promise.resolve();
+  private renderRequests: { rendered: RenderedMetrics | null; visible: boolean; model: NormalizationModelDto | null; nowMs: number }[] = [];
 
   constructor(options: { queue: BiosignalQueue; session: BiosignalCaptureSession; viewKind: ViewKind; createId?: () => string; now?: () => number; sourceFeature: SnapshotContext['sourceFeature'] }) {
     this.queue = options.queue; this.session = options.session; this.viewKind = options.viewKind;
     this.createId = options.createId ?? (() => crypto.randomUUID()); this.now = options.now ?? Date.now; this.sourceFeature = options.sourceFeature;
   }
 
+  async restore(): Promise<void> {
+    for (const { value } of await this.queue.drafts<{ row: DisplaySnapshotRow; streamId: string; viewInstanceId: string; bundle?: number }>('display')) {
+      this.rows.push(value.row);
+      this.rowScopes.set(this.rowId(value.row), value);
+      if (value.bundle !== undefined) this.rowBundles.set(this.rowId(value.row), value.bundle);
+    }
+  }
+
   async start(model: NormalizationModelDto | null): Promise<void> {
+    await this.restore();
     this.viewInstanceId = this.createId();
     this.streamId = this.session.streamId('eeg') ?? this.createId();
     this.startMs = this.now(); this.lastIndex = -1;
@@ -180,47 +198,95 @@ export class DisplayRecorder {
   /** 모델이 바뀌면 새 snapshot을 등록한다. 이미 만든 행은 그 시점 snapshot을 그대로 가진다. */
   async setModel(model: NormalizationModelDto | null): Promise<void> {
     if (this.modelSeen && this.lastModel === model) return;
-    this.modelSeen = true; this.lastModel = model;
+
     const { snapshot, alias } = await buildNormalizationSnapshot(model);
     if (this.normalization?.params_hash === snapshot.params_hash) return;
-    this.normalization = snapshot;
+
     const bytes = new TextEncoder().encode(JSON.stringify(snapshot));
     const payload = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
-    await this.queue.enqueueArtifact({ artifact_alias: alias, artifact_kind: 'normalization', stream_id: null, segment_id: null, signal: null, sequence: 0, row_count: 1, content_encoding: 'identity',
+    await this.queue.enqueueArtifact({ artifact_alias: alias, artifact_kind: 'normalization', stream_id: null, segment_id: null, signal: null, sequence: await this.queue.artifactSequence('normalization', alias), row_count: 1, content_encoding: 'identity',
       schema_version: 'normalization-v1', checksum: await sha256(payload), size_bytes: payload.byteLength, content_type: 'application/json' }, payload);
+    this.normalization = snapshot; this.modelSeen = true; this.lastModel = model;
+  }
+
+  /** 표시 당시 모델/값/시각을 함께 고정하고 모델 등록 뒤 같은 행을 기록한다. */
+  record(rendered: RenderedMetrics | null, visible: boolean, model: NormalizationModelDto | null): Promise<void> {
+    const nowMs = this.now();
+    this.renderRequests.push({ rendered: rendered ? structuredClone(rendered) : null, visible, model: model ? structuredClone(model) : null, nowMs });
+    const task = this.renderChain.then(() => this.drainRenders());
+    this.renderChain = task.catch(() => { this.session.abort('journal_failed'); });
+    return task;
+  }
+  private async drainRenders(): Promise<void> {
+    while (this.renderRequests.length) {
+      const request = this.renderRequests[0];
+      await this.setModel(request.model);
+      this.tick(request.rendered, request.visible, request.nowMs);
+      await this.persist();
+      this.renderRequests.shift();
+    }
   }
 
   /** 1초 타이머에서 호출. 지난 초를 못 그렸으면(타이머 정지·탭 비활성) not_rendered로 채운다. */
-  tick(rendered: RenderedMetrics | null, visible: boolean): void {
+  tick(rendered: RenderedMetrics | null, visible: boolean, nowMs = this.now()): void {
     if (!this.viewInstanceId) return;
-    const nowMs = this.now();
     const target = Math.floor((nowMs - this.startMs) / 1000) - 1;
     if (target <= this.lastIndex) return;
     const ctx = (): SnapshotContext => ({ streamId: this.streamId, viewInstanceId: this.viewInstanceId, viewKind: this.viewKind, nowMs, startMs: this.startMs,
       normalization: this.normalization, algorithm: this.algorithm, displayPipelineVersion: DISPLAY_PIPELINE_VERSION, sourceFeature: this.sourceFeature });
     const from = Math.max(this.lastIndex + 1, target - MAX_GAP_ROWS);
-    for (let i = from; i < target; i++) this.rows.push(buildDisplaySnapshot(null, ctx(), i));
-    this.rows.push(buildDisplaySnapshot(visible ? rendered : null, ctx(), target));
+    for (let i = from; i < target; i++) this.append(buildDisplaySnapshot(null, ctx(), i));
+    this.append(buildDisplaySnapshot(visible ? rendered : null, ctx(), target));
     this.lastIndex = target;
+  }
+  private rowId(row: DisplaySnapshotRow): string { return `${row.view_instance_alias}|${row.second_index}`; }
+  private append(row: DisplaySnapshotRow): void {
+    this.rows.push(row);
+    const id = this.rowId(row);
+    const scope = { streamId: this.streamId, viewInstanceId: this.viewInstanceId };
+    this.rowScopes.set(id, scope);
+    this.writes = this.writes.then(() => this.queue.saveDraft('display', id, { row, ...scope })).catch(error => { this.persistenceError = error; this.session.abort('journal_failed'); });
+  }
+  async persist(): Promise<void> {
+    await this.writes;
+    if (this.persistenceError) {
+      for (const row of this.rows) await this.queue.saveDraft('display', this.rowId(row), { row, ...this.rowScopes.get(this.rowId(row)), bundle: this.rowBundles.get(this.rowId(row)) });
+      this.persistenceError = null;
+    }
   }
 
   flush(force = false): Promise<void> {
-    this.chain = this.chain.then(() => this.run(force)).catch(error => { console.error('display snapshot 묶음 실패 — 행 보존', error); });
-    return this.chain;
+    const task = this.chain.then(() => this.run(force));
+    this.chain = task.catch(() => undefined);
+    return task;
   }
   private async run(force: boolean): Promise<void> {
-    if (!this.rows.length || (!force && this.rows.length < FLUSH_ROWS)) return;
-    const rows = this.rows; this.rows = [];
-    try {
+    await this.renderChain;
+    await this.drainRenders();
+    await this.persist();
+    const groups = new Map<string, DisplaySnapshotRow[]>();
+    for (const row of this.rows) {
+      const key = `${row.view_instance_alias}|${this.rowBundles.get(this.rowId(row)) ?? 'new'}`;
+      groups.set(key, [...(groups.get(key) ?? []), row]);
+    }
+    for (const rows of groups.values()) {
+      if (!force && rows.length < FLUSH_ROWS) continue;
+      const scope = this.rowScopes.get(this.rowId(rows[0]))!;
+      const sequence = this.rowBundles.get(this.rowId(rows[0])) ?? rows[0].second_index;
+      for (const row of rows) {
+        this.rowBundles.set(this.rowId(row), sequence);
+        await this.queue.saveDraft('display', this.rowId(row), { row, ...scope, bundle: sequence });
+      }
       const text = rows.map(r => JSON.stringify(r)).join('\n') + '\n';
       const bytes = await gzip(text);
-      const meta: ArtifactMeta = { artifact_alias: `IDX-${short(this.viewInstanceId)}-${String(this.bundleSeq).padStart(6, '0')}`, artifact_kind: 'indices', stream_id: this.streamId, segment_id: null, signal: null,
-        view_instance_id: this.viewInstanceId, sequence: this.bundleSeq, first_sequence: rows[0].second_index, last_sequence: rows[rows.length - 1].second_index, row_count: rows.length,
+      const meta: ArtifactMeta = { artifact_alias: `IDX-${scope.viewInstanceId.replace(/-/g, '')}-${String(sequence).padStart(6, '0')}`, artifact_kind: 'indices', stream_id: scope.streamId, segment_id: null, signal: null,
+        view_instance_id: scope.viewInstanceId, sequence, first_sequence: rows[0].second_index, last_sequence: rows[rows.length - 1].second_index, row_count: rows.length,
         content_encoding: 'gzip', schema_version: 'indices-v1', checksum: await sha256(bytes), uncompressed_sha256: await sha256(new TextEncoder().encode(text).buffer as ArrayBuffer),
         size_bytes: bytes.byteLength, time_range: { from_us: String(rows[0].second_index * 1_000_000), to_us: String(rows[rows.length - 1].second_index * 1_000_000) }, content_type: 'application/gzip' };
-      await this.queue.enqueueArtifact(meta, bytes);
-      this.bundleSeq += 1;
-      this.session.noteSnapshotSequence(this.streamId, this.viewInstanceId, rows[rows.length - 1].second_index);
-    } catch (error) { this.rows = [...rows, ...this.rows]; throw error; }
+      await this.queue.enqueueArtifact(meta, bytes, rows.map(row => ({ kind: 'display', id: this.rowId(row) })));
+      const done = new Set(rows);
+      this.rows = this.rows.filter(row => !done.has(row));
+      this.session.noteSnapshotSequence(scope.streamId, scope.viewInstanceId, rows[rows.length - 1].second_index);
+    }
   }
 }

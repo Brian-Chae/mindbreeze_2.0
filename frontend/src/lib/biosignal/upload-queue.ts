@@ -63,7 +63,7 @@ export async function sendBiosignalEvents(queue: BiosignalQueue, api: BiosignalA
   if (!pending.length || !active()) return null;
   const result = await api.events(queue.sessionId, queue.participantId, pending.map(p => p.event));
   if (!active()) return result;
-  const ok = new Set(result.events.filter(e => e.status !== 'conflict').map(e => e.event_id));
+  const ok = new Set(result.events.filter(e => e.status === 'recorded' || e.status === 'duplicate').map(e => e.event_id));
   await queue.markEventsSent(pending.filter(p => ok.has(p.event.event_type === 'gap' ? p.event.event_id : p.event.intent_id)).map(p => ({ id: p.id, store: p.store })));
   return result;
 }

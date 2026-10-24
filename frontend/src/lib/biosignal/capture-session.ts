@@ -4,7 +4,7 @@
  * 실패(쓰기/lease/quota/메모리 상한)는 침묵하지 않고 수집을 중단하며 gap을 남긴다.
  * 밴드 미연결 시에는 receive가 호출되지 않으므로 기존 동작에 영향이 없다.
  */
-import type { CloseIntent, ExpectedArtifact, GapEvent, RawMeta, StreamClose, ViewClose } from '../api/biosignal';
+import type { CloseIntent, LostArtifact, ExpectedArtifact, GapEvent, RawMeta, StreamClose, ViewClose } from '../api/biosignal';
 import { ACC_ADC_SCALE, EEG_ADC_SCALE } from './raw-capture';
 import { BiosignalClock, sampleTimeUs } from './raw-clock';
 import { encodeRawV2, rawSections } from './raw-encoder';
@@ -32,7 +32,7 @@ interface SegmentStats { lastEmitted: boolean; received: number }
 interface SignalState {
   streamId: string; clock: BiosignalClock; segmentId: string; seq: number; nextSample: number;
   unsealedSamples: number; unsealedBytes: number; anchor: JournalPacket['segmentAnchor'] | null;
-  segments: Map<string, SegmentStats>; lastReceivedUtcUs: string;
+  segments: Map<string, SegmentStats>; lastReceivedUtcUs: string; lastTick: bigint | null;
 }
 export interface SampleWindow {
   signal: Signal; streamId: string; segmentId: string; first: number; end: number; rate: number;
@@ -64,11 +64,13 @@ export class BiosignalCaptureSession {
   private readonly states = new Map<Signal, SignalState>();
   private chain: Promise<void> = Promise.resolve();
   private inflightBytes = 0;
+  private unpersisted = new Map<string, JournalPacket>();
+  private pendingGaps: Omit<GapEvent, 'sequence' | 'event_type'>[] = [];
   private originMono: string | null = null;
   private profileHash = '';
   private disconnectedAtUs: string | null = null;
   private reconnects = 0;
-  private featureSequences = new Map<Signal, number>();
+  private featureSequences = new Map<string, number>();
   private snapshotCloses = new Map<string, ViewClose>();
   private sealedRanges: SealedRange[] = [];
 
@@ -81,15 +83,21 @@ export class BiosignalCaptureSession {
   }
   private nowUs(): string { return (BigInt(this.now()) * 1000n).toString(); }
 
-  async start(): Promise<void> {
+  async start(collecting = true): Promise<void> {
     await this.queue.acquire();
     this.profileHash = await sha256(new TextEncoder().encode(JSON.stringify({ profile: 'mb-web-clock-v1', rates: RATES, tick_hz: 32768, tick_bits: 32, anchor: 'last_sample' })).buffer as ArrayBuffer);
     await this.recover();
-    this.setStatus('running', null);
+    this.setStatus(collecting ? 'running' : 'stopped', collecting ? null : 'closed');
   }
 
   /** 이전 실행이 남긴 journal: 새 청크로 봉인하고, 마지막 영속 이후는 unknown tail gap으로 남긴다. */
   private async recover(): Promise<void> {
+    for (const item of [...await this.queue.objects(), ...await this.queue.receipts()]) {
+      if (item.kind !== 'raw' || !item.meta || !('header' in item.meta)) continue;
+      const h = item.meta.header;
+      const first = h.first_sample_index;
+      this.sealedRanges.push({ signal: h.signal_type, streamId: h.stream_id, segmentId: h.segment_id, alias: item.alias, sha256: item.meta.checksum, first, end: first + h.sample_count });
+    }
     const groups = new Map<string, JournalPacket[]>();
     for (const p of await this.queue.allPackets()) {
       const key = `${p.signal}|${p.streamId}|${p.segmentId}`;
@@ -113,7 +121,7 @@ export class BiosignalCaptureSession {
     let s = this.states.get(signal);
     if (!s) {
       const clock = new BiosignalClock(this.createId);
-      s = { streamId: this.createId(), clock, segmentId: '', seq: 0, nextSample: 0, unsealedSamples: 0, unsealedBytes: 0, anchor: null, segments: new Map(), lastReceivedUtcUs: utcUs };
+      s = { streamId: this.createId(), clock, segmentId: '', seq: 0, nextSample: 0, unsealedSamples: 0, unsealedBytes: 0, anchor: null, segments: new Map(), lastReceivedUtcUs: utcUs, lastTick: null };
       this.states.set(signal, s);
     }
     this.originMono ??= monoUs;
@@ -130,15 +138,21 @@ export class BiosignalCaptureSession {
     let tickUnwrapped: string | null = null;
     let reason: string | null = null;
     if (packet.tickRaw !== null) {
-      const obs = s.clock.observe(packet.tickRaw, packet.receivedUtcUs, packet.receivedMonotonicUs);
-      tickUnwrapped = obs.unwrappedTick; reason = obs.reason;
+      let obs = s.clock.observe(packet.tickRaw, packet.receivedUtcUs, packet.receivedMonotonicUs);
+      const tick = BigInt(obs.unwrappedTick);
+      const elapsedUs = s.lastTick === null ? null : Number(tick - s.lastTick) * 1_000_000 / 32768;
+      const expectedUs = rows * 1_000_000 / RATES[signal];
+      const packetGap = !obs.reason && elapsedUs !== null && Math.abs(elapsedUs - expectedUs) > 2_000_000 / RATES[signal];
+      if (packetGap) { s.clock.reanchor(); obs = s.clock.observe(packet.tickRaw, packet.receivedUtcUs, packet.receivedMonotonicUs); }
+      s.lastTick = BigInt(obs.unwrappedTick);
+      tickUnwrapped = obs.unwrappedTick; reason = packetGap ? 'packet_gap' : obs.reason;
       if (obs.segmentId !== s.segmentId) {
-        if (s.segmentId) this.rollSegment(signal, s, reason, packet.receivedUtcUs);
+        if (s.segmentId) this.rollSegment(signal, s, reason, sampleTimeUs(0, { numerator: RATES[signal], denominator: 1 }, Math.max(0, rows - 1), obs.mappedUtcUs));
         s.segmentId = obs.segmentId; s.nextSample = 0; s.unsealedSamples = 0; s.unsealedBytes = 0;
         s.segments.set(s.segmentId, { lastEmitted: false, received: 0 });
         // 첫 샘플 시각 = 마지막 샘플 시각(tick 기준)에서 (rows-1)개 전
         const firstUtc = rows > 0 ? sampleTimeUs(0, { numerator: RATES[signal], denominator: 1 }, rows - 1, obs.mappedUtcUs) : obs.mappedUtcUs;
-        s.anchor = { utcUs: firstUtc, monotonicUs: packet.receivedMonotonicUs, tickRaw: obs.rawTick, tickUnwrapped: obs.unwrappedTick, originMonotonicUs: this.originMono! };
+        s.anchor = { utcUs: firstUtc, monotonicUs: sampleTimeUs(0, { numerator: RATES[signal], denominator: 1 }, Math.max(0, rows - 1), packet.receivedMonotonicUs), tickRaw: obs.rawTick, tickUnwrapped: obs.unwrappedTick, originMonotonicUs: this.originMono! };
       }
     } else if (!s.segmentId) {
       s.segmentId = this.createId(); s.segments.set(s.segmentId, { lastEmitted: false, received: 0 });
@@ -156,16 +170,16 @@ export class BiosignalCaptureSession {
     s.unsealedBytes += packet.bytes.length + rows * SAMPLE_STRIDE[signal] + MAP_ROW_ESTIMATE;
     s.segments.get(segmentId)!.received += rows;
 
+    this.unpersisted.set(record.id, record);
     this.inflightBytes += packet.bytes.length;
     if (this.inflightBytes > MAX_UNPERSISTED_BYTES) { this.stop('memory_cap', signal, s, packet.receivedUtcUs); return; }
     const size = packet.bytes.length;
     this.enqueue(async () => {
-      if (this.status !== 'running') { this.droppedWhileStopped += 1; this.inflightBytes -= size; return; }
       try { await this.queue.journalPacket(record); } catch (error) {
-        this.inflightBytes -= size;
         this.stop(error instanceof Error && error.message.startsWith('lease') ? 'lease_lost' : 'journal_failed', signal, s, packet.receivedUtcUs);
         return;
       }
+      this.unpersisted.delete(record.id);
       this.inflightBytes -= size;
     });
     if (s.unsealedSamples >= CHUNK_SECONDS * RATES[signal] || s.unsealedBytes >= CHUNK_SOFT_BYTES) {
@@ -177,12 +191,13 @@ export class BiosignalCaptureSession {
   /** clock 사유로 segment가 바뀌면 이전 segment를 부분 청크로 봉인하고 gap을 남긴다. */
   private rollSegment(signal: Signal, s: SignalState, reason: string | null, utcUs: string): void {
     const oldSegment = s.segmentId, streamId = s.streamId;
+    const gapStart = s.anchor ? sampleTimeUs(s.nextSample, { numerator: RATES[signal], denominator: 1 }, 0, s.anchor.utcUs) : utcUs;
     this.enqueue(() => this.sealPackets(signal, streamId, oldSegment));
     this.enqueue(async () => {
       try {
-        await this.queue.addGap({ event_id: this.createId(), discovered_at_us: this.nowUs(), signal, stream_id: streamId, segment_id: oldSegment, start_us: utcUs, end_us: utcUs,
+        await this.queue.addGap({ event_id: this.createId(), discovered_at_us: this.nowUs(), signal, stream_id: streamId, segment_id: oldSegment, start_us: BigInt(gapStart) <= BigInt(utcUs) ? gapStart : utcUs, end_us: BigInt(gapStart) <= BigInt(utcUs) ? utcUs : gapStart,
           reason: (reason ?? 'reanchor') as GapEvent['reason'], observed_or_estimated: 'observed', expected_samples: null, received_samples: null, reconnect_count: this.reconnects });
-      } catch { /* lease 상실 등: stop 경로가 별도로 기록 */ }
+      } catch { this.stop('journal_failed', signal, s, utcUs); }
     });
   }
 
@@ -199,8 +214,10 @@ export class BiosignalCaptureSession {
     const targets = signal && state ? [[signal, state] as const] : [...this.states.entries()];
     for (const [sig, st] of targets) {
       if (!st.segmentId) continue;
-      void this.queue.addGap({ event_id: this.createId(), discovered_at_us: this.nowUs(), signal: sig, stream_id: st.streamId, segment_id: st.segmentId, start_us: utcUs, end_us: null,
-        reason: 'local_write_failed', observed_or_estimated: 'unknown', expected_samples: null, received_samples: null, reconnect_count: this.reconnects }).catch(() => undefined);
+      const gap: Omit<GapEvent, 'sequence' | 'event_type'> = { event_id: this.createId(), discovered_at_us: this.nowUs(), signal: sig, stream_id: st.streamId, segment_id: st.segmentId, start_us: utcUs, end_us: null,
+        reason: 'local_write_failed', observed_or_estimated: 'unknown', expected_samples: null, received_samples: null, reconnect_count: this.reconnects };
+      this.pendingGaps.push(gap);
+      this.enqueue(async () => { try { await this.queue.addGap(gap); this.pendingGaps = this.pendingGaps.filter(item => item !== gap); } catch { /* 복구 시 다시 영속화 */ } });
     }
   }
 
@@ -244,9 +261,17 @@ export class BiosignalCaptureSession {
   /** 열린 segment의 남은 journal을 모두 봉인한다(종료 전 feature 원창 해소용). close intent는 만들지 않는다. */
   async sealOpen(): Promise<void> {
     await this.flush();
-    if (this.status !== 'running') return;
-    for (const [signal, s] of this.states) if (s.segmentId) this.enqueue(() => this.sealPackets(signal, s.streamId, s.segmentId));
-    await this.flush();
+    for (const [id, packet] of this.unpersisted) {
+      await this.queue.journalPacket(packet);
+      this.unpersisted.delete(id); this.inflightBytes -= packet.bytes.byteLength;
+    }
+    for (const gap of [...this.pendingGaps]) {
+      await this.queue.addGap(gap);
+      this.pendingGaps = this.pendingGaps.filter(item => item !== gap);
+    }
+    const groups = new Map<string, JournalPacket>();
+    for (const packet of await this.queue.allPackets()) groups.set(`${packet.signal}|${packet.streamId}|${packet.segmentId}`, packet);
+    for (const packet of groups.values()) await this.sealPackets(packet.signal as Signal, packet.streamId, packet.segmentId);
   }
 
   /** 외부(lease 갱신 실패 등)에서 수집을 중단한다. */
@@ -304,15 +329,18 @@ export class BiosignalCaptureSession {
       .sort((a, b) => a.first - b.first);
   }
 
-  noteFeatureSequence(signal: Signal, sequence: number): void { this.featureSequences.set(signal, Math.max(sequence, this.featureSequences.get(signal) ?? -1)); }
+  noteFeatureSequence(signal: Signal, sequence: number, streamId: string, segmentId: string): void {
+    const key = `${signal}|${streamId}|${segmentId}`;
+    this.featureSequences.set(key, Math.max(sequence, this.featureSequences.get(key) ?? -1));
+  }
   noteSnapshotSequence(streamId: string, viewInstanceId: string, sequence: number): void {
     const key = `${streamId}|${viewInstanceId}`;
     this.snapshotCloses.set(key, { stream_id: streamId, view_instance_id: viewInstanceId, last_snapshot_sequence: Math.max(sequence, this.snapshotCloses.get(key)?.last_snapshot_sequence ?? -1) });
   }
 
   /** 종료: 남은 청크 봉인 → 전체 expected set·마지막 sequence를 로컬에 먼저 기록한다(서버 응답 이전). */
-  async close(endReason: string): Promise<CloseIntent> {
-    await this.flush();
+  async close(endReason: string, lostArtifacts: LostArtifact[] = []): Promise<CloseIntent> {
+    await this.sealOpen();
     if (this.status === 'running') {
       if (this.disconnectedAtUs) {
         for (const [signal, s] of this.states) if (s.segmentId) await this.queue.addGap({ event_id: this.createId(), discovered_at_us: this.nowUs(), signal, stream_id: s.streamId, segment_id: s.segmentId,
@@ -326,8 +354,35 @@ export class BiosignalCaptureSession {
       for (const [segmentId, stats] of s.segments) {
         const next = await this.queue.nextIndex(signal, s.streamId, segmentId);
         streams.push({ stream_id: s.streamId, segment_id: segmentId, signal, last_chunk_sequence: next > 0 ? next - 1 : null,
-          last_feature_sequence: this.featureSequences.get(signal) ?? null, received_samples: stats.received });
+          last_feature_sequence: this.featureSequences.get(`${signal}|${s.streamId}|${segmentId}`) ?? null, received_samples: stats.received });
       }
+    }
+    // 재시작 전 봉인/ACK된 산출물도 종료 scope와 마지막 순번에 포함한다.
+    const persisted = [...await this.queue.objects(), ...await this.queue.receipts()];
+    const restored = new Map<string, StreamClose>();
+    for (const item of persisted) {
+      const meta = item.meta;
+      if (!meta) continue;
+      if ('header' in meta) {
+        const h = meta.header, key = `${h.signal_type}|${h.stream_id}|${h.segment_id}`;
+        const row = restored.get(key) ?? { stream_id: h.stream_id, segment_id: h.segment_id, signal: h.signal_type, last_chunk_sequence: null, last_feature_sequence: null, received_samples: 0 };
+        row.last_chunk_sequence = Math.max(row.last_chunk_sequence ?? -1, h.chunk_index); row.received_samples += h.sample_count;
+        restored.set(key, row);
+      }
+    }
+    for (const item of persisted) {
+      const meta = item.meta;
+      if (!meta || !('artifact_kind' in meta)) continue;
+      if (meta.artifact_kind === 'feature') {
+        const row = restored.get(`${meta.signal}|${meta.stream_id}|${meta.segment_id}`);
+        if (row && meta.last_sequence != null) row.last_feature_sequence = Math.max(row.last_feature_sequence ?? -1, meta.last_sequence);
+      }
+      if (meta.artifact_kind === 'indices' && meta.stream_id && meta.view_instance_id && meta.last_sequence != null) this.noteSnapshotSequence(meta.stream_id, meta.view_instance_id, meta.last_sequence);
+    }
+    for (const row of restored.values()) {
+      const current = streams.find(s => s.signal === row.signal && s.stream_id === row.stream_id && s.segment_id === row.segment_id);
+      if (current) current.last_feature_sequence = Math.max(current.last_feature_sequence ?? -1, row.last_feature_sequence ?? -1) < 0 ? null : Math.max(current.last_feature_sequence ?? -1, row.last_feature_sequence ?? -1);
+      else streams.push(row);
     }
     const seen = new Set<string>();
     const expected: ExpectedArtifact[] = [];
@@ -335,7 +390,7 @@ export class BiosignalCaptureSession {
       const key = `${item.kind}|${item.alias}`;
       if (!seen.has(key)) { seen.add(key); expected.push(item); }
     }
-    const intent: CloseIntent = { event_type: 'close_intent', intent_id: this.createId(), expected_artifacts: expected, streams, snapshots: [...this.snapshotCloses.values()],
+    const intent: CloseIntent = { event_type: 'close_intent', intent_id: this.createId(), expected_artifacts: expected, lost_artifacts: lostArtifacts, streams, snapshots: [...this.snapshotCloses.values()],
       last_gap_sequence: await this.queue.lastGapSequence(), end_reason: endReason, closed_at_us: this.nowUs() };
     await this.queue.addEvent(intent);
     if (this.status === 'running') this.setStatus('stopped', 'closed');

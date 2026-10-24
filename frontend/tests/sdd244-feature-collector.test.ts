@@ -97,7 +97,8 @@ describe('SDD244 T09 FeatureCollector', () => {
     for (const p of eegPackets(2)) session.receive(p);      // 100샘플, 봉인 전
     await session.flush();
     collector.emit('eeg', eegResult(100), { window: session.sampleWindow('eeg', 100)!, windowIndex: 0 });
-    await collector.flush(true);
+    await expect(collector.flush(true)).rejects.toThrow('feature_source_pending');
     expect(collector.unresolved).toBe(1);
+    expect(collector.pendingCount).toBe(1);
   });
 });

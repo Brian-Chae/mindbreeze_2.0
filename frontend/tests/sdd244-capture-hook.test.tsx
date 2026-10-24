@@ -12,6 +12,8 @@ vi.mock('../src/lib/api/eeg-raw', async importOriginal => ({ ...(await importOri
 
 import { useBiosignalCapture, type UseBiosignalCaptureResult } from '../src/hooks/useBiosignalCapture';
 import { captureRawPacket } from '../src/lib/biosignal/raw-capture';
+import { BiosignalCaptureSession } from '../src/lib/biosignal/capture-session';
+import { BiosignalQueue } from '../src/lib/biosignal/durable-queue';
 import { useAuthStore } from '../src/stores/authStore';
 
 const sessionId = '11111111-1111-4111-8111-111111111111', participantId = '22222222-2222-4222-8222-222222222222';
@@ -25,6 +27,7 @@ beforeEach(async () => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   globalThis.indexedDB = new IDBFactory();
   Object.defineProperty(globalThis, 'crypto', { value: webcrypto, configurable: true });
+  Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
   Object.values(api).forEach(fn => fn.mockReset()); put.mockClear();
   useAuthStore.setState({ user: { id: 'user-1' } } as never);
   connected = true;
@@ -66,4 +69,52 @@ describe('SDD244 T08 useBiosignalCapture', () => {
     expect(api.events).toHaveBeenCalled();
     expect(latest.closeState).toBe('pending_upload');
   });
+  it('H03: 오프라인 close 후 밴드 재연결 없이 online 이벤트로 영속 큐 업로드 재개', async () => {
+    api.capability.mockResolvedValue(capability());
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+    await act(async () => root.render(<Probe />)); await settle();
+    act(() => captureRawPacket('eeg', eegPacket()));
+    await act(async () => { await latest.close('offline_end'); });
+    expect(api.presign).not.toHaveBeenCalled();
+    Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+    window.dispatchEvent(new Event('online')); await settle(100);
+    expect(api.presign).toHaveBeenCalled();
+  });
+
+  it('H03: 밴드 없는 재마운트는 업로드만 복구하고 close 이후 새 표시 객체를 만들지 않는다', async () => {
+    api.capability.mockResolvedValue(capability());
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+    await act(async () => root.render(<Probe />)); await settle();
+    act(() => captureRawPacket('eeg', eegPacket()));
+    await act(async () => { await latest.close('offline_end'); });
+    await act(async () => root.unmount()); await settle();
+    connected = false; Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+    const tickets = new Map<string, { chunk_id?: string; artifact_id?: string; chunk_alias?: string; artifact_alias?: string; checksum: string; size_bytes: number }>();
+    api.presign.mockImplementation(async (_s, _p, kind, meta) => {
+      const id = kind === 'raw' ? meta.chunk_alias : meta.artifact_alias;
+      const ticket = { [kind === 'raw' ? 'chunk_id' : 'artifact_id']: id, [kind === 'raw' ? 'chunk_alias' : 'artifact_alias']: id, checksum: meta.checksum, size_bytes: meta.size_bytes };
+      tickets.set(id, ticket); return { ...ticket, upload_url: null, upload_headers: {}, upload_status: 'uploaded' };
+    });
+    api.ack.mockImplementation(async (_s,_p,_kind,id) => ({...tickets.get(id),upload_status:'uploaded',verified_at_us:'1',failure_reason:null}));
+    api.events.mockImplementation(async (_s,_p,events) => ({ events:events.map(e=>({event_type:e.event_type,event_id:e.intent_id ?? e.event_id,status:'recorded'})),close_state:'complete',manifest_revision:1,missing_artifacts:[] }));
+    root = createRoot(document.createElement('div')); await act(async()=>root.render(<Probe/>)); await settle(120); await settle(120);
+    expect(latest.status).toBe('stopped'); expect(latest.stopReason).toBe('closed');
+    const queue = new BiosignalQueue({accountId:'user:user-1',sessionId,participantId,deviceAlias:'LINK-BAND'},'observer');
+    expect(await queue.objects()).toHaveLength(0);
+    act(()=>latest.recordDisplay(null,true)); await settle();
+    expect(await queue.objects()).toHaveLength(0); expect(await queue.drafts('display')).toHaveLength(0);
+  });
+
+  it('H03: 느린 cleanup 중 즉시 재마운트는 lease 반환을 기다린 뒤 수집 재개', async () => {
+    api.capability.mockResolvedValue(capability());
+    await act(async()=>root.render(<Probe/>)); await settle(); expect(latest.status).toBe('running');
+    let release!:()=>void; const barrier = new Promise<void>(resolve=>{release=resolve;});
+    const original = BiosignalCaptureSession.prototype.sealOpen;
+    const seal = vi.spyOn(BiosignalCaptureSession.prototype,'sealOpen').mockImplementationOnce(async function(){await barrier; return original.call(this);});
+    await act(async()=>root.unmount()); root=createRoot(document.createElement('div'));
+    await act(async()=>root.render(<Probe/>)); await settle();
+    release(); await settle(100); await settle();
+    expect(latest.status).toBe('running'); seal.mockRestore();
+  });
+
 });

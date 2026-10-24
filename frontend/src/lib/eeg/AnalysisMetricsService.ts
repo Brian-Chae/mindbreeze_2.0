@@ -377,6 +377,11 @@ export class AnalysisMetricsService {
       const newest = Math.max(...candidates.map(c => c.ts).filter(Number.isFinite), -Infinity);
       if (Number.isFinite(newest) && newest < this.lastRrEndTimestamp - AnalysisMetricsService.RR_CLOCK_RESET_MS) {
         this.lastRrEndTimestamp = -Infinity;
+        this.rrIntervalBuffer = []; this.rrTimestampBuffer = []; this.bpmBuffer = [];
+        this.respiratoryRateHistory = []; this.currentRespiratoryRate = null;
+        this.respiratoryNullReason = 'insufficient_window'; this.lastLfHfCalculation = 0;
+        this.smoothedHeartRate = null;
+        this.currentLfPower = 0; this.currentHfPower = 0; this.currentLfHfRatio = 0;
       }
       // 중첩 창이 다시 보낸 박동(이미 받은 시각 이하)은 버린다.
       candidates = candidates.filter(c => Number.isFinite(c.ts) && c.ts > this.lastRrEndTimestamp);

@@ -114,10 +114,7 @@ export async function putEegRawToPresignedUrl(
   payload: ArrayBuffer,
   headers?: Record<string, string> | null,
 ): Promise<void> {
-  const merged: Record<string, string> = {
-    'Content-Type': 'application/octet-stream',
-    ...(headers ?? {}),
-  };
+  const merged: Record<string, string> = headers ?? { 'Content-Type': 'application/octet-stream' };
   // API7-09: presigned PUT 은 토큰 없이 별도 fetch 로 나가 공통 클라이언트의 타임아웃·재시도를
   // 우회한다. 응답이 없으면 영구 pending 되고 순단 실패가 청크 유실로 이어지므로 상한·재시도를 둔다.
   let lastErr: unknown = null;

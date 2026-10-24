@@ -154,9 +154,8 @@ function scoreWithModel(
  * raw indices → 0~100 점수.
  * 서버 활성 표준 모델 > 코호트(B0). params 없는 지표는 코호트 fallback.
  */
-export function scoreIndices(idx: RawIndexInput): EEGScoreSet {
+export function scoreIndices(idx: RawIndexInput, model: NormalizationModelDto | null = activeModelCache): EEGScoreSet {
   const cohort = cohortScores(idx);
-  const model = activeModelCache;
   if (!model) return cohort;
 
   const faaRaw =

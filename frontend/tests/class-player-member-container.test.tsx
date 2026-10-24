@@ -7,6 +7,8 @@ import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemberClassContainer } from '../src/components/class/player/member/MemberClassContainer';
 import { useAuthStore } from '../src/stores/authStore';
+import { setActiveModelFromDto } from '../src/lib/eeg/eegPersonalScore';
+import type { NormalizationModelDto } from '../src/lib/api/normalization-api';
 import { EEG_STALE_MS } from '../src/lib/session-live/signal-status';
 
 /* ───────── 모킹 ───────── */
@@ -14,6 +16,7 @@ const h = vi.hoisted(() => {
   const band = {
     isSupported: true,
     isMock: false,
+    normalizationModel: null as NormalizationModelDto | null,
     connectionState: 'connected' as string,
     battery: 82 as number | null,
     signalQualityLevel: 'ok',
@@ -28,6 +31,8 @@ const h = vi.hoisted(() => {
     error: null as string | null,
     connectedElapsedSec: 720,
     getEegWaveformSamples: () => ({ fp1: [1, 2, 3, 2, 1], fp2: [2, 1, 2, 3, 2] }),
+    recordingStatus: { status: 'running', stopReason: null, pendingCount: 0, blockedCount: 0, quotaWarning: false, resumeBlocked: vi.fn() } as import('../src/lib/biosignal/recording-status').RecordingStatus,
+    recordDisplay: vi.fn(),
     connect: vi.fn(async () => undefined),
     disconnect: vi.fn(async () => undefined),
   };
@@ -40,7 +45,9 @@ const h = vi.hoisted(() => {
     lk: {
       token: 'tok' as string | null, canPublish: true, error: null as string | null, notReady: false, attemptCount: 0, serverUrl: 'wss://lk.test',
       speaking: false, raisedHand: false, raising: false, raiseHandError: null as string | null,
-      connect: vi.fn(async () => undefined), disconnect: vi.fn(), raiseHand: vi.fn(async () => undefined), lowerHand: vi.fn(async () => undefined), roomId: null, loading: false,
+      recordingStatus: { status: 'running', stopReason: null, pendingCount: 0, blockedCount: 0, quotaWarning: false, resumeBlocked: vi.fn() } as import('../src/lib/biosignal/recording-status').RecordingStatus,
+    recordDisplay: vi.fn(),
+    connect: vi.fn(async () => undefined), disconnect: vi.fn(), raiseHand: vi.fn(async () => undefined), lowerHand: vi.fn(async () => undefined), roomId: null, loading: false,
     },
     lkOptions: [] as Array<Record<string, unknown>>,
     audio: { state: { track: null as { title: string } | null, playing: false, positionSec: 0, durationSec: null, volume: 0.6, blocked: false, synced: false, drift: 0 }, setVolume: vi.fn(), resume: vi.fn() },
@@ -588,7 +595,35 @@ describe('LiveKit·미디어 연결', () => {
   });
 });
 
+describe('SDD244 기록 상태', () => {
+  it('M02: effect 전 캐시가 바뀌어도 렌더 값과 함께 받은 모델 A를 기록', async () => {
+    const a: NormalizationModelDto = {id:1,version:'A',n_samples:10,is_active:true,created_at:'',params:{}};
+    h.band.normalizationModel = a;
+    setActiveModelFromDto({...a,id:2,version:'B'});
+    await render(<Container />); await advance(1000);
+    expect(h.band.recordDisplay.mock.calls.at(-1)?.[0]?.normalizationModel?.version).toBe('A');
+    h.band.normalizationModel = null; setActiveModelFromDto(null);
+  });
+  it('H05: 연결 중이어도 기록 중단·대기 건수·재개를 화면에 분리', async () => {
+    h.band.recordingStatus = { status:'stopped', stopReason:'quota', pendingCount:3, blockedCount:1, quotaWarning:true, resumeBlocked:vi.fn() };
+    await render(<Container />);
+    expect(q('[data-testid="biosignal-recording-status"]')?.textContent).toContain('저장 공간 부족으로 기록 중단');
+    expect(q('[data-testid="biosignal-recording-status"]')?.textContent).toContain('전송 대기 3건');
+    await act(async()=>buttonByText('전송 재개')!.click());
+    expect(h.band.recordingStatus.resumeBlocked).toHaveBeenCalledTimes(1);
+    h.band.recordingStatus = {status:'inactive',stopReason:null,pendingCount:0,blockedCount:0,quotaWarning:false,resumeBlocked:vi.fn()};
+  });
+});
+
 describe('네트워크 상태(M18·M19)', () => {
+  it('SDD244 M03: 끊김 카드만 보이는 동안은 displayed 지표가 없다', async () => {
+    await render(<Container />); h.socket.isConnected = false;
+    await render(<Container />); await advance(17_000);
+    expect(q('[data-pz="net-down"]')).not.toBeNull();
+    await advance(1000);
+    expect(h.band.recordDisplay.mock.calls.at(-1)?.[0]?.displayedKeys).toEqual([]);
+  });
+
   it('소켓이 끊기면 재연결 배너, 15초 이상 지속되면 끊김 카드, 복구되면 해제', async () => {
     await render(<Container />);
     await advance(1000);

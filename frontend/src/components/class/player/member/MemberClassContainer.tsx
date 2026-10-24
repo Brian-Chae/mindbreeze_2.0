@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ConnectionState } from 'livekit-client';
 import { useBand, type UseBandResult } from '../../../../hooks/useBand';
+import { BiosignalRecordingStatus } from '../../../../lib/biosignal/recording-status';
 import type { RenderedMetrics } from '../../../../lib/biosignal/display-snapshot';
 import { AnalysisMetricsService } from '../../../../lib/eeg/AnalysisMetricsService';
 import { useGuestAudioSync } from '../../../../hooks/useGuestAudioSync';
@@ -15,7 +16,7 @@ import { getEntryState } from '../../../../lib/api/class-flow';
 import { getSession, type LinkbandMode } from '../../../../lib/api/session';
 import type { AudioSyncEvent } from '../../../../lib/class/audio-sync';
 import { PLAYER_METRICS, deriveBandUi, deriveNetUi, type PlayerMetricKey } from '../../../../lib/class/player-case';
-import type { MemberCaseInput } from '../../../../lib/class/member-player-case';
+import { deriveMemberCase, type MemberCaseInput } from '../../../../lib/class/member-player-case';
 import { getActiveSessionLiveSocket, type SessionLiveEegFeatureEvent } from '../../../../lib/socket';
 import { contactStatusLabel, resolveBandLinkState, signalQualityLevelLabel } from '../../../../lib/session-live/signal-status';
 import { useAuthStore } from '../../../../stores/authStore';
@@ -80,6 +81,7 @@ function describeRender(band: UseBandResult, snapshot: MetricSnapshot, blocked: 
   const scoredRelax = band.scoredIndices?.relaxationIndex ?? null;
   return {
     values: snapshot,
+    normalizationModel: band.normalizationModel,
     rawMind: {
       focus: live ? (band.rawIndices?.focusIndex ?? null) : null,
       relaxation: live ? (band.rawIndices?.relaxationIndex ?? null) : null,
@@ -194,18 +196,9 @@ export function MemberClassContainer({
   useEffect(() => {
     readSnapshotRef.current = () => buildSnapshot(bandRef.current, metricsBlocked, remoteEfficiency);
   });
-  // SDD-244: 커밋된(=실제로 그려진) 렌더의 6지표를 1초 타이머가 그대로 저장한다. 화면과 별도로 재계산하지 않는다.
-  const renderedRef = useRef<RenderedMetrics | null>(null);
-  const screenOffRef = useRef(false);
-  useEffect(() => {
-    renderedRef.current = describeRender(band, snapshot, metricsBlocked, linkState === 'stale', remoteEfficiency);
-    screenOffRef.current = screenOff;
-  });
   useEffect(() => {
     const id = window.setInterval(() => {
       setNowMs(Date.now());
-      // 탭 숨김·화면 끄기는 "보이지 않음" — 그 초는 not_rendered로 남는다
-      bandRef.current.recordDisplay?.(renderedRef.current, document.visibilityState !== 'hidden' && !screenOffRef.current);
       const sample = readSnapshotRef.current();
       setSeries((prev) => {
         const next: Record<PlayerMetricKey, readonly number[]> = { ...prev };
@@ -555,6 +548,24 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
     viewerOnly: shared.viewerOnly,
   };
 
+  const renderedRef = useRef<RenderedMetrics | null>(null);
+  const visibleRef = useRef(false);
+  const recordRef = useRef(band.recordDisplay);
+  useEffect(() => {
+    const c = deriveMemberCase(input);
+    const allShown = shared.sheet === 'status' && c.dock.some(item => item.key === 'status');
+    const shown: PlayerMetricKey[] = allShown ? PLAYER_METRICS.map(metric => metric.key) : !c.netDown && c.ring.showValue ? [shared.hero] : [];
+    const live = band.connectionState === 'connected';
+    const stale = resolveBandLinkState({ bleConnected: live, lastEegAt: band.lastEegAt, nowMs: shared.nowMs }) === 'stale';
+    renderedRef.current = { ...describeRender(band, shared.snapshot, band.deviceStatus === 'lead_off' || stale, stale, shared.snapshot.relaxation), displayedKeys: shown };
+    visibleRef.current = !shared.screenOff && !shared.waitlisted;
+    recordRef.current = band.recordDisplay;
+  });
+  useEffect(() => {
+    const timer = window.setInterval(() => recordRef.current(renderedRef.current, visibleRef.current && document.visibilityState !== 'hidden'), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const actions: MemberClassViewProps['actions'] = {
     onLeave: () => controls.setConfirmLeave(true),
     onHeroChange: controls.setHero,
@@ -584,6 +595,7 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
   return (
     <>
       <div inert={shared.screenOff}>
+        <BiosignalRecordingStatus state={band.recordingStatus} />
         <MemberClassView
           input={input}
           header={shared.header}
