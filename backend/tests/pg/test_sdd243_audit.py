@@ -11,7 +11,7 @@ import sqlalchemy as sa
 from fastapi import HTTPException
 from sqlalchemy.orm import Session as OrmSession
 
-from tests.pg.test_sdd243_jobs import OkVerifier, pgdb, previews, run_threads  # noqa: F401
+from tests.pg.test_sdd243_jobs import OkVerifier, head_template, pgdb, previews, run_threads  # noqa: F401
 
 pytestmark = pytest.mark.pg
 

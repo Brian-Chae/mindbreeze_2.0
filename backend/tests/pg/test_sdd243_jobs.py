@@ -21,13 +21,21 @@ class OkVerifier:
         return proof == 'ok'
 
 
+@pytest.fixture(scope='session')
+def head_template(scratch_db):
+    """공유 DB 는 앞선 테스트의 잔여 연결 때문에 TEMPLATE 복제가 거부될 수 있다 — 아무도 접속하지 않는 전용 템플릿을 head 로 만든다."""
+    from tests.pg.conftest import alembic_ok
+    url = scratch_db('sdd243tpl')
+    alembic_ok(url, 'upgrade', 'head')
+    return sa.engine.make_url(url).database
+
+
 @pytest.fixture
-def pgdb(pg_engine, scratch_db, monkeypatch):
+def pgdb(pg_engine, scratch_db, head_template, monkeypatch):
     from app.config import settings
     from app.services import data_center_export as dcx, export_reauth
 
-    template = pg_engine.url.database
-    url = scratch_db('sdd243jobs', template=template)
+    url = scratch_db('sdd243jobs', template=head_template)
     engine = sa.create_engine(url, pool_size=10, max_overflow=10)
     monkeypatch.setattr(settings, 'data_center_enabled', True)
     monkeypatch.setattr(export_reauth, '_verifier', OkVerifier())
