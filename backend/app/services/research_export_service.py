@@ -369,7 +369,8 @@ def _participant_data(db: DBSession, consent: ResearchConsent, pseudo_p: str, ps
     )
     chunks = (
         db.query(EEGRawChunk)
-        .filter(EEGRawChunk.participant_id == pid, EEGRawChunk.upload_status == "uploaded")
+        .filter(EEGRawChunk.participant_id == pid, EEGRawChunk.upload_status == "uploaded",
+                EEGRawChunk.schema_version == "1.0", EEGRawChunk.signal_type == "eeg")
         .order_by(EEGRawChunk.stream_id, EEGRawChunk.chunk_index)
         .all()
     )
@@ -738,17 +739,23 @@ def _record_failure(db: DBSession, batch: ResearchExportBatch, error: str, sessi
 
 def cancel_batches_for_withdrawn(db: DBSession) -> int:
     """철회된 동의 건이 들어 있는 미ack 배치를 취소한다(스테이징 객체 삭제, 남은 유효 건은 다시 pending)."""
-    batches = db.query(ResearchExportBatch).filter(ResearchExportBatch.status == "uploaded").all()
+    batches = db.query(ResearchExportBatch).filter(ResearchExportBatch.status.in_(("uploaded", "acked"))).all()
     cancelled = 0
     for batch in batches:
         items = db.query(ResearchExportItem).filter(ResearchExportItem.batch_id == batch.id).all()
+        if batch.status == "acked" and not any(i.bundle_schema_version == "research-v3" for i in items):
+            continue
         consents = {
             c.id: c
             for c in db.query(ResearchConsent).filter(ResearchConsent.id.in_([i.consent_id for i in items])).all()
         }
         if not any(_is_withdrawn(consents.get(i.consent_id)) for i in items):
             continue
-        _cleanup_objects([batch.prefix + n for n in (*[f"{k}.parquet" for k in ALLOWED_COLUMNS], "manifest.json")])
+        if any(i.bundle_schema_version == 'research-v3' for i in items):
+            names=[f['name'] for i in items for f in i.rows.get('files',[])]
+            _queue_signal_deletions(db,batch.prefix,[*names,'manifest.json'],'research_withdrawn')
+        else:
+            _cleanup_objects([batch.prefix + n for n in (*[f"{k}.parquet" for k in ALLOWED_COLUMNS], "manifest.json")])
         for i in items:
             c = consents.get(i.consent_id)
             if c is not None and not _is_withdrawn(c) and c.export_state == STATE_EXPORTED:
@@ -820,7 +827,8 @@ def list_uploaded_batches(db: DBSession) -> list[dict]:
     return [
         {"batch_id": str(b.id), "prefix": b.prefix, "manifest_key": b.prefix + "manifest.json",
          "manifest_sha256": b.manifest_sha256, "file_count": b.file_count, "total_bytes": b.total_bytes}
-        for b in rows if not _batch_has_guest(db, b.id)
+        for b in rows if not _batch_has_guest(db, b.id) and _batch_scope_allowed(db, b.id)
+        and not db.query(ResearchExportItem.id).filter_by(batch_id=b.id, bundle_schema_version="research-v3").first()
     ]
 
 
@@ -833,6 +841,8 @@ def ack_batch(db: DBSession, batch_id: str, sha256: str) -> dict:
     batch = db.query(ResearchExportBatch).filter(ResearchExportBatch.id == bid).with_for_update().first()
     if batch is None:
         raise HTTPException(status_code=404, detail="배치를 찾을 수 없어요")
+    if db.query(ResearchExportItem.id).filter_by(batch_id=bid, bundle_schema_version="research-v3").first():
+        raise HTTPException(status_code=409, detail="signal_scope_ack_required")
     if _batch_has_guest(db, batch.id):
         raise HTTPException(status_code=409, detail="비회원 데이터가 포함된 배치는 반출 대상이 아닙니다")
     if batch.status == "acked":
@@ -859,3 +869,177 @@ def ack_batch(db: DBSession, batch_id: str, sha256: str) -> dict:
     batch.acked_at = now
     db.commit()
     return {"batch_id": str(batch.id), "status": "acked", "acked_at": now, "already": False}
+
+
+# ── SDD-244: 명시적 신호 범주 v3. 기존 동의를 PPG/ACC/신규 범주로 확대하지 않는다. ──
+from app.models.biosignal import BiosignalManifestRevision, BiosignalArtifact
+from app.models.research_export import ResearchSignalReceipt, ObjectDeletionOutbox
+
+SIGNAL_SCHEMA = 'research-v3'
+
+
+def signal_consent_status(db: DBSession, consent: ResearchConsent | None, signal: str, kind: str) -> str:
+    if _is_withdrawn(consent):
+        return 'withdrawn' if consent and consent.withdrawn_at else 'not_consented'
+    if not consent.research_subject_id or consent.export_state in ('blocked_key_missing','blocked_identity_missing'):
+        return 'unknown'
+    if research_consent_service._withdrawn_subject(consent.research_subject_id,consent.key_version or research_consent_service.current_key_version(),db):
+        return 'withdrawn'
+    participant = db.query(SessionParticipant).filter_by(id=consent.participant_id).execution_options(include_removed=True).first()
+    if participant is None or participant.user_id is None:
+        return 'not_consented'
+    if signal != 'eeg' or kind not in ('raw', 'feature'):
+        return 'unknown'
+    return 'consented'
+
+
+def _locked_consent(db: DBSession, sid, pid):
+    return db.query(ResearchConsent).filter_by(session_id=sid,participant_id=pid).populate_existing().with_for_update().first()
+
+
+def _scope_key(scope: dict) -> tuple:
+    return (scope.get('signal'),scope.get('artifact_kind'),scope.get('manifest_revision'),scope.get('manifest_sha256'))
+
+
+def _batch_scope_allowed(db: DBSession, bid) -> bool:
+    items=db.query(ResearchExportItem).filter_by(batch_id=bid).all()
+    if not items: return False
+    for item in items:
+        consent=db.query(ResearchConsent).filter_by(id=item.consent_id).populate_existing().first()
+        if _is_withdrawn(consent): return False
+        if item.bundle_schema_version==SIGNAL_SCHEMA:
+            if not item.signal_scope or any(signal_consent_status(db,consent,s['signal'],s['artifact_kind'])!='consented' for s in item.signal_scope): return False
+    return True
+
+
+def signal_research_hold(db: DBSession, session_id, participant_id, signal: str, kind: str, artifact_sha256: str) -> bool:
+    """정확히 해당 artifact를 포함한 revision/hash 영수증만 인정한다. v2 ACK는 영향 없음."""
+    consent=db.query(ResearchConsent).filter_by(session_id=session_id,participant_id=participant_id).first()
+    if signal_consent_status(db,consent,signal,kind)!='consented': return False
+    receipts=db.query(ResearchSignalReceipt).filter_by(session_id=session_id,participant_id=participant_id,
+        consent_id=consent.id,signal=signal,artifact_kind=kind,schema_version=SIGNAL_SCHEMA).filter(ResearchSignalReceipt.acked_at.isnot(None)).all()
+    for receipt in receipts:
+        revision=db.query(BiosignalManifestRevision).filter_by(session_id=session_id,participant_id=participant_id,revision=receipt.manifest_revision,content_sha256=receipt.manifest_sha256).first()
+        item=db.query(ResearchExportItem).filter_by(batch_id=receipt.batch_id,consent_id=consent.id,bundle_schema_version=SIGNAL_SCHEMA).first()
+        included=item is not None and any(a.get('sha256')==artifact_sha256 and a.get('signal')==signal and a.get('artifact_kind')==kind for a in item.rows.get('transferred_artifacts',[]))
+        if included and revision and any(a.get('sha256')==artifact_sha256 and a.get('artifact_kind')==kind for a in revision.content.get('artifacts',[])):
+            return False
+    return True
+
+
+def export_signal_revision(db: DBSession, session_id, participant_id, revision: int, *, receiver_versions: list[str]) -> dict:
+    """v3 수신자만, pinned revision의 EEG 기존 동의 범주만 생성/업로드한다.
+
+    신규 신호/indices/raw-derived는 동의 범위 정의 전 unknown이다. 운영 실행은
+    research_export_enabled와 서비스 토큰 API를 함께 통과해야 한다.
+    """
+    if SIGNAL_SCHEMA not in receiver_versions:
+        return {'status':'pending','reason':'receiver_capability_unknown'}
+    if not settings.research_export_enabled:
+        return {'status':'pending','reason':'research_export_disabled'}
+    sid,pid=uuid.UUID(str(session_id)),uuid.UUID(str(participant_id))
+    session=db.query(SessionModel).filter_by(id=sid).execution_options(include_hidden=True).first()
+    if session is None or session.status not in TARGET_STATUSES:
+        raise HTTPException(409,'session_not_closed')
+    consent=_locked_consent(db,sid,pid)
+    if signal_consent_status(db,consent,'eeg','raw')!='consented':
+        raise HTTPException(403,'signal_consent_required')
+    pinned=db.query(BiosignalManifestRevision).filter_by(session_id=sid,participant_id=pid,revision=revision).first()
+    if pinned is None: raise HTTPException(404,'manifest_revision_not_found')
+    from app.schemas.biosignal import ManifestRevision, ExportSelection, ExportPolicy
+    from app.services.biosignal_export_adapter import iter_export_artifacts
+    manifest=ManifestRevision.model_validate(pinned.content)
+    selection=ExportSelection(signals=['eeg'],time_range={'from_us':str(-(2**63)),'to_us':str(2**63-1)},sample_format='parquet',view_kind=manifest.default_view if manifest.default_view!='unavailable' else 'participant_player')
+    policy=ExportPolicy(time_policy='relative_only',raw_packets_authorized=False,allowed_artifact_kinds=['raw','feature'],policy_revision=SIGNAL_SCHEMA)
+    def check(m,ref,p):
+        current=_locked_consent(db,sid,pid)
+        return signal_consent_status(db,current,'eeg',ref.artifact_kind if ref else 'raw')=='consented'
+    def read(key,version):
+        # 내용 주소 객체를 전체 hash로 검증하므로 unversioned read 변조도 반출되지 않는다.
+        return storage_service.download_bytes(key)
+    files={}; manifest_files=[]; kinds=set(); transferred={}
+    for artifact in iter_export_artifacts(manifest,selection,policy,db=db,session_id=sid,participant_id=pid,reader=read,policy_check=check):
+        meta=artifact.metadata
+        if meta.artifact_kind not in ('raw','feature'): continue
+        blob=b''.join(artifact.iter_bytes())
+        files[meta.path]=blob; kinds.add(meta.artifact_kind)
+        source=next(a for a in manifest.artifacts if a.artifact_id_alias==meta.artifact_id_alias)
+        transferred[source.artifact_id_alias]={'signal':'eeg','artifact_kind':source.artifact_kind,'sha256':source.sha256}
+        manifest_files.append({'name':meta.path,'sha256':meta.sha256,'bytes':len(blob),'rows':meta.row_count})
+        if sum(map(len,files.values()))>settings.research_export_max_batch_bytes: raise ExportValidationError('batch_too_large')
+    if not files: return {'status':'pending','reason':'no_authorized_artifacts'}
+    scopes=[{'signal':'eeg','artifact_kind':kind,'manifest_revision':revision,'manifest_sha256':pinned.content_sha256} for kind in sorted(kinds)]
+    content_hash=_canonical_hash([SIGNAL_SCHEMA,scopes,manifest_files])
+    existing=db.query(ResearchExportItem).filter_by(consent_id=consent.id,bundle_schema_version=SIGNAL_SCHEMA,content_sha256=content_hash).order_by(ResearchExportItem.created_at.desc()).first()
+    if existing:
+        batch=db.get(ResearchExportBatch,existing.batch_id)
+        if batch and batch.status in ('uploaded','acked'): return {'status':batch.status,'batch_id':str(batch.id),'already':True}
+    batch=ResearchExportBatch(session_id=sid,status='building')
+    db.add(batch);db.flush();batch.prefix=_prefix_for(batch.id)
+    manifest_bytes=json.dumps({'schema_version':SIGNAL_SCHEMA,'signal_scope':scopes,'files':manifest_files},sort_keys=True,separators=(',',':')).encode()
+    batch.manifest_sha256=_sha256(manifest_bytes)
+    batch.file_count=len(files)+1;batch.total_bytes=sum(map(len,files.values()))+len(manifest_bytes)
+    if batch.total_bytes>settings.research_export_max_batch_bytes: raise ExportValidationError('batch_too_large')
+    # 동의 잠금을 유지한 채 업로드·원장 확정. 철회가 먼저 commit되면 check에서 거부된다.
+    for name,blob in {**files,'manifest.json':manifest_bytes}.items():
+        if not check(manifest,None,policy): raise HTTPException(409,'consent_withdrawn')
+        if not storage_service.upload_bytes(batch.prefix+name,blob):
+            _queue_signal_deletions(db,batch.prefix,[*files,'manifest.json'],'export_failed')
+            batch.status='failed';batch.last_error='upload_failed';db.commit()
+            raise ExportUploadError('signal_upload_failed')
+    next_revision,_=_next_revision(db,consent.id)
+    db.add(ResearchExportItem(batch_id=batch.id,consent_id=consent.id,research_subject_id=consent.research_subject_id,
+        revision=next_revision,content_sha256=content_hash,rows={'files':manifest_files,'transferred_artifacts':list(transferred.values())},bundle_schema_version=SIGNAL_SCHEMA,signal_scope=scopes))
+    for scope in scopes:
+        receipt=db.query(ResearchSignalReceipt).filter_by(participant_id=pid,**{k:v for k,v in scope.items()}).with_for_update().first()
+        if receipt is None:
+            receipt=ResearchSignalReceipt(session_id=sid,participant_id=pid,consent_id=consent.id,schema_version=SIGNAL_SCHEMA,**scope)
+            db.add(receipt)
+        if receipt.acked_at is None: receipt.batch_id=batch.id
+    batch.status='uploaded';batch.uploaded_at=_now();db.commit()
+    return {'status':'uploaded','batch_id':str(batch.id),'signal_scope':scopes}
+
+
+def list_signal_batches(db: DBSession, receiver_versions: list[str]) -> list[dict]:
+    if SIGNAL_SCHEMA not in receiver_versions: return []
+    result=[]
+    for batch in db.query(ResearchExportBatch).filter_by(status='uploaded').all():
+        items=db.query(ResearchExportItem).filter_by(batch_id=batch.id,bundle_schema_version=SIGNAL_SCHEMA).all()
+        if not items or not _batch_scope_allowed(db,batch.id) or _batch_has_guest(db,batch.id): continue
+        result.append({'batch_id':str(batch.id),'manifest_key':batch.prefix+'manifest.json','manifest_sha256':batch.manifest_sha256,
+            'bundle_schema_version':SIGNAL_SCHEMA,'signal_scope':[s for i in items for s in i.signal_scope]})
+    return result
+
+
+def ack_signal_batch(db: DBSession, batch_id: str, sha256: str, scopes: list[dict]) -> dict:
+    try: bid=uuid.UUID(str(batch_id))
+    except ValueError: raise HTTPException(404,'batch_not_found')
+    batch=db.query(ResearchExportBatch).filter_by(id=bid).populate_existing().with_for_update().first()
+    if batch is None: raise HTTPException(404,'batch_not_found')
+    items=db.query(ResearchExportItem).filter_by(batch_id=bid).all()
+    if not items or any(i.bundle_schema_version!=SIGNAL_SCHEMA for i in items): raise HTTPException(409,'signal_batch_required')
+    for item in sorted(items,key=lambda i:str(i.consent_id)):
+        db.query(ResearchConsent).filter_by(id=item.consent_id).populate_existing().with_for_update().first()
+    if not _batch_scope_allowed(db,bid): raise HTTPException(409,'consent_withdrawn_or_scope_unknown')
+    expected={_scope_key(s) for i in items for s in i.signal_scope}
+    if len(scopes)!=len(expected) or {_scope_key(s) for s in scopes}!=expected: raise HTTPException(409,'signal_scope_mismatch')
+    if not hmac.compare_digest(sha256,batch.manifest_sha256 or ''): raise HTTPException(409,'manifest_hash_mismatch')
+    if batch.status not in ('uploaded','acked'): raise HTTPException(409,'batch_not_uploaded')
+    receipts=db.query(ResearchSignalReceipt).filter_by(batch_id=bid).with_for_update().all()
+    if {_scope_key({'signal':r.signal,'artifact_kind':r.artifact_kind,'manifest_revision':r.manifest_revision,'manifest_sha256':r.manifest_sha256}) for r in receipts}!=expected:
+        raise HTTPException(409,'receipt_scope_mismatch')
+    already=batch.status=='acked';now=_now()
+    for r in receipts:
+        if r.acked_at is None: r.acked_at=now
+    batch.status='acked';batch.acked_at=batch.acked_at or now
+    db.commit()
+    return {'batch_id':str(bid),'status':'acked','already':already}
+
+
+def _queue_signal_deletions(db: DBSession, prefix: str, names: list[str], reason: str) -> None:
+    """실제 반출 경로를 tombstone/outbox에 보존한다. 객체 삭제는 통합 sweep이 재시도."""
+    for name in names:
+        key=prefix+name
+        if not db.query(ObjectDeletionOutbox.id).filter_by(object_key=key).first():
+            db.add(ObjectDeletionOutbox(object_key=key,source_table='research_export_items',reason=reason,state='pending',tombstone={'kind':'research_copy'}))
+            db.flush()
