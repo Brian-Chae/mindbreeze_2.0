@@ -34,13 +34,19 @@ interface SignalState {
   unsealedSamples: number; unsealedBytes: number; anchor: JournalPacket['segmentAnchor'] | null;
   segments: Map<string, SegmentStats>; lastReceivedUtcUs: string;
 }
+export interface SampleWindow {
+  signal: Signal; streamId: string; segmentId: string; first: number; end: number; rate: number;
+  /** 첫 샘플(segment index 0)의 UTC·회차 상대 µs 기준점 */
+  anchorUtcUs: string; anchorRelUs: string;
+}
+export interface SealedRange { signal: Signal; streamId: string; segmentId: string; alias: string; sha256: string; first: number; end: number }
 export interface CaptureOptions {
   queue: BiosignalQueue; createId?: () => string; now?: () => number;
   quota?: () => Promise<{ usage: number; quota: number } | null>;
   onStatus?: (status: CaptureStatus, reason: StopReason | null) => void;
 }
 
-async function sha256(buffer: ArrayBuffer): Promise<string> {
+export async function sha256(buffer: ArrayBuffer): Promise<string> {
   if (typeof crypto === 'undefined' || !crypto.subtle) throw new Error('crypto_subtle_unavailable');
   return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', buffer))).map(b => b.toString(16).padStart(2, '0')).join('');
 }
@@ -64,6 +70,7 @@ export class BiosignalCaptureSession {
   private reconnects = 0;
   private featureSequences = new Map<Signal, number>();
   private snapshotCloses = new Map<string, ViewClose>();
+  private sealedRanges: SealedRange[] = [];
 
   private readonly options: CaptureOptions;
   constructor(options: CaptureOptions) {
@@ -227,11 +234,20 @@ export class BiosignalCaptureSession {
     const payload = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
     const meta: RawMeta = { chunk_alias: alias(signal, streamId, segmentId, index), header, checksum: await sha256(payload), size_bytes: payload.byteLength, content_type: 'application/octet-stream' };
     await this.queue.sealRaw(meta, payload, packets.map(p => p.id));
+    this.sealedRanges.push({ signal, streamId, segmentId, alias: meta.chunk_alias, sha256: meta.checksum, first: packets[0].firstSampleIndex, end: packets[0].firstSampleIndex + samples });
     const stats = this.states.get(signal)?.segments.get(segmentId);
     if (stats) stats.lastEmitted = true;
   }
 
   async flush(): Promise<void> { await this.chain; }
+
+  /** 열린 segment의 남은 journal을 모두 봉인한다(종료 전 feature 원창 해소용). close intent는 만들지 않는다. */
+  async sealOpen(): Promise<void> {
+    await this.flush();
+    if (this.status !== 'running') return;
+    for (const [signal, s] of this.states) if (s.segmentId) this.enqueue(() => this.sealPackets(signal, s.streamId, s.segmentId));
+    await this.flush();
+  }
 
   /** 외부(lease 갱신 실패 등)에서 수집을 중단한다. */
   abort(reason: StopReason): void { this.stop(reason, null, null, this.nowUs()); }
@@ -270,6 +286,20 @@ export class BiosignalCaptureSession {
     if (this.status === 'running' && (ratio >= QUOTA_STOP_RATIO || estimate.quota - estimate.usage < Math.min(MIN_FREE_BYTES, estimate.quota * 0.05))) {
       this.stop('quota', null, null, this.nowUs());
     }
+  }
+
+  /** 지금까지 수신한 마지막 count개 샘플의 창(분석 emit의 원창 추정). 수집 중인 segment가 없으면 null. */
+  sampleWindow(signal: Signal, count: number): SampleWindow | null {
+    const s = this.states.get(signal);
+    if (!s || !s.segmentId || !s.anchor) return null;
+    const end = s.nextSample;
+    return { signal, streamId: s.streamId, segmentId: s.segmentId, first: Math.max(0, end - count), end, rate: RATES[signal],
+      anchorUtcUs: s.anchor.utcUs, anchorRelUs: (BigInt(s.anchor.monotonicUs) - BigInt(s.anchor.originMonotonicUs)).toString() };
+  }
+  /** 봉인된 raw 청크 중 창과 겹치는 범위(샘플 인덱스 오름차순). */
+  sealedOverlap(window: SampleWindow): SealedRange[] {
+    return this.sealedRanges.filter(r => r.signal === window.signal && r.streamId === window.streamId && r.segmentId === window.segmentId && r.end > window.first && r.first < window.end)
+      .sort((a, b) => a.first - b.first);
   }
 
   noteFeatureSequence(signal: Signal, sequence: number): void { this.featureSequences.set(signal, Math.max(sequence, this.featureSequences.get(signal) ?? -1)); }

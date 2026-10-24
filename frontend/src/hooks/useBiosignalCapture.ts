@@ -7,7 +7,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { putEegRawToPresignedUrl } from '../lib/api/eeg-raw';
 import { createBiosignalApi, type BiosignalApi, type CloseIntent } from '../lib/api/biosignal';
 import { BiosignalQueue, LEASE_RENEW_MS } from '../lib/biosignal/durable-queue';
-import { BiosignalCaptureSession, type CaptureStatus, type StopReason } from '../lib/biosignal/capture-session';
+import { BiosignalCaptureSession, type CaptureStatus, type SampleWindow, type StopReason } from '../lib/biosignal/capture-session';
+import { FeatureCollector } from '../lib/biosignal/feature-collector';
+import type { Scalars } from '../lib/biosignal/feature-record';
 import { subscribeRawPackets } from '../lib/biosignal/raw-capture';
 import { sendBiosignalEvents, uploadBiosignalQueue } from '../lib/biosignal/upload-queue';
 import type { Signal } from '../lib/biosignal/raw-types';
@@ -31,6 +33,10 @@ export interface UseBiosignalCaptureResult {
   status: CaptureStatus | 'inactive'; stopReason: StopReason | null;
   pendingCount: number; blockedCount: number; quotaWarning: boolean; closeState: string | null;
   markDisconnected: () => void; markReconnected: () => void;
+  /** 분석 시작 시점의 원창. 수집 중이 아니면 null → emitFeature는 아무것도 만들지 않는다. */
+  featureWindow: (signal: Signal, count: number) => SampleWindow | null;
+  /** 처리기 emit마다 호출(다운샘플 없음). */
+  emitFeature: (signal: Signal, data: Record<string, unknown>, window: SampleWindow | null, windowIndex: number, extras?: Partial<Scalars>) => void;
   /** 명시 종료: 남은 청크 봉인 → close intent 영속 → 전송 시도. 서버 응답을 저장 완료로 간주하지 않는다. */
   close: (reason: string) => Promise<CloseIntent | null>;
   /** 8회 초과/403/409로 보관된 사본을 재인증 뒤 명시 재개한다. */
@@ -50,7 +56,7 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
   const [armed, setArmed] = useState(false);
   const wasConnected = useRef(false);
   const closing = useRef(false);
-  const runtime = useRef<{ session: BiosignalCaptureSession; queue: BiosignalQueue; api: BiosignalApi; active: () => boolean } | null>(null);
+  const runtime = useRef<{ session: BiosignalCaptureSession; queue: BiosignalQueue; api: BiosignalApi; collector: FeatureCollector; active: () => boolean } | null>(null);
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
@@ -80,6 +86,7 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
     const rt = runtime.current; if (!rt) return;
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
     try {
+      await rt.collector.flush(false);
       await uploadBiosignalQueue(rt.queue, rt.api, (url, payload, headers) => putEegRawToPresignedUrl(url, payload, headers), rt.active);
       const result = await sendBiosignalEvents(rt.queue, rt.api, rt.active);
       if (result?.close_state && mounted.current) setCloseState(result.close_state);
@@ -104,7 +111,7 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
         if (!capability.raw_schemas.includes(RAW_V2) || allowed.size === 0) { setStatus('inactive'); return; }
         await session.start();
         if (cancelled) { await session.pause(); return; }
-        runtime.current = { session, queue, api, active: () => !cancelled };
+        runtime.current = { session, queue, api, collector: new FeatureCollector({ queue, session }), active: () => !cancelled };
         unsubscribe = subscribeRawPackets(packet => { if (allowed.has(packet.signal)) session.receive(packet); }, error => {
           logger.error('원문 수집 오류 — 수집 중단', error); session.abort('journal_failed');
         });
@@ -131,6 +138,9 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
     const rt = runtime.current; if (!rt) return null;
     closing.current = true;
     try {
+      // 원창이 봉인된 뒤 남은 feature를 모두 묶어야 close intent의 expected set에 들어간다.
+      await rt.session.sealOpen();
+      await rt.collector.flush(true);
       const intent = await rt.session.close(reason);
       await pump();
       return intent;
@@ -144,6 +154,8 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
     status: active ? status : 'inactive', stopReason, pendingCount, blockedCount, quotaWarning, closeState,
     markDisconnected: () => runtime.current?.session.markDisconnected(),
     markReconnected: () => runtime.current?.session.markReconnected(),
+    featureWindow: (signal, count) => runtime.current?.session.sampleWindow(signal, count) ?? null,
+    emitFeature: (signal, data, window, windowIndex, extras) => runtime.current?.collector.emit(signal, data, { window, windowIndex, extras }),
     close,
     resumeBlocked: async () => {
       const rt = runtime.current; if (!rt) return;

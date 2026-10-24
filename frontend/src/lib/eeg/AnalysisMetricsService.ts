@@ -21,6 +21,8 @@ export interface LatestEegFeature {
   hemisphericBalance: number;
   /** EEG-NUM-002: FAA(로그비) — 좌우뇌 균형 점수화 정본 입력 (미측정 null) */
   faa: number | null;
+  /** SDD-244: EEG 처리기 indices.totalNeuralActivity (미제공 null) */
+  totalNeuralActivity: number | null;
   cognitiveLoad: number;
   emotionalStability: number;
   attentionLevel: number;
@@ -35,6 +37,7 @@ type AdditionalIndices = {
   hemisphericBalance: number;
   /** EEG-NUM-002: FAA(로그비). 제공되지 않으면 null 로 보존한다. */
   faa?: number | null;
+  totalNeuralActivity?: number | null;
   cognitiveLoad: number;
   emotionalStability: number;
   attentionLevel: number;
@@ -145,6 +148,7 @@ export class AnalysisMetricsService {
       hemisphericBalance: additionalIndices.hemisphericBalance,
       // EEG-NUM-002: FAA(로그비)를 그대로 보존 — 좌우뇌 균형 점수화 입력.
       faa: additionalIndices.faa ?? null,
+      totalNeuralActivity: additionalIndices.totalNeuralActivity ?? null,
       cognitiveLoad: additionalIndices.cognitiveLoad,
       emotionalStability: additionalIndices.emotionalStability,
       attentionLevel: additionalIndices.attentionLevel,
@@ -170,6 +174,7 @@ export class AnalysisMetricsService {
       meditationLevel: feature.meditationLevel,
       // EEG-NUM-002: 점수화 정본 입력 FAA(로그비) 전달.
       faa: feature.faa,
+      totalNeuralActivity: feature.totalNeuralActivity,
       movingAverageValues: {
         totalPower: feature.totalPower,
         emotionalBalance,

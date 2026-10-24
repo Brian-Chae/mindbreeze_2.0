@@ -284,7 +284,7 @@ function trimNumbers(values: number[], max: number): number[] {
   return values.length > max ? values.slice(values.length - max) : values;
 }
 
-function metricsToFeature(
+export function metricsToFeature(
   metrics: EEGAnalysisMetrics,
   secondOffset: number,
   bandPowers: BandPowers | null,
@@ -310,6 +310,9 @@ function metricsToFeature(
     cognitive_load: metrics.cognitiveLoad,
     emotional_stability: metrics.emotionalStability,
     hemispheric_balance: metrics.hemisphericBalance,
+    // SDD-244: 처리기가 계산하고도 DB로 가지 않던 값 연결(없으면 null, 0 치환 금지)
+    total_neural_activity: metrics.totalNeuralActivity ?? null,
+    faa: metrics.faa ?? null,
     signal_quality:
       signalQuality0to100 == null ? null : toApiSignalQuality(signalQuality0to100),
     sdnn: hrv.getCurrentSDNN(),
@@ -457,6 +460,8 @@ export function useBand({
   });
   const biosignalCloseRef = useRef(biosignal.close);
   biosignalCloseRef.current = biosignal.close;
+  const biosignalRef = useRef(biosignal);
+  biosignalRef.current = biosignal;
   /** SDD-222 G6: BLE 콜백 경로 flush 의 마지막 시각(throttle 기준) */
   const lastCallbackFlushAtRef = useRef(0);
 
@@ -1293,6 +1298,14 @@ export function useBand({
         },
         onStoreUpdate: handleStoreUpdate,
         onEEGData: handleRawEegData,
+        // SDD-244: 분석 emit 전부를 원창과 함께 보존(수집 중이 아니면 훅이 무시)
+        onFeatureWindow: (signal, count) => biosignalRef.current.featureWindow(signal, count),
+        onFeatureEmit: (signal, data, window, extras) => {
+          if (!window) return;
+          const base = baseOffsetRef.current;
+          const windowIndex = base != null ? Math.max(0, Math.floor((Date.now() - base) / 1000)) : Math.floor(window.end / window.rate);
+          biosignalRef.current.emitFeature(signal, data, window, windowIndex, extras);
+        },
       });
       stream.setStoreCallbacks({
         updateBatteryData: (data) => {
