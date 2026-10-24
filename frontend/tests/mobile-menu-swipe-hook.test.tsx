@@ -106,10 +106,10 @@ describe('제스처 수명주기', () => {
     pointer('pointerdown', 280); pointer('pointermove', 160, 250, 80); pointer('pointerup', 160, 250, 100);
     await complete(); expect(path).toBe('/app/profile');
   });
-  it('오른쪽으로 이전 메뉴에 이동하고 첫·마지막에서는 저항만 준다', async () => {
+  it('오른쪽으로 이전 메뉴에 이동하고 첫·마지막에서는 반대쪽 끝으로 순환한다', async () => {
     await mount(); pointer('pointerdown', 100); pointer('pointermove', 220, 250, 80); pointer('pointerup', 220, 250, 100); await complete(); expect(path).toBe('/app');
-    pointer('pointerdown', 100); pointer('pointermove', 220, 250, 80); expect(page.style.transform).toBe('translate3d(26.4px,0,0)'); pointer('pointerup', 220, 250, 100); await complete(); expect(path).toBe('/app');
-    await mount(false, false, '/app/profile'); pointer('pointerdown', 280); pointer('pointermove', 160, 250, 80); expect(page.style.transform).toBe('translate3d(-26.4px,0,0)'); pointer('pointerup', 160, 250, 100); await complete(); expect(path).toBe('/app/profile');
+    pointer('pointerdown', 100); pointer('pointermove', 220, 250, 80); expect(page.style.transform).toBe('translate3d(120px,0,0)'); pointer('pointerup', 220, 250, 100); await complete(); expect(path).toBe('/app/profile');
+    await mount(false, false, '/app/profile'); pointer('pointerdown', 280); pointer('pointermove', 160, 250, 80); expect(page.style.transform).toBe('translate3d(-120px,0,0)'); pointer('pointerup', 160, 250, 100); await complete(); expect(path).toBe('/app');
   });
   it('auto 본문 padding에서는 수평 잠금 후 native pan만 막고 세로·레일·핀치는 유지한다', async () => {
     await mount();

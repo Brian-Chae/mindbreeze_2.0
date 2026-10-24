@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest';
-import { getMobileMenuTabs, getSwipeRootIndex, getSwipeAxis, shouldCommitSwipe, resistSwipe } from '../src/lib/mobile-menu-swipe';
+import { getMobileMenuTabs, getSwipeRootIndex, getSwipeAxis, shouldCommitSwipe, resistSwipe, getSwipeTargetIndex } from '../src/lib/mobile-menu-swipe';
 import { hasMobileSwipeProtection, registerMobileSwipeProtection, isSwipeTargetExcluded, hasSwipeDomProtection } from '../src/lib/mobile-menu-swipe-protection';
 
 describe('모바일 메뉴 순서와 정확한 루트', () => {
@@ -87,5 +87,18 @@ describe('보호 수명과 DOM', () => {
     const root = document.querySelector('main')!;
     for (const id of ['button', 'rail', 'table', 'chart']) expect(isSwipeTargetExcluded(document.getElementById(id)!, root)).toBe(true);
     expect(isSwipeTargetExcluded(document.getElementById('body')!, root)).toBe(false);
+  });
+});
+
+describe('메뉴 끝 순환', () => {
+  it('마지막 탭(설정)에서 다음으로 넘기면 첫 탭(홈)으로, 첫 탭에서 이전으로 넘기면 마지막 탭으로 간다', () => {
+    expect(getSwipeTargetIndex(4, -100, 5)).toBe(0);
+    expect(getSwipeTargetIndex(0, 100, 5)).toBe(4);
+    expect(getSwipeTargetIndex(2, -100, 5)).toBe(3);
+    expect(getSwipeTargetIndex(2, 100, 5)).toBe(1);
+  });
+  it('탭이 하나뿐이거나 루트가 아니면 이동하지 않는다', () => {
+    expect(getSwipeTargetIndex(0, -100, 1)).toBe(-1);
+    expect(getSwipeTargetIndex(-1, -100, 5)).toBe(-1);
   });
 });
