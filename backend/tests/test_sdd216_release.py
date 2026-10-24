@@ -50,12 +50,17 @@ def test_dev_등록_명령은_두_cron만_멱등하게_추가한다(tmp_path):
         for step in steps
         if step.get("uses", "").startswith("appleboy/ssh-action")
     )
+    assert "deploy/dev/register-crons.sh" in packaging
+    assert remote.index("tar xzf deploy-bundle.tar.gz") < remote.index(
+        'bash "$BASE/deploy/dev/register-crons.sh"'
+    )
+    registration = (ROOT / "deploy/dev/register-crons.sh").read_text()
     scripts = ("class_operations_cron.py", "class_rolling_cron.py")
     for script in scripts:
         assert f"backend/{script}" in packaging
     lines = [
         line
-        for line in remote.splitlines()
+        for line in registration.splitlines()
         if line.lstrip().startswith("(crontab")
         and any(name in line for name in scripts)
     ]
