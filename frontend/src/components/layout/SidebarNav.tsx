@@ -109,7 +109,6 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 const ORG_ADMIN_NAV_ITEMS: NavItem[] = [
-  { to: "/org/data-center", label: "데이터 센터", icon: ICONS.activity },
   { to: '/dashboard/org', key: 'org-dashboard', icon: ICONS.home },
   { to: '/classes', key: 'meditation-class', icon: ICONS.calendar },
   { to: '/clients', key: 'client', icon: ICONS.users },
@@ -118,6 +117,7 @@ const ORG_ADMIN_NAV_ITEMS: NavItem[] = [
   // SDD-082: 기관 관리자 전용 상담사 관리 페이지
   { to: '/org/counselors', key: 'members', icon: ICONS.users },
   { to: '/reports', key: 'report', icon: ICONS.report },
+  { to: "/org/data-center", label: "데이터 센터", icon: ICONS.activity },
   { to: '/notifications', key: 'notification', icon: ICONS.bell },
   { to: '/settings', key: 'setting', icon: ICONS.settings },
 ];
@@ -133,8 +133,8 @@ const CLIENT_NAV_ITEMS: NavItem[] = [
 ];
 
 const ADMIN_NAV_ITEMS: NavItem[] = [
-  { to: "/admin/data-center", label: "데이터 센터", icon: ICONS.activity },
   { to: '/chat', key: 'chat', icon: ICONS.message },
+  { to: "/admin/data-center", label: "데이터 센터", icon: ICONS.activity },
   { to: '/notifications', key: 'notification', icon: ICONS.bell },
   { to: '/settings', key: 'setting', icon: ICONS.settings },
   { to: '/admin/orgs', key: 'admin-orgs', icon: ICONS.users },

@@ -1,0 +1,46 @@
+[
+  {
+    "state": "normal",
+    "text": "다운로드 설정",
+    "classes": "dc-primary",
+    "fg": "rgb(255, 255, 255)",
+    "bg": "rgb(105, 81, 143)",
+    "effectiveBg": [
+      105,
+      81,
+      143,
+      1
+    ],
+    "opacity": "1",
+    "contrast": 6.615720587405839,
+    "disabled": false,
+    "focusVisible": false,
+    "outline": "rgb(255, 255, 255) none 3px",
+    "rect": {
+      "width": 104,
+      "height": 48
+    }
+  },
+  {
+    "state": "hover",
+    "text": "다운로드 설정",
+    "classes": "dc-primary",
+    "fg": "rgb(255, 255, 255)",
+    "bg": "rgb(244, 239, 250)",
+    "effectiveBg": [
+      244,
+      239,
+      250,
+      1
+    ],
+    "opacity": "1",
+    "contrast": 1.1306342563652727,
+    "disabled": false,
+    "focusVisible": false,
+    "outline": "rgb(255, 255, 255) none 3px",
+    "rect": {
+      "width": 104,
+      "height": 48
+    }
+  }
+]

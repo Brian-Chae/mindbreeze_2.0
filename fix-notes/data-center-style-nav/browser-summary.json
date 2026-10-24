@@ -1,0 +1,293 @@
+{
+  "channel": "chrome",
+  "version": "155.0.8059.85",
+  "viewports": [
+    1440,
+    390
+  ],
+  "mode": "localhost Vite + 실제 제품 컴포넌트 + API 전량 Playwright mock",
+  "tokensImportCorrection": "기존 frontend/src/index.css ../design-system 경로를 harness transform에서 저장소 루트 design-system 경로로 해석. 제품 소스 변경 없음.",
+  "scope": "본인 컴퓨터 Chrome headless, 실제 dev 서버/DB/로그인 검증 아님",
+  "samples": 3120,
+  "minimumContrast": 8.748034726587232,
+  "aaFailures": 0,
+  "runtimeErrors": [],
+  "perDataset": [
+    {
+      "kind": "final",
+      "samples": 1896,
+      "widths": [
+        1440,
+        390
+      ],
+      "failures": 0,
+      "min": 8.748034726587232
+    },
+    {
+      "kind": "supplement",
+      "samples": 896,
+      "widths": [
+        1440,
+        390
+      ],
+      "failures": 0,
+      "min": 8.748034726587232
+    },
+    {
+      "kind": "metrics",
+      "samples": 328,
+      "widths": [
+        1440,
+        390
+      ],
+      "failures": 0,
+      "min": 8.748034726587232
+    }
+  ],
+  "perState": [
+    {
+      "state": "normal",
+      "samples": 780,
+      "min": 8.748034726587232
+    },
+    {
+      "state": "hover",
+      "samples": 780,
+      "min": 8.748034726587232
+    },
+    {
+      "state": "focus",
+      "samples": 780,
+      "min": 8.748034726587232
+    },
+    {
+      "state": "disabled",
+      "samples": 780,
+      "min": 9.356793461754238
+    }
+  ],
+  "focusVisible": {
+    "samples": 780,
+    "enabledSamples": 696,
+    "actualVisible": 696,
+    "missingOnEnabled": 0,
+    "outlines": [
+      "rgb(124, 58, 237) solid 2px"
+    ]
+  },
+  "primary": [
+    {
+      "state": "normal",
+      "foreground": "rgb(255, 255, 255)",
+      "background": "rgb(110, 26, 140)",
+      "contrast": 9.591462779182894
+    },
+    {
+      "state": "hover",
+      "foreground": "rgb(255, 255, 255)",
+      "background": "rgb(95, 0, 128)",
+      "contrast": 11.67781397262292
+    },
+    {
+      "state": "focus",
+      "foreground": "rgb(255, 255, 255)",
+      "background": "rgb(110, 26, 140)",
+      "contrast": 9.591462779182894
+    },
+    {
+      "state": "disabled",
+      "foreground": "rgb(64, 64, 64)",
+      "background": "rgb(242, 243, 248)",
+      "contrast": 9.356793461754238
+    }
+  ],
+  "baseline": [
+    {
+      "state": "normal",
+      "text": "다운로드 설정",
+      "classes": "dc-primary",
+      "fg": "rgb(255, 255, 255)",
+      "bg": "rgb(105, 81, 143)",
+      "effectiveBg": [
+        105,
+        81,
+        143,
+        1
+      ],
+      "opacity": "1",
+      "contrast": 6.615720587405839,
+      "disabled": false,
+      "focusVisible": false,
+      "outline": "rgb(255, 255, 255) none 3px",
+      "rect": {
+        "width": 104,
+        "height": 48
+      }
+    },
+    {
+      "state": "hover",
+      "text": "다운로드 설정",
+      "classes": "dc-primary",
+      "fg": "rgb(255, 255, 255)",
+      "bg": "rgb(244, 239, 250)",
+      "effectiveBg": [
+        244,
+        239,
+        250,
+        1
+      ],
+      "opacity": "1",
+      "contrast": 1.1306342563652727,
+      "disabled": false,
+      "focusVisible": false,
+      "outline": "rgb(255, 255, 255) none 3px",
+      "rect": {
+        "width": 104,
+        "height": 48
+      }
+    }
+  ],
+  "disabledMethod": "원래 disabled 버튼 포함. 각 활성 버튼에도 DOM disabled 속성을 일시 설정하고 computedStyle 계산 후 원상복구해 스타일 가족을 검증.",
+  "geometry": [
+    {
+      "width": 1440,
+      "path": "classes",
+      "viewportWidth": 1440,
+      "documentWidth": 1440,
+      "bodyWidth": 1440,
+      "overflows": []
+    },
+    {
+      "width": 1440,
+      "path": "data-center",
+      "viewportWidth": 1440,
+      "documentWidth": 1440,
+      "bodyWidth": 1440,
+      "overflows": [
+        {
+          "class": "dc-tabs",
+          "width": 1072,
+          "scrollWidth": 1072
+        },
+        {
+          "class": "dc-subtabs",
+          "width": 1030,
+          "scrollWidth": 1030
+        },
+        {
+          "class": "dc-table-wrap",
+          "width": 1028,
+          "scrollWidth": 1028
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "path": "classes",
+      "viewportWidth": 390,
+      "documentWidth": 390,
+      "bodyWidth": 390,
+      "overflows": []
+    },
+    {
+      "width": 390,
+      "path": "data-center",
+      "viewportWidth": 390,
+      "documentWidth": 390,
+      "bodyWidth": 390,
+      "overflows": [
+        {
+          "class": "dc-tabs",
+          "width": 330,
+          "scrollWidth": 830
+        },
+        {
+          "class": "dc-subtabs",
+          "width": 300,
+          "scrollWidth": 310
+        },
+        {
+          "class": "dc-table-wrap",
+          "width": 298,
+          "scrollWidth": 590
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    "baseline-red-hover.png",
+    "baseline-red-normal.png",
+    "comparison-1440-detail.png",
+    "comparison-1440-list.png",
+    "comparison-390-detail.png",
+    "comparison-390-list.png",
+    "final-1440-counselor-classes-class-1.png",
+    "final-1440-counselor-classes.png",
+    "final-1440-dc-classes.png",
+    "final-1440-dc-export-dialog.png",
+    "final-1440-dc-export-preview.png",
+    "final-1440-dc-measure-ACC.png",
+    "final-1440-dc-measure-PPG.png",
+    "final-1440-dc-measure-eeg.png",
+    "final-1440-dc-measure-feature.png",
+    "final-1440-dc-participants.png",
+    "final-1440-dc-sessions.png",
+    "final-1440-dc-개요.png",
+    "final-1440-dc-다운로드 기록.png",
+    "final-1440-dc-다운로드 작업.png",
+    "final-1440-dc-동의·연구.png",
+    "final-1440-dc-보관·삭제.png",
+    "final-1440-dc-사용자 데이터.png",
+    "final-1440-dc-표준 데이터.png",
+    "final-1440-download-hover.png",
+    "final-1440-org_admin-classes-class-1.png",
+    "final-1440-org_admin-classes.png",
+    "final-390-counselor-classes-class-1.png",
+    "final-390-counselor-classes.png",
+    "final-390-dc-classes.png",
+    "final-390-dc-export-dialog.png",
+    "final-390-dc-export-preview.png",
+    "final-390-dc-measure-ACC.png",
+    "final-390-dc-measure-PPG.png",
+    "final-390-dc-measure-eeg.png",
+    "final-390-dc-measure-feature.png",
+    "final-390-dc-participants.png",
+    "final-390-dc-sessions.png",
+    "final-390-dc-개요.png",
+    "final-390-dc-다운로드 기록.png",
+    "final-390-dc-다운로드 작업.png",
+    "final-390-dc-동의·연구.png",
+    "final-390-dc-보관·삭제.png",
+    "final-390-dc-사용자 데이터.png",
+    "final-390-dc-표준 데이터.png",
+    "final-390-download-hover.png",
+    "final-390-org_admin-classes-class-1.png",
+    "final-390-org_admin-classes.png",
+    "metrics-1440-feature-table.png",
+    "metrics-1440-indices-more.png",
+    "metrics-1440-indices.png",
+    "metrics-1440-다운로드 기록-more.png",
+    "metrics-1440-다운로드 작업-more.png",
+    "metrics-390-feature-table.png",
+    "metrics-390-indices-more.png",
+    "metrics-390-indices.png",
+    "metrics-390-다운로드 기록-more.png",
+    "metrics-390-다운로드 작업-more.png",
+    "supplement-1440-dc-link-reauth.png",
+    "supplement-1440-dc-계정 삭제 접수·원장.png",
+    "supplement-1440-dc-삭제 후보.png",
+    "supplement-1440-dc-상담사 단위-sessions.png",
+    "supplement-1440-dc-상담사 단위.png",
+    "supplement-1440-dc-연구 배치.png",
+    "supplement-1440-dc-회원 단위-sessions.png",
+    "supplement-1440-dc-회원 단위.png",
+    "supplement-390-dc-link-reauth.png",
+    "supplement-390-dc-계정 삭제 접수·원장.png",
+    "supplement-390-dc-삭제 후보.png",
+    "supplement-390-dc-상담사 단위-sessions.png",
+    "supplement-390-dc-상담사 단위.png",
+    "supplement-390-dc-연구 배치.png",
+    "supplement-390-dc-회원 단위-sessions.png",
+    "supplement-390-dc-회원 단위.png"
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "totalTests": 2990,
+  "failedTests": 17,
+  "failedFiles": {
+    "agent-counselor-page.test.tsx": [
+      "상담사는 브리핑과 입력창을 보고 CTA로 세션 목록을 연다",
+      "메시지 전송 성공 후 입력을 비우고 사용자·AI 응답을 최신 하단에 표시한다"
+    ],
+    "chat-message-deeplink.test.ts": [
+      "대상 missing이면 최근 대화로 돌아갈 수 있다",
+      "대상 failure이면 최근 대화로 돌아갈 수 있다"
+    ],
+    "org-counselor-management-browser.test.cjs": [
+      "상담사 보호 대상, 확인 사유, 실패 유지, 역할 변경과 소속 해제"
+    ],
+    "org-management-browser.test.cjs": [
+      "기관 모달: 미저장 보호, 실패 유지, 충돌 재조회, 수정, 비활성화, 재활성화",
+      "목록 상태 필터와 저장 후 포커스 복귀"
+    ],
+    "report-modal-pdf.test.cjs": [
+      "하단 액션과 본문 전용 PDF (수신 주소: saved@example.com)",
+      "하단 액션과 본문 전용 PDF (수신 주소: 없음)"
+    ],
+    "report-server-pdf.test.cjs": [
+      "detail: 서버 파일 다운로드와 실패 복구",
+      "email: 서버 파일 다운로드와 실패 복구"
+    ],
+    "sdd220-native-release.test.ts": [
+      "TS1 버전·암호화·Privacy Resources 등록",
+      "TS29 release 서명 누락 거부·버전"
+    ],
+    "sdd234-a-mobile-home.test.tsx": [
+      "member: 768px 계산 글자·터치·간격 불변",
+      "member: 1440px 계산 글자·터치·간격 불변",
+      "host: 768px 계산 글자·터치·간격 불변",
+      "host: 1440px 계산 글자·터치·간격 불변"
+    ]
+  }
+}

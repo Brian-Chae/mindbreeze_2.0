@@ -1,0 +1,12 @@
+# 재시도·중복 캡처와 전체 원시 테스트 출력은 로컬에 보존한다.
+/baseline-1440-*.png
+/verified-*
+/baseline-tests.json
+/final-tests.json
+/*-1440-contrast.json
+/*-390-contrast.json
+/*.log
+!/build.log
+!/typecheck.log
+!/eslint.log
+!/focused-tests.log
