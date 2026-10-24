@@ -9,10 +9,27 @@
 const DB_NAME = 'mindbreeze-eeg-raw';
 const DB_VERSION = 1;
 const STORE_QUEUE = 'pending_raw_chunks';
+const MAX_QUEUE_BYTES = 64 * 1024 * 1024;
+const QUARANTINE_MS = 60_000;
+const LOSS_LOG_KEY = 'mindbreeze:eeg-raw-loss-events';
+
+/** raw·자격 증명 없이 진단을 영속 기록한다. 기록 불가 시 용량 삭제도 중단한다. */
+function recordLoss(item: QueuedRawChunkItem, reason: 'capacity_eviction' | 'upload_unavailable'): void {
+  const event = { at: Date.now(), chunkId: item.id, bytes: item.byteSize, reason };
+  const previous: unknown = JSON.parse(localStorage.getItem(LOSS_LOG_KEY) ?? '[]');
+  const events = Array.isArray(previous) ? previous.slice(-999) : [];
+  localStorage.setItem(LOSS_LOG_KEY, JSON.stringify([...events, event]));
+  console.error('[eeg-raw] 원데이터 손실/업로드 불가', event);
+}
 
 /** 큐에 넣는 raw chunk 메타 + payload */
 export interface QueuedRawChunkPayload {
   sessionId: string;
+  ownerId?: string | null;
+  state?: 'pending' | 'quarantine';
+  retryAfter?: number;
+  permanentFailureCount?: number;
+  unavailableRecorded?: boolean;
   participantId: string | null;
   streamId: string;
   chunkIndex: number;
@@ -126,8 +143,23 @@ export async function enqueueRawChunk(
     const existing = await idbReq<QueuedRawChunkItem | undefined>(
       store.get(item.id),
     );
+    if (existing && (existing.sessionId !== item.sessionId || existing.participantId !== item.participantId || existing.ownerId !== item.ownerId || existing.checksum !== item.checksum || existing.byteSize !== item.byteSize || !new Uint8Array(existing.payload).every((byte, index) => byte === new Uint8Array(item.payload)[index]))) {
+      throw new Error('raw 청크 키 충돌: 기존 사본을 보존합니다');
+    }
     if (!existing) {
-      store.put(item);
+      const all = await idbReq<QueuedRawChunkItem[]>(store.getAll());
+      const candidates = [...all, item].sort((a, b) => a.createdAt - b.createdAt);
+      let bytes = candidates.reduce((sum, candidate) => sum + candidate.byteSize, 0);
+      const evicted = new Set<string>();
+      for (const candidate of candidates) {
+        if (bytes <= MAX_QUEUE_BYTES) break;
+        recordLoss(candidate, 'capacity_eviction');
+        evicted.add(candidate.id);
+        bytes -= candidate.byteSize;
+      }
+      // 로그 기록까지 모두 성공해야 단일 IDB 트랜잭션에서 큐를 변경한다.
+      for (const id of evicted) store.delete(id);
+      if (!evicted.has(item.id)) store.put(item);
     }
     await txDone(tx);
     return existing ?? item;
@@ -139,18 +171,20 @@ export async function enqueueRawChunk(
 export async function listPendingRawChunks(
   sessionId: string,
   participantId?: string | null,
+  ownerId?: string | null,
 ): Promise<QueuedRawChunkItem[]> {
   const db = await openDb();
   try {
     const tx = db.transaction(STORE_QUEUE, 'readonly');
     const store = tx.objectStore(STORE_QUEUE);
-    const index = store.index('by_session');
-    const all = await idbReq<QueuedRawChunkItem[]>(index.getAll(sessionId));
+    const all = await idbReq<QueuedRawChunkItem[]>(store.getAll());
     await txDone(tx);
     const filtered =
-      participantId === undefined
-        ? all
-        : all.filter((item) => item.participantId === participantId);
+      all.filter((item) => {
+        if (ownerId && item.ownerId === ownerId) return true;
+        if (item.ownerId && item.ownerId !== ownerId && participantId !== undefined) return false;
+        return item.sessionId === sessionId && (participantId === undefined || item.participantId === participantId);
+      });
     return filtered.sort((a, b) => a.chunkIndex - b.chunkIndex);
   } finally {
     db.close();
@@ -190,6 +224,7 @@ export async function markRawChunkAttempt(
   streamId: string,
   chunkIndex: number,
   errorMessage: string,
+  permanent = false,
 ): Promise<QueuedRawChunkItem | null> {
   const db = await openDb();
   try {
@@ -206,6 +241,20 @@ export async function markRawChunkAttempt(
       attemptCount: item.attemptCount + 1,
       lastError: errorMessage,
     };
+    const permanentCount = (item.permanentFailureCount ?? 0) + (permanent ? 1 : 0);
+    updated.permanentFailureCount = permanentCount;
+    if (permanent || updated.attemptCount >= 8) {
+      updated.state = 'quarantine';
+      updated.retryAfter = Date.now() + QUARANTINE_MS;
+    }
+    if (permanentCount >= 3 && !item.unavailableRecorded) {
+      try {
+        recordLoss(updated, 'upload_unavailable');
+        updated.unavailableRecorded = true;
+      } catch (error) {
+        console.error('[eeg-raw] 업로드 불가 진단 저장 실패; payload는 유지합니다', error);
+      }
+    }
     store.put(updated);
     await txDone(tx);
     return updated;

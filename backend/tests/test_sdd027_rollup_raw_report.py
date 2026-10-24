@@ -238,6 +238,7 @@ def test_08_ack_업로드확인_file_count_갱신(client):
     assert res.status_code == 200, res.text
     body = res.json()
     assert body["acked"] == 3
+    assert body["chunks"] == [dict(c, upload_status="uploaded") for c in ack_chunks]
     assert body["file_count"] == 3
     assert body["eeg_record_id"] is not None
 
@@ -245,6 +246,7 @@ def test_08_ack_업로드확인_file_count_갱신(client):
     res2 = client.post(f"/api/v1/sessions/{cls['id']}/eeg-raw/ack",
                        json={"participant_id": pid, "chunks": ack_chunks})
     assert res2.json()["acked"] == 0
+    assert res2.json()["chunks"] == body["chunks"]
     assert res2.json()["file_count"] == 3
 
     from app.models.record import EEGRawChunk
@@ -416,3 +418,31 @@ def test_17_게스트_client_report_nullable_user_id(client):
     assert body["user_id"] is None
     assert body["participant_id"] == pid
     assert body["status"] == "pending_review"
+
+
+def test_raw_ack_부분실패_청크별_결과를_반환한다(client, monkeypatch):
+    from app.services import storage_service
+
+    counselor = _register(client, "raw-mixed-ack@test.com")
+    cls = _create_group_class(client, counselor["h"])
+    pid = _join_guest(client, cls["access_code"], "부분확인")
+    presigned = _presign(client, cls["id"], pid, range(2)).json()["chunks"]
+    checks = iter([True, False])
+    monkeypatch.setattr(storage_service, "verify_object", lambda *args, **kwargs: next(checks))
+    requested = [
+        {"chunk_id": chunk["chunk_id"], "checksum": f"sum-{index}", "size_bytes": 1024}
+        for index, chunk in enumerate(presigned)
+    ]
+    response = client.post(
+        f"/api/v1/sessions/{cls['id']}/eeg-raw/ack",
+        json={"participant_id": pid, "chunks": requested},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["acked"] == 1
+    assert body["failed"] == 1
+    assert body["file_count"] == 1
+    assert body["chunks"] == [
+        dict(requested[0], upload_status="uploaded"),
+        dict(requested[1], upload_status="failed"),
+    ]
