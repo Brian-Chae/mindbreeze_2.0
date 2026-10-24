@@ -443,6 +443,10 @@ class FeaturePage(Contract):
     session_id: UUID
     participant_id: UUID
     as_of: datetime
+    # 상세 emit JSONL(전체 emit inventory)은 SDD-244 artifact 연결 후 제공. 1Hz 스칼라와 혼동하지 않는다.
+    detail_emit: Literal['available', 'not_connected'] = 'not_connected'
+    # scalar_1hz 의 t_rel_ms 원점. manifest 원점이 연결되면 'manifest_origin' 으로 바뀐다.
+    time_origin: Literal['first_feature_window', 'manifest_origin'] = 'first_feature_window'
     algorithm_versions: dict[str, str] = Field(default_factory=dict)
     items: list[FeatureRow]
     next_cursor: str | None = None

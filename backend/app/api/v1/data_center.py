@@ -165,3 +165,60 @@ def account_deletions(query: dc.DataCenterQuery = Depends(query_dep), ctx: polic
 def baselines(query: dc.DataCenterQuery = Depends(query_dep), ctx: policy.ResolvedContext = Depends(context_dep),
               db: DBSession = Depends(get_db)):
     return gov.list_baselines(db, ctx, query)
+
+
+# ── B04 측정 1건 시계열 ───────────────────────────────────────────────────
+import re  # noqa: E402
+
+from app.services import data_center_measurement as dm  # noqa: E402
+
+_US = re.compile(r'^(0|[1-9][0-9]{0,18})$')
+
+
+def backend_dep() -> dm.MeasurementBackend:
+    """244 T06/T03 어댑터 주입점(테스트에서는 dependency_overrides 로 fake 를 넣는다)."""
+    return dm.default_backend()
+
+
+def _selection(session_id: UUID, participant_id: UUID, from_us: str | None, to_us: str | None) -> dc.MeasurementSelection:
+    for value in (from_us, to_us):
+        if value is not None and not _US.match(value):
+            raise policy.deny(422, 'range_invalid', 'from_us/to_us 는 0 이상의 정수 µs 문자열입니다')
+    return dc.MeasurementSelection(session_id=session_id, participant_id=participant_id, from_us=from_us, to_us=to_us)
+
+
+@router.get('/measurements/{session_id}/{participant_id}/waveform', response_model=dc.WaveformResponse)
+def waveform(session_id: UUID, participant_id: UUID, signal_type: dc.SignalType = Query(...),
+             from_us: str | None = Query(None), to_us: str | None = Query(None),
+             max_points: int = Query(dm.MAX_POINTS_DEFAULT, ge=10, le=dm.MAX_POINTS_LIMIT),
+             ctx: policy.ResolvedContext = Depends(context_dep), db: DBSession = Depends(get_db),
+             backend: dm.MeasurementBackend = Depends(backend_dep)):
+    dm.authorize_measurement(db, ctx, session_id, participant_id)
+    return dm.read_waveform(backend, _selection(session_id, participant_id, from_us, to_us), signal_type, max_points)
+
+
+@router.get('/measurements/{session_id}/{participant_id}/features', response_model=dc.FeaturePage)
+def features(session_id: UUID, participant_id: UUID, from_us: str | None = Query(None), to_us: str | None = Query(None),
+             limit: int = Query(200, ge=1, le=1000), cursor: str | None = Query(None, max_length=512),
+             ctx: policy.ResolvedContext = Depends(context_dep), db: DBSession = Depends(get_db)):
+    dm.authorize_measurement(db, ctx, session_id, participant_id)
+    query = dc.DataCenterQuery(limit=min(limit, 100), cursor=cursor)
+    query = query.model_copy(update={'limit': limit})  # 1Hz 시계열은 페이지당 최대 1000행(일반 목록 상한과 별개)
+    return dm.read_features(db, _selection(session_id, participant_id, from_us, to_us), query)
+
+
+@router.get('/measurements/{session_id}/{participant_id}/indices', response_model=dc.IndicesPage)
+def indices(session_id: UUID, participant_id: UUID, limit: int = Query(200, ge=1, le=1000),
+            cursor: str | None = Query(None, max_length=512), ctx: policy.ResolvedContext = Depends(context_dep),
+            db: DBSession = Depends(get_db), backend: dm.MeasurementBackend = Depends(backend_dep)):
+    dm.authorize_measurement(db, ctx, session_id, participant_id)
+    query = dc.DataCenterQuery(limit=100, cursor=cursor).model_copy(update={'limit': limit})
+    return dm.read_indices(db, backend, _selection(session_id, participant_id, None, None), query)
+
+
+@router.get('/measurements/{session_id}/{participant_id}/spectrum', response_model=dc.SpectrumResponse)
+def spectrum(session_id: UUID, participant_id: UUID, from_us: str = Query(...), to_us: str = Query(...),
+             ctx: policy.ResolvedContext = Depends(context_dep), db: DBSession = Depends(get_db),
+             backend: dm.MeasurementBackend = Depends(backend_dep)):
+    dm.authorize_measurement(db, ctx, session_id, participant_id)
+    return dm.read_spectrum(backend, _selection(session_id, participant_id, from_us, to_us))

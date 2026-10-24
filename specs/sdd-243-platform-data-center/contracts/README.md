@@ -63,6 +63,17 @@
 - `measurement` 의 PPG/ACC 는 SDD-244 인수 전이라 `not_collected(storage_not_connected)`, `manifest_state=not_connected`. EEG raw 없이 feature 만 있으면 `availability=unknown(raw_absent_features_only)`.
 - 기관 참여자 표에서 `display_name` 은 `capabilities.can_export_identified` 가 true 일 때만 값, 연구 동의는 `not_visible`.
 
+## 구현 메모 (B04 측정 시계열)
+
+- 파형: `signal_type`(필수) `from_us`/`to_us`(상대 µs, `[from,to)`) `max_points`(기본 2000, 10~4000, 초과 422). 해당 구간 청크만 서버가 순차로 읽는다.
+  - `method=raw`: 구간 원천 샘플 ≤ max_points. `method=minmax_envelope`: 시간 버킷 `max_points//2`개, 채널별 `min[]`·`max[]`(값 수 합 ≤ max_points), 데이터 없는 버킷은 `null`(보간 없음). `returned_count` = 포인트(버킷) 수, `source_sample_count` = 구간 안 원천 샘플 수.
+  - `segments[]` 는 stream/segment 별 연속 구간(`point_start..point_end`)이므로 FE 는 segment 사이를 선으로 잇지 않는다. `gaps[]` = manifest gap + 서버가 감지한 샘플 인덱스 불연속(`sample_index_gap`). overlap 은 중복제거 없이 segment 분리 + `null_reasons.overlap`.
+  - `availability != available` 이면 `method=none`, `t_us=[]`, `channels=[]`(0 값 파일/파형을 만들지 않음). 사유 예: `manifest_not_connected`(244 T06 미연결), `legacy_time_origin_unknown`, `old_app`/`unsupported_client`, `band_not_used`, `no_data_in_range`.
+  - manifest 가 `pending_upload` 면 409 `manifest_pending`(준비 중). 명시적 `partial` 은 열람 허용(제외 범위는 `gaps`/`availability` 로 표시).
+- feature: `limit` 최대 1000(1Hz 시계열이라 일반 목록 상한과 별개), `from_us`/`to_us` 는 첫 feature 윈도우 기준 상대 시각. `detail_emit=not_connected`(상세 emit JSONL 은 244 artifact 연결 후), `time_origin=first_feature_window`. 값은 원 float, 산출 불가는 `null`.
+- indices: 당시 표시 snapshot 만 통과. 저장 이전/미수집은 6지표 모두 `value=null,status=display_history_missing,source=none`, `view=unavailable`. 서버는 feature 로 재구성하지 않으며 `reconstructed`/`report_aggregate` 를 당시 시계열에 섞지 않는다. HRV 는 `hrv_sdnn_ms`(SDNN) 고정.
+- spectrum: `from_us`·`to_us` 필수. 2~30초, 연속(gap 없음)·시간축 확인 구간만 계산(`dc-welch-v1`: Hann·Welch 2초·50% overlap·창별 평균 제거·one-sided, 단위 `uV2/Hz`). 불가 시 `computable=false` + `reason`(`range_too_short`/`range_too_long`/`gap_in_range`/`time_axis_unknown`/`insufficient_coverage`/`manifest_not_connected`/`signal_*`).
+
 ## 인가 요점 (FE 가 믿으면 안 되는 것)
 
 - `capabilities` 는 표시용. 모든 호출을 서버가 다시 거절한다. 탭 숨김은 보안이 아니다.
