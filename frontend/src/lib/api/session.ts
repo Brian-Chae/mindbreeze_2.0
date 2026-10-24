@@ -211,6 +211,12 @@ export interface EegFeatureItem {
   cognitive_load?: number | null;
   emotional_stability?: number | null;
   hemispheric_balance?: number | null;
+  /** SDD-244: 누락돼 있던 스칼라. 서버가 알기 전까지는 무시된다. */
+  total_neural_activity?: number | null;
+  /** FAA(로그비) */
+  faa?: number | null;
+  /** 실행 구간(play/resume) 식별자 — 서버 EEGFeatureItem이 이미 수용 */
+  play_group_id?: string | null;
   /** 0~1 신호 품질 */
   signal_quality?: number | null;
   /** PPG HRV — 계산 불가 시 null (0 치환 금지) */

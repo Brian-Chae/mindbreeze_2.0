@@ -18,7 +18,16 @@ export class PPGSignalProcessor {
   private readonly channelNames = ['Red', 'IR'] as const;
   private readonly ppgSamplingRate: number = 50; // Hz
   
+  /** SDD-244 T10: processPPGData 결과 객체 → RR 인터벌마다 그것을 닫는 피크의 시각(ms). 반환 타입(inventory)은 바꾸지 않는다. */
+  private rrEndTimestampsByResult = new WeakMap<object, number[]>();
+  /** processPPGSegment가 동기로 남기는 값. 호출 직후 processPPGData가 결과 객체에 묶는다. */
+  private lastSegmentRrTimestamps: number[] = [];
+
   constructor() {}
+
+  getRrEndTimestamps(result: object): number[] {
+    return this.rrEndTimestampsByResult.get(result) ?? [];
+  }
   
   /**
    * PPG 데이터 처리 메인 함수
@@ -66,11 +75,12 @@ export class PPGSignalProcessor {
     try {
       // PPG 세그먼트 처리
       const result = this.processPPGSegment(data);
+      const rrEndTimestamps = this.lastSegmentRrTimestamps;
       
       // 피크 정보 분석
       const peakInfo = await this.analyzePeaks(result.filteredRawData);
       
-      return {
+      const output = {
         filteredData: result.filteredRawData,
         signalQuality: {
           overall: result.signalQuality,
@@ -90,6 +100,8 @@ export class PPGSignalProcessor {
         advancedHRV: result.advancedHRV,
         rrIntervals: result.rrIntervals || [] // 🔧 RR 간격 추가
       };
+      this.rrEndTimestampsByResult.set(output, rrEndTimestamps.slice(0, output.rrIntervals.length));
+      return output;
       
     } catch (error) {
       console.error('❌ PPG 데이터 처리 중 치명적 오류 발생:', {
@@ -214,6 +226,9 @@ export class PPGSignalProcessor {
     // 🔧 7. 고급 HRV 분석 추가 (에러 처리 포함)
     let advancedHRV;
     let rrIntervals: number[] = []; // 🔧 RR 간격 추출용
+    // SDD-244 T10: 각 RR을 닫는 피크의 시각 — 중첩 창에서 같은 박동을 구별(beat 식별)하는 데 쓴다.
+    const rrEndTimestamps: number[] = [];
+    this.lastSegmentRrTimestamps = rrEndTimestamps;
     
     try {
       advancedHRV = this.calculateAdvancedHRV(filteredIR);
@@ -227,6 +242,7 @@ export class PPGSignalProcessor {
           const interval = (peaks[i] - peaks[i-1]) * (1000 / this.ppgSamplingRate);
           if (interval >= 200 && interval <= 2000) {
             rrIntervals.push(interval);
+            rrEndTimestamps.push(processedData[peaks[i]]?.timestamp ?? NaN);
           }
         }
       }
@@ -237,6 +253,7 @@ export class PPGSignalProcessor {
         stressIndex: 0, avnn: 0, pnn20: 0, sdsd: 0, hrMax: 0, hrMin: 0
       };
       rrIntervals = [];
+      rrEndTimestamps.length = 0;
     }
     
     // 필터링된 데이터 재구성

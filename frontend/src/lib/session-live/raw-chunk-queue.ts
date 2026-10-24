@@ -6,8 +6,7 @@
  * 게스트(participantId) raw 지원. 재시도 카운트 보존.
  */
 
-const DB_NAME = 'mindbreeze-eeg-raw';
-const DB_VERSION = 1;
+import { openRawDb } from '../biosignal/queue-db';
 const STORE_QUEUE = 'pending_raw_chunks';
 const MAX_QUEUE_BYTES = 64 * 1024 * 1024;
 const QUARANTINE_MS = 60_000;
@@ -59,25 +58,7 @@ function queueItemId(streamId: string, chunkIndex: number): string {
   return `${streamId}:${chunkIndex}`;
 }
 
-function openDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    if (typeof indexedDB === 'undefined') {
-      reject(new Error('IndexedDB를 사용할 수 없습니다'));
-      return;
-    }
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(STORE_QUEUE)) {
-        const store = db.createObjectStore(STORE_QUEUE, { keyPath: 'id' });
-        store.createIndex('by_session', 'sessionId', { unique: false });
-        store.createIndex('by_stream', 'streamId', { unique: false });
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error ?? new Error('IndexedDB open 실패'));
-  });
-}
+const openDb = openRawDb;
 
 function idbReq<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
