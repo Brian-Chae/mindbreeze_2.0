@@ -230,3 +230,16 @@ A가 model/schema/migration을 모두 소유한다. C가 필요한 DB 변경은 
 3. v1 float32와 raw-v2 컨테이너의 schema dispatch, 추가 raw/packet/sample-map/raw-derived/display-status 경로, stream/segment 분리 파일명, `[from,to)`와 bin extra range를 확인해야 한다. ACC30Hz 고정·native25Hz 자동 재라벨은 금지다.
 4. 기본 가명 반출은 session 상대시각·alias만 사용한다. 원 UUID/tick/UTC 포함 raw bin은 무손실 권한 없으면 차단 또는 명시적 redacted_packet_view로 제공한다. 가명 feature device_timestamp_ms는 null, 기본 화면은 participant_player(없으면 session_player)다.
 5. 해결한 리뷰 지적: 기존 quality/소수ms 보존, ACC 파형 보관분리, ADC24/lead-off/MB 환산계수, B0 파라미터, 다중 stream/segment/view 종료 순번, 상세 null 사유, 6지표 원천 매핑, EEG fixture coverage4 정합. 추가 G1 차단사항 없음.
+
+
+## 8. T01 실행 결과 — FIX #89 인수(2026-10-24, 워커 A)
+
+- **인수 대상:** `fix/eeg-raw-ack-loss` 최종 commit `9501fc59`(develop `371789b0`에 PR #89로 머지). 본 브랜치 `sdd/244-a-server`에는 `587ba302`(origin/fix/eeg-raw-ack-loss 머지)로 포함되어 있다.
+- **FIX BE 변경(전부 확장 지점):**
+  - `schemas/eeg.py`: `RawAckResult{chunk_id, upload_status, checksum, size_bytes}` 추가, `RawAckResponse.chunks[]`(기본 빈 리스트) 추가. 기존 `acked/failed/eeg_record_id/file_count` 유지.
+  - `services/eeg_raw_service.py::ack_upload`: 응답에 요청 순서대로 청크별 결과를 담는다. DB commit 후 응답하며 재ACK도 `uploaded`를 돌려준다. 마이그레이션 없음.
+  - 테스트: `tests/test_sdd027_rollup_raw_report.py` test_08(청크별 ACK, 재ACK 동일 응답)·mixed uploaded/failed.
+- **244 확장 규칙(중복 구현 금지):** v2 ACK의 항목별 결과는 FIX의 `chunks[]` 구조(chunk_id/status/checksum/size)를 확장해 쓰고 v1 라우트 응답 형태는 건드리지 않는다. FIX 큐/상태 머신은 B 소유로 확장한다.
+- **FIX 요약에서 244가 이어받는 한계:** 서버 HEAD는 존재·크기만 확인(SHA-256 재검증 없음), 자격증명 미설정(stub) 시 검증 건너뜀 → T04가 v2 경로에 SHA-256 검증과 불변 object key를 추가한다. v1 경로의 의미는 바꾸지 않는다.
+- **회귀 확인:** `pytest tests/test_sdd027_rollup_raw_report.py tests/test_sdd244_contracts.py tests/test_sdd244_decoder.py` → **128 passed**(A02/A03 legacy 기준선). FIX 회귀 실패 없음.
+- 충돌 파일 예약: 위 소유권 표(A)의 BE 경로만 수정한다. FE 파일은 B 소유.
