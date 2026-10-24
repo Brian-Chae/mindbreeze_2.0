@@ -421,6 +421,7 @@ def run(db, job_id):
 def test_worker_dispatch_and_failure_modes(client, env, db, monkeypatch):
     w = env
     # 빌더 미연결 → ready 로 속이지 않고 failed
+    monkeypatch.setattr(dcx, 'PACKAGE_BUILDER', None)
     job = run(db, make_job(client, w, 'w1'))
     assert job.status == 'failed' and job.error_code == 'package_builder_unavailable'
     # 빌더가 연결되면 ready

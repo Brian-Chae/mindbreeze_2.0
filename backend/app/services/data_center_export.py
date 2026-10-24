@@ -651,3 +651,175 @@ def expire_jobs(db: DBSession, *, limit: int = 100) -> int:
             audit_dc(db, job, 'expired', 'expired')
     db.commit()
     return len(jobs)
+
+
+# ═══ B06: job → 패키지 빌더(DB 원천 + 244 어댑터) ═══════════════════════════════
+
+NUMERIC_FEATURES = (
+    'focus_index', 'cognitive_load', 'relaxation_index', 'stress_index', 'emotional_stability', 'total_neural_activity',
+    'faa', 'hemispheric_balance', 'delta_power', 'theta_power', 'alpha_power', 'beta_power', 'gamma_power', 'total_power',
+    'meditation_level', 'attention_level', 'signal_quality', 'sdnn', 'rmssd', 'lf_power', 'hf_power', 'lf_hf_ratio',
+    'heart_rate', 'respiratory_rate', 'motion',
+)
+FEATURE_HEADER = ['play_group_id', 'window_index', 't_rel_ms', *NUMERIC_FEATURES, 'quality', 'device_timestamp_ms']
+INDICES_HEADER = ['t_rel_ms', 'play_group_id', 'window_index', 'focus', 'relaxation', 'emotional_balance', 'bpm',
+                  'respiration', 'hrv_sdnn_ms', 'source', 'display_match', 'unavailable_reason']
+
+# 244 T12 `iter_export_artifacts` 어댑터(통합 시 연결). None 이면 raw 신호는 manifest_not_connected 로 제외한다.
+RAW_ARTIFACT_SOURCE = None
+
+
+def set_raw_artifact_source(source) -> None:
+    global RAW_ARTIFACT_SOURCE
+    RAW_ARTIFACT_SOURCE = source
+
+
+def _uuid_strings(*values) -> set[str]:
+    out: set[str] = set()
+    for v in values:
+        if v is not None:
+            out.update({str(v), str(v).replace('-', '')})
+    return out
+
+
+def _feature_rows(db: DBSession, session_id: UUID, participant_id: UUID, exact: bool):
+    from app.models.eeg_feature import EEGFeatureWindow
+    origin = db.query(func.min(EEGFeatureWindow.device_timestamp_ms)).filter(
+        EEGFeatureWindow.session_id == session_id, EEGFeatureWindow.participant_id == participant_id).scalar()
+    aliases: dict[str | None, str] = {}
+    q = db.query(EEGFeatureWindow).filter(EEGFeatureWindow.session_id == session_id,
+                                          EEGFeatureWindow.participant_id == participant_id).order_by(
+        EEGFeatureWindow.play_group_id.is_(None).desc(), EEGFeatureWindow.play_group_id, EEGFeatureWindow.window_index)
+
+    def rows():
+        for r in q.yield_per(1000):
+            if r.play_group_id is not None and r.play_group_id not in aliases:
+                aliases[r.play_group_id] = f'G{len(aliases) + 1:02d}'
+            rel = None if r.device_timestamp_ms is None or origin is None else round(r.device_timestamp_ms - origin)
+            yield [aliases.get(r.play_group_id, ''), r.window_index, rel, *[getattr(r, c) for c in NUMERIC_FEATURES],
+                   r.quality, r.device_timestamp_ms if exact else None]
+    return rows, q, origin
+
+
+def participant_artifacts(db: DBSession, request: dict, target: DataExportTarget, scope, policy, include: set[str]):
+    """243 이 직접 읽는 원천(features/indices/meta/README) + 244 어댑터가 공급하는 raw 신호."""
+    from app.services.export_package import MissingArtifact, RowArtifact, TextArtifact
+    from app.models.eeg_feature import EEGFeatureWindow
+    count = db.query(func.count(EEGFeatureWindow.id)).filter(
+        EEGFeatureWindow.session_id == target.session_id, EEGFeatureWindow.participant_id == target.participant_id).scalar() or 0
+    signals: dict[str, str] = {}
+    if 'features' in include:
+        if count:
+            rows, _, _ = _feature_rows(db, target.session_id, target.participant_id, policy.exact_time_allowed)
+            yield RowArtifact(name='features.csv', fmt='csv', rows=rows, header=FEATURE_HEADER, kind='features',
+                              schema_version='feature-scalar-1hz', dictionary_key='features', time_column='t_rel_ms')
+            signals['features'] = 'available'
+        else:
+            yield MissingArtifact('features', 'not_collected')
+            signals['features'] = 'not_collected'
+    if 'indices' in include:
+        snap = getattr(RAW_ARTIFACT_SOURCE, 'indices_artifact', None)
+        art = snap(db, target, scope, policy) if snap else None
+        if art is not None:
+            yield art
+            signals['indices'] = 'available'
+        elif count:  # 저장 이전 표시값: 재구성하지 않고 null + display_history_missing
+            rows_f, _, _ = _feature_rows(db, target.session_id, target.participant_id, False)
+
+            def rows():
+                for r in rows_f():
+                    yield [r[2], r[0], r[1], None, None, None, None, None, None, 'unavailable', 'unverified',
+                           'display_history_missing']
+            yield RowArtifact(name='indices.csv', fmt='csv', rows=rows, header=INDICES_HEADER, kind='indices',
+                              schema_version='indices-v1', dictionary_key='indices', time_column='t_rel_ms')
+            signals['indices'] = 'display_history_missing'
+        else:
+            yield MissingArtifact('indices', 'not_collected')
+    wanted = {k.split('_')[0] for k in ('eeg_raw', 'ppg_raw', 'acc_raw') if k in include}
+    if wanted and RAW_ARTIFACT_SOURCE is None:
+        for signal in sorted(wanted):
+            yield MissingArtifact(f'{signal}_raw', 'manifest_not_connected', signal)
+            signals[signal] = 'manifest_not_connected'
+    elif wanted:
+        for art in RAW_ARTIFACT_SOURCE.artifacts(scope, target, policy, frozenset(wanted)):
+            if getattr(art, 'signal', None) in wanted:  # 요청하지 않은 신호는 어댑터가 줘도 담지 않는다
+                yield art
+        for signal in wanted:
+            signals[signal] = 'requested'
+    meta = {'participant': scope.participant_alias, 'session': scope.session_alias, 'identity': policy.identity,
+            'time_origin': 'measurement_start_relative', 'signals': signals,
+            'time': 'exact_utc' if policy.exact_time_allowed else 'date-withheld',
+            'manifest_revision': scope.manifest_revision, 'selection': {'from_us': request.get('from_us'), 'to_us': request.get('to_us'), 'interval': '[from,to)'}}
+    import json as _json
+    yield TextArtifact('meta.json', _json.dumps(meta, ensure_ascii=False, indent=2), kind='meta')
+    yield TextArtifact('README_ko.md', f'# 참여자 {scope.participant_alias}\n\n이 폴더의 파일 구성과 단위는 상위 data_dictionary.json 과 manifest.json 을 따릅니다.\n'
+                                      '빈 칸은 미수집·산출 불가이며 0 이 아닙니다.\n', kind='readme')
+
+
+def package_job(db: DBSession, job: DataExportJob, token: int) -> PackageOutcome:
+    """고정 대상 → 별칭 계획 → part ZIP → 업로드 → part 원장. 호출자(run_job)가 fencing 으로 종료 전이를 보호한다."""
+    import tempfile
+    from pathlib import Path
+    from app.models.session import Session as SessionModel
+    from app.services import export_package as pkg, storage_service
+    targets = db.query(DataExportTarget).filter(DataExportTarget.job_id == job.id).order_by(DataExportTarget.ordinal).all()
+    if not targets:
+        raise pkg.PackageError('no_targets')
+    preview = db.get(DataExportPreview, job.preview_id)
+    request = preview.request if preview else {}
+    include = set(job.include or [])
+    session_ids = list(dict.fromkeys(t.session_id for t in targets))
+    sessions = {s.id: s for s in db.query(SessionModel).filter(SessionModel.id.in_(session_ids)).all()}
+    class_alias: dict = {}
+    session_alias: dict = {}
+    part_alias: dict = {}
+    exact = job.identity == 'identified' and job.purpose_type == 'operations'
+    lossless = exact and job.requester_role == 'platform_admin'
+    forbidden: set[str] = _uuid_strings(job.id, job.user_id, job.scope_org_id)
+    for t in targets:
+        s = sessions.get(t.session_id)
+        forbidden |= _uuid_strings(t.session_id, t.participant_id, s.class_id if s else None, s.host_id if s else None)
+        part = db.get(SessionParticipant, t.participant_id)
+        if part is not None:
+            forbidden |= _uuid_strings(part.user_id, part.member_id)
+    policy = pkg.PackagePolicy(
+        part_max_bytes=resolve_part_max(job), identity=job.identity or 'pseudonymized',
+        purpose=job.purpose_type or 'operations', exact_time_allowed=exact, lossless_allowed=lossless,
+        policy_version=job.policy_version or '', eeg_format=request.get('eeg_format', 'csv'),
+        forbidden_strings=frozenset(forbidden))
+    alias = hashlib.sha256(f'dc-job|{job.id}'.encode()).hexdigest()[:10]
+
+    def stream():
+        for t in targets:
+            s = sessions.get(t.session_id)
+            cls = class_alias.setdefault(s.class_id if s else None, f'class-C{len(class_alias) + 1:02d}')
+            idx = session_alias.setdefault(t.session_id, len(session_alias) + 1)
+            when = (aware(s.started_at or s.scheduled_at).date().isoformat() if exact and s and (s.started_at or s.scheduled_at)
+                    else 'date-withheld')
+            label = f'session-{idx:03d}_{when}'
+            key = t.session_id
+            part_alias.setdefault(key, {})
+            pa = part_alias[key].setdefault(t.participant_id, f'P{len(part_alias[key]) + 1:02d}')
+            scope = pkg.PackageScope(class_alias=cls, session_label=label, participant_alias=pa,
+                                     session_alias=f'S{idx:03d}', manifest_revision=t.manifest_revision)
+            for art in participant_artifacts(db, request, t, scope, policy, include):
+                yield scope, art
+    outcome_parts: list[dict] = []
+    with tempfile.TemporaryDirectory(prefix='mb-dc-') as temp:
+        result = pkg.build_data_center_package(alias, stream(), Path(temp), policy,
+                                               preview_exclusion_counts=preview.exclusion_counts if preview else {})
+        for info in result.parts:
+            renew_lease(db, job.id, token)
+            key = f'data-exports/{job.id}/part{info.part_no}.zip'
+            storage_service.upload_export(str(info.path), key)
+            outcome_parts.append({'part_no': info.part_no, 'object_key': key, 'size_bytes': info.size_bytes,
+                                  'checksum': info.sha256})
+    return PackageOutcome(parts=outcome_parts, warnings=result.warnings, expected_part_count=len(outcome_parts))
+
+
+def resolve_part_max(job: DataExportJob) -> int:
+    from app.config import settings
+    return int(settings.data_center_part_max_bytes)
+
+
+PACKAGE_BUILDER = package_job

@@ -85,6 +85,14 @@
 - 상태: `queued → preparing → ready|ready_with_warnings|failed|expired`. ZIP 생성기(B06) 연결 전에는 worker 가 `failed(package_builder_unavailable)` 로 닫는다. `parts[]` 에 object key·URL·ZIP hash 는 없다. 단건 SDD-071 API 는 일괄 작업을 보지 못한다(404).
 - 목록/조회는 본인 작업 + 현재 선택한 기관 범위만(다른 기관을 선택하면 같은 관리자의 작업도 404). 플랫폼은 기관 관리자의 작업을 열 수 없다.
 
+## 구현 메모 (B06 패키지) — 244 T12 연결 지점
+
+- ZIP: `mbdc_{job-alias}_{identity}_part{N}.zip`, 모든 part 루트에 `README_ko.md`·`data_dictionary.json`·`manifest.json`(part 목록·파일별 bytes/sha256/rows/범위/이어짐·제외 사유·source revision). 참여자 폴더 `class-C01/session-001_date-withheld/participant-P01/`(식별 운영만 날짜). ZIP 엔트리 시각은 고정(생성 시각 비노출). 큰 파일은 `*.cont-0002.*` 로 행/레코드/row group 경계 분할, 헤더 반복.
+- 어댑터 경계(통합 시 감독이 실제 T12 `iter_export_artifacts` 에 연결): `data_center_export.set_raw_artifact_source(source)` — `source.artifacts(scope, target, policy, signals) -> Iterator[RowArtifact|BinArtifact|MissingArtifact|TextArtifact]` (정의: `services/export_package.py`). 미연결이면 raw 신호는 `manifest_not_connected` 로 제외되고 features/indices/meta 만 담긴다. `source.indices_artifact(db, target, scope, policy)` 가 있으면 indices.csv 를 대체한다.
+- 정책은 호출자가 `PackagePolicy` 로 전달한다(`lossless_allowed`: 플랫폼+운영+식별일 때만 원본 bin, `exact_time_allowed`: 식별 운영, `forbidden_strings`: 원 UUID 등 — 어느 텍스트/parquet 조각에 나오면 `pseudonym_leak` 로 실패). 어댑터의 필터는 서버 인가를 대신하지 않는다.
+- 독립 검증기: `scripts/verify-sdd243-package.py --artifacts <dir> --expected <json>` (stdlib 전용, 제품 코드 import 없음).
+- 실제 1GB 경계: `SDD243_REAL_1GB=1 pytest tests/test_sdd243_package.py -k real_one_gb` (기본 skip).
+
 ## 인가 요점 (FE 가 믿으면 안 되는 것)
 
 - `capabilities` 는 표시용. 모든 호출을 서버가 다시 거절한다. 탭 숨김은 보안이 아니다.

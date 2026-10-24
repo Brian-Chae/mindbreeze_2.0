@@ -175,3 +175,532 @@ def build_package(db, job, session, participant, root: Path) -> tuple[Path, list
             if path.is_file() and path != zip_path:
                 archive.write(path, str(path.relative_to(root)))
     return zip_path, warnings
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SDD-243 B06 — 데이터 센터 원본 ZIP·독립 part
+#
+# - 디스크 임시파일로 조각(piece)을 만들고, 압축 크기를 정확히 측정해 part 에 배치한다(메모리 누적 없음).
+# - 모든 part 는 루트 README/data_dictionary/manifest 를 포함해 단독으로 열린다. ZIP 중첩·분할압축 없음.
+# - 최종 크기는 루트 메타·central directory 포함 **실제 파일 크기**로 검사하고, 넘으면 예약분을 늘려 재패킹한다(유한 재시도).
+# - 원본 bin 은 바이트 분할하지 않는다. 단독 상한 초과·무손실 권한 없음은 차단하고 사유를 manifest 에 남긴다.
+# - 244 T12 `iter_export_artifacts` 는 `ArtifactSource` 어댑터로 주입한다(통합 시 감독이 연결). 인가 결정은 호출자가
+#   PackagePolicy 로 전달하며, 어댑터의 필터가 서버 인가를 대신하지 않는다.
+# ═══════════════════════════════════════════════════════════════════════════
+import io
+import os
+import re
+import shutil
+import zlib
+from dataclasses import dataclass, field
+from typing import BinaryIO, Callable, Iterable, Iterator, Literal, Sequence
+from zipfile import ZipInfo
+
+PACKAGE_SCHEMA = 'data-center-package-v1'
+ZIP_ENTRY_OVERHEAD = 160  # local(30+name) + central(46+name) + zip64 extra 여유
+ZIP_END_RESERVE = 128
+FIXED_ZIP_TIME = (1980, 1, 1, 0, 0, 0)  # 생성 시각 비노출(date-withheld)
+_NUMERIC = re.compile(r'^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$')
+_FORMULA = ('=', '+', '-', '@', '\t', '\r')
+_SAFE_PATH = re.compile(r'^[A-Za-z0-9][A-Za-z0-9_.\-]*(/[A-Za-z0-9][A-Za-z0-9_.\-]*)*$')
+
+
+class PackageError(Exception):
+    def __init__(self, code: str, message: str = '') -> None:
+        super().__init__(message or code)
+        self.code = code
+
+
+@dataclass(frozen=True)
+class PackageScope:
+    """한 참여자의 ZIP 안 위치. 모두 별칭이며 원 UUID·실명·원본 경로를 담지 않는다."""
+    class_alias: str  # 예: class-C01
+    session_label: str  # 예: session-001_date-withheld
+    participant_alias: str  # 예: P01
+    session_alias: str = ''
+    manifest_revision: int | None = None
+
+    @property
+    def directory(self) -> str:
+        return f'{self.class_alias}/{self.session_label}/participant-{self.participant_alias}'
+
+
+@dataclass
+class RowArtifact:
+    name: str  # 참여자 폴더 기준 상대 경로(예: eeg_raw.csv, features/eeg.jsonl)
+    fmt: Literal['csv', 'jsonl', 'parquet']
+    rows: Callable[[], Iterable[Sequence | dict]]
+    header: Sequence[str] = ()
+    kind: str = 'table'
+    signal: str | None = None
+    schema_version: str = '1'
+    dictionary_key: str | None = None
+    parquet_types: dict[str, str] | None = None  # column -> float32|float64|int64|string
+    time_column: str | None = 'timestamp'
+    extra_range: list[dict] = field(default_factory=list)
+
+
+@dataclass
+class BinArtifact:
+    name: str
+    open: Callable[[], BinaryIO]
+    size_bytes: int
+    sha256: str
+    kind: str = 'raw_bin'
+    signal: str | None = None
+    schema_version: str = 'mb-biosignal-raw-v2'
+    dictionary_key: str | None = None
+    extra_range: list[dict] = field(default_factory=list)
+
+
+@dataclass
+class MissingArtifact:
+    kind: str
+    reason: str  # not_collected / unsupported_client / expired / withdrawn / lost / unknown / manifest_not_connected …
+    signal: str | None = None
+
+
+@dataclass
+class TextArtifact:
+    """작은 단일 파일(meta.json, README_ko.md). 분할하지 않는다."""
+    name: str
+    text: str
+    kind: str = 'meta'
+    signal: str | None = None
+    schema_version: str = '1'
+    dictionary_key: str | None = None
+    extra_range: list[dict] = field(default_factory=list)
+
+
+Artifact = RowArtifact | BinArtifact | MissingArtifact | TextArtifact
+
+
+class ArtifactSource:
+    """244 T12 `iter_export_artifacts` 와 맞물리는 어댑터 경계."""
+
+    def artifacts(self, scope: PackageScope, target: object, policy: 'PackagePolicy',
+                  signals: frozenset[str]) -> Iterator[Artifact]:  # pragma: no cover
+        raise NotImplementedError
+
+
+@dataclass(frozen=True)
+class PackagePolicy:
+    part_max_bytes: int = 1_000_000_000
+    identity: str = 'pseudonymized'
+    purpose: str = 'operations'
+    exact_time_allowed: bool = False
+    lossless_allowed: bool = False
+    policy_version: str = ''
+    eeg_format: str = 'csv'
+    piece_target_bytes: int | None = None  # None 이면 part_max//4
+    forbidden_strings: frozenset[str] = frozenset()  # 원 UUID·장치 ID 등(어디에도 나오면 안 됨)
+
+    @property
+    def piece_target(self) -> int:
+        return max(1024, min(self.piece_target_bytes or self.part_max_bytes // 4, self.part_max_bytes // 4))
+
+
+@dataclass
+class Piece:
+    scope: PackageScope
+    rel_path: str  # 참여자 폴더 기준
+    stage_path: Path
+    kind: str
+    signal: str | None
+    fmt: str
+    bytes: int
+    sha256: str
+    rows: int | None
+    first: str | None
+    last: str | None
+    schema_version: str
+    dictionary_key: str | None
+    compressed: int
+    piece_index: int = 1
+    piece_count: int = 1
+    extra_range: list[dict] = field(default_factory=list)
+
+    @property
+    def arcname(self) -> str:
+        return f'{self.scope.directory}/{self.rel_path}'
+
+    @property
+    def cost(self) -> int:
+        return self.compressed + ZIP_ENTRY_OVERHEAD + 2 * len(self.arcname)
+
+
+@dataclass
+class PartInfo:
+    part_no: int
+    path: Path
+    size_bytes: int
+    sha256: str
+    file_count: int
+
+
+@dataclass
+class PackageResult:
+    parts: list[PartInfo]
+    files: list[dict]
+    exclusions: list[dict]
+    source_revisions: list[dict]
+    warnings: list[str]
+
+
+def _check_rel_path(path: str) -> str:
+    if not _SAFE_PATH.match(path) or '..' in path.split('/'):
+        raise PackageError('unsafe_path', path)
+    return path
+
+
+def _cell(value: object) -> str:
+    """CSV 셀: None→빈칸(0 과 구별), 비유한 수 거부, 문자 메타는 수식 주입 방지."""
+    if value is None:
+        return ''
+    if isinstance(value, bool):
+        return 'true' if value else 'false'
+    if isinstance(value, float):
+        if value != value or value in (float('inf'), float('-inf')):
+            raise PackageError('nonfinite_value')
+        return repr(value)
+    text = str(value)
+    if text and text[0] in _FORMULA and not _NUMERIC.match(text):
+        return "'" + text
+    return text
+
+
+def _scan_forbidden(path: Path, forbidden: frozenset[str]) -> None:
+    if not forbidden:
+        return
+    needles = [s.encode() for s in forbidden if s]
+    keep = max((len(n) for n in needles), default=0) - 1
+    tail = b''
+    with open(path, 'rb') as fh:
+        while chunk := fh.read(1 << 20):
+            window = tail + chunk
+            if any(n in window for n in needles):
+                raise PackageError('pseudonym_leak', path.name)
+            tail = window[-keep:] if keep > 0 else b''
+
+
+def _compressed_size(path: Path) -> int:
+    comp = zlib.compressobj(zlib.Z_DEFAULT_COMPRESSION, zlib.DEFLATED, -15)
+    total = 0
+    with open(path, 'rb') as fh:
+        while chunk := fh.read(1 << 20):
+            total += len(comp.compress(chunk))
+    return total + len(comp.flush())
+
+
+def _finish_piece(scope: PackageScope, art: RowArtifact | BinArtifact, path: Path, rel: str, rows: int | None,
+                  first: str | None, last: str | None, policy: PackagePolicy, fmt: str) -> Piece:
+    _scan_forbidden(path, policy.forbidden_strings)
+    return Piece(scope=scope, rel_path=rel, stage_path=path, kind=art.kind, signal=art.signal, fmt=fmt,
+                 bytes=path.stat().st_size, sha256=sha256_file(path), rows=rows, first=first, last=last,
+                 schema_version=art.schema_version, dictionary_key=art.dictionary_key,
+                 compressed=_compressed_size(path), extra_range=list(art.extra_range))
+
+
+def _piece_name(name: str, index: int) -> str:
+    if index == 1:
+        return name
+    stem, dot, ext = name.rpartition('.')
+    return f'{stem}.cont-{index:04d}{dot}{ext}' if dot else f'{name}.cont-{index:04d}'
+
+
+def _stage_rows(scope: PackageScope, art: RowArtifact, stage: Path, policy: PackagePolicy, counter: Iterator[int]) -> list[Piece]:
+    pieces: list[Piece] = []
+    header = list(art.header)
+    time_idx = header.index(art.time_column) if art.fmt == 'csv' and art.time_column in header else None
+    index = 0
+    handle = None
+    writer = None
+    state = {'rows': 0, 'first': None, 'last': None, 'path': None, 'rel': None}
+    pq_buffer: dict[str, list] = {}
+
+    def open_piece() -> None:
+        nonlocal handle, writer, index
+        index += 1
+        state.update(rows=0, first=None, last=None, rel=_piece_name(art.name, index), path=stage / f'{next(counter):08d}.piece')
+        if art.fmt == 'csv':
+            handle = open(state['path'], 'w', encoding='utf-8', newline='')
+            writer = csv.writer(handle, lineterminator='\r\n')
+            writer.writerow(header)
+        elif art.fmt == 'jsonl':
+            handle = open(state['path'], 'w', encoding='utf-8', newline='')
+
+    def close_piece() -> None:
+        nonlocal handle
+        if art.fmt == 'parquet':
+            _flush_parquet(final=True)
+        elif handle is not None:
+            handle.close()
+        handle = None
+        if state['rows']:
+            pieces.append(_finish_piece(scope, art, state['path'], state['rel'], state['rows'], state['first'],
+                                        state['last'], policy, art.fmt))
+        elif state['path'] is not None:
+            state['path'].unlink(missing_ok=True)
+
+    pq_writer = None
+
+    def _flush_parquet(final: bool = False) -> None:
+        nonlocal pq_writer
+        import pyarrow as pa
+        import pyarrow.parquet as pq
+        types = {'float32': pa.float32(), 'float64': pa.float64(), 'int64': pa.int64(), 'string': pa.string()}
+        schema = pa.schema([(c, types[(art.parquet_types or {})[c]]) for c in header])
+        if pq_buffer and any(pq_buffer.values()):
+            table = pa.table({c: pq_buffer[c] for c in header}, schema=schema)
+            if pq_writer is None:
+                pq_writer = pq.ParquetWriter(state['path'], schema, compression='zstd')
+            pq_writer.write_table(table)
+            for c in header:
+                pq_buffer[c] = []
+        if final and pq_writer is not None:
+            pq_writer.close()
+            pq_writer = None
+
+    approx = 0
+    open_piece()
+    if art.fmt == 'parquet':
+        pq_buffer.update({c: [] for c in header})
+    for row in art.rows():
+        if art.fmt == 'csv':
+            cells = [_cell(v) for v in row]
+            if len(cells) != len(header):
+                raise PackageError('row_width_mismatch', art.name)
+            writer.writerow(cells)
+            size = sum(len(c) + 1 for c in cells)
+            stamp = cells[time_idx] if time_idx is not None else None
+        elif art.fmt == 'jsonl':
+            line = json.dumps(row, ensure_ascii=False, separators=(',', ':'), allow_nan=False) + '\n'
+            handle.write(line)
+            size = len(line)
+            stamp = str(row.get(art.time_column)) if isinstance(row, dict) and art.time_column in row else None
+        else:
+            values = row if isinstance(row, dict) else dict(zip(header, row))
+            for c in header:
+                pq_buffer[c].append(values.get(c))
+            size = 8 * len(header)
+            stamp = None if art.time_column not in values else str(values[art.time_column])
+            if len(pq_buffer[header[0]]) >= 20000:
+                _flush_parquet()
+        state['rows'] += 1
+        approx += size
+        if stamp is not None:
+            state['first'] = state['first'] if state['first'] is not None else stamp
+            state['last'] = stamp
+        if approx >= policy.piece_target:
+            close_piece()
+            approx = 0
+            open_piece()
+    close_piece()
+    if not pieces:  # 행이 하나도 없으면 헤더만 있는 파일을 남긴다(0 행과 미수집을 manifest 사유로 구분)
+        if art.fmt == 'csv':
+            path = stage / f'{next(counter):08d}.piece'
+            path.write_text(','.join(header) + '\r\n', encoding='utf-8')
+            pieces.append(_finish_piece(scope, art, path, art.name, 0, None, None, policy, 'csv'))
+        elif art.fmt == 'jsonl':
+            path = stage / f'{next(counter):08d}.piece'
+            path.write_bytes(b'')
+            pieces.append(_finish_piece(scope, art, path, art.name, 0, None, None, policy, 'jsonl'))
+    for i, p in enumerate(pieces, start=1):
+        p.piece_index, p.piece_count = i, len(pieces)
+        p.rel_path = _piece_name(art.name, i)
+    return pieces
+
+
+def _stage_text(scope: PackageScope, art: TextArtifact, stage: Path, policy: PackagePolicy, counter: Iterator[int]) -> Piece:
+    path = stage / f'{next(counter):08d}.piece'
+    path.write_text(art.text, encoding='utf-8')
+    fmt = 'json' if art.name.endswith('.json') else 'text'
+    return _finish_piece(scope, art, path, art.name, None, None, None, policy, fmt)  # type: ignore[arg-type]
+
+
+def _stage_bin(scope: PackageScope, art: BinArtifact, stage: Path, policy: PackagePolicy, counter: Iterator[int]) -> Piece:
+    path = stage / f'{next(counter):08d}.piece'
+    digest = hashlib.sha256()
+    with art.open() as src, open(path, 'wb') as dst:
+        while chunk := src.read(1 << 20):
+            digest.update(chunk)
+            dst.write(chunk)
+    if path.stat().st_size != art.size_bytes or digest.hexdigest() != art.sha256:
+        path.unlink(missing_ok=True)
+        raise PackageError('artifact_integrity', art.name)  # 서버 정본과 hash/크기가 다르면 만들지 않는다
+    piece = Piece(scope=scope, rel_path=art.name, stage_path=path, kind=art.kind, signal=art.signal, fmt='bin',
+                  bytes=art.size_bytes, sha256=art.sha256, rows=None, first=None, last=None,
+                  schema_version=art.schema_version, dictionary_key=art.dictionary_key,
+                  compressed=_compressed_size(path), extra_range=list(art.extra_range))
+    return piece
+
+
+README_TEXT = '''# MIND BREEZE 데이터 센터 반출 패키지
+
+- 이 ZIP 은 단독으로 열립니다(part 마다 이 안내·data_dictionary.json·manifest.json 이 들어 있습니다). 여러 part 는 manifest.json 의 part 목록을 따릅니다.
+- 파일은 UTF-8, 쉼표 구분(RFC 4180), 헤더 한 행입니다. 빈 칸/null 은 "수집·산출되지 않음"이며 0 과 다릅니다. 값은 반올림·보간하지 않았습니다.
+- 모든 신호의 timestamp 는 측정 시작 기준 상대 초(feature 의 t_rel_ms 도 같은 원점)입니다. 가명 패키지는 날짜·절대시각·장치 시각을 담지 않습니다(date-withheld).
+- 큰 파일은 행·레코드·row group 경계에서 나뉘며 `*.cont-0002.*` 형식으로 이어집니다. 각 조각에 헤더/스키마가 반복됩니다.
+- 파일별 SHA-256·바이트·행수·범위·이어짐은 manifest.json 에 있습니다. ZIP 자체의 해시는 서버 작업 기록에 있습니다.
+- 가명화는 익명화를 보장하지 않습니다. 승인된 목적 안에서 보관·재배포 책임을 지켜 주세요. 진단·치료 목적의 의료 데이터가 아닙니다.
+- 원본 바이너리(raw bin)는 무손실 권한이 있을 때만 포함합니다. 권한이 없으면 포함하지 않으며 manifest 의 exclusions 에 사유(blocked_requires_redaction)가 기록됩니다.
+- 상담·채팅·AI 본문, 실명(가명 패키지), 이메일, 전화, 생일 일자는 포함하지 않습니다.
+'''
+
+DICTIONARY_BASE = {
+    'schema': PACKAGE_SCHEMA,
+    'time_origin': '측정 시작(첫 샘플 index 0) 기준 상대 초; feature t_rel_ms 는 같은 원점의 ms',
+    'null_policy': '빈 칸/JSON null = 미수집·산출 불가(0 아님). 사유는 manifest.exclusions 와 sidecar 에 기록',
+    'files': {
+        'eeg_raw': {'columns': ['timestamp', 'fp1', 'fp2'], 'units': {'timestamp': 's', 'fp1': 'uV', 'fp2': 'uV'}, 'float': 'float32 유효숫자 9자리'},
+        'ppg_raw': {'columns': ['timestamp', 'red', 'ir'], 'units': {'timestamp': 's', 'red': 'ADC count', 'ir': 'ADC count'}, 'int': 'unsigned24 정수'},
+        'acc_raw': {'columns': ['timestamp', 'x', 'y', 'z'], 'units': {'timestamp': 's', 'x': 'g', 'y': 'g', 'z': 'g'}},
+        'features': {'columns': 'features.csv 헤더 참조(play_group_id, window_index, t_rel_ms, 원천 25개 지표, quality, device_timestamp_ms)'},
+        'indices': {'columns': 'see indices.csv header', 'hrv': 'SDNN(ms) — RMSSD 는 features 에 별도', 'note': '종합 점수 없음'},
+    },
+}
+
+
+def _participant_manifest_rows(pieces: list[Piece]) -> list[dict]:
+    out = []
+    for p in pieces:
+        out.append({'path': p.arcname, 'kind': p.kind, 'signal': p.signal, 'format': p.fmt, 'bytes': p.bytes,
+                    'sha256': p.sha256, 'rows': p.rows, 'schema_version': p.schema_version,
+                    'dictionary_key': p.dictionary_key, 'range': {'first': p.first, 'last': p.last},
+                    'piece_index': p.piece_index, 'piece_count': p.piece_count,
+                    'continues': p.piece_index > 1, 'continues_in_next': p.piece_index < p.piece_count,
+                    'extra_range': p.extra_range})
+    return out
+
+
+def _pack(pieces: list[Piece], cap: int) -> list[list[Piece]]:
+    """참여자 경계를 우선하되 한 참여자가 한 part 보다 크면 조각 경계로 나눈다."""
+    groups: list[list[Piece]] = []
+    for p in pieces:
+        if groups and groups[-1][0].scope == p.scope:
+            groups[-1].append(p)
+        else:
+            groups.append([p])
+    parts: list[list[Piece]] = [[]]
+    used = 0
+    for group in groups:
+        size = sum(p.cost for p in group)
+        if used and used + size > cap and size <= cap:
+            parts.append([])
+            used = 0
+        for p in group:
+            if p.cost > cap:
+                raise PackageError('single_oversize', p.arcname)
+            if used + p.cost > cap and parts[-1]:
+                parts.append([])
+                used = 0
+            parts[-1].append(p)
+            used += p.cost
+    return [p for p in parts if p]
+
+
+def _write_parts(job_alias: str, parts: list[list[Piece]], out: Path, policy: PackagePolicy, meta: dict) -> list[PartInfo]:
+    infos: list[PartInfo] = []
+    summary = [{'part_no': i, 'file_count': len(ps)} for i, ps in enumerate(parts, start=1)]
+    readme = README_TEXT.encode()
+    dictionary = json.dumps({**meta['dictionary']}, ensure_ascii=False, indent=2).encode()
+    for no, ps in enumerate(parts, start=1):
+        name = f'mbdc_{job_alias}_{policy.identity}_part{no}.zip'
+        manifest = {
+            'schema': PACKAGE_SCHEMA, 'job': job_alias, 'part_no': no, 'part_count': len(parts), 'state': 'complete',
+            'identity': policy.identity, 'purpose': policy.purpose, 'eeg_format': policy.eeg_format,
+            'policy_version': policy.policy_version, 'time': 'exact_utc' if policy.exact_time_allowed else 'date-withheld',
+            'parts': summary, 'files': _participant_manifest_rows(ps), 'exclusions': meta['exclusions'],
+            'source_revisions': meta['source_revisions'], 'preview_exclusion_counts': meta.get('preview_exclusion_counts', {}),
+        }
+        path = out / name
+        with ZipFile(path, 'w', ZIP_DEFLATED, allowZip64=True) as zf:
+            for arc, data in (('README_ko.md', readme), ('data_dictionary.json', dictionary),
+                              ('manifest.json', json.dumps(manifest, ensure_ascii=False, indent=2).encode())):
+                info = ZipInfo(arc, FIXED_ZIP_TIME)
+                info.compress_type, info.external_attr = ZIP_DEFLATED, 0o644 << 16
+                zf.writestr(info, data)
+            for p in ps:
+                info = ZipInfo(p.arcname, FIXED_ZIP_TIME)
+                info.compress_type, info.external_attr, info.file_size = ZIP_DEFLATED, 0o644 << 16, p.bytes
+                with zf.open(info, 'w') as dest, open(p.stage_path, 'rb') as src:
+                    shutil.copyfileobj(src, dest, 1 << 20)
+        infos.append(PartInfo(no, path, path.stat().st_size, sha256_file(path), len(ps)))
+    return infos
+
+
+def build_data_center_package(job_alias: str, artifacts: Iterable[tuple[PackageScope, Artifact]], output_dir: Path,
+                              policy: PackagePolicy, *, preview_exclusion_counts: dict | None = None,
+                              max_repack: int = 8) -> PackageResult:
+    """(scope, artifact) 스트림 → part ZIP 들. 인가·가명 별칭 결정은 호출자 책임이고 여기서는 누출·크기·무결성을 강제한다."""
+    out = Path(output_dir)
+    stage = out / '_stage'
+    stage.mkdir(parents=True, exist_ok=True)
+    counter = iter(range(1, 10**9))
+    pieces: list[Piece] = []
+    exclusions: list[dict] = []
+    revisions: dict[tuple[str, str], int | None] = {}
+    seen: set[str] = set()
+    root_budget = len(README_TEXT.encode()) + 4096
+    try:
+        for scope, art in artifacts:
+            revisions[(scope.session_label, scope.participant_alias)] = scope.manifest_revision
+            if isinstance(art, MissingArtifact):
+                exclusions.append({'scope': scope.directory, 'kind': art.kind, 'signal': art.signal, 'reason': art.reason})
+                continue
+            _check_rel_path(art.name)
+            if isinstance(art, BinArtifact):
+                if not policy.lossless_allowed:  # 원 UUID/tick/UTC 가 header 에 있어 그대로 담지 않는다
+                    exclusions.append({'scope': scope.directory, 'kind': art.kind, 'signal': art.signal,
+                                       'reason': 'blocked_requires_redaction'})
+                    continue
+                piece = _stage_bin(scope, art, stage, policy, counter)
+                if piece.cost + root_budget > policy.part_max_bytes:  # 바이트 분할 금지 → 차단 + 대체 포맷 안내
+                    piece.stage_path.unlink(missing_ok=True)
+                    exclusions.append({'scope': scope.directory, 'kind': art.kind, 'signal': art.signal,
+                                       'reason': 'single_oversize_bin', 'alternative': 'csv_or_parquet'})
+                    continue
+                new = [piece]
+            elif isinstance(art, TextArtifact):
+                new = [_stage_text(scope, art, stage, policy, counter)]
+            else:
+                new = _stage_rows(scope, art, stage, policy, counter)
+            for p in new:
+                if p.arcname in seen:
+                    raise PackageError('duplicate_path', p.arcname)
+                seen.add(p.arcname)
+            pieces.extend(new)
+        if not pieces:
+            raise PackageError('empty_package')
+        meta = {'dictionary': {**{k: v for k, v in DICTIONARY_BASE.items() if k != 'files'},
+                               'files': {k: v for k, v in DICTIONARY_BASE['files'].items()}},
+                'exclusions': exclusions,
+                'source_revisions': [{'session': k[0], 'participant': k[1], 'manifest_revision': v}
+                                     for k, v in sorted(revisions.items())],
+                'preview_exclusion_counts': preview_exclusion_counts or {}}
+        reserve = _compressed_bytes(README_TEXT.encode()) + 2048 + ZIP_END_RESERVE
+        infos: list[PartInfo] = []
+        for _ in range(max_repack):
+            cap = policy.part_max_bytes - reserve
+            if cap <= 0:
+                raise PackageError('part_limit_unreachable')
+            parts = _pack(pieces, cap)
+            for old in out.glob('mbdc_*.zip'):
+                old.unlink()
+            infos = _write_parts(job_alias, parts, out, policy, meta)
+            over = max(i.size_bytes for i in infos) - policy.part_max_bytes
+            if over <= 0:
+                break
+            reserve += over * 2 + 1024  # 루트 메타·central directory 가 예상보다 컸다 — 마지막 조각을 다음 part 로 밀어낸다
+        else:
+            raise PackageError('part_limit_unreachable')
+        files = [row for p in pieces for row in _participant_manifest_rows([p])]
+        return PackageResult(parts=infos, files=files, exclusions=exclusions, source_revisions=meta['source_revisions'],
+                             warnings=sorted({f"{e['reason']}:{e.get('signal') or e['kind']}" for e in exclusions}))
+    finally:
+        shutil.rmtree(stage, ignore_errors=True)
+
+
+def _compressed_bytes(data: bytes) -> int:
+    comp = zlib.compressobj(zlib.Z_DEFAULT_COMPRESSION, zlib.DEFLATED, -15)
+    return len(comp.compress(data)) + len(comp.flush())
