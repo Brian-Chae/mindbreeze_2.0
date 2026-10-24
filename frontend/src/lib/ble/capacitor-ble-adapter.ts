@@ -143,17 +143,28 @@ export class CapacitorBleAdapter implements BluetoothProvider {
   /**
    * 앱 복귀 시 실제 연결 상태 확인 (SDD-222 G1).
    * 백그라운드 중 OS 가 연결을 끊어도 해제 이벤트가 유실될 수 있어 로컬 Set 만으로는 알 수 없다.
-   * 배터리 특성 read 를 프로브로 사용하며, 실패하면 connectionLost 와 같은 경로로 재연결을 유도한다.
+   * 배터리 read 실패 시 OS 연결 목록으로 실제 단절을 확인한 뒤에만 재연결을 유도한다.
    * 이 어댑터가 연결로 알고 있지 않은 기기는 검증 대상이 아니므로 프로브 없이 false.
    */
   async verifyConnection(deviceId: string): Promise<boolean> {
     if (!this.connectedDevices.has(deviceId)) return false;
+    const attempt = this.connectionAttempts.get(deviceId);
+    const isCurrent = () => this.connectionAttempts.get(deviceId) === attempt && this.connectedDevices.has(deviceId);
     try {
       await BleClient.read(deviceId, BATTERY_SERVICE_UUID, BATTERY_LEVEL_CHAR_UUID);
-      return true;
+      return this.connectedDevices.has(deviceId);
     } catch {
-      // 이미 연결 해제 이벤트가 처리된 경우(중복 방지)에는 콜백을 다시 부르지 않는다.
-      if (!this.connectedDevices.has(deviceId)) return false;
+      if (!isCurrent()) return this.connectedDevices.has(deviceId);
+      // 배터리는 선택적이다. read 실패만으로 정상 BLE를 끊지 않고 OS 상태를 확인한다.
+      // iOS는 서비스 필터가 필수이므로 LINK BAND의 필수 EEG 서비스를 사용한다.
+      try {
+        const devices = await BleClient.getConnectedDevices([LINK_BAND_EEG_SERVICE_UUID]);
+        if (!isCurrent()) return this.connectedDevices.has(deviceId);
+        if (devices.some(device => device.deviceId === deviceId)) return true;
+      } catch {
+        // OS 상태도 확인할 수 없으면 연결 해제 이벤트를 기다린다.
+        return this.connectedDevices.has(deviceId);
+      }
       this.connectionAttempts.delete(deviceId);
       this.connectedDevices.delete(deviceId);
       try {
@@ -161,8 +172,9 @@ export class CapacitorBleAdapter implements BluetoothProvider {
       } catch {
         // 이미 끊긴 연결의 정리 실패는 무시
       }
-      this.connectionLost();
-      return false;
+      // 정리 대기 중 시작한 새 연결에 이전 단절 이벤트를 전달하지 않는다.
+      if (!this.connectionAttempts.has(deviceId)) this.connectionLost();
+      return this.connectedDevices.has(deviceId);
     }
   }
 
@@ -206,3 +218,6 @@ export async function verifyActiveBleConnection(): Promise<boolean | null> {
 // BLE 표준 UUID
 const BATTERY_SERVICE_UUID = '0000180f-0000-1000-8000-00805f9b34fb';
 const BATTERY_LEVEL_CHAR_UUID = '00002a19-0000-1000-8000-00805f9b34fb';
+
+// bluetoothService의 LINK BAND 필수 EEG 서비스. 선택적 배터리 서비스로 조회하지 않는다.
+const LINK_BAND_EEG_SERVICE_UUID = 'df7b5d95-3afe-00a1-084c-b50895ef4f95';

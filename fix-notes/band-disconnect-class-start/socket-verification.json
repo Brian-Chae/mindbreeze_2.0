@@ -1,0 +1,24 @@
+{
+  "maintained": {
+    "sameDuringConnecting": true,
+    "sameDuringReconnect": true,
+    "creates": 1,
+    "subscribersDelivered": 1
+  },
+  "recovery": {
+    "same": true,
+    "active": true,
+    "connectCalls": 1
+  },
+  "guarded": {
+    "active": false,
+    "connectCalls": 0,
+    "refreshCalls": 1
+  },
+  "tokenRecovery": {
+    "same": true,
+    "active": true,
+    "connectCalls": 1,
+    "authUpdated": true
+  }
+}

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // SDD-222 T-J3 — useBand 자동 재연결 루프 (V2·V3·V4·V5·V7)
-import { act } from 'react';
+import { act, StrictMode, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -10,6 +10,8 @@ const ble = vi.hoisted(() => ({
   connected: false,
   cached: null as string | null,
   disconnectSvc: vi.fn(async () => undefined),
+  battery: vi.fn(async () => 80),
+  scan: vi.fn(async () => [{ id: 'd1', name: 'LXB' }]),
 }));
 const stream = vi.hoisted(() => ({
   onEEGData: null as null | ((d: { fp1: number; fp2: number }[]) => void),
@@ -43,7 +45,7 @@ vi.mock('../src/lib/eeg/bluetoothService', () => ({
   bluetoothService: {
     isConnected: () => ble.connected,
     getCachedDeviceId: () => ble.cached,
-    scan: async () => [{ id: 'd1', name: 'LXB' }],
+    scan: () => ble.scan(),
     connect: async (id: string) => {
       await ble.connectImpl(id);
       ble.connected = true;
@@ -51,11 +53,12 @@ vi.mock('../src/lib/eeg/bluetoothService', () => ({
     },
     disconnect: async () => {
       ble.connected = false;
+      ble.cached = null;
       await ble.disconnectSvc();
     },
     onConnectionLost: (cb: () => void) => { ble.lost = cb; },
     setCallbacks: vi.fn(),
-    getBatteryLevel: async () => 80,
+    getBatteryLevel: () => ble.battery(),
   },
 }));
 vi.mock('../src/lib/eeg/StreamProcessor', () => ({
@@ -108,10 +111,10 @@ type BandApi = ReturnType<typeof useBand>;
 let api: BandApi;
 let root: Root;
 function Harness() {
-  api = useBand({ sessionId: 's1', participantId: 'p1', enabled: true, skipAuth: true });
+  const band = useBand({ sessionId: 's1', participantId: 'p1', enabled: true, skipAuth: true });
+  useEffect(() => { api = band; });
   return null;
 }
-const flush = () => act(async () => { await vi.advanceTimersByTimeAsync(0); });
 const advance = (ms: number) => act(async () => { await vi.advanceTimersByTimeAsync(ms); });
 
 beforeEach(() => {
@@ -119,6 +122,9 @@ beforeEach(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   ble.connected = false; ble.cached = null; ble.lost = null;
   ble.connectImpl.mockReset().mockResolvedValue(undefined);
+  ble.disconnectSvc.mockClear();
+  ble.battery.mockReset().mockResolvedValue(80);
+  ble.scan.mockReset().mockResolvedValue([{ id: 'd1', name: 'LXB' }]);
   gap.open.mockClear(); gap.recordAttempt.mockClear(); gap.close.mockClear();
   policy.delays.length = 0;
   stream.flush.mockClear(); stream.onEEGData = null;
@@ -298,4 +304,104 @@ describe('BLE 콜백 throttle flush (G6, V15·V16)', () => {
     }
     expect(stream.flush).toHaveBeenCalledTimes(4);
   });
+});
+
+// 실제 훅의 준비 화면 언마운트 → 대기 → 수업 마운트 인계를 검증한다.
+function Preparation() {
+  const band = useBand({ sessionId: '', participantId: null, observationOnly: true });
+  useEffect(() => { api = band; });
+  return null;
+}
+async function prepareAndWait() {
+  await act(async () => root.render(<Preparation />));
+  await act(async () => { await api.connect(); });
+  await act(async () => root.render(null));
+}
+describe('준비 화면에서 수업으로 BLE 인계', () => {
+  it('살아 있는 연결은 배터리 조회 대기 중에도 connected를 유지한다', async () => {
+    await prepareAndWait();
+    let finish!: (level: number) => void;
+    ble.battery.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    await act(async () => root.render(<Harness />));
+    const duringHandoff = api.connectionState;
+    await act(async () => { finish(80); });
+    expect(duringHandoff).toBe('connected');
+    expect(api.connectionState).toBe('connected');
+    expect(ble.connectImpl).toHaveBeenCalledTimes(1);
+    expect(ble.disconnectSvc).not.toHaveBeenCalled();
+  });
+  it('대기 중 끊긴 기존 기기는 수업 마운트 때 복구한다', async () => {
+    await prepareAndWait();
+    await dropLink();
+    await act(async () => root.render(<Harness />));
+    expect(api.connectionState).toBe('connected');
+    expect(ble.connectImpl).toHaveBeenCalledTimes(2);
+    expect(ble.connectImpl).toHaveBeenLastCalledWith('d1');
+  });
+  it('대기 중 끊긴 기기 복구가 실패해도 백오프로 계속 재시도한다', async () => {
+    await prepareAndWait();
+    await dropLink();
+    ble.connectImpl.mockRejectedValueOnce(new Error('still out of range'));
+    await act(async () => root.render(<Harness />));
+    await advance(1000);
+    expect(api.connectionState).toBe('connected');
+    expect(ble.connectImpl).toHaveBeenCalledTimes(3);
+  });
+  it('수동 해제 후 수업 진입은 다시 연결하지 않는다', async () => {
+    await act(async () => root.render(<Preparation />));
+    await act(async () => { await api.connect(); await api.disconnect(); });
+    await act(async () => root.render(<Harness />));
+    expect(api.connectionState).toBe('disconnected');
+    expect(ble.connectImpl).toHaveBeenCalledTimes(1);
+  });
+});
+
+it('실제 단절 후 수동 해제한 기기도 다음 화면에서 다시 연결하지 않는다', async () => {
+  await mountAndConnect();
+  await dropLink();
+  await act(async () => { await api.disconnect(); });
+  await act(async () => root.render(null));
+  await act(async () => root.render(<Harness />));
+  await advance(10_000);
+  expect(api.connectionState).toBe('disconnected');
+  expect(ble.connectImpl).toHaveBeenCalledTimes(1);
+});
+
+it('기기 선택 중 수업으로 전환해도 새 훅이 연결과 재연결을 이어받는다', async () => {
+  let select!: (devices: { id: string; name: string }[]) => void;
+  ble.scan.mockImplementationOnce(() => new Promise(resolve => { select = resolve; }));
+  await act(async () => root.render(<Preparation />));
+  let connecting!: Promise<void>;
+  await act(async () => { connecting = api.connect(); });
+  await act(async () => root.render(<Harness />));
+  await act(async () => { select([{ id: 'd1', name: 'LXB' }]); await connecting; });
+  await advance(1000);
+  expect(api.connectionState).toBe('connected');
+  expect(ble.scan).toHaveBeenCalledTimes(1);
+  expect(ble.connectImpl).toHaveBeenCalledTimes(1);
+  await dropLink();
+  await advance(1000);
+  expect(api.connectionState).toBe('connected');
+  expect(ble.connectImpl).toHaveBeenCalledTimes(2);
+});
+it('인계 배터리 조회 중 수동 해제하면 늦은 완료가 connected를 되살리지 않는다', async () => {
+  await prepareAndWait();
+  let finish!: (level: number) => void;
+  ble.battery.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  await act(async () => root.render(<Harness />));
+  await act(async () => { await api.disconnect(); });
+  await act(async () => { finish(80); });
+  expect(api.connectionState).toBe('disconnected');
+  expect(ble.connected).toBe(false);
+});
+
+it('StrictMode 재마운트에서도 기존 연결의 스트림과 단절 콜백을 이어받는다', async () => {
+  ble.connected = true;
+  ble.cached = 'd1';
+  await act(async () => root.render(<StrictMode><Harness /></StrictMode>));
+  await advance(1000);
+  expect(api.connectionState).toBe('connected');
+  expect(stream.onEEGData).not.toBeNull();
+  expect(ble.lost).not.toBeNull();
+  expect(ble.connectImpl).not.toHaveBeenCalled();
 });
