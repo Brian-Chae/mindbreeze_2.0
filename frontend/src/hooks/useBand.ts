@@ -46,6 +46,7 @@ import {
 } from '../lib/session-live/raw-encoder';
 import { useEegRawUpload, type EnqueueRawChunkInput } from './useEegRawUpload';
 import { useBiosignalCapture } from './useBiosignalCapture';
+import type { RenderedMetrics } from '../lib/biosignal/display-snapshot';
 import {
   deviceStatusFromLeadOff,
   normalizeSignalQuality01,
@@ -245,6 +246,8 @@ export interface UseBandResult {
   clearBuffers: () => void;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
+  /** SDD-244: 화면이 1초마다 보여 준 6지표를 DisplaySnapshot으로 보존(수집 중이 아니면 무시) */
+  recordDisplay: (rendered: RenderedMetrics | null, visible: boolean) => void;
 }
 
 function isWebBluetoothSupported(): boolean {
@@ -1737,5 +1740,6 @@ export function useBand({
     clearBuffers,
     connect,
     disconnect,
+    recordDisplay: biosignal.recordDisplay,
   };
 }

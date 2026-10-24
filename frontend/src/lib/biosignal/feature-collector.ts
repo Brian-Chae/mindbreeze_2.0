@@ -56,12 +56,15 @@ export class FeatureCollector {
   private derivedBundles = new Map<string, number>();
   private algorithms = new Map<Signal, AlgorithmSnapshot>();
   private chain: Promise<void> = Promise.resolve();
+  private lastAliases = new Map<Signal, string>();
 
   constructor(options: { queue: BiosignalQueue; session: BiosignalCaptureSession; createId?: () => string; now?: () => number; playGroupId?: () => string | null }) {
     this.queue = options.queue; this.session = options.session;
     this.now = options.now ?? Date.now; this.playGroupId = options.playGroupId ?? (() => null);
   }
   get pendingCount(): number { return this.pending.length; }
+  /** 해당 신호에서 가장 최근에 emit된 feature_id_alias(화면 snapshot의 출처 연결용) */
+  lastFeatureAlias(signal: Signal): string | null { return this.lastAliases.get(signal) ?? null; }
 
   /** 분석 콜백에서 동기 호출. 무거운 일은 flush에서 한다. */
   emit(signal: Signal, data: Record<string, unknown>, context: EmitContext): void {
@@ -70,6 +73,7 @@ export class FeatureCollector {
     if (this.pending.length >= MAX_PENDING) { this.unresolved += 1; return; }   // 가득 찬 경우도 조용히 버리지 않고 센다
     const sequence = this.sequences.get(signal) ?? 0;
     this.sequences.set(signal, sequence + 1);
+    this.lastAliases.set(signal, `FEAT-${signal.toUpperCase()}-${short(window.streamId)}-${String(sequence).padStart(8, '0')}`);
     const result: FeatureResult = { signal, data };
     const payloads = derivedPayloads(result);
     const bytes = JSON.stringify(payloads).length + 4000;

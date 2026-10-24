@@ -288,6 +288,8 @@ export class BiosignalCaptureSession {
     }
   }
 
+  streamId(signal: Signal): string | null { return this.states.get(signal)?.streamId ?? null; }
+
   /** 지금까지 수신한 마지막 count개 샘플의 창(분석 emit의 원창 추정). 수집 중인 segment가 없으면 null. */
   sampleWindow(signal: Signal, count: number): SampleWindow | null {
     const s = this.states.get(signal);

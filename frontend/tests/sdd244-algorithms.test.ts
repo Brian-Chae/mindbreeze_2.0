@@ -45,6 +45,17 @@ describe('SDD244 T10 PPG 중첩 창 RR 중복', () => {
     expect(rate!).toBeGreaterThan(12); expect(rate!).toBeLessThan(18);
   });
 
+  it('호흡 null 사유를 화면 snapshot에 줄 수 있다(경과 부족 → insufficient_window, 충족 → 사유 없음)', async () => {
+    const service = fresh(); const all = beats(100);
+    expect(service.getRespiratoryNullReason()).toBe('no_ppg_data');
+    await feedSliding(service, all, 40, 50);
+    expect(service.getCurrentRespiratoryRate()).toBeNull();
+    expect(service.getRespiratoryNullReason()).toBe('insufficient_window');
+    await feedSliding(service, all, 40, 100);
+    expect(service.getCurrentRespiratoryRate()).not.toBeNull();
+    expect(service.getRespiratoryNullReason()).toBeNull();
+  });
+
   it('재연결로 시각 기준이 되돌아가도(리셋) 새 박동은 버리지 않는다', async () => {
     const service = fresh(); const first = beats(12, 500_000);
     await service.processPPGAnalysisMetrics(hr, Date.now(), 90, true, first.rr, first.endTs);

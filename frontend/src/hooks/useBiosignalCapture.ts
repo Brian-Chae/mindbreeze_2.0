@@ -9,6 +9,8 @@ import { createBiosignalApi, type BiosignalApi, type CloseIntent } from '../lib/
 import { BiosignalQueue, LEASE_RENEW_MS } from '../lib/biosignal/durable-queue';
 import { BiosignalCaptureSession, type CaptureStatus, type SampleWindow, type StopReason } from '../lib/biosignal/capture-session';
 import { FeatureCollector } from '../lib/biosignal/feature-collector';
+import { DisplayRecorder, type RenderedMetrics, type ViewKind } from '../lib/biosignal/display-snapshot';
+import { getActiveModelCache } from '../lib/eeg/eegPersonalScore';
 import type { Scalars } from '../lib/biosignal/feature-record';
 import { subscribeRawPackets } from '../lib/biosignal/raw-capture';
 import { sendBiosignalEvents, uploadBiosignalQueue } from '../lib/biosignal/upload-queue';
@@ -28,6 +30,8 @@ export interface UseBiosignalCaptureOptions {
   /** 밴드가 연결되어 있을 때만 수집 */
   connected: boolean;
   skipAuth?: boolean; entryCredential?: string | null;
+  /** 화면 snapshot의 view 종류(기본 participant_player) */
+  displayViewKind?: ViewKind;
 }
 export interface UseBiosignalCaptureResult {
   status: CaptureStatus | 'inactive'; stopReason: StopReason | null;
@@ -35,6 +39,8 @@ export interface UseBiosignalCaptureResult {
   markDisconnected: () => void; markReconnected: () => void;
   /** 분석 시작 시점의 원창. 수집 중이 아니면 null → emitFeature는 아무것도 만들지 않는다. */
   featureWindow: (signal: Signal, count: number) => SampleWindow | null;
+  /** 1초 타이머에서 호출: 이번 렌더에서 화면이 실제로 보여 준 6지표(없으면 null=미렌더). */
+  recordDisplay: (rendered: RenderedMetrics | null, visible: boolean) => void;
   /** 처리기 emit마다 호출(다운샘플 없음). */
   emitFeature: (signal: Signal, data: Record<string, unknown>, window: SampleWindow | null, windowIndex: number, extras?: Partial<Scalars>) => void;
   /** 명시 종료: 남은 청크 봉인 → close intent 영속 → 전송 시도. 서버 응답을 저장 완료로 간주하지 않는다. */
@@ -44,7 +50,7 @@ export interface UseBiosignalCaptureResult {
 }
 
 export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBiosignalCaptureResult {
-  const { sessionId, participantId, enabled, connected, skipAuth = false, entryCredential = null } = options;
+  const { sessionId, participantId, enabled, connected, skipAuth = false, entryCredential = null, displayViewKind = 'participant_player' } = options;
   const userId = useAuthStore(state => state.user?.id ?? null);
   const [status, setStatus] = useState<CaptureStatus | 'inactive'>('inactive');
   const [stopReason, setStopReason] = useState<StopReason | null>(null);
@@ -56,7 +62,7 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
   const [armed, setArmed] = useState(false);
   const wasConnected = useRef(false);
   const closing = useRef(false);
-  const runtime = useRef<{ session: BiosignalCaptureSession; queue: BiosignalQueue; api: BiosignalApi; collector: FeatureCollector; active: () => boolean } | null>(null);
+  const runtime = useRef<{ session: BiosignalCaptureSession; queue: BiosignalQueue; api: BiosignalApi; collector: FeatureCollector; display: DisplayRecorder; active: () => boolean } | null>(null);
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
@@ -87,6 +93,7 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
     try {
       await rt.collector.flush(false);
+      await rt.display.flush(false);
       await uploadBiosignalQueue(rt.queue, rt.api, (url, payload, headers) => putEegRawToPresignedUrl(url, payload, headers), rt.active);
       const result = await sendBiosignalEvents(rt.queue, rt.api, rt.active);
       if (result?.close_state && mounted.current) setCloseState(result.close_state);
@@ -111,7 +118,10 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
         if (!capability.raw_schemas.includes(RAW_V2) || allowed.size === 0) { setStatus('inactive'); return; }
         await session.start();
         if (cancelled) { await session.pause(); return; }
-        runtime.current = { session, queue, api, collector: new FeatureCollector({ queue, session }), active: () => !cancelled };
+        const collector = new FeatureCollector({ queue, session });
+        const display = new DisplayRecorder({ queue, session, viewKind: displayViewKind, sourceFeature: s => collector.lastFeatureAlias(s) });
+        await display.start(getActiveModelCache());
+        runtime.current = { session, queue, api, collector, display, active: () => !cancelled };
         unsubscribe = subscribeRawPackets(packet => { if (allowed.has(packet.signal)) session.receive(packet); }, error => {
           logger.error('원문 수집 오류 — 수집 중단', error); session.abort('journal_failed');
         });
@@ -132,7 +142,7 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
       runtime.current = null;
       if (rt && rt.session === session) void session.pause();
     };
-  }, [active, accountId, sessionId, participantId, entryCredential, skipAuth, pump]);
+  }, [active, accountId, sessionId, participantId, entryCredential, skipAuth, pump, displayViewKind]);
 
   const close = useCallback(async (reason: string) => {
     const rt = runtime.current; if (!rt) return null;
@@ -141,6 +151,7 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
       // 원창이 봉인된 뒤 남은 feature를 모두 묶어야 close intent의 expected set에 들어간다.
       await rt.session.sealOpen();
       await rt.collector.flush(true);
+      await rt.display.flush(true);
       const intent = await rt.session.close(reason);
       await pump();
       return intent;
@@ -156,6 +167,12 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
     markReconnected: () => runtime.current?.session.markReconnected(),
     featureWindow: (signal, count) => runtime.current?.session.sampleWindow(signal, count) ?? null,
     emitFeature: (signal, data, window, windowIndex, extras) => runtime.current?.collector.emit(signal, data, { window, windowIndex, extras }),
+    recordDisplay: (rendered, visible) => {
+      const rt = runtime.current; if (!rt) return;
+      // 활성 표준 모델이 바뀌면 새 snapshot을 등록(이미 기록한 행은 그대로)
+      void rt.display.setModel(getActiveModelCache()).catch(() => undefined);
+      rt.display.tick(rendered, visible);
+    },
     close,
     resumeBlocked: async () => {
       const rt = runtime.current; if (!rt) return;

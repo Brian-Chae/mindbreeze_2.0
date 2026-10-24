@@ -112,6 +112,8 @@ export class AnalysisMetricsService {
   private smoothedHeartRate: number | null = null;
   /** 호흡수 지배주파수 중앙값 필터용 최근 N회 히스토리 */
   private respiratoryRateHistory: number[] = [];
+  /** SDD-244 T11: 호흡수가 null인 이유(화면 snapshot의 null_reason). 값이 있으면 null. */
+  private respiratoryNullReason: string | null = 'no_ppg_data';
 
   private hasTimeDomainMetrics = false;
   private hasFrequencyDomainMetrics = false;
@@ -317,6 +319,11 @@ export class AnalysisMetricsService {
     return this.currentHeartRate;
   }
 
+  /** 호흡수가 없을 때의 사유. 값이 있으면 null. */
+  getRespiratoryNullReason(): string | null {
+    return this.currentRespiratoryRate === null ? this.respiratoryNullReason : null;
+  }
+
   getCurrentMotion(): number | null {
     return this.currentMotion;
   }
@@ -429,6 +436,7 @@ export class AnalysisMetricsService {
     const currentTime = Date.now();
 
     if (this.rrIntervalBuffer.length < 30) {
+      if (this.currentRespiratoryRate === null) this.respiratoryNullReason = 'insufficient_rr_buffer';
       return;
     }
 
@@ -448,6 +456,7 @@ export class AnalysisMetricsService {
     } catch (error) {
       console.error('❌ RR 간격 버퍼 기반 HRV 분석 실패:', error);
       this.currentRespiratoryRate = null;
+      this.respiratoryNullReason = 'calculation_failed';
     }
   }
 
@@ -464,6 +473,7 @@ export class AnalysisMetricsService {
     const elapsedMs = stamps.length >= 2 ? stamps[stamps.length - 1] - stamps[0] : Infinity;
     if (totalDurationMs < this.RESPIRATORY_MIN_WINDOW_MS || elapsedMs < this.RESPIRATORY_MIN_WINDOW_MS) {
       this.currentRespiratoryRate = null;
+      this.respiratoryNullReason = 'insufficient_window';
       this.respiratoryRateHistory = [];
       return;
     }
@@ -472,6 +482,7 @@ export class AnalysisMetricsService {
     const resampledRR = this.resampleRRIntervals(rrIntervals, resamplingFs);
     if (resampledRR.length < 16) {
       this.currentRespiratoryRate = null;
+      this.respiratoryNullReason = 'insufficient_resampled_points';
       this.respiratoryRateHistory = [];
       return;
     }
@@ -495,6 +506,7 @@ export class AnalysisMetricsService {
 
     if (dominantFreq == null || !(maxPower > 0) || !Number.isFinite(dominantFreq)) {
       this.currentRespiratoryRate = null;
+      this.respiratoryNullReason = 'no_dominant_frequency';
       this.respiratoryRateHistory = [];
       return;
     }
@@ -502,6 +514,7 @@ export class AnalysisMetricsService {
     const rate = dominantFreq * 60;
     if (rate < 6 || rate > 40 || !Number.isFinite(rate)) {
       this.currentRespiratoryRate = null;
+      this.respiratoryNullReason = 'out_of_physiological_range';
       this.respiratoryRateHistory = [];
       return;
     }
@@ -512,6 +525,7 @@ export class AnalysisMetricsService {
       this.respiratoryRateHistory.shift();
     }
     this.currentRespiratoryRate = this.medianOf(this.respiratoryRateHistory);
+    this.respiratoryNullReason = null;
   }
 
   private calculateTimeDomainMetrics(rrIntervals: number[]): void {

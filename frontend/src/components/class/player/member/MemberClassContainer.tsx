@@ -5,6 +5,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ConnectionState } from 'livekit-client';
 import { useBand, type UseBandResult } from '../../../../hooks/useBand';
+import type { RenderedMetrics } from '../../../../lib/biosignal/display-snapshot';
+import { AnalysisMetricsService } from '../../../../lib/eeg/AnalysisMetricsService';
 import { useGuestAudioSync } from '../../../../hooks/useGuestAudioSync';
 import { useMemberLiveKit } from '../../../../hooks/useMemberLiveKit';
 import { useSessionLiveSocket } from '../../../../hooks/useSessionLiveSocket';
@@ -69,6 +71,25 @@ function buildSnapshot(band: BandSnapshotSource, metricsBlocked: boolean, remote
     bpm: live ? band.heartRate : null,
     respiration: live ? band.respiratoryRate : null,
     hrv: live ? band.sdnn : null,
+  };
+}
+
+/** SDD-244: 이번 렌더에서 화면이 받은 6지표와 그 근거(저장용 DisplaySnapshot의 입력). 값을 다시 계산하지 않는다. */
+function describeRender(band: UseBandResult, snapshot: MetricSnapshot, blocked: boolean, stale: boolean, remoteEfficiency: number | null): RenderedMetrics {
+  const live = band.connectionState === 'connected';
+  const scoredRelax = band.scoredIndices?.relaxationIndex ?? null;
+  return {
+    values: snapshot,
+    rawMind: {
+      focus: live ? (band.rawIndices?.focusIndex ?? null) : null,
+      relaxation: live ? (band.rawIndices?.relaxationIndex ?? null) : null,
+      emotional: live ? (band.rawIndices?.emotionalStability ?? null) : null,
+    },
+    live, blocked, stale, leadOff: band.deviceStatus === 'lead_off',
+    remoteRelaxation: !blocked && remoteEfficiency !== null && snapshot.relaxation === remoteEfficiency && !(live && scoredRelax !== null),
+    lastEegAtMs: band.lastEegAt ? Date.parse(band.lastEegAt) : null,
+    quality: band.signalQualityLevel,
+    respirationNullReason: AnalysisMetricsService.getInstance().getRespiratoryNullReason(),
   };
 }
 
@@ -173,9 +194,18 @@ export function MemberClassContainer({
   useEffect(() => {
     readSnapshotRef.current = () => buildSnapshot(bandRef.current, metricsBlocked, remoteEfficiency);
   });
+  // SDD-244: 커밋된(=실제로 그려진) 렌더의 6지표를 1초 타이머가 그대로 저장한다. 화면과 별도로 재계산하지 않는다.
+  const renderedRef = useRef<RenderedMetrics | null>(null);
+  const screenOffRef = useRef(false);
+  useEffect(() => {
+    renderedRef.current = describeRender(band, snapshot, metricsBlocked, linkState === 'stale', remoteEfficiency);
+    screenOffRef.current = screenOff;
+  });
   useEffect(() => {
     const id = window.setInterval(() => {
       setNowMs(Date.now());
+      // 탭 숨김·화면 끄기는 "보이지 않음" — 그 초는 not_rendered로 남는다
+      bandRef.current.recordDisplay?.(renderedRef.current, document.visibilityState !== 'hidden' && !screenOffRef.current);
       const sample = readSnapshotRef.current();
       setSeries((prev) => {
         const next: Record<PlayerMetricKey, readonly number[]> = { ...prev };
