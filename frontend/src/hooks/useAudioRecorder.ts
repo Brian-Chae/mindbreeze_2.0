@@ -1,3 +1,4 @@
+import { useMobileSwipeProtection } from './use-mobile-swipe-protection';
 // MediaRecorder API 래퍼 — 5초 청크로 분할해 서버에 업로드
 // SDD-137: useVideoRecorder 와 동일하게 종료 시 flush 대기 + 실패 청크 재전송
 
@@ -23,6 +24,7 @@ export function useAudioRecorder({ sessionId, onError }: UseAudioRecorderOptions
   const pendingRef = useRef<Array<{ index: number; blob: Blob }>>([]);
   // SDD-137: 진행 중 업로드를 stop()에서 대기 — 마지막 청크 유실 방지
   const inflightRef = useRef<Set<Promise<void>>>(new Set());
+  useMobileSwipeProtection(() => state === 'recording' || state === 'paused' || inflightRef.current.size > 0);
 
   const cleanup = useCallback(() => {
     recorderRef.current = null;

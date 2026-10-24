@@ -1,0 +1,13 @@
+.mobile-menu-swipe-viewport { position: relative; overflow: hidden; isolation: isolate; }
+.mobile-menu-swipe-page { height: 100%; width: 100%; }
+.mobile-menu-swipe-preview { position: absolute; inset: 0; background: #f7f4f0; padding: 24px; pointer-events: none; will-change: transform; }
+.mobile-menu-swipe-preview h2 { font-size: 24px; font-weight: 600; color: #34332f; }
+.mobile-menu-swipe-preview p { margin-top: 16px; font-size: 14px; color: #6b6861; }
+.mobile-menu-swipe-hint { position: absolute; left: 16px; right: 16px; bottom: calc(100px + env(safe-area-inset-bottom, 0px)); z-index: 2; display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 16px; background: #34332f; color: white; font-size: 13px; }
+.mobile-menu-swipe-hint button { flex-shrink: 0; min-width: 44px; min-height: 44px; }
+@media (max-width: 767px) {
+  [data-mobile-swipe-enabled] :is(.mobile-menu-swipe-page, .mobile-menu-swipe-page *):not(:has([data-mobile-swipe-native-x])):not([data-mobile-swipe-native-x]):not([data-mobile-swipe-native-x] *) { touch-action: pan-y pinch-zoom; }
+  [data-mobile-swipe-native-x], [data-mobile-swipe-native-x] * { touch-action: auto; }
+}
+@media (min-width: 768px) { .mobile-menu-swipe-hint { display: none; } }
+@media (prefers-reduced-motion: reduce) { .mobile-menu-swipe-preview { display: none; } }

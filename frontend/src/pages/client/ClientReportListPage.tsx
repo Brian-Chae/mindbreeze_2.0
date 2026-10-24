@@ -1,3 +1,4 @@
+import { useMobileSwipeProtection } from '../../hooks/use-mobile-swipe-protection';
 // 내담자용 리포트 목록 페이지
 // AppShell 없이 ClientShell 내에서 동작
 
@@ -148,6 +149,7 @@ export default function ClientReportListPage() {
   const [sortKey, setSortKey] = useState<SortKey>('newest');
   const [groupByCounselor, setGroupByCounselor] = useState(true);
   const [markingAllRead, setMarkingAllRead] = useState(false);
+  useMobileSwipeProtection(() => markingAllRead);
   const setReportUnread = useReportStore((s) => s.setUnread);
   const refreshReports = useReportStore((s) => s.refresh);
 

@@ -1,3 +1,4 @@
+import { useMobileSwipeProtection } from './use-mobile-swipe-protection';
 // SDD-084 — MediaRecorder(video/webm) 래퍼: 3초 청크 업로드 + 전면/후면 카메라 전환
 // useAudioRecorder 패턴 복제. 상담사 본인 카메라만 녹화한다(내담자 영상 저장 금지).
 
@@ -34,6 +35,7 @@ export function useVideoRecorder({ sessionId, withAudio = true, onError }: UseVi
   const pendingRef = useRef<Array<{ index: number; blob: Blob }>>([]);
   // 종료 시 잔여 청크 유실 방지 — 진행 중 업로드를 stop()에서 대기한다
   const inflightRef = useRef<Set<Promise<void>>>(new Set());
+  useMobileSwipeProtection(() => state === 'recording' || state === 'paused' || inflightRef.current.size > 0);
 
   const cleanup = useCallback(() => {
     recorderRef.current = null;

@@ -1,3 +1,4 @@
+import { getMobileMenuTabs } from '../../lib/mobile-menu-swipe';
 import { ICONS } from './SidebarNav';
 import { FloatingBottomNav, type FloatingTab } from './floating-bottom-nav';
 import ClientBottomTabBar from '../client/BottomTabBar';
@@ -22,11 +23,8 @@ export default function BottomTabBar({ onMoreClick, role }: { onMoreClick: () =>
     { to: '/admin/applications', label: '가입 신청', icon: ICONS.report },
     { to: '/admin/users', label: '사용자', icon: ICONS.users },
     { to: '/chat', label: '대화', icon: ICONS.message, badge: chatBadge },
-  ] : [
-    { to: role === 'org_admin' ? '/dashboard/org' : '/dashboard', label: '홈', icon: ICONS.home },
-    { to: '/classes', label: '클래스', icon: ICONS.calendar },
-    counseling ? { to: '/counseling', label: '상담', icon: ICONS.users } : { to: '/reports', label: '리포트', icon: ICONS.report, badge: reportBadge },
-    { to: '/chat', label: '대화', icon: ICONS.message, badge: chatBadge },
-  ];
+  ] : getMobileMenuTabs(role === 'org_admin' ? 'org_admin' : 'counselor', counseling).map(tab => ({
+    ...tab, icon: ICONS[tab.icon], badge: tab.to === '/reports' ? reportBadge : tab.to === '/chat' ? chatBadge : undefined,
+  }));
   return <FloatingBottomNav tabs={tabs} moreBadge={invites + (role !== 'platform_admin' && counseling ? reportBadge : 0)} onMoreClick={onMoreClick} />;
 }

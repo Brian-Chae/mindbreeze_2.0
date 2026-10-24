@@ -1,3 +1,4 @@
+import { useMobileSwipeProtection } from './use-mobile-swipe-protection';
 // SDD-088: 상담사 이탈 보수 처리 훅 — beforeunload(브라우저 이탈) + useBlocker(SPA 라우팅 이탈)
 // open/in_progress 상태의 호스트 플레이어에서만 활성화한다.
 // useBlocker 는 데이터 라우터(createBrowserRouter) 전용 — App 라우터가 데이터 라우터여야 한다.
@@ -12,6 +13,7 @@ import { useBlocker, type Blocker } from 'react-router-dom';
 export function useLeaveGuard(shouldGuard: () => boolean): Blocker {
   const guardRef = useRef(shouldGuard);
   guardRef.current = shouldGuard;
+  useMobileSwipeProtection(() => guardRef.current());
 
   // 새로고침·탭 닫기·주소 이동 — 브라우저 기본 확인 대화상자 강제
   useEffect(() => {
