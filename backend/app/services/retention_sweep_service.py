@@ -13,7 +13,7 @@
 
 안전장치
 - 기본 ``RETENTION_SWEEP_ENABLED=false`` — 이때는 항상 dry-run(삭제 0)이며 후보 건수·바이트·보류 건수만 보고한다.
-- 활성이어도 ``RETENTION_APPLY_FROM``(N-5)이 비어 있으면 실제 삭제를 거부하고 dry-run 으로만 동작한다.
+- 활성이어도 ``RETENTION_APPLY_FROM``(N-5)이 비면 기본 dry-run. 승인된 dev는 명시적 retroactive 옵션으로 빈 하한의 전체 소급을 허용한다.
 - 리포트 본문·지표 요약·회원 계정은 대상이 아니다(N-2). 모든 실행은 ``retention_sweep_runs`` 에 이력을 남긴다.
 - 파일/객체 삭제는 DB 커밋 뒤 best-effort 다(S3 버저닝이 꺼져 있어 복구 불가 — dry-run 승인 후에만 활성화).
 """
@@ -303,6 +303,7 @@ def run_retention_sweep(
     now: datetime | None = None,
     dry_run: bool | None = None,
     trigger: str = "manual",
+    retroactive: bool = False,
 ) -> dict:
     """스위프 1회 실행. ``dry_run=True`` 이거나 설정이 비활성이면 삭제 없이 보고만 한다."""
     moment = _aware(now) if now else _now()
@@ -310,7 +311,9 @@ def run_retention_sweep(
     apply_from = parse_apply_from(settings.retention_apply_from)
     blocked_reason: str | None = None
     execute = enabled and dry_run is not True
-    if execute and apply_from is None:
+    # 빈 하한의 소급은 명시적 opt-in만 허용한다. 잘못된 날짜는 옵션과 무관하게 차단한다.
+    allow_empty = retroactive and not (settings.retention_apply_from or "").strip()
+    if execute and apply_from is None and not allow_empty:
         execute = False
         blocked_reason = "apply_from_unset"
     elif not enabled:
@@ -354,6 +357,7 @@ def run_retention_sweep(
         report = {
             "mode": run.mode,
             "enabled": enabled,
+            "retroactive": retroactive,
             "blocked_reason": blocked_reason,
             "cutoffs": {
                 "raw_days": settings.retention_raw_days,
