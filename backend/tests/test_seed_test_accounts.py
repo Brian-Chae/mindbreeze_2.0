@@ -15,7 +15,13 @@ from app.models.user_org_membership import UserOrgMembership
 
 
 @pytest.fixture
-def seed():
+def seed(monkeypatch):
+    from app.config import settings
+
+    # 로컬 DB 테스트의 환경을 명시한다. 개발 머신의 production 기본값에 의존하지 않는다.
+    # DATABASE_URL은 바꾸지 않는다. 시드 함수는 실제 SQLite bind를 검사해야 한다.
+    # 운영 보호 테스트는 각 테스트에서 production을 다시 주입한다.
+    monkeypatch.setattr(settings, 'environment', 'test')
     spec = importlib.util.spec_from_file_location(
         'test_account_seed', Path(__file__).parents[1] / 'scripts/seed_test_accounts.py')
     module = importlib.util.module_from_spec(spec)
@@ -198,3 +204,22 @@ def test_existing_admin_role_conflict_is_rejected(seed, db):
     db.rollback()
     existing = db.query(User).filter_by(email='orgadmin@test.com').one()
     assert existing.role == 'client' and existing.password_hash == 'unchanged'
+
+
+def test_sqlite_bind_is_used_despite_remote_settings(seed, db, monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, 'database_url', 'postgresql://user@example.com/db')
+    assert seed.seed_test_accounts(db, 'fixture-secret')['created'] == 3
+
+
+def test_main_rejects_remote_settings_before_session(seed, monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, 'database_url', 'postgresql://user@example.com/db')
+    monkeypatch.setenv('TEST_ACCOUNTS_PASSWORD', 'fixture-secret')
+    factory = Mock(side_effect=AssertionError('DB 접속 금지'))
+    monkeypatch.setattr('app.core.database.SessionLocal', factory)
+    with pytest.raises(SystemExit):
+        seed.main([])
+    factory.assert_not_called()

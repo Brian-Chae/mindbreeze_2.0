@@ -29,3 +29,11 @@ python scripts/seed_test_accounts.py
 세 계정 모두 주입된 비밀번호로 갱신된다. 기존 두 계정만 있으면 생성 1/갱신 2, 이후 재실행은 생성 0/갱신 3이다. 기관관리자로 로그인해 같은 기관의 상담사 목록을 확인하고 비밀번호 환경변수를 해제한다. 메일 발송은 없다.
 
 머지·develop 푸시·배포·DB 적용은 수행하지 않는다.
+
+## 감독 재검증 실패 수정
+
+- 감독 환경의 실패 6건을 `DATABASE_URL=postgresql://user@example.com/db`, `ENVIRONMENT=production`으로 재현했다(수정 전 6 failed / 19 passed).
+- 실제 시드 함수는 이미 `db.get_bind().url`을 검사하고 있었다. 직접 원인은 테스트가 전역 `settings.environment`의 production 기본값에 의존한 것이다. 이전 격리 런처가 이를 test로 바꾸어 실패를 숨겼다.
+- 테스트의 seed fixture에서 환경만 test로 명시하고 monkeypatch로 복원한다. database_url은 변경하지 않는다. 운영 거부 테스트는 production을 자체 주입한다. 운영 코드는 변경하지 않았다.
+- 원격 설정에서도 실제 SQLite bind로 시드하는 회귀 및 main의 원격 URL 세션 생성 전 차단 회귀를 추가했다.
+- 같은 원격 URL·production 환경의 격리 런처로 관련 테스트 **35 passed / 13 skipped**. 독립 읽기 전용 리뷰에서 운영 보호 약화 없음 확인. 전체 테스트는 이번 수정에서 재실행하지 않았다.
