@@ -21,6 +21,8 @@ celery_app = Celery(
         "app.tasks.stt_task",
         "app.tasks.summary_task",
         "app.tasks.report_task",
+        # SDD-237: 상담사용 클래스 리포트 AI 서사(리포트 큐)
+        "app.tasks.class_report_task",
         "app.tasks.video_task",
         "app.tasks.upgrade_narrative_cache",
         "app.tasks.outbox",
@@ -41,7 +43,9 @@ celery_app.conf.include = list(celery_app.conf.include) + ['app.tasks.export_tas
 
 # SDD-212 TD1: 긴 작업(음성 변환·영상 병합)과 짧은 작업(요약·리포트)이 서로 굶기지 않도록 줄을 나눈다.
 _STT_QUEUE_TASKS = ('tasks.stt', 'tasks.merge_video_chunks')
-_REPORT_QUEUE_TASKS = ('tasks.summary', 'tasks.generate_reports_for_session', 'tasks.report')
+_REPORT_QUEUE_TASKS = (
+    'tasks.summary', 'tasks.generate_reports_for_session', 'tasks.report', 'tasks.class_report_narrative',
+)
 
 
 def build_task_routes(split_enabled: bool) -> dict:

@@ -167,7 +167,10 @@ def test_보존_테이블이_삭제_테이블을_참조하면_삭제_전에_거�
 # ── 재시드 ────────────────────────────────────────────────────────────────────
 
 
-def test_삭제_직후_052_에서_재시드해도_head_적용_후_로그인_해시가_유효하고_재실행은_멱등이다(synthetic_db):
+def test_삭제_직후_052_에서_재시드해도_head_적용_후_로그인_해시가_유효하고_재실행은_멱등이다(synthetic_db, monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "environment", "test")
     url, engine = synthetic_db
     dr.reset_database(engine, scope="all", apply=True)
     seed = _load_script("seed_test_accounts")
@@ -178,15 +181,16 @@ def test_삭제_직후_052_에서_재시드해도_head_적용_후_로그인_해�
     with OrmSession(engine) as db:
         second = seed.seed_test_accounts(db, SEED_PASSWORD)
         db.commit()
-    assert first == {"created": 2, "updated": 0} and second == {"created": 0, "updated": 2}
+    assert first == {"created": 3, "updated": 0} and second == {"created": 0, "updated": 3}
     with engine.connect() as c:
         rows = dict(c.execute(sa.text(
-            "select email, password_hash from users where email in ('counselor@test.com','client@test.com')"
+            "select email, password_hash from users where email in ('counselor@test.com','client@test.com','orgadmin@test.com')"
         )).all())
         roles = dict(c.execute(sa.text("select email, role from users")).all())
-    assert set(rows) == {"counselor@test.com", "client@test.com"}
+    assert set(rows) == {"counselor@test.com", "client@test.com", "orgadmin@test.com"}
     assert all(verify_password(SEED_PASSWORD, h) for h in rows.values())
-    assert roles == {"counselor@test.com": "counselor", "client@test.com": "client"}
+    assert roles == {"counselor@test.com": "counselor", "client@test.com": "client",
+                     "orgadmin@test.com": "org_admin"}
 
 
 def test_시드는_비밀번호가_없으면_거부한다(monkeypatch):

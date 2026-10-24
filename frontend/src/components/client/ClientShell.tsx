@@ -1,3 +1,4 @@
+import { useMobileMenuSwipe } from '../../hooks/use-mobile-menu-swipe';
 // 내담자 앱 전체 레이아웃 셸 — 상담사 AppShell과 동일한 구조
 // 데스크탑: grid-cols-[240px_1fr] + SidebarNav (role="client")
 // 모바일: TopBar + 콘텐츠 + BottomTabBar
@@ -49,6 +50,7 @@ export default function ClientShell({
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const userId = useAuthStore((s) => s.user?.id);
+  const swipe = useMobileMenuSwipe('client', drawerOpen || hideBottomTab, userId);
   const agentUnreadRaw = useAgentStore((s) => s.unread);
   const agentUnread = isAiEnabled() ? agentUnreadRaw : 0;
   const unread = useNotificationStore((s) => s.unread);
@@ -247,7 +249,7 @@ export default function ClientShell({
                   {sub}
                 </div>
               )}
-              <div className="mb-shell-title font-bold text-[18px] text-[#1F1F1F] tracking-tight mt-0.5 truncate">
+              <div data-mobile-swipe-title tabIndex={-1} className="mb-shell-title font-bold text-[18px] text-[#1F1F1F] tracking-tight mt-0.5 truncate">
                 {title}
               </div>
             </div>
@@ -255,10 +257,14 @@ export default function ClientShell({
           </div>
         )}
 
-        <div
-          className={`flex-1 min-h-0 bg-[#F7F4F0] ${noScroll ? '' : 'overflow-auto'} ${contentPad} ${noBottomPad || hideBottomTab ? '' : 'pb-[calc(100px+env(safe-area-inset-bottom,0px))]'} md:pb-0`}
+        <div ref={swipe.containerRef} data-mobile-menu-swipe className="mobile-menu-swipe-viewport flex-1 min-h-0">
+        <div data-mobile-swipe-page
+          className={`mobile-menu-swipe-page flex-1 min-h-0 bg-[#F7F4F0] ${noScroll ? '' : 'overflow-auto'} ${contentPad} ${noBottomPad || hideBottomTab ? '' : 'pb-[calc(100px+env(safe-area-inset-bottom,0px))]'} md:pb-0`}
         >
           {children}
+        </div>
+        {swipe.showHint && <aside className="mobile-menu-swipe-hint" aria-label="메뉴 이동 안내"><p>본문을 좌우로 밀어 메뉴를 이동할 수 있어요</p><button type="button" onClick={swipe.dismissHint} aria-label="메뉴 이동 안내 닫기">닫기</button></aside>}
+        <p className="sr-only" role="status" aria-live="polite">{swipe.message}</p>
         </div>
       </section>
 

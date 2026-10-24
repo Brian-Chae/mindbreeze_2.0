@@ -1,3 +1,4 @@
+import { useMobileSwipeProtection } from './use-mobile-swipe-protection';
 // LiveKit 토큰 발급 + 방 연결 훅
 // 세션 참여(join) 후 LiveKit 토큰을 받아 VideoConference에 전달
 
@@ -13,6 +14,7 @@ export function useLiveKit(sessionId: string | undefined) {
   const [session, setSession] = useState<SessionDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  useMobileSwipeProtection(() => loading || token !== null);
 
   /** 세션 참여 → LiveKit 토큰 발급 → 연결 준비 */
   const connect = useCallback(async () => {

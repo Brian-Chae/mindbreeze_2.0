@@ -1506,16 +1506,21 @@ def _enqueue_chat_push(room, sender, recipients: list[str], msg, db: DBSession) 
     """채팅 수신자에게 푸시 Outbox 행 적재(실제 발송은 push cron). 디바이스 토큰이 없으면 cron 이 skipped 처리."""
     from app.models.notification_outbox import NotificationOutbox
 
-    sender_display = sender.name if sender and sender.name else "상대방"
+    from app.services.notification_service import get_user_preferences
+
+    queued = 0
     for recipient_id in recipients:
-        recipient = db.query(User).filter(User.id == recipient_id).first()
+        recipient = db.query(User).filter(User.id == _uuid(recipient_id)).first()
+        if not recipient or not get_user_preferences(recipient)["push"].get("chat_message", False):
+            continue
+        queued += 1
         db.add(
             NotificationOutbox(
-                user_id=recipient_id,
+                user_id=_uuid(recipient_id),
                 channel="push",
                 payload={
                     "title": "MIND BREEZE",
-                    "body": f"{sender_display}님이 메시지를 보냈어요",
+                    "body": "새 메시지를 보냈어요",
                     "deeplink": _chat_push_deeplink(str(room.id), recipient),
                     "message_id": str(msg.id),
                 },
@@ -1523,7 +1528,9 @@ def _enqueue_chat_push(room, sender, recipients: list[str], msg, db: DBSession) 
             )
         )
     db.commit()
-
+    logging.getLogger("uvicorn.error.push").info(
+        "[OUTBOX-PUSH] chat enqueued=%s recipients=%s", queued, len(recipients)
+    )
 
 
 async def post_message(room_id: str, user_id: str, content: str, msg_type: str, file_url: str | None, db: DBSession) -> dict:

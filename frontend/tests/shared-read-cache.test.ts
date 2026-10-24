@@ -112,3 +112,14 @@ it('다음 조회가 없어도 계정 전환 전에 시작한 응답은 버린�
   finish(reply({ unread: 99 }));
   await rejected;
 });
+
+it.each([
+  '/sessions/s1/live-metrics', '/sessions/s1', '/sessions/s1/entry-state',
+])('실시간 %s는 동시 요청도 반복 폴링도 캐시하지 않는다', async path => {
+  let sequence = 0;
+  vi.mocked(fetch).mockImplementation(async () => reply({ sequence: ++sequence }));
+  expect(await Promise.all([apiClient.get(path), apiClient.get(path)]))
+    .toEqual([{ sequence: 1 }, { sequence: 2 }]);
+  expect(await apiClient.get(path)).toEqual({ sequence: 3 });
+  expect(fetch).toHaveBeenCalledTimes(3);
+});

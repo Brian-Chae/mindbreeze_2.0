@@ -86,9 +86,13 @@ def _build_summaries(sessions: list[Session], db: DBSession) -> list[dict]:
 
     report_counts: dict[uuid.UUID, int] = {}
     pending_review_counts: dict[uuid.UUID, int] = {}
+    class_session_ids = {s.id for s in sessions if s.class_id is not None}
     for rep in db.query(Report).filter(Report.session_id.in_(ids)).all():
         report_counts[rep.session_id] = report_counts.get(rep.session_id, 0) + 1
-        if rep.status == "pending_review":
+        # SDD-237: 명상 클래스 회차의 상담사용 리포트는 승인 대상이 아니라 승인 대기 수에 세지 않는다.
+        if rep.status == "pending_review" and not (
+            rep.type == "counselor" and rep.session_id in class_session_ids
+        ):
             pending_review_counts[rep.session_id] = pending_review_counts.get(rep.session_id, 0) + 1
 
     return [

@@ -1,4 +1,4 @@
-"""알림 서비스 — 인앱 + 이메일 라우팅"""
+"""알림 서비스 — 인앱·이메일·주요 이벤트 푸시 라우팅"""
 
 import logging
 from datetime import datetime, timezone
@@ -220,6 +220,45 @@ def enqueue_outbox(
     ))
 
 
+# 채팅·AI·회차 변경은 기존 전용 발화 지점이 소유한다. 중복 푸시를 만들지 않는다.
+GENERAL_PUSH_EVENTS = frozenset({"report_ready", "session_invited", "class_invited", "session_started"})
+
+
+def _push_deeplink(user: User, event_type: str, extra: dict[str, Any] | None) -> str:
+    """알림 센터와 같은 역할별 경로. 대상이 없으면 알림 목록에서 확인한다."""
+    prefix = "/app" if user.role == "client" else ""
+    extra = extra or {}
+    target = extra.get("target_id") or extra.get("report_id") or extra.get("session_id")
+    if not target:
+        return f"{prefix}/notifications"
+    # UUID만 경로에 사용해 URL·쿼리 삽입을 막는다.
+    try:
+        target = str(UUID(str(target)))
+    except (ValueError, TypeError):
+        return f"{prefix}/notifications"
+    if event_type == "report_ready":
+        return f"{prefix}/reports?report={target}"
+    if event_type == "class_invited":
+        params = extra.get("params") or {}
+        if user.role == "client" and params.get("start_now") is True:
+            try:
+                return f"/class/{UUID(str(params.get('session_id')))}/enter"
+            except (ValueError, TypeError):
+                pass
+        return f"{prefix}/classes/{target}"
+    if user.role == "client" and event_type == "session_started":
+        return f"/class/{target}/enter"
+    class_id = (extra.get("params") or {}).get("class_id")
+    if class_id:
+        try:
+            class_id = str(UUID(str(class_id)))
+            return (f"/app/classes/{class_id}?sessionId={target}" if user.role == "client"
+                    else f"/classes/{class_id}/sessions/{target}")
+        except (ValueError, TypeError):
+            pass
+    return f"{prefix}/sessions/{target}"
+
+
 def notify_event(
     event_type: str,
     user_id: str | UUID,
@@ -228,7 +267,7 @@ def notify_event(
     *,
     commit: bool = True,
 ) -> Notification | None:
-    """이벤트 → 인앱 알림 + (설정 시) 이메일 발송
+    """이벤트 → 인앱 알림 + (설정 시) 이메일·주요 이벤트 푸시 적재
 
     TXN-01: commit=False 면 알림·outbox 를 flush 만 하고 커밋은 호출자에게 맡긴다.
     상위 흐름이 아직 확정하지 않은 변경을 조기 커밋하는 것을 막는다.
@@ -283,6 +322,18 @@ def notify_event(
         )
         db.add(email_item)
         db.flush()  # outbox 행을 같은 트랜잭션에 확정
+
+    if event_type in GENERAL_PUSH_EVENTS and prefs["push"].get(pref_key, False):
+        enqueue_outbox(
+            db, user_id=user.id, channel="push",
+            notification_id=notif.id if notif else None,
+            payload={
+                "title": "MIND BREEZE",
+                "body": "새 알림이 도착했어요. 앱에서 확인해 주세요.",
+                "deeplink": _push_deeplink(user, event_type, extra),
+                "message_id": str(notif.id) if notif else "",
+            },
+        )
 
     if commit:
         db.commit()  # 알림 + outbox 이벤트를 원자적으로 확정

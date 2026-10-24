@@ -1,3 +1,4 @@
+import { useMobileSwipeProtection } from '../../hooks/use-mobile-swipe-protection';
 // AI 리포트 목록 페이지 — 테이블 + 검색/필터/정렬/세션 그룹핑 (SDD-053)
 
 import { useEffect, useMemo, useState } from 'react';
@@ -192,6 +193,7 @@ export default function ReportListPage() {
   const [autoApprove, setAutoApproveState] = useState(false);
   const [autoApproveLoading, setAutoApproveLoading] = useState(true);
   const [autoApproveSaving, setAutoApproveSaving] = useState(false);
+  useMobileSwipeProtection(() => autoApproveSaving);
   const [autoApproveError, setAutoApproveError] = useState<string | null>(null);
   // 일괄 승인 (검토중 리포트 코멘트 없이 일괄 발송)
   const [bulkApproveOpen, setBulkApproveOpen] = useState(false);

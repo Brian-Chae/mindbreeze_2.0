@@ -88,7 +88,12 @@ DEFAULT_NOTIFICATION_PREFERENCES: dict = {
     },
 }
 
-DEFAULT_NOTIFICATION_PREFERENCES["push"] = {"session_updated": True, "session_cancelled": True, "session_host_changed": True, "session_host_change_requested": True}
+DEFAULT_NOTIFICATION_PREFERENCES["push"] = {
+    "session_updated": True, "session_cancelled": True,
+    "session_host_changed": True, "session_host_change_requested": True,
+    "chat_message": True, "report_ready": True, "session_invited": True,
+    "class_invited": True, "session_started": True,
+}
 
 # SDD-216: 신규 클래스 운영 이벤트는 인앱 켬·이메일 끔으로 시작한다.
 CLASS_NOTIFICATION_EVENTS = (
@@ -123,6 +128,11 @@ class User(Base):
     notification_preferences: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     auto_approve_report: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False, server_default="false"
+    )
+    # SDD-237: 클래스 종료 후 '진행 기록 남기기' 1회 안내를 모든 회차에서 끌 수 있다(기본 켜짐).
+    #   deferred: 052 스키마에서 시드하는 스크립트처럼 컬럼 추가 이전 스키마에 ORM 으로 붙는 경로를 깨지 않는다(birth_date 와 같은 이유). Python default 를 두지 않아 INSERT 에서 빠지고 DB 기본값(true)이 쓰인다.
+    show_session_note_prompt: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="true", deferred=True
     )
     auth_provider: Mapped[str] = mapped_column(String(20), default="email", nullable=False, server_default="email")  # "email" | "google" | "apple"
     # SDD-017: 초대(pending) 계정의 초대 시각·만료 시각. 초대 관리 목록에서 상태/만료 뱃지에 사용한다.

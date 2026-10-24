@@ -1,0 +1,73 @@
+{
+  "session": {
+    "id": "5b0a0000-0000-4000-8000-000000000001",
+    "class_name": "아침 호흡 명상",
+    "seq": 3,
+    "ended_at": "2026-10-23T09:45:10Z",
+    "duration_min": 45,
+    "class_id": "c91f0000-0000-4000-8000-000000000001",
+    "started_at": "2026-10-23T09:00:04Z",
+    "domain": "meditation"
+  },
+  "headcount": {
+    "attended": 6,
+    "measured": null,
+    "report_targets": 5,
+    "excluded": 1
+  },
+  "report": {
+    "id": null,
+    "generation_status": "processing",
+    "state": "processing",
+    "narrative_pending": true
+  },
+  "class_report": {
+    "available": false,
+    "status": "pending",
+    "flags": [],
+    "scope": {
+      "attended": 6,
+      "measured": 0,
+      "included": 5,
+      "duration_min": 45,
+      "bucket_min": 5
+    },
+    "headline": null,
+    "chips": {
+      "body": [],
+      "mind": []
+    }
+  },
+  "approval": {
+    "auto_approve": {
+      "enabled": true,
+      "grace_minutes": 0
+    },
+    "counts": {
+      "generating": 5,
+      "pending_review": 0,
+      "approved": 0,
+      "error": 0,
+      "no_data_manual": 0
+    },
+    "participants_total": 5
+  },
+  "note_prompt": {
+    "eligible": true,
+    "has_note": false,
+    "seen": false,
+    "dismissed": false,
+    "user_enabled": true
+  },
+  "next_session": {
+    "id": "7c110000-0000-4000-8000-000000000001",
+    "seq": 4,
+    "scheduled_at": "2026-10-30T09:00:00Z"
+  },
+  "capabilities": {
+    "can_edit_narrative": true,
+    "can_write_note": true,
+    "can_approve": true
+  },
+  "fetched_at": "2026-10-23T09:47:00Z"
+}

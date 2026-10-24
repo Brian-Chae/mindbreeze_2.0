@@ -80,7 +80,7 @@ import { HostPrepContainer } from '../../components/class/flow/host/HostPrepCont
 import { HostStateScreen } from '../../components/class/flow/host/HostStateScreen';
 import { useMediaCheck } from '../../hooks/useMediaCheck';
 import { leadOffFromBand } from '../../lib/class/flow/member-presence';
-import { endedDurationMin } from '../../lib/class/flow/host-ending-model';
+import { completedClassDestination, endedDurationMin } from '../../lib/class/flow/host-ending-model';
 import { deriveHostStateKind, type HostStateAction, type HostStateKind } from '../../lib/class/flow/host-state-model';
 import type { OpenPrefs } from '../../lib/class/flow/host-open';
 import type { StartAudioPlan } from '../../lib/class/flow/host-start-model';
@@ -757,8 +757,16 @@ export default function ClassPlayerPage() {
   const isSetup = status === 'ready' || status === 'scheduled';
   const isLobby = status === 'open';
   const isRunning = status === 'in_progress';
+  const completedLeaveToRef = useRef<string | null>(null);
   const isEnded = status === 'completed';
   const isCancelled = status === 'cancelled';
+
+  useEffect(() => {
+    if (isHost && session?.class_id && session.status === 'completed' && !completedLeaveToRef.current) {
+      bypassGuardRef.current = true;
+      navigate(`/sessions/${session.id}/summary`, { replace: true });
+    }
+  }, [isHost, session?.class_id, session?.id, session?.status, navigate]);
 
   // SDD-094: 온라인 그룹(≤20)에서만 발언권 관리 대상 —
   // 온라인 1:1은 상시 송출, 오프라인/>20은 부여해도 can_publish=false 라 UI 를 띄우지 않는다
@@ -1037,10 +1045,13 @@ export default function ClassPlayerPage() {
       liveKit.disconnect();
       // D-5①: 응답(ended_at 포함)을 반영해 같은 화면에서 리포트 진행을 보여준다(/record 로 점프하지 않음)
       const ended = await transitionSession(id, 'end');
+      if (ended.class_id && ended.status !== 'completed') throw new Error('클래스 종료를 확인하지 못했어요. 다시 시도해 주세요.');
+      completedLeaveToRef.current = leaveTo ?? null;
       setSession(ended);
       setEndModalOpen(false);
       bypassGuardRef.current = true;
-      if (leaveTo) navigate(leaveTo);
+      const destination = ended.class_id ? completedClassDestination(ended, leaveTo) : leaveTo ?? null;
+      if (destination) navigate(destination, { replace: !leaveTo });
     } catch (e) {
       // SDD-101 D3: 종료 확정 실패 — 에러 + 재시도 CTA(미디어는 이미 stop 되어 있어 재시도 시 handleStop 생략됨)
       setError((e as Error).message);
@@ -1504,6 +1515,7 @@ export default function ClassPlayerPage() {
           }}
           onCloseClass={() => void closeClass(false)}
           ending={{
+            isClassSession: Boolean(session.class_id),
             steps: reportProgress.progress?.steps ?? null,
             generationStatus: reportProgress.generationStatus,
             progress: reportProgress.progress?.progress ?? null,
@@ -1516,7 +1528,7 @@ export default function ClassPlayerPage() {
           headcount={null}
           onEnd={() => undefined}
           onContinue={() => undefined}
-          onOpenRecord={() => navigate(`/sessions/${session.id}/record`)}
+          onOpenRecord={() => navigate(`/sessions/${session.id}/${session.class_id ? 'summary' : 'record'}`)}
           closedWaiting={closedInfo?.waiting}
           closedAtText={closedInfo?.atText ?? null}
           onStateAction={(action: HostStateAction) => {

@@ -11,7 +11,13 @@ from app.core.security import decode_token
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 
-async def get_current_user(
+# 이 파일의 인증 의존성은 일부러 `def`(동기)다. `async def` 안에서 동기 DB 조회를 하면
+# 이벤트 루프가 막혀 같은 프로세스의 다른 요청·Socket.IO 가 모두 줄을 서고, 풀이 가득 차면
+# 루프 위에서 커넥션을 기다리다 교착(pool_timeout 까지 정지)한다. `def` 로 두면 FastAPI 가
+# 스레드풀에서 실행한다. async 로 되돌리지 말 것(tests/test_auth_deps_nonblocking.py 가 고정).
+
+
+def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ):
@@ -55,7 +61,7 @@ async def get_current_user(
     }
 
 
-async def get_current_user_optional(
+def get_current_user_optional(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ) -> dict | None:
@@ -67,7 +73,7 @@ async def get_current_user_optional(
     if token is None:
         return None
     try:
-        return await get_current_user(token=token, db=db)
+        return get_current_user(token=token, db=db)
     except HTTPException:
         return None
 

@@ -189,6 +189,10 @@ def _serialize(
             ),
             report.type,
         )
+    # SDD-237: 상담사용 클래스 통계 블록은 다른 참여자의 값을 담고 있으므로 상담사용 리포트(counselor)에만 싣는다.
+    #   회원 직렬화 경로가 어떤 이유로든 이 키를 받더라도 여기서 한 번 더 제거한다(이중 방어).
+    if report.type != "counselor":
+        content.pop("class_report", None)
     # RPT-PAYLOAD-01: 목록 조회는 EEG 시계열(eeg.timeline, 최대 수 MB)을 제외한다.
     # 목록 카드는 headline/summary 요약만 쓰므로 대용량 timeline 을 내려보내는 건
     # 직렬화·전송 낭비(45건 × 수백 KB → 수 초 지연)다. 상세 조회(get_report)만 전체를 담는다.
@@ -497,11 +501,17 @@ def generate_client_reports_for_session(session_id: str, db: DBSession) -> list[
         )
         if needs_refresh:
             report = generate_report_inline(str(report.id), db) or report
-        if report.status == "pending_review" and auto_approve:
+        if report.status == "pending_review" and auto_approve and _skip_auto_approve_no_data(s, report):
+            # SDD-237: 측정·기록이 없는 명상 리포트는 자동 승인에서 제외 — 검토 대기로 남기고 알림·메일·AI 를 부르지 않는다.
+            results.append(
+                _serialize(report, s, subjective=_subjective_from_map(report, records_map))
+            )
+        elif report.status == "pending_review" and auto_approve:
             # SDD-087: 자동 승인 시 코멘트가 없으면 AI 초안을 생성해 저장 후 승인한다
             from app.services.report_comment_service import ensure_auto_comment
 
-            ensure_auto_comment(report, db)
+            # SDD-237: 명상 회차의 자동 초안은 비공개 메모(counselor_notes)를 입력으로 쓰지 않는다.
+            ensure_auto_comment(report, db, include_private_notes=report_domain(s) != "meditation")
             results.append(approve_report(str(report.id), str(s.host_id), db))
         else:
             results.append(
@@ -834,6 +844,7 @@ def get_report(report_id: str, user_id: str | None, db: DBSession, *, member_cre
             db.commit()
         result = _serialize(report, session, subjective=_subjective_for_report(report, db))
         result = without_raw_material(result)
+        result["content"].pop("class_report", None)  # SDD-237: 회원 경로 방어
         result.update(pdf_url=None, report_email=None, generation_error=None)
         return result
     if viewer is None:
@@ -868,6 +879,8 @@ def get_report(report_id: str, user_id: str | None, db: DBSession, *, member_cre
     )
     # SDD-211(R6-X1): 회원이 승인 전 리포트를 열면 마스킹 200 을 주고, 읽음 처리하지 않는다
     #   (승인 후에 NEW 가 정상 표시되도록). 소유자 검사(RPT-IDOR-001)가 위에서 먼저 끝났다.
+    if viewer and viewer.role == "client":
+        result["content"].pop("class_report", None)  # SDD-237: 회원 경로 방어
     if viewer and viewer.role == "client" and _is_unapproved(report):
         return _mask_unapproved(result, report, session)
     # SDD-087: counselor 리포트 상세에는 같은 세션 client 리포트들의 코멘트를 파생 표시한다
@@ -995,6 +1008,22 @@ def auto_approve_enabled(host, session) -> bool:
     if domain == "meditation":
         return True
     return True
+
+
+def _skip_auto_approve_no_data(session, report: Report) -> bool:
+    """SDD-237: 명상 회차에서 측정 자료가 없는 회원 리포트는 자동 승인하지 않는다(수동 승인은 가능).
+
+    상담 도메인은 종전 동작을 유지한다. 품질 경고(degraded/invalid/lost)까지 넓히는 것은 자동 승인 정책 본체 SDD 범위다.
+    리포트 반영을 제외한 참가자의 안내(stub)는 측정 자료 유무와 무관하므로 대상이 아니다.
+    """
+    if report_domain(session) != "meditation":
+        return False
+    content = report.content if isinstance(report.content, dict) else {}
+    eeg = content.get("eeg")
+    if isinstance(eeg, dict) and eeg.get("excluded"):
+        return False
+    status = eeg.get("status") if isinstance(eeg, dict) else None
+    return status in (None, "not_measured")
 
 
 def can_approve_report(db: DBSession, user, session) -> bool:
@@ -1202,7 +1231,12 @@ def approve_all_reports(host_id: str, db: DBSession) -> dict:
     pending = (
         db.query(Report)
         .join(Session, Session.id == Report.session_id)
-        .filter(Session.host_id == hid, Report.status == "pending_review")
+        .filter(
+            Session.host_id == hid,
+            Report.status == "pending_review",
+            # SDD-237: 명상 클래스 회차의 상담사용 리포트는 승인 대상이 아니다(상담 도메인은 종전대로 포함).
+            ~and_(Report.type == "counselor", Session.class_id.isnot(None)),
+        )
         .all()
     )
     for report in pending:

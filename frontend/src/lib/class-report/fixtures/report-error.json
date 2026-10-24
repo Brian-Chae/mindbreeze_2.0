@@ -1,0 +1,805 @@
+{
+  "session": {
+    "id": "5b0a0000-0000-4000-8000-000000000001",
+    "class_name": "아침 호흡 명상",
+    "seq": 3,
+    "ended_at": "2026-10-23T09:45:10Z",
+    "duration_min": 45
+  },
+  "report": {
+    "id": "r_cls_1",
+    "generation_status": "ready",
+    "state": "ready",
+    "narrative_pending": false
+  },
+  "block": {
+    "schema_version": 1,
+    "status": "error",
+    "flags": [],
+    "normalization_version": "v3",
+    "scope": {
+      "attended": 6,
+      "measured": 0,
+      "included": 5,
+      "duration_min": 45,
+      "bucket_min": 5,
+      "split_min": 22.5
+    },
+    "metrics": {
+      "respiration": {
+        "unit": "회/분",
+        "state": "missing",
+        "measured": 0,
+        "compared": 0,
+        "mean": null,
+        "min": null,
+        "max": null,
+        "early": null,
+        "late": null,
+        "delta": null,
+        "direction": null,
+        "valid_min": null,
+        "valid_ratio": null,
+        "agreement": null,
+        "missing_reason": "not_measured",
+        "series": []
+      },
+      "bpm": {
+        "unit": "bpm",
+        "state": "missing",
+        "measured": 0,
+        "compared": 0,
+        "mean": null,
+        "min": null,
+        "max": null,
+        "early": null,
+        "late": null,
+        "delta": null,
+        "direction": null,
+        "valid_min": null,
+        "valid_ratio": null,
+        "agreement": null,
+        "missing_reason": "not_measured",
+        "series": []
+      },
+      "hrv": {
+        "unit": "ms",
+        "state": "missing",
+        "measured": 0,
+        "compared": 0,
+        "mean": null,
+        "min": null,
+        "max": null,
+        "early": null,
+        "late": null,
+        "delta": null,
+        "direction": null,
+        "valid_min": null,
+        "valid_ratio": null,
+        "agreement": null,
+        "missing_reason": "not_measured",
+        "series": []
+      },
+      "focus": {
+        "unit": "%",
+        "state": "missing",
+        "measured": 0,
+        "compared": 0,
+        "mean": null,
+        "min": null,
+        "max": null,
+        "early": null,
+        "late": null,
+        "delta": null,
+        "direction": null,
+        "valid_min": null,
+        "valid_ratio": null,
+        "agreement": null,
+        "missing_reason": "not_measured",
+        "series": []
+      },
+      "relaxation": {
+        "unit": "%",
+        "state": "missing",
+        "measured": 0,
+        "compared": 0,
+        "mean": null,
+        "min": null,
+        "max": null,
+        "early": null,
+        "late": null,
+        "delta": null,
+        "direction": null,
+        "valid_min": null,
+        "valid_ratio": null,
+        "agreement": null,
+        "missing_reason": "not_measured",
+        "series": []
+      },
+      "emotional": {
+        "unit": "%",
+        "state": "missing",
+        "measured": 0,
+        "compared": 0,
+        "mean": null,
+        "min": null,
+        "max": null,
+        "early": null,
+        "late": null,
+        "delta": null,
+        "direction": null,
+        "valid_min": null,
+        "valid_ratio": null,
+        "agreement": null,
+        "missing_reason": "not_measured",
+        "series": []
+      }
+    },
+    "narrative": {
+      "prompt_version": "cr-1",
+      "model": null,
+      "input_hash": "fixture-237-error",
+      "generated_at": "2026-10-23T09:47:00Z",
+      "ai_attempt": null,
+      "fields": {
+        "headline": {
+          "text": "요약을 불러오지 못했어요.",
+          "source": "rule",
+          "ai_draft": null,
+          "rule_text": "요약을 불러오지 못했어요.",
+          "edited_text": null,
+          "edited_by": null,
+          "edited_by_name": null,
+          "edited_at": null,
+          "stale": false,
+          "max_len": 200
+        },
+        "flow": {
+          "text": "집중도는 전반 52%에서 후반 61%로 올랐어요.",
+          "source": "rule",
+          "ai_draft": null,
+          "rule_text": "집중도는 전반 52%에서 후반 61%로 올랐어요.",
+          "edited_text": null,
+          "edited_by": null,
+          "edited_by_name": null,
+          "edited_at": null,
+          "stale": false,
+          "max_len": 150
+        },
+        "body_subtitle": {
+          "text": "호흡과 심박이 후반에 낮아졌어요.",
+          "source": "rule",
+          "ai_draft": null,
+          "rule_text": "호흡과 심박이 후반에 낮아졌어요.",
+          "edited_text": null,
+          "edited_by": null,
+          "edited_by_name": null,
+          "edited_at": null,
+          "stale": false,
+          "max_len": 150
+        },
+        "mind_subtitle": {
+          "text": "집중과 이완 신호가 후반에 높아졌어요.",
+          "source": "rule",
+          "ai_draft": null,
+          "rule_text": "집중과 이완 신호가 후반에 높아졌어요.",
+          "edited_text": null,
+          "edited_by": null,
+          "edited_by_name": null,
+          "edited_at": null,
+          "stale": false,
+          "max_len": 150
+        },
+        "metric.respiration": {
+          "text": "측정 데이터가 없어 표시하지 않아요.",
+          "source": "rule",
+          "ai_draft": null,
+          "rule_text": "측정 데이터가 없어 표시하지 않아요.",
+          "edited_text": null,
+          "edited_by": null,
+          "edited_by_name": null,
+          "edited_at": null,
+          "stale": false,
+          "max_len": 100
+        },
+        "metric.bpm": {
+          "text": "측정 데이터가 없어 표시하지 않아요.",
+          "source": "rule",
+          "ai_draft": null,
+          "rule_text": "측정 데이터가 없어 표시하지 않아요.",
+          "edited_text": null,
+          "edited_by": null,
+          "edited_by_name": null,
+          "edited_at": null,
+          "stale": false,
+          "max_len": 100
+        },
+        "metric.hrv": {
+          "text": "측정 데이터가 없어 표시하지 않아요.",
+          "source": "rule",
+          "ai_draft": null,
+          "rule_text": "측정 데이터가 없어 표시하지 않아요.",
+          "edited_text": null,
+          "edited_by": null,
+          "edited_by_name": null,
+          "edited_at": null,
+          "stale": false,
+          "max_len": 100
+        },
+        "metric.focus": {
+          "text": "측정 데이터가 없어 표시하지 않아요.",
+          "source": "rule",
+          "ai_draft": null,
+          "rule_text": "측정 데이터가 없어 표시하지 않아요.",
+          "edited_text": null,
+          "edited_by": null,
+          "edited_by_name": null,
+          "edited_at": null,
+          "stale": false,
+          "max_len": 100
+        },
+        "metric.relaxation": {
+          "text": "측정 데이터가 없어 표시하지 않아요.",
+          "source": "rule",
+          "ai_draft": null,
+          "rule_text": "측정 데이터가 없어 표시하지 않아요.",
+          "edited_text": null,
+          "edited_by": null,
+          "edited_by_name": null,
+          "edited_at": null,
+          "stale": false,
+          "max_len": 100
+        },
+        "metric.emotional": {
+          "text": "측정 데이터가 없어 표시하지 않아요.",
+          "source": "rule",
+          "ai_draft": null,
+          "rule_text": "측정 데이터가 없어 표시하지 않아요.",
+          "edited_text": null,
+          "edited_by": null,
+          "edited_by_name": null,
+          "edited_at": null,
+          "stale": false,
+          "max_len": 100
+        },
+        "participant.p_1": {
+          "text": "측정 없이 참여 — 기록과 코멘트로 리포트가 이어져요.",
+          "source": "rule",
+          "ai_draft": null,
+          "rule_text": "측정 없이 참여 — 기록과 코멘트로 리포트가 이어져요.",
+          "edited_text": null,
+          "edited_by": null,
+          "edited_by_name": null,
+          "edited_at": null,
+          "stale": false,
+          "max_len": 100
+        },
+        "participant.p_2": {
+          "text": "측정 없이 참여 — 기록과 코멘트로 리포트가 이어져요.",
+          "source": "rule",
+          "ai_draft": null,
+          "rule_text": "측정 없이 참여 — 기록과 코멘트로 리포트가 이어져요.",
+          "edited_text": null,
+          "edited_by": null,
+          "edited_by_name": null,
+          "edited_at": null,
+          "stale": false,
+          "max_len": 100
+        },
+        "participant.p_3": {
+          "text": "측정 없이 참여 — 기록과 코멘트로 리포트가 이어져요.",
+          "source": "rule",
+          "ai_draft": null,
+          "rule_text": "측정 없이 참여 — 기록과 코멘트로 리포트가 이어져요.",
+          "edited_text": null,
+          "edited_by": null,
+          "edited_by_name": null,
+          "edited_at": null,
+          "stale": false,
+          "max_len": 100
+        },
+        "participant.p_4": {
+          "text": "측정 없이 참여 — 기록과 코멘트로 리포트가 이어져요.",
+          "source": "rule",
+          "ai_draft": null,
+          "rule_text": "측정 없이 참여 — 기록과 코멘트로 리포트가 이어져요.",
+          "edited_text": null,
+          "edited_by": null,
+          "edited_by_name": null,
+          "edited_at": null,
+          "stale": false,
+          "max_len": 100
+        },
+        "participant.p_5": {
+          "text": "측정 없이 참여 — 기록과 코멘트로 리포트가 이어져요.",
+          "source": "rule",
+          "ai_draft": null,
+          "rule_text": "측정 없이 참여 — 기록과 코멘트로 리포트가 이어져요.",
+          "edited_text": null,
+          "edited_by": null,
+          "edited_by_name": null,
+          "edited_at": null,
+          "stale": false,
+          "max_len": 100
+        },
+        "participant.p_6": {
+          "text": "측정 없이 참여 — 기록과 코멘트로 리포트가 이어져요.",
+          "source": "rule",
+          "ai_draft": null,
+          "rule_text": "측정 없이 참여 — 기록과 코멘트로 리포트가 이어져요.",
+          "edited_text": null,
+          "edited_by": null,
+          "edited_by_name": null,
+          "edited_at": null,
+          "stale": false,
+          "max_len": 100
+        }
+      },
+      "fallback_fields": []
+    },
+    "participants": [
+      {
+        "participant_id": "p_1",
+        "state": "unworn",
+        "metrics": {
+          "respiration": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "bpm": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "hrv": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "focus": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "relaxation": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "emotional": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          }
+        }
+      },
+      {
+        "participant_id": "p_2",
+        "state": "unworn",
+        "metrics": {
+          "respiration": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "bpm": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "hrv": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "focus": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "relaxation": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "emotional": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          }
+        }
+      },
+      {
+        "participant_id": "p_3",
+        "state": "unworn",
+        "metrics": {
+          "respiration": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "bpm": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "hrv": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "focus": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "relaxation": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "emotional": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          }
+        }
+      },
+      {
+        "participant_id": "p_4",
+        "state": "unworn",
+        "metrics": {
+          "respiration": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "bpm": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "hrv": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "focus": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "relaxation": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "emotional": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          }
+        }
+      },
+      {
+        "participant_id": "p_5",
+        "state": "unworn",
+        "metrics": {
+          "respiration": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "bpm": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "hrv": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "focus": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "relaxation": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "emotional": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          }
+        }
+      },
+      {
+        "participant_id": "p_6",
+        "state": "excluded",
+        "metrics": {
+          "respiration": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "bpm": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "hrv": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "focus": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "relaxation": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          },
+          "emotional": {
+            "mean": null,
+            "early": null,
+            "late": null,
+            "delta": null,
+            "direction": null,
+            "valid_min": null,
+            "valid_ratio": null
+          }
+        }
+      }
+    ]
+  },
+  "participants": [
+    {
+      "participant_id": "p_1",
+      "display_name": "김하늘",
+      "kind": "member",
+      "order": 1,
+      "included": true,
+      "exclusion": null,
+      "measurement": "unworn",
+      "report": {
+        "id": "r_p_1",
+        "generation": "ready",
+        "approval": "pending_review",
+        "delivery": "not_requested"
+      },
+      "narrative_field": "participant.p_1"
+    },
+    {
+      "participant_id": "p_2",
+      "display_name": "이바다",
+      "kind": "member",
+      "order": 2,
+      "included": true,
+      "exclusion": null,
+      "measurement": "unworn",
+      "report": {
+        "id": "r_p_2",
+        "generation": "ready",
+        "approval": "pending_review",
+        "delivery": "not_requested"
+      },
+      "narrative_field": "participant.p_2"
+    },
+    {
+      "participant_id": "p_3",
+      "display_name": "박나무",
+      "kind": "member",
+      "order": 3,
+      "included": true,
+      "exclusion": null,
+      "measurement": "unworn",
+      "report": {
+        "id": "r_p_3",
+        "generation": "ready",
+        "approval": "pending_review",
+        "delivery": "not_requested"
+      },
+      "narrative_field": "participant.p_3"
+    },
+    {
+      "participant_id": "p_4",
+      "display_name": "정새봄",
+      "kind": "member",
+      "order": 4,
+      "included": true,
+      "exclusion": null,
+      "measurement": "unworn",
+      "report": {
+        "id": "r_p_4",
+        "generation": "ready",
+        "approval": "pending_review",
+        "delivery": "not_requested"
+      },
+      "narrative_field": "participant.p_4"
+    },
+    {
+      "participant_id": "p_5",
+      "display_name": "윤여름",
+      "kind": "member",
+      "order": 5,
+      "included": true,
+      "exclusion": null,
+      "measurement": "unworn",
+      "report": {
+        "id": "r_p_5",
+        "generation": "ready",
+        "approval": "pending_review",
+        "delivery": "not_requested"
+      },
+      "narrative_field": "participant.p_5"
+    },
+    {
+      "participant_id": "p_6",
+      "display_name": "한가을",
+      "kind": "member",
+      "order": 6,
+      "included": false,
+      "exclusion": "not_included",
+      "measurement": "excluded",
+      "report": {
+        "id": null,
+        "generation": "none",
+        "approval": "none",
+        "delivery": "not_requested"
+      },
+      "narrative_field": "participant.p_6"
+    }
+  ],
+  "capabilities": {
+    "can_edit_narrative": true
+  },
+  "fetched_at": "2026-10-23T09:47:00Z"
+}

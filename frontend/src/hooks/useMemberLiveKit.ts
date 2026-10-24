@@ -1,3 +1,4 @@
+import { useMobileSwipeProtection } from './use-mobile-swipe-protection';
 // 회원/게스트 LiveKit 연결 훅 — 온라인 양방향이면 카메라/마이크 송출(can_publish=true),
 // 오프라인이면 수신 전용(can_publish=false)
 // SDD-094: 온라인 그룹(≤20)은 기본 뮤트이고, speaking_changed(발언권) 수신 시 토큰을 재발급해
@@ -40,6 +41,7 @@ export function useMemberLiveKit({
   const [canPublish, setCanPublish] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  useMobileSwipeProtection(() => loading || token !== null);
   /** 상담사 화상이 아직 시작되지 않아 토큰이 없는 상태 (폴링 재시도 대상) */
   const [notReady, setNotReady] = useState(true);
   /** SDD-131(②-17): 재시도 횟수 — 지수 백오프 상한 판단 */

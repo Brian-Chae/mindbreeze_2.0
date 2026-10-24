@@ -1,0 +1,56 @@
+{
+  "logicCommit": "7023ff8d",
+  "cssCommit": "2ba50a9a",
+  "unit": {
+    "new": 25,
+    "focused": 71,
+    "files": 5,
+    "passed": true
+  },
+  "tsc": {
+    "command": "cd frontend && npx tsc --noEmit -p tsconfig.app.json",
+    "exitCode": 0
+  },
+  "eslint": {
+    "scope": "변경 TS/TSX 전체",
+    "exitCode": 0
+  },
+  "scriptSyntax": {
+    "command": "node --check frontend/e2e/mobile-menu-swipe.mjs",
+    "exitCode": 0
+  },
+  "webBuild": {
+    "mode": "swipe-qa",
+    "envDir": "/tmp/sdd240-empty-env",
+    "nativeBuild": false,
+    "exitCode": 0
+  },
+  "browserChecks": {
+    "touch-results.json": {
+      "checks": 84,
+      "pageErrors": [],
+      "unknownApi": []
+    },
+    "touch-results-counseling.json": {
+      "checks": 49,
+      "pageErrors": [],
+      "unknownApi": []
+    },
+    "touch-results-visual.json": {
+      "checks": 7,
+      "pageErrors": [],
+      "unknownApi": []
+    },
+    "touch-results-visual-counseling.json": {
+      "checks": 7,
+      "pageErrors": [],
+      "unknownApi": []
+    }
+  },
+  "limits": [
+    "실기기/iOS WebKit 미실행",
+    "VoiceOver/TalkBack 미실행",
+    "실제 수업/마이크/LiveKit/BLE 서버 통합 미실행",
+    "첫 방문 이웃은 데이터 선조회 없는 제목/로딩 미리보기"
+  ]
+}

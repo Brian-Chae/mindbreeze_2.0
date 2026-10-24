@@ -1,3 +1,4 @@
+import { useMobileSwipeProtection } from './use-mobile-swipe-protection';
 import { isBleSupported } from '../lib/ble';
 /**
  * useBand — LINK BAND BLE 연결 → StreamProcessor → 1초 feature
@@ -382,6 +383,7 @@ export function useBand({
   const streamIdRef = useRef<string>('');
   const cursorReadyRef = useRef(false);
   const collectingRef = useRef(false);
+  useMobileSwipeProtection(() => enabled && collectingRef.current);
   const bandPowersRef = useRef<BandPowers | null>(null);
   const signalQualityRef = useRef<number | null>(null);
   const batteryRef = useRef<number | null>(null);
@@ -392,6 +394,8 @@ export function useBand({
   const connectedAtRef = useRef<number | null>(null);
   const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
+  // 비동기 연결의 늦은 완료가 수동 해제·소유자 교체를 되돌리지 않게 한다.
+  const connectionAttemptRef = useRef(0);
   /** SDD-120 후속: 밴드 끊김(gattserverdisconnected) 시 자동 재연결 */
   const autoReconnectRef = useRef(true);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -996,6 +1000,7 @@ export function useBand({
   }, []);
 
   const disconnect = useCallback(async () => {
+    connectionAttemptRef.current += 1;
     // 새 수집 중단 후 기존 큐 drain
     collectingRef.current = false;
     stopMock();
@@ -1026,7 +1031,7 @@ export function useBand({
       streamRef.current = null;
     }
     try {
-      if (bluetoothService.isConnected()) {
+      if (bluetoothService.isConnected() || bluetoothService.getCachedDeviceId()) {
         await bluetoothService.disconnect();
       }
     } catch (err) {
@@ -1103,7 +1108,11 @@ export function useBand({
       if (isAuto) scheduleReconnect();
       return;
     }
+    // 자동 복구는 이미 선택·연결한 기기에만 적용한다. 취소된 선택창을 다시 열지 않는다.
+    if (isAuto && !isMock && !bluetoothService.isConnected() && !bluetoothService.getCachedDeviceId()) return;
     bandConnectInFlight = true;
+    const attempt = connectionAttemptRef.current;
+    const ownsAttempt = () => mountedRef.current && connectionAttemptRef.current === attempt;
 
     setError(null);
     if (isAuto) {
@@ -1113,14 +1122,15 @@ export function useBand({
       autoReconnectRef.current = true;
       reconnectAttemptRef.current = 0;
     }
-    setConnectionState('connecting');
+    // 살아 있는 BLE를 인계할 때는 UI를 재연결/끊김 상태로 낮추지 않는다.
+    const alreadyConnected = !isMock && bluetoothService.isConnected();
+    if (!alreadyConnected) setConnectionState('connecting');
 
     try {
       // Web Bluetooth requestDevice는 사용자 제스처(클릭) 내에서 즉시 호출해야 하므로
       // 디바이스 선택(scan)을 맨 앞에서 수행해 다이얼로그가 정상적으로 뜨도록 한다.
       let selectedDeviceId: string | null = null;
       // 전역(singleton) BLE 연결이 이미 살아있으면 scan/connect를 건너뛰고 스트림만 재시작한다.
-      const alreadyConnected = !isMock && bluetoothService.isConnected();
       if (!isMock && !alreadyConnected) {
         // 재연결(SDD-120): 예기치 않은 끊김 후 캐시된 디바이스가 있으면
         // 재선택 다이얼로그(requestDevice)를 건너뛰고 같은 디바이스로 재연결한다.
@@ -1136,6 +1146,12 @@ export function useBand({
         }
       }
 
+      // 사용자가 시작한 기기 선택은 화면 전환 뒤 완료될 수 있다. 물리 연결만 완료해
+      // 다음 소유자가 이어받게 하고, 이전 훅의 스트림·타이머는 만들지 않는다.
+      if (!autoReconnectRef.current) return;
+      if (!isMock && !alreadyConnected) await bluetoothService.connect(selectedDeviceId!);
+      if (!ownsAttempt()) return;
+
       if (observationOnly) {
         streamIdRef.current = 'playground-observation';
         secondOffsetRef.current = 0;
@@ -1143,10 +1159,12 @@ export function useBand({
       } else {
         // 확정 cursor 복구 — offset 0 재시작 금지
         const cursor = await loadStreamCursor(sessionId, participantId);
+        if (!ownsAttempt()) return;
         streamIdRef.current = cursor.streamId;
         secondOffsetRef.current = cursor.nextSequence;
         cursorReadyRef.current = true;
         await refreshPendingCount();
+        if (!ownsAttempt()) return;
 
         // REST 폴백 플러시 타이머 (미확정 큐 재전송)
         if (flushTimerRef.current) clearInterval(flushTimerRef.current);
@@ -1219,22 +1237,18 @@ export function useBand({
       });
       await stream.start();
 
-      if (!alreadyConnected) {
-        await bluetoothService.connect(selectedDeviceId!);
-      }
-      // 재시도 도중 사용자가 수동 해제했다면 연결을 이어 가지 않는다.
-      if (isAuto && !autoReconnectRef.current) {
-        throw new Error('수동 해제로 자동 재연결을 중단했습니다');
-      }
+      if (!ownsAttempt()) return;
 
       try {
         const level = await bluetoothService.getBatteryLevel();
+        if (!ownsAttempt()) return;
         setBattery(level);
         batteryRef.current = level;
       } catch {
         // 배터리 실패는 연결을 막지 않음
       }
 
+      if (!ownsAttempt()) return;
       bluetoothService.onConnectionLost(() => {
         if (mountedRef.current) {
           setConnectionState('disconnected');
@@ -1271,6 +1285,7 @@ export function useBand({
       setUploadStatus(observationOnly ? 'idle' : 'streaming');
       markConnected();
     } catch (err) {
+      if (!ownsAttempt()) return;
       logger.error('연결 실패', err);
       if (isAuto && autoReconnectRef.current && mountedRef.current) {
         // 자동 재연결 실패: disconnect() 는 autoReconnectRef 를 꺼서 루프를 끊고
@@ -1291,8 +1306,18 @@ export function useBand({
         }
       }
     } finally {
-      // FE-BAND-001: 성공/실패와 무관하게 in-flight 가드를 해제한다.
-      bandConnectInFlight = false;
+      try {
+        if (!ownsAttempt()) {
+          streamRef.current?.cleanup();
+          streamRef.current = null;
+          if (flushTimerRef.current) clearInterval(flushTimerRef.current);
+          flushTimerRef.current = null;
+          // 언마운트는 연결을 인계하지만, 명시적 해제는 늦게 열린 연결도 정리한다.
+          if (!autoReconnectRef.current && bluetoothService.isConnected()) await bluetoothService.disconnect();
+        }
+      } finally {
+        bandConnectInFlight = false;
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- enabled는 BLE 연결 게이트였던 잔여 의존성으로 connect 본문에서 더 이상 직접 읽지 않는다. 다만 기존 의존성 항목을 제거하지 않는 원칙에 따라 유지한다(제거 시 connect identity 안정성이 달라짐).
   }, [
@@ -1359,13 +1384,42 @@ export function useBand({
     void refreshActiveModel();
   }, []);
 
-  // mount 시 전역(singleton) BLE 연결이 이미 살아있으면 스트림을 재시작한다.
-  // (waiting→meditation 전환 시 컴포넌트 remount로 StreamProcessor가 새로 생성되므로)
-  const connectRef = useRef(connect);
-  connectRef.current = connect;
   useEffect(() => {
-    if (bluetoothService.isConnected() && !isMock) {
-      void connectRef.current();
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      connectionAttemptRef.current += 1;
+      collectingRef.current = false;
+      stopMock();
+      // BAND-LIFE-002: 예기치 않은 끊김으로 예약된 자동 재연결 타이머를 언마운트 시 해제한다.
+      // 해제하지 않으면 죽은 컴포넌트에서 connect()가 실행되어 리스너·스트림이 누수된다.
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+      if (flushTimerRef.current) {
+        clearInterval(flushTimerRef.current);
+        flushTimerRef.current = null;
+      }
+      if (elapsedTimerRef.current) {
+        clearInterval(elapsedTimerRef.current);
+        elapsedTimerRef.current = null;
+      }
+      if (streamRef.current) {
+        streamRef.current.cleanup();
+        streamRef.current = null;
+      }
+      // BLE 연결은 전역(singleton)으로 유지한다 — waiting→meditation 전환 시
+      // 컴포넌트 unmount/remount로 연결이 끊기지 않도록 disconnect를 호출하지 않는다.
+      // 명시적 종료(resetJoin)에서 bluetoothService.disconnect()로 정리한다.
+    };
+  }, [stopMock]);
+
+  // 준비 단계 이후 소유자가 없는 대기 중 끊겼어도 이전 기기를 이어받는다.
+  // 수동 해제는 기기 캐시를 지우므로 재연결하지 않으며, 새 선택창도 띄우지 않는다.
+  useEffect(() => {
+    if (!isMock && (bluetoothService.isConnected() || bluetoothService.getCachedDeviceId() || bandConnectInFlight)) {
+      void autoConnectRef.current();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1558,35 +1612,7 @@ export function useBand({
     };
   }, [enabled, observationOnly, sessionId, participantId, refreshPendingCount]);
 
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-      collectingRef.current = false;
-      stopMock();
-      // BAND-LIFE-002: 예기치 않은 끊김으로 예약된 자동 재연결 타이머를 언마운트 시 해제한다.
-      // 해제하지 않으면 죽은 컴포넌트에서 connect()가 실행되어 리스너·스트림이 누수된다.
-      if (reconnectTimerRef.current) {
-        clearTimeout(reconnectTimerRef.current);
-        reconnectTimerRef.current = null;
-      }
-      if (flushTimerRef.current) {
-        clearInterval(flushTimerRef.current);
-        flushTimerRef.current = null;
-      }
-      if (elapsedTimerRef.current) {
-        clearInterval(elapsedTimerRef.current);
-        elapsedTimerRef.current = null;
-      }
-      if (streamRef.current) {
-        streamRef.current.cleanup();
-        streamRef.current = null;
-      }
-      // BLE 연결은 전역(singleton)으로 유지한다 — waiting→meditation 전환 시
-      // 컴포넌트 unmount/remount로 연결이 끊기지 않도록 disconnect를 호출하지 않는다.
-      // 명시적 종료(resetJoin)에서 bluetoothService.disconnect()로 정리한다.
-    };
-  }, [stopMock]);
+
 
   // 주의: enabled=false(participantId 미확정) 상태에서도 BLE 연결은 가능해야 한다.
   // 이전에는 여기서 `!enabled && connected → disconnect()`를 호출해, participantId가 null이면
