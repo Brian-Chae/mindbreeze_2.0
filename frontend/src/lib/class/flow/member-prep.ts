@@ -8,7 +8,7 @@ import type { MediaDeviceUi } from '../class-media';
 export const REPORT_NOTICE_VERSION = 'r5-1';
 export const CLASS_TEAM_NOTICE_VERSION = 'class-team-v1';
 export const reportNoticeVersion = (sessionType?: string): string => sessionType === 'meditation' ? CLASS_TEAM_NOTICE_VERSION : REPORT_NOTICE_VERSION;
-export const RESEARCH_NOTICE_VERSION = 'r5-1';
+export const RESEARCH_NOTICE_VERSION = 'r5-2';
 
 /** 리포트 반영 선택 — null = 아직 고르지 않음(서버 기본 = 제외) */
 export type ReportChoice = 'included' | 'excluded' | null;

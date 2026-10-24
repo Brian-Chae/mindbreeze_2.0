@@ -1,3 +1,4 @@
+import { RESEARCH_METADATA_NOTICE } from '../lib/privacy-policy';
 import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
@@ -225,7 +226,7 @@ export default function LoginPage() {
     <label htmlFor="social-opt-research" className="flex cursor-pointer items-start gap-2 text-xs leading-relaxed text-white/80">
       <input id="social-opt-research" type="checkbox" checked={optResearch} disabled={busy} onChange={(event) => setOptResearch(event.target.checked)}
         className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border border-white/50 accent-[#5F0080]" />
-      <span>[선택] 비식별 연구 목적 활용에 동의합니다.</span>
+      <span>[선택] 비식별 연구 목적 활용에 동의합니다.<span className="block">{RESEARCH_METADATA_NOTICE}</span></span>
     </label>
     </div>
   );

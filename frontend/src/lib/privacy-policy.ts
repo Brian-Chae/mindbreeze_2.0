@@ -1,15 +1,17 @@
 // 개인정보 처리방침 본문 데이터 — /privacy 페이지와 화면 고지 문구가 같은 값을 쓰도록 한 곳에 둔다.
 
 /** 방침 버전 */
-export const PRIVACY_POLICY_VERSION = '2.0';
+export const PRIVACY_POLICY_VERSION = '2.1';
 /** 시행일 (표시용) */
-export const PRIVACY_POLICY_EFFECTIVE_DATE = '2026년 10월 22일';
+export const PRIVACY_POLICY_EFFECTIVE_DATE = '2026년 10월 24일';
 /** 시행일 (ISO) */
-export const PRIVACY_POLICY_EFFECTIVE_ISO = '2026-10-22';
+export const PRIVACY_POLICY_EFFECTIVE_ISO = '2026-10-24';
 /** 기록 원본(뇌파·음성·영상·전사 원문) 및 비회원 개인정보 삭제 기한(일) — 서버 RETENTION_RAW_DAYS 기본값과 동일 */
 export const RAW_RETENTION_DAYS = 90;
 /** 개인정보 문의처 */
 export const PRIVACY_CONTACT_EMAIL = 'admin-mindbreeze@looxidlabs.com';
+
+export const RESEARCH_METADATA_NOTICE = '연구 사본에는 진행자 실명·실제 계정 ID·역할, 세션 및 실제 데이터로 확인 가능한 참여자별 측정 시작·종료 시각(UTC·한국시간), 프로그램 유형·회차·운영 정보가 포함됩니다. 근거가 없는 값은 비워 두며, 참여자 이름 원문·이메일·전화번호·생년월일의 일자·녹음 내용은 포함하지 않습니다.';
 
 export interface PrivacyArticle {
   id: string;
@@ -97,8 +99,9 @@ export const PRIVACY_ARTICLES: PrivacyArticle[] = [
     title: '제5조 (연구 목적 활용 동의 — 선택)',
     items: [
       '회사는 이용자가 선택적으로 동의한 경우에 한하여, 비식별 처리한 데이터를 연구 목적으로 활용합니다. 기본값은 동의하지 않음이며, 동의하지 않아도 서비스를 이용하고 클래스에 참여할 수 있습니다.',
-      '연구 목적으로 활용하는 정보: 뇌파(EEG)·맥박(PPG)·움직임(ACC) 데이터와 산출 지표, 암호화한 이름 식별값, 성별, 생년·월, 클래스 유형·진행 방식·길이 등 최소한의 세션 정보.',
-      '연구 목적으로 활용하지 않는 정보: 이메일, 전화번호, 이름 원문, 음성·영상 원본 및 녹음 내용.',
+      '연구 목적으로 활용하는 정보: 뇌파(EEG)·맥박(PPG)·움직임(ACC) 데이터와 산출 지표, 이름과 생년월일에서 생성한 HMAC 가명 식별값, 성별, 생년·월, 클래스 유형·진행 방식·길이 등 구조화된 프로그램 정보.',
+      RESEARCH_METADATA_NOTICE,
+      '연구 목적으로 활용하지 않는 참여자 정보: 이메일, 전화번호, 이름 원문, 생년월일의 일자, 음성·영상 원본 및 녹음 내용.',
       '선택 동의는 설정 또는 제11조 문의처에서 철회할 수 있습니다. 각 동의의 철회에 따라 해당 뇌파 수집 또는 연구 활용을 중단하며 기존 연구용 개인 데이터의 삭제·가명 처리도 요청할 수 있습니다. 이미 연구에 사용된 결과(논문·모델 등)는 되돌릴 수 없습니다.',
     ],
   },
@@ -116,8 +119,8 @@ export const PRIVACY_ARTICLES: PrivacyArticle[] = [
     id: 'reidentification',
     title: '제5조의3 (재식별 가능성에 대한 안내)',
     items: [
-      '연구용 데이터는 비식별 처리하지만, 성별·생년·월 및 세션 정보를 다른 정보와 결합하면 본인을 알아볼 가능성이 완전히 없다고는 할 수 없습니다.',
-      '이름은 암호화한 식별값으로만 저장하며, 식별값 생성에 쓰는 비밀 키는 별도로 관리합니다. 비밀 키가 외부에 유출되는 경우 식별 위험이 높아질 수 있습니다.',
+      '연구용 데이터는 비식별 처리하지만, 성별·생년·월, 정확한 측정 시각, 진행자 및 프로그램 정보를 다른 정보와 결합하면 본인을 알아볼 가능성이 완전히 없다고는 할 수 없습니다.',
+      '참여자 이름은 이름과 생년월일에서 생성한 HMAC 가명 식별값으로 저장하며, 식별값 생성에 쓰는 비밀 키는 별도로 관리합니다. 비밀 키가 외부에 유출되는 경우 식별 위험이 높아질 수 있습니다.',
     ],
   },
   {
@@ -159,7 +162,7 @@ export const PRIVACY_ARTICLES: PrivacyArticle[] = [
     title: '제10조 (안전성 확보 조치)',
     items: [
       '회사는 개인정보 및 생체신호 정보에 대한 접근 권한을 필요한 최소한의 담당자로 제한하고, 비밀번호는 암호화하여 저장합니다.',
-      '연구용 데이터는 이름을 암호화한 식별값으로만 보관하며, 기본 서비스 저장소와 분리하여 관리합니다.',
+      '연구용 참여자 데이터는 이름과 생년월일에서 생성한 HMAC 가명 식별값으로 보관하며, 진행자 실명·계정 ID·역할을 포함할 수 있습니다. 연구 사본은 기본 서비스 저장소와 분리하여 관리합니다.',
     ],
   },
   {
@@ -174,7 +177,7 @@ export const PRIVACY_ARTICLES: PrivacyArticle[] = [
     title: '부칙 (시행일과 개정 이력)',
     items: [
       `이 방침은 ${PRIVACY_POLICY_EFFECTIVE_DATE}부터 시행합니다.`,
-      `개정 이력: 버전 ${PRIVACY_POLICY_VERSION} (${PRIVACY_POLICY_EFFECTIVE_DATE}) — 탈퇴 30일 후 개인 데이터 삭제, 선택 동의 구분, 처리 위탁·국외 이전, 보호책임자, 수업 통계 AI 요약 및 광고 미사용 안내를 반영하였습니다. 기록 원본 ${RAW_RETENTION_DAYS}일 보관 기준은 유지합니다.`,
+      `개정 이력: 버전 ${PRIVACY_POLICY_VERSION} (${PRIVACY_POLICY_EFFECTIVE_DATE}) — 연구 사본의 진행자 실명·계정 ID·역할, 정확한 측정 시작·종료 시각 및 구조화된 프로그램 정보 고지를 추가하였습니다. 이전 개정에서 반영한 탈퇴 30일 후 개인 데이터 삭제, 선택 동의 구분, 처리 위탁·국외 이전, 보호책임자, 수업 통계 AI 요약 및 광고 미사용 안내를 반영하였습니다. 기록 원본 ${RAW_RETENTION_DAYS}일 보관 기준은 유지합니다.`,
     ],
   },
 ];

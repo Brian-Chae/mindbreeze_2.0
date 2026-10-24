@@ -42,9 +42,9 @@ const src = (rel: string): string => readFileSync(resolve(__dirname, '..', rel),
 describe('/privacy 페이지', () => {
   it('시행일·버전을 표기한다', () => {
     const text = renderPage();
-    expect(text).toContain('2026년 10월 22일');
+    expect(text).toContain('2026년 10월 24일');
     // SDD-220: 탈퇴 30일 삭제·선택 동의·위탁 고지를 반영한 2.0 으로 개정
-    expect(text).toContain('버전 2.0');
+    expect(text).toContain('버전 2.1');
     expect(container.querySelector('h1')?.textContent).toBe('개인정보 처리방침');
   });
 
