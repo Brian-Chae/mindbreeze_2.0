@@ -84,6 +84,11 @@ export class AnalysisMetricsService {
 
   private bpmBuffer: number[] = [];
   private rrIntervalBuffer: number[] = [];
+  /** SDD-244 T10: rrIntervalBuffer와 같은 순서의 '닫는 피크' 시각(ms). 시각 없이 들어온 RR은 NaN. */
+  private rrTimestampBuffer: number[] = [];
+  /** 마지막으로 받아들인 박동의 시각 — 중첩 창이 같은 박동을 다시 보내도 한 번만 센다. */
+  private lastRrEndTimestamp = -Infinity;
+  private static readonly RR_CLOCK_RESET_MS = 5000;
   private lastLfHfCalculation = 0;
 
   private currentLfPower = 0;
@@ -206,6 +211,7 @@ export class AnalysisMetricsService {
     _currentSQI?: number,
     _isQualityGood?: boolean,
     rrIntervals?: number[],
+    rrEndTimestamps?: number[],
   ): Promise<void> {
     const hr = ppgAnalysisResult.vitals.heartRate;
     if (hr > 40 && hr < 200) {
@@ -213,7 +219,7 @@ export class AnalysisMetricsService {
     }
 
     if (rrIntervals && rrIntervals.length > 0) {
-      this.updateRRIntervalBuffer(rrIntervals);
+      this.updateRRIntervalBuffer(rrIntervals, rrEndTimestamps);
       this.calculateLFHF();
     }
 
@@ -356,13 +362,27 @@ export class AnalysisMetricsService {
 
   // ---------- HRV 계산 (haru_band_app 이식) ----------
 
-  private updateRRIntervalBuffer(rrIntervals: number[]): void {
-    const validRRIntervals = rrIntervals.filter((rr) => rr >= 200 && rr <= 2000);
-    if (validRRIntervals.length === 0) return;
+  private updateRRIntervalBuffer(rrIntervals: number[], rrEndTimestamps?: number[]): void {
+    const stamped = rrEndTimestamps !== undefined && rrEndTimestamps.length === rrIntervals.length;
+    let candidates = rrIntervals.map((rr, i) => ({ rr, ts: stamped ? rrEndTimestamps![i] : NaN }));
+    if (stamped) {
+      // 시각 기준이 크게 과거로 돌아가면(재연결·clock reset) 새 구간으로 보고 커서를 푼다.
+      const newest = Math.max(...candidates.map(c => c.ts).filter(Number.isFinite), -Infinity);
+      if (Number.isFinite(newest) && newest < this.lastRrEndTimestamp - AnalysisMetricsService.RR_CLOCK_RESET_MS) {
+        this.lastRrEndTimestamp = -Infinity;
+      }
+      // 중첩 창이 다시 보낸 박동(이미 받은 시각 이하)은 버린다.
+      candidates = candidates.filter(c => Number.isFinite(c.ts) && c.ts > this.lastRrEndTimestamp);
+    }
+    const valid = candidates.filter(c => c.rr >= 200 && c.rr <= 2000);
+    if (valid.length === 0) return;
 
-    this.rrIntervalBuffer.push(...validRRIntervals);
+    this.rrIntervalBuffer.push(...valid.map(c => c.rr));
+    this.rrTimestampBuffer.push(...valid.map(c => c.ts));
+    if (stamped) this.lastRrEndTimestamp = Math.max(this.lastRrEndTimestamp, ...valid.map(c => c.ts));
     if (this.rrIntervalBuffer.length > this.LF_HF_BUFFER_SIZE) {
       this.rrIntervalBuffer = this.rrIntervalBuffer.slice(-this.LF_HF_BUFFER_SIZE);
+      this.rrTimestampBuffer = this.rrTimestampBuffer.slice(-this.LF_HF_BUFFER_SIZE);
     }
   }
 
@@ -439,7 +459,10 @@ export class AnalysisMetricsService {
     // 개수(30박) 게이트 → 경과시간 게이트로 교체.
     // 90bpm이면 30박≈20초에 불과해 주파수 해상도가 3.75회/분으로 너무 거칠다.
     const totalDurationMs = rrIntervals.reduce((sum, val) => sum + val, 0);
-    if (totalDurationMs < this.RESPIRATORY_MIN_WINDOW_MS) {
+    // SDD-244 T10: RR 합이 아니라 실제 경과(첫~마지막 박동 시각)도 60초를 넘어야 연다. 시각이 없는 구 호출은 RR 합만 본다.
+    const stamps = this.rrTimestampBuffer.filter(Number.isFinite);
+    const elapsedMs = stamps.length >= 2 ? stamps[stamps.length - 1] - stamps[0] : Infinity;
+    if (totalDurationMs < this.RESPIRATORY_MIN_WINDOW_MS || elapsedMs < this.RESPIRATORY_MIN_WINDOW_MS) {
       this.currentRespiratoryRate = null;
       this.respiratoryRateHistory = [];
       return;

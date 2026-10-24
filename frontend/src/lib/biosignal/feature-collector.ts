@@ -11,10 +11,15 @@ import { buildFeatureRecord, derivedPayloads, type AlgorithmSnapshot, type Featu
 import { sampleTimeUs } from './raw-clock';
 import type { Signal } from './raw-types';
 
-export const ALGORITHM_VERSIONS: Record<Signal, string> = { eeg: '1', ppg: '1', acc: '1' };
+/** PPG '2': 중첩 창 RR을 박동 시각으로 중복 제거하고 호흡 게이트에 실제 경과 60초를 요구(T10). '1'은 과거 기록 해석용으로 남긴다. */
+export const PPG_ALGORITHM_HISTORY: Record<string, string> = {
+  '1': 'rr-append-all: 중첩 창의 RR 전체를 매번 버퍼에 append, 호흡 게이트는 RR 합만 검사',
+  '2': 'rr-beat-dedup: 닫는 피크 시각 커서로 중복 제거, 호흡 게이트에 실제 경과 60초 추가',
+};
+export const ALGORITHM_VERSIONS: Record<Signal, string> = { eeg: '1', ppg: '2', acc: '1' };
 const ALGORITHM_PARAMETERS: Record<Signal, Record<string, number | string | boolean | number[]>> = {
   eeg: { sample_rate_hz: 250, min_window_samples: 500, channels: 'fp1,fp2' },
-  ppg: { sample_rate_hz: 50, channels: 'red,ir' },
+  ppg: { sample_rate_hz: 50, channels: 'red,ir', rr_dedup: 'end_timestamp_cursor', respiratory_min_elapsed_ms: 60000 },
   acc: { sample_rate_hz: 30, channels: 'x,y,z' },
 };
 export const BUNDLE_MAX_AGE_MS = 10_000;

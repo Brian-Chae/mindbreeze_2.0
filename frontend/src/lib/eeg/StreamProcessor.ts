@@ -777,6 +777,7 @@ export class StreamProcessor {
               currentSQI,
               isQualityGood,
               result.rrIntervals,
+              this.ppgProcessor.getRrEndTimestamps(result),
             );
           } catch (error) {
             logger.error('❌ PPG 분석 지표 생성 실패:', error);
