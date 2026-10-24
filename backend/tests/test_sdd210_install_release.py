@@ -76,7 +76,7 @@ def cur(env):
     return os.path.basename(os.readlink(env["prefix"] / "current"))
 
 
-def test_첫_설치는_current_venv_링크를_만들고_앱_유닛과_timer_18개를_설치한다(env):
+def test_첫_설치는_current_venv_링크를_만들고_앱_유닛과_timer_19개를_설치한다(env):
     r = install(env, RID_A)
     assert r.returncode == 0, r.stderr + r.stdout
     assert cur(env) == RID_A
@@ -84,7 +84,7 @@ def test_첫_설치는_current_venv_링크를_만들고_앱_유닛과_timer_18�
     assert os.readlink(env["prefix"] / "venv").endswith("/venvs/h1")
     units = env["etc"] / "systemd" / "system"
     assert (units / "mindbreeze-backend.service").is_file()
-    assert len(list(units.glob("mindbreeze-job-*.timer"))) == 18  # 기존 15 + SDD-216 클래스 운영/롤링 + #69 account_deletion_sweep
+    assert len(list(units.glob("mindbreeze-job-*.timer"))) == 19  # 기존 18 + SDD-238 retention_sweep(dry-run)
     log = env["calls"].read_text()
     assert "restart mindbreeze-backend" in log and "restart mindbreeze-worker" in log
     # 컷오버 전(timer 비활성) 상태에서는 timer 를 enable 하지 않는다
@@ -183,6 +183,7 @@ def test_timer_가_활성인_서버에서는_새_timer_도_활성화한다(env):
     assert r.returncode == 0, r.stderr
     log = env["calls"].read_text()
     assert "enable --now mindbreeze-job-process_email_outbox.timer" in log
+    assert "enable --now mindbreeze-job-retention_sweep.timer" in log
     assert not stale.exists() and "disable --now mindbreeze-job-old_job.timer" in log
 
 

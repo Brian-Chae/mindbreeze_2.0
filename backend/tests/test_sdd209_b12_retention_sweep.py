@@ -373,3 +373,51 @@ def test_cron_스크립트는_비활성에서_dry_run_보고서를_출력(db, ca
     out = capsys.readouterr().out
     assert "[retention_sweep]" in out and '"mode": "dry_run"' in out
     assert db.query(EEGRawChunk).count() >= 4
+
+
+@pytest.mark.parametrize("enabled_flag,apply_from,requested", [
+    (False, "", None),
+    (False, "2026-01-01", False),
+    (True, "2026-01-01", True),
+    (True, "invalid", None),
+])
+def test_sdd238_dry_run_reports_candidates_without_deletion_or_external_effects(
+    db, monkeypatch, deleted_refs, enabled_flag, apply_from, requested,
+):
+    """예약 실행의 삭제 차단과 명시적 dry-run을 독립적으로 확인한다."""
+    from app.services import eeg_raw_service, media_cleanup_service, retention_sweep_service
+
+    monkeypatch.setattr(settings, "retention_sweep_enabled", enabled_flag)
+    monkeypatch.setattr(settings, "retention_apply_from", apply_from)
+    host, session, guest, member = _session_with_originals(db, ended_at=NOW - timedelta(days=110))
+    consent = _consent(db, session, guest, "pending")
+    effects = [Mock(), Mock(), Mock()]
+    monkeypatch.setattr(retention_sweep_service, "_notify_hold_overdue", effects[0])
+    monkeypatch.setattr(eeg_raw_service, "sweep_stale_eeg_raw", effects[1])
+    monkeypatch.setattr(media_cleanup_service, "sweep_stale_media", effects[2])
+
+    report = _run(db, dry_run=requested, trigger="cron")
+
+    assert report["mode"] == "dry_run"
+    assert report["raw"]["eeg_raw_chunks"] == 2
+    assert report["research_hold"]["participants"] == 1
+    assert report["research_hold"]["eeg_raw_chunks"] == 2
+    assert report["research_hold"]["overdue"] == 1
+    assert report["research_hold"]["alerted"] == 0
+    assert all(count == 0 for count in report["raw"]["deleted"].values())
+    assert report["guest_pii"]["scrubbed"] == {"participants": 0, "invites": 0}
+    assert report["orphan_cleanup"] is None
+    assert _counts(db, session.id) == {"eeg": 4, "audio": 1, "video": 1, "windows": 2}
+    assert deleted_refs == []
+    for effect in effects:
+        effect.assert_not_called()
+    db.expire_all()
+    record = db.query(SessionRecord).filter_by(session_id=session.id).one()
+    assert record.transcript == "전사 원문" and record.video_s3_key
+    assert "segments" in record.ai_summary
+    unchanged_guest = db.query(SessionParticipant).filter_by(id=guest.id).one()
+    assert unchanged_guest.guest_name == "게스트" and unchanged_guest.pii_scrubbed_at is None
+    unchanged_consent = db.query(ResearchConsent).filter_by(id=consent.id).one()
+    assert unchanged_consent.export_state == "pending" and unchanged_consent.hold_alerted_at is None
+    run = db.query(RetentionSweepRun).one()
+    assert run.status == "completed" and run.mode == "dry_run" and run.trigger == "cron"

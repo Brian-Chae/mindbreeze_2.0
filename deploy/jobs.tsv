@@ -13,7 +13,7 @@ sweep_stale_eeg_raw	sweep_stale_eeg_raw_cron.py	*-*-* 04:30:00 UTC	1800	1	EEG ra
 sweep_stale_media	sweep_stale_media_cron.py	*-*-* 04:45:00 UTC	1800	1	미디어 고아 정리
 process_push_outbox	process_push_outbox_cron.py	*-*-* *:*:00 UTC	55	1	푸시 outbox 발송(FCM/VAPID)
 sweep_agent_checkins	sweep_agent_checkins_cron.py	*-*-* *:00/5:00 UTC	240	1	AI 비서 안부 체크인
-retention_sweep	retention_sweep_cron.py	*-*-* 03:00:00 UTC	3600	0	SDD-209 기본 DB 삭제 스위프 — RETENTION_SWEEP_ENABLED 승인 전 비활성(enabled=0)
+retention_sweep	retention_sweep_cron.py	*-*-* 03:00:00 UTC	3600	1	SDD-238 보고 타이머 활성 — RETENTION_SWEEP_ENABLED=false 기본 유지(dry-run), 실제 삭제는 별도 승인
 research_export	research_export_cron.py	*-*-* 03:30:00 UTC	3600	0	SDD-209 연구 내보내기 — RESEARCH_EXPORT_ENABLED 승인 전 비활성(enabled=0)
 report_backlog_probe	report_backlog_probe_cron.py	*-*-* *:*:00 UTC	55	1	SDD-212 종료 파이프라인 적체 지표 수집(로그, 게시는 설정 승인 후)
 class_operations	class_operations_cron.py	*-*-* *:*:00 UTC	55	1	SDD-216 요청 만료·마무리·전달 의도 처리 — 편성 스위치 off면 실행 없음
