@@ -60,9 +60,9 @@ fs.mkdirSync(out, { recursive: true });
     }
     await page.click('.views button[data-view="after"]');
     await page.locator('#after details').nth(1).locator('summary').click();
-    const groupStates = await page.locator('#after .radio-row select').evaluateAll(els => els.map(el => ({ label: el.getAttribute('aria-label'), value: el.value, mixedDisabled: el.options[0].disabled })));
+    const groupStates = await page.locator('#after .sw-row').evaluateAll(els => els.map(el => ({ label: el.querySelector('.lbl').textContent.trim(), value: el.querySelector('.sw').classList.contains('partial') ? '일부 켜짐' : el.querySelector('input').checked ? '켜짐' : '꺼짐' })));
     const expected = ['일부 켜짐', '켜짐', '꺼짐', '켜짐', '일부 켜짐', '켜짐'];
-    if (groupStates.some((s, i) => s.value !== expected[i] || !s.mixedDisabled)) throw new Error('알림 그룹 초기값 불일치');
+    if (groupStates.length !== 6 || groupStates.some((s, i) => s.value !== expected[i])) throw new Error('알림 그룹 초기값 불일치');
     results.checks.push({ groupStates });
     await page.screenshot({ path: path.join(out, 'notifications-expanded-390.png'), fullPage: true });
     results.captured.push('notifications-expanded-390.png');

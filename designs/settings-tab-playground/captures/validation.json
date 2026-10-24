@@ -95,34 +95,28 @@
     {
       "groupStates": [
         {
-          "label": "일정·참여 이메일",
-          "value": "일부 켜짐",
-          "mixedDisabled": true
+          "label": "이메일메일로 받기",
+          "value": "일부 켜짐"
         },
         {
-          "label": "일정·참여 인앱",
-          "value": "켜짐",
-          "mixedDisabled": true
+          "label": "인앱앱·웹 알림으로 받기",
+          "value": "켜짐"
         },
         {
-          "label": "대화 이메일",
-          "value": "꺼짐",
-          "mixedDisabled": true
+          "label": "이메일메일로 받기",
+          "value": "꺼짐"
         },
         {
-          "label": "대화 인앱",
-          "value": "켜짐",
-          "mixedDisabled": true
+          "label": "인앱앱·웹 알림으로 받기",
+          "value": "켜짐"
         },
         {
-          "label": "리포트·운영 이메일",
-          "value": "일부 켜짐",
-          "mixedDisabled": true
+          "label": "이메일메일로 받기",
+          "value": "일부 켜짐"
         },
         {
-          "label": "리포트·운영 인앱",
-          "value": "켜짐",
-          "mixedDisabled": true
+          "label": "인앱앱·웹 알림으로 받기",
+          "value": "켜짐"
         }
       ]
     },
