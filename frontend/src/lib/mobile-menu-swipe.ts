@@ -1,10 +1,11 @@
+import { isCounselingEnabled } from './feature-flags';
 import type { UserRole } from './api/auth';
 
 export interface MobileMenuTab { to: string; label: string; icon: 'home' | 'calendar' | 'users' | 'report' | 'message' }
 export interface SwipeSample { x: number; time: number }
 
 /** 실제 pill과 제스처가 공유하는 메뉴 순서. 더보기는 라우트가 아니다. */
-export function getMobileMenuTabs(role: UserRole | null | undefined, counseling: boolean): MobileMenuTab[] {
+export function getMobileMenuTabs(role: UserRole | null | undefined, counseling = isCounselingEnabled()): MobileMenuTab[] {
   if (role === 'client') return [
     { to: '/app', label: '홈', icon: 'home' },
     { to: '/app/classes', label: '내 클래스', icon: 'calendar' },

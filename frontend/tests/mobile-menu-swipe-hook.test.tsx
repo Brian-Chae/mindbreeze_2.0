@@ -21,8 +21,8 @@ function Probe({ busy = false, blocked = false }: { busy?: boolean; blocked?: bo
   useEffect(() => { path = location.pathname; }, [location.pathname]);
   return <section><h1>화면 제목</h1><div ref={swipe.containerRef}><div data-mobile-swipe-page><p id="start">본문</p></div></div></section>;
 }
-async function mount(busy = false, blocked = false) {
-  await act(async () => { reactRoot.render(<MemoryRouter initialEntries={['/app/classes']}><Probe busy={busy} blocked={blocked} /></MemoryRouter>); });
+async function mount(busy = false, blocked = false, initialPath = '/app/classes') {
+  await act(async () => { reactRoot.render(<MemoryRouter key={initialPath} initialEntries={[initialPath]}><Probe busy={busy} blocked={blocked} /></MemoryRouter>); });
   page = container.querySelector('[data-mobile-swipe-page]')!;
   root = page.parentElement as HTMLDivElement;
   root.getBoundingClientRect = () => ({ x: 0, y: 80, top: 80, bottom: 744, width: 390, height: 664, left: 0, right: 390, toJSON() {} });
@@ -100,6 +100,14 @@ describe('제스처 수명주기', () => {
     await mount(); pointer('pointerdown', 12); pointer('pointermove', 200, 250, 80); pointer('pointerup', 200, 250, 100); await complete(); expect(path).toBe('/app/classes');
     mobile = false; pointer('pointerdown', 280); pointer('pointermove', 160, 250, 80); pointer('pointerup', 160, 250, 100); await complete(); expect(path).toBe('/app/classes');
     mobile = true; await mount(true); pointer('pointerdown', 280); pointer('pointermove', 160, 250, 80); pointer('pointerup', 160, 250, 100); await complete(); expect(path).toBe('/app/classes');
+  });
+  it('오른쪽으로 이전 메뉴에 이동하고 첫·마지막에서는 저항만 준다', async () => {
+    await mount(); pointer('pointerdown', 100); pointer('pointermove', 220, 250, 80); pointer('pointerup', 220, 250, 100); await complete(); expect(path).toBe('/app');
+    pointer('pointerdown', 100); pointer('pointermove', 220, 250, 80); expect(page.style.transform).toBe('translate3d(26.4px,0,0)'); pointer('pointerup', 220, 250, 100); await complete(); expect(path).toBe('/app');
+    await mount(false, false, '/app/reports'); pointer('pointerdown', 280); pointer('pointermove', 160, 250, 80); expect(page.style.transform).toBe('translate3d(-26.4px,0,0)'); pointer('pointerup', 160, 250, 100); await complete(); expect(path).toBe('/app/reports');
+  });
+  it('500ms 이상 길게 누른 뒤에는 가로 이동을 시작하지 않는다', async () => {
+    await mount(); pointer('pointerdown', 280); pointer('pointermove', 160, 250, 501); pointer('pointerup', 160, 250, 550); await complete(); expect(path).toBe('/app/classes');
   });
   it('움직임 줄이기는 transform 없이 즉시 이동한다', async () => {
     await mount(); reduced = true; pointer('pointerdown', 280); pointer('pointermove', 160, 250, 80); expect(page.style.transform).toBe('');
