@@ -1,4 +1,71 @@
-# SDD-243 — 플랫폼·기관 데이터 센터 FE 구현 결과
+# SDD-243 — 플랫폼·기관 데이터 센터 구현 결과 (BE + FE + 244 통합)
+
+- 최종 갱신: 2026-10-24 / 브랜치 `sdd/243-platform-data-center` (243 BE·FE + 244 전체 + develop `371789b0` 통합). PR은 SDD-244와 한 건 `[SDD-243·244] 데이터 센터와 생체신호 원데이터 전체 저장`.
+- 이 문서는 통합 기준 요약이다. 아래 "FE 구현 결과" 절은 FE 워커(F01~F03)의 원 기록이며 증거 수준(합성 API fixture)은 그대로다.
+
+## 구성
+
+| 영역 | 커밋 | 내용 |
+|---|---|---|
+| B01 계약·인가 | `aa052d4b` | 데이터 센터 DTO·역할/기관 범위 재검증(`data_center_policy`), 비활성 시 403 `data_center_disabled` |
+| B02~B03 탐색·동의·보관 | `19d69ff1`, `dda140df` | 클래스→회차→참여자 집계, 동의·연구·보관 현황 |
+| B04 측정 상세 | `1f7371b7` | 파형·feature·표시 6지표·PSD (`data_center_measurement`, `MeasurementBackend` 경계) |
+| B05 작업·큐 | `d1e57e66` | preview 고정 → 작업 → outbox → `exports` 큐, fencing·lease |
+| B06 ZIP | `395b4df1` | 참여자 폴더·분할 part·data_dictionary/manifest, 정책별 가명·정확시각 |
+| B07 감사 | `5e0201ab` | part URL 발급 통제(재인증·재검사)·다운로드 감사 |
+| FE F01~F03 | `b086cea2`, `c1564df1`, `536f8d2b` | 탐색·측정 그래프·반출 대화상자·작업/감사 |
+| **통합(이번)** | `e07d1e14` | 244 실제 어댑터 연결(아래) |
+| **운영 설정(이번)** | `3134d423` | dev 기본 활성 · outbox cron |
+| PG 격리 수정 | `1eb78ba2` | 아래 "통합" 참고 |
+
+## 244 통합 (런타임 연결)
+
+- `backend/app/services/data_center_runtime.py` — 243의 두 주입점에 244 실제 구현을 등록한다.
+  - `dm.register_backend(BiosignalMeasurementBackend)`: 244 manifest revision + `eeg_raw_chunks` + `biosignal_decoder` 로 파형/PSD/반출 대상 판정. 청크 시간은 manifest `time_range`(ms 반올림, 마지막 샘플이 잘림 — 통합 테스트로 발견)가 아니라 헤더 앵커의 정확한 유리수 시간에서 계산한다. 청크 무결성(크기·SHA-256) 불일치는 502, 저장소 읽기 실패는 503, 디코드 실패는 502 로 응답하고 파형을 만들지 않는다.
+  - `dcx.set_raw_artifact_source(RawExportSource)`: 244 T12 `SDD243ArtifactSource` 를 job/대상 단위로 만들어 위임한다. 요청 구간·형식은 preview 원장에서 읽고, **파일마다** 현재 동의(`consent_eeg`, 연구 목적이면 연구 동의·철회)를 다시 확인한다(작업 도중 철회 반영).
+  - `install()` 은 앱(`app/main.py`)과 Celery 워커(`app/tasks/export_task.py`) 양쪽에서 호출된다(멱등). 신규 프로세스에서 두 진입점이 실제 구현을 등록하는지 서브프로세스 테스트로 고정했다(fake 로 폴백하지 않음).
+- B06 indices 훅 확장: `indices_sidecars` 추가 — indices 만 선택해도 `indices.jsonl`·`display-status.jsonl`·정규화/알고리즘 스냅샷이 함께 나간다(raw 신호 선택과 무관).
+- 서버 남은 결함 수정(244 B 리뷰 인계): `fix(sdd-244)` `40918696` — 별도 절은 SDD-244 summary 참고.
+
+## 운영 설정 — dev 에서만 켜지는 방식
+
+- `config.py`: `data_center_enabled` 를 명시하지 않았고 `ENVIRONMENT=development` 이면 기본 `true`. deploy-dev 워크플로가 배포마다 `.env.dev` 의 `ENVIRONMENT=development` 를 보장하므로 서버 `.env` 는 건드리지 않는다. 운영은 `ENVIRONMENT=production`(기본) → 꺼짐. `DATA_CENTER_ENABLED` 를 명시하면 환경과 무관하게 그 값이 이긴다(**롤백 = `DATA_CENTER_ENABLED=false`**).
+- `deploy/dev/register-crons.sh`: `process_data_export_outbox_cron.py` 매 1분 등록(기존 cron 형식, 멱등). `deploy-dev.yml` 번들 목록에 스크립트 추가. `deploy-dev.yml` script 길이 테스트 통과.
+- 244 수집(capability)은 서버 기능 스위치가 없다 — `GET /sessions/{id}/biosignal-capabilities` 가 참여자 동의·업로드 자격으로 `upload_allowed` 를 계산하며 dev 에서 별도 설정 없이 동작한다.
+- 메뉴: `/admin/data-center`(플랫폼), `/org/data-center`(기관 관리자)는 사이드바 상시 노출, 비활성 환경에서는 페이지가 비활성 안내를 보인다.
+- **운영(prod) 반영 시 남은 일**: `deploy/jobs.tsv` 에 outbox 재전달 timer 추가(현재 dev cron 만), `DATA_CENTER_ENABLED` 정책 결정. 이번 범위 밖(prod 승인 별도).
+
+## 검증 (통합 기준)
+
+| 항목 | 결과 |
+|---|---|
+| 백엔드 전체(SQLite, `tests/pg` 제외) | **4,258 passed / 14 skipped / 0 failed** (439초) |
+| PG(`tests/pg`, 빈 DB→head, 로컬 임시 PG16) | **512 passed / 0 failed** |
+| 마이그레이션 | 빈 DB→head 적용 OK(테이블 113 = 112 + alembic_version), develop head(`e036a0000061`)→head upgrade OK(96→113), head 1개 `e036a0243003` |
+| 프론트 vitest 전체 | 2,990 tests: **2,973 passed / 17 failed**, 실패 8파일·17건 — 244 기준선(`2,904/17`, 최종 `2,930/17`)과 **파일·테스트 이름 모두 동일**(신규 실패 0, 해소 0) |
+| `tsc --noEmit -p tsconfig.app.json` | 종료 0 |
+| `npm run build` | 성공(기존 청크 크기·동적 import 경고만) |
+| 이번 신규 테스트 | `test_sdd243_244_runtime.py` 12건(등록·골든 파형·무결성·반출·동의 재검사·indices-only·dev 기본값·cron), `test_sdd244_manifest.py` +4건(RED 4/4 확인 후 GREEN) |
+
+- PG 격리 수정(`1eb78ba2`): 243 PG 경합 테스트가 공유 DB 를 `TEMPLATE` 으로 복제해, 앞선 테스트의 잔여 연결 때문에 7건이 `ObjectInUse` 로 에러였다(전체 실행에서만 재현, 단독 실행은 통과). 전용 head 템플릿 DB 를 만들어 복제하도록 바꿨다. 같은 DB 에서 PG 스위트를 반복 실행하면 누적 데이터로 일부 테스트가 실패하므로 실행마다 새 DB 를 쓴다.
+
+## 미검증 (성공으로 표시하지 않음)
+
+- 실제 S3: presign 불변성·재PUT 거절·`ChecksumSHA256`·버전 ID·실제 객체 읽기(`storage_service.download_bytes`)와 1GB part 업로드/서명 URL. 테스트는 모의 저장소다.
+- 실기기 LINK BAND(BLE) 60분 수집, 앱(iOS/Android) 수집·백그라운드.
+- dev 서버 배포 후 실제 화면·API(데이터 센터 메뉴, 측정 상세, ZIP 생성·다운로드) 동작은 DEPLOY 창구 검증 대상이다.
+- 대량 부하(20명·60분 합성), 목록·preview 에서 대상 수만큼 manifest 를 조회할 때의 성능.
+- PG 위 API 전 구간(인가 포함) 시험.
+
+## 알려진 위험
+
+- `BiosignalMeasurementBackend.get_manifest(revision=None)` 는 판정 갱신(새 immutable revision)을 위해 쓰기를 동반한다 — preview/목록 GET 이 revision 을 만들 수 있다(내용이 같으면 새로 만들지 않음).
+- 연구 목적 반출의 동의 재검사는 `ResearchConsent`(참여자 단위) 기준이다. 신호별 연구 동의 범위는 244에서도 미정의(`unknown`).
+
+---
+
+# FE 구현 결과 (원 기록)
+
 
 - 실행일: 2026-10-24 / 워크트리 `mindbreeze_2.0-sdd243fe` / 브랜치 `sdd/243-fe`.
 - 승인 범위: 사용자 요청에 따른 F01 → F02 → F03 구현·FE 검증·Task별 커밋·브랜치 push. PR·배포·서버·DB·.env·메일·삭제 실행 없음.
