@@ -112,7 +112,7 @@ def _checked_read(row, ref, reader, db):
 def iter_export_artifacts(
     manifest: ManifestRevision, selection: ExportSelection, policy: ExportPolicy, *,
     db: Session, session_id: str | UUID, participant_id: str | UUID,
-    reader: Reader, policy_check: PolicyCheck,
+    reader: Reader, policy_check: PolicyCheck, retention_hold_check: PolicyCheck | None = None,
 ) -> Iterator[ArtifactPayload]:
     """원장 revision/hash를 검증하고 파일별 현재 정책을 검사한다. ZIP·인가 UI는 243 소유."""
     sid, pid = UUID(str(session_id)), UUID(str(participant_id))
@@ -135,8 +135,10 @@ def iter_export_artifacts(
         if policy_check(manifest, ref, policy) is not True:
             raise PermissionError('export_policy_denied')
         if ref.retention_deadline_us and int(ref.retention_deadline_us) <= int(datetime.now(timezone.utc).timestamp()*1e6):
-            missing.append({'artifact':ref.artifact_id_alias,'reason':'expired'})
-            continue
+            # 일반 다운로드 만료와 연구 보류 후 이관 권한은 별도다. 기본은 차단한다.
+            if retention_hold_check is None or retention_hold_check(manifest,ref,policy) is not True:
+                missing.append({'artifact':ref.artifact_id_alias,'reason':'expired'})
+                continue
         if ref.artifact_kind == 'gap':
             continue  # 고정 revision의 공개 gap만 아래 sidecar에 사용한다.
         model = EEGRawChunk if ref.artifact_kind == 'raw' else BiosignalArtifact
@@ -190,7 +192,11 @@ def iter_export_artifacts(
                 artifact.metadata.extra_range=extra
                 yield artifact
             else:
-                missing.append({'artifact':ref.artifact_id_alias,'reason':'blocked_requires_redaction','representation':'redacted_sample_map'})
+                packet_view=[{'packet_seq':p.packet_seq,'first_sample_index':p.first_sample_index,
+                    'sample_count':p.sample_count,'malformed_reason':p.malformed_reason} for p in decoded.packets]
+                yield _file(f'{directory}/meta/redacted-packet-view.jsonl',b''.join(_json(p)+b'\n' for p in packet_view),
+                    kind='packets',rows=len(packet_view),source=ref,selection=selection.time_range,schema='redacted-packet-view-v1')
+                missing.append({'artifact':ref.artifact_id_alias,'reason':'blocked_requires_redaction','representation':'redacted_packet_view'})
             continue
         if row.content_encoding == 'gzip':
             with gzip.GzipFile(fileobj=io.BytesIO(payload)) as f:
@@ -208,7 +214,10 @@ def iter_export_artifacts(
             if 't_rel_ms' in r and not lo <= r['t_rel_ms']*1000 < hi: continue
             if row.artifact_kind=='indices' and r['view_kind']!=selection.view_kind: continue
             if row.artifact_kind=='feature' and r['signal'] not in selection.signals: continue
-            selected.append(_redact(r, exact=exact))
+            safe=_redact(r, exact=exact)
+            if row.artifact_kind=='feature' and not exact:
+                safe['scalar_null_reasons']['device_timestamp_ms']='redacted_time_policy'
+            selected.append(safe)
         if not selected: continue
         yield _file(f'{directory}/{row.artifact_kind}.jsonl',b''.join(_json(r)+b'\n' for r in selected),kind=row.artifact_kind,rows=len(selected),source=ref,selection=selection.time_range)
         if row.artifact_kind=='indices':
@@ -229,6 +238,7 @@ def iter_export_artifacts(
             yield _file(f'{directory}/{name}.{selection.sample_format}',_table(flat,selection.sample_format),kind=row.artifact_kind,rows=len(flat),source=ref,selection=selection.time_range)
     report={'revision':manifest.revision,'policy_revision':policy.policy_revision,'selection':selection.model_dump(mode='json'),
         'signals':[s.model_dump(mode='json') for s in manifest.signals],'unavailable':missing,
+        'streams':[s.model_dump(mode='json') for s in manifest.streams if s.signal in selection.signals],
         'default_view':selection.view_kind,'raw_packet_policy':manifest.raw_packet_policy}
     yield _file(f'{root}/meta/export.json',_json(_redact(report)))
     gaps=[g.model_dump(mode='json') for g in manifest.gaps if g.signal in selection.signals and int(g.start_us)<hi and (g.end_us is None or int(g.end_us)>lo)]
@@ -238,3 +248,113 @@ def iter_export_artifacts(
         'CSV 빈칸과 JSON null은 0이 아닙니다. 기본 시각은 회차 상대 초입니다.\n'
         '원문 bin은 별도 무손실·정확시각 권한과 manifest 정책 허용이 모두 필요합니다.\n'
         'HRV는 SDNN(ms)이며 당시 표시 이력 없는 값을 재계산하지 않습니다.\n').encode())
+
+
+class SDD243ArtifactSource:
+    """B06(395b4df1)의 ArtifactSource/indices_artifact 소비 인터페이스.
+
+    243은 set_raw_artifact_source(instance)로 연결한다. session provider는 실행별
+    세션 context manager, selection_provider(target, signals, PackagePolicy)는
+    해당 job의 [from,to) 선택을 반환해야 한다. 공용 전역 DB 세션을 보관하지 않는다.
+    인가는 policy_check에서 매 파일 재검사하며 이 클래스가 권한을 추정하지 않는다.
+    package_types는 실제 243 export_package 모듈(통합 전 테스트에서 주입 가능)이다.
+    """
+
+    def __init__(self, *, db_provider, reader: Reader, policy_check: PolicyCheck,
+                 selection_provider, package_types=None, artifact_kinds_provider=None):
+        if package_types is None:
+            from app.services import export_package as package_types
+        self.db_provider=db_provider
+        self.reader=reader
+        self.policy_check=policy_check
+        self.selection_provider=selection_provider
+        self.package=package_types
+        self.artifact_kinds_provider=artifact_kinds_provider
+
+    def _manifest(self, db, target, scope):
+        revision=target.manifest_revision
+        if revision is None or scope.manifest_revision!=revision:
+            return None
+        row=db.query(BiosignalManifestRevision).filter_by(session_id=UUID(str(target.session_id)),
+            participant_id=UUID(str(target.participant_id)),revision=revision).one_or_none()
+        return ManifestRevision.model_validate(row.content) if row else None
+
+    @staticmethod
+    def _policy(policy, kinds):
+        return ExportPolicy(time_policy='exact_authorized' if policy.exact_time_allowed else 'relative_only',
+            raw_packets_authorized=policy.lossless_allowed,allowed_artifact_kinds=list(kinds),
+            policy_revision=policy.policy_version or 'unspecified')
+
+    def _convert(self, artifact, manifest, signal):
+        pkg=self.package;meta=artifact.metadata
+        prefix=f'{manifest.session_alias}/{manifest.participant_alias}/'
+        name='biosignal/'+meta.path.removeprefix(prefix)
+        extra=[r.model_dump(mode='json') for r in meta.extra_range]
+        common=dict(name=name,kind=meta.artifact_kind,signal=signal,schema_version=meta.schema_version,
+            dictionary_key=meta.dictionary_key,extra_range=extra)
+        if name.endswith('.bin'):
+            return pkg.BinArtifact(**common,open=lambda:io.BytesIO(artifact.payload),size_bytes=meta.size_bytes,sha256=meta.sha256)
+        if name.endswith(('.csv','.parquet','.jsonl')):
+            fmt=name.rsplit('.',1)[1]
+            if fmt=='csv':
+                records=list(csv.DictReader(io.StringIO(artifact.payload.decode('utf-8'))))
+            elif fmt=='parquet':
+                import pyarrow.parquet as pq
+                records=pq.read_table(io.BytesIO(artifact.payload)).to_pylist()
+            else:
+                records=[json.loads(line) for line in artifact.payload.splitlines()]
+            header=list(records[0]) if records else []
+            parquet_types={}
+            if fmt=='parquet':
+                for key in header:
+                    sample=next((r[key] for r in records if r[key] is not None),None)
+                    parquet_types[key]='int64' if isinstance(sample,int) else 'float64' if isinstance(sample,float) else 'string'
+            output_rows=[[r.get(k) for k in header] for r in records] if fmt=='csv' else records
+            return pkg.RowArtifact(**common,fmt=fmt,rows=lambda:iter(output_rows),header=header,
+                parquet_types=parquet_types,time_column='t_rel_ms' if meta.artifact_kind in ('feature','indices') else 'timestamp')
+        return pkg.TextArtifact(**common,text=artifact.payload.decode('utf-8'))
+
+    def artifacts(self, scope, target, policy, signals):
+        with self.db_provider() as db:
+            manifest=self._manifest(db,target,scope)
+            if manifest is None:
+                for signal in sorted(signals): yield self.package.MissingArtifact(signal+'_raw','manifest_not_connected',signal)
+                return
+            selection=self.selection_provider(target,signals,policy)
+            if set(selection.signals)!=set(signals): raise ValueError('selection_signal_mismatch')
+            # B06 include=features를 선택한 job만 provider로 상세 feature를 추가한다.
+            kinds=self.artifact_kinds_provider(target,policy) if self.artifact_kinds_provider else ('raw','raw_derived','normalization','algorithm','gap')
+            export_policy=self._policy(policy,kinds)
+            # 미수집 신호도 B06 root manifest의 exclusions에 실린다.
+            for coverage in manifest.signals:
+                if coverage.signal in signals and coverage.availability!='available':
+                    yield self.package.MissingArtifact(coverage.signal+'_raw',coverage.unavailable_reason or coverage.availability,coverage.signal)
+            refs={a.artifact_id_alias:a for a in manifest.artifacts}
+            for artifact in iter_export_artifacts(manifest,selection,export_policy,db=db,session_id=target.session_id,
+                    participant_id=target.participant_id,reader=self.reader,policy_check=self.policy_check):
+                ref=refs.get(artifact.metadata.artifact_id_alias)
+                signal=next((s for s in signals if ref and s in ref.consent_scope),None)
+                if signal is None:
+                    # 공통 sidecar도 B06의 wanted-signal 필터를 통과하되 한 번만 제공한다.
+                    signal=next(iter(sorted(signals)),None)
+                yield self._convert(artifact,manifest,signal)
+
+    def indices_artifact(self, db, target, scope, policy):
+        manifest=self._manifest(db,target,scope)
+        if manifest is None: return None
+        selection=self.selection_provider(target,frozenset(('eeg','ppg','acc')),policy)
+        export_policy=self._policy(policy,('indices',))
+        def chunks():
+            for artifact in iter_export_artifacts(manifest,selection,export_policy,db=db,session_id=target.session_id,
+                    participant_id=target.participant_id,reader=self.reader,policy_check=self.policy_check):
+                if artifact.metadata.path.endswith(('indices.csv','indices.parquet')):
+                    yield self._convert(artifact,manifest,None)
+        iterator=iter(chunks());first=next(iterator,None)
+        if first is None: return None
+        def rows():
+            from itertools import chain
+            for chunk in chain((first,),iterator):
+                for row in chunk.rows():
+                    yield [row.get(k) for k in first.header] if isinstance(row,dict) else row
+        return self.package.RowArtifact(name='indices.csv',fmt='csv',rows=rows,header=first.header,
+            kind='indices',schema_version='indices-v1',dictionary_key='indices',time_column='t_rel_ms')

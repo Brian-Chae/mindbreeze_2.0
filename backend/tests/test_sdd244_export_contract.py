@@ -141,3 +141,55 @@ def test_상세산출물과_flat파일_및_파형_정책(ctx,kind,filename):
         if kind=='feature': assert any(a.metadata.path.endswith('features.csv') for a in out)
         if kind=='indices': assert any(a.metadata.path.endswith('display-status.jsonl') for a in out)
     finally: db.close()
+
+
+def test_가명반출에도_신호프로필과_redacted_packet_view를_제공(ctx):
+    ready(ctx)
+    out=export(ctx)
+    meta=json.loads(next(a.payload for a in out if a.metadata.path.endswith('meta/export.json')))
+    assert meta['streams'][0]['rate']['numerator']==250
+    view=next(a for a in out if a.metadata.path.endswith('redacted-packet-view.jsonl'))
+    packets=[json.loads(line) for line in view.payload.splitlines()]
+    assert sum(p['sample_count'] for p in packets)==4
+    assert any(p['malformed_reason']=='truncated_packet' for p in packets)
+    assert all('tick_raw' not in p and 'received_at_us' not in p for p in packets)
+
+
+@pytest.mark.parametrize('fmt',['csv','parquet'])
+def test_SDD243_B06_실제_ZIP_소비_계약(ctx,tmp_path,fmt):
+    import importlib.util
+    from contextlib import contextmanager
+    from types import SimpleNamespace
+    from app.services import biosignal_export_adapter as adapter
+    ready(ctx)
+    result=subprocess.run(['git','show','395b4df1:backend/app/services/export_package.py'],capture_output=True)
+    if result.returncode: pytest.skip('읽기 전용 SDD-243 B06 git 객체가 필요합니다')
+    path=tmp_path/'sdd243_b06.py';path.write_bytes(result.stdout)
+    spec=importlib.util.spec_from_file_location('sdd243_b06_contract',path)
+    package=importlib.util.module_from_spec(spec);sys.modules[spec.name]=package;spec.loader.exec_module(package)
+    @contextmanager
+    def db_provider():
+        db=_db()
+        try: yield db
+        finally: db.close()
+    def selection(target,signals,policy):
+        return ExportSelection(signals=sorted(signals),time_range={'from_us':'0','to_us':'1000000'},sample_format=policy.eeg_format,view_kind='participant_player')
+    source=adapter.SDD243ArtifactSource(db_provider=db_provider,reader=lambda *a:(FIX/'eeg-raw-v2.bin').read_bytes(),
+        policy_check=lambda *a:True,selection_provider=selection,package_types=package)
+    scope=package.PackageScope('class-C01','session-001_date-withheld','P01',manifest_revision=1)
+    target=SimpleNamespace(session_id=ctx['sid'],participant_id=ctx['pid'],manifest_revision=1)
+    policy=package.PackagePolicy(policy_version='test',eeg_format=fmt)
+    arts=list(source.artifacts(scope,target,policy,frozenset(['eeg','ppg'])))
+    assert any(isinstance(a,package.MissingArtifact) and a.signal=='ppg' for a in arts)
+    outcome=package.build_data_center_package('test',((scope,a) for a in arts),tmp_path/'zip',policy)
+    assert outcome.parts
+    with zipfile.ZipFile(outcome.parts[0].path) as z:
+        names=z.namelist();name=next(n for n in names if n.endswith('eeg_raw.'+fmt))
+        rows=list(csv.DictReader(io.StringIO(z.read(name).decode()))) if fmt=='csv' else pq.read_table(io.BytesIO(z.read(name))).to_pylist()
+        assert len(rows)==4
+        with (FIX/'eeg-expected.csv').open() as f: golden=list(csv.DictReader(f))
+        for actual,expected in zip(rows,golden):
+            assert float(actual['fp1'])==pytest.approx(float(expected['fp1']),rel=1e-7)
+            assert float(actual['fp2'])==pytest.approx(float(expected['fp2']),rel=1e-7)
+        assert 'class-C01/session-001_date-withheld/participant-P01/' in name
+        assert {'manifest.json','README_ko.md','data_dictionary.json'}<=set(names)
