@@ -770,3 +770,291 @@ class ExportPolicy(Contract):
 
 class ExportArtifact(ArtifactReference):
     """adapter의 bytes/row iterator는 이 메타와 함께 반환한다(JSON 외부)."""
+
+
+# ───────────────────────────────────────────────────────────────────────────
+# T04 API wrapper (additive). 위 G1 DTO는 변경하지 않고 요청/응답 wrapper만 확장한다.
+# 기존 eeg-raw presign/ack 형태(participant_id·play_group_id·chunks[] / chunks[{chunk_id,
+# upload_status, checksum, size_bytes}])에 signal/stream 필드를 더한 형태다.
+# ───────────────────────────────────────────────────────────────────────────
+
+MAX_BATCH = 100
+MAX_OBJECT_BYTES = 1_048_576
+ArtifactKind = Literal['feature', 'raw_derived', 'indices', 'normalization', 'algorithm']
+UploadStatus = Literal['pending', 'uploaded', 'failed']
+PlayGroup = Annotated[str, Field(max_length=64)]
+
+
+class PresignChunk(Contract):
+    """raw presign 요청 1건. identity/시간/profile은 header(RawHeader)가 정본이다."""
+    header: RawHeader
+    checksum: Sha256
+    size_bytes: Annotated[int, Field(gt=12, le=MAX_OBJECT_BYTES, strict=True)]
+    content_type: Annotated[str, Field(max_length=100)] = 'application/octet-stream'
+
+
+class PresignRequest(Contract):
+    participant_id: UUID | None = None
+    play_group_id: PlayGroup | None = None
+    chunks: Annotated[list[PresignChunk], Field(min_length=1, max_length=MAX_BATCH)]
+
+
+class PresignItem(Contract):
+    chunk_id: UUID
+    signal_type: Signal
+    stream_id: UUID
+    segment_id: UUID
+    chunk_index: NonNegative
+    object_key: Text
+    checksum: Sha256
+    size_bytes: Positive
+    # uploaded 상태(이미 검증 ACK됨)이면 upload_url=None — PUT 없이 ACK만 재요청한다.
+    upload_url: str | None
+    # presign이 반환한 헤더를 그대로 PUT에 실어야 한다(서명·checksum 바인딩).
+    upload_headers: dict[str, str]
+    upload_status: UploadStatus
+    expires_in_sec: NonNegative
+
+
+class PresignResponse(Contract):
+    session_id: UUID
+    participant_id: UUID
+    chunks: list[PresignItem]
+
+
+class AckItem(Contract):
+    chunk_id: UUID
+    # v2는 등록된 값과 일치해야 한다(덮어쓰기 불가). 불일치 → failed.
+    checksum: Sha256
+    size_bytes: Positive
+
+
+class AckRequest(Contract):
+    participant_id: UUID | None = None
+    play_group_id: PlayGroup | None = None
+    chunks: Annotated[list[AckItem], Field(min_length=1, max_length=MAX_BATCH)]
+
+
+class AckResult(Contract):
+    chunk_id: UUID
+    upload_status: UploadStatus
+    checksum: Sha256
+    size_bytes: Positive
+    verified_at_us: DecimalInt | None
+    failure_reason: Text | None
+    object_version_id: Text | None = None
+
+    @model_validator(mode='after')
+    def verified_success(self) -> Self:
+        if self.upload_status == 'uploaded' and (self.verified_at_us is None or self.failure_reason is not None):
+            raise ValueError('성공 ACK에는 검증시각 필요')
+        if self.upload_status != 'uploaded' and not self.failure_reason:
+            raise ValueError('미확정 ACK 사유 필요')
+        return self
+
+
+class AckResponse(Contract):
+    session_id: UUID
+    acked: NonNegative
+    failed: NonNegative
+    chunks: list[AckResult]
+    eeg_record_id: UUID | None = None
+    file_count: NonNegative = 0
+
+
+class ArtifactPresignChunk(Contract):
+    """feature/raw_derived/indices/normalization/algorithm 객체 업로드 등록 1건."""
+    artifact_kind: ArtifactKind
+    stream_id: UUID | None
+    segment_id: UUID | None
+    signal: Signal | None
+    view_instance_id: UUID | None = None
+    # kind별 단조 순번(feature=stream/signal별, indices=stream/view별). 모델/알고리즘은 0.
+    sequence: NonNegative
+    first_sequence: NonNegative | None = None
+    last_sequence: NonNegative | None = None
+    row_count: NonNegative
+    content_encoding: Literal['identity', 'gzip'] = 'identity'
+    schema_version: Text
+    # checksum/size는 업로드되는 바이트(압축 후), uncompressed_sha256은 압축 해제 원문.
+    checksum: Sha256
+    uncompressed_sha256: Sha256 | None = None
+    size_bytes: Annotated[int, Field(gt=0, le=MAX_OBJECT_BYTES, strict=True)]
+    time_range: TimeRange | None = None
+    content_type: Annotated[str, Field(max_length=100)] = 'application/octet-stream'
+
+
+class ArtifactPresignRequest(Contract):
+    participant_id: UUID | None = None
+    play_group_id: PlayGroup | None = None
+    chunks: Annotated[list[ArtifactPresignChunk], Field(min_length=1, max_length=MAX_BATCH)]
+
+
+class ArtifactPresignItem(Contract):
+    artifact_id: UUID
+    artifact_kind: ArtifactKind
+    sequence: NonNegative
+    object_key: Text
+    checksum: Sha256
+    size_bytes: Positive
+    upload_url: str | None
+    upload_headers: dict[str, str]
+    upload_status: UploadStatus
+    expires_in_sec: NonNegative
+
+
+class ArtifactPresignResponse(Contract):
+    session_id: UUID
+    participant_id: UUID
+    chunks: list[ArtifactPresignItem]
+
+
+class ArtifactAckItem(Contract):
+    artifact_id: UUID
+    checksum: Sha256
+    size_bytes: Positive
+
+
+class ArtifactAckRequest(Contract):
+    participant_id: UUID | None = None
+    chunks: Annotated[list[ArtifactAckItem], Field(min_length=1, max_length=MAX_BATCH)]
+
+
+class ArtifactAckResult(Contract):
+    artifact_id: UUID
+    artifact_kind: ArtifactKind
+    upload_status: UploadStatus
+    checksum: Sha256
+    size_bytes: Positive
+    verified_at_us: DecimalInt | None
+    failure_reason: Text | None
+    # 서버가 객체 내용을 해석해 검색 원장(display_snapshots/normalization_snapshots)에 반영한 행 수
+    indexed_rows: NonNegative = 0
+
+
+class ArtifactAckResponse(Contract):
+    session_id: UUID
+    acked: NonNegative
+    failed: NonNegative
+    chunks: list[ArtifactAckResult]
+
+
+class GapEventIn(Contract):
+    """클라이언트 gap 이벤트. 서버가 alias로 변환해 manifest에 노출한다."""
+    event_type: Literal['gap']
+    event_id: UUID
+    sequence: NonNegative
+    discovered_at_us: DecimalInt
+    signal: Signal
+    stream_id: UUID
+    segment_id: UUID
+    start_us: DecimalInt
+    end_us: DecimalInt | None
+    reason: Literal['ble_disconnect', 'packet_gap', 'local_write_failed', 'process_terminated', 'clock_reset', 'wall_clock_jump', 'reanchor', 'unknown', 'upload_pending', 'not_rendered']
+    observed_or_estimated: Literal['observed', 'estimated', 'unknown']
+    expected_samples: NonNegative | None
+    received_samples: NonNegative | None
+    reconnect_count: NonNegative
+
+    @model_validator(mode='after')
+    def unknown_is_not_zero(self) -> Self:
+        if self.end_us is not None and int(self.end_us) < int(self.start_us):
+            raise ValueError('gap 범위 역전')
+        if self.observed_or_estimated == 'unknown' and self.expected_samples is not None:
+            raise ValueError('불명 손실량은 null')
+        return self
+
+
+class ExpectedArtifactIn(Contract):
+    """종료 시 서버가 원장과 대조할 산출물. id는 presign이 돌려준 chunk_id/artifact_id."""
+    kind: Literal['raw'] | ArtifactKind
+    id: UUID
+    sha256: Sha256
+
+
+class StreamCloseIn(Contract):
+    stream_id: UUID
+    segment_id: UUID
+    signal: Signal
+    last_chunk_sequence: NonNegative | None
+    last_feature_sequence: NonNegative | None
+    received_samples: NonNegative
+
+
+class ViewCloseIn(Contract):
+    stream_id: UUID
+    view_instance_id: UUID
+    last_snapshot_sequence: NonNegative | None
+
+
+class CloseIntentIn(Contract):
+    event_type: Literal['close_intent']
+    intent_id: UUID
+    expected_artifacts: list[ExpectedArtifactIn]
+    streams: list[StreamCloseIn]
+    snapshots: list[ViewCloseIn]
+    last_gap_sequence: NonNegative | None
+    end_reason: Text
+    closed_at_us: DecimalInt
+
+    @model_validator(mode='after')
+    def distinct_scopes(self) -> Self:
+        streams = {(s.stream_id, s.segment_id, s.signal) for s in self.streams}
+        views = {(s.stream_id, s.view_instance_id) for s in self.snapshots}
+        refs = {(a.kind, a.id) for a in self.expected_artifacts}
+        if len(streams) != len(self.streams) or len(views) != len(self.snapshots) or len(refs) != len(self.expected_artifacts):
+            raise ValueError('종료 순번/expected scope 중복')
+        return self
+
+
+class EventsRequest(Contract):
+    participant_id: UUID | None = None
+    events: Annotated[list[Annotated[GapEventIn | CloseIntentIn, Field(discriminator='event_type')]], Field(min_length=1, max_length=MAX_BATCH)]
+
+
+class EventResult(Contract):
+    event_type: Literal['gap', 'close_intent']
+    event_id: UUID
+    # recorded=신규, duplicate=동일 내용 재전송(멱등), conflict=같은 id에 다른 내용
+    status: Literal['recorded', 'duplicate', 'conflict']
+    detail: Text | None = None
+
+
+class EventsResponse(Contract):
+    session_id: UUID
+    participant_id: UUID
+    events: list[EventResult]
+    # close intent가 포함된 경우 판정된 최신 manifest revision 요약
+    manifest_revision: Positive | None = None
+    close_state: Literal['pending_upload', 'partial', 'complete', 'unknown'] | None = None
+    missing_artifacts: list[ExpectedArtifactIn] = Field(default_factory=list)
+
+
+class SignalCapability(Contract):
+    signal: Signal
+    upload_allowed: bool
+    reason: Text | None
+    # 연구 반출 동의(신호별). 평가하지 않은 경우 unknown + 사유.
+    research_consent: Literal['consented', 'not_consented', 'withdrawn', 'unknown']
+    research_reason: Text | None
+
+
+class CapabilityResponse(Contract):
+    session_id: UUID
+    participant_id: UUID
+    raw_schemas: list[Text]
+    artifact_kinds: list[ArtifactKind]
+    events: bool
+    max_batch: Positive
+    max_object_bytes: Positive
+    # 서버가 요구하는 업로드 불변성 방식: checksum_bound(서명 헤더 SHA-256 바인딩)
+    upload_immutability: Literal['checksum_bound']
+    legacy_eeg_raw: bool
+    signals: list[SignalCapability]
+
+
+class ManifestResponse(Contract):
+    session_id: UUID
+    participant_id: UUID
+    latest_revision: Positive | None
+    manifest: ManifestRevision | None
