@@ -1,3 +1,6 @@
+import { SettingsSwitch } from '../../components/settings/settings-switch';
+import { SessionNotePromptToggle } from '../../components/settings/session-note-prompt-toggle';
+import { useAuthStore } from '../../stores/authStore';
 import { useMobileSwipeProtection } from '../../hooks/use-mobile-swipe-protection';
 // AI 리포트 목록 페이지 — 테이블 + 검색/필터/정렬/세션 그룹핑 (SDD-053)
 
@@ -190,6 +193,8 @@ export default function ReportListPage() {
   const [sessionFilter, setSessionFilter] = useState('');
 
   // SDD-049 — 자동 승인 토글
+  const role = useAuthStore(s => s.user?.role);
+  const [operationsOpen, setOperationsOpen] = useState(() => searchParams.get('settings') === 'operations');
   const [autoApprove, setAutoApproveState] = useState(false);
   const [autoApproveLoading, setAutoApproveLoading] = useState(true);
   const [autoApproveSaving, setAutoApproveSaving] = useState(false);
@@ -251,13 +256,14 @@ export default function ReportListPage() {
   }, [page, reloadKey, hasActiveFilter]);
 
   useEffect(() => {
+    if (role !== 'counselor') { setAutoApproveLoading(false); return; }
     getAutoApprove()
       .then((r) => setAutoApproveState(r.enabled))
       .catch((e) =>
         setAutoApproveError(e instanceof Error ? e.message : '자동 승인 설정 조회 실패'),
       )
       .finally(() => setAutoApproveLoading(false));
-  }, []);
+  }, [role]);
 
   const handleToggleAutoApprove = async () => {
     if (autoApproveLoading || autoApproveSaving) return;
@@ -328,23 +334,7 @@ export default function ReportListPage() {
       >
         {autoApproveLoading ? '설정 로딩…' : autoApprove ? '자동 승인' : '수동 승인'}
       </span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={autoApprove}
-        aria-label={autoApprove ? '자동 승인' : '수동 승인'}
-        disabled={toggleDisabled}
-        onClick={() => void handleToggleAutoApprove()}
-        className={`mobile:min-h-11 mobile:min-w-11 mobile:py-2.5 mobile:bg-clip-content relative w-11 h-6 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-          autoApprove ? 'bg-[#5F0080]' : 'bg-[#D4D4D4]'
-        }`}
-      >
-        <span
-          className={`absolute top-0.5 mobile:top-3 h-5 w-5 rounded-full bg-white shadow transition-all ${
-            autoApprove ? 'left-[22px]' : 'left-0.5'
-          }`}
-        />
-      </button>
+      <SettingsSwitch checked={autoApprove} label="자동 승인" disabled={toggleDisabled} onChange={() => void handleToggleAutoApprove()} />
     </div>
   );
 
@@ -370,7 +360,7 @@ export default function ReportListPage() {
 
   const rightSlot = (
     <div className="inline-flex items-center gap-3">
-      {autoApproveToggle}
+      <button type="button" onClick={() => setOperationsOpen(value => !value)} aria-expanded={operationsOpen} aria-controls="report-operations-settings" className="inline-flex min-h-11 items-center rounded-full border border-[#E8D9F5] bg-[#F5EDFC] px-4 text-[14px] font-semibold text-[#5F0080]">운영 설정</button>
       {bulkApproveButton}
       {sampleLink}
     </div>
@@ -522,6 +512,11 @@ export default function ReportListPage() {
 
   return (
     <AppShell title="리포트" sub={isAiEnabled() ? 'AI REPORTS' : 'REPORTS'} rightSlot={!loading ? rightSlot : undefined}>
+      {operationsOpen && <section id="report-operations-settings" aria-label="리포트 운영 설정" className="mb-6 space-y-4 rounded-2xl border border-[#E9E2EB] bg-[#F8F5EF] p-4">
+        <h2 className="text-[18px] font-bold">운영 설정</h2>
+        <SessionNotePromptToggle />
+        {role === 'counselor' ? <div className="rounded-2xl border border-[#EFEFEF] bg-white p-5"><div className="flex flex-wrap items-center justify-between gap-4"><h3 className="text-[16px] font-bold">리포트 승인</h3>{autoApproveToggle}</div><p className="mt-3 text-[13px] text-[#6F6F6F]">본인이 진행하는 회차에 기존 자동 승인 정책을 적용해요. 기록과 측정 데이터가 없는 명상 리포트는 자동 승인에서 제외돼요.</p></div> : <p className="text-[14px] text-[#6F6F6F]">자동 승인은 상담사 계정이 진행하는 회차에 적용돼요. 기관관리자는 리포트를 직접 검토·승인할 수 있어요.</p>}
+      </section>}
       {autoApproveError && (
         <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm mobile:text-mb-body">{autoApproveError}</div>
       )}
@@ -606,19 +601,9 @@ export default function ReportListPage() {
                 </option>
               ))}
             </select>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={groupByClass}
-              onClick={() => setGroupByClass((v) => !v)}
-              className={`mobile:min-h-11 mobile:min-w-11 h-10 px-4 rounded-xl text-[13px] mobile:text-mb-label font-semibold border transition-colors ${
-                groupByClass
-                  ? 'bg-[#F5EDFC] text-[#5F0080] border-[#E8D9F5]'
-                  : 'bg-white text-[#6F6F6F] border-[#EFEFEF] hover:bg-[#F8FAFC]'
-              }`}
-            >
-              세션별 그룹핑 {groupByClass ? 'ON' : 'OFF'}
-            </button>
+            <div className="inline-flex min-h-11 items-center gap-3 text-[13px] mobile:text-mb-label">
+              <span>세션별 그룹핑</span><SettingsSwitch checked={groupByClass} label="세션별 그룹핑" onChange={setGroupByClass} />
+            </div>
             <span className="text-[13px] mobile:text-mb-caption text-[#6F6F6F] lg:ml-auto">
               {filtered.length} / {total}건
             </span>

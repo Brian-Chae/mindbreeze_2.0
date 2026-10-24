@@ -1,16 +1,17 @@
 import { isCounselingEnabled } from './feature-flags';
 import type { UserRole } from './api/auth';
 
-export interface MobileMenuTab { to: string; label: string; icon: 'home' | 'calendar' | 'users' | 'report' | 'message' }
+export interface MobileMenuTab { to: string; label: string; icon: 'home' | 'calendar' | 'users' | 'report' | 'message' | 'settings' }
 export interface SwipeSample { x: number; time: number }
 
-/** 실제 pill과 제스처가 공유하는 메뉴 순서. 더보기는 라우트가 아니다. */
+/** 실제 pill과 제스처가 공유하는 메뉴 순서. 설정까지 다섯 탭을 같은 순서로 이동한다. */
 export function getMobileMenuTabs(role: UserRole | null | undefined, counseling = isCounselingEnabled()): MobileMenuTab[] {
   if (role === 'client') return [
     { to: '/app', label: '홈', icon: 'home' },
     { to: '/app/classes', label: '내 클래스', icon: 'calendar' },
     counseling ? { to: '/app/counseling', label: '상담', icon: 'users' } : { to: '/app/chat', label: '대화', icon: 'message' },
     { to: '/app/reports', label: '리포트', icon: 'report' },
+    { to: '/app/profile', label: '설정', icon: 'settings' },
   ];
   if (role !== 'counselor' && role !== 'org_admin') return [];
   return [
@@ -18,6 +19,7 @@ export function getMobileMenuTabs(role: UserRole | null | undefined, counseling 
     { to: '/classes', label: '클래스', icon: 'calendar' },
     counseling ? { to: '/counseling', label: '상담', icon: 'users' } : { to: '/reports', label: '리포트', icon: 'report' },
     { to: '/chat', label: '대화', icon: 'message' },
+    { to: '/settings', label: '설정', icon: 'settings' },
   ];
 }
 export function getSwipeRootIndex(path: string, tabs: MobileMenuTab[]): number {

@@ -1,3 +1,4 @@
+import ParticipationProfilePage from '../settings/participation-profile-page';
 // 내담자 앱 메인 페이지
 // 상담사 연결 안 됨 → 코드 입력 화면
 // 상담사 연결 됨 → ClientShell + 탭별 페이지
@@ -259,6 +260,14 @@ export default function ClientAppPage() {
   if (pathname === '/app/ai' || pathname === '/app/ai/') return <Navigate to="/app/chat/lucy" replace />;
   // 채팅(루시 채널 포함)은 상담사 연결 전에도 접근 가능 — 코드 입력 게이트보다 먼저 처리
   if (pathname.startsWith('/app/chat')) return <ClientChatPage />;
+
+  // 본인 설정은 상담사 연결 여부와 무관하게 열 수 있다.
+  if (pathname === '/app/profile' || pathname === '/app/profile/') {
+    return <ClientShell title="설정" sub="SETTINGS"><ClientSettingsPage /></ClientShell>;
+  }
+  if (pathname === '/app/participation-profile' || pathname === '/app/participation-profile/') {
+    return <ClientShell title="참여 프로필 관리" sub="PARTICIPATION PROFILE"><ParticipationProfilePage /></ClientShell>;
+  }
 
   // 로딩 중
   if (counselors === null && !fetchError) {

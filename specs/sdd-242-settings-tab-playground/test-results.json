@@ -1,0 +1,174 @@
+{
+  "baseline": {
+    "files": 244,
+    "total": 2774,
+    "passed": 2757,
+    "failed": 17
+  },
+  "final": {
+    "files": 252,
+    "total": 2808,
+    "passed": 2791,
+    "failed": 17,
+    "skipped": 0
+  },
+  "related": {
+    "files": 18,
+    "passed": 271,
+    "failed": 0
+  },
+  "newFailures": [],
+  "newFailedFiles": [],
+  "baselineFailures": [
+    {
+      "file": "tests/agent-counselor-page.test.tsx",
+      "test": "메시지 전송 성공 후 입력을 비우고 사용자·AI 응답을 최신 하단에 표시한다"
+    },
+    {
+      "file": "tests/agent-counselor-page.test.tsx",
+      "test": "상담사는 브리핑과 입력창을 보고 CTA로 세션 목록을 연다"
+    },
+    {
+      "file": "tests/chat-message-deeplink.test.ts",
+      "test": "대상 failure이면 최근 대화로 돌아갈 수 있다"
+    },
+    {
+      "file": "tests/chat-message-deeplink.test.ts",
+      "test": "대상 missing이면 최근 대화로 돌아갈 수 있다"
+    },
+    {
+      "file": "tests/org-counselor-management-browser.test.cjs",
+      "test": "상담사 보호 대상, 확인 사유, 실패 유지, 역할 변경과 소속 해제"
+    },
+    {
+      "file": "tests/org-management-browser.test.cjs",
+      "test": "기관 모달: 미저장 보호, 실패 유지, 충돌 재조회, 수정, 비활성화, 재활성화"
+    },
+    {
+      "file": "tests/org-management-browser.test.cjs",
+      "test": "목록 상태 필터와 저장 후 포커스 복귀"
+    },
+    {
+      "file": "tests/report-modal-pdf.test.cjs",
+      "test": "하단 액션과 본문 전용 PDF (수신 주소: saved@example.com)"
+    },
+    {
+      "file": "tests/report-modal-pdf.test.cjs",
+      "test": "하단 액션과 본문 전용 PDF (수신 주소: 없음)"
+    },
+    {
+      "file": "tests/report-server-pdf.test.cjs",
+      "test": "detail: 서버 파일 다운로드와 실패 복구"
+    },
+    {
+      "file": "tests/report-server-pdf.test.cjs",
+      "test": "email: 서버 파일 다운로드와 실패 복구"
+    },
+    {
+      "file": "tests/sdd220-native-release.test.ts",
+      "test": "TS1 버전·암호화·Privacy Resources 등록"
+    },
+    {
+      "file": "tests/sdd220-native-release.test.ts",
+      "test": "TS29 release 서명 누락 거부·버전"
+    },
+    {
+      "file": "tests/sdd234-a-mobile-home.test.tsx",
+      "test": "host: 1440px 계산 글자·터치·간격 불변"
+    },
+    {
+      "file": "tests/sdd234-a-mobile-home.test.tsx",
+      "test": "host: 768px 계산 글자·터치·간격 불변"
+    },
+    {
+      "file": "tests/sdd234-a-mobile-home.test.tsx",
+      "test": "member: 1440px 계산 글자·터치·간격 불변"
+    },
+    {
+      "file": "tests/sdd234-a-mobile-home.test.tsx",
+      "test": "member: 768px 계산 글자·터치·간격 불변"
+    }
+  ],
+  "lint": {
+    "unchanged": true,
+    "newErrors": 0,
+    "changedFiles": 43,
+    "baselineAndFinalErrors": [
+      {
+        "file": "tests/agent-page.test.tsx",
+        "line": 114,
+        "column": 51,
+        "message": "This generator function does not have 'yield'  require-yield"
+      },
+      {
+        "file": "tests/agent-page.test.tsx",
+        "line": 131,
+        "column": 29,
+        "message": "This generator function does not have 'yield'  require-yield"
+      },
+      {
+        "file": "tests/sdd217-presence-socket.test.tsx",
+        "line": 12,
+        "column": 20,
+        "message": "Error: Cannot reassign variables declared outside of the component/hook"
+      },
+      {
+        "file": "tests/sdd222-use-background-session.test.tsx",
+        "line": 35,
+        "column": 3,
+        "message": "Error: Cannot reassign variables declared outside of the component/hook"
+      },
+      {
+        "file": "tests/sdd222-use-background-session.test.tsx",
+        "line": 123,
+        "column": 30,
+        "message": "Error: Cannot reassign variables declared outside of the component/hook"
+      },
+      {
+        "file": "tests/sdd222-use-background-session.test.tsx",
+        "line": 130,
+        "column": 30,
+        "message": "Error: Cannot reassign variables declared outside of the component/hook"
+      },
+      {
+        "file": "tests/sdd222-use-background-session.test.tsx",
+        "line": 143,
+        "column": 30,
+        "message": "Error: Cannot reassign variables declared outside of the component/hook"
+      },
+      {
+        "file": "tests/use-eeg-raw-upload.test.tsx",
+        "line": 20,
+        "column": 3,
+        "message": "Error: Cannot reassign variables declared outside of the component/hook"
+      },
+      {
+        "file": "tests/use-media-check.test.tsx",
+        "line": 10,
+        "column": 3,
+        "message": "Error: Cannot reassign variables declared outside of the component/hook"
+      }
+    ]
+  },
+  "tsc": "passed",
+  "build": "passed",
+  "backendChanged": false,
+  "pytest": "미실행: 백엔드 변경 없음",
+  "review": {
+    "critical": 0,
+    "remainingImportant": 0,
+    "fixedImportant": "상담사 고정 초대코드 복사 이관"
+  },
+  "browser": {
+    "widths": [
+      390,
+      1440
+    ],
+    "roles": 4,
+    "captures": 26,
+    "pageErrors": 0,
+    "horizontalOverflow": 0,
+    "realAPI": false,
+    "BLE": false
+  }
+}

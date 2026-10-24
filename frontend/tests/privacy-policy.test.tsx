@@ -115,8 +115,7 @@ describe('방침 링크·화면 문구 정합', () => {
       'src/pages/LoginPage.tsx',
       'src/components/auth/ConsentCheckList.tsx',
       'src/components/class/flow/member/NoticeStepView.tsx',
-      'src/pages/SettingsPage.tsx',
-      'src/pages/settings/ClientSettingsPage.tsx',
+      'src/components/settings/settings-content.tsx',
     ]) {
       expect(src(rel), rel).toContain('PrivacyPolicyLink');
     }

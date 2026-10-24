@@ -112,7 +112,7 @@ describe.each(COMBOS)('AI=$ai × 상담=$counseling', ({ ai, counseling, aiOpen,
     useAgentStore.setState({ unread: 7 });
     const view = render(<MemberTabs onMoreClick={() => undefined} />);
     const text = view.textContent ?? '';
-    expect(text.includes('7')).toBe(aiOpen);
+    expect(text.includes('7')).toBe(aiOpen && !counselingOpen);
     useAgentStore.setState({ unread: 0 });
   });
 });

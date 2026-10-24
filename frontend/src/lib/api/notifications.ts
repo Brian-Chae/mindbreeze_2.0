@@ -24,6 +24,7 @@ export interface UnreadCountResponse {
 }
 
 export interface NotificationPreferencesResponse {
+  push?: Record<string, boolean>;
   email: Record<string, boolean>;
   in_app: Record<string, boolean>;
 }

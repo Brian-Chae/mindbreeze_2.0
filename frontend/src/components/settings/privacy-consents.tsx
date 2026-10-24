@@ -3,6 +3,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { getMyConsents, updateMyConsents, type AccountConsentState } from '../../lib/api/account';
+import { SettingsSwitch } from './settings-switch';
 import { PrivacyPolicyLink } from '../legal/PrivacyPolicyLink';
 
 type OptionalKey = 'eeg' | 'research';
@@ -62,7 +63,7 @@ export function PrivacyConsentsSection() {
       ) : !state ? (
         <p className="text-sm text-[#6F6F6F]">불러오는 중...</p>
       ) : (
-        <ul className="space-y-4">
+        <div><details className="mb-4"><summary className="min-h-11 cursor-pointer py-2 text-sm font-medium">필수 동의 내역 확인</summary><ul className="text-sm text-[#6F6F6F]">{(['tos', 'privacy', 'sensitive'] as const).map((key) => <li key={key} className="py-2">{{tos: '이용약관', privacy: '개인정보 처리', sensitive: '민감정보 처리'}[key]} · {state[key].agreed ? '동의함' : '동의 내역 없음'}{state[key].version ? ` · 버전 ${state[key].version}` : ''}</li>)}</ul></details><ul className="space-y-4">
           {OPTIONS.map((option) => {
             const agreed = state[option.key].agreed;
             return (
@@ -71,21 +72,11 @@ export function PrivacyConsentsSection() {
                   <div className="text-[14px] font-medium text-[#1F1F1F]">{option.title}</div>
                   <div className="text-[12px] text-[#6F6F6F] mt-0.5">{option.desc}</div>
                 </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={agreed}
-                  aria-label={option.title}
-                  disabled={saving !== null}
-                  onClick={() => void toggle(option.key)}
-                  className={`shrink-0 min-h-11 px-4 rounded-full text-[13px] font-semibold border disabled:opacity-50 ${agreed ? 'bg-[#5F0080] text-white border-[#5F0080]' : 'bg-white text-[#3F3F3F] border-[#DDDEE7]'}`}
-                >
-                  {saving === option.key ? '저장 중…' : agreed ? '동의함' : '동의 안 함'}
-                </button>
+                <SettingsSwitch checked={agreed} label={option.title} disabled={saving !== null} onChange={() => void toggle(option.key)} />
               </li>
             );
           })}
-        </ul>
+        </ul></div>
       )}
       {error && (
         <p role="alert" className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">

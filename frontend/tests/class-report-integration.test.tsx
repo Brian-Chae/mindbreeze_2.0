@@ -48,12 +48,12 @@ describe('진행 기록 전체 안내 설정', () => {
     const root = createRoot(host);
     await act(async () => root.render(createElement(SessionNotePromptToggle)));
     const button = host.querySelector('button')!;
-    expect(button.getAttribute('aria-checked')).toBe('false');
+    expect(button.getAttribute('aria-checked')).toBe('true');
     await act(async () => button.click());
     expect(save).toHaveBeenCalledWith(false);
-    expect(button.getAttribute('aria-checked')).toBe('true');
-    await act(async () => rejectSave?.(new Error('network')));
     expect(button.getAttribute('aria-checked')).toBe('false');
+    await act(async () => rejectSave?.(new Error('network')));
+    expect(button.getAttribute('aria-checked')).toBe('true');
     expect(host.querySelector('[role=alert]')?.textContent).toContain('저장하지 못했어요');
     await act(async () => root.unmount()); host.remove();
   });
