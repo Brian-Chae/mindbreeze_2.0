@@ -135,7 +135,7 @@ class ExportPreview(Contract):
 class DataCenterExportCreate(Contract):
     preview_token: str = Field(min_length=16, max_length=256)
     reason: str = Field(min_length=1, max_length=2000)  # trim 후 정책 범위(2~500자)를 서버가 검사
-    reauth_proof: str | None = Field(None, max_length=512)
+    reauth_proof: str | None = Field(None, max_length=2048)
 
 
 class ExportPartStatus(Contract):
@@ -184,7 +184,7 @@ class ExportProof(Contract):
 
 class PartDownloadRequest(Contract):
     part_id: UUID
-    reauth_proof: str | None = Field(None, max_length=512)
+    reauth_proof: str | None = Field(None, max_length=2048)
 
 
 class PartDownload(Contract):

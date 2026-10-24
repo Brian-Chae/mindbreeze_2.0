@@ -48,7 +48,7 @@ SESSIONS_SCOPE_KEEP = frozenset({
     "agent_messages", "agent_profile_items", "agent_risk_signals", "careers", "client_counselor_links",
     "client_invites", "client_profiles", "consents", "counselor_profiles", "credentials", "data_export_audits",
     "data_export_jobs", "data_export_previews", "data_export_targets", "data_export_parts",
-    "data_export_dispatch_outbox", "device_tokens", "normalization_baselines", "normalization_models", "onboarding_progress",
+    "data_export_dispatch_outbox", "data_export_audit_targets", "device_tokens", "normalization_baselines", "normalization_models", "onboarding_progress",
     "org_documents", "org_join_requests", "organizations", "original_deletion_audits", "password_history",
     "qualifications", "refresh_tokens", "research_consent_events", "research_consents", "research_export_batches",
     "research_export_items", "research_withdrawal_requests", "retention_sweep_runs", "signup_applications",

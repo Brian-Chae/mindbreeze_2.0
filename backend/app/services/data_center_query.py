@@ -110,6 +110,15 @@ def page(items: list, next_cursor: str | None, total: int | None, as_of: datetim
     return dc.DataCenterPage(items=items, next_cursor=next_cursor, total=total, as_of=as_of, filters_hash=flt)
 
 
+def _range_filter(q: Query, col, query: dc.DataCenterQuery) -> Query:
+    start, end = kst_range(query.date_from, query.date_to)
+    if start:
+        q = q.filter(col >= start)
+    if end:
+        q = q.filter(col < end)
+    return q
+
+
 def like(value: str) -> str:
     return '%' + value.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_') + '%'
 

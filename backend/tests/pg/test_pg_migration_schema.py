@@ -34,7 +34,7 @@ def test_테이블_집합이_모델_메타데이터와_같다(pg_conn):
 
     tables = set(sa.inspect(pg_conn).get_table_names(schema="public")) - {"alembic_version"}
     assert tables == set(Base.metadata.tables)
-    assert len(tables) == 99  # SDD-218 리포트 일괄 작업 테이블 2개 추가 + SDD-220 ⓒ 5개(소셜 연결·해제 outbox·삭제 원장·객체 원장·공개 삭제 요청) + ⓓ 2개(chat_reports·chat_blocks) + SDD-243 4개(previews·targets·parts·dispatch outbox)
+    assert len(tables) == 100  # SDD-218 리포트 일괄 작업 테이블 2개 추가 + SDD-220 ⓒ 5개(소셜 연결·해제 outbox·삭제 원장·객체 원장·공개 삭제 요청) + ⓓ 2개(chat_reports·chat_blocks) + SDD-243 5개(previews·targets·parts·dispatch outbox·audit targets)
 
 
 def test_30c1_리비전이_채워야_하는_변경_4건이_있다(pg_conn):

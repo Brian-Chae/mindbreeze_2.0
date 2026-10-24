@@ -120,6 +120,12 @@ X = {
         session_count=12, participant_count=24, completed_count=24,
         parts=[de.ExportPartStatus(part_id=U(501), part_no=1, status='ready', size_bytes=48_000_000)],
         expected_part_count=1, created_at=NOW, expires_at=NOW, policy_version='dc-policy-1'),
+    'export-proof.json': de.ExportProof(proof='eyJhbGciOi...(서명 토큰, 불투명)', expires_at=NOW),
+    'part-download.json': de.PartDownload(url='https://storage.example.invalid/part1.zip?X-Amz-Signature=SYNTHETIC', expires_at=NOW, part_no=1),
+    'download-audits.json': page([de.DownloadAuditItem(
+        event_id=U(700), event='url_issued', result='issued', at=NOW, actor_id=U(900), actor_role='org_admin', org_id=U(100),
+        job_id=U(500), purpose='operations', identity='pseudonymized', reason='운영 점검', part_no=1, session_count=12,
+        size_bytes=48_000_000, policy_version='dc-policy-1')], total=1),
 }
 OUT.mkdir(parents=True, exist_ok=True)
 for name, model in X.items():

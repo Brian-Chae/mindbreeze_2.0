@@ -165,11 +165,37 @@ class DataExportAudit(Base):
     export_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), index=True)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     role: Mapped[str] = mapped_column(String(20), nullable=False)
-    session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
-    participant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    session_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    participant_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     purpose: Mapped[str] = mapped_column(Text, nullable=False)
     policy_version: Mapped[str] = mapped_column(String(50), nullable=False)
     event: Mapped[str] = mapped_column(String(40), nullable=False)
     result: Mapped[str] = mapped_column(String(60), nullable=False)
     size_bytes: Mapped[int | None] = mapped_column(BigInteger)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    # ── SDD-243 일괄 반출 감사(M243-3). 단건 행은 모두 NULL. URL·비밀·생체값은 어떤 컬럼에도 없다. ──
+    event_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), unique=True)
+    scope_org_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    identity: Mapped[str | None] = mapped_column(String(20))
+    purpose_type: Mapped[str | None] = mapped_column(String(20))
+    reason: Mapped[str | None] = mapped_column(Text)
+    request_hash: Mapped[str | None] = mapped_column(String(64))
+    consent_version: Mapped[str | None] = mapped_column(String(50))
+    part_no: Mapped[int | None] = mapped_column(Integer)
+    session_count: Mapped[int | None] = mapped_column(Integer)
+    participant_count: Mapped[int | None] = mapped_column(Integer)
+
+
+class DataExportAuditTarget(Base):
+    """요청 시점의 고정 대상 사본. 원천 FK 없음 — 원천 삭제가 감사로 cascade 되지 않는다."""
+    __tablename__ = 'data_export_audit_targets'
+    __table_args__ = (
+        UniqueConstraint('audit_id', 'session_id', 'participant_id', name='uq_data_export_audit_target'),
+        Index('ix_data_export_audit_targets_audit', 'audit_id', 'ordinal'),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    audit_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey('data_export_audits.id'), nullable=False)
+    ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+    session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    participant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)

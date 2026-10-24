@@ -23,7 +23,7 @@ BASE = '/api/v1/data-center'
 
 
 class OkVerifier:
-    def verify(self, db, context, proof, *, request_hash, purpose):
+    def verify(self, db, context, proof, **kw):
         return proof == 'ok-proof'
 
 

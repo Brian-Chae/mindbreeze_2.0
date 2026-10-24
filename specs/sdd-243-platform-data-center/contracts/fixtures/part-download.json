@@ -1,0 +1,6 @@
+{
+  "url": "https://storage.example.invalid/part1.zip?X-Amz-Signature=SYNTHETIC",
+  "expires_at": "2026-10-24T03:00:00Z",
+  "part_no": 1,
+  "revocable": false
+}

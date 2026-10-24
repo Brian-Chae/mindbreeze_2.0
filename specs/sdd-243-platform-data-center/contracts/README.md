@@ -51,9 +51,9 @@
 | 20 | POST `/exports` (헤더 `Idempotency-Key`, 202) | `DataCenterExportStatus` | ✅ | ✅ | B05 |
 | 21 | GET `/exports` | `DataCenterExportPage`(본인 작업만) | ✅ | ✅ | B05 |
 | 22 | GET `/exports/{job_id}` | `DataCenterExportStatus`(URL 없음) | ✅ | ✅ | B05 |
-| 23 | POST `/exports/{job_id}/download-url` | `PartDownload` | ✅ | ✅ | B07(미구현) |
-| 24 | GET `/download-audits` | `DataCenterPage[DownloadAuditItem]` | 전역 | 본인+현재 기관 | B07(미구현) |
-| 25 | POST `/export-reauth` | `ExportProof` | ✅ | ✅ | B07(미구현) |
+| 23 | POST `/exports/{job_id}/download-url` | `PartDownload` | ✅ | ✅ | B07 |
+| 24 | GET `/download-audits` | `DataCenterPage[DownloadAuditItem]` | 전역 | 본인+현재 기관 | B07 |
+| 25 | POST `/export-reauth` | `ExportProof` | ✅ | ✅ | B07 |
 
 ## 구현 메모 (B02)
 
@@ -92,6 +92,13 @@
 - 정책은 호출자가 `PackagePolicy` 로 전달한다(`lossless_allowed`: 플랫폼+운영+식별일 때만 원본 bin, `exact_time_allowed`: 식별 운영, `forbidden_strings`: 원 UUID 등 — 어느 텍스트/parquet 조각에 나오면 `pseudonym_leak` 로 실패). 어댑터의 필터는 서버 인가를 대신하지 않는다.
 - 독립 검증기: `scripts/verify-sdd243-package.py --artifacts <dir> --expected <json>` (stdlib 전용, 제품 코드 import 없음).
 - 실제 1GB 경계: `SDD243_REAL_1GB=1 pytest tests/test_sdd243_package.py -k real_one_gb` (기본 skip).
+
+## 구현 메모 (B07 재인증·감사·URL)
+
+- 재인증: `POST /export-reauth` body `{credential, request_hash | job_id}`(둘 중 정확히 하나, 아니면 422 `binding_invalid`). 비밀번호 계정만 지원(소셜 계정은 403 `reauth_method_unsupported`, 후속). 응답 `{proof, expires_at}` 는 `limits.reauth_ttl_seconds`(300) 안에서만 유효하고 **그 요청(request_hash)·그 작업(job_id)·그 기관/역할·그 인증 문맥**에 묶인다 → 생성(`POST /exports`)에는 preview 의 `request_hash` 로, URL(`download-url`)에는 `job_id` 로 각각 발급받는다. 실패 반복 시 423/429 잠금.
+- URL: `POST /exports/{job_id}/download-url` body `{part_id, reauth_proof}` → `{url, expires_at, part_no, revocable:false}`. TTL = min(`limits.url_ttl_seconds`, 작업 남은 기한, 원천 deadline). 감사 `url_authorized` 가 먼저 commit 된 뒤 서명하며 성공 시 `url_issued`, 서명 실패 시 `url_failed`(발급 성공으로 표시하지 않음). 오류: 404(소유자/기관 불일치·없는 part), 403 `access_revoked`(소속·동의·보관 변경)/재인증 오류, 409 `not_ready`/`policy_changed`, 410 `expired`/`source_expired`, 503 `storage_unavailable`. URL 은 응답에만 있고 로그/감사/캐시에 남지 않으며 일회용·즉시 철회 보장이 없다(FE 는 이를 표시).
+- 감사 목록: `GET /download-audits`(`actor_id`, `event`, `role`, `purpose`, `job_id` + 공통 `date_from/date_to/limit/cursor`; 플랫폼 `org_id` 로 기관 필터). 플랫폼은 전역, 기관은 본인+현재 기관만. 이벤트: `requested`/`request_denied`(무대상)/`preparing`/`ready`/`failed`/`expired`/`url_authorized`/`url_issued`/`url_denied`/`url_failed`. 감사 열람 권한은 다른 요청자의 파일·URL 접근권을 주지 않는다.
+- 생성 거부(403/404/409/429 등)는 `request_denied` 로 영속 기록된다. 감사 insert 실패 시 생성·URL 발급은 모두 실패(fail closed).
 
 ## 인가 요점 (FE 가 믿으면 안 되는 것)
 

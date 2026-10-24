@@ -209,6 +209,9 @@ def test_contract_fixtures_validate():
         'spectrum.json': dc.SpectrumResponse,
         'export-preview.json': de.ExportPreview,
         'export-status.json': de.DataCenterExportStatus,
+        'export-proof.json': de.ExportProof,
+        'part-download.json': de.PartDownload,
+        'download-audits.json': dc.DataCenterPage[de.DownloadAuditItem],
         'error-403.json': None,
     }
     assert FIXTURES.exists(), '계약 fixture 디렉터리가 필요하다'

@@ -10,6 +10,7 @@
 import hashlib
 import json
 import logging
+import uuid
 import math
 import secrets
 import socket
@@ -24,7 +25,7 @@ from sqlalchemy import and_, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
-from app.models.data_export import (DataExportAudit, DataExportDispatchOutbox, DataExportJob, DataExportPart,
+from app.models.data_export import (DataExportAudit, DataExportAuditTarget, DataExportDispatchOutbox, DataExportJob, DataExportPart,
                                     DataExportPreview, DataExportTarget)
 from app.models.research import ResearchConsent
 from app.models.session import Session, SessionParticipant
@@ -309,14 +310,55 @@ def _first_target(db: DBSession, *, job_id: UUID | None = None, preview_id: UUID
     return q.order_by(DataExportTarget.ordinal).first()
 
 
-def audit_dc(db: DBSession, job: DataExportJob, event: str, result: str, role: str | None = None) -> None:
-    """일괄 작업 감사(요약 행). B07(M243-3)에서 전용 컬럼·대상 표로 교체한다. URL·비밀·생체값은 기록하지 않는다."""
-    first = _first_target(db, job_id=job.id) or _first_target(db, preview_id=job.preview_id)
-    if first is None:
-        raise RuntimeError('audit target missing')
-    db.add(DataExportAudit(export_id=job.id, user_id=job.user_id, role=role or job.requester_role, session_id=first[0],
-                           participant_id=first[1], purpose=(job.reason or job.purpose)[:500],
-                           policy_version=job.policy_version or '', event=event, result=result, size_bytes=job.size_bytes))
+def audit_dc(db: DBSession, job: DataExportJob, event: str, result: str, role: str | None = None, *,
+             part_no: int | None = None, event_id: UUID | None = None, size_bytes: int | None = None,
+             with_targets: bool = False) -> DataExportAudit | None:
+    """일괄 작업 영속 감사. 상태 이벤트는 (job,event,part) 로 결정되는 event_id 라 중복 전달돼도 한 번만 남는다.
+    URL·비밀·생체값은 기록하지 않는다. 호출자가 commit 하며, 실패는 예외로 전파된다(fail closed)."""
+    eid = event_id or uuid.uuid5(job.id, f'{event}:{part_no}')
+    db.flush()  # autoflush 꺼진 세션에서도 같은 트랜잭션의 앞선 감사 행을 본다
+    if db.query(DataExportAudit.id).filter(DataExportAudit.event_id == eid).first():
+        return None
+    row = DataExportAudit(
+        event_id=eid, export_id=job.id, user_id=job.user_id, role=role or job.requester_role, session_id=None,
+        participant_id=None, purpose=(job.reason or job.purpose or '')[:500], policy_version=job.policy_version or '',
+        event=event, result=result, size_bytes=size_bytes if size_bytes is not None else job.size_bytes,
+        scope_org_id=job.scope_org_id, identity=job.identity, purpose_type=job.purpose_type, reason=job.reason,
+        request_hash=job.request_hash, consent_version=job.consent_policy_version, part_no=part_no,
+        session_count=job.target_count, participant_count=job.participant_total)
+    try:
+        with db.begin_nested():  # 동시 중복 전달: unique(event_id) 위반은 이미 기록된 것으로 본다
+            db.add(row)
+            db.flush()
+    except IntegrityError:
+        return None
+    if with_targets:
+        batch = []
+        q = db.query(DataExportTarget.ordinal, DataExportTarget.session_id, DataExportTarget.participant_id).filter(
+            DataExportTarget.job_id == job.id).order_by(DataExportTarget.ordinal)
+        for ordinal, sid, pid in q.yield_per(500):
+            batch.append(DataExportAuditTarget(audit_id=row.id, ordinal=ordinal, session_id=sid, participant_id=pid))
+            if len(batch) >= 500:
+                db.add_all(batch)
+                db.flush()
+                batch = []
+        if batch:
+            db.add_all(batch)
+    return row
+
+
+def audit_denied(db: DBSession, context: ResolvedContext, status_code: int, code: str, *, reason: str | None = None,
+                 request_hash: str | None = None, purpose: str | None = None, identity: str | None = None,
+                 scope: str | None = None) -> None:
+    """무대상 거부 요청도 남긴다(권한 위반·정책 차단 추적). 별도 트랜잭션으로 commit."""
+    db.rollback()
+    db.add(DataExportAudit(
+        event_id=uuid.uuid4(), export_id=None, user_id=context.actor_id, role=context.role, session_id=None,
+        participant_id=None, purpose=(reason or '')[:500], policy_version=context.policy.policy_version,
+        event='request_denied', result=f'http_{status_code}:{code}'[:60], scope_org_id=context.scope_org_id,
+        identity=identity, purpose_type=purpose, reason=(reason or None), request_hash=request_hash,
+        consent_version=None))
+    db.commit()
 
 
 def _revalidate_targets(db: DBSession, context: ResolvedContext, *, preview_id: UUID | None = None,
@@ -409,7 +451,7 @@ def create_data_center_export(db: DBSession, context: ResolvedContext, preview_t
     db.query(DataExportTarget).filter(DataExportTarget.preview_id == preview.id).update(
         {DataExportTarget.job_id: job.id}, synchronize_session=False)
     preview.consumed_job_id = job.id
-    audit_dc(db, job, 'requested', 'queued')  # 감사 insert 실패는 예외로 전파되어 생성 전체를 롤백(fail closed)
+    audit_dc(db, job, 'requested', 'queued', with_targets=True)  # 감사 insert 실패는 예외로 전파되어 생성 전체를 롤백(fail closed)
     db.add(DataExportDispatchOutbox(job_id=job.id, status='pending', next_attempt_at=moment))
     db.commit()
     try_dispatch(db, job.id)
@@ -610,6 +652,8 @@ def run_job(db: DBSession, export_id: UUID, *, owner: str | None = None) -> None
         return
     try:
         job = db.get(DataExportJob, export_id, populate_existing=True)
+        audit_dc(db, job, 'preparing', 'preparing')
+        db.commit()
         if aware(job.expires_at) <= now():
             return _fail(db, export_id, token, 'expired')
         try:
@@ -823,3 +867,99 @@ def resolve_part_max(job: DataExportJob) -> int:
 
 
 PACKAGE_BUILDER = package_job
+
+
+# ═══ B07: part URL 발급 · 감사 목록 ═════════════════════════════════════════════
+
+def _source_deadline(db: DBSession, job_id: UUID) -> datetime | None:
+    value = db.query(func.min(DataExportTarget.source_deadline)).filter(DataExportTarget.job_id == job_id).scalar()
+    return aware(value) if value else None
+
+
+def issue_part_url(db: DBSession, context: ResolvedContext, job_id: UUID, part_id: UUID,
+                   proof: str | None) -> de.PartDownload:
+    """소유자·현재 기관·재인증·최신 정책/동의/보관 재검사 → **감사 commit 후** 서명. 서명 실패는 발급 성공으로 기록하지 않는다."""
+    from app.services import storage_service
+    job = _owned_job(db, context, job_id)  # 소유자/기관 불일치는 404
+    part = db.query(DataExportPart).filter(DataExportPart.id == part_id, DataExportPart.job_id == job.id).first()
+    if part is None:
+        raise not_found()
+
+    def denied(status: int, code: str, message: str) -> HTTPException:
+        db.rollback()
+        audit_dc(db, job, 'url_denied', f'{code}'[:60], part_no=part.part_no, event_id=uuid.uuid4())
+        db.commit()
+        return deny(status, code, message)
+
+    moment = now()
+    if job.status == 'expired' or aware(job.expires_at) <= moment or part.status == 'expired':
+        _expire_if_due(db, job)
+        raise denied(410, 'expired', '패키지 보관기한이 지났습니다. 새로 요청해 주세요')
+    if job.status not in ('ready', 'ready_with_warnings') or part.status != 'ready' or not part.object_key:
+        raise denied(409, 'not_ready', '다운로드 파일이 아직 준비되지 않았습니다')
+    if context.policy.policy_hash != job.policy_hash:
+        raise denied(409, 'policy_changed', '정책이 변경되었습니다. 새로 요청해 주세요')
+    try:
+        authorize_purpose(context, job.purpose_type, job.identity)
+    except HTTPException as exc:
+        raise denied(exc.status_code, exc.detail['code'], exc.detail['message']) from None
+    if not _revalidate_targets(db, context, job_id=job.id, purpose=job.purpose_type):
+        raise denied(403, 'access_revoked', '대상의 권한·동의·보관 상태가 변경되어 발급할 수 없습니다')
+    deadline = _source_deadline(db, job.id)
+    limit = aware(job.expires_at) if deadline is None else min(aware(job.expires_at), deadline)
+    remaining = int((limit - moment).total_seconds())
+    if remaining < 1:
+        raise denied(410, 'source_expired', '원천 보관기한이 지나 발급할 수 없습니다')
+    try:
+        export_reauth.verify_export_proof(db, context, proof, job_id=job.id, purpose=job.purpose_type)
+    except HTTPException as exc:
+        raise denied(exc.status_code, exc.detail['code'], exc.detail['message']) from None
+    ttl = max(1, min(context.policy.url_ttl_seconds, remaining))
+    # 감사가 먼저 영속된다. 감사 실패 시 예외가 전파되어 URL 은 만들어지지 않는다(fail closed).
+    audit_dc(db, job, 'url_authorized', 'authorized', part_no=part.part_no, event_id=uuid.uuid4())
+    db.commit()
+    try:
+        url = storage_service.generate_presigned_get(
+            part.object_key, expires_in=ttl, expires_at=limit,
+            content_disposition=f'attachment; filename="mindbreeze-data-part{part.part_no}.zip"')
+    except storage_service.ExportStorageError:
+        audit_dc(db, job, 'url_failed', 'storage_unavailable', part_no=part.part_no, event_id=uuid.uuid4())
+        db.commit()
+        raise deny(503, 'storage_unavailable', '다운로드 저장소를 사용할 수 없습니다. 잠시 후 다시 시도해 주세요') from None
+    audit_dc(db, job, 'url_issued', 'issued', part_no=part.part_no, event_id=uuid.uuid4())  # URL 문자열은 기록하지 않는다
+    db.commit()
+    return de.PartDownload(url=url, expires_at=moment + timedelta(seconds=ttl), part_no=part.part_no)
+
+
+def list_audits(db: DBSession, context: ResolvedContext, query: dc.DataCenterQuery, *, actor_id: UUID | None = None,
+                event: str | None = None, role: str | None = None, purpose: str | None = None,
+                job_id: UUID | None = None):
+    """플랫폼: 기관관리자 요청 포함 전역(기관/요청자/역할/목적 필터). 기관: 본인 + 현재 기관 기록만.
+    감사 열람 권한은 다른 요청자의 파일 접근권을 주지 않는다(파일 API 는 소유자만)."""
+    from app.services.data_center_query import filters_hash, page, paginate, _range_filter
+    flt = filters_hash(context, 'download_audits', query, actor=actor_id, event=event, role=role, purpose=purpose, job=job_id)
+    q = db.query(DataExportAudit).filter(DataExportAudit.event_id.isnot(None))
+    if context.is_platform:
+        if context.scope_org_id is not None:
+            q = q.filter(DataExportAudit.scope_org_id == context.scope_org_id)
+        if actor_id:
+            q = q.filter(DataExportAudit.user_id == actor_id)
+        if role:
+            q = q.filter(DataExportAudit.role == role)
+    else:
+        q = q.filter(DataExportAudit.user_id == context.actor_id, DataExportAudit.scope_org_id == context.scope_org_id)
+    if event:
+        q = q.filter(DataExportAudit.event == event)
+    if purpose:
+        q = q.filter(DataExportAudit.purpose_type == purpose)
+    if job_id:
+        q = q.filter(DataExportAudit.export_id == job_id)
+    q = _range_filter(q, DataExportAudit.created_at, query)
+    total = q.count()
+    rows, nxt, as_of = paginate(q, DataExportAudit.created_at, DataExportAudit.id, query, flt, desc=query.sort != 'time_asc')
+    items = [de.DownloadAuditItem(
+        event_id=a.event_id, event=a.event, result=a.result, at=aware(a.created_at), actor_id=a.user_id,
+        actor_role=a.role, org_id=a.scope_org_id, job_id=a.export_id, purpose=a.purpose_type, identity=a.identity,
+        reason=a.reason, part_no=a.part_no, session_count=a.session_count, size_bytes=a.size_bytes,
+        policy_version=a.policy_version) for a, _ in rows]
+    return page(items, nxt, total, as_of, flt)
