@@ -1,5 +1,5 @@
 // 독립 HTML 체험만 확인한다. 제품 앱·기기 검증 결과가 아니다.
-const { chromium } = require('/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/playwright');
+const { chromium, webkit } = require('/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/playwright');
 const { pathToFileURL } = require('node:url');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -11,7 +11,7 @@ const assert = require('node:assert/strict');
  const checks=[];
  const check=(name,actual,expected)=>{assert.deepEqual(actual,expected,name);checks.push(name);};
  const route=()=>page.locator('#route').textContent();
- const ready=async()=>{await page.waitForTimeout(220);};
+ const ready=async()=>{await page.waitForTimeout(320);};
  async function mouseDrag(dx,dy=0,x=270,y=300) {
   await page.mouse.move(x,y);await page.mouse.down();
   for(let n=1;n<=8;n++){await page.mouse.move(x+dx*n/8,y+dy*n/8);await page.waitForTimeout(25);}
@@ -26,10 +26,24 @@ const assert = require('node:assert/strict');
  try {
   await page.goto(pathToFileURL(path.join(__dirname,'index.html')).href);await page.evaluate(()=>document.fonts.ready);
   check('초기 회원 홈',await route(),'/app');
+  // 패드 밖 본문에서 실제 터치가 취소되지 않고 두 페이지가 1:1로 따라오는지 확인한다.
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:270,y:200,id:0}]});
+  for(let n=1;n<=5;n++){await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:270-24*n,y:200,id:0}]});await page.waitForTimeout(25);}
+  const middle=await page.evaluate(()=>({x:document.querySelector('#screen').getBoundingClientRect().x,neighbor:document.querySelector('.neighbor .screen-head h2')?.textContent}));
+  check('패드 밖 터치 120px에 화면 1:1 추종',Math.round(middle.x),-120);
+  check('드래그 중 이웃 메뉴 표시',middle.neighbor,'내 클래스');
+  await page.screenshot({path:path.join(__dirname,'captures/04-mid-drag-pages-390.png')});
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});await ready();
+  check('중간 프레임 취소 후 홈 복귀',await route(),'/app');
+
   await page.screenshot({path:path.join(__dirname,'captures/01-member-home-390.png')});
-  await touchDrag(-105);check('터치: 홈 → 내 클래스',await route(),'/app/classes');
+  await touchDrag(-105,0,270,200);check('터치: 패드 밖 홈 → 내 클래스',await route(),'/app/classes');
+  check('터치 전환 후 하단 강조 변경',await page.locator('#nav [aria-current=page] span').textContent(),'내 클래스');
   await page.screenshot({path:path.join(__dirname,'captures/02-touch-next-tab-390.png')});
-  await mouseDrag(105,0,110);check('마우스: 내 클래스 → 홈',await route(),'/app');
+  await touchDrag(105,0,110,200);check('터치: 패드 밖 내 클래스 → 홈',await route(),'/app');
+  await touchDrag(-30,0,270,200);check('터치: 짧게 밀면 홈 복귀',await route(),'/app');
+  check('짧은 터치 후 화면 원위치',await page.locator('#screen').evaluate(el=>Math.round(el.getBoundingClientRect().x)),0);
+  await mouseDrag(-105);await mouseDrag(105,0,110);check('마우스: 내 클래스 → 홈',await route(),'/app');
   await mouseDrag(100,0,110);check('첫 메뉴에서 순환 없음',await route(),'/app');
   await mouseDrag(-30);check('느린 짧은 드래그 취소',await route(),'/app');
   await mouseDrag(-40,70);check('세로 우세 취소',await route(),'/app');
@@ -39,12 +53,16 @@ const assert = require('node:assert/strict');
   await page.evaluate(()=>getSelection().removeAllRanges());
   for(const guard of ['class','input','sheet','dirty','detail']) {
    await page.locator(`#guard-${guard}`).check();await mouseDrag(-110);check(`${guard} 상태 스와이프 차단`,await route(),'/app');
+   if(guard==='class'){await touchDrag(-110,0,270,200);check('실제 터치: 수업 중 이동 차단',await route(),'/app');}
    if(guard==='class')await page.screenshot({path:path.join(__dirname,'captures/03-protected-class-390.png')});
    await page.locator(`#guard-${guard}`).uncheck();
   }
   await page.locator('#guard-dirty').check();await page.locator('#nav button').nth(1).click();
   check('미저장 상태 버튼 이동 확인창',await page.locator('#dialog').evaluate(el=>el.open),true);
   await page.locator('#dialog-cancel').click();check('확인창 취소 후 유지',await route(),'/app');
+  await page.locator('#nav button').nth(1).click();await page.locator('#dialog-ok').click();await ready();
+  check('보호 확인 후 목적 메뉴 도착',await route(),'/app/classes');
+  check('보호 확인 후 상황 해제',await page.locator('#guard-dirty').isChecked(),false);
   await page.locator('#guard-dirty').uncheck();
   await page.locator('#nav button').nth(3).click();await ready();check('버튼 대체 이동',await route(),'/app/reports');
   await mouseDrag(-110);check('마지막 메뉴에서 더보기 자동 열림 없음',await page.locator('#dialog').evaluate(el=>el.open),false);check('마지막 메뉴 순환 없음',await route(),'/app/reports');
@@ -65,7 +83,10 @@ const assert = require('node:assert/strict');
   await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:170,y:300,id:0}]});
   await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});await ready();
   check('터치 취소 시 이동 없음',await route(),'/app');
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  const scrollBefore=await page.evaluate(()=>scrollY);
   await touchDrag(-5,-85);check('실제 터치 세로 우세 시 이동 없음',await route(),'/app');
+  check('실제 터치 세로 스크롤 유지',await page.evaluate(()=>scrollY)>scrollBefore,true);
   await page.evaluate(()=>window.scrollTo(0,0));
   const railBefore=await page.locator('#rail').evaluate(el=>el.scrollLeft);
   await touchDrag(-100,0,270,510);check('터치 레일 출발은 탭 이동 없음',await route(),'/app');
@@ -90,7 +111,7 @@ const assert = require('node:assert/strict');
   await page.evaluate(()=>getSelection().removeAllRanges());
   const metrics=await page.evaluate(()=>({viewport:innerWidth,scrollWidth:document.documentElement.scrollWidth,nav:[...document.querySelectorAll('#nav button')].map(el=>({width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height,fontSize:getComputedStyle(el).fontSize})),smallText:[...document.querySelectorAll('body *')].filter(el=>el.getClientRects().length&&[...el.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&parseFloat(getComputedStyle(el).fontSize)<=12).map(el=>el.tagName)}));
   check('390px 가로 넘침 없음',metrics.scrollWidth,390);check('12px 이하 표시 텍스트 없음',metrics.smallText,[]);check('하단 메뉴 터치 영역 44px 이상',metrics.nav.every(b=>b.width>=44&&b.height>=44),true);check('브라우저 실행 오류 없음',errors,[]);
-  fs.writeFileSync(path.join(__dirname,'capture-results.json'),JSON.stringify({scope:'Stage ① 독립 HTML 프로토타입. 제품 앱/네이티브/실기기 검증 아님',chrome:browser.version(),viewport:{width:390,height:844},checks,metrics,errors},null,2)+'\n');
+  fs.writeFileSync(path.join(__dirname,'capture-results.json'),JSON.stringify({scope:'A안 확정 · 독립 HTML 프로토타입. 제품 앱/네이티브/실기기 검증 아님',webkit:{available:fs.existsSync(webkit.executablePath()),status:'실행 파일 미설치로 미실행'},baseline:{commit:'07fcd35c',pad:{fingerDx:-120,screenDx:-30},outsidePad:{x:270,y:200,events:['pointerdown','pointermove','pointercancel'],routeAfter:'/app',touchAction:'auto'}},chrome:browser.version(),viewport:{width:390,height:844},checks,metrics,errors},null,2)+'\n');
   console.log(JSON.stringify({passed:checks.length,chrome:browser.version(),metrics},null,2));
  } finally {await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
