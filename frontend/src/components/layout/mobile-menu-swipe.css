@@ -4,6 +4,7 @@
 .mobile-menu-swipe-preview[data-mobile-swipe-preview-kind="loading"] > h2 { font-size: 24px; font-weight: 600; color: #34332f; }
 .mobile-menu-swipe-preview[data-mobile-swipe-preview-kind="loading"] > p { margin-top: 16px; font-size: 14px; color: #6b6861; }
 .mobile-menu-swipe-hint { position: absolute; left: 16px; right: 16px; bottom: calc(100px + env(safe-area-inset-bottom, 0px)); z-index: 2; display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 16px; background: #34332f; color: white; font-size: 13px; }
+.mobile-menu-swipe-hint p { color: inherit; margin: 0; }
 .mobile-menu-swipe-hint button { flex-shrink: 0; min-width: 44px; min-height: 44px; }
 @media (max-width: 767px) {
   [data-mobile-swipe-enabled] :is(.mobile-menu-swipe-page, .mobile-menu-swipe-page *):not(:has([data-mobile-swipe-native-x])):not([data-mobile-swipe-native-x]):not([data-mobile-swipe-native-x] *) { touch-action: pan-y pinch-zoom; }
