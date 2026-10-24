@@ -115,3 +115,53 @@ def member_sessions(member_id: UUID, subject_type: SubjectType = Query('user'),
 def facilitator_sessions(facilitator_id: UUID, query: dc.DataCenterQuery = Depends(query_dep),
                          ctx: policy.ResolvedContext = Depends(context_dep), db: DBSession = Depends(get_db)):
     return q.facilitator_sessions(db, ctx, facilitator_id, query)
+
+
+# ── B03 동의·보관·표준 (읽기 전용). #9~15 는 플랫폼 전용 ─────────────────────
+from app.services import data_center_governance as gov  # noqa: E402
+
+
+@router.get('/consents', response_model=dc.DataCenterPage[dc.ConsentItem])
+def consents(kind: str = Query('collection', max_length=20), query: dc.DataCenterQuery = Depends(query_dep),
+             ctx: policy.ResolvedContext = Depends(context_dep), db: DBSession = Depends(get_db)):
+    return gov.list_consents(db, ctx, query, kind)
+
+
+@router.get('/research-batches', response_model=dc.DataCenterPage[dc.ResearchBatchItem])
+def research_batches(query: dc.DataCenterQuery = Depends(query_dep), ctx: policy.ResolvedContext = Depends(context_dep),
+                     db: DBSession = Depends(get_db)):
+    return gov.list_research_batches(db, ctx, query)
+
+
+@router.get('/research-batches/{batch_id}', response_model=dc.ResearchBatchDetail)
+def research_batch(batch_id: UUID, ctx: policy.ResolvedContext = Depends(context_dep), db: DBSession = Depends(get_db)):
+    return gov.research_batch_detail(db, ctx, batch_id)
+
+
+@router.get('/retention-runs', response_model=dc.DataCenterPage[dc.RetentionRunItem])
+def retention_runs(query: dc.DataCenterQuery = Depends(query_dep), ctx: policy.ResolvedContext = Depends(context_dep),
+                   db: DBSession = Depends(get_db)):
+    return gov.list_retention_runs(db, ctx, query)
+
+
+@router.get('/retention-runs/{run_id}', response_model=dc.RetentionRunDetail)
+def retention_run(run_id: UUID, ctx: policy.ResolvedContext = Depends(context_dep), db: DBSession = Depends(get_db)):
+    return gov.retention_run_detail(db, ctx, run_id)
+
+
+@router.get('/retention-candidates', response_model=dc.DataCenterPage[dc.RetentionCandidate])
+def retention_candidates(query: dc.DataCenterQuery = Depends(query_dep),
+                         ctx: policy.ResolvedContext = Depends(context_dep), db: DBSession = Depends(get_db)):
+    return gov.list_retention_candidates(db, ctx, query)
+
+
+@router.get('/account-deletions', response_model=dc.DataCenterPage[dc.AccountDeletionItem])
+def account_deletions(query: dc.DataCenterQuery = Depends(query_dep), ctx: policy.ResolvedContext = Depends(context_dep),
+                      db: DBSession = Depends(get_db)):
+    return gov.list_account_deletions(db, ctx, query)
+
+
+@router.get('/baselines', response_model=dc.DataCenterPage[dc.BaselineItem])
+def baselines(query: dc.DataCenterQuery = Depends(query_dep), ctx: policy.ResolvedContext = Depends(context_dep),
+              db: DBSession = Depends(get_db)):
+    return gov.list_baselines(db, ctx, query)

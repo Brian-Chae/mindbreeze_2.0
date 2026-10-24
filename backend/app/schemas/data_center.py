@@ -342,6 +342,7 @@ class RetentionRunItem(Contract):
 
 class RetentionRunDetail(RetentionRunItem):
     cutoff_at: datetime | None
+    blocked_reason: str | None = None  # sweep_disabled / apply_from_unset / dry_run_requested 등 허용 목록 값만
     summary: dict[str, Count]  # report allowlist 투영: 후보/처리/보류/실패/미확인
     error_summary: str | None
 

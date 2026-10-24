@@ -84,14 +84,14 @@ def _key_value(value):
 
 
 def paginate(query: Query, key_expr, id_expr, query_in: dc.DataCenterQuery, flt: str, *, desc: bool,
-             key_is_time: bool = True) -> tuple[list, str | None, datetime]:
+             key_is_time: bool = True, id_cast=UUID) -> tuple[list, str | None, datetime]:
     """(엔티티..., key) 행을 keyset 으로 자른다. 반환 rows 는 limit 개, next_cursor 는 다음 페이지가 있을 때만."""
     as_of = now()
     q = query.add_columns(key_expr.label('_k'))
     if query_in.cursor:
         payload, as_of = decode_cursor(query_in.cursor, flt)
         key = datetime.fromisoformat(payload['k']) if key_is_time else payload['k']
-        cur_id = UUID(payload['id'])
+        cur_id = id_cast(payload['id'])
         before = (key_expr < key) | and_(key_expr == key, id_expr < cur_id) if desc else \
             (key_expr > key) | and_(key_expr == key, id_expr > cur_id)
         q = q.filter(before)
