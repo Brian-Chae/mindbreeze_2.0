@@ -43,3 +43,6 @@ set -e
 # 같은 작업의 겹친 실행은 flock으로 건너뛴다. 롤링 함수가 서버 시간대와 무관하게 KST 02시를 판정한다.
 (crontab -l 2>/dev/null | grep -v 'class_operations_cron'; echo '* * * * * cd /home/ubuntu/mindbreeze/backend && flock -n -E 0 .class_operations.lock venv/bin/python class_operations_cron.py --dev-env >> /var/log/mindbreeze-class-operations.log 2>&1') | crontab -
 (crontab -l 2>/dev/null | grep -v 'class_rolling_cron'; echo '0 * * * * cd /home/ubuntu/mindbreeze/backend && flock -n -E 0 .class_rolling.lock venv/bin/python class_rolling_cron.py --dev-env >> /var/log/mindbreeze-class-rolling.log 2>&1') | crontab -
+# SDD-243: 데이터 센터 일괄 반출 큐 전달 outbox 재전달 cron 등록 (매 1분). 전달 실패·lease 만료 작업을 exports 큐로 복구한다.
+#     데이터 센터 활성(DATA_CENTER_ENABLED)은 ENVIRONMENT=development 기본값으로 켜지며 이 cron 은 비활성이어도 무해하다.
+(crontab -l 2>/dev/null | grep -v 'process_data_export_outbox_cron'; echo '* * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python process_data_export_outbox_cron.py >> /var/log/mindbreeze-data-export-outbox.log 2>&1') | crontab -

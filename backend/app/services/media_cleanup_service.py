@@ -65,7 +65,7 @@ def _collect_session_media_refs(session_ids: list, db: DBSession) -> list[str]:
     refs: list[str] = []
     refs += [p for (p,) in db.query(AudioChunk.file_path).filter(AudioChunk.session_id.in_(ids)).all()]
     refs += [p for (p,) in db.query(VideoChunk.file_path).filter(VideoChunk.session_id.in_(ids)).all()]
-    refs += [k for (k,) in db.query(EEGRawChunk.object_key).filter(EEGRawChunk.session_id.in_(ids)).all()]
+    refs += [k for (k,) in db.query(EEGRawChunk.object_key).filter(EEGRawChunk.session_id.in_(ids), EEGRawChunk.schema_version == "1.0", EEGRawChunk.signal_type == "eeg").all()]
     for record in db.query(SessionRecord).filter(SessionRecord.session_id.in_(ids)).all():
         refs.append(record.audio_s3_key or "")
         refs.append(record.video_s3_key or "")
@@ -96,7 +96,7 @@ def delete_user_media(user_id, db: DBSession) -> int:
     ]
     refs = _collect_session_media_refs(session_ids, db)
     # 세션이 이미 정리됐거나 참가자로 남은 본인 소유 raw 객체도 함께 지운다.
-    refs += [k for (k,) in db.query(EEGRawChunk.object_key).filter(EEGRawChunk.user_id == uid).all()]
+    refs += [k for (k,) in db.query(EEGRawChunk.object_key).filter(EEGRawChunk.user_id == uid, EEGRawChunk.schema_version == "1.0", EEGRawChunk.signal_type == "eeg").all()]
     refs = [r for r in refs if r]
     for ref in refs:
         _delete_media_ref(ref)

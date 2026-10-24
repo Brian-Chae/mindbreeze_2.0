@@ -12,7 +12,8 @@ import { isAiEnabled, isCounselingEnabled } from '../../lib/feature-flags';
 
 interface NavItem {
   to: string;
-  key: TermKey;
+  key?: TermKey;
+  label?: string;
   icon: string[];
   badge?: number;
   end?: boolean;
@@ -108,6 +109,7 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 const ORG_ADMIN_NAV_ITEMS: NavItem[] = [
+  { to: "/org/data-center", label: "데이터 센터", icon: ICONS.activity },
   { to: '/dashboard/org', key: 'org-dashboard', icon: ICONS.home },
   { to: '/classes', key: 'meditation-class', icon: ICONS.calendar },
   { to: '/clients', key: 'client', icon: ICONS.users },
@@ -131,6 +133,7 @@ const CLIENT_NAV_ITEMS: NavItem[] = [
 ];
 
 const ADMIN_NAV_ITEMS: NavItem[] = [
+  { to: "/admin/data-center", label: "데이터 센터", icon: ICONS.activity },
   { to: '/chat', key: 'chat', icon: ICONS.message },
   { to: '/notifications', key: 'notification', icon: ICONS.bell },
   { to: '/settings', key: 'setting', icon: ICONS.settings },
@@ -294,13 +297,13 @@ export default function SidebarNav({
             }
           >
             <StrokeIcon d={it.icon} />
-            <span className="flex-1">{term(it.key)}</span>
+            <span className="flex-1">{it.label || (it.key ? term(it.key) : '')}</span>
             {it.badge != null ? (
               <span className="min-w-[18px] h-[18px] px-1.5 rounded-full bg-[#5F0080] text-white font-bold text-[10px] inline-flex items-center justify-center font-mono">
                 {it.badge}
               </span>
             ) : (
-              getBadge(it.key)
+              it.key ? getBadge(it.key) : null
             )}
           </NavLink>
         ))}

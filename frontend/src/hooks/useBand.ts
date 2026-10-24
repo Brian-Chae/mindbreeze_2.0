@@ -45,6 +45,9 @@ import {
   type RawEegSample,
 } from '../lib/session-live/raw-encoder';
 import { useEegRawUpload, type EnqueueRawChunkInput } from './useEegRawUpload';
+import { useBiosignalCapture } from './useBiosignalCapture';
+import type { RecordingStatus } from '../lib/biosignal/recording-status';
+import type { RenderedMetrics, ViewKind } from '../lib/biosignal/display-snapshot';
 import {
   deviceStatusFromLeadOff,
   normalizeSignalQuality01,
@@ -73,7 +76,8 @@ import type {
   BandSpectrum,
   WaveformPoint,
 } from '../types/playground';
-import { refreshActiveModel, scoreIndices } from '../lib/eeg/eegPersonalScore';
+import type { NormalizationModelDto } from '../lib/api/normalization-api';
+import { getActiveModelCache, refreshActiveModel, scoreIndices } from '../lib/eeg/eegPersonalScore';
 
 const logger = createLogger('useBand');
 
@@ -90,7 +94,7 @@ let activeBandOwners = 0;
 let bandConnectInFlight = false;
 
 /** raw indices → 표시용 0~100 정규화 (활성 모델 > 코호트 B0) */
-function toScoredIndices(raw: BandRawIndices): BandRawIndices {
+function toScoredIndices(raw: BandRawIndices, model: NormalizationModelDto | null = getActiveModelCache()): BandRawIndices {
   const scores = scoreIndices({
     focusIndex: raw.focusIndex,
     relaxationIndex: raw.relaxationIndex,
@@ -103,7 +107,7 @@ function toScoredIndices(raw: BandRawIndices): BandRawIndices {
     // FAA(로그비)로 정규화해야 한다(FAA_ABS_P90 = 로그비 p90). faa 미제공이면
     // scoreIndices 가 hemisphericBalance 로 폴백한다.
     faa: raw.faa,
-  });
+  }, model);
   return {
     focusIndex: scores.focusIndex,
     relaxationIndex: scores.relaxationIndex,
@@ -170,6 +174,7 @@ export interface BandChartPoint {
 }
 
 export interface UseBandOptions {
+  displayViewKind?: ViewKind;
   sessionId: string;
   participantId: string | null;
   /** false면 연결/업로드 비활성 (명상 단계 진입 전 등) */
@@ -188,6 +193,8 @@ export interface UseBandOptions {
 }
 
 export interface UseBandResult {
+  normalizationModel: NormalizationModelDto | null;
+  recordingStatus: RecordingStatus;
   isSupported: boolean;
   isMock: boolean;
   connectionState: BandConnectionState;
@@ -244,6 +251,8 @@ export interface UseBandResult {
   clearBuffers: () => void;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
+  /** SDD-244: 화면이 1초마다 보여 준 6지표를 DisplaySnapshot으로 보존(수집 중이 아니면 무시) */
+  recordDisplay: (rendered: RenderedMetrics | null, visible: boolean) => void;
 }
 
 function isWebBluetoothSupported(): boolean {
@@ -283,7 +292,7 @@ function trimNumbers(values: number[], max: number): number[] {
   return values.length > max ? values.slice(values.length - max) : values;
 }
 
-function metricsToFeature(
+export function metricsToFeature(
   metrics: EEGAnalysisMetrics,
   secondOffset: number,
   bandPowers: BandPowers | null,
@@ -309,6 +318,9 @@ function metricsToFeature(
     cognitive_load: metrics.cognitiveLoad,
     emotional_stability: metrics.emotionalStability,
     hemispheric_balance: metrics.hemisphericBalance,
+    // SDD-244: 처리기가 계산하고도 DB로 가지 않던 값 연결(없으면 null, 0 치환 금지)
+    total_neural_activity: metrics.totalNeuralActivity ?? null,
+    faa: metrics.faa ?? null,
     signal_quality:
       signalQuality0to100 == null ? null : toApiSignalQuality(signalQuality0to100),
     sdnn: hrv.getCurrentSDNN(),
@@ -339,6 +351,7 @@ export function useBand({
   entryCredential = null,
   observationOnly: requestedObservationOnly = false,
   forceMock,
+  displayViewKind,
 }: UseBandOptions): UseBandResult {
   const isMock = forceMock ?? envMockEeg();
   // 예시 데이터는 호출자의 옵션과 관계없이 영속 경로에서 격리한다.
@@ -445,6 +458,20 @@ export function useBand({
   rawDrainRef.current = rawUpload.drain;
   const rawFlushRef = useRef(rawUpload.flush);
   rawFlushRef.current = rawUpload.flush;
+  // SDD-244: EEG·PPG·ACC 원문 선수집(v2). 서버 capability 확인 전·미동의·관찰 전용이면 아무 것도 하지 않는다.
+  const biosignal = useBiosignalCapture({
+    sessionId,
+    participantId,
+    enabled: !observationOnly && Boolean(sessionId && participantId),
+    connected: connectionState === 'connected',
+    displayViewKind,
+    skipAuth,
+    entryCredential,
+  });
+  const biosignalCloseRef = useRef(biosignal.close);
+  biosignalCloseRef.current = biosignal.close;
+  const biosignalRef = useRef(biosignal);
+  biosignalRef.current = biosignal;
   /** SDD-222 G6: BLE 콜백 경로 flush 의 마지막 시각(throttle 기준) */
   const lastCallbackFlushAtRef = useRef(0);
 
@@ -1092,6 +1119,8 @@ export function useBand({
     }
 
     if (!observationOnlyRef.current) {
+      // SDD-244: 명시 해제는 종료 의도(close intent)를 먼저 로컬에 기록한다. 실패해도 기존 drain은 계속한다.
+      await biosignalCloseRef.current('band_disconnect').catch(() => null);
       await flushRawChunk();
       await drainPendingQueue();
       await rawDrainRef.current(15_000);
@@ -1279,6 +1308,14 @@ export function useBand({
         },
         onStoreUpdate: handleStoreUpdate,
         onEEGData: handleRawEegData,
+        // SDD-244: 분석 emit 전부를 원창과 함께 보존(수집 중이 아니면 훅이 무시)
+        onFeatureWindow: (signal, count) => biosignalRef.current.featureWindow(signal, count),
+        onFeatureEmit: (signal, data, window, extras) => {
+          if (!window) return;
+          const base = baseOffsetRef.current;
+          const windowIndex = base != null ? Math.max(0, Math.floor((Date.now() - base) / 1000)) : Math.floor(window.end / window.rate);
+          biosignalRef.current.emitFeature(signal, data, window, windowIndex, extras);
+        },
       });
       stream.setStoreCallbacks({
         updateBatteryData: (data) => {
@@ -1673,7 +1710,9 @@ export function useBand({
   // 연결되자마자 곧바로 끊기는 문제를 일으켰다. 연결 해제는 컴포넌트 unmount 정리(위 useEffect)와
   // 명시적 연결해제 버튼으로만 수행한다.
 
+  const normalizationModel = structuredClone(getActiveModelCache());
   return {
+    normalizationModel,
     isSupported,
     isMock,
     connectionState,
@@ -1701,7 +1740,7 @@ export function useBand({
     ppgWaveform,
     acc,
     rawIndices,
-    scoredIndices: rawIndices ? toScoredIndices(rawIndices) : null,
+    scoredIndices: rawIndices ? toScoredIndices(rawIndices, normalizationModel) : null,
     sensors,
     connectedElapsedSec,
     getEegWaveformSamples,
@@ -1710,5 +1749,7 @@ export function useBand({
     clearBuffers,
     connect,
     disconnect,
+    recordDisplay: biosignal.recordDisplay,
+    recordingStatus: biosignal,
   };
 }

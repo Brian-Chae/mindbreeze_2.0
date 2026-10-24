@@ -1,0 +1,69 @@
+{
+  "date": "2026-10-24",
+  "source": "합성 fixture + 실제 React production build, 실제 API/DB/ZIP 인수 아님",
+  "baseline": {
+    "files": 257,
+    "tests": 2852,
+    "passed": 2835,
+    "failed": 17
+  },
+  "final": {
+    "command": "npm test",
+    "exit_code": 1,
+    "files": 259,
+    "passed_files": 251,
+    "failed_files": 8,
+    "tests": 2884,
+    "passed": 2867,
+    "failed": 17,
+    "duration_seconds": 168.79
+  },
+  "baseline_failure_files_equal": true,
+  "failures_by_file": {
+    "tests/agent-counselor-page.test.tsx": 2,
+    "tests/chat-message-deeplink.test.ts": 2,
+    "tests/org-counselor-management-browser.test.cjs": 1,
+    "tests/org-management-browser.test.cjs": 2,
+    "tests/report-modal-pdf.test.cjs": 2,
+    "tests/report-server-pdf.test.cjs": 2,
+    "tests/sdd220-native-release.test.ts": 2,
+    "tests/sdd234-a-mobile-home.test.tsx": 4
+  },
+  "focused": {
+    "command": "npx vitest run tests/sdd243-navigation.test.tsx tests/sdd243-measurement.test.tsx tests/sdd243-export.test.tsx tests/nav-labels-characterization.test.tsx tests/nav-badge-by-key.test.tsx",
+    "exit_code": 0,
+    "passed": 63,
+    "sdd243": 34,
+    "related_menu": 29
+  },
+  "typescript": {
+    "command": "npx tsc --noEmit -p tsconfig.app.json",
+    "exit_code": 0
+  },
+  "build": {
+    "command": "npm run build",
+    "exit_code": 0,
+    "warnings": [
+      "대형 청크",
+      "기존 push/web-push 정적·동적 import 혼용"
+    ]
+  },
+  "browser": {
+    "command": "node frontend/e2e/sdd243-capture.mjs",
+    "channel": "chrome",
+    "version": "Chrome 155.0.8059.85",
+    "captures": 68,
+    "checks": 108,
+    "failed": 0,
+    "pageerrors": 0,
+    "server_process": false,
+    "real_api": false,
+    "outgoing_websocket_blocked": true
+  },
+  "ownership": {
+    "backend_own_edits": false,
+    "sdd244_edits": false,
+    "other_sdd_captures_restored": true,
+    "node_modules_symlink_untracked": true
+  }
+}

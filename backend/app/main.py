@@ -15,6 +15,7 @@ from app.api.v1 import router as v1_router
 from app.config import settings
 from app.core.cors import http_cors_origins, parse_origins, cors_explicitly_configured
 from app.ws import sio, asgi_app as socketio_asgi  # noqa: F401
+from app.services import data_center_runtime  # SDD-243/244 통합: 측정 backend·raw 반출 어댑터 등록
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +131,9 @@ def production_config_problems(cfg) -> list[str]:
         problems.append("개발용 역할 시뮬레이션이 켜져 있음")
     problems.extend(_production_extra_problems(cfg))
     return problems
+
+
+data_center_runtime.install()
 
 
 @asynccontextmanager

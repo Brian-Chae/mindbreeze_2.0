@@ -21,7 +21,7 @@ def run_sweep_eeg_raw(db: DBSession) -> dict:
     if settings.retention_sweep_enabled:
         # SDD-209(B12): retention_sweep 가 활성이면 이 스위프를 대체한다(이중 실행·이중 삭제 방지).
         return {"skipped": "replaced_by_retention_sweep"}
-    result = eeg_raw_service.sweep_stale_eeg_raw(db)
+    result = run_legacy_sweep(db)
     logger.info("[eeg_raw_task] 스윕 완료: %s", result)
     return result
 
@@ -41,3 +41,27 @@ try:
 except Exception:  # noqa: BLE001
     # MB-ERR-001: 등록 예외를 삼키면 raw 정리 스윕이 미등록된 채 조용히 유실된다.
     logger.exception("[eeg_raw_task] Celery 태스크 등록 실패 — 태스크 미등록 가능")
+
+
+def run_legacy_sweep(db: DBSession, **kwargs) -> dict:
+    """기존 서비스 소유 파일을 바꾸지 않고 이 실행의 v1 조회 범위를 고정한다."""
+    from sqlalchemy import event
+    from sqlalchemy.orm import with_loader_criteria
+    from app.models.record import EEGRawChunk, EEGRecord
+    from app.services import eeg_raw_service
+    def legacy_only(state):
+        state.statement = state.statement.options(with_loader_criteria(
+            EEGRawChunk, lambda row: (row.schema_version == '1.0') & (row.signal_type == 'eeg'), include_aliases=True))
+    pairs=db.query(EEGRawChunk.session_id,EEGRawChunk.participant_id).filter(EEGRawChunk.schema_version=='1.0',EEGRawChunk.signal_type=='eeg').distinct().all()
+    event.listen(db,'do_orm_execute',legacy_only)
+    try:
+        result = eeg_raw_service.sweep_stale_eeg_raw(db,**kwargs)
+    finally:
+        event.remove(db,'do_orm_execute',legacy_only)
+    # v1 조회 격리 해제 후 집계는 v1+v2 EEG 전체로 복구한다.
+    for sid,pid in pairs:
+        if pid is None: continue
+        count=db.query(EEGRawChunk).filter_by(session_id=sid,participant_id=pid,signal_type='eeg',upload_status='uploaded').count()
+        for record in db.query(EEGRecord).filter_by(session_id=sid,participant_id=pid): record.file_count=count
+    db.commit()
+    return result

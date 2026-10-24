@@ -1,0 +1,53 @@
+{
+  "session_id": "00000000-0000-0000-0000-00000000000b",
+  "participant_id": "00000000-0000-0000-0000-000000000015",
+  "alias": "P01",
+  "as_of": "2026-10-24T03:00:00Z",
+  "manifest_revision": 2,
+  "manifest_state": "available",
+  "signals": [
+    {
+      "signal": "eeg",
+      "availability": "available",
+      "unavailable_reason": null,
+      "sample_count": {
+        "value": 900000,
+        "partial": false,
+        "unavailable_reason": null
+      }
+    },
+    {
+      "signal": "ppg",
+      "availability": "unsupported_client",
+      "unavailable_reason": "구 앱은 PPG 를 보내지 않음",
+      "sample_count": {
+        "value": null,
+        "partial": false,
+        "unavailable_reason": "미수집"
+      }
+    },
+    {
+      "signal": "acc",
+      "availability": "not_collected",
+      "unavailable_reason": null,
+      "sample_count": {
+        "value": null,
+        "partial": false,
+        "unavailable_reason": "미수집"
+      }
+    }
+  ],
+  "feature_windows": {
+    "value": 900,
+    "partial": false,
+    "unavailable_reason": null
+  },
+  "consent": "agreed",
+  "retention_deadline": "2026-10-24T03:00:00Z",
+  "allowed_formats": [
+    "csv",
+    "parquet"
+  ],
+  "band_used": true,
+  "default_view": "participant_player"
+}

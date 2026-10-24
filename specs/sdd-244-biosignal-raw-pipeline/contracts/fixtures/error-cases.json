@@ -1,0 +1,38 @@
+[
+  {
+    "id": "unsupported_schema",
+    "stage": "T03 decoder",
+    "mutation": "magic MBRAW999",
+    "expected": "unsupported_schema"
+  },
+  {
+    "id": "truncated_header",
+    "stage": "T03 decoder",
+    "mutation": "header_len exceeds payload",
+    "expected": "truncated_header"
+  },
+  {
+    "id": "checksum_mismatch",
+    "stage": "T03 decoder",
+    "mutation": "flip final byte",
+    "expected": "checksum_mismatch"
+  },
+  {
+    "id": "section_overlap",
+    "stage": "G1 DTO + T03 decoder",
+    "mutation": "packets.offset=0",
+    "expected": "invalid_sections"
+  },
+  {
+    "id": "nonfinite_sample",
+    "stage": "T03 decoder",
+    "mutation": "EEG float32 NaN",
+    "expected": "nonfinite_sample"
+  },
+  {
+    "id": "unknown_loss",
+    "stage": "G1 DTO",
+    "mutation": "unknown gap expected_samples=20",
+    "expected": "unknown_count_must_be_null"
+  }
+]

@@ -1,0 +1,68 @@
+{
+  "session": {
+    "session_id": "00000000-0000-0000-0000-00000000000b",
+    "class_id": "00000000-0000-0000-0000-000000000001",
+    "seq": 3,
+    "title": "아침 호흡 명상 3회차",
+    "scheduled_at": "2026-10-24T03:00:00Z",
+    "started_at": "2026-10-24T03:00:00Z",
+    "ended_at": "2026-10-24T03:00:00Z",
+    "status": "completed",
+    "participant_count": {
+      "value": 2,
+      "partial": false,
+      "unavailable_reason": null
+    },
+    "measured_count": {
+      "value": 1,
+      "partial": false,
+      "unavailable_reason": null
+    },
+    "estimated_bytes": {
+      "value": 1200000,
+      "partial": true,
+      "unavailable_reason": null
+    },
+    "exportable": true,
+    "exclusion_reason": null
+  },
+  "participants": {
+    "items": [
+      {
+        "participant_id": "00000000-0000-0000-0000-000000000015",
+        "alias": "P01",
+        "display_name": null,
+        "subject_type": "user",
+        "subject_id": "00000000-0000-0000-0000-00000000001f",
+        "attendance_status": "attended",
+        "band_used": true,
+        "measurement": "available",
+        "general_consent": "agreed",
+        "research_consent": "not_visible",
+        "retention_deadline": "2026-10-24T03:00:00Z",
+        "selectable": true,
+        "unselectable_reason": null
+      },
+      {
+        "participant_id": "00000000-0000-0000-0000-000000000016",
+        "alias": "P02",
+        "display_name": null,
+        "subject_type": "guest",
+        "subject_id": "00000000-0000-0000-0000-000000000020",
+        "attendance_status": "attended",
+        "band_used": false,
+        "measurement": "band_not_used",
+        "general_consent": "none",
+        "research_consent": "not_visible",
+        "retention_deadline": null,
+        "selectable": false,
+        "unselectable_reason": "band_not_used"
+      }
+    ],
+    "next_cursor": null,
+    "total": 2,
+    "total_reason": null,
+    "as_of": "2026-10-24T03:00:00Z",
+    "filters_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+}

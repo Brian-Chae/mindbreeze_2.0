@@ -56,3 +56,4 @@ freezegun==1.5.5  # 시간 고정 — 자정 경계 플레이크 제거 (test_mb
 weasyprint==68.1
 pypdf==6.18.1
 pywebpush==2.5.0
+jsonschema==4.26.0

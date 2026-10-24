@@ -647,6 +647,12 @@ class EEGFeatureItem(HRVMotionFeatures):
     cognitive_load: float | None = None
     emotional_stability: float | None = None
     hemispheric_balance: float | None = None
+    # SDD-244: 기존에 서버로 전달되지 않던 컬럼(모델에는 존재) — null 보존
+    total_neural_activity: float | None = None
+    faa: float | None = None
+    # SDD-244: 상세 feature(JSONL) 원천 추적 — 이 1Hz 값이 나온 emit 의 feature_id_alias / 알고리즘 버전
+    source_feature_alias: str | None = Field(default=None, max_length=64)
+    algorithm_version: str | None = Field(default=None, max_length=40)
     # 신호 품질 원시값(0~1)
     signal_quality: float | None = None
     # SDD-026: 실행 세그먼트 식별자(play/resume 마다 새 값). pause/resume window_index 충돌 방지.

@@ -87,6 +87,7 @@ jobs:
             backend/process_email_outbox_cron.py \
             backend/process_push_outbox_cron.py \
             backend/cleanup_data_exports_cron.py \
+            backend/process_data_export_outbox_cron.py \
             backend/cleanup_notifications_cron.py \
             backend/upgrade_narrative_cache_cron.py \
             backend/sweep_stale_eeg_raw_cron.py \

@@ -1,0 +1,35 @@
+{
+  "items": [
+    {
+      "subject_type": "user",
+      "subject_id": "00000000-0000-0000-0000-00000000001f",
+      "display_name": "회원1",
+      "email": "member1@example.invalid",
+      "role": "client",
+      "status": "active",
+      "org_names": [
+        "기관A"
+      ],
+      "member_type": "member",
+      "holdings": {
+        "sessions": {
+          "value": 3,
+          "partial": false,
+          "unavailable_reason": null
+        },
+        "measurements": {
+          "value": 2,
+          "partial": false,
+          "unavailable_reason": null
+        }
+      },
+      "contact_on_file": true,
+      "created_at": "2026-10-24T03:00:00Z"
+    }
+  ],
+  "next_cursor": null,
+  "total": 1,
+  "total_reason": null,
+  "as_of": "2026-10-24T03:00:00Z",
+  "filters_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}

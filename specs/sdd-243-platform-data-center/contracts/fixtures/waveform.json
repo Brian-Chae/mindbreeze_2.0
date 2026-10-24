@@ -1,0 +1,81 @@
+{
+  "session_id": "00000000-0000-0000-0000-00000000000b",
+  "participant_id": "00000000-0000-0000-0000-000000000015",
+  "signal_type": "eeg",
+  "availability": "available",
+  "unavailable_reason": null,
+  "manifest_revision": 2,
+  "from_us": "0",
+  "to_us": "10000000",
+  "method": "minmax_envelope",
+  "max_points": 2000,
+  "source_sample_count": 2500,
+  "returned_count": 3,
+  "nominal_rate_hz": 250.0,
+  "observed_rate_hz": 249.98,
+  "time_basis": "session_relative",
+  "t_us": [
+    "0",
+    "4000000",
+    "8000000"
+  ],
+  "channels": [
+    {
+      "name": "fp1",
+      "unit": "uV",
+      "values": null,
+      "min": [
+        -10.5,
+        -8.0,
+        null
+      ],
+      "max": [
+        11.0,
+        9.5,
+        null
+      ]
+    },
+    {
+      "name": "fp2",
+      "unit": "uV",
+      "values": null,
+      "min": [
+        -9.0,
+        -7.5,
+        null
+      ],
+      "max": [
+        10.0,
+        8.5,
+        null
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "stream_id": "S01",
+      "segment_id": "G01",
+      "point_start": 0,
+      "point_end": 2,
+      "first_sample_index": 0,
+      "end_sample_index_exclusive": 1500
+    },
+    {
+      "stream_id": "S01",
+      "segment_id": "G02",
+      "point_start": 2,
+      "point_end": 3,
+      "first_sample_index": 1750,
+      "end_sample_index_exclusive": 2500
+    }
+  ],
+  "gaps": [
+    {
+      "start_us": "6000000",
+      "end_us": "7000000",
+      "reason": "ble_disconnect",
+      "observed_or_estimated": "observed"
+    }
+  ],
+  "null_reasons": {}
+}

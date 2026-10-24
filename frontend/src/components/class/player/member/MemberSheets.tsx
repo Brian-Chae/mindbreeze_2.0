@@ -1,3 +1,4 @@
+import { displayedInteger } from '../../../../lib/biosignal/display-snapshot';
 import { isNativeApp } from '../../../../lib/native/platform';
 import { PermissionGuide } from '../../../native/permission-guide';
 // SDD-208 M3 — 회원 시트 본문 5종: 내 상태 · 채팅 · 조용한 신호 · 소리 · 기기. 시트 틀(PlayerSheet)은 공용이고 여기는 안쪽만 그린다.
@@ -75,7 +76,7 @@ function GroupRow({ group, props }: GroupRowProps) {
       <div className="mp-grp-tag"><b>{group.key}</b><span>{group.label}</span></div>
       {PLAYER_METRICS.filter((m) => m.group === group.key).map((metric) => {
         const raw = props.snapshot[metric.key];
-        const value = raw === null || !Number.isFinite(raw) ? null : Math.round(raw);
+        const value = displayedInteger(raw);
         const fraction = metricFraction(metric.key, value);
         return (
           <button

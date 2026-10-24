@@ -1,0 +1,737 @@
+{
+  "$defs": {
+    "AlgorithmSnapshot": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "algorithm_id": {
+          "minLength": 1,
+          "title": "Algorithm Id",
+          "type": "string"
+        },
+        "algorithm_version": {
+          "minLength": 1,
+          "title": "Algorithm Version",
+          "type": "string"
+        },
+        "parameters_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Parameters Hash",
+          "type": "string"
+        },
+        "parameters": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              }
+            ]
+          },
+          "title": "Parameters",
+          "type": "object"
+        },
+        "filter_version": {
+          "minLength": 1,
+          "title": "Filter Version",
+          "type": "string"
+        },
+        "build": {
+          "minLength": 1,
+          "title": "Build",
+          "type": "string"
+        }
+      },
+      "required": [
+        "algorithm_id",
+        "algorithm_version",
+        "parameters_hash",
+        "parameters",
+        "filter_version",
+        "build"
+      ],
+      "title": "AlgorithmSnapshot",
+      "type": "object"
+    },
+    "DisplayMetric": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "input_source": {
+          "enum": [
+            "local_ble",
+            "socket",
+            "remote_fallback",
+            "reconstructed",
+            "unavailable"
+          ],
+          "title": "Input Source",
+          "type": "string"
+        },
+        "event_age_ms": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Event Age Ms"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        },
+        "display_input": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Display Input"
+        },
+        "normalized_output": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Normalized Output"
+        },
+        "measured_at_us": {
+          "anyOf": [
+            {
+              "pattern": "^-?(0|[1-9][0-9]{0,18})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Measured At Us"
+        },
+        "source_feature_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source Feature Id"
+        },
+        "provenance_reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Provenance Reason"
+        },
+        "held": {
+          "title": "Held",
+          "type": "boolean"
+        },
+        "stale": {
+          "title": "Stale",
+          "type": "boolean"
+        },
+        "lead_off": {
+          "title": "Lead Off",
+          "type": "boolean"
+        },
+        "quality": {
+          "minLength": 1,
+          "title": "Quality",
+          "type": "string"
+        },
+        "null_reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Null Reason"
+        },
+        "normalization_source": {
+          "enum": [
+            "standard_model",
+            "cohort",
+            "b0",
+            "physical",
+            "unavailable"
+          ],
+          "title": "Normalization Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "input_source",
+        "event_age_ms",
+        "value",
+        "display_input",
+        "normalized_output",
+        "measured_at_us",
+        "source_feature_id",
+        "provenance_reason",
+        "held",
+        "stale",
+        "lead_off",
+        "quality",
+        "null_reason",
+        "normalization_source"
+      ],
+      "title": "DisplayMetric",
+      "type": "object"
+    },
+    "MindMetric": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "input_source": {
+          "enum": [
+            "local_ble",
+            "socket",
+            "remote_fallback",
+            "reconstructed",
+            "unavailable"
+          ],
+          "title": "Input Source",
+          "type": "string"
+        },
+        "event_age_ms": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Event Age Ms"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        },
+        "display_input": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Display Input"
+        },
+        "normalized_output": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Normalized Output"
+        },
+        "measured_at_us": {
+          "anyOf": [
+            {
+              "pattern": "^-?(0|[1-9][0-9]{0,18})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Measured At Us"
+        },
+        "source_feature_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source Feature Id"
+        },
+        "provenance_reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Provenance Reason"
+        },
+        "held": {
+          "title": "Held",
+          "type": "boolean"
+        },
+        "stale": {
+          "title": "Stale",
+          "type": "boolean"
+        },
+        "lead_off": {
+          "title": "Lead Off",
+          "type": "boolean"
+        },
+        "quality": {
+          "minLength": 1,
+          "title": "Quality",
+          "type": "string"
+        },
+        "null_reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Null Reason"
+        },
+        "normalization_source": {
+          "enum": [
+            "standard_model",
+            "cohort",
+            "b0",
+            "physical",
+            "unavailable"
+          ],
+          "title": "Normalization Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "input_source",
+        "event_age_ms",
+        "value",
+        "display_input",
+        "normalized_output",
+        "measured_at_us",
+        "source_feature_id",
+        "provenance_reason",
+        "held",
+        "stale",
+        "lead_off",
+        "quality",
+        "null_reason",
+        "normalization_source"
+      ],
+      "title": "MindMetric",
+      "type": "object"
+    },
+    "NormalizationMetric": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "M"
+        },
+        "s": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "S"
+        },
+        "direction": {
+          "anyOf": [
+            {
+              "enum": [
+                -1,
+                1
+              ],
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Direction"
+        },
+        "source": {
+          "enum": [
+            "standard_model",
+            "cohort",
+            "b0"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "b0_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "B0 Version"
+        },
+        "fallback_reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Fallback Reason"
+        }
+      },
+      "required": [
+        "m",
+        "s",
+        "direction",
+        "source",
+        "b0_version",
+        "fallback_reason"
+      ],
+      "title": "NormalizationMetric",
+      "type": "object"
+    },
+    "NormalizationSnapshot": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "model_id_alias": {
+          "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+          "title": "Model Id Alias",
+          "type": "string"
+        },
+        "version": {
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        },
+        "params_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Params Hash",
+          "type": "string"
+        },
+        "focus": {
+          "$ref": "#/$defs/NormalizationMetric"
+        },
+        "relaxation": {
+          "$ref": "#/$defs/NormalizationMetric"
+        },
+        "emotional": {
+          "$ref": "#/$defs/NormalizationMetric"
+        },
+        "formula_version": {
+          "minLength": 1,
+          "title": "Formula Version",
+          "type": "string"
+        },
+        "formula_constants": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Formula Constants",
+          "type": "object"
+        },
+        "source": {
+          "enum": [
+            "standard_model",
+            "cohort",
+            "b0",
+            "mixed"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "cached": {
+          "title": "Cached",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "model_id_alias",
+        "version",
+        "params_hash",
+        "focus",
+        "relaxation",
+        "emotional",
+        "formula_version",
+        "formula_constants",
+        "source",
+        "cached"
+      ],
+      "title": "NormalizationSnapshot",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "indices-v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "stream_alias": {
+      "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+      "title": "Stream Alias",
+      "type": "string"
+    },
+    "view_instance_alias": {
+      "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+      "title": "View Instance Alias",
+      "type": "string"
+    },
+    "view_kind": {
+      "enum": [
+        "participant_player",
+        "session_player"
+      ],
+      "title": "View Kind",
+      "type": "string"
+    },
+    "second_index": {
+      "minimum": 0,
+      "title": "Second Index",
+      "type": "integer"
+    },
+    "t_rel_ms": {
+      "title": "T Rel Ms",
+      "type": "number"
+    },
+    "play_group_id": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Play Group Id"
+    },
+    "window_index": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Window Index"
+    },
+    "displayed_at_us": {
+      "anyOf": [
+        {
+          "pattern": "^-?(0|[1-9][0-9]{0,18})$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Displayed At Us"
+    },
+    "render_status": {
+      "enum": [
+        "rendered",
+        "not_rendered",
+        "unavailable"
+      ],
+      "title": "Render Status",
+      "type": "string"
+    },
+    "focus": {
+      "$ref": "#/$defs/MindMetric"
+    },
+    "relaxation": {
+      "$ref": "#/$defs/MindMetric"
+    },
+    "emotional": {
+      "$ref": "#/$defs/MindMetric"
+    },
+    "bpm": {
+      "$ref": "#/$defs/DisplayMetric"
+    },
+    "respiration": {
+      "$ref": "#/$defs/DisplayMetric"
+    },
+    "hrv": {
+      "$ref": "#/$defs/DisplayMetric"
+    },
+    "hrv_metric": {
+      "const": "sdnn",
+      "title": "Hrv Metric",
+      "type": "string"
+    },
+    "normalization": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/NormalizationSnapshot"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "algorithm": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AlgorithmSnapshot"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "display_pipeline_version": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Display Pipeline Version"
+    },
+    "source": {
+      "enum": [
+        "displayed",
+        "reconstructed",
+        "report_aggregate",
+        "unavailable"
+      ],
+      "title": "Source",
+      "type": "string"
+    },
+    "display_match": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "const": "unverified",
+          "type": "string"
+        }
+      ],
+      "title": "Display Match"
+    },
+    "unavailable_reason": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Unavailable Reason"
+    }
+  },
+  "required": [
+    "schema_version",
+    "stream_alias",
+    "view_instance_alias",
+    "view_kind",
+    "second_index",
+    "t_rel_ms",
+    "play_group_id",
+    "window_index",
+    "displayed_at_us",
+    "render_status",
+    "focus",
+    "relaxation",
+    "emotional",
+    "bpm",
+    "respiration",
+    "hrv",
+    "hrv_metric",
+    "normalization",
+    "algorithm",
+    "display_pipeline_version",
+    "source",
+    "display_match",
+    "unavailable_reason"
+  ],
+  "title": "DisplaySnapshot",
+  "type": "object"
+}
