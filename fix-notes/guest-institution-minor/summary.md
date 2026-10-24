@@ -112,3 +112,14 @@ Brian의 2026-10-24 확정 D3에 따라 비회원 코드 입장과 장기 비회
 - 백엔드 전체: **3991 passed, 468 skipped, 75 warnings**, 377.49초. 실행: `DATABASE_URL=sqlite:// PYTHONPATH=/tmp/guest-minor-pg85-isolation:. /tmp/mb237-venv/bin/python -m pytest -q` (backend). PG 등 468 skip은 별도 PG 결과와 구분한다.
 - `git diff --check` 통과. 변경 범위는 PG 테스트와 이 수정 기록 3종이며 제품 서비스/회원 보관 코드는 그대로다. 같은 브랜치에 한글 커밋·push 후 PR #85 CI의 실제 head 결과를 최종 답변으로 보고한다.
 - 로그: `/tmp/guest-minor-pg85-red.log`, `/tmp/guest-minor-pg85-ci-final.log`, `/tmp/guest-minor-pg85-backend.log`. 중간 실패 로그는 `/tmp/guest-minor-pg85-all.log`, `/tmp/guest-minor-pg85-all-final.log`이다.
+
+## CI backend 지연의 별도 원인과 테스트 환경 격리
+
+- 첫 수정 head `682dbb0f`의 GitHub CI에서 `backend-pg-smoke` **455 passed, 21 deselected** 및 fixture 위반0건, frontend 성공을 확인했다(run `40063078884`). 다만 backend 관련139파일2526케이스는 장시간 실행 중이었다. 이전 head도21분 후11%에서 새 푸시로 취소된 이력이 있어 단순 대기와 원인 조사를 병행했다.
+- 리포트 테스트 fixture는 매 테스트 `generate_report_inline`에서 AI 서사 태스크를 예약한다. 공통 fixture의 FastAPI fakeredis는 Celery broker/result backend에 적용되지 않는다. `apply_async(retry=False)`도 Celery의 Redis 결과 백엔드 구독/재연결 재시도는 끄지 못한다.
+- 합성 단일 테스트 `test_class_report_narrative_edit.py::test_제어문자는_422` 대조: 닫힌 로컬 Redis(127.0.0.1:55486) 조건 **21.68초/1 passed**, 메모리 broker/result backend 조건 **2.55초/1 passed**(테스트 본문1.45초). faulthandler 스택은 `class_report_task.apply_async → backend.on_task_call → redis.consume_from → ensure/retry_over_time`을 확인했다. 원격/기존 Redis를 사용하지 않았다.
+- `.github/workflows/ci-feature.yml`의 backend **Test 단계에만** `CELERY_BROKER_URL=memory://`, `CELERY_RESULT_BACKEND=cache+memory://`를 추가했다. 제품 설정·eager·테스트 선택·단언·PG 잡은 변경하지 않았다. 이 추가 작업의 plan·verify는 수정 전 `bf353caf`에 기록했다.
+- 독립 설정 스크립트로 실제 Celery broker/backend 값과 `task_always_eager=False`, 앱 Redis 설정은 닫힌 테스트 포트 유지임을 확인했다. 독립 workflow diff 리뷰 **Important 0건**.
+- 닫힌 Redis + 메모리 broker/backend로 CI와 동일한 관련139파일 재실행: **2525 passed, 1 skipped, 61 warnings**, 285.04초. 테스트 선택·단언을 줄이지 않고 지연 구간을 통과했다.
+- workflow YAML 파싱 및 env 적용 범위 검증 통과: backend Test에만 두 값 존재, PG 잡에는 추가하지 않음.
+- 같은 격리 환경의 백엔드 전체 재검증: **3991 passed, 468 skipped, 75 warnings**, 404.17초(관련 스위트와 병렬 실행). 원래 전체와 통과/건너뜀 수가 일치한다. `git diff --check` 통과. 이후 같은 브랜치에 커밋·push하고 최종 head의 모든 CI 결과를 확인해 보고한다.

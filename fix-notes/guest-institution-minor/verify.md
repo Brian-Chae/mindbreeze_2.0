@@ -36,6 +36,7 @@
 ## CI backend 지연 — 수정 전 검증 계획
 
 - [x] 동일 테스트의 접속불가 Redis/메모리 대조 및 재시도 스택 확인.
-- [ ] CI Test 단계에만 broker/backend 환경을 지정하고 실제 제품 설정·eager·단언 유지 확인.
-- [ ] 접속불가 Redis + 메모리 broker/backend로 관련139파일 및 전체 pytest 통과.
-- [ ] 독립 리뷰·한글 커밋·동일 브랜치 push 후 최종 CI 결과 확인.
+- [x] CI Test 단계에만 broker/backend 환경을 지정하고 실제 제품 설정·eager·단언 유지 확인.
+- [x] 접속불가 Redis + 메모리 broker/backend로 관련139파일 및 전체 pytest 통과.
+- [x] 독립 리뷰 및 로컬 검증 기록 완료.
+- 이후 한글 커밋·동일 브랜치 push 후 최종 CI 결과는 실제 head 기준으로 최종 답변에서 보고한다.
