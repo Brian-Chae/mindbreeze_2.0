@@ -66,6 +66,7 @@ USER_OWNED: dict[str, tuple[str, ...]] = {
     "counselor_profiles": ("user_id",),
     "credentials": ("user_id",),
     "data_export_jobs": ("user_id",),
+    "data_export_previews": ("actor_id",),  # SDD-243 (targets 는 FK 자식으로 함께 삭제)
     "device_tokens": ("user_id",),
     "notification_outbox": ("user_id",),
     "notifications": ("user_id",),

@@ -58,7 +58,7 @@ def mk_session(db, host, cls=None, org=None, *, stype="meditation", status="comp
         id=uuid.uuid4(), type=stype, status=status, host_id=host.id, class_id=cls.id if cls else None,
         organization_id=org.id if org else None, organization_attribution_known=known, duration_min=30,
         started_at=start, ended_at=start + timedelta(minutes=30) if status == "completed" else None,
-        scheduled_at=start, seq=seq, is_template=template)
+        scheduled_at=start, seq=seq, is_template=template, host_state='assigned')  # PG ck_sessions_one_parent 호환
     db.add(session)
     db.flush()
     return session

@@ -123,6 +123,9 @@ class ExportPreview(Contract):
     estimated_bytes: int | None = None
     estimated_part_count: int | None = None
     extra_range_notices: list[str] = Field(default_factory=list)
+    exclusion_counts: dict[str, int] = Field(default_factory=dict)  # 사유별 전체 건수(exclusions 는 일부만 상세)
+    exclusions_truncated: bool = False
+    raw_bin: Literal['not_requested', 'included', 'redacted_packet_view'] = 'not_requested'
     policy_version: str
     policy_hash: str
     eligible: bool

@@ -128,7 +128,7 @@ def create_export(db: DBSession, user_id: UUID, session_id: UUID, participant_id
 
 
 def get_job(db: DBSession, export_id: UUID, user_id: UUID) -> DataExportJob:
-    job = db.query(DataExportJob).populate_existing().filter_by(id=export_id, user_id=user_id).first()
+    job = db.query(DataExportJob).populate_existing().filter_by(id=export_id, user_id=user_id, kind='single').first()
     if not job:
         raise HTTPException(404, '작업을 찾을 수 없습니다')
     # EXPORT-LOCK-007: 상태 조회(GET)는 읽기 전용 경로다. 매 폴링마다 User/Session/Participant
@@ -186,6 +186,11 @@ def _delete_object(db: DBSession, job: DataExportJob) -> None:
 
 
 def run_export(export_id: UUID, db: DBSession) -> None:
+    kind = db.query(DataExportJob.kind).filter(DataExportJob.id == export_id).scalar()
+    if kind == 'data_center':  # SDD-243 일괄 작업은 claim/lease/fencing 경로로 처리한다
+        from app.services import data_center_export
+        data_center_export.run_job(db, export_id)
+        return
     # 조건부 UPDATE는 중복 Celery 메시지가 같은 작업을 동시에 게시하지 못하게 한다.
     claimed = db.query(DataExportJob).filter(DataExportJob.id == export_id, DataExportJob.status == 'queued').update(
         {'status': 'preparing', 'updated_at': now()}, synchronize_session=False)
@@ -254,7 +259,7 @@ def run_export(export_id: UUID, db: DBSession) -> None:
 def cleanup_expired(db: DBSession) -> int:
     """주기 작업: 만료 객체 명시 삭제, 실패한 삭제는 다음 주기에 재시도."""
     count = 0
-    candidates = db.query(DataExportJob).filter(
+    candidates = db.query(DataExportJob).filter(DataExportJob.kind == 'single').filter(
         ((DataExportJob.expires_at <= now()) & (DataExportJob.status != 'expired')) |
         (DataExportJob.status.in_(('failed', 'cancelled', 'expired')) & DataExportJob.object_key.is_not(None)) |
         ((DataExportJob.status.in_(('queued', 'preparing'))) & (DataExportJob.updated_at <= now() - timedelta(minutes=30)))

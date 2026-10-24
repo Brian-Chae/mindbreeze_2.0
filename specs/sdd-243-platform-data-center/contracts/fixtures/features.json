@@ -2,6 +2,8 @@
   "session_id": "00000000-0000-0000-0000-00000000000b",
   "participant_id": "00000000-0000-0000-0000-000000000015",
   "as_of": "2026-10-24T03:00:00Z",
+  "detail_emit": "not_connected",
+  "time_origin": "first_feature_window",
   "algorithm_versions": {
     "eeg": "looxid-sdk-x"
   },

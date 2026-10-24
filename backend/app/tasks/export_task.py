@@ -15,4 +15,6 @@ def generate_data_export(export_id: str) -> None:
 @celery_app.task(name='tasks.cleanup_data_exports', soft_time_limit=240, time_limit=300)
 def cleanup_data_exports() -> int:
     with SessionLocal() as db:
+        from app.services import data_center_export
+        data_center_export.expire_jobs(db)  # SDD-243: 상태 전이만(객체 삭제는 승인된 cleanup 에서 별도)
         return cleanup_expired(db)

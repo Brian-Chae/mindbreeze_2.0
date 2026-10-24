@@ -74,6 +74,17 @@
 - indices: 당시 표시 snapshot 만 통과. 저장 이전/미수집은 6지표 모두 `value=null,status=display_history_missing,source=none`, `view=unavailable`. 서버는 feature 로 재구성하지 않으며 `reconstructed`/`report_aggregate` 를 당시 시계열에 섞지 않는다. HRV 는 `hrv_sdnn_ms`(SDNN) 고정.
 - spectrum: `from_us`·`to_us` 필수. 2~30초, 연속(gap 없음)·시간축 확인 구간만 계산(`dc-welch-v1`: Hann·Welch 2초·50% overlap·창별 평균 제거·one-sided, 단위 `uV2/Hz`). 불가 시 `computable=false` + `reason`(`range_too_short`/`range_too_long`/`gap_in_range`/`time_axis_unknown`/`insufficient_coverage`/`manifest_not_connected`/`signal_*`).
 
+## 구현 메모 (B05 preview·작업)
+
+- 흐름: `POST /exports/preview` → (토큰 `preview_token`, 서버 원장에 대상·revision·정책 고정, TTL `limits.preview_ttl_seconds`) → `POST /exports`(헤더 `Idempotency-Key` **필수**, 본문 `{preview_token, reason, reauth_proof}`) → 202 `DataCenterExportStatus`(queued) → `GET /exports/{id}` 폴링.
+- preview 규칙: 회차 시작시각+ID 오름차순. 회원·상담사 단위 50회차 초과는 413 `too_many_sessions`(`total/max/batches`) — `range.batch_index`(1=1~50, 2=51~100…) 또는 `range.session_ids`(≤50) 또는 기간으로 줄인다. 클래스 전체·회차 안 참여자는 수 제한 없음. 상담사 단위는 `range.date_from/date_to` 필수(422 `period_required`), 0건은 422 `no_sessions`. 미종료 회차는 `exclusions[reason=not_completed]`.
+- 제외 사유(`exclusions`, `exclusion_counts` 는 전체 건수, 상세 목록은 500건까지): `consent_missing`, `band_not_used`, `not_collected`, `unsupported_client`, `expired`(raw 90일 경과), `manifest_not_connected`(244 T06 미연결), … 대상이 하나도 없으면 `eligible=false`, `preview_token=''`.
+- manifest: `pending_upload` 는 409 `manifest_pending`, `partial` 은 409 `manifest_partial`(제외 범위 확인 후 `allow_partial=true` 로 재요청). `targets[].manifest_revision` 은 preview 시점 revision 으로 고정되며 후발 revision 은 자동 포함되지 않는다.
+- create 재검사(전체 차단): preview 토큰은 본인·역할·기관 일치 필수(아니면 404), 만료 409 `preview_expired`, 재사용 409 `preview_consumed`, 정책 변경 409 `policy_changed`, 대상 권한·동의 변경 409 `scope_changed`, 소속 해제 등은 resolve 단계 403/404. 같은 `Idempotency-Key`+같은 preview 는 같은 작업 반환, 다른 요청이면 409 `request_hash_mismatch`, 활성 작업 한도 초과는 429 `active_job_exists`(+`export_id`).
+- 재인증: `reauth_proof` 가 없거나 검증기가 연결되기 전이면 403 `reauth_required`/`reauth_unavailable`(fail closed). 검증 구현은 B07.
+- 상태: `queued → preparing → ready|ready_with_warnings|failed|expired`. ZIP 생성기(B06) 연결 전에는 worker 가 `failed(package_builder_unavailable)` 로 닫는다. `parts[]` 에 object key·URL·ZIP hash 는 없다. 단건 SDD-071 API 는 일괄 작업을 보지 못한다(404).
+- 목록/조회는 본인 작업 + 현재 선택한 기관 범위만(다른 기관을 선택하면 같은 관리자의 작업도 404). 플랫폼은 기관 관리자의 작업을 열 수 없다.
+
 ## 인가 요점 (FE 가 믿으면 안 되는 것)
 
 - `capabilities` 는 표시용. 모든 호출을 서버가 다시 거절한다. 탭 숨김은 보안이 아니다.
