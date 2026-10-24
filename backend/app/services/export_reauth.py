@@ -23,6 +23,7 @@ from app.services.data_center_policy import ResolvedContext, deny
 
 AUDIENCE = 'data_export'
 ISSUER = 'mb-data-center'
+SOCIAL_PROVIDERS = ('google', 'apple')
 
 
 class ProofVerifier(Protocol):
@@ -46,15 +47,33 @@ def _binding(request_hash: str | None, job_id: UUID | None) -> str:
     return f'rh:{request_hash}' if request_hash else f'job:{job_id}'
 
 
-def issue_export_proof(db: DBSession, context: ResolvedContext, body: ExportReauthRequest) -> ExportProof:
-    """비밀번호를 확인하고 5분(설정값) 증명을 발급한다. 소셜 계정은 별도 경로 연결 전까지 거절한다."""
-    binding = _binding(body.request_hash, body.job_id)
+def check_reauth_method(db: DBSession, context: ResolvedContext, body: ExportReauthRequest) -> User:
+    """계정 유형과 요청 방식이 맞는지 확인한다: 이메일=비밀번호, 소셜(구글·애플)=소셜 재로그인 proof."""
+    _binding(body.request_hash, body.job_id)
     user = db.query(User).populate_existing().filter(User.id == context.actor_id).first()
     if user is None or user.status != 'active':
         raise deny(403, 'actor_forbidden', '활성 계정만 재인증할 수 있습니다')
-    if user.auth_provider != 'email':
-        raise deny(403, 'reauth_method_unsupported', '이 계정 유형의 재인증은 아직 지원하지 않습니다')
-    if not verify_password(body.credential, user.password_hash):
+    if user.auth_provider == 'email':
+        if not body.credential:
+            raise deny(403, 'reauth_method_unsupported', '이메일 계정은 로그인 비밀번호로 확인해 주세요')
+    elif user.auth_provider in SOCIAL_PROVIDERS:
+        if not body.social_proof:
+            raise deny(403, 'reauth_method_unsupported', '소셜 계정은 해당 서비스로 다시 로그인해 본인을 확인해 주세요')
+    else:
+        raise deny(403, 'reauth_method_unsupported', '이 계정 유형의 재인증은 지원하지 않습니다')
+    return user
+
+
+def issue_export_proof(db: DBSession, context: ResolvedContext, body: ExportReauthRequest, *,
+                       social_verified: bool = False) -> ExportProof:
+    """5분(설정값) 증명을 발급한다. 이메일은 비밀번호를 확인하고, 소셜은 호출자가 소비·검증한
+    SDD-220 1회용 proof(purpose=data_export)를 받은 경우에만 발급한다(social_verified)."""
+    binding = _binding(body.request_hash, body.job_id)
+    user = check_reauth_method(db, context, body)
+    if user.auth_provider == 'email':
+        if not verify_password(body.credential or '', user.password_hash):
+            raise deny(403, 'reauth_invalid', '재인증이 실패했습니다')
+    elif not social_verified:
         raise deny(403, 'reauth_invalid', '재인증이 실패했습니다')
     now = datetime.now(timezone.utc)
     ttl = context.policy.reauth_ttl_seconds

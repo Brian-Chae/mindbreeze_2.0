@@ -8,6 +8,7 @@ export interface ReauthRequest {
   access_token?: string;
   id_token?: string;
   nonce?: string;
+  purpose?: 'account_deletion' | 'data_export';
 }
 
 export interface ReauthResponse {
@@ -18,6 +19,10 @@ export interface ReauthResponse {
 /** 탈퇴용 재인증 proof(5분, 1회용)를 받는다. */
 export const reauthForDeletion = (payload: ReauthRequest): Promise<ReauthResponse> =>
   apiClient.post('/users/me/reauth', payload);
+
+/** 데이터 센터 반출 본인 확인용 소셜 재인증 proof(5분, 1회용, purpose=data_export). */
+export const reauthForDataExport = (payload: Pick<ReauthRequest, 'provider' | 'access_token' | 'id_token' | 'nonce'>): Promise<ReauthResponse> =>
+  apiClient.post('/users/me/reauth', { ...payload, purpose: 'data_export' });
 
 /** 본인 계정 즉시 탈퇴. 비밀번호 또는 재인증 proof 중 하나를 보낸다. 성공 시 204. */
 export const deleteMyAccount = (body: { password?: string; reauth_proof?: string }): Promise<void> =>

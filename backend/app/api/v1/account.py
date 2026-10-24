@@ -6,6 +6,7 @@ named export: ``router``(로그인 필요), ``public_router``(비로그인). 등
 
 import logging
 import uuid
+from typing import Literal
 
 from fastapi import APIRouter, Depends, Request, Response, status
 from pydantic import BaseModel, EmailStr, Field, model_validator
@@ -35,6 +36,7 @@ class ReauthRequest(BaseModel):
     access_token: str | None = None
     id_token: str | None = None
     nonce: str | None = None
+    purpose: Literal["account_deletion", "data_export"] = "account_deletion"
 
     @model_validator(mode="after")
     def _one_method(self):
@@ -78,7 +80,7 @@ async def reauth(
     db: Session = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
-    """계정 삭제용 재인증 proof 발급(5분, 1회용, 본인 계정에만 유효)."""
+    """재인증 proof 발급(5분, 1회용, 본인 계정·요청한 purpose 에만 유효). purpose: 계정 삭제(기본) | 데이터 반출."""
     user = _load_user(db, current_user)
     google_token: str | None = None
     if req.password:
@@ -93,7 +95,9 @@ async def reauth(
             raise social_reauth_service.reauth_required()
         await social_reauth_service.verify_apple(db, redis, user, req.id_token, req.nonce)
     proof = await social_reauth_service.issue_proof(
-        redis, str(user.id), social_reauth_service.PURPOSE_ACCOUNT_DELETION, google_token=google_token
+        redis, str(user.id), req.purpose,
+        # 구글 토큰은 탈퇴 시 연결 해제(revoke)용이라 반출 확인에는 보관하지 않는다.
+        google_token=google_token if req.purpose == social_reauth_service.PURPOSE_ACCOUNT_DELETION else None,
     )
     return ReauthResponse(reauth_proof=proof, expires_in=social_reauth_service.PROOF_TTL_SECONDS)
 

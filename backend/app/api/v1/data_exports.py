@@ -108,8 +108,18 @@ async def export_reauth_endpoint(body: de.ExportReauthRequest, request: Request,
     await attempts.check_login_lock(key, redis)
     if body.scope_org_id is not None and body.scope_org_id != ctx.scope_org_id:
         raise policy_deny(409, 'org_scope_mismatch', '요청한 기관이 현재 선택한 기관과 다릅니다')
+    social_verified = False
     try:
-        proof = await run_in_threadpool(export_reauth.issue_export_proof, db, ctx, body)
+        await run_in_threadpool(export_reauth.check_reauth_method, db, ctx, body)
+        if body.social_proof:
+            # 소셜 제공자 재로그인을 거쳐 발급된 data_export 전용 1회용 proof 만 인정한다(원자 소비).
+            from app.services import social_reauth_service as sr
+            try:
+                await sr.consume_proof(redis, body.social_proof, str(ctx.actor_id), sr.PURPOSE_DATA_EXPORT)
+            except HTTPException:
+                raise policy_deny(403, 'reauth_invalid', '재인증이 만료되었거나 유효하지 않습니다')
+            social_verified = True
+        proof = await run_in_threadpool(export_reauth.issue_export_proof, db, ctx, body, social_verified=social_verified)
     except HTTPException as exc:
         if isinstance(exc.detail, dict) and exc.detail.get('code') == 'reauth_invalid':
             await attempts.record_failed_attempt(key, redis)

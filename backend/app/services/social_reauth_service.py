@@ -24,6 +24,8 @@ from app.services.signup_policy_service import api_error
 logger = logging.getLogger(__name__)
 
 PURPOSE_ACCOUNT_DELETION = "account_deletion"
+PURPOSE_DATA_EXPORT = "data_export"  # 데이터 센터 반출 본인 확인
+PURPOSES = (PURPOSE_ACCOUNT_DELETION, PURPOSE_DATA_EXPORT)
 PROOF_TTL_SECONDS = 300
 _KEY_PREFIX = "reauth:"
 
