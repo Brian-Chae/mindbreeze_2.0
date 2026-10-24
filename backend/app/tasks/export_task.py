@@ -3,7 +3,11 @@ from uuid import UUID
 
 from app.core.celery_app import celery_app
 from app.core.database import SessionLocal
+from app.services import data_center_runtime
 from app.services.export_service import cleanup_expired, run_export
+
+# SDD-243/244 통합: 워커 프로세스에도 실제 raw 반출 어댑터·측정 backend 를 등록한다(fake 로 폴백하지 않음).
+data_center_runtime.install()
 
 
 @celery_app.task(name='tasks.generate_data_export', soft_time_limit=1200, time_limit=1500)

@@ -358,3 +358,19 @@ class SDD243ArtifactSource:
                     yield [row.get(k) for k in first.header] if isinstance(row,dict) else row
         return self.package.RowArtifact(name='indices.csv',fmt='csv',rows=rows,header=first.header,
             kind='indices',schema_version='indices-v1',dictionary_key='indices',time_column='t_rel_ms')
+
+    def indices_sidecars(self, db, target, scope, policy):
+        """indices(+normalization/algorithm) 선택 시 flat indices.csv 외 증빙 파일(JSONL·display-status).
+
+        raw 신호 선택 여부와 무관하게 동작한다(indices-only 반출). 루트 meta/README/gap 은 raw 경로(`artifacts`)
+        또는 243 의 meta.json 이 담당하므로 중복 생성하지 않는다.
+        """
+        manifest=self._manifest(db,target,scope)
+        if manifest is None: return
+        selection=self.selection_provider(target,frozenset(('eeg','ppg','acc')),policy)
+        export_policy=self._policy(policy,('indices','normalization','algorithm'))
+        skipped=('/indices.csv','/indices.parquet','meta/export.json','README_ko.md','meta/gaps.jsonl')
+        for artifact in iter_export_artifacts(manifest,selection,export_policy,db=db,session_id=target.session_id,
+                participant_id=target.participant_id,reader=self.reader,policy_check=self.policy_check):
+            if artifact.metadata.path.endswith(skipped): continue
+            yield self._convert(artifact,manifest,None)

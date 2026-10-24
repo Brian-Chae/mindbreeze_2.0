@@ -767,6 +767,9 @@ def participant_artifacts(db: DBSession, request: dict, target: DataExportTarget
         if art is not None:
             yield art
             signals['indices'] = 'available'
+            sidecars = getattr(RAW_ARTIFACT_SOURCE, 'indices_sidecars', None)
+            if sidecars is not None:  # indices-only 포함 — 표시 증빙(JSONL·display-status·모델 스냅샷)
+                yield from sidecars(db, target, scope, policy)
         elif count:  # 저장 이전 표시값: 재구성하지 않고 null + display_history_missing
             rows_f, _, _ = _feature_rows(db, target.session_id, target.participant_id, False)
 
