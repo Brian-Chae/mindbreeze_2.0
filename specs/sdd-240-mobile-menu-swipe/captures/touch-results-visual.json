@@ -1,0 +1,40 @@
+{
+  "chrome": "155.0.8059.85",
+  "viewport": "390x844",
+  "counseling": false,
+  "checks": [
+    {
+      "name": "client: 안내 본문 대비 4.5 이상",
+      "background": "rgb(52, 51, 47)",
+      "text": "rgb(255, 255, 255)",
+      "contrast": 12.64610283007389
+    },
+    {
+      "name": "client: 시각 확인 후 이웃 이동"
+    },
+    {
+      "name": "counselor: 안내 본문 대비 4.5 이상",
+      "background": "rgb(52, 51, 47)",
+      "text": "rgb(255, 255, 255)",
+      "contrast": 12.64610283007389
+    },
+    {
+      "name": "counselor: 시각 확인 후 이웃 이동"
+    },
+    {
+      "name": "org_admin: 안내 본문 대비 4.5 이상",
+      "background": "rgb(52, 51, 47)",
+      "text": "rgb(255, 255, 255)",
+      "contrast": 12.64610283007389
+    },
+    {
+      "name": "org_admin: 시각 확인 후 이웃 이동"
+    },
+    {
+      "name": "실제 앱 JS 실행 오류 0"
+    }
+  ],
+  "pageErrors": [],
+  "unknownApi": [],
+  "synthetic": true
+}

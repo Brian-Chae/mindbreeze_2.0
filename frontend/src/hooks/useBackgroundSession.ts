@@ -1,3 +1,4 @@
+import { useMobileSwipeProtection } from './use-mobile-swipe-protection';
 // 수업 진행 중 백그라운드 세션 유지 (SDD-222 G5, T-J9)
 // active 인 동안 Android Foreground Service 를 켜 두고, false 전환·언마운트 시 반드시 종료한다.
 // iOS·웹은 background-session 이 no-op 이므로 호출해도 영향이 없다.
@@ -36,6 +37,7 @@ export function useBackgroundSession(
   microphone = false,
 ): UseBackgroundSessionResult {
   const [batteryGuideOpen, setBatteryGuideOpen] = useState(false);
+  useMobileSwipeProtection(() => active);
   const useMicrophone = role === 'host' && microphone;
   // 회원은 옵션 없이(undefined) 호출해 기존 동작을 그대로 유지한다.
   const startOptions = useMemo(

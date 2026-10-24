@@ -1,3 +1,4 @@
+import { useMobileMenuSwipe } from '../../hooks/use-mobile-menu-swipe';
 import { useState, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SidebarNav, { ICONS, StrokeIcon } from './SidebarNav';
@@ -46,6 +47,8 @@ export default function AppShell({
   const sessionInvites = useNotificationStore((s) => s.sessionInvites);
   // NAV-01: 하단 탭 홈 경로를 역할에 맞춘다(org_admin → /dashboard/org).
   const userRole = useAuthStore((s) => s.user?.role);
+  const userId = useAuthStore((s) => s.user?.id);
+  const swipe = useMobileMenuSwipe(userRole, drawerOpen || hideBottomTab, userId);
   const chatUnread = useChatStore((s) =>
     s.rooms.reduce((sum, r) => sum + (r.unread_count ?? 0), 0),
   );
@@ -223,7 +226,7 @@ export default function AppShell({
                   {sub}
                 </div>
               )}
-              <div className="mb-shell-title font-bold text-[18px] text-[#1F1F1F] tracking-tight mt-0.5 truncate">
+              <div data-mobile-swipe-title tabIndex={-1} className="mb-shell-title font-bold text-[18px] text-[#1F1F1F] tracking-tight mt-0.5 truncate">
                 {title}
               </div>
             </div>
@@ -238,10 +241,14 @@ export default function AppShell({
           </div>
         )}
 
-        <div
-          className={`flex-1 min-h-0 bg-[#F7F4F0] ${noScroll ? '' : 'overflow-auto'} ${contentPad} ${noBottomPad || hideBottomTab ? '' : 'pb-[calc(100px+env(safe-area-inset-bottom,0px))]'} md:pb-0`}
+        <div ref={swipe.containerRef} data-mobile-menu-swipe className="mobile-menu-swipe-viewport flex-1 min-h-0">
+        <div data-mobile-swipe-page
+          className={`mobile-menu-swipe-page flex-1 min-h-0 bg-[#F7F4F0] ${noScroll ? '' : 'overflow-auto'} ${contentPad} ${noBottomPad || hideBottomTab ? '' : 'pb-[calc(100px+env(safe-area-inset-bottom,0px))]'} md:pb-0`}
         >
           {children}
+        </div>
+        {swipe.showHint && <aside className="mobile-menu-swipe-hint" aria-label="메뉴 이동 안내"><p>본문을 좌우로 밀어 메뉴를 이동할 수 있어요</p><button type="button" onClick={swipe.dismissHint} aria-label="메뉴 이동 안내 닫기">닫기</button></aside>}
+        <p className="sr-only" role="status" aria-live="polite">{swipe.message}</p>
         </div>
       </section>
 

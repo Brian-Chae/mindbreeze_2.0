@@ -1,0 +1,16 @@
+{
+  "chrome": "155.0.8059.85",
+  "viewport": "390x844",
+  "counseling": false,
+  "checks": [
+    {
+      "name": "본문 padding 터치 1:1 추종"
+    },
+    {
+      "name": "실제 앱 JS 실행 오류 0"
+    }
+  ],
+  "pageErrors": [],
+  "unknownApi": [],
+  "synthetic": true
+}

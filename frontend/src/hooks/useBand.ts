@@ -1,3 +1,4 @@
+import { useMobileSwipeProtection } from './use-mobile-swipe-protection';
 import { isBleSupported } from '../lib/ble';
 /**
  * useBand — LINK BAND BLE 연결 → StreamProcessor → 1초 feature
@@ -382,6 +383,7 @@ export function useBand({
   const streamIdRef = useRef<string>('');
   const cursorReadyRef = useRef(false);
   const collectingRef = useRef(false);
+  useMobileSwipeProtection(() => enabled && collectingRef.current);
   const bandPowersRef = useRef<BandPowers | null>(null);
   const signalQualityRef = useRef<number | null>(null);
   const batteryRef = useRef<number | null>(null);
