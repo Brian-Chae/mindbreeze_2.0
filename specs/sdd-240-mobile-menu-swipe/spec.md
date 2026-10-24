@@ -1,6 +1,6 @@
 # SDD-240 — 모바일 메뉴 좌우 스와이프 이동
 
-- 상태: Stage ① Spec — 2026-10-24 Brian A안(메뉴 좌우 이동) 확정 · 시안 수정 승인 (제품 구현 승인 아님)
+- 상태: Stage ②~⑥ 진행 승인 — 2026-10-24 Brian 제품 구현 승인
 - 브랜치: `sdd/240-mobile-menu-swipe`
 - 작성일: 2026-10-24 · 코드 조사 기준: `c84d7660`
 - 요청: “아이폰에서 메뉴 좌우 스와이프 … 기획서만 먼저”, “안드로이드도 확인해서 알려줘.”
@@ -201,7 +201,16 @@ rg -n 'backButton|disableBackButtonHandler|allowsBackForwardNavigationGestures|O
 
 근거: `frontend/capacitor.config.ts:3-13`은 로컬 dist이며 원격 `server.url` 없음. `frontend/package.json:27-52`에 OTA updater 없음(`@capgo/capacitor-social-login`은 로그인용이며 OTA가 아님). `frontend/android/app/build.gradle:9-21`은 versionCode/versionName CI 주입과 기본값 2/1.0.0, `frontend/ios/App/App.xcodeproj/project.pbxproj:326-333,351-358`도 2/1.0.0이다. 이 값은 저장소 기본값이지 현재 스토어/설치 버전이 아니다. **다음 버전 번호는 추정해 쓰지 않으며 실제 릴리즈 시 확정한다.** 앱 업데이트 전 사용자는 기존 버튼 이동을 계속 사용한다.
 
-## 10. Brian 결정 항목 (비즈니스 관점)
+## 10. Brian 결정표 (2026-10-24 승인)
+
+- ① A안 확정: 본문 좌우 스와이프로 이웃 하단 메뉴 이동, 페이지 전환형 1:1 추종·스냅. B는 제외.
+- ② 회원·상담사·기관관리자 모두, iOS·Android 앱과 모바일 웹 모두 제공. 플랫폼관리자 제외.
+- ③ 수업 중·입력 포커스·시트/모달·미저장 편집·상세 화면 비활성. 추천 보호 정책 그대로 승인.
+- Stage ②~⑥ 단계 승인 없이 연속 진행. plan·verify는 구현 전 커밋·push. frontend만 구현, 앱 반영은 다음 앱 빌드.
+- 최종 작업 브랜치 push 및 develop 대상 PR 생성 승인. 머지·develop push·배포·네이티브 수정·앱 빌드 금지.
+- 아래 초안의 ‘제품 구현 승인 아님’, ‘후속 승인’, ‘범위 밖’은 최초 기획 당시 기록이며, 현재 실행 범위는 이 결정표와 plan·verify가 우선한다.
+
+### 최초 기획 결정 항목 (과거 기록)
 
 1. **2026-10-24 확정:** A(주요 메뉴 좌우 탐색). “화면 스크롤처럼 작동한다”는 피드백을 반영해 1:1 추종·이웃 화면·스냅 전환형 시안으로 수정한다. B는 이번 범위에서 제외한다.
 2. **첫 제공 대상:** 추천 상담사·회원·기관관리자 및 iOS·Android·모바일 웹 동시 / 일부 역할·플랫폼부터. 일부만이면 교육 안내가 달라진다.
