@@ -158,3 +158,29 @@ def db(app_client):
 @pytest.fixture
 def world(db):
     return build_world(db)
+
+
+def auth(user) -> dict:
+    from app.core.security import create_access_token
+
+    return {"Authorization": f"Bearer {create_access_token(str(user.id))}"}
+
+
+def add_features(db, session, part, n=3, *, quality="valid"):
+    from app.models.eeg_feature import EEGFeatureWindow
+
+    for i in range(n):
+        db.add(EEGFeatureWindow(id=uuid.uuid4(), session_id=session.id, participant_id=part.id, user_id=part.user_id,
+                                window_index=i, quality=quality, focus_index=1.5, device_timestamp_ms=1000.0 * i))
+    db.flush()
+
+
+def add_raw(db, session, part, sizes=(100, 200), *, status="uploaded", seconds=4):
+    from app.models.record import EEGRawChunk
+
+    for i, size in enumerate(sizes):
+        db.add(EEGRawChunk(id=uuid.uuid4(), session_id=session.id, participant_id=part.id, user_id=part.user_id,
+                           stream_id="default", chunk_index=i, start_ms=i * seconds * 1000.0,
+                           end_ms=(i + 1) * seconds * 1000.0, sample_rate=250, size_bytes=size, checksum="c" * 64,
+                           object_key=f"k/{uuid.uuid4().hex}", upload_status=status))
+    db.flush()

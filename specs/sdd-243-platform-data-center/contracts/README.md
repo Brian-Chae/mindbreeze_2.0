@@ -10,11 +10,11 @@
 |---|---|
 | prefix | `/api/v1/data-center` (일괄 반출 작업은 `/exports`, 기존 단건 SDD-071 API 는 그대로) |
 | 인증 | 로그인 JWT. 서버가 매 호출 DB 로 role/active/membership 재검증. `platform_admin` 또는 `org_admin` 만 |
-| 기관 선택 | GET 은 `?org_id=<uuid>`, POST 는 body `scope_org_id`. org_admin 이 기관 2개 이상이면 필수(없으면 400 `org_selection_required`), 1개면 생략 가능. 플랫폼은 선택(좁힘) |
+| 기관 선택 | GET·POST 모두 쿼리 `?org_id=<uuid>`(반출 요청 본문의 `scope_org_id` 는 쿼리와 같아야 하며 다르면 409 `org_scope_mismatch`). org_admin 이 기관 2개 이상이면 필수(없으면 400 `org_selection_required`), 1개면 생략 가능. 플랫폼은 선택(좁힘) |
 | 범위 밖 | 타기관·개인상담소·상담 세션·귀속 불명·소속해제·없는 ID 는 **모두 동일한 404** `{"detail":{"code":"not_found",...}}` (존재 유출 금지) |
 | 오류 형식 | `{"detail": {"code": "...", "message": "..."}}` — 400 `org_selection_required`, 403 `data_center_disabled`/`role_forbidden`/`actor_forbidden`/`no_admin_org`/`platform_only`/`research_forbidden`/`identity_forbidden`, 404 `not_found`, 413 `too_many_sessions`, 422 `reason_invalid`, 409 `preview_expired`/`request_hash_mismatch`, 429 `active_job_exists`(+`export_id`) |
 | 캐시 | 모든 응답 `Cache-Control: no-store`. URL·개인정보·파형을 localStorage/분석 로그에 저장 금지 |
-| 목록 | `limit`(기본 25, 최대 100) + `cursor`(안정 정렬 `(time,id)`, 필터 해시·as_of 바인딩). 필터가 바뀐 cursor 는 400 `cursor_mismatch` |
+| 목록 | `limit`(기본 25, 최대 100, 초과 422) + `cursor`(안정 정렬 `(time,id)`, 필터 해시·as_of 바인딩). 필터가 바뀐 cursor 는 400 `cursor_mismatch` |
 | 날짜 필터 | `date_from`/`date_to` = KST 달력일. 시작일 00:00 포함 ~ 종료일 다음날 00:00 미포함으로 서버가 UTC 변환 |
 | 0 vs 미집계 | `Count{value, partial, unavailable_reason}`. `value=null`은 미집계, `0` 은 확인된 0 |
 | 시각 | UTC ISO-8601. 상대시각 `*_us` 는 측정 시작 기준 int64 µs **10진 문자열** |
@@ -54,6 +54,14 @@
 | 23 | POST `/exports/{job_id}/download-url` | `PartDownload` | ✅ | ✅ | B07(미구현) |
 | 24 | GET `/download-audits` | `DataCenterPage[DownloadAuditItem]` | 전역 | 본인+현재 기관 | B07(미구현) |
 | 25 | POST `/export-reauth` | `ExportProof` | ✅ | ✅ | B07(미구현) |
+
+## 구현 메모 (B02)
+
+- `subjects`: `kind=user|guest`(생략 시 계정 → 비회원 순), `role`, `status`, `q`(이름·이메일·비회원 이름만; 연락처·생일 검색 없음). 비회원은 canonical 만(병합 원본 제외), 보유 건수는 병합 원본 합산.
+- `members/{id}/sessions?subject_type=user|guest`, `facilitators/{id}/sessions` 는 `date_from`·`date_to` 필수(상담사). 회차는 시작시각 오름차순, `batches` 는 서버 설정 `member_facilitator_max_sessions`(기본 50) 기준 묶음 안내.
+- `group_by` 는 예약 필드(현재 서버 정렬에 영향 없음, FE 가 불러온 페이지 안에서 그룹).
+- `measurement` 의 PPG/ACC 는 SDD-244 인수 전이라 `not_collected(storage_not_connected)`, `manifest_state=not_connected`. EEG raw 없이 feature 만 있으면 `availability=unknown(raw_absent_features_only)`.
+- 기관 참여자 표에서 `display_name` 은 `capabilities.can_export_identified` 가 true 일 때만 값, 연구 동의는 `not_visible`.
 
 ## 인가 요점 (FE 가 믿으면 안 되는 것)
 

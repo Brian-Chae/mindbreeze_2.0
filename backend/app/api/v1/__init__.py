@@ -16,6 +16,8 @@ from app.api.v1 import devices
 from app.api.v1 import account
 # SDD-237: 명상 클래스 회차 요약·상담사 클래스 리포트
 from app.api.v1 import class_summary
+# SDD-243: 플랫폼·기관 데이터 센터
+from app.api.v1 import data_center
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(auth.router)
@@ -52,6 +54,7 @@ router.include_router(devices.router)
 router.include_router(account.router)
 router.include_router(account.public_router)
 router.include_router(class_summary.router)
+router.include_router(data_center.router)
 
 # SDD-019: dev 전용 역할 시뮬레이션 라우터.
 # 프로덕션에는 엔드포인트 자체가 존재하지 않도록, 아래 두 조건이 모두 참일 때만 조건부 include.
