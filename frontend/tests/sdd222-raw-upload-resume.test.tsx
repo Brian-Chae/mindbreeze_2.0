@@ -26,7 +26,7 @@ vi.mock('../src/lib/native/app-lifecycle', () => ({
 vi.mock('../src/lib/api/eeg-raw', () => ({
   requestEegRawPresign: (...a: unknown[]) => h.presign(...a),
   putEegRawToPresignedUrl: vi.fn(async () => undefined),
-  ackEegRawChunks: vi.fn(async () => undefined),
+  ackEegRawChunks: vi.fn(async () => ({ session_id: 's1', chunks: [{ chunk_id: 'k', upload_status: 'uploaded', checksum: 'x', size_bytes: 4 }] })),
 }));
 vi.mock('../src/lib/api/class-flow', () => ({
   requestEntryEegRawPresign: vi.fn(), ackEntryEegRawChunks: vi.fn(),
@@ -58,7 +58,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   h.resume.length = 0; h.pause.length = 0; h.pending = [];
-  h.presign.mockReset().mockResolvedValue({ chunks: [{ chunk_id: 'k', upload_url: 'u' }] });
+  h.presign.mockReset().mockImplementation(async (_session, body) => ({ chunks: [{ chunk_id: 'k', upload_url: 'u', stream_id: body.chunks[0].stream_id, chunk_index: body.chunks[0].chunk_index }] }));
   Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
   root = createRoot(document.createElement('div'));
 });
@@ -88,7 +88,7 @@ describe('useEegRawUpload 복귀 처리', () => {
   it('V14 flush 진행 중 복귀 이벤트가 연속 발생해도 중복 전송하지 않는다', async () => {
     let release: () => void = () => undefined;
     h.presign.mockImplementation(() => new Promise((resolve) => {
-      release = () => resolve({ chunks: [{ chunk_id: 'k', upload_url: 'u' }] });
+      release = () => resolve({ chunks: [{ chunk_id: 'k', upload_url: 'u', stream_id: 'st', chunk_index: 0 }] });
     }));
     await act(async () => root.render(<Harness />));
     h.pending = [mkItem(0)] as never;
