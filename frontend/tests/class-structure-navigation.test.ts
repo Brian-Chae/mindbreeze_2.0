@@ -120,7 +120,7 @@ describe('새 내비게이션', () => {
     expect(html).not.toContain('href="/classes"');
     useAuthStore.setState({ user: previous });
   });
-  it('호스트 탭은 상담·채팅과 더보기 승인 배지를 표시한다', () => {
+  it('호스트 탭은 상담·채팅과 설정 링크를 표시한다', () => {
     useReportStore.setState({ pendingReview: 4 });
     useNotificationStore.setState({ unread: 2, sessionInvites: [{ sessionId: 's', notificationId: 'n' }] });
     const html = render(createElement(HostTabs, { onMoreClick: () => {}, role: 'org_admin' }));
@@ -128,9 +128,9 @@ describe('새 내비게이션', () => {
     expect(html).toContain('/counseling');
     expect(html).toContain('/chat');
     expect(html).not.toContain('href="/reports');
-    expect(html).toContain('더보기 5건');
+    expect(html).toContain('href="/settings"');
   });
-  it('회원 탭은 내 상담·리포트를 표시하고 채팅을 더보기로 옮긴다', () => {
+  it('회원 탭은 내 상담·리포트와 설정을 표시하고 채팅은 전체 메뉴로 연결한다', () => {
     const html = render(createElement(MemberTabs, { onMoreClick: () => {} }), '/app/counseling');
     expect(html).toContain('내 클래스');
     expect(html).toContain('상담');
@@ -212,31 +212,21 @@ describe('읽기 전용 셸 선택', () => {
 });
 
 
-describe('더보기 상호작용', () => {
-  it('더보기로 옮긴 경로는 더보기에 활성 상태를 표시한다', () => {
-    const html = render(createElement(HostTabs, { role: 'counselor', onMoreClick: () => {} }), '/reports');
+describe('설정 탭 활성 경계', () => {
+  it.each(['/reports', '/clients/person', '/chat/unknown'])('탭 밖 업무 경로 %s는 설정을 활성화하지 않는다', (path) => {
     const element = document.createElement('div');
-    element.innerHTML = html;
-    expect(element.querySelector('button')?.getAttribute('aria-current')).toBe('page');
-    expect(element.querySelector('nav')?.className).toContain('floating-bottom-nav');
+    element.innerHTML = render(createElement(HostTabs, { role: 'counselor' }), path);
+    if (path.startsWith('/chat')) expect(element.querySelector('[aria-current="page"]')?.getAttribute('href')).toBe('/chat');
+    else expect(element.querySelector('[aria-current="page"]')).toBeNull();
+    expect(element.querySelector('a[href="/settings"]')?.getAttribute('aria-current')).toBeNull();
+    expect(element.querySelectorAll('nav > a')).toHaveLength(5);
   });
-  it('회원 채팅에서는 내 상담 탭 대신 더보기가 활성화된다', () => {
-    const html = render(createElement(MemberTabs, { onMoreClick: () => {} }), '/app/chat/lucy');
+  it('회원 숨겨진 대화에서도 설정 오활성 없이 회원 설정을 제공한다', () => {
     const element = document.createElement('div');
-    element.innerHTML = html;
-    const buttons = element.querySelectorAll('button');
-    expect(buttons[buttons.length - 1].getAttribute('aria-current')).toBe('page');
-    expect(element.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
-    expect([...buttons].filter((button) => button.getAttribute('aria-current') === 'page')).toHaveLength(1);
+    element.innerHTML = render(createElement(MemberTabs), '/app/chat/lucy');
+    expect(element.querySelector('[aria-current="page"]')).toBeNull();
+    expect(element.querySelector('a[href="/app/profile"]')).not.toBeNull();
   });
-});
-
-it.each(['counselor', 'org_admin'] as const)('%s 회원 상세에서는 모바일 더보기가 활성화된다', (role) => {
-  const html = render(createElement(HostTabs, { role, onMoreClick: () => {} }), '/clients/person');
-  const element = document.createElement('div');
-  element.innerHTML = html;
-  expect(element.querySelector('nav > button')?.getAttribute('aria-current')).toBe('page');
-  expect(element.querySelectorAll('nav > a').length).toBeLessThanOrEqual(4);
 });
 
 describe('역할 경계 회귀', () => {

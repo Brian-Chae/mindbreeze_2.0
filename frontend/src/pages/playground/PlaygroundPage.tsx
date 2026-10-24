@@ -5,6 +5,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AppShell from '../../components/layout/AppShell';
+import ClientShell from '../../components/client/ClientShell';
+import { Link } from 'react-router-dom';
 import { AccPanel } from '../../components/playground/AccPanel';
 import { CalibrationPanel } from '../../components/playground/CalibrationPanel';
 import { ConnectionPanel } from '../../components/playground/ConnectionPanel';
@@ -38,6 +40,8 @@ export default function PlaygroundPage() {
 
 function PlaygroundView({ useMock, onToggleMock }: { useMock: boolean; onToggleMock: () => void }) {
   const user = useAuthStore((s) => s.user);
+  const Shell = user?.role === 'client' ? ClientShell : AppShell;
+  const settingsPath = user?.role === 'client' ? '/app/profile' : '/settings';
   const isPlatformAdmin = import.meta.env.DEV && user?.role === 'platform_admin';
   const band = useBand({
     sessionId: 'playground-observation',
@@ -124,8 +128,9 @@ function PlaygroundView({ useMock, onToggleMock }: { useMock: boolean; onToggleM
       : null;
 
   return (
-    <AppShell title="체험 및 밴드 신호">
+    <Shell title="체험 및 밴드 신호">
       <div className="mx-auto max-w-6xl space-y-4">
+        <Link to={settingsPath} className="inline-flex min-h-11 items-center gap-2 font-semibold text-[#5B1A8A]">← 설정으로 돌아가기</Link>
         {import.meta.env.DEV && !isPlatformAdmin && (
           <div className="rounded-2xl border border-[#EFEFEF] bg-white px-4 py-3">
             <p className="text-xs text-[#6F6F6F]">
@@ -212,6 +217,6 @@ function PlaygroundView({ useMock, onToggleMock }: { useMock: boolean; onToggleM
           onTogglePause={() => setDebugPaused((v) => !v)}
         />}
       </div>
-    </AppShell>
+    </Shell>
   );
 }

@@ -1,0 +1,284 @@
+{
+  "fixture": true,
+  "checks": [
+    {
+      "role": "client",
+      "width": 390,
+      "groups": 5,
+      "notificationSwitches": 6,
+      "overflow": false,
+      "dimensions": {
+        "width": 88,
+        "height": 44,
+        "track": {
+          "x": 269,
+          "y": 768.625,
+          "width": 52,
+          "height": 32,
+          "top": 768.625,
+          "right": 321,
+          "bottom": 800.625,
+          "left": 269
+        }
+      },
+      "playgroundRoundTrip": true,
+      "noInitialPreferenceWrite": true
+    },
+    {
+      "role": "counselor",
+      "width": 390,
+      "groups": 5,
+      "notificationSwitches": 6,
+      "overflow": false,
+      "dimensions": {
+        "width": 88,
+        "height": 44,
+        "track": {
+          "x": 269,
+          "y": 768.625,
+          "width": 52,
+          "height": 32,
+          "top": 768.625,
+          "right": 321,
+          "bottom": 800.625,
+          "left": 269
+        }
+      },
+      "playgroundRoundTrip": true,
+      "noInitialPreferenceWrite": true
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "groups": 5,
+      "notificationSwitches": 6,
+      "overflow": false,
+      "dimensions": {
+        "width": 88,
+        "height": 44,
+        "track": {
+          "x": 269,
+          "y": 768.625,
+          "width": 52,
+          "height": 32,
+          "top": 768.625,
+          "right": 321,
+          "bottom": 800.625,
+          "left": 269
+        }
+      },
+      "playgroundRoundTrip": true,
+      "noInitialPreferenceWrite": true
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "groups": 5,
+      "notificationSwitches": 6,
+      "overflow": false,
+      "dimensions": {
+        "width": 88,
+        "height": 44,
+        "track": {
+          "x": 269,
+          "y": 768.625,
+          "width": 52,
+          "height": 32,
+          "top": 768.625,
+          "right": 321,
+          "bottom": 800.625,
+          "left": 269
+        }
+      },
+      "playgroundRoundTrip": true,
+      "noInitialPreferenceWrite": true
+    },
+    {
+      "role": "client",
+      "width": 1440,
+      "groups": 5,
+      "notificationSwitches": 6,
+      "overflow": false,
+      "dimensions": {
+        "width": 88,
+        "height": 44,
+        "track": {
+          "x": 1071,
+          "y": 704.25,
+          "width": 52,
+          "height": 32,
+          "top": 704.25,
+          "right": 1123,
+          "bottom": 736.25,
+          "left": 1071
+        }
+      },
+      "playgroundRoundTrip": true,
+      "noInitialPreferenceWrite": true
+    },
+    {
+      "role": "counselor",
+      "width": 1440,
+      "groups": 5,
+      "notificationSwitches": 6,
+      "overflow": false,
+      "dimensions": {
+        "width": 88,
+        "height": 44,
+        "track": {
+          "x": 1071,
+          "y": 704.25,
+          "width": 52,
+          "height": 32,
+          "top": 704.25,
+          "right": 1123,
+          "bottom": 736.25,
+          "left": 1071
+        }
+      },
+      "playgroundRoundTrip": true,
+      "noInitialPreferenceWrite": true
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "groups": 5,
+      "notificationSwitches": 6,
+      "overflow": false,
+      "dimensions": {
+        "width": 88,
+        "height": 44,
+        "track": {
+          "x": 1071,
+          "y": 704.25,
+          "width": 52,
+          "height": 32,
+          "top": 704.25,
+          "right": 1123,
+          "bottom": 736.25,
+          "left": 1071
+        }
+      },
+      "playgroundRoundTrip": true,
+      "noInitialPreferenceWrite": true
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "groups": 5,
+      "notificationSwitches": 6,
+      "overflow": false,
+      "dimensions": {
+        "width": 88,
+        "height": 44,
+        "track": {
+          "x": 1071,
+          "y": 704.25,
+          "width": 52,
+          "height": 32,
+          "top": 704.25,
+          "right": 1123,
+          "bottom": 736.25,
+          "left": 1071
+        }
+      },
+      "playgroundRoundTrip": true,
+      "noInitialPreferenceWrite": true
+    }
+  ],
+  "pageErrors": [],
+  "externalRequests": [
+    "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css",
+    "https://fonts.googleapis.com/css2",
+    "https://accounts.google.com/gsi/client",
+    "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css",
+    "https://fonts.googleapis.com/css2",
+    "https://accounts.google.com/gsi/client",
+    "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css",
+    "https://fonts.googleapis.com/css2",
+    "https://accounts.google.com/gsi/client",
+    "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css",
+    "https://fonts.googleapis.com/css2",
+    "https://accounts.google.com/gsi/client",
+    "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css",
+    "https://fonts.googleapis.com/css2",
+    "https://accounts.google.com/gsi/client",
+    "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css",
+    "https://fonts.googleapis.com/css2",
+    "https://accounts.google.com/gsi/client",
+    "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css",
+    "https://fonts.googleapis.com/css2",
+    "https://accounts.google.com/gsi/client",
+    "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css",
+    "https://fonts.googleapis.com/css2",
+    "https://accounts.google.com/gsi/client",
+    "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css",
+    "https://fonts.googleapis.com/css2",
+    "https://accounts.google.com/gsi/client",
+    "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css",
+    "https://fonts.googleapis.com/css2",
+    "https://accounts.google.com/gsi/client"
+  ],
+  "writes": [
+    {
+      "role": "client",
+      "width": 390,
+      "endpoint": "/auth/refresh",
+      "method": "POST"
+    },
+    {
+      "role": "client",
+      "width": 390,
+      "endpoint": "/auth/refresh",
+      "method": "POST"
+    },
+    {
+      "role": "counselor",
+      "width": 390,
+      "endpoint": "/auth/refresh",
+      "method": "POST"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "endpoint": "/auth/refresh",
+      "method": "POST"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "endpoint": "/auth/refresh",
+      "method": "POST"
+    },
+    {
+      "role": "client",
+      "width": 1440,
+      "endpoint": "/auth/refresh",
+      "method": "POST"
+    },
+    {
+      "role": "client",
+      "width": 1440,
+      "endpoint": "/auth/refresh",
+      "method": "POST"
+    },
+    {
+      "role": "counselor",
+      "width": 1440,
+      "endpoint": "/auth/refresh",
+      "method": "POST"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "endpoint": "/auth/refresh",
+      "method": "POST"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "endpoint": "/auth/refresh",
+      "method": "POST"
+    }
+  ]
+}

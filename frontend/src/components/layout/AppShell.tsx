@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import SidebarNav, { ICONS, StrokeIcon } from './SidebarNav';
 import MobileDrawer from './MobileDrawer';
 import BottomTabBar from './BottomTabBar';
+import { isCounselingEnabled } from '../../lib/feature-flags';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { useChatStore } from '../../stores/chatStore';
 import { useReportStore } from '../../stores/reportStore';
@@ -53,6 +54,7 @@ export default function AppShell({
     s.rooms.reduce((sum, r) => sum + (r.unread_count ?? 0), 0),
   );
   const reportPendingReview = useReportStore((s) => s.pendingReview);
+  const menuBadge = sessionInvites.length + (userRole !== 'platform_admin' && isCounselingEnabled() ? reportPendingReview : 0);
   const refreshReports = useReportStore((s) => s.refresh);
 
   // Socket.IO 실시간 알림 리스너 + 최초 fetch
@@ -105,11 +107,12 @@ export default function AppShell({
       <header className="mb-shell-topbar md:hidden h-14 flex items-center justify-between px-4 border-b border-[#EFEFEF] bg-white shrink-0">
         <button
           type="button"
-          aria-label="메뉴 열기"
+          aria-label={menuBadge ? `메뉴 열기 ${menuBadge}건` : '메뉴 열기'}
           onClick={() => setDrawerOpen(true)}
-          className="w-10 h-10 flex items-center justify-center -ml-2 text-[#1F1F1F]"
+          className="relative min-w-11 min-h-11 flex items-center justify-center -ml-2 text-[#1F1F1F]"
         >
           <StrokeIcon d={ICONS.hamburger} size={22} />
+          {menuBadge > 0 && <span aria-hidden="true" className="absolute top-0 right-0 min-w-[18px] h-[18px] px-1 rounded-full bg-[#B3264B] text-white text-[10px] font-bold">{menuBadge > 9 ? '9+' : menuBadge}</span>}
         </button>
         <button
           type="button"
@@ -253,7 +256,7 @@ export default function AppShell({
       </section>
 
       <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-      {!hideBottomTab && <BottomTabBar onMoreClick={() => setDrawerOpen(true)} role={userRole} />}
+      {!hideBottomTab && <BottomTabBar role={userRole} />}
     </div>
   );
 }

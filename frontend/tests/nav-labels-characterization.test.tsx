@@ -166,8 +166,8 @@ describe('FE-NAV-02 상담사·관리자 하단 탭 라벨·경로 골든', () =
     it(`role=${role ?? '미지정'}`, async () => {
       await renderLayoutTabs(role);
       const links = Array.from(container.querySelectorAll('nav > a')).map((a): Entry => [a.getAttribute('href') ?? '', tabLabel(a)]);
-      expect(links).toEqual(expected);
-      expect(container.querySelector('nav > button')?.textContent).toBe('더보기');
+      expect(links).toEqual([...expected, [role === 'client' ? '/app/profile' : '/settings', '설정']]);
+      expect(container.querySelector('nav > button')).toBeNull();
     });
   }
 });
@@ -176,8 +176,8 @@ describe('FE-NAV-03 회원 하단 탭 라벨·이동 골든', () => {
   it('버튼 라벨과 이동 경로', async () => {
     await renderClientTabs();
     const buttons = Array.from(container.querySelectorAll('nav > a, nav > button'));
-    expect(buttons.map(tabLabel)).toEqual(['홈', '내 클래스', '상담', '리포트', '더보기']);
-    const expectedPaths = ['/app', '/app/classes', '/app/counseling', '/app/reports'];
+    expect(buttons.map(tabLabel)).toEqual(['홈', '내 클래스', '상담', '리포트', '설정']);
+    const expectedPaths = ['/app', '/app/classes', '/app/counseling', '/app/reports', '/app/profile'];
     for (const [index, path] of expectedPaths.entries()) {
       await act(async () => { buttons[index].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); });
       expect(container.querySelector('[data-testid="path"]')?.textContent).toBe(path);
@@ -221,7 +221,7 @@ describe('FE-NAV-05 배지 현행값', () => {
     await renderSidebar({ role: 'counselor', notificationBadge: 4 });
     expect(sidebarBadges()).toEqual({ 홈: null, '명상 클래스': null, 회원: null, 상담: null, 채팅: null, 리포트: '2', 플레이그라운드: null, 알림: '4', 설정: null });
   });
-  it('상담사·관리자 하단 탭: 승인 대기·공통 알림은 더보기에 합산한다', async () => {
+  it('상담사·관리자 하단 탭: 업무 배지를 설정에 붙이지 않는다', async () => {
     state.sessionInvites = [1, 2, 3];
     state.notificationUnread = 4;
     state.chatUnread = 4;
@@ -229,21 +229,21 @@ describe('FE-NAV-05 배지 현행값', () => {
     state.reportUnread = 7;
     state.pendingReview = 2;
     await renderLayoutTabs('counselor');
-    expect(tabBadges()).toEqual({ 홈: null, 클래스: null, 상담: null, 대화: '4', 더보기: '5' });
-    expect(container.querySelector('nav > button')?.getAttribute('aria-label')).toBe('더보기 5건');
+    expect(tabBadges()).toEqual({ 홈: null, 클래스: null, 상담: null, 대화: '4', 설정: null });
+    expect(container.querySelector('a[href="/settings"]')?.getAttribute('aria-label')).toBe('설정');
     await renderLayoutTabs('client');
-    expect(tabBadges()).toEqual({ 홈: null, '내 클래스': null, 상담: null, 리포트: '7', 더보기: '9+' });
+    expect(tabBadges()).toEqual({ 홈: null, '내 클래스': null, 상담: null, 리포트: '7', 설정: null });
     state.sessionInvites = new Array(10).fill(0);
     await renderLayoutTabs('org_admin');
-    expect(tabBadges()).toEqual({ 홈: null, 클래스: null, 상담: null, 대화: '4', 더보기: '9+' });
-    expect(container.querySelector('nav > button')?.getAttribute('aria-label')).toBe('더보기 12건');
+    expect(tabBadges()).toEqual({ 홈: null, 클래스: null, 상담: null, 대화: '4', 설정: null });
+    expect(container.querySelector('a[href="/settings"]')?.getAttribute('aria-label')).toBe('설정');
     state.sessionInvites = [];
     state.notificationUnread = 0;
     state.pendingReview = 0;
     await renderLayoutTabs('org_admin');
-    expect(tabBadges()).toEqual({ 홈: null, 클래스: null, 상담: null, 대화: '4', 더보기: null });
+    expect(tabBadges()).toEqual({ 홈: null, 클래스: null, 상담: null, 대화: '4', 설정: null });
   });
-  it('회원 하단 탭: 리포트는 미열람, 더보기는 채팅·루시·공통 알림 합산', async () => {
+  it('회원 하단 탭: 리포트는 미열람, 설정은 업무 배지 없음', async () => {
     state.sessionInvites = [1];
     state.chatUnread = 4;
     state.agentUnread = 3;
@@ -252,7 +252,7 @@ describe('FE-NAV-05 배지 현행값', () => {
     const badges = Object.fromEntries(
       Array.from(container.querySelectorAll('nav > a, nav > button')).map((el) => [tabLabel(el), badgeOf(el)]),
     );
-    expect(badges).toEqual({ 홈: null, '내 클래스': null, 상담: null, 리포트: '9+', 더보기: '8' });
+    expect(badges).toEqual({ 홈: null, '내 클래스': null, 상담: null, 리포트: '9+', 설정: null });
   });
 });
 
@@ -260,6 +260,7 @@ describe('FE-NAV-05 배지 현행값', () => {
 function NavigationWithMore({ member = false }: { member?: boolean }) {
   const [open, setOpen] = useState(false);
   return <>
+    <button aria-label="메뉴 열기" onClick={() => setOpen(true)}>전체 메뉴</button>
     {member
       ? <ClientBottomTabBar onMoreClick={() => setOpen(true)} />
       : <LayoutBottomTabBar role="counselor" onMoreClick={() => setOpen(true)} />}
@@ -268,9 +269,9 @@ function NavigationWithMore({ member = false }: { member?: boolean }) {
   </>;
 }
 
-describe('더보기 실제 접근과 역할별 리포트 배지', () => {
+describe('전체 메뉴 실제 접근과 역할별 리포트 배지', () => {
   for (const member of [false, true]) {
-    it(`${member ? '회원' : '호스트'}: 더보기에서 리포트·알림·설정으로 이동하고 드로어를 닫는다`, async () => {
+    it(`${member ? '회원' : '호스트'}: 전체 메뉴에서 리포트·알림·설정으로 이동하고 드로어를 닫는다`, async () => {
       state.pendingReview = 2;
       state.reportUnread = 5;
       state.notificationUnread = 3;
@@ -279,7 +280,7 @@ describe('더보기 실제 접근과 역할별 리포트 배지', () => {
         : [['/reports', '리포트'], ['/notifications', '알림'], ['/settings', '설정']];
       await act(async () => root.render(<MemoryRouter><NavigationWithMore member={member} /></MemoryRouter>));
       for (const [path, label] of destinations) {
-        const more = container.querySelector('nav > button[aria-label^="더보기"]');
+        const more = container.querySelector('button[aria-label="메뉴 열기"]');
         expect(more).not.toBeNull();
         await act(async () => more!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
         const drawer = container.querySelector('aside[aria-hidden="false"]');

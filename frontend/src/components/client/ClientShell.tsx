@@ -7,7 +7,7 @@ import { useState, useEffect, type ReactNode } from 'react';
 import { useAgentStore } from '../../stores/agent-store';
 import { useAuthStore } from '../../stores/authStore';
 import { getUnreadCount } from '../../lib/api/agent';
-import { isAiEnabled } from '../../lib/feature-flags';
+import { isAiEnabled, isCounselingEnabled } from '../../lib/feature-flags';
 import { useNavigate, useLocation } from 'react-router-dom';
 import SidebarNav, { ICONS, StrokeIcon } from '../layout/SidebarNav';
 import MobileDrawer from '../layout/MobileDrawer';
@@ -61,6 +61,7 @@ export default function ClientShell({
     s.rooms.reduce((sum, r) => sum + (r.unread_count ?? 0), 0),
   );
   const reportUnread = useReportStore((s) => s.unread);
+  const menuBadge = sessionInvites.length + (isCounselingEnabled() ? chatUnread + agentUnread : 0);
   const refreshReports = useReportStore((s) => s.refresh);
 
   useEffect(() => { useAgentStore.getState().setUnread(0); }, [userId]);
@@ -128,11 +129,12 @@ export default function ClientShell({
       <header className="mb-shell-topbar md:hidden h-14 flex items-center justify-between px-4 border-b border-[#EFEFEF] bg-white shrink-0">
         <button
           type="button"
-          aria-label="메뉴 열기"
+          aria-label={menuBadge ? `메뉴 열기 ${menuBadge}건` : '메뉴 열기'}
           onClick={() => setDrawerOpen(true)}
-          className="w-10 h-10 flex items-center justify-center -ml-2 text-[#1F1F1F]"
+          className="relative min-w-11 min-h-11 flex items-center justify-center -ml-2 text-[#1F1F1F]"
         >
           <StrokeIcon d={ICONS.hamburger} size={22} />
+          {menuBadge > 0 && <span aria-hidden="true" className="absolute top-0 right-0 min-w-[18px] h-[18px] px-1 rounded-full bg-[#B3264B] text-white text-[10px] font-bold">{menuBadge > 9 ? '9+' : menuBadge}</span>}
         </button>
         <button
           type="button"
@@ -269,7 +271,7 @@ export default function ClientShell({
       </section>
 
       <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} role="client" />
-      {!hideBottomTab && <BottomTabBar onMoreClick={() => setDrawerOpen(true)} />}
+      {!hideBottomTab && <BottomTabBar />}
     </div>
   );
 }

@@ -80,6 +80,7 @@ const MeasurementGuidePage = lazy(() => import('./pages/measurement-guide-page')
 const AccountDeletionPage = lazy(() => import('./pages/account-deletion-page'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const NotificationCenterPage = lazy(() => import('./pages/notifications/NotificationCenterPage'));
+const ProfessionalProfilePage = lazy(() => import('./pages/settings/professional-profile-page'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const ClientAppPage = lazy(() => import('./pages/client/ClientAppPage'));
 const HostClassDetailPage = lazy(() => import('./pages/classes/host-class-detail-page').then((module) => ({ default: module.HostClassDetailPage })));
@@ -322,6 +323,7 @@ const router = createBrowserRouter(
         />
         <Route path="/notifications" element={<RoleGuard><NotificationCenterPage /></RoleGuard>} />
         <Route path="/settings" element={<RoleGuard><SettingsPage /></RoleGuard>} />
+        <Route path="/profile/professional" element={<RoleGuard role={['counselor', 'org_admin']}><ProfessionalProfilePage /></RoleGuard>} />
         <Route path="/playground" element={<RoleGuard><PlaygroundPage /></RoleGuard>} />
         {/* 정의되지 않은 경로는 전역 404 화면으로 처리한다 */}
         <Route path="*" element={<NotFoundPage />} />

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, useEffect } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 const calls = vi.hoisted(() => ({ upload: vi.fn(), raw: vi.fn(), queue: vi.fn(), socket: vi.fn(() => ({ connected: false, on: vi.fn(), off: vi.fn(), emit: vi.fn() })), toggle: vi.fn() }));
@@ -57,7 +58,7 @@ import { useMeditationSessionStore } from '../src/stores/useMeditationSessionSto
 it('운영 화면은 한 번 클릭으로 체험·명상을 시작하고 종료 때 예시 상태를 초기화한다', async () => {
   vi.stubEnv('DEV', false);
   try {
-    await act(async () => root.render(<PlaygroundPage />));
+    await act(async () => root.render(<MemoryRouter><PlaygroundPage /></MemoryRouter>));
     const start = [...container.querySelectorAll('button')].find(button => button.textContent === '체험 모드(예시 데이터)');
     expect(start).toBeDefined();
     await act(async () => start!.click());

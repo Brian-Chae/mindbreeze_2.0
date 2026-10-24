@@ -105,15 +105,15 @@ describe('FE-NAV-06 키-배지 결합: 사전 라벨을 바꿔도 배지는 해�
     await act(async () => root.render(
       <MemoryRouter><LayoutBottomTabBar onMoreClick={() => undefined} role="org_admin" /></MemoryRouter>,
     ));
-    expect(byLabel('nav > a, nav > button')).toEqual({ 홈: null, 클래스: null, 상담: null, 대화: '4', 더보기: '8' });
-    expect(container.querySelector('nav > button')?.getAttribute('aria-label')).toBe('더보기 8건');
+    expect(byLabel('nav > a, nav > button')).toEqual({ 홈: null, 클래스: null, 상담: null, 대화: '4', 설정: null });
+    expect(container.querySelector('a[href="/settings"]')?.getAttribute('aria-label')).toBe('설정');
   });
   it('회원 하단 탭', async () => {
     await act(async () => root.render(
       <MemoryRouter><ClientBottomTabBar onMoreClick={() => undefined} /></MemoryRouter>,
     ));
-    expect(byLabel('nav > a, nav > button')).toEqual({ 홈: null, '내 클래스': null, 상담: null, 리포트: '6', 더보기: '7' });
-    expect(container.querySelector('button[aria-label="더보기 7건"]')).not.toBeNull();
+    expect(byLabel('nav > a, nav > button')).toEqual({ 홈: null, '내 클래스': null, 상담: null, 리포트: '6', 설정: null });
+    expect(container.querySelector('a[href="/app/profile"]')).not.toBeNull();
   });
 });
 

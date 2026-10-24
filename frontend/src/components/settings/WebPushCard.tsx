@@ -1,3 +1,4 @@
+import { SettingsSwitch } from './settings-switch';
 import { isNativeApp } from '../../lib/native/platform';
 import { requestPushPermission } from '../../lib/native/push';
 import { PermissionGuide } from '../native/permission-guide';
@@ -87,25 +88,7 @@ function BrowserPushCard() {
           <p className="mt-1.5 text-[13px] text-[#6F6F6F]">{STATE_HINT[state]}</p>
         </div>
         {canToggle && (
-          <span className="-m-2.5 inline-flex shrink-0 items-center p-2.5">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={enabled}
-              aria-label="브라우저 알림"
-              disabled={busy}
-              onClick={() => { void toggle(); }}
-              className={`relative w-10 h-6 rounded-full transition-colors disabled:opacity-50 ${
-                enabled ? 'bg-[#5F0080]' : 'bg-[#DDDEE7]'
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                  enabled ? 'left-[18px]' : 'left-0.5'
-                }`}
-              />
-            </button>
-          </span>
+          <SettingsSwitch checked={enabled} label="브라우저 알림" disabled={busy} onChange={() => { void toggle(); }} />
         )}
       </div>
       {error && <p role="alert" className="mt-2 text-[12px] text-[#DC2626]">{error}</p>}

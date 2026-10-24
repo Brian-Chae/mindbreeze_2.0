@@ -5,10 +5,10 @@ import { hasMobileSwipeProtection, registerMobileSwipeProtection, isSwipeTargetE
 
 describe('모바일 메뉴 순서와 정확한 루트', () => {
   it('세 역할의 실제 공개 메뉴 순서만 제공한다', () => {
-    expect(getMobileMenuTabs('client', false).map(t => t.to)).toEqual(['/app', '/app/classes', '/app/chat', '/app/reports']);
+    expect(getMobileMenuTabs('client', false).map(t => t.to)).toEqual(['/app', '/app/classes', '/app/chat', '/app/reports', '/app/profile']);
     expect(getMobileMenuTabs('client', true)[2].to).toBe('/app/counseling');
     for (const role of ['counselor', 'org_admin'] as const) {
-      expect(getMobileMenuTabs(role, false).map(t => t.to)).toEqual([role === 'org_admin' ? '/dashboard/org' : '/dashboard', '/classes', '/reports', '/chat']);
+      expect(getMobileMenuTabs(role, false).map(t => t.to)).toEqual([role === 'org_admin' ? '/dashboard/org' : '/dashboard', '/classes', '/reports', '/chat', '/settings']);
       expect(getMobileMenuTabs(role, true)[2].to).toBe('/counseling');
     }
     expect(getMobileMenuTabs('platform_admin', false)).toEqual([]);

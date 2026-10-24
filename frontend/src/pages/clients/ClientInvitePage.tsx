@@ -13,6 +13,7 @@ export default function ClientInvitePage() {
   const [error, setError] = useState<string | null>(null);
   const [invite, setInvite] = useState<InviteCreateResponse | null>(null);
   const [copied, setCopied] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
 
   useEffect(() => {
     if (isInitialized && !isAuthenticated) {
@@ -80,6 +81,15 @@ export default function ClientInvitePage() {
           <p className="text-sm text-gray-500 mb-6">
             초대할 회원의 이메일을 입력하면 초대 링크가 생성됩니다.
           </p>
+
+          {user?.counselor_code && <section aria-label="상담사 초대 코드" className="mb-6 rounded-xl bg-[#F5EDFC] p-4">
+            <h2 className="text-base font-bold text-[#5F0080]">내 초대 코드</h2>
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-3"><strong className="break-all font-mono text-xl tracking-widest text-[#5F0080]">{user.counselor_code}</strong><button type="button" className="min-h-11 rounded-xl bg-white px-4 text-sm font-bold text-[#5F0080]" onClick={() => {
+              if (!navigator.clipboard) { setError('초대 코드를 직접 선택해 복사해 주세요.'); return; }
+              void navigator.clipboard.writeText(user.counselor_code ?? '').then(() => setCodeCopied(true)).catch(() => setError('초대 코드를 복사하지 못했어요. 직접 선택해 복사해 주세요.'));
+            }}>초대 코드 복사</button></div>
+            <p className="mt-2 text-sm text-[#6F6F6F]">이 코드를 회원에게 공유하면 상담사와 연결할 수 있어요.</p>{codeCopied && <p role="status" className="mt-2 text-sm">초대 코드를 복사했어요.</p>}
+          </section>}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
