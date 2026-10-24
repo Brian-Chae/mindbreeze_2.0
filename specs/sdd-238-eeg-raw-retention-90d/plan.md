@@ -13,18 +13,20 @@
 - 구현자와 읽기 전용 독립 검증자를 분리하고 최종 diff·테스트는 감독이 직접 재확인한다.
 
 ## 작업과 파일
-- [ ] `spec.md` 결정표, 본 plan, `verify.md`를 구현 전 커밋한다.
-- [ ] `backend/tests/test_sdd210_deploy_templates.py`: 활성 집합에 retention_sweep 추가, research_export만 비활성, timer UTC 03:00·3600초 검증.
-- [ ] `backend/tests/test_sdd210_install_release.py`: 설치 timer 18→19 및 활성 서버에 신규 retention timer enable 검증. 변경 테스트 RED 확인.
-- [ ] `deploy/jobs.tsv`: retention_sweep enabled=1, note에 기본 false·dry-run 명시. 다른 작업은 변경하지 않는다.
-- [ ] `backend/tests/test_sdd209_b12_retention_sweep.py`: dry-run 부작용 경계와 보류 보고 검증 강화. 기존 BT56~61 및 B13 연구 내보내기 회귀 확인.
-- [ ] 집중 pytest → 전체 백엔드 pytest, 독립 리뷰 → `summary.md` 작성 → 한글 커밋·브랜치 push·develop 대상 PR.
+- [x] `spec.md` 결정표, 본 plan, `verify.md`를 구현 전 커밋한다.
+- [x] `backend/tests/test_sdd210_deploy_templates.py`: 활성 집합에 retention_sweep 추가, research_export만 비활성, timer UTC 03:00·3600초 검증.
+- [x] `backend/tests/test_sdd210_install_release.py`: 설치 timer 18→19 및 활성 서버에 신규 retention timer enable 검증. 변경 테스트 RED 확인.
+- [x] `deploy/jobs.tsv`: retention_sweep enabled=1, note에 기본 false·dry-run 명시. 다른 작업은 변경하지 않는다.
+- [x] `backend/tests/test_sdd209_b12_retention_sweep.py`: dry-run 부작용 경계와 보류 보고 검증 강화. 기존 BT56~61 및 B13 연구 내보내기 회귀 확인.
+- [x] 집중 pytest → 전체 백엔드 pytest, 독립 리뷰 → `summary.md` 작성 완료.
+
+최종 제출: 한글 커밋·브랜치 push·develop 대상 PR 생성.
 
 ## RETENTION_APPLY_FROM 의미와 권장값
 - `parse_apply_from`은 YYYY-MM-DD를 UTC 00:00으로 변환한다. 미설정/잘못된 값이면 실제 삭제를 차단한다.
 - `_eligible_sessions`는 종료일(없으면 created_at)이 apply_from 이상이고 실행 시각에서 90일을 뺀 시각 미만인 종료·취소 클래스만 고른다. 숨김 클래스 포함, 템플릿 제외.
-- 권장값: **2026-10-24**(Brian 정책 결정일, UTC 기준). 과거 자료를 일괄 삭제하지 않는 보수적 시작이며 이날 이전 종료분은 계속 제외된다. 따라서 기존 자료 전체에 대한 90일 방침 이행값은 아니다.
-- 기존 자료에도 적용하기로 Brian이 결정하면 **보존 대상 최초 클래스 종료일 이하의 날짜**를 별도로 선정한다. 현재 날짜에서 90일을 뺀 값을 쓰면 그보다 오래된 자료를 영구 제외하므로 권장하지 않는다.
+- 권장값: **보존 대상 최초 클래스 종료일 이하의 UTC 날짜**. 기존 자료도 90일 정책에 포함하기 위해서다. 서버/DB를 조회하지 않아 실제 최초일은 미확인이다. 전체 자료를 포함할 기준일 후보는 `1970-01-01`이며, dry-run에서 범위를 확인하고 Brian이 승인해야 한다.
+- 과거 자료를 제외하는 선택지는 `2026-10-24`이지만 그 이전 종료분을 계속 제외하므로 기존 자료 전체의 90일 방침 이행값은 아니다. 현재 날짜에서 90일을 뺀 값을 쓰면 그보다 오래된 자료를 영구 제외하므로 권장하지 않는다.
 - 설정은 이번 작업에서 바꾸지 않는다. dev 보고에서 하한 미설정/권장 하한별 대상 범위 차이를 확인한 후 Brian이 적용 범위를 결정한다.
 
 ## 활성화 순서와 승인 시점

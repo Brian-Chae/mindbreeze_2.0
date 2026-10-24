@@ -147,15 +147,17 @@ PROD_ONLY_JOBS = {"report_backlog_probe"}
 CLASS_JOBS = {"class_operations", "class_rolling"}
 # SDD-220: 탈퇴 스위프 타이머는 켠다(소셜 연결 해제 재시도·삭제 요청 알림). 영구 삭제는 ACCOUNT_DELETION_SWEEP_ENABLED=false 라 dry-run 보고만 한다.
 ACCOUNT_DELETION_JOB = {"account_deletion_sweep"}
+# SDD-238: 타이머는 실행하되 실제 삭제 기본값은 false(dry-run)다.
+RETENTION_JOB = {"retention_sweep"}
 
 
-def test_jobs_tsv_는_dev_cron_14개를_활성으로_포함하고_SDD209_2종은_비활성이다():
+def test_jobs_tsv_는_retention_dry_run을_포함하고_연구_내보내기만_비활성이다():
     jobs = render.load_jobs(DEPLOY / "jobs.tsv")
     enabled = {j["name"] for j in jobs if j["enabled"] == "1"}
-    assert enabled == DEV_CRON_14 | PROD_ONLY_JOBS | CLASS_JOBS | ACCOUNT_DELETION_JOB
+    assert enabled == DEV_CRON_14 | PROD_ONLY_JOBS | CLASS_JOBS | ACCOUNT_DELETION_JOB | RETENTION_JOB
     disabled = {j["name"] for j in jobs if j["enabled"] == "0"}
-    # 기본 삭제 스위프·연구 내보내기는 운영 승인 전 비활성이다.
-    assert disabled == {"retention_sweep", "research_export"}
+    # 연구 내보내기는 승인 전 비활성이다. 삭제는 별도 환경 스위치로 잠긴다.
+    assert disabled == {"research_export"}
 
 
 def test_jobs_tsv_스크립트가_실제로_존재한다():
@@ -175,8 +177,12 @@ def test_jobs_tsv_주기가_dev_cron_과_같다():
 
 def test_활성_작업_수만큼_timer_와_타임아웃_드롭인이_생성된다(rendered):
     timers = sorted(p.name for p in (rendered / "etc/systemd/system").glob("mindbreeze-job-*.timer"))
-    assert len(timers) == 14 + len(PROD_ONLY_JOBS) + len(CLASS_JOBS) + len(ACCOUNT_DELETION_JOB)
-    assert not (rendered / "etc/systemd/system/mindbreeze-job-retention_sweep.timer").exists()
+    assert len(timers) == 14 + len(PROD_ONLY_JOBS) + len(CLASS_JOBS) + len(ACCOUNT_DELETION_JOB) + len(RETENTION_JOB)
+    retention = (rendered / "etc/systemd/system/mindbreeze-job-retention_sweep.timer").read_text()
+    assert "OnCalendar=*-*-* 03:00:00 UTC" in retention
+    assert "Unit=mindbreeze-job@retention_sweep.service" in retention
+    dropin = rendered / "etc/systemd/system/mindbreeze-job@retention_sweep.service.d/timeout.conf"
+    assert "TimeoutStartSec=3600" in dropin.read_text()
     t = (rendered / "etc/systemd/system/mindbreeze-job-process_email_outbox.timer").read_text()
     assert "Unit=mindbreeze-job@process_email_outbox.service" in t and "Persistent=false" in t
     d = (rendered / "etc/systemd/system/mindbreeze-job@process_email_outbox.service.d/timeout.conf").read_text()
