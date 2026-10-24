@@ -25,6 +25,8 @@ export interface SessionReportRow {
   absent: number | null;
   reports: {
     id: string;
+    /** 기존 화면 입력은 client 전용이며, 명시된 counselor는 방어적으로 제외한다. */
+    type?: 'client' | 'counselor';
     participant_name: string | null;
     status: string;
     /** 결석 등으로 일괄 작업 대상이 아닌 건. */
@@ -105,7 +107,7 @@ function countsOf(row: SessionReportRow) {
 
 export function ClassReportManage({
   classId,
-  rows,
+  rows: inputRows,
   loading,
   loadError,
 }: {
@@ -115,6 +117,7 @@ export function ClassReportManage({
   /** 일부 회차 조회가 실패했을 때의 안내. 빈 목록과 구분해서 보여준다. */
   loadError?: string;
 }) {
+  const rows = useMemo(() => inputRows.map((row) => ({ ...row, reports: row.reports.filter((report) => (report.type ?? 'client') === 'client') })), [inputRows]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | ReportStatusKey>('all');

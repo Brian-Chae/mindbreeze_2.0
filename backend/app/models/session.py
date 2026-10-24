@@ -121,6 +121,14 @@ class Session(Base):
     # 진행 강사 상태: assigned, pending_ack, needs_reassign. host_id 는 항상 NOT NULL.
     host_state: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
+    # SDD-237: 진행 기록 1회 안내 상태. 안내 대상은 회차 진행 상담사(host) 1명이라 회차 단위 컬럼으로 충분하다.
+    #   seen = 안내를 한 번 보여줬음(원자 claim), dismissed = [비워두기]. 둘 다 NULL = 미안내. 메모 내용은 저장하지 않는다.
+    #   deferred: 컬럼 추가 이전 스키마에 ORM 으로 붙는 시드 경로를 깨지 않는다.
+    note_prompt_seen_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, deferred=True)
+    note_prompt_dismissed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, deferred=True)
+
     assignment_override: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
 
     host = relationship("User", back_populates="hosted_sessions", foreign_keys=[host_id])

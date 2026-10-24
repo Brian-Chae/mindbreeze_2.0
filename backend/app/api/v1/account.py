@@ -17,7 +17,8 @@ from app.core.database import get_db
 from app.core.redis import get_redis
 from app.core.security import verify_password
 from app.models.user import User
-from app.services import account_deletion_service, privacy_consent_service, social_reauth_service
+from app.schemas.class_report import NotePromptSettingResponse, NotePromptSettingUpdate
+from app.services import account_deletion_service, class_summary_service, privacy_consent_service, social_reauth_service
 from app.services.signup_policy_service import api_error
 
 logger = logging.getLogger(__name__)
@@ -174,3 +175,22 @@ async def public_deletion_request(
     ip = request.client.host if request.client else None
     await account_deletion_service.submit_public_request(db, redis, email=str(req.email), ip=ip)
     return {"accepted": True}
+
+
+@router.get("/me/session-note-prompt", response_model=NotePromptSettingResponse)
+def get_session_note_prompt_setting(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """SDD-237: 클래스 종료 후 진행 기록 안내 전체 켜짐/꺼짐(본인 계정)."""
+    return {"enabled": class_summary_service.get_show_session_note_prompt(db, current_user["id"])}
+
+
+@router.patch("/me/session-note-prompt", response_model=NotePromptSettingResponse)
+def update_session_note_prompt_setting(
+    body: NotePromptSettingUpdate,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """자동 승인·기존 기록에는 영향이 없다. 다시 켜면 아직 안내하지 않은 회차에만 적용된다."""
+    return {"enabled": class_summary_service.set_show_session_note_prompt(db, current_user["id"], body.enabled)}

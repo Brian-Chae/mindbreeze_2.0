@@ -72,10 +72,12 @@ def build_comment_draft(report_id: str, host_id: str, db: DBSession) -> dict:
     return {"draft": draft, "source": source}
 
 
-def ensure_auto_comment(report: Report, db: DBSession) -> None:
+def ensure_auto_comment(report: Report, db: DBSession, *, include_private_notes: bool = True) -> None:
     """자동 승인(auto_approve_report) 경로: client 리포트에 코멘트가 없으면 AI 초안을 생성·저장한다.
 
     실패해도 승인·발송 흐름을 막지 않는다 (best-effort, 폴백 템플릿 포함).
+    include_private_notes=False 면 비공개 상담사 메모(counselor_notes)를 초안 입력에서 뺀다(SDD-237: 명상 자동 승인).
+    기본값은 현행(포함)이라 상담 도메인 동작은 그대로다.
     """
     if report.type != "client":
         return
@@ -87,7 +89,8 @@ def ensure_auto_comment(report: Report, db: DBSession) -> None:
         session = db.query(Session).filter(Session.id == report.session_id).first()
         if not session:
             return
-        draft, _source = _generate_draft(_draft_context(report, session, db))
+        draft, _source = _generate_draft(
+            _draft_context(report, session, db, include_private_notes=include_private_notes))
         new_content = dict(content)
         new_content["counselor_comment"] = draft
         report.content = new_content
@@ -100,7 +103,7 @@ def _session_type_label(session: Session) -> str:
     return session_terms.session_type_label(session.type, session.custom_type_name, variant="report_comment")
 
 
-def _draft_context(report: Report, session: Session, db: DBSession) -> dict:
+def _draft_context(report: Report, session: Session, db: DBSession, *, include_private_notes: bool = True) -> dict:
     """프롬프트 입력 계층 수집 — 필수(세션 메타)는 항상, 선택(요약·서사)은 있으면 보강."""
     participant = (
         db.query(SessionParticipant).filter(SessionParticipant.id == report.participant_id).first()
@@ -159,7 +162,7 @@ def _draft_context(report: Report, session: Session, db: DBSession) -> dict:
         sections = summary.get("sections")
         if isinstance(sections, dict) and sections:
             context["ai_sections"] = {str(k): str(v) for k, v in list(sections.items())[:5]}
-    if record and isinstance(record.counselor_notes, str) and record.counselor_notes.strip():
+    if include_private_notes and record and isinstance(record.counselor_notes, str) and record.counselor_notes.strip():
         context["counselor_notes"] = record.counselor_notes.strip()
 
     # EEG 측정 세션이면 서사(narrative)를 보강 소재로 활용 — 미측정이면 넣지 않는다 (날조 금지)

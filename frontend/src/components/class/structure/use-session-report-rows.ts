@@ -36,6 +36,7 @@ export function useSessionReportRows(
             .filter((r) => r.type === 'client')
             .map((r) => ({
               id: r.id,
+              type: 'client' as const,
               participant_name: r.participant_name ?? null,
               status: r.status,
               selectable: r.status === 'pending_review' || r.status === 'completed',

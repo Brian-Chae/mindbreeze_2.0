@@ -74,7 +74,8 @@ def test_본인이_host이면서_팀_강사여도_중복되지_않고_건수가_
     with database.SessionLocal() as db:
         org, lead, assistant, parent = world(db)
         s = _session(db, lead, parent, 1)
-        db.add(Report(session_id=s.id, status="pending_review", type="counselor", content={}))
+        # SDD-237: 클래스 회차의 상담사용(counselor) 리포트는 승인 대기 수에 세지 않는다 → 회원 리포트(client)로 중복 방지를 검증한다.
+        db.add(Report(session_id=s.id, status="pending_review", type="client", content={}))
         db.commit()
         lead_id = lead.id
 

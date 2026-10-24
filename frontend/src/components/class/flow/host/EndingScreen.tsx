@@ -73,10 +73,11 @@ export interface EndingSceneProps {
   left: HostFrameLeft;
   backdropSrc?: string;
   onOpenRecord: () => void;
+  isClassSession?: boolean;
 }
 
 /** 종료 씬: 같은 화면에서 4단계 진행 + `기록 보기`. 화면을 닫아도 리포트는 계속 만들어진다 */
-export function EndingScene({ view, title, left, backdropSrc, onOpenRecord }: EndingSceneProps) {
+export function EndingScene({ view, title, left, backdropSrc, onOpenRecord, isClassSession = view.isClassSession ?? false }: EndingSceneProps) {
   const body: ReactNode = (
     <>
       <div className="fhb-scene">
@@ -125,8 +126,8 @@ export function EndingScene({ view, title, left, backdropSrc, onOpenRecord }: En
       backdropSrc={backdropSrc}
       foot={
         <>
-          <FlowButton kind="primary" onClick={onOpenRecord}><FileText size={20} aria-hidden="true" />기록 보기</FlowButton>
-          <p className="fhb-fnote">{view.foot}</p>
+          <FlowButton kind="primary" onClick={onOpenRecord}><FileText size={20} aria-hidden="true" />{isClassSession ? '회차 요약 보기' : '기록 보기'}</FlowButton>
+          <p className="fhb-fnote">{isClassSession && view.done ? '리포트는 회차 요약에서 언제든 볼 수 있어요' : view.foot}</p>
         </>
       }
     >
