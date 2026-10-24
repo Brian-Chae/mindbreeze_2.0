@@ -14,4 +14,11 @@
 - [x] 관련 vitest 및 전체 회귀(기존 agent-counselor-page·chat-message-deeplink·sdd220-native-release·sdd234-a-mobile-home 이외 신규 실패 0).
 - [x] tsc 및 프로덕션 build.
 - [x] 합성 데이터 390px 브라우저 캡처 직접 확인, 넘침·입력·연구 UI 확인.
-- [ ] 독립 리뷰 후 한글 커밋, 작업 브랜치 push -u origin, develop 대상 PR 생성. 금지 작업 없음.
+- [x] 독립 리뷰 후 한글 커밋, 작업 브랜치 push -u origin, develop 대상 PR 생성. 금지 작업 없음.
+
+## 후속 요청 — 구현 전 다이얼 검증
+
+- [ ] 코드 입장·장기 비회원에서 연도/월을 독립된 스크롤 다이얼로 선택 가능.
+- [ ] 터치·클릭 및 키보드 조작, 빈값·잘못된값·미래월 검증 유지.
+- [ ] 두 다이얼 선택으로 YYYY-MM만 전송, 일자 입력·나이 차단 없음.
+- [ ] 관련 vitest·tsc·build 및 390px 실제 다이얼 캡처 확인 후 기존 PR 갱신.
