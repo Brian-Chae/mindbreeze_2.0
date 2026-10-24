@@ -274,3 +274,17 @@ it("플랫폼 하위 탭은 계약 경로별 안전한 한국어 투영으로 �
   expect(container.textContent).not.toContain("pipeline_version");
   await act(async () => root.unmount());
 });
+
+vi.mock('../src/components/data-center/measurement-detail',()=>({MeasurementDetail:({sessionId,participantId}:{sessionId:string;participantId:string})=><div data-testid="measurement-default">측정 데이터 {sessionId} {participantId}</div>}));
+it('측정 상세 클릭은 기본 MeasurementDetail 컴포넌트를 연결한다',async()=>{
+ Object.assign(globalThis,{IS_REACT_ACT_ENVIRONMENT:true});
+ vi.mocked(apiClient.get).mockImplementation(async(path:string)=>path.includes('/summary')?summary:path.includes('/participants')?participants:path.includes('/sessions')?sessions:classes);
+ const element=document.createElement('div');const root=createRoot(element);
+ await act(async()=>root.render(<DataCenterWorkspace context={context}/>));
+ for(const text of ['회차 보기 →','참여자 보기 →','측정 상세 →']) {
+  const button=Array.from(element.querySelectorAll('button')).find(item=>item.textContent===text)!;
+  await act(async()=>button.click());
+ }
+ expect(element.querySelector('[data-testid="measurement-default"]')).not.toBeNull();
+ await act(async()=>root.unmount());
+});

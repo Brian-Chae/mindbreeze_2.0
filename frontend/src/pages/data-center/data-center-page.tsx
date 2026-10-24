@@ -4,6 +4,7 @@ import {
   type MetadataItem,
   type InventoryItem,
 } from "../../components/data-center/data-center-metadata-table";
+import { MeasurementDetail } from "../../components/data-center/measurement-detail";
 import AppShell from "../../components/layout/AppShell";
 import { useDataCenter } from "../../hooks/use-data-center";
 import {
@@ -491,7 +492,7 @@ export function DataCenterWorkspace({
             {measurement && session ? (
               renderMeasurement?.(session.session_id, measurement, orgId, () =>
                 setMeasurement(null),
-              ) || <p>측정 상세 연결 중</p>
+              ) ?? <MeasurementDetail sessionId={session.session_id} participantId={measurement} orgId={orgId} onClose={()=>setMeasurement(null)} />
             ) : (
               <>
                 {query.loading && <p role="status">불러오는 중…</p>}
