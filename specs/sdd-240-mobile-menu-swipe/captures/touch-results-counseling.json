@@ -1,0 +1,226 @@
+{
+  "chrome": "155.0.8059.85",
+  "viewport": "390x844",
+  "counseling": true,
+  "checks": [
+    {
+      "name": "client: 표시 메뉴 순서"
+    },
+    {
+      "name": "client: 하단 버튼 44px 이상",
+      "hitAreas": [
+        {
+          "width": 68.796875,
+          "height": 52
+        },
+        {
+          "width": 68.8125,
+          "height": 52
+        },
+        {
+          "width": 68.796875,
+          "height": 52
+        },
+        {
+          "width": 68.796875,
+          "height": 52
+        },
+        {
+          "width": 68.796875,
+          "height": 52
+        }
+      ]
+    },
+    {
+      "name": "client: 첫 탭 비순환"
+    },
+    {
+      "name": "client: 짧은 이동 복귀"
+    },
+    {
+      "name": "client: 120px 1:1 추종·이웃 비활성 미리보기",
+      "offset": -120
+    },
+    {
+      "name": "client: 왼쪽 이동"
+    },
+    {
+      "name": "client: history 1회 push"
+    },
+    {
+      "name": "client: 목적지 제목 포커스"
+    },
+    {
+      "name": "client: 접근성 live 이동 안내"
+    },
+    {
+      "name": "client: 오른쪽 이동"
+    },
+    {
+      "name": "client: 재방문 실제 화면 미리보기·id 중복 없음"
+    },
+    {
+      "name": "client: 이웃 탭 2"
+    },
+    {
+      "name": "client: 이웃 탭 3"
+    },
+    {
+      "name": "client: 이웃 탭 4"
+    },
+    {
+      "name": "client: 마지막 탭·더보기 비진입"
+    },
+    {
+      "name": "client: back 이전 방문"
+    },
+    {
+      "name": "counselor: 표시 메뉴 순서"
+    },
+    {
+      "name": "counselor: 하단 버튼 44px 이상",
+      "hitAreas": [
+        {
+          "width": 68.796875,
+          "height": 52
+        },
+        {
+          "width": 68.8125,
+          "height": 52
+        },
+        {
+          "width": 68.796875,
+          "height": 52
+        },
+        {
+          "width": 68.796875,
+          "height": 52
+        },
+        {
+          "width": 68.796875,
+          "height": 52
+        }
+      ]
+    },
+    {
+      "name": "counselor: 첫 탭 비순환"
+    },
+    {
+      "name": "counselor: 짧은 이동 복귀"
+    },
+    {
+      "name": "counselor: 120px 1:1 추종·이웃 비활성 미리보기",
+      "offset": -120
+    },
+    {
+      "name": "counselor: 왼쪽 이동"
+    },
+    {
+      "name": "counselor: history 1회 push"
+    },
+    {
+      "name": "counselor: 목적지 제목 포커스"
+    },
+    {
+      "name": "counselor: 접근성 live 이동 안내"
+    },
+    {
+      "name": "counselor: 오른쪽 이동"
+    },
+    {
+      "name": "counselor: 재방문 실제 화면 미리보기·id 중복 없음"
+    },
+    {
+      "name": "counselor: 이웃 탭 2"
+    },
+    {
+      "name": "counselor: 이웃 탭 3"
+    },
+    {
+      "name": "counselor: 이웃 탭 4"
+    },
+    {
+      "name": "counselor: 마지막 탭·더보기 비진입"
+    },
+    {
+      "name": "counselor: back 이전 방문"
+    },
+    {
+      "name": "org_admin: 표시 메뉴 순서"
+    },
+    {
+      "name": "org_admin: 하단 버튼 44px 이상",
+      "hitAreas": [
+        {
+          "width": 68.796875,
+          "height": 52
+        },
+        {
+          "width": 68.8125,
+          "height": 52
+        },
+        {
+          "width": 68.796875,
+          "height": 52
+        },
+        {
+          "width": 68.796875,
+          "height": 52
+        },
+        {
+          "width": 68.796875,
+          "height": 52
+        }
+      ]
+    },
+    {
+      "name": "org_admin: 첫 탭 비순환"
+    },
+    {
+      "name": "org_admin: 짧은 이동 복귀"
+    },
+    {
+      "name": "org_admin: 120px 1:1 추종·이웃 비활성 미리보기",
+      "offset": -120
+    },
+    {
+      "name": "org_admin: 왼쪽 이동"
+    },
+    {
+      "name": "org_admin: history 1회 push"
+    },
+    {
+      "name": "org_admin: 목적지 제목 포커스"
+    },
+    {
+      "name": "org_admin: 접근성 live 이동 안내"
+    },
+    {
+      "name": "org_admin: 오른쪽 이동"
+    },
+    {
+      "name": "org_admin: 재방문 실제 화면 미리보기·id 중복 없음"
+    },
+    {
+      "name": "org_admin: 이웃 탭 2"
+    },
+    {
+      "name": "org_admin: 이웃 탭 3"
+    },
+    {
+      "name": "org_admin: 이웃 탭 4"
+    },
+    {
+      "name": "org_admin: 마지막 탭·더보기 비진입"
+    },
+    {
+      "name": "org_admin: back 이전 방문"
+    },
+    {
+      "name": "실제 앱 JS 실행 오류 0"
+    }
+  ],
+  "pageErrors": [],
+  "unknownApi": [],
+  "synthetic": true
+}

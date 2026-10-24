@@ -54,15 +54,15 @@
 
 ## Task 1 — 판정과 연결 (구현자)
 
-- [ ] 거리 78px(390px), 40px+0.5px/ms/최근80ms/최소16ms, 방향1.5, 12px·500ms, 양끝·역방향·취소·역할/플래그·보호 테스트 작성.
-- [ ] `cd frontend && npx vitest run tests/mobile-menu-swipe*.test.*` 실패(RED) 확인.
-- [ ] 순수 판정·보호 등록·제스처 훅·CSS·Shell·탭 SSOT 구현.
-- [ ] 같은 테스트 GREEN, tsc 및 변경 파일 eslint. 구현 한글 feat(sdd-240) 커밋 및 중간 push.
+- [x] 거리 78px(390px), 40px+0.5px/ms/최근80ms/최소16ms, 방향1.5, 12px·500ms, 양끝·역방향·취소·역할/플래그·보호 테스트 작성.
+- [x] `cd frontend && npx vitest run tests/mobile-menu-swipe*.test.*` 실패(RED) 확인.
+- [x] 순수 판정·보호 등록·제스처 훅·CSS·Shell·탭 SSOT 구현.
+- [x] 같은 테스트 GREEN, tsc 및 변경 파일 eslint. 구현 한글 feat(sdd-240) 커밋 및 중간 push.
 
 ## Task 2 — 독립 검증 (감독·검토자)
 
-- [ ] 로컬 Vite 빌드(envDir 빈 디렉토리, 실 API 금지) + fixture 응답으로 실제 앱 라우트 구동.
-- [ ] Chrome executablePath 지정, hasTouch 390x844, 회원·상담사·기관관리자 실제 터치와 verify 전 시나리오 검증. 360/767/768 경계·데스크톱·접근성 포함.
-- [ ] origin/develop를 임시 경로에 git archive로 읽기 전용 추출, 같은 node_modules 심링크 및 동일 러너로 전체 Vitest JSON 실패 목록 비교. 기존 파일/테스트 수정·skip 없이 신규 실패 0 확인.
-- [ ] 독립 diff 리뷰 후 문제 수정·해당 테스트 재실행. summary.md에 정확한 결과·캡처·실기기 미확인 범위 기록.
-- [ ] 최종 커밋/push, develop 대상 PR 생성. 생성한 node_modules 심링크만 명시 승인대로 해제. 머지/배포 없음.
+- [x] 로컬 Vite 빌드(envDir 빈 디렉토리, 실 API 금지) + fixture 응답으로 실제 앱 라우트 구동.
+- [x] Chrome executablePath 지정, hasTouch 390x844, 회원·상담사·기관관리자 실제 터치와 verify 전 시나리오 검증. 360/767/768 경계·데스크톱·접근성 포함.
+- [x] origin/develop를 임시 경로에 git archive로 읽기 전용 추출, 같은 node_modules 심링크 및 동일 러너로 전체 Vitest JSON 실패 목록 비교. 기존 파일/테스트 수정·skip 없이 신규 실패 0 확인.
+- [x] 독립 diff 리뷰 후 문제 수정·해당 테스트 재실행. summary.md에 정확한 결과·캡처·실기기 미확인 범위 기록.
+- [x] 최종 커밋/push, develop 대상 PR 생성. 생성한 node_modules 심링크만 명시 승인대로 해제. 머지/배포 없음.

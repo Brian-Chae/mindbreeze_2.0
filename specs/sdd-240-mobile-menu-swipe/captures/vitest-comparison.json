@@ -1,0 +1,192 @@
+{
+  "baselineCommit": "431fe625c24b177ddbe50f2de09a1f093e767887",
+  "headCommit": "7023ff8d",
+  "cssOnlyFollowup": "2ba50a9a (Chrome computed contrast and capture verified separately)",
+  "baseline": {
+    "total": 2749,
+    "passed": 2732,
+    "failed": 17,
+    "failures": [
+      {
+        "file": "tests/agent-counselor-page.test.tsx",
+        "name": "상담사는 브리핑과 입력창을 보고 CTA로 세션 목록을 연다",
+        "error": "AssertionError: expected undefined to be 1000 // Object.is equality\n    at /private/tmp/sdd240-baseline.o5kTaj/frontend/tests/agent-counselor-page.test.tsx:43:135\n    at file:///Volumes/Looxid%20SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/vitest/dist/chunks/run.C5UmxDPh.js:2783:20"
+      },
+      {
+        "file": "tests/agent-counselor-page.test.tsx",
+        "name": "메시지 전송 성공 후 입력을 비우고 사용자·AI 응답을 최신 하단에 표시한다",
+        "error": "TypeError: 'set value' called on an object that is not a valid instance of HTMLInputElement.\n    at set value (/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/jsdom/lib/jsdom/living/generated/HTMLInputElement.js:1558:15)\n    at /private/tmp/sdd240-baseline.o5kTaj/frontend/tests/agent-counselor-page.test.tsx:72:80\n    at P"
+      },
+      {
+        "file": "tests/chat-message-deeplink.test.ts",
+        "name": "대상 missing이면 최근 대화로 돌아갈 수 있다",
+        "error": "AssertionError: expected undefined to be true // Object.is equality\n    at /private/tmp/sdd240-baseline.o5kTaj/frontend/tests/chat-message-deeplink.test.ts:56:54\n    at file:///Volumes/Looxid%20SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/vitest/dist/chunks/run.C5UmxDPh.js:2783:20"
+      },
+      {
+        "file": "tests/chat-message-deeplink.test.ts",
+        "name": "대상 failure이면 최근 대화로 돌아갈 수 있다",
+        "error": "AssertionError: expected undefined to be true // Object.is equality\n    at /private/tmp/sdd240-baseline.o5kTaj/frontend/tests/chat-message-deeplink.test.ts:56:54\n    at file:///Volumes/Looxid%20SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/vitest/dist/chunks/run.C5UmxDPh.js:2783:20"
+      },
+      {
+        "file": "tests/org-counselor-management-browser.test.cjs",
+        "name": "상담사 보호 대상, 확인 사유, 실패 유지, 역할 변경과 소속 해제",
+        "error": "locator.click: Timeout 5000ms exceeded.\nCall log:\n  - waiting for getByRole('tab', { name: /상담사/ })\n\n    at /private/tmp/sdd240-baseline.o5kTaj/frontend/tests/org-counselor-management-browser.test.cjs:45:50\n    at /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/vitest/dist/chunks/run.C5UmxDPh.js:2783:20"
+      },
+      {
+        "file": "tests/org-management-browser.test.cjs",
+        "name": "기관 모달: 미저장 보호, 실패 유지, 충돌 재조회, 수정, 비활성화, 재활성화",
+        "error": "locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for getByRole('button', { name: '정보 수정', exact: true })\n\n    at /private/tmp/sdd240-baseline.o5kTaj/frontend/tests/org-management-browser.test.cjs:54:68\n    at /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/vitest/dist/chunks/run.C5UmxDPh.js:2783:20"
+      },
+      {
+        "file": "tests/org-management-browser.test.cjs",
+        "name": "목록 상태 필터와 저장 후 포커스 복귀",
+        "error": "TypeError: fetch failed\n    at node:internal/deps/undici/undici:15141:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at liveBrowserHash (/private/tmp/sdd240-baseline.o5kTaj/frontend/tests/org-management-browser.test.cjs:16:22)\n    at /private/tmp/sdd240-baseline.o5kTaj/frontend/tests/org-management-browser.test.cj"
+      },
+      {
+        "file": "tests/report-modal-pdf.test.cjs",
+        "name": "하단 액션과 본문 전용 PDF (수신 주소: saved@example.com)",
+        "error": "TypeError: fetch failed\n    at node:internal/deps/undici/undici:15141:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at liveBrowserHash (/private/tmp/sdd240-baseline.o5kTaj/frontend/tests/report-modal-pdf.test.cjs:14:22)\n    at /private/tmp/sdd240-baseline.o5kTaj/frontend/tests/report-modal-pdf.test.cjs:23:26\n    "
+      },
+      {
+        "file": "tests/report-modal-pdf.test.cjs",
+        "name": "하단 액션과 본문 전용 PDF (수신 주소: 없음)",
+        "error": "TypeError: fetch failed\n    at node:internal/deps/undici/undici:15141:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at liveBrowserHash (/private/tmp/sdd240-baseline.o5kTaj/frontend/tests/report-modal-pdf.test.cjs:14:22)\n    at /private/tmp/sdd240-baseline.o5kTaj/frontend/tests/report-modal-pdf.test.cjs:23:26\n    "
+      },
+      {
+        "file": "tests/report-server-pdf.test.cjs",
+        "name": "detail: 서버 파일 다운로드와 실패 복구",
+        "error": "TypeError: fetch failed\n    at node:internal/deps/undici/undici:15141:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at liveBrowserHash (/private/tmp/sdd240-baseline.o5kTaj/frontend/tests/report-server-pdf.test.cjs:14:22)\n    at /private/tmp/sdd240-baseline.o5kTaj/frontend/tests/report-server-pdf.test.cjs:24:26\n  "
+      },
+      {
+        "file": "tests/report-server-pdf.test.cjs",
+        "name": "email: 서버 파일 다운로드와 실패 복구",
+        "error": "TypeError: fetch failed\n    at node:internal/deps/undici/undici:15141:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at liveBrowserHash (/private/tmp/sdd240-baseline.o5kTaj/frontend/tests/report-server-pdf.test.cjs:14:22)\n    at /private/tmp/sdd240-baseline.o5kTaj/frontend/tests/report-server-pdf.test.cjs:24:26\n  "
+      },
+      {
+        "file": "tests/sdd220-native-release.test.ts",
+        "name": "TS1 버전·암호화·Privacy Resources 등록",
+        "error": "AssertionError: expected '// !$*UTF8*$!\\n{\\n\\tarchiveVersion = …' to contain 'CURRENT_PROJECT_VERSION = 2;'\n    at /private/tmp/sdd240-baseline.o5kTaj/frontend/tests/sdd220-native-release.test.ts:15:12\n    at file:///Volumes/Looxid%20SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/vitest/dist/chunks/run.C5UmxDPh.js:1628:35\n    at file://"
+      },
+      {
+        "file": "tests/sdd220-native-release.test.ts",
+        "name": "TS29 release 서명 누락 거부·버전",
+        "error": "AssertionError: expected 'apply plugin: \\'com.android.applicati…' to contain '\"2\"'\n    at /private/tmp/sdd240-baseline.o5kTaj/frontend/tests/sdd220-native-release.test.ts:36:44\n    at file:///Volumes/Looxid%20SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/vitest/dist/chunks/run.C5UmxDPh.js:1628:35\n    at file:///Volumes/Looxid%20SSD/loo"
+      },
+      {
+        "file": "tests/sdd234-a-mobile-home.test.tsx",
+        "name": "member: 768px 계산 글자·터치·간격 불변",
+        "error": "AssertionError: expected [ { tag: 'span', …(14) }, …(87) ] to deeply equal [ { tag: 'span', …(14) }, …(87) ]\n    at /private/tmp/sdd240-baseline.o5kTaj/frontend/tests/sdd234-a-mobile-home.test.tsx:38:34\n    at file:///Volumes/Looxid%20SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/vitest/dist/chunks/run.C5UmxDPh.js:1628:35\n    at file:/"
+      },
+      {
+        "file": "tests/sdd234-a-mobile-home.test.tsx",
+        "name": "member: 1440px 계산 글자·터치·간격 불변",
+        "error": "AssertionError: expected [ { tag: 'span', …(14) }, …(90) ] to deeply equal [ { tag: 'span', …(14) }, …(90) ]\n    at /private/tmp/sdd240-baseline.o5kTaj/frontend/tests/sdd234-a-mobile-home.test.tsx:38:34\n    at file:///Volumes/Looxid%20SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/vitest/dist/chunks/run.C5UmxDPh.js:1628:35\n    at file:/"
+      },
+      {
+        "file": "tests/sdd234-a-mobile-home.test.tsx",
+        "name": "host: 768px 계산 글자·터치·간격 불변",
+        "error": "AssertionError: expected [ { tag: 'span', …(14) }, …(86) ] to deeply equal [ { tag: 'span', …(14) }, …(86) ]\n    at /private/tmp/sdd240-baseline.o5kTaj/frontend/tests/sdd234-a-mobile-home.test.tsx:38:34\n    at file:///Volumes/Looxid%20SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/vitest/dist/chunks/run.C5UmxDPh.js:1628:35\n    at file:/"
+      },
+      {
+        "file": "tests/sdd234-a-mobile-home.test.tsx",
+        "name": "host: 1440px 계산 글자·터치·간격 불변",
+        "error": "AssertionError: expected [ { tag: 'span', …(14) }, …(86) ] to deeply equal [ { tag: 'span', …(14) }, …(86) ]\n    at /private/tmp/sdd240-baseline.o5kTaj/frontend/tests/sdd234-a-mobile-home.test.tsx:38:34\n    at file:///Volumes/Looxid%20SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/vitest/dist/chunks/run.C5UmxDPh.js:1628:35\n    at file:/"
+      }
+    ]
+  },
+  "head": {
+    "total": 2673,
+    "passed": 2658,
+    "failed": 15,
+    "failures": [
+      {
+        "file": "tests/agent-counselor-page.test.tsx",
+        "name": "상담사는 브리핑과 입력창을 보고 CTA로 세션 목록을 연다",
+        "error": "AssertionError: expected undefined to be 1000 // Object.is equality\n    at /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd240/frontend/tests/agent-counselor-page.test.tsx:43:135\n    at file:///Volumes/Looxid%20SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/vitest/dist/chunks/run.C5UmxDPh.js:2783:20"
+      },
+      {
+        "file": "tests/agent-counselor-page.test.tsx",
+        "name": "메시지 전송 성공 후 입력을 비우고 사용자·AI 응답을 최신 하단에 표시한다",
+        "error": "TypeError: 'set value' called on an object that is not a valid instance of HTMLInputElement.\n    at set value (/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/jsdom/lib/jsdom/living/generated/HTMLInputElement.js:1558:15)\n    at /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd240/frontend/tests/agent-counselor-page"
+      },
+      {
+        "file": "tests/chat-message-deeplink.test.ts",
+        "name": "대상 missing이면 최근 대화로 돌아갈 수 있다",
+        "error": "AssertionError: expected undefined to be true // Object.is equality\n    at /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd240/frontend/tests/chat-message-deeplink.test.ts:56:54\n    at file:///Volumes/Looxid%20SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/vitest/dist/chunks/run.C5UmxDPh.js:2783:20"
+      },
+      {
+        "file": "tests/chat-message-deeplink.test.ts",
+        "name": "대상 failure이면 최근 대화로 돌아갈 수 있다",
+        "error": "AssertionError: expected undefined to be true // Object.is equality\n    at /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd240/frontend/tests/chat-message-deeplink.test.ts:56:54\n    at file:///Volumes/Looxid%20SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/vitest/dist/chunks/run.C5UmxDPh.js:2783:20"
+      },
+      {
+        "file": "tests/org-counselor-management-browser.test.cjs",
+        "name": "상담사 보호 대상, 확인 사유, 실패 유지, 역할 변경과 소속 해제",
+        "error": "locator.click: Timeout 5000ms exceeded.\nCall log:\n  - waiting for getByRole('tab', { name: /상담사/ })\n\n    at /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd240/frontend/tests/org-counselor-management-browser.test.cjs:45:50\n    at /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/vitest/dist/chunks/run.C5UmxDPh.js:27"
+      },
+      {
+        "file": "tests/org-management-browser.test.cjs",
+        "name": "기관 모달: 미저장 보호, 실패 유지, 충돌 재조회, 수정, 비활성화, 재활성화",
+        "error": "locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for getByRole('button', { name: '정보 수정', exact: true })\n\n    at /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd240/frontend/tests/org-management-browser.test.cjs:54:68\n    at /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/vitest/dist/chunks/run.C5Umx"
+      },
+      {
+        "file": "tests/org-management-browser.test.cjs",
+        "name": "목록 상태 필터와 저장 후 포커스 복귀",
+        "error": "TypeError: fetch failed\n    at node:internal/deps/undici/undici:15141:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at liveBrowserHash (/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd240/frontend/tests/org-management-browser.test.cjs:16:22)\n    at /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd2"
+      },
+      {
+        "file": "tests/report-modal-pdf.test.cjs",
+        "name": "하단 액션과 본문 전용 PDF (수신 주소: saved@example.com)",
+        "error": "TypeError: fetch failed\n    at node:internal/deps/undici/undici:15141:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at liveBrowserHash (/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd240/frontend/tests/report-modal-pdf.test.cjs:14:22)\n    at /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd240/fro"
+      },
+      {
+        "file": "tests/report-modal-pdf.test.cjs",
+        "name": "하단 액션과 본문 전용 PDF (수신 주소: 없음)",
+        "error": "TypeError: fetch failed\n    at node:internal/deps/undici/undici:15141:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at liveBrowserHash (/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd240/frontend/tests/report-modal-pdf.test.cjs:14:22)\n    at /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd240/fro"
+      },
+      {
+        "file": "tests/report-server-pdf.test.cjs",
+        "name": "detail: 서버 파일 다운로드와 실패 복구",
+        "error": "TypeError: fetch failed\n    at node:internal/deps/undici/undici:15141:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at liveBrowserHash (/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd240/frontend/tests/report-server-pdf.test.cjs:14:22)\n    at /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd240/fr"
+      },
+      {
+        "file": "tests/report-server-pdf.test.cjs",
+        "name": "email: 서버 파일 다운로드와 실패 복구",
+        "error": "TypeError: fetch failed\n    at node:internal/deps/undici/undici:15141:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at liveBrowserHash (/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd240/frontend/tests/report-server-pdf.test.cjs:14:22)\n    at /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd240/fr"
+      },
+      {
+        "file": "tests/sdd234-a-mobile-home.test.tsx",
+        "name": "member: 768px 계산 글자·터치·간격 불변",
+        "error": "AssertionError: expected [ { tag: 'span', …(14) }, …(87) ] to deeply equal [ { tag: 'span', …(14) }, …(87) ]\n    at /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd240/frontend/tests/sdd234-a-mobile-home.test.tsx:38:34\n    at file:///Volumes/Looxid%20SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/vitest/dist/chunks/run.C5UmxDPh."
+      },
+      {
+        "file": "tests/sdd234-a-mobile-home.test.tsx",
+        "name": "member: 1440px 계산 글자·터치·간격 불변",
+        "error": "AssertionError: expected [ { tag: 'span', …(14) }, …(90) ] to deeply equal [ { tag: 'span', …(14) }, …(90) ]\n    at /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd240/frontend/tests/sdd234-a-mobile-home.test.tsx:38:34\n    at file:///Volumes/Looxid%20SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/vitest/dist/chunks/run.C5UmxDPh."
+      },
+      {
+        "file": "tests/sdd234-a-mobile-home.test.tsx",
+        "name": "host: 768px 계산 글자·터치·간격 불변",
+        "error": "AssertionError: expected [ { tag: 'span', …(14) }, …(86) ] to deeply equal [ { tag: 'span', …(14) }, …(86) ]\n    at /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd240/frontend/tests/sdd234-a-mobile-home.test.tsx:38:34\n    at file:///Volumes/Looxid%20SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/vitest/dist/chunks/run.C5UmxDPh."
+      },
+      {
+        "file": "tests/sdd234-a-mobile-home.test.tsx",
+        "name": "host: 1440px 계산 글자·터치·간격 불변",
+        "error": "AssertionError: expected [ { tag: 'span', …(14) }, …(86) ] to deeply equal [ { tag: 'span', …(14) }, …(86) ]\n    at /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd240/frontend/tests/sdd234-a-mobile-home.test.tsx:38:34\n    at file:///Volumes/Looxid%20SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/vitest/dist/chunks/run.C5UmxDPh."
+      }
+    ]
+  },
+  "newFailures": [],
+  "resolved": [
+    {
+      "file": "tests/sdd220-native-release.test.ts",
+      "name": "TS1 버전·암호화·Privacy Resources 등록",
+      "error": "AssertionError: expected '// !$*UTF8*$!\\n{\\n\\tarchiveVersion = …' to contain 'CURRENT_PROJECT_VERSION = 2;'\n    at /private/tmp/sdd240-baseline.o5kTaj/frontend/tests/sdd220-native-release.test.ts:15:12\n    at file:///Volumes/Looxid%20SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/vitest/dist/chunks/run.C5UmxDPh.js:1628:35\n    at file://"
+    },
+    {
+      "file": "tests/sdd220-native-release.test.ts",
+      "name": "TS29 release 서명 누락 거부·버전",
+      "error": "AssertionError: expected 'apply plugin: \\'com.android.applicati…' to contain '\"2\"'\n    at /private/tmp/sdd240-baseline.o5kTaj/frontend/tests/sdd220-native-release.test.ts:36:44\n    at file:///Volumes/Looxid%20SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/vitest/dist/chunks/run.C5UmxDPh.js:1628:35\n    at file:///Volumes/Looxid%20SSD/loo"
+    }
+  ]
+}
