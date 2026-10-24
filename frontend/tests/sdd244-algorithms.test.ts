@@ -57,11 +57,15 @@ describe('SDD244 T10 PPG 중첩 창 RR 중복', () => {
   });
 
   it('재연결로 시각 기준이 되돌아가도(리셋) 새 박동은 버리지 않는다', async () => {
-    const service = fresh(); const first = beats(12, 500_000);
+    const service = fresh(); const first = beats(100, 500_000);
     await service.processPPGAnalysisMetrics(hr, Date.now(), 90, true, first.rr, first.endTs);
-    const second = beats(12, 10_000);                          // 시각이 크게 과거로 돌아감
-    await service.processPPGAnalysisMetrics(hr, Date.now(), 90, true, second.rr, second.endTs);
-    expect(service.getRRBufferStatus().bufferLength).toBe(24);
+    const second = beats(100, 10_000);                          // 시각이 크게 과거로 돌아감
+    await feedSliding(service, second, 20, 50);
+    expect(service.getCurrentRespiratoryRate()).toBeNull();
+    await feedSliding(service, second, 20, 90);
+    expect(service.getRRBufferStatus().bufferLength).toBe(90);
+    expect(service.getCurrentRespiratoryRate()).toBeGreaterThan(12);
+    expect(service.getCurrentRespiratoryRate()).toBeLessThan(18);
   });
 
   it('시각을 주지 않는 기존 호출은 예전 동작 그대로다(호환)', async () => {

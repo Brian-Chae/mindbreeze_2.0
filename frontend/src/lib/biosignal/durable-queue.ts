@@ -17,7 +17,7 @@ export interface QueuedObject {
 }
 export interface AckReceipt {
   id: string; accountId: string; sessionId: string; participantId: string | null;
-  kind: ObjectKind; alias: string; sha256: string; serverId: string; size_bytes: number; verified_at_us: string;
+  meta?: RawMeta | ArtifactMeta; kind: ObjectKind; alias: string; sha256: string; serverId: string; size_bytes: number; verified_at_us: string;
 }
 export interface JournalPacket {
   id: string; accountId: string; sessionId: string; participantId: string | null;
@@ -106,6 +106,30 @@ export class BiosignalQueue {
     return idbRequest(body(tx.objectStore(store)));
   }
 
+  /** 처리기 emit/표시 행도 네트워크와 무관하게 먼저 영속화한다. 카운터 store의 별도 이름공간. */
+  async saveDraft<T>(kind: 'feature' | 'display', id: string, value: T): Promise<void> {
+    await this.write(['next_indices'], async tx => { tx.objectStore('next_indices').put({ id: `${this.scopeKey}|draft|${kind}|${id}`, draftScope: this.scopeKey, draftKind: kind, draftId: id, value }); });
+  }
+  async drafts<T>(kind: 'feature' | 'display'): Promise<{ id: string; value: T }[]> {
+    const rows = await this.read('next_indices', s => s.getAll() as IDBRequest<{ draftScope?: string; draftKind?: string; draftId: string; value: T }[]>);
+    return rows.filter(r => r.draftScope === this.scopeKey && r.draftKind === kind).map(r => ({ id: r.draftId, value: r.value }));
+  }
+
+  /** 내용 주소 모델은 재시작 후에도 같은 슬롯을 쓰고 서로 다른 모델은 슬롯을 공유하지 않는다. */
+  async artifactSequence(kind: ArtifactKind, alias: string): Promise<number> {
+    return this.write(['next_indices'], async tx => {
+      const store = tx.objectStore('next_indices');
+      const id = `${this.scopeKey}|artifact-slot|${kind}|${alias}`;
+      const existing = await idbRequest<{ sequence: number } | undefined>(store.get(id));
+      if (existing) return existing.sequence;
+      const counterId = `${this.scopeKey}|artifact-slot-counter|${kind}`;
+      const counter = await idbRequest<{ next: number } | undefined>(store.get(counterId));
+      const sequence = counter?.next ?? 0;
+      store.put({ id, sequence }); store.put({ id: counterId, next: sequence + 1 });
+      return sequence;
+    });
+  }
+
   // ── packet journal / raw 봉인 ──
   async journalPacket(packet: JournalPacket): Promise<void> {
     await this.write(['packets'], async tx => { tx.objectStore('packets').put({ ...packet, accountId: this.scope.accountId, sessionId: this.scope.sessionId, participantId: this.scope.participantId }); });
@@ -142,6 +166,8 @@ export class BiosignalQueue {
 
   /** gap 순번은 회차 단위로 영속 증가한다(재시작해도 되돌아가지 않음). */
   async addGap(gap: Omit<GapEvent, 'sequence' | 'event_type'>): Promise<GapEvent> {
+    // 역방향 구간은 저장하지 않고 순번도 소비하지 않는다.
+    if (gap.end_us !== null && BigInt(gap.end_us) < BigInt(gap.start_us)) throw new Error('negative_gap');
     const key = `${this.scopeKey}|gapseq`;
     return this.write(['gaps', 'next_indices'], async tx => {
       const counter = tx.objectStore('next_indices');
@@ -173,9 +199,13 @@ export class BiosignalQueue {
     store.put(object);
     return object;
   }
-  async enqueueArtifact(meta: ArtifactMeta, payload: ArrayBuffer): Promise<QueuedObject> {
+  async enqueueArtifact(meta: ArtifactMeta, payload: ArrayBuffer, drafts: { kind: 'feature' | 'display'; id: string }[] = []): Promise<QueuedObject> {
     const object = this.newObject(meta.artifact_kind, meta.artifact_alias, meta, payload);
-    return this.write([storeFor(meta.artifact_kind)], tx => this.putObject(tx.objectStore(storeFor(meta.artifact_kind)), object));
+    return this.write([storeFor(meta.artifact_kind), 'next_indices'], async tx => {
+      const saved = await this.putObject(tx.objectStore(storeFor(meta.artifact_kind)), object);
+      for (const draft of drafts) tx.objectStore('next_indices').delete(`${this.scopeKey}|draft|${draft.kind}|${draft.id}`);
+      return saved;
+    });
   }
 
   async objects(): Promise<QueuedObject[]> {
@@ -195,7 +225,7 @@ export class BiosignalQueue {
   async complete(object: QueuedObject, receipt: Omit<AckReceipt, 'id' | 'accountId' | 'sessionId' | 'participantId'>): Promise<void> {
     const store = storeFor(object.kind);
     await this.write([store, 'ack_receipts'], async tx => {
-      tx.objectStore('ack_receipts').put({ ...receipt, id: object.id, accountId: object.accountId, sessionId: object.sessionId, participantId: object.participantId } satisfies AckReceipt);
+      tx.objectStore('ack_receipts').put({ ...receipt, meta: object.meta, id: object.id, accountId: object.accountId, sessionId: object.sessionId, participantId: object.participantId } satisfies AckReceipt);
       tx.objectStore(store).delete(object.id);
     });
   }

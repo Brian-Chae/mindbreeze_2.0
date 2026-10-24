@@ -27,8 +27,10 @@ export interface GapEvent {
   reason: 'ble_disconnect' | 'packet_gap' | 'local_write_failed' | 'process_terminated' | 'clock_reset' | 'wall_clock_jump' | 'reanchor' | 'unknown' | 'upload_pending' | 'not_rendered';
   observed_or_estimated: 'observed' | 'estimated' | 'unknown'; expected_samples: number | null; received_samples: number | null; reconnect_count: number;
 }
+export interface LostArtifact { kind: 'raw' | ArtifactKind; alias: string; reason: string }
 export interface CloseIntent {
   event_type: 'close_intent'; intent_id: string; expected_artifacts: ExpectedArtifact[]; streams: StreamClose[];
+  lost_artifacts?: LostArtifact[];
   snapshots: ViewClose[]; last_gap_sequence: number | null; end_reason: string; closed_at_us: string;
 }
 export interface EventsResult {

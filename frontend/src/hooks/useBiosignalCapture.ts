@@ -49,6 +49,11 @@ export interface UseBiosignalCaptureResult {
   resumeBlocked: () => Promise<void>;
 }
 
+type CaptureRuntime = { session: BiosignalCaptureSession; queue: BiosignalQueue; api: BiosignalApi; collector: FeatureCollector; display: DisplayRecorder; active: () => boolean };
+// 저장 장치가 쓰기를 거절한 상태의 unmount도 메모리 사본을 버리지 않는다. 같은 계정/회차 재진입에서만 재시도한다.
+const suspendedRuntimes = new Map<string, CaptureRuntime>();
+const cleanupBarriers = new Map<string, Promise<void>>();
+
 export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBiosignalCaptureResult {
   const { sessionId, participantId, enabled, connected, skipAuth = false, entryCredential = null, displayViewKind = 'participant_player' } = options;
   const userId = useAuthStore(state => state.user?.id ?? null);
@@ -60,9 +65,10 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
   const [closeState, setCloseState] = useState<string | null>(null);
   // 밴드를 한 번도 연결하지 않은 사용자는 capability 요청·구독을 하지 않는다. close 뒤에는 다시 대기.
   const [armed, setArmed] = useState(false);
+  const [generation, setGeneration] = useState(0);
   const wasConnected = useRef(false);
   const closing = useRef(false);
-  const runtime = useRef<{ session: BiosignalCaptureSession; queue: BiosignalQueue; api: BiosignalApi; collector: FeatureCollector; display: DisplayRecorder; active: () => boolean } | null>(null);
+  const runtime = useRef<CaptureRuntime | null>(null);
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
@@ -74,10 +80,24 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
     const rt = runtime.current;
     if (rt && !closing.current) {
       if (wasConnected.current && !connected) rt.session.markDisconnected();
-      if (!wasConnected.current && connected) rt.session.markReconnected();
+      if (!wasConnected.current && connected) {
+        if (rt.session.stopReason === 'closed') setGeneration(g => g + 1);
+        else rt.session.markReconnected();
+      }
     }
     wasConnected.current = connected;
   }, [connected, enabled]);
+
+  // 밴드 없는 재진입도 해당 계정·회차의 미전송 사본이 있으면 복구한다.
+  useEffect(() => {
+    if (!enabled || !accountId || !participantId) return;
+    let cancelled = false;
+    const queue = new BiosignalQueue({ accountId, sessionId, participantId, deviceAlias: 'LINK-BAND' }, crypto.randomUUID());
+    void Promise.all([queue.objects(), queue.pendingEvents(), queue.allPackets(), queue.drafts('feature'), queue.drafts('display')]).then(parts => {
+      if (!cancelled && (parts.some(part => part.length > 0) || suspendedRuntimes.has(queue.scopeKey))) setArmed(true);
+    }).catch(error => logger.warn('biosignal 복구 조회 실패', error));
+    return () => { cancelled = true; };
+  }, [enabled, accountId, sessionId, participantId]);
 
   const refresh = useCallback(async () => {
     const rt = runtime.current; if (!rt || !mounted.current) return;
@@ -90,10 +110,10 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
 
   const pump = useCallback(async () => {
     const rt = runtime.current; if (!rt) return;
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
     try {
-      await rt.collector.flush(false);
-      await rt.display.flush(false);
+      await rt.collector.flush(rt.session.status !== 'running');
+      await rt.display.flush(rt.session.status !== 'running');
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) { await refresh(); return; }
       await uploadBiosignalQueue(rt.queue, rt.api, (url, payload, headers) => putEegRawToPresignedUrl(url, payload, headers), rt.active);
       const result = await sendBiosignalEvents(rt.queue, rt.api, rt.active);
       if (result?.close_state && mounted.current) setCloseState(result.close_state);
@@ -109,40 +129,68 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
     const api = createBiosignalApi({ entryCredential, skipAuth });
     const queue = new BiosignalQueue({ accountId, sessionId, participantId, deviceAlias: 'LINK-BAND' }, crypto.randomUUID());
     const session = new BiosignalCaptureSession({ queue, onStatus: (s, r) => { if (mounted.current && !cancelled) { setStatus(s); setStopReason(r); } } });
-    void (async () => {
+    const startup = (async () => {
       try {
+        await cleanupBarriers.get(queue.scopeKey);
+        if (cancelled) return;
+        const suspended = suspendedRuntimes.get(queue.scopeKey);
+        if (suspended) {
+          await suspended.queue.acquire();
+          try { await suspended.session.sealOpen(); await suspended.collector.flush(true); await suspended.display.flush(true); suspendedRuntimes.delete(queue.scopeKey); }
+          finally { await suspended.queue.release(); }
+        }
         const capability = await api.capability(sessionId, participantId);
         if (cancelled) return;
         const allowed = new Set<Signal>(capability.signals.filter(s => s.upload_allowed).map(s => s.signal));
         // 구버전 서버·미동의·미지원: v2를 쓰지 않고 기존 v1 경로만 유지한다.
         if (!capability.raw_schemas.includes(RAW_V2) || allowed.size === 0) { setStatus('inactive'); return; }
-        await session.start();
+        const collecting = wasConnected.current;
+        await session.start(collecting);
         if (cancelled) { await session.pause(); return; }
         const collector = new FeatureCollector({ queue, session });
+        await collector.restore();
         const display = new DisplayRecorder({ queue, session, viewKind: displayViewKind, sourceFeature: s => collector.lastFeatureAlias(s) });
-        await display.start(getActiveModelCache());
+        if (collecting) await display.start(getActiveModelCache());
+        else await display.restore();
+        if (cancelled) { await session.pause(); return; }
         runtime.current = { session, queue, api, collector, display, active: () => !cancelled };
-        unsubscribe = subscribeRawPackets(packet => { if (allowed.has(packet.signal)) session.receive(packet); }, error => {
+        unsubscribe = subscribeRawPackets(packet => { if (allowed.has(packet.signal) && session.status === 'running' && !closing.current) session.receive(packet); }, error => {
           logger.error('원문 수집 오류 — 수집 중단', error); session.abort('journal_failed');
         });
         timers.push(setInterval(() => { void queue.renew().catch(() => session.abort('lease_lost')); }, LEASE_RENEW_MS));
         timers.push(setInterval(() => { void pump(); }, UPLOAD_INTERVAL_MS));
+        void pump();
         timers.push(setInterval(() => { void session.checkQuota().then(() => { if (mounted.current) setQuotaWarning(session.quotaWarning); }).catch(() => undefined); }, QUOTA_INTERVAL_MS));
       } catch (error) {
         // capability 404/네트워크 오류/lease 점유: v2 비활성. 상담·분석 기능에는 영향이 없다.
         logger.warn('biosignal v2 수집 비활성', error);
-        if (mounted.current && !cancelled) setStatus('inactive');
+        await session.pause();
+        if (mounted.current && !cancelled) {
+          const leaseLost = error instanceof Error && error.message.startsWith('lease');
+          setStatus(leaseLost ? 'stopped' : 'inactive');
+          setStopReason(leaseLost ? 'lease_lost' : null);
+        }
       }
     })();
+    const online = () => { if (!runtime.current) setGeneration(g => g + 1); else void pump(); };
+    window.addEventListener('online', online);
     return () => {
       cancelled = true;
+      window.removeEventListener('online', online);
       unsubscribe?.();
       timers.forEach(clearInterval);
       const rt = runtime.current;
       runtime.current = null;
-      if (rt && rt.session === session) void session.pause();
+      const cleanup = startup.then(async () => {
+        if (!rt || rt.session !== session) return;
+        try { await session.sealOpen(); await rt.collector.flush(true); await rt.display.flush(true); }
+        catch (error) { suspendedRuntimes.set(rt.queue.scopeKey, rt); logger.warn('종료 전 로컬 기록 실패 — 영속 journal 및 메모리 사본 유지', error); }
+        finally { await session.pause(); }
+      });
+      cleanupBarriers.set(queue.scopeKey, cleanup);
+      void cleanup.finally(() => { if (cleanupBarriers.get(queue.scopeKey) === cleanup) cleanupBarriers.delete(queue.scopeKey); });
     };
-  }, [active, accountId, sessionId, participantId, entryCredential, skipAuth, pump, displayViewKind]);
+  }, [active, accountId, sessionId, participantId, entryCredential, skipAuth, pump, displayViewKind, generation]);
 
   const close = useCallback(async (reason: string) => {
     const rt = runtime.current; if (!rt) return null;
@@ -157,7 +205,7 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
       return intent;
     } catch (error) { logger.warn('close intent 기록 실패', error); return null; } finally {
       closing.current = false; wasConnected.current = false;
-      if (mounted.current) setArmed(false); // 다음 연결은 새 stream으로 시작
+      // 수집 종료 후에도 영속 큐 업로더와 online 재개는 살아 있다.
     }
   }, [pump]);
 
@@ -166,12 +214,11 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
     markDisconnected: () => runtime.current?.session.markDisconnected(),
     markReconnected: () => runtime.current?.session.markReconnected(),
     featureWindow: (signal, count) => runtime.current?.session.sampleWindow(signal, count) ?? null,
-    emitFeature: (signal, data, window, windowIndex, extras) => runtime.current?.collector.emit(signal, data, { window, windowIndex, extras }),
+    emitFeature: (signal, data, window, windowIndex, extras) => { const rt = runtime.current; if (rt?.session.status === 'running' && !closing.current) rt.collector.emit(signal, data, { window, windowIndex, extras }); },
     recordDisplay: (rendered, visible) => {
-      const rt = runtime.current; if (!rt) return;
+      const rt = runtime.current; if (!rt || rt.session.status !== 'running' || closing.current) return;
       // 활성 표준 모델이 바뀌면 새 snapshot을 등록(이미 기록한 행은 그대로)
-      void rt.display.setModel(getActiveModelCache()).catch(() => undefined);
-      rt.display.tick(rendered, visible);
+      void rt.display.record(rendered, visible, rendered && 'normalizationModel' in rendered ? rendered.normalizationModel ?? null : getActiveModelCache()).catch(error => logger.warn('표시 기록 실패', error));
     },
     close,
     resumeBlocked: async () => {

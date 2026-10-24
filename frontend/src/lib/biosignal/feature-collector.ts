@@ -32,6 +32,7 @@ export interface EmitContext {
   extras?: Partial<Scalars>;
 }
 interface Pending {
+  bundle?: number;
   signal: Signal; sequence: number; alias: string; result: FeatureResult; window: SampleWindow; windowIndex: number;
   extras: Partial<Scalars>; computedAtUs: string; emittedMs: number; payloads: Record<string, unknown>; bytes: number;
 }
@@ -42,7 +43,7 @@ async function gzip(text: string): Promise<ArrayBuffer> {
   void writer.write(new TextEncoder().encode(text)).then(() => writer.close());
   return new Response(stream.readable).arrayBuffer();
 }
-const short = (id: string) => id.replace(/-/g, '').slice(0, 8);
+const short = (id: string) => id.replace(/-/g, '').slice(0, 8) + id.replace(/-/g, '').slice(-8);
 
 export class FeatureCollector {
   unresolved = 0;
@@ -51,11 +52,11 @@ export class FeatureCollector {
   private readonly now: () => number;
   private readonly playGroupId: () => string | null;
   private pending: Pending[] = [];
-  private sequences = new Map<Signal, number>();
-  private featureBundles = new Map<string, number>();
-  private derivedBundles = new Map<string, number>();
+  private sequences = new Map<string, number>();
   private algorithms = new Map<Signal, AlgorithmSnapshot>();
   private chain: Promise<void> = Promise.resolve();
+  private writes: Promise<void> = Promise.resolve();
+  private persistenceError: unknown = null;
   private lastAliases = new Map<Signal, string>();
 
   constructor(options: { queue: BiosignalQueue; session: BiosignalCaptureSession; createId?: () => string; now?: () => number; playGroupId?: () => string | null }) {
@@ -70,21 +71,42 @@ export class FeatureCollector {
   emit(signal: Signal, data: Record<string, unknown>, context: EmitContext): void {
     const window = context.window;
     if (!window) return;
-    if (this.pending.length >= MAX_PENDING) { this.unresolved += 1; return; }   // 가득 찬 경우도 조용히 버리지 않고 센다
-    const sequence = this.sequences.get(signal) ?? 0;
-    this.sequences.set(signal, sequence + 1);
-    this.lastAliases.set(signal, `FEAT-${signal.toUpperCase()}-${short(window.streamId)}-${String(sequence).padStart(8, '0')}`);
-    const result: FeatureResult = { signal, data };
+    if (this.pending.length >= MAX_PENDING) this.session.abort('memory_cap');   // 가득 찬 경우도 조용히 버리지 않고 센다
+    const key = `${signal}|${window.streamId}|${window.segmentId}`;
+    const sequence = this.sequences.get(key) ?? 0;
+    this.sequences.set(key, sequence + 1);
+    this.lastAliases.set(signal, `FEAT-${signal.toUpperCase()}-${short(window.streamId)}-${short(window.segmentId)}-${String(sequence).padStart(8, '0')}`);
+    const result: FeatureResult = { signal, data: structuredClone(data) };
     const payloads = derivedPayloads(result);
     const bytes = JSON.stringify(payloads).length + 4000;
-    this.pending.push({ signal, sequence, alias: `FEAT-${signal.toUpperCase()}-${short(window.streamId)}-${String(sequence).padStart(8, '0')}`, result, window,
-      windowIndex: context.windowIndex, extras: context.extras ?? {}, computedAtUs: (BigInt(this.now()) * 1000n).toString(), emittedMs: this.now(), payloads, bytes });
+    const pending: Pending = { signal, sequence, alias: `FEAT-${signal.toUpperCase()}-${short(window.streamId)}-${short(window.segmentId)}-${String(sequence).padStart(8, '0')}`, result, window: { ...window },
+      windowIndex: context.windowIndex, extras: { ...context.extras }, computedAtUs: (BigInt(this.now()) * 1000n).toString(), emittedMs: this.now(), payloads, bytes };
+    this.pending.push(pending);
+    this.writes = this.writes.then(() => this.queue.saveDraft('feature', pending.alias, pending)).catch(error => { this.persistenceError = error; this.session.abort('journal_failed'); });
+  }
+
+  async persist(): Promise<void> {
+    await this.writes;
+    if (this.persistenceError) {
+      // 사본을 메모리에 유지하며 다음 명시 재시도에서 전체 미봉인 emit을 다시 쓴다.
+      for (const p of this.pending) await this.queue.saveDraft('feature', p.alias, p);
+      this.persistenceError = null;
+    }
+  }
+  async restore(): Promise<void> {
+    for (const { value: p } of await this.queue.drafts<Pending>('feature')) {
+      this.pending.push(p);
+      const key = `${p.signal}|${p.window.streamId}|${p.window.segmentId}`;
+      this.sequences.set(key, Math.max(this.sequences.get(key) ?? 0, p.sequence + 1));
+      this.lastAliases.set(p.signal, p.alias);
+    }
   }
 
   /** 원창이 봉인된 항목만 묶는다. force=true(종료)에서는 가능한 범위로 묶고, 전혀 못 찾으면 unresolved로 센다. */
   flush(force = false): Promise<void> {
-    this.chain = this.chain.then(() => this.run(force)).catch(error => { console.error('feature 묶음 실패 — 항목 보존', error); });
-    return this.chain;
+    const task = this.chain.then(() => this.run(force));
+    this.chain = task.catch(() => undefined);
+    return task;
   }
 
   private sources(p: Pending): { windows: SourceWindow[]; complete: boolean } {
@@ -106,40 +128,45 @@ export class FeatureCollector {
       const parameters = ALGORITHM_PARAMETERS[signal];
       const hash = await sha256(new TextEncoder().encode(JSON.stringify({ id: `mb-web-${signal}`, version: ALGORITHM_VERSIONS[signal], parameters })).buffer as ArrayBuffer);
       snapshot = { algorithm_id: `mb-web-${signal}`, algorithm_version: ALGORITHM_VERSIONS[signal], parameters_hash: hash, parameters, filter_version: ALGORITHM_VERSIONS[signal], build: 'web' };
-      this.algorithms.set(signal, snapshot);
+
       const payload = new TextEncoder().encode(JSON.stringify(snapshot));
       const buffer = payload.buffer.slice(payload.byteOffset, payload.byteOffset + payload.byteLength) as ArrayBuffer;
       await this.queue.enqueueArtifact({ artifact_alias: `ALGO-${signal.toUpperCase()}-${hash.slice(0, 8)}`, artifact_kind: 'algorithm', stream_id: null, segment_id: null, signal, sequence: 0,
         row_count: 1, content_encoding: 'identity', schema_version: 'algorithm-v1', checksum: await sha256(buffer), size_bytes: buffer.byteLength, content_type: 'application/json' }, buffer);
+      this.algorithms.set(signal, snapshot);
     }
     return snapshot;
   }
 
   private async run(force: boolean): Promise<void> {
+    await this.persist();
     const groups = new Map<string, Pending[]>();
-    const keep: Pending[] = [];
     for (const p of this.pending) {
       const { windows, complete } = this.sources(p);
-      if (!complete && !force) { keep.push(p); continue; }
+      if (!complete && !force) continue;
       if (!windows.length) { this.unresolved += 1; continue; }
-      const key = `${p.signal}|${p.window.streamId}|${p.window.segmentId}`;
+      const key = `${p.signal}|${p.window.streamId}|${p.window.segmentId}|${p.bundle ?? 'new'}`;
       groups.set(key, [...(groups.get(key) ?? []), p]);
     }
-    this.pending = keep;
     for (const items of groups.values()) {
-      // 10초 미만·소량이면 다음 flush로 미룬다(종료 시 force).
       const bytes = items.reduce((sum, p) => sum + p.bytes, 0);
       const age = this.now() - Math.min(...items.map(p => p.emittedMs));
-      if (!force && age < BUNDLE_MAX_AGE_MS && bytes < BUNDLE_SOFT_BYTES) { this.pending.push(...items); continue; }
-      try { await this.bundle(items); } catch (error) { this.pending.push(...items); throw error; }
+      if (!force && age < BUNDLE_MAX_AGE_MS && bytes < BUNDLE_SOFT_BYTES) continue;
+      for (const p of items) {
+        p.bundle ??= items[0].sequence;
+        await this.queue.saveDraft('feature', p.alias, p);
+      }
+      await this.bundle(items);
+      const done = new Set(items);
+      this.pending = this.pending.filter(p => !done.has(p));
     }
+    if (force && this.pending.length) throw new Error('feature_source_pending: 원창 봉인 전 종료할 수 없습니다');
   }
 
   private async bundle(items: Pending[]): Promise<void> {
     const first = items[0], signal = first.signal, w = first.window;
     const algorithm = await this.algorithm(signal);
-    const groupKey = `${signal}|${w.streamId}|${w.segmentId}`;
-    const derivedSeq = this.derivedBundles.get(groupKey) ?? 0, featureSeq = this.featureBundles.get(groupKey) ?? 0;
+    const derivedSeq = first.bundle ?? first.sequence, featureSeq = derivedSeq;
     const suffix = `${signal.toUpperCase()}-${short(w.streamId)}-${short(w.segmentId)}`;
     const derivedAlias = `DERIVED-${suffix}-${String(derivedSeq).padStart(6, '0')}`;
     const derivedText = items.map(p => JSON.stringify({ feature_id_alias: p.alias, first_sample_index: p.window.first, fields: p.payloads })).join('\n') + '\n';
@@ -148,7 +175,7 @@ export class FeatureCollector {
     await this.queue.enqueueArtifact({ artifact_alias: derivedAlias, artifact_kind: 'raw_derived', stream_id: w.streamId, segment_id: w.segmentId, signal, sequence: derivedSeq,
       row_count: items.length, content_encoding: 'gzip', schema_version: 'raw-derived-v1', checksum: derivedSha, uncompressed_sha256: await sha256(new TextEncoder().encode(derivedText).buffer as ArrayBuffer),
       size_bytes: derivedBytes.byteLength, content_type: 'application/gzip' }, derivedBytes);
-    this.derivedBundles.set(groupKey, derivedSeq + 1);
+
 
     const records: FeatureRecord[] = items.map(p => {
       const { windows } = this.sources(p);
@@ -166,8 +193,7 @@ export class FeatureCollector {
       stream_id: w.streamId, segment_id: w.segmentId, signal, sequence: featureSeq, first_sequence: records[0].sequence, last_sequence: records[records.length - 1].sequence, row_count: records.length,
       content_encoding: 'gzip', schema_version: 'feature-v1', checksum: await sha256(bytes), uncompressed_sha256: await sha256(new TextEncoder().encode(text).buffer as ArrayBuffer),
       size_bytes: bytes.byteLength, time_range: { from_us: records[0].source_windows[0].time_range.from_us, to_us: records[records.length - 1].source_windows.at(-1)!.time_range.to_us }, content_type: 'application/gzip' };
-    await this.queue.enqueueArtifact(meta, bytes);
-    this.featureBundles.set(groupKey, featureSeq + 1);
-    this.session.noteFeatureSequence(signal, records[records.length - 1].sequence);
+    await this.queue.enqueueArtifact(meta, bytes, items.map(p => ({ kind: 'feature', id: p.alias })));
+    this.session.noteFeatureSequence(signal, records[records.length - 1].sequence, w.streamId, w.segmentId);
   }
 }

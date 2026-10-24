@@ -10,6 +10,7 @@ import ClassPlayerPage from '../src/pages/sessions/ClassPlayerPage';
 import { useAuthStore } from '../src/stores/authStore';
 
 const h = vi.hoisted(() => ({
+  recordDisplay: vi.fn(),
   liveOptions: {} as Record<string, unknown>,
   bandOptions: {} as Record<string, unknown>,
   participation: {sessionId:'s1',version: -1, revoked: false, participants: {} as Record<string, unknown>},
@@ -65,7 +66,7 @@ vi.mock('../src/hooks/useBand', () => ({
   useBand: (options: Record<string, unknown>) => {h.bandOptions=options;return ({
     isSupported: true, isMock: false, connectionState: 'disconnected', battery: null, deviceStatus: null, signalQualityLevel: 'unknown',
     signalQuality: null, lastEegAt: null, currentEfficiency: null, uploadStatus: null, error: null,
-    connect: vi.fn(), disconnect: vi.fn(),
+    connect: vi.fn(), disconnect: vi.fn(), recordDisplay: h.recordDisplay,
   });},
 }));
 vi.mock('../src/hooks/useLiveKit', () => ({ useLiveKit: () => h.liveKit }));
@@ -139,7 +140,7 @@ beforeEach(() => {
   h.participation={sessionId:'s1',version:-1,revoked:false,participants:{}};
   h.containerProps.length = 0;
   h.prepProps.length = 0;
-  h.calls.length = 0;
+  h.calls.length = 0; h.recordDisplay.mockClear();
   Object.assign(h.liveKit, { token: null, loading: false, error: null });
   h.getClass.mockReset().mockResolvedValue({ id: 'class-1', revision: 1, status: 'active', capacity: 10, capabilities: { invite: true } });
   h.getSession.mockReset().mockImplementation(async () => h.session);
@@ -164,6 +165,13 @@ afterEach(async () => {
 
 describe('진행 중 호스트: 새 컨테이너로 교체', () => {
   beforeEach(() => { h.session = makeSession('in_progress'); });
+
+  it('SDD244 H06: session_player 표시를 60초 동안 매초 기록', async () => {
+    await renderPage();
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+    expect(h.bandOptions.displayViewKind).toBe('session_player');
+    expect(h.recordDisplay).toHaveBeenCalledTimes(60);
+  });
 
   it('옛 헤더·워크스페이스 대신 HostLiveContainer 하나만 그리고, 페이지의 채팅 오버레이·종료 모달은 중복으로 두지 않는다', async () => {
     await renderPage();
