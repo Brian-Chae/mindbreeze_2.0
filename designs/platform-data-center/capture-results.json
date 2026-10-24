@@ -137,7 +137,42 @@
       "clipped": []
     },
     {
+      "name": "1440-detail-features",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-detail-ppg-collected",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-detail-acc-collected",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-download-signals-collected",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
       "name": "1440-download-dialog",
+      "width": 1440,
+      "pageOverflow": 0,
+      "overlap": [],
+      "clipped": []
+    },
+    {
+      "name": "1440-download-signals",
       "width": 1440,
       "pageOverflow": 0,
       "overlap": [],
@@ -445,6 +480,38 @@
     },
     {
       "name": "acc 미저장 안내",
+      "pass": true
+    },
+    {
+      "name": "feature 전체 원천 컬럼 표",
+      "pass": true
+    },
+    {
+      "name": "6대 표시 지표는 감정균형도 포함",
+      "pass": true
+    },
+    {
+      "name": "ppg 수집 후 예시 구분",
+      "pass": true
+    },
+    {
+      "name": "acc 수집 후 예시 구분",
+      "pass": true
+    },
+    {
+      "name": "수집 후 신호별 5개 선택",
+      "pass": true
+    },
+    {
+      "name": "EEG 해제 시 bin도 제외",
+      "pass": true
+    },
+    {
+      "name": "전체 데이터 항목 미선택 차단",
+      "pass": true
+    },
+    {
+      "name": "미수집 PPG ACC 선택 비활성",
       "pass": true
     },
     {

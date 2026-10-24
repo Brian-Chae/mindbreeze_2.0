@@ -10,7 +10,7 @@
 
 현재 플랫폼 관리자는 기관·상담사·회원 계정을 관리할 수 있지만, 한 사용자의 데이터가 어디에 얼마나 쌓였고 연구 동의·보관 정리가 어느 단계인지 함께 확인하기 어렵다. 원본·파생 지표·동의·삭제 이력이 각 업무 화면과 백엔드에 흩어져 있다.
 
-**10/24 Brian 정정: 데이터 다운로드와 단건 그래프가 1차 핵심이다.** 기존 “조회만, 다운로드 제외” 권장안은 폐기한다. 플랫폼 관리자가 **클래스 → 회차 → 참여자** 순서로 탐색해 원파형·지표를 확인하고 회차를 기본 단위로 내려받는다. 10/24 Brian 확정에 따라 클래스 전체·회원·상담사 단위를 함께 제공한다. 기존 6개 업무 탭에 다운로드 작업·기록을 더한다.
+**10/24 Brian 정정: 데이터 다운로드와 단건 그래프가 1차 핵심이다.** 기존 “조회만, 다운로드 제외” 권장안은 폐기한다. 플랫폼 관리자가 **클래스 → 회차 → 참여자** 순서로 탐색해 EEG·PPG·ACC 원파형, 전체 feature와 화면 표시 6대 지표를 확인하고 회차를 기본 단위로 내려받는다. 10/24 Brian 확정에 따라 클래스 전체·회원·상담사 단위를 함께 제공한다. 기존 6개 업무 탭에 다운로드 작업·기록을 더한다.
 
 | 대안 | 장점 | 비용·위험 | 선택 |
 |---|---|---|---|
@@ -100,12 +100,48 @@
 | 기존 감사·만료 | job/audit 이미 있음. 사유2~500자, 요청/거절/URL 발급 기록, 작업24h·URL최대300초, 활성 계정·종료 회차·EEG 동의·작업 소유자 검사 | `backend/app/models/data_export.py:12`, `:45`; `export_service.py:35`, `:50`, `:107`, `:130`, `:154`. 플랫폼 일괄·식별 수준·연구정책·기록조회 확장 필요 |
 | LINK BAND 표준 CSV | 조사한 저장소 SDK/EEG/raw/export 경로에서 `timestamp,fp1,fp2` 표준 exporter **선례 확인 못함** | 이 3열은 **신규 호환용 계약 제안**이지 제조사 표준 인증이 아님. 기존 CSV 선례는 `export_package.py:12`, `:119`의 지표29열 |
 
-### 3.3 그래프 재사용 판단
+### 3.3 신호별 수집 경로 재확인 — 10/24 추가 요구
+
+이번 전수 조사는 `frontend/src`, `backend/app`, `backend/alembic`의 BLE parser·callback 등록·encoder/queue/upload·API·모델·S3 key·연구 export 경로를 대상으로 했다. 운영 객체 존재 확인은 아니다.
+
+| 종류 | 현재 서버 저장 경로 | 결정적 근거(파일:행) |
+|---|---|---|
+| EEG raw | 있음: 250Hz·2ch·µV, `eeg_raw_chunks` + S3 bin | `frontend/src/hooks/useBand.ts:433`, `frontend/src/lib/session-live/raw-encoder.ts:8`, `backend/app/api/v1/session.py:750`, `:770`, `backend/app/models/record.py:118` |
+| PPG raw | **없음**: 50Hz red/ir, unsigned 24bit ADC count 파서까지만 있음 | `frontend/src/lib/eeg/blePacketParser.ts:127`, `:158`; `StreamProcessor.ts:368` callback은 있으나 `useBand.ts:1223` 등록은 EEG뿐 |
+| ACC raw | **없음**: 30Hz xyz, int16 × 2/32768 → g | `frontend/src/lib/eeg/blePacketParser.ts:175`, `:233`; `StreamProcessor.ts:422` callback 미등록 |
+| feature | 있음: `eeg_feature_windows` 원천 컬럼·null 보존 | `backend/app/models/eeg_feature.py:71`~`:109`, `backend/app/api/v1/session.py:701`, `backend/app/services/session_service.py:3491` |
+| 화면 6대 지표 | 원천은 저장됨. **매초 실제 표시값·당시 모델버전 스냅샷은 없음**. 리포트 집계는 별도 저장 | `frontend/src/hooks/useBand.ts:295`, `backend/app/models/eeg_feature.py:56`~`:111`, 아래 §3.4 |
+
+- S3 key는 `eeg-raw/{session}/{participant}/{segment}/{stream}/{chunk:08d}.bin`만 확인(`backend/app/services/eeg_raw_service.py:45`~`:71`). PPG/ACC raw용 endpoint·모델·키 패턴은 없다. 연구 서비스도 raw 미저장을 명시(`backend/app/services/research_export_service.py:69`).
+- PPG 화면 버퍼(`useBand.ts:922`, `StreamProcessor.ts:720`)는 처리된 그래프 결과, ACC 화면 버퍼(`useBand.ts:969`)는 magnitude/요약이다. 이를 raw로 업로드하면 안 된다. `StreamProcessor.ts:345`, `:399`의 processing 중 드롭을 피하도록 **분석 전 BLE 파서 출력 수신 경로에서 독립 캡처**한다.
+- 현재 PPG/ACC 미수집은 “보관기간 만료”와 다르다. **저장 시작 전 데이터는 소급 수집·복원 불가**. feature에서 원파형을 합성해 raw로 제공하지 않는다.
+
+### 3.4 화면 6대 지표 정의와 동일성 계약
+
+| 화면 지표 / indices 컬럼 | 원천 feature | 실제 회원 화면 값 |
+|---|---|---|
+| 집중도 / focus | focus_index | scoredIndices.focusIndex 정규화 결과 |
+| 이완도 / relaxation | relaxation_index | scoredIndices.relaxationIndex, 로컬값 없음/연결 해제 시 정규화한 remoteEfficiency fallback |
+| 감정균형도 / emotional | emotional_stability | scoredIndices.emotionalStability 정규화 결과 (stress_index 아님) |
+| BPM / bpm | heart_rate | 같은 시점 심박 원값, bpm |
+| 호흡 / respiration | respiratory_rate | 같은 시점 원값, 회/분 |
+| HRV / hrv | sdnn | 같은 시점 SDNN 원값, ms (RMSSD 아님) |
+
+- 정의: `frontend/src/lib/class/player-case.ts:79`~`:85`; SDD-237 카드 `frontend/src/components/class-report/MetricStoryCard.tsx:2`, `:17`은 같은 정의 사용. 마음3 표시 단위는 `%`이지만 원 feature 비율과 같지 않고 백분위 순위도 아니다.
+- 회원 매핑: `frontend/src/components/class/player/member/MemberClassContainer.tsx:61`~`:71`. 마음3은 SDD-036 활성 모델 sigmoid 우선, 지표 params가 없으면 코호트 B0 fallback(`frontend/src/lib/eeg/eegPersonalScore.ts:153`~`:184`). 조회 실패 시 FE 캐시를 유지(`:88`~`:102`)한다. 실제 숫자는 `MemberSheets.tsx:76`, `MemberStage.tsx:59`의 Math.round 및 접촉/오래된 링크 null 게이트를 거친다. `MemberClassContainer.tsx:166`~`:168`의 lead_off 또는 stale이면 전체 null. 단순 disconnected는 이완 remote fallback을 허용한다. `:257`~`:262`에서 자기 session/participant socket의 current_efficiency → relaxation_index → feature.relaxation_index를 선택해 scoreIndices로 정규화한다. 따라서 snapshot에는 `input_source=local_ble|socket`, 원천 event 시각/age·로컬/원격 선택도 기록한다.
+- 표준모델 version/params 자체는 저장(`backend/app/models/normalization_model.py:23`~`:31`)되나 **측정 윈도우에 당시 사용 모델 연결은 없다**. FE/BE sigmoid 식·반올림은 일치(`backend/app/services/normalization_score.py:49`~`:71`)하지만 당시 모델/캐시/게이트를 알 수 없으므로 원 feature만으로 과거 화면과 동일하다고 확정할 수 없다. fallback 집중도도 FE p5~p95 선형(`frontend/src/lib/eeg/eegScore.ts:78`)과 BE 사다리꼴(`backend/app/services/eeg_metrics.py:242`)로 다르다.
+- 모델에 있는 전체 feature가 모든 수집 경로에서 채워진다는 뜻은 아니다. 특히 `total_neural_activity`, `faa`는 현재 `useBand.ts:295`~`:323` 전송과 `session_service.py:3491`~`:3522` 행 생성에서 빠져 있으므로 null/미전달 상태를 보존하며 임의 계산해 채우지 않는다.
+- 리포트는 생성 시 활성→최신 모델을 선택(`backend/app/services/class_report_stats_service.py:375`~`:385`), 마음3 재계산·몸3 원값(`:406`~`:416`), 품질/최소 유효시간/집계(`:111`, `:235`) 적용. 결과 `normalization_version`(`:293`)과 `content['class_report']`(`backend/app/tasks/report_task.py:662`~`:676`)는 저장되지만 매초 회원 화면 스냅샷이 아니다.
+- **선행 수집 확장:** 미래 indices는 실제 UI에 공급한 6개 값과 최종 표시 정수, 표시 시각/윈도우 연결·누락 사유를 스냅샷으로 보존한다. 표준 model id/version/params hash, 지표별 `normalization_source=standard_model|cohort|physical`, fallback 버전, `display_pipeline_version`(반올림·접촉 게이트 포함), 앱/웹 빌드 버전도 기록한다. 화면 변경 이벤트와 1초 표본의 관계를 명시하며 “화면 1초 표본”이 모든 렌더 프레임 기록이라는 주장은 하지 않는다.
+- 레거시 `indices.csv`는 파일·행을 제공하되 당시값 미확인 컬럼은 null + `unavailable_reason=display_history_missing`, `display_match=unverified`. 별도 요청한 재계산값만 `source=reconstructed`와 모델/산식 버전으로 분리하며 **현재 활성모델 값을 당시값으로 위장 금지**. 리포트 집계값은 `source=report_aggregate`, 집계범위·report/version 메타로 별도 구분, live 시계열에 혼합하지 않는다.
+- 데이터센터는 기존 화면의 지표를 재현할 뿐 **새 점수·종합점수·순위·판정을 생성하지 않는다**. 기존 Spec의 스트레스 포함 원천6지표 정의는 이 표로 대체한다.
+
+### 3.5 그래프 재사용 판단
 
 - `frontend/src/components/playground/EegWaveformPanel.tsx:10`, `:76` + `WaveformCanvas.tsx:39`, `:147`~`:170`: Canvas 2D Fp1/Fp2와 픽셀별 min/max 축약 렌더링 재사용 가능. 현 supplier는 라이브 버퍼이므로 기록 구간 로딩·시간축·스크롤·선택·gap 처리는 **신규 어댑터** 필요. 전체 수백만 값을 내려받은 후 화면에서만 줄이는 방식은 금지.
 - `frontend/src/components/playground/SpectrumPanel.tsx:4`, `:20`, `:60`: Recharts 대역 막대·스펙트럼 레이아웃 재사용 후보. 라이브 입력의 `linear-uv2` 표기를 저장 feature에 그대로 붙이지 않는다. 저장 PSD 배열은 없음; 검증된 raw 구간에서 PSD 계산·버전 기록 신규 필요.
 - `frontend/src/components/class-report/FlowChart.tsx:8`, `:22`, `:37`: Recharts 결측 미연결·단위별 축 패턴 재사용. 클래스 리포트의 평균·정규화·정서 지표를 데이터센터 원시 스트레스에 대입하지 않는다.
-- `frontend/src/lib/eeg/EEGSignalProcessor.ts:797`, `frontend/src/lib/eeg/signalProcessing.ts:239`: 신호처리 참고 자산. 원본 표시/다운로드에 필터를 몰래 적용하지 않고, 스펙트럼에 적용한 윈도우·detrend·주파수 범위·버전을 표시한다. 기존 점수 함수(`backend/app/services/eeg_metrics.py:242`~`:269`)는 재사용하지 않는다.
+- `frontend/src/lib/eeg/EEGSignalProcessor.ts:797`, `frontend/src/lib/eeg/signalProcessing.ts:239`: 신호처리 참고 자산. 원본 표시/다운로드에 필터를 몰래 적용하지 않고, 스펙트럼에 적용한 윈도우·detrend·주파수 범위·버전을 표시한다. 기존 점수 함수(`backend/app/services/eeg_metrics.py:242`~`:269`)를 raw/feature에 적용하지 않는다. indices는 §3.4의 실제 표시 경로와 버전만 따르며 서버 fallback을 FE 표시값 대신 사용하지 않는다.
 
 ## 4. 화면 구성과 정보 계약
 
@@ -134,22 +170,23 @@
 - 측정 보유 1건: 세션+참여자 조합에서 raw 업로드 완료 또는 feature가 있는 경우. 둘 다 있으면 중복하지 않는다. 참여자 연결 없는 레거시는 별도 미연결 그룹. 밴드 미사용은 실패 아님.
 - 동의 비율: **유효 연구동의 건수 / 연구동의 평가 대상 참여자-회차 수**. 동의 이벤트 행 수를 분모로 쓰지 않는다. 철회·구버전·확장동의 범위를 분리하고 0분모는 해당 없음. 화면의 310/500, 62%는 합성 예시.
 - 저장량: 업로드 완료 EEG `size_bytes`, 연구 배치 `total_bytes`는 각각의 영역으로만 집계. 로컬 음성·영상/DB/실제 연구 저장소는 미집계 사유를 표시. 서비스 원본과 연구 사본을 합쳐 유일 데이터 용량으로 부르지 않는다.
-- 품질은 `quality`, `signal_quality`, 업로드 상태, 윈도우/청크/결측 건수 등 기술적 수집 품질. 원시 생체지표 시계열은 포함하고 점수 변환·건강 판정·종합점수·순위는 제외. 측정 시각 근거 없으면 null+사유, 입장/업로드시각으로 대신하지 않는다.
+- 품질은 `quality`, `signal_quality`, 업로드 상태, 윈도우/청크/결측 건수 등 기술적 수집 품질. 원 feature와 기존 화면 표시값은 분리 제공하며 새로운 점수 변환·건강 판정·종합점수·순위는 제외. 측정 시각 근거 없으면 null+사유, 입장/업로드시각으로 대신하지 않는다.
 - 계정과 비회원은 `subject_type + subject_id + scope`로 식별. 기존 canonical/claim 관계만 이용하고 이름·이메일로 추정 병합하지 않는다. 다중기관 사용자는 기관별 합계에서 중복 가능함을 표시. 기존 회원 개요의 non_member는 “담당 상담사 미연결 회원” 의미도 있으므로 계정 없는 guest와 동일시하지 않는다.
 
 ### 4.2 데이터 1건 상세(세션×참여자)
 
 - 메타: 측정 시작·종료와 시간 출처/정확성, 프로그램·회차·진행자, 성별·생년월(일 제외), 채널·샘플레이트·단위·schema, 청크/윈도우 수, 유효/저하/결측, 동의·보관·다운로드 가능 범위. 성별/생년월은 수집·인가된 값만 개별 메타 열람으로 제공하며 기본은 비공개/마스킹, 결측 추정 금지. 진행자도 목적별 인가·최소화 적용.
 - EEG Fp1/Fp2: 기본 10초, 확대/축소 10/30/60초, 시간 이동·스크롤·범위 입력/선택, 두 채널 공통 시간축·µV, 원본/축약 표시 구분. 선택 구간은 `[from,to)`로 저장하여 다운로드·스펙트럼과 공유한다. 스트림 재시작/시각 겹침·청크 누락은 경계로 끊고 이어붙이거나 보간하지 않는다.
-- 6대 지표는 **집중 focus_index / 이완 relaxation_index / 스트레스 stress_index / 심박 heart_rate / 호흡 respiratory_rate / HRV sdnn**. 앞3개는 SDK 원천값(스케일 확인 필요), 심박 bpm·호흡 회/분·SDNN ms. 기존 클래스의 emotional_stability와 스트레스는 다른 값이다. 서로 다른 축으로 표시하고 score/백분위/순위/좋음·나쁨 판정을 붙이지 않는다. 원본 null은 0으로 대체하지 않고 품질 및 계산 불가 사유를 유지한다.
+- 6대 지표 시계열: §3.4의 **집중도·이완도·감정균형도·BPM·호흡·HRV(SDNN)**. 원 feature 표와 분리하고 당시 표시 스냅샷/재계산/리포트 집계 출처·정규화 버전·동일성 상태를 표시한다. 원본 null·접촉 게이트 누락을 0으로 바꾸지 않는다.
 - 대역 파워: 저장 delta/theta/alpha/beta/gamma 시계열·선택구간 요약(집계 방법 명시). 저장 단위 미확정이면 “SDK 원천값·단위 확인 필요”로 표시. 스펙트럼은 지원 raw 구간에서 **새로 계산한 PSD**로 별도 표기(Hz, 검증 시 µV²/Hz), 저장 대역 파워와 같다고 주장하지 않는다. raw 없음/지원 schema 아님/구간 부족이면 이유 표시.
-- PPG·ACC 탭: “원파형 서버 미저장, 과거 파형 없음”. 파생 심박·HRV·호흡·움직임은 저장된 지표에서 확인. raw 그래프/다운로드 버튼 비활성; 없는 파형을 합성하여 실제 데이터처럼 보여주지 않음. HTML의 EEG·지표 그래프도 모두 합성이라고 명시.
+- PPG·ACC 원파형 탭: 현재는 “미수집·저장 전 시점 소급 불가”와 다운로드 비활성. 수집 후에는 PPG red/ir 50Hz count, ACC xyz 30Hz g를 별도 축·시간근거·결측과 함께 표시. 시안의 “수집 후 합성 예시”는 미래 화면 시연이며 현재 보유로 오인시키지 않는다.
+- feature 표: 윈도우별 §4.3 전체 컬럼, 품질·null·시간기준 및 원천 단위. 6대 표시값과 명확히 분리한다.
 
 ### 4.3 다운로드 범위·파일 계약(1차)
 
 | 범위/형식 | 제공 계약 |
 |---|---|
-| 참여자 1건 | 회차 1개 안의 참여자 1명, 전체 또는 선택 구간. EEG 샘플 CSV/Parquet, 원본 bin 선택, 지표 CSV/Parquet, 메타 JSON·README·dictionary·manifest를 ZIP으로 제공. 필요한 항목만 선택 |
+| 참여자 1건 | 회차 1개 안의 참여자 1명, 전체 또는 선택 구간. EEG raw CSV/Parquet·원본 bin 선택, PPG raw CSV, ACC raw CSV, 전체 features.csv, 화면 indices.csv, meta.json·README·dictionary·manifest를 ZIP으로 제공. 필요한 항목만 선택 |
 | 클래스-회차 | **회차 1개**의 참여자 전체 또는 선택 참여자. 참여자 수 100건 제한 없음. 종료 회차만 허용 |
 | 클래스 전체 | 선택 클래스의 종료 회차를 회차별 폴더로 묶음. 회차 수 50개 제한 없음. ZIP 안의 ZIP 금지, 1GB 초과 시 part1, part2… |
 | 회원 | 해당 회원이 참여한 회차만, **한 번에 50회차**. 각 회차에서 그 회원 데이터만 포함(다른 참여자 제외) |
@@ -158,8 +195,17 @@
 | EEG CSV | UTF-8, 쉼표, 헤더 `timestamp,fp1,fp2`. timestamp는 확인된 UTC ISO8601 또는 상대 초(파일별 time_basis를 README/메타에 명시, 혼용 금지). fp1/fp2는 µV의 float32 저장값을 왕복 복원 가능한 정밀도로 출력 |
 | EEG Parquet | 동일 의미의 샘플 행 `timestamp,fp1,fp2`, 채널 float32. UTC 확인 시 timestamp[us,UTC], 상대 시각은 float64 초. 스키마·time_basis 명시. 기존 연구 binary payload Parquet와 다름 |
 | bin | 원본 청크 바이트를 변경하지 않고 파일별 포함. manifest에 채널순서·LE·float32·sample_rate·schema·size·SHA-256·시간근거. 선택 구간은 겹치는 청크 전체가 포함되므로 실제 포함 범위를 확인시 표시; 정밀 구간만 원하면 CSV/Parquet 선택 |
-| 지표 | `play_group_id,window_index,t_rel_ms,quality` 및 허용 원천 지표 컬럼. 가명본은 원 절대 device_timestamp_ms를 제외하고 t_rel_ms로 변환, 식별·인가·시간근거 확인된 경우에만 원 epoch를 추가. play_group_id는 가명 별칭. 저장값·null·품질 유지, 0 대체·정규화·반올림·보간 없음. 단위는 `export_package.py:33`~`:48`의 확인 수준을 따름 |
+| 원천 feature | `play_group_id,window_index,t_rel_ms,quality` 및 아래 전체 원천 feature 컬럼. 가명본은 device_timestamp_ms 컬럼을 null로 두고 t_rel_ms로 변환, 식별·인가·시간근거 확인된 경우에만 원 epoch를 추가. play_group_id는 가명 별칭. 저장값·null·품질 유지, 0 대체·정규화·반올림·보간 없음. 단위는 `export_package.py:33`~`:48`의 확인 수준을 따름 |
 | 메타·README | 측정/세션 시각 구분, 프로그램·진행자/대상 메타의 목적별 최소 필드, 단위, UTC/KST(+09:00), 포맷/버전, 선택/실제 범위, 시간 출처, 결측/실패/제외, 동의정책 버전, 만료, 디코딩 예시, 원본과 화면 축약의 차이 |
+
+#### 신호별 파일 계약 추가
+
+- 대화상자 체크 5개: **뇌파 / 맥파 / 움직임 / feature / 6대 지표**, 별도 EEG bin 선택. 없는 신호는 `미수집` 비활성. 혼합 회차는 신호별 보유/미수집 대상 수를 preview에서 확인하고 manifest에 사유를 남긴다. 전부 미선택이면 생성 불가. 미수집을 0값 파일로 만들지 않는다. 보관 만료·철회·실패는 다른 사유다.
+- `eeg_raw.csv` 또는 `eeg_raw.parquet`: 기존 EEG 계약 유지. 선택한 원본 bin은 `raw/`에 포함.
+- `ppg_raw.csv`: `timestamp,red,ir` / 50Hz / unsigned ADC count, 원샘플 보존. `acc_raw.csv`: `timestamp,x,y,z` / 30Hz / g (파서 환산값; 원 int16→g 변환계수 메타). 센서 명목률과 실제 수신 개수/누락을 구분하며 임의 재샘플링 없음.
+- `features.csv`: 초 단위 윈도우별 전체 원천 컬럼은 `focus_index,cognitive_load,relaxation_index,stress_index,emotional_stability,total_neural_activity,faa,hemispheric_balance,delta_power,theta_power,alpha_power,beta_power,gamma_power,total_power,meditation_level,attention_level,signal_quality,sdnn,rmssd,lf_power,hf_power,lf_hf_ratio,heart_rate,respiratory_rate,motion,quality,device_timestamp_ms`. 식별/윈도우 키는 가명 play_group_id·window_index·t_rel_ms를 포함. `device_timestamp_ms`는 가명본에 null + 이유로 두고 t_rel_ms 제공, 정확한 시각 인가 시에만 원값 제공. “전체 feature”는 개인정보·원 UUID 무제한 반출을 뜻하지 않는다. 모든 수치·null 보존, 정규화/반올림/보간 없음.
+- `indices.csv`: `t_rel_ms,play_group_id,window_index,focus,relaxation,emotional,bpm,respiration,hrv`는 실제 화면 표시 정수. 표시 전 정밀값은 `*_display_input`으로 분리. `normalization_version,normalization_model_id_alias,normalization_params_hash,normalization_source,display_pipeline_version,source,display_match,unavailable_reason` 포함. 지표별 모델/fallback·결측은 JSON 메타의 지표별 맵과 연결. 미래 표시 스냅샷과 레거시 null 계약은 §3.4 적용.
+- 참여자별 `meta.json` + `README_ko.md`: 모든 컬럼·단위·샘플레이트·UTC/KST/상대시간·장비/수신 시간근거·신호 schema·정규화/표시 버전·실제 수집 시작시점·결측 사유·파일 목록. SDK feature 단위 미검증 항목은 “SDK 원천값·단위 확인 필요”; 마음3의 `%`를 원천 feature 단위로 옮기지 않는다. 루트 README/dictionary/manifest도 유지.
 
 #### ZIP 구조와 분할 규칙
 
@@ -171,8 +217,12 @@ mbdc_{job-alias}_pseudonymized_part1.zip
 └── class-C01/
     ├── session-001_date-withheld/
     │   ├── participant-P01/
-    │   │   ├── eeg.csv
-    │   │   ├── metrics.csv
+    │   │   ├── eeg_raw.csv
+    │   │   ├── ppg_raw.csv  (수집 후)
+    │   │   ├── acc_raw.csv  (수집 후)
+    │   │   ├── features.csv
+    │   │   ├── indices.csv
+    │   │   ├── README_ko.md
     │   │   ├── meta.json
     │   │   └── raw/stream-S01/chunk-000001.bin  (선택)
     │   └── participant-P02/…
@@ -180,9 +230,9 @@ mbdc_{job-alias}_pseudonymized_part1.zip
 ```
 
 - 클래스·참여자는 **작업별 가명**. 세션 경로는 `session-{회차번호}_{날짜}`이나 기본 날짜는 `date-withheld`; 내부 운영에서 정확한 날짜 인가가 있을 때만 `session-001_20261023` 사용. 연구·가명 기본 상대시간 정책과 충돌하지 않게 실제 날짜를 자동 노출하지 않는다. 클래스 없는 상담 회차는 `class-unassigned/` 아래 작업 내 고유 회차 별칭을 쓴다.
-- 단일 스트림은 `eeg.csv`, 재시작·결측 세그먼트는 `eeg-stream-S01-segment-001.csv`처럼 분리, Parquet 선택 시 확장자만 변경. `metrics.csv`/`meta.json`으로 파일명 통일. 이름·이메일·생년월·원본 UUID·S3 키·원본 역매핑표를 파일명에 쓰지 않는다.
+- 단일 스트림은 `eeg_raw.csv`, 재시작·결측 세그먼트는 `eeg_raw-stream-S01-segment-001.csv`처럼 분리, Parquet 선택 시 확장자만 변경. `features.csv`/`indices.csv`/`meta.json`으로 파일명 통일. PPG·ACC도 재시작/결측 시 신호별 stream/segment 파일로 분리한다. 이름·이메일·생년월·원본 UUID·S3 키·원본 역매핑표를 파일명에 쓰지 않는다.
 - **1GB = 1,000,000,000 bytes**(1GiB 아님), 최종 ZIP 파일 하나의 상한으로 설계한다. 종전 작업당100건·압축 전1GiB 거절 정책은 폐기. 회차·회원·상담사 작업에도 동일 파일 분할을 적용한다. 클래스 전체는 회차 수로 거절하지 않는다.
-- 각 part는 단독으로 열리는 완결 ZIP이다(분할압축 `.z01` 아님). ZIP 안에 다른 ZIP을 넣지 않는다. 회차 순서 → 참여자 순서로 채우되 가능하면 회차 폴더를 통째로 유지한다. 한 회차가 1GB를 넘으면 참여자별로, 한 참여자 파일도 넘으면 CSV 행/Parquet row group 경계로 `eeg-segment-001.csv` 등으로 나눈다. 원본 bin 청크가 단독으로 상한을 넘으면 바이트를 변경하지 않고 해당 항목 차단 사유·대체 포맷을 안내한다.
+- 각 part는 단독으로 열리는 완결 ZIP이다(분할압축 `.z01` 아님). ZIP 안에 다른 ZIP을 넣지 않는다. 회차 순서 → 참여자 순서로 채우되 가능하면 회차 폴더를 통째로 유지한다. 한 회차가 1GB를 넘으면 참여자별로, 한 참여자 파일도 넘으면 CSV 행/Parquet row group 경계로 `eeg_raw-segment-001.csv` 등으로 나눈다. 원본 bin 청크가 단독으로 상한을 넘으면 바이트를 변경하지 않고 해당 항목 차단 사유·대체 포맷을 안내한다.
 - ZIP 헤더·루트 메타 용량을 포함해 최종 바이트를 검증한다. 압축 전 예상량과 압축률 추정에 따른 **예상 part 수**를 구분하고 생성 후 실제 part 수/크기를 표시한다. 예상보다 늘어날 수 있음을 안내. 회차 폴더가 part 사이에 이어지면 각 manifest에 이어지는 part·세그먼트 순서·샘플 범위·checksum을 기록하여 누락/중복 없이 복원한다.
 - 모든 part 최상위에 README·dictionary·manifest. manifest는 해당 part 파일 목록·해시·바이트·회차/참여자 가명·시간근거·제외사유와 전체 part 목록/개수/완료 상태를 포함한다. 모든 part 생성이 끝난 뒤 완료로 전환하며 URL은 part별로 재검증·발급한다. 작업 만료시각은 part마다 늘어나지 않는다.
 
@@ -246,7 +296,7 @@ mbdc_{job-alias}_pseudonymized_part1.zip
 | 연락처·생년월일 | 기본은 마스킹/원문 없음. 개별 열람 재인가 시 존재하는 필드만 일시 반환 |
 | 동의 유형·고지 버전·철회·시간·처리 상태 | 조회 허용. 사유 자유문/본문은 제외 |
 | EEG raw·지표 | 인가된 상세 그래프 및 목적·동의·보관 정책을 통과한 다운로드 허용(§4.2~4.5) |
-| PPG·ACC raw | 서버 저장 없음. 없음 안내만, 다운로드 비활성 |
+| PPG·ACC raw | 현재 미수집. 선행 수집 완료 후 인가된 원파형 열람·다운로드, 과거 미수집은 비활성 |
 | 음성·영상·전사·리포트·채팅·AI | 존재·건수·시각·상태만. 본문·재생·다운로드 없음 |
 | 상담 기록·비공개 메모·상담사용 리포트·AI 위험신호 | 본문과 내용 기반 추론 모두 비노출. 개인정보 열람으로 해제되지 않음 |
 | S3 key/prefix, 내부 파일 경로, 토큰·인증정보 | 일반 DTO·로그에서 제외. 전용 URL 발급 POST만 반출 전용 객체의 짧은 presigned URL 반환(no-store), 원본 저장 키 직접 공개 금지 |
@@ -289,9 +339,9 @@ mbdc_{job-alias}_pseudonymized_part1.zip
 - 제안: **기존 전체 메뉴의 상담사 관리 다음·리포트 이전에 ‘데이터 센터’**, 데스크톱 같은 메뉴 순서. 새 정적 경로 `/org/data-center`를 org_admin 가드로 선언(`/org/:org_id`와 명시 구분), 현재 기관명과 범위 배지 상시 표시. 시안 기관 화면의 ‘전체 메뉴’ 버튼으로 이 위치를 확인한다. 기존 모바일/데스크톱 메뉴 전체 개편은 범위 밖.
 - UI는 공통 DataCenter 화면에 서버가 반환한 role/capabilities/current_org를 전달한다. 기관 탭은 기관 개요·기관 사용자·클래스 데이터·본인 다운로드 작업·본인 다운로드 기록만. 표준/전역 보관/연구 배치 탭 숨김과 별개로 서버가 거절한다. 시안 역할 전환은 합성 보기 전환이며 실제 로그인·권한 검증을 대신하지 않는다.
 
-## 6. 필요한 신규 API — 제안 31개
+## 6. 필요한 신규 API — 데이터센터 32개 + 수집 2개 = 34개
 
-공통 `/api/v1/data-center` 아래를 권장한다(이전 `/admin/data-center` 제안을 대체; 기존 제품 라우트 변경 아님). **26개 GET + POST 5개 = 31개(직전25개 + 탐색 GET5개 + 역할·기관 문맥 GET1개)**. 직전25개는 GET20개/POST5개이며 이번에 GET6개가 늘어난다. 이번31개는 라우트 제안 수이며 실제 구현 분리는 Plan에서 확정한다. 공개/기관 API를 우회 호출하지 않는다. 아래의 집계·투영은 기존 모델에서 계산하되, 없는 운영·용량 정보는 `null + unavailable_reason`을 반환한다.
+공통 `/api/v1/data-center` 아래를 권장한다(이전 `/admin/data-center` 제안을 대체; 기존 제품 라우트 변경 아님). **데이터센터 GET27 + POST5 = 32개**(기존31 + 표시지표 GET1). 별도 선행 수집 POST2를 합쳐 **신규 라우트 제안 총34개(GET27/POST7)**. 기존 waveform은 signal_type으로 EEG/PPG/ACC 공통화하므로 2개를 중복 가산하지 않는다. feature ingestion의 표시 스냅샷 추가는 기존 API 확장이므로 신규 수에 넣지 않는다. 실제 구현 분리는 Plan에서 확정한다. 공개/기관 API를 우회 호출하지 않는다. 아래의 집계·투영은 기존 모델에서 계산하되, 없는 운영·용량 정보는 `null + unavailable_reason`을 반환한다.
 
 | # | 메서드·제안 경로 | 목적·핵심 응답 | 신규인 이유 |
 |---|---|---|---|
@@ -310,8 +360,8 @@ mbdc_{job-alias}_pseudonymized_part1.zip
 | 13 | GET `/retention-candidates` | 기준시각의 삭제 후보/기한임박/연구보류, 평가 사유 | **쓰기 없는 평가 서비스 신규 필요**, 실행 함수 호출 금지 |
 | 14 | GET `/account-deletions` | `source=request/ledger`, 접수/원장 상태·유예·보존사유, 객체 처리 건수 | 접수와 탈퇴 원장 분리된 관리자 목록 없음 |
 | 15 | GET `/baselines` | 개인정보 없는 baseline 목록·최소 메타·필터/페이지 | 기존 baseline API 존재하나 PII 포함; 안전한 어댑터 |
-| 16 | GET `/measurements/{session_id}/{participant_id}/waveform` | from/to·stream·max_points·raw/minmax, Fp1/Fp2·time_basis·gaps | 디코더·다운샘플 신규 |
-| 17 | GET `/measurements/{session_id}/{participant_id}/features` | 원천6지표·대역 파워·구간/bucket·품질·null | 관리자 시계열 신규 |
+| 16 | GET `/measurements/{session_id}/{participant_id}/waveform` | from/to·signal_type=eeg|ppg|acc·stream·max_points·raw/minmax, 채널/단위·time_basis·gaps·미수집 사유 | 디코더·다운샘플 신규 |
+| 17 | GET `/measurements/{session_id}/{participant_id}/features` | 전체 원천 feature·구간/bucket·품질·null, 화면 정규화값과 분리 | 관리자 시계열 신규 |
 | 18 | GET `/measurements/{session_id}/{participant_id}/spectrum` | 제한 구간 PSD·채널·Hz·단위·버전 | 저장 PSD 없음, 계산 신규 |
 | 19 | POST `/exports/preview` | scope=session/class/member/facilitator·회차/참여자 선택·기간·묶음·항목·목적·식별·포맷 → 고정 토큰·적격/차단·예상량/part 수 | 필터 스냅샷·정책 신규 |
 | 20 | POST `/exports` | preview 토큰·범위·사유·재인증·Idempotency-Key → 202 | 기존 단건 서비스 확장 |
@@ -326,13 +376,23 @@ mbdc_{job-alias}_pseudonymized_part1.zip
 | 29 | GET `/members/{member_id}/sessions` | 회원 참여 회차·날짜 필터·total·50회차 묶음·고정 스냅샷 | 회원 본인 데이터로 한정 |
 | 30 | GET `/facilitators/{facilitator_id}/sessions` | 필수 from/to 기간·진행 회차·total·50회차 묶음·고정 스냅샷 | 상담사 진행 관계로 한정 |
 | 31 | GET `/contexts` | actor 역할·현재 허용 기관 목록·capabilities·기본 기관 선택(개인상담소 제외) | 공통 화면의 역할별 진입·기관 전환용. 클라이언트 응답을 인가 증명으로 신뢰하지 않음 |
+| 32 | GET `/measurements/{session_id}/{participant_id}/indices` | 화면6값·모델/표시 버전·snapshot/reconstructed·동일성·결측 사유 | 원 feature와 표시값 계약 분리 |
+
+별도 수집 경로(데이터센터 관리 API 아님):
+
+| # | 메서드·제안 경로 | 목적 |
+|---|---|---|
+| 33 | POST `/api/v1/sessions/{session_id}/biosignal-raw/presign` | 본인 참여자 수집 인가, signal_type·stream·메타 검증 후 업로드 URL |
+| 34 | POST `/api/v1/sessions/{session_id}/biosignal-raw/ack` | checksum/size 검증·멱등 ACK·원장 갱신 |
+
+EEG 기존 경로는 호환 유지하고 서비스/원장 구조를 재사용·확장한다. #33/34는 PPG/ACC 수집자용이며 플랫폼/기관 관리자 조회권한만으로 업로드를 허용하지 않는다. #32는 #16과 동일한 역할/기관 범위 통제. 표시 스냅샷은 기존 feature ingestion 계약의 버전 확장으로 연계 저장한다.
 
 
-기존 제품의 생성·상태·URL 3개 API(`backend/app/api/v1/data_exports.py:15`, `:28`, `:34`)와 별도로 위 31개는 **데이터센터 경로 제안 수**이며 중복 구현 수가 아니다. 기존 서비스·원장을 재사용/확장하고 리포트 include는 데이터센터에서 허용하지 않는다.
+기존 제품의 생성·상태·URL 3개 API(`backend/app/api/v1/data_exports.py:15`, `:28`, `:34`)와 별도로 위 데이터센터32개는 **데이터센터 경로 제안 수**이며 중복 구현 수가 아니다. 기존 서비스·원장을 재사용/확장하고 리포트 include는 데이터센터에서 허용하지 않는다.
 
-재사용 후보(신규 31개에 미포함): `GET /api/v1/normalization/models`, 보조 상태 `GET /api/v1/admin/pipeline/backlog`, 단일 세션 동의 `GET /api/v1/admin/sessions/{session_id}/research-consents`. 연구 서비스 token·ack·실행 CLI는 재사용 UI에서 제외한다.
+재사용 후보(신규34개에 미포함): `GET /api/v1/normalization/models`, 보조 상태 `GET /api/v1/admin/pipeline/backlog`, 단일 세션 동의 `GET /api/v1/admin/sessions/{session_id}/research-consents`. 연구 서비스 token·ack·실행 CLI는 재사용 UI에서 제외한다.
 
-역할별 API 범위: #9~15(연구 배치·전역 보관·삭제·표준)는 플랫폼 전용. #8은 기관의 운영에 필요한 자기 기관 수집동의 상태만, 연구 배치·사본은 불가. #1~7, #16~30은 §5.1 서버 범위를 강제하고 #19/20/23은 기관 연구 목적을 차단한다. #21~23은 본인 작업만, #24는 플랫폼의 기관관리자 감사 조회를 포함한다. #31만 추가하며 나머지는 공통 계약을 확장하므로 기관용 동일 API를 복제해 수에 넣지 않는다.
+역할별 API 범위: #9~15(연구 배치·전역 보관·삭제·표준)는 플랫폼 전용. #8은 기관의 운영에 필요한 자기 기관 수집동의 상태만, 연구 배치·사본은 불가. #1~7, #16~30은 §5.1 서버 범위를 강제하고 #19/20/23은 기관 연구 목적을 차단한다. #21~23은 본인 작업만, #24는 플랫폼의 기관관리자 감사 조회를 포함한다. #31은 역할 문맥, #32는 표시지표 조회이며 나머지는 공통 계약을 확장하므로 기관용 동일 API를 복제해 수에 넣지 않는다.
 
 공통 계약: 역할/활성 상태·기관 범위 검사, cursor+limit(기본25·최대100 제안), 안정 정렬(시간+ID), KST 입력을 UTC로 변환, 허용 검색/정렬/그룹 필드, 선택한 페이지의 전체 건수 의미 명시. 일반 목록에 PII 원문·원시 feature·자유 JSON을 bulk 반환하지 않는다. 시계열은 제한된 전용 조회, 반출은 별도 작업에서 제공한다. 개인정보 POST는 사용자 데이터 변경은 없으나 민감 접근 로그를 남기는 예외임을 명시한다. 로그는 원문 없이 actor/target/시간/필드/허용결과, 개인정보 열람 DB 감사만 출시 이후 유지. **다운로드 DB 감사는 1차 필수 권장**(기존 원장 확장). 원문 클라이언트 캐시·URL·localStorage·분석 로그 저장 금지.
 
@@ -341,9 +401,17 @@ mbdc_{job-alias}_pseudonymized_part1.zip
 | 단계 | 포함 | 제외·위험 |
 |---|---|---|
 | 이번 작업 | 코드 근거 Spec, 합성 HTML 시안·캡처·검토, 요청한 docs 커밋/작업 브랜치 push | 제품 코드·Plan/Verify 사후 작성·SDD 완료 선언 없음; 서버/DB/.env/실데이터/메일/삭제/배포 없음 |
-| 1차 구현 제안 | 기존 조회 + 그래프 + CSV/Parquet/bin + 회차/클래스/회원/상담사별 ZIP + 사유·재인증·감사·API31개 | PPG/ACC 수집 신설·미디어/상담본문·삭제·수정·연구 철회/재실행/ack·모델 변경 제외 |
-| 후속 선택 | PPG/ACC 원파형 수집·저장 신규 설계, 상세 저장량 수집 | 과거 미저장 파형 복원 불가, 수집 동의·보관 비용 별도 |
+| ① 선행 수집 | PPG/ACC raw 수집·업로드 파이프라인 신규(앱 포함), 화면 표시 스냅샷 수집·버전 기록, 수집 API2개·기존 ingestion 확장 | EEG만 저장하는 현행 상태에서 미수집 raw·과거 표시값을 만들어내지 않음 |
+| ② 데이터센터 | 공통32개 API(GET27/POST5), EEG/PPG/ACC 그래프·feature 표·6대 지표·5종 다운로드·ZIP·감사 | PPG/ACC 제공은 ① 적용 이후 수집분만. 미디어/상담본문·삭제·동의변경·연구 재실행·모델 변경 제외 |
 | 별도 승인 과제 | 삭제/정리 실행, 동의변경, 연구재반출, 표준모델 변경 | 비가역 삭제·연구 보류 해제·리포트 변화. 대상 미리보기·승인·감사·실패/복구 계약 필요. 이번에 버튼조차 연결하지 않음 |
+
+### 선행 수집 범위와 병렬 가능성
+
+1. 기존 EEG raw presign/ack·큐를 재사용하되 `signal_type=eeg|ppg|acc`와 `stream_id`(수집 세그먼트)를 구분한다. 신호별 인코더/영속큐/재시도/멱등성·샘플 수·sample_rate·channel_names·unit·schema·checksum·장비/수신시각·누락 구간을 기록한다. PPG 분석 처리 전 red/ir, ACC xyz 캡처. 화면 버퍼를 raw 원천으로 재사용하지 않는다.
+2. 원장·S3 키·연구 export/ack·동의 범위·철회·원본 정리 대상을 신호별 확장. **서비스 raw 90일·유효 연구 동의 시 export ACK 전 보류·연구 사본 예외를 EEG와 동일 적용하는 설계 제안**. 현재 정책 설정은 `backend/app/config.py:158`~`:172`(통합 기본 비활성·legacy EEG 0)이므로 운영 활성화 확인과 별개다. 확장 신호 연구 동의·고지 범위가 없으면 연구 반출은 차단하고 보류 여부도 명시 평가한다. ACK는 해당 신호의 안전한 이관 확인이어야 하며 EEG ACK로 PPG/ACC까지 완료 처리하지 않는다.
+3. 화면 동일성 확보를 위해 §3.4 snapshot 저장/모델 버전·fallback·표시 게이트 계약도 수집 단계에서 확정한다. 기존 feature 컬럼 의미를 바꾸지 않는다.
+4. **iOS/Android 앱 새 빌드 필요**: `frontend/capacitor.config.ts:6`은 bundled dist, `frontend/package.json:16`~`:24`는 build→cap sync→앱 빌드. `frontend/src/lib/ble/capacitor-ble-adapter.ts:97`~`:110`이 공통 JS에 DataView를 전달하므로 새 네이티브 BLE 플러그인은 현재 근거상 필수 아님. 웹은 프론트 갱신, 앱은 내장 JS 갱신 빌드와 후속 배포 승인 필요. 백그라운드/재연결/영속큐/네트워크 끊김은 실제 iOS·Android 검증 대상이다. 이번 작업은 앱 빌드·배포를 수행하지 않는다.
+5. ① 수집 계약 확정 후 ② UI·조회/ZIP·정책·fixture 개발은 병렬 가능. 다만 PPG/ACC 실제 제공·표시값 동일성 인수는 ① 서버 수집+새 앱 적용+실기기 검증 후에만 완료. 기존 EEG/feature와 레거시 미수집 UI는 먼저 검증 가능. 저장 전 데이터는 소급 불가, 앱 구버전 대상은 신호별 미수집/기능 미지원으로 표시한다.
 
 제품 구현 승인 뒤 Plan → **구현 전 Verify** → Implement/Test/Summary 순서. 이번 Spec/시안 승인과 제품 구현 완료·배포 승인을 혼동하지 않는다.
 
@@ -360,7 +428,7 @@ mbdc_{job-alias}_pseudonymized_part1.zip
 ### 후속 제품 구현의 인수 기준(아직 실행하지 않음)
 
 - [ ] 지원 bin의 LE float32 왕복·checksum·길이·비유한 값·구버전 차단, 4ms 시간 및 gap·재시작 보존, CSV/Parquet/bin 샘플 수·값·구간 대조.
-- [ ] 시계열 max_points·min/max envelope, 선택구간/PSD·결측, 원시지표 무정규화, PPG/ACC 없음, 최대범위 부하시험.
+- [ ] 시계열 max_points·min/max envelope, 선택구간/PSD·결측, feature 무정규화·표시6값 버전/동일성, PPG/ACC 미수집 및 수집 후 원샘플, 최대범위 부하시험.
 - [ ] 회차/클래스/회원/상담사 스냅샷·50회차 경계·기간 필터·1GB 분할/단독복원·회차 폴더·CSV/Parquet·ZIP manifest·파일명·단위·UTC/KST·README, 원본 bin 청크 실제 포함범위 확인.
 - [ ] 식별/가명·운영/연구·미동의/비회원/철회/구고지·보관만료 조합별 차단, 작업 생성 이후 동의 변경·URL 직전 재검증·가명파일 재식별필드 제거.
 - [ ] 사유 필수·재인증 목적 바인딩·감사 실패시 발급 차단·만료/권한변경·중복 요청·부분실패, URL 발급과 실제 수신 구분.
@@ -371,7 +439,7 @@ mbdc_{job-alias}_pseudonymized_part1.zip
 - [ ] 기본 응답과 캐시에 전화·생일 원문, 상담본문·토큰·저장소 경로가 없고 열람 응답만 제한된 필드 반환.
 - [ ] 회원/비회원·canonical/claim·다중기관·귀속미상·탈퇴 데이터가 중복/오병합 없이 집계.
 - [ ] 개요·목록·상세가 같은 기준시각/필터에서 일치, 0과 미집계·원본 없음·밴드 미사용 구분.
-- [ ] EEG 바이너리와 연구 Parquet, PPG/ACC 파생 있음·raw 없음, baseline 개인정보 축소 검증.
+- [ ] EEG 바이너리와 연구 Parquet, PPG/ACC 과거 raw 미수집·신규 raw 값/개수 일치, baseline 개인정보 축소 검증.
 - [ ] 연구 구고지/r5-2/철회·ack 이전 보류·기한임박 구분, 가명-사용자 역연결 및 확장 자동반출 없음.
 - [ ] retention GET이 DB/파일/알림을 변경하지 않음; stored dry-run 결과와 실제 실행 구분; 공개 삭제접수와 탈퇴원장 구별.
 - [ ] 실 브라우저1440/390와 실제 권한별 API 응답 확인. 데이터 정합성은 합성 DB fixture로 별도 검증 후 승인된 환경에서 운영 검증.
@@ -384,12 +452,15 @@ mbdc_{job-alias}_pseudonymized_part1.zip
 | 2026-10-24 Brian | 클래스-회차1개 전체/선택 참여자; 클래스 전체는 회차 폴더 ZIP·중첩 ZIP 금지·1GB 초과 part 분할 | 확정 / §4.3 |
 | 2026-10-24 Brian | 회원·상담사50회차, 초과는 묶음/날짜 범위 선택, 상담사 기간 필터 | 확정 / §4.3·API26~30 |
 | 2026-10-24 Brian | 기본 가명·식별 내부 운영만·사유/감사·5분/24시간/60초·보관/연구 차단·파일명 개인정보/점수/순위 금지 유지 | 유지 지시 반영 / 기존 질문1·2의 권장안 확정 처리 확인만 남김 |
-| 2026-10-24 Brian 추가 | 기관관리자 제공, 자기 기관만·운영 목적만·플랫폼 전용 탭 제외·플랫폼의 기관 감사 열람 | 확정 / §5.1·공통 API31개·역할 시안 |
+| 2026-10-24 Brian 추가 | 기관관리자 제공, 자기 기관만·운영 목적만·플랫폼 전용 탭 제외·플랫폼의 기관 감사 열람 | 확정 / §5.1·공통 API32개·역할 시안 |
+| 2026-10-24 Brian 추가 | EEG·PPG·ACC raw + 전체 feature + 화면6대 지표 포함 | 확정 / 선행 수집+센터 단계, 신규 라우트 제안 총34개 |
 | 2026-10-24 설계 제안 | 요청자당 진행1개 유지, 독립 ZIP part와 최종 파일1GB 기준, 기본 날짜 비공개 | 기술 설계안 / 진행1개는 질문2로 확인 |
 
 1. **기존 질문1·2의 권장안을 유지 정책으로 확정 처리해도 될까요?** 플랫폼 식별 포함은 내부 운영만, 기본 가명·유효 동의 기반 연구, 사유·영속 감사·재인증5분·산출물24시간·URL60초를 유지합니다. 기관 식별 포함은 질문3에서 별도 결정합니다.
 2. **요청자당 진행 작업1개를 유지할까요?** 권장: 역할·기관을 통틀어 요청자당1개 유지. 여러 part도 작업1개이며 다음50회차 묶음은 완료 후 요청합니다.
 3. **기관관리자의 운영 목적 식별 포함 다운로드를 허용할까요?** 권장: 자기 기관 데이터에 한해 허용. 기존 회원 목록 접근과 업무 필요를 고려하되, 기본 가명·필드 최소화·사유·영속 감사·5분 재인증을 적용하고 플랫폼이 기관관리자 반출 이력을 조회합니다. 연구 목적은 허용하지 않습니다.
+
+신규 수집 필요성과 앱 빌드·표시 스냅샷은 요구 충족의 기술 선행조건으로 반영하며 새 사업 결정을 추가하지 않는다. 기존 질문3개를 유지한다.
 
 질문은 향후 제품 범위 확정을 위한 것이며 이번 Spec·시안·커밋·push를 막지 않는다. 다운로드 단위·회차 한도는 재질문하지 않는다.
 
@@ -401,6 +472,6 @@ mbdc_{job-alias}_pseudonymized_part1.zip
 - 외부 폰트/이미지 호출 없이 로고와 한국어 폰트 subset을 HTML 내장. Pretendard 설치 시 우선, 미설치 환경은 저장소 Noto Sans KR 폰트 사용. 디자인 시스템의 보라/크림·한국어 UI 원칙을 적용하되 요청한 자체완결 HTML을 우선.
 - 표/집계의 값은 **전부 합성 예시**. 시안 상호작용·레이아웃 검증은 실제 API·보관 실행·개인정보 보호의 제품 검증이 아니다.
 
-- 10/24 개정 검증: Chrome headless `file://`(HTTP(S) 차단)로 PNG54장·상호작용55개 통과. 클래스/회차/참여자/회원/상담사/기관 역할/모달/ZIP/감사/그래프 캡처 직접 확인, 검사 대상 잘림·겹침·가로 넘침0. 제품 API·DB·스토리지·실기기 검증 아님. 자세한 재현·제한은 시안 README 참조.
+- 10/24 개정 검증: Chrome headless `file://`(HTTP(S) 차단)로 PNG59장·상호작용63개 통과. 클래스/회차/참여자/회원/상담사/기관 역할/모달/ZIP/감사/그래프 캡처 직접 확인, 검사 대상 잘림·겹침·가로 넘침0. 제품 API·DB·스토리지·실기기 검증 아님. 자세한 재현·제한은 시안 README 참조.
 
-- 기관 확장 검증: `org_admin-*.png` 13장 포함, 역할별 탭·기관 클래스/회차·운영 전용·식별 포함 결정 대기·플랫폼의 기관 감사 조회를 합성 상태로 확인. 실제 서버 인가·ZIP 생성 검증은 아님. 별도 읽기 검토 후 감독이 API31개(GET26/POST5)·질문3개 및 Playwright 결과를 독립 재검증.
+- 기관 확장 검증: `org_admin-*.png` 13장 포함, 역할별 탭·기관 클래스/회차·운영 전용·식별 포함 결정 대기·플랫폼의 기관 감사 조회를 합성 상태로 확인. 실제 서버 인가·ZIP 생성 검증은 아님. 별도 읽기 검토 후 감독이 데이터센터 API32개(GET27/POST5) + 수집2개(POST2)·질문3개 및 Playwright 결과를 독립 재검증.

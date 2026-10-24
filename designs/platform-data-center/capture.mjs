@@ -51,7 +51,21 @@ await page.locator('#wave-zoom').selectOption('30');checks.push({name:'원파형
 await page.locator('#range-start').fill('120');await page.locator('#range-end').fill('130');await page.locator('#apply-range').click();checks.push({name:'원파형 구간 선택',pass:(await page.locator('#selection-label').innerText()).includes('120.0–130.0')});
 await page.locator('#wave-next').click();checks.push({name:'원파형 시간 이동',pass:(await page.locator('#selection-label').innerText()).includes('132.0')});
 for(const signal of ['ppg','acc']){await page.locator(`[data-signal="${signal}"]`).click();checks.push({name:signal+' 미저장 안내',pass:(await page.locator('#signal-body').innerText()).includes('서버에 저장되지')});await snap('1440-detail-'+signal)}
+await page.locator('[data-signal="features"]').click();await snap('1440-detail-features');
+checks.push({name:'feature 전체 원천 컬럼 표',pass:await page.locator('#signal-body tbody tr').count()===27});
+checks.push({name:'6대 표시 지표는 감정균형도 포함',pass:(await page.locator('.metric-grid').innerText()).includes('감정균형도')&&!(await page.locator('.metric-grid').innerText()).includes('스트레스')});
+await page.locator('#collected-preview').check();
+for(const signal of ['ppg','acc']){await page.locator(`[data-signal="${signal}"]`).click();checks.push({name:signal+' 수집 후 예시 구분',pass:(await page.locator('#signal-body').innerText()).includes('수집 후 합성 예시')&&await page.locator('#signal-body svg').count()===1});await snap('1440-detail-'+signal+'-collected')}
+await page.locator('#record-page [data-download]').click();await page.locator('#include-ppg').scrollIntoViewIfNeeded();await snap('1440-download-signals-collected');
+checks.push({name:'수집 후 신호별 5개 선택',pass:await page.locator('[data-export-signal]:checked').count()===5});
+await page.locator('#include-eeg').uncheck();checks.push({name:'EEG 해제 시 bin도 제외',pass:!await page.locator('#include-bin').isChecked()&&await page.locator('#include-bin').isDisabled()});
+for(const id of ['ppg','acc','features','indices'])await page.locator('#include-'+id).uncheck();
+await page.locator('#download-reason').fill('합성 항목 확인');await page.locator('#reauth').check();await page.locator('#download-form button[type="submit"]').click();
+checks.push({name:'전체 데이터 항목 미선택 차단',pass:(await page.locator('#download-policy').innerText()).includes('하나 이상')});
 await page.goto(url+'?tab=measurements&modal=download');await snap('1440-download-dialog');
+checks.push({name:'미수집 PPG ACC 선택 비활성',pass:await page.locator('#include-ppg').isDisabled()&&await page.locator('#include-acc').isDisabled()});
+await page.locator('#include-eeg').scrollIntoViewIfNeeded();await snap('1440-download-signals');
+
 checks.push({name:'빈 사유·재인증 미선택 제출 차단',pass:await page.locator('#download-form').evaluate(f=>!f.checkValidity())});
 await page.locator('#download-reason').fill('합성 데이터 원본 검증');await page.locator('#reauth').check();await page.locator('#download-format').selectOption('Parquet');await page.locator('#download-form button[type="submit"]').click();
 checks.push({name:'Parquet 합성 작업 생성',pass:(await page.locator('#table').innerText()).includes('Parquet + bin')});await snap('1440-download-created');
