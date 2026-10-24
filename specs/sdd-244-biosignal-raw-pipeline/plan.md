@@ -252,7 +252,7 @@ A가 model/schema/migration을 모두 소유한다. C가 필요한 DB 변경은 
 | T04 선행 | `90edd067`, `b3e9ee15` | – | API wrapper 스키마(`schemas/biosignal.py` 하단, G1 DTO 불변) + `contracts/api-v1.md`, alias↔UUID 규칙 |
 | T04 | `8fc42276` | M1 `e036a0244001` | raw v2 presign/검증 ACK(세 신호), capability, identity 확장, stream/segment/gap/close/manifest 원장 |
 | T05 | `dc2babad` | M2 `e036a0244002` | artifact(feature/raw_derived/indices/normalization/algorithm) presign/ACK, 1Hz 스냅샷·정규화 색인, 기존 feature 미전달 필드 연결 |
-| T06 | (이 커밋) | M3 `e036a0244003` | gap/close intent API, manifest revision 판정·조회, 연구 영수증/삭제 outbox 스키마(서비스 제외), revision 불변 트리거 |
+| T06 | `b40bca3f` | M3 `e036a0244003` | gap/close intent API, manifest revision 판정·조회, 연구 영수증/삭제 outbox 스키마(서비스 제외), revision 불변 트리거 |
 
 - **DB**: alembic head 1개(`e036a0244003`). 로컬 임시 PG16(저장소 밖 `/tmp`, 운영/개발 DB 아님)에서 빈 DB→head, 구 head에 legacy 행 시드 후 upgrade(행·기본값 보존), downgrade(v2 데이터 있으면 거부)·재upgrade를 확인했다. 큰 테이블 잠금/장시간 rewrite 계측은 하지 않았다(`lock_timeout 5s`, 상수 default 컬럼 추가만).
 - **불변성**: presign은 SigV4로 `x-amz-checksum-sha256`·SSE·content-type을 서명한다(오프라인 서명 검증). **실제 S3/MinIO에서 다른 바이트 재PUT 거절, HEAD `ChecksumSHA256` 반환, 버전 ID는 검증하지 못했다**(모의 저장소만). 저장소가 체크섬을 돌려주지 않으면 서버가 ≤1MiB를 스트리밍해 직접 SHA-256을 검증한다. 검증 불가(스텁/자격증명 없음)는 `failed`(`verification_unavailable`)로 두므로 로컬 스텁 환경에서는 v2 ACK가 성공하지 않는다.
