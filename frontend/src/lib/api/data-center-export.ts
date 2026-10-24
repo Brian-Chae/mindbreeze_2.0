@@ -20,7 +20,7 @@ export function validateExportRequest(request:ExportRequest,maxSessions=50):stri
 const path=(route:string,orgId?:string)=>`/data-center${route}${orgId?'?org_id='+encodeURIComponent(orgId):''}`;
 export const exportApi={
  preview:(request:ExportRequest,orgId?:string)=>apiClient.post<ExportPreview>(path('/exports/preview',orgId),request),
- reauth:(request:{credential:string;request_hash?:string;job_id?:string;scope_org_id?:string},orgId?:string)=>apiClient.post<ExportProof>(path('/export-reauth',orgId),request),
+ reauth:(request:{credential?:string;social_proof?:string;request_hash?:string;job_id?:string;scope_org_id?:string},orgId?:string)=>apiClient.post<ExportProof>(path('/export-reauth',orgId),request),
  create:(request:{preview_token:string;reason:string;reauth_proof:string},idempotencyKey:string,orgId?:string)=>apiClient.post<ExportStatus>(path('/exports',orgId),request,{headers:{'Idempotency-Key':idempotencyKey}}),
  jobs:(orgId?:string,cursor?:string)=>apiClient.get<{items:ExportStatus[];next_cursor:string|null}>(path('/exports',orgId)+(cursor?(orgId?'&':'?')+'cursor='+encodeURIComponent(cursor):'')),
  job:(jobId:string,orgId?:string)=>apiClient.get<ExportStatus>(path(`/exports/${encodeURIComponent(jobId)}`,orgId)),

@@ -7,7 +7,7 @@ import { ExportDialog } from '../src/components/data-center/export-dialog';
 import { validateExportRequest, exportApi, exportError } from '../src/lib/api/data-center-export';
 import preview from '../../specs/sdd-243-platform-data-center/contracts/fixtures/export-preview.json';
 import status from '../../specs/sdd-243-platform-data-center/contracts/fixtures/export-status.json';
-vi.mock('../src/lib/api/client',()=>({apiClient:{get:vi.fn(),post:vi.fn()}}));
+vi.mock('../src/lib/api/client',async importOriginal=>({...await importOriginal<typeof import('../src/lib/api/client')>(),apiClient:{get:vi.fn(),post:vi.fn()}}));
 import { apiClient } from '../src/lib/api/client';
 
 const base = {scope:'member' as const,target_id:'member',include:['eeg_raw' as const],range:{session_ids:Array.from({length:50},(_,i)=>String(i))},identity:'pseudonymized' as const,purpose:'operations' as const,eeg_format:'csv' as const,include_raw_bin:false,allow_partial:false};

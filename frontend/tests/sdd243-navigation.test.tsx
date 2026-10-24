@@ -7,7 +7,8 @@ import {
   formatCount,
   visibleDataCenterTabs,
 } from "../src/lib/api/data-center";
-vi.mock("../src/lib/api/client", () => ({
+vi.mock("../src/lib/api/client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/lib/api/client")>()),
   apiClient: { get: vi.fn().mockResolvedValue(classes) },
 }));
 import { apiClient } from "../src/lib/api/client";

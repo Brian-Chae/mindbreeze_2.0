@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class DataExportCreate(BaseModel):
@@ -170,11 +170,19 @@ class DataCenterExportPage(Contract):
 
 
 class ExportReauthRequest(Contract):
-    """반출 전용 재인증. 비밀번호 또는 SSO 확인 값은 저장·로그 금지."""
-    credential: str = Field(min_length=1, max_length=512)
+    """반출 전용 재인증. 이메일 계정은 비밀번호(credential), 소셜 계정은 소셜 재로그인으로 받은 1회용 proof(social_proof).
+    비밀번호·proof 는 저장·로그 금지."""
+    credential: str | None = Field(None, min_length=1, max_length=512)
+    social_proof: str | None = Field(None, min_length=1, max_length=512)
     request_hash: str | None = Field(None, min_length=64, max_length=64)
     job_id: UUID | None = None
     scope_org_id: UUID | None = None
+
+    @model_validator(mode='after')
+    def _one_method(self):
+        if bool(self.credential) == bool(self.social_proof):
+            raise ValueError('credential 또는 social_proof 중 하나만 전달해야 합니다')
+        return self
 
 
 class ExportProof(Contract):
