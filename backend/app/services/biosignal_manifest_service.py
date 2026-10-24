@@ -199,20 +199,25 @@ def evaluate(db: DBSession, sid, pid) -> Evaluation:
                     if i not in present and ("raw", f"RAWMISSING-{s.signal}-{i}") not in lost:
                         missing.append(("raw", f"RAWMISSING-{s.signal}-{i}", UNKNOWN_SHA))
             if s.last_feature_sequence is not None:
+                # 회복 불가로 선언된 산출물(lost_artifacts)은 순번을 차지한 것으로 본다 — 선언 후에도 구멍으로 남아 pending 에 갇히지 않게
                 ranges = [(a.first_sequence if a.first_sequence is not None else a.sequence,
                            a.last_sequence if a.last_sequence is not None else a.sequence)
-                          for a in arts if a.artifact_kind == "feature" and a.upload_status == "uploaded"
+                          for a in arts if a.artifact_kind == "feature" and (a.upload_status == "uploaded" or (a.artifact_kind, a.artifact_alias) in lost)
                           and (a.stream_id, a.segment_id, a.signal) == (str(s.stream_id), str(s.segment_id), s.signal)]
                 for lo, hi in _covered(ranges, s.last_feature_sequence):
-                    missing.append(("feature", f"FEATMISSING-{s.signal}-{lo}-{hi}", UNKNOWN_SHA))
+                    hole = f"FEATMISSING-{s.signal}-{lo}-{hi}"
+                    if ("feature", hole) not in lost:  # 서버가 알려 준 구멍 항목을 그대로 loss 로 선언할 수 있다
+                        missing.append(("feature", hole, UNKNOWN_SHA))
         for v in intent.snapshots:
             if v.last_snapshot_sequence is not None:
                 ranges = [(a.first_sequence if a.first_sequence is not None else a.sequence,
                            a.last_sequence if a.last_sequence is not None else a.sequence)
-                          for a in arts if a.artifact_kind == "indices" and a.upload_status == "uploaded"
+                          for a in arts if a.artifact_kind == "indices" and (a.upload_status == "uploaded" or (a.artifact_kind, a.artifact_alias) in lost)
                           and (a.stream_id, a.view_instance_id) == (str(v.stream_id), str(v.view_instance_id))]
                 for lo, hi in _covered(ranges, v.last_snapshot_sequence):
-                    missing.append(("indices", f"IDXMISSING-{lo}-{hi}", UNKNOWN_SHA))
+                    hole = f"IDXMISSING-{lo}-{hi}"
+                    if ("indices", hole) not in lost:
+                        missing.append(("indices", hole, UNKNOWN_SHA))
         # gap 순번 연속성 + 의도 이후 gap
         if intent.last_gap_sequence is not None:
             have = {g.sequence for g in gaps}
@@ -227,7 +232,7 @@ def evaluate(db: DBSession, sid, pid) -> Evaluation:
         for snap in db.query(DisplaySnapshot).filter_by(session_id=sid, participant_id=pid).all():
             refs.update(snap.source_feature_aliases or [])
         for alias in sorted(refs):
-            if resolve_feature_alias(db, sid, pid, alias) is None:
+            if resolve_feature_alias(db, sid, pid, alias) is None and ("feature", alias) not in lost:
                 missing.append(("feature", alias, UNKNOWN_SHA))
 
     # 중복 제거(순서 유지)
@@ -317,6 +322,18 @@ def _assemble(db, sid, pid, raws, arts, gaps, intent, intent_row, lost, state) -
         artifacts.append(ref(
             a.artifact_kind, a.artifact_alias, f"{a.artifact_kind}/{a.artifact_alias}.bin", a.schema_version, a.row_count,
             a.size_bytes, a.checksum, a.uncompressed_sha256, trange, a.retention_class, a.signal, a.upload_status))
+
+    # presign 전 로컬 유실: 원장 행이 없어 위 루프에 안 걸린다 — 선언 사유와 함께 lost 로 노출(hash/size 는 알 수 없음)
+    listed = {(a.artifact_kind, a.artifact_id_alias) for a in artifacts}
+    for (kind, alias), reason in sorted(lost.items()):
+        if (kind, alias) in listed:
+            continue
+        artifacts.append(ArtifactReference(
+            artifact_id_alias=alias, artifact_kind=kind, path=f"lost/{kind}/{alias}.bin", schema_version="unknown",
+            dictionary_key=kind, row_count=None, size_bytes=None, sha256=None, uncompressed_sha256=None, time_range=None,
+            selection=None, extra_range=[], retention="raw_90_days" if kind == "raw" else "feature_policy",
+            retention_deadline_us=None, consent_scope=["session"], consent_version="unspecified",
+            availability="lost", unavailable_reason=reason, ack_state="unavailable"))
 
     public_gaps = [
         GapEvent(

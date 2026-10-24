@@ -177,3 +177,66 @@ def test_manifest_다른_참여자_자격으로는_거절(client, ctx):
     body = {"participant_id": ctx["pid"], "events": [_gap(0)]}
     assert client.post(f"/api/v1/sessions/{ctx['sid']}/biosignal-events", json=body, headers=stolen).status_code in (401, 403)
     assert _manifest(ctx).status_code == 200  # 본인 자격으로는 조회된다
+
+
+# ── 서버 남은 결함(B 리뷰 인계): lost 선언과 feature/indices 순번·참조·공개 목록 ──────────────
+
+def _stream_seq(body, feature=None):
+    body["streams"][0]["last_feature_sequence"] = feature
+    return body
+
+
+def test_lost_선언한_feature_순번_구멍은_pending에_남지_않는다(ctx):
+    metas, _ = _upload(ctx)
+    first = _events(ctx, [_stream_seq(_intent(metas), feature=1)]).json()
+    assert first["close_state"] == "pending_upload"
+    holes = [a for a in first["missing_artifacts"] if a["kind"] == "feature"]
+    assert [h["alias"] for h in holes] == ["FEATMISSING-eeg-0-1"]
+    # 서버가 알려 준 구멍 항목을 그대로 loss 로 선언 → partial
+    retry = _stream_seq(_intent(metas, intent_id="99999999-9999-4999-8999-999999999999"), feature=1)
+    retry["closed_at_us"] = "9500000"
+    retry["lost_artifacts"] = [{"kind": "feature", "alias": "FEATMISSING-eeg-0-1", "reason": "local_write_failed"}]
+    res = _events(ctx, [retry]).json()
+    assert res["close_state"] == "partial" and not res["missing_artifacts"]
+
+
+def test_lost_선언한_indices_순번_구멍도_partial(ctx):
+    metas, _ = _upload(ctx)
+    body = _intent(metas)
+    body["snapshots"] = [{"stream_id": STREAM, "view_instance_id": "44444444-4444-4444-8444-444444444444", "last_snapshot_sequence": 0}]
+    assert _events(ctx, [body]).json()["close_state"] == "pending_upload"
+    retry = _intent(metas, intent_id="99999999-9999-4999-8999-999999999999")
+    retry["closed_at_us"] = "9500000"
+    retry["snapshots"] = body["snapshots"]
+    retry["lost_artifacts"] = [{"kind": "indices", "alias": "IDXMISSING-0-0", "reason": "not_rendered"}]
+    res = _events(ctx, [retry]).json()
+    assert res["close_state"] == "partial" and not res["missing_artifacts"]
+
+
+def test_presign_이전_loss도_공개_manifest에_lost로_실린다(ctx):
+    metas, _ = _upload(ctx)
+    body = _stream_seq(_intent(metas), feature=0)
+    body["lost_artifacts"] = [{"kind": "feature", "alias": "FEATMISSING-eeg-0-0", "reason": "local_write_failed"},
+                              {"kind": "normalization", "alias": "NORM-NEVER", "reason": "local_write_failed"}]
+    assert _events(ctx, [body]).json()["close_state"] == "partial"
+    m = ManifestRevision.model_validate(_manifest(ctx).json()["manifest"])
+    lost = {a.artifact_id_alias: a for a in m.artifacts if a.availability == "lost"}
+    assert set(lost) == {"FEATMISSING-eeg-0-0", "NORM-NEVER"}
+    assert all(a.unavailable_reason == "local_write_failed" and a.ack_state == "unavailable" and a.sha256 is None for a in lost.values())
+    # 실제 업로드된 raw 는 그대로 available
+    assert any(a.artifact_kind == "raw" and a.availability == "available" for a in m.artifacts)
+
+
+def test_행이_있는_lost_feature는_순번을_채운_것으로_본다(ctx):
+    from tests.test_sdd244_artifacts import _art, _post
+    metas, _ = _upload(ctx)
+    feat = _art("feature", "FEAT-EEG-0", b"zz", signal="eeg", segment_id=SEG, sequence=0)
+    assert _post(ctx, "biosignal-artifacts/presign", {"chunks": [feat]}).status_code == 200  # ACK 못 한 채 유실
+    body = _stream_seq(_intent(metas, extra=[{"kind": "feature", "alias": "FEAT-EEG-0", "sha256": feat["checksum"]}]), feature=0)
+    assert _events(ctx, [body]).json()["close_state"] == "pending_upload"
+    retry = _stream_seq(_intent(metas, intent_id="99999999-9999-4999-8999-999999999999",
+                                extra=[{"kind": "feature", "alias": "FEAT-EEG-0", "sha256": feat["checksum"]}]), feature=0)
+    retry["closed_at_us"] = "9500000"
+    retry["lost_artifacts"] = [{"kind": "feature", "alias": "FEAT-EEG-0", "reason": "local_write_failed"}]
+    res = _events(ctx, [retry]).json()
+    assert res["close_state"] == "partial" and not res["missing_artifacts"], res
