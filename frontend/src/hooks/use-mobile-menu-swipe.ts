@@ -157,6 +157,11 @@ export function useMobileMenuSwipe(role: UserRole | null | undefined, blocked: b
       }
       timer = setTimeout(finish, duration);
     };
+    // 레일을 포함한 조상의 빈 padding은 touch-action:auto여야 레일의 native pan이 산다.
+    // PointerEvent.preventDefault는 그 기본 pan을 막지 못하므로, 잠금된 단일 수평 터치만 보조한다.
+    const touchMove = (event: TouchEvent) => {
+      if (active?.horizontal && event.touches.length === 1 && !protectedNow()) event.preventDefault();
+    };
     const otherPointer = (event: PointerEvent) => { if (active && event.pointerType === 'touch' && event.pointerId !== active.id) cancel(); };
     const lostCapture = (event: PointerEvent) => { if (event.target === root && active?.id === event.pointerId && !settling) cancel(); };
     const click = (event: MouseEvent) => { if (performance.now() < suppressClickUntil) { event.preventDefault(); event.stopPropagation(); } };
@@ -181,6 +186,7 @@ export function useMobileMenuSwipe(role: UserRole | null | undefined, blocked: b
     });
     root.addEventListener('pointerdown', down);
     root.addEventListener('pointermove', move, { passive: false });
+    root.addEventListener('touchmove', touchMove, { passive: false });
     root.addEventListener('pointerup', up);
     root.addEventListener('pointercancel', cancel);
     root.addEventListener('lostpointercapture', lostCapture);
@@ -198,7 +204,7 @@ export function useMobileMenuSwipe(role: UserRole | null | undefined, blocked: b
     return () => {
       if (!protectedNow()) saveSwipeSnapshot(snapshotScope, tabs[index].to, page);
       cancel(); observer.disconnect(); unsubscribe(); unsubscribeAuth(); delete root.dataset.mobileSwipeEnabled;
-      root.removeEventListener('pointerdown', down); root.removeEventListener('pointermove', move); root.removeEventListener('pointerup', up);
+      root.removeEventListener('pointerdown', down); root.removeEventListener('pointermove', move); root.removeEventListener('touchmove', touchMove); root.removeEventListener('pointerup', up);
       root.removeEventListener('pointercancel', cancel); root.removeEventListener('lostpointercapture', lostCapture); root.removeEventListener('click', click, true);
       document.removeEventListener('pointerdown', otherPointer, true); document.removeEventListener('compositionstart', compositionStart); document.removeEventListener('compositionend', compositionEnd);
       document.removeEventListener('focusin', checkProtection); document.removeEventListener('input', checkProtection); document.removeEventListener('visibilitychange', cancel);

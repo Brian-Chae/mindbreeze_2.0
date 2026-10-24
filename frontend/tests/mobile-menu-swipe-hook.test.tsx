@@ -106,6 +106,24 @@ describe('제스처 수명주기', () => {
     pointer('pointerdown', 100); pointer('pointermove', 220, 250, 80); expect(page.style.transform).toBe('translate3d(26.4px,0,0)'); pointer('pointerup', 220, 250, 100); await complete(); expect(path).toBe('/app');
     await mount(false, false, '/app/reports'); pointer('pointerdown', 280); pointer('pointermove', 160, 250, 80); expect(page.style.transform).toBe('translate3d(-26.4px,0,0)'); pointer('pointerup', 160, 250, 100); await complete(); expect(path).toBe('/app/reports');
   });
+  it('auto 본문 padding에서는 수평 잠금 후 native pan만 막고 세로·레일·핀치는 유지한다', async () => {
+    await mount();
+    const touchMove = (count = 1) => {
+      const event = new Event('touchmove', { bubbles: true, cancelable: true });
+      Object.defineProperty(event, 'touches', { value: Array.from({ length: count }, () => ({ clientX: 160, clientY: 250 })) });
+      root.dispatchEvent(event); return event.defaultPrevented;
+    };
+    expect(touchMove()).toBe(false);
+    pointer('pointerdown', 280); pointer('pointermove', 160, 250, 80);
+    expect(touchMove()).toBe(true);
+    expect(touchMove(2)).toBe(false);
+    pointer('pointercancel', 160);
+    pointer('pointerdown', 280); pointer('pointermove', 275, 300, 80);
+    expect(touchMove()).toBe(false);
+    page.querySelector('#start')!.setAttribute('data-no-swipe', '');
+    pointer('pointerdown', 280); pointer('pointermove', 160, 250, 80);
+    expect(touchMove()).toBe(false);
+  });
   it('500ms 이상 길게 누른 뒤에는 가로 이동을 시작하지 않는다', async () => {
     await mount(); pointer('pointerdown', 280); pointer('pointermove', 160, 250, 501); pointer('pointerup', 160, 250, 550); await complete(); expect(path).toBe('/app/classes');
   });
