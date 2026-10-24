@@ -54,7 +54,7 @@ Brian의 2026-10-24 확정 D3에 따라 비회원 코드 입장과 장기 비회
 
 ## 남은 위험·후속
 
-- 실DB·PostgreSQL, 실 저장소·연구 파이프라인, 실기기 검증은 실행하지 않았다. 463건 건너뜀을 통과로 간주하지 않는다.
+- 초기 구현에서는 실DB·PostgreSQL, 실 저장소·연구 파이프라인, 실기기 검증을 실행하지 않았다(로컬 PG 후속 검증은 아래에 기록). 463건 건너뜀을 통과로 간주하지 않는다.
 - 정확한 생일 일자를 수집하지 않으므로 새 비회원의 월 1일은 저장 호환용이다. 기존 날짜 반환·리포트 목록 표시 계약은 유지되지만 생일 월 안에서 하루 단위 실제 만 나이를 확정하는 용도로 쓰면 안 된다. null·월 1일·기존 실제 생일 3종을 리포트 API 회귀로 확인했다.
 - 과거 이미 외부에 적재된 사본은 회수·삭제하지 않았다. 과거 회원·비회원 혼합 업로드 배치도 안전상 전체 차단되어 회원분 재반출은 별도 운영 후속 과제다.
 - 보호자 서면 동의 확인은 기관 운영·계약 책임이며 앱이 동의서를 수집하거나 검증하지 않는다. 계약·동의서의 법적 적정성은 법무 검토가 필요하다.
@@ -77,3 +77,38 @@ Brian의 2026-10-24 확정 D3에 따라 비회원 코드 입장과 장기 비회
 - `screenshots/entry-390.png`와 `membership-390.png`를 다이얼 화면으로 갱신하고 직접 확인했다. 실기기의 관성 스크롤 감각은 미검증이다. 백엔드는 후속 요청에서 수정하지 않았으므로 앞서 완료한 전체 pytest 결과가 유효하다.
 
 - 다이얼 포함 최종 전체 vitest: **2808 passed / 기존 4파일 10 failed**, 신규 실패 0. 최종 build·diff 검사 통과.
+
+## PR #85 backend-pg-smoke 후속 진단과 수정 (2026-10-24)
+
+### 9건 판정표
+
+기준 head `7c082557`의 해당 PG 파일을 로컬 PostgreSQL 16에서 실행하여 **9 failed, 12 passed**를 재현했다. 모두 **(a) D3 정책에 따른 기대 동작 변경**이다. 조사·회원 경로 검증에서 (b) 회원 동의/보관 정책의 의도치 않은 회귀는 발견하지 못했으며 제품 코드는 수정하지 않았다. 테스트를 단순히 제거하지 않고 아래와 같이 주체별 검증으로 갱신했다.
+
+| 테스트명 | 원인 | 조치 |
+|---|---|---|
+| `test_v22_join_choice_evidence_and_future_copy` | 비회원 가입 true가 false로 정규화되어 연구 사본 없음 | 실제 회원 코드 가입·본인 동의로 원선택 시각/ID·이력·사본 검증 유지. 별도 비회원 가입/미래 회차 사본 0건·PII/연월 저장 검증 추가 |
+| `test_v21_future_only_override_and_historical_preserved` | 비회원 미래 사본을 연구 동의로 간주 | 회원으로 전환. override·과거/입장완료 동의 보존·미래 false·변경 대상 ID 단언 유지/강화 |
+| `test_v39_explicit_withdrawal_reaches_ended_and_preserves_evidence` | 신규 비회원 동의가 없어 철회할 사본 없음 | 회원 및 명시적으로 재현한 과거 비회원 동의 양쪽에서 종료 회차 철회·원증거·append-only 이력 검증 |
+| `test_real_http_login_guest_scope_and_payload` | 비회원 true 정책 금지 403을 고지 누락 422/정상 200으로 기대 | 비회원은 고지 유무 모두 403과 `guest_research_not_applicable`, 회원 고지 누락422/정상200/실제 사본 저장, extra422를 분리 검증 |
+| `test_makeup_new_participant_copies_origin_and_pii` | 비회원 보강도 연구 사본이 생긴다고 가정 | 비회원 PII 복사 유지·연구 사본/원본 ID 없음. 별도 회원 보강에서 원본 ID·시각·동의 사본 복사 검증 |
+| `test_class_withdrawal_same_subject_other_class_and_export_unchanged` | 비회원 동일인 동의·pending 반출을 기대 | 동일 실제 회원을 두 클래스에 가입. 한 클래스 철회·타 클래스 pending/동의·전역 철회 없음 유지 |
+| `test_withdrawal_hidden_removed_copy_and_default_false_keep_withdrawn` | 신규 비회원 동의 없음으로 affected_count 0 | 회원/과거 비회원 양쪽 숨김·제거 회차 철회1건과 false 기본값 재복사 후 withdrawn 유지 검증 |
+| `test_class_withdrawal_cancels_existing_uploaded_batch_without_global_request` | 신규 비회원 연구 사본으로 uploaded 배치를 구성 | 회원/과거 비회원 동의·배치를 명시 구성하여 철회 후 배치 취소와 합성 cleanup 호출 단언 유지 |
+| `test_research_notice_cannot_rewrite_original_selection_without_choice` | 비회원 고지 원본이 None으로 정규화됨 | 회원으로 전환. 선택 없는 고지 변경422·원본 불변·재선택 시각/ID 갱신·이력2건 유지 |
+
+### 검증 환경과 중간 실패
+
+- 원격/dev DB와 환경파일을 사용하지 않았다. `/tmp/guest-minor-pg85-data`에 PostgreSQL 16 전용 클러스터를 초기화하고 `127.0.0.1:55485/smoke`에 빈 DB 마이그레이션을 적용했다. 기존 DB/파일/브랜치는 삭제하지 않았다.
+- 검증 Python은 `/tmp/mb237-venv/bin/python`. `/tmp/guest-minor-pg85-isolation/sitecustomize.py`에서 `DotEnvSettingsSource.__call__ = lambda self: {}`로 환경파일 값 주입을 차단했고 자식 alembic 프로세스에도 동일 PYTHONPATH를 전달했다. 워크트리에 환경파일이 없는 것도 확인했다. 이후 `_read_env_files`까지 빈 매핑으로 고정해 초기화 단계의 읽기도 차단했다. DATABASE_URL은 합성 로컬 URL만 주입했다. 백엔드 전체 실행은 `DATABASE_URL=sqlite://`, PG_SMOKE 미설정이다.
+- 1차 수정 후 해당 파일 **26 passed**. PG 전체에서는 기존 테스트가 가져오는 SQLite 전용 ARRAY 전역 변환기가 신규 ClientProfile ORM fixture를 `"[]"`로 바꾸어 **8 failed, 468 passed**가 발생했다. 합성 프로필 준비를 PG 명시 INSERT와 `ARRAY[]::varchar[]`로 바꾸어 제품 코드/단언 변경 없이 해결했다. 이 중간 결과를 최종 통과로 취급하지 않는다.
+- 독립 검증자는 정책/응답 계약·회원 경로 보존·최종 fixture diff를 재검토했으며 **Important 0건**이다. 최종 테스트 결과는 아래에 기록한다.
+- 같은 PG DB를 재사용한 중간 전체 실행은 **2 failed, 474 passed**였다. 앞선 전체 실행이 남긴 합성 세션/효과 행 때문에 기존 M0 전체 집계(13 기대→62)와 이메일 효과 건수(1 기대→2)가 달라진 것으로 확인했다. 해당 DB는 지우지 않고 보존했으며, 최종 검증은 새 빈 `smoke_ci_final` DB에서 CI와 같은 `-m pg -p no:cacheprovider` 명령으로 수행한다. 중간 `tests/pg` 무마커 실행에는 CI가 선택하지 않는 21건도 포함된다.
+
+### 최종 로컬 검증
+
+- 빈 PG16 DB의 `alembic upgrade head` 통과, head `e036a0000061`.
+- CI 동일 PG 전체: **455 passed, 21 deselected, 11 warnings**, 63.52초. 실행: `PG_SMOKE=1 DATABASE_URL=postgresql://postgres@127.0.0.1:55485/smoke_ci_final PYTHONPATH=/tmp/guest-minor-pg85-isolation:. /tmp/mb237-venv/bin/python -m pytest --confcutdir=tests/pg tests/pg -q -m pg -p no:cacheprovider` (backend). 21건은 CI 마커 필터에 의한 비-PG 테스트 제외이며 건너뜀을 통과로 세지 않는다.
+- PG fixture 위생: **2파일 위반 0건**.
+- 백엔드 전체: **3991 passed, 468 skipped, 75 warnings**, 377.49초. 실행: `DATABASE_URL=sqlite:// PYTHONPATH=/tmp/guest-minor-pg85-isolation:. /tmp/mb237-venv/bin/python -m pytest -q` (backend). PG 등 468 skip은 별도 PG 결과와 구분한다.
+- `git diff --check` 통과. 변경 범위는 PG 테스트와 이 수정 기록 3종이며 제품 서비스/회원 보관 코드는 그대로다. 같은 브랜치에 한글 커밋·push 후 PR #85 CI의 실제 head 결과를 최종 답변으로 보고한다.
+- 로그: `/tmp/guest-minor-pg85-red.log`, `/tmp/guest-minor-pg85-ci-final.log`, `/tmp/guest-minor-pg85-backend.log`. 중간 실패 로그는 `/tmp/guest-minor-pg85-all.log`, `/tmp/guest-minor-pg85-all-final.log`이다.
