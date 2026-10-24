@@ -44,3 +44,11 @@ G1 DTO 기반 주입형 transport/mock을 계속한다. A가 schemas/biosignal.p
 - 독립 리뷰: fixture3개 전체 bytes 일치, 분석전 복사, clock 검토. observed_rate 양의 정수 지적 수정+nullable 타입 오류 수정 후19/19+tsc 통과.
 - 실제 journal/1MiB 봉인 흐름은 T08, 실제 BLE/100ms latency/실브라우저 재시작 미검증.
 - 최신 A 계약 `b3e9ee15`: client chunk_alias/artifact_alias+feature_id_aliases와 서버 UUID 응답, close expected는 {kind,alias,sha256}. 임시 alias mapping 가정은 이 정본으로 대체.
+
+## 이어받기 완료 기록 (Claude, T08~T11)
+
+- T08 `81618841` · T09 `e1f65029` · T10 `fd1f8f07` · T11 `1acaa31a` (모두 sdd/244-b-frontend push).
+- 전체 vitest: 17 failed / 2904 passed (2921) — 기준선 실패 17건과 동일 파일(8개). raw-chunk-queue suite는 fake-indexeddb alias로 이제 로드·통과.
+- 검증 명령: `npx tsc --noEmit -p tsconfig.app.json`, `npm run build`. 테스트는 /tmp/sdd244-vitest.config.mts(fake-indexeddb alias)로 실행.
+- 미검증: 실제 BLE·브라우저 재시작·서버 API·객체 저장소(전부 mock/fake-indexeddb). ClassPlayerPage(session_player) snapshot 미배선.
+- 한계: beats(beat ID)·channelBandPowers는 현재 처리기 미emit → null+사유. 원창 매핑은 수신 샘플 카운트 기반 추정(분석 드롭 시 어긋날 수 있음).
