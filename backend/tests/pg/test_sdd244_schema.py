@@ -215,3 +215,67 @@ def test_M2_업그레이드_다운그레이드_왕복(scratch_db):
     alembic_ok(url, "downgrade", "-1")
     alembic_ok(url, "upgrade", "head")
     eng.dispose()
+
+
+# ── M3: 연구 영수증·삭제 outbox·manifest revision 불변 트리거 ───────────────────
+
+
+def test_research_signal_receipt_유니크와_check(conn):
+    row = {"id": uuid.uuid4(), "session_id": uuid.UUID(int=1), "participant_id": uuid.UUID(int=2), "signal": "ppg",
+           "artifact_kind": "raw", "manifest_revision": 1, "manifest_sha256": "c" * 64, "schema_version": "research-v3"}
+    sql = f"INSERT INTO research_signal_receipts ({', '.join(row)}) VALUES ({', '.join(':' + k for k in row)})"
+    conn.execute(sa.text(sql), row)
+    with pytest.raises(IntegrityError):
+        with conn.begin_nested():
+            conn.execute(sa.text(sql), dict(row, id=uuid.uuid4()))  # 같은 신호·종류·revision·hash 중복
+    conn.execute(sa.text(sql), dict(row, id=uuid.uuid4(), signal="acc"))  # 다른 신호는 별개 영수증
+    with pytest.raises(IntegrityError):
+        with conn.begin_nested():
+            conn.execute(sa.text(sql), dict(row, id=uuid.uuid4(), signal="emg", manifest_revision=2))
+
+
+def test_object_deletion_outbox_상태와_유니크(conn):
+    sql = "INSERT INTO object_deletion_outbox (id, object_key, source_table, reason, state) VALUES (:i, :k, 'eeg_raw_chunks', 'retention', :s)"
+    conn.execute(sa.text(sql), {"i": uuid.uuid4(), "k": "k1", "s": "pending"})
+    with pytest.raises(IntegrityError):
+        with conn.begin_nested():
+            conn.execute(sa.text(sql), {"i": uuid.uuid4(), "k": "k1", "s": "pending"})
+    with pytest.raises(IntegrityError):
+        with conn.begin_nested():
+            conn.execute(sa.text(sql), {"i": uuid.uuid4(), "k": "k2", "s": "bogus"})
+
+
+def test_manifest_revision_행은_수정할_수_없다(conn):
+    row = {"id": uuid.uuid4(), "session_id": uuid.UUID(int=1), "participant_id": uuid.UUID(int=2), "revision": 1,
+           "close_state": "unknown", "content": "{}", "content_sha256": "d" * 64}
+    conn.execute(sa.text(f"INSERT INTO biosignal_manifest_revisions ({', '.join(row)}) VALUES ({', '.join(':' + k for k in row)})"), row)
+    conn.execute(sa.text("SET LOCAL session_replication_role = origin"))  # replica 모드는 일반 트리거를 건너뛴다
+    with pytest.raises(sa.exc.DBAPIError):
+        with conn.begin_nested():
+            conn.execute(sa.text("UPDATE biosignal_manifest_revisions SET close_state='complete' WHERE id=:i"), {"i": row["id"]})
+    conn.execute(sa.text("SET LOCAL session_replication_role = replica"))
+    conn.execute(sa.text(f"INSERT INTO biosignal_manifest_revisions ({', '.join(dict(row, revision=2))}) VALUES ({', '.join(':' + k for k in row)})"),
+                 dict(row, id=uuid.uuid4(), revision=2))  # 새 revision 추가는 허용
+    with pytest.raises(IntegrityError):
+        with conn.begin_nested():
+            conn.execute(sa.text(f"INSERT INTO biosignal_manifest_revisions ({', '.join(row)}) VALUES ({', '.join(':' + k for k in row)})"),
+                         dict(row, id=uuid.uuid4()))  # revision 번호 중복 불가
+
+
+def test_M3_업그레이드_다운그레이드_왕복(scratch_db):
+    url = scratch_db("sdd244m3")
+    alembic_ok(url, "upgrade", "e036a0244003")
+    eng = sa.create_engine(url)
+    with eng.begin() as c:
+        cols = {r[0] for r in c.execute(sa.text("SELECT column_name FROM information_schema.columns WHERE table_name='research_export_items'"))}
+        assert {"bundle_schema_version", "signal_scope"} <= cols
+        c.execute(sa.text("INSERT INTO object_deletion_outbox (id, object_key, source_table, reason) VALUES (:i,'k','t','r')"), {"i": uuid.uuid4()})
+    refused = run_alembic(url, "downgrade", "-1")
+    assert refused.returncode != 0 and "downgrade 거부" in (refused.stderr + refused.stdout)
+    with eng.begin() as c:
+        c.execute(sa.text("DELETE FROM object_deletion_outbox"))
+    alembic_ok(url, "downgrade", "-1")
+    with eng.begin() as c:
+        assert c.execute(sa.text("SELECT count(*) FROM pg_trigger WHERE tgname='trg_biosignal_manifest_revisions_immutable'")).scalar() == 0
+    alembic_ok(url, "upgrade", "head")
+    eng.dispose()

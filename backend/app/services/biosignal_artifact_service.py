@@ -354,6 +354,9 @@ def ack(session_id: str, payload: ArtifactAckRequest, db: DBSession, *, current_
             "uploaded", datetime.now(timezone.utc), version, None)
         acked += 1
         results.append(_result(row, "uploaded", indexed=indexed))
+    db.flush()
+    from app.services import biosignal_manifest_service  # 순환 import 회피
+    biosignal_manifest_service.refresh_if_closing(db, sid, participant.id)  # 후발 ACK → 새 revision
     db.commit()
     logger.info("[biosignal] artifact ack session=%s participant=%s acked=%d failed=%d", sid, participant.id, acked, failed)
     return {"session_id": str(sid), "acked": acked, "failed": failed, "chunks": results}

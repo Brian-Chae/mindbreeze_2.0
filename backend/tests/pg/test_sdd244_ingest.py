@@ -69,3 +69,26 @@ def test_세_신호_같은_index와_stream_segment_원장(svc):
     rows = svc.db.execute(sa.text("SELECT signal_type, count(*) FROM eeg_raw_chunks WHERE session_id=:s GROUP BY 1"), {"s": svc.sid}).all()
     assert {r[0]: r[1] for r in rows} == {"eeg": 1, "ppg": 1, "acc": 1}
     assert svc.db.execute(sa.text("SELECT count(*) FROM biosignal_segments s JOIN biosignal_streams t ON t.id=s.stream_pk WHERE t.session_id=:s"), {"s": svc.sid}).scalar() == 3
+
+
+def test_manifest_revision_후발_ack는_새_revision_기존_불변(svc):
+    from app.schemas.biosignal import AckRequest, EventsRequest
+    from app.services import biosignal_manifest_service as man
+
+    first = svc.mod.presign_raw("x", _req(), svc.db)["chunks"][0]
+    intent = {
+        "event_type": "close_intent", "intent_id": str(uuid.uuid4()), "closed_at_us": "9000000",
+        "expected_artifacts": [{"kind": "raw", "alias": first["chunk_alias"], "sha256": first["checksum"]}],
+        "streams": [], "snapshots": [], "last_gap_sequence": None, "end_reason": "user_ended",
+    }
+    out = man.record_events("x", EventsRequest.model_validate({"events": [intent]}), svc.db)
+    assert out["close_state"] == "pending_upload" and out["manifest_revision"] == 1
+    snap1 = svc.db.execute(sa.text("SELECT content_sha256 FROM biosignal_manifest_revisions WHERE session_id=:s AND revision=1"), {"s": svc.sid}).scalar()
+    ack = AckRequest.model_validate({"chunks": [{"chunk_id": first["chunk_id"], "checksum": first["checksum"], "size_bytes": first["size_bytes"]}]})
+    svc.mod.ack_raw("x", ack, svc.db)
+    rows = svc.db.execute(sa.text("SELECT revision, close_state, content_sha256 FROM biosignal_manifest_revisions WHERE session_id=:s ORDER BY revision"), {"s": svc.sid}).all()
+    assert [(r[0], r[1]) for r in rows] == [(1, "pending_upload"), (2, "complete")] and rows[0][2] == snap1
+    assert svc.db.execute(sa.text("SELECT revision FROM biosignal_manifest_current WHERE session_id=:s"), {"s": svc.sid}).scalar() == 2
+    # 같은 상태 재판정은 새 revision 을 만들지 않는다
+    man.refresh(svc.db, svc.sid, svc.pid)
+    assert svc.db.execute(sa.text("SELECT count(*) FROM biosignal_manifest_revisions WHERE session_id=:s"), {"s": svc.sid}).scalar() == 2

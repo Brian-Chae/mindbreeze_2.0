@@ -985,6 +985,13 @@ class ExpectedArtifactIn(Contract):
     sha256: Sha256
 
 
+class MissingArtifact(Contract):
+    """종료 판정에서 확정되지 않은 항목(응답 전용). gap 합성/구멍 항목도 포함한다."""
+    kind: Literal['raw', 'gap'] | ArtifactKind
+    alias: Alias | Text
+    sha256: Sha256
+
+
 class StreamCloseIn(Contract):
     stream_id: UUID
     segment_id: UUID
@@ -1000,10 +1007,18 @@ class ViewCloseIn(Contract):
     last_snapshot_sequence: NonNegative | None
 
 
+class LostArtifactIn(Contract):
+    """클라이언트가 회복 불가로 선언한 산출물(로컬 쓰기 실패 등). 선언분은 필수 목록에서 빠지고 partial 로 판정된다."""
+    kind: Literal['raw'] | ArtifactKind
+    alias: Alias
+    reason: Text
+
+
 class CloseIntentIn(Contract):
     event_type: Literal['close_intent']
     intent_id: UUID
     expected_artifacts: list[ExpectedArtifactIn]
+    lost_artifacts: list[LostArtifactIn] = Field(default_factory=list)
     streams: list[StreamCloseIn]
     snapshots: list[ViewCloseIn]
     last_gap_sequence: NonNegative | None
@@ -1040,7 +1055,8 @@ class EventsResponse(Contract):
     # close intent가 포함된 경우 판정된 최신 manifest revision 요약
     manifest_revision: Positive | None = None
     close_state: Literal['pending_upload', 'partial', 'complete', 'unknown'] | None = None
-    missing_artifacts: list[ExpectedArtifactIn] = Field(default_factory=list)
+    # 미검증/목록 밖/순번 구멍 항목. 구멍·합성 항목의 sha256 은 모두 0(알 수 없음), alias 는 RAWMISSING-*/FEATMISSING-*/IDXMISSING-*/GAPMISSING-*.
+    missing_artifacts: list[MissingArtifact] = Field(default_factory=list)
 
 
 class SignalCapability(Contract):

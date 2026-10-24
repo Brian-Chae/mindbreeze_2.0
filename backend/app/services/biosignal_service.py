@@ -310,6 +310,8 @@ def ack_raw(session_id: str, payload: AckRequest, db: DBSession, *, current_user
 
     db.flush()
     record = eeg_raw_service._sync_eeg_record(sid, participant, payload.play_group_id, db)
+    from app.services import biosignal_manifest_service  # 순환 import 회피
+    biosignal_manifest_service.refresh_if_closing(db, sid, participant.id)  # 후발 ACK → 새 revision
     db.commit()
     logger.info("[biosignal] raw ack session=%s participant=%s acked=%d failed=%d", sid, participant.id, acked, failed)
     return {
