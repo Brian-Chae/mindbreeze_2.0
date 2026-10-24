@@ -1,0 +1,36 @@
+{
+  "preview_token": "pppppppppppppppppppppppppppppppp",
+  "expires_at": "2026-10-24T03:00:00Z",
+  "request_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "as_of": "2026-10-24T03:00:00Z",
+  "sort": "started_at_asc,id_asc",
+  "scope": "class",
+  "purpose": "operations",
+  "identity": "pseudonymized",
+  "session_count": 12,
+  "participant_count": 24,
+  "targets": [
+    {
+      "ordinal": 1,
+      "session_id": "00000000-0000-0000-0000-00000000000b",
+      "participant_id": "00000000-0000-0000-0000-000000000015",
+      "manifest_revision": 2
+    }
+  ],
+  "targets_truncated": true,
+  "exclusions": [
+    {
+      "session_id": "00000000-0000-0000-0000-00000000000c",
+      "participant_id": null,
+      "signal": null,
+      "reason": "not_completed"
+    }
+  ],
+  "estimated_bytes": 48000000,
+  "estimated_part_count": 1,
+  "extra_range_notices": [],
+  "policy_version": "dc-policy-1",
+  "policy_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "eligible": true,
+  "blocked_reason": null
+}

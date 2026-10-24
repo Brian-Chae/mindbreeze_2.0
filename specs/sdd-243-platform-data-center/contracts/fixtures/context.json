@@ -1,0 +1,47 @@
+{
+  "role": "org_admin",
+  "actor_id": "00000000-0000-0000-0000-000000000384",
+  "current_org": {
+    "id": "00000000-0000-0000-0000-000000000064",
+    "name": "기관A"
+  },
+  "allowed_orgs": [
+    {
+      "id": "00000000-0000-0000-0000-000000000064",
+      "name": "기관A"
+    }
+  ],
+  "default_org_id": "00000000-0000-0000-0000-000000000064",
+  "capabilities": {
+    "enabled": true,
+    "tabs": [
+      "overview",
+      "subjects",
+      "classes",
+      "jobs",
+      "audits"
+    ],
+    "can_research": false,
+    "can_export_identified": true,
+    "can_reveal_contact": true,
+    "can_view_platform_audits": false
+  },
+  "limits": {
+    "policy_version": "dc-policy-1",
+    "policy_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "default_identity": "pseudonymized",
+    "require_reason": true,
+    "reason_min_length": 2,
+    "reason_max_length": 500,
+    "reauth_ttl_seconds": 300,
+    "artifact_ttl_seconds": 86400,
+    "url_ttl_seconds": 60,
+    "preview_ttl_seconds": 300,
+    "max_active_jobs_per_actor": 1,
+    "member_facilitator_max_sessions": 50,
+    "part_max_bytes": 1000000000,
+    "page_default": 25,
+    "page_max": 100,
+    "provisional": true
+  }
+}

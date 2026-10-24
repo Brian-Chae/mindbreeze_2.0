@@ -116,6 +116,29 @@ class Settings(BaseSettings):
     research_export_max_batch_bytes: int = 256 * 1024 * 1024
     refresh_token_expire_days: int = 14
 
+    # SDD-243: 플랫폼·기관 데이터 센터 정책. 잠정 권장안(D1~D3)이며 변경은 운영 정책 변경이다.
+    # 기본 비활성 — 활성화는 Brian 승인 후 별도 범위(롤백도 이 스위치를 끈다). policy_version 은 값을 바꿀 때 올린다.
+    data_center_enabled: bool = False
+    data_center_policy_version: str = "dc-policy-1"
+    # D1: 기본 가명, 식별 포함은 운영 목적 한정, 사유·감사 필수, 재인증 5분, 산출물 24시간, URL 60초
+    data_center_default_identity: str = "pseudonymized"
+    data_center_identified_operations_only: bool = True
+    data_center_require_reason: bool = True
+    data_center_require_audit: bool = True
+    data_center_reason_min_length: int = 2
+    data_center_reason_max_length: int = 500
+    data_center_reauth_ttl_seconds: int = 300
+    data_center_artifact_ttl_seconds: int = 86400
+    data_center_url_ttl_seconds: int = 60
+    data_center_preview_ttl_seconds: int = 300
+    # D2: 요청자당 queued/preparing 합계 상한(part 수와 무관)
+    data_center_max_active_jobs_per_actor: int = 1
+    # D3: 기관 관리자의 자기 기관 식별 운영 다운로드(최소 식별 필드). false 면 UI 비활성 + 서버 403
+    data_center_org_identified_operations_enabled: bool = True
+    # 회원·상담사 단위 요청의 회차 상한(초과는 413, 클래스 전체는 제한 없음)
+    data_center_member_facilitator_max_sessions: int = 50
+    data_center_part_max_bytes: int = 1_000_000_000
+
     # SDD-210: CORS 허용 오리진(쉼표 구분). 미설정이면 기존 기본 목록(dev 호환), 운영은 **명시 필수**.
     # HTTP CORS 와 Socket.IO 가 같은 값을 쓴다(app/core/cors.py).
     cors_allowed_origins: str = ""

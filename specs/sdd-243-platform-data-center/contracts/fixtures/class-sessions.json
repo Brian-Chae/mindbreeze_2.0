@@ -1,0 +1,41 @@
+{
+  "class_id": "00000000-0000-0000-0000-000000000001",
+  "title": "아침 호흡 명상",
+  "org_name": "기관A",
+  "sessions": {
+    "items": [
+      {
+        "session_id": "00000000-0000-0000-0000-00000000000b",
+        "class_id": "00000000-0000-0000-0000-000000000001",
+        "seq": 3,
+        "title": "아침 호흡 명상 3회차",
+        "scheduled_at": "2026-10-24T03:00:00Z",
+        "started_at": "2026-10-24T03:00:00Z",
+        "ended_at": "2026-10-24T03:00:00Z",
+        "status": "completed",
+        "participant_count": {
+          "value": 2,
+          "partial": false,
+          "unavailable_reason": null
+        },
+        "measured_count": {
+          "value": 1,
+          "partial": false,
+          "unavailable_reason": null
+        },
+        "estimated_bytes": {
+          "value": 1200000,
+          "partial": true,
+          "unavailable_reason": null
+        },
+        "exportable": true,
+        "exclusion_reason": null
+      }
+    ],
+    "next_cursor": null,
+    "total": 1,
+    "total_reason": null,
+    "as_of": "2026-10-24T03:00:00Z",
+    "filters_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+}

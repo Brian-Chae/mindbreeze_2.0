@@ -1,0 +1,27 @@
+{
+  "session_id": "00000000-0000-0000-0000-00000000000b",
+  "participant_id": "00000000-0000-0000-0000-000000000015",
+  "computable": true,
+  "reason": null,
+  "method": "dc-welch-v1",
+  "unit": "uV2/Hz",
+  "window_sec": 2.0,
+  "overlap": 0.5,
+  "from_us": "0",
+  "to_us": "10000000",
+  "freq_hz": [
+    0.0,
+    0.5,
+    1.0
+  ],
+  "channels": [
+    {
+      "name": "fp1",
+      "psd": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    }
+  ]
+}
