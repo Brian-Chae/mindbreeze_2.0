@@ -60,4 +60,6 @@ python ../specs/sdd-241-research-export-metadata/verify-contract.py --pytest -q
 
 ## 최종 인계 상태
 
-로컬 검증과 독립 리뷰를 마쳤다. 커밋·push 및 PR 생성 결과는 완료 직후 갱신한다. Brian 최종 Review와 실제 운영 검증은 미완료다.
+- 제품 구현 커밋: `9e7c0da1` (`feat(sdd-241): 연구 사본 측정·프로그램·진행자 메타데이터와 고지 보강`), 작업 브랜치 push 완료.
+- PR: [#83 — 연구용 비식별 사본 메타데이터 보강](https://github.com/Brian-Chae/mindbreeze_2.0/pull/83), base `develop`, head `sdd/241-research-export-metadata`.
+- 로컬 검증과 독립 리뷰를 마쳤다. Brian 최종 Review·CI 완료·실제 운영 검증은 별도이며, 머지·develop push·배포는 하지 않았다.
