@@ -18,6 +18,7 @@ import {
   type GroupAverageEvent,
 } from '../lib/class/group-average';
 import {
+  cancelSessionLiveJoin,
   emitClassAudioSync,
   emitClassSignal,
   getSessionLiveSocket,
@@ -307,6 +308,7 @@ export function useSessionLiveSocket({
 
     const onJoinDenied = (event: { session_id?: string }): void => {
       if (event.session_id && event.session_id !== sessionId) return;
+      cancelSessionLiveJoin();
       signalParticipantRef.current = null;
       joinDeniedRef.current = true;
       pendingSignalsRef.current = [];
@@ -317,6 +319,7 @@ export function useSessionLiveSocket({
 
     const onAccessRevoked = (event: {session_id?: string}): void => {
       if (event.session_id !== sessionId) return;
+      cancelSessionLiveJoin();
       revokedSessionRef.current = sessionId;
       joinDeniedRef.current = true;
       signalParticipantRef.current = null;

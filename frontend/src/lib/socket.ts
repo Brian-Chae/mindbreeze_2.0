@@ -26,7 +26,7 @@ import {
   type AudioSyncEmit,
   type AudioSyncEvent,
 } from './class/audio-sync';
-import { refreshAccessToken } from './api/client';
+import { refreshAccessToken, tokenStorage } from './api/client';
 
 // FE-RT-002: 소켓 URL 단일 출처 — /chat · /session-live · /record 네임스페이스가 모두 이 값을 쓴다.
 export const SOCKET_URL =
@@ -389,6 +389,48 @@ let liveCurrentSession: string | null = null;
 /** FE-RT-001: join dedup 키 확장 — 세션뿐 아니라 참여자 확정 여부까지 비교한다 */
 let liveCurrentParticipant: string | null = null;
 let liveSnapshotCache: SessionLiveJoinedEvent | null = null;
+/**
+ * 서버 재시작·네트워크 단절 후 자동 재join 용 — 마지막으로 요청한 join payload.
+ * 훅(useSessionLiveSocket/useBand 등)의 onConnect 에만 의존하면 effect 재실행 타이밍에 따라
+ * 재join 이 빠질 수 있으므로, 소켓 레벨에서 connect 마다 이 payload 로 재join 한다.
+ */
+let liveJoinPayload: SessionLiveJoinPayload | null = null;
+/** 서버가 joined 로 확정한 세션 — REST 폴백/WS 송신 가능 판정용 */
+let liveJoinedSession: string | null = null;
+let liveJoinRetryTimer: ReturnType<typeof setTimeout> | null = null;
+/** joined 가 오지 않을 때 connected 상태에서 join 을 재전송하는 간격(ms) */
+export const LIVE_JOIN_RETRY_MS = 5000;
+
+const clearJoinRetry = (): void => {
+  if (liveJoinRetryTimer) {
+    clearTimeout(liveJoinRetryTimer);
+    liveJoinRetryTimer = null;
+  }
+};
+
+/** join emit + joined 미수신 시 재전송 예약(join_denied/leave/disconnect 시 중단) */
+const emitJoinWithRetry = (socket: Socket, payload: SessionLiveJoinPayload): void => {
+  clearJoinRetry();
+  if (!socket.connected) return;
+  socket.emit('join', payload);
+  liveJoinRetryTimer = setTimeout(() => {
+    liveJoinRetryTimer = null;
+    if (liveJoinPayload !== payload) return;
+    if (!socket.connected || liveJoinedSession === payload.session_id) return;
+    emitJoinWithRetry(socket, payload);
+  }, LIVE_JOIN_RETRY_MS);
+};
+
+/** 권한 회수·join 거부 시 자동 재join(재시도 타이머 포함)을 중단한다 */
+export const cancelSessionLiveJoin = (): void => {
+  liveJoinPayload = null;
+  liveJoinedSession = null;
+  clearJoinRetry();
+};
+
+/** 이 세션 room 에 서버가 join 을 확정(joined)했는가 — 아니면 feature 는 REST 로 보낸다 */
+export const isSessionLiveJoined = (sessionId: string): boolean =>
+  liveJoinedSession === sessionId && Boolean(sessionLiveSocket?.connected);
 
 /**
  * `/session-live` 싱글톤 소켓.
@@ -451,21 +493,56 @@ export const getSessionLiveSocket = (token: string | null = null): Socket => {
     });
   });
 
+  // 재연결 시도마다 최신 access 토큰으로 재인증한다 — 서버 재시작/장시간 단절 뒤에는 생성 시점
+  // 토큰이 만료돼 있어 핸드셰이크가 거부(token_expired)되고 refresh 왕복만 반복되던 문제.
+  // (socket.io Manager 이벤트 — 테스트 더블에는 없을 수 있어 optional)
+  sessionLiveSocket.io?.on?.('reconnect_attempt', () => {
+    const sock = sessionLiveSocket;
+    if (!sock || !sessionLiveToken) return;
+    const latest = tokenStorage.getAccess();
+    if (latest) {
+      sessionLiveToken = latest;
+      sock.auth = { token: latest };
+    }
+  });
+
   // SDD-110: 마지막 joined 스냅샷 캐시 — 후발 구독자에게 재배달한다.
   sessionLiveSocket.on('joined', (event: SessionLiveJoinedEvent) => {
     liveSnapshotCache = event;
+    liveJoinedSession = event.session_id ?? liveJoinPayload?.session_id ?? null;
+    clearJoinRetry();
+  });
+  // 거부·권한 회수 뒤에는 자동 재join 하지 않는다(재연결 시 회수된 room 에 다시 들어가지 않게).
+  sessionLiveSocket.on('join_denied', cancelSessionLiveJoin);
+  sessionLiveSocket.on('access_revoked', cancelSessionLiveJoin);
+  // 연결(최초·재연결) 직후 마지막 join 을 자동으로 다시 보낸다 — 훅 onConnect 와 무관하게 room 을 복구.
+  sessionLiveSocket.on('connect', () => {
+    const sock = sessionLiveSocket;
+    if (!sock || !liveJoinPayload) return;
+    liveCurrentSession = liveJoinPayload.session_id;
+    liveCurrentParticipant = liveJoinPayload.participant_id ?? null;
+    emitJoinWithRetry(sock, liveJoinPayload);
   });
   // SDD-110: 단절 시 join 상태 클리어 — 재연결 join이 dedup에 막히지 않게 한다.
+  // liveJoinPayload 는 유지한다(재연결 후 자동 재join 용).
   sessionLiveSocket.on('disconnect', () => {
     liveCurrentSession = null;
     liveCurrentParticipant = null;
     liveSnapshotCache = null;
+    liveJoinedSession = null;
+    clearJoinRetry();
   });
 
   return sessionLiveSocket;
 };
 
 export const disconnectSessionLiveSocket = (): void => {
+  liveCurrentSession = null;
+  liveCurrentParticipant = null;
+  liveSnapshotCache = null;
+  liveJoinPayload = null;
+  liveJoinedSession = null;
+  clearJoinRetry();
   if (sessionLiveSocket) {
     sessionLiveSocket.disconnect();
     sessionLiveSocket = null;
@@ -510,13 +587,10 @@ export const joinSessionLive = (
   };
   liveCurrentSession = sessionId;
   liveCurrentParticipant = nextParticipant;
-  if (socket.connected) {
-    socket.emit('join', payload);
-  } else {
-    socket.once('connect', () => {
-      socket.emit('join', payload);
-    });
-  }
+  liveJoinPayload = payload;
+  if (liveJoinedSession !== sessionId) liveJoinedSession = null;
+  // 미연결이면 emit 하지 않는다 — 소켓 레벨 connect 핸들러가 liveJoinPayload 로 보낸다.
+  if (socket.connected) emitJoinWithRetry(socket, payload);
 };
 
 /** room 퇴장 — 참조 카운트가 남아 있으면 실제 leave 를 보내지 않는다(releaseSessionLiveRoom 경유 권장) */
@@ -526,6 +600,11 @@ export const leaveSessionLive = (socket: Socket, sessionId: string): void => {
     liveCurrentSession = null;
     liveCurrentParticipant = null;
   }
+  if (liveJoinPayload?.session_id === sessionId) {
+    liveJoinPayload = null;
+    clearJoinRetry();
+  }
+  if (liveJoinedSession === sessionId) liveJoinedSession = null;
   liveSnapshotCache = null;
   if (!socket.connected) return;
   socket.emit('leave', { session_id: sessionId });
