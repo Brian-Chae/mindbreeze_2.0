@@ -47,8 +47,21 @@ object MeasurementManager {
         return e
     }
 
+    /** NativeRuntime 이 만든 엔진(코어 포함, 복구 이어쓰기)을 채택한다. */
+    @Synchronized
+    fun adopt(e: MeasurementEngine, isSynthetic: Boolean, rt: com.looxidlabs.mindbreeze.measurement.runtime.NativeRuntime?) {
+        engine = e; synthetic = isSynthetic; runtime = rt
+        com.looxidlabs.mindbreeze.measurement.runtime.NativeRuntimeHolder.set(rt)
+        startedAtMonoMs = SystemClock.elapsedRealtime()
+    }
+
+    @Volatile var runtime: com.looxidlabs.mindbreeze.measurement.runtime.NativeRuntime? = null
+        private set
+
     @Synchronized
     fun end() {
+        runtime = null
+        com.looxidlabs.mindbreeze.measurement.runtime.NativeRuntimeHolder.set(null)
         engine?.close(); engine = null
         releaseWake()
         state = MeasurementState.CLOSED

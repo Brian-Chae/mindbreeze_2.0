@@ -36,6 +36,8 @@ class MeasurementService : Service() {
         if (!MeasurementManager.gate.tryStart(instanceId)) { stopSelf(startId); return START_NOT_STICKY }
         MeasurementManager.noteServiceStart()
         if (MeasurementManager.engine != null) return START_NOT_STICKY // 중복 start 멱등
+        val sessionId = intent?.getStringExtra(EXTRA_SESSION)
+        if (sessionId != null && MeasurementManager.ownership.nativeEnabled) return startNative(intent!!, sessionId)
         val address = intent?.getStringExtra(EXTRA_ADDRESS)
         val isSynthetic = intent?.getBooleanExtra(EXTRA_SYNTHETIC, false) == true
         if (address == null && !isSynthetic) { MeasurementManager.setState(MeasurementState.BLOCKED, "no_address"); teardown(); return START_NOT_STICKY }
@@ -54,7 +56,38 @@ class MeasurementService : Service() {
         return START_NOT_STICKY
     }
 
+    private var nativeRt: com.looxidlabs.mindbreeze.measurement.runtime.NativeRuntime? = null
+
+    /** v2 native 경로: journal 복구 → Rust 코어 → LiveSession(Socket.IO v2)·archive. 플래그(nativeEnabled) on 일 때만 도달한다. */
+    private fun startNative(intent: Intent, sessionId: String): Int {
+        val cfg = com.looxidlabs.mindbreeze.measurement.runtime.RuntimeConfig(
+            sessionId, intent.getStringExtra(EXTRA_API_BASE) ?: "", intent.getStringExtra(EXTRA_SOCKET_BASE) ?: "",
+            intent.getStringExtra(EXTRA_ADDRESS), intent.getStringExtra(EXTRA_INSTANCE) ?: java.util.UUID.randomUUID().toString(), true)
+        val isSynthetic = intent.getBooleanExtra(EXTRA_SYNTHETIC, false)
+        if (!MeasurementCore.available()) { MeasurementManager.setState(MeasurementState.BLOCKED, "core_unavailable"); teardown(); return START_NOT_STICKY }
+        if (cfg.apiBase.isEmpty() || cfg.socketBase.isEmpty()) { MeasurementManager.setState(MeasurementState.BLOCKED, "bad_config"); teardown(); return START_NOT_STICKY }
+        MeasurementManager.setState(MeasurementState.ARMING)
+        val store = com.looxidlabs.mindbreeze.measurement.runtime.KeystoreFactory.tokenStore(applicationContext)
+        val rt = com.looxidlabs.mindbreeze.measurement.runtime.NativeRuntime.open(applicationContext, cfg, store)
+        com.looxidlabs.mindbreeze.measurement.runtime.RuntimeConfig.save(java.io.File(filesDir, "measurement/runtime.json"), cfg)
+        nativeRt = rt
+        MeasurementManager.adopt(rt.engine, isSynthetic, rt)
+        if (isSynthetic) synth = SyntheticSource(applicationContext, rt.engine).also { it.start() }
+        else {
+            if (cfg.bandAddress == null) { MeasurementManager.setState(MeasurementState.BLOCKED, "no_address"); teardown(); return START_NOT_STICKY }
+            if (!MeasurementManager.ownership.claim(BandOwnership.Owner.NATIVE)) { MeasurementManager.setState(MeasurementState.BLOCKED, "band_owned_by_js"); teardown(); return START_NOT_STICKY }
+            gatt = BandGattClient(applicationContext, rt.engine, cfg.bandAddress, { MeasurementManager.setState(it); rt.bandState = if (it == MeasurementState.CAPTURING) "connected" else "reconnecting"; updateNotification(it) }).also { it.start() }
+        }
+        rt.live.visibility = "locked"
+        rt.start()
+        updateNotification(MeasurementState.CAPTURING)
+        logHandler.removeCallbacks(logTask); logHandler.post(logTask)
+        // 프로세스가 죽어도 사용자가 중지하지 않았다면 runtime.json(active=true)을 보고 다시 붙는다.
+        return START_NOT_STICKY
+    }
+
     private fun releaseResources() {
+        nativeRt?.let { it.stop("user_stop"); nativeRt = null }
         logHandler.removeCallbacks(logTask)
         gatt?.stop(); gatt = null
         synth?.stop(); synth = null
@@ -109,8 +142,18 @@ class MeasurementService : Service() {
         const val ACTION_STOP = "com.looxidlabs.mindbreeze.measurement.STOP"
         const val EXTRA_ADDRESS = "address"
         const val EXTRA_SYNTHETIC = "synthetic"
+        const val EXTRA_SESSION = "session_id"
+        const val EXTRA_API_BASE = "api_base"
+        const val EXTRA_SOCKET_BASE = "socket_base"
+        const val EXTRA_INSTANCE = "instance_id"
         private const val CHANNEL = "measurement"
         private const val NOTIF_ID = 24601
+
+        fun startNative(ctx: Context, cfg: com.looxidlabs.mindbreeze.measurement.runtime.RuntimeConfig, synthetic: Boolean) {
+            val i = Intent(ctx, MeasurementService::class.java).putExtra(EXTRA_ADDRESS, cfg.bandAddress).putExtra(EXTRA_SYNTHETIC, synthetic)
+                .putExtra(EXTRA_SESSION, cfg.sessionId).putExtra(EXTRA_API_BASE, cfg.apiBase).putExtra(EXTRA_SOCKET_BASE, cfg.socketBase).putExtra(EXTRA_INSTANCE, cfg.instanceId)
+            androidx.core.content.ContextCompat.startForegroundService(ctx, i)
+        }
 
         fun start(ctx: Context, address: String?, synthetic: Boolean) {
             val i = Intent(ctx, MeasurementService::class.java).putExtra(EXTRA_ADDRESS, address).putExtra(EXTRA_SYNTHETIC, synthetic)

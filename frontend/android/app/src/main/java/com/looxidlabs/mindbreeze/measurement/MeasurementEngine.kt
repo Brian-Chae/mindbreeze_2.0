@@ -31,6 +31,7 @@ class MeasurementEngine(
     val counters = MeasurementCounters()
     val fence = InstanceFence()
     private val unwrap = TickUnwrapper()
+    private val tickUnwrapForAnchor = TickUnwrapper()
     private val framer = MetricFramer()
     private var journal: AppendOnlyJournal? = null
     @Volatile var lastFrame: MetricFrame? = null
@@ -41,6 +42,9 @@ class MeasurementEngine(
     /** 프레임이 생길 때마다 호출(같은 스레드). 업로더·소켓 큐가 구독한다. */
     @Volatile var frameSink: ((JSONObject) -> Unit)? = null
     @Volatile var coreError: String? = null
+        private set
+    /** 마지막 EEG 패킷의 (wrap 확장 device tick, 도착 단조 µs) — capture.reanchor 의 장치 시각 쌍. */
+    @Volatile var lastEegAnchor: Pair<Long, Long>? = null
         private set
 
     /** 열면서 기존 journal 레코드 수를 돌려준다(프로세스 재생성 후 이어쓰기에서 사용). */
@@ -56,7 +60,10 @@ class MeasurementEngine(
         j.append(JournalRecord(sensor, now, bytes)); counters.journaled()
         when (val r = PacketParser.parse(sensor, bytes)) {
             is ParseResult.Invalid -> counters.invalid()
-            is ParseResult.Ok -> counters.samples(sensor, r.packet.sampleCount)
+            is ParseResult.Ok -> {
+                counters.samples(sensor, r.packet.sampleCount)
+                if (sensor == Sensor.EEG) lastEegAnchor = tickUnwrapForAnchor.unwrap(sensor, r.packet.rawTick) to now * 1000
+            }
         }
         if (core != null) pushCore(sensor, bytes, now) else legacyFrame(sensor, bytes)
         return true
@@ -118,6 +125,13 @@ class MeasurementEngine(
         val c = core ?: return emptyList()
         return try { val fr = c.advance(clockMs() * 1000); emit(fr); fr } catch (e: CoreException) { coreError = e.message; emptyList() }
     }
+
+    /** 종료 시 서버에 알릴 최종 순번(코어가 센 값). 핸들은 닫지 않는다. */
+    @Synchronized
+    fun finalSequences(): JSONObject? = try {
+        val c = counters.snapshot()
+        JSONObject().put("eeg", c.eegSamples.toString()).put("ppg", c.ppgSamples.toString()).put("acc", c.accSamples.toString()).put("metric", c.frames.toString())
+    } catch (_: Exception) { null }
 
     @Synchronized fun checkpoint(): ByteArray? = try { core?.checkpoint() } catch (_: CoreException) { null }
 
