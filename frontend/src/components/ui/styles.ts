@@ -15,7 +15,7 @@ const BASE = 'inline-flex items-center justify-center gap-2 whitespace-nowrap fo
 
 // 높이: 모바일 48 / 데스크톱 44 (lg는 항상 48). sm은 터치 최소 44.
 const SIZE: Record<ButtonSize, string> = {
-  sm: 'min-h-11 px-3 text-[14px] md:text-[14px]',
+  sm: 'h-11 min-h-11 px-3 text-[14px] md:text-[14px]',
   md: 'h-12 px-4 text-[14px] md:h-11 md:text-[15px]',
   lg: 'h-12 px-6 text-[15px]',
 };
@@ -91,4 +91,8 @@ export function chipClass(className?: string): string {
   const parts = ['inline-flex min-h-7 items-center rounded-full bg-[#F1EDF5] px-2.5 text-[13px] font-semibold text-[#655173]'];
   if (className) parts.push(className);
   return parts.join(' ');
+}
+
+export function headerButtonClass(primary = false): string {
+  return buttonClass({ variant: 'primary', tone: primary ? 'default' : 'inverse', size: 'sm', className: `mb-header-action ${primary ? 'border border-transparent' : 'border border-[#5F0080]'}` });
 }

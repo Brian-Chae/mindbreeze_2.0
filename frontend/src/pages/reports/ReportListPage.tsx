@@ -21,8 +21,7 @@ import {
 } from '../../lib/api/reports';
 import BulkApproveModal from '../../components/reports/BulkApproveModal';
 import { useReportStore } from '../../stores/reportStore';
-import { isAiEnabled } from '../../lib/feature-flags';
-import { buttonClass } from '../../components/ui';
+import { buttonClass, tabClass, fieldClass } from '../../components/ui';
 
 type StatusFilter = 'all' | 'pending' | 'approved' | 'failed';
 type ReportTypeFilter = 'all' | 'counselor' | 'client';
@@ -353,7 +352,7 @@ export default function ReportListPage() {
     <button
       type="button"
       onClick={() => setBulkApproveOpen(true)}
-      className={buttonClass({ variant: 'primary', size: 'sm' })}
+      data-header-action="primary" className={buttonClass({ variant: 'primary', size: 'sm' })}
     >
       일괄 승인 ({pendingCount})
     </button>
@@ -367,8 +366,7 @@ export default function ReportListPage() {
     </div>
   );
 
-  const selectClass =
-    'mobile:min-h-12 h-10 rounded-xl border border-[#EFEFEF] px-3 text-[13px] mobile:text-mb-body text-[#1F1F1F] bg-white focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20';
+  const selectClass = fieldClass('select');
 
   const openReportModal = (id: string) => setSelectedReportId(id);
 
@@ -512,7 +510,7 @@ export default function ReportListPage() {
   );
 
   return (
-    <AppShell title="리포트" sub={isAiEnabled() ? 'AI REPORTS' : 'REPORTS'} rightSlot={!loading ? rightSlot : undefined}>
+    <AppShell title="리포트" rightSlot={!loading ? rightSlot : undefined}>
       {operationsOpen && <section id="report-operations-settings" aria-label="리포트 운영 설정" className="mb-6 space-y-4 rounded-2xl border border-[#E9E2EB] bg-[#F8F5EF] p-4">
         <h2 className="text-[18px] font-bold">운영 설정</h2>
         <SessionNotePromptToggle />
@@ -542,9 +540,9 @@ export default function ReportListPage() {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="제목·세션·사용자 검색"
               aria-label="리포트 검색"
-              className="mobile:min-h-12 mobile:text-mb-body h-10 rounded-xl border border-[#EFEFEF] px-4 text-[13px] w-full lg:w-64 focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20"
+              className={fieldClass('input', 'lg:!w-64')}
             />
-            <div className="inline-flex rounded-xl border border-[#EFEFEF] overflow-hidden bg-white">
+            <div className="flex flex-wrap gap-2">
               {(
                 [
                   ['all', '전체'],
@@ -557,13 +555,7 @@ export default function ReportListPage() {
                   key={value}
                   type="button"
                   onClick={() => setStatusFilter(value)}
-                  className={`mobile:min-h-11 mobile:min-w-11 h-10 px-3.5 text-[13px] mobile:text-mb-label font-semibold transition-colors ${
-                    statusFilter === value
-                      ? value === 'failed'
-                        ? 'bg-[#C62828] text-white'
-                        : 'bg-[#5F0080] text-white'
-                      : 'text-[#6F6F6F] hover:bg-[#F8FAFC]'
-                  }`}
+                  className={tabClass(statusFilter === value)}
                 >
                   {label}
                 </button>

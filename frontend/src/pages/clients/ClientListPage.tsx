@@ -252,7 +252,7 @@ export default function ClientListPage() {
   const totalPages = Math.max(1, Math.ceil(total / size));
 
   const rightSlot = (
-    <button type="button" onClick={() => setShowInvite(true)} className="mb-btn">
+    <button data-header-action="primary" type="button" onClick={() => setShowInvite(true)} className="mb-btn">
       회원 초대
     </button>
   );

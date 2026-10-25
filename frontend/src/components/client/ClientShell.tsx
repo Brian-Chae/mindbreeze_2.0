@@ -1,3 +1,4 @@
+import { PageHeader } from '../ui/page-header';
 import { useMobileMenuSwipe } from '../../hooks/use-mobile-menu-swipe';
 // 내담자 앱 전체 레이아웃 셸 — 상담사 AppShell과 동일한 구조
 // 데스크탑: grid-cols-[240px_1fr] + SidebarNav (role="client")
@@ -170,18 +171,8 @@ export default function ClientShell({
       <section className="flex flex-col flex-1 min-w-0 min-h-0">
         {/* 데스크톱 헤더 */}
         <header className="hidden md:flex h-[76px] px-8 items-center justify-between border-b border-[#EFEFEF] shrink-0">
-          <div>
-            {sub && (
-              <div className="text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">
-                {sub}
-              </div>
-            )}
-            <div className="font-bold text-[22px] text-[#1F1F1F] tracking-tight mt-0.5">
-              {title}
-            </div>
-          </div>
-          <div className="flex items-center gap-3 relative">
-            {rightSlot}
+          <PageHeader title={title} sub={sub} actions={rightSlot} />
+          <div className="flex items-center gap-3 relative ml-3">
             <button
               type="button"
               aria-label="알림"
@@ -244,19 +235,7 @@ export default function ClientShell({
 
         {/* 모바일 페이지 타이틀 */}
         {!hideMobileTitle && (title || sub || rightSlot) && (
-          <div className="md:hidden px-4 pt-4 pb-2 flex items-end justify-between gap-3">
-            <div className="min-w-0">
-              {sub && (
-                <div className="mb-shell-subtitle text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">
-                  {sub}
-                </div>
-              )}
-              <div data-mobile-swipe-title tabIndex={-1} className="mb-shell-title font-bold text-[18px] text-[#1F1F1F] tracking-tight mt-0.5 truncate">
-                {title}
-              </div>
-            </div>
-            {rightSlot && <div className="flex items-center gap-2 shrink-0">{rightSlot}</div>}
-          </div>
+          <PageHeader title={title} sub={sub} actions={rightSlot} mobile className="md:hidden px-4 pt-4 pb-2" />
         )}
 
         <div ref={swipe.containerRef} data-mobile-menu-swipe className="mobile-menu-swipe-viewport flex-1 min-h-0">

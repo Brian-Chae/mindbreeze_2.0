@@ -362,6 +362,7 @@ export default function ClientAppPage() {
   // 클래스 탭이면 rightSlot에 신청하기 버튼
   const rightSlot = pathname.startsWith('/app/sessions') ? (
     <button
+      data-header-action="primary"
       type="button"
       onClick={handleSessionRequest}
       className={buttonClass()}

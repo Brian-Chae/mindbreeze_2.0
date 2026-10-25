@@ -47,7 +47,7 @@ export default function SessionListPage() {
   }, [closeTargetId, refresh]);
 
   const rightSlot = (
-    <button type="button" onClick={() => navigate('/sessions/new')} className="mb-btn">
+    <button data-header-action="primary" type="button" onClick={() => navigate('/sessions/new')} className="mb-btn">
       <Plus size={20} aria-hidden="true" />클래스 만들기
     </button>
   );

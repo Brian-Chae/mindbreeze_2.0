@@ -1,3 +1,4 @@
+import { PageHeader } from '../ui/page-header';
 import { useMobileMenuSwipe } from '../../hooks/use-mobile-menu-swipe';
 import { useState, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -148,18 +149,8 @@ export default function AppShell({
       <section className="flex flex-col flex-1 min-w-0 min-h-0">
         {/* 데스크톱 헤더 */}
         <header className="hidden md:flex h-[76px] px-8 items-center justify-between border-b border-[#EFEFEF] shrink-0">
-          <div>
-            {sub && (
-              <div className="text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">
-                {sub}
-              </div>
-            )}
-            <div className="font-bold text-[22px] text-[#1F1F1F] tracking-tight mt-0.5">
-              {title}
-            </div>
-          </div>
-          <div className="flex items-center gap-3 relative">
-            {rightSlot}
+          <PageHeader title={title} sub={sub} actions={rightSlot} />
+          <div className="flex items-center gap-3 relative ml-3">
             <button
               type="button"
               aria-label="알림"
@@ -222,26 +213,7 @@ export default function AppShell({
 
         {/* 모바일 페이지 타이틀 */}
         {!hideMobileTitle && (title || sub || rightSlot) && (
-          <div className="md:hidden px-4 pt-4 pb-2 flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
-            <div className="min-w-0">
-              {sub && (
-                <div className="mb-shell-subtitle text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">
-                  {sub}
-                </div>
-              )}
-              <div data-mobile-swipe-title tabIndex={-1} className="mb-shell-title font-bold text-[18px] text-[#1F1F1F] tracking-tight mt-0.5 truncate">
-                {title}
-              </div>
-            </div>
-            {/* 좁은 화면에서 rightSlot 버튼이 넘치지 않도록 줄바꿈을 허용한다.
-                (shrink-0 + flex-wrap 조합은 실제로 줄바꿈이 일어나지 않고 가로로 넘치므로
-                 min-w-0 + ml-auto 로 줄이 바뀌게 한다) */}
-            {rightSlot && (
-              <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 ml-auto">
-                {rightSlot}
-              </div>
-            )}
-          </div>
+          <PageHeader title={title} sub={sub} actions={rightSlot} mobile className="md:hidden px-4 pt-4 pb-2" />
         )}
 
         <div ref={swipe.containerRef} data-mobile-menu-swipe className="mobile-menu-swipe-viewport flex-1 min-h-0">

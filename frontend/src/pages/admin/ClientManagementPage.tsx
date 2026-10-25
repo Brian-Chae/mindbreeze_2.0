@@ -413,6 +413,7 @@ export default function ClientManagementPage() {
 
   const addButton = (
     <button
+      data-header-action="primary"
       type="button"
       onClick={() => setAddOpen(true)}
       className={buttonClass()}
