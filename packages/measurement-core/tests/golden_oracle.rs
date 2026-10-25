@@ -38,17 +38,16 @@ struct Run {
     emissions: Vec<Emission>,
 }
 
-fn replay(batch: Option<usize>) -> Run {
+fn replay(filter: FilterImpl) -> Run {
     let blob = read_bin("synth/stream.bin");
     let sched: Vec<(u64, String, usize, usize)> =
         serde_json::from_value::<Vec<(u64, String, usize, usize)>>(read_json("synth/schedule.json")).unwrap();
     let mut core = Core::with_tuning(
         CoreConfig { model_mode: ModelMode::ActiveSigmoid, ..CoreConfig::default() },
-        Tuning { cadence: Cadence::LegacyPacket, emit_spectrum: true, filter: FilterImpl::LegacyFallback },
+        Tuning { cadence: Cadence::LegacyPacket, emit_spectrum: true, filter },
     )
     .unwrap();
     core.set_model(pinned_model());
-    let _ = batch;
     let mut em = Vec::new();
     for (arr, sensor, off, len) in sched {
         let out = core.push_packet(sensor_of(&sensor), &blob[off..off + len], arr, WallAnchor { wall_ms: BASE_MS, monotonic_us: 0 });
@@ -63,11 +62,20 @@ fn rel(ms: f64) -> f64 {
 
 #[test]
 fn eeg_stages_match_oracle() {
-    let run = replay(None);
+    eeg_check(FilterImpl::Biquad, "oracle");
+}
+
+#[test]
+fn eeg_stages_match_legacy_fallback() {
+    eeg_check(FilterImpl::LegacyFallback, "legacy_fallback");
+}
+
+fn eeg_check(filter: FilterImpl, dir: &str) {
+    let run = replay(filter);
     let eegs: Vec<_> = run.emissions.iter().filter_map(|e| if let Emission::Eeg(x) = e { Some(x) } else { None }).collect();
-    let psd = read_json("expected/oracle/eeg_psd_bandpower.json");
-    let raw = read_json("expected/oracle/eeg_raw_indices.json");
-    let disp = read_json("expected/oracle/display.json");
+    let psd = read_json(&format!("expected/{dir}/eeg_psd_bandpower.json"));
+    let raw = read_json(&format!("expected/{dir}/eeg_raw_indices.json"));
+    let disp = read_json(&format!("expected/{dir}/display.json"));
     let (psd, raw, disp) = (psd.as_array().unwrap(), raw.as_array().unwrap(), disp.as_array().unwrap());
     assert_eq!(eegs.len(), psd.len(), "EEG emission 개수(윈도 경계·throttle) 불일치");
     let mut c = Cmp::default();
@@ -117,15 +125,24 @@ fn eeg_stages_match_oracle() {
             c.exact(&format!("[{i}] active_sigmoid.{k}"), &d["active_sigmoid"][*k], Some(v));
         }
     }
-    c.assert_ok("oracle/eeg+display");
+    c.assert_ok(&format!("{dir}/eeg+display"));
 }
 
 #[test]
 fn ppg_hrv_respiration_stages_match_oracle() {
-    let run = replay(None);
+    ppg_check(FilterImpl::Biquad, "oracle");
+}
+
+#[test]
+fn ppg_hrv_respiration_stages_match_legacy_fallback() {
+    ppg_check(FilterImpl::LegacyFallback, "legacy_fallback");
+}
+
+fn ppg_check(filter: FilterImpl, dir: &str) {
+    let run = replay(filter);
     let ppgs: Vec<_> = run.emissions.iter().filter_map(|e| if let Emission::Ppg(x) = e { Some(x) } else { None }).collect();
-    let pk = read_json("expected/oracle/ppg_peaks_rr.json");
-    let hv = read_json("expected/oracle/hrv_sdnn_respiration.json");
+    let pk = read_json(&format!("expected/{dir}/ppg_peaks_rr.json"));
+    let hv = read_json(&format!("expected/{dir}/hrv_sdnn_respiration.json"));
     let (pk, hv) = (pk.as_array().unwrap(), hv.as_array().unwrap());
     assert_eq!(ppgs.len(), pk.len(), "PPG emission 개수 불일치");
     let mut c = Cmp::default();
@@ -176,5 +193,5 @@ fn ppg_hrv_respiration_stages_match_oracle() {
     }
     println!("PPG windows={} sdnn null/val={null_sdnn}/{val_sdnn} resp null/val={null_resp}/{val_resp}", ppgs.len());
     assert!(null_sdnn > 0 && val_sdnn > 0 && null_resp > 0 && val_resp > 0, "gate 전이(null→값)를 모두 지나야 함");
-    c.assert_ok("oracle/ppg+hrv");
+    c.assert_ok(&format!("{dir}/ppg+hrv"));
 }
