@@ -18,6 +18,13 @@ export function formatMetric(
   return `${Math.round(value)}${suffix}`;
 }
 
+/** 호흡·HRV(몸 지표) — 접촉 OK 인데 값이 아직 없으면 '측정 중'(RR 60초 누적 전), 그 밖에는 formatMetric 규칙. 점수·판정 아님. */
+export function formatBodyMetric(value: number | null | undefined, measuring: boolean): string {
+  if (!measuring) return '-';
+  if (value === null || value === undefined) return '측정 중';
+  return `${Math.round(value)}`;
+}
+
 /** 연결실패 판정 — 밴드 미사용(이력 없음)은 실패로 치지 않음 */
 export function isConnectionFailed(row: SessionLiveMetric): boolean {
   if (row.device_status === 'disconnected') return true;

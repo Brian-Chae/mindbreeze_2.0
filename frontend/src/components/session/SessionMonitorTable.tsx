@@ -8,6 +8,7 @@ import {
   isEegStale,
   isLowBattery,
 } from '../../lib/session-live/signal-status';
+import { formatBodyMetric } from '../../lib/session-live/metric-display';
 import type { MonitorSummaryCounts } from './SessionMonitorSummary';
 
 interface SessionMonitorTableProps {
@@ -151,7 +152,10 @@ const SessionMonitorRow = memo(function SessionMonitorRow({
         {showCurrent ? formatMetric(row.heart_rate) : '-'}
       </td>
       <td className={`${cellCenter} tabular-nums`}>
-        {showCurrent ? formatMetric(row.respiratory_rate) : '-'}
+        {formatBodyMetric(row.respiratory_rate, showCurrent)}
+      </td>
+      <td className={`${cellCenter} tabular-nums`}>
+        {formatBodyMetric(row.sdnn, showCurrent)}
       </td>
       <td className={cellCenter}>{uploadLabel(row.upload_status)}</td>
     </tr>
@@ -183,6 +187,7 @@ export function SessionMonitorTable({ participants, filter }: SessionMonitorTabl
             <th className={`${cellCenter} font-medium`}>현재 두뇌휴식도</th>
             <th className={`${cellCenter} font-medium`}>BPM</th>
             <th className={`${cellCenter} font-medium`}>호흡수</th>
+            <th className={`${cellCenter} font-medium`}>HRV</th>
             <th className={`${cellCenter} font-medium`}>업로드</th>
           </tr>
         </thead>
