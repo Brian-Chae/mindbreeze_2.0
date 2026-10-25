@@ -2381,6 +2381,11 @@ def participant_livekit_token(
 
     # SDD-231: 열리기 전 사전 입장자는 입장 시각·출석이 비어 있다 — 실제 라이브 입장(토큰 발급)에서 최초 1회 기록한다.
     if s.class_id and participant.entered_at is None:
+        # SDD-246: v2 회차에서는 미디어 토큰 조회가 입장(출석)을 만들지 않는다. 입장은 entry.enter command 하나로만 일어난다.
+        from app.services.session_live_legacy import PROTOCOL_V2, get_session_protocol
+        pin = get_session_protocol(db, s.id)
+        if pin is not None and pin.protocol == PROTOCOL_V2:
+            raise HTTPException(status_code=409, detail={"code": "entry_required"})
         from app.services.class_attendance_service import mark_entered
         mark_entered(db, s, participant, _now())
         db.commit()
