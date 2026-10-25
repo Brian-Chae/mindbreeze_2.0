@@ -83,6 +83,110 @@ KIND_PAYLOAD: dict[str, tuple[frozenset, frozenset]] = {
 }
 assert set(KIND_PAYLOAD) == set(ALL_KINDS), "KIND_PAYLOAD 와 T03 ALL_KINDS 가 어긋났다"
 
+_REASON_RE = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
+_VERSION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$")
+_MS_MAX = 9007199254740991
+_SIGNALS = ("following", "difficult", "resting")
+
+
+def _v_bool(v: Any, f: str) -> None:
+    if not isinstance(v, bool):
+        raise WireError("invalid_payload", f)
+
+
+def _v_uuid(v: Any, f: str) -> None:
+    if not is_uuid(v):
+        raise WireError("invalid_payload", f)
+
+
+def _v_uuid_or_null(v: Any, f: str) -> None:
+    if v is not None:
+        _v_uuid(v, f)
+
+
+def _v_u64(v: Any, f: str) -> None:
+    try:
+        parse_u64(v, f)
+    except WireError:
+        raise WireError("invalid_payload", f) from None
+
+
+def _v_u64_or_null(v: Any, f: str) -> None:
+    if v is not None:
+        _v_u64(v, f)
+
+
+def _v_reason(v: Any, f: str) -> None:
+    if not isinstance(v, str) or not _REASON_RE.match(v):
+        raise WireError("invalid_payload", f)
+
+
+def _v_version(v: Any, f: str) -> None:
+    if not isinstance(v, str) or not _VERSION_RE.match(v):
+        raise WireError("invalid_payload", f)
+
+
+def _v_ms(v: Any, f: str) -> None:
+    if isinstance(v, bool) or not isinstance(v, int) or not (0 <= v <= _MS_MAX):
+        raise WireError("invalid_payload", f)
+
+
+def _v_enum(*allowed: str):
+    def check(v: Any, f: str) -> None:
+        if v not in allowed:
+            raise WireError("invalid_payload", f)
+    return check
+
+
+def _v_ttl(v: Any, f: str) -> None:
+    if isinstance(v, bool) or not isinstance(v, int) or not (1000 <= v <= 30000):
+        raise WireError("invalid_payload", f)
+
+
+def _v_final_sequences(v: Any, f: str) -> None:
+    if not isinstance(v, Mapping) or "metric" not in v or set(v) - {"eeg", "ppg", "acc", "metric"}:
+        raise WireError("invalid_payload", f)
+    for k, val in v.items():
+        _v_u64(val, f"{f}.{k}")
+
+
+# kind → {payload 필드: 값 검증기}. KIND_PAYLOAD(키 집합)와 함께 command.schema.json 과 시험으로 대조된다.
+FIELD_VALIDATORS: dict[str, dict[str, Any]] = {
+    "entry.leave": {"target_id": _v_uuid},
+    "waiting.set_ready": {"ready": _v_bool, "checkin_revision": _v_u64},
+    "session.end": {"reason": _v_reason},
+    "session.cancel": {"reason": _v_reason},
+    "waiting.remind": {"target_scope": _v_enum("all_waiting", "not_ready")},
+    "waitlist.promote": {"target_id": _v_uuid},
+    "hand.set": {"raised": _v_bool},
+    "hand.lower": {"target_id": _v_uuid},
+    "speaking.set": {"target_id": _v_uuid, "can_publish": _v_bool, "expected_grant_version": _v_u64_or_null},
+    "signal.send": {"signal_type": _v_enum(*_SIGNALS), "target_scope": _v_enum("host"), "ttl_ms": _v_ttl},
+    "signal.clear": {"signal_id": _v_uuid},
+    "audio.set": {"track_id": _v_uuid_or_null, "action": _v_enum("play", "pause", "seek", "stop"), "position_ms": _v_ms,
+                  "expected_revision": _v_u64_or_null},
+    "chat.set_enabled": {"enabled": _v_bool},
+    "capture.start": {"device_profile": _v_version, "algorithm_version": _v_version, "model_version": _v_version},
+    "capture.close": {"stream_id": _v_uuid, "final_sequences": _v_final_sequences, "reason": _v_reason},
+    "capture.renew": {"stream_id": _v_uuid, "owner_generation": _v_u64, "clock_anchor_id": _v_uuid},
+    "capture.reanchor": {"stream_id": _v_uuid, "clock_probe_id": _v_uuid, "device_ticks": _v_u64, "monotonic_us": _v_u64},
+}
+
+# 개인정보로 보이는 값(이메일)은 어떤 문자열 필드에도 실을 수 없다 — 계약의 forbidden 규칙.
+_EMAIL_LIKE = re.compile(r"[^\s@]+@[^\s@]+\.[^\s@]+")
+
+
+def _reject_pii(value: Any, path: str) -> None:
+    if isinstance(value, str) and _EMAIL_LIKE.search(value):
+        raise WireError("forbidden_value", path)
+    if isinstance(value, Mapping):
+        for k, v in value.items():
+            _reject_pii(v, f"{path}.{k}")
+    elif isinstance(value, list):
+        for i, v in enumerate(value):
+            _reject_pii(v, f"{path}[{i}]")
+
+
 _ENVELOPE_REQUIRED = ("protocol_version", "schema_version", "command_id", "session_id", "expected_epoch", "kind",
                       "client_generation", "payload")
 _ENVELOPE_ALLOWED = frozenset(_ENVELOPE_REQUIRED) | {"target_id", "expected_entity_version"}
@@ -182,6 +286,10 @@ def parse_command(raw: Any) -> LiveCommand:
     absent = required - set(payload)
     if absent:
         raise WireError("missing_field", f"payload.{sorted(absent)[0]}")
+    _reject_pii(payload, "payload")
+    for name, check in FIELD_VALIDATORS.get(kind, {}).items():
+        if name in payload:
+            check(payload[name], f"payload.{name}")
     target = raw.get("target_id")
     if target is not None and not is_uuid(target):
         raise WireError("invalid_message", "target_id")
