@@ -97,7 +97,10 @@ it('입장 준비 상태를 누락으로 바꾸지 않는다', async () => {
 it('현재 탭을 시각적으로 구분하고 회차 표의 네 열 의미를 제공한다', async () => {
  setup(); await render('/classes/c1/sessions', <HostClassDetailPage/>);
  const current = box.querySelector('nav[aria-label="클래스 메뉴"] a[aria-current="page"]');
- expect(current?.className).toContain('border-purple-800');
+ expect(current?.getAttribute('aria-current')).toBe('page');
+ expect(current?.className).toContain('bg-[#5F0080]');
+ expect(current?.className).toContain('text-white');
+ expect(current?.className).toContain('rounded-full');
  expect([...box.querySelectorAll('[role="columnheader"]')].map(cell => cell.textContent)).toEqual(['회차', '일시', '진행 지도사', '상태']);
  expect(box.querySelectorAll('[role="cell"]')).toHaveLength(12);
 });

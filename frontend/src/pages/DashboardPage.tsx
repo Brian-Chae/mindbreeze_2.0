@@ -256,7 +256,7 @@ export default function DashboardPage() {
       title={`안녕하세요, ${displayName}님`}
       sub={orgLabel}
       rightSlot={
-        <div className="ch-header-actions flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link
             to="/classes/now"
             className="h-11 inline-flex items-center px-4 rounded-full border border-[#DDD0EA] bg-white text-[#5F0080] font-semibold text-sm mobile:text-mb-compact hover:bg-[#F5EDFC] transition-colors"
@@ -265,6 +265,7 @@ export default function DashboardPage() {
           </Link>
           <Link
             to="/classes/new"
+            data-header-action="primary"
             className="h-11 inline-flex items-center px-[18px] rounded-full bg-[#5F0080] text-white font-semibold text-sm mobile:text-mb-compact hover:bg-[#4B0066] transition-colors"
           >
             + 새 클래스
@@ -383,6 +384,7 @@ export default function DashboardPage() {
               <div className="mt-3">
                 <Link
                   to="/classes/new"
+            data-header-action="primary"
                   className="inline-flex h-11 px-5 items-center rounded-xl bg-[#F5EDFC] text-[#5F0080] font-semibold text-sm mobile:text-mb-compact hover:bg-[#EBDEF7] transition-colors"
                 >
                   클래스 만들기

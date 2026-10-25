@@ -49,7 +49,11 @@ function collect(){
  const inputs=all.filter(e=>e.matches('input:not([type=hidden]),select,textarea,[role=combobox]')).map(val);
  const chips=all.filter(e=>e.matches('[role=tab]')||/badge|chip|pill/.test(typeof e.className==='string'?e.className:'')).map(val);
  const sections=all.filter(e=>e.matches('section,article')||e.parentElement===content).map(e=>{const v=val(e),next=e.nextElementSibling;return {...v,nextVerticalGap:next&&visible(next)?next.getBoundingClientRect().top-e.getBoundingClientRect().bottom:null};});
- return {content:content?val(content):null,title:title?{...val(title),topFromContainer:title.getBoundingClientRect().top-(content?.getBoundingClientRect().top||0)}:null,wrappers,headings,controls,cards,inputs,chips,sections,scrollWidth:document.documentElement.scrollWidth,bodyText:document.body.innerText.slice(0,250),shell:!!shell};
+ const header=first('[data-ui="page-header"]');
+ const headerTitle=header && [...header.querySelectorAll('h1,h2')].find(visible);
+ const headerActions=header ? [...header.querySelectorAll('[data-ui="header-actions"] button,[data-ui="header-actions"] a[href]')].filter(e=>visible(e)&&e.textContent.trim()).map((e,index)=>({...val(e),order:index,role:e.getAttribute('data-header-action')||'secondary',titleCenterDelta:headerTitle ? e.getBoundingClientRect().y+e.getBoundingClientRect().height/2-headerTitle.getBoundingClientRect().y-headerTitle.getBoundingClientRect().height/2:null})) : [];
+ const pageHeader=header?{...val(header),title:headerTitle?val(headerTitle):null,actions:headerActions}:null;
+ return {pageHeader,content:content?val(content):null,title:title?{...val(title),topFromContainer:title.getBoundingClientRect().top-(content?.getBoundingClientRect().top||0)}:null,wrappers,headings,controls,cards,inputs,chips,sections,scrollWidth:document.documentElement.scrollWidth,bodyText:document.body.innerText.slice(0,250),shell:!!shell};
 }
 (async()=>{
  fs.mkdirSync(path.join(OUT,'captures'),{recursive:true});fs.mkdirSync(path.join(OUT,'measurements'),{recursive:true});
@@ -95,7 +99,7 @@ function collect(){
  debug('fontfaces');metrics.fontFaces=await page.evaluate(()=>[...document.fonts].filter(f=>f.status==='loaded').map(f=>({family:f.family,status:f.status,weight:f.weight})));
  debug(JSON.stringify(metrics.fontFaces));debug('hover');const hover=[];
  // 콘텐츠 우선, 역할마다 네 가지 대표 variant의 실제 pointer hover를 측정한다.
- for(const kind of ['primary','secondary','ghost','icon']){
+ for(const kind of (process.env.AUDIT_SKIP_HOVER ? [] : ['primary','secondary','ghost','icon'])){
  const candidates=metrics.controls.filter(x=>x.kind===kind&&!x.disabled&&x.height<=64);
  const target=candidates.find(x=>x.inContent)||candidates[0];
  if(!target){hover.push({kind,status:'not-present'});continue;}

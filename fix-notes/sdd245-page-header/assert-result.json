@@ -1,0 +1,1105 @@
+{
+  "summary": [
+    {
+      "width": 390,
+      "total": 162,
+      "pageHeaders": 81,
+      "actionHeaders": 32,
+      "actions": 41,
+      "mismatches": 0
+    },
+    {
+      "width": 1440,
+      "total": 162,
+      "pageHeaders": 89,
+      "actionHeaders": 32,
+      "actions": 41,
+      "mismatches": 0
+    }
+  ],
+  "failures": [],
+  "withoutPageHeader": [
+    {
+      "id": "client-390-app-ai",
+      "pattern": "/app/ai",
+      "redirected": true,
+      "title": "루시 (AI)"
+    },
+    {
+      "id": "client-390-app-chat-lucy",
+      "pattern": "/app/chat/lucy",
+      "redirected": false,
+      "title": "루시 (AI)"
+    },
+    {
+      "id": "client-390-app-chat-sample-room",
+      "pattern": "/app/chat/sample-room",
+      "redirected": false,
+      "title": "샘플 상담사"
+    },
+    {
+      "id": "client-390-chat-sample-room",
+      "pattern": "/chat/:roomId",
+      "redirected": false,
+      "title": "샘플 상담사 (2명)"
+    },
+    {
+      "id": "client-390-design-class-player-role-member-case-M02",
+      "pattern": "/design/class-player?role=member&case=M02",
+      "redirected": false,
+      "title": "마음챙김 명상수업 · 4회차"
+    },
+    {
+      "id": "client-390-onboarding-client-essentials",
+      "pattern": "/onboarding/client/essentials",
+      "redirected": false,
+      "title": "마지막 단계예요!"
+    },
+    {
+      "id": "client-390-onboarding-client",
+      "pattern": "/onboarding/client",
+      "redirected": false,
+      "title": "기본 정보"
+    },
+    {
+      "id": "client-390-org-requests",
+      "pattern": "/org/requests",
+      "redirected": false,
+      "title": "내 가입 신청 내역"
+    },
+    {
+      "id": "client-390-sessions-sample-session-live",
+      "pattern": "/sessions/:id/live",
+      "redirected": true
+    },
+    {
+      "id": "client-390-sessions-sample-session-player",
+      "pattern": "/sessions/:id/player",
+      "redirected": false
+    },
+    {
+      "id": "public-390-account-deletion",
+      "pattern": "/account-deletion",
+      "redirected": false,
+      "title": "MIND BREEZE 계정 삭제 요청"
+    },
+    {
+      "id": "public-390-audit-unknown",
+      "pattern": "*",
+      "redirected": false,
+      "title": "페이지를 찾을 수 없습니다"
+    },
+    {
+      "id": "public-390-class-members-sample-class",
+      "pattern": "/class-members/:classId",
+      "redirected": false,
+      "title": "비회원 클래스 참여"
+    },
+    {
+      "id": "public-390-class-sample-session-enter",
+      "pattern": "/class/:sessionId/enter",
+      "redirected": false,
+      "title": "초대받은 클래스에 입장해 주세요"
+    },
+    {
+      "id": "public-390-crisis-help",
+      "pattern": "/crisis-help",
+      "redirected": false,
+      "title": "긴급한 도움이 필요할 때"
+    },
+    {
+      "id": "public-390-forgot-password",
+      "pattern": "/forgot-password",
+      "redirected": false,
+      "title": "Mind Breeze"
+    },
+    {
+      "id": "public-390-invite-sample-token",
+      "pattern": "/invite/:token",
+      "redirected": false,
+      "title": "샘플 상담사"
+    },
+    {
+      "id": "public-390-join",
+      "pattern": "/join",
+      "redirected": false,
+      "title": "입장 코드를 입력해 주세요"
+    },
+    {
+      "id": "public-390-landing",
+      "pattern": "/",
+      "redirected": false,
+      "title": "마음을 돌보는 일,변화가 보이도록."
+    },
+    {
+      "id": "public-390-login-client",
+      "pattern": "/login/client",
+      "redirected": true,
+      "title": "로그인"
+    },
+    {
+      "id": "public-390-login",
+      "pattern": "/login",
+      "redirected": false,
+      "title": "로그인"
+    },
+    {
+      "id": "public-390-measurement-guide",
+      "pattern": "/measurement-guide",
+      "redirected": false,
+      "title": "측정 방법과 한계"
+    },
+    {
+      "id": "public-390-o-SAMPLE",
+      "pattern": "/o/:org_code",
+      "redirected": false,
+      "title": "샘플 기관"
+    },
+    {
+      "id": "public-390-org-register",
+      "pattern": "/org/register",
+      "redirected": true,
+      "title": "Mind Breeze"
+    },
+    {
+      "id": "public-390-privacy",
+      "pattern": "/privacy",
+      "redirected": false,
+      "title": "개인정보 처리방침"
+    },
+    {
+      "id": "public-390-register-audit-unknown",
+      "pattern": "/register/*",
+      "redirected": true,
+      "title": "Mind Breeze"
+    },
+    {
+      "id": "public-390-register-client",
+      "pattern": "/register/client",
+      "redirected": false,
+      "title": "Mind Breeze"
+    },
+    {
+      "id": "public-390-register-counselor",
+      "pattern": "/register/counselor",
+      "redirected": false,
+      "title": "Mind Breeze"
+    },
+    {
+      "id": "public-390-register-organization",
+      "pattern": "/register/organization",
+      "redirected": false,
+      "title": "Mind Breeze"
+    },
+    {
+      "id": "public-390-register",
+      "pattern": "/register",
+      "redirected": false,
+      "title": "Mind Breeze"
+    },
+    {
+      "id": "public-390-report-view-token-synthetic-view-token",
+      "pattern": "/report-view?token=synthetic-view-token",
+      "redirected": false,
+      "title": "샘플 명상 기록"
+    },
+    {
+      "id": "public-390-report-view",
+      "pattern": "/report-view",
+      "redirected": false,
+      "title": "리포트를 열 수 없습니다"
+    },
+    {
+      "id": "public-390-reset-password-token-synthetic-token",
+      "pattern": "/reset-password?token=synthetic-token",
+      "redirected": false,
+      "title": "Mind Breeze"
+    },
+    {
+      "id": "public-390-reset-password",
+      "pattern": "/reset-password",
+      "redirected": false,
+      "title": "Mind Breeze"
+    },
+    {
+      "id": "public-390-role-redirect",
+      "pattern": "/role-redirect",
+      "redirected": true,
+      "title": "로그인"
+    },
+    {
+      "id": "public-390-set-password-token-synthetic-token",
+      "pattern": "/set-password?token=synthetic-token",
+      "redirected": false,
+      "title": "비밀번호 설정"
+    },
+    {
+      "id": "public-390-set-password",
+      "pattern": "/set-password",
+      "redirected": false,
+      "title": "비밀번호 설정"
+    },
+    {
+      "id": "public-390-terms",
+      "pattern": "/terms",
+      "redirected": false,
+      "title": "서비스 이용약관"
+    },
+    {
+      "id": "counselor-390-agent",
+      "pattern": "/agent",
+      "redirected": true,
+      "title": "루시 (AI)"
+    },
+    {
+      "id": "counselor-390-chat-sample-room",
+      "pattern": "/chat/:roomId",
+      "redirected": false,
+      "title": "샘플 상담사 (2명)"
+    },
+    {
+      "id": "counselor-390-classes-new",
+      "pattern": "/classes/new",
+      "redirected": false,
+      "title": "어떻게 시작할까요?"
+    },
+    {
+      "id": "counselor-390-classes-now",
+      "pattern": "/classes/now",
+      "redirected": false,
+      "title": "지금 바로 열어요"
+    },
+    {
+      "id": "counselor-390-clients-invite",
+      "pattern": "/clients/invite",
+      "redirected": false,
+      "title": "회원 초대"
+    },
+    {
+      "id": "counselor-390-counseling-new",
+      "pattern": "/counseling/new",
+      "redirected": false,
+      "title": "어떤 클래스를 만들까요?"
+    },
+    {
+      "id": "counselor-390-credentials",
+      "pattern": "/credentials",
+      "redirected": false,
+      "title": "Mind Breeze"
+    },
+    {
+      "id": "counselor-390-design-app",
+      "pattern": "/design/app",
+      "redirected": false
+    },
+    {
+      "id": "counselor-390-design-class-flow",
+      "pattern": "/design/class-flow",
+      "redirected": false,
+      "title": "케이스 미등록"
+    },
+    {
+      "id": "counselor-390-design-class-player",
+      "pattern": "/design/class-player",
+      "redirected": false,
+      "title": "케이스 미등록"
+    },
+    {
+      "id": "counselor-390-design-docs",
+      "pattern": "/design/docs",
+      "redirected": false,
+      "title": "과학으로 증명하는한 호흡의 변화"
+    },
+    {
+      "id": "counselor-390-design-homepage",
+      "pattern": "/design/homepage",
+      "redirected": false,
+      "title": "과학으로 증명하는한 호흡의 변화"
+    },
+    {
+      "id": "counselor-390-design-report",
+      "pattern": "/design/report",
+      "redirected": false,
+      "title": "채이서님의두뇌건강 리포트"
+    },
+    {
+      "id": "counselor-390-design-user-app",
+      "pattern": "/design/user-app",
+      "redirected": false
+    },
+    {
+      "id": "counselor-390-design",
+      "pattern": "/design",
+      "redirected": false,
+      "title": "UI Kits"
+    },
+    {
+      "id": "counselor-390-membership-invite-token-synthetic-invite-token",
+      "pattern": "/membership-invite?token=synthetic-invite-token",
+      "redirected": false,
+      "title": "기관 소속 초대"
+    },
+    {
+      "id": "counselor-390-membership-invite",
+      "pattern": "/membership-invite",
+      "redirected": false,
+      "title": "기관 소속 초대"
+    },
+    {
+      "id": "counselor-390-onboarding-counselor",
+      "pattern": "/onboarding/counselor",
+      "redirected": false,
+      "title": "Mind Breeze"
+    },
+    {
+      "id": "counselor-390-org-requests",
+      "pattern": "/org/requests",
+      "redirected": false,
+      "title": "내 가입 신청 내역"
+    },
+    {
+      "id": "counselor-390-org-sample-org",
+      "pattern": "/org/:org_id",
+      "redirected": false,
+      "title": "상담센터 관리"
+    },
+    {
+      "id": "counselor-390-org-search",
+      "pattern": "/org/search",
+      "redirected": false,
+      "title": "상담센터 검색"
+    },
+    {
+      "id": "counselor-390-sessions-new",
+      "pattern": "/sessions/new",
+      "redirected": true,
+      "title": "어떻게 시작할까요?"
+    },
+    {
+      "id": "counselor-390-sessions-sample-session-class-report",
+      "pattern": "/sessions/:id/class-report",
+      "redirected": false,
+      "title": "수업 분석이 진행 중이에요. 완료되면 이 자리에 이야기가 채워져요."
+    },
+    {
+      "id": "counselor-390-sessions-sample-session-live",
+      "pattern": "/sessions/:id/live",
+      "redirected": true,
+      "title": "이번 수업에는 참석 기록이 없어요."
+    },
+    {
+      "id": "counselor-390-sessions-sample-session-player",
+      "pattern": "/sessions/:id/player",
+      "redirected": true,
+      "title": "이번 수업에는 참석 기록이 없어요."
+    },
+    {
+      "id": "counselor-390-sessions-sample-session-summary",
+      "pattern": "/sessions/:id/summary",
+      "redirected": false,
+      "title": "이번 수업에는 참석 기록이 없어요."
+    },
+    {
+      "id": "org_admin-390-chat-sample-room",
+      "pattern": "/chat/:roomId",
+      "redirected": false,
+      "title": "샘플 상담사 (2명)"
+    },
+    {
+      "id": "org_admin-390-classes-new",
+      "pattern": "/classes/new",
+      "redirected": false,
+      "title": "어떻게 시작할까요?"
+    },
+    {
+      "id": "org_admin-390-classes-now",
+      "pattern": "/classes/now",
+      "redirected": false,
+      "title": "지금 바로 열어요"
+    },
+    {
+      "id": "org_admin-390-clients-invite",
+      "pattern": "/clients/invite",
+      "redirected": false
+    },
+    {
+      "id": "org_admin-390-counseling-new",
+      "pattern": "/counseling/new",
+      "redirected": false,
+      "title": "어떤 클래스를 만들까요?"
+    },
+    {
+      "id": "org_admin-390-membership-invite-token-synthetic-invite-token",
+      "pattern": "/membership-invite?token=synthetic-invite-token",
+      "redirected": false,
+      "title": "기관 소속 초대"
+    },
+    {
+      "id": "org_admin-390-membership-invite",
+      "pattern": "/membership-invite",
+      "redirected": false,
+      "title": "기관 소속 초대"
+    },
+    {
+      "id": "org_admin-390-org-requests",
+      "pattern": "/org/requests",
+      "redirected": false,
+      "title": "내 가입 신청 내역"
+    },
+    {
+      "id": "org_admin-390-org-sample-org",
+      "pattern": "/org/:org_id",
+      "redirected": false,
+      "title": "상담센터 관리"
+    },
+    {
+      "id": "org_admin-390-org-search",
+      "pattern": "/org/search",
+      "redirected": false,
+      "title": "상담센터 검색"
+    },
+    {
+      "id": "org_admin-390-sessions-new",
+      "pattern": "/sessions/new",
+      "redirected": true,
+      "title": "어떻게 시작할까요?"
+    },
+    {
+      "id": "org_admin-390-sessions-sample-session-class-report",
+      "pattern": "/sessions/:id/class-report",
+      "redirected": false,
+      "title": "수업 분석이 진행 중이에요. 완료되면 이 자리에 이야기가 채워져요."
+    },
+    {
+      "id": "org_admin-390-sessions-sample-session-live",
+      "pattern": "/sessions/:id/live",
+      "redirected": true
+    },
+    {
+      "id": "org_admin-390-sessions-sample-session-player",
+      "pattern": "/sessions/:id/player",
+      "redirected": false
+    },
+    {
+      "id": "org_admin-390-sessions-sample-session-summary",
+      "pattern": "/sessions/:id/summary",
+      "redirected": false,
+      "title": "이번 수업에는 참석 기록이 없어요."
+    },
+    {
+      "id": "platform_admin-390-chat-sample-room",
+      "pattern": "/chat/:roomId",
+      "redirected": false,
+      "title": "샘플 상담사 (2명)"
+    },
+    {
+      "id": "platform_admin-390-org-requests",
+      "pattern": "/org/requests",
+      "redirected": false,
+      "title": "내 가입 신청 내역"
+    },
+    {
+      "id": "client-1440-design-class-player-role-member-case-M02",
+      "pattern": "/design/class-player?role=member&case=M02",
+      "redirected": false,
+      "title": "마음챙김 명상수업 · 4회차"
+    },
+    {
+      "id": "client-1440-onboarding-client-essentials",
+      "pattern": "/onboarding/client/essentials",
+      "redirected": false,
+      "title": "마지막 단계예요!"
+    },
+    {
+      "id": "client-1440-onboarding-client",
+      "pattern": "/onboarding/client",
+      "redirected": false,
+      "title": "기본 정보"
+    },
+    {
+      "id": "client-1440-org-requests",
+      "pattern": "/org/requests",
+      "redirected": false,
+      "title": "내 가입 신청 내역"
+    },
+    {
+      "id": "client-1440-sessions-sample-session-live",
+      "pattern": "/sessions/:id/live",
+      "redirected": true
+    },
+    {
+      "id": "client-1440-sessions-sample-session-player",
+      "pattern": "/sessions/:id/player",
+      "redirected": false
+    },
+    {
+      "id": "public-1440-account-deletion",
+      "pattern": "/account-deletion",
+      "redirected": false,
+      "title": "MIND BREEZE 계정 삭제 요청"
+    },
+    {
+      "id": "public-1440-audit-unknown",
+      "pattern": "*",
+      "redirected": false,
+      "title": "페이지를 찾을 수 없습니다"
+    },
+    {
+      "id": "public-1440-class-members-sample-class",
+      "pattern": "/class-members/:classId",
+      "redirected": false,
+      "title": "비회원 클래스 참여"
+    },
+    {
+      "id": "public-1440-class-sample-session-enter",
+      "pattern": "/class/:sessionId/enter",
+      "redirected": false,
+      "title": "초대받은 클래스에 입장해 주세요"
+    },
+    {
+      "id": "public-1440-crisis-help",
+      "pattern": "/crisis-help",
+      "redirected": false,
+      "title": "긴급한 도움이 필요할 때"
+    },
+    {
+      "id": "public-1440-forgot-password",
+      "pattern": "/forgot-password",
+      "redirected": false,
+      "title": "Mind Breeze"
+    },
+    {
+      "id": "public-1440-invite-sample-token",
+      "pattern": "/invite/:token",
+      "redirected": false,
+      "title": "샘플 상담사"
+    },
+    {
+      "id": "public-1440-join",
+      "pattern": "/join",
+      "redirected": false,
+      "title": "입장 코드를 입력해 주세요"
+    },
+    {
+      "id": "public-1440-landing",
+      "pattern": "/",
+      "redirected": false,
+      "title": "마음을 돌보는 일,변화가 보이도록."
+    },
+    {
+      "id": "public-1440-login-client",
+      "pattern": "/login/client",
+      "redirected": true,
+      "title": "로그인"
+    },
+    {
+      "id": "public-1440-login",
+      "pattern": "/login",
+      "redirected": false,
+      "title": "로그인"
+    },
+    {
+      "id": "public-1440-measurement-guide",
+      "pattern": "/measurement-guide",
+      "redirected": false,
+      "title": "측정 방법과 한계"
+    },
+    {
+      "id": "public-1440-o-SAMPLE",
+      "pattern": "/o/:org_code",
+      "redirected": false,
+      "title": "샘플 기관"
+    },
+    {
+      "id": "public-1440-org-register",
+      "pattern": "/org/register",
+      "redirected": true,
+      "title": "Mind Breeze"
+    },
+    {
+      "id": "public-1440-privacy",
+      "pattern": "/privacy",
+      "redirected": false,
+      "title": "개인정보 처리방침"
+    },
+    {
+      "id": "public-1440-register-audit-unknown",
+      "pattern": "/register/*",
+      "redirected": true,
+      "title": "Mind Breeze"
+    },
+    {
+      "id": "public-1440-register-client",
+      "pattern": "/register/client",
+      "redirected": false,
+      "title": "Mind Breeze"
+    },
+    {
+      "id": "public-1440-register-counselor",
+      "pattern": "/register/counselor",
+      "redirected": false,
+      "title": "Mind Breeze"
+    },
+    {
+      "id": "public-1440-register-organization",
+      "pattern": "/register/organization",
+      "redirected": false,
+      "title": "Mind Breeze"
+    },
+    {
+      "id": "public-1440-register",
+      "pattern": "/register",
+      "redirected": false,
+      "title": "Mind Breeze"
+    },
+    {
+      "id": "public-1440-report-view-token-synthetic-view-token",
+      "pattern": "/report-view?token=synthetic-view-token",
+      "redirected": false,
+      "title": "샘플 명상 기록"
+    },
+    {
+      "id": "public-1440-report-view",
+      "pattern": "/report-view",
+      "redirected": false,
+      "title": "리포트를 열 수 없습니다"
+    },
+    {
+      "id": "public-1440-reset-password-token-synthetic-token",
+      "pattern": "/reset-password?token=synthetic-token",
+      "redirected": false,
+      "title": "Mind Breeze"
+    },
+    {
+      "id": "public-1440-reset-password",
+      "pattern": "/reset-password",
+      "redirected": false,
+      "title": "Mind Breeze"
+    },
+    {
+      "id": "public-1440-role-redirect",
+      "pattern": "/role-redirect",
+      "redirected": true,
+      "title": "로그인"
+    },
+    {
+      "id": "public-1440-set-password-token-synthetic-token",
+      "pattern": "/set-password?token=synthetic-token",
+      "redirected": false,
+      "title": "비밀번호 설정"
+    },
+    {
+      "id": "public-1440-set-password",
+      "pattern": "/set-password",
+      "redirected": false,
+      "title": "비밀번호 설정"
+    },
+    {
+      "id": "public-1440-terms",
+      "pattern": "/terms",
+      "redirected": false,
+      "title": "서비스 이용약관"
+    },
+    {
+      "id": "counselor-1440-classes-new",
+      "pattern": "/classes/new",
+      "redirected": false,
+      "title": "어떻게 시작할까요?"
+    },
+    {
+      "id": "counselor-1440-classes-now",
+      "pattern": "/classes/now",
+      "redirected": false,
+      "title": "지금 바로 열어요"
+    },
+    {
+      "id": "counselor-1440-clients-invite",
+      "pattern": "/clients/invite",
+      "redirected": false,
+      "title": "회원 초대"
+    },
+    {
+      "id": "counselor-1440-counseling-new",
+      "pattern": "/counseling/new",
+      "redirected": false,
+      "title": "어떤 클래스를 만들까요?"
+    },
+    {
+      "id": "counselor-1440-credentials",
+      "pattern": "/credentials",
+      "redirected": false,
+      "title": "Mind Breeze"
+    },
+    {
+      "id": "counselor-1440-design-app",
+      "pattern": "/design/app",
+      "redirected": false
+    },
+    {
+      "id": "counselor-1440-design-class-flow",
+      "pattern": "/design/class-flow",
+      "redirected": false,
+      "title": "케이스 미등록"
+    },
+    {
+      "id": "counselor-1440-design-class-player",
+      "pattern": "/design/class-player",
+      "redirected": false,
+      "title": "케이스 미등록"
+    },
+    {
+      "id": "counselor-1440-design-docs",
+      "pattern": "/design/docs",
+      "redirected": false,
+      "title": "과학으로 증명하는한 호흡의 변화"
+    },
+    {
+      "id": "counselor-1440-design-homepage",
+      "pattern": "/design/homepage",
+      "redirected": false,
+      "title": "과학으로 증명하는한 호흡의 변화"
+    },
+    {
+      "id": "counselor-1440-design-report",
+      "pattern": "/design/report",
+      "redirected": false,
+      "title": "채이서님의두뇌건강 리포트"
+    },
+    {
+      "id": "counselor-1440-design-user-app",
+      "pattern": "/design/user-app",
+      "redirected": false
+    },
+    {
+      "id": "counselor-1440-design",
+      "pattern": "/design",
+      "redirected": false,
+      "title": "UI Kits"
+    },
+    {
+      "id": "counselor-1440-membership-invite-token-synthetic-invite-token",
+      "pattern": "/membership-invite?token=synthetic-invite-token",
+      "redirected": false,
+      "title": "기관 소속 초대"
+    },
+    {
+      "id": "counselor-1440-membership-invite",
+      "pattern": "/membership-invite",
+      "redirected": false,
+      "title": "기관 소속 초대"
+    },
+    {
+      "id": "counselor-1440-onboarding-counselor",
+      "pattern": "/onboarding/counselor",
+      "redirected": false,
+      "title": "Mind Breeze"
+    },
+    {
+      "id": "counselor-1440-org-requests",
+      "pattern": "/org/requests",
+      "redirected": false,
+      "title": "내 가입 신청 내역"
+    },
+    {
+      "id": "counselor-1440-org-sample-org",
+      "pattern": "/org/:org_id",
+      "redirected": false,
+      "title": "상담센터 관리"
+    },
+    {
+      "id": "counselor-1440-org-search",
+      "pattern": "/org/search",
+      "redirected": false,
+      "title": "상담센터 검색"
+    },
+    {
+      "id": "counselor-1440-sessions-new",
+      "pattern": "/sessions/new",
+      "redirected": true,
+      "title": "어떻게 시작할까요?"
+    },
+    {
+      "id": "counselor-1440-sessions-sample-session-class-report",
+      "pattern": "/sessions/:id/class-report",
+      "redirected": false,
+      "title": "수업 분석이 진행 중이에요. 완료되면 이 자리에 이야기가 채워져요."
+    },
+    {
+      "id": "counselor-1440-sessions-sample-session-live",
+      "pattern": "/sessions/:id/live",
+      "redirected": true,
+      "title": "이번 수업에는 참석 기록이 없어요."
+    },
+    {
+      "id": "counselor-1440-sessions-sample-session-player",
+      "pattern": "/sessions/:id/player",
+      "redirected": true,
+      "title": "이번 수업에는 참석 기록이 없어요."
+    },
+    {
+      "id": "counselor-1440-sessions-sample-session-summary",
+      "pattern": "/sessions/:id/summary",
+      "redirected": false,
+      "title": "이번 수업에는 참석 기록이 없어요."
+    },
+    {
+      "id": "org_admin-1440-classes-new",
+      "pattern": "/classes/new",
+      "redirected": false,
+      "title": "어떻게 시작할까요?"
+    },
+    {
+      "id": "org_admin-1440-classes-now",
+      "pattern": "/classes/now",
+      "redirected": false,
+      "title": "지금 바로 열어요"
+    },
+    {
+      "id": "org_admin-1440-clients-invite",
+      "pattern": "/clients/invite",
+      "redirected": false
+    },
+    {
+      "id": "org_admin-1440-counseling-new",
+      "pattern": "/counseling/new",
+      "redirected": false,
+      "title": "어떤 클래스를 만들까요?"
+    },
+    {
+      "id": "org_admin-1440-membership-invite-token-synthetic-invite-token",
+      "pattern": "/membership-invite?token=synthetic-invite-token",
+      "redirected": false,
+      "title": "기관 소속 초대"
+    },
+    {
+      "id": "org_admin-1440-membership-invite",
+      "pattern": "/membership-invite",
+      "redirected": false,
+      "title": "기관 소속 초대"
+    },
+    {
+      "id": "org_admin-1440-org-requests",
+      "pattern": "/org/requests",
+      "redirected": false,
+      "title": "내 가입 신청 내역"
+    },
+    {
+      "id": "org_admin-1440-org-sample-org",
+      "pattern": "/org/:org_id",
+      "redirected": false,
+      "title": "상담센터 관리"
+    },
+    {
+      "id": "org_admin-1440-org-search",
+      "pattern": "/org/search",
+      "redirected": false,
+      "title": "상담센터 검색"
+    },
+    {
+      "id": "org_admin-1440-sessions-new",
+      "pattern": "/sessions/new",
+      "redirected": true,
+      "title": "어떻게 시작할까요?"
+    },
+    {
+      "id": "org_admin-1440-sessions-sample-session-class-report",
+      "pattern": "/sessions/:id/class-report",
+      "redirected": false,
+      "title": "수업 분석이 진행 중이에요. 완료되면 이 자리에 이야기가 채워져요."
+    },
+    {
+      "id": "org_admin-1440-sessions-sample-session-live",
+      "pattern": "/sessions/:id/live",
+      "redirected": true
+    },
+    {
+      "id": "org_admin-1440-sessions-sample-session-player",
+      "pattern": "/sessions/:id/player",
+      "redirected": false
+    },
+    {
+      "id": "org_admin-1440-sessions-sample-session-summary",
+      "pattern": "/sessions/:id/summary",
+      "redirected": false,
+      "title": "이번 수업에는 참석 기록이 없어요."
+    },
+    {
+      "id": "platform_admin-1440-org-requests",
+      "pattern": "/org/requests",
+      "redirected": false,
+      "title": "내 가입 신청 내역"
+    }
+  ],
+  "evaluatedIds": [
+    "client-390-app-audit-unknown",
+    "client-390-app-chat",
+    "client-390-app-classes-sample-class",
+    "client-390-app-classes",
+    "client-390-app-counseling-sample-relationship",
+    "client-390-app-counseling",
+    "client-390-app-notifications",
+    "client-390-app-participation-profile",
+    "client-390-app-profile",
+    "client-390-app-reports-report-sample-report",
+    "client-390-app-reports",
+    "client-390-app-sessions-sample-session",
+    "client-390-app-sessions",
+    "client-390-app",
+    "client-390-chat",
+    "client-390-notifications",
+    "client-390-playground",
+    "client-390-sessions-sample-session-record",
+    "client-390-settings",
+    "public-390-reports-sample",
+    "counselor-390-chat",
+    "counselor-390-classes-sample-class-members",
+    "counselor-390-classes-sample-class-schedule",
+    "counselor-390-classes-sample-class-sessions-sample-session",
+    "counselor-390-classes-sample-class-sessions",
+    "counselor-390-classes-sample-class-settings",
+    "counselor-390-classes-sample-class",
+    "counselor-390-classes",
+    "counselor-390-clients-sample-client",
+    "counselor-390-clients",
+    "counselor-390-counseling-sample-relationship-sessions-sample-session",
+    "counselor-390-counseling-sample-relationship",
+    "counselor-390-counseling",
+    "counselor-390-dashboard",
+    "counselor-390-notifications",
+    "counselor-390-playground",
+    "counselor-390-profile-professional",
+    "counselor-390-reports-sample-report",
+    "counselor-390-reports",
+    "counselor-390-sessions-sample-session-record",
+    "counselor-390-sessions-sample-session",
+    "counselor-390-sessions",
+    "counselor-390-settings",
+    "org_admin-390-chat",
+    "org_admin-390-classes-sample-class-members",
+    "org_admin-390-classes-sample-class-schedule",
+    "org_admin-390-classes-sample-class-sessions-sample-session",
+    "org_admin-390-classes-sample-class-sessions",
+    "org_admin-390-classes-sample-class-settings",
+    "org_admin-390-classes-sample-class",
+    "org_admin-390-classes",
+    "org_admin-390-clients-sample-client",
+    "org_admin-390-clients",
+    "org_admin-390-counseling-sample-relationship-sessions-sample-session",
+    "org_admin-390-counseling-sample-relationship",
+    "org_admin-390-counseling",
+    "org_admin-390-credentials",
+    "org_admin-390-dashboard-org",
+    "org_admin-390-notifications",
+    "org_admin-390-org-counselors",
+    "org_admin-390-org-data-center",
+    "org_admin-390-playground",
+    "org_admin-390-profile-professional",
+    "org_admin-390-reports-sample-report",
+    "org_admin-390-reports",
+    "org_admin-390-sessions-sample-session-record",
+    "org_admin-390-sessions-sample-session",
+    "org_admin-390-sessions",
+    "org_admin-390-settings",
+    "platform_admin-390-admin-applications",
+    "platform_admin-390-admin-clients",
+    "platform_admin-390-admin-data-center",
+    "platform_admin-390-admin-orgs",
+    "platform_admin-390-admin-reviews-credential-sample-review",
+    "platform_admin-390-admin-reviews",
+    "platform_admin-390-admin-users",
+    "platform_admin-390-admin",
+    "platform_admin-390-chat",
+    "platform_admin-390-notifications",
+    "platform_admin-390-playground",
+    "platform_admin-390-settings",
+    "client-1440-app-ai",
+    "client-1440-app-audit-unknown",
+    "client-1440-app-chat-lucy",
+    "client-1440-app-chat-sample-room",
+    "client-1440-app-chat",
+    "client-1440-app-classes-sample-class",
+    "client-1440-app-classes",
+    "client-1440-app-counseling-sample-relationship",
+    "client-1440-app-counseling",
+    "client-1440-app-notifications",
+    "client-1440-app-participation-profile",
+    "client-1440-app-profile",
+    "client-1440-app-reports-report-sample-report",
+    "client-1440-app-reports",
+    "client-1440-app-sessions-sample-session",
+    "client-1440-app-sessions",
+    "client-1440-app",
+    "client-1440-chat-sample-room",
+    "client-1440-chat",
+    "client-1440-notifications",
+    "client-1440-playground",
+    "client-1440-sessions-sample-session-record",
+    "client-1440-settings",
+    "public-1440-reports-sample",
+    "counselor-1440-agent",
+    "counselor-1440-chat-sample-room",
+    "counselor-1440-chat",
+    "counselor-1440-classes-sample-class-members",
+    "counselor-1440-classes-sample-class-schedule",
+    "counselor-1440-classes-sample-class-sessions-sample-session",
+    "counselor-1440-classes-sample-class-sessions",
+    "counselor-1440-classes-sample-class-settings",
+    "counselor-1440-classes-sample-class",
+    "counselor-1440-classes",
+    "counselor-1440-clients-sample-client",
+    "counselor-1440-clients",
+    "counselor-1440-counseling-sample-relationship-sessions-sample-session",
+    "counselor-1440-counseling-sample-relationship",
+    "counselor-1440-counseling",
+    "counselor-1440-dashboard",
+    "counselor-1440-notifications",
+    "counselor-1440-playground",
+    "counselor-1440-profile-professional",
+    "counselor-1440-reports-sample-report",
+    "counselor-1440-reports",
+    "counselor-1440-sessions-sample-session-record",
+    "counselor-1440-sessions-sample-session",
+    "counselor-1440-sessions",
+    "counselor-1440-settings",
+    "org_admin-1440-chat-sample-room",
+    "org_admin-1440-chat",
+    "org_admin-1440-classes-sample-class-members",
+    "org_admin-1440-classes-sample-class-schedule",
+    "org_admin-1440-classes-sample-class-sessions-sample-session",
+    "org_admin-1440-classes-sample-class-sessions",
+    "org_admin-1440-classes-sample-class-settings",
+    "org_admin-1440-classes-sample-class",
+    "org_admin-1440-classes",
+    "org_admin-1440-clients-sample-client",
+    "org_admin-1440-clients",
+    "org_admin-1440-counseling-sample-relationship-sessions-sample-session",
+    "org_admin-1440-counseling-sample-relationship",
+    "org_admin-1440-counseling",
+    "org_admin-1440-credentials",
+    "org_admin-1440-dashboard-org",
+    "org_admin-1440-notifications",
+    "org_admin-1440-org-counselors",
+    "org_admin-1440-org-data-center",
+    "org_admin-1440-playground",
+    "org_admin-1440-profile-professional",
+    "org_admin-1440-reports-sample-report",
+    "org_admin-1440-reports",
+    "org_admin-1440-sessions-sample-session-record",
+    "org_admin-1440-sessions-sample-session",
+    "org_admin-1440-sessions",
+    "org_admin-1440-settings",
+    "platform_admin-1440-admin-applications",
+    "platform_admin-1440-admin-clients",
+    "platform_admin-1440-admin-data-center",
+    "platform_admin-1440-admin-orgs",
+    "platform_admin-1440-admin-reviews-credential-sample-review",
+    "platform_admin-1440-admin-reviews",
+    "platform_admin-1440-admin-users",
+    "platform_admin-1440-admin",
+    "platform_admin-1440-chat-sample-room",
+    "platform_admin-1440-chat",
+    "platform_admin-1440-notifications",
+    "platform_admin-1440-playground",
+    "platform_admin-1440-settings"
+  ]
+}

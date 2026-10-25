@@ -1,3 +1,4 @@
+import { tabClass } from '../../components/ui';
 import { MemberOperations } from '../../components/class/structure/member-operations';
 import { useAuthStore } from '../../stores/authStore';
 import { useState } from 'react';
@@ -23,7 +24,7 @@ function MemberClassDetail({ classId }: { classId: string }) {
         <Link className="mc-link" to="/app/classes">내 클래스로 돌아가기</Link>
         <section className="mc-card"><span className="mc-chip"><ReadField value={memberStatus(model.status)} /></span><h2><ReadField value={memberValue(model.title)} /></h2><MemberProgress model={model} /><p className="mc-muted">클래스 전체 진행이며 개인 출석을 의미하지 않아요.</p></section>
         {state.status === 'success' && state.data.detail.membership && <MemberOperations classId={classId} />}
-        <div role="tablist" aria-label="클래스 정보" className="mc-row">{(['overview', 'sessions'] as const).map((key) => <button key={key} id={`member-${key}-tab`} type="button" role="tab" className="mc-link" aria-selected={tab === key} aria-controls="member-class-panel" tabIndex={tab === key ? 0 : -1} onKeyDown={(event) => {
+        <div role="tablist" aria-label="클래스 정보" className="mc-row">{(['overview', 'sessions'] as const).map((key) => <button key={key} id={`member-${key}-tab`} type="button" role="tab" className={tabClass(tab === key)} aria-selected={tab === key} aria-controls="member-class-panel" tabIndex={tab === key ? 0 : -1} onKeyDown={(event) => {
           if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
           event.preventDefault();
           const nextTab = event.key === 'Home' ? 'overview' : event.key === 'End' ? 'sessions' : key === 'overview' ? 'sessions' : 'overview';

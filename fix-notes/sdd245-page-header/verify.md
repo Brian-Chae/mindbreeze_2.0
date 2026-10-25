@@ -9,11 +9,11 @@
 - AppShell 역할별 전체 라우트 헤더 inventory 후 공용 이관. 로그인·몰입 플레이어 제외. 필터 tab/field도 검사.
 
 ## 검증 체크리스트
-- [ ] 공용 헤더 native 동작·44px·순서·반응형 계약 테스트 RED→GREEN.
-- [ ] grep으로 전체 AppShell 라우트와 헤더 매핑, 이관 개수·제외 사유 기록.
-- [ ] 기존 측정 도구 확장: 액션 높이/radius/배경/테두리/순서/제목 대비 세로 위치, 390·1440 전수 측정.
-- [ ] 홈·클래스·리포트 390 전후 나란히 캡처 저장·직접 열어 확인.
-- [ ] vitest 전체: 기존 8파일 17건 외 신규 실패 0.
-- [ ] tsc --noEmit -p tsconfig.app.json / eslint src/ / npm run build.
-- [ ] specs/sdd-234 변경 0, node_modules 심볼릭 미커밋.
-- [ ] 독립 diff·검증 리뷰 후 summary, 커밋·push·develop PR·CI pass 확인.
+- [x] 공용 헤더 native 동작·44px·순서·반응형 계약 테스트 RED→GREEN.
+- [x] grep으로 전체 AppShell 라우트와 헤더 매핑, 이관 개수·제외 사유 기록.
+- [x] 기존 측정 도구 확장: 액션 높이/radius/배경/테두리/순서/제목 대비 세로 위치, 390·1440 전수 측정.
+- [x] 홈·클래스·리포트 390 전후 나란히 캡처 저장·직접 열어 확인.
+- [x] vitest 전체: 기존 8파일 17건 외 신규 실패 0.
+- [x] tsc --noEmit -p tsconfig.app.json / eslint src/ / npm run build.
+- [x] specs/sdd-234 변경 0, node_modules 심볼릭 미커밋.
+- [x] 독립 diff·검증 리뷰와 summary 완료. 커밋·push·PR·CI는 아래 최종 전달 기록 참조.

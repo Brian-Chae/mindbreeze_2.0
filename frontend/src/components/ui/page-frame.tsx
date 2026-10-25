@@ -1,5 +1,6 @@
 // SDD-245: 페이지 외곽 프레임과 제목. 좌우 gutter는 AppShell/ClientShell이 소유하므로 여기서 padding을 다시 주지 않는다(이중 inset 금지).
 import type { HTMLAttributes, ReactNode } from 'react';
+import { PageHeader } from './page-header';
 
 export type PageFrameWidth = 'standard' | 'reading' | 'form' | 'full';
 
@@ -31,14 +32,5 @@ export interface PageHeadingProps {
 
 /** 셸이 제목을 따로 그리지 않는 화면용 페이지 제목(22px/700). */
 export function PageHeading({ title, sub, actions, level = 1 }: PageHeadingProps) {
-  const Tag = level === 1 ? 'h1' : 'h2';
-  return (
-    <div data-ui="page-heading" className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
-      <div className="min-w-0">
-        <Tag className="text-[22px] font-bold leading-[30px] text-[#1F1F1F] md:leading-[33px]">{title}</Tag>
-        {sub && <p className="mt-0.5 text-[14px] leading-[21px] text-[#6F6F6F]">{sub}</p>}
-      </div>
-      {actions}
-    </div>
-  );
+  return <PageHeader title={title} sub={sub} actions={actions} level={level} />;
 }

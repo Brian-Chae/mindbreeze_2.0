@@ -1,3 +1,4 @@
+import { headerButtonClass } from '../../ui/styles';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../../stores/authStore';
@@ -18,8 +19,8 @@ export function ClassCreateAction() {
     }).catch(() => { if (active) setResult({ scope, enabled: false }); });
     return () => { active = false; controller.abort(); };
   }, [scope, userRole]);
-  const classes = 'inline-flex min-h-11 items-center rounded-xl bg-purple-800 px-4 py-2 text-sm font-semibold text-white';
+  const classes = headerButtonClass(true);
   return result?.scope === scope && result.enabled
-    ? <div className="flex flex-wrap gap-2"><Link className="inline-flex min-h-11 items-center rounded-xl border border-purple-200 px-4 py-2 text-sm font-semibold text-purple-800" to="/classes/new">새 클래스 만들기</Link><Link className={classes} to="/classes/now">지금 바로 시작</Link></div>
+    ? <div className="contents"><Link data-header-action="secondary" className={headerButtonClass()} to="/classes/now">지금 바로 시작</Link><Link data-header-action="primary" className={classes} to="/classes/new">새 클래스 만들기</Link></div>
     : <button className={`${classes} opacity-45`} disabled title="서버의 편성 활성화와 개설 권한을 확인해요">{result?.scope === scope ? '편성 준비 중' : '편성 확인 중…'}</button>;
 }
