@@ -205,11 +205,13 @@ class Determinism(unittest.TestCase):
                     rel = os.path.relpath(full, d)
                     with open(full, "rb") as a, open(os.path.join(V1, rel), "rb") as b:
                         self.assertEqual(a.read(), b.read(), rel)
-            n_new = sum(len(fs) for _, _, fs in os.walk(d))
-            n_old = 0
-            for sub in ("packets", "expected"):
-                n_old += sum(len(fs) for _, _, fs in os.walk(os.path.join(V1, sub)))
-            self.assertEqual(n_new, n_old)
+            # 생성기 산출물(packets/, expected/*.json 최상위)만 대상 — expected/oracle, expected/scoring 은 다른 도구 산출물.
+            gen = [os.path.relpath(os.path.join(r, f), d) for r, _, fs in os.walk(d) for f in fs]
+            stored = []
+            for sub in ("packets",):
+                stored += [os.path.relpath(os.path.join(r, f), V1) for r, _, fs in os.walk(os.path.join(V1, sub)) for f in fs]
+            stored += [os.path.join("expected", f) for f in os.listdir(os.path.join(V1, "expected")) if f.endswith(".json")]
+            self.assertEqual(sorted(gen), sorted(stored))
 
 
 if __name__ == "__main__":
