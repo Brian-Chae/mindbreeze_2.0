@@ -393,7 +393,9 @@ export class BiosignalCaptureSession {
     }
     const seen = new Set<string>();
     const expected: ExpectedArtifact[] = [];
-    for (const item of [...(await this.queue.expected()), ...(await this.queue.objectsMeta()).map(o => ({ kind: o.kind, alias: o.alias, sha256: o.meta.checksum }))]) {
+    // SDD-246 T09: 분할 복구된 부모(superseded)는 서버에 행이 없고(크기 초과 거절) 자식이 같은 순번 범위를 덮으므로 expected 에서만 뺀다.
+    const allMeta = await this.queue.objectsMeta();
+    for (const item of [...(await this.queue.expected()), ...allMeta.filter(o => o.state !== 'superseded').map(o => ({ kind: o.kind, alias: o.alias, sha256: o.meta.checksum }))]) {
       const key = `${item.kind}|${item.alias}`;
       if (!seen.has(key)) { seen.add(key); expected.push(item); }
     }
