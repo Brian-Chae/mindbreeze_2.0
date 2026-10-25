@@ -3031,6 +3031,7 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
             heart_rate = None
             respiratory_rate = None
             rmssd = None
+            sdnn = None
         else:
             device_status = st["device_status"]
             signal_quality = st["signal_quality"]
@@ -3043,6 +3044,7 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
             heart_rate = st["heart_rate"]
             respiratory_rate = st["respiratory_rate"]
             rmssd = st["rmssd"]
+            sdnn = st.get("sdnn")
             # SDD-026: 접촉 실패(lead_off)와 기기 단절(disconnected)을 분리 집계한다.
             if device_status == "lead_off":
                 contact_fail += 1
@@ -3079,6 +3081,7 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
                 "heart_rate": heart_rate,
                 "respiratory_rate": respiratory_rate,
                 "rmssd": rmssd,
+                "sdnn": sdnn,
                 # SDD-094: 발언권 상태 — 상담사 모니터 초기 로드/새로고침 시 손들기·발언 표시용
                 "raise_hand": p.raise_hand,
                 "speaking": p.speaking,
@@ -3391,6 +3394,7 @@ def _aggregate_window_stats(session_id, participant_ids: list, db: DBSession) ->
             "heart_rate": latest.heart_rate,
             "respiratory_rate": latest.respiratory_rate,
             "rmssd": latest.rmssd,
+            "sdnn": latest.sdnn,
         }
     return result
 
@@ -3414,8 +3418,11 @@ def resolve_upload_participant(
     db: DBSession,
     *,
     entry_credential: str | None = None,
+    allow_completed: bool = False,
 ) -> SessionParticipant:
     """업로드 소유 참가자를 확인한다 (REST 배치 + WS 실시간 공유 로직).
+
+    allow_completed=True: 종료된 회차의 raw/산출물 사후 업로드·ACK 허용(기기에 남은 사본 전송).
 
     SDD-209(B5b) 소유권 통합 — 로그인 회원은 본인 행으로, 비회원은 **입장 자격**으로만 업로드한다.
     - 명시 participant_id 는 확정된 본인 행과 같아야 한다 → 타인 대리 업로드 403.
@@ -3424,7 +3431,7 @@ def resolve_upload_participant(
     """
     participant = resolve_participant_actor(
         sid, db, entry_credential=entry_credential, current_user_id=current_user_id,
-        participant_id=participant_id,
+        participant_id=participant_id, allow_completed=allow_completed,
     )
     _assert_upload_eligible(participant)
     # SDD-220: 뇌파 수집을 거부한 참여자는 리포트 반영과 무관하게 EEG 업로드(REST·WS)를 받지 않는다.

@@ -565,6 +565,7 @@ class SessionLiveMetric(BaseModel):
     heart_rate: float | None = None
     respiratory_rate: float | None = None
     rmssd: float | None = None
+    sdnn: float | None = None
 
 
 class SessionLiveMetricsSummary(BaseModel):

@@ -82,7 +82,8 @@ def presign_upload(
     """raw chunk presigned PUT URL 발급 + manifest(EEGRawChunk) 멱등 생성."""
     sid, _ = _get_session(session_id, db)
     participant = session_service.resolve_upload_participant(
-        sid, payload.participant_id, current_user_id, db, entry_credential=entry_credential
+        sid, payload.participant_id, current_user_id, db, entry_credential=entry_credential,
+        allow_completed=True,
     )
     prefix = _object_prefix(sid, participant, payload.play_group_id)
 
@@ -194,7 +195,8 @@ def ack_upload(
     """업로드 완료 확인 — EEGRawChunk.status=uploaded + EEGRecord.file_count 갱신."""
     sid, _ = _get_session(session_id, db)
     participant = session_service.resolve_upload_participant(
-        sid, payload.participant_id, current_user_id, db, entry_credential=entry_credential
+        sid, payload.participant_id, current_user_id, db, entry_credential=entry_credential,
+        allow_completed=True,
     )
 
     # EEG-QRY-03: 청크별 개별 SELECT(N+1) 대신 id 목록을 한 번의 SELECT 로 조회한다.

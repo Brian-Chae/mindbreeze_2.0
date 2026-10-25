@@ -20,6 +20,11 @@ import { useAuthStore } from '../stores/authStore';
 
 const logger = createLogger('useBiosignalCapture');
 const UPLOAD_INTERVAL_MS = 4000;
+/** 한 pump 에서 연속 전송할 최대 라운드(적체 해소 속도 ↑, 한 번에 메인스레드를 오래 잡지 않도록 상한). */
+const PUMP_MAX_ROUNDS = 8;
+/** 다른 창이 lease 를 쥔 경우 TTL 안에 풀릴 때까지 재시도하는 간격·횟수 */
+const LEASE_RETRY_MS = 3000;
+const LEASE_RETRY_MAX = 14;
 const QUOTA_INTERVAL_MS = 30_000;
 const RAW_V2 = 'mb-biosignal-raw-v2';
 
@@ -93,8 +98,8 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
     if (!enabled || !accountId || !participantId) return;
     let cancelled = false;
     const queue = new BiosignalQueue({ accountId, sessionId, participantId, deviceAlias: 'LINK-BAND' }, crypto.randomUUID());
-    void Promise.all([queue.objects(), queue.pendingEvents(), queue.allPackets(), queue.drafts('feature'), queue.drafts('display')]).then(parts => {
-      if (!cancelled && (parts.some(part => part.length > 0) || suspendedRuntimes.has(queue.scopeKey))) setArmed(true);
+    void Promise.all([queue.hasStoredObjects(), queue.pendingEvents(), queue.allPackets(), queue.drafts('feature'), queue.drafts('display')]).then(([hasObjects, ...parts]) => {
+      if (!cancelled && (hasObjects || parts.some(part => part.length > 0) || suspendedRuntimes.has(queue.scopeKey))) setArmed(true);
     }).catch(error => logger.warn('biosignal 복구 조회 실패', error));
     return () => { cancelled = true; };
   }, [enabled, accountId, sessionId, participantId]);
@@ -102,22 +107,31 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
   const refresh = useCallback(async () => {
     const rt = runtime.current; if (!rt || !mounted.current) return;
     try {
-      const objects = await rt.queue.objects();
-      setPendingCount(objects.filter(o => o.state === 'pending').length);
-      setBlockedCount(objects.filter(o => o.state === 'dead_letter').length);
+      const { pending, blocked } = await rt.queue.counts();
+      setPendingCount(pending);
+      setBlockedCount(blocked);
     } catch (error) { logger.warn('biosignal 큐 조회 실패', error); }
   }, []);
 
+  const pumping = useRef(false);
   const pump = useCallback(async () => {
     const rt = runtime.current; if (!rt) return;
+    // 재진입 금지: 4초 타이머·online·close 가 겹쳐 같은 객체를 동시에 presign 하던 문제를 막는다.
+    if (pumping.current) return;
+    pumping.current = true;
     try {
       await rt.collector.flush(rt.session.status !== 'running');
       await rt.display.flush(rt.session.status !== 'running');
       if (typeof navigator !== 'undefined' && navigator.onLine === false) { await refresh(); return; }
-      await uploadBiosignalQueue(rt.queue, rt.api, (url, payload, headers) => putEegRawToPresignedUrl(url, payload, headers), rt.active);
+      for (let round = 0; round < PUMP_MAX_ROUNDS && rt.active(); round++) {
+        const summary = await uploadBiosignalQueue(rt.queue, rt.api, (url, payload, headers) => putEegRawToPresignedUrl(url, payload, headers), rt.active);
+        if (summary.acked === 0 || summary.failed > 0) break;
+        if (mounted.current) await refresh();
+      }
       const result = await sendBiosignalEvents(rt.queue, rt.api, rt.active);
       if (result?.close_state && mounted.current) setCloseState(result.close_state);
     } catch (error) { logger.warn('biosignal 업로드 실패, 사본 보존', error); }
+    finally { pumping.current = false; }
     await refresh();
   }, [refresh]);
 
@@ -145,7 +159,15 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
         // 구버전 서버·미동의·미지원: v2를 쓰지 않고 기존 v1 경로만 유지한다.
         if (!capability.raw_schemas.includes(RAW_V2) || allowed.size === 0) { setStatus('inactive'); return; }
         const collecting = wasConnected.current;
-        await session.start(collecting);
+        // 이전 창/인스턴스가 죽으면서 남긴 lease 는 TTL 안에 만료된다 → 그동안 재시도해 자동 인계한다.
+        for (let attempt = 0; ; attempt++) {
+          try { await session.start(collecting); break; } catch (error) {
+            const held = error instanceof Error && error.message.startsWith('lease_held');
+            if (!held || attempt >= LEASE_RETRY_MAX || cancelled) throw error;
+            await new Promise(resolve => setTimeout(resolve, LEASE_RETRY_MS));
+            if (cancelled) return;
+          }
+        }
         if (cancelled) { await session.pause(); return; }
         const collector = new FeatureCollector({ queue, session });
         await collector.restore();
@@ -174,9 +196,13 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
     })();
     const online = () => { if (!runtime.current) setGeneration(g => g + 1); else void pump(); };
     window.addEventListener('online', online);
+    // 앱 종료·창 닫기 때 lease 를 즉시 반납해 재입장이 TTL 을 기다리지 않게 한다(best effort).
+    const release = () => { void queue.release().catch(() => undefined); };
+    window.addEventListener('pagehide', release);
     return () => {
       cancelled = true;
       window.removeEventListener('online', online);
+      window.removeEventListener('pagehide', release);
       unsubscribe?.();
       timers.forEach(clearInterval);
       const rt = runtime.current;
@@ -223,7 +249,7 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
     close,
     resumeBlocked: async () => {
       const rt = runtime.current; if (!rt) return;
-      for (const o of await rt.queue.objects()) if (o.state === 'dead_letter') await rt.queue.resume(o.id);
+      for (const o of await rt.queue.objectsMeta()) if (o.state === 'dead_letter') await rt.queue.resume(o.id);
       await pump();
     },
   };
