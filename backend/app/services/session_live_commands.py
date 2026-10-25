@@ -20,7 +20,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
-from app.models.live_state import CaptureStream, LiveSessionEpoch
+from app.models.live_state import CaptureStream, LiveOutbox, LiveSessionEpoch
 from app.models.session import Session as SessionModel, SessionParticipant
 from app.services.session_live_ledger import (
     SYSTEM_ACTOR_ID,
@@ -237,11 +237,35 @@ def _own_participant(ctx: HandlerContext) -> SessionParticipant:
     return participant
 
 
+# DeviceEntity 의 밴드 보고 필드(live:device 가 채운다). stream 수명 event 는 같은 stream 의 마지막 값을 보존한다.
+BAND_FIELDS = ("device_seq", "band_state", "contact", "sqi", "battery_pct", "state_reason")
+
+
+def last_device_payload(db: DBSession, session_id: uuid.UUID, participant_id: uuid.UUID) -> dict[str, Any] | None:
+    row = db.execute(
+        select(LiveOutbox.payload).where(LiveOutbox.session_id == session_id, LiveOutbox.domain == "device",
+                                         LiveOutbox.entity_id == str(participant_id))
+        .order_by(LiveOutbox.revision.desc()).limit(1)
+    ).scalar_one_or_none()
+    return dict(row) if row else None
+
+
+def device_payload(stream: CaptureStream, *, band: dict[str, Any] | None = None) -> dict[str, Any]:
+    """DeviceEntity (contracts/session-live-v2/schema/state.schema.json). u64 는 십진 문자열."""
+    out: dict[str, Any] = {"participant_id": str(stream.participant_id), "stream_id": str(stream.id),
+                           "generation": str(int(stream.generation)), "status": stream.status,
+                           "clock_uncertain": bool(stream.clock_uncertain), "cutoff_code": stream.cutoff_code}
+    if band:
+        out.update({k: band[k] for k in BAND_FIELDS if k in band})
+    return out
+
+
 def _emit_device(ctx: HandlerContext, stream: CaptureStream, event_type: str = "device.changed") -> None:
+    prev = last_device_payload(ctx.db, ctx.session.id, stream.participant_id)
+    band = prev if prev and prev.get("stream_id") == str(stream.id) else None
     ctx.emit(domain="device", event_type=event_type, entity_id=str(stream.participant_id),
              entity_version=int(stream.entity_version), audience=_aud(stream.participant_id),
-             payload={"stream_id": str(stream.id), "generation": int(stream.generation), "status": stream.status,
-                      "clock_uncertain": bool(stream.clock_uncertain), "cutoff_code": stream.cutoff_code})
+             payload=device_payload(stream, band=band))
 
 
 def _load_stream(ctx: HandlerContext, stream_id_raw: Any) -> CaptureStream:
@@ -260,6 +284,10 @@ def _load_stream(ctx: HandlerContext, stream_id_raw: Any) -> CaptureStream:
     if ev is not None and int(stream.entity_version) != ev:
         raise CommandRejected("entity_version_conflict", {"entity_version": str(int(stream.entity_version))})
     return stream
+
+
+def _ms(dt: datetime) -> int:
+    return int(dt.timestamp() * 1000)
 
 
 def _bump(stream: CaptureStream) -> None:
@@ -301,9 +329,12 @@ def _handle_capture_start(ctx: HandlerContext) -> None:
     ctx.db.flush()
     _emit_device(ctx, stream)
     ctx.entity_version = 1
-    ctx.result = {"stream_id": str(stream.id), "generation": str(generation),
+    ctx.result = {"stream_id": str(stream.id), "participant_id": str(participant.id),
+                  "generation": str(generation), "owner_generation": str(generation),
                   "lease_expires_at": stream.lease_expires_at.isoformat(),
-                  "offline_bound_until": stream.offline_bound_until.isoformat()}
+                  "offline_bound_until": stream.offline_bound_until.isoformat(),
+                  "lease_expires_at_ms": _ms(stream.lease_expires_at), "offline_bound_until_ms": _ms(stream.offline_bound_until),
+                  "clock_uncertain": True}
 
 
 def _handle_capture_close(ctx: HandlerContext) -> None:
@@ -341,8 +372,11 @@ def _handle_capture_renew(ctx: HandlerContext) -> None:
     _bump(stream)
     ctx.db.flush()
     ctx.entity_version = int(stream.entity_version)
-    ctx.result = {"stream_id": str(stream.id), "lease_expires_at": stream.lease_expires_at.isoformat(),
-                  "offline_bound_until": stream.offline_bound_until.isoformat()}
+    ctx.result = {"stream_id": str(stream.id), "generation": str(int(stream.generation)),
+                  "owner_generation": str(int(stream.generation)),
+                  "lease_expires_at": stream.lease_expires_at.isoformat(),
+                  "offline_bound_until": stream.offline_bound_until.isoformat(),
+                  "lease_expires_at_ms": _ms(stream.lease_expires_at), "offline_bound_until_ms": _ms(stream.offline_bound_until)}
 
 
 def _handle_capture_reanchor(ctx: HandlerContext) -> None:

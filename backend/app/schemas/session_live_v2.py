@@ -320,7 +320,34 @@ def ack_from_result(result: DurableResult, cursors: list[dict[str, str]] | None 
                "committed": bool(result.committed), "code": result.code or "rejected"}
     if result.entity_version is not None:
         ack["entity_version"] = str(result.entity_version)
+    if result.status == "applied":
+        res = ack_result(result.result)
+        if res:
+            ack["result"] = res
     return ack
+
+
+def ack_result(raw: Mapping[str, Any] | None) -> dict[str, Any]:
+    """capture.* 결과 중 계약(ack.schema.json result)에 정의된 필드만 노출한다(ledger 내부 값 누출 방지)."""
+    raw = raw or {}
+    if not is_uuid(raw.get("stream_id")):
+        return {}
+    out: dict[str, Any] = {"stream_id": raw["stream_id"]}
+    if is_uuid(raw.get("participant_id")):
+        out["participant_id"] = raw["participant_id"]
+    for k in ("generation", "owner_generation"):
+        if isinstance(raw.get(k), str) and _U64_RE.match(raw[k]):
+            out[k] = raw[k]
+    if isinstance(raw.get("lease_expires_at_ms"), int) and not isinstance(raw.get("lease_expires_at_ms"), bool):
+        lease: dict[str, Any] = {"expires_at_ms": raw["lease_expires_at_ms"]}
+        if isinstance(raw.get("offline_bound_until_ms"), int):
+            lease["offline_bound_until_ms"] = raw["offline_bound_until_ms"]
+        out["lease"] = lease
+    if isinstance(raw.get("clock_uncertain"), bool):
+        out["clock_uncertain"] = raw["clock_uncertain"]
+    if raw.get("status") == "closed":
+        out["status"] = "closed"
+    return out
 
 
 def error_ack(command_id: str | None, code: str, *, status: str = "rejected", epoch: int | str = 0,

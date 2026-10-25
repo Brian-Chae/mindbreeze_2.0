@@ -8,7 +8,7 @@
 | 경로 | 내용 |
 |---|---|
 | `session-live-v2/schema/*.schema.json` | Socket.IO v2 command / event / ack / snapshot / metric / 기타 wire 의 JSON Schema(draft-07) |
-| `session-live-v2/fixtures/{valid,invalid}/` | valid 57건, invalid 66건(미지원 major·알 수 없는 kind·개인정보/토큰/서명URL 누출·타인 지표·종합점수·0 대체·u64 초과 등) |
+| `session-live-v2/fixtures/{valid,invalid}/` | valid 59건, invalid 68건(미지원 major·알 수 없는 kind·개인정보/토큰/서명URL 누출·타인 지표·종합점수·0 대체·u64 초과 등) |
 | `session-live-v2/validate.mjs` | 스키마 + 의미 규칙(누출, audience 범위, u64 범위, window 순서) 검증기 |
 | `session-live-v2/wire-compat.json` | Socket.IO/Engine.IO 버전 행렬, ACK 2초·백오프·heartbeat 상수 (lockfile 과 시험으로 동기) |
 | `biosignal-golden/v1/packets, expected/` | GF01/GF02 바이트 정본 binary + expected JSON (독립 산술) |

@@ -1,0 +1,10 @@
+{
+  "$fixture": {
+    "schema": "set-native-ownership-request",
+    "why": "boolean 만",
+    "reject_by": "schema"
+  },
+  "message": {
+    "enabled": "yes"
+  }
+}
