@@ -112,7 +112,8 @@ def presign(session_id: str, payload: ArtifactPresignRequest, db: DBSession, *, 
         _validate_scope(m)
     archive = biosignal_service.archive_gate(
         db, sid, participant, payload.capture_stream_id,
-        [(Fraction(int(m.monotonic_range.from_us)), Fraction(int(m.monotonic_range.to_us))) if m.monotonic_range else None for m in payload.chunks])
+        [(Fraction(int(m.monotonic_range.from_us)), Fraction(int(m.monotonic_range.to_us))) if m.monotonic_range else None for m in payload.chunks],
+        windowless_ok=[m.artifact_kind in ("normalization", "algorithm") for m in payload.chunks])
 
     aliases = {m.artifact_alias for m in payload.chunks}
     _check_aliases(sid, participant.id, aliases, db)

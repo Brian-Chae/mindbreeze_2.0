@@ -63,7 +63,7 @@ def raw_window_mono(meta: PresignChunk) -> tuple[Fraction, Fraction]:
 
 
 def archive_gate(db: DBSession, sid: UUID, participant, capture_stream_id: UUID | None,
-                 windows: list[tuple[Fraction, Fraction] | None]) -> dict | None:
+                 windows: list[tuple[Fraction, Fraction] | None], *, windowless_ok: list[bool] | None = None) -> dict | None:
     """SDD-246 T09 — 종료 이후·오프라인 사후전송 수락 판정(T03 evaluate_ingest 가 기준).
 
     capture_stream_id 가 없으면 None(현행 동작 유지). 하나라도 거절·격리면 요청 전체를 반영하지 않는다.
@@ -79,7 +79,15 @@ def archive_gate(db: DBSession, sid: UUID, participant, capture_stream_id: UUID 
         raise HTTPException(status_code=404, detail={"code": "capture_stream_not_found"})
     if stream.participant_id != participant.id:
         raise HTTPException(status_code=403, detail={"code": "capture_stream_not_owned"})
-    for window in windows:
+    for i, window in enumerate(windows):
+        if window is None and windowless_ok and windowless_ok[i]:
+            # 측정 구간이 없는 메타(normalization/algorithm): stream 개설 시각(항상 cutoff 이전)으로 권한 코드·deadline 만 판정한다.
+            decision = evaluate_ingest(db, stream_id=stream.id, window_start_at=stream.opened_at, window_end_at=stream.opened_at, now=_now())
+            if decision.verdict != "accept":
+                status = 403 if decision.verdict == "reject" else 409
+                code = "archive_rejected" if decision.verdict == "reject" else "pending_time_review"
+                raise HTTPException(status_code=status, detail={"code": code, "reason": decision.code})
+            continue
         if window is None or stream.anchor_server_at is None or stream.anchor_monotonic_us is None:
             # 창을 서버 시계로 환산할 수 없다: 종료/철회 cutoff 가 있으면 입증 불가 → 격리, 없으면 현행대로 수락.
             if stream.cutoff_at is not None:

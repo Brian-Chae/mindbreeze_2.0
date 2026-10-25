@@ -291,3 +291,19 @@ def test_늦은_backlog_presign_ACK는_capture_stream_과_live_outbox를_바꾸�
 def test_capture_stream_id_미지정은_현행_동작_archive_ingest_없음(maker, world, store):
     res = _presign(maker, world, [_raw_meta(0)])
     assert res.get("archive_ingest") is None and len(res["chunks"]) == 1
+
+
+def test_측정구간_없는_메타_산출물은_종료후에도_수락하되_동의철회는_거절(maker, world, store):
+    stream = _start_stream(maker, world)
+    _cutoff(maker, world, "completed", T0 + timedelta(seconds=60))
+    algo = _art_meta("ALGO-EEG-1", None, 0) | {"artifact_kind": "algorithm", "segment_id": None, "stream_id": None}
+    assert _presign_art(maker, world, [algo], stream)["archive_ingest"]["verdict"] == "accept"
+
+
+def test_동의철회_stream의_메타_산출물도_거절(maker, world, store):
+    stream = _start_stream(maker, world)
+    _cutoff(maker, world, "consent_withdrawn", T0 + timedelta(seconds=60))
+    algo = _art_meta("ALGO-EEG-2", None, 0) | {"artifact_kind": "algorithm", "segment_id": None, "stream_id": None}
+    with pytest.raises(HTTPException) as e:
+        _presign_art(maker, world, [algo], stream)
+    assert e.value.status_code == 403
