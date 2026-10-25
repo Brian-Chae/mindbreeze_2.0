@@ -1028,8 +1028,11 @@ def register_session_live_namespace(sio):
         record_audio_state(session_id, payload)
         await broadcast_audio_sync(session_id, payload)
 
-    # SDD-246 T05: v2(live:*) 이벤트 — v1 이벤트명과 겹치지 않는다. 기능 플래그가 꺼져 있으면 명시 거절만 한다.
-    register_v2_handlers(sio, _NAMESPACE)
+    # SDD-246 T05: v2(live:*) 이벤트는 기동 시점에 기능 플래그(live_protocol_v2)가 켜져 있을 때만 등록한다.
+    # 꺼져 있으면(기본) 네임스페이스 핸들러 집합이 현행과 정확히 같다(회귀 0). 켠 뒤에는 재기동으로 반영한다.
+    from app.schemas.session_live_v2 import live_protocol_v2_enabled
+    if live_protocol_v2_enabled():
+        register_v2_handlers(sio, _NAMESPACE)
 
     logger.info("[WS /session-live] namespace registered")
 

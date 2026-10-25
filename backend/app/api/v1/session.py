@@ -80,6 +80,55 @@ from app.services.session_authz import SessionAction, get_session_authorized
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
+
+# ---------------------------------------------------------------------------
+# SDD-246 T05 — v1 REST → T10 어댑터 연결.
+# 기능 플래그가 꺼져 있거나 회차가 v2 로 고정되지 않았으면 None 을 돌려 기존 경로를 그대로 탄다(회귀 0).
+# v2 회차에서는 구 REST 호출도 apply_command 한 경로(execute_v1)를 거쳐 WS·REST 가 같은 ledger 를 공유한다.
+# ---------------------------------------------------------------------------
+def _v1_via_live(db, session_id: str, op: str, params: dict, current_user, entry_credential=None):
+    from app.schemas.session_live_v2 import live_protocol_v2_enabled
+
+    if not live_protocol_v2_enabled():
+        return None
+    from app.services import class_participation_service as cps
+    from app.services.session_live_legacy import PROTOCOL_V2, LegacyError, execute_v1, get_session_protocol
+
+    try:
+        sid = UUID(session_id)
+    except ValueError:
+        return None
+    pin = get_session_protocol(db, sid)
+    if pin is None or pin.protocol != PROTOCOL_V2:
+        return None
+    actor = cps.resolve_live_actor(db, sid, current_user["id"] if current_user else None, entry_credential)
+    if actor is None:
+        return None  # 인증 실패는 기존 경로가 기존 오류 형식으로 거절한다
+    try:
+        outcome = execute_v1(db, actor, op, sid, params)
+    except LegacyError as exc:
+        from fastapi import HTTPException as _HE
+
+        raise _HE(status_code=exc.status_code, detail=exc.detail)
+    try:
+        from app.ws import session_live_namespace as ns
+
+        ns.schedule_publish(sid)
+    except Exception:  # noqa: BLE001 — 방송은 응답을 막지 않는다(heartbeat self-heal)
+        pass
+    return outcome
+
+
+def _pin_new_run(db, session_id) -> None:
+    """회차 생성/새 실행 시점에 protocol 을 고정한다. 플래그 off 면 아무것도 하지 않는다(현행 동일)."""
+    from app.schemas.session_live_v2 import live_protocol_v2_enabled
+
+    if not live_protocol_v2_enabled():
+        return
+    from app.services.session_live_legacy import PROTOCOL_V2, pin_session_protocol
+
+    pin_session_protocol(db, UUID(str(session_id)), protocol=PROTOCOL_V2)
+
 # 세션 생성·수정·복제·템플릿 저장·새 실행 — client 만 차단한다(platform_admin 은 현행 보존, SDD-211 U4).
 SESSION_MANAGE_ROLES = ("counselor", "org_admin", "platform_admin")
 
@@ -104,7 +153,10 @@ def create_session(
     current_user: dict = Depends(require_roles(*SESSION_MANAGE_ROLES)),
     db: DBSession = Depends(get_db),
 ):
-    return class_read_service.add_parent_fields(db, session_service.create_session(current_user["id"], payload, db))
+    created = session_service.create_session(current_user["id"], payload, db)
+    if not getattr(payload, "is_template", False) and created.get("id"):
+        _pin_new_run(db, created["id"])  # SDD-246: 플래그 on 이면 새 회차는 v2 로 고정(off 면 no-op)
+    return class_read_service.add_parent_fields(db, created)
 
 
 # ── SDD-209(B5a): 로그인 없는 4자리 코드 입장 ──
@@ -262,6 +314,9 @@ def set_session_chat_enabled(
     db: DBSession = Depends(get_db),
 ):
     """클래스 실시간 채팅 켜기/끄기 — host(상담사) 전용. 참여자 호출은 403."""
+    outcome = _v1_via_live(db, session_id, "chat_enabled", {"enabled": payload.enabled}, current_user)
+    if outcome is not None:
+        return session_service.get_session_chat_room(session_id, current_user["id"], db)
     return session_service.set_chat_enabled(
         session_id, current_user["id"], payload.enabled, db
     )
@@ -274,6 +329,11 @@ def _make_transition_endpoint(action: str):
         current_user: dict = Depends(get_current_user),
         db: DBSession = Depends(get_db),
     ):
+        # SDD-246: v2 회차의 전이는 live command 한 경로로 처리하고 응답만 기존 직렬화로 돌려준다.
+        # force/충돌 확인 같은 기존 확인 옵션이 필요한 요청은 어댑터가 표현하지 못하므로 기존 경로로 둔다.
+        if not (payload and any(payload.model_dump().values())):
+            if _v1_via_live(db, session_id, "transition", {"action": action}, current_user) is not None:
+                return class_read_service.add_parent_fields(db, session_service.get_session(session_id, current_user["id"], db))
         return class_read_service.add_parent_fields(
             db, session_service.transition_status(session_id, current_user["id"], action, db, **(payload.model_dump() if payload else {}))
         )
@@ -433,6 +493,9 @@ def raise_hand(
 
     로그인 회원은 본인 참여자만, 비회원은 입장 자격(X-Entry-Credential)이 필요하다.
     """
+    outcome = _v1_via_live(db, session_id, "raise_hand", {"participant_id": participant_id}, current_user, x_entry_credential)
+    if outcome is not None:
+        return outcome.body
     return session_service.raise_hand(
         session_id,
         participant_id,
@@ -457,6 +520,9 @@ def lower_hand(
 
     응답 lowered_by: self|host. 타인·비진행자는 403.
     """
+    outcome = _v1_via_live(db, session_id, "lower_hand", {"participant_id": participant_id}, current_user, x_entry_credential)
+    if outcome is not None:
+        return outcome.body
     return session_service.lower_hand(
         session_id,
         participant_id,
@@ -640,6 +706,9 @@ def cancel_waitlist(
 
     활성 참가자·종료 클래스는 409. 취소자는 자동 승격·토큰·상태 접근에서 제외되고 재대기는 대기열 끝 순번이다.
     """
+    outcome = _v1_via_live(db, session_id, "waitlist_cancel", {}, current_user, x_entry_credential)
+    if outcome is not None:
+        return outcome.body
     return session_service.cancel_waitlist(
         session_id,
         db,
@@ -685,6 +754,9 @@ def set_speaking(
 
     부여 시 손들기(raise_hand)는 자동 해제된다.
     """
+    outcome = _v1_via_live(db, session_id, "set_speaking", {"participant_id": participant_id, "granted": payload.granted}, current_user)
+    if outcome is not None:
+        return outcome.body
     return session_service.set_speaking(
         session_id, current_user["id"], participant_id, payload.granted, db
     )

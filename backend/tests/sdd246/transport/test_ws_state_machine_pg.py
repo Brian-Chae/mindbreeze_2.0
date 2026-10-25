@@ -135,16 +135,35 @@ async def test_v1_회차는_v2_join이_protocol_v1_session으로_거절되고_v1
         await c.close()
 
 
-async def test_플래그_off면_v2_이벤트는_v2_disabled이고_REST는_404(servers, v2world):
+async def test_플래그_off면_v2_이벤트가_등록되지_않고_v1은_그대로(servers, v2world):
     (srv,) = servers(flag="0")
-    c = await Client(srv, v2world.host_id).connect()
+    c = await Client(srv, v2world.members[0][0]).connect()
     try:
-        assert (await c.call("live:hello", hello()))["code"] == "v2_disabled"
-        assert (await c.call("live:join", join_msg(v2world.session_id)))["code"] == "v2_disabled"
-        ack = await c.call("live:command", wire_cmd(v2world, "session.open"))
-        assert ack["status"] == "rejected" and ack["code"] == "v2_disabled"
+        with pytest.raises(Exception):  # live:* handler 가 없으니 ack 가 오지 않는다
+            await c.call("live:hello", hello(), timeout=1.5)
+        joined = asyncio.Event()
+        c.sio.on("joined", lambda d: joined.set(), namespace="/session-live")
+        await c.sio.emit("join", {"session_id": str(v2world.session_id)}, namespace="/session-live")
+        await asyncio.wait_for(joined.wait(), 5)  # v1 join 은 현행대로 동작
     finally:
         await c.close()
+
+
+def test_플래그_off면_v2_네임스페이스_핸들러_집합이_v1과_같다(monkeypatch):
+    import socketio
+
+    from app.ws.session_live_namespace import register_session_live_namespace
+
+    monkeypatch.setenv("LIVE_PROTOCOL_V2", "0")
+    off = socketio.AsyncServer(async_mode="asgi")
+    register_session_live_namespace(off)
+    monkeypatch.setenv("LIVE_PROTOCOL_V2", "1")
+    on = socketio.AsyncServer(async_mode="asgi")
+    register_session_live_namespace(on)
+    off_h, on_h = set(off.handlers["/session-live"]), set(on.handlers["/session-live"])
+    assert not any(h.startswith("live:") for h in off_h)
+    assert {h for h in on_h if h.startswith("live:")} >= {"live:hello", "live:join", "live:command", "live:clock_probe", "live:metric"}
+    assert on_h - {h for h in on_h if h.startswith("live:")} == off_h
 
 
 async def test_권한회수_snapshot_race는_구_scope_snapshot을_보내지_않고_재인가한다(servers, maker, v2world, live):

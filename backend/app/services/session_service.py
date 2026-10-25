@@ -1810,6 +1810,9 @@ def remove_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
     participant.raise_hand = False
     db.flush()
     db.refresh(s)
+    # SDD-246: v2 회차면 제거(추방)를 같은 commit 에 outbox·auth_revision·capture 차단으로 남긴다(v1 회차는 no-op).
+    from app.services.class_participation_service import emit_participant_removed
+    emit_participant_removed(db, s, participant)
 
     promoted: list[SessionParticipant] = []
     if was_waitlisted and removed_position is not None:
