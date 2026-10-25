@@ -99,6 +99,8 @@ export interface HostLiveContainerProps {
   end: { open: boolean; onRequest: () => void; onConfirm: () => void; onCancel: () => void };
   onInvite?: () => void;
   onHandLowered?: (participantId: string) => void;
+  /** 손내리기 서버 확인 실패 — 낙관적으로 내린 손을 되돌린다 */
+  onHandLowerFailed?: (participantId: string) => void;
   codeCopy: { copied: boolean; onCopy: () => void };
   onClose: () => void;
   /** 대기실 준비 현황 패널(WaitingRoomReadinessPanel) — 구독이 켜져 있을 때만 페이지가 만든다 */
@@ -294,10 +296,12 @@ export function HostLiveContainer(props: HostLiveContainerProps) {
     lowerHandInFlight.current = true;
     setLowerHandBusyId(id);
     setLowerHandError(null);
+    // 낙관적 반영: 누른 즉시 목록에서 손을 내리고, 실패하면 서버 상태로 다시 맞춘다.
+    props.onHandLowered?.(id);
     try {
       await lowerEntryHand(session.id, id, null);
-      props.onHandLowered?.(id);
     } catch {
+      props.onHandLowerFailed?.(id);
       setLowerHandError({ participantId: id, message: '손을 내리지 못했어요. 다시 시도해 주세요.' });
     } finally {
       lowerHandInFlight.current = false;

@@ -1383,6 +1383,12 @@ export default function ClassPlayerPage() {
           onHandLowered={(participantId) => {
             if (!id || !isCurrentRoute(id)) return;
             setMetrics((previous) => previous.map((row) => row.participant_id === participantId ? { ...row, raise_hand: false } : row));
+            setSpeakingPatch((previous) => previous[participantId] ? { ...previous, [participantId]: { ...previous[participantId], raise_hand: false } } : previous);
+          }}
+          onHandLowerFailed={(participantId) => {
+            if (!id || !isCurrentRoute(id)) return;
+            setMetrics((previous) => previous.map((row) => row.participant_id === participantId ? { ...row, raise_hand: true } : row));
+            setSpeakingPatch((previous) => previous[participantId] ? { ...previous, [participantId]: { ...previous[participantId], raise_hand: true } } : previous);
           }}
           live={{
             socketConnected: liveSocket.isConnected,
