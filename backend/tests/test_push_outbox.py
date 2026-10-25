@@ -261,6 +261,24 @@ def test_TS5_활성_토큰이_없으면_skipped(client, monkeypatch):
     row = _row(outbox_id)
     assert row.status == "skipped"
     assert row.attempts == 0
+    assert "등록 이력 없음" in row.last_error
+
+
+def test_TS5_전부_해지된_토큰은_사유를_구분한다(client, monkeypatch):
+    user = H.register_counselor("push-ts5r-c@test.com")
+    _register_token(user["id"], "tok-ts5r")
+    from app.core.database import SessionLocal
+    from app.models.device_token import DeviceToken
+    from datetime import datetime, timezone
+    db = SessionLocal()
+    db.query(DeviceToken).filter(DeviceToken.token == "tok-ts5r").update({"revoked_at": datetime.now(timezone.utc)})
+    db.commit(); db.close()
+    outbox_id = _enqueue(user["id"], "push", PUSH_PAYLOAD)
+    _stub_sender(monkeypatch, {})
+    process_push_outbox()
+    row = _row(outbox_id)
+    assert row.status == "skipped"
+    assert "전부 해지" in row.last_error
 
 
 def test_TS5_24시간_초과_pending_은_expired(client, monkeypatch):

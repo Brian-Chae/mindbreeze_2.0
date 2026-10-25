@@ -41,6 +41,14 @@ export async function requestPushPermission(): Promise<boolean> {
   return await session.requestPermission?.() ?? false;
 }
 
+const ASKED_KEY = 'mb.push.permission-asked';
+function wasAsked(): boolean {
+  try { return globalThis.localStorage?.getItem(ASKED_KEY) === '1'; } catch { return false; }
+}
+function markAsked(): void {
+  try { globalThis.localStorage?.setItem(ASKED_KEY, '1'); } catch { /* 저장 불가 환경은 매 시작 시 재질문하지 않도록 무시 */ }
+}
+
 export function startPushRegistration(
   navigate: (path: string) => void,
   refreshNotifications: () => void,
@@ -106,9 +114,15 @@ export function startPushRegistration(
         });
         token = registration.value;
         if (previous && previous !== token) await apiClient.delete(`/devices/${encodeURIComponent(previous)}`);
-      }).catch(() => { /* 토큰이나 서버 오류 본문을 로그에 남기지 않는다. */ });
+      }).catch((error: unknown) => {
+        // 토큰·서버 응답 본문은 남기지 않고 상태 코드만 기록한다.
+        const status = (error as { response?: { status?: number } })?.response?.status;
+        console.warn('[push] 기기 토큰 서버 등록 실패', status ?? 'network');
+      });
     }));
-    handles.push(await PushNotifications.addListener('registrationError', () => {}));
+    handles.push(await PushNotifications.addListener('registrationError', () => {
+      console.warn('[push] 네이티브 토큰 발급 실패(FCM/APNs 설정 확인)');
+    }));
     handles.push(await PushNotifications.addListener('pushNotificationReceived', () => {
       if (!stopped) refreshNotifications();
     }));
@@ -126,11 +140,22 @@ export function startPushRegistration(
     }));
     if (stopped) return;
     // 시작 시에는 이미 허용한 기기만 재등록하고 새 권한 창을 열지 않는다.
-    if (requestOnStart) await requestPermission();
-    else {
+    // 허용된 기기는 즉시 등록. 미결정('prompt')이고 한 번도 묻지 않은 기기는 로그인 직후 1회만 요청한다.
+    if (requestOnStart) {
+      const permission = await PushNotifications.checkPermissions();
+      if (stopped) return;
+      if (permission.receive === 'granted') await PushNotifications.register();
+      else if (permission.receive === 'prompt' && !wasAsked()) {
+        markAsked();
+        await requestPermission();
+      } else console.info('[push] 알림 권한 미허용 — 설정에서 허용 필요', permission.receive);
+    } else {
       const permission = await PushNotifications.checkPermissions();
       if (!stopped && permission.receive === 'granted') await PushNotifications.register();
     }
-  })().catch(() => { /* 권한·네이티브 초기화 실패가 로그인을 막지 않는다. */ });
+  })().catch((error: unknown) => {
+    // 권한·네이티브 초기화 실패가 로그인을 막지 않는다.
+    console.warn('[push] 푸시 초기화 실패', error instanceof Error ? error.name : 'unknown');
+  });
   return session;
 }

@@ -210,3 +210,45 @@ it('권한 미허용 복귀는 권한 창이나 등록을 시작하지 않는다
   expect(mocks.register).not.toHaveBeenCalled();
   await session.stop();
 });
+
+describe('로그인 직후 자동 등록(토큰 미등록 회귀)', () => {
+  const store = new Map<string, string>();
+  beforeEach(() => {
+    store.clear();
+    Object.assign(globalThis, { localStorage: {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => { store.set(k, v); },
+    } });
+  });
+  it('이미 허용된 기기는 권한 팝업 없이 즉시 register한다', async () => {
+    mocks.check.mockResolvedValue({ receive: 'granted' });
+    const session = startPushRegistration(vi.fn(), vi.fn(), true);
+    await session.ready;
+    expect(mocks.request).not.toHaveBeenCalled();
+    expect(mocks.register).toHaveBeenCalledOnce();
+    await session.stop();
+  });
+  it('미결정 기기는 최초 1회만 권한을 묻고 다음 로그인에는 다시 묻지 않는다', async () => {
+    const first = startPushRegistration(vi.fn(), vi.fn(), true);
+    await first.ready;
+    expect(mocks.request).toHaveBeenCalledOnce();
+    expect(mocks.register).toHaveBeenCalledOnce();
+    await first.stop();
+    mocks.request.mockClear();
+    const second = startPushRegistration(vi.fn(), vi.fn(), true);
+    await second.ready;
+    expect(mocks.request).not.toHaveBeenCalled();
+    await second.stop();
+  });
+  it('서버 등록 실패는 토큰 없이 경고 로그를 남긴다', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mocks.post.mockRejectedValueOnce({ response: { status: 401 } });
+    const session = startPushRegistration(vi.fn(), vi.fn(), true);
+    await session.ready;
+    mocks.listeners.get('registration')?.({ value: 'secret-token-value' });
+    await vi.waitFor(() => expect(warn).toHaveBeenCalledWith('[push] 기기 토큰 서버 등록 실패', 401));
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('secret-token-value');
+    await session.stop();
+    warn.mockRestore();
+  });
+});
