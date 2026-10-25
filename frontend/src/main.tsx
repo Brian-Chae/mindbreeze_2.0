@@ -7,6 +7,10 @@ import './mb-tokens.css'
 import App from './App.tsx'
 import { useAuthStore } from './stores/authStore'
 import ErrorBoundary from './components/ErrorBoundary.tsx'
+import { getPlatform } from './lib/native/platform'
+
+// 플랫폼별 CSS 분기용(예: Android 하단 메뉴 여백).
+document.documentElement.dataset.platform = getPlatform()
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
