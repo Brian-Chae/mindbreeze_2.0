@@ -19,7 +19,7 @@ function sig(i: number) {
 }
 function ppgPacket(startIdx: number, n: number, deviceSec: number) {
   const dv = new DataView(new ArrayBuffer(4 + 6 * n));
-  dv.setUint32(0, Math.round(deviceSec * CLOCK), false);
+  dv.setUint32(0, Math.round(deviceSec * CLOCK), true);
   for (let k = 0; k < n; k++) {
     const { ir, red } = sig(startIdx + k); const o = 4 + k * 6;
     dv.setUint8(o, (red >> 16) & 255); dv.setUint8(o + 1, (red >> 8) & 255); dv.setUint8(o + 2, red & 255);

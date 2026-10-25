@@ -15,7 +15,7 @@ function sig(i: number) {
 }
 function packet(startIdx: number, n: number, deviceSec: number) {
   const buf = new ArrayBuffer(4 + 6 * n); const dv = new DataView(buf);
-  dv.setUint32(0, Math.round(deviceSec * 32768), false);
+  dv.setUint32(0, Math.round(deviceSec * 32768), true);
   for (let k = 0; k < n; k++) {
     const { ir, red } = sig(startIdx + k); const o = 4 + k * 6;
     dv.setUint8(o, (red >> 16) & 255); dv.setUint8(o + 1, (red >> 8) & 255); dv.setUint8(o + 2, red & 255);
