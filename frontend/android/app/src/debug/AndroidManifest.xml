@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <application>
+        <!-- SDD-246 T08 spike: debug 빌드에서만 adb(am start-foreground-service)로 합성 측정을 시작할 수 있게 노출. release 에는 포함되지 않는다. -->
+        <service
+            android:name=".measurement.MeasurementService"
+            android:exported="true"
+            tools:replace="android:exported" />
+    </application>
+</manifest>
