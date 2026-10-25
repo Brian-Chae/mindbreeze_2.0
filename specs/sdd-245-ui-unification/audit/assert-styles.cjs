@@ -7,7 +7,7 @@ const dir=path.resolve(arg('measurements')||'/tmp/sdd245-after');
 const targets=JSON.parse(fs.readFileSync(path.resolve(arg('targets')||path.join(__dirname,'style-targets.json'))));
 const tol=Number(arg('tolerance')||targets.tolerance);
 const matrix=JSON.parse(fs.readFileSync(path.join(dir,'page-matrix.json')));
-const OUT_OF_SCOPE={'시안(비범위)':'시안 /design/* 은 제품 이관 대상 아님','플레이어(제외 제안)':'몰입 플레이어 제외(D1)','의도된 404':'의도된 404 안내'};
+const OUT_OF_SCOPE={'권한 안내':'권한 안내 상태 화면 — 정상 페이지 측정 아님','토큰 미제공 안내':'토큰 미제공 안내 상태 화면 — 정상 페이지 측정 아님','시안(비범위)':'시안 /design/* 은 제품 이관 대상 아님','플레이어(제외 제안)':'몰입 플레이어 제외(D1)','의도된 404':'의도된 404 안내'};
 const indep=targets.independentLayouts.map(x=>({re:new RegExp(x.route),reason:x.reason}));
 const rows=[];const count={PASS:0,'EXC-READING':0,'EXC-INDEPENDENT':0,FAIL:0,OUT:0};
 for(const r of matrix){
@@ -15,12 +15,15 @@ for(const r of matrix){
  const url=r.url.replace(/\?.*/,'');
  const row={id:r.id,url:r.url,role:r.role,width:r.width,status:r.status};
  if(OUT_OF_SCOPE[r.status]){row.verdict='OUT';row.reason=OUT_OF_SCOPE[r.status];count.OUT++;rows.push(row);continue}
+ if(r.role==='public'){row.verdict='EXC-INDEPENDENT';row.reason='공개(비로그인) 독립 레이아웃 — 홈 기준 없음, 읽기 폭 유지(D3)·공통 색/글꼴/컨트롤 토큰 적용';count['EXC-INDEPENDENT']++;rows.push(row);continue}
  const homeLeft=r.homeMetrics.contentLeft,left=r.metrics.contentLeft,delta=left==null?null:left-homeLeft;
  row.contentLeft=left;row.homeLeft=homeLeft;row.delta=delta;row.maxWidth=r.metrics.maxWidth;
  const c=m.content,shellStart=c?c.x+c.paddingLeft:null;row.shellStart=shellStart;
  const mw=parseFloat(r.metrics.maxWidth);const narrow=Number.isFinite(mw)&&mw<(targets.frameContentMax||1200)&&/px$/.test(String(r.metrics.maxWidth));
  const ind=indep.find(i=>i.re.test(url));
+ const edgeDelta=r.metrics.frameX==null?null:r.metrics.frameX-homeLeft;
  if(delta!=null&&Math.abs(delta)<=tol){row.verdict='PASS';count.PASS++}
+ else if(edgeDelta!=null&&Math.abs(edgeDelta)<=tol&&r.metrics.framePaddingLeft>0){row.verdict='PASS';row.reason='프레임 외곽 x가 홈과 일치(자체 카드 padding은 내부)';count.PASS++}
  else if(narrow&&shellStart!=null&&Math.abs(shellStart-homeLeft)<=tol){row.verdict='EXC-READING';row.reason=`읽기·폼 폭 ${r.metrics.maxWidth} 중앙 정렬 유지(D3), 셸 시작선 ${shellStart}=홈 ${homeLeft}`;count['EXC-READING']++}
  else if(ind){row.verdict='EXC-INDEPENDENT';row.reason=ind.reason;count['EXC-INDEPENDENT']++}
  else{row.verdict='FAIL';count.FAIL++}
