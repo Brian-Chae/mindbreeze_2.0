@@ -339,7 +339,7 @@ export function applyRevoked(state: LiveState, code: string): LiveState {
 
 /** 전송 장애 — DEGRADED(REST 폴백). 이미 받은 값은 그대로 두고 신선도만 시간으로 판정한다. */
 export function markDegraded(state: LiveState): LiveState {
-  if (state.phase !== 'READY' && state.phase !== 'RESYNCING') return state;
+  if (state.phase !== 'READY' && state.phase !== 'RESYNCING' && state.phase !== 'CONNECTING') return state;
   return { ...state, phase: 'DEGRADED' };
 }
 
