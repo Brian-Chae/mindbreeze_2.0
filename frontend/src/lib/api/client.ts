@@ -238,6 +238,12 @@ export async function refreshAccessToken(): Promise<string | null> {
  * - 단일 객체({ msg, type } 등)면 loc/msg 를 조합
  * - 422 검증 오류처럼 객체 배열이면 각 항목의 loc(필드 경로)와 msg(사유)를 조합
  */
+const CODE_MESSAGES: Record<string, string> = {
+  schedule_conflict: '같은 시간에 겹치는 다른 클래스 일정이 있어요. 확인 후 다시 시도해 주세요.',
+  stale_class: '다른 변경이 먼저 저장됐어요. 최신 내용을 불러온 뒤 다시 시도해 주세요.',
+  stale_session: '회차가 변경됐어요. 최신 내용을 불러온 뒤 다시 시도해 주세요.',
+};
+
 export function formatErrorDetail(detail: unknown): string | null {
   if (typeof detail === 'string' && detail.trim()) return detail;
 
@@ -268,7 +274,12 @@ export function formatErrorDetail(detail: unknown): string | null {
 
   // API7-10: 단일 객체 detail({ msg, type } 등)도 파싱한다.
   // FastAPI 는 검증 오류를 배열로 주지만, 커스텀 핸들러는 단일 객체로 줄 수 있다.
-  if (detail && typeof detail === 'object') return formatItem(detail);
+  if (detail && typeof detail === 'object') {
+    // 구조화 코드 detail({ code, ... })은 사용자 문구로 바꾼다(없으면 'API 요청 실패 (409)'만 보였다).
+    const code = (detail as { code?: unknown }).code;
+    if (typeof code === 'string' && CODE_MESSAGES[code]) return CODE_MESSAGES[code];
+    return formatItem(detail);
+  }
 
   return null;
 }
