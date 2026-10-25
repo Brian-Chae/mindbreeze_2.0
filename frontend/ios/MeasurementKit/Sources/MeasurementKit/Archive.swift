@@ -69,6 +69,7 @@ public struct ArchiveItem {
     public var nextAttemptMs: Int = 0
     public var taskId: Int?
     public var uploadURL: String?
+    public var remoteId: String?                  // 서버 발급 chunk_id/artifact_id (ACK 용)
 
     public init(alias: String, kind: ArchiveKind, file: String, sha256: String, sizeBytes: Int, captureStreamId: String?, monotonicRange: (String, String)?) {
         self.alias = alias; self.kind = kind; self.file = file; self.sha256 = sha256; self.sizeBytes = sizeBytes
@@ -82,6 +83,7 @@ public struct ArchiveItem {
         if let v = lastCode { d["code"] = v }
         if let v = taskId { d["task"] = v }
         if let v = uploadURL { d["url"] = v }
+        if let v = remoteId { d["rid"] = v }
         return d
     }
     static func from(_ d: [String: Any]) -> ArchiveItem? {
@@ -90,7 +92,7 @@ public struct ArchiveItem {
         var i = ArchiveItem(alias: a, kind: k, file: f, sha256: s, sizeBytes: z, captureStreamId: d["stream"] as? String,
                             monotonicRange: (d["from"] as? String).flatMap { f in (d["to"] as? String).map { (f, $0) } })
         i.state = st; i.attempts = (d["attempts"] as? Int) ?? 0; i.nextAttemptMs = (d["next"] as? Int) ?? 0
-        i.lastCode = d["code"] as? String; i.taskId = d["task"] as? Int; i.uploadURL = d["url"] as? String
+        i.lastCode = d["code"] as? String; i.taskId = d["task"] as? Int; i.uploadURL = d["url"] as? String; i.remoteId = d["rid"] as? String
         return i
     }
 }
@@ -132,17 +134,17 @@ public final class ArchiveQueue {
     public func item(alias: String) -> ArchiveItem? { lock.lock(); defer { lock.unlock() }; return items[alias] }
     public func item(forTask id: Int) -> ArchiveItem? { lock.lock(); defer { lock.unlock() }; return items.values.first { $0.taskId == id } }
 
-    public func attach(taskId: Int, alias: String, url: String) throws {
+    public func attach(taskId: Int, alias: String, url: String, remoteId: String? = nil) throws {
         lock.lock(); defer { lock.unlock() }
         guard var i = items[alias] else { throw QueueError.unknownAlias }
-        i.taskId = taskId; i.uploadURL = url; i.state = .uploading
+        i.taskId = taskId; i.uploadURL = url; i.state = .uploading; if let r = remoteId { i.remoteId = r }
         try persist(i)
     }
 
     public func markVerified(alias: String) throws {
         lock.lock(); defer { lock.unlock() }
         guard var i = items[alias] else { throw QueueError.unknownAlias }
-        i.state = .verified; i.taskId = nil; i.uploadURL = nil; i.lastCode = nil
+        i.state = .verified; i.taskId = nil; i.uploadURL = nil; i.lastCode = nil; i.remoteId = nil
         try persist(i)
     }
 
