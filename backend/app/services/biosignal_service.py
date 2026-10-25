@@ -46,6 +46,54 @@ def _us(moment: datetime) -> str:
     return str(int(moment.timestamp() * 1_000_000))
 
 
+def _window_server_time(stream, mono_us: Fraction) -> datetime:
+    """장치 단조시각 → 서버 시계. 서버가 서명한 anchor(anchor_server_at ↔ anchor_monotonic_us)만 기준이다."""
+    from datetime import timedelta
+
+    return stream.anchor_server_at + timedelta(microseconds=float(mono_us - int(stream.anchor_monotonic_us)))
+
+
+def raw_window_mono(meta: PresignChunk) -> tuple[Fraction, Fraction]:
+    """raw 청크가 덮는 단조시각 창 [start, end(배타)] (µs, 유리수)."""
+    h = meta.header
+    step = Fraction(1_000_000) * h.rate.denominator / h.rate.numerator
+    base = int(h.anchor.monotonic_us) - h.anchor.sample_index * step
+
+    return base + h.first_sample_index * step, base + h.end_sample_index_exclusive * step
+
+
+def archive_gate(db: DBSession, sid: UUID, participant, capture_stream_id: UUID | None,
+                 windows: list[tuple[Fraction, Fraction] | None]) -> dict | None:
+    """SDD-246 T09 — 종료 이후·오프라인 사후전송 수락 판정(T03 evaluate_ingest 가 기준).
+
+    capture_stream_id 가 없으면 None(현행 동작 유지). 하나라도 거절·격리면 요청 전체를 반영하지 않는다.
+    archive 수락은 live 최신성을 바꾸지 않는다: capture_stream/outbox 를 쓰지 않고 live_fresh_applied=False 로 고정한다.
+    """
+    if capture_stream_id is None:
+        return None
+    from app.models.live_state import CaptureStream
+    from app.services.session_live_commands import evaluate_ingest
+
+    stream = db.get(CaptureStream, capture_stream_id)
+    if stream is None or stream.session_id != sid:
+        raise HTTPException(status_code=404, detail={"code": "capture_stream_not_found"})
+    if stream.participant_id != participant.id:
+        raise HTTPException(status_code=403, detail={"code": "capture_stream_not_owned"})
+    for window in windows:
+        if window is None or stream.anchor_server_at is None or stream.anchor_monotonic_us is None:
+            # 창을 서버 시계로 환산할 수 없다: 종료/철회 cutoff 가 있으면 입증 불가 → 격리, 없으면 현행대로 수락.
+            if stream.cutoff_at is not None:
+                raise HTTPException(status_code=409, detail={"code": "pending_time_review", "reason": "window_unproven"})
+            continue
+        start, end = _window_server_time(stream, window[0]), _window_server_time(stream, window[1])
+        decision = evaluate_ingest(db, stream_id=stream.id, window_start_at=start, window_end_at=end, now=_now())
+        if decision.verdict == "reject":
+            raise HTTPException(status_code=403, detail={"code": "archive_rejected", "reason": decision.code})
+        if decision.verdict == "pending_time_review":
+            raise HTTPException(status_code=409, detail={"code": "pending_time_review", "reason": decision.code})
+    return {"verdict": "accept", "code": None, "live_fresh_applied": False}
+
+
 def resolve_participant(sid: UUID, participant_id: UUID | None, db: DBSession, *, current_user_id, entry_credential):
     return session_service.resolve_upload_participant(
         sid, str(participant_id) if participant_id else None, current_user_id, db,
@@ -156,6 +204,7 @@ def presign_raw(session_id: str, payload: PresignRequest, db: DBSession, *, curr
     participant = resolve_participant(sid, payload.participant_id, db, current_user_id=current_user_id, entry_credential=entry_credential)
     for meta in payload.chunks:
         _check_sizes(meta)
+    archive = archive_gate(db, sid, participant, payload.capture_stream_id, [raw_window_mono(m) for m in payload.chunks])
 
     streams = {str(m.header.stream_id) for m in payload.chunks}
     aliases = {m.chunk_alias for m in payload.chunks}
@@ -253,7 +302,10 @@ def presign_raw(session_id: str, payload: PresignRequest, db: DBSession, *, curr
             "expires_in_sec": expires,
         })
     db.commit()
-    return {"session_id": str(sid), "participant_id": str(participant.id), "chunks": items}
+    out = {"session_id": str(sid), "participant_id": str(participant.id), "chunks": items}
+    if archive is not None:
+        out["archive_ingest"] = archive
+    return out
 
 
 def _result(row: EEGRawChunk, status: str, reason: str | None = None) -> dict:

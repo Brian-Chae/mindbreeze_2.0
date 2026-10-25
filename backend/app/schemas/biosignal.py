@@ -799,6 +799,8 @@ class PresignChunk(Contract):
 class PresignRequest(Contract):
     participant_id: UUID | None = None
     play_group_id: PlayGroup | None = None
+    # SDD-246 T09: 지정하면 서버가 해당 capture stream 의 종료 cutoff·권한코드로 archive 수락 여부를 판정한다(미지정=현행).
+    capture_stream_id: UUID | None = None
     chunks: Annotated[list[PresignChunk], Field(min_length=1, max_length=MAX_BATCH)]
 
 
@@ -824,6 +826,8 @@ class PresignResponse(Contract):
     session_id: UUID
     participant_id: UUID
     chunks: list[PresignItem]
+    # SDD-246 T09: capture_stream_id 를 보냈을 때만. archive 수락은 live 최신성을 바꾸지 않는다(live_fresh_applied=False 고정).
+    archive_ingest: dict[str, str | bool | None] | None = None
 
 
 class AckItem(Contract):
@@ -891,12 +895,15 @@ class ArtifactPresignChunk(Contract):
     uncompressed_sha256: Sha256 | None = None
     size_bytes: Annotated[int, Field(gt=0, le=MAX_OBJECT_BYTES, strict=True)]
     time_range: TimeRange | None = None
+    # SDD-246 T09: 이 산출물이 덮는 장치 단조시계 구간(µs). 종료 cutoff 이후 사후전송 판정(capture_stream_id 지정 시)에만 쓴다.
+    monotonic_range: TimeRange | None = None
     content_type: Annotated[str, Field(max_length=100)] = 'application/octet-stream'
 
 
 class ArtifactPresignRequest(Contract):
     participant_id: UUID | None = None
     play_group_id: PlayGroup | None = None
+    capture_stream_id: UUID | None = None  # SDD-246 T09 (PresignRequest 와 동일 의미)
     chunks: Annotated[list[ArtifactPresignChunk], Field(min_length=1, max_length=MAX_BATCH)]
 
 
@@ -918,6 +925,7 @@ class ArtifactPresignResponse(Contract):
     session_id: UUID
     participant_id: UUID
     chunks: list[ArtifactPresignItem]
+    archive_ingest: dict[str, str | bool | None] | None = None  # SDD-246 T09 (PresignResponse 와 동일 의미)
 
 
 class ArtifactAckItem(Contract):

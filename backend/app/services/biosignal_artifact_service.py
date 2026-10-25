@@ -9,6 +9,7 @@ import json
 import logging
 import zlib
 from datetime import datetime, timezone
+from fractions import Fraction
 from uuid import UUID
 
 from fastapi import HTTPException
@@ -109,6 +110,9 @@ def presign(session_id: str, payload: ArtifactPresignRequest, db: DBSession, *, 
         sid, payload.participant_id, db, current_user_id=current_user_id, entry_credential=entry_credential)
     for m in payload.chunks:
         _validate_scope(m)
+    archive = biosignal_service.archive_gate(
+        db, sid, participant, payload.capture_stream_id,
+        [(Fraction(int(m.monotonic_range.from_us)), Fraction(int(m.monotonic_range.to_us))) if m.monotonic_range else None for m in payload.chunks])
 
     aliases = {m.artifact_alias for m in payload.chunks}
     _check_aliases(sid, participant.id, aliases, db)
@@ -176,7 +180,10 @@ def presign(session_id: str, payload: ArtifactPresignRequest, db: DBSession, *, 
             "upload_status": row.upload_status, "expires_in_sec": expires,
         })
     db.commit()
-    return {"session_id": str(sid), "participant_id": str(participant.id), "chunks": items}
+    out = {"session_id": str(sid), "participant_id": str(participant.id), "chunks": items}
+    if archive is not None:
+        out["archive_ingest"] = archive
+    return out
 
 
 def _index_feature_aliases(sid, pid, row: BiosignalArtifact, aliases: list[str], db: DBSession) -> None:
