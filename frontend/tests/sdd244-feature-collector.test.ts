@@ -102,3 +102,50 @@ describe('SDD244 T09 FeatureCollector', () => {
     expect(collector.pendingCount).toBe(1);
   });
 });
+
+describe('SDD244 업로드 계약 — presign 422 방지', () => {
+  // 서버 ArtifactPresignChunk: size_bytes ≤ 1 MiB, feature_id_aliases ≤ 2000 (backend/app/schemas/biosignal.py)
+  const SERVER_MAX_BYTES = 1_048_576, SERVER_MAX_ALIASES = 2000;
+  const noisy = (n: number) => { const r = eegResult(n); r.filteredData = r.filteredData.map(d => ({ ...d, fp1: Math.random() * 1e3, fp2: Math.random() * 1e3 })); return r; };
+
+  it('flush가 오래 밀려 emit이 쌓여도 모든 artifact가 서버 크기·alias 상한 안에서 묶인다', async () => {
+    const { queue, session, collector } = await setup();
+    for (const p of eegPackets(50)) session.receive(p);
+    await session.flush();
+    const win = session.sampleWindow('eeg', 500)!;
+    for (let i = 0; i < 150; i++) collector.emit('eeg', noisy(500), { window: win, windowIndex: i });   // 업로드 pump 지연 동안 누적
+    await collector.flush(true);
+    const all = await artifacts(queue);
+    const sizes = all.map(o => (o.meta as ArtifactMeta).size_bytes);
+    expect(Math.max(...sizes)).toBeLessThanOrEqual(SERVER_MAX_BYTES);
+    for (const o of all) {
+      const m = o.meta as ArtifactMeta;
+      expect(o.payload.byteLength).toBe(m.size_bytes);
+      expect((m.feature_id_aliases ?? []).length).toBeLessThanOrEqual(SERVER_MAX_ALIASES);
+    }
+    // 쪼개도 150건 모두 어떤 feature 묶음에 빠짐없이 들어 있다
+    const featureRows = all.filter(o => o.kind === 'feature').reduce((n, o) => n + (o.meta as ArtifactMeta).row_count, 0);
+    expect(featureRows).toBe(150);
+    expect(all.filter(o => o.kind === 'raw_derived').length).toBeGreaterThan(1);
+  });
+});
+
+describe('SDD244 업로드 계약 — time_range 역전 422 방지', () => {
+  it('emit 순서가 창 순서와 뒤바뀌어도(분석 중첩 완료 순서) time_range 는 from ≤ to 다', async () => {
+    const { queue, session, collector } = await setup();
+    const packets = eegPackets(50);
+    for (const p of packets.slice(0, 40)) session.receive(p);     // 2000샘플
+    await session.flush();
+    const early = session.sampleWindow('eeg', 500)!;               // 1500..2000
+    for (const p of packets.slice(40)) session.receive(p);        // 2500샘플 → 청크 봉인
+    await session.flush();
+    const late = session.sampleWindow('eeg', 500)!;                // 2000..2500
+    collector.emit('eeg', eegResult(), { window: late, windowIndex: 1 });    // 늦은 창이 먼저 emit
+    collector.emit('eeg', eegResult(), { window: early, windowIndex: 0 });   // 이른 창이 나중에 emit
+    await collector.flush(true);
+    for (const o of (await artifacts(queue)).filter(a => a.kind === 'feature')) {
+      const range = (o.meta as ArtifactMeta).time_range!;
+      expect(BigInt(range.from_us) <= BigInt(range.to_us)).toBe(true);   // 서버 TimeRange.ordered 가 어기면 422
+    }
+  });
+});

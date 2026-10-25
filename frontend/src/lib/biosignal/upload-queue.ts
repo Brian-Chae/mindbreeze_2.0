@@ -14,9 +14,19 @@ export interface UploadSummary { acked: number; failed: number; blocked: number 
 
 class Stale extends Error {}
 
+/** 이전 빌드가 만든 time_range 역전(from > to)을 presign 전에 바로잡는다. 서버 TimeRange.ordered 위반은 422 영구 실패라 보관본이 서버에 못 올라간다. checksum 은 payload 기준이라 영향 없다. */
+export function normalizeArtifactMeta<T extends RawMeta | ArtifactMeta>(meta: T): T {
+  const range = (meta as ArtifactMeta).time_range;
+  if (!range) return meta;
+  try {
+    if (BigInt(range.from_us) <= BigInt(range.to_us)) return meta;
+    return { ...meta, time_range: { from_us: range.to_us, to_us: range.from_us } };
+  } catch { return meta; }
+}
+
 async function uploadOne(queue: BiosignalQueue, api: BiosignalApi, object: QueuedObject, put: PutObject, active: () => boolean): Promise<void> {
   const raw = object.kind === 'raw';
-  const meta = object.meta;
+  const meta = normalizeArtifactMeta(object.meta);
   const expectChecksum = meta.checksum, expectSize = meta.size_bytes;
   const guard = () => { if (!active()) throw new Stale(); };
   guard();

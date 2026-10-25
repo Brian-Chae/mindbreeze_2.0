@@ -421,7 +421,9 @@ export default function ClassPlayerPage() {
       const emotional = finiteValue(event.feature?.emotional_stability);
       const heartRate = event.feature?.heart_rate ?? null;
       const respiratoryRate = event.feature?.respiratory_rate ?? null;
-      const at = event.last_eeg_at ? Date.parse(event.last_eeg_at) : event.feature?.timestamp ?? now;
+      // 서버 eeg_feature 브로드캐스트에는 last_eeg_at 이 없다. 회원 기기 시계(feature.timestamp)는 상담사 시계와 어긋나면
+      // EXTRA_FRESH_MS(10초) 판정에서 집중·정서가 '-' 가 되므로 수신 시각을 쓴다.
+      const at = event.last_eeg_at ? Date.parse(event.last_eeg_at) : now;
       setHostExtras(previous => {
         if (previous[event.participant_id]?.at > at) return previous;
         const prev = previous[event.participant_id];

@@ -25,6 +25,8 @@ const ALGORITHM_PARAMETERS: Record<Signal, Record<string, number | string | bool
 export const BUNDLE_MAX_AGE_MS = 10_000;
 export const BUNDLE_SOFT_BYTES = 800_000;
 export const MAX_PENDING = 2000;
+/** 서버 presign 상한(ArtifactPresignChunk.size_bytes ≤ 1 MiB)에 여유를 둔 묶음 상한. 넘으면 422 로 영구 실패한다. */
+export const BUNDLE_HARD_BYTES = 900_000;
 
 export interface EmitContext {
   window: SampleWindow | null; windowIndex: number;
@@ -42,6 +44,17 @@ async function gzip(text: string): Promise<ArrayBuffer> {
   const writer = stream.writable.getWriter();
   void writer.write(new TextEncoder().encode(text)).then(() => writer.close());
   return new Response(stream.readable).arrayBuffer();
+}
+/** 묶음 전체의 [최소 from, 최대 to]. PPG·EEG 분석이 겹쳐 완료 순서가 창 순서와 뒤바뀌어도 from ≤ to 를 보장한다(서버 TimeRange.ordered 위반 시 422 영구 실패). */
+export function timeRangeOf(records: readonly FeatureRecord[]): { from_us: string; to_us: string } {
+  let from: bigint | null = null, to: bigint | null = null;
+  for (const r of records) for (const w of r.source_windows) {
+    const a = BigInt(w.time_range.from_us), b = BigInt(w.time_range.to_us);
+    if (from === null || a < from) from = a;
+    if (to === null || b > to) to = b;
+  }
+  const lo = from ?? 0n, hi = to ?? lo;
+  return { from_us: (lo <= hi ? lo : hi).toString(), to_us: (lo <= hi ? hi : lo).toString() };
 }
 const short = (id: string) => id.replace(/-/g, '').slice(0, 8) + id.replace(/-/g, '').slice(-8);
 
@@ -171,11 +184,9 @@ export class FeatureCollector {
     const derivedAlias = `DERIVED-${suffix}-${String(derivedSeq).padStart(6, '0')}`;
     const derivedText = items.map(p => JSON.stringify({ feature_id_alias: p.alias, first_sample_index: p.window.first, fields: p.payloads })).join('\n') + '\n';
     const derivedBytes = await gzip(derivedText);
+    // 업로드가 밀려 emit 이 쌓이면 한 묶음이 서버 상한을 넘어 presign 422(영구 실패)가 된다 → 상한 안에서 반으로 쪼갠다.
+    if (derivedBytes.byteLength > BUNDLE_HARD_BYTES && items.length > 1) return this.splitBundle(items);
     const derivedSha = await sha256(derivedBytes);
-    await this.queue.enqueueArtifact({ artifact_alias: derivedAlias, artifact_kind: 'raw_derived', stream_id: w.streamId, segment_id: w.segmentId, signal, sequence: derivedSeq,
-      row_count: items.length, content_encoding: 'gzip', schema_version: 'raw-derived-v1', checksum: derivedSha, uncompressed_sha256: await sha256(new TextEncoder().encode(derivedText).buffer as ArrayBuffer),
-      size_bytes: derivedBytes.byteLength, content_type: 'application/gzip' }, derivedBytes);
-
 
     const records: FeatureRecord[] = items.map(p => {
       const { windows } = this.sources(p);
@@ -189,11 +200,24 @@ export class FeatureCollector {
     });
     const text = records.map(r => JSON.stringify(r)).join('\n') + '\n';
     const bytes = await gzip(text);
+    if (bytes.byteLength > BUNDLE_HARD_BYTES && items.length > 1) return this.splitBundle(items);
+    await this.queue.enqueueArtifact({ artifact_alias: derivedAlias, artifact_kind: 'raw_derived', stream_id: w.streamId, segment_id: w.segmentId, signal, sequence: derivedSeq,
+      row_count: items.length, content_encoding: 'gzip', schema_version: 'raw-derived-v1', checksum: derivedSha, uncompressed_sha256: await sha256(new TextEncoder().encode(derivedText).buffer as ArrayBuffer),
+      size_bytes: derivedBytes.byteLength, content_type: 'application/gzip' }, derivedBytes);
     const meta: ArtifactMeta = { artifact_alias: `FEATURES-${suffix}-${String(featureSeq).padStart(6, '0')}`, feature_id_aliases: records.map(r => r.feature_id_alias), artifact_kind: 'feature',
       stream_id: w.streamId, segment_id: w.segmentId, signal, sequence: featureSeq, first_sequence: records[0].sequence, last_sequence: records[records.length - 1].sequence, row_count: records.length,
       content_encoding: 'gzip', schema_version: 'feature-v1', checksum: await sha256(bytes), uncompressed_sha256: await sha256(new TextEncoder().encode(text).buffer as ArrayBuffer),
-      size_bytes: bytes.byteLength, time_range: { from_us: records[0].source_windows[0].time_range.from_us, to_us: records[records.length - 1].source_windows.at(-1)!.time_range.to_us }, content_type: 'application/gzip' };
+      size_bytes: bytes.byteLength, time_range: timeRangeOf(records), content_type: 'application/gzip' };
     await this.queue.enqueueArtifact(meta, bytes, items.map(p => ({ kind: 'feature', id: p.alias })));
     this.session.noteFeatureSequence(signal, records[records.length - 1].sequence, w.streamId, w.segmentId);
+  }
+
+  /** 묶음을 반으로 나눈다. 뒤쪽 절반은 자기 첫 sequence 를 묶음 번호로 영속해 재시작 뒤에도 같은 묶음으로 복원된다. */
+  private async splitBundle(items: Pending[]): Promise<void> {
+    const mid = Math.ceil(items.length / 2), left = items.slice(0, mid), right = items.slice(mid);
+    right[0].bundle = right[0].sequence;
+    for (const p of right) { p.bundle = right[0].bundle; await this.queue.saveDraft('feature', p.alias, p); }
+    await this.bundle(left);
+    await this.bundle(right);
   }
 }

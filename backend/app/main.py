@@ -190,7 +190,11 @@ async def _validation_exception_handler(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
     """요청 검증 실패(422)를 FastAPI 기본과 동일한 봉투로 반환하고 경로를 로깅한다."""
-    logger.warning("[422] %s %s — 요청 검증 실패", request.method, request.url.path)
+    # 위반 필드 경로·사유만 남긴다(입력 값은 개인정보·생체값일 수 있어 기록하지 않는다).
+    fields = "; ".join(
+        f"{'.'.join(str(p) for p in e.get('loc', ()))}: {e.get('type')}" for e in exc.errors()[:5]
+    )
+    logger.warning("[422] %s %s — 요청 검증 실패 (%s)", request.method, request.url.path, fields)
     return JSONResponse(status_code=422, content={"detail": jsonable_encoder(exc.errors())})
 
 
