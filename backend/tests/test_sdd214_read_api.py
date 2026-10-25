@@ -325,6 +325,7 @@ def test_클래스_목록_호스트_시점_필드와_진행률(client, world):
         "id", "title", "status", "schedule_mode", "planned_session_count", "area",
         "progress", "session_count", "next_session", "has_open_session",
         "is_instant",  # SDD-226 가산
+        "host",  # 대표 진행자(다음 회차 없어도 표시)
     }
     assert item["id"] == str(world["c1"].id)
     assert item["area"] == "meditation"
@@ -829,3 +830,12 @@ def test_RD10_열린_세션_유무는_open_과_in_progress(client, world):
         assert _summary(db, host, "대기 중", NOW)["has_open_session"] is False
     finally:
         db.close()
+
+
+
+def test_클래스_목록_대표_진행자는_다음_회차가_없어도_채워진다(client, world):
+    """즉석·진행 중 클래스처럼 다음 회차가 없어도 '진행 지도사'가 '데이터 없음'이 되지 않는다."""
+    items = client.get(f"{API}/classes", headers=_h(world, "host_a")).json()["classes"]
+    assert items[0]["host"]["id"] == world["users"]["host_a"]["id"]
+    item = client.get(f"{API}/classes", headers=_h(world, "host_b")).json()["classes"][0]
+    assert item["host"] is not None and item["host"]["id"] == world["users"]["host_b"]["id"]

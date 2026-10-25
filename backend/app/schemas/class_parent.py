@@ -55,6 +55,8 @@ class ClassSummary(BaseModel):
     next_session: NextSession | None = None
     has_open_session: bool
     is_instant: bool = False
+    # 대표 진행자 — 목록 '진행 지도사' 열(다음 회차가 없어도 표시)
+    host: UserBrief | None = None
 
 
 class ClassInstructorInfo(BaseModel):

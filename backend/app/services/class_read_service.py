@@ -166,7 +166,15 @@ def _class_summary(cls: Class, rows: list, names: dict, now: datetime) -> dict:
     # 계획 횟수가 있어도 취소 회차는 분모에서 뺀다(verify RD-10). 취소가 계획보다 많아도 음수가 되지 않는다.
     total = max(cls.planned_session_count - cancelled, 0) if cls.planned_session_count else sum(r.session_kind == "regular" for r in rows) - cancelled
     nxt = _next_session(rows, now)
+    # 목록의 '진행 지도사' 열: 다음 회차가 없을 때(즉석·진행 중·완료)도 표시하도록 대표 진행자를 함께 준다.
+    # 다음 회차 → 진행 중/열린 회차 → 가장 최근 회차 순으로 배정된 진행자를 고른다.
+    assigned = [r for r in rows if r.host_id and r.host_state == "assigned"]
+    rep = nxt if nxt and nxt.host_state == "assigned" else (
+        next((r for r in assigned if r.status in _OPEN_STATUSES), None)
+        or max(assigned, key=lambda r: (_aware(r.scheduled_at) if r.scheduled_at else now, r.seq or 0), default=None)
+    )
     return {
+        "host": {"id": str(rep.host_id), "name": names.get(rep.host_id)} if rep else None,
         "id": str(cls.id),
         "title": cls.title,
         "status": cls.status,
