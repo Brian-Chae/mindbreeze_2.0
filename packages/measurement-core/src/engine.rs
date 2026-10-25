@@ -5,6 +5,7 @@
 //! - `LegacyPacket`: 현 웹 StreamProcessor 의 패킷/도착시각 throttle 을 그대로 재현 — 계약 oracle 패리티 전용.
 
 use crate::clock::{Admission, ClockConfig, SensorClock, Verdict};
+use crate::dsp::biquad::FilterImpl;
 use crate::dsp::acc::{self, AccPoint, AccResult};
 use crate::dsp::eeg::{self, EegPoint, EegResult};
 use crate::dsp::hrv::{HrvSnapshot, HrvState};
@@ -113,10 +114,11 @@ pub enum Cadence {
 pub struct Tuning {
     pub cadence: Cadence,
     pub emit_spectrum: bool,
+    pub filter: FilterImpl,
 }
 impl Default for Tuning {
     fn default() -> Self {
-        Tuning { cadence: Cadence::SampleClock, emit_spectrum: false }
+        Tuning { cadence: Cadence::SampleClock, emit_spectrum: false, filter: FilterImpl::Biquad }
     }
 }
 
@@ -581,7 +583,7 @@ impl Core {
 
     fn run_eeg(&mut self, last_ts: f64, now_ms: f64, out: &mut PushOutput) {
         let win: Vec<EegPoint> = self.s.eeg.iter().copied().collect();
-        let Some(res) = eeg::analyze(&win, self.tuning.emit_spectrum) else { return };
+        let Some(res) = eeg::analyze(&win, self.tuning.emit_spectrum, self.tuning.filter) else { return };
         let ix = res.indices;
         let input = RawInput {
             focus: ix.focus_index,
@@ -612,7 +614,7 @@ impl Core {
 
     fn run_ppg(&mut self, last_ts: f64, now_ms: f64, out: &mut PushOutput) {
         let win: Vec<PpgPoint> = self.s.ppg.iter().copied().collect();
-        let res = ppg::analyze(&win);
+        let res = ppg::analyze(&win, self.tuning.filter);
         self.s.hrv.process_ppg(res.heart_rate_raw, &res.rr, &res.rr_end_ts, now_ms);
         let hrv = self.s.hrv.snapshot();
         let reason = self.s.hrv.resp_null_reason().map(|s| s.to_string());

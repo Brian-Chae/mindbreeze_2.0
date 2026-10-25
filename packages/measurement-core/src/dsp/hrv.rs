@@ -141,7 +141,9 @@ fn interpolate_linear(xo: &[f64], yo: &[f64], xn: &[f64]) -> Vec<f64> {
             while i < xo.len() - 1 && xo[i + 1] < x {
                 i += 1;
             }
-            let (x1, x2, y1, y2) = (xo[i], xo[i + 1], yo[i], yo[i + 1]);
+            // TS: yOriginal 은 xOriginal 보다 1 짧아 마지막 구간의 y2 가 undefined → NaN. v1 은 그대로 재현한다.
+            let y = |k: usize| yo.get(k).copied().unwrap_or(f64::NAN);
+            let (x1, x2, y1, y2) = (xo[i], xo[i + 1], y(i), y(i + 1));
             out.push(y1 + ((y2 - y1) * (x - x1)) / (x2 - x1));
         }
     }
@@ -247,8 +249,9 @@ fn welch(data: &[f64], fs: f64) -> (Vec<f64>, Vec<f64>) {
         }
         let mut ps = Vec::with_capacity(nfft / 2 + 1);
         for i in 0..=nfft / 2 {
-            let re = f[2 * i];
-            let im = f[2 * i + 1];
+            // TS: `fftResult[2*i] || 0` — NaN(마지막 구간 보간 NaN 전파)과 0 은 0 으로 취급
+            let re = if f[2 * i].is_nan() { 0.0 } else { f[2 * i] };
+            let im = if f[2 * i + 1].is_nan() { 0.0 } else { f[2 * i + 1] };
             let mut p = (re * re + im * im) / (fs * wp);
             if i > 0 && i < nfft / 2 {
                 p *= 2.0;

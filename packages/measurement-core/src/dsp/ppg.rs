@@ -1,7 +1,7 @@
 //! PPGSignalProcessor.ts 포팅 (v1): DC 제거 + bandpass(1~5Hz), SQI, 심박(적응 임계 피크),
 //! 불응기 피크(IR 원신호)→RR+피크 시각, SpO2, 피크 정보. HRV 통계는 hrv.rs.
 
-use super::biquad::Biquad;
+use super::biquad::{ppg_filter, FilterImpl};
 use super::math::*;
 use serde::{Deserialize, Serialize};
 
@@ -33,12 +33,6 @@ pub struct PpgResult {
     /// 윈도 내 RR(ms) 와 그것을 닫는 피크의 웹 타임라인 시각(ms)
     pub rr: Vec<f64>,
     pub rr_end_ts: Vec<f64>,
-}
-
-fn simple_filter(data: &[f64]) -> Vec<f64> {
-    let mean = sum(data) / data.len() as f64;
-    let dc: Vec<f64> = data.iter().map(|&v| v - mean).collect();
-    Biquad::bandpass(1.0, 5.0, FS).run(&dc)
 }
 
 fn ppg_sqi(data: &[f64]) -> Vec<f64> {
@@ -348,7 +342,7 @@ fn analyze_peaks(red: &[f64]) -> PeakInfo {
 }
 
 /// 윈도 1개 분석(`data.len() >= 50` 는 호출자 책임).
-pub fn analyze(data: &[PpgPoint]) -> PpgResult {
+pub fn analyze(data: &[PpgPoint], imp: FilterImpl) -> PpgResult {
     let processed: &[PpgPoint] = if data.len() >= 500 {
         &data[100..data.len() - 100]
     } else if data.len() > 150 {
@@ -358,8 +352,8 @@ pub fn analyze(data: &[PpgPoint]) -> PpgResult {
     };
     let red: Vec<f64> = processed.iter().map(|p| p.red).collect();
     let ir: Vec<f64> = processed.iter().map(|p| p.ir).collect();
-    let f_red = simple_filter(&red);
-    let f_ir = simple_filter(&ir);
+    let f_red = ppg_filter(&red, imp);
+    let f_ir = ppg_filter(&ir, imp);
     let s_red = ppg_sqi(&f_red);
     let s_ir = ppg_sqi(&f_ir);
     let overall: Vec<f64> = s_red.iter().zip(&s_ir).map(|(a, b)| (a + b) / 2.0).collect();

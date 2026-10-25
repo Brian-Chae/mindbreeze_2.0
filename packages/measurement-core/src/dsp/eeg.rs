@@ -2,7 +2,7 @@
 //! → SQI → Morlet(7 cycles) PSD(PSD_CALIB × corr(f)) → 밴드파워 → SQI 가중 기하평균 → raw indices.
 //! 윈도 경계(최소 500 / 최대 1250 샘플 링)는 engine 이 보장한다.
 
-use super::biquad::Biquad;
+use super::biquad::{eeg_bandpass, eeg_notch, FilterImpl};
 use super::math::*;
 use serde::{Deserialize, Serialize};
 
@@ -77,7 +77,7 @@ pub struct EegResult {
     pub window_len: usize,
 }
 
-fn amplitude_sqi(data: &[f64]) -> Vec<f64> {
+pub fn amplitude_sqi(data: &[f64]) -> Vec<f64> {
     let n = data.len();
     let mut sqi = vec![0.0; n];
     if n == 0 {
@@ -105,7 +105,7 @@ fn amplitude_sqi(data: &[f64]) -> Vec<f64> {
     sqi
 }
 
-fn frequency_sqi(data: &[f64]) -> Vec<f64> {
+pub fn frequency_sqi(data: &[f64]) -> Vec<f64> {
     let n = data.len();
     let mut sqi = vec![0.0; n];
     if n == 0 {
@@ -123,7 +123,7 @@ fn frequency_sqi(data: &[f64]) -> Vec<f64> {
     sqi
 }
 
-fn morlet_power(data: &[f64], freq: f64) -> f64 {
+pub fn morlet_power(data: &[f64], freq: f64) -> f64 {
     let target = js_round(N_CYCLES * FS / freq) as usize;
     let l = target.min(data.len()).min(MAX_ANALYSIS_SAMPLES);
     if l < 2 {
@@ -252,16 +252,13 @@ fn raw_indices(m: &Bands, c1: &Bands, c2: &Bands, v1: bool, v2: bool) -> Indices
 }
 
 /// 윈도 1개 분석. `data.len() >= 500` 는 호출자 책임(TS 는 미만이면 throw).
-pub fn analyze(data: &[EegPoint], emit_spectrum: bool) -> Option<EegResult> {
+pub fn analyze(data: &[EegPoint], emit_spectrum: bool, imp: FilterImpl) -> Option<EegResult> {
     if data.len() < 500 {
         return None;
     }
     let ch1: Vec<f64> = data.iter().map(|p| p.fp1).collect();
     let ch2: Vec<f64> = data.iter().map(|p| p.fp2).collect();
-    let filt = |x: &[f64]| -> Vec<f64> {
-        let n = Biquad::notch(60.0, FS, 2.0).run(x);
-        Biquad::bandpass(1.0, 45.0, FS).run(&n)
-    };
+    let filt = |x: &[f64]| -> Vec<f64> { eeg_bandpass(&eeg_notch(x, imp), imp) };
     let f1 = filt(&ch1);
     let f2 = filt(&ch2);
     let transient = (data.len() as f64 * 0.15).floor() as usize;
