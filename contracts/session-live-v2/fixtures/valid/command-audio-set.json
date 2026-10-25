@@ -1,0 +1,21 @@
+{
+  "$fixture": {
+    "schema": "command"
+  },
+  "message": {
+    "protocol_version": 2,
+    "schema_version": 1,
+    "command_id": "0000000a-0000-4000-8000-00000000000a",
+    "session_id": "00000001-0000-4000-8000-000000000001",
+    "expected_epoch": "1",
+    "kind": "audio.set",
+    "client_generation": "7",
+    "payload": {
+      "track_id": "00000032-0000-4000-8000-000000000032",
+      "action": "seek",
+      "position_ms": 123456,
+      "expected_revision": "9"
+    },
+    "expected_entity_version": "2"
+  }
+}

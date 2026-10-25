@@ -1,0 +1,14 @@
+{
+  "$fixture": {
+    "schema": "start-request",
+    "why": "refresh token 을 웹뷰로 브로드캐스트 금지",
+    "reject_by": "schema"
+  },
+  "message": {
+    "sessionId": "00000001-0000-4000-8000-000000000001",
+    "credentialHandle": "cred_handle_AbCdEfGh0123",
+    "configHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "requestId": "0000001e-0000-4000-8000-00000000001e",
+    "refresh_token": "abc"
+  }
+}

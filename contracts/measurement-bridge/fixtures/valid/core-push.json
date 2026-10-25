@@ -1,0 +1,15 @@
+{
+  "$fixture": {
+    "schema": "core-push"
+  },
+  "message": {
+    "sensor": "ppg",
+    "bytes_base64": "AIAAAAAAAAAAAAAA",
+    "arrival_monotonic_us": "1000000",
+    "wall_anchor": {
+      "wall_ms": 1760000000000,
+      "monotonic_us": "900000",
+      "uncertainty_ms": 12.5
+    }
+  }
+}

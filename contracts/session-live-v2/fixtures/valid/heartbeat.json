@@ -1,0 +1,20 @@
+{
+  "$fixture": {
+    "schema": "heartbeat"
+  },
+  "message": {
+    "protocol_version": 2,
+    "schema_version": 1,
+    "session_id": "00000001-0000-4000-8000-000000000001",
+    "epoch": "1",
+    "through": [
+      {
+        "audience": "host",
+        "domain": "metrics",
+        "seq": "41"
+      }
+    ],
+    "auth_revision": "4",
+    "server_time_ms": 1760000005000
+  }
+}

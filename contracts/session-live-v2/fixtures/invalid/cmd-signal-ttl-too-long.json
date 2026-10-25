@@ -1,0 +1,21 @@
+{
+  "$fixture": {
+    "schema": "command",
+    "why": "ttl max 30초",
+    "reject_by": "schema"
+  },
+  "message": {
+    "protocol_version": 2,
+    "schema_version": 1,
+    "command_id": "0000000a-0000-4000-8000-00000000000a",
+    "session_id": "00000001-0000-4000-8000-000000000001",
+    "expected_epoch": "1",
+    "kind": "signal.send",
+    "client_generation": "7",
+    "payload": {
+      "signal_type": "following",
+      "target_scope": "host",
+      "ttl_ms": 31000
+    }
+  }
+}

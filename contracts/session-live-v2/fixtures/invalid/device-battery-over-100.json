@@ -1,0 +1,22 @@
+{
+  "$fixture": {
+    "schema": "device",
+    "why": "배터리 범위",
+    "reject_by": "schema"
+  },
+  "message": {
+    "protocol_version": 2,
+    "schema_version": 1,
+    "session_id": "00000001-0000-4000-8000-000000000001",
+    "stream_id": "00000014-0000-4000-8000-000000000014",
+    "device_seq": "1",
+    "band_state": "connected",
+    "contact": {
+      "fp1": "contact",
+      "fp2": "contact"
+    },
+    "sqi": 0.5,
+    "battery_pct": 101,
+    "state_reason": null
+  }
+}

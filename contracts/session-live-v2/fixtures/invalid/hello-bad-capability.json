@@ -1,0 +1,20 @@
+{
+  "$fixture": {
+    "schema": "hello",
+    "why": "capability allowlist",
+    "reject_by": "schema"
+  },
+  "message": {
+    "protocol_version": 2,
+    "schema_version": 1,
+    "supported_protocol_versions": [
+      2
+    ],
+    "app_build": "x",
+    "client_instance_id": "00000050-0000-4000-8000-000000000050",
+    "capabilities": [
+      "root"
+    ],
+    "core_version": null
+  }
+}

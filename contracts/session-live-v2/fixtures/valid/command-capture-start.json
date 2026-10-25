@@ -1,0 +1,20 @@
+{
+  "$fixture": {
+    "schema": "command"
+  },
+  "message": {
+    "protocol_version": 2,
+    "schema_version": 1,
+    "command_id": "0000000a-0000-4000-8000-00000000000a",
+    "session_id": "00000001-0000-4000-8000-000000000001",
+    "expected_epoch": "1",
+    "kind": "capture.start",
+    "client_generation": "7",
+    "payload": {
+      "device_profile": "linkband2-v1",
+      "algorithm_version": "web-ts-1",
+      "model_version": "b0-cohort-2"
+    },
+    "expected_entity_version": "2"
+  }
+}

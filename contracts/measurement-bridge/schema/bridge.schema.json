@@ -1,0 +1,967 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://contracts.mindbreeze.local/measurement-bridge/bridge.schema.json",
+  "title": "native-measurement Capacitor facade (plan §6.4). foreground 에만 batch emit, raw 전량 bridge 전달 금지 — 이 스키마에는 raw sample 필드가 없다.",
+  "definitions": {
+    "BridgeVersion": {
+      "type": "integer",
+      "const": 1,
+      "description": "bridge major. 미지원 major 는 upgrade_required — 조용한 downgrade 없음."
+    },
+    "BackgroundSupport": {
+      "type": "string",
+      "enum": [
+        "supported",
+        "unsupported",
+        "needs_permission",
+        "needs_user_setting"
+      ]
+    },
+    "Capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bridge_version",
+        "platform",
+        "os_version",
+        "native_runtime_version",
+        "core_version",
+        "live_protocol_versions",
+        "device_profiles",
+        "background",
+        "permissions"
+      ],
+      "properties": {
+        "bridge_version": {
+          "$ref": "#/definitions/BridgeVersion"
+        },
+        "platform": {
+          "type": "string",
+          "enum": [
+            "ios",
+            "android",
+            "web"
+          ]
+        },
+        "os_version": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "native_runtime_version": {
+          "oneOf": [
+            {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/VersionLabel"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "core_version": {
+          "oneOf": [
+            {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/VersionLabel"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "live_protocol_versions": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "minItems": 1
+        },
+        "device_profiles": {
+          "type": "array",
+          "items": {
+            "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/VersionLabel"
+          },
+          "uniqueItems": true
+        },
+        "background": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "capture",
+            "live_socket",
+            "archive_upload"
+          ],
+          "properties": {
+            "capture": {
+              "$ref": "#/definitions/BackgroundSupport"
+            },
+            "live_socket": {
+              "$ref": "#/definitions/BackgroundSupport"
+            },
+            "archive_upload": {
+              "$ref": "#/definitions/BackgroundSupport"
+            }
+          }
+        },
+        "permissions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "bluetooth",
+            "notifications",
+            "microphone"
+          ],
+          "properties": {
+            "bluetooth": {
+              "type": "string",
+              "enum": [
+                "granted",
+                "denied",
+                "not_determined"
+              ]
+            },
+            "notifications": {
+              "type": "string",
+              "enum": [
+                "granted",
+                "denied",
+                "not_determined"
+              ]
+            },
+            "microphone": {
+              "type": "string",
+              "enum": [
+                "granted",
+                "denied",
+                "not_determined",
+                "not_required"
+              ],
+              "description": "마이크 미사용 측정에는 요구하지 않는다(not_required)."
+            }
+          }
+        }
+      }
+    },
+    "CredentialHandle": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{16,128}$",
+      "description": "native 보안 저장소의 불투명 핸들. refresh token/서명 URL/원문 자체를 웹뷰로 보내지 않는다."
+    },
+    "ConfigHash": {
+      "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Sha256Hex"
+    },
+    "StartMeasurementRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sessionId",
+        "credentialHandle",
+        "configHash",
+        "requestId"
+      ],
+      "properties": {
+        "sessionId": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Uuid"
+        },
+        "credentialHandle": {
+          "$ref": "#/definitions/CredentialHandle"
+        },
+        "configHash": {
+          "$ref": "#/definitions/ConfigHash"
+        },
+        "requestId": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Uuid"
+        }
+      }
+    },
+    "StartMeasurementResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "managerId",
+        "streamId",
+        "ownerGeneration",
+        "managerGeneration",
+        "state",
+        "idempotentReplay"
+      ],
+      "properties": {
+        "managerId": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Uuid"
+        },
+        "streamId": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Uuid"
+        },
+        "ownerGeneration": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+        },
+        "managerGeneration": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+        },
+        "state": {
+          "$ref": "#/definitions/ManagerState"
+        },
+        "idempotentReplay": {
+          "type": "boolean",
+          "description": "같은 requestId 재호출이면 true, 새 수집을 시작하지 않는다."
+        }
+      }
+    },
+    "ManagerState": {
+      "type": "string",
+      "enum": [
+        "IDLE",
+        "ARMING",
+        "CAPTURING",
+        "RECONNECTING",
+        "SEALING",
+        "DRAINING",
+        "CLOSED",
+        "BLOCKED"
+      ]
+    },
+    "BlockedReason": {
+      "type": "string",
+      "enum": [
+        "bluetooth_permission",
+        "bluetooth_off",
+        "storage_full",
+        "consent_missing",
+        "capture_lease_denied",
+        "auth_expired",
+        "account_mismatch",
+        "owner_fenced",
+        "unsupported_background"
+      ]
+    },
+    "Counters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "packets",
+        "samples",
+        "native_metric_windows",
+        "native_heartbeat",
+        "js_heartbeat_independent"
+      ],
+      "properties": {
+        "packets": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "eeg",
+            "ppg",
+            "acc"
+          ],
+          "properties": {
+            "eeg": {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+            },
+            "ppg": {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+            },
+            "acc": {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+            }
+          }
+        },
+        "samples": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "eeg",
+            "ppg",
+            "acc"
+          ],
+          "properties": {
+            "eeg": {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+            },
+            "ppg": {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+            },
+            "acc": {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+            }
+          }
+        },
+        "native_metric_windows": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+        },
+        "native_heartbeat": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+        },
+        "js_heartbeat_independent": {
+          "type": "boolean",
+          "const": true,
+          "description": "native counter 는 JS heartbeat 와 무관하게 증가(G1 독립성 증거)."
+        }
+      }
+    },
+    "QueueCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "live_pending",
+        "live_acked",
+        "archive_pending",
+        "archive_verified",
+        "pending_authorization",
+        "pending_time_review",
+        "oldest_pending_age_ms",
+        "disk_used_bytes",
+        "disk_limit_bytes"
+      ],
+      "properties": {
+        "live_pending": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "live_acked": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "archive_pending": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "archive_verified": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pending_authorization": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pending_time_review": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "oldest_pending_age_ms": {
+          "oneOf": [
+            {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Ms"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "disk_used_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "disk_limit_bytes": {
+          "type": "integer",
+          "const": 536870912,
+          "description": "512MiB 상한(D07)"
+        }
+      }
+    },
+    "Gap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gap_id",
+        "kind",
+        "start_sample_sequence",
+        "end_sample_sequence",
+        "bounded"
+      ],
+      "properties": {
+        "gap_id": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Uuid"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "ble_disconnect",
+            "app_killed",
+            "os_suspended",
+            "storage_full",
+            "clock_reset",
+            "unknown"
+          ]
+        },
+        "start_sample_sequence": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+        },
+        "end_sample_sequence": {
+          "oneOf": [
+            {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "bounded": {
+          "type": "boolean",
+          "description": "false 면 unknown tail. 완결성 100% 로 표시하지 않는다."
+        }
+      }
+    },
+    "MetricsSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sequence",
+        "observed_at_ms",
+        "freshness",
+        "sqi",
+        "contact",
+        "metrics"
+      ],
+      "properties": {
+        "sequence": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+        },
+        "observed_at_ms": {
+          "oneOf": [
+            {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Ms"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "freshness": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/state.schema.json#/definitions/Freshness"
+        },
+        "sqi": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Sqi"
+        },
+        "contact": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Contact"
+        },
+        "metrics": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/MetricSet"
+        }
+      }
+    },
+    "MeasurementSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bridge_version",
+        "managerGeneration",
+        "seq",
+        "sessionId",
+        "state",
+        "blocked_reason",
+        "streamId",
+        "ownerGeneration",
+        "versions",
+        "metrics",
+        "collection",
+        "live",
+        "archive",
+        "gaps"
+      ],
+      "properties": {
+        "bridge_version": {
+          "$ref": "#/definitions/BridgeVersion"
+        },
+        "managerGeneration": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+        },
+        "seq": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+        },
+        "sessionId": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Uuid"
+        },
+        "state": {
+          "$ref": "#/definitions/ManagerState"
+        },
+        "blocked_reason": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/BlockedReason"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "streamId": {
+          "oneOf": [
+            {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Uuid"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ownerGeneration": {
+          "oneOf": [
+            {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "versions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "native_runtime",
+            "core",
+            "algorithm",
+            "model",
+            "device_profile"
+          ],
+          "properties": {
+            "native_runtime": {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/VersionLabel"
+            },
+            "core": {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/VersionLabel"
+            },
+            "algorithm": {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/VersionLabel"
+            },
+            "model": {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/VersionLabel"
+            },
+            "device_profile": {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/VersionLabel"
+            }
+          }
+        },
+        "metrics": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/MetricsSnapshot"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "collection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "band_state",
+            "last_committed_sample_sequence",
+            "counters"
+          ],
+          "properties": {
+            "band_state": {
+              "type": "string",
+              "enum": [
+                "not_worn",
+                "connecting",
+                "connected",
+                "reconnecting",
+                "lost",
+                "unknown"
+              ]
+            },
+            "last_committed_sample_sequence": {
+              "oneOf": [
+                {
+                  "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "counters": {
+              "$ref": "#/definitions/Counters"
+            }
+          }
+        },
+        "live": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "socket",
+            "last_ack_sequence",
+            "snapshot_through"
+          ],
+          "properties": {
+            "socket": {
+              "type": "string",
+              "enum": [
+                "disconnected",
+                "connecting",
+                "ready",
+                "degraded"
+              ]
+            },
+            "last_ack_sequence": {
+              "oneOf": [
+                {
+                  "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "snapshot_through": {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Cursors"
+            }
+          }
+        },
+        "archive": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "queue",
+            "last_verified_at_ms"
+          ],
+          "properties": {
+            "queue": {
+              "$ref": "#/definitions/QueueCounts"
+            },
+            "last_verified_at_ms": {
+              "oneOf": [
+                {
+                  "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Ms"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Gap"
+          },
+          "maxItems": 500
+        }
+      }
+    },
+    "DispatchLiveCommandRequest": {
+      "allOf": [
+        {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/command.schema.json"
+        }
+      ],
+      "description": "session-live-v2 LiveCommand 그대로. 웹뷰는 별도 socket writer 를 만들지 않는다."
+    },
+    "DispatchLiveCommandResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command_id",
+        "accepted_for_send",
+        "queued_at_native_ms"
+      ],
+      "properties": {
+        "command_id": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Uuid"
+        },
+        "accepted_for_send": {
+          "type": "boolean",
+          "description": "native 큐에 들어갔는지만 의미. ACK 는 commandAck 이벤트로 별도."
+        },
+        "queued_at_native_ms": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Ms"
+        }
+      }
+    },
+    "StopMeasurementRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reason",
+        "requestId"
+      ],
+      "properties": {
+        "reason": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/ReasonCode"
+        },
+        "requestId": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Uuid"
+        }
+      }
+    },
+    "StopMeasurementResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "seal_started",
+        "state",
+        "note"
+      ],
+      "properties": {
+        "seal_started": {
+          "type": "boolean"
+        },
+        "state": {
+          "$ref": "#/definitions/ManagerState"
+        },
+        "note": {
+          "type": "string",
+          "const": "seal_started_is_not_archive_complete"
+        }
+      }
+    },
+    "GetMeasurementSnapshotRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sessionId"
+      ],
+      "properties": {
+        "sessionId": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Uuid"
+        }
+      }
+    },
+    "GetCapabilitiesRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {}
+    },
+    "MeasurementUpdatedEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bridge_version",
+        "event",
+        "managerGeneration",
+        "seq",
+        "emitted_at_native_ms",
+        "payload"
+      ],
+      "properties": {
+        "bridge_version": {
+          "$ref": "#/definitions/BridgeVersion"
+        },
+        "event": {
+          "const": "measurementUpdated"
+        },
+        "managerGeneration": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+        },
+        "seq": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+        },
+        "emitted_at_native_ms": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Ms"
+        },
+        "payload": {
+          "$ref": "#/definitions/MeasurementSnapshot"
+        }
+      }
+    },
+    "LiveStateUpdatedEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bridge_version",
+        "event",
+        "managerGeneration",
+        "seq",
+        "emitted_at_native_ms",
+        "payload"
+      ],
+      "properties": {
+        "bridge_version": {
+          "$ref": "#/definitions/BridgeVersion"
+        },
+        "event": {
+          "const": "liveStateUpdated"
+        },
+        "managerGeneration": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+        },
+        "seq": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+        },
+        "emitted_at_native_ms": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Ms"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sessionId",
+            "event"
+          ],
+          "properties": {
+            "sessionId": {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Uuid"
+            },
+            "event": {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/event.schema.json"
+            }
+          }
+        }
+      }
+    },
+    "CommandAckEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bridge_version",
+        "event",
+        "managerGeneration",
+        "seq",
+        "emitted_at_native_ms",
+        "payload"
+      ],
+      "properties": {
+        "bridge_version": {
+          "$ref": "#/definitions/BridgeVersion"
+        },
+        "event": {
+          "const": "commandAck"
+        },
+        "managerGeneration": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+        },
+        "seq": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+        },
+        "emitted_at_native_ms": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Ms"
+        },
+        "payload": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/ack.schema.json"
+        }
+      }
+    },
+    "ArchiveStatusEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bridge_version",
+        "event",
+        "managerGeneration",
+        "seq",
+        "emitted_at_native_ms",
+        "payload"
+      ],
+      "properties": {
+        "bridge_version": {
+          "$ref": "#/definitions/BridgeVersion"
+        },
+        "event": {
+          "const": "archiveStatus"
+        },
+        "managerGeneration": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+        },
+        "seq": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+        },
+        "emitted_at_native_ms": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Ms"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sessionId",
+            "queue",
+            "blocked_reason",
+            "stage",
+            "code"
+          ],
+          "properties": {
+            "sessionId": {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Uuid"
+            },
+            "queue": {
+              "$ref": "#/definitions/QueueCounts"
+            },
+            "blocked_reason": {
+              "oneOf": [
+                {
+                  "$ref": "#/definitions/BlockedReason"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "stage": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "presign",
+                    "put",
+                    "verify"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "code": {
+              "oneOf": [
+                {
+                  "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/ReasonCode"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "BridgeEvent": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/MeasurementUpdatedEvent"
+        },
+        {
+          "$ref": "#/definitions/LiveStateUpdatedEvent"
+        },
+        {
+          "$ref": "#/definitions/CommandAckEvent"
+        },
+        {
+          "$ref": "#/definitions/ArchiveStatusEvent"
+        }
+      ]
+    }
+  },
+  "x-methods": {
+    "getCapabilities": {
+      "in": "GetCapabilitiesRequest",
+      "out": "Capabilities"
+    },
+    "startMeasurement": {
+      "in": "StartMeasurementRequest",
+      "out": "StartMeasurementResult"
+    },
+    "getMeasurementSnapshot": {
+      "in": "GetMeasurementSnapshotRequest",
+      "out": "MeasurementSnapshot"
+    },
+    "dispatchLiveCommand": {
+      "in": "DispatchLiveCommandRequest",
+      "out": "DispatchLiveCommandResult"
+    },
+    "stopMeasurement": {
+      "in": "StopMeasurementRequest",
+      "out": "StopMeasurementResult"
+    }
+  },
+  "x-events": [
+    "measurementUpdated",
+    "liveStateUpdated",
+    "commandAck",
+    "archiveStatus"
+  ],
+  "x-ordering": "이벤트는 managerGeneration + seq 로 순서/세대 검사. 옛 managerGeneration 이벤트는 폐기. foreground 복귀는 getMeasurementSnapshot → 새 이벤트 순서."
+}

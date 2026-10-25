@@ -1,0 +1,13 @@
+{
+  "$fixture": {
+    "schema": "resync"
+  },
+  "message": {
+    "protocol_version": 2,
+    "schema_version": 1,
+    "session_id": "00000001-0000-4000-8000-000000000001",
+    "reason": "seq_gap",
+    "request_id": "00000048-0000-4000-8000-000000000048",
+    "last_cursors": []
+  }
+}

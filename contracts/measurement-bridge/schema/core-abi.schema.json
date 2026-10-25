@@ -1,0 +1,340 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://contracts.mindbreeze.local/measurement-bridge/core-abi.schema.json",
+  "title": "Rust 코어 C ABI JSON 경계 (plan §5.1). create_core/push_packet/advance/checkpoint/restore/close. buffer 길이·소유권·free·오류코드는 T02 가 구현, panic 은 FFI 를 넘지 않는다.",
+  "definitions": {
+    "CoreConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "abi_version",
+        "device_profile_version",
+        "algorithm_version",
+        "model_version",
+        "model_hash",
+        "model_mode",
+        "rates_hz",
+        "anchor",
+        "acc_interval_profile"
+      ],
+      "properties": {
+        "abi_version": {
+          "type": "integer",
+          "const": 1
+        },
+        "device_profile_version": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/VersionLabel"
+        },
+        "algorithm_version": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/VersionLabel"
+        },
+        "model_version": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/VersionLabel"
+        },
+        "model_hash": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Sha256Hex"
+        },
+        "model_mode": {
+          "type": "string",
+          "enum": [
+            "legacy_cohort",
+            "active_sigmoid"
+          ]
+        },
+        "rates_hz": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "eeg",
+            "ppg",
+            "acc"
+          ],
+          "properties": {
+            "eeg": {
+              "const": 250
+            },
+            "ppg": {
+              "const": 50
+            },
+            "acc": {
+              "enum": [
+                25,
+                30
+              ]
+            }
+          }
+        },
+        "anchor": {
+          "type": "string",
+          "enum": [
+            "last_sample_web_v1",
+            "first_sample_sdk"
+          ]
+        },
+        "acc_interval_profile": {
+          "type": "string",
+          "enum": [
+            "rounded_33333us_v1",
+            "rational"
+          ]
+        }
+      }
+    },
+    "WallAnchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "wall_ms",
+        "monotonic_us",
+        "uncertainty_ms"
+      ],
+      "properties": {
+        "wall_ms": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Ms"
+        },
+        "monotonic_us": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+        },
+        "uncertainty_ms": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 300000
+        }
+      }
+    },
+    "PushPacketCall": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sensor",
+        "bytes_base64",
+        "arrival_monotonic_us",
+        "wall_anchor"
+      ],
+      "properties": {
+        "sensor": {
+          "type": "string",
+          "enum": [
+            "eeg",
+            "ppg",
+            "acc"
+          ]
+        },
+        "bytes_base64": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+          "maxLength": 4096
+        },
+        "arrival_monotonic_us": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+        },
+        "wall_anchor": {
+          "$ref": "#/definitions/WallAnchor"
+        }
+      }
+    },
+    "PacketStatus": {
+      "type": "string",
+      "enum": [
+        "accepted",
+        "duplicate",
+        "conflict",
+        "out_of_order",
+        "invalid_header_short",
+        "invalid_too_short",
+        "invalid_remainder"
+      ]
+    },
+    "PacketResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sensor",
+        "status",
+        "segment",
+        "extended_ticks",
+        "samples",
+        "raw_preserved"
+      ],
+      "properties": {
+        "sensor": {
+          "type": "string",
+          "enum": [
+            "eeg",
+            "ppg",
+            "acc"
+          ]
+        },
+        "status": {
+          "$ref": "#/definitions/PacketStatus"
+        },
+        "segment": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "extended_ticks": {
+          "oneOf": [
+            {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "samples": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "raw_preserved": {
+          "type": "boolean",
+          "const": true
+        }
+      }
+    },
+    "CoreError": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "ok",
+            "invalid_handle",
+            "buffer_too_small",
+            "invalid_config",
+            "checkpoint_corrupt",
+            "panic_contained",
+            "oom"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 200
+        }
+      }
+    },
+    "CoreOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "packet",
+        "frames",
+        "error"
+      ],
+      "properties": {
+        "packet": {
+          "$ref": "#/definitions/PacketResult"
+        },
+        "frames": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/MetricFrame"
+          },
+          "maxItems": 60
+        },
+        "error": {
+          "$ref": "#/definitions/CoreError"
+        }
+      }
+    },
+    "MetricFrame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sequence",
+        "window_start_us",
+        "window_end_us",
+        "observed_at_ms",
+        "sqi",
+        "contact",
+        "metrics",
+        "feature_hash"
+      ],
+      "properties": {
+        "sequence": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+        },
+        "window_start_us": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+        },
+        "window_end_us": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+        },
+        "observed_at_ms": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Ms"
+        },
+        "sqi": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Sqi"
+        },
+        "contact": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Contact"
+        },
+        "metrics": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/MetricSet"
+        },
+        "feature_hash": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Sha256Hex"
+        }
+      }
+    },
+    "FinalManifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "final_sequences",
+        "segments",
+        "raw_sha256",
+        "feature_sha256"
+      ],
+      "properties": {
+        "final_sequences": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "eeg",
+            "ppg",
+            "acc",
+            "metric"
+          ],
+          "properties": {
+            "eeg": {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+            },
+            "ppg": {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+            },
+            "acc": {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+            },
+            "metric": {
+              "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/U64"
+            }
+          }
+        },
+        "segments": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "raw_sha256": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Sha256Hex"
+        },
+        "feature_sha256": {
+          "$ref": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json#/definitions/Sha256Hex"
+        }
+      }
+    }
+  },
+  "x-abi": {
+    "create_core": "CoreConfig -> handle",
+    "push_packet": "PushPacketCall -> CoreOutput",
+    "advance": "monotonic_us -> MetricFrame[]",
+    "checkpoint": "handle -> bytes",
+    "restore": "CoreConfig+bytes -> handle",
+    "close": "handle -> FinalManifest"
+  }
+}
