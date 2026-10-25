@@ -45,12 +45,13 @@ it('TS27 앱 설정에서는 브라우저 설치 안내가 없다', async () => 
  expect(div.textContent).not.toMatch(/홈 화면|Chrome|브라우저 알림/);
 });
 
-it('TS26 로그인 부트스트랩을 실제 마운트해도 OS 권한 창은 열리지 않는다', async () => {
+it('로그인 부트스트랩은 미결정 기기에 권한을 최초 1회만 요청한다(설정 화면 의존 제거)', async () => {
+ localStorage.removeItem('mb.push.permission-asked');
  const div = document.createElement('div'); const root = createRoot(div); roots.push(root);
  await act(async () => root.render(createElement(NativeBootstrap)));
+ await vi.waitFor(() => expect(mocks.request).toHaveBeenCalledOnce());
  expect(mocks.check).toHaveBeenCalled();
- expect(mocks.request).not.toHaveBeenCalled();
- expect(mocks.register).not.toHaveBeenCalled();
+ expect(mocks.register).toHaveBeenCalledOnce();
 });
 
 it('TS27 앱의 밴드 미지원 안내는 Bluetooth 설정을 안내하고 연결 전 확인을 거친다', async () => {

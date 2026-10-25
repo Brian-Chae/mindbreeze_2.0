@@ -102,8 +102,10 @@ def process_push_outbox(limit: int = 100) -> dict:
                 continue
 
             if not tokens:
+                reason = _no_token_reason(db, item.user_id)
                 item.status = "skipped"
-                item.last_error = "활성 디바이스 토큰 없음"
+                item.last_error = reason
+                logger.info("[OUTBOX-PUSH] skipped (id=%s, user=%s): %s", item.id, item.user_id, reason)
                 skipped += 1
                 _commit_row(db, item)
                 continue
@@ -156,6 +158,16 @@ def process_push_outbox(limit: int = 100) -> dict:
         "revoked": revoked,
         "configured": True,
     }
+
+
+def _no_token_reason(db, user_id) -> str:
+    """활성 토큰이 없는 이유를 구분한다 — 기기 미등록(앱이 토큰을 안 보냄) vs 전부 해지."""
+    from app.models.device_token import DeviceToken
+
+    total = db.query(DeviceToken).filter(DeviceToken.user_id == user_id).count()
+    if total == 0:
+        return "활성 디바이스 토큰 없음: 등록 이력 없음(기기가 토큰을 등록한 적 없음)"
+    return f"활성 디바이스 토큰 없음: 등록 {total}건 전부 해지됨"
 
 
 def _send_to_device(row, payload: dict) -> push_service.PushResult:
