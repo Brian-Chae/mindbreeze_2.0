@@ -17,6 +17,15 @@ class MeasurementService : Service() {
     private val instanceId = "svc-" + System.identityHashCode(this)
     private var gatt: BandGattClient? = null
     private var synth: SyntheticSource? = null
+    private val logHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    // native 독립 텔레메트리: JS 와 무관하게 5초마다 카운터를 logcat(MBMeas)에 남긴다(Doze 시험용).
+    private val logTask = object : Runnable {
+        override fun run() {
+            val m = MeasurementManager.snapshotMap()
+            android.util.Log.i("MBMeas", "state=${m["state"]} eeg=${m["eegPackets"]} ppg=${m["ppgPackets"]} acc=${m["accPackets"]} eegS=${m["eegSamples"]} frames=${m["frames"]} win=${m["lastWindowIndex"]} journal=${m["journalRecords"]} bytes=${m["journalBytes"]} wake=${m["wakeLockHeld"]} starts=${m["serviceStarts"]} fenced=${m["fencedCallbacks"]} synth=${m["synthetic"]}")
+            logHandler.postDelayed(this, 5000)
+        }
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -41,10 +50,12 @@ class MeasurementService : Service() {
             gatt = BandGattClient(applicationContext, e, address!!) { MeasurementManager.setState(it); updateNotification(it) }.also { it.start() }
         }
         updateNotification(MeasurementState.CAPTURING)
+        logHandler.removeCallbacks(logTask); logHandler.post(logTask)
         return START_NOT_STICKY
     }
 
     private fun releaseResources() {
+        logHandler.removeCallbacks(logTask)
         gatt?.stop(); gatt = null
         synth?.stop(); synth = null
         MeasurementManager.ownership.release(BandOwnership.Owner.NATIVE)
