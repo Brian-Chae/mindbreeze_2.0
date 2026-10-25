@@ -72,6 +72,9 @@ export class LiveClient {
   private pollCount = 0;
   private awaitingSyncSnapshotId: string | null = null;
   private started = false;
+  private waiters = new Map<string, Array<(ack: CommandAck) => void>>();
+  private sentAtMs = new Map<string, number>();
+  private renderedListeners = new Set<(m: { commandId: string; rttMs: number }) => void>();
 
   constructor(o: LiveClientOptions) {
     this.o = o;
@@ -106,6 +109,7 @@ export class LiveClient {
     on('live:terminal', () => this.onTerminal());
     on('live:resync_required', () => this.resync('server_requested'));
     on('live:degraded', () => this.degrade());
+    on('live:rendered', (m) => this.onRenderedMsg(m as { command_id?: string }));
     if (this.o.socket.connected) this.handshake();
   }
 
@@ -115,7 +119,23 @@ export class LiveClient {
     this.clearTimers();
     for (const p of this.pending.values()) if (p.timer) clearTimeout(p.timer);
     this.pending.clear();
+    this.resolveAllWaiters('stopped');
     this.started = false;
+  }
+
+  private resolveAllWaiters(code: string): void {
+    for (const [id, list] of this.waiters) {
+      const ack: CommandAck = { command_id: id, status: 'rejected', epoch: this.state.epoch ?? '0', cursors: [], committed: false, code };
+      for (const fn of list) fn(ack);
+    }
+    this.waiters.clear();
+  }
+
+  private settle(ack: CommandAck): void {
+    const list = this.waiters.get(ack.command_id);
+    if (!list) return;
+    this.waiters.delete(ack.command_id);
+    for (const fn of list) fn(ack);
   }
 
   // ── 상태 반영 ───────────────────────────────────────────────
@@ -304,6 +324,7 @@ export class LiveClient {
     this.clearTimers();
     this.pending.forEach((p) => { if (p.timer) clearTimeout(p.timer); });
     this.pending.clear();
+    this.resolveAllWaiters(code);
   }
 
   private onTerminal(): void {
@@ -365,6 +386,15 @@ export class LiveClient {
     payload: Record<string, unknown>,
     opts: { targetId?: string; expectedEntityVersion?: string } = {},
   ): string {
+    return this.sendCommandWith(kind, payload, opts);
+  }
+
+  private sendCommandWith(
+    kind: CommandKind,
+    payload: Record<string, unknown>,
+    opts: { targetId?: string; expectedEntityVersion?: string },
+    beforeTransmit?: (commandId: string) => void,
+  ): string {
     const cmd: LiveCommand = {
       protocol_version: 2,
       schema_version: 1,
@@ -378,8 +408,74 @@ export class LiveClient {
       ...(opts.expectedEntityVersion ? { expected_entity_version: opts.expectedEntityVersion } : {}),
     };
     this.pending.set(cmd.command_id, { cmd, attempts: 0, timer: null });
+    this.sentAtMs.set(cmd.command_id, this.now());
+    if (this.sentAtMs.size > 200) this.sentAtMs.delete(this.sentAtMs.keys().next().value as string);
+    beforeTransmit?.(cmd.command_id);
     this.transmit(cmd.command_id);
     return cmd.command_id;
+  }
+
+  /** 명령을 보내고 최종 ACK(applied/duplicate/rejected, timeout 포함)로 resolve 한다. 예외를 던지지 않는다. */
+  request(kind: CommandKind, payload: Record<string, unknown>, opts: { targetId?: string; expectedEntityVersion?: string } = {}): Promise<CommandAck> {
+    return new Promise<CommandAck>((resolve) => {
+      // 전송 전에 대기자를 등록해 같은 tick 의 즉시 ACK 를 놓치지 않는다.
+      this.sendCommandWith(kind, payload, opts, (cid) => {
+        this.waiters.set(cid, [...(this.waiters.get(cid) ?? []), resolve]);
+      });
+    });
+  }
+
+  /** 측정 envelope(live:metric) 송신. READY·연결 중에만 보내고, 아니면 false(조용히 버리지 않고 호출자가 판단). */
+  sendMetric(envelope: Record<string, unknown>): boolean {
+    if (this.state.phase !== 'READY' || !this.o.socket.connected) return false;
+    this.o.socket.emit('live:metric', { protocol_version: 2, schema_version: 1, ...envelope });
+    return true;
+  }
+
+  /** NTP 식 왕복: RTT = (t1-t0) - (server_send - server_receive), offset = ((recv-t0)+(send-t1))/2 */
+  clockProbe(monotonicUs: () => number): Promise<{ probeId: string; rttMs: number; offsetMs: number; serverReceiveMs: number; serverSendMs: number } | null> {
+    return new Promise((resolve) => {
+      if (!this.o.socket.connected) { resolve(null); return; }
+      const probeId = this.o.uuid();
+      const t0 = this.now();
+      this.o.socket.emit('live:clock_probe', { protocol_version: 2, schema_version: 1, probe_id: probeId, client_monotonic_us: String(Math.round(monotonicUs())) }, (res) => {
+        const r = res as { ok?: boolean; probe_id?: string; server_receive_ms?: number; server_send_ms?: number } | undefined;
+        if (!r || r.ok === false || r.probe_id !== probeId || typeof r.server_receive_ms !== 'number' || typeof r.server_send_ms !== 'number') { resolve(null); return; }
+        const t1 = this.now();
+        resolve({
+          probeId,
+          rttMs: (t1 - t0) - (r.server_send_ms - r.server_receive_ms),
+          offsetMs: ((r.server_receive_ms - t0) + (r.server_send_ms - t1)) / 2,
+          serverReceiveMs: r.server_receive_ms,
+          serverSendMs: r.server_send_ms,
+        });
+      });
+    });
+  }
+
+  /** 화면에 그린 뒤(다음 paint) 호출 — 상대 발신자에게 live:rendered 가 가도록 즉시 applied 를 보낸다(1초 배치 아님). */
+  markRendered(commandIds: string[]): void {
+    if (commandIds.length === 0 || !this.o.socket.connected || this.state.phase !== 'READY') return;
+    this.o.socket.emit('live:applied', {
+      protocol_version: 2, schema_version: 1, session_id: this.o.sessionId,
+      cursors: this.cursorList(), rendered_command_ids: commandIds.slice(0, 100),
+    });
+  }
+
+  /** 상대가 내 명령을 그렸다는 live:rendered 수신 — 입력→수신 monotonic 차이(왕복)를 알린다. */
+  onRendered(fn: (m: { commandId: string; rttMs: number }) => void): () => void {
+    this.renderedListeners.add(fn);
+    return () => { this.renderedListeners.delete(fn); };
+  }
+
+  private onRenderedMsg(m: { command_id?: string }): void {
+    const id = m.command_id;
+    if (!id) return;
+    const at = this.sentAtMs.get(id);
+    if (at === undefined) return; // 모르는/중복 delivery 는 무시
+    this.sentAtMs.delete(id);
+    const rttMs = this.now() - at;
+    for (const fn of this.renderedListeners) fn({ commandId: id, rttMs });
   }
 
   private transmit(commandId: string): void {
@@ -405,7 +501,9 @@ export class LiveClient {
     const idx = p.attempts - 1;
     if (idx >= RETRY_BACKOFF_MS.length) {
       this.pending.delete(commandId);
-      this.set(resolveIntent(this.state, { command_id: commandId, status: 'rejected', epoch: this.state.epoch ?? '0', cursors: [], committed: false, code: 'timeout' }));
+      const timeoutAck: CommandAck = { command_id: commandId, status: 'rejected', epoch: this.state.epoch ?? '0', cursors: [], committed: false, code: 'timeout' };
+      this.set(resolveIntent(this.state, timeoutAck));
+      this.settle(timeoutAck);
       this.resync('command_timeout');
       return;
     }
@@ -422,6 +520,7 @@ export class LiveClient {
     }
     this.pending.delete(ack.command_id);
     this.set(resolveIntent(this.state, ack));
+    this.settle(ack);
     // 현재 epoch 와 다른 ACK 는 상태를 덮지 않고 새 snapshot 으로 맞춘다.
     if (this.state.epoch !== null && ack.epoch !== this.state.epoch) this.resync('epoch_changed');
   }

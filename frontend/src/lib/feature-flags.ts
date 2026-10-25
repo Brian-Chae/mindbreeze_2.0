@@ -22,3 +22,10 @@ export function isDesignRoutesEnabled(): boolean {
 export function isArchiveV3Enabled(): boolean {
   return import.meta.env.VITE_ARCHIVE_V3 === 'true';
 }
+
+/** SDD-246 T06 — session-live v2 실시간 프로토콜(LiveClient/LiveState 단일 출처). 기본 off: 켜지 않으면 현행(v1) 경로 그대로다. */
+export function isLiveProtocolV2Enabled(
+  env: { VITE_LIVE_PROTOCOL_V2?: string } = import.meta.env as { VITE_LIVE_PROTOCOL_V2?: string },
+): boolean {
+  return env.VITE_LIVE_PROTOCOL_V2 === 'true';
+}
