@@ -298,7 +298,7 @@ export default function LoginPage() {
           <section role={isAdmin ? undefined : 'tabpanel'} id={`login-panel-${loginRole}`} aria-labelledby={isAdmin ? undefined : `login-tab-${loginRole}`} aria-busy={busy} className={`flex flex-col gap-4 ${isClient ? 'pb-[calc(8.5rem+env(safe-area-inset-bottom))]' : ''}`}>
             {/* SDD-227: 회원 탭은 이메일 로그인을 위에, 간편 로그인(Google·Apple)을 아래에 둔다. */}
             {isClient && <>{emailForm}
-              <p className="text-center text-sm"><Link to="/forgot-password" className="underline">비밀번호 찾기</Link><span aria-hidden="true" className="mx-2 text-white/60">·</span><Link to="/register?role=client" className="font-semibold underline">회원가입</Link></p>
+              <p className="text-center text-sm text-white"><Link to="/forgot-password" className="text-white underline">비밀번호 찾기</Link><span aria-hidden="true" className="mx-2 text-white/60">·</span><Link to="/register?role=client" className="font-semibold text-white underline">회원가입</Link></p>
               {dividerWith('간편 로그인')}{googleButton}{appleButton}{needsGoogleConsent && googleConsentField}</>}
             {!isAdmin && loginRole === 'counselor' && <>{emailForm}{divider}{googleButton}{appleButton}<p className="text-center text-xs text-white/80">Google·Apple 로그인은 기존 상담사 계정만 이용할 수 있습니다.</p></>}
             {!isAdmin && loginRole === 'org_admin' && emailForm}
