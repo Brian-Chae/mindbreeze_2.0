@@ -1,6 +1,6 @@
 # SDD-245 — 앱 전체 UI 통일화(디자인 토큰·컴포넌트 스타일)
 
-- 상태: Stage ①~③ 작성, 구현 전. Brian 검토 대기. Stage ④~⑦ 미진행.
+- 상태: Stage ①~⑥ 완료(구현·검증·summary), Brian 최종 리뷰(⑦) 대기.
 - 작성일: 2026-10-25 / 브랜치: `sdd/245-ui-unification` / 기준 코드: `62017dd8` (감사 시작 시 origin/develop과 동일)
 - Brian 요청: 전체 페이지 구성은 유지하면서 역할별 홈을 기준으로 데스크톱·모바일 좌우 여백, 버튼 등 앱 스타일을 통일한다.
 - 근거: [실측 감사](audit/report.md), [코드 감사](audit/code-audit.md), [전체 경로](audit/routes.json), [기존 테스트 기준선](audit/vitest-baseline.txt).
