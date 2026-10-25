@@ -1,8 +1,9 @@
 # 저장된 실제 브라우저 측정에서 파생 표만 생성한다. 제품 코드를 실행/수정하지 않는다.
-import json, re
+import json, re, sys
 from pathlib import Path
 from collections import Counter
-root=Path(__file__).parent
+# 인자로 출력 디렉터리를 주면 그 디렉터리의 measurements를 요약한다(구현 후 재측정용).
+root=Path(sys.argv[1]) if len(sys.argv)>1 else Path(__file__).parent
 rows=[json.loads(p.read_text()) for p in sorted((root/'measurements').glob('*.json'))]
 homes={d['role']+'-'+str(d['width']):d for d in rows if d['url']==d.get('home')}
 def frame(d):

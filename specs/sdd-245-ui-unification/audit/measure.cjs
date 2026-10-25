@@ -57,7 +57,7 @@ function collect(){
  const browser=await chromium.launch({channel:'chrome',headless:true});
  const allResults=[];const filter=process.env.AUDIT_FILTER?new RegExp(process.env.AUDIT_FILTER):null;
  try{
- for(const width of [390,1440]) for(const item of manifest) for(const role of item.roles){
+ for(const width of (process.env.AUDIT_WIDTHS||'390,1440').split(',').map(Number)) for(const item of manifest) for(const role of item.roles){
  const url=concrete(item.pattern), id=`${role}-${width}-${url.replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'')||'landing'}`;
  if(filter&&!filter.test(id))continue;
  if(process.env.AUDIT_RESUME&&fs.existsSync(path.join(OUT,'measurements',id+'.json')))continue;
