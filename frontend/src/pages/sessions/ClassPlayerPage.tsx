@@ -37,6 +37,8 @@ import { useBand } from '../../hooks/useBand';
 import { useLiveKit } from '../../hooks/useLiveKit';
 import { useParticipationSnapshot } from '../../hooks/useParticipationSnapshot';
 import { useSessionLiveSocket } from '../../hooks/useSessionLiveSocket';
+import { useLiveV2 } from '../../lib/session-live/use-live-v2';
+import { toSessionLiveMetrics } from '../../lib/session-live/live-legacy-adapter';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { useHostBackgroundSession } from '../../hooks/useHostBackgroundSession';
 import { useAppResume } from '../../hooks/useAppResume';
@@ -1136,7 +1138,12 @@ export default function ClassPlayerPage() {
     [baseMetrics, speakingPatch],
   );
 
+  const liveV2 = useLiveV2({ sessionId: id, selfParticipantId: hostParticipantId, enabled: Boolean(id && session && !participation.revoked) });
   const displayMetrics = useMemo(() => {
+    // SDD-246 T06: v2 on 이면 지표·손·장치는 LiveState 단일 reducer 만 출처다(rich participant 의 `...p` 병합 금지).
+    if (liveV2.active && liveV2.state && liveV2.state.phase !== 'CONNECTING') {
+      return toSessionLiveMetrics(liveV2.state, { nowMs: liveV2.nowMs, legacy: Object.values(participation.participants) });
+    }
     const base: SessionLiveMetric[] = participation.version >= 0
       ? Object.values(participation.participants).map(p => ({
           display_name:'참가자', is_guest:false, band_connected:false, device_status:null,
@@ -1184,6 +1191,9 @@ export default function ClassPlayerPage() {
     });
     return changed ? next : base;
   }, [
+    liveV2.active,
+    liveV2.state,
+    liveV2.nowMs,
     speakingMetrics,
     participation.participants,
     participation.version,

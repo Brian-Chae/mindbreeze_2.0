@@ -1,0 +1,77 @@
+// SDD-246 T06 — LiveClient 를 React 에 연결하는 훅. 플래그 off 이면 아무 것도 만들지 않는다(현행 경로 유지).
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { apiClient, tokenStorage } from '../api/client';
+import { getSessionLiveSocket } from '../socket';
+import { LiveClient, type LiveSocketLike } from './live-client';
+import { isLiveProtocolV2Enabled } from './live-flag';
+import { createRestFallback } from './live-rest';
+import type { LiveState } from './live-state';
+import { toSessionLiveMetrics } from './live-legacy-adapter';
+import type { SessionLiveMetric } from '../api/session';
+import type { LegacyIdentity } from './live-view';
+
+const uuid = (): string => crypto.randomUUID();
+
+export interface UseLiveV2Options {
+  sessionId: string | null | undefined;
+  selfParticipantId: string | null;
+  enabled: boolean;
+  entryCredential?: string | null;
+}
+
+export interface UseLiveV2Result {
+  active: boolean;
+  state: LiveState | null;
+  client: LiveClient | null;
+  /** 1초마다 갱신되는 시계 — 신선도(3초 지연/10초 stale)가 이벤트 없이도 화면에 반영된다 */
+  nowMs: number;
+  rows: (legacy?: readonly LegacyIdentity[]) => SessionLiveMetric[];
+}
+
+export function useLiveV2({ sessionId, selfParticipantId, enabled, entryCredential }: UseLiveV2Options): UseLiveV2Result {
+  const active = enabled && isLiveProtocolV2Enabled() && Boolean(sessionId);
+  const [state, setState] = useState<LiveState | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const clientRef = useRef<LiveClient | null>(null);
+  const instanceId = useMemo(() => uuid(), []);
+
+  useEffect(() => {
+    if (!active || !sessionId) return undefined;
+    const socket = getSessionLiveSocket(tokenStorage.getAccess()) as unknown as LiveSocketLike;
+    const client = new LiveClient({
+      sessionId,
+      selfParticipantId,
+      socket,
+      rest: createRestFallback(apiClient),
+      uuid,
+      clientInstanceId: instanceId,
+      appBuild: 'web',
+      capabilities: ['paint_ack'],
+      entryCredential: entryCredential ?? null,
+    });
+    clientRef.current = client;
+    const unsub = client.subscribe(setState);
+    client.start();
+    setState(client.getState());
+    return () => {
+      unsub();
+      client.stop();
+      clientRef.current = null;
+      setState(null);
+    };
+  }, [active, sessionId, selfParticipantId, instanceId, entryCredential]);
+
+  useEffect(() => {
+    if (!active) return undefined;
+    const t = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(t);
+  }, [active]);
+
+  return {
+    active,
+    state,
+    client: clientRef.current,
+    nowMs,
+    rows: (legacy) => (state ? toSessionLiveMetrics(state, { nowMs, legacy }) : []),
+  };
+}

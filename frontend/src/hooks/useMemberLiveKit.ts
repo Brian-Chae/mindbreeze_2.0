@@ -5,6 +5,7 @@ import { useMobileSwipeProtection } from './use-mobile-swipe-protection';
 // can_publish를 갱신한다 — 재발급된 토큰으로 재연결하면 카메라·마이크가 켜진다.
 // 손들기 상태도 이 훅이 소유한다(손들기 완료 ↔ 발언권 부여를 같은 출처로 유지).
 import { resolveLiveKitUrl } from '../lib/livekit-url';
+import { isLiveProtocolV2Enabled } from '../lib/session-live/live-flag';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, tokenStorage } from '../lib/api/client';
 import { getEntryLiveKitToken, lowerEntryHand, raiseEntryHand } from '../lib/api/class-flow';
@@ -50,6 +51,9 @@ export function useMemberLiveKit({
   const [raisedHand, setRaisedHand] = useState(false);
   /** SDD-094: 발언권(송출) 부여 상태 — speaking_changed 로 갱신 */
   const [speaking, setSpeaking] = useState(false);
+  /** 현재 토큰이 가진 송출 권한 — 손만 바뀐 이벤트와 권한 변경을 구분하는 기준 */
+  const canPublishRef = useRef(false);
+  useEffect(() => { canPublishRef.current = canPublish; }, [canPublish]);
   const [raising, setRaising] = useState(false);
   /** 손들기·손 내리기 중복 호출 방지(state 는 렌더 뒤에야 반영되므로 ref 로 즉시 막는다) */
   const raisingRef = useRef(false);
@@ -111,10 +115,13 @@ export function useMemberLiveKit({
     const handleSpeaking = (event: SpeakingChangedEvent): void => {
       if (!event || event.participant_id !== participantId) return;
       if (sessionId && event.session_id && event.session_id !== sessionId) return;
+      const publishChanged = event.speaking !== canPublishRef.current;
       setSpeaking(event.speaking);
       // BE는 부여 시 손들기를 내린다 — 해제 시에도 손들기 표시를 남기지 않는다
       setRaisedHand(event.raise_hand ?? false);
       // 자기 speaking 변경 → 토큰 재발급(can_publish 갱신) → 재연결
+      // SDD-246 T06: v2 on 이면 손만 바뀐 경우(송출 권한 불변)는 재발급하지 않는다(늦은 응답이 권한을 되돌리는 경로 제거).
+      if (isLiveProtocolV2Enabled() && !publishChanged) return;
       void connectRef.current();
     };
 

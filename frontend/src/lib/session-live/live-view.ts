@@ -55,7 +55,6 @@ export interface MemberRow {
 
 export interface LegacyIdentity {
   participant_id: string;
-  [k: string]: unknown;
 }
 
 export interface RowOptions {
@@ -79,7 +78,10 @@ export function buildMemberRows(state: LiveState, opts: RowOptions): MemberRow[]
     const dev = state.devices[id]?.data;
     const legacy = legacyById.get(id);
     const ident: Record<string, unknown> = {};
-    if (legacy) for (const f of LEGACY_IDENTITY_FIELDS) if (legacy[f] !== undefined) ident[f] = legacy[f];
+    if (legacy) {
+      const src = legacy as unknown as Record<string, unknown>;
+      for (const f of LEGACY_IDENTITY_FIELDS) if (src[f] !== undefined) ident[f] = src[f];
+    }
 
     const intent = state.intents[`hand:${id}`];
     const handPending = Boolean(intent);
