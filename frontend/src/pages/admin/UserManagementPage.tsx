@@ -124,7 +124,7 @@ export default function UserManagementPage() {
   }, [modal]);
 
   return (
-    <AppShell title="상담사 관리" sub="COUNSELOR MANAGEMENT">
+    <AppShell title="상담사 관리" sub="COUNSELOR MANAGEMENT" wide>
       {/* 필터 */}
       <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
         <input

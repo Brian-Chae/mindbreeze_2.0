@@ -188,7 +188,7 @@ export default function OrgManagementPage() {
   };
 
   return (
-    <AppShell title="기관 관리" sub="ORGANIZATION MANAGEMENT">
+    <AppShell title="기관 관리" sub="ORGANIZATION MANAGEMENT" wide>
       {error && (
         <div role="alert" className="mb-5 rounded-xl bg-red-50 p-3 text-sm text-red-700">
           {error}

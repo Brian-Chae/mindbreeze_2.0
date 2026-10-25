@@ -372,7 +372,7 @@ export default function ClientAppPage() {
   ) : undefined;
 
   return (
-    <ClientShell title={shellTitle} sub={shellSub} rightSlot={rightSlot}>
+    <ClientShell title={shellTitle} sub={shellSub} rightSlot={rightSlot} wide={pathname.startsWith('/app/sessions') || pathname.startsWith('/app/reports')}>
       {renderTabContent()}
     </ClientShell>
   );

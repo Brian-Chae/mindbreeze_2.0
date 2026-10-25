@@ -27,6 +27,8 @@ export interface AppShellProps {
   hideBottomTab?: boolean;
   /** 모바일 페이지 타이틀 블록 숨김(채팅방처럼 화면이 자체 헤더를 가질 때). */
   hideMobileTitle?: boolean;
+  /** 목록·대시보드형 본문을 1200px(mb-content) 가운데 정렬로 감싼다. */
+  wide?: boolean;
 }
 
 export default function AppShell({
@@ -40,6 +42,7 @@ export default function AppShell({
   noBottomPad = false,
   hideBottomTab = false,
   hideMobileTitle = false,
+  wide = false,
 }: AppShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const navigate = useNavigate();
@@ -220,7 +223,7 @@ export default function AppShell({
         <div data-mobile-swipe-page
           className={`mobile-menu-swipe-page flex-1 min-h-0 bg-[#F7F4F0] ${noScroll ? '' : 'overflow-auto'} ${contentPad} ${noBottomPad || hideBottomTab ? '' : 'pb-[calc(100px+env(safe-area-inset-bottom,0px))]'} md:pb-0`}
         >
-          {children}
+          {wide ? <div data-ui="page-wide" className="mx-auto w-full max-w-mb-content">{children}</div> : children}
         </div>
         <p className="sr-only" role="status" aria-live="polite">{swipe.message}</p>
         </div>

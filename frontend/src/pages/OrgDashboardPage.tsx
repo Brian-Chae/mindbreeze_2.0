@@ -661,6 +661,7 @@ export default function OrgDashboardPage() {
     <AppShell
       title={data?.org_name ?? '기관 대시보드'}
       sub="ORG DASHBOARD"
+      wide
     >
       <OrgRemovedNoticeDialog />
 

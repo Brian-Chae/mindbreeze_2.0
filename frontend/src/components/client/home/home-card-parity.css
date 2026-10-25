@@ -43,11 +43,13 @@
 .cs-structure .mc-stack.mh-home{display:grid;grid-template-columns:minmax(0,1fr) 320px;align-items:start}
 :is(.cs-structure .mh-home,.ch-home) :is(.mh-summary,.ch-tiles){grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
 :is(.cs-structure .mh-home,.ch-home) .mh-track{gap:16px}
-:is(.cs-structure .mh-home,.ch-home) .mh-track>.mc-card{flex:0 0 280px;width:280px}
+:is(.cs-structure .mh-home,.ch-home) .mh-track>.mc-card{flex:0 0 max(240px,calc((100% - 48px)/4));width:max(240px,calc((100% - 48px)/4))}
 .ch-home .ch-review{flex-direction:row;align-items:center;justify-content:space-between;padding:24px}
 .ch-home .ch-review a{align-self:center}
 }
 @media(min-width:1600px){.cs-structure .mc-stack.mh-home{grid-template-columns:minmax(0,1fr) 352px}}
+/* 본문 폭 1200 통일: 회원 홈도 다른 화면과 같은 gutter(40)·1200 가운데 열을 쓴다(자체 좌우 padding 제거). */
+@media(min-width:1024px){.cs-structure .cs-structure-content:has(.mh-home){padding:32px 0 40px 40px}.cs-structure .cs-structure-content:has(.mh-home)>.cs-structure-scroll{padding-right:40px}.cs-structure .mc-stack.mh-home{max-width:1200px;margin-inline:auto;padding:0 0 64px}}
 
 @media(min-width:768px) and (max-width:1023px){[data-shell-variant]>section>div:has(>.ch-home){padding:24px}}
 

@@ -5,8 +5,10 @@
 /* SDD-245: 일반 셸 contentPad(16/32/40)와 같은 gutter. 홈(.mh-home/.ch-home)은 자체 inset을 유지해 아래에서 기존 값으로 고정한다. */
 .cs-structure .cs-structure-content { display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; padding: 32px 32px 40px; }
 @media (min-width: 1024px) { .cs-structure .cs-structure-content { padding: 32px 40px 40px; } }
+/* 데스크톱: 스크롤바(gutter 고정)를 일반 셸처럼 가장자리에 두고 오른쪽 gutter는 스크롤 영역 안쪽 padding으로 준다 → 본문 열 폭이 셸 종류와 무관하게 같다. */
+@media (min-width: 1024px) { .cs-structure .cs-structure-content:not(:has(.mh-home)) { padding-right: 0; } .cs-structure .cs-structure-content:not(:has(.mh-home)) > .cs-structure-scroll { padding-right: 40px; } }
 @media (min-width: 768px) and (max-width: 1023px) { .cs-structure .cs-structure-content:has(.mh-home, .ch-home) { padding: 24px; } }
-.cs-structure .cs-structure-scroll { width: 100%; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
+.cs-structure .cs-structure-scroll { scrollbar-gutter: stable; width: 100%; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
 .cs-structure .cs-read-state { display: flex; min-height: 240px; padding: 32px 16px; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; }
 .cs-structure .cs-read-state p { margin: 0; color: #625b6c; }
 .cs-structure .cs-read-state button, .cs-structure .cs-read-state a { display: inline-flex; min-width: 44px; min-height: 44px; align-items: center; justify-content: center; padding: 8px 16px; border: 1px solid #dcd2e5; border-radius: 12px; background: #fff; color: #5f0080; }
