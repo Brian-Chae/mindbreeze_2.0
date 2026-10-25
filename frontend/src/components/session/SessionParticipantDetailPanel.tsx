@@ -22,6 +22,7 @@ import {
   bandCardState,
   bandCardStateLabel,
   canShowCurrentMetrics,
+  formatBodyMetric,
   formatMetric,
   type ParticipantHistoryPoint,
 } from '../../lib/session-live/metric-display';
@@ -145,7 +146,7 @@ export function SessionParticipantDetailPanel({
                   배터리 {formatMetric(row.band_battery, '%')}
                 </span>
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
                 {[
                   {
                     label: '현재 두뇌휴식도',
@@ -163,9 +164,11 @@ export function SessionParticipantDetailPanel({
                   },
                   {
                     label: '호흡수',
-                    value: showCurrent
-                      ? formatMetric(row.respiratory_rate)
-                      : '-',
+                    value: formatBodyMetric(row.respiratory_rate, showCurrent),
+                  },
+                  {
+                    label: 'HRV',
+                    value: formatBodyMetric(row.sdnn, showCurrent),
                   },
                 ].map((item) => (
                   <div

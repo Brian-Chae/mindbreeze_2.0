@@ -10,6 +10,7 @@ import {
   bandCardState,
   bandCardStateLabel,
   canShowCurrentMetrics,
+  formatBodyMetric,
   formatMetric,
   isConnectionFailed,
   matchesMonitorFilter,
@@ -131,8 +132,8 @@ const ParticipantCard = memo(function ParticipantCard({
         </div>
       )}
 
-      {/* 현재 지표 3종 */}
-      <div className="grid grid-cols-3 gap-2">
+      {/* 현재 지표 4종 — 호흡·HRV 는 값이 없어도 항상 노출(없으면 '측정 중') */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[
           {
             label: '두뇌휴식도',
@@ -144,7 +145,11 @@ const ParticipantCard = memo(function ParticipantCard({
           },
           {
             label: '호흡수',
-            value: showCurrent ? formatMetric(row.respiratory_rate) : '-',
+            value: formatBodyMetric(row.respiratory_rate, showCurrent),
+          },
+          {
+            label: 'HRV',
+            value: formatBodyMetric(row.sdnn, showCurrent),
           },
         ].map((item) => (
           <div
