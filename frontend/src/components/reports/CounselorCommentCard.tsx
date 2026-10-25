@@ -1,3 +1,4 @@
+import { buttonClass } from '../ui';
 // SDD-087 — 내담자에게 보내는 상담사 코멘트 카드
 // pending_review + client 리포트 + 상담사 권한일 때만 노출 (노출 조건은 부모가 판단)
 // textarea + AI 초안 받기(Gemini, 실패 시 서버 규칙 폴백) + 저장(null = 삭제)
@@ -143,7 +144,7 @@ export default function CounselorCommentCard({
             type="button"
             onClick={handleSave}
             disabled={saving || drafting || !dirty}
-            className="mobile:min-h-12 mobile:min-w-11 bg-[#5F0080] text-white font-medium hover:bg-[#4A0066] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[13px] mobile:text-mb-label px-5 py-2 rounded-xl disabled:opacity-50"
+            className={buttonClass({ size: 'sm' })}
           >
             {saving ? '저장 중...' : '코멘트 저장'}
           </button>

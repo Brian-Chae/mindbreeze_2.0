@@ -1,3 +1,4 @@
+import { buttonClass } from '../../components/ui';
 import ParticipationProfilePage from '../settings/participation-profile-page';
 // 내담자 앱 메인 페이지
 // 상담사 연결 안 됨 → 코드 입력 화면
@@ -290,7 +291,7 @@ export default function ClientAppPage() {
           <button
             type="button"
             onClick={() => setFetchKey((k) => k + 1)}
-            className="w-full py-3 rounded-xl bg-[#5F0080] text-white font-semibold hover:bg-[#4B0066] transition-colors"
+            className={buttonClass({ className: 'w-full' })}
           >
             다시 시도
           </button>
@@ -363,7 +364,7 @@ export default function ClientAppPage() {
     <button
       type="button"
       onClick={handleSessionRequest}
-      className="h-11 px-4 rounded-full bg-[#5F0080] text-white text-sm font-semibold hover:bg-[#4B0066] transition-colors"
+      className={buttonClass()}
     >
       클래스 신청하기
     </button>

@@ -1,3 +1,4 @@
+import { buttonClass } from '../ui';
 // 리포트 상세 본문 — 페이지/모달 공용 (SDD-064)
 // Cover → 서사 → 상담 본문 → EEG → 액션 → 재발송(client only)
 
@@ -270,7 +271,7 @@ export default function ReportDetailView({
             type="button"
             onClick={handleApprove}
             disabled={approving}
-            className="mobile:min-h-12 mobile:min-w-11 bg-[#5F0080] text-white font-medium hover:bg-[#4A0066] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[15px] mobile:text-mb-label px-6 py-2.5 rounded-xl disabled:opacity-50"
+            className={buttonClass()}
           >
             {approving ? '승인 중...' : '승인하기'}
           </button>
@@ -447,7 +448,7 @@ export default function ReportDetailView({
               type="button"
               onClick={handleResendEmail}
               disabled={resending || !resendEmail.trim()}
-              className="mobile:min-h-12 mobile:min-w-11 bg-[#5F0080] text-white font-medium hover:bg-[#4A0066] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[15px] mobile:text-mb-label px-6 py-2.5 rounded-xl disabled:opacity-50 shrink-0"
+              className={buttonClass({ className: 'shrink-0' })}
             >
               {resending ? '발송 중...' : '발송'}
             </button>

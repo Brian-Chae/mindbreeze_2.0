@@ -1,3 +1,4 @@
+import { buttonClass } from '../../components/ui';
 // 내담자 홈 — 행동 중심 재설계 (SDD-187) + 클래스 사전 흐름(SDD-209 FM01)
 // 데스크톱 2컬럼: 좌측(다음 클래스 히어로 → 초대 → 이번 주 클래스 → 코드로 입장하기 → 내 리포트) / 우측(요약 타일 → 담당 상담사 → 대화 → 알림)
 
@@ -333,7 +334,7 @@ export default function ClientHomePage({ hideHero = false, classSections }: { hi
         <button
           type="button"
           onClick={() => setReloadKey((k) => k + 1)}
-          className="mobile:min-h-12 rounded-xl px-5 py-2.5 text-sm mobile:text-mb-compact font-semibold bg-[#5F0080] text-white hover:bg-[#4B0066] transition-colors"
+          className={buttonClass()}
         >
           다시 시도
         </button>
