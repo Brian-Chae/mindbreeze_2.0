@@ -13,11 +13,14 @@ crate-type = ["cdylib", "staticlib", "rlib"]
 [features]
 default = []
 wasm = ["dep:wasm-bindgen"]
+# 테스트 전용 FFI 훅(panic 격리 검증). 릴리스 산출물에는 넣지 않는다.
+debug-hooks = []
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
 libm = "0.2"
+base64 = { version = "0.22", default-features = false, features = ["alloc"] }
 sha2 = { version = "0.10", default-features = false }
 postcard = { version = "1", features = ["alloc"] }
 wasm-bindgen = { version = "0.2", optional = true }
