@@ -19,6 +19,8 @@ _user_sids: dict[str, str] = {}  # user_id → latest sid
 # 역추적할 수 있어야 한다. latest sid 만 남기면 먼저 연 탭의 sid 역추적이 불가해
 # 방 입장/메시지 전송이 차단된다(탭 2개 이상).
 _sid_users: dict[str, str] = {}
+# sid → 이 소켓이 '보고 있음'으로 표시한 방 id 집합(이탈·disconnect 시 presence 정리용)
+_sid_viewing: dict[str, set[str]] = {}
 
 
 def _user_is_active(user_id: str) -> bool:
@@ -83,7 +85,10 @@ async def connect(sid, environ, auth):
 @sio.event(namespace="/chat")
 async def disconnect(sid):
     # 멀티탭: 이 소켓의 sid→user 매핑을 먼저 정리한다(다른 탭 sid 매핑은 유지).
-    _sid_users.pop(sid, None)
+    user_id = _sid_users.pop(sid, None)
+    rooms = _sid_viewing.pop(sid, set())
+    if user_id and rooms:
+        await asyncio.to_thread(_clear_viewing, user_id, sid, rooms)
     # sid로 등록된 user_id 정리 (latest sid 일 때만 제거 — 다른 탭이 남아 있으면 유지)
     for uid, s in list(_user_sids.items()):
         if s == sid:
@@ -145,11 +150,50 @@ async def on_join_room(sid, data):
     await _enter_room(sid, data)
 
 
+def _clear_viewing(user_id: str, sid: str, rooms) -> None:
+    from app.services import chat_presence_service
+
+    for rid in rooms:
+        chat_presence_service.clear_sid(str(rid), user_id, sid)
+
+
 async def _exit_room(sid, data):
     data = data if isinstance(data, dict) else {}
     room_id = data.get("room_id")
     if room_id:
         await sio.leave_room(sid, room_id, namespace="/chat")
+        # 방을 떠나면 '보고 있음'도 즉시 해제 → 바로 다시 푸시 대상
+        user_id = _sid_users.get(sid)
+        viewing = _sid_viewing.get(sid)
+        if user_id and viewing and str(room_id) in viewing:
+            viewing.discard(str(room_id))
+            await asyncio.to_thread(_clear_viewing, user_id, sid, [str(room_id)])
+
+
+@sio.on("room_viewing", namespace="/chat")
+async def on_room_viewing(sid, data):
+    """방 열람 presence — {room_id, viewing}. viewing=true 는 하트비트로 반복 전송한다.
+
+    앱 포그라운드 + 해당 방 화면일 때만 true. 백그라운드·탭 숨김·방 이탈이면 false.
+    """
+    data = data if isinstance(data, dict) else {}
+    room_id = data.get("room_id")
+    user_id = _sid_users.get(sid)
+    if not room_id or not user_id or str(room_id).startswith("user:"):
+        return {"ok": False}
+    room_id = str(room_id)
+    viewing = data.get("viewing") is True
+    from app.services import chat_presence_service
+
+    if viewing:
+        # 멤버만 presence 를 등록할 수 있다(비멤버가 타인 푸시를 막는 일 방지).
+        if not await _is_room_member(sid, room_id):
+            return {"ok": False}
+        _sid_viewing.setdefault(sid, set()).add(room_id)
+    else:
+        _sid_viewing.get(sid, set()).discard(room_id)
+    await asyncio.to_thread(chat_presence_service.set_viewing, room_id, user_id, sid, viewing)
+    return {"ok": True}
 
 
 @sio.on("leave", namespace="/chat")

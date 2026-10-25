@@ -60,14 +60,9 @@
 .chat-msg__name { font-size: 13px; margin-bottom: 3px; margin-left: 2px; }
 .chat-msg__time { font-size: 12px; flex-shrink: 0; }
 .chat-msg__unread { font-size: 12px; flex-shrink: 0; font-weight: 500; }
-.chat-msg__report {
-  font-size: 12px; flex-shrink: 0; margin-bottom: 4px; text-decoration: underline;
-  background: none; border: none; cursor: pointer; padding: 0;
-}
 .chat-msg__avatar { font-size: 13px; }
 .chat-system { padding: 4px 12px; font-size: 12px; border-radius: 999px; display: flex; align-items: center; gap: 8px; }
 .chat-date-sep { font-size: 12px; border-radius: 12px; padding: 4px 12px; }
-.chat-room__peer-report { font-size: 12px; text-decoration: underline; }
 
 @media (max-width: 767px) {
   .chat-msg__row { gap: 8px; margin: 4px 0; }
@@ -84,13 +79,6 @@
     font-size: var(--mobile-type-caption-size); line-height: var(--mobile-type-caption-leading);
   }
   .chat-msg__avatar { font-size: var(--mobile-type-caption-size); }
-  /* 신고 버튼: 글자는 13, 터치 영역은 44 높이·44 너비 (글자 크기는 그대로, 패딩으로 확보) */
-  .chat-msg__report,
-  .chat-room__peer-report {
-    font-size: var(--mobile-type-caption-size); line-height: var(--mobile-type-caption-leading);
-    min-height: var(--mobile-touch-minimum); min-width: var(--mobile-touch-minimum);
-    padding: 0 8px; margin-bottom: 0; display: inline-flex; align-items: center; justify-content: center;
-  }
   .chat-room__composer { padding: 8px 12px; }
   .chat-room__composer .mb-btn { min-height: var(--mobile-touch-control); min-width: var(--mobile-touch-minimum); font-size: var(--mobile-type-body-size); }
   .chat-room [role="alert"], .chat-room [role="status"] {

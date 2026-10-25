@@ -10,8 +10,6 @@ interface Props {
   showSender?: boolean;
   /** 발신자가 바뀐 첫 말풍선 — 위쪽 간격을 넓혀 대화 묶음을 구분한다. */
   groupStart?: boolean;
-  /** SDD-220: 상대 메시지 신고. 지정하면 상대 메시지 옆에 신고 버튼을 보인다. */
-  onReport?: () => void;
 }
 
 function formatTime(iso: string): string {
@@ -39,7 +37,7 @@ function calcUnreadCount(msg: ChatMessage): number {
   return 0;
 }
 
-export function MessageBubble({ message, isMine, senderName, showSender, groupStart = false, onReport }: Props) {
+export function MessageBubble({ message, isMine, senderName, showSender, groupStart = false }: Props) {
   if (!message) return null;
 
   const content = message.content ?? '(내용 없음)';
@@ -107,17 +105,6 @@ export function MessageBubble({ message, isMine, senderName, showSender, groupSt
         <span className="chat-msg__time" style={{ color: 'var(--chat-muted, #6F6F6F)', marginBottom: '4px' }}>
           {timeStr}
         </span>
-      )}
-      {!isMine && onReport && (
-        <button
-          type="button"
-          onClick={onReport}
-          aria-label="이 메시지 신고"
-          className="chat-msg__report"
-          style={{ color: 'var(--chat-muted, #6F6F6F)' }}
-        >
-          신고
-        </button>
       )}
     </div>
   );

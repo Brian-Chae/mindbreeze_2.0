@@ -1508,10 +1508,19 @@ def _enqueue_chat_push(room, sender, recipients: list[str], msg, db: DBSession) 
 
     from app.services.notification_service import get_user_preferences
 
+    from app.services import chat_presence_service
+
+    push_log = logging.getLogger("uvicorn.error.push")
     queued = 0
     for recipient_id in recipients:
         recipient = db.query(User).filter(User.id == _uuid(recipient_id)).first()
         if not recipient or not get_user_preferences(recipient)["push"].get("chat_message", False):
+            continue
+        # 수신자가 지금 이 방 화면을 보고 있으면 푸시를 보내지 않는다(인앱 미읽음·WS 는 그대로).
+        if chat_presence_service.is_viewing(str(room.id), str(recipient_id)):
+            push_log.info(
+                "[OUTBOX-PUSH] chat skip reason=viewing_room room=%s user=%s", room.id, recipient_id
+            )
             continue
         queued += 1
         db.add(
