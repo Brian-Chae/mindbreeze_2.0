@@ -1,0 +1,19 @@
+{
+  "$fixture": {
+    "schema": "ack"
+  },
+  "message": {
+    "command_id": "0000000a-0000-4000-8000-00000000000a",
+    "status": "applied",
+    "epoch": "1",
+    "cursors": [
+      {
+        "audience": "host",
+        "domain": "speaking",
+        "seq": "9"
+      }
+    ],
+    "entity_version": "4",
+    "committed": true
+  }
+}

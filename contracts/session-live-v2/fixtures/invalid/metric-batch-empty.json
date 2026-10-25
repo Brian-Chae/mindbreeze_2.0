@@ -1,0 +1,12 @@
+{
+  "$fixture": {
+    "schema": "metric-batch",
+    "why": "빈 배치",
+    "reject_by": "schema"
+  },
+  "message": {
+    "protocol_version": 2,
+    "schema_version": 1,
+    "windows": []
+  }
+}

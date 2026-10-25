@@ -1,0 +1,32 @@
+{
+  "$fixture": {
+    "schema": "metric-ack"
+  },
+  "message": {
+    "protocol_version": 2,
+    "schema_version": 1,
+    "acks": [
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "sequence": "42",
+        "status": "accepted",
+        "durable": true,
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "received_at_server_ms": 1760000000800
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "sequence": "43",
+        "status": "retryable",
+        "durable": false,
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "received_at_server_ms": 1760000000900,
+        "code": "db_busy"
+      }
+    ]
+  }
+}

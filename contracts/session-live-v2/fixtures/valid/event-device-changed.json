@@ -1,0 +1,33 @@
+{
+  "$fixture": {
+    "schema": "event"
+  },
+  "message": {
+    "protocol_version": 2,
+    "schema_version": 1,
+    "event_id": "0000003c-0000-4000-8000-00000000003c",
+    "session_id": "00000001-0000-4000-8000-000000000001",
+    "epoch": "1",
+    "audience": "host",
+    "domain": "device",
+    "seq": "8",
+    "entity_id": "00000002-0000-4000-8000-000000000002",
+    "entity_version": "3",
+    "kind": "device.changed",
+    "observed_at_ms": null,
+    "received_at_server_ms": 1760000000500,
+    "payload": {
+      "participant_id": "00000002-0000-4000-8000-000000000002",
+      "stream_id": "00000014-0000-4000-8000-000000000014",
+      "device_seq": "12",
+      "band_state": "connected",
+      "contact": {
+        "fp1": "contact",
+        "fp2": "contact"
+      },
+      "sqi": 0.9,
+      "battery_pct": 77,
+      "state_reason": null
+    }
+  }
+}

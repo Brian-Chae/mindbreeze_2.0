@@ -1,0 +1,15 @@
+{
+  "$fixture": {
+    "schema": "presence",
+    "why": "visibility enum",
+    "reject_by": "schema"
+  },
+  "message": {
+    "protocol_version": 2,
+    "schema_version": 1,
+    "session_id": "00000001-0000-4000-8000-000000000001",
+    "instance_id": "00000050-0000-4000-8000-000000000050",
+    "lease_generation": "5",
+    "visibility": "asleep"
+  }
+}

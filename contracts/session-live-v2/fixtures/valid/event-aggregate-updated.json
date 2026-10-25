@@ -1,0 +1,35 @@
+{
+  "$fixture": {
+    "schema": "event"
+  },
+  "message": {
+    "protocol_version": 2,
+    "schema_version": 1,
+    "event_id": "0000003c-0000-4000-8000-00000000003c",
+    "session_id": "00000001-0000-4000-8000-000000000001",
+    "epoch": "1",
+    "audience": "public",
+    "domain": "aggregate",
+    "seq": "8",
+    "entity_id": "00000001-0000-4000-8000-000000000001",
+    "entity_version": "3",
+    "kind": "aggregate.updated",
+    "observed_at_ms": null,
+    "received_at_server_ms": 1760000000500,
+    "payload": {
+      "revision": "3",
+      "window_ms": 5000,
+      "participant_count": 12,
+      "metrics": {
+        "focus_display": {
+          "mean": 58.2,
+          "valid_count": 9
+        },
+        "bpm": {
+          "mean": null,
+          "valid_count": 0
+        }
+      }
+    }
+  }
+}

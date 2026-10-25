@@ -1,0 +1,12 @@
+{
+  "$fixture": {
+    "schema": "sync-complete"
+  },
+  "message": {
+    "protocol_version": 2,
+    "schema_version": 1,
+    "session_id": "00000001-0000-4000-8000-000000000001",
+    "snapshot_id": "00000046-0000-4000-8000-000000000046",
+    "through": []
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "$fixture": {
+    "schema": "terminal"
+  },
+  "message": {
+    "protocol_version": 2,
+    "schema_version": 1,
+    "session_id": "00000001-0000-4000-8000-000000000001",
+    "code": "session_ended",
+    "revision": "6",
+    "end_cutoff_ms": 1760003600000
+  }
+}
