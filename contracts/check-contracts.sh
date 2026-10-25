@@ -30,7 +30,8 @@ python3 -I "$V1/tools/build_manifest.py" check "$REPO"
 if [ "${SKIP_ORACLE:-0}" = "1" ]; then
   step "6/6 TS oracle 생략(SKIP_ORACLE=1) — 최종 인수 증거로 사용 금지"
 else
-  step "6/6 TS oracle: 기존 frontend/src/lib/eeg 무수정 실행 vs 저장된 expected (vitest)"
+  step "6/6 TS oracle(정본: 제품과 같은 biquad 경로) + GF04 + legacy_fallback 대조"
   (cd "$REPO/frontend" && npx vitest run --config ../contracts/biosignal-golden/v1/oracle/vitest.oracle.config.mjs)
+  (cd "$REPO/frontend" && ORACLE_FILTER=legacy_fallback npx vitest run --config ../contracts/biosignal-golden/v1/oracle/vitest.oracle.config.mjs)
 fi
 printf '\n계약 검증 완료 (G1 실측 골든은 여전히 미충족 — manifest.status 참고)\n'

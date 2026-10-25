@@ -95,7 +95,7 @@ def ppg_val(i, rng, chan):
 def acc_vals(i, rng):
     t = i / ACC_HZ
     burst = 60 <= t < 65
-    s = 900 if burst else 60
+    s = 9000 if burst else 60  # burst ±9000 raw ≈ ±1.1g
     return ((rng.next() % (2 * s + 1)) - s, (rng.next() % (2 * s + 1)) - s, 16384 + (rng.next() % (2 * s + 1)) - s)
 
 

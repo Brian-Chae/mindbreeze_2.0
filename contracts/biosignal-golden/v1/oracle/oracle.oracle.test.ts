@@ -4,11 +4,11 @@
 import { describe, expect, test } from 'vitest';
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { V1_DIR, canon, hashOf, runOracle, sha256, summarize } from './run-oracle';
+import { FILTER_MODE, ORACLE_DIR, V1_DIR, canon, hashOf, runOracle, sha256, summarize } from './run-oracle';
 import { parseACCPacket, parseEEGPacket, parsePPGPacket } from '../../../../frontend/src/lib/eeg/blePacketParser';
 import { TimestampSynchronizer } from '../../../../frontend/src/lib/eeg/TimestampSynchronizer';
 
-const OUT = join(V1_DIR, 'expected', 'oracle');
+const OUT = join(V1_DIR, 'expected', ORACLE_DIR);
 const WRITE = process.env.ORACLE_WRITE === '1';
 const rj = (p: string) => JSON.parse(readFileSync(join(V1_DIR, p), 'utf8'));
 const dvOf = (p: string) => { const b = readFileSync(join(V1_DIR, p)); return new DataView(b.buffer, b.byteOffset, b.byteLength); };
@@ -93,6 +93,21 @@ describe('TS 파서 vs 독립 clock 규칙 — 차이를 기록(resolve 대상, 
   });
 });
 
+describe('필터 경로 확인', () => {
+  test('biquad 모드면 진짜 biquad(named export)가 풀리고 fallback 경고가 0, fallback 모드면 fallback 이 실제로 쓰인다', async () => {
+    const mod: any = await import('biquadjs');
+    const b = await runOracle();
+    if (FILTER_MODE === 'biquad') {
+      expect(typeof mod.makeBandpassFilter).toBe('function');
+      expect(typeof mod.makeNotchFilter).toBe('function');
+      expect(b.meta.fallback_warnings).toBe(0);
+    } else {
+      expect(mod.makeBandpassFilter).toBeUndefined();
+      expect(b.meta.fallback_warnings as number).toBeGreaterThan(0);
+    }
+  }, 600000);
+});
+
 describe('결정적 합성 입력 → 단계별 expected', () => {
   test('두 번 실행한 단계 hash 가 같다(비결정 요소 없음)', async () => {
     const a = summarize(await runOracle());
@@ -100,13 +115,13 @@ describe('결정적 합성 입력 → 단계별 expected', () => {
     expect(b).toEqual(a);
   }, 600000);
 
-  test(WRITE ? 'expected/oracle 생성' : '저장된 expected 와 일치', async () => {
+  test(WRITE ? 'expected 생성' : '저장된 expected 와 일치', async () => {
     const bundle = await runOracle();
     const stages = summarize(bundle);
     const stream = readFileSync(join(V1_DIR, 'synth/stream.bin'));
     const sched = readFileSync(join(V1_DIR, 'synth/schedule.json'));
     const body = {
-      oracle: 'frontend/src/lib/eeg (수정 없이 실행)',
+      oracle: 'frontend/src/lib/eeg (수정 없이 실행)', filter_mode: FILTER_MODE,
       input: { stream_sha256: sha256(stream), schedule_sha256: sha256(sched) },
       meta: bundle.meta, stages,
     };
