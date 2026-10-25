@@ -64,7 +64,15 @@ public final class SocketIOClient {
     }
 
     /// 로컬 연결만 끊고 backoff 재연결을 시도한다(예: 토큰 갱신 후 새 auth 로 다시 붙기).
-    public func reconnectNow() { teardown(reason: "reconnect requested", reconnect: false); transport?.close(); if wantConnected { openTransport() } }
+    public func reconnectNow() {
+        reconnectTimer?.cancel(); reconnectTimer = nil
+        attempt = 0
+        let old = transport
+        transport = nil
+        teardown(reason: "reconnect requested", reconnect: false)
+        old?.onClose = nil; old?.close()
+        if wantConnected { openTransport() }
+    }
 
     private func openTransport() {
         transport?.onClose = nil

@@ -4,6 +4,7 @@ import Foundation
 /// 수동 시계 — 타이머/백오프를 시간 경과 없이 구동한다.
 final class ManualScheduler: Scheduler {
     private(set) var now: TimeInterval = 0
+    var nowSeconds: TimeInterval { now }
     private var items: [(id: Int, at: TimeInterval, block: () -> Void)] = []
     private var next = 0
     func schedule(after: TimeInterval, _ block: @escaping () -> Void) -> Cancellable {
