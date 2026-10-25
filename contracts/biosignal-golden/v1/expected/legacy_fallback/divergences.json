@@ -1,0 +1,35 @@
+{
+ "gf02_multisensor_origin": [],
+ "gf02_wrap32": [],
+ "gf02_reset_segment": [],
+ "gf02_duplicate_conflict_order": [],
+ "gf02_truncated": [
+  {
+   "i": 1,
+   "file": "packets/gf02_truncated/001_eeg.bin",
+   "ref_status": "invalid",
+   "ref_event": null,
+   "ref_strict": "invalid_remainder",
+   "ts_samples": 3,
+   "ts_threw": false
+  },
+  {
+   "i": 5,
+   "file": "packets/gf02_truncated/005_ppg.bin",
+   "ref_status": "invalid",
+   "ref_event": null,
+   "ref_strict": "invalid_remainder",
+   "ts_samples": 1,
+   "ts_threw": false
+  },
+  {
+   "i": 8,
+   "file": "packets/gf02_truncated/008_acc.bin",
+   "ref_status": "invalid",
+   "ref_event": null,
+   "ref_strict": "invalid_remainder",
+   "ts_samples": 1,
+   "ts_threw": false
+  }
+ ]
+}
