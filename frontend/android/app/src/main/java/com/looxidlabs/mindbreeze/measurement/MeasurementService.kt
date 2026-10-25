@@ -30,13 +30,39 @@ class MeasurementService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_STOP) { teardown(); return START_NOT_STICKY }
+        if (intent?.action == ACTION_STOP) {
+            // 사용자 중지: 재개하지 않도록 active=false 를 먼저 영속화한다.
+            com.looxidlabs.mindbreeze.measurement.runtime.RuntimeConfig.load(java.io.File(filesDir, "measurement/runtime.json"))?.let {
+                com.looxidlabs.mindbreeze.measurement.runtime.RuntimeConfig.save(java.io.File(filesDir, "measurement/runtime.json"), it.copy(active = false))
+            }
+            teardown(); return START_NOT_STICKY
+        }
         // FGS 시작 후 5초 내 startForeground 필수 — 어떤 경로든 먼저 호출한다.
         goForeground("측정 준비 중")
+        // OS 가 프로세스를 죽였다 START_STICKY 로 되살린 경우(intent == null): 마지막 설정이 active 이면 같은 journal 에 이어서 재개한다.
+        var resumed: Intent? = null
+        if (intent == null) {
+            val c = com.looxidlabs.mindbreeze.measurement.runtime.RuntimeConfig.load(java.io.File(filesDir, "measurement/runtime.json"))
+            if (c != null && c.active) {
+                MeasurementManager.ownership.nativeEnabled = true
+                resumed = Intent().putExtra(EXTRA_SESSION, c.sessionId).putExtra(EXTRA_API_BASE, c.apiBase).putExtra(EXTRA_SOCKET_BASE, c.socketBase)
+                    .putExtra(EXTRA_ADDRESS, c.bandAddress).putExtra(EXTRA_INSTANCE, c.instanceId)
+                    .putExtra(EXTRA_SYNTHETIC, c.bandAddress == null)
+            } else { stopSelf(startId); return START_NOT_STICKY }
+        }
+        @Suppress("NAME_SHADOWING") val intent = intent ?: resumed
         if (!MeasurementManager.gate.tryStart(instanceId)) { stopSelf(startId); return START_NOT_STICKY }
         MeasurementManager.noteServiceStart()
         if (MeasurementManager.engine != null) return START_NOT_STICKY // 중복 start 멱등
         val sessionId = intent?.getStringExtra(EXTRA_SESSION)
+        // debug 빌드(FLAG_DEBUGGABLE)에서만: adb 시험용으로 플래그·합성 토큰을 주입한다. release 에서는 무시된다.
+        val debuggable = (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        if (debuggable && sessionId != null && intent.getBooleanExtra("debug_force_native", false)) {
+            MeasurementManager.ownership.nativeEnabled = true
+            intent.getStringExtra("debug_access")?.let { a ->
+                com.looxidlabs.mindbreeze.measurement.runtime.KeystoreFactory.tokenStore(applicationContext).save(a, intent.getStringExtra("debug_refresh"))
+            }
+        }
         if (sessionId != null && MeasurementManager.ownership.nativeEnabled) return startNative(intent!!, sessionId)
         val address = intent?.getStringExtra(EXTRA_ADDRESS)
         val isSynthetic = intent?.getBooleanExtra(EXTRA_SYNTHETIC, false) == true
@@ -83,7 +109,7 @@ class MeasurementService : Service() {
         updateNotification(MeasurementState.CAPTURING)
         logHandler.removeCallbacks(logTask); logHandler.post(logTask)
         // 프로세스가 죽어도 사용자가 중지하지 않았다면 runtime.json(active=true)을 보고 다시 붙는다.
-        return START_NOT_STICKY
+        return START_STICKY
     }
 
     private fun releaseResources() {
