@@ -1,0 +1,310 @@
+{
+  "$comment": "SDD-246 T10 — v1 호출 → v2 LiveCommand 정규화 기대값(합성, 개인정보 없음). {session}/{participant}/{other} 는 테스트가 합성 UUID 로 치환한다. expected_epoch·client_generation·expected_entity_version·expected_grant_version·expected_revision·checkin_revision 은 v1 이 알 수 없으므로 어떤 case 에서도 만들지 않는다(가짜 최신성 금지).",
+  "schema_version": 1,
+  "cases": [
+    {
+      "name": "raise_hand_member",
+      "op": "raise_hand",
+      "actor_role": "member",
+      "params": {
+        "participant_id": "{participant}"
+      },
+      "expect": {
+        "kind": "hand.set",
+        "target_id": "{participant}",
+        "payload": {
+          "raised": true
+        }
+      }
+    },
+    {
+      "name": "lower_hand_self",
+      "op": "lower_hand",
+      "actor_role": "member",
+      "params": {
+        "participant_id": "{participant}"
+      },
+      "expect": {
+        "kind": "hand.set",
+        "target_id": "{participant}",
+        "payload": {
+          "raised": false
+        }
+      }
+    },
+    {
+      "name": "lower_hand_host",
+      "op": "lower_hand",
+      "actor_role": "host",
+      "params": {
+        "participant_id": "{other}"
+      },
+      "expect": {
+        "kind": "hand.lower",
+        "target_id": "{other}",
+        "payload": {
+          "target_id": "{other}"
+        }
+      }
+    },
+    {
+      "name": "set_speaking_grant",
+      "op": "set_speaking",
+      "actor_role": "host",
+      "params": {
+        "participant_id": "{other}",
+        "granted": true
+      },
+      "expect": {
+        "kind": "speaking.set",
+        "target_id": "{other}",
+        "payload": {
+          "target_id": "{other}",
+          "can_publish": true
+        }
+      }
+    },
+    {
+      "name": "set_speaking_revoke",
+      "op": "set_speaking",
+      "actor_role": "host",
+      "params": {
+        "participant_id": "{other}",
+        "granted": false
+      },
+      "expect": {
+        "kind": "speaking.set",
+        "target_id": "{other}",
+        "payload": {
+          "target_id": "{other}",
+          "can_publish": false
+        }
+      }
+    },
+    {
+      "name": "transition_open",
+      "op": "transition",
+      "actor_role": "host",
+      "params": {
+        "action": "open"
+      },
+      "expect": {
+        "kind": "session.open",
+        "target_id": null,
+        "payload": {}
+      }
+    },
+    {
+      "name": "transition_start",
+      "op": "transition",
+      "actor_role": "host",
+      "params": {
+        "action": "start"
+      },
+      "expect": {
+        "kind": "session.start",
+        "target_id": null,
+        "payload": {}
+      }
+    },
+    {
+      "name": "transition_end",
+      "op": "transition",
+      "actor_role": "host",
+      "params": {
+        "action": "end"
+      },
+      "expect": {
+        "kind": "session.end",
+        "target_id": null,
+        "payload": {
+          "reason": "legacy_v1"
+        }
+      }
+    },
+    {
+      "name": "transition_cancel",
+      "op": "transition",
+      "actor_role": "host",
+      "params": {
+        "action": "cancel"
+      },
+      "expect": {
+        "kind": "session.cancel",
+        "target_id": null,
+        "payload": {
+          "reason": "legacy_v1"
+        }
+      }
+    },
+    {
+      "name": "enter_member",
+      "op": "enter",
+      "actor_role": "member",
+      "params": {
+        "participant_id": "{participant}"
+      },
+      "expect": {
+        "kind": "entry.enter",
+        "target_id": "{participant}",
+        "payload": {}
+      }
+    },
+    {
+      "name": "leave_member",
+      "op": "leave",
+      "actor_role": "member",
+      "params": {
+        "participant_id": "{participant}"
+      },
+      "expect": {
+        "kind": "entry.leave",
+        "target_id": "{participant}",
+        "payload": {
+          "target_id": "{participant}"
+        }
+      }
+    },
+    {
+      "name": "waitlist_cancel",
+      "op": "waitlist_cancel",
+      "actor_role": "member",
+      "params": {},
+      "expect": {
+        "kind": "waitlist.cancel",
+        "target_id": null,
+        "payload": {}
+      }
+    },
+    {
+      "name": "chat_enabled_on",
+      "op": "chat_enabled",
+      "actor_role": "host",
+      "params": {
+        "enabled": true
+      },
+      "expect": {
+        "kind": "chat.set_enabled",
+        "target_id": null,
+        "payload": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "name": "quiet_signal",
+      "op": "quiet_signal",
+      "actor_role": "member",
+      "params": {
+        "signal_type": "difficult"
+      },
+      "expect": {
+        "kind": "signal.send",
+        "target_id": null,
+        "payload": {
+          "signal_type": "difficult",
+          "target_scope": "host"
+        }
+      }
+    },
+    {
+      "name": "waiting_room_remind",
+      "op": "waiting_room_remind",
+      "actor_role": "host",
+      "params": {
+        "participant_ids": [
+          "{other}",
+          "{participant}"
+        ]
+      },
+      "expect": {
+        "kind": "waiting.remind",
+        "target_id": null,
+        "payload": {
+          "target_scope": "not_ready",
+          "participant_ids": [
+            "{other}",
+            "{participant}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "audio_play",
+      "op": "audio_sync",
+      "actor_role": "host",
+      "params": {
+        "action": "play",
+        "track_id": "bgm-rain",
+        "position_sec": 12.3456
+      },
+      "expect": {
+        "kind": "audio.set",
+        "target_id": null,
+        "payload": {
+          "track_id": "bgm-rain",
+          "action": "play",
+          "position_ms": 12346
+        }
+      }
+    },
+    {
+      "name": "audio_stop_no_track",
+      "op": "audio_sync",
+      "actor_role": "host",
+      "params": {
+        "action": "stop",
+        "track_id": null,
+        "position_sec": 0
+      },
+      "expect": {
+        "kind": "audio.set",
+        "target_id": null,
+        "payload": {
+          "track_id": null,
+          "action": "stop",
+          "position_ms": 0
+        }
+      }
+    }
+  ],
+  "unsupported_ops": {
+    "features": "측정(metrics) 경로 — command 가 아니다. T04/T09 의 ingest 로 간다. 어댑터는 command 를 만들지 않는다.",
+    "feature": "소켓 feature 이벤트. 위와 동일.",
+    "participation_heartbeat": "presence 신호. command 아님.",
+    "waiting_room": "휘발성 대기실 presence. v2 waiting.set_ready 는 checkin_revision 이 필수인데 v1 은 알 수 없다 → 만들어 채우지 않는다(가짜 최신성 금지). T05 는 v1 회차에서 기존 소켓 경로를 그대로 쓴다."
+  },
+  "error_map": [
+    {
+      "code": "forbidden",
+      "http": 403
+    },
+    {
+      "code": "session_ended",
+      "http": 400,
+      "detail": "종료된 세션입니다"
+    },
+    {
+      "code": "participant_not_found",
+      "http": 404
+    },
+    {
+      "code": "participant_waitlisted",
+      "http": 403,
+      "detail": "대기 중인 참여자는 손을 들 수 없습니다"
+    },
+    {
+      "code": "idempotency_conflict",
+      "http": 409
+    },
+    {
+      "code": "handler_not_registered",
+      "http": 503
+    },
+    {
+      "code": "session_not_found",
+      "http": 404,
+      "detail": "세션을 찾을 수 없습니다"
+    }
+  ]
+}
