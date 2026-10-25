@@ -112,6 +112,8 @@ export interface MemberClassViewProps {
   /** 오프라인 현장 카드에서 고른 체크인 */
   checkin?: MemberCheckin | null;
   sheet: MemberSheetKey | null;
+  /** SDD-246: v2 on 일 때만 — 현재값(매초)과 5분 막대. 데스크톱만 막대, 모바일은 현재값만 */
+  v2Bars?: { label: string; current: number | null; bars: readonly import('../../../../lib/session-live/live-view').Bar[] } | null;
   /** 하니스·측정용 정지 배경. 없으면 교차 페이드 배경 */
   backdropSrc?: string;
   /** 종료 화면(M21) 정보 */

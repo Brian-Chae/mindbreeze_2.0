@@ -50,3 +50,49 @@ export function toSessionLiveMetrics(state: LiveState, opts: LegacyAdapterOption
     };
   });
 }
+
+// ── 페이지 보조 모델 (v2 단일 출처에서 파생) ─────────────────────────────
+
+import type { SessionStatus } from '../api/session';
+import type { WaitingRoomEntry } from '../../hooks/useWaitingRoomCount';
+
+/** LiveState.session.phase → 기존 화면이 쓰는 SessionStatus. 아직 snapshot 이 없으면 null. */
+export function sessionStatusOf(state: LiveState | null): SessionStatus | null {
+  const phase = state?.session?.data.phase;
+  switch (phase) {
+    case 'scheduled': return 'scheduled';
+    case 'open':
+    case 'waiting': return 'open';
+    case 'in_progress': return 'in_progress';
+    case 'ended': return 'completed';
+    case 'cancelled': return 'cancelled';
+    default: return null;
+  }
+}
+
+/** 대기실 항목 — waiting 도메인 + 신원(legacy allowlist). 준비 완료 여부만 쓰고 점수/원시값은 없다. */
+export function toWaitingEntries(state: LiveState, legacy: readonly LegacyIdentity[] = []): WaitingRoomEntry[] {
+  const byId = new Map(legacy.map((p) => [p.participant_id, p]));
+  const out: WaitingRoomEntry[] = [];
+  for (const [pid, v] of Object.entries(state.waiting)) {
+    if (state.removed[pid] !== undefined) continue;
+    const part = state.participation[pid]?.data;
+    if (part && (part.attendance === 'left' || part.attendance === 'removed')) continue;
+    const name = (byId.get(pid) as { display_name?: unknown } | undefined)?.display_name;
+    const done = v.data.ready;
+    out.push({
+      participantId: pid,
+      nickname: typeof name === 'string' ? name : null,
+      checkin: null,
+      readiness: { surveyDone: done, bandDone: done, deviceDone: done },
+    });
+  }
+  return out.sort((a, b) => a.participantId.localeCompare(b.participantId));
+}
+
+/** 무음 신호 — 만료 전 신호만, 참여자별 최신 1건. */
+export function activeSignals(state: LiveState, nowMs: number): Array<{ participantId: string; type: 'following' | 'difficult' | 'resting'; expiresAtMs: number }> {
+  return Object.entries(state.signal)
+    .filter(([pid, v]) => state.removed[pid] === undefined && v.data.expires_at_ms > nowMs)
+    .map(([pid, v]) => ({ participantId: pid, type: v.data.signal_type, expiresAtMs: v.data.expires_at_ms }));
+}

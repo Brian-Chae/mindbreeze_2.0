@@ -2,7 +2,8 @@
 // 이식 범위: useBand(+everConnected) · useSessionLiveSocket(평균 수신 구독 없음) · 1Hz 링버퍼 · useGuestAudioSync · 채팅 폴링 · 접촉 불량 상태.
 // useWakeLock 은 호출부(class-join-page: step waiting|meditation)가 이미 걸고 있어 여기서 다시 걸지 않는다(센티널 중복 방지).
 // 이 파일만 useBand 를 호출한다(plan R4: BLE 연결·업로드 인스턴스는 화면당 1개).
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { freshnessOf } from '../../../../lib/session-live/live-view';
 import { ConnectionState } from 'livekit-client';
 import { useBand, type UseBandResult } from '../../../../hooks/useBand';
 import { BiosignalRecordingStatus } from '../../../../lib/biosignal/recording-status';
@@ -20,6 +21,10 @@ import { deriveMemberCase, type MemberCaseInput } from '../../../../lib/class/me
 import { getActiveSessionLiveSocket, type SessionLiveEegFeatureEvent } from '../../../../lib/socket';
 import { contactStatusLabel, resolveBandLinkState, signalQualityLevelLabel } from '../../../../lib/session-live/signal-status';
 import { useAuthStore } from '../../../../stores/authStore';
+import { isLiveProtocolV2Enabled } from '../../../../lib/session-live/live-flag';
+import type { UseLiveV2Result } from '../../../../lib/session-live/use-live-v2';
+import type { LiveClient } from '../../../../lib/session-live/live-client';
+import { useMetricBars } from '../../../../lib/session-live/metric-bars';
 import { ClassChatPanel } from '../../../chat/ClassChatPanel';
 import { LeaveConfirmModal } from '../../../player/LeaveConfirmModal';
 import { ClassOnboardingCoachmarks } from '../../ClassOnboardingCoachmarks';
@@ -46,6 +51,8 @@ interface MemberClassContainerProps {
   linkbandMode?: LinkbandMode;
   /** 정원이 차서 대기열에 들어간 참가자 — 대기 화면만 보이고 밴드·소켓·영상 연결을 하지 않는다(M20) */
   waitlisted?: boolean;
+  /** SDD-246: v2 on 이면 EntryPage 가 만든 LiveClient/LiveState 하나를 받는다(없으면 v1 훅) */
+  liveV2?: UseLiveV2Result | null;
 }
 
 const AI_ANALYZING_MS = 15_000;
@@ -95,10 +102,19 @@ function describeRender(band: UseBandResult, snapshot: MetricSnapshot, blocked: 
   };
 }
 
+/** 무음 신호 — v2 는 signal.send 명령(command_id 포함). 결과는 ACK 가 아니라 즉시 'sent'/'failed' 로 UI 에 알린다. */
+function sendSignalV2(client: LiveClient): MemberClassViewProps['actions']['onSignal'] {
+  return (type) => {
+    client.sendCommand('signal.send', { signal_type: type, target_scope: 'host' });
+    return 'sent';
+  };
+}
+
 export function MemberClassContainer({
   title, startedAt, durationMin, onLeave, sessionId, participantId, entryCredential, hostName = null,
-  locationType, participantMode, maxParticipants, linkbandMode, waitlisted = false,
+  locationType, participantMode, maxParticipants, linkbandMode, waitlisted = false, liveV2 = null,
 }: MemberClassContainerProps) {
+  const v2On = isLiveProtocolV2Enabled() && liveV2 !== null;
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
   const place: 'online' | 'offline' = locationType === 'offline' ? 'offline' : 'online';
@@ -134,6 +150,8 @@ export function MemberClassContainer({
   const [guestChatEnabled, setGuestChatEnabled] = useState(false);
   const [unread, setUnread] = useState(0);
 
+  const v2PolicyChat = v2On && liveV2?.ready ? liveV2.state?.policy?.data.chat_enabled ?? null : null;
+  const v2ChatReady = v2PolicyChat !== null;
   useEffect(() => {
     if (!isAuthenticated || !sessionId) return undefined;
     let cancelled = false;
@@ -148,12 +166,13 @@ export function MemberClassContainer({
       }
     };
     void load();
+    if (v2ChatReady) return () => { cancelled = true; }; // v2 READY: 채팅 on/off 는 policy 도메인 — 주기 폴링 0
     const timer = window.setInterval(() => void load(), CHAT_STATE_POLL_MS);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [isAuthenticated, sessionId]);
+  }, [isAuthenticated, sessionId, v2ChatReady]);
 
   useEffect(() => {
     if (isAuthenticated || !participantId || !entryCredential) return undefined;
@@ -167,12 +186,13 @@ export function MemberClassContainer({
       }
     };
     void load();
+    if (v2ChatReady) return () => { cancelled = true; };
     const timer = window.setInterval(() => void load(), CHAT_STATE_POLL_MS);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [isAuthenticated, participantId, entryCredential, sessionId]);
+  }, [isAuthenticated, participantId, entryCredential, sessionId, v2ChatReady]);
 
   /* ───────── 밴드(useBand 단일 인스턴스) ───────── */
   const band = useBand({ sessionId, participantId, enabled: connectionsActive, skipAuth: !isAuthenticated, entryCredential });
@@ -297,7 +317,7 @@ export function MemberClassContainer({
   const liveSocket = useSessionLiveSocket({
     sessionId,
     participantId,
-    enabled: connectionsActive,
+    enabled: connectionsActive && !v2On,
     skipAuth: !isAuthenticated,
     entryCredential,
     onEegFeature: handleEegFeature,
@@ -305,7 +325,21 @@ export function MemberClassContainer({
   });
 
   /* ───────── 상담사 가이드 동기 재생(온라인 전용) + 스피커 ───────── */
-  const guestAudio = useGuestAudioSync({ sessionId, enabled: Boolean(sessionId) && locationType === 'online', event: audioSyncEvent });
+  // v2: 음성 동기화는 LiveState.audio(서버 anchor·revision)에서 파생한다 — class:audio_sync 소켓 이벤트는 쓰지 않는다.
+  const v2Audio = v2On ? liveV2?.state?.audio?.data ?? null : null;
+  const v2AudioEvent = useMemo<AudioSyncEvent | null>(() => {
+    if (!v2Audio) return null;
+    return {
+      session_id: sessionId,
+      action: v2Audio.action,
+      track_id: v2Audio.track_id,
+      position_sec: v2Audio.position_ms / 1000,
+      server_ts: new Date(v2Audio.server_anchor_ms).toISOString(),
+      server_ts_ms: v2Audio.server_anchor_ms,
+      revision: Number(v2Audio.revision),
+    };
+  }, [v2Audio, sessionId]);
+  const guestAudio = useGuestAudioSync({ sessionId, enabled: Boolean(sessionId) && locationType === 'online', event: v2On ? v2AudioEvent : audioSyncEvent });
   const [speakerOn, setSpeakerOn] = useState(locationType !== 'offline');
   const speakerTouchedRef = useRef(false);
   useEffect(() => {
@@ -314,7 +348,15 @@ export function MemberClassContainer({
   }, [locationType]);
 
   /* ───────── 상담사 영상(LiveKit) 토큰: 입장 + 상담사 화상 미시작이면 지수 백오프 재시도 ───────── */
-  const liveKit = useMemberLiveKit({ participantId, entryCredential, sessionId, listenSpeakingChanges: speakingManaged });
+  const v2Binding = useMemo(() => (v2On && liveV2 ? { client: liveV2.client, state: liveV2.state } : null), [v2On, liveV2?.client, liveV2?.state]); // eslint-disable-line react-hooks/exhaustive-deps -- liveV2 객체 대신 client/state 만 본다
+  const v2NowMs = liveV2?.nowMs ?? 0;
+  const v2Bars = useMetricBars(v2On ? liveV2?.state ?? null : null, participantId, 'relaxation_display', v2NowMs);
+  const v2Current = (() => {
+    const m = v2On && participantId ? liveV2?.state?.metrics[participantId]?.data : undefined;
+    const v = m?.metrics.relaxation_display;
+    return m && v && v.validity === 'valid' && freshnessOf(m.observed_at_ms, v2NowMs, m.freshness) === 'fresh' ? v.value : null;
+  })();
+  const liveKit = useMemberLiveKit({ participantId, entryCredential, sessionId, listenSpeakingChanges: speakingManaged, v2: v2Binding });
   const { connect: connectLiveKit, notReady, attemptCount } = liveKit;
   const videoActive = connectionsActive && place === 'online';
   useEffect(() => {
@@ -362,6 +404,7 @@ export function MemberClassContainer({
     place, mode, viewerOnly, bandVisible, bandUi, waitlisted, nowMs, hostVideoIssue,
     header: { title: title ?? '클래스', elapsedSec, totalSec, counselorName, myInitial: user?.name?.trim().charAt(0) || '나' },
     hero, snapshot, series, sheet, screenOff, confirmLeave,
+    v2Bars: v2On ? { label: '이완', current: v2Current, bars: v2Bars } : null,
     device: {
       battery: band.battery,
       signalLabel: signalQualityLevelLabel(band.signalQualityLevel),
@@ -381,7 +424,7 @@ export function MemberClassContainer({
       onsiteLabel: null,
     },
     chat: {
-      enabled: isAuthenticated ? chatEnabled : guestChatEnabled,
+      enabled: v2ChatReady ? Boolean(v2PolicyChat) : isAuthenticated ? chatEnabled : guestChatEnabled,
       authenticated: isAuthenticated,
       unread,
       node: isAuthenticated ? (
@@ -398,7 +441,7 @@ export function MemberClassContainer({
       ) : null,
     },
     waitlist: { title: title ?? '클래스', counselorName, startLabel: startedAt ? formatStartLabel(startedAt) : null, notifyByPush: isAuthenticated },
-    socketConnected: liveSocket.isConnected,
+    socketConnected: v2On ? liveV2?.state?.phase === 'READY' : liveSocket.isConnected,
     onboarding: { locationType, participantMode, maxParticipants },
   };
 
@@ -413,7 +456,7 @@ export function MemberClassContainer({
     band,
     retryNetwork,
     retryHostVideo: () => void connectLiveKit(),
-    sendSignal: liveSocket.sendSignal,
+    sendSignal: v2On && liveV2?.client ? sendSignalV2(liveV2.client) : liveSocket.sendSignal,
     setSpeakerOn: (on) => {
       speakerTouchedRef.current = true;
       setSpeakerOn(on);
@@ -468,6 +511,7 @@ interface SharedScreenProps {
   snapshot: MetricSnapshot;
   series: MetricSeries;
   sheet: MemberSheetKey | null;
+  v2Bars: MemberClassViewProps['v2Bars'];
   screenOff: boolean;
   confirmLeave: boolean;
   device: MemberDeviceModel;
@@ -609,6 +653,7 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
           myVideo={media.myVideo}
           hostVideoIssue={shared.hostVideoIssue}
           sheet={shared.sheet}
+          v2Bars={shared.v2Bars}
           waitlist={shared.waitlist}
           actions={actions}
         />

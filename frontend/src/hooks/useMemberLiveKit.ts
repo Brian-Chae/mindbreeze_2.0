@@ -6,7 +6,10 @@ import { useMobileSwipeProtection } from './use-mobile-swipe-protection';
 // 손들기 상태도 이 훅이 소유한다(손들기 완료 ↔ 발언권 부여를 같은 출처로 유지).
 import { resolveLiveKitUrl } from '../lib/livekit-url';
 import { isLiveProtocolV2Enabled } from '../lib/session-live/live-flag';
+import { shouldRefreshMediaToken, type MediaGrant } from '../lib/session-live/media-token-policy';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { LiveClient } from '../lib/session-live/live-client';
+import type { LiveState } from '../lib/session-live/live-state';
 import { ApiError, tokenStorage } from '../lib/api/client';
 import { getEntryLiveKitToken, lowerEntryHand, raiseEntryHand } from '../lib/api/class-flow';
 import {
@@ -28,6 +31,8 @@ interface UseMemberLiveKitOptions {
   sessionId?: string | null;
   /** SDD-094: 온라인 그룹(≤20)에서만 true — speaking_changed 수신 시 토큰 재발급 (기본 true) */
   listenSpeakingChanges?: boolean;
+  /** SDD-246: v2 on 이면 LiveClient/LiveState 가 손·발언권의 유일한 출처다(v1 소켓 리스너·손들기 REST 미사용) */
+  v2?: { client: LiveClient | null; state: LiveState | null } | null;
 }
 
 export function useMemberLiveKit({
@@ -35,6 +40,7 @@ export function useMemberLiveKit({
   entryCredential,
   sessionId = null,
   listenSpeakingChanges = true,
+  v2 = null,
 }: UseMemberLiveKitOptions) {
   const [token, setToken] = useState<string | null>(null);
   const [roomId, setRoomId] = useState<string | null>(null);
@@ -107,7 +113,7 @@ export function useMemberLiveKit({
    * 이미 열린 연결이 있으면 그대로 구독하고 없으면 같은 연결을 만들어 room 에 join 한다.
    */
   useEffect(() => {
-    if (!listenSpeakingChanges || !participantId) return undefined;
+    if (v2 || !listenSpeakingChanges || !participantId) return undefined;
     const existing = getActiveSessionLiveSocket();
     if (!existing && !sessionId) return undefined;
     const socket = existing ?? getSessionLiveSocket(tokenStorage.getAccess());
@@ -139,10 +145,28 @@ export function useMemberLiveKit({
       unsubSpeaking();
       socket.off('connect', onConnect);
     };
-  }, [listenSpeakingChanges, participantId, sessionId, entryCredential]);
+  }, [v2, listenSpeakingChanges, participantId, sessionId, entryCredential]);
+
+
+  /* SDD-246: v2 — 손·발언권은 LiveState(speaking 도메인)에서 파생한다. 손만 바뀌면 토큰 재발급 0(shouldRefreshMediaToken). */
+  const v2State = v2?.state ?? null;
+  const mySpeaking = participantId && v2State ? v2State.speaking[participantId]?.data ?? null : null;
+  const myIntent = participantId && v2State ? v2State.intents[`hand:${participantId}`] : undefined;
+  const grantRef = useRef<MediaGrant | null>(null);
+  useEffect(() => {
+    if (!v2 || !mySpeaking || !participantId) return;
+    const next: MediaGrant = { participantId, canPublish: mySpeaking.can_publish, grantVersion: mySpeaking.grant_version };
+    if (shouldRefreshMediaToken(grantRef.current, next)) void connectRef.current();
+    grantRef.current = next;
+  }, [v2, mySpeaking, participantId]);
 
   /** SDD-094: 손들기 — 상담사가 발언권을 부여할 때까지 대기 상태로 둔다 */
   const raiseHand = useCallback(async (): Promise<void> => {
+    if (v2) {
+      // 낙관 표시는 LiveClient intent 가 맡는다(상태 직접 변경 없음). 실패 ACK 면 intent 가 풀려 원래 값으로 돌아간다.
+      v2.client?.setHand(true);
+      return;
+    }
     if (!sessionId || !participantId || !entryCredential || raisingRef.current) return;
     raisingRef.current = true;
     setRaising(true);
@@ -158,10 +182,14 @@ export function useMemberLiveKit({
       raisingRef.current = false;
       setRaising(false);
     }
-  }, [sessionId, participantId, entryCredential]);
+  }, [v2, sessionId, participantId, entryCredential]);
 
   /** 손 내리기(손들기 취소) — 실패하면 손든 상태를 그대로 두고 오류만 남긴다. 진행 중 연타는 무시 */
   const lowerHand = useCallback(async (): Promise<void> => {
+    if (v2) {
+      v2.client?.setHand(false);
+      return;
+    }
     if (!sessionId || !participantId || !entryCredential || raisingRef.current) return;
     raisingRef.current = true;
     setRaising(true);
@@ -177,7 +205,7 @@ export function useMemberLiveKit({
       raisingRef.current = false;
       setRaising(false);
     }
-  }, [sessionId, participantId, entryCredential]);
+  }, [v2, sessionId, participantId, entryCredential]);
 
   return {
     token,
@@ -191,9 +219,9 @@ export function useMemberLiveKit({
     disconnect,
     serverUrl: LIVEKIT_URL,
     /** SDD-094 발언권 — speaking: 부여 상태, raisedHand: 손들기 상태 */
-    speaking,
-    raisedHand,
-    raising,
+    speaking: v2 ? (mySpeaking?.can_publish ?? false) : speaking,
+    raisedHand: v2 ? (myIntent ? myIntent.value : (mySpeaking?.hand_raised ?? false)) : raisedHand,
+    raising: v2 ? Boolean(myIntent) : raising,
     raiseHandError: raiseError,
     raiseHand,
     lowerHand,

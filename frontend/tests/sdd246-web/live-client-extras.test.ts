@@ -101,3 +101,27 @@ describe('LiveClient 확장', () => {
     expect(seen).toHaveLength(1);
   });
 });
+
+describe('paint ACK 자동 전송', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+  it('타인이 보낸 명령 event 는 반영 후 live:applied(rendered_command_ids) 를 보낸다, 내 명령 event 는 보내지 않는다', async () => {
+    const { sock, client } = await ready();
+    const ev = (seq: string, cid: string) => ({
+      protocol_version: 2, schema_version: 1, event_id: `0000003c-0000-4000-8000-${seq.padStart(12, '0')}`, session_id: SID, epoch: '1',
+      audience: 'host', domain: 'speaking', seq, entity_id: '00000002-0000-4000-8000-000000000002', entity_version: seq, kind: 'speaking.changed',
+      observed_at_ms: null, received_at_server_ms: 1, command_id: cid,
+      payload: { participant_id: '00000002-0000-4000-8000-000000000002', hand_raised: true, can_publish: false, grant_version: '1' },
+    });
+    const base = (snapshot().through.find((c) => c.domain === 'speaking')?.seq) ?? '0';
+    const next = String(Number(base) + 1);
+    sock.fire('live:event', ev(next, '00000077-0000-4000-8000-000000000077'));
+    await vi.advanceTimersByTimeAsync(40);
+    const rendered = sock.emitted.filter((e) => e.ev === 'live:applied' && (e.payload as { rendered_command_ids?: string[] }).rendered_command_ids);
+    expect(rendered.at(-1)?.payload).toMatchObject({ rendered_command_ids: ['00000077-0000-4000-8000-000000000077'] });
+    const mine = client.sendCommand('hand.set', { raised: true });
+    sock.fire('live:event', ev(String(Number(next) + 1), mine));
+    await vi.advanceTimersByTimeAsync(40);
+    expect(sock.emitted.filter((e) => e.ev === 'live:applied' && JSON.stringify(e.payload).includes(mine))).toHaveLength(0);
+  });
+});

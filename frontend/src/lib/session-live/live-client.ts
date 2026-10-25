@@ -262,6 +262,18 @@ export class LiveClient {
     this.set(r.state);
     this.run(r.effects);
     if (r.state.phase === 'READY') this.scheduleApplied();
+    // paint ACK: 내가 보낸 명령이 아닌 타인의 명령 event 는, 화면에 반영된 다음 paint 뒤 즉시 알린다(origin 이 왕복을 잰다).
+    if (ev.command_id && !this.sentAtMs.has(ev.command_id) && r.state.phase === 'READY') this.schedulePaintAck(ev.command_id);
+  }
+
+  private schedulePaintAck(commandId: string): void {
+    const fire = (): void => this.markRendered([commandId]);
+    // React 가 이 상태를 commit 한 뒤(다음 frame)에 보낸다. rAF 가 없는 환경(시험·백그라운드)은 timeout 으로 대체.
+    if (typeof requestAnimationFrame === 'function' && typeof document !== 'undefined' && document.visibilityState === 'visible') {
+      requestAnimationFrame(() => requestAnimationFrame(fire));
+    } else {
+      setTimeout(fire, 16);
+    }
   }
 
   private scheduleApplied(): void {

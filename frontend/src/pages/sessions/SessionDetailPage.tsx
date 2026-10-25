@@ -23,6 +23,9 @@ import { SessionLocationEditor } from '../../components/session/session-location
 import { ParticipantPicker, type SelectedParticipant } from '../../components/session/ParticipantPicker';
 import AppShell from '../../components/layout/AppShell';
 import { useSessionLiveSocket } from '../../hooks/useSessionLiveSocket';
+import { isLiveProtocolV2Enabled } from '../../lib/session-live/live-flag';
+import { useLiveV2 } from '../../lib/session-live/use-live-v2';
+import { sessionStatusOf } from '../../lib/session-live/live-legacy-adapter';
 import { ClassActionSheet, type ClassActionKind } from '../../components/class/flow/shell/ClassActionSheet';
 import { HostDetailView } from '../../components/class/flow/shell/HostDetailView';
 import { HostMenuSheet } from '../../components/class/flow/shell/HostMenuSheet';
@@ -114,8 +117,13 @@ function LegacySessionDetailPage() {
   );
 
   // SDD-129(③-8): WS 구독으로 클래스 상태 즉시 반영 (5초 폴링은 WS 미결합 시 폴백)
-  const { isReady } = useSessionLiveSocket({
+  // SDD-246 T06: v2 on 이면 LiveClient/LiveState 하나가 상태·참여 변화의 출처다(v1 소켓 훅·REST 폴링 미구동).
+  const v2Flag = isLiveProtocolV2Enabled();
+  const liveV2 = useLiveV2({ sessionId: id, selfParticipantId: null, enabled: Boolean(id) });
+  const v2Status = v2Flag && liveV2.ready ? sessionStatusOf(liveV2.state) : null;
+  const v1Socket = useSessionLiveSocket({
     sessionId: id,
+    enabled: !v2Flag,
     onSessionStateChanged: (event) => {
       setSession((prev) =>
         prev
@@ -125,6 +133,13 @@ function LegacySessionDetailPage() {
     },
     onParticipantChanged: handleParticipantChanged,
   });
+  const isReady = v2Flag ? liveV2.ready : v1Socket.isReady;
+  // v2: 전이/참여 변화가 LiveState 로 오면 상세 모델(session)을 한 번만 다시 읽는다(주기 폴링 아님).
+  const participationKey = v2Flag && liveV2.state ? Object.keys(liveV2.state.participation).sort().join(',') + '|' + (liveV2.state.session?.version ?? '') : '';
+  useEffect(() => {
+    if (!id || !v2Flag || !v2Status) return;
+    getSession(id).then((next) => { setSession(next); setError(null); }).catch(() => { /* 다음 변화에서 복구 */ });
+  }, [id, v2Flag, v2Status, participationKey]);
 
   useEffect(() => {
     if (!id) return;
