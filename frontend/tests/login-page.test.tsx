@@ -59,3 +59,22 @@ test('관리자 모드는 공개 탭과 이메일을 숨긴다', () => {
 test('알 수 없는 role은 회원 화면이다', () => {
   expect(render('/login?role=unknown')).toMatch(/Google로 회원 로그인/);
 });
+
+
+test('로그인 제목과 역할 스위치는 본문 앞의 헤더에 있고 브랜드 대형 제목은 없다', () => {
+  const html = render('/login');
+  expect(html).toMatch(/<header[\s\S]*<h1[^>]*>로그인<\/h1>[\s\S]*role="tablist"[\s\S]*<\/header>/);
+  expect(html).not.toContain('MIND BREEZE 로그인');
+  expect(html).toContain('aria-label="Mind Breeze 홈으로 이동"');
+});
+
+test('각 역할 안내는 로그인 버튼 바로 다음에 표시한다', () => {
+  for (const [role, description] of [
+    ['client', '상담과 명상을 이용하는 회원을 위한 로그인입니다.'],
+    ['counselor', '상담사 계정으로 세션과 회원을 관리하세요.'],
+    ['org_admin', '기관에서 발급받은 관리자 계정을 사용하세요.'],
+    ['platform_admin', 'Google Workspace 계정으로 로그인하세요.'],
+  ]) {
+    expect(render(`/login?role=${role}`)).toContain(`</button><p class="text-center text-[12.5px] text-white/78 text-white/[0.78]">${description}</p>`);
+  }
+});

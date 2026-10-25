@@ -262,6 +262,7 @@ export default function LoginPage() {
       <input id="login-password" type="password" required autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} onFocus={() => setTyping(true)} onBlur={() => setTyping(false)} disabled={busy} className={inputClass} />
       {rememberMeField}
       <button type="submit" disabled={busy || !email || !password} className="mt-1 h-[52px] rounded-full bg-[#5F0080] text-[15px] font-semibold hover:bg-[#4B0066] disabled:opacity-60">{pending === 'email' ? '로그인 중…' : config.submit}</button>
+      <p className="text-center text-[12.5px] text-white/78 text-white/[0.78]">{config.description}</p>
     </form>
   );
 
@@ -269,29 +270,32 @@ export default function LoginPage() {
     <div className="relative min-h-screen font-sans">
       <img src="/mb-design/assets/images/background3.jpg" alt="" className="absolute inset-0 h-full w-full object-cover" />
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/60" />
-      <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 pb-10 pt-24 text-white">
-        <Link to="/" aria-label="Mind Breeze 홈으로 이동" className="absolute left-6 top-6 flex items-center gap-2.5 text-xl font-extrabold tracking-[-0.04em] text-white">
-          <img src="/mb-design/assets/logo_symbol_dark.svg" width={28} height={16} alt="" className="brightness-0 invert" />
-          Mind Breeze
-        </Link>
-        <img src="/mb-design/assets/logo_symbol_dark.svg" width={64} height={29} alt="" className="mb-5 brightness-0 invert" />
-        <h1 className="text-center text-[28px] font-extrabold tracking-tight text-white sm:text-[32px]">{isAdmin ? '플랫폼 관리자 로그인' : 'MIND BREEZE 로그인'}</h1>
-        <div className="mt-6 w-full max-w-[360px]">
-          {!isAdmin && <div role="tablist" aria-label="로그인 유형" className="mb-5 grid grid-cols-3 rounded-full bg-black/20 p-1">
-            {tabs.map((tab, index) => <button key={tab.role} ref={(el) => { tabRefs.current[index] = el; }}
-              id={`login-tab-${tab.role}`} role="tab" aria-selected={loginRole === tab.role} aria-controls={`login-panel-${tab.role}`}
-              tabIndex={loginRole === tab.role ? 0 : -1} disabled={busy} onClick={() => selectTab(index)} onKeyDown={(event) => handleTabKey(event, index)}
-              className={`rounded-full px-2 py-3 text-sm font-semibold disabled:opacity-60 ${loginRole === tab.role ? 'bg-white text-[#5F0080] underline decoration-2 underline-offset-4' : 'text-white hover:bg-white/10'}`}>{tab.label}</button>)}
+      <div className="relative z-10 min-h-screen text-white">
+        <header className="sticky top-0 z-30 border-b border-white/[0.08] bg-[rgba(20,0,30,0.55)] pt-[env(safe-area-inset-top)] backdrop-blur-[18px]">
+          <div className="grid h-[52px] grid-cols-[44px_1fr_44px] items-center px-3">
+            <Link to="/" aria-label="Mind Breeze 홈으로 이동" className="flex h-11 w-11 items-center justify-center">
+              <img src="/mb-design/assets/logo_symbol_dark.svg" width={24} height={16} alt="" className="brightness-0 invert" />
+            </Link>
+            <h1 className="text-center text-[17px] font-bold tracking-[-0.02em] text-white">{isAdmin ? '플랫폼 관리자 로그인' : '로그인'}</h1>
+          </div>
+          {!isAdmin && <div className="mx-auto w-full max-w-[400px] px-5 pb-3.5 pt-1">
+            <div role="tablist" aria-label="로그인 유형" className="grid grid-cols-3 rounded-full bg-black/25 p-1">
+              {tabs.map((tab, index) => <button key={tab.role} ref={(el) => { tabRefs.current[index] = el; }}
+                id={`login-tab-${tab.role}`} role="tab" aria-selected={loginRole === tab.role} aria-controls={`login-panel-${tab.role}`}
+                tabIndex={loginRole === tab.role ? 0 : -1} disabled={busy} onClick={() => selectTab(index)} onKeyDown={(event) => handleTabKey(event, index)}
+                className={`rounded-full px-1 py-2.5 text-[14px] leading-5 font-semibold disabled:opacity-60 ${loginRole === tab.role ? 'bg-white text-[#5F0080] underline decoration-2 underline-offset-4' : 'text-white hover:bg-white/10'}`}>{tab.label}</button>)}
+            </div>
           </div>}
+        </header>
+        <div className="mx-auto w-full max-w-[408px] px-6 pb-10 pt-[26px]">
           <section role={isAdmin ? undefined : 'tabpanel'} id={`login-panel-${loginRole}`} aria-labelledby={isAdmin ? undefined : `login-tab-${loginRole}`} aria-busy={busy} className={`flex flex-col gap-4 ${isClient ? 'pb-[calc(8.5rem+env(safe-area-inset-bottom))]' : ''}`}>
-            <p className="text-center text-sm text-white/90">{isAdmin ? 'Google Workspace 계정으로 로그인하세요.' : config.description}</p>
             {/* SDD-227: 회원 탭은 이메일 로그인을 위에, 간편 로그인(Google·Apple)을 아래에 둔다. */}
             {isClient && <>{emailForm}
               <p className="text-center text-sm"><Link to="/forgot-password" className="underline">비밀번호 찾기</Link><span aria-hidden="true" className="mx-2 text-white/60">·</span><Link to="/register?role=client" className="font-semibold underline">회원가입</Link></p>
               {dividerWith('간편 로그인')}{googleButton}{appleButton}{needsGoogleConsent && googleConsentField}</>}
             {!isAdmin && loginRole === 'counselor' && <>{emailForm}{divider}{googleButton}{appleButton}<p className="text-center text-xs text-white/80">Google·Apple 로그인은 기존 상담사 계정만 이용할 수 있습니다.</p></>}
             {!isAdmin && loginRole === 'org_admin' && emailForm}
-            {isAdmin && <>{rememberMeField}{googleButton}</>}
+            {isAdmin && <>{rememberMeField}{googleButton}<p className="text-center text-[12.5px] text-white/78 text-white/[0.78]">Google Workspace 계정으로 로그인하세요.</p></>}
             {error && <p role="alert" className="rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-red-900/30">{error}</p>}
             {!isAdmin && !isClient && <Link to="/forgot-password" className="text-center text-sm underline">비밀번호 찾기</Link>}
             {loginRole === 'counselor' && <Link to="/register?role=counselor" className="text-center text-sm font-semibold underline">상담사 가입</Link>}

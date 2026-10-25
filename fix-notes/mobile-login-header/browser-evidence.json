@@ -1,0 +1,56 @@
+{
+  "client": {
+    "headerTop": 0,
+    "headerHeight": 119,
+    "position": "sticky",
+    "paddingTop": "0px",
+    "background": "rgba(20, 0, 30, 0.55)",
+    "blur": "blur(18px)",
+    "emailTop": 179,
+    "descriptionSize": "12.5px",
+    "descriptionColor": "rgba(255, 255, 255, 0.78)",
+    "overflow": false,
+    "scrolled": {
+      "scrollY": 0,
+      "headerTop": 0
+    }
+  },
+  "counselor": {
+    "headerTop": 0,
+    "headerHeight": 119,
+    "position": "sticky",
+    "paddingTop": "0px",
+    "background": "rgba(20, 0, 30, 0.55)",
+    "blur": "blur(18px)",
+    "emailTop": 179,
+    "descriptionSize": "12.5px",
+    "descriptionColor": "rgba(255, 255, 255, 0.78)",
+    "overflow": false,
+    "scrolled": {
+      "scrollY": 0,
+      "headerTop": 0
+    }
+  },
+  "org_admin": {
+    "headerTop": 0,
+    "headerHeight": 119,
+    "position": "sticky",
+    "paddingTop": "0px",
+    "background": "rgba(20, 0, 30, 0.55)",
+    "blur": "blur(18px)",
+    "emailTop": 179,
+    "descriptionSize": "12.5px",
+    "descriptionColor": "rgba(255, 255, 255, 0.78)",
+    "overflow": false,
+    "scrolled": {
+      "scrollY": 0,
+      "headerTop": 0
+    }
+  },
+  "keyboard": true,
+  "adminUrl": "http://127.0.0.1:5186/login?role=platform_admin&next=%2Fadmin",
+  "actualScroll": {
+    "scrollY": 169,
+    "headerTop": 0
+  }
+}
