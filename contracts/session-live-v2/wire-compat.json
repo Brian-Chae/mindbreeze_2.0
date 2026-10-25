@@ -15,9 +15,21 @@
     "source": "frontend/package-lock.json"
   },
   "native_clients": {
-    "ios": "T07 이 선택·고정(Socket.IO v4 프로토콜 호환 Swift 클라이언트) 후 이 파일에 추가",
-    "android": "T08 이 선택·고정(socket.io-client-java 또는 동급) 후 이 파일에 추가",
-    "rule": "native 가 선택한 라이브러리는 websocket-only 에서 python-socketio 5.16.1 과 handshake/ack/auth payload/reconnect 를 합성 서버로 시험한 결과를 evidence 에 남긴다"
+    "android": {
+      "library": "io.socket:socket.io-client",
+      "version": "2.1.2",
+      "protocol": "Engine.IO 4 / Socket.IO v4 wire",
+      "transport": "websocket-only",
+      "evidence": "T08 실기기(Galaxy Note10) + python-socketio 5.16.1 / python-engineio 4.13.1 합성 서버: handshake·ack·auth·reconnect, token_expired→refresh→재연결"
+    },
+    "ios": {
+      "library": "자체 구현 EIO4 클라이언트 (MeasurementKit/SocketIOClient)",
+      "version": "measurement-kit-1",
+      "protocol": "Engine.IO 4 / Socket.IO v4 wire",
+      "transport": "websocket-only",
+      "evidence": "T07 호스트 swift test: 실 python-socketio 5.16.1 합성 서버 wire 호환 5건 (CONNECT auth, ping watchdog, ack id/timeout, backoff)"
+    },
+    "rule": "native 가 선택한 라이브러리는 websocket-only 에서 python-socketio 5.16.1 과 handshake/ack/auth payload/reconnect 를 합성 서버로 시험한 결과를 evidence 에 남긴다. 버전을 올리면 이 파일과 wire-compat.test.mjs 를 함께 갱신한다."
   },
   "ack_timeout_ms": 2000,
   "retry_backoff_ms": [

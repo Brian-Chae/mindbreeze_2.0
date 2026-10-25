@@ -876,16 +876,17 @@ def events_for_rows(live, session_id, rows) -> list[dict]:
     from app.services.session_live_state import Cursor, LiveStateService, Scope
 
     want = {str(r.event_id): int(r.revision) for r in rows}
-    pairs: list[tuple[str, str]] = []
+    pairs: dict[tuple[str, str], int] = {}
     for r in rows:
-        for aud in r.audience_policy or []:
-            if (aud, r.domain) not in pairs:
-                pairs.append((aud, r.domain))
+        for aud in dict.fromkeys(r.audience_policy or []):
+            pairs[(aud, r.domain)] = pairs.get((aud, r.domain), 0) + 1
     svc, out = LiveStateService(live), []
-    for aud, dom in pairs:
+    for (aud, dom), n_rows in pairs.items():
         scope = Scope("host") if aud in ("host", "public") else Scope("member", _uuid.UUID(aud.split(":", 1)[1]))
         seq = int(live.snapshot_raw(session_id, [aud], (dom,), False)[5][0][2])
-        rep = svc.replay(session_id, scope, [Cursor(aud, dom, max(0, seq - 512))])
+        # 방송 대상 행은 projection 된 가장 최근 event 들이라 (aud,dom) 의 마지막 n_rows 개 seq 와 일치한다.
+        # 고정 폭(512)으로 거슬러 가면 재구축 직후(복원된 seq 만 있고 stream 이력이 없을 때) log_truncated 가 난다.
+        rep = svc.replay(session_id, scope, [Cursor(aud, dom, max(0, seq - n_rows))])
         out += [e for e in rep.events if e["event_id"] in want]
     out.sort(key=lambda e: (want[e["event_id"]], e["audience"]))
     return out

@@ -44,6 +44,51 @@
     "committed": {
       "type": "boolean",
       "description": "true+retryable 이면 재실행 대신 ledger 결과 조회"
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "capture.* 명령의 결과. capture.start 는 stream_id·owner_generation·lease 를 반드시 포함한다(별도 device.changed 를 기다릴 필요 없음).",
+      "properties": {
+        "stream_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "participant_id": {
+          "$ref": "common.schema.json#/definitions/Uuid",
+          "description": "서버가 인증 문맥에서 확정한 본인 participant. live:metric 의 participant_id 는 반드시 이 값이어야 한다(다르면 participant_mismatch)."
+        },
+        "generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "owner_generation": {
+          "$ref": "common.schema.json#/definitions/U64",
+          "description": "generation 과 같은 값(fencing 세대). presence/renew 의 owner_generation 으로 보낸다."
+        },
+        "lease": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "expires_at_ms"
+          ],
+          "properties": {
+            "expires_at_ms": {
+              "$ref": "common.schema.json#/definitions/Ms"
+            },
+            "offline_bound_until_ms": {
+              "$ref": "common.schema.json#/definitions/Ms"
+            }
+          }
+        },
+        "clock_uncertain": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "closed"
+          ]
+        }
+      }
     }
   },
   "allOf": [

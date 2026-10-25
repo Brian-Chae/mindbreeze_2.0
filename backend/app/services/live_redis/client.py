@@ -26,6 +26,8 @@ from app.services.live_redis import keys, scripts
 STREAM_MAXLEN = 50_000  # 회차 audience·domain 별 stream 상한 (plan §4.1)
 STREAM_RETAIN_MS = 10 * 60 * 1000  # 최근 10분 (둘 중 먼저 도달한 상한)
 DEDUPE_TTL_S = 24 * 3600
+# 고빈도 metrics event(1Hz×참가자) 는 dedupe 키를 만들지 않는다(0): 키·keys 집합 폭증 방지. 중복 방어는 applied watermark(rev<=applied)로 충분하다.
+METRIC_DEDUPE_TTL_S = 0
 TERMINAL_TTL_S = 24 * 3600
 LOCK_TTL_MS = 10_000  # projector-lock TTL 10초, renew 3초
 
@@ -103,6 +105,10 @@ class LiveRedis:
             raise
 
     # --- 키 ---
+    def emitted_key(self, sid) -> str:
+        """방송 워터마크(마지막으로 방송한 revision). T05 publish_pending 이 쓰고 rebuild 가 재구축 후 맞춘다."""
+        return f"{self.base(sid)}:emitted"
+
     def base(self, sid) -> str:
         return keys.base(self.prefix, sid)
 
@@ -137,11 +143,13 @@ class LiveRedis:
     # --- 스크립트 호출 ---
     def project(self, sid, *, epoch: int, fence: Fence, revision: int, event_id: str, domain: str, entity_id: str,
                 entity_version: int, kind: str, payload: dict[str, Any], command_id: str, now_ms: int,
-                deleted: bool, terminal: bool, auth_revision: int, state_value: str, audiences: list[str]) -> list:
+                deleted: bool, terminal: bool, auth_revision: int, state_value: str, audiences: list[str],
+                dedupe_ttl_s: int | None = None) -> list:
         argv = [self.base(sid), str(epoch), str(fence.fence), str(revision), event_id, domain, entity_id,
                 str(entity_version), kind, json.dumps(payload, separators=(",", ":"), ensure_ascii=False),
                 command_id, str(now_ms), "1" if deleted else "0", "1" if terminal else "0", str(auth_revision),
-                str(STREAM_MAXLEN), str(STREAM_RETAIN_MS), str(DEDUPE_TTL_S), str(TERMINAL_TTL_S), state_value,
+                str(STREAM_MAXLEN), str(STREAM_RETAIN_MS), str(DEDUPE_TTL_S if dedupe_ttl_s is None else dedupe_ttl_s),
+                str(TERMINAL_TTL_S), state_value,
                 *audiences]
         return self._wrap(self._project, keys=[self.meta_key(sid), keys.lock(self.prefix, sid)], args=argv)
 

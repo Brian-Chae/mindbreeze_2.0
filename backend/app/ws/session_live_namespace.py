@@ -1903,6 +1903,19 @@ _METRIC_SINK = None
 _DEVICE_SINK = None
 
 
+def install_default_ingest_sinks() -> None:
+    """T09: 아직 sink 가 등록되지 않았으면 기본 수집 sink(feature 저장 + 최신값 투영)를 연결한다. 이미 있으면(시험·확장) 건드리지 않는다."""
+    from app.services.live_ingest_service import make_sinks
+
+    if _METRIC_SINK is not None and _DEVICE_SINK is not None:
+        return
+    metric, device = make_sinks(lambda: _open_db(), lambda sid: publish_session_sync(sid))
+    if _METRIC_SINK is None:
+        set_metric_sink(metric)
+    if _DEVICE_SINK is None:
+        set_device_sink(device)
+
+
 def set_metric_sink(fn) -> None:
     global _METRIC_SINK
     _METRIC_SINK = fn
@@ -1973,6 +1986,7 @@ def register_v2_handlers(sio, ns):
     from app.services.session_live_legacy import PROTOCOL_V2, admit_client, get_session_protocol, pin_session_protocol
     from app.services.session_live_state import LiveStateService, ScopeStale, SnapshotIncomplete
 
+    install_default_ingest_sinks()
     cps.register_live_handlers()  # T03 레지스트리에 업무 handler 등록(플래그와 무관 — 호출은 플래그/프로토콜이 결정한다)
 
     async def _leave_rooms(conn: V2Conn) -> None:
