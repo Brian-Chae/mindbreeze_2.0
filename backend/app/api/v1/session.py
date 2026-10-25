@@ -86,7 +86,20 @@ router = APIRouter(prefix="/sessions", tags=["sessions"])
 # 기능 플래그가 꺼져 있거나 회차가 v2 로 고정되지 않았으면 None 을 돌려 기존 경로를 그대로 탄다(회귀 0).
 # v2 회차에서는 구 REST 호출도 apply_command 한 경로(execute_v1)를 거쳐 WS·REST 가 같은 ledger 를 공유한다.
 # ---------------------------------------------------------------------------
-def _v1_via_live(db, session_id: str, op: str, params: dict, current_user, entry_credential=None):
+def _hello_from_header(value: str | None):
+    """REST 에는 live:hello 가 없다. v2 를 지원하는 신규 클라이언트는 `X-Live-Protocol: 1,2` 로 능력을 알린다(없으면 구 클라이언트)."""
+    from app.services.session_live_legacy import ClientHello
+
+    if not value:
+        return None
+    try:
+        versions = frozenset(int(v) for v in value.split(",") if v.strip())
+    except ValueError:
+        return None
+    return ClientHello(versions, frozenset()) if versions else None
+
+
+def _v1_via_live(db, session_id: str, op: str, params: dict, current_user, entry_credential=None, live_protocol: str | None = None):
     from app.schemas.session_live_v2 import live_protocol_v2_enabled
 
     if not live_protocol_v2_enabled():
@@ -105,7 +118,7 @@ def _v1_via_live(db, session_id: str, op: str, params: dict, current_user, entry
     if actor is None:
         return None  # 인증 실패는 기존 경로가 기존 오류 형식으로 거절한다
     try:
-        outcome = execute_v1(db, actor, op, sid, params)
+        outcome = execute_v1(db, actor, op, sid, params, hello=_hello_from_header(live_protocol))
     except LegacyError as exc:
         from fastapi import HTTPException as _HE
 
@@ -162,6 +175,7 @@ def create_session(
 # ── SDD-209(B5a): 로그인 없는 4자리 코드 입장 ──
 # 주의: "/{session_id}" 라우트보다 먼저 선언해야 "enter"가 세션 ID로 해석되지 않는다.
 EntryCredential = Annotated[str | None, Header(alias="X-Entry-Credential")]
+LiveProtocolHeader = Annotated[str | None, Header(alias="X-Live-Protocol")]
 
 
 def _client_ip(request: Request) -> str | None:
@@ -312,9 +326,10 @@ def set_session_chat_enabled(
     payload: SessionChatEnabledRequest,
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
+    x_live_protocol: LiveProtocolHeader = None,
 ):
     """클래스 실시간 채팅 켜기/끄기 — host(상담사) 전용. 참여자 호출은 403."""
-    outcome = _v1_via_live(db, session_id, "chat_enabled", {"enabled": payload.enabled}, current_user)
+    outcome = _v1_via_live(db, session_id, "chat_enabled", {"enabled": payload.enabled}, current_user, live_protocol=x_live_protocol)
     if outcome is not None:
         return session_service.get_session_chat_room(session_id, current_user["id"], db)
     return session_service.set_chat_enabled(
@@ -328,11 +343,12 @@ def _make_transition_endpoint(action: str):
         payload: TransitionConfirmation | None = None,
         current_user: dict = Depends(get_current_user),
         db: DBSession = Depends(get_db),
+        x_live_protocol: LiveProtocolHeader = None,
     ):
         # SDD-246: v2 회차의 전이는 live command 한 경로로 처리하고 응답만 기존 직렬화로 돌려준다.
         # force/충돌 확인 같은 기존 확인 옵션이 필요한 요청은 어댑터가 표현하지 못하므로 기존 경로로 둔다.
         if not (payload and any(payload.model_dump().values())):
-            if _v1_via_live(db, session_id, "transition", {"action": action}, current_user) is not None:
+            if _v1_via_live(db, session_id, "transition", {"action": action}, current_user, live_protocol=x_live_protocol) is not None:
                 return class_read_service.add_parent_fields(db, session_service.get_session(session_id, current_user["id"], db))
         return class_read_service.add_parent_fields(
             db, session_service.transition_status(session_id, current_user["id"], action, db, **(payload.model_dump() if payload else {}))
@@ -486,6 +502,7 @@ def raise_hand(
     session_id: str,
     participant_id: str,
     x_entry_credential: EntryCredential = None,
+    x_live_protocol: LiveProtocolHeader = None,
     current_user: dict | None = Depends(get_current_user_optional),
     db: DBSession = Depends(get_db),
 ):
@@ -493,7 +510,7 @@ def raise_hand(
 
     로그인 회원은 본인 참여자만, 비회원은 입장 자격(X-Entry-Credential)이 필요하다.
     """
-    outcome = _v1_via_live(db, session_id, "raise_hand", {"participant_id": participant_id}, current_user, x_entry_credential)
+    outcome = _v1_via_live(db, session_id, "raise_hand", {"participant_id": participant_id}, current_user, x_entry_credential, x_live_protocol)
     if outcome is not None:
         return outcome.body
     return session_service.raise_hand(
@@ -513,6 +530,7 @@ def lower_hand(
     session_id: str,
     participant_id: str,
     x_entry_credential: EntryCredential = None,
+    x_live_protocol: LiveProtocolHeader = None,
     current_user: dict | None = Depends(get_current_user_optional),
     db: DBSession = Depends(get_db),
 ):
@@ -520,7 +538,7 @@ def lower_hand(
 
     응답 lowered_by: self|host. 타인·비진행자는 403.
     """
-    outcome = _v1_via_live(db, session_id, "lower_hand", {"participant_id": participant_id}, current_user, x_entry_credential)
+    outcome = _v1_via_live(db, session_id, "lower_hand", {"participant_id": participant_id}, current_user, x_entry_credential, x_live_protocol)
     if outcome is not None:
         return outcome.body
     return session_service.lower_hand(
@@ -699,6 +717,7 @@ def research_consent_summary(
 def cancel_waitlist(
     session_id: str,
     x_entry_credential: EntryCredential = None,
+    x_live_protocol: LiveProtocolHeader = None,
     current_user: dict | None = Depends(get_current_user_optional),
     db: DBSession = Depends(get_db),
 ):
@@ -706,7 +725,7 @@ def cancel_waitlist(
 
     활성 참가자·종료 클래스는 409. 취소자는 자동 승격·토큰·상태 접근에서 제외되고 재대기는 대기열 끝 순번이다.
     """
-    outcome = _v1_via_live(db, session_id, "waitlist_cancel", {}, current_user, x_entry_credential)
+    outcome = _v1_via_live(db, session_id, "waitlist_cancel", {}, current_user, x_entry_credential, x_live_protocol)
     if outcome is not None:
         return outcome.body
     return session_service.cancel_waitlist(
@@ -749,12 +768,13 @@ def set_speaking(
     payload: SpeakingRequest,
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
+    x_live_protocol: LiveProtocolHeader = None,
 ):
     """상담사 발언권 부여/해제 — speaking=granted. 호스트(상담사) 전용.
 
     부여 시 손들기(raise_hand)는 자동 해제된다.
     """
-    outcome = _v1_via_live(db, session_id, "set_speaking", {"participant_id": participant_id, "granted": payload.granted}, current_user)
+    outcome = _v1_via_live(db, session_id, "set_speaking", {"participant_id": participant_id, "granted": payload.granted}, current_user, live_protocol=x_live_protocol)
     if outcome is not None:
         return outcome.body
     return session_service.set_speaking(
