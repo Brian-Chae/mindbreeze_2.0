@@ -104,6 +104,9 @@ class ChatReport(Base):
     # 증거 보존용 메시지 본문 사본(최대 500자). 개인정보 복제본이므로 탈퇴 삭제 대상에 포함한다.
     message_excerpt: Mapped[str | None] = mapped_column(Text, nullable=True)
     operation_key: Mapped[str] = mapped_column(String(100), nullable=False)
+    # 처리 상태: submitted(접수) → withdrawn(신고자 철회). 관리자 처리 상태(resolved 등)는 철회 불가.
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="submitted", server_default="submitted")
+    withdrawn_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

@@ -9,13 +9,15 @@ vi.mock('../src/components/settings/account-settings', () => ({ default: () => <
 vi.mock('../src/components/settings/notification-groups', () => ({ default: () => <p>목적별 알림</p> }));
 vi.mock('../src/components/settings/WebPushCard', () => ({ default: () => null }));
 vi.mock('../src/components/settings/privacy-consents', () => ({ PrivacyConsentsSection: () => null }));
+vi.mock('../src/components/chat/blocked-users-list', () => ({ BlockedUsersList: () => <p>차단 목록</p> }));
 vi.mock('../src/components/settings/account-deletion', () => ({ AccountDeletionSection: () => null }));
 afterEach(() => vi.restoreAllMocks());
-it.each(['client', 'counselor', 'org_admin', 'platform_admin'] as const)('%s는 5그룹·플레이그라운드·로그아웃 진입을 가진다', async (role) => {
+it.each(['client', 'counselor', 'org_admin', 'platform_admin'] as const)('%s는 6그룹(차단한 사용자 포함)·플레이그라운드·로그아웃 진입을 가진다', async (role) => {
   useAuthStore.setState({ user: { id: 'sample', role, name: '샘플', email: 'sample@example.test' } as NonNullable<ReturnType<typeof useAuthStore.getState>['user']> });
   const host = document.createElement('div'); const root = createRoot(host);
   await act(async () => root.render(<MemoryRouter><SettingsContent /></MemoryRouter>));
-  expect(host.querySelectorAll('[data-settings-group]')).toHaveLength(5);
+  expect(host.querySelectorAll('[data-settings-group]')).toHaveLength(6);
+  expect(host.textContent).toContain('차단한 사용자');
   expect(host.querySelector('a[href="/playground"]')).not.toBeNull();
   expect(host.textContent).toContain('로그아웃');
   expect(host.querySelector('a[href="/reports?settings=operations"]') !== null).toBe(role === 'counselor' || role === 'org_admin');
