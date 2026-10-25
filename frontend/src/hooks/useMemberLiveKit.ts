@@ -140,10 +140,12 @@ export function useMemberLiveKit({
     raisingRef.current = true;
     setRaising(true);
     setRaiseError(null);
+    // 낙관적 갱신: 누른 즉시 화면에 반영하고 서버 확인에서 실패하면 되돌린다.
+    setRaisedHand(true);
     try {
       await raiseEntryHand(sessionId, participantId, entryCredential);
-      setRaisedHand(true);
     } catch (e) {
+      setRaisedHand(false);
       setRaiseError(e instanceof Error ? e.message : '손들기에 실패했습니다');
     } finally {
       raisingRef.current = false;
@@ -157,10 +159,12 @@ export function useMemberLiveKit({
     raisingRef.current = true;
     setRaising(true);
     setRaiseError(null);
+    // 낙관적 갱신: 즉시 내리고, 서버 확인에서 실패하면 손든 상태로 되돌린다.
+    setRaisedHand(false);
     try {
       await lowerEntryHand(sessionId, participantId, entryCredential);
-      setRaisedHand(false);
     } catch {
+      setRaisedHand(true);
       setRaiseError('손을 내리지 못했어요. 잠시 후 다시 눌러 주세요');
     } finally {
       raisingRef.current = false;

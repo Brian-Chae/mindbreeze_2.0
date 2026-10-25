@@ -473,6 +473,17 @@ def register_session_live_namespace(sio):
 
     @sio.on("join", namespace=_NAMESPACE)
     async def on_join(sid, data):
+        # 대기실 유실 방지: join 처리 중(세션 컨텍스트가 비어 있는 구간)에 도착한 waiting_room 등이
+        # "join 불일치"로 버려지지 않도록, 진행 중임을 표시하고 끝나면 해제한다.
+        done = asyncio.Event()
+        _join_in_progress[str(sid)] = done
+        try:
+            await _on_join_impl(sid, data)
+        finally:
+            _join_in_progress.pop(str(sid), None)
+            done.set()
+
+    async def _on_join_impl(sid, data):
         data = data or {}
         session_id = data.get("session_id")
         if not session_id:
@@ -619,6 +630,14 @@ def register_session_live_namespace(sio):
         # 본인 소켓으로만 1건 발행한다(첫 feature 를 기다리면 게이지가 빈 채로 남는다).
         if role == "host":
             await publish_group_aggregate(session_id, force=True, to=sid)
+            # 늦게 접속·재접속한 상담사도 이미 대기 중인 회원을 즉시 본다(대기실 명단 replay).
+            for waiting in waiting_room_roster(session_id):
+                await sio.emit(
+                    "waiting_room_changed",
+                    {"session_id": str(session_id), **waiting},
+                    to=sid,
+                    namespace=_NAMESPACE,
+                )
 
         # 개선 10: 늦게 입장한 회원은 진행 중인 가이드·BGM 에 같은 위치로 합류한다.
         # (상담사 본인은 자기 플레이어가 원본이므로 replay 하지 않는다 — 자기 명령을 되받을 필요 없음)
@@ -858,6 +877,13 @@ def register_session_live_namespace(sio):
         if not session_id or action not in ("join", "leave"):
             return
 
+        # join 이 진행 중이면 끝날 때까지 잠시 기다린다(클라이언트가 join 직후 같은 틱에 보낸다).
+        pending = _join_in_progress.get(str(sid))
+        if pending is not None:
+            try:
+                await asyncio.wait_for(pending.wait(), timeout=_JOIN_WAIT_TIMEOUT_SEC)
+            except asyncio.TimeoutError:
+                pass
         session = await sio.get_session(sid, namespace=_NAMESPACE) or {}
         # 이 소켓이 join 한 세션과 일치해야 한다(타 세션 위조 차단)
         if session.get("session_id") != str(session_id):
@@ -869,19 +895,17 @@ def register_session_live_namespace(sio):
             return
 
         readiness = _sanitize_readiness(data.get("readiness"))
-        await broadcast_waiting_room(
-            session_id,
-            {
-                "participant_id": session["participant_id"],
-                "action": action,
-                "nickname": _sanitize_nickname(data.get("nickname")),
-                "checkin": _sanitize_checkin(data.get("checkin")),
-                "readiness": readiness,
-            },
-        )
+        waiting_payload = {
+            "participant_id": session["participant_id"],
+            "action": action,
+            "nickname": _sanitize_nickname(data.get("nickname")),
+            "checkin": _sanitize_checkin(data.get("checkin")),
+            "readiness": readiness,
+        }
+        await broadcast_waiting_room(session_id, waiting_payload)
         # SDD-209(B9/BE-12): 회원 대기실용 익명 집계({ready,total}) — 개인 식별 정보 없음, 서버 DB 저장 없음.
         summary = update_waiting_room_presence(
-            session_id, session["participant_id"], action, readiness
+            session_id, session["participant_id"], action, readiness, payload=waiting_payload
         )
         await broadcast_waiting_room_summary(session_id, summary)
 
@@ -1337,6 +1361,9 @@ async def broadcast_waiting_room(session_id: str, payload: dict) -> None:
 # 대기실 presence 는 휘발성 메모리(프로세스 단일 — systemd 단일 프로세스 전제)다. DB·로그에 남기지 않는다.
 # 클라이언트가 주기적으로 waiting_room(join)을 다시 보내는 heartbeat 로 유지되고, TTL 을 넘기면 집계에서 빠진다.
 WAITING_ROOM_PRESENCE_TTL_SEC = 90.0
+# join 처리 중인 sid → 완료 이벤트. join 직후 도착하는 waiting_room 이 컨텍스트 공백에 걸려 버려지지 않게 한다.
+_join_in_progress: dict[str, asyncio.Event] = {}
+_JOIN_WAIT_TIMEOUT_SEC = 5.0
 _waiting_room_presence: dict[str, dict[str, dict[str, Any]]] = {}
 
 
@@ -1351,13 +1378,23 @@ def _readiness_ready(readiness: dict | None) -> bool:
 
 
 def update_waiting_room_presence(
-    session_id: str, participant_id: str, action: str, readiness: dict | None, *, now: float | None = None
+    session_id: str,
+    participant_id: str,
+    action: str,
+    readiness: dict | None,
+    *,
+    now: float | None = None,
+    payload: dict | None = None,
 ) -> dict:
     """대기실 presence 를 갱신하고 익명 집계 {session_id, ready, total} 을 돌려준다(참가자 식별 정보 없음)."""
     moment = time.monotonic() if now is None else now
     room = _waiting_room_presence.setdefault(str(session_id), {})
     if action == "join":
-        room[str(participant_id)] = {"ts": moment, "ready": _readiness_ready(readiness)}
+        room[str(participant_id)] = {
+            "ts": moment,
+            "ready": _readiness_ready(readiness),
+            "payload": payload,
+        }
     else:
         room.pop(str(participant_id), None)
     return waiting_room_summary(session_id, now=moment)
@@ -1375,6 +1412,13 @@ def waiting_room_summary(session_id: str, *, now: float | None = None) -> dict:
         "ready": sum(1 for v in room.values() if v["ready"]),
         "total": len(room),
     }
+
+
+def waiting_room_roster(session_id: str, *, now: float | None = None) -> list[dict]:
+    """호스트 늦은 접속용 — TTL 안의 대기 회원 join payload 목록(참가자 신원은 서버 컨텍스트 값)."""
+    waiting_room_summary(session_id, now=now)  # 만료 정리
+    room = _waiting_room_presence.get(str(session_id), {})
+    return [dict(v["payload"]) for v in room.values() if v.get("payload")]
 
 
 def reset_waiting_room_presence(session_id: str | None = None) -> None:
