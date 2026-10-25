@@ -105,7 +105,7 @@ public final class MeasurementManager: BandLinkDelegate {
         self.requestId = requestId; self.sessionId = sessionId; self.credentialHandle = credentialHandle; self.configHash = configHash
         streamId = nil; ownerGeneration = nil; engine = nil; lastEnvelope = nil; blockedReason = nil
         bleGaps = []; openBleGapStart = nil; anchor = nil; needsRecoveryMark = false
-        archive = try? ArchiveQueue(dir: sessionDir(sessionId).appendingPathComponent("archive"))
+        archive = openArchive(sessionId)
         state = .arming
         let l = makeLive(sessionId); live = l; wire(l)
         l.start()
@@ -207,7 +207,7 @@ public final class MeasurementManager: BandLinkDelegate {
         guard let cred = credentialHandle else { ownership.releaseNative(); return false }
         _ = cred
         participantId = pid; streamId = stream; ownerGeneration = gen
-        archive = try? ArchiveQueue(dir: sessionDir(sid).appendingPathComponent("archive"))
+        archive = openArchive(sid)
         guard adoptEngine(sessionId: sid, participant: pid, stream: stream, generation: gen) else { ownership.releaseNative(); state = .blocked; blockedReason = "storage_full"; return false }
         needsRecoveryMark = true
         state = .reconnecting
@@ -405,6 +405,11 @@ public final class MeasurementManager: BandLinkDelegate {
 
     // MARK: 영속(active.json)
 
+    private func openArchive(_ sid: String) -> ArchiveQueue? {
+        let d = sessionDir(sid).appendingPathComponent("archive")
+        try? FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
+        return try? ArchiveQueue(dir: d)
+    }
     private func sessionDir(_ sid: String) -> URL { root.appendingPathComponent("sessions").appendingPathComponent(sid.isEmpty ? "none" : sid) }
     private var activeURL: URL { root.appendingPathComponent("active.json") }
 
@@ -443,4 +448,14 @@ public final class MeasurementManager: BandLinkDelegate {
 
     static func isUUID(_ s: String) -> Bool { s.range(of: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", options: .regularExpression) != nil }
     static func isReason(_ s: String) -> Bool { s.range(of: "^[a-z][a-z0-9_]{0,63}$", options: .regularExpression) != nil }
+}
+
+public enum NativeCapabilities {
+    /// 계약 Capabilities. iOS 는 audio 모드를 쓰지 않으므로 microphone 은 not_required.
+    public static func make(osVersion: String, bluetooth: String, notifications: String) -> [String: Any] {
+        ["bridge_version": 1, "platform": "ios", "os_version": osVersion, "native_runtime_version": MeasurementManager.nativeRuntimeVersion,
+         "core_version": MeasurementManager.coreVersion, "live_protocol_versions": [2], "device_profiles": ["linkband2-v1"],
+         "background": ["capture": bluetooth == "granted" ? "supported" : "needs_permission", "live_socket": "supported", "archive_upload": "supported"],
+         "permissions": ["bluetooth": bluetooth, "notifications": notifications, "microphone": "not_required"]]
+    }
 }

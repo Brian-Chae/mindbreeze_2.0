@@ -110,7 +110,7 @@ final class ManagerTests: XCTestCase {
         let fs = (close?["payload"] as? [String: Any])?["final_sequences"] as? [String: Any]
         XCTAssertNotNil(fs?["metric"])
         own.setJSOwning(true) // sealing 중에도 native 가 소유 중이면 거절
-        XCTAssertFalse(own.setJSOwning(true) && own.isNativeOwning)
+        XCTAssertTrue(own.isNativeOwning)
     }
     func testAuthExpiredLiveBlocksButKeepsCollecting() throws {
         own.nativeEnabled = true; _ = try start()
@@ -132,5 +132,102 @@ final class ManagerTests: XCTestCase {
         XCTAssertEqual(m.state, .reconnecting)
         m.bandLink(didChange: .subscribed, reason: nil)
         XCTAssertEqual(m.state, .capturing)
+    }
+}
+
+final class ManagerRecoveryAndContractTests: XCTestCase {
+    var dir: URL!
+    let sid = "00000001-0000-4000-8000-000000000001"
+    func make(_ band: FakeBand, _ live: FakeLive, _ own: BandOwnership) -> MeasurementManager {
+        let m = MeasurementManager(root: dir, band: band, ownership: own, makeLive: { _ in live },
+                                   makeEngine: { d, ctx in try MeasurementEngine(dir: d, configJSON: CoreBridgeTests.cfg, context: ctx, journalSync: .none) },
+                                   participantId: { _ in "00000004-0000-4000-8000-000000000004" }, nowMs: { 1_760_000_000_000 })
+        return m
+    }
+    override func setUpWithError() throws {
+        dir = FileManager.default.temporaryDirectory.appendingPathComponent("mrc-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    }
+    override func tearDownWithError() throws { try? FileManager.default.removeItem(at: dir) }
+
+    /// 서버 live:event(T04 _wire_event)와 같은 전체 LiveEvent 형태.
+    func deviceEvent(stream: String, generation: Int, status: String = "active") -> [String: Any] {
+        ["protocol_version": 2, "schema_version": 1, "event_id": UUID().uuidString.lowercased(), "session_id": sid, "epoch": "1",
+         "audience": "member:00000004-0000-4000-8000-000000000004", "domain": "device", "seq": "1", "entity_id": "00000004-0000-4000-8000-000000000004",
+         "entity_version": "1", "kind": "device.changed", "observed_at_ms": NSNull(), "received_at_server_ms": 1_760_000_000_000,
+         "payload": ["stream_id": stream, "generation": generation, "status": status, "clock_uncertain": true, "cutoff_code": NSNull()]]
+    }
+    func startCapturing(_ m: MeasurementManager, _ live: FakeLive) throws {
+        _ = try m.startMeasurement(sessionId: sid, credentialHandle: "cred_handle_AbCdEfGh0123", configHash: String(repeating: "a", count: 64), requestId: "0000001e-0000-4000-8000-00000000001e")
+        live.onEvent?(deviceEvent(stream: "00000014-0000-4000-8000-000000000014", generation: 3))
+    }
+
+    func testRecoverOnLaunchRestoresEngineAndReconnectsBandWithoutNewCaptureStart() throws {
+        let own1 = BandOwnership(defaults: UserDefaults(suiteName: "r-\(UUID().uuidString)")!); own1.nativeEnabled = true
+        let b1 = FakeBand(), l1 = FakeLive(); let m1 = make(b1, l1, own1)
+        try startCapturing(m1, l1)
+        for i in 0..<300 { let p = EngineTests.packets[i]; m1.bandLink(didReceive: p.sensor, data: p.bytes, monotonicUs: p.arrivalUs) }
+        let committed = m1.snapshot()["collection"] as! [String: Any]
+        XCTAssertEqual(committed["last_committed_sample_sequence"] as? String, "300")
+        // 프로세스 종료 모사: m1 폐기, 새 인스턴스(앱 재시작)
+        let suite = "r-\(UUID().uuidString)"
+        let own2 = BandOwnership(defaults: UserDefaults(suiteName: suite)!); own2.nativeEnabled = true
+        let b2 = FakeBand(), l2 = FakeLive(); let m2 = make(b2, l2, own2)
+        XCTAssertTrue(m2.recoverOnLaunch())
+        XCTAssertEqual(m2.state, .reconnecting)
+        XCTAssertEqual(b2.connects, 1); XCTAssertEqual(l2.started, 1)
+        XCTAssertEqual(l2.owner?.0, "00000014-0000-4000-8000-000000000014"); XCTAssertEqual(l2.owner?.1, 3)
+        XCTAssertFalse(l2.dispatched.contains { ($0["kind"] as? String) == "capture.start" }, "복구는 새 stream 을 만들지 않고 기존 owner generation 으로 이어간다")
+        let s = m2.snapshot()
+        XCTAssertEqual((s["collection"] as! [String: Any])["last_committed_sample_sequence"] as? String, "300")
+        // 첫 패킷이 오면 app_killed bounded gap 이 기록되고 CAPTURING 복귀
+        m2.bandLink(didChange: .subscribed, reason: nil)
+        let p = EngineTests.packets[400]; m2.bandLink(didReceive: p.sensor, data: p.bytes, monotonicUs: p.arrivalUs)
+        let kinds = (m2.snapshot()["gaps"] as! [[String: Any]]).map { $0["kind"] as? String }
+        XCTAssertTrue(kinds.contains("app_killed"))
+        XCTAssertEqual(m2.state, .capturing)
+    }
+    func testRecoverNotAttemptedWhenFlagOffOrNothingActiveOrAlreadyClosed() throws {
+        let off = BandOwnership(defaults: UserDefaults(suiteName: "r-\(UUID().uuidString)")!)
+        let m = make(FakeBand(), FakeLive(), off)
+        XCTAssertFalse(m.recoverOnLaunch(), "플래그 off: 아무것도 하지 않는다")
+        let on = BandOwnership(defaults: UserDefaults(suiteName: "r-\(UUID().uuidString)")!); on.nativeEnabled = true
+        let b = FakeBand(); XCTAssertFalse(make(b, FakeLive(), on).recoverOnLaunch()); XCTAssertEqual(b.connects, 0)
+    }
+    func testStopThenRelaunchDoesNotResurrect() throws {
+        let own = BandOwnership(defaults: UserDefaults(suiteName: "r-\(UUID().uuidString)")!); own.nativeEnabled = true
+        let l = FakeLive(); let m = make(FakeBand(), l, own); try startCapturing(m, l)
+        _ = try m.stopMeasurement(reason: "user_stop", requestId: "0000001f-0000-4000-8000-00000000001f")
+        let own2 = BandOwnership(defaults: UserDefaults(suiteName: "r-\(UUID().uuidString)")!); own2.nativeEnabled = true
+        let b2 = FakeBand(); XCTAssertFalse(make(b2, FakeLive(), own2).recoverOnLaunch()); XCTAssertEqual(b2.connects, 0)
+    }
+    func testSealQueuesRawAndFeatureForArchiveWithStreamId() throws {
+        let own = BandOwnership(defaults: UserDefaults(suiteName: "r-\(UUID().uuidString)")!); own.nativeEnabled = true
+        let l = FakeLive(); let m = make(FakeBand(), l, own); try startCapturing(m, l)
+        for i in 0..<400 { let p = EngineTests.packets[i]; m.bandLink(didReceive: p.sensor, data: p.bytes, monotonicUs: p.arrivalUs) }
+        _ = try m.stopMeasurement(reason: "user_stop", requestId: "0000001f-0000-4000-8000-00000000001f")
+        let q = m.archiveQueue!
+        XCTAssertEqual(q.counts.pending, 2)
+        let item = q.dueItems(now: 0)[0]
+        XCTAssertEqual(item.captureStreamId, "00000014-0000-4000-8000-000000000014")
+        XCTAssertEqual(Hashing.sha256Hex(file: m.archiveFileURL(item)), item.sha256)
+        XCTAssertEqual(m.state, .sealing)
+    }
+
+    /// Swift 가 만든 snapshot/event JSON 을 contracts/measurement-bridge 의 ajv 검증기로 확인한다(MK_CONTRACT_OUT 지정 시 파일로 내보냄).
+    func testEmitContractSamplesForNodeValidation() throws {
+        let own = BandOwnership(defaults: UserDefaults(suiteName: "r-\(UUID().uuidString)")!); own.nativeEnabled = true
+        let l = FakeLive(); let m = make(FakeBand(), l, own)
+        var evs: [[String: Any]] = []; m.onBridgeEvent = { evs.append($0) }
+        try startCapturing(m, l)
+        for i in 0..<1500 { let p = EngineTests.packets[i]; m.bandLink(didReceive: p.sensor, data: p.bytes, monotonicUs: p.arrivalUs) }
+        m.bandLink(didChange: .reconnecting, reason: "ble_disconnect")
+        m.emitArchiveStatus(stage: "put", code: "http_503")
+        let out: [String: Any] = ["snapshot": m.snapshot(), "events": evs,
+                                  "start": ["managerId": "00000003-0000-4000-8000-000000000003", "streamId": "00000014-0000-4000-8000-000000000014", "ownerGeneration": "3", "managerGeneration": "1", "state": "ARMING", "idempotentReplay": false],
+                                  "capabilities": NativeCapabilities.make(osVersion: "17.5", bluetooth: "granted", notifications: "granted")]
+        let data = try JSONSerialization.data(withJSONObject: out, options: [.sortedKeys])
+        if let path = ProcessInfo.processInfo.environment["MK_CONTRACT_OUT"] { try data.write(to: URL(fileURLWithPath: path)) }
+        XCTAssertFalse(evs.isEmpty)
     }
 }
