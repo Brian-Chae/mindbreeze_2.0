@@ -1,3 +1,4 @@
+#if os(macOS)  // Process(합성 서버 기동)는 macOS 호스트 전용. 시뮬레이터에서는 호스트(swift test)가 이 시험을 담당한다.
 import XCTest
 @testable import MeasurementKit
 
@@ -126,3 +127,4 @@ final class WireCompatTests: XCTestCase {
         q.sync { live.stop(); client.close() }
     }
 }
+#endif

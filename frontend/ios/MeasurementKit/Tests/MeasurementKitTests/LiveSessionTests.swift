@@ -59,7 +59,7 @@ final class LiveSessionTests: XCTestCase {
     }
     func testMetricNotSentBeforeReady() throws {
         driveToReady()   // applied 응답 전 = RESYNCING
-        let box = try MetricOutbox(dir: dir)
+        let box = try MetricOutbox(dir: dir, sync: .none)
         live.attach(outbox: box)
         _ = try box.enqueue(["sequence": "1", "feature_hash": String(repeating: "a", count: 64)])
         live.pump()
@@ -67,7 +67,7 @@ final class LiveSessionTests: XCTestCase {
     }
     func testMetricBatchSentNewestFirstAndAckedOnlyWhenDurable() throws {
         driveToReady(); ackLast("{\"ok\":true,\"state\":\"READY\"}")
-        let box = try MetricOutbox(dir: dir); live.attach(outbox: box)
+        let box = try MetricOutbox(dir: dir, sync: .none); live.attach(outbox: box)
         for i in 1...3 { _ = try box.enqueue(["sequence": "\(i)", "feature_hash": "h\(i)"]) }
         live.pump()
         let m = sentEvents().last!
@@ -80,10 +80,10 @@ final class LiveSessionTests: XCTestCase {
         XCTAssertEqual(box.rejectedSequences, [1], "거절은 격리(재전송 안 함), 보존")
     }
     func testAckedSetSurvivesReopen() throws {
-        let box = try MetricOutbox(dir: dir)
+        let box = try MetricOutbox(dir: dir, sync: .none)
         for i in 1...3 { _ = try box.enqueue(["sequence": "\(i)"]) }
         box.markAcked([2])
-        let again = try MetricOutbox(dir: dir)
+        let again = try MetricOutbox(dir: dir, sync: .none)
         XCTAssertEqual(again.pendingSequences, [1, 3])
     }
     func testCommandRetriesSameCommandIdOnTimeoutThenNeverNewId() throws {
@@ -174,7 +174,7 @@ final class LiveSessionTests: XCTestCase {
 
     func testAcceptedButNotDurableIsNotCountedAsAcked() throws {
         driveToReady(); ackLast("{\"ok\":true,\"state\":\"READY\"}")
-        let box = try MetricOutbox(dir: dir); live.attach(outbox: box)
+        let box = try MetricOutbox(dir: dir, sync: .none); live.attach(outbox: box)
         _ = try box.enqueue(["sequence": "1", "feature_hash": "h"])
         live.pump()
         ackLast("{\"acks\":[{\"sequence\":\"1\",\"status\":\"accepted\",\"durable\":false}]}")

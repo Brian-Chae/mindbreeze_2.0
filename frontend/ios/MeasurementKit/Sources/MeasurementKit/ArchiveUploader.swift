@@ -24,6 +24,7 @@ public protocol FileUploading: AnyObject {
 public final class ArchiveUploader {
     public static let maxConcurrent = 2
     private let queue: ArchiveQueue, http: HTTPClient, files: FileUploading
+    public var queueRef: ArchiveQueue { queue }
     private let apiBase: URL, sessionId: String, participantId: String?
     private let token: (@escaping (String?) -> Void) -> Void
     private let fileURL: (ArchiveItem) -> URL

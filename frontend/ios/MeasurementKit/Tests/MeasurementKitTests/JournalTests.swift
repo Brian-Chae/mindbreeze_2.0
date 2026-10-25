@@ -13,10 +13,10 @@ final class JournalTests: XCTestCase {
 
     func testAppendAndReopenKeepsAllRecordsInOrder() throws {
         let url = dir.appendingPathComponent("raw.journal")
-        let j = try AppendOnlyJournal(url: url)
+        let j = try AppendOnlyJournal(url: url, sync: .none)
         for i in 1...5 { XCTAssertEqual(try j.append(payload(i)), UInt64(i)) }
         j.close()
-        let again = try AppendOnlyJournal(url: url)
+        let again = try AppendOnlyJournal(url: url, sync: .none)
         XCTAssertEqual(again.lastSequence, 5)
         XCTAssertEqual(try again.append(payload(6)), 6)
         let scan = AppendOnlyJournal.scan(url: url)
@@ -28,7 +28,7 @@ final class JournalTests: XCTestCase {
     /// 쓰기 도중 어느 바이트 위치에서 죽어도(찢긴 꼬리) 앞선 완결 레코드는 모두 살아야 하고 이어쓰기가 가능해야 한다.
     func testTornTailAtEveryByteOffsetRecoversCompletePrefix() throws {
         let url = dir.appendingPathComponent("raw.journal")
-        let j = try AppendOnlyJournal(url: url)
+        let j = try AppendOnlyJournal(url: url, sync: .none)
         var ends: [Int] = []
         for i in 1...4 { _ = try j.append(payload(i)); ends.append(Int(try FileManager.default.attributesOfItem(atPath: url.path)[.size] as! UInt64)) }
         j.close()
@@ -37,7 +37,7 @@ final class JournalTests: XCTestCase {
             let torn = dir.appendingPathComponent("torn-\(cut).journal")
             try full.prefix(cut).write(to: torn)
             let expected = ends.filter { $0 <= cut }.count
-            let r = try AppendOnlyJournal(url: torn)
+            let r = try AppendOnlyJournal(url: torn, sync: .none)
             XCTAssertEqual(r.lastSequence, UInt64(expected), "cut=\(cut)")
             XCTAssertEqual(try r.append(Data("next".utf8)), UInt64(expected + 1), "cut=\(cut)")
             r.close()
@@ -49,14 +49,14 @@ final class JournalTests: XCTestCase {
 
     func testCorruptionInMiddleIsQuarantinedNotSilentlyDeleted() throws {
         let url = dir.appendingPathComponent("raw.journal")
-        let j = try AppendOnlyJournal(url: url)
+        let j = try AppendOnlyJournal(url: url, sync: .none)
         for i in 1...3 { _ = try j.append(payload(i)) }
         j.close()
         var bytes = try Data(contentsOf: url)
         let firstLen = AppendOnlyJournal.headerSize + payload(1).count
         bytes[firstLen + AppendOnlyJournal.headerSize + 2] ^= 0xFF   // 2번째 레코드 payload 변조
         try bytes.write(to: url)
-        let r = try AppendOnlyJournal(url: url)
+        let r = try AppendOnlyJournal(url: url, sync: .none)
         XCTAssertEqual(r.lastSequence, 1)
         XCTAssertGreaterThan(r.quarantinedBytes, 0)
         let side = try FileManager.default.contentsOfDirectory(atPath: dir.path).filter { $0.contains(".corrupt-") }
@@ -68,7 +68,7 @@ final class JournalTests: XCTestCase {
     func testFsyncIsCalledPerAppend() throws {
         let url = dir.appendingPathComponent("raw.journal")
         var syncs = 0
-        let j = try AppendOnlyJournal(url: url, syncHook: { syncs += 1 })
+        let j = try AppendOnlyJournal(url: url, sync: .none, syncHook: { syncs += 1 })
         _ = try j.append(payload(1)); _ = try j.append(payload(2))
         XCTAssertEqual(syncs, 2)
     }

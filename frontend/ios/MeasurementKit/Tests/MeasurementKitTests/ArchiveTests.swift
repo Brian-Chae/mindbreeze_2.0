@@ -45,16 +45,16 @@ final class ArchiveQueueTests: XCTestCase {
                     captureStreamId: "00000014-0000-4000-8000-000000000014", monotonicRange: ("100", "200"))
     }
     func testPersistsAcrossReopenAndMapsTaskToItem() throws {
-        let q = try ArchiveQueue(dir: dir)
+        let q = try ArchiveQueue(dir: dir, sync: .none)
         try q.enqueue(item("a")); try q.enqueue(item("b"))
         try q.attach(taskId: 77, alias: "b", url: "https://s3/put")
-        let again = try ArchiveQueue(dir: dir)
+        let again = try ArchiveQueue(dir: dir, sync: .none)
         XCTAssertEqual(again.item(forTask: 77)?.alias, "b")
         XCTAssertEqual(again.item(forTask: 77)?.state, .uploading)
         XCTAssertEqual(again.item(alias: "a")?.state, .pending)
     }
     func testEnqueueIsIdempotentByAliasAndNeverOverwritesDifferentBytes() throws {
-        let q = try ArchiveQueue(dir: dir)
+        let q = try ArchiveQueue(dir: dir, sync: .none)
         try q.enqueue(item("a"))
         try q.enqueue(item("a"))
         XCTAssertEqual(q.counts.pending, 1)
@@ -62,7 +62,7 @@ final class ArchiveQueueTests: XCTestCase {
         XCTAssertThrowsError(try q.enqueue(other), "같은 alias 에 다른 바이트 금지")
     }
     func testStateTransitionsAndCounts() throws {
-        let q = try ArchiveQueue(dir: dir)
+        let q = try ArchiveQueue(dir: dir, sync: .none)
         for a in ["a", "b", "c", "d", "e"] { try q.enqueue(item(a)) }
         try q.markVerified(alias: "a")
         try q.apply(.init(stage: .put, action: .backoff, code: "http_503", retryAfterMs: nil, splitCandidate: false), alias: "b", now: 0)
@@ -77,27 +77,27 @@ final class ArchiveQueueTests: XCTestCase {
         XCTAssertEqual(q.dueItems(now: 1_100).map { $0.alias }, ["b"])
     }
     func testManyBackoffAttemptsNeverBecomePermanentFailure() throws {
-        let q = try ArchiveQueue(dir: dir); try q.enqueue(item("a"))
+        let q = try ArchiveQueue(dir: dir, sync: .none); try q.enqueue(item("a"))
         for _ in 0..<50 { try q.apply(.init(stage: .put, action: .backoff, code: "network", retryAfterMs: nil, splitCandidate: false), alias: "a", now: 0) }
         XCTAssertEqual(q.item(alias: "a")?.state, .pending)
         XCTAssertEqual(q.counts.quarantined, 0)
     }
     func testHaltedItemsStayOnDiskAndAreNotDue() throws {
-        let q = try ArchiveQueue(dir: dir); try q.enqueue(item("a"))
+        let q = try ArchiveQueue(dir: dir, sync: .none); try q.enqueue(item("a"))
         try q.apply(.init(stage: .presign, action: .halt, code: "expelled", retryAfterMs: nil, splitCandidate: false), alias: "a", now: 0)
         XCTAssertEqual(q.dueItems(now: 10_000_000).count, 0)
-        XCTAssertEqual(try ArchiveQueue(dir: dir).item(alias: "a")?.state, .pendingAuthorization, "payload 자동 삭제 없음, 사유 보존")
-        XCTAssertEqual(try ArchiveQueue(dir: dir).item(alias: "a")?.lastCode, "expelled")
+        XCTAssertEqual(try ArchiveQueue(dir: dir, sync: .none).item(alias: "a")?.state, .pendingAuthorization, "payload 자동 삭제 없음, 사유 보존")
+        XCTAssertEqual(try ArchiveQueue(dir: dir, sync: .none).item(alias: "a")?.lastCode, "expelled")
     }
     func testRepresignKeepsPendingAndClearsTask() throws {
-        let q = try ArchiveQueue(dir: dir); try q.enqueue(item("a")); try q.attach(taskId: 5, alias: "a", url: "u")
+        let q = try ArchiveQueue(dir: dir, sync: .none); try q.enqueue(item("a")); try q.attach(taskId: 5, alias: "a", url: "u")
         try q.apply(.init(stage: .put, action: .represign, code: "put_signature_expired", retryAfterMs: nil, splitCandidate: false), alias: "a", now: 0)
         XCTAssertNil(q.item(forTask: 5)); XCTAssertEqual(q.item(alias: "a")?.state, .pending)
         XCTAssertEqual(q.dueItems(now: 0).map { $0.alias }, ["a"], "represign 은 즉시 재시도")
     }
     func testOrphanTaskReattachAfterRelaunchFindsItem() throws {
-        let q = try ArchiveQueue(dir: dir); try q.enqueue(item("a")); try q.attach(taskId: 9, alias: "a", url: "u")
-        let relaunched = try ArchiveQueue(dir: dir)
+        let q = try ArchiveQueue(dir: dir, sync: .none); try q.enqueue(item("a")); try q.attach(taskId: 9, alias: "a", url: "u")
+        let relaunched = try ArchiveQueue(dir: dir, sync: .none)
         XCTAssertEqual(relaunched.item(forTask: 9)?.alias, "a", "OS 완료 callback 이 재실행 앱에서 큐 항목에 재연결")
         XCTAssertNil(relaunched.item(forTask: 123), "알 수 없는 task 는 무시")
     }
