@@ -1107,6 +1107,21 @@ def _close_out_media_on_cancel(s: Session, db: DBSession) -> None:
 
 def transition_status(session_id: str, host_id: str, action: str, db: DBSession,
                       *, restrict_from: set[str] | None = None, force: bool = False, confirmed_conflict_fingerprint: str | None = None) -> dict:
+    s, parent, early = transition_tx(session_id, host_id, action, db, restrict_from=restrict_from, force=force,
+                                     confirmed_conflict_fingerprint=confirmed_conflict_fingerprint, commit=True)
+    if early:
+        return _with_chat_room(_serialize(s, include_participant_pii=True), s.id, db)
+    return transition_after_commit(s, parent, action, db)
+
+
+def transition_tx(session_id: str, host_id: str, action: str, db: DBSession,
+                  *, restrict_from: set[str] | None = None, force: bool = False,
+                  confirmed_conflict_fingerprint: str | None = None, commit: bool = True):
+    """상태 전이의 DB 변경 부분. commit=False 면 호출자(SDD-246 live command)의 트랜잭션 안에서 실행되고 commit/rollback 을 하지 않는다.
+
+    반환: (세션, 부모 클래스, early) — early=True 면 이미 완료된 종료의 멱등 재응답(후속 부수효과 없음).
+    commit 이후 부수효과(알림·영상/음성 마감·채팅방)는 `transition_after_commit` 이 맡는다.
+    """
     if action not in TRANSITIONS:
         raise HTTPException(status_code=400, detail="알 수 없는 액션입니다")
     s = get_session_authorized(db, session_id, host_id, SessionAction.SESSION_TRANSITION)
@@ -1133,8 +1148,9 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession,
     # SDD-217: 같은 클래스 회차 종료의 응답 유실·동시 재시도는 읽기로 끝낸다.
     # 권한 재검사와 공통 잠금 이후이므로 제거된 진행자에게 재응답하지 않는다.
     if parent and action == "end" and s.status == "completed" and restrict_from is None:
-        db.commit()
-        return _with_chat_room(_serialize(s, include_participant_pii=True), s.id, db)
+        if commit:
+            db.commit()
+        return s, parent, True
 
     allowed_from, target = TRANSITIONS[action]
     # STATE-SWEEP-TOCTOU: 호출부가 전이 출발 상태를 더 좁힐 수 있다(예: 스윕은 open 에서만
@@ -1196,11 +1212,20 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession,
             # 즉석 클래스의 유일한 회차가 취소되면 부모·멤버도 닫는다(회원 '참여 중' 고착 방지).
             from app.services.class_rolling_service import close_cancelled_instant_class
             close_cancelled_instant_class(db,parent,now)
-        db.commit()
+        if commit:
+            db.commit()
+        else:
+            db.flush()
     except Exception:
-        db.rollback()
+        if commit:
+            db.rollback()
         raise
     db.refresh(s)
+    return s, parent, False
+
+
+def transition_after_commit(s: Session, parent, action: str, db: DBSession) -> dict:
+    """transition_tx commit 이후의 부수효과(알림·마감·채팅방)와 응답 직렬화. best-effort 이며 실패해도 전이는 유지된다."""
     if parent and action == "end":
         _notify_participant_changed(s, db)
 
