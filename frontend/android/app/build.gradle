@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
 
 // 릴리스 서명 정보: android/keystore.properties (git 제외). 없으면 release 작업을 거부한다.
 def keystorePropertiesFile = rootProject.file("keystore.properties")
@@ -13,6 +14,9 @@ def appVersionName = (project.findProperty("versionName") ?: "1.0.0").toString()
 android {
     namespace = "com.looxidlabs.mindbreeze"
     compileSdk = rootProject.ext.compileSdkVersion
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
     defaultConfig {
         applicationId "com.looxidlabs.mindbreeze2"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -72,6 +76,7 @@ dependencies {
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
     testImplementation "junit:junit:$junitVersion"
+    implementation "androidx.core:core:$androidxCoreVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')

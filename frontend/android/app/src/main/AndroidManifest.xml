@@ -33,6 +33,12 @@
             android:foregroundServiceType="connectedDevice|microphone"
             android:exported="false" />
 
+        <!-- SDD-246 T08: 네이티브 측정 서비스. connectedDevice 만 사용하며 마이크 타입/권한을 요구하지 않는다. -->
+        <service
+            android:name=".measurement.MeasurementService"
+            android:foregroundServiceType="connectedDevice"
+            android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
