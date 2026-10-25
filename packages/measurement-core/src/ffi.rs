@@ -27,6 +27,7 @@ pub struct McBuffer {
 /// 상태 코드 — 값은 안정(ABI). 계약 CoreError.code 와 이름이 대응한다.
 #[repr(i32)]
 #[derive(Clone, Copy)]
+#[allow(non_camel_case_types)]
 pub enum McStatus {
     MC_OK = 0,
     MC_INVALID_HANDLE = 1,

@@ -93,11 +93,22 @@ fn real_c_compiler_links_header_and_staticlib() {
         return;
     }
     let manifest = env!("CARGO_MANIFEST_DIR");
-    // staticlib 위치: 현재 프로파일의 target 디렉터리
-    let exe = std::env::current_exe().unwrap();
-    let dir = exe.parent().unwrap().parent().unwrap().to_path_buf(); // target/<profile>
+    // 같은 프로파일·feature 로 staticlib 을 직접 빌드한다(스테일 .a 로 링크하지 않기 위해).
+    // 별도 target-dir 을 써서 실행 중인 cargo test 의 빌드 잠금과 충돌하지 않는다.
+    let profile = if cfg!(debug_assertions) { "debug" } else { "release" };
+    let dir = std::path::Path::new(manifest).join("target/c-abi-build").join(profile);
+    let mut b = Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".into()));
+    b.current_dir(manifest).args(["build", "--lib", "--target-dir"]).arg(std::path::Path::new(manifest).join("target/c-abi-build"));
+    if !cfg!(debug_assertions) {
+        b.arg("--release");
+    }
+    if cfg!(feature = "debug-hooks") {
+        b.args(["--features", "debug-hooks"]);
+    }
+    let bs = b.output().unwrap();
+    assert!(bs.status.success(), "staticlib 빌드 실패:\n{}", String::from_utf8_lossy(&bs.stderr));
     let lib = dir.join("libmeasurement_core.a");
-    assert!(lib.exists(), "staticlib 없음: {} (cargo build 먼저)", lib.display());
+    assert!(lib.exists(), "staticlib 없음: {}", lib.display());
     let out = dir.join("c_smoke");
     let mut cmd = Command::new(&cc);
     cmd.arg(format!("{manifest}/tests/c/smoke.c")).arg(format!("-I{manifest}/include")).arg(&lib).arg("-o").arg(&out).arg("-Wall").arg("-Werror");
