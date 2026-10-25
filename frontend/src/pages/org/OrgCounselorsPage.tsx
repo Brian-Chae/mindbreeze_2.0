@@ -411,7 +411,7 @@ export default function OrgCounselorsPage() {
   };
 
   return (
-    <AppShell title="상담사 관리" sub="COUNSELORS">
+    <AppShell title="상담사 관리" sub="COUNSELORS" wide>
       {error && (
         <div className="mb-4 rounded-xl bg-[#FDECEC] p-3 text-sm text-[#B3261E]" role="alert">
           {error}

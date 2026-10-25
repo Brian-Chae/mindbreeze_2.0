@@ -90,7 +90,7 @@ export default function AdminReviewListPage() {
   const totalPages = Math.max(1, Math.ceil(total / 20));
 
   return (
-    <AppShell title="검토 큐" sub="ADMIN REVIEW QUEUE">
+    <AppShell title="검토 큐" sub="ADMIN REVIEW QUEUE" wide>
       {/* 필터 */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
         <select

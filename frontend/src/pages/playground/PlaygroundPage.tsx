@@ -129,7 +129,7 @@ function PlaygroundView({ useMock, onToggleMock }: { useMock: boolean; onToggleM
 
   return (
     <Shell title="체험 및 밴드 신호">
-      <div className="mx-auto max-w-6xl space-y-4">
+      <div className="mx-auto w-full max-w-mb-content space-y-4">
         <Link to={settingsPath} className="inline-flex min-h-11 items-center gap-2 font-semibold text-[#5B1A8A]">← 설정으로 돌아가기</Link>
         {import.meta.env.DEV && !isPlatformAdmin && (
           <div className="rounded-2xl border border-[#EFEFEF] bg-white px-4 py-3">

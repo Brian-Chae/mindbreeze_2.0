@@ -1,0 +1,202 @@
+[
+ {
+  "label": "before",
+  "role": "host",
+  "name": "홈(상담사)",
+  "vw": 1440,
+  "x": 280,
+  "w": 1120,
+  "url": "/dashboard",
+  "track": {
+   "n": 4,
+   "trackW": 1120,
+   "cardW": 280,
+   "rightEdge": 1170
+  }
+ },
+ {
+  "label": "before",
+  "role": "host",
+  "name": "홈(상담사)",
+  "vw": 1920,
+  "x": 480,
+  "w": 1200,
+  "url": "/dashboard",
+  "track": {
+   "n": 4,
+   "trackW": 1200,
+   "cardW": 280,
+   "rightEdge": 1170
+  }
+ },
+ {
+  "label": "before",
+  "role": "host",
+  "name": "명상 클래스",
+  "vw": 1440,
+  "x": 280,
+  "w": 1120,
+  "url": "/classes",
+  "track": null
+ },
+ {
+  "label": "before",
+  "role": "host",
+  "name": "명상 클래스",
+  "vw": 1920,
+  "x": 480,
+  "w": 1200,
+  "url": "/classes",
+  "track": null
+ },
+ {
+  "label": "before",
+  "role": "host",
+  "name": "회원 목록",
+  "vw": 1440,
+  "x": 280,
+  "w": 1120,
+  "url": "/clients",
+  "track": null
+ },
+ {
+  "label": "before",
+  "role": "host",
+  "name": "회원 목록",
+  "vw": 1920,
+  "x": 280,
+  "w": 1600,
+  "url": "/clients",
+  "track": null
+ },
+ {
+  "label": "before",
+  "role": "host",
+  "name": "리포트",
+  "vw": 1440,
+  "x": 280,
+  "w": 1120,
+  "url": "/reports",
+  "track": null
+ },
+ {
+  "label": "before",
+  "role": "host",
+  "name": "리포트",
+  "vw": 1920,
+  "x": 280,
+  "w": 1600,
+  "url": "/reports",
+  "track": null
+ },
+ {
+  "label": "before",
+  "role": "host",
+  "name": "플레이그라운드",
+  "vw": 1440,
+  "x": 280,
+  "w": 1120,
+  "url": "/playground",
+  "track": null
+ },
+ {
+  "label": "before",
+  "role": "host",
+  "name": "플레이그라운드",
+  "vw": 1920,
+  "x": 504,
+  "w": 1152,
+  "url": "/playground",
+  "track": null
+ },
+ {
+  "label": "before",
+  "role": "host",
+  "name": "알림(유지)",
+  "vw": 1440,
+  "x": 504,
+  "w": 672,
+  "url": "/notifications",
+  "track": null
+ },
+ {
+  "label": "before",
+  "role": "host",
+  "name": "알림(유지)",
+  "vw": 1920,
+  "x": 744,
+  "w": 672,
+  "url": "/notifications",
+  "track": null
+ },
+ {
+  "label": "before",
+  "role": "member",
+  "name": "회원 홈",
+  "vw": 1440,
+  "x": 240,
+  "w": 1200,
+  "url": "/app",
+  "track": {
+   "n": 4,
+   "trackW": 1120,
+   "cardW": 280,
+   "rightEdge": 1170
+  }
+ },
+ {
+  "label": "before",
+  "role": "member",
+  "name": "회원 홈",
+  "vw": 1920,
+  "x": 440,
+  "w": 1280,
+  "url": "/app",
+  "track": {
+   "n": 4,
+   "trackW": 1200,
+   "cardW": 280,
+   "rightEdge": 1170
+  }
+ },
+ {
+  "label": "before",
+  "role": "member",
+  "name": "내 클래스",
+  "vw": 1440,
+  "x": 280,
+  "w": 1120,
+  "url": "/app/classes",
+  "track": null
+ },
+ {
+  "label": "before",
+  "role": "member",
+  "name": "내 클래스",
+  "vw": 1920,
+  "x": 480,
+  "w": 1200,
+  "url": "/app/classes",
+  "track": null
+ },
+ {
+  "label": "before",
+  "role": "member",
+  "name": "회원 리포트",
+  "vw": 1440,
+  "x": 280,
+  "w": 1120,
+  "url": "/app/reports",
+  "track": null
+ },
+ {
+  "label": "before",
+  "role": "member",
+  "name": "회원 리포트",
+  "vw": 1920,
+  "x": 280,
+  "w": 1600,
+  "url": "/app/reports",
+  "track": null
+ }
+]

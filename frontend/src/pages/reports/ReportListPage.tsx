@@ -510,7 +510,7 @@ export default function ReportListPage() {
   );
 
   return (
-    <AppShell title="리포트" rightSlot={!loading ? rightSlot : undefined}>
+    <AppShell title="리포트" rightSlot={!loading ? rightSlot : undefined} wide>
       {operationsOpen && <section id="report-operations-settings" aria-label="리포트 운영 설정" className="mb-6 space-y-4 rounded-2xl border border-[#E9E2EB] bg-[#F8F5EF] p-4">
         <h2 className="text-[18px] font-bold">운영 설정</h2>
         <SessionNotePromptToggle />

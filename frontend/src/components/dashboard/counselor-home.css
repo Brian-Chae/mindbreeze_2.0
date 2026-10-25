@@ -38,7 +38,7 @@
 .ch-home .ch-review{flex-direction:row;align-items:center;justify-content:space-between;padding:16px 24px}
 .ch-home .ch-tiles{grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
 .ch-home .mh-track{gap:16px}
-.ch-home .mh-track>.mc-card{flex:0 0 280px;width:280px;height:304px;min-height:0}
+.ch-home .mh-track>.mc-card{flex:0 0 max(240px,calc((100% - 48px)/4));width:max(240px,calc((100% - 48px)/4));height:304px;min-height:0}
 .ch-home .ch-rail{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
 .ch-home .ch-panel{padding:24px}
 }

@@ -207,7 +207,7 @@ export default function ClientProfilePage() {
 
   return (
     <AppShell title={profile.name} sub="CLIENT" rightSlot={backLink}>
-      <div className="mx-auto max-w-[1280px] space-y-5">
+      <div className="mx-auto w-full max-w-mb-content space-y-5">
         {/* 요약 헤더 */}
         <section aria-label="회원 요약" className={panel}>
           <div className="flex items-center gap-4">

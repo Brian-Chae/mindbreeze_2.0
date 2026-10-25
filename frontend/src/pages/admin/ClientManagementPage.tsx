@@ -423,7 +423,7 @@ export default function ClientManagementPage() {
   );
 
   return (
-    <AppShell title="회원 관리" sub="CLIENT MANAGEMENT" rightSlot={addButton}>
+    <AppShell title="회원 관리" sub="CLIENT MANAGEMENT" rightSlot={addButton} wide>
       <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
         <input
           type="text"

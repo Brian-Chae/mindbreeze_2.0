@@ -258,8 +258,8 @@ export default function ClientListPage() {
   );
 
   return (
-    <AppShell title="회원" sub="CLIENTS" rightSlot={rightSlot}>
-      <div className="mx-auto max-w-[1600px] space-y-5">
+    <AppShell title="회원" sub="CLIENTS" rightSlot={rightSlot} wide>
+      <div className="mx-auto w-full max-w-mb-content space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-[#6F6F6F]" aria-live="polite">
             전체 <b className="text-[#5F0080]">{total}</b>명

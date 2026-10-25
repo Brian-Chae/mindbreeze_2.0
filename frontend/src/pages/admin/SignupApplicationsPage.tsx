@@ -131,7 +131,7 @@ export default function SignupApplicationsPage() {
   const canReview = detail && (detail.status === 'submitted' || detail.status === 'reviewing');
 
   return (
-    <AppShell title="가입 신청 관리" sub="SIGNUP APPLICATIONS">
+    <AppShell title="가입 신청 관리" sub="SIGNUP APPLICATIONS" wide>
       {message && (
         <div role="status" className="mb-5 rounded-xl bg-[#F5EDFC] p-3 text-sm text-[#5F0080]">
           {message}
