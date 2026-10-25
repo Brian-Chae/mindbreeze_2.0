@@ -9,11 +9,16 @@ import { idbRequest, openRawDb, transactionDone, type BiosignalStore } from './q
 
 export interface CaptureScope { accountId: string; sessionId: string; participantId: string | null; deviceAlias: string }
 export type ObjectKind = 'raw' | ArtifactKind;
-export type ObjectState = 'pending' | 'dead_letter';
+/** time_review=종료 cutoff를 걸친/시간 미확정 자료(완료로 세지 않음), superseded=분할 복구되어 자식 alias로 대체된 원본(payload 보존). */
+export type ObjectState = 'pending' | 'dead_letter' | 'time_review' | 'superseded';
 export interface QueuedObject {
   id: string; accountId: string; sessionId: string; participantId: string | null;
   kind: ObjectKind; alias: string; meta: RawMeta | ArtifactMeta; payload: ArrayBuffer;
   state: ObjectState; attempts: number; lastError: string | null; retryAfter: number; createdAt: number;
+  /** SDD-246 T09: 마지막 실패 단계와 분할 후보 표시(없으면 v1/v2 동작). */
+  stage?: 'presign' | 'put' | 'verify' | 'local'; splitCandidate?: boolean;
+  /** 분할 복구 연결: 자식은 부모 alias/hash, 부모는 자식 alias 목록. */
+  parentAlias?: string; parentSha256?: string; splitInto?: string[];
 }
 /** payload 를 뺀 큐 항목(목록·카운트·전송 선택용). 수백 건 적체에도 메모리에 payload 를 올리지 않는다. */
 export type QueuedMeta = Omit<QueuedObject, 'payload'>;
@@ -255,7 +260,10 @@ export class BiosignalQueue {
   }
   async counts(): Promise<{ pending: number; blocked: number }> {
     let pending = 0, blocked = 0;
-    for (const m of (await this.ensureIndex()).values()) { if (m.state === 'dead_letter') blocked += 1; else pending += 1; }
+    for (const m of (await this.ensureIndex()).values()) {
+      if (m.state === 'superseded') continue; // 자식 alias가 대체: 집계에서 제외(payload만 보존)
+      if (m.state === 'pending') pending += 1; else blocked += 1;
+    }
     return { pending, blocked };
   }
   /** 지금 보낼 수 있는 항목 최대 limit 건(payload 포함, 오래된 순). 나머지는 읽지 않는다. */
@@ -267,7 +275,7 @@ export class BiosignalQueue {
       const object = await this.read(storeFor(m.kind), s => s.get(m.id) as IDBRequest<QueuedObject | undefined>);
       if (object) batch.push(object);
     }
-    return { batch, blocked: metas.filter(m => m.state === 'dead_letter').length };
+    return { batch, blocked: metas.filter(m => m.state === 'dead_letter' || m.state === 'time_review').length };
   }
   /** 저장소에 항목이 하나라도 있는지(payload 를 읽지 않음). 재진입 복구 판단용. */
   async hasStoredObjects(): Promise<boolean> {
@@ -312,6 +320,40 @@ export class BiosignalQueue {
     const next: QueuedObject = { ...object, attempts, state, lastError: reason, retryAfter: this.now() + Math.min(MAX_BACKOFF_MS, 1000 * 2 ** attempts) };
     await this.write([storeFor(object.kind)], async tx => { tx.objectStore(storeFor(object.kind)).put(next); });
     this.indexPut(next);
+  }
+  /**
+   * SDD-246 T09 단계별 실패 기록. backoff는 횟수와 무관하게 pending 유지(영구 실패 금지), halt/quarantine은 dead_letter,
+   * time_review는 별도 상태. payload는 어떤 경우에도 삭제하지 않는다.
+   */
+  async failStaged(id: string, outcome: { reason: string; stage: 'presign' | 'put' | 'verify' | 'local'; mode: 'backoff' | 'dead_letter' | 'time_review'; retryAfterMs?: number; splitCandidate?: boolean }): Promise<void> {
+    const known = (await this.ensureIndex()).get(id);
+    if (!known) return;
+    const object = await this.read(storeFor(known.kind), s => s.get(id) as IDBRequest<QueuedObject | undefined>);
+    if (!object) { this.metaIndex?.delete(id); return; }
+    const attempts = object.attempts + 1;
+    const state: ObjectState = outcome.mode === 'backoff' ? 'pending' : outcome.mode;
+    const delay = Math.min(MAX_BACKOFF_MS, 1000 * 2 ** Math.min(attempts, 20));
+    const next: QueuedObject = { ...object, attempts, state, lastError: outcome.reason, stage: outcome.stage, splitCandidate: outcome.splitCandidate ?? object.splitCandidate,
+      retryAfter: outcome.mode === 'backoff' ? this.now() + Math.max(delay, outcome.retryAfterMs ?? 0) : object.retryAfter };
+    await this.write([storeFor(object.kind)], async tx => { tx.objectStore(storeFor(object.kind)).put(next); });
+    this.indexPut(next);
+  }
+  /** 분할 복구: 원본은 superseded로 payload 보존, 자식 alias 목록을 기록한다. */
+  async markSplit(id: string, children: string[]): Promise<void> {
+    const known = (await this.ensureIndex()).get(id);
+    if (!known) return;
+    const object = await this.read(storeFor(known.kind), s => s.get(id) as IDBRequest<QueuedObject | undefined>);
+    if (!object) return;
+    const next: QueuedObject = { ...object, state: 'superseded', splitInto: children };
+    await this.write([storeFor(object.kind)], async tx => { tx.objectStore(storeFor(object.kind)).put(next); });
+    this.indexPut(next);
+  }
+  /** 분할 자식을 부모 연결 정보와 함께 등록한다(alias는 새것, 같은 alias에 다른 바이트 금지는 putObject가 보장). */
+  async enqueueChild(meta: ArtifactMeta, payload: ArrayBuffer, parent: { alias: string; sha256: string }): Promise<QueuedObject> {
+    const object = { ...this.newObject(meta.artifact_kind, meta.artifact_alias, meta, payload), parentAlias: parent.alias, parentSha256: parent.sha256 };
+    const saved = await this.write([storeFor(meta.artifact_kind)], async tx => this.putObject(tx.objectStore(storeFor(meta.artifact_kind)), object));
+    this.indexPut(saved);
+    return saved;
   }
   /** 명시 재개(재인증 후): dead_letter를 pending으로 되돌린다. payload는 그대로. */
   async resume(id: string): Promise<void> {

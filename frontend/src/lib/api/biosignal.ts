@@ -8,6 +8,8 @@ export interface ArtifactMeta {
   sequence: number; first_sequence?: number | null; last_sequence?: number | null; row_count: number;
   content_encoding?: 'identity' | 'gzip'; schema_version: string; checksum: string; uncompressed_sha256?: string | null;
   size_bytes: number; time_range?: { from_us: string; to_us: string } | null; content_type?: string;
+  /** SDD-246 T09: 장치 단조시계 구간(µs). capture_stream_id 와 함께 보내 종료 이후 사후전송 판정에 쓴다. */
+  monotonic_range?: { from_us: string; to_us: string } | null;
 }
 export interface RawMeta { chunk_alias: string; header: RawHeader; checksum: string; size_bytes: number; content_type?: string }
 export interface UploadTicket {
@@ -50,8 +52,10 @@ export function createBiosignalApi(auth: { entryCredential?: string | null; skip
   const path = (session: string, suffix: string) => `/sessions/${encodeURIComponent(session)}/${suffix}`;
   return {
     capability: (session: string, participant: string | null) => transport.get<Capability>(path(session, `biosignal-capabilities${participant ? `?participant_id=${encodeURIComponent(participant)}` : ''}`), options),
-    presign: async (session: string, participant: string | null, kind: 'raw' | ArtifactKind, meta: RawMeta | ArtifactMeta, playGroup?: string | null) => {
-      const response = await transport.post<{ chunks: UploadTicket[] }>(path(session, kind === 'raw' ? 'biosignal-raw/presign' : 'biosignal-artifacts/presign'), { participant_id: participant, play_group_id: playGroup ?? null, chunks: [meta] }, options);
+    presign: async (session: string, participant: string | null, kind: 'raw' | ArtifactKind, meta: RawMeta | ArtifactMeta, playGroup?: string | null, captureStreamId?: string | null) => {
+      const body: Record<string, unknown> = { participant_id: participant, play_group_id: playGroup ?? null, chunks: [meta] };
+      if (captureStreamId) body.capture_stream_id = captureStreamId; // 미지정이면 v1/v2 와 동일한 본문
+      const response = await transport.post<{ chunks: UploadTicket[] }>(path(session, kind === 'raw' ? 'biosignal-raw/presign' : 'biosignal-artifacts/presign'), body, options);
       return response.chunks[0];
     },
     ack: async (session: string, participant: string | null, kind: 'raw' | ArtifactKind, id: string, checksum: string, size: number) => {
