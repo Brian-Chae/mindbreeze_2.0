@@ -9,5 +9,5 @@ const {pathToFileURL} = require('node:url');
  const outDir=fs.mkdtempSync('/tmp/sdd245-build-');
  const envDir=fs.mkdtempSync('/tmp/sdd245-env-');
  await build({root,configFile:path.join(root,'vite.config.ts'),mode:'development',envDir,resolve:{alias:{'../design-system':path.resolve(root,'../design-system')}},define:{'import.meta.env.VITE_API_BASE_URL':JSON.stringify('/api/v1'),'import.meta.env.VITE_COUNSELING_ENABLED':'"true"','import.meta.env.VITE_AI_ENABLED':'"true"','import.meta.env.VITE_DESIGN_ROUTES_ENABLED':'"true"'},build:{outDir,emptyOutDir:false}});
- fs.writeFileSync(path.join(__dirname,'build-info.json'),JSON.stringify({outDir,mode:'development',flags:{counseling:true,ai:true,designRoutes:true},sourceCommit:require('node:child_process').execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim()},null,2));
+ fs.writeFileSync(process.env.AUDIT_BUILD_INFO?path.resolve(process.env.AUDIT_BUILD_INFO):path.join(__dirname,'build-info.json'),JSON.stringify({outDir,mode:'development',flags:{counseling:true,ai:true,designRoutes:true},sourceCommit:require('node:child_process').execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim()},null,2));
 })();

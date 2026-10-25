@@ -6,7 +6,9 @@ const root=path.resolve(__dirname,'../../..');
 const {chromium}=require(path.join(root,'frontend/node_modules/playwright'));
 const {fixture,userFor}=require('./base-fixtures.cjs');
 const extraFixture=(...args)=>fs.existsSync(path.join(__dirname,'extra-fixtures.cjs'))?require('./extra-fixtures.cjs').extraFixture(...args):undefined;
-const build=JSON.parse(fs.readFileSync(path.join(__dirname,'build-info.json')));
+// SDD-245: 구현 후 재측정은 AUDIT_OUT(별도 디렉터리)/AUDIT_BUILD_INFO로 before 산출물을 덮어쓰지 않는다.
+const OUT=process.env.AUDIT_OUT?path.resolve(process.env.AUDIT_OUT):__dirname;
+const build=JSON.parse(fs.readFileSync(process.env.AUDIT_BUILD_INFO?path.resolve(process.env.AUDIT_BUILD_INFO):path.join(__dirname,'build-info.json')));
 const home={client:'/app',counselor:'/dashboard',org_admin:'/dashboard/org',platform_admin:'/admin/orgs'};
 const src=fs.readFileSync(path.join(root,'frontend/src/App.tsx'),'utf8');
 const routeBlocks=[...src.matchAll(/<Route\s+path="([^"]+)"([\s\S]*?)(?=<Route\s|$)/g)];
@@ -50,15 +52,15 @@ function collect(){
  return {content:content?val(content):null,title:title?{...val(title),topFromContainer:title.getBoundingClientRect().top-(content?.getBoundingClientRect().top||0)}:null,wrappers,headings,controls,cards,inputs,chips,sections,scrollWidth:document.documentElement.scrollWidth,bodyText:document.body.innerText.slice(0,250),shell:!!shell};
 }
 (async()=>{
- fs.mkdirSync(path.join(__dirname,'captures'),{recursive:true});fs.mkdirSync(path.join(__dirname,'measurements'),{recursive:true});
- fs.writeFileSync(path.join(__dirname,'routes.json'),JSON.stringify(manifest,null,2));
+ fs.mkdirSync(path.join(OUT,'captures'),{recursive:true});fs.mkdirSync(path.join(OUT,'measurements'),{recursive:true});
+ fs.writeFileSync(path.join(OUT,'routes.json'),JSON.stringify(manifest,null,2));
  const browser=await chromium.launch({channel:'chrome',headless:true});
  const allResults=[];const filter=process.env.AUDIT_FILTER?new RegExp(process.env.AUDIT_FILTER):null;
  try{
  for(const width of [390,1440]) for(const item of manifest) for(const role of item.roles){
  const url=concrete(item.pattern), id=`${role}-${width}-${url.replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'')||'landing'}`;
  if(filter&&!filter.test(id))continue;
- if(process.env.AUDIT_RESUME&&fs.existsSync(path.join(__dirname,'measurements',id+'.json')))continue;
+ if(process.env.AUDIT_RESUME&&fs.existsSync(path.join(OUT,'measurements',id+'.json')))continue;
  const context=await browser.newContext({viewport:{width,height:width===390?844:900},deviceScaleFactor:1,serviceWorkers:'block',locale:'ko-KR',timezoneId:'Asia/Seoul'});
  const page=await context.newPage();const errors=[],unknown=[],blockedWrites=[],fontRequests=[];
  page.on('pageerror',e=>errors.push(e.message));
@@ -100,13 +102,13 @@ function collect(){
  try{const el=page.locator(target.selector);await el.hover({timeout:1200});await page.waitForTimeout(180);const style=await el.evaluate(e=>{const c=getComputedStyle(e);return {background:c.backgroundColor,color:c.color,border:c.border,shadow:c.boxShadow,radius:c.borderRadius};});hover.push({kind,selector:target.selector,normal:{background:target.background,color:target.color,border:target.border,shadow:target.shadow,radius:target.radius},hover:style});}catch{hover.push({kind,selector:target.selector,status:'not-hoverable'});}
  }
  await page.mouse.move(0,0);await page.evaluate(()=>{window.scrollTo(0,0);document.querySelectorAll('*').forEach(e=>{if(e.scrollTop)e.scrollTop=0;});});await page.waitForTimeout(180);
- await page.screenshot({path:path.join(__dirname,'captures',id+'.png'),fullPage:false});
+ await page.screenshot({path:path.join(OUT,'captures',id+'.png'),fullPage:false});
  const actual=new URL(page.url()).pathname;
  const result={id,fixtureRevision:3,pattern:item.pattern,url,role,width,height:width===390?844:900,home:home[role]||null,actual,redirected:actual!==url.split('?')[0],failure,errors,unknown:[...new Set(unknown)],blockedWrites,fontRequests,hover,...metrics};
- fs.writeFileSync(path.join(__dirname,'measurements',id+'.json'),JSON.stringify(result,null,2));allResults.push(result);
+ fs.writeFileSync(path.join(OUT,'measurements',id+'.json'),JSON.stringify(result,null,2));allResults.push(result);
  console.log(JSON.stringify({id,title:metrics.title?.text,errors,unknown:result.unknown,redirected:result.redirected}));
  await context.close();
  }
- fs.writeFileSync(path.join(__dirname,'run-info.json'),JSON.stringify({browser:await browser.version(),channel:'chrome',build,completedAt:new Date().toISOString(),manifestCount:manifest.length,captures:fs.readdirSync(path.join(__dirname,'measurements')).length},null,2));
+ fs.writeFileSync(path.join(OUT,'run-info.json'),JSON.stringify({browser:await browser.version(),channel:'chrome',build,completedAt:new Date().toISOString(),manifestCount:manifest.length,captures:fs.readdirSync(path.join(OUT,'measurements')).length},null,2));
  }finally{await browser.close();}
 })();

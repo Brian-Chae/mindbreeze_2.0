@@ -2,7 +2,10 @@
 .cs-structure { height: 100%; min-height: 0; color: #26232b; font-size: 14px; }
 .cs-structure [data-shell-variant="structure"] { overflow: hidden; background: #f7f5f9; }
 .cs-structure [data-shell-variant="structure"] > aside { min-height: 0; overflow-y: auto; }
-.cs-structure .cs-structure-content { display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; padding: 24px; }
+/* SDD-245: 일반 셸 contentPad(16/32/40)와 같은 gutter. 홈(.mh-home/.ch-home)은 자체 inset을 유지해 아래에서 기존 값으로 고정한다. */
+.cs-structure .cs-structure-content { display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; padding: 32px 32px 40px; }
+@media (min-width: 1024px) { .cs-structure .cs-structure-content { padding: 32px 40px 40px; } }
+@media (min-width: 768px) and (max-width: 1023px) { .cs-structure .cs-structure-content:has(.mh-home, .ch-home) { padding: 24px; } }
 .cs-structure .cs-structure-scroll { width: 100%; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
 .cs-structure .cs-read-state { display: flex; min-height: 240px; padding: 32px 16px; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; }
 .cs-structure .cs-read-state p { margin: 0; color: #625b6c; }
