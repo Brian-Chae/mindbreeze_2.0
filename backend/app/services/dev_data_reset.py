@@ -42,6 +42,8 @@ SESSIONS_SCOPE_DELETE = frozenset({
 SESSIONS_SCOPE_DELETE = SESSIONS_SCOPE_DELETE | frozenset({
     "biosignal_streams", "biosignal_segments", "biosignal_gap_events", "biosignal_close_intents",
     "biosignal_manifest_revisions", "biosignal_manifest_current",
+    # SDD-246 T03: 실시간 명령 장부·outbox·epoch·측정 stream(세션 종속).
+    "live_session_epoch", "live_command_ledger", "live_outbox", "capture_stream",
     # SDD-244 M2: 산출물 원장·화면 스냅샷·feature alias 색인(세션 종속). 정규화 모델 snapshot 은 전역 content-addressed 라 보존.
     "biosignal_artifacts", "biosignal_feature_aliases", "display_snapshots",
 })

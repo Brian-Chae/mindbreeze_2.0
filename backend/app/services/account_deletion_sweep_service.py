@@ -90,6 +90,7 @@ USER_OWNED_NO_FK: dict[str, tuple[str, ...]] = {
 # 본인 참여자(session_participants.user_id)에 속한 개인 데이터: table → (참여자 열, 사용자 열).
 PARTICIPANT_OWNED: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "eeg_records": (("participant_id",), ("user_id",)),
+    "capture_stream": (("participant_id",), ()),  # SDD-246 T03
     "eeg_raw_chunks": (("participant_id",), ("user_id",)),
     "eeg_feature_windows": (("participant_id",), ("user_id",)),
     "reports": (("participant_id",), ("user_id",)),
