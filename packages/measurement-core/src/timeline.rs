@@ -26,6 +26,9 @@ pub struct WebTimeline {
     last_sample: Option<f64>,
     actual_interval: f64,
     last_acc: f64,
+    /// SampleClock 모드: EEG/PPG 헤더 tick 을 샘플 격자(idx×간격)로 정규화한다.
+    /// 헤더 양자화(±1/32768s)가 batch 크기마다 달라 gate 경계(예: 호흡 60초)를 뒤집는 것을 막는다.
+    quantize: bool,
 }
 
 fn js_round(x: f64) -> f64 {
@@ -33,13 +36,13 @@ fn js_round(x: f64) -> f64 {
 }
 
 impl WebTimeline {
-    pub fn new(sensor: Sensor) -> Self {
+    pub fn new(sensor: Sensor, quantize: bool) -> Self {
         let expected = match sensor {
             Sensor::Eeg => 4.0,
             Sensor::Ppg => 20.0,
             Sensor::Acc => 33.33,
         };
-        WebTimeline { sensor, expected, clock: None, last_sample: None, actual_interval: expected, last_acc: 0.0 }
+        WebTimeline { sensor, expected, clock: None, last_sample: None, actual_interval: expected, last_acc: 0.0, quantize }
     }
 
     /// 장치 시각(ms) → 웹 타임라인 시각(ms). `now_ms` = Date.now().
@@ -99,7 +102,12 @@ impl WebTimeline {
 
     /// 패킷 하나의 샘플 시각(ms) n개. 헤더는 마지막 샘플 기준(v1).
     pub fn sample_times(&mut self, ext_tick: i64, n: usize, now_ms: f64) -> Vec<f64> {
-        let dev = (ext_tick as f64 / 32768.0) * 1000.0;
+        let mut dev = (ext_tick as f64 / 32768.0) * 1000.0;
+        if self.quantize && self.sensor != Sensor::Acc {
+            let rate = self.sensor.rate_hz() as f64;
+            let iv = 1000.0 / rate;
+            dev = js_round(ext_tick as f64 * rate / 32768.0) * iv;
+        }
         let corrected = self.normalize(dev, now_ms);
         match self.sensor {
             Sensor::Eeg | Sensor::Ppg => {

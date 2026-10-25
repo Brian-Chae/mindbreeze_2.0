@@ -23,6 +23,9 @@ const PPG_RING: usize = 500;
 const ACC_RING: usize = 150;
 const FRAME_INTERVAL_US: u64 = 1_000_000;
 const STALE_US: u64 = 3_000_000;
+/// 헤더 tick(1/32768s) 양자화로 batch 마다 분석 종료 시각이 수십 µs 달라진다.
+/// 프레임 격자 비교는 PPG 반 샘플(10ms)의 허용폭을 두어 경계 뒤집힘을 막는다.
+const GRID_TOL_US: u64 = 10_000;
 
 // ---------------------------------------------------------------- 설정
 
@@ -306,6 +309,7 @@ impl ContactState {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct LatestEeg {
     end_us: u64,
+    contact: [ContactState; 2],
     observed_ms: u64,
     sqi01: f64,
     focus: f64,
@@ -333,10 +337,13 @@ struct CoreState {
     last_eeg_analysis_ms: Option<i64>,
     hrv: HrvState,
     contact: [ContactState; 2],
-    latest_eeg: Option<LatestEeg>,
-    latest_ppg: Option<LatestPpg>,
+    /// 분석 이력(최근 8개). 프레임은 격자 시각 T 이하의 최신 분석값으로 만든다 → batch 크기와 무관.
+    eeg_hist: VecDeque<LatestEeg>,
+    ppg_hist: VecDeque<LatestPpg>,
+    /// 센서별 처리된 마지막 샘플 시각(µs). 프레임 격자 진행의 워터마크.
+    wm_us: [Option<u64>; 2],
+    next_frame_us: Option<u64>,
     seq: u64,
-    last_frame_end_us: Option<u64>,
     last_valid: [Option<(u64, u64)>; 9],
     last_push_mono_us: Option<u64>,
     last_data_end_us: u64,
@@ -390,9 +397,10 @@ impl Core {
     pub fn with_tuning(cfg: CoreConfig, tuning: Tuning) -> Result<Core, String> {
         cfg.validate()?;
         let cc = ClockConfig::default();
+        let quant = tuning.cadence == Cadence::SampleClock;
         let s = CoreState {
             clocks: [SensorClock::new(Sensor::Eeg, cc), SensorClock::new(Sensor::Ppg, cc), SensorClock::new(Sensor::Acc, cc)],
-            timelines: [WebTimeline::new(Sensor::Eeg), WebTimeline::new(Sensor::Ppg), WebTimeline::new(Sensor::Acc)],
+            timelines: [WebTimeline::new(Sensor::Eeg, quant), WebTimeline::new(Sensor::Ppg, quant), WebTimeline::new(Sensor::Acc, quant)],
             eeg: VecDeque::new(),
             ppg: VecDeque::new(),
             acc: VecDeque::new(),
@@ -400,10 +408,11 @@ impl Core {
             last_eeg_analysis_ms: None,
             hrv: HrvState::default(),
             contact: [ContactState::Unknown; 2],
-            latest_eeg: None,
-            latest_ppg: None,
+            eeg_hist: VecDeque::new(),
+            ppg_hist: VecDeque::new(),
+            wm_us: [None, None],
+            next_frame_us: None,
             seq: 0,
-            last_frame_end_us: None,
             last_valid: [None; 9],
             last_push_mono_us: None,
             last_data_end_us: 0,
@@ -514,7 +523,7 @@ impl Core {
 
         if adm.flags.segment_reset {
             // 새 segment: 불연속 구간이므로 이 센서의 링과 타임라인을 새로 시작한다.
-            self.s.timelines[i] = WebTimeline::new(sensor);
+            self.s.timelines[i] = WebTimeline::new(sensor, self.tuning.cadence == Cadence::SampleClock);
             match sensor {
                 Sensor::Eeg => self.s.eeg.clear(),
                 Sensor::Ppg => self.s.ppg.clear(),
@@ -535,6 +544,7 @@ impl Core {
                         self.s.eeg.pop_front();
                     }
                     self.s.totals[0] += 1;
+                    self.s.wm_us[0] = Some(ts_us(times[k]));
                     self.s.contact = [if s.leadoff_ch1 { ContactState::Leadoff } else { ContactState::Contact }, if s.leadoff_ch2 { ContactState::Leadoff } else { ContactState::Contact }];
                     if !legacy && self.s.totals[0] % 250 == 0 && self.s.eeg.len() >= 500 {
                         let t = times[k];
@@ -553,6 +563,7 @@ impl Core {
                         self.s.ppg.pop_front();
                     }
                     self.s.totals[1] += 1;
+                    self.s.wm_us[1] = Some(ts_us(times[k]));
                     if !legacy && self.s.totals[1] % 50 == 0 {
                         let t = times[k];
                         self.run_ppg(t, t.floor(), &mut out);
@@ -578,6 +589,7 @@ impl Core {
                 }
             }
         }
+        self.drain_frames(&mut out);
         out
     }
 
@@ -598,8 +610,9 @@ impl Core {
         let cohort = score::score(&input, None);
         let model = self.s.model.as_ref().map(|m| score::score(&input, Some(m)));
         let end_us = ts_us(last_ts);
-        self.s.latest_eeg = Some(LatestEeg {
+        self.s.eeg_hist.push_back(LatestEeg {
             end_us,
+            contact: self.s.contact,
             observed_ms: last_ts.max(0.0).floor() as u64,
             sqi01: (res.sqi_overall_pct / 100.0).clamp(0.0, 1.0),
             focus: ix.focus_index,
@@ -608,8 +621,11 @@ impl Core {
             cohort,
             model,
         });
+        if self.s.eeg_hist.len() > 8 {
+            self.s.eeg_hist.pop_front();
+        }
+        self.anchor_grid(end_us);
         out.emissions.push(Emission::Eeg(EegEmission { now_ms, end_sample_index: self.s.totals[0], window_end_ts: last_ts, result: res, scores_cohort: cohort, scores_model: model }));
-        self.maybe_frame(end_us, out);
     }
 
     fn run_ppg(&mut self, last_ts: f64, now_ms: f64, out: &mut PushOutput) {
@@ -619,7 +635,11 @@ impl Core {
         let hrv = self.s.hrv.snapshot();
         let reason = self.s.hrv.resp_null_reason().map(|s| s.to_string());
         let end_us = ts_us(last_ts);
-        self.s.latest_ppg = Some(LatestPpg { end_us, observed_ms: last_ts.max(0.0).floor() as u64, hrv: hrv.clone(), resp_reason: reason.clone() });
+        self.s.ppg_hist.push_back(LatestPpg { end_us, observed_ms: last_ts.max(0.0).floor() as u64, hrv: hrv.clone(), resp_reason: reason.clone() });
+        if self.s.ppg_hist.len() > 8 {
+            self.s.ppg_hist.pop_front();
+        }
+        self.anchor_grid(end_us);
         out.emissions.push(Emission::Ppg(PpgEmission {
             now_ms,
             end_sample_index: self.s.totals[1],
@@ -629,7 +649,6 @@ impl Core {
             resp_null_reason: reason,
             rr_buffer_len: self.s.hrv.rr_buffer_len(),
         }));
-        self.maybe_frame(end_us, out);
     }
 
     fn run_acc(&mut self, now_ms: f64, out: &mut PushOutput) {
@@ -658,36 +677,53 @@ impl Core {
             sample_times: vec![],
         };
         self.emit_frame(end_us, &mut out);
+        // 공백 뒤 첫 분석에서 격자를 다시 잡는다(시간 역행 방지).
+        self.s.next_frame_us = None;
         out.frames
     }
 
-    fn maybe_frame(&mut self, end_us: u64, out: &mut PushOutput) {
+    /// 첫 분석 시각을 1초 격자의 원점으로 삼는다.
+    fn anchor_grid(&mut self, end_us: u64) {
         if end_us > self.s.last_data_end_us {
             self.s.last_data_end_us = end_us;
         }
-        let due = match self.s.last_frame_end_us {
-            None => true,
-            Some(l) => end_us >= l + FRAME_INTERVAL_US,
-        };
-        if due {
-            self.emit_frame(end_us, out);
+        if self.s.next_frame_us.is_none() {
+            self.s.next_frame_us = Some(end_us);
         }
+    }
+
+    /// 격자 시각 T 의 프레임은 (처리된 센서 전부가 T 이상 진행)했을 때 만든다.
+    /// 내용은 T 이하의 최신 분석값만 사용하므로 패킷 크기·도착 순서와 무관하다.
+    fn drain_frames(&mut self, out: &mut PushOutput) {
+        let Some(mut t) = self.s.next_frame_us else { return };
+        let wm = self.s.wm_us.iter().flatten().copied().min();
+        let Some(wm) = wm else { return };
+        let mut n = 0;
+        while t + GRID_TOL_US <= wm && n < 60 {
+            self.emit_frame(t, out);
+            t += FRAME_INTERVAL_US;
+            n += 1;
+        }
+        self.s.next_frame_us = Some(t);
     }
 
     fn emit_frame(&mut self, end_us: u64, out: &mut PushOutput) {
         self.s.seq += 1;
         let seq = self.s.seq;
         let observed_ms = end_us / 1000;
+        let eeg_at = self.s.eeg_hist.iter().rev().find(|e| e.end_us <= end_us + GRID_TOL_US).cloned();
+        let ppg_at = self.s.ppg_hist.iter().rev().find(|p| p.end_us <= end_us + GRID_TOL_US).cloned();
+        let contact_now = eeg_at.as_ref().map(|e| e.contact).unwrap_or([ContactState::Unknown; 2]);
         let mode = self.cfg.model_mode;
-        let both_off = self.s.contact[0] == ContactState::Leadoff && self.s.contact[1] == ContactState::Leadoff;
+        let both_off = contact_now[0] == ContactState::Leadoff && contact_now[1] == ContactState::Leadoff;
 
-        let eeg_state: Result<&LatestEeg, (&'static str, &'static str)> = match &self.s.latest_eeg {
+        let eeg_state: Result<&LatestEeg, (&'static str, &'static str)> = match &eeg_at {
             None => Err(("warming_up", "insufficient_window")),
             Some(e) if end_us.saturating_sub(e.end_us) > STALE_US => Err(("gap", "no_recent_eeg")),
             Some(_) if both_off => Err(("invalid", "leadoff")),
             Some(e) => Ok(e),
         };
-        let ppg_fresh = self.s.latest_ppg.as_ref().filter(|p| end_us.saturating_sub(p.end_us) <= STALE_US);
+        let ppg_fresh = ppg_at.as_ref().filter(|p| end_us.saturating_sub(p.end_us) <= STALE_US);
 
         let mut lv = self.s.last_valid;
         let mut mk = |slot: usize, unit: &'static str, v: Result<f64, (&'static str, &'static str)>| -> MetricValue {
@@ -741,7 +777,7 @@ impl Core {
                 None => Err(("warming_up", "no_ppg_data")),
             }
         };
-        let have_ppg = self.s.latest_ppg.is_some();
+        let have_ppg = ppg_at.is_some();
         let gate = ppg_gate(ppg_fresh, have_ppg);
         let bpm = mk(6, "beats_per_min", gate.and_then(|_| ppg_fresh.unwrap().hrv.heart_rate.ok_or(("warming_up", "no_heartbeat_yet"))));
         let sdnn = mk(8, "ms", gate.and_then(|_| ppg_fresh.unwrap().hrv.sdnn.ok_or(("warming_up", "insufficient_rr_window"))));
@@ -767,8 +803,8 @@ impl Core {
         self.s.last_valid = lv;
 
         let metrics = MetricSet { focus_raw, focus_display, relaxation_raw, relaxation_display, emotion_raw, emotion_display, bpm, respiration: resp, sdnn };
-        let contact = Contact { fp1: self.s.contact[0].name(), fp2: self.s.contact[1].name() };
-        let sqi = match &self.s.latest_eeg {
+        let contact = Contact { fp1: contact_now[0].name(), fp2: contact_now[1].name() };
+        let sqi = match &eeg_at {
             Some(e) if end_us.saturating_sub(e.end_us) <= STALE_US => Some(e.sqi01),
             _ => None,
         };
@@ -779,7 +815,6 @@ impl Core {
             d
         };
         self.s.feature_chain = chain(&self.s.feature_chain, &[&fh]);
-        self.s.last_frame_end_us = Some(end_us);
         out.frames.push(MetricFrame {
             sequence: seq.to_string(),
             window_start_us: start_us.to_string(),
