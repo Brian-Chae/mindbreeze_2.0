@@ -22,7 +22,8 @@ export function ClassRow({ data, onOpen }: ClassRowProps) {
     <button type="button" className="sh-card sh-row" data-testid="class-row" onClick={() => onOpen(data.id)}>
       <span className="sh-row__tx">
         <b>{data.title}</b>
-        <span>{data.sub}</span>
+        {/* 일시 · 진행자를 두 줄로 나눠 오른쪽 상태 칩이 한 줄을 유지할 공간을 확보한다. */}
+        {data.sub.split(' · ').map((line, i) => <span key={i} className="sh-row__sub">{line}</span>)}
       </span>
       <StatusChip chip={data.chip} />
     </button>
