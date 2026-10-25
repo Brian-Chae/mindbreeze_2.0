@@ -96,7 +96,7 @@ final class EngineTests: XCTestCase {
         XCTAssertEqual(e2.recoveredFromSequence, 500)
         e2.markResumeAfterRecovery(firstMonotonicUs: Self.packets[900].arrivalUs)
         let g = e2.gaps.last
-        XCTAssertEqual(g?.kind, "process_terminated"); XCTAssertEqual(g?.bounded, true)
+        XCTAssertEqual(g?.kind, "app_killed"); XCTAssertEqual(g?.bounded, true)
         XCTAssertEqual(g?.startSample, "500")
     }
 

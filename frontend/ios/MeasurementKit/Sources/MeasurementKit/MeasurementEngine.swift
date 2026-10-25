@@ -176,7 +176,7 @@ public final class MeasurementEngine {
     /// 복구 후 BLE 가 다시 붙어 첫 패킷이 도착했을 때, 마지막 committed 와 그 사이를 bounded gap 으로 남긴다(복구 성공을 주장하지 않는다).
     public func markResumeAfterRecovery(firstMonotonicUs: UInt64) {
         lock.lock(); defer { lock.unlock() }
-        let g = Gap(kind: "process_terminated", bounded: true, startSample: String(recoveredFromSequence), endMonotonicUs: firstMonotonicUs)
+        let g = Gap(kind: "app_killed", bounded: true, startSample: String(recoveredFromSequence), endMonotonicUs: firstMonotonicUs)
         gaps.append(g)
         if let d = try? JSONSerialization.data(withJSONObject: ["kind": g.kind, "bounded": true, "start": g.startSample, "end_us": String(firstMonotonicUs)]) { _ = try? gapJournal.append(d) }
     }
