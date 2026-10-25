@@ -12,6 +12,8 @@ export interface ClassSummaryDto {
   id: string; title: string | null; status: string; schedule_mode: string;
   planned_session_count: number | null; area: 'meditation' | 'counseling';
   progress: ProgressDto; session_count: number; next_session: NextSessionDto | null; has_open_session: boolean;
+  /** 대표 진행자(다음 회차가 없어도 채워짐) */
+  host?: UserBriefDto | null;
 }
 export interface ClassInstructorDto { user_id: string; name: string | null; role: string; status: string }
 export interface ClassHostViewDto { access_code: string | null; instructors: ClassInstructorDto[] }
