@@ -61,7 +61,7 @@ describe('REST 폴백 어댑터', () => {
     await rest.getSnapshot({ sessionId: SID, requestId: 'r', generation: '2' });
     expect(get.mock.calls[0]![0]).toBe(`/sessions/${SID}/live-v2/snapshot?generation=2&request_id=r`);
     expect(get.mock.calls[0]![1]).toMatchObject({ headers: { 'X-Live-Protocol': '1,2' } });
-    await rest.postCommand({ command_id: 'c' } as never);
+    await rest.postCommand({ command_id: 'c', session_id: SID } as never);
     expect(post.mock.calls[0]![0]).toBe(`/sessions/${SID}/live-v2/commands`);
     expect(post.mock.calls[0]![2]).toMatchObject({ headers: { 'X-Live-Protocol': '1,2' } });
   });
