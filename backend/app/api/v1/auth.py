@@ -853,8 +853,14 @@ async def google_auth(
         # (비활성화 실효성 — Google OAuth 로 정지 계정 세션을 발급하지 못하게 한다.)
         _ensure_account_active(user)
         # 역할 의도 검증은 계정 연결 변경과 토큰 발급보다 먼저 수행한다.
-        if not wants_platform_admin:
-            _ensure_login_role(user, req.role)
+        if not wants_platform_admin and req.role is not None and user.role != req.role:
+            # 이전에 로그인했던 다른 유형의 구글 계정이 그대로 선택된 경우가 대부분이라,
+            # 계정을 바꿔 다시 시도하면 된다는 점을 코드와 함께 안내한다.
+            raise signup_policy_service.api_error(
+                status.HTTP_403_FORBIDDEN,
+                "ROLE_MISMATCH",
+                "선택한 Google 계정은 이 로그인 유형의 계정이 아니에요. 다른 Google 계정을 선택하거나 올바른 탭에서 로그인해 주세요.",
+            )
         # 기존 사용자 — auth_provider 업데이트
         updated = False
         if user.auth_provider == "email":

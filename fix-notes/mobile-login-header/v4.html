@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>모바일 로그인 A-1 — 회원·상담사·기관</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Pretendard,system-ui,sans-serif;background:#1a1420;color:#fff;padding:32px 24px 60px}
+h1.page{font-size:20px;font-weight:800;margin-bottom:6px}
+p.lead{color:#cfc6d9;font-size:14px;margin-bottom:28px;line-height:1.6}
+.row{display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start}
+.col{display:flex;flex-direction:column;gap:12px;width:390px}
+.col h2{font-size:16px;font-weight:800}
+.col ul{font-size:13px;color:#d8d0e2;line-height:1.7;padding-left:18px;min-height:66px}
+.phone{position:relative;width:390px;height:844px;border-radius:44px;overflow:hidden;border:10px solid #000;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+.phone .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.phone .shade{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.2),rgba(0,0,0,.6))}
+.status{position:absolute;top:0;left:0;right:0;height:47px;display:flex;justify-content:space-between;align-items:center;padding:0 28px 0 34px;font-size:15px;font-weight:600;z-index:30}
+.scroll{position:absolute;inset:0;overflow-y:auto;z-index:10;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+.hdr{position:sticky;top:0;z-index:20;padding-top:47px;background:rgba(20,0,30,.55);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-bottom:1px solid rgba(255,255,255,.08)}
+.bar{height:52px;display:grid;grid-template-columns:44px 1fr 44px;align-items:center;padding:0 12px}
+.bar .logo{display:flex;align-items:center;justify-content:center}
+.bar .logo img{width:24px;filter:brightness(0) invert(1)}
+.bar .title{text-align:center;font-size:17px;font-weight:700;letter-spacing:-.02em}
+.tabs-wrap{padding:4px 20px 14px}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);border-radius:999px;background:rgba(0,0,0,.25);padding:4px}
+.tabs button{border:0;background:none;color:#fff;font:inherit;font-size:14px;font-weight:600;padding:10px 4px;border-radius:999px;cursor:pointer}
+.tabs button.on{background:#fff;color:#5F0080;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+.body{padding:26px 24px 24px;display:flex;flex-direction:column;gap:14px}
+.body.pad-code{padding-bottom:150px}
+label.l{font-size:14px;color:rgba(255,255,255,.9);margin-bottom:-6px}
+.inp{height:52px;border-radius:999px;background:#fff;border:1px solid #ddd}
+.chk{display:flex;gap:8px;align-items:center;font-size:14px}
+.chk i{width:18px;height:18px;border-radius:4px;background:#5F0080;display:inline-flex;align-items:center;justify-content:center;font-style:normal;font-size:12px}
+.hint{font-size:12px;color:rgba(255,255,255,.7);margin:-8px 0 0 26px}
+.btn{height:52px;border-radius:999px;background:#5F0080;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px}
+.sbtn{height:52px;border-radius:999px;background:#fff;color:#1f1f1f;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700;font-size:15px}
+.sbtn.apple{background:#000;color:#fff}
+.sbtn .g{font-weight:800;color:#4285F4}
+.div{display:flex;align-items:center;gap:10px;font-size:12px;color:rgba(255,255,255,.75)}
+.div:before,.div:after{content:"";flex:1;height:1px;background:rgba(255,255,255,.3)}
+.links{text-align:center;font-size:14px}
+.links a{color:#fff;text-decoration:underline}
+.links .sep{margin:0 8px;color:rgba(255,255,255,.6)}
+.links.b a{font-weight:700}
+.small{font-size:12px;text-align:center;color:rgba(255,255,255,.8)}
+.small a{color:#fff;text-decoration:underline}
+.note{text-align:center;font-size:12.5px;color:rgba(255,255,255,.78);line-height:1.55;margin-top:-4px}
+.note b{flex:none;width:18px;height:18px;border-radius:50%;border:1.5px solid rgba(255,255,255,.7);font-size:11px;display:inline-flex;align-items:center;justify-content:center;margin-top:1px}
+.code{position:absolute;left:0;right:0;bottom:0;z-index:25;padding:28px 16px 22px;background:linear-gradient(to top,rgba(20,0,30,.85) 60%,transparent)}
+.code a{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.95);border-radius:20px;padding:14px 16px;color:#1f1f1f;text-decoration:none;box-shadow:0 10px 28px rgba(0,0,0,.35)}
+.code .ic{width:42px;height:42px;border-radius:12px;background:#F3E9F8;display:grid;place-items:center;color:#5F0080;font-size:20px}
+.code .t{font-size:15px;font-weight:800}.code .s{font-size:12px;color:#666;margin-top:2px}
+.code .go{margin-left:auto;background:#5F0080;color:#fff;border-radius:999px;padding:8px 14px;font-size:13px;font-weight:700;white-space:nowrap}
+.tag{display:inline-block;font-size:11px;font-weight:700;background:#5F0080;border-radius:6px;padding:2px 8px;margin-left:6px;vertical-align:middle}
+</style></head><body>
+<h1 class="page">모바일 로그인 A-1 — 회원 · 상담사 · 기관 (390×844)</h1>
+<p class="lead">공통: 반투명 고정 헤더("로그인" + 알약 스위치) · 이메일 칸이 스위치 바로 아래에서 시작 · 탭별 안내 문구는 각 탭의 로그인 버튼 바로 아래 작은 회색 글씨로 이동.<br>
+각 휴대폰 안에서 스크롤할 수 있고, 헤더의 스위치를 눌러도 탭이 바뀝니다(시안용). 회원 탭의 "입장 코드" 카드는 지금처럼 화면 하단에 떠 있습니다.</p>
+<div class="row" id="row"></div>
+
+<script>
+const TABS={
+ client:{label:'회원',desc:'상담과 명상을 이용하는 회원을 위한 로그인입니다.'},
+ counselor:{label:'상담사',desc:'상담사 계정으로 세션과 회원을 관리하세요.'},
+ org_admin:{label:'기관',desc:'기관에서 발급받은 관리자 계정을 사용하세요.'}
+};
+const NOTES={client:['안내 문구는 "이메일로 회원 로그인" 버튼 바로 아래','이메일 → 비밀번호 찾기·회원가입 → 간편 로그인 순서 유지, 입장 코드 카드는 하단 고정'],
+ counselor:['안내 문구는 "상담사 로그인" 버튼 바로 아래','간편 로그인 안내("기존 상담사 계정만")는 Google·Apple 버튼 아래 유지'],
+ org_admin:['안내 문구는 "기관 관리자 로그인" 버튼 바로 아래','소셜 로그인 없음(현행과 동일), 스크롤 없이 한 화면']};
+const email=`<label class="l">이메일</label><div class="inp"></div><label class="l">비밀번호</label><div class="inp"></div>
+ <div class="chk"><i>✓</i>로그인 상태 유지</div><p class="hint">해제하면 브라우저를 닫을 때 로그아웃됩니다.</p>`;
+const g=l=>`<div class="sbtn"><span class="g">G</span>Google로 ${l} 로그인</div>`;
+const a=l=>`<div class="sbtn apple"><span></span>Apple로 ${l} 로그인</div>`;
+const note=r=>`<p class="note">${TABS[r].desc}</p>`;
+function body(r){const t=TABS[r];let h='';
+ if(r==='client'){h=email+`<div class="btn">이메일로 회원 로그인</div>${note(r)}
+  <p class="links"><a>비밀번호 찾기</a><span class="sep">·</span><a style="font-weight:700">회원가입</a></p>
+  <div class="div">간편 로그인</div>${g('회원')}${a('회원')}`;}
+ if(r==='counselor'){h=email+`<div class="btn">상담사 로그인</div>${note(r)}<div class="div">또는</div>${g('상담사')}${a('상담사')}
+  <p class="small">Google·Apple 로그인은 기존 상담사 계정만 이용할 수 있습니다.</p>
+  <p class="links"><a>비밀번호 찾기</a></p><p class="links b"><a>상담사 가입</a></p>`;}
+ if(r==='org_admin'){h=email+`<div class="btn">기관 관리자 로그인</div>${note(r)}<p class="links"><a>비밀번호 찾기</a></p>`;}
+ h+=`<p class="small"><a>개인정보 처리방침</a></p>`;
+ return h;}
+function phone(r,id){return `<div class="phone" id="${id}"><img class="bg" src="background3.jpg" alt=""><div class="shade"></div>
+ <div class="status"><span>9:42</span><span>▂▄▆ ◔ ▭</span></div>
+ <div class="scroll"><div class="hdr"><div class="bar"><div class="logo"><img src="logo_symbol_dark.svg" alt=""></div><div class="title">로그인</div><div></div></div>
+ <div class="tabs-wrap"><div class="tabs">${Object.keys(TABS).map(k=>`<button data-r="${k}" class="${k===r?'on':''}">${TABS[k].label}</button>`).join('')}</div></div></div>
+ <div class="body ${r==='client'?'pad-code':''}">${body(r)}</div></div>
+ ${r==='client'?`<div class="code"><a><span class="ic">⚿</span><span><div class="t">입장 코드가 있나요?</div><div class="s">로그인 없이 바로 들어가요</div></span><span class="go">코드로 입장</span></a></div>`:''}</div>`;}
+function col(r){return `<div class="col" data-col="${r}"><h2>${TABS[r].label} 탭</h2><ul>${NOTES[r].map(n=>`<li>${n}</li>`).join('')}</ul>${phone(r,'p-'+r)}</div>`;}
+const row=document.getElementById('row');
+row.innerHTML=Object.keys(TABS).map(col).join('');
+row.addEventListener('click',e=>{const b=e.target.closest('button[data-r]');if(!b)return;const c=b.closest('.col');const p=c.querySelector('.phone');p.outerHTML=phone(b.dataset.r,p.id);});
+</script>
+</body></html>
