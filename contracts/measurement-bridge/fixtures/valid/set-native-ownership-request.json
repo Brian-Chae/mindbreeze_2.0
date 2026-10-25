@@ -1,0 +1,8 @@
+{
+  "$fixture": {
+    "schema": "set-native-ownership-request"
+  },
+  "message": {
+    "enabled": true
+  }
+}

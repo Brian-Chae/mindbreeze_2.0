@@ -77,8 +77,10 @@ for i = 21, #ARGV do
   out[#out + 1] = tostring(seq)
 end
 
-redis.call('SET', dedupe, ARGV[4], 'EX', tonumber(ARGV[18]))
-redis.call('SADD', keys_set, dedupe)
+if tonumber(ARGV[18]) > 0 then  -- 0 = dedupe 키 미생성(고빈도 metrics): watermark 가 중복을 막는다
+  redis.call('SET', dedupe, ARGV[4], 'EX', tonumber(ARGV[18]))
+  redis.call('SADD', keys_set, dedupe)
+end
 redis.call('HSET', meta, 'applied_revision', ARGV[4], 'last_event_ms', ARGV[12])
 local auth = tonumber(redis.call('HGET', meta, 'auth_revision') or '0')
 if tonumber(ARGV[15]) > auth then redis.call('HSET', meta, 'auth_revision', ARGV[15]) end

@@ -933,6 +933,128 @@
           "$ref": "#/definitions/ArchiveStatusEvent"
         }
       ]
+    },
+    "SetNativeOwnershipRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "native 가 측정을 소유하는 기능 플래그. false 면 sessionId 경로 startMeasurement 는 native_ownership_disabled 로 거절."
+        }
+      }
+    },
+    "SetNativeOwnershipResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "SetJSBandOwnershipRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "owning"
+      ],
+      "properties": {
+        "owning": {
+          "type": "boolean",
+          "description": "JS(bluetooth-le) 가 밴드를 소유 중이면 true. native 와 동시 소유 금지."
+        }
+      }
+    },
+    "SetJSBandOwnershipResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "accepted"
+      ],
+      "properties": {
+        "accepted": {
+          "type": "boolean",
+          "description": "false = native 가 이미 소유 중이라 JS 소유를 받아들이지 않음"
+        }
+      }
+    },
+    "RegisterCredentialRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "accountId",
+        "accessToken",
+        "refreshToken",
+        "apiBase"
+      ],
+      "description": "웹→native 1회 인계(iOS). 값은 native 보안 저장소(Keychain)로만 가고 어떤 결과/이벤트로도 돌아오지 않는다.",
+      "properties": {
+        "accountId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "accessToken": {
+          "type": "string",
+          "minLength": 1
+        },
+        "refreshToken": {
+          "type": "string",
+          "minLength": 1
+        },
+        "apiBase": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        }
+      }
+    },
+    "RegisterCredentialResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "credentialHandle"
+      ],
+      "properties": {
+        "credentialHandle": {
+          "$ref": "#/definitions/CredentialHandle"
+        }
+      }
+    },
+    "HandoffCredentialsRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "description": "웹→native 1회 인계(Android). Keystore 로만 가고 돌아오지 않는다. 인계 후 웹 쪽 사본 정리는 T06 결정.",
+      "properties": {
+        "accessToken": {
+          "type": "string",
+          "minLength": 1
+        },
+        "refreshToken": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "HandoffCredentialsResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "handoff"
+      ],
+      "properties": {
+        "handoff": {
+          "type": "boolean"
+        }
+      }
     }
   },
   "x-methods": {
@@ -955,6 +1077,35 @@
     "stopMeasurement": {
       "in": "StopMeasurementRequest",
       "out": "StopMeasurementResult"
+    },
+    "setNativeOwnership": {
+      "in": "SetNativeOwnershipRequest",
+      "out": "SetNativeOwnershipResult",
+      "platforms": [
+        "ios",
+        "android"
+      ]
+    },
+    "setJSBandOwnership": {
+      "in": "SetJSBandOwnershipRequest",
+      "out": "SetJSBandOwnershipResult",
+      "platforms": [
+        "ios"
+      ]
+    },
+    "registerCredential": {
+      "in": "RegisterCredentialRequest",
+      "out": "RegisterCredentialResult",
+      "platforms": [
+        "ios"
+      ]
+    },
+    "handoffCredentials": {
+      "in": "HandoffCredentialsRequest",
+      "out": "HandoffCredentialsResult",
+      "platforms": [
+        "android"
+      ]
     }
   },
   "x-events": [
