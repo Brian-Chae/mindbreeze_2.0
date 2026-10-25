@@ -1,0 +1,22 @@
+{
+  "$fixture": {
+    "schema": "core-output",
+    "why": "오류 코드 enum — panic 은 panic_contained 로만",
+    "reject_by": "schema"
+  },
+  "message": {
+    "packet": {
+      "sensor": "eeg",
+      "status": "accepted",
+      "segment": 0,
+      "extended_ticks": "1",
+      "samples": 1,
+      "raw_preserved": true
+    },
+    "frames": [],
+    "error": {
+      "code": "segfault",
+      "message": ""
+    }
+  }
+}

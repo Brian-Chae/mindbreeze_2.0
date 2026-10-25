@@ -1,0 +1,12 @@
+{
+  "$fixture": {
+    "schema": "stop-result",
+    "why": "seal 시작은 archive 완료가 아님",
+    "reject_by": "schema"
+  },
+  "message": {
+    "seal_started": true,
+    "state": "CLOSED",
+    "note": "archive_complete"
+  }
+}

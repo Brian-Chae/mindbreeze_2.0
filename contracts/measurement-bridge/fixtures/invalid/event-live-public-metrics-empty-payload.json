@@ -1,0 +1,33 @@
+{
+  "$fixture": {
+    "schema": "event",
+    "why": "내장 live event 도 live 계약을 따른다(payload 누락 필드)",
+    "reject_by": "schema"
+  },
+  "message": {
+    "bridge_version": 1,
+    "event": "liveStateUpdated",
+    "managerGeneration": "1",
+    "seq": "58",
+    "emitted_at_native_ms": 1760000000200,
+    "payload": {
+      "sessionId": "00000001-0000-4000-8000-000000000001",
+      "event": {
+        "protocol_version": 2,
+        "schema_version": 1,
+        "event_id": "0000003c-0000-4000-8000-00000000003c",
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "epoch": "1",
+        "audience": "public",
+        "domain": "metrics",
+        "seq": "3",
+        "entity_id": "00000002-0000-4000-8000-000000000002",
+        "entity_version": "2",
+        "kind": "metrics.updated",
+        "observed_at_ms": null,
+        "received_at_server_ms": 1,
+        "payload": {}
+      }
+    }
+  }
+}

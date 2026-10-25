@@ -1,0 +1,16 @@
+{
+  "$fixture": {
+    "schema": "core-final"
+  },
+  "message": {
+    "final_sequences": {
+      "eeg": "450000",
+      "ppg": "90000",
+      "acc": "54000",
+      "metric": "1800"
+    },
+    "segments": 1,
+    "raw_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "feature_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+}

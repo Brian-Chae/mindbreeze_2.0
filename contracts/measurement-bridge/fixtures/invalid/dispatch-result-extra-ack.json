@@ -1,0 +1,13 @@
+{
+  "$fixture": {
+    "schema": "dispatch-result",
+    "why": "전송 큐 수락과 ACK 를 섞지 않는다",
+    "reject_by": "schema"
+  },
+  "message": {
+    "command_id": "0000000a-0000-4000-8000-00000000000a",
+    "accepted_for_send": true,
+    "queued_at_native_ms": 1,
+    "status": "applied"
+  }
+}

@@ -61,6 +61,8 @@ export const FORBIDDEN_KEYS = new Set([
   'presigned_url', 'signed_url', 'url', 'raw_samples', 'samples', 'raw',
   'total_score', 'meditation_total_score', 'overall_score', 'composite_score',
 ]);
+/** raw 샘플 계열 키는 배열(샘플 열)일 때만 누출로 본다 — `samples: {eeg: "720"}` 같은 카운터 객체는 정상. */
+const RAW_ARRAY_KEYS = new Set(['samples', 'raw_samples', 'raw']);
 const FORBIDDEN_VALUE_PATTERNS = [
   [/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/, 'email_address'],
   [/\bBearer\s+[A-Za-z0-9._~+/-]{16,}/i, 'bearer_token'],
@@ -81,7 +83,7 @@ export function scanLeaks(message) {
   const errs = [];
   walk(message, '', (v, path) => {
     const key = path.split('/').pop();
-    if (key && FORBIDDEN_KEYS.has(key)) errs.push({ rule: 'forbidden_key', path, detail: key });
+    if (key && FORBIDDEN_KEYS.has(key) && !(RAW_ARRAY_KEYS.has(key) && !Array.isArray(v))) errs.push({ rule: 'forbidden_key', path, detail: key });
     if (typeof v === 'string') {
       for (const [re, name] of FORBIDDEN_VALUE_PATTERNS) if (re.test(v)) errs.push({ rule: name, path });
     }
@@ -137,7 +139,7 @@ export function checkU64Ranges(message) {
   const errs = [];
   walk(message, '', (v, path) => {
     const key = path.split('/').pop() || '';
-    if (typeof v === 'string' && /^(0|[1-9][0-9]*)$/.test(v) && SEQ_KEYS.test(key) && BigInt(v) > U64_MAX) {
+    if (typeof v === 'string' && /^(0|[1-9][0-9]*)$/.test(v) && (SEQ_KEYS.test(key) || v.length >= 20) && BigInt(v) > U64_MAX) {
       errs.push({ rule: 'u64_overflow', path });
     }
   });

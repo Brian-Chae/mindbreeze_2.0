@@ -1,0 +1,31 @@
+{
+  "$fixture": {
+    "schema": "event",
+    "why": "stage enum(presign|put|verify)",
+    "reject_by": "schema"
+  },
+  "message": {
+    "bridge_version": 1,
+    "event": "archiveStatus",
+    "managerGeneration": "1",
+    "seq": "58",
+    "emitted_at_native_ms": 1760000000200,
+    "payload": {
+      "sessionId": "00000001-0000-4000-8000-000000000001",
+      "queue": {
+        "live_pending": 0,
+        "live_acked": 41,
+        "archive_pending": 3,
+        "archive_verified": 10,
+        "pending_authorization": 0,
+        "pending_time_review": 0,
+        "oldest_pending_age_ms": 4200,
+        "disk_used_bytes": 1048576,
+        "disk_limit_bytes": 536870912
+      },
+      "blocked_reason": null,
+      "stage": "upload",
+      "code": null
+    }
+  }
+}
