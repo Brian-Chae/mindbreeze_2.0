@@ -196,3 +196,21 @@ def test_live_Redis_장애시_commit된_명령은_retryable_committed_true(maker
     again = _run(maker, world, m, "hand.set", {"raised": True}, command_id=cid)
     assert again.ack["status"] == "duplicate"  # 새 ID 없이 ledger 결과 재생, 부작용 1회
     assert _pdata(maker, m.participant_id) == (True, False)
+
+
+def test_방송_실패시_워터마크가_전진하지_않아_다음_호출이_이어서_보낸다(maker, world, live):
+    m = world.member(0)
+    _run(maker, world, m, "hand.set", {"raised": True})
+    sent: list[dict] = []
+
+    def boom(ev):
+        raise RuntimeError("emit 실패")
+
+    with maker() as s:
+        with pytest.raises(RuntimeError):
+            cps.publish_pending(s, live, world.session_id, boom)
+    with maker() as s:
+        n = cps.publish_pending(s, live, world.session_id, sent.append)
+    assert n > 0 and any(e["domain"] == "speaking" and e["payload"]["hand_raised"] for e in sent)
+    with maker() as s:  # 모두 보낸 뒤에는 재방송 없음
+        assert cps.publish_pending(s, live, world.session_id, sent.append) == 0

@@ -1,6 +1,6 @@
 """세션 관리 API"""
 
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi.responses import HTMLResponse
@@ -1092,7 +1092,7 @@ def _live_actor(db, session_id, current_user, entry_credential):
     return sid, actor
 
 
-@router.get("/{session_id}/live-v2/snapshot")
+@router.get("/{session_id}/live-v2/snapshot", response_model=dict[str, Any])
 def live_v2_snapshot(
     session_id: str,
     request_id: str | None = Query(None),
@@ -1131,7 +1131,7 @@ def live_v2_snapshot(
         return _JSONResponse(status_code=409, content={"code": "scope_stale", "retryable": True})
 
 
-@router.post("/{session_id}/live-v2/commands")
+@router.post("/{session_id}/live-v2/commands", response_model=dict[str, Any])
 def live_v2_command(
     session_id: str,
     body: dict,
