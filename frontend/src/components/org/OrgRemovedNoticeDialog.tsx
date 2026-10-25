@@ -3,6 +3,7 @@
 // 미읽음 `org_removed` 알림이 있으면 팝업으로 안내하고, 확인 시 읽음 처리해
 // 다시 노출하지 않는다. 알림 조회 실패는 조용히 무시한다 (대시보드 차단 금지).
 
+import { buttonClass } from '../../components/ui';
 import { useEffect, useState } from 'react';
 import { listNotifications, markRead, type NotificationDto } from '../../lib/api/notifications';
 import { useDialogA11y } from '../../hooks/useDialogA11y';
@@ -74,7 +75,7 @@ export default function OrgRemovedNoticeDialog() {
           <button
             type="button"
             onClick={() => void handleConfirm()}
-            className="px-5 py-2 text-[15px] bg-[#5F0080] text-white font-semibold rounded-lg hover:bg-[#3F0055] transition-colors"
+            className={buttonClass()}
           >
             확인
           </button>

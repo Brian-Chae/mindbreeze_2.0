@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Button, PageFrame, cardClass, fieldClass } from '../../components/ui';
 import AppShell from '../../components/layout/AppShell';
 import {
   getCredentialReview,
@@ -53,7 +54,7 @@ function StatusBadge({ status }: { status: string }) {
 function AuditTimeline({ audits }: { audits: AuditDto[] }) {
   if (!audits || audits.length === 0) return null;
   return (
-    <div className="border border-[#EFEFEF] rounded-2xl p-6">
+    <div className={cardClass()}>
       <h3 className="text-[15px] font-bold text-[#1F1F1F] mb-4 flex items-center gap-2">
         <span className="w-1.5 h-1.5 rounded-full bg-[#5F0080]" />
         처리 이력
@@ -149,12 +150,9 @@ export default function AdminReviewDetailPage() {
     return (
       <AppShell title="검토 상세" sub="ADMIN REVIEW DETAIL">
         <div className="p-4 rounded-xl bg-red-50 text-red-700 text-sm mb-4">{error}</div>
-        <button
-          onClick={() => navigate('/admin/reviews')}
-          className="mb-btn mb-btn-secondary text-[15px] px-5 py-2.5 rounded-xl"
-        >
+        <Button variant="secondary" onClick={() => navigate('/admin/reviews')}>
           목록으로
-        </button>
+        </Button>
       </AppShell>
     );
   }
@@ -170,7 +168,7 @@ export default function AdminReviewDetailPage() {
 
   return (
     <AppShell title="검토 상세" sub="ADMIN REVIEW DETAIL">
-      <div className="max-w-5xl mx-auto space-y-6">
+      <PageFrame>
         {error && (
           <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>
         )}
@@ -178,7 +176,7 @@ export default function AdminReviewDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* 좌측: 기본 정보 */}
           <div className="lg:col-span-1 space-y-4">
-            <div className="bg-white border border-[#EFEFEF] rounded-2xl p-6">
+            <div className={cardClass()}>
               <div className="flex items-center gap-2 mb-3">
                 <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold bg-[#F5EDFC] text-[#5F0080]">
                   {DOC_TYPE_LABELS[detail.document_type] ?? detail.document_type}
@@ -198,7 +196,7 @@ export default function AdminReviewDetailPage() {
 
             {/* 원본 뷰어 */}
             {detail.s3_key && (
-              <div className="bg-white border border-[#EFEFEF] rounded-2xl p-6">
+              <div className={cardClass()}>
                 <h3 className="text-[15px] font-bold text-[#1F1F1F] mb-3">원본 증빙</h3>
                 <div className="bg-[#F8FAFC] rounded-xl p-4 text-center border border-[#EFEFEF]">
                   <div className="text-[12px] text-[#6F6F6F] font-mono break-all mb-2">
@@ -216,7 +214,7 @@ export default function AdminReviewDetailPage() {
           <div className="lg:col-span-2 space-y-4">
             {/* AI 검증 결과 */}
             {verdict && (
-              <div className="bg-white border border-[#EFEFEF] rounded-2xl p-6">
+              <div className={cardClass()}>
                 <h3 className="text-[15px] font-bold text-[#1F1F1F] mb-4 flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#5F0080]" />
                   AI 검증 결과
@@ -277,33 +275,22 @@ export default function AdminReviewDetailPage() {
 
             {/* 액션 버튼 - 대기 중일 때만 */}
             {isPending && (
-              <div className="bg-white border border-[#EFEFEF] rounded-2xl p-6">
+              <div className={cardClass()}>
                 <h3 className="text-[15px] font-bold text-[#1F1F1F] mb-4 flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#5F0080]" />
                   검토 처리
                 </h3>
 
                 <div className="flex flex-wrap items-center gap-3 mb-4">
-                  <button
-                    onClick={() => handleQuickAction('approve')}
-                    disabled={submitting}
-                    className="mb-btn mb-btn-primary text-[15px] px-6 py-2.5 rounded-xl disabled:opacity-50"
-                  >
+                  <Button onClick={() => handleQuickAction('approve')} disabled={submitting}>
                     {submitting && action === 'approve' ? '처리 중...' : '승인'}
-                  </button>
-                  <button
-                    onClick={() => handleQuickAction('reject')}
-                    disabled={submitting}
-                    className="px-6 py-2.5 rounded-xl text-[15px] font-medium border border-[#EF4444] text-[#EF4444] hover:bg-red-50 disabled:opacity-50"
-                  >
+                  </Button>
+                  <Button variant="secondary" tone="danger" onClick={() => handleQuickAction('reject')} disabled={submitting}>
                     {submitting && action === 'reject' ? '처리 중...' : '반려'}
-                  </button>
-                  <button
-                    onClick={() => setAction('request_more')}
-                    className="px-6 py-2.5 rounded-xl text-[15px] font-medium border border-[#EFEFEF] text-[#6F6F6F] hover:bg-gray-50"
-                  >
+                  </Button>
+                  <Button variant="secondary" onClick={() => setAction('request_more')}>
                     추가 자료 요청
-                  </button>
+                  </Button>
                 </div>
 
                 {/* 사유 입력 (반려/추가자료 시) */}
@@ -314,15 +301,11 @@ export default function AdminReviewDetailPage() {
                       onChange={(e) => setReason(e.target.value)}
                       placeholder="처리 사유를 입력하세요..."
                       rows={3}
-                      className="w-full rounded-xl border border-[#EFEFEF] px-4 py-3 text-[15px] resize-none focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20"
+                      className={fieldClass('textarea', 'resize-none')}
                     />
-                    <button
-                      onClick={handleAction}
-                      disabled={submitting || !reason.trim()}
-                      className="mb-btn mb-btn-primary text-[15px] px-5 py-2 rounded-xl disabled:opacity-50"
-                    >
+                    <Button onClick={handleAction} disabled={submitting || !reason.trim()}>
                       {submitting ? '처리 중...' : '확인'}
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
@@ -335,14 +318,11 @@ export default function AdminReviewDetailPage() {
 
         {/* 목록으로 */}
         <div className="pt-4 border-t border-[#EFEFEF]">
-          <button
-            onClick={() => navigate('/admin/reviews')}
-            className="mb-btn mb-btn-secondary text-[15px] px-5 py-2.5 rounded-xl"
-          >
+          <Button variant="secondary" onClick={() => navigate('/admin/reviews')}>
             목록으로
-          </button>
+          </Button>
         </div>
-      </div>
+      </PageFrame>
     </AppShell>
   );
 }

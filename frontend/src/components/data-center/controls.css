@@ -21,7 +21,13 @@
 
 .dc .dc-primary,
 :is(.dc-export-dialog, .dc-export-section) .dc-export-primary {
+  /* SDD-245: 주 CTA 공용 규격(pill, 모바일 48 / 데스크톱 44) */
   min-height: 48px;
+  border-radius: 9999px;
+}
+@media (min-width: 768px) {
+  .dc .dc-primary,
+  :is(.dc-export-dialog, .dc-export-section) .dc-export-primary { min-height: 44px; }
 }
 
 .dc .dc-primary:where(:hover:not(:disabled)),
@@ -46,8 +52,11 @@
 
 :is(.dc, .dc-measurement, .dc-export-dialog, .dc-export-section) :is(input:not([type=checkbox]):not([type=radio]), select, textarea) {
   @apply rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800;
-  min-height: 44px;
+  min-height: 48px;
   font-family: inherit;
+}
+@media (min-width: 768px) {
+  :is(.dc, .dc-measurement, .dc-export-dialog, .dc-export-section) :is(input:not([type=checkbox]):not([type=radio]), select, textarea) { min-height: 44px; }
 }
 
 :is(.dc, .dc-measurement, .dc-export-dialog, .dc-export-section) :is(button, input, select, textarea, summary):focus-visible {

@@ -1,5 +1,6 @@
 // SDD-082: 기관 관리자 — 상담사 관리 페이지 (조회/검색/상태 관리/이력/활성화·비활성화)
 
+import { buttonClass, cardClass, fieldClass } from '../../components/ui';
 import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import AppShell from '../../components/layout/AppShell';
 import CounselorInfoEditor from '../../components/counselor/counselor-info-editor';
@@ -121,7 +122,7 @@ function StatusChangeDialog({
             onChange={(e) => setReason(e.target.value)}
             rows={3}
             placeholder="예: 휴직 처리에 따른 계정 비활성화"
-            className="mt-1.5 w-full rounded-xl border border-[#DDDEE7] p-3 text-[15px] font-normal text-[#1F1F1F] focus:border-[#5F0080] focus:outline-none"
+            className={fieldClass('textarea', 'mt-1.5')}
           />
         </label>
         <div className="mt-5 flex justify-end gap-2">
@@ -129,7 +130,7 @@ function StatusChangeDialog({
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="rounded-xl border border-[#DDDEE7] px-4 py-2.5 text-[15px] font-semibold text-[#6F6F6F] hover:bg-[#F8FAFC] disabled:opacity-60"
+            className={buttonClass({ variant: 'secondary' })}
           >
             취소
           </button>
@@ -188,7 +189,7 @@ function CounselorDetailPanel({
   }, [orgId, counselor.id]);
 
   return (
-    <section className="rounded-2xl border border-[#DDDEE7] bg-white p-6">
+    <section className={cardClass('default')}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-[18px] font-bold tracking-tight text-[#1F1F1F]">
@@ -202,7 +203,7 @@ function CounselorDetailPanel({
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg border border-[#DDDEE7] px-3 py-1.5 text-[12px] font-semibold text-[#6F6F6F] hover:bg-[#F8FAFC]"
+          className={buttonClass({ variant: 'secondary', size: 'sm' })}
         >
           닫기
         </button>
@@ -423,7 +424,7 @@ export default function OrgCounselorsPage() {
         <div className="space-y-6">
           {/* SDD-077 재사용 — 상담사 정보 수정 */}
           {editing && orgId && (
-            <section className="rounded-2xl border border-[#DDDEE7] bg-white p-6">
+            <section className={cardClass('default')}>
               <h2 className="mb-4 text-[18px] font-bold text-[#1F1F1F]">
                 정보 수정 — {editing.name}
               </h2>
@@ -446,13 +447,13 @@ export default function OrgCounselorsPage() {
               placeholder="이름·이메일·코드 검색"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="h-10 min-w-0 flex-1 rounded-xl border border-[#DDDEE7] bg-white px-3.5 text-[15px] text-[#1F1F1F] focus:border-[#5F0080] focus:outline-none"
+              className={fieldClass('input', 'min-w-0 flex-1')}
             />
             <select
               aria-label="역할 필터"
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="h-10 rounded-xl border border-[#DDDEE7] bg-white px-3 text-[15px] text-[#1F1F1F]"
+              className={fieldClass('select', '!w-auto')}
             >
               <option value="">전체 역할</option>
               <option value="counselor">상담사</option>
@@ -462,7 +463,7 @@ export default function OrgCounselorsPage() {
               aria-label="상태 필터"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-10 rounded-xl border border-[#DDDEE7] bg-white px-3 text-[15px] text-[#1F1F1F]"
+              className={fieldClass('select', '!w-auto')}
             >
               <option value="">전체 상태</option>
               <option value="active">활성</option>
@@ -481,7 +482,7 @@ export default function OrgCounselorsPage() {
               검색 조건에 맞는 상담사가 없습니다.
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-2xl border border-[#EFEFEF] bg-white">
+            <div className={cardClass('none', 'overflow-x-auto')}>
               <table className="w-full min-w-[720px] text-[15px]">
                 <thead>
                   <tr className="border-b border-[#EFEFEF] bg-[#F8FAFC]">
@@ -533,14 +534,14 @@ export default function OrgCounselorsPage() {
                                   ? '기관 관리자 계정은 본인 설정 또는 플랫폼 관리자를 통해 수정합니다'
                                   : undefined
                               }
-                              className="rounded-lg border border-[#DDDEE7] px-2.5 py-1.5 text-[12px] font-semibold text-[#6F6F6F] hover:bg-white hover:text-[#1F1F1F] disabled:opacity-40"
+                              className={buttonClass({ variant: 'secondary', size: 'sm' })}
                             >
                               정보 수정
                             </button>
                             <button
                               type="button"
                               onClick={() => setSelected(c)}
-                              className="rounded-lg border border-[#DDDEE7] px-2.5 py-1.5 text-[12px] font-semibold text-[#6F6F6F] hover:bg-white hover:text-[#1F1F1F]"
+                              className={buttonClass({ variant: 'secondary', size: 'sm' })}
                             >
                               이력
                             </button>

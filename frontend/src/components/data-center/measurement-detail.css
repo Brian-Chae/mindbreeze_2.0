@@ -10,7 +10,7 @@
 .dc-measure-controls label{display:flex;flex-direction:column;gap:6px;font-size:13px}
 .dc-measure-controls input{width:110px}
 .dc-measure-note{background:#f1e8f8;color:#5a456c;border-radius:9px;padding:12px;font-size:13px;overflow-wrap:anywhere}
-.dc-measure-panel,.dc-spectrum{border:1px solid #e8e2ea;border-radius:16px;background:#fff;padding:20px;margin:16px 0}
+.dc-measure-panel,.dc-spectrum{border:1px solid #E8E2ED;border-radius:20px;background:#fff;padding:24px;margin:16px 0}
 .dc-measure-empty{padding:30px 10px;color:#766d7d;text-align:center}
 .dc-wave-frame{width:100%;min-width:0}
 .dc-wave-segment{width:100%;min-width:0;margin:8px 0}

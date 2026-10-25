@@ -1,3 +1,4 @@
+import { buttonClass, fieldClass } from '../ui';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   getAdminOrganization, listAdminOrganizationCounselors,
@@ -17,7 +18,7 @@ const statusLabel = (status: string): string =>
   ({ active: '활성', pending: '가입 대기', suspended: '정지' })[status] ?? '확인 필요';
 const roleLabel = (role: string): string =>
   ({ org_admin: '기관 관리자', counselor: '상담사' })[role] ?? '확인 필요';
-const control = 'rounded-lg border border-[#DDDEE7] bg-white px-3 py-2 text-sm';
+const control = buttonClass({ variant: 'secondary', size: 'sm' });
 
 type LoadState<T> = { status: 'loading' } | { status: 'error' } | { status: 'success'; data: T };
 function useOrgRequest<T>(id: string, fetcher: (id: string) => Promise<T>) {
@@ -138,7 +139,7 @@ export default function OrgDetailModal({ organization, onClose, onUpdated }: {
       {confirmClose && <div role="alertdialog" aria-label="미저장 변경 확인" className="border-b bg-amber-50 p-4 text-sm">
         <p>저장하지 않은 변경사항이 있습니다.</p>
         <button type="button" className={control} onClick={() => setConfirmClose(false)}>계속 편집</button>
-        <button type="button" className={`${control} ml-2`} onClick={onClose}>변경사항 버리기</button>
+        <button type="button" className={buttonClass({ variant: 'secondary', size: 'sm', className: 'ml-2' })} onClick={onClose}>변경사항 버리기</button>
       </div>}
       <div role="tablist" aria-label="기관 상세" className="flex shrink-0 border-b px-5">
         {(['info', 'counselors'] as const).map((value) => <button key={value} type="button" role="tab" disabled={guard.busy || guard.dirty}
@@ -214,11 +215,11 @@ export default function OrgDetailModal({ organization, onClose, onUpdated }: {
           {counselors.state.status === 'success' && <>
             <p className="mb-3 text-xs text-[#6F6F6F]">상담사와 기관 관리자를 포함한 총 {members.length}명 · 검색 결과 {filtered.length}명</p>
             <div className="mb-4 flex flex-wrap gap-2">
-              <input aria-label="상담사 검색" placeholder="이름·이메일·상담사 코드" value={query} onChange={(event) => setQuery(event.target.value)} className={`${control} min-w-0 flex-1`} />
-              <select aria-label="상담사 역할" value={role} onChange={(event) => setRole(event.target.value)} className={control}>
+              <input aria-label="상담사 검색" placeholder="이름·이메일·상담사 코드" value={query} onChange={(event) => setQuery(event.target.value)} className={fieldClass('input', 'min-w-0 flex-1')} />
+              <select aria-label="상담사 역할" value={role} onChange={(event) => setRole(event.target.value)} className={fieldClass('select', '!w-auto')}>
                 <option value="">전체 역할</option><option value="counselor">상담사</option><option value="org_admin">기관 관리자</option><option value="unknown">확인 필요</option>
               </select>
-              <select aria-label="상담사 상태" value={status} onChange={(event) => setStatus(event.target.value)} className={control}>
+              <select aria-label="상담사 상태" value={status} onChange={(event) => setStatus(event.target.value)} className={fieldClass('select', '!w-auto')}>
                 <option value="">전체 상태</option><option value="active">활성</option><option value="pending">가입 대기</option><option value="suspended">정지</option><option value="unknown">확인 필요</option>
               </select>
             </div>
@@ -230,15 +231,15 @@ export default function OrgDetailModal({ organization, onClose, onUpdated }: {
                   <td className="p-3">{member.email}</td><td className="p-3 font-mono">{member.counselor_code ?? '미등록'}</td><td className="p-3">{roleLabel(member.role)}</td><td className="p-3">{statusLabel(member.status)}</td>
                   <td className="p-3">
                     <div className="flex gap-2">
-                      <button type="button" className={`${control} whitespace-nowrap disabled:opacity-50`}
+                      <button type="button" className={control}
                         disabled={!['counselor', 'org_admin'].includes(member.role) || !!counselorAction || !!editingCounselor || guard.busy}
                         onClick={() => setEditingCounselor(member)}>정보 수정</button>
-                      <button type="button" className={`${control} whitespace-nowrap disabled:opacity-50`} disabled={!!protectedReason(member) || !!counselorAction || !!editingCounselor || guard.busy}
+                      <button type="button" className={control} disabled={!!protectedReason(member) || !!counselorAction || !!editingCounselor || guard.busy}
                         onClick={() => setCounselorAction({ member, action: 'role' })}>역할 변경</button>
-                      <button type="button" className={`${control} whitespace-nowrap disabled:opacity-50`} disabled={!!protectedReason(member) || !!counselorAction || !!editingCounselor || guard.busy}
+                      <button type="button" className={control} disabled={!!protectedReason(member) || !!counselorAction || !!editingCounselor || guard.busy}
                         onClick={() => setCounselorAction({ member, action: 'remove' })}>소속 해제</button>
                       {member.status === 'active' && ['counselor', 'org_admin'].includes(member.role) &&
-                        <button type="button" className={`${control} whitespace-nowrap disabled:opacity-50`}
+                        <button type="button" className={control}
                           disabled={!!counselorAction || !!editingCounselor || !!resetTarget || guard.busy}
                           onClick={() => { setResetMessage(''); setResetTarget({ kind: 'counselor', member }); }}>비밀번호 재설정</button>}
                     </div>

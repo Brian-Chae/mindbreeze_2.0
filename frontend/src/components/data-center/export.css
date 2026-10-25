@@ -19,7 +19,7 @@
 .dc-export-dialog pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.7}
 .dc-export-dialog footer{border-top:1px solid #e5dfeb}
 .dc-export-dialog footer p{font-size:13px}
-.dc-export-section{padding:20px;background:#fff;border:1px solid #e5dfeb;border-radius:16px;min-width:0}
+.dc-export-section{padding:24px;background:#fff;border:1px solid #E8E2ED;border-radius:20px;min-width:0}
 .dc-export-section header{padding:0 0 18px}
 .dc-export-table{overflow:auto}
 .dc-export-table table{width:100%;border-collapse:collapse;min-width:680px;font-size:14px}
@@ -33,7 +33,7 @@
 .dc-export-body{padding:14px;gap:14px}
 .dc-export-grid{grid-template-columns:1fr}
 .dc-export-dialog footer{flex-direction:column;gap:4px}
-.dc-export-section{padding:14px}
+.dc-export-section{padding:16px}
 .dc-export-section header{align-items:flex-start}
 .dc-export-checks{display:grid;gap:0}
 .dc-export-dialog footer p{font-size:13px}

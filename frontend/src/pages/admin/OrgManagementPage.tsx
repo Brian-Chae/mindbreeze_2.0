@@ -1,5 +1,6 @@
 // 플랫폼 관리자용 기관 코드 발급 및 기관 목록 관리
 
+import { buttonClass, cardClass, fieldClass } from '../../components/ui';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import OrgDetailModal from '../../components/admin/org-detail-modal';
 import { orgKindLabel, orgDate } from '../../lib/org-format';
@@ -199,7 +200,7 @@ export default function OrgManagementPage() {
         </div>
       )}
 
-      <section className="mb-8 rounded-2xl border border-[#EFEFEF] bg-white p-5 md:p-6">
+      <section className={cardClass('default', 'mb-8')}>
         <div className="mb-5">
           <h2 className="text-[18px] font-bold text-[#1F1F1F]">새 기관 등록</h2>
           <p className="mt-1 text-[13px] text-[#6F6F6F]">
@@ -219,7 +220,7 @@ export default function OrgManagementPage() {
                 required
                 maxLength={200}
                 disabled={creating}
-                className="w-full rounded-xl border border-[#EFEFEF] px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 disabled:opacity-60"
+                className={fieldClass('input')}
               />
             </label>
             <label className="block">
@@ -233,7 +234,7 @@ export default function OrgManagementPage() {
                 placeholder="02-0000-0000"
                 maxLength={20}
                 disabled={creating}
-                className="w-full rounded-xl border border-[#EFEFEF] px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 disabled:opacity-60"
+                className={fieldClass('input')}
               />
             </label>
             <label className="block md:col-span-2">
@@ -247,7 +248,7 @@ export default function OrgManagementPage() {
                 placeholder="기관 주소"
                 maxLength={300}
                 disabled={creating}
-                className="w-full rounded-xl border border-[#EFEFEF] px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 disabled:opacity-60"
+                className={fieldClass('input')}
               />
             </label>
           </div>
@@ -268,7 +269,7 @@ export default function OrgManagementPage() {
                   required
                   maxLength={100}
                   disabled={creating}
-                  className="w-full rounded-xl border border-[#EFEFEF] bg-white px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 disabled:opacity-60"
+                  className={fieldClass('input')}
                 />
               </label>
               <label className="block">
@@ -281,7 +282,7 @@ export default function OrgManagementPage() {
                   required
                   maxLength={200}
                   disabled={creating}
-                  className="w-full rounded-xl border border-[#EFEFEF] bg-white px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 disabled:opacity-60"
+                  className={fieldClass('input')}
                 />
               </label>
               <label className="block">
@@ -295,7 +296,7 @@ export default function OrgManagementPage() {
                   placeholder="010-0000-0000"
                   maxLength={20}
                   disabled={creating}
-                  className="w-full rounded-xl border border-[#EFEFEF] bg-white px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 disabled:opacity-60"
+                  className={fieldClass('input')}
                 />
               </label>
             </div>
@@ -305,7 +306,7 @@ export default function OrgManagementPage() {
             <button
               type="submit"
               disabled={creating}
-              className="rounded-xl bg-[#5F0080] px-5 py-2.5 text-[15px] font-bold text-white transition-colors hover:bg-[#4B0066] disabled:cursor-not-allowed disabled:opacity-60"
+              className={buttonClass()}
             >
               {creating ? '등록 중...' : '기관 등록 및 초대 발송'}
             </button>
@@ -325,7 +326,7 @@ export default function OrgManagementPage() {
                   <button
                     type="button"
                     onClick={() => void handleCopyCode()}
-                    className="rounded-lg border border-[#C9B0E8] bg-white px-3 py-1.5 text-[13px] font-semibold text-[#5F0080] transition-colors hover:bg-[#EFE3FA]"
+                    className={buttonClass({ variant: 'secondary', size: 'sm' })}
                   >
                     코드 복사
                   </button>
@@ -355,23 +356,23 @@ export default function OrgManagementPage() {
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <input aria-label="기관 검색" placeholder="기관명·기관 코드 검색" value={query} onChange={(event) => setQuery(event.target.value)} className="min-w-0 flex-1 rounded-lg border px-3 py-2.5 text-sm" />
-          <select aria-label="기관 운영 상태" value={operationStatus} onChange={(event) => setOperationStatus(event.target.value as 'active' | 'inactive')} className="rounded-lg border px-3 py-2.5 text-sm"><option value="active">운영 기관</option><option value="inactive">비활성화 기관</option></select>
-          <select aria-label="인증 여부" value={verification} onChange={(event) => setVerification(event.target.value)} className="rounded-lg border px-3 py-2.5 text-sm">
+          <input aria-label="기관 검색" placeholder="기관명·기관 코드 검색" value={query} onChange={(event) => setQuery(event.target.value)} className={fieldClass('input', 'min-w-0 flex-1')} />
+          <select aria-label="기관 운영 상태" value={operationStatus} onChange={(event) => setOperationStatus(event.target.value as 'active' | 'inactive')} className={fieldClass('select', '!w-auto')}><option value="active">운영 기관</option><option value="inactive">비활성화 기관</option></select>
+          <select aria-label="인증 여부" value={verification} onChange={(event) => setVerification(event.target.value)} className={fieldClass('select', '!w-auto')}>
             <option value="">전체 인증</option><option value="verified">인증됨</option><option value="unverified">미인증</option>
           </select>
-          <select aria-label="기관 유형" value={kind} onChange={(event) => setKind(event.target.value)} className="rounded-lg border px-3 py-2.5 text-sm">
+          <select aria-label="기관 유형" value={kind} onChange={(event) => setKind(event.target.value)} className={fieldClass('select', '!w-auto')}>
             <option value="">전체 유형</option><option value="institution">일반 기관</option><option value="individual">개인 기관</option>
           </select>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={grouped} onChange={(event) => setGrouped(event.target.checked)} />유형별 그룹핑</label>
-          <button type="button" onClick={resetFilters} className="rounded-lg border px-3 py-2.5 text-sm">검색 초기화</button>
+          <button type="button" onClick={resetFilters} className={buttonClass({ variant: 'secondary', size: 'sm' })}>검색 초기화</button>
         </div>
         {loading ? <p role="status" className="p-10 text-center text-sm">기관 목록을 불러오는 중...</p>
-          : listError ? <div role="alert" className="rounded-xl bg-red-50 p-5 text-sm">기관 목록 조회에 실패했습니다. <button type="button" onClick={() => { setListError(false); setLoading(true); setListAttempt((value) => value + 1); }} className="ml-3 rounded-lg border px-3 py-2.5">다시 시도</button></div>
+          : listError ? <div role="alert" className="rounded-xl bg-red-50 p-5 text-sm">기관 목록 조회에 실패했습니다. <button type="button" onClick={() => { setListError(false); setLoading(true); setListAttempt((value) => value + 1); }} className={buttonClass({ variant: 'secondary', size: 'sm', className: 'ml-3' })}>다시 시도</button></div>
           : filteredOrganizations.length === 0 ? <p className="p-10 text-center text-sm">{organizations.length === 0 ? '등록된 기관이 없습니다.' : '검색 조건에 맞는 기관이 없습니다.'}</p>
           : groups.map((group) => <div key={group.label} className="mb-5">
             {group.label && <h3 className="mb-2 text-sm font-bold">{group.label} · {group.items.length}개</h3>}
-            <div className="overflow-x-auto rounded-2xl border border-[#EFEFEF] bg-white">
+            <div className={cardClass('none', 'overflow-x-auto')}>
               <table className="w-full min-w-[900px] text-left text-sm">
                 <thead className="bg-[#F8FAFC] text-xs text-[#6F6F6F]"><tr>{['기관명', '유형', '기관 코드', '전화번호', '인증', '생성일 (KST)', '초대'].map((label) => <th key={label} className="px-4 py-3">{label}</th>)}</tr></thead>
                 <tbody>{group.items.map((organization) => <tr key={organization.id}
@@ -388,10 +389,10 @@ export default function OrgManagementPage() {
                   className="cursor-pointer border-t border-[#EFEFEF] hover:bg-[#F8FAFC]">
                   <td className="px-4 py-4"><button type="button" data-org-opener data-org-id={organization.id}
                     onClick={(event) => { event.stopPropagation(); openOrg(organization, event.currentTarget); }}
-                    className="text-left font-semibold text-[#5F0080] underline-offset-4 hover:underline focus-visible:outline-2" aria-haspopup="dialog">{organization.name}</button></td>
+                    className="inline-flex min-h-11 items-center text-left font-semibold text-[#5F0080] underline-offset-4 hover:underline focus-visible:outline-2" aria-haspopup="dialog">{organization.name}</button></td>
                   <td className="px-4 py-4 text-xs">{orgKindLabel(organization.kind)}</td>
                   <td className="px-4 py-4"><span className="font-mono text-[#5F0080]">{organization.org_code ?? '미등록'}</span>
-                    {organization.org_code && <button type="button" aria-label={`${organization.name} 기관 코드 복사`} onClick={(event) => { event.stopPropagation(); void copyListCode(organization.org_code!); }} className="ml-2 rounded border px-2 py-1 text-xs">복사</button>}</td>
+                    {organization.org_code && <button type="button" aria-label={`${organization.name} 기관 코드 복사`} onClick={(event) => { event.stopPropagation(); void copyListCode(organization.org_code!); }} className={buttonClass({ variant: 'secondary', size: 'sm', className: 'ml-2' })}>복사</button>}</td>
                   <td className="px-4 py-4">{organization.phone ?? '미등록'}</td>
                   <td className="px-4 py-4"><VerificationBadge verified={organization.verified} /></td>
                   <td className="px-4 py-4 text-xs">{orgDate(organization.created_at)}</td>
@@ -399,7 +400,7 @@ export default function OrgManagementPage() {
                     <button type="button" onClick={(event) => { event.stopPropagation(); void handleResendInvite(organization.id); }}
                       disabled={resendingOrgId === organization.id || !!organization.deactivated_at || organization.kind === 'individual' || !organization.has_primary_admin}
                       title={organization.kind === 'individual' ? '개인 기관은 담당자 초대 대상이 아닙니다.' : !organization.has_primary_admin ? '담당자 미지정' : undefined}
-                      className="rounded-lg border border-[#C9B0E8] px-3 py-1.5 text-xs font-semibold text-[#5F0080] disabled:cursor-not-allowed disabled:opacity-50">
+                      className={buttonClass({ variant: 'secondary', size: 'sm' })}>
                       {resendingOrgId === organization.id ? '발송 중...' : '초대 재발송'}
                     </button>
                     {(organization.kind === 'individual' || !organization.has_primary_admin) && <p className="mt-1 text-xs text-[#6F6F6F]">{organization.kind === 'individual' ? '개인 기관' : '담당자 미지정'}</p>}

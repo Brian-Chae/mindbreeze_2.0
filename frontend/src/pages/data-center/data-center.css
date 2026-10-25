@@ -1,8 +1,8 @@
 @import "../../components/data-center/controls.css";
 
-.dc{--dc-purple:#5f0080;--dc-line:#ECE6F0;color:#2f293a;background:#F7F4F0;min-height:100%;padding:24px;max-width:1200px;margin:auto;font-size:14px}
+.dc{--dc-purple:#5f0080;--dc-line:#ECE6F0;color:#2f293a;background:#F7F4F0;min-height:100%;padding:0;max-width:1200px;margin:0 auto;font-size:14px}
 .dc *{box-sizing:border-box}
-.dc h1{font-size:30px;margin:10px 0;color:#352a47}
+.dc h1{font-size:22px;font-weight:700;line-height:30px;margin:10px 0;color:#352a47}
 .dc h2{font-size:21px;margin:0 0 8px}
 .dc h3{font-size:17px}
 .dc p{line-height:1.7;color:#6f6f6f;margin:4px 0}
@@ -10,7 +10,7 @@
 .dc-eyebrow{font-size:13px;font-weight:700;letter-spacing:1px;color:var(--dc-purple)}
 .dc-badge{border:0;color:#5f0080;background:#f5edfc;border-radius:9999px;padding:6px 10px;white-space:nowrap}
 .dc-tabs{display:flex;gap:6px;border-bottom:1px solid var(--dc-line);margin:28px 0 24px;overflow:auto;padding-bottom:0}
-.dc-panel{border:1px solid var(--dc-line);border-radius:16px;background:white;padding:20px;box-shadow:none;min-width:0}
+.dc-panel{border:1px solid #E8E2ED;border-radius:20px;background:white;padding:24px;box-shadow:none;min-width:0}
 .dc-subtabs{display:flex;gap:8px;margin:22px 0 16px;overflow:auto}
 .dc-filters{display:flex;gap:12px;align-items:end;padding:16px 0}
 .dc label{font-size:13px;color:#756c81;display:flex;flex-direction:column;gap:7px}
@@ -28,13 +28,12 @@
 .dc-breadcrumb{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:15px 0}
 .dc-empty{text-align:center;padding:45px 15px}
 .dc-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;margin:24px 0}
-.dc-kpis article{border:1px solid var(--dc-line);padding:25px;border-radius:16px}
+.dc-kpis article{border:1px solid #E8E2ED;padding:24px;border-radius:20px}
 .dc-kpis strong{display:block;font-size:26px;margin-top:14px}
-@media(max-width:640px){.dc{padding:22px 14px}
-.dc h1{font-size:25px}
+@media(max-width:640px){.dc h1{font-size:22px}
 .dc-heading{display:block}
 .dc-badge{display:inline-block;margin-top:14px}
-.dc-panel{padding:18px 14px}
+.dc-panel{padding:16px}
 .dc-section-heading{align-items:flex-start;flex-direction:column}
 .dc-tabs{margin-top:22px}
 .dc-filters{flex-wrap:wrap}
@@ -52,6 +51,6 @@
 
 .dc-group-row td{background:#f6f1fa;color:#5f0080;font-weight:700}
 .dc-kpis{margin:24px 0 0}
-.dc-kpis article{min-width:0;padding:18px 14px;background:white}
+.dc-kpis article{min-width:0;padding:18px 16px;background:white}
 .dc-kpis strong{font-size:22px}
 .dc-kpis small{display:inline;font-size:13px}
