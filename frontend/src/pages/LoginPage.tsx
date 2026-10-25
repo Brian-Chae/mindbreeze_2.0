@@ -68,7 +68,12 @@ export default function LoginPage() {
   useEffect(() => {
     setPassword('');
     setError(null);
+    // 탭(역할)을 바꾸면 이전 탭에서 입력한 소셜 가입 동의·생년월일이 다른 계정에 따라가지 않게 비운다.
     setNeedsGoogleConsent(false);
+    setGoogleConsent(false);
+    setSocialBirthDate('');
+    setOptEeg(false);
+    setOptResearch(false);
   }, [loginRole]);
 
   const finish = () => {
@@ -105,6 +110,8 @@ export default function LoginPage() {
     }
   };
   const googleLogin = useGoogleLogin({
+    // 항상 계정 선택창을 띄워 이전에 쓴 구글 계정이 자동으로 재사용되지 않게 한다.
+    prompt: 'select_account',
     onSuccess: async (response) => {
       const started = intent.current;
       if (!started || googleExchanging.current) return;

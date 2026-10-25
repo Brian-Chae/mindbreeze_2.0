@@ -29,6 +29,7 @@ async function issueProof(payload: Parameters<typeof reauthForDataExport>[0], on
 // 웹 Google 은 useGoogleLogin 팝업 콜백 방식이라 별도 컴포넌트로 분리한다(웹에서만 마운트).
 function WebGoogleButton({ disabled, onProof, onError }: Omit<SocialProps, 'provider'>) {
   const login = useGoogleLogin({
+    prompt: 'select_account',
     onSuccess: (res) => void issueProof({ provider: 'google', access_token: res.access_token }, onProof, onError),
     onError: () => onError('Google 본인 확인에 실패했어요. 다시 시도해 주세요.'),
   });

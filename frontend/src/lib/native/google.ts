@@ -32,10 +32,14 @@ export async function ensureSocialLoginInitialized(): Promise<void> {
   initialized = true;
 }
 
-/** 네이티브 Google 로그인 후 id_token 반환. 사용자가 취소하면 예외. */
+/**
+ * 네이티브 Google 로그인 후 id_token 반환. 사용자가 취소하면 예외.
+ * forcePrompt: iOS GoogleSignIn 은 이전 로그인 기록이 있으면 계정 선택 없이 그 계정을 복원하므로,
+ * 계정 전환(상담사 → 회원 등)이 막히지 않게 항상 계정 선택창을 띄운다.
+ */
 export async function nativeGoogleIdToken(): Promise<string> {
   await ensureSocialLoginInitialized();
-  const res = await SocialLogin.login({ provider: 'google', options: {} });
+  const res = await SocialLogin.login({ provider: 'google', options: { forcePrompt: true } });
   const result = res.result as { idToken?: string | null };
   if (!result.idToken) throw new Error('Google 인증 토큰을 받지 못했습니다.');
   return result.idToken;

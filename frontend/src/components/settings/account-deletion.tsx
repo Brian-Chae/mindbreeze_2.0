@@ -43,6 +43,7 @@ export function AccountDeletionSection() {
   const dialogRef = useDialogA11y(step !== 'closed', close);
 
   const googleReauth = useGoogleLogin({
+    prompt: 'select_account',
     onSuccess: (res) => void runReauth({ provider: 'google', access_token: res.access_token }),
     onError: () => setError('Google 본인 확인에 실패했어요. 다시 시도해 주세요.'),
   });
