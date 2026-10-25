@@ -1,0 +1,28 @@
+{
+  "anchor_offsets_us": {
+    "sdk_first_sample": [
+      "0"
+    ],
+    "web_last_sample": [
+      "0"
+    ]
+  },
+  "file": "packets/gf01_ppg_header_endian_probe.bin",
+  "header_seconds_exact": "67305985/32768",
+  "header_ticks": 67305985,
+  "header_ticks_if_big_endian_wrong": 16909060,
+  "length": 10,
+  "n_samples": 1,
+  "remainder_bytes": 0,
+  "samples": [
+    {
+      "ir": 2,
+      "red": 1
+    }
+  ],
+  "sdk_accepts": true,
+  "sdk_lenient_sample_count": 1,
+  "sensor": "ppg",
+  "sha256_note": "sha256 은 manifest.json 에 고정",
+  "strict_status": "ok"
+}

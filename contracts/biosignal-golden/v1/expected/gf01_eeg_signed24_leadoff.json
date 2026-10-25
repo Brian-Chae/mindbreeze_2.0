@@ -1,0 +1,97 @@
+{
+  "anchor_offsets_us": {
+    "sdk_first_sample": [
+      "0",
+      "4000",
+      "8000",
+      "12000",
+      "16000"
+    ],
+    "web_last_sample": [
+      "-16000",
+      "-12000",
+      "-8000",
+      "-4000",
+      "0"
+    ]
+  },
+  "file": "packets/gf01_eeg_signed24_leadoff.bin",
+  "header_seconds_exact": "1",
+  "header_ticks": 32768,
+  "header_ticks_if_big_endian_wrong": 8388608,
+  "length": 39,
+  "n_samples": 5,
+  "remainder_bytes": 0,
+  "samples": [
+    {
+      "ch1_raw24": 8388608,
+      "ch1_signed": -8388608,
+      "ch1_uv_exact": "-336083.373397594",
+      "ch1_uv_sdk_float": -336083.37339759356,
+      "ch2_raw24": 8388607,
+      "ch2_signed": 8388607,
+      "ch2_uv_exact": "336083.333333333",
+      "ch2_uv_sdk_float": 336083.3333333334,
+      "leadoff_byte": 0,
+      "leadoff_ch1": false,
+      "leadoff_ch2": false
+    },
+    {
+      "ch1_raw24": 16777215,
+      "ch1_signed": -1,
+      "ch1_uv_exact": "-0.040064260",
+      "ch1_uv_sdk_float": -0.04006426017255706,
+      "ch2_raw24": 0,
+      "ch2_signed": 0,
+      "ch2_uv_exact": "0.000000000",
+      "ch2_uv_sdk_float": 0.0,
+      "leadoff_byte": 1,
+      "leadoff_ch1": true,
+      "leadoff_ch2": false
+    },
+    {
+      "ch1_raw24": 1,
+      "ch1_signed": 1,
+      "ch1_uv_exact": "0.040064260",
+      "ch1_uv_sdk_float": 0.04006426017255706,
+      "ch2_raw24": 16777214,
+      "ch2_signed": -2,
+      "ch2_uv_exact": "-0.080128520",
+      "ch2_uv_sdk_float": -0.08012852034511413,
+      "leadoff_byte": 4,
+      "leadoff_ch1": false,
+      "leadoff_ch2": true
+    },
+    {
+      "ch1_raw24": 1193046,
+      "ch1_signed": 1193046,
+      "ch1_uv_exact": "47798.505341829",
+      "ch1_uv_sdk_float": 47798.50534182851,
+      "ch2_raw24": 16702650,
+      "ch2_signed": -74566,
+      "ch2_uv_exact": "-2987.431624027",
+      "ch2_uv_sdk_float": -2987.4316240268895,
+      "leadoff_byte": 5,
+      "leadoff_ch1": true,
+      "leadoff_ch2": true
+    },
+    {
+      "ch1_raw24": 0,
+      "ch1_signed": 0,
+      "ch1_uv_exact": "0.000000000",
+      "ch1_uv_sdk_float": 0.0,
+      "ch2_raw24": 0,
+      "ch2_signed": 0,
+      "ch2_uv_exact": "0.000000000",
+      "ch2_uv_sdk_float": 0.0,
+      "leadoff_byte": 250,
+      "leadoff_ch1": false,
+      "leadoff_ch2": false
+    }
+  ],
+  "sdk_accepts": true,
+  "sdk_lenient_sample_count": 5,
+  "sensor": "eeg",
+  "sha256_note": "sha256 은 manifest.json 에 고정",
+  "strict_status": "ok"
+}
