@@ -1,5 +1,6 @@
 // 플랫폼 관리자 회원(내담자) 관리 페이지
 
+import { buttonClass, cardClass, fieldClass } from '../../components/ui';
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import AppShell from '../../components/layout/AppShell';
 import { ApiError } from '../../lib/api/client';
@@ -168,7 +169,7 @@ function CounselorPicker({ selected, onSelect, error }: CounselorPickerProps) {
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder="상담사 이름 또는 이메일 검색..."
-          className="w-full rounded-xl border border-[#EFEFEF] px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20"
+          className={fieldClass('input')}
         />
         {loading && (
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-[#9B9B9B]">
@@ -414,7 +415,7 @@ export default function ClientManagementPage() {
     <button
       type="button"
       onClick={() => setAddOpen(true)}
-      className="px-4 py-2 rounded-xl text-[15px] font-medium text-white bg-[#5F0080] hover:bg-[#4A0066] transition-colors"
+      className={buttonClass()}
     >
       + 회원 추가
     </button>
@@ -429,7 +430,7 @@ export default function ClientManagementPage() {
           placeholder="이름 또는 이메일 검색..."
           value={q}
           onChange={(e) => { setQ(e.target.value); setPage(1); }}
-          className="rounded-xl border border-[#EFEFEF] px-4 py-2 text-[13px] w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20"
+          className={fieldClass('input', 'md:!w-64')}
         />
         <span className="text-[13px] text-[#6F6F6F]">총 {total}명</span>
       </div>
@@ -440,7 +441,7 @@ export default function ClientManagementPage() {
           <button
             type="button"
             onClick={() => void fetchUsers()}
-            className="inline-flex items-center mt-4 h-10 px-5 rounded-full text-[13px] font-bold text-white bg-[#5F0080] hover:bg-[#4A0066] transition-colors"
+            className={buttonClass({ size: 'sm', className: 'mt-4' })}
           >
             다시 시도
           </button>
@@ -453,7 +454,7 @@ export default function ClientManagementPage() {
           <button
             type="button"
             onClick={() => setAddOpen(true)}
-            className="text-[15px] font-medium text-[#5F0080] hover:underline"
+            className={buttonClass({ variant: 'ghost', size: 'sm' })}
           >
             + 회원 추가로 첫 회원을 등록하세요
           </button>
@@ -462,7 +463,7 @@ export default function ClientManagementPage() {
         <>
           <div className="block md:hidden space-y-3">
             {users.map((u) => (
-              <div key={u.id} className="bg-white border border-[#EFEFEF] rounded-2xl p-4">
+              <div key={u.id} className={cardClass('compact')}>
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-bold text-[#1F1F1F]">{u.name}</span>
                   <StatusBadge suspended={u.suspended} />
@@ -476,21 +477,21 @@ export default function ClientManagementPage() {
                   {u.suspended ? (
                     <button
                       onClick={() => setModal({ user: u, action: 'unsuspend' })}
-                      className="inline-flex min-h-[44px] items-center text-[13px] font-medium text-[#10B981] hover:underline"
+                      className={buttonClass({ variant: 'ghost', size: 'sm' })}
                     >
                       해제
                     </button>
                   ) : (
                     <button
                       onClick={() => setModal({ user: u, action: 'suspend' })}
-                      className="inline-flex min-h-[44px] items-center text-[13px] font-medium text-[#EF4444] hover:underline"
+                      className={buttonClass({ variant: 'ghost', size: 'sm', tone: 'danger' })}
                     >
                       정지
                     </button>
                   )}
                   <button
                     onClick={() => setModal({ user: u, action: 'delete', step: 1 })}
-                    className="inline-flex min-h-[44px] items-center text-[13px] font-medium text-[#EF4444] hover:underline"
+                    className={buttonClass({ variant: 'ghost', size: 'sm', tone: 'danger' })}
                   >
                     삭제
                   </button>
@@ -499,7 +500,7 @@ export default function ClientManagementPage() {
             ))}
           </div>
 
-          <div className="hidden md:block bg-white border border-[#EFEFEF] rounded-2xl overflow-x-auto">
+          <div className={cardClass('none', 'hidden md:block overflow-x-auto')}>
             <table className="w-full min-w-[760px] text-[15px]">
               <thead>
                 <tr className="bg-[#F8FAFC] border-b border-[#EFEFEF]">
@@ -524,14 +525,14 @@ export default function ClientManagementPage() {
                         {u.suspended ? (
                           <button
                             onClick={() => setModal({ user: u, action: 'unsuspend' })}
-                            className="inline-flex min-h-[44px] items-center text-[13px] font-medium text-[#10B981] hover:underline"
+                            className={buttonClass({ variant: 'ghost', size: 'sm' })}
                           >
                             해제
                           </button>
                         ) : (
                           <button
                             onClick={() => setModal({ user: u, action: 'suspend' })}
-                            className="inline-flex min-h-[44px] items-center text-[13px] font-medium text-[#EF4444] hover:underline"
+                            className={buttonClass({ variant: 'ghost', size: 'sm', tone: 'danger' })}
                             title="플랫폼 관리자에 의한 계정 정지(로그인 차단)"
                           >
                             정지
@@ -539,7 +540,7 @@ export default function ClientManagementPage() {
                         )}
                         <button
                           onClick={() => setModal({ user: u, action: 'delete', step: 1 })}
-                          className="inline-flex min-h-[44px] items-center text-[13px] font-medium text-[#EF4444] hover:underline"
+                          className={buttonClass({ variant: 'ghost', size: 'sm', tone: 'danger' })}
                         >
                           삭제
                         </button>
@@ -556,7 +557,7 @@ export default function ClientManagementPage() {
               <button
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page === 1}
-                className="px-3 py-2.5 rounded-lg text-[13px] border border-[#EFEFEF] disabled:opacity-30"
+                className={buttonClass({ variant: 'secondary', size: 'sm' })}
               >
                 이전
               </button>
@@ -564,7 +565,7 @@ export default function ClientManagementPage() {
               <button
                 onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page === totalPages}
-                className="px-3 py-2.5 rounded-lg text-[13px] border border-[#EFEFEF] disabled:opacity-30"
+                className={buttonClass({ variant: 'secondary', size: 'sm' })}
               >
                 다음
               </button>
@@ -611,13 +612,13 @@ export default function ClientManagementPage() {
                 <div className="flex items-center gap-3 justify-end">
                   <button
                     onClick={() => setModal(null)}
-                    className="px-4 py-2 rounded-xl text-[15px] text-[#6F6F6F] border border-[#EFEFEF]"
+                    className={buttonClass({ variant: 'secondary' })}
                   >
                     취소
                   </button>
                   <button
                     onClick={() => void handleAction()}
-                    className="px-4 py-2 rounded-xl text-[15px] font-medium text-white bg-[#EF4444]"
+                    className={buttonClass({ tone: 'danger' })}
                   >
                     계속
                   </button>
@@ -634,19 +635,19 @@ export default function ClientManagementPage() {
                   value={deleteEmailConfirm}
                   onChange={(e) => setDeleteEmailConfirm(e.target.value)}
                   placeholder={modal.user.email}
-                  className="w-full rounded-xl border border-[#EFEFEF] px-4 py-3 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#EF4444]/20 mb-4"
+                  className={fieldClass('input', 'mb-4')}
                 />
                 <div className="flex items-center gap-3 justify-end">
                   <button
                     onClick={() => setModal(null)}
-                    className="px-4 py-2 rounded-xl text-[15px] text-[#6F6F6F] border border-[#EFEFEF]"
+                    className={buttonClass({ variant: 'secondary' })}
                   >
                     취소
                   </button>
                   <button
                     onClick={() => void handleAction()}
                     disabled={acting || deleteEmailConfirm.trim() !== modal.user.email}
-                    className="px-4 py-2 rounded-xl text-[15px] font-medium text-white bg-[#EF4444] disabled:opacity-50"
+                    className={buttonClass({ tone: 'danger' })}
                   >
                     {acting ? '처리 중...' : '영구 삭제'}
                   </button>
@@ -668,13 +669,13 @@ export default function ClientManagementPage() {
                     onChange={(e) => setReason(e.target.value)}
                     placeholder="정지 사유를 입력하세요 (필수)..."
                     rows={3}
-                    className="w-full rounded-xl border border-[#EFEFEF] px-4 py-3 text-[15px] resize-none focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 mb-4"
+                    className={fieldClass('textarea', 'resize-none mb-4')}
                   />
                 )}
                 <div className="flex items-center gap-3 justify-end">
                   <button
                     onClick={() => setModal(null)}
-                    className="px-4 py-2 rounded-xl text-[15px] text-[#6F6F6F] border border-[#EFEFEF]"
+                    className={buttonClass({ variant: 'secondary' })}
                   >
                     취소
                   </button>
@@ -727,7 +728,7 @@ export default function ClientManagementPage() {
                   onChange={(e) => setAddName(e.target.value)}
                   placeholder="홍길동"
                   maxLength={50}
-                  className="w-full rounded-xl border border-[#EFEFEF] px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20"
+                  className={fieldClass('input')}
                 />
               </div>
 
@@ -740,7 +741,7 @@ export default function ClientManagementPage() {
                   value={addEmail}
                   onChange={(e) => setAddEmail(e.target.value)}
                   placeholder="client@example.com"
-                  className="w-full rounded-xl border border-[#EFEFEF] px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20"
+                  className={fieldClass('input')}
                 />
                 {addFieldErrors.email && (
                   <p className="mt-1 text-[12px] text-red-600">{addFieldErrors.email}</p>
@@ -772,14 +773,14 @@ export default function ClientManagementPage() {
                 <button
                   type="button"
                   onClick={closeAddModal}
-                  className="px-4 py-2 rounded-xl text-[15px] text-[#6F6F6F] border border-[#EFEFEF]"
+                  className={buttonClass({ variant: 'secondary' })}
                 >
                   취소
                 </button>
                 <button
                   type="submit"
                   disabled={addSubmitting || !addCounselor}
-                  className="px-4 py-2 rounded-xl text-[15px] font-medium text-white bg-[#5F0080] hover:bg-[#4A0066] disabled:opacity-50"
+                  className={buttonClass()}
                 >
                   {addSubmitting ? '추가 중...' : '회원 추가'}
                 </button>

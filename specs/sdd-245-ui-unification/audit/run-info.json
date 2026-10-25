@@ -1,0 +1,17 @@
+{
+  "browser": "155.0.8059.85",
+  "channel": "chrome",
+  "build": {
+    "outDir": "/tmp/sdd245-build-jeYZsY",
+    "mode": "development",
+    "flags": {
+      "counseling": true,
+      "ai": true,
+      "designRoutes": true
+    },
+    "sourceCommit": "62017dd80f364605a0a8857e8eeba92e048929f6"
+  },
+  "completedAt": "2026-10-25T01:26:35.079Z",
+  "manifestCount": 109,
+  "captures": 324
+}

@@ -98,6 +98,14 @@
   --container-app: 1280px;
   --container-marketing: 1440px;
   --container-prose: 680px;
+  --page-gutter-mobile: 16px;
+  --page-gutter-tablet: 32px;
+  --page-gutter-desktop: 40px;
+  --page-frame-max: 1280px;
+  --page-content-max: 1200px;
+  --page-section-gap: 24px;
+  --page-title-size: 22px;
+  --page-title-weight: 700;
   --radius-none: 0;
   --radius-sm: 8px;
   --radius-md: 12px;

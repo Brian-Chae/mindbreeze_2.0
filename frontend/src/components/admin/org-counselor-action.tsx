@@ -1,10 +1,12 @@
+import { buttonClass, fieldClass } from '../ui';
 import { useEffect, useRef, useState } from 'react';
 import {
   patchAdminOrganizationCounselor, removeAdminOrganizationCounselor,
   type AdminOrganizationCounselorDto,
 } from '../../lib/api/admin';
 
-const control = 'rounded-lg border border-[#DDDEE7] bg-white px-3 py-2 text-sm disabled:opacity-50';
+const buttonSecondary = buttonClass({ variant: 'secondary', size: 'sm' });
+const buttonPrimary = buttonClass({ size: 'sm' });
 
 export default function OrgCounselorAction({ orgId, member, action, onCancel, onSaved, onGuardChange }: {
   orgId: string; member: AdminOrganizationCounselorDto; action: 'role' | 'remove';
@@ -44,12 +46,12 @@ export default function OrgCounselorAction({ orgId, member, action, onCancel, on
       : '기관 소속을 해제합니다. 기관 관리자라면 상담사로 변경됩니다. 계정과 과거 상담 기록은 삭제되지 않습니다.'}</p>
     <label className="block">상담사 변경 사유 (필수)
       <textarea value={reason} onChange={(event) => setReason(event.target.value)} disabled={busy} required maxLength={2000}
-        className={`${control} mt-1 block w-full`} rows={3} />
+        className={fieldClass('textarea', 'mt-1')} rows={3} />
     </label>
     {error && <p role="alert" className="text-red-700">{error}</p>}
     <div className="flex gap-2">
-      <button ref={cancelRef} type="button" disabled={busy} onClick={onCancel} className={control}>취소</button>
-      <button type="submit" disabled={busy || !reason.trim()} className={`${control} border-purple-800 text-purple-900`}>{busy ? '처리 중...' : `${label} 실행`}</button>
+      <button ref={cancelRef} type="button" disabled={busy} onClick={onCancel} className={buttonSecondary}>취소</button>
+      <button type="submit" disabled={busy || !reason.trim()} className={buttonPrimary}>{busy ? '처리 중...' : `${label} 실행`}</button>
     </div>
   </form>;
 }

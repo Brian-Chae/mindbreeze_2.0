@@ -33,7 +33,7 @@ function memberDate0(iso: string): string | undefined {
 }
 export function MemberClassStyles() {
   return <style>{`
-.cs-structure .mc-stack{display:flex;flex-direction:column;gap:20px;max-width:1040px;margin:0 auto;padding-bottom:16px}
+.cs-structure .mc-stack{display:flex;flex-direction:column;gap:24px;max-width:1200px;margin:0 auto;padding-bottom:16px}
 .cs-structure .mc-card{border:1px solid #e8e2ed;border-radius:20px;padding:24px;background:#fff;min-width:0;overflow-wrap:anywhere}
 .cs-structure .mc-hero{background:linear-gradient(120deg,#e7dbf3,#f3edf8);border-color:#ded0eb;padding:28px}
 .cs-structure .mc-card h2,.cs-structure .mc-card h3{margin:8px 0 12px;font-size:20px;line-height:1.4;color:#292231}
@@ -55,7 +55,7 @@ export function MemberClassStyles() {
 .cs-structure .mc-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:16px 0 0}
 .cs-structure .mc-facts dt{font-size:12px;color:#716779;margin-bottom:4px}
 .cs-structure .mc-facts dd{margin:0;font-size:14px}
-@media(max-width:767px){.cs-structure .mc-grid{grid-template-columns:1fr}.cs-structure .mc-card{padding:20px}.cs-structure .mc-hero h2{font-size:24px}}
+@media(max-width:767px){.cs-structure .mc-grid{grid-template-columns:1fr}.cs-structure .mc-card{padding:20px}.cs-structure .mc-stack:not(.mh-home) .mc-card{padding:24px}.cs-structure .mc-hero h2{font-size:24px}}
 /* SDD-234: 같은 스타일을 쓰는 A 홈(.mh-home)은 제외한다. */
 @media(max-width:767px){
  .cs-structure .mc-stack:not(.mh-home) .mc-chip{font-size:var(--mobile-type-caption-size);line-height:var(--mobile-type-caption-leading)}

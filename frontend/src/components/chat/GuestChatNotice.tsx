@@ -2,6 +2,7 @@
 // SDD-095 후속: 게스트는 세션 채팅방 접근 권한이 없으므로(백엔드 403), 패널 대신 이 안내를 노출한다.
 
 import { useState } from 'react';
+import { buttonClass } from '../../components/ui';
 
 function LockIcon() {
   return (
@@ -68,7 +69,7 @@ export function GuestChatNotice() {
         href="/register/client"
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-4 block w-full rounded-xl bg-[#5F0080] py-3 mobile:min-h-12 mobile:leading-6 text-center text-sm mobile:text-mb-compact font-semibold text-white transition-colors hover:bg-[#4E0068]"
+        className={buttonClass({ variant: 'primary', className: 'mt-4 w-full' })}
       >
         회원가입 하기
       </a>

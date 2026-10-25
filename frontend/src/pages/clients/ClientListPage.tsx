@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import AppShell from '../../components/layout/AppShell';
+import { fieldClass as uiFieldClass } from '../../components/ui';
 import InviteModal from '../../components/clients/InviteModal';
 import { useAuthStore } from '../../stores/authStore';
 import { listClients, type ClientClassRef, type ClientCounselorRef, type ClientListItem, type MemberType } from '../../lib/api/clients';
@@ -24,8 +25,8 @@ const PAGE_SIZE = 20;
 // 클래스별 그룹핑은 한 번에 더 많은 회원을 묶어 보여 준다(서버 상한 100).
 const GROUP_PAGE_SIZE = 100;
 
-const fieldClass =
-  'w-full min-h-[44px] rounded-[10px] border border-[#DDDEE7] bg-white px-3 text-sm text-[#1F1F1F] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-purple-900/15';
+// 공용 입력 규격(SDD-245): 모바일 48 / 데스크톱 44, radius 12
+const fieldClass = uiFieldClass('input', 'text-sm');
 
 function initials(name: string): string {
   const t = name.trim();

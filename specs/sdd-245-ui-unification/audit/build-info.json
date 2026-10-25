@@ -1,0 +1,10 @@
+{
+  "outDir": "/tmp/sdd245-build-jeYZsY",
+  "mode": "development",
+  "flags": {
+    "counseling": true,
+    "ai": true,
+    "designRoutes": true
+  },
+  "sourceCommit": "62017dd80f364605a0a8857e8eeba92e048929f6"
+}

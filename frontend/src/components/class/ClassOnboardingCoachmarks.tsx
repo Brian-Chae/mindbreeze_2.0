@@ -20,6 +20,7 @@ import {
   markClassOnboardingSeen,
   type CoachmarkMode,
 } from '../../lib/class/class-onboarding';
+import { buttonClass } from '../../components/ui';
 
 interface ClassOnboardingCoachmarksProps extends CoachmarkMode {
   /** 노출 이력을 무시하고 강제로 연다(미리보기·테스트) */
@@ -193,7 +194,7 @@ export function ClassOnboardingCoachmarks({
             <button
               type="button"
               onClick={goNext}
-              className="h-11 flex-1 rounded-xl bg-[#5F0080] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#4C0066]"
+              className={buttonClass({ variant: 'primary', className: 'flex-1' })}
             >
               {isLast ? '완료' : '다음'}
             </button>

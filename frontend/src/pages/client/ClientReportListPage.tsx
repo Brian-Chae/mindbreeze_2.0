@@ -1,3 +1,4 @@
+import { buttonClass, fieldClass } from '../../components/ui';
 import { useMobileSwipeProtection } from '../../hooks/use-mobile-swipe-protection';
 // 내담자용 리포트 목록 페이지
 // AppShell 없이 ClientShell 내에서 동작
@@ -229,7 +230,6 @@ export default function ClientReportListPage() {
   const filtered = useMemo(() => filterAndSortReports(reports, search, sortKey), [reports, search, sortKey]);
   const grouped = useMemo(() => groupByCounselor ? groupReportsByCounselor(filtered) : null, [groupByCounselor, filtered]);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
-  const controlClass = 'mobile:min-h-12 mobile:text-mb-body h-10 px-4 rounded-xl text-[13px] border border-[#EFEFEF] bg-white text-[#6F6F6F] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20';
   const pageButtonClass = 'mobile:min-w-11 h-11 px-4 rounded-xl text-[13px] mobile:text-mb-label font-semibold border border-[#EFEFEF] bg-white text-[#5F0080] hover:bg-[#F5EDFC] disabled:opacity-40 disabled:cursor-not-allowed transition-colors';
 
   const renderMobileCard = (report: ReportDto) => (
@@ -308,13 +308,13 @@ export default function ClientReportListPage() {
   );
 
   return (
-    <div className="px-4 md:px-8 py-4 md:py-6">
+    <div>
       <div className="flex flex-wrap items-center gap-2 py-4">
         <input type="search" aria-label="제목·요약 검색" placeholder="제목·요약 검색"
           value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }}
-          className={`mobile:min-h-12 mobile:text-mb-body ${controlClass} w-full md:w-64`} />
+          className={fieldClass('input', 'md:w-64')} />
         <select aria-label="정렬" value={sortKey}
-          onChange={(event) => { setSortKey(event.target.value as SortKey); setPage(1); }} className={controlClass}>
+          onChange={(event) => { setSortKey(event.target.value as SortKey); setPage(1); }} className={fieldClass('select', 'md:w-auto')}>
           <option value="newest">최신순</option><option value="oldest">오래된순</option><option value="title">제목순</option>
         </select>
         <button type="button" role="switch" aria-checked={groupByCounselor}
@@ -323,7 +323,7 @@ export default function ClientReportListPage() {
         >상담사별 그룹핑 {groupByCounselor ? 'ON' : 'OFF'}</button>
         {reports.some((r) => !r.is_read && !isReportInReview(r)) && (
           <button type="button" onClick={() => void handleMarkAllRead()} disabled={markingAllRead}
-            className="mobile:min-h-11 mobile:min-w-11 h-10 px-4 rounded-xl text-[13px] mobile:text-mb-label font-semibold border border-[#E8D9F5] bg-white text-[#5F0080] hover:bg-[#F5EDFC] disabled:opacity-50 transition-colors"
+            className={buttonClass({ variant: 'secondary', size: 'sm' })}
           >{markingAllRead ? '처리 중...' : '전체 읽음'}</button>
         )}
         {!loading && !error && <span className="text-[13px] mobile:text-mb-caption text-[#6F6F6F] md:ml-auto">{filtered.length} / {total}건</span>}

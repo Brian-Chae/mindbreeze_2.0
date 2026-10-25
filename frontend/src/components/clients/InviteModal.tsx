@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { createInvite, type InviteCreateResponse } from '../../lib/api/clients';
 import { ApiError } from '../../lib/api/client';
 import { useDialogA11y } from '../../hooks/useDialogA11y';
+import { buttonClass } from '../../components/ui';
 
 interface InviteModalProps {
   open: boolean;
@@ -167,7 +168,7 @@ export default function InviteModal({ open, onClose }: InviteModalProps) {
             <button
               type="submit"
               disabled={loading || !email.trim()}
-              className="w-full h-11 rounded-xl bg-[#5F0080] text-white text-[15px] font-semibold hover:bg-[#4A0066] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className={buttonClass({ variant: 'primary', className: 'w-full' })}
             >
               {loading ? '발송 중...' : '초대 메일 보내기'}
             </button>

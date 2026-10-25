@@ -3,6 +3,7 @@
 import { useId, useState } from 'react';
 import type { ClientProfile, ClientProfileUpdate } from '../../lib/api/client-profile';
 import ConfirmDialog from './ConfirmDialog';
+import { buttonClass } from '../../components/ui';
 
 interface Props {
   profile: ClientProfile;
@@ -102,7 +103,7 @@ export default function ClientProfileSection({ profile, onSave }: Props) {
             <button
               type="button"
               onClick={() => setConfirmOpen(true)}
-              className="text-[13px] text-white bg-[#5F0080] hover:bg-[#3F0055] font-medium px-3 py-1.5 rounded-lg transition-colors"
+              className={buttonClass({ variant: 'primary', size: 'sm' })}
             >
               저장
             </button>

@@ -176,7 +176,7 @@ export default function ClientSessionListPage() {
   const sections = useMemo(() => buildClassSections(withHost, invitedSessionIds), [withHost, invitedSessionIds]);
 
   return (
-    <div className="sh-scope px-4 md:px-8 py-4 md:py-6">
+    <div className="sh-scope">
       {/* 토스트 */}
       {toast && (
         <div role="status" className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-[#1F1F1F] text-white text-sm px-5 py-2.5 rounded-full shadow-lg animate-fade-in">

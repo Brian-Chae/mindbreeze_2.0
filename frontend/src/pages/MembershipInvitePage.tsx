@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ApiError } from '../lib/api/client';
 import { acceptMembershipInvite } from '../lib/api/org';
+import { buttonClass } from '../components/ui';
 
 export default function MembershipInvitePage() {
   const [params] = useSearchParams();
@@ -90,7 +91,7 @@ export default function MembershipInvitePage() {
             </div>
             <Link
               to="/login"
-              className="h-[52px] w-[280px] flex items-center justify-center rounded-full bg-[#5F0080] hover:bg-[#4B0066] active:bg-[#3F0055] text-white font-semibold text-[15px] transition-colors"
+              className={buttonClass({ variant: 'primary', size: 'lg', className: 'w-[280px]' })}
             >
               로그인하기
             </Link>
@@ -123,7 +124,7 @@ export default function MembershipInvitePage() {
               type="button"
               onClick={() => void handleAccept()}
               disabled={loading}
-              className="h-[52px] w-[280px] rounded-full bg-[#5F0080] hover:bg-[#4B0066] active:bg-[#3F0055] disabled:opacity-60 text-white font-semibold text-[15px] transition-colors"
+              className={buttonClass({ variant: 'primary', size: 'lg', className: 'w-[280px]' })}
             >
               {loading ? '수락 중…' : '소속 초대 수락하기'}
             </button>

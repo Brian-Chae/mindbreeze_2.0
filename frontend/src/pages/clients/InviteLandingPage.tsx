@@ -5,6 +5,7 @@ import { ApiError } from '../../lib/api/client';
 import type { User } from '../../lib/api/auth';
 import GoogleLoginButton from '../../components/auth/GoogleLoginButton';
 import { ConsentCheckList, type Consents } from '../../components/auth/ConsentCheckList';
+import { buttonClass } from '../../components/ui';
 
 export default function InviteLandingPage() {
   const { token } = useParams<{ token: string }>();
@@ -103,7 +104,7 @@ export default function InviteLandingPage() {
               {!isExpired && (
                 <button
                   onClick={() => setReloadKey((k) => k + 1)}
-                  className="rounded-xl px-6 py-3 font-semibold bg-[#5F0080] text-white hover:bg-[#4D0066] transition-colors"
+                  className={buttonClass({ variant: 'primary' })}
                 >
                   다시 시도
                 </button>

@@ -22,6 +22,7 @@ import {
 import BulkApproveModal from '../../components/reports/BulkApproveModal';
 import { useReportStore } from '../../stores/reportStore';
 import { isAiEnabled } from '../../lib/feature-flags';
+import { buttonClass } from '../../components/ui';
 
 type StatusFilter = 'all' | 'pending' | 'approved' | 'failed';
 type ReportTypeFilter = 'all' | 'counselor' | 'client';
@@ -352,7 +353,7 @@ export default function ReportListPage() {
     <button
       type="button"
       onClick={() => setBulkApproveOpen(true)}
-      className="mobile:min-h-12 mobile:min-w-11 inline-flex items-center h-9 px-4 rounded-full text-[13px] mobile:text-mb-label font-semibold text-white bg-[#5F0080] hover:bg-[#4A0066] transition-colors"
+      className={buttonClass({ variant: 'primary', size: 'sm' })}
     >
       일괄 승인 ({pendingCount})
     </button>
@@ -526,7 +527,7 @@ export default function ReportListPage() {
           <button
             type="button"
             onClick={() => setReloadKey((k) => k + 1)}
-            className="mobile:min-h-12 mobile:min-w-11 inline-flex items-center mt-4 h-10 px-5 rounded-full text-[13px] mobile:text-mb-label font-bold text-white bg-[#5F0080] hover:bg-[#4A0066] transition-colors"
+            className={buttonClass({ variant: 'primary', className: 'mt-4' })}
           >
             다시 시도
           </button>
@@ -708,7 +709,7 @@ export default function ReportListPage() {
           <button
             type="button"
             onClick={() => setSampleOpen(true)}
-            className="mobile:min-h-12 mobile:min-w-11 inline-flex items-center mt-5 h-10 px-5 rounded-full text-[13px] mobile:text-mb-label font-bold text-white bg-[#5F0080] hover:bg-[#4A0066] transition-colors"
+            className={buttonClass({ variant: 'primary', className: 'mt-5' })}
           >
             샘플 리포트 보기
           </button>

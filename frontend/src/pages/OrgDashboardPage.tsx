@@ -1,5 +1,6 @@
 // 기관 클래스 대시보드 (SDD-015, SDD-017)
 
+import { buttonClass, cardClass, fieldClass } from '../components/ui';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import AppShell from '../components/layout/AppShell';
@@ -129,7 +130,7 @@ function StatCard({
   accent?: string;
 }) {
   return (
-    <div className="bg-white border border-[#DDDEE7] rounded-2xl p-5">
+    <div className={cardClass('default')}>
       <div className="text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-2">
         {label}
       </div>
@@ -169,7 +170,7 @@ function CounselorRow({ counselor }: { counselor: OrgCounselorStat }) {
 
 function CounselorCard({ counselor }: { counselor: OrgCounselorStat }) {
   return (
-    <div className="bg-white border border-[#EFEFEF] rounded-2xl p-4">
+    <div className={cardClass('compact')}>
       <div className="font-bold text-[#1F1F1F] mb-1">{counselor.name}</div>
       <div className="text-[13px] text-[#6F6F6F] break-all mb-3">{counselor.email}</div>
       <div className="grid grid-cols-3 gap-2 text-center">
@@ -244,7 +245,7 @@ function ClassCard({ cls }: { cls: ClassSummary }) {
   const showRecordLink = cls.has_record || cls.has_summary;
 
   return (
-    <div className="bg-white border border-[#EFEFEF] rounded-2xl p-4 space-y-2">
+    <div className={cardClass('compact', 'space-y-2')}>
       <div className="flex items-start justify-between gap-3">
         <Link
           to={`/sessions/${cls.id}`}
@@ -310,7 +311,7 @@ function OrgCodeCard({ orgCode }: { orgCode: string | null }) {
             <button
               type="button"
               onClick={() => void handleCopy()}
-              className="rounded-lg border border-[#C9B0E8] bg-white px-4 py-2 text-[13px] font-semibold text-[#5F0080] transition-colors hover:bg-[#EFE3FA]"
+              className={buttonClass({ variant: 'secondary', size: 'sm' })}
             >
               코드 복사
             </button>
@@ -398,7 +399,7 @@ function CounselorInviteSection({
 
   return (
     <section className="space-y-6">
-      <div className="rounded-2xl border border-[#EFEFEF] bg-white p-5 md:p-6">
+      <div className={cardClass()}>
         <div className="mb-5">
           <h2 className="text-[18px] font-bold text-[#1F1F1F]">상담사 초대</h2>
           <p className="mt-1 text-[13px] text-[#6F6F6F]">
@@ -432,7 +433,7 @@ function CounselorInviteSection({
               placeholder="홍길동"
               maxLength={100}
               disabled={inviting}
-              className="w-full rounded-xl border border-[#EFEFEF] px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 disabled:opacity-60"
+              className={fieldClass('input')}
             />
           </label>
           <label className="block">
@@ -446,9 +447,7 @@ function CounselorInviteSection({
               }}
               placeholder="name@example.com"
               disabled={inviting}
-              className={`w-full rounded-xl border px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 disabled:opacity-60 ${
-                inviteError ? 'border-[#F87171] bg-[#FEF2F2]' : 'border-[#EFEFEF]'
-              }`}
+              className={fieldClass('input', inviteError ? '!border-[#F87171] !bg-[#FEF2F2]' : '')}
             />
             {inviteError && (
               <p role="alert" className="mt-1.5 text-[12px] text-[#B3261E]">
@@ -460,7 +459,7 @@ function CounselorInviteSection({
             <button
               type="submit"
               disabled={inviting || !name.trim() || !email.trim()}
-              className="h-[42px] w-full rounded-xl bg-[#5F0080] px-6 text-[15px] font-semibold text-white transition-colors hover:bg-[#4B0066] disabled:opacity-60 md:w-auto"
+              className={buttonClass({ className: 'w-full md:w-auto' })}
             >
               {inviting ? '발송 중…' : '초대 발송'}
             </button>
@@ -495,7 +494,7 @@ function CounselorInviteSection({
                 return (
                   <div
                     key={counselor.id}
-                    className="rounded-2xl border border-[#EFEFEF] bg-white p-4"
+                    className={cardClass('compact')}
                   >
                     <div className="mb-2 flex items-start justify-between gap-2">
                       <div>
@@ -515,7 +514,7 @@ function CounselorInviteSection({
                         type="button"
                         onClick={() => void handleResend(counselor.id)}
                         disabled={resendingUserId === counselor.id}
-                        className="mt-3 rounded-lg border border-[#C9B0E8] bg-[#F5EDFC] px-3 py-1.5 text-[12px] font-semibold text-[#5F0080] hover:bg-[#EFE3FA] disabled:opacity-60"
+                        className={buttonClass({ variant: 'secondary', size: 'sm', className: 'mt-3' })}
                       >
                         {resendingUserId === counselor.id ? '발송 중…' : '재발송'}
                       </button>
@@ -525,7 +524,7 @@ function CounselorInviteSection({
               })}
             </div>
 
-            <div className="hidden overflow-x-auto rounded-2xl border border-[#EFEFEF] bg-white md:block">
+            <div className={cardClass('none', 'hidden overflow-x-auto md:block')}>
               <table className="w-full text-[15px]">
                 <thead>
                   <tr className="border-b border-[#EFEFEF] bg-[#F8FAFC]">
@@ -575,7 +574,7 @@ function CounselorInviteSection({
                               type="button"
                               onClick={() => void handleResend(counselor.id)}
                               disabled={resendingUserId === counselor.id}
-                              className="rounded-lg border border-[#C9B0E8] bg-[#F5EDFC] px-3 py-1.5 text-[12px] font-semibold text-[#5F0080] hover:bg-[#EFE3FA] disabled:opacity-60"
+                              className={buttonClass({ variant: 'secondary', size: 'sm' })}
                             >
                               {resendingUserId === counselor.id ? '발송 중…' : '재발송'}
                             </button>
@@ -712,7 +711,7 @@ export default function OrgDashboardPage() {
                   ))}
                 </div>
 
-                <div className="hidden md:block bg-white border border-[#EFEFEF] rounded-2xl overflow-x-auto">
+                <div className={cardClass('none', 'hidden md:block overflow-x-auto')}>
                   <table className="w-full text-[15px]">
                     <thead>
                       <tr className="bg-[#F8FAFC] border-b border-[#EFEFEF]">
@@ -766,7 +765,7 @@ export default function OrgDashboardPage() {
                   ))}
                 </div>
 
-                <div className="hidden md:block bg-white border border-[#EFEFEF] rounded-2xl overflow-x-auto">
+                <div className={cardClass('none', 'hidden md:block overflow-x-auto')}>
                   <table className="w-full text-[15px] min-w-[960px]">
                     <thead>
                       <tr className="bg-[#F8FAFC] border-b border-[#EFEFEF]">

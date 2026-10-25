@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { ApiError } from '../../lib/api/client';
+import { cardClass } from '../../components/ui';
 import { getMyRequests, type JoinRequest, type JoinRequestStatus } from '../../lib/api/org';
 
 const statusLabel: Record<JoinRequestStatus, string> = {
@@ -51,17 +52,17 @@ export default function MyRequestsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-canvas p-4 sm:p-8">
+    <div className="min-h-screen bg-surface-canvas px-4 py-4 md:px-8 md:py-6 lg:px-10 lg:pt-8 lg:pb-10">
       <div className="max-w-3xl mx-auto space-y-6">
         <div>
-          <h1 className="font-display text-3xl font-light text-ink-primary">내 가입 신청 내역</h1>
+          <h1 className="text-[22px] font-bold leading-[30px] text-ink-primary md:leading-[33px]">내 가입 신청 내역</h1>
           <p className="text-sm text-ink-secondary mt-1">상담센터 가입 신청 현황을 확인하세요</p>
         </div>
 
         {error && <p className="text-red-500 text-sm" role="alert">{error}</p>}
 
         {requests.length === 0 ? (
-          <div className="rounded-xl border border-border-default bg-surface-raised p-6 text-sm text-ink-tertiary">
+          <div className={cardClass('default', 'text-sm text-ink-tertiary')}>
             신청 내역이 없습니다.
           </div>
         ) : (
@@ -69,7 +70,7 @@ export default function MyRequestsPage() {
             {requests.map((r) => (
               <div
                 key={r.id}
-                className="rounded-xl border border-border-default bg-surface-raised p-5"
+                className={cardClass('default')}
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">

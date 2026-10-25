@@ -8,6 +8,7 @@ import {
   type ChatReportReason,
   type ChatReportResult,
 } from '../../lib/api/chat';
+import { buttonClass } from '../../components/ui';
 
 interface Props {
   targetUserId: string;
@@ -92,7 +93,7 @@ export function ReportDialog({ targetUserId, targetName, roomId, messageId, onCl
             <button
               type="button"
               onClick={onClose}
-              className="w-full rounded-xl bg-[#5F0080] px-4 py-3 mobile:min-h-12 text-sm mobile:text-mb-compact font-semibold text-white hover:bg-[#4B0066]"
+              className={buttonClass({ variant: 'primary', className: 'w-full' })}
             >
               확인
             </button>
@@ -135,7 +136,7 @@ export function ReportDialog({ targetUserId, targetName, roomId, messageId, onCl
                 type="button"
                 onClick={() => void submit()}
                 disabled={busy}
-                className="flex-1 rounded-xl bg-[#5F0080] px-4 py-3 mobile:min-h-12 text-sm mobile:text-mb-compact font-semibold text-white hover:bg-[#4B0066] disabled:opacity-50"
+                className={buttonClass({ variant: 'primary', className: 'flex-1' })}
               >
                 {busy ? '접수 중…' : '신고하고 차단'}
               </button>

@@ -4,6 +4,7 @@
 import { useId, useState } from 'react';
 import type { UpdateUserMePayload } from '../../lib/api/auth';
 import ConfirmDialog from './ConfirmDialog';
+import { buttonClass } from '../../components/ui';
 
 export interface SelfInfoValue {
   email: string;
@@ -101,7 +102,7 @@ export default function SelfInfoSection({ value, showPersonal, onSave }: SelfInf
             <button
               type="button"
               onClick={() => setConfirmOpen(true)}
-              className="text-[13px] text-white bg-[#5F0080] hover:bg-[#3F0055] font-medium px-3 py-1.5 rounded-lg transition-colors"
+              className={buttonClass({ variant: 'primary', size: 'sm' })}
             >
               저장
             </button>
