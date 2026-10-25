@@ -191,6 +191,7 @@
   ],
   "real_fixtures": [],
   "files": {
+    "consumers/decode-conformance.test.mjs": "03a4b9487b9373957d8b86daee5c15b452dca4864178f8fc399af77f04cc0756",
     "expected/gf01_acc_signed16.json": "1fc316a53c750909a46ed068d026c7fa3139e9b44331045cb2d4541fa63322c4",
     "expected/gf01_eeg_signed24_leadoff.json": "2ebda46c4f3d99c98a5b567d013d69698810b6f27be4e594813df558b2d6a869",
     "expected/gf01_ppg_header_endian_probe.json": "1a2da27bf54880e049887753020371963fe7a487299702127405c10007f04111",
@@ -348,7 +349,7 @@
     "synth/scenario.json": "bceb420784c939cf9c538da927da69be4f6020a21e571180c5fa58b57865219b",
     "synth/schedule.json": "6e82d4ba705527abe080371de5618ebb0c7aac67f2292f29747891a05ac0cfa2",
     "synth/stream.bin": "90c276af9ad0d5e67d9fe5929d689fe02711183b05b2459d87fe3f4a564ae6ef",
-    "tools/build_manifest.py": "da9536b349c2625d4411e9f9ad98f2c620dabf0575cd230bf5bbddf801328b3f",
+    "tools/build_manifest.py": "f43efe9397282321a94aa4d3f41de875f7934bd5ce50d17b2d217a3856ad3bad",
     "tools/gen_packets.py": "48194145439aac1a14c0c52383c92b2719424dc8ef28d7864a7bf595214d3fa9",
     "tools/gen_scoring.py": "d75c079503d66ce68831138b7773c8863219cbf6ef1ea9fab7eb1734ff0833f4",
     "tools/gen_synthetic.py": "ea08348470385ecca425b42e7eec0efba847d860e1e577af06762ffbb01f79c6",

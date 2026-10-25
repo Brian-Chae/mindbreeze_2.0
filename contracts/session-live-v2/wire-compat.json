@@ -1,0 +1,30 @@
+{
+  "$comment": "SDD-246 T01 — Socket.IO/Engine.IO 버전 행렬 고정(plan §3.1). raw WebSocket 클라이언트를 Socket.IO 호환으로 취급하지 않는다. 값이 바뀌면 wire-compat.test.mjs 가 실패하고 T12 가 호환 재검증한다.",
+  "transport": "websocket-only (Engine.IO long-polling 비활성; 활성화하려면 sticky affinity 를 별도 검증)",
+  "namespace": "/session-live",
+  "protocol_version": 2,
+  "server": {
+    "python-socketio": "5.16.1",
+    "python-engineio": "4.13.1",
+    "source": "backend/requirements.txt (+ 현 venv pip list)"
+  },
+  "web_client": {
+    "socket.io-client": "4.8.3",
+    "engine.io-client": "6.6.4",
+    "socket.io-parser": "4.2.6",
+    "source": "frontend/package-lock.json"
+  },
+  "native_clients": {
+    "ios": "T07 이 선택·고정(Socket.IO v4 프로토콜 호환 Swift 클라이언트) 후 이 파일에 추가",
+    "android": "T08 이 선택·고정(socket.io-client-java 또는 동급) 후 이 파일에 추가",
+    "rule": "native 가 선택한 라이브러리는 websocket-only 에서 python-socketio 5.16.1 과 handshake/ack/auth payload/reconnect 를 합성 서버로 시험한 결과를 evidence 에 남긴다"
+  },
+  "ack_timeout_ms": 2000,
+  "retry_backoff_ms": [
+    500,
+    1000,
+    2000,
+    4000
+  ],
+  "heartbeat_ms": 5000
+}

@@ -55,7 +55,7 @@ def files_under(root, rel_dir, exts=None):
 
 def v1_files():
     out = []
-    for sub in ("packets", "expected", "synth", "oracle", "tools"):
+    for sub in ("packets", "expected", "synth", "oracle", "tools", "consumers"):
         for p in files_under(V1, sub):
             if "__pycache__" in p or p.endswith(".pyc"):
                 continue
