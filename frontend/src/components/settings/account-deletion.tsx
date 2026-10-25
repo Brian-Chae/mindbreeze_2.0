@@ -12,6 +12,7 @@ import { isNativeApp } from '../../lib/native/platform';
 import { nativeGoogleIdToken } from '../../lib/native/google';
 import { isAppleLoginAvailable, nativeAppleCredential } from '../../lib/native/apple';
 import { useDialogA11y } from '../../hooks/useDialogA11y';
+import { buttonClass } from '../../components/ui';
 
 type Step = 'closed' | 'notice' | 'reauth' | 'confirm';
 
@@ -133,7 +134,7 @@ export function AccountDeletionSection() {
                   <button
                     type="button"
                     onClick={() => setStep('reauth')}
-                    className="px-4 py-2 text-[15px] bg-[#5F0080] text-white font-medium rounded-lg hover:bg-[#3F0055]"
+                    className={buttonClass({ variant: 'primary' })}
                   >
                     계속
                   </button>
@@ -177,7 +178,7 @@ export function AccountDeletionSection() {
                       type="button"
                       disabled={busy || !password}
                       onClick={() => setStep('confirm')}
-                      className="px-4 py-2 text-[15px] bg-[#5F0080] text-white font-medium rounded-lg disabled:opacity-50"
+                      className={buttonClass({ variant: 'primary' })}
                     >
                       다음
                     </button>

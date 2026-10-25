@@ -19,6 +19,7 @@ import CounselorAgentPage from '../agent/counselor-agent-page';
 import { useCounselorAgentStore } from '../../stores/agent-counselor-store';
 import { isAiEnabled } from '../../lib/feature-flags';
 import { sortRooms, chatRoomDisplayName, lastMessagePreview, formatChatTime } from '../../lib/chat-sort';
+import { buttonClass } from '../../components/ui';
 
 function formatSessionDate(iso: string | null | undefined): string {
   if (!iso) return '세션 채팅';
@@ -158,7 +159,7 @@ export default function ChatPage() {
             <button
               type="button"
               onClick={() => setShowCreate(true)}
-              className="w-full h-11 mobile:h-12 rounded-xl bg-[#5F0080] text-white font-semibold text-sm mobile:text-mb-body hover:bg-[#4B0066] transition-colors"
+              className={buttonClass({ variant: 'primary', className: 'w-full' })}
             >
               + 새 채팅방
             </button>

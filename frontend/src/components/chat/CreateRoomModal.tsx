@@ -5,6 +5,7 @@ import { listClients, type ClientListItem } from '../../lib/api/clients';
 import { useNavigate } from 'react-router-dom';
 import { ApiError } from '../../lib/api/client';
 import { useDialogA11y } from '../../hooks/useDialogA11y';
+import { buttonClass } from '../../components/ui';
 
 type RoomMode = 'direct' | 'group';
 
@@ -258,7 +259,7 @@ export function CreateRoomModal({ open, onClose }: Props) {
             type="button"
             onClick={handleCreateGroup}
             disabled={creating || selectedCount < 2}
-            className="w-full mt-4 h-11 mobile:h-12 rounded-xl bg-[#5F0080] text-white font-semibold text-sm mobile:text-mb-compact hover:bg-[#4B0066] disabled:opacity-50 transition-colors"
+            className={buttonClass({ variant: 'primary', className: 'w-full mt-4' })}
           >
             {creating ? '생성 중...' : `그룹 채팅방 만들기 (${selectedCount}명)`}
           </button>

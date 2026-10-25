@@ -9,6 +9,7 @@ import { canInviteToRoom } from '../../lib/api/chat-invite';
 import { ApiError } from '../../lib/api/client';
 import { useAuthStore } from '../../stores/authStore';
 import { useChatStore } from '../../stores/chatStore';
+import { buttonClass } from '../../components/ui';
 
 interface Props {
   room: ChatRoom;
@@ -206,7 +207,7 @@ export function RoomSettingsModal({ room, onClose, onSaved, onInvite }: Props) {
               className="w-full rounded-xl border border-[#DDDEE7] px-3.5 py-2.5 text-sm mobile:text-mb-compact text-[#1F1F1F] outline-none read-only:bg-[#F2F3F8] focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/15 disabled:opacity-50" />
             <p id={`${nameId}-help`} className="mt-2 text-xs mobile:text-mb-caption text-[#6F6F6F]">{canRename ? '1~120자 · 모든 참여자에게 표시되는 이름입니다.' : detail.room_type === 'session' ? disabledReasons.session_managed : disabledReasons[detail.rename_disabled_reason ?? 'not_host'] || '이 채팅방의 이름은 변경할 수 없습니다.'}</p>
             {canRename && dirty && invalidName && <p className="mt-2 text-xs mobile:text-mb-caption text-red-600">공백만 있는 이름, 줄바꿈·제어문자는 사용할 수 없으며 이름은 1~120자여야 합니다.</p>}
-            {canRename && <button type="submit" disabled={busy || invalidName || !dirty} className="mt-4 h-11 w-full rounded-xl bg-[#5F0080] text-sm mobile:text-mb-compact font-semibold text-white hover:bg-[#4B0066] disabled:opacity-50">{busy ? '처리 중...' : '이름 저장'}</button>}
+            {canRename && <button type="submit" disabled={busy || invalidName || !dirty} className={buttonClass({ variant: 'primary', className: 'mt-4 w-full' })}>{busy ? '처리 중...' : '이름 저장'}</button>}
           </form>
           {canInvite && <section aria-label="회원 초대" className="mt-6 border-t border-[#EFEFEF] pt-4">
             {detail.room_type === 'direct' && <p className="mb-2 text-xs mobile:text-mb-caption text-[#6F6F6F]">새 그룹방에 회원을 초대합니다. 기존 1:1 채팅은 유지됩니다.</p>}

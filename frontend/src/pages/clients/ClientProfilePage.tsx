@@ -21,6 +21,7 @@ import MemberTypeBadge from '../../components/clients/MemberTypeBadge';
 import { MEMBER_TYPE_HELP } from '../../lib/clients/member-type';
 import { isAiEnabled } from '../../lib/feature-flags';
 import { ACTIVITY_LABELS, ageLabel, formatKst, genderLabel } from '../../lib/clients/overview';
+import { buttonClass } from '../../components/ui';
 
 const PERIODS = [
   { days: 7, label: '7일' },
@@ -434,7 +435,7 @@ export default function ClientProfilePage() {
             <button
               onClick={handleSaveMemo}
               disabled={saving}
-              className="min-h-[44px] rounded-md bg-[#5F0080] px-4 py-2 text-sm text-white hover:bg-[#4D0066] disabled:opacity-50"
+              className={buttonClass({ variant: 'primary' })}
             >
               {saving ? '저장 중...' : '저장'}
             </button>

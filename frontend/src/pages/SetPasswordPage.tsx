@@ -6,6 +6,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { apiClient, ApiError, tokenStorage } from '../lib/api/client';
 import type { LoginResponse } from '../lib/api/auth';
 import { useAuthStore } from '../stores/authStore';
+import { buttonClass } from '../components/ui';
 
 const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
@@ -210,7 +211,7 @@ export default function SetPasswordPage() {
             <button
               type="submit"
               disabled={loading || !password || !passwordConfirm}
-              className="h-[52px] w-full rounded-full bg-[#5F0080] hover:bg-[#4B0066] active:bg-[#3F0055] disabled:opacity-60 text-white font-semibold text-[15px] transition-colors"
+              className={buttonClass({ variant: 'primary', size: 'lg', className: 'w-full' })}
             >
               {loading ? '설정 중…' : '비밀번호 설정 완료'}
             </button>

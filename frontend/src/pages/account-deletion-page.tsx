@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { ApiError } from '../lib/api/client';
 import { submitAccountDeletionRequest } from '../lib/api/account';
 import { DELETION_NOTICE_LINES } from '../lib/account-deletion-copy';
+import { buttonClass } from '../components/ui';
 
 export default function AccountDeletionPage() {
   const [email, setEmail] = useState('');
@@ -68,7 +69,7 @@ export default function AccountDeletionPage() {
           <button
             type="submit"
             disabled={busy || !email}
-            className="h-12 rounded-xl bg-[#5F0080] text-[15px] font-semibold text-white disabled:opacity-50"
+            className={buttonClass({ variant: 'primary' })}
           >
             {busy ? '접수 중…' : '삭제 요청 보내기'}
           </button>

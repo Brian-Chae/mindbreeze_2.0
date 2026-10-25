@@ -8,6 +8,7 @@ import { useRequireAuth } from '../../hooks/useAuth';
 import { apiClient, ApiError } from '../../lib/api/client';
 import { completeClientOnboarding } from '../../lib/api/onboarding';
 import type { VerifiedTier } from '../../lib/api/auth';
+import { buttonClass } from '../../components/ui';
 
 interface EssentialsForm {
   name: string;
@@ -198,7 +199,7 @@ export default function ClientEssentialsPage() {
             <button
               type="submit"
               disabled={!isFormValid || loading}
-              className="w-full rounded-xl px-6 py-3 font-semibold text-white bg-[#5F0080] hover:bg-[#4A0066] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className={buttonClass({ variant: 'primary', className: 'w-full' })}
             >
               {loading ? '저장 중...' : '시작하기'}
             </button>

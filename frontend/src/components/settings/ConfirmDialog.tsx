@@ -1,6 +1,7 @@
 // 변경사항 저장 재확인 다이얼로그
 
 import { useDialogA11y } from '../../hooks/useDialogA11y';
+import { buttonClass } from '../../components/ui';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -43,7 +44,7 @@ export default function ConfirmDialog({
           <button
             type="button"
             onClick={onConfirm}
-            className="px-4 py-2 text-[15px] bg-[#5F0080] text-white font-medium rounded-lg hover:bg-[#3F0055] transition-colors"
+            className={buttonClass({ variant: 'primary' })}
           >
             {confirmLabel}
           </button>
