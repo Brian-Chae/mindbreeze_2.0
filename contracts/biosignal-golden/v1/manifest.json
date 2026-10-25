@@ -60,8 +60,11 @@
   },
   "oracle": {
     "runner": "oracle/run-oracle.ts (vitest, fake timers, base_ms=1760000000000)",
-    "command": "(cd frontend && npx vitest run --config ../contracts/biosignal-golden/v1/oracle/vitest.oracle.config.mjs)",
-    "regenerate_command": "(cd frontend && ORACLE_WRITE=1 npx vitest run --config ../contracts/biosignal-golden/v1/oracle/vitest.oracle.config.mjs)  # 감독 승인 변경에서만",
+    "canonical_filter_path": "biquad",
+    "canonical_expected_dir": "expected/oracle",
+    "command": "(cd frontend && npx vitest run --config ../contracts/biosignal-golden/v1/oracle/vitest.oracle.config.mjs)  # ORACLE_FILTER 기본=biquad(정본)",
+    "legacy_command": "(cd frontend && ORACLE_FILTER=legacy_fallback npx vitest run --config ../contracts/biosignal-golden/v1/oracle/vitest.oracle.config.mjs)",
+    "regenerate_command": "ORACLE_WRITE=1 을 붙여 두 모드 각각 실행  # 감독 승인 변경에서만",
     "stages": [
       "decoded",
       "clock",
@@ -75,7 +78,7 @@
     "stage_hashes": {
       "decoded": {
         "count": 4500,
-        "sha256": "1a70d8b690778489ad764831d5b6ab4a8bbaa470c8af884ce49dafe0c1d20d81"
+        "sha256": "36a8c6fb068a21107104a382b8fa6d98e97bdb2ecb2a6b1b0db076ce1a478fe6"
       },
       "clock": {
         "count": 4500,
@@ -83,41 +86,105 @@
       },
       "eeg_psd_bandpower": {
         "count": 140,
-        "sha256": "bb6aab31a93e3d9410039ed1b70338d34515d697bc1fd7076f1e57c18797c414"
+        "sha256": "ab4e27e3855e1c632eb21fc8df2b323a6231ea4322a9c0434b764246daecf2bc"
       },
       "eeg_raw_indices": {
         "count": 140,
-        "sha256": "26e24e15a61239275533e22e61988a5fe52a6851dacd354a4d606fa066d71940"
+        "sha256": "614322ece8a555735f496465d4dcb455ec5e48f05128111800b2d7c909f3f088"
       },
       "ppg_peaks_rr": {
         "count": 1491,
-        "sha256": "a27a7a7998bcfeb9e597b275d49f7b4c60bbeff12d8d3cb0207983ffb4cc62c9"
+        "sha256": "0280b411ee88015a0f20e5dabb45234364b86dd5bf39faa0311fb9e850f907ef"
       },
       "hrv_sdnn_respiration": {
         "count": 1491,
-        "sha256": "3a109e078d319e6fa9cdc262efa73bdf599d3611727a45f43e1264e8fb89809e"
+        "sha256": "e51b7cdf8364a2e61ef62a18e82ec490e75f763ea4ecdc6704e0c2edb76e188f"
       },
       "display": {
         "count": 140,
-        "sha256": "3f396d53323f9ad9d3a351ee295ebbabe1c399e3adbbf41fc693ca9aa8937a03"
+        "sha256": "4c1230028b3f02cffe42cc01f4e7e9ef2edec2309e1cd729306004dbcf8d49ee"
       },
       "acc": {
         "count": 1491,
-        "sha256": "0f00a69b327c98f898bbf0a083cd81c0ac177f8aa6554dce722bf8388e3d671c"
+        "sha256": "a026c952b07d0321f7d16bdb9421a149a57e352b8072863bcd0dd4e35461c799"
       }
     },
     "input": {
-      "stream_sha256": "90c276af9ad0d5e67d9fe5929d689fe02711183b05b2459d87fe3f4a564ae6ef",
+      "stream_sha256": "99a9c75f850a7edf78d37230fcaf7140034d2171e8e2fbab5c83118ab6b55e27",
       "schedule_sha256": "6e82d4ba705527abe080371de5618ebb0c7aac67f2292f29747891a05ac0cfa2"
     },
     "meta": {
+      "filter_mode": "biquad",
+      "fallback_warnings": 0,
       "packets": 4500,
       "eeg_emissions": 140,
       "ppg_emissions": 1491,
       "base_ms": 1760000000000
     },
+    "legacy_fallback": {
+      "expected_dir": "expected/legacy_fallback",
+      "status": "NON_CANONICAL — 제품 번들과 다른 필터 경로(1극 HP/LP·이동평균). 이전 expected 를 이름만 바꿔 보존. T02 의 기준으로 쓰지 않는다.",
+      "stage_hashes": {
+        "decoded": {
+          "count": 4500,
+          "sha256": "36a8c6fb068a21107104a382b8fa6d98e97bdb2ecb2a6b1b0db076ce1a478fe6"
+        },
+        "clock": {
+          "count": 4500,
+          "sha256": "5dccd5f3ec2941d5bd10a8f0397c6f1b6f56f599ba9e2313d6da44879522e741"
+        },
+        "eeg_psd_bandpower": {
+          "count": 140,
+          "sha256": "bb6aab31a93e3d9410039ed1b70338d34515d697bc1fd7076f1e57c18797c414"
+        },
+        "eeg_raw_indices": {
+          "count": 140,
+          "sha256": "26e24e15a61239275533e22e61988a5fe52a6851dacd354a4d606fa066d71940"
+        },
+        "ppg_peaks_rr": {
+          "count": 1491,
+          "sha256": "a27a7a7998bcfeb9e597b275d49f7b4c60bbeff12d8d3cb0207983ffb4cc62c9"
+        },
+        "hrv_sdnn_respiration": {
+          "count": 1491,
+          "sha256": "7d9e9cd065135bbe1cf81586f41f10821ae691087b9b5468546a40484e731311"
+        },
+        "display": {
+          "count": 140,
+          "sha256": "3f396d53323f9ad9d3a351ee295ebbabe1c399e3adbbf41fc693ca9aa8937a03"
+        },
+        "acc": {
+          "count": 1491,
+          "sha256": "a026c952b07d0321f7d16bdb9421a149a57e352b8072863bcd0dd4e35461c799"
+        }
+      },
+      "meta": {
+        "filter_mode": "legacy_fallback",
+        "fallback_warnings": 3542,
+        "packets": 4500,
+        "eeg_emissions": 140,
+        "ppg_emissions": 1491,
+        "base_ms": 1760000000000
+      }
+    },
+    "filter_path_evidence": {
+      "cause": "biquadjs package.json main=dist/BiquadFilters.js(IIFE, export 없음), module=dist/BiquadFilters.esm.js(export{makeBandpassFilter,makeNotchFilter,...}). vitest 기본 해석은 main → named import undefined → TS try/catch fallback.",
+      "product_bundle": "vite build --mode development(2026-10-26) 산출물 assets/useBand-*.js: applyNotchFilter 가 biquad 인스턴스(applyFilter 가 b0..b2,a1,a2 직접형 II 전치 구현)를 사용, fallbackNotchFilter 는 catch 경로로만 존재. 즉 제품은 진짜 biquad 사용.",
+      "oracle_fix": "vitest.oracle.config.mjs resolve.alias biquadjs → dist/BiquadFilters.esm.js (frontend/src 무수정). 시험이 named export 해석과 fallback 경고 0 건을 검증하고, legacy 모드는 fallback 경고>0 을 검증한다.",
+      "impact_on_numbers": "EEG 밴드파워·raw index 와 PPG RR/HR 가 달라진다(예: focusIndex 샘플점 0.055→0.266, 100초대 HR 105→134). 정본은 biquad."
+    },
     "hash_method": "sha256(canonical JSON: 키 순서 보존, NaN/±Infinity/-0 는 문자열 토큰)",
     "no_rust_generated_expected": true
+  },
+  "gf04": {
+    "cases": "expected/gf04/cases.json (독립 Python 기대값 16건: 누적 58~62s, RR 199/200/2000/2001, 최소박동 29/30, SDNN 합 29970/30000, 분모 N, 최근60, 버퍼120)",
+    "degenerate": "expected/gf04/ppg_degenerate.json (flat/noise/NaN/zeros — 기존 TS 거동 기록, oracle 특성)",
+    "ts_findings": [
+      "flat/zeros PPG: heartRate 0 이지만 sqi_overall=100(완벽 품질로 보고) — 유효 신호가 아닌데 품질 100",
+      "NaN 포함 PPG: sqi_overall=NaN, filteredData 에 NaN 전파(threw=false) — 0/null 로 격리하지 않음",
+      "noise PPG: 박동이 없는데 RR 16개·HR 113 산출 — 저품질 게이트 부재"
+    ],
+    "policy": "위 결함 후보는 이식 차이로 숨기지 않는다. 새 코어가 null/invalid 로 바꾸려면 algorithm_version 증가 + 골든 승인 필요(plan §5.2)."
   },
   "oracle_divergences": {
     "truncated": {
@@ -201,21 +268,34 @@
     "expected/gf02_reset_segment.json": "e28123f4bff195c063c0404ed6b2f9cc40bd9a37aa9e1e408aebc095ccc42e38",
     "expected/gf02_truncated.json": "40c9f8a0d56cc67e969d5ae5f00c678a99c7a9ffe30fc11bf4e630d00aa1745c",
     "expected/gf02_wrap32.json": "2b9336f0ffaac87b9b1ef4b0acdde142fd0cee47bcd9bd5939d9af71f6f18551",
-    "expected/oracle/acc.json": "c9a8ae67b68ec1b048260164b17704fa0863511ff7982059ebdbe9f8ae662dc6",
+    "expected/gf04/cases.json": "0074442204be09acb845d0b3529a370d03dbc2aa55a8a434add7eb1358915ceb",
+    "expected/gf04/ppg_degenerate.json": "ca31099c0b41ef9184d737c5e95799d61434d3d999f3a2a8dd7102242c0f660f",
+    "expected/legacy_fallback/acc.json": "06d44fdd4da5f5023c589a78ab983228263da956117bb08dd4ab146cd103eb7b",
+    "expected/legacy_fallback/clock.json": "97f76fb441e6622548a6c9836e97a93563c8971c871b06cfbcbb213af910a122",
+    "expected/legacy_fallback/decoded.json": "a524fcc4bdefc5ed88cfb7e0c5851aebe0368dc13d29380b7d471813907d99d9",
+    "expected/legacy_fallback/display.json": "a4d16f5ae245c862e94dc278443c61fcf51628fb84ec3132ccf5abe07657a9bb",
+    "expected/legacy_fallback/divergences.json": "55de8bba70d698bf85d7a9800e6951edc8c8dd31aadf976f1640ff93fa51328a",
+    "expected/legacy_fallback/eeg_psd_bandpower.json": "8675d404d3c753b5b31797aa2beb3e8c3fbb5c3a16fded55e1fb69c248d45489",
+    "expected/legacy_fallback/eeg_raw_indices.json": "15527d87b83590f96293c1b25b46c0d6d5db139a5ac2ca48eda37ab24b57a02a",
+    "expected/legacy_fallback/hrv_sdnn_respiration.json": "8b1df43b61c543a8ba135a9a40ea02e736dcc7cd7188859273a9f8e57964924e",
+    "expected/legacy_fallback/ppg_peaks_rr.json": "5012ba46fc5844111f3347947f1c690d13afcbc475a5f6443f030497b14c022f",
+    "expected/legacy_fallback/summary.json": "2e380d71fb9bc2ed20aa78cebc74fa7e51e1809c9a68fbd620f2e98e2b148998",
+    "expected/oracle/acc.json": "06d44fdd4da5f5023c589a78ab983228263da956117bb08dd4ab146cd103eb7b",
     "expected/oracle/clock.json": "97f76fb441e6622548a6c9836e97a93563c8971c871b06cfbcbb213af910a122",
-    "expected/oracle/decoded.json": "38fb7d28d7dcf7131687a38bd3e92c3603edc0756861761c97dc16f3ad9543dd",
-    "expected/oracle/display.json": "a4d16f5ae245c862e94dc278443c61fcf51628fb84ec3132ccf5abe07657a9bb",
+    "expected/oracle/decoded.json": "a524fcc4bdefc5ed88cfb7e0c5851aebe0368dc13d29380b7d471813907d99d9",
+    "expected/oracle/display.json": "5b234386928235fd2a87878f6e9d6e1f4d16972e564978b80e3275e45dfad9ff",
     "expected/oracle/divergences.json": "55de8bba70d698bf85d7a9800e6951edc8c8dd31aadf976f1640ff93fa51328a",
-    "expected/oracle/eeg_psd_bandpower.json": "8675d404d3c753b5b31797aa2beb3e8c3fbb5c3a16fded55e1fb69c248d45489",
-    "expected/oracle/eeg_raw_indices.json": "15527d87b83590f96293c1b25b46c0d6d5db139a5ac2ca48eda37ab24b57a02a",
-    "expected/oracle/hrv_sdnn_respiration.json": "2100695650af1094ea5860d967981d22086f4add653cb1f435be9bad54c7b283",
-    "expected/oracle/ppg_peaks_rr.json": "5012ba46fc5844111f3347947f1c690d13afcbc475a5f6443f030497b14c022f",
-    "expected/oracle/summary.json": "b05d3f1717fb8c3a3f29d260d92a23e6ef89db47b3e7a9d034e65dd59c0aa31d",
+    "expected/oracle/eeg_psd_bandpower.json": "d67cdc8abede8c699033bb96a90169b2df5c4d9f70d734c415f56fce32c60f3b",
+    "expected/oracle/eeg_raw_indices.json": "b01dc444445741a62a93b82f2fa2f6f3642f616544d66080051b0b50d980b939",
+    "expected/oracle/hrv_sdnn_respiration.json": "6624bf28aaffaefb86c4ff0bb73160091b418cf0baee41c09dbbc15ba9bfc0ab",
+    "expected/oracle/ppg_peaks_rr.json": "572375b31d78e1f46d01f1c010453a0346aaf1a77ddb5647be01aa7f567fb639",
+    "expected/oracle/summary.json": "48a4581d3cdc0e02afff06a5eafca4d1b0cb0e907d12c4881ded6f63ef06be41",
     "expected/scoring/gf05_scoring.json": "87724a8a05988553440220334e3f2230054a7d1913b090bfbcb007093ffc2d2d",
-    "oracle/oracle.oracle.test.ts": "36f82d165c50f2b4a7c4dd8bed02e2646292d063583f39d7fe4a8599951ae9aa",
-    "oracle/run-oracle.ts": "d8d0071f139c275093e0af127f46094fbf85898eec1f9ba4114d062d6e92bec8",
+    "oracle/gf04.oracle.test.ts": "2ad0c10886701d6b930b9113230e906d602e32c43f72a6bcc078d662fb45c996",
+    "oracle/oracle.oracle.test.ts": "015693ea41c5abfebac2b338e6e7af6aa0308b0fe75e38de439dbc66717a8bba",
+    "oracle/run-oracle.ts": "332718963db9ca7ebd8a18f6a12f89c01ff83fae0e5befcca6ad88b91327a1fb",
     "oracle/scoring.oracle.test.ts": "d006a4f28502290b3b9d76aad35db886814a8ef232b3128b8ad150411ee077bc",
-    "oracle/vitest.oracle.config.mjs": "b7897f8dc85ee636293427d822db0d32b83fd63a976017d16f16283c793469af",
+    "oracle/vitest.oracle.config.mjs": "db5809ac97b38cecd301d938584a7572b3fe0d6c843a4543fe6cab5860b6aa70",
     "packets/gf01_acc_signed16.bin": "5ac357ad90d39d6ff2e9aa41eb3dbf2bbb3b08890ba7628eb198c5e25a2ea5dc",
     "packets/gf01_eeg_signed24_leadoff.bin": "3feeef30211c9e6ee05e0c7004af54e2ef81304935d9d7c5102413f12aa6faaf",
     "packets/gf01_ppg_header_endian_probe.bin": "cae24e0d2bae260c0909d53b969622372f427c2aa11c75b7f575fec0fee941f1",
@@ -348,11 +428,12 @@
     "packets/gf02_wrap32/007_eeg.bin": "8433d39a2acd3632c324690f5673438ee74db8e5b7ebdcdaab15748afc876719",
     "synth/scenario.json": "bceb420784c939cf9c538da927da69be4f6020a21e571180c5fa58b57865219b",
     "synth/schedule.json": "6e82d4ba705527abe080371de5618ebb0c7aac67f2292f29747891a05ac0cfa2",
-    "synth/stream.bin": "90c276af9ad0d5e67d9fe5929d689fe02711183b05b2459d87fe3f4a564ae6ef",
-    "tools/build_manifest.py": "f43efe9397282321a94aa4d3f41de875f7934bd5ce50d17b2d217a3856ad3bad",
+    "synth/stream.bin": "99a9c75f850a7edf78d37230fcaf7140034d2171e8e2fbab5c83118ab6b55e27",
+    "tools/build_manifest.py": "120f8ccf2c1c883668c947f5dd971ee13d15849e17354b601cf9ec5c87d6526f",
+    "tools/gen_gf04.py": "95582f7eb832cfd28b55ac158af4e2a2cd7b5bc0f2a6add150fcfc4a44feb86e",
     "tools/gen_packets.py": "48194145439aac1a14c0c52383c92b2719424dc8ef28d7864a7bf595214d3fa9",
     "tools/gen_scoring.py": "d75c079503d66ce68831138b7773c8863219cbf6ef1ea9fab7eb1734ff0833f4",
-    "tools/gen_synthetic.py": "ea08348470385ecca425b42e7eec0efba847d860e1e577af06762ffbb01f79c6",
+    "tools/gen_synthetic.py": "2349dea2c0c46e4beb61260cc4567d46ffa97ff46e6079645471dad05f03461e",
     "tools/verify_packets.py": "c3743a89f3eb6d86510fa66143f885bbcdb77f699447ce6d0b3a565786e57173"
   }
 }

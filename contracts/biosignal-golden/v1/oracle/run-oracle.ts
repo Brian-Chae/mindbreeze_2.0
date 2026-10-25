@@ -21,6 +21,9 @@ import { scoreIndices } from '../../../../frontend/src/lib/eeg/eegPersonalScore'
 
 export const V1_DIR = join(__dirname, '..');
 export const BASE_MS = 1_760_000_000_000;
+export const FILTER_MODE = (process.env.ORACLE_FILTER || 'biquad') as 'biquad' | 'legacy_fallback';
+/** biquad 모드 expected 는 expected/oracle, fallback 은 expected/legacy_fallback. */
+export const ORACLE_DIR = FILTER_MODE === 'biquad' ? 'oracle' : 'legacy_fallback';
 
 export function canon(value: unknown): string {
   return JSON.stringify(value, (_k, v) => {
@@ -73,7 +76,8 @@ export async function runOracle(streamDir = join(V1_DIR, 'synth')): Promise<Stag
   AnalysisMetricsService.resetInstance();
   const svc = AnalysisMetricsService.getInstance();
   const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
-  const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  const fallbackWarns: string[] = [];
+  const warnSpy = vi.spyOn(console, 'warn').mockImplementation((...a: unknown[]) => { const m = String(a[0]); if (/기본 구현 사용|fallback 사용/.test(m)) fallbackWarns.push(m); });
 
   const rrCalls: { t: number; rr: number[]; ts: number[] }[] = [];
   const origPpg = svc.processPPGAnalysisMetrics.bind(svc);
@@ -125,8 +129,9 @@ export async function runOracle(streamDir = join(V1_DIR, 'synth')): Promise<Stag
       });
       out.hrv_sdnn_respiration.push({ i: ppgN, t_ms: Date.now() - BASE_MS, hrv: svc.getCurrentHRVMetrics(), respiratory_null_reason: svc.getRespiratoryNullReason(), rr_buffer: svc.getRRBufferStatus() });
     },
+    // 이전 버전은 d.activity/d.movement 를 읽어 전부 null 이었다 — 실제 페이로드 키는 indices/magnitude(rawBufferData 는 제외).
     onProcessedACC: (d: any) => {
-      out.acc.push({ t_ms: Date.now() - BASE_MS, activity: d.activity ?? null, movement: d.movement ?? null });
+      out.acc.push({ t_ms: Date.now() - BASE_MS, indices: d.indices, magnitude_n: d.magnitude?.length ?? 0, magnitude_last: d.magnitude?.length ? d.magnitude[d.magnitude.length - 1].value : null, motion: svc.getCurrentMotion() });
     },
   } as never);
 
@@ -162,7 +167,7 @@ export async function runOracle(streamDir = join(V1_DIR, 'synth')): Promise<Stag
   vi.useRealTimers();
   vi.restoreAllMocks();
   AnalysisMetricsService.resetInstance();
-  out.meta = { packets: sched.length, eeg_emissions: eegN, ppg_emissions: ppgN, base_ms: BASE_MS };
+  out.meta = { filter_mode: FILTER_MODE, fallback_warnings: fallbackWarns.length, packets: sched.length, eeg_emissions: eegN, ppg_emissions: ppgN, base_ms: BASE_MS };
   void r6;
   return out;
 }
