@@ -15,6 +15,8 @@ export interface QueuedObject {
   kind: ObjectKind; alias: string; meta: RawMeta | ArtifactMeta; payload: ArrayBuffer;
   state: ObjectState; attempts: number; lastError: string | null; retryAfter: number; createdAt: number;
 }
+/** payload 를 뺀 큐 항목(목록·카운트·전송 선택용). 수백 건 적체에도 메모리에 payload 를 올리지 않는다. */
+export type QueuedMeta = Omit<QueuedObject, 'payload'>;
 export interface AckReceipt {
   id: string; accountId: string; sessionId: string; participantId: string | null;
   meta?: RawMeta | ArtifactMeta; kind: ObjectKind; alias: string; sha256: string; serverId: string; size_bytes: number; verified_at_us: string;
@@ -31,7 +33,7 @@ export interface JournalPacket {
 interface LeaseRecord { id: string; owner: string; token: number; expiresAt: number }
 interface EventRecord { id: string; accountId: string; sessionId: string; participantId: string | null; event: GapEvent | CloseIntent; sent: boolean }
 
-export const LEASE_TTL_MS = 10_000;
+export const LEASE_TTL_MS = 30_000;
 export const LEASE_RENEW_MS = 2_000;
 export const MAX_ATTEMPTS = 8;
 export const MAX_BACKOFF_MS = 60_000;
@@ -44,6 +46,8 @@ const OBJECT_STORES: BiosignalStore[] = ['sealed_chunks', 'feature_outbox', 'ind
 export class BiosignalQueue {
   private token = 0;
   private dbPromise: Promise<IDBDatabase> | null = null;
+  private metaIndex: Map<string, QueuedMeta> | null = null;
+  private metaLoading: Promise<Map<string, QueuedMeta>> | null = null;
   private readonly scope: CaptureScope;
   private readonly tabId: string;
   private readonly now: () => number;
@@ -86,7 +90,8 @@ export class BiosignalQueue {
   }
   private async checkLease(tx: IDBTransaction): Promise<void> {
     const lease = await idbRequest<LeaseRecord | undefined>(tx.objectStore('leases').get(this.scopeKey));
-    if (!lease || lease.owner !== this.tabId || lease.token !== this.token || lease.expiresAt <= this.now()) {
+    // 만료(expiresAt)만으로 권한을 잃지 않는다: 메인 스레드가 오래 멈췄다 돌아와도 다른 창이 가져가지 않았으면 소유자다.
+    if (!lease || lease.owner !== this.tabId || lease.token !== this.token) {
       tx.abort();
       throw new Error('lease_lost: 수집 권한을 잃었습니다');
     }
@@ -150,7 +155,7 @@ export class BiosignalQueue {
   /** index 할당 + payload 등록 + journal GC를 한 트랜잭션으로 묶는다. */
   async sealRaw(meta: RawMeta, payload: ArrayBuffer, packetIds: string[]): Promise<QueuedObject> {
     const { signal_type: signal, stream_id: stream, segment_id: segment, chunk_index: index } = meta.header;
-    return this.write(['sealed_chunks', 'next_indices', 'packets'], async tx => {
+    const sealed = await this.write(['sealed_chunks', 'next_indices', 'packets'], async tx => {
       const indices = tx.objectStore('next_indices');
       const key = this.indexKey(signal, stream, segment);
       const row = await idbRequest<{ next: number } | undefined>(indices.get(key));
@@ -162,6 +167,8 @@ export class BiosignalQueue {
       for (const id of packetIds) packets.delete(id);
       return object;
     });
+    this.indexPut(sealed);
+    return sealed;
   }
 
   /** gap 순번은 회차 단위로 영속 증가한다(재시작해도 되돌아가지 않음). */
@@ -201,11 +208,75 @@ export class BiosignalQueue {
   }
   async enqueueArtifact(meta: ArtifactMeta, payload: ArrayBuffer, drafts: { kind: 'feature' | 'display'; id: string }[] = []): Promise<QueuedObject> {
     const object = this.newObject(meta.artifact_kind, meta.artifact_alias, meta, payload);
-    return this.write([storeFor(meta.artifact_kind), 'next_indices'], async tx => {
+    const saved = await this.write([storeFor(meta.artifact_kind), 'next_indices'], async tx => {
       const saved = await this.putObject(tx.objectStore(storeFor(meta.artifact_kind)), object);
       for (const draft of drafts) tx.objectStore('next_indices').delete(`${this.scopeKey}|draft|${draft.kind}|${draft.id}`);
       return saved;
     });
+    this.indexPut(saved);
+    return saved;
+  }
+
+  /** 이 범위(scopeKey)의 큐 항목 메타를 한 번 훑어 메모리 인덱스로 만든다(payload 는 버린다). */
+  private async ensureIndex(): Promise<Map<string, QueuedMeta>> {
+    if (this.metaIndex) return this.metaIndex;
+    this.metaLoading ??= (async () => {
+      const db = await this.db();
+      const index = new Map<string, QueuedMeta>();
+      const prefix = `${this.scopeKey}|`;
+      for (const store of OBJECT_STORES) {
+        await new Promise<void>((resolve, reject) => {
+          const request = db.transaction([store], 'readonly').objectStore(store).openCursor();
+          request.onerror = () => reject(request.error);
+          request.onsuccess = () => {
+            const cursor = request.result;
+            if (!cursor) { resolve(); return; }
+            if (String(cursor.key).startsWith(prefix)) {
+              const { payload: _payload, ...meta } = cursor.value as QueuedObject;
+              if (this.owns(meta)) index.set(meta.id, meta);
+            }
+            cursor.continue();
+          };
+        });
+      }
+      this.metaIndex = index;
+      return index;
+    })();
+    return this.metaLoading;
+  }
+  private indexPut(object: QueuedObject | QueuedMeta): void {
+    if (!this.metaIndex) return;
+    const { payload: _payload, ...meta } = object as QueuedObject;
+    this.metaIndex.set(meta.id, meta);
+  }
+  /** payload 없는 전체 목록(생성 순). close/복구/카운트용. */
+  async objectsMeta(): Promise<QueuedMeta[]> {
+    return [...(await this.ensureIndex()).values()].sort((a, b) => a.createdAt - b.createdAt);
+  }
+  async counts(): Promise<{ pending: number; blocked: number }> {
+    let pending = 0, blocked = 0;
+    for (const m of (await this.ensureIndex()).values()) { if (m.state === 'dead_letter') blocked += 1; else pending += 1; }
+    return { pending, blocked };
+  }
+  /** 지금 보낼 수 있는 항목 최대 limit 건(payload 포함, 오래된 순). 나머지는 읽지 않는다. */
+  async dueBatch(limit: number, now: number): Promise<{ batch: QueuedObject[]; blocked: number }> {
+    const metas = await this.objectsMeta();
+    const due = metas.filter(m => m.state === 'pending' && m.retryAfter <= now).slice(0, limit);
+    const batch: QueuedObject[] = [];
+    for (const m of due) {
+      const object = await this.read(storeFor(m.kind), s => s.get(m.id) as IDBRequest<QueuedObject | undefined>);
+      if (object) batch.push(object);
+    }
+    return { batch, blocked: metas.filter(m => m.state === 'dead_letter').length };
+  }
+  /** 저장소에 항목이 하나라도 있는지(payload 를 읽지 않음). 재진입 복구 판단용. */
+  async hasStoredObjects(): Promise<boolean> {
+    const prefix = `${this.scopeKey}|`;
+    for (const store of OBJECT_STORES) {
+      const keys = await this.read(store, s => s.getAllKeys() as IDBRequest<IDBValidKey[]>);
+      if (keys.some(key => String(key).startsWith(prefix))) return true;
+    }
+    return false;
   }
 
   async objects(): Promise<QueuedObject[]> {
@@ -228,21 +299,29 @@ export class BiosignalQueue {
       tx.objectStore('ack_receipts').put({ ...receipt, meta: object.meta, id: object.id, accountId: object.accountId, sessionId: object.sessionId, participantId: object.participantId } satisfies AckReceipt);
       tx.objectStore(store).delete(object.id);
     });
+    this.metaIndex?.delete(object.id);
   }
   /** permanent(403/409 등)·8회 초과는 dead_letter로 보관. 재시도 횟수로 삭제하지 않는다. */
   async fail(id: string, reason: string, permanent = false): Promise<void> {
-    const object = (await this.objects()).find(o => o.id === id);
-    if (!object) return;
+    const known = (await this.ensureIndex()).get(id);
+    if (!known) return;
+    const object = await this.read(storeFor(known.kind), s => s.get(id) as IDBRequest<QueuedObject | undefined>);
+    if (!object) { this.metaIndex?.delete(id); return; }
     const attempts = object.attempts + 1;
     const state: ObjectState = permanent || attempts >= MAX_ATTEMPTS ? 'dead_letter' : object.state;
     const next: QueuedObject = { ...object, attempts, state, lastError: reason, retryAfter: this.now() + Math.min(MAX_BACKOFF_MS, 1000 * 2 ** attempts) };
     await this.write([storeFor(object.kind)], async tx => { tx.objectStore(storeFor(object.kind)).put(next); });
+    this.indexPut(next);
   }
   /** 명시 재개(재인증 후): dead_letter를 pending으로 되돌린다. payload는 그대로. */
   async resume(id: string): Promise<void> {
-    const object = (await this.objects()).find(o => o.id === id);
+    const known = (await this.ensureIndex()).get(id);
+    if (!known) return;
+    const object = await this.read(storeFor(known.kind), s => s.get(id) as IDBRequest<QueuedObject | undefined>);
     if (!object) return;
-    await this.write([storeFor(object.kind)], async tx => { tx.objectStore(storeFor(object.kind)).put({ ...object, state: 'pending', attempts: 0, retryAfter: 0 }); });
+    const resumed: QueuedObject = { ...object, state: 'pending', attempts: 0, retryAfter: 0 };
+    await this.write([storeFor(object.kind)], async tx => { tx.objectStore(storeFor(object.kind)).put(resumed); });
+    this.indexPut(resumed);
   }
 
   // ── gap / close intent (멱등 events outbox) ──

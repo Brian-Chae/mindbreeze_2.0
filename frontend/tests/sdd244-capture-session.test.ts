@@ -92,7 +92,7 @@ describe('SDD244 T08 capture session', () => {
     let now = 1000;
     const queue = new BiosignalQueue(scope, 'tab-a', () => now);
     const session = new BiosignalCaptureSession({ queue, createId }); await session.start();
-    now = 20_000; const other = new BiosignalQueue(scope, 'tab-b', () => now); await other.acquire();
+    now = 40_000; const other = new BiosignalQueue(scope, 'tab-b', () => now); await other.acquire();
     session.receive(packetFactory('eeg', 50)()); await session.flush();
     expect(session.status).toBe('stopped'); expect(session.stopReason).toBe('lease_lost');
   });

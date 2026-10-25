@@ -92,7 +92,7 @@ export class BiosignalCaptureSession {
 
   /** 이전 실행이 남긴 journal: 새 청크로 봉인하고, 마지막 영속 이후는 unknown tail gap으로 남긴다. */
   private async recover(): Promise<void> {
-    for (const item of [...await this.queue.objects(), ...await this.queue.receipts()]) {
+    for (const item of [...await this.queue.objectsMeta(), ...await this.queue.receipts()]) {
       if (item.kind !== 'raw' || !item.meta || !('header' in item.meta)) continue;
       const h = item.meta.header;
       const first = h.first_sample_index;
@@ -365,7 +365,7 @@ export class BiosignalCaptureSession {
       }
     }
     // 재시작 전 봉인/ACK된 산출물도 종료 scope와 마지막 순번에 포함한다.
-    const persisted = [...await this.queue.objects(), ...await this.queue.receipts()];
+    const persisted = [...await this.queue.objectsMeta(), ...await this.queue.receipts()];
     const restored = new Map<string, StreamClose>();
     for (const item of persisted) {
       const meta = item.meta;
@@ -393,7 +393,7 @@ export class BiosignalCaptureSession {
     }
     const seen = new Set<string>();
     const expected: ExpectedArtifact[] = [];
-    for (const item of [...(await this.queue.expected()), ...(await this.queue.objects()).map(o => ({ kind: o.kind, alias: o.alias, sha256: o.meta.checksum }))]) {
+    for (const item of [...(await this.queue.expected()), ...(await this.queue.objectsMeta()).map(o => ({ kind: o.kind, alias: o.alias, sha256: o.meta.checksum }))]) {
       const key = `${item.kind}|${item.alias}`;
       if (!seen.has(key)) { seen.add(key); expected.push(item); }
     }

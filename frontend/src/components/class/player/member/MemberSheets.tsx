@@ -94,7 +94,7 @@ function GroupRow({ group, props }: GroupRowProps) {
                   <circle className="mp-mring__val" cx="32" cy="32" r="28" pathLength={100} strokeDasharray={`${Math.round(fraction * 1000) / 10} 100`} transform="rotate(-90 32 32)" />
                 )}
               </svg>
-              <span className="mp-mring__mv"><b>{value === null ? '—' : value}</b><i>{metric.unit}</i></span>
+              <span className="mp-mring__mv"><b>{value === null ? (metric.key === 'respiration' || metric.key === 'hrv' ? '측정 중' : '—') : value}</b><i>{value === null ? '' : metric.unit}</i></span>
             </span>
             <span className="mp-mcell__label">{metric.label}</span>
           </button>

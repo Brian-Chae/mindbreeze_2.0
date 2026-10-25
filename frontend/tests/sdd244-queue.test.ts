@@ -37,7 +37,7 @@ describe('SDD244 durable queue', () => {
     const first = new BiosignalQueue(scope, 'tab-a', () => now); await first.acquire();
     const second = new BiosignalQueue(scope, 'tab-b', () => now);
     await expect(second.acquire()).rejects.toThrow('lease');
-    now = 10101; await second.acquire();
+    now = 30101; await second.acquire(); // LEASE_TTL_MS(30s) 경과 후 인계
     await expect(first.enqueueArtifact({ artifact_alias: 'A', artifact_kind: 'feature', stream_id: null, segment_id: null, signal: null, sequence: 0, row_count: 1, schema_version: 'v1', checksum, size_bytes: 3 }, payload)).rejects.toThrow('lease');
   });
   it('계정 B는 계정 A 객체를 읽거나 전송하지 못한다', async () => {

@@ -49,7 +49,7 @@ def _us(moment: datetime) -> str:
 def resolve_participant(sid: UUID, participant_id: UUID | None, db: DBSession, *, current_user_id, entry_credential):
     return session_service.resolve_upload_participant(
         sid, str(participant_id) if participant_id else None, current_user_id, db,
-        entry_credential=entry_credential,
+        entry_credential=entry_credential, allow_completed=True,
     )
 
 

@@ -111,10 +111,10 @@ describe('내 상태 시트 — 6지표 2×3 격자', () => {
     await act(async () => { qa('[data-pz="mcell"]')[3].click(); });
     expect(actions.onHeroChange).toHaveBeenCalledWith('bpm');
   });
-  it('값이 아직 없으면 "—" 로 표시한다(빈 칸 금지)', async () => {
+  it('HRV·호흡 값이 아직 없으면 "측정 중" 으로 표시한다(빈 칸 금지)', async () => {
     const base = memberCaseViewProps('M01');
     await mount('M01', 'status', { snapshot: { ...base.snapshot, hrv: null } });
-    expect(qa('[data-pz="mcell"]')[5].querySelector('.mp-mring__mv b')?.textContent).toBe('—');
+    expect(qa('[data-pz="mcell"]')[5].querySelector('.mp-mring__mv b')?.textContent).toBe('측정 중');
   });
   it.each([
     ['M07', '밴드 없이 참여 중이에요', 'LINK BAND를 연결하면 내 몸과 마음의 상태를 볼 수 있어요.', '기기에서 연결하기'],

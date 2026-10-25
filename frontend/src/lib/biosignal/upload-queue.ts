@@ -7,7 +7,9 @@ import type { ArtifactMeta, BiosignalApi, RawMeta } from '../api/biosignal';
 import type { BiosignalQueue, QueuedObject } from './durable-queue';
 
 export type PutObject = (url: string, payload: ArrayBuffer, headers: Record<string, string>) => Promise<void>;
-export const UPLOAD_CONCURRENCY = 2;
+export const UPLOAD_CONCURRENCY = 4;
+/** 한 번에 payload 를 읽어 보낼 최대 건수. 적체돼도 메모리에는 이 만큼만 올린다. */
+export const UPLOAD_BATCH = 24;
 export interface UploadSummary { acked: number; failed: number; blocked: number }
 
 class Stale extends Error {}
@@ -36,10 +38,8 @@ async function uploadOne(queue: BiosignalQueue, api: BiosignalApi, object: Queue
 
 export async function uploadBiosignalQueue(queue: BiosignalQueue, api: BiosignalApi, put: PutObject, active: () => boolean, now: () => number = Date.now): Promise<UploadSummary> {
   const summary: UploadSummary = { acked: 0, failed: 0, blocked: 0 };
-  const todo = (await queue.objects()).filter(o => {
-    if (o.state === 'dead_letter') { summary.blocked += 1; return false; }
-    return o.retryAfter <= now();
-  });
+  const { batch: todo, blocked } = await queue.dueBatch(UPLOAD_BATCH, now());
+  summary.blocked = blocked;
   let cursor = 0;
   const worker = async () => {
     while (cursor < todo.length && active()) {
@@ -48,6 +48,8 @@ export async function uploadBiosignalQueue(queue: BiosignalQueue, api: Biosignal
         if (error instanceof Stale) return; // 계정/탭 변경: 사본 보존, 시도 횟수도 올리지 않는다.
         summary.failed += 1;
         // 403/409(권한·동의 철회·충돌)는 재시도해도 같으므로 즉시 보관 상태로 전환한다. 삭제는 하지 않는다.
+        // 409 는 '이미 저장'이 아니다: 같은 내용 재요청은 200(upload_url=null)로 오고, 409 는 같은 슬롯·alias 에 다른 내용이 있다는 뜻이라
+        // 성공으로 간주하면 데이터가 유실된다. 영구 재시도하지 않고 보관(dead_letter)해 '전송 확인 필요'로 노출한다.
         const permanent = error instanceof ApiError && [400, 403, 404, 409, 413, 422].includes(error.status);
         try { await queue.fail(object.id, error instanceof Error ? error.message : 'upload_failed', permanent); } catch { /* lease 상실: 사본은 그대로 */ }
       }

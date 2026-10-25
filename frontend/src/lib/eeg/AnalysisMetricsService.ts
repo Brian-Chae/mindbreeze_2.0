@@ -370,7 +370,10 @@ export class AnalysisMetricsService {
   // ---------- HRV 계산 (haru_band_app 이식) ----------
 
   private updateRRIntervalBuffer(rrIntervals: number[], rrEndTimestamps?: number[]): void {
-    const stamped = rrEndTimestamps !== undefined && rrEndTimestamps.length === rrIntervals.length;
+    // 시각이 하나라도 유한하지 않으면(샘플 시각 누락) 시각 중복 제거를 쓰지 않고 RR 을 그대로 쌓는다.
+    // 예전에는 NaN 시각 박동을 전부 폐기해 RR 버퍼가 비고 HRV·호흡이 영원히 null 이었다.
+    const stamped = rrEndTimestamps !== undefined && rrEndTimestamps.length === rrIntervals.length
+      && rrEndTimestamps.every(Number.isFinite);
     let candidates = rrIntervals.map((rr, i) => ({ rr, ts: stamped ? rrEndTimestamps![i] : NaN }));
     if (stamped) {
       // 시각 기준이 크게 과거로 돌아가면(재연결·clock reset) 새 구간으로 보고 커서를 푼다.

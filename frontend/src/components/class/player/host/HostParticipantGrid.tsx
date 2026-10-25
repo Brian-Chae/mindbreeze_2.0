@@ -86,7 +86,7 @@ function HostTile({ p, metric, allOff, netBad, pressed, onSelect }: {
           <span className="hp-tile__badge" data-kind={badge} aria-hidden="true">{badge === 'speak' ? <Mic strokeWidth={2} /> : <Hand strokeWidth={2} />}</span>
         ) : null}
         <StatusRing variant="mini" fraction={value === null ? 0 : metricFraction(metric, value)} tone="live" colorVar={metric.colorVar} ariaLabel={`${metric.label} ${value ?? '측정 중'}`}>
-          <b className="hp-ring-num">{value === null ? '—' : value}</b>
+          <b className="hp-ring-num">{value === null ? (metric.key === 'respiration' || metric.key === 'hrv' ? '측정 중' : '—') : value}</b>
           <small className="hp-ring-label">{metric.short}</small>
         </StatusRing>
         <span className="hp-tile__nm">{p.name}</span>
@@ -139,7 +139,7 @@ function HostTable({ participants, metric, selectedId, onSelect }: {
               </td>
               {PLAYER_METRICS.map((m) => {
                 const v = hostValueOf(p, m.key);
-                return <td key={m.key} data-sel={m.key === metric.key ? 'true' : undefined} data-mu={v === null ? 'true' : undefined}>{v === null ? '—' : v}</td>;
+                return <td key={m.key} data-sel={m.key === metric.key ? 'true' : undefined} data-mu={v === null ? 'true' : undefined}>{v === null ? (m.key === 'respiration' || m.key === 'hrv' ? '측정 중' : '—') : v}</td>;
               })}
             </tr>
           ))}
