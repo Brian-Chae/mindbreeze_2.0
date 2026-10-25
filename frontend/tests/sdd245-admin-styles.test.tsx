@@ -38,7 +38,8 @@ describe('SDD-245 기관·플랫폼 화면 스타일', () => {
   });
 
   it('기관 홈 초대 발송 CTA 와 플랫폼 홈 등록 CTA 가 buttonClass 를 쓴다', () => {
-    const org = read('pages/OrgDashboardPage.tsx');
+    // 초대 폼은 공용 컴포넌트(counselor-invite-section)로 이동 — 대시보드·구성원 페이지 공용
+    const org = read('components/org/counselor-invite-section.tsx');
     expect(org).toContain("buttonClass({ className: 'w-full md:w-auto' })");
     expect(org).not.toContain('h-[42px]');
     const platform = read('pages/admin/OrgManagementPage.tsx');
