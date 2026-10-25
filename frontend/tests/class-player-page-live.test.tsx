@@ -466,3 +466,23 @@ describe('SDD-223 진행 화면 내부 초대', () => {
     await renderPage(); expect(lastProps().onInvite).toBeUndefined();
   });
 });
+
+describe('손들기 실시간 반영 (hand-raise-realtime)', () => {
+  beforeEach(() => { h.session = makeSession('in_progress', { class_id: 'c1' }); });
+  const rowOf = (id: string) => lastProps().rows.find((r: { participant_id: string }) => r.participant_id === id);
+  it('speaking_changed 수신 즉시(폴링 대기 없이) 상담사 목록의 손들기가 켜지고 내려간다', async () => {
+    await renderPage();
+    expect(rowOf('a').raise_hand).toBe(false);
+    await fire(() => (h.liveOptions.onSpeakingChanged as (e: unknown) => void)({ session_id: 's1', participant_id: 'a', raise_hand: true, speaking: false }));
+    expect(rowOf('a').raise_hand).toBe(true);
+    await fire(() => (h.liveOptions.onSpeakingChanged as (e: unknown) => void)({ session_id: 's1', participant_id: 'a', raise_hand: false, speaking: true }));
+    expect(rowOf('a').raise_hand).toBe(false);
+    expect(rowOf('a').speaking).toBe(true);
+  });
+  it('참여 스냅샷(participation.version>=0) 경로에서도 손들기가 즉시 반영된다', async () => {
+    await renderPage();
+    h.participation = { sessionId: 's1', version: 3, revoked: false, participants: { a: { participant_id: 'a', entered_at: null, presence_state: 'connected' }, b: { participant_id: 'b', entered_at: null, presence_state: 'connected' } } };
+    await fire(() => (h.liveOptions.onSpeakingChanged as (e: unknown) => void)({ session_id: 's1', participant_id: 'b', raise_hand: true, speaking: false }));
+    expect(rowOf('b').raise_hand).toBe(true);
+  });
+});

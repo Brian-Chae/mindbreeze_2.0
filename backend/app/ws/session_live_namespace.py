@@ -1295,7 +1295,7 @@ async def broadcast_speaking(session_id: str, payload: dict) -> None:
         await sio.emit(
             "speaking_changed", body, room=_room_self(session_id, pid), namespace=_NAMESPACE
         )
-    logger.info("[WS /session-live] broadcast speaking_changed → session:%s", session_id)
+    logger.warning("[WS /session-live] broadcast speaking_changed → session:%s participant:%s raise_hand=%s", session_id, payload.get("participant_id"), payload.get("raise_hand"))
 
 
 async def broadcast_participant_promoted(session_id: str, participant_id: str, payload: dict) -> None:
@@ -1710,15 +1710,29 @@ def audio_state_for(session_id, *, now: float | None = None) -> dict | None:
 # ---------------------------------------------------------------------------
 
 
+def _log_schedule_result(future) -> None:
+    """예약된 코루틴의 예외를 삼키지 않고 경고 로그로 남긴다(REST 스레드 → WS 루프 발행 실패 가시화)."""
+    try:
+        exc = future.exception()
+    except Exception:  # 취소 등
+        return
+    if exc is not None:
+        logger.warning("[WS /session-live] 예약 발행 실패: %r", exc, exc_info=exc)
+
+
 def _schedule(coro) -> None:
     """캡처한 이벤트 루프에 코루틴을 예약한다. 루프가 없으면(테스트 등) 발행을 생략한다."""
     loop = _loop
-    if loop is not None:
+    if loop is not None and not loop.is_closed():
         try:
-            asyncio.run_coroutine_threadsafe(coro, loop)
+            future = asyncio.run_coroutine_threadsafe(coro, loop)
+            future.add_done_callback(_log_schedule_result)
             return
         except Exception:
-            pass
+            logger.warning("[WS /session-live] 이벤트 예약 실패", exc_info=True)
+    else:
+        # 서버 재기동 직후 WS 연결이 한 번도 없으면 _loop 가 비어 발행이 사라진다 — 무음 생략 금지.
+        logger.warning("[WS /session-live] 이벤트 루프 없음 — 발행 생략 (WS 미연결/종료)")
     # 실행 중 루프 없음 — "coroutine never awaited" 경고 방지 후 생략
     coro.close()
 
