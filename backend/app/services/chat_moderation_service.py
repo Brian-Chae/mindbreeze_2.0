@@ -314,3 +314,78 @@ def report_user(
         db.rollback()
         raise
     return _result(report)
+
+
+# ── 차단 해제·목록·신고 철회 ──
+
+REPORT_SUBMITTED = "submitted"
+REPORT_WITHDRAWN = "withdrawn"
+
+
+def list_my_blocks(user_id, db: DBSession) -> list[dict]:
+    """내가 건 차단(blocker_id == 나)만 최신순. 차단당한 쪽에는 노출하지 않는다."""
+    uid = _uid(user_id)
+    rows = (
+        db.query(ChatBlock)
+        .filter(ChatBlock.blocker_id == uid)
+        .order_by(ChatBlock.created_at.desc())
+        .all()
+    )
+    result: list[dict] = []
+    for b in rows:
+        other = b.user_high_id if _uid(b.user_low_id) == uid else b.user_low_id
+        user = db.query(User).filter(User.id == other).first()
+        report = db.query(ChatReport).filter(ChatReport.id == b.report_id).first() if b.report_id else None
+        result.append(
+            {
+                "user_id": str(other),
+                "name": display_user_name(user.name, user.status) if user else None,
+                "blocked_at": b.created_at,
+                "report_id": str(b.report_id) if b.report_id else None,
+                "report_status": report.status if report else None,
+            }
+        )
+    return result
+
+
+def unblock_user(user_id, target_user_id, db: DBSession) -> None:
+    """차단을 건 본인(blocker)만 해제한다. 그 외(차단당한 쪽·무관한 사람)는 404."""
+    not_found = HTTPException(status_code=404, detail="차단 내역을 찾을 수 없습니다")
+    try:
+        low, high = pair_key(user_id, target_user_id)
+    except ValueError:
+        raise not_found
+    block = (
+        db.query(ChatBlock)
+        .filter(ChatBlock.user_low_id == low, ChatBlock.user_high_id == high)
+        .first()
+    )
+    if block is None or block.blocker_id != _uid(user_id):
+        raise not_found
+    db.delete(block)
+    db.commit()
+
+
+def withdraw_report(user_id, report_id, db: DBSession) -> dict:
+    """신고자 본인이 접수 상태의 신고를 철회한다(멱등). 차단은 별도로 해제한다."""
+    not_found = HTTPException(status_code=404, detail="신고를 찾을 수 없습니다")
+    try:
+        rid = UUID(str(report_id))
+    except ValueError:
+        raise not_found
+    report = db.query(ChatReport).filter(ChatReport.id == rid).first()
+    if report is None or report.reporter_id != _uid(user_id):
+        raise not_found
+    if report.status == REPORT_WITHDRAWN:
+        return {"report_id": str(report.id), "status": report.status}
+    if report.status != REPORT_SUBMITTED:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "REPORT_ALREADY_PROCESSED", "message": "이미 처리된 신고는 철회할 수 없습니다"},
+        )
+    from datetime import datetime, timezone
+
+    report.status = REPORT_WITHDRAWN
+    report.withdrawn_at = datetime.now(timezone.utc)
+    db.commit()
+    return {"report_id": str(report.id), "status": report.status}

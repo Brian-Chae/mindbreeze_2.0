@@ -197,3 +197,25 @@ class ChatReportResponse(BaseModel):
     reported: bool = True
     blocked: bool = True
     report_id: str
+
+
+class ChatBlockOut(BaseModel):
+    """내가 건 차단 1건."""
+    user_id: str
+    name: str | None = None
+    blocked_at: datetime | None = None
+    report_id: str | None = None
+    report_status: str | None = None
+
+
+class ChatBlockListResponse(BaseModel):
+    blocks: list[ChatBlockOut]
+
+
+class ChatUnblockResponse(BaseModel):
+    unblocked: bool = True
+
+
+class ChatReportWithdrawResponse(BaseModel):
+    report_id: str
+    status: str

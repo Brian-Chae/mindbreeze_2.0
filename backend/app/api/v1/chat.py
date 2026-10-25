@@ -6,6 +6,10 @@ from sqlalchemy.orm import Session as DBSession
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.schemas.chat import (
+    ChatBlockListResponse,
+    ChatBlockOut,
+    ChatReportWithdrawResponse,
+    ChatUnblockResponse,
     ChatReportRequest,
     ChatReportResponse,
     InvitableCounselorOut,
@@ -262,3 +266,36 @@ def report_chat_user(
         db=db,
     )
     return ChatReportResponse(**result)
+
+
+@router.post("/reports/{report_id}/withdraw", response_model=ChatReportWithdrawResponse)
+def withdraw_chat_report(
+    report_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """내가 접수한 신고 철회 — 접수 상태만 가능, 차단은 유지(별도 해제)."""
+    return ChatReportWithdrawResponse(
+        **chat_moderation_service.withdraw_report(current_user["id"], report_id, db)
+    )
+
+
+@router.get("/blocks", response_model=ChatBlockListResponse)
+def list_chat_blocks(
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """내가 건 차단 목록."""
+    items = chat_moderation_service.list_my_blocks(current_user["id"], db)
+    return ChatBlockListResponse(blocks=[ChatBlockOut(**i) for i in items])
+
+
+@router.delete("/blocks/{user_id}", response_model=ChatUnblockResponse)
+def unblock_chat_user(
+    user_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """차단 해제 — 차단을 건 본인만 가능."""
+    chat_moderation_service.unblock_user(current_user["id"], user_id, db)
+    return ChatUnblockResponse()

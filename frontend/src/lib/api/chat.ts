@@ -230,3 +230,23 @@ export function isChatBlockedError(error: unknown): boolean {
   const data = error.data as { detail?: { code?: string } } | null;
   return data?.detail?.code === 'CHAT_BLOCKED';
 }
+
+// ── 차단 목록·해제, 신고 철회 ──────────────────────────────
+
+export interface ChatBlockItem {
+  user_id: string;
+  name: string | null;
+  blocked_at: string | null;
+  report_id: string | null;
+  /** submitted(접수) | withdrawn(철회) | 관리자 처리 상태 */
+  report_status: string | null;
+}
+
+export const listChatBlocks = (): Promise<{ blocks: ChatBlockItem[] }> =>
+  apiClient.get<{ blocks: ChatBlockItem[] }>('/chat/blocks');
+
+export const unblockChatUser = (userId: string): Promise<{ unblocked: boolean }> =>
+  apiClient.delete<{ unblocked: boolean }>(`/chat/blocks/${encodeURIComponent(userId)}`);
+
+export const withdrawChatReport = (reportId: string): Promise<{ report_id: string; status: string }> =>
+  apiClient.post<{ report_id: string; status: string }>(`/chat/reports/${encodeURIComponent(reportId)}/withdraw`);

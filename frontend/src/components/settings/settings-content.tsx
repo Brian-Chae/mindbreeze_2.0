@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Bell, Bluetooth, ChevronRight, Info, ShieldCheck, UserRound } from 'lucide-react';
+import { Ban, Bell, Bluetooth, ChevronRight, Info, ShieldCheck, UserRound } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { PrivacyPolicyLink } from '../legal/PrivacyPolicyLink';
@@ -10,6 +10,7 @@ import NotificationGroups from './notification-groups';
 import WebPushCard from './WebPushCard';
 import { PrivacyConsentsSection } from './privacy-consents';
 import { AccountDeletionSection } from './account-deletion';
+import { BlockedUsersList } from '../chat/blocked-users-list';
 
 function Group({ title, description, icon, children }: { title: string; description: string; icon: ReactNode; children: ReactNode }) {
   return <details data-settings-group className="group border-b border-[#E9E2EB] last:border-b-0">
@@ -43,6 +44,7 @@ export default function SettingsContent() {
     <div className="overflow-hidden rounded-[18px] border border-[#E9E2EB] bg-white">
       <Group title="내 계정" description={user?.role === 'platform_admin' ? '계정 정보 확인' : '기본 정보 · 프로필 관리'} icon={<UserRound size={24} />}><AccountSettings /></Group>
       <Group title="알림" description="일정·참여, 대화, 리포트·운영" icon={<Bell size={24} />}><NotificationGroups /><WebPushCard /></Group>
+      <Group title="차단한 사용자" description="채팅 차단 해제 · 신고 철회" icon={<Ban size={24} />}><BlockedUsersList /></Group>
       <Group title="기기 · LINK BAND" description="연결 방법과 측정 안내" icon={<Bluetooth size={24} />}><Link className={linkClass} to="/measurement-guide">밴드 연결 · 측정 방법 <span aria-hidden="true">↗</span></Link><Link className={linkClass} to="/playground">플레이그라운드 다시 열기 <span aria-hidden="true">↗</span></Link><p className="text-[13px] text-[#776D7B]">밴드를 착용하지 않아도 클래스와 리포트를 이용할 수 있어요.</p></Group>
       <Group title="개인정보 · 약관" description="동의 관리 · 연구 동의 철회 · 계정 삭제" icon={<ShieldCheck size={24} />}><PrivacyConsentsSection /><PrivacyPolicyLink className={linkClass}>개인정보 처리방침</PrivacyPolicyLink><p className="text-[13px] text-[#776D7B]">AI 요약을 사용하면 이름·연락처 없는 수업 통계를 외부 AI(Google Gemini)로 전송해 문장으로 정리해요.</p><AccountDeletionSection /></Group>
       <Group title="앱 정보" description="버전 · 도움말 · 연결 상태" icon={<Info size={24} />}><p className="text-[15px] font-semibold">MIND BREEZE 2.0 · Looxid Labs</p><p className="text-[14px]">서버연결: {connected ? '양호' : '끊김'}</p><Link className={linkClass} to="/measurement-guide">이용 도움말 · LINK BAND 안내 <span aria-hidden="true">↗</span></Link></Group>
