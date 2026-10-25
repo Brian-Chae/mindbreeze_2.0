@@ -2572,16 +2572,21 @@ def cancel_waitlist(
     if not participant.is_waitlisted:
         raise HTTPException(status_code=409, detail="이미 입장한 참여자는 대기 취소를 할 수 없어요")
 
+    apply_waitlist_cancel(s, participant, db)
+    db.commit()
+    db.refresh(s)
+    _notify_participant_changed(s, db)
+    return {"participant_id": str(participant.id), "cancelled": True, "changed": True}
+
+
+def apply_waitlist_cancel(s: Session, participant: SessionParticipant, db: DBSession) -> None:
+    """대기 취소의 DB 변경(commit 없음). REST(cancel_waitlist)와 SDD-246 live command 가 같은 단계를 쓴다."""
     participant.waitlist_cancelled_at = _now()
     participant.waitlist_position = None
     participant.raise_hand = False
     participant.speaking = False
     db.flush()
     _renumber_waitlist(s, db)
-    db.commit()
-    db.refresh(s)
-    _notify_participant_changed(s, db)
-    return {"participant_id": str(participant.id), "cancelled": True, "changed": True}
 
 
 def resolve_participant_actor(

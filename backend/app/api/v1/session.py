@@ -970,3 +970,107 @@ def view_report_email(session_id: UUID, token: str, db: DBSession = Depends(get_
     return HTMLResponse(report_email_service.view_report_email(session_id, token, db),
                         headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer",
                                  "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'"})
+
+
+# ===========================================================================
+# SDD-246 T05 — v2 REST 폴백 (DEGRADED 상태머신): WS 와 같은 command service / 같은 snapshot 을 쓴다.
+# 기능 플래그 live_protocol_v2 가 꺼져 있으면 404(존재하지 않는 경로처럼) — 현행 동작과 동일.
+# ===========================================================================
+from fastapi import HTTPException as _HTTPException  # noqa: E402
+from fastapi.responses import JSONResponse as _JSONResponse  # noqa: E402
+
+
+def _v2_or_404() -> None:
+    from app.schemas.session_live_v2 import live_protocol_v2_enabled
+
+    if not live_protocol_v2_enabled():
+        raise _HTTPException(status_code=404, detail="Not Found")
+
+
+def _live_actor(db, session_id, current_user, entry_credential):
+    from app.services import class_participation_service as cps
+
+    try:
+        sid = UUID(session_id)
+    except ValueError:
+        raise _HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+    actor = cps.resolve_live_actor(db, sid, current_user["id"] if current_user else None, entry_credential)
+    if actor is None:
+        raise _HTTPException(status_code=403 if current_user else 401, detail="접근 권한이 없습니다")
+    return sid, actor
+
+
+@router.get("/{session_id}/live-v2/snapshot")
+def live_v2_snapshot(
+    session_id: str,
+    request_id: str | None = Query(None),
+    generation: str = Query("0"),
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """완전 snapshot(WS live:snapshot 과 같은 서비스). Redis 불가 시 503 — 별도 메모리 상태를 돌려주지 않는다."""
+    import uuid as _uuid
+
+    from app.schemas.session_live_v2 import is_uuid, parse_u64, WireError
+    from app.services import class_participation_service as cps
+    from app.services import session_live_outbox as ob
+    from app.services.live_redis.client import LiveNotReady, LiveRedisUnavailable
+    from app.services.session_live_state import ScopeStale, SnapshotIncomplete
+
+    _v2_or_404()
+    sid, actor = _live_actor(db, session_id, current_user, x_entry_credential)
+    try:
+        gen = parse_u64(generation, "generation")
+    except WireError:
+        raise _HTTPException(status_code=400, detail="generation 이 올바르지 않습니다")
+    try:
+        cps.seed_live_state(db, sid)
+        from app.models.live_state import LiveSessionEpoch
+
+        auth_rev = int(db.get(LiveSessionEpoch, sid).auth_revision)
+        return ob.snapshot_ready(db, cps.get_live_redis(), sid, cps.scope_of(actor, auth_rev),
+                                 request_id=_uuid.UUID(request_id) if is_uuid(request_id) else _uuid.uuid4(), connection_generation=gen)
+    except LiveRedisUnavailable:
+        return _JSONResponse(status_code=503, content={"code": "live_unavailable", "retryable": True})
+    except (LiveNotReady, SnapshotIncomplete):
+        return _JSONResponse(status_code=503, content={"code": "not_ready", "retryable": True})
+    except ScopeStale:
+        return _JSONResponse(status_code=409, content={"code": "scope_stale", "retryable": True})
+
+
+@router.post("/{session_id}/live-v2/commands")
+def live_v2_command(
+    session_id: str,
+    body: dict,
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """WS live:command 와 같은 command service(apply_command). 같은 command_id 면 REST/WS 어느 쪽이든 부작용은 한 번이다."""
+    from app.schemas import session_live_v2 as w
+    from app.services import class_participation_service as cps
+
+    _v2_or_404()
+    sid, actor = _live_actor(db, session_id, current_user, x_entry_credential)
+    cid = body.get("command_id") if isinstance(body, dict) and isinstance(body.get("command_id"), str) else None
+    try:
+        cmd = w.parse_command(body)
+    except w.WireError as exc:
+        return _JSONResponse(status_code=400, content=w.error_ack(cid, exc.code))
+    if cmd.session_id != sid:
+        return _JSONResponse(status_code=400, content=w.error_ack(cid, "session_mismatch"))
+    outcome = cps.run_live_command(db, actor, cmd)
+    if outcome.committed and not outcome.degraded:
+        try:
+            from app.ws import session_live_namespace as ns
+
+            ns.schedule_publish(sid)
+        except Exception:  # noqa: BLE001 — 방송은 ACK 를 막지 않는다
+            pass
+    status_code = 200
+    if outcome.ack.get("code") == w.IDEMPOTENCY_CONFLICT_CODE:
+        status_code = 409
+    elif outcome.degraded and not outcome.committed:
+        status_code = 503
+    return _JSONResponse(status_code=status_code, content=outcome.ack)

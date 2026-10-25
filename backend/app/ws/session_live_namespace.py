@@ -59,6 +59,7 @@ import asyncio
 import logging
 import re
 import time
+import uuid
 from datetime import datetime, timezone
 from typing import Any, cast
 
@@ -426,12 +427,14 @@ def register_session_live_namespace(sio):
             _loop = None
 
         user_id = None
+        token_exp = None
         token = (auth or {}).get("token")
         if token:
             try:
                 from app.core.security import decode_token
                 payload = decode_token(token)
                 user_id = payload.get("sub")
+                token_exp = payload.get("exp")
             except Exception:
                 logger.warning("[WS /session-live] 잘못된 토큰 — 연결 거부 (sid=%s)", sid)
                 raise ConnectionRefusedError("token_expired")
@@ -458,11 +461,12 @@ def register_session_live_namespace(sio):
                 raise ConnectionRefusedError("account_inactive")
             logger.info("[WS /session-live] user %s connected (sid=%s)", user_id, sid)
 
-        await sio.save_session(sid, {"user_id": user_id}, namespace=_NAMESPACE)
+        await sio.save_session(sid, {"user_id": user_id, "token_exp": token_exp}, namespace=_NAMESPACE)
         return True
 
     @sio.event(namespace=_NAMESPACE)
     async def disconnect(sid):
+        _v2_drop(sid)  # SDD-246: v2 연결 상태·heartbeat 정리 (v1 연결에는 영향 없음)
         try:
             context = await sio.get_session(sid, namespace=_NAMESPACE) or {}
             await asyncio.to_thread(_participation_socket, sid, context, "leave")
@@ -1023,6 +1027,9 @@ def register_session_live_namespace(sio):
         payload = build_audio_sync_payload(session_id, action, track_id, position)
         record_audio_state(session_id, payload)
         await broadcast_audio_sync(session_id, payload)
+
+    # SDD-246 T05: v2(live:*) 이벤트 — v1 이벤트명과 겹치지 않는다. 기능 플래그가 꺼져 있으면 명시 거절만 한다.
+    register_v2_handlers(sio, _NAMESPACE)
 
     logger.info("[WS /session-live] namespace registered")
 
@@ -1826,3 +1833,498 @@ def _sanitize_readiness(value):
     if band is not None:
         out["band"] = band
     return out
+
+
+
+# ===========================================================================
+# SDD-246 T05 — Socket.IO v2 transport (`live:*`)
+#
+# 상태머신: CONNECTING(hello) → RESYNCING(join·snapshot 전달, 클라이언트 applied 대기) → READY → DEGRADED → RESYNCING,
+#           업무 종료 TERMINAL, 권한 회수 REVOKED. transport.connected(=Socket.IO 연결)와 READY 는 별개다.
+# 명령: WS 수신 → T03 apply_command(commit) → T04 drain(projection) → publish_pending(방송) → ACK.
+# 방송: room `live2:<session>:<audience>` — AsyncRedisManager 가 프로세스 간 중계. 상태 정본은 DB/Redis 이고 room 은 전달 수단이다.
+# ===========================================================================
+import os as _os
+from dataclasses import dataclass as _dc, field as _fld
+
+V2_HEARTBEAT_S = float(_os.environ.get("LIVE_V2_HEARTBEAT_S", "5"))
+
+
+def room_audience(session_id, audience: str) -> str:
+    return f"live2:{session_id}:{audience}"
+
+
+def emit_to_room(event: str, data: dict, room: str) -> None:
+    """동기 컨텍스트(스레드)에서 v2 room 으로 예약 발행한다."""
+    _schedule(_get_sio().emit(event, data, room=room, namespace=_NAMESPACE))
+
+
+def _now_ms() -> int:
+    return int(time.time() * 1000)
+
+
+@_dc
+class V2Conn:
+    sid: str
+    user_id: Any = None
+    token_exp: Any = None
+    hello: Any = None
+    instance_id: str | None = None
+    state: str = "CONNECTING"
+    session_id: Any = None
+    actor: Any = None
+    entry_credential: str | None = None
+    generation: int = 0
+    auth_revision: int = 0
+    pending_snapshot: str | None = None
+    rooms: list = _fld(default_factory=list)
+    hb_task: Any = None
+    degraded_notified: bool = False
+    auth_expired_notified: bool = False
+
+    def expired(self) -> bool:
+        return self.token_exp is not None and _now_ms() >= int(self.token_exp) * 1000
+
+
+_v2_conns: dict[str, V2Conn] = {}
+
+
+def _v2_drop(sid) -> None:
+    conn = _v2_conns.pop(str(sid), None)
+    if conn is not None and conn.hb_task is not None:
+        conn.hb_task.cancel()
+
+
+# 측정(metric/device) ingest 는 T09 가 등록한다. 없으면 명시적 retryable — 조용히 버리지 않는다.
+_METRIC_SINK = None
+_DEVICE_SINK = None
+
+
+def set_metric_sink(fn) -> None:
+    global _METRIC_SINK
+    _METRIC_SINK = fn
+
+
+def set_device_sink(fn) -> None:
+    global _DEVICE_SINK
+    _DEVICE_SINK = fn
+
+
+def _err(code: str, *, retry: bool = False, **extra) -> dict:
+    return {"ok": False, "code": code, "retryable": retry, **extra}
+
+
+def emit_sync_factory(session_id):
+    """publish_pending 의 emit_fn: 스레드에서 이벤트 루프로 발행하고 완료를 기다린다(워터마크는 모두 성공한 뒤에만 전진)."""
+    sio = _get_sio()
+
+    def _run(coro):
+        loop = _loop
+        if loop is None or loop.is_closed():
+            coro.close()
+            raise RuntimeError("이벤트 루프 없음 — 방송 불가(워터마크 미전진, 재시도)")
+        asyncio.run_coroutine_threadsafe(coro, loop).result(timeout=5)
+
+    def emit(ev: dict) -> None:
+        room = room_audience(session_id, ev["audience"])
+        _run(sio.emit("live:event", ev, room=room, namespace=_NAMESPACE))
+        payload = ev.get("payload") or {}
+        if ev["kind"] == "participant.removed" and ev["audience"].startswith("member:"):
+            # 제거된 참가자: 모든 worker 의 개인 room 을 즉시 닫는다(공용 room 은 소유 worker 의 heartbeat 가 회수).
+            _run(sio.emit("live:access_revoked", {"session_id": str(session_id), "code": "participant_removed", "revision": ev["seq"]},
+                          room=room, namespace=_NAMESPACE))
+            _run(sio.close_room(room, namespace=_NAMESPACE))
+        if ev["kind"] == "session.changed" and payload.get("status") in ("completed", "cancelled"):
+            _run(sio.emit("live:terminal", {"session_id": str(session_id), "code": payload["status"], "revision": ev["seq"],
+                                            "end_cutoff": payload.get("cutoff_ms")}, room=room, namespace=_NAMESPACE))
+    return emit
+
+
+def publish_session_sync(session_id) -> int:
+    """projection 된 미방송 event 를 방송한다(어느 프로세스에서 호출해도 클러스터 단일 발행자 락으로 직렬화)."""
+    from app.services import class_participation_service as cps
+
+    db = _open_db()
+    try:
+        return cps.publish_pending(db, cps.get_live_redis(), session_id, emit_sync_factory(session_id))
+    finally:
+        db.close()
+
+
+def schedule_publish(session_id) -> None:
+    """REST/서비스(동기)에서 commit 직후 호출: 스레드에서 방송을 예약한다. WS 루프가 없으면 heartbeat 의 self-heal 에 맡긴다."""
+    async def _go():
+        try:
+            await asyncio.to_thread(publish_session_sync, session_id)
+        except Exception:  # noqa: BLE001
+            logger.warning("[live-v2] 방송 실패 — heartbeat 가 이어서 재시도", exc_info=True)
+
+    _schedule(_go())
+
+
+def register_v2_handlers(sio, ns):
+    from app.schemas import session_live_v2 as w
+    from app.services import class_participation_service as cps
+    from app.services import session_live_outbox as ob
+    from app.services.live_redis.client import LiveNotReady, LiveRedisUnavailable
+    from app.services.session_live_legacy import PROTOCOL_V2, admit_client, get_session_protocol, pin_session_protocol
+    from app.services.session_live_state import LiveStateService, ScopeStale, SnapshotIncomplete
+
+    cps.register_live_handlers()  # T03 레지스트리에 업무 handler 등록(플래그와 무관 — 호출은 플래그/프로토콜이 결정한다)
+
+    async def _leave_rooms(conn: V2Conn) -> None:
+        for room in list(conn.rooms):
+            await sio.leave_room(conn.sid, room, namespace=ns)
+        conn.rooms = []
+
+    async def _revoke(conn: V2Conn, code: str = "access_revoked") -> None:
+        conn.state = "REVOKED"
+        await _leave_rooms(conn)
+        if conn.hb_task is not None:
+            conn.hb_task.cancel()
+            conn.hb_task = None
+        await sio.emit("live:access_revoked", {"session_id": str(conn.session_id), "code": code}, to=conn.sid, namespace=ns)
+
+    def _authorize_sync(conn: V2Conn):
+        """현재 권한을 DB 에서 다시 확정한다 → (actor|None, auth_revision)."""
+        from app.models.live_state import LiveSessionEpoch
+
+        db = _open_db()
+        try:
+            actor = cps.resolve_live_actor(db, conn.session_id, conn.user_id, conn.entry_credential)
+            rev = db.get(LiveSessionEpoch, conn.session_id)
+            return actor, int(rev.auth_revision) if rev is not None else 0
+        finally:
+            db.close()
+
+    async def _reauthorize(conn: V2Conn) -> bool:
+        """scope 가 낡았을 때(권한 변경 가능) 재인가. 거부되면 REVOKED 로 전환하고 False."""
+        actor, rev = await asyncio.to_thread(_authorize_sync, conn)
+        if actor is None or actor.role != conn.actor.role or actor.participant_id != conn.actor.participant_id:
+            await _revoke(conn)
+            return False
+        conn.actor, conn.auth_revision = actor, rev
+        return True
+
+    def _scope_check_sync(conn: V2Conn):
+        live = cps.get_live_redis()
+        LiveStateService(live).heartbeat(conn.session_id, cps.scope_of(conn.actor, conn.auth_revision))
+
+    async def _ensure_scope(conn: V2Conn) -> bool:
+        """모든 command/emit 직전 scope 검사. ScopeStale 이면 재인가."""
+        try:
+            await asyncio.to_thread(_scope_check_sync, conn)
+        except ScopeStale:
+            if not await _reauthorize(conn):
+                return False
+            await sio.emit("live:resync_required", {"session_id": str(conn.session_id), "reason": "scope_changed"},
+                           to=conn.sid, namespace=ns)
+        except (LiveRedisUnavailable, LiveNotReady):
+            pass  # 명령 실행기가 retryable/503 로 처리한다
+        return True
+
+    # ---------------- hello / reauth ----------------
+    @sio.on("live:hello", namespace=ns)
+    async def live_hello(sid, data):
+        if not w.live_protocol_v2_enabled():
+            return _err("v2_disabled")
+        try:
+            hello = w.parse_hello(data)
+        except w.WireError as exc:
+            return _err(exc.code, field=exc.field)
+        sess = await sio.get_session(sid, namespace=ns) or {}
+        conn = _v2_conns.get(str(sid)) or V2Conn(sid=str(sid))
+        conn.user_id, conn.token_exp, conn.hello = sess.get("user_id"), sess.get("token_exp"), hello
+        conn.instance_id = data.get("client_instance_id")
+        _v2_conns[str(sid)] = conn
+        if conn.expired():
+            return _err("token_expired", refresh=True, state=conn.state)
+        return {"ok": True, "protocol_version": 2, "schema_version": 1, "capabilities": list(w.SERVER_CAPABILITIES),
+                "server_time_ms": _now_ms(), "heartbeat_s": V2_HEARTBEAT_S, "state": conn.state}
+
+    @sio.on("live:reauth", namespace=ns)
+    async def live_reauth(sid, data):
+        conn = _v2_conns.get(str(sid))
+        if conn is None:
+            return _err("hello_required", retry=True)
+        token = (data or {}).get("token") if isinstance(data, dict) else None
+        try:
+            from app.core.security import decode_token
+
+            payload = decode_token(token)
+        except Exception:  # noqa: BLE001
+            return _err("token_expired", refresh=True)
+        if payload.get("type") != "access" or str(payload.get("sub")) != str(conn.user_id):
+            return _err("token_mismatch")
+        conn.token_exp, conn.auth_expired_notified = payload.get("exp"), False
+        return {"ok": True, "state": conn.state}
+
+    # ---------------- join / resync ----------------
+    def _pin_for_join(db, session_id):
+        from app.models.session import Session as SessionModel
+
+        pin = get_session_protocol(db, session_id)
+        if pin is not None:
+            return pin
+        s = db.get(SessionModel, session_id)
+        # 아직 열리지 않은 회차의 첫 v2 접촉만 v2 로 고정한다. 진행 중이거나 이미 지난 회차는 v1 유지(회차 도중 전환 없음).
+        if s is not None and s.status in ("ready", "scheduled"):
+            return pin_session_protocol(db, session_id, protocol=PROTOCOL_V2)
+        return pin_session_protocol(db, session_id)
+
+    def _join_prepare(conn: V2Conn, req):
+        db = _open_db()
+        try:
+            actor = cps.resolve_live_actor(db, req.session_id, conn.user_id, req.entry_credential)
+            if actor is None:
+                return ("denied", None, None, 0)
+            pin = _pin_for_join(db, req.session_id)
+            adm = admit_client(pin, conn.hello, flow="entry")
+            if adm.action != "allow":
+                return ("upgrade_required", adm, None, 0)
+            if adm.effective_protocol != PROTOCOL_V2:
+                return ("v1_session", adm, None, 0)
+            cps.seed_live_state(db, req.session_id)
+            from app.models.live_state import LiveSessionEpoch
+
+            return ("ok", adm, actor, int(db.get(LiveSessionEpoch, req.session_id).auth_revision))
+        finally:
+            db.close()
+
+    def _snapshot_sync(conn: V2Conn, req, auth_rev: int):
+        db = _open_db()
+        try:
+            scope = cps.scope_of(conn.actor, auth_rev)
+            return ob.snapshot_ready(db, cps.get_live_redis(), req.session_id, scope, request_id=req.request_id,
+                                     connection_generation=req.generation)
+        finally:
+            db.close()
+
+    async def _do_join(conn: V2Conn, req):
+        await _leave_rooms(conn)
+        conn.state, conn.generation, conn.entry_credential = "RESYNCING", req.generation, req.entry_credential
+        status, adm, actor, auth_rev = await asyncio.to_thread(_join_prepare, conn, req)
+        if status == "denied":
+            conn.state = "CONNECTING"
+            return _err("join_denied")
+        if status == "upgrade_required":
+            conn.state = "CONNECTING"
+            return _err("upgrade_required", message=adm.message, http_status=adm.http_status)
+        if status == "v1_session":
+            conn.state = "CONNECTING"
+            return _err("protocol_v1_session", message=adm.notice, effective_protocol=1)
+        conn.session_id, conn.actor = req.session_id, actor
+        rooms = [room_audience(req.session_id, "public"),
+                 room_audience(req.session_id, "host" if actor.role == "host" else f"member:{actor.participant_id}")]
+        for room in rooms:  # snapshot 읽기 전에 구독부터 활성화 — snapshot 이후 이벤트가 구멍 없이 이어진다
+            await sio.enter_room(conn.sid, room, namespace=ns)
+        conn.rooms = rooms
+        snapshot = None
+        for _attempt in range(3):
+            try:
+                snapshot = await asyncio.to_thread(_snapshot_sync, conn, req, auth_rev)
+                break
+            except ScopeStale:  # 인가 이후 권한이 바뀌었다(권한회수 race) — snapshot 을 보내지 않고 재인가
+                actor2, auth_rev = await asyncio.to_thread(_authorize_sync, conn)
+                if actor2 is None:
+                    await _revoke(conn)
+                    return _err("access_revoked")
+                conn.actor = actor2
+            except LiveRedisUnavailable:
+                conn.state = "DEGRADED"
+                return _err("live_unavailable", retry=True, http_status=503, degraded=True)
+            except (LiveNotReady, SnapshotIncomplete):
+                conn.state = "RESYNCING"
+                return _err("not_ready", retry=True)
+        if snapshot is None:
+            await _revoke(conn)
+            return _err("access_revoked")
+        conn.auth_revision, conn.pending_snapshot = int(snapshot["auth_revision"]), snapshot["snapshot_id"]
+        await sio.emit("live:snapshot", snapshot, to=conn.sid, namespace=ns)
+        try:  # 미방송 event 를 흘려 보낸다(이미 room 에 가입했으므로 이 연결도 받는다)
+            await asyncio.to_thread(publish_session_sync, req.session_id)
+        except Exception:  # noqa: BLE001
+            logger.warning("[live-v2] join 후 방송 실패 — heartbeat 가 재시도", exc_info=True)
+        await sio.emit("live:sync_complete", {"snapshot_id": snapshot["snapshot_id"], "through": snapshot["through"],
+                                              "protocol_version": 2, "schema_version": 1}, to=conn.sid, namespace=ns)
+        if conn.hb_task is None or conn.hb_task.done():
+            conn.hb_task = asyncio.create_task(_hb_loop(conn))
+        conn.degraded_notified = False
+        return {"ok": True, "snapshot_id": snapshot["snapshot_id"], "state": conn.state, "epoch": snapshot["epoch"]}
+
+    @sio.on("live:join", namespace=ns)
+    async def live_join(sid, data):
+        if not w.live_protocol_v2_enabled():
+            return _err("v2_disabled")
+        conn = _v2_conns.get(str(sid))
+        if conn is None or conn.hello is None:
+            return _err("hello_required", retry=True)
+        try:
+            req = w.parse_join(data)
+        except w.WireError as exc:
+            return _err(exc.code, field=exc.field)
+        if conn.expired():
+            return _err("token_expired", refresh=True)
+        return await _do_join(conn, req)
+
+    @sio.on("live:resync", namespace=ns)
+    async def live_resync(sid, data):
+        conn = _v2_conns.get(str(sid))
+        if conn is None or conn.session_id is None:
+            return _err("not_joined", retry=True)
+        if conn.state in ("REVOKED", "TERMINAL"):
+            return _err("access_revoked")
+        if conn.expired():
+            return _err("token_expired", refresh=True)
+        rid = (data or {}).get("request_id") if isinstance(data, dict) else None
+        req = w.JoinRequest(conn.session_id, uuid.UUID(rid) if w.is_uuid(rid) else uuid.uuid4(), conn.generation + 1, (), conn.entry_credential)
+        return await _do_join(conn, req)
+
+    @sio.on("live:applied", namespace=ns)
+    async def live_applied(sid, data):
+        conn = _v2_conns.get(str(sid))
+        if conn is None or conn.session_id is None:
+            return _err("not_joined", retry=True)
+        snap = (data or {}).get("snapshot_id") if isinstance(data, dict) else None
+        if snap and snap == conn.pending_snapshot and conn.state == "RESYNCING":
+            conn.state, conn.pending_snapshot = "READY", None
+        return {"ok": True, "state": conn.state}
+
+    # ---------------- command ----------------
+    def _run_command_sync(conn: V2Conn, cmd):
+        db = _open_db()
+        try:
+            outcome = cps.run_live_command(db, conn.actor, cmd, auth_revision=conn.auth_revision)
+            if outcome.committed and not outcome.degraded:
+                try:
+                    publish_session_sync(cmd.session_id)
+                except Exception:  # noqa: BLE001 — 방송은 ACK 를 막지 않는다(heartbeat self-heal)
+                    logger.warning("[live-v2] 명령 후 방송 실패", exc_info=True)
+            return outcome
+        finally:
+            db.close()
+
+    @sio.on("live:command", namespace=ns)
+    async def live_command(sid, data):
+        cid = data.get("command_id") if isinstance(data, dict) and isinstance(data.get("command_id"), str) else None
+        if not w.live_protocol_v2_enabled():
+            return w.error_ack(cid, "v2_disabled")
+        conn = _v2_conns.get(str(sid))
+        if conn is None or conn.session_id is None or conn.state == "CONNECTING":
+            # join 완료 전: 조용히 버리지 않고 명시적 대기 오류(부작용 0, 같은 ID 재시도 가능)
+            return w.error_ack(cid, "not_joined", status="retryable", retry_after_ms=500)
+        try:
+            cmd = w.parse_command(data)
+        except w.WireError as exc:
+            return w.error_ack(cid, exc.code)
+        if cmd.session_id != conn.session_id:
+            return w.error_ack(cid, "session_mismatch")
+        if conn.state in ("REVOKED", "TERMINAL"):
+            return w.error_ack(cid, "access_revoked")
+        if conn.state == "RESYNCING" and cmd.kind != "entry.enter":
+            return w.error_ack(cid, "not_ready", status="retryable", retry_after_ms=300)
+        if conn.expired():
+            return w.error_ack(cid, "token_expired")
+        if not await _ensure_scope(conn):
+            return w.error_ack(cid, "access_revoked")
+        outcome = await asyncio.to_thread(_run_command_sync, conn, cmd)
+        if outcome.degraded:
+            conn.state = "DEGRADED"
+        return outcome.ack
+
+    # ---------------- clock probe / presence / metric / device ----------------
+    @sio.on("live:clock_probe", namespace=ns)
+    async def live_clock_probe(sid, data):
+        recv = _now_ms()
+        conn = _v2_conns.get(str(sid))
+        if conn is None or conn.actor is None:
+            return _err("not_joined", retry=True)
+        if not isinstance(data, dict) or not w.is_uuid(data.get("probe_id")):
+            return _err("invalid_message", field="probe_id")
+        try:
+            w.parse_u64(data.get("client_monotonic_us"), "client_monotonic_us")
+        except w.WireError as exc:
+            return _err(exc.code, field=exc.field)
+        try:
+            await asyncio.to_thread(cps.store_clock_probe, cps.get_live_redis(), data["probe_id"], recv, conn.actor.actor_id)
+        except LiveRedisUnavailable:
+            return _err("live_unavailable", retry=True, http_status=503)
+        return {"ok": True, "protocol_version": 2, "schema_version": 1, "probe_id": data["probe_id"],
+                "client_monotonic_us": data["client_monotonic_us"], "server_receive_ms": recv, "server_send_ms": _now_ms()}
+
+    @sio.on("live:presence", namespace=ns)
+    async def live_presence(sid, data):
+        conn = _v2_conns.get(str(sid))
+        if conn is None or conn.actor is None or conn.state in ("REVOKED", "TERMINAL"):
+            return _err("not_joined", retry=True)
+        if not isinstance(data, dict) or not w.is_uuid(data.get("instance_id")) or data.get("visibility") not in ("foreground", "background", "locked"):
+            return _err("invalid_message")
+        try:
+            lease_gen = w.parse_u64(data.get("lease_generation"), "lease_generation")
+        except w.WireError as exc:
+            return _err(exc.code, field=exc.field)
+
+        def write():
+            live = cps.get_live_redis()
+            key = f"{live.prefix}:conn:{data['instance_id']}"
+            live._wrap(live.r.hset, key, mapping={"actor": str(conn.actor.actor_id), "role": conn.actor.role, "session": str(conn.session_id),
+                                                    "auth_rev": conn.auth_revision, "lease_generation": lease_gen,
+                                                    "visibility": data["visibility"]})
+            live._wrap(live.r.expire, key, 15)
+        try:
+            await asyncio.to_thread(write)
+        except LiveRedisUnavailable:
+            return _err("live_unavailable", retry=True, http_status=503)
+        return {"ok": True, "lease_ttl_s": 15}
+
+    async def _ingest(sid, data, sink, name):
+        conn = _v2_conns.get(str(sid))
+        if conn is None or conn.session_id is None or conn.state != "READY":
+            # join/READY 전 metric·device 는 버리지 않고 명시 대기 오류
+            return _err("not_ready", retry=True, retry_after_ms=500)
+        if conn.actor is None or conn.actor.role != "member":
+            return _err("forbidden")
+        if sink is None:
+            return _err(f"{name}_ingest_unavailable", retry=True, retry_after_ms=1000)
+        return await asyncio.to_thread(sink, conn.actor, conn.session_id, data)
+
+    @sio.on("live:metric", namespace=ns)
+    async def live_metric(sid, data):
+        return await _ingest(sid, data, _METRIC_SINK, "metric")
+
+    @sio.on("live:device", namespace=ns)
+    async def live_device(sid, data):
+        return await _ingest(sid, data, _DEVICE_SINK, "device")
+
+    # ---------------- heartbeat (5초) ----------------
+    def _hb_sync(conn: V2Conn):
+        publish_session_sync(conn.session_id)  # 방송 유실/프로세스 중단 self-heal
+        return LiveStateService(cps.get_live_redis()).heartbeat(conn.session_id, cps.scope_of(conn.actor, conn.auth_revision))
+
+    async def _hb_loop(conn: V2Conn):
+        try:
+            while conn.state not in ("REVOKED", "TERMINAL"):
+                await asyncio.sleep(V2_HEARTBEAT_S)
+                if conn.expired() and not conn.auth_expired_notified:
+                    conn.auth_expired_notified = True
+                    await sio.emit("live:auth_expired", {"refresh": True}, to=conn.sid, namespace=ns)
+                try:
+                    hb = await asyncio.to_thread(_hb_sync, conn)
+                except ScopeStale:
+                    if not await _reauthorize(conn):
+                        return
+                    await sio.emit("live:resync_required", {"session_id": str(conn.session_id), "reason": "scope_changed"},
+                                   to=conn.sid, namespace=ns)
+                    continue
+                except (LiveRedisUnavailable, LiveNotReady):
+                    if not conn.degraded_notified:
+                        conn.degraded_notified, conn.state = True, "DEGRADED"
+                        await sio.emit("live:degraded", {"code": "live_unavailable"}, to=conn.sid, namespace=ns)
+                    continue
+                except Exception:  # noqa: BLE001
+                    logger.warning("[live-v2] heartbeat 오류", exc_info=True)
+                    continue
+                conn.degraded_notified = False
+                await sio.emit("live:heartbeat", hb, to=conn.sid, namespace=ns)
+        except asyncio.CancelledError:
+            pass

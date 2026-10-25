@@ -26,6 +26,7 @@ _CAPS = frozenset({"native_background", "wasm_core", "ble_capture", "paint_ack",
 
 # 서버가 광고하는 capability (hello 응답)
 SERVER_CAPABILITIES = ("http_fallback", "paint_ack")
+IDEMPOTENCY_CONFLICT_CODE = "idempotency_conflict"
 
 
 def live_protocol_v2_enabled() -> bool:
@@ -230,6 +231,11 @@ def error_ack(command_id: str | None, code: str, *, status: str = "rejected", ep
 
 def _ms(dt: Any) -> int | None:
     return None if dt is None else int(dt.timestamp() * 1000)
+
+
+def ms_of(dt: Any) -> int:
+    """datetime → epoch milliseconds (안전 정수)."""
+    return int(dt.timestamp() * 1000)
 
 
 _PHASE = {"scheduled": "scheduled", "ready": "scheduled", "open": "open", "in_progress": "in_progress",

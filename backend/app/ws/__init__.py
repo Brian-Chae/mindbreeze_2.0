@@ -19,7 +19,8 @@ from app.core.cors import socketio_cors_origins
 logger = logging.getLogger(__name__)
 
 # WS-01: Celery 워커 ↔ 웹 프로세스 간 broadcast 를 잇는 Redis 채널명
-REDIS_CHANNEL = "mindbreeze"
+# SDD-246 T05: 다중 프로세스 시험이 운영/타 인스턴스 채널과 섞이지 않게 환경변수로 바꿀 수 있다(기본 동일).
+REDIS_CHANNEL = os.environ.get("SOCKETIO_REDIS_CHANNEL", "mindbreeze")
 
 
 def _running_under_pytest() -> bool:
