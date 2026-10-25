@@ -105,7 +105,7 @@ fn median_of(v: &[f64]) -> f64 {
         return 0.0;
     }
     let mut s = v.to_vec();
-    s.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    js_sort_numeric(&mut s);
     let mid = s.len() / 2;
     if s.len() % 2 != 0 {
         s[mid]

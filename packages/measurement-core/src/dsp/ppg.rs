@@ -45,7 +45,7 @@ fn ppg_sqi(data: &[f64]) -> Vec<f64> {
             let mut s = 0.0;
             for &v in &data[i..i + w] {
                 let a = v.abs();
-                let q = if a <= thr { 1.0 } else { (1.0 - ((a - thr) / thr).min(1.0)).max(0.0) };
+                let q = if a <= thr { 1.0 } else { js_max(0.0, 1.0 - js_min((a - thr) / thr, 1.0)) };
                 s += q;
             }
             let ws = s / w as f64;
@@ -111,7 +111,7 @@ fn rr_with_outlier_removal(peaks: &[usize]) -> Vec<f64> {
         return valid;
     }
     let mut sorted = valid.clone();
-    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    js_sort_numeric(&mut sorted);
     let q1 = sorted[(sorted.len() as f64 * 0.25).floor() as usize];
     let q3 = sorted[(sorted.len() as f64 * 0.75).floor() as usize];
     let iqr = q3 - q1;
@@ -183,9 +183,9 @@ fn peaks_refractory(norm: &[f64], ratio: f64, refractory_ms: f64) -> Vec<usize> 
     }
     let refr = js_round(refractory_ms * (FS / 1000.0)).max(1.0) as i64;
     let mut sorted = norm.to_vec();
-    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    js_sort_numeric(&mut sorted);
     let p90 = sorted[((sorted.len() - 1) as f64 * 0.9).floor() as usize];
-    let bootstrap = (p90 * ratio).max(0.0);
+    let bootstrap = js_max(p90 * ratio, 0.0);
     let mut recent: Vec<f64> = Vec::new();
     for i in 1..norm.len() - 1 {
         if !(norm[i] > norm[i - 1] && norm[i] >= norm[i + 1]) {
@@ -307,7 +307,7 @@ fn spo2(red: &[f64], ir: &[f64]) -> f64 {
         }
         out
     };
-    let qf = rs.min(is) / rs.max(is);
+    let qf = js_min(rs, is) / js_max(rs, is);
     if qf < 0.5 {
         s = s * 0.95 + 95.0 * 0.05;
     }
