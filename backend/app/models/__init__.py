@@ -60,7 +60,14 @@ from app.models.account_deletion import (
     SocialRevokeOutbox,
 )
 
+# SDD-246 T03: 실시간 v2 영속 상태(command ledger·outbox·epoch·capture stream)
+from app.models.live_state import CaptureStream, LiveCommandLedger, LiveOutbox, LiveSessionEpoch
+
 __all__ = [
+    "CaptureStream",
+    "LiveCommandLedger",
+    "LiveOutbox",
+    "LiveSessionEpoch",
     "Class",
     "ClassInstructor",
     "ClassMember",
