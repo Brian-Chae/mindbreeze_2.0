@@ -29,13 +29,14 @@ const mobileCss = css.slice(mediaAt);
 const baseCss = css.slice(0, mediaAt);
 
 it('말풍선은 클래스 기반이며 본문이 인라인 12/15px 고정이 아니다', () => {
-  const el = render(createElement(MessageBubble, { message, isMine: false, senderName: '상담사', showSender: true, onReport: vi.fn() }));
+  const el = render(createElement(MessageBubble, { message, isMine: false, senderName: '상담사', showSender: true }));
   const bubble = el.querySelector('.chat-msg__bubble') as HTMLElement;
   expect(bubble.textContent).toContain('긴 한글');
   expect(bubble.style.fontSize).toBe('');
   expect(el.querySelector('.chat-msg__time')).not.toBeNull();
   expect((el.querySelector('.chat-msg__time') as HTMLElement).style.fontSize).toBe('');
-  expect(el.querySelector('button[aria-label="이 메시지 신고"]')?.classList.contains('chat-msg__report')).toBe(true);
+  // 메시지별 신고 버튼은 없다(신고는 상단 ⋯ 메뉴로 일원화)
+  expect(el.querySelector('button[aria-label="이 메시지 신고"]')).toBeNull();
 });
 
 it('다크 테마 색상 변수 폴백은 그대로 유지된다', () => {

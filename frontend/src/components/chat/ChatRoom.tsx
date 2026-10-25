@@ -1,6 +1,6 @@
 // 채팅방 — iOS 모바일 대응 재구현 + WebSocket 실시간
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CHAT_REPORT_CONTACT_EMAIL, isChatBlockedError, listChatMessages, listChatMessagesAround, listChatRooms, sendChatMessage, markRoomRead, markMessagesRead, type ChatMessage } from '../../lib/api/chat';
+import { CHAT_REPORT_CONTACT_EMAIL, isChatBlockedError, listChatMessages, listChatMessagesAround, sendChatMessage, markRoomRead, markMessagesRead, type ChatMessage } from '../../lib/api/chat';
 import { useChatStore } from '../../stores/chatStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
@@ -10,9 +10,12 @@ import { useKeyboardHeight } from '../../hooks/useKeyboardHeight';
 import { useAutoScroll } from '../../hooks/useAutoScroll';
 import { ChatTextarea } from './ChatTextarea';
 import { MessageBubble } from './MessageBubble';
-import { ReportDialog } from './report-dialog';
 import { SystemMessage } from './SystemMessage';
+import { subscribeAppPause, subscribeAppResume } from '../../lib/native/app-lifecycle';
 import './chat-room.css';
+
+/** 열람 presence 하트비트 주기 — 서버 TTL(45초)보다 짧게 유지한다. */
+const VIEWING_HEARTBEAT_MS = 20_000;
 import type { Socket } from 'socket.io-client';
 
 // ---- 날짜 포맷 유틸 (KST 기준) ----
@@ -78,12 +81,9 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent, tone
   const updateSenderName = useChatStore((s) => s.updateSenderName);
   const clearRoomUnread = useChatStore((s) => s.clearRoomUnread);
   const setActiveRoom = useChatStore((s) => s.setActiveRoom);
-  const applyBlock = useChatStore((s) => s.applyBlock);
-  const setRooms = useChatStore((s) => s.setRooms);
   const room = useChatStore((s) => s.rooms.find((r) => r.id === roomId));
   // SDD-220: 서버가 내려준 상호 차단 상태. 차단된 1:1 방은 입력을 막는다(서버도 403 으로 거부).
   const blocked = room?.room_type === 'direct' && room.is_blocked === true;
-  const [reportTarget, setReportTarget] = useState<{ userId: string; name: string; messageId?: string } | null>(null);
 
   const [dismissedTarget, setDismissedTarget] = useState<string | null>(null);
   const target = dismissedTarget === `${roomId}:${targetMessageId}` ? undefined : targetMessageId;
@@ -229,6 +229,39 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent, tone
     };
   }, [roomId, token, appendMessage, updateSenderName]);
 
+  // 열람 presence — 이 방을 실제로 보고 있는 동안만 서버가 이 방의 새 메시지 푸시를 보내지 않는다.
+  //   앱 포그라운드 + 탭 표시 + 이 방 화면일 때만 viewing=true(20초 하트비트). 숨김·백그라운드·이탈 시 즉시 false.
+  useEffect(() => {
+    if (!roomId || !token) return;
+    const socket: Socket = getChatSocket(token);
+    let active = false;
+    const report = (viewing: boolean): void => {
+      active = viewing;
+      socket.emit('room_viewing', { room_id: roomId, viewing });
+    };
+    const sync = (): void => {
+      if (typeof document !== 'undefined' && document.hidden) {
+        if (active) report(false);
+      } else {
+        report(true);
+      }
+    };
+    sync();
+    const timer = setInterval(() => { if (active) report(true); }, VIEWING_HEARTBEAT_MS);
+    document.addEventListener('visibilitychange', sync);
+    const offResume = subscribeAppResume(sync);
+    const offPause = subscribeAppPause(() => { if (active) report(false); });
+    socket.on('connect', sync);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', sync);
+      offResume();
+      offPause();
+      socket.off('connect', sync);
+      report(false);
+    };
+  }, [roomId, token]);
+
   // ── IntersectionObserver: 스크롤 읽음 처리 ──
   const messageElRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const readSentRef = useRef<Set<string>>(new Set());
@@ -338,21 +371,8 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent, tone
     [input, roomId, appendMessage, scrollToBottom, target, loading, targetError],
   );
 
-  const canReportPeer = room?.room_type === 'direct' && !!room.peer_id && !room.peer_deleted && !blocked;
-
   return (
     <div data-chat-tone={tone} className="chat-room flex flex-col h-full min-h-0 bg-white">
-      {canReportPeer && room?.peer_id && (
-        <div className="flex justify-end px-4 pt-2 mobile:pt-1 shrink-0">
-          <button
-            type="button"
-            onClick={() => setReportTarget({ userId: room.peer_id as string, name: room.peer_name || peerName || '상대방' })}
-            className="chat-room__peer-report text-xs text-[#6F6F6F] underline"
-          >
-            상대방 신고
-          </button>
-        </div>
-      )}
       {target && !loading && (
         <div className="px-4 py-2 text-sm mobile:text-mb-compact bg-purple-50 shrink-0" role="status">
           {targetError ?? '알림의 메시지 위치를 보고 있습니다.'}
@@ -396,9 +416,6 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent, tone
                   senderName={senderName}
                   showSender={showSender}
                   groupStart={groupStart}
-                  onReport={!isMine && m.sender_id
-                    ? () => setReportTarget({ userId: m.sender_id as string, name: senderName || '상대방', messageId: m.id })
-                    : undefined}
                 />
               );
             // 메시지에 ref 등록 + data-message-id (IntersectionObserver용)
@@ -475,21 +492,6 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent, tone
         </button>
         </div>
       </div>
-      {reportTarget && (
-        <ReportDialog
-          targetUserId={reportTarget.userId}
-          targetName={reportTarget.name}
-          roomId={roomId}
-          messageId={reportTarget.messageId}
-          onClose={() => setReportTarget(null)}
-          onReported={(result) => {
-            if (!result.blocked) return;
-            // 즉시 캐시에서 상대 콘텐츠를 지우고, 그룹 방 preview 등은 서버 기준으로 다시 받는다.
-            applyBlock(reportTarget.userId);
-            void listChatRooms().then((res) => setRooms(res.rooms)).catch(() => { /* 조용히 실패 */ });
-          }}
-        />
-      )}
     </div>
   );
 }

@@ -145,8 +145,12 @@ export default function ChatPage() {
     return roomSub(selectedRoom);
   }, [selectedRoom, isLucy]);
 
+  const headerMenu = selectedRoom && !isLucy ? (
+    <RoomActionsMenu room={selectedRoom} onSettings={() => setSettingsRoom(selectedRoom)} onInvite={() => openInvite(selectedRoom)} onLeave={() => navigate('/chat')} />
+  ) : undefined;
+
   return (
-    <AppShell title={headerTitle} sub={headerSub} contentPad="" noScroll hideBottomTab={!!paramRoomId} noBottomPad={!!paramRoomId} hideMobileTitle={!!paramRoomId}>
+    <AppShell title={headerTitle} sub={headerSub} rightSlot={paramRoomId ? headerMenu : undefined} contentPad="" noScroll hideBottomTab={!!paramRoomId} noBottomPad={!!paramRoomId} hideMobileTitle={!!paramRoomId}>
       <div className="h-full flex flex-col md:flex-row">
         {/* 좌측 대화 목록 */}
         <aside
@@ -254,7 +258,7 @@ export default function ChatPage() {
                 title={headerTitle}
                 sub={headerSub}
                 onBack={() => navigate('/chat')}
-                rightSlot={<RoomActionsMenu room={selectedRoom} onSettings={() => setSettingsRoom(selectedRoom)} onInvite={() => openInvite(selectedRoom)} />}
+                rightSlot={headerMenu}
               />
               <div className="flex-1 min-h-0">
                 <ChatRoom key={selectedRoom.id} targetMessageId={targetMessageId} onShowRecent={showRecentMessages} roomId={selectedRoom.id} peerName={selectedRoom.peer_name ?? undefined} />

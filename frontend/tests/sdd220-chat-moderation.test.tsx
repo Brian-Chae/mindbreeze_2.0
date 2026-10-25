@@ -5,6 +5,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ChatRoom } from '../src/components/chat/ChatRoom';
+import { RoomActionsMenu } from '../src/components/chat/RoomActionsMenu';
 import ChatPage from '../src/pages/chat/ChatPage';
 import ClientChatPage from '../src/pages/client/ClientChatPage';
 import { ApiError } from '../src/lib/api/client';
@@ -95,23 +96,33 @@ afterEach(async () => {
   container.remove();
 });
 
-describe('TS32 신고 → 즉시 상호 차단 UI', () => {
-  it('상대 메시지 옆 신고 → 사유 선택(선택) → 접수 시 상대 메시지·preview 가 즉시 사라지고 문의 이메일을 안내한다', async () => {
-    api.reportChatUser.mockResolvedValue({ reported: true, blocked: true, report_id: 'r1' });
-    await render(createElement(ChatRoom, { roomId: 'room' }));
-    expect(document.body.textContent).toContain('내용-m1');
-    // 내 메시지에는 신고 버튼이 없고 상대 메시지에만 있다
-    expect(document.querySelectorAll('[aria-label="이 메시지 신고"]')).toHaveLength(1);
+// 신고 진입점은 방 상단 ⋯ 메뉴의 '신고하기' 하나다(메시지별·상단 '상대방 신고' 버튼은 제거).
+async function openReportFromMenu(): Promise<void> {
+  await click(document.querySelector('button[aria-haspopup=menu]'));
+  await click(document.querySelector('[role=menuitem][type=button]:nth-of-type(2)') && [...document.querySelectorAll('[role=menuitem]')].find((el) => el.textContent === '신고하기'));
+}
 
-    await click(document.querySelector('[aria-label="이 메시지 신고"]'));
+describe('TS32 신고 → 즉시 상호 차단 UI', () => {
+  const renderRoomWithMenu = async (): Promise<void> => {
+    await render(createElement('div', null,
+      createElement(RoomActionsMenu, { room: directRoom(), onSettings: vi.fn(), onLeave: vi.fn() }),
+      createElement(ChatRoom, { roomId: 'room' })));
+  };
+
+  it('메시지 옆·방 상단에는 신고 버튼이 없고, ⋯ 메뉴 신고하기 → 사유 선택(선택) → 접수 시 상대 메시지·preview 가 즉시 사라지고 문의 이메일을 안내한다', async () => {
+    api.reportChatUser.mockResolvedValue({ reported: true, blocked: true, report_id: 'r1' });
+    await renderRoomWithMenu();
+    expect(document.body.textContent).toContain('내용-m1');
+    expect(document.querySelectorAll('[aria-label="이 메시지 신고"]')).toHaveLength(0);
+    expect(button('상대방 신고')).toBeUndefined();
+
+    await openReportFromMenu();
     expect(document.querySelector('[role=dialog]')).not.toBeNull();
     await click(document.querySelector('input[type=radio]'));
     await click(button('신고하고 차단'));
 
     expect(api.reportChatUser).toHaveBeenCalledTimes(1);
-    expect(api.reportChatUser.mock.calls[0][0]).toMatchObject({
-      target_user_id: PEER, room_id: 'room', message_id: 'm1', reason: 'abuse',
-    });
+    expect(api.reportChatUser.mock.calls[0][0]).toMatchObject({ target_user_id: PEER, room_id: 'room', reason: 'abuse' });
     expect(api.reportChatUser.mock.calls[0][0].operation_key).toBeTruthy();
 
     // 성공 즉시: 상대 메시지 제거, 방 blocked, preview·미읽음 제거, 운영 이메일 링크
@@ -122,10 +133,10 @@ describe('TS32 신고 → 즉시 상호 차단 UI', () => {
     expect(document.body.textContent).not.toContain('내용-m1');
   });
 
-  it('사유 없이도 접수되고, 상대 프로필(방 상단)에서도 신고할 수 있다', async () => {
+  it('사유 없이도 접수된다', async () => {
     api.reportChatUser.mockResolvedValue({ reported: true, blocked: true, report_id: 'r1' });
-    await render(createElement(ChatRoom, { roomId: 'room' }));
-    await click(button('상대방 신고'));
+    await renderRoomWithMenu();
+    await openReportFromMenu();
     await click(button('신고하고 차단'));
     const payload = api.reportChatUser.mock.calls[0][0];
     expect(payload).toMatchObject({ target_user_id: PEER, room_id: 'room' });
@@ -135,8 +146,8 @@ describe('TS32 신고 → 즉시 상호 차단 UI', () => {
 
   it('접수 실패 후 다시 눌러도 같은 operation_key 로 재전송한다(중복 접수 방지)', async () => {
     api.reportChatUser.mockRejectedValueOnce(new Error('network')).mockResolvedValueOnce({ reported: true, blocked: true, report_id: 'r1' });
-    await render(createElement(ChatRoom, { roomId: 'room' }));
-    await click(button('상대방 신고'));
+    await renderRoomWithMenu();
+    await openReportFromMenu();
     await click(button('신고하고 차단'));
     expect(document.querySelector('[role=alert]')?.textContent).toContain('신고를 접수하지 못했습니다');
     await click(button('신고하고 차단'));

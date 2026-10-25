@@ -380,6 +380,16 @@ def _pipeline_backlog_redis_isolation(monkeypatch):
     yield client
 
 
+@pytest.fixture(autouse=True)
+def _chat_presence_redis_isolation(monkeypatch):
+    """채팅 열람 presence 가 개발 PC 의 실제 Redis 를 보지 않게 빈 fakeredis 를 주입한다."""
+    import fakeredis
+
+    client = fakeredis.FakeStrictRedis(decode_responses=True)
+    monkeypatch.setattr("app.services.chat_presence_service.get_client", lambda: client)
+    yield client
+
+
 @pytest.fixture
 def celery_eager():
     """SDD-101: Celery 체인을 테스트에서 결정적으로 인라인 실행한다(파이프라인 검증용).
