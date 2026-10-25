@@ -3,6 +3,7 @@
 import { buttonClass, cardClass, fieldClass } from '../../components/ui';
 import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import AppShell from '../../components/layout/AppShell';
+import CounselorInviteSection from '../../components/org/counselor-invite-section';
 import CounselorInfoEditor from '../../components/counselor/counselor-info-editor';
 import { ApiError } from '../../lib/api/client';
 import { sessionStatusLabel } from '../../lib/session-status';
@@ -347,6 +348,8 @@ export default function OrgCounselorsPage() {
     mode: 'suspend' | 'unsuspend';
   } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
+  const inviteDialogRef = useDialogA11y(showInvite, () => setShowInvite(false));
 
   const refresh = useCallback(async (targetOrgId: string): Promise<void> => {
     const list = await listCounselors(targetOrgId);
@@ -411,7 +414,23 @@ export default function OrgCounselorsPage() {
   };
 
   return (
-    <AppShell title="상담사 관리" sub="COUNSELORS" wide>
+    <AppShell
+      title="상담사 관리"
+      sub="COUNSELORS"
+      wide
+      rightSlot={
+        orgId ? (
+          <button
+            data-header-action="primary"
+            type="button"
+            onClick={() => setShowInvite(true)}
+            className="mb-btn"
+          >
+            상담사 초대
+          </button>
+        ) : undefined
+      }
+    >
       {error && (
         <div className="mb-4 rounded-xl bg-[#FDECEC] p-3 text-sm text-[#B3261E]" role="alert">
           {error}
@@ -475,7 +494,7 @@ export default function OrgCounselorsPage() {
           {/* 목록 */}
           {counselors.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-[#DDDEE7] p-8 text-center text-sm text-[#6F6F6F]">
-              아직 소속된 상담사가 없습니다. 기관 대시보드에서 상담사를 초대해 보세요.
+              아직 소속된 상담사가 없습니다. 상단의 '상담사 초대' 버튼으로 초대해 보세요.
             </div>
           ) : filtered.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-[#DDDEE7] p-8 text-center text-sm text-[#6F6F6F]">
@@ -583,6 +602,35 @@ export default function OrgCounselorsPage() {
               onClose={() => setSelected(null)}
             />
           )}
+        </div>
+      )}
+
+      {showInvite && orgId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div
+            ref={inviteDialogRef}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            aria-label="상담사 초대"
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-4 shadow-xl"
+          >
+            <CounselorInviteSection
+              orgId={orgId}
+              inviteList={[]}
+              showList={false}
+              onRefresh={() => refresh(orgId)}
+            />
+            <div className="mt-3 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowInvite(false)}
+                className={buttonClass({ variant: 'secondary' })}
+              >
+                닫기
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
