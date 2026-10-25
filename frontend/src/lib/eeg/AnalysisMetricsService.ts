@@ -386,6 +386,14 @@ export class AnalysisMetricsService {
         this.smoothedHeartRate = null;
         this.currentLfPower = 0; this.currentHfPower = 0; this.currentLfHfRatio = 0;
       }
+      // 미래로 튄 시각(시계 어긋남·중복 샘플 누적)이 커서를 앞으로 밀어 정상 박동을 전부 버리게 하는 것을 막는다.
+      const nowMs = Date.now();
+      const futureLimit = nowMs + AnalysisMetricsService.RR_CLOCK_RESET_MS;
+      if (this.lastRrEndTimestamp > futureLimit) {
+        this.lastRrEndTimestamp = -Infinity;
+        this.rrIntervalBuffer = []; this.rrTimestampBuffer = [];
+      }
+      candidates = candidates.filter(c => Number.isFinite(c.ts) && c.ts <= futureLimit);
       // 중첩 창이 다시 보낸 박동(이미 받은 시각 이하)은 버린다.
       candidates = candidates.filter(c => Number.isFinite(c.ts) && c.ts > this.lastRrEndTimestamp);
     }

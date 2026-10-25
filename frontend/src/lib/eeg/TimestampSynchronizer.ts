@@ -52,13 +52,9 @@ export class TimestampSynchronizer {
   
   // 동기화 상태
   private isInitialized: boolean = false;
-  private masterTimeBase: number = 0;
-  private deviceTimeBase: number = 0;
-  private lastDeviceTime: number = 0;
-  // 장기 드리프트 보정 누적량(ms). 재동기화마다 소량(MAX_SLEW_PER_SYNC)씩만 이동한다.
-  private slewMs: number = 0;
-  // 현재 동기화 구간에서 관측한 최소(도착시각 - 장치시각). BLE 지연이 가장 작았던 패킷 = 실제 오프셋에 가장 가까움.
-  private windowMinOffset: number = Infinity;
+  // 센서별 독립 시계. EEG·PPG·ACC 는 장치 카운터가 서로 독립(엔디안·시작점이 다름)일 수 있어
+  // 하나의 deviceTimeBase 를 공유하면 한 센서의 시각이 수십 시간 어긋난다. 센서마다 자기 첫 패킷에 앵커링한다.
+  private clocks: Map<string, { masterTimeBase: number; deviceTimeBase: number; lastDeviceTime: number; slewMs: number; windowMinOffset: number; lastSyncTime: number }> = new Map();
   
   // 센서별 직전 "샘플" 타임스탬프. 재동기화 시각(Date.now 벽시계)이 아니라
   // 같은 시간축(정규화 masterTime)의 직전 샘플을 기준으로 간격을 계산하기 위함.
@@ -118,24 +114,28 @@ export class TimestampSynchronizer {
   /**
    * 시스템 초기화 (첫 번째 패킷 수신 시)
    */
-  initialize(deviceTimestamp: number): void {
+  initialize(deviceTimestamp: number, sensorType: string = 'EEG'): void {
     const now = Date.now();
-    
-    this.masterTimeBase = now;
-    this.deviceTimeBase = deviceTimestamp;
-    this.lastDeviceTime = deviceTimestamp;
-    
+    this.clocks.set(sensorType, {
+      masterTimeBase: now, deviceTimeBase: deviceTimestamp, lastDeviceTime: deviceTimestamp,
+      slewMs: 0, windowMinOffset: Infinity, lastSyncTime: now
+    });
     this.metrics.masterTime = now;
     this.metrics.deviceTimeOffset = now - deviceTimestamp;
     this.metrics.lastSyncTime = now;
-    
     this.isInitialized = true;
-    
-    console.log('TimestampSynchronizer 초기화:', {
-      masterTime: this.masterTimeBase,
-      deviceTime: this.deviceTimeBase,
-      offset: this.metrics.deviceTimeOffset
-    });
+    console.log('TimestampSynchronizer 초기화:', { sensorType, masterTime: now, deviceTime: deviceTimestamp });
+  }
+  
+  /**
+   * 패킷 중복 판정 — 같은 센서에서 직전 패킷 헤더 시각 이하이고 2초 이내로만 되돌아갔으면 중복 전달로 본다.
+   * 중복 알림은 같은 패킷이 즉시 다시 오는 형태다. 카운터 리셋·재연결처럼 크게 되돌아가면 새 구간이다.
+   */
+  isDuplicatePacket(deviceTimestamp: number, sensorType: 'EEG' | 'PPG' | 'ACC'): boolean {
+    const c = this.clocks.get(sensorType);
+    if (!c) return false;
+    const back = c.lastDeviceTime - deviceTimestamp;
+    return back >= 0 && back < 2_000;
   }
   
   /**
@@ -146,14 +146,15 @@ export class TimestampSynchronizer {
     sensorType: 'EEG' | 'PPG' | 'ACC'
   ): TimestampValidationResult {
     // 초기화 필요 시
-    if (!this.isInitialized) {
-      this.initialize(deviceTimestamp);
+    if (!this.clocks.has(sensorType)) {
+      this.initialize(deviceTimestamp, sensorType);
     }
+    const clock = this.clocks.get(sensorType)!;
     
     this.metrics.totalPackets++;
     
     // 기본 정규화
-    const normalizedTime = this.performBasicNormalization(deviceTimestamp);
+    const normalizedTime = this.performBasicNormalization(clock, deviceTimestamp);
     
     // 타임스탬프 검증
     const validation = this.validateTimestamp(normalizedTime, sensorType, deviceTimestamp);
@@ -162,11 +163,11 @@ export class TimestampSynchronizer {
     this.updateSensorTiming(sensorType, normalizedTime);
     
     // 도착시각-장치시각 최소 오프셋 관측 (지터가 아닌 장기 드리프트 추정용)
-    this.windowMinOffset = Math.min(this.windowMinOffset, Date.now() - deviceTimestamp);
-    this.lastDeviceTime = deviceTimestamp;
+    clock.windowMinOffset = Math.min(clock.windowMinOffset, Date.now() - deviceTimestamp);
+    clock.lastDeviceTime = deviceTimestamp;
     
     // 주기적(5초) 재동기화 확인
-    this.checkResyncNeeded();
+    this.checkResyncNeeded(sensorType, clock);
     
     // 메트릭 업데이트
     this.updateMetrics();
@@ -178,8 +179,8 @@ export class TimestampSynchronizer {
    * 기본 타임스탬프 정규화
    * 장치 카운터(고정 매핑) + 완만하게 누적되는 보정량(slewMs). 샘플 시각은 장치 시계 간격 그대로 단조 증가한다.
    */
-  private performBasicNormalization(deviceTimestamp: number): number {
-    return this.masterTimeBase + (deviceTimestamp - this.deviceTimeBase) + this.slewMs;
+  private performBasicNormalization(clock: { masterTimeBase: number; deviceTimeBase: number; slewMs: number }, deviceTimestamp: number): number {
+    return clock.masterTimeBase + (deviceTimestamp - clock.deviceTimeBase) + clock.slewMs;
   }
   
   /**
@@ -312,48 +313,50 @@ export class TimestampSynchronizer {
   }
   
   /**
-   * 재동기화 필요 여부 확인 — 5초 주기로만 수행한다.
-   * (이전: driftRate 가 3센서 공유 lastDeviceTime·벽시계를 섞어 계산되어 도착 지터만으로 임계값을 넘고 매 패킷 재앵커링)
+   * 재동기화 필요 여부 확인 — 센서별 5초 주기로만 수행한다.
    */
-  private checkResyncNeeded(): void {
+  private checkResyncNeeded(sensorType: string, clock: { lastSyncTime: number } & Record<string, number>): void {
     const now = Date.now();
-    if (now - this.metrics.lastSyncTime >= this.SYNC_INTERVAL) {
-      this.performResync(now);
+    if (now - clock.lastSyncTime >= this.SYNC_INTERVAL) {
+      this.performResync(sensorType, clock as never, now);
     }
   }
   
   /**
-   * 재동기화 수행 — 구간 최소 오프셋 기반 장기 드리프트만 보정한다.
-   * 샘플 시각 축은 재앵커링하지 않고 slewMs 만 소량 이동 (큰 이탈은 하드 리싱크).
+   * 재동기화 수행 — 구간 최소 오프셋 기반 장기 드리프트만 보정한다(1회 최대 MAX_SLEW_PER_SYNC).
    */
-  private performResync(now: number): void {
-    const elapsedSec = Math.max(0.001, (now - this.metrics.lastSyncTime) / 1000);
+  private performResync(
+    sensorType: string,
+    clock: { masterTimeBase: number; deviceTimeBase: number; lastDeviceTime: number; slewMs: number; windowMinOffset: number; lastSyncTime: number },
+    now: number
+  ): void {
+    const elapsedSec = Math.max(0.001, (now - clock.lastSyncTime) / 1000);
+    clock.lastSyncTime = now;
     this.metrics.lastSyncTime = now;
+    if (!Number.isFinite(clock.windowMinOffset)) return;
     
-    if (!Number.isFinite(this.windowMinOffset)) return;
-    
-    const currentOffset = this.masterTimeBase - this.deviceTimeBase + this.slewMs;
-    const delta = this.windowMinOffset - currentOffset;
-    this.windowMinOffset = Infinity;
+    const currentOffset = clock.masterTimeBase - clock.deviceTimeBase + clock.slewMs;
+    const delta = clock.windowMinOffset - currentOffset;
+    clock.windowMinOffset = Infinity;
     
     if (Math.abs(delta) > this.HARD_RESYNC_THRESHOLD) {
-      // 재연결·장치 일시정지 등: 매핑 자체를 다시 잡는다.
-      this.masterTimeBase = now;
-      this.deviceTimeBase = this.lastDeviceTime;
-      this.slewMs = 0;
-      this.lastSampleTimes.clear();
-      this.metrics.deviceTimeOffset = now - this.lastDeviceTime;
+      // 재연결·장치 일시정지 등: 이 센서의 매핑만 다시 잡는다.
+      clock.masterTimeBase = now;
+      clock.deviceTimeBase = clock.lastDeviceTime;
+      clock.slewMs = 0;
+      this.lastSampleTimes.delete(sensorType);
+      this.metrics.deviceTimeOffset = now - clock.lastDeviceTime;
       this.metrics.driftRate = 0;
-      console.log('타임스탬프 하드 재동기화:', { delta });
+      console.log('타임스탬프 하드 재동기화:', { sensorType, delta });
       return;
     }
     
     const step = Math.max(-this.MAX_SLEW_PER_SYNC, Math.min(this.MAX_SLEW_PER_SYNC, delta));
-    this.slewMs += step;
-    // 센서별 직전 샘플 시각도 같은 양만큼 이동해 간격 계산 연속성 유지
-    this.lastSampleTimes.forEach((t, k) => this.lastSampleTimes.set(k, t + step));
+    clock.slewMs += step;
+    const last = this.lastSampleTimes.get(sensorType);
+    if (last !== undefined) this.lastSampleTimes.set(sensorType, last + step);
     this.metrics.deviceTimeOffset = currentOffset + step;
-    this.metrics.driftRate = step / elapsedSec; // ms/sec
+    this.metrics.driftRate = step / elapsedSec;
   }
   
   /**
@@ -448,11 +451,7 @@ export class TimestampSynchronizer {
    */
   reset(): void {
     this.isInitialized = false;
-    this.masterTimeBase = 0;
-    this.deviceTimeBase = 0;
-    this.lastDeviceTime = 0;
-    this.slewMs = 0;
-    this.windowMinOffset = Infinity;
+    this.clocks.clear();
     this.lastSampleTimes.clear();
     this.driftHistory = [];
     
@@ -479,8 +478,7 @@ export class TimestampSynchronizer {
       sensorTimings: Object.fromEntries(this.sensorTimings),
       driftHistory: this.driftHistory.slice(-10), // 최근 10개
       isInitialized: this.isInitialized,
-      masterTimeBase: this.masterTimeBase,
-      deviceTimeBase: this.deviceTimeBase
+      clocks: Object.fromEntries(this.clocks)
     };
   }
 } 

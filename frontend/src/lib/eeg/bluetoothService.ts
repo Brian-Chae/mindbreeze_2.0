@@ -835,6 +835,8 @@ class LinkBandBluetoothService implements BluetoothEEGService {
     // ACC timestamp 동기화 변수 초기화
     this.lastAccTimestamp = 0;
     this.accPacketCount = 0;
+    // 재연결 시 장치 카운터가 새로 시작될 수 있으므로 센서별 시계·중복 판정 상태도 초기화
+    this.timestampSync.reset();
     
     // 샘플링 레이트 카운터 초기화
     Object.keys(this.samplingRateCounters).forEach(sensor => {
