@@ -1,5 +1,6 @@
 // 네이티브 앱(Capacitor) Google 로그인 — 시스템 계정 선택기 사용(웹 팝업 OAuth는 WebView에서 불가)
 import { SocialLogin } from '@capgo/capacitor-social-login';
+import { getPlatform } from './platform';
 
 // Firebase 프로젝트(mind-breeze)의 웹 클라이언트 ID — 공개값. 서버는 id_token 의 aud 로 검증한다.
 const NATIVE_WEB_CLIENT_ID =
@@ -26,8 +27,10 @@ export async function ensureSocialLoginInitialized(): Promise<void> {
       iOSClientId: NATIVE_IOS_CLIENT_ID,
       iOSServerClientId: NATIVE_WEB_CLIENT_ID,
     },
+    // Apple 공급자는 iOS 에서만 등록한다. Android 는 apple.android.clientId 가 없으면 initialize 전체가
+    // 실패해 Google 로그인까지 막힌다("apple.android.clientId is null or empty").
     // iOS 네이티브는 redirectUrl 을 비워 둔다. authorization code 는 서버가 교환해 revoke 토큰을 확보한다.
-    apple: { useProperTokenExchange: true, redirectUrl: '' },
+    ...(getPlatform() === 'ios' ? { apple: { useProperTokenExchange: true, redirectUrl: '' } } : {}),
   });
   initialized = true;
 }
