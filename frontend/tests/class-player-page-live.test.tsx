@@ -216,6 +216,15 @@ describe('진행 중 호스트: 새 컨테이너로 교체', () => {
     expect(lastProps().live.metricsPollFailing).toBe(false);
   });
 
+  it('지표 폴링 성공 시각(metricsLastOkAt)을 기록한다 — 첫 성공 전 null, 성공 후 값, 실패해도 마지막 성공 시각 유지', async () => {
+    await renderPage();
+    expect(lastProps().live.metricsLastOkAt).not.toBeNull();
+    const ok = lastProps().live.metricsLastOkAt;
+    h.getSessionLiveMetrics.mockRejectedValue(new Error('network'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(4100); });
+    expect(lastProps().live.metricsLastOkAt).toBe(ok);
+  });
+
   it('[다시 연결]은 지표를 다시 받고 끊긴 소켓을 다시 연결한다', async () => {
     await renderPage();
     h.getSessionLiveMetrics.mockClear();
