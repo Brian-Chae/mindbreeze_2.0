@@ -67,6 +67,8 @@ export class BiosignalCaptureSession {
   private unpersisted = new Map<string, JournalPacket>();
   private pendingGaps: Omit<GapEvent, 'sequence' | 'event_type'>[] = [];
   private originMono: string | null = null;
+  /** SDD-246 T09: 큐 time_range(원점 상대 µs)를 장치 단조시계로 환산하는 기준. 수집 전이면 null. */
+  get originMonotonicUs(): string | null { return this.originMono; }
   private profileHash = '';
   private disconnectedAtUs: string | null = null;
   private reconnects = 0;
