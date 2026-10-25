@@ -1,5 +1,8 @@
 import Foundation
 
+/// 운영 기본은 .full(F_FULLFSYNC). .none 은 시험 전용(프로세스 종료 모사는 파일 핸들 폐기로 충분).
+public enum JournalSync { case full, none }
+
 public enum JournalError: Error, Equatable {
     case openFailed(Int32), writeFailed(Int32), syncFailed(Int32), closed, payloadTooLarge
 }
@@ -24,11 +27,13 @@ public final class AppendOnlyJournal {
     public private(set) var tornBytes: UInt64 = 0
     public private(set) var byteSize: UInt64 = 0
     public var syncHook: (() -> Void)?
+    private let syncMode: JournalSync
     private var fd: Int32 = -1
     private let lock = NSLock()
 
-    public init(url: URL, syncHook: (() -> Void)? = nil) throws {
+    public init(url: URL, sync: JournalSync = .full, syncHook: (() -> Void)? = nil) throws {
         self.url = url
+        self.syncMode = sync
         self.syncHook = syncHook
         let fd = open(url.path, O_RDWR | O_CREAT, 0o600)
         guard fd >= 0 else { throw JournalError.openFailed(errno) }
@@ -108,6 +113,7 @@ public final class AppendOnlyJournal {
     }
 
     private func fullSync() throws {
+        if syncMode == .none { return }
         if fcntl(fd, F_FULLFSYNC) != 0 {
             if fsync(fd) != 0 { throw JournalError.syncFailed(errno) }
         }

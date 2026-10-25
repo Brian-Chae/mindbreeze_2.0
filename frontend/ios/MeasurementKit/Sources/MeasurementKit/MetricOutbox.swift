@@ -14,8 +14,8 @@ public final class MetricOutbox {
     private var rejectCodes: [UInt64: String] = [:]
     public private(set) var persistFailure = false
 
-    public init(dir: URL, name: String = "metric-outbox.journal") throws {
-        journal = try AppendOnlyJournal(url: dir.appendingPathComponent(name))
+    public init(dir: URL, name: String = "metric-outbox.journal", sync: JournalSync = .full) throws {
+        journal = try AppendOnlyJournal(url: dir.appendingPathComponent(name), sync: sync)
         for r in AppendOnlyJournal.scan(url: journal.url).records {
             guard let o = try? JSONSerialization.jsonObject(with: r.payload) as? [String: Any], let k = o["k"] as? String else { continue }
             switch k {
