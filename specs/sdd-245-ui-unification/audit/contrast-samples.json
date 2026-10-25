@@ -1,0 +1,23 @@
+{
+  "note": "홈/제안 토큰 단색 조합 독립 계산. 앱 전체 모든 상태 AA 검증이 아님.",
+  "samples": [
+    {
+      "foreground": "#FFFFFF",
+      "background": "#5F0080",
+      "contrast": 11.678,
+      "normalTextAA": true
+    },
+    {
+      "foreground": "#FFFFFF",
+      "background": "#4B0066",
+      "contrast": 14.084,
+      "normalTextAA": true
+    },
+    {
+      "foreground": "#5F0080",
+      "background": "#F4EDF8",
+      "contrast": 10.185,
+      "normalTextAA": true
+    }
+  ]
+}

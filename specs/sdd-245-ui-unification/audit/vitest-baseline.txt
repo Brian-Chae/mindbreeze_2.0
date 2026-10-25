@@ -1,0 +1,51 @@
+제품 코드 변경 전 npm test (frontend), HEAD 62017dd8
+ ❯ tests/org-management-browser.test.cjs (2 tests | 2 failed) 33034ms
+   × 기관 모달: 미저장 보호, 실패 유지, 충돌 재조회, 수정, 비활성화, 재활성화 31737ms
+   × 목록 상태 필터와 저장 후 포커스 복귀 1296ms
+ ❯ tests/sdd234-a-mobile-home.test.tsx (6 tests | 4 failed) 9878ms
+   × member: 768px 계산 글자·터치·간격 불변 21ms
+   × member: 1440px 계산 글자·터치·간격 불변 12ms
+   × host: 768px 계산 글자·터치·간격 불변 10ms
+   × host: 1440px 계산 글자·터치·간격 불변 8ms
+ ❯ tests/org-counselor-management-browser.test.cjs (1 test | 1 failed) 8177ms
+   × 상담사 보호 대상, 확인 사유, 실패 유지, 역할 변경과 소속 해제 8176ms
+ ❯ tests/report-server-pdf.test.cjs (2 tests | 2 failed) 1286ms
+   × detail: 서버 파일 다운로드와 실패 복구 718ms
+   × email: 서버 파일 다운로드와 실패 복구 567ms
+ ❯ tests/report-modal-pdf.test.cjs (2 tests | 2 failed) 1345ms
+   × 하단 액션과 본문 전용 PDF (수신 주소: saved@example.com) 698ms
+   × 하단 액션과 본문 전용 PDF (수신 주소: 없음) 646ms
+ ❯ tests/agent-counselor-page.test.tsx (10 tests | 2 failed) 133ms
+   × 상담사는 브리핑과 입력창을 보고 CTA로 세션 목록을 연다 50ms
+   × 메시지 전송 성공 후 입력을 비우고 사용자·AI 응답을 최신 하단에 표시한다 6ms
+ ❯ tests/chat-message-deeplink.test.ts (6 tests | 2 failed) 78ms
+   × 대상 missing이면 최근 대화로 돌아갈 수 있다 6ms
+   × 대상 failure이면 최근 대화로 돌아갈 수 있다 3ms
+ ❯ tests/sdd220-native-release.test.ts (7 tests | 2 failed) 26ms
+   × TS1 버전·암호화·Privacy Resources 등록 9ms
+   × TS29 release 서명 누락 거부·버전 4ms
+ FAIL  tests/agent-counselor-page.test.tsx > 상담사는 브리핑과 입력창을 보고 CTA로 세션 목록을 연다
+ FAIL  tests/agent-counselor-page.test.tsx > 메시지 전송 성공 후 입력을 비우고 사용자·AI 응답을 최신 하단에 표시한다
+ FAIL  tests/chat-message-deeplink.test.ts > 대상 missing이면 최근 대화로 돌아갈 수 있다
+ FAIL  tests/chat-message-deeplink.test.ts > 대상 failure이면 최근 대화로 돌아갈 수 있다
+ FAIL  tests/org-counselor-management-browser.test.cjs > 상담사 보호 대상, 확인 사유, 실패 유지, 역할 변경과 소속 해제
+ FAIL  tests/org-management-browser.test.cjs > 기관 모달: 미저장 보호, 실패 유지, 충돌 재조회, 수정, 비활성화, 재활성화
+ FAIL  tests/org-management-browser.test.cjs > 목록 상태 필터와 저장 후 포커스 복귀
+TypeError: fetch failed
+ FAIL  tests/report-modal-pdf.test.cjs > 하단 액션과 본문 전용 PDF (수신 주소: saved@example.com)
+ FAIL  tests/report-modal-pdf.test.cjs > 하단 액션과 본문 전용 PDF (수신 주소: 없음)
+TypeError: fetch failed
+ FAIL  tests/report-server-pdf.test.cjs > detail: 서버 파일 다운로드와 실패 복구
+ FAIL  tests/report-server-pdf.test.cjs > email: 서버 파일 다운로드와 실패 복구
+TypeError: fetch failed
+ FAIL  tests/sdd220-native-release.test.ts > TS1 버전·암호화·Privacy Resources 등록
+ FAIL  tests/sdd220-native-release.test.ts > TS29 release 서명 누락 거부·버전
+ FAIL  tests/sdd234-a-mobile-home.test.tsx > member: 768px 계산 글자·터치·간격 불변
+ FAIL  tests/sdd234-a-mobile-home.test.tsx > member: 1440px 계산 글자·터치·간격 불변
+ FAIL  tests/sdd234-a-mobile-home.test.tsx > host: 768px 계산 글자·터치·간격 불변
+ FAIL  tests/sdd234-a-mobile-home.test.tsx > host: 1440px 계산 글자·터치·간격 불변
+ Test Files  8 failed | 264 passed (272)
+      Tests  17 failed | 2984 passed (3001)
+   Start at  10:04:41
+   Duration  169.17s (tests 55%, environment 24%, import 15%, transform 4%, setup 1%, worker 1%)
+종료코드 1. SDD-234 test-a 자동 갱신 파일은 실행 후 git restore로 복원.

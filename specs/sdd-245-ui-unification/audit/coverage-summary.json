@@ -1,0 +1,149 @@
+{
+  "count": 324,
+  "statuses": {
+    "리다이렉트": 40,
+    "렌더 표본": 252,
+    "시안(비범위)": 18,
+    "플레이어(제외 제안)": 4,
+    "토큰 미제공 안내": 6,
+    "권한 안내": 2,
+    "의도된 404": 2
+  },
+  "errors": [],
+  "unknown": [],
+  "blockedWrites": [
+    {
+      "id": "client-1440-app-chat-sample-room",
+      "requests": [
+        {
+          "method": "PUT",
+          "path": "/api/v1/chat/rooms/sample-room/read"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/chat/rooms/sample-room/messages/read"
+        }
+      ]
+    },
+    {
+      "id": "client-1440-chat-sample-room",
+      "requests": [
+        {
+          "method": "PUT",
+          "path": "/api/v1/chat/rooms/sample-room/read"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/chat/rooms/sample-room/messages/read"
+        }
+      ]
+    },
+    {
+      "id": "client-390-app-chat-sample-room",
+      "requests": [
+        {
+          "method": "PUT",
+          "path": "/api/v1/chat/rooms/sample-room/read"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/chat/rooms/sample-room/messages/read"
+        }
+      ]
+    },
+    {
+      "id": "client-390-chat-sample-room",
+      "requests": [
+        {
+          "method": "PUT",
+          "path": "/api/v1/chat/rooms/sample-room/read"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/chat/rooms/sample-room/messages/read"
+        }
+      ]
+    },
+    {
+      "id": "counselor-1440-chat-sample-room",
+      "requests": [
+        {
+          "method": "PUT",
+          "path": "/api/v1/chat/rooms/sample-room/read"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/chat/rooms/sample-room/messages/read"
+        }
+      ]
+    },
+    {
+      "id": "counselor-390-chat-sample-room",
+      "requests": [
+        {
+          "method": "PUT",
+          "path": "/api/v1/chat/rooms/sample-room/read"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/chat/rooms/sample-room/messages/read"
+        }
+      ]
+    },
+    {
+      "id": "org_admin-1440-chat-sample-room",
+      "requests": [
+        {
+          "method": "PUT",
+          "path": "/api/v1/chat/rooms/sample-room/read"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/chat/rooms/sample-room/messages/read"
+        }
+      ]
+    },
+    {
+      "id": "org_admin-390-chat-sample-room",
+      "requests": [
+        {
+          "method": "PUT",
+          "path": "/api/v1/chat/rooms/sample-room/read"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/chat/rooms/sample-room/messages/read"
+        }
+      ]
+    },
+    {
+      "id": "platform_admin-1440-chat-sample-room",
+      "requests": [
+        {
+          "method": "PUT",
+          "path": "/api/v1/chat/rooms/sample-room/read"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/chat/rooms/sample-room/messages/read"
+        }
+      ]
+    },
+    {
+      "id": "platform_admin-390-chat-sample-room",
+      "requests": [
+        {
+          "method": "PUT",
+          "path": "/api/v1/chat/rooms/sample-room/read"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/chat/rooms/sample-room/messages/read"
+        }
+      ]
+    }
+  ],
+  "revisions": {
+    "3": 324
+  }
+}

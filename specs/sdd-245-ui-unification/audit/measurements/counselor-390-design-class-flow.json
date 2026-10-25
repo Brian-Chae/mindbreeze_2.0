@@ -1,0 +1,293 @@
+{
+  "id": "counselor-390-design-class-flow",
+  "fixtureRevision": 3,
+  "pattern": "/design/class-flow",
+  "url": "/design/class-flow",
+  "role": "counselor",
+  "width": 390,
+  "height": 844,
+  "home": "/dashboard",
+  "actual": "/design/class-flow",
+  "redirected": false,
+  "failure": null,
+  "errors": [],
+  "unknown": [],
+  "blockedWrites": [],
+  "fontRequests": [
+    {
+      "url": "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,700&family=Inter:wght@300;400;500;700&family=JetBrains+Mono:wght@400;700&display=swap",
+      "sha256": "85ce0b5abaaf76bfaa2b9c7ea658be948fa494db7eff491c94303dc226a719ff",
+      "bytes": 2494
+    },
+    {
+      "url": "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css",
+      "sha256": "7802465df48a4fe19d6f959d8150da79543d2721b29fb41bd34f9636e33ea38b",
+      "bytes": 59900
+    },
+    {
+      "url": "https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap",
+      "sha256": "d1a44a102a37be4bb28bedf76261bd5f879b056d9c73f51cf37bf9a6cd4be7ef",
+      "bytes": 1165
+    },
+    {
+      "url": "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/variable/woff2-dynamic-subset/PretendardVariable.subset.90.woff2",
+      "sha256": "ed2d605d80cbe4f2c1df801852f7a1d8ad5e1a4972b26d8fee93427317f32f09",
+      "bytes": 20852
+    },
+    {
+      "url": "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/variable/woff2-dynamic-subset/PretendardVariable.subset.91.woff2",
+      "sha256": "fc9fcd1bea9c8f43f97136a1e89bfa6e34db85f820f86538288647b4c24c5b06",
+      "bytes": 37996
+    },
+    {
+      "url": "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/variable/woff2-dynamic-subset/PretendardVariable.subset.88.woff2",
+      "sha256": "192abc4c6ad933f53d809d8a46ee6237ae71e766bf66199fdce4678841fe12d7",
+      "bytes": 25640
+    },
+    {
+      "url": "https://fonts.gstatic.com/s/notosanskr/v40/PbyxFmXiEBPT4ITbgNA5Cgms3VYcOA-vvnIzzuoyeLQ.ttf",
+      "sha256": "84e2b8acadd0a01af9f0de6b0a2d29117fb5b0eabd7c2f8353d9d2da0461d5fa",
+      "bytes": 6170740
+    },
+    {
+      "url": "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/variable/woff2-dynamic-subset/PretendardVariable.subset.89.woff2",
+      "sha256": "44634e793e0d50fcdf803a2ad513d8bf0482d9adccbbd4ef534325cae9b2ee01",
+      "bytes": 21864
+    },
+    {
+      "url": "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/variable/woff2-dynamic-subset/PretendardVariable.subset.87.woff2",
+      "sha256": "04ca8277cfe3d27235573956255b0211575504cb695cdeab644c583df774e257",
+      "bytes": 24664
+    },
+    {
+      "url": "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/variable/woff2-dynamic-subset/PretendardVariable.subset.85.woff2",
+      "sha256": "757b9fc85ad85a1024fcacc04a9b688ace2db7af393e9ddc3b5dd2ba605b5a9b",
+      "bytes": 25104
+    }
+  ],
+  "hover": [
+    {
+      "kind": "primary",
+      "status": "not-present"
+    },
+    {
+      "kind": "secondary",
+      "status": "not-present"
+    },
+    {
+      "kind": "ghost",
+      "status": "not-present"
+    },
+    {
+      "kind": "icon",
+      "status": "not-present"
+    }
+  ],
+  "content": {
+    "selector": "body > div:nth-of-type(1) > div:nth-of-type(1)",
+    "tag": "DIV",
+    "class": "",
+    "text": "케이스 미등록요청: screen=- · case=-회원 케이스 106건 · 상담사 케이스 126건 (?index=1 로 전체 목록)",
+    "x": 0,
+    "y": 0,
+    "width": 390,
+    "height": 844,
+    "maxWidth": "none",
+    "paddingLeft": 16,
+    "paddingRight": 16,
+    "paddingTop": 16,
+    "paddingBottom": 16,
+    "marginTop": 0,
+    "marginBottom": 0,
+    "radius": "0px",
+    "shadow": "none",
+    "border": "0px solid rgb(239, 239, 239)",
+    "borderWidth": "0px",
+    "borderColor": "rgb(239, 239, 239)",
+    "fontSize": 16,
+    "fontWeight": "400",
+    "fontFamily": "system-ui, sans-serif",
+    "lineHeight": "24px",
+    "color": "rgb(247, 244, 240)",
+    "background": "rgb(18, 8, 28)",
+    "gap": "normal",
+    "rowGap": "normal",
+    "columnGap": "normal"
+  },
+  "title": {
+    "selector": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > h1:nth-of-type(1)",
+    "tag": "H1",
+    "class": "",
+    "text": "케이스 미등록",
+    "x": 16,
+    "y": 344,
+    "width": 358,
+    "height": 54,
+    "maxWidth": "none",
+    "paddingLeft": 0,
+    "paddingRight": 0,
+    "paddingTop": 0,
+    "paddingBottom": 0,
+    "marginTop": 0,
+    "marginBottom": 12,
+    "radius": "0px",
+    "shadow": "none",
+    "border": "0px solid rgb(239, 239, 239)",
+    "borderWidth": "0px",
+    "borderColor": "rgb(239, 239, 239)",
+    "fontSize": 24,
+    "fontWeight": "700",
+    "fontFamily": "\"Pretendard Variable\", Pretendard, \"Noto Sans KR\", -apple-system, \"system-ui\", system-ui, Roboto, sans-serif",
+    "lineHeight": "54px",
+    "color": "rgb(31, 31, 31)",
+    "background": "rgba(0, 0, 0, 0)",
+    "gap": "normal",
+    "rowGap": "normal",
+    "columnGap": "normal",
+    "topFromContainer": 344
+  },
+  "wrappers": [
+    {
+      "selector": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1)",
+      "tag": "DIV",
+      "class": "",
+      "text": "케이스 미등록요청: screen=- · case=-회원 케이스 106건 · 상담사 케이스 126건 (?index=1 로 전체 목록)",
+      "x": 16,
+      "y": 344,
+      "width": 358,
+      "height": 156,
+      "maxWidth": "560px",
+      "paddingLeft": 0,
+      "paddingRight": 0,
+      "paddingTop": 0,
+      "paddingBottom": 0,
+      "marginTop": 0,
+      "marginBottom": 0,
+      "radius": "0px",
+      "shadow": "none",
+      "border": "0px solid rgb(239, 239, 239)",
+      "borderWidth": "0px",
+      "borderColor": "rgb(239, 239, 239)",
+      "fontSize": 16,
+      "fontWeight": "400",
+      "fontFamily": "system-ui, sans-serif",
+      "lineHeight": "24px",
+      "color": "rgb(247, 244, 240)",
+      "background": "rgba(0, 0, 0, 0)",
+      "gap": "normal",
+      "rowGap": "normal",
+      "columnGap": "normal"
+    }
+  ],
+  "headings": [
+    {
+      "selector": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > h1:nth-of-type(1)",
+      "tag": "H1",
+      "class": "",
+      "text": "케이스 미등록",
+      "x": 16,
+      "y": 344,
+      "width": 358,
+      "height": 54,
+      "maxWidth": "none",
+      "paddingLeft": 0,
+      "paddingRight": 0,
+      "paddingTop": 0,
+      "paddingBottom": 0,
+      "marginTop": 0,
+      "marginBottom": 12,
+      "radius": "0px",
+      "shadow": "none",
+      "border": "0px solid rgb(239, 239, 239)",
+      "borderWidth": "0px",
+      "borderColor": "rgb(239, 239, 239)",
+      "fontSize": 24,
+      "fontWeight": "700",
+      "fontFamily": "\"Pretendard Variable\", Pretendard, \"Noto Sans KR\", -apple-system, \"system-ui\", system-ui, Roboto, sans-serif",
+      "lineHeight": "54px",
+      "color": "rgb(31, 31, 31)",
+      "background": "rgba(0, 0, 0, 0)",
+      "gap": "normal",
+      "rowGap": "normal",
+      "columnGap": "normal"
+    }
+  ],
+  "controls": [],
+  "cards": [],
+  "inputs": [],
+  "chips": [],
+  "sections": [
+    {
+      "selector": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1)",
+      "tag": "DIV",
+      "class": "",
+      "text": "케이스 미등록요청: screen=- · case=-회원 케이스 106건 · 상담사 케이스 126건 (?index=1 로 전체 목록)",
+      "x": 16,
+      "y": 344,
+      "width": 358,
+      "height": 156,
+      "maxWidth": "560px",
+      "paddingLeft": 0,
+      "paddingRight": 0,
+      "paddingTop": 0,
+      "paddingBottom": 0,
+      "marginTop": 0,
+      "marginBottom": 0,
+      "radius": "0px",
+      "shadow": "none",
+      "border": "0px solid rgb(239, 239, 239)",
+      "borderWidth": "0px",
+      "borderColor": "rgb(239, 239, 239)",
+      "fontSize": 16,
+      "fontWeight": "400",
+      "fontFamily": "system-ui, sans-serif",
+      "lineHeight": "24px",
+      "color": "rgb(247, 244, 240)",
+      "background": "rgba(0, 0, 0, 0)",
+      "gap": "normal",
+      "rowGap": "normal",
+      "columnGap": "normal",
+      "nextVerticalGap": null
+    }
+  ],
+  "scrollWidth": 390,
+  "bodyText": "케이스 미등록\n\n요청: screen=- · case=-\n\n회원 케이스 106건 · 상담사 케이스 126건 (?index=1 로 전체 목록)",
+  "shell": false,
+  "fontFaces": [
+    {
+      "family": "Pretendard Variable",
+      "status": "loaded",
+      "weight": "45 920"
+    },
+    {
+      "family": "Pretendard Variable",
+      "status": "loaded",
+      "weight": "45 920"
+    },
+    {
+      "family": "Pretendard Variable",
+      "status": "loaded",
+      "weight": "45 920"
+    },
+    {
+      "family": "Pretendard Variable",
+      "status": "loaded",
+      "weight": "45 920"
+    },
+    {
+      "family": "Pretendard Variable",
+      "status": "loaded",
+      "weight": "45 920"
+    },
+    {
+      "family": "Pretendard Variable",
+      "status": "loaded",
+      "weight": "45 920"
+    },
+    {
+      "family": "Noto Sans KR",
+      "status": "loaded",
+      "weight": "400"
+    }
+  ]
+}

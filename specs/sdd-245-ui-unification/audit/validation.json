@@ -1,0 +1,33 @@
+{
+  "checks": {
+    "expected_count": true,
+    "all_revision_3": true,
+    "all_captures": true,
+    "no_runtime_error": true,
+    "no_unknown_api": true,
+    "pretendard_loaded": true,
+    "font_fetch_success": true,
+    "router_ast_coverage": true,
+    "role_viewport_coverage": true,
+    "ownership_unique": true,
+    "sdd234_unchanged": true,
+    "product_unchanged": true
+  },
+  "measurementCount": 324,
+  "routeDeclarations": 94,
+  "statuses": {
+    "리다이렉트": 40,
+    "렌더 표본": 252,
+    "시안(비범위)": 18,
+    "플레이어(제외 제안)": 4,
+    "토큰 미제공 안내": 6,
+    "권한 안내": 2,
+    "의도된 404": 2
+  },
+  "fontFamilies": [
+    "Noto Sans KR",
+    "Pretendard Variable"
+  ],
+  "blockedAutomaticWriteAttempts": 20,
+  "method": "모든 API 로컬 mock/비GET405, 공개폰트GET만 외부 읽기"
+}

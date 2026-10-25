@@ -1,0 +1,1021 @@
+[
+  {
+    "pattern": "/",
+    "roles": [
+      "public"
+    ],
+    "line": 168,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/join",
+    "roles": [
+      "public"
+    ],
+    "line": 169,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/class/:sessionId/enter",
+    "roles": [
+      "public"
+    ],
+    "line": 170,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/o/:org_code",
+    "roles": [
+      "public"
+    ],
+    "line": 171,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/privacy",
+    "roles": [
+      "public"
+    ],
+    "line": 172,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/terms",
+    "roles": [
+      "public"
+    ],
+    "line": 173,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/crisis-help",
+    "roles": [
+      "public"
+    ],
+    "line": 174,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/measurement-guide",
+    "roles": [
+      "public"
+    ],
+    "line": 175,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/account-deletion",
+    "roles": [
+      "public"
+    ],
+    "line": 176,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/login",
+    "roles": [
+      "public"
+    ],
+    "line": 177,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/login/client",
+    "roles": [
+      "public"
+    ],
+    "line": 178,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/register",
+    "roles": [
+      "public"
+    ],
+    "line": 179,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/register/client",
+    "roles": [
+      "public"
+    ],
+    "line": 180,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/register/counselor",
+    "roles": [
+      "public"
+    ],
+    "line": 181,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/register/organization",
+    "roles": [
+      "public"
+    ],
+    "line": 182,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/register/*",
+    "roles": [
+      "public"
+    ],
+    "line": 183,
+    "source": "frontend/src/App.tsx",
+    "redirect": true
+  },
+  {
+    "pattern": "/role-redirect",
+    "roles": [
+      "public"
+    ],
+    "line": 184,
+    "source": "frontend/src/App.tsx",
+    "redirect": true
+  },
+  {
+    "pattern": "/app",
+    "roles": [
+      "client"
+    ],
+    "line": 186,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/class-members/:classId",
+    "roles": [
+      "public"
+    ],
+    "line": 187,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/app/classes",
+    "roles": [
+      "client"
+    ],
+    "line": 188,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/app/classes/:classId",
+    "roles": [
+      "client"
+    ],
+    "line": 189,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/app/counseling",
+    "roles": [
+      "client"
+    ],
+    "line": 190,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/app/counseling/:relationshipId",
+    "roles": [
+      "client"
+    ],
+    "line": 191,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/app/sessions",
+    "roles": [
+      "client"
+    ],
+    "line": 192,
+    "source": "frontend/src/App.tsx",
+    "redirect": true
+  },
+  {
+    "pattern": "/app/*",
+    "roles": [
+      "client"
+    ],
+    "line": 193,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/forgot-password",
+    "roles": [
+      "public"
+    ],
+    "line": 194,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/reset-password",
+    "roles": [
+      "public"
+    ],
+    "line": 195,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/set-password",
+    "roles": [
+      "public"
+    ],
+    "line": 196,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/membership-invite",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 197,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/agent",
+    "roles": [
+      "counselor"
+    ],
+    "line": 198,
+    "source": "frontend/src/App.tsx",
+    "redirect": true
+  },
+  {
+    "pattern": "/dashboard",
+    "roles": [
+      "counselor"
+    ],
+    "line": 199,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/dashboard/org",
+    "roles": [
+      "org_admin"
+    ],
+    "line": 203,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/onboarding/counselor",
+    "roles": [
+      "counselor"
+    ],
+    "line": 204,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/onboarding/client",
+    "roles": [
+      "client"
+    ],
+    "line": 205,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/onboarding/client/essentials",
+    "roles": [
+      "client"
+    ],
+    "line": 206,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/clients",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 207,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/clients/invite",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 211,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/clients/:id",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 212,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/invite/:token",
+    "roles": [
+      "public"
+    ],
+    "line": 213,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/report-view",
+    "roles": [
+      "public"
+    ],
+    "line": 214,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/org/search",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 215,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/org/register",
+    "roles": [
+      "public"
+    ],
+    "line": 217,
+    "source": "frontend/src/App.tsx",
+    "redirect": true
+  },
+  {
+    "pattern": "/org/requests",
+    "roles": [
+      "client",
+      "counselor",
+      "org_admin",
+      "platform_admin"
+    ],
+    "line": 218,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/org/counselors",
+    "roles": [
+      "org_admin"
+    ],
+    "line": 220,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/org/data-center",
+    "roles": [
+      "org_admin"
+    ],
+    "line": 221,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/admin/data-center",
+    "roles": [
+      "platform_admin"
+    ],
+    "line": 222,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/org/:org_id",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 223,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/credentials",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 224,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/sessions",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 225,
+    "source": "frontend/src/App.tsx",
+    "redirect": true
+  },
+  {
+    "pattern": "/sessions/new",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 226,
+    "source": "frontend/src/App.tsx",
+    "redirect": true
+  },
+  {
+    "pattern": "/sessions/:id",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 227,
+    "source": "frontend/src/App.tsx",
+    "redirect": true
+  },
+  {
+    "pattern": "/classes",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 228,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/classes/now",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 232,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/classes/new",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 233,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/classes/:classId",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 234,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/classes/:classId/sessions",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 235,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/classes/:classId/members",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 236,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/classes/:classId/settings",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 237,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/classes/:classId/schedule",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 238,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/classes/:classId/sessions/:id",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 240,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/counseling",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 241,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/counseling/new",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 242,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/counseling/:relationshipId",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 243,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/counseling/:relationshipId/sessions/:id",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 244,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/sessions/:id/live",
+    "roles": [
+      "client",
+      "counselor",
+      "org_admin"
+    ],
+    "line": 246,
+    "source": "frontend/src/App.tsx",
+    "redirect": true
+  },
+  {
+    "pattern": "/sessions/:id/player",
+    "roles": [
+      "client",
+      "counselor",
+      "org_admin"
+    ],
+    "line": 247,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/sessions/:id/summary",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 248,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/sessions/:id/class-report",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 249,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/sessions/:id/record",
+    "roles": [
+      "client",
+      "counselor",
+      "org_admin"
+    ],
+    "line": 250,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/chat",
+    "roles": [
+      "client",
+      "counselor",
+      "org_admin",
+      "platform_admin"
+    ],
+    "line": 251,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/chat/:roomId",
+    "roles": [
+      "client",
+      "counselor",
+      "org_admin",
+      "platform_admin"
+    ],
+    "line": 255,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/design",
+    "roles": [
+      "counselor"
+    ],
+    "line": 262,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/design/homepage",
+    "roles": [
+      "counselor"
+    ],
+    "line": 263,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/design/app",
+    "roles": [
+      "counselor"
+    ],
+    "line": 264,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/design/user-app",
+    "roles": [
+      "counselor"
+    ],
+    "line": 265,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/design/report",
+    "roles": [
+      "counselor"
+    ],
+    "line": 266,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/design/docs",
+    "roles": [
+      "counselor"
+    ],
+    "line": 267,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/design/class-player",
+    "roles": [
+      "counselor"
+    ],
+    "line": 268,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/design/class-flow",
+    "roles": [
+      "counselor"
+    ],
+    "line": 269,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/admin",
+    "roles": [
+      "platform_admin"
+    ],
+    "line": 272,
+    "source": "frontend/src/App.tsx",
+    "redirect": true
+  },
+  {
+    "pattern": "/reports",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 273,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/reports/sample",
+    "roles": [
+      "public"
+    ],
+    "line": 277,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/reports/:id",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 278,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/admin/reviews",
+    "roles": [
+      "platform_admin"
+    ],
+    "line": 279,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/admin/reviews/:targetType/:id",
+    "roles": [
+      "platform_admin"
+    ],
+    "line": 287,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/admin/users",
+    "roles": [
+      "platform_admin"
+    ],
+    "line": 295,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/admin/clients",
+    "roles": [
+      "platform_admin"
+    ],
+    "line": 303,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/admin/orgs",
+    "roles": [
+      "platform_admin"
+    ],
+    "line": 311,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/admin/applications",
+    "roles": [
+      "platform_admin"
+    ],
+    "line": 319,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/notifications",
+    "roles": [
+      "client",
+      "counselor",
+      "org_admin",
+      "platform_admin"
+    ],
+    "line": 327,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/settings",
+    "roles": [
+      "client",
+      "counselor",
+      "org_admin",
+      "platform_admin"
+    ],
+    "line": 328,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/profile/professional",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "line": 329,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/playground",
+    "roles": [
+      "client",
+      "counselor",
+      "org_admin",
+      "platform_admin"
+    ],
+    "line": 330,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "*",
+    "roles": [
+      "public"
+    ],
+    "line": 332,
+    "source": "frontend/src/App.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/app/chat",
+    "roles": [
+      "client"
+    ],
+    "source": "frontend/src/pages/client/ClientAppPage.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/app/chat/sample-room",
+    "roles": [
+      "client"
+    ],
+    "source": "frontend/src/pages/client/ClientAppPage.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/app/chat/lucy",
+    "roles": [
+      "client"
+    ],
+    "source": "frontend/src/pages/client/ClientAppPage.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/app/ai",
+    "roles": [
+      "client"
+    ],
+    "source": "frontend/src/pages/client/ClientAppPage.tsx",
+    "redirect": true
+  },
+  {
+    "pattern": "/app/profile",
+    "roles": [
+      "client"
+    ],
+    "source": "frontend/src/pages/client/ClientAppPage.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/app/participation-profile",
+    "roles": [
+      "client"
+    ],
+    "source": "frontend/src/pages/client/ClientAppPage.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/app/sessions/sample-session",
+    "roles": [
+      "client"
+    ],
+    "source": "frontend/src/pages/client/ClientAppPage.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/app/reports",
+    "roles": [
+      "client"
+    ],
+    "source": "frontend/src/pages/client/ClientAppPage.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/app/notifications",
+    "roles": [
+      "client"
+    ],
+    "source": "frontend/src/pages/client/ClientAppPage.tsx",
+    "redirect": false
+  },
+  {
+    "pattern": "/app/reports?report=sample-report",
+    "roles": [
+      "client"
+    ],
+    "source": "frontend/src/pages/client/ClientReportListPage.tsx",
+    "supplement": true
+  },
+  {
+    "pattern": "/design/class-player?role=member&case=M02",
+    "roles": [
+      "client"
+    ],
+    "source": "frontend/src/pages/design/ClassPlayerCasesPage.tsx",
+    "supplement": true
+  },
+  {
+    "pattern": "/report-view?token=synthetic-view-token",
+    "roles": [
+      "public"
+    ],
+    "source": "frontend/src/pages/reports/ReportViewPage.tsx",
+    "supplement": true
+  },
+  {
+    "pattern": "/membership-invite?token=synthetic-invite-token",
+    "roles": [
+      "counselor",
+      "org_admin"
+    ],
+    "source": "frontend/src/pages/MembershipInvitePage.tsx",
+    "supplement": true
+  },
+  {
+    "pattern": "/set-password?token=synthetic-token",
+    "roles": [
+      "public"
+    ],
+    "source": "frontend/src/pages/SetPasswordPage.tsx",
+    "supplement": true
+  },
+  {
+    "pattern": "/reset-password?token=synthetic-token",
+    "roles": [
+      "public"
+    ],
+    "source": "frontend/src/pages/ResetPasswordPage.tsx",
+    "supplement": true
+  }
+]
