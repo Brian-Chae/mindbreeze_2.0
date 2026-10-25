@@ -1,7 +1,7 @@
 import type { ParticipationRow } from "./participation";
 // 세션 관리 API
 
-import { apiClient } from './client';
+import { apiClient, ApiError } from './client';
 import { invalidateClassReads } from '../class-structure/invalidation';
 
 export type SessionType = 'clinical' | 'hypnosis' | 'meditation' | 'custom';
@@ -290,8 +290,18 @@ export const createSessionFromTemplate = (
 
 export type SessionAction = 'open' | 'start' | 'end' | 'cancel';
 
-export const transitionSession = async (id: string, action: SessionAction): Promise<SessionDto> => {
-  const result = await apiClient.post<SessionDto>(`/sessions/${id}/${action}`);
+/** 겹침 확인 후 재요청에 쓰는 확인 값(서버 TransitionConfirmation) */
+export interface TransitionConfirmation { force: true; confirmed_conflict_fingerprint: string }
+
+/** 409 schedule_conflict 응답이면 확인용 지문을 돌려준다(아니면 null). */
+export const scheduleConflictFingerprint = (error: unknown): string | null => {
+  if (!(error instanceof ApiError) || error.status !== 409) return null;
+  const detail = (error.data as { detail?: { code?: string; conflict_fingerprint?: string } } | null)?.detail;
+  return detail?.code === 'schedule_conflict' && typeof detail.conflict_fingerprint === 'string' ? detail.conflict_fingerprint : null;
+};
+
+export const transitionSession = async (id: string, action: SessionAction, confirmation?: TransitionConfirmation): Promise<SessionDto> => {
+  const result = await apiClient.post<SessionDto>(`/sessions/${id}/${action}`, confirmation);
   if (action === 'end' || action === 'cancel') invalidateClassReads();
   return result;
 };

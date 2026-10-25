@@ -23,6 +23,7 @@ import {
   duplicateSession,
   setParticipantSpeaking,
   transitionSession,
+  scheduleConflictFingerprint,
   type SessionDto,
   type SessionLiveMetric,
   type SessionStatus,
@@ -894,7 +895,19 @@ export default function ClassPlayerPage() {
     setTransitioning(true);
     setError(null);
     try {
-      const updated = await transitionSession(id, 'start');
+      let updated: SessionDto;
+      try {
+        updated = await transitionSession(id, 'start');
+      } catch (e) {
+        // 같은 시간대 다른 클래스와 겹치면 서버가 확인용 지문과 함께 409 를 준다 → 확인 후 force 로 재요청.
+        const fingerprint = scheduleConflictFingerprint(e);
+        if (!fingerprint) throw e;
+        if (!window.confirm('같은 시간에 진행 중이거나 예정된 다른 클래스가 있어요.\n그래도 이 클래스를 시작할까요?')) {
+          setError('겹치는 일정이 있어 시작하지 않았어요.');
+          return;
+        }
+        updated = await transitionSession(id, 'start', { force: true, confirmed_conflict_fingerprint: fingerprint });
+      }
       setSession(updated);
       const online = updated.location_type === 'online';
       if (online) liveKit.connect();
