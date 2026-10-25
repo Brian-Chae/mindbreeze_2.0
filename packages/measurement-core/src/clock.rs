@@ -14,6 +14,8 @@ pub const TICK_HZ: i64 = 32_768;
 pub struct ClockConfig {
     /// 이 값 이상 과거로 돌아가면 tick reset(새 segment). 미만이면 순서 역행.
     pub reset_back_ticks: i64,
+    /// 이 값을 초과해 전진하면 새 segment (계약 forward_gap 10분 = 19_660_800 tick). 보간하지 않는다.
+    pub forward_gap_ticks: i64,
     /// 장치 시각이 도착 벽시계보다 이만큼 앞서면 미래로 보고 재앵커(µs).
     pub future_tolerance_us: i64,
     /// 예측 벽시계와 실제 도착 벽시계가 이 이상 어긋나면 clock_uncertain(µs, ±5분).
@@ -25,6 +27,7 @@ impl Default for ClockConfig {
     fn default() -> Self {
         ClockConfig {
             reset_back_ticks: 2 * TICK_HZ,
+            forward_gap_ticks: 600 * TICK_HZ,
             future_tolerance_us: 5_000_000,
             wall_divergence_us: 300_000_000,
             recent_cap: 64,
@@ -50,6 +53,7 @@ pub struct Flags {
     pub future: bool,
     pub reanchored: bool,
     pub clock_uncertain: bool,
+    pub forward_gap: bool,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -167,7 +171,8 @@ impl SensorClock {
         let d = raw.wrapping_sub(st.last_raw) as i32 as i64;
         let ext = st.last_ext + d;
 
-        if let Some(&(_, h)) = self.recent.iter().find(|(t, _)| *t == ext) {
+        // 계약: 직전과 같은 tick 만 duplicate/conflict, 그보다 과거(2초 이내)는 out_of_order
+        if let Some(&(_, h)) = self.recent.iter().find(|(t, _)| *t == ext && ext == st.last_ext) {
             return if h == payload_hash {
                 self.stats.duplicates += 1;
                 self.skip(Verdict::Duplicate, ext, n_samples)
@@ -177,8 +182,9 @@ impl SensorClock {
             };
         }
 
-        if d <= 0 {
-            if -d < self.cfg.reset_back_ticks {
+        let forward_gap = d > self.cfg.forward_gap_ticks;
+        if d <= 0 || forward_gap {
+            if d <= 0 && -d <= self.cfg.reset_back_ticks {
                 self.stats.out_of_order += 1;
                 return self.skip(Verdict::OutOfOrder, ext, n_samples);
             }
@@ -198,7 +204,7 @@ impl SensorClock {
                 last_sample_wall_us: wall_us,
                 gap_samples: 0,
                 anchor_id: self.anchor_id,
-                flags: Flags { segment_reset: true, reanchored: true, ..Flags::default() },
+                flags: Flags { segment_reset: true, reanchored: true, forward_gap, ..Flags::default() },
                 n_samples: n_samples as u32,
                 interval_us,
             };

@@ -17,6 +17,9 @@ wasm = ["dep:wasm-bindgen"]
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
+libm = "0.2"
+sha2 = { version = "0.10", default-features = false }
+postcard = { version = "1", features = ["alloc"] }
 wasm-bindgen = { version = "0.2", optional = true }
 
 [build-dependencies]

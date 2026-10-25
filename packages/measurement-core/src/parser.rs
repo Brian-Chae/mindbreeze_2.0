@@ -35,6 +35,13 @@ impl Sensor {
             Sensor::Acc => 2,
         }
     }
+    /// 계약 packet_rules.min_len (SDK `_handle_*` 의 최소 길이 검사)
+    pub fn min_len(self) -> usize {
+        match self {
+            Sensor::Eeg | Sensor::Ppg => 8,
+            Sensor::Acc => 10,
+        }
+    }
     pub fn sample_size(self) -> usize {
         match self {
             Sensor::Eeg => 7,
@@ -63,7 +70,9 @@ impl Sensor {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParseError {
-    /// 헤더 + 샘플 1개 미만
+    /// 헤더 4바이트 미만 (계약 invalid_header_short)
+    HeaderShort { got: usize },
+    /// 최소 길이 미만 (계약 invalid_too_short: eeg/ppg 8, acc 10 — SDK 의 최소 길이 검사)
     TooShort { got: usize, need: usize },
     /// 샘플 크기로 나누어 떨어지지 않는 꼬리 바이트
     TrailingBytes { extra: usize },
@@ -148,7 +157,10 @@ fn eeg_uv(signed: i32) -> f64 {
 
 pub fn parse_packet(sensor: Sensor, bytes: &[u8]) -> Result<Parsed, ParseError> {
     let size = sensor.sample_size();
-    let need = 4 + size;
+    if bytes.len() < 4 {
+        return Err(ParseError::HeaderShort { got: bytes.len() });
+    }
+    let need = sensor.min_len();
     if bytes.len() < need {
         return Err(ParseError::TooShort { got: bytes.len(), need });
     }

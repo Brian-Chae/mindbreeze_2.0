@@ -72,7 +72,8 @@ fn acc_little_endian_signed16() {
 
 #[test]
 fn truncated_and_trailing_bytes_are_invalid_not_silently_cut() {
-    assert!(matches!(parse_packet(Sensor::Eeg, &[1, 2, 3]), Err(ParseError::TooShort { .. })));
+    assert!(matches!(parse_packet(Sensor::Eeg, &[1, 2, 3]), Err(ParseError::HeaderShort { got: 3 })));
+    assert!(matches!(parse_packet(Sensor::Eeg, &[0; 7]), Err(ParseError::TooShort { .. })));
     assert!(matches!(
         parse_packet(Sensor::Ppg, &[0, 0, 0, 0, 1, 2, 3]),
         Err(ParseError::TooShort { .. })
@@ -134,16 +135,15 @@ fn sensors_have_independent_origins() {
 
 #[test]
 fn duplicate_notification_and_same_tick_conflict() {
+    // 계약 clock_rules: 직전과 같은 tick → duplicate/conflict, 2초 이내 과거 tick → out_of_order
     let mut c = clock(Sensor::Ppg);
     let w = 1_700_000_000_000_000i64;
     assert_eq!(adm(&mut c, 10_000, b"x", 25, w).verdict, Verdict::Accept);
     assert_eq!(adm(&mut c, 20_000, b"y", 25, w + 300_000).verdict, Verdict::Accept);
-    // 재연결/중복 알림: 같은 (tick, hash)
-    assert_eq!(adm(&mut c, 10_000, b"x", 25, w + 310_000).verdict, Verdict::Duplicate);
-    // 같은 tick 다른 payload → conflict (원문 보존, 분석 제외)
-    assert_eq!(adm(&mut c, 10_000, b"x-other", 25, w + 320_000).verdict, Verdict::Conflict);
-    // 직전보다 과거(2초 이내) 새 payload → 순서 역행
+    assert_eq!(adm(&mut c, 20_000, b"y", 25, w + 310_000).verdict, Verdict::Duplicate);
+    assert_eq!(adm(&mut c, 20_000, b"y-other", 25, w + 320_000).verdict, Verdict::Conflict);
     assert_eq!(adm(&mut c, 15_000, b"z", 25, w + 330_000).verdict, Verdict::OutOfOrder);
+    assert_eq!(adm(&mut c, 10_000, b"x", 25, w + 340_000).verdict, Verdict::OutOfOrder);
 }
 
 #[test]
