@@ -88,6 +88,10 @@ class Settings(BaseSettings):
     # Redis
     redis_url: str = "redis://localhost:6379/0"
 
+    # SDD-246: 실시간 v2 프로토콜(live:* Socket.IO + /live-v2 REST) 기능 플래그. 기본 off —
+    # off 면 v1 동작과 동일(핸들러 미등록, v2 REST 404). 켜려면 재기동 필요. 환경변수 LIVE_PROTOCOL_V2 가 우선한다.
+    live_protocol_v2: bool = False
+
     # SDD-212: 종료 파이프라인 줄(큐) 분리 — stt/report 전용 일꾼 유닛이 설치된 환경에서만 켠다.
     #   꺼져 있으면 기존 단일 줄 구성(롤백 경로). 신규 유닛 기동 후 켜야 작업이 쌓이지 않는다.
     pipeline_queue_split_enabled: bool = False

@@ -69,10 +69,15 @@
     },
     "DeviceEntity": {
       "type": "object", "additionalProperties": false,
-      "required": ["participant_id", "stream_id", "device_seq", "band_state", "contact", "sqi", "battery_pct", "state_reason"],
+      "description": "참가자 1명의 장치(capture stream) 상태. 두 출처가 같은 entity(participant_id)를 갱신한다: (1) stream 수명 event(capture.start/reanchor/close/종료·추방 cutoff) = generation/status/clock_uncertain/cutoff_code 를 항상 채운다, (2) 밴드 상태 보고(live:device) = 위 stream 필드 + device_seq/band_state/contact/sqi/battery_pct/state_reason 을 모두 채운다. (1) 은 밴드 필드를 싣지 않는다(마지막 (2) 값을 덮어쓴다 — 소비자는 밴드 필드 부재를 '미보고'로 취급).",
+      "required": ["participant_id", "stream_id"],
       "properties": {
         "participant_id": { "$ref": "common.schema.json#/definitions/Uuid" },
         "stream_id": { "$ref": "common.schema.json#/definitions/Uuid" },
+        "generation": { "$ref": "common.schema.json#/definitions/U64", "description": "참가자별 stream 세대(fencing). 큰 값이 현재 owner." },
+        "status": { "type": "string", "enum": ["active", "closed", "superseded", "ended", "revoked"] },
+        "clock_uncertain": { "type": "boolean" },
+        "cutoff_code": { "oneOf": [{ "$ref": "common.schema.json#/definitions/ReasonCode" }, { "type": "null" }] },
         "device_seq": { "$ref": "common.schema.json#/definitions/U64" },
         "band_state": { "type": "string", "enum": ["not_worn", "connecting", "connected", "reconnecting", "lost", "unknown"] },
         "contact": { "$ref": "common.schema.json#/definitions/Contact" },

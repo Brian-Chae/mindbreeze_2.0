@@ -23,6 +23,14 @@ export const REFS = {
   'stop-request': ['bridge.schema.json', '#/definitions/StopMeasurementRequest'],
   'stop-result': ['bridge.schema.json', '#/definitions/StopMeasurementResult'],
   event: ['bridge.schema.json', '#/definitions/BridgeEvent'],
+  'set-native-ownership-request': ['bridge.schema.json', '#/definitions/SetNativeOwnershipRequest'],
+  'set-native-ownership-result': ['bridge.schema.json', '#/definitions/SetNativeOwnershipResult'],
+  'set-js-band-ownership-request': ['bridge.schema.json', '#/definitions/SetJSBandOwnershipRequest'],
+  'set-js-band-ownership-result': ['bridge.schema.json', '#/definitions/SetJSBandOwnershipResult'],
+  'register-credential-request': ['bridge.schema.json', '#/definitions/RegisterCredentialRequest'],
+  'register-credential-result': ['bridge.schema.json', '#/definitions/RegisterCredentialResult'],
+  'handoff-credentials-request': ['bridge.schema.json', '#/definitions/HandoffCredentialsRequest'],
+  'handoff-credentials-result': ['bridge.schema.json', '#/definitions/HandoffCredentialsResult'],
   'core-config': ['core-abi.schema.json', '#/definitions/CoreConfig'],
   'core-push': ['core-abi.schema.json', '#/definitions/PushPacketCall'],
   'core-output': ['core-abi.schema.json', '#/definitions/CoreOutput'],
@@ -53,6 +61,10 @@ function walk(v, path, fn) {
   else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) walk(x, `${path}/${k}`, fn);
 }
 
+// 웹→native 1회 인계 요청만이 토큰 값을 싣는다(결과·이벤트·snapshot 으로는 절대 되돌아오지 않는다).
+const CREDENTIAL_INBOUND_KINDS = new Set(['register-credential-request', 'handoff-credentials-request']);
+const CREDENTIAL_KEYS = new Set(['accessToken', 'refreshToken']);
+
 export function validateBridge(kind, message) {
   const [file, frag] = REFS[kind] || [];
   if (!file) throw new Error(`알 수 없는 종류: ${kind}`);
@@ -65,7 +77,7 @@ export function validateBridge(kind, message) {
     semanticErrors.push(...scanLeaks(message));
     walk(message, '', (v, p) => {
       const key = p.split('/').pop();
-      if (key && BRIDGE_FORBIDDEN_EXTRA.has(key) && !(/samples/i.test(key) && !Array.isArray(v))) semanticErrors.push({ rule: 'forbidden_key', path: p, detail: key });
+      if (key && BRIDGE_FORBIDDEN_EXTRA.has(key) && !(CREDENTIAL_INBOUND_KINDS.has(kind) && CREDENTIAL_KEYS.has(key) && p.split('/').length === 2) && !(/samples/i.test(key) && !Array.isArray(v))) semanticErrors.push({ rule: 'forbidden_key', path: p, detail: key });
     });
   }
   // 이벤트 순서 필드: managerGeneration 은 반드시 있어야 한다(스키마 required) — 여기서는 세대 비교 유틸을 제공.

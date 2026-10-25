@@ -21,3 +21,14 @@ test('재시도/타임아웃 상수가 plan §3.3 과 같다', () => {
   assert.deepEqual(compat.retry_backoff_ms, [500, 1000, 2000, 4000]);
   assert.equal(compat.protocol_version, 2);
 });
+
+test('native 클라이언트가 고정되어 있고 websocket-only 이다', () => {
+  for (const os of ['android', 'ios']) {
+    const c = compat.native_clients[os];
+    assert.equal(c.transport, 'websocket-only', os);
+    assert.match(c.protocol, /Engine\.IO 4 \/ Socket\.IO v4/, os);
+    assert.ok(c.library && c.version && c.evidence, os);
+  }
+  assert.equal(compat.native_clients.android.library, 'io.socket:socket.io-client');
+  assert.equal(compat.native_clients.android.version, '2.1.2');
+});

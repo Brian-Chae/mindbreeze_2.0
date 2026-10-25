@@ -31,6 +31,7 @@ from app.services.live_redis.client import (
     LiveNotReady,
     LiveRedis,
     LiveRedisUnavailable,
+    METRIC_DEDUPE_TTL_S,
     ProjectionEpochMismatch,
     ProjectionFenceLost,
     ProjectionGap,
@@ -213,9 +214,19 @@ def rebuild(db: DBSession, live: LiveRedis, session_id: uuid.UUID, *, now_ms: in
         # 복원된 revision 까지는 Redis 가 정본으로 가졌으므로 표기. 이후 revision 은 drain 이 이어서 적용한다.
         if fold:
             _mark_processed(db, session_id, high)
+            # 방송 워터마크(emitted)도 소실됐을 수 있다 → high 로 맞춰, 재구축 직후 전체 outbox 를 재방송하지 않는다.
+            # (복원 시점 이전 revision 은 새 epoch 의 snapshot 으로 전달된다. high 이후만 다음 방송 대상.)
+            _align_emitted(live, session_id, high)
         return target_epoch
     finally:
         live.release_rebuild(session_id, token)
+
+
+def _align_emitted(live: LiveRedis, session_id: uuid.UUID, applied: int) -> None:
+    """`emitted` 워터마크가 applied 보다 뒤처졌으면(또는 없으면) applied 로 올린다. 앞서 있으면 건드리지 않는다."""
+    cur = live._wrap(live.r.get, live.emitted_key(session_id))
+    if cur is None or int(cur) < applied:
+        live._wrap(live.r.set, live.emitted_key(session_id), applied)
 
 
 def ensure_ready(db: DBSession, live: LiveRedis, session_id: uuid.UUID) -> int:
@@ -312,7 +323,8 @@ def _project_row(live: LiveRedis, session_id: uuid.UUID, row: LiveOutbox, epoch:
         domain=row.domain, entity_id=row.entity_id or "", entity_version=_row_version(row), kind=row.event_type,
         payload=payload, command_id=str(row.command_id) if row.command_id else "", now_ms=_now_ms(),
         deleted=removed, terminal=is_terminal_event(row.domain, payload), auth_revision=auth_rev,
-        state_value=state_value(_row_version(row), payload, removed), audiences=_audiences(row))
+        state_value=state_value(_row_version(row), payload, removed), audiences=_audiences(row),
+        dedupe_ttl_s=METRIC_DEDUPE_TTL_S if row.domain == "metrics" else None)
     if res[0] in ("ok", "dup"):
         return res
     code = res[1]
