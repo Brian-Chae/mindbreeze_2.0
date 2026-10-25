@@ -16,7 +16,7 @@
 - [ ] `joined` 가 5초 내 오지 않으면 connected 상태에서 join 을 재전송한다. joined 수신 시 중단.
 - [ ] `isSessionLiveJoined` 는 joined 전 false, 수신 후 true, disconnect/leave 후 false.
 - [ ] feature REST 폴백 판정: WS 미연결 / 미join / ACK 10초 정체면 REST, 정상이면 WS 만.
-- [ ] 상담사 화면 네트워크 판정: 소켓 끊김이어도 폴링 정상이면 'ok', 폴링 실패면 기존대로 reconnecting/down.
+- [x] (제외) 상담사 배너 판정 변경은 기존 정책(폴링 정상이어도 소켓 끊김=불안정 배너)과 충돌해 원복. 지표 "-" 는 last_eeg_at 정체(stale)가 원인이라 feature 저장 복구로 해결.
 - [ ] 기존 session-live 소켓 테스트 회귀 없음.
 
 ## 실행

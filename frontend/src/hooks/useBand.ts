@@ -58,6 +58,7 @@ import {
 import {
   emitSessionLiveFeature,
   getSessionLiveSocket,
+  isSessionLiveJoined,
   joinSessionLive,
   releaseSessionLiveRoom,
   retainSessionLiveRoom,
@@ -120,6 +121,8 @@ function toScoredIndices(raw: BandRawIndices, model: NormalizationModelDto | nul
 }
 
 const FEATURE_FLUSH_MS = 5000;
+/** WS 연결·join 상태여도 ACK 가 이 시간 이상 없으면 REST 폴백 */
+const WS_ACK_STALL_MS = 10_000;
 /** SDD-222 G6: BLE 콜백 경로 raw flush 최소 간격 */
 const CALLBACK_FLUSH_MIN_INTERVAL_MS = 5000;
 /** SDD-112: REST 폴백 재전송 배치 상한(1분치) — 거대 큐를 5초 주기로 나눠 drain */
@@ -419,6 +422,8 @@ export function useBand({
   /** 재시도 타이머가 최신 connect 를 호출하도록 하는 ref (stale closure 방지) */
   const autoConnectRef = useRef<() => Promise<void>>(async () => undefined);
   const wsConnectedRef = useRef(false);
+  /** 마지막 feature ACK 수신 시각 — WS 가 붙어 있어도 ACK 가 멈추면 REST 폴백으로 전환한다 */
+  const lastAckAtRef = useRef(Date.now());
   const revokedSessionRef = useRef<string | null>(null);
   const drainingRef = useRef(false);
   /** SDD-112: 재전송 in-flight 가드 — 5초 타이머·재연결 중복 호출 방지 */
@@ -619,6 +624,8 @@ export function useBand({
     (item: QueuedFeatureItem): boolean => {
       const socket = getSessionLiveSocket(skipAuth ? null : tokenStorage.getAccess());
       if (!wsConnectedRef.current || !socket.connected) return false;
+      // join 확정 전(서버 재시작 직후 등)에는 서버가 join 불일치로 버릴 수 있다 — REST 폴백에 맡긴다.
+      if (!isSessionLiveJoined(item.sessionId)) return false;
       return emitSessionLiveFeature(socket, {
         session_id: item.sessionId,
         participant_id: item.participantId,
@@ -727,6 +734,7 @@ export function useBand({
       if (ack.session_id && ack.session_id !== sessionId) return;
       // SDD-128(②-22): 실패 ACK(saved=0)는 큐에서 제거하지 않아 REST 폴백이 재시도하게 한다.
       if (ack.saved === 0) return;
+      lastAckAtRef.current = Date.now();
       try {
         const removed = await removeAckedFeature(
           {
@@ -1253,7 +1261,12 @@ export function useBand({
         flushTimerRef.current = setInterval(() => {
           // SDD-128(②-22): WS 정상 연결 시 REST 주기 flush 중지(이중 전송 제거).
           // 오프라인 폴백은 재연결 시 직접 retransmitPending이 처리한다.
-          if (!wsConnectedRef.current) void retransmitPending();
+          // 단, WS 가 붙어 있어도 room join 미확정이거나 ACK 가 멈추면(서버 재시작·join 불일치) REST 로 보낸다.
+          const wsHealthy =
+            wsConnectedRef.current &&
+            isSessionLiveJoined(sessionId) &&
+            Date.now() - lastAckAtRef.current < WS_ACK_STALL_MS;
+          if (!wsHealthy) void retransmitPending();
         }, FEATURE_FLUSH_MS);
       }
 
@@ -1538,6 +1551,12 @@ export function useBand({
       void retransmitPending();
     };
 
+    // 재join 확정(서버 재시작 후 포함) 즉시 미확정 큐를 재전송하고 ACK 시계를 리셋한다.
+    const onJoinedConfirmed = (): void => {
+      lastAckAtRef.current = Date.now();
+      void retransmitPending();
+    };
+
     const onDisconnect = (): void => {
       // 단절 시 큐 유지
       wsConnectedRef.current = false;
@@ -1638,6 +1657,7 @@ export function useBand({
     };
 
     socket.on('connect', onConnect);
+    socket.on('joined', onJoinedConfirmed);
     socket.on('disconnect', onDisconnect);
     socket.on('access_revoked', onAccessRevoked);
     const unsubAck = subscribeSessionLiveFeatureAck(socket, onAck);
@@ -1654,6 +1674,7 @@ export function useBand({
       unsubAck();
       unsubscribe();
       socket.off('connect', onConnect);
+      socket.off('joined', onJoinedConfirmed);
       socket.off('disconnect', onDisconnect);
       socket.off('access_revoked', onAccessRevoked);
       wsConnectedRef.current = false;
