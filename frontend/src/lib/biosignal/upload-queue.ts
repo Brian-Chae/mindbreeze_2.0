@@ -61,8 +61,22 @@ async function uploadOne(queue: BiosignalQueue, api: BiosignalApi, object: Queue
   await queue.complete(object, { kind: object.kind, alias: object.alias, sha256: expectChecksum, serverId, size_bytes: expectSize, verified_at_us: ack.verified_at_us });
 }
 
-class StageError extends Error { constructor(readonly stage: ArchiveStage, readonly cause: unknown) { super(cause instanceof Error ? cause.message : String(cause)); } }
-class AckRejected extends Error { constructor(readonly reason: string) { super(reason); } }
+class StageError extends Error {
+  readonly stage: ArchiveStage;
+  readonly cause: unknown;
+  constructor(stage: ArchiveStage, cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause));
+    this.stage = stage;
+    this.cause = cause;
+  }
+}
+class AckRejected extends Error {
+  readonly reason: string;
+  constructor(reason: string) {
+    super(reason);
+    this.reason = reason;
+  }
+}
 
 function withMonotonicRange<T extends RawMeta | ArtifactMeta>(meta: T, origin: string | null | undefined): T {
   const range = (meta as ArtifactMeta).time_range;
