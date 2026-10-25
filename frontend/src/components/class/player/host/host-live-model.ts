@@ -125,3 +125,39 @@ export function toHostQueue(participants: readonly SessionParticipant[]): HostQu
     .filter((p) => p.is_waitlisted)
     .map((p, i) => ({ id: p.participant_id ?? p.user_id ?? `queue-${i}`, name: p.user_name || p.guest_name || '대기 회원' }));
 }
+
+/** 일시적 null 로 값이 깜빡이는 것을 막기 위해 직전 값을 유지하는 시간 */
+export const HOLD_LAST_VALUE_MS = 15_000;
+
+export type HeldValues = Readonly<Record<string, { values: Partial<Record<keyof HostMetricValues, { value: number; at: number }>> }>>;
+
+/**
+ * band 가 on 인 참가자의 지표가 일시적으로 null 이면 직전 값을 HOLD_LAST_VALUE_MS 동안 유지한다.
+ * 순수 함수: 이전 보관분을 받아 새 보관분과 보정된 참가자 목록을 돌려준다(입력 불변).
+ * band 가 on 이 아니면(끊김·미착용) 유지하지 않고 보관분도 버린다.
+ */
+export function holdLastValues(
+  participants: readonly HostParticipant[],
+  prev: HeldValues,
+  nowMs: number,
+): { participants: HostParticipant[]; held: HeldValues } {
+  const held: Record<string, { values: Partial<Record<keyof HostMetricValues, { value: number; at: number }>> }> = {};
+  const out = participants.map((p) => {
+    if (p.band !== 'on') return p;
+    const keep = { ...(prev[p.id]?.values ?? {}) };
+    const nextValues: Record<string, number | null> = { ...p.values };
+    for (const key of Object.keys(p.values) as (keyof HostMetricValues)[]) {
+      const v = p.values[key];
+      if (v !== null) {
+        keep[key] = { value: v, at: nowMs };
+      } else {
+        const last = keep[key];
+        if (last && nowMs - last.at <= HOLD_LAST_VALUE_MS) nextValues[key] = last.value;
+        else delete keep[key];
+      }
+    }
+    held[p.id] = { values: keep };
+    return { ...p, values: nextValues as unknown as HostMetricValues };
+  });
+  return { participants: out, held };
+}

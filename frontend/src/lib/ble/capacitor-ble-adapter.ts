@@ -100,6 +100,13 @@ export class CapacitorBleAdapter implements BluetoothProvider {
     characteristicUuid: string,
     onData: (data: DataView) => void
   ): Promise<void> {
+    // 재연결·재입장 때 같은 characteristic 에 네이티브 구독이 남아 있으면 같은 패킷이 중복 전달된다.
+    // 등록 전에 항상 해제를 시도한다(구독이 없으면 무시).
+    try {
+      await BleClient.stopNotifications(deviceId, serviceUuid, characteristicUuid);
+    } catch {
+      // 구독 없음 — 정상
+    }
     await BleClient.startNotifications(
       deviceId,
       serviceUuid,

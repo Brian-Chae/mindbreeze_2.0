@@ -31,7 +31,7 @@ import type { HostErrorBannerModel } from './HostBanner';
 import { HostLiveKitBridge } from './HostLiveKitBridge';
 import { HostLiveView, type HostLiveActions } from './HostLiveView';
 import type { HostMediaProps } from './HostMediaSheet';
-import { toHostParticipant, toHostQueue, type HostMetricExtra } from './host-live-model';
+import { holdLastValues, toHostParticipant, toHostQueue, type HeldValues, type HostMetricExtra } from './host-live-model';
 import {
   resolveCamUi,
   resolveMicUi,
@@ -143,12 +143,17 @@ export function HostLiveContainer(props: HostLiveContainerProps) {
   }, []);
 
   /* ───── 참가자 모델 ───── */
+  const heldRef = useRef<HeldValues>({});
   const participants = useMemo(() => {
     const entryFor = (row: SessionLiveMetric): WaitingRoomEntry | undefined =>
       checkins.find((e) => e.participantId === row.participant_id || (row.user_id != null && e.participantId === row.user_id));
-    return rows
+    const raw = rows
       .filter((row) => row.participant_id !== hostParticipantId && !(hostUserId && row.user_id === hostUserId))
       .map((row) => toHostParticipant(row, { extra: extras[row.participant_id], entry: entryFor(row), nowMs }));
+    // 4초 폴링·WS 패치 사이에 값이 일시 null 이 되어도 직전 값을 15초 유지해 '-' 깜빡임을 없앤다
+    const { participants: held, held: nextHeld } = holdLastValues(raw, heldRef.current, nowMs);
+    heldRef.current = nextHeld;
+    return held;
   }, [rows, extras, checkins, hostParticipantId, hostUserId, nowMs]);
 
   const [history, setHistory] = useState<Readonly<Record<string, readonly HistoryPoint[]>>>({});

@@ -749,7 +749,7 @@ def register_session_live_namespace(sio):
             )
         except Exception:
             # 비참가자/미식별/대리 업로드/미동의 등 저장 실패 시 브로드캐스트하지 않는다
-            logger.warning("[WS /session-live] feature 저장 실패 (sid=%s, session=%s)", sid, session_id)
+            logger.warning("[WS /session-live] feature 저장 실패 (sid=%s, session=%s)", sid, session_id, exc_info=True)
             # 저장 실패 ACK — 클라이언트가 REST 폴백을 유지하게 한다.
             await sio.emit(
                 "feature_ack",

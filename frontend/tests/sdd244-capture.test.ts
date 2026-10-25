@@ -88,7 +88,8 @@ describe('SDD244 T07 실패 격리와 잘못된 입력', () => {
     const analysis = vi.fn();
     bluetoothService.onDataReceived = analysis;
     const bytes = Buffer.from(golden.eeg.packet_hex, 'hex').subarray(0, -1);
-    const service = bluetoothService as unknown as { handleEEGData(value: DataView): void };
+    const service = bluetoothService as unknown as { handleEEGData(value: DataView): void; timestampSync: { reset(): void } };
+    service.timestampSync.reset(); // 싱글턴이라 앞선 테스트의 같은 골든 패킷이 중복으로 걸리지 않게 격리
     expect(() => service.handleEEGData(view(bytes))).not.toThrow();
     expect(error).toHaveBeenCalledOnce();
     expect(analysis).toHaveBeenCalledOnce();
