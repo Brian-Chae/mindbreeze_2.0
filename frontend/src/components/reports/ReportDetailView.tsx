@@ -1,19 +1,19 @@
+import { buttonClass } from '../ui';
 // 리포트 상세 본문 — 페이지/모달 공용 (SDD-064)
 // Cover → 서사 → 상담 본문 → EEG → 액션 → 재발송(client only)
 
+import { ClassReportLoader } from '../class-report/ClassNarrativeReport';
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { downloadReportPdf } from '../../lib/report/print-report';
 import CounselorCommentCard from './CounselorCommentCard';
 import DataExportButton from './DataExportButton';
-import EegQualityBanner from './EegQualityBanner';
-import EegMetricsGrid from './EegMetricsGrid';
-import EegTimeline from './EegTimeline';
 import NarrativeSections from './NarrativeSections';
 import SessionReplayPanel from './SessionReplayPanel';
 import ReportCoverSection from './ReportCoverSection';
 import ReportStatusBadge from './ReportStatusBadge';
 import { useAuthStore } from '../../stores/authStore';
+import { aiRecordUnavailableText } from '../../lib/features';
 import {
   approveReport,
   resendReportEmail,
@@ -24,26 +24,8 @@ import {
   resolveReportStatus,
   type ReportDto,
 } from '../../lib/api/reports';
-import type { EegQualityStatus } from '../../lib/api/report';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function eegQualitySummaryLabel(status: EegQualityStatus): string | null {
-  switch (status) {
-    case 'valid':
-      return '품질 양호';
-    case 'degraded':
-      return '품질 주의';
-    case 'invalid':
-      return '품질 미달';
-    case 'insufficient':
-      return '데이터 부족';
-    case 'lost':
-      return '데이터 유실';
-    default:
-      return null;
-  }
-}
 
 // SDD-087 — content.counselor_comment 파싱 (문자열만 인정, 빈 값은 null)
 function commentOf(content: Record<string, unknown> | null | undefined): string | null {
@@ -79,8 +61,8 @@ function parseClientComments(
 
 function SummaryCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="report-summary-card bg-white border border-[#EFEFEF] rounded-2xl p-6">
-      <h3 className="text-[15px] font-bold text-[#1F1F1F] mb-4 flex items-center gap-2">
+    <div className="report-summary-card bg-white border border-[#EFEFEF] rounded-2xl p-6 mobile:p-4">
+      <h3 className="mobile:[overflow-wrap:anywhere] text-[15px] mobile:text-mb-subtitle font-bold text-[#1F1F1F] mb-4 flex items-center gap-2">
         <span className="w-1.5 h-1.5 rounded-sm bg-[#5F0080]" />
         {title}
       </h3>
@@ -92,8 +74,8 @@ function SummaryCard({ title, children }: { title: string; children: React.React
 function MarkerBadge({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="flex items-center justify-between py-2.5 px-4 bg-[#F5EDFC] rounded-xl">
-      <span className="text-[13px] font-medium text-[#1F1F1F]">{label}</span>
-      <span className="text-[15px] font-bold text-[#5F0080]">{value}</span>
+      <span className="text-[13px] mobile:text-mb-caption font-medium text-[#1F1F1F]">{label}</span>
+      <span className="text-[15px] mobile:text-mb-body font-bold text-[#5F0080]">{value}</span>
     </div>
   );
 }
@@ -226,15 +208,9 @@ export default function ReportDetailView({
   const { markers, displayNarrative, transcriptSegments } = adapted;
   // SDD-085: 마이크 오프(수동 기록) 세션 — AI 요약 섹션 숨김 + 사유 표기
   const aiRecordUnavailable = adapted.aiRecord?.status === 'not_available';
-  const aiRecordReasonText =
-    adapted.aiRecord?.reason === 'mic_off'
-      ? '이 세션은 마이크를 사용하지 않아 AI 자동 기록(전사·요약)이 제공되지 않습니다.'
-      : adapted.aiRecord?.reason === 'low_confidence'
-        ? '오디오 분석 신뢰도가 낮아 AI 자동 요약을 제공하지 않습니다. 녹음 원본 전사문은 아래 기록지에서 확인할 수 있습니다.'
-        : '이 세션에는 AI 자동 기록(전사·요약)이 없습니다.';
+  const aiRecordReasonText = aiRecordUnavailableText(adapted.aiRecord?.reason);
   const isCounselor = report.type === 'counselor';
   const eeg = adapted.eeg;
-  const eegQualityLabel = eeg ? eegQualitySummaryLabel(eeg.status) : null;
   const pipelineStatus = resolveReportStatus(report);
   const credibility = resolveDataCredibility(
     report.data_credibility,
@@ -262,7 +238,7 @@ export default function ReportDetailView({
           <button
             type="button"
             onClick={onListAction}
-            className="border border-[#E8D9F5] bg-white text-[#5F0080] font-medium hover:bg-[#F5EDFC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[15px] px-5 py-2.5 rounded-xl"
+            className="mobile:min-h-11 mobile:min-w-11 border border-[#E8D9F5] bg-white text-[#5F0080] font-medium hover:bg-[#F5EDFC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[15px] mobile:text-mb-label px-5 py-2.5 rounded-xl"
           >
             {listActionLabel}
           </button>
@@ -273,7 +249,7 @@ export default function ReportDetailView({
             type="button"
             onClick={handleApprove}
             disabled={approving}
-            className="bg-[#5F0080] text-white font-medium hover:bg-[#4A0066] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[15px] px-6 py-2.5 rounded-xl disabled:opacity-50"
+            className={buttonClass()}
           >
             {approving ? '승인 중...' : '승인하기'}
           </button>
@@ -290,7 +266,7 @@ export default function ReportDetailView({
             onClick={handleGeneratePDF}
             disabled={printing}
             aria-busy={printing}
-            className="border border-[#E8D9F5] bg-white text-[#5F0080] font-medium hover:bg-[#F5EDFC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[15px] px-5 py-2.5 rounded-xl disabled:opacity-50"
+            className="mobile:min-h-11 mobile:min-w-11 border border-[#E8D9F5] bg-white text-[#5F0080] font-medium hover:bg-[#F5EDFC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[15px] mobile:text-mb-label px-5 py-2.5 rounded-xl disabled:opacity-50"
           >
             {printing ? 'PDF 준비 중...' : 'PDF 다운로드'}
           </button>
@@ -298,10 +274,14 @@ export default function ReportDetailView({
       </div>
   );
 
+  if (report.type === 'counselor' && report.content?.class_report) {
+    return <ClassReportLoader sessionId={report.session_id} />;
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 print:max-w-none print:[&_.report-main]:overflow-visible print:[&_.narrative-report_section]:break-inside-auto print:[&_.metric]:break-inside-avoid">
       {displayError && (
-        <div data-print-exclude role="alert" className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{displayError}</div>
+        <div data-print-exclude role="alert" className="p-3 rounded-xl bg-red-50 text-red-700 text-sm mobile:text-mb-body">{displayError}</div>
       )}
 
       <ReportCoverSection report={report} adapted={adapted} />
@@ -332,11 +312,11 @@ export default function ReportDetailView({
                 className="bg-[#F5EDFC] rounded-xl p-4"
               >
                 {entry.participant_name && (
-                  <div className="text-[12px] font-medium text-[#5F0080] mb-1.5">
+                  <div className="text-[12px] mobile:text-mb-caption font-medium text-[#5F0080] mb-1.5">
                     {entry.participant_name}
                   </div>
                 )}
-                <p className="text-[15px] text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
+                <p className="mobile:[overflow-wrap:anywhere] text-[15px] mobile:text-mb-body text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
                   {entry.comment}
                 </p>
               </div>
@@ -348,7 +328,7 @@ export default function ReportDetailView({
       {displayNarrative && <NarrativeSections narrative={displayNarrative} />}
 
       {aiRecordUnavailable && (
-        <div className="rounded-2xl border border-[#EFEFEF] bg-[#F9F9F9] p-5 text-sm text-[#6F6F6F]">
+        <div className="rounded-2xl border border-[#EFEFEF] bg-[#F9F9F9] p-5 text-sm mobile:text-mb-body text-[#6F6F6F]">
           {aiRecordReasonText}
         </div>
       )}
@@ -356,7 +336,7 @@ export default function ReportDetailView({
       {/* SDD-087 — 저장된 상담사 코멘트 (편집 카드 미노출 시 읽기 전용: 내담자 뷰 · completed) */}
       {report.type === 'client' && counselorComment && !showCommentEditor && (
         <SummaryCard title="상담사 코멘트">
-          <p className="text-[15px] text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
+          <p className="mobile:[overflow-wrap:anywhere] text-[15px] mobile:text-mb-body text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
             {counselorComment}
           </p>
         </SummaryCard>
@@ -379,53 +359,15 @@ export default function ReportDetailView({
         </SummaryCard>
       )}
 
-      {adapted.showEegSection && eeg && (
-        <details
-          className="group rounded-2xl border border-[#E8D9F5] bg-[#FDFAFF] open:bg-white"
-          data-testid="eeg-section"
-          data-print-exclude
-        >
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 md:px-6 [&::-webkit-details-marker]:hidden">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <span className="text-[15px] font-bold text-[#5F0080]">
-                뇌파 상세 지표 보기
-              </span>
-              {eegQualityLabel && (
-                <span className="rounded-lg border border-[#E8D9F5] bg-white px-2.5 py-0.5 text-[12px] font-medium text-[#6D547A]">
-                  {eegQualityLabel}
-                </span>
-              )}
-            </div>
-            <span
-              aria-hidden="true"
-              className="shrink-0 text-[12px] text-[#9B9B9B] transition-transform group-open:rotate-180"
-            >
-              ▾
-            </span>
-          </summary>
-          <div className="space-y-4 border-t border-[#E8D9F5] px-5 pb-5 pt-4 md:px-6 md:pb-6">
-            <EegQualityBanner eeg={eeg} reportType={report.type} />
-
-            {adapted.showEegMetrics && (
-              <EegMetricsGrid eeg={eeg} reportType={report.type} compact />
-            )}
-
-            {adapted.showEegTimeline && (
-              <EegTimeline data={adapted.eeg_timeline} dense={!isCounselor} />
-            )}
-          </div>
-        </details>
-      )}
-
       {actionContainer ? createPortal(actions, actionContainer) : actions}
 
       {showResendEmail && (
         <section data-print-exclude className="rounded-2xl border border-[#E8D9F5] bg-[#FDFAFF] p-5 md:p-6">
-          <h3 className="text-[15px] font-bold text-[#5F0080] flex items-center gap-2">
+          <h3 className="mobile:[overflow-wrap:anywhere] text-[15px] mobile:text-mb-subtitle font-bold text-[#5F0080] flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-sm bg-[#5F0080]" />
             메일 발송
           </h3>
-          <p className="mt-1.5 text-[13px] text-[#6D547A]">
+          <p className="mt-1.5 text-[13px] mobile:text-mb-caption text-[#6D547A]">
             기본 주소는 저장된 리포트 수신 메일입니다. 주소를 확인하거나 수정한 후 발송해 주세요.
           </p>
           <div className="mt-4 flex flex-col sm:flex-row gap-3">
@@ -439,25 +381,25 @@ export default function ReportDetailView({
               }}
               placeholder="수신 이메일 주소"
               disabled={resending}
-              className="flex-1 px-3.5 py-2.5 border border-[#DDDEE7] rounded-xl bg-white text-[#1F1F1F] text-sm placeholder:text-[#9B9B9B] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/15 focus:border-[#5F0080] disabled:opacity-50"
+              className="mobile:min-h-12 mobile:text-mb-body flex-1 px-3.5 py-2.5 border border-[#DDDEE7] rounded-xl bg-white text-[#1F1F1F] text-sm mobile:text-mb-body placeholder:text-[#9B9B9B] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/15 focus:border-[#5F0080] disabled:opacity-50"
               aria-label="발송 이메일"
             />
             <button
               type="button"
               onClick={handleResendEmail}
               disabled={resending || !resendEmail.trim()}
-              className="bg-[#5F0080] text-white font-medium hover:bg-[#4A0066] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[15px] px-6 py-2.5 rounded-xl disabled:opacity-50 shrink-0"
+              className={buttonClass({ className: 'shrink-0' })}
             >
               {resending ? '발송 중...' : '발송'}
             </button>
           </div>
           {resendSuccess && (
-            <div role="status" className="mt-3 p-3 rounded-xl bg-[#F0F9F5] text-[#26724B] text-sm border border-[#D8EFE3]">
+            <div role="status" className="mt-3 p-3 rounded-xl bg-[#F0F9F5] text-[#26724B] text-sm mobile:text-mb-body border border-[#D8EFE3]">
               {resendSuccess}
             </div>
           )}
           {resendError && (
-            <div role="alert" className="mt-3 p-3 rounded-xl bg-red-50 text-red-700 text-sm">
+            <div role="alert" className="mt-3 p-3 rounded-xl bg-red-50 text-red-700 text-sm mobile:text-mb-body">
               {resendError}
             </div>
           )}
@@ -465,7 +407,7 @@ export default function ReportDetailView({
       )}
 
       {!isCounselor && (
-        <p className="text-center text-[12px] text-[#9B9B9B] pb-4">
+        <p className="text-center text-[12px] mobile:text-mb-caption text-[#9B9B9B] pb-4">
           본 리포트는 의료 진단이 아닌 두뇌건강 관리 목적의 참고 자료입니다.
         </p>
       )}

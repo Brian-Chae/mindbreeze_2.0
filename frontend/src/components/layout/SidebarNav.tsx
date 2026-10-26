@@ -6,11 +6,14 @@ import { getUnreadCount } from '../../lib/api/agent-counselor';
 import { useCounselorAgentStore } from '../../stores/agent-counselor-store';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
+import { useReportStore } from '../../stores/reportStore';
 import { term, type TermKey } from '../../lib/terms';
+import { isAiEnabled, isCounselingEnabled } from '../../lib/feature-flags';
 
 interface NavItem {
   to: string;
-  key: TermKey;
+  key?: TermKey;
+  label?: string;
   icon: string[];
   badge?: number;
   end?: boolean;
@@ -88,10 +91,16 @@ export function StrokeIcon({ d, size = 20 }: { d: string[]; size?: number }) {
   );
 }
 
+/** 상담 영역 경로 여부 (/counseling, /app/counseling 및 하위) */
+function isCounselingPath(to: string): boolean {
+  return /^\/(app\/)?counseling(\/|$)/.test(to);
+}
+
 const NAV_ITEMS: NavItem[] = [
-  { to: '/dashboard', key: 'dashboard', icon: ICONS.home },
-  { to: '/sessions', key: 'class', icon: ICONS.calendar },
+  { to: '/dashboard', key: 'home', icon: ICONS.home },
+  { to: '/classes', key: 'meditation-class', icon: ICONS.calendar },
   { to: '/clients', key: 'client', icon: ICONS.users },
+  { to: '/counseling', key: 'counseling', icon: ICONS.users },
   { to: '/chat', key: 'chat', icon: ICONS.message },
   { to: '/reports', key: 'report', icon: ICONS.report },
   { to: '/playground', key: 'playground', icon: ICONS.activity },
@@ -101,19 +110,22 @@ const NAV_ITEMS: NavItem[] = [
 
 const ORG_ADMIN_NAV_ITEMS: NavItem[] = [
   { to: '/dashboard/org', key: 'org-dashboard', icon: ICONS.home },
-  { to: '/sessions', key: 'class', icon: ICONS.calendar },
+  { to: '/classes', key: 'meditation-class', icon: ICONS.calendar },
   { to: '/clients', key: 'client', icon: ICONS.users },
+  { to: '/counseling', key: 'counseling', icon: ICONS.users },
   { to: '/chat', key: 'chat', icon: ICONS.message },
   // SDD-082: 기관 관리자 전용 상담사 관리 페이지
-  { to: '/org/counselors', key: 'org-counselors', icon: ICONS.users },
+  { to: '/org/counselors', key: 'members', icon: ICONS.users },
   { to: '/reports', key: 'report', icon: ICONS.report },
+  { to: "/org/data-center", label: "데이터 센터", icon: ICONS.activity },
   { to: '/notifications', key: 'notification', icon: ICONS.bell },
   { to: '/settings', key: 'setting', icon: ICONS.settings },
 ];
 
 const CLIENT_NAV_ITEMS: NavItem[] = [
   { to: '/app', key: 'home', icon: ICONS.home, end: true },
-  { to: '/app/sessions', key: 'class', icon: ICONS.calendar },
+  { to: '/app/classes', key: 'my-class', icon: ICONS.calendar },
+  { to: '/app/counseling', key: 'my-counseling', icon: ICONS.users },
   { to: '/app/chat', key: 'chat', icon: ICONS.message },
   { to: '/app/reports', key: 'report', icon: ICONS.report },
   { to: '/app/notifications', key: 'notification', icon: ICONS.bell },
@@ -121,10 +133,15 @@ const CLIENT_NAV_ITEMS: NavItem[] = [
 ];
 
 const ADMIN_NAV_ITEMS: NavItem[] = [
+  { to: '/chat', key: 'chat', icon: ICONS.message },
+  { to: "/admin/data-center", label: "데이터 센터", icon: ICONS.activity },
+  { to: '/notifications', key: 'notification', icon: ICONS.bell },
+  { to: '/settings', key: 'setting', icon: ICONS.settings },
   { to: '/admin/orgs', key: 'admin-orgs', icon: ICONS.users },
   { to: '/admin/applications', key: 'admin-applications', icon: ICONS.report },
   { to: '/admin/users', key: 'admin-users', icon: ICONS.users },
   { to: '/admin/clients', key: 'admin-clients', icon: ICONS.users },
+  { to: '/admin/chat-reports', label: '채팅 신고', icon: ICONS.message },
   { to: '/playground', key: 'playground', icon: ICONS.activity },
 ];
 
@@ -147,11 +164,15 @@ export default function SidebarNav({
   reportBadge,
   sessionBadge,
 }: SidebarNavProps) {
+  const pendingReview = useReportStore((s) => s.pendingReview);
+  const unreadReports = useReportStore((s) => s.unread);
   const user = useAuthStore((s) => s.user);
   const openRisk = useCounselorAgentStore((state) => state.openRisk);
   const counselorUnread = useCounselorAgentStore((state) => state.unread);
   useEffect(() => {
     if (user?.role !== 'counselor' || role === 'client') return;
+    // SDD-220: AI 비공개면 루시 미읽음·체크인 위험 조회를 하지 않는다.
+    if (!isAiEnabled()) return;
     let active = true;
     let fetching = false;
     useCounselorAgentStore.getState().setUnread(0);
@@ -185,7 +206,7 @@ export default function SidebarNav({
   const logout = useAuthStore((s) => s.logout);
   const wsConnected = useNotificationStore((s) => s.wsConnected);
   const navigate = useNavigate();
-  const navItems =
+  const allNavItems =
     user?.role === 'client' || role === 'client'
       ? CLIENT_NAV_ITEMS
       : user?.role === 'platform_admin'
@@ -193,6 +214,8 @@ export default function SidebarNav({
         : user?.role === 'org_admin'
           ? ORG_ADMIN_NAV_ITEMS
           : NAV_ITEMS;
+  // SDD-219: 상담 비공개 시 상담 항목(/counseling, /app/counseling)을 숨긴다.
+  const navItems = isCounselingEnabled() ? allNavItems : allNavItems.filter((it) => !isCounselingPath(it.to));
   const roleLabel =
     user?.role === 'client' || role === 'client'
       ? '회원 전용'
@@ -212,16 +235,16 @@ export default function SidebarNav({
     let count: number;
     switch (key) {
       case 'chat':
-        count = (chatBadge ?? 0) + (user?.role === 'counselor' && role !== 'client' ? counselorUnread + openRisk : agentBadge ?? 0);
+        count = (chatBadge ?? 0) + (!isAiEnabled() ? 0 : user?.role === 'counselor' && role !== 'client' ? counselorUnread + openRisk : agentBadge ?? 0);
         break;
       case 'notification':
-        count = notificationBadge ?? 0;
+        count = Math.max(notificationBadge ?? 0, sessionBadge ?? 0);
         break;
       case 'report':
-        count = reportBadge ?? 0;
+        count = reportBadge ?? (role === 'client' || user?.role === 'client' ? unreadReports : pendingReview);
         break;
       case 'class':
-        count = sessionBadge ?? 0;
+        count = 0;
         break;
       default:
         count = 0;
@@ -237,9 +260,9 @@ export default function SidebarNav({
   };
 
   return (
-    <div className="flex flex-col gap-7 px-5 py-8 h-full">
+    <div data-sidebar-root className="flex flex-col gap-7 px-5 py-8 h-full">
       {/* 브랜딩 블록 */}
-      <div className="flex flex-col gap-1.5">
+      <div data-sidebar-brand className="flex flex-col gap-1.5">
         <div className="flex items-center gap-2.5 px-2.5">
           <img
             src="/mb-design/assets/logo_symbol_dark.svg"
@@ -259,7 +282,7 @@ export default function SidebarNav({
         </div>
       </div>
 
-      <nav className="flex flex-col gap-1">
+      <nav data-sidebar-menu className="flex flex-col gap-1">
         {navItems.map((it) => (
           <NavLink
             key={it.to}
@@ -275,19 +298,19 @@ export default function SidebarNav({
             }
           >
             <StrokeIcon d={it.icon} />
-            <span className="flex-1">{term(it.key)}</span>
+            <span className="flex-1">{it.label || (it.key ? term(it.key) : '')}</span>
             {it.badge != null ? (
               <span className="min-w-[18px] h-[18px] px-1.5 rounded-full bg-[#5F0080] text-white font-bold text-[10px] inline-flex items-center justify-center font-mono">
                 {it.badge}
               </span>
             ) : (
-              getBadge(it.key)
+              it.key ? getBadge(it.key) : null
             )}
           </NavLink>
         ))}
       </nav>
 
-      <div className="mt-auto bg-white rounded-2xl p-4">
+      <div data-sidebar-profile className="mt-auto bg-white rounded-2xl p-4">
         <div className="text-[12px] text-[#6F6F6F] font-mono">{roleLabel}</div>
         <div className="font-bold text-[15px] text-[#1F1F1F] mt-1">
           {user?.name ?? '게스트'}

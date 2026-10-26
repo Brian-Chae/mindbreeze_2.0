@@ -83,7 +83,7 @@ describe('FM07 시작 대기', () => {
     const onBgmVolume = vi.fn();
     await render(<WaitStartView {...props({ bgm: { title: '심신이완 앰비언트', playing: false, volume: 0, blocked: false }, onBgmToggle, onBgmVolume })} />);
     expect(text()).toContain('대기실 BGM · 꺼짐');
-    expect(document.querySelector<HTMLInputElement>('input[type="range"]')!.disabled).toBe(true);
+    expect(document.querySelector<HTMLInputElement>('input[type="range"]')!.disabled).toBe(false);
     await render(<WaitStartView {...props({ onBgmToggle, onBgmVolume })} />);
     const toggle = qa<HTMLButtonElement>('button').find((b) => b.getAttribute('aria-label') === '일시정지')!;
     await act(async () => { toggle.click(); });

@@ -1,0 +1,394 @@
+{
+  "browser": "Google Chrome headless",
+  "executablePath": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "scope": "독립 HTML 시안, 서버 연결 없음",
+  "screens": [
+    {
+      "width": 390,
+      "variant": "current",
+      "state": "none",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 390,
+      "variant": "current",
+      "state": "hand",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 390,
+      "variant": "current",
+      "state": "signals",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 390,
+      "variant": "current",
+      "state": "toast",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 390,
+      "variant": "current",
+      "state": "sheet",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 390,
+      "variant": "current",
+      "state": "quiet",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 390,
+      "variant": "current",
+      "state": "speaking",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 390,
+      "variant": "a",
+      "state": "none",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 390,
+      "variant": "a",
+      "state": "hand",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 390,
+      "variant": "a",
+      "state": "signals",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 390,
+      "variant": "a",
+      "state": "toast",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 390,
+      "variant": "a",
+      "state": "sheet",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 390,
+      "variant": "a",
+      "state": "quiet",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 390,
+      "variant": "a",
+      "state": "speaking",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 390,
+      "variant": "b",
+      "state": "none",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 390,
+      "variant": "b",
+      "state": "hand",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 390,
+      "variant": "b",
+      "state": "signals",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 390,
+      "variant": "b",
+      "state": "toast",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 390,
+      "variant": "b",
+      "state": "sheet",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 390,
+      "variant": "b",
+      "state": "quiet",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 390,
+      "variant": "b",
+      "state": "speaking",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 1440,
+      "variant": "current",
+      "state": "none",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 1440,
+      "variant": "current",
+      "state": "hand",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 1440,
+      "variant": "current",
+      "state": "signals",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 1440,
+      "variant": "current",
+      "state": "toast",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 1440,
+      "variant": "current",
+      "state": "sheet",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 1440,
+      "variant": "current",
+      "state": "quiet",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 1440,
+      "variant": "current",
+      "state": "speaking",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 1440,
+      "variant": "a",
+      "state": "none",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 1440,
+      "variant": "a",
+      "state": "hand",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 1440,
+      "variant": "a",
+      "state": "signals",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 1440,
+      "variant": "a",
+      "state": "toast",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 1440,
+      "variant": "a",
+      "state": "sheet",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 1440,
+      "variant": "a",
+      "state": "quiet",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 1440,
+      "variant": "a",
+      "state": "speaking",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 1440,
+      "variant": "b",
+      "state": "none",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 1440,
+      "variant": "b",
+      "state": "hand",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 1440,
+      "variant": "b",
+      "state": "signals",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 1440,
+      "variant": "b",
+      "state": "toast",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 1440,
+      "variant": "b",
+      "state": "sheet",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 1440,
+      "variant": "b",
+      "state": "quiet",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    },
+    {
+      "width": 1440,
+      "variant": "b",
+      "state": "speaking",
+      "overflow": false,
+      "smallTargets": [],
+      "smallFonts": [],
+      "blur": false
+    }
+  ],
+  "interactions": [
+    "A 손들기→발언권 부여→회수",
+    "A 손 내리기",
+    "토스트→이름 없는 신호 집계",
+    "B 더보기→체크인",
+    "Escape 닫기 및 조치/시트 전환 후 포커스 복귀",
+    "1440px 기존 도크 및 단일 칩 줄 유지"
+  ],
+  "errors": []
+}

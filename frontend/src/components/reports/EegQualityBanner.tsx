@@ -111,11 +111,11 @@ export default function EegQualityBanner({ eeg, reportType }: EegQualityBannerPr
     >
       <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0">
-          <p className="text-[13px] font-semibold tracking-tight">{copy.title}</p>
-          <p className="mt-1 text-[12px] leading-relaxed opacity-90">{copy.body}</p>
+          <p className="text-[13px] mobile:text-mb-caption font-semibold tracking-tight">{copy.title}</p>
+          <p className="mt-1 text-[12px] mobile:text-mb-caption leading-relaxed opacity-90">{copy.body}</p>
         </div>
         {reliabilityText && (
-          <span className="shrink-0 font-mono text-[12px] opacity-80">
+          <span className="shrink-0 font-mono text-[12px] mobile:text-mb-caption opacity-80">
             {reliabilityText}
           </span>
         )}
@@ -124,12 +124,12 @@ export default function EegQualityBanner({ eeg, reportType }: EegQualityBannerPr
       {(reasonChip || (reportType === 'counselor' && eeg.coverage_ratio !== null)) && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {reasonChip && (
-            <span className="rounded-full bg-white/70 px-2.5 py-0.5 text-[12px] font-medium">
+            <span className="rounded-full bg-white/70 px-2.5 py-0.5 text-[12px] mobile:text-mb-caption font-medium">
               {reasonChip}
             </span>
           )}
           {reportType === 'counselor' && eeg.coverage_ratio !== null && (
-            <span className="rounded-full bg-white/70 px-2.5 py-0.5 font-mono text-[12px]">
+            <span className="rounded-full bg-white/70 px-2.5 py-0.5 font-mono text-[12px] mobile:text-mb-caption">
               커버리지 {Math.round(eeg.coverage_ratio * 100)}%
             </span>
           )}
@@ -137,19 +137,19 @@ export default function EegQualityBanner({ eeg, reportType }: EegQualityBannerPr
       )}
 
       {veryLowConfidence && (
-        <p className="mt-2 rounded-lg border border-amber-200 bg-white/70 px-3 py-2 text-[12px] text-amber-800">
+        <p className="mt-2 rounded-lg border border-amber-200 bg-white/70 px-3 py-2 text-[12px] mobile:text-mb-caption text-amber-800">
           데이터 유실로 신뢰도가 매우 낮은 상태입니다. 아래 지표는 경향 참고용입니다.
         </p>
       )}
 
       {eeg.drowsiness_flag && (
-        <p className="mt-2 rounded-lg border border-amber-200 bg-white/70 px-3 py-2 text-[12px] text-amber-800">
+        <p className="mt-2 rounded-lg border border-amber-200 bg-white/70 px-3 py-2 text-[12px] mobile:text-mb-caption text-amber-800">
           졸음 구간이 감지되었습니다. 지표 해석 시 참고하세요.
         </p>
       )}
 
       {reportType === 'counselor' && eeg.normalization_version && (
-        <p className="mt-2 font-mono text-[12px] text-[#9B9B9B]">
+        <p className="mt-2 font-mono text-[12px] mobile:text-mb-caption text-[#9B9B9B]">
           norm {eeg.normalization_version}
         </p>
       )}

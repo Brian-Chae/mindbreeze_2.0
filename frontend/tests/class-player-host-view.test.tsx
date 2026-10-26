@@ -42,16 +42,16 @@ afterEach(async () => {
 });
 
 describe('상담사 뷰 — C01 기본', () => {
-  it('상단 바에 닫기·제목·함께한 시간/계획 시간·접속 인원·종료가 있다', async () => {
+  it('상단 바는 X 없이 제목·함께한 시간/계획 시간·접속 인원·종료를 두고 나가기는 도구에 있다', async () => {
     await renderCase('C01');
     expect(one('[data-pz="top"]')).not.toBeNull();
-    expect(one('[data-pz="btn-close"]')?.getAttribute('aria-label')).toBe('클래스 화면 닫기');
+    expect(one('[data-pz="btn-close"]')).toBeNull();
     expect(one('[data-pz="btn-end"]')?.getAttribute('aria-label')).toBe('클래스 종료');
     const title = text(one('[data-pz="ttl"]'));
     expect(title).toContain('마음챙김 명상수업');
     expect(title).toContain('12:34');
     expect(title).toContain('30:00');
-    expect(title).toContain('접속 7/8');
+    expect(text(one('.hp-topbar-stats')).replace(/\s/g, '')).toBe('접속7/8');
   });
 
   it('지표 띠에 지금 보는 지표명(큰 글자)과 그룹 평균이 있다', async () => {
@@ -85,15 +85,31 @@ describe('상담사 뷰 — C01 기본', () => {
     expect(visible).not.toContain('›');
   });
 
-  it('도크 5개: 지표 기준·채팅(안읽음)·미디어·체크인·도구', async () => {
+  it('도크 4개: 지표 기준·채팅(안읽음)·미디어·도구', async () => {
     await renderCase('C01');
     const labels = all('[data-pz="dk"]').map((d) => text(d.querySelector('.pz-dk__label')));
-    expect(labels).toEqual(['지표 기준', '채팅', '미디어', '체크인', '도구']);
+    expect(labels).toEqual(['지표 기준', '채팅', '미디어', '도구']);
   });
 
-  it('칩 줄에는 연결 5 · 미착용 2 · 끊김 1 요약이 있다', async () => {
+  it('신호는 모든 폭에서 도크 위 한 곳에 있고 체크인은 상태에서 펼친다', async () => {
     await renderCase('C01');
-    const line = text(one('[data-pz="chipline"]'));
+    expect(all('[data-signal="hands"]')).toHaveLength(1);
+    expect(one('.pz-shell__dock [data-signal="hands"]')).not.toBeNull();
+    expect(text(one('.hp-chipline'))).not.toContain('체크인');
+    expect(one('.hp-statusline .hp-status-open')).not.toBeNull();
+    await act(async () => one('.hp-status-open')?.click());
+    const sheet = one('[data-pz="sheet"]');
+    expect(text(sheet)).toContain('자가 체크인 응답');
+    const details = sheet?.querySelector('details');
+    expect(details?.open).toBe(false);
+    expect(text(details ?? null)).toContain('살펴볼 응답');
+    await act(async () => details?.querySelector('summary')?.click());
+    expect(details?.open).toBe(true);
+  });
+
+  it('수업 상태 시트에는 연결 5 · 미착용 2 · 끊김 1 요약이 있다', async () => {
+    await renderCase('C01', 'sheet=alerts');
+    const line = text(one('[data-pz="sheet"]'));
     expect(line).toContain('연결 5');
     expect(line).toContain('미착용 2');
     expect(line).toContain('끊김 1');
@@ -114,11 +130,11 @@ describe('상담사 뷰 — 스크롤 그리드(C18)', () => {
     expect(css).not.toMatch(/pagination/);
   });
 
-  it('마지막 행 가운데 정렬(justify-content:center)과 상단 바 시간 숫자 15px→18px 규칙이 CSS 에 있다', () => {
+  it('마지막 행 가운데 정렬과 확정 상단바 시간 스타일이 CSS 에 있다', () => {
     const css = readFileSync(resolve(__dirname, '../src/components/class/player/host/host-player.css'), 'utf8');
     expect(css).toMatch(/\.hp-grid\s*\{[^}]*justify-content:\s*center/);
-    expect(css).toMatch(/\.hp-time b\s*\{[^}]*font-size:\s*var\(--fs-15\)/);
-    expect(css).toMatch(/@media \(min-width: 1000px\)[\s\S]*?\.hp-time b\s*\{[^}]*font-size:\s*var\(--fs-18\)/);
+    expect(css).toMatch(/\.hp-time b\s*\{[^}]*font-size:\s*16px/);
+    expect(css).toMatch(/\.hp-topbar\s*\{[^}]*border-radius:\s*var\(--r-sheet\)/);
   });
 });
 

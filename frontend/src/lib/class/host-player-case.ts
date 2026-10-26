@@ -16,7 +16,7 @@ export type HostPhase = 'live' | 'confirm' | 'ending';
 export type HostSort = 'join' | 'low' | 'high';
 
 export const HOST_SHEET_KEYS = [
-  'metric', 'chat', 'media', 'checkin', 'tools', 'hands', 'actions', 'queue', 'alerts', 'myband', 'permcam', 'permmic', 'detail',
+  'metric', 'chat', 'media', 'checkin', 'tools', 'hands', 'signals', 'actions', 'queue', 'alerts', 'myband', 'permcam', 'permmic', 'detail',
 ] as const;
 export type HostSheetKey = (typeof HOST_SHEET_KEYS)[number];
 
@@ -40,6 +40,9 @@ export interface HostParticipant {
   /** 끊김 상태일 때 "2분 전" 같은 마지막 수신 경과 */
   agoLabel: string | null;
   checkin: readonly HostCheckinAnswer[];
+  checkinState?: "completed" | "not_completed" | "unknown";
+  presenceState?: "connected" | "disconnected" | "unknown";
+  enteredAt?: string | null;
   /** 체크인 응답 중 상담사가 살펴볼 만한 한 줄(없으면 null) */
   attention: string | null;
 }
@@ -334,7 +337,7 @@ export function chipTarget(chip: HostChip): { sheet: HostSheetKey } | { act: 'ha
     case 'speak': case 'hands': return { sheet: 'hands' };
     case 'actions': return { sheet: 'actions' };
     case 'queue': return { sheet: 'queue' };
-    case 'signals': return { sheet: 'checkin' };
+    case 'signals': return { sheet: 'signals' };
     case 'myband': return { sheet: 'myband' };
     case 'first': return { act: 'handsfirst' };
     case 'filter': return { sheet: 'actions' };
@@ -411,7 +414,7 @@ export function deriveHostCase(input: HostCaseInput): HostCase {
   const list = input.participants;
   const online = input.loc === 'online';
   const allOff = list.length > 0 && list.every((p) => p.band === 'off');
-  const joinedList = list.filter((p) => p.band !== 'lost');
+  const joinedList = list.filter((p) => p.presenceState === 'connected');
   const chips: HostChip[] = [];
 
   if (input.rec) {
@@ -420,7 +423,7 @@ export function deriveHostCase(input: HostCaseInput): HostCase {
     chips.push({ key: 'rec', label: paused ? '기록 일시정지' : `녹음 중 ${elapsed}`, paused, elapsed });
   }
   if (allOff) {
-    const done = list.filter((p) => p.checkin.length > 0).length;
+    const done = list.filter((p) => p.checkinState === 'completed').length;
     chips.push({ key: 'checkin', label: `체크인 ${done}/${list.length}`, done, total: list.length });
   }
   const speaker = list.find((p) => p.speaking);
@@ -452,7 +455,7 @@ export function deriveHostCase(input: HostCaseInput): HostCase {
   const lost = countBand(list, 'lost');
   chips.push({
     key: 'band',
-    label: `연결 ${on} · 미착용 ${off} · 끊김 ${lost}`,
+    label: `밴드 연결 ${on} · 미착용 ${off} · 끊김 ${lost}`,
     solo: input.solo,
     on, off, lost,
     soloBand: input.solo && list[0] ? list[0].band : null,
@@ -463,8 +466,8 @@ export function deriveHostCase(input: HostCaseInput): HostCase {
     : {
       recLabel: input.rec === 'paused' ? '정지됨' : formatClock(input.recElapsedSec),
       recPaused: input.rec === 'paused',
-      checkinDone: joinedList.filter((p) => p.checkin.length > 0).length,
-      checkinTotal: joinedList.length,
+      checkinDone: list.filter((p) => p.checkinState === 'completed').length,
+      checkinTotal: list.length,
       bandOn: on,
       bandTotal: list.length,
     };
@@ -506,6 +509,7 @@ export function summarizeCheckins(participants: readonly HostParticipant[]): Hos
   const order: string[] = [];
   const counts = new Map<string, Map<string, number>>();
   for (const p of participants) {
+    if (p.checkinState !== 'completed') continue;
     for (const [question, answer] of p.checkin) {
       if (!counts.has(question)) {
         counts.set(question, new Map());
@@ -516,13 +520,13 @@ export function summarizeCheckins(participants: readonly HostParticipant[]): Hos
     }
   }
   return {
-    responded: participants.filter((p) => p.checkin.length > 0).length,
+    responded: participants.filter((p) => p.checkinState === 'completed').length,
     total: participants.length,
     questions: order.map((question) => ({
       question,
       buckets: [...(counts.get(question)?.entries() ?? [])].map(([label, count]) => ({ label, count })),
     })),
-    attention: participants.filter((p) => p.attention).map((p) => ({ id: p.id, name: p.name, text: p.attention ?? '' })),
+    attention: participants.filter((p) => p.checkinState === 'completed' && p.attention).map((p) => ({ id: p.id, name: p.name, text: p.attention ?? '' })),
   };
 }
 

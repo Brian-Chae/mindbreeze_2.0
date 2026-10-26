@@ -1,0 +1,143 @@
+# SDD-216 — 편성 API 계약
+
+- 상태: 로컬 BE 구현. 코드: `backend/app/api/v1/classes.py`, `backend/app/schemas/class_scheduling.py`. 테스트 실행 결과는 [summary.md](summary.md).
+- 접두: `/api/v1/classes`. HTTP 응답은 코드와 PG 라우터 테스트 기준이며 배포 환경 응답은 미확인.
+- `class_scheduling_enabled=false` 기본값: 편성 쓰기·preview·코드 가입·참관 진입점은 404. 기존 읽기는 유지한다.
+- `class_rolling_enabled=false`, `class_team_read_enabled=false` 기본값. 팀 본문·참관은 새 고지와 팀 스위치가 모두 필요하다.
+- UUID는 문자열. 날짜는 ISO 날짜, 반복 시각은 한국 벽시계 `HH:MM`. 회차 시각은 시간대가 있는 ISO 문자열이며 DB에는 UTC로 저장한다. 코드는 선행 0을 보존하는 4자리 문자열.
+
+## 1. 생성·편성 입력
+
+- `operation_key`: 1~100자. 같은 사용자·키·동일 요청은 저장된 동일 결과. 다른 요청은 409 `operation_key_reused`.
+- `expected_revision`: 클래스 수정에 필수. 생성은 새 클래스, 수정은 클래스 행 잠금 후 현재 revision 비교. 오래된 값은 409 `stale_class`.
+- `expected_state_versions`: bulk에서 선택한 모든 회차 ID→버전. 강사 변경은 `expected_state_version`. 오래된 값은 409.
+- `force` + `confirmed_conflict_fingerprint`: 최신 충돌 확인. 검사를 건너뛰지 않는다. 확인 후 충돌이 바뀌면 다시 409.
+- 센터 관리자 대행·완료 후 정정의 `reason` 필수. 허용하지 않은 입력 필드는 422.
+
+`ScheduleInput`:
+
+- `title`, `location_type`(online/offline), `location_address`, `capacity`, `linkband_mode`, `record_audio`, `record_video`, `chat_enabled`.
+- 온라인 정원 최대 50, 오프라인 최대 100. 영상 녹화 기본 off. 오프라인 후보는 장소 입력 필요.
+- `schedule_mode`: fixed/rolling. `planned_session_count`: 기본 8, 일반 예약 2~52. 바로 지금은 fixed·1회. `duration_min`: 기본 60, 5~480의 5분 단위.
+- `recurrence_rule`: version=1, start_date, weekdays(월=1~일=7), time(07:00~22:00·5분 단위), interval_weeks, skip_dates.
+- `assignment_rule`: version=1, mode(all_one/rotate/by_weekday/per_session), host_ids 또는 weekday_hosts. 미정 null은 draft만 저장한다.
+- `instructors`: user_id·role(lead/assistant). counselor 개설자는 lead. org_admin 개설은 별도 lead 필수.
+- `rows`: client_key(`regular:YYYY-MM-DD`)·seq·scheduled_at·duration_min·location_type/address·host_id·session_kind·assignment_override. 수동 수정은 원래 후보 키로 식별한다.
+- `reminder_offsets`, `ends_on`, `member_ids`. 이메일/CSV 초대는 별도 API다.
+
+### 바로 지금 추가 계약
+
+- 구현 전 확정한 계약과 로컬 구현·검증 결과: [추가 요구사항·QA](instant-class-followup.md).
+- `recurrence_rule.start_now: boolean` 선택 필드, 생략하면 false. true이면 fixed·planned_session_count=1·all_one 진행자 1명·rows=[]·ends_on=null. 기존 날짜·시각은 입력 구조를 유지하되 즉시 편성 시각으로 쓰지 않는다.
+- 프리뷰는 서버 조회 시각의 후보 1개. 생성/초안 게시에서 서버의 실제 현재 시각으로 확정한다. 회차는 open·opened_at 설정, started_at 없음. 일반 예약 입력 제한은 유지한다.
+- draft는 회차를 만들지 않는다. 즉시 원본 복제는 start_now=false·일반 fixed 2회 초안이다.
+- 즉시 클래스 초대는 현재 열린 정규 회차에도 expected 참가자를 연결한다. 무초대 계정의 회차 ID만으로는 참가 자격을 발급하지 않는다.
+- 커밋 후 해당 클래스의 outbox 즉시 처리 요청, 실패는 기존 상태/재시도 경로 사용. 생성 성공 응답은 이메일 수신함 도착 증거가 아니다.
+- 즉시 `class_invited`: target_type=class·target_id=class_id 유지, params에 `start_now: true`, `session_id` 가산. 회원 앱 이동은 `/class/{session_id}/enter`. 일반 초대/직원 이동 경로는 유지한다.
+- 이메일에 frontend_base_url 기반 `/class/{session_id}/enter`, `/join`, 본문 참여 코드를 제공한다. 코드·이메일을 URL에 넣지 않는다. 입장 자격 없는 수신자는 코드 경로로 진입하며 기존 개인정보·동의 절차를 거친다.
+
+## 2. 연결된 HTTP 경로
+
+| 메서드·상대 경로 | 입력·권한 | 결과·핵심 조건 |
+|---|---|---|
+| GET 빈 경로 | 인증, 기존 목록 필터·페이지 | `classes`, `total` |
+| GET `/instructor-candidates` | 편성 스위치 on, 활성 counselor/org_admin·현재 기관 소속. 선택 query `class_id`는 해당 클래스 관리 권한 필요 | `instructors: [{id, name}]`. 기본 현재 기관, class_id 지정 시 해당 클래스 기관의 활성 counselor만. 이메일·연락처 제외 |
+| GET `/{class_id}` | 현재 강사·회원·센터 관리자 | 상세 직접 반환, 관리 권한자만 draft_schedule, capabilities.schedule은 편성 스위치와 관리 권한을 반영한 bool |
+| GET `/{class_id}/sessions` | 부모 가시 범위 | `sessions`, `total`, 미정 host nullable |
+| POST `/preview-schedule` | ScheduleInput, counselor/org_admin | rows/conflicts/warnings/input_hash/conflict_fingerprint/class_revision. 저장 없음 |
+| POST 빈 경로 | operation_key, status(draft/active), schedule, 충돌 확인 | 201, class_id/revision/session_ids/effects_pending/invitation_results |
+| PATCH `/{class_id}` | 전체 schedule·공통 쓰기 입력, lead/org_admin | draft 입력 또는 이후 생성 설정 수정. 기존 회차 수정은 bulk |
+| POST `/{class_id}/publish` | 공통 쓰기 입력, lead/org_admin | 전체 진행자·충돌 재검사 후 공개 |
+| POST `/{class_id}/duplicate` | start_date, invite_members 기본 false | 201, 원래 패턴으로 새 draft. 원본 규칙 없으면 422 |
+| POST `/{class_id}/schedule/preview` | BulkCommand | 전후 후보·충돌·현재 revision. 저장 없음 |
+| PATCH `/{class_id}/sessions/bulk` | action(replace/shift_week/cancel), session_ids, 버전, rows | 선택 전체 원자 적용. 한 행 실패하면 전부 롤백 |
+| POST `/{class_id}/sessions` | row, makeup_for_session_id, member_ids | 정규 또는 지정 회원 보강. 보강의 원 정규 회차 연결 저장 |
+| POST `/{class_id}/roll-forward` | lead/org_admin | cron과 같은 잠금·커서 계산. class_id/session_ids |
+| POST `/{class_id}/transition` | action(complete/cancel/archive/restore/hide)·공통 입력 | 클래스 수명 전이. open/in_progress이면 마무리/취소 거절 |
+| DELETE `/{class_id}` | 공통 쓰기 입력, lead/org_admin | 시작 이력 없는 클래스·회차 숨김. 물리 삭제 없음. 시작/완료 이력은 409 archive_required |
+| GET/POST `/{class_id}/instructors` | 조회 또는 강사 추가 입력 | 동일 센터 active counselor. guest는 scope_session_id 필요 |
+| PATCH/DELETE `/{class_id}/instructors/{user_id}` | 역할 변경/제거, 공통 쓰기 입력 | 마지막 lead 제거·미진행 배정이 남은 제거·다른 진행 회차를 잃는 guest 축소는 409 |
+| POST `/{class_id}/sessions/{session_id}/host-requests` | candidate_host_id, request_kind, 회차 버전, 충돌 확인 | request_id/status. 후보와 확정 host 분리 |
+| GET `/{class_id}/sessions/{session_id}/host-requests` | 편성 스위치 on, 현재 강사·같은 센터 관리자 | `requests`: 관리자는 전체, 다른 강사는 본인이 요청자/후보/현재 진행자인 요청만. guest는 지정 회차만. 상태 전체 반환 |
+| POST `/{class_id}/sessions/{session_id}/host-requests/{request_id}/resolve` | action(approve/accept/reject/cancel), 공통 입력 | 후보/관리자/요청자 권한 분리. 수락 시 최신 충돌 fingerprint 재확인 |
+| POST `/{class_id}/sessions/{session_id}/host-correction` | mode(correct/note), reason, 후보 또는 displayed_host_name | 승인 전 귀속 정정, 승인 후 append-only 표시 메모 |
+| GET/POST `/{class_id}/members` | 조회 또는 user_ids·reactivate·공통 입력 | active 1행, 미래 정규 expected. 수료·탈퇴 회원 재초대는 명시 reactivate |
+| POST `/{class_id}/email-invites` | emails·공통 쓰기 입력 | 주소 정규화·중복 제거·전달 의도. 회원 신원·동의 자동 생성 없음 |
+| GET `/{class_id}/email-invites` | 편성 스위치 on, lead/assistant/org_admin | `invitations`: 해당 클래스의 현재 전달 상태 목록. 조회는 발송·재시도하지 않음 |
+| POST `/{class_id}/email-invites/{invite_id}/retry` | 공통 쓰기 입력 | failed만 pending 재처리. 실제 메일은 별도 워커 |
+| POST `/resolve-code` | code, 기존 시도 제한 | 공개 부모·입장 가능한 일정, 개인정보 목록 없음 |
+| POST `/{class_id}/join` | 인증 회원·code, 시도 제한 | 코드와 부모 일치 검증 후 최소 멤버십. 미래 회차 자동 시작 없음 |
+| POST `/{class_id}/sessions/{session_id}/observe` | 현재 lead/assistant, 새 고지·팀 스위치 | 참관 token/room_name/snapshot. participant 생성 없음 |
+| GET `/reassignment-queue` | 센터 관리자 | 같은 센터 needs_reassign 운영 메타 |
+
+- 성공한 DB 저장과 외부 전달 성공은 구분한다. 생성의 `invitation_results`는 현재 빈 배열이며 이메일 전달 결과는 GET 이메일 초대 API에서 조회한다.
+- 요청 조회 항목: `id`, `session_id`, `requested_by`, `candidate_host_id`, `request_kind`, `status`, `expected_state_version`, `expires_at`, `created_at`, `resolved_at`. 이유 본문은 반환하지 않는다. 생성 시각·ID 순서. 요청 조회 후 처리는 기존 resolve API가 최신 상태·권한을 재검사한다.
+- 이메일 조회 항목: `id`, `email`, `status`(pending/sent/failed), `created_at`, `sent_at`. 생성 시각·ID 순서. sent는 발송 함수 성공 기록이며 수신함 도착 증거가 아니다.
+- 회원 조회 항목: `id`, `user_id: string|null`, `name: string|null`, `status`. 연결 계정이 없으면 user_id·name은 null, 이메일·연락처는 제공하지 않는다. 기존 초대 권한 필요.
+- GET 클래스 상세는 `record_video: bool`, `chat_enabled: bool`, `reminder_offsets: int[]`의 현재 저장값도 반환한다. FE는 전체 설정 저장 시 조회값을 유지한다.
+- GET `/dashboard/counselor`·`/dashboard/org`의 `classes[]`에 실제 부모 `class_id`, `counseling_relationship_id`, `area`(meditation/counseling/null), `seq`를 가산한다. ID·seq는 nullable. 영역은 실제 부모 FK 기준이며 세션 유형으로 추정하지 않는다. 기존 집계는 유지한다.
+- `effects_pending`은 생성 회차의 준비 의도 수다. 클래스 전체 outbox 잔량이나 전달 성공 건수가 아니다.
+- draft에는 실제 회차·코드·멤버·전달 의도가 없다. 부분 생성 성공 응답은 없다.
+- 숨김과 상태 변경도 `operation_key`를 사용한다. 동일 키 재시도는 권한이 유지되는 가시 클래스에서 처리한다.
+
+### 클래스 상세 capabilities
+
+- `manage`: 현재 클래스의 주강사(`lead`) 또는 같은 센터 관리자(`org_admin`)이면 true.
+- `invite`: 현재 주강사·보조강사·같은 센터 관리자이면 true.
+- `schedule`: **bool, 항상 반환**. `CLASS_SCHEDULING_ENABLED=true`이고 `manage=true`일 때만 true. 설정 객체에서는 `settings.class_scheduling_enabled`로 읽는다.
+- 권한은 현재 활성 계정·소속·강사 상태를 검사하는 `class_role` 기준이다. 보조강사·회원 및 기존 회차 호스트라는 사실만으로 편성 권한을 부여하지 않는다.
+- 스위치 off에서도 GET 상세는 유지하고 `schedule=false`를 반환한다. 기존 `manage`·`invite` 값은 스위치로 바꾸지 않는다.
+- FE의 새 편성 마법사 CTA는 `capabilities.schedule === true`일 때만 활성화한다. 요청 시 서버의 편성 스위치·권한 검사는 계속 적용한다.
+- 추가 검증 SC-01: 실제 GET 상세에서 스위치 off/on × 주강사/센터 관리자/보조강사/회원 8조합의 bool 값과 기존 capability 보존을 확인한다. 구현 전에 기대값·실패 테스트를 작성한다.
+
+## 3. 오류·권한·기존 엔진 연결
+
+- 401 인증, 403 역할/동작, 404 미존재·비가시 부모, 409 상태/버전/충돌/정원, 422 입력, 503 코드 소진.
+- 신규 도메인 오류의 detail은 `code` 객체. 필드 검증 오류는 FastAPI 표준 422.
+- 공개 코드 형식 오류·비활성·잘못된 코드 조회는 404. 잘못된 코드 시도에는 기존 rate limiter 적용.
+- 충돌 항목: host/place/member. 장소는 정보 경고, host/member는 명시 확인 필요. 비가시 상대의 ID·제목·seq는 null.
+- 진행자 변경: 시작 61분 전 즉시, 60분 전부터 수락 대기, 15분 이하 새 요청 거절. 수락·열기 시 현재 자격을 재검사한다.
+- 새 편성 활성화 시 기존 POST `/sessions`의 실제 명상 생성과 기존 명상 복제는 409 `use_class_scheduling`. 상담·설정 템플릿은 기존 엔진을 유지한다.
+- 신규 부모의 기존 단건 수정·삭제·new-run·자동 시작 join도 클래스 편성 경로로 유도한다.
+- 기존 SessionResponse에 `host_state` 추가, 미정/수락 대기 회원 응답의 host_id/host_name은 null. 계약 골든은 host_id nullable 변경만 갱신했다.
+- 회원 회차 링크는 `/app/classes/{class_id}?sessionId={session_id}`, 강사 링크는 `/classes/{class_id}/sessions/{session_id}`. 부모 ID와 회차 ID를 혼용하지 않는다.
+- D-28: 센터 관리자는 명상 리포트 읽기, 상담 운영 메타만 허용. 리포트 쓰기·승인·원문·녹음/영상 제어는 진행 지도사 권한으로 별도 판정한다.
+- D-05: 팀 본문은 반영 대상의 `class-team-v1` 확인, 라이브 참관은 실제 입장 회원 전체의 확인 필요. 전사·원본 미디어·편집 이력은 팀/센터 관리자 응답에서 제거한다.
+
+## 4. 전달·참관 계약
+
+- 클래스 전달 의도→`notify_event(commit=False)`→Notification/NotificationOutbox→효과 완료를 같은 DB 커밋으로 처리한다.
+- 요청/수락 결과, 가입, 추가 회차, 배정·변경, 재배정, 클래스 종료 이벤트를 생산한다. 일괄 변경은 묶어서 전달한다. 수락 대기 행 때문에 확정된 다른 행 알림이 누락되지 않도록 확정 행을 선택한다.
+- 진행자 변경·양도 요청 알림의 `extra.params.request_id`로 요청을 식별한다. 알림 ID로 권한을 인정하지 않으며 조회·resolve에서 현재 권한을 검사한다.
+- `GET/PUT /api/v1/notifications/preferences`에 `push` 맵 추가. 시작 60분 이내 확정 변경은 해당 push 선호를 확인해 기존 push outbox에 적재한다. 실제 FCM/Web Push는 이번 실행에서 호출하지 않았다.
+- LiveKit 참관 토큰: identity=`observer:{user_id}`, TTL 60초, canPublish=false, canPublishData=false. 토큰만으로 이미 연결된 사용자의 권한 회수를 대신하지 않는다.
+- 참관 WS 방은 `session:{session_id}:observer`. 상태·버전·시각만 투영하며 EEG·참여자·기기 payload를 포함하지 않는다. 민감 이벤트 직전 현재 역할을 재검사한다.
+- 강사 제거·계정 제한·회원 입장/고지 변경은 LiveKit 재검사 의도를 저장한다. 클래스 유지 cron은 열린 회차를 재검사한다. 서버에서 현재 참관 권한이 없는 identity를 제거하고 없는 방/이미 나간 identity는 멱등 처리한다.
+- 실제 LiveKit 연결 회수 시간, 다중 WS 워커, 브라우저 권한 표시·실제 전달은 미확인. 팀 스위치 on의 출시 차단 조건이다.
+
+## 5. FE 연결 순서
+
+1. BE 출시·마이그레이션·운영 작업 검증 후 이 계약을 고정한다.
+2. DTO의 nullable host·push 선호·오류 code·operation_key·버전·충돌 확인을 연결한다.
+3. 4단계 편성·표/카드/시트·강사 운영을 연결한다.
+4. 새 고지 문구·저장과 실제 참관 회수 검증 후 팀 스위치를 켠다. 시안 시각 검증은 별도 FE 게이트다.
+
+## 6. 회차 리포트 읽기 연결
+
+- `GET /classes/{class_id}/sessions/{session_id}/reports`: `{reports:[{id,type,status}]}`. 클래스/회차 일치·숨김·현재 활성 소속 검사 후 기존 리포트 열람 판정 사용.
+- 현재 진행자, 팀 열람 스위치와 참여자 고지를 충족한 주/보조강사, D-28 해당 센터 관리자만 목록 조회. 일반 회원은 403, 외부 계정/다른 부모/숨김은 404, 팀 열람 조건 미충족은 403.
+- 목록 조회는 읽음 처리하지 않는다. 원문·미디어·개인 연락처·쓰기 capability를 반환하지 않는다. 상세는 기존 `GET /reports/{id}`의 투영을 사용한다.
+- 팀 강사·관리자 화면은 수정·승인·발송·내보내기 없이 읽기 전용으로 표시한다.
+
+- 클래스 상세 `capabilities.host_request: boolean`: 편성 스위치 on 및 현재 주/보조/대강/센터 관리자 여부. 대강의 host_view는 계속 null이며, 요청 API는 지정 회차 범위를 별도로 검사한다.
+
+## 클래스 회원 후보 검색
+
+- GET `/classes/member-candidates?class_id={uuid}&q={검색어}`. 편성 스위치 off는 404.
+- `class_id`가 있으면 해당 클래스의 현재 `invite` 권한(주강사·보조강사·센터 관리자)을 검사한다. guest·회원·비소속·타센터 클래스는 차단한다.
+- 생성 전에는 `class_id`를 생략한다. 현재 활성 상담사/센터 관리자 계정과 활성 주 소속을 검사한다. 기관 없는 상담사도 기존 생성 권한과 같이 거절한다.
+- 이름/빈 검색은 같은 기관에서 호출자가 초대 가능한 클래스의 기존 회원 + 본인 활성 상담 연결로 제한한다. 센터 관리자는 해당 기관의 현재 활성 상담사에 연결된 회원을 포함한다. 상담 관심사·메모·본문은 조회하지 않는다.
+- `q`에 `@`가 있으면 정상 형식의 **정확 이메일**만 대소문자 무시하여 검색한다. 기존 회원 초대가 허용하는 활성 client만 반환하고 정지·삭제·대기 계정은 제외한다. 이메일 일부·와일드카드로 전역 검색하지 않는다.
+- 응답 `{members: [{id, name, masked_email}], has_more: boolean}`. 이름순·ID순 최대 20명, 전체 사용자 수·원문 이메일·연락처는 반환하지 않는다. `q` 최대 254자, 빈 검색도 관계 범위를 벗어나지 않는다.
+- 검색 결과는 회원·상담 연결·동의를 만들지 않는다. 사용자가 명시적으로 선택한 UUID는 기존 생성 `schedule.member_ids` 또는 POST `/{class_id}/members`로 전달한다. 이메일/CSV 초대와 구분한다.
+- 근거와 검증: [member-search-followup.md](member-search-followup.md). 기존 `/clients`와 상담용 ParticipantPicker는 변경하지 않는다.

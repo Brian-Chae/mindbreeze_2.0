@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, Integer, Float, Text, Boolean, DateTime, ForeignKey, Index, UniqueConstraint, func, text
+from sqlalchemy import String, Integer, BigInteger, Float, Text, Boolean, DateTime, CheckConstraint, ForeignKey, Index, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -126,9 +126,25 @@ class EEGRawChunk(Base):
     __tablename__ = "eeg_raw_chunks"
     __table_args__ = (
         # 참여자·스트림별 청크 인덱스가 유일 — 동일 청크 재발급/중복 ack 를 멱등 처리한다.
+        # SDD-244 M1: 세 신호·segment를 구분하도록 identity 확장. v1(signal=eeg, segment=legacy)의 의미는 같다.
         UniqueConstraint(
-            "session_id", "participant_id", "stream_id", "chunk_index",
-            name="uq_eeg_raw_chunk",
+            "session_id", "participant_id", "signal_type", "stream_id", "segment_id", "chunk_index",
+            name="uq_eeg_raw_chunk_v2",
+        ),
+        CheckConstraint("signal_type IN ('eeg','ppg','acc')", name="ck_eeg_raw_signal_type"),
+        CheckConstraint(
+            "(sample_count IS NULL OR sample_count >= 0) AND (packet_count IS NULL OR packet_count >= 0)",
+            name="ck_eeg_raw_counts",
+        ),
+        CheckConstraint(
+            "schema_version <> 'mb-biosignal-raw-v2' OR participant_id IS NOT NULL",
+            name="ck_eeg_raw_v2_participant",
+        ),
+        Index("ix_eeg_raw_chunk_signal", "session_id", "participant_id", "signal_type"),
+        # 클라이언트 업로드 alias — 회차·참여자 안에서 유일(NULL=v1 행은 제외)
+        Index(
+            "uq_eeg_raw_chunk_alias", "session_id", "participant_id", "chunk_alias", unique=True,
+            postgresql_where=text("chunk_alias IS NOT NULL"), sqlite_where=text("chunk_alias IS NOT NULL"),
         ),
         # SDD-028: batch key(chunk_index 범위) 조회를 인덱스로 지원한다.
         # (session_id, participant_id, chunk_index) 복합 인덱스로 세그먼트별 청크 범위 스캔을
@@ -170,6 +186,22 @@ class EEGRawChunk(Base):
     upload_status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     uploaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # ── SDD-244 M1: 세 신호 raw v2 메타. v1 행은 기본값(eeg/legacy)이며 나머지는 NULL ──
+    signal_type: Mapped[str] = mapped_column(String(8), default="eeg", server_default="eeg", nullable=False)
+    segment_id: Mapped[str] = mapped_column(String(64), default="legacy", server_default="legacy", nullable=False)
+    play_group_id: Mapped[str | None] = mapped_column(String(64))
+    sample_count: Mapped[int | None] = mapped_column(Integer)
+    packet_count: Mapped[int | None] = mapped_column(Integer)
+    first_sample_index: Mapped[int | None] = mapped_column(BigInteger)
+    time_basis: Mapped[str | None] = mapped_column(String(20))
+    parser_profile_id: Mapped[str | None] = mapped_column(String(64))
+    parser_profile_hash: Mapped[str | None] = mapped_column(String(64))
+    # 검증된 RawHeader(≤64KiB, 배열 payload 없음). 서버가 section 범위·rate 근거를 재현하는 용도
+    header: Mapped[dict | None] = mapped_column(JSONB)
+    object_version_id: Mapped[str | None] = mapped_column(String(200))
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    failure_reason: Mapped[str | None] = mapped_column(String(100))
+    chunk_alias: Mapped[str | None] = mapped_column(String(64))
 
 
 class Report(Base):
@@ -234,5 +266,10 @@ class Report(Base):
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     is_read: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # SDD-214: 승인 증빙 컬럼. Phase 5 전까지 값을 쓰는 코드가 없다.
+    approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     session = relationship("Session", back_populates="reports")

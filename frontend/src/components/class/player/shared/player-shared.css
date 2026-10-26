@@ -179,7 +179,9 @@
 /* ───────── 시트: 바텀(기본) / 사이드(가로형 ≥1000px) — 분기는 sheet-mode.ts 가 data-mode 로 알려 준다 ───────── */
 .pz-sheet {
   z-index: 5; display: flex; flex-direction: column; min-height: 0;
-  background: var(--sheet-bg-strong); border: 1px solid var(--sheet-border); border-radius: var(--r-sheet);
+  /* 뒤 화면 글자·컴포넌트가 비쳐 읽기 어렵지 않도록 거의 불투명하게 깐다(톤은 기존 시트 색 유지). */
+  background: linear-gradient(var(--sheet-bg-strong), var(--sheet-bg-strong)), #1a1024;
+  border: 1px solid var(--sheet-border); border-radius: var(--r-sheet);
   box-shadow: 0 12px 32px rgba(10, 4, 18, 0.35); padding: 4px 16px 16px;
 }
 .pz-sheet:focus { outline: none; }
@@ -202,3 +204,10 @@
 .pz-sheet__sub { margin-left: 8px; font-size: var(--fs-12); font-weight: 400; color: var(--tx-lo); }
 .pz-sheet__body { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.25) transparent; }
 .pz-sheet__foot { flex: none; display: flex; flex-direction: column; gap: 8px; padding-top: 8px; }
+
+/* SDD-234: 상담사 진행 화면은 기존 도크 치수를 그대로 보존한다. */
+@media (max-width: 767px) {
+  .pz-root:not(.hp-shell) .pz-dk { font-size: var(--mobile-type-caption-size); line-height: var(--mobile-type-caption-leading); }
+  .pz-root:not(.hp-shell) .pz-sheet__sub,
+  .pz-root:not(.hp-shell) .pz-ring__sub { font-size: var(--mobile-type-caption-size); line-height: var(--mobile-type-caption-leading); }
+}

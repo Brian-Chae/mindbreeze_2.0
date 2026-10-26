@@ -15,6 +15,7 @@ from app.api.v1 import router as v1_router
 from app.config import settings
 from app.core.cors import http_cors_origins, parse_origins, cors_explicitly_configured
 from app.ws import sio, asgi_app as socketio_asgi  # noqa: F401
+from app.services import data_center_runtime  # SDD-243/244 통합: 측정 backend·raw 반출 어댑터 등록
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +133,9 @@ def production_config_problems(cfg) -> list[str]:
     return problems
 
 
+data_center_runtime.install()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # SDD-136: JWT 서명 키 미설정/기본값은 기동 중단 — 임의 토큰 위조 방지.
@@ -150,11 +154,19 @@ async def lifespan(app: FastAPI):
         pass
 
 
+def docs_urls(environment: str) -> dict[str, str | None]:
+    """SDD-220: 운영(production)에서는 API 문서·스키마 경로를 만들지 않는다."""
+    if environment == "production":
+        return {"docs_url": None, "redoc_url": None, "openapi_url": None}
+    return {"docs_url": "/docs", "redoc_url": "/redoc", "openapi_url": "/openapi.json"}
+
+
 app = FastAPI(
     title="MIND BREEZE 2.0",
     description="뇌파 기반 심리상담·명상 통합 서비스 플랫폼 API",
     version="0.1.0",
     lifespan=lifespan,
+    **docs_urls(settings.environment),
 )
 
 # SDD-210: 허용 오리진은 CORS_ALLOWED_ORIGINS 로 주입(미설정 시 기존 기본 목록 — app/core/cors.py).
@@ -178,7 +190,11 @@ async def _validation_exception_handler(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
     """요청 검증 실패(422)를 FastAPI 기본과 동일한 봉투로 반환하고 경로를 로깅한다."""
-    logger.warning("[422] %s %s — 요청 검증 실패", request.method, request.url.path)
+    # 위반 필드 경로·사유만 남긴다(입력 값은 개인정보·생체값일 수 있어 기록하지 않는다).
+    fields = "; ".join(
+        f"{'.'.join(str(p) for p in e.get('loc', ()))}: {e.get('type')}" for e in exc.errors()[:5]
+    )
+    logger.warning("[422] %s %s — 요청 검증 실패 (%s)", request.method, request.url.path, fields)
     return JSONResponse(status_code=422, content={"detail": jsonable_encoder(exc.errors())})
 
 

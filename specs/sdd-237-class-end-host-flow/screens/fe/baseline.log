@@ -1,0 +1,73 @@
+
+ RUN  v5.0.2 /private/tmp/sdd237-baseline-e4e22b00/frontend
+
+ ❯ tests/agent-counselor-page.test.tsx (10 tests | 2 failed) 132ms
+   × 상담사는 브리핑과 입력창을 보고 CTA로 세션 목록을 연다 41ms
+   × 메시지 전송 성공 후 입력을 비우고 사용자·AI 응답을 최신 하단에 표시한다 6ms
+ ❯ tests/chat-message-deeplink.test.ts (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/chat-message-deeplink.test.ts [ tests/chat-message-deeplink.test.ts ]
+Error: [postcss] Cannot find module '../design-system/build/outputs/tailwind/preset.cjs'
+Require stack:
+- /private/tmp/sdd237-baseline-e4e22b00/frontend/tailwind.config.cjs
+  Plugin: vite:css
+  File: /private/tmp/sdd237-baseline-e4e22b00/frontend/src/components/chat/chat-room.css:undefined:NaN
+ ❯ _resolve ../../../../Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/jiti/dist/jiti.js:1:246378
+ ❯ jiti ../../../../Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/jiti/dist/jiti.js:1:249092
+ ❯ tailwind.config.cjs:2:16
+ ❯ evalModule ../../../../Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/jiti/dist/jiti.js:1:251913
+ ❯ jiti ../../../../Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/jiti/dist/jiti.js:1:249841
+ ❯ ../../../../Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/tailwindcss/lib/lib/load-config.js:53:30
+ ❯ loadConfig ../../../../Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/tailwindcss/lib/lib/load-config.js:55:6
+ ❯ getTailwindConfig ../../../../Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/tailwindcss/lib/lib/setupTrackingContext.js:74:116
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/agent-counselor-page.test.tsx > 상담사는 브리핑과 입력창을 보고 CTA로 세션 목록을 연다
+AssertionError: expected undefined to be 1000 // Object.is equality
+
+- Expected:
+1000
+
++ Received:
+undefined
+
+ ❯ tests/agent-counselor-page.test.tsx:43:135
+     41| it('상담사는 브리핑과 입력창을 보고 CTA로 세션 목록을 연다', async () => {
+     42|   useCounselorAgentStore.getState().setUnread(3);
+     43|   await render(); expect(container.textContent).toContain('아침 브리핑'); e…
+       |                                                                                                                                       ^
+     44|   expect(useCounselorAgentStore.getState().unread).toBe(0);
+     45|   await act(async () => button('일정 보기').click()); expect(container.tex…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/agent-counselor-page.test.tsx > 메시지 전송 성공 후 입력을 비우고 사용자·AI 응답을 최신 하단에 표시한다
+TypeError: 'set value' called on an object that is not a valid instance of HTMLInputElement.
+ ❯ set value ../../../../Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/jsdom/lib/jsdom/living/generated/HTMLInputElement.js:1558:15
+ ❯ tests/agent-counselor-page.test.tsx:72:80
+     70|   const textarea = container.querySelector<HTMLInputElement>('input[ty…
+     71|   await act(async () => {
+     72|     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value…
+       |                                                                                ^
+     73|     textarea.dispatchEvent(new Event('input', { bubbles: true }));
+     74|   });
+ ❯ Proxy.process.env.NODE_ENV.exports.act ../../../../Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/react/cjs/react.development.js:814:22
+ ❯ tests/agent-counselor-page.test.tsx:71:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  2 failed | 8 passed (10)
+   Start at  22:00:12
+   Duration  1.85s (environment 61%, transform 14%, tests 13%, import 8%, setup 2%, worker 1%)
+
+    Isolate  2 workers spawned · ~382ms startup each (spawn + environment, per file)
+             at least ~382ms faster with isolate: false — reuses workers across files instead of one per file
+

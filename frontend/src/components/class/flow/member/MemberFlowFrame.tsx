@@ -29,33 +29,37 @@ interface MemberFlowFrameProps {
   exitLabel?: string;
   /** 준비 마법사(FM06) 단계 — 모든 단계가 같은 바깥 여백을 쓴다 */
   wizard?: boolean;
+  /** 체크인 A안 전용 스타일. 다른 입장 단계 기본값은 유지한다. */
+  survey?: boolean;
   /** 본문 컬럼 클래스(예: fm-wide) */
   colClassName?: string;
   /** 하단 고정 영역(주 버튼 1개 + 보조) */
   foot?: ReactNode;
   sheet?: ReactNode;
   sheetOpen?: boolean;
+  sheetMode?: 'side' | 'bottom';
   children: ReactNode;
 }
 
 export function MemberFlowFrame({
   place = 'online', backdropSrc, title, steps, onBack, backLabel = '이전', onExit, exitLabel = '나가기',
-  wizard = false, colClassName, foot, sheet = null, sheetOpen = false, children,
+  wizard = false, survey = false, colClassName, foot, sheet = null, sheetOpen = false, sheetMode, children,
 }: MemberFlowFrameProps) {
   const center = steps ? <FlowSteps total={steps.total} current={steps.current} /> : <span className="fm-title">{title ?? ''}</span>;
   return (
     <PlayerShell
       place={place}
       flow
-      className={wizard ? 'fl-root fm-member fm-wizard' : 'fl-root fm-member'}
+      className={`fl-root fm-member${wizard ? ' fm-wizard' : ''}${survey ? ' fm-survey' : ''}`}
       sheetOpen={sheetOpen}
+      sheetMode={sheetMode}
       backdrop={<PlayerBackdrop imageSrc={backdropSrc} />}
       top={
         <PlayerTopBar
           variant="flow"
           slotWidth={TOP_SLOT}
           left={onBack ? <IconCircleButton label={backLabel} icon={<ChevronLeft size={24} />} onClick={onBack} /> : <span className="fm-ph" aria-hidden="true" />}
-          center={center}
+          center={survey ? <div className="fm-survey-progress"><span>클래스 입장 준비</span>{center}</div> : center}
           right={onExit ? <IconCircleButton label={exitLabel} icon={<X size={24} />} onClick={onExit} /> : <span className="fm-ph" aria-hidden="true" />}
         />
       }

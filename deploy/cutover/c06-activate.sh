@@ -23,7 +23,7 @@ want=\$(awk -F'\t' 'NR>1 && \$1!~/^#/ && \$5=="1"' \$D/jobs.tsv | wc -l)
 have=\$(systemctl list-timers 'mindbreeze-job-*' --no-pager --no-legend | wc -l)
 echo "활성 timer: \$have / 기대: \$want"
 [ "\$have" = "\$want" ]
-for s in mindbreeze-backend mindbreeze-worker mindbreeze-email-worker mindbreeze-export-worker nginx livekit coturn; do
+for s in mindbreeze-backend mindbreeze-stt-worker mindbreeze-report-worker mindbreeze-worker mindbreeze-email-worker mindbreeze-export-worker nginx livekit coturn; do
   [ "\$(systemctl is-active \$s)" = active ] || { echo "\$s 비활성"; exit 1; }
 done
 curl -fsS http://127.0.0.1:8000/health/ready >/dev/null && echo "헬스 OK"

@@ -7,6 +7,8 @@ import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemberClassContainer } from '../src/components/class/player/member/MemberClassContainer';
 import { useAuthStore } from '../src/stores/authStore';
+import { setActiveModelFromDto } from '../src/lib/eeg/eegPersonalScore';
+import type { NormalizationModelDto } from '../src/lib/api/normalization-api';
 import { EEG_STALE_MS } from '../src/lib/session-live/signal-status';
 
 /* ───────── 모킹 ───────── */
@@ -14,6 +16,7 @@ const h = vi.hoisted(() => {
   const band = {
     isSupported: true,
     isMock: false,
+    normalizationModel: null as NormalizationModelDto | null,
     connectionState: 'connected' as string,
     battery: 82 as number | null,
     signalQualityLevel: 'ok',
@@ -28,6 +31,8 @@ const h = vi.hoisted(() => {
     error: null as string | null,
     connectedElapsedSec: 720,
     getEegWaveformSamples: () => ({ fp1: [1, 2, 3, 2, 1], fp2: [2, 1, 2, 3, 2] }),
+    recordingStatus: { status: 'running', stopReason: null, pendingCount: 0, blockedCount: 0, quotaWarning: false, resumeBlocked: vi.fn() } as import('../src/lib/biosignal/recording-status').RecordingStatus,
+    recordDisplay: vi.fn(),
     connect: vi.fn(async () => undefined),
     disconnect: vi.fn(async () => undefined),
   };
@@ -40,7 +45,9 @@ const h = vi.hoisted(() => {
     lk: {
       token: 'tok' as string | null, canPublish: true, error: null as string | null, notReady: false, attemptCount: 0, serverUrl: 'wss://lk.test',
       speaking: false, raisedHand: false, raising: false, raiseHandError: null as string | null,
-      connect: vi.fn(async () => undefined), disconnect: vi.fn(), raiseHand: vi.fn(async () => undefined), roomId: null, loading: false,
+      recordingStatus: { status: 'running', stopReason: null, pendingCount: 0, blockedCount: 0, quotaWarning: false, resumeBlocked: vi.fn() } as import('../src/lib/biosignal/recording-status').RecordingStatus,
+    recordDisplay: vi.fn(),
+    connect: vi.fn(async () => undefined), disconnect: vi.fn(), raiseHand: vi.fn(async () => undefined), lowerHand: vi.fn(async () => undefined), roomId: null, loading: false,
     },
     lkOptions: [] as Array<Record<string, unknown>>,
     audio: { state: { track: null as { title: string } | null, playing: false, positionSec: 0, durationSec: null, volume: 0.6, blocked: false, synced: false, drift: 0 }, setVolume: vi.fn(), resume: vi.fn() },
@@ -202,6 +209,7 @@ beforeEach(() => {
   Object.assign(h.lk, { token: 'tok', canPublish: true, speaking: false, raisedHand: false, error: null, notReady: false, attemptCount: 0 });
   h.lk.connect.mockClear();
   h.lk.raiseHand.mockClear();
+  h.lk.lowerHand.mockClear();
   Object.assign(h.audio.state, { track: null, volume: 0.6, blocked: false, synced: false });
   h.audio.setVolume.mockClear();
   h.audio.resume.mockClear();
@@ -453,6 +461,9 @@ describe('밴드 조작', () => {
     await render(<Container />);
     await act(async () => { dockButton('기기')?.click(); });
     await act(async () => { buttonByText('LINK BAND 연결')?.click(); });
+    // SDD-220 TS26: OS 권한 요청 전 사전 안내를 거친다(확인 전에는 연결하지 않는다).
+    expect(h.band.connect).not.toHaveBeenCalled();
+    await act(async () => { buttonByText('확인하고 계속')?.click(); });
     expect(h.band.connect).toHaveBeenCalledTimes(1);
     expect(new Set(h.bandOptions.map((o) => JSON.stringify(o))).size).toBe(1);
   });
@@ -556,6 +567,16 @@ describe('LiveKit·미디어 연결', () => {
     await act(async () => { buttonByText('손들기')?.click(); });
     expect(h.lk.raiseHand).toHaveBeenCalledTimes(1);
   });
+  it('손든 대기 중 "손 내리기"를 누르면 lowerHand 를 호출한다(raiseHand 아님)', async () => {
+    h.lk.canPublish = false;
+    h.lk.raisedHand = true;
+    await render(<Container participantMode="group" maxParticipants={10} />);
+    expect(qa('[data-pz="mbtn"]').map((b) => b.textContent)).toEqual(['뮤트 중', '손 내리기']);
+    await act(async () => { buttonByText('손 내리기')?.click(); });
+    expect(h.lk.lowerHand).toHaveBeenCalledTimes(1);
+    expect(h.lk.raiseHand).not.toHaveBeenCalled();
+    h.lk.raisedHand = false;
+  });
   it('온라인 그룹 20명 초과: 수신 전용 — 마이크·카메라·손들기 없음', async () => {
     h.lk.canPublish = false;
     await render(<Container participantMode="group" maxParticipants={30} />);
@@ -574,7 +595,37 @@ describe('LiveKit·미디어 연결', () => {
   });
 });
 
+describe('SDD244 기록 상태', () => {
+  it('M02: effect 전 캐시가 바뀌어도 렌더 값과 함께 받은 모델 A를 기록', async () => {
+    const a: NormalizationModelDto = {id:1,version:'A',n_samples:10,is_active:true,created_at:'',params:{}};
+    h.band.normalizationModel = a;
+    setActiveModelFromDto({...a,id:2,version:'B'});
+    await render(<Container />); await advance(1000);
+    expect(h.band.recordDisplay.mock.calls.at(-1)?.[0]?.normalizationModel?.version).toBe('A');
+    h.band.normalizationModel = null; setActiveModelFromDto(null);
+  });
+  it('H05: 연결 중이어도 기록 중단·대기 건수·재개를 화면에 분리', async () => {
+    h.band.recordingStatus = { status:'stopped', stopReason:'quota', pendingCount:3, blockedCount:1, quotaWarning:true, resumeBlocked:vi.fn() };
+    await render(<Container />);
+    expect(q('[data-testid="biosignal-recording-status"]')?.textContent).toContain('저장 공간 부족으로 기록 중단');
+    expect(q('[data-testid="biosignal-recording-status"]')?.textContent).toContain('기록 저장 중');
+    expect(q('[data-testid="biosignal-recording-status"]')?.textContent).not.toContain('3건');
+    expect(q('[data-testid="biosignal-blocked"]')?.textContent).toBe('전송 확인 필요 1건');
+    await act(async()=>buttonByText('전송 재개')!.click());
+    expect(h.band.recordingStatus.resumeBlocked).toHaveBeenCalledTimes(1);
+    h.band.recordingStatus = {status:'inactive',stopReason:null,pendingCount:0,blockedCount:0,quotaWarning:false,resumeBlocked:vi.fn()};
+  });
+});
+
 describe('네트워크 상태(M18·M19)', () => {
+  it('SDD244 M03: 끊김 카드만 보이는 동안은 displayed 지표가 없다', async () => {
+    await render(<Container />); h.socket.isConnected = false;
+    await render(<Container />); await advance(17_000);
+    expect(q('[data-pz="net-down"]')).not.toBeNull();
+    await advance(1000);
+    expect(h.band.recordDisplay.mock.calls.at(-1)?.[0]?.displayedKeys).toEqual([]);
+  });
+
   it('소켓이 끊기면 재연결 배너, 15초 이상 지속되면 끊김 카드, 복구되면 해제', async () => {
     await render(<Container />);
     await advance(1000);

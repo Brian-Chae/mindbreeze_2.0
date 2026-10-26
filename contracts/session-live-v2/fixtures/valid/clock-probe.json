@@ -1,0 +1,13 @@
+{
+  "$fixture": {
+    "schema": "clock-probe"
+  },
+  "message": {
+    "protocol_version": 2,
+    "schema_version": 1,
+    "probe_id": "0000001f-0000-4000-8000-00000000001f",
+    "client_monotonic_us": "1000000",
+    "server_receive_ms": null,
+    "server_send_ms": null
+  }
+}

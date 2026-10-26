@@ -1,63 +1,64 @@
-// SDD-208 H1 — 상담사 상단 바: 닫기 · 제목 / 함께한 시간 · 접속 인원 · 종료. 좌·우는 같은 크기, 제목·시간은 정중앙(S3).
-import { Clock, Square, X } from 'lucide-react';
+// 상담사 상단 바 — 확정 라운드 컨트롤 스트립: 제목·코드 / 진행 시간·접속 인원.
+import { useId, useRef } from 'react';
+import { Copy } from 'lucide-react';
 import { formatClock } from '../../../../lib/class/host-player-case';
-import { IconCircleButton } from '../shared/IconCircleButton';
-import { PlayerTopBar } from '../shared/PlayerTopBar';
 import './host-player.css';
 
 interface HostTopBarProps {
   title: string;
+  accessCode?: string | null;
+  codeCopied?: boolean;
+  onCopyCode?: () => void;
   elapsedSec: number;
   durationMin: number;
   /** 접속 중/전체. 1:1 이면 null */
   stats: { joined: number; total: number } | null;
-  onClose: () => void;
   onEnd: () => void;
   endDisabled?: boolean;
 }
 
-const LOGO_PATH =
-  'M 414.72 92.871 L 413.139 94.458 L 412.995 94.603 C 409.607 98.313 406.014 101.838 402.483 105.424 C 378.911 129.356 355.38 153.328 331.686 177.136 C 329.386 179.424 326.183 181.464 323.062 182.165 C 314.089 184.165 306.554 177.919 306.102 168.334 C 305.753 160.975 305.979 153.575 305.979 146.196 C 305.958 131.582 305.876 116.988 305.999 102.394 C 306.061 95.365 303.72 89.82 297.088 87.017 C 290.251 84.131 284.584 86.399 279.491 91.552 C 253.538 117.709 227.482 143.764 201.447 169.839 C 195.677 175.59 190.071 177.012 183.871 174.312 C 177.382 171.467 175.041 166.211 175.083 159.388 C 175.144 140.342 175.124 121.275 175.062 102.209 C 175.021 93.283 170.955 87.821 163.564 86.172 C 157.281 84.75 152.763 87.574 148.575 91.882 C 118.843 122.265 89.03 152.565 59.319 182.948 C 55.52 186.803 51.393 189.503 45.767 188.823 C 37.76 187.875 32.955 182.083 32.852 172.992 C 32.565 150.669 32.483 128.325 32.175 106.001 C 32.031 95.18 20.184 88.171 11.108 93.448 C 9.712 94.376 8.049 96.169 7.638 96.54 C 7.494 96.664 7.371 96.788 7.248 96.911 C 7.125 97.035 7.002 97.138 6.899 97.262 C 6.796 97.344 6.714 97.427 6.714 97.427 L 0.205 103.961 C 0.082 101.652 0.021 99.344 0 97.014 L 3.018 93.984 L 13.839 82.915 L 13.839 82.956 C 37.328 58.984 60.859 35.032 84.431 11.121 C 89.071 6.401 94.635 4.814 100.836 7.535 C 106.976 10.214 109.768 15.244 109.747 21.902 L 109.747 54.861 C 109.747 65.869 109.706 76.855 109.768 87.842 C 109.83 95.035 112.971 100.518 119.583 103.425 C 125.085 105.857 129.767 104.105 133.914 99.818 C 151.1 82.111 168.368 64.467 185.636 46.843 C 199.065 33.136 212.575 19.511 225.963 5.742 C 230.849 0.712 236.332 -1.535 243.066 1.248 C 249.76 4.031 252.121 9.534 252.08 16.543 C 252.019 35.609 251.998 54.655 252.121 73.722 C 252.203 84.234 259.144 91.119 268.527 89.326 C 272.223 88.625 276.021 86.007 278.793 83.266 C 304.89 57.5 330.782 31.528 356.736 5.618 C 362.731 -0.339 369.035 -1.576 375.256 1.99 C 380.738 5.123 382.771 10.05 382.751 16.213 C 382.689 37.67 382.792 59.149 382.73 80.607 C 382.689 87.697 385.564 92.892 392.052 95.798 C 394.721 96.994 397.308 97.385 399.752 97.056 C 401.764 96.664 403.304 96.458 408.642 91.263 L 414.535 85.512 C 414.658 87.965 414.72 90.398 414.72 92.871 Z';
-
-function HostLogo() {
-  return (
-    <svg className="hp-logo" viewBox="0 0 414.72 188.928" aria-hidden="true">
-      <path fill="currentColor" d={LOGO_PATH} />
-    </svg>
+export function HostTopBar({ title, elapsedSec, durationMin, stats, onEnd, endDisabled, accessCode, codeCopied = false, onCopyCode }: HostTopBarProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const dialogTitleId = useId();
+  const code = accessCode && /^[0-9]{4}$/.test(accessCode) ? accessCode : null;
+  const spacedCode = code?.split('').join(' ');
+  const copyButton = () => (
+    <button type="button" className="hp-entry-code__copy" aria-label="클래스 입장 코드 복사" onClick={onCopyCode} disabled={!onCopyCode}>
+      <Copy size={16} aria-hidden="true" />
+      <span>{codeCopied ? '복사됨' : '코드 복사'}</span>
+    </button>
   );
-}
-
-export function HostTopBar({ title, elapsedSec, durationMin, stats, onClose, onEnd, endDisabled }: HostTopBarProps) {
   const elapsedMin = Math.floor(elapsedSec / 60);
   const elapsedRest = Math.floor(elapsedSec % 60);
   return (
-    <PlayerTopBar
-      variant="host"
-      left={<IconCircleButton label="클래스 화면 닫기" icon={<X size={24} strokeWidth={2} />} pz="btn-close" onClick={onClose} />}
-      center={
-        <div className="hp-ttl">
-          <h1><HostLogo /><span>{title}</span></h1>
-          <p className="hp-time">
-            <span className="hp-time__clock" aria-label={`함께한 시간 ${elapsedMin}분 ${elapsedRest}초, 계획 ${durationMin}분`}>
-              <Clock aria-hidden="true" strokeWidth={2} />
-              <b>{formatClock(elapsedSec)}</b>
-              <span>/ {formatClock(durationMin * 60)}</span>
-            </span>
-            {stats ? (
-              <>
-                <span aria-hidden="true">·</span>
-                <span>접속 <b>{stats.joined}/{stats.total}</b></span>
-              </>
-            ) : null}
+    <>
+      <header className="hp-topbar" data-variant="host" data-pz="top">
+        <div className="hp-topbar-info" data-pz="ttl">
+          <h1 className="hp-topbar-title" title={title}>{title}</h1>
+          {code && <div className="hp-entry-code">
+            <button type="button" className="hp-entry-code__open" aria-label="클래스 입장 코드 크게 보기" onClick={() => dialogRef.current?.showModal()}>
+              <span className="hp-entry-code__label">코드 :</span>
+              <strong className="hp-entry-code__digits">{code}</strong>
+            </button>
+          </div>}
+          <p className="hp-time" aria-label={`함께한 시간 ${elapsedMin}분 ${elapsedRest}초, 계획 ${durationMin}분`}>
+            <b>{formatClock(elapsedSec)}</b>
+            <span>/ {formatClock(durationMin * 60)}</span>
           </p>
+          {stats && <p className="hp-topbar-stats"><span>접속</span><b>{stats.joined}</b><span className="hp-topbar-stats__total">/ {stats.total}</span></p>}
         </div>
-      }
-      right={
-        <button type="button" className="hp-end" data-pz="btn-end" aria-label="클래스 종료" disabled={endDisabled} onClick={onEnd}>
-          <Square aria-hidden="true" strokeWidth={2} />
-          <span className="hp-end__t">종료</span>
-        </button>
-      }
-    />
+        <button type="button" className="hp-end" data-pz="btn-end" aria-label="클래스 종료" disabled={endDisabled} onClick={onEnd}>종료</button>
+      </header>
+    {code && <dialog ref={dialogRef} className="hp-entry-dialog" aria-labelledby={dialogTitleId}>
+      <h2 id={dialogTitleId}>클래스 입장 코드</h2>
+      <strong className="hp-entry-dialog__digits">{spacedCode}</strong>
+      <p>멤버에게만 알려 주세요.</p>
+      <div className="hp-entry-dialog__actions">
+        {copyButton()}
+        <button type="button" aria-label="입장 코드 크게 보기 닫기" onClick={() => dialogRef.current?.close()}>닫기</button>
+      </div>
+      <p role="status">{codeCopied ? '코드를 복사했어요.' : ''}</p>
+    </dialog>}
+    </>
   );
 }

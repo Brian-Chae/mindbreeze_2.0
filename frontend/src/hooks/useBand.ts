@@ -1,3 +1,4 @@
+import { useMobileSwipeProtection } from './use-mobile-swipe-protection';
 import { isBleSupported } from '../lib/ble';
 /**
  * useBand — LINK BAND BLE 연결 → StreamProcessor → 1초 feature
@@ -26,6 +27,11 @@ import { StreamProcessor } from '../lib/eeg/StreamProcessor';
 import type { BandPowers, LeadOffStatus } from '../lib/eeg/types/eeg';
 import type { EEGAnalysisMetrics } from '../lib/eeg/types/processed-data';
 import { createLogger } from '../lib/eeg/logger';
+import { bleGapLog } from '../lib/eeg/ble-gap-log';
+import { nextReconnectDelay } from '../lib/ble/reconnect-policy';
+import { RESUME_ORDER } from '../lib/native/app-lifecycle';
+import { isNativeApp } from '../lib/native/platform';
+import { PAUSE_ORDER, useAppLifecycle } from './useAppResume';
 import {
   enqueueFeature,
   listPendingFeatures,
@@ -38,7 +44,10 @@ import {
   RAW_SAMPLES_PER_CHUNK,
   type RawEegSample,
 } from '../lib/session-live/raw-encoder';
-import { useEegRawUpload } from './useEegRawUpload';
+import { useEegRawUpload, type EnqueueRawChunkInput } from './useEegRawUpload';
+import { useBiosignalCapture } from './useBiosignalCapture';
+import type { RecordingStatus } from '../lib/biosignal/recording-status';
+import type { RenderedMetrics, ViewKind } from '../lib/biosignal/display-snapshot';
 import {
   deviceStatusFromLeadOff,
   normalizeSignalQuality01,
@@ -49,6 +58,7 @@ import {
 import {
   emitSessionLiveFeature,
   getSessionLiveSocket,
+  isSessionLiveJoined,
   joinSessionLive,
   releaseSessionLiveRoom,
   retainSessionLiveRoom,
@@ -67,7 +77,8 @@ import type {
   BandSpectrum,
   WaveformPoint,
 } from '../types/playground';
-import { refreshActiveModel, scoreIndices } from '../lib/eeg/eegPersonalScore';
+import type { NormalizationModelDto } from '../lib/api/normalization-api';
+import { getActiveModelCache, refreshActiveModel, scoreIndices } from '../lib/eeg/eegPersonalScore';
 
 const logger = createLogger('useBand');
 
@@ -84,7 +95,10 @@ let activeBandOwners = 0;
 let bandConnectInFlight = false;
 
 /** raw indices → 표시용 0~100 정규화 (활성 모델 > 코호트 B0) */
-function toScoredIndices(raw: BandRawIndices): BandRawIndices {
+/** 표시 점수 묶음 — 이완도(두뇌 휴식)는 활성 모델 없으면 null(pending) */
+export type BandScoredIndices = Omit<BandRawIndices, 'relaxationIndex'> & { relaxationIndex: number | null };
+
+function toScoredIndices(raw: BandRawIndices, model: NormalizationModelDto | null = getActiveModelCache()): BandScoredIndices {
   const scores = scoreIndices({
     focusIndex: raw.focusIndex,
     relaxationIndex: raw.relaxationIndex,
@@ -97,7 +111,7 @@ function toScoredIndices(raw: BandRawIndices): BandRawIndices {
     // FAA(로그비)로 정규화해야 한다(FAA_ABS_P90 = 로그비 p90). faa 미제공이면
     // scoreIndices 가 hemisphericBalance 로 폴백한다.
     faa: raw.faa,
-  });
+  }, model);
   return {
     focusIndex: scores.focusIndex,
     relaxationIndex: scores.relaxationIndex,
@@ -110,6 +124,10 @@ function toScoredIndices(raw: BandRawIndices): BandRawIndices {
 }
 
 const FEATURE_FLUSH_MS = 5000;
+/** WS 연결·join 상태여도 ACK 가 이 시간 이상 없으면 REST 폴백 */
+const WS_ACK_STALL_MS = 10_000;
+/** SDD-222 G6: BLE 콜백 경로 raw flush 최소 간격 */
+const CALLBACK_FLUSH_MIN_INTERVAL_MS = 5000;
 /** SDD-112: REST 폴백 재전송 배치 상한(1분치) — 거대 큐를 5초 주기로 나눠 drain */
 const RETRANSMIT_BATCH_MAX = 60;
 /** SDD-113: 세션 경과시간 기반 window_index 영속 base 키 */
@@ -162,6 +180,7 @@ export interface BandChartPoint {
 }
 
 export interface UseBandOptions {
+  displayViewKind?: ViewKind;
   sessionId: string;
   participantId: string | null;
   /** false면 연결/업로드 비활성 (명상 단계 진입 전 등) */
@@ -175,11 +194,18 @@ export interface UseBandOptions {
    * sessionId가 비어 있어도 연결·지표 갱신이 동작한다.
    */
   observationOnly?: boolean;
-  /** true면 VITE_USE_MOCK_EEG와 무관하게 mockDataGenerator 경로 사용 */
+  /** true=예시, false=실측 강제. 미지정 시에만 환경 설정을 따른다. */
   forceMock?: boolean;
+  /**
+   * SDD-246 T12: false 면 v1 feature 업로드(REST feature 배치·WS session-live feature)를 끈다 — v2 수집 경로(web_wasm/native)가
+   * 같은 지표를 live:metric 으로 보내므로 이중 집계를 막는다. raw 업로드·화면 로컬 지표는 영향 없음. 기본 true(현행).
+   */
+  v1FeatureUpload?: boolean;
 }
 
 export interface UseBandResult {
+  normalizationModel: NormalizationModelDto | null;
+  recordingStatus: RecordingStatus;
   isSupported: boolean;
   isMock: boolean;
   connectionState: BandConnectionState;
@@ -222,7 +248,7 @@ export interface UseBandResult {
   /** playground — 7지표 raw */
   rawIndices: BandRawIndices | null;
   /** playground — 정규화 점수 (활성 모델 > 코호트 B0). raw는 유지 */
-  scoredIndices: BandRawIndices | null;
+  scoredIndices: BandScoredIndices | null;
   /** playground — 전극/센서 접촉 */
   sensors: BandSensors;
   /** playground — 연결 이후 경과 초 */
@@ -236,6 +262,8 @@ export interface UseBandResult {
   clearBuffers: () => void;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
+  /** SDD-244: 화면이 1초마다 보여 준 6지표를 DisplaySnapshot으로 보존(수집 중이 아니면 무시) */
+  recordDisplay: (rendered: RenderedMetrics | null, visible: boolean) => void;
 }
 
 function isWebBluetoothSupported(): boolean {
@@ -275,7 +303,7 @@ function trimNumbers(values: number[], max: number): number[] {
   return values.length > max ? values.slice(values.length - max) : values;
 }
 
-function metricsToFeature(
+export function metricsToFeature(
   metrics: EEGAnalysisMetrics,
   secondOffset: number,
   bandPowers: BandPowers | null,
@@ -301,6 +329,9 @@ function metricsToFeature(
     cognitive_load: metrics.cognitiveLoad,
     emotional_stability: metrics.emotionalStability,
     hemispheric_balance: metrics.hemisphericBalance,
+    // SDD-244: 처리기가 계산하고도 DB로 가지 않던 값 연결(없으면 null, 0 치환 금지)
+    total_neural_activity: metrics.totalNeuralActivity ?? null,
+    faa: metrics.faa ?? null,
     signal_quality:
       signalQuality0to100 == null ? null : toApiSignalQuality(signalQuality0to100),
     sdnn: hrv.getCurrentSDNN(),
@@ -329,10 +360,16 @@ export function useBand({
   enabled = true,
   skipAuth = false,
   entryCredential = null,
-  observationOnly = false,
-  forceMock = false,
+  observationOnly: requestedObservationOnly = false,
+  forceMock,
+  displayViewKind,
+  v1FeatureUpload = true,
 }: UseBandOptions): UseBandResult {
-  const isMock = forceMock || envMockEeg();
+  const v1FeatureUploadRef = useRef(v1FeatureUpload);
+  v1FeatureUploadRef.current = v1FeatureUpload;
+  const isMock = forceMock ?? envMockEeg();
+  // 예시 데이터는 호출자의 옵션과 관계없이 영속 경로에서 격리한다.
+  const observationOnly = requestedObservationOnly || isMock;
   const isSupported = isMock || isWebBluetoothSupported();
 
   const [connectionState, setConnectionState] = useState<BandConnectionState>(() => {
@@ -373,6 +410,7 @@ export function useBand({
   const streamIdRef = useRef<string>('');
   const cursorReadyRef = useRef(false);
   const collectingRef = useRef(false);
+  useMobileSwipeProtection(() => enabled && collectingRef.current);
   const bandPowersRef = useRef<BandPowers | null>(null);
   const signalQualityRef = useRef<number | null>(null);
   const batteryRef = useRef<number | null>(null);
@@ -383,10 +421,21 @@ export function useBand({
   const connectedAtRef = useRef<number | null>(null);
   const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
+  // 비동기 연결의 늦은 완료가 수동 해제·소유자 교체를 되돌리지 않게 한다.
+  const connectionAttemptRef = useRef(0);
   /** SDD-120 후속: 밴드 끊김(gattserverdisconnected) 시 자동 재연결 */
   const autoReconnectRef = useRef(true);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** SDD-222: 자동 재연결 시도 횟수(백오프 단계). 연결 성공 시 0 으로 리셋 */
+  const reconnectAttemptRef = useRef(0);
+  /** SDD-222: 끊김 구간 로그가 열려 있는지 — 밴드를 쓰지 않는 회원은 로그 코드가 호출되지 않는다 */
+  const gapOpenRef = useRef(false);
+  /** 재시도 타이머가 최신 connect 를 호출하도록 하는 ref (stale closure 방지) */
+  const autoConnectRef = useRef<() => Promise<void>>(async () => undefined);
   const wsConnectedRef = useRef(false);
+  /** 마지막 feature ACK 수신 시각 — WS 가 붙어 있어도 ACK 가 멈추면 REST 폴백으로 전환한다 */
+  const lastAckAtRef = useRef(Date.now());
+  const revokedSessionRef = useRef<string | null>(null);
   const drainingRef = useRef(false);
   /** SDD-112: 재전송 in-flight 가드 — 5초 타이머·재연결 중복 호출 방지 */
   const retransmitInFlightRef = useRef(false);
@@ -423,34 +472,105 @@ export function useBand({
   rawEnqueueRef.current = rawUpload.enqueueChunk;
   const rawDrainRef = useRef(rawUpload.drain);
   rawDrainRef.current = rawUpload.drain;
+  const rawFlushRef = useRef(rawUpload.flush);
+  rawFlushRef.current = rawUpload.flush;
+  // SDD-244: EEG·PPG·ACC 원문 선수집(v2). 서버 capability 확인 전·미동의·관찰 전용이면 아무 것도 하지 않는다.
+  const biosignal = useBiosignalCapture({
+    sessionId,
+    participantId,
+    enabled: !observationOnly && Boolean(sessionId && participantId),
+    connected: connectionState === 'connected',
+    displayViewKind,
+    skipAuth,
+    entryCredential,
+  });
+  const biosignalCloseRef = useRef(biosignal.close);
+  biosignalCloseRef.current = biosignal.close;
+  const biosignalRef = useRef(biosignal);
+  biosignalRef.current = biosignal;
+  /** SDD-222 G6: BLE 콜백 경로 flush 의 마지막 시각(throttle 기준) */
+  const lastCallbackFlushAtRef = useRef(0);
 
   const rawSamplesRef = useRef<RawEegSample[]>([]);
   const rawChunkIndexRef = useRef(0);
+  const rawStreamIdRef = useRef<string | null>(null);
+  if (!rawStreamIdRef.current) {
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    rawStreamIdRef.current = `raw-${Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')}`;
+  }
+  const rawStagedRef = useRef<{ input: EnqueueRawChunkInput; sampleCount: number } | null>(null);
+  const rawPersistingRef = useRef<Promise<void> | null>(null);
   const rawChunkStartMsRef = useRef<number | null>(null);
+  const rawGenerationRef = useRef(0);
+  const rawOwnerRef = useRef({ sessionId, participantId, enqueue: rawUpload.enqueueChunk });
 
-  const flushRawChunk = useCallback(() => {
-    const samples = rawSamplesRef.current;
-    if (samples.length === 0 || !streamIdRef.current) return;
-    const startMs = rawChunkStartMsRef.current ?? Date.now();
-    const endMs = Date.now();
-    const payload = encodeRawChunk(samples);
-    void rawEnqueueRef
-      .current({
-        streamId: streamIdRef.current,
-        chunkIndex: rawChunkIndexRef.current,
-        startedAt: new Date(startMs).toISOString(),
-        endedAt: new Date(endMs).toISOString(),
-        payload,
-      })
-      .catch((err) => logger.warn('raw chunk 적재 실패', err));
-    rawChunkIndexRef.current += 1;
+  // 종료/소유 세션 전환에서는 실패한 staged 뒤의 샘플도 모두 hook의 메모리 큐로 인계한다.
+  const handoffRawMemory = useCallback(() => {
+    let offset = 0;
+    let index = rawChunkIndexRef.current;
+    const staged = rawStagedRef.current;
+    const enqueue = rawOwnerRef.current.enqueue;
+    while (offset < rawSamplesRef.current.length) {
+      const samples = rawSamplesRef.current.slice(offset, offset + RAW_SAMPLES_PER_CHUNK);
+      const input = offset === 0 && staged ? staged.input : {
+        streamId: rawStreamIdRef.current!, chunkIndex: index,
+        startedAt: new Date(rawChunkStartMsRef.current ?? Date.now()).toISOString(),
+        endedAt: new Date().toISOString(), payload: encodeRawChunk(samples),
+      };
+      void enqueue(input).catch((err) => logger.warn('raw 종료 적재 실패 — hook 메모리 사본 유지', err));
+      offset += offset === 0 && staged ? staged.sampleCount : samples.length;
+      index += 1;
+    }
+    rawGenerationRef.current += 1;
+    rawChunkIndexRef.current = index;
     rawSamplesRef.current = [];
+    rawStagedRef.current = null;
     rawChunkStartMsRef.current = null;
+    rawPersistingRef.current = null;
+  }, []);
+
+  const flushRawChunk = useCallback((): Promise<void> => {
+    if (rawPersistingRef.current) return rawPersistingRef.current;
+    const generation = rawGenerationRef.current;
+    const enqueue = rawOwnerRef.current.enqueue;
+    const persist = async () => {
+      while (rawSamplesRef.current.length > 0 && generation === rawGenerationRef.current) {
+        if (!rawStagedRef.current) {
+          const samples = rawSamplesRef.current.slice(0, RAW_SAMPLES_PER_CHUNK);
+          rawStagedRef.current = {
+            sampleCount: samples.length,
+            input: {
+              streamId: rawStreamIdRef.current!, chunkIndex: rawChunkIndexRef.current,
+              startedAt: new Date(rawChunkStartMsRef.current ?? Date.now()).toISOString(),
+              endedAt: new Date().toISOString(), payload: encodeRawChunk(samples),
+            },
+          };
+        }
+        const staged = rawStagedRef.current;
+        try {
+          // 실패 시 샘플·고정 payload 모두 유지. hook도 재마운트용 메모리 사본을 보존한다.
+          await enqueue(staged.input);
+          if (generation !== rawGenerationRef.current) return;
+        } catch (err) {
+          logger.warn('raw chunk 적재 실패 — 메모리 사본 유지', err);
+          return;
+        }
+        rawSamplesRef.current = rawSamplesRef.current.slice(staged.sampleCount);
+        rawChunkIndexRef.current += 1;
+        rawStagedRef.current = null;
+        rawChunkStartMsRef.current = rawSamplesRef.current.length ? Date.now() : null;
+      }
+    };
+    const promise = persist().finally(() => { if (generation === rawGenerationRef.current) rawPersistingRef.current = null; });
+    rawPersistingRef.current = promise;
+    return promise;
   }, []);
 
   const handleRawEegData = useCallback(
     (data: { fp1: number; fp2: number }[]) => {
       if (observationOnlyRef.current || !streamIdRef.current) return;
+      if (rawOwnerRef.current.sessionId !== sessionId || rawOwnerRef.current.participantId !== participantId) handoffRawMemory();
+      if (rawSamplesRef.current.length === 0) rawOwnerRef.current = { sessionId, participantId, enqueue: rawEnqueueRef.current };
       if (rawChunkStartMsRef.current == null) rawChunkStartMsRef.current = Date.now();
       for (const s of data) {
         rawSamplesRef.current.push({ fp1: s.fp1, fp2: s.fp2 });
@@ -458,8 +578,16 @@ export function useBand({
       if (rawSamplesRef.current.length >= RAW_SAMPLES_PER_CHUNK) {
         flushRawChunk();
       }
+      // SDD-222 G6: 백그라운드에서 setInterval flush 가 멈춰도 BLE 수신이 살아 있는 동안은
+      // 업로드가 진행되도록 콜백 경로에서도 최소 5초 간격으로 flush 한다.
+      // 중복 전송은 useEegRawUpload 의 flushingRef 가드가 막는다.
+      const now = Date.now();
+      if (now - lastCallbackFlushAtRef.current >= CALLBACK_FLUSH_MIN_INTERVAL_MS) {
+        lastCallbackFlushAtRef.current = now;
+        void rawFlushRef.current().catch((err) => logger.warn('콜백 경로 raw flush 실패', err));
+      }
     },
-    [flushRawChunk],
+    [flushRawChunk, handoffRawMemory, sessionId, participantId],
   );
 
   const eegWaveformRef = useRef<BandEegWaveform>({ fp1: [], fp2: [] });
@@ -496,7 +624,9 @@ export function useBand({
   /** feature 배치 REST 업로드 — 입장 자격이 있으면 자격으로, 없으면 현행(로그인/skipAuth)대로 */
   const uploadFeatureBatch = useCallback(
     (targetSessionId: string, payload: { participant_id?: string | null; features: EegFeatureItem[] }) =>
-      entryCredentialRef.current
+      !v1FeatureUploadRef.current
+        ? Promise.reject(new Error('v1_feature_upload_disabled'))
+        : entryCredentialRef.current
         ? postEntryFeatures(targetSessionId, entryCredentialRef.current, payload)
         : postSessionFeatures(targetSessionId, payload, { skipAuth }),
     [skipAuth],
@@ -505,8 +635,11 @@ export function useBand({
   /** 큐 항목 1건 WS emit — 성공해도 ACK 전까지 삭제하지 않음 */
   const emitQueuedItem = useCallback(
     (item: QueuedFeatureItem): boolean => {
+      if (!v1FeatureUploadRef.current) return false;
       const socket = getSessionLiveSocket(skipAuth ? null : tokenStorage.getAccess());
       if (!wsConnectedRef.current || !socket.connected) return false;
+      // join 확정 전(서버 재시작 직후 등)에는 서버가 join 불일치로 버릴 수 있다 — REST 폴백에 맡긴다.
+      if (!isSessionLiveJoined(item.sessionId)) return false;
       return emitSessionLiveFeature(socket, {
         session_id: item.sessionId,
         participant_id: item.participantId,
@@ -531,7 +664,7 @@ export function useBand({
    */
   const retransmitPending = useCallback(async (): Promise<void> => {
     // SDD-112: in-flight 가드 — 5초 타이머·재연결 중복 호출이 동시 재전송하지 않게 한다.
-    if (!sessionId || drainingRef.current || retransmitInFlightRef.current) return;
+    if (!sessionId || drainingRef.current || retransmitInFlightRef.current || !v1FeatureUploadRef.current) return;
     retransmitInFlightRef.current = true;
     try {
       const pending = await listPendingFeatures(sessionId, participantIdRef.current);
@@ -615,6 +748,7 @@ export function useBand({
       if (ack.session_id && ack.session_id !== sessionId) return;
       // SDD-128(②-22): 실패 ACK(saved=0)는 큐에서 제거하지 않아 REST 폴백이 재시도하게 한다.
       if (ack.saved === 0) return;
+      lastAckAtRef.current = Date.now();
       try {
         const removed = await removeAckedFeature(
           {
@@ -651,7 +785,7 @@ export function useBand({
       const contactStatus = deviceStatusFromLeadOff(true, leadOffRef.current);
       const signal01 = sqi == null ? null : toApiSignalQuality(sqi);
 
-      if (!observation && sessionId && streamIdRef.current && cursorReadyRef.current) {
+      if (!observation && v1FeatureUploadRef.current && sessionId && streamIdRef.current && cursorReadyRef.current) {
         // SDD-113: 세션 경과시간 기반 window_index — remount 시 0으로 재시작해
         // 이전 구간과 window_index가 충돌(서버 멱등 폐기)하던 것을 방지.
         if (baseOffsetRef.current == null) {
@@ -732,7 +866,7 @@ export function useBand({
       }
       setSensors(sensorFromLeadOff(leadOffRef.current, true));
       // 차트도 표시 지표와 동일한 정규화 점수(0~100)로 축적한다 (raw 비율 혼용 금지)
-      pushChartPoint(scored.relaxationIndex);
+      if (scored.relaxationIndex !== null) pushChartPoint(scored.relaxationIndex);
     },
     [emitQueuedItem, pushChartPoint, sessionId],
   );
@@ -968,6 +1102,7 @@ export function useBand({
   }, []);
 
   const disconnect = useCallback(async () => {
+    connectionAttemptRef.current += 1;
     // 새 수집 중단 후 기존 큐 drain
     collectingRef.current = false;
     stopMock();
@@ -986,6 +1121,11 @@ export function useBand({
     }
     // 수동 해제 시 자동 재연결 중단 — 예기치 않은 끊김(gattserverdisconnected)만 자동 재연결한다.
     autoReconnectRef.current = false;
+    reconnectAttemptRef.current = 0;
+    if (gapOpenRef.current) {
+      gapOpenRef.current = false;
+      bleGapLog.close();
+    }
     connectedAtRef.current = null;
 
     if (streamRef.current) {
@@ -993,7 +1133,7 @@ export function useBand({
       streamRef.current = null;
     }
     try {
-      if (bluetoothService.isConnected()) {
+      if (bluetoothService.isConnected() || bluetoothService.getCachedDeviceId()) {
         await bluetoothService.disconnect();
       }
     } catch (err) {
@@ -1001,7 +1141,9 @@ export function useBand({
     }
 
     if (!observationOnlyRef.current) {
-      flushRawChunk();
+      // SDD-244: 명시 해제는 종료 의도(close intent)를 먼저 로컬에 기록한다. 실패해도 기존 drain은 계속한다.
+      await biosignalCloseRef.current('band_disconnect').catch(() => null);
+      await flushRawChunk();
       await drainPendingQueue();
       await rawDrainRef.current(15_000);
     }
@@ -1011,8 +1153,21 @@ export function useBand({
       setUploadStatus('idle');
       setConnectedElapsedSec(0);
       setSensors(INITIAL_SENSORS);
+      if (isMock) {
+        clearBuffers();
+        setRawIndices(null);
+        setCurrentEfficiency(null);
+        setFocusIndex(null);
+        setStressIndex(null);
+        setBandPowers(null);
+        setChartPoints([]);
+        setHeartRate(null);
+        setRespiratoryRate(null);
+        setSdnn(null);
+        setRmssd(null);
+      }
     }
-  }, [drainPendingQueue, flushRawChunk, isSupported, stopMock]);
+  }, [clearBuffers, drainPendingQueue, flushRawChunk, isMock, isSupported, stopMock]);
 
   const markConnected = useCallback(() => {
     connectedAtRef.current = Date.now();
@@ -1024,7 +1179,24 @@ export function useBand({
     }, 1000);
   }, []);
 
-  const connect = useCallback(async () => {
+  /** SDD-222: 자동 재연결 예약 — 지수 백오프, 수동 해제·언마운트 시 실행되지 않는다 */
+  const scheduleReconnect = useCallback(() => {
+    if (!autoReconnectRef.current || !mountedRef.current) return;
+    if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+    const delay = nextReconnectDelay(reconnectAttemptRef.current);
+    reconnectAttemptRef.current += 1;
+    reconnectTimerRef.current = setTimeout(() => {
+      reconnectTimerRef.current = null;
+      if (!autoReconnectRef.current || !mountedRef.current) return;
+      void autoConnectRef.current();
+    }, delay);
+  }, []);
+
+  /**
+   * @param isAuto true 면 자동 재연결 시도 — 실패해도 autoReconnectRef 를 끄지 않고 다음 백오프를 예약한다.
+   *   (기존에는 실패 catch 의 disconnect() 가 플래그를 꺼서 재시도가 1회로 끝났다)
+   */
+  const connectInternal = useCallback(async (isAuto: boolean) => {
     // BLE 연결 자체는 세션/참가자 정보와 무관하게 가능해야 한다.
     // (participantId가 아직 없어도 웹블루투스 다이얼로그는 떠야 함)
     if (!isSupported) {
@@ -1037,21 +1209,32 @@ export function useBand({
     // (싱글톤 BLE 연결에 다중 StreamProcessor/큐가 붙으면 업로드가 이중화된다.)
     if (bandConnectInFlight) {
       logger.warn('중복 connect 무시 — 연결 시도가 이미 진행 중입니다');
+      if (isAuto) scheduleReconnect();
       return;
     }
+    // 자동 복구는 이미 선택·연결한 기기에만 적용한다. 취소된 선택창을 다시 열지 않는다.
+    if (isAuto && !isMock && !bluetoothService.isConnected() && !bluetoothService.getCachedDeviceId()) return;
     bandConnectInFlight = true;
+    const attempt = connectionAttemptRef.current;
+    const ownsAttempt = () => mountedRef.current && connectionAttemptRef.current === attempt;
 
     setError(null);
-    // 연결 시도 시 자동 재연결 재활성화 (수동 해제로 꺼진 플래그 복원)
-    autoReconnectRef.current = true;
-    setConnectionState('connecting');
+    if (isAuto) {
+      if (gapOpenRef.current) bleGapLog.recordAttempt();
+    } else {
+      // 사용자 연결 시도 — 자동 재연결 재활성화 (수동 해제로 꺼진 플래그 복원)
+      autoReconnectRef.current = true;
+      reconnectAttemptRef.current = 0;
+    }
+    // 살아 있는 BLE를 인계할 때는 UI를 재연결/끊김 상태로 낮추지 않는다.
+    const alreadyConnected = !isMock && bluetoothService.isConnected();
+    if (!alreadyConnected) setConnectionState('connecting');
 
     try {
       // Web Bluetooth requestDevice는 사용자 제스처(클릭) 내에서 즉시 호출해야 하므로
       // 디바이스 선택(scan)을 맨 앞에서 수행해 다이얼로그가 정상적으로 뜨도록 한다.
       let selectedDeviceId: string | null = null;
       // 전역(singleton) BLE 연결이 이미 살아있으면 scan/connect를 건너뛰고 스트림만 재시작한다.
-      const alreadyConnected = !isMock && bluetoothService.isConnected();
       if (!isMock && !alreadyConnected) {
         // 재연결(SDD-120): 예기치 않은 끊김 후 캐시된 디바이스가 있으면
         // 재선택 다이얼로그(requestDevice)를 건너뛰고 같은 디바이스로 재연결한다.
@@ -1067,6 +1250,12 @@ export function useBand({
         }
       }
 
+      // 사용자가 시작한 기기 선택은 화면 전환 뒤 완료될 수 있다. 물리 연결만 완료해
+      // 다음 소유자가 이어받게 하고, 이전 훅의 스트림·타이머는 만들지 않는다.
+      if (!autoReconnectRef.current) return;
+      if (!isMock && !alreadyConnected) await bluetoothService.connect(selectedDeviceId!);
+      if (!ownsAttempt()) return;
+
       if (observationOnly) {
         streamIdRef.current = 'playground-observation';
         secondOffsetRef.current = 0;
@@ -1074,17 +1263,24 @@ export function useBand({
       } else {
         // 확정 cursor 복구 — offset 0 재시작 금지
         const cursor = await loadStreamCursor(sessionId, participantId);
+        if (!ownsAttempt()) return;
         streamIdRef.current = cursor.streamId;
         secondOffsetRef.current = cursor.nextSequence;
         cursorReadyRef.current = true;
         await refreshPendingCount();
+        if (!ownsAttempt()) return;
 
         // REST 폴백 플러시 타이머 (미확정 큐 재전송)
         if (flushTimerRef.current) clearInterval(flushTimerRef.current);
         flushTimerRef.current = setInterval(() => {
           // SDD-128(②-22): WS 정상 연결 시 REST 주기 flush 중지(이중 전송 제거).
           // 오프라인 폴백은 재연결 시 직접 retransmitPending이 처리한다.
-          if (!wsConnectedRef.current) void retransmitPending();
+          // 단, WS 가 붙어 있어도 room join 미확정이거나 ACK 가 멈추면(서버 재시작·join 불일치) REST 로 보낸다.
+          const wsHealthy =
+            wsConnectedRef.current &&
+            isSessionLiveJoined(sessionId) &&
+            Date.now() - lastAckAtRef.current < WS_ACK_STALL_MS;
+          if (!wsHealthy) void retransmitPending();
         }, FEATURE_FLUSH_MS);
       }
 
@@ -1139,6 +1335,14 @@ export function useBand({
         },
         onStoreUpdate: handleStoreUpdate,
         onEEGData: handleRawEegData,
+        // SDD-244: 분석 emit 전부를 원창과 함께 보존(수집 중이 아니면 훅이 무시)
+        onFeatureWindow: (signal, count) => biosignalRef.current.featureWindow(signal, count),
+        onFeatureEmit: (signal, data, window, extras) => {
+          if (!window) return;
+          const base = baseOffsetRef.current;
+          const windowIndex = base != null ? Math.max(0, Math.floor((Date.now() - base) / 1000)) : Math.floor(window.end / window.rate);
+          biosignalRef.current.emitFeature(signal, data, window, windowIndex, extras);
+        },
       });
       stream.setStoreCallbacks({
         updateBatteryData: (data) => {
@@ -1150,18 +1354,18 @@ export function useBand({
       });
       await stream.start();
 
-      if (!alreadyConnected) {
-        await bluetoothService.connect(selectedDeviceId!);
-      }
+      if (!ownsAttempt()) return;
 
       try {
         const level = await bluetoothService.getBatteryLevel();
+        if (!ownsAttempt()) return;
         setBattery(level);
         batteryRef.current = level;
       } catch {
         // 배터리 실패는 연결을 막지 않음
       }
 
+      if (!ownsAttempt()) return;
       bluetoothService.onConnectionLost(() => {
         if (mountedRef.current) {
           setConnectionState('disconnected');
@@ -1176,29 +1380,61 @@ export function useBand({
           void drainPendingQueue();
           void rawDrainRef.current(15_000);
         }
-        // SDD-120 후속: 자동 재연결 — 캐시된 디바이스로 재선택 다이얼로그 없이 gatt.connect() 재호출.
+        // SDD-120 후속 / SDD-222: 자동 재연결 — 캐시된 디바이스로 재선택 다이얼로그 없이
+        // gatt.connect() 를 지수 백오프(1s→30s)로 재호출하고, 끊김 구간을 로그로 남긴다.
         if (autoReconnectRef.current && mountedRef.current) {
-          if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-          reconnectTimerRef.current = setTimeout(() => {
-            void connect();
-          }, 1500);
+          if (!gapOpenRef.current) {
+            gapOpenRef.current = true;
+            bleGapLog.open('connection-lost');
+          }
+          reconnectAttemptRef.current = 0;
+          scheduleReconnect();
         }
       });
 
+      reconnectAttemptRef.current = 0;
+      if (gapOpenRef.current) {
+        gapOpenRef.current = false;
+        bleGapLog.close();
+      }
       collectingRef.current = true;
       setConnectionState('connected');
       setUploadStatus(observationOnly ? 'idle' : 'streaming');
       markConnected();
     } catch (err) {
+      if (!ownsAttempt()) return;
       logger.error('연결 실패', err);
-      await disconnect();
-      if (mountedRef.current) {
-        setConnectionState('error');
-        setError(err instanceof Error ? err.message : 'LINK BAND 연결 실패');
+      if (isAuto && autoReconnectRef.current && mountedRef.current) {
+        // 자동 재연결 실패: disconnect() 는 autoReconnectRef 를 꺼서 루프를 끊고
+        // 캐시된 디바이스 ID 까지 지우므로 호출하지 않는다. 스트림만 정리하고 다음 백오프를 예약한다.
+        if (streamRef.current) {
+          streamRef.current.cleanup();
+          streamRef.current = null;
+        }
+        if (!observationOnlyRef.current) flushRawChunk();
+        setConnectionState('disconnected');
+        setError('LINK BAND 연결이 끊어졌습니다 — 자동 재연결 시도 중');
+        scheduleReconnect();
+      } else {
+        await disconnect();
+        if (mountedRef.current) {
+          setConnectionState('error');
+          setError(err instanceof Error ? err.message : 'LINK BAND 연결 실패');
+        }
       }
     } finally {
-      // FE-BAND-001: 성공/실패와 무관하게 in-flight 가드를 해제한다.
-      bandConnectInFlight = false;
+      try {
+        if (!ownsAttempt()) {
+          streamRef.current?.cleanup();
+          streamRef.current = null;
+          if (flushTimerRef.current) clearInterval(flushTimerRef.current);
+          flushTimerRef.current = null;
+          // 언마운트는 연결을 인계하지만, 명시적 해제는 늦게 열린 연결도 정리한다.
+          if (!autoReconnectRef.current && bluetoothService.isConnected()) await bluetoothService.disconnect();
+        }
+      } finally {
+        bandConnectInFlight = false;
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- enabled는 BLE 연결 게이트였던 잔여 의존성으로 connect 본문에서 더 이상 직접 읽지 않는다. 다만 기존 의존성 항목을 제거하지 않는 원칙에 따라 유지한다(제거 시 connect identity 안정성이 달라짐).
   }, [
@@ -1216,9 +1452,48 @@ export function useBand({
     participantId,
     refreshPendingCount,
     retransmitPending,
+    scheduleReconnect,
     sessionId,
     startMock,
   ]);
+
+  const connect = useCallback(() => connectInternal(false), [connectInternal]);
+  autoConnectRef.current = () => connectInternal(true);
+
+  // SDD-222 G1: 앱 복귀 — BLE 연결 상태 확인.
+  // - 재연결 진행 중(끊김 구간 열림)이면 백그라운드에서 멈춘 백오프 타이머를 기다리지 않고 즉시 재시도한다.
+  // - 연결 중이면 어댑터 프로브로 실제 연결을 확인하고, 끊겼으면 어댑터가 connectionLost 와 같은 경로를 태워
+  //   위 onConnectionLost 핸들러(갭 로그 + 백오프 재연결)가 시작된다.
+  // - 밴드를 쓰지 않는 회원(opt-in 안 함)은 아무 것도 하지 않는다.
+  // 전환(pause) 시에는 메모리 raw 버퍼를 큐에 적재한다(소켓은 끊지 않는다).
+  useAppLifecycle({
+    order: RESUME_ORDER.ble,
+    pauseOrder: PAUSE_ORDER.bufferFlush,
+    onResume: async () => {
+      if (isMock || !isSupported) return;
+      if (gapOpenRef.current) {
+        if (!bandConnectInFlight && autoReconnectRef.current && mountedRef.current) {
+          if (reconnectTimerRef.current) {
+            clearTimeout(reconnectTimerRef.current);
+            reconnectTimerRef.current = null;
+          }
+          void autoConnectRef.current();
+        }
+        return;
+      }
+      if (!bluetoothService.isConnected() || !isNativeApp()) return;
+      try {
+        // 정적 import 하면 웹 번들·실행 경로에 네이티브 BLE 플러그인이 들어가므로 동적으로 로드한다.
+        const { verifyActiveBleConnection } = await import('../lib/ble/capacitor-ble-adapter');
+        await verifyActiveBleConnection();
+      } catch (err) {
+        logger.warn('복귀 시 BLE 연결 확인 실패', err);
+      }
+    },
+    onPause: async () => {
+      if (!observationOnlyRef.current && collectingRef.current) await flushRawChunk();
+    },
+  });
 
   // 표시용 정규화에 쓸 활성 표준 모델을 1회 로드한다 (playground 외 화면도 표준모델 적용).
   // 실패 시 코호트(B0) fallback — scoreIndices 내부에서 처리된다.
@@ -1226,13 +1501,43 @@ export function useBand({
     void refreshActiveModel();
   }, []);
 
-  // mount 시 전역(singleton) BLE 연결이 이미 살아있으면 스트림을 재시작한다.
-  // (waiting→meditation 전환 시 컴포넌트 remount로 StreamProcessor가 새로 생성되므로)
-  const connectRef = useRef(connect);
-  connectRef.current = connect;
   useEffect(() => {
-    if (bluetoothService.isConnected() && !isMock) {
-      void connectRef.current();
+    mountedRef.current = true;
+    return () => {
+      if (!observationOnlyRef.current) handoffRawMemory();
+      mountedRef.current = false;
+      connectionAttemptRef.current += 1;
+      collectingRef.current = false;
+      stopMock();
+      // BAND-LIFE-002: 예기치 않은 끊김으로 예약된 자동 재연결 타이머를 언마운트 시 해제한다.
+      // 해제하지 않으면 죽은 컴포넌트에서 connect()가 실행되어 리스너·스트림이 누수된다.
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+      if (flushTimerRef.current) {
+        clearInterval(flushTimerRef.current);
+        flushTimerRef.current = null;
+      }
+      if (elapsedTimerRef.current) {
+        clearInterval(elapsedTimerRef.current);
+        elapsedTimerRef.current = null;
+      }
+      if (streamRef.current) {
+        streamRef.current.cleanup();
+        streamRef.current = null;
+      }
+      // BLE 연결은 전역(singleton)으로 유지한다 — waiting→meditation 전환 시
+      // 컴포넌트 unmount/remount로 연결이 끊기지 않도록 disconnect를 호출하지 않는다.
+      // 명시적 종료(resetJoin)에서 bluetoothService.disconnect()로 정리한다.
+    };
+  }, [stopMock, handoffRawMemory]);
+
+  // 준비 단계 이후 소유자가 없는 대기 중 끊겼어도 이전 기기를 이어받는다.
+  // 수동 해제는 기기 캐시를 지우므로 재연결하지 않으며, 새 선택창도 띄우지 않는다.
+  useEffect(() => {
+    if (!isMock && (bluetoothService.isConnected() || bluetoothService.getCachedDeviceId() || bandConnectInFlight)) {
+      void autoConnectRef.current();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1252,6 +1557,7 @@ export function useBand({
     retainSessionLiveRoom(sessionId);
 
     const onConnect = (): void => {
+      if (revokedSessionRef.current === sessionId) return;
       wsConnectedRef.current = true;
       if (mountedRef.current) setIsWsConnected(true);
       joinSessionLive(socket, sessionId, participantIdRef.current, entryCredentialRef.current);
@@ -1259,8 +1565,21 @@ export function useBand({
       void retransmitPending();
     };
 
+    // 재join 확정(서버 재시작 후 포함) 즉시 미확정 큐를 재전송하고 ACK 시계를 리셋한다.
+    const onJoinedConfirmed = (): void => {
+      lastAckAtRef.current = Date.now();
+      void retransmitPending();
+    };
+
     const onDisconnect = (): void => {
       // 단절 시 큐 유지
+      wsConnectedRef.current = false;
+      if (mountedRef.current) setIsWsConnected(false);
+    };
+
+    const onAccessRevoked = (event: {session_id?: string}): void => {
+      if (event.session_id !== sessionId) return;
+      revokedSessionRef.current = sessionId;
       wsConnectedRef.current = false;
       if (mountedRef.current) setIsWsConnected(false);
     };
@@ -1314,7 +1633,7 @@ export function useBand({
         // feature 계약은 raw 비율 — 표시 전 표준모델/코호트 정규화(0~100)
         const scored = scoreIndices({ relaxationIndex: efficiency }).relaxationIndex;
         setCurrentEfficiency(scored);
-        pushChartPoint(scored);
+        if (scored !== null) pushChartPoint(scored);
       }
       const focus = event.focus_index ?? event.feature?.focus_index;
       if (typeof focus === 'number') {
@@ -1352,7 +1671,9 @@ export function useBand({
     };
 
     socket.on('connect', onConnect);
+    socket.on('joined', onJoinedConfirmed);
     socket.on('disconnect', onDisconnect);
+    socket.on('access_revoked', onAccessRevoked);
     const unsubAck = subscribeSessionLiveFeatureAck(socket, onAck);
     const unsubscribe = subscribeSessionLiveEegFeature(socket, onEegFeature);
 
@@ -1367,7 +1688,9 @@ export function useBand({
       unsubAck();
       unsubscribe();
       socket.off('connect', onConnect);
+      socket.off('joined', onJoinedConfirmed);
       socket.off('disconnect', onDisconnect);
+      socket.off('access_revoked', onAccessRevoked);
       wsConnectedRef.current = false;
       if (mountedRef.current) setIsWsConnected(false);
     };
@@ -1415,42 +1738,16 @@ export function useBand({
     };
   }, [enabled, observationOnly, sessionId, participantId, refreshPendingCount]);
 
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-      collectingRef.current = false;
-      stopMock();
-      // BAND-LIFE-002: 예기치 않은 끊김으로 예약된 자동 재연결 타이머를 언마운트 시 해제한다.
-      // 해제하지 않으면 죽은 컴포넌트에서 connect()가 실행되어 리스너·스트림이 누수된다.
-      if (reconnectTimerRef.current) {
-        clearTimeout(reconnectTimerRef.current);
-        reconnectTimerRef.current = null;
-      }
-      if (flushTimerRef.current) {
-        clearInterval(flushTimerRef.current);
-        flushTimerRef.current = null;
-      }
-      if (elapsedTimerRef.current) {
-        clearInterval(elapsedTimerRef.current);
-        elapsedTimerRef.current = null;
-      }
-      if (streamRef.current) {
-        streamRef.current.cleanup();
-        streamRef.current = null;
-      }
-      // BLE 연결은 전역(singleton)으로 유지한다 — waiting→meditation 전환 시
-      // 컴포넌트 unmount/remount로 연결이 끊기지 않도록 disconnect를 호출하지 않는다.
-      // 명시적 종료(resetJoin)에서 bluetoothService.disconnect()로 정리한다.
-    };
-  }, [stopMock]);
+
 
   // 주의: enabled=false(participantId 미확정) 상태에서도 BLE 연결은 가능해야 한다.
   // 이전에는 여기서 `!enabled && connected → disconnect()`를 호출해, participantId가 null이면
   // 연결되자마자 곧바로 끊기는 문제를 일으켰다. 연결 해제는 컴포넌트 unmount 정리(위 useEffect)와
   // 명시적 연결해제 버튼으로만 수행한다.
 
+  const normalizationModel = structuredClone(getActiveModelCache());
   return {
+    normalizationModel,
     isSupported,
     isMock,
     connectionState,
@@ -1478,7 +1775,7 @@ export function useBand({
     ppgWaveform,
     acc,
     rawIndices,
-    scoredIndices: rawIndices ? toScoredIndices(rawIndices) : null,
+    scoredIndices: rawIndices ? toScoredIndices(rawIndices, normalizationModel) : null,
     sensors,
     connectedElapsedSec,
     getEegWaveformSamples,
@@ -1487,5 +1784,7 @@ export function useBand({
     clearBuffers,
     connect,
     disconnect,
+    recordDisplay: biosignal.recordDisplay,
+    recordingStatus: biosignal,
   };
 }

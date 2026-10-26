@@ -23,7 +23,8 @@ from app.core.celery_app import celery_app
 from app.models.notification_outbox import NotificationOutbox
 from app.services import device_service, push_service, web_push_service
 
-logger = logging.getLogger(__name__)
+# API에서는 uvicorn의 INFO 핸들러를 상속한다. cron 결과는 진입점에서도 출력한다.
+logger = logging.getLogger("uvicorn.error.push")
 
 MAX_ATTEMPTS = 3
 EXPIRE_AFTER_HOURS = 24
@@ -101,8 +102,10 @@ def process_push_outbox(limit: int = 100) -> dict:
                 continue
 
             if not tokens:
+                reason = _no_token_reason(db, item.user_id)
                 item.status = "skipped"
-                item.last_error = "활성 디바이스 토큰 없음"
+                item.last_error = reason
+                logger.info("[OUTBOX-PUSH] skipped (id=%s, user=%s): %s", item.id, item.user_id, reason)
                 skipped += 1
                 _commit_row(db, item)
                 continue
@@ -157,6 +160,16 @@ def process_push_outbox(limit: int = 100) -> dict:
     }
 
 
+def _no_token_reason(db, user_id) -> str:
+    """활성 토큰이 없는 이유를 구분한다 — 기기 미등록(앱이 토큰을 안 보냄) vs 전부 해지."""
+    from app.models.device_token import DeviceToken
+
+    total = db.query(DeviceToken).filter(DeviceToken.user_id == user_id).count()
+    if total == 0:
+        return "활성 디바이스 토큰 없음: 등록 이력 없음(기기가 토큰을 등록한 적 없음)"
+    return f"활성 디바이스 토큰 없음: 등록 {total}건 전부 해지됨"
+
+
 def _send_to_device(row, payload: dict) -> push_service.PushResult:
     """기기 플랫폼에 맞는 발송기로 1건 발송. payload 필드는 플랫폼 무관하게 동일(비식별)."""
     title = str(payload.get("title", ""))
@@ -194,7 +207,8 @@ def dispatch_push_now() -> None:
 
     def _run() -> None:
         try:
-            process_push_outbox(limit=20)
+            result = process_push_outbox(limit=20)
+            logger.info("[OUTBOX-PUSH] immediate result=%s", result)
         except Exception:  # noqa: BLE001 — 즉시 발송 실패는 cron 이 재시도한다
             logger.exception("[OUTBOX-PUSH] 즉시 발송 실패")
 

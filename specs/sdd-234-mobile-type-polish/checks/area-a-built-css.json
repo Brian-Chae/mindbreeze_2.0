@@ -1,0 +1,6 @@
+{
+  "mobile\\:text-mb-label": true,
+  "mobile\\:text-mb-number": true,
+  "mobile\\:\\!min-h-12": true,
+  "--mobile-type-hero-leading": true
+}

@@ -1,7 +1,8 @@
+import type { LocalVideoTrack } from 'livekit-client';
 // SDD-208 H1·H2 — 상담사 진행 중 화면(뷰). props 만 받는 순수 컴포넌트라 서버·BLE·LiveKit 없이 픽스처로 렌더·측정할 수 있다.
 // 구성: 상단 바 → (배너) → 헤드 행(지표 띠 + 셀프뷰/요약 패널) → 칩 줄 → 세로 스크롤 그리드 → 도크, 시트는 도크·칩·타일에서 연다.
-import { useState, type ReactNode } from 'react';
-import { Activity, ClipboardCheck, MessageCircle, Mic, SlidersHorizontal, Video } from 'lucide-react';
+import { useRef, useState, type ReactNode } from 'react';
+import { Activity, MessageCircle, Hand, ArrowUpRight, Mic, SlidersHorizontal, Video } from 'lucide-react';
 import {
   filterHostParticipants,
   HOST_BAND_TEXT,
@@ -16,6 +17,7 @@ import {
   type HostSelfBand,
   type HostSheetKey,
 } from '../../../../lib/class/host-player-case';
+import type { SignalMap } from '../../../../lib/class/quiet-signal';
 import type { PlayerMetricKey } from '../../../../lib/class/player-case';
 import { PlayerBackdrop } from '../shared/PlayerBackdrop';
 import { PlayerDock, type DockItem } from '../shared/PlayerDock';
@@ -39,6 +41,7 @@ import { DetailSheet } from './sheets/DetailSheet';
 import { HandsSheet } from './sheets/HandsSheet';
 import { MetricSheet } from './sheets/MetricSheet';
 import { MybandSheet } from './sheets/MybandSheet';
+import { SignalsSheet } from './sheets/SignalsSheet';
 import { QueueSheet } from './sheets/QueueSheet';
 import { ToolsSheet } from './sheets/ToolsSheet';
 import type { HostUiActions, HostUiState } from './useHostUi';
@@ -57,6 +60,7 @@ export interface HostLiveActions {
   /** 허용 방법 시트의 "허용했어요 · 다시 확인" */
   recheckPermission: (kind: 'camera' | 'microphone') => void;
   copyCode: () => void;
+  invite?: () => void;
   connectSelfBand: () => void;
   disconnectSelfBand: () => void;
 }
@@ -71,6 +75,7 @@ export interface HostChatProps {
 }
 
 export interface HostLiveViewProps {
+  signalToast?: ReactNode;
   hostCase: HostCase;
   /** 입장순 원본 — 정렬·필터는 뷰가 ui 상태로 한다 */
   participants: readonly HostParticipant[];
@@ -85,6 +90,7 @@ export interface HostLiveViewProps {
   readinessPanel?: ReactNode;
   preCheckins: readonly HostPreCheckin[];
   quietSignals: HostQuietSignalCounts;
+  quietSignalEntries?: SignalMap;
   selfBand: HostSelfBand;
   chat: HostChatProps;
   /** 미디어(온라인)/녹음(오프라인) 시트 내용 */
@@ -94,6 +100,7 @@ export interface HostLiveViewProps {
   codeCopied: boolean;
   /** 내 카메라 영상(없으면 실루엣) */
   selfStream: MediaStream | null;
+  selfTrack?: LocalVideoTrack | null;
   /** 회원이 켠 카메라 영상 — 1:1 에서만 쓰며 null 이면 영상 자리 자체가 없다 */
   memberStream: MediaStream | null;
   /** 최근 5분 추이(오래된 값부터). 점이 없으면 빈 배열 */
@@ -115,8 +122,9 @@ function selfBandText(band: HostSelfBand): string {
 }
 
 export function HostLiveView(props: HostLiveViewProps) {
-  const { hostCase, participants, ui, uiActions, meta, queue, speakingPanel, readinessPanel, preCheckins, quietSignals, selfBand, chat, media, errorBanners, codeCopied, selfStream, memberStream, trendOf, actions, backdropSrc } = props;
+  const { hostCase, participants, ui, uiActions, meta, queue, speakingPanel, readinessPanel, preCheckins, quietSignals, selfBand, chat, media, errorBanners, codeCopied, selfStream, selfTrack, memberStream, trendOf, actions, backdropSrc } = props;
   const sheetMode = useSheetMode();
+  const signalOpener = useRef<HTMLElement | null>(null);
   const [range, setRange] = useState<string | null>(null);
   const metric = metricByKey(ui.metric);
   const visible = filterHostParticipants(participants, ui.filter);
@@ -128,11 +136,24 @@ export function HostLiveView(props: HostLiveViewProps) {
   const handCount = participants.filter((p) => p.hand).length;
   const detail = ui.sheet === 'detail' ? participants.find((p) => p.id === ui.detailId) ?? null : null;
 
+  const speakingCount = participants.filter((p) => p.speaking).length;
+  const signalCount = quietSignals.following + quietSignals.difficult + quietSignals.resting;
+  const signalButtons = (
+    <div className="hp-signalbar" aria-label="수업 신호">
+      <button type="button" data-signal="hands" data-empty={handCount + speakingCount === 0 ? 'true' : undefined} aria-pressed={ui.sheet === 'hands'} onClick={() => uiActions.toggleSheet('hands')}>
+        <Hand aria-hidden="true" size={22} /><span><b>손들기 {handCount}</b><small>발언권 {speakingCount}명</small></span>
+      </button>
+      <button type="button" data-signal="quiet" data-empty={signalCount === 0 ? 'true' : undefined} aria-pressed={ui.sheet === 'signals'} onClick={() => uiActions.toggleSheet('signals')}>
+        <Activity aria-hidden="true" size={22} /><span><b>조용한 신호 {signalCount}</b><small>최근 10초</small></span>
+      </button>
+    </div>
+  );
+  const secondaryChips = hostCase.chips.filter((chip) => !['hands', 'speak', 'signals', 'band', 'first', 'checkin'].includes(chip.key));
+
   const dockItems: DockItem[] = [
     { key: 'metric', label: '지표 기준', icon: icon(Activity) },
     { key: 'chat', label: '채팅', icon: icon(MessageCircle), badge: ui.sheet === 'chat' ? 0 : chat.unread },
     { key: 'media', label: hostCase.mediaDockLabel, icon: icon(online ? Video : Mic) },
-    { key: 'checkin', label: '체크인', icon: icon(ClipboardCheck) },
     { key: 'tools', label: '도구', icon: icon(SlidersHorizontal) },
   ];
 
@@ -149,14 +170,18 @@ export function HostLiveView(props: HostLiveViewProps) {
           title: '도구',
           body: (
             <ToolsSheet
+              onLeave={actions.close}
               sort={ui.sort} onSort={uiActions.setSort}
               showHandsFirst={online && !hostCase.solo} handsFirst={ui.handsFirst} onHandsFirst={uiActions.setHandsFirst}
               table={ui.table} onTable={uiActions.setTable}
+              onInvite={actions.invite ? () => { uiActions.closeSheet(); actions.invite?.(); } : undefined}
               accessCode={meta.accessCode} codeCopied={codeCopied} onCopyCode={actions.copyCode}
               selfBandText={selfBandText(selfBand)} onOpenMyband={() => uiActions.openSheet('myband')}
             />
           ),
         };
+      case 'signals':
+        return { title: '조용한 신호', subtitle: '최근 10초 · 회원별 최신 선택', body: <SignalsSheet counts={quietSignals} signals={props.quietSignalEntries} onCheckin={() => uiActions.openSheet('alerts')} /> };
       case 'hands':
         return { title: `손든 회원 ${handCount}`, body: <HandsSheet panel={speakingPanel} /> };
       case 'actions':
@@ -164,7 +189,7 @@ export function HostLiveView(props: HostLiveViewProps) {
       case 'queue':
         return { title: `입장 대기 ${queue.length}`, body: <QueueSheet queue={queue} readinessPanel={readinessPanel} /> };
       case 'alerts':
-        return { title: '알림 전체', body: <AlertsSheet chips={hostCase.chips} onSheet={uiActions.openSheet} onToggleHandsFirst={() => uiActions.setHandsFirst(!ui.handsFirst)} /> };
+        return { title: '수업 상태', body: <AlertsSheet checkinSummary={summarizeCheckins(participants)} preCheckins={preCheckins} onDetail={uiActions.openDetail} chips={hostCase.chips} onSheet={uiActions.openSheet} onToggleHandsFirst={() => uiActions.setHandsFirst(!ui.handsFirst)} /> };
       case 'myband':
         return { title: '내 밴드', body: <MybandSheet band={selfBand} onConnect={actions.connectSelfBand} onDisconnect={actions.disconnectSelfBand} /> };
       case 'media':
@@ -191,7 +216,8 @@ export function HostLiveView(props: HostLiveViewProps) {
   })();
 
   const sheet = sheetSpec ? (
-    <PlayerSheet open title={sheetSpec.title} sub={sheetSpec.subtitle} tall={sheetSpec.tall} onClose={uiActions.closeSheet}>
+    <PlayerSheet open returnFocusRef={signalOpener} title={sheetSpec.title} sub={sheetSpec.subtitle} tall={sheetSpec.tall} onClose={uiActions.closeSheet}>
+      {props.signalToast}
       {sheetSpec.body}
     </PlayerSheet>
   ) : null;
@@ -211,21 +237,27 @@ export function HostLiveView(props: HostLiveViewProps) {
 
   return (
     <PlayerShell
+      onFocusCapture={(event) => {
+        if (event.target instanceof HTMLElement && !event.target.closest('[role="dialog"]')) signalOpener.current = event.target;
+      }}
+      className="hp-shell"
       place={hostCase.loc}
       sheetOpen={sheet !== null}
       backdrop={<PlayerBackdrop imageSrc={backdropSrc} />}
       top={
         <HostTopBar
           title={meta.title}
+          accessCode={meta.accessCode}
+          codeCopied={codeCopied}
+          onCopyCode={actions.copyCode}
           elapsedSec={meta.elapsedSec}
           durationMin={meta.durationMin}
           stats={hostCase.solo ? null : hostCase.stats}
-          onClose={actions.close}
           onEnd={actions.end}
           endDisabled={meta.ending}
         />
       }
-      dock={<PlayerDock items={dockItems} active={ui.sheet} onSelect={(key) => (key ? uiActions.toggleSheet(key as HostSheetKey) : uiActions.closeSheet())} />}
+      dock={<><div className="hp-mobile-signals">{signalButtons}</div><PlayerDock items={dockItems} active={ui.sheet} onSelect={(key) => (key ? uiActions.toggleSheet(key as HostSheetKey) : uiActions.closeSheet())} /></>}
       sheet={sheet}
     >
       <div className="hp-main" data-net-bad={netBad ? 'true' : undefined} data-sheet-bottom={bottomSheetOpen ? 'true' : undefined}>
@@ -235,19 +267,19 @@ export function HostLiveView(props: HostLiveViewProps) {
             <HostBanner banner={hostCase.banner} onSheet={uiActions.openSheet} onToggleMic={actions.toggleMic} onRetry={actions.retryNetwork} />
           ) : null}
         </NoticeOverlay>
-        <div className="hp-head" data-pz="head" data-big={camBig ? 'true' : undefined}>
+        <div className="hp-head" data-pz="head" data-selfview={hostCase.headSlot === 'selfview' ? 'true' : undefined} data-big={camBig ? 'true' : undefined}>
           {strip}
           {hostCase.headSlot === 'selfview' ? (
             <HostSelfView
-              cam={hostCase.cam} mic={hostCase.mic} big={camBig} stream={selfStream} netBad={netBad}
+              cam={hostCase.cam} mic={hostCase.mic} big={camBig} stream={selfStream} track={selfTrack} netBad={netBad}
               onPress={hostCase.cam === 'denied' || hostCase.cam === 'nodevice' ? () => uiActions.openSheet('permcam') : uiActions.toggleCamBig}
             />
           ) : hostCase.summary ? (
             <HostSummaryPanel summary={hostCase.summary} />
           ) : null}
         </div>
-        <HostChipLine
-          chips={hostCase.chips}
+        <div className="hp-statusline"><span className="hp-participant-heading">참가자 {participants.length}명</span><HostChipLine
+          chips={secondaryChips}
           range={range}
           handlers={{
             onSheet: uiActions.openSheet,
@@ -256,7 +288,8 @@ export function HostLiveView(props: HostLiveViewProps) {
             onClearFilter: uiActions.clearFilter,
           }}
           onMore={() => uiActions.openSheet('alerts')}
-        />
+        /><button type="button" className="hp-status-open" onClick={() => uiActions.openSheet('alerts')}>수업 상태 <ArrowUpRight aria-hidden="true" size={15} /></button></div>
+        {!sheetSpec && props.signalToast ? <div className="hp-signal-toast-slot">{props.signalToast}</div> : null}
         <HostParticipantGrid
           participants={sorted}
           metric={metric}

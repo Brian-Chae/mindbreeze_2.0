@@ -1,3 +1,4 @@
+import { buttonClass } from '../ui';
 // SDD-087 — 내담자에게 보내는 상담사 코멘트 카드
 // pending_review + client 리포트 + 상담사 권한일 때만 노출 (노출 조건은 부모가 판단)
 // textarea + AI 초안 받기(Gemini, 실패 시 서버 규칙 폴백) + 저장(null = 삭제)
@@ -8,8 +9,12 @@ import {
   updateReportComment,
   type ReportDto,
 } from '../../lib/api/reports';
+import { isAiEnabled } from '../../lib/feature-flags';
 
 const COMMENT_MAX_LENGTH = 1000;
+
+// SDD-220: AI 비공개면 서버가 규칙 초안(source=rule)을 주므로 화면에서 AI 표현을 쓰지 않고 '초안' 으로만 표기한다.
+const draftNoun = (): string => (isAiEnabled() ? 'AI 초안' : '초안');
 
 function savedCommentOf(report: ReportDto): string {
   const value = report.content?.counselor_comment;
@@ -55,7 +60,7 @@ export default function CounselorCommentCard({
 
   const handleDraft = useCallback(async () => {
     if (drafting || saving) return;
-    if (text.trim() && !window.confirm('작성 중인 내용을 AI 초안으로 덮어쓸까요?')) return;
+    if (text.trim() && !window.confirm(`작성 중인 내용을 ${draftNoun()}으로 덮어쓸까요?`)) return;
     setDrafting(true);
     setSuccess(null);
     setError(null);
@@ -63,7 +68,7 @@ export default function CounselorCommentCard({
       const { draft } = await generateCommentDraft(report.id!);
       setText(draft.slice(0, COMMENT_MAX_LENGTH));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'AI 초안 생성에 실패했습니다.');
+      setError(e instanceof Error ? e.message : `${draftNoun()} 생성에 실패했습니다.`);
     } finally {
       setDrafting(false);
     }
@@ -89,18 +94,18 @@ export default function CounselorCommentCard({
 
   return (
     <section data-print-exclude className="rounded-2xl border border-[#E8D9F5] bg-[#FDFAFF] p-5 md:p-6">
-      <h3 className="text-[15px] font-bold text-[#5F0080] flex items-center gap-2">
+      <h3 className="mobile:[overflow-wrap:anywhere] text-[15px] mobile:text-mb-subtitle font-bold text-[#5F0080] flex items-center gap-2">
         <span className="w-1.5 h-1.5 rounded-sm bg-[#5F0080]" />
         내담자에게 보내는 코멘트
       </h3>
-      <p className="mt-1.5 text-[13px] text-[#6D547A]">
-        승인·발송 시 리포트와 메일에 함께 전달됩니다. AI 초안을 받아 편집할 수도 있어요.
+      <p className="mt-1.5 text-[13px] mobile:text-mb-caption text-[#6D547A]">
+        승인·발송 시 리포트와 메일에 함께 전달됩니다. {draftNoun()}을 받아 편집할 수도 있어요.
       </p>
 
       {showNoDataBanner && (
         <div
           role="note"
-          className="mt-4 p-3 rounded-xl bg-[#FFF7E8] border border-[#F3E2B8] text-[#8A6A1F] text-[13px]"
+          className="mt-4 p-3 rounded-xl bg-[#FFF7E8] border border-[#F3E2B8] text-[#8A6A1F] text-[13px] mobile:text-mb-caption"
         >
           이 세션에는 측정 데이터가 없습니다. 코멘트를 작성해 내담자에게 전달해 주세요.
         </div>
@@ -118,11 +123,11 @@ export default function CounselorCommentCard({
         placeholder="내담자에게 전달할 메시지를 작성해 주세요"
         disabled={saving || drafting}
         aria-label="내담자에게 보내는 코멘트"
-        className="mt-4 w-full px-3.5 py-3 border border-[#DDDEE7] rounded-xl bg-white text-[#1F1F1F] text-sm leading-relaxed placeholder:text-[#9B9B9B] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/15 focus:border-[#5F0080] disabled:opacity-50 resize-y"
+        className="mobile:min-h-12 mobile:text-mb-body mt-4 w-full px-3.5 py-3 border border-[#DDDEE7] rounded-xl bg-white text-[#1F1F1F] text-sm mobile:text-mb-body leading-relaxed placeholder:text-[#9B9B9B] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/15 focus:border-[#5F0080] disabled:opacity-50 resize-y"
       />
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-        <span className="text-[12px] text-[#9B9B9B]">
+        <span className="text-[12px] mobile:text-mb-caption text-[#9B9B9B]">
           {text.length}/{COMMENT_MAX_LENGTH}자
           {dirty && <span className="ml-2 text-[#B0731F]">저장되지 않은 변경이 있습니다</span>}
         </span>
@@ -131,15 +136,15 @@ export default function CounselorCommentCard({
             type="button"
             onClick={handleDraft}
             disabled={drafting || saving}
-            className="border border-[#E8D9F5] bg-white text-[#5F0080] font-medium hover:bg-[#F5EDFC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[13px] px-4 py-2 rounded-xl disabled:opacity-50"
+            className="mobile:min-h-11 mobile:min-w-11 border border-[#E8D9F5] bg-white text-[#5F0080] font-medium hover:bg-[#F5EDFC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[13px] mobile:text-mb-label px-4 py-2 rounded-xl disabled:opacity-50"
           >
-            {drafting ? 'AI 초안 생성 중...' : 'AI 초안 받기'}
+            {drafting ? `${draftNoun()} 생성 중...` : `${draftNoun()} 받기`}
           </button>
           <button
             type="button"
             onClick={handleSave}
             disabled={saving || drafting || !dirty}
-            className="bg-[#5F0080] text-white font-medium hover:bg-[#4A0066] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[13px] px-5 py-2 rounded-xl disabled:opacity-50"
+            className={buttonClass({ size: 'sm' })}
           >
             {saving ? '저장 중...' : '코멘트 저장'}
           </button>
@@ -147,12 +152,12 @@ export default function CounselorCommentCard({
       </div>
 
       {success && (
-        <div role="status" className="mt-3 p-3 rounded-xl bg-[#F0F9F5] text-[#26724B] text-sm border border-[#D8EFE3]">
+        <div role="status" className="mt-3 p-3 rounded-xl bg-[#F0F9F5] text-[#26724B] text-sm mobile:text-mb-body border border-[#D8EFE3]">
           {success}
         </div>
       )}
       {error && (
-        <div role="alert" className="mt-3 p-3 rounded-xl bg-red-50 text-red-700 text-sm">
+        <div role="alert" className="mt-3 p-3 rounded-xl bg-red-50 text-red-700 text-sm mobile:text-mb-body">
           {error}
         </div>
       )}

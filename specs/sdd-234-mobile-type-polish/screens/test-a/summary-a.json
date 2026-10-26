@@ -1,0 +1,541 @@
+[
+  {
+    "area": "A",
+    "name": "host-home",
+    "role": "counselor",
+    "url": "/dashboard",
+    "width": 1440,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "default",
+    "scrollWidth": 1440,
+    "sectionGaps": [
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1)",
+        "verticalGap": 24
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3)",
+        "verticalGap": 24
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(2)",
+        "verticalGap": -304
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(2)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(3)",
+        "verticalGap": -304
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(3)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(4)",
+        "verticalGap": -304
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > section:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > section:nth-of-type(2)",
+        "verticalGap": 24
+      }
+    ],
+    "distributions": {
+      "fontSize": {
+        "10": 1,
+        "12": 19,
+        "13": 13,
+        "14": 11,
+        "15": 18,
+        "16": 3,
+        "18": 9,
+        "22": 1,
+        "24": 1,
+        "30": 4
+      },
+      "lineHeight": {
+        "15px": 1,
+        "18px": 19,
+        "19.5px": 4,
+        "21px": 2,
+        "22.1px": 8,
+        "22.5px": 16,
+        "22px": 4,
+        "23.8px": 8,
+        "24px": 3,
+        "27px": 6,
+        "31.2px": 1,
+        "33px": 1,
+        "38px": 3,
+        "45px": 4
+      },
+      "fontWeight": {
+        "400": 29,
+        "500": 8,
+        "600": 13,
+        "700": 19,
+        "800": 11
+      }
+    },
+    "summary": {
+      "textCount": 80,
+      "minFont": 10,
+      "smallTextCount": 20,
+      "smallTextRatio": 25,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  },
+  {
+    "area": "A",
+    "name": "host-home",
+    "role": "counselor",
+    "url": "/dashboard",
+    "width": 390,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "default",
+    "scrollWidth": 390,
+    "sectionGaps": [
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1)",
+        "verticalGap": 24
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3)",
+        "verticalGap": 24
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(2)",
+        "verticalGap": -304
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(2)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(3)",
+        "verticalGap": -304
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(3)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(4)",
+        "verticalGap": -304
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > section:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > section:nth-of-type(2)",
+        "verticalGap": 24
+      }
+    ],
+    "distributions": {
+      "fontSize": {
+        "12": 2,
+        "13": 21,
+        "14": 13,
+        "15": 16,
+        "16": 3,
+        "18": 9,
+        "22": 1,
+        "24": 1,
+        "28": 4
+      },
+      "lineHeight": {
+        "18px": 2,
+        "19.5px": 1,
+        "20px": 23,
+        "21px": 2,
+        "22.5px": 4,
+        "24px": 23,
+        "27px": 6,
+        "30px": 1,
+        "32px": 1,
+        "34px": 4,
+        "38px": 3
+      },
+      "fontWeight": {
+        "400": 30,
+        "600": 12,
+        "700": 16,
+        "800": 12
+      }
+    },
+    "summary": {
+      "textCount": 70,
+      "minFont": 12,
+      "smallTextCount": 2,
+      "smallTextRatio": 2.9,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  },
+  {
+    "area": "A",
+    "name": "host-home",
+    "role": "counselor",
+    "url": "/dashboard",
+    "width": 768,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "default",
+    "scrollWidth": 768,
+    "sectionGaps": [
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1)",
+        "verticalGap": 24
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3)",
+        "verticalGap": 24
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(2)",
+        "verticalGap": -304
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(2)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(3)",
+        "verticalGap": -304
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(3)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(4)",
+        "verticalGap": -304
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > section:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > section:nth-of-type(2)",
+        "verticalGap": 24
+      }
+    ],
+    "distributions": {
+      "fontSize": {
+        "10": 1,
+        "12": 19,
+        "13": 13,
+        "14": 11,
+        "15": 18,
+        "16": 3,
+        "18": 9,
+        "22": 1,
+        "24": 1,
+        "30": 4
+      },
+      "lineHeight": {
+        "15px": 1,
+        "18px": 19,
+        "19.5px": 4,
+        "21px": 2,
+        "22.1px": 8,
+        "22.5px": 16,
+        "22px": 4,
+        "23.8px": 8,
+        "24px": 3,
+        "27px": 6,
+        "31.2px": 1,
+        "33px": 1,
+        "38px": 3,
+        "45px": 4
+      },
+      "fontWeight": {
+        "400": 29,
+        "500": 8,
+        "600": 13,
+        "700": 19,
+        "800": 11
+      }
+    },
+    "summary": {
+      "textCount": 80,
+      "minFont": 10,
+      "smallTextCount": 20,
+      "smallTextRatio": 25,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  },
+  {
+    "area": "A",
+    "name": "member-home",
+    "role": "client",
+    "url": "/app",
+    "width": 1440,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "structure",
+    "scrollWidth": 1440,
+    "sectionGaps": [
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(2)",
+        "verticalGap": 48
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(2)",
+        "verticalGap": -304
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(2)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(3)",
+        "verticalGap": -304
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(3)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(4)",
+        "verticalGap": -304
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(2)",
+        "verticalGap": 24
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > section:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > section:nth-of-type(2)",
+        "verticalGap": 24
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > section:nth-of-type(2)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > section:nth-of-type(3)",
+        "verticalGap": 24
+      }
+    ],
+    "distributions": {
+      "fontSize": {
+        "12": 20,
+        "13": 16,
+        "14": 11,
+        "15": 17,
+        "16": 2,
+        "18": 11,
+        "22": 1,
+        "24": 1,
+        "30": 4,
+        "11.2": 1
+      },
+      "lineHeight": {
+        "16.8px": 1,
+        "17.55px": 1,
+        "18px": 19,
+        "19.5px": 7,
+        "21px": 3,
+        "22.1px": 8,
+        "22.5px": 17,
+        "22px": 1,
+        "23.8px": 8,
+        "24px": 2,
+        "27px": 11,
+        "31.2px": 1,
+        "33px": 1,
+        "45px": 4
+      },
+      "fontWeight": {
+        "400": 28,
+        "500": 6,
+        "600": 15,
+        "700": 22,
+        "800": 13
+      }
+    },
+    "summary": {
+      "textCount": 84,
+      "minFont": 11.2,
+      "smallTextCount": 21,
+      "smallTextRatio": 25,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  },
+  {
+    "area": "A",
+    "name": "member-home",
+    "role": "client",
+    "url": "/app",
+    "width": 390,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "structure",
+    "scrollWidth": 390,
+    "sectionGaps": [
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(2)",
+        "verticalGap": 24
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(2)",
+        "verticalGap": -304
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(2)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(3)",
+        "verticalGap": -304
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(3)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(4)",
+        "verticalGap": -304
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(2)",
+        "verticalGap": 24
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > section:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > section:nth-of-type(2)",
+        "verticalGap": 24
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > section:nth-of-type(2)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > section:nth-of-type(3)",
+        "verticalGap": 24
+      }
+    ],
+    "distributions": {
+      "fontSize": {
+        "12": 1,
+        "13": 25,
+        "14": 11,
+        "15": 16,
+        "16": 2,
+        "18": 11,
+        "22": 1,
+        "24": 1,
+        "28": 4
+      },
+      "lineHeight": {
+        "17.55px": 1,
+        "18px": 1,
+        "19.5px": 4,
+        "20px": 22,
+        "21px": 1,
+        "22.5px": 7,
+        "24px": 19,
+        "27px": 6,
+        "30px": 1,
+        "32px": 1,
+        "34px": 4,
+        "38px": 5
+      },
+      "fontWeight": {
+        "400": 26,
+        "600": 14,
+        "700": 18,
+        "800": 14
+      }
+    },
+    "summary": {
+      "textCount": 72,
+      "minFont": 12,
+      "smallTextCount": 1,
+      "smallTextRatio": 1.4,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  },
+  {
+    "area": "A",
+    "name": "member-home",
+    "role": "client",
+    "url": "/app",
+    "width": 768,
+    "failure": null,
+    "errors": [],
+    "unknown": [],
+    "shell": "structure",
+    "scrollWidth": 768,
+    "sectionGaps": [
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(2)",
+        "verticalGap": 24
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(2)",
+        "verticalGap": -304
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(2)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(3)",
+        "verticalGap": -304
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(3)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > article:nth-of-type(4)",
+        "verticalGap": -304
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(2)",
+        "verticalGap": 24
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > section:nth-of-type(1)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > section:nth-of-type(2)",
+        "verticalGap": 24
+      },
+      {
+        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > section:nth-of-type(2)",
+        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > section:nth-of-type(3)",
+        "verticalGap": 24
+      }
+    ],
+    "distributions": {
+      "fontSize": {
+        "12": 20,
+        "13": 15,
+        "14": 10,
+        "15": 17,
+        "16": 2,
+        "18": 11,
+        "22": 1,
+        "24": 1,
+        "30": 4
+      },
+      "lineHeight": {
+        "17.55px": 1,
+        "18px": 19,
+        "19.5px": 6,
+        "21px": 2,
+        "22.1px": 8,
+        "22.5px": 17,
+        "22px": 1,
+        "23.8px": 8,
+        "24px": 2,
+        "27px": 6,
+        "31.2px": 1,
+        "33px": 1,
+        "38px": 5,
+        "45px": 4
+      },
+      "fontWeight": {
+        "400": 25,
+        "500": 6,
+        "600": 15,
+        "700": 22,
+        "800": 13
+      }
+    },
+    "summary": {
+      "textCount": 81,
+      "minFont": 12,
+      "smallTextCount": 20,
+      "smallTextRatio": 24.7,
+      "smallTouchCount": 0,
+      "narrowTouchCount": 0
+    }
+  }
+]

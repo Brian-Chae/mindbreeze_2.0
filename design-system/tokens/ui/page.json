@@ -1,0 +1,40 @@
+{
+  "page": {
+    "gutter": {
+      "mobile": {
+        "$value": "16px",
+        "$type": "dimension"
+      },
+      "tablet": {
+        "$value": "32px",
+        "$type": "dimension"
+      },
+      "desktop": {
+        "$value": "40px",
+        "$type": "dimension"
+      }
+    },
+    "frameMax": {
+      "$value": "1280px",
+      "$type": "dimension"
+    },
+    "contentMax": {
+      "$value": "1200px",
+      "$type": "dimension"
+    },
+    "sectionGap": {
+      "$value": "24px",
+      "$type": "dimension"
+    },
+    "title": {
+      "size": {
+        "$value": "22px",
+        "$type": "dimension"
+      },
+      "weight": {
+        "$value": "700",
+        "$type": "fontWeight"
+      }
+    }
+  }
+}

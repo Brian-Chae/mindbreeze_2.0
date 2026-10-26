@@ -3,6 +3,7 @@ import { useDialogA11y } from '../../hooks/useDialogA11y';
 import * as api from '../../lib/api/agent-counselor';
 import type { BriefingSettings } from '../../lib/api/agent-counselor';
 import { serializeSettings } from './counselor-agent-utils';
+import { buttonClass } from '../../components/ui';
 
 export default function BriefingSettingsSheet({ onClose }: { onClose: () => void }) {
   const [settings, setSettings] = useState<BriefingSettings | null>(null);
@@ -40,7 +41,7 @@ export default function BriefingSettingsSheet({ onClose }: { onClose: () => void
           <div className="space-y-3"><label className="flex gap-2"><input type="checkbox" checked={settings.evening_enabled} onChange={(event) => setSettings({ ...settings, evening_enabled: event.target.checked })} />저녁 브리핑 사용</label>
             <label className="flex items-center justify-between">저녁 시각<input required aria-label="저녁 시각" type="time" value={settings.evening_time} onChange={(event) => setSettings({ ...settings, evening_time: event.target.value })} className="rounded-lg border p-2" /></label></div>
           <label className="flex gap-2"><input type="checkbox" checked={settings.skip_no_session_days} onChange={(event) => setSettings({ ...settings, skip_no_session_days: event.target.checked })} />일정 없는 날 건너뛰기</label>
-          <button type="submit" className="w-full rounded-xl bg-[#5F0080] px-4 py-3 font-semibold text-white disabled:opacity-40">{busy ? '저장 중…' : '저장'}</button>
+          <button type="submit" className={buttonClass({ variant: 'primary', className: 'w-full' })}>{busy ? '저장 중…' : '저장'}</button>
         </fieldset>
       </form>}
     </div>

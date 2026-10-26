@@ -19,7 +19,7 @@ from app.models.organization import Organization
 from app.models.org_join_request import OrganizationJoinRequest
 from app.models.user_org_membership import UserOrgMembership
 from app.models.client_invite import ClientInvite
-from app.models.chat import ChatRoom, ChatMessage, ChatMessageRead, ChatRoomParticipant
+from app.models.chat import ChatRoom, ChatMessage, ChatMessageRead, ChatRoomParticipant, ChatReport, ChatBlock, ChatFilterTerm
 from app.models.org_document import OrgDocument
 from app.models.qualification import Qualification
 from app.models.career import Career
@@ -42,8 +42,42 @@ from app.models.normalization_baseline import NormalizationBaseline
 from app.models.normalization_model import NormalizationModel
 from app.models.narrative_cache import NarrativeCache
 from app.models.original_deletion_audit import OriginalDeletionAudit
+from app.models.class_program import Class, ClassInstructor, ClassMember, ClassMemberEvent
+from app.models.counseling import (
+    CounselingGuest,
+    CounselingRelationship,
+    CounselingRelationshipCounselor,
+    CounselingRelationshipEvent,
+    GuestClaimEvent,
+)
+from app.models.session_parent import SessionHostHistory
+# SDD-220: 소셜 연결·탈퇴 원장·소셜 해제 outbox·공개 삭제 요청 (감독자 등록 요청 전에도 메타데이터 일치 테스트가 통과하도록 최소 1줄)
+from app.models.account_deletion import (
+    AccountDeletionLedger,
+    AccountDeletionObject,
+    AccountDeletionRequest,
+    SocialIdentity,
+    SocialRevokeOutbox,
+)
+
+# SDD-246 T03: 실시간 v2 영속 상태(command ledger·outbox·epoch·capture stream)
+from app.models.live_state import CaptureStream, LiveCommandLedger, LiveOutbox, LiveSessionEpoch
 
 __all__ = [
+    "CaptureStream",
+    "LiveCommandLedger",
+    "LiveOutbox",
+    "LiveSessionEpoch",
+    "Class",
+    "ClassInstructor",
+    "ClassMember",
+    "ClassMemberEvent",
+    "CounselingGuest",
+    "CounselingRelationship",
+    "CounselingRelationshipCounselor",
+    "CounselingRelationshipEvent",
+    "GuestClaimEvent",
+    "SessionHostHistory",
     "ReportChoiceEvent",
     "OriginalDeletionAudit",
     "NormalizationBaseline",
@@ -53,6 +87,9 @@ __all__ = [
     "ChatMessage",
     "ChatMessageRead",
     "ChatRoomParticipant",
+    "ChatReport",
+    "ChatBlock",
+    "ChatFilterTerm",
     "User",
     "Session",
     "SessionParticipant",
@@ -118,5 +155,36 @@ from app.models.retention_sweep_run import RetentionSweepRun
 __all__ += ["RetentionSweepRun"]
 
 # SDD-209 B13: 연구 DB 내보내기 배치
-from app.models.research_export import ResearchExportBatch, ResearchExportItem
-__all__ += ["ResearchExportBatch", "ResearchExportItem"]
+from app.models.research_export import ResearchExportBatch, ResearchExportItem, ResearchSignalReceipt, ObjectDeletionOutbox
+__all__ += ["ResearchExportBatch", "ResearchExportItem", "ResearchSignalReceipt", "ObjectDeletionOutbox"]
+
+# SDD-216: 편성 트랜잭션과 진행자 요청
+from app.models.class_scheduling import ClassOperation, ClassEffect, ClassEmailInvite, SessionHostRequest, SessionHostNote
+__all__ += ["ClassOperation", "ClassEffect", "ClassEmailInvite", "SessionHostRequest", "SessionHostNote"]
+
+# SDD-217: 클래스 멤버십·보강·guest 자격·동의·현재 참여
+from app.models.class_membership import (
+    ClassAttendanceEvent, ClassMakeupAssignment, ClassGuestCredential, ClassGuestRecovery,
+    ClassGuestMerge, ClassMemberOperation, ClassGuestJoinOperation,
+    ClassMemberConsentEvent, SessionPresenceLease,
+)
+__all__ += [
+    'ClassAttendanceEvent', 'ClassMakeupAssignment', 'ClassGuestCredential', 'ClassGuestRecovery',
+    'ClassGuestMerge', 'ClassMemberOperation', 'ClassGuestJoinOperation',
+    'ClassMemberConsentEvent', 'SessionPresenceLease',
+]
+
+from app.models.class_report_job import ClassReportJob, ClassReportJobItem
+__all__ += ['ClassReportJob', 'ClassReportJobItem']
+
+# SDD-244 M1: 생체신호 stream/segment/gap/종료 의도/manifest revision
+from app.models.biosignal import (
+    BiosignalStream, BiosignalSegment, BiosignalGapEvent, BiosignalCloseIntent,
+    BiosignalManifestRevision, BiosignalManifestCurrent, BiosignalArtifact, BiosignalFeatureAlias,
+    DisplaySnapshot, NormalizationSnapshotRow,
+)
+__all__ += [
+    "BiosignalStream", "BiosignalSegment", "BiosignalGapEvent", "BiosignalCloseIntent",
+    "BiosignalManifestRevision", "BiosignalManifestCurrent", "BiosignalArtifact", "BiosignalFeatureAlias",
+    "DisplaySnapshot", "NormalizationSnapshotRow",
+]

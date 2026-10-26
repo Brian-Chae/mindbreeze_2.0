@@ -1,0 +1,81 @@
+{
+  "note": "SDD-245 합격 기준 정본. 허용폭 0~1px(tolerance). 예외는 route 정규식·사유 단위로만 허용한다.",
+  "tolerance": 1,
+  "outerStart": {
+    "mobile": 16,
+    "desktop": 280,
+    "rule": "본문 시작선(contentLeft)이 같은 역할·폭의 홈과 ±tolerance. 홈 자체는 기준."
+  },
+  "title": {
+    "fontSize": 22,
+    "fontWeight": "700",
+    "rule": "셸 페이지 제목"
+  },
+  "button": {
+    "primary": {
+      "radius": "pill",
+      "heightMobile": 48,
+      "heightDesktop": 44,
+      "tolerance": 4,
+      "note": "lg(48)·sm(44 이상) 허용 → 44~48 범위"
+    }
+  },
+  "card": {
+    "radius": "20px"
+  },
+  "independentLayouts": [
+    {
+      "route": "^/(app/)?chat",
+      "reason": "채팅 대화면 분할 구조(spec 비범위·D3)"
+    },
+    {
+      "route": "^/app/ai",
+      "reason": "채팅(루시) 화면으로 리다이렉트 — 분할 구조"
+    },
+    {
+      "route": "^/classes/now",
+      "reason": "즉시 수업 대기실 — 몰입 진입 전 공간 배치 유지(D1)"
+    },
+    {
+      "route": "^/classes/new",
+      "reason": "클래스 편성 마법사 — 독립 풀스크린 레이아웃"
+    },
+    {
+      "route": "^/counseling/new",
+      "reason": "상담 생성 마법사 — 독립 풀스크린 레이아웃"
+    },
+    {
+      "route": "^/onboarding",
+      "reason": "온보딩 — 셸 없는 독립 레이아웃"
+    },
+    {
+      "route": "^/membership-invite",
+      "reason": "공개 초대 수락 — 셸 없는 독립 레이아웃"
+    },
+    {
+      "route": "^/sessions/[^/]+/(live|player|record)",
+      "reason": "수업 진행·몰입 플레이어·기록 화면 — 몰입 화면 제외(D1)"
+    },
+    {
+      "route": "^/agent",
+      "reason": "상담사 AI 대화(루시) — 채팅 분할 구조"
+    },
+    {
+      "route": "^/(clients/invite|credentials|org/requests|org/search|org/[^/]+)$",
+      "reason": "AppShell 밖 독립 화면(사이드바 없음) — 편입은 화면 구성 변경이라 제외, 읽기·폼 폭 유지(D3), 제목·카드·CTA 토큰은 적용"
+    },
+    {
+      "route": "^/sessions/new$",
+      "reason": "세션 생성 풀스크린 폼 — 독립 레이아웃"
+    },
+    {
+      "route": "^/sessions/[^/]+/(summary|class-report)$",
+      "reason": "문서형 리포트 — 읽기 폭 유지(D3), 모바일 좌우 16은 통일"
+    }
+  ],
+  "frameContentMax": 1200,
+  "outOfScopeStatuses": [
+    "권한 안내",
+    "토큰 미제공 안내"
+  ]
+}

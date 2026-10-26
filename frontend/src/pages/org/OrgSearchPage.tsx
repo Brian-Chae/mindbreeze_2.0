@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Button, cardClass, fieldClass } from '../../components/ui';
 import { useAuthStore } from '../../stores/authStore';
 import { ApiError } from '../../lib/api/client';
 import {
@@ -90,11 +91,11 @@ export default function OrgSearchPage() {
   if (!isInitialized) return null;
 
   return (
-    <div className="min-h-screen bg-surface-canvas p-4 sm:p-8">
+    <div className="min-h-screen bg-surface-canvas px-4 py-4 md:px-8 md:py-6 lg:px-10 lg:pt-8 lg:pb-10">
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="font-display text-3xl font-light text-ink-primary">상담센터 검색</h1>
+            <h1 className="text-[22px] font-bold leading-[30px] text-ink-primary md:leading-[33px]">상담센터 검색</h1>
             <p className="text-sm text-ink-secondary mt-1">소속될 상담센터를 찾아 가입을 신청하세요</p>
           </div>
           <Link
@@ -106,7 +107,7 @@ export default function OrgSearchPage() {
         </div>
 
         {user?.role !== 'counselor' && (
-          <div className="rounded-xl border border-border-default bg-surface-raised p-4 text-sm text-ink-secondary">
+          <div className={cardClass('compact', 'text-sm text-ink-secondary')}>
             상담사 계정으로만 가입 신청이 가능합니다 (현재 역할: {user?.role ? ROLE_LABELS[user.role] ?? user.role : '알 수 없음'})
           </div>
         )}
@@ -118,22 +119,18 @@ export default function OrgSearchPage() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="센터명 검색"
-            className="flex-1 h-11 px-4 rounded-xl bg-surface-raised border border-border-default text-sm text-ink-primary outline-none focus:border-brand-primary"
+            className={fieldClass('input', 'flex-1')}
           />
           <input
             type="text"
             value={region}
             onChange={(e) => setRegion(e.target.value)}
             placeholder="지역 (예: 서울)"
-            className="sm:w-40 h-11 px-4 rounded-xl bg-surface-raised border border-border-default text-sm text-ink-primary outline-none focus:border-brand-primary"
+            className={fieldClass('input', 'sm:!w-40')}
           />
-          <button
-            type="submit"
-            disabled={loading}
-            className="h-11 px-6 rounded-pill bg-brand-primary text-ink-on-brand text-sm font-medium disabled:opacity-50"
-          >
+          <Button type="submit" size="lg" disabled={loading}>
             {loading ? '검색 중...' : '검색'}
-          </button>
+          </Button>
         </form>
 
         {error && <p className="text-red-500 text-sm" role="alert">{error}</p>}
@@ -146,7 +143,7 @@ export default function OrgSearchPage() {
             return (
               <div
                 key={org.id}
-                className="rounded-xl border border-border-default bg-surface-raised p-5 flex items-center justify-between gap-4"
+                className={cardClass('default', 'flex items-center justify-between gap-4')}
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
@@ -164,14 +161,13 @@ export default function OrgSearchPage() {
                   </div>
                   <p className="text-sm text-ink-tertiary mt-1 truncate">{org.address}</p>
                 </div>
-                <button
-                  type="button"
+                <Button
                   onClick={() => handleJoin(org.id)}
                   disabled={!canJoin || joiningId === org.id}
-                  className="shrink-0 h-11 px-4 rounded-pill bg-brand-primary text-ink-on-brand text-sm font-medium disabled:bg-surface-sunken disabled:text-ink-disabled"
+                  className="shrink-0"
                 >
                   {alreadyRequested ? '신청 완료' : joiningId === org.id ? '신청 중...' : '가입 신청'}
-                </button>
+                </Button>
               </div>
             );
           })}

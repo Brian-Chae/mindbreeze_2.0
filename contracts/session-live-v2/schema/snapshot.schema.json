@@ -1,0 +1,366 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://contracts.mindbreeze.local/session-live-v2/snapshot.schema.json",
+  "title": "LiveSnapshot (plan §3.1). 접속마다 현재 전 상태 + through vector. 누락 필드는 불완전 오류",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "schema_version",
+    "snapshot_id",
+    "request_id",
+    "connection_generation",
+    "session_id",
+    "epoch",
+    "audiences",
+    "through",
+    "server_time_ms",
+    "auth_revision",
+    "session",
+    "participation",
+    "waiting",
+    "speaking",
+    "signal",
+    "audio",
+    "devices",
+    "metrics",
+    "aggregates",
+    "policy",
+    "terminal"
+  ],
+  "properties": {
+    "protocol_version": {
+      "$ref": "common.schema.json#/definitions/ProtocolVersion"
+    },
+    "schema_version": {
+      "$ref": "common.schema.json#/definitions/SchemaVersion"
+    },
+    "snapshot_id": {
+      "$ref": "common.schema.json#/definitions/Uuid"
+    },
+    "request_id": {
+      "$ref": "common.schema.json#/definitions/Uuid"
+    },
+    "connection_generation": {
+      "$ref": "common.schema.json#/definitions/U64"
+    },
+    "session_id": {
+      "$ref": "common.schema.json#/definitions/Uuid"
+    },
+    "epoch": {
+      "$ref": "common.schema.json#/definitions/U64"
+    },
+    "audiences": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "common.schema.json#/definitions/Audience"
+      }
+    },
+    "through": {
+      "$ref": "common.schema.json#/definitions/Cursors"
+    },
+    "server_time_ms": {
+      "$ref": "common.schema.json#/definitions/Ms"
+    },
+    "auth_revision": {
+      "$ref": "common.schema.json#/definitions/U64"
+    },
+    "session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "data"
+      ],
+      "properties": {
+        "version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "data": {
+          "$ref": "state.schema.json#/definitions/SessionState"
+        }
+      }
+    },
+    "participation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entities",
+        "tombstones"
+      ],
+      "properties": {
+        "entities": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[0-9a-f-]{36}$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "version",
+              "data"
+            ],
+            "properties": {
+              "version": {
+                "$ref": "common.schema.json#/definitions/U64"
+              },
+              "data": {
+                "$ref": "state.schema.json#/definitions/ParticipationEntity"
+              }
+            }
+          }
+        },
+        "tombstones": {
+          "type": "array",
+          "items": {
+            "$ref": "state.schema.json#/definitions/Tombstone"
+          }
+        }
+      }
+    },
+    "waiting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entities",
+        "tombstones"
+      ],
+      "properties": {
+        "entities": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[0-9a-f-]{36}$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "version",
+              "data"
+            ],
+            "properties": {
+              "version": {
+                "$ref": "common.schema.json#/definitions/U64"
+              },
+              "data": {
+                "$ref": "state.schema.json#/definitions/WaitingEntity"
+              }
+            }
+          }
+        },
+        "tombstones": {
+          "type": "array",
+          "items": {
+            "$ref": "state.schema.json#/definitions/Tombstone"
+          }
+        }
+      }
+    },
+    "speaking": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entities",
+        "tombstones"
+      ],
+      "properties": {
+        "entities": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[0-9a-f-]{36}$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "version",
+              "data"
+            ],
+            "properties": {
+              "version": {
+                "$ref": "common.schema.json#/definitions/U64"
+              },
+              "data": {
+                "$ref": "state.schema.json#/definitions/SpeakingEntity"
+              }
+            }
+          }
+        },
+        "tombstones": {
+          "type": "array",
+          "items": {
+            "$ref": "state.schema.json#/definitions/Tombstone"
+          }
+        }
+      }
+    },
+    "signal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entities",
+        "tombstones"
+      ],
+      "properties": {
+        "entities": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[0-9a-f-]{36}$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "version",
+              "data"
+            ],
+            "properties": {
+              "version": {
+                "$ref": "common.schema.json#/definitions/U64"
+              },
+              "data": {
+                "$ref": "state.schema.json#/definitions/SignalEntity"
+              }
+            }
+          }
+        },
+        "tombstones": {
+          "type": "array",
+          "items": {
+            "$ref": "state.schema.json#/definitions/Tombstone"
+          }
+        }
+      }
+    },
+    "audio": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "data"
+      ],
+      "properties": {
+        "version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "data": {
+          "$ref": "state.schema.json#/definitions/AudioState"
+        }
+      }
+    },
+    "devices": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entities",
+        "tombstones"
+      ],
+      "properties": {
+        "entities": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[0-9a-f-]{36}$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "version",
+              "data"
+            ],
+            "properties": {
+              "version": {
+                "$ref": "common.schema.json#/definitions/U64"
+              },
+              "data": {
+                "$ref": "state.schema.json#/definitions/DeviceEntity"
+              }
+            }
+          }
+        },
+        "tombstones": {
+          "type": "array",
+          "items": {
+            "$ref": "state.schema.json#/definitions/Tombstone"
+          }
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entities",
+        "tombstones"
+      ],
+      "properties": {
+        "entities": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[0-9a-f-]{36}$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "version",
+              "data"
+            ],
+            "properties": {
+              "version": {
+                "$ref": "common.schema.json#/definitions/U64"
+              },
+              "data": {
+                "$ref": "state.schema.json#/definitions/MetricsEntity"
+              }
+            }
+          }
+        },
+        "tombstones": {
+          "type": "array",
+          "items": {
+            "$ref": "state.schema.json#/definitions/Tombstone"
+          }
+        }
+      }
+    },
+    "aggregates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "data"
+      ],
+      "properties": {
+        "version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "data": {
+          "$ref": "state.schema.json#/definitions/AggregateEntity"
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "data"
+      ],
+      "properties": {
+        "version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "data": {
+          "$ref": "state.schema.json#/definitions/PolicyState"
+        }
+      }
+    },
+    "terminal": {
+      "type": "boolean"
+    }
+  }
+}

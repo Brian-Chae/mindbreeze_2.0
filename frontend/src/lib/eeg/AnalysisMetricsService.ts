@@ -21,6 +21,8 @@ export interface LatestEegFeature {
   hemisphericBalance: number;
   /** EEG-NUM-002: FAA(로그비) — 좌우뇌 균형 점수화 정본 입력 (미측정 null) */
   faa: number | null;
+  /** SDD-244: EEG 처리기 indices.totalNeuralActivity (미제공 null) */
+  totalNeuralActivity: number | null;
   cognitiveLoad: number;
   emotionalStability: number;
   attentionLevel: number;
@@ -35,6 +37,7 @@ type AdditionalIndices = {
   hemisphericBalance: number;
   /** EEG-NUM-002: FAA(로그비). 제공되지 않으면 null 로 보존한다. */
   faa?: number | null;
+  totalNeuralActivity?: number | null;
   cognitiveLoad: number;
   emotionalStability: number;
   attentionLevel: number;
@@ -81,6 +84,11 @@ export class AnalysisMetricsService {
 
   private bpmBuffer: number[] = [];
   private rrIntervalBuffer: number[] = [];
+  /** SDD-244 T10: rrIntervalBuffer와 같은 순서의 '닫는 피크' 시각(ms). 시각 없이 들어온 RR은 NaN. */
+  private rrTimestampBuffer: number[] = [];
+  /** 마지막으로 받아들인 박동의 시각 — 중첩 창이 같은 박동을 다시 보내도 한 번만 센다. */
+  private lastRrEndTimestamp = -Infinity;
+  private static readonly RR_CLOCK_RESET_MS = 5000;
   private lastLfHfCalculation = 0;
 
   private currentLfPower = 0;
@@ -104,6 +112,8 @@ export class AnalysisMetricsService {
   private smoothedHeartRate: number | null = null;
   /** 호흡수 지배주파수 중앙값 필터용 최근 N회 히스토리 */
   private respiratoryRateHistory: number[] = [];
+  /** SDD-244 T11: 호흡수가 null인 이유(화면 snapshot의 null_reason). 값이 있으면 null. */
+  private respiratoryNullReason: string | null = 'no_ppg_data';
 
   private hasTimeDomainMetrics = false;
   private hasFrequencyDomainMetrics = false;
@@ -145,6 +155,7 @@ export class AnalysisMetricsService {
       hemisphericBalance: additionalIndices.hemisphericBalance,
       // EEG-NUM-002: FAA(로그비)를 그대로 보존 — 좌우뇌 균형 점수화 입력.
       faa: additionalIndices.faa ?? null,
+      totalNeuralActivity: additionalIndices.totalNeuralActivity ?? null,
       cognitiveLoad: additionalIndices.cognitiveLoad,
       emotionalStability: additionalIndices.emotionalStability,
       attentionLevel: additionalIndices.attentionLevel,
@@ -170,6 +181,7 @@ export class AnalysisMetricsService {
       meditationLevel: feature.meditationLevel,
       // EEG-NUM-002: 점수화 정본 입력 FAA(로그비) 전달.
       faa: feature.faa,
+      totalNeuralActivity: feature.totalNeuralActivity,
       movingAverageValues: {
         totalPower: feature.totalPower,
         emotionalBalance,
@@ -201,6 +213,7 @@ export class AnalysisMetricsService {
     _currentSQI?: number,
     _isQualityGood?: boolean,
     rrIntervals?: number[],
+    rrEndTimestamps?: number[],
   ): Promise<void> {
     const hr = ppgAnalysisResult.vitals.heartRate;
     if (hr > 40 && hr < 200) {
@@ -208,7 +221,7 @@ export class AnalysisMetricsService {
     }
 
     if (rrIntervals && rrIntervals.length > 0) {
-      this.updateRRIntervalBuffer(rrIntervals);
+      this.updateRRIntervalBuffer(rrIntervals, rrEndTimestamps);
       this.calculateLFHF();
     }
 
@@ -306,6 +319,11 @@ export class AnalysisMetricsService {
     return this.currentHeartRate;
   }
 
+  /** 호흡수가 없을 때의 사유. 값이 있으면 null. */
+  getRespiratoryNullReason(): string | null {
+    return this.currentRespiratoryRate === null ? this.respiratoryNullReason : null;
+  }
+
   getCurrentMotion(): number | null {
     return this.currentMotion;
   }
@@ -351,13 +369,70 @@ export class AnalysisMetricsService {
 
   // ---------- HRV 계산 (haru_band_app 이식) ----------
 
-  private updateRRIntervalBuffer(rrIntervals: number[]): void {
-    const validRRIntervals = rrIntervals.filter((rr) => rr >= 200 && rr <= 2000);
-    if (validRRIntervals.length === 0) return;
+  private updateRRIntervalBuffer(rrIntervals: number[], rrEndTimestamps?: number[]): void {
+    // 시각이 하나라도 유한하지 않으면(샘플 시각 누락) 시각 중복 제거를 쓰지 않고 RR 을 그대로 쌓는다.
+    // 예전에는 NaN 시각 박동을 전부 폐기해 RR 버퍼가 비고 HRV·호흡이 영원히 null 이었다.
+    const stamped = rrEndTimestamps !== undefined && rrEndTimestamps.length === rrIntervals.length
+      && rrEndTimestamps.every(Number.isFinite);
+    let candidates = rrIntervals.map((rr, i) => ({ rr, ts: stamped ? rrEndTimestamps![i] : NaN }));
+    if (stamped) {
+      // 시각 기준이 크게 과거로 돌아가면(재연결·clock reset) 새 구간으로 보고 커서를 푼다.
+      const newest = Math.max(...candidates.map(c => c.ts).filter(Number.isFinite), -Infinity);
+      if (Number.isFinite(newest) && newest < this.lastRrEndTimestamp - AnalysisMetricsService.RR_CLOCK_RESET_MS) {
+        this.lastRrEndTimestamp = -Infinity;
+        this.rrIntervalBuffer = []; this.rrTimestampBuffer = []; this.bpmBuffer = [];
+        this.respiratoryRateHistory = []; this.currentRespiratoryRate = null;
+        this.respiratoryNullReason = 'insufficient_window'; this.lastLfHfCalculation = 0;
+        this.smoothedHeartRate = null;
+        this.currentLfPower = 0; this.currentHfPower = 0; this.currentLfHfRatio = 0;
+      }
+      // 미래로 튄 시각(시계 어긋남·중복 샘플 누적)이 커서를 앞으로 밀어 정상 박동을 전부 버리게 하는 것을 막는다.
+      const nowMs = Date.now();
+      const futureLimit = nowMs + AnalysisMetricsService.RR_CLOCK_RESET_MS;
+      if (this.lastRrEndTimestamp > futureLimit) {
+        this.lastRrEndTimestamp = -Infinity;
+        this.rrIntervalBuffer = []; this.rrTimestampBuffer = [];
+      }
+      candidates = candidates.filter(c => Number.isFinite(c.ts) && c.ts <= futureLimit);
+      // 중첩 창이 다시 보낸 박동(이미 받은 시각 이하)은 버린다.
+      candidates = candidates.filter(c => Number.isFinite(c.ts) && c.ts > this.lastRrEndTimestamp);
+    }
+    let valid = candidates.filter(c => c.rr >= 200 && c.rr <= 2000);
+    // 하루명상 SDD-052 filterArtifactRr: 버퍼 중앙값 ±25% 이탈 RR 은 박동 누락/가짜 피크로 보고 제외한다.
+    // (시각 커서는 아래에서 유효 박동 기준으로 갱신하므로 제외된 박동이 재유입되지는 않는다.)
+    // 버퍼가 5개 미만인 초기에는 들어온 윈도우 자체의 중앙값을 기준으로 삼는다(윈도우에 RR 3개 이상일 때).
+    const refPool = this.rrIntervalBuffer.length >= 5 ? this.rrIntervalBuffer : valid.map(c => c.rr);
+    if (refPool.length >= 3) {
+      const sortedRef = [...refPool].sort((a, b) => a - b);
+      const median = sortedRef[sortedRef.length >> 1];
+      if (median > 0) valid = valid.filter(c => Math.abs(c.rr - median) <= median * 0.25);
+    }
+    if (valid.length === 0) {
+      if (stamped) {
+        const seen = candidates.map(c => c.ts).filter(Number.isFinite);
+        if (seen.length > 0) this.lastRrEndTimestamp = Math.max(this.lastRrEndTimestamp, ...seen);
+      }
+      return;
+    }
 
-    this.rrIntervalBuffer.push(...validRRIntervals);
+    this.rrIntervalBuffer.push(...valid.map(c => c.rr));
+    this.rrTimestampBuffer.push(...valid.map(c => c.ts));
+    if (stamped) this.lastRrEndTimestamp = Math.max(this.lastRrEndTimestamp, ...candidates.map(c => c.ts));
+    // 초기(기준 부족)에 통과한 이상치를 버퍼가 5개 이상이 되면 중앙값 ±25% 기준으로 소급 정리한다.
+    if (this.rrIntervalBuffer.length >= 5) {
+      const sortedAll = [...this.rrIntervalBuffer].sort((a, b) => a - b);
+      const med = sortedAll[sortedAll.length >> 1];
+      if (med > 0) {
+        const keep = this.rrIntervalBuffer.map(r => Math.abs(r - med) <= med * 0.25);
+        if (keep.some(k => !k)) {
+          this.rrIntervalBuffer = this.rrIntervalBuffer.filter((_, i) => keep[i]);
+          this.rrTimestampBuffer = this.rrTimestampBuffer.filter((_, i) => keep[i]);
+        }
+      }
+    }
     if (this.rrIntervalBuffer.length > this.LF_HF_BUFFER_SIZE) {
       this.rrIntervalBuffer = this.rrIntervalBuffer.slice(-this.LF_HF_BUFFER_SIZE);
+      this.rrTimestampBuffer = this.rrTimestampBuffer.slice(-this.LF_HF_BUFFER_SIZE);
     }
   }
 
@@ -404,6 +479,7 @@ export class AnalysisMetricsService {
     const currentTime = Date.now();
 
     if (this.rrIntervalBuffer.length < 30) {
+      if (this.currentRespiratoryRate === null) this.respiratoryNullReason = 'insufficient_rr_buffer';
       return;
     }
 
@@ -423,6 +499,7 @@ export class AnalysisMetricsService {
     } catch (error) {
       console.error('❌ RR 간격 버퍼 기반 HRV 분석 실패:', error);
       this.currentRespiratoryRate = null;
+      this.respiratoryNullReason = 'calculation_failed';
     }
   }
 
@@ -434,8 +511,12 @@ export class AnalysisMetricsService {
     // 개수(30박) 게이트 → 경과시간 게이트로 교체.
     // 90bpm이면 30박≈20초에 불과해 주파수 해상도가 3.75회/분으로 너무 거칠다.
     const totalDurationMs = rrIntervals.reduce((sum, val) => sum + val, 0);
-    if (totalDurationMs < this.RESPIRATORY_MIN_WINDOW_MS) {
+    // SDD-244 T10: RR 합이 아니라 실제 경과(첫~마지막 박동 시각)도 60초를 넘어야 연다. 시각이 없는 구 호출은 RR 합만 본다.
+    const stamps = this.rrTimestampBuffer.filter(Number.isFinite);
+    const elapsedMs = stamps.length >= 2 ? stamps[stamps.length - 1] - stamps[0] : Infinity;
+    if (totalDurationMs < this.RESPIRATORY_MIN_WINDOW_MS || elapsedMs < this.RESPIRATORY_MIN_WINDOW_MS) {
       this.currentRespiratoryRate = null;
+      this.respiratoryNullReason = 'insufficient_window';
       this.respiratoryRateHistory = [];
       return;
     }
@@ -444,6 +525,7 @@ export class AnalysisMetricsService {
     const resampledRR = this.resampleRRIntervals(rrIntervals, resamplingFs);
     if (resampledRR.length < 16) {
       this.currentRespiratoryRate = null;
+      this.respiratoryNullReason = 'insufficient_resampled_points';
       this.respiratoryRateHistory = [];
       return;
     }
@@ -467,6 +549,7 @@ export class AnalysisMetricsService {
 
     if (dominantFreq == null || !(maxPower > 0) || !Number.isFinite(dominantFreq)) {
       this.currentRespiratoryRate = null;
+      this.respiratoryNullReason = 'no_dominant_frequency';
       this.respiratoryRateHistory = [];
       return;
     }
@@ -474,6 +557,7 @@ export class AnalysisMetricsService {
     const rate = dominantFreq * 60;
     if (rate < 6 || rate > 40 || !Number.isFinite(rate)) {
       this.currentRespiratoryRate = null;
+      this.respiratoryNullReason = 'out_of_physiological_range';
       this.respiratoryRateHistory = [];
       return;
     }
@@ -484,6 +568,7 @@ export class AnalysisMetricsService {
       this.respiratoryRateHistory.shift();
     }
     this.currentRespiratoryRate = this.medianOf(this.respiratoryRateHistory);
+    this.respiratoryNullReason = null;
   }
 
   private calculateTimeDomainMetrics(rrIntervals: number[]): void {

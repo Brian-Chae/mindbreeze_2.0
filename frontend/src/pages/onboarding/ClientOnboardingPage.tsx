@@ -15,6 +15,7 @@ import {
   completeClientOnboarding,
   type ClientMatchResponse,
 } from '../../lib/api/onboarding';
+import { buttonClass } from '../../components/ui';
 
 const CONCERN_OPTIONS = [
   '우울',
@@ -28,7 +29,7 @@ const CONCERN_OPTIONS = [
   '기타',
 ];
 
-const INTEREST_OPTIONS = ['명상', '인지행동', '마음챙김', '수용전념', '미술치료'];
+const INTEREST_OPTIONS = ['명상', '인지행동', '마음챙김', '수용전념', '미술 활동'];
 
 const STEP_LABELS = ['기본 정보', '상세 정보', '프로필', '상담사 매칭'];
 
@@ -451,7 +452,7 @@ export default function ClientOnboardingPage() {
           <button
             type="button"
             onClick={() => navigate('/app')}
-            className="h-[52px] w-[280px] rounded-full bg-[#5F0080] hover:bg-[#4B0066] text-white font-semibold text-[15px] transition-colors"
+            className={buttonClass({ variant: 'primary', size: 'lg', className: 'w-[280px]' })}
           >
             대시보드로 이동
           </button>
@@ -823,7 +824,7 @@ export default function ClientOnboardingPage() {
                   type="button"
                   onClick={handleNext}
                   disabled={loading}
-                  className="w-full h-[44px] rounded-full bg-[#5F0080] hover:bg-[#4B0066] active:bg-[#3F0055] disabled:opacity-60 text-white font-semibold text-[15px] transition-colors"
+                  className={buttonClass({ variant: 'primary', className: 'w-full' })}
                 >
                   {loading ? '저장 중...' : '다음'}
                 </button>
@@ -833,7 +834,7 @@ export default function ClientOnboardingPage() {
                   type="button"
                   onClick={handleMatch}
                   disabled={loading}
-                  className="w-full h-[44px] rounded-full bg-[#5F0080] hover:bg-[#4B0066] active:bg-[#3F0055] disabled:opacity-60 text-white font-semibold text-[15px] transition-colors"
+                  className={buttonClass({ variant: 'primary', className: 'w-full' })}
                 >
                   {loading ? '매칭 중...' : '매칭하기'}
                 </button>
@@ -843,7 +844,7 @@ export default function ClientOnboardingPage() {
                   type="button"
                   onClick={handleComplete}
                   disabled={loading || inviteConfirmLoading}
-                  className="w-full h-[44px] rounded-full bg-[#5F0080] hover:bg-[#4B0066] active:bg-[#3F0055] disabled:opacity-60 text-white font-semibold text-[15px] transition-colors"
+                  className={buttonClass({ variant: 'primary', className: 'w-full' })}
                 >
                   {loading ? '처리 중...' : '완료'}
                 </button>

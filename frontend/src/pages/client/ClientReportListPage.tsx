@@ -1,3 +1,5 @@
+import { buttonClass, fieldClass } from '../../components/ui';
+import { useMobileSwipeProtection } from '../../hooks/use-mobile-swipe-protection';
 // 내담자용 리포트 목록 페이지
 // AppShell 없이 ClientShell 내에서 동작
 
@@ -6,7 +8,12 @@ import { useSearchParams } from 'react-router-dom';
 import { ClientReportDetailModal } from './ClientReportDetailModal';
 import { listReports, markAllReportsRead, type ReportDto } from '../../lib/api/reports';
 import { useReportStore } from '../../stores/reportStore';
-import { isReportInReview, REPORT_IN_REVIEW_BADGE } from '../../lib/report-review-copy';
+import {
+  isReportDelayed,
+  isReportInReview,
+  REPORT_IN_REVIEW_BADGE,
+  REPORT_IN_REVIEW_DELAYED_NOTICE,
+} from '../../lib/report-review-copy';
 
 function formatDateTime(iso: string | null): string {
   if (!iso) return '-';
@@ -19,7 +26,7 @@ function TypeBadge({ type }: { type: string }) {
   const isCounselor = type === 'counselor';
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold font-mono ${
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12px] mobile:text-mb-caption font-bold font-mono ${
         isCounselor ? 'bg-[#F5EDFC] text-[#5F0080]' : 'bg-[#E6F4EA] text-[#2E7D32]'
       }`}
     >
@@ -31,20 +38,20 @@ function TypeBadge({ type }: { type: string }) {
 function StatusBadge({ sentAt, inReview = false }: { sentAt: string | null; inReview?: boolean }) {
   if (inReview) {
     return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold bg-[#F5EDFC] text-[#5F0080]">
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] mobile:text-mb-caption font-bold bg-[#F5EDFC] text-[#5F0080]">
         {REPORT_IN_REVIEW_BADGE}
       </span>
     );
   }
   if (sentAt) {
     return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold bg-[#E0F2FE] text-[#075985]">
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] mobile:text-mb-caption font-bold bg-[#E0F2FE] text-[#075985]">
         확인 가능
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold bg-[#FEF3C7] text-[#92400E]">
+    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] mobile:text-mb-caption font-bold bg-[#FEF3C7] text-[#92400E]">
       대기
     </span>
   );
@@ -71,8 +78,8 @@ function EmptyState() {
         <line x1="16" y1="17" x2="8" y2="17" />
         <polyline points="10 9 9 9 8 9" />
       </svg>
-      <p className="text-sm font-medium text-[#1F1F1F] mb-1">아직 리포트가 없어요</p>
-      <p className="text-xs text-[#6F6F6F]">클래스를 마치면 리포트를 확인할 수 있습니다</p>
+      <p className="text-sm mobile:text-mb-body font-medium text-[#1F1F1F] mb-1">아직 리포트가 없어요</p>
+      <p className="text-xs mobile:text-mb-caption text-[#6F6F6F]">클래스를 마치면 리포트를 확인할 수 있습니다</p>
     </div>
   );
 }
@@ -143,6 +150,7 @@ export default function ClientReportListPage() {
   const [sortKey, setSortKey] = useState<SortKey>('newest');
   const [groupByCounselor, setGroupByCounselor] = useState(true);
   const [markingAllRead, setMarkingAllRead] = useState(false);
+  useMobileSwipeProtection(() => markingAllRead);
   const setReportUnread = useReportStore((s) => s.setUnread);
   const refreshReports = useReportStore((s) => s.refresh);
 
@@ -222,41 +230,41 @@ export default function ClientReportListPage() {
   const filtered = useMemo(() => filterAndSortReports(reports, search, sortKey), [reports, search, sortKey]);
   const grouped = useMemo(() => groupByCounselor ? groupReportsByCounselor(filtered) : null, [groupByCounselor, filtered]);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
-  const controlClass = 'h-10 px-4 rounded-xl text-[13px] border border-[#EFEFEF] bg-white text-[#6F6F6F] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20';
-  const pageButtonClass = 'h-11 px-4 rounded-xl text-[13px] font-semibold border border-[#EFEFEF] bg-white text-[#5F0080] hover:bg-[#F5EDFC] disabled:opacity-40 disabled:cursor-not-allowed transition-colors';
+  const pageButtonClass = 'mobile:min-w-11 h-11 px-4 rounded-xl text-[13px] mobile:text-mb-label font-semibold border border-[#EFEFEF] bg-white text-[#5F0080] hover:bg-[#F5EDFC] disabled:opacity-40 disabled:cursor-not-allowed transition-colors';
 
   const renderMobileCard = (report: ReportDto) => (
     <button
       key={reportKey(report)} type="button" aria-haspopup="dialog" disabled={!report.id}
       onClick={() => setSelectedReportId(report.id)}
-      className="block w-full text-left bg-white border border-[#EFEFEF] rounded-2xl p-4 hover:shadow-md hover:border-[#5F0080]/30 transition-all disabled:cursor-default"
+      className="mobile:min-h-11 mobile:min-w-11 block w-full text-left bg-white border border-[#EFEFEF] rounded-2xl p-4 hover:shadow-md hover:border-[#5F0080]/30 transition-all disabled:cursor-default"
     >
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[12px] font-semibold text-[#5F0080]">{counselorName(report)}</span>
+        <span className="text-[12px] mobile:text-mb-caption font-semibold text-[#5F0080]">{counselorName(report)}</span>
         <span className="flex gap-2"><TypeBadge type={report.type} /><StatusBadge sentAt={report.sent_at} inReview={isReportInReview(report)} /></span>
       </div>
       <div className="flex items-center gap-1.5 mb-1">
         {!report.is_read && !isReportInReview(report) && (
-          <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[12px] font-bold text-white">NEW</span>
+          <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[12px] mobile:text-mb-caption font-bold text-white">NEW</span>
         )}
-        <span className="font-bold text-[15px] text-[#1F1F1F] truncate">{reportTitle(report)}</span>
+        <span className="font-bold text-[15px] mobile:text-mb-subtitle mobile:whitespace-normal mobile:[overflow-wrap:anywhere] text-[#1F1F1F] truncate">{reportTitle(report)}</span>
       </div>
-      <div className="text-[13px] font-bold text-[#1F1F1F] font-mono">
+      <div className="text-[13px] mobile:text-mb-caption font-bold text-[#1F1F1F] font-mono">
         {formatDateTime(report.scheduled_at ?? report.created_at)}
       </div>
-      <p className="mt-2 text-[13px] text-[#6F6F6F] line-clamp-2">{reportSummary(report)}</p>
-      <div className="mt-2 text-[12px] text-[#6F6F6F]">
+      <p className="mt-2 text-[13px] mobile:text-mb-compact text-[#6F6F6F] line-clamp-2">{reportSummary(report)}</p>
+      {isReportDelayed(report) && <p className="mt-1 text-[12px] mobile:text-mb-caption text-[#6F6F6F]">{REPORT_IN_REVIEW_DELAYED_NOTICE}</p>}
+      <div className="mt-2 text-[12px] mobile:text-mb-caption text-[#6F6F6F]">
         {SESSION_TYPE_LABELS[report.session_type ?? ''] ?? report.session_type ?? '-'}
       </div>
     </button>
   );
 
   const renderTable = (items: ReportDto[]) => (
-    <table className="w-full text-[15px] min-w-[640px] table-fixed">
+    <table className="w-full text-[15px] mobile:text-mb-body min-w-[640px] table-fixed">
       <thead>
         <tr className="bg-[#F8FAFC] border-b border-[#EFEFEF]">
           {['제목', '클래스 유형', '날짜·시간', '상태', '액션'].map((label, index) => (
-            <th key={label} scope="col" className={`text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono tracking-wider ${index === 0 ? 'w-[34%]' : index === 2 ? 'w-[25%]' : index === 4 ? 'w-[10%]' : ''}`}>{label}</th>
+            <th key={label} scope="col" className={`text-left px-5 py-3 text-[12px] mobile:text-mb-caption text-[#6F6F6F] font-mono tracking-wider ${index === 0 ? 'w-[34%]' : index === 2 ? 'w-[25%]' : index === 4 ? 'w-[10%]' : ''}`}>{label}</th>
           ))}
         </tr>
       </thead>
@@ -277,19 +285,20 @@ export default function ClientReportListPage() {
           >
             <td className="px-5 py-3.5"><div className="flex items-center gap-1.5">
               {!report.is_read && !isReportInReview(report) && (
-                <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[12px] font-bold text-white">NEW</span>
+                <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[12px] mobile:text-mb-caption font-bold text-white">NEW</span>
               )}
               <span className="font-bold text-[#1F1F1F] truncate" title={reportTitle(report)}>{reportTitle(report)}</span>
             </div>
-              <p className="mt-1 text-[13px] text-[#6F6F6F] line-clamp-2">{reportSummary(report)}</p>
+              <p className="mt-1 text-[13px] mobile:text-mb-compact text-[#6F6F6F] line-clamp-2">{reportSummary(report)}</p>
+              {isReportDelayed(report) && <p className="mt-1 text-[12px] mobile:text-mb-caption text-[#6F6F6F]">{REPORT_IN_REVIEW_DELAYED_NOTICE}</p>}
             </td>
-            <td className="px-5 py-3.5 text-[13px] text-[#6F6F6F]">{SESSION_TYPE_LABELS[report.session_type ?? ''] ?? report.session_type ?? '-'}</td>
-            <td className="px-5 py-3.5 text-[12px] font-bold text-[#1F1F1F] font-mono whitespace-nowrap">{formatDateTime(report.scheduled_at ?? report.created_at)}</td>
+            <td className="px-5 py-3.5 text-[13px] mobile:text-mb-caption text-[#6F6F6F]">{SESSION_TYPE_LABELS[report.session_type ?? ''] ?? report.session_type ?? '-'}</td>
+            <td className="px-5 py-3.5 text-[12px] mobile:text-mb-caption font-bold text-[#1F1F1F] font-mono whitespace-nowrap">{formatDateTime(report.scheduled_at ?? report.created_at)}</td>
             <td className="px-5 py-3.5"><StatusBadge sentAt={report.sent_at} inReview={isReportInReview(report)} /></td>
             <td className="px-5 py-3.5">
               <button type="button" aria-haspopup="dialog" disabled={!report.id}
                 onClick={(event) => { event.stopPropagation(); setSelectedReportId(report.id); }}
-                className="text-[13px] font-semibold text-[#5F0080] hover:underline disabled:text-[#BDBDBD] disabled:no-underline"
+                className="mobile:min-h-11 mobile:min-w-11 text-[13px] mobile:text-mb-label font-semibold text-[#5F0080] hover:underline disabled:text-[#BDBDBD] disabled:no-underline"
               >보기</button>
             </td>
           </tr>
@@ -299,47 +308,47 @@ export default function ClientReportListPage() {
   );
 
   return (
-    <div className="px-4 md:px-8 py-4 md:py-6">
+    <div>
       <div className="flex flex-wrap items-center gap-2 py-4">
         <input type="search" aria-label="제목·요약 검색" placeholder="제목·요약 검색"
           value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }}
-          className={`${controlClass} w-full md:w-64`} />
+          className={fieldClass('input', 'md:w-64')} />
         <select aria-label="정렬" value={sortKey}
-          onChange={(event) => { setSortKey(event.target.value as SortKey); setPage(1); }} className={controlClass}>
+          onChange={(event) => { setSortKey(event.target.value as SortKey); setPage(1); }} className={fieldClass('select', 'md:w-auto')}>
           <option value="newest">최신순</option><option value="oldest">오래된순</option><option value="title">제목순</option>
         </select>
         <button type="button" role="switch" aria-checked={groupByCounselor}
           onClick={() => setGroupByCounselor((value) => !value)}
-          className={`h-10 px-4 rounded-xl text-[13px] font-semibold border transition-colors ${groupByCounselor ? 'bg-[#F5EDFC] text-[#5F0080] border-[#E8D9F5]' : 'bg-white text-[#6F6F6F] border-[#EFEFEF] hover:bg-[#F8FAFC]'}`}
+          className={`mobile:min-h-11 mobile:min-w-11 h-10 px-4 rounded-xl text-[13px] mobile:text-mb-label font-semibold border transition-colors ${groupByCounselor ? 'bg-[#F5EDFC] text-[#5F0080] border-[#E8D9F5]' : 'bg-white text-[#6F6F6F] border-[#EFEFEF] hover:bg-[#F8FAFC]'}`}
         >상담사별 그룹핑 {groupByCounselor ? 'ON' : 'OFF'}</button>
         {reports.some((r) => !r.is_read && !isReportInReview(r)) && (
           <button type="button" onClick={() => void handleMarkAllRead()} disabled={markingAllRead}
-            className="h-10 px-4 rounded-xl text-[13px] font-semibold border border-[#E8D9F5] bg-white text-[#5F0080] hover:bg-[#F5EDFC] disabled:opacity-50 transition-colors"
+            className={buttonClass({ variant: 'secondary', size: 'sm' })}
           >{markingAllRead ? '처리 중...' : '전체 읽음'}</button>
         )}
-        {!loading && !error && <span className="text-[13px] text-[#6F6F6F] md:ml-auto">{filtered.length} / {total}건</span>}
+        {!loading && !error && <span className="text-[13px] mobile:text-mb-caption text-[#6F6F6F] md:ml-auto">{filtered.length} / {total}건</span>}
       </div>
       {loading ? (
-        <div role="status" className="text-[#6F6F6F] text-sm text-center py-12">불러오는 중...</div>
+        <div role="status" className="text-[#6F6F6F] text-sm mobile:text-mb-body text-center py-12">불러오는 중...</div>
       ) : error ? (
-        <div className="mx-4 my-6 p-6 rounded-2xl bg-red-50 text-center" role="alert">
-          <p className="text-sm text-red-700 mb-4">{error}</p>
+        <div className="mx-4 my-6 p-6 mobile:p-4 rounded-2xl bg-red-50 text-center" role="alert">
+          <p className="text-sm mobile:text-mb-body text-red-700 mb-4">{error}</p>
           <button type="button" onClick={() => setReloadKey((key) => key + 1)}
-            className="rounded-xl px-5 py-2.5 text-sm font-semibold bg-white text-[#1F1F1F] border border-[#EFEFEF] hover:bg-[#F5F5F5] transition-colors"
+            className="mobile:min-h-11 mobile:min-w-11 rounded-xl px-5 py-2.5 text-sm mobile:text-mb-label font-semibold bg-white text-[#1F1F1F] border border-[#EFEFEF] hover:bg-[#F5F5F5] transition-colors"
           >다시 시도</button>
         </div>
       ) : total === 0 ? <EmptyState /> : filtered.length === 0 ? (
         <div className="border border-dashed border-[#DDDEE7] rounded-2xl p-10 text-center">
-          <p className="text-[#6F6F6F] text-sm">조건에 맞는 리포트가 없습니다.</p>
+          <p className="text-[#6F6F6F] text-sm mobile:text-mb-body">조건에 맞는 리포트가 없습니다.</p>
           <button type="button" onClick={() => { setSearch(''); setPage(1); }}
-            className="mt-3 text-[13px] font-semibold text-[#5F0080] hover:underline">필터 초기화</button>
+            className="mobile:min-h-11 mobile:min-w-11 mt-3 text-[13px] mobile:text-mb-label font-semibold text-[#5F0080] hover:underline">필터 초기화</button>
         </div>
       ) : (
         <>
           <div className="block md:hidden space-y-3">
             {grouped ? grouped.map((group) => (
               <div key={group.counselorName} className="space-y-2">
-                <div className="px-1 pt-2 text-[12px] font-bold text-[#5F0080]">
+                <div className="px-1 pt-2 text-[12px] mobile:text-mb-caption font-bold text-[#5F0080]">
                   {group.label}<span className="ml-2 text-[#9B9B9B] font-normal">{group.items.length}건</span>
                 </div>
                 {group.items.map(renderMobileCard)}
@@ -349,7 +358,7 @@ export default function ClientReportListPage() {
           <div className="hidden md:block bg-white border border-[#EFEFEF] rounded-2xl overflow-hidden overflow-x-auto">
             {grouped ? grouped.map((group) => (
               <div key={group.counselorName}>
-                <div className="px-5 py-2.5 bg-[#F5EDFC]/60 border-b border-[#EFEFEF] text-[12px] font-bold text-[#5F0080]">
+                <div className="px-5 py-2.5 bg-[#F5EDFC]/60 border-b border-[#EFEFEF] text-[12px] mobile:text-mb-caption font-bold text-[#5F0080]">
                   {group.label}<span className="ml-2 font-normal text-[#6F6F6F]">{group.items.length}건</span>
                 </div>
                 {renderTable(group.items)}
@@ -363,7 +372,7 @@ export default function ClientReportListPage() {
         <nav aria-label="리포트 페이지" className="flex items-center justify-center gap-3 pt-4">
           <button type="button" aria-label="이전" disabled={page <= 1 || loading}
             onClick={() => setPage((value) => Math.max(1, value - 1))} className={pageButtonClass}>이전</button>
-          <span className="text-[13px] text-[#6F6F6F] font-mono tabular-nums">{page} / {totalPages}</span>
+          <span className="text-[13px] mobile:text-mb-caption text-[#6F6F6F] font-mono tabular-nums">{page} / {totalPages}</span>
           <button type="button" aria-label="다음" disabled={page >= totalPages || loading}
             onClick={() => setPage((value) => Math.min(totalPages, value + 1))} className={pageButtonClass}>다음</button>
         </nav>

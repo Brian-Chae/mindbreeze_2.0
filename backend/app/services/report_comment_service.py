@@ -27,13 +27,13 @@ _SESSION_TYPE_LABELS = session_terms.type_label_table("report_comment")
 
 def _load_client_report(report_id: str, host_id: str, db: DBSession) -> tuple[Report, Session]:
     """client 리포트 + host 접근 제어 공통 로드 (기존 리포트 접근 제어 재사용)."""
-    from app.services.report_service import _can_access_report, _to_uuid
+    from app.services.report_service import _can_edit_report, _to_uuid
 
     report = db.query(Report).filter(Report.id == _to_uuid(report_id)).first()
     if not report:
         raise HTTPException(status_code=404, detail="리포트를 찾을 수 없습니다")
     session = db.query(Session).filter(Session.id == report.session_id).first()
-    if not _can_access_report(host_id, session, db):
+    if not _can_edit_report(host_id, session, db):
         raise HTTPException(status_code=403, detail="host 상담사만 가능합니다")
     if report.type != "client":
         raise HTTPException(status_code=400, detail="내담자 리포트에만 코멘트를 작성할 수 있습니다")
@@ -72,10 +72,12 @@ def build_comment_draft(report_id: str, host_id: str, db: DBSession) -> dict:
     return {"draft": draft, "source": source}
 
 
-def ensure_auto_comment(report: Report, db: DBSession) -> None:
+def ensure_auto_comment(report: Report, db: DBSession, *, include_private_notes: bool = True) -> None:
     """자동 승인(auto_approve_report) 경로: client 리포트에 코멘트가 없으면 AI 초안을 생성·저장한다.
 
     실패해도 승인·발송 흐름을 막지 않는다 (best-effort, 폴백 템플릿 포함).
+    include_private_notes=False 면 비공개 상담사 메모(counselor_notes)를 초안 입력에서 뺀다(SDD-237: 명상 자동 승인).
+    기본값은 현행(포함)이라 상담 도메인 동작은 그대로다.
     """
     if report.type != "client":
         return
@@ -87,7 +89,8 @@ def ensure_auto_comment(report: Report, db: DBSession) -> None:
         session = db.query(Session).filter(Session.id == report.session_id).first()
         if not session:
             return
-        draft, _source = _generate_draft(_draft_context(report, session, db))
+        draft, _source = _generate_draft(
+            _draft_context(report, session, db, include_private_notes=include_private_notes))
         new_content = dict(content)
         new_content["counselor_comment"] = draft
         report.content = new_content
@@ -100,7 +103,7 @@ def _session_type_label(session: Session) -> str:
     return session_terms.session_type_label(session.type, session.custom_type_name, variant="report_comment")
 
 
-def _draft_context(report: Report, session: Session, db: DBSession) -> dict:
+def _draft_context(report: Report, session: Session, db: DBSession, *, include_private_notes: bool = True) -> dict:
     """프롬프트 입력 계층 수집 — 필수(세션 메타)는 항상, 선택(요약·서사)은 있으면 보강."""
     participant = (
         db.query(SessionParticipant).filter(SessionParticipant.id == report.participant_id).first()
@@ -159,7 +162,7 @@ def _draft_context(report: Report, session: Session, db: DBSession) -> dict:
         sections = summary.get("sections")
         if isinstance(sections, dict) and sections:
             context["ai_sections"] = {str(k): str(v) for k, v in list(sections.items())[:5]}
-    if record and isinstance(record.counselor_notes, str) and record.counselor_notes.strip():
+    if include_private_notes and record and isinstance(record.counselor_notes, str) and record.counselor_notes.strip():
         context["counselor_notes"] = record.counselor_notes.strip()
 
     # EEG 측정 세션이면 서사(narrative)를 보강 소재로 활용 — 미측정이면 넣지 않는다 (날조 금지)
@@ -244,6 +247,12 @@ def _call_gemini(
     model 을 주지 않으면 settings.gemini_model(STT·요약 공용)을 쓰고, 루시는
     settings.agent_llm_model 을 넘겨 전용 모델을 쓴다(SDD-201).
     """
+    # SDD-220: 네트워크 직전 단일 가드 — AI off 면 호출 0건, 호출부는 규칙 폴백(None)으로 처리한다.
+    from app.core.ai_features import is_ai_enabled
+
+    if not is_ai_enabled():
+        return None
+
     api_key = settings.gemini_api_key
     if not api_key:
         return None

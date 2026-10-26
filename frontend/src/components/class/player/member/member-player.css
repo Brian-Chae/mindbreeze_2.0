@@ -346,3 +346,19 @@
 /* 종료 화면 시트 안의 기존 라이트 톤 패널(리포트 이메일 신청·사후 체크인)을 밝은 카드로 감싸 어두운 시트에서도 읽히게 한다 */
 .mp-legacy-panel { padding: 16px; border-radius: var(--r-card); background: var(--mb-purple-cream); color: var(--mb-label-70, #1f1f1f); }
 .mp-legacy-panel :is(h1, h2, h3, p):not([class]) { color: var(--mb-label-70, #1f1f1f); }
+
+/* 손들기·손 내리기 실패 안내 — 화면 하단에 짧게 띄운다 */
+.mp-hand-error { position: fixed; left: 50%; bottom: 88px; transform: translateX(-50%); z-index: 50; margin: 0; padding: 8px 14px; border-radius: 12px; background: rgba(0, 0, 0, 0.78); font-size: var(--fs-13); line-height: 18px; color: var(--mb-coral); }
+
+/* SDD-234: 회원 진행 화면·시트의 보조 정보. 실제 채팅 컴포넌트 내부는 D 소유다. */
+@media (max-width: 767px) {
+  .mp-trend__label, .mp-pip__chip, .mp-pip__issue-text, .mp-mypip__deny,
+  .mp-grp-tag, .mp-grp-tag b, .mp-mring__mv i, .mp-status-note,
+  .mp-msg__who, .mp-now__tx span, .mp-dev-top__tx span, .mp-stat span,
+  .mp-raw > span, .mp-signal .player-signal::after {
+    font-size: var(--mobile-type-caption-size); line-height: var(--mobile-type-caption-leading);
+  }
+  .mp-mbtn { font-size: var(--mobile-type-label-size); line-height: var(--mobile-type-label-leading); }
+  .mp-info__tx p, .mp-info__tx ol, .mp-empty p, .mp-chat__note,
+  .mp-note, .mp-band-error { font-size: var(--mobile-type-compact-size); line-height: var(--mobile-type-compact-leading); }
+}

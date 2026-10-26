@@ -2,8 +2,8 @@
 //
 // 기본 뮤트 1:N 수업에서 회원은 발언권(손들기) 없이는 상태를 전달할 방법이 없다.
 // 회원이 3버튼(잘 따라가요 / 조금 어려워요 / 잠시 쉴게요)으로 조용히 신호를 보내면
-// 상담사 화면의 참여자 카드에 은은한 배지가 몇 초 표시된 뒤 사라지고,
-// 상단에는 유형별 집계 카운트만 남는다(소리·팝업 없음, 발언권과 독립).
+// 상담사 화면에서는 최근 10초의 이름·최신 선택과 유형별 집계를 휘발성으로 알린다.
+// 발언권과 독립이며 이름과 식별자는 세션 메모리에만 유지한다.
 //
 // 컴포넌트·훅·테스트가 함께 쓰는 단일 출처 — 여기 값은 백엔드 `class:signal` 계약과 동일하다.
 
@@ -84,9 +84,13 @@ export function isClassSignalType(value: unknown): value is ClassSignalType {
 
 /** 참여자별 활성 신호 — 마지막으로 받은 신호 1건만 유지한다 */
 export interface ActiveSignal {
+  /** 상담사에게만 표시하며 TTL 만료 시 신호와 함께 제거하는 이름 */
+  displayName?: string;
   type: ClassSignalType;
   /** 수신 시각(epoch ms) — 카드 표시·집계 TTL 판정 기준 */
   at: number;
+  /** 중복·역순 수신 억제용 서버 시각. 화면/로그에 출력하지 않는다. */
+  sourceAt?: number;
 }
 
 export type SignalMap = Readonly<Record<string, ActiveSignal>>;
@@ -143,4 +147,23 @@ export function signalCountParts(counts: ClassSignalCounts): string[] {
   return CLASS_SIGNAL_TYPES.filter((type) => counts[type] > 0).map(
     (type) => `${CLASS_SIGNAL_META[type].icon} ${CLASS_SIGNAL_META[type].label} ${counts[type]}`,
   );
+}
+
+/** 이름이 없거나 서버의 익명 대체 값이면 식별자를 노출하지 않는다. */
+export function normalizeSignalDisplayName(value?: string | null): string {
+  const name = value?.trim();
+  return !name || name === '익명' ? '참가자' : name;
+}
+
+/** WS 재전송은 TTL을 연장하지 않는다. 구 payload는 짧은 중복 억제 창을 적용한다. */
+export function receiveSignal(map: SignalMap, participantId: string, type: ClassSignalType, serverAt: string | null | undefined, now: number, displayName?: string | null): SignalMap {
+  if (!participantId) return map;
+  const parsed = serverAt ? Date.parse(serverAt) : NaN;
+  const sourceAt = Number.isFinite(parsed) ? parsed : undefined;
+  const previous = map[participantId];
+  if (sourceAt !== undefined) {
+    if (now - sourceAt >= SIGNAL_ACTIVE_MS || sourceAt > now + SIGNAL_ACTIVE_MS) return map;
+    if (previous?.sourceAt !== undefined && sourceAt <= previous.sourceAt) return map;
+  } else if (previous?.type === type && now - previous.at < 500) return map;
+  return { ...map, [participantId]: { type, at: now, displayName: normalizeSignalDisplayName(displayName), ...(sourceAt === undefined ? {} : { sourceAt }) } };
 }

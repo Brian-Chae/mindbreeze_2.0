@@ -1,4 +1,5 @@
 @import '../design-system/build/outputs/css/tokens.css';
+@import './mobile-foundation.css';
 
 @tailwind base;
 @tailwind components;
@@ -11,6 +12,7 @@
     select,
     textarea {
       font-size: 16px !important;
+      min-height: var(--mobile-touch-control) !important;
     }
   }
 

@@ -36,12 +36,16 @@ const NOW = new Date(2026, 9, 17, 12, 0);
 const L = (day: number, hour: number, minute = 0): string => new Date(2026, 9, day, hour, minute).toISOString();
 
 beforeEach(() => {
+  // 고정 일정이 실행 날짜에 따라 입장 가능 상태로 바뀌지 않게 한다.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(NOW);
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   container = document.createElement('div');
   document.body.append(container);
   root = createRoot(container);
 });
 afterEach(async () => {
+  vi.useRealTimers();
   await act(async () => root.unmount());
   container.remove();
   vi.clearAllMocks();
@@ -165,7 +169,7 @@ describe('ClientHomePage — FM01', () => {
   });
   it('코드로 입장하기 → /join', async () => {
     await renderHome([session({ status: 'scheduled', scheduled_at: L(20, 15) })]);
-    await act(async () => { q<HTMLButtonElement>('[data-testid="enter-with-code"]')!.click(); });
+    await act(async () => { q<HTMLElement>('[data-testid="enter-with-code"]')!.click(); });
     expect(document.querySelector('[data-testid="where"]')!.textContent).toBe('/join');
   });
   it('예정 클래스 히어로의 클래스 보기 → 상세', async () => {

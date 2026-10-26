@@ -267,3 +267,7 @@
 .sh-menu button.danger { color: var(--warn); }
 .sh-inline-panel { border-top: 1px solid var(--shell-line); padding-top: 16px; margin-top: 8px; display: flex; flex-direction: column; gap: 16px; }
 .sh-inline-panel__act { display: flex; gap: 8px; }
+
+/* 홈 이번 주 클래스 행: 상태 칩은 줄바꿈 없이 한 줄, 왼쪽 텍스트가 줄어든다. */
+.sh-row > .sh-chip { flex: none; white-space: nowrap; }
+.sh-row__tx .sh-row__sub { font-size: var(--fs-13); line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 
 from app.core.celery_app import celery_app
 from app.models.pipeline_outbox import PipelineOutbox
+from app.services import pipeline_backlog_service
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,10 @@ def _pipeline_chain_incomplete(item: PipelineOutbox, db) -> bool:
     )
 
 
+def _as_utc(value: datetime) -> datetime:
+    return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+
+
 def _publish_chain(item: PipelineOutbox, db) -> None:
     """아웃박스 플래그로 체인을 (재)발행한다."""
     from app.services.audio_service import publish_pipeline
@@ -54,7 +59,8 @@ def process_pipeline_outbox(limit: int = 100) -> dict:
     from app.services.audio_service import PIPELINE_REDRIVE_DELAY_SECONDS
 
     db = SessionLocal()
-    published = failed = redriven = 0
+    published = failed = redriven = held = 0
+    backlogged: bool | None = None
     try:
         now = datetime.now(timezone.utc)
 
@@ -107,6 +113,18 @@ def process_pipeline_outbox(limit: int = 100) -> dict:
         for item in stale:
             if not _pipeline_chain_incomplete(item, db):
                 continue
+            # SDD-212 TD4: 줄이 밀려 있으면 작업이 유실된 게 아니라 아직 순서를 기다리는 것이다.
+            #   이때 재발행하면 STT 가 중복 실행되어 줄이 더 길어진다 → 이번 회차 보류(시도 횟수 미소모).
+            #   보류 상한: 판정 시각을 재드라이브 지연만큼 더 넘기면(발행 후 지연의 2배) 줄이 밀려 있어도
+            #   유실로 보고 재발행한다.
+            overdue = (now - _as_utc(item.available_at)).total_seconds()
+            if overdue < PIPELINE_REDRIVE_DELAY_SECONDS:
+                if backlogged is None:
+                    backlogged = pipeline_backlog_service.is_backlogged()
+                if backlogged:
+                    held += 1
+                    logger.info("[PIPELINE-OUTBOX] 줄 적체로 재드라이브 보류 (id=%s)", item.id)
+                    continue
             item.attempts += 1
             try:
                 _publish_chain(item, db)
@@ -135,4 +153,4 @@ def process_pipeline_outbox(limit: int = 100) -> dict:
         db.commit()
     finally:
         db.close()
-    return {"published": published, "failed": failed, "redriven": redriven}
+    return {"published": published, "failed": failed, "redriven": redriven, "held": held}

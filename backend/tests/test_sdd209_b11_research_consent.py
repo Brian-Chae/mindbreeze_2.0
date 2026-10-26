@@ -47,7 +47,20 @@ def _group(client, host, cap=10):
 def _guest(client, cls, name="김연구", birth="1990-05-17", **kw):
     r = enter_guest(client, cls["access_code"], name, birth_date=birth, **kw)
     assert r.status_code == 200, r.text
-    return r.json()
+    result = r.json()
+    # 기존 연구 도메인 검증의 이름·생일 입력은 보존하되 회원 동의 주체로 구성한다.
+    from app.models.user import User
+    from app.models.session import SessionParticipant
+    db = _db()
+    try:
+        user = User(email=f"subject-{uuid.uuid4().hex}@test.com", name=name, role="client", password_hash="x")
+        db.add(user)
+        db.flush()
+        db.get(SessionParticipant, uuid.UUID(result['participant_id'])).user_id = user.id
+        db.commit()
+    finally:
+        db.close()
+    return result
 
 
 def _cred(j):
@@ -238,7 +251,7 @@ def test_BT51_리포트_선택_고지_증빙과_저장소가_다르다(client):
     me = _guest(client, cls)
     client.put(
         f"/api/v1/sessions/{cls['id']}/report-choice",
-        json={"participant_id": me["participant_id"], "report_included": True, "notice_acknowledged": True},
+        json={"participant_id": me["participant_id"], "report_included": True, "notice_acknowledged": True, "notice_version": "r5-1"},
         headers=_cred(me),
     )
     _put(client, cls, _cred(me), True)

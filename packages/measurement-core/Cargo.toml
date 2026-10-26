@@ -1,0 +1,36 @@
+[package]
+name = "measurement-core"
+version = "0.1.0"
+edition = "2021"
+description = "MIND BREEZE 2.0 측정 코어 — 파서·시계·DSP 순수 상태기계 (SDD-246 T02)"
+license = "UNLICENSED"
+publish = false
+
+[lib]
+name = "measurement_core"
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[features]
+default = []
+wasm = ["dep:wasm-bindgen"]
+# 테스트 전용 FFI 훅(panic 격리 검증). 릴리스 산출물에는 넣지 않는다.
+debug-hooks = []
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+libm = "0.2"
+base64 = { version = "0.22", default-features = false, features = ["alloc"] }
+sha2 = { version = "0.10", default-features = false }
+postcard = { version = "1", features = ["alloc"] }
+wasm-bindgen = { version = "0.2", optional = true }
+
+[build-dependencies]
+cbindgen = { version = "0.29", default-features = false }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "unwind"
+# fast-math 류 최적화는 Rust 에 없음(부동소수 재결합 금지). 명시적 mul_add/SIMD 도 코드에서 사용하지 않는다.

@@ -97,3 +97,20 @@ design-system/
 - `design-system/README.md` — 토큰 시스템 구조·빌드·변경 절차
 - `designs/session-management/DESIGN.md` — 세션 관리 고도화 디자인 상세
 - `docs/MIND_BREEZE_2.0_종합_기획.md` §12 — 디자인 시스템 요구사항
+
+## SDD-234 모바일 가독성 (767px 이하)
+
+기존 앱의 테마·폰트 계열과 데스크톱 크기는 유지한다. `design-system/tokens/system/typography.json`의 `mobile` 원본을 빌드해 `--mobile-type-{caption,label,compact,body,subtitle,title,hero,number}-{size,leading}`를 제공한다.
+
+| 의미 | 크기 / 행간(px) |
+|---|---|
+| 보조·캡션 | 13 / 20 |
+| 라벨 | 14 / 20 |
+| 카드 본문 | 15 / 24 |
+| 기본 본문·입력 | 16 / 26 |
+| 소제목 | 18 / 27 |
+| 제목 | 22 / 30 |
+| 히어로 | 24 / 32 |
+| 주요 숫자 | 28 / 34 |
+
+Tailwind는 `mobile:text-mb-body`처럼 모바일 변형을 명시한다. 기존 `text-sm=15px/22px`는 유지한다. 전역 rem 확대나 작은 글씨 선택자 일괄 치환은 하지 않는다. 최소 터치 44×44, 입력·주 CTA 48, 조작 아이콘 20~24. 간격 4px 단위(8/12/16/24). 홈 카드의 18/24px 패딩과 152/304px 높이는 기존 parity 계약을 우선한다. 자세한 소유 파일·측정 합격 기준·예외는 `specs/sdd-234-mobile-type-polish/{spec,plan,verify}.md` 참조.

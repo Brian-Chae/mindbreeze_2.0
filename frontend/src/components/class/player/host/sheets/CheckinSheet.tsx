@@ -14,15 +14,10 @@ export interface HostQuietSignalCounts {
 interface CheckinSheetProps {
   summary: HostCheckinSummary;
   preCheckins: readonly HostPreCheckin[];
-  quietSignals: HostQuietSignalCounts;
+  quietSignals?: HostQuietSignalCounts;
   onDetail: (participantId: string) => void;
 }
 
-const SIGNAL_ROWS = [
-  { key: 'following', label: '잘 따라가요' },
-  { key: 'difficult', label: '조금 어려워요' },
-  { key: 'resting', label: '잠시 쉴게요' },
-] as const;
 
 function Distribution({ question, buckets }: { question: string; buckets: readonly { label: string; count: number }[] }) {
   const sorted = [...buckets].sort((a, b) => b.count - a.count);
@@ -42,9 +37,8 @@ function Distribution({ question, buckets }: { question: string; buckets: readon
   );
 }
 
-export function CheckinSheet({ summary, preCheckins, quietSignals, onDetail }: CheckinSheetProps) {
+export function CheckinSheet({ summary, preCheckins, onDetail }: CheckinSheetProps) {
   const percent = summary.total ? Math.round((summary.responded / summary.total) * 100) : 0;
-  const signalTotal = quietSignals.following + quietSignals.difficult + quietSignals.resting;
   return (
     <div className="hp-sheet">
       <HostSection>
@@ -74,13 +68,7 @@ export function CheckinSheet({ summary, preCheckins, quietSignals, onDetail }: C
           ))}
         </HostSection>
       ) : null}
-      {signalTotal > 0 ? (
-        <HostSection label="조용한 신호 · 익명 · 최근 10초">
-          {SIGNAL_ROWS.map((row) => (
-            <div className="hp-row" key={row.key}><b>{row.label}</b><b>{quietSignals[row.key]}</b></div>
-          ))}
-        </HostSection>
-      ) : null}
+
     </div>
   );
 }

@@ -1,0 +1,149 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://contracts.mindbreeze.local/session-live-v2/state.schema.json",
+  "title": "도메인 상태 DTO — event payload 와 snapshot 이 공유 (plan §3.1~3.3)",
+  "definitions": {
+    "SessionState": {
+      "type": "object", "additionalProperties": false,
+      "required": ["phase", "status", "started_at_ms", "ended_at_ms", "cutoff_ms"],
+      "properties": {
+        "phase": { "type": "string", "enum": ["scheduled", "open", "waiting", "in_progress", "ended", "cancelled"] },
+        "status": { "type": "string", "enum": ["scheduled", "in_progress", "completed", "cancelled"] },
+        "started_at_ms": { "oneOf": [{ "$ref": "common.schema.json#/definitions/Ms" }, { "type": "null" }] },
+        "ended_at_ms": { "oneOf": [{ "$ref": "common.schema.json#/definitions/Ms" }, { "type": "null" }] },
+        "cutoff_ms": { "oneOf": [{ "$ref": "common.schema.json#/definitions/Ms" }, { "type": "null" }] }
+      }
+    },
+    "ParticipationEntity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["participant_id", "role", "attendance", "connected"],
+      "properties": {
+        "participant_id": { "$ref": "common.schema.json#/definitions/Uuid" },
+        "role": { "type": "string", "enum": ["host", "member"] },
+        "attendance": { "type": "string", "enum": ["none", "waiting", "attending", "left", "removed"] },
+        "connected": { "type": "boolean", "description": "접속 lease 상태. 출석/BLE 정상과 합치지 않는다." }
+      }
+    },
+    "WaitingEntity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["participant_id", "ready", "checkin_revision", "waitlist_position"],
+      "properties": {
+        "participant_id": { "$ref": "common.schema.json#/definitions/Uuid" },
+        "ready": { "type": "boolean" },
+        "checkin_revision": { "$ref": "common.schema.json#/definitions/U64" },
+        "waitlist_position": { "type": ["integer", "null"], "minimum": 1 }
+      }
+    },
+    "SpeakingEntity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["participant_id", "hand_raised", "can_publish", "grant_version"],
+      "properties": {
+        "participant_id": { "$ref": "common.schema.json#/definitions/Uuid" },
+        "hand_raised": { "type": "boolean" },
+        "can_publish": { "type": "boolean" },
+        "grant_version": { "$ref": "common.schema.json#/definitions/U64" }
+      }
+    },
+    "SignalType": { "type": "string", "enum": ["following", "difficult", "resting"] },
+    "SignalEntity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["signal_id", "participant_id", "signal_type", "expires_at_ms"],
+      "properties": {
+        "signal_id": { "$ref": "common.schema.json#/definitions/Uuid" },
+        "participant_id": { "$ref": "common.schema.json#/definitions/Uuid" },
+        "signal_type": { "$ref": "#/definitions/SignalType" },
+        "expires_at_ms": { "$ref": "common.schema.json#/definitions/Ms", "description": "절대 만료시각. 과거 event 재생으로 새 알림을 만들지 않는다." }
+      }
+    },
+    "AudioState": {
+      "type": "object", "additionalProperties": false,
+      "required": ["track_id", "action", "position_ms", "server_anchor_ms", "rate", "revision"],
+      "properties": {
+        "track_id": { "oneOf": [{ "$ref": "common.schema.json#/definitions/Uuid" }, { "type": "null" }] },
+        "action": { "type": "string", "enum": ["play", "pause", "seek", "stop"] },
+        "position_ms": { "$ref": "common.schema.json#/definitions/Ms" },
+        "server_anchor_ms": { "$ref": "common.schema.json#/definitions/Ms" },
+        "rate": { "type": "number", "exclusiveMinimum": 0, "maximum": 4 },
+        "revision": { "$ref": "common.schema.json#/definitions/U64" }
+      }
+    },
+    "DeviceEntity": {
+      "type": "object", "additionalProperties": false,
+      "description": "참가자 1명의 장치(capture stream) 상태. 두 출처가 같은 entity(participant_id)를 갱신한다: (1) stream 수명 event(capture.start/reanchor/close/종료·추방 cutoff) = generation/status/clock_uncertain/cutoff_code 를 항상 채운다, (2) 밴드 상태 보고(live:device) = 위 stream 필드 + device_seq/band_state/contact/sqi/battery_pct/state_reason 을 모두 채운다. (1) 은 밴드 필드를 싣지 않는다(마지막 (2) 값을 덮어쓴다 — 소비자는 밴드 필드 부재를 '미보고'로 취급).",
+      "required": ["participant_id", "stream_id"],
+      "properties": {
+        "participant_id": { "$ref": "common.schema.json#/definitions/Uuid" },
+        "stream_id": { "$ref": "common.schema.json#/definitions/Uuid" },
+        "generation": { "$ref": "common.schema.json#/definitions/U64", "description": "참가자별 stream 세대(fencing). 큰 값이 현재 owner." },
+        "status": { "type": "string", "enum": ["active", "closed", "superseded", "ended", "revoked"] },
+        "clock_uncertain": { "type": "boolean" },
+        "cutoff_code": { "oneOf": [{ "$ref": "common.schema.json#/definitions/ReasonCode" }, { "type": "null" }] },
+        "device_seq": { "$ref": "common.schema.json#/definitions/U64" },
+        "band_state": { "type": "string", "enum": ["not_worn", "connecting", "connected", "reconnecting", "lost", "unknown"] },
+        "contact": { "$ref": "common.schema.json#/definitions/Contact" },
+        "sqi": { "$ref": "common.schema.json#/definitions/Sqi" },
+        "battery_pct": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
+        "state_reason": { "oneOf": [{ "$ref": "common.schema.json#/definitions/ReasonCode" }, { "type": "null" }] }
+      }
+    },
+    "Freshness": { "type": "string", "enum": ["fresh", "delayed", "stale", "time_uncertain"] },
+    "MetricsEntity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["participant_id", "stream_id", "sequence", "observed_at_ms", "freshness", "sqi", "contact", "metrics"],
+      "properties": {
+        "participant_id": { "$ref": "common.schema.json#/definitions/Uuid" },
+        "stream_id": { "$ref": "common.schema.json#/definitions/Uuid" },
+        "sequence": { "$ref": "common.schema.json#/definitions/U64" },
+        "observed_at_ms": { "oneOf": [{ "$ref": "common.schema.json#/definitions/Ms" }, { "type": "null" }] },
+        "freshness": { "$ref": "#/definitions/Freshness" },
+        "sqi": { "$ref": "common.schema.json#/definitions/Sqi" },
+        "contact": { "$ref": "common.schema.json#/definitions/Contact" },
+        "metrics": { "$ref": "common.schema.json#/definitions/MetricSet" }
+      }
+    },
+    "AggregateMetric": {
+      "type": "object", "additionalProperties": false,
+      "required": ["mean", "valid_count"],
+      "properties": {
+        "mean": { "type": ["number", "null"], "description": "미착용/invalid 는 평균에 0 으로 넣지 않는다 — valid_count 로만 센다." },
+        "valid_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "AggregateEntity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["revision", "window_ms", "participant_count", "metrics"],
+      "properties": {
+        "revision": { "$ref": "common.schema.json#/definitions/U64" },
+        "window_ms": { "type": "integer", "minimum": 1000, "maximum": 3600000 },
+        "participant_count": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "metrics": {
+          "type": "object", "additionalProperties": false,
+          "properties": {
+            "focus_display": { "$ref": "#/definitions/AggregateMetric" },
+            "relaxation_display": { "$ref": "#/definitions/AggregateMetric" },
+            "emotion_display": { "$ref": "#/definitions/AggregateMetric" },
+            "bpm": { "$ref": "#/definitions/AggregateMetric" },
+            "respiration": { "$ref": "#/definitions/AggregateMetric" }
+          }
+        }
+      }
+    },
+    "PolicyState": {
+      "type": "object", "additionalProperties": false,
+      "required": ["chat_enabled", "capabilities", "consent_revision"],
+      "properties": {
+        "chat_enabled": { "type": "boolean" },
+        "capabilities": { "type": "array", "uniqueItems": true, "items": { "type": "string", "enum": ["publish_audio", "raise_hand", "send_signal", "share_metrics", "capture_eeg"] } },
+        "consent_revision": { "$ref": "common.schema.json#/definitions/U64" }
+      }
+    },
+    "Tombstone": {
+      "type": "object", "additionalProperties": false,
+      "required": ["entity_id", "version"],
+      "properties": {
+        "entity_id": { "$ref": "common.schema.json#/definitions/Uuid" },
+        "version": { "$ref": "common.schema.json#/definitions/U64" }
+      }
+    }
+  }
+}

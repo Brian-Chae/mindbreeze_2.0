@@ -1,0 +1,1194 @@
+{
+  "$defs": {
+    "AlgorithmSnapshot": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "algorithm_id": {
+          "minLength": 1,
+          "title": "Algorithm Id",
+          "type": "string"
+        },
+        "algorithm_version": {
+          "minLength": 1,
+          "title": "Algorithm Version",
+          "type": "string"
+        },
+        "parameters_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Parameters Hash",
+          "type": "string"
+        },
+        "parameters": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              }
+            ]
+          },
+          "title": "Parameters",
+          "type": "object"
+        },
+        "filter_version": {
+          "minLength": 1,
+          "title": "Filter Version",
+          "type": "string"
+        },
+        "build": {
+          "minLength": 1,
+          "title": "Build",
+          "type": "string"
+        }
+      },
+      "required": [
+        "algorithm_id",
+        "algorithm_version",
+        "parameters_hash",
+        "parameters",
+        "filter_version",
+        "build"
+      ],
+      "title": "AlgorithmSnapshot",
+      "type": "object"
+    },
+    "ArtifactReference": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id_alias": {
+          "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+          "title": "Artifact Id Alias",
+          "type": "string"
+        },
+        "artifact_kind": {
+          "enum": [
+            "raw",
+            "packets",
+            "sample_map",
+            "feature",
+            "raw_derived",
+            "indices",
+            "normalization",
+            "algorithm",
+            "gap",
+            "display_status"
+          ],
+          "title": "Artifact Kind",
+          "type": "string"
+        },
+        "path": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_./-]*$",
+          "title": "Path",
+          "type": "string"
+        },
+        "schema_version": {
+          "minLength": 1,
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "dictionary_key": {
+          "minLength": 1,
+          "title": "Dictionary Key",
+          "type": "string"
+        },
+        "row_count": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Row Count"
+        },
+        "size_bytes": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Size Bytes"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Sha256"
+        },
+        "uncompressed_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Uncompressed Sha256"
+        },
+        "time_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeRange"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "selection": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeRange"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "extra_range": {
+          "items": {
+            "$ref": "#/$defs/TimeRange"
+          },
+          "title": "Extra Range",
+          "type": "array"
+        },
+        "retention": {
+          "enum": [
+            "raw_90_days",
+            "feature_policy",
+            "metadata_policy"
+          ],
+          "title": "Retention",
+          "type": "string"
+        },
+        "retention_deadline_us": {
+          "anyOf": [
+            {
+              "pattern": "^-?(0|[1-9][0-9]{0,18})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Retention Deadline Us"
+        },
+        "consent_scope": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Consent Scope",
+          "type": "array"
+        },
+        "consent_version": {
+          "minLength": 1,
+          "title": "Consent Version",
+          "type": "string"
+        },
+        "availability": {
+          "enum": [
+            "available",
+            "not_collected",
+            "unsupported_client",
+            "expired",
+            "withdrawn",
+            "lost",
+            "unknown",
+            "blocked"
+          ],
+          "title": "Availability",
+          "type": "string"
+        },
+        "unavailable_reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Unavailable Reason"
+        },
+        "ack_state": {
+          "enum": [
+            "verified",
+            "committed",
+            "pending",
+            "failed",
+            "unavailable"
+          ],
+          "title": "Ack State",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id_alias",
+        "artifact_kind",
+        "path",
+        "schema_version",
+        "dictionary_key",
+        "row_count",
+        "size_bytes",
+        "sha256",
+        "uncompressed_sha256",
+        "time_range",
+        "selection",
+        "extra_range",
+        "retention",
+        "retention_deadline_us",
+        "consent_scope",
+        "consent_version",
+        "availability",
+        "unavailable_reason",
+        "ack_state"
+      ],
+      "title": "ArtifactReference",
+      "type": "object"
+    },
+    "CloseIntent": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "intent_id_alias": {
+          "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+          "title": "Intent Id Alias",
+          "type": "string"
+        },
+        "expected_artifacts": {
+          "patternProperties": {
+            "^[A-Z][A-Za-z0-9_-]{0,63}$": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          },
+          "title": "Expected Artifacts",
+          "type": "object"
+        },
+        "streams": {
+          "items": {
+            "$ref": "#/$defs/StreamCloseSequence"
+          },
+          "title": "Streams",
+          "type": "array"
+        },
+        "snapshots": {
+          "items": {
+            "$ref": "#/$defs/ViewCloseSequence"
+          },
+          "title": "Snapshots",
+          "type": "array"
+        },
+        "last_gap_sequence": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Last Gap Sequence"
+        },
+        "end_reason": {
+          "minLength": 1,
+          "title": "End Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "intent_id_alias",
+        "expected_artifacts",
+        "streams",
+        "snapshots",
+        "last_gap_sequence",
+        "end_reason"
+      ],
+      "title": "CloseIntent",
+      "type": "object"
+    },
+    "ExportStream": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "stream_alias": {
+          "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+          "title": "Stream Alias",
+          "type": "string"
+        },
+        "segment_alias": {
+          "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+          "title": "Segment Alias",
+          "type": "string"
+        },
+        "signal": {
+          "enum": [
+            "eeg",
+            "ppg",
+            "acc"
+          ],
+          "title": "Signal",
+          "type": "string"
+        },
+        "profile": {
+          "$ref": "#/$defs/ParserProfile"
+        },
+        "rate": {
+          "$ref": "#/$defs/Rate"
+        },
+        "observed_rate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Rate"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "observed_rate_window_us": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Observed Rate Window Us"
+        },
+        "observed_rate_reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Observed Rate Reason"
+        },
+        "channels": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Channels",
+          "type": "array"
+        },
+        "units": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Units",
+          "type": "array"
+        },
+        "time_basis": {
+          "enum": [
+            "host_estimated",
+            "device_relative",
+            "utc_verified",
+            "session_relative"
+          ],
+          "title": "Time Basis",
+          "type": "string"
+        }
+      },
+      "required": [
+        "stream_alias",
+        "segment_alias",
+        "signal",
+        "profile",
+        "rate",
+        "observed_rate",
+        "observed_rate_window_us",
+        "observed_rate_reason",
+        "channels",
+        "units",
+        "time_basis"
+      ],
+      "title": "ExportStream",
+      "type": "object"
+    },
+    "GapEvent": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "discovered_at_us": {
+          "pattern": "^-?(0|[1-9][0-9]{0,18})$",
+          "title": "Discovered At Us",
+          "type": "string"
+        },
+        "event_id_alias": {
+          "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+          "title": "Event Id Alias",
+          "type": "string"
+        },
+        "signal": {
+          "enum": [
+            "eeg",
+            "ppg",
+            "acc"
+          ],
+          "title": "Signal",
+          "type": "string"
+        },
+        "stream_alias": {
+          "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+          "title": "Stream Alias",
+          "type": "string"
+        },
+        "segment_alias": {
+          "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+          "title": "Segment Alias",
+          "type": "string"
+        },
+        "start_us": {
+          "pattern": "^-?(0|[1-9][0-9]{0,18})$",
+          "title": "Start Us",
+          "type": "string"
+        },
+        "end_us": {
+          "anyOf": [
+            {
+              "pattern": "^-?(0|[1-9][0-9]{0,18})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "End Us"
+        },
+        "reason": {
+          "enum": [
+            "ble_disconnect",
+            "packet_gap",
+            "local_write_failed",
+            "process_terminated",
+            "clock_reset",
+            "wall_clock_jump",
+            "reanchor",
+            "unknown",
+            "upload_pending",
+            "not_rendered"
+          ],
+          "title": "Reason",
+          "type": "string"
+        },
+        "observed_or_estimated": {
+          "enum": [
+            "observed",
+            "estimated",
+            "unknown"
+          ],
+          "title": "Observed Or Estimated",
+          "type": "string"
+        },
+        "expected_samples": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Expected Samples"
+        },
+        "received_samples": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Received Samples"
+        },
+        "reconnect_count": {
+          "minimum": 0,
+          "title": "Reconnect Count",
+          "type": "integer"
+        },
+        "sequence": {
+          "minimum": 0,
+          "title": "Sequence",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "discovered_at_us",
+        "event_id_alias",
+        "signal",
+        "stream_alias",
+        "segment_alias",
+        "start_us",
+        "end_us",
+        "reason",
+        "observed_or_estimated",
+        "expected_samples",
+        "received_samples",
+        "reconnect_count",
+        "sequence"
+      ],
+      "title": "GapEvent",
+      "type": "object"
+    },
+    "NormalizationMetric": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "M"
+        },
+        "s": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "S"
+        },
+        "direction": {
+          "anyOf": [
+            {
+              "enum": [
+                -1,
+                1
+              ],
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Direction"
+        },
+        "source": {
+          "enum": [
+            "standard_model",
+            "cohort",
+            "b0"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "b0_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "B0 Version"
+        },
+        "fallback_reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Fallback Reason"
+        }
+      },
+      "required": [
+        "m",
+        "s",
+        "direction",
+        "source",
+        "b0_version",
+        "fallback_reason"
+      ],
+      "title": "NormalizationMetric",
+      "type": "object"
+    },
+    "NormalizationSnapshot": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "model_id_alias": {
+          "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+          "title": "Model Id Alias",
+          "type": "string"
+        },
+        "version": {
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        },
+        "params_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Params Hash",
+          "type": "string"
+        },
+        "focus": {
+          "$ref": "#/$defs/NormalizationMetric"
+        },
+        "relaxation": {
+          "$ref": "#/$defs/NormalizationMetric"
+        },
+        "emotional": {
+          "$ref": "#/$defs/NormalizationMetric"
+        },
+        "formula_version": {
+          "minLength": 1,
+          "title": "Formula Version",
+          "type": "string"
+        },
+        "formula_constants": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Formula Constants",
+          "type": "object"
+        },
+        "source": {
+          "enum": [
+            "standard_model",
+            "cohort",
+            "b0",
+            "mixed"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "cached": {
+          "title": "Cached",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "model_id_alias",
+        "version",
+        "params_hash",
+        "focus",
+        "relaxation",
+        "emotional",
+        "formula_version",
+        "formula_constants",
+        "source",
+        "cached"
+      ],
+      "title": "NormalizationSnapshot",
+      "type": "object"
+    },
+    "ParserProfile": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "firmware": {
+          "minLength": 1,
+          "title": "Firmware",
+          "type": "string"
+        },
+        "device_model": {
+          "minLength": 1,
+          "title": "Device Model",
+          "type": "string"
+        },
+        "profile_id": {
+          "minLength": 1,
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "version": {
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        },
+        "parameters_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Parameters Hash",
+          "type": "string"
+        },
+        "platform": {
+          "enum": [
+            "mb-web",
+            "mb-app-js",
+            "native-candidate",
+            "synthetic"
+          ],
+          "title": "Platform",
+          "type": "string"
+        },
+        "verification": {
+          "enum": [
+            "unverified",
+            "synthetic_only",
+            "device_verified"
+          ],
+          "title": "Verification",
+          "type": "string"
+        },
+        "packet_endian": {
+          "enum": [
+            "little",
+            "big",
+            "mixed",
+            "unknown"
+          ],
+          "title": "Packet Endian",
+          "type": "string"
+        },
+        "tick_hz": {
+          "exclusiveMinimum": 0,
+          "title": "Tick Hz",
+          "type": "integer"
+        },
+        "tick_bits": {
+          "exclusiveMinimum": 0,
+          "title": "Tick Bits",
+          "type": "integer"
+        },
+        "header_anchor": {
+          "enum": [
+            "first_sample",
+            "last_sample",
+            "unknown"
+          ],
+          "title": "Header Anchor",
+          "type": "string"
+        }
+      },
+      "required": [
+        "firmware",
+        "device_model",
+        "profile_id",
+        "version",
+        "parameters_hash",
+        "platform",
+        "verification",
+        "packet_endian",
+        "tick_hz",
+        "tick_bits",
+        "header_anchor"
+      ],
+      "title": "ParserProfile",
+      "type": "object"
+    },
+    "Rate": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "numerator": {
+          "exclusiveMinimum": 0,
+          "title": "Numerator",
+          "type": "integer"
+        },
+        "denominator": {
+          "exclusiveMinimum": 0,
+          "title": "Denominator",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "numerator",
+        "denominator"
+      ],
+      "title": "Rate",
+      "type": "object"
+    },
+    "SignalCoverage": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "signal": {
+          "enum": [
+            "eeg",
+            "ppg",
+            "acc"
+          ],
+          "title": "Signal",
+          "type": "string"
+        },
+        "availability": {
+          "enum": [
+            "available",
+            "not_collected",
+            "unsupported_client",
+            "expired",
+            "withdrawn",
+            "lost",
+            "unknown",
+            "blocked"
+          ],
+          "title": "Availability",
+          "type": "string"
+        },
+        "unavailable_reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Unavailable Reason"
+        },
+        "expected_samples": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Expected Samples"
+        },
+        "acked_samples": {
+          "minimum": 0,
+          "title": "Acked Samples",
+          "type": "integer"
+        },
+        "lost_samples": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Lost Samples"
+        },
+        "unknown_samples": {
+          "title": "Unknown Samples",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "signal",
+        "availability",
+        "unavailable_reason",
+        "expected_samples",
+        "acked_samples",
+        "lost_samples",
+        "unknown_samples"
+      ],
+      "title": "SignalCoverage",
+      "type": "object"
+    },
+    "StreamCloseSequence": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "stream_alias": {
+          "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+          "title": "Stream Alias",
+          "type": "string"
+        },
+        "segment_alias": {
+          "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+          "title": "Segment Alias",
+          "type": "string"
+        },
+        "signal": {
+          "enum": [
+            "eeg",
+            "ppg",
+            "acc"
+          ],
+          "title": "Signal",
+          "type": "string"
+        },
+        "last_chunk_sequence": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Last Chunk Sequence"
+        },
+        "last_feature_sequence": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Last Feature Sequence"
+        },
+        "received_samples": {
+          "minimum": 0,
+          "title": "Received Samples",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "stream_alias",
+        "segment_alias",
+        "signal",
+        "last_chunk_sequence",
+        "last_feature_sequence",
+        "received_samples"
+      ],
+      "title": "StreamCloseSequence",
+      "type": "object"
+    },
+    "TimeRange": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "from_us": {
+          "pattern": "^-?(0|[1-9][0-9]{0,18})$",
+          "title": "From Us",
+          "type": "string"
+        },
+        "to_us": {
+          "pattern": "^-?(0|[1-9][0-9]{0,18})$",
+          "title": "To Us",
+          "type": "string"
+        }
+      },
+      "required": [
+        "from_us",
+        "to_us"
+      ],
+      "title": "TimeRange",
+      "type": "object"
+    },
+    "ViewCloseSequence": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "stream_alias": {
+          "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+          "title": "Stream Alias",
+          "type": "string"
+        },
+        "view_instance_alias": {
+          "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+          "title": "View Instance Alias",
+          "type": "string"
+        },
+        "last_snapshot_sequence": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Last Snapshot Sequence"
+        }
+      },
+      "required": [
+        "stream_alias",
+        "view_instance_alias",
+        "last_snapshot_sequence"
+      ],
+      "title": "ViewCloseSequence",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "manifest-v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "revision": {
+      "exclusiveMinimum": 0,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "session_alias": {
+      "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+      "title": "Session Alias",
+      "type": "string"
+    },
+    "participant_alias": {
+      "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+      "title": "Participant Alias",
+      "type": "string"
+    },
+    "close_state": {
+      "enum": [
+        "pending_upload",
+        "partial",
+        "complete",
+        "unknown"
+      ],
+      "title": "Close State",
+      "type": "string"
+    },
+    "close_intent": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CloseIntent"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "time_basis": {
+      "enum": [
+        "session_relative",
+        "utc_verified",
+        "host_estimated"
+      ],
+      "title": "Time Basis",
+      "type": "string"
+    },
+    "default_view": {
+      "enum": [
+        "participant_player",
+        "session_player",
+        "unavailable"
+      ],
+      "title": "Default View",
+      "type": "string"
+    },
+    "streams": {
+      "items": {
+        "$ref": "#/$defs/ExportStream"
+      },
+      "title": "Streams",
+      "type": "array"
+    },
+    "signals": {
+      "items": {
+        "$ref": "#/$defs/SignalCoverage"
+      },
+      "maxItems": 3,
+      "minItems": 3,
+      "title": "Signals",
+      "type": "array"
+    },
+    "artifacts": {
+      "items": {
+        "$ref": "#/$defs/ArtifactReference"
+      },
+      "title": "Artifacts",
+      "type": "array"
+    },
+    "gaps": {
+      "items": {
+        "$ref": "#/$defs/GapEvent"
+      },
+      "title": "Gaps",
+      "type": "array"
+    },
+    "models": {
+      "items": {
+        "$ref": "#/$defs/NormalizationSnapshot"
+      },
+      "title": "Models",
+      "type": "array"
+    },
+    "algorithms": {
+      "items": {
+        "$ref": "#/$defs/AlgorithmSnapshot"
+      },
+      "title": "Algorithms",
+      "type": "array"
+    },
+    "policy_recheck_required": {
+      "const": true,
+      "title": "Policy Recheck Required",
+      "type": "boolean"
+    },
+    "raw_packet_policy": {
+      "enum": [
+        "lossless_authorized",
+        "blocked_requires_redaction",
+        "redacted_packet_view"
+      ],
+      "title": "Raw Packet Policy",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "revision",
+    "session_alias",
+    "participant_alias",
+    "close_state",
+    "close_intent",
+    "time_basis",
+    "default_view",
+    "streams",
+    "signals",
+    "artifacts",
+    "gaps",
+    "models",
+    "algorithms",
+    "policy_recheck_required",
+    "raw_packet_policy"
+  ],
+  "title": "ManifestRevision",
+  "type": "object"
+}

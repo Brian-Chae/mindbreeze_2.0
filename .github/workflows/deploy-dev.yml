@@ -4,6 +4,8 @@
 # 방식: systemd (Docker 미사용) — SDD-014 아키텍처 정합
 #   · 프론트: GitHub에서 빌드 → nginx 루트(/home/ubuntu/mindbreeze/dist) 교체
 #   · 백엔드: 소스 SCP 전송 → (venv 이미 서버에 존재) → alembic upgrade → systemctl restart
+# SDD-229: E2E 는 dev 배포에서 돌지 않는다(운영 릴리스 빌드 release-build.yml 에서만 + 수동 실행).
+#          requirements.txt 가 바뀌지 않았으면 시스템 패키지·pip 설치를 건너뛴다.
 # ─────────────────────────────────────────
 
 name: Deploy Dev
@@ -39,10 +41,13 @@ jobs:
           rm -rf dist node_modules/.tmp
           echo "VITE_API_BASE_URL=https://dev-api.mindbreeze.looxidlabs.com/api/v1" > .env
           echo "VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}" >> .env
+          # SDD-246: dev 는 실시간 v2 프로토콜 on (운영 deploy-prod.yml 은 건드리지 않는다)
+          echo "VITE_LIVE_PROTOCOL_V2=true" >> .env
           # SDD-197: 개발용 역할 시뮬레이션(무인증 계정 생성·무비번 로그인)은 실사용자가 있는 환경에서 끈다.
           npm install --legacy-peer-deps
           npx tsc -b --clean 2>/dev/null; true
-          npm run build
+          # SDD-220 이후 기본 모드(production)는 운영 출시 빌드로 취급돼 운영 API 주소가 박힌다 → dev는 mode=dev로 빌드
+          npx tsc -b && npx vite build --mode dev
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -65,12 +70,14 @@ jobs:
 
       - name: Package deploy bundle
         run: |
-          tar czf deploy-bundle.tar.gz \
+          tar --exclude='__pycache__' -czf deploy-bundle.tar.gz \
             frontend/dist \
+            deploy/dev/register-crons.sh \
             backend/app \
             backend/alembic \
             backend/alembic.ini \
             backend/requirements.txt \
+            backend/scripts \
             backend/ensure_livekit_nginx.py \
             backend/sweep_stale_open_sessions_cron.py \
             backend/sweep_stale_reports_cron.py \
@@ -82,13 +89,19 @@ jobs:
             backend/process_email_outbox_cron.py \
             backend/process_push_outbox_cron.py \
             backend/cleanup_data_exports_cron.py \
+            backend/process_data_export_outbox_cron.py \
             backend/cleanup_notifications_cron.py \
             backend/upgrade_narrative_cache_cron.py \
             backend/sweep_stale_eeg_raw_cron.py \
             backend/sweep_stale_media_cron.py \
+            backend/retention_sweep_cron.py \
+            backend/class_operations_cron.py \
+            backend/class_rolling_cron.py \
             backend/deploy/mindbreeze-worker.service \
             backend/deploy/mindbreeze-email-worker.service \
             backend/deploy/mindbreeze-export-worker.service \
+            backend/deploy/mindbreeze-stt-worker.service \
+            backend/deploy/mindbreeze-report-worker.service \
             backend/deploy/logrotate-mindbreeze
 
       - name: Deploy bundle to EC2
@@ -123,6 +136,45 @@ jobs:
             [ -d backend/app ]     && cp -r backend/app "$BACKUP_DIR/app" || true
             [ -d backend/alembic ] && cp -r backend/alembic "$BACKUP_DIR/alembic" || true
 
+            # SDD-216: 클래스 작업 두 개의 이전 등록과 진입점을 함께 보관한다.
+            snapshot_class_jobs() {
+              local snapshot="$BACKUP_DIR/class-jobs"
+              mkdir -p "$snapshot"
+              if ! LC_ALL=C crontab -l > "$snapshot/all-crontab" 2> "$snapshot/crontab-error"; then
+                if ! grep -q 'no crontab for' "$snapshot/crontab-error"; then
+                  echo "클래스 작업 백업 실패: crontab을 읽을 수 없습니다." >&2
+                  return 1
+                fi
+              fi
+              grep -E 'class_(operations|rolling)_cron[.]py([[:space:]]|$)' "$snapshot/all-crontab" > "$snapshot/rows" || true
+              for name in class_operations_cron.py class_rolling_cron.py; do
+                if [ -f "$BASE/backend/$name" ]; then cp -p "$BASE/backend/$name" "$snapshot/$name"; fi
+              done
+              touch "$snapshot/ready"
+            }
+            restore_class_jobs() {
+              local snapshot="$BACKUP_DIR/class-jobs"
+              [ -f "$snapshot/ready" ] || return 0
+              if ! LC_ALL=C crontab -l > "$snapshot/current-crontab" 2> "$snapshot/crontab-error"; then
+                if ! grep -q 'no crontab for' "$snapshot/crontab-error"; then
+                  echo "클래스 작업 복귀 실패: 현재 crontab을 읽을 수 없습니다." >&2
+                  return 1
+                fi
+              fi
+              # 배포 중 추가된 다른 작업은 유지하고 클래스 작업만 복귀한다.
+              grep -Ev 'class_(operations|rolling)_cron[.]py([[:space:]]|$)' "$snapshot/current-crontab" > "$snapshot/restored-crontab" || true
+              for name in class_operations_cron.py class_rolling_cron.py; do
+                if [ -f "$snapshot/$name" ]; then
+                  cp -p "$snapshot/$name" "$BASE/backend/$name"
+                else
+                  rm -f "$BASE/backend/$name"
+                fi
+              done
+              cat "$snapshot/rows" >> "$snapshot/restored-crontab"
+              crontab - < "$snapshot/restored-crontab"
+            }
+            snapshot_class_jobs
+
             # 롤백 트랩: 스크립트가 실패(set -e 로 조기 종료)하면 이전 버전을 복원한다.
             # 성공 경로에서는 DEPLOY_OK=1 로 확정해 롤백을 막는다.
             DEPLOY_OK=0
@@ -135,10 +187,15 @@ jobs:
                 if [ -d "$BACKUP_DIR/dist" ]; then rm -rf dist; cp -r "$BACKUP_DIR/dist" dist; fi
                 if [ -d "$BACKUP_DIR/app" ]; then rm -rf backend/app; cp -r "$BACKUP_DIR/app" backend/app; fi
                 if [ -d "$BACKUP_DIR/alembic" ]; then rm -rf backend/alembic; cp -r "$BACKUP_DIR/alembic" backend/alembic; fi
+                restore_class_jobs
                 sudo systemctl restart mindbreeze-backend 2>/dev/null || true
                 sudo systemctl restart mindbreeze-worker 2>/dev/null || true
                 sudo systemctl restart mindbreeze-email-worker 2>/dev/null || true
                 sudo systemctl restart mindbreeze-export-worker 2>/dev/null || true
+                # SDD-212: 줄 전용 일꾼도 이전 버전 코드로 재시작한다(유닛 파일은 그대로 두어도 무해 —
+                #   PIPELINE_QUEUE_SPLIT_ENABLED 가 꺼져 있으면 빈 줄을 기다릴 뿐이다).
+                sudo systemctl restart mindbreeze-stt-worker 2>/dev/null || true
+                sudo systemctl restart mindbreeze-report-worker 2>/dev/null || true
               fi
             }
             trap rollback EXIT
@@ -163,6 +220,7 @@ jobs:
             if [ ! -x venv/bin/python ]; then
               python3 -m venv venv
               venv/bin/pip install --upgrade pip
+              rm -f .requirements.sha256   # 새 venv 는 반드시 설치
             fi
 
             # 4.5 GEMINI_API_KEY 주입 (secrets → .env.dev, 없으면 추가·있으면 갱신)
@@ -170,6 +228,12 @@ jobs:
               sed -i "s#^GEMINI_API_KEY=.*#GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}#" ./.env.dev
             else
               echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> ./.env.dev
+            fi
+            # SDD-246: dev 는 실시간 v2 프로토콜 on (재기동 필요 — 아래 서비스 재시작 단계에서 반영)
+            if grep -qE '^LIVE_PROTOCOL_V2=' ./.env.dev; then
+              sed -i 's#^LIVE_PROTOCOL_V2=.*#LIVE_PROTOCOL_V2=true#' ./.env.dev
+            else
+              echo 'LIVE_PROTOCOL_V2=true' >> ./.env.dev
             fi
             # SDD-197: 역할 시뮬레이션은 항상 끈다(이전에는 true 로 강제). DEBUG 도 끈다(SQL echo 에
             #   바인드 파라미터=개인정보가 로그로 남고 디스크를 채웠다).
@@ -189,9 +253,17 @@ jobs:
               echo 'DEBUG=false' >> ./.env.dev
             fi
             # SDD-070: PDF 렌더러 시스템 의존성. 글꼴은 app/assets/fonts에도 포함한다.
-            sudo apt-get update -qq
-            sudo apt-get install -y --no-install-recommends libcairo2 libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 fonts-noto-cjk
-            venv/bin/pip install -q -r requirements.txt
+            # SDD-229: requirements.txt 해시가 직전 설치와 같으면 apt·pip 설치를 건너뛴다(배포당 약 1분).
+            #   해시 파일은 설치가 성공한 뒤에만 기록한다 → 설치 실패 시 다음 배포에서 다시 설치한다.
+            REQ_HASH=$(sha256sum requirements.txt | cut -d' ' -f1)
+            if [ -f .requirements.sha256 ] && [ "$(cat .requirements.sha256)" = "$REQ_HASH" ]; then
+              echo "requirements.txt 변경 없음 — 패키지 설치 생략"
+            else
+              sudo apt-get update -qq
+              sudo apt-get install -y --no-install-recommends libcairo2 libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 fonts-noto-cjk
+              venv/bin/pip install -q -r requirements.txt
+              echo "$REQ_HASH" > .requirements.sha256
+            fi
             venv/bin/python -c "from weasyprint import HTML; from pathlib import Path; assert Path('app/assets/fonts/NotoSansKR.ttf').is_file()"
 
             # 4. DB 마이그레이션 — .env.dev 전체 source 대신 필요한 변수만 추출
@@ -220,7 +292,22 @@ jobs:
             sudo systemctl daemon-reload
             sudo systemctl enable mindbreeze-export-worker 2>/dev/null || true
 
+            # 4.11 SDD-212: 리포트 파이프라인 줄 전용 일꾼 2종 설치 (stt 줄 / report 줄)
+            #      — cp(덮어쓰기)·daemon-reload·enable 만 사용하므로 재실행해도 결과가 같다(멱등).
+            #      — 라우팅은 서버 .env.dev 의 PIPELINE_QUEUE_SPLIT_ENABLED 로 제어하며 이 워크플로는 건드리지 않는다.
+            #        꺼져 있으면 두 줄은 비어 있어 유닛은 대기만 한다.
+            #      — 롤백(수동): 플래그 false → 재시작, 줄 잔량 0 확인(redis-cli llen stt/report) 후
+            #        sudo systemctl disable --now mindbreeze-stt-worker mindbreeze-report-worker (deploy/README.md).
+            sudo cp "$BASE/backend/deploy/mindbreeze-stt-worker.service" /etc/systemd/system/mindbreeze-stt-worker.service
+            sudo cp "$BASE/backend/deploy/mindbreeze-report-worker.service" /etc/systemd/system/mindbreeze-report-worker.service
+            sudo systemctl daemon-reload
+            sudo systemctl enable mindbreeze-stt-worker
+            sudo systemctl enable mindbreeze-report-worker
+
             # 5. 서비스 재시작
+            #    SDD-212: 줄 전용 일꾼을 먼저 기동(빈 줄 소비 대기) → 이후 백엔드·기존 일꾼 순서(deploy/README.md 배포 순서)
+            sudo systemctl restart mindbreeze-stt-worker
+            sudo systemctl restart mindbreeze-report-worker
             sudo systemctl restart mindbreeze-backend
             sudo systemctl restart mindbreeze-email-worker 2>/dev/null || true
             sudo systemctl restart mindbreeze-export-worker 2>/dev/null || true
@@ -229,6 +316,9 @@ jobs:
             sudo systemctl is-active mindbreeze-backend
             sudo systemctl is-active mindbreeze-worker
             sudo systemctl is-active mindbreeze-export-worker 2>/dev/null || true
+            # SDD-212: 신규 유닛이 죽어 있으면 배포 실패(롤백 트랩) — 줄 분리를 켠 뒤 소비자 없는 줄이 생기지 않게 한다.
+            sudo systemctl is-active mindbreeze-stt-worker
+            sudo systemctl is-active mindbreeze-report-worker
 
             # 5.0 진단: 워커·백엔드 최근 로그 (파이프라인 소비 여부 확인용)
             echo "=== [진단] mindbreeze-worker 상태 ==="
@@ -244,40 +334,9 @@ jobs:
               sudo nginx -t && sudo systemctl reload nginx
             fi
 
-            # 5.5 알림 보관·파기 cron 등록 (매일 04:00, celery beat 대체)
-            #     INFRA-03: DB·Redis 접속 정보(env)를 명시 export 해야 config 기본값(localhost)으로
-            #     떨어지지 않는다 — 다른 cron 들과 동일한 규약을 적용한다.
-            (crontab -l 2>/dev/null | grep -v 'cleanup_notifications_cron'; echo '0 4 * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python cleanup_notifications_cron.py >> /var/log/mindbreeze-cleanup.log 2>&1') | crontab -
+            # 5.5~5.10 dev 크론 등록 (번들 해제 후, 기존 순서 유지)
+            bash "$BASE/deploy/dev/register-crons.sh"
 
-            # 5.6 SDD-100: open 상태 방치 세션 자동 취소 cron 등록 (매 5분, celery beat 대체)
-            (crontab -l 2>/dev/null | grep -v 'sweep_stale_open_sessions_cron'; echo '*/5 * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E "^DATABASE_URL=" ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E "^REDIS_URL=" ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_stale_open_sessions_cron.py >> /var/log/mindbreeze-stale-open-sessions.log 2>&1') | crontab -
-
-            # 5.7 SDD-138: celery beat 대체 나머지 주기 스윕 cron 등록
-            (crontab -l 2>/dev/null | grep -v 'sweep_stale_reports_cron'; echo '*/5 * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_stale_reports_cron.py >> /var/log/mindbreeze-stale-reports.log 2>&1') | crontab -
-            (crontab -l 2>/dev/null | grep -v 'sweep_session_reminders_cron'; echo '*/5 * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_session_reminders_cron.py >> /var/log/mindbreeze-reminders.log 2>&1') | crontab -
-            # SDD-188: AI 비서 예약 사전 노티(3시간 전·1시간 전) 스윕 cron 등록 (매 1분)
-            (crontab -l 2>/dev/null | grep -v 'sweep_agent_reminders_cron'; echo '* * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_agent_reminders_cron.py >> /var/log/mindbreeze-agent-reminders.log 2>&1') | crontab -
-            # SDD-189: AI 비서 상담사 브리핑(아침 일정·저녁 정리) 스윕 cron 등록 (매 1분)
-            #     상담사가 지정한 KST 시각 도래 + 30분 보정 창 안에서만 생성한다.
-            (crontab -l 2>/dev/null | grep -v 'sweep_agent_briefings_cron'; echo '* * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_agent_briefings_cron.py >> /var/log/mindbreeze-agent-briefings.log 2>&1') | crontab -
-            (crontab -l 2>/dev/null | grep -v 'process_pipeline_outbox_cron'; echo '* * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python process_pipeline_outbox_cron.py >> /var/log/mindbreeze-pipeline-outbox.log 2>&1') | crontab -
-            # 5.8 NOTIF-03/OUTBOX-001: 이메일 아웃박스 발송 cron 등록 (매 1분, celery beat 대체)
-            (crontab -l 2>/dev/null | grep -v 'process_email_outbox_cron'; echo '* * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && export RESEND_API_KEY=$(grep -E ^RESEND_API_KEY= ./.env.dev | head -1 | cut -d= -f2-) && export RESEND_FROM_EMAIL=$(grep -E ^RESEND_FROM_EMAIL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python process_email_outbox_cron.py >> /var/log/mindbreeze-email-outbox.log 2>&1') | crontab -
-            (crontab -l 2>/dev/null | grep -v 'cleanup_data_exports_cron'; echo '*/5 * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python cleanup_data_exports_cron.py >> /var/log/mindbreeze-exports.log 2>&1') | crontab -
-
-            # 5.9 SDD-048/INFRA-02: 서사 캐시 주기 업그레이드 cron 등록 (매일 05:00, celery beat 대체)
-            #     번들에는 포함(upgrade_narrative_cache_cron.py)되나 crontab 등록이 누락돼
-            #     실행되지 않던 항목을 보완한다.
-            (crontab -l 2>/dev/null | grep -v 'upgrade_narrative_cache_cron'; echo '0 5 * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python upgrade_narrative_cache_cron.py >> /var/log/mindbreeze-narrative-cache.log 2>&1') | crontab -
-
-            # 5.10 INT-VERIFY-2AXIS: EEG raw 고아·보관기간 정리 + 미디어 고아 정리 cron 등록.
-            #     스크립트는 존재했으나 배포 번들·crontab 등록이 누락돼 실행되지 않던 항목.
-            (crontab -l 2>/dev/null | grep -v 'sweep_stale_eeg_raw_cron'; echo '30 4 * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_stale_eeg_raw_cron.py >> /var/log/mindbreeze-eeg-raw.log 2>&1') | crontab -
-            (crontab -l 2>/dev/null | grep -v 'sweep_stale_media_cron'; echo '45 4 * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_stale_media_cron.py >> /var/log/mindbreeze-media-sweep.log 2>&1') | crontab -
-            # SDD-190: 앱 푸시 아웃박스 발송 cron 등록 (매 1분, celery beat 대체)
-            (crontab -l 2>/dev/null | grep -v 'process_push_outbox_cron'; echo '* * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && export FCM_PROJECT_ID=$(grep -E ^FCM_PROJECT_ID= ./.env.dev | head -1 | cut -d= -f2-) && export FCM_SERVICE_ACCOUNT_JSON=$(grep -E ^FCM_SERVICE_ACCOUNT_JSON= ./.env.dev | head -1 | cut -d= -f2-) && export VAPID_PUBLIC_KEY=$(grep -E ^VAPID_PUBLIC_KEY= ./.env.dev | head -1 | cut -d= -f2-) && export VAPID_PRIVATE_KEY=$(grep -E ^VAPID_PRIVATE_KEY= ./.env.dev | head -1 | cut -d= -f2-) && export VAPID_SUBJECT=$(grep -E ^VAPID_SUBJECT= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python process_push_outbox_cron.py >> /var/log/mindbreeze-push-outbox.log 2>&1') | crontab -
-            # SDD-191: AI 비서 안부 대화(체크인) 아웃리치 스윕 cron 등록 (매 5분)
-            (crontab -l 2>/dev/null | grep -v 'sweep_agent_checkins_cron'; echo '*/5 * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_agent_checkins_cron.py >> /var/log/mindbreeze-agent-checkins.log 2>&1') | crontab -
             # SDD-188: cron 로그 파일은 ubuntu 가 /var/log 에 직접 만들 수 없어(Permission denied) cron 이 실행되지 못했다 → 미리 생성·소유권 부여
             for f in $(crontab -l | grep -o '/var/log/mindbreeze-[a-z-]*\.log' | sort -u); do sudo touch "$f" && sudo chown ubuntu:ubuntu "$f"; done
             # cron 프로세스의 SQLAlchemy echo(DEBUG=true) 로 로그가 폭증하는 것을 막는다 (crontab 환경변수 줄)
@@ -303,8 +362,3 @@ jobs:
           curl -sf https://dev.mindbreeze.looxidlabs.com/ -o /dev/null && echo "frontend 200 OK"
           curl -sf https://dev-api.mindbreeze.looxidlabs.com/health/ready && echo " ← api ready OK"
 
-  # SDD-204: 배포 성공 직후 스모크 E2E (실패 시 텔레그램 알림). 배포 자체의 성공/실패에는 영향 없음.
-  e2e-smoke:
-    needs: [deploy]
-    uses: ./.github/workflows/e2e-smoke.yml
-    secrets: inherit

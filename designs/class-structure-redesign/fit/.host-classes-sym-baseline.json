@@ -1,0 +1,46 @@
+{
+ "byRule": {
+  "S1": {
+   "fail": 8,
+   "total": 1952
+  },
+  "S2": {
+   "fail": 0,
+   "total": 596
+  },
+  "S3": {
+   "fail": 0,
+   "total": 372
+  },
+  "S4": {
+   "fail": 0,
+   "total": 0
+  },
+  "S5": {
+   "fail": 0,
+   "total": 160
+  },
+  "S6": {
+   "fail": 12,
+   "total": 707
+  },
+  "S7": {
+   "fail": 0,
+   "total": 140
+  },
+  "S8": {
+   "fail": 0,
+   "total": 304
+  },
+  "S9": {
+   "fail": 0,
+   "total": 760
+  },
+  "S10": {
+   "fail": 4,
+   "total": 1432
+  }
+ },
+ "fail": 24,
+ "total": 6423
+}

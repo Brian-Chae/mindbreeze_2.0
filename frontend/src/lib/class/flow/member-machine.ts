@@ -1,6 +1,7 @@
 // SDD-209 M1 — 참가자 입장 흐름 상태 머신(순수). EntryPage 가 서버 상태(entry-state)를 sync 로 흘려 넣고 화면은 phase 만 본다.
 // 어떤 선택·동의의 성공 여부도 입장·녹음·업로드를 막지 않는다 — 머신에는 그런 분기가 없다.
 import { ApiError } from '../../api/client';
+import { apiErrorCode } from '../../api/auth';
 import type { SessionStatus } from '../../api/session';
 import type { FlowBandMode, FlowPlace } from './types';
 
@@ -44,6 +45,8 @@ export function deriveFlowStateKind(input: { error?: unknown; status?: SessionSt
     if (error instanceof ApiError) {
       if (error.status === 401 || error.status === 403) return 'entry-expired';
       if (error.status === 404 || error.status === 410) return 'closed';
+      // 회차가 아직 열리지 않았다(서버 409 session_not_open) — 오류가 아니라 '아직 열리지 않았어요'
+      if (error.status === 409 && apiErrorCode(error) === 'session_not_open') return 'notyet';
       if (NETWORK_STATUS.has(error.status)) return 'offline';
       return 'error';
     }
@@ -54,6 +57,12 @@ export function deriveFlowStateKind(input: { error?: unknown; status?: SessionSt
   if (input.status === 'completed') return 'closed';
   if (input.status === 'ready' || input.status === 'scheduled') return 'notyet';
   return 'error';
+}
+
+/** 409 session_not_open 오류가 실어 보낸 시작 예정 시각(ISO). 없으면 null — SDD-231 */
+export function notYetScheduledAt(error: unknown): string | null {
+  const value = (error as { data?: { detail?: { scheduled_at?: unknown } } } | null)?.data?.detail?.scheduled_at;
+  return typeof value === 'string' ? value : null;
 }
 
 export type EntryPhase = 'confirm' | 'wizard' | 'wait' | 'waitlist' | 'live' | 'end' | 'state';

@@ -11,8 +11,11 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
+from app.core.ai_features import is_stt_enabled
+from app.config import settings
 from app.models.session import Session, SessionParticipant
 from app.models.record import SessionRecord, AudioChunk
+from app.services import audio_merge_service
 from app.services.session_authz import SessionAction, get_session_authorized
 
 logger = logging.getLogger(__name__)
@@ -24,7 +27,8 @@ CHUNK_STORAGE_DIR = Path(os.environ.get("AUDIO_CHUNK_DIR", "/var/lib/mindbreeze/
 # status='published' 로 표시한 뒤 중간 태스크가 죽어 체인이 끝나지 않으면 워치독이 재발행한다.
 # 정상 수행 시간을 확보하기 위해 이 시간이 지난 뒤에만 재드라이브 대상으로 본다
 # (진행 중인 체인을 중복 발행하지 않는다).
-PIPELINE_REDRIVE_DELAY_SECONDS = 30 * 60
+# SDD-212 TD4: 줄 대기 시간(음성 변환 최대 30분 × 대기)을 정상 진행으로 인정하도록 설정값(기본 90분)을 쓴다.
+PIPELINE_REDRIVE_DELAY_SECONDS = settings.pipeline_redrive_delay_seconds
 
 
 def _to_uuid(value: str) -> UUID:
@@ -119,7 +123,11 @@ def save_chunk(session_id: str, host_id: str, chunk_index: int, content: bytes, 
         }
 
     CHUNK_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
-    file_path = CHUNK_STORAGE_DIR / f"{s.id}_{chunk_index}_{uuid.uuid4().hex}.bin"
+    # SDD-247: 바이트 매직으로 형식 판별(mp4→.m4a, webm→.webm, 그 외→.bin). unknown 은 거부하지 않는다.
+    #   연속 webm 의 2번째 이후 청크는 EBML 헤더가 없어 unknown(.bin)이 정상이다.
+    fmt = audio_merge_service.sniff_format(content[:16])
+    ext = audio_merge_service.EXTENSIONS[fmt]
+    file_path = CHUNK_STORAGE_DIR / f"{s.id}_{chunk_index}_{uuid.uuid4().hex}{ext}"
     file_path.write_bytes(content)
 
     chunk = AudioChunk(
@@ -210,7 +218,8 @@ def _build_pipeline_tasks(session_id, has_recording, needs_video_merge, needs_re
         from app.tasks.video_task import merge_video_chunks_task
 
         tasks.append(merge_video_chunks_task.si(str(session_id)))
-    if has_recording:
+    # SDD-220/228: AI·STT off — STT·요약 작업은 큐에 넣지 않는다(영상 병합·리포트 작업은 유지).
+    if has_recording and is_stt_enabled():
         from app.tasks.stt_task import stt_task
         from app.tasks.summary_task import summary_task
 
@@ -243,6 +252,13 @@ def finalize_on_session_end(session_id: UUID, db: DBSession) -> None:
     # SDD-101 Phase A: stop_recording이 이미 'processing'으로 마킹한 경우도 녹음으로 취급.
     # (direct /end 는 'recording', 정상 handleStop 경로는 'processing' 상태로 여기 도달)
     has_recording = record is not None and record.status in ("recording", "processing")
+    # SDD-220: AI off — 녹음 원본은 보존하고 전사·요약 없이 저장 완료(completed)로 마감한다.
+    #   has_recording 은 그대로 둬 outbox/리포트 의도(녹음 있음)를 유지하고, 체인에서만 STT·요약을 뺀다.
+    if has_recording and record is not None and not is_stt_enabled():
+        if record.status == "recording":
+            record.recording_ended_at = _now()
+        record.status = "completed"
+        db.commit()
     # INT-VERIFY-01: 녹음이 전혀 없던 세션(record 없음 또는 idle)이 종료되면 AI 기록이
     # 없다는 뜻으로 manual 로 마감한다. 방치하면 session_record 가 idle(미생성 시 GET 이
     # idle 기본 반환)로 영구 정지해 UI 가 '처리 중'으로 표시된다.

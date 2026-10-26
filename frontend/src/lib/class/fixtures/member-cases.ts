@@ -126,6 +126,7 @@ export function memberCaseViewProps(id: string, ctx?: Partial<Pick<PlayerCaseCon
       error: null,
       analyzing: false,
       raw: { fp1: demoWave(0.5, 7, 4), fp2: demoWave(2.1, 6, 5) },
+      ppg: { red: demoWave(0.9, 3, 4), ir: demoWave(1.7, 3, 5) },
       isMock: false,
       pendingCount: input.net === 'down' ? 12 : 0,
     },

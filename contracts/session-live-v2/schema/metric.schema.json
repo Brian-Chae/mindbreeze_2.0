@@ -1,0 +1,210 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://contracts.mindbreeze.local/session-live-v2/metric.schema.json",
+  "title": "MetricEnvelope/Batch/Ack (plan §3.4). 종합점수 필드 없음",
+  "definitions": {
+    "MetricEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "session_id",
+        "participant_id",
+        "stream_id",
+        "stream_generation",
+        "sequence",
+        "window_start_us",
+        "window_end_us",
+        "observed_at_ms",
+        "clock_anchor_id",
+        "clock_uncertainty_ms",
+        "device_profile_version",
+        "algorithm_version",
+        "model_version",
+        "feature_hash",
+        "contact",
+        "sqi",
+        "metrics"
+      ],
+      "properties": {
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "participant_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "stream_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "stream_generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "sequence": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "window_start_us": {
+          "description": "창 시작/끝의 시간축은 capture.reanchor 의 monotonic_us 와 반드시 같은 축(코어 창 시간축, μs)이어야 한다. 서버는 anchor_server_at + (window_start_us − reanchor.monotonic_us) 로 서버시계로 환산해 신선도를 판정한다. 축이 다르면 창이 미래/과거로 환산되어 time_uncertain 이 된다.",
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "window_end_us": {
+          "description": "창 시작/끝의 시간축은 capture.reanchor 의 monotonic_us 와 반드시 같은 축(코어 창 시간축, μs)이어야 한다. 서버는 anchor_server_at + (window_end_us − reanchor.monotonic_us) 로 서버시계로 환산해 신선도를 판정한다. 축이 다르면 창이 미래/과거로 환산되어 time_uncertain 이 된다.",
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "observed_at_ms": {
+          "$ref": "common.schema.json#/definitions/Ms"
+        },
+        "clock_anchor_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "clock_uncertainty_ms": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 300000
+        },
+        "device_profile_version": {
+          "$ref": "common.schema.json#/definitions/VersionLabel"
+        },
+        "algorithm_version": {
+          "$ref": "common.schema.json#/definitions/VersionLabel"
+        },
+        "model_version": {
+          "$ref": "common.schema.json#/definitions/VersionLabel"
+        },
+        "feature_hash": {
+          "$ref": "common.schema.json#/definitions/Sha256Hex"
+        },
+        "contact": {
+          "$ref": "common.schema.json#/definitions/Contact"
+        },
+        "sqi": {
+          "$ref": "common.schema.json#/definitions/Sqi"
+        },
+        "metrics": {
+          "$ref": "common.schema.json#/definitions/MetricSet"
+        }
+      }
+    },
+    "MetricBatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "windows"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "windows": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 60,
+          "items": {
+            "$ref": "#/definitions/MetricEnvelope"
+          }
+        }
+      }
+    },
+    "MetricAck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "session_id",
+        "participant_id",
+        "stream_id",
+        "sequence",
+        "status",
+        "durable",
+        "feature_hash",
+        "received_at_server_ms"
+      ],
+      "properties": {
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "participant_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "stream_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "sequence": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "accepted",
+            "duplicate",
+            "rejected",
+            "retryable"
+          ]
+        },
+        "durable": {
+          "type": "boolean"
+        },
+        "feature_hash": {
+          "$ref": "common.schema.json#/definitions/Sha256Hex"
+        },
+        "received_at_server_ms": {
+          "$ref": "common.schema.json#/definitions/Ms"
+        },
+        "code": {
+          "$ref": "common.schema.json#/definitions/ReasonCode"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "accepted",
+                  "duplicate"
+                ]
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "durable": {
+                "const": true
+              }
+            }
+          }
+        }
+      ]
+    },
+    "MetricAckBatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "acks"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "acks": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 60,
+          "items": {
+            "$ref": "#/definitions/MetricAck"
+          }
+        }
+      }
+    }
+  }
+}

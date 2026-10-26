@@ -1,7 +1,9 @@
 // SDD-082: 기관 관리자 — 상담사 관리 페이지 (조회/검색/상태 관리/이력/활성화·비활성화)
 
+import { buttonClass, cardClass, fieldClass } from '../../components/ui';
 import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import AppShell from '../../components/layout/AppShell';
+import CounselorInviteSection from '../../components/org/counselor-invite-section';
 import CounselorInfoEditor from '../../components/counselor/counselor-info-editor';
 import { ApiError } from '../../lib/api/client';
 import { sessionStatusLabel } from '../../lib/session-status';
@@ -121,7 +123,7 @@ function StatusChangeDialog({
             onChange={(e) => setReason(e.target.value)}
             rows={3}
             placeholder="예: 휴직 처리에 따른 계정 비활성화"
-            className="mt-1.5 w-full rounded-xl border border-[#DDDEE7] p-3 text-[15px] font-normal text-[#1F1F1F] focus:border-[#5F0080] focus:outline-none"
+            className={fieldClass('textarea', 'mt-1.5')}
           />
         </label>
         <div className="mt-5 flex justify-end gap-2">
@@ -129,7 +131,7 @@ function StatusChangeDialog({
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="rounded-xl border border-[#DDDEE7] px-4 py-2.5 text-[15px] font-semibold text-[#6F6F6F] hover:bg-[#F8FAFC] disabled:opacity-60"
+            className={buttonClass({ variant: 'secondary' })}
           >
             취소
           </button>
@@ -188,7 +190,7 @@ function CounselorDetailPanel({
   }, [orgId, counselor.id]);
 
   return (
-    <section className="rounded-2xl border border-[#DDDEE7] bg-white p-6">
+    <section className={cardClass('default')}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-[18px] font-bold tracking-tight text-[#1F1F1F]">
@@ -202,7 +204,7 @@ function CounselorDetailPanel({
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg border border-[#DDDEE7] px-3 py-1.5 text-[12px] font-semibold text-[#6F6F6F] hover:bg-[#F8FAFC]"
+          className={buttonClass({ variant: 'secondary', size: 'sm' })}
         >
           닫기
         </button>
@@ -346,6 +348,8 @@ export default function OrgCounselorsPage() {
     mode: 'suspend' | 'unsuspend';
   } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
+  const inviteDialogRef = useDialogA11y(showInvite, () => setShowInvite(false));
 
   const refresh = useCallback(async (targetOrgId: string): Promise<void> => {
     const list = await listCounselors(targetOrgId);
@@ -410,7 +414,23 @@ export default function OrgCounselorsPage() {
   };
 
   return (
-    <AppShell title="상담사 관리" sub="COUNSELORS">
+    <AppShell
+      title="상담사 관리"
+      sub="COUNSELORS"
+      wide
+      rightSlot={
+        orgId ? (
+          <button
+            data-header-action="primary"
+            type="button"
+            onClick={() => setShowInvite(true)}
+            className="mb-btn"
+          >
+            상담사 초대
+          </button>
+        ) : undefined
+      }
+    >
       {error && (
         <div className="mb-4 rounded-xl bg-[#FDECEC] p-3 text-sm text-[#B3261E]" role="alert">
           {error}
@@ -423,7 +443,7 @@ export default function OrgCounselorsPage() {
         <div className="space-y-6">
           {/* SDD-077 재사용 — 상담사 정보 수정 */}
           {editing && orgId && (
-            <section className="rounded-2xl border border-[#DDDEE7] bg-white p-6">
+            <section className={cardClass('default')}>
               <h2 className="mb-4 text-[18px] font-bold text-[#1F1F1F]">
                 정보 수정 — {editing.name}
               </h2>
@@ -446,13 +466,13 @@ export default function OrgCounselorsPage() {
               placeholder="이름·이메일·코드 검색"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="h-10 min-w-0 flex-1 rounded-xl border border-[#DDDEE7] bg-white px-3.5 text-[15px] text-[#1F1F1F] focus:border-[#5F0080] focus:outline-none"
+              className={fieldClass('input', 'min-w-0 flex-1')}
             />
             <select
               aria-label="역할 필터"
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="h-10 rounded-xl border border-[#DDDEE7] bg-white px-3 text-[15px] text-[#1F1F1F]"
+              className={fieldClass('select', '!w-auto')}
             >
               <option value="">전체 역할</option>
               <option value="counselor">상담사</option>
@@ -462,7 +482,7 @@ export default function OrgCounselorsPage() {
               aria-label="상태 필터"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-10 rounded-xl border border-[#DDDEE7] bg-white px-3 text-[15px] text-[#1F1F1F]"
+              className={fieldClass('select', '!w-auto')}
             >
               <option value="">전체 상태</option>
               <option value="active">활성</option>
@@ -474,14 +494,14 @@ export default function OrgCounselorsPage() {
           {/* 목록 */}
           {counselors.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-[#DDDEE7] p-8 text-center text-sm text-[#6F6F6F]">
-              아직 소속된 상담사가 없습니다. 기관 대시보드에서 상담사를 초대해 보세요.
+              아직 소속된 상담사가 없습니다. 상단의 '상담사 초대' 버튼으로 초대해 보세요.
             </div>
           ) : filtered.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-[#DDDEE7] p-8 text-center text-sm text-[#6F6F6F]">
               검색 조건에 맞는 상담사가 없습니다.
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-2xl border border-[#EFEFEF] bg-white">
+            <div className={cardClass('none', 'overflow-x-auto')}>
               <table className="w-full min-w-[720px] text-[15px]">
                 <thead>
                   <tr className="border-b border-[#EFEFEF] bg-[#F8FAFC]">
@@ -533,14 +553,14 @@ export default function OrgCounselorsPage() {
                                   ? '기관 관리자 계정은 본인 설정 또는 플랫폼 관리자를 통해 수정합니다'
                                   : undefined
                               }
-                              className="rounded-lg border border-[#DDDEE7] px-2.5 py-1.5 text-[12px] font-semibold text-[#6F6F6F] hover:bg-white hover:text-[#1F1F1F] disabled:opacity-40"
+                              className={buttonClass({ variant: 'secondary', size: 'sm' })}
                             >
                               정보 수정
                             </button>
                             <button
                               type="button"
                               onClick={() => setSelected(c)}
-                              className="rounded-lg border border-[#DDDEE7] px-2.5 py-1.5 text-[12px] font-semibold text-[#6F6F6F] hover:bg-white hover:text-[#1F1F1F]"
+                              className={buttonClass({ variant: 'secondary', size: 'sm' })}
                             >
                               이력
                             </button>
@@ -582,6 +602,35 @@ export default function OrgCounselorsPage() {
               onClose={() => setSelected(null)}
             />
           )}
+        </div>
+      )}
+
+      {showInvite && orgId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div
+            ref={inviteDialogRef}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            aria-label="상담사 초대"
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-4 shadow-xl"
+          >
+            <CounselorInviteSection
+              orgId={orgId}
+              inviteList={[]}
+              showList={false}
+              onRefresh={() => refresh(orgId)}
+            />
+            <div className="mt-3 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowInvite(false)}
+                className={buttonClass({ variant: 'secondary' })}
+              >
+                닫기
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

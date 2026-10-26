@@ -1,0 +1,38 @@
+/* B안의 공통 토큰은 회원 홈 데스크톱에만 적용한다. */
+.mh-scroll-tools,.mh-edge{display:none}
+@media(min-width:1024px){
+.cs-structure .cs-structure-content:has(.mh-home){padding:0}
+.cs-structure .mc-stack.mh-home{--mh-radius:20px;--mh-space:24px;--mh-border:#e8e3ec;--mh-shadow:0 2px 8px #35213f06;display:grid;width:100%;max-width:1280px;padding:32px 40px 64px;gap:var(--mh-space);grid-template-columns:minmax(0,1fr) 320px;align-items:start}
+.mh-home>*{min-width:0}
+.mh-home>[data-testid="class-hero"]{grid-column:1/-1;grid-row:1;border-radius:var(--mh-radius);min-height:240px}
+.mh-home .mh-legacy{display:contents}
+.mh-home .mh-rail{display:flex;grid-column:2;grid-row:5;gap:var(--mh-space)}
+.mh-home .mh-summary{grid-column:1/-1;grid-row:2;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.mh-home .mh-summary>button{height:152px;border-radius:var(--mh-radius);padding:18px;box-shadow:var(--mh-shadow)}
+.mh-home .mh-counseling{grid-column:1/-1;grid-row:4}
+.mh-home .mh-classes{grid-column:1/-1;grid-row:3}
+.mh-home .mh-main{grid-column:1;grid-row:5;gap:var(--mh-space)}
+.mh-home .mh-rail>section{grid-column:2}
+.mh-home .mh-main>section,.mh-home .mh-rail>section{border:1px solid var(--mh-border);border-radius:var(--mh-radius);background:#fff;padding:var(--mh-space);box-shadow:var(--mh-shadow);min-width:0}
+.mh-home .mh-main h2,.mh-home .mh-rail h2,.mh-home .mc-heading{font-size:18px;line-height:1.5;font-weight:800;margin:0}
+.mh-home .mc-row{min-height:32px;margin-bottom:16px}
+.mh-home .mc-row .mc-link{background:transparent;padding:0;font-size:13px}
+.mh-home .mh-scroll-wrap{position:relative;min-width:0}
+.cs-structure .mh-home .mh-track{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding:2px;padding:4px 2px 16px;overscroll-behavior-x:contain}
+.cs-structure .mh-track>.mc-card{box-sizing:border-box;flex:0 0 max(240px,calc((100% - 48px)/4));width:max(240px,calc((100% - 48px)/4));height:304px;scroll-snap-align:start;padding:24px;border-radius:var(--mh-radius);box-shadow:var(--mh-shadow)}
+.cs-structure .mh-track .mc-card-link{display:flex;flex-direction:column;height:100%}
+.cs-structure .mh-track h3{font-size:18px;line-height:1.5;margin:16px 0;height:54px;flex-shrink:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.cs-structure .mh-track .mc-card-link>div:last-child{margin-top:auto;font-size:13px}
+.mh-home .mh-edge{display:block;position:absolute;top:0;bottom:16px;width:28px;pointer-events:none;z-index:1}
+.mh-home .mh-edge[hidden]{display:none}
+.mh-edge-left{left:0;background:linear-gradient(90deg,#f8f7fa,transparent)}
+.mh-edge-right{right:0;background:linear-gradient(270deg,#f8f7fa,transparent)}
+.mh-home .mh-scroll-tools{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:8px}
+.mh-scroll-tools small{margin-right:auto}
+.mh-scroll-tools button{border:1px solid var(--mh-border);border-radius:12px;background:#fff;min-width:44px;min-height:44px}
+.mh-scroll-tools button:disabled{opacity:.4}
+.mh-home a:focus-visible,.mh-home button:focus-visible{outline:2px solid #5f0080;outline-offset:2px}
+.mh-home .cs-read-state,.mh-home .mh-legacy-state{min-height:220px;border:1px solid var(--mh-border);border-radius:var(--mh-radius);background:white}
+.mh-home .mh-legacy-state{grid-column:1/-1;grid-row:4}
+}
+@media(min-width:1600px){.cs-structure .mc-stack.mh-home{grid-template-columns:minmax(0,1fr) 352px}}

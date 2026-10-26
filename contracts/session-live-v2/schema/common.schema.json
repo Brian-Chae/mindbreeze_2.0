@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://contracts.mindbreeze.local/session-live-v2/common.schema.json",
+  "title": "session-live-v2 공통 타입 (SDD-246 plan §3.1)",
+  "description": "64비트 seq/tick/cursor/generation 은 JSON 십진 문자열. ms 는 JS 안전 정수. 미지원 major 는 upgrade_required — 조용한 downgrade 없음.",
+  "definitions": {
+    "Uuid": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+    "U64": { "type": "string", "pattern": "^(0|[1-9][0-9]{0,19})$", "description": "0..2^64-1 십진 문자열. 범위 초과는 validate.mjs 가 u64_overflow 로 거절." },
+    "Ms": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+    "ProtocolVersion": { "type": "integer", "const": 2 },
+    "SchemaVersion": { "type": "integer", "const": 1 },
+    "Sha256Hex": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "VersionLabel": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$" },
+    "ReasonCode": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$" },
+    "OpaqueCredential": { "type": "string", "pattern": "^[A-Za-z0-9_-]{16,512}$", "description": "점(.)이 없는 불투명 값. JWT 형태는 허용하지 않는다." },
+    "Audience": { "type": "string", "pattern": "^(host|public|member:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$", "description": "서버가 만든 불투명 audience. 이름/이메일/토큰 금지." },
+    "Domain": { "type": "string", "enum": ["session", "participation", "waiting", "speaking", "signal", "audio", "device", "metrics", "aggregate", "policy"] },
+    "Cursor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["audience", "domain", "seq"],
+      "properties": {
+        "audience": { "$ref": "#/definitions/Audience" },
+        "domain": { "$ref": "#/definitions/Domain" },
+        "seq": { "$ref": "#/definitions/U64" }
+      }
+    },
+    "Cursors": { "type": "array", "items": { "$ref": "#/definitions/Cursor" }, "maxItems": 200 },
+    "ContactState": { "type": "string", "enum": ["contact", "leadoff", "unknown"], "description": "센서별 actual leadoff. SQI 로 합성하지 않는다." },
+    "Contact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fp1", "fp2"],
+      "properties": {
+        "fp1": { "$ref": "#/definitions/ContactState" },
+        "fp2": { "$ref": "#/definitions/ContactState" }
+      }
+    },
+    "Sqi": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "MetricUnit": { "type": "string", "enum": ["index_raw", "score_0_100", "beats_per_min", "breaths_per_min", "ms", "ratio_0_1"] },
+    "Validity": { "type": "string", "enum": ["valid", "warming_up", "invalid", "gap"] },
+    "MetricValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "unit", "validity", "reason", "last_valid_sequence", "last_valid_observed_at_ms"],
+      "properties": {
+        "value": { "type": ["number", "null"], "description": "null 과 필드 없음은 다르다. NaN/Infinity 는 JSON 에 없다. 0 으로 대체 금지." },
+        "unit": { "$ref": "#/definitions/MetricUnit" },
+        "validity": { "$ref": "#/definitions/Validity" },
+        "reason": { "oneOf": [{ "$ref": "#/definitions/ReasonCode" }, { "type": "null" }] },
+        "last_valid_sequence": { "oneOf": [{ "$ref": "#/definitions/U64" }, { "type": "null" }] },
+        "last_valid_observed_at_ms": { "oneOf": [{ "$ref": "#/definitions/Ms" }, { "type": "null" }] }
+      },
+      "allOf": [
+        { "if": { "properties": { "validity": { "const": "valid" } }, "required": ["validity"] }, "then": { "properties": { "value": { "type": "number" } } } },
+        { "if": { "properties": { "validity": { "enum": ["warming_up", "invalid", "gap"] } }, "required": ["validity"] }, "then": { "properties": { "value": { "type": "null" } } } }
+      ]
+    },
+    "MetricSet": {
+      "type": "object",
+      "description": "raw index 와 정규화 표시값은 별도 필드(이중 정규화 금지). 종합점수 필드 없음.",
+      "additionalProperties": false,
+      "properties": {
+        "focus_raw": { "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "index_raw" } } }] },
+        "focus_display": { "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "score_0_100" }, "value": { "minimum": 0, "maximum": 100 } } }] },
+        "relaxation_raw": { "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "index_raw" } } }] },
+        "relaxation_display": { "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "score_0_100" }, "value": { "minimum": 0, "maximum": 100 } } }] },
+        "emotion_raw": { "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "index_raw" } } }] },
+        "emotion_display": { "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "score_0_100" }, "value": { "minimum": 0, "maximum": 100 } } }] },
+        "bpm": { "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "beats_per_min" } } }] },
+        "respiration": { "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "breaths_per_min" } } }] },
+        "sdnn": { "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "ms" } } }] },
+        "tna_raw": { "description": "선택 필드(구 클라이언트 미전송). 총 신경활동 raw — 서버가 활성 모델로 두뇌 휴식 점수를 재계산.", "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "index_raw" } } }] }
+      }
+    }
+  }
+}

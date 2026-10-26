@@ -109,7 +109,7 @@ export function HostMediaSheet({ online, cam, mic, media, onToggleCam, onToggleM
             lead={<span className="hp-row__lead"><Pause aria-hidden="true" strokeWidth={2} /></span>}
             title="AI 기록"
             sub="마이크를 켜면 이어서 기록돼요"
-            trailing={recActive ? <button type="button" className="hp-btn" data-variant="ghost" onClick={recording.onStop}>녹음 종료</button> : undefined}
+            trailing={recActive ? <button type="button" className="hp-btn" data-variant="danger" data-rec-action="stop" onClick={recording.onStop}>녹음 종료</button> : undefined}
           />
         ) : (
           <div className="hp-legacy">

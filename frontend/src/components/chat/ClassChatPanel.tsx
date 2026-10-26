@@ -54,7 +54,7 @@ function ChatIcon() {
 function UnreadBadge({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
-    <span className="inline-flex min-w-[20px] shrink-0 items-center justify-center rounded-full bg-[#5F0080] px-1.5 font-mono text-[11px] font-bold text-white">
+    <span className="inline-flex min-w-[20px] shrink-0 items-center justify-center rounded-full bg-[#5F0080] px-1.5 font-mono text-[11px] mobile:text-mb-caption font-bold text-white">
       {count > 99 ? '99+' : count}
     </span>
   );
@@ -143,7 +143,7 @@ export function ClassChatPanel({
     if (collapsed) return null;
     return (
       <div className="flex min-h-0 flex-1 flex-col">
-        <ChatRoom key={activeRoomId} roomId={activeRoomId} />
+        <ChatRoom key={activeRoomId} roomId={activeRoomId} tone="dark" />
       </div>
     );
   }
@@ -155,7 +155,7 @@ export function ClassChatPanel({
         onClick={() => onCollapsedChange(false)}
         aria-expanded={false}
         aria-label={`${title} 펼치기`}
-        className="fixed bottom-20 right-4 z-50 flex items-center gap-2 rounded-full bg-white/95 px-4 py-3 text-sm font-semibold text-[#5F0080] shadow-lg ring-1 ring-black/5 backdrop-blur transition-colors hover:bg-white"
+        className="fixed bottom-20 right-4 z-50 flex items-center gap-2 rounded-full bg-white/95 px-4 py-3 text-sm mobile:text-mb-compact font-semibold text-[#5F0080] shadow-lg ring-1 ring-black/5 backdrop-blur transition-colors hover:bg-white"
       >
         <ChatIcon />
         <span>{title}</span>
@@ -172,7 +172,7 @@ export function ClassChatPanel({
     >
       <header className="flex shrink-0 items-center justify-between gap-2 border-b border-[#EFEFEF] px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="truncate text-sm font-bold text-[#1F1F1F]">{title}</span>
+          <span className="truncate text-sm mobile:text-mb-compact font-bold text-[#1F1F1F]">{title}</span>
           <UnreadBadge count={unread} />
         </div>
         <button
@@ -180,7 +180,7 @@ export function ClassChatPanel({
           onClick={() => onCollapsedChange(true)}
           aria-expanded={true}
           aria-label={`${title} 접기`}
-          className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-[#6F6F6F] transition-colors hover:bg-[#F2F3F8] hover:text-[#1F1F1F]"
+          className="shrink-0 rounded-lg px-2 py-1 mobile:min-h-11 mobile:min-w-11 text-sm mobile:text-mb-compact font-medium text-[#6F6F6F] transition-colors hover:bg-[#F2F3F8] hover:text-[#1F1F1F]"
         >
           접기
         </button>

@@ -208,3 +208,12 @@
 .pz-root .fhb-endhead {display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 32px;}
 @media (max-height: 760px) { .pz-root .fhb-step {min-height: 40px;} }
 @media (prefers-reduced-motion: reduce) { .pz-root .fhb-step.now svg {animation: none;} }
+
+/* SDD-234: 로비·밴드 시트의 설명은 보조 캡션이 아닌 본문으로 읽는다. */
+@media (max-width: 767px) {
+  .pz-root .fhb-how > div, .pz-root .fhb-slot p, .pz-root .fhb-empty p,
+  .pz-root .fhb-ctr p, .pz-root .fhb-opt .fhb-od, .pz-root .fhb-pn {
+    font-size: var(--mobile-type-compact-size); line-height: var(--mobile-type-compact-leading);
+  }
+  .pz-root .fhb-btn44, .pz-root .fhb-dk { font-size: var(--mobile-type-label-size); line-height: var(--mobile-type-label-leading); }
+}

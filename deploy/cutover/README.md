@@ -27,7 +27,7 @@ AWS: `looxid-las`/ap-northeast-1, `MB_AWS_PY`(기본 `backend/venv/bin/python -m
 | `c04-s3-sync.sh` | C-4 | `eeg-raw/`·`video/` sync, 객체 수·바이트·샘플 해시 |
 | `c04b-audio-migrate.sh` | C-4b | 오디오 존재분 이관(`--pack-only` 사전 복사 가능)·유실 행 정리·영상 행 보고 |
 | `c05-deploy.sh` | C-5 | `deploy-prod` 실행·환경 승인 대기·서버 상태 확인(리허설 임시 호스트 설정 유지) |
-| `c06-activate.sh` | C-6 | 운영 호스트 재구성(인증서 DNS-01)·timer 14개 활성·prod 점검 ON |
+| `c06-activate.sh` | C-6 | 운영 호스트 재구성(인증서 DNS-01)·timer 15개 활성·prod 점검 ON |
 | `c07-dns.sh` | C-7 | Route53 A CREATE×2(TTL 60)·존 전후 비교·전파 확인(시간 가드 T+48) |
 | `c08-smoke.sh` / `smoke-api.sh` | C-8 | 공개 스모크 9항목·인증서·계정 API·정지 계정 차단·LiveKit/TURN·오류 로그 |
 | `c09-release.sh` | C-9 | 임시 설정 원복·점검 해제·dev 안내 페이지·업타임 감시 |

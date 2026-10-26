@@ -4,7 +4,7 @@ set -eux
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get install -y nginx redis-server certbot python3-certbot-dns-route53 python3-venv python3-pip build-essential libpq-dev \
-  libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libffi-dev fonts-noto-cjk unzip jq curl
+  libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libffi-dev fonts-noto-cjk unzip jq curl ffmpeg
 systemctl disable --now nginx
 # SSM agent: Ubuntu AMI 기본 snap 설치본 확인
 snap list amazon-ssm-agent || snap install amazon-ssm-agent --classic

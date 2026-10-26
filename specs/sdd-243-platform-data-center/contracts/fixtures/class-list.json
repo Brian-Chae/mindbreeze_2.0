@@ -1,0 +1,31 @@
+{
+  "items": [
+    {
+      "class_id": "00000000-0000-0000-0000-000000000001",
+      "title": "아침 호흡 명상",
+      "org_id": "00000000-0000-0000-0000-000000000064",
+      "org_name": "기관A",
+      "status": "active",
+      "ended_session_count": {
+        "value": 12,
+        "partial": false,
+        "unavailable_reason": null
+      },
+      "stored_bytes": {
+        "value": null,
+        "partial": false,
+        "unavailable_reason": "미집계"
+      },
+      "facilitator_aliases": [
+        "F1"
+      ],
+      "attribution": "confirmed",
+      "last_session_at": "2026-10-24T03:00:00Z"
+    }
+  ],
+  "next_cursor": null,
+  "total": 1,
+  "total_reason": null,
+  "as_of": "2026-10-24T03:00:00Z",
+  "filters_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}

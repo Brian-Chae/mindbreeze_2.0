@@ -1,0 +1,18 @@
+{
+  "synthetic": true,
+  "sha": "a4acf6ba0c434fd40f7eb70ce573e7ad1a7699b4",
+  "branch": "sdd/217-class-structure-phase4",
+  "pg_port": 55437,
+  "test_database": "sdd217_test",
+  "browser_database": "sdd217_browser",
+  "migration_head": "e036a0000057",
+  "redis_port": 55438,
+  "api_port": 55439,
+  "frontend_port": 55440,
+  "class_scheduling": true,
+  "class_team_read": false,
+  "external_credentials_used": false,
+  "fake_camera": false,
+  "real_camera_frames_measured": false,
+  "deployed": false
+}

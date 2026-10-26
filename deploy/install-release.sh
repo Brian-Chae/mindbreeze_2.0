@@ -24,7 +24,7 @@ SYSTEMCTL="${MB_SYSTEMCTL:-systemctl}"
 HEALTH_URL="${MB_HEALTH_URL:-http://127.0.0.1:8000/health/ready}"
 HEALTH_TIMEOUT="${MB_HEALTH_TIMEOUT:-90}"
 KEEP_RELEASES="${MB_KEEP_RELEASES:-5}"
-SERVICES=(mindbreeze-backend mindbreeze-worker mindbreeze-email-worker mindbreeze-export-worker)
+SERVICES=(mindbreeze-backend mindbreeze-stt-worker mindbreeze-report-worker mindbreeze-worker mindbreeze-email-worker mindbreeze-export-worker)
 
 log() { echo "[install-release] $*"; }
 die() { local code="$1"; shift; echo "[install-release] 오류: $*" >&2; exit "$code"; }

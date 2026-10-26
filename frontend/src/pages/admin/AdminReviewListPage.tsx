@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { Button, cardClass, fieldClass } from '../../components/ui';
 import AppShell from '../../components/layout/AppShell';
 import { listReviews, type ReviewItemDto } from '../../lib/api/admin';
 
@@ -89,13 +90,13 @@ export default function AdminReviewListPage() {
   const totalPages = Math.max(1, Math.ceil(total / 20));
 
   return (
-    <AppShell title="검토 큐" sub="ADMIN REVIEW QUEUE">
+    <AppShell title="검토 큐" sub="ADMIN REVIEW QUEUE" wide>
       {/* 필터 */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
         <select
           value={docType}
           onChange={(e) => { setDocType(e.target.value); setPage(1); }}
-          className="rounded-xl border border-[#EFEFEF] px-3 py-2 text-[13px] text-[#1F1F1F] bg-white"
+          className={fieldClass('select', '!w-auto')}
         >
           <option value="">전체 유형</option>
           {Object.entries(DOC_TYPE_LABELS).map(([k, v]) => (
@@ -108,13 +109,9 @@ export default function AdminReviewListPage() {
       {error ? (
         <div className="border border-[#F5C2C2] bg-red-50 rounded-2xl p-10 text-center">
           <div className="text-[15px] text-red-700">{error}</div>
-          <button
-            type="button"
-            onClick={() => void fetchReviews()}
-            className="inline-flex items-center mt-4 h-10 px-5 rounded-full text-[13px] font-bold text-white bg-[#5F0080] hover:bg-[#4A0066] transition-colors"
-          >
+          <Button onClick={() => void fetchReviews()} className="mt-4">
             다시 시도
-          </button>
+          </Button>
         </div>
       ) : loading ? (
         <div className="text-[#6F6F6F]">불러오는 중...</div>
@@ -129,7 +126,7 @@ export default function AdminReviewListPage() {
               <Link
                 key={item.id}
                 to={`/admin/reviews/${item.target_type}/${item.id}`}
-                className="block bg-white border border-[#EFEFEF] rounded-2xl p-5 hover:shadow-md hover:border-[#5F0080]/30 transition-all"
+                className={cardClass('default', 'block hover:shadow-md hover:border-[#5F0080]/30 transition-all')}
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
@@ -165,23 +162,15 @@ export default function AdminReviewListPage() {
           {/* 페이지네이션 */}
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 mt-6">
-              <button
-                onClick={() => setPage(Math.max(1, page - 1))}
-                disabled={page === 1}
-                className="px-3 py-2.5 rounded-lg text-[13px] border border-[#EFEFEF] disabled:opacity-30"
-              >
+              <Button variant="secondary" size="sm" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}>
                 이전
-              </button>
+              </Button>
               <span className="text-[13px] text-[#6F6F6F]">
                 {page} / {totalPages}
               </span>
-              <button
-                onClick={() => setPage(Math.min(totalPages, page + 1))}
-                disabled={page === totalPages}
-                className="px-3 py-2.5 rounded-lg text-[13px] border border-[#EFEFEF] disabled:opacity-30"
-              >
+              <Button variant="secondary" size="sm" onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages}>
                 다음
-              </button>
+              </Button>
             </div>
           )}
         </>

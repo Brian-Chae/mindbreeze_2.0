@@ -1,0 +1,130 @@
+[
+  {
+    "name": "member-left",
+    "width": 390,
+    "height": 844,
+    "viewport": 390,
+    "scroll": 390,
+    "clipped": []
+  },
+  {
+    "name": "member-completed-before",
+    "width": 390,
+    "height": 844,
+    "viewport": 390,
+    "scroll": 390,
+    "clipped": []
+  },
+  {
+    "name": "host-members",
+    "width": 390,
+    "height": 844,
+    "viewport": 390,
+    "scroll": 390,
+    "clipped": []
+  },
+  {
+    "name": "guest-public",
+    "width": 390,
+    "height": 844,
+    "viewport": 390,
+    "scroll": 390,
+    "clipped": []
+  },
+  {
+    "name": "member-left",
+    "width": 834,
+    "height": 1194,
+    "viewport": 834,
+    "scroll": 834,
+    "clipped": []
+  },
+  {
+    "name": "member-completed-before",
+    "width": 834,
+    "height": 1194,
+    "viewport": 834,
+    "scroll": 834,
+    "clipped": []
+  },
+  {
+    "name": "host-members",
+    "width": 834,
+    "height": 1194,
+    "viewport": 834,
+    "scroll": 834,
+    "clipped": []
+  },
+  {
+    "name": "guest-public",
+    "width": 834,
+    "height": 1194,
+    "viewport": 834,
+    "scroll": 834,
+    "clipped": []
+  },
+  {
+    "name": "member-left",
+    "width": 1194,
+    "height": 834,
+    "viewport": 1194,
+    "scroll": 1194,
+    "clipped": []
+  },
+  {
+    "name": "member-completed-before",
+    "width": 1194,
+    "height": 834,
+    "viewport": 1194,
+    "scroll": 1194,
+    "clipped": []
+  },
+  {
+    "name": "host-members",
+    "width": 1194,
+    "height": 834,
+    "viewport": 1194,
+    "scroll": 1194,
+    "clipped": []
+  },
+  {
+    "name": "guest-public",
+    "width": 1194,
+    "height": 834,
+    "viewport": 1194,
+    "scroll": 1194,
+    "clipped": []
+  },
+  {
+    "name": "member-left",
+    "width": 1280,
+    "height": 720,
+    "viewport": 1280,
+    "scroll": 1280,
+    "clipped": []
+  },
+  {
+    "name": "member-completed-before",
+    "width": 1280,
+    "height": 720,
+    "viewport": 1280,
+    "scroll": 1280,
+    "clipped": []
+  },
+  {
+    "name": "host-members",
+    "width": 1280,
+    "height": 720,
+    "viewport": 1280,
+    "scroll": 1280,
+    "clipped": []
+  },
+  {
+    "name": "guest-public",
+    "width": 1280,
+    "height": 720,
+    "viewport": 1280,
+    "scroll": 1280,
+    "clipped": []
+  }
+]

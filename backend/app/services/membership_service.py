@@ -220,9 +220,14 @@ def leave_membership(db: Session, user: User, org_id: uuid.UUID | str) -> UserOr
 
     해제 대상이 주 소속이면 남은 active 소속 중 가장 오래된(joined_at 최소) 소속을 승격한다.
     """
+    db.query(User).filter(User.id == user.id).with_for_update().first()
     membership = get_membership(db, user.id, org_id)
     if membership is None:
         return None
+    from app.models.class_program import Class
+    from app.services.class_instructor_service import mark_needs_reassign
+    class_ids = [row[0] for row in db.query(Class.id).filter(Class.organization_id == org_id).all()]
+    mark_needs_reassign(db, user.id, class_ids, datetime.now(timezone.utc))
     was_primary = membership.is_primary and membership.status == "active"
     membership.status = "left"
     membership.left_at = datetime.now(timezone.utc)

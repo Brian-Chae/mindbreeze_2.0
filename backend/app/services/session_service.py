@@ -16,11 +16,20 @@ from app.models.user import User
 from app.models.client_profile import ClientProfile
 from app.models.session import ReportChoiceEvent, Session, SessionParticipant
 from app.models.record import SessionRecord
+from app.models.class_program import Class, ClassInstructor, ClassMember
+from app.models.counseling import CounselingRelationship, CounselingRelationshipCounselor
 from app.models.eeg_feature import EEGFeatureWindow
 from app.schemas.session import EEGFeatureItem
 from app.services import class_code_service, code_service, eeg_query, reminder_service as _reminder_service
 from app.services import session_terms
 from app.services.session_authz import SessionAction, get_session_authorized
+from app.services.session_classifier import (
+    PARENT_COUNSELING_RELATIONSHIP,
+    PARENT_MEDITATION_CLASS,
+    PARENT_NONE,
+    SessionFacts,
+    classify_session,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -120,6 +129,7 @@ def _serialize(
             object_session(s), [s.host_id, *(p.user_id for p in parts)]
         )
     host_info = users.get(s.host_id) or {}
+    hide_host = not include_participant_pii and s.class_id is not None and s.host_state in ("pending_ack", "needs_reassign")
     waitlist_count = sum(1 for p in parts if p.is_waitlisted)
     return {
         "id": str(s.id),
@@ -128,10 +138,11 @@ def _serialize(
         "type": s.type,
         "custom_type_name": s.custom_type_name,
         "status": s.status,
-        "host_id": str(s.host_id),
-        "host_name": host_info.get("name"),
+        "host_id": None if hide_host else str(s.host_id),
+        "host_name": None if hide_host else host_info.get("name"),
+        "host_state": s.host_state,
         "scheduled_at": s.scheduled_at,
-        "access_code": s.access_code,
+        "access_code": class_code_service.display_code(object_session(s), s),
         "opened_at": s.opened_at,
         "started_at": s.started_at,
         "ended_at": s.ended_at,
@@ -272,6 +283,10 @@ def generate_access_code(db: DBSession) -> str:
         raise class_code_service.exhausted_http_error()
 
 
+# uq_classes_active_access_code 에서 제외되는 클래스 상태(모델 정의와 같다)
+_CLASS_CODE_RELEASED_STATUSES = ("completed", "cancelled", "archived")
+
+
 def _add_session_with_code_retry(session: Session, db: DBSession) -> None:
     """세션 행 삽입. 동시 발급 경합(활성 코드 부분 유니크 위반)이면 코드를 재발급해 재시도한다."""
     for attempt in range(5):
@@ -279,11 +294,171 @@ def _add_session_with_code_retry(session: Session, db: DBSession) -> None:
             with db.begin_nested():
                 db.add(session)
                 db.flush()
-            return
+            break
         except IntegrityError:
             if session.access_code is None or attempt == 4:
                 raise
             session.access_code = generate_access_code(db)
+    # 클래스 코드는 최종 세션 코드를 복사한다(재발급 반영 위해 세션 INSERT 뒤에 한 번만 쓴다).
+    if session.class_id is not None and session.access_code is not None:
+        klass = db.get(Class, session.class_id)
+        if klass is not None and klass.access_code != session.access_code:
+            # 세션 쪽 유일성은 종료·취소 세션의 코드를 풀어 주지만 클래스 status 는 세션을 따라가지 않는다.
+            # uq_classes_active_access_code 범위(숨김 아님 + 종료·취소·보관 아님)에서 같은 코드를 쥔 클래스만 비워 충돌을 막는다.
+            db.query(Class).filter(
+                Class.access_code == session.access_code,
+                Class.id != klass.id,
+                Class.hidden_at.is_(None),
+                Class.status.notin_(_CLASS_CODE_RELEASED_STATUSES),
+            ).update({Class.access_code: None}, synchronize_session="fetch")
+            klass.access_code = session.access_code
+            db.flush()
+
+
+# ---------------------------------------------------------------------------
+# SDD-214: 세션 생성 시 부모(명상 클래스 / 상담 관계) 동시 생성
+# ---------------------------------------------------------------------------
+
+
+def _sync_class_from_session(klass: Class, s: Session) -> None:
+    """세션의 클래스 단위 설정을 클래스 행에 복사한다(dual-write — 엔진은 계속 세션 값을 읽는다)."""
+    klass.title = s.title
+    klass.description = s.notes
+    klass.capacity = s.max_participants
+    klass.participant_mode = s.participant_mode
+    klass.linkband_mode = s.linkband_mode
+    klass.location_type = s.location_type
+    klass.location_address = s.location_address
+    klass.default_duration_min = s.duration_min
+    klass.record_audio = s.record_audio
+    klass.record_video = s.record_video
+    klass.chat_enabled = bool(s.chat_enabled)
+    klass.sfu_enabled = bool(s.sfu_enabled)
+    klass.reminder_offsets = list(s.reminder_offsets or [])
+
+
+def _visible_session_count(class_id: UUID, db: DBSession) -> int:
+    return (
+        db.query(func.count(Session.id))
+        .filter(Session.class_id == class_id, Session.hidden_at.is_(None), Session.is_template.is_(False))
+        .scalar()
+    )
+
+
+def _sync_parent_class(s: Session, db: DBSession) -> None:
+    """클래스의 가시 세션이 1개일 때만 세션 설정을 클래스에 반영한다(Phase 1 의 클래스는 세션과 1:1).
+
+    다회차 클래스의 동기화 규칙은 Phase 3 이 다시 정한다.
+    """
+    if s.class_id is None:
+        return
+    db.flush()
+    if _visible_session_count(s.class_id, db) != 1:
+        return
+    klass = db.get(Class, s.class_id)
+    if klass is not None:
+        _sync_class_from_session(klass, s)
+
+
+def _hide_class_if_no_visible_sessions(s: Session, db: DBSession) -> None:
+    """마지막 가시 세션이 숨겨지면 클래스도 숨긴다(가시 세션 0개의 고아 클래스 방지)."""
+    if s.class_id is None:
+        return
+    db.flush()
+    if _visible_session_count(s.class_id, db) > 0:
+        return
+    klass = db.get(Class, s.class_id)
+    if klass is not None and klass.hidden_at is None:
+        klass.hidden_at = s.hidden_at
+
+
+def _get_or_create_placeholder_relationship(s: Session, db: DBSession) -> CounselingRelationship:
+    """호스트별 보관용 관계(is_placeholder, 상담사당 1개)를 찾거나 만들고, 동시 생성에 대비해 행을 잠근다."""
+    def _lookup() -> CounselingRelationship | None:
+        return (
+            db.query(CounselingRelationship)
+            .execution_options(include_hidden=True)
+            .filter(CounselingRelationship.counselor_id == s.host_id, CounselingRelationship.is_placeholder.is_(True))
+            .with_for_update()
+            .first()
+        )
+
+    rel = _lookup()
+    if rel is None:
+        try:
+            with db.begin_nested():
+                rel = CounselingRelationship(
+                    organization_id=s.organization_id,
+                    organization_attribution_known=True,
+                    counselor_id=s.host_id,
+                    is_placeholder=True,
+                    modality_default=s.type if s.type in ("clinical", "hypnosis") else None,
+                    status="active",
+                )
+                db.add(rel)
+                db.flush()
+        except IntegrityError:
+            # 동시에 다른 요청이 먼저 만든 경우(uq_rel_placeholder) — 그 행을 쓴다.
+            rel = _lookup()
+            if rel is None:
+                raise
+    if rel.hidden_at is not None:
+        rel.hidden_at = None
+    link_exists = (
+        db.query(CounselingRelationshipCounselor.id)
+        .filter_by(relationship_id=rel.id, counselor_id=s.host_id)
+        .first()
+    )
+    if link_exists is None:
+        # sessions 의 (relationship_id, host_id) 복합 FK 참조 대상
+        db.add(CounselingRelationshipCounselor(relationship_id=rel.id, counselor_id=s.host_id, status="active"))
+        db.flush()
+    return rel
+
+
+def _attach_parent(s: Session, db: DBSession) -> None:
+    """분류 함수로 부모를 정해 같은 트랜잭션에서 만들고 세션에 연결한다(세션 INSERT 전에 호출).
+
+    CHECK(ck_sessions_one_parent) 때문에 부모가 먼저 있어야 비템플릿 세션이 들어간다.
+    템플릿은 부모가 없다(T0). 분류 불가(X0)는 버그이므로 아무것도 만들지 않고 서버 오류로 끝낸다.
+    """
+    result = classify_session(
+        SessionFacts(is_template=bool(s.is_template), type=s.type, participant_mode=s.participant_mode)
+    )
+    if result.parent_kind == PARENT_NONE:
+        return
+    if result.parent_kind == PARENT_MEDITATION_CLASS:
+        klass = Class(
+            organization_id=s.organization_id,
+            organization_attribution_known=True,
+            created_by=s.host_id,
+            schedule_mode="fixed",
+            planned_session_count=1,
+            status="active",
+        )
+        _sync_class_from_session(klass, s)
+        db.add(klass)
+        db.flush()
+        db.add(ClassInstructor(class_id=klass.id, user_id=s.host_id, role="lead", status="active", added_by=s.host_id))
+        db.flush()
+        s.class_id = klass.id
+        s.seq = 1
+    elif result.parent_kind == PARENT_COUNSELING_RELATIONSHIP:
+        rel = _get_or_create_placeholder_relationship(s, db)
+        last_seq = (
+            db.query(func.max(Session.seq))
+            .execution_options(include_hidden=True)
+            .filter(Session.counseling_relationship_id == rel.id)
+            .scalar()
+        )
+        s.counseling_relationship_id = rel.id
+        s.seq = (last_seq or 0) + 1
+    else:
+        db.rollback()
+        logger.error("[session] 분류 불가 세션 생성 중단 rule=%s type=%s mode=%s", result.rule, s.type, s.participant_mode)
+        raise HTTPException(status_code=500, detail="서버 내부 오류가 발생했습니다")
+    s.session_kind = "regular"
+    s.host_state = "assigned"
 
 
 def _ensure_aware(dt: datetime) -> datetime:
@@ -333,6 +508,8 @@ def normalize_reminder_offsets(value) -> list[int]:
 
 
 def create_session(host_id: str, payload, db: DBSession) -> dict:
+    if settings.class_scheduling_enabled and payload.type == "meditation" and not getattr(payload, "is_template", False):
+        raise HTTPException(409, detail={"code": "use_class_scheduling"})
     host_uuid = _to_uuid(host_id)
     from app.services.org_management_service import require_active_user_org
     host = db.get(User, host_uuid)
@@ -404,7 +581,12 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
         record_audio=payload.record_audio,
         record_video=payload.record_video,
     )
+    _attach_parent(session, db)
     _add_session_with_code_retry(session, db)
+    if not getattr(payload, "is_template", False):
+        from app.services.session_live_legacy import pin_new_run_if_enabled
+
+        pin_new_run_if_enabled(db, session.id)  # SDD-246: 같은 트랜잭션에서 v2 고정(템플릿 제외)
 
     # SDD-028: 기본 run_id = session_id. 최초 실행의 회차 식별자로 자기 id 를 채운다.
     # 이후 "새 실행(명시적)"은 start_new_run 이 새 run_id 를 발급하고, pause/resume·이어하기는
@@ -561,7 +743,12 @@ def _clone_session_config(
         webrtc_room_id=None if is_template else uuid.uuid4(),
         is_template=is_template,
     )
+    _attach_parent(clone, db)
     _add_session_with_code_retry(clone, db)
+    if not is_template:
+        from app.services.session_live_legacy import pin_new_run_if_enabled
+
+        pin_new_run_if_enabled(db, clone.id)  # SDD-246: 복제 회차도 v2 고정(템플릿 제외)
     # SDD-028: 복제본도 새 실행 회차 — run_id = 자기 id.
     clone.run_id = clone.id
     return clone
@@ -585,6 +772,9 @@ def duplicate_session(
     호스트 상담사만 호출할 수 있다.
     """
     source = get_session_authorized(db, session_id, host_id, SessionAction.SESSION_DUPLICATE)
+    _require_legacy_mutation(source, db)
+    if settings.class_scheduling_enabled and source.type == "meditation":
+        raise HTTPException(409, detail={"code": "use_class_scheduling"})
     host_uuid = _to_uuid(host_id)
     host = db.get(User, host_uuid)
     if host is None:
@@ -698,6 +888,10 @@ def list_sessions(
 ) -> tuple[list[dict], int]:
     """내 클래스 목록 — 템플릿(is_template=True)은 제외한다(별도 /sessions/templates)."""
     uid = _to_uuid(user_id)
+    actor=db.query(User).filter_by(id=uid).first()
+    if actor and actor.role=="org_admin":
+        # 관리자 일정 메타는 /classes·/counseling DTO로 조회한다.
+        return [],0
     # host 이거나 참여자인 세션을 단일 쿼리로 모은다(중복 제거 포함).
     participates = (
         db.query(SessionParticipant.id)
@@ -732,8 +926,18 @@ def get_session(session_id: str, user_id: str, db: DBSession) -> dict:
     )
 
 
+def _require_legacy_mutation(session,db):
+    if session.class_id:
+        parent=db.query(Class).filter_by(id=session.class_id).first()
+        if parent and parent.recurrence_rule:
+            raise HTTPException(409,detail={"code":"use_class_scheduling_api"})
+
+
 def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dict:
     s = get_session_authorized(db, session_id, host_id, SessionAction.SESSION_UPDATE)
+    _require_legacy_mutation(s,db)
+    # SDD-214: 동시 PUT 이 같은 클래스에 서로의 변경을 덮어쓰지 않도록 세션 행을 잠그고 최신 값을 다시 읽는다.
+    s = _lock_session_for_capacity(s.id, db) or s
     if s.status in ("completed", "cancelled"):
         raise HTTPException(status_code=400, detail="종료된 세션은 수정할 수 없습니다")
 
@@ -825,6 +1029,7 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
         s.reminder_offsets = normalize_reminder_offsets(payload.reminder_offsets)
         reminders_changed = True
 
+    _sync_parent_class(s, db)
     db.commit()
     db.refresh(s)
     if promoted_by_capacity:
@@ -869,6 +1074,7 @@ def delete_session(session_id: str, host_id: str, db: DBSession) -> None:
     플랫폼 관리자 삭제(original_deletion_service)로만 지운다.
     """
     s = get_session_authorized(db, session_id, host_id, SessionAction.SESSION_DELETE)
+    _require_legacy_mutation(s,db)
     # SDD-209(B8 / BE-13): 준비·예정·취소 상태만 삭제할 수 있다. 열림(대기실 개방)·진행 중·완료는 거부 —
     # 열린 클래스는 먼저 취소(닫기)해야 하고, 완료된 기록은 삭제 대상이 아니다. 거부 시 알림·숨김 없음.
     if s.status not in _DELETABLE_STATUSES:
@@ -884,6 +1090,7 @@ def delete_session(session_id: str, host_id: str, db: DBSession) -> None:
         body=s.title or session_terms.notification_body_fallback(),
     )
     s.hidden_at = datetime.now(timezone.utc)
+    _hide_class_if_no_visible_sessions(s, db)
     db.commit()
 
 
@@ -907,10 +1114,52 @@ def _close_out_media_on_cancel(s: Session, db: DBSession) -> None:
 
 
 def transition_status(session_id: str, host_id: str, action: str, db: DBSession,
-                      *, restrict_from: set[str] | None = None) -> dict:
+                      *, restrict_from: set[str] | None = None, force: bool = False, confirmed_conflict_fingerprint: str | None = None) -> dict:
+    s, parent, early = transition_tx(session_id, host_id, action, db, restrict_from=restrict_from, force=force,
+                                     confirmed_conflict_fingerprint=confirmed_conflict_fingerprint, commit=True)
+    if early:
+        return _with_chat_room(_serialize(s, include_participant_pii=True), s.id, db)
+    return transition_after_commit(s, parent, action, db)
+
+
+def transition_tx(session_id: str, host_id: str, action: str, db: DBSession,
+                  *, restrict_from: set[str] | None = None, force: bool = False,
+                  confirmed_conflict_fingerprint: str | None = None, commit: bool = True):
+    """상태 전이의 DB 변경 부분. commit=False 면 호출자(SDD-246 live command)의 트랜잭션 안에서 실행되고 commit/rollback 을 하지 않는다.
+
+    반환: (세션, 부모 클래스, early) — early=True 면 이미 완료된 종료의 멱등 재응답(후속 부수효과 없음).
+    commit 이후 부수효과(알림·영상/음성 마감·채팅방)는 `transition_after_commit` 이 맡는다.
+    """
     if action not in TRANSITIONS:
         raise HTTPException(status_code=400, detail="알 수 없는 액션입니다")
     s = get_session_authorized(db, session_id, host_id, SessionAction.SESSION_TRANSITION)
+    parent=None
+    if s.class_id:
+        from app.services.class_write_service import lock_class_session,check_conflicts
+        from app.services.session_authz import authorize_session
+        parent,s=lock_class_session(db,s,host_id)
+        authorize_session(db,host_id,s,SessionAction.SESSION_TRANSITION)
+        if parent and parent.recurrence_rule and action in ("open","start"):
+            from app.schemas.class_scheduling import ScheduleRow,WriteCommand
+            row=ScheduleRow.model_construct(client_key=str(s.id),session_id=s.id,seq=s.seq,
+                scheduled_at=_ensure_aware(s.scheduled_at) if s.scheduled_at else _now(),
+                duration_min=s.duration_min,host_id=s.host_id,location_type=s.location_type,location_address=s.location_address)
+            actor=db.query(User).filter_by(id=_to_uuid(host_id)).one()
+            check_conflicts(db,[row],actor,WriteCommand(operation_key="transition",force=force,
+                confirmed_conflict_fingerprint=confirmed_conflict_fingerprint),{s.id},class_id=s.class_id)
+            from app.models.class_scheduling import SessionHostRequest
+            for pending in db.query(SessionHostRequest).filter(SessionHostRequest.session_id==s.id,
+                    SessionHostRequest.status.in_(("requested","pending_ack"))).all():
+                pending.status="expired";pending.resolved_at=_now()
+            s.host_state="assigned"
+
+    # SDD-217: 같은 클래스 회차 종료의 응답 유실·동시 재시도는 읽기로 끝낸다.
+    # 권한 재검사와 공통 잠금 이후이므로 제거된 진행자에게 재응답하지 않는다.
+    if parent and action == "end" and s.status == "completed" and restrict_from is None:
+        if commit:
+            db.commit()
+        return s, parent, True
+
     allowed_from, target = TRANSITIONS[action]
     # STATE-SWEEP-TOCTOU: 호출부가 전이 출발 상태를 더 좁힐 수 있다(예: 스윕은 open 에서만
     #   cancel). effective_from 을 사전 검사와 CAS WHERE 절 양쪽에 사용해, 조회 이후 다른
@@ -932,15 +1181,6 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession,
                 s.host_id,
             )
 
-    s.status = target
-    # SDD-015: 실제 시작/종료 시각 기록 (재시작 시 최초 시작 시각은 보존)
-    # SDD-088: 오픈 시각도 최초 1회만 기록 (대기 경과 표시·오픈→시작 지표용)
-    if action == "open" and s.opened_at is None:
-        s.opened_at = _now()
-    elif action == "start" and s.started_at is None:
-        s.started_at = _now()
-    elif action == "end":
-        s.ended_at = _now()
     # SDD-026: 상태 계약 버전 — 전이마다 정확히 +1 증가(계약: SDD-026).
     # STATE-01: 인메모리 선반영(s.state_version += 1) 후 CAS values 에서 다시 +1 을
     # 계산해 DB 에 +2 가 반영되던 문제를 제거한다. 원본 값을 스냅샷해 1회만 증가시킨다.
@@ -962,16 +1202,40 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession,
     elif action == "end":
         values["ended_at"] = now
 
-    result = db.execute(
-        update(Session)
-        .where(Session.id == s.id, Session.status.in_(effective_from))
-        .values(**values)
-    )
-    if result.rowcount == 0:
-        db.rollback()
-        raise HTTPException(status_code=409, detail="상태가 이미 변경되었습니다")
-    db.commit()
+    try:
+        result = db.execute(
+            update(Session)
+            .where(Session.id == s.id, Session.status.in_(effective_from))
+            .values(**values)
+        )
+        if result.rowcount == 0:
+            raise HTTPException(status_code=409, detail="상태가 이미 변경되었습니다")
+        if parent and action == "end":
+            from app.services.class_attendance_service import finalize_attendance
+            finalize_attendance(db, parent, s)
+        if parent and action == "end" and s.session_kind == "regular":
+            from app.services.class_rolling_service import finish_class_if_due
+            finish_class_if_due(db,parent,now)
+        if parent and action == "cancel" and s.session_kind == "regular":
+            # 즉석 클래스의 유일한 회차가 취소되면 부모·멤버도 닫는다(회원 '참여 중' 고착 방지).
+            from app.services.class_rolling_service import close_cancelled_instant_class
+            close_cancelled_instant_class(db,parent,now)
+        if commit:
+            db.commit()
+        else:
+            db.flush()
+    except Exception:
+        if commit:
+            db.rollback()
+        raise
     db.refresh(s)
+    return s, parent, False
+
+
+def transition_after_commit(s: Session, parent, action: str, db: DBSession) -> dict:
+    """transition_tx commit 이후의 부수효과(알림·마감·채팅방)와 응답 직렬화. best-effort 이며 실패해도 전이는 유지된다."""
+    if parent and action == "end":
+        _notify_participant_changed(s, db)
 
     # 클래스 오픈 시점에 세션 채팅방을 보장한다(생성 시 개설이 기본 — 기존 세션 대상 멱등 보완).
     # 입장한 회원이 곧바로 room_id 를 받아 채팅에 참여할 수 있게 한다.
@@ -1096,6 +1360,7 @@ def start_new_run(session_id: str, host_id: str, db: DBSession) -> dict:
     호스트 상담사만 호출할 수 있다.
     """
     s = get_session_authorized(db, session_id, host_id, SessionAction.SESSION_NEW_RUN)
+    _require_legacy_mutation(s,db)
     if s.status in _NON_RESTARTABLE_STATUSES:
         raise HTTPException(
             status_code=400,
@@ -1218,6 +1483,13 @@ def _notify_participant_changed(s: Session, db: DBSession | None = None) -> None
     try:
         from app.ws import session_live_namespace as live
 
+        participation = None
+        if db is not None:
+            from app.services.class_participation_service import lock_context, _expire, _now, build_snapshot
+            s, locked_participants = lock_context(db, s.id)
+            now = _now()
+            _expire(db, s, now)
+            participation = build_snapshot(db, s, locked_participants, now)
         active = [p for p in (s.participants or []) if not p.is_waitlisted]
         names: dict = {}
         if db is not None:
@@ -1237,6 +1509,9 @@ def _notify_participant_changed(s: Session, db: DBSession | None = None) -> None
             participants.append(
                 {
                     "participant_id": str(p.id),
+                    "member_id": str(p.member_id) if p.member_id else None,
+                    "attendance_status": p.attendance_status,
+                    "entered_at": p.entered_at.isoformat() if p.entered_at else None,
                     "user_id": str(p.user_id) if p.user_id else None,
                     "display_name": display_name,
                     "is_guest": p.user_id is None,
@@ -1252,15 +1527,22 @@ def _notify_participant_changed(s: Session, db: DBSession | None = None) -> None
                 }
             )
 
-        live.notify_participant_changed(
-            str(s.id),
-            {
-                "version": s.state_version or 0,
-                "participant_count": len(active),
-                "waitlist_count": sum(1 for p in (s.participants or []) if p.is_waitlisted),
-                "participants": participants,
-            },
-        )
+        if participation is not None:
+            by_id = {p['participant_id']: p for p in participation['participants']}
+            participants = [{**p, **by_id[p['participant_id']]} for p in participants if p['participant_id'] in by_id]
+        # 커밋으로 ORM이 만료되기 전에 식별자·본문·버전을 모두 같은 잠금에서 확정한다.
+        session_id = str(s.id)
+        payload = {
+            "version": s.state_version or 0,
+            "participation_version": participation['participation_version'] if participation else (s.participation_version or 0),
+            "participant_count": len(participants),
+            "waitlist_count": sum(1 for p in (s.participants or []) if p.is_waitlisted),
+            "participants": participants,
+        }
+        if participation is not None:
+            payload.update({key: participation[key] for key in ('generated_at', 'presence_ttl_seconds')})
+            db.commit()
+        live.notify_participant_changed(session_id, payload)
     except Exception as exc:
         # MB-ERR-003: best-effort 이벤트 발행 실패를 로그로 남긴다.
         logger.warning("[session] participant_changed 발행 실패 session=%s: %s", s.id, exc)
@@ -1536,6 +1818,9 @@ def remove_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
     participant.raise_hand = False
     db.flush()
     db.refresh(s)
+    # SDD-246: v2 회차면 제거(추방)를 같은 commit 에 outbox·auth_revision·capture 차단으로 남긴다(v1 회차는 no-op).
+    from app.services.class_participation_service import emit_participant_removed
+    emit_participant_removed(db, s, participant)
 
     promoted: list[SessionParticipant] = []
     if was_waitlisted and removed_position is not None:
@@ -1611,9 +1896,39 @@ def generate_livekit_token(
     return token.to_jwt()
 
 
+def _session_not_open_detail(s: Session) -> dict:
+    """SDD-231: 화면이 남은 시간을 보여 줄 수 있게 시작 예정 시각을 함께 싣는다(상태 코드·code 는 그대로)."""
+    detail: dict = {"code": "session_not_open"}
+    if s.scheduled_at is not None:
+        detail["scheduled_at"] = s.scheduled_at.isoformat()
+    return detail
+
+
 def join_session(session_id: str, user_id: str, user_name: str, db: DBSession) -> dict:
     """세션 참여자 입장 처리 — 상태 전이 + WebRTC 룸 ID 생성 + LiveKit 토큰 발급"""
     s = get_session_authorized(db, session_id, user_id, SessionAction.SESSION_JOIN)
+    if s.class_id:
+        from app.services.class_write_service import lock_class_session
+        from app.services.class_attendance_service import mark_entered, require_eligible
+        parent, s = lock_class_session(db, s, user_id)
+        if parent and parent.recurrence_rule and s.status not in ("open", "in_progress"):
+            raise HTTPException(409, detail=_session_not_open_detail(s))
+        entered = db.query(SessionParticipant).filter_by(session_id=s.id, user_id=_to_uuid(user_id)).first()
+        if entered is not None:
+            if s.status != "in_progress":
+                raise HTTPException(400, detail="현재 세션에 입장할 수 없는 상태입니다")
+            require_eligible(db, entered)
+            from app.services.recording_consent_service import require_recording_consent
+            require_recording_consent(entered)  # SDD-220(F1): 구 join 경로도 같은 동의 검증을 거친다
+            if not s.webrtc_room_id:
+                s.webrtc_room_id = uuid.uuid4()
+            token = generate_livekit_token(str(s.webrtc_room_id), user_name, user_id)
+            mark_entered(db, s, entered, _now())
+            db.commit()
+            _notify_participant_changed(s, db)
+            result = _serialize(s)
+            result["livekit_token"] = token
+            return result
 
     # webrtc_room_id가 없으면 생성 (상태 전이와 분리해 먼저 확정)
     if not s.webrtc_room_id:
@@ -1648,6 +1963,9 @@ def join_session(session_id: str, user_id: str, user_name: str, db: DBSession) -
         .filter(SessionParticipant.session_id == s.id, SessionParticipant.user_id == _to_uuid(user_id))
         .first()
     )
+    if entered is not None:
+        from app.services.recording_consent_service import require_recording_consent
+        require_recording_consent(entered)  # SDD-220(F1)
     if entered is not None and entered.entered_at is None:
         entered.entered_at = _now()
         db.commit()
@@ -1705,6 +2023,7 @@ def _enter_response(s: Session, participant: SessionParticipant | None, db: DBSe
         "participant_id": str(participant.id) if participant is not None else None,
         "is_guest": is_guest,
         "is_waitlisted": bool(participant.is_waitlisted) if participant is not None else False,
+        "eeg_collection_consented": participant.eeg_collection_consented if participant is not None else None,
         # 참여자 PII(성별·생년월일)는 입장 응답에 싣지 않는다.
         "session": _with_chat_room(_serialize(s, include_participant_pii=False), s.id, db),
     }
@@ -1717,8 +2036,65 @@ def _member_profile_pii(user_id: UUID, db: DBSession) -> tuple[str | None, date 
 
 def _mark_entered(participant: SessionParticipant) -> None:
     """SDD-209(B9/BE-11): 최초 입장 시각을 한 번만 기록한다(재입장·복귀로 덮어쓰지 않는다)."""
-    if participant.entered_at is None:
-        participant.entered_at = _now()
+    db = object_session(participant)
+    session = db.get(Session, participant.session_id)
+    from app.services.class_attendance_service import mark_entered
+    mark_entered(db, session, participant, _now())
+
+
+def _precheck_recording_consent(
+    s: Session,
+    db: DBSession,
+    *,
+    member_uid: UUID | None,
+    entry_credential: str | None,
+    granted: bool,
+) -> None:
+    """SDD-220(F1): 입장 처리(참여자 생성·멤버십·입장 자격) 이전에 회차별 녹음·녹화 동의를 확인한다.
+
+    이번 요청에서 동의했거나, 이 회차의 본인 참여자 행에 동의가 이미 저장돼 있으면 통과한다.
+    아니면 아무것도 쓰기 전에 403 RECORDING_CONSENT_REQUIRED 로 거부한다(다음 단계·자격·토큰 0).
+    """
+    from app.services import entry_credential_service
+    from app.services.recording_consent_service import is_recorded, recording_required
+
+    if granted:
+        return
+    existing: SessionParticipant | None = None
+    if member_uid is not None:
+        existing = (
+            db.query(SessionParticipant)
+            .filter(SessionParticipant.session_id == s.id, SessionParticipant.user_id == member_uid)
+            .first()
+        )
+    elif entry_credential:
+        try:
+            existing = entry_credential_service.resolve_participant(db, entry_credential, s.id, include_cancelled=True)
+        except HTTPException:
+            existing = None
+    if not is_recorded(existing):
+        raise recording_required()
+
+
+def _apply_entry_consents(
+    db: DBSession,
+    participant: SessionParticipant,
+    *,
+    recording_consent: bool | None,
+    recording_notice_version: str | None,
+    eeg_collection_consent: bool | None,
+    eeg_notice_version: str | None,
+) -> None:
+    """입장 요청에 실린 동의를 참여자 행에 저장한다(커밋은 호출자). 뇌파 수집은 리포트/연구 선택과 별개로 기록한다."""
+    from app.services import recording_consent_service as rcs
+
+    if recording_consent and not rcs.is_recorded(participant):
+        rcs.apply_recording_consent(participant, recording_notice_version)
+    if eeg_collection_consent is not None:
+        rcs.apply_eeg_choice(participant, eeg_collection_consent, eeg_notice_version)
+    elif participant.eeg_collection_consented is None:
+        # 첫 입장에서 따로 고르지 않았다 — 회원은 계정 설정값, 비회원은 미동의(true 로 추정하지 않는다).
+        rcs.apply_eeg_choice(participant, rcs.account_eeg_consent(db, participant.user_id), None)
 
 
 def _enter_resolved(
@@ -1732,11 +2108,64 @@ def _enter_resolved(
     email: str | None = None,
     entry_credential: str | None = None,
     require_invite: bool = False,
+    recording_consent: bool | None = None,
+    recording_notice_version: str | None = None,
+    eeg_collection_consent: bool | None = None,
+    eeg_notice_version: str | None = None,
 ) -> dict:
     """확인된 활성 클래스에 참여자를 만들거나 되살려 입장 자격과 함께 돌려준다."""
     from app.services import entry_credential_service
 
     member_uid = _to_uuid(user_id) if user_id else None
+    if not (member_uid is not None and s.host_id == member_uid):
+        _precheck_recording_consent(
+            s, db, member_uid=member_uid, entry_credential=entry_credential, granted=bool(recording_consent)
+        )
+    consent_kwargs = dict(
+        recording_consent=recording_consent,
+        recording_notice_version=recording_notice_version,
+        eeg_collection_consent=eeg_collection_consent,
+        eeg_notice_version=eeg_notice_version,
+    )
+    membership=None
+    pre_open=False  # SDD-231: 열리기 전 대기실 입장이면 출석(entered_at)을 남기지 않는다
+    if s.class_id:
+        parent=db.query(Class).filter_by(id=s.class_id).first()
+        if parent and parent.recurrence_rule:
+            from app.services.class_write_service import lock_class_session
+            from app.services.session_authz import authorize_session
+            from app.services.class_membership_service import invite_members
+            parent,s=lock_class_session(db,s,member_uid)
+            # SDD-231: 열리기 전이라도 허용 구간이면 대기실 입장은 받는다(미디어·출석은 열린 뒤).
+            pre_open = s.status not in ("open","in_progress") and class_code_service.pre_open_entry_allowed(s)
+            if s.status not in ("open","in_progress") and not pre_open:
+                raise HTTPException(409,detail=_session_not_open_detail(s))
+            if member_uid==s.host_id:
+                authorize_session(db,member_uid,s,SessionAction.SESSION_JOIN)
+            elif member_uid:
+                actor=db.query(User).filter_by(id=member_uid).first()
+                if not actor or actor.role!="client" or actor.status!="active":
+                    raise HTTPException(403,detail={"code":"use_observation_endpoint"})
+                invited_makeup=(parent.status=="completed" and s.session_kind=="makeup" and require_invite and
+                    db.query(SessionParticipant).filter_by(session_id=s.id,user_id=member_uid).first() is not None)
+                if require_invite and not invited_makeup:
+                    # 직접 링크는 기존 초대 자격만 사용한다. 코드 가입보다 먼저 검사한다.
+                    invited = db.query(SessionParticipant).filter_by(
+                        session_id=s.id, user_id=member_uid
+                    ).first()
+                    existing_member = db.query(ClassMember).filter_by(
+                        class_id=parent.id, user_id=member_uid, status="active"
+                    ).first()
+                    if invited is None or existing_member is None:
+                        raise HTTPException(
+                            status_code=403,
+                            detail="초대받은 클래스가 아니에요. 클래스 코드로 입장해 주세요",
+                        )
+                if not invited_makeup:
+                    membership=invite_members(db,parent,[member_uid],member_uid,_now(),via="code")[0]
+    if s.class_id:
+        from app.services.class_access_service import queue_live_reconcile
+        queue_live_reconcile(db, s.class_id)
     promoted: list[SessionParticipant] = []
     if member_uid is not None and s.host_id == member_uid:
         if require_invite:
@@ -1786,7 +2215,11 @@ def _enter_resolved(
         if participant.is_waitlisted:
             # 재입장이 순번을 앞지르지 못한다 — 정원 여유가 있으면 대기열 앞에서부터 순서대로 승격한다.
             promoted = _promote_waitlist_all(s, db)
-        _mark_entered(participant)
+        if membership is not None:
+            participant.member_id=membership.id
+        _apply_entry_consents(db, participant, **consent_kwargs)
+        if not pre_open:
+            _mark_entered(participant)
         db.commit()
         db.refresh(s)
         _notify_participant_changed(s, db)
@@ -1838,9 +2271,11 @@ def _enter_resolved(
             participant.birth_date = birth_date
             participant.report_email = clean_email
     db.flush()
+    _apply_entry_consents(db, participant, **consent_kwargs)
     if participant.is_waitlisted:
         promoted = _promote_waitlist_all(s, db)
-    _mark_entered(participant)
+    if not pre_open:
+        _mark_entered(participant)
     db.commit()
     db.refresh(s)
     _notify_participant_changed(s, db)
@@ -1858,16 +2293,31 @@ def enter_session(
     birth_date: date | None = None,
     email: str | None = None,
     entry_credential: str | None = None,
+    recording_consent: bool | None = None,
+    recording_notice_version: str | None = None,
+    eeg_collection_consent: bool | None = None,
+    eeg_notice_version: str | None = None,
 ) -> dict:
     """코드로 입장 — 로그인·초대 행 없이 가능. 성공 시 클래스/참여자 범위의 입장 자격을 발급한다."""
     s = _get_session_by_code(code, db)
     return _enter_resolved(
         s, db, user_id=user_id, name=name, gender=gender, birth_date=birth_date,
         email=email, entry_credential=entry_credential,
+        recording_consent=recording_consent, recording_notice_version=recording_notice_version,
+        eeg_collection_consent=eeg_collection_consent, eeg_notice_version=eeg_notice_version,
     )
 
 
-def enter_session_as_invited(session_id: str, user_id: str, db: DBSession) -> dict:
+def enter_session_as_invited(
+    session_id: str,
+    user_id: str,
+    db: DBSession,
+    *,
+    recording_consent: bool | None = None,
+    recording_notice_version: str | None = None,
+    eeg_collection_consent: bool | None = None,
+    eeg_notice_version: str | None = None,
+) -> dict:
     """초대받은 로그인 회원의 편의 경로 — 초대 행이 있을 때만 코드 없이 입장한다(입장 조건이 아님)."""
     sid = _to_uuid(session_id)
     s = db.query(Session).filter(Session.id == sid, Session.is_template.is_(False)).first()
@@ -1875,7 +2325,11 @@ def enter_session_as_invited(session_id: str, user_id: str, db: DBSession) -> di
         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
     if s.status in _CLOSED_STATUSES:
         raise HTTPException(status_code=409, detail="종료된 클래스에는 입장할 수 없어요")
-    return _enter_resolved(s, db, user_id=user_id, require_invite=True)
+    return _enter_resolved(
+        s, db, user_id=user_id, require_invite=True,
+        recording_consent=recording_consent, recording_notice_version=recording_notice_version,
+        eeg_collection_consent=eeg_collection_consent, eeg_notice_version=eeg_notice_version,
+    )
 
 
 def revoke_entry_credential(entry_credential: str | None, db: DBSession) -> None:
@@ -1908,9 +2362,17 @@ def participant_livekit_token(
         sid, db, entry_credential=entry_credential, current_user_id=current_user_id,
         participant_id=participant_id,
     )
+    from app.services.class_attendance_service import require_eligible
+    require_eligible(db, participant, allow_excused=False)
+    # SDD-220(F1): 회차 녹음·녹화 동의가 저장된 참여자에게만 토큰을 발급한다.
+    from app.services.recording_consent_service import require_recording_consent
+    require_recording_consent(participant)
     # LIVE-04: 완료/취소된 세션에서는 토큰을 발급하지 않는다.
     if s.status in _CLOSED_STATUSES:
         raise HTTPException(status_code=400, detail="종료된 세션입니다")
+    # SDD-231: 열리기 전 대기실 입장자는 회차가 열릴 때까지 미디어 토큰을 받지 못한다.
+    if s.class_id and s.status in ("ready", "scheduled"):
+        raise HTTPException(status_code=409, detail=_session_not_open_detail(s))
     if not s.webrtc_room_id:
         raise HTTPException(status_code=400, detail="아직 상담사 화상이 시작되지 않았습니다")
 
@@ -1927,6 +2389,18 @@ def participant_livekit_token(
 
     # SDD-094: 발언권 기반 송신 규칙 — 온라인 + (1:1 상시 또는 그룹≤20 & speaking=True).
     can_publish = _compute_can_publish(s, participant)
+
+    # SDD-231: 열리기 전 사전 입장자는 입장 시각·출석이 비어 있다 — 실제 라이브 입장(토큰 발급)에서 최초 1회 기록한다.
+    if s.class_id and participant.entered_at is None:
+        # SDD-246: v2 회차에서는 미디어 토큰 조회가 입장(출석)을 만들지 않는다. 입장은 entry.enter command 하나로만 일어난다.
+        from app.services.session_live_legacy import PROTOCOL_V2, get_session_protocol
+        pin = get_session_protocol(db, s.id)
+        if pin is not None and pin.protocol == PROTOCOL_V2:
+            raise HTTPException(status_code=409, detail={"code": "entry_required"})
+        from app.services.class_attendance_service import mark_entered
+        mark_entered(db, s, participant, _now())
+        db.commit()
+        _notify_participant_changed(s, db)
 
     token = generate_livekit_token(
         room_name=str(s.webrtc_room_id),
@@ -1958,7 +2432,8 @@ def get_entry_state(
     if not s:
         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
     p = resolve_participant_actor(
-        sid, db, entry_credential=entry_credential, current_user_id=current_user_id
+        sid, db, entry_credential=entry_credential, current_user_id=current_user_id,
+        allow_completed=True
     )
     # SDD-023/026: 본인 최신 EEG feature 윈도우 (없으면 null). LIMIT 1 헬퍼로 최신 1건만 조회.
     latest = eeg_query.latest_feature_window(db, s.id, p.id)
@@ -2113,16 +2588,21 @@ def cancel_waitlist(
     if not participant.is_waitlisted:
         raise HTTPException(status_code=409, detail="이미 입장한 참여자는 대기 취소를 할 수 없어요")
 
+    apply_waitlist_cancel(s, participant, db)
+    db.commit()
+    db.refresh(s)
+    _notify_participant_changed(s, db)
+    return {"participant_id": str(participant.id), "cancelled": True, "changed": True}
+
+
+def apply_waitlist_cancel(s: Session, participant: SessionParticipant, db: DBSession) -> None:
+    """대기 취소의 DB 변경(commit 없음). REST(cancel_waitlist)와 SDD-246 live command 가 같은 단계를 쓴다."""
     participant.waitlist_cancelled_at = _now()
     participant.waitlist_position = None
     participant.raise_hand = False
     participant.speaking = False
     db.flush()
     _renumber_waitlist(s, db)
-    db.commit()
-    db.refresh(s)
-    _notify_participant_changed(s, db)
-    return {"participant_id": str(participant.id), "cancelled": True, "changed": True}
 
 
 def resolve_participant_actor(
@@ -2132,6 +2612,7 @@ def resolve_participant_actor(
     entry_credential: str | None,
     current_user_id: str | None,
     participant_id: str | None = None,
+    allow_completed: bool = False,
 ) -> SessionParticipant:
     """소유권 통합(SDD-209 B5b) — 요청 주체의 본인 참여자 행을 확정한다.
 
@@ -2178,6 +2659,8 @@ def resolve_participant_actor(
             raise HTTPException(status_code=403, detail="본인 참여자만 요청할 수 있습니다")
         if participant.id != explicit:
             raise HTTPException(status_code=403, detail="본인 참여자만 요청할 수 있습니다")
+    from app.services.class_attendance_service import require_eligible
+    require_eligible(db, participant, allow_completed=allow_completed)
     return participant
 
 
@@ -2217,7 +2700,8 @@ def set_report_choice(
     - 입장·업로드·리포트 생성은 이 선택의 성공 여부와 무관하다(기본 제외로 진행).
     """
     sid = _to_uuid(session_id)
-    s = db.query(Session).filter(Session.id == sid).first()
+    from app.services.class_member_consent_service import lock_session_choice
+    s = lock_session_choice(db,sid,current_user_id)
     if not s:
         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
     if s.status in ("completed", "cancelled"):
@@ -2228,6 +2712,12 @@ def set_report_choice(
         participant, db, entry_credential=entry_credential, current_user_id=current_user_id
     )
 
+    if notice_acknowledged and (notice_version not in ("r5-1", "class-team-v1") or
+            (notice_version=="class-team-v1" and s.type!="meditation")):
+        raise HTTPException(422,detail={"code":"invalid_notice_version"})
+
+    if s.class_id:
+        participant.report_consent_override = True
     previous = bool(participant.report_included)
     changed = previous != report_included
     if changed:
@@ -2245,6 +2735,9 @@ def set_report_choice(
     if notice_acknowledged:
         participant.report_notice_ack_at = _now()
         participant.report_notice_version = notice_version
+    if s.class_id:
+        from app.services.class_access_service import queue_live_reconcile
+        queue_live_reconcile(db, s.class_id)
     db.commit()
     db.refresh(participant)
     if changed:
@@ -2304,6 +2797,65 @@ def raise_hand(
     }
 
 
+def lower_hand(
+    session_id: str,
+    participant_id: str,
+    db: DBSession,
+    *,
+    entry_credential: str | None = None,
+    current_user_id: str | None = None,
+) -> dict:
+    """참여자 손 내리기(손들기 취소) — raise_hand=False 로 바꾸고 호스트/본인에게 통지한다.
+
+    raise_hand 와 같은 인가(본인 로그인 또는 입장 자격)·종료 세션 검사를 적용한다.
+    이미 내려가 있으면 멱등 성공(통지 없음). 발언 중(speaking) 상태는 건드리지 않는다.
+    """
+    sid = _to_uuid(session_id)
+    s = db.query(Session).filter(Session.id == sid).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+    if s.status in ("completed", "cancelled"):
+        raise HTTPException(status_code=400, detail="종료된 세션입니다")
+
+    participant = _get_participant_in_session(sid, participant_id, db)
+    # SDD-235: 진행자(set_speaking 과 같은 인가)는 다른 참여자의 손도 내릴 수 있다.
+    #   진행자가 아니면 기존 본인(로그인/입장 자격) 인가로 폴백 — 타인·비진행자는 403.
+    if _is_speaking_manager(s, current_user_id, db):
+        lowered_by = "host"
+    else:
+        _authorize_participant_access(
+            participant, db, entry_credential=entry_credential, current_user_id=current_user_id
+        )
+        lowered_by = "self"
+
+    if participant.raise_hand:
+        participant.raise_hand = False
+        db.commit()
+        db.refresh(participant)
+        _notify_speaking_changed(sid, participant)
+
+    return {
+        "participant_id": str(participant.id),
+        "raise_hand": participant.raise_hand,
+        "speaking": participant.speaking,
+        "can_publish": _compute_can_publish(s, participant),
+        "lowered_by": lowered_by,
+    }
+
+
+def _is_speaking_manager(s: Session, user_id: str | None, db: DBSession) -> bool:
+    """set_speaking 과 같은 진행자 판정 — 세션 호스트 + LIVE_METRICS_READ 인가 통과.
+
+    호스트가 아니면 False. 호스트인데 인가 거부면 authorize_session 의 예외를 그대로 올린다.
+    """
+    if not user_id or s.host_id != _to_uuid(user_id):
+        return False
+    from app.services.session_authz import authorize_session
+
+    authorize_session(db, user_id, s, SessionAction.LIVE_METRICS_READ)
+    return True
+
+
 def set_speaking(
     session_id: str,
     host_id: str,
@@ -2325,6 +2877,8 @@ def set_speaking(
     if s.host_id != _to_uuid(host_id):
         raise HTTPException(status_code=403, detail="발언권은 상담사만 부여/해제할 수 있습니다")
 
+    from app.services.session_authz import authorize_session
+    authorize_session(db,host_id,s,SessionAction.LIVE_METRICS_READ)
     participant = _get_participant_in_session(sid, participant_id, db)
 
     # AUTHZ-WAITLIST-SPEAKING: 대기열 참여자는 아직 입장 전이므로 발언권을 부여할 수 없다
@@ -2449,6 +3003,8 @@ def resolve_audio_sync_host(
         raise HTTPException(status_code=403, detail="상담사만 재생을 제어할 수 있습니다")
     if s.host_id != _to_uuid(current_user_id):
         raise HTTPException(status_code=403, detail="상담사만 재생을 제어할 수 있습니다")
+    from app.services.session_authz import authorize_session
+    authorize_session(db,current_user_id,s,SessionAction.AUDIO_RECORD)
     return {"session_id": str(sid), "status": s.status}
 
 
@@ -2521,6 +3077,7 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
             heart_rate = None
             respiratory_rate = None
             rmssd = None
+            sdnn = None
         else:
             device_status = st["device_status"]
             signal_quality = st["signal_quality"]
@@ -2533,6 +3090,7 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
             heart_rate = st["heart_rate"]
             respiratory_rate = st["respiratory_rate"]
             rmssd = st["rmssd"]
+            sdnn = st.get("sdnn")
             # SDD-026: 접촉 실패(lead_off)와 기기 단절(disconnected)을 분리 집계한다.
             if device_status == "lead_off":
                 contact_fail += 1
@@ -2569,6 +3127,7 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
                 "heart_rate": heart_rate,
                 "respiratory_rate": respiratory_rate,
                 "rmssd": rmssd,
+                "sdnn": sdnn,
                 # SDD-094: 발언권 상태 — 상담사 모니터 초기 로드/새로고침 시 손들기·발언 표시용
                 "raise_hand": p.raise_hand,
                 "speaking": p.speaking,
@@ -2581,7 +3140,7 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
         # SDD-026: 상태 계약 버전 + 시작 시각 — join snapshot/이벤트와 동일 계약
         "version": s.state_version or 0,
         "started_at": s.started_at,
-        "access_code": s.access_code,
+        "access_code": class_code_service.display_code(object_session(s), s),
         # WS-SNAPSHOT-METRICS-KEY: join 스냅샷 소비자 계약이 'metrics'(백엔드 내부 핸들러)와
         #   'participants'(프론트 SessionLiveJoinSnapshot)로 갈려 있어 둘 다 노출한다.
         #   REST(/live-metrics)는 response_model 이 'metrics' 만 남기므로 무영향.
@@ -2638,6 +3197,46 @@ def _participant_live_snapshot(s: Session, participant: SessionParticipant, db: 
     }
 
 
+def completed_participant_state(session_id, user_id, participant_id, db, *, entry_credential=None):
+    """수료로 활동 자격이 끝난 본인에게만 종료·오디오 정리용 최소 상태를 반환한다."""
+    from app.services import entry_credential_service
+
+    session = db.query(Session).filter_by(id=_to_uuid(session_id)).first()
+    if session is None or session.status not in _CLOSED_STATUSES or not session.class_id:
+        return None
+    participant = None
+    if user_id:
+        actor = db.query(User).filter_by(id=_to_uuid(user_id), status="active").first()
+        if actor is None:
+            return None
+        participant = db.query(SessionParticipant).filter_by(
+            session_id=session.id, user_id=actor.id, id=_to_uuid(participant_id)
+        ).first()
+    elif entry_credential:
+        try:
+            participant = entry_credential_service.resolve_participant(db, entry_credential, session.id)
+        except HTTPException:
+            return None
+        if str(participant.id) != str(participant_id):
+            return None
+    if (participant is None or not participant.member_id or participant.is_waitlisted
+            or participant.entered_at is None or participant.removed_at
+            or participant.waitlist_cancelled_at or participant.superseded_by_participant_id
+            or participant.attendance_status == "withdrawn"):
+        return None
+    member = db.get(ClassMember, participant.member_id)
+    canonical = db.get(ClassMember, member.canonical_member_id or member.id) if member else None
+    parent = db.get(Class, session.class_id)
+    if canonical is None or canonical.status != "completed" or parent is None or parent.status != "completed":
+        return None
+    return {
+        "session_id": str(session.id), "status": session.status,
+        "version": session.state_version or 0,
+        "started_at": session.started_at.isoformat() if session.started_at else None,
+        "ended_at": session.ended_at.isoformat() if session.ended_at else None,
+    }
+
+
 def resolve_live_join(
     session_id: str,
     user_id: str | None,
@@ -2676,6 +3275,11 @@ def resolve_live_join(
         snapshot["role"] = "host"
         return {"role": "host", "participant_id": None, "snapshot": snapshot}
 
+    if uid is not None:
+        from app.services.class_access_service import can_observe,observer_snapshot
+        if can_observe(db,uid,s):
+            return {"role":"observer","participant_id":None,"snapshot":observer_snapshot(s)}
+
     # 참가자(회원/비회원)
     try:
         participant = resolve_participant_actor(
@@ -2686,7 +3290,8 @@ def resolve_live_join(
     except HTTPException:
         participant = None
 
-    if participant is None:
+    from app.services.class_attendance_service import eligible_participant
+    if participant is None or not eligible_participant(db, participant, allow_excused=False):
         return None
 
     return {
@@ -2835,6 +3440,7 @@ def _aggregate_window_stats(session_id, participant_ids: list, db: DBSession) ->
             "heart_rate": latest.heart_rate,
             "respiratory_rate": latest.respiratory_rate,
             "rmssd": latest.rmssd,
+            "sdnn": latest.sdnn,
         }
     return result
 
@@ -2858,8 +3464,11 @@ def resolve_upload_participant(
     db: DBSession,
     *,
     entry_credential: str | None = None,
+    allow_completed: bool = False,
 ) -> SessionParticipant:
     """업로드 소유 참가자를 확인한다 (REST 배치 + WS 실시간 공유 로직).
+
+    allow_completed=True: 종료된 회차의 raw/산출물 사후 업로드·ACK 허용(기기에 남은 사본 전송).
 
     SDD-209(B5b) 소유권 통합 — 로그인 회원은 본인 행으로, 비회원은 **입장 자격**으로만 업로드한다.
     - 명시 participant_id 는 확정된 본인 행과 같아야 한다 → 타인 대리 업로드 403.
@@ -2868,9 +3477,12 @@ def resolve_upload_participant(
     """
     participant = resolve_participant_actor(
         sid, db, entry_credential=entry_credential, current_user_id=current_user_id,
-        participant_id=participant_id,
+        participant_id=participant_id, allow_completed=allow_completed,
     )
     _assert_upload_eligible(participant)
+    # SDD-220: 뇌파 수집을 거부한 참여자는 리포트 반영과 무관하게 EEG 업로드(REST·WS)를 받지 않는다.
+    from app.services.recording_consent_service import assert_eeg_upload_allowed
+    assert_eeg_upload_allowed(participant)
     return participant
 
 
@@ -2951,6 +3563,10 @@ def _persist_feature_items(
             cognitive_load=f.cognitive_load,
             emotional_stability=f.emotional_stability,
             hemispheric_balance=f.hemispheric_balance,
+            total_neural_activity=getattr(f, "total_neural_activity", None),
+            faa=getattr(f, "faa", None),
+            source_feature_alias=getattr(f, "source_feature_alias", None),
+            algorithm_version=getattr(f, "algorithm_version", None),
             signal_quality=f.signal_quality,
             sdnn=f.sdnn,
             rmssd=f.rmssd,

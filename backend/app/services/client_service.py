@@ -118,65 +118,32 @@ def list_clients(
     page: int,
     size: int,
     db: Session,
-) -> tuple[list[dict], int]:
-    """상담사 본인의 내담자 목록 + 검색 + 페이징"""
-    query = (
-        db.query(User, ClientProfile)
-        .join(ClientCounselorLink, ClientCounselorLink.client_id == User.id)
-        .outerjoin(ClientProfile, ClientProfile.user_id == User.id)
-        .filter(ClientCounselorLink.counselor_id == UUID(counselor_id))
-        # SEC-09: 종료(ended)된 연결의 내담자는 목록에서 제외한다 (IDOR 방지).
-        .filter(ClientCounselorLink.status == "active")
+    class_id: str | None = None,
+    active_within_days: int | None = None,
+    counselor_filter_id: str | None = None,
+    member_type: str | None = None,
+) -> tuple[list[dict], int, list[dict], list[dict]]:
+    """내담자 목록 + 서버 검색·필터 + 페이징 (SDD-230 개요 집계).
+
+    상담사는 본인 active 연결 회원, 기관관리자는 거기에 관리 기관 회원을 더한다.
+    """
+    from app.services import client_overview_service
+
+    data = client_overview_service.list_clients_overview(
+        counselor_id, q, page, size, class_id, active_within_days, db,
+        counselor_filter_id=counselor_filter_id, member_type=member_type,
     )
-
-    if q:
-        like = f"%{q}%"
-        query = query.filter(
-            (User.name.ilike(like)) | (User.email.ilike(like))
-        )
-
-    total = query.count()
-    rows = (
-        query.order_by(User.name)
-        .offset((page - 1) * size)
-        .limit(size)
-        .all()
-    )
-
-    clients = []
-    for user, profile in rows:
-        clients.append(
-            {
-                "id": str(user.id),
-                "name": user.name,
-                "email": user.email,
-                "concerns": profile.concerns if profile else [],
-                "last_session_at": None,  # 추후 세션 연동
-            }
-        )
-
-    return clients, total
+    return data["clients"], data["total"], data["class_options"], data["counselor_options"]
 
 
 def get_client_profile(
     client_id: str, counselor_id: str, db: Session
 ) -> dict:
-    """내담자 프로필 상세 (본인 내담자만)"""
-    link = (
-        db.query(ClientCounselorLink)
-        .filter(
-            ClientCounselorLink.client_id == UUID(client_id),
-            ClientCounselorLink.counselor_id == UUID(counselor_id),
-            # SEC-09: active 연결만 허용 — 종료된 연결로는 접근 불가 (IDOR 방지).
-            ClientCounselorLink.status == "active",
-        )
-        .first()
-    )
-    if not link:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="접근 권한이 없습니다",
-        )
+    """내담자 프로필 상세 (본인 active 연결 회원 + 기관관리자의 관리 기관 회원)"""
+    from app.services import client_overview_service
+
+    # SEC-09: active 연결만 허용(IDOR 방지). 기관관리자는 관리 기관 회원도 허용하며 이때 link=None.
+    link = client_overview_service.require_client_access(db, counselor_id, client_id)
 
     user = db.query(User).filter(User.id == client_id).first()
     profile = (
@@ -189,14 +156,20 @@ def get_client_profile(
         "id": str(user.id),
         "name": user.name,
         "email": user.email,
-        "phone": user.phone,
+        # SDD-230: 기본 응답은 마스킹 — 원문은 POST /clients/{id}/contact-reveal 로만.
+        "phone": None,
+        "phone_masked": client_overview_service.mask_phone(user.phone),
+        "age": client_overview_service.calc_age(profile.birth_date) if profile else None,
         "gender": profile.gender if profile else None,
-        "birth_date": str(profile.birth_date) if profile and profile.birth_date else None,
+        "birth_date": None,
         "concerns": profile.concerns if profile else [],
         "interests": profile.interests if profile else [],
         "bio": profile.bio if profile else None,
         "profile_image_url": profile.profile_image_url if profile else None,
-        "memo": link.memo,
+        # 메모는 상담사 개인 메모 — 본인 연결이 없는 기관관리자에게는 노출하지 않는다.
+        "memo": link.memo if link else None,
+        "memo_editable": link is not None,
+        "member_type": client_overview_service.profile_member_type(db, counselor_id, user.id),
     }
 
 

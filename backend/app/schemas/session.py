@@ -158,7 +158,8 @@ class SessionResponse(BaseModel):
     type: SessionType
     custom_type_name: str | None = None
     status: SessionStatus
-    host_id: str
+    host_id: str | None
+    host_state: Literal["assigned", "pending_ack", "needs_reassign"] | None = None
     # SDD-209(B8): 진행자(상담사) 표시 이름 — 참가자 화면에서 호스트 id 대신 이름을 보여준다.
     host_name: str | None = None
     scheduled_at: datetime | None = None
@@ -192,6 +193,11 @@ class SessionResponse(BaseModel):
     waitlist_count: int = 0
     # SDD-209(B7): 초대 응답에서만 채워진다 — 참여자 등록 성공과 알림 요청 결과를 분리.
     invite_result: "InviteResult | None" = None
+    # SDD-214: 세션의 상위(클래스·상담 관계) 정보. 부모가 없는 세션(템플릿 등)은 모두 null.
+    class_id: str | None = None
+    class_title: str | None = None
+    seq: int | None = None
+    area: Literal["meditation", "counseling"] | None = None
 
     model_config = {"from_attributes": True}
 
@@ -272,15 +278,59 @@ class EnterVerifyResponse(BaseModel):
 
 
 class EnterRequest(BaseModel):
-    """SDD-209(B5a): 코드 + 개인정보로 입장. 비로그인은 이름·성별·생년월일·이메일 필수, 로그인 회원은 생략 가능."""
+    """SDD-209(B5a): 코드 + 개인정보로 입장. 비로그인은 이름·성별·생년월·이메일 필수, 로그인 회원은 생략 가능. 이전 생년월일 요청도 호환."""
 
     code: str = Field(..., max_length=64)
     name: str | None = Field(None, min_length=1, max_length=100)
     gender: Literal["male", "female", "other"] | None = None
-    birth_date: str | None = None
+    birth_date: str | None = None  # 이전 클라이언트 요청 호환
+    birth_year_month: str | None = None
     email: EmailStr | None = None
     # 복귀: 이전에 받은 입장 자격(헤더 X-Entry-Credential 로도 전달 가능). 이름 일치로는 인계하지 않는다.
     entry_credential: str | None = None
+    # SDD-220(F1): 회차별 녹음·녹화 필수 동의. 누락·거부면 403 RECORDING_CONSENT_REQUIRED 로 입장 자격을 내주지 않는다.
+    recording_consent: bool | None = None
+    recording_notice_version: str | None = Field(None, min_length=1, max_length=20)
+    # SDD-220: 뇌파 수집 선택(밴드 연결 사전 선택). 생략하면 회원은 계정 동의값, 비회원은 미동의로 둔다.
+    eeg_collection_consent: bool | None = None
+    eeg_notice_version: str | None = Field(None, min_length=1, max_length=20)
+
+    @model_validator(mode="after")
+    def normalize_guest_birth(self) -> "EnterRequest":
+        if self.birth_year_month is not None:
+            from app.schemas.guest_birth import parse_guest_birth_year_month
+            self.birth_date = parse_guest_birth_year_month(self.birth_year_month).isoformat()
+        return self
+
+
+class EntryConsentBody(BaseModel):
+    """초대 회원 편의 입장(POST /{id}/enter)의 선택 본문 — F1 동의."""
+
+    recording_consent: bool | None = None
+    recording_notice_version: str | None = Field(None, min_length=1, max_length=20)
+    eeg_collection_consent: bool | None = None
+    eeg_notice_version: str | None = Field(None, min_length=1, max_length=20)
+
+
+class RecordingConsentRequest(BaseModel):
+    """회차 녹음·녹화 동의 저장. consented=false 는 거부 기록이며 입장은 열리지 않는다."""
+
+    consented: bool
+    notice_version: str | None = Field(None, min_length=1, max_length=20)
+
+
+class EegCollectionConsentRequest(BaseModel):
+    consented: bool
+    notice_version: str | None = Field(None, min_length=1, max_length=20)
+
+
+class EntryConsentState(BaseModel):
+    participant_id: str
+    recording_consented: bool
+    recording_notice_version: str | None = None
+    recording_consent_at: datetime | None = None
+    eeg_collection_consented: bool | None = None
+    eeg_notice_version: str | None = None
 
 
 class EnterResponse(BaseModel):
@@ -289,6 +339,8 @@ class EnterResponse(BaseModel):
     participant_id: str | None = None
     is_guest: bool = False
     is_waitlisted: bool = False
+    # SDD-220: 뇌파 수집 선택 현황(True 동의 / False 거부 / None 미확인). 밴드 연결 사전 선택 화면 표시 판단용.
+    eeg_collection_consented: bool | None = None
     session: SessionResponse
 
 
@@ -461,6 +513,9 @@ class SpeakingStateResponse(BaseModel):
     # 부여 시 raise_hand 는 자동 해제된다(한 흐름) — 클라이언트 정합용으로 함께 내린다.
     can_publish: bool = False
 
+    # SDD-235: lower-hand 에서만 채움 — 누가 내렸는지(self=본인, host=진행자). 그 외 null.
+    lowered_by: Literal["self", "host"] | None = None
+
 
 # ---------------------------------------------------------------------------
 # SDD-021: 클래스 시작 프로세스 1.0 패리티
@@ -510,6 +565,7 @@ class SessionLiveMetric(BaseModel):
     heart_rate: float | None = None
     respiratory_rate: float | None = None
     rmssd: float | None = None
+    sdnn: float | None = None
 
 
 class SessionLiveMetricsSummary(BaseModel):
@@ -592,6 +648,12 @@ class EEGFeatureItem(HRVMotionFeatures):
     cognitive_load: float | None = None
     emotional_stability: float | None = None
     hemispheric_balance: float | None = None
+    # SDD-244: 기존에 서버로 전달되지 않던 컬럼(모델에는 존재) — null 보존
+    total_neural_activity: float | None = None
+    faa: float | None = None
+    # SDD-244: 상세 feature(JSONL) 원천 추적 — 이 1Hz 값이 나온 emit 의 feature_id_alias / 알고리즘 버전
+    source_feature_alias: str | None = Field(default=None, max_length=64)
+    algorithm_version: str | None = Field(default=None, max_length=40)
     # 신호 품질 원시값(0~1)
     signal_quality: float | None = None
     # SDD-026: 실행 세그먼트 식별자(play/resume 마다 새 값). pause/resume window_index 충돌 방지.
@@ -640,3 +702,26 @@ class EntryStateResponse(GuestSessionStateResponse):
     # 서버 기준 클래스 시작·종료 시각 — 종료 화면의 `함께한 시간`을 클라이언트 관찰 시각으로 근사하지 않기 위함.
     started_at: datetime | None = None
     ended_at: datetime | None = None
+
+
+# ---------------------------------------------------------------------------
+# SDD-246 T03: 실시간 v2 영속 결과 (ledger 조회/명령 결과의 서버 내부·REST 표현)
+# ---------------------------------------------------------------------------
+
+
+class LiveDurableResultResponse(BaseModel):
+    """`session_live_commands.DurableResult` 의 직렬화. ACK 매핑(wire)은 T05 가 contracts/session-live-v2 기준으로 한다.
+
+    숫자 U64 는 wire 에서 문자열이므로 여기서도 문자열로 내보낸다.
+    """
+
+    command_id: UUID
+    status: Literal["applied", "rejected"]
+    code: str | None = None
+    epoch: str
+    revision: str
+    entity_version: str | None = None
+    result: dict = Field(default_factory=dict)
+    duplicate: bool = False
+    committed: bool = True
+    transient: bool = False

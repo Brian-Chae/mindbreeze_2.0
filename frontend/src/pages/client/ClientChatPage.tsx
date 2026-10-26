@@ -16,6 +16,7 @@ import { RoomSettingsModal } from '../../components/chat/RoomSettingsModal';
 import { useChatSortPreference } from '../../hooks/useChatSortPreference';
 import AiAgentPage from './ai-agent-page';
 import { useAgentStore } from '../../stores/agent-store';
+import { isAiEnabled } from '../../lib/feature-flags';
 import { sortRooms, chatRoomDisplayName, lastMessagePreview, formatChatTime } from '../../lib/chat-sort';
 
 /** 상담사 이름에서 이니셜 추출 (최대 2글자) */
@@ -112,7 +113,14 @@ export default function ClientChatPage() {
     };
   }, [setRooms]);
 
-  const isLucy = paramRoomId === LUCY_ROOM_ID;
+  // SDD-220: AI 비공개일 때는 루시 채널·embedded agent 를 만들지 않고, 직접 URL 은 일반 채팅으로 돌려보낸다.
+  const aiEnabled = isAiEnabled();
+  const isLucy = aiEnabled && paramRoomId === LUCY_ROOM_ID;
+
+  useEffect(() => {
+    if (!aiEnabled && paramRoomId === LUCY_ROOM_ID) navigate('/app/chat', { replace: true });
+  }, [aiEnabled, paramRoomId, navigate]);
+
   const selectedRoom: ChatRoomDto | null = useMemo(() => {
     if (!paramRoomId || paramRoomId === LUCY_ROOM_ID) return null;
     return (
@@ -138,8 +146,12 @@ export default function ClientChatPage() {
     return roomDisplaySub(selectedRoom);
   }, [selectedRoom, isLucy]);
 
+  const headerMenu = selectedRoom && !isLucy ? (
+    <RoomActionsMenu room={selectedRoom} onSettings={() => setSettingsRoom(selectedRoom)} onLeave={() => navigate('/app/chat')} />
+  ) : undefined;
+
   return (
-    <ClientShell title={headerTitle} sub={headerSub} contentPad="" noScroll hideBottomTab={!!paramRoomId} noBottomPad={!!paramRoomId} hideMobileTitle={!!paramRoomId}>
+    <ClientShell title={headerTitle} sub={headerSub} rightSlot={paramRoomId ? headerMenu : undefined} contentPad="" noScroll hideBottomTab={!!paramRoomId} noBottomPad={!!paramRoomId} hideMobileTitle={!!paramRoomId}>
       {(
         <div className="h-full flex flex-col md:flex-row">
           {/* 좌측 대화 목록 */}
@@ -149,6 +161,7 @@ export default function ClientChatPage() {
             }`}
           >
             <ChatSortToggle {...sortPreference} />
+            {aiEnabled && (
             <button
               type="button"
               onClick={() => navigate(`/app/chat/${LUCY_ROOM_ID}`)}
@@ -156,25 +169,26 @@ export default function ClientChatPage() {
               className={`flex items-center gap-3 px-4 md:px-5 py-3.5 md:py-4 text-left border-b border-[#EFEFEF] transition-colors ${isLucy ? 'bg-[#F5EDFC]' : 'bg-[#FBF8FD] hover:bg-[#F5EDFC]'}`}
             >
               <div className="w-11 h-11 rounded-full bg-[#5F0080] flex items-center justify-center shrink-0 ring-2 ring-[#01f0c8]/60">
-                <span className="text-sm font-bold text-white">루시</span>
+                <span className="text-sm mobile:text-mb-label font-bold text-white">루시</span>
               </div>
               <div className="flex-1 min-w-0">
-                <span className="text-[15px] font-semibold text-[#1F1F1F]">루시 (AI)</span>
-                <p className="text-[12px] text-[#6F6F6F] truncate mt-0.5">예약 안내 · 리포트 이야기 · 안부</p>
+                <span className="text-[15px] mobile:text-mb-body font-semibold text-[#1F1F1F]">루시 (AI)</span>
+                <p className="text-[12px] mobile:text-mb-compact text-[#6F6F6F] truncate mt-0.5">예약 안내 · 리포트 이야기 · 안부</p>
               </div>
               {agentUnread > 0 && (
-                <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-[#5F0080] text-white text-[11px] font-bold inline-flex items-center justify-center shrink-0">
+                <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-[#5F0080] text-white text-[11px] mobile:text-mb-caption mobile:min-w-[22px] mobile:h-[22px] font-bold inline-flex items-center justify-center shrink-0">
                   {agentUnread > 99 ? '99+' : agentUnread}
                 </span>
               )}
             </button>
+            )}
             {loading ? (
-              <div className="p-6 text-center text-sm text-[#6F6F6F]">불러오는 중...</div>
+              <div className="p-6 text-center text-sm mobile:text-mb-compact text-[#6F6F6F]">불러오는 중...</div>
             ) : error ? (
-              <div className="p-6 text-center text-sm text-red-500">{error}</div>
+              <div className="p-6 text-center text-sm mobile:text-mb-compact text-red-500">{error}</div>
             ) : rooms.length === 0 ? (
               !hasCounselors ? (
-                <div className="px-6 py-10 text-center text-sm text-[#6F6F6F]">상담사와 연결하면 상담사와의 1:1 채팅이 여기에 표시돼요.</div>
+                <div className="px-6 py-10 text-center text-sm mobile:text-mb-compact text-[#6F6F6F]">상담사와 연결하면 상담사와의 1:1 채팅이 여기에 표시돼요.</div>
               ) : (
               <div className="flex flex-col items-center justify-center flex-1 min-h-[40vh] px-6">
                 <div className="w-16 h-16 rounded-full bg-[#EFEFEF] flex items-center justify-center mb-4">
@@ -185,7 +199,7 @@ export default function ClientChatPage() {
                     />
                   </svg>
                 </div>
-                <p className="text-[#6F6F6F] text-sm">아직 대화가 없어요</p>
+                <p className="text-[#6F6F6F] text-sm mobile:text-mb-compact">아직 대화가 없어요</p>
               </div>
               )
             ) : (
@@ -203,7 +217,7 @@ export default function ClientChatPage() {
                       >
                         {/* 상담사 아바타 (이니셜) */}
                         <div className="w-11 h-11 rounded-full bg-[#EFEFEF] flex items-center justify-center shrink-0 ring-2 ring-[#5F0080]/20">
-                          <span className="text-sm font-bold text-[#5F0080]">
+                          <span className="text-sm mobile:text-mb-label font-bold text-[#5F0080]">
                             {room.room_type === 'direct' ? getInitials(room.peer_name) : '#'}
                           </span>
                         </div>
@@ -211,23 +225,23 @@ export default function ClientChatPage() {
                         {/* 대화 정보 */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-[15px] font-semibold text-[#1F1F1F] truncate">
+                            <span className="text-[15px] font-semibold mobile:text-mb-body text-[#1F1F1F] truncate">
                               {chatRoomDisplayName(room)}
                             </span>
                             {(room.last_message_at ?? room.last_message?.created_at ?? room.created_at) && (
-                              <span className="text-[12px] text-[#9CA0AE] shrink-0">
+                              <span className="text-[12px] mobile:text-mb-caption text-[#9CA0AE] shrink-0">
                                 {formatChatTime(room.last_message_at ?? room.last_message?.created_at ?? room.created_at)}
                               </span>
                             )}
                           </div>
-                          <p className="text-[12px] text-[#6F6F6F] truncate mt-0.5">
+                          <p className="text-[12px] mobile:text-mb-compact text-[#6F6F6F] truncate mt-0.5">
                             {lastMessagePreview(room, roomDisplaySub(room))}
                           </p>
                         </div>
 
                         {/* 안 읽은 뱃지 */}
                         {(room.unread_count ?? 0) > 0 && (
-                          <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-[#5F0080] text-white text-[11px] font-bold inline-flex items-center justify-center shrink-0">
+                          <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-[#5F0080] text-white text-[11px] mobile:text-mb-caption mobile:min-w-[22px] mobile:h-[22px] font-bold inline-flex items-center justify-center shrink-0">
                             {room.unread_count > 99 ? '99+' : room.unread_count}
                           </span>
                         )}
@@ -255,24 +269,24 @@ export default function ClientChatPage() {
               </>
             ) : selectedRoom ? (
               <>
-                <ChatMobileHeader title={headerTitle} sub={headerSub} onBack={() => navigate('/app/chat')} />
+                <ChatMobileHeader title={headerTitle} sub={headerSub} onBack={() => navigate('/app/chat')} rightSlot={headerMenu} />
                 <div className="flex-1 min-h-0">
                   <ChatRoom key={selectedRoom.id} targetMessageId={targetMessageId} onShowRecent={showRecentMessages} roomId={selectedRoom.id} peerName={selectedRoom.peer_name ?? undefined} />
                 </div>
               </>
             ) : paramRoomId && !loading ? (
-              <div className="flex-1 flex items-center justify-center text-sm text-[#6F6F6F]">
+              <div className="flex-1 flex items-center justify-center text-sm mobile:text-mb-compact text-[#6F6F6F]">
                 채팅방을 찾을 수 없습니다.
               </div>
             ) : (
-              <div className="flex-1 flex items-center justify-center text-sm text-[#6F6F6F]">
+              <div className="flex-1 flex items-center justify-center text-sm mobile:text-mb-compact text-[#6F6F6F]">
                 왼쪽에서 대화를 선택하세요.
               </div>
             )}
           </main>
         </div>
       )}
-      {status && <p role="status" className="fixed bottom-20 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-[#5F0080] px-4 py-3 text-sm text-white">{status}</p>}
+      {status && <p role="status" className="fixed bottom-20 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-[#5F0080] px-4 py-3 text-sm mobile:text-mb-compact text-white">{status}</p>}
       {settingsRoom && <RoomSettingsModal key={settingsRoom.id} room={settingsRoom} onClose={() => setSettingsRoom(null)} onSaved={setStatus} />}
     </ClientShell>
   );

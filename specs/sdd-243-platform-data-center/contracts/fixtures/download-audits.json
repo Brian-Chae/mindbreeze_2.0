@@ -1,0 +1,26 @@
+{
+  "items": [
+    {
+      "event_id": "00000000-0000-0000-0000-0000000002bc",
+      "event": "url_issued",
+      "result": "issued",
+      "at": "2026-10-24T03:00:00Z",
+      "actor_id": "00000000-0000-0000-0000-000000000384",
+      "actor_role": "org_admin",
+      "org_id": "00000000-0000-0000-0000-000000000064",
+      "job_id": "00000000-0000-0000-0000-0000000001f4",
+      "purpose": "operations",
+      "identity": "pseudonymized",
+      "reason": "운영 점검",
+      "part_no": 1,
+      "session_count": 12,
+      "size_bytes": 48000000,
+      "policy_version": "dc-policy-1"
+    }
+  ],
+  "next_cursor": null,
+  "total": 1,
+  "total_reason": null,
+  "as_of": "2026-10-24T03:00:00Z",
+  "filters_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}

@@ -137,7 +137,7 @@ def test_consent_and_session_gate(export_env):
     db.commit()
     assert create_export(export_env).status_code == 409
     session.status = 'completed'
-    participant.consent_eeg = False
+    participant.consent_eeg = participant.eeg_collection_consented = False
     db.commit()
     assert create_export(export_env).status_code == 403
 
@@ -161,10 +161,10 @@ def test_presign_and_expiration(export_env, monkeypatch):
     path = f'/api/v1/data-exports/{export_id}/download-url'
     assert client.post(path).status_code == 200
     assert 1 <= seen[0] <= 60
-    participant.consent_eeg = False
+    participant.consent_eeg = participant.eeg_collection_consented = False
     db.commit()
     assert client.post(path).status_code == 403
-    participant.consent_eeg = True
+    participant.consent_eeg = participant.eeg_collection_consented = True
     job.expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
     db.commit()
     assert client.post(path).status_code == 410
@@ -197,7 +197,9 @@ def test_upload_failure_is_explicit(export_env, monkeypatch):
     assert job.error_code == 'storage_unavailable'
 
 
-def test_migration_can_render_offline():
+def test_migration_can_render_offline(monkeypatch):
+    # 오프라인 DDL은 테스트 DB(SQLite)가 아닌 실제 마이그레이션 방언으로 렌더링한다. 연결은 없다.
+    monkeypatch.setenv("DATABASE_URL", "postgresql://offline:offline@127.0.0.1/offline_render")
     import subprocess
     import sys
     # Alembic env.py의 fileConfig가 현재 pytest 로거를 변경하지 않도록 별도 프로세스 사용.
@@ -236,7 +238,7 @@ def test_empty_features_and_pending_report_warn(export_env, monkeypatch):
     monkeypatch.setattr(storage_service, 'upload_export', lambda path, key: captured.update(data=Path(path).read_bytes()))
     _, db, _, _, participant, report = export_env
     db.query(EEGFeatureWindow).filter_by(participant_id=participant.id).delete()
-    participant.consent_eeg = False
+    participant.consent_eeg = participant.eeg_collection_consented = False
     participant.band_connected = False
     report.content = {'eeg': {'status': 'not_measured'}}
     report.status = 'pending_review'
@@ -275,7 +277,7 @@ def test_revocation_during_upload_prevents_publication(export_env, monkeypatch):
     _, db, _, _, participant, _ = export_env
     deleted = []
     def upload(*args):
-        participant.consent_eeg = False
+        participant.consent_eeg = participant.eeg_collection_consented = False
         db.commit()
     monkeypatch.setattr(storage_service, 'upload_export', upload)
     monkeypatch.setattr(storage_service, 'delete_export', lambda key: deleted.append(key))

@@ -19,7 +19,7 @@ export interface SurveyStepViewProps {
   /** 시작 후 시트(StartedSheet) — 열려 있으면 하단 푸터는 inert */
   startedSheet?: ReactNode;
   sheetOpen?: boolean;
-  onSelect: (axis: AxisKey, value: SamValue) => void;
+  onSelect: (axis: AxisKey, value: SamValue, auto?: boolean) => void;
   onNote: (note: string) => void;
   onNext: () => void;
   onSkip: () => void;
@@ -33,9 +33,9 @@ export function SurveyStepView({
 }: SurveyStepViewProps) {
   const chips = [...SURVEY_QUESTIONS.map((q) => q.chip), NOTE_CHIP];
   const axes = (
-    <div className="fm-axes" role="list">
+    <div className="fm-axes" role="list" aria-label="체크인 문항 진행">
       {chips.map((chip, i) => (
-        <div key={chip} className="fm-ax" role="listitem" data-state={i < question - 1 ? 'done' : i === question - 1 ? 'on' : undefined}>
+        <div key={chip} className="fm-ax" role="listitem" aria-current={i === question - 1 ? 'step' : undefined} data-state={i < question - 1 ? 'done' : i === question - 1 ? 'on' : undefined}>
           {chip}
           <i />
         </div>
@@ -48,6 +48,7 @@ export function SurveyStepView({
   return (
     <MemberFlowFrame
       wizard
+      survey
       place={place}
       backdropSrc={backdropSrc}
       steps={steps}
@@ -72,10 +73,21 @@ export function SurveyStepView({
       {axes}
       {current ? (
         <div className="fm-opts" role="radiogroup" aria-label={current.chip}>
-          {current.options.map((option) => (
+          {current.options.map((option, index) => (
             <button
               key={option.value} type="button" role="radio" className="fm-opt" aria-checked={selected === option.value}
-              onClick={() => onSelect(current.axis, option.value)}
+              tabIndex={selected === option.value || (selected === null && index === 0) ? 0 : -1}
+              onKeyDown={(event) => {
+                const last = current.options.length - 1;
+                const target = event.key === 'Home' ? 0 : event.key === 'End' ? last
+                  : event.key === 'ArrowRight' || event.key === 'ArrowDown' ? (index + 1) % (last + 1)
+                    : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? (index + last) % (last + 1) : null;
+                if (target === null) return;
+                event.preventDefault();
+                onSelect(current.axis, current.options[target]!.value);
+                event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[target]?.focus();
+              }}
+              onClick={() => onSelect(current.axis, option.value, true)}
             >
               <span className="fm-radio" />
               {option.label}

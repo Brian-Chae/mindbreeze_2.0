@@ -1,0 +1,36 @@
+{
+  "as_of": "2026-10-24T03:00:00Z",
+  "scope_label": "기관A",
+  "kpis": [
+    {
+      "key": "classes",
+      "label": "클래스",
+      "unit": "개",
+      "count": {
+        "value": 4,
+        "partial": false,
+        "unavailable_reason": null
+      }
+    },
+    {
+      "key": "storage_bytes",
+      "label": "저장량(메타데이터 기준)",
+      "unit": "B",
+      "count": {
+        "value": 52000000,
+        "partial": true,
+        "unavailable_reason": null
+      }
+    },
+    {
+      "key": "retention_due_7d",
+      "label": "7일 내 만료",
+      "unit": "건",
+      "count": {
+        "value": null,
+        "partial": false,
+        "unavailable_reason": "미집계"
+      }
+    }
+  ]
+}

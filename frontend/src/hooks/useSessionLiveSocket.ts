@@ -1,3 +1,4 @@
+import { invalidateClassReads } from '../lib/class-structure/invalidation';
 // `/session-live` 네임스페이스 구독 훅 — 호스트/게스트 실시간 EEG + SDD-026 상태 계약
 // snapshot 적용 전에는 isReady=false → 호출측이 REST 폴백을 유지해야 한다.
 // SDD-028: eeg_feature는 setState 없이 콜백만 — 대규모 참여자 전체 재렌더 회피
@@ -6,6 +7,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 import { useAuthStore } from '../stores/authStore';
+import { RESUME_ORDER, subscribeAppResume } from '../lib/native/app-lifecycle';
 import { type ClassSignalType } from '../lib/class/quiet-signal';
 import {
   normalizeAggregate,
@@ -16,6 +18,7 @@ import {
   type GroupAverageEvent,
 } from '../lib/class/group-average';
 import {
+  cancelSessionLiveJoin,
   emitClassAudioSync,
   emitClassSignal,
   getSessionLiveSocket,
@@ -169,6 +172,7 @@ export function useSessionLiveSocket({
   const pendingSessionRef = useRef<string | null>(null);
   /** join 거부 상태 — 이 상태에서는 신호를 전송하지 않는다 */
   const joinDeniedRef = useRef(false);
+  const revokedSessionRef = useRef<string | null>(null);
   const versionRef = useRef(0);
   /**
    * MB2-05: 마지막으로 적용한 joined 스냅샷.
@@ -254,6 +258,7 @@ export function useSessionLiveSocket({
     retainSessionLiveRoom(sessionId);
 
     const onConnect = (): void => {
+      if (revokedSessionRef.current === sessionId) return;
       signalParticipantRef.current = null;
       joinDeniedRef.current = false;
       setIsConnected(true);
@@ -284,6 +289,7 @@ export function useSessionLiveSocket({
     };
 
     const onJoined = (event: SessionLiveJoinedEvent): void => {
+      if (revokedSessionRef.current === sessionId) return;
       if (event.session_id && event.session_id !== sessionId) return;
       // 서버가 확정한 본인 id를 사용한다. 구 서버의 joined는 요청 id로 호환한다.
       const pid = event.participant_id === undefined ? participantId : event.participant_id;
@@ -296,10 +302,13 @@ export function useSessionLiveSocket({
       // snapshot 없는 joined(구 BE) → hasSnapshot 유지 false, 폴백 계속
       // 단절 중 눌린 신호 flush — 확정된 pid가 있을 때만
       if (pid) flushPendingSignals(pid);
+      // 복귀 재연결 후 첫 joined 에서만 즉시 heartbeat (참여 상태 공백 최소화)
+      if (heartbeatAfterJoin && normalized && sendHeartbeat()) heartbeatAfterJoin = false;
     };
 
     const onJoinDenied = (event: { session_id?: string }): void => {
       if (event.session_id && event.session_id !== sessionId) return;
+      cancelSessionLiveJoin();
       signalParticipantRef.current = null;
       joinDeniedRef.current = true;
       pendingSignalsRef.current = [];
@@ -308,9 +317,43 @@ export function useSessionLiveSocket({
       snapshotRef.current = null;
     };
 
+    const onAccessRevoked = (event: {session_id?: string}): void => {
+      if (event.session_id !== sessionId) return;
+      cancelSessionLiveJoin();
+      revokedSessionRef.current = sessionId;
+      joinDeniedRef.current = true;
+      signalParticipantRef.current = null;
+      pendingSignalsRef.current = [];
+      setHasSnapshot(false);
+      setSnapshot(null);
+      snapshotRef.current = null;
+    };
+    const sendHeartbeat = (): boolean => {
+      if (socket.connected && snapshotRef.current && !joinDeniedRef.current && revokedSessionRef.current !== sessionId) {
+        socket.emit('participation_heartbeat', {});
+        return true;
+      }
+      return false;
+    };
+    const heartbeatTimer = window.setInterval(sendHeartbeat, 30000);
+
+    // SDD-222 G1: 앱 복귀 — 30초 타이머는 백그라운드에서 멈추므로 즉시 1회 보낸다.
+    // 단절 상태면 재연결(connect 이벤트 → onConnect 의 재join 경로)하고, joined 확정 직후 1회 보낸다.
+    // 이미 연결된 상태에서는 connect()/join 을 다시 호출하지 않는다.
+    let heartbeatAfterJoin = false;
+    const unsubResume = subscribeAppResume(() => {
+      if (!socket.connected) {
+        heartbeatAfterJoin = true;
+        socket.connect();
+        return;
+      }
+      sendHeartbeat();
+    }, RESUME_ORDER.socket);
+
     const onState = (event: SessionStateChangedEvent): void => {
       if (event.session_id !== sessionId) return;
       if (!acceptVersion(event.version)) return;
+      if (event.status === 'completed' || event.status === 'cancelled') invalidateClassReads();
       // MB2-05: snapshotRef 를 setSnapshot 상태와 동기 유지 — applySnapshot 의 version 병합 기준.
       const prev = snapshotRef.current;
       if (prev) {
@@ -389,6 +432,7 @@ export function useSessionLiveSocket({
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on('join_denied', onJoinDenied);
+    socket.on('access_revoked', onAccessRevoked);
 
     // onConnect 를 구독보다 먼저 호출한다 — SDD-110 snapshot 캐시 재배달(subscribeSessionLiveJoined)이
     // onConnect 의 signalParticipantRef 초기화보다 나중에 실행되어, 이미 join된 세션(join dedup 으로
@@ -425,6 +469,9 @@ export function useSessionLiveSocket({
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       socket.off('join_denied', onJoinDenied);
+      socket.off('access_revoked', onAccessRevoked);
+      window.clearInterval(heartbeatTimer);
+      unsubResume();
       signalParticipantRef.current = null;
       joinDeniedRef.current = false;
       socketRef.current = null;

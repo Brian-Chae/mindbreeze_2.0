@@ -2,9 +2,14 @@
 // 이식 범위: useBand(+everConnected) · useSessionLiveSocket(평균 수신 구독 없음) · 1Hz 링버퍼 · useGuestAudioSync · 채팅 폴링 · 접촉 불량 상태.
 // useWakeLock 은 호출부(class-join-page: step waiting|meditation)가 이미 걸고 있어 여기서 다시 걸지 않는다(센티널 중복 방지).
 // 이 파일만 useBand 를 호출한다(plan R4: BLE 연결·업로드 인스턴스는 화면당 1개).
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { freshnessOf } from '../../../../lib/session-live/live-view';
+import { liveMetricSnapshot } from '../../../../lib/session-live/live-metric-snapshot';
 import { ConnectionState } from 'livekit-client';
 import { useBand, type UseBandResult } from '../../../../hooks/useBand';
+import { BiosignalRecordingStatus } from '../../../../lib/biosignal/recording-status';
+import type { RenderedMetrics } from '../../../../lib/biosignal/display-snapshot';
+import { AnalysisMetricsService } from '../../../../lib/eeg/AnalysisMetricsService';
 import { useGuestAudioSync } from '../../../../hooks/useGuestAudioSync';
 import { useMemberLiveKit } from '../../../../hooks/useMemberLiveKit';
 import { useSessionLiveSocket } from '../../../../hooks/useSessionLiveSocket';
@@ -13,16 +18,28 @@ import { getEntryState } from '../../../../lib/api/class-flow';
 import { getSession, type LinkbandMode } from '../../../../lib/api/session';
 import type { AudioSyncEvent } from '../../../../lib/class/audio-sync';
 import { PLAYER_METRICS, deriveBandUi, deriveNetUi, type PlayerMetricKey } from '../../../../lib/class/player-case';
-import type { MemberCaseInput } from '../../../../lib/class/member-player-case';
+import { deriveMemberCase, type MemberCaseInput } from '../../../../lib/class/member-player-case';
 import { getActiveSessionLiveSocket, type SessionLiveEegFeatureEvent } from '../../../../lib/socket';
 import { contactStatusLabel, resolveBandLinkState, signalQualityLevelLabel } from '../../../../lib/session-live/signal-status';
 import { useAuthStore } from '../../../../stores/authStore';
+import { isLiveProtocolV2Enabled } from '../../../../lib/session-live/live-flag';
+import type { UseLiveV2Result } from '../../../../lib/session-live/use-live-v2';
+import type { LiveClient } from '../../../../lib/session-live/live-client';
+import { useMetricBars } from '../../../../lib/session-live/metric-bars';
+import { useWebMeasurementV2 } from '../../../../lib/measurement-web/use-web-measurement';
+import { useNativeMeasurementV2 } from '../../../../lib/measurement-web/use-native-measurement';
+import { decideMeasurementPath } from '../../../../lib/measurement-web/measurement-path';
+import { getNativeMeasurement, isNativeMeasurementAvailable } from '../../../../lib/native-measurement';
+import { Capacitor } from '@capacitor/core';
+import { isBleSupported } from '../../../../lib/ble';
+import { toBandReport } from '../../../../lib/measurement-web/band-report';
 import { ClassChatPanel } from '../../../chat/ClassChatPanel';
 import { LeaveConfirmModal } from '../../../player/LeaveConfirmModal';
 import { ClassOnboardingCoachmarks } from '../../ClassOnboardingCoachmarks';
 import { MemberClassView } from './MemberClassView';
 import { MemberMediaControls, type MemberMediaBinding } from './MemberMediaControls';
-import { downsample, emptySeries, formatClock, pushRingPoint, type MetricSeries, type MetricSnapshot } from './member-metrics';
+import { filterEegPreview, filterPpgPreview, minMaxDecimate, smoothAutoScale } from '../../../../lib/eeg/raw-preview-filter';
+import { emptySeries, formatClock, pushRingPoint, type MetricSeries, type MetricSnapshot } from './member-metrics';
 import type { MemberClassViewProps, MemberDeviceModel, MemberHostVideoIssue, MemberSheetKey } from './member-view-types';
 import './member-player.css';
 
@@ -43,6 +60,10 @@ interface MemberClassContainerProps {
   linkbandMode?: LinkbandMode;
   /** 정원이 차서 대기열에 들어간 참가자 — 대기 화면만 보이고 밴드·소켓·영상 연결을 하지 않는다(M20) */
   waitlisted?: boolean;
+  /** SDD-246: v2 on 이면 EntryPage 가 만든 LiveClient/LiveState 하나를 받는다(없으면 v1 훅) */
+  liveV2?: UseLiveV2Result | null;
+  /** SDD-246 T06c: 회차 EEG 수집 동의(true 일 때만 v2 웹 측정을 시작한다) */
+  eegConsent?: boolean;
 }
 
 const AI_ANALYZING_MS = 15_000;
@@ -51,6 +72,9 @@ const CHAT_STATE_POLL_MS = 5_000;
 /** 기기 시트의 원시 파형 갱신 주기·표시 점 수 */
 const RAW_REFRESH_MS = 1_000;
 const RAW_POINTS = 120;
+// 필터는 원 샘플레이트가 필요하므로 다운샘플 전 EEG 4초(250Hz)=1000, PPG 4초(50Hz)=200점을 받는다
+const RAW_EEG_SAMPLES = 1000;
+const RAW_PPG_SAMPLES = 200;
 /** 상담사 영상 토큰 재시도 상한(지수 백오프 5s→10s→20s→30s) */
 const LIVEKIT_RETRY_MAX = 5;
 
@@ -72,10 +96,39 @@ function buildSnapshot(band: BandSnapshotSource, metricsBlocked: boolean, remote
   };
 }
 
+/** SDD-244: 이번 렌더에서 화면이 받은 6지표와 그 근거(저장용 DisplaySnapshot의 입력). 값을 다시 계산하지 않는다. */
+function describeRender(band: UseBandResult, snapshot: MetricSnapshot, blocked: boolean, stale: boolean, remoteEfficiency: number | null): RenderedMetrics {
+  const live = band.connectionState === 'connected';
+  const scoredRelax = band.scoredIndices?.relaxationIndex ?? null;
+  return {
+    values: snapshot,
+    normalizationModel: band.normalizationModel,
+    rawMind: {
+      focus: live ? (band.rawIndices?.focusIndex ?? null) : null,
+      relaxation: live ? (band.rawIndices?.relaxationIndex ?? null) : null,
+      emotional: live ? (band.rawIndices?.emotionalStability ?? null) : null,
+    },
+    live, blocked, stale, leadOff: band.deviceStatus === 'lead_off',
+    remoteRelaxation: !blocked && remoteEfficiency !== null && snapshot.relaxation === remoteEfficiency && !(live && scoredRelax !== null),
+    lastEegAtMs: band.lastEegAt ? Date.parse(band.lastEegAt) : null,
+    quality: band.signalQualityLevel,
+    respirationNullReason: AnalysisMetricsService.getInstance().getRespiratoryNullReason(),
+  };
+}
+
+/** 무음 신호 — v2 는 signal.send 명령(command_id 포함). 결과는 ACK 가 아니라 즉시 'sent'/'failed' 로 UI 에 알린다. */
+function sendSignalV2(client: LiveClient): MemberClassViewProps['actions']['onSignal'] {
+  return (type) => {
+    client.sendCommand('signal.send', { signal_type: type, target_scope: 'host' });
+    return 'sent';
+  };
+}
+
 export function MemberClassContainer({
   title, startedAt, durationMin, onLeave, sessionId, participantId, entryCredential, hostName = null,
-  locationType, participantMode, maxParticipants, linkbandMode, waitlisted = false,
+  locationType, participantMode, maxParticipants, linkbandMode, waitlisted = false, liveV2 = null, eegConsent = false,
 }: MemberClassContainerProps) {
+  const v2On = isLiveProtocolV2Enabled() && liveV2 !== null;
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
   const place: 'online' | 'offline' = locationType === 'offline' ? 'offline' : 'online';
@@ -101,6 +154,9 @@ export function MemberClassContainer({
   const [remoteEfficiency, setRemoteEfficiency] = useState<number | null>(null);
   const [series, setSeries] = useState<MetricSeries>(() => emptySeries());
   const [raw, setRaw] = useState<MemberDeviceModel['raw']>(null);
+  const [ppg, setPpg] = useState<MemberDeviceModel['ppg']>(null);
+  // 채널별 자동 스케일 피크(감쇠 smoothing) — fp1, fp2, red, ir
+  const rawPeaksRef = useRef([1, 1, 1, 1]);
 
   /* ───────── 클래스 정보(상담사 이름): 클래스 요약에서 받은 값을 그대로 쓴다 ───────── */
   const counselorName = hostName;
@@ -111,6 +167,8 @@ export function MemberClassContainer({
   const [guestChatEnabled, setGuestChatEnabled] = useState(false);
   const [unread, setUnread] = useState(0);
 
+  const v2PolicyChat = v2On && liveV2?.ready ? liveV2.state?.policy?.data.chat_enabled ?? null : null;
+  const v2ChatReady = v2PolicyChat !== null;
   useEffect(() => {
     if (!isAuthenticated || !sessionId) return undefined;
     let cancelled = false;
@@ -125,12 +183,13 @@ export function MemberClassContainer({
       }
     };
     void load();
+    if (v2ChatReady) return () => { cancelled = true; }; // v2 READY: 채팅 on/off 는 policy 도메인 — 주기 폴링 0
     const timer = window.setInterval(() => void load(), CHAT_STATE_POLL_MS);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [isAuthenticated, sessionId]);
+  }, [isAuthenticated, sessionId, v2ChatReady]);
 
   useEffect(() => {
     if (isAuthenticated || !participantId || !entryCredential) return undefined;
@@ -144,34 +203,71 @@ export function MemberClassContainer({
       }
     };
     void load();
+    if (v2ChatReady) return () => { cancelled = true; };
     const timer = window.setInterval(() => void load(), CHAT_STATE_POLL_MS);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [isAuthenticated, participantId, entryCredential, sessionId]);
+  }, [isAuthenticated, participantId, entryCredential, sessionId, v2ChatReady]);
 
   /* ───────── 밴드(useBand 단일 인스턴스) ───────── */
-  const band = useBand({ sessionId, participantId, enabled: connectionsActive, skipAuth: !isAuthenticated, entryCredential });
+  // SDD-246 T12: v2 수집 경로(web_wasm/native)가 활성이면 v1 feature 업로드를 끈다(이중 집계 방지). 판정은 band 연결 상태가 필요해 ref 로 읽는다.
+  const bandConnectedRef = useRef(false);
+  const v2Path = decideMeasurementPath({
+    v2: v2On && connectionsActive, native: isNativeMeasurementAvailable(), webBluetooth: isBleSupported(),
+    bandConnected: bandConnectedRef.current, eegConsent, bandOptIn: linkbandMode !== 'none',
+  });
+  const band = useBand({ sessionId, participantId, enabled: connectionsActive, skipAuth: !isAuthenticated, entryCredential, v1FeatureUpload: v2Path !== 'web_wasm' && v2Path !== 'native' });
+  bandConnectedRef.current = band.connectionState === 'connected';
   const bandRef = useRef(band);
   useEffect(() => {
     bandRef.current = band;
   });
 
+  // SDD-246 T06c: v2 on + 웹 + 밴드 착용 + EEG 동의일 때만 WASM 코어 측정 → live:metric. 그 밖에는 아무 것도 만들지 않는다(현행 경로 유지).
+  const bandReport = useMemo(
+    () => toBandReport({ connectionState: band.connectionState, leadOff: band.leadOff, signalQuality: band.signalQuality, battery: band.battery }),
+    [band.connectionState, band.leadOff?.ch1, band.leadOff?.ch2, band.signalQuality, band.battery], // eslint-disable-line react-hooks/exhaustive-deps -- leadOff 는 값으로 비교
+  );
+  useWebMeasurementV2({
+    liveV2: v2On ? liveV2 : null,
+    sessionId,
+    selfParticipantId: participantId,
+    bandOptIn: linkbandMode !== 'none',
+    eegConsent,
+    bandConnected: band.connectionState === 'connected',
+    band: bandReport,
+    enabled: connectionsActive,
+  });
+  const nativeM = useNativeMeasurementV2({
+    v2: v2On, sessionId, participantId, accountId: user?.id ?? null, bandOptIn: linkbandMode !== 'none', eegConsent,
+    bandConnected: band.connectionState === 'connected', enabled: connectionsActive,
+  });
+
+  // native 소유 동안 JS BLE 는 놓였으므로 신호·접촉·연결은 native snapshot 값을 쓴다(없으면 기존 useBand).
+  const nd = nativeM.device;
+  const deviceStatus = nd ? nd.deviceStatus : band.deviceStatus;
+  const signalLevel = nd ? nd.signalQualityLevel : band.signalQualityLevel;
   const [everConnected, setEverConnected] = useState(false);
   useEffect(() => {
-    if (band.connectionState === 'connected') setEverConnected(true);
-  }, [band.connectionState]);
+    if (band.connectionState === 'connected' || nd?.connected) setEverConnected(true);
+  }, [band.connectionState, nd?.connected]);
 
   const isLive = band.connectionState === 'connected';
   const linkState = resolveBandLinkState({ bleConnected: isLive, lastEegAt: band.lastEegAt, nowMs });
-  const metricsBlocked = band.deviceStatus === 'lead_off' || linkState === 'stale';
-  const snapshot = buildSnapshot(band, metricsBlocked, remoteEfficiency);
+  const metricsBlocked = deviceStatus === 'lead_off' || linkState === 'stale';
+  // native 소유 동안 6지표는 native snapshot.metrics(null 보존)로 표시한다.
+  // 상담사 타일과 같은 출처(LiveState)·같은 규칙을 우선한다 — 두 화면 숫자 불일치 방지. LiveState 에 내 지표가 없을 때만 앱/웹 자체값.
+  const liveSnap = v2On ? liveMetricSnapshot(liveV2?.state, participantId, liveV2?.nowMs ?? nowMs) : null;
+  const snapshot = liveSnap ?? nativeM.metrics ?? buildSnapshot(band, metricsBlocked, remoteEfficiency);
 
   // 1Hz 링버퍼 — readSnapshot 을 ref 로 안정화해 타이머를 1회만 만든다(서버 신호에 의한 리셋·샘플 누락 방지, SDD-127)
+  const nativeMetricsRef = useRef(liveSnap ?? nativeM.metrics);
+  nativeMetricsRef.current = liveSnap ?? nativeM.metrics;
   const readSnapshotRef = useRef<() => MetricSnapshot>(() => NO_METRICS);
   useEffect(() => {
-    readSnapshotRef.current = () => buildSnapshot(bandRef.current, metricsBlocked, remoteEfficiency);
+    readSnapshotRef.current = () => nativeMetricsRef.current ?? buildSnapshot(bandRef.current, metricsBlocked, remoteEfficiency);
   });
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -195,7 +291,7 @@ export function MemberClassContainer({
   const wasLeadOffRef = useRef(false);
   const analyzingTimerRef = useRef<number | null>(null);
   useEffect(() => {
-    if (band.deviceStatus === 'lead_off') {
+    if (deviceStatus === 'lead_off') {
       wasLeadOffRef.current = true;
       setLeadOffDismissed(false);
       setIsAnalyzing(false);
@@ -214,7 +310,7 @@ export function MemberClassContainer({
         analyzingTimerRef.current = null;
       }, AI_ANALYZING_MS);
     }
-  }, [band.deviceStatus]);
+  }, [deviceStatus]);
   useEffect(
     () => () => {
       if (analyzingTimerRef.current != null) window.clearTimeout(analyzingTimerRef.current);
@@ -222,7 +318,7 @@ export function MemberClassContainer({
     [],
   );
   // 접촉 불량이 새로 감지되면 전체 화면 모달 대신 기기 시트(코랄 안내)를 연다
-  const showLeadOffSheet = band.deviceStatus === 'lead_off' && !leadOffDismissed;
+  const showLeadOffSheet = deviceStatus === 'lead_off' && !leadOffDismissed;
   const leadOffAutoOpenedRef = useRef(false);
   useEffect(() => {
     if (showLeadOffSheet) {
@@ -236,22 +332,43 @@ export function MemberClassContainer({
   }, [leadOffDismissed]);
   // 자동으로 열린 접촉 확인 시트는 접촉이 복구되면 저절로 닫는다
   useEffect(() => {
-    if (band.deviceStatus === 'lead_off' || !leadOffAutoOpenedRef.current) return;
+    if (deviceStatus === 'lead_off' || !leadOffAutoOpenedRef.current) return;
     leadOffAutoOpenedRef.current = false;
     setSheet((prev) => (prev === 'device' ? null : prev));
-  }, [band.deviceStatus]);
+  }, [deviceStatus]);
 
-  // 기기 시트가 열려 있고 연결 중일 때만 원시 파형을 1초마다 읽는다(250Hz 렌더 부하 회피)
+  // 기기 시트가 열려 있고 연결 중일 때만 원시 파형을 1초마다 읽는다(250Hz 렌더 부하 회피).
+  // native 소유 중이면 플러그인 getRawPreview(Android), 아니면 useBand 버퍼.
+  const nativeOwned = nd !== null;
   useEffect(() => {
-    if (sheet !== 'device' || !isLive) return undefined;
+    if (sheet !== 'device' || !(isLive || nativeOwned)) return undefined;
+    let cancelled = false;
+    // 원 샘플 → 필터 → 화면용 min/max 다운샘플 → 채널별 자동 스케일(±1)
+    const view = (idx: number, x: readonly number[], filter: (v: readonly number[]) => number[]): number[] => {
+      const r = smoothAutoScale(minMaxDecimate(filter(x), RAW_POINTS), rawPeaksRef.current[idx]);
+      rawPeaksRef.current[idx] = r.peak;
+      return r.values;
+    };
+    const show = (fp1: readonly number[], fp2: readonly number[], red: readonly number[], ir: readonly number[]): void => {
+      setRaw({ fp1: view(0, fp1, filterEegPreview), fp2: view(1, fp2, filterEegPreview) });
+      setPpg(red.length > 1 ? { red: view(2, red, filterPpgPreview), ir: view(3, ir, filterPpgPreview) } : null);
+    };
     const sample = (): void => {
+      if (nativeOwned) {
+        void getNativeMeasurement().getRawPreview(Capacitor.getPlatform(), 4, RAW_EEG_SAMPLES).then((p) => {
+          if (cancelled || !p) return; // iOS 등 미지원은 null → 파형 영역을 그리지 않는다
+          show(p.eegFp1, p.eegFp2, p.ppgRed, p.ppgIr);
+        });
+        return;
+      }
       const wave = bandRef.current.getEegWaveformSamples();
-      setRaw({ fp1: downsample(wave.fp1, RAW_POINTS), fp2: downsample(wave.fp2, RAW_POINTS) });
+      const pw = bandRef.current.getPpgWaveformSamples?.() ?? { red: [], ir: [] };
+      show(wave.fp1.slice(-RAW_EEG_SAMPLES), wave.fp2.slice(-RAW_EEG_SAMPLES), pw.red.slice(-RAW_PPG_SAMPLES), pw.ir.slice(-RAW_PPG_SAMPLES));
     };
     sample();
     const id = window.setInterval(sample, RAW_REFRESH_MS);
-    return () => window.clearInterval(id);
-  }, [sheet, isLive]);
+    return () => { cancelled = true; window.clearInterval(id); };
+  }, [sheet, isLive, nativeOwned]);
 
   /* ───────── 실시간 소켓 — 다른 참가자와 견주는 평균 수신은 구독하지 않는다(spec 합의 #5) ───────── */
   const handleEegFeature = useCallback(
@@ -274,7 +391,7 @@ export function MemberClassContainer({
   const liveSocket = useSessionLiveSocket({
     sessionId,
     participantId,
-    enabled: connectionsActive,
+    enabled: connectionsActive && !v2On,
     skipAuth: !isAuthenticated,
     entryCredential,
     onEegFeature: handleEegFeature,
@@ -282,7 +399,21 @@ export function MemberClassContainer({
   });
 
   /* ───────── 상담사 가이드 동기 재생(온라인 전용) + 스피커 ───────── */
-  const guestAudio = useGuestAudioSync({ sessionId, enabled: Boolean(sessionId) && locationType === 'online', event: audioSyncEvent });
+  // v2: 음성 동기화는 LiveState.audio(서버 anchor·revision)에서 파생한다 — class:audio_sync 소켓 이벤트는 쓰지 않는다.
+  const v2Audio = v2On ? liveV2?.state?.audio?.data ?? null : null;
+  const v2AudioEvent = useMemo<AudioSyncEvent | null>(() => {
+    if (!v2Audio) return null;
+    return {
+      session_id: sessionId,
+      action: v2Audio.action,
+      track_id: v2Audio.track_id,
+      position_sec: v2Audio.position_ms / 1000,
+      server_ts: new Date(v2Audio.server_anchor_ms).toISOString(),
+      server_ts_ms: v2Audio.server_anchor_ms,
+      revision: Number(v2Audio.revision),
+    };
+  }, [v2Audio, sessionId]);
+  const guestAudio = useGuestAudioSync({ sessionId, enabled: Boolean(sessionId) && locationType === 'online', event: v2On ? v2AudioEvent : audioSyncEvent });
   const [speakerOn, setSpeakerOn] = useState(locationType !== 'offline');
   const speakerTouchedRef = useRef(false);
   useEffect(() => {
@@ -291,7 +422,15 @@ export function MemberClassContainer({
   }, [locationType]);
 
   /* ───────── 상담사 영상(LiveKit) 토큰: 입장 + 상담사 화상 미시작이면 지수 백오프 재시도 ───────── */
-  const liveKit = useMemberLiveKit({ participantId, entryCredential, sessionId, listenSpeakingChanges: speakingManaged });
+  const v2Binding = useMemo(() => (v2On && liveV2 ? { client: liveV2.client, state: liveV2.state } : null), [v2On, liveV2?.client, liveV2?.state]); // eslint-disable-line react-hooks/exhaustive-deps -- liveV2 객체 대신 client/state 만 본다
+  const v2NowMs = liveV2?.nowMs ?? 0;
+  const v2Bars = useMetricBars(v2On ? liveV2?.state ?? null : null, participantId, 'relaxation_display', v2NowMs);
+  const v2Current = (() => {
+    const m = v2On && participantId ? liveV2?.state?.metrics[participantId]?.data : undefined;
+    const v = m?.metrics.relaxation_display;
+    return m && v && v.validity === 'valid' && freshnessOf(m.observed_at_ms, v2NowMs, m.freshness) === 'fresh' ? v.value : null;
+  })();
+  const liveKit = useMemberLiveKit({ participantId, entryCredential, sessionId, listenSpeakingChanges: speakingManaged, v2: v2Binding });
   const { connect: connectLiveKit, notReady, attemptCount } = liveKit;
   const videoActive = connectionsActive && place === 'online';
   useEffect(() => {
@@ -308,12 +447,12 @@ export function MemberClassContainer({
   const bandEnabled = linkbandMode !== 'none';
   const bandUi = deriveBandUi(
     {
-      connectionState: band.connectionState,
+      connectionState: nd ? (nd.connected ? 'connected' : 'connecting') : band.connectionState,
       everConnected,
-      deviceStatus: band.deviceStatus,
-      signalQualityLevel: band.signalQualityLevel,
+      deviceStatus,
+      signalQualityLevel: signalLevel,
       battery: band.battery,
-      lastEegAt: band.lastEegAt,
+      lastEegAt: nd ? null : band.lastEegAt,
     },
     nowMs,
   );
@@ -339,14 +478,16 @@ export function MemberClassContainer({
     place, mode, viewerOnly, bandVisible, bandUi, waitlisted, nowMs, hostVideoIssue,
     header: { title: title ?? '클래스', elapsedSec, totalSec, counselorName, myInitial: user?.name?.trim().charAt(0) || '나' },
     hero, snapshot, series, sheet, screenOff, confirmLeave,
+    v2Bars: v2On ? { label: '이완', current: v2Current, bars: v2Bars } : null,
     device: {
       battery: band.battery,
-      signalLabel: signalQualityLevelLabel(band.signalQualityLevel),
-      contactLabel: contactStatusLabel(band.deviceStatus),
+      signalLabel: signalQualityLevelLabel(signalLevel),
+      contactLabel: contactStatusLabel(deviceStatus),
       connectedElapsedSec: band.connectedElapsedSec,
       error: band.error,
       analyzing: isAnalyzing,
       raw,
+      ppg,
       isMock: band.isMock,
       pendingCount: band.pendingCount,
     },
@@ -358,7 +499,7 @@ export function MemberClassContainer({
       onsiteLabel: null,
     },
     chat: {
-      enabled: isAuthenticated ? chatEnabled : guestChatEnabled,
+      enabled: v2ChatReady ? Boolean(v2PolicyChat) : isAuthenticated ? chatEnabled : guestChatEnabled,
       authenticated: isAuthenticated,
       unread,
       node: isAuthenticated ? (
@@ -375,7 +516,7 @@ export function MemberClassContainer({
       ) : null,
     },
     waitlist: { title: title ?? '클래스', counselorName, startLabel: startedAt ? formatStartLabel(startedAt) : null, notifyByPush: isAuthenticated },
-    socketConnected: liveSocket.isConnected,
+    socketConnected: v2On ? liveV2?.state?.phase === 'READY' : liveSocket.isConnected,
     onboarding: { locationType, participantMode, maxParticipants },
   };
 
@@ -390,7 +531,7 @@ export function MemberClassContainer({
     band,
     retryNetwork,
     retryHostVideo: () => void connectLiveKit(),
-    sendSignal: liveSocket.sendSignal,
+    sendSignal: v2On && liveV2?.client ? sendSignalV2(liveV2.client) : liveSocket.sendSignal,
     setSpeakerOn: (on) => {
       speakerTouchedRef.current = true;
       setSpeakerOn(on);
@@ -409,6 +550,8 @@ export function MemberClassContainer({
       speaking={liveKit.speaking}
       raisedHand={liveKit.raisedHand}
       raiseHand={liveKit.raiseHand}
+      lowerHand={liveKit.lowerHand}
+      raiseHandError={liveKit.raiseHandError}
       speakerOn={speakerOn}
     >
       {(media) => <MemberLiveScreen shared={shared} controls={controls} media={media} />}
@@ -443,6 +586,7 @@ interface SharedScreenProps {
   snapshot: MetricSnapshot;
   series: MetricSeries;
   sheet: MemberSheetKey | null;
+  v2Bars: MemberClassViewProps['v2Bars'];
   screenOff: boolean;
   confirmLeave: boolean;
   device: MemberDeviceModel;
@@ -523,6 +667,24 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
     viewerOnly: shared.viewerOnly,
   };
 
+  const renderedRef = useRef<RenderedMetrics | null>(null);
+  const visibleRef = useRef(false);
+  const recordRef = useRef(band.recordDisplay);
+  useEffect(() => {
+    const c = deriveMemberCase(input);
+    const allShown = shared.sheet === 'status' && c.dock.some(item => item.key === 'status');
+    const shown: PlayerMetricKey[] = allShown ? PLAYER_METRICS.map(metric => metric.key) : !c.netDown && c.ring.showValue ? [shared.hero] : [];
+    const live = band.connectionState === 'connected';
+    const stale = resolveBandLinkState({ bleConnected: live, lastEegAt: band.lastEegAt, nowMs: shared.nowMs }) === 'stale';
+    renderedRef.current = { ...describeRender(band, shared.snapshot, band.deviceStatus === 'lead_off' || stale, stale, shared.snapshot.relaxation), displayedKeys: shown };
+    visibleRef.current = !shared.screenOff && !shared.waitlisted;
+    recordRef.current = band.recordDisplay;
+  });
+  useEffect(() => {
+    const timer = window.setInterval(() => recordRef.current(renderedRef.current, visibleRef.current && document.visibilityState !== 'hidden'), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const actions: MemberClassViewProps['actions'] = {
     onLeave: () => controls.setConfirmLeave(true),
     onHeroChange: controls.setHero,
@@ -552,6 +714,7 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
   return (
     <>
       <div inert={shared.screenOff}>
+        <BiosignalRecordingStatus state={band.recordingStatus} />
         <MemberClassView
           input={input}
           header={shared.header}
@@ -565,6 +728,7 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
           myVideo={media.myVideo}
           hostVideoIssue={shared.hostVideoIssue}
           sheet={shared.sheet}
+          v2Bars={shared.v2Bars}
           waitlist={shared.waitlist}
           actions={actions}
         />

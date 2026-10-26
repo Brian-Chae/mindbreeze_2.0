@@ -47,14 +47,14 @@ export default function SessionListPage() {
   }, [closeTargetId, refresh]);
 
   const rightSlot = (
-    <button type="button" onClick={() => navigate('/sessions/new')} className="mb-btn">
+    <button data-header-action="primary" type="button" onClick={() => navigate('/sessions/new')} className="mb-btn">
       <Plus size={20} aria-hidden="true" />클래스 만들기
     </button>
   );
 
   return (
     <AppShell title="클래스" rightSlot={rightSlot} noScroll>
-      <div className="sh-scope mx-auto h-full w-full max-w-6xl overflow-y-auto pb-6">
+      <div className="sh-scope mx-auto h-full w-full max-w-mb-content overflow-y-auto pb-6">
         <div className="sh-col">
           {loading ? (
             <p className="py-8 text-center text-sm text-[#6F6F6F]">불러오는 중...</p>

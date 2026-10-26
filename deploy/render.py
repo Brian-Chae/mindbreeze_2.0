@@ -46,6 +46,8 @@ STATIC_OUTPUTS: dict[str, str] = {
     "coturn/turnserver.conf.tpl": "etc/turnserver.conf",
     "systemd/mindbreeze-backend.service.tpl": "etc/systemd/system/mindbreeze-backend.service",
     "systemd/mindbreeze-worker.service.tpl": "etc/systemd/system/mindbreeze-worker.service",
+    "systemd/mindbreeze-stt-worker.service.tpl": "etc/systemd/system/mindbreeze-stt-worker.service",
+    "systemd/mindbreeze-report-worker.service.tpl": "etc/systemd/system/mindbreeze-report-worker.service",
     "systemd/mindbreeze-email-worker.service.tpl": "etc/systemd/system/mindbreeze-email-worker.service",
     "systemd/mindbreeze-export-worker.service.tpl": "etc/systemd/system/mindbreeze-export-worker.service",
     "systemd/livekit.service.tpl": "etc/systemd/system/livekit.service",
@@ -138,7 +140,7 @@ def render_text(text: str, values: dict[str, str], source: str) -> str:
     return TOKEN_RE.sub(lambda m: values[m.group(1)], text)
 
 
-def validate_values(values: dict[str, str]) -> None:
+def validate_values(values: dict[str, str], *, app_only: bool = False) -> None:
     for name in ("PUBLIC_IP", "PRIVATE_IP"):
         v = values.get(name, "")
         if v and not re.fullmatch(r"\d{1,3}(\.\d{1,3}){3}", v):
@@ -148,6 +150,14 @@ def validate_values(values: dict[str, str]) -> None:
         if v and not re.fullmatch(r"[a-z0-9]([a-z0-9.-]*[a-z0-9])?", v):
             raise RenderError(f"{name} 형식 오류")
     for name, v in values.items():
+        if name == "PREFIX" and app_only:
+            # 앱 ExecStart 경로는 따옴표로 감싼다. systemd 확장·인용 문자는 허용하지 않는다.
+            # WorkingDirectory는 단일 경로 값이므로 내부 공백을 그대로 유지한다.
+            if not v.startswith("/") or any(ord(c) < 32 or ord(c) == 127 or c in "\"'\\%$" for c in v):
+                raise RenderError("PREFIX 는 절대 경로이며 제어·인용·확장 문자를 포함할 수 없음")
+            if any(c.isspace() and c != " " for c in v):
+                raise RenderError("PREFIX 에 일반 공백 이외의 공백 문자 불가")
+            continue
         if name not in SECRET_VARS and re.search(r"[\s]", v) and name not in ("TURN_REALM",):
             raise RenderError(f"{name} 에 공백/개행 불가")
         if name in SECRET_VARS and re.search(r"[\s:#\"']", v):
@@ -164,7 +174,7 @@ def write(out: Path, rel: str, content: str, mode: int = 0o644) -> None:
 def render_all(out: Path, values: dict[str, str], templates: Path = HERE / "templates", jobs_file: Path = HERE / "jobs.tsv",
                allow_dev_markers: bool = False, only: str | None = None) -> list[str]:
     """only=None: 전체 / "app": 앱 유닛·job timer 만(install-release.sh 가 릴리스마다 사용) / "infra": 나머지."""
-    validate_values(values)
+    validate_values(values, app_only=only == "app")
     written: list[str] = []
     for tpl_rel, out_rel in STATIC_OUTPUTS.items():
         if only == "app" and tpl_rel not in APP_OUTPUTS:

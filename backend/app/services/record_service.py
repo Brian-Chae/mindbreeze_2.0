@@ -171,6 +171,14 @@ def get_record(session_id: str, user_id: str, db: DBSession) -> dict:
             .first()
         )
         subjective = participant_subjective_state(record, participant.id if participant else None)
+    if not is_host:
+        from app.services.class_access_service import can_read_team_material, without_raw_material
+        if can_read_team_material(db,user_id,s):
+            result=_serialize(record,s.id,None,video_actual_chunks=None,include_internal=False)
+            result["ai_summary"]=without_raw_material(record.ai_summary or {}) if record else {}
+            result["markers"]=[]
+            result["edit_history"]=[]
+            return result
     return _serialize(
         record, s.id, subjective,
         video_actual_chunks=video_actual,
@@ -253,6 +261,7 @@ def _resolve_checkin_participant(
     participant = resolve_participant_actor(
         s.id, db, entry_credential=entry_credential, current_user_id=user_id,
         participant_id=payload.participant_id,
+        allow_completed=payload.phase == "after",
     )
     if participant.is_waitlisted:
         raise HTTPException(status_code=403, detail="해당 세션의 참가자가 아닙니다")
@@ -268,7 +277,8 @@ def submit_checkin(
     - phase 단위 저장: before(수업 전 예상)/after(수업 후)를 각각 덮어쓴다.
     - 취소된 세션은 409 (그 외 상태는 종료 화면 진입 타이밍 차이를 흡수해 허용).
     """
-    s = _get_session(session_id, db)
+    from app.services.class_participation_service import lock_context
+    s, _ = lock_context(db, session_id, user_id)
     if s.status == "cancelled":
         raise HTTPException(status_code=409, detail="취소된 세션에는 체크인할 수 없습니다")
 
@@ -300,8 +310,16 @@ def submit_checkin(
         "participants": participants_map,
         "updated_at": _now().isoformat(),
     }
+    if payload.phase == "before":
+        participant.checkin_state = "completed"
+        participant.checkin_at = _now()
+        s.participation_version = (s.participation_version or 0) + 1
     db.commit()
     db.refresh(record)
+    if payload.phase == "before":
+        from app.services.session_service import _notify_participant_changed
+        _notify_participant_changed(s, db)
+
 
     return {
         "session_id": str(s.id),

@@ -166,6 +166,24 @@ def test_stg11_stream_id_rejects_key_escaping_chars():
     assert key == "eeg-raw/x/y/s0-1_2/00000003.bin"
 
 
+def test_sdd224_stream_id_allows_colon_but_rejects_escapes():
+    """프론트 stream_id `eeg:{session}:{participant}` 허용, 경로 이탈 문자는 계속 422."""
+    from uuid import uuid4
+
+    from fastapi import HTTPException
+
+    from app.services.eeg_raw_service import _build_object_key
+
+    sid = f"eeg:{uuid4()}:{uuid4()}"
+    assert len(sid) <= 128
+    assert _build_object_key("eeg-raw/x/y", sid, 1) == f"eeg-raw/x/y/{sid}/00000001.bin"
+
+    for bad in ("a/b", "../x", "a\\b", "a..b", "", "a" * 129):
+        with pytest.raises(HTTPException) as exc:
+            _build_object_key("eeg-raw/x/y", bad, 0)
+        assert exc.value.status_code == 422
+
+
 # ---------------------------------------------------------------------------
 # [5] STG-13 — 리포트 content 내부 S3 key 미노출
 # ---------------------------------------------------------------------------
@@ -296,10 +314,13 @@ def test_mb_err_005_approve_notification_failure_logged(monkeypatch, caplog):
         user_id=uuid.uuid4(),
         content={},
         sent_at=None,
+        approved_at=None,
+        approved_by_user_id=None,
         participant_id=None,
         type="counselor",
     )
-    session = SimpleNamespace(id=session_id, host_id=host_id, title="세션")
+    session = SimpleNamespace(id=session_id, host_id=host_id, title="세션", class_id=None)
+    actor = SimpleNamespace(id=host_id, status="active", role="counselor")
 
     class _Query:
         def __init__(self, target):
@@ -313,7 +334,8 @@ def test_mb_err_005_approve_notification_failure_logged(monkeypatch, caplog):
 
     class _DB:
         def query(self, model):
-            return _Query(report if model is Report else session)
+            from app.models.user import User
+            return _Query(report if model is Report else actor if model is User else session)
 
         def commit(self):
             pass
@@ -374,7 +396,7 @@ def test_mb_err_007_export_enqueue_failure_logged(client, monkeypatch, caplog):
         lambda *a, **k: (
             SimpleNamespace(role="counselor"),
             None,
-            SimpleNamespace(consent_eeg=False),
+            SimpleNamespace(consent_eeg=False, eeg_collection_consented=None),
         ),
     )
 

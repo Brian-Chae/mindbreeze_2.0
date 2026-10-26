@@ -1,3 +1,7 @@
+import { userErrorMessage } from '../../lib/api/user-error';
+import { BiosignalRecordingStatus } from '../../lib/biosignal/recording-status';
+import type { RenderedMetrics } from '../../lib/biosignal/display-snapshot';
+import { toHostParticipant } from '../../components/class/player/host/host-live-model';
 // SDD-088: 독립형 클래스 플레이어 — 클래스 = 가상의 방, 상태에 따라 씬이 전개된다.
 // 풀스크린(AppShell 밖) 단일 페이지. 상담사(host) 씬:
 //   ① 세팅(ready/scheduled): 내 영상·소리 점검 + [클래스 열기]   — SDD-209 HostPrepContainer
@@ -11,12 +15,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import { getClass, type ClassDetailDto } from '../../lib/api/class-structure';
+import { asClassId } from '../../lib/class-structure/read-model';
+import { MemberInviteSheet } from '../../components/class/flow/host/MemberInviteSheet';
 import {
   getSession,
   getSessionLiveMetrics,
   duplicateSession,
   setParticipantSpeaking,
   transitionSession,
+  scheduleConflictFingerprint,
   type SessionDto,
   type SessionLiveMetric,
   type SessionStatus,
@@ -28,8 +36,15 @@ import { useAudioRecorder } from '../../hooks/useAudioRecorder';
 import { useVideoRecorder } from '../../hooks/useVideoRecorder';
 import { useBand } from '../../hooks/useBand';
 import { useLiveKit } from '../../hooks/useLiveKit';
+import { useParticipationSnapshot } from '../../hooks/useParticipationSnapshot';
 import { useSessionLiveSocket } from '../../hooks/useSessionLiveSocket';
+import { useLiveV2 } from '../../lib/session-live/use-live-v2';
+import { participantsToMetrics } from './participants-to-metrics';
+import { isLiveProtocolV2Enabled } from '../../lib/session-live/live-flag';
+import { activeSignals, sessionStatusOf, toSessionLiveMetrics, toWaitingEntries } from '../../lib/session-live/live-legacy-adapter';
 import { useWakeLock } from '../../hooks/useWakeLock';
+import { useHostBackgroundSession } from '../../hooks/useHostBackgroundSession';
+import { useAppResume } from '../../hooks/useAppResume';
 import { useLeaveGuard } from '../../hooks/useLeaveGuard';
 import { useAuthStore } from '../../stores/authStore';
 import { applyEegFeatureToMetricsDetailed } from '../../lib/session-live/apply-eeg-feature';
@@ -65,7 +80,7 @@ import {
   countSignals,
   isClassSignalType,
   pruneSignals,
-  recordSignal,
+  receiveSignal,
   SIGNAL_ACTIVE_MS,
   type ActiveSignal,
 } from '../../lib/class/quiet-signal';
@@ -74,7 +89,7 @@ import { HostPrepContainer } from '../../components/class/flow/host/HostPrepCont
 import { HostStateScreen } from '../../components/class/flow/host/HostStateScreen';
 import { useMediaCheck } from '../../hooks/useMediaCheck';
 import { leadOffFromBand } from '../../lib/class/flow/member-presence';
-import { endedDurationMin } from '../../lib/class/flow/host-ending-model';
+import { completedClassDestination, endedDurationMin } from '../../lib/class/flow/host-ending-model';
 import { deriveHostStateKind, type HostStateAction, type HostStateKind } from '../../lib/class/flow/host-state-model';
 import type { OpenPrefs } from '../../lib/class/flow/host-open';
 import type { StartAudioPlan } from '../../lib/class/flow/host-start-model';
@@ -126,29 +141,6 @@ function scoreServerRows(rows: SessionLiveMetric[]): SessionLiveMetric[] {
     current_efficiency: scoreEfficiency(r.current_efficiency),
     avg_efficiency: scoreEfficiency(r.avg_efficiency),
   }));
-}
-
-/** live-metrics가 없을 때 세션 참가자로 테이블 행을 만든다 (시작 전 대기 표시) */
-function participantsToMetrics(session: SessionDto): SessionLiveMetric[] {
-  return session.participants
-    .filter((p) => !p.is_waitlisted)
-    .map((p, index) => ({
-      participant_id: p.user_id ?? `guest-${index}-${p.guest_name ?? 'unknown'}`,
-      display_name:
-        p.user_name || p.guest_name || p.user_email || (p.is_guest ? '게스트' : '참가자'),
-      is_guest: p.is_guest,
-      band_connected: p.band_connected,
-      device_status: null,
-      band_battery: null,
-      avg_efficiency: null,
-      current_efficiency: null,
-      upload_status: null,
-      last_eeg_at: null,
-      // SDD-094: 세션 상세에 실린 발언권 상태를 그대로 승계
-      // (게스트 id 는 실제 participant_id 가 아니므로 부여/해제 버튼은 패널에서 막힌다)
-      raise_hand: p.raise_hand ?? false,
-      speaking: p.speaking ?? false,
-    }));
 }
 
 /** SDD-094: 참여자별 발언권 상태 — WS 이벤트/API 응답으로 갱신되는 오버레이 */
@@ -277,7 +269,13 @@ function mergeFeatureBufferAverages(
 export default function ClassPlayerPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [session, setSession] = useState<SessionDto | null>(null);
+  const routeRef = useRef({id, generation:0});
+  if (routeRef.current.id !== id) routeRef.current = {id, generation:routeRef.current.generation + 1};
+  const routeGeneration = routeRef.current.generation;
+  const isCurrentRoute = useCallback((requestedId: string | undefined): boolean =>
+    routeRef.current.id === requestedId && routeRef.current.generation === routeGeneration, [routeGeneration]);
+  const [loadedSession, setSession] = useState<SessionDto | null>(null);
+  const session = loadedSession?.id === id ? loadedSession : null;
   // FE-PERF-002: setSession 업데이터 내부에서 setMetrics 를 호출하면 updater 가 부수효과를
   // 갖게 된다(StrictMode 이중 호출 위험). 최신 세션은 ref 로 읽어 updater 밖에서 갱신한다.
   const sessionRef = useRef<SessionDto | null>(null);
@@ -318,6 +316,8 @@ export default function ClassPlayerPage() {
     micOn: true,
   });
   const [codeCopied, setCodeCopied] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteDetail, setInviteDetail] = useState<ClassDetailDto | null>(null);
   /** SDD-094: 발언권 부여/해제 요청 진행 중인 participant_id */
   const [speakingBusyId, setSpeakingBusyId] = useState<string | null>(null);
   /** SDD-095: 상담사 채팅 토글 요청 진행 중 */
@@ -344,35 +344,62 @@ export default function ClassPlayerPage() {
   const currentUserId = useAuthStore((s) => s.user?.id ?? null);
   const isHost = Boolean(session && currentUserId && session.host_id === currentUserId);
 
+  const inviteClassId = isHost && (session?.status === 'open' || session?.status === 'in_progress') ? session.class_id : null;
+  useEffect(() => {
+    const controller = new AbortController();
+    setInviteDetail(null); setInviteOpen(false);
+    if (inviteClassId) void getClass(asClassId(inviteClassId), controller.signal)
+      .then(detail => { if (!controller.signal.aborted) setInviteDetail(detail); })
+      .catch(() => { /* 권한을 확인하지 못하면 초대 진입점을 숨긴다. */ });
+    return () => controller.abort();
+  }, [inviteClassId, id, currentUserId]);
+  const canInvite = Boolean(inviteClassId && inviteDetail?.id === inviteClassId && inviteDetail.status === 'active' && inviteDetail.capabilities?.invite === true);
+
+  // 마이크·카메라 없음/거부는 전용 안내 배너가 이미 보여 준다 — 브라우저 원문(Requested device not found)을 오류 띠로 띄우지 않는다.
+  const onRecorderError = useCallback((err: Error) => {
+    if (err.name === 'NotFoundError' || err.name === 'NotAllowedError' || err.name === 'OverconstrainedError') return;
+    setError(err.message);
+  }, []);
   const recorder = useAudioRecorder({
     sessionId: id ?? '',
-    onError: (err) => setError(err.message),
+    onError: onRecorderError,
   });
 
   // SDD-084/085: 상담사 본인 카메라 영상 녹화 — 마이크 오프 세션은 무음 영상
   const videoRecorder = useVideoRecorder({
     sessionId: id ?? '',
     withAudio: mediaPrefs.micOn,
-    onError: (err) => setError(err.message),
+    onError: onRecorderError,
   });
 
   /** 호스트 본인 참가자 id — live-metrics 행의 user_id 매칭 */
   const hostParticipantId = useMemo(() => {
-    if (!currentUserId) return null;
+    if (!currentUserId || !session) return null;
     const fromMetrics = metrics.find((m) => m.user_id === currentUserId);
     if (fromMetrics) return fromMetrics.participant_id;
     return null;
-  }, [currentUserId, metrics]);
+  }, [currentUserId, metrics, session]);
+
+  // SDD-246 T06: v2 on 이면 LiveClient/LiveState 하나만 쓴다 — v1 소켓 훅·REST 폴링은 구동하지 않는다.
+  const v2Flag = isLiveProtocolV2Enabled();
+  const liveV2 = useLiveV2({ sessionId: id, selfParticipantId: hostParticipantId, enabled: Boolean(id && session) });
+  const v2Ready = liveV2.ready;
+  const participationState = useParticipationSnapshot({classId: v2Flag ? undefined : session?.class_id, sessionId: id});
+  const participation = participationState.sessionId === id ? participationState : {sessionId:id, participants:{}, version:-1, revoked:false};
+  const participationVersionRef = useRef({sessionId: id, version: -1});
+  if (participationVersionRef.current.sessionId !== id) participationVersionRef.current = {sessionId: id, version: -1};
+  participationVersionRef.current.version = Math.max(participationVersionRef.current.version, participation.version);
 
   const band = useBand({
-    sessionId: id ?? '',
-    participantId: hostParticipantId,
-    enabled: Boolean(id && hostParticipantId),
+    displayViewKind: 'session_player',
+    sessionId: participation.revoked || !session ? '' : id ?? '',
+    participantId: participation.revoked ? null : hostParticipantId,
+    enabled: Boolean(id && hostParticipantId && !participation.revoked),
   });
 
   const handleLiveFeature = useCallback(
     (event: SessionLiveEegFeatureEvent) => {
-      if (!id || event.session_id !== id) return;
+      if (!id || event.session_id !== id || !isCurrentRoute(id)) return;
       // saved=0 은 이미 저장된 window의 재전송 중복(멱등 skip) — 과거 timestamp가
       // last_eeg_at을 되돌리고(→ false "수신끊김") 구간 평균을 오염시키므로 무시한다.
       if (event.saved === 0) return;
@@ -385,7 +412,9 @@ export default function ClassPlayerPage() {
       const emotional = finiteValue(event.feature?.emotional_stability);
       const heartRate = event.feature?.heart_rate ?? null;
       const respiratoryRate = event.feature?.respiratory_rate ?? null;
-      const at = event.last_eeg_at ? Date.parse(event.last_eeg_at) : event.feature?.timestamp ?? now;
+      // 서버 eeg_feature 브로드캐스트에는 last_eeg_at 이 없다. 회원 기기 시계(feature.timestamp)는 상담사 시계와 어긋나면
+      // EXTRA_FRESH_MS(10초) 판정에서 집중·정서가 '-' 가 되므로 수신 시각을 쓴다.
+      const at = event.last_eeg_at ? Date.parse(event.last_eeg_at) : now;
       setHostExtras(previous => {
         if (previous[event.participant_id]?.at > at) return previous;
         const prev = previous[event.participant_id];
@@ -434,11 +463,15 @@ export default function ClassPlayerPage() {
       }
       setMetrics((prev) => mergeFeatureBufferAverages(prev, bufferSnapshot, envelopeSnapshot));
     },
-    [id],
+    [id, isCurrentRoute],
   );
 
   const handleSnapshot = useCallback((snap: SessionLiveJoinSnapshot) => {
-    if (snap.participants?.length) {
+    if (snap.session_id !== id || !isCurrentRoute(id)) return;
+    const participationVersion = snap.participation_version;
+    const stale = typeof participationVersion === 'number' && participationVersion <= participationVersionRef.current.version;
+    if (!stale && snap.participants) {
+      if (typeof participationVersion === 'number') participationVersionRef.current.version = participationVersion;
       setMetrics(scoreServerRows(snap.participants));
     }
     if (snap.status) {
@@ -446,11 +479,11 @@ export default function ClassPlayerPage() {
         prev ? { ...prev, status: snap.status as SessionStatus } : prev,
       );
     }
-  }, []);
+  }, [id, isCurrentRoute]);
 
   const handleSessionState = useCallback(
     (event: SessionStateChangedEvent) => {
-      if (!id || event.session_id !== id) return;
+      if (!id || event.session_id !== id || !isCurrentRoute(id)) return;
       setSession((prev) =>
         prev
           ? {
@@ -461,22 +494,40 @@ export default function ClassPlayerPage() {
           : prev,
       );
     },
-    [id],
+    [id, isCurrentRoute],
   );
 
   const handleParticipantChanged = useCallback(
     (event: ParticipantChangedEvent) => {
-      if (!id || event.session_id !== id) return;
-      if (event.participants && event.participants.length > 0) {
+      if (!id || event.session_id !== id || !isCurrentRoute(id)) return;
+      if (typeof event.participation_version === 'number') {
+        if (event.participation_version <= participationVersionRef.current.version) return;
+        participationVersionRef.current.version = event.participation_version;
+        if (event.participants) {
+          // 참여 이벤트의 NULL 측정 placeholder는 최신 EEG를 덮지 않는다.
+          const incoming = event.participants;
+          setMetrics(previous => {
+            const known = new Set(previous.map(row => row.participant_id));
+            return [
+              ...previous.map(row => {
+                const update = incoming.find(p => p.participant_id === row.participant_id);
+                return update ? {...row, display_name:update.display_name, user_id:update.user_id, is_guest:update.is_guest,
+                  raise_hand:update.raise_hand, speaking:update.speaking} : row;
+              }),
+              ...scoreServerRows(incoming.filter(row => !known.has(row.participant_id))),
+            ];
+          });
+        }
+      } else if (event.participants) {
         setMetrics(scoreServerRows(event.participants));
       }
     },
-    [id],
+    [id, isCurrentRoute],
   );
 
   const handleDeviceStatus = useCallback(
     (event: DeviceStatusChangedEvent) => {
-      if (!id || event.session_id !== id) return;
+      if (!id || event.session_id !== id || !isCurrentRoute(id)) return;
       setMetrics((prev) => {
         let changed = false;
         const next = prev.map((row) => {
@@ -512,7 +563,7 @@ export default function ClassPlayerPage() {
         return changed ? next : prev;
       });
     },
-    [id],
+    [id, isCurrentRoute],
   );
 
   /** SDD-094: 참여자별 발언권 상태 오버레이 — WS 이벤트/API 응답에서만 갱신 */
@@ -553,15 +604,20 @@ export default function ClassPlayerPage() {
       setSpeakingBusyId(participantId);
       setError(null);
       try {
+        if (v2Flag && liveV2.client && v2Ready) {
+          const ack = await liveV2.client.request('speaking.set', { target_id: participantId, can_publish: granted, expected_grant_version: null }, { targetId: participantId });
+          if (ack.status !== 'applied' && ack.status !== 'duplicate') throw new Error(ack.code ?? '발언권 변경에 실패했습니다');
+          return; // 표시는 LiveState(speaking 도메인)가 출처 — 로컬 patch 를 만들지 않는다
+        }
         const res = await setParticipantSpeaking(id, participantId, granted);
         recordSpeaking(res.participant_id ?? participantId, res.speaking, res.raise_hand);
       } catch (e) {
-        setError(e instanceof Error ? e.message : '발언권 변경에 실패했습니다');
+        { const text = userErrorMessage(e, '발언권 변경에 실패했습니다'); if (text) setError(text); }
       } finally {
         setSpeakingBusyId(null);
       }
     },
-    [id, recordSpeaking],
+    [id, recordSpeaking, v2Flag, v2Ready, liveV2.client],
   );
 
   /** SDD-095: 클래스 채팅 활성 여부(상담사 토글) — 세션 폴링·토글 응답으로 갱신된다 */
@@ -583,7 +639,7 @@ export default function ClassPlayerPage() {
       // 켜면 바로 펼쳐서 대화를 확인할 수 있게 한다
       if (value) setChatExpanded(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : '채팅 설정 변경에 실패했습니다');
+      { const text = userErrorMessage(e, '채팅 설정 변경에 실패했습니다'); if (text) setError(text); }
     } finally {
       setChatBusy(false);
     }
@@ -591,7 +647,7 @@ export default function ClassPlayerPage() {
 
   // ── 개선 5: 무음 시그널 ──────────────────────────────────────────
   // 회원이 발언권 없이 보낸 상태 신호(휘발성)를 참여자별 최신 1건으로 보관한다.
-  // 카드 배지는 CSS 페이드(수 초)로 사라지고, 상단에는 유형별 집계만 남는다.
+  // 상담사에게만 이름·최신 선택을 표시하며 TTL 만료 시 함께 제거한다.
   const [quietSignals, setQuietSignals] = useState<Record<string, ActiveSignal>>({});
 
   const handleQuietSignal = useCallback(
@@ -599,7 +655,7 @@ export default function ClassPlayerPage() {
       if (!id || (event.session_id && event.session_id !== id)) return;
       if (!event.participant_id || !isClassSignalType(event.signal_type)) return;
       const at = Date.now();
-      setQuietSignals((prev) => recordSignal(prev, event.participant_id, event.signal_type, at));
+      setQuietSignals((prev) => receiveSignal(prev, event.participant_id, event.signal_type, event.at, at, event.display_name));
     },
     [id],
   );
@@ -608,20 +664,46 @@ export default function ClassPlayerPage() {
   useEffect(() => {
     const timer = window.setInterval(() => {
       setQuietSignals((prev) => pruneSignals(prev, Date.now(), SIGNAL_ACTIVE_MS));
-    }, 1000);
+    }, 200);
     return () => window.clearInterval(timer);
   }, []);
 
   /** 상단 집계 — 활성(TTL 이내) 신호만 유형별로 센다 */
+  const v2Signals = useMemo<Record<string, ActiveSignal>>(() => {
+    if (!v2Flag || !liveV2.state) return {};
+    const out: Record<string, ActiveSignal> = {};
+    for (const sig of activeSignals(liveV2.state, liveV2.nowMs)) {
+      out[sig.participantId] = { type: sig.type, at: sig.expiresAtMs - SIGNAL_ACTIVE_MS };
+    }
+    return out;
+  }, [v2Flag, liveV2.state, liveV2.nowMs]);
+  const shownSignals = v2Flag ? v2Signals : quietSignals;
   const quietSignalCounts = useMemo(
-    () => countSignals(quietSignals, Date.now(), SIGNAL_ACTIVE_MS),
-    [quietSignals],
+    () => countSignals(shownSignals, Date.now(), SIGNAL_ACTIVE_MS),
+    [shownSignals],
   );
+
+  useEffect(() => {
+    // 같은 페이지 인스턴스의 회차 전환에서 이전 EEG·체크인 캐시는 재사용하지 않는다.
+    setMetrics([]);
+    setMetricsPollFailing(false);
+    setError(null);
+    setLoadErrorKind(null);
+    setHostExtras({});
+    setSpeakingPatch({});
+    setQuietSignals({});
+    setSessionCheckins([]);
+    retainedCheckinsRef.current.clear();
+    featureBufferRef.current.clear();
+    lastFeatureEnvelopeRef.current.clear();
+    historyRef.current.clear();
+    lastFeaturePatchAtRef.current = 0;
+  }, [id]);
 
   const liveSocket = useSessionLiveSocket({
     sessionId: id,
     participantId: hostParticipantId,
-    enabled: Boolean(id && session),
+    enabled: !v2Flag && Boolean(id && session && !participation.revoked),
     onEegFeature: handleLiveFeature,
     onSnapshot: handleSnapshot,
     onSessionStateChanged: handleSessionState,
@@ -635,56 +717,100 @@ export default function ClassPlayerPage() {
     if (!id) return;
     try {
       const next = await getSession(id);
+      if (!isCurrentRoute(id) || next.id !== id) return;
       setSession(next);
       // 폴링 재시도 성공 시 이전 오류 문구를 지운다(에러 복구)
       setError(null);
       setLoadErrorKind(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : '클래스를 불러오지 못했습니다');
+      if (!isCurrentRoute(id)) return;
+      { const text = userErrorMessage(e, '클래스를 불러오지 못했습니다'); if (text) setError(text); }
       setLoadErrorKind(deriveHostStateKind({ error: e, online: typeof navigator === 'undefined' ? undefined : navigator.onLine }));
     }
-  }, [id]);
+  }, [id, isCurrentRoute]);
 
   const refreshMetrics = useCallback(async (): Promise<void> => {
     if (!id) return;
     try {
       const res = await getSessionLiveMetrics(id);
+      if (!isCurrentRoute(id)) return;
       setMetrics(scoreServerRows(res.metrics ?? res.participants ?? []));
       setMetricsPollFailing(false);
     } catch {
+      if (!isCurrentRoute(id)) return;
       setMetricsPollFailing(true);
       // FE-PERF-002: sessionRef 에서 최신 세션을 읽어 setMetrics 를 직접 호출한다.
       const current = sessionRef.current;
       if (current) setMetrics(participantsToMetrics(current));
     }
-  }, [id]);
+  }, [id, isCurrentRoute]);
 
   useEffect(() => {
     if (!id) return;
     void refreshSession();
+    // v2 READY 에서는 REST 폴링 0 — 상태 변화는 아래 effect 가 LiveState 로 감지해 한 번만 다시 읽는다.
+    if (v2Ready) return undefined;
     const timer = window.setInterval(() => {
       void refreshSession();
     }, SESSION_POLL_MS);
     return () => window.clearInterval(timer);
-  }, [id, refreshSession]);
+  }, [id, refreshSession, v2Ready]);
 
   // SDD-021: 폴링은 항상 유지(안전망) — WS 실시간은 트리거로 즉시 갱신
   useEffect(() => {
     if (!id || !session) return undefined;
+    if (v2Flag) {
+      if (!v2Ready) void refreshMetrics(); // v2 지표는 LiveState 가 출처 — READY 에서는 REST 지표 폴링 0
+      return undefined;
+    }
     void refreshMetrics();
     const timer = window.setInterval(() => {
       void refreshMetrics();
     }, LIVE_METRICS_POLL_MS);
     return () => window.clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- session 은 폴링마다 새 객체로 setSession 되므로 deps 에 넣으면 effect 가 매 폴링 재실행된다. session?.status 로 상태 변화만 감지한다.
-  }, [id, session?.status, refreshMetrics]);
+  }, [id, session?.status, refreshMetrics, v2Flag, v2Ready]);
+
+  /**
+   * SDD-246 T06: 전이(open/start/end/cancel)는 v2 READY 에서 live:command 로 보낸다.
+   * 거절(예: 일정 겹침 409 확인 흐름)은 기존 REST 가 정확한 오류를 주므로 REST 로 한 번 더 요청한다.
+   */
+  const transition = useCallback(async (
+    sid: string,
+    action: 'open' | 'start' | 'end' | 'cancel',
+    opts?: Parameters<typeof transitionSession>[2],
+  ): Promise<SessionDto> => {
+    const client = liveV2.client;
+    if (v2Flag && v2Ready && client && !opts) {
+      // 계약상 session.end/cancel 은 payload.reason 필수 — 없으면 서버가 missing_field 로 거절한다.
+      const payload = action === 'end' || action === 'cancel' ? { reason: 'host_request' } : {};
+      const ack = await client.request(`session.${action}`, payload);
+      if (ack.status === 'applied' || ack.status === 'duplicate') return getSession(sid);
+    }
+    return opts ? transitionSession(sid, action, opts) : transitionSession(sid, action);
+  }, [liveV2.client, v2Flag, v2Ready]);
+
+  // v2: 회차 전이가 LiveState 로 먼저 오면 REST 를 한 번만 다시 읽어 화면 모델(session)을 맞춘다(주기 폴링 아님).
+  const v2Status = v2Flag ? sessionStatusOf(liveV2.state) : null;
+  useEffect(() => {
+    if (!v2Flag || !v2Status || !session || v2Status === session.status) return;
+    void refreshSession();
+  }, [v2Flag, v2Status, session, refreshSession]);
 
   const status: SessionStatus | null = session?.status ?? null;
   const isSetup = status === 'ready' || status === 'scheduled';
   const isLobby = status === 'open';
   const isRunning = status === 'in_progress';
+  const completedLeaveToRef = useRef<string | null>(null);
   const isEnded = status === 'completed';
   const isCancelled = status === 'cancelled';
+
+  useEffect(() => {
+    if (isHost && session?.class_id && session.status === 'completed' && !completedLeaveToRef.current) {
+      bypassGuardRef.current = true;
+      navigate(`/sessions/${session.id}/summary`, { replace: true });
+    }
+  }, [isHost, session?.class_id, session?.id, session?.status, navigate]);
 
   // SDD-094: 온라인 그룹(≤20)에서만 발언권 관리 대상 —
   // 온라인 1:1은 상시 송출, 오프라인/>20은 부여해도 can_publish=false 라 UI 를 띄우지 않는다
@@ -701,14 +827,42 @@ export default function ClassPlayerPage() {
     sessionId: id,
     // BGM·가이드는 온라인 전용 — 오프라인 대면 수업은 재생하지 않는다.
     enabled: Boolean(id && isHost && isLobby && session?.location_type === 'online'),
-    publish: liveSocket.sendAudioSync,
+    publish: v2Flag
+      ? (payload) => {
+          const client = liveV2.client;
+          if (!client || !v2Ready) return false;
+          client.sendCommand('audio.set', {
+            action: payload.action,
+            track_id: payload.track_id,
+            position_ms: Math.max(0, Math.round(payload.position_sec * 1000)),
+            expected_revision: null,
+          });
+          return true;
+        }
+      : liveSocket.sendAudioSync,
   });
 
   // 대기·진행 중 화면 꺼짐 방지 (회원 immersive 와 동일 정책)
   useWakeLock(isLobby || isRunning);
+  // SDD-222 D3: 상담사도 화면이 꺼지거나 앱이 백그라운드여도 BLE·음성 송출·소켓이 유지되도록 Foreground Service 를 켠다.
+  useHostBackgroundSession({
+    isHost,
+    isLobby,
+    isRunning,
+    online: session?.location_type === 'online',
+    recording: recorder.state === 'recording' || recorder.state === 'paused',
+  });
+  // 앱 복귀 시 경과 시각을 즉시 다시 계산한다 — setInterval 은 백그라운드에서 멈추므로 서버 기준 시각(started_at·opened_at)으로 보정.
+  const [resumeTick, setResumeTick] = useState(0);
+  useAppResume(() => setResumeTick((n) => n + 1));
 
   // 개선 3: 회원 대기실(입장 전 준비) 인원 — 대기실 씬에서만 구독한다
-  const waitingRoom = useWaitingRoomCount({ sessionId: id, enabled: Boolean(id && isLobby) });
+  const waitingRoomV1 = useWaitingRoomCount({ sessionId: id, enabled: !v2Flag && Boolean(id && isLobby) });
+  const waitingRoom = useMemo(() => {
+    if (!v2Flag || !liveV2.state) return waitingRoomV1;
+    const entries = toWaitingEntries(liveV2.state, Object.values(participation.participants));
+    return { ...waitingRoomV1, entries, count: entries.length, nicknames: entries.map((e) => e.nickname ?? '참가자') };
+  }, [v2Flag, liveV2.state, waitingRoomV1, participation.participants]);
 
   // FH05 세팅: 온라인일 때만 마이크·카메라를 켜서 점검한다(오프라인은 getUserMedia 호출 0회). 세팅을 벗어나면 끈다.
   const setupMediaActive = Boolean(isHost && isSetup && session?.location_type === 'online');
@@ -783,11 +937,11 @@ export default function ClassPlayerPage() {
     setTransitioning(true);
     setError(null);
     try {
-      const updated = await transitionSession(id, 'open');
+      const updated = await transition(id, 'open');
       setSession(updated);
       await refreshMetrics();
     } catch (e) {
-      setError(e instanceof Error ? e.message : '클래스 오픈에 실패했습니다');
+      { const text = userErrorMessage(e, '클래스 오픈에 실패했습니다'); if (text) setError(text); }
     } finally {
       setTransitioning(false);
     }
@@ -803,7 +957,19 @@ export default function ClassPlayerPage() {
     setTransitioning(true);
     setError(null);
     try {
-      const updated = await transitionSession(id, 'start');
+      let updated: SessionDto;
+      try {
+        updated = await transition(id, 'start');
+      } catch (e) {
+        // 같은 시간대 다른 클래스와 겹치면 서버가 확인용 지문과 함께 409 를 준다 → 확인 후 force 로 재요청.
+        const fingerprint = scheduleConflictFingerprint(e);
+        if (!fingerprint) throw e;
+        if (!window.confirm('같은 시간에 진행 중이거나 예정된 다른 클래스가 있어요.\n그래도 이 클래스를 시작할까요?')) {
+          setError('겹치는 일정이 있어 시작하지 않았어요.');
+          return;
+        }
+        updated = await transitionSession(id, 'start', { force: true, confirmed_conflict_fingerprint: fingerprint });
+      }
       setSession(updated);
       const online = updated.location_type === 'online';
       if (online) liveKit.connect();
@@ -833,7 +999,7 @@ export default function ClassPlayerPage() {
         }
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : '클래스 시작에 실패했습니다');
+      { const text = userErrorMessage(e, '클래스 시작에 실패했습니다'); if (text) setError(text); }
     } finally {
       setTransitioning(false);
     }
@@ -846,7 +1012,7 @@ export default function ClassPlayerPage() {
     setError(null);
     try {
       const waitingNow = waitingRoom.count;
-      const updated = await transitionSession(id, 'cancel');
+      const updated = await transition(id, 'cancel');
       setSession(updated);
       setClosedInfo({ waiting: waitingNow, atText: formatWhen(new Date().toISOString()) ?? '' });
       if (leaveAfter) {
@@ -854,7 +1020,7 @@ export default function ClassPlayerPage() {
         navigate('/sessions');
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : '클래스 닫기에 실패했습니다');
+      { const text = userErrorMessage(e, '클래스 닫기에 실패했습니다'); if (text) setError(text); }
     } finally {
       setTransitioning(false);
     }
@@ -957,15 +1123,18 @@ export default function ClassPlayerPage() {
       }
       liveKit.disconnect();
       // D-5①: 응답(ended_at 포함)을 반영해 같은 화면에서 리포트 진행을 보여준다(/record 로 점프하지 않음)
-      const ended = await transitionSession(id, 'end');
+      const ended = await transition(id, 'end');
+      if (ended.class_id && ended.status !== 'completed') throw new Error('클래스 종료를 확인하지 못했어요. 다시 시도해 주세요.');
+      completedLeaveToRef.current = leaveTo ?? null;
       setSession(ended);
       setEndModalOpen(false);
       bypassGuardRef.current = true;
-      if (leaveTo) navigate(leaveTo);
+      const destination = ended.class_id ? completedClassDestination(ended, leaveTo) : leaveTo ?? null;
+      if (destination) navigate(destination, { replace: !leaveTo });
     } catch (e) {
       // SDD-101 D3: 종료 확정 실패 — 에러 + 재시도 CTA(미디어는 이미 stop 되어 있어 재시도 시 handleStop 생략됨)
-      setError((e as Error).message);
-      setEndFailed(true);
+      const text = userErrorMessage(e, '클래스 종료에 실패했습니다');
+      if (text) { setError(text); setEndFailed(true); }
     } finally {
       setTransitioning(false);
     }
@@ -984,7 +1153,7 @@ export default function ClassPlayerPage() {
     tick();
     const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);
-  }, [session?.started_at]);
+  }, [session?.started_at, resumeTick]);
 
   // 녹음/녹화 경과 타이머 — recordingStartedAt 기준 (일시정지 시에도 누적 경과 표시)
   useEffect(() => {
@@ -998,7 +1167,7 @@ export default function ClassPlayerPage() {
     tick();
     const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);
-  }, [recordingStartedAt]);
+  }, [recordingStartedAt, resumeTick]);
 
   // 대기실 경과 타이머 — opened_at 기준 (SDD-088)
   useEffect(() => {
@@ -1013,7 +1182,7 @@ export default function ClassPlayerPage() {
     tick();
     const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);
-  }, [isLobby, session?.opened_at]);
+  }, [isLobby, session?.opened_at, resumeTick]);
 
   /** 라이브 지표가 있으면 그것을, 없으면 세션 참가자로 만든 대체 행을 쓴다 */
   const baseMetrics = useMemo(
@@ -1028,7 +1197,18 @@ export default function ClassPlayerPage() {
   );
 
   const displayMetrics = useMemo(() => {
-    const base = speakingMetrics;
+    // SDD-246 T06: v2 on 이면 지표·손·장치는 LiveState 단일 reducer 만 출처다(rich participant 의 `...p` 병합 금지).
+    if (liveV2.active && liveV2.state && liveV2.state.phase !== 'CONNECTING') {
+      // 신원·입장 시각·체크인은 REST 행(speakingMetrics)에서만 가져온다(v2 에서는 participation 스냅샷을 구독하지 않아 비어 있다).
+      return toSessionLiveMetrics(liveV2.state, { nowMs: liveV2.nowMs, legacy: [...speakingMetrics, ...Object.values(participation.participants)] });
+    }
+    const base: SessionLiveMetric[] = participation.version >= 0
+      ? Object.values(participation.participants).map(p => ({
+          display_name:'참가자', is_guest:false, band_connected:false, device_status:null,
+          band_battery:null, avg_efficiency:null, current_efficiency:null, upload_status:null, last_eeg_at:null,
+          ...speakingMetrics.find(row => row.participant_id === p.participant_id), ...p,
+        }))
+      : speakingMetrics;
 
     if (!hostParticipantId || band.connectionState !== 'connected') return base;
 
@@ -1069,7 +1249,12 @@ export default function ClassPlayerPage() {
     });
     return changed ? next : base;
   }, [
+    liveV2.active,
+    liveV2.state,
+    liveV2.nowMs,
     speakingMetrics,
+    participation.participants,
+    participation.version,
     hostParticipantId,
     band.connectionState,
     band.lastEegAt,
@@ -1080,6 +1265,23 @@ export default function ClassPlayerPage() {
     band.uploadStatus,
     band.signalQualityLevel,
   ]);
+
+  // 상담사 화면의 본인 밴드 칩은 이완도만 표시한다. 나머지 지표를 보였다고 주장하지 않는다.
+  const displayRef = useRef<{ rendered: RenderedMetrics | null; visible: boolean; record: typeof band.recordDisplay }>({ rendered: null, visible: false, record: band.recordDisplay });
+  useEffect(() => {
+    const row = displayMetrics.find(item => item.participant_id === hostParticipantId);
+    const live = band.connectionState === 'connected';
+    const relaxation = live && row ? toHostParticipant(row, { nowMs: Date.now() }).values.relaxation : null;
+    displayRef.current = { record: band.recordDisplay, visible: isRunning && isHost && !participation.revoked && !inviteOpen, rendered: {
+      values: { focus: null, relaxation, emotional: null, bpm: null, respiration: null, hrv: null }, displayedKeys: live ? ['relaxation'] : [],
+      rawMind: { focus: null, relaxation: null, emotional: null }, live, remoteRelaxation: true, blocked: false, leadOff: band.deviceStatus === 'lead_off', stale: false,
+      lastEegAtMs: row?.last_eeg_at ? Date.parse(row.last_eeg_at) : null, quality: band.signalQualityLevel, respirationNullReason: null,
+    } };
+  });
+  useEffect(() => {
+    const timer = window.setInterval(() => { const view = displayRef.current; view.record(view.rendered, view.visible && document.visibilityState !== 'hidden'); }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const summary = useMemo(() => summarizeMetrics(displayMetrics), [displayMetrics]);
 
@@ -1160,6 +1362,10 @@ export default function ClassPlayerPage() {
     }
   };
 
+  if (participation.revoked) {
+    return <main role="alert" className="flex min-h-screen items-center justify-center"><p>참여 권한이 종료되었습니다. 수업 목록에서 현재 상태를 확인해 주세요.</p></main>;
+  }
+
   if (!session && loadErrorKind) {
     return (
       <HostStateScreen
@@ -1217,11 +1423,24 @@ export default function ClassPlayerPage() {
       />
     ) : null;
 
+  const memberInviteSheet = canInvite && inviteDetail ? (
+    <MemberInviteSheet key={`${id}:${inviteDetail.id}`} open={inviteOpen} detail={inviteDetail}
+      code={session.access_code} codeCopied={codeCopied} onCopyCode={() => void handleCopyCode()}
+      onClose={() => setInviteOpen(false)} onSaved={async () => {
+        const [detail] = await Promise.all([
+          getClass(asClassId(inviteDetail.id)), refreshSession(), refreshMetrics(),
+        ]);
+        if (id && isCurrentRoute(id)) setInviteDetail(detail);
+        return detail;
+      }} />
+  ) : null;
+
   /* ─── ③ 라이브 씬(호스트): 새 진행 화면(SDD-208). 훅·핸들러는 이 페이지가 한 번만 만들고 컨테이너는 값만 받는다 ─── */
   if (isRunning && isHost) {
     return (
       <>
-        <HostLiveContainer
+        <BiosignalRecordingStatus state={band.recordingStatus} />
+        <div inert={canInvite && inviteOpen}><HostLiveContainer
           session={session}
           hostUserId={currentUserId}
           hostParticipantId={hostParticipantId}
@@ -1230,9 +1449,23 @@ export default function ClassPlayerPage() {
           elapsedSec={classElapsedSec}
           checkins={sessionCheckins}
           waitingEntries={waitingRoom.entries}
-          quietSignals={quietSignals}
+          quietSignals={shownSignals}
+          v2LowerHand={v2Flag && v2Ready && liveV2.client ? async (participantId) => {
+            const ack = await liveV2.client!.request('hand.lower', { target_id: participantId }, { targetId: participantId });
+            return ack.status === 'applied' || ack.status === 'duplicate';
+          } : undefined}
+          onHandLowered={v2Flag ? undefined : (participantId) => {
+            if (!id || !isCurrentRoute(id)) return;
+            setMetrics((previous) => previous.map((row) => row.participant_id === participantId ? { ...row, raise_hand: false } : row));
+            setSpeakingPatch((previous) => previous[participantId] ? { ...previous, [participantId]: { ...previous[participantId], raise_hand: false } } : previous);
+          }}
+          onHandLowerFailed={v2Flag ? undefined : (participantId) => {
+            if (!id || !isCurrentRoute(id)) return;
+            setMetrics((previous) => previous.map((row) => row.participant_id === participantId ? { ...row, raise_hand: true } : row));
+            setSpeakingPatch((previous) => previous[participantId] ? { ...previous, [participantId]: { ...previous[participantId], raise_hand: true } } : previous);
+          }}
           live={{
-            socketConnected: liveSocket.isConnected,
+            socketConnected: v2Flag ? liveV2.state?.phase === 'READY' : liveSocket.isConnected,
             metricsPollFailing,
             onRetry: () => {
               void refreshMetrics();
@@ -1262,9 +1495,11 @@ export default function ClassPlayerPage() {
             onConfirm: () => void finishSession(),
             onCancel: () => setEndModalOpen(false),
           }}
+          onInvite={canInvite ? () => setInviteOpen(true) : undefined}
           codeCopy={{ copied: codeCopied, onCopy: () => void handleCopyCode() }}
           onClose={() => navigate('/sessions')}
-        />
+        /></div>
+        {memberInviteSheet}
         {consentModal}
         {leaveGuardModal}
       </>
@@ -1301,7 +1536,8 @@ export default function ClassPlayerPage() {
     } as const;
     return (
       <>
-        <HostPrepContainer
+        <BiosignalRecordingStatus state={band.recordingStatus} />
+        <div inert={canInvite && inviteOpen}><HostPrepContainer
           phase={phase}
           stateKind={closedInfo ? (closedInfo.waiting > 0 ? 'closed' : 'closed-0') : 'closed-revisit'}
           title={session.title || '제목 없는 클래스'}
@@ -1340,7 +1576,8 @@ export default function ClassPlayerPage() {
               .catch(() => setRemindResults((prev) => new Map([...prev, ...participantIds.map((pid) => [pid, 'failed'] as const)])))
               .finally(() => setReminding(false));
           }}
-          onInviteAdd={() => navigate(`/sessions/${session.id}`)}
+          canInvite={canInvite}
+          onInviteAdd={() => setInviteOpen(true)}
           onCopyCode={() => void handleCopyCode()}
           codeCopied={codeCopied}
           sheets={{
@@ -1394,6 +1631,7 @@ export default function ClassPlayerPage() {
           }}
           onCloseClass={() => void closeClass(false)}
           ending={{
+            isClassSession: Boolean(session.class_id),
             steps: reportProgress.progress?.steps ?? null,
             generationStatus: reportProgress.generationStatus,
             progress: reportProgress.progress?.progress ?? null,
@@ -1406,7 +1644,7 @@ export default function ClassPlayerPage() {
           headcount={null}
           onEnd={() => undefined}
           onContinue={() => undefined}
-          onOpenRecord={() => navigate(`/sessions/${session.id}/record`)}
+          onOpenRecord={() => navigate(`/sessions/${session.id}/${session.class_id ? 'summary' : 'record'}`)}
           closedWaiting={closedInfo?.waiting}
           closedAtText={closedInfo?.atText ?? null}
           onStateAction={(action: HostStateAction) => {
@@ -1417,7 +1655,8 @@ export default function ClassPlayerPage() {
                 .catch(() => setError('같은 설정으로 새 클래스를 만들지 못했어요'));
             } else navigate(action === 'home' ? '/dashboard' : '/sessions');
           }}
-        />
+        /></div>
+        {memberInviteSheet}
         {error ? (
           <div role="alert" className="fixed left-1/2 top-4 z-[70] w-[min(92vw,420px)] -translate-x-1/2 rounded-xl border border-[#F5C2C0] bg-[#FDECEC] p-3.5 text-sm text-[#B3261E]">
             {error}
@@ -1432,20 +1671,20 @@ export default function ClassPlayerPage() {
   const liveStatusBar = (
     <div className="flex flex-wrap items-center gap-2">
       {/* 서버(WebSocket) 연결 상태 — 끊겨도 4초 폴링 안전망은 유지된다 */}
-      {liveSocket.isConnected ? (
+      {(v2Flag ? liveV2.state?.phase === 'READY' || liveV2.state?.phase === 'RESYNCING' : liveSocket.isConnected) ? (
         <span
           className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold ${
-            liveSocket.isReady
+            (v2Flag ? v2Ready : liveSocket.isReady)
               ? 'bg-[#59CE9026] text-[#2F9E68]'
               : 'bg-amber-100 text-amber-700'
           }`}
         >
           <span
             className={`h-2 w-2 rounded-full ${
-              liveSocket.isReady ? 'bg-[#2F9E68]' : 'animate-pulse bg-amber-500'
+              (v2Flag ? v2Ready : liveSocket.isReady) ? 'bg-[#2F9E68]' : 'animate-pulse bg-amber-500'
             }`}
           />
-          {liveSocket.isReady ? '서버 실시간 연결됨' : '서버 연결 중 · 동기화 대기'}
+          {(v2Flag ? v2Ready : liveSocket.isReady) ? '서버 실시간 연결됨' : '서버 연결 중 · 동기화 대기'}
         </span>
       ) : (
         <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F2212133] px-3 py-1.5 text-[12px] font-semibold text-[#F22121B2]">
@@ -1547,7 +1786,7 @@ export default function ClassPlayerPage() {
             filter={activeFilter}
             selectedId={selectedParticipantId}
             onSelect={handleSelectParticipant}
-            signals={quietSignals}
+            signals={shownSignals}
           />
         ) : (
           <SessionMonitorTable participants={displayMetrics} filter={activeFilter} />

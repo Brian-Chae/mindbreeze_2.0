@@ -1,0 +1,51 @@
+@import "./controls.css";
+
+.dc-export-backdrop{position:fixed;inset:0;z-index:100;background:#30213a66;display:flex;align-items:center;justify-content:center;padding:24px;color:#30243b;font-size:14px}
+.dc-export-dialog{background:#fff;border-radius:16px;width:760px;max-width:100%;max-height:calc(100dvh - 48px);display:flex;flex-direction:column;box-shadow:0 18px 70px #30213a33}
+.dc-export-dialog header,.dc-export-dialog footer,.dc-export-section header{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:20px 24px}
+.dc-export-dialog header{border-bottom:1px solid #e5dfeb}
+.dc-export-dialog h2,.dc-export-section h2{font-size:18px;font-weight:700}
+.dc-export-dialog p,.dc-export-section p{margin:7px 0;color:#75677f;line-height:1.6}
+.dc-export-body{overflow:auto;padding:20px 24px;display:grid;gap:18px}
+.dc-export-dialog label,.dc-export-section label{display:block;font-weight:500}
+.dc-export-dialog input:not([type=checkbox]),.dc-export-dialog textarea,.dc-export-dialog select,.dc-export-section input{width:100%;margin-top:7px}
+.dc-export-dialog textarea{min-height:78px;resize:vertical}
+.dc-export-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:center}
+.dc-export-checks{display:flex;gap:10px 20px;flex-wrap:wrap}
+.dc-export-checks label,.dc-export-note label{display:flex;align-items:center;min-height:44px;gap:8px}
+.dc-export-note{background:#f1e8f8;border:1px solid #e8dbf0;padding:14px;border-radius:8px}
+.dc-export-dialog details{border:1px solid #e3dce9;border-radius:8px;padding:14px;background:#fcfaff}
+.dc-export-dialog summary{color:#602185;cursor:pointer;min-height:24px}
+.dc-export-dialog pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.7}
+.dc-export-dialog footer{border-top:1px solid #e5dfeb}
+.dc-export-dialog footer p{font-size:13px}
+.dc-export-section{padding:24px;background:#fff;border:1px solid #E8E2ED;border-radius:20px;min-width:0}
+.dc-export-section header{padding:0 0 18px}
+.dc-export-table{overflow:auto}
+.dc-export-table table{width:100%;border-collapse:collapse;min-width:680px;font-size:14px}
+.dc-export-table th,.dc-export-table td{text-align:left;padding:14px;border-bottom:1px solid #eee7f1;vertical-align:top;overflow-wrap:anywhere}
+.dc-export-table th{background:#fff;color:#766282}
+.dc-export-table small{display:block;font-size:13px;line-height:1.6;color:#75677f}
+.dc-export-section [role=alert],.dc-export-dialog [role=alert]{color:#9c2c38}
+@media(max-width:600px){.dc-export-backdrop{padding:8px}
+.dc-export-dialog{max-height:calc(100dvh - 16px);border-radius:12px}
+.dc-export-dialog header,.dc-export-dialog footer{padding:14px;align-items:flex-start}
+.dc-export-body{padding:14px;gap:14px}
+.dc-export-grid{grid-template-columns:1fr}
+.dc-export-dialog footer{flex-direction:column;gap:4px}
+.dc-export-section{padding:16px}
+.dc-export-section header{align-items:flex-start}
+.dc-export-checks{display:grid;gap:0}
+.dc-export-dialog footer p{font-size:13px}
+}
+
+/* 앱 공통 폼 규칙보다 우선하며, 체크박스 터치 영역은 라벨이 확보한다. */
+.dc-export-backdrop .dc-export-dialog input[type=checkbox]{width:18px;height:18px;min-width:18px;min-height:18px;margin:0;padding:0;flex-shrink:0;accent-color:#602185}
+
+.dc-export-backdrop .dc-export-dialog label:has(>input[type=checkbox]){display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:8px;min-height:44px;line-height:1.5}
+
+.dc-export-backdrop .dc-export-dialog .dc-export-grid>label,.dc-export-backdrop .dc-export-dialog .dc-export-body>label:not(:has(>input[type=checkbox])){display:block;min-width:0}
+
+.dc-export-backdrop .dc-export-dialog select,.dc-export-backdrop .dc-export-dialog input:not([type=checkbox]),.dc-export-backdrop .dc-export-dialog textarea{display:block;box-sizing:border-box;min-width:0;max-width:100%;width:100%}
+
+.dc-export-primary{white-space:nowrap}

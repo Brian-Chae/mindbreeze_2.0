@@ -10,7 +10,7 @@ User=@@SERVICE_USER@@
 Group=@@SERVICE_USER@@
 WorkingDirectory=@@PREFIX@@/current/backend
 EnvironmentFile=@@ENV_FILE@@
-ExecStart=@@PREFIX@@/venv/bin/celery -A app.core.celery_app:celery_app worker -Q exports --concurrency=1 --prefetch-multiplier=1 --hostname=exports@%H --loglevel=INFO
+ExecStart="@@PREFIX@@/venv/bin/celery" -A app.core.celery_app:celery_app worker -Q exports --concurrency=1 --prefetch-multiplier=1 --hostname=exports@%H --loglevel=INFO
 Restart=on-failure
 RestartSec=5
 PrivateTmp=true

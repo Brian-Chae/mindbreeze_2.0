@@ -33,7 +33,8 @@ export {
 /** StreamProcessor / useBand 가 표시용으로 쓰는 0~100 점수 묶음 */
 export interface EEGScoreSet {
   focusIndex: number;
-  relaxationIndex: number;
+  /** 이완도 = 두뇌 휴식(TNA 반전). 활성 모델 없으면 null(pending, 0 표시 금지). */
+  relaxationIndex: number | null;
   stressIndex: number;
   totalPower: number;
   hemisphericBalance: number;
@@ -140,6 +141,17 @@ function cohortScores(idx: RawIndexInput): EEGScoreSet {
   };
 }
 
+/**
+ * 두뇌 휴식(하루명상): 활성 모델 totalNeuralActivity(m,s) + direction -1 강제.
+ * 신경 활동↓ = 휴식↑. 모델/params 없으면 null. Rust score::brain_rest 와 동일 규칙.
+ */
+function scoreBrainRest(tna: number, model: NormalizationModelDto | null): number | null {
+  if (!model) return null;
+  const params = parseModelParams('totalNeuralActivity', model.params.totalNeuralActivity);
+  if (!params) return null;
+  return sigmoidScore('totalNeuralActivity', tna, { ...params, direction: -1 });
+}
+
 function scoreWithModel(
   key: CalibrationMetricKey,
   raw: number,
@@ -154,9 +166,11 @@ function scoreWithModel(
  * raw indices → 0~100 점수.
  * 서버 활성 표준 모델 > 코호트(B0). params 없는 지표는 코호트 fallback.
  */
-export function scoreIndices(idx: RawIndexInput): EEGScoreSet {
+export function scoreIndices(idx: RawIndexInput, model: NormalizationModelDto | null = activeModelCache): EEGScoreSet {
   const cohort = cohortScores(idx);
-  const model = activeModelCache;
+  // TNA 가 있으면 이완도 = 두뇌 휴식(모델 없으면 null). TNA 없는 원격 raw(α/(α+β) 비율)는 기존 점수 유지.
+  const hasTna = typeof idx.totalNeuralActivity === 'number';
+  if (hasTna) cohort.relaxationIndex = null;
   if (!model) return cohort;
 
   const faaRaw =
@@ -167,9 +181,10 @@ export function scoreIndices(idx: RawIndexInput): EEGScoreSet {
   return {
     focusIndex:
       scoreWithModel('focusIndex', idx.focusIndex ?? Number.NaN, model) ?? cohort.focusIndex,
-    relaxationIndex:
-      scoreWithModel('relaxationIndex', idx.relaxationIndex ?? Number.NaN, model) ??
-      cohort.relaxationIndex,
+    relaxationIndex: hasTna
+      ? scoreBrainRest(idx.totalNeuralActivity as number, model)
+      : (scoreWithModel('relaxationIndex', idx.relaxationIndex ?? Number.NaN, model) ??
+        cohort.relaxationIndex),
     stressIndex:
       scoreWithModel('stressIndex', idx.stressIndex ?? Number.NaN, model) ?? cohort.stressIndex,
     totalPower:

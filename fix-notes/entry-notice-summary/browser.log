@@ -1,0 +1,74 @@
+기본 화면 실측 {"viewport":[390,844],"page":[390,844],"bodyHeight":648,"bodyScroll":648,"ctaBottom":760,"smallTexts":[],"smallTargets":[],"radioStates":["false","false"],"research":"false","coreFontSizes":[15,15,15,15,15],"blurred":[]}
+시트 실측 record { left: 0, right: 390, bottom: 844 }
+시트 실측 report { left: 0, right: 390, bottom: 844 }
+시트 실측 research { left: 0, right: 390, bottom: 844 }
+기본 화면 실측 {"viewport":[1440,900],"page":[1440,900],"bodyHeight":704,"bodyScroll":704,"ctaBottom":816,"smallTexts":[],"smallTargets":[],"radioStates":["false","false"],"research":"false","coreFontSizes":[15,15,15,15,15],"blurred":[]}
+시트 실측 record { left: 400, right: 1040, bottom: 900 }
+시트 실측 report { left: 400, right: 1040, bottom: 900 }
+시트 실측 research { left: 400, right: 1040, bottom: 900 }
+[
+  {
+    "width": 390,
+    "metrics": {
+      "viewport": [
+        390,
+        844
+      ],
+      "page": [
+        390,
+        844
+      ],
+      "bodyHeight": 648,
+      "bodyScroll": 648,
+      "ctaBottom": 760,
+      "smallTexts": [],
+      "smallTargets": [],
+      "radioStates": [
+        "false",
+        "false"
+      ],
+      "research": "false",
+      "coreFontSizes": [
+        15,
+        15,
+        15,
+        15,
+        15
+      ],
+      "blurred": []
+    },
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "metrics": {
+      "viewport": [
+        1440,
+        900
+      ],
+      "page": [
+        1440,
+        900
+      ],
+      "bodyHeight": 704,
+      "bodyScroll": 704,
+      "ctaBottom": 816,
+      "smallTexts": [],
+      "smallTargets": [],
+      "radioStates": [
+        "false",
+        "false"
+      ],
+      "research": "false",
+      "coreFontSizes": [
+        15,
+        15,
+        15,
+        15,
+        15
+      ],
+      "blurred": []
+    },
+    "errors": []
+  }
+]

@@ -1,5 +1,6 @@
 // 플랫폼 관리자 — 가입 신청(기관 상담 / 개인 상담사) 관리 (SDD-073)
 
+import { buttonClass, cardClass, fieldClass } from '../../components/ui';
 import { useCallback, useEffect, useState } from 'react';
 import AppShell from '../../components/layout/AppShell';
 import {
@@ -130,7 +131,7 @@ export default function SignupApplicationsPage() {
   const canReview = detail && (detail.status === 'submitted' || detail.status === 'reviewing');
 
   return (
-    <AppShell title="가입 신청 관리" sub="SIGNUP APPLICATIONS">
+    <AppShell title="가입 신청 관리" sub="SIGNUP APPLICATIONS" wide>
       {message && (
         <div role="status" className="mb-5 rounded-xl bg-[#F5EDFC] p-3 text-sm text-[#5F0080]">
           {message}
@@ -142,7 +143,7 @@ export default function SignupApplicationsPage() {
           aria-label="신청 유형 필터"
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          className="rounded-xl border border-[#EFEFEF] bg-white px-3 py-2 text-[13px]"
+          className={fieldClass('select', '!w-auto')}
         >
           <option value="">전체 유형</option>
           <option value="organization">기관 가입 상담</option>
@@ -152,7 +153,7 @@ export default function SignupApplicationsPage() {
           aria-label="신청 상태 필터"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-xl border border-[#EFEFEF] bg-white px-3 py-2 text-[13px]"
+          className={fieldClass('select', '!w-auto')}
         >
           <option value="">전체 상태</option>
           <option value="submitted">접수</option>
@@ -169,7 +170,7 @@ export default function SignupApplicationsPage() {
           <button
             type="button"
             onClick={() => void load()}
-            className="mt-4 inline-flex items-center rounded-full bg-[#5F0080] px-5 py-2.5 text-[13px] font-bold text-white transition-colors hover:bg-[#4B0066]"
+            className={buttonClass({ className: 'mt-4' })}
           >
             다시 시도
           </button>
@@ -183,7 +184,7 @@ export default function SignupApplicationsPage() {
           접수된 신청이 없습니다.
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-[#EFEFEF] bg-white">
+        <div className={cardClass('none', 'overflow-x-auto')}>
           <table className="min-w-[860px] w-full text-left text-[15px]">
             <thead>
               <tr className="border-b border-[#EFEFEF] bg-[#F8FAFC]">
@@ -232,7 +233,7 @@ export default function SignupApplicationsPage() {
       )}
 
       {detail && !detailLoading && (
-        <section className="mt-6 rounded-2xl border border-[#EFEFEF] bg-white p-5 md:p-6">
+        <section className={cardClass('default', 'mt-6')}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-[18px] font-bold text-[#1F1F1F]">
@@ -295,7 +296,7 @@ export default function SignupApplicationsPage() {
                           : '승인 완료 — 기관 등록은 기관 관리에서 진행하세요.',
                     )
                   }
-                  className="rounded-xl bg-[#5F0080] px-5 py-2.5 text-[15px] font-bold text-white transition-colors hover:bg-[#4B0066] disabled:cursor-not-allowed disabled:opacity-60"
+                  className={buttonClass()}
                 >
                   {actionLoading ? '처리 중...' : '승인'}
                 </button>
@@ -305,7 +306,7 @@ export default function SignupApplicationsPage() {
                   onChange={(e) => setRejectReason(e.target.value)}
                   placeholder="반려 사유 (선택)"
                   maxLength={1000}
-                  className="w-56 rounded-xl border border-[#EFEFEF] px-3 py-2.5 text-[13px]"
+                  className={fieldClass('input', '!w-56')}
                 />
                 <button
                   type="button"
@@ -316,7 +317,7 @@ export default function SignupApplicationsPage() {
                       () => '반려 처리되었습니다.',
                     )
                   }
-                  className="rounded-xl border border-[#FCA5A5] bg-white px-5 py-2.5 text-[15px] font-bold text-[#B91C1C] transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  className={buttonClass({ variant: 'secondary', tone: 'danger' })}
                 >
                   반려
                 </button>
@@ -332,7 +333,7 @@ export default function SignupApplicationsPage() {
                     () => '운영 알림 재발송을 요청했습니다.',
                   )
                 }
-                className="rounded-lg border border-[#C9B0E8] bg-white px-3 py-2 text-[13px] font-semibold text-[#5F0080] transition-colors hover:bg-[#EFE3FA] disabled:cursor-not-allowed disabled:opacity-60"
+                className={buttonClass({ variant: 'secondary', size: 'sm' })}
               >
                 알림 재발송
               </button>
@@ -340,7 +341,7 @@ export default function SignupApplicationsPage() {
             <button
               type="button"
               onClick={() => setDetail(null)}
-              className="ml-auto rounded-lg px-3 py-2 text-[13px] text-[#6F6F6F] hover:bg-[#F8FAFC]"
+              className={buttonClass({ variant: 'ghost', size: 'sm', className: 'ml-auto' })}
             >
               닫기
             </button>

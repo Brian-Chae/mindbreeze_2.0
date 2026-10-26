@@ -4,6 +4,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { ClassSessionDetail } from '../../components/class/structure/class-session-detail';
 import { Ellipsis } from 'lucide-react';
 import {
   deleteSession,
@@ -22,6 +23,9 @@ import { SessionLocationEditor } from '../../components/session/session-location
 import { ParticipantPicker, type SelectedParticipant } from '../../components/session/ParticipantPicker';
 import AppShell from '../../components/layout/AppShell';
 import { useSessionLiveSocket } from '../../hooks/useSessionLiveSocket';
+import { isLiveProtocolV2Enabled } from '../../lib/session-live/live-flag';
+import { useLiveV2 } from '../../lib/session-live/use-live-v2';
+import { sessionStatusOf } from '../../lib/session-live/live-legacy-adapter';
 import { ClassActionSheet, type ClassActionKind } from '../../components/class/flow/shell/ClassActionSheet';
 import { HostDetailView } from '../../components/class/flow/shell/HostDetailView';
 import { HostMenuSheet } from '../../components/class/flow/shell/HostMenuSheet';
@@ -46,6 +50,23 @@ const toSessionParticipant = (metric: SessionLiveMetric): SessionParticipant => 
 });
 
 export default function SessionDetailPage() {
+  const { classId, id } = useParams<{ classId: string; id: string }>();
+  return classId && id ? <><CompletedClassSummaryLink classId={classId} sessionId={id} /><ClassSessionDetail classId={classId} sessionId={id}/></> : <LegacySessionDetailPage/>;
+}
+/** 직접 클래스 회차 URL에서도 서버가 확인한 완료 회차에만 요약 링크를 보인다. */
+function CompletedClassSummaryLink({ classId, sessionId }: { classId: string; sessionId: string }) {
+  const [completed, setCompleted] = useState(false);
+  useEffect(() => {
+    let active = true;
+    setCompleted(false);
+    void getSession(sessionId).then((session) => {
+      if (active) setCompleted(session.class_id === classId && session.status === 'completed');
+    }).catch(() => { /* 상세 화면이 조회 오류를 안내한다. */ });
+    return () => { active = false; };
+  }, [classId, sessionId]);
+  return completed ? <div className="px-6 pt-4"><a className="inline-flex min-h-11 items-center text-[15px] mobile:text-mb-body text-[#5F0080] underline underline-offset-4" href={`/sessions/${sessionId}/summary`}>회차 요약으로</a></div> : null;
+}
+function LegacySessionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [session, setSession] = useState<SessionDto | null>(null);
@@ -96,8 +117,13 @@ export default function SessionDetailPage() {
   );
 
   // SDD-129(③-8): WS 구독으로 클래스 상태 즉시 반영 (5초 폴링은 WS 미결합 시 폴백)
-  const { isReady } = useSessionLiveSocket({
+  // SDD-246 T06: v2 on 이면 LiveClient/LiveState 하나가 상태·참여 변화의 출처다(v1 소켓 훅·REST 폴링 미구동).
+  const v2Flag = isLiveProtocolV2Enabled();
+  const liveV2 = useLiveV2({ sessionId: id, selfParticipantId: null, enabled: Boolean(id) });
+  const v2Status = v2Flag && liveV2.ready ? sessionStatusOf(liveV2.state) : null;
+  const v1Socket = useSessionLiveSocket({
     sessionId: id,
+    enabled: !v2Flag,
     onSessionStateChanged: (event) => {
       setSession((prev) =>
         prev
@@ -107,6 +133,13 @@ export default function SessionDetailPage() {
     },
     onParticipantChanged: handleParticipantChanged,
   });
+  const isReady = v2Flag ? liveV2.ready : v1Socket.isReady;
+  // v2: 전이/참여 변화가 LiveState 로 오면 상세 모델(session)을 한 번만 다시 읽는다(주기 폴링 아님).
+  const participationKey = v2Flag && liveV2.state ? Object.keys(liveV2.state.participation).sort().join(',') + '|' + (liveV2.state.session?.version ?? '') : '';
+  useEffect(() => {
+    if (!id || !v2Flag || !v2Status) return;
+    getSession(id).then((next) => { setSession(next); setError(null); }).catch(() => { /* 다음 변화에서 복구 */ });
+  }, [id, v2Flag, v2Status, participationKey]);
 
   useEffect(() => {
     if (!id) return;
@@ -304,6 +337,11 @@ export default function SessionDetailPage() {
   }, [id, mailItems, loadMailInvites]);
 
   const data = useMemo(() => (session ? toHostDetailData(session, { mailInvites: mailInputs }) : null), [session, mailInputs]);
+
+  if (session?.class_id) return <>
+    {session.status === 'completed' && <div className="px-6 pt-4"><a className="inline-flex min-h-11 items-center text-[15px] mobile:text-mb-body text-[#5F0080] underline underline-offset-4" href={`/sessions/${session.id}/summary`}>회차 요약으로</a></div>}
+    <ClassSessionDetail classId={session.class_id} sessionId={session.id}/>
+  </>;
 
   if (error && !session) {
     return (

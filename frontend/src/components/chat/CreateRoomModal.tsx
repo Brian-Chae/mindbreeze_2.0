@@ -5,6 +5,7 @@ import { listClients, type ClientListItem } from '../../lib/api/clients';
 import { useNavigate } from 'react-router-dom';
 import { ApiError } from '../../lib/api/client';
 import { useDialogA11y } from '../../hooks/useDialogA11y';
+import { buttonClass } from '../../components/ui';
 
 type RoomMode = 'direct' | 'group';
 
@@ -127,14 +128,14 @@ export function CreateRoomModal({ open, onClose }: Props) {
       aria-modal="true"
       aria-labelledby="create-room-title"
     >
-      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl max-h-[85dvh] overflow-y-auto">
+      <div className="w-full max-w-sm rounded-2xl bg-white p-6 mobile:p-5 shadow-xl max-h-[85dvh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <h2 id="create-room-title" className="text-lg font-bold text-[#1F1F1F]">새 채팅방</h2>
+          <h2 id="create-room-title" className="text-lg mobile:text-mb-subtitle font-bold text-[#1F1F1F]">새 채팅방</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="채팅방 생성 닫기"
-            className="w-11 h-11 shrink-0 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#6F6F6F] flex items-center justify-center text-sm"
+            className="w-11 h-11 shrink-0 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#6F6F6F] flex items-center justify-center text-sm mobile:text-mb-compact"
           >
             ✕
           </button>
@@ -145,7 +146,7 @@ export function CreateRoomModal({ open, onClose }: Props) {
           <button
             type="button"
             onClick={() => { setMode('direct'); setSelectedIds(new Set()); }}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${
+            className={`flex-1 py-2 mobile:min-h-11 rounded-lg text-sm mobile:text-mb-compact font-semibold transition-colors ${
               mode === 'direct'
                 ? 'bg-white text-[#5F0080] shadow-sm'
                 : 'text-[#6F6F6F] hover:text-[#1F1F1F]'
@@ -156,7 +157,7 @@ export function CreateRoomModal({ open, onClose }: Props) {
           <button
             type="button"
             onClick={() => setMode('group')}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${
+            className={`flex-1 py-2 mobile:min-h-11 rounded-lg text-sm mobile:text-mb-compact font-semibold transition-colors ${
               mode === 'group'
                 ? 'bg-white text-[#5F0080] shadow-sm'
                 : 'text-[#6F6F6F] hover:text-[#1F1F1F]'
@@ -172,13 +173,13 @@ export function CreateRoomModal({ open, onClose }: Props) {
           placeholder={mode === 'direct' ? '채팅방 이름 (선택, 예: 홍길동 상담)' : '그룹방 이름 (선택)'}
           value={roomName}
           onChange={(e) => setRoomName(e.target.value)}
-          className="w-full px-3.5 py-2.5 border border-[#DDDEE7] rounded-xl bg-white text-sm text-[#1F1F1F] placeholder:text-[#9CA0AE] outline-none focus:ring-2 focus:ring-[#5F0080]/15 focus:border-[#5F0080] mb-3"
+          className="w-full px-3.5 py-2.5 mobile:min-h-12 border border-[#DDDEE7] rounded-xl bg-white text-sm mobile:text-mb-compact text-[#1F1F1F] placeholder:text-[#9CA0AE] outline-none focus:ring-2 focus:ring-[#5F0080]/15 focus:border-[#5F0080] mb-3"
         />
 
         {/* 그룹방: 선택된 인원 표시 */}
         {mode === 'group' && selectedCount > 0 && (
-          <div className="flex items-center gap-2 mb-3 text-sm text-[#5F0080] font-medium">
-            <span className="w-6 h-6 rounded-full bg-[#F5EDFC] flex items-center justify-center text-xs font-bold">
+          <div className="flex items-center gap-2 mb-3 text-sm mobile:text-mb-compact text-[#5F0080] font-medium">
+            <span className="w-6 h-6 rounded-full bg-[#F5EDFC] flex items-center justify-center text-xs mobile:text-mb-caption font-bold">
               {selectedCount}
             </span>
             명 선택됨
@@ -191,18 +192,18 @@ export function CreateRoomModal({ open, onClose }: Props) {
           placeholder="내담자 이름 또는 이메일 검색..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full px-3.5 py-2.5 border border-[#DDDEE7] rounded-xl bg-white text-sm text-[#1F1F1F] placeholder:text-[#9CA0AE] outline-none focus:ring-2 focus:ring-[#5F0080]/15 focus:border-[#5F0080] mb-3"
+          className="w-full px-3.5 py-2.5 mobile:min-h-12 border border-[#DDDEE7] rounded-xl bg-white text-sm mobile:text-mb-compact text-[#1F1F1F] placeholder:text-[#9CA0AE] outline-none focus:ring-2 focus:ring-[#5F0080]/15 focus:border-[#5F0080] mb-3"
         />
 
         {error && (
-          <p className="text-xs text-red-500 mb-3">{error}</p>
+          <p className="text-xs mobile:text-mb-caption text-red-500 mb-3">{error}</p>
         )}
 
         <div className="max-h-56 overflow-y-auto border border-[#EFEFEF] rounded-xl divide-y divide-[#EFEFEF]">
           {loading ? (
-            <div className="p-4 text-center text-sm text-[#6F6F6F]">불러오는 중...</div>
+            <div className="p-4 text-center text-sm mobile:text-mb-compact text-[#6F6F6F]">불러오는 중...</div>
           ) : clients.length === 0 ? (
-            <div className="p-4 text-center text-sm text-[#6F6F6F]">검색 결과가 없습니다</div>
+            <div className="p-4 text-center text-sm mobile:text-mb-compact text-[#6F6F6F]">검색 결과가 없습니다</div>
           ) : mode === 'direct' ? (
             clients.map((c) => (
               <button
@@ -212,12 +213,12 @@ export function CreateRoomModal({ open, onClose }: Props) {
                 disabled={creating}
                 className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-[#F8F8FB] transition-colors disabled:opacity-50"
               >
-                <div className="w-10 h-10 rounded-full bg-[#F5EDFC] ring-2 ring-[#5F0080]/20 flex items-center justify-center text-[#5F0080] font-bold text-sm shrink-0">
+                <div className="w-10 h-10 rounded-full bg-[#F5EDFC] ring-2 ring-[#5F0080]/20 flex items-center justify-center text-[#5F0080] font-bold text-sm mobile:text-mb-compact shrink-0">
                   {c.name.charAt(0)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-[#1F1F1F] truncate">{c.name}</div>
-                  <div className="text-xs text-[#6F6F6F] truncate">{c.email}</div>
+                  <div className="text-sm mobile:text-mb-compact font-medium text-[#1F1F1F] truncate">{c.name}</div>
+                  <div className="text-xs mobile:text-mb-caption text-[#6F6F6F] truncate">{c.email}</div>
                 </div>
               </button>
             ))
@@ -237,14 +238,14 @@ export function CreateRoomModal({ open, onClose }: Props) {
                     checked={isSelected}
                     onChange={() => toggleGroupSelect(c.id)}
                     disabled={creating}
-                    className="accent-[#5F0080] w-4 h-4"
+                    className="accent-[#5F0080] w-4 h-4 mobile:w-5 mobile:h-5"
                   />
-                  <div className="w-10 h-10 rounded-full bg-[#F5EDFC] ring-2 ring-[#5F0080]/20 flex items-center justify-center text-[#5F0080] font-bold text-sm shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-[#F5EDFC] ring-2 ring-[#5F0080]/20 flex items-center justify-center text-[#5F0080] font-bold text-sm mobile:text-mb-compact shrink-0">
                     {c.name.charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-[#1F1F1F] truncate">{c.name}</div>
-                    <div className="text-xs text-[#6F6F6F] truncate">{c.email}</div>
+                    <div className="text-sm mobile:text-mb-compact font-medium text-[#1F1F1F] truncate">{c.name}</div>
+                    <div className="text-xs mobile:text-mb-caption text-[#6F6F6F] truncate">{c.email}</div>
                   </div>
                 </label>
               );
@@ -258,7 +259,7 @@ export function CreateRoomModal({ open, onClose }: Props) {
             type="button"
             onClick={handleCreateGroup}
             disabled={creating || selectedCount < 2}
-            className="w-full mt-4 h-11 rounded-xl bg-[#5F0080] text-white font-semibold text-sm hover:bg-[#4B0066] disabled:opacity-50 transition-colors"
+            className={buttonClass({ variant: 'primary', className: 'w-full mt-4' })}
           >
             {creating ? '생성 중...' : `그룹 채팅방 만들기 (${selectedCount}명)`}
           </button>

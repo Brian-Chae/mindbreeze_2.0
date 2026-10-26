@@ -7,6 +7,7 @@
  * - S3 PUT:  presigned URL에 raw 바이트(application/octet-stream)
  */
 
+import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { ApiError, apiClient } from './client';
 
 const RAW_PUT_TIMEOUT_MS = 20_000;
@@ -77,6 +78,8 @@ export interface EegRawAckRequest {
 export interface EegRawAckResponse {
   session_id: string;
   acked: number;
+  failed?: number;
+  chunks?: { chunk_id: string; upload_status: string; checksum: string | null; size_bytes: number | null }[];
   eeg_record_id: string | null;
   file_count: number;
 }
@@ -107,15 +110,30 @@ export const ackEegRawChunks = (
  * presigned URL로 raw 바이트 PUT.
  * Authorization/JSON Content-Type을 붙이지 않는다(1.0 S3Manager 패턴).
  */
+function toBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(binary);
+}
+
+/**
+ * 네이티브 앱(Capacitor)은 오리진이 https://localhost 라 S3 버킷 CORS 에 막힌다(dev: OPTIONS 403 → PUT 전량 실패).
+ * 네이티브 HTTP 로 PUT 하면 WebView CORS 를 거치지 않는다. 서명 헤더는 그대로 보낸다.
+ */
+async function putViaNativeHttp(uploadUrl: string, payload: ArrayBuffer, headers: Record<string, string>): Promise<void> {
+  const res = await CapacitorHttp.request({ url: uploadUrl, method: 'PUT', headers, data: toBase64(payload), dataType: 'file', readTimeout: RAW_PUT_TIMEOUT_MS, connectTimeout: RAW_PUT_TIMEOUT_MS });
+  if (res.status < 200 || res.status >= 300) throw new ApiError(res.status, `raw S3 PUT 실패 (${res.status})`, null);
+}
+
+const isNativePlatform = (): boolean => { try { return Capacitor.isNativePlatform(); } catch { return false; } };
+
 export async function putEegRawToPresignedUrl(
   uploadUrl: string,
   payload: ArrayBuffer,
   headers?: Record<string, string> | null,
 ): Promise<void> {
-  const merged: Record<string, string> = {
-    'Content-Type': 'application/octet-stream',
-    ...(headers ?? {}),
-  };
+  const merged: Record<string, string> = headers ?? { 'Content-Type': 'application/octet-stream' };
   // API7-09: presigned PUT 은 토큰 없이 별도 fetch 로 나가 공통 클라이언트의 타임아웃·재시도를
   // 우회한다. 응답이 없으면 영구 pending 되고 순단 실패가 청크 유실로 이어지므로 상한·재시도를 둔다.
   let lastErr: unknown = null;
@@ -123,6 +141,7 @@ export async function putEegRawToPresignedUrl(
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), RAW_PUT_TIMEOUT_MS);
     try {
+      if (isNativePlatform()) { await putViaNativeHttp(uploadUrl, payload, merged); return; }
       const res = await fetch(uploadUrl, {
         method: 'PUT',
         headers: merged,

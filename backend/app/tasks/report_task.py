@@ -11,6 +11,7 @@ import logging
 from datetime import datetime, timezone
 from uuid import UUID
 
+from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session as DBSession
 
@@ -23,10 +24,12 @@ from app.services import report_progress_service
 from app.services import report_scope
 from app.services.eeg_rollup_service import summarize_hrv_motion
 from app.services.report_narrative import build_metrics_summary
-from app.services.normalization_score import sigmoid_score
+from app.services.normalization_score import brain_rest_score, sigmoid_score
 from app.tasks.summary_task import _call_narrative_llm
 
 logger = logging.getLogger(__name__)
+
+REPORT_TASK_MAX_RETRIES = 3
 
 
 def _ensure_aware_dt(dt):
@@ -98,7 +101,10 @@ def _ai_record_block(record: SessionRecord | None) -> dict:
     if record is not None and _ai_summary(record).get("transcript_confidence") == "low":
         return {"status": "not_available", "reason": "low_confidence"}
     if record is None or not (record.transcript and record.transcript.strip()):
-        return {"status": "not_available", "reason": "no_transcript"}
+        # SDD-228: STT 미제공 빌드는 '말이 없음'이 아니라 별도 사유(stt_disabled)로 구분한다.
+        from app.core.ai_features import is_stt_enabled
+
+        return {"status": "not_available", "reason": "no_transcript" if is_stt_enabled() else "stt_disabled"}
     return {"status": "available"}
 
 
@@ -323,7 +329,8 @@ def _build_eeg_content(
                 else None
             ),
             "concentration": mind_score("focusIndex", w.focus_index, eeg_metrics.normalize_focus),
-            "relaxation": mind_score("relaxationIndex", w.relaxation_index, eeg_metrics.normalize_relaxation),
+            # 이완도 = 두뇌 휴식(TNA 반전, 모델 없으면 None) — 웹·Rust 와 동일 정의
+            "relaxation": brain_rest_score(w.total_neural_activity, std_params),
             "stress": mind_score("stressIndex", w.stress_index, eeg_metrics.normalize_stress),
             "emotional_stability": mind_score(
                 "emotionalStability", w.emotional_stability, eeg_metrics.normalize_emotional_stability
@@ -451,7 +458,9 @@ def _maybe_enqueue_client_report_email(report: Report, db: DBSession) -> None:
         )
         .first()
     )
-    if participant is None or not participant.report_email:
+    from app.services.report_service import fill_member_report_email
+
+    if not fill_member_report_email(participant, db):
         return
     if participant.report_email_sent_at is not None:
         return
@@ -558,6 +567,12 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
                 content["report_scope"] = report_scope.scope_marker(scope)
             else:
                 content = _counselor_content(session, record, eeg_block)
+        # SDD-237: 명상 클래스 회차의 상담사용 리포트만 클래스 통계 블록을 추가한다(상담 도메인은 무변경).
+        if report.type != "client":
+            from app.services.report_service import report_domain
+
+            if report_domain(session) == "meditation":
+                _attach_class_report(content, previous_content, session, db)
         # SDD-027: 분석 성공 → 승인 게이트(pending_review) 로 전이 + 신뢰도 파생
         report.data_credibility = _derive_data_credibility(eeg_block)
         # RPT-REGEN-005: 이미 승인된 리포트는 재생성 후에도 승인(completed)을 유지한다.
@@ -627,6 +642,11 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
     ):
         content["counselor_comment"] = prev_comment
 
+    # SDD-237: 생성 실패 스텁이 상담사 수정본이 든 클래스 블록을 지우지 않도록 이월한다.
+    prev_class_report = prev.get("class_report")
+    if report.type != "client" and isinstance(prev_class_report, dict) and "class_report" not in content:
+        content["class_report"] = prev_class_report
+
     report.content = content
     # SDD-095: 최종 생성 상태 — ai_record 가용(전사+요약)이면 ready, 아니면 partial.
     # 승인 게이트(report.status)와는 독립 축이다.
@@ -634,9 +654,48 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
     db.commit()
     db.refresh(report)
     _emit_report_progress(str(report.session_id), db)
+    _maybe_enqueue_class_narrative(report, session)
     # FUNC-04: 비동기 생성 완료 — 신청된 내담자(client) 리포트면 메일 발송을 예약한다.
     _maybe_enqueue_client_report_email(report, db)
     return report
+
+
+def _attach_class_report(content: dict, previous_content, session: Session, db: DBSession) -> None:
+    """SDD-237: 명상 클래스 회차의 상담사용 리포트에 클래스 통계·규칙 서사 블록(`class_report`)을 저장한다.
+
+    통계는 결정론이며 AI 는 부르지 않는다(AI 서사는 별도 Celery 태스크). 이전 블록의 상담사 수정본·AI 초안은 이월한다.
+    계산이 실패해도 리포트 상태는 바꾸지 않는다 — 이전 블록이 있으면 그대로 두고, 없으면 error 블록을 둔다.
+    """
+    from app.services import class_report_narrative
+
+    prev = previous_content.get("class_report") if isinstance(previous_content, dict) else None
+    prev = prev if isinstance(prev, dict) else None
+    try:
+        content["class_report"] = class_report_narrative.build_block(db, session, prev)
+    except Exception:  # noqa: BLE001 — 통계 실패가 리포트 생성·승인 상태를 흔들지 않게 한다.
+        logger.exception("[report_task] class_report 계산 실패: session_id=%s", session.id)
+        content["class_report"] = prev if prev is not None else class_report_narrative.error_block()
+
+
+def _maybe_enqueue_class_narrative(report: Report, session: Session) -> None:
+    """SDD-237: 상담사용 클래스 리포트에 AI 서사가 필요하면 별도 Celery 태스크를 예약한다(best-effort).
+
+    AI 지연·실패·브로커 장애가 리포트 생성·승인을 막지 않는다. 같은 입력 해시로 이미 시도했으면 예약하지 않는다.
+    """
+    if report.type == "client" or not isinstance(report.content, dict):
+        return
+    block = report.content.get("class_report")
+    if not isinstance(block, dict):
+        return
+    try:
+        from app.core.ai_features import is_ai_enabled
+        from app.services import class_report_narrative
+        from app.tasks import class_report_task
+
+        if is_ai_enabled() and class_report_narrative.ai_call_needed(block):
+            class_report_task.enqueue_class_report_narrative(str(session.id))
+    except Exception:  # noqa: BLE001
+        logger.exception("[report_task] AI 서사 예약 실패: session_id=%s", session.id)
 
 
 def _mark_pipeline_failure(session_id: str, db: DBSession, exc: Exception) -> None:
@@ -702,12 +761,17 @@ try:
             db.close()
 
     @celery_app.task(
+        bind=True,
         name="tasks.generate_reports_for_session",
         autoretry_for=(Exception,),
         retry_backoff=True,
-        retry_kwargs={"max_retries": 3},
+        retry_kwargs={"max_retries": REPORT_TASK_MAX_RETRIES},
+        # SDD-212 TD3: 정체 스윕 기준(30분, report_progress_service.REPORT_GENERATION_TIMEOUT_SECONDS)
+        #   안쪽에서 끝나도록 상한을 둔다. 상한이 없으면 대규모 클래스가 일꾼을 무기한 점유한다.
+        soft_time_limit=25 * 60,
+        time_limit=28 * 60,
     )
-    def generate_reports_for_session(session_id: str) -> None:
+    def generate_reports_for_session(self, session_id: str) -> None:
         """세션 종료 후 counselor+client 리포트를 생성한다 (STT/요약 완료 후 chain에서 호출).
 
         CEL-CHAIN-01: 중간 단계 실패를 조용히 유실하지 않도록 Celery 자동 재시도(backoff,
@@ -728,6 +792,13 @@ try:
                 # SDD-095: 세션의 모든 리포트 생성이 끝난 뒤 최종 진행 상태를 1회 push 한다.
                 # (개별 리포트 생성 중 발생한 이벤트를 최종 집계값으로 확정)
                 _emit_report_progress(str(s.id), db)
+            except SoftTimeLimitExceeded:
+                # SDD-212 TD3: 시간 초과는 중간 재시도에서 마킹하지 않는다 — 마킹하면 이미 만든
+                # 회원 리포트(pending_review)까지 error 로 되돌아가 재시도가 전부 다시 생성한다.
+                # 재시도는 완료분을 건너뛰고 남은 건만 이어서 처리(멱등). 소진된 마지막 시도만 마킹한다.
+                if self.request.retries >= REPORT_TASK_MAX_RETRIES:
+                    _mark_pipeline_failure(session_id, db, SoftTimeLimitExceeded("report_time_limit"))
+                raise
             except Exception as exc:  # noqa: BLE001
                 # 재시도 전에 실패를 기록하고 재전파한다(autoretry 가 재시도).
                 # 재시도가 모두 소진되면 마지막 시도의 실패 마킹이 남아 유실되지 않는다.

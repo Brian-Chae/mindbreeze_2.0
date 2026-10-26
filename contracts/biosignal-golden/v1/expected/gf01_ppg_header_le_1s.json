@@ -1,0 +1,40 @@
+{
+  "anchor_offsets_us": {
+    "sdk_first_sample": [
+      "0",
+      "20000",
+      "40000"
+    ],
+    "web_last_sample": [
+      "-40000",
+      "-20000",
+      "0"
+    ]
+  },
+  "file": "packets/gf01_ppg_header_le_1s.bin",
+  "header_seconds_exact": "1",
+  "header_ticks": 32768,
+  "header_ticks_if_big_endian_wrong": 8388608,
+  "length": 22,
+  "n_samples": 3,
+  "remainder_bytes": 0,
+  "samples": [
+    {
+      "ir": 16777215,
+      "red": 0
+    },
+    {
+      "ir": 11259375,
+      "red": 1193046
+    },
+    {
+      "ir": 8388607,
+      "red": 8388608
+    }
+  ],
+  "sdk_accepts": true,
+  "sdk_lenient_sample_count": 3,
+  "sensor": "ppg",
+  "sha256_note": "sha256 은 manifest.json 에 고정",
+  "strict_status": "ok"
+}

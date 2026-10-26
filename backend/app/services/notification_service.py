@@ -1,4 +1,4 @@
-"""알림 서비스 — 인앱 + 이메일 라우팅"""
+"""알림 서비스 — 인앱·이메일·주요 이벤트 푸시 라우팅"""
 
 import logging
 from datetime import datetime, timezone
@@ -9,7 +9,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session as DBSession
 
 from app.models.notification import Notification
-from app.models.user import User, DEFAULT_NOTIFICATION_PREFERENCES
+from app.models.user import User, DEFAULT_NOTIFICATION_PREFERENCES, CLASS_NOTIFICATION_EVENTS
 from app.tasks.email import _send_email
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 # 표준 딥링크 대상 유형 (프론트 라우트 화이트리스트와 1:1 대응)
 STANDARD_TARGET_TYPES: frozenset[str] = frozenset(
-    {"chat_room", "report", "session", "credentials", "self_profile", "organization", "notice"}
+    {"chat_room", "report", "session", "credentials", "self_profile", "organization", "notice", "class"}
 )
 
 # 이벤트 카탈로그 — event_type → (화면 분류 type, 딥링크 대상 target_type)
@@ -77,6 +77,9 @@ EVENT_CATALOG: dict[str, dict[str, str]] = {
     "risk_signal": {"type": "system", "target_type": "notice"},
 }
 
+for _event in CLASS_NOTIFICATION_EVENTS:
+    EVENT_CATALOG[_event] = {"type": "session", "target_type": "class" if _event.startswith("class_") else "session"}
+
 # 하위 호환: 이전 이벤트→type 매핑 (기존 호출부가 참조하던 이름)
 EVENT_TO_NOTIF_TYPE: dict[str, str] = {
     event: meta["type"] for event, meta in EVENT_CATALOG.items()
@@ -127,10 +130,12 @@ def get_user_preferences(user: User) -> dict[str, dict[str, bool]]:
         return {
             "email": dict(DEFAULT_NOTIFICATION_PREFERENCES["email"]),
             "in_app": dict(DEFAULT_NOTIFICATION_PREFERENCES["in_app"]),
+            "push": dict(DEFAULT_NOTIFICATION_PREFERENCES["push"]),
         }
     return {
         "email": {**DEFAULT_NOTIFICATION_PREFERENCES["email"], **(prefs.get("email") or {})},
         "in_app": {**DEFAULT_NOTIFICATION_PREFERENCES["in_app"], **(prefs.get("in_app") or {})},
+        "push": {**DEFAULT_NOTIFICATION_PREFERENCES["push"], **(prefs.get("push") or {})},
     }
 
 
@@ -215,6 +220,45 @@ def enqueue_outbox(
     ))
 
 
+# 채팅·AI·회차 변경은 기존 전용 발화 지점이 소유한다. 중복 푸시를 만들지 않는다.
+GENERAL_PUSH_EVENTS = frozenset({"report_ready", "session_invited", "class_invited", "session_started"})
+
+
+def _push_deeplink(user: User, event_type: str, extra: dict[str, Any] | None) -> str:
+    """알림 센터와 같은 역할별 경로. 대상이 없으면 알림 목록에서 확인한다."""
+    prefix = "/app" if user.role == "client" else ""
+    extra = extra or {}
+    target = extra.get("target_id") or extra.get("report_id") or extra.get("session_id")
+    if not target:
+        return f"{prefix}/notifications"
+    # UUID만 경로에 사용해 URL·쿼리 삽입을 막는다.
+    try:
+        target = str(UUID(str(target)))
+    except (ValueError, TypeError):
+        return f"{prefix}/notifications"
+    if event_type == "report_ready":
+        return f"{prefix}/reports?report={target}"
+    if event_type == "class_invited":
+        params = extra.get("params") or {}
+        if user.role == "client" and params.get("start_now") is True:
+            try:
+                return f"/class/{UUID(str(params.get('session_id')))}/enter"
+            except (ValueError, TypeError):
+                pass
+        return f"{prefix}/classes/{target}"
+    if user.role == "client" and event_type == "session_started":
+        return f"/class/{target}/enter"
+    class_id = (extra.get("params") or {}).get("class_id")
+    if class_id:
+        try:
+            class_id = str(UUID(str(class_id)))
+            return (f"/app/classes/{class_id}?sessionId={target}" if user.role == "client"
+                    else f"/classes/{class_id}/sessions/{target}")
+        except (ValueError, TypeError):
+            pass
+    return f"{prefix}/sessions/{target}"
+
+
 def notify_event(
     event_type: str,
     user_id: str | UUID,
@@ -223,7 +267,7 @@ def notify_event(
     *,
     commit: bool = True,
 ) -> Notification | None:
-    """이벤트 → 인앱 알림 + (설정 시) 이메일 발송
+    """이벤트 → 인앱 알림 + (설정 시) 이메일·주요 이벤트 푸시 적재
 
     TXN-01: commit=False 면 알림·outbox 를 flush 만 하고 커밋은 호출자에게 맡긴다.
     상위 흐름이 아직 확정하지 않은 변경을 조기 커밋하는 것을 막는다.
@@ -278,6 +322,18 @@ def notify_event(
         )
         db.add(email_item)
         db.flush()  # outbox 행을 같은 트랜잭션에 확정
+
+    if event_type in GENERAL_PUSH_EVENTS and prefs["push"].get(pref_key, False):
+        enqueue_outbox(
+            db, user_id=user.id, channel="push",
+            notification_id=notif.id if notif else None,
+            payload={
+                "title": "MIND BREEZE",
+                "body": "새 알림이 도착했어요. 앱에서 확인해 주세요.",
+                "deeplink": _push_deeplink(user, event_type, extra),
+                "message_id": str(notif.id) if notif else "",
+            },
+        )
 
     if commit:
         db.commit()  # 알림 + outbox 이벤트를 원자적으로 확정
@@ -385,7 +441,9 @@ def update_preferences(
     email_prefs: dict[str, bool],
     in_app_prefs: dict[str, bool],
     db: DBSession,
+    *, push_prefs: dict[str, bool] | None = None,
 ) -> dict[str, dict[str, bool]]:
+    push_prefs = push_prefs or {}
     uid = _to_uuid(user_id)
     user = db.query(User).filter(User.id == uid).first()
     if not user:
@@ -393,7 +451,7 @@ def update_preferences(
     # NOTIF-CONF-08: 임의 event key 저장 금지 — 이벤트 카탈로그(EVENT_CATALOG)에 존재하는
     #   키만 허용한다. 화이트리스트 없이 저장하면 임의 키가 영속화되고, 오타/미지원 키가
     #   조용히 누적돼 실제 이벤트 설정을 우회한다.
-    unknown = sorted((set(email_prefs) | set(in_app_prefs)) - set(EVENT_CATALOG))
+    unknown = sorted((set(email_prefs) | set(in_app_prefs) | set(push_prefs)) - set(EVENT_CATALOG))
     if unknown:
         raise HTTPException(
             status_code=422,
@@ -404,6 +462,7 @@ def update_preferences(
     user.notification_preferences = {
         "email": {**current["email"], **email_prefs},
         "in_app": {**current["in_app"], **in_app_prefs},
+        "push": {**current["push"], **push_prefs},
     }
     db.commit()
     db.refresh(user)

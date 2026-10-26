@@ -5,6 +5,7 @@ raw EEG 청크는 서버를 거치지 않고 클라이언트가 S3 로 직접 PU
 (실제 업로드는 배포 환경 자격증명이 있을 때 동작한다).
 """
 
+import base64
 import hashlib
 import logging
 import threading
@@ -174,6 +175,98 @@ def verify_object(object_key: str, *, expected_size: int | None = None) -> bool 
     except Exception as exc:  # noqa: BLE001
         logger.warning("[storage] S3 HEAD 검증 실패: %s (%s)", object_key, exc)
         return False
+
+
+def _b64_sha256(hex_digest: str) -> str:
+    return base64.b64encode(bytes.fromhex(hex_digest)).decode()
+
+
+def generate_presigned_put_checksummed(
+    object_key: str,
+    *,
+    checksum_sha256_hex: str,
+    content_type: str = "application/octet-stream",
+    expires_in: int = PRESIGNED_PUT_DEFAULT_EXPIRES_IN,
+) -> tuple[str, dict[str, str]]:
+    """SDD-244: SHA-256 을 서명 헤더에 바인딩한 PUT URL 과 클라이언트가 그대로 보내야 할 헤더.
+
+    SigV4 로 content-type · x-amz-checksum-sha256 · x-amz-server-side-encryption 을 서명한다.
+    저장소가 body 의 실제 SHA-256 을 검증하므로 유효 URL 을 재사용해도 다른 바이트는 거절된다.
+    객체 key 에 hash 가 들어 있어(내용 주소) 같은 key 는 같은 바이트만 가질 수 있다.
+    자격증명 미설정(스텁)은 같은 헤더 계약의 스텁 URL 을 돌려준다.
+    """
+    expires_in = max(1, min(int(expires_in), PRESIGNED_PUT_MAX_EXPIRES_IN))
+    headers = {
+        "Content-Type": content_type,
+        "x-amz-server-side-encryption": "AES256",
+        "x-amz-checksum-sha256": _b64_sha256(checksum_sha256_hex),
+    }
+    if not storage_configured():
+        return _stub_url(object_key), headers
+    try:
+        import boto3
+        from botocore.config import Config
+
+        client = boto3.client(
+            "s3",
+            region_name=settings.s3_region,
+            endpoint_url=_endpoint_url() or f"https://s3.{settings.s3_region}.amazonaws.com",
+            config=Config(signature_version="s3v4"),
+            **_credential_kwargs(),
+        )
+        url = client.generate_presigned_url(
+            "put_object",
+            Params={
+                "Bucket": settings.s3_bucket,
+                "Key": object_key,
+                "ContentType": content_type,
+                "ServerSideEncryption": "AES256",
+                "ChecksumSHA256": headers["x-amz-checksum-sha256"],
+            },
+            ExpiresIn=expires_in,
+        )
+        return url, headers
+    except Exception as exc:  # noqa: BLE001
+        logger.error("[storage] checksum presigned 발급 실패, 스텁 폴백 금지: %s", exc)
+        raise StorageSigningError("presigned_url_failed") from exc
+
+
+def verify_object_sha256(
+    object_key: str, *, expected_size: int, expected_sha256_hex: str
+) -> tuple[bool | None, str | None]:
+    """ACK 확정 전 객체의 존재·크기·SHA-256 을 검증한다. 반환 (결과, object version id).
+
+    - (None, None): 자격증명 미설정 → 검증 불가(스텁/테스트). 호출측이 운영 의미를 결정한다.
+    - (True, version): HEAD 크기 일치 + 저장소 SHA-256(ChecksumSHA256) 일치, 또는 저장소 체크섬이 없으면
+      서버가 스트리밍으로 읽어 계산한 SHA-256 일치. ETag 는 SHA-256 이 아니므로 사용하지 않는다.
+    - (False, None): 객체 없음/크기·해시 불일치/조회 실패.
+    """
+    if not storage_configured():
+        return None, None
+    try:
+        client = _s3_client()
+        if client is None:
+            return False, None
+        head = client.head_object(Bucket=settings.s3_bucket, Key=object_key, ChecksumMode="ENABLED")
+        if int(head.get("ContentLength", -1)) != int(expected_size):
+            logger.warning("[storage] v2 객체 크기 불일치: %s", object_key)
+            return False, None
+        version = head.get("VersionId")
+        stored = head.get("ChecksumSHA256")
+        if stored:
+            ok = stored == _b64_sha256(expected_sha256_hex)
+            return (True, version) if ok else (False, None)
+        digest = hashlib.sha256()
+        body = client.get_object(Bucket=settings.s3_bucket, Key=object_key)["Body"]
+        try:
+            for piece in iter(lambda: body.read(65536), b""):
+                digest.update(piece)
+        finally:
+            body.close()
+        return (True, version) if digest.hexdigest() == expected_sha256_hex else (False, None)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[storage] v2 객체 검증 실패: %s (%s)", object_key, exc)
+        return False, None
 
 
 # STG-14: 자격증명 회전·설정 변경을 반영하기 위해 클라이언트를 '설정 지문' 기준으로 캐시한다.
@@ -400,6 +493,43 @@ def delete_object(object_key: str) -> bool:
     except Exception as exc:  # noqa: BLE001
         logger.warning("[storage] S3 객체 삭제 실패: %s (%s)", object_key, exc)
         return False
+
+
+def delete_object_everywhere(object_key: str) -> bool:
+    """SDD-220: 사용자 영구 삭제용 — 모든 버전(delete marker 포함)과 진행 중 multipart 잔여물까지 지운다.
+
+    버저닝 버킷에서 delete_object 는 delete marker 만 만들 뿐 이전 버전이 남는다.
+    자격증명이 없으면 지울 객체가 없으므로 True(멱등 성공)를 돌려준다. 일부라도 실패하면 예외를 올려 호출자가 재시도하게 한다.
+    """
+    client = _s3_client()
+    if client is None:
+        return True
+    bucket = settings.s3_bucket
+    key_marker = version_marker = None
+    while True:
+        params: dict = {"Bucket": bucket, "Prefix": object_key}
+        if key_marker:
+            params.update(KeyMarker=key_marker, VersionIdMarker=version_marker)
+        page = client.list_object_versions(**params)
+        targets = [
+            {"Key": v["Key"], "VersionId": v["VersionId"]}
+            for v in [*page.get("Versions", []), *page.get("DeleteMarkers", [])]
+            if v["Key"] == object_key
+        ]
+        if targets:
+            result = client.delete_objects(Bucket=bucket, Delete={"Objects": targets, "Quiet": True})
+            if result.get("Errors"):
+                raise RuntimeError("s3_version_delete_failed")
+        if not page.get("IsTruncated"):
+            break
+        key_marker, version_marker = page.get("NextKeyMarker"), page.get("NextVersionIdMarker")
+    # 현재 버전이 버저닝 없는 버킷이면 위 목록이 비어 있을 수 있어 단순 삭제도 한 번 더 시도한다(멱등).
+    client.delete_object(Bucket=bucket, Key=object_key)
+    uploads = client.list_multipart_uploads(Bucket=bucket, Prefix=object_key)
+    for upload in uploads.get("Uploads", []):
+        if upload["Key"] == object_key:
+            client.abort_multipart_upload(Bucket=bucket, Key=object_key, UploadId=upload["UploadId"])
+    return True
 
 
 def delete_export(object_key: str) -> None:

@@ -97,6 +97,7 @@ export function FlowSteps({ total, current }: { total: number; current: number }
 }
 
 interface FlowSheetProps {
+  sheetMode?: 'side' | 'bottom';
   open: boolean;
   title: string;
   sub?: string;

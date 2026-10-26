@@ -1,0 +1,28 @@
+{
+  "session_id": "00000000-0000-0000-0000-00000000000b",
+  "participant_id": "00000000-0000-0000-0000-000000000015",
+  "as_of": "2026-10-24T03:00:00Z",
+  "detail_emit": "not_connected",
+  "time_origin": "first_feature_window",
+  "algorithm_versions": {
+    "eeg": "looxid-sdk-x"
+  },
+  "items": [
+    {
+      "window_index": 0,
+      "t_rel_ms": 0,
+      "quality": "valid",
+      "source": "scalar_1hz",
+      "values": {
+        "focus_index": 1.234567890123,
+        "total_neural_activity": null,
+        "faa": 0.01
+      },
+      "units": {
+        "faa": "ratio"
+      }
+    }
+  ],
+  "next_cursor": null,
+  "total": 1
+}

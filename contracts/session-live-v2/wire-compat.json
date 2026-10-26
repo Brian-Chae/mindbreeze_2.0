@@ -1,0 +1,42 @@
+{
+  "$comment": "SDD-246 T01 — Socket.IO/Engine.IO 버전 행렬 고정(plan §3.1). raw WebSocket 클라이언트를 Socket.IO 호환으로 취급하지 않는다. 값이 바뀌면 wire-compat.test.mjs 가 실패하고 T12 가 호환 재검증한다.",
+  "transport": "websocket-only (Engine.IO long-polling 비활성; 활성화하려면 sticky affinity 를 별도 검증)",
+  "namespace": "/session-live",
+  "protocol_version": 2,
+  "server": {
+    "python-socketio": "5.16.1",
+    "python-engineio": "4.13.1",
+    "source": "backend/requirements.txt (+ 현 venv pip list)"
+  },
+  "web_client": {
+    "socket.io-client": "4.8.3",
+    "engine.io-client": "6.6.4",
+    "socket.io-parser": "4.2.6",
+    "source": "frontend/package-lock.json"
+  },
+  "native_clients": {
+    "android": {
+      "library": "io.socket:socket.io-client",
+      "version": "2.1.2",
+      "protocol": "Engine.IO 4 / Socket.IO v4 wire",
+      "transport": "websocket-only",
+      "evidence": "T08 실기기(Galaxy Note10) + python-socketio 5.16.1 / python-engineio 4.13.1 합성 서버: handshake·ack·auth·reconnect, token_expired→refresh→재연결"
+    },
+    "ios": {
+      "library": "자체 구현 EIO4 클라이언트 (MeasurementKit/SocketIOClient)",
+      "version": "measurement-kit-1",
+      "protocol": "Engine.IO 4 / Socket.IO v4 wire",
+      "transport": "websocket-only",
+      "evidence": "T07 호스트 swift test: 실 python-socketio 5.16.1 합성 서버 wire 호환 5건 (CONNECT auth, ping watchdog, ack id/timeout, backoff)"
+    },
+    "rule": "native 가 선택한 라이브러리는 websocket-only 에서 python-socketio 5.16.1 과 handshake/ack/auth payload/reconnect 를 합성 서버로 시험한 결과를 evidence 에 남긴다. 버전을 올리면 이 파일과 wire-compat.test.mjs 를 함께 갱신한다."
+  },
+  "ack_timeout_ms": 2000,
+  "retry_backoff_ms": [
+    500,
+    1000,
+    2000,
+    4000
+  ],
+  "heartbeat_ms": 5000
+}

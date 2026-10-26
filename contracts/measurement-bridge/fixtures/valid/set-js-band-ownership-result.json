@@ -1,0 +1,8 @@
+{
+  "$fixture": {
+    "schema": "set-js-band-ownership-result"
+  },
+  "message": {
+    "accepted": false
+  }
+}

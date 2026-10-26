@@ -1,3 +1,5 @@
+import { isNativeApp } from '../../../../lib/native/platform';
+import { PermissionGuide } from '../../../native/permission-guide';
 // SDD-209 M4 — FM06c LINK BAND 단계. 어떤 모드·상태에서도 참가를 막지 않는다(`LINK BAND 없이 계속하기`는 항상 있다).
 // 전극 LED 카드는 접촉 불량일 때만 띄운다. 연결 중은 회전 스피너 대신 3점 순차 페이드.
 import { Activity, Battery, Bluetooth, CircleAlert, Globe, Info, Power, RefreshCw, User } from 'lucide-react';
@@ -55,6 +57,7 @@ export function BandStepView({
   onConnect, onDisconnect, onNext, onSkip, onStartedEnterNow, onStartedContinue, onBack, onExit,
 }: BandStepViewProps) {
   const req = bandMode === 'req';
+  const native = isNativeApp();
   const lead = state === 'leadoffl' || state === 'leadoffr' || state === 'leadoff';
   const bat = batteryView(battery);
 
@@ -122,8 +125,8 @@ export function BandStepView({
   } else {
     body = (
       <ul className="fm-bb">
-        <Li tone={unsupportedTone} icon={<CircleAlert size={20} aria-hidden="true" />}>이 브라우저는 LINK BAND 연결을 지원하지 않아요</Li>
-        <Li icon={<Globe size={20} aria-hidden="true" />}>Chrome 또는 Edge에서 열면 연결할 수 있어요</Li>
+        <Li tone={unsupportedTone} icon={<CircleAlert size={20} aria-hidden="true" />}>{native ? '기기 설정에서 Bluetooth 권한을 확인해 주세요' : '이 브라우저는 LINK BAND 연결을 지원하지 않아요'}</Li>
+        <Li icon={<Globe size={20} aria-hidden="true" />}>{native ? 'Bluetooth를 켜고 앱 권한을 허용한 뒤 다시 시도해 주세요' : 'Chrome 또는 Edge에서 열면 연결할 수 있어요'}</Li>
         <Li icon={<Info size={20} aria-hidden="true" />}>밴드 없이도 클래스에 함께할 수 있어요</Li>
       </ul>
     );
@@ -132,7 +135,7 @@ export function BandStepView({
   const noBand = <FlowButton kind="ghost" onClick={onSkip}>LINK BAND 없이 계속하기</FlowButton>;
   let foot: ReactNode;
   if (state === 'idle') {
-    foot = <><FlowButton kind="primary" onClick={onConnect}><Bluetooth size={20} aria-hidden="true" />LINK BAND 연결하기</FlowButton>{noBand}</>;
+    foot = <><PermissionGuide kind="bluetooth" onContinue={onConnect}>{request => <FlowButton kind="primary" onClick={request}><Bluetooth size={20} aria-hidden="true" />LINK BAND 연결하기</FlowButton>}</PermissionGuide>{noBand}</>;
   } else if (state === 'connecting') {
     foot = <><FlowButton kind="primary" disabled>연결하고 있어요</FlowButton>{noBand}</>;
   } else if (state === 'connected') {
@@ -148,7 +151,7 @@ export function BandStepView({
     foot = (
       <>
         <FlowButton kind="primary" onClick={onSkip}>LINK BAND 없이 계속하기</FlowButton>
-        <p className="fl-note fm-slot">Chrome 또는 Edge에서 열면 연결할 수 있어요.</p>
+        <p className="fl-note fm-slot">{native ? '기기 설정에서 Bluetooth를 허용한 뒤 다시 시도해 주세요.' : 'Chrome 또는 Edge에서 열면 연결할 수 있어요.'}</p>
       </>
     );
   }

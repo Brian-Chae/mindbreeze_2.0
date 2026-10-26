@@ -1,0 +1,223 @@
+MIND BREEZE 2.0 · 회원 홈·내 클래스 시안 (MC01~MC07) — fit 측정 [수정 전]
+측정: tools/member-classes-run.mjs (+ member-classes-lib.mjs) · 대상 7개 화면 · 41개 케이스 × 4개 뷰포트 = 164개 조합 · 서버: http://localhost:5312 (서빙 루트 designs/)
+판정: FAIL (조합 위반 32건 / 164건, 정적 grep 위반 2건, 스크립트 오류 0건)
+
+항목별 위반 건수 (조합 합계):
+  페이지 스크롤 0                     0
+  11px 이하 0                     0
+  텍스트 잘림 0                      0
+  이탈 0                          0
+  겹침 0                          0
+  터치 ≥44                        0
+  빈 영역 0                       77
+  이모지·글리프 0                     0
+  금지 용어 0                       0
+  영문 대문자 아이브로우 0                0
+  히어로 CTA 첫 화면 노출               0
+  외부 http 리소스 0                 0
+  호흡 지시 문구 grep 0               0
+  이모지 범위 파일 grep 0              0
+  문자 글리프 파일 grep 0              1
+  금지어 파일 grep(전체 소스)            3  정원=2 대기열=1
+
+내부 스크롤: 셸형 본문(목록·타임라인·서사)만 허용. 일람표의 `내부스크롤` 열이 넘치는 높이(px).
+
+=== 위반 상세 ===
+FAIL | MC04/default | 390x844 | 빈영역: .w-tile:4회내 참석 (채움 32%x61%)
+FAIL | MC04/completed | 390x844 | 빈영역: .w-tile:7회내 참석 (채움 32%x61%)
+FAIL | MC04/joined-mid | 390x844 | 빈영역: .w-tile:2회내 참석 (채움 32%x61%)
+FAIL | MC04/few | 390x844 | 빈영역: .w-tile:1회내 참석 (채움 32%x61%)
+FAIL | MC04/no-band | 390x844 | 빈영역: .w-tile:4회내 참석 (채움 32%x61%)
+FAIL | MC05/first-visit | 390x844 | 빈영역: .w-tile:0회내 참석 (채움 32%x61%) ; .w-tile:0회결석 (채움 32%x61%)
+FAIL | MC05/between | 390x844 | 빈영역: .w-tile:2회내 참석 (채움 32%x61%) ; .w-tile:1회결석 (채움 32%x61%)
+FAIL | MC05/open | 390x844 | 빈영역: .w-tile:2회내 참석 (채움 32%x61%) ; .w-tile:1회결석 (채움 32%x61%)
+FAIL | MC04/default | 834x1194 | 빈영역: .w-tile:4회내 참석 (채움 20%x61%) ; .w-tile:1회보강 완료 (채움 26%x61%)
+FAIL | MC04/completed | 834x1194 | 빈영역: .w-tile:7회내 참석 (채움 20%x61%) ; .w-tile:1회보강 완료 (채움 26%x61%)
+FAIL | MC04/joined-mid | 834x1194 | 빈영역: .w-tile:2회내 참석 (채움 20%x61%) ; .w-tile:0회보강 완료 (채움 26%x61%)
+FAIL | MC04/few | 834x1194 | 빈영역: .w-tile:1회내 참석 (채움 20%x61%) ; .w-tile:0회보강 완료 (채움 26%x61%)
+FAIL | MC04/no-band | 834x1194 | 빈영역: .w-tile:4회내 참석 (채움 20%x61%) ; .w-tile:0회보강 완료 (채움 26%x61%)
+FAIL | MC05/first-visit | 834x1194 | 빈영역: .w-tile:0회내 참석 (채움 18%x61%) ; .w-tile:0회결석 (채움 18%x61%) ; .w-tile:5회남은 회차 (채움 23%x61%) ; .sh-card:아직 리포트가 없어요참 (채움 30%x59%)
+FAIL | MC05/between | 834x1194 | 빈영역: .w-tile:2회내 참석 (채움 18%x61%) ; .w-tile:1회결석 (채움 18%x61%) ; .w-tile:5회남은 회차 (채움 23%x61%) ; .sh-card:2회차이 회차는 결석이 (채움 24%x49%)
+FAIL | MC05/open | 834x1194 | 빈영역: .w-tile:2회내 참석 (채움 18%x61%) ; .w-tile:1회결석 (채움 18%x61%) ; .w-tile:5회남은 회차 (채움 23%x61%) ; .sh-card:2회차이 회차는 결석이 (채움 24%x49%)
+FAIL | MC04/default | 1194x834 | 빈영역: .w-tile:4회내 참석 (채움 18%x61%) ; .w-tile:1회보강 완료 (채움 23%x61%)
+FAIL | MC04/completed | 1194x834 | 빈영역: .w-tile:7회내 참석 (채움 18%x61%) ; .w-tile:1회보강 완료 (채움 23%x61%)
+FAIL | MC04/joined-mid | 1194x834 | 빈영역: .w-tile:2회내 참석 (채움 18%x61%) ; .w-tile:0회보강 완료 (채움 23%x61%)
+FAIL | MC04/few | 1194x834 | 빈영역: .w-tile:1회내 참석 (채움 18%x61%) ; .w-tile:0회보강 완료 (채움 23%x61%)
+FAIL | MC04/no-band | 1194x834 | 빈영역: .w-tile:4회내 참석 (채움 18%x61%) ; .w-tile:0회보강 완료 (채움 23%x61%)
+FAIL | MC05/first-visit | 1194x834 | 빈영역: .w-tile:0회내 참석 (채움 18%x61%) ; .w-tile:0회결석 (채움 18%x61%) ; .w-tile:5회남은 회차 (채움 23%x61%) ; .sh-card:아직 리포트가 없어요참 (채움 30%x59%)
+FAIL | MC05/between | 1194x834 | 빈영역: .w-tile:2회내 참석 (채움 18%x61%) ; .w-tile:1회결석 (채움 18%x61%) ; .w-tile:5회남은 회차 (채움 23%x61%) ; .sh-card:2회차이 회차는 결석이 (채움 24%x49%)
+FAIL | MC05/open | 1194x834 | 빈영역: .w-tile:2회내 참석 (채움 18%x61%) ; .w-tile:1회결석 (채움 18%x61%) ; .w-tile:5회남은 회차 (채움 23%x61%) ; .sh-card:2회차이 회차는 결석이 (채움 24%x49%)
+FAIL | MC04/default | 1280x720 | 빈영역: .w-tile:4회내 참석 (채움 18%x61%) ; .w-tile:1회보강 완료 (채움 23%x61%)
+FAIL | MC04/completed | 1280x720 | 빈영역: .w-tile:7회내 참석 (채움 18%x61%) ; .w-tile:1회보강 완료 (채움 23%x61%)
+FAIL | MC04/joined-mid | 1280x720 | 빈영역: .w-tile:2회내 참석 (채움 18%x61%) ; .w-tile:0회보강 완료 (채움 23%x61%)
+FAIL | MC04/few | 1280x720 | 빈영역: .w-tile:1회내 참석 (채움 18%x61%) ; .w-tile:0회보강 완료 (채움 23%x61%)
+FAIL | MC04/no-band | 1280x720 | 빈영역: .w-tile:4회내 참석 (채움 18%x61%) ; .w-tile:0회보강 완료 (채움 23%x61%)
+FAIL | MC05/first-visit | 1280x720 | 빈영역: .w-tile:0회내 참석 (채움 18%x61%) ; .w-tile:0회결석 (채움 18%x61%) ; .w-tile:5회남은 회차 (채움 23%x61%) ; .sh-card:아직 리포트가 없어요참 (채움 30%x59%)
+FAIL | MC05/between | 1280x720 | 빈영역: .w-tile:2회내 참석 (채움 18%x61%) ; .w-tile:1회결석 (채움 18%x61%) ; .w-tile:5회남은 회차 (채움 23%x61%) ; .sh-card:2회차이 회차는 결석이 (채움 24%x49%)
+FAIL | MC05/open | 1280x720 | 빈영역: .w-tile:2회내 참석 (채움 18%x61%) ; .w-tile:1회결석 (채움 18%x61%) ; .w-tile:5회남은 회차 (채움 23%x61%) ; .sh-card:2회차이 회차는 결석이 (채움 24%x49%)
+
+=== 전체 일람표 (화면/케이스 | 뷰포트 | scrollH/innerH | 내부 스크롤 | 판정) ===
+MC01/class-open            | 390x844  | 844/844   | 내부스크롤  435 | PASS
+MC01/class-soon            | 390x844  | 844/844   | 내부스크롤  435 | PASS
+MC01/class-upcoming        | 390x844  | 844/844   | 내부스크롤  389 | PASS
+MC01/counsel-next          | 390x844  | 844/844   | 내부스크롤  435 | PASS
+MC01/invited               | 390x844  | 844/844   | 내부스크롤  732 | PASS
+MC01/only-class            | 390x844  | 844/844   | 내부스크롤  411 | PASS
+MC01/only-counsel          | 390x844  | 844/844   | 내부스크롤  319 | PASS
+MC01/empty                 | 390x844  | 844/844   | 내부스크롤  188 | PASS
+MC02/list                  | 390x844  | 844/844   | 내부스크롤  310 | PASS
+MC02/left-open             | 390x844  | 844/844   | 내부스크롤  418 | PASS
+MC02/waitlist              | 390x844  | 844/844   | 내부스크롤  499 | PASS
+MC02/invited               | 390x844  | 844/844   | 내부스크롤  611 | PASS
+MC02/empty                 | 390x844  | 844/844   | 내부스크롤    0 | PASS
+MC02/apply                 | 390x844  | 844/844   | 내부스크롤  310 | PASS
+MC03/ongoing               | 390x844  | 844/844   | 내부스크롤 1090 | PASS
+MC03/makeup-pick           | 390x844  | 844/844   | 내부스크롤 1090 | PASS
+MC03/makeup-planned        | 390x844  | 844/844   | 내부스크롤 1065 | PASS
+MC03/makeup-done           | 390x844  | 844/844   | 내부스크롤 1161 | PASS
+MC03/joined-mid            | 390x844  | 844/844   | 내부스크롤  924 | PASS
+MC03/cancelled             | 390x844  | 844/844   | 내부스크롤 1095 | PASS
+MC03/host-changed          | 390x844  | 844/844   | 내부스크롤 1022 | PASS
+MC03/rolling               | 390x844  | 844/844   | 내부스크롤  751 | PASS
+MC03/completed             | 390x844  | 844/844   | 내부스크롤  913 | PASS
+MC03/left                  | 390x844  | 844/844   | 내부스크롤  697 | PASS
+MC04/default               | 390x844  | 844/844   | 내부스크롤  741 | FAIL empty=1
+MC04/completed             | 390x844  | 844/844   | 내부스크롤  767 | FAIL empty=1
+MC04/joined-mid            | 390x844  | 844/844   | 내부스크롤  706 | FAIL empty=1
+MC04/few                   | 390x844  | 844/844   | 내부스크롤  247 | FAIL empty=1
+MC04/no-band               | 390x844  | 844/844   | 내부스크롤  288 | FAIL empty=1
+MC05/first-visit           | 390x844  | 844/844   | 내부스크롤  272 | FAIL empty=2
+MC05/between               | 390x844  | 844/844   | 내부스크롤  375 | FAIL empty=2
+MC05/open                  | 390x844  | 844/844   | 내부스크롤  336 | FAIL empty=2
+MC05/expired               | 390x844  | 844/844   | 내부스크롤    0 | PASS
+MC06/joined-mid            | 390x844  | 844/844   | 내부스크롤    0 | PASS
+MC06/waitlisted            | 390x844  | 844/844   | 내부스크롤    0 | PASS
+MC06/leave-sheet           | 390x844  | 844/844   | 내부스크롤 1090 | PASS
+MC06/left-done             | 390x844  | 844/844   | 내부스크롤    0 | PASS
+MC06/removed               | 390x844  | 844/844   | 내부스크롤    0 | PASS
+MC07/host-changed          | 390x844  | 844/844   | 내부스크롤    0 | PASS
+MC07/makeup-offered        | 390x844  | 844/844   | 내부스크롤    0 | PASS
+MC07/mixed                 | 390x844  | 844/844   | 내부스크롤    0 | PASS
+MC01/class-open            | 834x1194 | 1194/1194 | 내부스크롤    6 | PASS
+MC01/class-soon            | 834x1194 | 1194/1194 | 내부스크롤    6 | PASS
+MC01/class-upcoming        | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+MC01/counsel-next          | 834x1194 | 1194/1194 | 내부스크롤    6 | PASS
+MC01/invited               | 834x1194 | 1194/1194 | 내부스크롤  278 | PASS
+MC01/only-class            | 834x1194 | 1194/1194 | 내부스크롤    5 | PASS
+MC01/only-counsel          | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+MC01/empty                 | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+MC02/list                  | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+MC02/left-open             | 834x1194 | 1194/1194 | 내부스크롤   12 | PASS
+MC02/waitlist              | 834x1194 | 1194/1194 | 내부스크롤   93 | PASS
+MC02/invited               | 834x1194 | 1194/1194 | 내부스크롤  205 | PASS
+MC02/empty                 | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+MC02/apply                 | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+MC03/ongoing               | 834x1194 | 1194/1194 | 내부스크롤  624 | PASS
+MC03/makeup-pick           | 834x1194 | 1194/1194 | 내부스크롤  624 | PASS
+MC03/makeup-planned        | 834x1194 | 1194/1194 | 내부스크롤  582 | PASS
+MC03/makeup-done           | 834x1194 | 1194/1194 | 내부스크롤  696 | PASS
+MC03/joined-mid            | 834x1194 | 1194/1194 | 내부스크롤  458 | PASS
+MC03/cancelled             | 834x1194 | 1194/1194 | 내부스크롤  612 | PASS
+MC03/host-changed          | 834x1194 | 1194/1194 | 내부스크롤  576 | PASS
+MC03/rolling               | 834x1194 | 1194/1194 | 내부스크롤  305 | PASS
+MC03/completed             | 834x1194 | 1194/1194 | 내부스크롤  463 | PASS
+MC03/left                  | 834x1194 | 1194/1194 | 내부스크롤  245 | PASS
+MC04/default               | 834x1194 | 1194/1194 | 내부스크롤  219 | FAIL empty=2
+MC04/completed             | 834x1194 | 1194/1194 | 내부스크롤  219 | FAIL empty=2
+MC04/joined-mid            | 834x1194 | 1194/1194 | 내부스크롤  152 | FAIL empty=2
+MC04/few                   | 834x1194 | 1194/1194 | 내부스크롤    0 | FAIL empty=2
+MC04/no-band               | 834x1194 | 1194/1194 | 내부스크롤    0 | FAIL empty=2
+MC05/first-visit           | 834x1194 | 1194/1194 | 내부스크롤    0 | FAIL empty=4
+MC05/between               | 834x1194 | 1194/1194 | 내부스크롤    0 | FAIL empty=4
+MC05/open                  | 834x1194 | 1194/1194 | 내부스크롤    0 | FAIL empty=4
+MC05/expired               | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+MC06/joined-mid            | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+MC06/waitlisted            | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+MC06/leave-sheet           | 834x1194 | 1194/1194 | 내부스크롤  624 | PASS
+MC06/left-done             | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+MC06/removed               | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+MC07/host-changed          | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+MC07/makeup-offered        | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+MC07/mixed                 | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+MC01/class-open            | 1194x834 | 834/834   | 내부스크롤  366 | PASS
+MC01/class-soon            | 1194x834 | 834/834   | 내부스크롤  366 | PASS
+MC01/class-upcoming        | 1194x834 | 834/834   | 내부스크롤  294 | PASS
+MC01/counsel-next          | 1194x834 | 834/834   | 내부스크롤  366 | PASS
+MC01/invited               | 1194x834 | 834/834   | 내부스크롤  638 | PASS
+MC01/only-class            | 1194x834 | 834/834   | 내부스크롤  365 | PASS
+MC01/only-counsel          | 1194x834 | 834/834   | 내부스크롤  251 | PASS
+MC01/empty                 | 1194x834 | 834/834   | 내부스크롤  142 | PASS
+MC02/list                  | 1194x834 | 834/834   | 내부스크롤  264 | PASS
+MC02/left-open             | 1194x834 | 834/834   | 내부스크롤  372 | PASS
+MC02/waitlist              | 1194x834 | 834/834   | 내부스크롤  453 | PASS
+MC02/invited               | 1194x834 | 834/834   | 내부스크롤  565 | PASS
+MC02/empty                 | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+MC02/apply                 | 1194x834 | 834/834   | 내부스크롤  264 | PASS
+MC03/ongoing               | 1194x834 | 834/834   | 내부스크롤  984 | PASS
+MC03/makeup-pick           | 1194x834 | 834/834   | 내부스크롤  984 | PASS
+MC03/makeup-planned        | 1194x834 | 834/834   | 내부스크롤  942 | PASS
+MC03/makeup-done           | 1194x834 | 834/834   | 내부스크롤 1056 | PASS
+MC03/joined-mid            | 1194x834 | 834/834   | 내부스크롤  818 | PASS
+MC03/cancelled             | 1194x834 | 834/834   | 내부스크롤  972 | PASS
+MC03/host-changed          | 1194x834 | 834/834   | 내부스크롤  936 | PASS
+MC03/rolling               | 1194x834 | 834/834   | 내부스크롤  665 | PASS
+MC03/completed             | 1194x834 | 834/834   | 내부스크롤  823 | PASS
+MC03/left                  | 1194x834 | 834/834   | 내부스크롤  605 | PASS
+MC04/default               | 1194x834 | 834/834   | 내부스크롤  554 | FAIL empty=2
+MC04/completed             | 1194x834 | 834/834   | 내부스크롤  579 | FAIL empty=2
+MC04/joined-mid            | 1194x834 | 834/834   | 내부스크롤  512 | FAIL empty=2
+MC04/few                   | 1194x834 | 834/834   | 내부스크롤  104 | FAIL empty=2
+MC04/no-band               | 1194x834 | 834/834   | 내부스크롤  146 | FAIL empty=2
+MC05/first-visit           | 1194x834 | 834/834   | 내부스크롤  191 | FAIL empty=4
+MC05/between               | 1194x834 | 834/834   | 내부스크롤  294 | FAIL empty=4
+MC05/open                  | 1194x834 | 834/834   | 내부스크롤  294 | FAIL empty=4
+MC05/expired               | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+MC06/joined-mid            | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+MC06/waitlisted            | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+MC06/leave-sheet           | 1194x834 | 834/834   | 내부스크롤  984 | PASS
+MC06/left-done             | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+MC06/removed               | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+MC07/host-changed          | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+MC07/makeup-offered        | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+MC07/mixed                 | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+MC01/class-open            | 1280x720 | 720/720   | 내부스크롤  480 | PASS
+MC01/class-soon            | 1280x720 | 720/720   | 내부스크롤  480 | PASS
+MC01/class-upcoming        | 1280x720 | 720/720   | 내부스크롤  408 | PASS
+MC01/counsel-next          | 1280x720 | 720/720   | 내부스크롤  480 | PASS
+MC01/invited               | 1280x720 | 720/720   | 내부스크롤  752 | PASS
+MC01/only-class            | 1280x720 | 720/720   | 내부스크롤  479 | PASS
+MC01/only-counsel          | 1280x720 | 720/720   | 내부스크롤  365 | PASS
+MC01/empty                 | 1280x720 | 720/720   | 내부스크롤  256 | PASS
+MC02/list                  | 1280x720 | 720/720   | 내부스크롤  378 | PASS
+MC02/left-open             | 1280x720 | 720/720   | 내부스크롤  486 | PASS
+MC02/waitlist              | 1280x720 | 720/720   | 내부스크롤  567 | PASS
+MC02/invited               | 1280x720 | 720/720   | 내부스크롤  679 | PASS
+MC02/empty                 | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+MC02/apply                 | 1280x720 | 720/720   | 내부스크롤  378 | PASS
+MC03/ongoing               | 1280x720 | 720/720   | 내부스크롤 1098 | PASS
+MC03/makeup-pick           | 1280x720 | 720/720   | 내부스크롤 1098 | PASS
+MC03/makeup-planned        | 1280x720 | 720/720   | 내부스크롤 1056 | PASS
+MC03/makeup-done           | 1280x720 | 720/720   | 내부스크롤 1170 | PASS
+MC03/joined-mid            | 1280x720 | 720/720   | 내부스크롤  932 | PASS
+MC03/cancelled             | 1280x720 | 720/720   | 내부스크롤 1086 | PASS
+MC03/host-changed          | 1280x720 | 720/720   | 내부스크롤 1050 | PASS
+MC03/rolling               | 1280x720 | 720/720   | 내부스크롤  779 | PASS
+MC03/completed             | 1280x720 | 720/720   | 내부스크롤  937 | PASS
+MC03/left                  | 1280x720 | 720/720   | 내부스크롤  719 | PASS
+MC04/default               | 1280x720 | 720/720   | 내부스크롤  668 | FAIL empty=2
+MC04/completed             | 1280x720 | 720/720   | 내부스크롤  693 | FAIL empty=2
+MC04/joined-mid            | 1280x720 | 720/720   | 내부스크롤  626 | FAIL empty=2
+MC04/few                   | 1280x720 | 720/720   | 내부스크롤  218 | FAIL empty=2
+MC04/no-band               | 1280x720 | 720/720   | 내부스크롤  260 | FAIL empty=2
+MC05/first-visit           | 1280x720 | 720/720   | 내부스크롤  305 | FAIL empty=4
+MC05/between               | 1280x720 | 720/720   | 내부스크롤  408 | FAIL empty=4
+MC05/open                  | 1280x720 | 720/720   | 내부스크롤  408 | FAIL empty=4
+MC05/expired               | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+MC06/joined-mid            | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+MC06/waitlisted            | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+MC06/leave-sheet           | 1280x720 | 720/720   | 내부스크롤 1098 | PASS
+MC06/left-done             | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+MC06/removed               | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+MC07/host-changed          | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+MC07/makeup-offered        | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+MC07/mixed                 | 1280x720 | 720/720   | 내부스크롤    0 | PASS

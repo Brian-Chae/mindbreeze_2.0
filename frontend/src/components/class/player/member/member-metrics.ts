@@ -76,6 +76,13 @@ export function downsample(values: ArrayLike<number>, count: number): number[] {
   return Array.from({ length: count }, (_, i) => values[Math.round((i * last) / (count - 1))]);
 }
 
+/** 평균을 뺀다(PPG 처럼 DC 오프셋이 큰 신호를 채널별 정규화 전에 가운데로 모은다) */
+export function centerSeries(values: readonly number[]): number[] {
+  if (values.length === 0) return [];
+  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  return values.map((v) => v - mean);
+}
+
 function resample(series: readonly number[], count: number): number[] {
   if (series.length <= count) return [...series];
   const last = series.length - 1;

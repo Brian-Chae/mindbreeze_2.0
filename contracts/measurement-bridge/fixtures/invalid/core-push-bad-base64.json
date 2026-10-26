@@ -1,0 +1,17 @@
+{
+  "$fixture": {
+    "schema": "core-push",
+    "why": "base64",
+    "reject_by": "schema"
+  },
+  "message": {
+    "sensor": "eeg",
+    "bytes_base64": "!!!",
+    "arrival_monotonic_us": "1",
+    "wall_anchor": {
+      "wall_ms": 1,
+      "monotonic_us": "1",
+      "uncertainty_ms": 1
+    }
+  }
+}

@@ -1,0 +1,1253 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MIND BREEZE · 상담 영역 시안 (CN01~CN16)</title>
+<link rel="stylesheet" href="../class-player-redesign/tokens.css">
+<link rel="stylesheet" href="flow-base.css">
+<style>
+.ic.s16 { width: 16px; height: 16px; }
+.ic.s20 { width: 20px; height: 20px; }
+.w-logo { fill: currentColor; stroke: none; }
+h1, h2, h3, p { margin: 0; }
+input { font: inherit; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--mb-pale); outline-offset: 2px; }
+.w-tight { white-space: nowrap; }
+.w-shell { position: relative; }
+.sh-main { position: relative; }
+.w-brand { display: flex; align-items: center; gap: 8px; padding: 8px 16px 24px; color: var(--mb-purple); font-weight: 800; font-size: var(--fs-18); }
+.w-brand svg { width: 40px; height: 18px; flex: none; }
+.w-nav { display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; }
+.w-nav button { display: flex; align-items: center; gap: 16px; min-height: 48px; padding: 0 16px; border-radius: var(--r-pill); font-size: var(--fs-15); font-weight: 600; color: var(--ink); text-align: left; }
+.w-nav button.on { background: var(--mb-purple-cream); color: var(--mb-purple); }
+.w-me { border-radius: var(--r-card); background: var(--mb-purple-cream); padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.w-me b { font-size: var(--fs-15); } .w-me span { font-size: var(--fs-13); color: var(--ink-mid); }
+.w-tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 0; align-self: stretch; font-size: var(--fs-12); color: var(--ink-mid); }
+.w-tab.on { color: var(--mb-purple); font-weight: 700; }
+.w-headl { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.w-backbtn { width: 44px; height: 44px; border-radius: var(--r-pill); display: inline-grid; place-items: center; background: #fff; border: 1px solid var(--shell-line); color: var(--ink); flex: none; }
+.w-page { width: min(100%, 640px); margin: 0 auto; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.w-page.fill { flex: 1; min-height: 0; }
+.sh-scroll.w-hold { overflow: hidden; }
+.w-sec { font-size: var(--fs-13); font-weight: 700; color: var(--ink-mid); padding: 8px 8px 0; }
+.sh-head .sh-btn { min-height: 48px; }
+.w-headrow { flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; }
+.w-live { display: grid; gap: 16px; padding: 16px; flex: none; }
+.w-live.sh-card { padding: 16px; border-radius: var(--r-sheet); }
+@media (min-width: 768px) {
+  .w-live { padding: 24px; grid-template-columns: minmax(0, 1fr) 208px; align-items: center; gap: 24px; }
+  .w-live.sh-card { padding: 24px; }
+}
+.w-live-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.w-live-title { font-size: var(--fs-24); line-height: 32px; font-weight: 800; }
+.w-line { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.w-dim { font-size: var(--fs-13); color: var(--tx-mid); }
+.w-dim2 { font-size: var(--fs-13); color: var(--ink-mid); }
+.w-start { justify-content: flex-start; }
+.w-wait { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-15); font-weight: 600; }
+.w-live-act { display: flex; flex-direction: column; gap: 8px; }
+.w-live-act .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (min-width: 768px) { .w-live-act .row2 { grid-template-columns: 1fr; } }
+.w-dline { border: 1px solid var(--warn); color: var(--warn); background: rgba(232,180,160,0.08); }
+.w-live-act .fl-btn { white-space: nowrap; }
+.sh-card .w-live-title { color: var(--ink); }
+.w-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: none; }
+.w-tabs button { min-height: 44px; border-radius: var(--r-pill); background: #fff; border: 1px solid var(--shell-line); font-size: var(--fs-15); font-weight: 600; color: var(--ink-mid); }
+.w-tabs button.on { background: var(--mb-purple); border-color: var(--mb-purple); color: #fff; }
+.w-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-bottom: 8px; }
+.w-item { display: flex; align-items: center; gap: 8px; background: var(--shell-card); border: 1px solid var(--shell-line); border-radius: var(--r-card); padding-right: 16px; flex: none; }
+.w-item-main { flex: 1; min-width: 0; display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 16px; align-items: center; padding: 16px; min-height: 72px; text-align: left; }
+.w-ico { width: 44px; height: 44px; border-radius: var(--r-pill); background: var(--mb-purple-cream); color: var(--mb-purple); display: grid; place-items: center; }
+.w-tt { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.w-tt b { font-size: var(--fs-15); font-weight: 700; color: var(--ink); }
+.w-sb { font-size: var(--fs-13); color: var(--ink-mid); margin-top: 8px; line-height: 1.5; }
+.w-mini { display: none; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: var(--r-pill); background: var(--mb-purple-cream); color: var(--mb-purple); font-size: var(--fs-13); font-weight: 700; white-space: nowrap; flex: none; }
+@media (min-width: 768px) { .w-mini { display: inline-flex; } }
+.w-empty { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.w-empty .sh-card { width: min(100%, 480px); display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; padding: 32px 24px; }
+.w-empty h2 { font-size: var(--fs-18); font-weight: 700; }
+.w-empty p { font-size: var(--fs-15); color: var(--ink-mid); line-height: 1.5; }
+.w-bigico { width: 64px; height: 64px; border-radius: var(--r-pill); background: var(--mb-purple-cream); color: var(--mb-purple); display: grid; place-items: center; }
+.w-next { background: rgba(255,255,255,0.12); border: 1px solid var(--sheet-border); border-radius: var(--r-card); padding: 16px; display: flex; gap: 16px; align-items: flex-start; }
+.w-next .tx { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.w-next .tx b { font-size: var(--fs-15); font-weight: 700; line-height: 1.4; }
+.w-next .tx span { font-size: var(--fs-13); color: var(--tx-mid); line-height: 1.5; }
+.w-next .ic { flex: none; margin-top: 0; }
+.w-detail-hero { display: flex; flex-direction: column; gap: 16px; padding: 16px; }
+@media (min-width: 768px) { .w-detail-hero { padding: 24px; } }
+.w-kv { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 16px; align-items: center; min-height: 56px; border-top: 1px solid var(--shell-line); }
+.w-kv:first-child { border-top: 0; }
+.w-kv .k { font-size: var(--fs-13); color: var(--ink-mid); font-weight: 600; }
+.w-kv .v { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: var(--fs-15); min-width: 0; }
+.w-kv .v.w-wrapv { flex-wrap: wrap; justify-content: flex-start; }
+.w-kv .v > span:first-child { min-width: 0; line-height: 1.5; }
+.w-smbtn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: var(--r-pill); background: var(--mb-purple-cream); color: var(--mb-purple); font-size: var(--fs-13); font-weight: 700; white-space: nowrap; flex: none; }
+.w-smbtn.line { background: transparent; border: 1.5px solid var(--mb-purple); }
+.w-smbtn[disabled] { opacity: 0.4; }
+.w-cancelrow { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; width: 100%; border-top: 1px solid var(--shell-line); color: #8A3A1F; font-size: var(--fs-15); font-weight: 700; }
+.w-phead { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 44px; margin-bottom: 8px; }
+.w-phead h3 { font-size: var(--fs-18); font-weight: 700; }
+.w-p { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; padding: 8px 0; gap: 16px; align-items: center; min-height: 64px; border-top: 1px solid var(--shell-line); }
+.w-p .av { width: 40px; height: 40px; border-radius: var(--r-pill); background: var(--mb-purple-cream); color: var(--mb-purple); font-weight: 700; display: grid; place-items: center; }
+.w-p .nm { font-size: var(--fs-15); font-weight: 700; }
+.w-p .st { margin-top: 8px; display: flex; }
+.w-p .rt { display: flex; align-items: center; gap: 8px; }
+.w-xbtn { width: 44px; height: 44px; border-radius: var(--r-pill); display: inline-grid; place-items: center; color: var(--ink-mid); }
+.w-note { display: flex; align-items: flex-start; gap: 8px; font-size: var(--fs-13); line-height: 1.5; }
+.w-note .ic { flex: none; }
+.w-note.ok { color: var(--ok); } .w-note.warn { color: var(--warn); }
+.w-wiz .fl-top-title { font-size: var(--fs-15); }
+.w-wiz .fl-label { line-height: 20px; }
+.w-wiz .fl-steps { flex: none; }
+.w-card { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+@media (min-width: 600px) { .w-card { padding: 24px; } }
+.w-form { display: flex; flex-direction: column; gap: 16px; }
+.w-group { display: flex; flex-direction: column; gap: 8px; }
+.w-info { display: flex; align-items: flex-start; gap: 8px; font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); }
+.w-info .ic { flex: none; }
+.fl-seg.w-flex > button { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 0 8px; min-width: 0; white-space: nowrap; }
+.fl-seg.w-flex > button.on { border-color: var(--mb-lavender); }
+.fl-seg.w-types { grid-auto-flow: row; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.fl-seg.w-c4 { grid-auto-flow: row; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 699px) { .fl-seg.w-types { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.w-inwrap { position: relative; }
+.w-inwrap > .ic { position: absolute; left: 16px; top: 16px; color: var(--tx-mid); pointer-events: none; }
+.w-inwrap > .fl-input { padding-left: 48px; }
+.w-tog { width: 100%; text-align: left; min-height: 64px; }
+.w-tog .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.w-tog .tx b { font-size: var(--fs-15); font-weight: 700; }
+.w-tog .tx span { font-size: var(--fs-13); color: var(--tx-mid); }
+.w-tog .sw { width: 48px; height: 28px; border-radius: var(--r-pill); background: rgba(255,255,255,0.24); position: relative; flex: none; }
+.w-tog .sw::after { content: ""; position: absolute; top: 4px; left: 4px; width: 20px; height: 20px; border-radius: 50%; background: #fff; }
+.w-tog[aria-checked="true"] .sw { background: var(--mb-lavender); }
+.w-tog[aria-checked="true"] .sw::after { left: 24px; }
+.w-tog[disabled] { opacity: 0.4; }
+.w-static { min-height: 64px; border-style: dashed; }
+.w-static .tx { flex: 1; font-size: var(--fs-13); color: var(--tx-mid); line-height: 1.5; }
+.w-when3 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.w-when3 > .w-group:first-child { grid-column: 1 / -1; }
+@media (min-width: 700px) { .w-when3 { grid-template-columns: 1.8fr 1fr 1fr; } .w-when3 > .w-group:first-child { grid-column: auto; } }
+.w-stepper.sm { grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 0; padding: 0; }
+.w-durrow { display: grid; grid-template-columns: 1fr; gap: 8px; }
+@media (min-width: 700px) { .w-durrow { grid-template-columns: 216px 1fr; gap: 16px; } }
+.fl-seg.w-c5 { grid-auto-flow: row; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.w-2col { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 700px) { .w-2col { grid-template-columns: 1fr 1fr; } }
+.w-stepper { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; min-height: 56px; padding: 0 8px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); }
+.w-stepper b { text-align: center; font-size: var(--fs-15); font-weight: 700; white-space: nowrap; }
+.w-stepper button { width: 44px; height: 44px; border-radius: var(--r-pill); display: grid; place-items: center; background: rgba(255,255,255,0.1); }
+.w-stepper button[disabled] { opacity: 0.4; }
+.w-nav2 { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }
+.w-wiz .fl-body.w-fill .fl-col { flex: 1; min-height: 0; max-height: 640px; }
+.w-wiz .w-fill .w-card { flex: 1; min-height: 0; }
+.w-pchips { display: flex; flex-wrap: wrap; gap: 8px; min-height: 44px; align-items: center; }
+.w-pchips .hint { font-size: var(--fs-13); color: var(--tx-lo); }
+.w-pchip { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: var(--r-pill); background: var(--mb-purple); border: 1px solid var(--mb-lavender); font-size: var(--fs-15); font-weight: 600; }
+.w-count { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 44px; }
+.w-count span { font-size: var(--fs-13); color: var(--tx-mid); }
+.w-count b { color: var(--tx-hi); font-size: var(--fs-15); }
+.w-count .fl-btn { min-height: 44px; padding: 0 16px; font-size: var(--fs-13); }
+.w-plist { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.w-prow { display: grid; grid-template-columns: 40px minmax(0, 1fr) 32px; gap: 16px; align-items: center; min-height: 64px; padding: 8px 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); width: 100%; text-align: left; flex: none; }
+.w-prow[disabled] { opacity: 0.4; }
+.w-prow .av { width: 40px; height: 40px; border-radius: var(--r-pill); background: rgba(255,255,255,0.14); font-weight: 700; display: grid; place-items: center; }
+.w-prow .nm { font-size: var(--fs-15); font-weight: 700; }
+.w-prow .em { font-size: var(--fs-13); color: var(--tx-mid); margin-top: 8px; }
+.w-prow .ck { width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--sheet-border); display: grid; place-items: center; }
+.w-prow.on { border-color: var(--mb-lavender); }
+.w-prow.on .ck { background: var(--mb-purple); border-color: var(--mb-lavender); }
+.w-prow:not(.on) .ck .ic { display: none; }
+.w-prow .ck .ic { width: 20px; height: 20px; }
+.w-sumrow .tx { overflow-wrap: anywhere; flex: 1; min-width: 0; font-size: var(--fs-15); line-height: 1.5; padding: 8px 0; }
+.w-sumrow > .ic { flex: none; color: var(--mb-pale); }
+.w-edit { width: 44px; height: 44px; border-radius: var(--r-pill); display: grid; place-items: center; flex: none; color: var(--tx-mid); }
+.w-ok { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: rgba(125,227,200,0.16); border: 1px solid rgba(125,227,200,0.5); color: var(--ok); align-self: center; }
+.w-invcard { gap: 16px; }
+.w-inv { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 16px; align-items: center; min-height: 64px; padding: 8px 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); }
+.w-inv.fail { border: 1px dashed var(--warn); background: var(--warn-bg); }
+.w-inv .av { width: 40px; height: 40px; border-radius: var(--r-pill); background: rgba(255,255,255,0.14); font-weight: 700; display: grid; place-items: center; }
+.w-inv .nm { font-size: var(--fs-15); font-weight: 700; }
+.w-inv .st { margin-top: 8px; display: flex; }
+.w-inv .fl-btn { min-height: 44px; padding: 0 16px; font-size: var(--fs-13); white-space: nowrap; }
+.w-invcard .fl-h2 { text-align: center; }
+.w-card h1.w-solo, .w-card p.w-solo { text-align: center; }
+.w-invlist { display: flex; flex-direction: column; gap: 8px; }
+.w-ghostrow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.w-ghostrow .fl-btn { padding: 0 8px; font-size: var(--fs-13); white-space: nowrap; }
+.w-center { text-align: center; align-items: center; }
+.w-static .w-two { display: flex; flex-direction: column; gap: 8px; }
+.w-static .w-two b { font-size: var(--fs-15); font-weight: 700; color: var(--tx-hi); }
+.w-emailin { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.w-emailin .fl-btn { min-height: 52px; }
+.w-erow { display: grid; grid-template-columns: 40px minmax(0, 1fr) 44px; gap: 16px; align-items: center; min-height: 64px; padding: 8px 8px 8px 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); flex: none; }
+.w-erow .av { width: 40px; height: 40px; border-radius: var(--r-pill); background: rgba(255,255,255,0.14); display: grid; place-items: center; }
+.w-erow .em { font-size: var(--fs-15); font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.w-codecard { gap: 8px; flex: none; }
+.w-coderow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; }
+.w-codebig { font-size: 40px; line-height: 48px; font-weight: 800; letter-spacing: 8px; font-variant-numeric: tabular-nums; }
+.w-codecard .w-note { color: var(--tx-mid); }
+.w-codeval { font-size: var(--fs-18); font-weight: 800; letter-spacing: 8px; font-variant-numeric: tabular-nums; }
+.w-inv .sub { margin-top: 8px; font-size: var(--fs-13); color: var(--tx-mid); line-height: 1.5; }
+.w-inv .sub.bad { color: var(--warn); }
+.w-inv .av svg { width: 20px; height: 20px; }
+.w-wiz .w-fill .w-codecard { flex: none; }
+.w-wiz .w-fill .w-invcard { flex: 1; min-height: 0; }
+.w-scrim { position: absolute; inset: 0; z-index: 20; background: rgba(12, 6, 20, 0.55); display: flex; align-items: flex-end; justify-content: center; color: var(--tx-hi); }
+.w-sheet { width: min(100%, 640px); background: rgba(24, 12, 36, 0.97); border: 1px solid var(--sheet-border); border-radius: var(--r-sheet) var(--r-sheet) 0 0; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+.w-shead { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.w-shead h2 { font-size: var(--fs-18); font-weight: 700; }
+.w-x { width: 44px; height: 44px; border-radius: var(--r-pill); display: grid; place-items: center; background: rgba(255,255,255,0.1); flex: none; }
+.w-sbody { display: flex; flex-direction: column; gap: 16px; }
+.w-sbody p { font-size: var(--fs-15); line-height: 1.5; color: var(--tx-mid); }
+.w-sico { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: var(--warn-bg); color: var(--warn); border: 1px dashed var(--warn); }
+.w-sfoot { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.w-menu { display: flex; flex-direction: column; gap: 8px; }
+.w-menu button { display: flex; align-items: center; gap: 16px; min-height: 56px; padding: 0 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); font-size: var(--fs-15); font-weight: 600; text-align: left; width: 100%; }
+.w-menu button.danger { color: var(--warn); }
+body.w-index { height: auto; overflow: auto; background: var(--shell-bg); color: var(--ink); padding: 32px; }
+.w-index h1 { font-size: var(--fs-24); margin-bottom: 8px; }
+.w-index p { font-size: var(--fs-15); color: var(--ink-mid); margin-bottom: 24px; }
+.w-index table { width: 100%; border-collapse: collapse; background: #fff; border-radius: var(--r-card); overflow: hidden; font-size: var(--fs-13); }
+.w-index th, .w-index td { text-align: left; padding: 16px; border-bottom: 1px solid var(--shell-line); vertical-align: top; line-height: 1.6; }
+.w-index th { background: var(--mb-purple-cream); color: var(--mb-purple); }
+.w-index a { display: inline-block; margin: 0 8px 8px 0; padding: 8px 16px; border-radius: var(--r-pill); background: var(--mb-purple-cream); color: var(--mb-purple); text-decoration: none; font-weight: 600; }
+.w-ico { font-size: var(--fs-15); font-weight: 700; }
+.w-sin { position: relative; flex: none; }
+.w-sin > .ic { position: absolute; left: 16px; top: 14px; color: var(--ink-mid); pointer-events: none; }
+.w-sin > input { width: 100%; height: 48px; border-radius: var(--r-pill); background: #fff; border: 1px solid var(--shell-line); padding: 0 16px 0 48px; font: inherit; font-size: var(--fs-15); color: var(--ink); }
+.w-sin > input::placeholder { color: var(--ink-lo); }
+.w-tabs.c3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.w-tabs.c4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.w-tabs button { padding: 0 8px; white-space: nowrap; }
+.w-tabs.fil button { font-size: var(--fs-13); }
+.w-arch { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; padding: 0 8px 0 16px; border-radius: var(--r-card); border: 1px dashed var(--shell-line); color: var(--ink-mid); font-size: var(--fs-13); line-height: 1.5; flex: none; }
+.w-arch > span { min-width: 0; }
+.w-item.dim .w-ico { background: #F0ECF3; color: var(--ink-mid); }
+.w-item-main .w-tt { align-items: flex-start; }
+.w-sb > span { display: block; }
+.w-sb > span + span { margin-top: 8px; }
+.w-noresult { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.w-noresult .sh-card { width: min(100%, 480px); display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; padding: 24px; }
+.w-noresult h2 { font-size: var(--fs-18); font-weight: 700; }
+.w-noresult p { font-size: var(--fs-15); color: var(--ink-mid); line-height: 1.5; }
+
+.w-pb { width: 100%; text-align: left; background: transparent; }
+.w-pb .nm { display: block; }
+.w-p .st { flex-wrap: wrap; gap: 8px; }
+.w-p .rt .ic { color: var(--ink-lo); }
+.w-p .av .ic { width: 20px; height: 20px; }
+.w-p .av.ok { background: #E3F8F2; color: #0B6B55; }
+.w-p .av.mute { background: #F0ECF3; color: var(--ink-mid); }
+.w-p .sub { margin-top: 8px; font-size: var(--fs-13); color: var(--ink-mid); line-height: 1.5; }
+.w-callout { display: flex; gap: 16px; align-items: flex-start; padding: 16px; border-radius: var(--r-card); background: var(--mb-purple-cream); color: var(--ink); font-size: var(--fs-13); line-height: 1.5; flex: none; }
+.w-callout.warn { background: #FBEAE3; border: 1px dashed #D58A6F; color: #8A3A1F; }
+.w-callout.ok { background: #E3F8F2; color: #0B6B55; }
+.w-callout .ic { flex: none; }
+.w-callout .tx { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.w-callout .tx b { font-size: var(--fs-15); font-weight: 700; }
+.w-callout .w-smbtn { align-self: flex-start; }
+.w-btnrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.w-btnrow .w-smbtn { min-height: 48px; }
+.w-sbtn { min-height: 48px; }
+.w-doc { display: flex; flex-direction: column; gap: 16px; }
+.w-doc h4 { margin: 0; font-size: var(--fs-15); font-weight: 700; }
+.w-doc p { margin: 0; font-size: var(--fs-15); line-height: 1.6; color: var(--ink); }
+.w-doc .mut { color: var(--ink-mid); font-size: var(--fs-13); line-height: 1.5; }
+.w-ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.w-ul li { position: relative; padding-left: 24px; font-size: var(--fs-15); line-height: 1.5; }
+.w-ul li::before { content: ""; position: absolute; left: 8px; top: 9px; width: 6px; height: 6px; border-radius: 50%; background: var(--mb-lavender); }
+.w-pipe { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.w-pipe > div { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; font-size: var(--fs-13); font-weight: 600; color: var(--ink-mid); }
+.w-pipe .dot { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: #F0ECF3; color: var(--ink-lo); }
+.w-pipe .on { color: var(--mb-purple); }
+.w-pipe .on .dot { background: var(--mb-purple); color: #fff; }
+.w-pipe .done { color: #0B6B55; }
+.w-pipe .done .dot { background: #E3F8F2; color: #0B6B55; }
+.w-pipe .err { color: #8A3A1F; }
+.w-pipe .err .dot { background: #FBEAE3; color: #8A3A1F; }
+.w-dirs { display: flex; flex-wrap: wrap; gap: 8px; }
+.w-memo { width: 100%; min-height: 128px; border-radius: var(--r-card); background: #fff; border: 1px solid var(--shell-line); padding: 16px; font: inherit; font-size: var(--fs-15); line-height: 1.6; color: var(--ink); resize: none; }
+.w-memo.ph { color: var(--ink-lo); }
+.w-appr { display: flex; flex-direction: column; gap: 16px; }
+.w-appr .w-note { color: var(--ink-mid); }
+.w-hd2 { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.w-hd2 h1 { margin: 0; }
+.w-hd2 .s { font-size: var(--fs-13); color: var(--ink-mid); }
+.w-page .w-tabs + .sh-card, .w-page .w-tabs + .w-doc { margin-top: 0; }
+.w-tabs[role="tablist"].c2 { grid-template-columns: 1fr 1fr; }
+.w-linkrow { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; width: 100%; text-align: left; padding: 0 16px; border-radius: var(--r-card); background: #fff; border: 1px solid var(--shell-line); font-size: var(--fs-15); font-weight: 600; flex: none; }
+.w-linkrow .l { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.w-linkrow .ic:last-child { color: var(--ink-lo); }
+.w-dangerrow { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 56px; width: 100%; border-radius: var(--r-card); border: 1px dashed #D58A6F; background: #FBEAE3; color: #8A3A1F; font-size: var(--fs-15); font-weight: 700; flex: none; }
+.w-rel { display: flex; flex-direction: column; gap: 16px; }
+.w-relhead { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 16px; align-items: center; }
+.w-relhead b { display: block; font-size: var(--fs-15); font-weight: 700; }
+.w-relhead .s { display: block; margin-top: 8px; font-size: var(--fs-13); color: var(--ink-mid); }
+.w-fold { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; min-height: 56px; padding: 0 16px; border-radius: var(--r-card); background: #fff; border: 1px solid var(--shell-line); font-size: var(--fs-15); font-weight: 600; flex: none; }
+.w-fold .l { display: flex; align-items: center; gap: 16px; }
+.w-sec2 { display: flex; flex-direction: column; gap: 16px; }
+
+.w-card.dense { padding: 16px; gap: 8px; }
+.w-card.dense .w-form { gap: 8px; }
+.w-card.dense .w-2col { gap: 8px; }
+.w-card.dense .w-group { gap: 8px; }
+.w-card.dense .fl-row { min-height: 48px; }
+.w-card.dense .w-tog { min-height: 56px; }
+.w-card.dense .w-when3 { gap: 8px; }
+.w-card.dense .w-durrow { gap: 8px; }
+.w-card.dense .fl-h1 { font-size: var(--fs-18); line-height: 28px; }
+@media (min-width: 700px) { .w-card.dense .fl-h1 { font-size: var(--fs-24); line-height: 31px; } }
+.w-card.tight { gap: 16px; }
+.w-sel { position: relative; }
+.w-sel select { appearance: none; -webkit-appearance: none; width: 100%; height: 52px; border-radius: var(--r-card); background: rgba(255,255,255,0.1); border: 1px solid var(--sheet-border); color: var(--tx-hi); padding: 0 48px 0 16px; font: inherit; font-size: var(--fs-15); }
+.w-sel select option { color: #1F1F1F; }
+.w-sel > .ic { position: absolute; right: 16px; top: 14px; pointer-events: none; color: var(--tx-mid); }
+.w-err { display: flex; align-items: flex-start; gap: 8px; font-size: var(--fs-13); line-height: 20px; color: var(--warn); }
+.w-err .ic { flex: none; }
+.fl-input.bad { border-color: var(--warn); }
+.fl-input[readonly] { opacity: 0.8; }
+.fl-seg.w-c7 { grid-auto-flow: row; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0; }
+.fl-seg.w-c7 > button { min-height: 48px; padding: 0; border-radius: 0; }
+.fl-seg.w-c7 > button:first-child { border-radius: var(--r-card) 0 0 var(--r-card); }
+.fl-seg.w-c7 > button:last-child { border-radius: 0 var(--r-card) var(--r-card) 0; }
+.fl-seg.w-c3 { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.fl-seg.w-c2 { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.fl-seg.w-flex > button { white-space: nowrap; }
+.w-opt { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 16px; align-items: start; min-height: 56px; padding: 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); width: 100%; text-align: left; }
+.w-opt .rd { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.4); display: block; }
+.w-opt.on { border-color: var(--mb-lavender); }
+.w-opt.on .rd { border-color: var(--mb-lavender); background: radial-gradient(circle, var(--mb-lavender) 0 5px, transparent 6px); }
+.w-opt .tx { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.w-opt .tx b { font-size: var(--fs-15); font-weight: 700; }
+.w-opt .tx .s { font-size: var(--fs-13); color: var(--tx-mid); line-height: 1.5; }
+.w-cin { width: 100%; height: 100%; background: transparent; border: 0; text-align: center; font: inherit; font-size: var(--fs-24); font-weight: 800; color: inherit; padding: 0; }
+.fl-codebox > span.on { border-color: var(--mb-lavender); }
+.fl-codebox > span.bad { border-color: var(--warn); background: var(--warn-bg); }
+.w-glogo { width: 56px; height: 26px; fill: var(--mb-pale); align-self: center; flex: none; }
+.w-hint { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: var(--fs-13); color: var(--tx-mid); line-height: 20px; text-align: center; }
+.w-hint.bad { color: var(--warn); }
+.w-hint.ok { color: var(--ok); }
+.w-chk { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 16px; align-items: center; min-height: 56px; padding: 0 8px 0 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); width: 100%; text-align: left; font-size: var(--fs-13); line-height: 1.5; flex: none; }
+.w-chk .bx { width: 32px; height: 32px; border-radius: 8px; border: 1.5px solid rgba(255,255,255,0.4); display: grid; place-items: center; }
+.w-chk[aria-checked="true"] .bx { background: var(--mb-purple); border-color: var(--mb-lavender); }
+.w-chk[aria-checked="false"] .bx .ic { display: none; }
+.w-chk .bx .ic { width: 20px; height: 20px; }
+.w-chk .tx { min-width: 0; font-size: var(--fs-13); }
+.w-chk .tx b { font-size: var(--fs-13); }
+.w-chk .more { display: inline-flex; align-items: center; min-height: 44px; padding: 0 8px; color: var(--mb-pale); font-size: var(--fs-13); font-weight: 600; }
+.w-chk.bad { border-color: var(--warn); }
+.w-who { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 16px; align-items: center; }
+.w-who .av { width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,0.14); display: grid; place-items: center; font-size: var(--fs-18); font-weight: 700; }
+.w-who b { display: block; font-size: var(--fs-18); font-weight: 700; }
+.w-who .s { display: block; margin-top: 8px; font-size: var(--fs-13); color: var(--tx-mid); }
+.w-checks { display: flex; flex-direction: column; gap: 8px; }
+.w-checks .fl-row { min-height: 48px; font-size: var(--fs-15); }
+.w-checks .fl-row .ic { color: var(--ok); flex: none; }
+.w-checks .fl-row.no .ic { color: var(--tx-lo); }
+.w-checks .fl-row .grow { min-width: 0; line-height: 1.5; padding: 8px 0; }
+.w-centerbox { display: flex; flex-direction: column; gap: 16px; align-items: center; text-align: center; }
+.w-centerbox .fl-sub { text-align: center; }
+.w-stat { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; align-self: center; background: rgba(255,255,255,0.1); border: 1px solid var(--sheet-border); }
+.w-stat.ok { background: rgba(125,227,200,0.16); border-color: rgba(125,227,200,0.5); color: var(--ok); }
+.w-stat.warn { background: var(--warn-bg); border: 1px dashed var(--warn); color: var(--warn); }
+.w-stat .ic { width: 28px; height: 28px; }
+.w-codeline { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; }
+.w-btns2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.w-btns2 .fl-btn { padding: 0 8px; white-space: nowrap; font-size: var(--fs-13); }
+.w-rpt { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 16px; align-items: center; min-height: 64px; padding: 8px 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); width: 100%; text-align: left; flex: none; }
+.w-rpt .av { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.14); display: grid; place-items: center; }
+.w-rpt .nm { display: block; font-size: var(--fs-15); font-weight: 700; }
+.w-rpt .s { display: block; margin-top: 8px; font-size: var(--fs-13); color: var(--tx-mid); }
+.w-card.fillcard { flex: 1; min-height: 0; }
+.w-lh { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 32px; }
+.w-lh h2 { font-size: var(--fs-15); font-weight: 700; margin: 0; }
+.w-lh span { font-size: var(--fs-13); color: var(--tx-mid); }
+.w-bar2 { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }
+.w-bar2.one { grid-template-columns: 1fr; }
+.w-memo-ro { background: #FBF9FC; }
+.w-tx3 { font-size: var(--fs-13); color: var(--ink-mid); line-height: 1.5; }
+.w-index td .gl { font-size: var(--fs-13); color: #6F6F6F; }
+@media (max-width: 479px) { .fl-seg.w-c7 > button { font-size: var(--fs-13); } .w-ghostrow .fl-btn { font-size: var(--fs-13); } }
+.w-sfoot.one { grid-template-columns: 1fr; }
+.w-sico.ok { background: rgba(125,227,200,0.16); color: var(--ok); border: 1px solid rgba(125,227,200,0.5); }
+.w-dl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+.w-dl li { display: flex; gap: 16px; align-items: flex-start; font-size: var(--fs-15); line-height: 1.5; color: var(--tx-hi); }
+.w-dl .ic { flex: none; color: var(--mb-pale); }
+.w-callout-d { display: flex; flex-direction: column; gap: 16px; }
+.w-cd-h { display: flex; gap: 16px; align-items: flex-start; font-size: var(--fs-13); line-height: 1.5; color: var(--tx-mid); }
+.w-cd-h .ic { flex: none; color: var(--mb-pale); }
+.w-cd-h .tx { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.w-cd-h .tx b { font-size: var(--fs-15); font-weight: 700; color: var(--tx-hi); }
+.w-bg { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 8px; }
+.w-bgi { min-width: 0; display: flex; flex-direction: column; }
+.w-bgi .fl-seg > button { min-height: 52px; }
+.w-bgi .w-sel select { padding: 0 40px 0 12px; }
+.w-bgi .w-sel > .ic { right: 12px; }
+.w-bgi .w-tog { min-height: 56px; }
+.w-stcard { display: flex; flex-direction: column; align-items: stretch; gap: 16px; flex: none; height: auto; padding: 16px; background: rgba(24,12,36,0.78); }
+.w-stcard.bad { border: 1px dashed var(--warn); background: var(--warn-bg); }
+.w-st { display: flex; gap: 16px; align-items: flex-start; font-size: var(--fs-15); line-height: 1.5; }
+.w-st .ic { flex: none; color: var(--mb-pale); }
+.w-ghostrow.one { grid-template-columns: 1fr; }
+.w-linkrow.w-dk { background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); color: var(--tx-hi); justify-content: center; gap: 8px; }
+.w-lightbtn { background: var(--mb-purple-cream); color: var(--mb-purple); border: 0; }
+.w-bar2 { grid-template-columns: 1fr 1fr; }
+.w-bar2.one { grid-template-columns: 1fr; }
+.w-bar2 .fl-btn { padding: 0 8px; white-space: nowrap; font-size: var(--fs-13); }
+.w-bar2 .w-smbtn { width: 100%; }
+.w-conv { display: flex; flex-direction: column; gap: 16px; flex: none; }
+.w-conv-t { display: flex; align-items: center; gap: 16px; font-size: var(--fs-15); font-weight: 600; line-height: 1.5; }
+.w-conv-t .ic { flex: none; color: var(--mb-pale); }
+.w-sum3 { width: 100%; text-align: left; }
+.w-detail-hero .w-dim { text-align: center; }
+.w-card.tight .w-who { width: 100%; }
+.w-wiz .w-fill .w-card.tight { flex: none; }
+.w-wiz .w-fill .w-card.fillcard { flex: 1; min-height: 0; }
+.w-card.fillcard .w-centerbox { flex: 1; justify-content: center; }
+.w-lightbtn:disabled { opacity: 0.4; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-logo" viewBox="0 0 414.72 188.928"><path d="M 414.72 92.871 L 413.139 94.458 L 412.995 94.603 C 409.607 98.313 406.014 101.838 402.483 105.424 C 378.911 129.356 355.38 153.328 331.686 177.136 C 329.386 179.424 326.183 181.464 323.062 182.165 C 314.089 184.165 306.554 177.919 306.102 168.334 C 305.753 160.975 305.979 153.575 305.979 146.196 C 305.958 131.582 305.876 116.988 305.999 102.394 C 306.061 95.365 303.72 89.82 297.088 87.017 C 290.251 84.131 284.584 86.399 279.491 91.552 C 253.538 117.709 227.482 143.764 201.447 169.839 C 195.677 175.59 190.071 177.012 183.871 174.312 C 177.382 171.467 175.041 166.211 175.083 159.388 C 175.144 140.342 175.124 121.275 175.062 102.209 C 175.021 93.283 170.955 87.821 163.564 86.172 C 157.281 84.75 152.763 87.574 148.575 91.882 C 118.843 122.265 89.03 152.565 59.319 182.948 C 55.52 186.803 51.393 189.503 45.767 188.823 C 37.76 187.875 32.955 182.083 32.852 172.992 C 32.565 150.669 32.483 128.325 32.175 106.001 C 32.031 95.18 20.184 88.171 11.108 93.448 C 9.712 94.376 8.049 96.169 7.638 96.54 C 7.494 96.664 7.371 96.788 7.248 96.911 C 7.125 97.035 7.002 97.138 6.899 97.262 C 6.796 97.344 6.714 97.427 6.714 97.427 L 0.205 103.961 C 0.082 101.652 0.021 99.344 0 97.014 L 3.018 93.984 L 13.839 82.915 L 13.839 82.956 C 37.328 58.984 60.859 35.032 84.431 11.121 C 89.071 6.401 94.635 4.814 100.836 7.535 C 106.976 10.214 109.768 15.244 109.747 21.902 L 109.747 54.861 C 109.747 65.869 109.706 76.855 109.768 87.842 C 109.83 95.035 112.971 100.518 119.583 103.425 C 125.085 105.857 129.767 104.105 133.914 99.818 C 151.1 82.111 168.368 64.467 185.636 46.843 C 199.065 33.136 212.575 19.511 225.963 5.742 C 230.849 0.712 236.332 -1.535 243.066 1.248 C 249.76 4.031 252.121 9.534 252.08 16.543 C 252.019 35.609 251.998 54.655 252.121 73.722 C 252.203 84.234 259.144 91.119 268.527 89.326 C 272.223 88.625 276.021 86.007 278.793 83.266 C 304.89 57.5 330.782 31.528 356.736 5.618 C 362.731 -0.339 369.035 -1.576 375.256 1.99 C 380.738 5.123 382.771 10.05 382.751 16.213 C 382.689 37.67 382.792 59.149 382.73 80.607 C 382.689 87.697 385.564 92.892 392.052 95.798 C 394.721 96.994 397.308 97.385 399.752 97.056 C 401.764 96.664 403.304 96.458 408.642 91.263 L 414.535 85.512 C 414.658 87.965 414.72 90.398 414.72 92.871 Z"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="i-chev-l" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-chev-r" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="i-user-plus" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></symbol>
+    <symbol id="i-video" viewBox="0 0 24 24"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></symbol>
+    <symbol id="i-video-off" viewBox="0 0 24 24"><path d="M10.66 5H14a2 2 0 0 1 2 2v2.34l1 1L22 8v8"/><path d="M16 16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2l10 10Z"/><line x1="2" x2="22" y1="2" y2="22"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol>
+    <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3"/></symbol>
+    <symbol id="i-door-open" viewBox="0 0 24 24"><path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h3"/><path d="M13 20h9"/><path d="M10 12v.01"/><path d="M13 4.562v16.157a1 1 0 0 1-1.242.97L5 20V5.562a2 2 0 0 1 1.515-1.94l4-1A2 2 0 0 1 13 4.561Z"/></symbol>
+    <symbol id="i-door-closed" viewBox="0 0 24 24"><path d="M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14"/><path d="M2 20h20"/><path d="M14 12v.01"/></symbol>
+    <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.859a10 10 0 0 1 14 0"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/></symbol>
+    <symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/><path d="M5 12.859a10 10 0 0 1 5.17-2.69"/><path d="M19 12.859a10 10 0 0 0-2.007-1.523"/><path d="M2 8.82a15 15 0 0 1 4.177-2.643"/><path d="M22 8.82a15 15 0 0 0-11.288-3.764"/><path d="m2 2 20 20"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+    <symbol id="i-waves" viewBox="0 0 24 24"><path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></symbol>
+    <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+    <symbol id="i-message" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+    <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></symbol>
+    <symbol id="i-circle-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol>
+    <symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/></symbol>
+    <symbol id="i-counsel" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path vector-effect="non-scaling-stroke" transform="translate(7.2 6.6) scale(0.4)" d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></symbol>
+    <symbol id="i-archive" viewBox="0 0 24 24"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></symbol>
+    <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+    <symbol id="i-repeat" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+    <symbol id="i-user-check" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></symbol>
+    <symbol id="i-mic-off" viewBox="0 0 24 24"><line x1="2" x2="22" y1="2" y2="22"/><path d="M18.89 13.23A7.12 7.12 0 0 0 19 12v-2"/><path d="M5 10v2a7 7 0 0 0 12 5"/><path d="M15 9.34V5a3 3 0 0 0-5.68-1.33"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12"/><line x1="12" x2="12" y1="19" y2="22"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-chev-d" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-log-in" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></symbol>
+  </defs>
+</svg>
+<div id="root"></div>
+<script>
+/* ───────── 기본 ───────── */
+const Q = new URLSearchParams(location.search);
+const ic = (n, c) => '<svg class="ic ' + (c || '') + '" aria-hidden="true"><use href="#i-' + n + '"/></svg>';
+const BG = (n) => 'assets/bg/background' + n + '.webp';
+const GO = (id, c) => ' data-go="' + id + '|' + c + '"';
+const EXT = {
+  open: '../class-flow-redesign/host-b.html?screen=FH05&case=ok',
+  lobby: '../class-flow-redesign/host-b.html?screen=FH06',
+  enter: '../class-flow-redesign/member-a.html?screen=FM05&case=member',
+  join: '../class-flow-redesign/member-a.html?screen=FM05&case=guest-name',
+};
+const XGO = (u) => ' data-go="' + u + '"';
+
+/* ───────── 공통 조각 ───────── */
+const NAV_H = [['home', '홈'], ['leaf', '명상 클래스'], ['counsel', '상담'], ['message', '채팅'], ['file', '리포트'], ['sparkles', '플레이그라운드'], ['bell', '알림'], ['sliders', '설정']]; /*NAV*/
+const TAB_H = [['home', '홈'], ['leaf', '클래스'], ['counsel', '상담'], ['message', '채팅'], ['dots', '더보기']]; /*NAV*/
+const NAV_M = [['home', '홈'], ['leaf', '내 클래스'], ['counsel', '내 상담'], ['message', '채팅'], ['file', '리포트'], ['bell', '알림'], ['sliders', '설정']]; /*NAV*/
+const TAB_M = [['home', '홈'], ['leaf', '내 클래스'], ['counsel', '내 상담'], ['file', '리포트'], ['dots', '더보기']]; /*NAV*/
+function shell(role, head, body, extra, banner) {
+  const H = role === 'host';
+  const nav = H ? NAV_H : NAV_M, tabs = H ? TAB_H : TAB_M, on = H ? '상담' : '내 상담';
+  const me = H ? '<b>채용욱 님</b><span>마음숲 상담센터</span>' : '<b>김하늘 님</b><span>회원</span>';
+  return '<div class="sh-root w-shell">' +
+    '<aside class="sh-side"><div class="w-brand"><svg class="ic w-logo" viewBox="0 0 414.72 188.928"><use href="#i-logo"/></svg>Mind Breeze</div>' +
+    '<nav class="w-nav" aria-label="메뉴">' + nav.map((n) => '<button class="' + (n[1] === on ? 'on' : '') + '">' + ic(n[0]) + n[1] + '</button>').join('') + '</nav>' +
+    '<div class="w-me">' + me + '</div></aside>' +
+    '<main class="sh-main">' + head + body + (banner || '') +
+    '<nav class="sh-tabbar" aria-label="메뉴">' + tabs.map((n) => '<button class="w-tab ' + (n[1] === on ? 'on' : '') + '">' + ic(n[0]) + n[1] + '</button>').join('') + '</nav></main>' +
+    (extra || '') + '</div>';
+}
+const ST = {
+  ing: ['ok', 'circle-check', '진행 중'], wait: ['', 'mail', '초대 대기'], live: ['live', 'play', '상담 중'], closed: ['mute', 'check', '마무리'],
+  arch: ['mute', 'archive', '보관'], sched: ['', 'calendar', '예정'], done: ['mute', 'circle-check', '완료'],
+};
+const shChip = (k) => '<span class="sh-chip ' + ST[k][0] + '">' + ic(ST[k][1], 's16') + ST[k][2] + '</span>';
+const chip = (cls, icon, t) => '<span class="sh-chip ' + cls + '">' + (icon ? ic(icon, 's16') : '') + t + '</span>';
+const shChips = (a) => a.map((t) => '<span class="sh-chip mute">' + t + '</span>').join('');
+const flChips = (a) => a.map((t) => '<span class="fl-chip">' + t + '</span>').join('');
+const netBanner = () => '<div class="fl-banner" role="status">' + ic('wifi-off') + '<span>연결이 끊겼어요. 다시 연결되면 자동으로 새로 고쳐요.</span></div>';
+const callout = (cls, icon, title, text, btn) => '<div class="w-callout ' + cls + '" role="status">' + ic(icon, 's20') + '<div class="tx">' + (title ? '<b>' + title + '</b>' : '') + '<span>' + text + '</span>' + (btn || '') + '</div></div>';
+const smbtn = (go, icon, t, cls) => '<button class="w-smbtn ' + (cls || '') + '"' + go + '>' + (icon ? ic(icon, 's20') : '') + t + '</button>';
+const kv = (k, v, wrap) => '<div class="w-kv"><span class="k">' + k + '</span><div class="v' + (wrap ? ' w-wrapv' : '') + '">' + v + '</div></div>';
+const backHead = (title, backGo, right, sub) => '<header class="sh-head"><div class="w-page w-headrow"><div class="w-headl"><button class="w-backbtn"' + backGo + ' aria-label="뒤로">' + ic('chev-l') + '</button>' + (sub ? '<div class="w-hd2"><h1 class="sh-title">' + title + '</h1><span class="s">' + sub + '</span></div>' : '<h1 class="sh-title">' + title + '</h1>') + '</div>' + (right || '<span class="w-ph"></span>') + '</div></header>';
+const dotsBtn = (go) => '<button class="w-backbtn"' + go + ' aria-label="더보기">' + ic('dots') + '</button>';
+
+/* 시트 */
+function sheet(o) {
+  const body = (o.icon ? '<div class="w-sico' + (o.okIcon ? ' ok' : '') + '">' + ic(o.icon) + '</div>' : '') + (o.html || '<p>' + o.p + '</p>');
+  const foot = o.one
+    ? '<div class="w-sfoot one"><button class="fl-btn soft"' + o.aGo + '>' + o.a + '</button></div>'
+    : '<div class="w-sfoot"><button class="fl-btn soft"' + o.aGo + '>' + o.a + '</button><button class="fl-btn ' + (o.danger ? 'danger' : 'primary') + '"' + o.bGo + '>' + o.b + '</button></div>';
+  return '<div class="w-scrim"><section class="w-sheet" role="dialog" aria-modal="true" aria-label="' + o.t + '">' +
+    '<div class="w-shead"><h2>' + o.t + '</h2><button class="w-x"' + o.aGo + ' aria-label="닫기">' + ic('x') + '</button></div>' +
+    '<div class="w-sbody">' + body + '</div>' + foot + '</section></div>';
+}
+
+/* 몰입형 프레임 */
+function imm(o) {
+  const left = o.left ? '<button class="fl-iconbtn"' + o.left[1] + ' aria-label="' + o.left[2] + '">' + ic(o.left[0]) + '</button>' : '<span class="fl-iconbtn" style="visibility:hidden" aria-hidden="true"></span>';
+  return '<div class="fl-root w-wiz"><div class="fl-backdrop" style="background-image:url(' + BG(o.bg || 4) + ')"></div><div class="fl-layer">' +
+    '<div class="fl-top"><div class="fl-top-l">' + left + '</div><div class="fl-top-title">' + o.title + '</div><div class="fl-top-r"><span class="fl-iconbtn" style="visibility:hidden" aria-hidden="true"></span></div></div>' +
+    (o.steps || '') + '<div class="fl-body' + (o.fill ? ' w-fill' : '') + '"><div class="fl-col">' + o.body + '</div></div>' +
+    (o.foot ? '<div class="fl-foot"><div class="fl-col">' + o.foot + '</div></div>' : '') + '</div>' + (o.banner || '') + (o.sheet || '') + '</div>';
+}
+const dots = (n, total, doneAll) => {
+  let d = '';
+  for (let i = 1; i <= total; i++) d += '<i class="' + (i === n ? 'on' : (i < n || doneAll) ? 'done' : '') + '"></i>';
+  return '<div class="fl-steps w-solo" role="img" aria-label="' + total + '단계 중 ' + n + '단계">' + d + '</div>';
+};
+const btn = (cls, go, icon, t, dis) => '<button class="fl-btn ' + cls + '"' + go + (dis ? ' disabled' : '') + '>' + (icon ? ic(icon, 's20') : '') + t + '</button>';
+const field = (label, inner, err) => '<div class="w-group"><span class="fl-label">' + label + '</span>' + inner + (err ? '<div class="w-err" role="alert">' + ic('alert', 's16') + '<span>' + err + '</span></div>' : '') + '</div>';
+const inp = (v, ph, o) => { o = o || {}; return '<div class="' + (o.icon ? 'w-inwrap' : '') + '">' + (o.icon ? ic(o.icon, 's20') : '') + '<input class="fl-input' + (o.bad ? ' bad' : '') + '" value="' + v + '" placeholder="' + ph + '"' + (o.type ? ' type="' + o.type + '"' : '') + (o.mode ? ' inputmode="' + o.mode + '"' : '') + (o.ro ? ' readonly' : '') + ' aria-label="' + (o.label || ph) + '"' + (o.bad ? ' aria-invalid="true"' : '') + '></div>'; };
+const seg = (opts, on, cls) => '<div class="fl-seg w-flex ' + (cls || '') + '">' + opts.map((o) => '<button class="' + (on === o[0] ? 'on' : '') + '" aria-pressed="' + (on === o[0]) + '"' + (o[3] ? o[3] : '') + '>' + (o[2] ? ic(o[2], 's20') : '') + o[1] + '</button>').join('') + '</div>';
+const tog = (on, icon, t, sub, dis) => '<button class="fl-row w-tog" role="switch" aria-checked="' + on + '"' + (dis ? ' disabled' : '') + '>' + ic(icon) + '<span class="tx"><b>' + t + '</b><span>' + sub + '</span></span><span class="sw"></span></button>';
+const stepper = (cls, label, dis) => '<div class="w-stepper ' + (cls || '') + '"><button' + (dis && dis[0] ? ' disabled' : '') + ' aria-label="줄이기">' + ic(dis && dis[2] ? 'chev-l' : 'minus') + '</button><b>' + label + '</b><button' + (dis && dis[1] ? ' disabled' : '') + ' aria-label="늘리기">' + ic(dis && dis[2] ? 'chev-r' : 'plus') + '</button></div>';
+const info = (icon, t) => '<div class="w-info">' + ic(icon, 's20') + '<span>' + t + '</span></div>';
+const note = (cls, icon, t) => '<div class="w-note ' + cls + '">' + ic(icon, 's20') + '<span>' + t + '</span></div>';
+const WD = ['토', '일', '월', '화', '수', '목', '금'];
+const dayText = (d) => (d === 0 ? '오늘' : d === 1 ? '내일' : d + '일 뒤') + ' · 10월 ' + (17 + d) + '일 ' + WD[d % 7];
+const dayShort = (d) => (d === 0 ? '오늘 ' : '') + '10/' + (17 + d) + '(' + WD[d % 7] + ')';
+const fmtHour = (m) => { const h = Math.floor(m / 60); return (h < 12 ? '오전 ' : '오후 ') + (h % 12 === 0 ? 12 : h % 12) + '시'; };
+const fmtMin = (m) => String(m % 60).padStart(2, '0') + '분';
+const av = (n) => n.slice(1, 2);
+/* ───────── CN01 상담 목록 ───────── */
+const ROWS_ACTIVE = [
+  { n: '한지우', k: '회원', m: '오프라인', t: '지금 상담 중 · 2회차', st: 'live', go: 'CN02|ongoing' },
+  { n: '박서윤', k: '가입 없이', m: '오프라인', t: '다음 상담 4회차 · 오늘 오후 3:00', st: 'ing', go: 'CN02|guest-active', open: true },
+  { n: '김하늘', k: '회원', m: '온라인', t: '다음 상담 4회차 · 10/22(목) 오후 7:00', st: 'ing', go: 'CN02|active' },
+  { n: '정민재', k: '가입 없이', m: '온라인', t: '첫 상담 1회차 · 10/24(토) 오전 10:00', st: 'wait', go: 'CN02|guest-pending' },
+  { n: '오다은', k: '회원', m: '온라인', t: '예정된 상담이 없어요 · 지금까지 5회', st: 'ing', go: 'CN02|recurring' },
+];
+const ROWS_CLOSED = [
+  { n: '이도현', k: '회원', m: '온라인', t: '8회차까지 · 10/8 마무리', st: 'closed', go: 'CN02|closed' },
+  { n: '윤서아', k: '가입 없이', m: '오프라인', t: '3회차까지 · 9/20 마무리', st: 'closed', go: 'CN02|closed-guest' },
+];
+const ROWS_ARCH = [
+  { n: '최유나', k: '회원', m: '온라인', t: '6회차까지 · 2025/8/12 마무리', st: 'arch', go: 'CN02|archived', dim: true },
+  { n: '임도윤', k: '가입 없이', m: '오프라인', t: '4회차까지 · 2025/9/3 마무리', st: 'arch', go: 'CN02|scrubbed', dim: true },
+];
+const ROWS_CLIENTS = [
+  { n: '김하늘', k: '회원', m: '온라인', t: '상담 3회 · 마지막 10/15', st: 'ing', go: 'CN02|active' },
+  { n: '박서윤', k: '가입 없이', m: '오프라인', t: '상담 3회 · 마지막 10/10', st: 'ing', go: 'CN02|guest-active' },
+  { n: '한지우', k: '회원', m: '오프라인', t: '상담 1회 · 마지막 10/13', st: 'live', go: 'CN02|ongoing' },
+  { n: '오다은', k: '회원', m: '온라인', t: '상담 5회 · 마지막 10/9', st: 'ing', go: 'CN02|recurring' },
+  { n: '정민재', k: '가입 없이', m: '온라인', t: '아직 상담 전 · 초대 10/16', st: 'wait', go: 'CN02|guest-pending' },
+  { n: '이도현', k: '회원', m: '온라인', t: '상담 8회 · 마지막 10/8', st: 'closed', go: 'CN02|closed' },
+  { n: '윤서아', k: '가입 없이', m: '오프라인', t: '상담 3회 · 마지막 9/20', st: 'closed', go: 'CN02|closed-guest' },
+];
+function rowHTML(r) {
+  return '<div class="w-item' + (r.dim ? ' dim' : '') + '"><button class="w-item-main" data-go="' + r.go + '"><span class="w-ico">' + av(r.n) + '</span><span><span class="w-tt"><b>' + r.n + '</b>' + shChip(r.st) + '</span><span class="w-sb"><span>' + r.t + '</span><span>' + r.m + ' · ' + r.k + '</span></span></span></button>' +
+    (r.open ? '<button class="w-mini"' + XGO(EXT.open) + '>' + ic('door-open', 's20') + '상담 열기</button>' : '') + '</div>';
+}
+function cn01(c) {
+  const head = '<header class="sh-head"><div class="w-page w-headrow"><h1 class="sh-title">상담</h1><button class="sh-btn"' + GO('CN03a', 'existing') + '>' + ic('plus', 's20') + '새 상담 시작</button></div></header>';
+  if (c === 'empty') {
+    return shell('host', head, '<div class="sh-scroll w-hold"><div class="w-page fill"><div class="w-empty"><div class="sh-card"><div class="w-bigico">' + ic('counsel') + '</div><h2>아직 상담이 없어요</h2><p>내담자를 고르거나 이메일로 초대하면 첫 상담을 바로 시작할 수 있어요.</p><button class="sh-btn"' + GO('CN03a', 'existing') + '>' + ic('plus', 's20') + '새 상담 시작</button></div></div></div></div>');
+  }
+  const tab = c.indexOf('closed') === 0 ? 'closed' : c === 'clients' ? 'clients' : 'active';
+  let rows = tab === 'closed' ? ROWS_CLOSED : tab === 'clients' ? ROWS_CLIENTS : ROWS_ACTIVE;
+  let q = '';
+  if (c === 'search') { q = '하늘'; rows = ROWS_ACTIVE.filter((r) => r.n.indexOf('하늘') >= 0); }
+  if (c === 'search-empty') { q = '송태'; rows = []; }
+  const tabs = '<div class="w-tabs c3" role="tablist">' + [['active', '진행 중 ' + ROWS_ACTIVE.length, 'CN01|active'], ['closed', '마무리한 ' + ROWS_CLOSED.length, 'CN01|closed'], ['clients', '내담자 ' + ROWS_CLIENTS.length, 'CN01|clients']].map((t) => '<button class="' + (tab === t[0] ? 'on' : '') + '" role="tab" data-go="' + t[2] + '">' + t[1] + '</button>').join('') + '</div>';
+  const search = '<div class="w-sin">' + ic('search', 's20') + '<input value="' + q + '" placeholder="이름이나 이메일로 찾아요" aria-label="상담 검색"></div>';
+  const fil = '<div class="w-tabs c4 fil" role="tablist">' + ['전체', '온라인', '오프라인', '가입 없이'].map((t, i) => '<button class="' + (i === 0 ? 'on' : '') + '" role="tab">' + t + '</button>').join('') + '</div>';
+  let list = '';
+  if (c === 'search-empty') {
+    list = '<div class="w-noresult"><div class="sh-card"><div class="w-bigico">' + ic('search') + '</div><h2>찾는 상담이 없어요</h2><p>이름이나 이메일을 다시 확인해 보세요. 보관한 상담은 마무리한 탭에서 함께 볼 수 있어요.</p></div></div>';
+  } else {
+    if (tab === 'closed') {
+      list += c === 'closed-archived'
+        ? '<div class="w-arch"><span>보관한 상담 ' + ROWS_ARCH.length + '건을 함께 보고 있어요</span><button class="w-smbtn line"' + GO('CN01', 'closed') + '>숨기기</button></div>'
+        : '<div class="w-arch"><span>보관한 상담 ' + ROWS_ARCH.length + '건은 기본 목록에서 숨겨져요. 검색하면 볼 수 있어요.</span><button class="w-smbtn line"' + GO('CN01', 'closed-archived') + '>함께 보기</button></div>';
+    }
+    list += rows.concat(c === 'closed-archived' ? ROWS_ARCH : []).map(rowHTML).join('');
+    list = '<div class="w-list">' + list + '</div>';
+  }
+  const body = '<div class="sh-scroll w-hold"><div class="w-page fill">' + tabs + search + fil + list + '</div></div>';
+  return shell('host', head, body, '', c === 'net' ? netBanner() : '');
+}
+
+/* ───────── CN02 상담 상세 ───────── */
+const REP = {
+  review: chip('warn', 'clock', '리포트 승인 대기') + chip('mute', 'file', '기록 있음'),
+  sent: chip('ok', 'circle-check', '전달 요청함') + chip('mute', 'file', '기록 있음'),
+  processing: chip('', 'clock', '기록 정리 중'),
+  manual: chip('warn', 'pencil', '직접 기록 중'),
+};
+const SESS_ACTIVE = [
+  { no: 5, when: '10/29(목) 오후 7:00', k: 'sched' }, { no: 4, when: '10/22(목) 오후 7:00', k: 'sched' },
+  { no: 3, when: '10/15(목) 오후 7:00', k: 'done', rep: 'review', go: 'review' },
+  { no: 2, when: '10/8(목) 오후 7:00', k: 'done', rep: 'sent', go: 'approved-member' },
+  { no: 1, when: '10/1(목) 오후 7:00', k: 'done', rep: 'sent', go: 'approved-member' },
+];
+const D2 = {
+  active: { n: '김하늘', kind: '회원', email: 'haneul@example.com', st: 'ing', mode: '온라인', chips: ['회원', '온라인', '매주 목요일 · 4회 먼저 잡음'], first: '10/1(목)',
+    next: { i: 'calendar', t: '다음 상담 4회차 · 10/22(목) 오후 7:00', s: '50분 · 온라인 · 5일 뒤에 시작해요' }, cta: ['door-open', '상담 열기', XGO(EXT.open)], sess: SESS_ACTIVE, close: 'close' },
+  recurring: { n: '오다은', kind: '회원', email: 'daeun.oh@example.com', st: 'ing', mode: '온라인', chips: ['회원', '온라인', '매주 목요일 · 끝 없이 이어가요'], first: '9/10(목)',
+    next: { i: 'repeat', t: '다음 상담 6회차 · 10/22(목) 오후 8:00', s: '50분 · 온라인 · 앞으로 4주 분량을 잡아 두었어요' }, cta: ['door-open', '상담 열기', XGO(EXT.open)],
+    callout: ['', 'repeat', '끝 없이 이어가는 상담이에요', '앞으로 4주 분량을 먼저 잡아 두고, 한 회차가 끝나면 다음 주가 이어서 잡혀요. 반복을 멈추려면 상담을 마무리해 주세요.'],
+    sess: [{ no: 9, when: '11/12(목) 오후 8:00', k: 'sched' }, { no: 8, when: '11/5(목) 오후 8:00', k: 'sched' }, { no: 7, when: '10/29(목) 오후 8:00', k: 'sched' }, { no: 6, when: '10/22(목) 오후 8:00', k: 'sched' },
+      { no: 5, when: '10/15(목) 오후 8:00', k: 'done', rep: 'sent', go: 'approved-member' }], close: 'close' },
+  ongoing: { n: '한지우', kind: '회원', email: 'jiwoo.han@example.com', st: 'live', mode: '오프라인', addr: '서울 강남구 테헤란로 152 7층', chips: ['회원', '오프라인', '임상심리상담'], first: '10/13(화)',
+    next: { i: 'play', t: '지금 2회차 진행 중이에요', s: '12분째 · 50분 일정이에요. 이어서 열면 진행 화면으로 돌아가 상담을 이어갈 수 있어요' }, cta: ['door-open', '이어서 열기', XGO(EXT.open)],
+    sess: [{ no: 2, when: '오늘 오후 2:00', k: 'live' }, { no: 1, when: '10/13(화) 오후 2:00', k: 'done', rep: 'review', go: 'review' }], close: 'close-blocked' },
+  'guest-pending': { n: '정민재', kind: '가입 없이', email: 'minjae.jung@example.com', st: 'wait', mode: '온라인', chips: ['가입 없이', '온라인', '임상심리상담'], first: '10/24(토) 예정',
+    next: { i: 'calendar', t: '첫 상담 1회차 · 10/24(토) 오전 10:00', s: '50분 · 온라인 · 7일 뒤에 시작해요' }, cta: ['door-open', '상담 열기', XGO(EXT.open)],
+    callout: ['', 'mail', '아직 입장하지 않았어요', '내담자가 코드와 등록한 이메일로 처음 입장하면 상담이 시작돼요. 입장하면 대기실에서 한 번 확인해 주세요.'],
+    guest: { code: '4827', mail: '메일 발송을 요청했어요 · 10/16 오후 4:20', revisit: ['mute', 'clock', '첫 입장 전'], rtext: '처음 입장하면 이 기기에서 90일 동안 코드 없이 다시 올 수 있어요' },
+    sess: [{ no: 1, when: '10/24(토) 오전 10:00', k: 'sched' }], close: 'close-guest' },
+  'guest-active': { n: '박서윤', kind: '가입 없이', email: 'seoyoon.park@example.com', st: 'ing', mode: '오프라인', addr: '서울 강남구 테헤란로 152 7층', chips: ['가입 없이', '오프라인', '임상심리상담'], first: '9/26(토)',
+    next: { i: 'calendar', t: '다음 상담 4회차 · 오늘 오후 3:00', s: '50분 · 오프라인 · 2시간 뒤에 시작해요' }, cta: ['door-open', '상담 열기', XGO(EXT.open)],
+    callout: ['', 'user-check', '내담자가 입장하면 한 번 확인해 주세요', '대기실에 들어오면 이름과 등록 이메일 일치를 보고 입장을 승인해요.', smbtn(GO('CN06', 'first'), 'user-check', '입장 확인 화면 보기', 'line')],
+    guest: { code: '4827', mail: '리포트는 등록 이메일로 보내요', revisit: ['ok', 'circle-check', '재방문 자격 있음'], rtext: '이 기기에서 10/10 접속 · 90일 안에 다시 오면 코드 없이 입장해요' },
+    sess: [{ no: 5, when: '10/31(토) 오후 3:00', k: 'sched' }, { no: 4, when: '오늘 오후 3:00', k: 'sched' }, { no: 3, when: '10/10(토) 오후 3:00', k: 'done', rep: 'sent', go: 'approved-guest' },
+      { no: 2, when: '10/3(토) 오후 3:00', k: 'done', rep: 'sent', go: 'approved-guest' }, { no: 1, when: '9/26(토) 오후 3:00', k: 'done', rep: 'sent', go: 'approved-guest' }], close: 'close-guest' },
+  'guest-expired': { n: '박서윤', kind: '가입 없이', email: 'seoyoon.park@example.com', st: 'ing', mode: '오프라인', addr: '서울 강남구 테헤란로 152 7층', chips: ['가입 없이', '오프라인', '임상심리상담'], first: '5/9(토)',
+    next: { i: 'calendar', t: '다음 상담 2회차 · 10/24(토) 오후 3:00', s: '50분 · 오프라인 · 7일 뒤에 시작해요' }, cta: ['door-open', '상담 열기', XGO(EXT.open)],
+    callout: ['warn', 'alert', '재방문 확인이 한 번 더 필요해요', '마지막 접속이 90일을 넘었어요. 입장할 때 코드와 이메일, 생년월일을 다시 확인해요.'],
+    guest: { code: '4827', mail: '리포트는 등록 이메일로 보내요', revisit: ['warn', 'clock', '확인 필요'], rtext: '마지막 접속 5/9 · 90일이 지나 자격이 끝났어요. 코드를 다시 만들 수도 있어요' },
+    sess: [{ no: 2, when: '10/24(토) 오후 3:00', k: 'sched' }, { no: 1, when: '5/9(토) 오후 3:00', k: 'done', rep: 'sent', go: 'approved-guest' }], close: 'close-guest' },
+  closed: { n: '이도현', kind: '회원', email: 'dohyun.lee@example.com', st: 'closed', mode: '온라인', chips: ['회원', '온라인', '임상심리상담'], first: '7/9(목)', ro: true,
+    next: { i: 'file', t: '8회차까지 마쳤어요 · 10/8(목)에 마무리했어요', s: '지난 기록과 리포트는 그대로 볼 수 있어요' }, cta: ['rotate', '다시 시작하기', GO('CN04', 'reopen')],
+    callout: ['', 'lock', '마무리한 상담이에요', '새 상담 세션은 잡을 수 없고, 기록·리포트·메모는 읽을 수 있어요. 메모는 마무리 수정만 할 수 있어요. 마무리한 지 1년이 지나면 보관 상태로 바뀌어요.'],
+    sess: [{ no: 8, when: '10/8(목) 오후 6:00', k: 'done', rep: 'sent', go: 'closed' }, { no: 7, when: '10/1(목) 오후 6:00', k: 'done', rep: 'sent', go: 'closed' }, { no: 6, when: '9/24(목) 오후 6:00', k: 'done', rep: 'sent', go: 'closed' }], more: '이전 5회차 모두 보기', archive: true },
+  'closed-guest': { n: '윤서아', kind: '가입 없이', email: 'seoa.yoon@example.com', st: 'closed', mode: '오프라인', addr: '서울 강남구 테헤란로 152 7층', chips: ['가입 없이', '오프라인', '임상심리상담'], first: '8/23(일)', ro: true,
+    next: { i: 'file', t: '3회차까지 마쳤어요 · 9/20(일)에 마무리했어요', s: '지난 기록과 리포트는 그대로 볼 수 있어요' }, cta: ['rotate', '다시 시작하기', GO('CN04', 'reopen-guest')],
+    callout: ['warn', 'lock', '재방문 코드와 자격은 닫혔어요', '리포트는 등록 이메일로 다시 보낼 수 있어요. 개인정보는 12월 19일 뒤에 지워지고, 지워진 뒤에는 다시 보낼 수 없어요.'],
+    guest: { closed: true, mail: '리포트는 등록 이메일로 보내요', revisit: ['mute', 'lock', '자격 폐기됨'], rtext: '마무리할 때 재방문 자격이 닫혔어요' },
+    sess: [{ no: 3, when: '9/20(일) 오후 4:00', k: 'done', rep: 'sent', go: 'closed' }, { no: 2, when: '9/13(일) 오후 4:00', k: 'done', rep: 'sent', go: 'closed' }, { no: 1, when: '8/23(일) 오후 4:00', k: 'done', rep: 'sent', go: 'closed' }], archive: true },
+  archived: { n: '최유나', kind: '회원', email: 'yuna.choi@example.com', st: 'arch', mode: '온라인', chips: ['회원', '온라인', '임상심리상담'], first: '2025/5/6', ro: true,
+    next: { i: 'archive', t: '보관한 상담이에요 · 2025/8/12에 마무리했어요', s: '이전 상담 기록 6건이 그대로 남아 있어요' }, cta: ['plus', '새 상담으로 시작하기', GO('CN03a', 'dup-closed')],
+    callout: ['', 'archive', '기본 목록에는 보이지 않아요', '검색하면 볼 수 있고 기록은 지워지지 않아요. 다시 만나려면 새 상담으로 시작하고, 이전 상담 기록은 함께 보여요.'],
+    sess: [{ no: 6, when: '2025/8/12(화) 오후 5:00', k: 'done', rep: 'sent', go: 'closed' }, { no: 5, when: '2025/8/5(화) 오후 5:00', k: 'done', rep: 'sent', go: 'closed' }], more: '이전 4회차 모두 보기' },
+  scrubbed: { n: '임도윤', kind: '가입 없이', email: '지워졌어요', st: 'arch', mode: '오프라인', addr: '서울 강남구 테헤란로 152 7층', chips: ['가입 없이', '오프라인', '임상심리상담'], first: '2025/6/2', ro: true,
+    next: { i: 'archive', t: '보관한 상담이에요 · 2025/9/3에 마무리했어요', s: '상담 기록은 남아 있어요' }, cta: ['plus', '새 상담으로 시작하기', GO('CN03a', 'new')],
+    callout: ['warn', 'alert', '개인정보 보관 기간이 지나 다시 보낼 수 없어요', '이름과 이메일은 지워졌어요. 상담 기록과 리포트는 남아 있지만 이메일로 다시 보낼 수는 없어요.'],
+    guest: { closed: true, scrubbed: true, mail: '이메일이 지워졌어요', revisit: ['mute', 'lock', '자격 폐기됨'], rtext: '개인정보 보관 기간이 지났어요' },
+    sess: [{ no: 4, when: '2025/9/3(수) 오후 3:00', k: 'done', rep: 'sent', go: 'closed' }, { no: 3, when: '2025/8/27(수) 오후 3:00', k: 'done', rep: 'sent', go: 'closed' }], more: '이전 2회차 모두 보기' },
+};
+D2.net = Object.assign({}, D2.active, { net: true });
+function sessRow(s, ro) {
+  const done = s.k === 'done', live = s.k === 'live';
+  const chips = done ? REP[s.rep] : live ? chip('live', 'play', '상담 중') : chip('', 'calendar', '예정');
+  const inner = '<span class="av ' + (done ? 'mute' : '') + '">' + ic(done ? 'file' : live ? 'play' : 'calendar') + '</span><span><span class="nm">' + s.no + '회차 · ' + s.when + '</span><span class="st">' + chips + '</span></span><span class="rt">' + (done ? ic('chev-r', 's20') : '') + '</span>';
+  const to = ro && done ? 'CN05|closed' : 'CN05|' + s.go;
+  return done ? '<button class="w-p w-pb" data-go="' + to + '">' + inner + '</button>' : '<div class="w-p">' + inner + '</div>';
+}
+function cn02(c, sheetHtml) {
+  const d = D2[c];
+  const stFl = { ing: 'ok', live: 'live', wait: '', closed: '', arch: '' }[d.st];
+  const stIc = ST[d.st][1], stTx = d.st === 'live' ? '상담 중' : ST[d.st][2];
+  const hero = '<section class="sh-hero w-detail-hero" style="background-image:url(' + BG(8) + ')"><div class="w-line"><span class="fl-chip ' + stFl + '">' + ic(stIc, 's16') + stTx + '</span></div>' +
+    '<h2 class="w-live-title">' + d.n + ' 상담</h2><div class="fl-chiprow w-start">' + flChips(d.chips) + '</div>' +
+    '<div class="w-next">' + ic(d.next.i) + '<div class="tx"><b>' + d.next.t + '</b><span>' + d.next.s + '</span></div></div>' +
+    '<button class="fl-btn primary block"' + d.cta[2] + '>' + ic(d.cta[0], 's20') + d.cta[1] + '</button></section>';
+  const co = d.callout ? callout(d.callout[0], d.callout[1], d.callout[2], d.callout[3], d.callout[4]) : '';
+  const kvs = kv('구분', '<span class="fl-chiprow w-start">' + shChips([d.kind]) + '</span>') + kv('이메일', '<span>' + d.email + '</span>') +
+    kv('첫 상담', '<span>' + d.first + '</span>') + kv('방식', '<span>' + d.mode + (d.addr ? ' · ' + d.addr : '') + '</span>') + kv('유형', '<span>임상심리상담</span>');
+  const cust = '<section class="sh-card" aria-label="내담자 정보"><div class="w-phead"><h3>내담자 정보</h3></div>' + kvs + '</section>';
+  let guest = '';
+  if (d.guest) {
+    const g = d.guest;
+    const codeRow = g.closed ? kv('상담 코드', '<span>코드가 닫혔어요</span>') :
+      kv('상담 코드', '<span class="w-codeval" aria-label="상담 코드 4자리">' + g.code + '</span>' + smbtn('', 'copy', '코드 복사') + smbtn(GO('CN04', 'regen-code'), 'rotate', '다시 만들기', 'line'), true);
+    const mailRow = kv('리포트 메일', '<span>' + g.mail + '</span>' + (g.closed ? (g.scrubbed ? '' : smbtn(GO('CN05', 'sheet-resend'), 'send', '다시 보내기')) : (c === 'guest-pending' ? smbtn('', 'send', '다시 보내기') : '')), true);
+    guest = '<section class="sh-card" aria-label="가입 없이 상담"><div class="w-phead"><h3>가입 없이 상담</h3></div>' + codeRow + mailRow +
+      kv('재방문', '<span class="fl-chiprow w-start">' + chip(g.revisit[0], g.revisit[1], g.revisit[2]) + '</span>', true) + '<div class="w-tx3">' + g.rtext + '</div></section>';
+  }
+  const rows = d.sess.map((s) => sessRow(s, d.ro)).join('');
+  const add = d.ro ? '' : smbtn(GO('CN03b', 'next'), 'plus', '다음 상담 잡기', 'line');
+  const sessions = '<section class="sh-card" aria-label="상담 회차"><div class="w-phead"><h3>상담 회차</h3>' + add + '</div>' + rows +
+    (d.more ? '<button class="w-linkrow" aria-label="지난 회차 더 보기"><span class="l">' + ic('file', 's20') + d.more + '</span>' + ic('chev-r', 's20') + '</button>' : '') + '</section>';
+  let foot = '';
+  if (d.close) foot = '<button class="w-dangerrow"' + GO('CN04', d.close) + '>' + ic('door-closed', 's20') + '상담 마무리하기</button>';
+  if (d.archive) foot = '<button class="w-linkrow"' + GO('CN04', 'archive') + '><span class="l">' + ic('archive', 's20') + '보관하기</span>' + ic('chev-r', 's20') + '</button>';
+  const head = backHead(d.n + ' 상담', GO('CN01', 'active'), dotsBtn(''));
+  const body = '<div class="sh-scroll"><div class="w-page">' + hero + co + cust + guest + sessions + foot + '</div></div>';
+  return shell('host', head, body, sheetHtml || '', d.net ? netBanner() : '');
+}
+
+/* ───────── CN04 종결·재개·보관·코드 확인 시트 ───────── */
+const dl = (items) => '<ul class="w-dl">' + items.map((i) => '<li>' + ic(i[0], 's20') + '<span>' + i[1] + '</span></li>').join('') + '</ul>';
+const S4 = {
+  close: { base: 'active', t: '김하늘 상담을 마무리할까요?', icon: 'alert', html: dl([['calendar', '앞으로 예정된 상담 3건이 취소돼요'], ['file', '지난 기록과 리포트는 그대로 보관돼요'], ['bell', '김하늘 님에게 마무리했다고 알려요']]), a: '계속 진행하기', b: '상담 마무리하기', danger: true },
+  'close-blocked': { base: 'ongoing', t: '지금은 마무리할 수 없어요', icon: 'alert', p: '진행 중인 상담이 있어요. 마친 뒤에 마무리해 주세요.', a: '확인', one: true },
+  'close-guest': { base: 'guest-active', t: '박서윤 상담을 마무리할까요?', icon: 'alert', html: dl([['calendar', '앞으로 예정된 상담 2건이 취소돼요'], ['lock', '재방문 코드와 자격을 더 쓸 수 없게 돼요'], ['file', '지난 기록과 리포트는 그대로 보관돼요']]), a: '계속 진행하기', b: '상담 마무리하기', danger: true },
+  reopen: { base: 'closed', t: '다시 시작할까요?', icon: 'rotate', okIcon: true, html: '<button class="w-opt on"><span class="rd"></span><span class="tx"><b>이어서 다시 시작해요</b><span class="s">이전 기록과 이어져요. 9회차부터 이어서 잡아요.</span></span></button><button class="w-opt"><span class="rd"></span><span class="tx"><b>새 상담으로 시작해요</b><span class="s">이전 기록과 분리해서 1회차부터 시작해요.</span></span></button>', a: '취소', b: '다시 시작하기' },
+  'reopen-guest': { base: 'closed-guest', t: '다시 시작할까요?', icon: 'rotate', okIcon: true, html: '<button class="w-opt on"><span class="rd"></span><span class="tx"><b>이어서 다시 시작해요</b><span class="s">이전 기록과 이어져요. 새 상담 코드가 만들어지고 윤서아 님에게 안내 메일을 보내요.</span></span></button><button class="w-opt"><span class="rd"></span><span class="tx"><b>새 상담으로 시작해요</b><span class="s">이전 기록과 분리해서 1회차부터 시작해요.</span></span></button>', a: '취소', b: '다시 시작하기' },
+  archive: { base: 'closed', t: '보관할까요?', icon: 'archive', okIcon: true, p: '보관한 상담은 기본 목록에서 숨겨져요. 검색하면 볼 수 있고 기록은 지워지지 않아요. 보관한 뒤에 다시 만나려면 새 상담으로 시작해요.', a: '취소', b: '보관하기' },
+  'regen-code': { base: 'guest-active', t: '코드를 다시 만들까요?', icon: 'key', okIcon: true, p: '이전 코드는 바로 쓸 수 없게 돼요. 새 코드는 박서윤 님에게 다시 안내해 주세요.', a: '취소', b: '코드 다시 만들기' },
+};
+function cn04(c) {
+  const s = S4[c];
+  const back = GO('CN02', s.base);
+  return cn02(s.base, sheet({ t: s.t, icon: s.icon, okIcon: s.okIcon, html: s.html, p: s.p, a: s.a, b: s.b, aGo: back, bGo: back, danger: s.danger, one: s.one }));
+}
+/* ───────── CN03 새 상담 세션 마법사 ───────── */
+const wizTop = () => ({ title: '새 상담 세션', left: ['x', GO('CN03a', 'leave'), '나가기'] });
+const wFoot1 = (go, dis) => btn('primary block', go, '', '다음' + ic('chev-r', 's20'), dis);
+const wFoot = (prev, next, label, icon, dis) => '<div class="w-nav2"><button class="fl-btn soft"' + prev + '>' + ic('chev-l', 's20') + '이전</button><button class="fl-btn primary"' + next + (dis ? ' disabled' : '') + '>' + (icon ? ic(icon, 's20') : '') + label + (icon ? '' : ic('chev-r', 's20')) + '</button></div>';
+const prow = (n, sub, on) => '<button class="w-prow' + (on ? ' on' : '') + '" aria-pressed="' + !!on + '"><span class="av">' + av(n) + '</span><span><span class="nm" style="display:block">' + n + '</span><span class="em" style="display:block">' + sub + '</span></span><span class="ck">' + ic('check') + '</span></button>';
+const EX = [['김하늘', '상담 3회 · 마지막 10/15 · 회원'], ['한지우', '상담 1회 · 마지막 10/13 · 회원'], ['박서윤', '상담 3회 · 마지막 10/10 · 가입 없이'], ['오다은', '상담 5회 · 마지막 10/9 · 회원'], ['이도현', '마무리한 상담 · 10/8 · 회원']];
+const SEL_A = (tab) => seg([['existing', '기존 내담자', 'users', GO('CN03a', 'existing')], ['new', '새 내담자', 'user-plus', GO('CN03a', 'new')]], tab);
+const dlgBtns = (a, b) => '<div class="w-btns2"><button class="fl-btn soft"' + a[0] + '>' + a[1] + '</button><button class="fl-btn primary"' + b[0] + '>' + b[1] + '</button></div>';
+const darkNote = (icon, title, text, btns) => '<div class="fl-card sm w-callout-d">' + '<div class="w-cd-h">' + ic(icon, 's20') + '<div class="tx"><b>' + title + '</b><span>' + text + '</span></div></div>' + btns + '</div>';
+function cn03a(c) {
+  const tab = (c === 'existing' || c === 'picked' || c === 'search' || c === 'leave') ? 'existing' : 'new';
+  let sheetH = '';
+  let card, foot, fill = false;
+  if (tab === 'existing') {
+    fill = true;
+    const q = c === 'search' ? '민' : '';
+    const rows = c === 'search' ? [['정민재', '아직 상담 전 · 초대 10/16 · 가입 없이'], ['이민서', '상담 기록 없음 · 회원']] : EX;
+    const pick = c === 'picked' ? '김하늘' : '';
+    const cnt = c === 'search' ? '검색 결과 ' + rows.length + '명' : '최근 상담 순 · ' + rows.length + '명';
+    card = '<div class="fl-card strong w-card dense"><h1 class="fl-h1 w-solo">누구와 만나요?</h1>' + SEL_A('existing') +
+      '<div class="w-inwrap">' + ic('search', 's20') + '<input class="fl-input" value="' + q + '" placeholder="이름이나 이메일로 찾아요" aria-label="내담자 검색"></div>' +
+      '<div class="w-count"><span>' + (pick ? '<b>' + pick + '</b> 님을 골랐어요' : cnt) + '</span></div>' +
+      '<div class="w-plist">' + rows.map((r) => prow(r[0], r[1], r[0] === pick)).join('') + '</div></div>';
+    foot = wFoot1(GO('CN03b', 'later'), !pick);
+    if (c === 'leave') sheetH = sheet({ t: '만들기를 그만둘까요?', icon: 'alert', p: '입력한 내용은 저장되지 않아요.', a: '계속 만들기', b: '나가기', aGo: GO('CN03a', 'existing'), bGo: GO('CN01', 'active'), danger: true });
+  } else {
+    let nm = '', em = '', em2 = '', e1 = '', e2 = '', e3 = '', ready = false, extra = '', short = false;
+    if (c === 'new-filled') { nm = '이민서'; em = 'minseo.lee@gmail.com'; em2 = 'minseo.lee@gmail.com'; ready = true; }
+    if (c === 'new-error') { nm = ''; em = 'minseo@'; em2 = 'minseo@gmal.com'; e1 = '이름을 입력해 주세요'; e2 = '이메일 형식을 확인해 주세요'; e3 = '이메일이 서로 달라요'; }
+    if (c === 'member-found') { nm = '이민서'; em = 'minseo.lee@example.com'; short = true; extra = darkNote('user-check', '이 이메일로 가입한 회원이에요', '회원으로 연결할까요? 가입 없이 상담을 고르면 이메일로 초대해요.', dlgBtns([GO('CN03b', 'later'), '가입 없이 상담'], [GO('CN03b', 'later'), '회원으로 연결'])); }
+    if (c === 'dup-active') { nm = '김하늘'; em = 'haneul@example.com'; short = true; extra = darkNote('calendar', '김하늘 님과의 상담이 이미 있어요', '이어서 다음 상담을 잡을까요?', dlgBtns([GO('CN03a', 'new'), '다시 입력해요'], [GO('CN03b', 'next'), '다음 상담 잡기'])); }
+    if (c === 'dup-closed') { nm = '이도현'; em = 'dohyun.lee@example.com'; short = true; extra = darkNote('rotate', '마무리한 상담이 있어요', '이어서 다시 시작할까요, 새로 시작할까요?', dlgBtns([GO('CN03b', 'later'), '새로 시작'], [GO('CN03b', 'later'), '이어서 다시 시작'])); }
+    const f1 = field('이름', inp(nm, '이름을 입력해 주세요', { icon: 'user', bad: !!e1 }), e1);
+    const f2 = field('이메일', inp(em, 'name@example.com', { icon: 'mail', type: 'email', mode: 'email', bad: !!e2 }), e2);
+    const f3 = field('이메일 확인', inp(em2, '한 번 더 입력해 주세요', { icon: 'mail', type: 'email', mode: 'email', bad: !!e3 }), e3);
+    const form = short
+      ? '<div class="w-form"><div class="w-2col">' + f1 + f2 + '</div></div>' + extra
+      : '<div class="w-form">' + f1 + '<div class="w-2col">' + f2 + f3 + '</div>' + info('mail', '이메일로 상담 초대와 리포트를 보내요. 가입하지 않아도 상담받을 수 있어요.') + '</div>';
+    card = '<div class="fl-card strong w-card dense"><h1 class="fl-h1 w-solo">누구와 만나요?</h1>' + SEL_A('new') + form + '</div>';
+    foot = wFoot1(GO('CN03b', 'later'), !ready);
+  }
+  return imm(Object.assign(wizTop(), { bg: 4, steps: dots(1, 3), body: card, foot: foot, fill: fill, sheet: sheetH }));
+}
+
+const AR = (...c) => '"' + c.map((x) => Array(x[1]).fill(x[0]).join(' ')).join(' ') + '"';
+const bgStyle = (areas, areasWide) => '<style>.w-bg{grid-template-areas:' + areas + '}@media (min-width:700px){.w-bg{grid-template-areas:' + areasWide + '}}</style>';
+const BGI = (a, h) => '<div class="w-bgi" style="grid-area:' + a + '">' + h + '</div>';
+function cn03b(c) {
+  const k = { later: {}, now: { now: true }, conflict: { conf: true }, offline: { off: true }, past: { past: true }, custom: { custom: true }, next: { next: true, rep: '매주 목요일 · 4회 먼저 잡기' }, 'repeat-set': { rep: '매주 목요일 · 4회 먼저 잡기' } }[c] || {};
+  const day = k.past ? 0 : 5, time = k.past ? 600 : 1140;
+  const when = BGI('when', seg([['now', '지금 바로', '', ''], ['later', '예약', '', '']], k.now ? 'now' : 'later', 'w-c2').replace('class="fl-seg w-flex', 'aria-label="일정" class="fl-seg w-flex'));
+  const mode = BGI('mode', seg([['online', '온라인', 'video'], ['offline', '오프라인', 'pin']], k.off ? 'offline' : 'online', 'w-c2'));
+  let items = when + mode;
+  let areasM, areasW;
+  if (!k.now) {
+    items += BGI('date', stepper('', dayShort(day), [day <= 0, day >= 13, 1])) + BGI('hour', stepper('sm', fmtHour(time), [time < 420, time >= 1320])) + BGI('min', stepper('sm', fmtMin(time), [false, false]));
+    items += BGI('note', k.past ? note('warn', 'alert', '지난 시간으로는 잡을 수 없어요') : k.conf ? note('warn', 'alert', '같은 시간에 한지우 님 상담이 있어요. 겹쳐도 만들 수 있어요.') : note('ok', 'circle-check', '이 시간에는 다른 일정이 없어요.'));
+    areasM = [AR(['when', 12]), AR(['date', 12]), AR(['hour', 6], ['min', 6]), AR(['note', 12])];
+    areasW = [AR(['when', 6], ['mode', 6]), AR(['date', 5], ['hour', 4], ['min', 3]), AR(['note', 12])];
+  } else {
+    items += BGI('note', info('info', '만들면 바로 열 수 있어요. 일정은 따로 저장되지 않아요.'));
+    areasM = [AR(['when', 12]), AR(['note', 12])];
+    areasW = [AR(['when', 6], ['mode', 6]), AR(['note', 12])];
+  }
+  items += BGI('dur', stepper('', '50분', [false, false])) + BGI('typ', '<div class="w-sel"><select aria-label="상담 유형"><option>' + (k.custom ? '기타' : '임상심리상담') + '</option><option>최면심리상담</option><option>기타</option></select>' + ic('chev-d', 's20') + '</div>');
+  areasM.push(AR(['dur', 6], ['typ', 6])); areasW.push(AR(['dur', 6], ['typ', 6]));
+  areasM.push(AR(['mode', 12]));
+  if (k.off) { items += BGI('addr', inp('서울 강남구 테헤란로 152 7층', '장소 주소를 입력해 주세요', { icon: 'pin', label: '장소 주소' })); areasM.push(AR(['addr', 12])); areasW.push(AR(['addr', 12])); }
+  if (k.custom) { items += BGI('addr', inp('감정 코칭', '유형 이름 (예: 감정 코칭)', { icon: 'pencil', label: '상담 유형 이름' })); areasM.push(AR(['addr', 12])); areasW.push(AR(['addr', 12])); }
+  items += BGI('rep', '<button class="fl-row w-tog"' + GO('CN03r', k.rep ? 'weekly' : 'weekly') + '>' + ic('repeat') + '<span class="tx"><b>반복 상담 예약</b><span>' + (k.rep || '반복 안 함 · 한 번만 잡아요') + '</span></span>' + ic('chev-r', 's20') + '</button>');
+  areasM.push(AR(['rep', 12])); areasW.push(AR(['rep', 12]));
+  const fixed = k.next ? '<div class="fl-chiprow w-solo"><span class="fl-chip">' + ic('user', 's16') + '김하늘 님과 다음 상담</span><span class="fl-chip ok">' + ic('circle-check', 's16') + '지난 상담과 같은 요일·시각이에요</span></div>' : '';
+  const card = '<div class="fl-card strong w-card dense"><h1 class="fl-h1 w-solo">언제, 어떻게 만날까요?</h1>' + fixed + '<div class="w-bg">' + items + '</div>' + bgStyle(areasM.join(' '), areasW.join(' ')) + '</div>';
+  return imm(Object.assign(wizTop(), { bg: 4, steps: dots(k.next ? 2 : 2, 3, false), body: card, foot: wFoot(GO('CN03a', 'existing'), GO('CN03c', k.off ? 'guest-offline' : k.rep ? 'member' : 'member-single'), '다음', '', !!k.past) }));
+}
+
+const PRE = [
+  ['10/22(목) 오후 7:00 · 4회차', ''], ['10/29(목) 오후 7:00 · 5회차', ''], ['11/5(목) 오후 7:00 · 6회차', ''], ['11/12(목) 오후 7:00 · 7회차', ''], ['11/19(목) 오후 7:00 · 8회차', ''], ['11/26(목) 오후 7:00 · 9회차', ''],
+];
+function cn03r(c) {
+  const k = { weekly: { cyc: 'weekly', end: 'count', n: 4 }, biweekly: { cyc: 'bi', end: 'count', n: 4 }, days: { cyc: 'days', end: 'count', n: 4 }, endless: { cyc: 'weekly', end: 'endless' }, conflict: { cyc: 'weekly', end: 'count', n: 4, conf: 1 }, max: { cyc: 'weekly', end: 'count', n: 12 } }[c];
+  let rows = PRE.slice(0, k.end === 'endless' ? 4 : 4);
+  let rowsHtml;
+  const pr = (r, i) => {
+    const on = !(k.conf && i === 1);
+    const t = k.cyc === 'bi' ? ['10/22(목) 오후 7:00 · 4회차', '11/5(목) 오후 7:00 · 5회차', '11/19(목) 오후 7:00 · 6회차', '12/3(목) 오후 7:00 · 7회차'][i] : k.cyc === 'days' ? ['10/22(목) 오후 7:00 · 4회차', '10/26(월) 오후 7:00 · 5회차', '10/29(목) 오후 7:00 · 6회차', '11/2(월) 오후 7:00 · 7회차'][i] : r[0];
+    return '<button class="w-prow' + (on ? ' on' : '') + '" aria-pressed="' + on + '"><span class="av">' + ic('calendar', 's20') + '</span><span><span class="nm" style="display:block">' + t + '</span><span class="em" style="display:block">' + (!on ? '같은 시간에 한지우 님 상담이 있어서 뺐어요' : (k.conf && i === 1 ? '' : '50분 · 온라인')) + '</span></span><span class="ck">' + ic('check') + '</span></button>';
+  };
+  rowsHtml = rows.map(pr).join('') + (k.end === 'endless' ? '' : '<button class="w-linkrow w-dk">' + ic('plus', 's20') + '더 보기</button>');
+  const cyc = seg([['weekly', '매주', '', GO('CN03r', 'weekly')], ['bi', '격주', '', GO('CN03r', 'biweekly')], ['days', '직접 고르기', '', GO('CN03r', 'days')]], k.cyc, 'w-c3');
+  const wd = k.cyc === 'days' ? '<div class="w-group"><span class="fl-label">요일</span>' + seg([['m', '월'], ['t', '화'], ['w', '수'], ['th', '목'], ['f', '금'], ['s', '토'], ['u', '일']].map((o) => [o[0], o[1], '']), '', 'w-c7').replace('<button class="" aria-pressed="false">목', '<button class="on" aria-pressed="true">목').replace('<button class="" aria-pressed="false">월', '<button class="on" aria-pressed="true">월') + '</div>' : '';
+  const end = seg([['count', '횟수로 정해요', '', GO('CN03r', 'weekly')], ['endless', '끝 없이 이어가요', '', GO('CN03r', 'endless')]], k.end, 'w-c2');
+  const cntBox = k.end === 'count'
+    ? '<div class="w-group"><span class="fl-label">횟수 · 2회에서 12회</span>' + stepper('', k.n + '회', [k.n <= 2, k.n >= 12]) + '</div>'
+    : '<div class="w-group"><span class="fl-label">이어서 잡기</span><div class="w-info">' + ic('info', 's20') + '<span>앞으로 4주 분량만 먼저 잡고, 이후는 자동으로 이어서 잡아요.</span></div></div>';
+  const msg = k.n >= 12 ? note('warn', 'alert', '최대 12회까지 먼저 잡을 수 있어요. 더 이어가려면 끝 없이 이어가요를 골라 주세요.') : k.conf ? note('warn', 'alert', '겹치는 회차 1건은 뺐어요. 체크하면 겹쳐도 넣어요.') : '';
+  const lh = '<div class="w-count"><span><b>회차 미리 보기</b> · ' + (k.end === 'endless' ? '앞으로 4주' : (k.conf ? k.n - 1 : k.n) + '회') + '</span></div>';
+  const card = '<div class="fl-card strong w-card dense"><h1 class="fl-h1 w-solo">반복 상담 예약</h1>' +
+    '<div class="w-2col"><div class="w-group"><span class="fl-label">주기</span>' + cyc + '</div><div class="w-group"><span class="fl-label">끝</span>' + end + '</div></div>' + wd +
+    '<div class="w-2col">' + cntBox + '<div class="w-group"><span class="fl-label">시작</span>' + inp('10/22(목) 오후 7:00', '첫 상담', { icon: 'calendar', ro: true, label: '첫 상담 일시' }) + '</div></div>' + msg + lh +
+    '<div class="w-plist">' + rowsHtml + '</div></div>';
+  return imm(Object.assign(wizTop(), { bg: 4, steps: dots(2, 3), body: card, fill: true, foot: '<div class="w-nav2"><button class="fl-btn soft"' + GO('CN03b', 'later') + '>' + ic('x', 's20') + '취소</button><button class="fl-btn primary"' + GO('CN03b', 'repeat-set') + '>' + ic('check', 's20') + '반복 적용</button></div>' }));
+}
+
+function cn03c(c) {
+  const g = c === 'guest-offline', single = c === 'member-single';
+  const sumRow = (icon, t, go) => '<div class="fl-row w-sumrow">' + ic(icon) + '<span class="tx">' + t + '</span><button class="w-edit"' + go + ' aria-label="수정">' + ic('pencil', 's20') + '</button></div>';
+  const rows = g
+    ? sumRow('user', '박서윤 · 가입 없이 · 임상심리상담', GO('CN03a', 'new')) + sumRow('calendar', '오늘 오후 3:00 · 50분 · 오프라인', GO('CN03b', 'offline')) + sumRow('mail', '리포트는 seoyoon.park@example.com 으로 보내요', GO('CN03a', 'new'))
+    : sumRow('user', '김하늘 · 회원 · 임상심리상담', GO('CN03a', 'existing')) + sumRow('calendar', '10/22(목) 오후 7:00 · 50분 · 온라인', GO('CN03b', 'later')) + sumRow('repeat', single ? '반복 없이 한 번만 잡아요' : '매주 목요일 · 4회 (4회차부터 7회차까지)', GO('CN03b', 'repeat-set'));
+  const rec = '<div class="w-2col">' + tog(true, 'mic', '음성 녹음', '내담자가 동의한 뒤에만 시작해요') + tog(true, 'sparkles', 'AI 기록', '기록지와 리포트를 만들어요') + '</div>';
+  const consent = info('shield', g ? '내담자에게 동의 안내를 함께 보내요. 오프라인 상담은 현장에서 동의를 확인해요. 동의하지 않으면 녹음 없이 직접 기록해요.' : '내담자에게 동의 안내를 함께 보내요. 동의하지 않으면 녹음 없이 직접 기록해요.');
+  const two = '<div class="w-2col"><button class="fl-row w-tog"' + GO('CN03c', 'preview') + '>' + ic('eye') + '<span class="tx"><b>안내문 미리 보기</b></span>' + ic('chev-r', 's20') + '</button><button class="fl-row w-tog"' + GO('CN03c', 'advanced') + '>' + ic('sliders') + '<span class="tx"><b>고급 설정</b></span>' + ic('chev-r', 's20') + '</button></div>';
+  const card = '<div class="fl-card strong w-card dense"><h1 class="fl-h1 w-solo">이렇게 시작할까요?</h1><div class="w-form">' + rows + '<div class="w-group"><span class="fl-label">상담 기록</span>' + rec + '</div>' + consent + two + '</div></div>';
+  const base = g ? 'guest-offline' : c === 'member-single' ? 'member-single' : 'member';
+  let sh = '';
+  if (c === 'advanced') {
+    sh = sheet({ t: '고급 설정', html: '<div class="w-form">' + tog(false, 'video', '영상 녹화', '상담은 기본으로 꺼 두어요') + '<div class="w-group"><span class="fl-label">LINK BAND 사용</span>' + seg([['use', '사용'], ['no', '사용 안 함']], 'use', 'w-c2') + '</div><div class="w-group"><span class="fl-label">리마인더</span>' + seg([['off', '끄기'], ['day', '하루 전'], ['hour', '1시간 전']], 'day', 'w-c3') + '</div></div>', a: '닫기', b: '적용', aGo: GO('CN03c', 'member'), bGo: GO('CN03c', 'member') });
+  }
+  if (c === 'preview') {
+    sh = sheet({ t: '내담자에게 가는 동의 안내', html: dl([['mic', '음성은 내가 동의한 뒤에만 녹음해요'], ['file', '동의하지 않아도 상담은 그대로 진행돼요'], ['lock', '기록과 리포트는 담당 상담사와 나만 볼 수 있어요'], ['info', 'LINK BAND는 진단·치료 목적이 아니에요']]), a: '닫기', one: true, aGo: GO('CN03c', 'member') });
+  }
+  const bc = (c === 'advanced' || c === 'preview') ? 'member' : base;
+  return imm(Object.assign(wizTop(), { bg: 4, steps: dots(3, 3), body: card, sheet: sh, foot: wFoot(GO('CN03b', g ? 'offline' : 'later'), GO('CN03d', g ? 'guest-offline' : single ? 'member-scheduled' : 'member-repeat'), '상담 만들기', 'check') }));
+}
+
+function cn03d(c) {
+  const k = {
+    'member-now': { name: '김하늘', chips: ['온라인', '지금 바로', '임상심리상담'], st: ['bell', '김하늘 님에게 상담 초대 알림을 보냈어요'], cta: ['door-open', '상담 열러 가기', XGO(EXT.open)] },
+    'member-scheduled': { name: '김하늘', chips: ['온라인', '10/22(목) 오후 7:00', '임상심리상담'], st: ['bell', '김하늘 님에게 상담 초대 알림을 보냈어요'], cta: ['calendar', '상담 목록 보기', GO('CN01', 'active')] },
+    'member-repeat': { name: '김하늘', chips: ['온라인', '매주 목요일 · 4회', '첫 상담 10/22(목) 오후 7:00'], st: ['bell', '김하늘 님에게 상담 초대 알림을 보냈어요. 4회차부터 7회차까지 잡았어요'], cta: ['calendar', '상담 목록 보기', GO('CN01', 'active')] },
+    guest: { name: '정민재', chips: ['온라인', '10/24(토) 오전 10:00', '가입 없이'], st: ['mail', '정민재 님에게 초대 메일 발송을 요청했어요'], code: true, cta: ['calendar', '상담 목록 보기', GO('CN01', 'active')] },
+    'guest-offline': { name: '박서윤', chips: ['오프라인', '오늘 오후 3:00', '가입 없이'], st: ['mail', '박서윤 님에게 초대 메일 발송을 요청했어요'], code: true, off: true, cta: ['door-open', '상담 열러 가기', XGO(EXT.open)] },
+    'guest-mail-partial': { name: '정민재', chips: ['온라인', '10/24(토) 오전 10:00', '가입 없이'], st: ['alert', '상담은 만들었지만 안내 메일을 보내지 못했어요. 다시 보낼까요?'], bad: true, code: true, cta: ['calendar', '상담 목록 보기', GO('CN01', 'active')] },
+    fail: { fail: true },
+  }[c];
+  if (k.fail) {
+    const body = '<div class="w-stat warn">' + ic('alert') + '</div><h1 class="fl-h1 w-solo">상담을 만들지 못했어요</h1><p class="fl-sub w-solo">잠시 뒤 다시 시도해 주세요. 입력한 내용은 그대로예요.</p>';
+    return imm({ bg: 5, title: '새 상담 세션', left: ['x', GO('CN01', 'active'), '목록으로'], body: '<div class="w-centerbox">' + body + '</div>', foot: btn('primary block', GO('CN03c', 'member'), 'rotate', '다시 시도') + btn('ghost', GO('CN03c', 'member'), 'chev-l', '확인 화면으로') });
+  }
+  const code = k.code ? '<div class="fl-card strong w-card w-codecard"><span class="fl-label">상담 코드</span><div class="w-coderow"><b class="w-codebig" aria-label="상담 코드 4자리">4827</b><button class="fl-btn soft w-codebtn">' + ic('copy', 's20') + '코드 복사</button></div><div class="w-note">' + ic('info', 's20') + '<span>' + (k.off ? '코드는 박서윤 님에게만 전달하세요. 직접 알려 주어도 돼요' : '코드는 내담자에게만 전달하세요') + '</span></div></div>' : '';
+  const stat = '<div class="fl-row w-stcard' + (k.bad ? ' bad' : '') + '"><div class="w-st">' + ic(k.st[0], 's20') + '<span>' + k.st[1] + '</span></div>' + (k.bad ? btn('soft block', '', 'send', '다시 보내기') : '') + '</div>';
+  const body = '<div class="w-ok w-solo">' + ic('check') + '</div><h1 class="fl-h1 w-solo">' + k.name + ' 상담을 시작해요</h1><div class="fl-chiprow w-solo">' + flChips(k.chips) + '</div>' + code + stat;
+  const foot = btn('primary block', k.cta[2], k.cta[0], k.cta[1]) + '<div class="w-ghostrow one"><button class="fl-btn ghost"' + GO('CN02', k.name === '김하늘' ? 'active' : 'guest-pending') + '>' + ic('file', 's16') + '상담 상세 보기</button></div>';
+  return imm({ bg: 5, title: '새 상담 세션', left: ['x', GO('CN01', 'active'), '목록으로'], body: body, foot: foot });
+}
+/* ───────── CN05 회차 기록·리포트 승인 ───────── */
+const PSTEP = { done: 'check', on: 'clock', wait: 'minus', err: 'alert', skip: 'mic-off' };
+const PLAB = ['녹음', '기록', '요약', '리포트'];
+const dirChips = () => '<div class="w-dirs">' + chip('ok', 'circle-check', '이완이 올라갔어요') + chip('mute', 'minus', '집중은 비슷해요') + chip('ok', 'circle-check', '긴장이 내려갔어요') + '</div>';
+const W5 = {
+  processing: { who: '김하늘', no: 3, when: '10/15(목) 오후 7:00 · 50분 · 온라인', guest: false, st: ['done', 'on', 'wait', 'wait'], cap: '음성을 글로 옮기는 중이에요. 몇 분 걸리고, 끝나면 알려 드려요.', appr: 'wait', back: 'active' },
+  review: { who: '김하늘', no: 3, when: '10/15(목) 오후 7:00 · 50분 · 온라인', guest: false, st: ['done', 'done', 'done', 'done'], cap: '기록과 요약, 리포트가 준비됐어요. 내용을 확인하고 승인해 주세요.', appr: 'pending', band: true, tab: 'host', back: 'active' },
+  'review-client': { who: '김하늘', no: 3, when: '10/15(목) 오후 7:00 · 50분 · 온라인', guest: false, st: ['done', 'done', 'done', 'done'], cap: '기록과 요약, 리포트가 준비됐어요. 내용을 확인하고 승인해 주세요.', appr: 'pending', band: true, tab: 'client', back: 'active' },
+  'review-guest': { who: '박서윤', no: 3, when: '10/10(토) 오후 3:00 · 50분 · 오프라인', guest: true, email: 'seoyoon.park@example.com', st: ['done', 'done', 'done', 'done'], cap: '기록과 요약, 리포트가 준비됐어요. 내용을 확인하고 승인해 주세요.', appr: 'pending', band: false, tab: 'host', back: 'guest-active' },
+  manual: { who: '한지우', no: 1, when: '10/13(화) 오후 2:00 · 50분 · 오프라인', guest: false, st: ['skip', 'on', 'wait', 'wait'], cap: '내담자가 녹음에 동의하지 않아 직접 기록하는 상담이에요. 기록을 저장하면 리포트를 만들 수 있어요.', appr: 'wait', manual: true, back: 'ongoing' },
+  'approved-member': { who: '김하늘', no: 2, when: '10/8(목) 오후 7:00 · 50분 · 온라인', guest: false, st: ['done', 'done', 'done', 'done'], cap: '승인했어요. 내담자에게 전달을 요청했어요.', appr: 'done', band: true, tab: 'host', back: 'active' },
+  'approved-guest': { who: '박서윤', no: 3, when: '10/10(토) 오후 3:00 · 50분 · 오프라인', guest: true, email: 'seoyoon.park@example.com', st: ['done', 'done', 'done', 'done'], cap: '승인했어요. 등록 이메일로 발송을 요청했어요.', appr: 'done', band: false, tab: 'host', back: 'guest-active' },
+  error: { who: '김하늘', no: 3, when: '10/15(목) 오후 7:00 · 50분 · 온라인', guest: false, st: ['done', 'done', 'done', 'err'], cap: '리포트를 만들지 못했어요. 기록은 그대로 있어요.', appr: 'error', back: 'active' },
+  closed: { who: '이도현', no: 8, when: '10/8(목) 오후 6:00 · 50분 · 온라인', guest: false, st: ['done', 'done', 'done', 'done'], cap: '승인했어요. 내담자에게 전달을 요청했어요.', appr: 'done', band: true, tab: 'host', ro: true, back: 'closed' },
+};
+W5['sheet-approve'] = Object.assign({}, W5.review, { sheet: 'approve' });
+W5['sheet-resend'] = Object.assign({}, W5['approved-guest'], { who: '윤서아', no: 3, when: '9/20(일) 오후 4:00 · 50분 · 오프라인', email: 'seoa.yoon@example.com', sheet: 'resend', back: 'closed-guest' });
+function cn05(c) {
+  const d = W5[c];
+  const pipe = '<div class="w-pipe">' + d.st.map((s, i) => '<div class="' + (s === 'skip' ? '' : s) + '"><span class="dot">' + ic(PSTEP[s], 's20') + '</span><span>' + PLAB[i] + '</span></div>').join('') + '</div>';
+  const pcard = '<section class="sh-card w-sec2" aria-label="기록 진행">' + pipe + '<div class="w-tx3">' + d.cap + '</div></section>';
+  const ro = d.ro ? callout('', 'lock', '마무리한 상담이에요', '기록과 리포트는 읽을 수 있고, 메모만 마무리 수정을 할 수 있어요.') : '';
+  let rec;
+  if (d.appr === 'wait' && !d.manual) rec = callout('', 'clock', '기록지는 정리가 끝나면 여기에 나와요', '녹음에서 글로 옮기고 요약하는 데 몇 분 걸려요. 이 화면을 닫아도 계속 진행돼요.');
+  else if (d.manual) rec = '<section class="sh-card w-sec2" aria-label="직접 기록"><div class="w-phead"><h3>직접 기록</h3></div><textarea class="w-memo ph" placeholder="오늘 상담에서 나눈 이야기를 적어 주세요" aria-label="직접 기록"></textarea><div class="w-bar2 one"><button class="fl-btn primary">' + ic('check', 's20') + '기록 저장하고 리포트 만들기</button></div></section>';
+  else rec = '<section class="sh-card w-sec2" aria-label="기록지"><div class="w-phead"><h3>기록지</h3>' + (d.ro ? '' : smbtn('', 'pencil', '고치기', 'line')) + '</div><div class="w-doc"><h4>AI 요약</h4><ul class="w-ul"><li>업무 부담과 완벽주의에 대해 이야기했어요</li><li>잠들기 전에 같은 생각이 반복된다고 했어요</li><li>저녁 걷기 과제를 4번 중 3번 해 보았어요</li></ul><h4>상담사 메모</h4><textarea class="w-memo' + (d.ro ? ' w-memo-ro' : '') + '" aria-label="상담사 메모"' + '>다음 회차에는 수면 일기를 함께 살펴보기. 이완 연습은 편안해해서 짧게 한 번 더 해 보기.</textarea>' + (d.ro ? '<div class="w-bar2 one"><button class="w-smbtn line">' + ic('pencil', 's20') + '메모 마무리 수정</button></div>' : '') + '</div></section>';
+  let rep = '';
+  if (d.appr !== 'wait' && !d.manual) {
+    const t = d.tab || 'host';
+    const tabs = '<div class="w-tabs c2" role="tablist"><button class="' + (t === 'host' ? 'on' : '') + '" role="tab"' + GO('CN05', c === 'review-client' ? 'review' : c) + '>상담사용</button><button class="' + (t === 'client' ? 'on' : '') + '" role="tab"' + GO('CN05', d.guest ? 'review-guest' : 'review-client') + '>내담자용</button></div>';
+    let doc;
+    if (d.appr === 'error') doc = callout('warn', 'alert', '리포트를 만들지 못했어요', '기록은 그대로 있어요. 다시 만들어 볼까요?', smbtn('', 'rotate', '리포트 다시 만들기', 'line'));
+    else if (t === 'host') {
+      doc = '<div class="w-doc"><h4>이번 상담 요약</h4><p>업무 부담과 수면 문제가 주된 이야기였어요. 지난 회차보다 감정을 말로 옮기는 데 여유가 생겼고, 상담 후반에는 이완 연습에 적극적으로 참여했어요.</p><h4>이어서 살펴볼 것</h4><ul class="w-ul"><li>수면 전 반복되는 생각의 패턴</li><li>완벽주의가 올라오는 상황 기록</li></ul>' +
+        (d.band ? '<h4>LINK BAND 변화</h4>' + dirChips() + '<span class="mut">참고용이에요. 진단이나 치료를 위한 것이 아니에요.</span>' : '<span class="mut">LINK BAND 없이 진행한 상담이에요. 상담 내용만으로 만든 리포트예요.</span>') + '</div>';
+    } else {
+      doc = '<div class="w-doc"><h4>오늘 상담에서</h4><p>요즘 일이 많아 마음이 바쁘다는 이야기를 나눴어요. 지난번보다 내 마음을 말로 옮기는 게 조금 편해졌다고 하셨어요.</p><h4>다음 상담까지 해 볼 것</h4><ul class="w-ul"><li>저녁에 10분 걷기</li><li>잠들기 전 떠오르는 생각을 메모하기</li></ul>' +
+        (d.band ? '<h4>몸과 마음의 흐름</h4>' + dirChips() : '') + '<span class="mut">상담사가 확인한 뒤에 전달돼요. 진단이나 치료를 위한 것이 아니에요.</span></div>';
+    }
+    rep = '<section class="sh-card w-sec2" aria-label="리포트"><div class="w-phead"><h3>리포트</h3></div>' + (d.appr === 'error' ? '' : tabs) + doc + '</section>';
+  } else if (d.manual) {
+    rep = callout('', 'file', '리포트는 기록을 저장하면 만들어져요', '직접 쓴 기록으로 상담사용 리포트와 내담자용 리포트를 만들어요.');
+  }
+  let appr = '';
+  const who = d.who + ' 님';
+  if (d.appr === 'pending') {
+    appr = '<section class="sh-card w-appr" aria-label="승인"><div class="w-note">' + ic('shield', 's20') + '<span>' + (d.guest ? '승인하면 ' + d.email + ' 으로 발송을 요청해요. 링크는 7일 동안 열려요.' : '승인하면 ' + who + '에게 내담자용 리포트가 가요. 승인 전에는 내담자에게 보이지 않아요.') + '</span></div>' +
+      '<div class="w-note">' + ic('info', 's20') + '<span>자동 승인은 꺼져 있어요. 설정에서 바꿀 수 있어요.</span></div>' +
+      '<div class="w-bar2"><button class="fl-btn soft w-lightbtn">' + ic('pencil', 's20') + '내용 고치기</button><button class="fl-btn primary"' + GO('CN05', 'sheet-approve') + '>' + ic('check', 's20') + '승인하고 보내기</button></div></section>';
+  } else if (d.appr === 'wait') {
+    appr = '<section class="sh-card w-appr" aria-label="승인"><div class="w-note">' + ic('clock', 's20') + '<span>' + (d.manual ? '기록을 저장하면 승인할 수 있어요.' : '기록이 준비되면 승인할 수 있어요.') + '</span></div><div class="w-bar2 one"><button class="fl-btn primary" disabled>' + ic('check', 's20') + '승인하고 보내기</button></div></section>';
+  } else if (d.appr === 'done') {
+    appr = callout('ok', 'circle-check', '승인했어요 · 10/15 오후 8:42', d.guest ? '등록 이메일로 발송을 요청했어요. 링크는 7일 동안 열려요.' : who + '에게 전달을 요청했어요. 리포트는 내담자 앱의 내 상담에서 열 수 있어요.', d.guest ? smbtn(GO('CN05', 'sheet-resend'), 'send', '다시 보내기') : smbtn(GO('CN10', 'report'), 'eye', '내담자 화면 보기', 'line'));
+  } else if (d.appr === 'error') {
+    appr = '<section class="sh-card w-appr" aria-label="승인"><div class="w-note">' + ic('alert', 's20') + '<span>리포트가 만들어지면 승인할 수 있어요.</span></div><div class="w-bar2 one"><button class="fl-btn primary" disabled>' + ic('check', 's20') + '승인하고 보내기</button></div></section>';
+  }
+  let sh = '';
+  const back = GO('CN05', d.sheet === 'resend' ? 'approved-guest' : 'review');
+  if (d.sheet === 'approve') sh = sheet({ t: '승인할까요?', icon: 'shield', okIcon: true, html: dl([['send', who + '에게 내담자용 리포트가 가요'], ['lock', '승인한 뒤에는 내용을 고칠 수 없어요'], ['eye', '상담사용 리포트는 나만 볼 수 있어요']]), a: '취소', b: '승인하고 보내기', aGo: back, bGo: GO('CN05', 'approved-member') });
+  if (d.sheet === 'resend') sh = sheet({ t: '리포트를 다시 보낼까요?', icon: 'send', okIcon: true, p: '등록 이메일 ' + d.email + ' 으로 발송을 요청해요. 링크는 7일 동안 열려요.', a: '취소', b: '다시 보내기', aGo: GO('CN02', 'closed-guest'), bGo: GO('CN02', 'closed-guest') });
+  const head = backHead(d.who + ' 상담 · ' + d.no + '회차', GO('CN02', d.back), dotsBtn(''), d.when);
+  return shell('host', head, '<div class="sh-scroll"><div class="w-page">' + ro + pcard + rec + rep + appr + '</div></div>', sh);
+}
+
+/* ───────── CN06 비회원 입장 확인(상담사 대기실) ───────── */
+const chkRow = (ok, t) => '<div class="fl-row' + (ok ? '' : ' no') + '">' + ic(ok ? 'circle-check' : 'clock', 's20') + '<span class="grow">' + t + '</span></div>';
+function cn06(c) {
+  const T = '박서윤 상담 · 4회차';
+  const left = ['chev-l', GO('CN02', 'guest-active'), '상담 상세로'];
+  const base = (o) => imm({ bg: 4, title: T, left: left, body: o.body, foot: o.foot, banner: o.banner || '', sheet: o.sheet || '' });
+  const whoCard = (chips, subtitle) => '<div class="w-who"><span class="av">' + av('박서윤') + '</span><div><b>박서윤 님</b><span class="s">' + subtitle + '</span></div></div><div class="fl-chiprow w-start">' + flChips(chips) + '</div>';
+  const decide = '<div class="w-nav2"><button class="fl-btn soft"' + GO('CN06', 'decline') + '>' + ic('x', 's20') + '거절</button><button class="fl-btn primary"' + GO('CN06', 'approved') + '>' + ic('user-check', 's20') + '입장 승인</button></div>';
+  if (c === 'first' || c === 'decline') {
+    const body = '<div class="fl-card strong w-card tight"><h1 class="fl-h2 w-solo">입장을 확인해 주세요</h1>' + whoCard(['가입 없이', '첫 입장'], '대기실에서 승인을 기다리고 있어요') +
+      '<div class="w-checks">' + chkRow(1, '상담 코드를 맞게 입력했어요') + chkRow(1, '등록한 이메일과 같아요') + chkRow(1, '이름·생년월일을 입력하고 개인정보에 동의했어요') + '</div>' +
+      info('info', '이 사람이 맞는지 확인하고 승인해 주세요. 승인해야 입장할 수 있어요.') + '</div>';
+    const sh = c === 'decline' ? sheet({ t: '입장을 거절할까요?', icon: 'alert', p: '거절하면 박서윤 님은 이번에는 입장할 수 없어요. 내담자에게는 상담사가 입장을 확인하지 못했다고 안내해요. 코드는 그대로 유지돼요.', a: '돌아가기', b: '입장 거절', aGo: GO('CN06', 'first'), bGo: GO('CN02', 'guest-active'), danger: true }) : '';
+    return base({ body: body, foot: decide, sheet: sh });
+  }
+  if (c === 'revisit') {
+    const body = '<div class="fl-card strong w-card tight"><h1 class="fl-h2 w-solo">입장을 확인해 주세요</h1>' + whoCard(['가입 없이', '재방문'], '이 기기로 다시 왔어요') +
+      '<div class="w-checks">' + chkRow(1, '10/10 접속 때 확인한 기기예요') + chkRow(1, '등록한 정보와 같아요') + chkRow(1, '재방문 자격이 90일 안이라 코드 없이 들어왔어요') + '</div>' +
+      info('info', '한 번만 확인하고 승인해 주세요.') + '</div>';
+    return base({ body: body, foot: decide });
+  }
+  if (c === 'other-device') {
+    const body = '<div class="fl-card strong w-card tight"><h1 class="fl-h2 w-solo">다른 기기의 접속을 막았어요</h1><div class="w-checks">' + chkRow(1, '박서윤 님은 이미 입장해 있어요') + chkRow(1, '새로 들어오려던 접속은 막았어요') + chkRow(1, '진행 중인 상담에는 영향이 없어요') + '</div>' +
+      info('info', '본인이 아니라면 코드를 다시 만들어 주세요. 이전 코드는 바로 쓸 수 없게 돼요.') + '</div>';
+    const banner = '<div class="fl-banner" role="status">' + ic('alert') + '<span>다른 기기에서 같은 코드로 들어오려고 했어요.</span></div>';
+    return base({ body: body, banner: banner, foot: '<div class="w-nav2"><button class="fl-btn soft"' + GO('CN04', 'regen-code') + '>' + ic('rotate', 's20') + '코드 다시 만들기</button><button class="fl-btn primary"' + GO('CN06', 'approved') + '>알겠어요</button></div>' });
+  }
+  if (c === 'approved') {
+    const body = '<div class="fl-card strong w-card tight"><div class="w-ok w-solo">' + ic('check') + '</div><h1 class="fl-h2 w-solo">입장을 승인했어요</h1>' + whoCard(['가입 없이', '오프라인'], '입장 준비를 하고 있어요') +
+      '<div class="w-checks">' + chkRow(1, '입장을 승인했어요') + chkRow(0, '박서윤 님이 입장 준비를 하는 중이에요') + '</div></div>';
+    return base({ body: body, foot: btn('primary block', XGO(EXT.lobby), 'door-open', '대기실로 가기') });
+  }
+  const body = '<div class="fl-card strong w-card tight"><div class="w-stat">' + ic('clock') + '</div><h1 class="fl-h2 w-solo">아직 입장하지 않았어요</h1><p class="fl-sub w-solo">박서윤 님이 상담 코드를 입력하면 여기에서 알려 드려요.</p><div class="fl-chiprow w-solo"><span class="fl-chip">' + ic('key', 's16') + '상담 코드 4827</span></div></div>';
+  return base({ body: body, foot: btn('soft block', GO('CN02', 'guest-active'), 'file', '상담 상세로') });
+}
+/* ───────── CN07 내 상담 목록 (회원) ───────── */
+function relCard(o) {
+  const kvs = (o.last ? kv('마지막 상담', '<span>' + o.last + '</span>') : '') + kv(o.closedAt ? '마무리' : '다음 상담', '<span>' + (o.closedAt || o.next) + '</span>');
+  return '<section class="sh-card w-rel" aria-label="' + o.who + ' 상담사와 상담"><div class="w-relhead"><span class="w-ico">' + av(o.who) + '</span><div><b>' + o.who + ' 상담사와 상담</b><span class="s">' + o.sub + '</span></div>' + o.chip + '</div><div>' + kvs + '</div>' +
+    '<div class="w-btnrow"><button class="w-smbtn"' + o.go + '>' + ic('file', 's20') + '상담 보기</button>' + (o.closedAt ? '<button class="w-smbtn line"' + GO('CN08', 'closed-me') + '>' + ic('rotate', 's20') + '다시 시작하기</button>' : '<button class="w-smbtn line">' + ic('message', 's20') + '상담사와 대화</button>') + '</div></section>';
+}
+const MAIN_REL = { who: '채용욱', sub: '4회차 · 온라인', chip: shChip('ing'), last: '10/15(목)', next: '10/22(목) 오후 7:00', go: GO('CN08', 'active') };
+const OLD_REL = { who: '박현수', sub: '6회차까지 · 온라인', chip: shChip('closed'), closedAt: '9/3(수)에 마무리했어요', go: GO('CN08', 'closed-counselor') };
+function cn07(c) {
+  const head = '<header class="sh-head"><div class="w-page w-headrow"><h1 class="sh-title">내 상담</h1><button class="sh-btn line">' + ic('plus', 's20') + '상담 신청하기</button></div></header>';
+  if (c === 'empty') {
+    return shell('member', head, '<div class="sh-scroll w-hold"><div class="w-page fill"><div class="w-empty"><div class="sh-card"><div class="w-bigico">' + ic('counsel') + '</div><h2>아직 상담이 없어요</h2><p>상담사에게 신청하면 상담을 시작할 수 있어요. 상담사가 초대하면 여기에 나타나요.</p><button class="sh-btn">' + ic('message', 's20') + '상담 신청하기</button></div></div></div></div>');
+  }
+  let cards = '';
+  if (c === 'invited') {
+    cards = relCard({ who: '채용욱', sub: '1회차 · 온라인', chip: chip('', 'mail', '새 초대'), next: '10/22(목) 오후 7:00', go: GO('CN08', 'ready-now') });
+    cards = cards.replace('상담 보기', '초대 확인하기');
+  } else {
+    cards = relCard(MAIN_REL);
+    cards += '<button class="w-fold"' + GO('CN07', c === 'list-open' ? 'list' : 'list-open') + ' aria-expanded="' + (c === 'list-open') + '"><span class="l">' + ic('archive', 's20') + '마무리한 상담 1</span>' + ic(c === 'list-open' ? 'chev-d' : 'chev-r', 's20') + '</button>';
+    if (c === 'list-open') cards += relCard(OLD_REL);
+  }
+  return shell('member', head, '<div class="sh-scroll"><div class="w-page">' + cards + '</div></div>', '', c === 'net' ? netBanner() : '');
+}
+
+/* ───────── CN08 내 상담 상세 ───────── */
+const DM = {
+  active: { st: 'ing', next: { i: 'calendar', t: '다음 상담 4회차 · 10/22(목) 오후 7:00', s: '50분 · 온라인 · 5일 뒤에 시작해요' }, cta: ['door-open', '상담 입장하기', '', true, '시작 15분 전부터 입장할 수 있어요'], up: true, rep: 'two', close: 'close' },
+  'ready-now': { st: 'ing', next: { i: 'clock', t: '곧 시작해요 · 오늘 오후 7:00', s: '입장 준비를 마치면 상담사가 맞이해요' }, cta: ['door-open', '상담 입장하기', XGO(EXT.enter), false], up: true, rep: 'two', close: 'close' },
+  'no-next': { st: 'ing', next: { i: 'clock', t: '예정된 상담이 없어요', s: '다음 상담은 채용욱 상담사가 잡으면 알려 드려요' }, cta: ['message', '상담사와 대화', '', false], up: false, rep: 'two', close: 'close' },
+  'report-waiting': { st: 'ing', next: { i: 'calendar', t: '다음 상담 2회차 · 10/22(목) 오후 7:00', s: '50분 · 온라인 · 5일 뒤에 시작해요' }, cta: ['door-open', '상담 입장하기', '', true, '시작 15분 전부터 입장할 수 있어요'], up: true, rep: 'wait', close: 'close' },
+  'closed-me': { st: 'closed', next: { i: 'check', t: '내가 마무리한 상담이에요 · 10/8(목)', s: '지난 리포트는 그대로 볼 수 있어요' }, cta: ['rotate', '다시 시작하기', GO('CN09', 'reopen'), false], up: false, rep: 'two', ro: '내가 마무리한 상담이에요. 새 상담은 잡을 수 없고 지난 리포트는 읽을 수 있어요.' },
+  'closed-counselor': { st: 'closed', next: { i: 'check', t: '채용욱 상담사가 마무리한 상담이에요 · 10/8(목)', s: '다시 하고 싶으면 상담사에게 요청할 수 있어요' }, cta: ['send', '다시 시작 요청하기', GO('CN09', 'reopen-request'), false], up: false, rep: 'two', ro: '채용욱 상담사가 마무리한 상담이에요. 지난 리포트는 읽을 수 있어요.' },
+};
+DM.net = Object.assign({}, DM.active, { net: true });
+function cn08(c, sheetHtml) {
+  const d = DM[c];
+  const stFl = { ing: 'ok', closed: '' }[d.st];
+  const hero = '<section class="sh-hero w-detail-hero" style="background-image:url(' + BG(8) + ')"><div class="w-line"><span class="fl-chip ' + stFl + '">' + ic(ST[d.st][1], 's16') + ST[d.st][2] + '</span></div>' +
+    '<h2 class="w-live-title">채용욱 상담사와 상담</h2><div class="fl-chiprow w-start">' + flChips(['임상심리상담', '온라인']) + '</div>' +
+    '<div class="w-next">' + ic(d.next.i) + '<div class="tx"><b>' + d.next.t + '</b><span>' + d.next.s + '</span></div></div>' +
+    '<button class="fl-btn ' + (d.cta[3] ? 'soft' : 'primary') + ' block"' + (d.cta[3] ? ' disabled' : '') + d.cta[2] + '>' + ic(d.cta[0], 's20') + d.cta[1] + '</button>' + (d.cta[4] ? '<span class="w-dim w-solo">' + d.cta[4] + '</span>' : '') + '</section>';
+  const ro = d.ro ? callout('', 'lock', '읽기만 할 수 있어요', d.ro) : '';
+  const up = d.up ? '<section class="sh-card" aria-label="예정된 상담"><div class="w-phead"><h3>예정된 상담</h3></div>' + [['4회차 · 10/22(목) 오후 7:00', 'calendar'], ['5회차 · 10/29(목) 오후 7:00', 'calendar']].map((r) => '<div class="w-p"><span class="av">' + ic(r[1]) + '</span><span><span class="nm">' + r[0] + '</span><span class="st">' + chip('', 'calendar', '예정') + '</span></span><span class="rt"></span></div>').join('') + '</section>' : '';
+  let rep;
+  if (d.rep === 'wait') rep = '<section class="sh-card" aria-label="지난 상담 리포트"><div class="w-phead"><h3>지난 상담 리포트</h3></div><div class="w-p"><span class="av mute">' + ic('file') + '</span><span><span class="nm">1회차 · 10/15(목)</span><span class="st">' + chip('', 'clock', '상담사가 확인하고 있어요') + '</span><span class="sub">확인이 끝나면 알려 드리고, 그때부터 볼 수 있어요.</span></span><span class="rt"></span></div></section>';
+  else rep = '<section class="sh-card" aria-label="지난 상담 리포트"><div class="w-phead"><h3>지난 상담 리포트</h3></div>' + [['3회차 · 10/15(목)', 'report'], ['2회차 · 10/8(목)', 'report']].map((r) => '<button class="w-p w-pb"' + GO('CN10', d.st === 'closed' ? 'closed' : r[1]) + '><span class="av">' + ic('file') + '</span><span><span class="nm">' + r[0] + '</span><span class="st">' + chip('ok', 'circle-check', '리포트 열람') + '</span></span><span class="rt">' + ic('chev-r', 's20') + '</span></button>').join('') + '</section>';
+  const chat = d.st === 'closed' ? '' : '<button class="w-linkrow"><span class="l">' + ic('message', 's20') + '상담사와 대화</span>' + ic('chev-r', 's20') + '</button>';
+  const foot = d.close ? '<button class="w-dangerrow"' + GO('CN09', 'close') + '>' + ic('door-closed', 's20') + '상담 마무리하기</button>' : '';
+  const head = backHead('채용욱 상담사와 상담', GO('CN07', 'list'), dotsBtn(''));
+  return shell('member', head, '<div class="sh-scroll"><div class="w-page">' + hero + ro + up + rep + chat + foot + '</div></div>', sheetHtml || '', d.net ? netBanner() : '');
+}
+const S9 = {
+  close: { base: 'active', t: '상담을 마무리할까요?', icon: 'alert', html: dl([['calendar', '앞으로 예정된 상담 3건이 취소돼요'], ['file', '지난 리포트는 그대로 볼 수 있어요'], ['bell', '채용욱 상담사에게 알려요']]), a: '계속 이어가기', b: '상담 마무리하기', danger: true },
+  reopen: { base: 'closed-me', t: '다시 시작할까요?', icon: 'rotate', okIcon: true, p: '이전 기록과 이어져요. 채용욱 상담사에게 알림이 가요.', a: '취소', b: '다시 시작하기' },
+  'reopen-request': { base: 'closed-counselor', t: '다시 시작을 요청할까요?', icon: 'send', okIcon: true, p: '채용욱 상담사가 승인하면 다시 시작해요. 승인 전에는 새 상담을 예약할 수 없어요.', a: '취소', b: '요청 보내기' },
+};
+function cn09(c) {
+  const s = S9[c], back = GO('CN08', s.base);
+  return cn08(s.base, sheet({ t: s.t, icon: s.icon, okIcon: s.okIcon, html: s.html, p: s.p, a: s.a, b: s.b, aGo: back, bGo: back, danger: s.danger }));
+}
+
+/* ───────── CN10 내담자용 리포트 열람 ───────── */
+function cn10(c) {
+  const band = c !== 'report-noband';
+  const ro = c === 'closed' ? callout('', 'lock', '마무리한 상담이에요', '리포트는 지금처럼 언제든 읽을 수 있어요.') : '';
+  const doc = '<section class="sh-card w-sec2" aria-label="리포트"><div class="w-doc"><h4>오늘 상담에서</h4><p>요즘 일이 많아 마음이 바쁘다는 이야기를 나눴어요. 지난번보다 내 마음을 말로 옮기는 게 조금 편해졌다고 하셨어요.</p><h4>다음 상담까지 해 볼 것</h4><ul class="w-ul"><li>저녁에 10분 걷기</li><li>잠들기 전 떠오르는 생각을 메모하기</li></ul>' +
+    (band ? '<h4>몸과 마음의 흐름</h4>' + dirChips() : '<span class="mut">이번 상담은 LINK BAND 없이 진행했어요. 상담 내용으로만 만든 리포트예요.</span>') +
+    '<span class="mut">진단이나 치료를 위한 리포트가 아니에요.</span></div></section>';
+  const head = backHead('상담 리포트', GO('CN08', c === 'closed' ? 'closed-me' : 'active'), dotsBtn(''), '채용욱 상담사와 상담 · 3회차 · 10/15(목)');
+  return shell('member', head, '<div class="sh-scroll"><div class="w-page">' + ro + doc + '<button class="w-linkrow"' + GO('CN08', c === 'closed' ? 'closed-me' : 'active') + '><span class="l">' + ic('file', 's20') + '지난 리포트 모두 보기</span>' + ic('chev-r', 's20') + '</button></div></div>');
+}
+
+/* ───────── 비회원 내담자 화면 (몰입형) ───────── */
+const codeBox = (v, on, bad, lock) => {
+  let s = '';
+  for (let i = 0; i < 4; i++) s += '<span class="' + (bad ? 'bad' : on === i ? 'on' : '') + '"><input class="w-cin" inputmode="numeric" maxlength="1" value="' + (v.charAt(i) || '') + '" aria-label="' + (i + 1) + '번째 숫자"' + (lock ? ' disabled' : '') + '></span>';
+  return '<div class="fl-codebox" role="group" aria-label="상담 코드 4자리">' + s + '</div>';
+};
+const glogo = '<svg class="w-glogo" viewBox="0 0 414.72 188.928" aria-hidden="true"><use href="#i-logo"/></svg>';
+const hint = (cls, icon, t) => '<div class="w-hint ' + cls + '"' + (cls === 'bad' ? ' role="alert"' : '') + '>' + ic(icon, 's16') + '<span>' + t + '</span></div>';
+function cn11(c) {
+  const k = {
+    default: { v: '', on: 0, em: '', h: ['', 'key', '숫자 4자리와 등록한 이메일을 입력해 주세요'], dis: true },
+    filled: { v: '4827', on: -1, em: 'seoyoon.park@example.com', h: ['ok', 'circle-check', '모두 입력했어요'] },
+    mismatch: { v: '4827', on: -1, bad: true, em: 'seoyun.park@example.com', h: ['bad', 'alert', '코드 또는 이메일을 확인해 주세요'] },
+    locked: { v: '4827', on: -1, bad: true, lock: true, em: 'seoyun.park@example.com', h: ['bad', 'clock', '시도 횟수를 넘었어요. 잠시 후 다시 시도해 주세요'], dis: true },
+  }[c];
+  const left = ['x', GO('CN11', 'default'), '닫기'];
+  if (c === 'busy' || c === 'closed') {
+    const t = c === 'busy' ? ['이미 진행 중인 상담이에요', '다른 기기에서 이 상담에 입장해 있어요. 상담사에게도 알렸어요. 본인이 아니라면 상담사에게 알려 주세요.', 'alert'] : ['마무리된 상담이에요', '이 코드로는 더 입장할 수 없어요. 다시 상담하고 싶다면 상담사에게 문의해 주세요.', 'lock'];
+    const body = '<div class="fl-card strong w-card tight w-centerbox"><div class="w-stat warn">' + ic(t[2]) + '</div><h1 class="fl-h1 w-solo">' + t[0] + '</h1><p class="fl-sub w-solo">' + t[1] + '</p></div>';
+    return imm({ bg: 1, title: '상담 입장', left: left, body: body, foot: btn('soft block', GO('CN11', 'default'), 'chev-l', '코드 다시 입력하기') });
+  }
+  if (c === 'revisit') {
+    const body = '<div class="fl-card strong w-card tight w-centerbox">' + glogo + '<h1 class="fl-h1 w-solo">다시 오셨네요</h1><div class="w-who"><span class="av">' + av('박서윤') + '</span><div><b>박서윤 님</b><span class="s">채용욱 상담사와 상담 · 4회차</span></div></div><p class="fl-sub w-solo">이 기기는 10/10에 확인했어요. 코드 없이 입장할 수 있어요.</p></div>';
+    return imm({ bg: 1, title: '상담 입장', left: left, body: body, foot: btn('primary block', GO('CN13', 'waiting'), 'log-in', '이어서 입장하기') + btn('ghost', GO('CN11', 'default'), 'key', '다른 코드로 입장하기') });
+  }
+  const body = '<div class="fl-card strong w-card tight">' + glogo + '<h1 class="fl-h1 w-solo">상담 코드를 입력해 주세요</h1><p class="fl-sub w-solo">상담사가 보낸 숫자 4자리와 등록한 이메일이 필요해요</p>' + codeBox(k.v, k.on, k.bad, k.lock) +
+    field('등록한 이메일', inp(k.em, 'name@example.com', { icon: 'mail', type: 'email', mode: 'email', bad: !!k.bad })) + hint(k.h[0], k.h[1], k.h[2]) + '</div>';
+  return imm({ bg: 1, title: '상담 입장', left: left, body: body, foot: btn('primary block', GO('CN12', 'form'), 'log-in', '확인하기', k.dis) });
+}
+const chkBox = (on, t, req, bad) => '<button class="w-chk' + (bad ? ' bad' : '') + '" role="checkbox" aria-checked="' + on + '"><span class="bx">' + ic('check') + '</span><span class="tx"><b>' + (req ? '필수 · ' : '선택 · ') + '</b>' + t + '</span><span class="more">내용 보기</span></button>';
+function cn12(c) {
+  const k = { form: { nm: '박서윤', bd: '', g: -1, agree: false }, filled: { nm: '박서윤', bd: '1994.07.21', g: 0, agree: true }, error: { nm: '박서윤', bd: '1994.13', g: 0, agree: false, err: true } }[c];
+  const G = ['여성', '남성', '선택 안 함'];
+  const f1 = field('이름', inp(k.nm, '이름을 입력해 주세요', { icon: 'user' }));
+  const f2 = field('생년월일', inp(k.bd, '예: 1994.07.21', { icon: 'calendar', mode: 'numeric', bad: !!k.err }), k.err ? '생년월일을 다시 확인해 주세요' : '');
+  const f3 = field('성별', seg(G.map((x, i) => [i, x, '']), k.g, 'w-c3'));
+  const cons = '<div class="w-group">' + chkBox(k.agree, '개인정보 수집·보관에 동의해요', true, k.err) + chkBox(false, '상담 알림 메일을 받아요', false) + chkBox(false, '연구 참여에 동의해요. 동의하지 않아도 돼요', false) + '</div>';
+  const card = '<div class="fl-card strong w-card dense"><h1 class="fl-h1 w-solo">정보를 확인해 주세요</h1><div class="w-form"><div class="w-2col">' + f1 + f2 + '</div>' + f3 + cons + '</div></div>';
+  const ready = k.agree && !k.err;
+  return imm({ bg: 1, title: '상담 입장', left: ['chev-l', GO('CN11', 'filled'), '이전'], body: card, foot: btn('primary block', GO('CN13', 'waiting'), 'user-check', '입장 요청하기', !ready) });
+}
+function cn13(c) {
+  const k = {
+    waiting: { st: ['', 'clock'], h: '상담사가 입장을 확인하고 있어요', s: '승인되면 자동으로 다음으로 넘어가요. 이 화면을 열어 두세요.', c1: [1, '코드와 이메일을 확인했어요'], c2: [0, '상담사가 입장을 확인하는 중이에요'], foot: btn('primary block', '', 'clock', '승인을 기다리고 있어요', true) + btn('ghost', GO('CN11', 'default'), 'x', '입장 취소') },
+    slow: { st: ['', 'clock'], h: '조금 오래 걸리고 있어요', s: '상담사가 곧 확인할 거예요. 이 화면을 닫지 말고 기다려 주세요.', c1: [1, '코드와 이메일을 확인했어요'], c2: [0, '상담사가 입장을 확인하는 중이에요'], foot: btn('primary block', '', 'clock', '승인을 기다리고 있어요', true) + btn('ghost', GO('CN11', 'default'), 'x', '입장 취소') },
+    approved: { st: ['ok', 'check'], h: '입장이 승인됐어요', s: '이제 상담 입장 준비를 해요.', c1: [1, '코드와 이메일을 확인했어요'], c2: [1, '상담사가 입장을 승인했어요'], foot: btn('primary block', XGO(EXT.join), 'door-open', '입장 준비하기') },
+    declined: { st: ['warn', 'alert'], h: '입장하지 못했어요', s: '상담사가 입장을 확인하지 못했어요. 상담사에게 문의해 주세요.', c1: [1, '코드와 이메일을 확인했어요'], c2: [0, '상담사가 입장을 승인하지 않았어요'], foot: btn('soft block', GO('CN11', 'default'), 'key', '코드 다시 입력하기') },
+  }[c];
+  const body = '<div class="fl-card strong w-card tight"><div class="w-stat ' + k.st[0] + '">' + ic(k.st[1]) + '</div><h1 class="fl-h2 w-solo">' + k.h + '</h1><p class="fl-sub w-solo">' + k.s + '</p>' +
+    '<div class="w-who"><span class="av">' + av('채용욱') + '</span><div><b>채용욱 상담사</b><span class="s">4회차 · 오늘 오후 3:00 · 오프라인</span></div></div>' +
+    '<div class="w-checks">' + chkRow(k.c1[0], k.c1[1]) + chkRow(k.c2[0], k.c2[1]) + '</div></div>';
+  return imm({ bg: 4, title: '상담 입장', left: ['x', GO('CN11', 'default'), '닫기'], body: body, foot: k.foot });
+}
+function cn14(c) {
+  const k = {
+    reverify: { h: '본인 확인이 필요해요', s: '기기가 바뀌었어요. 상담 때 입력한 정보로 확인해요.', v: '4827', bd: '', em: 'seoyoon.park@example.com', hint: ['', 'info', '확인하면 이 기기에서 90일 동안 코드 없이 입장할 수 있어요'] },
+    'reverify-error': { h: '본인 확인이 필요해요', s: '기기가 바뀌었어요. 상담 때 입력한 정보로 확인해요.', v: '4827', bd: '1994.07.12', em: 'seoyoon.park@example.com', bad: true, hint: ['bad', 'alert', '입력한 정보가 맞지 않아요. 확인하고 다시 입력해 주세요'] },
+    expired: { h: '다시 확인해 주세요', s: '90일 넘게 접속하지 않아 확인이 필요해요. 상담 때 입력한 정보로 확인해요.', v: '4827', bd: '', em: 'seoyoon.park@example.com', hint: ['', 'info', '확인하면 이 기기에서 90일 동안 코드 없이 입장할 수 있어요'] },
+    locked: { h: '잠시 후 다시 시도해 주세요', s: '확인에 여러 번 실패했어요. 잠시 뒤에 다시 시도하거나 상담사에게 문의해 주세요.', v: '4827', bd: '1994.07.12', em: 'seoyoon.park@example.com', bad: true, lock: true, hint: ['bad', 'clock', '5분 뒤에 다시 시도할 수 있어요'] },
+  }[c];
+  const card = '<div class="fl-card strong w-card dense"><h1 class="fl-h1 w-solo">' + k.h + '</h1><p class="fl-sub w-solo">' + k.s + '</p><div class="w-form">' + field('상담 코드', codeBox(k.v, -1, k.bad, k.lock)) +
+    '<div class="w-2col">' + field('등록한 이메일', inp(k.em, 'name@example.com', { icon: 'mail', type: 'email', mode: 'email', ro: !!k.lock })) + field('생년월일', inp(k.bd, '예: 1994.07.21', { icon: 'calendar', mode: 'numeric', bad: !!k.bad })) + '</div>' + hint(k.hint[0], k.hint[1], k.hint[2]) + '</div></div>';
+  return imm({ bg: 1, title: '본인 확인', left: ['x', GO('CN11', 'default'), '닫기'], body: card, foot: btn('primary block', GO('CN13', 'waiting'), 'user-check', '확인하고 입장하기', !!k.lock || !k.bd) });
+}
+function cn15(c) {
+  const closed = c === 'closed', scr = c === 'scrubbed';
+  const next = closed ? ['lock', '상담이 마무리됐어요', '재방문 자격이 닫혔어요. 지난 리포트는 메일 링크로 볼 수 있어요.'] : c === 'no-next' ? ['clock', '예정된 상담이 없어요', '다음 상담은 채용욱 상담사가 잡으면 메일로 알려 드려요.'] : ['calendar', '다음 상담 4회차 · 10/22(목) 오후 7:00', '50분 · 오프라인 · 5일 뒤에 시작해요'];
+  const c1 = '<div class="fl-card strong w-card tight"><div class="w-who"><span class="av">' + av('채용욱') + '</span><div><b>채용욱 상담사와 상담</b><span class="s">가입 없이 상담 중이에요</span></div></div>' +
+    '<div class="w-next">' + ic(next[0]) + '<div class="tx"><b>' + next[1] + '</b><span>' + next[2] + '</span></div></div>' +
+    (closed || c === 'no-next' ? '' : btn('primary block', XGO(EXT.join), 'door-open', '상담 입장하기')) + '</div>';
+  let list;
+  if (scr) list = callout2('alert', '개인정보 보관 기간이 지나 다시 보낼 수 없어요', '이름과 이메일이 지워져서 리포트를 다시 보내거나 열 수 없어요. 궁금한 점은 상담사에게 문의해 주세요.');
+  else if (c === 'no-report') list = '<div class="fl-card strong w-card tight fillcard"><div class="w-lh"><h2>지난 리포트</h2><span>0건</span></div><div class="w-centerbox"><p class="fl-sub w-solo">아직 받은 리포트가 없어요. 상담 뒤에 상담사가 확인하면 여기에 나타나요.</p></div></div>';
+  else list = '<div class="fl-card strong w-card tight fillcard"><div class="w-lh"><h2>지난 리포트</h2><span>2건</span></div><div class="w-plist">' +
+    [['3회차 · 10/10(토)', '메일 링크는 7일 동안 열려요'], ['2회차 · 10/3(토)', '메일 링크는 7일 동안 열려요']].map((r) => '<button class="w-rpt" data-go="' + (closed ? 'CN10|closed' : 'CN10|report-noband') + '"><span class="av">' + ic('file', 's20') + '</span><span><span class="nm">' + r[0] + '</span><span class="s">' + (closed ? '메일 링크로 열기' : r[1]) + '</span></span>' + ic('chev-r', 's20') + '</button>').join('') + '</div></div>';
+  const conv = '<div class="fl-card sm w-conv"><div class="w-conv-t">' + ic('user-plus', 's20') + '<span>회원으로 가입하면 상담 기록이 한곳에 모여요</span></div>' + btn('soft block', GO('CN16', 'confirm'), 'link', '회원 가입하고 기록 연결하기') + '</div>';
+  return imm({ bg: 10, title: '내 상담', body: c1 + list + conv, fill: true });
+}
+const callout2 = (icon, t, text) => '<div class="fl-card strong w-card tight"><div class="w-cd-h">' + ic(icon, 's20') + '<div class="tx"><b>' + t + '</b><span>' + text + '</span></div></div></div>';
+function cn16(c) {
+  const left = ['x', GO('CN15', 'minimal'), '닫기'];
+  if (c === 'confirm') {
+    const body = '<div class="fl-card strong w-card tight w-centerbox"><div class="w-stat">' + ic('link') + '</div><h1 class="fl-h1 w-solo">이 이메일로 받은 상담 기록이 있어요</h1><p class="fl-sub w-solo">내 계정에 연결할까요?</p>' +
+      '<div class="w-rpt w-sum3"><span class="av">' + ic('counsel', 's20') + '</span><span><span class="nm">채용욱 상담사와 상담</span><span class="s">3회차까지 · 마지막 10/10(토)</span></span><span></span></div>' + info('info', '연결하면 리포트와 상담 기록이 내 계정에 모여요. 연결 전에 생년월일로 한 번 더 확인해요.') + '</div>';
+    return imm({ bg: 1, title: '상담 기록 연결', left: left, body: body, foot: btn('primary block', GO('CN16', 'birth'), 'link', '연결하기') + btn('ghost', GO('CN07', 'list'), 'chev-r', '나중에 할게요') });
+  }
+  if (c === 'birth' || c === 'birth-mismatch') {
+    const bad = c === 'birth-mismatch';
+    const body = '<div class="fl-card strong w-card tight"><h1 class="fl-h1 w-solo">본인 확인</h1><p class="fl-sub w-solo">상담 때 입력한 생년월일을 입력해 주세요</p>' + field('생년월일', inp(bad ? '1994.07.12' : '', '예: 1994.07.21', { icon: 'calendar', mode: 'numeric', bad: bad }), bad ? '생년월일이 맞지 않아요' : '') +
+      hint(bad ? 'bad' : '', bad ? 'alert' : 'info', bad ? '상담 때 입력한 생년월일과 같아야 연결돼요. 계속 맞지 않으면 상담사에게 요청할 수 있어요' : '입력한 정보는 연결을 확인하는 데만 써요') + '</div>';
+    return imm({ bg: 1, title: '상담 기록 연결', left: ['chev-l', GO('CN16', 'confirm'), '이전'], body: body, foot: btn('primary block', GO('CN16', 'done'), 'link', '확인하고 연결하기', !bad && false) + (bad ? btn('ghost', GO('CN16', 'request'), 'send', '상담사에게 연결 요청하기') : '') });
+  }
+  if (c === 'request') {
+    const body = '<div class="fl-card strong w-card tight w-centerbox"><div class="w-stat">' + ic('send') + '</div><h1 class="fl-h1 w-solo">상담사에게 연결을 요청해요</h1><p class="fl-sub w-solo">가입한 이메일이 상담 때 등록한 이메일과 달라요. 채용욱 상담사가 확인하고 승인하면 기록이 내 계정에 연결돼요.</p></div>';
+    return imm({ bg: 1, title: '상담 기록 연결', left: ['chev-l', GO('CN16', 'confirm'), '이전'], body: body, foot: btn('primary block', GO('CN07', 'list'), 'send', '연결 요청 보내기') + btn('ghost', GO('CN07', 'list'), 'chev-r', '나중에 할게요') });
+  }
+  const body = '<div class="fl-card strong w-card tight w-centerbox"><div class="w-stat ok">' + ic('circle-check') + '</div><h1 class="fl-h1 w-solo">기록을 연결했어요</h1><p class="fl-sub w-solo">상담 기록 3건과 리포트 2건이 내 계정에 모였어요. 채용욱 상담사에게도 알려요.</p></div>';
+  return imm({ bg: 5, title: '상담 기록 연결', left: null, body: body, foot: btn('primary block', GO('CN07', 'list'), 'counsel', '내 상담 보기') });
+}
+/* ───────── 화면·케이스 인덱스 (개발자용 ?index=1) ───────── */
+const INDEX = [
+  { id: 'CN01', role: 'host', name: '상담 목록', type: '셸형', first: 'active', link: '행 = CN02 · 새 상담 시작 = CN03a · 상담 열기 = 기존 FH05(host-b)',
+    assume: '탭 진행 중·마무리한·내담자(기존 내담자 메뉴 흡수) · D-47 종결 365일 뒤 보관(기본값) · 보관한 상담은 기본 목록에서 숨기고 토글·검색으로 노출 · 목록 필드(내담자·다음 상담·회차·상태)는 읽기 API 가정',
+    cases: [['active', '진행 중 탭 · 5건(상담 중·오늘·예정·초대 대기·예정 없음)'], ['closed', '마무리한 탭 · 보관한 상담은 숨김 안내'], ['closed-archived', '마무리한 탭 · 보관한 상담 함께 보기'], ['clients', '내담자 탭'], ['search', '검색 결과 1건'], ['search-empty', '검색 결과 없음'], ['empty', '상담 없음(빈 상태)'], ['net', '네트워크 끊김']] },
+  { id: 'CN02', role: 'host', name: '상담 상세', type: '셸형', first: 'active', link: '상담 열기 = 기존 FH05 · 입장 확인 = CN06 · 회차 행 = CN05 · 마무리·다시 시작·보관·코드 = CN04',
+    assume: 'D-44 회원도 종결 가능 · D-46 상담사가 종결한 건은 내담자 단독 재개 불가 · D-50 비회원 개인정보는 종결일 + 90일 뒤 스크럽(기본값) · 정기형은 앞으로 4주 분량 유지 · 센터 관리자는 메타만 보므로 이 화면은 담당 상담사 본인용 · 담당 상담사는 정확히 1명',
+    cases: [['active', '회원 · 진행 중 · N회 먼저 잡음'], ['recurring', '회원 · 끝 없이 이어가는 정기형'], ['ongoing', '지금 상담 중(마무리 불가)'], ['guest-pending', '가입 없이 · 초대 대기(첫 입장 전)'], ['guest-active', '가입 없이 · 진행 중 · 재방문 자격 있음'], ['guest-expired', '가입 없이 · 재방문 자격 만료'], ['closed', '마무리한 상담(읽기 전용) · 회원'], ['closed-guest', '마무리한 상담 · 가입 없이(자격 폐기·삭제 예정일)'], ['archived', '보관한 상담 · 새 상담으로 시작'], ['scrubbed', '보관 · 개인정보 삭제됨(다시 보낼 수 없음)'], ['net', '네트워크 끊김']] },
+  { id: 'CN03a', role: 'host', name: '새 상담 세션 ① 누구와 만나요?', type: '몰입형', first: 'existing', link: '다음 = CN03b · 나가기 시트 = CN01',
+    assume: '기획-상세-편성UX §4.2 A · 3단계 + 완료, 클릭 4번 목표 · 새 내담자는 이름 + 이메일(재입력 확인) 필수, 휴대폰은 받지 않음 · 이미 회원인 이메일은 연결 여부를 묻고, 같은 상담이 있으면 이어서 잡도록 안내',
+    cases: [['existing', '기존 내담자 · 최근 상담순'], ['picked', '기존 내담자 · 1명 선택'], ['search', '검색 결과(상담 전 초대·기록 없는 회원 포함)'], ['new', '새 내담자(가입 없이) · 빈 입력'], ['new-filled', '새 내담자 · 입력 완료'], ['new-error', '새 내담자 · 형식·불일치 오류'], ['member-found', '이미 가입한 회원 이메일'], ['dup-active', '같은 상담이 이미 있음'], ['dup-closed', '마무리한 상담이 있음'], ['leave', '나가기 확인 시트']] },
+  { id: 'CN03b', role: 'host', name: '새 상담 세션 ② 언제, 어떻게', type: '몰입형', first: 'later', link: '반복 상담 예약 = CN03r · 다음 = CN03c',
+    assume: '일정은 지금 바로·예약 · 소요 기본 50분(5분 단위 스텝퍼) · 방식 온라인·오프라인(오프라인은 주소) · 상담 유형은 선택 하나(임상심리·최면심리·기타) · 충돌은 상담사 본인 일정 기준 소프트 경고(겹쳐도 생성) · 지난 회차 값 prefill(CN03b next)',
+    cases: [['later', '예약 · 온라인'], ['now', '지금 바로'], ['conflict', '예약 · 같은 시간 일정 있음'], ['offline', '예약 · 오프라인(주소)'], ['past', '지난 시간 오류(다음 비활성)'], ['custom', '기타 유형 이름 입력'], ['next', '다음 상담 잡기 진입(① 건너뜀 · 지난 값 prefill)'], ['repeat-set', '반복 설정 완료 표시']] },
+  { id: 'CN03r', role: 'host', name: '반복 상담 예약(② 하위 화면)', type: '몰입형', first: 'weekly', link: '반복 적용 = CN03b|repeat-set · 취소 = CN03b',
+    assume: '주기 매주·격주·요일 직접 고르기 · 끝 조건은 횟수(2~12회, 기본 4) 또는 끝 없이 이어가요(앞으로 4주씩 자동) · 회차 미리 보기에서 개별 제외 · 겹치는 회차는 기본 제외 후 안내',
+    cases: [['weekly', '매주 · 4회'], ['biweekly', '격주 · 4회'], ['days', '요일 직접 고르기'], ['endless', '끝 없이 이어가요'], ['conflict', '겹치는 회차 1건 제외'], ['max', '12회 상한 안내']] },
+  { id: 'CN03c', role: 'host', name: '새 상담 세션 ③ 확인·동의', type: '몰입형', first: 'member', link: '상담 만들기 = CN03d · 이전 = CN03b',
+    assume: 'D-02 녹음 동의 거부 시 수동 기록(기본값, 기존 정책과 충돌해 확정 필요) · D-03 상담은 리포트 기본 포함 · 녹음 동의는 상담사가 대신 체크하지 않고 내담자에게 안내 발송 · 영상 기본 꺼짐 · LINK BAND는 사용·사용 안 함 2택',
+    cases: [['member', '회원 · 반복 4회'], ['member-single', '회원 · 한 번만'], ['guest-offline', '가입 없이 · 오프라인 · 리포트 이메일 표시'], ['advanced', '고급 설정 시트'], ['preview', '동의 안내문 미리 보기 시트']] },
+  { id: 'CN03d', role: 'host', name: '새 상담 세션 완료', type: '몰입형', first: 'member-now', link: '상담 열러 가기 = 기존 FH05 · 상담 상세 = CN02',
+    assume: '안내 전달은 요청 결과만 표시(전달·열람 단정 금지) · 가입 없이면 관계 단위 4자리 코드를 큰 글자로(코드는 메일 본문에만) · 오프라인 대면은 코드를 직접 안내해도 되고 이메일은 여전히 필수',
+    cases: [['member-now', '회원 · 지금 바로'], ['member-scheduled', '회원 · 예약'], ['member-repeat', '회원 · 반복 4회'], ['guest', '가입 없이 · 코드 표시'], ['guest-offline', '가입 없이 · 오프라인 대면'], ['guest-mail-partial', '메일 발송 일부 실패 · 다시 보내기'], ['fail', '만들지 못함']] },
+  { id: 'CN04', role: 'host', name: '종결·재개·보관·코드 확인 시트', type: '셸형', first: 'close', link: '시트 아래는 CN02 해당 케이스',
+    assume: '종결·보관은 데이터를 지우지 않음 · 예정 회차는 목록 확인 후 일괄 취소 · 진행 중 회차가 있으면 종결 차단 · 재개 기본은 같은 관계(회차 이어서), 새 상담은 이전 기록과 분리 · 코드 다시 만들기는 이전 코드 즉시 무효',
+    cases: [['close', '마무리 확인(회원)'], ['close-blocked', '마무리 차단(진행 중 회차)'], ['close-guest', '마무리 확인(가입 없이)'], ['reopen', '다시 시작(회원)'], ['reopen-guest', '다시 시작(가입 없이)'], ['archive', '보관 확인'], ['regen-code', '코드 다시 만들기 확인']] },
+  { id: 'CN05', role: 'host', name: '회차 기록·리포트 승인', type: '셸형', first: 'review', link: '내담자 화면 보기 = CN10',
+    assume: 'D-37 자동 승인은 영역별 분리, 상담 기본 꺼짐 · 상담사 승인 필수 · D-28 센터 관리자는 메타만 · D-51 가입 없이는 승인 후 등록 이메일로 발송(링크 7일) · 수치 환산이나 비교 없이 방향 표시만 · LINK BAND 미사용은 정상 상태',
+    cases: [['processing', '기록 정리 중'], ['review', '승인 대기 · 상담사용 탭'], ['review-client', '승인 대기 · 내담자용 탭'], ['review-guest', '승인 대기 · 가입 없이(이메일 발송)'], ['manual', '녹음 동의 거부 · 직접 기록'], ['approved-member', '승인함 · 회원 전달 요청'], ['approved-guest', '승인함 · 이메일 발송 요청'], ['error', '리포트 생성 실패'], ['closed', '마무리한 상담 · 읽기 전용(메모만 수정)'], ['sheet-approve', '승인 확인 시트'], ['sheet-resend', '리포트 다시 보내기 시트']] },
+  { id: 'CN06', role: 'host', name: '가입 없이 상담 · 입장 확인(대기실)', type: '몰입형', first: 'first', link: '대기실로 가기 = 기존 FH06 · 코드 다시 만들기 = CN04',
+    assume: '기획-상세-상담 §4.3 관계 코드 + 등록 이메일 일치 + 상담사 대기실 승인 · 이미 입장한 상담에 다른 기기가 들어오면 막고 상담사에게 알림(409) · 미확인: 현행 대기실에 입장 승인 기능을 얹을 수 있는지',
+    cases: [['empty', '아직 입장 전'], ['first', '첫 입장 요청'], ['revisit', '재방문(자격 유효)'], ['other-device', '다른 기기 접속 차단'], ['approved', '승인함'], ['decline', '거절 확인 시트']] },
+  { id: 'CN07', role: 'member', name: '내 상담 목록', type: '셸형', first: 'list', link: '상담 보기 = CN08',
+    assume: '회원 시점 표기 {상담사} 상담사와 상담 · 진행률 없음(횟수 제한 없음) · 마무리한 상담은 접힌 구역 · 신청은 상담사에게 채팅 메시지(현행 방식) · 두 영역 모두 항상 노출',
+    cases: [['list', '진행 1건 + 마무리 접힘'], ['list-open', '마무리한 상담 펼침'], ['invited', '새 초대'], ['empty', '아직 상담 없음'], ['net', '네트워크 끊김']] },
+  { id: 'CN08', role: 'member', name: '내 상담 상세', type: '셸형', first: 'active', link: '상담 입장하기 = 기존 FM05(member-a) · 리포트 = CN10 · 마무리 = CN09',
+    assume: 'D-44 회원도 종결 가능 · D-46 내담자가 종결한 건은 단독 재개, 상담사가 종결한 건은 요청 후 승인 · 승인 전 리포트는 노출하지 않음(승인 전 노출 여부 사전 검증 필요) · 입장은 시작 15분 전부터',
+    cases: [['active', '다음 상담 예정'], ['ready-now', '곧 시작 · 입장 가능'], ['no-next', '예정된 상담 없음'], ['report-waiting', '첫 리포트 확인 대기'], ['closed-me', '내가 마무리한 상담'], ['closed-counselor', '상담사가 마무리한 상담'], ['net', '네트워크 끊김']] },
+  { id: 'CN09', role: 'member', name: '내 상담 시트(마무리·재개 요청)', type: '셸형', first: 'close', link: '시트 아래는 CN08 해당 케이스',
+    assume: '종결해도 지난 리포트 열람은 유지 · 예정 상담은 취소 · 상담사 종결 건은 요청 후 승인',
+    cases: [['close', '상담 마무리 확인'], ['reopen', '다시 시작(내가 마무리한 건)'], ['reopen-request', '다시 시작 요청(상담사가 마무리한 건)']] },
+  { id: 'CN10', role: 'member', name: '내담자용 리포트 열람', type: '셸형', first: 'report', link: '이전 = CN08',
+    assume: '서사 + 방향 표시만(수치 환산·비교 없음) · 종결 후에도 열람 유지 · 의료 오인 방지 고지 · LINK BAND 미사용은 정상 상태',
+    cases: [['report', 'LINK BAND 사용 · 방향 표시'], ['report-noband', 'LINK BAND 없이 진행'], ['closed', '마무리한 상담에서 열람']] },
+  { id: 'CN11', role: 'member', name: '가입 없이 상담 · 코드 입장', type: '몰입형', first: 'default', link: '확인하기 = CN12 · 재방문 = CN13',
+    assume: '관계 단위 4자리 코드 + 등록 이메일 일치(OTP 없음) · 실패 사유는 구분하지 않음 · 시도 제한 재사용 · 이미 입장한 상담이면 줄 세우지 않고 안내 · 마무리된 상담의 코드는 무효',
+    cases: [['default', '빈 입력'], ['filled', '입력 완료'], ['mismatch', '코드·이메일 불일치'], ['locked', '시도 제한'], ['busy', '이미 진행 중(다른 기기)'], ['closed', '마무리된 상담'], ['revisit', '재방문 자격 있는 기기']] },
+  { id: 'CN12', role: 'member', name: '가입 없이 상담 · 정보·동의', type: '몰입형', first: 'form', link: '입장 요청하기 = CN13',
+    assume: '이름·성별·생년월일 입력 · 개인정보 수집·보관 동의 필수 · 알림 메일·연구 참여는 선택(기본 동의 안 함, D-04·D-15) · 녹음 동의는 기존 입장 전 흐름에서 별도로 받음',
+    cases: [['form', '처음(필수 동의 전)'], ['filled', '입력 완료'], ['error', '생년월일 오류 · 필수 동의 없음']] },
+  { id: 'CN13', role: 'member', name: '가입 없이 상담 · 입장 승인 대기', type: '몰입형', first: 'waiting', link: '입장 준비하기 = 기존 FM05(member-a)',
+    assume: '1:1이라 상담사가 사람을 직접 확인(대기실 승인) · 승인되면 관계 active · 거절 시 코드는 유지',
+    cases: [['waiting', '승인 대기'], ['slow', '오래 걸림'], ['approved', '승인됨'], ['declined', '입장하지 못함']] },
+  { id: 'CN14', role: 'member', name: '가입 없이 상담 · 재방문 본인 확인', type: '몰입형', first: 'reverify', link: '확인하고 입장하기 = CN13',
+    assume: '기기 분실·90일 만료 시 코드 + 이메일 + 생년월일 3요소 재확인(시도 제한) · 확인하면 재방문 자격을 새로 발급하고 이전 자격은 폐기',
+    cases: [['reverify', '기기 변경'], ['reverify-error', '정보 불일치'], ['expired', '90일 만료'], ['locked', '시도 제한']] },
+  { id: 'CN15', role: 'member', name: '가입 없이 상담 · 내 상담 최소 화면', type: '몰입형', first: 'minimal', link: '상담 입장하기 = 기존 FM05 · 기록 연결 = CN16',
+    assume: '앱 셸 없음 · 재방문 자격이 있는 기기에서 다음 일정과 지난 리포트만 · 리포트 메일 링크는 7일 · 만료 후 재열람은 자격 기기 또는 상담사 재발송 · 보관 기간이 지나면 재발송 불가',
+    cases: [['minimal', '다음 일정 + 지난 리포트'], ['no-report', '아직 리포트 없음'], ['no-next', '예정된 상담 없음'], ['closed', '마무리됨(메일 링크로 열람)'], ['scrubbed', '개인정보 보관 기간 지남']] },
+  { id: 'CN16', role: 'member', name: '회원 전환 · 상담 기록 연결', type: '몰입형', first: 'confirm', link: '내 상담 보기 = CN07',
+    assume: '기본값 = 가입 링크 토큰 + 이메일 일치(a)와 이메일 일치 + 생년월일 확인(b) 병행, 자동 연결 금지(확인 화면 필수) · 이메일이 다르면 상담사 승인(c) · 연결 후 상담사 알림, 취소는 지원하지 않음 · D-52 연결 방식의 강도',
+    cases: [['confirm', '연결 확인'], ['birth', '생년월일 확인'], ['birth-mismatch', '생년월일 불일치'], ['request', '이메일이 달라 상담사에게 요청'], ['done', '연결 완료']] },
+];
+window.__INDEX = INDEX.flatMap((s) => s.cases.map((c) => ({ screen: s.id, case: c[0], type: s.type, role: s.role })));
+window.__REG = INDEX.reduce((a, s) => { a[s.id] = s.cases.map((c) => c[0]); return a; }, {});
+
+function indexPage() {
+  document.body.className = 'w-index';
+  const total = INDEX.reduce((a, s) => a + s.cases.length, 0);
+  const rows = (role) => INDEX.filter((s) => s.role === role).map((s) => '<tr><td><b>' + s.id + '</b><br>' + s.name + '</td><td>' + s.type + '</td><td>' + s.cases.map((c) => '<a href="?role=' + role + '&screen=' + s.id + '&case=' + c[0] + '">' + c[0] + '</a><span class="gl"> ' + c[1] + '</span><br>').join('') + '</td><td>' + s.assume + '</td><td>' + s.link + '</td></tr>').join('');
+  const th = '<thead><tr><th>화면</th><th>유형</th><th>케이스</th><th>가정</th><th>연결</th></tr></thead>';
+  return '<h1>상담 영역 시안 (CN01~CN16) · 화면·케이스 인덱스</h1><p>상담사 웹·앱 ' + INDEX.filter((s) => s.role === 'host').length + '종, 회원·가입 없이 내담자 ' + INDEX.filter((s) => s.role === 'member').length + '종 · 총 화면 ' + INDEX.length + '종 · 케이스 총 ' + total + '개. ?role=host 또는 ?role=member 로 첫 화면을 고르고, ?screen=화면ID&amp;case=케이스 로 열어요. 입장 전·진행 화면은 기존 시안을 다시 쓰고 연결 열에 표기했어요. D-번호는 결정-필요.md 의 항목이에요.</p>' +
+    '<h2>상담사 웹·앱 (?role=host)</h2><table>' + th + '<tbody>' + rows('host') + '</tbody></table><h2>회원·가입 없이 내담자 (?role=member)</h2><table>' + th + '<tbody>' + rows('member') + '</tbody></table>';
+}
+
+/* ───────── 라우팅·이벤트 ───────── */
+const FN = { CN01: cn01, CN02: (c) => cn02(c), CN03a: cn03a, CN03b: cn03b, CN03r: cn03r, CN03c: cn03c, CN03d: cn03d, CN04: cn04, CN05: cn05, CN06: cn06, CN07: cn07, CN08: (c) => cn08(c), CN09: cn09, CN10: cn10, CN11: cn11, CN12: cn12, CN13: cn13, CN14: cn14, CN15: cn15, CN16: cn16 };
+const ROLE = Q.get('role');
+const SCREEN = Q.get('screen') || (ROLE === 'member' ? 'CN07' : 'CN01');
+const DEF = INDEX.filter((s) => s.id === SCREEN)[0];
+const CASE = Q.get('case') || (DEF ? DEF.first : 'active');
+function view() {
+  if (Q.get('index')) return indexPage();
+  const f = FN[SCREEN] || cn01;
+  return f(CASE);
+}
+function render() { document.getElementById('root').innerHTML = view(); }
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-go]');
+  if (t) {
+    const g = t.getAttribute('data-go');
+    if (g.indexOf('.html') >= 0) { location.href = g; return; }
+    const p = g.split('|');
+    const d = INDEX.filter((s) => s.id === p[0])[0];
+    location.search = '?role=' + (d ? d.role : 'host') + '&screen=' + p[0] + '&case=' + p[1];
+    return;
+  }
+  const sw = e.target.closest('[role="switch"], [role="checkbox"]');
+  if (sw) { sw.setAttribute('aria-checked', sw.getAttribute('aria-checked') === 'true' ? 'false' : 'true'); }
+});
+render();
+(document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(() => { window.__ready = true; });
+</script>
+</body>
+</html>

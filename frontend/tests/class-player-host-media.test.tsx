@@ -31,6 +31,7 @@ vi.mock('@livekit/components-react', () => ({
     return <i data-testid="lk-audio" />;
   },
   useLocalParticipant: () => ({ localParticipant: livekit.local }),
+  useRoomContext: () => ({ state: "connected", localParticipant: livekit.local }),
   useConnectionState: () => livekit.state,
   useTracks: () => livekit.tracks,
 }));
@@ -272,12 +273,14 @@ describe('마이크·카메라 UI 상태 판정', () => {
     expect(resolveMicUi({ micOn: true, failure: null, recorderState: 'error' })).toBe('denied');
   });
 
-  it('카메라: 권한 거부는 denied, 기기 없음은 nodevice, 영상 녹화 오류는 denied', () => {
+  it('카메라: 권한·기기 실패를 표시하고 로컬 트랙이 있으면 녹화 오류와 분리한다', () => {
     expect(resolveCamUi({ camOn: true, failure: null, videoState: 'idle' })).toBe('on');
     expect(resolveCamUi({ camOn: false, failure: null, videoState: 'idle' })).toBe('off');
     expect(resolveCamUi({ camOn: true, failure: 'denied', videoState: 'idle' })).toBe('denied');
     expect(resolveCamUi({ camOn: true, failure: 'notfound', videoState: 'idle' })).toBe('nodevice');
     expect(resolveCamUi({ camOn: true, failure: null, videoState: 'error' })).toBe('denied');
+    expect(resolveCamUi({ camOn: true, failure: null, videoState: 'error', hasLocalTrack: true })).toBe('on');
+    expect(resolveCamUi({ camOn: false, failure: null, videoState: 'error', hasLocalTrack: true })).toBe('off');
   });
 });
 
@@ -329,6 +332,17 @@ describe('미디어 시트 — 온라인(C07·C09)', () => {
     expect(buttonByText('일시정지', s ?? document)).not.toBeNull();
     expect(buttonByText('녹음 종료', s ?? document)).not.toBeNull();
     expect(one('input[placeholder="마커 메모 입력"]', s ?? document)).not.toBeNull();
+  });
+
+  it('녹음 종료 버튼은 위험 동작 표식(data-rec-action=stop)을 달고 어두운 시트의 붉은 스타일을 받는다', async () => {
+    await renderCase('C11', 'sheet=media');
+    const stop = buttonByText('녹음 종료', sheet() ?? document);
+    expect(stop?.getAttribute('data-rec-action')).toBe('stop');
+    expect(stop?.closest('.hp-legacy')).not.toBeNull();
+    const { readFileSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    const css = readFileSync(resolve(process.cwd(), 'src/components/class/player/host/host-player.css'), 'utf-8');
+    expect(css).toMatch(/\.hp-legacy button\[data-rec-action="stop"\][^{]*\{[^}]*background: #D9443F !important[^}]*color: #FFFFFF !important/);
   });
 
   it('녹음 전: 녹음 시작 버튼', async () => {

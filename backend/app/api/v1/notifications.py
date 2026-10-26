@@ -35,6 +35,7 @@ def update_preferences(
         payload.email,
         payload.in_app,
         db,
+        push_prefs=payload.push,
     )
 
 

@@ -111,10 +111,10 @@ describe('내 상태 시트 — 6지표 2×3 격자', () => {
     await act(async () => { qa('[data-pz="mcell"]')[3].click(); });
     expect(actions.onHeroChange).toHaveBeenCalledWith('bpm');
   });
-  it('값이 아직 없으면 "—" 로 표시한다(빈 칸 금지)', async () => {
+  it('HRV·호흡 값이 아직 없으면 "측정 중" 으로 표시한다(빈 칸 금지)', async () => {
     const base = memberCaseViewProps('M01');
     await mount('M01', 'status', { snapshot: { ...base.snapshot, hrv: null } });
-    expect(qa('[data-pz="mcell"]')[5].querySelector('.mp-mring__mv b')?.textContent).toBe('—');
+    expect(qa('[data-pz="mcell"]')[5].querySelector('.mp-mring__mv b')?.textContent).toBe('측정 중');
   });
   it.each([
     ['M07', '밴드 없이 참여 중이에요', 'LINK BAND를 연결하면 내 몸과 마음의 상태를 볼 수 있어요.', '기기에서 연결하기'],
@@ -177,7 +177,7 @@ describe('조용한 신호 시트', () => {
     expect(labels).toEqual(['잘 따라가요', '조금 어려워요', '잠시 쉴게요']);
     await act(async () => { qa('[data-pz="sheet"] .player-signal')[0].click(); });
     expect(actions.onSignal).toHaveBeenCalledWith('following');
-    expect(sheetEl()?.textContent).toContain('지금 상태를 조용히 알려 주세요 · 상담사에게만 보여요');
+    expect(sheetEl()?.textContent).toContain('선택한 상태와 이름이 상담사에게만 보여요');
     expect(sheetEl()?.textContent).toContain('상담사에게 조용히 전달했어요');
   });
 });
@@ -290,6 +290,9 @@ describe('기기 시트 — 밴드 상태별', () => {
     const actions = await mount('M07', 'device');
     expect(sheetEl()?.textContent).toContain('연결된 기기 없음');
     await act(async () => { buttonByText('LINK BAND 연결')?.click(); });
+    // SDD-220 TS26: OS 권한 요청 전 사전 안내를 거친다(확인 전에는 연결하지 않는다).
+    expect(actions.onBandConnect).not.toHaveBeenCalled();
+    await act(async () => { buttonByText('확인하고 계속')?.click(); });
     expect(actions.onBandConnect).toHaveBeenCalledTimes(1);
     const base = memberCaseViewProps('M07');
     await mount('M07', 'device', { device: { ...base.device, isMock: true } });

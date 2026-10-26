@@ -9,11 +9,12 @@ from sqlalchemy import and_, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
+from app.config import settings
 from app.models.session import Session, SessionParticipant
 from app.models.client_profile import ClientProfile
 from app.models.record import Report, SessionRecord
 from app.models.user import User
-from app.services import notification_service, record_service, report_scope
+from app.services import notification_service, record_service, report_progress_service, report_scope
 from app.services.session_authz import SessionAction, get_session_authorized
 from app.schemas.eeg import HRVMotionSummary
 
@@ -131,6 +132,36 @@ def _counselor_name(
     return host.name if host else None
 
 
+def _effective_report_email(participant: SessionParticipant | None, db: DBSession) -> str | None:
+    """리포트 수신 이메일 — 비회원은 입장 때 입력한 report_email, 회원은 계정 이메일.
+
+    회원(user_id 있음)이 로그인 상태로 코드 입장하면 report_email 을 따로 받지 않아 None 이다.
+    이메일은 아이디라 회원·비회원 모두 리포트에 남아야 하므로 계정 이메일로 채운다.
+    개인정보 파기(pii_scrubbed_at)된 참여자는 비운다.
+    """
+    if participant is None or participant.pii_scrubbed_at is not None:
+        return None
+    if participant.report_email:
+        return participant.report_email
+    if participant.user_id is None:
+        return None
+    return db.query(User.email).filter(User.id == participant.user_id).scalar()
+
+
+def fill_member_report_email(participant: SessionParticipant | None, db: DBSession) -> str | None:
+    """회원 참여자의 report_email 이 비어 있으면 계정 이메일로 채운다(자동 발송·열람 링크 검증용).
+
+    이메일은 아이디라 회원도 리포트 메일을 받는다. 비회원·파기 참여자는 건드리지 않는다.
+    """
+    if participant is None or participant.pii_scrubbed_at is not None:
+        return None
+    if not participant.report_email and participant.user_id is not None:
+        email = db.query(User.email).filter(User.id == participant.user_id).scalar()
+        if email:
+            participant.report_email = email.strip().lower()
+    return participant.report_email
+
+
 def _serialize(
     report: Report,
     session: Session | None = None,
@@ -158,6 +189,10 @@ def _serialize(
             ),
             report.type,
         )
+    # SDD-237: 상담사용 클래스 통계 블록은 다른 참여자의 값을 담고 있으므로 상담사용 리포트(counselor)에만 싣는다.
+    #   회원 직렬화 경로가 어떤 이유로든 이 키를 받더라도 여기서 한 번 더 제거한다(이중 방어).
+    if report.type != "counselor":
+        content.pop("class_report", None)
     # RPT-PAYLOAD-01: 목록 조회는 EEG 시계열(eeg.timeline, 최대 수 MB)을 제외한다.
     # 목록 카드는 headline/summary 요약만 쓰므로 대용량 timeline 을 내려보내는 건
     # 직렬화·전송 낭비(45건 × 수백 KB → 수 초 지연)다. 상세 조회(get_report)만 전체를 담는다.
@@ -203,6 +238,7 @@ def _serialize(
         "birth_date": participant_info.get("birth_date") if participant_info else None,
         "is_guest": participant_info.get("is_guest") if participant_info else None,
         "in_review": False,
+        "in_review_delayed": False,
     }
 
 
@@ -214,7 +250,24 @@ def _is_unapproved(report: Report) -> bool:
     return report.status != "completed"
 
 
-def _mask_unapproved(result: dict, report: Report) -> dict:
+def _generation_delayed(report: Report, session: Session | None, now: datetime | None = None) -> bool:
+    """SDD-212 TD7: 리포트 생성이 아직 끝나지 않았고 세션 종료 후 지연 임계를 넘었는가.
+
+    생성이 끝나 상담사 확인을 기다리는 건(ready/partial)이나 실패 건은 지연이 아니다.
+    """
+    if session is None or session.ended_at is None:
+        return False
+    if (report.generation_status or "pending") not in (
+        report_progress_service.GENERATION_PENDING,
+        report_progress_service.GENERATION_PROCESSING,
+    ):
+        return False
+    ended_at = session.ended_at if session.ended_at.tzinfo else session.ended_at.replace(tzinfo=timezone.utc)
+    elapsed = ((now or _now()) - ended_at).total_seconds()
+    return elapsed > settings.pipeline_report_delay_notice_seconds
+
+
+def _mask_unapproved(result: dict, report: Report, session: Session | None = None) -> dict:
     """SDD-211(R6-X1, U1=B): 승인 전 리포트를 회원 응답에서 '리뷰 중' 자리표시자로 마스킹한다.
 
     행·id·상태·생성 진행·시각 등 식별/표시 필드는 보존하고(구 앱 호환, 키 집합 불변),
@@ -230,6 +283,7 @@ def _mask_unapproved(result: dict, report: Report) -> dict:
         "pdf_url": None,
         "subjective_state": None,
         "in_review": True,
+        "in_review_delayed": _generation_delayed(report, session),
     }
 
 
@@ -293,6 +347,8 @@ def generate_report(
     if report_type not in ("counselor", "client"):
         raise HTTPException(status_code=400, detail="잘못된 리포트 유형")
     s = get_session_authorized(db, session_id, host_id, SessionAction.REPORT_GENERATE)
+    if not _can_edit_report(host_id, s, db):
+        raise HTTPException(403, detail="현재 진행 지도사만 생성 가능합니다")
 
     if report_type == "client":
         # FUNC-02: client 리포트는 대상 participant 를 명시해야 한다.
@@ -399,7 +455,7 @@ def generate_client_reports_for_session(session_id: str, db: DBSession) -> list[
         .all()
     )
     host = db.query(User).filter(User.id == s.host_id).first()
-    auto_approve = bool(host and host.role == "counselor" and host.auto_approve_report)
+    auto_approve = auto_approve_enabled(host, s)
 
     # RPT-03: 세션의 기존 client 리포트를 배치로 1회 조회한다(participant_id → Report).
     # 존재하는 리포트는 재조회 없이 재사용하고, 없는 경우에만 생성 헬퍼를 호출한다.
@@ -445,11 +501,17 @@ def generate_client_reports_for_session(session_id: str, db: DBSession) -> list[
         )
         if needs_refresh:
             report = generate_report_inline(str(report.id), db) or report
-        if report.status == "pending_review" and auto_approve:
+        if report.status == "pending_review" and auto_approve and _skip_auto_approve_no_data(s, report):
+            # SDD-237: 측정·기록이 없는 명상 리포트는 자동 승인에서 제외 — 검토 대기로 남기고 알림·메일·AI 를 부르지 않는다.
+            results.append(
+                _serialize(report, s, subjective=_subjective_from_map(report, records_map))
+            )
+        elif report.status == "pending_review" and auto_approve:
             # SDD-087: 자동 승인 시 코멘트가 없으면 AI 초안을 생성해 저장 후 승인한다
             from app.services.report_comment_service import ensure_auto_comment
 
-            ensure_auto_comment(report, db)
+            # SDD-237: 명상 회차의 자동 초안은 비공개 메모(counselor_notes)를 입력으로 쓰지 않는다.
+            ensure_auto_comment(report, db, include_private_notes=report_domain(s) != "meditation")
             results.append(approve_report(str(report.id), str(s.host_id), db))
         else:
             results.append(
@@ -579,7 +641,7 @@ def list_reports(
             )
             .select_from(Session)
             .outerjoin(Report, Report.session_id == Session.id)
-            .filter(Session.host_id.in_(host_ids))
+            .filter(Session.host_id.in_(host_ids) if user.role == "counselor" else True)
             .filter(
                 or_(
                     Report.id.isnot(None),
@@ -602,6 +664,18 @@ def list_reports(
             .join(Session, Session.id == Report.session_id)
             .filter(Report.user_id == uid)
         )
+
+    if user and user.role == "org_admin":
+        from app.models.class_program import Class
+        from app.models.user_org_membership import UserOrgMembership
+        from app.models.organization import Organization
+        permitted = db.query(Class.id).join(UserOrgMembership, UserOrgMembership.org_id == Class.organization_id).join(
+            Organization, Organization.id == Class.organization_id).filter(
+            Class.organization_attribution_known.is_(True), UserOrgMembership.user_id == uid,
+            UserOrgMembership.status == "active", UserOrgMembership.role == "org_admin",
+            Organization.deactivated_at.is_(None),
+        )
+        base = base.filter(Session.type == "meditation", Session.class_id.in_(permitted))
 
     # 페이지네이션 total 은 별도 count 쿼리로 산출한다(창과 무관한 전체 건수).
     total = base.count()
@@ -718,7 +792,9 @@ def list_reports(
             )
             # SDD-211(R6-X1): 회원(비-staff) 조회에서는 승인 전 행을 '리뷰 중' 으로 마스킹한다(총계·페이지 불변).
             if not is_staff and _is_unapproved(report):
-                serialized = _mask_unapproved(serialized, report)
+                serialized = _mask_unapproved(serialized, report, sessions_map.get(report.session_id))
+            from app.services.class_access_service import project_report_for_viewer
+            serialized=project_report_for_viewer(serialized,user,sessions_map.get(report.session_id))
             result.append(serialized)
         else:
             session = missing_by_id.get(row.session_id)
@@ -740,12 +816,39 @@ def list_reports(
     return response
 
 
-def get_report(report_id: str, user_id: str, db: DBSession) -> dict:
+def get_report(report_id: str, user_id: str | None, db: DBSession, *, member_credential: str | None = None) -> dict:
     rid = _to_uuid(report_id)
     report = db.query(Report).filter(Report.id == rid).first()
     if not report:
         raise HTTPException(status_code=404, detail="리포트를 찾을 수 없습니다")
     session = db.query(Session).filter(Session.id == report.session_id).first()
+    # SDD-217 본인 클래스 이력은 기존 세션 활동권한과 분리한다. 관리자/강사 경로는 유지한다.
+    from app.models.class_program import Class, ClassMember
+    viewer = db.query(User).filter(User.id == _to_uuid(user_id)).first() if user_id else None
+    cls = db.query(Class).filter(Class.id == session.class_id).first() if session and session.class_id else None
+    if session and session.class_id and cls is None:
+        raise HTTPException(404, detail="리포트를 찾을 수 없습니다")
+    own_member = db.query(ClassMember).filter_by(class_id=session.class_id, user_id=viewer.id).first() if cls and viewer else None
+    from app.services.class_access_service import class_role
+    staff = bool(cls and viewer and (viewer.id == session.host_id or class_role(db, viewer, cls) in ("lead", "assistant", "guest", "org_admin")))
+    personal = bool(member_credential or (cls and viewer and not staff and (own_member or cls.recurrence_rule is not None)))
+    if personal:
+        from app.services.class_read_service import require_own_approved_report
+        from app.services.class_access_service import without_raw_material
+        member, participant = require_own_approved_report(db, report, session, user_id=user_id, member_credential=member_credential)
+        # 클래스 회원 본인 리포트도 최초 열람 시 읽음 처리한다 — 이 분기가 일찍 반환해
+        #   읽음 마킹이 빠져 하단 탭 배지·NEW 가 계속 남던 문제. (본인 소유·승인 완료는 위에서 검사됨)
+        if not report.is_read:
+            report.is_read = True
+            db.add(report)
+            db.commit()
+        result = _serialize(report, session, subjective=_subjective_for_report(report, db))
+        result = without_raw_material(result)
+        result["content"].pop("class_report", None)  # SDD-237: 회원 경로 방어
+        result.update(pdf_url=None, report_email=None, generation_error=None)
+        return result
+    if viewer is None:
+        raise HTTPException(404, detail="리포트를 찾을 수 없습니다")
     if not _can_access_report(user_id, session, db):
         raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
     viewer = db.query(User).filter(User.id == _to_uuid(user_id)).first()
@@ -771,23 +874,26 @@ def get_report(report_id: str, user_id: str, db: DBSession) -> dict:
     result = _serialize(
         report,
         session,
-        participant.report_email if participant else None,
+        _effective_report_email(participant, db),
         subjective=_subjective_for_report(report, db),
     )
     # SDD-211(R6-X1): 회원이 승인 전 리포트를 열면 마스킹 200 을 주고, 읽음 처리하지 않는다
     #   (승인 후에 NEW 가 정상 표시되도록). 소유자 검사(RPT-IDOR-001)가 위에서 먼저 끝났다.
+    if viewer and viewer.role == "client":
+        result["content"].pop("class_report", None)  # SDD-237: 회원 경로 방어
     if viewer and viewer.role == "client" and _is_unapproved(report):
-        return _mask_unapproved(result, report)
+        return _mask_unapproved(result, report, session)
     # SDD-087: counselor 리포트 상세에는 같은 세션 client 리포트들의 코멘트를 파생 표시한다
     # (원본은 client 리포트에만 저장 — 저장하지 않고 조회 시 주입).
     if report.type == "counselor":
         result["content"]["client_comments"] = _collect_client_comments(report.session_id, db)
     # 신규 리포트 배지용: 최초 열람 시 is_read=true 마킹
-    if not report.is_read:
+    if not report.is_read and viewer and viewer.role != "org_admin" and (viewer.role=="client" or viewer.id==session.host_id):
         report.is_read = True
         db.add(report)
         db.commit()
-    return result
+    from app.services.class_access_service import project_report_for_viewer
+    return project_report_for_viewer(result,viewer,session)
 
 
 def _collect_client_comments(session_id, db: DBSession) -> list[dict]:
@@ -846,37 +952,116 @@ def _collect_client_comments(session_id, db: DBSession) -> list[dict]:
 
 
 def _can_access_report(user_id: str, session, db: DBSession) -> bool:
-    """사용자가 리포트 세션에 접근 가능한지 (본인 세션 host / 기관 관리자 / 참여 내담자)."""
+    """D-05/D-28: 읽기와 수정 권한을 분리한다."""
+    from app.services.class_access_service import admin_can_read_meditation_report, can_read_team_material
     uid = _to_uuid(user_id)
-    if session and session.host_id == uid:
-        return True
     user = db.query(User).filter(User.id == uid).first()
-    if user and user.role == "org_admin" and user.org_id and session:
-        host = db.query(User).filter(User.id == session.host_id).first()
-        return bool(host and host.org_id == user.org_id)
-    # 내담자(client): 자신이 참여한 세션의 리포트는 열람 가능
-    if session:
-        is_participant = (
-            db.query(SessionParticipant)
-            .filter(
-                SessionParticipant.session_id == session.id,
-                SessionParticipant.user_id == uid,
-            )
-            .first()
-        )
-        if is_participant is not None:
-            return True
-    return False
+    if user is None or user.status != "active" or session is None:
+        return False
+    if user.role == "org_admin":
+        return admin_can_read_meditation_report(db, user, session)
+    if session.host_id == uid:
+        return True
+    if can_read_team_material(db, uid, session):
+        return True
+    return db.query(SessionParticipant).filter(
+        SessionParticipant.session_id == session.id, SessionParticipant.user_id == uid,
+    ).first() is not None
+
+
+def _can_edit_report(user_id: str, session, db: DBSession) -> bool:
+    uid = _to_uuid(user_id)
+    user = db.query(User).filter(User.id == uid).first()
+    allowed=bool(session and user and user.status=="active" and user.role=="counselor" and session.host_id==uid)
+    if allowed and session.class_id:
+        from app.models.class_program import Class
+        from app.services.class_instructor_service import validate_instructor
+        cls=db.query(Class).filter_by(id=session.class_id).first()
+        if cls and cls.recurrence_rule:
+            try:
+                validate_instructor(db,cls,uid,session.id)
+            except HTTPException:
+                return False
+    return allowed
+
+
+def report_domain(session) -> str:
+    """SDD-218 D-37: 자동 승인 정책이 갈라지는 지점.
+
+    클래스 회차는 "meditation", 그 밖은 "counseling" 으로 본다.
+    이번 단계에서는 두 영역의 동작이 같다. 영역을 나누는 분기점만 만들어 두고
+    상담 쪽 정책 변경은 Phase 6 에서 다룬다. 지금 동작을 바꾸면 안 된다.
+    """
+    if session is not None and getattr(session, "class_id", None):
+        return "meditation"
+    return "counseling"
+
+
+def auto_approve_enabled(host, session) -> bool:
+    """진행자 설정에 따른 자동 승인 여부. 영역별로 분리 가능한 형태로 둔다.
+
+    주의: 현재 두 영역의 판정은 동일하다. 한쪽만 바꾸면 D-37 범위를 넘는다.
+    """
+    if not (host and host.role == "counselor" and host.auto_approve_report):
+        return False
+    domain = report_domain(session)
+    if domain == "meditation":
+        return True
+    return True
+
+
+def _skip_auto_approve_no_data(session, report: Report) -> bool:
+    """SDD-237: 명상 회차에서 측정 자료가 없는 회원 리포트는 자동 승인하지 않는다(수동 승인은 가능).
+
+    상담 도메인은 종전 동작을 유지한다. 품질 경고(degraded/invalid/lost)까지 넓히는 것은 자동 승인 정책 본체 SDD 범위다.
+    리포트 반영을 제외한 참가자의 안내(stub)는 측정 자료 유무와 무관하므로 대상이 아니다.
+    """
+    if report_domain(session) != "meditation":
+        return False
+    content = report.content if isinstance(report.content, dict) else {}
+    eeg = content.get("eeg")
+    if isinstance(eeg, dict) and eeg.get("excluded"):
+        return False
+    status = eeg.get("status") if isinstance(eeg, dict) else None
+    return status in (None, "not_measured")
+
+
+def can_approve_report(db: DBSession, user, session) -> bool:
+    """SDD-218 D-36: 승인 권한만 주강사 대행까지 넓힌다.
+
+    편집 권한(`_can_edit_report`)은 그대로 둔다. 승인과 편집은 다른 권한이다.
+    - 해당 회차 진행 지도사: 기존 의미 그대로 허용
+    - 현재 주강사(class_role == "lead"): 타인 진행 회차를 대행 승인
+    - 보조 강사·센터 관리자·비활성·제거된 강사·타 기관: 불허
+
+    대행 승인이어도 `approved_by_user_id` 에는 실제 승인자(주강사 본인)를 쓴다.
+    """
+    if user is None or session is None or getattr(user, "status", None) != "active":
+        return False
+    if _can_edit_report(str(user.id), session, db):
+        return True
+    if not session.class_id:
+        return False
+
+    from app.models.class_program import Class
+    from app.services.class_access_service import class_role
+
+    cls = db.query(Class).filter(Class.id == session.class_id).first()
+    if cls is None:
+        return False
+    # class_role 은 활성 멤버십·활성 강사 등록을 모두 검사하므로
+    # 비활성·제거·타 기관·교체된 구 주강사는 여기서 걸러진다.
+    return class_role(db, user, cls) == "lead"
 
 
 def require_report_host(report_id: str, host_id: str, db: DBSession) -> None:
-    """리포트가 현재 상담사의 세션에 속하는지 확인한다. (org_admin은 소속 기관 세션 허용)"""
+    """리포트 쓰기는 현재 진행 지도사만 허용한다."""
     rid = _to_uuid(report_id)
     report = db.query(Report).filter(Report.id == rid).first()
     if not report:
         raise HTTPException(status_code=404, detail="리포트를 찾을 수 없습니다")
     session = db.query(Session).filter(Session.id == report.session_id).first()
-    if not _can_access_report(host_id, session, db):
+    if not _can_edit_report(host_id, session, db):
         raise HTTPException(status_code=403, detail="host 상담사만 가능합니다")
 
 
@@ -886,7 +1071,7 @@ def update_report(report_id: str, host_id: str, payload, db: DBSession) -> dict:
     if not report:
         raise HTTPException(status_code=404, detail="리포트를 찾을 수 없습니다")
     session = db.query(Session).filter(Session.id == report.session_id).first()
-    if not _can_access_report(host_id, session, db):
+    if not _can_edit_report(host_id, session, db):
         raise HTTPException(status_code=403, detail="host 상담사만 수정 가능합니다")
 
     if payload.content is not None:
@@ -914,7 +1099,7 @@ def _enqueue_client_email_on_approval(report: Report, db: DBSession) -> None:
         )
         .first()
     )
-    if participant is None or not participant.report_email:
+    if not fill_member_report_email(participant, db):
         return
     if participant.report_email_sent_at is not None:
         return
@@ -936,7 +1121,21 @@ def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
     if not report:
         raise HTTPException(status_code=404, detail="리포트를 찾을 수 없습니다")
     session = db.query(Session).filter(Session.id == report.session_id).first()
-    if not session or session.host_id != _to_uuid(host_id):
+    if session and session.class_id:
+        from app.models.class_program import Class, ClassInstructor
+        from app.services.class_write_service import lock_users
+        lock_users(db,[r[0] for r in db.query(ClassInstructor.user_id).filter_by(class_id=session.class_id).all()])
+        db.query(Class).filter_by(id=session.class_id).populate_existing().with_for_update().one()
+        session=db.query(Session).filter_by(id=session.id).populate_existing().with_for_update().one()
+        report=db.query(Report).filter_by(id=rid).populate_existing().with_for_update().one()
+    # SDD-218 D-36: 클래스 회차는 현재 주강사의 대행 승인을 허용한다.
+    # 클래스에 속하지 않은 상담 세션은 기존 판정(_can_edit_report)을 그대로 쓴다.
+    if session is not None and session.class_id:
+        actor = db.query(User).filter(User.id == _to_uuid(host_id)).first()
+        approved = can_approve_report(db, actor, session)
+    else:
+        approved = _can_edit_report(host_id, session, db)
+    if not approved:
         raise HTTPException(status_code=403, detail="host 상담사만 승인 가능합니다")
 
     # SDD-027: 승인 게이트 = pending_review → completed. 이미 completed 면 멱등 처리.
@@ -947,6 +1146,8 @@ def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
     already_completed = report.status == "completed"
     report.status = "completed"
     report.sent_at = report.sent_at or _now()
+    report.approved_at = report.approved_at or _now()
+    report.approved_by_user_id = report.approved_by_user_id or _to_uuid(host_id)
     content = dict(report.content or {})
     content["approved"] = True
     report.content = content
@@ -968,7 +1169,7 @@ def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
                         legacy={"report_id": str(report.id), "session_id": str(report.session_id)},
                     ),
                 },
-                db,
+                db, commit=False,
             )
         except Exception:  # noqa: BLE001
             # MB-ERR-005: 승인 완료 알림 발화 실패를 삼키지 않고 로그로 남긴다.
@@ -1030,7 +1231,12 @@ def approve_all_reports(host_id: str, db: DBSession) -> dict:
     pending = (
         db.query(Report)
         .join(Session, Session.id == Report.session_id)
-        .filter(Session.host_id == hid, Report.status == "pending_review")
+        .filter(
+            Session.host_id == hid,
+            Report.status == "pending_review",
+            # SDD-237: 명상 클래스 회차의 상담사용 리포트는 승인 대상이 아니다(상담 도메인은 종전대로 포함).
+            ~and_(Report.type == "counselor", Session.class_id.isnot(None)),
+        )
         .all()
     )
     for report in pending:

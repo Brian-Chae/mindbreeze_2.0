@@ -85,7 +85,7 @@ EMPTY_CONTENT: JsonDict = {
     "markers": [],
 }
 ALL_KEYS: frozenset[str] = frozenset(
-    set(NULL_KEYS) | set(PRESERVED_KEYS) | set(META_KEYS) | {"content", "in_review"}
+    set(NULL_KEYS) | set(PRESERVED_KEYS) | set(META_KEYS) | {"content", "in_review", "in_review_delayed"}
 )
 
 # 키별 허용 타입 태그 (구 앱 호환: 마스킹 전후 타입 불변)
@@ -118,6 +118,8 @@ ALLOWED_TAGS: dict[str, set[str]] = {
     "is_guest": {"bool", "null"},
     "content": {"object"},
     "in_review": {"bool"},
+    # SDD-212: 생성 지연 안내 가산 필드(비내용 메타 — 마스킹 대상 아님)
+    "in_review_delayed": {"bool"},
 }
 
 # sentinel 접두 — 승인 전 영구 비공개 / 승인 후 공개 / 처음부터 공개
@@ -212,6 +214,9 @@ def _make_org_admin(org_code: str) -> JsonDict:
             org_id=org.id,
         )
         db.add(user)
+        db.flush()
+        from app.services.membership_service import add_membership
+        add_membership(db, user, org.id, status_="active", role="org_admin")
         db.commit()
         return {
             "id": str(user.id),
@@ -890,7 +895,7 @@ def test_RX13_report_status_와_WS_report_progress_상태문자열_Phase0_불변
     후속(Phase 5)에서 회원 컨텍스트를 분리하면 이 테스트를 개정한다.
     """
     from app.services import report_progress_service as rps
-    from app.ws import record_namespace
+    from app.ws import sync_emit
 
     env = _scenario(client, ("pending_review",))
     sid = env["sids"]["pending_review"]
@@ -901,10 +906,11 @@ def test_RX13_report_status_와_WS_report_progress_상태문자열_Phase0_불변
 
     captured: list[JsonDict] = []
 
-    async def fake_broadcast(session_id: str, payload: JsonDict) -> None:
+    def fake_sync_emit(session_id: str, payload: JsonDict) -> bool:
         captured.append(payload)
+        return True
 
-    monkeypatch.setattr(record_namespace, "broadcast_report_progress", fake_broadcast)
+    monkeypatch.setattr(sync_emit, "emit_report_progress_sync", fake_sync_emit)
     db = _db()
     try:
         payload = rps.emit_report_progress(sid, db)
@@ -986,7 +992,7 @@ def _staff_unmasked_problems(rows: list[JsonDict], env: JsonDict) -> list[str]:
     return problems
 
 
-def test_RX15_staff_호스트_org_admin_목록_상세_마스킹_없음_회귀고정(client):
+def test_RX15_호스트_본문과_D28_관리자_상담_비공개(client):
     org_code = create_test_org()
     host = _make_host(org_code=org_code)
     org_admin = _make_org_admin(org_code)
@@ -999,7 +1005,14 @@ def test_RX15_staff_호스트_org_admin_목록_상세_마스킹_없음_회귀고
         res = client.get("/api/v1/reports", headers=viewer["auth"])
         assert res.status_code == 200, res.text
         rows = res.json()["reports"]
-        problems += [f"[{label} 목록] {p}" for p in _staff_unmasked_problems(rows, env)]
+        if label == "호스트":
+            problems += [f"[{label} 목록] {p}" for p in _staff_unmasked_problems(rows, env)]
+        else:
+            # 이 fixture는 clinical 상담이다. D-28 관리자에게 본문 목록을 주지 않는다.
+            assert rows == []
+            for rid in env["ids"].values():
+                assert client.get(f"/api/v1/reports/{rid}", headers=viewer["auth"]).status_code == 403
+            continue
         if not any(r["session_id"] == bare_sid and r["id"] is None for r in rows):
             problems.append(f"[{label} 목록] 합성(미생성) 행이 사라짐")
 

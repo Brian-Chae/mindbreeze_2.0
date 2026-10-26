@@ -1,3 +1,4 @@
+import { buttonClass } from '../../components/ui';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDialogA11y } from '../../hooks/useDialogA11y';
 import { useEnterClass } from '../../hooks/useEnterClass';
@@ -209,7 +210,7 @@ export default function AiAgentPage({ embedded = false }: { embedded?: boolean }
           <div className="flex gap-2">
             <button disabled={busy} onClick={() => { setDeclined(true); setMessages([]); }} className="rounded-xl border px-4 py-3">동의하지 않음</button>
             <button disabled={busy || !consent} onClick={() => void perform(async () => { const value = await agentApi.agree(); setConsent(value); setDeclined(false); })}
-              className="flex-1 rounded-xl bg-[#5F0080] px-4 py-3 font-semibold text-white disabled:opacity-40">동의하고 시작하기</button>
+              className={buttonClass({ className: 'flex-1' })}>동의하고 시작하기</button>
           </div>
         </section>
       ) : <>
@@ -237,7 +238,7 @@ export default function AiAgentPage({ embedded = false }: { embedded?: boolean }
         {replyFailed && !awaitingReply && <div role="alert" className="mx-4 mb-2 shrink-0 rounded-2xl bg-[#F5EDFC] px-4 py-3 text-sm text-[#3D3D3D] md:mx-6">
           <p>루시가 지금 답변을 만들지 못했어요. 잠시 후 다시 시도해 주세요.</p>
           <button disabled={busy} onClick={() => sendContent(replyFailed.content, replyFailed.tempId)}
-            className="mt-2 rounded-xl bg-[#5F0080] px-4 py-2 font-semibold text-white disabled:opacity-40">다시 시도</button>
+            className={buttonClass({ size: 'sm', className: 'mt-2' })}>다시 시도</button>
         </div>}
         <AgentInputBar ariaLabel="루시에게 보낼 메시지" placeholder="메시지를 입력하세요" value={text} onChange={setText} disabled={busy} busy={busy}
           onSubmit={() => {
@@ -269,7 +270,7 @@ export default function AiAgentPage({ embedded = false }: { embedded?: boolean }
           {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
           <div className="mt-4 flex justify-end gap-2">
             <button type="button" disabled={busy} onClick={() => setChangeRequest(null)} className="rounded-xl border px-4 py-2">취소</button>
-            <button disabled={busy || !reason.trim()} className="rounded-xl bg-[#5F0080] px-4 py-2 text-white disabled:opacity-40">문의 보내기</button>
+            <button disabled={busy || !reason.trim()} className={buttonClass({ size: 'sm' })}>문의 보내기</button>
           </div>
         </form>
       </div>}

@@ -1,0 +1,50 @@
+{
+  "oracle": "frontend/src/lib/eeg (수정 없이 실행)",
+  "filter_mode": "legacy_fallback",
+  "input": {
+    "stream_sha256": "99a9c75f850a7edf78d37230fcaf7140034d2171e8e2fbab5c83118ab6b55e27",
+    "schedule_sha256": "6e82d4ba705527abe080371de5618ebb0c7aac67f2292f29747891a05ac0cfa2"
+  },
+  "meta": {
+    "filter_mode": "legacy_fallback",
+    "fallback_warnings": 3542,
+    "packets": 4500,
+    "eeg_emissions": 140,
+    "ppg_emissions": 1491,
+    "base_ms": 1760000000000
+  },
+  "stages": {
+    "decoded": {
+      "count": 4500,
+      "sha256": "36a8c6fb068a21107104a382b8fa6d98e97bdb2ecb2a6b1b0db076ce1a478fe6"
+    },
+    "clock": {
+      "count": 4500,
+      "sha256": "5dccd5f3ec2941d5bd10a8f0397c6f1b6f56f599ba9e2313d6da44879522e741"
+    },
+    "eeg_psd_bandpower": {
+      "count": 140,
+      "sha256": "bb6aab31a93e3d9410039ed1b70338d34515d697bc1fd7076f1e57c18797c414"
+    },
+    "eeg_raw_indices": {
+      "count": 140,
+      "sha256": "26e24e15a61239275533e22e61988a5fe52a6851dacd354a4d606fa066d71940"
+    },
+    "ppg_peaks_rr": {
+      "count": 1491,
+      "sha256": "b79c7295b63deb97a17327bdbf54a0dd1cb8b1356fd6d914a8caaed9a0968b7c"
+    },
+    "hrv_sdnn_respiration": {
+      "count": 1491,
+      "sha256": "ccfe7e5fae4a44447c9906ac8a709f87aaf3445a18d9a5a135532c7d565bf3be"
+    },
+    "display": {
+      "count": 140,
+      "sha256": "e6fd3e5c77cc81f3358cc0db10d9cedffae6c3ec23f8e72f86a84bbabe3dafb4"
+    },
+    "acc": {
+      "count": 1491,
+      "sha256": "a026c952b07d0321f7d16bdb9421a149a57e352b8072863bcd0dd4e35461c799"
+    }
+  }
+}

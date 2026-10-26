@@ -36,11 +36,23 @@ function viewportWidth(): number {
 }
 
 function tileStatus(p: HostParticipant, netBad: boolean, warn: boolean): { tone: string | undefined; node: ReactNode } {
+  if (p.presenceState !== 'connected') return { tone: undefined, node: (<><i className="hp-dot" data-state="off" />{presenceLabel(p)}</>) };
   if (p.speaking) return { tone: 'speak', node: (<><i className="hp-dot" data-state="on" />말하는 중</>) };
   if (p.hand) return { tone: 'hand', node: (<><Hand aria-hidden="true" strokeWidth={2} />손듦 · 대기 중</>) };
   if (netBad) return { tone: undefined, node: (<><Pause aria-hidden="true" strokeWidth={2} />수신 일시 중단</>) };
   if (p.lowBattery) return { tone: 'caution', node: (<><BatteryLow aria-hidden="true" strokeWidth={2} />배터리 낮음</>) };
   return { tone: warn ? 'warn' : undefined, node: (<><i className="hp-dot" data-state="on" />연결됨{warn ? ' · 살펴보기' : ''}</>) };
+}
+
+function checkinLabel(p: HostParticipant): string {
+  if (p.checkinState === 'completed') return '체크인 완료';
+  if (p.checkinState === 'not_completed') return '체크인 전';
+  return '체크인 확인 중';
+}
+function presenceLabel(p: HostParticipant): string {
+  if (p.presenceState === 'connected') return '참여 중';
+  if (p.enteredAt === null) return '미입장';
+  return p.presenceState === 'disconnected' ? '현재 미접속' : '접속 확인 중';
 }
 
 function HostTile({ p, metric, allOff, netBad, pressed, onSelect }: {
@@ -51,11 +63,12 @@ function HostTile({ p, metric, allOff, netBad, pressed, onSelect }: {
 
   if (allOff) {
     return (
-      <button type="button" className="hp-tile" data-pz="tile" data-away="true" data-band="off" data-participant-id={p.id}
-        aria-pressed={pressed} aria-label={`${p.name} 체크인 ${p.checkin[0]?.[1] ?? '전'}`} onClick={() => onSelect(p.id)}>
+      <button type="button" className="hp-tile" data-pz="tile" data-away="true" data-band="off" data-hand={p.hand ? 'true' : undefined} data-speaking={p.speaking ? 'true' : undefined} data-participant-id={p.id}
+        aria-pressed={pressed} aria-label={`${p.name} ${checkinLabel(p)} ${presenceLabel(p)}${p.hand ? ", 손들었어요" : ""}${p.speaking ? ", 말하는 중" : ""}`} onClick={() => onSelect(p.id)}>
+        {badge ? <span className="hp-tile__badge" data-kind={badge} aria-hidden="true">{badge === 'speak' ? <Mic strokeWidth={2} /> : <Hand strokeWidth={2} />}</span> : null}
         <div className="hp-avring"><span className="hp-avt">{p.name.slice(0, 1)}</span></div>
         <span className="hp-tile__nm">{p.name}</span>
-        <span className="hp-tile__st"><i className="hp-dot" data-state="off" />{p.checkin[0]?.[1] ?? '체크인 전'}</span>
+        <span className="hp-tile__st"><i className="hp-dot" data-state="off" />{p.speaking ? '말하는 중' : p.hand ? '손듦 · 대기 중' : `${checkinLabel(p)} · ${presenceLabel(p)}`}</span>
       </button>
     );
   }
@@ -73,7 +86,7 @@ function HostTile({ p, metric, allOff, netBad, pressed, onSelect }: {
           <span className="hp-tile__badge" data-kind={badge} aria-hidden="true">{badge === 'speak' ? <Mic strokeWidth={2} /> : <Hand strokeWidth={2} />}</span>
         ) : null}
         <StatusRing variant="mini" fraction={value === null ? 0 : metricFraction(metric, value)} tone="live" colorVar={metric.colorVar} ariaLabel={`${metric.label} ${value ?? '측정 중'}`}>
-          <b className="hp-ring-num">{value === null ? '—' : value}</b>
+          <b className="hp-ring-num">{value === null ? (metric.key === 'respiration' || metric.key === 'hrv' ? '측정 중' : '—') : value}</b>
           <small className="hp-ring-label">{metric.short}</small>
         </StatusRing>
         <span className="hp-tile__nm">{p.name}</span>
@@ -86,17 +99,19 @@ function HostTile({ p, metric, allOff, netBad, pressed, onSelect }: {
   const lost = p.band === 'lost';
   const ringTone = p.band === 'off' ? 'idle' : 'lost';
   const nb = leadoff ? '접촉' : lost ? '끊김' : '미착용';
-  const statusText = leadoff ? '접촉 불량 · 확인' : lost ? `연결 끊김 · ${p.agoLabel ?? '방금 전'}` : '밴드 없이 참여';
+  const statusText = p.presenceState !== 'connected' ? presenceLabel(p) : leadoff ? '접촉 불량 · 확인' : lost ? `연결 끊김 · ${p.agoLabel ?? '방금 전'}` : '밴드 없이 참여';
   const label = leadoff ? `${p.name} 접촉 불량` : lost ? `${p.name} 연결 끊김` : `${p.name} 밴드 미착용`;
   return (
     <button type="button" className="hp-tile" data-pz="tile" data-band={p.band} data-participant-id={p.id}
-      data-away={leadoff ? undefined : 'true'} aria-pressed={pressed} aria-label={label} onClick={() => onSelect(p.id)}>
+      data-hand={p.hand ? 'true' : undefined} data-speaking={p.speaking ? 'true' : undefined}
+      data-away={leadoff ? undefined : 'true'} aria-pressed={pressed} aria-label={`${label}${p.hand ? ", 손들었어요" : ""}${p.speaking ? ", 말하는 중" : ""}`} onClick={() => onSelect(p.id)}>
+      {badge ? <span className="hp-tile__badge" data-kind={badge} aria-hidden="true">{badge === 'speak' ? <Mic strokeWidth={2} /> : <Hand strokeWidth={2} />}</span> : null}
       <StatusRing variant="mini" fraction={null} tone={ringTone} ariaLabel={label}>
         <span className="hp-ring-nb" data-warn={leadoff || lost ? 'true' : undefined}>{nb}</span>
       </StatusRing>
       <span className="hp-tile__nm">{p.name}</span>
       <span className="hp-tile__st" data-tone={leadoff ? 'warn' : undefined}>
-        <i className="hp-dot" data-state={DOT_STATE[p.band]} />{statusText}
+        <i className="hp-dot" data-state={DOT_STATE[p.band]} />{p.speaking ? '말하는 중' : p.hand ? '손듦 · 대기 중' : statusText}
       </span>
     </button>
   );
@@ -124,7 +139,7 @@ function HostTable({ participants, metric, selectedId, onSelect }: {
               </td>
               {PLAYER_METRICS.map((m) => {
                 const v = hostValueOf(p, m.key);
-                return <td key={m.key} data-sel={m.key === metric.key ? 'true' : undefined} data-mu={v === null ? 'true' : undefined}>{v === null ? '—' : v}</td>;
+                return <td key={m.key} data-sel={m.key === metric.key ? 'true' : undefined} data-mu={v === null ? 'true' : undefined}>{v === null ? (m.key === 'respiration' || m.key === 'hrv' ? '측정 중' : '—') : v}</td>;
               })}
             </tr>
           ))}

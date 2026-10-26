@@ -21,9 +21,9 @@ export function HostMinis({ participant, selected }: { participant: HostParticip
               fraction={live ? metricFraction(m, value) : null}
               tone={live ? 'live' : tone}
               colorVar={m.colorVar}
-              ariaLabel={`${m.label} ${live ? value : '값 없음'}`}
+              ariaLabel={`${m.label} ${live ? value : participant.band === 'on' && (m.key === 'respiration' || m.key === 'hrv') ? '측정 중' : '값 없음'}`}
             >
-              <b className="hp-ring-num" data-empty={live ? undefined : 'true'}>{live ? value : '—'}</b>
+              <b className="hp-ring-num" data-empty={live ? undefined : 'true'}>{live ? value : participant.band === 'on' && (m.key === 'respiration' || m.key === 'hrv') ? '측정 중' : '—'}</b>
             </StatusRing>
             <span className="hp-mini__ml">{m.short}</span>
           </div>

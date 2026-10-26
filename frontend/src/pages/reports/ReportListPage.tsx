@@ -1,3 +1,7 @@
+import { SettingsSwitch } from '../../components/settings/settings-switch';
+import { SessionNotePromptToggle } from '../../components/settings/session-note-prompt-toggle';
+import { useAuthStore } from '../../stores/authStore';
+import { useMobileSwipeProtection } from '../../hooks/use-mobile-swipe-protection';
 // AI 리포트 목록 페이지 — 테이블 + 검색/필터/정렬/세션 그룹핑 (SDD-053)
 
 import { useEffect, useMemo, useState } from 'react';
@@ -17,6 +21,7 @@ import {
 } from '../../lib/api/reports';
 import BulkApproveModal from '../../components/reports/BulkApproveModal';
 import { useReportStore } from '../../stores/reportStore';
+import { buttonClass, tabClass, fieldClass } from '../../components/ui';
 
 type StatusFilter = 'all' | 'pending' | 'approved' | 'failed';
 type ReportTypeFilter = 'all' | 'counselor' | 'client';
@@ -77,7 +82,7 @@ function TypeBadge({ type }: { type: string }) {
   const isCounselor = type === 'counselor';
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold font-mono ${
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12px] mobile:text-mb-caption font-bold font-mono ${
         isCounselor ? 'bg-[#F5EDFC] text-[#5F0080]' : 'bg-[#E6F4EA] text-[#2E7D32]'
       }`}
     >
@@ -89,12 +94,12 @@ function TypeBadge({ type }: { type: string }) {
 /** SDD-065 — 회원(보라) / 비회원(회색). 미생성 합성 항목(is_guest=null)은 '—'. */
 function MembershipBadge({ isGuest }: { isGuest: boolean | null | undefined }) {
   if (isGuest === null || isGuest === undefined) {
-    return <span className="text-[13px] text-[#9B9B9B]">—</span>;
+    return <span className="text-[13px] mobile:text-mb-caption text-[#9B9B9B]">—</span>;
   }
   const guest = isGuest === true;
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold font-mono ${
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12px] mobile:text-mb-caption font-bold font-mono ${
         guest ? 'bg-[#F0F0F0] text-[#6F6F6F]' : 'bg-[#F5EDFC] text-[#5F0080]'
       }`}
     >
@@ -188,9 +193,12 @@ export default function ReportListPage() {
   const [sessionFilter, setSessionFilter] = useState('');
 
   // SDD-049 — 자동 승인 토글
+  const role = useAuthStore(s => s.user?.role);
+  const [operationsOpen, setOperationsOpen] = useState(() => searchParams.get('settings') === 'operations');
   const [autoApprove, setAutoApproveState] = useState(false);
   const [autoApproveLoading, setAutoApproveLoading] = useState(true);
   const [autoApproveSaving, setAutoApproveSaving] = useState(false);
+  useMobileSwipeProtection(() => autoApproveSaving);
   const [autoApproveError, setAutoApproveError] = useState<string | null>(null);
   // 일괄 승인 (검토중 리포트 코멘트 없이 일괄 발송)
   const [bulkApproveOpen, setBulkApproveOpen] = useState(false);
@@ -248,13 +256,14 @@ export default function ReportListPage() {
   }, [page, reloadKey, hasActiveFilter]);
 
   useEffect(() => {
+    if (role !== 'counselor') { setAutoApproveLoading(false); return; }
     getAutoApprove()
       .then((r) => setAutoApproveState(r.enabled))
       .catch((e) =>
         setAutoApproveError(e instanceof Error ? e.message : '자동 승인 설정 조회 실패'),
       )
       .finally(() => setAutoApproveLoading(false));
-  }, []);
+  }, [role]);
 
   const handleToggleAutoApprove = async () => {
     if (autoApproveLoading || autoApproveSaving) return;
@@ -319,29 +328,13 @@ export default function ReportListPage() {
   const autoApproveToggle = (
     <div className="inline-flex items-center gap-2 p-2.5 -m-2.5">
       <span
-        className={`text-[13px] font-semibold ${
+        className={`text-[13px] mobile:text-mb-label font-semibold ${
           autoApprove ? 'text-[#5F0080]' : 'text-[#6F6F6F]'
         }`}
       >
         {autoApproveLoading ? '설정 로딩…' : autoApprove ? '자동 승인' : '수동 승인'}
       </span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={autoApprove}
-        aria-label={autoApprove ? '자동 승인' : '수동 승인'}
-        disabled={toggleDisabled}
-        onClick={() => void handleToggleAutoApprove()}
-        className={`relative w-11 h-6 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-          autoApprove ? 'bg-[#5F0080]' : 'bg-[#D4D4D4]'
-        }`}
-      >
-        <span
-          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
-            autoApprove ? 'left-[22px]' : 'left-0.5'
-          }`}
-        />
-      </button>
+      <SettingsSwitch checked={autoApprove} label="자동 승인" disabled={toggleDisabled} onChange={() => void handleToggleAutoApprove()} />
     </div>
   );
 
@@ -349,7 +342,7 @@ export default function ReportListPage() {
     <button
       type="button"
       onClick={() => setSampleOpen(true)}
-      className="inline-flex items-center h-9 px-4 rounded-full text-[13px] font-semibold text-[#5F0080] bg-[#F5EDFC] border border-[#E8D9F5] hover:bg-[#EFE3FA] transition-colors"
+      className="mobile:min-h-11 mobile:min-w-11 inline-flex items-center h-9 px-4 rounded-full text-[13px] mobile:text-mb-label font-semibold text-[#5F0080] bg-[#F5EDFC] border border-[#E8D9F5] hover:bg-[#EFE3FA] transition-colors"
     >
       샘플 보기
     </button>
@@ -359,7 +352,7 @@ export default function ReportListPage() {
     <button
       type="button"
       onClick={() => setBulkApproveOpen(true)}
-      className="inline-flex items-center h-9 px-4 rounded-full text-[13px] font-semibold text-white bg-[#5F0080] hover:bg-[#4A0066] transition-colors"
+      data-header-action="primary" className={buttonClass({ variant: 'primary', size: 'sm' })}
     >
       일괄 승인 ({pendingCount})
     </button>
@@ -367,14 +360,13 @@ export default function ReportListPage() {
 
   const rightSlot = (
     <div className="inline-flex items-center gap-3">
-      {autoApproveToggle}
+      <button type="button" onClick={() => setOperationsOpen(value => !value)} aria-expanded={operationsOpen} aria-controls="report-operations-settings" className="inline-flex min-h-11 items-center rounded-full border border-[#E8D9F5] bg-[#F5EDFC] px-4 text-[14px] font-semibold text-[#5F0080]">운영 설정</button>
       {bulkApproveButton}
       {sampleLink}
     </div>
   );
 
-  const selectClass =
-    'h-10 rounded-xl border border-[#EFEFEF] px-3 text-[13px] text-[#1F1F1F] bg-white focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20';
+  const selectClass = fieldClass('select');
 
   const openReportModal = (id: string) => setSelectedReportId(id);
 
@@ -410,7 +402,7 @@ export default function ReportListPage() {
       <td className="px-5 py-3.5">
         <div className="flex items-center gap-1.5">
           {!r.is_read && (
-            <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[12px] font-bold text-white">NEW</span>
+            <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[12px] mobile:text-mb-caption font-bold text-white">NEW</span>
           )}
           <span className="font-medium text-[#1F1F1F] truncate max-w-[200px]">{reportTitle(r)}</span>
         </div>
@@ -418,16 +410,16 @@ export default function ReportListPage() {
       <td className="px-5 py-3.5">
         <div className="font-medium text-[#1F1F1F] truncate max-w-[120px]">{participantDisplayName(r)}</div>
       </td>
-      <td className="px-5 py-3.5 text-[13px] text-[#6F6F6F] whitespace-nowrap">{genderLabel(r.gender)}</td>
-      <td className="px-5 py-3.5 text-[12px] text-[#9B9B9B] font-mono whitespace-nowrap">{formatBirthDate(r.birth_date)}</td>
+      <td className="px-5 py-3.5 text-[13px] mobile:text-mb-caption text-[#6F6F6F] whitespace-nowrap">{genderLabel(r.gender)}</td>
+      <td className="px-5 py-3.5 text-[12px] mobile:text-mb-caption text-[#9B9B9B] font-mono whitespace-nowrap">{formatBirthDate(r.birth_date)}</td>
       <td className="px-5 py-3.5">
         <MembershipBadge isGuest={r.is_guest} />
       </td>
       <td className="px-5 py-3.5">
         <TypeBadge type={r.type} />
       </td>
-      <td className="px-5 py-3.5 text-[13px] text-[#6F6F6F] whitespace-nowrap">{sessionTypeLabel(r.session_type)}</td>
-      <td className="px-5 py-3.5 text-[12px] text-[#9B9B9B] font-mono whitespace-nowrap">{formatDate(reportDateIso(r))}</td>
+      <td className="px-5 py-3.5 text-[13px] mobile:text-mb-caption text-[#6F6F6F] whitespace-nowrap">{sessionTypeLabel(r.session_type)}</td>
+      <td className="px-5 py-3.5 text-[12px] mobile:text-mb-caption text-[#9B9B9B] font-mono whitespace-nowrap">{formatDate(reportDateIso(r))}</td>
       <td className="px-5 py-3.5">
         <ReportStatusChip status={r.status} sentAt={r.sent_at} />
       </td>
@@ -447,12 +439,12 @@ export default function ReportListPage() {
               e.stopPropagation();
               openIfPresent(r);
             }}
-            className="text-[13px] font-semibold text-[#5F0080] hover:underline"
+            className="mobile:min-h-11 mobile:min-w-11 text-[13px] mobile:text-mb-label font-semibold text-[#5F0080] hover:underline"
           >
             보기
           </button>
         ) : (
-          <span className="text-[13px] text-[#BDBDBD]">—</span>
+          <span className="text-[13px] mobile:text-mb-caption text-[#BDBDBD]">—</span>
         )}
       </td>
     </tr>
@@ -464,7 +456,7 @@ export default function ReportListPage() {
       key={reportKey(r)}
       type="button"
       onClick={r.id ? () => openIfPresent(r) : undefined}
-      className={`block w-full text-left bg-white border border-[#EFEFEF] rounded-2xl p-4 transition-all ${
+      className={`mobile:min-h-11 mobile:min-w-11 block w-full text-left bg-white border border-[#EFEFEF] rounded-2xl p-4 transition-all ${
         r.id ? 'hover:border-[#5F0080]/30 hover:shadow-sm' : 'bg-[#FDFDFD]'
       }`}
     >
@@ -477,15 +469,15 @@ export default function ReportListPage() {
       </div>
       <div className="flex items-center gap-1.5 mb-1">
         {!r.is_read && (
-          <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[12px] font-bold text-white">NEW</span>
+          <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[12px] mobile:text-mb-caption font-bold text-white">NEW</span>
         )}
-        <span className="font-bold text-[15px] text-[#1F1F1F] truncate">{reportTitle(r)}</span>
+        <span className="font-bold text-[15px] mobile:text-mb-subtitle mobile:whitespace-normal mobile:[overflow-wrap:anywhere] text-[#1F1F1F] truncate">{reportTitle(r)}</span>
       </div>
-      <div className="text-[13px] text-[#1F1F1F] mb-1">
+      <div className="text-[13px] mobile:text-mb-caption text-[#1F1F1F] mb-1">
         {participantDisplayName(r)}
         <span className="text-[#9B9B9B] font-normal"> · {genderLabel(r.gender)} · {formatBirthDate(r.birth_date)}</span>
       </div>
-      <div className="text-[12px] text-[#6F6F6F]">
+      <div className="text-[12px] mobile:text-mb-caption text-[#6F6F6F]">
         {sessionTypeLabel(r.session_type)} · {formatDate(reportDateIso(r))}
       </div>
       <div className="mt-2">
@@ -502,40 +494,38 @@ export default function ReportListPage() {
   const tableHead = (
     <thead>
       <tr className="bg-[#F8FAFC] border-b border-[#EFEFEF]">
-        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">제목</th>
-        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">사용자</th>
-        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">성별</th>
-        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">생년월일</th>
-        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">구분</th>
-        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">타입</th>
-        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">세션유형</th>
-        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">날짜</th>
-        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">상태</th>
-        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">생성 상태</th>
-        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">액션</th>
+        <th className="text-left px-5 py-3 text-[12px] mobile:text-mb-caption text-[#6F6F6F] font-mono uppercase tracking-wider">제목</th>
+        <th className="text-left px-5 py-3 text-[12px] mobile:text-mb-caption text-[#6F6F6F] font-mono uppercase tracking-wider">사용자</th>
+        <th className="text-left px-5 py-3 text-[12px] mobile:text-mb-caption text-[#6F6F6F] font-mono uppercase tracking-wider">성별</th>
+        <th className="text-left px-5 py-3 text-[12px] mobile:text-mb-caption text-[#6F6F6F] font-mono uppercase tracking-wider">생년월일</th>
+        <th className="text-left px-5 py-3 text-[12px] mobile:text-mb-caption text-[#6F6F6F] font-mono uppercase tracking-wider">구분</th>
+        <th className="text-left px-5 py-3 text-[12px] mobile:text-mb-caption text-[#6F6F6F] font-mono uppercase tracking-wider">타입</th>
+        <th className="text-left px-5 py-3 text-[12px] mobile:text-mb-caption text-[#6F6F6F] font-mono uppercase tracking-wider">세션유형</th>
+        <th className="text-left px-5 py-3 text-[12px] mobile:text-mb-caption text-[#6F6F6F] font-mono uppercase tracking-wider">날짜</th>
+        <th className="text-left px-5 py-3 text-[12px] mobile:text-mb-caption text-[#6F6F6F] font-mono uppercase tracking-wider">상태</th>
+        <th className="text-left px-5 py-3 text-[12px] mobile:text-mb-caption text-[#6F6F6F] font-mono uppercase tracking-wider">생성 상태</th>
+        <th className="text-left px-5 py-3 text-[12px] mobile:text-mb-caption text-[#6F6F6F] font-mono uppercase tracking-wider">액션</th>
       </tr>
     </thead>
   );
 
   return (
-    <AppShell title="리포트" sub="AI REPORTS" rightSlot={!loading ? rightSlot : undefined}>
-      {!loading && (
-        <div className="mb-4 md:hidden flex items-center gap-3 flex-wrap">
-          {autoApproveToggle}
-          {bulkApproveButton}
-          {sampleLink}
-        </div>
-      )}
+    <AppShell title="리포트" rightSlot={!loading ? rightSlot : undefined} wide>
+      {operationsOpen && <section id="report-operations-settings" aria-label="리포트 운영 설정" className="mb-6 space-y-4 rounded-2xl border border-[#E9E2EB] bg-[#F8F5EF] p-4">
+        <h2 className="text-[18px] font-bold">운영 설정</h2>
+        <SessionNotePromptToggle />
+        {role === 'counselor' ? <div className="rounded-2xl border border-[#EFEFEF] bg-white p-5"><div className="flex flex-wrap items-center justify-between gap-4"><h3 className="text-[16px] font-bold">리포트 승인</h3>{autoApproveToggle}</div><p className="mt-3 text-[13px] text-[#6F6F6F]">본인이 진행하는 회차에 기존 자동 승인 정책을 적용해요. 기록과 측정 데이터가 없는 명상 리포트는 자동 승인에서 제외돼요.</p></div> : <p className="text-[14px] text-[#6F6F6F]">자동 승인은 상담사 계정이 진행하는 회차에 적용돼요. 기관관리자는 리포트를 직접 검토·승인할 수 있어요.</p>}
+      </section>}
       {autoApproveError && (
-        <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm">{autoApproveError}</div>
+        <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm mobile:text-mb-body">{autoApproveError}</div>
       )}
       {error ? (
         <div className="border border-[#F5C2C2] bg-red-50 rounded-2xl p-10 text-center">
-          <div className="text-[15px] text-red-700">{error}</div>
+          <div className="text-[15px] mobile:text-mb-body text-red-700">{error}</div>
           <button
             type="button"
             onClick={() => setReloadKey((k) => k + 1)}
-            className="inline-flex items-center mt-4 h-10 px-5 rounded-full text-[13px] font-bold text-white bg-[#5F0080] hover:bg-[#4A0066] transition-colors"
+            className={buttonClass({ variant: 'primary', className: 'mt-4' })}
           >
             다시 시도
           </button>
@@ -550,9 +540,9 @@ export default function ReportListPage() {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="제목·세션·사용자 검색"
               aria-label="리포트 검색"
-              className="h-10 rounded-xl border border-[#EFEFEF] px-4 text-[13px] w-full lg:w-64 focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20"
+              className={fieldClass('input', 'lg:!w-64')}
             />
-            <div className="inline-flex rounded-xl border border-[#EFEFEF] overflow-hidden bg-white">
+            <div className="flex flex-wrap gap-2">
               {(
                 [
                   ['all', '전체'],
@@ -565,13 +555,7 @@ export default function ReportListPage() {
                   key={value}
                   type="button"
                   onClick={() => setStatusFilter(value)}
-                  className={`h-10 px-3.5 text-[13px] font-semibold transition-colors ${
-                    statusFilter === value
-                      ? value === 'failed'
-                        ? 'bg-[#C62828] text-white'
-                        : 'bg-[#5F0080] text-white'
-                      : 'text-[#6F6F6F] hover:bg-[#F8FAFC]'
-                  }`}
+                  className={tabClass(statusFilter === value)}
                 >
                   {label}
                 </button>
@@ -601,7 +585,7 @@ export default function ReportListPage() {
               value={sessionFilter}
               onChange={(e) => setSessionFilter(e.target.value)}
               aria-label="세션 필터"
-              className={`${selectClass} max-w-[220px]`}
+              className={`mobile:min-h-12 mobile:text-mb-body ${selectClass} max-w-[220px]`}
             >
               <option value="">전체 세션</option>
               {sessionOptions.map((s) => (
@@ -610,20 +594,10 @@ export default function ReportListPage() {
                 </option>
               ))}
             </select>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={groupByClass}
-              onClick={() => setGroupByClass((v) => !v)}
-              className={`h-10 px-4 rounded-xl text-[13px] font-semibold border transition-colors ${
-                groupByClass
-                  ? 'bg-[#F5EDFC] text-[#5F0080] border-[#E8D9F5]'
-                  : 'bg-white text-[#6F6F6F] border-[#EFEFEF] hover:bg-[#F8FAFC]'
-              }`}
-            >
-              세션별 그룹핑 {groupByClass ? 'ON' : 'OFF'}
-            </button>
-            <span className="text-[13px] text-[#6F6F6F] lg:ml-auto">
+            <div className="inline-flex min-h-11 items-center gap-3 text-[13px] mobile:text-mb-label">
+              <span>세션별 그룹핑</span><SettingsSwitch checked={groupByClass} label="세션별 그룹핑" onChange={setGroupByClass} />
+            </div>
+            <span className="text-[13px] mobile:text-mb-caption text-[#6F6F6F] lg:ml-auto">
               {filtered.length} / {total}건
             </span>
           </div>
@@ -632,7 +606,7 @@ export default function ReportListPage() {
             <div className="text-[#6F6F6F]">불러오는 중...</div>
           ) : filtered.length === 0 ? (
             <div className="border border-dashed border-[#DDDEE7] rounded-2xl p-10 text-center">
-              <div className="text-[#6F6F6F] text-sm">조건에 맞는 리포트가 없습니다.</div>
+              <div className="text-[#6F6F6F] text-sm mobile:text-mb-body">조건에 맞는 리포트가 없습니다.</div>
               <button
                 type="button"
                 onClick={() => {
@@ -641,7 +615,7 @@ export default function ReportListPage() {
                   setTypeFilter('all');
                   setSessionFilter('');
                 }}
-                className="mt-3 text-[13px] font-semibold text-[#5F0080] hover:underline"
+                className="mobile:min-h-11 mobile:min-w-11 mt-3 text-[13px] mobile:text-mb-label font-semibold text-[#5F0080] hover:underline"
               >
                 필터 초기화
               </button>
@@ -653,7 +627,7 @@ export default function ReportListPage() {
                 {grouped
                   ? grouped.map((g) => (
                       <div key={g.sessionId} className="space-y-2">
-                        <div className="px-1 pt-2 text-[12px] font-bold text-[#5F0080] font-mono uppercase tracking-wider">
+                        <div className="px-1 pt-2 text-[12px] mobile:text-mb-caption font-bold text-[#5F0080] font-mono uppercase tracking-wider">
                           {g.label}
                           <span className="ml-2 text-[#9B9B9B] font-normal normal-case tracking-normal">
                             {g.items.length}건
@@ -670,18 +644,18 @@ export default function ReportListPage() {
                 {grouped ? (
                   grouped.map((g) => (
                     <div key={g.sessionId}>
-                      <div className="px-5 py-2.5 bg-[#F5EDFC]/60 border-b border-[#EFEFEF] text-[12px] font-bold text-[#5F0080]">
+                      <div className="px-5 py-2.5 bg-[#F5EDFC]/60 border-b border-[#EFEFEF] text-[12px] mobile:text-mb-caption font-bold text-[#5F0080]">
                         {g.label}
                         <span className="ml-2 font-normal text-[#6F6F6F]">{g.items.length}건</span>
                       </div>
-                      <table className="w-full text-[15px] min-w-[980px]">
+                      <table className="w-full text-[15px] mobile:text-mb-body min-w-[980px]">
                         {tableHead}
                         <tbody>{g.items.map(renderRow)}</tbody>
                       </table>
                     </div>
                   ))
                 ) : (
-                  <table className="w-full text-[15px] min-w-[980px]">
+                  <table className="w-full text-[15px] mobile:text-mb-body min-w-[980px]">
                     {tableHead}
                     <tbody>{filtered.map(renderRow)}</tbody>
                   </table>
@@ -696,11 +670,11 @@ export default function ReportListPage() {
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page <= 1 || loading}
                     aria-label="이전"
-                    className="h-11 px-4 rounded-xl text-[13px] font-semibold border border-[#EFEFEF] bg-white text-[#5F0080] hover:bg-[#F5EDFC] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    className="mobile:min-h-11 mobile:min-w-11 h-11 px-4 rounded-xl text-[13px] mobile:text-mb-label font-semibold border border-[#EFEFEF] bg-white text-[#5F0080] hover:bg-[#F5EDFC] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     이전
                   </button>
-                  <span className="text-[13px] text-[#6F6F6F] font-mono tabular-nums">
+                  <span className="text-[13px] mobile:text-mb-caption text-[#6F6F6F] font-mono tabular-nums">
                     {page} / {totalPages}
                     <span className="ml-2 text-[#9B9B9B]">(전체 {total}건)</span>
                   </span>
@@ -709,7 +683,7 @@ export default function ReportListPage() {
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page >= totalPages || loading}
                     aria-label="다음"
-                    className="h-11 px-4 rounded-xl text-[13px] font-semibold border border-[#EFEFEF] bg-white text-[#5F0080] hover:bg-[#F5EDFC] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    className="mobile:min-h-11 mobile:min-w-11 h-11 px-4 rounded-xl text-[13px] mobile:text-mb-label font-semibold border border-[#EFEFEF] bg-white text-[#5F0080] hover:bg-[#F5EDFC] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     다음
                   </button>
@@ -722,12 +696,12 @@ export default function ReportListPage() {
         <div className="text-[#6F6F6F]">불러오는 중...</div>
       ) : (
         <div className="border border-dashed border-[#DDDEE7] rounded-2xl p-12 text-center">
-          <div className="text-[#6F6F6F] text-sm">아직 생성된 리포트가 없습니다.</div>
-          <div className="text-[#9B9B9B] text-xs mt-1">세션을 마치면 리포트를 생성할 수 있습니다.</div>
+          <div className="text-[#6F6F6F] text-sm mobile:text-mb-body">아직 생성된 리포트가 없습니다.</div>
+          <div className="text-[#9B9B9B] text-xs mobile:text-mb-caption mt-1">세션을 마치면 리포트를 생성할 수 있습니다.</div>
           <button
             type="button"
             onClick={() => setSampleOpen(true)}
-            className="inline-flex items-center mt-5 h-10 px-5 rounded-full text-[13px] font-bold text-white bg-[#5F0080] hover:bg-[#4A0066] transition-colors"
+            className={buttonClass({ variant: 'primary', className: 'mt-5' })}
           >
             샘플 리포트 보기
           </button>

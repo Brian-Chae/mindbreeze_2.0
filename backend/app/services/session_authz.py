@@ -130,6 +130,25 @@ def authorize_session(
     """이미 로드한 세션에 대해 판정만 한다. 통과하면 같은 세션을 돌려준다."""
     policy = POLICIES[action]
     uid = _to_uuid(user_id)
+    actor = db.query(User).filter(User.id==uid).first()
+    if actor and (actor.status!="active" or actor.role=="org_admin"):
+        raise HTTPException(403,detail=policy.deny_detail)
+    if session.class_id:
+        from app.models.class_program import Class
+        from app.services.class_access_service import can_read_team_material
+        from app.services.class_instructor_service import validate_instructor
+        cls=db.query(Class).filter(Class.id==session.class_id).first()
+        if session.host_id!=uid and action in (SessionAction.RECORD_VIEW,SessionAction.REPORT_STATUS_VIEW):
+            if can_read_team_material(db,uid,session):
+                return session
+        if session.host_id==uid and cls and cls.recurrence_rule:
+            historical_read=session.status=="completed" and action in (
+                SessionAction.RECORD_VIEW,SessionAction.TRANSCRIPT_VIEW,SessionAction.REPORT_STATUS_VIEW,
+                SessionAction.SESSION_VIEW)
+            if not historical_read:
+                validate_instructor(db,cls,uid,session.id)
+                if session.host_state=="needs_reassign":
+                    raise HTTPException(409,detail={"code":"host_reassignment_required"})
     if session.host_id != uid:
         if policy.rule is Rule.HOST:
             raise HTTPException(status_code=403, detail=policy.deny_detail)

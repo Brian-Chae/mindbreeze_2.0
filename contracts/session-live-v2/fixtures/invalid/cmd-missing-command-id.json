@@ -1,0 +1,18 @@
+{
+  "$fixture": {
+    "schema": "command",
+    "why": "command_id 필수",
+    "reject_by": "schema"
+  },
+  "message": {
+    "protocol_version": 2,
+    "schema_version": 1,
+    "session_id": "00000001-0000-4000-8000-000000000001",
+    "expected_epoch": "1",
+    "kind": "hand.set",
+    "client_generation": "7",
+    "payload": {
+      "raised": true
+    }
+  }
+}

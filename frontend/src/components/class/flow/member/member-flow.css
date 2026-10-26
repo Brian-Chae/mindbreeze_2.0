@@ -23,11 +23,14 @@
 /* FM04 코드 입력 */
 .pz-root .fm-code-card { display: flex; flex-direction: column; gap: 16px; align-items: stretch; }
 .pz-root .fm-code-card .fl-sub { margin-top: -8px; }
-.pz-root .fm-codebox { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-.pz-root .fm-codebox > span { height: 64px; border-radius: 12px; background: rgba(255, 255, 255, 0.1); border: 1px solid var(--sheet-border); display: block; }
+/* 숫자 칸은 균형형 비율(60×68) — 최대 폭을 제한하고 좁은 카드에서는 비율을 유지해 축소 */
+.pz-root .fm-codebox { display: grid; grid-template-columns: repeat(4, minmax(0, 60px)); justify-content: center; gap: 16px; }
+.pz-root .fm-codebox > span { aspect-ratio: 60 / 68; height: auto; border-radius: 12px; background: rgba(255, 255, 255, 0.1); border: 1px solid var(--sheet-border); display: block; }
 .pz-root .fm-codebox > span[data-active="true"] { border: 2px solid var(--mb-lavender); }
 .pz-root .fm-codebox > span[data-bad="true"] { border: 2px solid var(--warn); background: var(--warn-bg); }
 .pz-root .fm-codebox input { display: block; width: 100%; height: 100%; padding: 0; border: 0; background: transparent; color: var(--tx-hi); text-align: center; font: inherit; font-size: var(--fs-36); font-weight: 800; border-radius: 12px; }
+/* 모바일 전역 입력 규칙의 !important와 속성 선택자 우선순위를 넘어 36px을 보존한다. */
+.pz-root .fm-codebox input[type="text"][inputmode="numeric"][autocomplete="off"][maxlength] { font-size: var(--fs-36) !important; }
 .pz-root .fm-codebox input:disabled { opacity: 0.6; }
 .pz-root .fm-hint { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; font-size: var(--fs-13); color: var(--tx-mid); text-align: center; }
 .pz-root .fm-hint[data-bad="true"] { color: var(--warn); font-weight: 600; }
@@ -222,3 +225,69 @@
 
 /* 체크인 시트(3축 + 한 줄 소감 + 버튼)는 공용 상한(58dvh)보다 크다 — 시트 안 중첩 스크롤을 만들지 않도록 회원 흐름 시트만 상한을 올린다 */
 .pz-shell.fm-member[data-sheet-mode="bottom"] .pz-sheet[data-pz="flow-sheet"] { max-height: min(86dvh, 640px); }
+
+/* SDD-234: 설문·동의·준비 과정의 보조 문구와 입력. */
+@media (max-width: 767px) {
+  .pz-root .fm-ft, .pz-root .fm-failhint, .pz-root .fm-label-row .fm-err { font-size: var(--mobile-type-caption-size); line-height: var(--mobile-type-caption-leading); }
+  .pz-root .fm-input { font-size: var(--mobile-type-body-size); line-height: var(--mobile-type-body-leading); min-height: var(--mobile-touch-control); }
+  .pz-root .fm-mini { font-size: var(--mobile-type-label-size); line-height: var(--mobile-type-label-leading); }
+}
+
+/* 10/23 확정 A안. 설문 루트에서만 공통·모바일 토큰보다 구체적으로 적용한다. */
+.pz-root.fm-survey { --col-w: 520px; }
+.pz-root.fm-survey .pz-backdrop__scrim { background: rgba(18, 8, 28, 0.76); }
+.pz-root.fm-survey .pz-backdrop__still { background-position: center; }
+.pz-root.fm-survey .fl-col { gap: 0; }
+.pz-root.fm-survey .fl-h1 { font-size: 40px; line-height: 1.3; letter-spacing: -0.035em; color: #F7F4F0; word-break: keep-all; }
+.pz-root.fm-survey .fl-sub { font-size: 16px; line-height: 1.6; color: #F7F4F0; margin-top: 14px; }
+.pz-root.fm-survey .fm-axes { gap: 0; margin: 28px 0 22px; }
+.pz-root.fm-survey .fm-ax { position: relative; padding: 12px 0; font-size: 14px; line-height: 20px; color: #CFC6D6; font-weight: 400; gap: 0; }
+.pz-root.fm-survey .fm-ax i { position: absolute; bottom: 0; height: 2px; border-radius: 0; background: #CFC6D6; }
+.pz-root.fm-survey .fm-ax[data-state="on"] { color: #F7F4F0; font-weight: 800; }
+.pz-root.fm-survey .fm-ax[data-state="on"] i { background: #D2AEFC; }
+.pz-root.fm-survey .fm-opts { gap: 10px; }
+.pz-root.fm-survey .fm-opt { min-height: 58px; padding: 15px 22px; font-size: 18px; line-height: 1.4; border: 2px solid transparent; border-radius: 16px; background: #F7F4F0; color: #241B2E; }
+.pz-root.fm-survey .fm-opt[aria-checked="true"] { background: #5F0080; color: #FFFFFF; border-color: #D2AEFC; }
+.pz-root.fm-survey .fm-radio { width: 20px; height: 20px; border-color: #6E1A8C; }
+.pz-root.fm-survey .fm-opt[aria-checked="true"] .fm-radio { border-color: #FFFFFF; }
+.pz-root.fm-survey .fm-opt:focus-visible, .pz-root.fm-survey .fm-ta:focus-visible { outline: 3px solid #B373EF; outline-offset: 4px; }
+.pz-root.fm-survey .fl-foot { gap: 6px; }
+.pz-root.fm-survey .fl-btn[data-kind="primary"] { min-height: 56px; font-size: 17px; background: #5F0080; color: #FFFFFF; border: 1px solid #D2AEFC; }
+.pz-root.fm-survey .fl-btn:disabled { opacity: 1; background: #F5EDFC; color: #51415D; border-color: #CFC6D6; }
+.pz-root.fm-survey .fl-btn[data-kind="ghost"] { min-height: 48px; font-size: 15px; color: #F7F4F0; background: transparent; text-decoration: underline; text-underline-offset: 4px; }
+.pz-root.fm-survey .fm-ta { min-height: 170px; background: #F7F4F0; color: #241B2E; font-size: 17px; border-color: #6E1A8C; }
+.pz-root.fm-survey .fm-ta::placeholder { color: #51415D; }
+.pz-root.fm-survey .fm-count, .pz-root.fm-survey .fm-err { color: #F7F4F0; }
+@media (max-width: 767px) {
+  .pz-root.fm-survey .fl-h1 { font-size: 28px; }
+  .pz-root.fm-survey .fl-sub { font-size: 15px; margin-top: 12px; }
+  .pz-root.fm-survey .fm-axes { margin: 26px 0 20px; }
+  .pz-root.fm-survey .fm-ax { font-size: 13px; }
+  .pz-root.fm-survey .fm-opt { padding: 14px 18px; }
+}
+/* 질문·보기·CTA를 함께 중앙에 배치한다. 짧은 화면은 기존 스크롤 가능한 틀을 쓴다. */
+.pz-root.fm-survey .fm-survey-progress { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.pz-root.fm-survey .fm-survey-progress > span { font-size: 12px; color: #F7F4F0; }
+.pz-root.fm-survey .fl-steps > i { background: #CFC6D6; }
+.pz-root.fm-survey .fl-steps > i.on { background: #D2AEFC; }
+.pz-root.fm-survey .pz-circle-btn { width: 48px; height: 48px; background: #180C24; color: #F7F4F0; border-color: #CFC6D6; }
+@media (min-height: 780px) {
+  .pz-root.fm-survey { grid-template-rows: auto minmax(0, 1fr) auto auto minmax(0, 1fr); padding-left: 48px; padding-right: 48px; }
+  .pz-root.fm-survey .pz-shell__stage { grid-row: 3; margin: 0; }
+  .pz-root.fm-survey .fl-body { padding: 0; }
+  .pz-root.fm-survey .pz-shell__dock { width: min(100%, 520px); margin-top: 28px; }
+}
+@media (max-width: 767px) and (min-height: 780px) {
+  .pz-root.fm-survey { padding-left: 20px; padding-right: 20px; }
+  .pz-root.fm-survey .pz-shell__dock { margin-top: 24px; }
+}
+.pz-root.fm-survey .fm-head { gap: 0; }
+.pz-root.fm-survey .fm-opt[aria-checked="true"] .fm-radio { background: #FFFFFF; box-shadow: inset 0 0 0 4px #5F0080; }
+.pz-root.fm-survey .fm-opt[aria-checked="true"] .fm-radio::after { opacity: 0; }
+.pz-root.fm-survey .fl-btn[data-kind="ghost"] { font-weight: 400; }
+@media (min-height: 780px) {
+  .pz-root.fm-survey .pz-shell__top { min-height: 100px; padding-top: 18px; }
+}
+@media (max-width: 767px) and (min-height: 780px) {
+  .pz-root.fm-survey .pz-shell__top { min-height: 76px; padding-top: 12px; }
+}

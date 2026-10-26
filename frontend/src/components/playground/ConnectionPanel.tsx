@@ -43,16 +43,16 @@ export function ConnectionPanel({ band, useMock, onToggleMock }: Props) {
 
   const browserHint =
     !band.isSupported && !band.isMock
-      ? 'Web Bluetooth 미지원 브라우저입니다. Chrome/Edge를 사용하거나 Mock 모드(VITE_USE_MOCK_EEG)를 켜세요.'
+      ? '밴드 연결을 지원하지 않는 브라우저입니다. Chrome/Edge를 사용하거나 체험 모드를 시작하세요.'
       : null;
 
   return (
     <PanelShell
-      title="P1 · 연결"
+      title="밴드 연결 및 체험"
       subtitle={
         band.isMock
-          ? '관찰 전용 · Mock EEG — 세션 저장 없이 스트리밍만'
-          : '관찰 전용 모드 — 세션 저장 없이 스트리밍만'
+          ? '체험 모드(예시 데이터) · 기록에 저장되지 않습니다'
+          : '밴드 신호 보기 · 기록에 저장되지 않습니다'
       }
       state={panelState}
       actions={
@@ -62,7 +62,7 @@ export function ConnectionPanel({ band, useMock, onToggleMock }: Props) {
             onClick={onToggleMock}
             className="rounded-lg border border-[#C9B0E8] bg-[#F5EDFC] px-3 py-1.5 text-xs font-medium text-[#5F0080] hover:bg-[#EBDEF7]"
           >
-            {useMock ? '실기기로 전환' : 'Mock으로 전환'}
+            {useMock ? '체험 종료' : '체험 모드(예시 데이터)'}
           </button>
           <span className="rounded-full bg-[#F5EDFC] px-2 py-0.5 text-[11px] text-[#5F0080]">
             {connected ? formatElapsed(band.connectedElapsedSec) : '--:--'}
@@ -83,7 +83,7 @@ export function ConnectionPanel({ band, useMock, onToggleMock }: Props) {
           disabled={!band.isSupported || isBusy || connected}
           className="rounded-lg bg-[#5F0080] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#4B0066] disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {isBusy ? '연결 중…' : band.isMock ? 'Mock 연결' : '스캔 및 연결'}
+          {isBusy ? '연결 중…' : band.isMock ? '체험 다시 시작' : '밴드 연결'}
         </button>
         <button
           type="button"
@@ -99,7 +99,7 @@ export function ConnectionPanel({ band, useMock, onToggleMock }: Props) {
           disabled={!connected}
           className="rounded-lg border border-[#DDDEE7] px-3 py-1.5 text-xs font-medium text-[#6F6F6F] hover:bg-[#EFE3FA] hover:text-[#5F0080] disabled:cursor-not-allowed disabled:opacity-40"
         >
-          버퍼 초기화
+          화면 초기화
         </button>
       </div>
 
@@ -112,11 +112,11 @@ export function ConnectionPanel({ band, useMock, onToggleMock }: Props) {
       <dl className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
         <div>
           <dt className="text-[#6F6F6F]">모드</dt>
-          <dd className="mt-0.5 text-[#1F1F1F]">{band.isMock ? 'Mock' : 'BLE'}</dd>
+          <dd className="mt-0.5 text-[#1F1F1F]">{band.isMock ? '예시 데이터' : '실제 밴드'}</dd>
         </div>
         <div>
           <dt className="text-[#6F6F6F]">상태</dt>
-          <dd className="mt-0.5 text-[#1F1F1F]">{band.connectionState}</dd>
+          <dd className="mt-0.5 text-[#1F1F1F]">{{ unsupported: '연결 미지원', disconnected: '미연결', connecting: '연결 중', connected: '연결됨', error: '연결 오류' }[band.connectionState]}</dd>
         </div>
         <div>
           <dt className="text-[#6F6F6F]">배터리</dt>
@@ -125,11 +125,11 @@ export function ConnectionPanel({ band, useMock, onToggleMock }: Props) {
           </dd>
         </div>
         <div>
-          <dt className="text-[#6F6F6F]">SQI</dt>
+          <dt className="text-[#6F6F6F]">신호 품질</dt>
           <dd className="mt-0.5 text-[#1F1F1F]">
             {band.signalQuality === null
               ? '--'
-              : `${band.signalQuality.toFixed(0)} · ${band.signalQualityLevel}`}
+              : `${band.signalQuality.toFixed(0)} · ${{ ok: '양호', degraded: '주의', invalid: '불안정', unknown: '확인 중' }[band.signalQualityLevel]}`}
           </dd>
         </div>
       </dl>

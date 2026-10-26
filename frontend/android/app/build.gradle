@@ -1,20 +1,48 @@
 apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
 
-// 릴리스 서명 정보: android/keystore.properties (git 제외). 없으면 release 는 서명 없이 빌드된다.
+// 릴리스 서명 정보: android/keystore.properties (git 제외). 없으면 release 작업을 거부한다.
 def keystorePropertiesFile = rootProject.file("keystore.properties")
 def keystoreProperties = new Properties()
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 // CI 에서 -PversionCode=N -PversionName=x.y.z 로 주입한다.
-def appVersionCode = (project.findProperty("versionCode") ?: "1").toInteger()
-def appVersionName = (project.findProperty("versionName") ?: "1.0").toString()
+def appVersionCode = (project.findProperty("versionCode") ?: "5").toInteger()
+def appVersionName = (project.findProperty("versionName") ?: "1.0.0").toString()
+
+// SDD-246 T08: 공유 Rust 측정 코어(packages/measurement-core)를 gradle 에서 빌드해 apk 에 포함한다.
+//   -PskipMeasurementCore=true 면 건너뛴다(cargo 없는 환경). 이 경우 .so 가 없어 native 측정은 core_unavailable 로 막힌다.
+def measurementCoreDir = rootProject.file('../../packages/measurement-core')
+def measurementCoreHostDir = new File(measurementCoreDir, 'target/release')
+def measurementCoreJniDir = layout.buildDirectory.dir('generated/measurementCoreJni').get().asFile
+def cargoBin = new File(System.getProperty('user.home'), '.cargo/bin')
+def ndkVersion = '27.2.12479018'
+def sdkDir = System.getenv('ANDROID_HOME') ?: System.getenv('ANDROID_SDK_ROOT') ?: ''
+def ndkLlvmBin = project.findProperty('androidNdkBin') ?: System.getenv('ANDROID_NDK_BIN') ?:
+    "${sdkDir}/ndk/${ndkVersion}/android-ndk-r27c/toolchains/llvm/prebuilt/darwin-x86_64/bin"
+def skipCore = (project.findProperty('skipMeasurementCore') ?: 'false').toString() == 'true'
 
 android {
     namespace = "com.looxidlabs.mindbreeze"
     compileSdk = rootProject.ext.compileSdkVersion
+    testOptions {
+        unitTests.returnDefaultValues = true
+        unitTests.all {
+            // 호스트용 Rust 코어(dylib)가 있으면 JNA 가 찾도록 경로를 넘긴다. 없으면 코어 의존 시험은 건너뛴다.
+            systemProperty 'jna.library.path', measurementCoreHostDir.absolutePath
+            systemProperty 'mb.core.host', new File(measurementCoreHostDir, System.getProperty('os.name').toLowerCase().contains('mac') ? 'libmeasurement_core.dylib' : 'libmeasurement_core.so').absolutePath
+            systemProperty 'mb.contract.dir', rootProject.file('../../contracts').absolutePath
+            systemProperty 'mb.test.out', layout.buildDirectory.dir('test-artifacts').get().asFile.absolutePath
+        }
+    }
+    sourceSets {
+        main { jniLibs.srcDirs += [measurementCoreJniDir] }
+        // SDD-246 T08d: adb 시험용 서비스 export 는 opt-in(-PmbAdbExport=true). 기본 debug/dev 빌드에는 export 없음.
+        if (project.hasProperty('mbAdbExport')) { debug { manifest.srcFile 'src/adbtest/AndroidManifest.xml' } }
+    }
     defaultConfig {
-        applicationId "com.looxidlabs.mindbreeze"
+        applicationId "com.looxidlabs.mindbreeze2"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode appVersionCode
@@ -65,6 +93,41 @@ repositories {
     }
 }
 
+tasks.register('buildMeasurementCoreAndroid', Exec) {
+    description = 'measurement-core 를 aarch64-linux-android .so 로 빌드해 jniLibs 에 복사'
+    enabled = !skipCore
+    workingDir measurementCoreDir
+    environment 'PATH', "${cargoBin}:${System.getenv('PATH')}"
+    environment 'CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER', "${ndkLlvmBin}/aarch64-linux-android24-clang"
+    environment 'AR_aarch64_linux_android', "${ndkLlvmBin}/llvm-ar"
+    commandLine 'cargo', 'build', '--release', '--target', 'aarch64-linux-android'
+    inputs.dir(new File(measurementCoreDir, 'src'))
+    inputs.file(new File(measurementCoreDir, 'Cargo.toml'))
+    outputs.file(new File(measurementCoreDir, 'target/aarch64-linux-android/release/libmeasurement_core.so'))
+    doLast {
+        copy {
+            from new File(measurementCoreDir, 'target/aarch64-linux-android/release/libmeasurement_core.so')
+            into new File(measurementCoreJniDir, 'arm64-v8a')
+        }
+    }
+}
+
+tasks.register('buildMeasurementCoreHost', Exec) {
+    description = 'JVM 단위 시험용 호스트 dylib 빌드'
+    enabled = !skipCore
+    workingDir measurementCoreDir
+    environment 'PATH', "${cargoBin}:${System.getenv('PATH')}"
+    commandLine 'cargo', 'build', '--release'
+    inputs.dir(new File(measurementCoreDir, 'src'))
+    inputs.file(new File(measurementCoreDir, 'Cargo.toml'))
+    outputs.dir(measurementCoreHostDir)
+}
+
+tasks.configureEach { t ->
+    if (!skipCore && t.name.matches('merge(Dev|Prod)(Debug|Release)JniLibFolders')) t.dependsOn('buildMeasurementCoreAndroid')
+    if (!skipCore && t.name.matches('test(Dev|Prod)(Debug|Release)UnitTest')) t.dependsOn('buildMeasurementCoreHost')
+}
+
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
@@ -72,6 +135,15 @@ dependencies {
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
     testImplementation "junit:junit:$junitVersion"
+    implementation "androidx.core:core:$androidxCoreVersion"
+    // SDD-246 T08: Rust 코어 C ABI 호출(JNA), native Socket.IO(v4 wire)·HTTP, 지연 재시도(WorkManager)
+    implementation 'net.java.dev.jna:jna:5.17.0@aar'
+    implementation 'io.socket:socket.io-client:2.1.2'
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation 'androidx.work:work-runtime:2.9.1'
+    testImplementation 'net.java.dev.jna:jna:5.17.0'
+    testImplementation 'org.json:json:20250517'
+    testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
@@ -86,4 +158,18 @@ try {
     }
 } catch(Exception e) {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}
+
+// debug·조회 작업은 허용하되 모든 release 패키징은 완전한 서명 설정을 요구한다.
+gradle.taskGraph.whenReady { graph ->
+    // -PallowUnsignedRelease=true: 서명 없는 검증 전용 빌드(AAB 구성·매니페스트 점검용, 배포 불가). 기본은 서명 필수.
+    if (!project.hasProperty('allowUnsignedRelease') && graph.allTasks.any { it.project == project && it.name.toLowerCase().contains('release') }) {
+        def requiredKeys = ['storeFile', 'storePassword', 'keyAlias', 'keyPassword']
+        if (!keystorePropertiesFile.exists() || requiredKeys.any { !keystoreProperties[it]?.toString()?.trim() }) {
+            throw new GradleException('릴리스 서명 설정이 없습니다. keystore.properties의 필수 항목을 설정해 주세요.')
+        }
+        if (!file(keystoreProperties['storeFile']).exists()) {
+            throw new GradleException('릴리스 서명 키 파일을 찾을 수 없습니다.')
+        }
+    }
 }

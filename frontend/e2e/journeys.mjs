@@ -1,3 +1,5 @@
+import { createClassFixture } from './class-fixture.mjs';
+import { randomUUID } from 'node:crypto';
 // SDD-205 역할별 여정 (약 29개). 실행: E2E_PASSWORD=... node e2e/journeys.mjs
 import { scenario, uiLogin, go, bodyText, expectText, apiLogin, apiLoginFull, finish, BASE, API, EMAIL, HOME } from './lib.mjs';
 
@@ -8,12 +10,23 @@ const client = (name, fn, o) => scenario(`[내담자] ${name}`, async (p) => { a
 await client('홈: 인사·담당 상담사·이번 주 클래스 영역', async (p) => { await expectText(p, '/app', '안녕하세요, E2E-내담자님', '담당 상담사', '이번 주 클래스'); });
 // SDD-209: 달력 제거(D-5②) — 목록(예정/지난 클래스 섹션)이 보이는지 확인한다.
 await client('클래스: 목록 표시(달력 없음)', async (p) => {
-  const t = await expectText(p, '/app/sessions', '클래스', '클래스 신청하기');
-  await p.locator('.sh-list-sec').first().waitFor({ timeout: 10000 });
+  const t = await expectText(p, '/app/classes', '내 클래스', '클래스 신청하기');
+  // 클래스가 하나도 없으면 목록 섹션 대신 빈 안내가 보인다(초기화 직후 신규 E2E 내담자) — 둘 중 하나면 통과.
+  await p.locator('a[href^="/app/classes/"], :text("아직 클래스가 없어요")').first().waitFor({ timeout: 10000 });
   if (/달력/.test(t)) throw new Error('달력 문구가 남아 있음');
 });
+await client('코드로 입장하기: 홈에서 /join 으로 이동', async (p) => {
+  await go(p, '/app');
+  await p.getByTestId('enter-with-code').click();
+  await p.waitForURL((u) => u.pathname === '/join', { timeout: 8000 });
+});
+await client('구 경로 /app/sessions → /app/classes 이동', async (p) => {
+  await go(p, '/app/sessions');
+  await p.waitForURL((u) => u.pathname === '/app/classes', { timeout: 8000 });
+});
 await client('리포트: 빈 상태 안내', async (p) => { await expectText(p, '/app/reports', '리포트'); });
-await client('채팅: 루시·담당 상담사 대화방 노출', async (p) => { await expectText(p, '/app/chat', '루시', 'E2E-상담사'); });
+// SDD-220: AI 비공개 기본값 — 루시 대화방이 없어야 한다
+await client('채팅: 담당 상담사 대화방 노출(AI 비공개 시 루시 없음)', async (p) => { const t = await expectText(p, '/app/chat', 'E2E-상담사'); if (t.includes('루시')) throw new Error('AI 비공개인데 루시 노출'); });
 await client('알림: 빈 상태', async (p) => { await expectText(p, '/app/notifications', '알림'); });
 await client('다음 클래스 카드: 제목·설명 글자가 흰색(어두운 배경 대비)', async (p) => {
   // 상담사가 E2E 세션을 만들어 내담자를 참여시킨 뒤, 내담자 홈의 '다음 클래스' 히어로(class-hero) 글자색을 확인하고 삭제한다.
@@ -21,9 +34,8 @@ await client('다음 클래스 카드: 제목·설명 글자가 흰색(어두운
   const cl = await apiLoginFull('client');
   const H = { Authorization: `Bearer ${c.token}`, 'Content-Type': 'application/json' };
   const at = new Date(Date.now() + 2 * 86400000).toISOString();
-  const r = await fetch(`${API}/sessions`, { method: 'POST', headers: H, body: JSON.stringify({ type: 'meditation', duration_min: 30, title: `E2E-히어로-${Date.now()}`, scheduled_at: at, location_type: 'online', participant_mode: 'one_on_one', max_participants: 2, participant_ids: [cl.user.id] }) });
-  if (r.status !== 201) throw new Error(`클래스 생성 ${r.status}`);
-  const id = (await r.json()).id;
+  const fixture = await createClassFixture({ api: API, token: c.token, hostId: c.user.id,
+    title: `E2E-히어로-${Date.now()}`, memberIds: [cl.user.id], scheduledAt: at });
   try {
     await go(p, '/app');
     const hero = p.locator('section[data-testid="class-hero"]').first();
@@ -34,8 +46,9 @@ await client('다음 클래스 카드: 제목·설명 글자가 흰색(어두운
     const dark = colors.filter(({ c: col }) => { const m = col.match(/\d+/g).map(Number); return (0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]) < 150; });
     if (dark.length) throw new Error(`어두운 글자색: ${dark.map((d) => `${d.t} ${d.c}`).join(', ')}`);
   } finally {
-    const d = await fetch(`${API}/sessions/${id}`, { method: 'DELETE', headers: H });
-    if (d.status !== 204) throw new Error(`E2E 클래스 삭제 실패 ${d.status} (id=${id})`);
+    const d = await fetch(`${API}/classes/${fixture.class_id}`, { method: 'DELETE', headers: H,
+      body: JSON.stringify({ operation_key: randomUUID(), expected_revision: fixture.revision }) });
+    if (d.status !== 200) throw new Error(`E2E 클래스 숨김 실패 ${d.status}`);
   }
 });
 await client('설정: 계정 정보 표시 및 카드 제목 중복 없음', async (p) => {
@@ -62,30 +75,29 @@ await cou('내담자 검색: 없는 이름 → 결과 없음', async (p) => {
   await box.fill('zzzz-없는사람'); await box.press('Enter'); await p.waitForTimeout(1500);
   if ((await bodyText(p)).includes('e2e-client@e2e.looxidlabs.com')) throw new Error('검색 필터가 동작하지 않음');
 });
-await cou('내담자 초대: 폼 노출 (제출 안 함)', async (p) => { await expectText(p, '/clients/invite', '내담자 초대', '초대 링크 생성'); });
+await cou('내담자 초대: 폼 노출 (제출 안 함)', async (p) => { await expectText(p, '/clients/invite', '회원 초대', '초대 링크 생성'); });
 await cou('클래스: 목록·클래스 만들기 버튼(달력·타임라인 없음)', async (p) => {
   const text = await expectText(p, '/sessions', '클래스 만들기');
   if (/예약 만들기|타임라인|달력/.test(text)) throw new Error('캘린더·예약 모달 문구가 남아 있음');
 });
-await cou('클래스 만들기: 버튼 → /sessions/new 마법사(예약 모달 없음)', async (p) => {
-  await go(p, '/sessions');
-  await p.getByRole('button', { name: /클래스 만들기/ }).first().click();
-  await p.waitForURL((u) => u.pathname === '/sessions/new', { timeout: 8000 });
+await cou('클래스 만들기: 링크 → /classes/new 마법사(예약 모달 없음)', async (p) => {
+  await go(p, '/classes');
+  await p.getByRole('link', { name: /클래스 만들기/ }).first().click();
+  await p.waitForURL((u) => u.pathname === '/classes/new', { timeout: 8000 });
   await p.getByText('클래스 만들기').first().waitFor({ timeout: 8000 });
 });
-await cou('클래스 생성 → 목록 노출 → 삭제(잔여 0)', async (p) => {
-  const token = await apiLogin('counselor');
-  const H = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
-  const at = new Date(Date.now() + 3 * 86400000).toISOString();
-  const r = await fetch(`${API}/sessions`, { method: 'POST', headers: H, body: JSON.stringify({ type: 'meditation', duration_min: 30, title: TITLE, scheduled_at: at, location_type: 'online', participant_mode: 'one_on_one', max_participants: 2 }) });
-  if (r.status !== 201) throw new Error(`세션 생성 ${r.status}`);
-  const id = (await r.json()).id;
+await cou('클래스 생성 → 목록 노출 → 미진행 클래스 숨김', async (p) => {
+  const c = await apiLoginFull('counselor');
+  const H = { Authorization: `Bearer ${c.token}`, 'Content-Type': 'application/json' };
+  const fixture = await createClassFixture({ api: API, token: c.token, hostId: c.user.id, title: TITLE,
+    scheduledAt: new Date(Date.now() + 3 * 86400000).toISOString() });
   try {
     await go(p, '/sessions');
     await p.getByText(TITLE).first().waitFor({ timeout: 10000 });
   } finally {
-    const d = await fetch(`${API}/sessions/${id}`, { method: 'DELETE', headers: H });
-    if (d.status !== 204) throw new Error(`E2E 세션 삭제 실패 ${d.status} (id=${id})`);
+    const d = await fetch(`${API}/classes/${fixture.class_id}`, { method: 'DELETE', headers: H,
+      body: JSON.stringify({ operation_key: randomUUID(), expected_revision: fixture.revision }) });
+    if (d.status !== 200) throw new Error(`E2E 클래스 숨김 실패 ${d.status}`);
   }
 });
 await cou('리포트: 목록·샘플 리포트 열기', async (p) => {
@@ -98,7 +110,8 @@ await cou('설정: 코드·카드 제목 중복 없음', async (p) => {
   const dup = heads.filter((h, i, a) => a.indexOf(h) !== i);
   if (dup.length) throw new Error(`카드 제목 중복: ${dup.join(',')}`);
 });
-await cou('채팅: 루시 AI 대화방과 내담자 대화방', async (p) => { await expectText(p, '/chat/lucy', '루시 (AI)', 'E2E-내담자'); });
+// SDD-220: AI 비공개 기본값 — /chat/lucy 는 채팅 목록으로 돌려보낸다
+await cou('채팅: 루시 경로 차단(AI 비공개)·내담자 대화방', async (p) => { const t = await expectText(p, '/chat/lucy', 'E2E-내담자'); if (t.includes('루시 (AI)')) throw new Error('AI 비공개인데 루시 노출'); });
 await cou('인증 등급 페이지', async (p) => { await expectText(p, '/credentials', '인증 등급', '증빙 업로드'); });
 
 // ── 기관 관리자 (5) ────────────────────────────────────

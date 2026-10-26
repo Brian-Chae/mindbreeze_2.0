@@ -1,0 +1,26 @@
+language = "C"
+include_guard = "MEASUREMENT_CORE_H"
+sys_includes = ["stdint.h", "stddef.h"]
+no_includes = true
+cpp_compat = true
+documentation = true
+documentation_style = "c99"
+header = "/* MIND BREEZE measurement-core C ABI (SDD-246 T02). 자동 생성 — 수정 금지(cbindgen). */"
+usize_is_size_t = true
+
+[parse]
+parse_deps = false
+
+[parse.expand]
+crates = []
+
+[export]
+include = ["McBuffer", "McStatus"]
+exclude = ["TICK_HZ", "FS", "ABI_VERSION", "MAX_INPUT"]
+
+[enum]
+prefix_with_name = false
+rename_variants = "None"
+
+[defines]
+"feature = debug-hooks" = "MC_DEBUG_HOOKS"

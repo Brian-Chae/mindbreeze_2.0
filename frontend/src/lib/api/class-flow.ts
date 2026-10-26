@@ -22,9 +22,17 @@ export interface EnterPayload {
   code: string;
   name?: string;
   gender?: EntryGender;
-  /** YYYY-MM-DD — 서버가 연·월만 보관한다 */
+  /** 기존 클라이언트 요청 호환용 YYYY-MM-DD */
   birth_date?: string;
+  /** 비회원 신규 입력: YYYY-MM, 일자는 수집하지 않는다 */
+  birth_year_month?: string;
   email?: string;
+  /** SDD-220 F1 — 회차 녹음·녹화 필수 동의. 없으면 서버가 403 RECORDING_CONSENT_REQUIRED 로 거부한다 */
+  recording_consent?: boolean;
+  recording_notice_version?: string;
+  /** 뇌파 수집 선택(밴드 연결 사전 선택). 생략하면 회원은 계정 설정, 비회원은 미동의 */
+  eeg_collection_consent?: boolean;
+  eeg_notice_version?: string;
 }
 
 export type EntrySessionDto = SessionDto & { host_name?: string | null };
@@ -35,6 +43,8 @@ export interface EnterResult {
   participant_id: string | null;
   is_guest: boolean;
   is_waitlisted: boolean;
+  /** SDD-220 — 뇌파 수집 선택 현황(true 동의 · false 거부 · null 미확인). 필드가 없으면 구 응답. */
+  eeg_collection_consented?: boolean | null;
   session: EntrySessionDto;
 }
 
@@ -111,9 +121,29 @@ export async function enterByCode(payload: EnterPayload): Promise<EnterResult> {
 }
 
 /** 초대받은 로그인 회원의 편의 입장 — 코드 없이 초대 행으로 같은 자격을 받는다 */
-export async function enterInvitedSession(sessionId: string): Promise<EnterResult> {
+export async function enterInvitedSession(
+  sessionId: string,
+  consent?: { recordingConsent: boolean; recordingNoticeVersion?: string },
+): Promise<EnterResult> {
   await prepareMemberToken();
-  return apiClient.post<EnterResult>(`/sessions/${encodeURIComponent(sessionId)}/enter`, undefined, { skipAuth: false });
+  const body = consent
+    ? { recording_consent: consent.recordingConsent, recording_notice_version: consent.recordingNoticeVersion }
+    : undefined;
+  return apiClient.post<EnterResult>(`/sessions/${encodeURIComponent(sessionId)}/enter`, body, { skipAuth: false });
+}
+
+/** SDD-220 — 입장 후 뇌파 수집 선택 저장(리포트 반영·연구 선택과 별개). 실패하면 던진다(성공으로 표시하지 않는다). */
+export async function setEegCollectionConsent(
+  sessionId: string,
+  credential: string | null,
+  body: { consented: boolean; noticeVersion?: string },
+): Promise<void> {
+  await prepareMemberToken();
+  await apiClient.put(
+    `/sessions/${encodeURIComponent(sessionId)}/entry/eeg-consent`,
+    { consented: body.consented, notice_version: body.noticeVersion },
+    entryRequestOptions(credential),
+  );
 }
 
 export async function getEntryState(sessionId: string, credential: string | null): Promise<EntryStateDto> {
@@ -211,10 +241,21 @@ export async function raiseEntryHand(sessionId: string, participantId: string, c
   );
 }
 
+/** 손 내리기(손들기 취소) — 손들기와 같은 인가. 이미 내려가 있어도 성공(멱등) */
+export async function lowerEntryHand(sessionId: string, participantId: string, credential: string | null): Promise<void> {
+  await prepareMemberToken();
+  await apiClient.post<unknown>(
+    `/sessions/${encodeURIComponent(sessionId)}/participants/${encodeURIComponent(participantId)}/lower-hand`,
+    undefined,
+    entryRequestOptions(credential),
+  );
+}
+
 /* ───────────────────────── 입장 자격 저장 (탭 단위) ───────────────────────── */
 
 /** 새로고침 뒤 화면을 다시 그리기 위한 클래스 요약 — 개인정보가 아니다(제목·시각·방식 설정) */
 export interface EntryClassInfo {
+  sessionType?: SessionDto['type'];
   title: string | null;
   hostName: string | null;
   scheduledAt: string | null;
@@ -236,6 +277,8 @@ export interface StoredEntry {
   participantId: string | null;
   isGuest: boolean;
   classInfo?: EntryClassInfo;
+  /** SDD-220 — 입장 시점의 뇌파 수집 선택. 없으면(구 응답) 사전 선택 화면을 띄우지 않는다. */
+  eegCollectionConsented?: boolean | null;
 }
 
 const ENTRY_KEY_PREFIX = 'mb_entry_';
@@ -289,6 +332,7 @@ export function clearEntry(sessionId: string): void {
 
 export function classInfoFromSession(session: EntrySessionDto): EntryClassInfo {
   return {
+    sessionType: session.type,
     title: session.title,
     hostName: session.host_name ?? null,
     scheduledAt: session.scheduled_at,
@@ -314,5 +358,6 @@ export function entryFromResult(result: EnterResult): StoredEntry | null {
     expiresAt: result.expires_at,
     participantId: result.participant_id,
     isGuest: result.is_guest,
+    ...(result.eeg_collection_consented !== undefined ? { eegCollectionConsented: result.eeg_collection_consented } : {}),
   };
 }

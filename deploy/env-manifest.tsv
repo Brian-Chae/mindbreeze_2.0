@@ -12,6 +12,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES	static	1	2880	현행 dev 와 동일(코드 기본값
 REFRESH_TOKEN_EXPIRE_DAYS	static	1	14	
 RETENTION_SWEEP_ENABLED	static	1	false	SDD-209 — 방침 반영·별도 승인 전 활성 금지
 RESEARCH_EXPORT_ENABLED	static	1	false	SDD-209 — 방침 반영·별도 승인 전 활성 금지
+ACCOUNT_DELETION_SWEEP_ENABLED	static	1	false	SDD-220 — 탈퇴 30일 영구 삭제. dry-run 보고 확인·대표 승인 후 true 로 변경(타이머는 enabled=1, false 이면 dry-run 보고만)
 DATABASE_URL	ssm	1		RDS prod 엔드포인트(SSL)
 DATABASE_URL_SYNC	ssm	1		마이그레이션·precheck 용 동기 URL
 REDIS_URL	ssm	1		redis://127.0.0.1:6379/0
@@ -39,3 +40,12 @@ VAPID_PUBLIC_KEY	ssm	0
 VAPID_PRIVATE_KEY	ssm	0		
 VAPID_SUBJECT	ssm	0		
 ALERT_SNS_TOPIC_ARN	ssm	0		주기 작업 실패 알림(SNS) — 비밀 아님
+PIPELINE_QUEUE_SPLIT_ENABLED	static	1	true	SDD-212 — stt/report 줄 분리. 신규 워커 유닛이 같은 릴리스로 설치되므로 운영은 켠다(롤백: false)
+PIPELINE_QUEUE_GRACE_SECONDS	static	1	3600	SDD-212 — 정체 스윕 대기 유예(초)
+PIPELINE_REDRIVE_DELAY_SECONDS	static	1	5400	SDD-212 — 체인 미완료 재발행 지연(초)
+PIPELINE_METRICS_CLOUDWATCH_ENABLED	static	1	false	SDD-212 — CloudWatch 지표 게시. AWS 권한 확인·승인 전 활성 금지
+CLASS_SCHEDULING_ENABLED	ssm	0		SDD-216 편성 API·운영 작업 — 미설정 기본 false, 단계별 검증 후 변경
+CLASS_ROLLING_ENABLED	ssm	0		SDD-216 정기형 보충 — 미설정 기본 false, 단계별 검증 후 변경
+CLASS_TEAM_READ_ENABLED	ssm	0		SDD-216 고지 확인 후 팀 열람·참관 — 미설정 기본 false, 단계별 검증 후 변경
+MODERATION_NOTICE_EMAIL	ssm	0		채팅 신고 운영 알림 수신(운영 전용 주소). 없으면 메일 없이 관리자 화면에서만 확인
+MODERATION_HOLIDAYS	ssm	0		채팅 신고 처리 기한에서 뺄 휴일(쉼표 구분 YYYY-MM-DD). 없으면 주말만

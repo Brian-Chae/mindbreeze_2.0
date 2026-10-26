@@ -19,9 +19,13 @@ vi.mock('@livekit/components-react', () => ({
   },
   RoomAudioRenderer: () => <i data-testid="lk-audio" />,
   useLocalParticipant: () => ({ localParticipant: livekit.local }),
+  useRoomContext: () => ({ state: "connected", localParticipant: livekit.local }),
   useConnectionState: () => livekit.state,
   useTracks: () => [],
 }));
+
+const handApi = vi.hoisted(() => ({ lowerEntryHand: vi.fn() }));
+vi.mock('../src/lib/api/class-flow', async (importOriginal) => ({ ...(await importOriginal<typeof import('../src/lib/api/class-flow')>()), lowerEntryHand: handApi.lowerEntryHand }));
 
 const chat = vi.hoisted(() => ({ last: {} as Record<string, unknown> }));
 vi.mock('../src/components/chat/ClassChatPanel', async () => {
@@ -46,7 +50,9 @@ function row(id: string, name: string, over: Partial<SessionLiveMetric> = {}): S
   return {
     participant_id: id, user_id: `u-${id}`, display_name: name, is_guest: false, band_connected: true, device_status: 'ok', band_battery: 80,
     avg_efficiency: null, current_efficiency: 60, upload_status: null, last_eeg_at: new Date(NOW).toISOString(),
-    heart_rate: 70, respiratory_rate: 14, sdnn: 50, raise_hand: false, speaking: false, ...over,
+    heart_rate: 70, respiratory_rate: 14, sdnn: 50, raise_hand: false, speaking: false,
+    presence_state: 'connected', // 이 테스트는 서버 접속이 확인된 참가자의 수신 중단을 검증한다.
+    ...over,
   };
 }
 
@@ -113,6 +119,7 @@ beforeEach(async () => {
     value: vi.fn().mockReturnValue({ matches: true, addEventListener: () => undefined, removeEventListener: () => undefined }),
   });
   livekit.local = { setMicrophoneEnabled: vi.fn().mockResolvedValue(undefined), setCameraEnabled: vi.fn().mockResolvedValue(undefined) };
+  handApi.lowerEntryHand.mockReset();
   livekit.state = 'connected';
   livekit.roomProps = {};
   container = document.createElement('div');
@@ -138,10 +145,11 @@ describe('HostLiveContainer — 뷰 모델 조립', () => {
     expect(text(one('[data-pz="ttl"]'))).toContain('/ 30:00');
   });
 
-  it('손든 회원 칩과 밴드 요약이 라이브 행에서 나온다', async () => {
+  it('상시 손들기와 수업 상태의 밴드 요약이 라이브 행에서 나온다', async () => {
     await render(<HostLiveContainer {...baseProps()} />);
-    const line = text(one('[data-pz="chipline"]'));
-    expect(line).toContain('손든 회원 1');
+    expect(text(one('[data-signal="hands"]'))).toContain('손들기 1');
+    await click(one('.hp-status-open'));
+    const line = text(sheet());
     expect(line).toContain('연결 2');
     expect(line).toContain('미착용 1');
   });
@@ -306,10 +314,43 @@ describe('마이크 끄기 = LiveKit mute + AI 기록 일시정지 (P7)', () => 
 });
 
 describe('발언권·채팅·녹음 연결', () => {
+  it('상담사 손 내리기는 기존 API에 세션·참가자·null 자격을 전달하고 중복을 막으며 누른 즉시 행을 낙관적으로 갱신한다', async () => {
+    let resolveRequest: (() => void) | undefined;
+    handApi.lowerEntryHand.mockImplementation(() => new Promise<void>((resolve) => { resolveRequest = resolve; }));
+    const onHandLowered = vi.fn();
+    await render(<HostLiveContainer {...baseProps({ onHandLowered })} />);
+    await click(one('[data-signal="hands"]'));
+    await click(buttonByText('손 내리기', sheet() ?? document));
+    expect(handApi.lowerEntryHand).toHaveBeenCalledWith('s1', 'p2', null);
+    expect(onHandLowered).toHaveBeenCalledExactlyOnceWith('p2');
+    const button = all('button', sheet() ?? document).find((b) => text(b).includes('손 내리기') || text(b).includes('처리 중'));
+    expect(button).toBeDefined();
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    await act(async () => { button?.click(); });
+    expect(handApi.lowerEntryHand).toHaveBeenCalledTimes(1);
+    await act(async () => { resolveRequest?.(); });
+    expect(onHandLowered).toHaveBeenCalledExactlyOnceWith('p2');
+  });
+
+  it('손 내리기 API 실패는 낙관적 갱신을 되돌리고 재시도 안내를 표시한다', async () => {
+    handApi.lowerEntryHand.mockRejectedValue(new Error('forbidden'));
+    const onHandLowered = vi.fn();
+    const onHandLowerFailed = vi.fn();
+    await render(<HostLiveContainer {...baseProps({ onHandLowered, onHandLowerFailed })} />);
+    await click(one('[data-signal="hands"]'));
+    await click(buttonByText('손 내리기', sheet() ?? document));
+    expect(onHandLowered).toHaveBeenCalledTimes(1);
+    expect(onHandLowerFailed).toHaveBeenCalledWith('p2');
+    expect(text(sheet())).toContain('손을 내리지 못했어요. 다시 시도해 주세요.');
+    expect(text(one('[data-signal="hands"]'))).toContain('손들기 1');
+    await click(buttonByText('손 내리기', sheet() ?? document));
+    expect(handApi.lowerEntryHand).toHaveBeenCalledTimes(2);
+  });
+
   it('손든 회원 시트의 발언권 부여가 페이지 핸들러로 간다', async () => {
     const props = baseProps();
     await render(<HostLiveContainer {...props} />);
-    await click(buttonByText('손든 회원 1', one('[data-pz="chipline"]') ?? document));
+    await click(one('[data-signal="hands"]'));
     const grant = all('button', sheet() ?? document).find((b) => text(b) === '발언권 부여');
     await click(grant ?? null);
     expect(props.speaking.onSet).toHaveBeenCalledWith('p2', true);
@@ -355,9 +396,12 @@ describe('발언권·채팅·녹음 연결', () => {
     const props = baseProps();
     await render(<HostLiveContainer {...props} />);
     expect(text(one('[data-pz="chipline"]'))).not.toContain('내 밴드');
-    await click(all('[data-pz="dk"]')[4]);
+    await click(buttonByText('도구', one('[data-pz="dock"]') ?? document));
     await click(all('button', sheet() ?? document).find((b) => text(b) === '보기') ?? null);
     await click(buttonByText('밴드 연결', sheet() ?? document));
+    // SDD-220 TS26: OS 권한 요청 전 사전 안내를 거친다(확인 전에는 연결하지 않는다).
+    expect(props.band.connect).not.toHaveBeenCalled();
+    await click(buttonByText('확인하고 계속', document));
     expect(props.band.connect).toHaveBeenCalledTimes(1);
   });
 
@@ -370,16 +414,18 @@ describe('발언권·채팅·녹음 연결', () => {
   it('코드 복사는 페이지 핸들러를 부른다', async () => {
     const props = baseProps();
     await render(<HostLiveContainer {...props} />);
-    await click(all('[data-pz="dk"]')[4]);
+    await click(buttonByText('도구', one('[data-pz="dock"]') ?? document));
     await click(buttonByText('코드 복사', sheet() ?? document));
     expect(props.codeCopy.onCopy).toHaveBeenCalledTimes(1);
   });
 
-  it('닫기 버튼은 페이지의 onClose 를 부른다', async () => {
+  it('도구의 화면 나가기는 페이지 onClose를 호출하고 수업 종료는 하지 않는다', async () => {
     const props = baseProps();
     await render(<HostLiveContainer {...props} />);
-    await click(one('[data-pz="btn-close"]'));
+    await click(buttonByText('도구', one('[data-pz="dock"]') ?? document));
+    await click(buttonByText('클래스 화면 나가기', sheet() ?? document));
     expect(props.onClose).toHaveBeenCalledTimes(1);
+    expect(props.end.onRequest).not.toHaveBeenCalled();
   });
 });
 

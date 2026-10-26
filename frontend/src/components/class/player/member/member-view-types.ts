@@ -30,6 +30,8 @@ export interface MemberDeviceModel {
   analyzing: boolean;
   /** 원시 파형 2채널(표시용으로 줄인 점들). 없으면 파형 영역을 그리지 않는다 */
   raw: { fp1: readonly number[]; fp2: readonly number[] } | null;
+  /** 맥파 원시 2채널(Red·IR). 없으면 맥파 영역을 그리지 않는다 */
+  ppg: { red: readonly number[]; ir: readonly number[] } | null;
   /** 시뮬레이션 모드면 연결 버튼 라벨이 "시뮬레이션 시작" */
   isMock: boolean;
   /** 서버로 아직 못 보낸 밴드 데이터 수 — 0보다 크면 네트워크 끊김 카드에 "보관 중" 문구를 보여 준다 */
@@ -112,6 +114,8 @@ export interface MemberClassViewProps {
   /** 오프라인 현장 카드에서 고른 체크인 */
   checkin?: MemberCheckin | null;
   sheet: MemberSheetKey | null;
+  /** SDD-246: v2 on 일 때만 — 현재값(매초)과 5분 막대. 데스크톱만 막대, 모바일은 현재값만 */
+  v2Bars?: { label: string; current: number | null; bars: readonly import('../../../../lib/session-live/live-view').Bar[] } | null;
   /** 하니스·측정용 정지 배경. 없으면 교차 페이드 배경 */
   backdropSrc?: string;
   /** 종료 화면(M21) 정보 */

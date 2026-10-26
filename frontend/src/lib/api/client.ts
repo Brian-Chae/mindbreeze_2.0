@@ -4,12 +4,21 @@
 import { loginPathForRole } from '../auth-routing';
 import type { UserRole } from './auth';
 import { Capacitor } from '@capacitor/core';
+import { isLiveProtocolV2Enabled } from '../feature-flags';
 
 // 네이티브 앱(Capacitor)은 앱 오리진(https://localhost)이 API와 달라 SameSite=Lax 쿠키가 전송되지 않는다.
 // 그래서 앱에서만 서버가 응답 헤더로 주는 refresh token 을 로컬에 보관하고, refresh/logout 때 본문으로 보낸다.
 const NATIVE_HEADER = 'X-MB-Native';
 const NATIVE_REFRESH_RESPONSE_HEADER = 'X-MB-Refresh-Token';
 const NATIVE_REFRESH_KEY = 'mb_native_refresh';
+
+/**
+ * SDD-246: v2 회차는 `X-Live-Protocol` 없는 REST 를 구 클라이언트로 보고 426 으로 거절한다.
+ * 신규 웹·앱은 모든 REST 에 지원 버전을 실어 보낸다(종료·시작 REST 폴백 포함).
+ */
+function liveProtocolHeaders(): Record<string, string> {
+  return isLiveProtocolV2Enabled() ? { 'X-Live-Protocol': '1,2' } : {};
+}
 const isNativeClient = (): boolean => {
   try { return Capacitor.isNativePlatform(); } catch { return false; }
 };
@@ -62,6 +71,7 @@ type AccessTokenListener = (token: string | null) => void;
 const accessTokenListeners = new Set<AccessTokenListener>();
 
 function setAccessToken(next: string | null): void {
+  if (next === null) { sharedReadEpoch += 1; invalidateSharedReads(); }
   accessToken = next;
   // API7-03: tokenStorage 를 access token 의 단일 소스로 두고, 변경을 구독자에게 전파한다.
   // (authStore.accessToken 미러가 401 자동 갱신을 놓쳐 소켓이 만료 토큰을 들고 있던 문제 해소)
@@ -118,6 +128,7 @@ export class ApiError extends Error {
 }
 
 interface RequestOptions {
+  signal?: AbortSignal;
   method?: string;
   body?: unknown;
   skipAuth?: boolean;
@@ -137,12 +148,15 @@ const REQUEST_TIMEOUT_MS = 15_000;
 const BLOB_TIMEOUT_MS = 60_000;
 
 /** AbortController 기반 타임아웃 signal 을 만든다. 사용 후 반드시 clear() 로 타이머를 해제한다. */
-function createTimeoutSignal(timeoutMs: number): { signal: AbortSignal; clear: () => void } {
+function createTimeoutSignal(timeoutMs: number, caller?: AbortSignal): { signal: AbortSignal; clear: () => void } {
   const controller = new AbortController();
+  const abort = () => controller.abort();
+  if (caller?.aborted) abort();
+  else caller?.addEventListener('abort', abort, { once: true });
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   return {
     signal: controller.signal,
-    clear: () => clearTimeout(timer),
+    clear: () => { clearTimeout(timer); caller?.removeEventListener('abort', abort); },
   };
 }
 
@@ -233,6 +247,21 @@ export async function refreshAccessToken(): Promise<string | null> {
  * - 단일 객체({ msg, type } 등)면 loc/msg 를 조합
  * - 422 검증 오류처럼 객체 배열이면 각 항목의 loc(필드 경로)와 msg(사유)를 조합
  */
+const CODE_MESSAGES: Record<string, string> = {
+  schedule_conflict: '같은 시간에 겹치는 다른 클래스 일정이 있어요. 확인 후 다시 시도해 주세요.',
+  stale_class: '다른 변경이 먼저 저장됐어요. 최신 내용을 불러온 뒤 다시 시도해 주세요.',
+  stale_session: '회차가 변경됐어요. 최신 내용을 불러온 뒤 다시 시도해 주세요.',
+  // [MB261026][FIX] 채팅 게시 필터 · 관리자 신고 처리
+  CHAT_CONTENT_BLOCKED: '운영정책에 맞지 않는 표현이 있어 보낼 수 없어요. 내용을 고쳐 다시 보내 주세요.',
+  CHAT_FILTER_TERM_EXISTS: '이미 등록된 단어입니다.',
+  CHAT_FILTER_TERM_LIMIT: '금칙어는 최대 500개까지 등록할 수 있습니다.',
+  CHAT_FILTER_TERM_INVALID: '금칙어는 공백·기호를 뺀 2~50자여야 합니다.',
+  REPORT_CLOSED: '이미 판단이 끝난 신고입니다.',
+  REPORT_WITHDRAWN: '신고자가 철회한 신고입니다.',
+  INVALID_REPORT_TRANSITION: '이 상태로 바꿀 수 없습니다.',
+  RESOLUTION_NOTE_REQUIRED: '판단 내용을 메모로 남겨 주세요.',
+};
+
 export function formatErrorDetail(detail: unknown): string | null {
   if (typeof detail === 'string' && detail.trim()) return detail;
 
@@ -263,25 +292,106 @@ export function formatErrorDetail(detail: unknown): string | null {
 
   // API7-10: 단일 객체 detail({ msg, type } 등)도 파싱한다.
   // FastAPI 는 검증 오류를 배열로 주지만, 커스텀 핸들러는 단일 객체로 줄 수 있다.
-  if (detail && typeof detail === 'object') return formatItem(detail);
+  if (detail && typeof detail === 'object') {
+    // 구조화 코드 detail({ code, ... })은 사용자 문구로 바꾼다(없으면 'API 요청 실패 (409)'만 보였다).
+    const code = (detail as { code?: unknown }).code;
+    if (typeof code === 'string' && CODE_MESSAGES[code]) return CODE_MESSAGES[code];
+    return formatItem(detail);
+  }
 
   return null;
 }
 
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+// 메뉴 공통 데이터만 짧게 재사용한다. 화면 데이터·상세·PDF는 대상이 아니다.
+interface SharedRead { promise: Promise<unknown>; expiresAt: number }
+const sharedReads = new Map<string, SharedRead>();
+let sharedReadScope: string | null = null;
+let sharedReadEpoch = 0;
+const SHARED_READ_TTL_MS = 30_000;
+const isSharedRead = (path: string): boolean =>
+  /^(?:\/notifications(?:\/unread-count)?|\/chat\/rooms|\/classes\/instructor-candidates)(?:\?|$)/.test(path);
+
+/** 소켓·계정 변경 시 진행 중 응답도 격리해 과거 배지가 다시 적용되지 않게 한다. */
+export function invalidateSharedReads(resource?: 'notifications' | 'chat', settledOnly = false): void {
+  for (const [path, entry] of sharedReads) {
+    if (resource && !path.startsWith(`/${resource}`)) continue;
+    if (settledOnly && entry.expiresAt === Infinity) continue;
+    sharedReads.delete(path);
+  }
+}
+
+function readScope(): string | null {
+  try { return localStorage.getItem(PERSISTED_USER_KEY); } catch { return null; }
+}
+
+function sharedRead<T>(path: string, options: RequestOptions): Promise<T> {
+  const scope = readScope();
+  if (scope !== sharedReadScope) {
+    sharedReadScope = scope;
+    sharedReadEpoch += 1;
+    invalidateSharedReads();
+  }
+  let entry = sharedReads.get(path);
+  if (!entry || entry.expiresAt <= Date.now()) {
+    const epoch = sharedReadEpoch;
+    const created: SharedRead = { promise: Promise.resolve(), expiresAt: Infinity };
+    sharedReads.set(path, created);
+    // caller의 abort는 아래 request에서 처리한다. 공유 네트워크는 별도로 유지한다.
+    created.promise = requestActive<T>(path, { ...options, signal: undefined }).then(data => {
+      if (epoch !== sharedReadEpoch || scope !== readScope()) throw new DOMException('만료된 계정 조회', 'AbortError');
+      // 소켓/변경 요청과 겹친 소비자는 실패시키지 않고 최신 조회에 합류시킨다.
+      if (sharedReads.get(path) !== created) return sharedRead<T>(path, options);
+      created.expiresAt = Date.now() + SHARED_READ_TTL_MS;
+      return data;
+    }, error => {
+      if (sharedReads.get(path) === created) sharedReads.delete(path);
+      throw error;
+    });
+    entry = created;
+  }
+  // 소비자의 상태 처리에서 객체를 변경해도 다음 조회에 전파하지 않는다.
+  return entry.promise.then(data => structuredClone(data) as T);
+}
+
+/** 호출자 취소는 공유 인증 갱신을 끊지 않고 해당 요청만 즉시 종료한다. */
+function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const { signal } = options;
+  if (signal?.aborted) return Promise.reject(new DOMException('요청 취소', 'AbortError'));
+  const method = options.method ?? 'GET';
+  const mutation = !['GET', 'HEAD', 'OPTIONS'].includes(method);
+  if (mutation) invalidateSharedReads();
+  const active = method === 'GET' && !options.skipAuth && !options.headers && !options.responseType && isSharedRead(path)
+    ? sharedRead<T>(path, options)
+    : requestActive<T>(path, options);
+  const result = mutation ? active.finally(() => invalidateSharedReads()) : active;
+  if (!signal) return result;
+  return new Promise<T>((resolve, reject) => {
+    const abort = () => reject(new DOMException('요청 취소', 'AbortError'));
+    signal.addEventListener('abort', abort, { once: true });
+    result.then(resolve, reject)
+      .finally(() => signal.removeEventListener('abort', abort));
+  });
+}
+
+async function requestActive<T>(path: string, options: RequestOptions): Promise<T> {
+  const checkCancelled = () => {
+    if (options.signal?.aborted) throw new DOMException('요청 취소', 'AbortError');
+  };
   const { method = 'GET', body, skipAuth = false, headers = {} } = options;
 
   const buildHeaders = (token: string | null): Record<string, string> => {
-    const h: Record<string, string> = { ...headers, ...nativeHeaders() };
+    const h: Record<string, string> = { ...liveProtocolHeaders(), ...headers, ...nativeHeaders() };
     if (body !== undefined && !isFormDataBody(body)) h['Content-Type'] = 'application/json';
     if (!skipAuth && token) h.Authorization = `Bearer ${token}`;
     return h;
   };
 
   const doFetch = async (token: string | null): Promise<Response> => {
+    checkCancelled();
     // API7-02: 응답이 오지 않으면 상한 시간 후 요청을 중단한다.
     const { signal, clear } = createTimeoutSignal(
       options.responseType === 'blob' ? BLOB_TIMEOUT_MS : REQUEST_TIMEOUT_MS,
+      options.signal,
     );
     try {
       const response = await fetch(`${BASE_URL}${path}`, {
@@ -294,6 +404,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       captureNativeRefresh(response);
       return response;
     } catch (error) {
+      checkCancelled();
       if (isAbortError(error)) {
         throw new ApiError(408, '요청 시간이 초과되었습니다. 네트워크 상태를 확인한 후 다시 시도해 주세요.', null);
       }
@@ -305,13 +416,16 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   let token = tokenStorage.getAccess();
   let res = await doFetch(token);
+  checkCancelled();
 
   // 401 → refresh 재시도 1회
   if (res.status === 401 && !skipAuth) {
     const refresh = await refreshAccessTokenResult();
+    checkCancelled();
     if (refresh.ok) {
       token = refresh.token;
       res = await doFetch(token);
+      checkCancelled();
       // API7-05: 갱신 후 재시도도 401이면 세션이 실제로 무효다.
       // 초기 401(무효 refresh) 경로와 동일하게 정리·로그인 이동을 수행해야
       // '인증됨' 상태로 남아 401만 반복되는 상태에 빠지지 않는다.

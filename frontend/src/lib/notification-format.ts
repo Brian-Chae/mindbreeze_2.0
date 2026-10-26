@@ -17,6 +17,18 @@ export const TYPE_LABELS: Record<string, string> = {
 };
 
 export const EVENT_LABELS: Record<string, string> = {
+  class_invited: '클래스 초대',
+  class_member_joined: '클래스 가입',
+  class_session_added: '클래스 회차 추가',
+  class_completed: '클래스 마무리',
+  class_cancelled: '클래스 취소',
+  session_host_assigned: '진행자 배정',
+  session_host_change_requested: '진행자 변경 요청',
+  session_host_change_resolved: '진행자 변경 요청 결과',
+  session_host_transfer_requested: '진행자 양도 요청',
+  session_host_changed: '진행자 변경',
+  session_host_released: '진행자 해제',
+  session_host_needed: '진행자 배정 필요',
   // 세션
   session_booked: '세션 예약',
   session_updated: '세션 변경',

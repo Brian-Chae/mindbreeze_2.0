@@ -21,6 +21,7 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
+from app.core.ai_features import require_ai_enabled
 from app.models.agent import (
     AgentConversation,
     AgentDeliveryLog,
@@ -319,6 +320,20 @@ def _enqueue_notifications(
         )
     except Exception:  # noqa: BLE001 — 알림 실패가 메시지 생성을 막지 않는다
         logger.exception("[agent_service] 인앱 알림 적재 실패: message_id=%s", message.id)
+
+    if message.kind == "report_ready" and message.ref_type == "report":
+        user = db.get(User, user_id)
+        if not user or not notification_service.get_user_preferences(user)["push"].get("report_ready", False):
+            return
+        # 승인 알림이 이미 담당하는 리포트는 루시 메시지까지 두 번 푸시하지 않는다.
+        # sent/skipped 등도 재생성하지 않는다. 인앱 OFF로 notification_id가 없어도 조회한다.
+        existing = db.query(NotificationOutbox.id).filter(
+            NotificationOutbox.user_id == user_id,
+            NotificationOutbox.channel == "push",
+            NotificationOutbox.payload["deeplink"].astext == f"/app/reports?report={message.ref_id}",
+        ).first()
+        if existing:
+            return
 
     # 푸시 Outbox — payload 에 PII·상담 내용 없음(TS15).
     db.add(
@@ -703,6 +718,7 @@ def _companion_reply(db: DBSession, user_id: UUID, user_text: str) -> str:
 
 def send_user_message(db: DBSession, user_id: str | UUID, content: str) -> dict:
     """사용자 메시지 저장 + 에이전트 응답 생성 (동의 필수)."""
+    require_ai_enabled()  # SDD-220: AI off 면 대화 생성 0
     require_consent(db, user_id)
     uid = _to_uuid(user_id)
     text = content.strip()
@@ -749,6 +765,7 @@ def stream_user_message(db: DBSession, user_id: str | UUID, content: str):
     `agent_guard.sanitize` 를 거쳐 진단·점수 표현이 제거된 뒤 저장된다(프론트는 완료 후
     폴링으로 확정 메시지를 다시 받는다).
     """
+    require_ai_enabled()  # SDD-220: AI off 면 스트림·도구 실행 0
     require_consent(db, user_id)
     uid = _to_uuid(user_id)
     text = content.strip()
@@ -960,6 +977,7 @@ def execute_cta(
     text: str | None = None,
 ) -> dict:
     """CTA 실행 — 소유자 검증 후 액션별로 처리한다(IDOR 방지)."""
+    require_ai_enabled()  # SDD-220: AI off 면 도구 실행 0
     require_consent(db, user_id)
     uid = _to_uuid(user_id)
     mid = _to_uuid(message_id)

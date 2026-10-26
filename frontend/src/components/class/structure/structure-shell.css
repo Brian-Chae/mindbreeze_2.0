@@ -1,0 +1,93 @@
+/* 새 읽기 화면에서만 쓰는 소프트 셸. 기존 전역 토큰은 유지한다. */
+.cs-structure { height: 100%; min-height: 0; color: #26232b; font-size: 14px; }
+.cs-structure [data-shell-variant="structure"] { overflow: hidden; background: #f7f5f9; }
+.cs-structure [data-shell-variant="structure"] > aside { min-height: 0; overflow-y: auto; }
+/* SDD-245: 일반 셸 contentPad(16/32/40)와 같은 gutter. 홈(.mh-home/.ch-home)은 자체 inset을 유지해 아래에서 기존 값으로 고정한다. */
+.cs-structure .cs-structure-content { display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; padding: 32px 32px 40px; }
+@media (min-width: 1024px) { .cs-structure .cs-structure-content { padding: 32px 40px 40px; } }
+/* 데스크톱: 스크롤바(gutter 고정)를 일반 셸처럼 가장자리에 두고 오른쪽 gutter는 스크롤 영역 안쪽 padding으로 준다 → 본문 열 폭이 셸 종류와 무관하게 같다. */
+@media (min-width: 1024px) { .cs-structure .cs-structure-content:not(:has(.mh-home)) { padding-right: 0; } .cs-structure .cs-structure-content:not(:has(.mh-home)) > .cs-structure-scroll { padding-right: 40px; } }
+@media (min-width: 768px) and (max-width: 1023px) { .cs-structure .cs-structure-content:has(.mh-home, .ch-home) { padding: 24px; } }
+.cs-structure .cs-structure-scroll { scrollbar-gutter: stable; width: 100%; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
+.cs-structure .cs-read-state { display: flex; min-height: 240px; padding: 32px 16px; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; }
+.cs-structure .cs-read-state p { margin: 0; color: #625b6c; }
+.cs-structure .cs-read-state button, .cs-structure .cs-read-state a { display: inline-flex; min-width: 44px; min-height: 44px; align-items: center; justify-content: center; padding: 8px 16px; border: 1px solid #dcd2e5; border-radius: 12px; background: #fff; color: #5f0080; }
+.cs-structure button, .cs-structure a { min-width: 44px; min-height: 44px; }
+.cs-structure button:focus-visible, .cs-structure a:focus-visible { outline: 2px solid #7c3aed; outline-offset: 2px; }
+.cs-structure [class~="text-[10px]"] { font-size: 12px; }
+@media (max-width: 767px) {
+  .cs-structure .cs-structure-content { padding: 16px; }
+  .cs-structure .cs-structure-scroll { box-sizing: border-box; padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
+  .cs-structure [data-shell-variant="structure"] > header { height: 56px; }
+}
+
+/* SDD-216 시안 토큰: structure 셸 안에만 적용한다. */
+.cs-structure { --cs-brand: #5F0080; --cs-cream: #F5EDFC; --cs-ink: #1F1F1F; --cs-muted: #6F6F6F; --cs-line: #ECE6F0; --cs-surface: #F7F4F0; }
+.cs-structure [data-shell-variant="structure"] { background: var(--cs-surface); }
+.cs-structure .cs-class-list { container: class-list / inline-size; display: grid; gap: 12px; }
+.cs-structure .cs-class-columns { display: none; }
+.cs-structure .cs-class-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); grid-template-areas: "identity identity" "next host" "progress progress" "state state"; gap: 16px; padding: 16px; border: 1px solid var(--cs-line); border-radius: 16px; background: #fff; color: var(--cs-ink); align-items: start; }
+.cs-structure .cs-class-row:hover { border-color: #D2AEFC; }
+.cs-structure .cs-class-identity { grid-area: identity; display: grid; grid-template-columns: 44px minmax(0,1fr); align-items: center; gap: 16px; min-width: 0; }
+.cs-structure .cs-class-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 16px; background: var(--cs-cream); color: var(--cs-brand); }
+.cs-structure .cs-class-identity h2 { font-size: 15px; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
+/* 클래스 제목은 한 줄 — '즉석' 칩을 앞에 두고 넘치면 말줄임(…). 칩은 줄바꿈되지 않는다. */
+.cs-structure .cs-class-identity h2.cs-class-title { display: flex; align-items: center; gap: 8px; min-width: 0; overflow-wrap: normal; }
+.cs-structure .cs-class-title__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-structure .cs-instant-chip { flex: none; white-space: nowrap; border-radius: 999px; background: #F3E8FF; color: #6B21A8; padding: 2px 8px; font-size: 12px; font-weight: 600; line-height: 18px; }
+.cs-structure .cs-class-identity p { margin-top: 8px; color: var(--cs-muted); font-size: 13px; }
+.cs-structure .cs-class-next { grid-area: next; }
+.cs-structure .cs-class-progress { grid-area: progress; }
+.cs-structure .cs-class-host { grid-area: host; }
+.cs-structure .cs-class-next, .cs-structure .cs-class-host, .cs-structure .cs-class-progress { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.cs-structure .cs-class-key { font-size: 13px; font-weight: 600; color: var(--cs-muted); }
+.cs-structure .cs-class-row strong { font-size: 15px; font-weight: 700; line-height: 1.4; }
+.cs-structure .cs-class-row small { font-size: 13px; color: var(--cs-muted); line-height: 20px; }
+.cs-structure .cs-progress-line { display: flex; align-items: center; gap: 16px; }
+.cs-structure .cs-progress-line progress { flex: 1; width: 100%; min-width: 40px; height: 8px; border: 0; border-radius: 9999px; accent-color: var(--cs-brand); overflow: hidden; background: #EFE8F5; }
+.cs-structure .cs-progress-line progress::-webkit-progress-bar { background: #EFE8F5; }
+.cs-structure .cs-progress-line progress::-webkit-progress-value { background: var(--cs-brand); border-radius: 9999px; }
+.cs-structure .cs-progress-line progress::-moz-progress-bar { background: var(--cs-brand); border-radius: 9999px; }
+.cs-structure .cs-class-state { grid-area: state; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+/* 즉석 클래스 '다시 열기' — 카드 링크 안에 링크를 중첩할 수 없어 형제로 두고 카드 오른쪽 끝에 겹쳐 배치한다. */
+.cs-structure .cs-reopen-link { position: absolute; right: 16px; bottom: 16px; z-index: 1; display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border: 1px solid #E9D5FF; border-radius: 12px; background: #fff; font-size: 14px; font-weight: 600; color: #6B21A8; }
+.cs-structure .cs-reopen-link:hover { border-color: #D2AEFC; background: #FAF5FF; }
+.cs-structure .cs-state-chip { display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 9999px; background: var(--cs-cream); color: var(--cs-brand); font-size: 12px; font-weight: 600; }
+.cs-structure .cs-muted-chip { background: #F0ECF3; color: var(--cs-muted); }
+.cs-structure .cs-open-chip { background: #E3F8F2; color: #0B6B55; }
+@container class-list (min-width: 760px) {
+  .cs-structure .cs-class-columns, .cs-structure .cs-class-row { grid-template-columns: minmax(0,3fr) minmax(0,1.3fr) minmax(0,1.3fr) minmax(0,1.1fr) minmax(0,1.3fr); }
+  .cs-structure .cs-class-columns { display: grid; gap: 16px; padding: 0 16px; font-size: 13px; font-weight: 600; color: var(--cs-muted); }
+  .cs-structure .cs-class-row { grid-template-areas: "identity next progress host state"; align-items: center; }
+  .cs-structure .cs-class-row .cs-class-key { display: none; }
+  .cs-structure .cs-reopen-link { top: 50%; bottom: auto; transform: translateY(-50%); }
+}
+.cs-structure .cs-class-hero { position: relative; isolation: isolate; display: grid; gap: 24px; border-radius: 24px; padding: 24px; color: #F7F4F0; background-size: cover; background-position: center; overflow: hidden; }
+.cs-structure .cs-class-hero::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(to bottom,rgba(18,8,28,.35),rgba(18,8,28,.75)); }
+.cs-structure .cs-hero-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.cs-structure .cs-hero-top, .cs-structure .cs-hero-chips, .cs-structure .cs-hero-when { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+.cs-structure .cs-hero-top > span:last-child { color: #CFC6D6; }
+.cs-structure .cs-hero-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; border: 1px solid rgba(255,255,255,.18); border-radius: 9999px; background: rgba(24,12,36,.4); padding: 6px 12px; color: #F7F4F0; font-size: 13px; }
+.cs-structure .cs-class-hero h2 { margin: 0; font-size: 24px; line-height: 1.45; font-weight: 700; overflow-wrap: anywhere; }
+.cs-structure .cs-hero-guide { display: flex; align-items: flex-start; gap: 12px; padding: 16px; background: rgba(24,12,36,.4); border-radius: 16px; }
+.cs-structure .cs-hero-guide strong { font-size: 15px; font-weight: 600; }
+.cs-structure .cs-hero-guide p, .cs-structure .cs-hero-actions p { font-size: 13px; line-height: 1.6; color: #CFC6D6; margin-top: 8px; }
+.cs-structure .cs-hero-actions { display: flex; flex-direction: column; gap: 8px; }
+.cs-structure .cs-hero-actions a { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 12px 24px; border-radius: 9999px; color: var(--cs-brand); background: #F7F4F0; font-size: 15px; font-weight: 700; }
+@media(min-width: 1194px) { .cs-structure .cs-class-hero { grid-template-columns: minmax(0,1fr) 240px; align-items: center; } }
+@media(max-width: 767px) { .cs-structure .cs-class-hero { padding: 16px; gap: 16px; } }
+
+/* 사진 위 제목·일시는 전역 h2/p 색보다 우선해 읽기 대비를 유지한다. */
+.cs-structure .cs-class-hero h2,
+.cs-structure .cs-open-hero h2 { color: #F7F4F0; }
+.cs-structure .cs-class-hero .cs-hero-when,
+.cs-structure .cs-open-hero > p { color: #CFC6D6; }
+
+/* SDD-234: 클래스 전용 선택자만 보정한다. 홈 카드와 공통 셸은 제외한다. */
+@media (max-width: 767px) {
+  .cs-structure .cs-state-chip { font-size: var(--mobile-type-caption-size); line-height: var(--mobile-type-caption-leading); }
+  .cs-structure .cs-class-key { font-size: var(--mobile-type-label-size); line-height: var(--mobile-type-label-leading); }
+  .cs-structure .cs-class-identity h2 { font-size: var(--mobile-type-subtitle-size); line-height: var(--mobile-type-subtitle-leading); }
+  .cs-structure .cs-class-row strong { font-size: var(--mobile-type-compact-size); line-height: var(--mobile-type-compact-leading); }
+  .cs-structure .cs-hero-guide p, .cs-structure .cs-hero-actions p { font-size: var(--mobile-type-compact-size); line-height: var(--mobile-type-compact-leading); }
+}

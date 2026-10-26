@@ -12,6 +12,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session as DBSession
 
+from app.core.ai_features import require_ai_enabled_dep
 from app.api.deps import require_roles
 from app.core.database import get_db
 from app.schemas.agent import (
@@ -38,7 +39,11 @@ from app.schemas.agent import (
 )
 from app.services import agent_counselor_service, agent_service
 
-router = APIRouter(prefix="/agent/counselor", tags=["agent-counselor"])
+router = APIRouter(
+    prefix="/agent/counselor",
+    tags=["agent-counselor"],
+    dependencies=[Depends(require_ai_enabled_dep)],
+)
 
 # 상담사 전용 채널 — 내담자·기관관리자·플랫폼관리자 토큰은 403.
 _counselor_only = require_roles("counselor")

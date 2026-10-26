@@ -1,9 +1,9 @@
 """User Model"""
 
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
-from sqlalchemy import Boolean, String, DateTime, Text, ForeignKey, func
+from sqlalchemy import Boolean, Date, String, DateTime, Text, ForeignKey, func, text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -88,11 +88,31 @@ DEFAULT_NOTIFICATION_PREFERENCES: dict = {
     },
 }
 
+DEFAULT_NOTIFICATION_PREFERENCES["push"] = {
+    "session_updated": True, "session_cancelled": True,
+    "session_host_changed": True, "session_host_change_requested": True,
+    "chat_message": True, "report_ready": True, "session_invited": True,
+    "class_invited": True, "session_started": True,
+}
+
+# SDD-216: 신규 클래스 운영 이벤트는 인앱 켬·이메일 끔으로 시작한다.
+CLASS_NOTIFICATION_EVENTS = (
+    "class_invited", "class_member_joined", "class_session_added", "class_completed", "class_cancelled",
+    "session_host_assigned", "session_host_change_requested", "session_host_change_resolved",
+    "session_host_transfer_requested", "session_host_changed", "session_host_released", "session_host_needed",
+)
+for _event in CLASS_NOTIFICATION_EVENTS:
+    DEFAULT_NOTIFICATION_PREFERENCES["in_app"][_event] = True
+    DEFAULT_NOTIFICATION_PREFERENCES["email"][_event] = False
+
 from app.core.database import Base
 
 
 class User(Base):
     __tablename__ = "users"
+    # SDD-220: 서버 기본값 컬럼(birth_date/deleted_at/purge_after)을 INSERT ... RETURNING 으로 읽지 않는다 —
+    #   컬럼 추가 이전(052) 스키마에서 시드 스크립트가 users 를 INSERT 해도 깨지지 않게 한다.
+    __mapper_args__ = {"eager_defaults": False}
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
@@ -109,10 +129,21 @@ class User(Base):
     auto_approve_report: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False, server_default="false"
     )
-    auth_provider: Mapped[str] = mapped_column(String(20), default="email", nullable=False, server_default="email")  # "email" | "google"
+    # SDD-237: 클래스 종료 후 '진행 기록 남기기' 1회 안내를 모든 회차에서 끌 수 있다(기본 켜짐).
+    #   deferred: 052 스키마에서 시드하는 스크립트처럼 컬럼 추가 이전 스키마에 ORM 으로 붙는 경로를 깨지 않는다(birth_date 와 같은 이유). Python default 를 두지 않아 INSERT 에서 빠지고 DB 기본값(true)이 쓰인다.
+    show_session_note_prompt: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="true", deferred=True
+    )
+    auth_provider: Mapped[str] = mapped_column(String(20), default="email", nullable=False, server_default="email")  # "email" | "google" | "apple"
     # SDD-017: 초대(pending) 계정의 초대 시각·만료 시각. 초대 관리 목록에서 상태/만료 뱃지에 사용한다.
     invited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     invite_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # SDD-220: 만 14세 확인용 생년월일. 기존 사용자에게 임의 값을 채우지 않는다(NULL 허용).
+    #   deferred: 052 스키마에서 시드하는 스크립트(seed_test_accounts)처럼 컬럼 추가 이전 스키마에 ORM 으로 붙는 경로를 깨지 않는다.
+    birth_date: Mapped[date | None] = mapped_column(Date, nullable=True, deferred=True, server_default=text("NULL"))
+    # SDD-220: 본인 탈퇴 — 즉시 접근 차단(deleted_at)과 영구 삭제 시각(purge_after = deleted_at + 유예일)을 분리해 기록한다.
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, deferred=True, server_default=text("NULL"))
+    purge_after: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True, deferred=True, server_default=text("NULL"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

@@ -144,9 +144,9 @@ function stateDto(over: Partial<EntryStateDto> = {}): EntryStateDto {
   };
 }
 
-function seedEntry(): void {
+function seedEntry(isGuest = true): void {
   saveEntry({
-    sessionId: 's1', credential: 'cred', expiresAt: null, participantId: 'p1', isGuest: true,
+    sessionId: 's1', credential: 'cred', expiresAt: null, participantId: 'p1', isGuest,
     classInfo: {
       title: '마음챙김 명상', hostName: '채용욱', scheduledAt: null, startedAt: null, durationMin: 50, locationType: 'online',
       locationAddress: null, participantMode: 'group', linkbandMode: 'optional', maxParticipants: 10, recordAudio: true, recordVideo: true,
@@ -195,9 +195,9 @@ describe('EntryPage', () => {
     await renderPage();
     expect(text()).toContain('열리면 자동으로 입장해요 · 이 화면을 열어 두세요');
   });
-  it('자격이 없으면 입장 정보 만료 → 코드 입력하기로 /join 이동', async () => {
+  it('자격이 없으면 초대 안내 → 코드 입력하기로 /join 이동', async () => {
     await renderPage();
-    expect(text()).toContain('입장 정보가 만료됐어요');
+    expect(text()).toContain('초대받은 클래스에 입장해 주세요');
     await act(async () => { qa<HTMLButtonElement>('button').find((b) => b.textContent === '코드 입력하기')?.click(); });
     expect(document.querySelector('[data-testid="where"]')?.textContent).toBe('/join');
   });
@@ -227,8 +227,8 @@ describe('EntryPage', () => {
 });
 
 describe('EntryPage — 고지·리포트 반영 선택·연구 동의 (M2)', () => {
-  async function toNotice(): Promise<void> {
-    seedEntry();
+  async function toNotice(isGuest = true): Promise<void> {
+    seedEntry(isGuest);
     getEntryState.mockResolvedValue(stateDto({ status: 'open' }));
     await renderPage();
     await act(async () => { qa<HTMLButtonElement>('button').find((b) => b.textContent === '입장하기')?.click(); });
@@ -257,11 +257,16 @@ describe('EntryPage — 고지·리포트 반영 선택·연구 동의 (M2)', ()
     await act(async () => { find('확인하고 계속하기')?.click(); });
     expect(text()).not.toContain('시작 전에 확인해 주세요');
   });
+  it('비회원은 고지 화면에서 연구 동의 UI와 저장 요청이 없다', async () => {
+    await toNotice();
+    expect(qa('[aria-label="연구 동의"]')).toHaveLength(0);
+    expect(setResearchConsent).not.toHaveBeenCalled();
+  });
   it('연구 동의 체크는 즉시 저장하고, 실패하면 미동의로 두며 안내한다(계속하기는 막지 않음)', async () => {
     setResearchConsent.mockResolvedValueOnce({ participant_id: 'p1', consented: true, changed: true });
-    await toNotice();
+    await toNotice(false);
     await act(async () => { qa('[role="checkbox"]')[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
-    expect(setResearchConsent).toHaveBeenCalledWith('s1', 'cred', { participantId: 'p1', consented: true, noticeVersion: 'r5-1' });
+    expect(setResearchConsent).toHaveBeenCalledWith('s1', 'cred', { participantId: 'p1', consented: true, noticeVersion: 'r5-2' });
     expect(qa('[role="checkbox"]')[0]!.getAttribute('aria-checked')).toBe('true');
 
     setResearchConsent.mockRejectedValueOnce(new ApiError(409, 'x', null));
@@ -370,8 +375,8 @@ describe('EntryPage — LINK BAND 단계 (M4)', () => {
 
 describe('EntryPage — 기기 점검 (M5)', () => {
   const find = (label: string): HTMLButtonElement | undefined => qa<HTMLButtonElement>('button').find((b) => (b.textContent ?? '').trim() === label);
-  async function toDevice(): Promise<void> {
-    seedEntry();
+  async function toDevice(isGuest = true): Promise<void> {
+    seedEntry(isGuest);
     setReportChoice.mockResolvedValue({ participant_id: 'p1', report_included: false, changed: false });
     getEntryState.mockResolvedValue(stateDto({ status: 'open' }));
     bandStepState.state = 'idle';
@@ -390,12 +395,19 @@ describe('EntryPage — 기기 점검 (M5)', () => {
     await act(async () => { qa<HTMLButtonElement>('button').find((b) => b.getAttribute('aria-label') === '마이크 켜기')?.click(); });
     expect(toggleMic).toHaveBeenCalledTimes(1);
   });
+  it('회원의 최종 준비 요약에는 연구 선택 행을 유지한다', async () => {
+    await toDevice(false);
+    await act(async () => { find('다음')?.click(); });
+    expect(text()).toContain('준비를 마쳤어요');
+    expect(text()).toContain('연구 목적 활용에 동의하지 않았어요');
+  });
   it('마이크가 거부돼도 다음으로 진행해 요약에 마이크 꺼짐이 보인다', async () => {
     mediaState.mic = 'denied';
     await toDevice();
     await act(async () => { find('다음')?.click(); });
     expect(text()).toContain('준비를 마쳤어요');
     expect(text()).toContain('마이크 꺼짐 · 카메라 꺼짐');
+    expect(text()).not.toContain('연구 목적 활용');
   });
 });
 

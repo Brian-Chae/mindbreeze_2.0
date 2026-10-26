@@ -1,0 +1,22 @@
+{
+  "$fixture": {
+    "schema": "core-config",
+    "why": "anchor profile enum",
+    "reject_by": "schema"
+  },
+  "message": {
+    "abi_version": 1,
+    "device_profile_version": "linkband2-v1",
+    "algorithm_version": "web-ts-1",
+    "model_version": "b0-cohort-2",
+    "model_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "model_mode": "active_sigmoid",
+    "rates_hz": {
+      "eeg": 250,
+      "ppg": 50,
+      "acc": 30
+    },
+    "anchor": "middle",
+    "acc_interval_profile": "rounded_33333us_v1"
+  }
+}

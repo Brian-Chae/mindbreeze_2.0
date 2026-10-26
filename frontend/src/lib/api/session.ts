@@ -1,6 +1,8 @@
+import type { ParticipationRow } from "./participation";
 // 세션 관리 API
 
-import { apiClient } from './client';
+import { apiClient, ApiError } from './client';
+import { invalidateClassReads } from '../class-structure/invalidation';
 
 export type SessionType = 'clinical' | 'hypnosis' | 'meditation' | 'custom';
 /** SDD-088: 'open' = 오픈/대기 — 상담사가 클래스를 열어 회원 입장을 받는 단계 */
@@ -28,6 +30,8 @@ export interface SessionParticipant {
   speaking?: boolean;
   user_name?: string;
   user_email?: string;
+  /** SDD-209: 최초 입장 시각(호스트 뷰 전용). 미입장이면 null */
+  entered_at?: string | null;
 }
 
 export interface SessionDto {
@@ -67,6 +71,13 @@ export interface SessionDto {
   is_template?: boolean;
   /** SDD-097: 예약 사전 안내(리마인더) 시점 — 시작 N분 전 정수 목록(빈 배열=끔) */
   reminder_offsets?: number[];
+  /** SDD-214: 세션의 상위 클래스 ID·제목(상담·템플릿은 null) */
+  class_id?: string | null;
+  class_title?: string | null;
+  /** SDD-214: 부모 내 회차 번호(템플릿은 null) */
+  seq?: number | null;
+  /** SDD-214: 세션 영역(부모 없는 템플릿은 null) */
+  area?: 'meditation' | 'counseling' | null;
 }
 
 export interface SessionListResponse {
@@ -143,7 +154,7 @@ export interface ReportEmailResponse {
 export type DeviceStatus = 'ok' | 'lead_off' | 'disconnected' | 'unsupported' | 'unknown';
 export type UploadStatus = 'idle' | 'streaming' | 'delayed' | 'failed' | 'completed' | null;
 
-export interface SessionLiveMetric {
+export interface SessionLiveMetric extends Partial<ParticipationRow> {
   participant_id: string;
   user_id?: string | null;
   display_name: string;
@@ -171,6 +182,10 @@ export interface SessionLiveMetric {
   sdnn?: number | null;
   /** 몸 지표 — HRV RMSSD ms (산출 불가 시 null) */
   rmssd?: number | null;
+  /** v2 LiveState focus_display(0~100). 구 경로는 없음 → extras 폴백 */
+  focus_score?: number | null;
+  /** v2 LiveState emotion_display(0~100). 구 경로는 없음 → extras 폴백 */
+  emotional_score?: number | null;
   /** SDD-094: 손들기 상태 (온라인 그룹에서 기본 뮤트 → 손들기로 발언 요청) */
   raise_hand?: boolean;
   /** SDD-094: 발언권(송출) 부여 상태 — true면 can_publish */
@@ -202,6 +217,12 @@ export interface EegFeatureItem {
   cognitive_load?: number | null;
   emotional_stability?: number | null;
   hemispheric_balance?: number | null;
+  /** SDD-244: 누락돼 있던 스칼라. 서버가 알기 전까지는 무시된다. */
+  total_neural_activity?: number | null;
+  /** FAA(로그비) */
+  faa?: number | null;
+  /** 실행 구간(play/resume) 식별자 — 서버 EEGFeatureItem이 이미 수용 */
+  play_group_id?: string | null;
   /** 0~1 신호 품질 */
   signal_quality?: number | null;
   /** PPG HRV — 계산 불가 시 null (0 치환 금지) */
@@ -275,8 +296,21 @@ export const createSessionFromTemplate = (
 
 export type SessionAction = 'open' | 'start' | 'end' | 'cancel';
 
-export const transitionSession = (id: string, action: SessionAction): Promise<SessionDto> =>
-  apiClient.post<SessionDto>(`/sessions/${id}/${action}`);
+/** 겹침 확인 후 재요청에 쓰는 확인 값(서버 TransitionConfirmation) */
+export interface TransitionConfirmation { force: true; confirmed_conflict_fingerprint: string }
+
+/** 409 schedule_conflict 응답이면 확인용 지문을 돌려준다(아니면 null). */
+export const scheduleConflictFingerprint = (error: unknown): string | null => {
+  if (!(error instanceof ApiError) || error.status !== 409) return null;
+  const detail = (error.data as { detail?: { code?: string; conflict_fingerprint?: string } } | null)?.detail;
+  return detail?.code === 'schedule_conflict' && typeof detail.conflict_fingerprint === 'string' ? detail.conflict_fingerprint : null;
+};
+
+export const transitionSession = async (id: string, action: SessionAction, confirmation?: TransitionConfirmation): Promise<SessionDto> => {
+  const result = await apiClient.post<SessionDto>(`/sessions/${id}/${action}`, confirmation);
+  if (action === 'end' || action === 'cancel') invalidateClassReads();
+  return result;
+};
 
 export const inviteParticipant = (id: string, userId: string): Promise<SessionDto> =>
   apiClient.post<SessionDto>(`/sessions/${id}/invite`, { user_id: userId });

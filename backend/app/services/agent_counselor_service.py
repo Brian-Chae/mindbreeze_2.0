@@ -21,6 +21,7 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
+from app.core.ai_features import require_ai_enabled
 from app.models.agent import (
     AgentCheckin as AgentCheckinModel,
     AgentConversation,
@@ -208,6 +209,7 @@ def send_user_message(db: DBSession, user_id: str | UUID, content: str) -> dict:
     상담사 채널에는 별도 동의 게이트를 두지 않는다(업무 도구이며, 내담자 개인정보를
     새로 노출하지 않고 이미 담당인 데이터만 보여준다).
     """
+    require_ai_enabled()  # SDD-220: AI off 면 대화 생성 0
     uid = agent_service._to_uuid(user_id)
     text = content.strip()
 

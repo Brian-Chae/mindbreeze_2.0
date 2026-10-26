@@ -1,0 +1,20 @@
+# MIND BREEZE 2.0 — 음성 변환(STT)·영상 병합 전용 워커 (-Q stt). SDD-212 줄 분리.
+# PIPELINE_QUEUE_SPLIT_ENABLED=true 로 줄 분리를 켜기 전에 이 유닛을 먼저 설치·기동한다.
+[Unit]
+Description=MIND BREEZE stt worker (queue: stt)
+After=network.target redis-server.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/mindbreeze/backend
+EnvironmentFile=/home/ubuntu/mindbreeze/backend/.env.dev
+ExecStart=/home/ubuntu/mindbreeze/backend/venv/bin/celery -A app.core.celery_app:celery_app worker -Q stt --concurrency=2 --prefetch-multiplier=1 --hostname=stt@%H --loglevel=INFO
+Restart=on-failure
+RestartSec=5
+# PrivateTmp 미사용: 백엔드가 쓰는 호스트 /tmp 를 공유한다(워커 공통 정책).
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

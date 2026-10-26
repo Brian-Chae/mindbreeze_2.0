@@ -1,0 +1,20 @@
+{
+  "$fixture": {
+    "schema": "core-output"
+  },
+  "message": {
+    "packet": {
+      "sensor": "eeg",
+      "status": "accepted",
+      "segment": 0,
+      "extended_ticks": "3276800",
+      "samples": 25,
+      "raw_preserved": true
+    },
+    "frames": [],
+    "error": {
+      "code": "ok",
+      "message": ""
+    }
+  }
+}

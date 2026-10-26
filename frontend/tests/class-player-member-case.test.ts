@@ -75,11 +75,10 @@ describe('M02~M04 온라인 그룹(기본 뮤트·손들기·발언권)', () => 
     expect(c.showMyPip).toBe(false);
     expect(c.showHostPip).toBe(true);
   });
-  it('M03: 손들기 대기 — 문구 "손들었어요", 취소 버튼은 두지 않는다(B1 미적용: 비활성 상태 표시)', () => {
+  it('M03: 손들기 대기 — 상태 문구 유지, 버튼은 활성 "손 내리기"(손들기 취소)', () => {
     const c = derive('M03');
     expect(c.notice).toEqual({ tone: 'info', icon: 'hand', text: '손들었어요 · 상담사가 확인 중이에요' });
-    expect(c.hand).toMatchObject({ s: 'waiting', label: '손들었어요', disabled: true });
-    expect(JSON.stringify(c)).not.toContain('취소');
+    expect(c.hand).toMatchObject({ s: 'waiting', label: '손 내리기', disabled: false });
   });
   it('M04: 발언권 부여 — 마이크 "말하는 중"(상태 표시) · "말하기 종료" 버튼', () => {
     const c = derive('M04');

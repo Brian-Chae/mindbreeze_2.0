@@ -1,0 +1,1465 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MIND BREEZE · 상담사·지도사 명상 클래스 시안 (CH01~CH30)</title>
+<link rel="stylesheet" href="../class-player-redesign/tokens.css">
+<link rel="stylesheet" href="flow-base.css">
+<style>
+/* ───────── host-a 전용 (.w- 접두어) ───────── */
+.ic.s16 { width: 16px; height: 16px; }
+.ic.s20 { width: 20px; height: 20px; }
+.w-logo { fill: currentColor; stroke: none; }
+h1, h2, h3, p { margin: 0; }
+input { font: inherit; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--mb-pale); outline-offset: 2px; }
+.w-tight { white-space: nowrap; }
+
+/* ── 셸 공통 ── */
+.w-shell { position: relative; }
+.sh-main { position: relative; }
+.w-brand { display: flex; align-items: center; gap: 8px; padding: 8px 16px 24px; color: var(--mb-purple); font-weight: 800; font-size: var(--fs-18); }
+.w-brand svg { width: 40px; height: 18px; flex: none; }
+.w-nav { display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; }
+.w-nav button { display: flex; align-items: center; gap: 16px; min-height: 48px; padding: 0 16px; border-radius: var(--r-pill); font-size: var(--fs-15); font-weight: 600; color: var(--ink); text-align: left; }
+.w-nav button.on { background: var(--mb-purple-cream); color: var(--mb-purple); }
+.w-me { border-radius: var(--r-card); background: var(--mb-purple-cream); padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.w-me b { font-size: var(--fs-15); } .w-me span { font-size: var(--fs-13); color: var(--ink-mid); }
+.w-tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 0; align-self: stretch; font-size: var(--fs-12); color: var(--ink-mid); }
+.w-tab.on { color: var(--mb-purple); font-weight: 700; }
+.w-headl { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.w-backbtn { width: 44px; height: 44px; border-radius: var(--r-pill); display: inline-grid; place-items: center; background: #fff; border: 1px solid var(--shell-line); color: var(--ink); flex: none; }
+.w-page { width: min(100%, 640px); margin: 0 auto; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.w-page.fill { flex: 1; min-height: 0; }
+.sh-scroll.w-hold { overflow: hidden; }
+.w-sec { font-size: var(--fs-13); font-weight: 700; color: var(--ink-mid); padding: 8px 8px 0; }
+.sh-head .sh-btn { min-height: 48px; }
+.w-headrow { flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; }
+
+/* ── FH01 상단 고정 카드 ── */
+.w-live { display: grid; gap: 16px; padding: 16px; flex: none; }
+.w-live.sh-card { padding: 16px; border-radius: var(--r-sheet); }
+@media (min-width: 768px) {
+  .w-live { padding: 24px; grid-template-columns: minmax(0, 1fr) 208px; align-items: center; gap: 24px; }
+  .w-live.sh-card { padding: 24px; }
+}
+.w-live-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.w-live-title { font-size: var(--fs-24); line-height: 32px; font-weight: 800; }
+.w-line { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.w-dim { font-size: var(--fs-13); color: var(--tx-mid); }
+.w-dim2 { font-size: var(--fs-13); color: var(--ink-mid); }
+.w-start { justify-content: flex-start; }
+.w-wait { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-15); font-weight: 600; }
+.w-live-act { display: flex; flex-direction: column; gap: 8px; }
+.w-live-act .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (min-width: 768px) { .w-live-act .row2 { grid-template-columns: 1fr; } }
+.w-dline { border: 1px solid var(--warn); color: var(--warn); background: rgba(232,180,160,0.08); }
+.w-live-act .fl-btn { white-space: nowrap; }
+.sh-card .w-live-title { color: var(--ink); }
+
+/* ── FH01 목록 ── */
+.w-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: none; }
+.w-tabs button { min-height: 44px; border-radius: var(--r-pill); background: #fff; border: 1px solid var(--shell-line); font-size: var(--fs-15); font-weight: 600; color: var(--ink-mid); }
+.w-tabs button.on { background: var(--mb-purple); border-color: var(--mb-purple); color: #fff; }
+.w-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-bottom: 8px; }
+.w-item { display: flex; align-items: center; gap: 8px; background: var(--shell-card); border: 1px solid var(--shell-line); border-radius: var(--r-card); padding-right: 16px; flex: none; }
+.w-item-main { flex: 1; min-width: 0; display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 16px; align-items: center; padding: 16px; min-height: 72px; text-align: left; }
+.w-ico { width: 44px; height: 44px; border-radius: var(--r-pill); background: var(--mb-purple-cream); color: var(--mb-purple); display: grid; place-items: center; }
+.w-tt { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.w-tt b { font-size: var(--fs-15); font-weight: 700; color: var(--ink); }
+.w-sb { font-size: var(--fs-13); color: var(--ink-mid); margin-top: 8px; line-height: 1.5; }
+.w-mini { display: none; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: var(--r-pill); background: var(--mb-purple-cream); color: var(--mb-purple); font-size: var(--fs-13); font-weight: 700; white-space: nowrap; flex: none; }
+@media (min-width: 768px) { .w-mini { display: inline-flex; } }
+.w-empty { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.w-empty .sh-card { width: min(100%, 480px); display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; padding: 32px 24px; }
+.w-empty h2 { font-size: var(--fs-18); font-weight: 700; }
+.w-empty p { font-size: var(--fs-15); color: var(--ink-mid); line-height: 1.5; }
+.w-bigico { width: 64px; height: 64px; border-radius: var(--r-pill); background: var(--mb-purple-cream); color: var(--mb-purple); display: grid; place-items: center; }
+
+/* ── FH04 상세 ── */
+.w-next { background: rgba(255,255,255,0.12); border: 1px solid var(--sheet-border); border-radius: var(--r-card); padding: 16px; display: flex; gap: 16px; align-items: flex-start; }
+.w-next .tx { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.w-next .tx b { font-size: var(--fs-15); font-weight: 700; line-height: 1.4; }
+.w-next .tx span { font-size: var(--fs-13); color: var(--tx-mid); line-height: 1.5; }
+.w-next .ic { flex: none; margin-top: 0; }
+.w-detail-hero { display: flex; flex-direction: column; gap: 16px; padding: 16px; }
+@media (min-width: 768px) { .w-detail-hero { padding: 24px; } }
+.w-kv { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 16px; align-items: center; min-height: 56px; border-top: 1px solid var(--shell-line); }
+.w-kv:first-child { border-top: 0; }
+.w-kv .k { font-size: var(--fs-13); color: var(--ink-mid); font-weight: 600; }
+.w-kv .v { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: var(--fs-15); min-width: 0; }
+.w-kv .v.w-wrapv { flex-wrap: wrap; justify-content: flex-start; }
+.w-kv .v > span:first-child { min-width: 0; line-height: 1.5; }
+.w-smbtn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: var(--r-pill); background: var(--mb-purple-cream); color: var(--mb-purple); font-size: var(--fs-13); font-weight: 700; white-space: nowrap; flex: none; }
+.w-smbtn.line { background: transparent; border: 1.5px solid var(--mb-purple); }
+.w-smbtn[disabled] { opacity: 0.4; }
+.w-cancelrow { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; width: 100%; border-top: 1px solid var(--shell-line); color: #8A3A1F; font-size: var(--fs-15); font-weight: 700; }
+.w-phead { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 44px; margin-bottom: 8px; }
+.w-phead h3 { font-size: var(--fs-18); font-weight: 700; }
+.w-p { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; padding: 8px 0; gap: 16px; align-items: center; min-height: 64px; border-top: 1px solid var(--shell-line); }
+.w-p .av { width: 40px; height: 40px; border-radius: var(--r-pill); background: var(--mb-purple-cream); color: var(--mb-purple); font-weight: 700; display: grid; place-items: center; }
+.w-p .nm { font-size: var(--fs-15); font-weight: 700; }
+.w-p .st { margin-top: 8px; display: flex; }
+.w-p .rt { display: flex; align-items: center; gap: 8px; }
+.w-xbtn { width: 44px; height: 44px; border-radius: var(--r-pill); display: inline-grid; place-items: center; color: var(--ink-mid); }
+.w-note { display: flex; align-items: flex-start; gap: 8px; font-size: var(--fs-13); line-height: 1.5; }
+.w-note .ic { flex: none; }
+.w-note.ok { color: var(--ok); } .w-note.warn { color: var(--warn); }
+
+/* ── 몰입형 마법사 ── */
+.w-wiz .fl-top-title { font-size: var(--fs-15); }
+.w-wiz .fl-label { line-height: 20px; }
+.w-wiz .fl-steps { flex: none; }
+.w-card { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+@media (min-width: 600px) { .w-card { padding: 24px; } }
+.w-form { display: flex; flex-direction: column; gap: 16px; }
+.w-group { display: flex; flex-direction: column; gap: 8px; }
+.w-info { display: flex; align-items: flex-start; gap: 8px; font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); }
+.w-info .ic { flex: none; }
+.w-info.w-solo { flex-direction: column; align-items: center; text-align: center; }
+.fl-seg.w-flex > button { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 0 8px; min-width: 0; white-space: nowrap; }
+.fl-seg.w-flex > button.on { border-color: var(--mb-lavender); }
+.fl-seg.w-types { grid-auto-flow: row; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.fl-seg.w-c4 { grid-auto-flow: row; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 699px) { .fl-seg.w-types { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.w-inwrap { position: relative; }
+.w-inwrap > .ic { position: absolute; left: 16px; top: 16px; color: var(--tx-mid); pointer-events: none; }
+.w-inwrap > .fl-input { padding-left: 48px; }
+.w-tog { width: 100%; text-align: left; min-height: 64px; }
+.w-tog .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.w-tog .tx b { font-size: var(--fs-15); font-weight: 700; }
+.w-tog .tx span { font-size: var(--fs-13); color: var(--tx-mid); }
+.w-tog .sw { width: 48px; height: 28px; border-radius: var(--r-pill); background: rgba(255,255,255,0.24); position: relative; flex: none; }
+.w-tog .sw::after { content: ""; position: absolute; top: 4px; left: 4px; width: 20px; height: 20px; border-radius: 50%; background: #fff; }
+.w-tog[aria-checked="true"] .sw { background: var(--mb-lavender); }
+.w-tog[aria-checked="true"] .sw::after { left: 24px; }
+.w-tog[disabled] { opacity: 0.4; }
+.w-static { min-height: 64px; border-style: dashed; }
+.w-static .tx { flex: 1; font-size: var(--fs-13); color: var(--tx-mid); line-height: 1.5; }
+.w-when3 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.w-when3 > .w-group:first-child { grid-column: 1 / -1; }
+@media (min-width: 700px) { .w-when3 { grid-template-columns: 1.8fr 1fr 1fr; } .w-when3 > .w-group:first-child { grid-column: auto; } }
+.w-stepper.sm { grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 0; padding: 0; }
+.w-durrow { display: grid; grid-template-columns: 1fr; gap: 8px; }
+@media (min-width: 700px) { .w-durrow { grid-template-columns: 216px 1fr; gap: 16px; } }
+.fl-seg.w-c5 { grid-auto-flow: row; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.w-2col { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 700px) { .w-2col { grid-template-columns: 1fr 1fr; } }
+.w-stepper { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; min-height: 56px; padding: 0 8px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); }
+.w-stepper b { text-align: center; font-size: var(--fs-15); font-weight: 700; white-space: nowrap; }
+.w-stepper button { width: 44px; height: 44px; border-radius: var(--r-pill); display: grid; place-items: center; background: rgba(255,255,255,0.1); }
+.w-stepper button[disabled] { opacity: 0.4; }
+.w-nav2 { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }
+.w-wiz .fl-body.w-fill .fl-col { flex: 1; min-height: 0; max-height: 640px; }
+.w-wiz .w-fill .w-card { flex: 1; min-height: 0; }
+.w-pchips { display: flex; flex-wrap: wrap; gap: 8px; min-height: 44px; align-items: center; }
+.w-pchips .hint { font-size: var(--fs-13); color: var(--tx-lo); }
+.w-pchip { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: var(--r-pill); background: var(--mb-purple); border: 1px solid var(--mb-lavender); font-size: var(--fs-15); font-weight: 600; }
+.w-count { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 44px; }
+.w-count span { font-size: var(--fs-13); color: var(--tx-mid); }
+.w-count b { color: var(--tx-hi); font-size: var(--fs-15); }
+.w-count .fl-btn { min-height: 44px; padding: 0 16px; font-size: var(--fs-13); }
+.w-plist { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.w-prow { display: grid; grid-template-columns: 40px minmax(0, 1fr) 32px; gap: 16px; align-items: center; min-height: 64px; padding: 8px 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); width: 100%; text-align: left; flex: none; }
+.w-prow[disabled] { opacity: 0.4; }
+.w-prow .av { width: 40px; height: 40px; border-radius: var(--r-pill); background: rgba(255,255,255,0.14); font-weight: 700; display: grid; place-items: center; }
+.w-prow .nm { font-size: var(--fs-15); font-weight: 700; }
+.w-prow .em { font-size: var(--fs-13); color: var(--tx-mid); margin-top: 8px; }
+.w-prow .ck { width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--sheet-border); display: grid; place-items: center; }
+.w-prow.on { border-color: var(--mb-lavender); }
+.w-prow.on .ck { background: var(--mb-purple); border-color: var(--mb-lavender); }
+.w-prow:not(.on) .ck .ic { display: none; }
+.w-prow .ck .ic { width: 20px; height: 20px; }
+.w-sumrow .tx { flex: 1; min-width: 0; font-size: var(--fs-15); line-height: 1.5; padding: 8px 0; }
+.w-sumrow > .ic { flex: none; color: var(--mb-pale); }
+.w-edit { width: 44px; height: 44px; border-radius: var(--r-pill); display: grid; place-items: center; flex: none; color: var(--tx-mid); }
+
+/* ── FH03 완료 ── */
+.w-ok { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: rgba(125,227,200,0.16); border: 1px solid rgba(125,227,200,0.5); color: var(--ok); align-self: center; }
+.w-invcard { gap: 16px; }
+.w-inv { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 16px; align-items: center; min-height: 64px; padding: 8px 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); }
+.w-inv.fail { border: 1px dashed var(--warn); background: var(--warn-bg); }
+.w-inv .av { width: 40px; height: 40px; border-radius: var(--r-pill); background: rgba(255,255,255,0.14); font-weight: 700; display: grid; place-items: center; }
+.w-inv .nm { font-size: var(--fs-15); font-weight: 700; }
+.w-inv .st { margin-top: 8px; display: flex; }
+.w-inv .fl-btn { min-height: 44px; padding: 0 16px; font-size: var(--fs-13); white-space: nowrap; }
+.w-invcard .fl-h2 { text-align: center; }
+.w-invlist { display: flex; flex-direction: column; gap: 8px; }
+.w-ghostrow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.w-ghostrow .fl-btn { padding: 0 8px; font-size: var(--fs-13); white-space: nowrap; }
+.w-center { text-align: center; align-items: center; }
+
+
+/* ── R5 추가 (정원·이메일·입장 코드) ── */
+.w-static .w-two { display: flex; flex-direction: column; gap: 8px; }
+.w-static .w-two b { font-size: var(--fs-15); font-weight: 700; color: var(--tx-hi); }
+.w-emailin { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.w-emailin .fl-btn { min-height: 52px; }
+.w-erow { display: grid; grid-template-columns: 40px minmax(0, 1fr) 44px; gap: 16px; align-items: center; min-height: 64px; padding: 8px 8px 8px 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); flex: none; }
+.w-erow .av { width: 40px; height: 40px; border-radius: var(--r-pill); background: rgba(255,255,255,0.14); display: grid; place-items: center; }
+.w-erow .em { font-size: var(--fs-15); font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.w-codecard { gap: 8px; flex: none; }
+.w-coderow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; }
+.w-codebig { font-size: 40px; line-height: 48px; font-weight: 800; letter-spacing: 8px; font-variant-numeric: tabular-nums; }
+.w-codecard .w-note { color: var(--tx-mid); }
+.w-codeval { font-size: var(--fs-18); font-weight: 800; letter-spacing: 8px; font-variant-numeric: tabular-nums; }
+.w-inv .sub { margin-top: 8px; font-size: var(--fs-13); color: var(--tx-mid); line-height: 1.5; }
+.w-inv .sub.bad { color: var(--warn); }
+.w-inv .av svg { width: 20px; height: 20px; }
+.w-wiz .w-fill .w-codecard { flex: none; }
+.w-wiz .w-fill .w-invcard { flex: 1; min-height: 0; }
+
+/* ── 시트 (몰입형·셸형 공용, 다크 소프트) ── */
+.w-scrim { position: absolute; inset: 0; z-index: 20; background: rgba(12, 6, 20, 0.55); display: flex; align-items: flex-end; justify-content: center; color: var(--tx-hi); }
+.w-sheet { width: min(100%, 640px); background: rgba(24, 12, 36, 0.97); border: 1px solid var(--sheet-border); border-radius: var(--r-sheet) var(--r-sheet) 0 0; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+.w-shead { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.w-shead h2 { font-size: var(--fs-18); font-weight: 700; }
+.w-x { width: 44px; height: 44px; border-radius: var(--r-pill); display: grid; place-items: center; background: rgba(255,255,255,0.1); flex: none; }
+.w-sbody { display: flex; flex-direction: column; gap: 16px; }
+.w-sbody p { font-size: var(--fs-15); line-height: 1.5; color: var(--tx-mid); }
+.w-sico { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: var(--warn-bg); color: var(--warn); border: 1px dashed var(--warn); }
+.w-sfoot { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.w-menu { display: flex; flex-direction: column; gap: 8px; }
+.w-menu button { display: flex; align-items: center; gap: 16px; min-height: 56px; padding: 0 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); font-size: var(--fs-15); font-weight: 600; text-align: left; width: 100%; }
+.w-menu button.danger { color: var(--warn); }
+
+/* ── 인덱스 ── */
+body.w-index { height: auto; overflow: auto; background: var(--shell-bg); color: var(--ink); padding: 32px; }
+.w-index h1 { font-size: var(--fs-24); margin-bottom: 8px; }
+.w-index p { font-size: var(--fs-15); color: var(--ink-mid); margin-bottom: 24px; }
+.w-index table { width: 100%; border-collapse: collapse; background: #fff; border-radius: var(--r-card); overflow: hidden; font-size: var(--fs-13); }
+.w-index th, .w-index td { text-align: left; padding: 16px; border-bottom: 1px solid var(--shell-line); vertical-align: top; line-height: 1.6; }
+.w-index th { background: var(--mb-purple-cream); color: var(--mb-purple); }
+.w-index a { display: inline-block; margin: 0 8px 8px 0; padding: 8px 16px; border-radius: var(--r-pill); background: var(--mb-purple-cream); color: var(--mb-purple); text-decoration: none; font-weight: 600; }
+
+/* ───────── host-classes 추가 (.w- 접두어) ───────── */
+a { color: inherit; text-decoration: none; }
+.w-nav a { display: flex; align-items: center; gap: 16px; min-height: 48px; padding: 0 16px; border-radius: var(--r-pill); font-size: var(--fs-15); font-weight: 600; color: var(--ink); }
+.w-nav a.on { background: var(--mb-purple-cream); color: var(--mb-purple); }
+.sh-tabbar > a.w-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; font-size: var(--fs-12); color: var(--ink-mid); }
+.sh-tabbar > a.w-tab.on { color: var(--mb-purple); font-weight: 700; }
+.w-page { container-type: inline-size; container-name: pg; }
+.w-page.wide { width: min(100%, 960px); }
+.w-grow { flex: 1; min-height: 0; }
+
+/* 상세 머리글 + 탭 */
+.sh-head.w-dhead { height: auto; min-height: 72px; padding: 8px 16px; flex: none; }
+@media (min-width: 768px) { .sh-head.w-dhead { padding: 8px 24px; } }
+.w-dtitle { display: flex; flex-direction: column; min-width: 0; }
+.w-dtitle .sh-title { font-size: var(--fs-18); line-height: 24px; }
+.w-dtitle .w-dsub { font-size: var(--fs-13); color: var(--ink-mid); line-height: 20px; }
+@media (min-width: 768px) { .w-dtitle .sh-title { font-size: var(--fs-24); line-height: 32px; } }
+.w-tabsbar { flex: none; padding: 0 16px; }
+@media (min-width: 768px) { .w-tabsbar { padding: 0 24px; } }
+.w-tabsbar .w-page { gap: 0; }
+.w-dtabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-bottom: 1px solid var(--shell-line); }
+.w-dtabs a { min-height: 48px; display: grid; place-items: center; font-size: var(--fs-13); font-weight: 600; color: var(--ink-mid); border-bottom: 3px solid transparent; margin-bottom: -1px; }
+.w-dtabs a.on { color: var(--mb-purple); border-color: var(--mb-purple); font-weight: 700; }
+@media (min-width: 768px) { .w-dtabs a { font-size: var(--fs-15); } }
+
+/* 알림 박스 */
+.w-alert { display: flex; align-items: flex-start; gap: 16px; padding: 16px; border-radius: var(--r-card); background: #FBEAE3; border: 1px dashed #D58A6F; color: #8A3A1F; }
+.w-alert .ic { flex: none; }
+.w-alert .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; font-size: var(--fs-15); line-height: 1.5; }
+.w-alert .tx b { font-weight: 700; }
+.w-alert .tx span { font-size: var(--fs-13); line-height: 20px; }
+.w-alert .w-smbtn { align-self: flex-start; }
+.w-alert.info { background: var(--mb-purple-cream); border: 1px solid #E5D3F5; color: var(--mb-purple); }
+.w-alert.ok { background: #E3F8F2; border: 1px solid #BFE9DD; color: #0B6B55; }
+.w-alert.plain { background: #fff; border: 1px solid var(--shell-line); color: var(--ink); }
+.w-dbtn { min-height: 48px; padding: 0 24px; border-radius: var(--r-pill); border: 1.5px solid #D58A6F; color: #8A3A1F; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: var(--fs-15); font-weight: 700; background: #fff; }
+.w-smbtn.warn { background: #FBEAE3; color: #8A3A1F; }
+.w-smbtn.solid { background: var(--mb-purple); color: #fff; }
+
+/* 필터·검색 */
+.w-bar { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; flex: none; }
+@container pg (min-width: 760px) { .w-bar { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; } }
+.w-filter { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.w-filter a { min-height: 44px; border-radius: var(--r-pill); background: #fff; border: 1px solid var(--shell-line); display: grid; place-items: center; font-size: var(--fs-13); font-weight: 600; color: var(--ink-mid); }
+.w-filter a.on { background: var(--mb-purple); border-color: var(--mb-purple); color: #fff; }
+.w-sin { height: 52px; border-radius: var(--r-card); background: #fff; border: 1px solid var(--shell-line); padding: 0 16px 0 48px; font-size: var(--fs-15); width: 100%; color: var(--ink); }
+.w-bar .w-inwrap > .ic { color: var(--ink-mid); }
+.w-sin::placeholder { color: var(--ink-lo); }
+
+/* 클래스 목록 행 */
+.w-clist { display: flex; flex-direction: column; gap: 8px; }
+.w-chead { display: none; }
+.w-crow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "c1 c1" "c2 c4" "c3 c3" "c5 c5"; gap: 16px; padding: 16px; background: var(--shell-card); border: 1px solid var(--shell-line); border-radius: var(--r-card); align-items: start; }
+.w-crow.hl { border: 1px dashed #D58A6F; background: #FFFBF9; }
+.w-c1 { grid-area: c1; display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 16px; align-items: center; }
+.w-c2 { grid-area: c2; } .w-c3 { grid-area: c3; } .w-c4 { grid-area: c4; }
+.w-c5 { grid-area: c5; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.w-cv { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.w-cv .w-k { font-size: var(--fs-13); color: var(--ink-mid); font-weight: 600; }
+.w-cv b { font-size: var(--fs-15); font-weight: 700; color: var(--ink); line-height: 1.4; }
+.w-cv .w-s { font-size: var(--fs-13); color: var(--ink-mid); line-height: 20px; }
+.w-cv .w-s.bad { color: #8A3A1F; font-weight: 600; }
+.w-cn { font-size: var(--fs-15); font-weight: 700; color: var(--ink); line-height: 1.4; display: block; }
+.w-c1 .w-sb { margin-top: 8px; }
+.w-prog { height: 8px; border-radius: var(--r-pill); background: #EFE8F5; flex: 1; min-width: 40px; }
+.w-prog i { display: block; height: 100%; border-radius: var(--r-pill); background: var(--mb-purple); }
+.w-prog.ok i { background: #3DBF9F; }
+.w-pline { display: flex; align-items: center; gap: 16px; }
+.w-pline b { font-size: var(--fs-15); font-weight: 700; white-space: nowrap; }
+@container pg (min-width: 760px) {
+  .w-chead, .w-crow { grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.5fr) minmax(0, 1.4fr) minmax(0, 1.2fr) minmax(0, 1.5fr); gap: 16px; }
+  .w-crow { grid-template-areas: "c1 c2 c3 c4 c5"; align-items: center; }
+  .w-chead { display: grid; padding: 0 16px; font-size: var(--fs-13); font-weight: 600; color: var(--ink-mid); }
+  .w-cv .w-k { display: none; }
+  .w-c5 { justify-content: flex-start; }
+}
+.w-end { margin-top: 8px; text-align: center; font-size: var(--fs-13); color: var(--ink-mid); line-height: 20px; }
+.w-found { font-size: var(--fs-13); color: var(--ink-mid); padding: 0 8px; }
+
+/* 개요 */
+.w-g2 { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+@container pg (min-width: 760px) { .w-g2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.w-trow { display: grid; grid-template-columns: 44px minmax(0, 1fr) 24px; gap: 16px; align-items: center; min-height: 72px; padding: 16px 0; border-top: 1px solid var(--shell-line); }
+.w-trow:first-of-type { border-top: 0; }
+.w-trow .tx { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.w-trow .tx b { font-size: var(--fs-15); font-weight: 700; line-height: 1.4; }
+.w-trow .tx span { font-size: var(--fs-13); color: var(--ink-mid); line-height: 20px; }
+.w-trow > .ic:last-child { color: var(--ink-lo); }
+.w-ico.warn { background: #FBEAE3; color: #8A3A1F; }
+.w-ico.ok { background: #E3F8F2; color: #0B6B55; }
+.w-ico.mute { background: #F0ECF3; color: var(--ink-mid); }
+.w-sumline { display: flex; flex-wrap: wrap; gap: 8px; }
+.w-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.w-tile { background: #fff; border: 1px solid var(--shell-line); border-radius: var(--r-card); padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.w-tile b { font-size: var(--fs-24); font-weight: 800; line-height: 32px; }
+.w-tile span { font-size: var(--fs-13); color: var(--ink-mid); line-height: 20px; }
+.w-tile.warn { border: 1px dashed #D58A6F; background: #FFFBF9; }
+.w-btnrow2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.w-two { display: flex; flex-direction: column; gap: 8px; }
+
+/* 세션 표 */
+.w-tbar { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; flex: none; }
+.w-tbar .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.w-seg2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.w-seg2 a, .w-seg2 button { min-height: 44px; border-radius: var(--r-pill); background: #fff; border: 1px solid var(--shell-line); display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: var(--fs-13); font-weight: 600; color: var(--ink-mid); }
+.w-seg2 .on { background: var(--mb-purple); border-color: var(--mb-purple); color: #fff; }
+@container pg (min-width: 760px) { .w-tbar { grid-template-columns: 240px minmax(0, 1fr); gap: 16px; } .w-tbar .btns { display: flex; justify-content: flex-end; } }
+.w-stable { display: flex; flex-direction: column; gap: 8px; }
+.w-shead { display: none; }
+.w-srow { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "no st" "when mode" "host act"; gap: 8px 16px; align-items: center; padding: 16px; background: var(--shell-card); border: 1px solid var(--shell-line); border-radius: var(--r-card); }
+.w-srow.dim { background: #FAF8FB; }
+.w-srow.dim .w-sn { color: var(--ink-mid); text-decoration: line-through; }
+.w-srow.hl { border: 1px dashed #D58A6F; background: #FFFBF9; }
+.w-srow.now { border-color: var(--mb-lavender); box-shadow: 0 0 0 2px var(--mb-purple-cream); }
+.w-sno { grid-area: no; display: flex; align-items: center; gap: 8px; min-height: 44px; min-width: 0; }
+.w-sn { font-size: var(--fs-15); font-weight: 700; color: var(--ink); }
+.w-sno .w-k2 { font-size: var(--fs-13); color: var(--ink-mid); }
+.w-swhen { grid-area: when; font-size: var(--fs-15); line-height: 1.5; min-width: 0; }
+.w-smode { grid-area: mode; font-size: var(--fs-13); color: var(--ink-mid); white-space: nowrap; }
+.w-shost { grid-area: host; display: flex; align-items: center; gap: 8px; font-size: var(--fs-15); font-weight: 600; min-width: 0; }
+.w-shost .ic { color: var(--ink-mid); flex: none; }
+.w-shost.bad { color: #8A3A1F; }
+.w-sst { grid-area: st; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.w-sact { grid-area: act; justify-self: end; }
+.w-stable .w-srow > .w-sno { text-align: left; }
+@container pg (min-width: 760px) {
+  .w-shead, .w-srow { grid-template-columns: 96px minmax(0, 1.5fr) minmax(0, 1.2fr) 96px minmax(0, 1.5fr) 44px; gap: 16px; }
+  .w-srow { grid-template-areas: "no when host mode st act"; min-height: 64px; padding: 8px 16px; }
+  .w-shead { display: grid; padding: 0 16px; font-size: var(--fs-13); font-weight: 600; color: var(--ink-mid); }
+  .w-sst { justify-content: flex-start; }
+}
+.w-addrow { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; border-radius: var(--r-card); border: 1.5px dashed #CDB8E3; color: var(--mb-purple); font-size: var(--fs-15); font-weight: 700; }
+.w-dim2 { font-size: var(--fs-13); color: var(--ink-mid); }
+.w-tl { display: flex; flex-direction: column; }
+.w-tli { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 16px; padding-bottom: 16px; position: relative; }
+.w-tli::before { content: ""; position: absolute; left: 11px; top: 28px; bottom: 4px; width: 2px; background: var(--shell-line); }
+.w-tli:last-child::before { display: none; }
+.w-dotc { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: #fff; border: 2px solid var(--shell-line); color: var(--ink-lo); position: relative; z-index: 1; margin-top: 12px; }
+.w-dotc .ic { width: 16px; height: 16px; stroke-width: 2.5; }
+.w-tli.done .w-dotc { background: var(--mb-purple-cream); border-color: var(--mb-lavender); color: var(--mb-purple); }
+.w-tli.next .w-dotc { background: var(--mb-purple); border-color: var(--mb-purple); color: #fff; }
+.w-tli.bad .w-dotc { background: #FBEAE3; border-color: #D58A6F; color: #8A3A1F; }
+.w-tlc { background: #fff; border: 1px solid var(--shell-line); border-radius: var(--r-card); padding: 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.w-tlc.next { border-color: var(--mb-lavender); box-shadow: 0 0 0 2px var(--mb-purple-cream); }
+.w-tlc.bad { border: 1px dashed #D58A6F; background: #FFFBF9; }
+.w-tlc .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 44px; }
+.w-tlc .top a { display: flex; align-items: center; min-height: 44px; font-size: var(--fs-15); font-weight: 700; }
+.w-tlc .line { display: flex; align-items: center; gap: 8px; font-size: var(--fs-13); color: var(--ink-mid); line-height: 20px; flex-wrap: wrap; }
+.w-tlc .line .ic { flex: none; }
+.w-tlc.dim .top a { color: var(--ink-mid); text-decoration: line-through; }
+
+/* 멤버·출석 */
+.w-mlist { display: flex; flex-direction: column; gap: 8px; }
+.w-mrow { display: grid; grid-template-columns: minmax(0, 1fr) 44px; grid-template-areas: "who more" "cells cells" "sum sum"; gap: 16px; padding: 16px; background: var(--shell-card); border: 1px solid var(--shell-line); border-radius: var(--r-card); align-items: center; }
+.w-mrow.hl { border: 1px dashed #D58A6F; background: #FFFBF9; }
+.w-mrow.off { background: #FAF8FB; }
+.w-who { grid-area: who; display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 16px; align-items: center; min-width: 0; }
+.w-who .av { width: 40px; height: 40px; border-radius: var(--r-pill); background: var(--mb-purple-cream); color: var(--mb-purple); font-weight: 700; display: grid; place-items: center; }
+.w-who .nm { font-size: var(--fs-15); font-weight: 700; line-height: 1.4; }
+.w-who .st { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.w-cells { grid-area: cells; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 8px; width: 100%; max-width: 312px; }
+.w-cell { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: var(--fs-12); color: var(--ink-lo); line-height: 16px; }
+.w-cell .ic { width: 20px; height: 20px; }
+.w-cell.att { color: #0B6B55; } .w-cell.abs { color: #B5532F; } .w-cell.exc { color: #8A7A99; } .w-cell.mk { color: var(--mb-purple); } .w-cell.mkw { color: #B5532F; }
+.w-msum { grid-area: sum; font-size: var(--fs-13); color: var(--ink-mid); line-height: 20px; }
+.w-mmore { grid-area: more; }
+@container pg (min-width: 760px) {
+  .w-mrow { grid-template-columns: minmax(0, 1.4fr) 312px minmax(0, 1fr) 44px; grid-template-areas: "who cells sum more"; gap: 16px; }
+}
+.w-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: var(--fs-13); color: var(--ink-mid); }
+.w-legend span { display: inline-flex; align-items: center; gap: 8px; min-height: 20px; }
+.w-legend .ic { width: 16px; height: 16px; }
+.w-legend .att { color: #0B6B55; } .w-legend .abs { color: #B5532F; } .w-legend .mk { color: var(--mb-purple); } .w-legend .exc { color: #8A7A99; }
+
+/* 리포트 */
+.w-rlist { display: flex; flex-direction: column; gap: 8px; }
+.w-rhead { display: none; }
+.w-rrow { background: #fff; border: 1px solid var(--shell-line); border-radius: var(--r-card); }
+.w-rmain { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "r1 act" "r2 r3" "r4 r5"; gap: 16px; padding: 16px; align-items: start; }
+.w-rmain > .r1 { grid-area: r1; } .w-rmain > .r2 { grid-area: r2; } .w-rmain > .r3 { grid-area: r3; } .w-rmain > .r4 { grid-area: r4; } .w-rmain > .r5 { grid-area: r5; }
+.w-ract { grid-area: act; justify-self: end; display: flex; align-items: center; gap: 8px; }
+.w-rexp { border-top: 1px solid var(--shell-line); padding: 8px 16px 16px; }
+.w-rexp .w-p:first-child { border-top: 0; }
+@container pg (min-width: 760px) {
+  .w-rhead, .w-rmain { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1.1fr) minmax(0, 1.1fr) auto; gap: 16px; }
+  .w-rmain { grid-template-areas: "r1 r2 r3 r4 r5 act"; align-items: center; }
+  .w-rhead { display: grid; padding: 0 16px; font-size: var(--fs-13); font-weight: 600; color: var(--ink-mid); }
+  .w-rmain .w-k { display: none; }
+}
+.w-rexp-sum { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 0; }
+.w-trend { display: flex; flex-direction: column; }
+.w-trow2 { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 16px 0; border-top: 1px solid var(--shell-line); }
+.w-trow2:first-of-type { border-top: 0; }
+.w-trow2 > b { font-size: var(--fs-15); font-weight: 700; }
+.w-dirs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; font-size: var(--fs-13); color: var(--ink); min-height: 32px; }
+.w-dirs .lb { color: var(--ink-mid); font-weight: 600; min-width: 32px; }
+.w-dirs .d { display: inline-flex; align-items: center; gap: 8px; }
+.w-dirs .up { color: #0B6B55; } .w-dirs .flat { color: var(--ink-mid); } .w-dirs .down { color: #8A3A1F; }
+.w-dirs .ic { width: 16px; height: 16px; }
+@container pg (min-width: 760px) { .w-trow2 { grid-template-columns: 96px minmax(0, 1fr) minmax(0, 1fr); align-items: center; } }
+.w-narr { font-size: var(--fs-15); line-height: 1.6; color: var(--ink); }
+.w-gen { display: flex; align-items: center; gap: 8px; font-size: var(--fs-13); color: var(--mb-purple); font-weight: 600; }
+.w-gen .w-prog { max-width: 96px; }
+
+/* 설정 */
+.w-lstep { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; min-height: 56px; padding: 0 8px; border-radius: var(--r-card); background: #fff; border: 1px solid var(--shell-line); }
+.w-lstep b { text-align: center; font-size: var(--fs-15); font-weight: 700; }
+.w-lstep a, .w-lstep button { width: 44px; height: 44px; border-radius: var(--r-pill); display: grid; place-items: center; background: var(--mb-purple-cream); color: var(--mb-purple); }
+.w-lstep.sm { grid-template-columns: 44px minmax(0, 1fr) 44px; padding: 0; min-height: 44px; }
+.w-lstep.sm b { font-size: var(--fs-13); }
+.w-field { display: flex; flex-direction: column; gap: 8px; }
+.w-field > .k { font-size: var(--fs-13); font-weight: 600; color: var(--ink-mid); }
+.w-box { min-height: 52px; padding: 0 16px; border-radius: var(--r-card); border: 1px solid var(--shell-line); background: #fff; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: var(--fs-15); }
+.w-box.err { border: 1px solid #D58A6F; background: #FFFBF9; }
+.w-box .ic { color: var(--ink-mid); flex: none; }
+.w-days2 { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.w-days2 > span { min-height: 48px; display: grid; place-items: center; }
+.w-days2 > span i { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: #F0ECF3; color: var(--ink-mid); font-style: normal; font-size: var(--fs-13); font-weight: 600; }
+.w-days2 > span.on i { background: var(--mb-purple); color: #fff; }
+.w-iprow { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 16px; align-items: center; min-height: 64px; padding: 8px 0; border-top: 1px solid var(--shell-line); }
+.w-iprow:first-of-type { border-top: 0; }
+.w-iprow .av { width: 40px; height: 40px; border-radius: var(--r-pill); background: var(--mb-purple-cream); color: var(--mb-purple); font-weight: 700; display: grid; place-items: center; }
+.w-iprow .nm { font-size: var(--fs-15); font-weight: 700; }
+.w-iprow .st { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.w-danger { border: 1px dashed #D58A6F; }
+.w-dline2 { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 64px; padding: 8px 0; border-top: 1px solid var(--shell-line); }
+.w-dline2:first-of-type { border-top: 0; }
+.w-dline2 .tx { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.w-dline2 .tx b { font-size: var(--fs-15); font-weight: 700; }
+.w-dline2 .tx span { font-size: var(--fs-13); color: var(--ink-mid); line-height: 20px; }
+
+/* 일괄 편집 표 */
+.w-bscope { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; flex: none; }
+@container pg (min-width: 760px) { .w-bscope { grid-template-columns: 1fr 320px; align-items: center; } }
+.w-bbar { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 16px; border-radius: var(--r-card); background: var(--mb-purple-cream); border: 1px solid #E5D3F5; flex: none; }
+.w-bbar .cnt { font-size: var(--fs-15); font-weight: 700; color: var(--mb-purple); min-height: 24px; display: flex; align-items: center; }
+.w-bbar .acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.w-bbar .w-smbtn { background: #fff; padding: 0 8px; }
+@container pg (min-width: 760px) { .w-bbar { grid-template-columns: auto minmax(0, 1fr); align-items: center; } .w-bbar .acts { display: flex; justify-content: flex-end; flex-wrap: wrap; } .w-bbar .w-smbtn { padding: 0 16px; } }
+.w-btable { display: flex; flex-direction: column; gap: 8px; }
+.w-bhead { display: none; }
+.w-brow { display: flex; flex-direction: column; gap: 8px; padding: 8px 16px 8px 8px; background: var(--shell-card); border: 1px solid var(--shell-line); border-radius: var(--r-card); }
+.w-bgrid { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; grid-template-areas: "ck no st" ". info edit"; gap: 8px 8px; align-items: center; }
+.w-bwhy { display: flex; align-items: flex-start; gap: 8px; padding: 0 0 8px 44px; font-size: var(--fs-13); line-height: 20px; color: #8A3A1F; font-weight: 600; }
+.w-bwhy .ic { flex: none; }
+.w-brow.sel { background: #FBF7FE; border-color: var(--mb-lavender); }
+.w-brow.hl { border: 1px dashed #D58A6F; background: #FFFBF9; }
+.w-brow.dim { background: #FAF8FB; }
+.w-ck { grid-area: ck; width: 44px; height: 44px; display: grid; place-items: center; }
+.w-ck i { width: 24px; height: 24px; border-radius: 8px; border: 2px solid #CDB8E3; display: grid; place-items: center; background: #fff; color: #fff; }
+.w-ck.on i { background: var(--mb-purple); border-color: var(--mb-purple); }
+.w-ck i .ic { width: 16px; height: 16px; stroke-width: 3; }
+.w-ck:not(.on) i .ic { display: none; }
+.w-bno { grid-area: no; font-size: var(--fs-15); font-weight: 700; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.w-bno .w-k2 { font-size: var(--fs-13); color: var(--ink-mid); font-weight: 600; }
+.w-bst { grid-area: st; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.w-binfo { grid-area: info; display: flex; flex-direction: column; gap: 8px; font-size: var(--fs-13); color: var(--ink-mid); line-height: 20px; min-width: 0; }
+.w-binfo b { font-size: var(--fs-15); color: var(--ink); font-weight: 600; }
+.w-bedit { grid-area: edit; }
+.w-ed { display: none; }
+.w-sel { min-height: 44px; padding: 0 16px; border-radius: var(--r-pill); background: #fff; border: 1px solid var(--shell-line); display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; font-size: var(--fs-15); font-weight: 600; color: var(--ink); min-width: 0; white-space: nowrap; }
+.w-sel .ic { color: var(--ink-mid); flex: none; }
+.w-sel.bad { border: 1px dashed #D58A6F; background: #FBEAE3; color: #8A3A1F; }
+.w-sel.sm { padding: 0 12px; }
+.w-sel.dk { background: rgba(255,255,255,0.1); border-color: var(--sheet-border); color: var(--tx-hi); }
+.w-sel.dk .ic { color: var(--tx-mid); }
+.w-sel.dk.bad { background: var(--warn-bg); border: 1px dashed var(--warn); color: var(--warn); }
+@container pg (min-width: 760px) {
+  .w-bhead, .w-bgrid { grid-template-columns: 44px 64px 152px 152px 80px 88px minmax(0, 1fr) 120px; grid-template-areas: "ck no date time dur mode host st"; gap: 8px; }
+  .w-brow { padding: 8px 16px 8px 8px; min-height: 64px; justify-content: center; }
+  .w-bhead { display: grid; padding: 0 16px 0 8px; font-size: var(--fs-13); font-weight: 600; color: var(--ink-mid); align-items: center; }
+  .w-ed { display: flex; }
+  .w-binfo, .w-bedit { display: none; }
+  .w-bst { justify-content: flex-start; }
+  .w-bdate { grid-area: date; } .w-btime { grid-area: time; } .w-bdur { grid-area: dur; } .w-bmode { grid-area: mode; } .w-bhost { grid-area: host; }
+}
+.w-bhead > span:nth-child(1) { grid-column: 1; }
+
+/* 세션 상세 */
+.w-codeline { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.w-cdanger { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; width: 100%; color: #8A3A1F; font-size: var(--fs-15); font-weight: 700; border-top: 1px solid var(--shell-line); }
+
+/* 마법사 추가 */
+.w-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.w-days button { min-height: 48px; display: grid; place-items: center; }
+.w-days button span { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,0.1); border: 1px solid var(--sheet-border); font-size: var(--fs-13); font-weight: 600; }
+.w-days button.on span { background: var(--mb-purple); border-color: var(--mb-lavender); color: #fff; }
+.w-pill2 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.w-pill2 > * { min-height: 52px; border-radius: var(--r-card); background: rgba(255,255,255,0.1); border: 1px solid var(--sheet-border); display: grid; place-items: center; font-size: var(--fs-15); font-weight: 600; text-align: center; padding: 0 8px; }
+.w-wlist { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.w-wrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; min-height: 64px; padding: 8px 8px 8px 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); flex: none; }
+.w-wrow.bad { border: 1px dashed var(--warn); background: var(--warn-bg); }
+.w-wrow .tx { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.w-wrow .tx b { font-size: var(--fs-15); font-weight: 700; }
+.w-wrow .tx span { font-size: var(--fs-13); color: var(--tx-mid); }
+.w-wrow .tx .fl-chip { align-self: flex-start; }
+.w-ord { display: grid; grid-template-columns: 32px minmax(0, 1fr) 44px 44px; gap: 8px; align-items: center; min-height: 52px; padding: 4px 8px 4px 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); }
+.w-ord .no { width: 32px; height: 32px; border-radius: 50%; background: var(--mb-purple); display: grid; place-items: center; font-size: var(--fs-13); font-weight: 700; }
+.w-ord b { font-size: var(--fs-15); }
+.w-ord button { width: 44px; height: 44px; border-radius: var(--r-pill); display: grid; place-items: center; background: rgba(255,255,255,0.1); }
+.w-ord button[disabled] { opacity: 0.4; }
+.w-wiz .w-fill .w-wlist { flex: 1; min-height: 0; }
+.w-wiz .w-fill .w-card { flex: 1; min-height: 0; }
+.w-lbl { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 24px; }
+.w-lbl .fl-label { line-height: 24px; }
+.w-startcards { display: flex; flex-direction: column; gap: 16px; }
+.w-startcard { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 16px; align-items: center; padding: 24px 16px; border-radius: var(--r-sheet); background: var(--sheet-bg-strong); border: 1px solid var(--sheet-border); min-height: 112px; text-align: left; }
+.w-startcard .ico { width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,0.12); display: grid; place-items: center; }
+.w-startcard .tx { display: flex; flex-direction: column; gap: 8px; }
+.w-startcard .tx b { font-size: var(--fs-18); font-weight: 700; }
+.w-startcard .tx span { font-size: var(--fs-13); color: var(--tx-mid); line-height: 20px; }
+.w-ophead { display: flex; flex-direction: column; gap: 8px; }
+.w-ophead span { font-size: var(--fs-13); color: var(--tx-mid); line-height: 20px; }
+.w-opt { display: grid; grid-template-columns: 40px minmax(0, 1fr) 32px; gap: 16px; align-items: center; min-height: 64px; padding: 8px 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); width: 100%; text-align: left; flex: none; }
+.w-opt .av { width: 40px; height: 40px; border-radius: var(--r-pill); background: rgba(255,255,255,0.14); font-weight: 700; display: grid; place-items: center; }
+.w-opt .nm { font-size: var(--fs-15); font-weight: 700; display: block; }
+.w-opt .em { font-size: var(--fs-13); color: var(--tx-mid); margin-top: 8px; display: block; line-height: 20px; }
+.w-opt .ck { width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--sheet-border); display: grid; place-items: center; }
+.w-opt.on { border-color: var(--mb-lavender); }
+.w-opt.on .ck { background: var(--mb-purple); border-color: var(--mb-lavender); }
+.w-opt:not(.on) .ck .ic { display: none; }
+.w-opt .ck .ic { width: 20px; height: 20px; }
+.w-opt[disabled] { opacity: 0.4; }
+.w-sbody.sc { flex: 1; min-height: 0; overflow-y: auto; }
+.w-sheet { max-height: calc(100dvh - 32px); }
+.w-diff { display: grid; grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr); gap: 8px; align-items: center; min-height: 56px; padding: 8px 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); flex: none; }
+.w-diff .ic { color: var(--mb-pale); }
+.w-diff .b { display: flex; flex-direction: column; gap: 8px; font-size: var(--fs-13); color: var(--tx-mid); line-height: 20px; }
+.w-diff .b b { font-size: var(--fs-15); color: var(--tx-hi); }
+.w-diff.bad { border: 1px dashed var(--warn); background: var(--warn-bg); }
+.w-resrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; min-height: 56px; padding: 8px 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); flex: none; }
+.w-resrow .tx { display: flex; flex-direction: column; gap: 8px; font-size: var(--fs-13); color: var(--tx-mid); line-height: 20px; }
+.w-resrow .tx b { font-size: var(--fs-15); color: var(--tx-hi); }
+.w-toast { position: absolute; left: 50%; transform: translateX(-50%); bottom: 88px; z-index: 6; width: min(92%, 480px); display: flex; gap: 16px; align-items: center; padding: 16px; border-radius: var(--r-card); background: rgba(24,12,36,0.94); color: var(--tx-hi); font-size: var(--fs-15); }
+.w-lead { font-size: var(--fs-15); line-height: 1.5; color: var(--tx-mid); }
+.w-lead b { color: var(--tx-hi); }
+.fl-chip.dl { color: var(--tx-hi); }
+
+.w-fields { display: flex; flex-direction: column; gap: 16px; }
+.w-bulk { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+@container pg (min-width: 760px) { .w-bulk { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.w-bulk .sh-btn { white-space: normal; text-align: center; }
+.w-lstep.sm b { font-size: var(--fs-13); }
+.w-pill { min-height: 44px; padding: 0 12px; border-radius: var(--r-pill); background: #fff; border: 1px solid var(--shell-line); display: inline-flex; align-items: center; justify-content: center; font-size: var(--fs-13); font-weight: 600; color: var(--ink); white-space: nowrap; }
+.w-ghostrow2 { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
+.w-ghostrow2 .fl-btn { padding: 0 8px; font-size: var(--fs-13); white-space: nowrap; }
+.w-wiz .w-fill .w-card.w-sum { flex: none; padding: 16px; }
+.w-wiz .w-fill .w-card.w-invs { flex: 1; min-height: 0; }
+.w-sched { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.w-sched .span2 { grid-column: 1 / -1; }
+@media (min-width: 700px) { .w-sched { grid-template-columns: repeat(3, minmax(0, 1fr)); } .w-sched .span2 { grid-column: span 2; } }
+@media (min-width: 700px) and (max-height: 760px) { .w-wiz .w-card { padding: 16px; } }
+.w-asg > button { font-size: var(--fs-13); white-space: normal; line-height: 1.3; padding: 0 8px; text-align: center; }
+.w-two { gap: 16px; }
+
+.sh-root, .fl-root { word-break: keep-all; overflow-wrap: break-word; }
+.w-stepper.sm b { font-size: var(--fs-13); }
+.w-card .fl-h2 { text-align: center; }
+.w-detail-hero { display: flex; flex-direction: column; gap: 16px; padding: 16px; }
+.w-hmain { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.w-hact { display: flex; flex-direction: column; gap: 8px; }
+@container pg (min-width: 760px) {
+  .w-detail-hero { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 24px; align-items: center; padding: 24px; }
+}
+.w-tl { gap: 16px; }
+.w-tli { padding-bottom: 0; }
+.w-tli::before { top: 36px; bottom: 0; }
+.w-tli + .w-tli .w-dotc::before { content: ""; position: absolute; left: 9px; top: -30px; width: 2px; height: 28px; background: var(--shell-line); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-logo" viewBox="0 0 414.72 188.928"><path d="M 414.72 92.871 L 413.139 94.458 L 412.995 94.603 C 409.607 98.313 406.014 101.838 402.483 105.424 C 378.911 129.356 355.38 153.328 331.686 177.136 C 329.386 179.424 326.183 181.464 323.062 182.165 C 314.089 184.165 306.554 177.919 306.102 168.334 C 305.753 160.975 305.979 153.575 305.979 146.196 C 305.958 131.582 305.876 116.988 305.999 102.394 C 306.061 95.365 303.72 89.82 297.088 87.017 C 290.251 84.131 284.584 86.399 279.491 91.552 C 253.538 117.709 227.482 143.764 201.447 169.839 C 195.677 175.59 190.071 177.012 183.871 174.312 C 177.382 171.467 175.041 166.211 175.083 159.388 C 175.144 140.342 175.124 121.275 175.062 102.209 C 175.021 93.283 170.955 87.821 163.564 86.172 C 157.281 84.75 152.763 87.574 148.575 91.882 C 118.843 122.265 89.03 152.565 59.319 182.948 C 55.52 186.803 51.393 189.503 45.767 188.823 C 37.76 187.875 32.955 182.083 32.852 172.992 C 32.565 150.669 32.483 128.325 32.175 106.001 C 32.031 95.18 20.184 88.171 11.108 93.448 C 9.712 94.376 8.049 96.169 7.638 96.54 C 7.494 96.664 7.371 96.788 7.248 96.911 C 7.125 97.035 7.002 97.138 6.899 97.262 C 6.796 97.344 6.714 97.427 6.714 97.427 L 0.205 103.961 C 0.082 101.652 0.021 99.344 0 97.014 L 3.018 93.984 L 13.839 82.915 L 13.839 82.956 C 37.328 58.984 60.859 35.032 84.431 11.121 C 89.071 6.401 94.635 4.814 100.836 7.535 C 106.976 10.214 109.768 15.244 109.747 21.902 L 109.747 54.861 C 109.747 65.869 109.706 76.855 109.768 87.842 C 109.83 95.035 112.971 100.518 119.583 103.425 C 125.085 105.857 129.767 104.105 133.914 99.818 C 151.1 82.111 168.368 64.467 185.636 46.843 C 199.065 33.136 212.575 19.511 225.963 5.742 C 230.849 0.712 236.332 -1.535 243.066 1.248 C 249.76 4.031 252.121 9.534 252.08 16.543 C 252.019 35.609 251.998 54.655 252.121 73.722 C 252.203 84.234 259.144 91.119 268.527 89.326 C 272.223 88.625 276.021 86.007 278.793 83.266 C 304.89 57.5 330.782 31.528 356.736 5.618 C 362.731 -0.339 369.035 -1.576 375.256 1.99 C 380.738 5.123 382.771 10.05 382.751 16.213 C 382.689 37.67 382.792 59.149 382.73 80.607 C 382.689 87.697 385.564 92.892 392.052 95.798 C 394.721 96.994 397.308 97.385 399.752 97.056 C 401.764 96.664 403.304 96.458 408.642 91.263 L 414.535 85.512 C 414.658 87.965 414.72 90.398 414.72 92.871 Z"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="i-chev-l" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-chev-r" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="i-user-plus" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></symbol>
+    <symbol id="i-video" viewBox="0 0 24 24"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></symbol>
+    <symbol id="i-video-off" viewBox="0 0 24 24"><path d="M10.66 5H14a2 2 0 0 1 2 2v2.34l1 1L22 8v8"/><path d="M16 16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2l10 10Z"/><line x1="2" x2="22" y1="2" y2="22"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol>
+    <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3"/></symbol>
+    <symbol id="i-door-open" viewBox="0 0 24 24"><path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h3"/><path d="M13 20h9"/><path d="M10 12v.01"/><path d="M13 4.562v16.157a1 1 0 0 1-1.242.97L5 20V5.562a2 2 0 0 1 1.515-1.94l4-1A2 2 0 0 1 13 4.561Z"/></symbol>
+    <symbol id="i-door-closed" viewBox="0 0 24 24"><path d="M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14"/><path d="M2 20h20"/><path d="M14 12v.01"/></symbol>
+    <symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/><path d="M5 12.859a10 10 0 0 1 5.17-2.69"/><path d="M19 12.859a10 10 0 0 0-2.007-1.523"/><path d="M2 8.82a15 15 0 0 1 4.177-2.643"/><path d="M22 8.82a15 15 0 0 0-11.288-3.764"/><path d="m2 2 20 20"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+    <symbol id="i-waves" viewBox="0 0 24 24"><path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></symbol>
+    <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+    <symbol id="i-message" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+    <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></symbol>
+    <symbol id="i-circle-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol>
+    <symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/></symbol>
+    <symbol id="i-chev-d" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-chev-u" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></symbol>
+    <symbol id="i-user-x" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" x2="22" y1="8" y2="13"/><line x1="22" x2="17" y1="8" y2="13"/></symbol>
+    <symbol id="i-user-check" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></symbol>
+    <symbol id="i-calendar-plus" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8"/><path d="M3 10h18"/><path d="M16 19h6"/><path d="M19 16v6"/></symbol>
+    <symbol id="i-calendar-x" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8"/><path d="M3 10h18"/><path d="m17 22 5-5"/><path d="m17 17 5 5"/></symbol>
+    <symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></symbol>
+    <symbol id="i-repeat" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></symbol>
+    <symbol id="i-trend-up" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></symbol>
+    <symbol id="i-trend-down" viewBox="0 0 24 24"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></symbol>
+    <symbol id="i-list-checks" viewBox="0 0 24 24"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+    <symbol id="i-archive" viewBox="0 0 24 24"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></symbol>
+    <symbol id="i-clipboard-check" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></symbol>
+    <symbol id="i-flask" viewBox="0 0 24 24"><path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2"/><path d="M6.453 15h11.094"/><path d="M8.5 2h7"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-merge" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></symbol>
+    <symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></symbol>
+  </defs>
+</svg>
+<div id="root"></div>
+<script>
+/* ───────── 기본 ───────── */
+const Q = new URLSearchParams(location.search);
+const ic = (n, c) => '<svg class="ic ' + (c || '') + '" aria-hidden="true"><use href="#i-' + n + '"/></svg>';
+const BG = (n) => 'assets/bg/background' + n + '.webp';
+const href = (g, k) => { const p = g.split('|'); return '?screen=' + p[0] + '&case=' + p[1] + (k ? '&k=' + k : ''); };
+
+/* 클래스 데이터 (시연 고정값 · 오늘 = 11/18(수)) */
+const CLS = {
+  mbsr: { id: 'mbsr', n: 'MBSR 봄', ico: 'leaf', kind: 'fixed', total: 8, done: 3, members: 11, cap: 12, mode: '온라인', code: '4281', rule: '매주 월 오후 7:00 · 60분', sub: '고정형 8회 · 매주 월 오후 7:00 · 온라인', next: ['4회차', '11/23(월) 오후 7:00'], host: ['박서연', '외 1명'], st: 'run', chips: ['진행 중', '리포트 승인 대기 4건'], inst: [['김지수', '주강사'], ['박서연', '강사']] },
+  wed: { id: 'wed', n: '수요 저녁 명상', ico: 'moon', kind: 'rolling', seqNow: 12, members: 9, cap: 0, mode: '온라인', code: '7035', rule: '매주 수 오후 8:00 · 60분', sub: '정기형 · 매주 수 오후 8:00 · 온라인', next: ['12회차', '오늘 오후 8:00'], host: ['김지수', ''], st: 'sched', chips: ['진행 중'], inst: [['김지수', '주강사']] },
+  'wed-open': { id: 'wed-open', n: '수요 저녁 명상', ico: 'moon', kind: 'rolling', seqNow: 12, members: 9, cap: 0, mode: '온라인', code: '7035', rule: '매주 수 오후 8:00 · 60분', sub: '정기형 · 매주 수 오후 8:00 · 온라인', next: ['12회차', '오늘 오후 8:00'], host: ['김지수', ''], st: 'open', chips: ['입장 가능'], inst: [['김지수', '주강사']] },
+  lunch: { id: 'lunch', n: '직장인 점심 명상', ico: 'leaf', kind: 'fixed', total: 6, done: 4, members: 8, cap: 10, mode: '오프라인', code: '5512', rule: '매주 목 오후 12:30 · 40분', sub: '고정형 6회 · 매주 목 오후 12:30 · 센터 3층 명상실', next: ['5회차', '내일 오후 12:30'], host: ['김지수', ''], st: 'run', chips: ['진행 중'], inst: [['김지수', '주강사']] },
+  intro: { id: 'intro', n: '마음챙김 입문 가을', ico: 'leaf', kind: 'fixed', total: 8, done: 6, members: 10, cap: 12, mode: '오프라인', code: '3946', rule: '매주 금 오전 10:00 · 60분', sub: '고정형 8회 · 매주 금 오전 10:00 · 센터 3층 명상실', next: ['7회차', '11/20(금) 오전 10:00'], host: ['이진호', ''], st: 'run', chips: ['진행 중'], inst: [['김지수', '주강사'], ['이진호', '강사']], warn: true },
+  winter: { id: 'winter', n: '겨울 이완 명상', ico: 'moon', kind: 'fixed', total: 8, done: 0, members: 0, cap: 12, mode: '온라인', code: '', rule: '매주 목 오후 7:30 · 60분', sub: '고정형 8회 · 매주 목 오후 7:30 · 온라인', next: ['1회차', '12/3(목) 오후 7:30'], host: ['미정 2개', ''], st: 'draft', chips: ['편성 중'], inst: [['김지수', '주강사'], ['박서연', '강사']] },
+  morning: { id: 'morning', n: '아침 스트레칭 명상', ico: 'leaf', kind: 'fixed', total: 8, done: 8, members: 10, cap: 12, mode: '온라인', code: '', rule: '매주 화 오전 7:30 · 40분', sub: '고정형 8회 · 매주 화 오전 7:30 · 온라인', next: null, host: ['김지수', ''], st: 'done', chips: ['마무리'], inst: [['김지수', '주강사']] },
+  summer: { id: 'summer', n: '여름 마음챙김', ico: 'leaf', kind: 'fixed', total: 6, done: 6, members: 9, cap: 10, mode: '오프라인', code: '', rule: '매주 수 오후 6:30 · 50분', sub: '고정형 6회 · 매주 수 오후 6:30 · 센터 3층 명상실', next: null, host: ['박서연', ''], st: 'done', chips: ['마무리'], inst: [['박서연', '주강사']] },
+};
+const ORDER = ['mbsr', 'wed', 'lunch', 'intro', 'winter', 'morning', 'summer'];
+const kOf = (c, def) => CLS[Q.get('k')] || CLS[def];
+
+/* 세션(회차) 데이터 */
+const MB = [
+  { n: 1, d: '11/2(월)', t: '오후 7:00', du: '60분', h: '김지수', st: 'done' }, { n: 2, d: '11/9(월)', t: '오후 7:00', du: '60분', h: '박서연', st: 'done' },
+  { n: 3, d: '11/16(월)', t: '오후 7:00', du: '60분', h: '김지수', st: 'done' }, { n: 4, d: '11/23(월)', t: '오후 7:00', du: '60분', h: '박서연', st: 'up' },
+  { n: 5, d: '11/30(월)', t: '오후 7:00', du: '60분', h: '김지수', st: 'up' }, { n: 6, d: '12/7(월)', t: '오후 7:00', du: '60분', h: '박서연', st: 'up' },
+  { n: 7, d: '12/14(월)', t: '오후 7:00', du: '60분', h: '김지수', st: 'up' }, { n: 8, d: '12/21(월)', t: '오후 7:00', du: '60분', h: '박서연', st: 'up' },
+];
+const WED = [
+  { n: 10, d: '11/4(수)', t: '오후 8:00', du: '60분', h: '김지수', st: 'done' }, { n: 11, d: '11/11(수)', t: '오후 8:00', du: '60분', h: '김지수', st: 'done' },
+  { n: 12, d: '오늘(11/18)', t: '오후 8:00', du: '60분', h: '김지수', st: 'up' }, { n: 13, d: '11/25(수)', t: '오후 8:00', du: '60분', h: '김지수', st: 'up' },
+  { n: 14, d: '12/2(수)', t: '오후 8:00', du: '60분', h: '김지수', st: 'up' }, { n: 15, d: '12/9(수)', t: '오후 8:00', du: '60분', h: '김지수', st: 'up' },
+  { n: 16, d: '12/16(수)', t: '오후 8:00', du: '60분', h: '김지수', st: 'up' },
+];
+const INTRO = [
+  { n: 5, d: '11/6(금)', t: '오전 10:00', du: '60분', h: '이진호', st: 'done', m: '오프라인' }, { n: 6, d: '11/13(금)', t: '오전 10:00', du: '60분', h: '이진호', st: 'done', m: '오프라인' },
+  { n: 7, d: '11/20(금)', t: '오전 10:00', du: '60분', h: '이진호', st: 'need', m: '오프라인' }, { n: 8, d: '11/27(금)', t: '오전 10:00', du: '60분', h: '이진호', st: 'need', m: '오프라인' },
+];
+const MEMBERS = [
+  { n: '김하늘', a: 'aaa', s: '참석 3회' }, { n: '이도윤', a: 'aaa', s: '참석 3회' }, { n: '박서준', a: 'aax', s: '참석 2회 · 결석 1회', need: 1 },
+  { n: '최유나', a: 'aaa', s: '참석 3회', guest: 1 }, { n: '정하윤', a: '---', s: '4회차부터 합류', join: 1 }, { n: '한지민', a: 'aae', s: '참석 2회 · 사전 결석 1회', need: 1 },
+  { n: '오태윤', a: 'axa', s: '참석 2회 · 결석 1회', need: 1 }, { n: '서은채', a: 'aaa', s: '참석 3회' }, { n: '문가온', a: 'aaa', s: '참석 3회' },
+  { n: '임시우', a: 'aaa', s: '참석 3회' }, { n: '윤예린', a: 'aaa', s: '참석 3회' },
+];
+
+/* ───────── 공통 조각 ───────── */
+const NAVS = [['home', '홈'], ['calendar', '명상 클래스'], ['heart', '상담'], ['message', '채팅'], ['file', '리포트'], ['flask', '플레이그라운드'], ['bell', '알림'], ['sliders', '설정']];
+const TABS = [['home', '홈'], ['calendar', '클래스'], ['heart', '상담'], ['message', '채팅'], ['dots', '더보기']];
+function shell(head, body, extra, banner, o) {
+  o = o || {};
+  const me = o.me || ['김지수 지도사', '마음숲 센터'];
+  return '<div class="sh-root w-shell">' +
+    '<aside class="sh-side"><div class="w-brand"><svg class="ic w-logo" viewBox="0 0 414.72 188.928"><use href="#i-logo"/></svg>Mind Breeze</div>' +
+    '<nav class="w-nav" aria-label="메뉴">' + NAVS.map((n) => n[1] === '명상 클래스' ? '<a class="on" href="' + href('CH01|open') + '">' + ic(n[0]) + n[1] + '</a>' : '<a href="#">' + ic(n[0]) + n[1] + '</a>').join('') + '</nav>' +
+    '<div class="w-me"><b>' + me[0] + '</b><span>' + me[1] + '</span></div></aside>' +
+    '<main class="sh-main">' + head + body + (banner || '') +
+    '<nav class="sh-tabbar" aria-label="메뉴">' + TABS.map((n) => n[1] === '클래스' ? '<a class="w-tab on" href="' + href('CH01|open') + '">' + ic(n[0]) + n[1] + '</a>' : '<a class="w-tab" href="#">' + ic(n[0]) + n[1] + '</a>').join('') + '</nav></main>' +
+    (extra || '') + '</div>';
+}
+const SCH = { done: ['circle-check', '완료', 'mute'], up: ['calendar', '예정', ''], open: ['door-open', '입장 가능', 'ok'], live: ['play', '진행 중', 'live'], cancel: ['x', '취소', 'warn'], makeup: ['repeat', '보강', ''], need: ['alert', '진행 강사 필요', 'warn'], clash: ['alert', '겹쳐요', 'warn'], pend: ['hourglass', '수락 기다리는 중', ''], draft: ['pencil', '편성 중', 'mute'], fin: ['archive', '마무리', 'mute'], run: ['play', '진행 중', ''] };
+const chip = (k, label) => { const s = SCH[k]; return '<span class="sh-chip ' + s[2] + '">' + ic(s[0], 's16') + (label || s[1]) + '</span>'; };
+const tag = (t, cls) => '<span class="sh-chip ' + (cls || 'mute') + '">' + t + '</span>';
+const flChips = (a) => a.map((t) => '<span class="fl-chip">' + t + '</span>').join('');
+const netBanner = () => '<div class="fl-banner" role="status">' + ic('wifi-off') + '<span>연결이 끊겼어요. 다시 연결되면 자동으로 새로 고쳐요.</span></div>';
+const A = (g, cls, inner, k, extra) => '<a class="' + cls + '" href="' + href(g, k) + '"' + (extra || '') + '>' + inner + '</a>';
+const alertBox = (kind, icon, title, sub, btn) => '<div class="w-alert ' + kind + '" role="status">' + ic(icon, 's20') + '<div class="tx"><b>' + title + '</b>' + (sub ? '<span>' + sub + '</span>' : '') + (btn || '') + '</div></div>';
+
+/* 시트 */
+function sheetWrap(title, body, foot, close, sc) {
+  return '<div class="w-scrim"><section class="w-sheet" role="dialog" aria-modal="true" aria-label="' + title + '">' +
+    '<div class="w-shead"><h2>' + title + '</h2><a class="w-x" href="' + close + '" aria-label="닫기">' + ic('x') + '</a></div>' +
+    '<div class="w-sbody' + (sc ? ' sc' : '') + '">' + body + '</div>' + (foot || '') + '</section></div>';
+}
+const sfoot = (a, b) => '<div class="w-sfoot">' + a + b + '</div>';
+const btnSoft = (g, t, k) => '<a class="fl-btn soft" href="' + href(g, k) + '">' + t + '</a>';
+const btnPri = (g, t, k, cls) => '<a class="fl-btn ' + (cls || 'primary') + '" href="' + href(g, k) + '">' + t + '</a>';
+
+/* 인덱스 */
+const INDEX = [];
+const SCREENS = {};
+function reg(id, name, type, first, assume, cases, fn) { INDEX.push({ id, name, type, first, assume, cases }); SCREENS[id] = fn; }
+
+/* ───────── CH01 클래스 목록 ───────── */
+function crow(K, o) {
+  o = o || {};
+  const prog = K.kind === 'rolling'
+    ? '<div class="w-cv"><span class="w-k">진행</span><b>' + K.seqNow + '회차째</b><span class="w-s">정기형 · 앞으로 4주 준비됨</span></div>'
+    : '<div class="w-cv"><span class="w-k">진행</span><div class="w-pline"><div class="w-prog' + (K.done === K.total ? ' ok' : '') + '"><i style="width:' + (K.done / K.total * 100) + '%"></i></div><b>' + K.done + '/' + K.total + '</b></div></div>';
+  let nextC;
+  if (K.st === 'done') nextC = '<div class="w-cv"><span class="w-k">다음 세션</span><b>모두 마쳤어요</b><span class="w-s">' + K.total + '회차까지 진행했어요</span></div>';
+  else if (K.st === 'draft') nextC = '<div class="w-cv"><span class="w-k">다음 세션</span><b>첫 세션 ' + K.next[0] + '</b><span class="w-s">' + K.next[1] + ' 예정 · 아직 공개 전</span></div>';
+  else nextC = '<div class="w-cv"><span class="w-k">다음 세션</span><b>' + K.next[0] + '</b><span class="w-s">' + K.next[1] + '</span></div>';
+  const need = o.need;
+  const hostC = need
+    ? '<div class="w-cv"><span class="w-k">진행 강사</span><b>미정</b><span class="w-s bad">이진호 지도사가 빠졌어요</span></div>'
+    : K.st === 'draft' ? '<div class="w-cv"><span class="w-k">진행 강사</span><b>' + K.host[0] + '</b><span class="w-s bad">정해야 공개할 수 있어요</span></div>'
+    : '<div class="w-cv"><span class="w-k">진행 강사</span><b>' + K.host[0] + '</b><span class="w-s">' + (K.host[1] || '강사 1명') + '</span></div>';
+  let chips;
+  if (need) chips = chip('need') + tag('진행 중');
+  else if (K.st === 'open') chips = chip('open');
+  else if (K.st === 'draft') chips = chip('draft');
+  else if (K.st === 'done') chips = chip('fin');
+  else chips = K.chips.map((t, i) => i === 0 ? chip('run', t) : '<span class="sh-chip">' + t + '</span>').join('');
+  const page = K.st === 'done' ? 'CH02|done' : K.st === 'draft' ? 'CH02|draft' : K.id === 'intro' ? 'CH02|warn' : K.id === 'wed' || K.id === 'wed-open' ? 'CH02|rolling' : 'CH02|overview';
+  return '<a class="w-crow' + (need ? ' hl' : '') + '" href="' + href(page, K.id === 'wed-open' ? 'wed-open' : K.id) + '">' +
+    '<div class="w-c1"><span class="w-ico' + (need ? ' warn' : K.st === 'done' ? ' mute' : '') + '">' + ic(K.ico) + '</span><div><b class="w-cn">' + K.n + '</b><div class="w-sb">' + K.sub + '</div></div></div>' +
+    '<div class="w-c2">' + nextC + '</div><div class="w-c3">' + prog + '</div><div class="w-c4">' + hostC + '</div><div class="w-c5">' + chips + '</div></a>';
+}
+function liveCard(kind) {
+  const open = kind === 'open';
+  const chipH = open ? '<span class="fl-chip ok">' + ic('door-open', 's16') + '입장 가능</span>' : '<span class="fl-chip live">' + ic('play', 's16') + '진행 중</span>';
+  const hint = open ? '멤버가 대기실로 입장할 수 있어요' : '지금 진행되고 있어요';
+  const wait = open ? '멤버 9명 · 입장 3명 · 준비 2명' : '23분째 · 접속 7/9명';
+  const act = open
+    ? '<a class="fl-btn primary block" href="' + href('CH02|open', 'wed-open') + '">' + ic('door-open', 's20') + '이어서 열기</a><a class="fl-btn soft block" href="' + href('CH30|open', 'wed-open') + '">' + ic('play', 's20') + '시작하기</a>'
+    : '<a class="fl-btn primary block" href="' + href('CH30|open', 'wed-open') + '">' + ic('door-open', 's20') + '이어서 열기</a>';
+  return '<section class="sh-hero w-live" style="background-image:url(' + BG(8) + ')" aria-label="지금 열려 있는 세션"><div class="w-live-main">' +
+    '<div class="w-line">' + chipH + '<span class="w-dim">' + hint + '</span></div>' +
+    '<h2 class="w-live-title">수요 저녁 명상 · 12회차</h2><div class="fl-chiprow w-start">' + flChips(['온라인', '정기형', 'LINK BAND 선택']) + '</div>' +
+    '<div class="w-line"><span class="w-wait">' + ic('users', 's20') + wait + '</span></div></div><div class="w-live-act">' + act + '</div></section>';
+}
+function nextCard() {
+  return '<section class="sh-card w-live" aria-label="다음 세션"><div class="w-live-main">' +
+    '<div class="w-line">' + chip('up') + '<span class="w-dim2">다음 세션 · 2시간 뒤 시작해요</span></div>' +
+    '<h2 class="w-live-title">수요 저녁 명상 · 12회차</h2><div class="fl-chiprow w-start">' + ['온라인', '정기형', 'LINK BAND 선택'].map((t) => tag(t)).join('') + '</div>' +
+    '<div class="w-line"><span class="w-wait">' + ic('calendar', 's20') + '오늘 오후 8:00 · 60분</span></div></div>' +
+    '<div class="w-live-act"><a class="sh-btn" href="' + href('CH02|rolling', 'wed') + '">' + ic('door-open', 's20') + '세션 보기</a></div></section>';
+}
+function ch01(c) {
+  const head = (btn) => '<header class="sh-head"><div class="w-page wide w-headrow"><h1 class="sh-title">명상 클래스</h1>' + (btn ? '<a class="sh-btn" href="' + href('CH10|start') + '">' + ic('plus', 's20') + '클래스 만들기</a>' : '') + '</div></header>';
+  if (c === 'empty') {
+    return shell(head(false), '<div class="sh-scroll w-hold"><div class="w-page wide fill"><div class="w-empty"><div class="sh-card"><div class="w-bigico">' + ic('calendar') + '</div><h2>아직 만든 클래스가 없어요</h2><p>횟수와 요일을 정하고 강사를 배정하면 한 번에 모든 세션이 만들어져요.</p><a class="sh-btn" href="' + href('CH10|start') + '">' + ic('plus', 's20') + '클래스 만들기</a><a class="w-smbtn line" href="' + href('CH10|clone') + '">' + ic('copy', 's20') + '지난 클래스 그대로 시작해요</a></div></div></div></div>');
+  }
+  const f = c === 'filter-draft' ? 'draft' : c === 'done' ? 'done' : 'all';
+  const q = c === 'search' ? 'MBSR' : '';
+  const hasLive = c === 'open' || c === 'progress' || c === 'warn' || c === 'search' || c === 'filter-draft' || c === 'done';
+  const live = c === 'progress' ? liveCard('progress') : c === 'idle' ? nextCard() : hasLive ? liveCard('open') : nextCard();
+  let rows = ORDER.map((id) => CLS[id]);
+  if (f === 'draft') rows = rows.filter((k) => k.st === 'draft');
+  if (f === 'done') rows = rows.filter((k) => k.st === 'done');
+  if (q) rows = rows.filter((k) => k.n.indexOf(q) >= 0);
+  const wedState = (k) => (k.id === 'wed' ? Object.assign({}, k, { st: c === 'progress' ? 'run' : hasLive && c !== 'idle' ? 'open' : 'sched', chips: c === 'progress' ? ['진행 중'] : ['진행 중'] }) : k);
+  const list = rows.map((k) => crow(wedState(k), { need: c === 'warn' && k.id === 'intro' })).join('');
+  const flt = '<div class="w-filter" role="tablist">' + [['all', '전체 7'], ['run', '진행 중 4'], ['draft', '편성 중 1'], ['done', '마무리 2']].map((o) => '<a class="' + (f === o[0] || (f === 'all' && o[0] === 'all') ? 'on' : '') + '" role="tab" href="' + href(o[0] === 'draft' ? 'CH01|filter-draft' : o[0] === 'done' ? 'CH01|done' : 'CH01|open') + '">' + o[1] + '</a>').join('') + '</div>';
+  const search = '<div class="w-inwrap">' + ic('search', 's20') + '<input class="w-sin" value="' + q + '" placeholder="클래스 이름으로 찾아요" aria-label="클래스 검색"></div>';
+  const warn = c === 'warn' ? alertBox('', 'alert', '진행 강사가 필요한 세션이 2개 있어요', '마음챙김 입문 가을 7·8회차는 이진호 지도사가 소속을 떠나 담당이 비었어요. 시작 전에 강사를 정해 주세요.', '<a class="w-smbtn warn" href="' + href('CH03|needs-reassign', 'intro') + '">' + ic('user-check', 's20') + '진행 강사 정하기</a>') : '';
+  const headrow = '<div class="w-chead" aria-hidden="true"><span>클래스</span><span>다음 세션</span><span>진행</span><span>진행 강사</span><span>상태</span></div>';
+  const body = '<div class="sh-scroll"><div class="w-page wide">' + live + warn +
+    '<div class="w-bar">' + flt + search + '</div>' +
+    (q ? '<div class="w-found">검색 결과 ' + rows.length + '개</div>' : '') +
+    '<div class="w-clist">' + headrow + list + '</div>' +
+    (f === 'draft' ? '<div class="w-end">편성 중인 클래스는 진행 강사를 모두 정하면 공개할 수 있어요.</div>' : '') + '</div></div>';
+  return shell(head(true), body);
+}
+reg('CH01', '클래스 목록', '셸형', 'open',
+  'DTO 가 다음 세션·진행률(N/총 회차)·다음 세션 진행 강사를 한 행에 함께 준다고 가정(서버 집계, 기획 §7.3) · 열린 세션 카드는 시작 15분 전부터 진행 중인 세션 1건 · 필터 4종(전체·진행 중·편성 중·마무리)과 검색은 기본값 · 정기형은 총 횟수 없이 N회차째 표기',
+  [['open', '열린 세션 카드(입장 가능) + 클래스 7개'], ['progress', '진행 중 세션 카드'], ['idle', '열린 세션 없음 · 다음 세션 카드'], ['warn', '진행 강사 미배정 경고(이탈) + 행 강조'], ['filter-draft', '편성 중 필터'], ['search', '검색 결과 1개'], ['done', '마무리 필터'], ['empty', '클래스 없음(첫 사용)']], ch01);
+
+/* ───────── 상세 공통 ───────── */
+const DTABS = [['CH02', 'overview', '개요'], ['CH03', 'table', '세션'], ['CH04', 'members', '멤버/출석'], ['CH05', 'reports', '리포트'], ['CH06', 'settings', '설정']];
+function dshell(K, tab, body, o) {
+  o = o || {};
+  const subH = (K.kind === 'fixed' ? '고정형 ' + K.total + '회' : '정기형') + ' · ' + K.mode;
+  const head = '<header class="sh-head w-dhead"><div class="w-page wide w-headrow"><div class="w-headl"><a class="w-backbtn" href="' + href('CH01|open') + '" aria-label="클래스 목록으로">' + ic('chev-l') + '</a><div class="w-dtitle"><h1 class="sh-title">' + K.n + '</h1><span class="w-dsub">' + subH + '</span></div></div>' +
+    '<a class="w-backbtn" href="' + href('CH06|settings', K.id) + '" aria-label="클래스 설정">' + ic('dots') + '</a></div></header>';
+  const tabs = '<div class="w-tabsbar"><div class="w-page wide"><nav class="w-dtabs" role="tablist" aria-label="클래스 메뉴">' + DTABS.map((t) => '<a role="tab" class="' + (t[0] === tab ? 'on' : '') + '" href="' + href(t[0] + '|' + t[1], K.id) + '">' + t[2] + '</a>').join('') + '</nav></div></div>';
+  return shell(head + tabs, '<div class="sh-scroll"><div class="w-page wide">' + body + '</div></div>', o.sheet || '', o.net ? netBanner() : '', { me: o.me });
+}
+const kv = (k, v, wrap) => '<div class="w-kv"><span class="k">' + k + '</span><div class="v' + (wrap ? ' w-wrapv' : '') + '">' + v + '</div></div>';
+const card = (inner, cls) => '<section class="sh-card' + (cls ? ' ' + cls : '') + '">' + inner + '</section>';
+const phead = (t, act) => '<div class="w-phead"><h3>' + t + '</h3>' + (act || '') + '</div>';
+const trow = (icon, cls, t, s, g, k) => '<a class="w-trow" href="' + href(g, k) + '"><span class="w-ico ' + cls + '">' + ic(icon) + '</span><span class="tx"><b>' + t + '</b><span>' + s + '</span></span>' + ic('chev-r', 's20') + '</a>';
+
+/* ───────── CH02 개요 ───────── */
+const CK2 = { overview: 'mbsr', open: 'wed-open', warn: 'intro', rolling: 'wed', draft: 'winter', done: 'morning' };
+function ch02(c) {
+  const K = kOf(c, CK2[c]);
+  const st = K.st;
+  let hero;
+  const heroWrap = (chipH, title, when, nx, btns) => '<section class="sh-hero w-detail-hero" style="background-image:url(' + BG(8) + ')"><div class="w-hmain"><div class="w-line">' + chipH + '</div><h2 class="w-live-title">' + title + '</h2>' + (when ? '<span class="w-wait">' + ic('calendar', 's20') + when + '</span>' : '') +
+    '<div class="w-next">' + ic(nx[0]) + '<div class="tx"><b>' + nx[1] + '</b><span>' + nx[2] + '</span></div></div></div><div class="w-hact">' + btns + '</div></section>';
+  const dis = (t, i) => '<button class="fl-btn primary block disabled" disabled>' + ic(i || 'door-open', 's20') + t + '</button>';
+  if (st === 'run' && K.warn) hero = heroWrap('<span class="fl-chip warn">' + ic('alert', 's16') + '진행 강사 필요</span>', '7회차 · 11/20(금) 오전 10:00', '60분 · 센터 3층 명상실', ['alert', '진행 강사가 비어 있어요', '이진호 지도사가 소속을 떠났어요. 강사를 정해야 세션을 열 수 있어요.'], '<a class="fl-btn primary block" href="' + href('CH03|needs-reassign', K.id) + '">' + ic('user-check', 's20') + '진행 강사 정하기</a>');
+  else if (st === 'run') hero = heroWrap('<span class="fl-chip">' + ic('calendar', 's16') + '예정</span>', K.next[0] + ' · 박서연 지도사 진행', K.next[1] + ' · 60분 · ' + K.mode, ['user', '박서연 지도사가 진행해요', '진행 강사만 세션을 열고 시작할 수 있어요. 주강사는 일정과 강사를 바꿀 수 있어요.'], dis('세션 열기'));
+  else if (st === 'open') hero = heroWrap('<span class="fl-chip ok">' + ic('door-open', 's16') + '입장 가능</span>', '12회차 · 내가 진행해요', '오늘 오후 8:00 · 60분 · 온라인', ['users', '멤버 3명이 대기 중이에요', '2명은 준비를 마쳤어요. 준비되면 시작해요.'], '<a class="fl-btn primary block" href="' + href('CH30|open', K.id) + '">' + ic('door-open', 's20') + '이어서 열기</a>');
+  else if (st === 'sched') hero = heroWrap('<span class="fl-chip">' + ic('calendar', 's16') + '예정</span>', '12회차 · 내가 진행해요', '오늘 오후 8:00 · 60분 · 온라인', ['clock', '시작 15분 전부터 열 수 있어요', '미리 열어 두면 멤버가 일찍 와서 준비해요.'], dis('세션 열기'));
+  else if (st === 'draft') hero = heroWrap('<span class="fl-chip">' + ic('pencil', 's16') + '편성 중</span>', '1회차 · 12/3(목) 오후 7:30', '8회 · 매주 목 · 60분', ['alert', '진행 강사가 없는 세션이 2개 있어요', '모든 세션에 진행 강사를 정하면 클래스를 공개할 수 있어요.'], '<a class="fl-btn primary block" href="' + href('CH13|unassigned') + '">' + ic('pencil', 's20') + '편성 이어서 하기</a>');
+  else hero = heroWrap('<span class="fl-chip">' + ic('archive', 's16') + '마무리</span>', '모든 세션을 마쳤어요', '8회차까지 진행했어요', ['file', '리포트를 확인해 보세요', '승인하지 않은 리포트가 없는지 리포트 탭에서 확인할 수 있어요.'], '<a class="fl-btn primary block" href="' + href('CH05|reports', K.id) + '">' + ic('file', 's20') + '리포트 보기</a>');
+
+  let progress;
+  if (K.kind === 'rolling') progress = card(phead('진행 현황') + '<div class="w-cv"><b>' + K.seqNow + '회차째 이어지고 있어요</b><span class="w-s">앞으로 4주 분량(16회차, 12/16까지)을 미리 만들어 두었어요. 이후 세션은 자동으로 이어져요.</span></div>');
+  else if (st === 'draft') progress = card(phead('진행 현황') + '<div class="w-pline"><div class="w-prog"><i style="width:0%"></i></div><b>0/8</b></div><div class="w-sumline" style="margin-top:16px">' + tag('편성 중') + tag('세션 8개 준비') + '</div>');
+  else progress = card(phead('진행 현황') + '<div class="w-pline"><div class="w-prog' + (K.done === K.total ? ' ok' : '') + '"><i style="width:' + (K.done / K.total * 100) + '%"></i></div><b>' + K.done + '/' + K.total + '</b></div><div class="w-sumline" style="margin-top:16px">' + tag('완료 ' + K.done) + tag('예정 ' + (K.total - K.done)) + tag('보강 0') + '</div>');
+
+  let todos = '';
+  if (K.id === 'mbsr') todos = trow('file', '', '리포트 승인을 기다려요', '3회차 리포트 4건 · 코멘트가 없는 건 4건', 'CH05|reports', K.id) + trow('user-x', 'warn', '놓친 세션이 있는 멤버 3명', '보강 세션으로 채울 수 있어요', 'CH04|absent', K.id) + trow('alert', 'warn', '겹치는 일정 1건', '6회차 12/7(월) 오후 7:00', 'CH20|conflict', K.id);
+  else if (K.id === 'wed' || K.id === 'wed-open') todos = trow('file', '', '리포트 승인을 기다려요', '11회차 리포트 2건', 'CH05|reports', K.id) + trow('users', 'mute', '정원 제한 없이 이어져요', '코드로 언제든 새 멤버가 합류할 수 있어요', 'CH04|members', K.id);
+  else if (K.id === 'intro') todos = trow('alert', 'warn', '진행 강사 없는 세션 2개', '7회차 11/20(금) · 8회차 11/27(금)', 'CH03|needs-reassign', K.id) + trow('user-x', 'warn', '놓친 세션이 있는 멤버 1명', '보강 세션으로 채울 수 있어요', 'CH04|absent', K.id);
+  else if (K.id === 'winter') todos = trow('alert', 'warn', '진행 강사 없는 세션 2개', '3회차 12/17(목) · 6회차 1/7(목)', 'CH13|unassigned') + trow('user-plus', 'mute', '멤버 초대는 공개한 뒤에 할 수 있어요', '코드는 클래스를 공개하면 만들어져요', 'CH13|unassigned');
+  else todos = trow('circle-check', 'ok', '대기 중인 리포트가 없어요', '10명 모두에게 리포트를 보냈어요', 'CH05|reports', K.id) + trow('copy', '', '지난 기수 그대로 새로 만들어요', '요일·시각·강사 배정을 그대로 가져와요', 'CH10|clone') + trow('archive', 'mute', '클래스 보관하기', '목록에서 숨기고 열람만 할 수 있어요', 'CH06|settings', K.id);
+  const todoCard = card(phead('할 일') + todos);
+
+  const code = K.code ? '<span class="w-codeval" aria-label="클래스 코드 4자리">' + K.code + '</span><span class="w-smbtn">' + ic('copy', 's20') + '코드 복사</span>' : '<span>' + (st === 'draft' ? '공개하면 만들어져요' : '코드가 닫혔어요') + '</span>';
+  const instr = K.inst.map((i) => tag(i[0] + ' ' + i[1], i[1] === '주강사' ? '' : 'mute')).join('');
+  const info = card(kv('클래스 코드', code, true) + kv('일정', '<span>' + K.rule + '</span>') + kv('방식', '<span>' + (K.mode === '온라인' ? '온라인' : '센터 3층 명상실') + '</span>') +
+    kv('멤버', '<span>' + (K.cap ? K.members + '명 · 정원 ' + K.cap + '명' : K.members + '명 · 정원 제한 없음') + '</span>') + kv('강사', '<span class="w-sumline">' + instr + '</span>', true) + kv('기록', '<span>음성 녹음 · AI 분석 · LINK BAND 선택</span>'));
+  const alertTop = st === 'run' && K.warn ? alertBox('', 'alert', '7회차는 진행 강사가 정해져야 열 수 있어요', '시작 전까지 정하지 않으면 홈 화면 맨 위에 진행자 필요 안내가 떠요.', '<a class="w-smbtn warn" href="' + href('CH03|needs-reassign', K.id) + '">' + ic('user-check', 's20') + '진행 강사 정하기</a>') : '';
+  return dshell(K, 'CH02', hero + alertTop + '<div class="w-g2"><div class="w-two">' + progress + todoCard + '</div><div class="w-two">' + info + '</div></div>');
+}
+reg('CH02', '클래스 상세 · 개요 탭', '셸형', 'overview',
+  '진행 강사만 세션을 열고 시작할 수 있음(강사 모델 I9) — 주강사라도 다른 강사의 회차는 열기 비활성 · 열기는 시작 15분 전부터 · 정기형은 앞으로 4주 분량을 미리 만들어 둠(롤링, 기획 §5-18) · 클래스 코드는 클래스 단위 1개이며 마무리하면 닫힘 · 편성 중(draft)은 코드 없음',
+  [['overview', '고정형 8회 · 3/8 진행 · 다음 세션은 다른 강사 진행(열기 비활성)'], ['open', '정기형 · 내가 진행하는 세션 입장 가능'], ['warn', '진행 강사 미배정 경고(강사 이탈)'], ['rolling', '정기형 · 오늘 저녁 세션 대기 중'], ['draft', '편성 중(진행 강사 미정 2개)'], ['done', '마무리된 클래스']], ch02);
+
+/* ───────── CH03 세션 탭 ───────── */
+function rowsFor(K, c) {
+  let r;
+  if (K.id === 'mbsr') r = MB.map((x) => Object.assign({}, x));
+  else if (K.id === 'wed' || K.id === 'wed-open') r = WED.map((x) => Object.assign({}, x));
+  else r = [{ n: 1, d: '10/16(금)', t: '오전 10:00', du: '60분', h: '김지수', st: 'done', m: '오프라인' }, { n: 2, d: '10/23(금)', t: '오전 10:00', du: '60분', h: '이진호', st: 'done', m: '오프라인' }, { n: 3, d: '10/30(금)', t: '오전 10:00', du: '60분', h: '김지수', st: 'done', m: '오프라인' }, { n: 4, d: '11/6(금)', t: '오전 10:00', du: '60분', h: '이진호', st: 'done', m: '오프라인' }].concat(INTRO.slice(0).map((x) => Object.assign({}, x, { n: x.n + 0 }))).slice(0, 8);
+  if (K.id === 'intro') r = [{ n: 1, d: '10/9(금)', t: '오전 10:00', du: '60분', h: '김지수', st: 'done', m: '오프라인' }, { n: 2, d: '10/16(금)', t: '오전 10:00', du: '60분', h: '이진호', st: 'done', m: '오프라인' }, { n: 3, d: '10/23(금)', t: '오전 10:00', du: '60분', h: '김지수', st: 'done', m: '오프라인' }, { n: 4, d: '10/30(금)', t: '오전 10:00', du: '60분', h: '이진호', st: 'done', m: '오프라인' }].concat(INTRO);
+  if (c === 'cancelled') r[4].st = 'cancel';
+  if (c === 'makeup') r.splice(4, 0, { n: '보강', d: '11/29(일)', t: '오후 2:00', du: '60분', h: '김지수', st: 'makeup', note: '박서준 · 한지민 · 오태윤' });
+  if (c === 'pending' || c === 'host-urgent') { const x = r.filter((q) => q.n === 12)[0]; if (c === 'pending') x.st = 'pend'; }
+  return r;
+}
+function srow(r, K) {
+  const dim = r.st === 'cancel', bad = r.st === 'need';
+  const label = r.n === '보강' ? '보강' : r.n + '회차';
+  const chips = r.st === 'done' ? chip('done') : r.st === 'cancel' ? chip('cancel') : r.st === 'makeup' ? chip('makeup') + tag('대상 3명') : r.st === 'need' ? chip('need') : r.st === 'pend' ? chip('pend') : r.st === 'clash' ? chip('clash') : chip('up');
+  const mode = r.m || K.mode;
+  const host = '<span class="w-shost' + (bad ? ' bad' : '') + '">' + ic(bad ? 'alert' : 'user', 's20') + (bad ? '미정' : r.h) + '</span>';
+  const act = r.st === 'done' || dim ? '<span></span>' : A(r.st === 'need' ? 'CH03|reassign' : r.st === 'pend' ? 'CH03|pending' : K.id === 'wed' || K.id === 'wed-open' ? 'CH03|host-urgent' : 'CH03|host-change', 'w-xbtn w-sact', ic('pencil', 's20'), K.id, ' aria-label="' + label + ' 진행 강사 바꾸기"');
+  const now = r.d.indexOf('오늘') === 0;
+  return '<div class="w-srow' + (dim ? ' dim' : '') + (bad ? ' hl' : '') + (now ? ' now' : '') + '">' +
+    A('CH30|' + (r.st === 'done' ? 'completed' : dim ? 'cancelled' : r.st === 'makeup' ? 'makeup' : bad ? 'needs-reassign' : 'scheduled'), 'w-sno', '<span class="w-sn">' + label + '</span>', K.id) +
+    '<div class="w-sst">' + chips + '</div><div class="w-swhen">' + r.d + ' ' + r.t + ' · ' + r.du + (r.note ? '<div class="w-dim2">대상 ' + r.note + '</div>' : '') + '</div><div class="w-smode">' + mode + '</div>' + host + act + '</div>';
+}
+function tli(r, K, firstUp) {
+  const label = r.n === '보강' ? '보강' : r.n + '회차';
+  const cls = r.st === 'done' ? 'done' : r.st === 'need' ? 'bad' : r.st === 'cancel' ? '' : firstUp ? 'next' : '';
+  const icon = r.st === 'done' ? 'check' : r.st === 'need' ? 'alert' : r.st === 'cancel' ? 'x' : r.st === 'makeup' ? 'repeat' : firstUp ? 'play' : 'circle';
+  const chips = r.st === 'done' ? chip('done') : r.st === 'cancel' ? chip('cancel') : r.st === 'makeup' ? chip('makeup') : r.st === 'need' ? chip('need') : r.st === 'pend' ? chip('pend') : chip('up');
+  const mode = r.m || K.mode;
+  return '<div class="w-tli ' + cls + '"><span class="w-dotc">' + ic(icon) + '</span><div class="w-tlc' + (firstUp ? ' next' : '') + (r.st === 'need' ? ' bad' : '') + (r.st === 'cancel' ? ' dim' : '') + '"><div class="top">' +
+    A('CH30|' + (r.st === 'done' ? 'completed' : 'scheduled'), '', label + ' · ' + r.d, K.id) + chips + '</div>' +
+    '<div class="line">' + ic('clock', 's16') + r.t + ' · ' + r.du + ' · ' + mode + '</div><div class="line">' + ic(r.st === 'need' ? 'alert' : 'user', 's16') + (r.st === 'need' ? '진행 강사가 비어 있어요' : r.h + ' 지도사 진행') + '</div></div></div>';
+}
+const CK3 = { table: 'mbsr', timeline: 'mbsr', makeup: 'mbsr', cancelled: 'mbsr', rolling: 'wed', pending: 'wed', 'needs-reassign': 'intro', reassign: 'intro', 'host-change': 'mbsr', 'host-conflict': 'mbsr', 'host-urgent': 'wed', 'makeup-add': 'mbsr' };
+function ch03(c) {
+  const K = kOf(c, CK3[c]);
+  const rows = rowsFor(K, c);
+  const tl = c === 'timeline';
+  const firstUp = rows.filter((x) => x.st === 'up' || x.st === 'pend')[0];
+  const bar = '<div class="w-tbar"><div class="w-seg2" role="tablist"><a class="' + (tl ? '' : 'on') + '" role="tab" href="' + href('CH03|table', K.id) + '">' + ic('list-checks', 's20') + '표로 보기</a><a class="' + (tl ? 'on' : '') + '" role="tab" href="' + href('CH03|timeline', K.id) + '">' + ic('clock', 's20') + '타임라인</a></div>' +
+    '<div class="btns"><a class="w-smbtn" href="' + href('CH20|table', K.id) + '">' + ic('sliders', 's20') + '일괄 편집</a><a class="w-smbtn" href="' + href('CH03|makeup-add', K.id) + '">' + ic('repeat', 's20') + '보강 세션 추가</a></div></div>';
+  let top = '';
+  if (c === 'cancelled') top = alertBox('plain', 'info', '5회차를 취소했어요', '멤버 11명에게 알렸어요. 총 횟수는 그대로이고, 필요하면 보강 세션을 추가할 수 있어요.', '<a class="w-smbtn" href="' + href('CH03|makeup-add', K.id) + '">' + ic('repeat', 's20') + '보강 세션 추가</a>');
+  if (c === 'needs-reassign' || c === 'reassign') top = alertBox('', 'alert', '진행 강사가 비어 있는 세션이 2개 있어요', '7회차·8회차는 진행 강사를 정해야 열 수 있어요. 멤버에게는 정해진 뒤에 알려요.', '<a class="w-smbtn warn" href="' + href('CH03|reassign', K.id) + '">' + ic('user-check', 's20') + '한 번에 정하기</a>');
+  if (c === 'pending') top = alertBox('info', 'hourglass', '12회차 진행 강사를 바꾸는 중이에요', '이진호 지도사가 수락하면 바뀌어요. 수락 전에는 김지수 지도사가 그대로 진행하고, 멤버에게는 수락한 뒤에 알려요.');
+  if (c === 'makeup') top = alertBox('ok', 'circle-check', '보강 세션을 추가했어요', '11/29(일) 오후 2:00 · 박서준, 한지민, 오태윤에게 알렸어요. 보강은 8회에 포함하지 않아요.');
+  const body = tl
+    ? '<div class="w-tl">' + rows.map((r) => tli(r, K, r === firstUp)).join('') + '</div>'
+    : '<div class="w-stable"><div class="w-shead" aria-hidden="true"><span>회차</span><span>일시</span><span>진행 강사</span><span>방식</span><span>상태</span><span></span></div>' + rows.map((r) => srow(r, K)).join('') + '</div>';
+  const note = K.kind === 'rolling' ? card('<div class="w-cv"><b>앞으로 4주 분량을 미리 만들어 두었어요</b><span class="w-s">16회차(12/16)까지 준비돼 있고, 이후 세션은 매일 한 번씩 자동으로 이어서 만들어요. 저장한 배정 규칙(내가 모두 진행)이 그대로 적용돼요.</span></div>') : '';
+  let sheet = '';
+  const close = href('CH03|table', K.id);
+  const opt = (nm, role, on) => '<button class="w-opt' + (on ? ' on' : '') + '" aria-pressed="' + !!on + '"><span class="av">' + nm.slice(0, 1) + '</span><span><span class="nm">' + nm + '</span><span class="em">' + role + '</span></span><span class="ck">' + ic('check') + '</span></button>';
+  const scope = '<div class="fl-seg w-flex"><button class="on" aria-pressed="true">이 세션만</button><button aria-pressed="false">이 세션부터 모두</button></div>';
+  if (c === 'host-change') sheet = sheetWrap('4회차 진행 강사 바꾸기', '<div class="w-ophead"><b>11/23(월) 오후 7:00 · 60분</b><span>지금은 박서연 지도사가 진행해요.</span></div>' + opt('김지수', '주강사 · 이 클래스 강사', false) + opt('박서연', '강사 · 지금 진행 강사', false) + opt('이진호', '같은 센터 지도사 · 이 세션만 임시로 맡아요', true) + scope +
+    '<div class="w-info">' + ic('info', 's20') + '<span>이진호 지도사는 이 클래스 강사가 아니에요. 이 세션만 임시 강사로 등록돼요.</span></div>', sfoot(btnSoft('CH03|table', '취소', K.id), btnPri('CH03|table', '바꾸기', K.id)), close, true);
+  if (c === 'host-conflict') sheet = sheetWrap('4회차 진행 강사 바꾸기', '<div class="w-ophead"><b>11/23(월) 오후 7:00 · 60분</b><span>지금은 박서연 지도사가 진행해요.</span></div>' + opt('김지수', '주강사 · 이 클래스 강사', true) + opt('박서연', '강사 · 지금 진행 강사', false) + scope +
+    '<div class="w-note warn">' + ic('alert', 's20') + '<span>같은 시간에 ‘채용욱 상담 6회차’가 있어요. 겹쳐도 바꿀 수 있어요.</span></div>', sfoot(btnSoft('CH03|table', '취소', K.id), btnPri('CH03|table', '겹쳐도 바꾸기', K.id)), close, true);
+  if (c === 'host-urgent') sheet = sheetWrap('12회차 진행 강사 바꾸기', '<div class="w-ophead"><b>오늘 오후 8:00 · 시작까지 40분 남았어요</b><span>지금은 김지수 지도사가 진행해요.</span></div><div class="w-note warn">' + ic('alert', 's20') + '<span>곧 시작하는 세션이에요. 새 강사가 수락해야 바뀌고, 수락 전에는 김지수 지도사가 그대로 진행해요. 멤버에게는 수락한 뒤에 알려요.</span></div>' +
+    opt('박서연', '같은 센터 지도사 · 이 세션만 임시로 맡아요', false) + opt('이진호', '같은 센터 지도사 · 이 세션만 임시로 맡아요', true), sfoot(btnSoft('CH03|rolling', '취소', K.id), btnPri('CH03|pending', '수락 요청 보내기', K.id)), href('CH03|rolling', K.id), true);
+  if (c === 'reassign') sheet = sheetWrap('진행 강사를 정해 주세요', '<div class="w-ophead"><b>이진호 지도사가 맡은 세션이 2개 있어요</b><span>정하지 않으면 세션을 열 수 없어요.</span></div>' +
+    '<div class="w-resrow"><span class="tx"><b>7회차</b><span>11/20(금) 오전 10:00</span></span><button class="w-sel dk">김지수' + ic('chev-d', 's20') + '</button></div><div class="w-resrow"><span class="tx"><b>8회차</b><span>11/27(금) 오전 10:00</span></span><button class="w-sel dk bad">미정' + ic('chev-d', 's20') + '</button></div>' +
+    '<div class="w-info">' + ic('info', 's20') + '<span>정한 뒤에 멤버에게 알려요. 정하는 도중에는 알리지 않아요.</span></div>', sfoot(btnSoft('CH03|needs-reassign', '나중에', K.id), btnPri('CH03|table', '2개 정하기', K.id)), href('CH03|needs-reassign', K.id), true);
+  if (c === 'makeup-add') {
+    const m = (nm, why, on) => '<button class="w-opt' + (on ? ' on' : '') + '" aria-pressed="' + !!on + '"><span class="av">' + nm.slice(0, 1) + '</span><span><span class="nm">' + nm + '</span><span class="em">' + why + '</span></span><span class="ck">' + ic('check') + '</span></button>';
+    const stp = (t, l) => '<div class="w-stepper" role="group" aria-label="' + l + '"><button aria-label="' + l + ' 줄이기">' + ic('minus') + '</button><b>' + t + '</b><button aria-label="' + l + ' 늘리기">' + ic('plus') + '</button></div>';
+    sheet = sheetWrap('보강 세션 추가', '<div class="w-ophead"><b>놓친 세션을 채울 멤버를 골라요</b><span>결석한 멤버가 기본으로 선택돼요. 보강은 8회에 포함하지 않아요.</span></div>' + m('박서준', '3회차 결석', true) + m('한지민', '3회차 사전 결석', true) + m('오태윤', '2회차 결석', true) +
+      '<div class="w-2col"><div class="w-group"><span class="fl-label">날짜</span>' + stp('11/29(일)', '날짜') + '</div><div class="w-group"><span class="fl-label">시작 시각 · 5분 단위</span>' + stp('오후 2:00', '시작 시각') + '</div></div>' +
+      '<div class="w-group"><span class="fl-label">진행 강사</span><button class="w-sel dk">김지수' + ic('chev-d', 's20') + '</button></div>', sfoot(btnSoft('CH03|table', '취소', K.id), btnPri('CH03|makeup', '보강 추가', K.id)), close, true);
+  }
+  return dshell(K, 'CH03', bar + top + body + note, { sheet });
+}
+reg('CH03', '클래스 상세 · 세션 탭(표/타임라인) · 강사 변경 시트', '셸형', 'table',
+  '진행 강사는 세션당 정확히 1명(셀렉트 단일) · 시작 60분 이내 변경은 새 강사 수락 필요(pending_ack, 현 진행자 유지, 회원 알림은 수락 뒤 — 기획 §6.1) · open·in_progress 세션은 변경 불가라 편집 버튼 없음 · 취소 세션도 seq 유지, 보강은 분모 8회에 포함하지 않음 · 같은 센터 강사만 임시 강사로 지정 · 충돌은 클래스·상담 통합 검사(소프트)',
+  [['table', '세션 8개 표(완료 3 · 예정 5, 서로 다른 두 강사)'], ['timeline', '타임라인 보기'], ['makeup', '보강 세션 추가됨(대상 3명)'], ['cancelled', '5회차 취소(seq 유지) + 보강 안내'], ['rolling', '정기형 · 앞으로 4주 분량'], ['pending', '임박 변경 대기(수락 기다리는 중)'], ['needs-reassign', '진행 강사 필요 경고(강사 이탈)'], ['reassign', '진행 강사 일괄 재배정 시트'], ['host-change', '강사 변경 시트(임시 강사 지정)'], ['host-conflict', '강사 변경 시트 · 시간 충돌 경고'], ['host-urgent', '임박 변경 확인 시트(수락 필요)'], ['makeup-add', '보강 세션 추가 시트']], ch03);
+
+/* ───────── CH04 멤버·출석 ───────── */
+function cellsHTML(a) {
+  const map = { a: ['circle-check', 'att'], x: ['x', 'abs'], e: ['calendar-x', 'exc'], '-': ['minus', ''], m: ['repeat', 'mk'], w: ['minus', ''] };
+  let out = '';
+  for (let i = 0; i < 8; i++) {
+    const ch = a[i];
+    const m = ch ? map[ch] : ['circle', ''];
+    out += '<span class="w-cell ' + m[1] + '">' + ic(m[0]) + (i + 1) + '</span>';
+  }
+  return '<div class="w-cells" aria-label="1회차부터 8회차까지 출석">' + out + '</div>';
+}
+function mrow(m, o) {
+  o = o || {};
+  const chips = [];
+  if (m.guest) chips.push(tag('비회원'));
+  if (m.need) chips.push('<span class="sh-chip warn">' + ic('repeat', 's16') + '보강 필요</span>');
+  if (m.join) chips.push('<span class="sh-chip">' + ic('user-plus', 's16') + '중간 합류</span>');
+  if (m.left) chips.push(tag('나갔어요'));
+  if (m.dup) chips.push('<span class="sh-chip warn">같은 사람일 수 있어요</span>');
+  if (m.wait) chips.push(tag(m.wait));
+  const more = A(m.dup || m.guest ? 'CH04|merge' : m.need ? 'CH03|makeup-add' : 'CH04|members', 'w-xbtn w-mmore', ic('dots', 's20'), 'mbsr', ' aria-label="' + m.n + ' 멤버 메뉴"');
+  return '<div class="w-mrow' + (o.hl ? ' hl' : '') + (m.left ? ' off' : '') + '"><div class="w-who"><span class="av">' + m.n.slice(0, 1) + '</span><div><div class="nm">' + m.n + '</div>' + (chips.length ? '<div class="st">' + chips.join('') + '</div>' : '') + '</div></div>' + more +
+    (m.wait ? '' : cellsHTML(m.a)) + '<div class="w-msum">' + m.s + '</div></div>';
+}
+function ch04(c) {
+  const K = CLS.mbsr;
+  const full = c === 'full';
+  const list = MEMBERS.map((m) => Object.assign({}, m));
+  if (c === 'merge' || c === 'guest') list.splice(4, 0, { n: '최유나', a: '---', s: '4회차부터 · 새 기기로 들어왔어요', guest: 1, dup: 1, join: 1 });
+  if (full) list.push({ n: '강서윤', a: '---', s: '4회차부터 합류', join: 1 });
+  const left = { n: '강도윤', a: 'aawwwwww', s: '3회차 전에 나갔어요', left: 1 };
+  const hlAll = c === 'absent';
+  const tiles = '<div class="w-tiles"><div class="w-tile"><b>' + (full ? 12 : 11) + '명</b><span>참여 중</span></div><div class="w-tile' + (hlAll || c === 'members' ? ' warn' : '') + '"><b>3명</b><span>놓친 세션이 있는 멤버</span></div><div class="w-tile"><b>' + (full ? '0자리' : '1자리') + '</b><span>정원 12명 중 남은 자리</span></div></div>';
+  let top = '';
+  if (c === 'absent') top = alertBox('', 'repeat', '놓친 세션이 있는 멤버가 3명 있어요', '박서준(3회차), 한지민(3회차 사전 결석), 오태윤(2회차). 보강 세션을 추가하면 멤버에게 알려요.', '<a class="w-smbtn warn" href="' + href('CH03|makeup-add', 'mbsr') + '">' + ic('repeat', 's20') + '보강 세션 추가</a>');
+  if (c === 'join-mid') top = alertBox('info', 'user-plus', '정하윤님이 4회차부터 합류했어요', '코드로 들어왔어요. 지난 세션은 일정만 보이고 출석에는 포함하지 않아요.');
+  if (full) top = alertBox('plain', 'info', '정원이 가득 찼어요', '새 멤버는 대기로 들어와요. 자리가 나면 순서대로 알려요.');
+  const legend = '<div class="w-legend"><span><i class="att">' + ic('circle-check') + '</i>참석</span><span><i class="abs">' + ic('x') + '</i>결석</span><span><i class="exc">' + ic('calendar-x') + '</i>사전 결석</span><span><i class="mk">' + ic('repeat') + '</i>보강</span><span>' + ic('circle') + '예정</span><span>' + ic('minus') + '합류 전 · 나감</span></div>';
+  const bar = '<div class="w-btnrow2"><a class="w-smbtn" href="' + href('CH04|members', 'mbsr') + '">' + ic('user-plus', 's20') + '멤버 초대</a><a class="w-smbtn" href="' + href('CH03|makeup-add', 'mbsr') + '">' + ic('repeat', 's20') + '보강 세션 추가</a></div>';
+  const rows = list.map((m) => mrow(m, { hl: (hlAll && m.need) || (c === 'join-mid' && m.join) || (c === 'merge' && m.dup) })).join('') + mrow(left);
+  let wait = '';
+  if (full) wait = '<div class="w-sec">대기 2명</div><div class="w-mlist">' + mrow({ n: '윤하린', a: '', s: '정원이 차서 대기로 들어왔어요', wait: '대기 1번째' }) + mrow({ n: '조민서', a: '', s: '정원이 차서 대기로 들어왔어요', wait: '대기 2번째' }) + '</div>';
+  let sheet = '';
+  if (c === 'merge') sheet = sheetWrap('같은 사람 합치기', '<div class="w-ophead"><b>비회원 최유나님이 두 명으로 보여요</b><span>기기를 바꾸면 새 멤버로 만들어질 수 있어요. 합치면 출석과 리포트가 한 사람으로 모여요.</span></div>' +
+    '<button class="w-opt on" aria-pressed="true"><span class="av">최</span><span><span class="nm">최유나 · 기존 멤버</span><span class="em">1회차부터 참석 3회</span></span><span class="ck">' + ic('check') + '</span></button>' +
+    '<button class="w-opt on" aria-pressed="true"><span class="av">최</span><span><span class="nm">최유나 · 새 기기로 들어온 멤버</span><span class="em">4회차부터 합류 · 오늘 들어왔어요</span></span><span class="ck">' + ic('check') + '</span></button>' +
+    '<div class="w-info">' + ic('shield', 's20') + '<span>이름이 같다는 이유만으로는 합치지 않아요. 같은 사람이 맞는지 확인한 뒤에만 합쳐 주세요.</span></div>', sfoot(btnSoft('CH04|members', '나중에', 'mbsr'), btnPri('CH04|members', '한 사람으로 합치기', 'mbsr')), href('CH04|members', 'mbsr'), true);
+  return dshell(K, 'CH04', tiles + top + bar + legend + '<div class="w-mlist">' + rows + '</div>' + wait, { sheet });
+}
+reg('CH04', '클래스 상세 · 멤버/출석 탭', '셸형', 'members',
+  '멤버십과 회차별 출석을 분리: 멤버 한 줄에 회차별 출석 8칸(참석·결석·사전 결석·보강·예정·합류 전/나감) · 지난 회차 출석 행은 합류 후에만 생김(합류 전 칸은 빈 표시) · 나간 멤버도 지난 출석·리포트는 남음 · 비회원은 클래스 단위 장기 자격 + 지도사 병합(기획 §5-10) · 정원은 멤버 단위(활성 멤버 수) · 출석은 횟수로만 표기',
+  [['members', '멤버 11명 + 나간 멤버 1명 · 회차별 출석'], ['absent', '놓친 세션이 있는 멤버 강조 + 보강 안내'], ['join-mid', '중간 합류 안내(4회차부터)'], ['merge', '비회원 중복 · 같은 사람 합치기 시트'], ['full', '정원 가득 · 대기 2명']], ch04);
+
+/* ───────── CH05 리포트 탭 ───────── */
+const REP = [
+  { n: 1, d: '11/2(월)', h: '김지수', t: ['반영 10명', '참석 11명 · 제외 1명'], g: ['준비됨 10건', '실패 0건'], a: ['모두 승인', '승인 10건'], s: ['앱 10건 노출', '메일 성공 8건 · 실패 1건', 1], full: 1 },
+  { n: 2, d: '11/9(월)', h: '박서연', t: ['반영 9명', '참석 10명 · 제외 1명'], g: ['준비됨 9건', '실패 0건'], a: ['모두 승인', '승인 9건'], s: ['앱 9건 노출', '메일 성공 7건'], full: 1 },
+  { n: 3, d: '11/16(월)', h: '김지수', t: ['반영 7명', '참석 8명 · 제외 1명'], g: ['준비됨 7건', '실패 0건'], a: ['검토 대기 4건', '승인 3건'], s: ['앱 3건 노출', '메일 대기 3건'], pend: 4 },
+];
+function rrow(r, o) {
+  o = o || {};
+  const exp = o.exp === r.n;
+  const canApprove = r.pend && !o.noperm;
+  const act = '<div class="w-ract">' + (r.pend ? (canApprove ? A('CH05|approve-confirm', 'w-smbtn solid', ic('check', 's20') + '승인') : '<button class="w-smbtn" disabled>' + ic('lock', 's20') + '승인</button>') : '') +
+    A(exp ? 'CH05|reports' : 'CH05|expand', 'w-xbtn', ic(exp ? 'chev-u' : 'chev-d', 's20'), 'mbsr', ' aria-label="' + r.n + '회차 리포트 ' + (exp ? '접기' : '펼치기') + '"') + '</div>';
+  const cell = (cls, label, v, bad) => '<div class="' + cls + ' w-cv"><span class="w-k">' + label + '</span><b>' + v[0] + '</b><span class="w-s' + (bad ? ' bad' : '') + '">' + v[1] + '</span></div>';
+  const gen = o.gen && r.n === 2 ? '<div class="r3 w-cv"><span class="w-k">생성</span><b>준비됨 8건</b><span class="w-gen">' + ic('refresh', 's16') + '다시 만드는 중 1건<span class="w-prog"><i style="width:60%"></i></span></span></div>' : cell('r3', '생성', r.g);
+  const appr = o.partial && r.n === 3 ? cell('r4', '승인', ['검토 대기 1건', '승인 6건']) : cell('r4', '승인', r.a);
+  const send = o.partial && r.n === 3 ? cell('r5', '발송', ['앱 6건 노출', '메일 대기 5건 · 실패 1건', 1], 1) : cell('r5', '발송', r.s.slice(0, 2), r.s[2]);
+  const main = '<div class="w-rmain"><div class="r1 w-cv"><span class="w-k">회차</span><b>' + r.n + '회차</b><span class="w-s">' + r.d + ' · ' + r.h + ' 진행</span></div>' + cell('r2', '대상', r.t) + gen + appr + send + act + '</div>';
+  let ex = '';
+  if (exp) {
+    const p = (nm, chips) => '<div class="w-p"><span class="av">' + nm.slice(0, 1) + '</span><div><div class="nm">' + nm + '</div><div class="st">' + chips + '</div></div><div class="rt"></div></div>';
+    const ok = tag('승인 완료', 'ok') + tag('앱에서 볼 수 있어요', 'mute') + tag('메일 대기', 'mute');
+    const wt = '<span class="sh-chip warn">' + ic('pencil', 's16') + '코멘트 없음</span>' + tag('검토 대기');
+    ex = '<div class="w-rexp"><div class="w-rexp-sum">' + tag('지도사용 리포트 · 승인 완료', 'ok') + tag('멤버용 리포트 7건') + '</div>' +
+      p('김하늘', ok) + p('이도윤', ok) + p('서은채', ok) + p('문가온', wt) + p('임시우', wt) + p('윤예린', wt) + p('최유나', wt + tag('비회원 · 승인 뒤 메일로 보내요')) +
+      p('오태윤', tag('리포트에 반영하지 않아요')) + p('박서준', tag('이 회차는 결석이에요')) + p('한지민', tag('사전 결석이에요')) + '</div>';
+  }
+  return '<div class="w-rrow">' + main + ex + '</div>';
+}
+function trendHTML(few) {
+  const d = (up, fl, dn) => '<span class="d up">' + ic('trend-up') + up + '명</span><span class="d flat">' + ic('minus') + fl + '명</span><span class="d down">' + ic('trend-down') + dn + '명</span>';
+  const row = (n, w, e, f, hide) => hide
+    ? '<div class="w-trow2"><b>' + n + '회차 · 착용 ' + w + '명</b><div class="w-dirs" style="grid-column:2 / -1">' + ic('lock', 's16') + '착용한 멤버가 3명보다 적어서 보여 드리지 않아요</div></div>'
+    : '<div class="w-trow2"><b>' + n + '회차 · 착용 ' + w + '명</b><div class="w-dirs"><span class="lb">이완</span>' + d(e[0], e[1], e[2]) + '</div><div class="w-dirs"><span class="lb">집중</span>' + d(f[0], f[1], f[2]) + '</div></div>';
+  return '<div class="w-trend">' + row(1, 6, [4, 1, 1], [2, 3, 1]) + row(2, 6, [4, 2, 0], [3, 2, 1]) + (few ? row(3, 2, 0, 0, true) : row(3, 5, [3, 1, 1], [2, 2, 1])) + '</div>';
+}
+const CK5 = { reports: 'mbsr', expand: 'mbsr', 'approve-confirm': 'mbsr', 'approve-result': 'mbsr', generating: 'mbsr', 'few-wearers': 'mbsr', empty: 'winter', 'no-perm': 'mbsr' };
+function ch05(c) {
+  const K = kOf(c, CK5[c]);
+  if (c === 'empty') return dshell(K, 'CH05', alertBox('plain', 'info', '아직 끝난 세션이 없어요', '첫 세션이 끝나면 회차별 리포트가 여기에 모여요. 승인과 발송 상태도 한 화면에서 볼 수 있어요.') + card(phead('이 탭에서 할 수 있는 일') + trow('check', '', '대기 중인 리포트 한 번에 승인', '코멘트 없는 건수를 확인한 뒤 보내요', 'CH05|empty', K.id) + trow('refresh', '', '실패한 리포트 다시 만들기', '이미 승인한 리포트는 그대로 유지돼요', 'CH05|empty', K.id) + trow('mail', '', '메일 다시 보내기', '메일을 받지 못한 멤버에게 다시 보내요', 'CH05|empty', K.id)));
+  const noperm = c === 'no-perm', gen = c === 'generating', partial = c === 'approve-result';
+  const tiles = '<div class="w-tiles"><div class="w-tile' + (partial ? '' : ' warn') + '"><b>' + (partial ? 1 : 4) + '건</b><span>승인 대기</span></div><div class="w-tile"><b>' + (gen ? 1 : 0) + '건</b><span>다시 만드는 중</span></div><div class="w-tile' + (partial ? ' warn' : '') + '"><b>' + (partial ? 2 : 1) + '건</b><span>메일을 못 보낸 리포트</span></div></div>';
+  const bulk = noperm
+    ? '<div class="w-bulk"><button class="sh-btn mute" disabled>' + ic('lock', 's20') + '대기 중인 리포트 모두 승인</button><button class="sh-btn mute" disabled>' + ic('refresh', 's20') + '실패한 리포트 다시 만들기</button><button class="sh-btn mute" disabled>' + ic('mail', 's20') + '메일 다시 보내기</button></div>'
+    : '<div class="w-bulk">' + (partial ? '<button class="sh-btn mute" disabled>' + ic('check', 's20') + '대기 중인 리포트 모두 승인</button>' : A('CH05|approve-confirm', 'sh-btn', ic('check', 's20') + '대기 중인 리포트 모두 승인', K.id)) +
+      (gen ? '<button class="sh-btn mute" disabled>' + ic('refresh', 's20') + '다시 만드는 중</button>' : '<a class="sh-btn line" href="' + href('CH05|generating', K.id) + '">' + ic('refresh', 's20') + '실패한 리포트 다시 만들기</a>') + '<a class="sh-btn line" href="' + href('CH05|reports', K.id) + '">' + ic('mail', 's20') + '메일 다시 보내기</a></div>';
+  let top = '';
+  if (noperm) top = alertBox('info', 'lock', '보조 강사는 리포트를 볼 수만 있어요', '3회차는 김지수 지도사가 진행했어요. 승인과 다시 만들기는 진행 강사와 주강사가 해요.');
+  if (partial) top = alertBox('', 'alert', '4건 중 1건은 보내지 못했어요', '최유나님 리포트는 메일 주소를 확인해 주세요. 나머지 3건은 승인했고 멤버 앱에 노출했어요. 다시 시도할 수 있어요.', '<a class="w-smbtn warn" href="' + href('CH05|approve-result', K.id) + '">' + ic('refresh', 's20') + '실패한 1건 다시 시도</a>');
+  if (gen) top = alertBox('info', 'refresh', '실패한 리포트 1건을 다시 만드는 중이에요', '끝나면 알려 드려요. 이미 승인한 리포트는 승인 상태가 그대로 유지돼요.');
+  const head = '<div class="w-rhead" aria-hidden="true"><span>회차</span><span>대상</span><span>생성</span><span>승인</span><span>발송</span><span></span></div>';
+  const rows = REP.map((r) => rrow(r, { exp: c === 'expand' ? 3 : 0, noperm: noperm && r.h !== '박서연', gen, partial })).join('');
+  const upcoming = alertBox('plain', 'calendar', '4~8회차는 아직 끝나지 않았어요', '세션이 끝나면 리포트가 만들어져요. 결석한 멤버는 리포트 없이 결석으로 표시돼요.');
+  const att = card(phead('출석 요약') +
+    '<div class="w-trow2"><b>1회차</b><div class="w-dirs">참석 11명 · 결석 0명</div></div><div class="w-trow2"><b>2회차</b><div class="w-dirs">참석 10명 · 결석 1명</div></div><div class="w-trow2"><b>3회차</b><div class="w-dirs">참석 8명 · 결석 1명 · 사전 결석 1명</div></div><div class="w-trow2"><b>보강 세션</b><div class="w-dirs">아직 없어요</div></div>');
+  const trend = card(phead('클래스 흐름') + '<p class="w-narr">3회 동안 LINK BAND를 착용한 멤버 대부분에게서 세션 안에서 이완 쪽 변화가 이어졌어요. 집중은 회차마다 오르내림이 달랐어요.</p>' +
+    '<div class="w-legend" style="margin-top:16px"><span class="w-dirs"><span class="d up">' + ic('trend-up') + '올라간 멤버</span></span><span class="w-dirs"><span class="d flat">' + ic('minus') + '비슷한 멤버</span></span><span class="w-dirs"><span class="d down">' + ic('trend-down') + '내려간 멤버</span></span></div>' + trendHTML(c === 'few-wearers') +
+    '<div class="w-note" style="margin-top:8px">' + ic('shield', 's20') + '<span>진단이나 치료 목적이 아니에요. 세션 안에서 바뀐 방향만 보여 드려요.</span></div>');
+  let sheet = '';
+  if (c === 'approve-confirm') sheet = sheetWrap('대기 중인 리포트를 모두 승인할까요?', '<div class="w-sico">' + ic('alert') + '</div><p>승인하면 멤버 앱에 바로 보이고 알림이 나가요. 승인한 리포트는 되돌릴 수 없어요.</p>' +
+    '<div class="w-resrow"><span class="tx"><b>승인할 리포트 4건</b><span>3회차 · 김지수 진행</span></span></div><div class="w-resrow"><span class="tx"><b>메일 발송 예정 4건</b><span>비회원 1명 포함</span></span></div>' +
+    '<div class="w-note warn">' + ic('alert', 's20') + '<span>코멘트가 없는 리포트가 4건 있어요. 그대로 보낼까요?</span></div>', sfoot(btnSoft('CH05|expand', '코멘트 쓰러 가기', K.id), btnPri('CH05|approve-result', '그대로 승인', K.id)), href('CH05|reports', K.id), true);
+  return dshell(K, 'CH05', tiles + top + bulk + '<div class="w-rlist">' + head + rows + '</div>' + upcoming + trend + att, { sheet, me: noperm ? ['박서연 지도사', '마음숲 센터'] : null });
+}
+reg('CH05', '클래스 상세 · 리포트 탭(일괄 처리)', '셸형', 'reports',
+  '일괄 승인은 진행 강사 + 주강사만, 보조 강사 불가(대행 승인은 approved_by 기록, 기획 §5-11) · 승인 확인 시트에 대상 건수·메일 발송 예정·코멘트 없는 건수를 보여 줌 · 재생성은 큐에 넣고 진행 표시(동기 호출 없음) · 클래스 흐름은 방향(올라감·비슷·내려감)별 인원수만, 착용 3명 미만 회차는 비노출 · 추이는 회차 리포트의 변화 방향을 조립(결정론 서사, 개인 장기 기준선 없음)',
+  [['reports', '회차별 리포트 3개 + 클래스 흐름 + 출석 요약'], ['expand', '3회차 펼침(멤버별 상태·코멘트 없음)'], ['approve-confirm', '일괄 승인 확인 시트(코멘트 없는 4건 경고)'], ['approve-result', '일부만 승인됨(4건 중 1건 실패)'], ['generating', '실패한 리포트 다시 만드는 중'], ['few-wearers', '착용 3명 미만 회차 비노출'], ['empty', '끝난 세션 없음(편성 중 클래스)'], ['no-perm', '보조 강사 보기 — 승인 비활성']], ch05);
+
+/* ───────── CH06 설정 탭 ───────── */
+const CK6 = { settings: 'mbsr', 'instr-leave': 'mbsr', 'last-lead': 'wed', finish: 'wed', cancel: 'mbsr' };
+function ch06(c) {
+  const K = kOf(c, CK6[c]);
+  const roll = K.kind === 'rolling';
+  const basic = card(phead('기본 정보') + '<div class="w-fields">' +
+    '<div class="w-field"><span class="k">클래스 이름</span><div class="w-box"><span>' + K.n + '</span>' + ic('pencil', 's20') + '</div></div>' +
+    '<div class="w-field"><span class="k">진행 방식</span><div class="w-box"><span>' + (K.mode === '온라인' ? '온라인' : '오프라인 · 센터 3층 명상실') + '</span>' + ic('chev-d', 's20') + '</div></div>' +
+    '<div class="w-field"><span class="k">정원</span>' + (roll ? '<div class="w-box"><span>정원 제한 없음</span>' + ic('chev-d', 's20') + '</div>' : '<div class="w-lstep" role="group" aria-label="정원"><a href="' + href('CH06|settings', K.id) + '" aria-label="정원 줄이기">' + ic('minus') + '</a><b>정원 ' + K.cap + '명</b><a href="' + href('CH06|settings', K.id) + '" aria-label="정원 늘리기">' + ic('plus') + '</a></div>') + '</div>' +
+    '<div class="w-note">' + ic('info', 's20') + '<span>지금 ' + K.members + '명이 참여 중이에요. 정원을 줄여도 기존 멤버는 그대로 두고, 새 멤버만 대기로 들어와요.</span></div></div>');
+  const days = ['월', '화', '수', '목', '금', '토', '일'];
+  const on = K.id === 'wed' ? '수' : K.id === 'mbsr' ? '월' : '목';
+  const sched = card(phead('일정 규칙') + '<div class="w-fields"><div class="w-field"><span class="k">요일</span><div class="w-days2">' + days.map((d) => '<span class="' + (d === on ? 'on' : '') + '"><i>' + d + '</i></span>').join('') + '</div></div>' +
+    '<div class="w-field"><span class="k">시각 · 소요</span><div class="w-box"><span>' + K.rule.replace(/^매주 . /, '') + '</span>' + ic('clock', 's20') + '</div></div>' +
+    '<div class="w-note">' + ic('info', 's20') + '<span>규칙을 바꿔도 이미 만든 세션에는 적용되지 않아요. 만든 세션은 일괄 편집에서 바꿔요.</span></div>' +
+    '<a class="w-smbtn line" href="' + href('CH20|table', K.id) + '">' + ic('sliders', 's20') + '세션 일괄 편집으로 이동</a></div>');
+  const last = c === 'last-lead';
+  const irow = (nm, role, sub, rm) => '<div class="w-iprow"><span class="av">' + nm.slice(0, 1) + '</span><div><div class="nm">' + nm + '</div><div class="st">' + tag(role, role === '주강사' ? '' : 'mute') + tag(sub) + '</div></div>' + rm + '</div>';
+  const rmBtn = (nm, dis, g) => dis ? '<button class="w-xbtn" disabled aria-label="' + nm + ' 빼기">' + ic('x', 's20') + '</button>' : A(g, 'w-xbtn', ic('x', 's20'), K.id, ' aria-label="' + nm + ' 빼기"');
+  const insts = K.inst.length > 1
+    ? irow('김지수', '주강사', '남은 세션 3개 중 2개', rmBtn('김지수', false, 'CH06|settings')) + irow('박서연', '강사', '남은 세션 3개', rmBtn('박서연', false, 'CH06|instr-leave'))
+    : irow('김지수', '주강사', roll ? '남은 세션 5개' : '남은 세션 5개', rmBtn('김지수', last, 'CH06|settings'));
+  const rule = K.id === 'mbsr' ? kv('배정 규칙', '<span>번갈아 맡아요 · 김지수, 박서연 순서</span>') : kv('배정 규칙', '<span>모두 한 분이 맡아요 · 김지수</span>');
+  const instCard = card(phead('강사 ' + K.inst.length + '명', '<a class="w-smbtn line" href="' + href('CH06|settings', K.id) + '">' + ic('user-plus', 's20') + '강사 추가</a>') + insts +
+    (last ? '<div class="w-alert" role="alert" style="margin-top:8px">' + ic('alert', 's20') + '<div class="tx"><b>다른 강사를 주강사로 먼저 정해 주세요</b><span>주강사는 한 명 이상 있어야 해요. 강사를 추가한 뒤에 바꿀 수 있어요.</span></div></div>' : '') + rule +
+    '<div class="w-note">' + ic('info', 's20') + '<span>배정 규칙은 이후에 만들어지는 세션에만 적용돼요. 이미 만든 세션은 세션 탭에서 바꿔요.</span></div>');
+  const rep = card(phead('리포트') + kv('자동 승인', '<span>꺼짐 · 명상 클래스는 상담과 따로 설정해요</span>') + kv('승인 권한', '<span>진행 강사와 주강사</span>'));
+  const code = K.code ? card(phead('클래스 코드') + '<div class="w-codeline"><span class="w-codeval" aria-label="클래스 코드 4자리">' + K.code + '</span><span class="w-smbtn">' + ic('copy', 's20') + '코드 복사</span></div><div class="w-note" style="margin-top:8px">' + ic('info', 's20') + '<span>코드는 클래스가 끝날 때까지 그대로예요. 코드는 멤버에게만 전달하세요.</span></div>') : '';
+  const danger = card(phead('마무리') + (roll
+    ? '<div class="w-dline2"><div class="tx"><b>클래스 마무리</b><span>예정된 세션 4개가 취소돼요. 지난 기록은 그대로 남아요.</span></div><a class="w-dbtn" href="' + href('CH06|finish', K.id) + '">마무리</a></div>'
+    : '<div class="w-dline2"><div class="tx"><b>클래스 취소</b><span>예정된 세션 5개가 취소되고 멤버에게 알려요.</span></div><a class="w-dbtn" href="' + href('CH06|cancel', K.id) + '">취소</a></div>') +
+    '<div class="w-dline2"><div class="tx"><b>보관</b><span>마무리한 뒤에 목록에서 숨기고 열람만 할 수 있어요.</span></div><button class="w-smbtn" disabled>' + ic('archive', 's20') + '보관</button></div>', 'w-danger');
+  let sheet = '';
+  const close = href('CH06|settings', K.id);
+  if (c === 'instr-leave') sheet = sheetWrap('박서연 지도사가 맡은 세션이 3개 있어요', '<div class="w-ophead"><b>빼기 전에 누가 맡을지 정해 주세요</b><span>정하지 않으면 강사를 뺄 수 없어요. 멤버에게는 정해진 뒤에 알려요.</span></div>' +
+    ['4회차 · 11/23(월)', '6회차 · 12/7(월)', '8회차 · 12/21(월)'].map((t) => '<div class="w-resrow"><span class="tx"><b>' + t.split(' · ')[0] + '</b><span>' + t.split(' · ')[1] + ' 오후 7:00</span></span><button class="w-sel dk">김지수' + ic('chev-d', 's20') + '</button></div>').join('') +
+    '<div class="w-info">' + ic('info', 's20') + '<span>같은 시간에 겹치는 일정이 없어요.</span></div>', sfoot(btnSoft('CH06|settings', '취소', K.id), btnPri('CH06|settings', '재배정하고 빼기', K.id)), close, true);
+  if (c === 'finish') sheet = sheetWrap('클래스를 마무리할까요?', '<div class="w-sico">' + ic('alert') + '</div><p>마무리하면 예정된 세션 4개(13~16회차)가 취소되고 멤버 9명에게 알려요. 지난 기록과 리포트는 그대로 남아요.</p>', sfoot(btnSoft('CH06|settings', '계속 이어가기', K.id), btnPri('CH01|open', '마무리하기', null, 'danger')), close);
+  if (c === 'cancel') sheet = sheetWrap('클래스를 취소할까요?', '<div class="w-sico">' + ic('alert') + '</div><p>예정된 5개 세션이 취소되고 멤버 11명에게 알려요. 이미 마친 3개 세션의 기록과 리포트는 남아요. 취소한 클래스는 다시 열 수 없어요.</p>', sfoot(btnSoft('CH06|settings', '유지하기', K.id), btnPri('CH01|open', '클래스 취소', null, 'danger')), close);
+  return dshell(K, 'CH06', '<div class="w-g2"><div class="w-two">' + basic + sched + rep + code + '</div><div class="w-two">' + instCard + danger + '</div></div>', { sheet });
+}
+reg('CH06', '클래스 상세 · 설정 탭(강사 구성·마무리)', '셸형', 'settings',
+  '마지막 강사·마지막 주강사는 빼거나 낮출 수 없음(409) · 맡은 미래 세션이 있는 강사는 일괄 재배정 후에만 뺄 수 있음(정상 경로, 강사 모델 §6.3) · 배정 규칙은 이후 세션에만 적용 · 정기형은 마무리 시 예정 세션 취소 + 멤버 알림, 마무리 뒤에만 보관 가능 · 자동 승인은 영역별 설정(D-37) · 센터 관리자 대행은 이 화면에서 같은 구성(별도 시안 없음)',
+  [['settings', '고정형 클래스 설정'], ['instr-leave', '강사 빼기 · 맡은 세션 일괄 재배정 시트'], ['last-lead', '마지막 주강사 빼기 시도(인라인 오류)'], ['finish', '정기형 마무리 확인 시트'], ['cancel', '클래스 취소 확인 시트']], ch06);
+
+/* ───────── CH20 세션 일괄 편집 ───────── */
+const BED = [
+  { n: 4, d: '11/23(월)', t: '오후 7:00', du: '60분', m: '온라인', h: '박서연' }, { n: 5, d: '11/30(월)', t: '오후 7:00', du: '60분', m: '온라인', h: '김지수' },
+  { n: 6, d: '12/7(월)', t: '오후 7:00', du: '60분', m: '온라인', h: '박서연' }, { n: 7, d: '12/14(월)', t: '오후 7:00', du: '60분', m: '온라인', h: '김지수' },
+  { n: 8, d: '12/21(월)', t: '오후 7:00', du: '60분', m: '온라인', h: '박서연' },
+];
+const BED2 = [
+  { n: 5, d: '11/19(목)', t: '오후 12:30', du: '40분', m: '오프라인', h: '김지수' }, { n: 6, d: '11/26(목)', t: '오후 12:30', du: '40분', m: '오프라인', h: '김지수' },
+];
+const lstep = (t, l, k) => '<div class="w-lstep sm" role="group" aria-label="' + l + '"><a href="' + href('CH20|table', k) + '" aria-label="' + l + ' 줄이기">' + ic('minus', 's20') + '</a><b>' + t + '</b><a href="' + href('CH20|table', k) + '" aria-label="' + l + ' 늘리기">' + ic('plus', 's20') + '</a></div>';
+function brow(r, K, o) {
+  const sel = o.sel.indexOf(r.n) >= 0;
+  const clash = o.clash === r.n ? 'host' : o.place === r.n ? 'place' : '';
+  const chips = clash === 'host' ? '<span class="sh-chip warn">겹쳐요</span>' : clash === 'place' ? '<span class="sh-chip warn">장소 겹쳐요</span>' : '';
+  const ck = '<a class="w-ck' + (sel ? ' on' : '') + '" href="' + href('CH20|' + (sel ? 'table' : 'selected'), K.id) + '" role="checkbox" aria-checked="' + sel + '" aria-label="' + r.n + '회차 선택"><i>' + ic('check') + '</i></a>';
+  const why = clash === 'host' ? '<div class="w-bwhy">' + ic('alert', 's16') + '<span>12/7(월) 오후 7:00 ‘채용욱 상담 6회차’와 겹쳐요. 겹쳐도 저장할 수 있어요.</span></div>'
+    : clash === 'place' ? '<div class="w-bwhy">' + ic('pin', 's16') + '<span>센터 3층 명상실에서 같은 시간 ‘이완 요가 클래스’가 진행돼요. 겹쳐도 저장할 수 있어요.</span></div>' : '';
+  const edit = A('CH20|edit-sheet', 'w-smbtn w-bedit', ic('pencil', 's20') + '편집', K.id, ' aria-label="' + r.n + '회차 편집"');
+  return '<div class="w-brow' + (sel ? ' sel' : '') + (clash ? ' hl' : '') + '"><div class="w-bgrid">' + ck +
+    '<span class="w-bno">' + r.n + '회차' + '</span><div class="w-bst">' + chips + '</div>' +
+    '<div class="w-binfo"><b>' + r.d + ' ' + r.t + '</b><span>' + r.du + ' · ' + r.m + ' · 진행 ' + r.h + '</span></div>' + edit +
+    '<div class="w-ed w-bdate">' + lstep(r.d, '날짜', K.id) + '</div><div class="w-ed w-btime">' + lstep(r.t, '시작 시각', K.id) + '</div>' +
+    '<div class="w-ed w-bdur"><button class="w-sel sm">' + r.du + ic('chev-d', 's20') + '</button></div><div class="w-ed w-bmode"><button class="w-pill">' + r.m + '</button></div>' +
+    '<div class="w-ed w-bhost"><button class="w-sel sm' + '">' + r.h + ic('chev-d', 's20') + '</button></div></div>' + why + '</div>';
+}
+const CK20 = { table: 'mbsr', selected: 'mbsr', conflict: 'mbsr', 'conflict-sheet': 'mbsr', 'place-conflict': 'lunch', preview: 'mbsr', 'bulk-host': 'mbsr', 'edit-sheet': 'mbsr' };
+function ch20(c) {
+  const K = kOf(c, CK20[c]);
+  const rows = K.id === 'lunch' ? BED2 : BED;
+  const sel = c === 'selected' || c === 'preview' || c === 'bulk-host' ? [4, 5, 6] : [];
+  const o = { sel, clash: c === 'conflict' || c === 'conflict-sheet' ? 6 : 0, place: c === 'place-conflict' ? 5 : 0 };
+  const subH = '세션 일괄 편집';
+  const head = '<header class="sh-head w-dhead"><div class="w-page wide w-headrow"><div class="w-headl"><a class="w-backbtn" href="' + href('CH03|table', K.id) + '" aria-label="세션 탭으로">' + ic('chev-l') + '</a><div class="w-dtitle"><h1 class="sh-title">' + subH + '</h1><span class="w-dsub">' + K.n + '</span></div></div>' +
+    '<a class="sh-btn" href="' + href('CH03|table', K.id) + '">' + ic('check', 's20') + '저장</a></div></header>';
+  const scope = '<div class="w-bscope"><div class="w-found" style="padding:0">끝난 3개 세션은 바꿀 수 없어요. 아래 세션은 한 번에 고칠 수 있어요.</div><div class="w-seg2" role="tablist"><button class="on" role="tab">이 세션만</button><button role="tab">이 세션부터 모두</button></div></div>';
+  const bulk = sel.length ? '<div class="w-bbar"><span class="cnt">' + sel.length + '개 선택했어요</span><div class="acts"><a class="w-smbtn" href="' + href('CH20|selected', K.id) + '">' + ic('clock', 's20') + '시각 한꺼번에 바꾸기</a><a class="w-smbtn" href="' + href('CH20|bulk-host', K.id) + '">' + ic('swap', 's20') + '강사 한꺼번에 바꾸기</a><a class="w-smbtn" href="' + href('CH20|preview', K.id) + '">' + ic('calendar-plus', 's20') + '한 주 밀기</a><a class="w-smbtn" href="' + href('CH20|selected', K.id) + '">' + ic('calendar-x', 's20') + '선택 세션 취소</a></div></div>' : '';
+  const top = o.clash || o.place ? alertBox('', 'alert', '겹치는 일정이 1건 있어요', '겹쳐도 저장할 수 있어요. 시간을 바꾸거나 다른 강사를 정할 수도 있어요.') : '';
+  const bhead = '<div class="w-bhead" aria-hidden="true"><span></span><span>회차</span><span>날짜</span><span>시작</span><span>소요</span><span>방식</span><span>진행 강사</span><span>상태</span></div>';
+  const body = '<div class="sh-scroll"><div class="w-page wide">' + scope + bulk + top + '<div class="w-btable">' + bhead + rows.map((r) => brow(r, K, o)).join('') + '</div>' +
+    '<div class="w-note">' + ic('info', 's20') + '<span>변경 내용은 저장하면 한 번에 적용돼요. 바뀐 일정은 해당 세션의 진행 강사와 멤버에게 알려요.</span></div></div></div>';
+  let sheet = '';
+  const close = href(c === 'conflict-sheet' ? 'CH20|conflict' : c === 'edit-sheet' ? 'CH20|table' : 'CH20|selected', K.id);
+  const diff = (a, b, bad) => '<div class="w-diff' + (bad ? ' bad' : '') + '"><div class="b"><span>변경 전</span><b>' + a + '</b></div>' + ic('chev-r', 's20') + '<div class="b"><span>변경 후</span><b>' + b + '</b></div></div>';
+  if (c === 'preview') sheet = sheetWrap('한 주 밀기 미리 보기', '<div class="w-ophead"><b>선택한 3개 세션을 1주씩 미뤄요</b><span>변경 전과 후를 확인한 뒤 적용해요. 총 횟수는 그대로이고 마지막 세션이 뒤로 밀려요.</span></div>' +
+    diff('4회차 · 11/23(월)', '4회차 · 11/30(월)') + diff('5회차 · 11/30(월)', '5회차 · 12/7(월)') + diff('6회차 · 12/7(월)', '6회차 · 12/14(월)', true) +
+    '<div class="w-note warn">' + ic('alert', 's20') + '<span>겹치는 일정이 1건 있어요. 6회차 12/14(월) 오후 7:00에 다른 일정이 있어요.</span></div>', sfoot(btnSoft('CH20|selected', '취소', K.id), btnPri('CH20|table', '적용', K.id)), close, true);
+  if (c === 'bulk-host') sheet = sheetWrap('강사 한꺼번에 바꾸기', '<div class="w-ophead"><b>선택한 3개 세션의 진행 강사를 바꿔요</b><span>세션마다 진행 강사는 정확히 1명이에요.</span></div>' +
+    '<button class="w-opt on" aria-pressed="true"><span class="av">김</span><span><span class="nm">김지수</span><span class="em">주강사 · 이 클래스 강사</span></span><span class="ck">' + ic('check') + '</span></button>' +
+    '<button class="w-opt" aria-pressed="false"><span class="av">박</span><span><span class="nm">박서연</span><span class="em">강사 · 이 클래스 강사</span></span><span class="ck">' + ic('check') + '</span></button>' +
+    diff('4회차 · 박서연', '4회차 · 김지수') + diff('6회차 · 박서연', '6회차 · 김지수', true), sfoot(btnSoft('CH20|selected', '취소', K.id), btnPri('CH20|table', '적용', K.id)), close, true);
+  if (c === 'conflict-sheet') sheet = sheetWrap('6회차가 겹쳐요', '<div class="w-ophead"><b>12/7(월) 오후 7:00 · 박서연 지도사</b><span>같은 시간에 다른 일정이 있어요.</span></div>' +
+    '<div class="w-resrow"><span class="tx"><b>채용욱 상담 6회차</b><span>12/7(월) 오후 7:00 · 상담 · 온라인</span></span></div>' +
+    '<div class="w-info">' + ic('info', 's20') + '<span>겹쳐도 저장할 수 있어요. 시간을 바꾸거나 다른 강사를 정해도 돼요.</span></div>', sfoot(btnSoft('CH20|edit-sheet', '시간 바꾸기', K.id), btnPri('CH20|conflict', '그대로 두기', K.id)), close, true);
+  if (c === 'edit-sheet') {
+    const stp = (t, l) => '<div class="w-stepper" role="group" aria-label="' + l + '"><button aria-label="' + l + ' 줄이기">' + ic('minus') + '</button><b>' + t + '</b><button aria-label="' + l + ' 늘리기">' + ic('plus') + '</button></div>';
+    sheet = sheetWrap('4회차 편집', '<div class="w-2col"><div class="w-group"><span class="fl-label">날짜</span>' + stp('11/23(월)', '날짜') + '</div><div class="w-group"><span class="fl-label">시작 시각 · 5분 단위</span>' + stp('오후 7:00', '시작 시각') + '</div></div>' +
+      '<div class="w-2col"><div class="w-group"><span class="fl-label">소요 시간 · 5분 단위</span>' + stp('60분', '소요 시간') + '</div><div class="w-group"><span class="fl-label">진행 강사</span><button class="w-sel dk">박서연' + ic('chev-d', 's20') + '</button></div></div>' +
+      '<div class="w-group"><span class="fl-label">진행 방식</span><div class="fl-seg w-flex"><button class="on" aria-pressed="true">온라인</button><button aria-pressed="false">오프라인</button></div></div>' +
+      '<div class="w-group"><span class="fl-label">적용 범위</span><div class="fl-seg w-flex"><button class="on" aria-pressed="true">이 세션만</button><button aria-pressed="false">이 세션부터 모두</button></div></div>', sfoot(btnSoft('CH20|table', '취소', K.id), btnPri('CH20|table', '저장', K.id)), close, true);
+  }
+  return shell(head, body, sheet);
+}
+reg('CH20', '세션 일괄 편집 표', '셸형', 'table',
+  '날짜·시각·소요는 드래그 없이 −/+ 스텝퍼와 5분 단위 입력만 · 충돌은 서버 preview-schedule 결과를 그대로 표시하고 차단하지 않음(소프트 경고, 강사 기준 클래스·상담 통합 + 같은 센터 장소 문자열 정보성 경고) · 변경은 전후 미리 보기 후 적용 · 일괄 이동은 서버 일괄 API 1회(클라이언트 N회 호출 금지) · 모바일·태블릿 세로는 카드 + 편집 시트(같은 필드·같은 검증)',
+  [['table', '예정 5개 세션 편집 표(데스크톱은 인라인, 좁은 화면은 카드)'], ['selected', '3개 선택 · 일괄 동작 바'], ['conflict', '강사 시간 충돌(클래스·상담 통합)'], ['conflict-sheet', '충돌 사유 시트'], ['place-conflict', '장소 충돌(정보성) · 오프라인 클래스'], ['preview', '한 주 밀기 변경 전후 미리 보기'], ['bulk-host', '강사 한꺼번에 바꾸기 시트'], ['edit-sheet', '회차 편집 시트(카드 편집)']], ch20);
+
+/* ───────── CH30 세션 상세(축소판) ───────── */
+const CK30 = { scheduled: 'mbsr', open: 'wed-open', others: 'mbsr', completed: 'mbsr', cancelled: 'mbsr', makeup: 'mbsr', 'needs-reassign': 'intro', 'cancel-sheet': 'mbsr' };
+function ch30(c) {
+  const K = kOf(c, CK30[c]);
+  const cfg = {
+    scheduled: { no: '5회차', when: '11/30(월) 오후 7:00 · 60분', host: '김지수', mine: true, st: 'up', chip: '<span class="fl-chip">' + ic('calendar', 's16') + '예정</span>', nx: ['clock', '시작 15분 전부터 열 수 있어요', '미리 열어 두면 멤버가 일찍 와서 준비해요.'], btn: 'dis' },
+    open: { no: '12회차', when: '오늘 오후 8:00 · 60분', host: '김지수', mine: true, st: 'open', chip: '<span class="fl-chip ok">' + ic('door-open', 's16') + '입장 가능</span>', nx: ['users', '멤버 3명이 대기 중이에요', '2명은 준비를 마쳤어요. 준비되면 시작해요.'], btn: 'open' },
+    others: { no: '4회차', when: '11/23(월) 오후 7:00 · 60분', host: '박서연', mine: false, st: 'up', chip: '<span class="fl-chip">' + ic('calendar', 's16') + '예정</span>', nx: ['user', '박서연 지도사가 진행해요', '진행 강사만 세션을 열고 시작할 수 있어요.'], btn: 'dis' },
+    completed: { no: '3회차', when: '11/16(월) 오후 7:00 · 60분', host: '김지수', mine: true, st: 'done', chip: '<span class="fl-chip">' + ic('circle-check', 's16') + '완료</span>', nx: ['file', '기록과 리포트가 준비됐어요', 'AI 요약이 만들어졌고 멤버 리포트 4건이 승인을 기다려요.'], btn: 'rec' },
+    cancelled: { no: '5회차', when: '11/30(월) 오후 7:00 · 60분', host: '김지수', mine: true, st: 'cancel', chip: '<span class="fl-chip warn">' + ic('x', 's16') + '취소</span>', nx: ['info', '이 세션은 취소됐어요', '총 횟수는 그대로예요. 필요하면 보강 세션을 추가할 수 있어요.'], btn: 'mk' },
+    makeup: { no: '보강', when: '11/29(일) 오후 2:00 · 60분', host: '김지수', mine: true, st: 'makeup', chip: '<span class="fl-chip">' + ic('repeat', 's16') + '보강</span>', nx: ['repeat', '박서준 · 한지민 · 오태윤 보강이에요', '보강은 8회에 포함하지 않아요. 대상 멤버에게만 보여요.'], btn: 'dis' },
+    'needs-reassign': { no: '7회차', when: '11/20(금) 오전 10:00 · 60분', host: '미정', mine: false, st: 'need', chip: '<span class="fl-chip warn">' + ic('alert', 's16') + '진행 강사 필요</span>', nx: ['alert', '진행 강사가 비어 있어요', '이진호 지도사가 소속을 떠났어요. 강사를 정해야 세션을 열 수 있어요.'], btn: 'host' },
+    'cancel-sheet': { no: '5회차', when: '11/30(월) 오후 7:00 · 60분', host: '김지수', mine: true, st: 'up', chip: '<span class="fl-chip">' + ic('calendar', 's16') + '예정</span>', nx: ['clock', '시작 15분 전부터 열 수 있어요', '미리 열어 두면 멤버가 일찍 와서 준비해요.'], btn: 'dis' },
+  }[c];
+  const btn = { dis: '<button class="fl-btn primary block disabled" disabled>' + ic('door-open', 's20') + '세션 열기</button>', open: '<a class="fl-btn primary block" href="' + href('CH30|open', K.id) + '">' + ic('door-open', 's20') + '이어서 열기</a><a class="fl-btn soft block" href="' + href('CH30|open', K.id) + '">' + ic('play', 's20') + '시작하기</a>',
+    rec: '<a class="fl-btn primary block" href="' + href('CH30|completed', K.id) + '">' + ic('file', 's20') + '기록 보기</a>', mk: '<a class="fl-btn primary block" href="' + href('CH03|makeup-add', K.id) + '">' + ic('repeat', 's20') + '보강 세션 추가</a>', host: '<a class="fl-btn primary block" href="' + href('CH03|reassign', K.id) + '">' + ic('user-check', 's20') + '진행 강사 정하기</a>' }[cfg.btn];
+  const hero = '<section class="sh-hero w-detail-hero" style="background-image:url(' + BG(8) + ')"><div class="w-hmain"><div class="w-line">' + cfg.chip + '</div><h2 class="w-live-title">' + cfg.no + '</h2><span class="w-wait">' + ic('calendar', 's20') + cfg.when + '</span>' +
+    '<div class="w-next">' + ic(cfg.nx[0]) + '<div class="tx"><b>' + cfg.nx[1] + '</b><span>' + cfg.nx[2] + '</span></div></div></div><div class="w-hact">' + btn + '</div></section>';
+  const upcoming = cfg.st === 'up' || cfg.st === 'open' || cfg.st === 'need' || cfg.st === 'makeup';
+  const where = K.mode === '온라인' ? '온라인' : '센터 3층 명상실';
+  const info = card(kv('클래스 코드', '<span class="w-codeval" aria-label="클래스 코드 4자리">' + K.code + '</span><span class="w-dim2">클래스 전체 코드예요</span>', true) +
+    kv('진행 강사', '<span>' + cfg.host + ' 지도사</span>' + (upcoming && cfg.st !== 'open' ? A(cfg.st === 'need' ? 'CH03|reassign' : 'CH03|host-change', 'w-smbtn', ic('swap', 's20') + '바꾸기', K.id) : '')) +
+    kv('장소', '<span>' + where + '</span>') + kv('기록', '<span>음성 녹음 · AI 분석 · LINK BAND 선택</span>') +
+    (cfg.st === 'up' || cfg.st === 'need' ? '<a class="w-cdanger" href="' + href('CH30|cancel-sheet', K.id) + '">' + ic('x', 's20') + '이 세션 취소</a>' : ''));
+  const stt = (s) => ({ a: tag('참석', 'ok'), x: tag('결석'), e: tag('사전 결석'), u: tag('참석 예정'), m: tag('보강 예정', ''), '-': tag('합류 전') })[s];
+  const rowsP = (list) => list.map((p) => '<div class="w-p"><span class="av">' + p[0].slice(0, 1) + '</span><div><div class="nm">' + p[0] + '</div><div class="st">' + stt(p[1]) + '</div></div><div class="rt"></div></div>').join('');
+  let people;
+  if (cfg.st === 'done') people = card(phead('참여자 · 참석 8명') + rowsP([['김하늘', 'a'], ['이도윤', 'a'], ['박서준', 'x'], ['최유나', 'a'], ['한지민', 'e'], ['오태윤', 'a'], ['서은채', 'a'], ['문가온', 'a']]));
+  else if (cfg.st === 'makeup') people = card(phead('대상 멤버 3명') + rowsP([['박서준', 'm'], ['한지민', 'm'], ['오태윤', 'm']]));
+  else if (cfg.st === 'cancel') people = card(phead('참여자') + '<div class="w-cv"><b>멤버 11명에게 취소를 알렸어요</b><span class="w-s">취소해도 5회차 번호는 그대로 남아요.</span></div>');
+  else people = card(phead('참여자 · 참석 예정 ' + (c === 'open' ? 9 : 9) + '명') + rowsP([['김하늘', 'u'], ['이도윤', 'u'], ['박서준', 'u'], ['최유나', 'u'], ['한지민', 'e'], ['정하윤', 'u'], ['오태윤', 'u'], ['서은채', 'u']]) + '<div class="w-dim2" style="padding-top:8px">사전 결석 1명은 정원에서 빠져 있어요.</div>');
+  const rec = card(phead('기록') + (cfg.st === 'done'
+    ? trow('file', '', 'AI 요약과 기록지', '녹음 기록이 정리됐어요', 'CH30|completed', K.id) + trow('clipboard-check', '', '리포트 승인을 기다려요', '멤버 리포트 4건 · 코멘트 없음 4건', 'CH05|reports', K.id)
+    : '<div class="w-cv"><b>끝난 뒤에 기록과 리포트가 만들어져요</b><span class="w-s">녹음 동의는 멤버가 세션 시작 전에 따로 선택해요.</span></div>'));
+  const back = cfg.st === 'makeup' ? 'CH03|makeup' : 'CH03|table';
+  const head = '<header class="sh-head w-dhead"><div class="w-page wide w-headrow"><div class="w-headl"><a class="w-backbtn" href="' + href(back, K.id) + '" aria-label="세션 탭으로">' + ic('chev-l') + '</a><div class="w-dtitle"><h1 class="sh-title">' + K.n + ' · ' + cfg.no + '</h1><span class="w-dsub">세션 상세</span></div></div>' +
+    '<a class="w-backbtn" href="' + href('CH02|overview', K.id) + '" aria-label="클래스 개요로">' + ic('home') + '</a></div></header>';
+  const body = '<div class="sh-scroll"><div class="w-page wide">' + hero + '<div class="w-g2"><div class="w-two">' + people + '</div><div class="w-two">' + info + rec + '</div></div></div></div>';
+  const sheet = c === 'cancel-sheet' ? sheetWrap('5회차를 취소할까요?', '<div class="w-sico">' + ic('alert') + '</div><p>멤버 11명에게 취소를 알려요. 5회차 번호는 그대로 남고, 총 횟수는 줄지 않아요. 필요하면 보강 세션을 추가할 수 있어요.</p>', sfoot(btnSoft('CH30|scheduled', '유지하기', K.id), btnPri('CH30|cancelled', '세션 취소', K.id, 'danger')), href('CH30|scheduled', K.id)) : '';
+  return shell(head, body, sheet);
+}
+reg('CH30', '세션 상세(축소판)', '셸형', 'scheduled',
+  '세션 상세는 코드·참여자(출석 기반)·장소·기록·취소만 — 일정·강사 편집은 세션 탭/일괄 편집에서 · 클래스 코드는 클래스 단위 1개라 세션마다 코드를 보여 주지 않고 같은 코드를 안내 · 사전 결석은 회차 정원에서 빠짐 · 취소해도 seq 번호 유지 · 열기·시작은 진행 강사 본인만, 센터 관리자는 열 수 없음(대행은 편성만)',
+  [['scheduled', '예정 · 내가 진행(열기는 시작 15분 전부터)'], ['open', '입장 가능 · 내가 진행'], ['others', '다른 강사가 진행하는 세션(열기 비활성)'], ['completed', '완료 · 기록과 리포트'], ['cancelled', '취소됨 · 보강 안내'], ['makeup', '보강 세션(대상 3명, 분모 미포함)'], ['needs-reassign', '진행 강사 필요(열기 차단)'], ['cancel-sheet', '세션 취소 확인 시트']], ch30);
+
+/* ───────── 마법사 공통 (몰입형) ───────── */
+const segB = (opts, on, cls) => '<div class="fl-seg w-flex ' + (cls || '') + '">' + opts.map((o) => '<button class="' + (on === o[0] ? 'on' : '') + '" aria-pressed="' + (on === o[0]) + '">' + (o[2] ? ic(o[2], 's20') : '') + o[1] + '</button>').join('') + '</div>';
+const stepper = (t, l, sm) => '<div class="w-stepper' + (sm ? ' sm' : '') + '" role="group" aria-label="' + l + '"><button aria-label="' + l + ' 줄이기">' + ic('minus') + '</button><b>' + t + '</b><button aria-label="' + l + ' 늘리기">' + ic('plus') + '</button></div>';
+const grp = (l, inner, cls) => '<div class="w-group' + (cls ? ' ' + cls : '') + '"><span class="fl-label">' + l + '</span>' + inner + '</div>';
+function wizTop(leave, title) {
+  return '<div class="fl-top"><div class="fl-top-l"><a class="fl-iconbtn" href="' + href(leave) + '" aria-label="나가기">' + ic('x') + '</a></div><div class="fl-top-title">' + (title || '클래스 만들기') + '</div><div class="fl-top-r"><span class="fl-iconbtn" style="visibility:hidden" aria-hidden="true"></span></div></div>';
+}
+function wizSteps(n) {
+  let d = '';
+  for (let i = 1; i <= 4; i++) d += '<i class="' + (i === n ? 'on' : i < n ? 'done' : '') + '"></i>';
+  return '<div class="fl-steps w-solo" role="img" aria-label="4단계 중 ' + n + '단계">' + d + '</div>';
+}
+function wizFoot(n, prev, next, label, o) {
+  o = o || {};
+  const nx = label || '다음';
+  const nextB = o.disNext ? '<button class="fl-btn primary disabled" disabled>' + nx + ic('chev-r', 's20') + '</button>' : '<a class="fl-btn primary" href="' + href(next) + '">' + (n === 4 ? ic('check', 's20') + nx : nx + ic('chev-r', 's20')) + '</a>';
+  const prevB = n === 1 ? '' : o.later ? '<a class="fl-btn soft" href="' + href(o.later) + '">' + ic('bookmark', 's20') + '나중에 이어서</a>' : '<a class="fl-btn soft" href="' + href(prev) + '">' + ic('chev-l', 's20') + '이전</a>';
+  return '<div class="fl-foot"><div class="fl-col">' + (n === 1 ? '<a class="fl-btn primary block" href="' + href(next) + '">' + nx + ic('chev-r', 's20') + '</a>' : '<div class="w-nav2">' + prevB + nextB + '</div>') + '</div></div>';
+}
+function wiz(n, cards, o) {
+  o = o || {};
+  return '<div class="fl-root w-wiz"><div class="fl-backdrop" style="background-image:url(' + BG(o.bg || 4) + ')"></div><div class="fl-layer">' +
+    wizTop(o.leave || 'CH11|leave', o.title) + (n ? wizSteps(n) : '') + '<div class="fl-body' + (o.fill ? ' w-fill' : '') + '"><div class="fl-col">' + cards + '</div></div>' + (o.foot || '') + '</div>' + (o.banner || '') + (o.sheet || '') + '</div>';
+}
+const wcard = (h, inner, cls) => '<div class="fl-card strong w-card' + (cls ? ' ' + cls : '') + '">' + (h ? '<h1 class="fl-h1 w-solo">' + h + '</h1>' : '') + inner + '</div>';
+
+/* CH10 시작 방법 */
+function ch10(c) {
+  const cards = '<h1 class="fl-h1 w-solo">어떻게 시작할까요?</h1><p class="fl-sub w-solo">처음부터 만들거나, 지난 클래스를 그대로 가져와 새 기수로 시작해요.</p>' +
+    '<div class="w-startcards"><a class="w-startcard" href="' + href('CH11|online') + '"><span class="ico">' + ic('plus') + '</span><span class="tx"><b>처음부터 만들어요</b><span>이름·일정·강사를 새로 정해요</span></span></a>' +
+    '<a class="w-startcard" href="' + href('CH10|clone') + '"><span class="ico">' + ic('copy') + '</span><span class="tx"><b>지난 클래스 그대로 시작해요</b><span>요일·시각·횟수·강사 배정을 가져와요</span></span></a></div>';
+  const foot = '<div class="fl-foot"><div class="fl-col"><a class="fl-btn ghost block" href="' + href('CH01|open') + '">' + ic('chev-l', 's20') + '목록으로 돌아가기</a></div></div>';
+  let sheet = '';
+  const close = href('CH10|start');
+  const op = (nm, sub, on) => '<button class="w-opt' + (on ? ' on' : '') + '" aria-pressed="' + !!on + '"><span class="av">' + nm.slice(0, 1) + '</span><span><span class="nm">' + nm + '</span><span class="em">' + sub + '</span></span><span class="ck">' + ic('check') + '</span></button>';
+  if (c === 'clone') sheet = sheetWrap('어떤 클래스를 이어서 만들까요?', '<div class="w-ophead"><b>최근에 마친 순서예요</b><span>멤버와 초대는 가져오지 않고, 클래스 코드는 새로 만들어요.</span></div>' +
+    op('아침 스트레칭 명상', '8회 · 매주 화 오전 7:30 · 김지수', true) + op('여름 마음챙김', '6회 · 매주 수 오후 6:30 · 박서연', false) + op('MBSR 여름', '8회 · 매주 월 오후 7:00 · 김지수, 박서연', false),
+    sfoot(btnSoft('CH10|start', '취소'), btnPri('CH11|clone', '이 클래스로 시작')), close, true);
+  if (c === 'clone-empty') sheet = sheetWrap('지난 클래스 그대로 시작해요', '<div class="w-sico" style="background:rgba(255,255,255,0.1);color:var(--tx-hi);border:1px solid var(--sheet-border)">' + ic('info') + '</div><p>아직 지난 클래스가 없어요. 처음부터 만들어 볼까요?</p>', sfoot(btnSoft('CH10|start', '닫기'), btnPri('CH11|online', '처음부터 만들기')), close);
+  return wiz(0, cards, { foot, sheet, leave: 'CH01|open', bg: 5 });
+}
+reg('CH10', '클래스 만들기 · 시작 방법 / 지난 기수 복제 시트', '몰입형', 'start',
+  '복제는 원본의 반복 규칙(recurrence_rule)과 배정 규칙만 가져오고 보강·취소·개별 일정 이동 같은 예외는 가져오지 않음 · 멤버·초대 복사는 기본 꺼짐 · 클래스 코드는 새로 발급(D-18 기본값) · 비활성 강사는 다음 단계에서 미정으로 표시',
+  [['start', '처음부터 / 지난 클래스 그대로'], ['clone', '지난 기수 선택 시트'], ['clone-empty', '지난 클래스 없음']], ch10);
+
+/* CH11 ① 기본 정보 */
+function ch11(c) {
+  const off = c === 'offline';
+  const err = c === 'error';
+  const adv = c === 'advanced';
+  const clone = c === 'clone';
+  const name = err ? '' : clone ? '' : 'MBSR 봄';
+  const nameField = '<div class="w-inwrap">' + ic('pencil', 's20') + '<input class="fl-input" value="' + name + '" placeholder="클래스 이름 (예: MBSR 봄, 점심 명상)" aria-label="클래스 이름"' + (clone ? ' autofocus' : '') + '></div>' +
+    (err ? '<div class="w-note warn" role="alert">' + ic('alert', 's20') + '<span>클래스 이름을 입력해 주세요</span></div>' : '') +
+    (clone ? '<div class="w-info">' + ic('copy', 's20') + '<span>‘아침 스트레칭 명상’ 설정을 가져왔어요. 이름만 새로 정해 주세요.</span></div>' : '');
+  const mode = grp('진행 방식', segB([['on', off ? '온라인' : '온라인', 'video'], ['off', '오프라인(대면)', 'pin']].map((o) => [o[0], o[1], o[2]]), off ? 'off' : 'on'));
+  const cap = grp('정원', stepper(off ? '정원 12명' : clone ? '정원 12명' : '정원 12명', '정원') + '');
+  let more = '';
+  if (off) more = '<div class="w-inwrap">' + ic('pin', 's20') + '<input class="fl-input" value="서울 마포구 월드컵로 25길 3층 명상실" placeholder="장소 주소를 입력해 주세요" aria-label="장소 주소"></div><div class="w-info">' + ic('video-off', 's20') + '<span>대면 클래스는 영상 녹화 없이 진행해요.</span></div>';
+  const advRow = '<a class="fl-row w-sumrow" href="' + href(adv ? 'CH11|online' : 'CH11|advanced') + '">' + ic('sliders') + '<span class="tx">고급 설정 · LINK BAND·녹음</span>' + ic(adv ? 'chev-u' : 'chev-d', 's20') + '</a>';
+  const advBody = adv ? grp('LINK BAND 사용', segB([['none', '사용 안 함'], ['opt', '선택'], ['req', '필수']], 'opt')) +
+    '<div class="w-2col"><button class="fl-row w-tog" role="switch" aria-checked="true">' + ic('mic') + '<span class="tx"><b>음성 녹음</b><span>시작 전에 안내해요</span></span><span class="sw"></span></button><button class="fl-row w-tog" role="switch" aria-checked="true">' + ic('video') + '<span class="tx"><b>영상 녹화</b><span>온라인만 저장해요</span></span><span class="sw"></span></button></div>' : '';
+  const body = '<div class="w-form">' + grp('클래스 이름', nameField) + '<div class="w-2col">' + mode + cap + '</div>' + more + advRow + advBody + '</div>';
+  const foot = wizFoot(1, null, 'CH12|fixed');
+  const sheet = c === 'leave' ? sheetWrap('만들기를 그만둘까요?', '<div class="w-sico">' + ic('alert') + '</div><p>입력한 내용은 저장되지 않아요.</p>', sfoot(btnSoft('CH11|online', '계속 만들기'), btnPri('CH01|open', '나가기', null, 'danger')), href('CH11|online')) : '';
+  return wiz(1, wcard(adv ? '' : '기본 정보를 정해요', body), { foot, sheet });
+}
+reg('CH11', '클래스 만들기 ① 기본 정보', '몰입형', 'online',
+  '필수는 이름뿐이고 정원 기본값 12(온라인 ≤50, 오프라인 ≤100, 최소 2 — 현행 규칙 승계) · LINK BAND·녹음·영상은 접힌 고급 설정 · 오프라인은 영상 녹화 자리를 안내로 대체 · 정원은 클래스 멤버 정원이며 세션당 상한은 별도(혼합, 기획 §5-15)',
+  [['online', '온라인 · 정원 12명'], ['offline', '오프라인 · 주소 입력'], ['error', '이름 비어 있음(인라인 오류)'], ['advanced', '고급 설정 펼침'], ['clone', '지난 기수 복제로 들어옴(설정 채움)'], ['leave', '나가기 확인 시트']], ch11);
+
+/* CH12 ② 일정 형태 */
+function ch12(c) {
+  const roll = c === 'rolling';
+  const err = c === 'error';
+  const skip = c === 'skip';
+  const days = ['월', '화', '수', '목', '금', '토', '일'];
+  const on = roll ? ['수'] : err ? [] : ['월'];
+  const dayRow = '<div class="w-days" role="group" aria-label="요일">' + days.map((d) => '<button class="' + (on.indexOf(d) >= 0 ? 'on' : '') + '" aria-pressed="' + (on.indexOf(d) >= 0) + '"><span>' + d + '</span></button>').join('') + '</div>';
+  const when = roll ? '11/25(수)' : '11/2(월)';
+  const time = roll ? '오후 8:00' : '오후 7:00';
+  const sched = '<div class="w-sched">' + grp('시작 날짜', stepper(when, '시작 날짜', true)) + grp('시작 시각 · 5분', stepper(time, '시작 시각', true)) + grp('소요 시간', stepper('60분', '소요 시간', true)) +
+    (roll ? grp('횟수', '<div class="w-box-d fl-row" style="min-height:44px"><span class="tx w-info" style="padding:0">끝 없이 이어져요</span></div>') : grp('횟수', stepper('8회', '횟수', true))) +
+    grp('예약 알림', segB([['off', '끄기'], ['day', '하루 전'], ['hour', '1시간 전'], ['both', '둘 다']], 'day', 'w-c4'), 'span2') + '</div>';
+  let note;
+  if (err) note = '<div class="w-note warn" role="alert">' + ic('alert', 's20') + '<span>요일을 하나 이상 골라 주세요</span></div>';
+  else if (skip) note = '<a class="fl-row w-sumrow" href="' + href('CH12|fixed') + '">' + ic('calendar-x') + '<span class="tx">건너뛸 날짜 12/24(목)·12/31(목) · 공휴일은 자동으로 건너뛰지 않아요</span>' + ic('pencil', 's20') + '</a>';
+  else if (roll) note = '<div class="w-info">' + ic('info', 's20') + '<span>처음 4주 분량의 세션을 먼저 만들어 두고, 이후 세션은 자동으로 이어서 만들어요.</span></div>';
+  else note = '<div class="w-note ok">' + ic('circle-check', 's20') + '<span>11/2(월)부터 매주 월요일, 마지막 세션은 12/21(월)이에요.</span></div>';
+  const body = '<div class="w-form">' + segB([['fix', '정해진 횟수', 'list-checks'], ['roll', '계속 이어져요', 'repeat']], roll ? 'roll' : 'fix') + sched + grp('요일', dayRow) + note + '</div>';
+  return wiz(2, wcard('언제 진행할까요?', body), { foot: wizFoot(2, 'CH11|online', 'CH13|rotate') });
+}
+reg('CH12', '클래스 만들기 ② 일정 형태(고정형·정기형)', '몰입형', 'fixed',
+  '고정형은 시작 날짜·요일·시각·소요·횟수(2~52회, 기본 8)로 세션을 한 번에 만들고, 정기형은 처음 4주 분량만 만들고 이후 매일 자동 보충(롤링) · 한국 공휴일 데이터가 없어 자동 건너뛰기 없음(건너뛸 날짜를 직접 입력, 기획 §1.4) · 모든 입력은 드래그 없이 스텝퍼·칩 · 날짜는 오늘 이후',
+  [['fixed', '정해진 횟수 · 8회 · 월요일'], ['rolling', '계속 이어져요(정기형) · 수요일'], ['skip', '건너뛸 날짜 지정'], ['error', '요일 미선택(인라인 오류)']], ch12);
+
+/* CH13 ③ 강사 배정·세션 확인 */
+const wrow = (no, d, t, host, o) => { o = o || {}; return '<div class="w-wrow' + (o.bad ? ' bad' : '') + '"><span class="tx"><b>' + no + ' · ' + d + '</b><span>' + t + ' · 60분</span>' + (o.clash ? '<span class="fl-chip warn">' + ic('alert', 's16') + '겹쳐요</span>' : '') + (o.manual ? '<span class="fl-chip">직접 정함</span>' : '') + '</span><button class="w-sel dk' + (o.bad ? ' bad' : '') + '">' + host + ic('chev-d', 's20') + '</button></div>'; };
+const CH13_ROWS = {
+  rotate: [['1회차', '11/2(월)', '김지수'], ['2회차', '11/9(월)', '박서연'], ['3회차', '11/16(월)', '김지수'], ['4회차', '11/23(월)', '박서연'], ['5회차', '11/30(월)', '김지수'], ['6회차', '12/7(월)', '박서연'], ['7회차', '12/14(월)', '김지수'], ['8회차', '12/21(월)', '박서연']],
+};
+function ch13(c) {
+  const roll = c === 'rolling';
+  const mode = { 'all-one': 0, rotate: 1, 'by-weekday': 2, 'per-session': 3, unassigned: 1, conflict: 1, 'conflict-sheet': 1, 'add-instructor': 1, rolling: 0 }[c];
+  const instr = '<div class="w-pchips"><span class="w-pchip">김지수 · 주강사</span>' + (roll ? '' : '<span class="w-pchip">박서연 · 강사</span>') + '<a class="fl-btn soft" href="' + href('CH13|add-instructor') + '">' + ic('user-plus', 's20') + '강사 추가</a></div>';
+  const asg = segB([['one', '모두 한 분이 맡아요'], ['rot', '번갈아 맡아요'], ['wk', '요일마다 달라요'], ['ps', '회차마다 직접 정해요']].map((o, i) => [o[0], o[1]]), ['one', 'rot', 'wk', 'ps'][mode], 'w-types w-asg');
+  let ctl = '';
+  if (mode === 1) ctl = '<div class="w-ord"><span class="no">1</span><b>김지수</b><button aria-label="위로" disabled>' + ic('chev-u', 's20') + '</button><button aria-label="아래로">' + ic('chev-d', 's20') + '</button></div><div class="w-ord"><span class="no">2</span><b>박서연</b><button aria-label="위로">' + ic('chev-u', 's20') + '</button><button aria-label="아래로" disabled>' + ic('chev-d', 's20') + '</button></div>';
+  if (mode === 2) ctl = '<div class="w-resrow"><span class="tx"><b>월요일</b><span>1·3·5·7회차</span></span><button class="w-sel dk">김지수' + ic('chev-d', 's20') + '</button></div><div class="w-resrow"><span class="tx"><b>목요일</b><span>2·4·6·8회차</span></span><button class="w-sel dk">박서연' + ic('chev-d', 's20') + '</button></div>';
+  if (mode === 0) ctl = '<div class="w-resrow"><span class="tx"><b>모든 세션</b><span>' + (roll ? '이후에 만들어지는 세션에도 같은 규칙이 적용돼요' : '한 명이 처음부터 끝까지 맡아요') + '</span></span><button class="w-sel dk">김지수' + ic('chev-d', 's20') + '</button></div>';
+  if (mode === 3) ctl = '<div class="w-info">' + ic('info', 's20') + '<span>아래 목록에서 세션마다 진행 강사를 직접 골라요.</span></div>';
+  let rows;
+  if (roll) rows = [wrow('13회차', '11/25(수)', '오후 8:00', '김지수'), wrow('14회차', '12/2(수)', '오후 8:00', '김지수'), wrow('15회차', '12/9(수)', '오후 8:00', '김지수'), wrow('16회차', '12/16(수)', '오후 8:00', '김지수')];
+  else if (mode === 2) rows = [['1회차', '11/2(월)', '김지수'], ['2회차', '11/5(목)', '박서연'], ['3회차', '11/9(월)', '김지수'], ['4회차', '11/12(목)', '박서연'], ['5회차', '11/16(월)', '김지수'], ['6회차', '11/19(목)', '박서연'], ['7회차', '11/23(월)', '김지수'], ['8회차', '11/26(목)', '박서연']].map((r) => wrow(r[0], r[1], '오후 7:00', r[2]));
+  else {
+    rows = CH13_ROWS.rotate.map((r, i) => {
+      let h = r[2];
+      if (mode === 0) h = '김지수';
+      if (mode === 3 && i === 4) h = '박서연';
+      const bad = c === 'unassigned' && i >= 6;
+      return wrow(r[0], r[1], '오후 7:00', bad ? '미정' : h, { bad, clash: (c === 'conflict' || c === 'conflict-sheet') && i === 5, manual: mode === 3 && i === 4 });
+    });
+  }
+  const un = c === 'unassigned';
+  const cl = c === 'conflict' || c === 'conflict-sheet';
+  const lblR = roll ? '<span class="fl-note">앞으로 4주 · 4개</span>' : un ? '<span class="fl-chip warn">' + ic('alert', 's16') + '미정 2개</span>' : cl ? '<span class="fl-chip warn">' + ic('alert', 's16') + '겹침 1건</span>' : '<span class="fl-note">8개</span>';
+  const alertL = un ? '<div class="w-note warn" role="alert">' + ic('alert', 's20') + '<span>진행 강사가 없는 세션이 있어요. 강사를 정해 주세요</span></div>' : cl ? '<div class="w-note warn">' + ic('alert', 's20') + '<span>겹치는 일정이 1건 있어요. 겹쳐도 만들 수 있어요.</span></div>' : '';
+  const body = '<div class="w-form w-grow" style="min-height:0;flex:1">' + grp('강사 구성', instr) + grp('배정 방식', asg) + (ctl ? '<div class="w-group">' + ctl + '</div>' : '') + alertL +
+    '<div class="w-group w-grow" style="min-height:0;flex:1"><div class="w-lbl"><span class="fl-label">세션 목록</span>' + lblR + '</div><div class="w-wlist">' + rows.join('') + '</div></div></div>';
+  let sheet = '';
+  const close = href('CH13|rotate');
+  const op = (nm, sub, on) => '<button class="w-opt' + (on ? ' on' : '') + '" aria-pressed="' + !!on + '"><span class="av">' + nm.slice(0, 1) + '</span><span><span class="nm">' + nm + '</span><span class="em">' + sub + '</span></span><span class="ck">' + ic('check') + '</span></button>';
+  if (c === 'add-instructor') sheet = sheetWrap('강사 추가', '<div class="w-ophead"><b>같은 센터의 지도사만 추가할 수 있어요</b><span>추가하면 이 클래스의 강사로 등록돼요.</span></div><div class="w-inwrap">' + ic('search', 's20') + '<input class="fl-input" value="" placeholder="이름으로 찾아요" aria-label="강사 검색"></div>' + op('이진호', '지도사 · 마음숲 센터', true) + op('정수아', '상담사·지도사 · 마음숲 센터', false) + op('한도윤', '지도사 · 마음숲 센터', false),
+    sfoot(btnSoft('CH13|rotate', '취소'), btnPri('CH13|rotate', '강사로 추가')), close, true);
+  if (c === 'conflict-sheet') sheet = sheetWrap('6회차가 겹쳐요', '<div class="w-ophead"><b>12/7(월) 오후 7:00 · 박서연 지도사</b><span>같은 시간에 다른 일정이 있어요.</span></div><div class="w-resrow"><span class="tx"><b>채용욱 상담 6회차</b><span>12/7(월) 오후 7:00 · 상담 · 온라인</span></span></div><div class="w-info">' + ic('info', 's20') + '<span>겹쳐도 만들 수 있어요. 시간을 바꾸거나 다른 강사를 정해도 돼요.</span></div>',
+    sfoot(btnSoft('CH12|fixed', '시간 바꾸기'), btnPri('CH13|conflict', '그대로 두기')), href('CH13|conflict'));
+  const foot = wizFoot(3, 'CH12|fixed', 'CH14|summary', '다음', un ? { later: 'CH15|draft-saved', disNext: true } : {});
+  return wiz(3, wcard('누가 진행할까요?', body, 'w-grow'), { foot, sheet, fill: true });
+}
+reg('CH13', '클래스 만들기 ③ 강사 배정·세션 확인', '몰입형', 'rotate',
+  '세션마다 진행 강사는 정확히 1명, 클래스 강사는 1명 이상 · 배정 방식 4종은 생성 시점에 세션 값으로 펼쳐지고 규칙은 저장돼 정기형 롤링·지난 기수 복제에 재사용 · 미정은 편성 초안(나중에 이어서)에서만 허용, 공개 전 전 세션 필수 · 같은 센터 강사만 추가(임시 대강은 세션 탭) · 충돌은 클래스·상담 통합 검사 서버 결과를 소프트 경고로 표시 · 이 단계의 세션 목록만 내부 스크롤(기획 §1.3)',
+  [['rotate', '번갈아 맡아요 · 8회'], ['all-one', '모두 한 분이 맡아요'], ['by-weekday', '요일마다 달라요(월·목)'], ['per-session', '회차마다 직접 정해요(5회차 수정)'], ['unassigned', '진행 강사 미정 2개 · 다음 비활성 + 나중에 이어서'], ['conflict', '시간 충돌 칩'], ['conflict-sheet', '충돌 사유 시트'], ['add-instructor', '강사 추가 시트'], ['rolling', '정기형 · 앞으로 4주']], ch13);
+
+/* CH14 ④ 멤버 초대·확인 */
+const MEM = [['김하늘', 'haneul@example.com'], ['이도윤', 'doyun@example.com'], ['박서준', 'seojun@example.com'], ['한지민', 'jimin@example.com'], ['오태윤', 'taeyun@example.com'], ['서은채', 'eunchae@example.com'], ['문가온', 'gaon@example.com'], ['임시우', 'siwoo@example.com'], ['윤예린', 'yerin@example.com'], ['정하윤', 'hayun@example.com'], ['강서윤', 'seoyun@example.com'], ['조민서', 'minseo@example.com']];
+function ch14(c) {
+  const emailTab = c === 'email' || c === 'error-mail';
+  const picked = c === 'empty' ? [] : c === 'capacity' ? MEM.map((m) => m[0]) : ['김하늘', '이도윤', '박서준', '한지민', '오태윤'];
+  const cl = c === 'conflict';
+  const sum = '<div class="fl-card strong w-card w-sum"><div class="w-form">' +
+    '<div class="fl-row w-sumrow">' + ic('calendar') + '<span class="tx">MBSR 봄 · 8회 · 11/2(월) 시작 · 매주 월 오후 7:00</span><a class="w-edit" href="' + href('CH12|fixed') + '" aria-label="일정 수정">' + ic('pencil', 's20') + '</a></div>' +
+    '<div class="fl-row w-sumrow">' + ic('users') + '<span class="tx">김지수·박서연 번갈아 · 온라인 · 정원 12명</span><a class="w-edit" href="' + href('CH13|rotate') + '" aria-label="강사 수정">' + ic('pencil', 's20') + '</a></div>' +
+    (cl ? '<div class="w-note warn">' + ic('alert', 's20') + '<span>겹치는 일정이 1건 있어요. 그대로 만들 수 있어요.</span></div>' : '<div class="w-note ok">' + ic('circle-check', 's20') + '<span>겹치는 일정이 없어요.</span></div>') + '</div></div>';
+  const tabs = segB([['m', '회원', 'users'], ['e', '비회원 이메일', 'mail']], emailTab ? 'e' : 'm');
+  let panel;
+  if (emailTab) {
+    const mails = c === 'error-mail' ? [] : ['hana.park@example.com', 'guest.lee@example.com', 'minsu.kim@example.com'];
+    panel = '<div class="w-emailin"><div class="w-inwrap">' + ic('mail', 's20') + '<input class="fl-input" value="' + (c === 'error-mail' ? 'minsu@' : '') + '" placeholder="name@example.com" inputmode="email" aria-label="초대할 이메일"></div><button class="fl-btn soft">' + ic('plus', 's20') + '추가</button></div>' +
+      (c === 'error-mail' ? '<div class="w-note warn" role="alert">' + ic('alert', 's20') + '<span>이메일 형식을 확인해 주세요</span></div>' : '') +
+      '<div class="w-count"><span><b>이메일 ' + mails.length + '명</b> · 메일에 클래스 코드가 들어가요</span></div><div class="w-plist">' + mails.map((e) => '<div class="w-erow"><span class="av">' + ic('mail', 's20') + '</span><span class="em">' + e + '</span><button class="w-xbtn" aria-label="' + e + ' 삭제">' + ic('x', 's20') + '</button></div>').join('') + '</div>';
+  } else {
+    const full = picked.length >= 12;
+    const rows = MEM.map((m) => { const on = picked.indexOf(m[0]) >= 0; return '<button class="w-prow' + (on ? ' on' : '') + '" aria-pressed="' + on + '"><span class="av">' + m[0].slice(1, 2) + '</span><span><span class="nm" style="display:block">' + m[0] + '</span><span class="em" style="display:block">' + m[1] + '</span></span><span class="ck">' + ic('check') + '</span></button>'; }).join('');
+    panel = '<div class="w-inwrap">' + ic('search', 's20') + '<input class="fl-input" value="" placeholder="이름이나 이메일로 찾아요" aria-label="회원 검색"></div>' +
+      (full ? '<div class="w-note warn" role="alert">' + ic('alert', 's20') + '<span>정원을 넘어서 더 초대할 수 없어요</span></div>' : '') +
+      '<div class="w-count"><span><b>' + (picked.length ? picked.length + '/12명' : '선택 없음') + '</b>' + (picked.length ? '' : ' · 건너뛰고 나중에 초대해도 돼요') + '</span><button class="fl-btn soft">' + ic('upload', 's20') + 'CSV 추가</button></div><div class="w-plist">' + rows + '</div>';
+  }
+  const inv = '<div class="fl-card strong w-card w-invs">' + tabs + panel + '</div>';
+  const banner = c === 'submit-error' ? '<div class="fl-banner" role="alert">' + ic('alert') + '<span>클래스를 만들지 못했어요. 잠시 뒤 다시 시도해 주세요.</span></div>' : '';
+  return wiz(4, sum + inv, { foot: wizFoot(4, 'CH13|rotate', 'CH15|done', '클래스 만들기'), fill: true, banner });
+}
+reg('CH14', '클래스 만들기 ④ 멤버 초대·확인', '몰입형', 'summary',
+  '초대는 클래스 단위로 알림 1통(회차마다 아님) · 비회원은 이메일 초대(코드는 메일 본문에만) · 정원은 활성 멤버 기준이라 초대 인원이 정원을 넘으면 막음 · 만들기는 한 트랜잭션(클래스+세션 N개+강사+리마인더+코드 1개) · 충돌은 경고만 · 이 단계의 멤버 목록만 내부 스크롤',
+  [['summary', '요약 + 회원 5명 선택'], ['conflict', '겹치는 일정 1건 경고'], ['email', '비회원 이메일 초대 3명'], ['error-mail', '이메일 형식 오류'], ['empty', '선택 없음(나중에 초대)'], ['capacity', '정원 초과 안내'], ['submit-error', '만들기 실패 배너']], ch14);
+
+/* CH15 완료 */
+function ch15(c) {
+  const draft = c === 'draft-saved';
+  const roll = c === 'rolling';
+  const none = c === 'no-invite';
+  const part = c === 'partial';
+  const ok = '<div class="w-ok w-solo">' + ic(draft ? 'bookmark' : 'check') + '</div><h1 class="fl-h1 w-solo">' + (draft ? '편성을 저장했어요' : '클래스를 만들었어요') + '</h1>';
+  const chipsR = '<div class="fl-chiprow w-solo">' + flChips(draft ? ['MBSR 봄', '8회', '진행 강사 미정 2개'] : roll ? ['수요 저녁 명상', '정기형', '온라인'] : ['MBSR 봄', '8회 · 11/2(월) 시작', '온라인']) + '</div>';
+  const code = '<div class="fl-card strong w-card w-codecard"><span class="fl-label">클래스 코드</span><div class="w-coderow"><b class="w-codebig" aria-label="클래스 코드 4자리">' + (roll ? '7035' : '4281') + '</b><span class="fl-btn soft w-codebtn">' + ic('copy', 's20') + '코드 복사</span></div><div class="w-note">' + ic('info', 's20') + '<span>코드는 멤버에게만 전달하세요</span></div></div>';
+  const rowH = (av, label, txt, fail, retry) => '<div class="w-inv' + (fail ? ' fail' : '') + '"><span class="av">' + av + '</span><div><div class="nm">' + label + '</div><div class="sub' + (fail ? ' bad' : '') + '">' + txt + '</div></div>' + (retry ? '<a class="fl-btn soft" href="' + href('CH15|done') + '">' + ic('send', 's16') + '다시 시도</a>' : '') + '</div>';
+  const names = ['김하늘', '이도윤', '박서준', '한지민', '오태윤'];
+  const mails = ['ha***@…', 'gu***@…', 'mi***@…'];
+  const rows = names.map((n, i) => { const fail = part && i >= 3; return rowH(n.slice(1, 2), n, fail ? '초대하지 못했어요' : '초대했어요', fail, fail); }).concat(mails.map((m) => rowH(ic('mail', 's20'), m, '메일 발송을 요청했어요', false, false)));
+  let mid;
+  if (draft) mid = '<div class="fl-card strong w-card"><h2 class="fl-h2 w-solo">나중에 이어서 편성할 수 있어요</h2><p class="fl-sub w-solo">진행 강사가 없는 세션 2개(7·8회차)가 남아 있어요. 모두 정하면 클래스를 공개하고 멤버를 초대할 수 있어요.</p></div>';
+  else if (none) mid = code + '<div class="fl-card strong w-card"><h2 class="fl-h2 w-solo">초대한 멤버가 아직 없어요</h2><p class="fl-sub w-solo">클래스 상세에서 언제든 멤버를 초대할 수 있어요.</p></div>';
+  else mid = code + '<div class="fl-card strong w-card w-invcard"><h2 class="fl-h2">' + (part ? '회원 3명을 초대했어요' : '회원 5명을 초대했어요') + '</h2><div class="w-invlist w-plist">' + rows.join('') + '</div></div>';
+  const rollNote = roll ? '<div class="w-info w-solo" style="justify-content:center">' + ic('info', 's20') + '<span>처음 4주 분량의 세션 4개를 만들었어요. 이후 세션은 자동으로 이어져요.</span></div>' : '';
+  const foot = '<div class="fl-foot"><div class="fl-col"><a class="fl-btn primary block" href="' + href(draft ? 'CH13|unassigned' : 'CH02|overview') + '">' + ic(draft ? 'pencil' : 'calendar', 's20') + (draft ? '편성 이어서 하기' : '첫 세션 보러 가기') + '</a><div class="w-ghostrow2"><a class="fl-btn ghost" href="' + href('CH01|open') + '">' + ic('list-checks', 's16') + '클래스 목록</a>' + (draft ? '' : '<span class="fl-btn ghost">' + ic('bookmark', 's16') + '템플릿으로 저장</span>') + '</div></div></div>';
+  return wiz(0, ok + chipsR + rollNote + mid, { foot, fill: !draft && !none, bg: 5, leave: 'CH01|open' });
+}
+reg('CH15', '클래스 만들기 · 완료', '몰입형', 'done',
+  '초대 결과는 요청 결과만 표시(전달·열람 단정 금지) · 코드는 클래스 단위 1개이며 복사 버튼 제공 · 편성 중 저장은 draft 로 보관돼 목록에 편성 중 칩으로 보임(진행 강사 필수는 공개 시점, D-19) · 정기형은 처음 4주 분량만 생성 안내',
+  [['done', '고정형 8회 · 초대 완료'], ['partial', '일부 초대 실패 · 다시 시도'], ['no-invite', '초대 없이 만듦'], ['draft-saved', '편성 중으로 저장(나중에 이어서)'], ['rolling', '정기형 · 처음 4주 분량 생성']], ch15);
+
+/* ───────── 인덱스 ───────── */
+function indexPage() {
+  document.body.className = 'w-index';
+  const total = INDEX.reduce((a, s) => a + s.cases.length, 0);
+  return '<h1>상담사·지도사 명상 클래스 시안 · 화면·케이스 인덱스 (CH01~CH30)</h1><p>?screen=화면ID&amp;case=케이스 로 열어요. 클래스 상세 계열은 &amp;k=mbsr|wed|wed-open|lunch|intro|winter|morning 으로 클래스를 바꿔요. 파라미터가 없으면 CH01 첫 화면이에요. 화면 ' + INDEX.length + '종 · 케이스 총 ' + total + '개 (각 4개 뷰포트). 가정 열의 D-nn 은 결정-필요.md, § 는 기획 문서 절이에요.</p>' +
+    '<table><thead><tr><th>화면</th><th>유형</th><th>케이스</th><th>가정</th></tr></thead><tbody>' +
+    INDEX.map((s) => '<tr><td><b>' + s.id + '</b><br>' + s.name + '</td><td>' + s.type + '</td><td>' + s.cases.map((c) => '<a href="?screen=' + s.id + '&case=' + c[0] + '">' + c[0] + '</a><span style="font-size:13px;color:#6F6F6F"> ' + c[1] + '</span><br>').join('') + '</td><td>' + s.assume + '</td></tr>').join('') + '</tbody></table>';
+}
+const SCREEN = Q.get('screen') || 'CH01';
+const DEF = INDEX.filter((s) => s.id === SCREEN)[0];
+const CASE = Q.get('case') || (DEF ? DEF.first : 'open');
+window.__INDEX = INDEX.flatMap((s) => s.cases.map((c) => ({ screen: s.id, case: c[0], type: s.type, k: (Q.get('k') || '') })));
+window.__REG = INDEX.reduce((a, s) => { a[s.id] = s.cases.map((c) => c[0]); return a; }, {});
+function view() {
+  if (Q.get('index')) return indexPage();
+  const fn = SCREENS[SCREEN] || SCREENS.CH01;
+  return fn(CASE);
+}
+document.getElementById('root').innerHTML = view();
+(document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(() => { window.__ready = true; });
+</script>
+</body>
+</html>

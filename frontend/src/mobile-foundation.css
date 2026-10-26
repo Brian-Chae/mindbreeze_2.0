@@ -1,0 +1,20 @@
+/* SDD-234: 화면별 카드 규칙과 분리한 모바일 공통 셸. 768px 이상에는 적용하지 않는다. */
+@media (max-width: 767px) {
+  .mb-shell-topbar > button {
+    min-width: var(--mobile-touch-minimum);
+    min-height: var(--mobile-touch-minimum);
+  }
+
+  [data-shell-variant] .mb-shell-subtitle {
+    font-size: var(--mobile-type-caption-size);
+    line-height: var(--mobile-type-caption-leading);
+  }
+
+  [data-shell-variant] .mb-shell-title {
+    font-size: var(--mobile-type-title-size);
+    line-height: var(--mobile-type-title-leading);
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+}

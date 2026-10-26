@@ -102,3 +102,11 @@
 .pz-root .mav-howto { list-style: none; display: flex; flex-direction: column; gap: var(--sp-1); }
 .pz-root .mav-howto li { display: flex; align-items: center; gap: var(--sp-2); min-height: 48px; font-size: var(--fs-15); color: var(--tx-hi); }
 .pz-root .mav-howto svg { flex: none; color: var(--mb-pale); }
+
+/* SDD-234: 입장 안내와 조작 라벨의 모바일 의미별 크기. */
+@media (max-width: 767px) {
+  .pz-root .fl-sub { font-size: var(--mobile-type-body-size); line-height: var(--mobile-type-body-leading); }
+  .pz-root .fl-label, .pz-root .mav-mini, .pz-root .mav-spk__btn .fl-btn { font-size: var(--mobile-type-label-size); line-height: var(--mobile-type-label-leading); }
+  .pz-root .mav-tag, .pz-root .eled-mini__item, .pz-root .fl-note { font-size: var(--mobile-type-caption-size); line-height: var(--mobile-type-caption-leading); }
+  .pz-root .mav-hint, .pz-root .mav-owarn { font-size: var(--mobile-type-compact-size); line-height: var(--mobile-type-compact-leading); }
+}

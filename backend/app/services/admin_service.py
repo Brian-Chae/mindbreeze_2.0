@@ -573,6 +573,11 @@ def create_client(
             detail="활성 상태(인증 완료)의 상담사에게만 회원을 배정할 수 있습니다",
         )
 
+    # SDD-220(F2): 탈퇴 처리 중인 이메일로는 초대 계정도 만들 수 없다.
+    from app.services import signup_policy_service
+
+    signup_policy_service.assert_email_not_pending_deletion(db, normalized_email)
+
     # 4. pending 내담자 계정 생성 — 비밀번호는 난수(초대 메일로만 활성화)
     client = User(
         email=normalized_email,
@@ -640,7 +645,7 @@ def serialize_client_detail(user: User, db: Session) -> dict[str, Any]:
 def suspend_user(user_id: uuid.UUID, reason: str, admin_id: uuid.UUID, db: Session) -> dict[str, Any]:
     if not reason or not reason.strip():
         raise HTTPException(status_code=422, detail="정지 사유는 필수입니다")
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.id == user_id).with_for_update().first()
     if user is None:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
     if user.role == "platform_admin":
@@ -653,6 +658,8 @@ def suspend_user(user_id: uuid.UUID, reason: str, admin_id: uuid.UUID, db: Sessi
             status_code=status.HTTP_409_CONFLICT,
             detail="초대 미수락(대기) 상태의 계정은 정지할 수 없습니다",
         )
+    from app.services.class_instructor_service import mark_needs_reassign
+    mark_needs_reassign(db, user.id, None, datetime.now(timezone.utc))
     previous_status = user.status
     user.status = "suspended"
     db.add(user)
@@ -725,29 +732,13 @@ _ACCOUNT_ACCESS_TABLES: list[tuple[str, list[str]]] = [
 ]
 
 
-def delete_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict[str, Any]:
-    """사용자 계정 삭제 = 비활성(숨김) 전환 (플랫폼 관리자 전용, SDD-209 B1 / RV1-4).
+def remove_account_access(db: Session, user_id: uuid.UUID) -> None:
+    """계정 접근 권한·소속·알림·토큰 자식 행을 지운다(커밋하지 않는다 — 호출자 트랜잭션에 참여).
 
-    users 행은 ``sessions.host_id`` FK 때문에 지울 수 없고, 세션·원본을 함께 지우면 상담 기록과
-    뇌파·음성·영상 원본이 즉시 영구 삭제된다. 따라서 계정은 ``status='deleted'`` 로 전환해 로그인·
-    토큰·조직 소속·알림만 걷어내고, 호스트 클래스는 숨김 처리하며 원본·리포트는 보존한다.
-    실제 삭제는 보관 스위프나 관리자 원본 삭제(original_deletion_service)로만 도달한다.
+    SDD-220: 관리자 삭제(delete_user)와 본인 탈퇴(account_deletion_service)가 같은 정리 규칙을 쓰도록 추출했다.
+    상담·원본·리포트 데이터와 다른 기관 관리자의 참조는 건드리지 않는다.
     """
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None:
-        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
-    if user.role == "platform_admin":
-        raise HTTPException(status_code=403, detail="플랫폼 관리자는 삭제할 수 없습니다")
-    if user.status == "deleted":
-        return {"id": str(user_id), "deleted": True}
-
     uid = str(user_id)
-
-    # 기관의 primary_admin_id/owner_user_id/deactivated_by 참조 해제 (SET NULL)
-    db.execute(
-        text("UPDATE organizations SET primary_admin_id = NULL, owner_user_id = NULL, deactivated_by = NULL WHERE primary_admin_id = :id OR owner_user_id = :id OR deactivated_by = :id"),
-        {"id": uid},
-    )
     for table, cols in _ACCOUNT_ACCESS_TABLES:
         for col in cols:
             db.execute(text(f"DELETE FROM {table} WHERE {col} = :id"), {"id": uid})
@@ -756,12 +747,40 @@ def delete_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict[st
         {"id": uid},
     )
 
+
+def delete_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict[str, Any]:
+    """사용자 계정 삭제 = 비활성(숨김) 전환 (플랫폼 관리자 전용, SDD-209 B1 / RV1-4).
+
+    users 행은 ``sessions.host_id`` FK 때문에 지울 수 없고, 세션·원본을 함께 지우면 상담 기록과
+    뇌파·음성·영상 원본이 즉시 영구 삭제된다. 따라서 계정은 ``status='deleted'`` 로 전환해 로그인·
+    토큰·조직 소속·알림만 걷어내고, 호스트 클래스는 숨김 처리하며 원본·리포트는 보존한다.
+    실제 삭제는 보관 스위프나 관리자 원본 삭제(original_deletion_service)로만 도달한다.
+    """
+    user = db.query(User).filter(User.id == user_id).with_for_update().first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
+    if user.role == "platform_admin":
+        raise HTTPException(status_code=403, detail="플랫폼 관리자는 삭제할 수 없습니다")
+    if user.status == "deleted":
+        return {"id": str(user_id), "deleted": True}
+
+    from app.services.class_instructor_service import mark_needs_reassign
+    mark_needs_reassign(db, user.id, None, datetime.now(timezone.utc))
+    uid = str(user_id)
+
+    # 기관의 primary_admin_id/owner_user_id/deactivated_by 참조 해제 (SET NULL)
+    db.execute(
+        text("UPDATE organizations SET primary_admin_id = NULL, owner_user_id = NULL, deactivated_by = NULL WHERE primary_admin_id = :id OR owner_user_id = :id OR deactivated_by = :id"),
+        {"id": uid},
+    )
+    remove_account_access(db, user_id)
+
     # 호스트 클래스는 숨김(원본 보존). 이미 숨김인 행은 건드리지 않는다.
     db.execute(
-        text("UPDATE sessions SET hidden_at = :now WHERE host_id = :id AND hidden_at IS NULL"),
+        text("UPDATE sessions SET hidden_at = :now WHERE host_id = :id AND class_id IS NULL AND hidden_at IS NULL"),
         {"id": uid, "now": datetime.now(timezone.utc)},
     )
-
+    # 명상 클래스·지난 회차는 보존하고 미래 진행자만 재배정 대상으로 남긴다.
     user.status = "deleted"
     db.commit()
     return {"id": uid, "deleted": True}

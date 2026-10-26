@@ -1,0 +1,99 @@
+
+ RUN  v5.0.2 /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd217/frontend
+
+ ❯ tests/sdd217-host-summary.test.ts (4 tests | 4 failed) 7ms
+   × T11 호스트 접속 인원은 미착용 수와 분리해 서버 connected만 센다 4ms
+   × T11 체크인 시트는 원문 없이도 저장된 completed를 세고 unknown 원문은 완료로 추정하지 않는다 1ms
+   × T11 오프라인 요약은 접속 종료 후에도 저장된 체크인 완료를 보존한다 0ms
+   × T11 서버 접속 근거 없는 기존 밴드 연결 행도 접속 인원으로 추정하지 않는다 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/sdd217-host-summary.test.ts > T11 호스트 접속 인원은 미착용 수와 분리해 서버 connected만 센다
+AssertionError: expected { joined: 2, total: 2 } to deeply equal { joined: 1, total: 2 }
+
+- Expected
++ Received
+
+  {
+-   "joined": 1,
++   "joined": 2,
+    "total": 2,
+  }
+
+ ❯ tests/sdd217-host-summary.test.ts:11:23
+      9| it('T11 호스트 접속 인원은 미착용 수와 분리해 서버 connected만 센다',()=>{
+     10|  const result=deriveHostCase({...input(),participants:people()});
+     11|  expect(result.stats).toEqual({joined:1,total:2});
+       |                       ^
+     12|  const checkin=result.chips.find(c=>c.key==='checkin');expect(checkin?…
+     13|  const band=result.chips.find(c=>c.key==='band');expect(band?.key==='b…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  tests/sdd217-host-summary.test.ts > T11 체크인 시트는 원문 없이도 저장된 completed를 세고 unknown 원문은 완료로 추정하지 않는다
+AssertionError: expected [ { question: '이전 대기실 값', …(1) } ] to have a length of +0 but got 1
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ tests/sdd217-host-summary.test.ts:16:130
+     14| });
+     15| it('T11 체크인 시트는 원문 없이도 저장된 completed를 세고 unknown 원문은 완료로 추정하지 않는다',()=…
+     16|  const result=summarizeCheckins(people());expect(result.responded).toB…
+       |                                                                                                                                  ^
+     17| });
+     18| it('T11 오프라인 요약은 접속 종료 후에도 저장된 체크인 완료를 보존한다',()=>{
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  tests/sdd217-host-summary.test.ts > T11 오프라인 요약은 접속 종료 후에도 저장된 체크인 완료를 보존한다
+AssertionError: expected 2 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 2
+
+ ❯ tests/sdd217-host-summary.test.ts:20:30
+     18| it('T11 오프라인 요약은 접속 종료 후에도 저장된 체크인 완료를 보존한다',()=>{
+     19|  const result=deriveHostCase({...input(),loc:'offline',participants:pe…
+     20|  expect(result.stats.joined).toBe(0);expect(result.summary).toMatchObj…
+       |                              ^
+     21| });
+     22| it('T11 서버 접속 근거 없는 기존 밴드 연결 행도 접속 인원으로 추정하지 않는다',()=>{
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  tests/sdd217-host-summary.test.ts > T11 서버 접속 근거 없는 기존 밴드 연결 행도 접속 인원으로 추정하지 않는다
+AssertionError: expected { joined: 2, total: 2 } to deeply equal { joined: +0, total: 2 }
+
+- Expected
++ Received
+
+  {
+-   "joined": 0,
++   "joined": 2,
+    "total": 2,
+  }
+
+ ❯ tests/sdd217-host-summary.test.ts:24:23
+     22| it('T11 서버 접속 근거 없는 기존 밴드 연결 행도 접속 인원으로 추정하지 않는다',()=>{
+     23|  const result=deriveHostCase({...input(),participants:people().map(p=>…
+     24|  expect(result.stats).toEqual({joined:0,total:2});
+       |                       ^
+     25| });
+     26|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed (4)
+   Start at  21:22:35
+   Duration  383ms (transform 74%, import 22%, tests 2%, setup 1%, worker 1%)
+

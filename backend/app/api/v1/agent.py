@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session as DBSession
 
+from app.core.ai_features import require_ai_enabled_dep
 from app.api.deps import require_roles
 from app.core.database import get_db
 from app.schemas.agent import (
@@ -28,7 +29,9 @@ from app.schemas.agent import (
 )
 from app.services import agent_llm, agent_service
 
-router = APIRouter(prefix="/agent", tags=["agent"])
+router = APIRouter(
+    prefix="/agent", tags=["agent"], dependencies=[Depends(require_ai_enabled_dep)]
+)
 
 # 내담자 전용 채널 — 상담사·기관관리자·플랫폼관리자 토큰은 403.
 _client_only = require_roles("client")

@@ -10,11 +10,16 @@ import ClassPlayerPage from '../src/pages/sessions/ClassPlayerPage';
 import { useAuthStore } from '../src/stores/authStore';
 
 const h = vi.hoisted(() => ({
+  recordDisplay: vi.fn(),
+  liveOptions: {} as Record<string, unknown>,
+  bandOptions: {} as Record<string, unknown>,
+  participation: {sessionId:'s1',version: -1, revoked: false, participants: {} as Record<string, unknown>},
   containerProps: [] as Array<Record<string, any>>, // eslint-disable-line @typescript-eslint/no-explicit-any
   prepProps: [] as Array<Record<string, any>>, // eslint-disable-line @typescript-eslint/no-explicit-any
   calls: [] as string[],
   media: { mic: 'on', cam: 'on', level: 0.2, steps: 1, quiet: false, speakerPlaying: false, videoRef: { current: null }, startMic: vi.fn(async () => undefined), stopMic: vi.fn(), toggleMic: vi.fn(async () => undefined), startCamera: vi.fn(async () => undefined), stopCamera: vi.fn(), toggleCamera: vi.fn(async () => undefined), recheck: vi.fn(async () => undefined), playTestTone: vi.fn(async () => undefined) },
   session: {} as Record<string, unknown>,
+  getClass: vi.fn(),
   getSession: vi.fn(),
   getSessionLiveMetrics: vi.fn(),
   setParticipantSpeaking: vi.fn(),
@@ -26,6 +31,9 @@ const h = vi.hoisted(() => ({
   rawSocket: { connected: false, connect: vi.fn() },
 }));
 
+vi.mock('../src/lib/api/class-structure', () => ({ getClass: (...args: unknown[]) => h.getClass(...args) }));
+vi.mock('../src/lib/api/class-operations', () => ({ classOperationsApi: { members: vi.fn(async () => ({ members: [] })) } }));
+vi.mock('../src/lib/api/class-member-candidates', () => ({ searchClassMemberCandidates: vi.fn(async () => ({ members: [], has_more: false })) }));
 vi.mock('../src/lib/api/session', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../src/lib/api/session')>()),
   getSession: (...a: unknown[]) => h.getSession(...a),
@@ -55,16 +63,17 @@ vi.mock('../src/lib/socket', () => ({ getActiveSessionLiveSocket: () => h.rawSoc
 vi.mock('../src/hooks/useAudioRecorder', () => ({ useAudioRecorder: () => h.recorder }));
 vi.mock('../src/hooks/useVideoRecorder', () => ({ useVideoRecorder: () => h.videoRecorder }));
 vi.mock('../src/hooks/useBand', () => ({
-  useBand: () => ({
+  useBand: (options: Record<string, unknown>) => {h.bandOptions=options;return ({
     isSupported: true, isMock: false, connectionState: 'disconnected', battery: null, deviceStatus: null, signalQualityLevel: 'unknown',
     signalQuality: null, lastEegAt: null, currentEfficiency: null, uploadStatus: null, error: null,
-    connect: vi.fn(), disconnect: vi.fn(),
-  }),
+    connect: vi.fn(), disconnect: vi.fn(), recordDisplay: h.recordDisplay,
+  });},
 }));
 vi.mock('../src/hooks/useLiveKit', () => ({ useLiveKit: () => h.liveKit }));
 vi.mock('../src/hooks/useSessionLiveSocket', () => ({
-  useSessionLiveSocket: () => ({ isConnected: true, isReady: true, hasSnapshot: true, sendSignal: vi.fn(), sendAudioSync: vi.fn() }),
+  useSessionLiveSocket: (options:Record<string, unknown>) => {h.liveOptions=options;return ({ isConnected: true, isReady: true, hasSnapshot: true, sendSignal: vi.fn(), sendAudioSync: vi.fn() });},
 }));
+vi.mock('../src/hooks/useParticipationSnapshot',()=>({useParticipationSnapshot:()=>h.participation}));
 vi.mock('../src/hooks/useWakeLock', () => ({ useWakeLock: vi.fn() }));
 vi.mock('../src/hooks/useLeaveGuard', () => ({ useLeaveGuard: () => ({ state: 'unblocked' }) }));
 vi.mock('../src/hooks/useWaitingRoomCount', () => ({ useWaitingRoomCount: () => ({ entries: [], count: 0, nicknames: [] }) }));
@@ -105,8 +114,9 @@ function makeSession(status: string, extra: Record<string, unknown> = {}) {
 
 let root: Root;
 let container: HTMLDivElement;
+let pageRouter: ReturnType<typeof createMemoryRouter>;
 async function renderPage(): Promise<void> {
-  const router = createMemoryRouter(
+  const router = pageRouter = createMemoryRouter(
     [
       { path: '/sessions/:id/player', element: createElement(ClassPlayerPage) },
       { path: '/sessions/:id/record', element: createElement('p', null, '기록 화면') },
@@ -127,10 +137,12 @@ beforeEach(() => {
   vi.setSystemTime(new Date('2026-10-16T05:00:00Z'));
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   Object.defineProperty(window, 'matchMedia', { configurable: true, value: (query: string) => ({ matches: false, media: query, addEventListener: () => undefined, removeEventListener: () => undefined, addListener: () => undefined, removeListener: () => undefined }) });
+  h.participation={sessionId:'s1',version:-1,revoked:false,participants:{}};
   h.containerProps.length = 0;
   h.prepProps.length = 0;
-  h.calls.length = 0;
+  h.calls.length = 0; h.recordDisplay.mockClear();
   Object.assign(h.liveKit, { token: null, loading: false, error: null });
+  h.getClass.mockReset().mockResolvedValue({ id: 'class-1', revision: 1, status: 'active', capacity: 10, capabilities: { invite: true } });
   h.getSession.mockReset().mockImplementation(async () => h.session);
   h.getSessionLiveMetrics.mockReset().mockResolvedValue({ metrics: [metric('host-p', { user_id: 'host-1' }), metric('a'), metric('b')] });
   h.setParticipantSpeaking.mockReset().mockResolvedValue({ participant_id: 'a', speaking: true, raise_hand: false });
@@ -153,6 +165,13 @@ afterEach(async () => {
 
 describe('진행 중 호스트: 새 컨테이너로 교체', () => {
   beforeEach(() => { h.session = makeSession('in_progress'); });
+
+  it('SDD244 H06: session_player 표시를 60초 동안 매초 기록', async () => {
+    await renderPage();
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+    expect(h.bandOptions.displayViewKind).toBe('session_player');
+    expect(h.recordDisplay).toHaveBeenCalledTimes(60);
+  });
 
   it('옛 헤더·워크스페이스 대신 HostLiveContainer 하나만 그리고, 페이지의 채팅 오버레이·종료 모달은 중복으로 두지 않는다', async () => {
     await renderPage();
@@ -347,7 +366,8 @@ describe('시작 전·닫힘 호스트: HostPrepContainer 로 교체 (SDD-209 I2
 
   it('세션을 못 받으면 서버 문구 없이 FH10 오류 화면(404=찾을 수 없는 클래스)을 보여 준다', async () => {
     const { ApiError } = await import('../src/lib/api/client');
-    h.getSession.mockReset().mockRejectedValue(new ApiError(404, '서버 원문 메시지', null));
+    h.getClass.mockReset().mockResolvedValue({ id: 'class-1', revision: 1, status: 'active', capacity: 10, capabilities: { invite: true } });
+  h.getSession.mockReset().mockRejectedValue(new ApiError(404, '서버 원문 메시지', null));
     await renderPage();
     expect(document.body.textContent).toContain('찾을 수 없는 클래스예요');
     expect(document.body.textContent).not.toContain('서버 원문 메시지');
@@ -360,5 +380,109 @@ describe('호스트가 아닌 사용자는 옛 화면을 그대로 쓴다', () =
     await renderPage();
     expect(q('[data-testid="host-live-container"]')).toBeNull();
     expect(document.body.textContent).toContain('나가기');
+  });
+});
+
+describe('T04 리뷰: 실제 페이지의 참여 갱신 경계',()=>{
+  beforeEach(()=>{h.session=makeSession('in_progress',{class_id:'c1'});});
+  const emitParticipant = (version:number, participants:unknown[]) => fire(()=>{
+    const callback=h.liveOptions.onParticipantChanged as (event:unknown)=>void;
+    callback({session_id:'s1',version:0,participation_version:version,participants});
+  });
+  it('최신 A+B roster 뒤 오래된 A 이벤트가 와도 B를 제거하지 않는다',async()=>{
+    await renderPage();
+    h.participation={sessionId:'s1',version:5,revoked:false,participants:{a:{participant_id:'a',entered_at:null,presence_state:'unknown'},b:{participant_id:'b',entered_at:null,presence_state:'unknown'}}};
+    await emitParticipant(5,[metric('a'),metric('b')]);await emitParticipant(4,[metric('a')]);
+    expect(lastProps().rows.map((row:{participant_id:string})=>row.participant_id)).toContain('b');
+  });
+  it('heartbeat의 참여상태만 갱신하고 최신 EEG 측정값은 유지한다',async()=>{
+    await renderPage();const before=lastProps().rows.find((row:{participant_id:string})=>row.participant_id==='a');
+    await emitParticipant(1,[metric('a',{device_status:null,current_efficiency:null,avg_efficiency:null,last_eeg_at:null})]);
+    const after=lastProps().rows.find((row:{participant_id:string})=>row.participant_id==='a');
+    expect(after.current_efficiency).toBe(before.current_efficiency);expect(after.last_eeg_at).toBe(before.last_eeg_at);expect(after.device_status).toBe('ok');
+  });
+  it('권한회수 뒤 페이지에 남아있는 BLE 훅의 session과 upload 자격도 비활성화한다',async()=>{
+    await renderPage();expect(h.bandOptions.enabled).toBe(true);
+    h.participation={sessionId:'s1',version:2,revoked:true,participants:{}};
+    await fire(()=>{const cb=h.liveOptions.onSessionStateChanged as (event:unknown)=>void;cb({session_id:'s1',status:'in_progress',version:1});});
+    expect(h.bandOptions.enabled).toBe(false);expect(h.bandOptions.sessionId).toBe('');expect(h.bandOptions.participantId).toBe(null);
+  });
+});
+it('T04: REST 최신 roster 뒤 오래된 joined snapshot도 B의 EEG를 지우지 않는다',async()=>{
+  h.session=makeSession('in_progress',{class_id:'c1'});await renderPage();
+  const before=lastProps().rows.find((row:{participant_id:string})=>row.participant_id==='b');
+  h.participation={sessionId:'s1',version:5,revoked:false,participants:{a:{participant_id:'a'},b:{participant_id:'b'}}};
+  await fire(()=>{const cb=h.liveOptions.onSessionStateChanged as (event:unknown)=>void;cb({session_id:'s1',status:'in_progress',version:1});});
+  await fire(()=>{const cb=h.liveOptions.onSnapshot as (event:unknown)=>void;cb({session_id:'s1',status:'in_progress',version:1,participation_version:4,participants:[metric('a')]});});
+  expect(lastProps().rows.find((row:{participant_id:string})=>row.participant_id==='b').current_efficiency).toBe(before.current_efficiency);
+});
+
+it('T04 route reuse: A 버전50을 B에 이월하지 않고 B 버전1과2를 즉시 반영한다',async()=>{
+  h.session=makeSession('in_progress',{class_id:'class-a'});
+  h.participation={sessionId:'s1',version:50,revoked:false,participants:{a:{participant_id:'a'}}};
+  await renderPage();
+  // 훅이 effect에서 reset하기 전 첫 B 렌더에도 A 상태를 돌려주는 경계를 보존한다.
+  h.session=makeSession('in_progress',{id:'s2',class_id:'class-b'});
+  await act(async()=>{await pageRouter.navigate('/sessions/s2/player');});
+  h.participation={sessionId:'s2',version:0,revoked:false,participants:{b:{participant_id:'b'}}};
+  await fire(()=>{const cb=h.liveOptions.onSnapshot as (event:unknown)=>void;cb({session_id:'s2',status:'in_progress',version:1,participation_version:1,participants:[metric('b',{display_name:'B 최초'})]});});
+  expect(lastProps().rows.find((row:{participant_id:string})=>row.participant_id==='b').display_name).toBe('B 최초');
+  await fire(()=>{const cb=h.liveOptions.onParticipantChanged as (event:unknown)=>void;cb({session_id:'s2',version:1,participation_version:2,participants:[metric('b',{display_name:'B 최신'})]});});
+  expect(lastProps().rows.find((row:{participant_id:string})=>row.participant_id==='b').display_name).toBe('B 최신');
+});
+it('T04 route reuse: B 로딩 중 A 데이터를 숨기고 늦은 A HTTP·joined 응답도 B를 덮지 않는다',async()=>{
+  h.session=makeSession('in_progress',{class_id:'class-a'});await renderPage();
+  const lateSnapshot=h.liveOptions.onSnapshot as (event:unknown)=>void;
+  let oldMetrics!:(value:unknown)=>void;let oldSession!:(value:unknown)=>void;let newSession!:(value:unknown)=>void;
+  h.getSessionLiveMetrics.mockImplementationOnce(()=>new Promise(resolve=>{oldMetrics=resolve;}));
+  h.getSession.mockImplementationOnce(()=>new Promise(resolve=>{oldSession=resolve;}));
+  await act(async()=>{await vi.advanceTimersByTimeAsync(5000);});
+  h.getSession.mockImplementationOnce(()=>new Promise(resolve=>{newSession=resolve;}));
+  h.getSessionLiveMetrics.mockResolvedValue({metrics:[metric('b',{display_name:'B 화면'})]});
+  await act(async()=>{await pageRouter.navigate('/sessions/s2/player');});
+  expect(q('[data-testid="host-live-container"]')).toBeNull();
+  await act(async()=>newSession(makeSession('in_progress',{id:'s2',class_id:'class-b'})));
+  await act(async()=>oldMetrics({metrics:[metric('old-a',{display_name:'과거 A'})]}));
+  await act(async()=>oldSession(makeSession('in_progress',{class_id:'class-a'})));
+  await fire(()=>lateSnapshot({session_id:'s1',status:'in_progress',version:5,participation_version:55,participants:[metric('old-a',{display_name:'과거 A'})]}));
+  expect(lastProps().session.id).toBe('s2');
+  expect(lastProps().rows.map((row:{participant_id:string})=>row.participant_id)).not.toContain('old-a');
+});
+
+describe('SDD-223 진행 화면 내부 초대', () => {
+  it.each(['open', 'in_progress'])('%s에서 클래스 상세를 조회하고 화면 이동 없이 공용 시트를 연다', async status => {
+    h.session = makeSession(status, { class_id: 'class-1' });
+    await renderPage();
+    expect(h.getClass).toHaveBeenCalledWith('class-1', expect.any(AbortSignal));
+    const props = status === 'open' ? h.prepProps.at(-1)! : lastProps();
+    if (status === 'open') expect(props.canInvite).toBe(true);
+    await fire(status === 'open' ? props.onInviteAdd : props.onInvite);
+    expect(q('[role="dialog"]')?.getAttribute('aria-label')).toBe('회원 초대');
+    expect(pageRouter.state.location.pathname).toBe('/sessions/s1/player');
+  });
+  it.each([{ status: 'completed', invite: true }, { status: 'active', invite: false }])('클래스 상태 $status, invite=$invite이면 초대를 숨긴다', async value => {
+    h.getClass.mockResolvedValue({ id: 'class-1', status: value.status, capabilities: { invite: value.invite } });
+    h.session = makeSession('in_progress', { class_id: 'class-1' });
+    await renderPage(); expect(lastProps().onInvite).toBeUndefined();
+  });
+});
+
+describe('손들기 실시간 반영 (hand-raise-realtime)', () => {
+  beforeEach(() => { h.session = makeSession('in_progress', { class_id: 'c1' }); });
+  const rowOf = (id: string) => lastProps().rows.find((r: { participant_id: string }) => r.participant_id === id);
+  it('speaking_changed 수신 즉시(폴링 대기 없이) 상담사 목록의 손들기가 켜지고 내려간다', async () => {
+    await renderPage();
+    expect(rowOf('a').raise_hand).toBe(false);
+    await fire(() => (h.liveOptions.onSpeakingChanged as (e: unknown) => void)({ session_id: 's1', participant_id: 'a', raise_hand: true, speaking: false }));
+    expect(rowOf('a').raise_hand).toBe(true);
+    await fire(() => (h.liveOptions.onSpeakingChanged as (e: unknown) => void)({ session_id: 's1', participant_id: 'a', raise_hand: false, speaking: true }));
+    expect(rowOf('a').raise_hand).toBe(false);
+    expect(rowOf('a').speaking).toBe(true);
+  });
+  it('참여 스냅샷(participation.version>=0) 경로에서도 손들기가 즉시 반영된다', async () => {
+    await renderPage();
+    h.participation = { sessionId: 's1', version: 3, revoked: false, participants: { a: { participant_id: 'a', entered_at: null, presence_state: 'connected' }, b: { participant_id: 'b', entered_at: null, presence_state: 'connected' } } };
+    await fire(() => (h.liveOptions.onSpeakingChanged as (e: unknown) => void)({ session_id: 's1', participant_id: 'b', raise_hand: true, speaking: false }));
+    expect(rowOf('b').raise_hand).toBe(true);
   });
 });

@@ -236,9 +236,9 @@ function camButton(input: MemberCaseInput): MediaButton {
     : { s: 'on', label: '카메라 켜짐', disabled: false, pressed: true };
 }
 
-/** B1(손들기 취소 API)·B2(말하기 종료 API) 미적용 — 대기 중에는 취소 버튼 대신 상태만 보여 준다 */
+/** 대기 중에는 같은 버튼이 "손 내리기"(손들기 취소)가 된다. B2(말하기 종료 API)는 미적용 */
 function handButton(input: MemberCaseInput): MediaButton {
-  if (input.hand === 'waiting') return { s: 'waiting', label: '손들었어요', disabled: true };
+  if (input.hand === 'waiting') return { s: 'waiting', label: '손 내리기', disabled: false, pressed: true };
   if (input.hand === 'speaking') return { s: 'speaking', label: '말하기 종료', disabled: false, pressed: true };
   return { s: 'idle', label: '손들기', disabled: false, pressed: false };
 }

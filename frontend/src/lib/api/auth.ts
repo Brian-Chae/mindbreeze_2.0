@@ -33,12 +33,28 @@ export interface OtpVerifyResponse {
   email_verify_token: string;
 }
 
+/** 필수 3종 + 선택 2종(eeg/research). 선택은 미전달 시 서버가 거부로 기록한다. */
+export interface ConsentPayload {
+  tos: boolean;
+  privacy: boolean;
+  sensitive: boolean;
+  eeg?: boolean;
+  research?: boolean;
+}
+
+/** 서버 오류 detail.code (예: AGE_RESTRICTED, ACCOUNT_DELETION_PENDING). 없으면 null. */
+export function apiErrorCode(err: unknown): string | null {
+  const data = (err as { data?: { detail?: { code?: unknown } } } | null)?.data;
+  const code = data?.detail?.code;
+  return typeof code === 'string' ? code : null;
+}
+
 export interface ClientRegisterPayload {
   email: string;
   password: string;
   name: string;
   email_verify_token: string;
-  consents: { tos: boolean; privacy: boolean; sensitive: boolean };
+  consents: ConsentPayload;
   /** 초대 링크 토큰 — 있으면 가입 시 상담사 자동 연결 */
   invite_token?: string;
   /** SDD-073: 가입 시점 개인정보 (전화번호는 선택) */
@@ -89,13 +105,34 @@ export interface GoogleLoginPayload {
   invite_token?: string;
   role?: string;
   /** SEC-04: 신규 가입 시 약관·민감정보 동의 (기존 사용자 로그인은 불필요) */
-  consents?: { tos: boolean; privacy: boolean; sensitive: boolean };
+  consents?: ConsentPayload;
+  /** SDD-220: 신규 가입 시 생년월일(만 14세 확인). 기존 사용자 로그인에는 불필요 */
+  birth_date?: string;
   /** 로그인 상태 유지 — true면 14일 영속 세션, false면 브라우저 종료 시 소멸 */
   remember_me?: boolean;
 }
 
 export const loginGoogle = (payload: GoogleLoginPayload, rememberMe: boolean = true): Promise<LoginResponse> =>
   apiClient.post('/auth/google', { ...payload, remember_me: rememberMe }, { skipAuth: true });
+
+export interface AppleLoginPayload {
+  id_token: string;
+  nonce: string;
+  authorization_code?: string;
+  name?: string;
+  invite_token?: string;
+  role?: string;
+  consents?: ConsentPayload;
+  birth_date?: string;
+  remember_me?: boolean;
+}
+
+/** 서버가 발급하는 일회용 nonce — Apple 로그인 요청에 묶인다. */
+export const requestAppleChallenge = (): Promise<{ nonce: string; expires_in: number }> =>
+  apiClient.post('/auth/apple/challenge', undefined, { skipAuth: true });
+
+export const loginApple = (payload: AppleLoginPayload, rememberMe: boolean = true): Promise<LoginResponse> =>
+  apiClient.post('/auth/apple', { ...payload, remember_me: rememberMe }, { skipAuth: true });
 
 // SDD-080: 자기 기본정보 수정 — 이름/전화/성별/생년월일만 허용 (이메일·역할 불변)
 export interface UpdateUserMePayload {

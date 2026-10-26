@@ -90,6 +90,8 @@ SEED = (Path(__file__).parent / "m0_prequery_seed.sql").read_text(encoding="utf-
 
 
 def test_합성_데이터에서_분류_집계가_손으로_센_값과_같다(runner, statements, pg_conn):
+    # 이 시드는 SDD-214 이전 모양(부모 없는 비템플릿 세션)이라 같은 트랜잭션 안에서만 CHECK 를 푼다(테스트 끝에 롤백).
+    pg_conn.exec_driver_sql("ALTER TABLE sessions DROP CONSTRAINT IF EXISTS ck_sessions_one_parent")
     pg_conn.exec_driver_sql(SEED)
     out, labels = io.StringIO(), io.StringIO()
     runner.run_plan(pg_conn, statements, out, labels, include_labels=True)

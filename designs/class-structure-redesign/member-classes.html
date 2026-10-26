@@ -1,0 +1,853 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MIND BREEZE · 회원 홈 · 내 클래스 시안</title>
+<link rel="stylesheet" href="../class-player-redesign/tokens.css">
+<link rel="stylesheet" href="flow-base.css">
+<style>
+/* 워커 2 전용 스타일 (.w- 접두어) — member-classes: MC01~MC07 */
+body { background: #12081C; word-break: keep-all; overflow-wrap: break-word; }
+h1, h2, h3, p, ol { margin: 0; }
+a { color: inherit; text-decoration: none; }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--mb-lavender); outline-offset: 2px; }
+.ic.sm { width: 16px; height: 16px; flex: none; }
+.ic.md { width: 20px; height: 20px; flex: none; }
+.w-logo { width: 64px; height: 29px; fill: var(--mb-purple); flex: none; }
+.w-logo.d { width: 56px; height: 26px; fill: var(--mb-pale); align-self: center; }
+
+/* ───────── 셸 공통 ───────── */
+.sh-side .w-logo { margin: 0 0 16px 16px; }
+.w-nav { display: flex; flex-direction: column; gap: 8px; }
+.w-nav a { display: flex; align-items: center; gap: 16px; min-height: 48px; padding: 0 16px; border-radius: var(--r-pill); font-size: var(--fs-15); font-weight: 600; color: var(--ink-mid); }
+.w-nav a.on { background: var(--mb-purple-cream); color: var(--mb-purple); }
+.w-me { margin-top: auto; display: flex; align-items: center; gap: 16px; padding: 8px 16px; font-size: var(--fs-15); font-weight: 600; color: var(--ink-mid); }
+.w-me i { width: 40px; height: 40px; border-radius: 50%; background: var(--mb-purple-cream); color: var(--mb-purple); display: grid; place-items: center; }
+.sh-tabbar > a.w-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: var(--fs-12); font-weight: 600; color: var(--ink-mid); }
+.sh-tabbar > a.w-tab.on { color: var(--mb-purple); }
+.sh-title { line-height: 1.3; }
+.w-hbtn { width: var(--tap); height: var(--tap); border-radius: var(--r-pill); display: inline-grid; place-items: center; background: #fff; border: 1px solid var(--shell-line); color: var(--ink); position: relative; }
+.w-hbtn .w-dot { position: absolute; top: 10px; right: 11px; width: 8px; height: 8px; border-radius: 50%; background: var(--mb-purple); border: 2px solid #fff; box-sizing: content-box; }
+.w-head3 { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; }
+.w-htitle { font-size: var(--fs-18); font-weight: 700; text-align: center; }
+.w-ph { display: block; width: 44px; height: 44px; }
+.w-brand { width: 44px; height: 44px; border-radius: 50%; background: var(--mb-purple-cream); display: grid; place-items: center; }
+.w-brand .w-logo { width: 28px; height: 13px; }
+.w-col { width: 100%; max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.w-foot { flex: none; padding: 16px 24px; background: var(--shell-bg); }
+@media (max-width: 767px) { .w-foot { padding: 16px; } }
+.w-sec { display: flex; align-items: center; justify-content: space-between; min-height: 44px; margin-top: 8px; }
+.w-sec h2 { font-size: var(--fs-15); font-weight: 700; }
+.w-sec > span { font-size: var(--fs-13); color: var(--ink-mid); }
+.w-sec a { display: inline-flex; align-items: center; justify-content: flex-end; gap: 8px; min-height: 44px; min-width: 44px; font-size: var(--fs-13); font-weight: 600; color: var(--mb-purple); }
+.w-sec:first-child { margin-top: 0; }
+.w-link { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; border-radius: var(--r-pill); font-size: var(--fs-15); font-weight: 700; color: var(--mb-purple); background: transparent; }
+.w-link.mute { color: var(--ink-mid); font-weight: 600; }
+.sh-btn.danger { background: #B5482A; color: #fff; }
+.sh-chip.dash { background: #F0ECF3; color: var(--ink-mid); border: 1px dashed #B5ABBE; }
+.sh-chip.line { background: #fff; color: var(--mb-purple); border: 1px solid var(--mb-purple); }
+.sh-chip { white-space: nowrap; }
+.sh-chip .ic.sm { flex: none; }
+
+/* ───────── 히어로 ───────── */
+.w-hero .w-herobg { position: absolute; inset: 0; background-size: cover; background-position: center; z-index: 0; }
+.sh-hero.w-hero::before { z-index: 1; }
+.w-hero.off .w-herobg { filter: grayscale(1) brightness(0.8); }
+.w-hc { position: relative; z-index: 2; display: flex; flex-direction: column; gap: 16px; }
+.w-hrow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.w-htl { font-size: var(--fs-24); font-weight: 800; line-height: 1.3; }
+.w-htl + .w-hmeta { margin-top: -8px; }
+.w-hmeta { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: var(--fs-15); color: var(--tx-mid); }
+.w-hmeta > span { display: inline-flex; align-items: center; gap: 8px; }
+.w-hchip { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border-radius: var(--r-pill); font-size: var(--fs-13); font-weight: 600; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.24); color: var(--tx-hi); }
+.w-hchip.live { background: var(--mb-purple); border-color: transparent; color: #fff; }
+.w-hchip.ok { color: var(--ok); border-color: rgba(125,227,200,0.5); }
+.w-hchip.off { border-style: dashed; color: var(--tx-mid); }
+.w-hchip.warn { color: var(--warn); border: 1px dashed var(--warn); background: var(--warn-bg); }
+.w-hbox { display: flex; align-items: center; gap: 16px; min-height: 56px; padding: 8px 16px; border-radius: var(--r-card); background: var(--sheet-bg); border: 1px solid var(--sheet-border); }
+.w-hbox .tx { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; }
+.w-hbox b { font-size: var(--fs-15); font-weight: 700; }
+.w-hbox .s { font-size: var(--fs-13); color: var(--tx-mid); }
+.w-hbox .ic { color: var(--mb-pale); flex: none; }
+.w-hcta { min-height: 48px; width: 100%; border-radius: var(--r-pill); font-size: var(--fs-15); font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: #fff; color: var(--mb-purple); }
+.w-hcta.line { background: transparent; color: #fff; border: 1.5px solid rgba(255,255,255,0.7); }
+.w-hcta[disabled] { background: rgba(255,255,255,0.18); color: var(--tx-mid); border: 1px solid var(--sheet-border); }
+.w-hero .w-prog { color: var(--tx-hi); }
+.w-hero .w-plab span:nth-child(2) { color: var(--tx-mid); }
+.w-hero .w-seg i { background: rgba(255,255,255,0.28); }
+.w-hero .w-seg i.d { background: #fff; }
+.w-hero .w-seg i.c { background: var(--mb-pale); }
+.w-hfact { display: flex; align-items: center; gap: 8px; font-size: var(--fs-15); color: var(--tx-hi); }
+
+/* ───────── 진행 막대 · 카드 ───────── */
+.w-prog { display: flex; flex-direction: column; gap: 8px; }
+.w-plab { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: var(--fs-15); font-weight: 600; }
+.w-plab span:nth-child(2) { font-size: var(--fs-13); color: var(--ink-mid); font-weight: 600; }
+.w-seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; height: 8px; }
+.w-seg i { display: block; border-radius: 8px; background: #E6DFEC; }
+.w-seg i.d { background: var(--mb-purple); }
+.w-seg i.c { background: var(--mb-lavender); }
+.w-cc { display: flex; flex-direction: column; gap: 16px; padding: 16px; }
+.w-cclink { display: flex; flex-direction: column; gap: 8px; color: inherit; }
+.w-ccrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.w-ccrow > .ic { color: var(--ink-lo); flex: none; }
+.w-cchips { display: flex; flex-wrap: wrap; gap: 8px; }
+.w-cctitle { font-size: var(--fs-18); font-weight: 700; line-height: 1.35; }
+.w-ccmeta { display: flex; align-items: flex-start; gap: 8px; font-size: var(--fs-13); color: var(--ink-mid); line-height: 1.5; }
+.w-ccmeta.pri { font-size: var(--fs-15); color: var(--ink); }
+.w-cc .sh-btn { width: 100%; }
+.w-cc.hl { border-color: var(--mb-purple); box-shadow: 0 0 0 1px var(--mb-purple); }
+.w-ctype { font-size: var(--fs-13); font-weight: 600; color: var(--ink-mid); }
+.w-fold { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; padding: 0 16px; width: 100%; text-align: left; font-size: var(--fs-15); font-weight: 700; }
+.w-fold .l { display: flex; align-items: center; gap: 16px; }
+.w-fold .l i { width: 40px; height: 40px; border-radius: 50%; background: #F0ECF3; color: var(--ink-mid); display: grid; place-items: center; flex: none; }
+.w-fold .s { font-size: var(--fs-13); font-weight: 600; color: var(--ink-mid); }
+.w-empty { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 24px 16px; text-align: center; }
+.w-eic { width: 48px; height: 48px; border-radius: 50%; background: var(--mb-purple-cream); color: var(--mb-purple); display: grid; place-items: center; }
+.w-empty .tx { display: flex; flex-direction: column; gap: 0; }
+.w-empty .tx b { font-size: var(--fs-15); }
+.w-empty .tx .s { font-size: var(--fs-13); color: var(--ink-mid); line-height: 1.5; }
+.w-empty .btns { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 320px; }
+.w-empty .btns .sh-btn { width: 100%; }
+.w-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px; min-height: 72px; }
+.w-row .tx { min-width: 0; display: flex; flex-direction: column; gap: 0; }
+.w-row b { font-size: var(--fs-15); font-weight: 700; }
+.w-row .s { font-size: var(--fs-13); color: var(--ink-mid); line-height: 1.4; }
+.w-row .l { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.w-row .l i { width: 40px; height: 40px; border-radius: 50%; background: var(--mb-purple-cream); color: var(--mb-purple); display: grid; place-items: center; flex: none; }
+.w-row > .ic { color: var(--ink-lo); flex: none; }
+.w-row.danger b { color: #B5482A; }
+.w-row.danger .l i { background: #FBEAE3; color: #B5482A; }
+
+/* 배너·안내 */
+.w-ban { display: flex; gap: 16px; align-items: flex-start; padding: 16px; border-radius: var(--r-card); background: var(--mb-purple-cream); border: 1px solid #E6D7F5; color: var(--ink); }
+.w-ban .ico { width: 40px; height: 40px; border-radius: 50%; background: #fff; color: var(--mb-purple); display: grid; place-items: center; flex: none; }
+.w-ban .tx { display: flex; flex-direction: column; gap: 0; min-width: 0; }
+.w-ban b { font-size: var(--fs-15); font-weight: 700; line-height: 1.4; }
+.w-ban .s { font-size: var(--fs-13); color: var(--ink-mid); line-height: 1.5; }
+.w-ban.warn { background: #FBEAE3; border: 1px dashed #D58A6F; }
+.w-ban.warn .ico { color: #8A3A1F; }
+.w-ban.plain { background: #fff; border: 1px solid var(--shell-line); }
+.w-next { display: flex; flex-direction: column; gap: 8px; }
+.w-next .sh-btn { width: 100%; margin-top: 8px; }
+.w-tag { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-13); font-weight: 600; color: var(--mb-purple); }
+
+/* ───────── 회차 타임라인 ───────── */
+.w-tl { list-style: none; margin: 0; padding: 0; }
+.w-trow { position: relative; display: flex; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--shell-line); }
+.w-trow:first-child { padding-top: 0; }
+.w-trow:last-child { border-bottom: 0; padding-bottom: 0; }
+.w-tic { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--mb-purple-cream); color: var(--mb-purple); }
+.w-trow.att .w-tic { background: #E3F8F2; color: #0B6B55; }
+.w-trow.abs .w-tic { background: #FBEAE3; color: #8A3A1F; }
+.w-trow.before .w-tic, .w-trow.cx .w-tic, .w-trow.wd .w-tic, .w-trow.up .w-tic { background: #F0ECF3; color: var(--ink-mid); }
+.w-trow.open .w-tic { background: var(--mb-purple); color: #fff; }
+.w-trow.before .w-ttop b, .w-trow.wd .w-ttop b, .w-trow.cx .w-ttop b { color: var(--ink-mid); }
+.w-tmain { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.w-ttop { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.w-ttop .tx { display: flex; flex-direction: column; gap: 0; min-width: 0; }
+.w-ttop b { font-size: var(--fs-15); font-weight: 700; line-height: 1.4; }
+.w-ttop .s { font-size: var(--fs-13); color: var(--ink-mid); line-height: 1.4; }
+.w-ttop .sh-chip { flex: none; }
+.w-tact { display: flex; }
+.w-tact .sh-btn { min-height: 44px; padding: 0 16px; font-size: var(--fs-13); }
+
+/* ───────── 변화 이야기 ───────── */
+.w-story { display: flex; flex-direction: column; gap: 16px; }
+.w-story h2 { font-size: var(--fs-18); font-weight: 800; line-height: 1.4; }
+.w-story p { font-size: var(--fs-15); line-height: 1.7; color: var(--ink); }
+.w-story .note { font-size: var(--fs-13); color: var(--ink-mid); line-height: 1.5; }
+.w-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.w-tile { background: #fff; border: 1px solid var(--shell-line); border-radius: var(--r-card); padding: 16px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; }
+.w-tile .ti { width: 40px; height: 40px; border-radius: 50%; background: var(--mb-purple-cream); color: var(--mb-purple); display: grid; place-items: center; flex: none; }
+.w-tile .tt { display: flex; flex-direction: column; align-items: center; gap: 0; min-width: 0; }
+.w-tile b { font-size: var(--fs-24); font-weight: 800; line-height: 1.2; }
+.w-tile .tt > span { font-size: var(--fs-15); color: var(--ink-mid); line-height: 1.3; }
+@media (min-width: 640px) { .w-tile { flex-direction: row; justify-content: center; gap: 16px; padding: 16px; text-align: left; } .w-tile .tt { align-items: flex-start; } }
+.w-mxcard { display: flex; flex-direction: column; gap: 16px; }
+.w-mxcard h2 { font-size: var(--fs-15); font-weight: 700; }
+.w-mxcard .sub { font-size: var(--fs-13); color: var(--ink-mid); line-height: 1.5; margin-top: -8px; }
+.w-mx { display: grid; grid-template-columns: 56px repeat(var(--n), 1fr); gap: 8px; align-items: center; }
+.w-mx > .lb { font-size: var(--fs-13); font-weight: 600; color: var(--ink-mid); }
+.w-mx > .hd { font-size: var(--fs-13); font-weight: 600; color: var(--ink-mid); text-align: center; }
+.w-mx > .gr { grid-column: 1 / -1; font-size: var(--fs-13); font-weight: 700; margin-top: 8px; }
+.w-fc { height: 28px; border-radius: 8px; display: grid; place-items: center; }
+.w-fc .ic { width: 16px; height: 16px; }
+.w-fc.u { background: var(--mb-purple-cream); color: var(--mb-purple); }
+.w-fc.s { background: #F0ECF3; color: var(--ink-mid); }
+.w-fc.d { background: #E9F0FA; color: #2F5A8F; }
+.w-fc.n { border: 1px dashed #CFC6D6; }
+.w-fc.f { background: #FAF8FC; }
+.w-fc.b { background: #F7F4F0; border: 1px dashed #D9D2DF; color: var(--ink-lo); }
+.w-fc.a-att { background: #E3F8F2; color: #0B6B55; }
+.w-fc.a-abs { background: #FBEAE3; color: #8A3A1F; }
+.w-fc.a-mk { background: #fff; color: var(--mb-purple); border: 1.5px solid var(--mb-purple); }
+.w-fc.mini { width: 24px; height: 24px; flex: none; }
+.w-leg { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: var(--fs-13); color: var(--ink-mid); }
+.w-leg span { display: inline-flex; align-items: center; gap: 8px; }
+.w-cmp { display: grid; grid-template-columns: 64px 1fr 1fr; gap: 8px; align-items: center; }
+.w-cmp > .hd { font-size: var(--fs-13); font-weight: 600; color: var(--ink-mid); }
+.w-cmp > .lb { font-size: var(--fs-13); font-weight: 600; color: var(--ink-mid); }
+.w-cmp > .v { display: flex; align-items: center; gap: 8px; min-height: 32px; font-size: var(--fs-13); font-weight: 600; }
+
+/* ───────── 알림 ───────── */
+.w-nt { display: flex; gap: 16px; padding: 16px; align-items: flex-start; min-height: 72px; }
+.w-nt .ico { width: 40px; height: 40px; border-radius: 50%; background: var(--mb-purple-cream); color: var(--mb-purple); display: grid; place-items: center; flex: none; }
+.w-nt .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0; }
+.w-nt b { font-size: var(--fs-15); font-weight: 700; line-height: 1.4; }
+.w-nt .s { font-size: var(--fs-13); color: var(--ink-mid); line-height: 1.5; }
+.w-nt .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mb-purple); flex: none; margin-top: 8px; }
+.w-nt.un { border-color: var(--mb-purple); }
+
+/* ───────── 시트 ───────── */
+.w-scrim { position: fixed; inset: 0; z-index: 30; background: rgba(12,6,20,0.55); display: flex; align-items: flex-end; justify-content: center; }
+.w-sheet { width: min(100%, 640px); background: #fff; color: var(--ink); border-radius: var(--r-sheet) var(--r-sheet) 0 0; padding: 16px 24px calc(24px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 16px; }
+.w-sheet h2 { font-size: var(--fs-18); font-weight: 800; }
+.w-sheet p { font-size: var(--fs-15); color: var(--ink-mid); line-height: 1.5; }
+.w-sheet .hd { display: flex; flex-direction: column; gap: 8px; }
+.w-grab { width: 48px; height: 8px; border-radius: 8px; background: #D9D2DF; align-self: center; }
+.w-picks { display: flex; flex-direction: column; gap: 8px; }
+.w-pick { display: flex; align-items: center; gap: 16px; min-height: 64px; padding: 8px 16px; border-radius: var(--r-card); border: 1px solid var(--shell-line); background: #fff; text-align: left; width: 100%; }
+.w-pick.on { border: 1.5px solid var(--mb-purple); background: var(--mb-purple-cream); }
+.w-pick i.av { width: 40px; height: 40px; border-radius: 50%; background: var(--mb-purple-cream); color: var(--mb-purple); display: grid; place-items: center; flex: none; }
+.w-pick.on i.av { background: #fff; }
+.w-pick .tx { flex: 1; min-width: 0; }
+.w-pick b { display: block; font-size: var(--fs-15); }
+.w-pick .s { display: block; font-size: var(--fs-13); color: var(--ink-mid); }
+.w-pick .ic.end { color: var(--ink-lo); }
+.w-pick.on .ic.end { color: var(--mb-purple); }
+.w-sheet .sh-btn { width: 100%; }
+.w-sheet .sh-btn.ghost { background: transparent; color: var(--ink-mid); min-height: var(--tap); }
+
+/* ───────── 몰입형 상태 카드 ───────── */
+.w-imm { --col-w: 480px; }
+.w-tc { display: flex; flex-direction: column; gap: 16px; }
+.w-tc .fl-note { text-align: center; }
+.w-ic { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: rgba(210,174,252,0.18); color: var(--mb-pale); align-self: center; }
+.w-ic.warn { background: var(--warn-bg); color: var(--warn); }
+.w-ic .ic { width: 32px; height: 32px; }
+.w-info { display: flex; flex-direction: column; gap: 8px; padding: 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); }
+.w-info > div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; font-size: var(--fs-15); }
+.w-info > div span { color: var(--tx-lo); font-size: var(--fs-13); flex: none; }
+.w-info > div b { font-weight: 600; text-align: right; }
+
+/* ───────── 개발자 인덱스 (?index=1) ───────── */
+body.w-index { height: auto; overflow: auto; background: #fff; color: #1F1F1F; }
+.w-idx { max-width: 1280px; margin: 0 auto; padding: 24px; font-family: var(--font); }
+.w-idx h1 { font-size: 24px; margin-bottom: 8px; }
+.w-idx p.l { font-size: 14px; color: #555; margin-bottom: 24px; line-height: 1.6; }
+.w-idx table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.w-idx th, .w-idx td { border: 1px solid #E3DEE8; padding: 8px 16px; text-align: left; vertical-align: top; }
+.w-idx th { background: #F5EDFC; }
+.w-idx a { color: #5F0080; text-decoration: underline; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="brandMark"><path d="M 414.72 92.871 L 413.139 94.458 L 412.995 94.603 C 409.607 98.313 406.014 101.838 402.483 105.424 C 378.911 129.356 355.38 153.328 331.686 177.136 C 329.386 179.424 326.183 181.464 323.062 182.165 C 314.089 184.165 306.554 177.919 306.102 168.334 C 305.753 160.975 305.979 153.575 305.979 146.196 C 305.958 131.582 305.876 116.988 305.999 102.394 C 306.061 95.365 303.72 89.82 297.088 87.017 C 290.251 84.131 284.584 86.399 279.491 91.552 C 253.538 117.709 227.482 143.764 201.447 169.839 C 195.677 175.59 190.071 177.012 183.871 174.312 C 177.382 171.467 175.041 166.211 175.083 159.388 C 175.144 140.342 175.124 121.275 175.062 102.209 C 175.021 93.283 170.955 87.821 163.564 86.172 C 157.281 84.75 152.763 87.574 148.575 91.882 C 118.843 122.265 89.03 152.565 59.319 182.948 C 55.52 186.803 51.393 189.503 45.767 188.823 C 37.76 187.875 32.955 182.083 32.852 172.992 C 32.565 150.669 32.483 128.325 32.175 106.001 C 32.031 95.18 20.184 88.171 11.108 93.448 C 9.712 94.376 8.049 96.169 7.638 96.54 C 7.494 96.664 7.371 96.788 7.248 96.911 C 7.125 97.035 7.002 97.138 6.899 97.262 C 6.796 97.344 6.714 97.427 6.714 97.427 L 0.205 103.961 C 0.082 101.652 0.021 99.344 0 97.014 L 3.018 93.984 L 13.839 82.915 L 13.839 82.956 C 37.328 58.984 60.859 35.032 84.431 11.121 C 89.071 6.401 94.635 4.814 100.836 7.535 C 106.976 10.214 109.768 15.244 109.747 21.902 L 109.747 54.861 C 109.747 65.869 109.706 76.855 109.768 87.842 C 109.83 95.035 112.971 100.518 119.583 103.425 C 125.085 105.857 129.767 104.105 133.914 99.818 C 151.1 82.111 168.368 64.467 185.636 46.843 C 199.065 33.136 212.575 19.511 225.963 5.742 C 230.849 0.712 236.332 -1.535 243.066 1.248 C 249.76 4.031 252.121 9.534 252.08 16.543 C 252.019 35.609 251.998 54.655 252.121 73.722 C 252.203 84.234 259.144 91.119 268.527 89.326 C 272.223 88.625 276.021 86.007 278.793 83.266 C 304.89 57.5 330.782 31.528 356.736 5.618 C 362.731 -0.339 369.035 -1.576 375.256 1.99 C 380.738 5.123 382.771 10.05 382.751 16.213 C 382.689 37.67 382.792 59.149 382.73 80.607 C 382.689 87.697 385.564 92.892 392.052 95.798 C 394.721 96.994 397.308 97.385 399.752 97.056 C 401.764 96.664 403.304 96.458 408.642 91.263 L 414.535 85.512 C 414.658 87.965 414.72 90.398 414.72 92.871 Z"/></g>
+<symbol id="i-house" viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+<symbol id="i-book-open" viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></symbol>
+<symbol id="i-heart" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></symbol>
+<symbol id="i-sliders" viewBox="0 0 24 24"><path d="M21 4h-7"/><path d="M10 4H3"/><path d="M21 12h-9"/><path d="M8 12H3"/><path d="M21 20h-5"/><path d="M12 20H3"/><path d="M14 2v4"/><path d="M8 10v4"/><path d="M16 18v4"/></symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></symbol>
+<symbol id="i-calendar-x" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="m14 14-4 4"/><path d="m10 14 4 4"/></symbol>
+<symbol id="i-calendar-plus" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8"/><path d="M3 10h18"/><path d="M16 19h6"/><path d="M19 16v6"/></symbol>
+<symbol id="i-calendar-clock" viewBox="0 0 24 24"><path d="M16 14v2.2l1.6 1"/><path d="M16 2v4"/><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M3 10h5"/><path d="M8 2v4"/><circle cx="16" cy="16" r="6"/></symbol>
+<symbol id="i-message" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
+<symbol id="i-file-text" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol>
+<symbol id="i-ellipsis" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+<symbol id="i-chev-l" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+<symbol id="i-chev-r" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+<symbol id="i-chev-d" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+<symbol id="i-chev-u" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+<symbol id="i-video" viewBox="0 0 24 24"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></symbol>
+<symbol id="i-map-pin" viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+<symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></symbol>
+<symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></symbol>
+<symbol id="i-circle-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+<symbol id="i-circle-x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></symbol>
+<symbol id="i-circle-minus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></symbol>
+<symbol id="i-circle-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
+<symbol id="i-mail" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol>
+<symbol id="i-send" viewBox="0 0 24 24"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+<symbol id="i-log-in" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></symbol>
+<symbol id="i-log-out" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></symbol>
+<symbol id="i-key" viewBox="0 0 24 24"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+<symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></symbol>
+<symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></symbol>
+<symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
+<symbol id="i-rotate" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+<symbol id="i-repeat" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol>
+<symbol id="i-headphones" viewBox="0 0 24 24"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></symbol>
+</defs></svg>
+<div id="root"></div>
+<script>
+(function () {
+'use strict';
+var I = function (n, c) { return '<svg class="ic ' + (c || '') + '" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-' + n + '"/></svg>'; };
+var LOGO = function (c) { return '<svg class="' + c + '" viewBox="0 0 414.72 188.928" aria-hidden="true"><use href="#brandMark"/></svg>'; };
+var BG = function (n) { return 'assets/bg/background' + n + '.webp'; };
+
+/* ───────── 데모 데이터 (고정 시연값) ───────── */
+var DATE = { 1: '11월 3일(월)', 2: '11월 10일(월)', 3: '11월 17일(월)', 4: '11월 24일(월)', 5: '12월 1일(월)', 6: '12월 8일(월)', 7: '12월 15일(월)', 8: '12월 22일(월)' };
+var HOST = function (n) { return n % 2 ? '김지수' : '박서연'; };
+var MB = '김지수 · 박서연 지도사';
+var M_ON = [['video', '온라인'], ['users', '그룹'], ['activity', 'LINK BAND 선택']];
+var M_ON1 = [['video', '온라인'], ['user', '1:1'], ['activity', 'LINK BAND 선택']];
+
+/* 상태 칩: 색 + 선 + 아이콘 + 라벨 */
+var ST = {
+  scheduled: ['calendar', '예정', 'mute'], soon: ['clock', '곧 열림', ''], open: ['log-in', '입장 가능', 'ok'], live: ['play', '진행 중', 'live'],
+  done: ['circle-check', '완료', 'mute'], cancelled: ['circle-x', '취소', 'dash'], invited: ['mail', '초대', 'line'],
+  part: ['users', '참여 중', ''], wait: ['clock', '대기 중', 'line'], left: ['log-out', '나감', 'dash'], removed: ['circle-minus', '참여 종료', 'dash'],
+  mwait: ['calendar-x', '보강 대기', 'warn'], mset: ['rotate', '보강 예정', 'line'], mid: ['calendar-plus', '중간 합류', 'line'],
+  att: ['circle-check', '참석', 'ok'], abs: ['calendar-x', '결석', 'warn'], before: ['lock', '참여 전', 'dash'], ongo: ['heart', '진행 중', '']
+};
+var DK = { ok: 'ok', live: 'live', dash: 'off', mute: 'off', warn: 'warn', line: '', '': '' };
+var chip = function (k, dark, label) {
+  var s = ST[k], t = label || s[1];
+  if (dark) return '<span class="w-hchip ' + DK[s[2]] + '">' + I(s[0], 'sm') + t + '</span>';
+  return '<span class="sh-chip ' + s[2] + '">' + I(s[0], 'sm') + t + '</span>';
+};
+var hchip = function (t) { return '<span class="w-hchip">' + t + '</span>'; };
+
+/* ───────── 셸 프레임 ───────── */
+var NAV = [['home', 'house', '홈', 'MC01:class-open'], ['classes', 'book-open', '내 클래스', 'MC02:list'], ['counsel', 'heart', '내 상담', ''], ['chat', 'message', '채팅', ''], ['report', 'file-text', '리포트', ''], ['notice', 'bell', '알림', 'MC07:host-changed'], ['settings', 'sliders', '설정', '']];
+var TABS = [['home', 'house', '홈', 'MC01:class-open'], ['classes', 'book-open', '내 클래스', 'MC02:list'], ['counsel', 'heart', '내 상담', ''], ['report', 'file-text', '리포트', ''], ['more', 'ellipsis', '더보기', 'MC07:host-changed']];
+var navA = function (n, on, cls) {
+  return '<a href="#" class="' + cls + (on ? ' on' : '') + '"' + (on ? ' aria-current="page"' : '') + (n[3] ? ' data-go="' + n[3] + '"' : ' data-out="다른 시안 또는 기존 화면"') + '>' + I(n[1]) + '<span>' + n[2] + '</span></a>';
+};
+var shell = function (o) {
+  var side = '', tab = '';
+  if (!o.lite) {
+    side = '<aside class="sh-side" aria-label="메뉴">' + LOGO('w-logo') + '<nav class="w-nav">' + NAV.map(function (n) { return navA(n, n[0] === o.active, ''); }).join('') + '</nav><div class="w-me"><i>' + I('user') + '</i>지은 님</div></aside>';
+    tab = '<nav class="sh-tabbar" aria-label="하단 메뉴">' + TABS.map(function (n) { return navA(n, n[0] === (o.tab || o.active), 'w-tab'); }).join('') + '</nav>';
+  }
+  return '<div class="sh-root" data-kind="shell">' + side + '<div class="sh-main">' + o.head +
+    '<div class="sh-scroll"><div class="w-col">' + o.body + '</div></div>' + (o.foot || '') + tab + '</div>' + (o.over || '') + '</div>';
+};
+var headHome = function (title, right) { return '<header class="sh-head"><h1 class="sh-title">' + title + '</h1>' + right + '</header>'; };
+var headBack = function (title, back) { return '<header class="sh-head w-head3"><button class="w-hbtn" type="button" aria-label="뒤로" data-go="' + back + '">' + I('chev-l') + '</button><h1 class="w-htitle">' + title + '</h1><span class="w-ph" aria-hidden="true"></span></header>'; };
+var sec = function (t, right) { return '<div class="w-sec"><h2>' + t + '</h2>' + (right || '') + '</div>'; };
+var secLink = function (txt, go) { return '<a href="#" ' + (go.indexOf('out:') === 0 ? 'data-out="' + go.slice(4) + '"' : 'data-go="' + go + '"') + '>' + txt + I('chev-r', 'sm') + '</a>'; };
+
+/* ───────── 히어로 ───────── */
+var hero = function (o) {
+  var cta = '';
+  if (o.cta) {
+    var c = o.cta;
+    cta = '<button class="w-hcta ' + (c[1] || '') + '" type="button"' + (c[3] ? ' disabled' : '') + (c[2].indexOf('out:') === 0 ? ' data-out="' + c[2].slice(4) + '"' : ' data-go="' + c[2] + '"') + '>' + (c[4] ? I(c[4], 'md') : '') + c[0] + '</button>';
+  }
+  return '<section class="sh-hero w-hero' + (o.off ? ' off' : '') + '" aria-label="' + o.aria + '"><div class="w-herobg" style="background-image:url(' + BG(o.bg) + ')"></div><div class="w-hc">' +
+    '<div class="w-hrow">' + o.chips + '</div><h2 class="w-htl">' + o.title + '</h2>' +
+    (o.metas ? '<div class="w-hmeta">' + o.metas.map(function (m) { return '<span>' + I(m[0], 'sm') + m[1] + '</span>'; }).join('') + '</div>' : '') +
+    (o.extra || '') +
+    (o.m ? '<div class="w-hrow">' + o.m.map(function (p) { return '<span class="w-hchip">' + I(p[0], 'sm') + p[1] + '</span>'; }).join('') + '</div>' : '') +
+    (o.box ? '<div class="w-hbox">' + I(o.box[0]) + '<div class="tx"><b>' + o.box[1] + '</b><span class="s">' + o.box[2] + '</span></div></div>' : '') +
+    cta + '</div></section>';
+};
+var seg = function (total, done, cur) {
+  var h = '';
+  for (var i = 0; i < total; i++) h += '<i class="' + (i < done ? 'd' : (i === cur - 1 ? 'c' : '')) + '"></i>';
+  return '<div class="w-seg" aria-hidden="true">' + h + '</div>';
+};
+var prog = function (label, right, total, done, cur) {
+  return '<div class="w-prog"><div class="w-plab"><span>' + label + '</span>' + (right ? '<span>' + right + '</span>' : '') + '</div>' + (total ? seg(total, done, cur) : '') + '</div>';
+};
+
+/* ───────── 클래스 카드 (내 클래스) ───────── */
+var ccard = function (o) {
+  var link = '<a class="w-cclink" href="#" ' + (o.go ? 'data-go="' + o.go + '"' : 'data-out="' + (o.out || '') + '"') + ' aria-label="' + o.title + ' ' + (o.plabel || '') + '">' +
+    '<div class="w-cchips">' + o.chips.map(function (c) { return chip(c[0], false, c[1]); }).join('') + '</div>' +
+    '<div class="w-ccrow"><h3 class="w-cctitle">' + o.title + '</h3>' + I('chev-r') + '</div>' +
+    (!o.mini && o.host ? '<div class="w-ccmeta">' + I('user', 'sm') + o.host + '</div>' : '') +
+    (o.plabel ? prog(o.plabel, o.pright, o.total, o.done, o.cur) : '') +
+    (o.next ? '<div class="w-ccmeta pri">' + I('calendar-clock', 'sm') + o.next + '</div>' : '') +
+    (!o.mini && o.facts ? '<div class="w-ccmeta">' + I('circle-check', 'sm') + o.facts + '</div>' : '') +
+    (o.note ? '<div class="w-ccmeta">' + I('info', 'sm') + o.note + '</div>' : '') + '</a>';
+  var btn = o.btn ? '<button class="sh-btn ' + (o.btn[2] || 'line') + '" type="button" ' + (o.btn[1].indexOf('out:') === 0 ? 'data-out="' + o.btn[1].slice(4) + '"' : 'data-go="' + o.btn[1] + '"') + '>' + (o.btn[3] ? I(o.btn[3], 'md') : '') + o.btn[0] + '</button>' : '';
+  return '<div class="sh-card w-cc' + (o.hl ? ' hl' : '') + '">' + link + btn + '</div>';
+};
+var MBSR = function (mini, next) {
+  return ccard({ go: 'MC03:ongoing', chips: [['part'], ['mwait', '보강 대기 1']], title: 'MBSR 봄 클래스', host: MB, total: 8, done: 2, cur: 3, plabel: '8회 중 3회차', pright: '3/8', next: next, facts: '내 참석 1회 · 결석 1회', mini: mini });
+};
+var SLEEP = function (mini) {
+  return ccard({ go: 'MC03:rolling', chips: [['part']], title: '수면 준비 명상 클래스', host: '박서연 지도사', plabel: '3회차 · 계속 이어져요', next: '수요일 오후 8:00 · 온라인 · 박서연 지도사', facts: '내 참석 2회', mini: mini });
+};
+var COUNSEL = function (today) {
+  return '<div class="sh-card w-cc"><a class="w-cclink" href="#" data-out="내 상담 화면 (상담 워커 시안 counseling.html)" aria-label="김하늘 상담사와 상담">' +
+    '<div class="w-cchips">' + chip('ongo', false) + '</div><div class="w-ccrow"><h3 class="w-cctitle">김하늘 상담사와 상담</h3>' + I('chev-r') + '</div>' +
+    '<div class="w-ccmeta">' + I('clock', 'sm') + '마지막 상담 · 10월 30일(목) · 3회차</div>' +
+    '<div class="w-ccmeta pri">' + I('calendar-clock', 'sm') + '다음 상담 · ' + (today ? '오늘 오후 3:00' : '11월 20일(목) 오후 7:00') + ' · 온라인 · 4회차</div></a>' +
+    '<button class="sh-btn line" type="button" data-out="상담사와 대화 (채팅)">' + I('message', 'md') + '상담사와 대화</button></div>';
+};
+var emptyRow = function (ic, t, s, btns) {
+  return '<div class="sh-card w-empty"><i class="w-eic">' + I(ic) + '</i><div class="tx"><b>' + t + '</b><span class="s">' + s + '</span></div><div class="btns">' + btns + '</div></div>';
+};
+
+/* ───────── MC01 회원 홈 ───────── */
+var HOME = {
+  'class-open': { hero: { bg: 8, area: '명상 클래스', st: 'open', ex: '', title: 'MBSR 봄 · 3회차', time: '오늘 오후 7:00 · 60분', host: '김지수 지도사', m: M_ON, box: ['circle-check', '지금 입장할 수 있어요', '입장하면 간단한 준비를 먼저 해요'], cta: ['입장하기', '', 'out:입장 흐름 FM05 (구현됨)'] }, next: '오늘 오후 7:00 · 온라인 · 김지수 지도사' },
+  'class-soon': { hero: { bg: 5, area: '명상 클래스', st: 'soon', ex: '30분 뒤', title: 'MBSR 봄 · 3회차', time: '오늘 오후 7:00 · 60분', host: '김지수 지도사', m: M_ON, box: ['clock', '30분 뒤에 회차가 열려요', '미리 입장해서 기다릴 수 있어요'], cta: ['입장 대기하기', '', 'out:입장 대기 FM05 member-wait (구현됨)'] }, next: '오늘 오후 7:00 · 온라인 · 김지수 지도사' },
+  'class-upcoming': { hero: { bg: 4, area: '명상 클래스', st: 'scheduled', ex: 'D-3', title: 'MBSR 봄 · 3회차', time: '11월 17일(월) 오후 7:00 · 60분', host: '김지수 지도사', m: M_ON, cta: ['클래스 보기', 'line', 'MC03:ongoing'] }, next: '11월 17일(월) 오후 7:00 · 온라인 · 김지수 지도사' },
+  'counsel-next': { hero: { bg: 1, area: '상담', st: 'open', ex: '', title: '김하늘 상담사와 상담 · 4회차', time: '오늘 오후 3:00 · 50분', host: '김하늘 상담사', m: M_ON1, box: ['circle-check', '지금 입장할 수 있어요', '입장하면 간단한 준비를 먼저 해요'], cta: ['입장하기', '', 'out:입장 흐름 FM05 (구현됨)'] }, next: '오늘 오후 7:00 · 온라인 · 김지수 지도사' },
+  'invited': { hero: { bg: 5, area: '명상 클래스', st: 'scheduled', ex: 'D-3', title: 'MBSR 봄 · 3회차', time: '11월 17일(월) 오후 7:00 · 60분', host: '김지수 지도사', m: M_ON, cta: ['클래스 보기', 'line', 'MC03:ongoing'] }, next: '11월 17일(월) 오후 7:00 · 온라인 · 김지수 지도사', inv: true },
+  'only-class': { hero: { bg: 8, area: '명상 클래스', st: 'open', ex: '', title: 'MBSR 봄 · 3회차', time: '오늘 오후 7:00 · 60분', host: '김지수 지도사', m: M_ON, box: ['circle-check', '지금 입장할 수 있어요', '입장하면 간단한 준비를 먼저 해요'], cta: ['입장하기', '', 'out:입장 흐름 FM05 (구현됨)'] }, next: '오늘 오후 7:00 · 온라인 · 김지수 지도사', noCounsel: true },
+  'only-counsel': { hero: { bg: 1, area: '상담', st: 'soon', ex: '30분 뒤', title: '김하늘 상담사와 상담 · 4회차', time: '오늘 오후 3:00 · 50분', host: '김하늘 상담사', m: M_ON1, box: ['clock', '30분 뒤에 상담이 열려요', '미리 입장해서 기다릴 수 있어요'], cta: ['입장 대기하기', '', 'out:입장 대기 FM05 member-wait (구현됨)'] }, noClass: true, cToday: true },
+  'empty': { empty: true }
+};
+var mc01 = function (k) {
+  var d = HOME[k], h, body;
+  if (d.empty) {
+    h = hero({ bg: 8, aria: '다음 일정', chips: hchip(I('calendar', 'sm') + '예정 없음'), title: '예정된 일정이 없어요', metas: [['bell', '클래스나 상담이 잡히면 알려드려요']],
+      box: ['send', '하고 싶은 클래스나 상담이 있나요?', '지도사나 상담사에게 신청해 보세요'], cta: ['코드로 입장하기', '', 'out:코드 입력 FM04 (구현됨)', false, 'key'] });
+    body = h + sec('내 클래스') + emptyRow('book-open', '참여 중인 클래스가 없어요', '코드로 입장하거나 지도사에게 신청해 보세요', '<button class="sh-btn" type="button" data-go="MC02:apply">' + I('plus', 'md') + '클래스 신청하기</button>') +
+      sec('내 상담') + emptyRow('heart', '아직 상담이 없어요', '상담사에게 신청해 보세요', '<button class="sh-btn" type="button" data-out="상담 신청 (상담 워커 시안)">' + I('plus', 'md') + '상담 신청하기</button>');
+  } else {
+    var x = d.hero;
+    h = hero({ bg: x.bg, aria: '다음 일정', chips: hchip(x.area) + chip(x.st, true) + (x.ex ? hchip(I('clock', 'sm') + x.ex) : ''), title: x.title,
+      metas: [['clock', x.time], ['user', x.host]], m: x.m, box: x.box, cta: x.cta });
+    var inv = '';
+    if (d.inv) {
+      inv = sec('초대받은 일정', '<span>2개</span>') +
+        '<div class="sh-card w-cc"><a class="w-cclink" href="#" data-go="MC02:invited"><div class="w-cchips">' + chip('invited', false) + '<span class="sh-chip mute">명상 클래스</span></div>' +
+        '<div class="w-ccrow"><h3 class="w-cctitle">걷기 명상 클래스</h3>' + I('chev-r') + '</div><div class="w-ccmeta">' + I('user', 'sm') + '박서연 지도사가 초대했어요 · 4회</div></a></div>' +
+        '<div class="sh-card w-cc"><a class="w-cclink" href="#" data-out="상담 초대 (상담 워커 시안)"><div class="w-cchips">' + chip('invited', false) + '<span class="sh-chip mute">상담</span></div>' +
+        '<div class="w-ccrow"><h3 class="w-cctitle">이도윤 상담사와 상담</h3>' + I('chev-r') + '</div><div class="w-ccmeta">' + I('user', 'sm') + '이도윤 상담사가 상담에 초대했어요</div></a></div>';
+    }
+    var cls = d.noClass ? sec('내 클래스') + emptyRow('book-open', '참여 중인 클래스가 없어요', '코드로 입장하거나 지도사에게 신청해 보세요', '<button class="sh-btn" type="button" data-go="MC02:apply">' + I('plus', 'md') + '클래스 신청하기</button>')
+      : sec('내 클래스', secLink('전체 보기', 'MC02:list')) + MBSR(true, d.next) + SLEEP(true);
+    var cns = d.noCounsel ? sec('내 상담') + emptyRow('heart', '아직 상담이 없어요', '상담사에게 신청해 보세요', '<button class="sh-btn" type="button" data-out="상담 신청 (상담 워커 시안)">' + I('plus', 'md') + '상담 신청하기</button>')
+      : sec('내 상담', secLink('전체 보기', 'out:내 상담 목록 (상담 워커 시안)')) + COUNSEL(k === 'counsel-next' || d.cToday);
+    body = h + inv + cls + cns;
+  }
+  body += d.empty ? '' : '<button class="w-link" type="button" data-out="코드 입력 FM04 (구현됨)">' + I('key', 'md') + '코드로 입장하기</button>';
+  return shell({ active: 'home', head: headHome('안녕하세요, 지은님', '<button class="w-hbtn" type="button" aria-label="알림" data-go="MC07:host-changed">' + I('bell') + '<i class="w-dot"></i></button>'), body: body });
+};
+
+/* ───────── MC02 내 클래스 목록 ───────── */
+var DONE_CARD = function () {
+  return ccard({ go: 'MC03:completed', chips: [['done']], title: '마음챙김 입문 클래스', host: '김지수 지도사', total: 8, done: 8, cur: 8, plabel: '8회 중 8회 마쳤어요', pright: '8/8', next: '10월 6일(월)에 마쳤어요', facts: '내 참석 7회 · 결석 1회 · 보강 완료 1회', btn: ['변화 이야기 보기', 'MC04:completed', 'line', 'activity'] });
+};
+var WAIT_CARD = function () {
+  return ccard({ out: '대기 중인 클래스', chips: [['wait', '대기 3번째']], title: '감정 다루기 클래스', host: '박서연 지도사', plabel: '6회 · 11월 27일(목) 시작', note: '자리가 나면 알림으로 알려드려요' });
+};
+var INV_CARD = function () {
+  return '<div class="sh-card w-cc"><a class="w-cclink" href="#" data-out="초대 확인 (입장 흐름)"><div class="w-cchips">' + chip('invited', false) + '</div>' +
+    '<div class="w-ccrow"><h3 class="w-cctitle">걷기 명상 클래스</h3>' + I('chev-r') + '</div><div class="w-ccmeta">' + I('user', 'sm') + '박서연 지도사가 초대했어요</div>' +
+    '<div class="w-ccmeta pri">' + I('calendar-clock', 'sm') + '4회 · 12월 4일(목) 오후 7:00부터</div></a>' +
+    '<button class="sh-btn line" type="button" data-out="초대 확인 (입장 흐름)">클래스 확인</button></div>';
+};
+var LEFT_ROWS = function () {
+  return '<a class="sh-card w-row" href="#" data-go="MC03:left"><span class="l"><i>' + I('log-out') + '</i><span class="tx"><b>감정 다루기 클래스</b><span class="s">3회 참석하고 나갔어요</span></span></span>' + chip('left', false) + '</a>' +
+    '<a class="sh-card w-row" href="#" data-go="MC06:removed"><span class="l"><i>' + I('circle-minus') + '</i><span class="tx"><b>걷기 명상 모임</b><span class="s">참여가 종료됐어요</span></span></span>' + chip('removed', false) + '</a>';
+};
+var mc02 = function (k) {
+  var body, sheet = '';
+  if (k === 'empty') {
+    body = sec('참여 중', '<span>0개</span>') + emptyRow('book-open', '참여 중인 클래스가 없어요', '코드로 입장하거나 지도사에게 신청해 보세요',
+      '<button class="sh-btn" type="button" data-go="MC02:apply">' + I('plus', 'md') + '클래스 신청하기</button><button class="sh-btn line" type="button" data-out="코드 입력 FM04 (구현됨)">' + I('key', 'md') + '코드로 입장하기</button>');
+  } else {
+    var left = k === 'left-open';
+    body = (k === 'invited' ? sec('초대받은 클래스', '<span>1개</span>') + INV_CARD() : '') +
+      sec('참여 중', '<span>' + (k === 'waitlist' ? 3 : 2) + '개</span>') + MBSR(false, '오늘 오후 7:00 · 온라인 · 김지수 지도사') + SLEEP(false) + (k === 'waitlist' ? WAIT_CARD() : '') +
+      sec('완료', '<span>1개</span>') + DONE_CARD() +
+      '<div class="w-sec"><h2>이탈한 클래스</h2><span>2개</span></div>' +
+      (left ? LEFT_ROWS() : '<button class="sh-card w-fold" type="button" aria-expanded="false" data-go="MC02:left-open"><span class="l"><i>' + I('log-out') + '</i><span>이탈한 클래스 보기</span></span>' + I('chev-d') + '</button>');
+  }
+  if (k === 'apply') {
+    sheet = '<div class="w-scrim" data-layer="sheet"><section class="w-sheet" role="dialog" aria-modal="true" aria-labelledby="applyTitle"><span class="w-grab" aria-hidden="true"></span>' +
+      '<div class="hd"><h2 id="applyTitle">클래스 신청하기</h2><p>신청 메시지를 지도사에게 보내요. 답을 받으면 알림으로 알려드려요.</p></div>' +
+      '<div class="w-picks" role="radiogroup" aria-label="지도사 선택">' +
+        '<button class="w-pick on" type="button" role="radio" aria-checked="true"><i class="av">' + I('user') + '</i><span class="tx"><b>김지수 지도사</b><span class="s">MBSR · 마음챙김 명상</span></span>' + I('circle-check', 'end') + '</button>' +
+        '<button class="w-pick" type="button" role="radio" aria-checked="false"><i class="av">' + I('user') + '</i><span class="tx"><b>박서연 지도사</b><span class="s">수면 준비 · 걷기 명상</span></span>' + I('circle', 'end') + '</button></div>' +
+      '<button class="sh-btn" type="button" data-out="신청 메시지 전송 (채팅)">' + I('send', 'md') + '신청 메시지 보내기</button>' +
+      '<button class="sh-btn ghost" type="button" data-go="MC02:list">닫기</button></section></div>';
+  }
+  var head = headHome('내 클래스', '<button class="sh-btn" type="button" data-go="MC02:apply">' + I('plus', 'md') + '클래스 신청</button>');
+  return shell({ active: 'classes', head: head, body: body, over: sheet });
+};
+
+/* ───────── MC03 클래스 상세 ───────── */
+var trow = function (r) {
+  var mk = r.mk, n = r.n, st = r.s;
+  var title = mk ? '보강 · ' + r.d : n + '회차 · ' + DATE[n];
+  var time = mk ? r.t : '오후 7:00';
+  var host = mk ? '박서연 지도사' : HOST(n) + ' 지도사';
+  var sub = time + (r.nohost ? '' : ' · ' + host);
+  if (st === 'before') sub = '합류 전 회차예요';
+  if (st === 'cx') sub = '이 회차는 열리지 않아요 · 결석이 아니에요';
+  if (st === 'wd') sub = '나간 뒤의 회차예요';
+  if (st === 'abs' && r.fill === 'plan') sub = '보강 11월 29일(토) 예정';
+  if (st === 'abs' && r.fill === 'done') sub = '보강으로 채웠어요';
+  if (st === 'abs' && r.fill === 'none') sub = '나가기 전에 놓친 회차예요';
+  if (mk) sub = r.mk + '회차 대신 · ' + sub;
+  var ic = { att: 'circle-check', abs: 'calendar-x', open: 'log-in', up: 'calendar', before: 'lock', cx: 'circle-x', wd: 'circle-minus' }[st];
+  if (mk) ic = 'rotate';
+  var chipK = { att: 'att', abs: 'abs', open: 'open', up: 'scheduled', before: 'before', cx: 'cancelled', wd: 'removed' }[st];
+  var act = '';
+  if (st === 'att' && !r.norep) act = '<div class="w-tact"><button class="sh-btn line" type="button" data-out="회차 리포트 (기존 리포트 화면)">' + I('file-text', 'sm') + '리포트 보기</button></div>';
+  if (st === 'abs' && !r.fill) act = '<div class="w-tact"><button class="sh-btn line" type="button" data-go="MC03:makeup-pick">' + I('rotate', 'sm') + '보강 신청</button></div>';
+  var tag = r.chg ? '<span class="w-tag">' + I('repeat', 'sm') + '진행 지도사가 바뀌었어요</span>' : '';
+  return '<li class="w-trow ' + st + '"><i class="w-tic">' + I(ic, 'md') + '</i><div class="w-tmain"><div class="w-ttop"><span class="tx"><b>' + title + '</b><span class="s">' + sub + '</span>' + tag + '</span>' + chip(chipK, false) + '</div>' + act + '</div></li>';
+};
+var timeline = function (rows, total) {
+  return sec('회차', '<span>' + total + '</span>') + '<section class="sh-card" aria-label="회차 타임라인"><ol class="w-tl">' + rows.map(trow).join('') + '</ol></section>';
+};
+var nextCard = function (o) {
+  var dis = o.dis;
+  return '<section class="sh-card w-next" aria-label="다음 회차"><div class="w-ccrow"><span class="w-ctype">다음 회차</span>' + chip(o.st, false) + '</div>' +
+    '<h3 class="w-cctitle">' + o.title + '</h3><div class="w-ccmeta">' + I('user', 'sm') + o.host + '</div><div class="w-ccmeta">' + I('video', 'sm') + '온라인 · 그룹 · LINK BAND 선택</div>' +
+    '<button class="sh-btn' + (dis ? ' mute' : '') + '" type="button"' + (dis ? ' disabled' : ' data-out="입장 흐름 FM05 (구현됨)"') + '>' + o.cta + '</button></section>';
+};
+var banner = function (ic, t, s, cls) { return '<div class="w-ban ' + (cls || '') + '"><i class="ico">' + I(ic, 'md') + '</i><div class="tx"><b>' + t + '</b><span class="s">' + s + '</span></div></div>'; };
+var storyRow = function (go, t, s) { return '<a class="sh-card w-row" href="#" data-go="' + go + '"><span class="l"><i>' + I('activity', 'md') + '</i><span class="tx"><b>' + t + '</b><span class="s">' + s + '</span></span></span>' + I('chev-r') + '</a>'; };
+var setRow = function (ic, t, s, cls, go) { return '<a class="sh-card w-row ' + (cls || '') + '" href="#" ' + (go ? 'data-go="' + go + '"' : 'data-out="설정"') + '><span class="l"><i>' + I(ic, 'md') + '</i><span class="tx"><b>' + t + '</b><span class="s">' + s + '</span></span></span>' + I('chev-r') + '</a>'; };
+var SET_ROWS = function () {
+  return sec('내 설정') + setRow('file-text', '리포트 반영 기본값', '반영 안 함 · 다음 회차부터 적용돼요') + setRow('log-out', '클래스에서 나가기', '예정된 회차는 취소되고 지난 기록은 그대로예요', 'danger', 'MC06:leave-sheet');
+};
+var MK = [{ n: 1, s: 'att' }, { n: 2, s: 'abs' }, { n: 3, s: 'open' }, { n: 4, s: 'up' }, { n: 5, s: 'up' }, { n: 6, s: 'up' }, { n: 7, s: 'up' }, { n: 8, s: 'up' }];
+var mc03 = function (k, extra) {
+  var c = {
+    title: 'MBSR 봄 클래스', chips: hchip('명상 클래스') + chip('part', true), bg: 8,
+    metas: [['user', MB], ['calendar', '매주 월요일 오후 7:00 · 60분']], prog: prog('8회 중 3회차', '3/8', 8, 2, 3), facts: '내 참석 1회 · 결석 1회',
+    top: '', mid: '', rows: MK, total: '8회', tail: storyRow('MC04:default', '클래스 변화 이야기', '내가 함께한 회차의 흐름을 모아 봐요') + SET_ROWS(), off: false
+  };
+  var nextOpen = nextCard({ st: 'open', title: '3회차 · 오늘 오후 7:00', host: '김지수 지도사', cta: '입장하기' });
+  var nextUp = function (t, hostN) { return nextCard({ st: 'scheduled', title: t, host: hostN, cta: '열리면 입장할 수 있어요', dis: true }); };
+  var makeupBan = banner('calendar-x', '놓친 회차가 1개 있어요', '2회차를 보강으로 채울 수 있어요. 가능한 일정을 골라 신청해요.', 'warn') +
+    '<button class="sh-btn line" type="button" data-go="MC03:makeup-pick">' + I('rotate', 'md') + '보강 일정 보기</button>';
+  var sheet = '', back = 'MC02:list';
+  if (k === 'ongoing' || k === 'makeup-pick') {
+    c.chips += chip('mwait', true, '보강 대기 1'); c.mid = makeupBan + nextOpen;
+  } else if (k === 'makeup-planned') {
+    c.chips += chip('mset', true); c.facts = '내 참석 1회 · 결석 1회 · 보강 예정 1회';
+    c.rows = [{ n: 1, s: 'att' }, { n: 2, s: 'abs', fill: 'plan' }, { n: 3, s: 'open' }, { n: 4, s: 'up' }, { mk: 2, d: '11월 29일(토)', t: '오후 2:00', s: 'up' }, { n: 5, s: 'up' }, { n: 6, s: 'up' }, { n: 7, s: 'up' }, { n: 8, s: 'up' }];
+    c.total = '9회'; c.mid = banner('circle-check', '보강을 신청했어요', '11월 29일(토) 오후 2:00 · 박서연 지도사가 진행해요. 2회차 대신 채워져요.') + nextOpen;
+  } else if (k === 'makeup-done') {
+    c.prog = prog('8회 중 6회차', '6/8', 8, 5, 6); c.facts = '내 참석 4회 · 결석 1회 · 보강 완료 1회';
+    c.rows = [{ n: 1, s: 'att' }, { n: 2, s: 'abs', fill: 'done' }, { n: 3, s: 'att' }, { n: 4, s: 'att' }, { mk: 2, d: '11월 29일(토)', t: '오후 2:00', s: 'att' }, { n: 5, s: 'att' }, { n: 6, s: 'up' }, { n: 7, s: 'up' }, { n: 8, s: 'up' }];
+    c.total = '9회'; c.mid = nextUp('6회차 · 12월 8일(월) 오후 7:00', '박서연 지도사');
+  } else if (k === 'joined-mid') {
+    c.chips += chip('mid', true); c.prog = prog('8회 중 4회차', '4/8', 8, 3, 4); c.facts = '합류 후 첫 회차를 기다려요';
+    c.rows = [{ n: 1, s: 'before' }, { n: 2, s: 'before' }, { n: 3, s: 'before' }, { n: 4, s: 'open' }, { n: 5, s: 'up' }, { n: 6, s: 'up' }, { n: 7, s: 'up' }, { n: 8, s: 'up' }];
+    c.mid = banner('calendar-plus', '4회차부터 함께해요', '앞선 3개 회차는 일정만 볼 수 있어요. 리포트는 참석한 회차부터 만들어져요.') + nextCard({ st: 'open', title: '4회차 · 오늘 오후 7:00', host: '박서연 지도사', cta: '입장하기' });
+    c.tail = storyRow('MC04:joined-mid', '클래스 변화 이야기', '합류한 회차부터 모아 봐요') + SET_ROWS();
+  } else if (k === 'cancelled') {
+    c.prog = prog('7회 중 4회차', '4/7', 7, 3, 4); c.facts = '내 참석 3회';
+    c.rows = [{ n: 1, s: 'att' }, { n: 2, s: 'att' }, { n: 3, s: 'att' }, { n: 4, s: 'cx' }, { n: 5, s: 'up' }, { n: 6, s: 'up' }, { n: 7, s: 'up' }, { n: 8, s: 'up' }];
+    c.total = '8회'; c.mid = banner('circle-x', '4회차가 취소됐어요', '취소된 회차는 결석으로 세지 않아요. 진행률도 취소된 1회를 빼고 세어요.', 'warn') + nextUp('5회차 · 12월 1일(월) 오후 7:00', '김지수 지도사');
+  } else if (k === 'host-changed') {
+    c.facts = '내 참석 2회';
+    c.rows = [{ n: 1, s: 'att' }, { n: 2, s: 'att' }, { n: 3, s: 'open' }, { n: 4, s: 'up', chg: true }, { n: 5, s: 'up' }, { n: 6, s: 'up' }, { n: 7, s: 'up', nohost: true }, { n: 8, s: 'up' }];
+    c.top = banner('repeat', '4회차는 김지수 지도사가 진행해요', '박서연 지도사에서 바뀌었어요. 일정은 그대로예요.'); c.mid = nextOpen;
+  } else if (k === 'rolling') {
+    c.title = '수면 준비 명상 클래스'; c.bg = 4; c.metas = [['user', '박서연 지도사'], ['calendar', '매주 수요일 오후 8:00 · 40분']];
+    c.prog = prog('3회차 · 계속 이어져요', '', 0); c.facts = '내 참석 2회';
+    c.rows = null; c.total = '지난 2회 · 앞으로 4주';
+    c.custom = '<li class="w-trow att"><i class="w-tic">' + I('circle-check', 'md') + '</i><div class="w-tmain"><div class="w-ttop"><span class="tx"><b>1회차 · 10월 22일(수)</b><span class="s">오후 8:00 · 박서연 지도사</span></span>' + chip('att', false) + '</div><div class="w-tact"><button class="sh-btn line" type="button" data-out="회차 리포트 (기존 리포트 화면)">' + I('file-text', 'sm') + '리포트 보기</button></div></div></li>' +
+      '<li class="w-trow att"><i class="w-tic">' + I('circle-check', 'md') + '</i><div class="w-tmain"><div class="w-ttop"><span class="tx"><b>2회차 · 10월 29일(수)</b><span class="s">오후 8:00 · 박서연 지도사</span></span>' + chip('att', false) + '</div><div class="w-tact"><button class="sh-btn line" type="button" data-out="회차 리포트 (기존 리포트 화면)">' + I('file-text', 'sm') + '리포트 보기</button></div></div></li>' +
+      [['3회차 · 11월 5일(수)', 'open'], ['4회차 · 11월 12일(수)', 'up'], ['5회차 · 11월 19일(수)', 'up'], ['6회차 · 11월 26일(수)', 'up']].map(function (p) {
+        return '<li class="w-trow ' + p[1] + '"><i class="w-tic">' + I(p[1] === 'open' ? 'log-in' : 'calendar', 'md') + '</i><div class="w-tmain"><div class="w-ttop"><span class="tx"><b>' + p[0] + '</b><span class="s">오후 8:00 · 박서연 지도사</span></span>' + chip(p[1] === 'open' ? 'open' : 'scheduled', false) + '</div></div></li>';
+      }).join('');
+    c.tail = storyRow('MC04:default', '클래스 변화 이야기', '내가 함께한 회차의 흐름을 모아 봐요') + SET_ROWS();
+    c.mid = nextCard({ st: 'open', title: '3회차 · 오늘 오후 8:00', host: '박서연 지도사', cta: '입장하기' });
+  } else if (k === 'completed') {
+    c.chips = hchip('명상 클래스') + chip('done', true); c.prog = prog('8회 중 8회 마쳤어요', '8/8', 8, 8, 8); c.facts = '내 참석 7회 · 결석 1회 · 보강 완료 1회';
+    c.rows = [{ n: 1, s: 'att' }, { n: 2, s: 'abs', fill: 'done' }, { mk: 2, d: '11월 29일(토)', t: '오후 2:00', s: 'att' }, { n: 3, s: 'att' }, { n: 4, s: 'att' }, { n: 5, s: 'att' }, { n: 6, s: 'att' }, { n: 7, s: 'att' }, { n: 8, s: 'att' }];
+    c.total = '9회'; c.mid = banner('circle-check', 'MBSR 봄 클래스를 마쳤어요', '함께한 8회의 기록과 리포트는 그대로 볼 수 있어요.') ;
+    c.tail = storyRow('MC04:completed', '클래스 변화 이야기', '8회를 함께한 흐름을 모아 봤어요');
+  } else if (k === 'left') {
+    c.chips = hchip('명상 클래스') + chip('left', true); c.facts = '내 참석 4회 · 결석 1회';
+    c.prog = prog('5회차까지 함께했어요', '5/8', 8, 5, 5);
+    c.rows = [{ n: 1, s: 'att' }, { n: 2, s: 'att' }, { n: 3, s: 'abs', fill: 'none' }, { n: 4, s: 'att' }, { n: 5, s: 'att' }, { n: 6, s: 'wd' }, { n: 7, s: 'wd' }, { n: 8, s: 'wd' }];
+    c.mid = banner('log-out', '이 클래스에서 나갔어요', '지난 기록과 리포트는 그대로 볼 수 있어요. 예정된 회차 3개는 취소됐어요.', 'plain');
+    c.tail = storyRow('MC04:default', '클래스 변화 이야기', '나가기 전까지의 흐름을 볼 수 있어요') + '<button class="w-link" type="button" data-out="코드 입력 FM04 (구현됨)">' + I('key', 'md') + '코드로 다시 입장하기</button>';
+  }
+  var h = hero({ bg: c.bg, off: false, aria: '클래스 정보', chips: c.chips, title: c.title, metas: c.metas, extra: c.prog + '<div class="w-hfact">' + I('circle-check', 'sm') + c.facts + '</div>' });
+  var tl;
+  if (c.custom) tl = sec('회차', '<span>' + c.total + '</span>') + '<section class="sh-card" aria-label="회차 타임라인"><ol class="w-tl">' + c.custom + '</ol></section>';
+  else tl = timeline(c.rows, c.total);
+  var body = c.top + h + c.mid + tl + c.tail;
+  if (k === 'makeup-pick') {
+    sheet = '<div class="w-scrim" data-layer="sheet"><section class="w-sheet" role="dialog" aria-modal="true" aria-labelledby="mkTitle"><span class="w-grab" aria-hidden="true"></span>' +
+      '<div class="hd"><h2 id="mkTitle">보강 일정 고르기</h2><p>2회차를 놓쳤어요. 아래 일정 중 하나로 채울 수 있어요.</p></div>' +
+      '<div class="w-picks" role="radiogroup" aria-label="보강 일정">' +
+        '<button class="w-pick on" type="button" role="radio" aria-checked="true"><i class="av">' + I('calendar') + '</i><span class="tx"><b>11월 29일(토) 오후 2:00</b><span class="s">박서연 지도사 · 온라인 · 60분</span></span>' + I('circle-check', 'end') + '</button>' +
+        '<button class="w-pick" type="button" role="radio" aria-checked="false"><i class="av">' + I('calendar') + '</i><span class="tx"><b>12월 6일(토) 오후 2:00</b><span class="s">김지수 지도사 · 온라인 · 60분</span></span>' + I('circle', 'end') + '</button></div>' +
+      '<button class="sh-btn" type="button" data-go="MC03:makeup-planned">' + I('rotate', 'md') + '이 일정으로 신청</button>' +
+      '<button class="sh-btn ghost" type="button" data-go="MC03:ongoing">닫기</button></section></div>';
+  }
+  return shell({ active: 'classes', head: headBack(c.title, back), body: body, over: sheet });
+};
+
+/* ───────── MC04 변화 이야기 ───────── */
+var TILE_IC = { '내 참석': 'circle-check', '보강 완료': 'rotate', '뇌파 측정 회차': 'activity', '결석한 회차': 'calendar-x', '남은 회차': 'calendar' };
+var tilesHtml = function (tiles) {
+  return '<div class="w-tiles">' + tiles.map(function (t) { return '<div class="w-tile"><i class="ti">' + I(TILE_IC[t[1]], 'md') + '</i><span class="tt"><b>' + t[0] + '</b><span>' + t[1] + '</span></span></div>'; }).join('') + '</div>';
+};
+var IND = ['집중', '이완', '감정', '심박수', '호흡수', '심박 변동'];
+var DIR = { u: ['arrow-up', 'u', '오르는 흐름'], s: ['arrow-right', 's', '비슷한 흐름'], d: ['arrow-down', 'd', '내려가는 흐름'] };
+var mx = function (cols, n, legendBefore) {
+  var h = '<div class="w-mx" style="--n:' + n + '"><span class="lb">회차</span>' + cols.map(function (c, i) { return '<span class="hd">' + (i + 1) + '</span>'; }).join('');
+  h += '<span class="lb">출석</span>' + cols.map(function (c) {
+    if (c.a === 'att') return '<span class="w-fc a-att" role="img" aria-label="참석">' + I('circle-check') + '</span>';
+    if (c.a === 'abs') return '<span class="w-fc a-abs" role="img" aria-label="결석">' + I('circle-x') + '</span>';
+    if (c.a === 'mk') return '<span class="w-fc a-mk" role="img" aria-label="보강으로 채움">' + I('rotate') + '</span>';
+    if (c.a === 'before') return '<span class="w-fc b" role="img" aria-label="합류 전">' + I('lock') + '</span>';
+    return '<span class="w-fc f"></span>';
+  }).join('');
+  [['마음', [0, 1, 2]], ['몸', [3, 4, 5]]].forEach(function (g) {
+    h += '<span class="gr">' + g[0] + '</span>';
+    g[1].forEach(function (ri) {
+      h += '<span class="lb">' + IND[ri] + '</span>' + cols.map(function (c) {
+        if (c.a === 'before') return '<span class="w-fc b"></span>';
+        if (c.a === 'future') return '<span class="w-fc f"></span>';
+        if (!c.v) return '<span class="w-fc n" role="img" aria-label="측정 안 됨"></span>';
+        var d = DIR[c.v.charAt(ri)];
+        return '<span class="w-fc ' + d[1] + '" role="img" aria-label="' + d[2] + '">' + I(d[0]) + '</span>';
+      }).join('');
+    });
+  });
+  return h + '</div>';
+};
+var leg = function (before) {
+  var m = function (cls, ic) { return '<i class="w-fc mini ' + cls + '">' + (ic ? I(ic) : '') + '</i>'; };
+  return '<div class="w-leg">' + '<span>' + m('u', 'arrow-up') + '오르는 흐름</span><span>' + m('s', 'arrow-right') + '비슷한 흐름</span><span>' + m('d', 'arrow-down') + '내려가는 흐름</span><span>' + m('n') + '측정 안 됨</span></div>' +
+    '<div class="w-leg"><span>' + m('a-att', 'circle-check') + '참석</span><span>' + m('a-abs', 'circle-x') + '결석</span><span>' + m('a-mk', 'rotate') + '보강으로 채움</span>' + (before ? '<span>' + m('b', 'lock') + '합류 전</span>' : '') + '</div>';
+};
+var F = { c: { a: 'future' } };
+var cmpRows = function (a, b, rows) {
+  var cell = function (p) { var d = DIR[p[0]]; return '<span class="v"><i class="w-fc mini ' + d[1] + '">' + I(d[0]) + '</i>' + p[1] + '</span>'; };
+  return '<div class="w-cmp"><span></span><span class="hd">' + a + '</span><span class="hd">' + b + '</span>' + rows.map(function (r, i) { return '<span class="lb">' + IND[i] + '</span>' + cell(r[0]) + cell(r[1]); }).join('') + '</div>';
+};
+var CASES4 = {
+  'default': {
+    story: ['5회차까지 함께한 이야기', ['1회차에서는 이완이 조금 내려간 채 끝났어요. 5회차에서는 이완이 오르는 흐름이 뚜렷하게 보였어요.', '집중은 회차마다 비슷하게 이어졌고, 몸에서는 심박수가 낮아지는 흐름이 자주 보였어요.', '2회차는 놓쳤지만 11월 29일 보강으로 채웠어요.']],
+    tiles: [['4회', '내 참석'], ['1회', '보강 완료'], ['4/5', '뇌파 측정 회차']],
+    cols: [{ a: 'att', v: 'sdssss' }, { a: 'mk', v: 'susdss' }, { a: 'att', v: null }, { a: 'att', v: 'suuddu' }, { a: 'att', v: 'uusddu' }, F.c, F.c, F.c],
+    cmp: ['1회차', '5회차', [[['s', '비슷'], ['u', '조금 오름']], [['d', '조금 내림'], ['u', '뚜렷하게 오름']], [['s', '비슷'], ['s', '비슷']], [['s', '비슷'], ['d', '조금 내림']], [['s', '비슷'], ['d', '조금 내림']], [['s', '비슷'], ['u', '조금 오름']]]],
+    next: '6회차는 12월 8일(월) 오후 7:00에 열려요'
+  },
+  completed: {
+    story: ['8회를 함께한 이야기', ['1회차에서는 이완이 조금 내려간 채 끝났어요. 마지막 8회차에서는 이완이 오른 상태로 안정적으로 이어졌어요.', '집중은 회차마다 비슷하게 이어졌고, 심박수는 낮아지는 흐름이 자주 보였어요.', '2회차는 보강으로 채워서 8회를 모두 함께했어요.']],
+    tiles: [['7회', '내 참석'], ['1회', '보강 완료'], ['7/8', '뇌파 측정 회차']],
+    cols: [{ a: 'att', v: 'sdssss' }, { a: 'mk', v: 'susdss' }, { a: 'att', v: 'susssu' }, { a: 'att', v: 'suuddu' }, { a: 'att', v: 'uusddu' }, { a: 'att', v: 'sussdu' }, { a: 'att', v: null }, { a: 'att', v: 'uussdu' }],
+    cmp: ['1회차', '8회차', [[['s', '비슷'], ['u', '조금 오름']], [['d', '조금 내림'], ['u', '뚜렷하게 오름']], [['s', '비슷'], ['s', '비슷']], [['s', '비슷'], ['d', '조금 내림']], [['s', '비슷'], ['s', '비슷']], [['s', '비슷'], ['u', '조금 오름']]]],
+    next: '8회를 모두 마쳤어요'
+  },
+  'joined-mid': {
+    story: ['4회차부터 함께한 이야기', ['4회차에서는 이완이 오르는 흐름이 보였고, 5회차에서도 이어졌어요.', '합류하기 전 1~3회차는 비교에 넣지 않아요.']],
+    tiles: [['2회', '내 참석'], ['0회', '보강 완료'], ['2/2', '뇌파 측정 회차']],
+    cols: [{ a: 'before' }, { a: 'before' }, { a: 'before' }, { a: 'att', v: 'suuddu' }, { a: 'att', v: 'uusddu' }, F.c, F.c, F.c], before: true,
+    cmp: ['4회차', '5회차', [[['s', '비슷'], ['u', '조금 오름']], [['u', '조금 오름'], ['u', '뚜렷하게 오름']], [['u', '조금 오름'], ['s', '비슷']], [['d', '조금 내림'], ['d', '조금 내림']], [['d', '조금 내림'], ['d', '조금 내림']], [['u', '조금 오름'], ['u', '조금 오름']]]],
+    next: '6회차는 12월 8일(월) 오후 7:00에 열려요'
+  },
+  few: {
+    story: ['첫 이야기가 만들어지는 중이에요', ['1회차 기록이 모였어요. 두 번째 회차부터 이전 회차와 흐름을 견줄 수 있어요.']],
+    tiles: [['1회', '내 참석'], ['0회', '보강 완료'], ['1/1', '뇌파 측정 회차']],
+    cols: [{ a: 'att', v: 'sdssss' }, F.c, F.c, F.c, F.c, F.c, F.c, F.c],
+    next: '2회차는 11월 10일(월) 오후 7:00에 열려요'
+  },
+  'no-band': {
+    story: ['뇌파 측정 없이 함께한 이야기', ['이 클래스에서는 LINK BAND 없이 함께했어요. 측정 기록이 없어 흐름은 비워 두었어요.', '측정하지 않아도 참석과 리포트 기록은 그대로 모여요.']],
+    tiles: [['4회', '내 참석'], ['0회', '보강 완료'], ['0/4', '뇌파 측정 회차']],
+    cols: [{ a: 'att', v: null }, { a: 'att', v: null }, { a: 'att', v: null }, { a: 'att', v: null }, F.c, F.c, F.c, F.c],
+    next: '5회차는 12월 1일(월) 오후 7:00에 열려요'
+  }
+};
+var mc04 = function (k) {
+  var d = CASES4[k], n = 8;
+  var story = '<section class="sh-card w-story" aria-label="변화 이야기"><h2>' + d.story[0] + '</h2>' + d.story[1].map(function (p) { return '<p>' + p + '</p>'; }).join('') +
+    '<p class="note">뇌파 분석은 진단이나 치료를 위한 것이 아니에요. 측정하지 않은 회차는 비워 두고 비교에 넣지 않아요.</p></section>';
+  var tiles = tilesHtml(d.tiles);
+  var grid = '<section class="sh-card w-mxcard" aria-label="회차별 흐름"><h2>회차마다의 흐름</h2><p class="sub">각 회차 안에서 전반부에서 후반부로 바뀐 방향이에요.</p>' + mx(d.cols, n) + leg(d.before) + '</section>';
+  var cmp = d.cmp ? '<section class="sh-card w-mxcard" aria-label="첫 회차와 최근 회차"><h2>처음과 지금</h2><p class="sub">처음과 가장 최근 회차 안에서 바뀐 정도를 나란히 놓았어요. 다른 사람과 비교하지 않아요.</p>' + cmpRows(d.cmp[0], d.cmp[1], d.cmp[2]) + '</section>' : '';
+  var more = '<a class="sh-card w-row" href="#" data-go="MC03:ongoing"><span class="l"><i>' + I('file-text', 'md') + '</i><span class="tx"><b>회차별 리포트 보기</b><span class="s">' + d.next + '</span></span></span>' + I('chev-r') + '</a>';
+  return shell({ active: 'classes', head: headBack('변화 이야기', 'MC03:ongoing'), body: story + tiles + grid + cmp + more });
+};
+
+/* ───────── MC05 비회원 제한 뷰 ───────── */
+var GUEST = {
+  'first-visit': { hero: { bg: 4, st: 'scheduled', ex: '', title: 'MBSR 봄 · 4회차', time: '11월 24일(월) 오후 7:00 · 60분', host: '박서연 지도사', box: ['calendar-clock', '회차 사이에는 입장할 수 없어요', '11월 24일(월) 오후 7:00에 다시 열려요'], cta: ['그때 입장해 주세요', '', '', true] }, tiles: [['0회', '내 참석'], ['0회', '결석한 회차'], ['5회', '남은 회차']], reports: [] },
+  between: { hero: { bg: 4, st: 'scheduled', ex: '', title: 'MBSR 봄 · 4회차', time: '11월 24일(월) 오후 7:00 · 60분', host: '박서연 지도사', box: ['calendar-clock', '회차 사이에는 입장할 수 없어요', '11월 24일(월) 오후 7:00에 다시 열려요'], cta: ['그때 입장해 주세요', '', '', true] }, tiles: [['2회', '내 참석'], ['1회', '결석한 회차'], ['5회', '남은 회차']], reports: [[1, true], [2, false], [3, true]] },
+  open: { hero: { bg: 8, st: 'open', ex: '', title: 'MBSR 봄 · 4회차', time: '오늘 오후 7:00 · 60분', host: '박서연 지도사', box: ['circle-check', '지금 입장할 수 있어요', '이 기기에 저장된 입장 정보로 들어가요'], cta: ['입장하기', '', 'out:입장 확인 FM05 (구현됨)'] }, tiles: [['2회', '내 참석'], ['1회', '결석한 회차'], ['5회', '남은 회차']], reports: [[1, true], [2, false], [3, true]] }
+};
+var mc05 = function (k) {
+  if (k === 'expired') {
+    var b = '<div class="fl-card strong w-tc" role="alert">' + LOGO('w-logo d') + '<span class="w-ic">' + I('key') + '</span>' +
+      '<h2 class="fl-h1">입장 정보가 만료됐어요</h2><p class="fl-sub">이 기기에 저장된 입장 정보를 더는 쓸 수 없어요.<br>코드를 다시 입력해 주세요.</p>' +
+      '<div class="w-info"><div><span>클래스</span><b>MBSR 봄 클래스</b></div><div><span>상태</span><b>다시 입력이 필요해요</b></div></div>' +
+      '<p class="fl-note">이전에 참여하셨다면 지도사에게 알려 주세요.</p>' +
+      '<button class="fl-btn primary block" type="button" data-out="코드 입력 FM04 (구현됨)">코드 다시 입력하기</button></div>';
+    return '<div class="fl-root w-imm" data-kind="imm"><div class="fl-backdrop" style="background-image:url(' + BG(4) + ')"></div><div class="fl-layer"><main class="fl-body"><div class="fl-col">' + b + '</div></main></div></div>';
+  }
+  var d = GUEST[k], x = d.hero;
+  var h = hero({ bg: x.bg, aria: '다음 회차', chips: hchip('명상 클래스') + chip(x.st, true) + (x.ex ? hchip(I('clock', 'sm') + x.ex) : ''), title: x.title, metas: [['clock', x.time], ['user', x.host]], box: x.box, cta: x.cta });
+  var tiles = tilesHtml(d.tiles);
+  var rep;
+  if (!d.reports.length) rep = '<div class="sh-card w-row"><span class="l"><i>' + I('file-text', 'md') + '</i><span class="tx"><b>아직 리포트가 없어요</b><span class="s">참석한 회차의 리포트가 여기에 모여요</span></span></span><span class="sh-chip mute">' + I('clock', 'sm') + '준비 중</span></div>';
+  else rep = d.reports.map(function (r) {
+    return r[1] ? '<a class="sh-card w-row" href="#" data-out="회차 리포트 (메일 링크와 같은 화면)"><span class="l"><i>' + I('file-text', 'md') + '</i><span class="tx"><b>' + r[0] + '회차 리포트</b><span class="s">' + DATE[r[0]] + ' · 메일로도 보냈어요</span></span></span>' + I('chev-r') + '</a>'
+      : '<div class="sh-card w-row"><span class="l"><i>' + I('calendar-x', 'md') + '</i><span class="tx"><b>' + r[0] + '회차</b><span class="s">이 회차는 결석이에요</span></span></span>' + chip('abs', false) + '</div>';
+  }).join('');
+  var body = h + sec('내 출석', '<span>3회차까지</span>') + tiles + sec('내 리포트', '<span>' + (d.reports.length ? '회차마다 메일로도 보내드려요' : '')+ '</span>') + rep +
+    banner('info', '이 화면에서는 내 참석과 리포트만 볼 수 있어요', '다른 참가자의 정보는 보이지 않아요. 이 기기에 입장 정보를 저장해 두었어요.', 'plain') +
+    banner('user', '가입하면 클래스 변화 이야기도 볼 수 있어요', '가입하지 않아도 계속 입장할 수 있어요. 가입은 원할 때 안내해 드려요.', 'plain') +
+    '<button class="w-link mute" type="button" data-out="입장 정보 지우기 (entry/revoke)">' + I('log-out', 'md') + '이 기기에서 나가기</button>';
+  var head = '<header class="sh-head w-head3"><span class="w-brand">' + LOGO('w-logo') + '</span><h1 class="w-htitle">MBSR 봄 클래스</h1><button class="w-hbtn" type="button" aria-label="도움말" data-out="도움말">' + I('info') + '</button></header>';
+  return shell({ lite: true, head: head, body: body });
+};
+
+/* ───────── MC06 상태 안내 ───────── */
+var MC6 = {
+  'joined-mid': { ic: 'calendar-plus', warn: false, h: 'MBSR 봄 클래스에 합류했어요', p: '4회차부터 함께해요.<br>앞선 3개 회차는 일정만 볼 수 있어요.', rows: [['다음 회차', '4회차 · 11월 24일(월) 오후 7:00'], ['진행', '박서연 지도사'], ['지난 회차', '일정만 볼 수 있어요']], note: '합류 전 회차의 리포트는 만들어지지 않아요.', a: ['클래스 보기', 'MC03:joined-mid'], b: ['홈으로', 'MC01:class-open'], bg: 8 },
+  waitlisted: { ic: 'clock', warn: false, h: '대기 3번째로 등록했어요', p: '지금은 자리가 없어요.<br>자리가 나면 알림으로 알려드려요.', rows: [['클래스', '감정 다루기 클래스'], ['대기 순서', '3번째'], ['알림', '자리가 나면 바로 알려요']], note: '대기를 취소해도 지난 기록에는 영향이 없어요.', a: ['내 클래스로 가기', 'MC02:waitlist'], b: ['대기 취소', 'MC02:list'], bg: 1 },
+  'left-done': { ic: 'log-out', warn: false, h: '클래스에서 나갔어요', p: '앞으로 예정된 회차 3개가 취소됐어요.<br>지난 기록과 리포트는 그대로 볼 수 있어요.', rows: [['클래스', 'MBSR 봄 클래스'], ['내 참석', '4회'], ['지난 리포트', '계속 볼 수 있어요']], note: '다시 함께하려면 코드를 입력해 주세요.', a: ['지난 기록 보기', 'MC03:left'], b: ['내 클래스로', 'MC02:left-open'], bg: 4 },
+  removed: { ic: 'circle-minus', warn: false, h: '이 클래스의 참여가 종료됐어요', p: '지난 기록과 리포트는 그대로 볼 수 있어요.<br>궁금한 점은 지도사에게 문의해 주세요.', rows: [['클래스', '걷기 명상 모임'], ['상태', '참여 종료'], ['지난 리포트', '계속 볼 수 있어요']], note: '이 클래스에는 다시 입장할 수 없어요.', a: ['지난 기록 보기', 'MC03:left'], b: ['내 클래스로', 'MC02:left-open'], bg: 4 }
+};
+var mc06 = function (k) {
+  if (k === 'leave-sheet') {
+    var base = mc03('ongoing');
+    var sheet = '<div class="w-scrim" data-layer="sheet"><section class="w-sheet" role="dialog" aria-modal="true" aria-labelledby="lvTitle"><span class="w-grab" aria-hidden="true"></span>' +
+      '<div class="hd"><h2 id="lvTitle">클래스에서 나갈까요?</h2><p>나가면 앞으로 예정된 회차 6개가 취소돼요. 지난 기록과 리포트는 그대로 볼 수 있어요.</p></div>' +
+      '<button class="sh-btn danger" type="button" data-go="MC06:left-done">' + I('log-out', 'md') + '나가기</button>' +
+      '<button class="sh-btn ghost" type="button" data-go="MC03:ongoing">그대로 있기</button></section></div>';
+    return base.replace(/<div class="w-scrim"[\s\S]*$/, '') + sheet + '</div>';
+  }
+  var d = MC6[k];
+  var body = '<div class="fl-card strong w-tc" role="status">' + LOGO('w-logo d') + '<span class="w-ic ' + (d.warn ? 'warn' : '') + '">' + I(d.ic) + '</span>' +
+    '<h2 class="fl-h1">' + d.h + '</h2><p class="fl-sub">' + d.p + '</p>' +
+    '<div class="w-info">' + d.rows.map(function (r) { return '<div><span>' + r[0] + '</span><b>' + r[1] + '</b></div>'; }).join('') + '</div>' +
+    '<p class="fl-note">' + d.note + '</p>' +
+    '<button class="fl-btn primary block" type="button" data-go="' + d.a[1] + '">' + d.a[0] + '</button>' +
+    '<button class="fl-btn soft block" type="button" data-go="' + d.b[1] + '">' + d.b[0] + '</button></div>';
+  return '<div class="fl-root w-imm" data-kind="imm"><div class="fl-backdrop" style="background-image:url(' + BG(d.bg) + ')"></div><div class="fl-layer"><main class="fl-body"><div class="fl-col">' + body + '</div></main></div></div>';
+};
+
+/* ───────── MC07 알림 (진행 지도사 변경 등) ───────── */
+var NT = {
+  'host-changed': [
+    ['repeat', '4회차는 김지수 지도사가 진행해요', 'MBSR 봄 · 박서연 지도사에서 바뀌었어요 · 10분 전', true, 'MC03:host-changed'],
+    ['clock', 'MBSR 봄 · 3회차가 30분 뒤에 열려요', '오늘 오후 7:00 · 입장 준비를 해 주세요 · 1시간 전', false, 'MC01:class-soon'],
+    ['file-text', '2회차 리포트가 준비됐어요', 'MBSR 봄 · 어제', false, 'MC03:ongoing']
+  ],
+  'makeup-offered': [
+    ['calendar-x', '놓친 2회차를 보강으로 채울 수 있어요', 'MBSR 봄 · 보강 일정을 골라 신청해요 · 1시간 전', true, 'MC03:makeup-pick'],
+    ['calendar-plus', 'MBSR 봄 · 보강 회차가 추가됐어요', '11월 29일(토) 오후 2:00 · 어제', false, 'MC03:makeup-pick'],
+    ['file-text', '1회차 리포트가 준비됐어요', 'MBSR 봄 · 2일 전', false, 'MC03:ongoing']
+  ],
+  mixed: [
+    ['circle-x', 'MBSR 봄 · 4회차가 취소됐어요', '취소된 회차는 결석으로 세지 않아요 · 어제', true, 'MC03:cancelled'],
+    ['mail', '걷기 명상 클래스에 초대됐어요', '박서연 지도사 · 4회 · 12월 4일(목)부터 · 어제', true, 'MC02:invited'],
+    ['circle-check', '마음챙김 입문 클래스를 마쳤어요', '함께한 기록은 그대로 볼 수 있어요 · 3일 전', false, 'MC02:list'],
+    ['heart', '이도윤 상담사가 상담에 초대했어요', '내 상담에서 확인해요 · 3일 전', false, '']
+  ]
+};
+var mc07 = function (k) {
+  var body = NT[k].map(function (n) {
+    return '<a class="sh-card w-nt' + (n[3] ? ' un' : '') + '" href="#" ' + (n[4] ? 'data-go="' + n[4] + '"' : 'data-out="내 상담 (상담 워커 시안)"') + '><i class="ico">' + I(n[0], 'md') + '</i><span class="tx"><b>' + n[1] + '</b><span class="s">' + n[2] + '</span></span>' + (n[3] ? '<i class="dot" aria-label="안 읽음"></i>' : '') + '</a>';
+  }).join('');
+  return shell({ active: 'notice', tab: 'more', head: headHome('알림', '<button class="w-hbtn" type="button" aria-label="모두 읽음" data-out="모두 읽음">' + I('circle-check') + '</button>'), body: sec('새 알림', '<span>' + NT[k].filter(function (n) { return n[3]; }).length + '개</span>') + body });
+};
+
+/* ───────── 화면·케이스 인덱스 ───────── */
+var A_BASE = '시연 기준: 지은 님, MBSR 봄 클래스 8회 고정형(월 19:00, 김지수·박서연 번갈아), 오늘 = 11월 17일(월)';
+var REG = [
+  { id: 'MC01', name: '회원 홈 — 다음 일정 · 내 클래스 · 내 상담', kind: '셸형(내부 스크롤)', fn: mc01, cases: [
+    { k: 'class-open', d: '다음 일정 = MBSR 봄 · 3회차 입장 가능, 보강 대기 배지, 내 클래스 2 · 내 상담 1', a: A_BASE + ' / 입장하기는 FM05 연결 표기' },
+    { k: 'class-soon', d: '곧 열림(30분 뒤) · 입장 대기하기', a: A_BASE },
+    { k: 'class-upcoming', d: '예정 D-3 · 클래스 보기(MC03 연결)', a: A_BASE + ' (오늘 11월 14일로 가정)' },
+    { k: 'counsel-next', d: '다음 일정이 상담(김하늘 상담사와 상담 · 4회차)', a: '상담 오늘 15:00이 클래스 19:00보다 임박' },
+    { k: 'invited', d: '초대받은 일정 섹션(클래스 초대 + 상담 초대)', a: '초대 카드는 요약만 · 확인은 입장 흐름 재사용' },
+    { k: 'only-class', d: '내 상담 0건 빈 상태(신청 안내)', a: '현행 신청 = 채팅 메시지 전송 (기획 §3.1)' },
+    { k: 'only-counsel', d: '내 클래스 0건 빈 상태(코드 입장 · 신청)', a: '현행 신청 = 채팅 메시지 전송 (기획 §3.1)' },
+    { k: 'empty', d: '둘 다 없음', a: '두 메뉴 항상 노출, 빈 상태가 안내(결정 11)' }] },
+  { id: 'MC02', name: '내 클래스 목록 — 참여 중 · 완료 · 이탈', kind: '셸형(내부 스크롤)', fn: mc02, cases: [
+    { k: 'list', d: '참여 중 2(고정형 + 정기형) · 완료 1 · 이탈 접힘', a: A_BASE + ' / 상태 4종은 파생값 (기획 §3.2)' },
+    { k: 'left-open', d: '이탈 구역 펼침(본인 나감 · 지도사 제외 = 사유 비노출)', a: '`removed` 는 `참여가 종료됐어요`만 표기' },
+    { k: 'waitlist', d: '대기 중 칩(4종 밖) 포함', a: '자리 대기는 4종 밖의 별도 칩' },
+    { k: 'invited', d: '초대받은 클래스 카드', a: '-' },
+    { k: 'empty', d: '클래스 없음 빈 상태', a: '-' },
+    { k: 'apply', d: '클래스 신청 바텀 시트', a: '신청 = 지도사에게 채팅 메시지' }] },
+  { id: 'MC03', name: '클래스 상세 — 회차 타임라인', kind: '셸형(내부 스크롤)', fn: mc03, cases: [
+    { k: 'ongoing', d: '3회차 입장 가능 · 1 참석 · 2 결석(보강 신청) · 진행 지도사 번갈아 표기 · 보강 안내 카드', a: A_BASE },
+    { k: 'makeup-pick', d: '보강 일정 고르기 시트', a: '보강 후보 일정 2개(시연값)' },
+    { k: 'makeup-planned', d: '보강 신청 완료 · 보강 회차 행(2회차 대신)', a: '보강 회차는 진행률 분모 제외 (기획 §3.3)' },
+    { k: 'makeup-done', d: '보강 참석 완료 후(6회차 예정)', a: '시점 = 12월 초' },
+    { k: 'joined-mid', d: '중간 합류 · 1~3회차 참여 전(일정만)', a: '합류 전 회차 리포트 없음 (결정 D-07 기본값)' },
+    { k: 'cancelled', d: '4회차 취소 · 결석 아님 · 진행률 분모에서 제외', a: '`7회 중 4회차` — 취소 제외 규칙' },
+    { k: 'host-changed', d: '진행 지도사 변경 배너 + 해당 회차 태그 · 미확정 회차는 지도사 줄 숨김', a: '회원에게는 확정된 변경만 알림 (불변식 I20)' },
+    { k: 'rolling', d: '정기형 · 분모 없이 `3회차` · 앞으로 4주만', a: '롤링 생성 4주 (기획 §5 #18)' },
+    { k: 'completed', d: '클래스 마침 · 보강 완료 표기 · 변화 이야기 링크', a: '완료 = 멤버십 `completed`' },
+    { k: 'left', d: '이탈 후 읽기 전용 · 지난 리포트 접근 유지', a: '이탈해도 지난 기록 열람 (결정 D-12 기본값)' }] },
+  { id: 'MC04', name: '변화 이야기 — 클래스 단위 서사 · 방향 띠', kind: '셸형(내부 스크롤)', fn: mc04, cases: [
+    { k: 'default', d: '5회차까지(1 참석 · 2 보강 · 3 미착용 · 4·5 참석)', a: '규칙 기반 서사 · 변화량은 단어 표기 · 수치 환원 없음 (기획-상세-회원내클래스 §4)' },
+    { k: 'completed', d: '8회 마침', a: '-' },
+    { k: 'joined-mid', d: '4회차 합류 · 합류 이후부터', a: '합류 전 열은 비교에 넣지 않음' },
+    { k: 'few', d: '참석 1회 — 비교 전 안내', a: '두 회차 이상부터 서사' },
+    { k: 'no-band', d: 'LINK BAND 없이 참석(정상 상태) — 측정 칸 비움', a: '미측정은 감점·경고색 없음' }] },
+  { id: 'MC05', name: '비회원 제한 뷰 — 4자리 코드 참가자', kind: '셸형 라이트(사이드바·탭바 없음) / 몰입형', fn: mc05, cases: [
+    { k: 'first-visit', d: '코드 입장 직후 회차 사이 대기 · 리포트 없음', a: '클래스 단위 장기 자격 (결정 D-16 기본값)' },
+    { k: 'between', d: '회차 사이 · 내 출석 요약 · 회차별 리포트(결석 회차는 리포트 없음)', a: '클래스 단위 추이 미제공(회차별 메일 링크만, D-43)' },
+    { k: 'open', d: '입장 가능', a: '-' },
+    { k: 'expired', d: '입장 정보 만료 후 코드 다시 입력', a: '지도사의 `같은 사람 합치기` 로 복구' }] },
+  { id: 'MC06', name: '상태 안내 — 중간 합류 · 대기 · 나감 · 제외', kind: '몰입형 / 셸형 시트', fn: mc06, cases: [
+    { k: 'joined-mid', d: '중간 합류 직후 안내', a: '합류 후 예정 회차에만 출석 행 생성' },
+    { k: 'waitlisted', d: '자리가 없어 대기 3번째', a: '클래스 단위 대기 순번' },
+    { k: 'leave-sheet', d: '클래스에서 나가기 확인 시트', a: '미래 출석 `withdrawn`, 과거 행 유지' },
+    { k: 'left-done', d: '나가기 완료 안내', a: '-' },
+    { k: 'removed', d: '지도사가 제외 — 사유 비노출', a: '`참여가 종료됐어요` (기획 §3.2)' }] },
+  { id: 'MC07', name: '알림 — 진행 지도사 변경 · 보강 안내 · 취소', kind: '셸형', fn: mc07, cases: [
+    { k: 'host-changed', d: '`4회차는 김지수 지도사가 진행해요`', a: '확정 뒤에만 회원에게 알림' },
+    { k: 'makeup-offered', d: '`놓친 2회차를 보강으로 채울 수 있어요`', a: 'makeup_offered' },
+    { k: 'mixed', d: '회차 취소 · 클래스 초대 · 클래스 마침 · 상담 초대', a: '클래스 단위 알림 1통' }] }
+];
+var TOTAL = REG.reduce(function (a, s) { return a + s.cases.length; }, 0);
+
+var q = new URLSearchParams(location.search);
+var root = document.getElementById('root');
+if (q.get('index')) {
+  document.body.className = 'w-index';
+  var rows = REG.map(function (s) {
+    return s.cases.map(function (c, i) {
+      return '<tr>' + (i === 0 ? '<td rowspan="' + s.cases.length + '"><b>' + s.id + '</b><br>' + s.name + '<br>' + s.kind + '</td>' : '') +
+        '<td><a href="?screen=' + s.id + '&case=' + c.k + '">' + c.k + '</a></td><td>' + c.d + '</td><td>' + c.a + '</td></tr>';
+    }).join('');
+  }).join('');
+  root.innerHTML = '<div class="w-idx"><h1>회원 홈 · 내 클래스 시안 · 화면·케이스 인덱스</h1><p class="l">?screen=MC01&amp;case=class-open 형태로 화면을 고릅니다. 파라미터가 없으면 MC01 첫 케이스. 4개 뷰포트: 390x844 · 834x1194 · 1194x834 · 1280x720.<br>' +
+    '화면 ' + REG.length + '개 · 케이스 총 <b>' + TOTAL + '</b>개 · 입장 흐름(FM04~FM10)과 내 상담 화면은 만들지 않고 CTA 연결만 표기합니다. `연결` 로 표기한 버튼(입장·리포트·내 상담 등)은 다른 시안 또는 구현된 화면으로 이어지며 이 파일에서는 눌러도 이동하지 않습니다.</p>' +
+    '<table><thead><tr><th>화면</th><th>케이스</th><th>설명</th><th>가정</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+  document.title = '인덱스 · member-classes';
+} else {
+  var sid = q.get('screen') || 'MC01';
+  var scr = REG.filter(function (s) { return s.id === sid; })[0] || REG[0];
+  var cs = q.get('case');
+  var ck = scr.cases.filter(function (c) { return c.k === cs; })[0] || scr.cases[0];
+  root.innerHTML = scr.fn(ck.k);
+  root.firstChild.setAttribute('data-screen', scr.id);
+  root.firstChild.setAttribute('data-case', ck.k);
+  document.title = scr.id + ' · ' + ck.k + ' · member-classes';
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-go]');
+    if (!t) return;
+    e.preventDefault();
+    var p = t.getAttribute('data-go').split(':');
+    location.search = '?screen=' + p[0] + '&case=' + p[1];
+  });
+}
+window.__REG = REG.map(function (s) { return { id: s.id, cases: s.cases.map(function (c) { return c.k; }) }; });
+window.__ready = true;
+})();
+</script>
+</body>
+</html>

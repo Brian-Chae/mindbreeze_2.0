@@ -1,5 +1,6 @@
 // @ts-nocheck — link-band-sdk 이식본 (verbatim/noUnusedLocals 완화)
 import type { EEGDevice } from './types/eeg';
+import { captureRawPacket } from '../biosignal/raw-capture';
 import { StreamProcessor } from './StreamProcessor';
 import { TimestampSynchronizer } from './TimestampSynchronizer';
 import {
@@ -94,6 +95,8 @@ export interface BluetoothEEGService {
   /** 재연결용 — 예기치 않은 끊김 후 같은 디바이스로 재연결하기 위한 캐시 ID */
   getCachedDeviceId(): string | null;
   clearDeviceCache(): void;
+  /** 네이티브 측정이 밴드를 잡기 전에 JS 연결을 놓는다. 해제 전 연결 ID(MAC)를 돌려준다(연결 없으면 null). */
+  releaseForNative(): Promise<string | null>;
 }
 
 class LinkBandBluetoothService implements BluetoothEEGService {
@@ -631,6 +634,7 @@ class LinkBandBluetoothService implements BluetoothEEGService {
   }
 
   private handleEEGData(dataView: DataView): void {
+    captureRawPacket('eeg', dataView);
     if (!dataView || dataView.byteLength < 8) return;
 
     try {
@@ -652,6 +656,7 @@ class LinkBandBluetoothService implements BluetoothEEGService {
   }
 
   private handlePPGData(dataView: DataView): void {
+    captureRawPacket('ppg', dataView);
     if (!dataView || dataView.byteLength < 8) return;
 
     try {
@@ -674,6 +679,7 @@ class LinkBandBluetoothService implements BluetoothEEGService {
   }
 
   private handleAccData(dataView: DataView): void {
+    captureRawPacket('acc', dataView);
     if (!dataView || dataView.byteLength < 10) return;
 
     try {
@@ -831,6 +837,8 @@ class LinkBandBluetoothService implements BluetoothEEGService {
     // ACC timestamp 동기화 변수 초기화
     this.lastAccTimestamp = 0;
     this.accPacketCount = 0;
+    // 재연결 시 장치 카운터가 새로 시작될 수 있으므로 센서별 시계·중복 판정 상태도 초기화
+    this.timestampSync.reset();
     
     // 샘플링 레이트 카운터 초기화
     Object.keys(this.samplingRateCounters).forEach(sensor => {
@@ -968,6 +976,18 @@ class LinkBandBluetoothService implements BluetoothEEGService {
    */
   getCachedDeviceId(): string | null {
     return this.lastDeviceId;
+  }
+
+  /**
+   * Android 앱: 네이티브 측정이 같은 밴드를 직접 구독하기 전에 JS(BLE 플러그인) 연결을 놓는다.
+   * 같은 링크에서 두 클라이언트가 CCCD 를 쓰면(JS 의 stop→start) 네이티브의 PPG/ACC 구독이 끊기거나 GATT 바쁨으로 드롭된다.
+   * 해제 전에 장치 ID 를 확보해 돌려준다. disconnect() 는 forceCleanup 으로 캐시 ID 도 지운다.
+   */
+  async releaseForNative(): Promise<string | null> {
+    const id = this.deviceId || this.lastDeviceId || null;
+    if (!id) return null;
+    await this.disconnect();
+    return id;
   }
 }
 

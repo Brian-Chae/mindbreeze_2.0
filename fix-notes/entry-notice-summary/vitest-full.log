@@ -1,0 +1,268 @@
+
+> frontend@1.0.0 test
+> vitest run --run
+
+
+ RUN  v5.0.2 /Users/brianyongwookchae/.paseo/worktrees/11h17zc0/fix-entry-notice-summary/frontend
+
+ ❯ tests/org-management-browser.test.cjs (2 tests | 2 failed) 31416ms
+   × 기관 모달: 미저장 보호, 실패 유지, 충돌 재조회, 수정, 비활성화, 재활성화 30800ms
+   × 목록 상태 필터와 저장 후 포커스 복귀 615ms
+ ❯ tests/org-counselor-management-browser.test.cjs (1 test | 1 failed) 5641ms
+   × 상담사 보호 대상, 확인 사유, 실패 유지, 역할 변경과 소속 해제 5641ms
+ ❯ tests/report-server-pdf.test.cjs (2 tests | 2 failed) 1272ms
+   × detail: 서버 파일 다운로드와 실패 복구 691ms
+   × email: 서버 파일 다운로드와 실패 복구 580ms
+ ❯ tests/report-modal-pdf.test.cjs (2 tests | 2 failed) 1267ms
+   × 하단 액션과 본문 전용 PDF (수신 주소: saved@example.com) 671ms
+   × 하단 액션과 본문 전용 PDF (수신 주소: 없음) 596ms
+ ❯ tests/agent-counselor-page.test.tsx (10 tests | 2 failed) 129ms
+   × 상담사는 브리핑과 입력창을 보고 CTA로 세션 목록을 연다 76ms
+   × 메시지 전송 성공 후 입력을 비우고 사용자·AI 응답을 최신 하단에 표시한다 3ms
+ ❯ tests/chat-message-deeplink.test.ts (6 tests | 2 failed) 67ms
+   × 대상 missing이면 최근 대화로 돌아갈 수 있다 5ms
+   × 대상 failure이면 최근 대화로 돌아갈 수 있다 2ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 11 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/agent-counselor-page.test.tsx > 상담사는 브리핑과 입력창을 보고 CTA로 세션 목록을 연다
+AssertionError: expected undefined to be 1000 // Object.is equality
+
+- Expected:
+1000
+
++ Received:
+undefined
+
+ ❯ tests/agent-counselor-page.test.tsx:43:135
+     41| it('상담사는 브리핑과 입력창을 보고 CTA로 세션 목록을 연다', async () => {
+     42|   useCounselorAgentStore.getState().setUnread(3);
+     43|   await render(); expect(container.textContent).toContain('아침 브리핑'); e…
+       |                                                                                                                                       ^
+     44|   expect(useCounselorAgentStore.getState().unread).toBe(0);
+     45|   await act(async () => button('일정 보기').click()); expect(container.tex…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/11]⎯
+
+ FAIL  tests/agent-counselor-page.test.tsx > 메시지 전송 성공 후 입력을 비우고 사용자·AI 응답을 최신 하단에 표시한다
+TypeError: 'set value' called on an object that is not a valid instance of HTMLInputElement.
+ ❯ set value ../../../../../../../Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/jsdom/lib/jsdom/living/generated/HTMLInputElement.js:1558:15
+ ❯ tests/agent-counselor-page.test.tsx:72:80
+     70|   const textarea = container.querySelector<HTMLInputElement>('input[ty…
+     71|   await act(async () => {
+     72|     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value…
+       |                                                                                ^
+     73|     textarea.dispatchEvent(new Event('input', { bubbles: true }));
+     74|   });
+ ❯ Proxy.process.env.NODE_ENV.exports.act ../../../../../../../Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/node_modules/react/cjs/react.development.js:814:22
+ ❯ tests/agent-counselor-page.test.tsx:71:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/11]⎯
+
+ FAIL  tests/chat-message-deeplink.test.ts > 대상 missing이면 최근 대화로 돌아갈 수 있다
+ FAIL  tests/chat-message-deeplink.test.ts > 대상 failure이면 최근 대화로 돌아갈 수 있다
+AssertionError: expected undefined to be true // Object.is equality
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ❯ tests/chat-message-deeplink.test.ts:56:54
+     54|   const button = [...container.querySelectorAll('button')].find((item)…
+     55|   expect(button).toBeDefined();
+     56|   expect(container.querySelector('input')?.disabled).toBe(true);
+       |                                                      ^
+     57|   await act(async () => button!.click());
+     58|   expect(container.textContent).toContain('본문 recent');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/11]⎯
+
+ FAIL  tests/org-counselor-management-browser.test.cjs > 상담사 보호 대상, 확인 사유, 실패 유지, 역할 변경과 소속 해제
+TimeoutError: locator.click: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for getByRole('tab', { name: /상담사/ })[22m
+
+ ❯ tests/org-counselor-management-browser.test.cjs:45:50
+     43|     </script></body></html>` }));
+     44|     await page.goto('http://127.0.0.1:5175/sdd-076-test');
+     45|     await page.getByRole('tab', { name: /상담사/ }).click();
+       |                                                  ^
+     46|     const primary = page.getByRole('row').filter({ hasText: '주 담당' });
+     47|     assert.equal(await primary.getByRole('button', { name: '역할 변경', ex…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/11]⎯
+
+ FAIL  tests/org-management-browser.test.cjs > 기관 모달: 미저장 보호, 실패 유지, 충돌 재조회, 수정, 비활성화, 재활성화
+TimeoutError: locator.click: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for getByRole('button', { name: '정보 수정', exact: true })[22m
+
+ ❯ tests/org-management-browser.test.cjs:54:68
+     52|     </script></body></html>` }));
+     53|     await page.goto('http://127.0.0.1:5175/sdd-075-test');
+     54|     await page.getByRole('button', { name: '정보 수정', exact: true }).cli…
+       |                                                                    ^
+     55|     await page.getByRole('textbox', { name: '기관명', exact: true }).fill…
+     56|     await page.getByRole('button', { name: '기관 상세 닫기' }).click();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/11]⎯
+
+ FAIL  tests/org-management-browser.test.cjs > 목록 상태 필터와 저장 후 포커스 복귀
+TypeError: fetch failed
+ ❯ liveBrowserHash tests/org-management-browser.test.cjs:16:22
+     14|     if (res.ok) { const meta = await res.json(); if (meta.browserHash)…
+     15|   } catch { /* fallthrough */ }
+     16|   const src = await (await fetch(`${baseUrl}/src/main.tsx`)).text();
+       |                      ^
+     17|   return src.match(/\?v=([a-f0-9]+)/)?.[1] ?? '';
+     18| }
+ ❯ tests/org-management-browser.test.cjs:97:25
+
+Caused by: Error: connect ECONNREFUSED 127.0.0.1:5175
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { errno: -61, code: 'ECONNREFUSED', syscall: 'connect', address: '127.0.0.1', port: 5175 }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/11]⎯
+
+ FAIL  tests/report-modal-pdf.test.cjs > 하단 액션과 본문 전용 PDF (수신 주소: saved@example.com)
+ FAIL  tests/report-modal-pdf.test.cjs > 하단 액션과 본문 전용 PDF (수신 주소: 없음)
+TypeError: fetch failed
+ ❯ liveBrowserHash tests/report-modal-pdf.test.cjs:14:22
+     12|     if (res.ok) { const meta = await res.json(); if (meta.browserHash)…
+     13|   } catch { /* fallthrough */ }
+     14|   const src = await (await fetch(`${baseUrl}/src/main.tsx`)).text();
+       |                      ^
+     15|   return src.match(/\?v=([a-f0-9]+)/)?.[1] ?? '';
+     16| }
+ ❯ tests/report-modal-pdf.test.cjs:23:26
+
+{
+  stack: 'AggregateError: \n' +
+    '    at internalConnectMultiple (node:net:1135:18)\n' +
+    '    at afterConnectMultiple (node:net:1716:7)\n' +
+    '    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)',
+  errors: [
+    {
+      stack: 'Error: connect ECONNREFUSED ::1:5175\n' +
+        '    at createConnectionError (node:net:1679:14)\n' +
+        '    at afterConnectMultiple (node:net:1709:16)\n' +
+        '    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)',
+      message: 'connect ECONNREFUSED ::1:5175',
+      errno: -61,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '::1',
+      port: 5175,
+      constructor: 'Function<Error>',
+      name: 'Error',
+      toString: 'Function<toString>'
+    },
+    {
+      stack: 'Error: connect ECONNREFUSED 127.0.0.1:5175\n' +
+        '    at createConnectionError (node:net:1679:14)\n' +
+        '    at afterConnectMultiple (node:net:1709:16)\n' +
+        '    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)',
+      message: 'connect ECONNREFUSED 127.0.0.1:5175',
+      errno: -61,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '127.0.0.1',
+      port: 5175,
+      constructor: 'Function<Error>',
+      name: 'Error',
+      toString: 'Function<toString>'
+    }
+  ],
+  code: 'ECONNREFUSED',
+  constructor: 'Function<AggregateError>',
+  name: 'Caused by: AggregateError',
+  message: '',
+  toString: 'Function<toString>',
+  stacks: []
+}
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { errors: [ { stack: 'Error: connect ECONNREFUSED ::1:5175
+    at createConnectionError (node:net:1679:14)
+    at afterConnectMultiple (node:net:1709:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)', message: 'connect ECONNREFUSED ::1:5175', errno: -61, code: 'ECONNREFUSED', syscall: 'connect', address: '::1', port: 5175, constructor: 'Function<Error>', name: 'Error', toString: 'Function<toString>' }, { stack: 'Error: connect ECONNREFUSED 127.0.0.1:5175
+    at createConnectionError (node:net:1679:14)
+    at afterConnectMultiple (node:net:1709:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)', message: 'connect ECONNREFUSED 127.0.0.1:5175', errno: -61, code: 'ECONNREFUSED', syscall: 'connect', address: '127.0.0.1', port: 5175, constructor: 'Function<Error>', name: 'Error', toString: 'Function<toString>' } ], code: 'ECONNREFUSED' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/11]⎯
+
+ FAIL  tests/report-server-pdf.test.cjs > detail: 서버 파일 다운로드와 실패 복구
+ FAIL  tests/report-server-pdf.test.cjs > email: 서버 파일 다운로드와 실패 복구
+TypeError: fetch failed
+ ❯ liveBrowserHash tests/report-server-pdf.test.cjs:14:22
+     12|     if (res.ok) { const meta = await res.json(); if (meta.browserHash)…
+     13|   } catch { /* fallthrough */ }
+     14|   const src = await (await fetch(`${baseUrl}/src/main.tsx`)).text();
+       |                      ^
+     15|   return src.match(/\?v=([a-f0-9]+)/)?.[1] ?? '';
+     16| }
+ ❯ tests/report-server-pdf.test.cjs:24:26
+
+{
+  stack: 'AggregateError: \n' +
+    '    at internalConnectMultiple (node:net:1135:18)\n' +
+    '    at afterConnectMultiple (node:net:1716:7)\n' +
+    '    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)',
+  errors: [
+    {
+      stack: 'Error: connect ECONNREFUSED ::1:5175\n' +
+        '    at createConnectionError (node:net:1679:14)\n' +
+        '    at afterConnectMultiple (node:net:1709:16)\n' +
+        '    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)',
+      message: 'connect ECONNREFUSED ::1:5175',
+      errno: -61,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '::1',
+      port: 5175,
+      constructor: 'Function<Error>',
+      name: 'Error',
+      toString: 'Function<toString>'
+    },
+    {
+      stack: 'Error: connect ECONNREFUSED 127.0.0.1:5175\n' +
+        '    at createConnectionError (node:net:1679:14)\n' +
+        '    at afterConnectMultiple (node:net:1709:16)\n' +
+        '    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)',
+      message: 'connect ECONNREFUSED 127.0.0.1:5175',
+      errno: -61,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '127.0.0.1',
+      port: 5175,
+      constructor: 'Function<Error>',
+      name: 'Error',
+      toString: 'Function<toString>'
+    }
+  ],
+  code: 'ECONNREFUSED',
+  constructor: 'Function<AggregateError>',
+  name: 'Caused by: AggregateError',
+  message: '',
+  toString: 'Function<toString>',
+  stacks: []
+}
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { errors: [ { stack: 'Error: connect ECONNREFUSED ::1:5175
+    at createConnectionError (node:net:1679:14)
+    at afterConnectMultiple (node:net:1709:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)', message: 'connect ECONNREFUSED ::1:5175', errno: -61, code: 'ECONNREFUSED', syscall: 'connect', address: '::1', port: 5175, constructor: 'Function<Error>', name: 'Error', toString: 'Function<toString>' }, { stack: 'Error: connect ECONNREFUSED 127.0.0.1:5175
+    at createConnectionError (node:net:1679:14)
+    at afterConnectMultiple (node:net:1709:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)', message: 'connect ECONNREFUSED 127.0.0.1:5175', errno: -61, code: 'ECONNREFUSED', syscall: 'connect', address: '127.0.0.1', port: 5175, constructor: 'Function<Error>', name: 'Error', toString: 'Function<toString>' } ], code: 'ECONNREFUSED' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/11]⎯
+
+
+ Test Files  6 failed | 212 passed (218)
+      Tests  11 failed | 2536 passed (2547)
+   Start at  22:07:29
+   Duration  122.30s (tests 56%, environment 23%, import 16%, transform 4%, setup 1%, worker 1%)
+
+    Isolate  218 workers spawned · ~169ms startup each (spawn + environment, per file)
+             at least ~36.63s faster with isolate: false — reuses workers across files instead of one per file
+

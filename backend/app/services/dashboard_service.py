@@ -34,6 +34,12 @@ def _class_summary(
     guest_count = sum(1 for p in participants if p.user_id is None)
     return {
         "id": str(s.id),
+        "class_id": str(s.class_id) if s.class_id else None,
+        "counseling_relationship_id": (
+            str(s.counseling_relationship_id) if s.counseling_relationship_id else None
+        ),
+        "area": "meditation" if s.class_id else "counseling" if s.counseling_relationship_id else None,
+        "seq": s.seq,
         "title": s.title,
         "type": s.type,
         "custom_type_name": s.custom_type_name,
@@ -80,9 +86,13 @@ def _build_summaries(sessions: list[Session], db: DBSession) -> list[dict]:
 
     report_counts: dict[uuid.UUID, int] = {}
     pending_review_counts: dict[uuid.UUID, int] = {}
+    class_session_ids = {s.id for s in sessions if s.class_id is not None}
     for rep in db.query(Report).filter(Report.session_id.in_(ids)).all():
         report_counts[rep.session_id] = report_counts.get(rep.session_id, 0) + 1
-        if rep.status == "pending_review":
+        # SDD-237: 명상 클래스 회차의 상담사용 리포트는 승인 대상이 아니라 승인 대기 수에 세지 않는다.
+        if rep.status == "pending_review" and not (
+            rep.type == "counselor" and rep.session_id in class_session_ids
+        ):
             pending_review_counts[rep.session_id] = pending_review_counts.get(rep.session_id, 0) + 1
 
     return [
@@ -95,6 +105,11 @@ def _build_summaries(sessions: list[Session], db: DBSession) -> list[dict]:
         )
         for s in sessions
     ]
+
+
+def _distinct_class_count(sessions: list[Session]) -> int:
+    """서로 다른 클래스 수 — class_id 기준 고유 개수. class_id 없는 레거시 단건 회차는 회차 1건 = 클래스 1개."""
+    return len({s.class_id if s.class_id is not None else s.id for s in sessions})
 
 
 _FALLBACK_SORT_TIME = datetime(1970, 1, 1, tzinfo=timezone.utc)
@@ -119,6 +134,42 @@ def _sorted_sessions(query) -> list[Session]:
     return sorted(sessions, key=_activity_sort_key, reverse=True)
 
 
+def _team_instructor_sessions(
+    uid: uuid.UUID, user: User, exclude_ids: set[uuid.UUID], db: DBSession
+) -> list[Session]:
+    """본인이 활성 팀 강사(lead/assistant)인 클래스의 회차 중 본인이 host 가 아닌 것.
+
+    guest 강사는 진행 요청 외 접근이 없으므로 제외하고, 접근 판정은 class_role 을 그대로 따른다
+    (기관 소속·상담사 역할 불일치 시 제외). 템플릿(is_template)은 계속 제외한다.
+    """
+    from app.models.class_program import Class, ClassInstructor
+    from app.services.class_access_service import class_role
+
+    class_ids = [
+        row.class_id
+        for row in db.query(ClassInstructor)
+        .filter(
+            ClassInstructor.user_id == uid,
+            ClassInstructor.status == "active",
+            ClassInstructor.role.in_(("lead", "assistant")),
+        )
+        .all()
+    ]
+    if not class_ids:
+        return []
+    allowed = [
+        c.id
+        for c in db.query(Class).filter(Class.id.in_(class_ids)).all()
+        if class_role(db, user, c) in ("lead", "assistant")
+    ]
+    if not allowed:
+        return []
+    query = db.query(Session).filter(
+        Session.class_id.in_(allowed), Session.is_template.is_(False)
+    )
+    return [s for s in _sorted_sessions(query) if s.id not in exclude_ids]
+
+
 def counselor_dashboard(user_id: str, db: DBSession) -> dict:
     """상담사 본인이 host인 클래스 목록 + 기록/참여자/상태 집계."""
     uid = _to_uuid(user_id)
@@ -128,9 +179,30 @@ def counselor_dashboard(user_id: str, db: DBSession) -> dict:
 
     # SDD-095: 클래스 템플릿(is_template=True)은 실제 진행 클래스가 아니므로 집계·목록에서 제외한다.
     sessions = _sorted_sessions(
-        db.query(Session).filter(Session.host_id == uid, Session.is_template.is_(False))
+        db.query(Session).filter(
+            Session.host_id == uid,
+            Session.is_template.is_(False),
+            Session.counseling_relationship_id.is_(None),  # SDD-225: 상담 세션은 클래스 홈 통계에서 제외
+        )
     )
     summaries = _build_summaries(sessions, db)
+    all_sessions = list(sessions)
+
+    # SDD-221: 팀 강사(lead/assistant)로만 속한 클래스의 타인 진행 회차도 목록·집계에 합친다.
+    team_sessions = _team_instructor_sessions(uid, user, {s.id for s in sessions}, db)
+    if team_sessions:
+        team_summaries = _build_summaries(team_sessions, db)
+        for row in team_summaries:
+            # 리포트는 진행 강사 몫이다(팀 열람은 별도 동의 경로) — 건수·검토 대기를 노출하지 않는다.
+            row["report_count"] = 0
+            row["pending_review_count"] = 0
+        merged = sorted(
+            zip(sessions + team_sessions, summaries + team_summaries),
+            key=lambda pair: _activity_sort_key(pair[0]),
+            reverse=True,
+        )
+        summaries = [summary for _, summary in merged]
+        all_sessions = sessions + team_sessions
 
     org = db.query(Organization).filter(Organization.id == user.org_id).first() if user.org_id else None
 
@@ -141,7 +213,7 @@ def counselor_dashboard(user_id: str, db: DBSession) -> dict:
         "org_name": org.name if org else None,
         # SDD-081: 개인 상담소(individual)면 FE 가 "내 개인 상담소"로 표시한다
         "org_kind": org.kind if org else None,
-        "total_classes": len(summaries),
+        "total_classes": _distinct_class_count(all_sessions),
         "in_progress_classes": sum(1 for c in summaries if c["status"] in _IN_PROGRESS),
         "completed_classes": sum(1 for c in summaries if c["status"] == "completed"),
         "total_participants": sum(c["participant_count"] for c in summaries),
@@ -174,6 +246,7 @@ def org_dashboard(user_id: str, db: DBSession) -> dict:
             db.query(Session).filter(
                 Session.host_id.in_(counselor_ids),
                 Session.is_template.is_(False),  # SDD-095: 템플릿은 기관 집계에서 제외
+                Session.counseling_relationship_id.is_(None),  # SDD-225: 상담 세션 제외
             )
         )
         if counselor_ids
@@ -182,8 +255,10 @@ def org_dashboard(user_id: str, db: DBSession) -> dict:
     summaries = _build_summaries(sessions, db)
 
     by_host: dict[str, list[dict]] = {}
+    sessions_by_host: dict[str, list[Session]] = {}
     for s, summary in zip(sessions, summaries):
         by_host.setdefault(str(s.host_id), []).append(summary)
+        sessions_by_host.setdefault(str(s.host_id), []).append(s)
 
     counselor_stats = []
     for m in counselors:
@@ -193,7 +268,7 @@ def org_dashboard(user_id: str, db: DBSession) -> dict:
                 "id": str(m.id),
                 "name": m.name,
                 "email": m.email,
-                "class_count": len(owned),
+                "class_count": _distinct_class_count(sessions_by_host.get(str(m.id), [])),
                 "participant_count": sum(c["participant_count"] for c in owned),
                 "completed_count": sum(1 for c in owned if c["status"] == "completed"),
             }
@@ -204,7 +279,7 @@ def org_dashboard(user_id: str, db: DBSession) -> dict:
         "org_name": org.name,
         "org_code": org.org_code,
         "total_counselors": len(counselor_stats),
-        "total_classes": len(summaries),
+        "total_classes": _distinct_class_count(sessions),
         "total_participants": sum(c["participant_count"] for c in summaries),
         "completed_classes": sum(1 for c in summaries if c["status"] == "completed"),
         "in_progress_classes": sum(1 for c in summaries if c["status"] in _IN_PROGRESS),

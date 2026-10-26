@@ -52,6 +52,12 @@ class GeminiTransientError(RuntimeError):
 
 def _gemini_request_once(url: str, headers: dict, body: dict, timeout: int) -> dict:
     """Gemini POST 1회. 일시 오류는 GeminiTransientError, 영구 오류는 그대로 전파한다."""
+    # SDD-220: 네트워크 직전 단일 가드 — AI off 면 호출 0건(재시도 대상 아님).
+    from app.core.ai_features import require_ai_enabled, require_stt_enabled
+
+    require_ai_enabled()
+    require_stt_enabled()  # SDD-228
+
     import httpx
 
     try:
@@ -111,6 +117,12 @@ def _call_whisper(chunk_paths: list[str]) -> dict:
     고정된다 — 폴백 사실을 결과에 diarization_fallback=True 로 명시해 상담사/내담자
     구분이 소실됐음을 상위에서 기록할 수 있게 한다.
     """
+    # SDD-220: 네트워크 직전 단일 가드 — AI off 면 호출 0건.
+    from app.core.ai_features import require_ai_enabled, require_stt_enabled
+
+    require_ai_enabled()
+    require_stt_enabled()  # SDD-228
+
     openai_api_key = settings.openai_api_key
     if not openai_api_key:
         # SDD-085 G5: 키 미설정 시 가짜 stub 전사를 만들지 않는다 — 실패로 처리해
@@ -127,22 +139,16 @@ def _call_whisper(chunk_paths: list[str]) -> dict:
         logger.warning("[stt_task] [청크 누락] Whisper %d개 건너뜀: %s", len(missing), missing)
     logger.info("[stt_task] Whisper API: %d chunks(누락 %d)", len(existing), len(missing))
 
-    # 청크 파일들을 읽어서 하나의 파일로 병합 후 Whisper에 전송
-    # Whisper는 multipart/form-data로 파일 업로드
-    merged = tempfile.NamedTemporaryFile(suffix=".webm", delete=False)
-    merged_path = merged.name
-    try:
-        # STT-02: 병합 파일 핸들을 with 로 관리해 병합 중 예외가 나도 반드시 닫히게 한다.
-        with merged:
-            for path in existing:
-                with open(path, "rb") as src:
-                    shutil.copyfileobj(src, merged)
+    # SDD-247: 형식별 병합(webm 연속→바이트 병합, m4a/혼재→ffmpeg concat). mime·확장자는 병합 결과를 따른다.
+    from app.services import audio_merge_service
 
+    merged_path, merged_mime = audio_merge_service.merge_chunks_for_stt(existing)
+    try:
         with open(merged_path, "rb") as f:
             resp = requests.post(
                 "https://api.openai.com/v1/audio/transcriptions",
                 headers={"Authorization": f"Bearer {openai_api_key}"},
-                files={"file": ("audio.webm", f, "audio/webm")},
+                files={"file": ("audio" + os.path.splitext(merged_path)[1], f, merged_mime)},
                 data={
                     "model": settings.whisper_model,
                     "language": "ko",
@@ -200,14 +206,11 @@ def _transcribe_batch(chunk_paths: list[str], session_type: str) -> tuple[list[d
     if missing:
         logger.warning("[stt_task] [청크 누락] %d개 건너뜀: %s", len(missing), missing)
 
-    # 1) 존재하는 청크만 병합 → base64
-    merged = tempfile.NamedTemporaryFile(suffix=".webm", delete=False)
-    merged_path = merged.name
+    # 1) 존재하는 청크만 병합 → base64 (SDD-247: 형식별 병합, mime 은 병합 결과를 따른다)
+    from app.services import audio_merge_service
+
+    merged_path, merged_mime = audio_merge_service.merge_chunks_for_stt(existing)
     try:
-        with open(merged_path, "wb") as out:
-            for path in existing:
-                with open(path, "rb") as src:
-                    shutil.copyfileobj(src, out)
         with open(merged_path, "rb") as f:
             audio_b64 = base64.b64encode(f.read()).decode("utf-8")
     finally:
@@ -241,7 +244,7 @@ def _transcribe_batch(chunk_paths: list[str], session_type: str) -> tuple[list[d
                 {
                     "parts": [
                         {"text": prompt},
-                        {"inline_data": {"mime_type": "audio/webm", "data": audio_b64}},
+                        {"inline_data": {"mime_type": merged_mime, "data": audio_b64}},
                     ]
                 }
             ],
@@ -435,11 +438,12 @@ def _assess_transcript_confidence(segments: list[dict], audio_duration_sec: floa
     return "high"
 
 
-async def _emit_status(session_id: str, status: str, detail: dict | None = None):
+def _emit_status(session_id: str, status: str, detail: dict | None = None):
     """WebSocket으로 처리 상태 브로드캐스트."""
     try:
-        from app.ws.record_namespace import broadcast_record_status
-        await broadcast_record_status(session_id, status, detail)
+        from app.ws.sync_emit import emit_record_status_sync
+
+        emit_record_status_sync(session_id, status, detail)
     except Exception:
         logger.warning("[stt_task] WebSocket emit failed: %s", status)
 
@@ -489,12 +493,23 @@ def _notify_low_confidence(session: Session | None, db: DBSession) -> None:
 
 def run_stt_inline(session_id: str, db: DBSession) -> None:
     """동기 실행용 헬퍼 — Celery 비활성 환경/테스트에서 직접 호출."""
-    import asyncio
-
     sid = UUID(session_id)
     record = db.query(SessionRecord).filter(SessionRecord.session_id == sid).first()
     if not record:
         logger.warning("[stt_task] SessionRecord not found: %s", session_id)
+        return
+
+    # SDD-220: AI off — 이미 큐에 적재된 작업도 외부 호출 없이 skip 한다(retry 0).
+    #   녹음 원본은 보존하고, 저장 완료(completed)로 마감해 리포트 단계가 이어지게 한다.
+    #   SDD-228: STT 전용 스위치(stt_enabled)도 같은 경로로 스킵한다.
+    from app.core.ai_features import is_stt_enabled
+
+    if not is_stt_enabled():
+        logger.info("[stt_task] AI/STT 기능 off — STT 스킵: %s", session_id)
+        if record.status == "processing":
+            record.status = "completed"
+            db.commit()
+        _emit_report_progress(session_id, db)
         return
 
     # SDD-085 가드 1: 수동 기록 모드(마이크 오프)는 STT 대상 아님
@@ -510,7 +525,7 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
     if record.recording_started_at and record.recording_ended_at:
         audio_duration_sec = (record.recording_ended_at - record.recording_started_at).total_seconds()
 
-    asyncio.run(_emit_status(session_id, "merging"))
+    _emit_status(session_id, "merging")
     # SDD-095: 세션 종료 → 녹음 저장 완료/STT 진행을 진행 스텝퍼에 반영
     _emit_report_progress(session_id, db)
 
@@ -531,11 +546,11 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
         logger.warning("[stt_task] 오디오 청크 없음 — STT 미실행(manual, 기록 없음): %s", session_id)
         record.status = "manual"
         db.commit()
-        asyncio.run(_emit_status(session_id, "manual", {"reason": "no_audio_chunks"}))
+        _emit_status(session_id, "manual", {"reason": "no_audio_chunks"})
         _emit_report_progress(session_id, db)
         return
 
-    asyncio.run(_emit_status(session_id, "transcribing"))
+    _emit_status(session_id, "transcribing")
     _emit_report_progress(session_id, db)
     # STT-5TH-01: Gemini 실패를 일시/영구로 구분한다.
     #   - 일시 오류(backoff 재시도 소진 후): Whisper 폴백(비용 발생) 수행.
@@ -551,7 +566,7 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
             logger.exception("[stt_task] Whisper failed — STT 실패 처리: %s", exc2)
             record.status = "failed"
             db.commit()
-            asyncio.run(_emit_status(session_id, "failed", {"reason": "stt_failed"}))
+            _emit_status(session_id, "failed", {"reason": "stt_failed"})
             _emit_report_progress(session_id, db)
             # CEL-RETRY-01: 일시 오류(공급자 다운 등)로 폴백까지 실패한 경우, 실패를
             # durable 하게 마킹한 뒤 재시도 가능한 예외를 전파한다 — 여기서 조용히 return 하면
@@ -562,11 +577,11 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
         logger.exception("[stt_task] Gemini 영구 오류 — STT 실패 처리(폴백 생략): %s", exc)
         record.status = "failed"
         db.commit()
-        asyncio.run(_emit_status(session_id, "failed", {"reason": "stt_failed"}))
+        _emit_status(session_id, "failed", {"reason": "stt_failed"})
         _emit_report_progress(session_id, db)
         return
 
-    asyncio.run(_emit_status(session_id, "diarizing"))
+    _emit_status(session_id, "diarizing")
     segments = result.get("segments", [])
     confidence = _assess_transcript_confidence(segments, audio_duration_sec)
 

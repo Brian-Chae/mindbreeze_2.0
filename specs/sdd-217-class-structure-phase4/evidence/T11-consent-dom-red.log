@@ -1,0 +1,33 @@
+
+ RUN  v5.0.2 /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd217/frontend
+
+ ❯ tests/sdd217-integration-regressions.test.tsx (1 test | 1 failed) 30ms
+   × T11 동일 동의값 재조회가 미저장 선택을 지우지 않고 바뀌지 않은 필드만 서버값을 따른다 29ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/sdd217-integration-regressions.test.tsx > T11 동일 동의값 재조회가 미저장 선택을 지우지 않고 바뀌지 않은 필드만 서버값을 따른다
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/sdd217-integration-regressions.test.tsx:30:29
+     28|  await act(async()=>check()[0].click());expect(check()[0].checked).toB…
+     29|  await act(async()=>window.dispatchEvent(new Event('focus')));
+     30|  expect(check()[0].checked).toBe(true);
+       |                             ^
+     31|  reminder=true;
+     32|  await act(async()=>window.dispatchEvent(new Event('focus')));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  21:12:27
+   Duration  1.05s (environment 39%, import 33%, transform 24%, tests 3%, setup 1%)
+

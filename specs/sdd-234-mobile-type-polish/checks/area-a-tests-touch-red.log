@@ -1,0 +1,29 @@
+
+ RUN  v5.0.2 /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd234-a-home/frontend
+
+ ❯ tests/sdd234-a-mobile-home.test.tsx (6 tests | 1 failed) 9872ms
+   × member: 모바일 본문·라벨 하한, 44px 터치, 가로 넘침 없음 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/sdd234-a-mobile-home.test.tsx > member: 모바일 본문·라벨 하한, 44px 터치, 가로 넘침 없음
+AssertionError: expected 44 to be greater than or equal to 48
+ ❯ tests/sdd234-a-mobile-home.test.tsx:27:29
+     25|     expect(m.violations.narrowTouch).toEqual([]);
+     26|     const primary = m.touches.find(x => x.text === (role === 'member' …
+     27|     expect(primary?.height).toBeGreaterThanOrEqual(48);
+       |                             ^
+     28|     // PR #60 유지 대상: 기존 레일의 아바타 이니셜/읽지 않은 개수만 제외한다.
+     29|     const remaining = m.violations.smallText.filter(x => !(x.text === …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 8 passed (9)
+      Tests  1 failed | 54 passed (55)
+   Start at  00:39:55
+   Duration  13.12s (tests 84%, environment 8%, import 5%, transform 3%)
+
+    Isolate  9 workers spawned · ~172ms startup each (spawn + environment, per file)
+             at least ~1.37s faster with isolate: false — reuses workers across files instead of one per file
+

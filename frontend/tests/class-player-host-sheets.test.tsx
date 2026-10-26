@@ -47,11 +47,11 @@ afterEach(async () => {
 });
 
 describe('H2 칩 줄 — 손든 회원·말하는 중·녹음·필요 조치·대기·내 밴드', () => {
-  it('C02: 손든 회원 2 칩, 손든 회원 우선 칩, 타일 손들기 배지', async () => {
+  it('C02: 손들기 상시 버튼과 타일 손들기 배지', async () => {
     await renderCase('C02');
     const line = text(one('[data-pz="chipline"]'));
-    expect(line).toContain('손든 회원 2');
-    expect(line).toContain('손든 회원 우선');
+    expect(text(one('[data-signal="hands"]'))).toContain('손들기 2');
+    expect(line).not.toContain('손든 회원 2');
     const handTiles = all('[data-pz="tile"][data-hand="true"]');
     expect(handTiles.map((t) => t.dataset.participantId)).toEqual(['p2', 'p5']);
     expect(handTiles.every((t) => text(t).includes('손듦 · 대기 중'))).toBe(true);
@@ -59,23 +59,23 @@ describe('H2 칩 줄 — 손든 회원·말하는 중·녹음·필요 조치·�
 
   it('C02: 손든 회원 칩 → 손든 회원 시트에서 발언권 부여 → 말하는 중 칩 + 회수', async () => {
     await renderCase('C02');
-    await click(buttonByText('손든 회원 2', one('[data-pz="chipline"]') ?? document));
+    await click(one('[data-signal="hands"]'));
     expect(sheet()).not.toBeNull();
     expect(text(sheet())).toContain('발언권 관리');
     const minjunRow = all('div', sheet() ?? document).find((d) => text(d.querySelector('p')) === '민준' && d.querySelector('button'));
     expect(minjunRow).toBeTruthy();
     await click(buttonByText('발언권 부여', minjunRow ?? document));
-    expect(text(one('[data-pz="chipline"]'))).toContain('민준 말하는 중');
+    expect(text(one('[data-signal="hands"]'))).toContain('발언권 1명');
     expect(one('[data-pz="tile"][data-participant-id="p2"]')?.getAttribute('data-speaking')).toBe('true');
-    await click(buttonByText('민준 발언권 회수', one('[data-pz="chipline"]') ?? document));
-    expect(text(one('[data-pz="chipline"]'))).not.toContain('말하는 중');
+    await click(buttonByText('해제', minjunRow ?? document));
+    expect(text(one('[data-signal="hands"]'))).toContain('발언권 0명');
   });
 
-  it('C03: 말하는 중 칩 + 회수 버튼(참가자 이름 포함 라벨)', async () => {
+  it('C03: 발언권 건수와 전용 시트 회수 버튼', async () => {
     await renderCase('C03');
-    const line = one('[data-pz="chipline"]');
-    expect(text(line)).toContain('지우 말하는 중');
-    expect(buttonByText('지우 발언권 회수', line ?? document)).not.toBeNull();
+    expect(text(one('[data-signal="hands"]'))).toContain('발언권 1명');
+    await click(one('[data-signal="hands"]'));
+    expect(buttonByText('해제', sheet() ?? document)).not.toBeNull();
     expect(one('[data-pz="tile"][data-participant-id="p3"]')?.getAttribute('data-speaking')).toBe('true');
   });
 
@@ -152,7 +152,7 @@ describe('H2 칩 줄 — 손든 회원·말하는 중·녹음·필요 조치·�
   it('알림 전체 시트는 칩 목록을 열기 버튼과 함께 보여 준다', async () => {
     await renderCase('C02', 'sheet=alerts');
     const s = sheet();
-    expect(text(s)).toContain('알림 전체');
+    expect(text(s)).toContain('수업 상태');
     expect(text(s)).toContain('손든 회원 2');
     expect(all('button', s ?? document).filter((b) => text(b) === '열기').length).toBeGreaterThan(0);
   });

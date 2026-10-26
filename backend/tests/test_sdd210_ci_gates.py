@@ -96,7 +96,8 @@ def test_실제_저장소_head_는_1개다():
     revs = [mig.parse_revision(p) for p in (ROOT / "backend/alembic/versions").glob("*.py") if p.name != "__init__.py"]
     ids = {r["revision"] for r in revs}
     downs = {d for r in revs for d in r["down"]}
-    assert sorted(ids - downs) == ["e036a0000051"]
+    assert len(ids - downs) == 1
+    assert "e036a0000055" in downs  # SDD-216 이후에도 기존 head는 후속 리비전의 조상이다.
 
 
 def test_head_가_2개면_실패한다(tmp_path):

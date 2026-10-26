@@ -8,6 +8,7 @@ import { NoticeBanner } from '../shared/NoticeBanner';
 import { NoticeOverlay } from '../shared/NoticeOverlay';
 import { StatusRing } from '../shared/StatusRing';
 import { MemberIcon } from './MemberIcon';
+import { displayedInteger } from '../../../../lib/biosignal/display-snapshot';
 import { METRIC_GUIDE, formatTrendChange, hasTrendData, metricDef, metricFraction, sparkGeometry, type MetricSeries, type MetricSnapshot } from './member-metrics';
 import './member-player.css';
 
@@ -56,7 +57,8 @@ function ringAriaLabel(c: MemberCase, label: string, valueText: string | null): 
 function HeroRing({ c, hero, snapshot }: Pick<MemberStageProps, 'c' | 'hero' | 'snapshot'>) {
   const def = metricDef(hero);
   const raw = snapshot[hero];
-  const value = raw === null || !Number.isFinite(raw) ? null : Math.round(raw);
+  // SDD-244: 저장되는 DisplaySnapshot과 같은 표시 규칙(displayedInteger)을 쓴다
+  const value = displayedInteger(raw);
   const { ring } = c;
   const waiting = ring.core === 'gauge' && value === null;
   return (

@@ -77,6 +77,7 @@ async def create_individual_counselor_application(
         specialties=req.specialties,
         inquiry=req.inquiry,
         db=db,
+        birth_date=req.birth_date,
     )
     svc.enqueue_notice(app_row, db)
     return ApplicationCreatedResponse(application_id=str(app_row.id), status=app_row.status)

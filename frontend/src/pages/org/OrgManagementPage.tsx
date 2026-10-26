@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { Button, cardClass, fieldClass } from '../../components/ui';
 import { useAuthStore } from '../../stores/authStore';
 import { ApiError } from '../../lib/api/client';
 import {
@@ -99,10 +100,10 @@ export default function OrgManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-canvas p-4 sm:p-8">
+    <div className="min-h-screen bg-surface-canvas px-4 py-4 md:px-8 md:py-6 lg:px-10 lg:pt-8 lg:pb-10">
       <div className="max-w-4xl mx-auto space-y-8">
         <div>
-          <h1 className="font-display text-3xl font-light text-ink-primary">상담센터 관리</h1>
+          <h1 className="text-[22px] font-bold leading-[30px] text-ink-primary md:leading-[33px]">상담센터 관리</h1>
           <p className="text-sm text-ink-secondary mt-1">{org?.name}</p>
         </div>
 
@@ -115,7 +116,7 @@ export default function OrgManagementPage() {
         )}
 
         {/* 가입 요청 관리 — 준비 중 (API 미연동) */}
-        <section className="rounded-xl border border-border-default bg-surface-raised p-6 space-y-2">
+        <section className={cardClass('default', 'space-y-2')}>
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-lg font-medium text-ink-primary">가입 요청 관리</h2>
             <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
@@ -126,7 +127,7 @@ export default function OrgManagementPage() {
         </section>
 
         {/* 소속 상담사 — 테이블 + 검색/상태 필터 + 정보 수정 (SDD-077) */}
-        <section className="rounded-xl border border-border-default bg-surface-raised p-6 space-y-4">
+        <section className={cardClass('default', 'space-y-4')}>
           <h2 className="text-lg font-medium text-ink-primary">소속 상담사 ({counselors.length}명)</h2>
           {editingUser && orgId && (
             <CounselorInfoEditor
@@ -145,13 +146,13 @@ export default function OrgManagementPage() {
               placeholder="이름·이메일 검색"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="h-9 min-w-0 flex-1 px-3 rounded-lg bg-surface-canvas border border-border-default text-sm text-ink-primary"
+              className={fieldClass('input', 'min-w-0 flex-1')}
             />
             <select
               aria-label="계정 상태 필터"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-9 px-3 rounded-lg bg-surface-canvas border border-border-default text-sm text-ink-primary"
+              className={fieldClass('select', '!w-auto')}
             >
               <option value="">전체 상태</option>
               <option value="active">활성</option>
@@ -184,7 +185,7 @@ export default function OrgManagementPage() {
                           value={c.role}
                           onChange={(e) => handleRoleChange(c.id, e.target.value as CounselorRole)}
                           disabled={busyUser === c.id}
-                          className="h-9 px-3 rounded-lg bg-surface-canvas border border-border-default text-sm text-ink-primary"
+                          className={fieldClass('select', '!w-auto')}
                         >
                           <option value="counselor">상담사</option>
                           <option value="org_admin">관리자</option>
@@ -192,23 +193,24 @@ export default function OrgManagementPage() {
                       </td>
                       <td className="p-2">
                         <div className="flex gap-2">
-                          <button
-                            type="button"
+                          <Button
+                            variant="secondary"
+                            size="sm"
                             onClick={() => setEditingUser(c)}
                             disabled={busyUser === c.id || !!editingUser || c.role !== 'counselor'}
                             title={c.role !== 'counselor' ? '기관 관리자 계정은 본인 설정 또는 플랫폼 관리자를 통해 수정합니다' : undefined}
-                            className="h-9 px-3 rounded-pill border border-border-default text-sm text-ink-secondary hover:text-ink-primary disabled:opacity-50"
                           >
                             정보 수정
-                          </button>
-                          <button
-                            type="button"
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            tone="danger"
                             onClick={() => handleRemove(c.id)}
                             disabled={busyUser === c.id}
-                            className="h-9 px-3 rounded-pill border border-border-default text-sm text-ink-secondary hover:text-red-500 hover:border-red-500"
                           >
                             소속 해제
-                          </button>
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -221,7 +223,7 @@ export default function OrgManagementPage() {
 
         {/* 센터 정보 */}
         {org && (
-          <section className="rounded-xl border border-border-default bg-surface-raised p-6 space-y-3">
+          <section className={cardClass('default', 'space-y-3')}>
             <h2 className="text-lg font-medium text-ink-primary">센터 정보</h2>
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
               {[

@@ -156,6 +156,9 @@ class RoomResponse(BaseModel):
     display_name: str | None = None
     can_rename: bool = False
     rename_disabled_reason: str | None = None
+    # ── SDD-220: direct 방 상대와의 상호 차단 여부, 상대 탈퇴 여부 ──
+    is_blocked: bool = False
+    peer_deleted: bool = False
 
 
 class RoomListResponse(BaseModel):
@@ -169,3 +172,50 @@ class MessageContextResponse(BaseModel):
     after: list[MessageResponse]
     before_cursor: str | None = None
     after_cursor: str | None = None
+
+
+ReportReason = Literal["abuse", "spam", "sexual", "privacy", "other"]
+
+
+class ChatReportRequest(BaseModel):
+    """SDD-220: 채팅 신고 — 메시지 메뉴(message_id) 또는 상대 프로필(room_id 없이 target 만)에서 호출."""
+    target_user_id: str
+    room_id: str | None = None
+    message_id: str | None = None
+    # 사유는 선택. 빈 문자열은 미선택으로 본다.
+    reason: ReportReason | None = None
+    # 같은 operation 재전송 시 중복 신고·중복 메일을 막는 클라이언트 생성 키
+    operation_key: str | None = Field(default=None, max_length=100)
+
+    @field_validator("reason", mode="before")
+    @classmethod
+    def _empty_reason_is_none(cls, v):
+        return None if v == "" else v
+
+
+class ChatReportResponse(BaseModel):
+    reported: bool = True
+    blocked: bool = True
+    report_id: str
+
+
+class ChatBlockOut(BaseModel):
+    """내가 건 차단 1건."""
+    user_id: str
+    name: str | None = None
+    blocked_at: datetime | None = None
+    report_id: str | None = None
+    report_status: str | None = None
+
+
+class ChatBlockListResponse(BaseModel):
+    blocks: list[ChatBlockOut]
+
+
+class ChatUnblockResponse(BaseModel):
+    unblocked: bool = True
+
+
+class ChatReportWithdrawResponse(BaseModel):
+    report_id: str
+    status: str

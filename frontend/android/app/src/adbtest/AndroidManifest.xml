@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- SDD-246 T08d: adb(am start-foreground-service) 시험 전용. `./gradlew assembleDevDebug -PmbAdbExport=true` 일 때만 debug manifest 를 이 파일로 바꾼다.
+         기본 debug/dev 배포본에는 측정 서비스가 export 되지 않는다(위험 7). -->
+    <application
+        android:usesCleartextTraffic="true"
+        tools:replace="android:usesCleartextTraffic">
+        <service
+            android:name=".measurement.MeasurementService"
+            android:exported="true"
+            tools:replace="android:exported" />
+    </application>
+</manifest>

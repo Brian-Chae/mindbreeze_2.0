@@ -1,0 +1,2507 @@
+{
+  "source": "실제 production build + 모든 API 합성 fixture intercept, 서버 실행 없음",
+  "browser": "Chrome 155.0.8059.85",
+  "results": [
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "name": "classes",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": null
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "name": "sessions",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": null
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "name": "participants",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": null
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "name": "measurement",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": null
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "name": "eeg-waveform",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": null
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "name": "indices",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": null
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "name": "measurement-ppg",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": null
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "name": "measurement-acc",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": null
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "name": "features",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": null
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "name": "participant-range-dialog",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": {
+        "left": 340,
+        "right": 1100,
+        "top": 24,
+        "bottom": 976
+      }
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "name": "download-dialog",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": {
+        "left": 340,
+        "right": 1100,
+        "top": 24,
+        "bottom": 976
+      }
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "name": "download-preview",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": {
+        "left": 340,
+        "right": 1100,
+        "top": 24,
+        "bottom": 976
+      }
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "name": "jobs",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": null
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "name": "audits",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": null
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "name": "member-dialog",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": {
+        "left": 340,
+        "right": 1100,
+        "top": 24,
+        "bottom": 976
+      }
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "name": "facilitator-dialog",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": {
+        "left": 340,
+        "right": 1100,
+        "top": 24,
+        "bottom": 976
+      }
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "name": "class-dialog",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": {
+        "left": 340,
+        "right": 1100,
+        "top": 24,
+        "bottom": 976
+      }
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "name": "classes",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": null
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "name": "sessions",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": null
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "name": "participants",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": null
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "name": "measurement",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": null
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "name": "eeg-waveform",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": null
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "name": "indices",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": null
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "name": "measurement-ppg",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": null
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "name": "measurement-acc",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": null
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "name": "features",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": null
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "name": "participant-range-dialog",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": {
+        "left": 8,
+        "right": 382,
+        "top": 8,
+        "bottom": 836
+      }
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "name": "download-dialog",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": {
+        "left": 8,
+        "right": 382,
+        "top": 8,
+        "bottom": 836
+      }
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "name": "download-preview",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": {
+        "left": 8,
+        "right": 382,
+        "top": 8,
+        "bottom": 836
+      }
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "name": "jobs",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": null
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "name": "audits",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": null
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "name": "member-dialog",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": {
+        "left": 8,
+        "right": 382,
+        "top": 8,
+        "bottom": 836
+      }
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "name": "facilitator-dialog",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": {
+        "left": 8,
+        "right": 382,
+        "top": 8,
+        "bottom": 836
+      }
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "name": "class-dialog",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": {
+        "left": 8,
+        "right": 382,
+        "top": 8,
+        "bottom": 836
+      }
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "name": "classes",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": null
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "name": "sessions",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": null
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "name": "participants",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": null
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "name": "measurement",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": null
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "name": "eeg-waveform",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": null
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "name": "indices",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": null
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "name": "measurement-ppg",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": null
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "name": "measurement-acc",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": null
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "name": "features",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": null
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "name": "participant-range-dialog",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": {
+        "left": 340,
+        "right": 1100,
+        "top": 24,
+        "bottom": 976
+      }
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "name": "download-dialog",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": {
+        "left": 340,
+        "right": 1100,
+        "top": 24,
+        "bottom": 976
+      }
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "name": "download-preview",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": {
+        "left": 340,
+        "right": 1100,
+        "top": 24,
+        "bottom": 976
+      }
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "name": "jobs",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": null
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "name": "audits",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": null
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "name": "member-dialog",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": {
+        "left": 340,
+        "right": 1100,
+        "top": 24,
+        "bottom": 976
+      }
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "name": "facilitator-dialog",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": {
+        "left": 340,
+        "right": 1100,
+        "top": 24,
+        "bottom": 976
+      }
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "name": "class-dialog",
+      "overflow": 0,
+      "bodyWidth": 1440,
+      "modal": {
+        "left": 340,
+        "right": 1100,
+        "top": 24,
+        "bottom": 976
+      }
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "name": "classes",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": null
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "name": "sessions",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": null
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "name": "participants",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": null
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "name": "measurement",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": null
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "name": "eeg-waveform",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": null
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "name": "indices",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": null
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "name": "measurement-ppg",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": null
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "name": "measurement-acc",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": null
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "name": "features",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": null
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "name": "participant-range-dialog",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": {
+        "left": 8,
+        "right": 382,
+        "top": 8,
+        "bottom": 836
+      }
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "name": "download-dialog",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": {
+        "left": 8,
+        "right": 382,
+        "top": 8,
+        "bottom": 836
+      }
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "name": "download-preview",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": {
+        "left": 8,
+        "right": 382,
+        "top": 8,
+        "bottom": 836
+      }
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "name": "jobs",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": null
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "name": "audits",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": null
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "name": "member-dialog",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": {
+        "left": 8,
+        "right": 382,
+        "top": 8,
+        "bottom": 836
+      }
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "name": "facilitator-dialog",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": {
+        "left": 8,
+        "right": 382,
+        "top": 8,
+        "bottom": 836
+      }
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "name": "class-dialog",
+      "overflow": 0,
+      "bodyWidth": 390,
+      "modal": {
+        "left": 8,
+        "right": 382,
+        "top": 8,
+        "bottom": 836
+      }
+    }
+  ],
+  "checks": [
+    {
+      "name": "platform_admin-1440 역할별 기관·탭",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440-classes 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440 검색 빈 상태",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440-sessions 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440-participants 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440-measurement 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440-eeg-waveform 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440-indices 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440 30초 범위",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440-measurement-ppg 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440-measurement-acc 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440-features 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440-participant-range-dialog 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440-participant-range-dialog 대화상자 화면 내 배치",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440-download-dialog 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440-download-dialog 대화상자 화면 내 배치",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440 재인증 전 생성 차단",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440-download-preview 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440-download-preview 대화상자 화면 내 배치",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440-jobs 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440-audits 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440-member-dialog 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440-member-dialog 대화상자 화면 내 배치",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440-facilitator-dialog 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440-facilitator-dialog 대화상자 화면 내 배치",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440-class-dialog 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-1440-class-dialog 대화상자 화면 내 배치",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390 역할별 기관·탭",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390-classes 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390 검색 빈 상태",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390-sessions 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390-participants 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390-measurement 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390-eeg-waveform 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390-indices 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390 30초 범위",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390-measurement-ppg 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390-measurement-acc 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390-features 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390-participant-range-dialog 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390-participant-range-dialog 대화상자 화면 내 배치",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390-download-dialog 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390-download-dialog 대화상자 화면 내 배치",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390 재인증 전 생성 차단",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390-download-preview 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390-download-preview 대화상자 화면 내 배치",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390-jobs 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390-audits 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390-member-dialog 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390-member-dialog 대화상자 화면 내 배치",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390-facilitator-dialog 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390-facilitator-dialog 대화상자 화면 내 배치",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390-class-dialog 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "platform_admin-390-class-dialog 대화상자 화면 내 배치",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440 역할별 기관·탭",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440-classes 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440 검색 빈 상태",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440-sessions 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440-participants 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440-measurement 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440-eeg-waveform 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440-indices 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440 30초 범위",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440-measurement-ppg 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440-measurement-acc 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440-features 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440-participant-range-dialog 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440-participant-range-dialog 대화상자 화면 내 배치",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440-download-dialog 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440-download-dialog 대화상자 화면 내 배치",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440 재인증 전 생성 차단",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440-download-preview 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440-download-preview 대화상자 화면 내 배치",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440-jobs 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440-audits 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440-member-dialog 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440-member-dialog 대화상자 화면 내 배치",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440-facilitator-dialog 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440-facilitator-dialog 대화상자 화면 내 배치",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440-class-dialog 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-1440-class-dialog 대화상자 화면 내 배치",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390 역할별 기관·탭",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390-classes 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390 검색 빈 상태",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390-sessions 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390-participants 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390-measurement 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390-eeg-waveform 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390-indices 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390 30초 범위",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390-measurement-ppg 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390-measurement-acc 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390-features 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390-participant-range-dialog 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390-participant-range-dialog 대화상자 화면 내 배치",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390-download-dialog 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390-download-dialog 대화상자 화면 내 배치",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390 재인증 전 생성 차단",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390-download-preview 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390-download-preview 대화상자 화면 내 배치",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390-jobs 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390-audits 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390-member-dialog 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390-member-dialog 대화상자 화면 내 배치",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390-facilitator-dialog 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390-facilitator-dialog 대화상자 화면 내 배치",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390-class-dialog 페이지 가로 넘침 없음",
+      "pass": true
+    },
+    {
+      "name": "org_admin-390-class-dialog 대화상자 화면 내 배치",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "requests": [
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "POST",
+      "path": "/api/v1/auth/refresh",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/devices/web-push/public-key",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "query": "?only_unread=true&limit=200&event=session_invited"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "query": "?page=1&limit=100"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/contexts",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/summary",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes",
+      "query": "?q=%EA%B2%80%EC%83%89%EA%B2%B0%EA%B3%BC%EC%97%86%EC%9D%8C"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes/00000000-0000-0000-0000-000000000001/sessions",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/sessions/00000000-0000-0000-0000-00000000000b/participants",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/waveform",
+      "query": "?from_us=0&to_us=10000000&signal_type=eeg&max_points=2000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/features",
+      "query": "?from_us=0&to_us=10000000&limit=1000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/indices",
+      "query": "?limit=1000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/spectrum",
+      "query": "?from_us=0&to_us=10000000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/waveform",
+      "query": "?from_us=0&to_us=30000000&signal_type=eeg&max_points=2000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/features",
+      "query": "?from_us=0&to_us=30000000&limit=1000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/indices",
+      "query": "?limit=1000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/spectrum",
+      "query": "?from_us=0&to_us=30000000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/waveform",
+      "query": "?from_us=0&to_us=30000000&signal_type=ppg&max_points=2000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/features",
+      "query": "?from_us=0&to_us=30000000&limit=1000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/indices",
+      "query": "?limit=1000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/spectrum",
+      "query": "?from_us=0&to_us=30000000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/waveform",
+      "query": "?from_us=0&to_us=30000000&signal_type=acc&max_points=2000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/features",
+      "query": "?from_us=0&to_us=30000000&limit=1000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/indices",
+      "query": "?limit=1000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/spectrum",
+      "query": "?from_us=0&to_us=30000000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/features",
+      "query": "?from_us=0&to_us=30000000&limit=1000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/indices",
+      "query": "?limit=1000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/spectrum",
+      "query": "?from_us=0&to_us=30000000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "POST",
+      "path": "/api/v1/data-center/exports/preview",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "POST",
+      "path": "/api/v1/data-center/export-reauth",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "POST",
+      "path": "/api/v1/data-center/exports",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/exports",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/download-audits",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/subjects",
+      "query": "?role=client"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/members/00000000-0000-0000-0000-00000000001f/sessions",
+      "query": "?role=client&subject_type=user"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/subjects",
+      "query": "?role=client"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/subjects",
+      "query": "?role=counselor"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/subjects",
+      "query": "?role=counselor"
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes/00000000-0000-0000-0000-000000000001/sessions",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "POST",
+      "path": "/api/v1/auth/refresh",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/devices/web-push/public-key",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "query": "?only_unread=true&limit=200&event=session_invited"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "query": "?page=1&limit=100"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/contexts",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/summary",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes",
+      "query": "?q=%EA%B2%80%EC%83%89%EA%B2%B0%EA%B3%BC%EC%97%86%EC%9D%8C"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes/00000000-0000-0000-0000-000000000001/sessions",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/sessions/00000000-0000-0000-0000-00000000000b/participants",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/waveform",
+      "query": "?from_us=0&to_us=10000000&signal_type=eeg&max_points=2000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/features",
+      "query": "?from_us=0&to_us=10000000&limit=1000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/indices",
+      "query": "?limit=1000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/spectrum",
+      "query": "?from_us=0&to_us=10000000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/waveform",
+      "query": "?from_us=0&to_us=30000000&signal_type=eeg&max_points=2000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/features",
+      "query": "?from_us=0&to_us=30000000&limit=1000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/indices",
+      "query": "?limit=1000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/spectrum",
+      "query": "?from_us=0&to_us=30000000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/waveform",
+      "query": "?from_us=0&to_us=30000000&signal_type=ppg&max_points=2000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/features",
+      "query": "?from_us=0&to_us=30000000&limit=1000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/indices",
+      "query": "?limit=1000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/spectrum",
+      "query": "?from_us=0&to_us=30000000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/waveform",
+      "query": "?from_us=0&to_us=30000000&signal_type=acc&max_points=2000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/features",
+      "query": "?from_us=0&to_us=30000000&limit=1000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/indices",
+      "query": "?limit=1000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/spectrum",
+      "query": "?from_us=0&to_us=30000000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/features",
+      "query": "?from_us=0&to_us=30000000&limit=1000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/indices",
+      "query": "?limit=1000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/spectrum",
+      "query": "?from_us=0&to_us=30000000"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "POST",
+      "path": "/api/v1/data-center/exports/preview",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "POST",
+      "path": "/api/v1/data-center/export-reauth",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "POST",
+      "path": "/api/v1/data-center/exports",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/exports",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/download-audits",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/subjects",
+      "query": "?role=client"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/members/00000000-0000-0000-0000-00000000001f/sessions",
+      "query": "?role=client&subject_type=user"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/subjects",
+      "query": "?role=client"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/subjects",
+      "query": "?role=counselor"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/subjects",
+      "query": "?role=counselor"
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes",
+      "query": ""
+    },
+    {
+      "role": "platform_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes/00000000-0000-0000-0000-000000000001/sessions",
+      "query": ""
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "POST",
+      "path": "/api/v1/auth/refresh",
+      "query": ""
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/devices/web-push/public-key",
+      "query": ""
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "query": ""
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "query": "?only_unread=true&limit=200&event=session_invited"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "query": ""
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "query": "?page=1&limit=100"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/contexts",
+      "query": ""
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/summary",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064&q=%EA%B2%80%EC%83%89%EA%B2%B0%EA%B3%BC%EC%97%86%EC%9D%8C"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes/00000000-0000-0000-0000-000000000001/sessions",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/sessions/00000000-0000-0000-0000-00000000000b/participants",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/waveform",
+      "query": "?from_us=0&to_us=10000000&signal_type=eeg&max_points=2000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/features",
+      "query": "?from_us=0&to_us=10000000&limit=1000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/indices",
+      "query": "?limit=1000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/spectrum",
+      "query": "?from_us=0&to_us=10000000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/waveform",
+      "query": "?from_us=0&to_us=30000000&signal_type=eeg&max_points=2000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/features",
+      "query": "?from_us=0&to_us=30000000&limit=1000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/indices",
+      "query": "?limit=1000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/spectrum",
+      "query": "?from_us=0&to_us=30000000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/waveform",
+      "query": "?from_us=0&to_us=30000000&signal_type=ppg&max_points=2000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/features",
+      "query": "?from_us=0&to_us=30000000&limit=1000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/indices",
+      "query": "?limit=1000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/spectrum",
+      "query": "?from_us=0&to_us=30000000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/waveform",
+      "query": "?from_us=0&to_us=30000000&signal_type=acc&max_points=2000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/features",
+      "query": "?from_us=0&to_us=30000000&limit=1000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/indices",
+      "query": "?limit=1000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/spectrum",
+      "query": "?from_us=0&to_us=30000000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/features",
+      "query": "?from_us=0&to_us=30000000&limit=1000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/indices",
+      "query": "?limit=1000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/spectrum",
+      "query": "?from_us=0&to_us=30000000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "POST",
+      "path": "/api/v1/data-center/exports/preview",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "POST",
+      "path": "/api/v1/data-center/export-reauth",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "POST",
+      "path": "/api/v1/data-center/exports",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/exports",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/download-audits",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/subjects",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064&role=client"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/members/00000000-0000-0000-0000-00000000001f/sessions",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064&role=client&subject_type=user"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/subjects",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064&role=client"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/subjects",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064&role=counselor"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/subjects",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064&role=counselor"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes/00000000-0000-0000-0000-000000000001/sessions",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "POST",
+      "path": "/api/v1/auth/refresh",
+      "query": ""
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/devices/web-push/public-key",
+      "query": ""
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "query": ""
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "query": "?only_unread=true&limit=200&event=session_invited"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "query": ""
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "query": "?page=1&limit=100"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/contexts",
+      "query": ""
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/summary",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064&q=%EA%B2%80%EC%83%89%EA%B2%B0%EA%B3%BC%EC%97%86%EC%9D%8C"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes/00000000-0000-0000-0000-000000000001/sessions",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/sessions/00000000-0000-0000-0000-00000000000b/participants",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/waveform",
+      "query": "?from_us=0&to_us=10000000&signal_type=eeg&max_points=2000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/features",
+      "query": "?from_us=0&to_us=10000000&limit=1000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/indices",
+      "query": "?limit=1000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/spectrum",
+      "query": "?from_us=0&to_us=10000000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/waveform",
+      "query": "?from_us=0&to_us=30000000&signal_type=eeg&max_points=2000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/features",
+      "query": "?from_us=0&to_us=30000000&limit=1000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/indices",
+      "query": "?limit=1000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/spectrum",
+      "query": "?from_us=0&to_us=30000000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/waveform",
+      "query": "?from_us=0&to_us=30000000&signal_type=ppg&max_points=2000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/features",
+      "query": "?from_us=0&to_us=30000000&limit=1000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/indices",
+      "query": "?limit=1000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/spectrum",
+      "query": "?from_us=0&to_us=30000000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/waveform",
+      "query": "?from_us=0&to_us=30000000&signal_type=acc&max_points=2000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/features",
+      "query": "?from_us=0&to_us=30000000&limit=1000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/indices",
+      "query": "?limit=1000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/spectrum",
+      "query": "?from_us=0&to_us=30000000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/features",
+      "query": "?from_us=0&to_us=30000000&limit=1000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/indices",
+      "query": "?limit=1000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/measurements/00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-000000000015/spectrum",
+      "query": "?from_us=0&to_us=30000000&org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "POST",
+      "path": "/api/v1/data-center/exports/preview",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "POST",
+      "path": "/api/v1/data-center/export-reauth",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "POST",
+      "path": "/api/v1/data-center/exports",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/exports",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/download-audits",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/subjects",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064&role=client"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/members/00000000-0000-0000-0000-00000000001f/sessions",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064&role=client&subject_type=user"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/subjects",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064&role=client"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/subjects",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064&role=counselor"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/subjects",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064&role=counselor"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    },
+    {
+      "role": "org_admin",
+      "width": 390,
+      "method": "GET",
+      "path": "/api/v1/data-center/classes/00000000-0000-0000-0000-000000000001/sessions",
+      "query": "?org_id=00000000-0000-0000-0000-000000000064"
+    }
+  ]
+}

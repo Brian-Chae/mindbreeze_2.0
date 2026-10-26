@@ -32,15 +32,27 @@ it('실서비스 화면에는 12px 미만 글씨가 없다(배지 숫자 제외)
   expect(offenders).toEqual([]);
 });
 
-it('채팅 말풍선은 본문 15px·시간 12px·이름 13px을 쓴다', () => {
-  for (const f of ['MessageBubble.tsx', 'agent-bubble.tsx']) {
-    const src = readFileSync(join(SRC, 'components/chat', f), 'utf-8');
-    expect(src).toMatch(/fontSize: '15px'/); // 본문
-    expect(src).toMatch(/fontSize: '13px', color: '#6F6F6F'/); // 이름
-    expect(src).toMatch(/fontSize: '12px', color: '#6F6F6F'/); // 시간(대비 5:1)
-    expect(src).not.toMatch(/#9CA0AE'?, flexShrink/); // 낮은 대비 시간색 금지
-    expect(src).toMatch(/maxWidth: '80%'/);
-  }
+it('채팅 말풍선은 본문 15px·시간 12px·이름 13px을 쓴다(데스크톱 기준)', () => {
+  // SDD-234 D: 공용 말풍선 크기는 모바일 미디어쿼리를 쓰기 위해 chat-room.css 클래스로 옮겼다.
+  //   데스크톱 기본값(15/13/12, 최대폭 80%)과 테마 muted 색 폴백은 그대로다.
+  const bubble = readFileSync(join(SRC, 'components/chat', 'MessageBubble.tsx'), 'utf-8');
+  const css = readFileSync(join(SRC, 'components/chat', 'chat-room.css'), 'utf-8');
+  const base = css.slice(0, css.indexOf('@media'));
+  expect(base).toMatch(/\.chat-msg__bubble \{[^}]*font-size: 15px/);
+  expect(base).toMatch(/\.chat-msg__name \{[^}]*font-size: 13px/);
+  expect(base).toMatch(/\.chat-msg__time \{[^}]*font-size: 12px/);
+  expect(base).toMatch(/\.chat-msg__body \{[^}]*max-width: 80%/);
+  expect(bubble).toContain("className=\"chat-msg__name\" style={{ color: 'var(--chat-muted, #6F6F6F)' }}");
+  expect(bubble).toContain("className=\"chat-msg__time\" style={{ color: 'var(--chat-muted, #6F6F6F)'");
+  expect(bubble).not.toMatch(/#9CA0AE/); // 낮은 대비 시간색 금지
+
+  // AI 말풍선은 기존 인라인 규격을 유지한다.
+  const agent = readFileSync(join(SRC, 'components/chat', 'agent-bubble.tsx'), 'utf-8');
+  expect(agent).toMatch(/fontSize: '15px'/);
+  expect(agent).toContain("fontSize: '13px', color: '#6F6F6F'");
+  expect(agent).toContain("fontSize: '12px', color: '#6F6F6F'");
+  expect(agent).not.toMatch(/#9CA0AE'?, flexShrink/);
+  expect(agent).toMatch(/maxWidth: '80%'/);
 });
 
 it('Tailwind text-sm 은 15px/22px', () => {

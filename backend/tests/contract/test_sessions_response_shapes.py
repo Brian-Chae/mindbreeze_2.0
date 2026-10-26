@@ -118,6 +118,9 @@ def test_S07_end_전이(client, recorder):
     assert client.post(f"{API}/{cls['id']}/start", headers=host["h"]).status_code == 200
     res = client.post(f"{API}/{cls['id']}/end", headers=host["h"])
     recorder.check("S07 POST end", res)
+    # SDD-217 DEV-03: 마지막 정규 회차와 부모 클래스가 즉시 완료되어 코드를 숨긴다.
+    assert res.json()["status"] == "completed"
+    assert res.json()["access_code"] is None
 
 
 # ── S08~S10: 입장 ───────────────────────────────────────────────────────

@@ -6,6 +6,7 @@ beat 스윕이 generation_started_at(리포트) / recording_ended_at(세션 기�
 """
 from datetime import datetime, timedelta, timezone
 
+from app.config import settings
 from app.services import report_progress_service as rps
 from tests.test_sdd095_report_progress import (
     _create_session,
@@ -67,7 +68,8 @@ def test_03_processing_세션기록_타임아웃_마감(client):
     db = _db()
     try:
         rec = _mk_record(db, sid, status="processing")
-        rec.recording_ended_at = _old()
+        # SDD-212 TD4: 녹음 종료 기준은 줄 대기 유예(pipeline_queue_grace_seconds)만큼 더 기다린 뒤 마감한다.
+        rec.recording_ended_at = _old() - timedelta(seconds=settings.pipeline_queue_grace_seconds)
         db.commit()
 
         affected = rps.sweep_stale_reports(db)

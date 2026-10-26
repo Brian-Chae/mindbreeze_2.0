@@ -1,6 +1,6 @@
 // 채팅방 — iOS 모바일 대응 재구현 + WebSocket 실시간
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { listChatMessages, listChatMessagesAround, sendChatMessage, markRoomRead, markMessagesRead, type ChatMessage } from '../../lib/api/chat';
+import { CHAT_REPORT_CONTACT_EMAIL, isChatBlockedError, isChatContentBlockedError, listChatMessages, listChatMessagesAround, sendChatMessage, markRoomRead, markMessagesRead, type ChatMessage } from '../../lib/api/chat';
 import { useChatStore } from '../../stores/chatStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
@@ -11,6 +11,11 @@ import { useAutoScroll } from '../../hooks/useAutoScroll';
 import { ChatTextarea } from './ChatTextarea';
 import { MessageBubble } from './MessageBubble';
 import { SystemMessage } from './SystemMessage';
+import { subscribeAppPause, subscribeAppResume } from '../../lib/native/app-lifecycle';
+import './chat-room.css';
+
+/** 열람 presence 하트비트 주기 — 서버 TTL(45초)보다 짧게 유지한다. */
+const VIEWING_HEARTBEAT_MS = 20_000;
 import type { Socket } from 'socket.io-client';
 
 // ---- 날짜 포맷 유틸 (KST 기준) ----
@@ -42,12 +47,10 @@ function DateSeparator({ iso }: { iso: string }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'center', margin: '16px 0 8px' }}>
       <span
+        className="chat-date-sep"
         style={{
-          fontSize: '12px',
-          color: '#8E8E93',
-          background: '#F2F2F7',
-          borderRadius: '12px',
-          padding: '4px 12px',
+          color: 'var(--chat-muted, #8E8E93)',
+          background: 'var(--chat-surface, #F2F2F7)',
         }}
       >
         {formatDateLabel(iso)}
@@ -58,13 +61,15 @@ function DateSeparator({ iso }: { iso: string }) {
 
 interface Props {
   roomId: string;
+  /** 클래스 시트에서만 dark를 지정한다. 일반 채팅은 기존 light 유지. */
+  tone?: 'light' | 'dark';
   targetMessageId?: string;
   onShowRecent?: () => void;
   /** 상대방 이름 (직접 채팅에서 표시용). 미지정 시 sender_id 기반 "사용자" */
   peerName?: string;
 }
 
-export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Props) {
+export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent, tone = 'light' }: Props) {
   const user = useAuthStore((s) => s.user);
   const messages = useChatStore((s) => s.messagesByRoom[roomId]);
   // store는 최신순 저장 → 일반 flex-col용으로 오래된 순으로 뒤집기
@@ -76,6 +81,9 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
   const updateSenderName = useChatStore((s) => s.updateSenderName);
   const clearRoomUnread = useChatStore((s) => s.clearRoomUnread);
   const setActiveRoom = useChatStore((s) => s.setActiveRoom);
+  const room = useChatStore((s) => s.rooms.find((r) => r.id === roomId));
+  // SDD-220: 서버가 내려준 상호 차단 상태. 차단된 1:1 방은 입력을 막는다(서버도 403 으로 거부).
+  const blocked = room?.room_type === 'direct' && room.is_blocked === true;
 
   const [dismissedTarget, setDismissedTarget] = useState<string | null>(null);
   const target = dismissedTarget === `${roomId}:${targetMessageId}` ? undefined : targetMessageId;
@@ -221,6 +229,39 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
     };
   }, [roomId, token, appendMessage, updateSenderName]);
 
+  // 열람 presence — 이 방을 실제로 보고 있는 동안만 서버가 이 방의 새 메시지 푸시를 보내지 않는다.
+  //   앱 포그라운드 + 탭 표시 + 이 방 화면일 때만 viewing=true(20초 하트비트). 숨김·백그라운드·이탈 시 즉시 false.
+  useEffect(() => {
+    if (!roomId || !token) return;
+    const socket: Socket = getChatSocket(token);
+    let active = false;
+    const report = (viewing: boolean): void => {
+      active = viewing;
+      socket.emit('room_viewing', { room_id: roomId, viewing });
+    };
+    const sync = (): void => {
+      if (typeof document !== 'undefined' && document.hidden) {
+        if (active) report(false);
+      } else {
+        report(true);
+      }
+    };
+    sync();
+    const timer = setInterval(() => { if (active) report(true); }, VIEWING_HEARTBEAT_MS);
+    document.addEventListener('visibilitychange', sync);
+    const offResume = subscribeAppResume(sync);
+    const offPause = subscribeAppPause(() => { if (active) report(false); });
+    socket.on('connect', sync);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', sync);
+      offResume();
+      offPause();
+      socket.off('connect', sync);
+      report(false);
+    };
+  }, [roomId, token]);
+
   // ── IntersectionObserver: 스크롤 읽음 처리 ──
   const messageElRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const readSentRef = useRef<Set<string>>(new Set());
@@ -317,6 +358,18 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
         setFailedContent(null);
         scrollToBottom();
       } catch (err: unknown) {
+        if (isChatBlockedError(err)) {
+          // 차단된 상대에게는 다시 보내도 같은 결과이므로 재전송 버튼을 두지 않는다.
+          useChatStore.getState().updateRoom(roomId, { is_blocked: true });
+          setError('차단된 상대와는 대화할 수 없습니다');
+          return;
+        }
+        if (isChatContentBlockedError(err)) {
+          // [MB261026][FIX] 게시 필터: 같은 문장은 다시 보내도 막히므로 재전송 버튼 대신 원문을 입력란에 돌려준다.
+          setInput(content);
+          setError(err instanceof Error ? err.message : '운영정책에 맞지 않는 표현이 있어 보낼 수 없어요.');
+          return;
+        }
         setFailedContent(content);
         setError(err instanceof Error ? err.message : '전송 실패');
       }
@@ -325,11 +378,11 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
   );
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-white">
+    <div data-chat-tone={tone} className="chat-room flex flex-col h-full min-h-0 bg-white">
       {target && !loading && (
-        <div className="px-4 py-2 text-sm bg-purple-50 shrink-0" role="status">
+        <div className="px-4 py-2 text-sm mobile:text-mb-compact bg-purple-50 shrink-0" role="status">
           {targetError ?? '알림의 메시지 위치를 보고 있습니다.'}
-          <button type="button" onClick={showRecent} className="ml-3 text-[#5F0080] underline">최근 대화 보기</button>
+          <button type="button" onClick={showRecent} className="ml-3 text-[#5F0080] underline mobile:min-h-11">최근 대화 보기</button>
         </div>
       )}
       {/* 메시지 리스트 */}
@@ -340,9 +393,9 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
       >
         <div className="mx-auto w-full max-w-[760px]">
         {loading ? (
-          <div className="text-center text-gray-500 py-4">{target ? '메시지 위치를 찾고 있습니다' : '메시지를 불러오는 중…'}</div>
+          <div className="text-center text-gray-500 py-4 mobile:text-mb-compact">{target ? '메시지 위치를 찾고 있습니다' : '메시지를 불러오는 중…'}</div>
         ) : targetError ? null : msgList.length === 0 ? (
-          <div className="text-center text-gray-500 py-4">아직 메시지가 없습니다</div>
+          <div className="text-center text-gray-500 py-4 mobile:text-mb-compact">아직 메시지가 없습니다</div>
         ) : (
           msgList.map((m, idx, arr) => {
             const showDateSep =
@@ -400,7 +453,7 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
       </div>
 
       {error && (
-        <div role="alert" className="px-4 py-1.5 text-xs text-red-600 bg-red-50 shrink-0 flex items-center justify-between gap-2">
+        <div role="alert" className="px-4 py-1.5 text-xs mobile:text-mb-compact text-red-600 bg-red-50 shrink-0 flex items-center justify-between gap-2">
           <span className="min-w-0 flex-1 truncate">{error}</span>
           {failedContent && (
             <button
@@ -414,15 +467,22 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
         </div>
       )}
 
+      {blocked && (
+        <div role="status" className="px-4 py-2 text-xs mobile:text-mb-compact text-[#6F6F6F] bg-[#F8F8FB] shrink-0">
+          신고하여 서로 메시지를 주고받을 수 없는 상대예요. 문의:{' '}
+          <a href={`mailto:${CHAT_REPORT_CONTACT_EMAIL}`} className="text-[#5F0080] underline">{CHAT_REPORT_CONTACT_EMAIL}</a>
+        </div>
+      )}
+
       {/* 입력창 */}
       <div
-        className="border-t border-[#EFEFEF] p-3 bg-white shrink-0"
+        className="chat-room__composer border-t border-[#EFEFEF] p-3 bg-white shrink-0"
         style={{ paddingBottom: `calc(0.75rem + ${keyboardHeight}px)` }}
       >
         <div className="mx-auto flex w-full max-w-[760px] items-end gap-2">
         <ChatTextarea
           textareaRef={inputRef}
-          disabled={!!target && (loading || !!targetError)}
+          disabled={blocked || (!!target && (loading || !!targetError))}
           value={input}
           onChange={setInput}
           onSend={() => void handleSend()}
@@ -431,8 +491,8 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
         <button
           type="button"
           onClick={() => void handleSend()}
-          disabled={!input.trim() || (!!target && (loading || !!targetError))}
-          className="mb-btn shrink-0 disabled:opacity-50"
+          disabled={blocked || !input.trim() || (!!target && (loading || !!targetError))}
+          className="chat-room__send mb-btn shrink-0 disabled:opacity-50"
         >
           전송
         </button>

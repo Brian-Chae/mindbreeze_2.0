@@ -1,6 +1,6 @@
 // SDD-208 — 케이스 하니스(/design/class-player)용 상담사 화면 래퍼. 픽스처 입력을 로컬 상태로 들고 있어 시안처럼 눌러 볼 수 있다.
 // 서버·소켓·LiveKit 을 전혀 쓰지 않으므로 케이스를 결정적으로 렌더·측정한다. 발언권·녹음·마커는 실제 컴포넌트를 그대로 쓴다.
-import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Send } from 'lucide-react';
 import type { SessionLiveMetric } from '../../../../lib/api/session';
 import {
@@ -17,6 +17,9 @@ import { registerCasePatch, type PlayerCaseContext } from '../../../../lib/class
 import { EndSessionModal } from '../../../player/EndSessionModal';
 import { MarkerButton } from '../../../session/MarkerButton';
 import { SpeakingRightsPanel } from '../../../session/SpeakingRightsPanel';
+import { HostSignalToastPolicy, type SignalSnapshot, type SignalToast } from './host-signal-toast';
+import type { SignalMap } from '../../../../lib/class/quiet-signal';
+import { HostSignalToast } from './HostSignalToast';
 import { HostEndingCard } from './HostEndingCard';
 import type { HostMediaProps } from './HostMediaSheet';
 import { HostLiveView, type HostLiveActions } from './HostLiveView';
@@ -73,7 +76,28 @@ function FakeChat({ messages, onSend }: { messages: readonly HostChatMessage[]; 
 
 export function HostCaseHarness({ spec, ctx }: HostCaseHarnessProps) {
   const { ui, actions: uiActions } = useHostUi(spec.ui);
-  const [participants, setParticipants] = useState<readonly HostParticipant[]>(spec.input.participants);
+  const signalDemo = ctx.params.get('signalsDemo');
+  const [participants, setParticipants] = useState<readonly HostParticipant[]>(() => signalDemo
+    ? spec.input.participants.map((participant, index) => ({ ...participant, name: ['지은', '민수', '서연', '도윤', '하늘', '유진'][index] ?? '참가자', hand: ['hand', 'hand-one', 'hand-many', 'toast'].includes(signalDemo) && index < (signalDemo === 'hand-many' ? 3 : 1), speaking: false }))
+    : spec.input.participants);
+  const demoPolicy = useRef<HostSignalToastPolicy | null>(null);
+  const [demoToast, setDemoToast] = useState<SignalToast | null>(null);
+  const [quietSignalEntries] = useState<SignalMap>((): SignalMap => signalDemo && ['signals', 'toast', 'quiet'].includes(signalDemo) ? { a: { type: 'difficult', at: Date.now(), displayName: '지은' }, b: { type: 'difficult', at: Date.now(), displayName: '민수' }, c: { type: 'resting', at: Date.now() + 1, displayName: '서연' } } : {});
+  useEffect(() => {
+    if (!signalDemo) return;
+    const policy = new HostSignalToastPolicy();
+    demoPolicy.current = policy;
+    const now = Date.now();
+    const snapshot: SignalSnapshot = { sessionId: 'harness', connected: true, hands: [], queue: [], signals: {}, sheet: null, blocked: false };
+    policy.update(snapshot, now);
+    const next = { ...snapshot, hands: participants.filter(p => p.hand).map(p => p.id), handNames: Object.fromEntries(participants.map(p => [p.id, p.name])), speakingCount: 0, signals: quietSignalEntries };
+    setDemoToast(policy.update(next, now + 2));
+    const timer = setInterval(() => setDemoToast(policy.update(next, Date.now())), 200);
+    return () => clearInterval(timer);
+  }, [signalDemo, participants, quietSignalEntries]);
+  const quietCounts = signalDemo && ['signals', 'toast', 'quiet'].includes(signalDemo)
+    ? { following: 0, difficult: 2, resting: 1 }
+    : { following: 0, difficult: 0, resting: 0 };
   const [mic, setMic] = useState<MicUi>(spec.input.mic);
   const [cam, setCam] = useState<CamUi>(spec.input.cam);
   const [rec, setRec] = useState<HostRec | null>(spec.input.rec);
@@ -143,6 +167,7 @@ export function HostCaseHarness({ spec, ctx }: HostCaseHarnessProps) {
     <SpeakingRightsPanel
       participants={participants.map(toLiveRow)}
       busyId={null}
+      onLowerHand={(id) => setParticipants((previous) => previous.map((participant) => participant.id === id ? { ...participant, hand: false } : participant))}
       onGrant={(id) => setSpeaking(id, true)}
       onRevoke={(id) => setSpeaking(id, false)}
     />
@@ -174,7 +199,9 @@ export function HostCaseHarness({ spec, ctx }: HostCaseHarnessProps) {
       queue={spec.input.queue}
       speakingPanel={speakingPanel}
       preCheckins={spec.meta.preCheckins}
-      quietSignals={{ following: 0, difficult: 0, resting: 0 }}
+      quietSignals={quietCounts}
+      quietSignalEntries={quietSignalEntries}
+      signalToast={demoToast ? <HostSignalToast toast={demoToast} onOpen={(topic) => { demoPolicy.current?.dismiss(topic); setDemoToast(null); uiActions.openSheet(topic); }} onDismiss={(topic) => { demoPolicy.current?.dismiss(topic); setDemoToast(null); }} onPause={() => demoPolicy.current?.pause(Date.now())} onResume={() => demoPolicy.current?.resume(Date.now())} /> : null}
       selfBand={selfBand ?? HOST_SELF_BAND_NONE}
       chat={{
         unread: spec.meta.unread,

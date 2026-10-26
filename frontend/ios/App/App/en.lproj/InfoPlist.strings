@@ -1,0 +1,3 @@
+"NSBluetoothAlwaysUsageDescription" = "MIND BREEZE uses Bluetooth to connect to your LINK BAND and receive brainwave signals. You can still join classes and view reports without the band.";
+"NSCameraUsageDescription" = "MIND BREEZE uses the camera to show your video during live classes and to record a class when the host has your consent. You can join with your camera off.";
+"NSMicrophoneUsageDescription" = "MIND BREEZE uses the microphone so you can talk during live classes and to record a class when the host has your consent. You can join muted.";

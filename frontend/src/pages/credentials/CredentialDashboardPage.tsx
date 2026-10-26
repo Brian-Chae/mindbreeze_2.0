@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { buttonClass, cardClass, fieldClass } from '../../components/ui';
 import { useRequireAuth, useRequireRole } from '../../hooks/useAuth';
 import {
   uploadCredential,
@@ -119,12 +120,13 @@ export default function CredentialDashboardPage() {
   const tier = data?.verified_tier ?? 'unverified';
   const tierMeta = TIER_META[tier];
 
+  // 외곽 gutter는 셸 기본(16/32/40)과 동일
   return (
-    <div className="min-h-screen bg-surface-canvas p-4 sm:p-8">
+    <div className="min-h-screen bg-surface-canvas px-4 py-4 md:px-8 md:py-6 lg:px-10 lg:pt-8 lg:pb-10">
       <div className="mx-auto w-full max-w-[800px] space-y-6">
         <div className="flex items-center justify-between">
           <Link to="/" className="inline-block">
-            <h1 className="font-display text-2xl font-light text-ink-primary tracking-tight">
+            <h1 className="font-display text-[22px] font-bold leading-[30px] text-ink-primary tracking-tight">
               Mind Breeze
             </h1>
           </Link>
@@ -132,7 +134,7 @@ export default function CredentialDashboardPage() {
         </div>
 
         {/* 인증 등급 카드 */}
-        <div className="bg-surface-raised rounded-2xl border border-border-default p-6 space-y-3">
+        <div className={cardClass('default', 'space-y-3')}>
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-ink-primary">인증 등급</h2>
             <span className={`px-3 py-1 rounded-full text-xs font-semibold ${tierMeta.cls}`}>
@@ -166,7 +168,7 @@ export default function CredentialDashboardPage() {
         {/* 업로드 폼 */}
         <form
           onSubmit={handleUpload}
-          className="bg-surface-raised rounded-2xl border border-border-default p-6 space-y-4"
+          className={cardClass('default', 'space-y-4')}
         >
           <h2 className="text-lg font-bold text-ink-primary">증빙 업로드</h2>
 
@@ -176,7 +178,7 @@ export default function CredentialDashboardPage() {
               type="file"
               accept=".pdf,.jpg,.jpeg,.png"
               onChange={handleFileChange}
-              className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary file:mr-3 file:rounded file:border-0 file:bg-brand-deep file:px-3 file:py-1 file:text-white"
+              className={fieldClass('input', 'h-auto py-3 text-sm file:mr-3 file:rounded file:border-0 file:bg-brand-deep file:px-3 file:py-1 file:text-white')}
             />
             <p className="text-xs text-ink-tertiary">PDF, JPG, PNG · 최대 10MB</p>
           </div>
@@ -186,7 +188,7 @@ export default function CredentialDashboardPage() {
             <select
               value={type}
               onChange={(e) => setType(e.target.value as CredentialType)}
-              className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary"
+              className={fieldClass('select')}
             >
               <option value="id_card">신분증</option>
               <option value="license">자격증</option>
@@ -203,7 +205,7 @@ export default function CredentialDashboardPage() {
               type="date"
               value={expiresAt}
               onChange={(e) => setExpiresAt(e.target.value)}
-              className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary"
+              className={fieldClass('input')}
             />
           </div>
 
@@ -221,14 +223,14 @@ export default function CredentialDashboardPage() {
           <button
             type="submit"
             disabled={uploading || !file}
-            className="w-full h-11 rounded-pill bg-brand-deep text-white font-semibold hover:opacity-90 disabled:opacity-50"
+            className={buttonClass({ variant: 'primary', className: 'w-full' })}
           >
             {uploading ? '업로드 중...' : '업로드'}
           </button>
         </form>
 
         {/* 증빙 목록 */}
-        <div className="bg-surface-raised rounded-2xl border border-border-default p-6 space-y-4">
+        <div className={cardClass('default', 'space-y-4')}>
           <h2 className="text-lg font-bold text-ink-primary">업로드한 증빙</h2>
 
           {loading && (
@@ -241,7 +243,7 @@ export default function CredentialDashboardPage() {
               <button
                 type="button"
                 onClick={() => void fetchList()}
-                className="rounded-lg px-3 py-1.5 text-[13px] font-semibold bg-white text-[#1F1F1F] border border-[#EFEFEF] hover:bg-[#F5F5F5] transition-colors"
+                className={buttonClass({ variant: 'secondary', size: 'sm' })}
               >
                 다시 시도
               </button>

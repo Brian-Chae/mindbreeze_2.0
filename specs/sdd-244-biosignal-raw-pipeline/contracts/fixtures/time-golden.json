@@ -1,0 +1,35 @@
+{
+  "rule": "anchor+(sample_index-anchor.sample_index)*1000000*denominator/numerator; round only final output",
+  "cases": [
+    {
+      "rate": 250,
+      "index": 1,
+      "expected_numerator": 4000,
+      "expected_denominator": 1
+    },
+    {
+      "rate": 50,
+      "index": 1,
+      "expected_numerator": 20000,
+      "expected_denominator": 1
+    },
+    {
+      "rate": 30,
+      "index": 1,
+      "expected_numerator": 100000,
+      "expected_denominator": 3
+    },
+    {
+      "rate": 30,
+      "index": 108000,
+      "expected_numerator": 3600000000,
+      "expected_denominator": 1
+    },
+    {
+      "rate": 25,
+      "index": 1,
+      "expected_numerator": 40000,
+      "expected_denominator": 1
+    }
+  ]
+}

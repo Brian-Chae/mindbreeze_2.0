@@ -1,0 +1,28 @@
+{
+  "$fixture": {
+    "schema": "event"
+  },
+  "message": {
+    "protocol_version": 2,
+    "schema_version": 1,
+    "event_id": "0000003d-0000-4000-8000-00000000003d",
+    "session_id": "00000001-0000-4000-8000-000000000001",
+    "epoch": "1",
+    "audience": "host",
+    "domain": "device",
+    "seq": "9",
+    "entity_id": "00000002-0000-4000-8000-000000000002",
+    "entity_version": "4",
+    "kind": "device.changed",
+    "observed_at_ms": null,
+    "received_at_server_ms": 1760000000600,
+    "payload": {
+      "participant_id": "00000002-0000-4000-8000-000000000002",
+      "stream_id": "00000014-0000-4000-8000-000000000014",
+      "generation": "3",
+      "status": "revoked",
+      "clock_uncertain": false,
+      "cutoff_code": "expelled"
+    }
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "arrival": "명목 도착 + 결정적 jitter ±25ms, 센서 내 순서 보존",
+  "bytes": 352500,
+  "duration_s": 150,
+  "events": [
+    {
+      "note": "alpha 우세(18µV@10Hz) + beta 3µV@20Hz",
+      "t_s": [
+        0,
+        50
+      ]
+    },
+    {
+      "note": "beta 우세(12µV) + alpha 5µV",
+      "t_s": [
+        50,
+        100
+      ]
+    },
+    {
+      "note": "혼합 alpha 10 / beta 6",
+      "t_s": [
+        100,
+        150
+      ]
+    },
+    {
+      "note": "ch1 leadoff",
+      "t_s": [
+        120,
+        125
+      ]
+    },
+    {
+      "note": "양 채널 leadoff",
+      "t_s": [
+        130,
+        131
+      ]
+    },
+    {
+      "note": "PPG 저품질(맥파 0 + 잡음 ±3000)",
+      "t_s": [
+        100,
+        110
+      ]
+    },
+    {
+      "note": "ACC 움직임 burst",
+      "t_s": [
+        60,
+        65
+      ]
+    },
+    {
+      "note": "PPG RSA 0.25Hz(15 breaths/min), RR=0.9±0.06s"
+    }
+  ],
+  "g1_satisfied": false,
+  "kind": "synthetic",
+  "name": "synth_seed246",
+  "origin_seconds": {
+    "acc": 500,
+    "eeg": 1000,
+    "ppg": 93400
+  },
+  "packets": 4500,
+  "per_packet_samples": {
+    "acc": 3,
+    "eeg": 25,
+    "ppg": 5
+  },
+  "real_data": false,
+  "seed": 246002
+}

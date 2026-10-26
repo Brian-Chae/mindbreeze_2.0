@@ -424,7 +424,9 @@ def test_14_broadcast_session_state_공용룸(client, monkeypatch):
         ns.broadcast_session_state("sess-x", {"status": "in_progress", "version": 3})
     )
     e = fake.events("session_state_changed")
-    assert len(e) == 1
+    assert len(e) == 2
+    assert e[1]["room"] == "session:sess-x:observer"
+    assert e[1]["data"] == {"session_id": "sess-x", "status": "in_progress"}
     assert e[0]["room"] == "session:sess-x:all"
     assert e[0]["data"]["version"] == 3
     assert e[0]["data"]["status"] == "in_progress"

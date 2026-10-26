@@ -1,0 +1,1871 @@
+{
+  "$defs": {
+    "ACCOutput": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "filteredData": {
+          "$ref": "#/$defs/DerivedReference"
+        },
+        "magnitude": {
+          "$ref": "#/$defs/DerivedReference"
+        },
+        "activity": {
+          "$ref": "#/$defs/Activity"
+        },
+        "movement": {
+          "$ref": "#/$defs/Movement"
+        },
+        "posture": {
+          "$ref": "#/$defs/Posture"
+        },
+        "signalQuality": {
+          "$ref": "#/$defs/ACCQuality"
+        }
+      },
+      "required": [
+        "filteredData",
+        "magnitude",
+        "activity",
+        "movement",
+        "posture",
+        "signalQuality"
+      ],
+      "title": "ACCOutput",
+      "type": "object"
+    },
+    "ACCQuality": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "overall": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Overall"
+        },
+        "reliability": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reliability"
+        },
+        "consistency": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Consistency"
+        }
+      },
+      "required": [
+        "overall",
+        "reliability",
+        "consistency"
+      ],
+      "title": "ACCQuality",
+      "type": "object"
+    },
+    "Activity": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": [
+            "stationary",
+            "sitting",
+            "walking",
+            "running"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Confidence"
+        },
+        "intensity": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Intensity"
+        }
+      },
+      "required": [
+        "type",
+        "confidence",
+        "intensity"
+      ],
+      "title": "Activity",
+      "type": "object"
+    },
+    "AdvancedHRV": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "sdnn": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Sdnn"
+        },
+        "pnn50": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Pnn50"
+        },
+        "lfPower": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Lfpower"
+        },
+        "hfPower": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Hfpower"
+        },
+        "lfHfRatio": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Lfhfratio"
+        },
+        "stressIndex": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Stressindex"
+        },
+        "avnn": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Avnn"
+        },
+        "pnn20": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Pnn20"
+        },
+        "sdsd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Sdsd"
+        },
+        "hrMax": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Hrmax"
+        },
+        "hrMin": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Hrmin"
+        }
+      },
+      "required": [
+        "sdnn",
+        "pnn50",
+        "lfPower",
+        "hfPower",
+        "lfHfRatio",
+        "stressIndex",
+        "avnn",
+        "pnn20",
+        "sdsd",
+        "hrMax",
+        "hrMin"
+      ],
+      "title": "AdvancedHRV",
+      "type": "object"
+    },
+    "AlgorithmSnapshot": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "algorithm_id": {
+          "minLength": 1,
+          "title": "Algorithm Id",
+          "type": "string"
+        },
+        "algorithm_version": {
+          "minLength": 1,
+          "title": "Algorithm Version",
+          "type": "string"
+        },
+        "parameters_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Parameters Hash",
+          "type": "string"
+        },
+        "parameters": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              }
+            ]
+          },
+          "title": "Parameters",
+          "type": "object"
+        },
+        "filter_version": {
+          "minLength": 1,
+          "title": "Filter Version",
+          "type": "string"
+        },
+        "build": {
+          "minLength": 1,
+          "title": "Build",
+          "type": "string"
+        }
+      },
+      "required": [
+        "algorithm_id",
+        "algorithm_version",
+        "parameters_hash",
+        "parameters",
+        "filter_version",
+        "build"
+      ],
+      "title": "AlgorithmSnapshot",
+      "type": "object"
+    },
+    "BandPowers": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "delta": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Delta"
+        },
+        "theta": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Theta"
+        },
+        "alpha": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Alpha"
+        },
+        "beta": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Beta"
+        },
+        "gamma": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Gamma"
+        }
+      },
+      "required": [
+        "delta",
+        "theta",
+        "alpha",
+        "beta",
+        "gamma"
+      ],
+      "title": "BandPowers",
+      "type": "object"
+    },
+    "Beat": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "beat_id": {
+          "minLength": 1,
+          "title": "Beat Id",
+          "type": "string"
+        },
+        "peak_sample_index": {
+          "minimum": 0,
+          "title": "Peak Sample Index",
+          "type": "integer"
+        },
+        "rr_ms": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Rr Ms"
+        },
+        "accepted": {
+          "title": "Accepted",
+          "type": "boolean"
+        },
+        "exclusion_reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Exclusion Reason"
+        }
+      },
+      "required": [
+        "beat_id",
+        "peak_sample_index",
+        "rr_ms",
+        "accepted",
+        "exclusion_reason"
+      ],
+      "title": "Beat",
+      "type": "object"
+    },
+    "BrainMetrics": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "arousal": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Arousal"
+        },
+        "valence": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Valence"
+        },
+        "attention": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Attention"
+        },
+        "relaxation": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Relaxation"
+        }
+      },
+      "required": [
+        "arousal",
+        "valence",
+        "attention",
+        "relaxation"
+      ],
+      "title": "BrainMetrics",
+      "type": "object"
+    },
+    "BrainState": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "currentState": {
+          "minLength": 1,
+          "title": "Currentstate",
+          "type": "string"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Confidence"
+        },
+        "stateHistory": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Statehistory",
+          "type": "array"
+        },
+        "recommendations": {
+          "anyOf": [
+            {
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Recommendations"
+        },
+        "metrics": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BrainMetrics"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "currentState",
+        "confidence",
+        "stateHistory",
+        "recommendations",
+        "metrics"
+      ],
+      "title": "BrainState",
+      "type": "object"
+    },
+    "DerivedReference": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id_alias": {
+          "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+          "title": "Artifact Id Alias",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "field_path": {
+          "minLength": 1,
+          "title": "Field Path",
+          "type": "string"
+        },
+        "first_sample_index": {
+          "minimum": 0,
+          "title": "First Sample Index",
+          "type": "integer"
+        },
+        "sample_count": {
+          "minimum": 0,
+          "title": "Sample Count",
+          "type": "integer"
+        },
+        "availability": {
+          "enum": [
+            "available",
+            "expired",
+            "withdrawn",
+            "unknown"
+          ],
+          "title": "Availability",
+          "type": "string"
+        },
+        "unavailable_reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Unavailable Reason"
+        }
+      },
+      "required": [
+        "artifact_id_alias",
+        "sha256",
+        "field_path",
+        "first_sample_index",
+        "sample_count",
+        "availability",
+        "unavailable_reason"
+      ],
+      "title": "DerivedReference",
+      "type": "object"
+    },
+    "EEGIndices": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "focusIndex": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Focusindex"
+        },
+        "relaxationIndex": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Relaxationindex"
+        },
+        "stressIndex": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Stressindex"
+        },
+        "hemisphericBalance": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Hemisphericbalance"
+        },
+        "cognitiveLoad": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Cognitiveload"
+        },
+        "emotionalStability": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Emotionalstability"
+        },
+        "totalPower": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Totalpower"
+        },
+        "totalNeuralActivity": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Totalneuralactivity"
+        },
+        "faa": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Faa"
+        }
+      },
+      "required": [
+        "focusIndex",
+        "relaxationIndex",
+        "stressIndex",
+        "hemisphericBalance",
+        "cognitiveLoad",
+        "emotionalStability",
+        "totalPower",
+        "totalNeuralActivity",
+        "faa"
+      ],
+      "title": "EEGIndices",
+      "type": "object"
+    },
+    "EEGOutput": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "filteredData": {
+          "$ref": "#/$defs/DerivedReference"
+        },
+        "signalQuality": {
+          "$ref": "#/$defs/EEGQuality"
+        },
+        "bandPowers": {
+          "$ref": "#/$defs/BandPowers"
+        },
+        "brainState": {
+          "$ref": "#/$defs/BrainState"
+        },
+        "frequencySpectrum": {
+          "$ref": "#/$defs/Spectrum"
+        },
+        "indices": {
+          "$ref": "#/$defs/EEGIndices"
+        },
+        "rawAnalysis": {
+          "$ref": "#/$defs/EEGRawAnalysis"
+        },
+        "channelBandPowers": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/BandPowers"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Channelbandpowers"
+        },
+        "channelBandPowers_reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Channelbandpowers Reason"
+        }
+      },
+      "required": [
+        "filteredData",
+        "signalQuality",
+        "bandPowers",
+        "brainState",
+        "frequencySpectrum",
+        "indices",
+        "rawAnalysis",
+        "channelBandPowers",
+        "channelBandPowers_reason"
+      ],
+      "title": "EEGOutput",
+      "type": "object"
+    },
+    "EEGQuality": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "overall": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Overall"
+        },
+        "fp1": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Fp1"
+        },
+        "fp2": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Fp2"
+        },
+        "sqi": {
+          "$ref": "#/$defs/DerivedReference"
+        }
+      },
+      "required": [
+        "overall",
+        "fp1",
+        "fp2",
+        "sqi"
+      ],
+      "title": "EEGQuality",
+      "type": "object"
+    },
+    "EEGRawAnalysis": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "ch1SQI": {
+          "$ref": "#/$defs/DerivedReference"
+        },
+        "ch2SQI": {
+          "$ref": "#/$defs/DerivedReference"
+        },
+        "overallSQI": {
+          "$ref": "#/$defs/DerivedReference"
+        }
+      },
+      "required": [
+        "ch1SQI",
+        "ch2SQI",
+        "overallSQI"
+      ],
+      "title": "EEGRawAnalysis",
+      "type": "object"
+    },
+    "FeatureScalars": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "focus_index": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Focus Index"
+        },
+        "cognitive_load": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Cognitive Load"
+        },
+        "relaxation_index": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Relaxation Index"
+        },
+        "stress_index": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Stress Index"
+        },
+        "emotional_stability": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Emotional Stability"
+        },
+        "total_neural_activity": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Total Neural Activity"
+        },
+        "faa": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Faa"
+        },
+        "hemispheric_balance": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Hemispheric Balance"
+        },
+        "delta_power": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Delta Power"
+        },
+        "theta_power": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Theta Power"
+        },
+        "alpha_power": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Alpha Power"
+        },
+        "beta_power": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Beta Power"
+        },
+        "gamma_power": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Gamma Power"
+        },
+        "total_power": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Total Power"
+        },
+        "meditation_level": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Meditation Level"
+        },
+        "attention_level": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Attention Level"
+        },
+        "signal_quality": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Signal Quality"
+        },
+        "sdnn": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Sdnn"
+        },
+        "rmssd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Rmssd"
+        },
+        "lf_power": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Lf Power"
+        },
+        "hf_power": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Hf Power"
+        },
+        "lf_hf_ratio": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Lf Hf Ratio"
+        },
+        "heart_rate": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Heart Rate"
+        },
+        "respiratory_rate": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Respiratory Rate"
+        },
+        "motion": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Motion"
+        },
+        "quality": {
+          "anyOf": [
+            {
+              "enum": [
+                "valid",
+                "degraded",
+                "invalid"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Quality"
+        },
+        "device_timestamp_ms": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Device Timestamp Ms"
+        }
+      },
+      "required": [
+        "focus_index",
+        "cognitive_load",
+        "relaxation_index",
+        "stress_index",
+        "emotional_stability",
+        "total_neural_activity",
+        "faa",
+        "hemispheric_balance",
+        "delta_power",
+        "theta_power",
+        "alpha_power",
+        "beta_power",
+        "gamma_power",
+        "total_power",
+        "meditation_level",
+        "attention_level",
+        "signal_quality",
+        "sdnn",
+        "rmssd",
+        "lf_power",
+        "hf_power",
+        "lf_hf_ratio",
+        "heart_rate",
+        "respiratory_rate",
+        "motion",
+        "quality",
+        "device_timestamp_ms"
+      ],
+      "title": "FeatureScalars",
+      "type": "object"
+    },
+    "Movement": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "avgMovement": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Avgmovement"
+        },
+        "stdMovement": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Stdmovement"
+        },
+        "maxMovement": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Maxmovement"
+        },
+        "totalMovement": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Totalmovement"
+        }
+      },
+      "required": [
+        "avgMovement",
+        "stdMovement",
+        "maxMovement",
+        "totalMovement"
+      ],
+      "title": "Movement",
+      "type": "object"
+    },
+    "PPGOutput": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "filteredData": {
+          "$ref": "#/$defs/DerivedReference"
+        },
+        "signalQuality": {
+          "$ref": "#/$defs/PPGQuality"
+        },
+        "vitals": {
+          "$ref": "#/$defs/Vitals"
+        },
+        "peakInfo": {
+          "$ref": "#/$defs/PeakInfo"
+        },
+        "advancedHRV": {
+          "$ref": "#/$defs/AdvancedHRV"
+        },
+        "rrIntervals": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Rrintervals",
+          "type": "array"
+        },
+        "beats": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Beat"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Beats"
+        },
+        "beats_reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Beats Reason"
+        }
+      },
+      "required": [
+        "filteredData",
+        "signalQuality",
+        "vitals",
+        "peakInfo",
+        "advancedHRV",
+        "rrIntervals",
+        "beats",
+        "beats_reason"
+      ],
+      "title": "PPGOutput",
+      "type": "object"
+    },
+    "PPGQuality": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "overall": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Overall"
+        },
+        "red": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Red"
+        },
+        "ir": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Ir"
+        },
+        "sqi": {
+          "$ref": "#/$defs/DerivedReference"
+        },
+        "redSQI": {
+          "$ref": "#/$defs/DerivedReference"
+        },
+        "irSQI": {
+          "$ref": "#/$defs/DerivedReference"
+        },
+        "overallSQI": {
+          "$ref": "#/$defs/DerivedReference"
+        }
+      },
+      "required": [
+        "overall",
+        "red",
+        "ir",
+        "sqi",
+        "redSQI",
+        "irSQI",
+        "overallSQI"
+      ],
+      "title": "PPGQuality",
+      "type": "object"
+    },
+    "PeakInfo": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "peakCount": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Peakcount"
+        },
+        "avgPeakInterval": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Avgpeakinterval"
+        },
+        "peakQuality": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Peakquality"
+        }
+      },
+      "required": [
+        "peakCount",
+        "avgPeakInterval",
+        "peakQuality"
+      ],
+      "title": "PeakInfo",
+      "type": "object"
+    },
+    "Posture": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "tiltAngle": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Tiltangle"
+        },
+        "stability": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Stability"
+        },
+        "balance": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Balance"
+        }
+      },
+      "required": [
+        "tiltAngle",
+        "stability",
+        "balance"
+      ],
+      "title": "Posture",
+      "type": "object"
+    },
+    "SourceWindow": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "signal": {
+          "enum": [
+            "eeg",
+            "ppg",
+            "acc"
+          ],
+          "title": "Signal",
+          "type": "string"
+        },
+        "stream_alias": {
+          "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+          "title": "Stream Alias",
+          "type": "string"
+        },
+        "segment_alias": {
+          "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+          "title": "Segment Alias",
+          "type": "string"
+        },
+        "raw_artifact_id_alias": {
+          "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+          "title": "Raw Artifact Id Alias",
+          "type": "string"
+        },
+        "raw_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Raw Sha256",
+          "type": "string"
+        },
+        "first_sample_index": {
+          "minimum": 0,
+          "title": "First Sample Index",
+          "type": "integer"
+        },
+        "end_sample_index_exclusive": {
+          "minimum": 0,
+          "title": "End Sample Index Exclusive",
+          "type": "integer"
+        },
+        "time_range": {
+          "$ref": "#/$defs/TimeRange"
+        },
+        "valid_sample_count": {
+          "minimum": 0,
+          "title": "Valid Sample Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "signal",
+        "stream_alias",
+        "segment_alias",
+        "raw_artifact_id_alias",
+        "raw_sha256",
+        "first_sample_index",
+        "end_sample_index_exclusive",
+        "time_range",
+        "valid_sample_count"
+      ],
+      "title": "SourceWindow",
+      "type": "object"
+    },
+    "Spectrum": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "frequencies": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Frequencies",
+          "type": "array"
+        },
+        "ch1Power": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Ch1Power",
+          "type": "array"
+        },
+        "ch2Power": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Ch2Power",
+          "type": "array"
+        },
+        "timestamp": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Timestamp"
+        }
+      },
+      "required": [
+        "frequencies",
+        "ch1Power",
+        "ch2Power",
+        "timestamp"
+      ],
+      "title": "Spectrum",
+      "type": "object"
+    },
+    "TimeRange": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "from_us": {
+          "pattern": "^-?(0|[1-9][0-9]{0,18})$",
+          "title": "From Us",
+          "type": "string"
+        },
+        "to_us": {
+          "pattern": "^-?(0|[1-9][0-9]{0,18})$",
+          "title": "To Us",
+          "type": "string"
+        }
+      },
+      "required": [
+        "from_us",
+        "to_us"
+      ],
+      "title": "TimeRange",
+      "type": "object"
+    },
+    "Vitals": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "heartRate": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Heartrate"
+        },
+        "hrv": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Hrv"
+        },
+        "spo2": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Spo2"
+        }
+      },
+      "required": [
+        "heartRate",
+        "hrv",
+        "spo2"
+      ],
+      "title": "Vitals",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "feature-v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "feature_id_alias": {
+      "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+      "title": "Feature Id Alias",
+      "type": "string"
+    },
+    "sequence": {
+      "minimum": 0,
+      "title": "Sequence",
+      "type": "integer"
+    },
+    "signal": {
+      "enum": [
+        "eeg",
+        "ppg",
+        "acc"
+      ],
+      "title": "Signal",
+      "type": "string"
+    },
+    "play_group_id": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Z][A-Za-z0-9_-]{0,63}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Play Group Id"
+    },
+    "window_index": {
+      "minimum": 0,
+      "title": "Window Index",
+      "type": "integer"
+    },
+    "t_rel_ms": {
+      "title": "T Rel Ms",
+      "type": "number"
+    },
+    "computed_at_us": {
+      "pattern": "^-?(0|[1-9][0-9]{0,18})$",
+      "title": "Computed At Us",
+      "type": "string"
+    },
+    "measured_at_us": {
+      "pattern": "^-?(0|[1-9][0-9]{0,18})$",
+      "title": "Measured At Us",
+      "type": "string"
+    },
+    "algorithm": {
+      "$ref": "#/$defs/AlgorithmSnapshot"
+    },
+    "source_windows": {
+      "items": {
+        "$ref": "#/$defs/SourceWindow"
+      },
+      "minItems": 1,
+      "title": "Source Windows",
+      "type": "array"
+    },
+    "scalars": {
+      "$ref": "#/$defs/FeatureScalars"
+    },
+    "scalar_null_reasons": {
+      "additionalProperties": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Scalar Null Reasons",
+      "type": "object"
+    },
+    "detail_null_reasons": {
+      "additionalProperties": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Detail Null Reasons",
+      "type": "object"
+    },
+    "eeg": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EEGOutput"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "ppg": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PPGOutput"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "acc": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ACCOutput"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "quality": {
+      "minLength": 1,
+      "title": "Quality",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "feature_id_alias",
+    "sequence",
+    "signal",
+    "play_group_id",
+    "window_index",
+    "t_rel_ms",
+    "computed_at_us",
+    "measured_at_us",
+    "algorithm",
+    "source_windows",
+    "scalars",
+    "scalar_null_reasons",
+    "detail_null_reasons",
+    "eeg",
+    "ppg",
+    "acc",
+    "quality"
+  ],
+  "title": "FeatureRecord",
+  "type": "object"
+}

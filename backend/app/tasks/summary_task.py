@@ -38,6 +38,11 @@ def _call_gemini_text(prompt: str, *, json_mode: bool = True, timeout: int = 120
 
     키 미설정·네트워크·응답 형식 문제 시 예외를 그대로 전파한다 — 호출부가 폴백/실패를 결정.
     """
+    # SDD-220: 네트워크 직전 단일 가드 — AI off 면 호출 0건(재시도 대상 아님).
+    from app.core.ai_features import require_ai_enabled
+
+    require_ai_enabled()
+
     if not settings.gemini_api_key:
         raise RuntimeError("gemini_api_key not set")
 
@@ -103,6 +108,11 @@ def _call_narrative_llm(
     from app.services.report_narrative import build_narrative_signature, fallback_narrative
 
     fallback = fallback_narrative(metrics_summary)
+    # SDD-220: AI off — LLM 캐시도 읽지 않고 규칙 서사만 쓴다(캐시 쓰기도 하지 않는다).
+    from app.core.ai_features import is_ai_enabled
+
+    if not is_ai_enabled():
+        return fallback
     # SUM-5TH-08: 일부 지표의 direction 이 None(비교 불가)이면 전체 시그니처가 None 이 되어
     # 캐시를 아예 쓰지 못했다(같은 입력을 매번 재계산·폴백 재생성). 결측을 '?' 로 표시한
     # 부분 시그니처로도 캐시 키를 만들어 반복 호출을 막는다(null 을 stable 로 오인하지 않는다).
@@ -236,10 +246,11 @@ def _call_gemini_summary(session_type: str, transcript: str | None) -> dict:
     return parsed
 
 
-async def _emit_status(session_id: str, status: str, detail: dict | None = None):
+def _emit_status(session_id: str, status: str, detail: dict | None = None):
     try:
-        from app.ws.record_namespace import broadcast_record_status
-        await broadcast_record_status(session_id, status, detail)
+        from app.ws.sync_emit import emit_record_status_sync
+
+        emit_record_status_sync(session_id, status, detail)
     except Exception:
         logger.warning("[summary_task] WebSocket emit failed: %s", status)
 
@@ -255,13 +266,23 @@ def _emit_report_progress(session_id: str, db: DBSession) -> None:
 
 
 def run_summary_inline(session_id: str, db: DBSession) -> None:
-    import asyncio
-
     sid = UUID(session_id)
     record = db.query(SessionRecord).filter(SessionRecord.session_id == sid).first()
     session = db.query(Session).filter(Session.id == sid).first()
     if not record or not session:
         logger.warning("[summary_task] not found: %s", session_id)
+        return
+
+    # SDD-220: AI off — 이미 큐에 적재된 작업도 외부 호출 없이 skip 한다(retry 0).
+    #   SDD-228: 전사 기반 요약은 STT 스위치가 꺼져 있으면 전사가 없으므로 함께 스킵한다.
+    from app.core.ai_features import is_stt_enabled
+
+    if not is_stt_enabled():
+        logger.info("[summary_task] AI/STT 기능 off — 요약 스킵: %s", session_id)
+        if record.status == "processing":
+            record.status = "completed"
+            db.commit()
+        _emit_report_progress(session_id, db)
         return
 
     # SDD-085 가드: 수동 기록 모드(마이크 오프)는 요약 대상 아님
@@ -277,7 +298,7 @@ def run_summary_inline(session_id: str, db: DBSession) -> None:
         if record.status == "processing":
             record.status = "failed"
             db.commit()
-        asyncio.run(_emit_status(session_id, "failed", {"reason": "no_transcript"}))
+        _emit_status(session_id, "failed", {"reason": "no_transcript"})
         _emit_report_progress(session_id, db)
         return
 
@@ -289,11 +310,11 @@ def run_summary_inline(session_id: str, db: DBSession) -> None:
         if record.status == "processing":
             record.status = "completed"
             db.commit()
-        asyncio.run(_emit_status(session_id, "completed", {"reason": "low_confidence"}))
+        _emit_status(session_id, "completed", {"reason": "low_confidence"})
         _emit_report_progress(session_id, db)
         return
 
-    asyncio.run(_emit_status(session_id, "summarizing"))
+    _emit_status(session_id, "summarizing")
     # SDD-095: AI 요약 단계 진행 표시
     _emit_report_progress(session_id, db)
 
@@ -304,7 +325,7 @@ def run_summary_inline(session_id: str, db: DBSession) -> None:
         # 전파해 Celery autoretry(backoff)로 재시도한다. status 는 processing 으로 남겨
         # 재시도가 이어받을 수 있게 한다(영구 실패가 아니므로 completed 마킹 금지).
         logger.warning("[summary_task] Gemini 일시 오류 — 재시도 위임: %s", session_id)
-        asyncio.run(_emit_status(session_id, "summarizing", {"retryable": True}))
+        _emit_status(session_id, "summarizing", {"retryable": True})
         raise
     except Exception as exc:
         # SDD-085 G5: 허위 요약을 저장하지 않는다 — 전사문은 유지하고 요약 실패로 마감.
@@ -314,7 +335,7 @@ def run_summary_inline(session_id: str, db: DBSession) -> None:
         record.ai_summary = summary
         record.status = "completed"
         db.commit()
-        asyncio.run(_emit_status(session_id, "completed", {"reason": "summary_failed"}))
+        _emit_status(session_id, "completed", {"reason": "summary_failed"})
         _emit_report_progress(session_id, db)
         return
 
@@ -324,7 +345,7 @@ def run_summary_inline(session_id: str, db: DBSession) -> None:
     record.status = "completed"
     db.commit()
 
-    asyncio.run(_emit_status(session_id, "completed", {"headline": result.get("headline")}))
+    _emit_status(session_id, "completed", {"headline": result.get("headline")})
     logger.info("[summary_task] Summary complete for session %s", session_id)
     # SDD-095: 요약 완료 → 리포트 생성 단계로 넘어감을 진행 스텝퍼에 반영
     _emit_report_progress(session_id, db)

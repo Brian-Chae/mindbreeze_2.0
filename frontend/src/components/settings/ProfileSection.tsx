@@ -1,3 +1,4 @@
+import { SettingsSwitch } from './settings-switch';
 // 프로필정보 섹션 (소속센터/전문분야/경력연수/자격정보/이력정보)
 
 import { useId, useState } from 'react';
@@ -8,6 +9,7 @@ import type {
   CareerItem,
 } from '../../lib/api/counselor';
 import ConfirmDialog from './ConfirmDialog';
+import { buttonClass } from '../../components/ui';
 
 interface ProfileSectionProps {
   profile: CounselorProfile;
@@ -134,7 +136,7 @@ export default function ProfileSection({ profile, onSave }: ProfileSectionProps)
             <button
               type="button"
               onClick={() => setConfirmOpen(true)}
-              className="text-[13px] text-white bg-[#5F0080] hover:bg-[#3F0055] font-medium px-3 py-1.5 rounded-lg transition-colors"
+              className={buttonClass({ variant: 'primary', size: 'sm' })}
             >
               저장
             </button>
@@ -293,14 +295,7 @@ export default function ProfileSection({ profile, onSave }: ProfileSectionProps)
                       disabled={c.is_current}
                     />
                   </div>
-                  <label className="flex items-center gap-2 text-[13px] text-[#1F1F1F]">
-                    <input
-                      type="checkbox"
-                      checked={c.is_current}
-                      onChange={(e) => updateCareer(idx, 'is_current', e.target.checked)}
-                    />
-                    재직중
-                  </label>
+                  <div className="flex items-center justify-between gap-3 text-[13px]"><span>재직중</span><SettingsSwitch checked={c.is_current} label={`${idx + 1}번째 이력 재직중`} onChange={next => updateCareer(idx, 'is_current', next)} /></div>
                 </div>
               ))}
               {draft.careers.length === 0 && (

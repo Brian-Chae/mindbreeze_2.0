@@ -18,6 +18,9 @@ class ConsentRequest(BaseModel):
     tos: bool
     privacy: bool
     sensitive: bool
+    # SDD-220: 선택 동의 — 독립 저장하며 가입을 막지 않는다. 미제출은 거부로 기록한다.
+    eeg: bool = False
+    research: bool = False
 
 
 class RegisterRequest(BaseModel):
@@ -28,6 +31,8 @@ class RegisterRequest(BaseModel):
     role: str = Field(pattern="^(counselor|client)$")
     email_verify_token: str | None = None
     consents: ConsentRequest | None = None
+    # SDD-220: 신규 계정은 만 14세 이상 확인용 생년월일 필수(서버 검증).
+    birth_date: str | None = Field(None, description="YYYY-MM-DD 형식")
     # 자동 로그인(로그인 상태 유지) — True면 refresh 쿠키를 14일 지속 쿠키로,
     # False면 브라우저 세션 쿠키로 발급한다. 미지정 시 기존 동작(지속)을 유지한다.
     remember_me: bool = True
@@ -157,6 +162,8 @@ class GoogleAuthRequest(BaseModel):
     # SEC-04: 신규 Google 가입 시 약관·민감정보 동의. 기존 사용자 로그인은 불필요.
     # 신규 계정 생성 경로에서는 필수(누락/미동의 시 422).
     consents: ConsentRequest | None = None
+    # SDD-220: 신규 Google 가입 시 생년월일(만 14세 확인). 기존 사용자 재로그인에는 요구하지 않는다.
+    birth_date: str | None = Field(None, description="YYYY-MM-DD 형식")
     # 자동 로그인(로그인 상태 유지) — 이메일 로그인과 동일한 refresh 쿠키 분기.
     remember_me: bool = True
 
@@ -165,6 +172,30 @@ class GoogleAuthRequest(BaseModel):
         if bool(self.access_token) == bool(self.id_token):
             raise ValueError("access_token 또는 id_token 중 하나만 전달해야 합니다")
         return self
+
+
+class AppleChallengeResponse(BaseModel):
+    """서버가 발급하는 일회용 nonce — Apple 로그인 요청에 묶어 재사용(replay)을 막는다."""
+
+    nonce: str
+    expires_in: int
+
+
+class AppleAuthRequest(BaseModel):
+    """Apple 로그인. id_token·nonce 는 서버가 서명/claim 을 검증한다.
+
+    name 은 Apple 이 최초 인증 때만 내려주므로 클라이언트가 그대로 전달한다(재로그인에는 불필요).
+    """
+
+    id_token: str = Field(min_length=10)
+    nonce: str = Field(min_length=8, max_length=200)
+    authorization_code: str | None = None
+    name: str | None = Field(None, max_length=100)
+    invite_token: str | None = Field(None, max_length=128)
+    role: str | None = Field(None, pattern="^(client|counselor|org_admin|platform_admin)$")
+    consents: ConsentRequest | None = None
+    birth_date: str | None = Field(None, description="YYYY-MM-DD 형식")
+    remember_me: bool = True
 
 
 class UpdateUserMeRequest(BaseModel):

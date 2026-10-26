@@ -1,0 +1,13 @@
+.birth-year-month-wheel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 12px; color: inherit; }
+.birth-wheel-column { min-width: 0; }
+.birth-wheel-label { display: block; margin-bottom: 4px; font-size: 14px; opacity: .8; }
+.birth-wheel-window { position: relative; height: 132px; border: 1px solid currentColor; border-radius: 12px; overflow: hidden; }
+.birth-wheel-highlight { position: absolute; top: 44px; left: 0; right: 0; height: 44px; background: rgba(150, 110, 190, .16); border-block: 1px solid rgba(150, 110, 190, .5); pointer-events: none; }
+.birth-wheel-scroll { height: 132px; overflow-y: auto; padding-block: 44px; box-sizing: border-box; scroll-snap-type: y mandatory; overscroll-behavior-y: contain; scrollbar-width: none; touch-action: pan-y; position: relative; }
+.birth-wheel-scroll::-webkit-scrollbar { display: none; }
+.birth-wheel-scroll:focus-visible { outline: 3px solid #aa82cf; outline-offset: -3px; border-radius: 11px; }
+.birth-wheel-option { height: 44px; display: flex; align-items: center; justify-content: center; scroll-snap-align: center; font-size: 16px; cursor: pointer; opacity: .6; user-select: none; }
+.birth-wheel-option[aria-selected=true] { font-weight: 700; opacity: 1; }
+.birth-wheel-help { grid-column: 1 / -1; margin: 0; font-size: 13px; line-height: 1.5; opacity: .8; }
+/* 몰입형 입장 화면의 어두운 배경에서도 안내문 대비를 유지한다. */
+.pz-root .birth-wheel-help { color: var(--tx-mid); opacity: 1; }

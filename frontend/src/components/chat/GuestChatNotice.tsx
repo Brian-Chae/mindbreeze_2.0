@@ -2,6 +2,7 @@
 // SDD-095 후속: 게스트는 세션 채팅방 접근 권한이 없으므로(백엔드 403), 패널 대신 이 안내를 노출한다.
 
 import { useState } from 'react';
+import { buttonClass } from '../../components/ui';
 
 function LockIcon() {
   return (
@@ -33,7 +34,7 @@ export function GuestChatNotice() {
         onClick={() => setOpen(true)}
         aria-expanded={false}
         aria-label="채팅 안내 열기"
-        className="fixed bottom-20 right-4 z-50 flex items-center gap-2 rounded-full bg-white/95 px-4 py-3 text-sm font-semibold text-[#5F0080] shadow-lg ring-1 ring-black/5 backdrop-blur transition-colors hover:bg-white"
+        className="fixed bottom-20 right-4 z-50 flex items-center gap-2 rounded-full bg-white/95 px-4 py-3 text-sm mobile:text-mb-compact font-semibold text-[#5F0080] shadow-lg ring-1 ring-black/5 backdrop-blur transition-colors hover:bg-white"
       >
         <LockIcon />
         <span>채팅은 회원 전용</span>
@@ -50,25 +51,25 @@ export function GuestChatNotice() {
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2 text-[#5F0080]">
           <LockIcon />
-          <h2 className="text-sm font-bold text-[#1F1F1F]">채팅은 회원 전용입니다</h2>
+          <h2 className="text-sm mobile:text-mb-compact font-bold text-[#1F1F1F]">채팅은 회원 전용입니다</h2>
         </div>
         <button
           type="button"
           onClick={() => setOpen(false)}
           aria-label="닫기"
-          className="shrink-0 rounded-lg px-2 py-1 text-sm text-[#6F6F6F] transition-colors hover:bg-[#F2F3F8]"
+          className="shrink-0 rounded-lg px-2 py-1 mobile:min-h-11 mobile:min-w-11 text-sm mobile:text-mb-compact text-[#6F6F6F] transition-colors hover:bg-[#F2F3F8]"
         >
           닫기
         </button>
       </div>
-      <p className="mt-3 text-sm leading-relaxed text-[#6F6F6F]">
+      <p className="mt-3 text-sm mobile:text-mb-compact leading-relaxed text-[#6F6F6F]">
         채팅방 입장에는 회원가입이 필요합니다. 가입 후 클래스에 다시 참여해 주세요.
       </p>
       <a
         href="/register/client"
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-4 block w-full rounded-xl bg-[#5F0080] py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-[#4E0068]"
+        className={buttonClass({ variant: 'primary', className: 'mt-4 w-full' })}
       >
         회원가입 하기
       </a>

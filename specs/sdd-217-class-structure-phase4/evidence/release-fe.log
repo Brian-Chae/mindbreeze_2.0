@@ -1,0 +1,12 @@
+
+ RUN  v5.0.2 /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd217/frontend
+
+
+ Test Files  9 passed (9)
+      Tests  69 passed (69)
+   Start at  02:41:28
+   Duration  5.99s (environment 33%, import 28%, tests 19%, transform 18%, setup 1%, worker 1%)
+
+    Isolate  9 workers spawned · ~257ms startup each (spawn + environment, per file)
+             at least ~2.05s faster with isolate: false — reuses workers across files instead of one per file
+

@@ -431,7 +431,9 @@ def test_리포트_메시지도_푸시_outbox_가_비식별이다(client):
 
     rows = H.outbox_rows("push")
     assert len(rows) == 1
-    assert rows[0]["payload"]["body"] == "루시가 메시지를 보냈어요"
+    # 승인 알림이 푸시를 소유한다. AI ON에서도 한 건이고 리포트로 직접 이동한다.
+    assert rows[0]["payload"]["body"] == "새 알림이 도착했어요. 앱에서 확인해 주세요."
+    assert rows[0]["payload"]["deeplink"] == f"/app/reports?report={report_id}"
     assert "민감한 상담 요약 문장" not in str(rows[0]["payload"])
     assert "박내담" not in str(rows[0]["payload"])
 

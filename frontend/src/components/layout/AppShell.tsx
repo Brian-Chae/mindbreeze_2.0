@@ -1,8 +1,11 @@
+import { PageHeader } from '../ui/page-header';
+import { useMobileMenuSwipe } from '../../hooks/use-mobile-menu-swipe';
 import { useState, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SidebarNav, { ICONS, StrokeIcon } from './SidebarNav';
 import MobileDrawer from './MobileDrawer';
 import BottomTabBar from './BottomTabBar';
+import { isCounselingEnabled } from '../../lib/feature-flags';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { useChatStore } from '../../stores/chatStore';
 import { useReportStore } from '../../stores/reportStore';
@@ -13,6 +16,8 @@ import { resolveNotificationTarget } from '../../lib/api/notifications';
 
 export interface AppShellProps {
   children: ReactNode;
+  /** 새 읽기 화면에서만 적용하는 셸 스타일. */
+  variant?: 'default' | 'structure';
   title: string;
   sub?: string;
   rightSlot?: ReactNode;
@@ -22,10 +27,13 @@ export interface AppShellProps {
   hideBottomTab?: boolean;
   /** 모바일 페이지 타이틀 블록 숨김(채팅방처럼 화면이 자체 헤더를 가질 때). */
   hideMobileTitle?: boolean;
+  /** 목록·대시보드형 본문을 1200px(mb-content) 가운데 정렬로 감싼다. */
+  wide?: boolean;
 }
 
 export default function AppShell({
   children,
+  variant = 'default',
   title,
   sub,
   rightSlot,
@@ -34,6 +42,7 @@ export default function AppShell({
   noBottomPad = false,
   hideBottomTab = false,
   hideMobileTitle = false,
+  wide = false,
 }: AppShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const navigate = useNavigate();
@@ -43,10 +52,13 @@ export default function AppShell({
   const sessionInvites = useNotificationStore((s) => s.sessionInvites);
   // NAV-01: 하단 탭 홈 경로를 역할에 맞춘다(org_admin → /dashboard/org).
   const userRole = useAuthStore((s) => s.user?.role);
+  const userId = useAuthStore((s) => s.user?.id);
+  const swipe = useMobileMenuSwipe(userRole, drawerOpen || hideBottomTab, userId);
   const chatUnread = useChatStore((s) =>
     s.rooms.reduce((sum, r) => sum + (r.unread_count ?? 0), 0),
   );
   const reportPendingReview = useReportStore((s) => s.pendingReview);
+  const menuBadge = sessionInvites.length + (userRole !== 'platform_admin' && isCounselingEnabled() ? reportPendingReview : 0);
   const refreshReports = useReportStore((s) => s.refresh);
 
   // Socket.IO 실시간 알림 리스너 + 최초 fetch
@@ -55,9 +67,12 @@ export default function AppShell({
   // 채팅방 목록 불러오기 (사이드바 뱃지용)
   const setRooms = useChatStore((s) => s.setRooms);
   useEffect(() => {
+    const snapshot = useChatStore.getState().rooms;
+    let active = true;
     listChatRooms()
-      .then((res) => setRooms(res.rooms))
+      .then((res) => { if (active) setRooms(res.rooms, snapshot); })
       .catch(() => { /* 조용히 실패 */ });
+    return () => { active = false; };
   }, [setRooms]);
 
   // 리포트 미읽음 수 초기 로드 (사이드바·하단 탭 공용 배지)
@@ -81,7 +96,7 @@ export default function AppShell({
   };
 
   return (
-    <div className="h-full w-full bg-[#F7F4F0] font-sans text-[#1F1F1F] md:grid md:grid-cols-[240px_1fr] flex flex-col">
+    <div data-shell-variant={variant} className="h-full w-full bg-[#F7F4F0] font-sans text-[#1F1F1F] md:grid md:grid-cols-[240px_minmax(0,1fr)] flex flex-col">
       {/* 데스크톱 사이드바 */}
       <aside className="hidden md:flex bg-[#F5EDFC] border-r border-[#EFEFEF] flex-col">
         <SidebarNav
@@ -93,14 +108,15 @@ export default function AppShell({
       </aside>
 
       {/* 모바일 헤더 */}
-      <header className="md:hidden h-14 flex items-center justify-between px-4 border-b border-[#EFEFEF] bg-white shrink-0">
+      <header className="mb-shell-topbar md:hidden h-14 flex items-center justify-between px-4 border-b border-[#EFEFEF] bg-white shrink-0">
         <button
           type="button"
-          aria-label="메뉴 열기"
+          aria-label={menuBadge ? `메뉴 열기 ${menuBadge}건` : '메뉴 열기'}
           onClick={() => setDrawerOpen(true)}
-          className="w-10 h-10 flex items-center justify-center -ml-2 text-[#1F1F1F]"
+          className="relative min-w-11 min-h-11 flex items-center justify-center -ml-2 text-[#1F1F1F]"
         >
           <StrokeIcon d={ICONS.hamburger} size={22} />
+          {menuBadge > 0 && <span aria-hidden="true" className="absolute top-0 right-0 min-w-[18px] h-[18px] px-1 rounded-full bg-[#B3264B] text-white text-[10px] font-bold">{menuBadge > 9 ? '9+' : menuBadge}</span>}
         </button>
         <button
           type="button"
@@ -136,18 +152,8 @@ export default function AppShell({
       <section className="flex flex-col flex-1 min-w-0 min-h-0">
         {/* 데스크톱 헤더 */}
         <header className="hidden md:flex h-[76px] px-8 items-center justify-between border-b border-[#EFEFEF] shrink-0">
-          <div>
-            {sub && (
-              <div className="text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">
-                {sub}
-              </div>
-            )}
-            <div className="font-bold text-[22px] text-[#1F1F1F] tracking-tight mt-0.5">
-              {title}
-            </div>
-          </div>
-          <div className="flex items-center gap-3 relative">
-            {rightSlot}
+          <PageHeader title={title} sub={sub} actions={rightSlot} />
+          <div className="flex items-center gap-3 relative ml-3">
             <button
               type="button"
               aria-label="알림"
@@ -210,37 +216,21 @@ export default function AppShell({
 
         {/* 모바일 페이지 타이틀 */}
         {!hideMobileTitle && (title || sub || rightSlot) && (
-          <div className="md:hidden px-4 pt-4 pb-2 flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
-            <div className="min-w-0">
-              {sub && (
-                <div className="text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">
-                  {sub}
-                </div>
-              )}
-              <div className="font-bold text-[18px] text-[#1F1F1F] tracking-tight mt-0.5 truncate">
-                {title}
-              </div>
-            </div>
-            {/* 좁은 화면에서 rightSlot 버튼이 넘치지 않도록 줄바꿈을 허용한다.
-                (shrink-0 + flex-wrap 조합은 실제로 줄바꿈이 일어나지 않고 가로로 넘치므로
-                 min-w-0 + ml-auto 로 줄이 바뀌게 한다) */}
-            {rightSlot && (
-              <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 ml-auto">
-                {rightSlot}
-              </div>
-            )}
-          </div>
+          <PageHeader title={title} sub={sub} actions={rightSlot} mobile className="md:hidden px-4 pt-4 pb-2" />
         )}
 
-        <div
-          className={`flex-1 min-h-0 bg-[#F7F4F0] ${noScroll ? '' : 'overflow-auto'} ${contentPad} ${noBottomPad ? '' : 'pb-[calc(4rem+env(safe-area-inset-bottom))]'} md:pb-0`}
+        <div ref={swipe.containerRef} data-mobile-menu-swipe className="mobile-menu-swipe-viewport flex-1 min-h-0">
+        <div data-mobile-swipe-page
+          className={`mobile-menu-swipe-page flex-1 min-h-0 bg-[#F7F4F0] ${noScroll ? '' : 'overflow-auto'} ${contentPad} ${noBottomPad || hideBottomTab ? '' : 'pb-[calc(100px+env(safe-area-inset-bottom,0px))]'} md:pb-0`}
         >
-          {children}
+          {wide ? <div data-ui="page-wide" className="mx-auto w-full max-w-mb-content">{children}</div> : children}
+        </div>
+        <p className="sr-only" role="status" aria-live="polite">{swipe.message}</p>
         </div>
       </section>
 
       <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-      {!hideBottomTab && <BottomTabBar onMoreClick={() => setDrawerOpen(true)} role={userRole} />}
+      {!hideBottomTab && <BottomTabBar role={userRole} />}
     </div>
   );
 }

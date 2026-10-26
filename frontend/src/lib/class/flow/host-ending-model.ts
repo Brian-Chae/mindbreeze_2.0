@@ -15,6 +15,7 @@ export interface EndStepView {
 }
 
 export interface EndingInput {
+  isClassSession?: boolean;
   /** 서버 steps[] (아직 조회 전이면 null → 첫 단계 진행 중으로 본다) */
   steps: readonly ReportProgressStep[] | null;
   generationStatus: ReportGenerationStatus | null;
@@ -31,6 +32,7 @@ export interface EndingInput {
 }
 
 export interface EndingView {
+  isClassSession?: boolean;
   done: boolean;
   manual: boolean;
   steps: EndStepView[];
@@ -119,6 +121,7 @@ export function deriveEnding(input: EndingInput): EndingView {
     : done ? `${together ? `${together} ` : ''}리포트가 준비됐어요.` : `${together ? `${together} ` : ''}녹음이 저장됐고 리포트를 만들고 있어요.`;
   return {
     done,
+    isClassSession: input.isClassSession,
     manual,
     steps,
     pct,
@@ -148,4 +151,14 @@ export function endedDurationMin(startedAt: string | null | undefined, endedAt: 
   const ms = new Date(endedAt).getTime() - new Date(startedAt).getTime();
   if (!Number.isFinite(ms) || ms <= 0) return null;
   return Math.max(1, Math.round(ms / 60000));
+}
+
+/** 명상 종료는 서버의 completed 응답으로 확정한다. 상담은 기존 종료 화면을 유지한다. */
+export function completedClassDestination(
+  session: { id: string; class_id?: string | null; status: string },
+  leaveTo?: string,
+): string | null {
+  if (session.status !== 'completed') return null;
+  if (leaveTo) return leaveTo;
+  return session.class_id ? `/sessions/${session.id}/summary` : null;
 }

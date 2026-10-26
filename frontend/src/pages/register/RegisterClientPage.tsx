@@ -5,6 +5,9 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import ThemeToggle from '../../components/ThemeToggle';
 import { OtpInput } from '../../components/auth/OtpInput';
 import { ConsentCheckList, type Consents } from '../../components/auth/ConsentCheckList';
+import { BIRTH_DATE_MESSAGES, checkBirthDate, todayKst } from '../../lib/auth/age';
+import { hasRequiredConsents, toConsentPayload } from '../../lib/auth/consents';
+import { apiErrorCode } from '../../lib/api/auth';
 import { requestOtp, verifyOtp } from '../../lib/api/auth';
 import { checkCounselorCode, type CounselorCodeCheckResponse } from '../../lib/api/signup';
 import { useAuthStore } from '../../stores/authStore';
@@ -147,8 +150,8 @@ export default function RegisterClientPage() {
 
   const handleConsentNext = (): void => {
     setError(null);
-    if (!consents.tos || !consents.privacy || !consents.sensitive) {
-      setError('모든 약관에 동의해야 가입할 수 있습니다');
+    if (!hasRequiredConsents(consents)) {
+      setError('필수 약관에 모두 동의해야 가입할 수 있습니다');
       return;
     }
     setStep(3);
@@ -193,8 +196,10 @@ export default function RegisterClientPage() {
       setError('성별을 선택해주세요');
       return;
     }
-    if (!birthDate) {
-      setError('생년월일을 입력해주세요');
+    // 서버가 최종 판정하지만(Asia/Seoul 기준) 입력 단계에서 먼저 안내한다.
+    const birthCheck = checkBirthDate(birthDate);
+    if (birthCheck !== 'ok') {
+      setError(BIRTH_DATE_MESSAGES[birthCheck]);
       return;
     }
     if (phone.trim() && !PHONE_REGEX.test(phone.trim())) {
@@ -225,7 +230,7 @@ export default function RegisterClientPage() {
         password,
         name: name.trim(),
         email_verify_token: emailVerifyToken,
-        consents,
+        consents: toConsentPayload(consents),
         invite_token: inviteToken || undefined,
         gender,
         birth_date: birthDate,
@@ -241,7 +246,10 @@ export default function RegisterClientPage() {
       );
     } catch (err) {
       if (err instanceof ApiError) {
-        if (err.status === 409) {
+        if (apiErrorCode(err) === 'ACCOUNT_DELETION_PENDING') {
+          // F2: 탈퇴 처리 중인 이메일은 영구 삭제가 끝날 때까지 가입할 수 없다.
+          setError('탈퇴 처리 중인 이메일이에요. 영구 삭제가 끝난 뒤 다시 가입할 수 있어요');
+        } else if (err.status === 409) {
           setError('이미 등록된 이메일입니다');
         } else {
           setError(err.message || '가입에 실패했습니다');
@@ -426,7 +434,7 @@ export default function RegisterClientPage() {
                   type="date"
                   value={birthDate}
                   onChange={(e) => setBirthDate(e.target.value)}
-                  max={new Date().toISOString().slice(0, 10)}
+                  max={todayKst()}
                   disabled={loading}
                   className={inputClass}
                 />

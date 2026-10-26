@@ -48,8 +48,9 @@ def _object_prefix(sid: UUID, participant: SessionParticipant, play_group_id: st
     return f"eeg-raw/{sid}/{participant.id}/{seg}"
 
 
-# STG-11: S3 key 에 삽입되는 stream_id 허용 문자(영숫자·.·_·-).
-_STREAM_ID_RE = re.compile(r"^[A-Za-z0-9._-]{1,128}$")
+# STG-11: S3 key 에 삽입되는 stream_id 허용 문자(영숫자·.·_·-·:).
+# 프론트 stream_id 는 `eeg:{session_uuid}:{participant_uuid}` 형태라 `:` 를 허용한다.
+_STREAM_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 
 
 def _validate_stream_id(stream_id: str) -> str:
@@ -57,9 +58,9 @@ def _validate_stream_id(stream_id: str) -> str:
 
     stream_id 는 클라이언트 입력이며 object key 에 그대로 들어간다. ``../``·``/`` 같은
     문자가 허용되면 다른 prefix(참가자·세션 경계)로 키가 이탈하거나 예기치 않은 객체를
-    덮어쓸 수 있다. 허용: 영숫자와 ``.``·``_``·``-`` (1~128자).
+    덮어쓸 수 있다. 허용: 영숫자와 ``.``·``_``·``-``·``:`` (1~128자). ``/``·``\``·``..`` 는 거부한다.
     """
-    if not isinstance(stream_id, str) or not _STREAM_ID_RE.fullmatch(stream_id):
+    if not isinstance(stream_id, str) or not _STREAM_ID_RE.fullmatch(stream_id) or ".." in stream_id:
         raise HTTPException(status_code=422, detail="stream_id 형식이 올바르지 않습니다")
     return stream_id
 
@@ -81,7 +82,8 @@ def presign_upload(
     """raw chunk presigned PUT URL 발급 + manifest(EEGRawChunk) 멱등 생성."""
     sid, _ = _get_session(session_id, db)
     participant = session_service.resolve_upload_participant(
-        sid, payload.participant_id, current_user_id, db, entry_credential=entry_credential
+        sid, payload.participant_id, current_user_id, db, entry_credential=entry_credential,
+        allow_completed=True,
     )
     prefix = _object_prefix(sid, participant, payload.play_group_id)
 
@@ -97,6 +99,9 @@ def presign_upload(
             .filter(
                 EEGRawChunk.session_id == sid,
                 EEGRawChunk.participant_id == participant.id,
+                # SDD-244: v1 은 legacy EEG 행만 다룬다(세 신호 v2 행 재사용·변조 금지)
+                EEGRawChunk.signal_type == "eeg",
+                EEGRawChunk.segment_id == "legacy",
                 EEGRawChunk.stream_id.in_(stream_ids),
                 EEGRawChunk.chunk_index.in_(chunk_indices),
             )
@@ -144,6 +149,8 @@ def presign_upload(
                     .filter(
                         EEGRawChunk.session_id == sid,
                         EEGRawChunk.participant_id == participant.id,
+                        EEGRawChunk.signal_type == "eeg",
+                        EEGRawChunk.segment_id == "legacy",
                         EEGRawChunk.stream_id == meta.stream_id,
                         EEGRawChunk.chunk_index == meta.chunk_index,
                     )
@@ -188,7 +195,8 @@ def ack_upload(
     """업로드 완료 확인 — EEGRawChunk.status=uploaded + EEGRecord.file_count 갱신."""
     sid, _ = _get_session(session_id, db)
     participant = session_service.resolve_upload_participant(
-        sid, payload.participant_id, current_user_id, db, entry_credential=entry_credential
+        sid, payload.participant_id, current_user_id, db, entry_credential=entry_credential,
+        allow_completed=True,
     )
 
     # EEG-QRY-03: 청크별 개별 SELECT(N+1) 대신 id 목록을 한 번의 SELECT 로 조회한다.
@@ -200,6 +208,7 @@ def ack_upload(
             EEGRawChunk.id.in_(wanted_ids),
             EEGRawChunk.session_id == sid,
             EEGRawChunk.participant_id == participant.id,
+            EEGRawChunk.segment_id == "legacy",  # SDD-244: v2 행은 biosignal-raw/ack 로만 확정
         )
         .all()
     )
@@ -242,6 +251,11 @@ def ack_upload(
     return {
         "session_id": str(sid),
         "acked": acked,
+        "chunks": [
+            {"chunk_id": str(chunk_id), "upload_status": by_id[chunk_id].upload_status,
+             "checksum": by_id[chunk_id].checksum, "size_bytes": by_id[chunk_id].size_bytes}
+            for chunk_id in wanted_ids
+        ],
         "failed": failed,
         "eeg_record_id": str(record.id) if record else None,
         "file_count": record.file_count if record else 0,
@@ -264,6 +278,7 @@ def _sync_eeg_record(
         .filter(
             EEGRawChunk.session_id == sid,
             EEGRawChunk.participant_id == participant.id,
+            EEGRawChunk.signal_type == "eeg",  # SDD-244: PPG/ACC 는 EEG 파일 수에 섞지 않는다
             EEGRawChunk.upload_status == "uploaded",
         )
         .count()
@@ -338,6 +353,7 @@ def _refresh_eeg_record_file_count(sid: UUID, participant_id: UUID | None, db: D
         .filter(
             EEGRawChunk.session_id == sid,
             EEGRawChunk.participant_id == participant_id,
+            EEGRawChunk.signal_type == "eeg",
             EEGRawChunk.upload_status == "uploaded",
         )
         .count()

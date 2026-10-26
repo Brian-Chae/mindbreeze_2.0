@@ -1,0 +1,12 @@
+
+ RUN  v5.0.2 /Users/brianyongwookchae/.paseo/worktrees/11h17zc0/fix-entry-notice-summary/frontend
+
+
+ Test Files  10 passed (10)
+      Tests  248 passed (248)
+   Start at  22:13:12
+   Duration  7.27s (tests 34%, environment 33%, import 18%, transform 13%, setup 1%)
+
+    Isolate  10 workers spawned · ~283ms startup each (spawn + environment, per file)
+             at least ~2.55s faster with isolate: false — reuses workers across files instead of one per file
+

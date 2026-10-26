@@ -1,7 +1,8 @@
+import type { LocalVideoTrack } from 'livekit-client';
 // SDD-208 H5 — 상담사 진행 중 화면 컨테이너. ClassPlayerPage 가 들고 있는 진행 중 상태·핸들러를 props 로 받아 뷰 모델을 조립한다.
 // 훅(useBand·소켓·녹음기·LiveKit 토큰)은 페이지가 한 번만 호출하고 여기서는 값만 받는다(useBand 인스턴스 중복 금지, X4).
 // 서버·소켓 판정은 하지 않는다 — 데이터 규칙은 host-live-model·host-player-case, 마이크/카메라 규칙은 host-media-control 에 있다.
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import type { RecorderState } from '../../../../hooks/useAudioRecorder';
 import type { BandConnectionState } from '../../../../hooks/useBand';
 import type { FacingMode, VideoRecorderState } from '../../../../hooks/useVideoRecorder';
@@ -30,7 +31,7 @@ import type { HostErrorBannerModel } from './HostBanner';
 import { HostLiveKitBridge } from './HostLiveKitBridge';
 import { HostLiveView, type HostLiveActions } from './HostLiveView';
 import type { HostMediaProps } from './HostMediaSheet';
-import { toHostParticipant, toHostQueue, type HostMetricExtra } from './host-live-model';
+import { holdLastValues, toHostParticipant, toHostQueue, type HeldValues, type HostMetricExtra } from './host-live-model';
 import {
   resolveCamUi,
   resolveMicUi,
@@ -38,6 +39,9 @@ import {
   type MediaFailureReason,
 } from './host-media-control';
 import { useHostUi } from './useHostUi';
+import { lowerEntryHand } from '../../../../lib/api/class-flow';
+import { HostSignalToast } from './HostSignalToast';
+import { HostSignalToastPolicy, type SignalToast } from './host-signal-toast';
 import './host-player.css';
 
 export interface ContainerRecorder {
@@ -93,6 +97,12 @@ export interface HostLiveContainerProps {
   band: ContainerBand;
   status: { error: string | null; endFailed: boolean; ending: boolean; onRetryEnd: () => void };
   end: { open: boolean; onRequest: () => void; onConfirm: () => void; onCancel: () => void };
+  onInvite?: () => void;
+  onHandLowered?: (participantId: string) => void;
+  /** 손내리기 서버 확인 실패 — 낙관적으로 내린 손을 되돌린다 */
+  onHandLowerFailed?: (participantId: string) => void;
+  /** SDD-246: v2 on 이면 손 내리기를 live:command(hand.lower)로 보낸다. 없으면 현행 REST. true=성공 */
+  v2LowerHand?: (participantId: string) => Promise<boolean>;
   codeCopy: { copied: boolean; onCopy: () => void };
   onClose: () => void;
   /** 대기실 준비 현황 패널(WaitingRoomReadinessPanel) — 구독이 켜져 있을 때만 페이지가 만든다 */
@@ -135,12 +145,17 @@ export function HostLiveContainer(props: HostLiveContainerProps) {
   }, []);
 
   /* ───── 참가자 모델 ───── */
+  const heldRef = useRef<HeldValues>({});
   const participants = useMemo(() => {
     const entryFor = (row: SessionLiveMetric): WaitingRoomEntry | undefined =>
       checkins.find((e) => e.participantId === row.participant_id || (row.user_id != null && e.participantId === row.user_id));
-    return rows
+    const raw = rows
       .filter((row) => row.participant_id !== hostParticipantId && !(hostUserId && row.user_id === hostUserId))
       .map((row) => toHostParticipant(row, { extra: extras[row.participant_id], entry: entryFor(row), nowMs }));
+    // 4초 폴링·WS 패치 사이에 값이 일시 null 이 되어도 직전 값을 15초 유지해 '-' 깜빡임을 없앤다
+    const { participants: held, held: nextHeld } = holdLastValues(raw, heldRef.current, nowMs);
+    heldRef.current = nextHeld;
+    return held;
   }, [rows, extras, checkins, hostParticipantId, hostUserId, nowMs]);
 
   const [history, setHistory] = useState<Readonly<Record<string, readonly HistoryPoint[]>>>({});
@@ -186,11 +201,12 @@ export function HostLiveContainer(props: HostLiveContainerProps) {
   const [micFailure, setMicFailure] = useState<MediaFailureReason | null>(DEFAULT_MEDIA_FAILURE);
   const [camFailure, setCamFailure] = useState<MediaFailureReason | null>(DEFAULT_MEDIA_FAILURE);
   const [deviceRetry, setDeviceRetry] = useState(0);
+  const [selfTrack, setSelfTrack] = useState<LocalVideoTrack | null>(null);
   const [selfStream, setSelfStream] = useState<MediaStream | null>(null);
   const [memberStream, setMemberStream] = useState<MediaStream | null>(null);
 
   const micUi = resolveMicUi({ micOn: media.micOn, failure: micFailure, recorderState: recorder.state });
-  const camUi = resolveCamUi({ camOn: media.camOn, failure: camFailure, videoState: videoRecorder.state });
+  const camUi = resolveCamUi({ camOn: media.camOn, failure: camFailure, videoState: videoRecorder.state, hasLocalTrack: selfTrack !== null });
 
   const recheckPermission = useCallback((kind: 'camera' | 'microphone'): void => {
     const getUserMedia = navigator.mediaDevices?.getUserMedia?.bind(navigator.mediaDevices);
@@ -242,7 +258,67 @@ export function HostLiveContainer(props: HostLiveContainerProps) {
   const { ui, actions: uiActions } = useHostUi({
     metric: 'relaxation', rotate: true, sort: 'join', handsFirst: false, table: false, sheet: null, detailId: null, camBig: false,
   });
-  const signalCounts = countSignals(quietSignals, nowMs);
+  // 재연결·백그라운드 복귀 시 이전 10초 신호를 다시 새 신호로 보이지 않는다.
+  const [signalEpoch, setSignalEpoch] = useState(0);
+  const wasConnected = useRef(live.socketConnected);
+  const toastPolicy = useRef(new HostSignalToastPolicy());
+  const [signalToast, setSignalToast] = useState<SignalToast | null>(null);
+  useEffect(() => {
+    if (live.socketConnected !== wasConnected.current) {
+      setSignalEpoch(Date.now());
+      wasConnected.current = live.socketConnected;
+    }
+  }, [live.socketConnected]);
+  useEffect(() => {
+    const reset = () => {
+      toastPolicy.current.reset();
+      setSignalToast(null);
+      setSignalEpoch(Date.now());
+    };
+    const onVisibility = () => { if (document.visibilityState === 'visible') reset(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    reset();
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [session.id]);
+  const freshSignals = useMemo(() => Object.fromEntries(Object.entries(quietSignals).filter(([, value]) => value.at >= signalEpoch)), [quietSignals, signalEpoch]);
+  const signalCounts = countSignals(freshSignals, nowMs);
+  useEffect(() => {
+    const update = () => setSignalToast(toastPolicy.current.update({
+      sessionId: session.id, connected: live.socketConnected && browserOnline,
+      hands: participants.filter((p) => p.hand).map((p) => p.id),
+      handNames: Object.fromEntries(participants.map((p) => [p.id, p.name])),
+      speakingCount: participants.filter((p) => p.speaking).length,
+      queue: queue.map((p) => p.id), signals: freshSignals, sheet: ui.sheet,
+      blocked: Boolean(status.error || liveKit.error || end.open),
+    }, Date.now()));
+    update();
+    const timer = window.setInterval(update, 200);
+    return () => window.clearInterval(timer);
+  }, [session.id, live.socketConnected, browserOnline, participants, queue, freshSignals, ui.sheet, status.error, liveKit.error, end.open]);
+  const [lowerHandBusyId, setLowerHandBusyId] = useState<string | null>(null);
+  const [lowerHandError, setLowerHandError] = useState<{ participantId: string; message: string } | null>(null);
+  const lowerHandInFlight = useRef(false);
+  const lowerHand = async (id: string) => {
+    if (lowerHandInFlight.current) return;
+    lowerHandInFlight.current = true;
+    setLowerHandBusyId(id);
+    setLowerHandError(null);
+    // 낙관적 반영: 누른 즉시 목록에서 손을 내리고, 실패하면 서버 상태로 다시 맞춘다.
+    props.onHandLowered?.(id);
+    try {
+      if (props.v2LowerHand) {
+        if (!(await props.v2LowerHand(id))) throw new Error('lower_hand_rejected');
+      } else {
+        await lowerEntryHand(session.id, id, null);
+      }
+    } catch {
+      props.onHandLowerFailed?.(id);
+      setLowerHandError({ participantId: id, message: '손을 내리지 못했어요. 다시 시도해 주세요.' });
+    } finally {
+      lowerHandInFlight.current = false;
+      setLowerHandBusyId(null);
+    }
+  };
   const [chatUnread, setChatUnread] = useState(0);
 
   const hostCase = useMemo(
@@ -272,6 +348,9 @@ export function HostLiveContainer(props: HostLiveContainerProps) {
       busyId={speaking.busyId}
       onGrant={(id) => speaking.onSet(id, true)}
       onRevoke={(id) => speaking.onSet(id, false)}
+      onLowerHand={(id) => void lowerHand(id)}
+      lowerHandBusyId={lowerHandBusyId}
+      lowerHandError={lowerHandError}
     />
   ) : null;
 
@@ -308,6 +387,7 @@ export function HostLiveContainer(props: HostLiveContainerProps) {
     toggleCam: media.toggleCam,
     recheckPermission,
     copyCode: codeCopy.onCopy,
+    invite: props.onInvite,
     connectSelfBand: () => void band.connect(),
     disconnectSelfBand: () => void band.disconnect(),
   };
@@ -331,9 +411,19 @@ export function HostLiveContainer(props: HostLiveContainerProps) {
         meta={{ title: session.title || '제목 없는 클래스', elapsedSec, durationMin: session.duration_min, accessCode: session.access_code ?? '', ending: status.ending }}
         queue={queue}
         speakingPanel={speakingPanel}
+        signalToast={signalToast ? <HostSignalToast toast={signalToast}
+          onOpen={(topic) => { uiActions.openSheet(topic); toastPolicy.current.dismiss(topic); }}
+          onDismiss={(topic) => { toastPolicy.current.dismiss(topic); setSignalToast((current) => {
+            const rows = current?.rows?.filter((row) => row.topic !== topic) ?? [];
+            return rows.length ? { ...rows[0], rows } : null;
+          }); }}
+          onPause={() => toastPolicy.current.pause(Date.now())}
+          onResume={() => toastPolicy.current.resume(Date.now())}
+        /> : null}
         readinessPanel={waitingEntries.length ? readinessPanel : undefined}
         preCheckins={preCheckins}
         quietSignals={signalCounts}
+        quietSignalEntries={freshSignals}
         selfBand={selfBandSheet}
         chat={{
           unread: chatUnread,
@@ -357,6 +447,7 @@ export function HostLiveContainer(props: HostLiveContainerProps) {
         errorBanners={errorBanners}
         codeCopied={codeCopy.copied}
         selfStream={selfStream}
+        selfTrack={selfTrack}
         memberStream={solo ? memberStream : null}
         trendOf={trendOf}
         actions={actions}
@@ -371,6 +462,7 @@ export function HostLiveContainer(props: HostLiveContainerProps) {
           onDisconnected={liveKit.onDisconnected}
           onMediaFailure={(kind, reason) => (kind === 'mic' ? setMicFailure(reason) : setCamFailure(reason))}
           onSelfStream={setSelfStream}
+          onSelfTrack={setSelfTrack}
           onMemberStream={setMemberStream}
         />
       ) : null}

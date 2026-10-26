@@ -1,6 +1,7 @@
 // 알림 API 클라이언트
 
 import { apiClient } from './client';
+import { isCounselingEnabled } from '../feature-flags';
 
 export interface NotificationDto {
   id: string;
@@ -23,6 +24,7 @@ export interface UnreadCountResponse {
 }
 
 export interface NotificationPreferencesResponse {
+  push?: Record<string, boolean>;
   email: Record<string, boolean>;
   in_app: Record<string, boolean>;
 }
@@ -154,11 +156,33 @@ export function resolveNotificationTarget(
           messageId ? `?message=${encodeURIComponent(messageId)}` : ''
         }`,
       };
+    case 'class': {
+      if (!targetId.trim()) return null;
+      const sessionId = extra.params?.session_id;
+      if (isClient && extra.event_type === 'class_invited' && extra.params?.start_now === true
+        && typeof sessionId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sessionId)) {
+        return { path: `/class/${sessionId}/enter` };
+      }
+      return { path: `${isClient ? '/app' : ''}/classes/${encodeURIComponent(targetId)}` };
+    }
+    case 'counseling':
+      if (!targetId.trim()) return null;
+      // SDD-219: 상담 비공개 시 클래스 홈으로 보낸다.
+      if (!isCounselingEnabled()) return { path: isClient ? '/app/classes' : '/classes' };
+      return { path: `${isClient ? '/app' : ''}/counseling/${encodeURIComponent(targetId)}` };
     case 'session':
       if (!targetId) return null;
       // SDD-209: 열림·시작·대기열 승격 알림은 회원을 입장 화면으로 바로 보낸다(열리기 전이면 입장 화면이 대기 카드로 안내)
       if (isClient && typeof extra.event_type === 'string' && DIRECT_ENTER_EVENTS.has(extra.event_type)) {
         return { path: `/class/${encodeURIComponent(targetId)}/enter` };
+      }
+      if (typeof extra.params?.class_id === 'string' && extra.params.class_id.trim()) {
+        const classId = encodeURIComponent(extra.params.class_id);
+        const sessionId = encodeURIComponent(targetId);
+        if (isClient) return { path: `/app/classes/${classId}?sessionId=${sessionId}` };
+        const requestId = typeof extra.params.request_id === 'string' && extra.params.request_id.trim()
+          ? `?requestId=${encodeURIComponent(extra.params.request_id)}` : '';
+        return { path: `/classes/${classId}/sessions/${sessionId}${requestId}` };
       }
       return { path: `${isClient ? '/app' : ''}/sessions/${targetId}` };
     case 'report':

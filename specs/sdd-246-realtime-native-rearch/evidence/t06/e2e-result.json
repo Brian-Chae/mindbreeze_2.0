@@ -1,0 +1,205 @@
+{
+ "steps": [
+  {
+   "name": "상담사 로비 표시",
+   "ok": true
+  },
+  {
+   "name": "회원 입장·대기",
+   "ok": true,
+   "text": "클래스 입장 준비 | 지금 집중은 어떤가요? | 가장 가까운 느낌을 하나 골라 주세요. | 집중 | 편안함 | 감정 | 전할 말 | 매우 산만 | 산만 | 보통 | 집중 | 매우 집중 | 다음 | 건너뛰기"
+  },
+  {
+   "name": "상담사 대기실 반영",
+   "ok": true,
+   "text": "제목 없는 클래스 | 로비 · 온라인 · 그룹 | 초대 현황 | 초대 2명 · 대기실 1명 | 1명이 아직 입장하지 않았어요 | 다시 알림 | 대기실 1명 | LINK BAND 사용 안 함 | 참 | 참가자 | 설문 | 기기 | BGM | 발언권 | 채팅 | 0명 준비 완료 · 1명 준"
+  },
+  {
+   "name": "시작 → 회원 화면 전환",
+   "ok": true,
+   "text": "클래스 | 00:05 / 30:00 | 함께하는 | 수업이에요 | 이 수업은 밴드 없이 | 진행돼요 | 이 수업은 기본 뮤트예요 · 말하고 싶을 땐 손들기를 눌러 주세요 | 뮤트 중 | 손들기 | 채팅 | 조용한 신호 | 소리 | 1 / 4 | 건너뛰"
+  },
+  {
+   "name": "손들기/내리기 왕복",
+   "ok": true,
+   "n": 20
+  },
+  {
+   "name": "합성 metric 77 상담사 표시",
+   "ok": true
+  },
+  {
+   "name": "5분 막대 E2E",
+   "ok": null,
+   "skipped": "밴드 없는 회원은 상태 시트 없음 — 단위 시험으로 대체"
+  },
+  {
+   "name": "백엔드 재시작 후 30초 내 자동 복구",
+   "ok": true,
+   "serverUpMs": 3432,
+   "snapshotAfterRestartMs": 5748,
+   "metricVisibleMs": 5748,
+   "metricInjectedAtMs": 3432
+  }
+ ],
+ "hand": [
+  {
+   "i": 0,
+   "memberOptimisticRaiseMs": 40,
+   "hostSeesRaiseMs": 59,
+   "memberOptimisticLowerMs": 23,
+   "hostSeesLowerMs": 50
+  },
+  {
+   "i": 1,
+   "memberOptimisticRaiseMs": 15,
+   "hostSeesRaiseMs": 40,
+   "memberOptimisticLowerMs": 24,
+   "hostSeesLowerMs": 49
+  },
+  {
+   "i": 2,
+   "memberOptimisticRaiseMs": 24,
+   "hostSeesRaiseMs": 49,
+   "memberOptimisticLowerMs": 26,
+   "hostSeesLowerMs": 50
+  },
+  {
+   "i": 3,
+   "memberOptimisticRaiseMs": 24,
+   "hostSeesRaiseMs": 51,
+   "memberOptimisticLowerMs": 23,
+   "hostSeesLowerMs": 48
+  },
+  {
+   "i": 4,
+   "memberOptimisticRaiseMs": 23,
+   "hostSeesRaiseMs": 50,
+   "memberOptimisticLowerMs": 23,
+   "hostSeesLowerMs": 49
+  },
+  {
+   "i": 5,
+   "memberOptimisticRaiseMs": 24,
+   "hostSeesRaiseMs": 49,
+   "memberOptimisticLowerMs": 26,
+   "hostSeesLowerMs": 50
+  },
+  {
+   "i": 6,
+   "memberOptimisticRaiseMs": 24,
+   "hostSeesRaiseMs": 49,
+   "memberOptimisticLowerMs": 25,
+   "hostSeesLowerMs": 50
+  },
+  {
+   "i": 7,
+   "memberOptimisticRaiseMs": 22,
+   "hostSeesRaiseMs": 49,
+   "memberOptimisticLowerMs": 23,
+   "hostSeesLowerMs": 50
+  },
+  {
+   "i": 8,
+   "memberOptimisticRaiseMs": 22,
+   "hostSeesRaiseMs": 49,
+   "memberOptimisticLowerMs": 24,
+   "hostSeesLowerMs": 50
+  },
+  {
+   "i": 9,
+   "memberOptimisticRaiseMs": 23,
+   "hostSeesRaiseMs": 52,
+   "memberOptimisticLowerMs": 20,
+   "hostSeesLowerMs": 47
+  },
+  {
+   "i": 10,
+   "memberOptimisticRaiseMs": 22,
+   "hostSeesRaiseMs": 50,
+   "memberOptimisticLowerMs": 22,
+   "hostSeesLowerMs": 49
+  },
+  {
+   "i": 11,
+   "memberOptimisticRaiseMs": 22,
+   "hostSeesRaiseMs": 49,
+   "memberOptimisticLowerMs": 23,
+   "hostSeesLowerMs": 50
+  },
+  {
+   "i": 12,
+   "memberOptimisticRaiseMs": 22,
+   "hostSeesRaiseMs": 49,
+   "memberOptimisticLowerMs": 23,
+   "hostSeesLowerMs": 52
+  },
+  {
+   "i": 13,
+   "memberOptimisticRaiseMs": 23,
+   "hostSeesRaiseMs": 49,
+   "memberOptimisticLowerMs": 23,
+   "hostSeesLowerMs": 51
+  },
+  {
+   "i": 14,
+   "memberOptimisticRaiseMs": 22,
+   "hostSeesRaiseMs": 47,
+   "memberOptimisticLowerMs": 25,
+   "hostSeesLowerMs": 50
+  },
+  {
+   "i": 15,
+   "memberOptimisticRaiseMs": 24,
+   "hostSeesRaiseMs": 49,
+   "memberOptimisticLowerMs": 25,
+   "hostSeesLowerMs": 50
+  },
+  {
+   "i": 16,
+   "memberOptimisticRaiseMs": 23,
+   "hostSeesRaiseMs": 49,
+   "memberOptimisticLowerMs": 24,
+   "hostSeesLowerMs": 50
+  },
+  {
+   "i": 17,
+   "memberOptimisticRaiseMs": 23,
+   "hostSeesRaiseMs": 49,
+   "memberOptimisticLowerMs": 23,
+   "hostSeesLowerMs": 50
+  },
+  {
+   "i": 18,
+   "memberOptimisticRaiseMs": 22,
+   "hostSeesRaiseMs": 49,
+   "memberOptimisticLowerMs": 23,
+   "hostSeesLowerMs": 50
+  },
+  {
+   "i": 19,
+   "memberOptimisticRaiseMs": 22,
+   "hostSeesRaiseMs": 50,
+   "memberOptimisticLowerMs": 22,
+   "hostSeesLowerMs": 50
+  }
+ ],
+ "restart": {
+  "serverUpMs": 3432,
+  "snapshotAfterRestartMs": 5748,
+  "metricVisibleMs": 5748,
+  "metricInjectedAtMs": 3432
+ },
+ "memberBars": {
+  "mobile": 0,
+  "desktop": 0,
+  "mobileCurrent": "",
+  "desktopCurrent": ""
+ },
+ "restPollsIn12s": {
+  "host": 0,
+  "member": 0,
+  "hostUrls": [],
+  "memberUrls": []
+ }
+}

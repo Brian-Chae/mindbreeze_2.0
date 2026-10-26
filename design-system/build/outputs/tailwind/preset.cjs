@@ -318,11 +318,16 @@ module.exports = {
         'mb-80': '80px',
       },
 
+      maxWidth: {
+        'mb-frame': '1280px',
+        'mb-content': '1200px',
+      },
+
       borderRadius: {
         'mb-xs': '4px',
         'mb-sm': '8px',
         'mb-md': '12px',
-        'mb-lg': '16px',
+        'mb-lg': '20px',
         'mb-xl': '22px',
         'mb-2xl': '24px',
         'mb-3xl': '42px',

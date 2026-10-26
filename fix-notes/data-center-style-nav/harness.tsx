@@ -1,0 +1,12 @@
+import React from 'react';
+import {createRoot} from 'react-dom/client';
+import {BrowserRouter,Routes,Route} from 'react-router-dom';
+import '../../frontend/src/index.css';
+import DataCenterPage from '../../frontend/src/pages/data-center/data-center-page';
+import {HostClassesPage} from '../../frontend/src/pages/classes/host-classes-page';
+import {HostClassDetailPage} from '../../frontend/src/pages/classes/host-class-detail-page';
+import {useAuthStore} from '../../frontend/src/stores/authStore';
+const params=new URLSearchParams(location.search);
+const role=params.get('role')||'org_admin';
+useAuthStore.setState({user:{id:'mock-admin',name:'검증 관리자',email:'mock@example.invalid',role,org_id:'org-1',organization_id:'org-1'},isAuthenticated:true,isInitialized:true});
+createRoot(document.getElementById('root')!).render(<BrowserRouter><Routes><Route path="/verify/classes" element={<HostClassesPage/>}/><Route path="/verify/classes/:classId" element={<HostClassDetailPage/>}/><Route path="*" element={<DataCenterPage/>}/></Routes></BrowserRouter>);

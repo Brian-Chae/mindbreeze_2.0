@@ -26,6 +26,19 @@
 
         </activity>
 
+        <!-- SDD-222: 수업 중 화면이 꺼져도 BLE·서버 통신을 유지하는 포그라운드 서비스(connectedDevice|microphone — 마이크는 상담사 온라인 수업 음성 송출용, SDD-222 D3).
+             서비스 클래스는 capawesome 플러그인이 제공하지만 Manifest 에는 병합되지 않아 앱에서 선언한다. -->
+        <service
+            android:name="io.capawesome.capacitorjs.plugins.foregroundservice.AndroidForegroundService"
+            android:foregroundServiceType="connectedDevice|microphone"
+            android:exported="false" />
+
+        <!-- SDD-246 T08: 네이티브 측정 서비스. connectedDevice 만 사용하며 마이크 타입/권한을 요구하지 않는다. -->
+        <service
+            android:name=".measurement.MeasurementService"
+            android:foregroundServiceType="connectedDevice"
+            android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -48,10 +61,23 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- SDD-222: 백그라운드 BLE 유지(포그라운드 서비스 connectedDevice) + 화면 꺼짐 방지 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
     <!-- BLE 플러그인이 병합하는 위치 권한 제거: neverForLocation 스캔이므로 불필요(Android 11 이하 FINE만 위 선언으로 유지) -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" tools:node="remove" />
 
-    <!-- 화상 상담(LiveKit)·AI 기록용 마이크/카메라. 하드웨어는 필수가 아니다. -->
+    <!-- 광고 ID·AdServices 권한 제거: 앱은 광고·추적을 하지 않는다. Facebook SDK 를 뺀 뒤에도 다른 SDK 가 병합하지 못하게 막는다([MB261026][FIX]). -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_AD_ID" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_CUSTOM_AUDIENCE" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_TOPICS" tools:node="remove" />
+
+    <!-- 화상 클래스·동의한 녹음·녹화용 마이크/카메라. 하드웨어는 필수가 아니다. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />

@@ -1,0 +1,50 @@
+
+ RUN  v5.0.2 /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd217/frontend
+
+ ❯ tests/sdd217-member-operations.test.tsx (33 tests | 3 failed) 541ms
+   × fix1 host 출석 응답 유실 재시도는 최초 revision·참여버전·키·본문을 그대로 전송한다 10ms
+   × 최종검토 lead는 전체 participation 권한 없이 회차 DTO 버전으로 정정한다 3ms
+   × 최종검토 assistant는 전체 participation 권한 없이 회차 DTO 버전으로 정정한다 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/sdd217-member-operations.test.tsx > fix1 host 출석 응답 유실 재시도는 최초 revision·참여버전·키·본문을 그대로 전송한다
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ tests/sdd217-member-operations.test.tsx:43:1695
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/sdd217-member-operations.test.tsx > 최종검토 lead는 전체 participation 권한 없이 회차 DTO 버전으로 정정한다
+ FAIL  tests/sdd217-member-operations.test.tsx > 최종검토 assistant는 전체 participation 권한 없이 회차 DTO 버전으로 정정한다
+AssertionError: expected undefined to be 23 // Object.is equality
+
+- Expected:
+23
+
++ Received:
+undefined
+
+ ❯ tests/sdd217-member-operations.test.tsx:67:97
+     65|  await act(async()=>{input('멤버 운영 사유','강사 확인 정정');select('운영 대상 멤버','m…
+     66|  await click('출석 정정 저장');
+     67|  expect(calls.find(c=>c.body.action==='correct_attended')?.body.expect…
+       |                                                                                                 ^
+     68|  expect(calls.filter(c=>c.url.endsWith('/participation'))).toHaveLengt…
+     69| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 30 passed (33)
+   Start at  21:47:40
+   Duration  1.65s (tests 34%, environment 25%, import 23%, transform 17%)
+

@@ -16,12 +16,25 @@ const render = (url: string): string =>
     createElement(MemoryRouter, { initialEntries: [url] }, createElement(LoginPage)),
   );
 
-test('기본 회원 탭은 Google을 이메일보다 먼저 보여 준다', () => {
+test('기본 회원 탭은 이메일 로그인을 위에, 간편 로그인을 아래에 둔다 (SDD-227 V03)', () => {
   const html = render('/login');
   expect((html.match(/role="tab"/g) || []).length).toBe(3);
-  expect(html).toMatch(/Google로 회원 로그인/);
-  expect(html.indexOf('Google로 회원 로그인')).toBeLessThan(html.indexOf('type="email"'));
+  const order = ['type="email"', '이메일로 회원 로그인', '비밀번호 찾기', '회원가입', '간편 로그인', 'Google로 회원 로그인'].map((k) => html.indexOf(k));
+  order.forEach((i) => expect(i).toBeGreaterThan(-1));
+  expect([...order].sort((a, b) => a - b)).toEqual(order);
   expect(html).toMatch(/register\?role=client/);
+});
+
+test('회원 탭에만 하단 코드 입장 카드가 있고 링크에 코드가 없다 (SDD-227 V01·V02·V05)', () => {
+  for (const url of ['/login', '/login?role=client']) {
+    const html = render(url);
+    expect(html).toMatch(/입장 코드가 있나요\?/);
+    expect(html).toMatch(/href="\/join"/);
+  }
+  for (const url of ['/login?role=counselor', '/login?role=org_admin', '/login?role=platform_admin']) {
+    const html = render(url);
+    expect(html).not.toMatch(/입장 코드가 있나요|href="\/join/);
+  }
 });
 
 test('상담사는 이메일 우선, 기관은 Google과 가입이 없다', () => {
@@ -45,4 +58,23 @@ test('관리자 모드는 공개 탭과 이메일을 숨긴다', () => {
 
 test('알 수 없는 role은 회원 화면이다', () => {
   expect(render('/login?role=unknown')).toMatch(/Google로 회원 로그인/);
+});
+
+
+test('로그인 제목과 역할 스위치는 본문 앞의 헤더에 있고 브랜드 대형 제목은 없다', () => {
+  const html = render('/login');
+  expect(html).toMatch(/<header[\s\S]*<h1[^>]*>로그인<\/h1>[\s\S]*role="tablist"[\s\S]*<\/header>/);
+  expect(html).not.toContain('MIND BREEZE 로그인');
+  expect(html).toContain('aria-label="Mind Breeze 홈으로 이동"');
+});
+
+test('각 역할 안내는 로그인 버튼 바로 다음에 표시한다', () => {
+  for (const [role, description] of [
+    ['client', '상담과 명상을 이용하는 회원을 위한 로그인입니다.'],
+    ['counselor', '상담사 계정으로 세션과 회원을 관리하세요.'],
+    ['org_admin', '기관에서 발급받은 관리자 계정을 사용하세요.'],
+    ['platform_admin', 'Google Workspace 계정으로 로그인하세요.'],
+  ]) {
+    expect(render(`/login?role=${role}`)).toContain(`</button><p class="text-center text-[12.5px] text-white/78 text-white/[0.78]">${description}</p>`);
+  }
 });

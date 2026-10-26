@@ -1,0 +1,61 @@
+홈 8표본 비교 항목 10788개 중 차이 509개
+ - org_admin-390-dashboard-org.wrappers[1].height: 1710.5 → 1755
+ - org_admin-390-dashboard-org.wrappers[2].y: 383.5 → 390
+ - org_admin-390-dashboard-org.wrappers[2].height: 564.5 → 578.5
+ - org_admin-390-dashboard-org.wrappers[3].y: 1374 → 1418.5
+ - org_admin-390-dashboard-org.wrappers[4].y: 1611.5 → 1656
+ - org_admin-390-dashboard-org.headings[2].x: 37 → 41
+ - org_admin-390-dashboard-org.headings[2].y: 404.5 → 415
+ - org_admin-390-dashboard-org.headings[2].width: 316 → 308
+ - org_admin-390-dashboard-org.headings[3].y: 790.5 → 811
+ - org_admin-390-dashboard-org.headings[4].y: 1374 → 1418.5
+ - org_admin-390-dashboard-org.headings[5].y: 1611.5 → 1656
+ - org_admin-390-dashboard-org.controls[3].width: 82.046875 → 75.734375
+ - org_admin-390-dashboard-org.controls[3].height: 37.5 → 44
+ - org_admin-390-dashboard-org.controls[3].paddingLeft: 16 → 12
+ - org_admin-390-dashboard-org.controls[3].paddingRight: 16 → 12
+ - org_admin-390-dashboard-org.controls[3].paddingTop: 8 → 0
+ - org_admin-390-dashboard-org.controls[3].paddingBottom: 8 → 0
+ - org_admin-390-dashboard-org.controls[3].fontSize: 13 → 14
+ - org_admin-390-dashboard-org.controls[3].radius: 8px → 12px
+ - org_admin-390-dashboard-org.controls[3].borderWidth: 1px → 0px
+ - org_admin-390-dashboard-org.controls[3].borderColor: rgb(201, 176, 232) → rgb(239, 239, 239)
+ - org_admin-390-dashboard-org.controls[3].background: rgb(255, 255, 255) → rgb(244, 237, 248)
+ - org_admin-390-dashboard-org.controls[3].gap: normal → 8px
+ - org_admin-390-dashboard-org.controls[4].x: 37 → 41
+ - org_admin-390-dashboard-org.controls[4].y: 703.5 → 714
+ - org_admin-390-dashboard-org.controls[4].width: 316 → 308
+ - org_admin-390-dashboard-org.controls[4].height: 42 → 48
+ - org_admin-390-dashboard-org.controls[4].paddingLeft: 24 → 16
+ - org_admin-390-dashboard-org.controls[4].paddingRight: 24 → 16
+ - org_admin-390-dashboard-org.controls[4].fontSize: 15 → 14
+ - org_admin-390-dashboard-org.controls[4].radius: 12px → 9999px
+ - org_admin-390-dashboard-org.controls[4].gap: normal → 8px
+ - org_admin-390-dashboard-org.controls[5].y: 1682.5 → 1727
+ - org_admin-390-dashboard-org.controls[6].y: 1820.5 → 1865
+ - org_admin-390-dashboard-org.cards[0].height: 203.5 → 210
+ - org_admin-390-dashboard-org.cards[1].y: 383.5 → 390
+ - org_admin-390-dashboard-org.cards[1].height: 383 → 397
+ - org_admin-390-dashboard-org.cards[1].paddingLeft: 20 → 24
+ - org_admin-390-dashboard-org.cards[1].paddingRight: 20 → 24
+ - org_admin-390-dashboard-org.cards[1].paddingTop: 20 → 24
+ - org_admin-390-dashboard-org.cards[1].paddingBottom: 20 → 24
+ - org_admin-390-dashboard-org.cards[1].radius: 16px → 20px
+ - org_admin-390-dashboard-org.cards[1].shadow: none → rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(53, 33, 63, 0.024) 0px 2px 8px 0px
+ - org_admin-390-dashboard-org.cards[1].borderColor: rgb(239, 239, 239) → rgb(232, 226, 237)
+ - org_admin-390-dashboard-org.cards[2].y: 844.5 → 865
+ - org_admin-390-dashboard-org.cards[2].radius: 16px → 20px
+ - org_admin-390-dashboard-org.cards[2].shadow: none → rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(53, 33, 63, 0.024) 0px 2px 8px 0px
+ - org_admin-390-dashboard-org.cards[2].borderColor: rgb(239, 239, 239) → rgb(232, 226, 237)
+ - org_admin-390-dashboard-org.cards[3].y: 980 → 1000.5
+ - org_admin-390-dashboard-org.cards[3].height: 110 → 118
+ - org_admin-390-dashboard-org.cards[3].paddingLeft: 20 → 24
+ - org_admin-390-dashboard-org.cards[3].paddingRight: 20 → 24
+ - org_admin-390-dashboard-org.cards[3].paddingTop: 20 → 24
+ - org_admin-390-dashboard-org.cards[3].paddingBottom: 20 → 24
+ - org_admin-390-dashboard-org.cards[3].radius: 16px → 20px
+ - org_admin-390-dashboard-org.cards[3].shadow: none → rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(53, 33, 63, 0.024) 0px 2px 8px 0px
+ - org_admin-390-dashboard-org.cards[3].borderColor: rgb(221, 222, 231) → rgb(232, 226, 237)
+ - org_admin-390-dashboard-org.cards[4].y: 980 → 1000.5
+ - org_admin-390-dashboard-org.cards[4].height: 110 → 118
+ - org_admin-390-dashboard-org.cards[4].paddingLeft: 20 → 24

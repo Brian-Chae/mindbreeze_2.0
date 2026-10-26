@@ -1,0 +1,424 @@
+{
+  "$defs": {
+    "Anchor": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "sample_index": {
+          "minimum": 0,
+          "title": "Sample Index",
+          "type": "integer"
+        },
+        "utc_us": {
+          "anyOf": [
+            {
+              "pattern": "^-?(0|[1-9][0-9]{0,18})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Utc Us"
+        },
+        "monotonic_us": {
+          "pattern": "^-?(0|[1-9][0-9]{0,18})$",
+          "title": "Monotonic Us",
+          "type": "string"
+        },
+        "relative_us": {
+          "pattern": "^-?(0|[1-9][0-9]{0,18})$",
+          "title": "Relative Us",
+          "type": "string"
+        },
+        "device_tick_raw": {
+          "anyOf": [
+            {
+              "pattern": "^-?(0|[1-9][0-9]{0,18})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Device Tick Raw"
+        },
+        "device_tick_unwrapped": {
+          "anyOf": [
+            {
+              "pattern": "^-?(0|[1-9][0-9]{0,18})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Device Tick Unwrapped"
+        },
+        "clock_segment_id": {
+          "format": "uuid",
+          "title": "Clock Segment Id",
+          "type": "string"
+        },
+        "uncertainty_us": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Uncertainty Us"
+        },
+        "rule": {
+          "const": "anchor_plus_index_delta_over_rate",
+          "title": "Rule",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sample_index",
+        "utc_us",
+        "monotonic_us",
+        "relative_us",
+        "device_tick_raw",
+        "device_tick_unwrapped",
+        "clock_segment_id",
+        "uncertainty_us",
+        "rule"
+      ],
+      "title": "Anchor",
+      "type": "object"
+    },
+    "ParserProfile": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "firmware": {
+          "minLength": 1,
+          "title": "Firmware",
+          "type": "string"
+        },
+        "device_model": {
+          "minLength": 1,
+          "title": "Device Model",
+          "type": "string"
+        },
+        "profile_id": {
+          "minLength": 1,
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "version": {
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        },
+        "parameters_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Parameters Hash",
+          "type": "string"
+        },
+        "platform": {
+          "enum": [
+            "mb-web",
+            "mb-app-js",
+            "native-candidate",
+            "synthetic"
+          ],
+          "title": "Platform",
+          "type": "string"
+        },
+        "verification": {
+          "enum": [
+            "unverified",
+            "synthetic_only",
+            "device_verified"
+          ],
+          "title": "Verification",
+          "type": "string"
+        },
+        "packet_endian": {
+          "enum": [
+            "little",
+            "big",
+            "mixed",
+            "unknown"
+          ],
+          "title": "Packet Endian",
+          "type": "string"
+        },
+        "tick_hz": {
+          "exclusiveMinimum": 0,
+          "title": "Tick Hz",
+          "type": "integer"
+        },
+        "tick_bits": {
+          "exclusiveMinimum": 0,
+          "title": "Tick Bits",
+          "type": "integer"
+        },
+        "header_anchor": {
+          "enum": [
+            "first_sample",
+            "last_sample",
+            "unknown"
+          ],
+          "title": "Header Anchor",
+          "type": "string"
+        }
+      },
+      "required": [
+        "firmware",
+        "device_model",
+        "profile_id",
+        "version",
+        "parameters_hash",
+        "platform",
+        "verification",
+        "packet_endian",
+        "tick_hz",
+        "tick_bits",
+        "header_anchor"
+      ],
+      "title": "ParserProfile",
+      "type": "object"
+    },
+    "Rate": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "numerator": {
+          "exclusiveMinimum": 0,
+          "title": "Numerator",
+          "type": "integer"
+        },
+        "denominator": {
+          "exclusiveMinimum": 0,
+          "title": "Denominator",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "numerator",
+        "denominator"
+      ],
+      "title": "Rate",
+      "type": "object"
+    },
+    "RawSection": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "enum": [
+            "samples",
+            "packets",
+            "packet_map"
+          ],
+          "title": "Name",
+          "type": "string"
+        },
+        "offset": {
+          "minimum": 0,
+          "title": "Offset",
+          "type": "integer"
+        },
+        "length": {
+          "minimum": 0,
+          "title": "Length",
+          "type": "integer"
+        },
+        "row_stride": {
+          "minimum": 0,
+          "title": "Row Stride",
+          "type": "integer"
+        },
+        "encoding": {
+          "enum": [
+            "eeg-i32-i32-u8-f32-f32-le",
+            "ppg-u32-u32-le",
+            "acc-i16-i16-i16-f32-f32-f32-le",
+            "bytes",
+            "utf8-jsonl"
+          ],
+          "title": "Encoding",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "offset",
+        "length",
+        "row_stride",
+        "encoding"
+      ],
+      "title": "RawSection",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "mb-biosignal-raw-v2",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "signal_type": {
+      "enum": [
+        "eeg",
+        "ppg",
+        "acc"
+      ],
+      "title": "Signal Type",
+      "type": "string"
+    },
+    "stream_id": {
+      "format": "uuid",
+      "title": "Stream Id",
+      "type": "string"
+    },
+    "segment_id": {
+      "format": "uuid",
+      "title": "Segment Id",
+      "type": "string"
+    },
+    "chunk_index": {
+      "minimum": 0,
+      "title": "Chunk Index",
+      "type": "integer"
+    },
+    "parser_profile": {
+      "$ref": "#/$defs/ParserProfile"
+    },
+    "rate": {
+      "$ref": "#/$defs/Rate"
+    },
+    "observed_rate": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Rate"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "observed_rate_window_us": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Observed Rate Window Us"
+    },
+    "observed_rate_reason": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Observed Rate Reason"
+    },
+    "channels": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Channels",
+      "type": "array"
+    },
+    "units": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Units",
+      "type": "array"
+    },
+    "scale": {
+      "items": {
+        "type": "number"
+      },
+      "title": "Scale",
+      "type": "array"
+    },
+    "sample_count": {
+      "minimum": 0,
+      "title": "Sample Count",
+      "type": "integer"
+    },
+    "packet_count": {
+      "minimum": 0,
+      "title": "Packet Count",
+      "type": "integer"
+    },
+    "first_sample_index": {
+      "minimum": 0,
+      "title": "First Sample Index",
+      "type": "integer"
+    },
+    "end_sample_index_exclusive": {
+      "minimum": 0,
+      "title": "End Sample Index Exclusive",
+      "type": "integer"
+    },
+    "time_basis": {
+      "enum": [
+        "host_estimated",
+        "device_relative",
+        "utc_verified",
+        "session_relative"
+      ],
+      "title": "Time Basis",
+      "type": "string"
+    },
+    "anchor": {
+      "$ref": "#/$defs/Anchor"
+    },
+    "sections": {
+      "items": {
+        "$ref": "#/$defs/RawSection"
+      },
+      "maxItems": 3,
+      "minItems": 3,
+      "title": "Sections",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "signal_type",
+    "stream_id",
+    "segment_id",
+    "chunk_index",
+    "parser_profile",
+    "rate",
+    "observed_rate",
+    "observed_rate_window_us",
+    "observed_rate_reason",
+    "channels",
+    "units",
+    "scale",
+    "sample_count",
+    "packet_count",
+    "first_sample_index",
+    "end_sample_index_exclusive",
+    "time_basis",
+    "anchor",
+    "sections"
+  ],
+  "title": "RawHeader",
+  "type": "object"
+}

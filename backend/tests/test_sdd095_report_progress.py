@@ -457,18 +457,19 @@ def test_17_report_progress_이벤트_계약(monkeypatch):
     assert isinstance(captured["data"]["updated_at"], str)
 
 
-def test_18_emit_report_progress_가_브로드캐스트를_호출한다(client, monkeypatch):
-    from app.ws import record_namespace
+def test_18_emit_report_progress_가_동기_emit_을_호출한다(client, monkeypatch):
+    from app.ws import sync_emit
 
     host = _register(client, "rp18@test.com")
     sid = _create_session(client, host, start=False)
 
     seen: list[dict] = []
 
-    async def _fake_broadcast(session_id, payload):
+    def _fake_sync(session_id, payload):
         seen.append({"session_id": session_id, "payload": payload})
+        return True
 
-    monkeypatch.setattr(record_namespace, "broadcast_report_progress", _fake_broadcast)
+    monkeypatch.setattr(sync_emit, "emit_report_progress_sync", _fake_sync)
 
     db = _db()
     try:

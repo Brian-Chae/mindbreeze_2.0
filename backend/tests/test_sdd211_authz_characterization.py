@@ -5,6 +5,7 @@
   통합하기 전에, **현행 응답(상태코드 + detail 문자열 + 에러 우선순위)** 을 그대로 박제한다.
 - 이 파일은 현행 코드에서 GREEN 이어야 하고 **이후 구현 커밋에서 수정하지 않는다**(verify G7).
   현행 응답이 이상해 보이는 곳(버그 포함)도 그대로 고정한다 — 고치는 것은 별도 작업이다.
+- SDD-216 별도 정책 변경: D-28·진행자 전용 리포트 쓰기와 현재 기관 역할 fixture만 갱신한다.
 
 범위 밖 / 방침
 - 인라인 호스트 판정(TD3 대상: `_can_access_report`, `set_speaking`, `resolve_audio_sync_host`,
@@ -82,7 +83,7 @@ def _make_user(email: str, role: str, org_id: uuid.UUID | None = None) -> dict:
         if org_id is not None and role in ("counselor", "org_admin"):
             from app.services import membership_service
 
-            membership_service.add_membership(db, user, org_id, status_="active")
+            membership_service.add_membership(db, user, org_id, status_="active", role=role)
         db.commit()
         db.refresh(user)
         uid = str(user.id)
@@ -967,11 +968,11 @@ def test_TD3_report_get_참여자_client는_접근판정은_통과하나_상담�
     assert (res.status_code, res.json()["detail"]) == (403, DETAIL_NO_ACCESS)
 
 
-def test_TD3_report_update_호스트와_같은_기관_org_admin은_통과(client, report_world):
+def test_TD3_report_update_호스트만_통과하고_org_admin은_403(client, report_world):
     w, rid = report_world
     for actor in ("host", "org_admin"):
         res = client.put(f"/api/v1/reports/{rid}", json={"content": {"k": actor}}, headers=getattr(w, actor)["h"])
-        assert res.status_code == 200, (actor, res.text)
+        assert res.status_code == (200 if actor == "host" else 403), (actor, res.text)
 
 
 def test_TD3_report_update_무관한_상담사는_403_수정_문구(client, report_world):
@@ -986,18 +987,18 @@ def test_TD3_report_update_platform_admin은_라우트_role_가드에서_403(cli
     assert (res.status_code, res.json()["detail"]) == (403, "이 작업을 수행할 권한이 없습니다")
 
 
-def test_TD3_report_update_다른_상담사의_세션에_참여자로_들어간_상담사는_서비스_판정을_통과한다(client, report_world):
-    """현행 관찰 박제(이상 동작 후보): 참여자 분기 때문에 호스트가 아닌 참여 상담사도 리포트를 수정할 수 있다."""
+def test_TD3_report_update_다른_상담사의_세션에_참여자로_들어간_상담사는_수정할_수_없다(client, report_world):
+    """SDD-216: 참여 강사의 읽기와 진행 지도사의 쓰기를 분리한다."""
     w, rid = report_world
     _add_participant(w.sid, w.other["id"])
     res = client.put(f"/api/v1/reports/{rid}", json={"content": {"by": "participant-counselor"}}, headers=w.other["h"])
-    assert res.status_code == 200, res.text
+    assert res.status_code == 403, res.text
 
 
-def test_TD3_report_pdf_require_report_host_비호스트는_403_계열A_문구(client, report_world):
+def test_TD3_report_pdf_읽기_권한_없는_비호스트는_403(client, report_world):
     w, rid = report_world
     res = client.get(f"/api/v1/reports/{rid}/pdf", headers=w.other["h"])
-    assert (res.status_code, res.json()["detail"]) == (403, DETAIL_HOST_ONLY)
+    assert (res.status_code, res.json()["detail"]) == (403, DETAIL_NO_ACCESS)
 
 
 def test_TD3_report_pdf_호스트는_판정_통과_후_미승인이면_409(client, report_world):

@@ -10,6 +10,8 @@
 // 회원 볼륨은 서버로 보내지 않는다(개별 설정). 상담사 볼륨은 본인 모니터링용 로컬 값이다.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { RESUME_ORDER } from '../lib/native/app-lifecycle';
+import { useAppResume } from './useAppResume';
 import { getClassAudioTracks } from '../lib/api/class-audio';
 import { createAudioEngine, type AudioEngine } from '../lib/class/audio-engine';
 import {
@@ -107,7 +109,13 @@ export function useClassAudioPlayer({
     setPlaying(false);
     setPositionSec(0);
     setBlocked(false);
+    const engine = engineRef.current;
+    const unsubscribe = engine?.subscribe(() => {
+      setBlocked(engine.isBlocked());
+      setPlaying(engine.isPlaying());
+    });
     return () => {
+      unsubscribe?.();
       engineRef.current?.dispose();
       engineRef.current = null;
     };
@@ -245,6 +253,21 @@ export function useClassAudioPlayer({
     }, AUDIO_SYNC_HEARTBEAT_MS);
     return () => window.clearInterval(timer);
   }, [playing, enabled, send]);
+
+  // ── 앱 복귀 재동기화 (SDD-222 T-J10) ──────────────────────────────
+  // 백그라운드 동안 JS 타이머가 멈춰 heartbeat 가 끊겼을 수 있으므로, 재생 중일 때만 현재 위치를 다시 배포한다.
+  useAppResume(() => {
+    if (!enabled) return;
+    const engine = engineRef.current;
+    if (!engine || !engine.isPlaying()) return;
+    if (engine.isBlocked()) {
+      engine.resume();
+      setBlocked(engine.isBlocked());
+    }
+    const at = engine.positionSec();
+    setPositionSec(at);
+    send('seek', engine.track.track_id, at);
+  }, RESUME_ORDER.audio);
 
   return {
     state: {

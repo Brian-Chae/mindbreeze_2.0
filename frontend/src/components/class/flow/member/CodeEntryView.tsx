@@ -1,6 +1,6 @@
 // SDD-209 M0 — FM04 코드 입력(몰입형, 로그인 없음). 이 화면에는 개인정보 입력이 없다.
 // 오류 문구는 없는/틀린/종료 코드를 구분하지 않고 하나만 쓴다.
-import { useRef, type ClipboardEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, type ClipboardEvent, type KeyboardEvent } from 'react';
 import { CircleAlert, CircleCheck, Clock, Key, LogIn, User } from 'lucide-react';
 import { CODE_LENGTH, sanitizeCodeInput } from '../../../../lib/class/flow/member-entry';
 import { MemberBrandMark } from '../../player/member/MemberBrandMark';
@@ -23,13 +23,16 @@ interface CodeEntryViewProps {
 
 function Hint({ digits, status, memberName }: { digits: string; status: CodeEntryStatus; memberName: string | null }) {
   if (status === 'error') {
-    return <div className="fm-hint" data-bad="true" role="alert"><CircleAlert size={16} aria-hidden="true" />코드를 확인해 주세요</div>;
+    return <div className="fm-hint" data-bad="true" role="alert"><CircleAlert size={16} aria-hidden="true" />코드를 확인해 주세요. 4자리를 다시 입력해 주세요</div>;
   }
   if (status === 'throttled') {
     return <div className="fm-hint" data-bad="true" role="alert"><Clock size={16} aria-hidden="true" />잠시 후 다시 시도해 주세요</div>;
   }
   if (status === 'unavailable') {
     return <div className="fm-hint" data-bad="true" role="alert"><CircleAlert size={16} aria-hidden="true" />잠시 문제가 생겼어요. 다시 시도해 주세요</div>;
+  }
+  if (status === 'verifying') {
+    return <div className="fm-hint" role="status"><Clock size={16} aria-hidden="true" />코드를 확인하고 있어요</div>;
   }
   if (memberName) {
     return <div className="fm-hint"><User size={16} aria-hidden="true" />내 계정 정보로 다음 단계를 채워 드려요</div>;
@@ -50,6 +53,11 @@ export function CodeEntryView({ digits, status, memberName, backdropSrc, onChang
     const next = refs.current[Math.max(0, Math.min(CODE_LENGTH - 1, index))];
     next?.focus();
   };
+
+  // 틀린 코드로 칸이 비워지면 첫 칸에 다시 커서를 둬 키보드를 유지한 채 바로 입력하게 한다.
+  useEffect(() => {
+    if (status === 'error') refs.current[0]?.focus();
+  }, [status]);
 
   const handleCell = (index: number, raw: string): void => {
     const clean = sanitizeCodeInput(raw);

@@ -1,0 +1,44 @@
+{
+  "vitest": {
+    "files": 280,
+    "passedFiles": 272,
+    "failedFiles": 8,
+    "tests": 3052,
+    "passed": 3035,
+    "failed": 17,
+    "newFailures": 0,
+    "existingFailureFiles": [
+      " ❯ tests/org-management-browser.test.cjs (2 tests | 2 failed) 33035ms",
+      " ❯ tests/sdd234-a-mobile-home.test.tsx (6 tests | 4 failed) 10002ms",
+      " ❯ tests/org-counselor-management-browser.test.cjs (1 test | 1 failed) 5826ms",
+      " ❯ tests/report-server-pdf.test.cjs (2 tests | 2 failed) 1349ms",
+      " ❯ tests/report-modal-pdf.test.cjs (2 tests | 2 failed) 1666ms",
+      " ❯ tests/chat-message-deeplink.test.ts (6 tests | 2 failed) 86ms",
+      " ❯ tests/agent-counselor-page.test.tsx (10 tests | 2 failed) 109ms",
+      " ❯ tests/sdd220-native-release.test.ts (7 tests | 2 failed) 23ms"
+    ]
+  },
+  "tsc": 0,
+  "eslint": 0,
+  "build": 0,
+  "sdd234ArtifactsChanged": false,
+  "nodeModulesCommitted": false,
+  "independentHeaderAssert": [
+    {
+      "width": 390,
+      "total": 162,
+      "pageHeaders": 81,
+      "actionHeaders": 32,
+      "actions": 41,
+      "mismatches": 0
+    },
+    {
+      "width": 1440,
+      "total": 162,
+      "pageHeaders": 89,
+      "actionHeaders": 32,
+      "actions": 41,
+      "mismatches": 0
+    }
+  ]
+}

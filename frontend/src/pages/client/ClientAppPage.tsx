@@ -1,3 +1,5 @@
+import { buttonClass } from '../../components/ui';
+import ParticipationProfilePage from '../settings/participation-profile-page';
 // 내담자 앱 메인 페이지
 // 상담사 연결 안 됨 → 코드 입력 화면
 // 상담사 연결 됨 → ClientShell + 탭별 페이지
@@ -14,6 +16,7 @@ import ClientSessionListPage from './ClientSessionListPage';
 import ClientSessionDetailPage from './ClientSessionDetailPage';
 import ClientSettingsPage from '../settings/ClientSettingsPage';
 import ClientReportListPage from './ClientReportListPage';
+import { isAiEnabled } from '../../lib/feature-flags';
 
 // ── 헬퍼 ──────────────────────────────────────────────────────────
 
@@ -250,10 +253,22 @@ export default function ClientAppPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchKey]);
 
+  // SDD-220: AI 비공개면 루시 직접 진입(구 경로·푸시 딥링크 포함)을 일반 채팅 목록으로 보낸다(루프 없음).
+  if (!isAiEnabled() && (pathname === '/app/ai' || pathname.startsWith('/app/ai/') || pathname.startsWith('/app/chat/lucy'))) {
+    return <Navigate to="/app/chat" replace />;
+  }
   // AI 대화는 채팅 목록의 루시(AI) 채널로 통합 — 구 경로·푸시 딥링크는 리다이렉트
   if (pathname === '/app/ai' || pathname === '/app/ai/') return <Navigate to="/app/chat/lucy" replace />;
   // 채팅(루시 채널 포함)은 상담사 연결 전에도 접근 가능 — 코드 입력 게이트보다 먼저 처리
   if (pathname.startsWith('/app/chat')) return <ClientChatPage />;
+
+  // 본인 설정은 상담사 연결 여부와 무관하게 열 수 있다.
+  if (pathname === '/app/profile' || pathname === '/app/profile/') {
+    return <ClientShell title="설정" sub="SETTINGS"><ClientSettingsPage /></ClientShell>;
+  }
+  if (pathname === '/app/participation-profile' || pathname === '/app/participation-profile/') {
+    return <ClientShell title="참여 프로필 관리" sub="PARTICIPATION PROFILE"><ParticipationProfilePage /></ClientShell>;
+  }
 
   // 로딩 중
   if (counselors === null && !fetchError) {
@@ -276,7 +291,7 @@ export default function ClientAppPage() {
           <button
             type="button"
             onClick={() => setFetchKey((k) => k + 1)}
-            className="w-full py-3 rounded-xl bg-[#5F0080] text-white font-semibold hover:bg-[#4B0066] transition-colors"
+            className={buttonClass({ className: 'w-full' })}
           >
             다시 시도
           </button>
@@ -347,16 +362,17 @@ export default function ClientAppPage() {
   // 클래스 탭이면 rightSlot에 신청하기 버튼
   const rightSlot = pathname.startsWith('/app/sessions') ? (
     <button
+      data-header-action="primary"
       type="button"
       onClick={handleSessionRequest}
-      className="h-11 px-4 rounded-full bg-[#5F0080] text-white text-sm font-semibold hover:bg-[#4B0066] transition-colors"
+      className={buttonClass()}
     >
       클래스 신청하기
     </button>
   ) : undefined;
 
   return (
-    <ClientShell title={shellTitle} sub={shellSub} rightSlot={rightSlot}>
+    <ClientShell title={shellTitle} sub={shellSub} rightSlot={rightSlot} wide={pathname.startsWith('/app/sessions') || pathname.startsWith('/app/reports')}>
       {renderTabContent()}
     </ClientShell>
   );

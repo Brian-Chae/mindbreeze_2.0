@@ -12,13 +12,18 @@ export function allowedPushDeeplink(value: unknown): string | null {
   const path = value.split(/[?#]/, 1)[0];
   if (path.split('/').some((part) => part === '.' || part === '..')) return null;
   return path === '/app' || path.startsWith('/app/') || path === '/agent'
+    || path === '/reports' || path === '/notifications'
+    || /^\/(?:sessions|classes)\/[a-zA-Z0-9_-]+$/.test(path)
+    || /^\/class\/[a-zA-Z0-9_-]+\/enter$/.test(path)
     || path === '/chat' || path.startsWith('/chat/')
+    || /^\/classes\/[a-zA-Z0-9_-]+\/sessions\/[a-zA-Z0-9_-]+$/.test(path)
     ? value : null;
 }
 
 export interface PushSession {
   ready: Promise<void>;
   stop: () => Promise<void>;
+  requestPermission?: () => Promise<boolean>;
 }
 
 // 로그아웃은 인증 토큰 폐기 전에 이 함수를 호출한다.
@@ -28,9 +33,26 @@ export async function revokePushRegistration(): Promise<void> {
   await session?.stop();
 }
 
+/** 설정의 사전 안내 확인 후에만 호출한다. */
+export async function requestPushPermission(): Promise<boolean> {
+  const session = currentSession;
+  if (!session) return false;
+  await session.ready;
+  return await session.requestPermission?.() ?? false;
+}
+
+const ASKED_KEY = 'mb.push.permission-asked';
+function wasAsked(): boolean {
+  try { return globalThis.localStorage?.getItem(ASKED_KEY) === '1'; } catch { return false; }
+}
+function markAsked(): void {
+  try { globalThis.localStorage?.setItem(ASKED_KEY, '1'); } catch { /* 저장 불가 환경은 매 시작 시 재질문하지 않도록 무시 */ }
+}
+
 export function startPushRegistration(
   navigate: (path: string) => void,
   refreshNotifications: () => void,
+  requestOnStart = true,
 ): PushSession {
   let stopped = false;
   let token: string | null = null;
@@ -38,7 +60,23 @@ export function startPushRegistration(
   const handles: PluginListenerHandle[] = [];
   let stopPromise: Promise<void> | null = null;
   const platform = getPlatform();
+  let permissionRequest: Promise<boolean> | null = null;
+  const requestPermission = (): Promise<boolean> => {
+    permissionRequest ??= (async () => {
+      if (stopped) return false;
+      let permission = await PushNotifications.checkPermissions();
+      if (stopped) return false;
+      if (permission.receive === 'prompt' || permission.receive === 'prompt-with-rationale') {
+        permission = await PushNotifications.requestPermissions();
+      }
+      if (stopped || permission.receive !== 'granted') return false;
+      await PushNotifications.register();
+      return true;
+    })().finally(() => { permissionRequest = null; });
+    return permissionRequest;
+  };
   const session: PushSession = {
+    requestPermission,
     ready: Promise.resolve(),
     stop: () => {
       stopPromise ??= (async () => {
@@ -76,9 +114,15 @@ export function startPushRegistration(
         });
         token = registration.value;
         if (previous && previous !== token) await apiClient.delete(`/devices/${encodeURIComponent(previous)}`);
-      }).catch(() => { /* 토큰이나 서버 오류 본문을 로그에 남기지 않는다. */ });
+      }).catch((error: unknown) => {
+        // 토큰·서버 응답 본문은 남기지 않고 상태 코드만 기록한다.
+        const status = (error as { response?: { status?: number } })?.response?.status;
+        console.warn('[push] 기기 토큰 서버 등록 실패', status ?? 'network');
+      });
     }));
-    handles.push(await PushNotifications.addListener('registrationError', () => {}));
+    handles.push(await PushNotifications.addListener('registrationError', () => {
+      console.warn('[push] 네이티브 토큰 발급 실패(FCM/APNs 설정 확인)');
+    }));
     handles.push(await PushNotifications.addListener('pushNotificationReceived', () => {
       if (!stopped) refreshNotifications();
     }));
@@ -87,13 +131,31 @@ export function startPushRegistration(
       const path = allowedPushDeeplink(data?.deeplink);
       if (!stopped && path) navigate(path);
     }));
+    handles.push(await App.addListener('appStateChange', ({ isActive }) => {
+      if (!isActive || stopped) return;
+      // 네트워크·인증 오류 후 재시도. 권한 팝업은 사용자 동작에서만 연다.
+      void PushNotifications.checkPermissions().then(async (permission) => {
+        if (!stopped && permission.receive === 'granted') await PushNotifications.register();
+      }).catch(() => {});
+    }));
     if (stopped) return;
-    let permission = await PushNotifications.checkPermissions();
-    if (stopped) return;
-    if (permission.receive === 'prompt' || permission.receive === 'prompt-with-rationale') {
-      permission = await PushNotifications.requestPermissions();
+    // 시작 시에는 이미 허용한 기기만 재등록하고 새 권한 창을 열지 않는다.
+    // 허용된 기기는 즉시 등록. 미결정('prompt')이고 한 번도 묻지 않은 기기는 로그인 직후 1회만 요청한다.
+    if (requestOnStart) {
+      const permission = await PushNotifications.checkPermissions();
+      if (stopped) return;
+      if (permission.receive === 'granted') await PushNotifications.register();
+      else if (permission.receive === 'prompt' && !wasAsked()) {
+        markAsked();
+        await requestPermission();
+      } else console.info('[push] 알림 권한 미허용 — 설정에서 허용 필요', permission.receive);
+    } else {
+      const permission = await PushNotifications.checkPermissions();
+      if (!stopped && permission.receive === 'granted') await PushNotifications.register();
     }
-    if (!stopped && permission.receive === 'granted') await PushNotifications.register();
-  })().catch(() => { /* 권한·네이티브 초기화 실패가 로그인을 막지 않는다. */ });
+  })().catch((error: unknown) => {
+    // 권한·네이티브 초기화 실패가 로그인을 막지 않는다.
+    console.warn('[push] 푸시 초기화 실패', error instanceof Error ? error.name : 'unknown');
+  });
   return session;
 }

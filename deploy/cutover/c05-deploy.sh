@@ -34,7 +34,7 @@ step_main() {
     note "실행 ID 조회 → GitHub Actions 에서 production 환경 Approve 대기(최대 ${APPROVAL_WAIT_MIN}분) → 완료 폴링(gh run view) → conclusion=success 아니면 중단"
     remote_prod "배포 후 서버 상태 확인(current 릴리스·서비스 active·prod.env 정적 값)" <<EOF
 bash /opt/mindbreeze/current/deploy/install-release.sh status
-for s in mindbreeze-backend mindbreeze-worker mindbreeze-email-worker mindbreeze-export-worker nginx redis-server livekit coturn; do printf '%s=%s\n' \$s "\$(systemctl is-active \$s)"; done
+for s in mindbreeze-backend mindbreeze-stt-worker mindbreeze-report-worker mindbreeze-worker mindbreeze-email-worker mindbreeze-export-worker nginx redis-server livekit coturn; do printf '%s=%s\n' \$s "\$(systemctl is-active \$s)"; done
 grep -E '^(ENVIRONMENT|RETENTION_SWEEP_ENABLED|RESEARCH_EXPORT_ENABLED|ENABLE_DEV_ROLE_SIMULATION)=' $PROD_ENV_FILE
 curl -fsS http://127.0.0.1:8000/health/ready
 EOF
@@ -64,7 +64,7 @@ EOF
 
   remote_prod "배포 후 서버 상태 확인" <<EOF | tee "$RUN_DIR/C5-server-status.txt" >&2
 bash /opt/mindbreeze/current/deploy/install-release.sh status
-for s in mindbreeze-backend mindbreeze-worker mindbreeze-email-worker mindbreeze-export-worker nginx redis-server livekit coturn; do printf '%s=%s\n' \$s "\$(systemctl is-active \$s)"; done
+for s in mindbreeze-backend mindbreeze-stt-worker mindbreeze-report-worker mindbreeze-worker mindbreeze-email-worker mindbreeze-export-worker nginx redis-server livekit coturn; do printf '%s=%s\n' \$s "\$(systemctl is-active \$s)"; done
 grep -E '^(ENVIRONMENT|RETENTION_SWEEP_ENABLED|RESEARCH_EXPORT_ENABLED|ENABLE_DEV_ROLE_SIMULATION)=' $PROD_ENV_FILE
 curl -fsS http://127.0.0.1:8000/health/ready
 EOF

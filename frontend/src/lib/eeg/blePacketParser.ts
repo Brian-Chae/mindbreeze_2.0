@@ -69,6 +69,10 @@ export function parseEEGPacket(
   // EEG: little endian
   const timeRaw = dataView.getUint32(0, true);
   const baseTimestampSec = timeRaw / TIMESTAMP_CLOCK;
+  // 같은 패킷이 중복 전달되면(재연결·중복 알림) 샘플이 불어 RR/시각축이 깨진다 — 헤더 시각으로 거른다.
+  if (timestampSync.isDuplicatePacket(baseTimestampSec * 1000, 'EEG')) {
+    return { samples: [], chunkMetadata: { arrivalTime, deviceTimestampSec: baseTimestampSec, numSamples: 0, sensorType: 'EEG' }, arrivalTime };
+  }
   const syncResult = timestampSync.normalizeTimestamp(baseTimestampSec * 1000, 'EEG');
   const baseTimestampMs = syncResult.correctedTimestamp;
 
@@ -131,9 +135,15 @@ export function parsePPGPacket(
 ): PPGParseResult {
   const arrivalTime = Date.now();
 
-  // PPG: big endian (Python SDK: int.from_bytes(..., 'big'))
-  const timeRaw = dataView.getUint32(0, false);
+  // PPG 헤더 시각도 EEG·ACC 와 같은 little endian 이다.
+  // 공식 SDK(link_band_sdk python_core/app/core/device.py _handle_ppg): data[3]<<24|data[2]<<16|data[1]<<8|data[0].
+  // 예전 big endian 해석은 시각이 수십 시간씩 튀어 RR 버퍼가 쌓이지 않았고 호흡·HRV 가 계산되지 않았다.
+  const timeRaw = dataView.getUint32(0, true);
   const baseTimestampSec = timeRaw / TIMESTAMP_CLOCK;
+  // 같은 패킷이 중복 전달되면(재연결·중복 알림) 샘플이 불어 RR/시각축이 깨진다 — 헤더 시각으로 거른다.
+  if (timestampSync.isDuplicatePacket(baseTimestampSec * 1000, 'PPG')) {
+    return { samples: [], chunkMetadata: { arrivalTime, deviceTimestampSec: baseTimestampSec, numSamples: 0, sensorType: 'PPG' }, arrivalTime };
+  }
   const syncResult = timestampSync.normalizeTimestamp(baseTimestampSec * 1000, 'PPG');
   const baseTimestampMs = syncResult.correctedTimestamp;
 
@@ -184,6 +194,10 @@ export function parseACCPacket(
   // ACC: little endian
   const timeRaw = dataView.getUint32(0, true);
   const deviceTimestampSec = timeRaw / TIMESTAMP_CLOCK;
+  // 같은 패킷이 중복 전달되면(재연결·중복 알림) 샘플이 불어 RR/시각축이 깨진다 — 헤더 시각으로 거른다.
+  if (timestampSync.isDuplicatePacket(deviceTimestampSec * 1000, 'ACC')) {
+    return { samples: [], chunkMetadata: { arrivalTime, deviceTimestampSec, numSamples: 0, sensorType: 'ACC' }, arrivalTime, newLastTimestamp: lastAccTimestamp, newPacketCount: accPacketCount };
+  }
   const syncResult = timestampSync.normalizeTimestamp(deviceTimestampSec * 1000, 'ACC');
   const deviceTimestampMs = syncResult.correctedTimestamp;
 

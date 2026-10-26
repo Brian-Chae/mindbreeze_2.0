@@ -1,0 +1,151 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://contracts.mindbreeze.local/session-live-v2/ack.schema.json",
+  "title": "CommandAck (plan §3.1). applied=DB commit+Redis projection, 상대 렌더 의미 아님",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "command_id",
+    "status",
+    "epoch",
+    "cursors",
+    "committed"
+  ],
+  "properties": {
+    "command_id": {
+      "$ref": "common.schema.json#/definitions/Uuid"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "applied",
+        "duplicate",
+        "rejected",
+        "retryable"
+      ]
+    },
+    "epoch": {
+      "$ref": "common.schema.json#/definitions/U64"
+    },
+    "cursors": {
+      "$ref": "common.schema.json#/definitions/Cursors"
+    },
+    "entity_version": {
+      "$ref": "common.schema.json#/definitions/U64"
+    },
+    "code": {
+      "$ref": "common.schema.json#/definitions/ReasonCode"
+    },
+    "retry_after_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 60000
+    },
+    "committed": {
+      "type": "boolean",
+      "description": "true+retryable 이면 재실행 대신 ledger 결과 조회"
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "capture.* 명령의 결과. capture.start 는 stream_id·owner_generation·lease 를 반드시 포함한다(별도 device.changed 를 기다릴 필요 없음).",
+      "properties": {
+        "stream_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "participant_id": {
+          "$ref": "common.schema.json#/definitions/Uuid",
+          "description": "서버가 인증 문맥에서 확정한 본인 participant. live:metric 의 participant_id 는 반드시 이 값이어야 한다(다르면 participant_mismatch)."
+        },
+        "generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "owner_generation": {
+          "$ref": "common.schema.json#/definitions/U64",
+          "description": "generation 과 같은 값(fencing 세대). presence/renew 의 owner_generation 으로 보낸다."
+        },
+        "lease": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "expires_at_ms"
+          ],
+          "properties": {
+            "expires_at_ms": {
+              "$ref": "common.schema.json#/definitions/Ms"
+            },
+            "offline_bound_until_ms": {
+              "$ref": "common.schema.json#/definitions/Ms"
+            }
+          }
+        },
+        "clock_uncertain": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "closed"
+          ]
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "rejected"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "code"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "retryable"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "retry_after_ms"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "applied"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "committed": {
+            "const": true
+          }
+        }
+      }
+    }
+  ]
+}

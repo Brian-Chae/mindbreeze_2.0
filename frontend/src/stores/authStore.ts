@@ -21,6 +21,9 @@ import {
   logout as apiLogout,
   refreshToken as apiRefresh,
   loginGoogle as apiLoginGoogle,
+  loginApple as apiLoginApple,
+  type AppleLoginPayload,
+  type ConsentPayload,
   type User,
   type UserRole,
   type ClientRegisterPayload,
@@ -58,7 +61,8 @@ interface AuthState {
   /** 세션 복구 재시도 — initialize() 를 다시 실행한다. */
   retryInitialize: () => void;
   login: (email: string, password: string, role?: UserRole, rememberMe?: boolean) => Promise<User>;
-  loginGoogle: (idToken: string, inviteToken?: string, role?: string, rememberMe?: boolean, consents?: { tos: boolean; privacy: boolean; sensitive: boolean }, tokenKind?: 'access_token' | 'id_token') => Promise<User>;
+  loginGoogle: (idToken: string, inviteToken?: string, role?: string, rememberMe?: boolean, consents?: ConsentPayload, tokenKind?: 'access_token' | 'id_token', birthDate?: string) => Promise<User>;
+  loginApple: (payload: Omit<AppleLoginPayload, 'remember_me'>, rememberMe?: boolean) => Promise<User>;
   devLogin: (userId: string) => Promise<User>;
   registerClient: (data: ClientRegisterPayload, rememberMe?: boolean) => Promise<User>;
   refreshAuth: () => Promise<boolean>;
@@ -164,12 +168,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     return user;
   },
 
-  loginGoogle: async (idToken, inviteToken, role, rememberMe = true, consents, tokenKind = 'access_token'): Promise<User> => {
+  loginGoogle: async (idToken, inviteToken, role, rememberMe = true, consents, tokenKind = 'access_token', birthDate): Promise<User> => {
     const res = await apiLoginGoogle(
-      { [tokenKind]: idToken, invite_token: inviteToken, role, consents },
+      { [tokenKind]: idToken, invite_token: inviteToken, role, consents, birth_date: birthDate },
       rememberMe,
     );
     const user = applyLogin(res, role);
+    set({ user, accessToken: res.access_token, isAuthenticated: true, sessionError: null });
+    return user;
+  },
+
+  loginApple: async (payload, rememberMe = true): Promise<User> => {
+    const res = await apiLoginApple(payload, rememberMe);
+    const user = applyLogin(res, payload.role);
     set({ user, accessToken: res.access_token, isAuthenticated: true, sessionError: null });
     return user;
   },
@@ -218,6 +229,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await disableWebPush();
     } catch {
       // 웹 푸시 해지 실패가 로컬 로그아웃을 막지 않는다.
+    }
+    try {
+      // 소셜(Google·Apple) 세션도 함께 정리해야 다음 로그인에서 다른 계정을 고를 수 있다.
+      const { clearSocialSessions } = await import('../lib/native/social-session');
+      await clearSocialSessions();
+    } catch {
+      // 소셜 세션 정리 실패가 로컬 로그아웃을 막지 않는다.
     }
     try {
       await apiLogout();

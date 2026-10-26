@@ -4,7 +4,8 @@ import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import ThemeToggle from '../../components/ThemeToggle';
 import { OtpInput } from '../../components/auth/OtpInput';
-import { requestOtp, verifyOtp } from '../../lib/api/auth';
+import { apiErrorCode, requestOtp, verifyOtp } from '../../lib/api/auth';
+import { BIRTH_DATE_MESSAGES, checkBirthDate, todayKst } from '../../lib/auth/age';
 import { submitIndividualCounselorApplication } from '../../lib/api/signup';
 import { ApiError } from '../../lib/api/client';
 import { PrivacyPolicyLink } from '../../components/legal/PrivacyPolicyLink';
@@ -40,6 +41,8 @@ export default function RegisterCounselorPage() {
   const [otp, setOtp] = useState('');
   const [emailVerifyToken, setEmailVerifyToken] = useState<string | null>(null);
   const [phone, setPhone] = useState('');
+  // SDD-220: 신규 계정이 만들어지므로 만 14세 확인용 생년월일을 받는다(서버가 최종 검증).
+  const [birthDate, setBirthDate] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [specialties, setSpecialties] = useState('');
   const [privacyAgreed, setPrivacyAgreed] = useState(false);
@@ -90,6 +93,11 @@ export default function RegisterCounselorPage() {
       setError('이메일 인증을 완료해주세요');
       return;
     }
+    const birthCheck = checkBirthDate(birthDate);
+    if (birthCheck !== 'ok') {
+      setError(BIRTH_DATE_MESSAGES[birthCheck]);
+      return;
+    }
     if (!privacyAgreed) {
       setError('개인정보 수집·이용에 동의해야 신청할 수 있습니다');
       return;
@@ -97,6 +105,7 @@ export default function RegisterCounselorPage() {
     setLoading(true);
     try {
       const res = await submitIndividualCounselorApplication({
+        birth_date: birthDate,
         name: name.trim(),
         email,
         email_verify_token: emailVerifyToken,
@@ -108,7 +117,9 @@ export default function RegisterCounselorPage() {
       setApplicationId(res.application_id);
     } catch (err) {
       if (err instanceof ApiError) {
-        if (err.status === 409) {
+        if (apiErrorCode(err) === 'ACCOUNT_DELETION_PENDING') {
+          setError('탈퇴 처리 중인 이메일이에요. 영구 삭제가 끝난 뒤 다시 신청할 수 있어요');
+        } else if (err.status === 409) {
           setError('이미 등록되었거나 접수된 이메일입니다');
         } else {
           setError(err.message || '신청에 실패했습니다');
@@ -280,6 +291,21 @@ export default function RegisterCounselorPage() {
                 이메일 인증이 완료되었습니다
               </p>
             )}
+
+            <div className="space-y-2">
+              <label htmlFor="ind-birth" className="block text-sm font-medium text-ink-secondary">
+                생년월일
+              </label>
+              <input
+                id="ind-birth"
+                type="date"
+                value={birthDate}
+                onChange={(e) => setBirthDate(e.target.value)}
+                max={todayKst()}
+                disabled={loading}
+                className={inputClass}
+              />
+            </div>
 
             <div className="space-y-2">
               <label htmlFor="ind-phone" className="block text-sm font-medium text-ink-secondary">

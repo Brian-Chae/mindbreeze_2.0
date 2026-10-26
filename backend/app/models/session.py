@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from typing import Optional
 
-from sqlalchemy import String, Integer, Date, DateTime, Text, Boolean, ForeignKey, UniqueConstraint, Index, func, text
+from sqlalchemy import BigInteger, CheckConstraint, ForeignKeyConstraint, String, Integer, Date, DateTime, Text, Boolean, ForeignKey, UniqueConstraint, Index, func, text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -16,6 +16,11 @@ class Session(Base):
     # SDD-095: 일반 클래스 목록/템플릿 목록 조회를 (host_id, is_template) 로 좁힌다.
     __table_args__ = (
         Index("ix_sessions_host_is_template", "host_id", "is_template"),
+        Index("ix_sessions_host_scheduled_at", "host_id", "scheduled_at"),
+        # SDD-214: 부모 안 회차 번호 유일. NULL 은 서로 다르므로 템플릿·부모 없는 행은 영향 없다.
+        # 부모 정확히 하나(ck_sessions_one_parent)와 진행자 복합 FK 는 PG 마이그레이션(055)에만 있다(ORM 미선언).
+        UniqueConstraint("class_id", "seq", name="uq_sessions_class_seq"),
+        UniqueConstraint("counseling_relationship_id", "seq", name="uq_sessions_relationship_seq"),
         # SDD-209(B4): 4자리 코드는 활성(입장 가능) 클래스 사이에서만 유일하다. 종료·취소·숨김·템플릿은
         # 제외하므로 코드 값이 재사용될 수 있고, 과거 값은 행에 그대로 보존된다.
         Index(
@@ -46,6 +51,7 @@ class Session(Base):
     # SDD-026: 상태 계약 버전. 상태전이(start/pause/resume/end/cancel)마다 +1 증가시켜
     # join snapshot / session_state_changed 이벤트의 중복·역순 처리를 가능케 한다.
     state_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    participation_version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
     host_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     # SDD-015: 즉석 클래스는 일정 없이 생성되므로 nullable
     # 생성 당시 기관 귀속. 기존 데이터는 추정하여 보완하지 않는다.
@@ -102,9 +108,34 @@ class Session(Base):
     # SDD-209(B1): 일반 클래스 삭제는 숨김(보존 전환). 값이 있으면 모든 ORM 조회에서 제외된다
     # (app/core/database.py 의 do_orm_execute 필터). 원본은 보관 스위프/플랫폼 관리자만 삭제한다.
     hidden_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # SDD-214: 세션의 상위. 비템플릿 세션은 둘 중 정확히 하나를 가진다(DB CHECK). 템플릿은 둘 다 NULL.
+    class_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("classes.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    counseling_relationship_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("counseling_relationships.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    # 부모 안의 회차 번호(1부터). 재사용하지 않는다.
+    seq: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    session_kind: Mapped[str] = mapped_column(String(10), nullable=False, default="regular", server_default="regular")  # regular, makeup
+    # 진행 강사 상태: assigned, pending_ack, needs_reassign. host_id 는 항상 NOT NULL.
+    host_state: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
+    # SDD-237: 진행 기록 1회 안내 상태. 안내 대상은 회차 진행 상담사(host) 1명이라 회차 단위 컬럼으로 충분하다.
+    #   seen = 안내를 한 번 보여줬음(원자 claim), dismissed = [비워두기]. 둘 다 NULL = 미안내. 메모 내용은 저장하지 않는다.
+    #   deferred: 컬럼 추가 이전 스키마에 ORM 으로 붙는 시드 경로를 깨지 않는다.
+    note_prompt_seen_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, deferred=True)
+    note_prompt_dismissed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, deferred=True)
+
+    assignment_override: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
 
     host = relationship("User", back_populates="hosted_sessions", foreign_keys=[host_id])
-    participants = relationship("SessionParticipant", back_populates="session", cascade="all, delete-orphan")
+    participants = relationship(
+        "SessionParticipant", back_populates="session", cascade="all, delete-orphan",
+        foreign_keys="SessionParticipant.session_id",
+    )
     record = relationship("SessionRecord", back_populates="session", uselist=False, cascade="all, delete-orphan")
     eeg_records = relationship("EEGRecord", back_populates="session", cascade="all, delete-orphan")
     reports = relationship("Report", back_populates="session", cascade="all, delete-orphan")
@@ -117,7 +148,17 @@ class SessionParticipant(Base):
     # 대리 키(id)를 PK로 두고 (session_id, user_id)는 UNIQUE 제약으로 강등한다.
     # PostgreSQL의 UNIQUE는 NULL을 서로 다른 값으로 취급하므로 게스트 중복 참여가 허용된다.
     __table_args__ = (
+        UniqueConstraint("session_id", "id", name="uq_session_participants_session_id"),
+        ForeignKeyConstraint(["session_id", "superseded_by_participant_id"],
+            ["session_participants.session_id", "session_participants.id"],
+            name="fk_session_participants_superseded", ondelete="RESTRICT"),
+        CheckConstraint("superseded_by_participant_id IS NULL OR superseded_by_participant_id <> id",
+                        name="ck_session_participants_superseded_not_self"),
+        CheckConstraint("checkin_state IS NULL OR checkin_state IN ('completed', 'not_completed', 'unknown')",
+                        name="ck_session_participants_checkin_state"),
         UniqueConstraint("session_id", "user_id", name="uq_session_participant_user"),
+        # SDD-214: 같은 회차에 같은 멤버십의 출석 행은 최대 1개(member_id NULL 은 영향 없음).
+        UniqueConstraint("session_id", "member_id", name="uq_session_participants_session_member"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -163,8 +204,45 @@ class SessionParticipant(Base):
     # SDD-209(B9/BE-11): 코드/초대 입장으로 실제 클래스에 들어온 최초 시각. 초대만 받고 들어오지 않았으면 NULL.
     # (이 컬럼 도입 전 참여자는 NULL — 입장 여부를 알 수 없다.) 이후 값은 바뀌지 않는다.
     entered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # SDD-214: 출석 모델. member_id(명상 멤버십) 와 guest_client_id(상담 비회원) 는 동시에 채우지 않는다(DB CHECK).
+    # Phase 4 전까지 쓰는 코드가 없어 비어 있다.
+    member_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("class_members.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    guest_client_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("counseling_guests.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    # expected, attended, absent, excused, withdrawn
+    attendance_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # regular, makeup, guest_pass
+    attendance_kind: Mapped[str] = mapped_column(String(10), nullable=False, default="regular", server_default="regular")
+    makeup_for_session_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="SET NULL"), nullable=True
+    )
+    # system, host, self
+    attendance_marked_by: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    absence_reason: Mapped[str | None] = mapped_column(String(200), nullable=True)
 
-    session = relationship("Session", back_populates="participants")
+    # SDD-217: 출석·체크인·presence 근거는 서로 독립적으로 보존한다.
+    checkin_state: Mapped[str | None] = mapped_column(String(20))
+    checkin_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    presence_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    report_consent_override: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    research_consent_override: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    research_origin_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    # SDD-220(F1): 회차별 녹음·녹화 필수 동의. 저장에 성공한 뒤에만 입장 자격·LiveKit 토큰이 나간다.
+    #   consent_audio/consent_eeg(내보내기·리포트 의미)와 별개이며 서로 추정하지 않는다.
+    recording_consented: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    recording_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    recording_notice_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # SDD-220: 뇌파 수집 선택 동의(밴드 연결 사전 선택). NULL=이 기능 이전 행(미확인), False=거부, True=동의.
+    #   리포트 제외/연구 거부와 무관하며, 거부(False)면 서버가 EEG 업로드 권한을 막는다.
+    eeg_collection_consented: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    eeg_collection_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    eeg_notice_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    superseded_by_participant_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), index=True)
+
+    session = relationship("Session", back_populates="participants", foreign_keys=[session_id])
 
 
 class SessionReminderLog(Base):

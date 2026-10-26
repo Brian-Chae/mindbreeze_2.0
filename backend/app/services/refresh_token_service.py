@@ -91,6 +91,37 @@ def rotate_refresh_token(
     return new_token
 
 
+# 회전 직후 동시 요청(여러 탭·로그인 직후 401 재시도 등)이 같은 토큰으로 refresh 를 보내는
+# 정상 경합을 '탈취'로 오판하지 않기 위한 유예 시간(초). 이 안에서는 후속 유효 토큰을 이어서 회전한다.
+REUSE_GRACE_SECONDS = 10
+_GRACE_MAX_HOPS = 5
+
+
+def find_grace_successor(record: RefreshToken, db: Session) -> RefreshToken | None:
+    """회전으로 막 폐기된 토큰(유예 시간 이내)이면 체인을 따라 현재 유효한 후속 토큰을 반환한다.
+
+    회전이 아닌 폐기(로그아웃·전체 폐기: replaced_by 없음)나 유예 초과·후속 토큰 없음은
+    None → 호출 측이 기존대로 재사용(탈취) 처리한다.
+    """
+    now = _now()
+    current = record
+    for _ in range(_GRACE_MAX_HOPS):
+        if current.revoked_at is None:
+            return current if current is not record else None
+        if not current.replaced_by:
+            return None
+        revoked_at = current.revoked_at
+        if revoked_at.tzinfo is None:  # SQLite(테스트)는 naive 로 돌려준다
+            revoked_at = revoked_at.replace(tzinfo=timezone.utc)
+        if now - revoked_at > timedelta(seconds=REUSE_GRACE_SECONDS):
+            return None
+        nxt = db.query(RefreshToken).filter(RefreshToken.jti == current.replaced_by).first()
+        if nxt is None:
+            return None
+        current = nxt
+    return None
+
+
 def revoke_token(jti: str, db: Session) -> None:
     """단일 토큰 폐기"""
     token = db.query(RefreshToken).filter(RefreshToken.jti == jti).first()

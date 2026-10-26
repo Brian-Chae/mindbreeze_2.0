@@ -15,7 +15,12 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@capacitor/core', () => ({ Capacitor: {
   isNativePlatform: () => mocks.native, getPlatform: () => mocks.platform,
 } }));
-vi.mock('@capacitor/app', () => ({ App: { getInfo: mocks.info } }));
+vi.mock('@capacitor/app', () => ({ App: { getInfo: mocks.info,
+  addListener: vi.fn(async (event: string, callback: (event: unknown) => void) => {
+    mocks.listeners.set(event, callback);
+    return { remove: mocks.remove };
+  }),
+} }));
 vi.mock('@capacitor/push-notifications', () => ({ PushNotifications: {
   addListener: vi.fn(async (event: string, callback: (event: unknown) => void) => {
     mocks.listeners.set(event, callback);
@@ -71,7 +76,7 @@ it('권한 허용 후 토큰과 버전을 등록하고 로그아웃 시 해지�
   }));
   await revokePushRegistration();
   expect(mocks.delete).toHaveBeenCalledWith('/devices/fixture%2Ftoken');
-  expect(mocks.remove).toHaveBeenCalledTimes(4);
+  expect(mocks.remove).toHaveBeenCalledTimes(5);
   await session.stop();
   expect(mocks.delete).toHaveBeenCalledOnce();
 });
@@ -170,4 +175,80 @@ it('권한 확인 중 로그아웃하면 뒤늦은 권한 팝업을 열지 않�
   resolvePermission({ receive: 'prompt' });
   await stopping;
   expect(mocks.request).not.toHaveBeenCalled();
+});
+
+it('등록 실패 후 앱 복귀 시 허용된 기기를 재등록한다', async () => {
+  mocks.check.mockResolvedValue({ receive: 'granted' });
+  mocks.post.mockRejectedValueOnce(new Error('등록 실패'));
+  const session = startPushRegistration(vi.fn(), vi.fn(), false);
+  await session.ready;
+  mocks.listeners.get('registration')?.({ value: 'retry-fixture' });
+  await vi.waitFor(() => expect(mocks.post).toHaveBeenCalledTimes(1));
+  mocks.listeners.get('appStateChange')?.({ isActive: true });
+  await vi.waitFor(() => expect(mocks.register).toHaveBeenCalledTimes(2));
+  mocks.listeners.get('registration')?.({ value: 'retry-fixture' });
+  await vi.waitFor(() => expect(mocks.post).toHaveBeenCalledTimes(2));
+  await session.stop();
+  mocks.listeners.get('appStateChange')?.({ isActive: true });
+  expect(mocks.register).toHaveBeenCalledTimes(2);
+});
+
+it.each(['/reports?report=fixture', '/notifications', '/sessions/fixture', '/classes/fixture', '/class/fixture/enter'])('일반 알림 경로 %s를 허용한다', (path) => {
+  expect(allowedPushDeeplink(path)).toBe(path);
+});
+
+it.each(['/reports/../../login', '/class/fixture/enter/extra', '/sessions', '/classes/../login', '/reports.evil'])('일반 알림 허용 범위를 벗어난 %s를 거부한다', (path) => {
+  expect(allowedPushDeeplink(path)).toBeNull();
+});
+
+it('권한 미허용 복귀는 권한 창이나 등록을 시작하지 않는다', async () => {
+  const session = startPushRegistration(vi.fn(), vi.fn(), false);
+  await session.ready;
+  mocks.listeners.get('appStateChange')?.({ isActive: true });
+  await Promise.resolve();
+  expect(mocks.request).not.toHaveBeenCalled();
+  expect(mocks.register).not.toHaveBeenCalled();
+  await session.stop();
+});
+
+describe('로그인 직후 자동 등록(토큰 미등록 회귀)', () => {
+  const store = new Map<string, string>();
+  beforeEach(() => {
+    store.clear();
+    Object.assign(globalThis, { localStorage: {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => { store.set(k, v); },
+    } });
+  });
+  it('이미 허용된 기기는 권한 팝업 없이 즉시 register한다', async () => {
+    mocks.check.mockResolvedValue({ receive: 'granted' });
+    const session = startPushRegistration(vi.fn(), vi.fn(), true);
+    await session.ready;
+    expect(mocks.request).not.toHaveBeenCalled();
+    expect(mocks.register).toHaveBeenCalledOnce();
+    await session.stop();
+  });
+  it('미결정 기기는 최초 1회만 권한을 묻고 다음 로그인에는 다시 묻지 않는다', async () => {
+    const first = startPushRegistration(vi.fn(), vi.fn(), true);
+    await first.ready;
+    expect(mocks.request).toHaveBeenCalledOnce();
+    expect(mocks.register).toHaveBeenCalledOnce();
+    await first.stop();
+    mocks.request.mockClear();
+    const second = startPushRegistration(vi.fn(), vi.fn(), true);
+    await second.ready;
+    expect(mocks.request).not.toHaveBeenCalled();
+    await second.stop();
+  });
+  it('서버 등록 실패는 토큰 없이 경고 로그를 남긴다', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mocks.post.mockRejectedValueOnce({ response: { status: 401 } });
+    const session = startPushRegistration(vi.fn(), vi.fn(), true);
+    await session.ready;
+    mocks.listeners.get('registration')?.({ value: 'secret-token-value' });
+    await vi.waitFor(() => expect(warn).toHaveBeenCalledWith('[push] 기기 토큰 서버 등록 실패', 401));
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('secret-token-value');
+    await session.stop();
+    warn.mockRestore();
+  });
 });

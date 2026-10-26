@@ -30,6 +30,7 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
+from app.core.ai_features import is_ai_enabled
 from app.models.agent import (
     AgentCheckin,
     AgentCheckinEnablement,
@@ -515,6 +516,9 @@ def start_outreach(
 
     하루 1회는 `agent_delivery_logs` UNIQUE 선점으로 보장하므로 스윕이 겹쳐도 멱등하다.
     """
+    # SDD-220: AI off — 안부 메시지를 만들지 않는다.
+    if not is_ai_enabled():
+        return None
     now = now or _now()
 
     if in_quiet_hours(now):
@@ -588,6 +592,9 @@ def start_outreach(
 
 def sweep(db: DBSession, *, now: datetime | None = None, limit: int = SWEEP_LIMIT) -> dict:
     """안부 아웃리치 스윕 1회(매 5분 cron). 한 건 실패가 전체를 멈추지 않는다."""
+    # SDD-220: AI off — 자동 안부 메시지·알림을 만들지 않는다.
+    if not is_ai_enabled():
+        return {"scanned": 0, "created": 0, "skipped": 0}
     now = now or _now()
     client_ids = eligible_client_ids(db, limit=limit)
 
@@ -876,6 +883,9 @@ def _is_idle(db: DBSession, checkin: AgentCheckin, now: datetime, *, include_use
 
 def close_stale(db: DBSession, *, now: datetime | None = None) -> int:
     """하루 넘게 방치됐거나 대화 후 IDLE_CLOSE_MINUTES 동안 말이 없는 열린 체크인을 닫는다(스윕)."""
+    # SDD-220: AI off — 마무리 요약(LLM)·기억 추출을 돌리지 않는다.
+    if not is_ai_enabled():
+        return 0
     now = now or _now()
     rows = (
         db.query(AgentCheckin)

@@ -39,6 +39,8 @@ export interface EEGAnalysisMetrics {
    * hemisphericBalance(-1~1 비율)와 스케일이 다르므로 점수화에는 이 값을 쓴다.
    */
   faa?: number | null;
+  /** SDD-244: EEG 처리기 totalNeuralActivity — DB feature 스칼라 연결용(화면 점수 계산과 무관) */
+  totalNeuralActivity?: number | null;
   movingAverageValues: {
     totalPower: number;
     emotionalBalance: number;

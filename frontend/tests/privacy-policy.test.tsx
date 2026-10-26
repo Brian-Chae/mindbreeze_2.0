@@ -42,8 +42,9 @@ const src = (rel: string): string => readFileSync(resolve(__dirname, '..', rel),
 describe('/privacy 페이지', () => {
   it('시행일·버전을 표기한다', () => {
     const text = renderPage();
-    expect(text).toContain('2026년 10월 22일');
-    expect(text).toContain('버전 1.0');
+    expect(text).toContain('2026년 10월 26일');
+    // SDD-220: 탈퇴 30일 삭제·선택 동의·위탁 고지를 반영한 2.0 으로 개정
+    expect(text).toContain('버전 2.3');
     expect(container.querySelector('h1')?.textContent).toBe('개인정보 처리방침');
   });
 
@@ -74,15 +75,17 @@ describe('/privacy 페이지', () => {
     expect(text).toContain('연구 목적 활용 동의');
     expect(text).toContain('동의하지 않아도 서비스를 이용하고 클래스에 참여할 수 있습니다');
     expect(text).toContain('되돌릴 수 없습니다');
-    // 3 무기한 보관 범위와 비보관 항목
-    expect(text).toContain('보관 기한을 두지 않고 계속 보관');
+    // 3 연구 보관 범위와 비보관 항목 — SDD-220: 무기한 보관을 원칙으로 하지 않는다(법정 항목은 법무 확정)
+    expect(text).toContain('무기한 보관을 원칙으로 하지 않습니다');
     expect(text).toContain('생년·월');
     expect(text).toContain('이메일, 전화번호, 이름 원문');
     // 4 재식별 위험
     expect(text).toContain('본인을 알아볼 가능성이 완전히 없다고는 할 수 없습니다');
     // 5 비회원 개인정보(이름·성별·생년월일·이메일, 리포트 발송)
-    expect(text).toContain('이름, 성별, 생년월일, 이메일');
+    expect(text).toContain('이름(별명·반 번호 가능), 성별, 생년월(연·월), 이메일');
     expect(text).toContain('리포트 이메일 발송');
+    expect(text).toContain('보호자의 서면 동의를 확보할 책임');
+    expect(text).toContain('비회원 참여자의 데이터는 연구 활용 대상에서 제외');
     // 6 4자리 입장 코드
     expect(text).toContain('4자리 숫자 입장 코드');
     // 7 시행일·개정 이력
@@ -114,8 +117,7 @@ describe('방침 링크·화면 문구 정합', () => {
       'src/pages/LoginPage.tsx',
       'src/components/auth/ConsentCheckList.tsx',
       'src/components/class/flow/member/NoticeStepView.tsx',
-      'src/pages/SettingsPage.tsx',
-      'src/pages/settings/ClientSettingsPage.tsx',
+      'src/components/settings/settings-content.tsx',
     ]) {
       expect(src(rel), rel).toContain('PrivacyPolicyLink');
     }

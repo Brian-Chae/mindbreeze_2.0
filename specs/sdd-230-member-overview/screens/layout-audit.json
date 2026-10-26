@@ -1,0 +1,130 @@
+[
+  {
+    "file": "table-1440.png",
+    "errors": [],
+    "pageWidth": 1440,
+    "viewport": 1440,
+    "tableScroll": false,
+    "small": [],
+    "text": false,
+    "pageOverflow": false
+  },
+  {
+    "file": "cards-1440.png",
+    "errors": [],
+    "pageWidth": 1440,
+    "viewport": 1440,
+    "tableScroll": null,
+    "small": [],
+    "text": false,
+    "pageOverflow": false
+  },
+  {
+    "file": "group-1440.png",
+    "errors": [],
+    "pageWidth": 1440,
+    "viewport": 1440,
+    "tableScroll": false,
+    "small": [],
+    "text": false,
+    "pageOverflow": false
+  },
+  {
+    "file": "detail-1440.png",
+    "errors": [],
+    "pageWidth": 1440,
+    "viewport": 1440,
+    "tableScroll": null,
+    "small": [],
+    "text": false,
+    "pageOverflow": false
+  },
+  {
+    "file": "table-1194.png",
+    "errors": [],
+    "pageWidth": 1194,
+    "viewport": 1194,
+    "tableScroll": false,
+    "small": [],
+    "text": false,
+    "pageOverflow": false
+  },
+  {
+    "file": "cards-1194.png",
+    "errors": [],
+    "pageWidth": 1194,
+    "viewport": 1194,
+    "tableScroll": null,
+    "small": [],
+    "text": false,
+    "pageOverflow": false
+  },
+  {
+    "file": "group-1194.png",
+    "errors": [],
+    "pageWidth": 1194,
+    "viewport": 1194,
+    "tableScroll": false,
+    "small": [],
+    "text": false,
+    "pageOverflow": false
+  },
+  {
+    "file": "detail-1194.png",
+    "errors": [],
+    "pageWidth": 1194,
+    "viewport": 1194,
+    "tableScroll": null,
+    "small": [],
+    "text": false,
+    "pageOverflow": false
+  },
+  {
+    "file": "table-390.png",
+    "errors": [],
+    "pageWidth": 390,
+    "viewport": 390,
+    "tableScroll": true,
+    "small": [
+      "Mind Breeze:27"
+    ],
+    "text": false,
+    "pageOverflow": false
+  },
+  {
+    "file": "cards-390.png",
+    "errors": [],
+    "pageWidth": 390,
+    "viewport": 390,
+    "tableScroll": null,
+    "small": [
+      "Mind Breeze:27"
+    ],
+    "text": false,
+    "pageOverflow": false
+  },
+  {
+    "file": "group-390.png",
+    "errors": [],
+    "pageWidth": 390,
+    "viewport": 390,
+    "tableScroll": true,
+    "small": [
+      "Mind Breeze:27"
+    ],
+    "text": false,
+    "pageOverflow": false
+  },
+  {
+    "file": "detail-390.png",
+    "errors": [],
+    "pageWidth": 390,
+    "viewport": 390,
+    "tableScroll": null,
+    "small": [
+      "Mind Breeze:27"
+    ],
+    "text": false,
+    "pageOverflow": false
+  }
+]

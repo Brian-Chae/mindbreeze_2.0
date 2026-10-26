@@ -53,6 +53,7 @@ export function useLobbyBgm(enabled: boolean): {
   useEffect(() => {
     engineRef.current?.dispose();
     engineRef.current = null;
+    let unsubscribe: (() => void) | undefined;
     if (!enabled || !track) return undefined;
     const engine = createAudioEngine(track);
     engineRef.current = engine;
@@ -60,8 +61,11 @@ export function useLobbyBgm(enabled: boolean): {
       engine.setVolume(volume);
       engine.play(0);
       setBlocked(engine.isBlocked());
+      // play() 거부는 비동기 — 구독으로 차단 상태를 놓치지 않는다
+      unsubscribe = engine.subscribe(() => setBlocked(engine.isBlocked()));
     }
     return () => {
+      unsubscribe?.();
       engineRef.current?.dispose();
       engineRef.current = null;
     };
@@ -71,7 +75,13 @@ export function useLobbyBgm(enabled: boolean): {
 
   const setVolume = useCallback((value: number): void => {
     const next = clampVolume(value);
-    engineRef.current?.setVolume(next);
+    const engine = engineRef.current;
+    engine?.setVolume(next);
+    // 슬라이더 조작도 사용자 제스처 — 자동재생 차단 상태면 여기서 재생을 재개한다
+    if (engine && next > 0 && engine.isBlocked()) {
+      engine.resume();
+      setBlocked(engine.isBlocked());
+    }
     setVolumeState(next);
     writeStoredVolume(next);
     if (next > 0) lastVolumeRef.current = next;
@@ -80,7 +90,12 @@ export function useLobbyBgm(enabled: boolean): {
   const toggleMute = useCallback((): void => {
     const current = engineRef.current?.volume() ?? volume;
     const next = current > 0 ? 0 : lastVolumeRef.current;
-    engineRef.current?.setVolume(next);
+    const engine = engineRef.current;
+    engine?.setVolume(next);
+    if (engine && next > 0 && engine.isBlocked()) {
+      engine.resume();
+      setBlocked(engine.isBlocked());
+    }
     setVolumeState(next);
     writeStoredVolume(next);
   }, [volume]);

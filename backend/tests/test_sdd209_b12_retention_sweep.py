@@ -373,3 +373,106 @@ def test_cron_스크립트는_비활성에서_dry_run_보고서를_출력(db, ca
     out = capsys.readouterr().out
     assert "[retention_sweep]" in out and '"mode": "dry_run"' in out
     assert db.query(EEGRawChunk).count() >= 4
+
+
+@pytest.mark.parametrize("enabled_flag,apply_from,requested", [
+    (False, "", None),
+    (False, "2026-01-01", False),
+    (True, "2026-01-01", True),
+    (True, "invalid", None),
+])
+def test_sdd238_dry_run_reports_candidates_without_deletion_or_external_effects(
+    db, monkeypatch, deleted_refs, enabled_flag, apply_from, requested,
+):
+    """예약 실행의 삭제 차단과 명시적 dry-run을 독립적으로 확인한다."""
+    from app.services import eeg_raw_service, media_cleanup_service, retention_sweep_service
+
+    monkeypatch.setattr(settings, "retention_sweep_enabled", enabled_flag)
+    monkeypatch.setattr(settings, "retention_apply_from", apply_from)
+    host, session, guest, member = _session_with_originals(db, ended_at=NOW - timedelta(days=110))
+    consent = _consent(db, session, guest, "pending")
+    effects = [Mock(), Mock(), Mock()]
+    monkeypatch.setattr(retention_sweep_service, "_notify_hold_overdue", effects[0])
+    monkeypatch.setattr(eeg_raw_service, "sweep_stale_eeg_raw", effects[1])
+    monkeypatch.setattr(media_cleanup_service, "sweep_stale_media", effects[2])
+
+    report = _run(db, dry_run=requested, trigger="cron")
+
+    assert report["mode"] == "dry_run"
+    assert report["raw"]["eeg_raw_chunks"] == 2
+    assert report["research_hold"]["participants"] == 1
+    assert report["research_hold"]["eeg_raw_chunks"] == 2
+    assert report["research_hold"]["overdue"] == 1
+    assert report["research_hold"]["alerted"] == 0
+    assert all(count == 0 for count in report["raw"]["deleted"].values())
+    assert report["guest_pii"]["scrubbed"] == {"participants": 0, "invites": 0}
+    assert report["orphan_cleanup"] is None
+    assert _counts(db, session.id) == {"eeg": 4, "audio": 1, "video": 1, "windows": 2}
+    assert deleted_refs == []
+    for effect in effects:
+        effect.assert_not_called()
+    db.expire_all()
+    record = db.query(SessionRecord).filter_by(session_id=session.id).one()
+    assert record.transcript == "전사 원문" and record.video_s3_key
+    assert "segments" in record.ai_summary
+    unchanged_guest = db.query(SessionParticipant).filter_by(id=guest.id).one()
+    assert unchanged_guest.guest_name == "게스트" and unchanged_guest.pii_scrubbed_at is None
+    unchanged_consent = db.query(ResearchConsent).filter_by(id=consent.id).one()
+    assert unchanged_consent.export_state == "pending" and unchanged_consent.hold_alerted_at is None
+    run = db.query(RetentionSweepRun).one()
+    assert run.status == "completed" and run.mode == "dry_run" and run.trigger == "cron"
+
+
+@pytest.mark.parametrize("requested,expected_mode", [(None, "execute"), (True, "dry_run")])
+def test_dev_소급옵션_빈하한_표준데이터_보존(db, enabled, monkeypatch, deleted_refs, requested, expected_mode):
+    """세션 원본 삭제 중에도 독립 표준 측정값/분포 모델/상수를 보존한다."""
+    from pathlib import Path
+    from sqlalchemy import inspect
+    from app.models.normalization_baseline import NormalizationBaseline
+    from app.models.normalization_model import NormalizationModel
+    from app.services.retention_sweep_service import run_retention_sweep
+
+    monkeypatch.setattr(settings, "retention_apply_from", "")
+    host, old, *_ = _session_with_originals(db, ended_at=NOW - timedelta(days=1000))
+    baseline = NormalizationBaseline(user_id=str(host.id), closed={"alpha": 1.2}, open={"alpha": 0.8}, is_active=True)
+    model = NormalizationModel(version=1, n_samples=1, params={"alpha": {"mean": 1.0, "std": 0.2}}, is_active=True)
+    db.add_all([baseline, model])
+    db.commit()
+    def snapshot(row):
+        return {col.key: getattr(row, col.key) for col in inspect(type(row)).columns}
+    before = snapshot(baseline), snapshot(model)
+    constants = Path(__file__).resolve().parents[1] / "app/services/normalization_constants.json"
+    original_constants = constants.read_bytes()
+    report = run_retention_sweep(db, now=NOW, dry_run=requested, retroactive=True)
+    assert report["mode"] == expected_mode
+    assert report["cutoffs"]["apply_from"] is None
+    assert report["raw"]["deleted"]["eeg_raw_chunks"] == (4 if expected_mode == "execute" else 0)
+    db.expire_all()
+    assert db.query(NormalizationBaseline).count() == db.query(NormalizationModel).count() == 1
+    assert (snapshot(db.query(NormalizationBaseline).one()), snapshot(db.query(NormalizationModel).one())) == before
+    assert db.query(Session).filter_by(id=old.id).one()
+    assert constants.read_bytes() == original_constants
+
+
+def test_dev_소급옵션도_잘못된_하한은_차단(db, enabled, monkeypatch, deleted_refs):
+    monkeypatch.setattr(settings, "retention_apply_from", "invalid")
+    _session_with_originals(db)
+    from app.services.retention_sweep_service import run_retention_sweep
+    assert run_retention_sweep(db, now=NOW, retroactive=True)["mode"] == "dry_run"
+    assert not deleted_refs
+
+
+@pytest.mark.parametrize("args,expected_mode", [(["--retroactive"], "execute"), (["--retroactive", "--dry-run"], "dry_run")])
+def test_dev_cron_소급옵션이_서비스까지_전달된다(db, enabled, monkeypatch, capsys, deleted_refs, args, expected_mode):
+    import retention_sweep_cron
+    from app.services import retention_sweep_service
+    monkeypatch.setattr(retention_sweep_cron, "SessionLocal", lambda: db)
+    monkeypatch.setattr(retention_sweep_service, "_now", lambda: NOW)
+    monkeypatch.setattr(settings, "retention_apply_from", "")
+    _, session, *_ = _session_with_originals(db)
+    session_id = session.id
+    assert retention_sweep_cron.main(args) == 0
+    output = capsys.readouterr().out
+    assert f'"mode": "{expected_mode}"' in output
+    assert '"retroactive": true' in output
+    assert _counts(db, session_id)["eeg"] == (0 if expected_mode == "execute" else 4)

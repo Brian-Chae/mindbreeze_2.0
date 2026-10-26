@@ -1,0 +1,95 @@
+/* SDD-233: 실제 셸과 관계없이 두 홈이 같은 카드 규격을 사용한다. */
+:is(.cs-structure .mc-stack.mh-home,.ch-home){--home-radius:20px;--home-space:24px;--home-line:#e8e3ec;--home-shadow:0 2px 8px #35213f06;--ch-radius:var(--home-radius);--ch-line:var(--home-line);display:flex;flex-direction:column;gap:var(--home-space);width:100%;max-width:1280px;margin:0 auto;padding:0 0 32px;min-width:0}
+:is(.mh-home,.ch-home)>*{min-width:0}
+:is(.cs-structure .mh-home,.ch-home) .sh-hero{border-radius:var(--home-radius);min-height:240px;padding:24px}
+:is(.cs-structure .mh-home,.ch-home) .sh-hero__title{font-size:24px;line-height:1.3;overflow-wrap:anywhere}
+:is(.cs-structure .mh-home,.ch-home) .sh-hcta{width:100%;min-width:44px;min-height:48px;height:48px;align-self:stretch}
+:is(.cs-structure .mh-home,.ch-home) :is(.mh-summary,.ch-tiles){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+:is(.cs-structure .mh-home .mh-summary>button,.ch-home .ch-tiles>a){box-sizing:border-box;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;min-height:152px;height:152px;border:1px solid var(--home-line);border-radius:var(--home-radius);padding:18px;box-shadow:var(--home-shadow);background:#fff}
+:is(.cs-structure .mh-home,.ch-home) .mh-legacy{display:contents}
+:is(.cs-structure .mh-home,.ch-home) :is(.mh-main,.mh-rail,.ch-main,.ch-rail){display:flex;flex-direction:column;gap:var(--home-space);min-width:0}
+:is(.cs-structure .mh-home,.ch-home) :is(.mh-main>section,.mh-rail>section,.ch-panel){border:1px solid var(--home-line);border-radius:var(--home-radius);background:#fff;padding:24px;box-shadow:var(--home-shadow);min-width:0;min-height:200px}
+:is(.cs-structure .mh-home,.ch-home) .mh-track{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scroll-padding:2px;padding:4px 2px 16px}
+:is(.cs-structure .mh-home,.ch-home) .mh-track>.mc-card{box-sizing:border-box;flex:0 0 calc(100% - 28px);height:304px;min-height:0;border:1px solid #e8e2ed;border-radius:var(--home-radius);padding:24px;background:#fff;box-shadow:var(--home-shadow);min-width:0;overflow-wrap:anywhere;scroll-snap-align:start}
+:is(.cs-structure .mh-home,.ch-home) .mh-track .mc-card-link{display:flex;flex-direction:column;height:100%;min-height:0;text-decoration:none;color:inherit}
+:is(.cs-structure .mh-home,.ch-home) .mh-track h3{font-size:18px;line-height:1.5;margin:16px 0;height:54px;min-height:54px;flex-shrink:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:#292231}
+:is(.cs-structure .mh-home,.ch-home) .mh-track .mc-next{margin-top:auto;border-top:1px solid #f0ecf2;padding-top:16px;font-size:13px}
+:is(.cs-structure .mh-home,.ch-home) .mc-muted{color:#716779;font-size:14px;line-height:1.7}
+:is(.cs-structure .mh-home,.ch-home) .mc-chip-row{display:flex;flex-wrap:wrap;gap:6px;min-height:28px}
+:is(.cs-structure .mh-home,.ch-home) .mc-chip{display:inline-block;border-radius:20px;background:#f1edf5;color:#655173;padding:5px 10px;font-size:12px}
+:is(.cs-structure .mh-home,.ch-home) .mc-next strong{display:block;font-size:14px;color:#292231;margin-bottom:2px}
+:is(.cs-structure .mh-home,.ch-home) .mc-progress{height:6px;overflow:hidden;background:#eee7f3;border-radius:6px;margin:10px 0}
+:is(.cs-structure .mh-home,.ch-home) .mc-progress-fill{height:100%;background:#9472b3}
+:is(.cs-structure .mh-home,.ch-home) :is(.mc-row,.ch-heading){display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;margin:0 0 16px}
+:is(.cs-structure .mh-home,.ch-home) :is(.mc-heading,.ch-heading h2){font-size:18px;line-height:1.5;font-weight:800;margin:0}
+.ch-home .ch-review{border:1px solid var(--home-line);border-radius:var(--home-radius);box-shadow:var(--home-shadow);padding:18px;gap:12px}
+.ch-home .ch-review a{align-self:flex-start;flex-shrink:0;min-height:44px;padding:0 16px;border-radius:9999px}
+.ch-home .ch-work{gap:var(--home-space)}
+/* 상담사 홈 헤더: 왼쪽 소속·인사말, 오른쪽 작업 버튼을 한 줄에 둔다(다른 AppShell 영향 없음). */
+[data-shell-variant]:has(.ch-home)>section>div:has(>.ch-header-actions),
+[data-shell-variant]:has(.ch-home)>section>div:has(>div>.ch-header-actions){align-items:center}
+@media(max-width:767px){
+[data-shell-variant]:has(.ch-home)>section>div:has(>div>.ch-header-actions){flex-wrap:nowrap;align-items:center}
+[data-shell-variant]:has(.ch-home)>section>div:has(>div>.ch-header-actions)>div:first-child>div:last-child{white-space:normal;overflow:visible;text-overflow:clip;word-break:keep-all}
+[data-shell-variant]:has(.ch-home)>section>div:has(>div>.ch-header-actions)>div:has(>.ch-header-actions){flex-shrink:0;margin-left:auto}
+.ch-header-actions{flex-wrap:nowrap;gap:6px}
+.ch-header-actions a{white-space:nowrap;font-size:12px;padding:0 12px;height:40px}
+}
+@media(min-width:1024px){
+.cs-structure .cs-structure-content:has(.mh-home){padding:0}
+:is(.cs-structure .mc-stack.mh-home,.ch-home){padding:32px 40px 64px}
+/* AppShell 본문의 데스크톱 여백을 홈 안에서 중복하지 않는다. */
+:is(.cs-structure .mc-stack.mh-home,.ch-home).ch-home{padding:0 0 64px;max-width:1200px}
+.cs-structure .mc-stack.mh-home{display:grid;grid-template-columns:minmax(0,1fr) 320px;align-items:start}
+:is(.cs-structure .mh-home,.ch-home) :is(.mh-summary,.ch-tiles){grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+:is(.cs-structure .mh-home,.ch-home) .mh-track{gap:16px}
+:is(.cs-structure .mh-home,.ch-home) .mh-track>.mc-card{flex:0 0 max(240px,calc((100% - 48px)/4));width:max(240px,calc((100% - 48px)/4))}
+.ch-home .ch-review{flex-direction:row;align-items:center;justify-content:space-between;padding:24px}
+.ch-home .ch-review a{align-self:center}
+}
+@media(min-width:1600px){.cs-structure .mc-stack.mh-home{grid-template-columns:minmax(0,1fr) 352px}}
+/* 본문 폭 1200 통일: 회원 홈도 다른 화면과 같은 gutter(40)·1200 가운데 열을 쓴다(자체 좌우 padding 제거). */
+@media(min-width:1024px){.cs-structure .cs-structure-content:has(.mh-home){padding:32px 0 40px 40px}.cs-structure .cs-structure-content:has(.mh-home)>.cs-structure-scroll{padding-right:40px}.cs-structure .mc-stack.mh-home{max-width:1200px;margin-inline:auto;padding:0 0 64px}}
+
+@media(min-width:768px) and (max-width:1023px){[data-shell-variant]>section>div:has(>.ch-home){padding:24px}}
+
+/* 회원·상담사 홈의 보조 카드는 내용 높이를 사용한다. */
+:is(.cs-structure .mh-home,.ch-home) section.home-rail-card{min-height:0;flex:none;align-self:start;width:100%}
+:is(.mh-home,.ch-home) .home-rail-link{display:inline-flex;align-items:center;justify-content:flex-end;gap:4px;min-width:44px;min-height:44px;font-size:15px}
+
+/* SDD-234 A: 홈 내부에만 모바일 의미 토큰을 적용한다. 오른쪽 레일 규격은 유지한다. */
+@media(max-width:767px){
+  :is(.cs-structure .mh-home,.ch-home) .sh-hero__title{
+    font-size:var(--mobile-type-hero-size);line-height:var(--mobile-type-hero-leading)
+  }
+  :is(.cs-structure .mh-home,.ch-home) :is(.sh-hchip,.mc-chip){
+    font-size:var(--mobile-type-caption-size);line-height:var(--mobile-type-caption-leading);padding:4px 12px
+  }
+  :is(.cs-structure .mh-home,.ch-home) :is(.sh-hbox__tx,.sh-hbox__tx b,.sh-hbox__tx span,.ch-hero__sub){
+    font-size:var(--mobile-type-compact-size);line-height:var(--mobile-type-compact-leading)
+  }
+  :is(.cs-structure .mh-home,.ch-home) :is(.sh-hcta,.mc-link,.ch-heading a,.ch-review a,.ch-past summary){
+    font-size:var(--mobile-type-label-size);line-height:var(--mobile-type-label-leading);min-height:var(--mobile-touch-minimum);min-width:var(--mobile-touch-minimum)
+  }
+  :is(.cs-structure .mh-home,.ch-home) .sh-hcta{min-height:var(--mobile-touch-control)}
+  :is(.cs-structure .mh-home,.ch-home) :is(.mh-track h3,.mc-heading,.ch-heading h2){
+    font-size:var(--mobile-type-subtitle-size);line-height:var(--mobile-type-subtitle-leading)
+  }
+  :is(.cs-structure .mh-home,.ch-home) :is(.mc-muted,.mc-next,.mc-next strong){
+    font-size:var(--mobile-type-compact-size);line-height:var(--mobile-type-compact-leading)
+  }
+  :is(.cs-structure .mh-home,.ch-home) .mc-progress{margin:8px 0}
+  :is(.cs-structure .mh-home,.ch-home) .mc-next strong{margin-bottom:4px}
+  :is(.cs-structure .mh-home,.ch-home) .mh-scroll-tools small{
+    font-size:var(--mobile-type-caption-size);line-height:var(--mobile-type-caption-leading)
+  }
+  /* 두 줄 메타도 동일한 박스 높이를 확보한다. 장문은 자연스럽게 확장한다. */
+  :is(.cs-structure .mh-home,.ch-home) .sh-hbox{min-height:68px}
+  .ch-header-actions{gap:8px}
+  .ch-header-actions a{
+    font-size:var(--mobile-type-label-size);line-height:var(--mobile-type-label-leading);height:var(--mobile-touch-control);min-height:var(--mobile-touch-control)
+  }
+  .ch-home .ch-row>span{
+    font-size:var(--mobile-type-caption-size);line-height:var(--mobile-type-caption-leading)
+  }
+}

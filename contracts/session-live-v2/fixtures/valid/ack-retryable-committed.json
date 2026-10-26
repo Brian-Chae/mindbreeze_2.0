@@ -1,0 +1,13 @@
+{
+  "$fixture": {
+    "schema": "ack"
+  },
+  "message": {
+    "command_id": "0000000a-0000-4000-8000-00000000000a",
+    "status": "retryable",
+    "epoch": "1",
+    "cursors": [],
+    "committed": true,
+    "retry_after_ms": 500
+  }
+}

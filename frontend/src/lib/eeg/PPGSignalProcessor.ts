@@ -18,7 +18,16 @@ export class PPGSignalProcessor {
   private readonly channelNames = ['Red', 'IR'] as const;
   private readonly ppgSamplingRate: number = 50; // Hz
   
+  /** SDD-244 T10: processPPGData 결과 객체 → RR 인터벌마다 그것을 닫는 피크의 시각(ms). 반환 타입(inventory)은 바꾸지 않는다. */
+  private rrEndTimestampsByResult = new WeakMap<object, number[]>();
+  /** processPPGSegment가 동기로 남기는 값. 호출 직후 processPPGData가 결과 객체에 묶는다. */
+  private lastSegmentRrTimestamps: number[] = [];
+
   constructor() {}
+
+  getRrEndTimestamps(result: object): number[] {
+    return this.rrEndTimestampsByResult.get(result) ?? [];
+  }
   
   /**
    * PPG 데이터 처리 메인 함수
@@ -66,11 +75,12 @@ export class PPGSignalProcessor {
     try {
       // PPG 세그먼트 처리
       const result = this.processPPGSegment(data);
+      const rrEndTimestamps = this.lastSegmentRrTimestamps;
       
       // 피크 정보 분석
       const peakInfo = await this.analyzePeaks(result.filteredRawData);
       
-      return {
+      const output = {
         filteredData: result.filteredRawData,
         signalQuality: {
           overall: result.signalQuality,
@@ -90,6 +100,8 @@ export class PPGSignalProcessor {
         advancedHRV: result.advancedHRV,
         rrIntervals: result.rrIntervals || [] // 🔧 RR 간격 추가
       };
+      this.rrEndTimestampsByResult.set(output, rrEndTimestamps.slice(0, output.rrIntervals.length));
+      return output;
       
     } catch (error) {
       console.error('❌ PPG 데이터 처리 중 치명적 오류 발생:', {
@@ -214,19 +226,23 @@ export class PPGSignalProcessor {
     // 🔧 7. 고급 HRV 분석 추가 (에러 처리 포함)
     let advancedHRV;
     let rrIntervals: number[] = []; // 🔧 RR 간격 추출용
+    // SDD-244 T10: 각 RR을 닫는 피크의 시각 — 중첩 창에서 같은 박동을 구별(beat 식별)하는 데 쓴다.
+    const rrEndTimestamps: number[] = [];
+    this.lastSegmentRrTimestamps = rrEndTimestamps;
     
     try {
       advancedHRV = this.calculateAdvancedHRV(filteredIR);
       
-      // 🔧 RR 간격 추출 (LF/HF 계산용) - 원시 IR 데이터 사용
-      // ⚠️ 중요: HRV 계산에는 밴드패스 필터를 거치지 않은 원시 데이터 사용
-      // LF(0.04-0.15Hz), HF(0.15-0.4Hz) 대역이 1.0Hz 하이패스로 제거되지 않도록
-      const peaks = this.detectPeaksForHRV(irData);
+      // 🔧 RR 간격 추출 — 필터드 IR(1~5Hz 밴드패스) 사용 (하루명상 SDD-052 와 동일).
+      // 원시 IR 은 호흡·기저선 드리프트(<1Hz)가 남아 박동 누락(RR≈2배)·가짜 피크(RR 300~500ms)가
+      // 섞여 SDNN 이 3배 이상 부풀려졌다. RR 간격은 피크 시각 차이이므로 LF/HF 정보는 필터로 사라지지 않는다.
+      const peaks = this.detectPeaksForHRV(filteredIR);
       if (peaks.length >= 2) {
         for (let i = 1; i < peaks.length; i++) {
           const interval = (peaks[i] - peaks[i-1]) * (1000 / this.ppgSamplingRate);
           if (interval >= 200 && interval <= 2000) {
             rrIntervals.push(interval);
+            rrEndTimestamps.push(processedData[peaks[i]]?.timestamp ?? NaN);
           }
         }
       }
@@ -237,6 +253,7 @@ export class PPGSignalProcessor {
         stressIndex: 0, avnn: 0, pnn20: 0, sdsd: 0, hrMax: 0, hrMin: 0
       };
       rrIntervals = [];
+      rrEndTimestamps.length = 0;
     }
     
     // 필터링된 데이터 재구성

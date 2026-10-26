@@ -69,7 +69,8 @@ describe('H3 1:1 카드(C05·C06)', () => {
     const strip = text(one('[data-pz="mstrip"]'));
     expect(strip).toContain('강조해서 보는 지표');
     expect(strip).not.toContain('그룹 평균');
-    expect(text(one('[data-pz="chipline"]'))).toContain('밴드 연결됨');
+    await click(one('.hp-status-open'));
+    expect(text(sheet())).toContain('밴드 연결됨');
   });
 
   it('C05: 회원이 카메라를 켜지 않았으면 회원 영상 자리가 DOM 에 없다(확정 결정 #1)', async () => {
@@ -122,7 +123,7 @@ describe('H3 오프라인 헤드(C04) — 셀프뷰·카메라 토글 DOM 없음
     expect(panel).toContain('녹음');
     expect(panel).toContain('08:12');
     expect(panel).toContain('체크인');
-    expect(panel).toContain('6/7');
+    expect(panel).toContain('7/8'); // 현재 접속과 별개로 저장된 체크인 완료를 보존한다.
     expect(panel).toContain('밴드');
     expect(panel).toContain('5/8');
   });

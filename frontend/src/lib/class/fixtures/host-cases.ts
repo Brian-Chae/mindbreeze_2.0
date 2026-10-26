@@ -59,6 +59,7 @@ type Seed = {
   band: 'on' | 'off' | 'lost';
   v: readonly [focus: number, relaxation: number, emotional: number, bpm: number, respiration: number, hrv: number] | null;
   ago?: string;
+  presence?: 'connected' | 'disconnected';
   ci: readonly HostCheckinAnswer[];
   attention?: string;
 };
@@ -69,9 +70,9 @@ const SEEDS: readonly Seed[] = [
   { id: 3, name: '지우', band: 'on', v: [79, 88, 85, 64, 10, 71], ci: [['마음의 날씨', '맑고 고요해요'], ['몸 상태', '가벼워요'], ['수면', '8시간 · 푹 잤어요']] },
   { id: 4, name: '하준', band: 'off', v: null, ci: [['마음의 날씨', '잔잔해요'], ['몸 상태', '편안해요'], ['수면', '7시간 · 보통']] },
   { id: 5, name: '서아', band: 'on', v: [38, 41, 45, 86, 18, 28], ci: [['몸 상태', '어깨가 많이 뻐근해요'], ['마음의 날씨', '조금 무거워요'], ['수면', '4시간 · 뒤척였어요']], attention: '어깨가 많이 뻐근해요' },
-  { id: 6, name: '도윤', band: 'lost', v: [60, 64, 66, 75, 15, 44], ago: '2분 전', ci: [['수면', '거의 못 잤어요'], ['마음의 날씨', '무거워요'], ['몸 상태', '피곤해요']], attention: '거의 못 잤어요' },
+  { id: 6, name: '도윤', presence: 'disconnected', band: 'lost', v: [60, 64, 66, 75, 15, 44], ago: '2분 전', ci: [['수면', '거의 못 잤어요'], ['마음의 날씨', '무거워요'], ['몸 상태', '피곤해요']], attention: '거의 못 잤어요' },
   { id: 7, name: '예린', band: 'on', v: [62, 73, 70, 70, 12, 55], ci: [['마음의 날씨', '잔잔해요'], ['몸 상태', '편안해요'], ['수면', '7시간 · 보통']] },
-  // 시우는 아직 체크인을 하지 않았다(체크인 요약 6/7 구성)
+  // 시우는 아직 체크인을 하지 않았다(체크인 요약 7/8 구성)
   { id: 8, name: '시우', band: 'off', v: null, ci: [] },
 ];
 
@@ -127,6 +128,9 @@ export function buildHostParticipants(count: number, def: CaseDef = {}): HostPar
       speaking: def.speaking === seed.id,
       agoLabel: band === 'lost' ? (seed.ago ?? '방금 전') : null,
       checkin: seed.ci,
+      // 하니스는 실제 접속·저장 체크인 상태도 명시적으로 합성한다.
+      presenceState: seed.presence ?? 'connected',
+      checkinState: seed.ci.length ? 'completed' : 'not_completed',
       attention: seed.attention ?? null,
     };
   });

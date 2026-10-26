@@ -28,6 +28,8 @@ export interface HostMetricExtra {
 
 const EXTRA_FRESH_MS = 10_000;
 
+const rounded = (value: number | null): number | null => value === null ? null : Math.round(value);
+
 const finite = (value: number | null | undefined): number | null =>
   typeof value === 'number' && Number.isFinite(value) ? value : null;
 
@@ -48,14 +50,15 @@ export function hostMetricValues(row: SessionLiveMetric, extra: HostMetricExtra 
   const valid = row.band_connected && row.device_status === 'ok' && !isEegStale(row.last_eeg_at, nowMs);
   const extraValid = valid && extra !== undefined && nowMs - extra.at < EXTRA_FRESH_MS;
   return toHostMetricValues({
-    relaxation: valid ? finite(row.current_efficiency) : null,
+    relaxation: rounded(valid ? finite(row.current_efficiency) : null),
     // BPM·호흡·HRV 는 행(4초 폴링) 우선, extras(WS) 폴백 — 폴링이 WS 패치를 덮어도 깜빡이지 않는다
-    heartRate: valid ? finite(row.heart_rate) ?? (extraValid ? extra.heartRate : null) : null,
-    respiratoryRate: valid ? finite(row.respiratory_rate) ?? (extraValid ? extra.respiratoryRate : null) : null,
-    focus: extraValid ? extra.focus : null,
-    emotionalStability: extraValid ? extra.emotionalStability : null,
+    heartRate: rounded(valid ? finite(row.heart_rate) ?? (extraValid ? extra.heartRate : null) : null),
+    respiratoryRate: rounded(valid ? finite(row.respiratory_rate) ?? (extraValid ? extra.respiratoryRate : null) : null),
+    // v2 는 행(LiveState)에 실려 온다. 구 경로는 extras(WS)만 있다.
+    focus: rounded(valid ? finite(row.focus_score) ?? (extraValid ? extra.focus : null) : null),
+    emotionalStability: rounded(valid ? finite(row.emotional_score) ?? (extraValid ? extra.emotionalStability : null) : null),
     // 회원 화면과 같은 SDNN 기준(rmssd 혼용 금지)
-    hrv: valid ? finite(row.sdnn) ?? (extraValid ? extra.hrv : null) : null,
+    hrv: rounded(valid ? finite(row.sdnn) ?? (extraValid ? extra.hrv : null) : null),
   });
 }
 
@@ -110,6 +113,9 @@ export function toHostParticipant(row: SessionLiveMetric, { extra, entry, nowMs 
     speaking: row.speaking === true,
     agoLabel: band === 'lost' ? agoLabelOf(row.last_eeg_at, nowMs) : null,
     checkin: checkinAnswers(checkin),
+    checkinState: row.checkin_state,
+    presenceState: row.presence_state,
+    enteredAt: row.entered_at,
     attention: checkinAttention(checkin),
   };
 }
@@ -119,4 +125,40 @@ export function toHostQueue(participants: readonly SessionParticipant[]): HostQu
   return participants
     .filter((p) => p.is_waitlisted)
     .map((p, i) => ({ id: p.participant_id ?? p.user_id ?? `queue-${i}`, name: p.user_name || p.guest_name || '대기 회원' }));
+}
+
+/** 일시적 null 로 값이 깜빡이는 것을 막기 위해 직전 값을 유지하는 시간 */
+export const HOLD_LAST_VALUE_MS = 15_000;
+
+export type HeldValues = Readonly<Record<string, { values: Partial<Record<keyof HostMetricValues, { value: number; at: number }>> }>>;
+
+/**
+ * band 가 on 인 참가자의 지표가 일시적으로 null 이면 직전 값을 HOLD_LAST_VALUE_MS 동안 유지한다.
+ * 순수 함수: 이전 보관분을 받아 새 보관분과 보정된 참가자 목록을 돌려준다(입력 불변).
+ * band 가 on 이 아니면(끊김·미착용) 유지하지 않고 보관분도 버린다.
+ */
+export function holdLastValues(
+  participants: readonly HostParticipant[],
+  prev: HeldValues,
+  nowMs: number,
+): { participants: HostParticipant[]; held: HeldValues } {
+  const held: Record<string, { values: Partial<Record<keyof HostMetricValues, { value: number; at: number }>> }> = {};
+  const out = participants.map((p) => {
+    if (p.band !== 'on') return p;
+    const keep = { ...(prev[p.id]?.values ?? {}) };
+    const nextValues: Record<string, number | null> = { ...p.values };
+    for (const key of Object.keys(p.values) as (keyof HostMetricValues)[]) {
+      const v = p.values[key];
+      if (v !== null) {
+        keep[key] = { value: v, at: nowMs };
+      } else {
+        const last = keep[key];
+        if (last && nowMs - last.at <= HOLD_LAST_VALUE_MS) nextValues[key] = last.value;
+        else delete keep[key];
+      }
+    }
+    held[p.id] = { values: keep };
+    return { ...p, values: nextValues as unknown as HostMetricValues };
+  });
+  return { participants: out, held };
 }

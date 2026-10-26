@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import Nav from '../components/landing/Nav';
 import { Footer } from '../components/landing/CTASection';
 import { StatusBadge } from '../components/session/StatusBadge';
+import { Button, ButtonLink, cardClass } from '../components/ui';
 import { ApiError } from '../lib/api/client';
 import { getOrgPublic, type OrgPublicClass, type OrgPublicResponse } from '../lib/api/orgPublic';
 import type { SessionType } from '../lib/api/session';
@@ -74,7 +75,7 @@ function TypeBadge({ type }: { type: SessionType }) {
 
 function ClassCard({ cls }: { cls: OrgPublicClass }) {
   return (
-    <div className="bg-white border border-[#DDDEE7] rounded-2xl p-5 flex flex-col gap-3">
+    <div className={cardClass('default', 'flex flex-col gap-3')}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-2 min-w-0">
           <h3 className="text-[16px] font-bold text-[#1F1F1F] truncate">
@@ -100,7 +101,7 @@ function ClassCard({ cls }: { cls: OrgPublicClass }) {
 
 function CounselorCard({ name, specialties }: { name: string; specialties: string[] }) {
   return (
-    <div className="bg-white border border-[#DDDEE7] rounded-2xl p-5">
+    <div className={cardClass('default')}>
       <h3 className="text-[16px] font-bold text-[#1F1F1F] mb-3">{name}</h3>
       {specialties.length > 0 ? (
         <div className="flex flex-wrap gap-2">
@@ -125,7 +126,7 @@ function NotFoundView() {
     <div className="min-h-screen bg-[#F5EDFC] flex flex-col">
       <Nav />
       <main className="flex-1 flex items-center justify-center px-8 py-16">
-        <div className="max-w-md w-full bg-white border border-[#DDDEE7] rounded-2xl p-10 text-center">
+        <div className={cardClass('none', 'max-w-md w-full p-10 text-center')}>
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#F5EDFC] flex items-center justify-center">
             <span className="text-2xl">🏢</span>
           </div>
@@ -133,12 +134,9 @@ function NotFoundView() {
           <p className="text-sm text-[#6F6F6F] mb-6">
             입력하신 기관 코드에 해당하는 기관을 찾을 수 없습니다. 코드를 다시 확인해 주세요.
           </p>
-          <Link
-            to="/"
-            className="inline-flex items-center justify-center rounded-xl px-6 py-3 font-semibold bg-[#5F0080] text-white hover:bg-[#4D0066] transition-colors"
-          >
+          <ButtonLink to="/" className="whitespace-normal">
             홈으로 돌아가기
-          </Link>
+          </ButtonLink>
         </div>
       </main>
     </div>
@@ -151,7 +149,7 @@ function ErrorView({ message, onRetry }: { message: string; onRetry: () => void 
       <Nav />
       <main className="flex-1 flex items-center justify-center px-8 py-16">
         <div
-          className="max-w-md w-full bg-white border border-[#DDDEE7] rounded-2xl p-10 text-center"
+          className={cardClass('none', 'max-w-md w-full p-10 text-center')}
           role="alert"
         >
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-50 flex items-center justify-center">
@@ -160,19 +158,12 @@ function ErrorView({ message, onRetry }: { message: string; onRetry: () => void 
           <h1 className="text-xl font-bold text-[#1F1F1F] mb-2">기관 정보를 불러오지 못했습니다</h1>
           <p className="text-sm text-[#6F6F6F] mb-6">{message}</p>
           <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={onRetry}
-              className="inline-flex items-center justify-center rounded-xl px-6 py-3 font-semibold bg-[#5F0080] text-white hover:bg-[#4D0066] transition-colors"
-            >
+            <Button onClick={onRetry} className="whitespace-normal">
               다시 시도
-            </button>
-            <Link
-              to="/"
-              className="inline-flex items-center justify-center rounded-xl px-6 py-3 font-semibold bg-white text-[#6F6F6F] border border-[#DDDEE7] hover:bg-[#F5EDFC] transition-colors"
-            >
+            </Button>
+            <ButtonLink to="/" variant="secondary" className="whitespace-normal">
               홈으로 돌아가기
-            </Link>
+            </ButtonLink>
           </div>
         </div>
       </main>
@@ -190,7 +181,7 @@ function OrgPublicContent({ data }: { data: OrgPublicResponse }) {
       <main className="flex-1 px-4 py-8 sm:px-8 sm:py-12">
         <div className="max-w-[960px] mx-auto flex flex-col gap-10">
           {/* 상단: 기관 정보 */}
-          <section className="bg-white border border-[#DDDEE7] rounded-2xl p-8 md:p-10">
+          <section className={cardClass('none', 'p-8 md:p-10')}>
             <p className="text-[12px] font-mono uppercase tracking-wider text-[#6F6F6F] mb-3">
               기관 공개 페이지
             </p>
@@ -228,7 +219,7 @@ function OrgPublicContent({ data }: { data: OrgPublicResponse }) {
                 ))}
               </div>
             ) : (
-              <div className="bg-white border border-[#DDDEE7] rounded-2xl p-6 text-[#6F6F6F] text-[15px]">
+              <div className={cardClass('default', 'text-[#6F6F6F] text-[15px]')}>
                 등록된 상담사·명상지도사가 없습니다.
               </div>
             )}
@@ -251,24 +242,21 @@ function OrgPublicContent({ data }: { data: OrgPublicResponse }) {
                 ))}
               </div>
             ) : (
-              <div className="bg-white border border-[#DDDEE7] rounded-2xl p-6 text-[#6F6F6F] text-[15px]">
+              <div className={cardClass('default', 'text-[#6F6F6F] text-[15px]')}>
                 현재 진행중이거나 예정된 클래스가 없습니다.
               </div>
             )}
           </section>
 
           {/* 하단 CTA */}
-          <section className="bg-white border border-[#DDDEE7] rounded-2xl p-8 text-center">
+          <section className={cardClass('default', 'text-center')}>
             <h2 className="text-[20px] font-bold text-[#1F1F1F] mb-2">코드로 입장</h2>
             <p className="text-[15px] text-[#6F6F6F] mb-6">
               상담사·지도사가 안내한 입장 코드 4자리를 입력하면 바로 입장할 수 있습니다.
             </p>
-            <Link
-              to="/join"
-              className="inline-flex items-center justify-center rounded-xl px-8 py-3 font-semibold bg-[#5F0080] text-white hover:bg-[#4D0066] transition-colors"
-            >
+            <ButtonLink to="/join" size="lg" className="whitespace-normal">
               입장 코드 입력
-            </Link>
+            </ButtonLink>
           </section>
         </div>
       </main>

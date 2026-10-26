@@ -1,0 +1,17 @@
+{
+  "$fixture": {
+    "schema": "core-final",
+    "why": "metric 최종 seq 필수",
+    "reject_by": "schema"
+  },
+  "message": {
+    "final_sequences": {
+      "eeg": "1",
+      "ppg": "1",
+      "acc": "1"
+    },
+    "segments": 1,
+    "raw_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "feature_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+}

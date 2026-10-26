@@ -35,17 +35,17 @@ export default function TranscriptTimeline({
             type="button"
             onClick={() => onSeek?.(seg.start)}
             disabled={!onSeek}
-            className={`flex w-full gap-3 rounded-xl border px-4 py-2.5 text-left ${meta.color} ${
+            className={`mobile:min-h-11 mobile:min-w-11 flex w-full gap-3 rounded-xl border px-4 py-2.5 text-left ${meta.color} ${
               onSeek ? 'cursor-pointer transition hover:opacity-80' : 'cursor-default'
             }`}
           >
             <div className="flex w-16 shrink-0 flex-col items-start gap-0.5">
-              <span className={`text-[12px] font-bold ${meta.tone}`}>{meta.label}</span>
-              <span className="font-mono text-[12px] text-[#9B9B9B]">
+              <span className={`text-[12px] mobile:text-mb-caption font-bold ${meta.tone}`}>{meta.label}</span>
+              <span className="font-mono text-[12px] mobile:text-mb-caption text-[#9B9B9B]">
                 {formatTimestamp(seg.start)}
               </span>
             </div>
-            <p className="min-w-0 flex-1 text-[15px] leading-relaxed text-[#1F1F1F] whitespace-pre-wrap">
+            <p className="mobile:[overflow-wrap:anywhere] min-w-0 flex-1 text-[15px] mobile:text-mb-body leading-relaxed text-[#1F1F1F] whitespace-pre-wrap">
               {seg.text}
             </p>
           </button>

@@ -1,0 +1,7 @@
+// @vitest-environment jsdom
+import {act} from 'react';import {createRoot} from 'react-dom/client';import {expect,it,vi} from 'vitest';
+import {ClassTeamReports} from '../src/components/class/structure/class-team-reports';
+const api=vi.hoisted(()=>({get:vi.fn().mockResolvedValue({reports:[{id:'r',type:'counselor',status:'completed'}]}),report:vi.fn().mockResolvedValue({id:'r',type:'counselor',content:{summary:'차분한 시간',transcript_segments:[{speaker:'host',text:'원문 비공개',start:0,end:1}],video:{s3_key:'private.mp4',status:'completed'}},session_title:'명상'})}));
+vi.mock('../src/lib/api/client',()=>({apiClient:{get:api.get},ApiError:class extends Error{}}));
+vi.mock('../src/lib/api/reports',()=>({getReport:api.report}));Object.assign(globalThis,{IS_REACT_ACT_ENVIRONMENT:true});
+it('회차 목록에서 선택한 리포트를 읽고 원본·승인·수정 UI를 만들지 않는다',async()=>{const box=document.createElement('div');const root=createRoot(box);await act(async()=>root.render(<ClassTeamReports classId="c" sessionId="s"/>));expect(api.get).toHaveBeenCalledWith('/classes/c/sessions/s/reports');expect(api.report).not.toHaveBeenCalled();await act(async()=>[...box.querySelectorAll('button')].find(b=>b.textContent?.includes('지도사용 리포트'))!.click());expect(api.report).toHaveBeenCalledWith('r');expect(box.textContent).toContain('차분한 시간');expect(box.textContent).not.toContain('원문 비공개');expect(box.querySelector('video,textarea,input')).toBeNull();expect([...box.querySelectorAll('button')].some(b=>/승인|수정|재발송/.test(b.textContent??''))).toBe(false);await act(async()=>root.unmount());});
