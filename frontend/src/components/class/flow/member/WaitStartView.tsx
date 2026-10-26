@@ -58,7 +58,7 @@ export function WaitStartView({
         <div className="fm-bgmr">
           {bgm.playing ? <Volume2 size={20} aria-hidden="true" /> : <VolumeX size={20} aria-hidden="true" />}
           <input
-            className="fm-range" type="range" min={0} max={100} aria-label="볼륨" disabled={!bgm.playing}
+            className="fm-range" type="range" min={0} max={100} aria-label="볼륨"
             value={Math.round(bgm.volume * 100)} onChange={(e) => onBgmVolume(Number(e.target.value) / 100)}
           />
         </div>

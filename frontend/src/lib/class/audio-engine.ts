@@ -37,10 +37,28 @@ export interface AudioEngine {
   fadeOut(durationMs: number): void;
   /** 자동재생 차단(무음) 여부 — 회원 패널이 "탭하여 소리 켜기"를 안내한다 */
   isBlocked(): boolean;
+  /** 차단·재생 상태가 비동기로 바뀔 때 알린다(play() 거부 등). 해제 함수를 돌려준다 */
+  subscribe(listener: () => void): () => void;
   dispose(): void;
 }
 
 const TONE_ANCHOR_TICK_MS = 250;
+
+/** 상태 변화 구독 저장소 — 엔진 공통 */
+function createNotifier(): { subscribe: (l: () => void) => () => void; emit: () => void } {
+  const listeners = new Set<() => void>();
+  return {
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    emit: () => {
+      listeners.forEach((l) => l());
+    },
+  };
+}
 
 /** AudioContext 생성자 — 브라우저별 접두어(webkit)까지 확인한다 */
 function resolveAudioContextCtor(): typeof AudioContext | null {
@@ -63,6 +81,23 @@ function createElementEngine(track: MeditationTrack, url: string): AudioEngine {
   let playing = false;
   let lastPosition = 0;
   let blocked = false;
+  const notifier = createNotifier();
+
+  /** play() 시도 — 거부(자동재생 정책)는 비동기라 구독자에게 알린다 */
+  const tryPlay = (): void => {
+    // jsdom 등 play() 미구현 환경은 undefined 를 돌려준다 — 결과를 신뢰하지 않는다
+    const result = element.play() as Promise<void> | undefined;
+    playing = true;
+    blocked = false;
+    if (result && typeof result.catch === 'function') {
+      result.catch(() => {
+        // 자동재생 정책 차단 — 무음이지만 상태(위치)는 유지한다
+        blocked = true;
+        playing = false;
+        notifier.emit();
+      });
+    }
+  };
 
   const readPosition = (): number => {
     if (!playing) return lastPosition;
@@ -89,17 +124,7 @@ function createElementEngine(track: MeditationTrack, url: string): AudioEngine {
     isPlaying: () => playing,
     play: (fromSec?: number) => {
       seekTo(fromSec ?? lastPosition);
-      // jsdom 등 play() 미구현 환경은 undefined 를 돌려준다 — 결과를 신뢰하지 않는다
-      const result = element.play() as Promise<void> | undefined;
-      playing = true;
-      blocked = false;
-      if (result && typeof result.catch === 'function') {
-        result.catch(() => {
-          // 자동재생 정책 차단 — 무음이지만 상태(위치)는 유지한다
-          blocked = true;
-          playing = false;
-        });
-      }
+      tryPlay();
     },
     pause: () => {
       playing = false;
@@ -114,19 +139,11 @@ function createElementEngine(track: MeditationTrack, url: string): AudioEngine {
     setVolume: (value: number) => {
       volume = clampVolume(value);
       element.volume = volume;
+      // iOS WKWebView 는 element.volume 을 무시한다 — 0 이면 muted 로 확실히 끈다
+      element.muted = volume === 0;
     },
     volume: () => volume,
-    resume: () => {
-      const result = element.play() as Promise<void> | undefined;
-      playing = true;
-      blocked = false;
-      if (result && typeof result.catch === 'function') {
-        result.catch(() => {
-          blocked = true;
-          playing = false;
-        });
-      }
-    },
+    resume: () => tryPlay(),
     fadeOut: (durationMs: number) => {
       if (!playing) return;
       const startVolume = element.volume;
@@ -146,6 +163,7 @@ function createElementEngine(track: MeditationTrack, url: string): AudioEngine {
       tick();
     },
     isBlocked: () => blocked,
+    subscribe: notifier.subscribe,
     dispose: () => {
       playing = false;
       element.pause();
@@ -169,6 +187,8 @@ function createToneEngine(track: MeditationTrack, spec: AudioToneSpec): AudioEng
   let anchorSec = 0;
   let anchorMs = 0;
   let blocked = false;
+  const notifier = createNotifier();
+  let lfoGain: GainNode | null = null;
 
   const wrap = (sec: number): number => {
     if (!durationSec || durationSec <= 0) return Math.max(0, sec);
@@ -226,12 +246,17 @@ function createToneEngine(track: MeditationTrack, spec: AudioToneSpec): AudioEng
     if (master && context) {
       master.gain.setTargetAtTime(groupGain() * volume, context.currentTime, 0.02);
     }
+    // 맥박(LFO) 진폭도 음량에 비례해야 가이드 트랙에서 음량 조절이 먹는다
+    if (lfoGain && context) {
+      lfoGain.gain.setTargetAtTime(groupGain() * volume * 0.6, context.currentTime, 0.02);
+    }
   };
 
   const startNodes = (): void => {
     const ctx = ensureContext();
     if (!ctx || !master) return;
     stopNodes();
+    lfoGain = null;
 
     const freqs = [spec.freq_hz];
     if (spec.detune_hz && spec.detune_hz > 0) freqs.push(spec.freq_hz + spec.detune_hz);
@@ -250,7 +275,7 @@ function createToneEngine(track: MeditationTrack, spec: AudioToneSpec): AudioEng
       const lfo = ctx.createOscillator();
       lfo.type = 'sine';
       lfo.frequency.value = 1 / spec.pulse_sec;
-      const lfoGain = ctx.createGain();
+      lfoGain = ctx.createGain();
       lfoGain.gain.value = groupGain() * volume * 0.6;
       lfo.connect(lfoGain);
       lfoGain.connect(master.gain);
@@ -283,9 +308,11 @@ function createToneEngine(track: MeditationTrack, spec: AudioToneSpec): AudioEng
           resumed.then(
             () => {
               blocked = false;
+              notifier.emit();
             },
             () => {
               blocked = true;
+              notifier.emit();
             },
           );
         }
@@ -334,9 +361,11 @@ function createToneEngine(track: MeditationTrack, spec: AudioToneSpec): AudioEng
         resumed.then(
           () => {
             blocked = false;
+            notifier.emit();
           },
           () => {
             blocked = true;
+            notifier.emit();
           },
         );
       } else {
@@ -356,6 +385,7 @@ function createToneEngine(track: MeditationTrack, spec: AudioToneSpec): AudioEng
       }
     },
     isBlocked: () => blocked,
+    subscribe: notifier.subscribe,
     dispose: () => {
       playing = false;
       clearTimer();

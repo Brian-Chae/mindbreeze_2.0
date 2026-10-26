@@ -109,7 +109,13 @@ export function useClassAudioPlayer({
     setPlaying(false);
     setPositionSec(0);
     setBlocked(false);
+    const engine = engineRef.current;
+    const unsubscribe = engine?.subscribe(() => {
+      setBlocked(engine.isBlocked());
+      setPlaying(engine.isPlaying());
+    });
     return () => {
+      unsubscribe?.();
       engineRef.current?.dispose();
       engineRef.current = null;
     };

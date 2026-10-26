@@ -27,6 +27,7 @@ vi.mock('../src/lib/class/audio-engine', () => ({
     resume: () => h.engineResume(),
     fadeOut: () => undefined,
     isBlocked: () => h.blocked,
+    subscribe: () => () => undefined,
     dispose: () => undefined,
   }),
 }));
