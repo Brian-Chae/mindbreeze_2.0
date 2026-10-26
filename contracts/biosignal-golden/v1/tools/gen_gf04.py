@@ -1,15 +1,25 @@
 #!/usr/bin/env python3
 """SDD-246 T01 — GF04 경계 벡터 입력 + 독립(표준 라이브러리) 기대값.
 HRV 게이트 규칙은 AnalysisMetricsService 의 문서화된 계약(plan §5.2)을 Python 으로 다시 계산한다:
-  유효 RR 200..2000ms(양끝 포함) · 버퍼 최근 120 · 계산은 버퍼>=30 · SDNN/RMSSD: 최근 60 RR 중 >=10개이고 합>=30000ms,
+  유효 RR 200..2000ms(양끝 포함) → 중앙값 ±25% 이탈 제외(FIX hrv-sdnn-scale) · 버퍼 최근 120 · 계산은 버퍼>=30 · SDNN/RMSSD: 최근 60 RR 중 >=10개이고 합>=30000ms,
   SDNN 분모 N(모집단) · 호흡: 버퍼 RR 합>=60000ms 이고 첫~마지막 박동 시각 경과>=60000ms.
 출력: expected/gf04/cases.json (입력 rr 열 + independent 기대값). 호흡 '값' 자체는 oracle 몫(여기선 게이트 여부만).
 사용: python3 gen_gf04.py <v1_dir>
 """
 import json, math, os, sys
 
+def art(rr):
+    # 중앙값 ±25% 아티팩트 제외 (하루명상 SDD-052 filterArtifactRr). 기준 풀이 3개 미만이면 통과.
+    if len(rr) < 3: return rr
+    med = sorted(rr)[len(rr) >> 1]
+    return [x for x in rr if abs(x - med) <= med * 0.25] if med > 0 else rr
+
+def valid_of(rr_in):
+    v = art([x for x in rr_in if 200 <= x <= 2000])
+    return art(v)[-120:] if len(v) >= 5 else v[-120:]
+
 def run(rr_in):
-    rr = [x for x in rr_in if 200 <= x <= 2000][-120:]
+    rr = valid_of(rr_in)
     out = {"valid_rr": len(rr), "calc": len(rr) >= 30}
     if not out["calc"]:
         out.update(sdnn=None, avnn=None, resp_gate="insufficient_rr_buffer"); return out
@@ -22,7 +32,7 @@ def run(rr_in):
     return out
 
 def with_resp(case):
-    rr = case["rr"]; valid = [x for x in rr if 200 <= x <= 2000][-120:]
+    rr = case["rr"]; valid = valid_of(rr)
     e = run(rr)
     if e["calc"]:
         # 시각: 마지막 박동 종료 시각을 기준으로 RR 누적 (첫 박동 시각 = 마지막 - 합(첫 RR 제외))

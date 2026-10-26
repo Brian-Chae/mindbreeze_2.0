@@ -390,8 +390,26 @@ impl HrvState {
             let last = self.last_rr_end_ts;
             cand.retain(|c| c.1.is_finite() && c.1 > last);
         }
-        let valid: Vec<(f64, f64)> = cand.into_iter().filter(|c| c.0 >= 200.0 && c.0 <= 2000.0).collect();
+        let mut valid: Vec<(f64, f64)> = cand.iter().cloned().filter(|c| c.0 >= 200.0 && c.0 <= 2000.0).collect();
+        // 하루명상 SDD-052 filterArtifactRr: 중앙값 ±25% 이탈 RR(박동 누락/가짜 피크) 제외.
+        // 버퍼가 5개 미만이면 들어온 윈도우 자체(3개 이상)를 기준으로 한다.
+        let ref_pool: Vec<f64> = if self.rr.len() >= 5 { self.rr.clone() } else { valid.iter().map(|c| c.0).collect() };
+        if ref_pool.len() >= 3 {
+            let mut sr = ref_pool;
+            js_sort_numeric(&mut sr);
+            let med = sr[sr.len() >> 1];
+            if med > 0.0 {
+                valid.retain(|c| (c.0 - med).abs() <= med * 0.25);
+            }
+        }
         if valid.is_empty() {
+            if stamped {
+                for c in &cand {
+                    if c.1.is_finite() && c.1 > self.last_rr_end_ts {
+                        self.last_rr_end_ts = c.1;
+                    }
+                }
+            }
             return;
         }
         for c in &valid {
@@ -399,9 +417,24 @@ impl HrvState {
             self.rr_ts.push(c.1);
         }
         if stamped {
-            for c in &valid {
-                if c.1 > self.last_rr_end_ts {
+            for c in &cand {
+                if c.1.is_finite() && c.1 > self.last_rr_end_ts {
                     self.last_rr_end_ts = c.1;
+                }
+            }
+        }
+        // 초기(기준 부족)에 통과한 이상치를 버퍼 5개 이상 시점에 중앙값 ±25% 로 소급 정리 (TS 동일).
+        if self.rr.len() >= 5 {
+            let mut sa = self.rr.clone();
+            js_sort_numeric(&mut sa);
+            let med = sa[sa.len() >> 1];
+            if med > 0.0 {
+                let keep: Vec<bool> = self.rr.iter().map(|&r| (r - med).abs() <= med * 0.25).collect();
+                if keep.iter().any(|k| !k) {
+                    let mut i = 0;
+                    self.rr.retain(|_| { let k = keep[i]; i += 1; k });
+                    let mut j = 0;
+                    self.rr_ts.retain(|_| { let k = keep[j]; j += 1; k });
                 }
             }
         }

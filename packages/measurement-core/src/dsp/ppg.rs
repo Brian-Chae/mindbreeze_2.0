@@ -362,9 +362,10 @@ pub fn analyze(data: &[PpgPoint], imp: FilterImpl) -> PpgResult {
     let hrv = simple_hrv(&f_ir);
     let sp = spo2(&red, &ir);
 
-    // RR: 원신호 IR 평균 제거 → 불응기 피크
-    let mean = sum(&ir) / ir.len() as f64;
-    let norm: Vec<f64> = ir.iter().map(|&v| v - mean).collect();
+    // RR: 필터드 IR(1~5Hz) 평균 제거 → 불응기 피크 (하루명상 SDD-052 / TS detectPeaksForHRV(filteredIR) 와 동일).
+    // 원신호 IR 은 호흡·드리프트로 박동 누락·가짜 피크가 생겨 SDNN 이 3배 이상 부풀려졌다.
+    let mean = sum(&f_ir) / f_ir.len() as f64;
+    let norm: Vec<f64> = f_ir.iter().map(|&v| v - mean).collect();
     let peaks = peaks_refractory(&norm, 0.5, 300.0);
     let mut rr = Vec::new();
     let mut rr_ts = Vec::new();
