@@ -29,6 +29,7 @@ SCRIPTS = BACKEND / "scripts"
 EXPECTED_DELTA = {
     "users": 2, "onboarding_progress": 2, "counselor_profiles": 1, "classes": 1, "class_instructors": 1,
     "class_members": 1, "sessions": 1, "session_participants": 1, "eeg_feature_windows": 60, "reports": 2,
+    "organizations": 1, "user_org_memberships": 1,  # 진행자 개인 상담소(실제 가입 경로와 같은 구조)
 }
 
 
@@ -269,3 +270,113 @@ def test_deactivate_then_reactivate(pg_engine: Engine, pg_conn: Connection, tmp_
     assert [a["action"] for a in again["accounts"]] == ["reactivate", "reactivate"]
     assert [a["password"] for a in again["accounts"]] == ["keep", "keep"]
     assert set(statuses().values()) == {"active"} and read_file(secrets) == passwords
+
+
+# ── 심사자 실제 경로: PG 시드 → 실제 ASGI 앱 로그인 → 클래스·리포트 조회 ───────────────────
+
+
+def test_review_accounts_login_and_read_synthetic_reports_via_asgi(
+    pg_engine: Engine, pg_conn: Connection, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """운영 시드 경로(run --apply)로 넣은 계정이 실제 FastAPI 앱에서 로그인하고 합성 클래스·리포트를 읽는다.
+
+    DB 는 바깥 트랜잭션 연결(끝에 롤백), Redis 만 fakeredis 로 대체한다. 외부 발송은 autouse mock 이 0회를 확인한다.
+    """
+    import asyncio
+    import fakeredis
+    import httpx
+    from sqlalchemy.orm import sessionmaker
+    from app.main import app as fastapi_app
+    from app.core.database import get_db
+    from app.core.redis import get_redis
+
+    module = ops()
+    secrets = tmp_path / "s.json"
+    module.run(url_of(pg_engine), "test", do_apply=True, secrets_path=secrets,
+               engine_factory=lambda _url: pg_conn)
+    passwords = read_file(secrets)
+    host_email, member_email = "store-review-counselor@example.com", "store-review-client@example.com"
+
+    TestingSession = sessionmaker(bind=pg_conn, join_transaction_mode="create_savepoint")
+    monkeypatch.setattr("app.core.database.SessionLocal", TestingSession)
+    fake_redis = fakeredis.aioredis.FakeRedis(decode_responses=True)
+
+    def override_db():
+        db = TestingSession()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    monkeypatch.setitem(fastapi_app.dependency_overrides, get_db, override_db)
+    monkeypatch.setitem(fastapi_app.dependency_overrides, get_redis, lambda: fake_redis)
+
+    async def scenario() -> dict:
+        transport = httpx.ASGITransport(app=fastapi_app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://review.test") as client:
+            async def login(email: str, role: str) -> dict[str, str]:
+                res = await client.post("/api/v1/auth/login",
+                                        json={"email": email, "password": passwords[email], "role": role})
+                assert res.status_code == 200, res.text
+                return {"Authorization": f"Bearer {res.json()['access_token']}"}
+
+            member, host = await login(member_email, "client"), await login(host_email, "counselor")
+            out: dict = {}
+            # 회원: 리포트 목록·상세
+            res = await client.get("/api/v1/reports", headers=member)
+            assert res.status_code == 200, res.text
+            out["member_list"] = res.json()
+            rid = out["member_list"]["reports"][0]["id"]
+            res = await client.get(f"/api/v1/reports/{rid}", headers=member)
+            assert res.status_code == 200, res.text
+            out["member_detail"] = res.json()
+            # 회원: 참여한 클래스 목록·상세(앱 '클래스' 탭)
+            res = await client.get("/api/v1/classes", headers=member)
+            assert res.status_code == 200, res.text
+            out["member_classes"] = res.json()
+            member_class_id = next(c["id"] for c in out["member_classes"]["classes"] if c["title"].startswith("예시 데이터"))
+            res = await client.get(f"/api/v1/classes/{member_class_id}", headers=member)
+            out["member_class_status"] = res.status_code
+            out["member_class"] = res.json()
+            # 진행자: 합성 클래스 목록·상세, 회차 리포트(회원 리포트 포함)
+            res = await client.get("/api/v1/classes", headers=host)
+            assert res.status_code == 200, res.text
+            out["host_classes"] = res.json()
+            class_id = next(c["id"] for c in out["host_classes"]["classes"] if c["title"].startswith("예시 데이터"))
+            res = await client.get(f"/api/v1/classes/{class_id}", headers=host)
+            assert res.status_code == 200, res.text
+            out["host_class"] = res.json()
+            res = await client.get(f"/api/v1/classes/{class_id}/sessions", headers=host)
+            assert res.status_code == 200, res.text
+            session_id = res.json()["sessions"][0]["id"]
+            res = await client.get(f"/api/v1/classes/{class_id}/sessions/{session_id}/reports", headers=host)
+            assert res.status_code == 200, res.text
+            out["host_session_reports"] = res.json()
+            client_report_id = next(r["id"] for r in out["host_session_reports"]["reports"] if r["type"] == "client")
+            res = await client.get(f"/api/v1/reports/{client_report_id}", headers=host)
+            assert res.status_code == 200, res.text
+            out["host_member_report"] = res.json()
+            res = await client.get("/api/v1/reports", headers=host)
+            assert res.status_code == 200, res.text
+            out["host_list"] = res.json()
+            # 정지 계정·틀린 비밀번호는 로그인되지 않는다(가드 회귀)
+            res = await client.post("/api/v1/auth/login",
+                                    json={"email": member_email, "password": "wrong-password-0", "role": "client"})
+            out["wrong_password_status"] = res.status_code
+            return out
+
+    out = asyncio.run(scenario())
+    assert out["member_list"]["total"] >= 1
+    assert out["member_detail"]["content"]["source"] == "synthetic"
+    assert "합성 예시 데이터" in out["member_detail"]["content"]["summary"]
+    assert out["host_class"]["title"] == "예시 데이터 · 명상 클래스"
+    assert out["member_class_status"] == 200, out["member_class"]
+    assert out["member_class"]["title"] == "예시 데이터 · 명상 클래스"
+    reports = out["host_session_reports"]["reports"]
+    assert {r["type"] for r in reports} == {"counselor", "client"}
+    assert any(r.get("participant_name") == "예시 회원" for r in reports)
+    assert out["host_session_reports"]["attendance"] == {"attended": 1, "absent": 0}
+    assert out["host_member_report"]["content"]["source"] == "synthetic"
+    assert out["host_member_report"]["type"] == "client"
+    assert out["host_list"]["total"] >= 1
+    assert out["wrong_password_status"] in (400, 401)

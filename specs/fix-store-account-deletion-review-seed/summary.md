@@ -7,7 +7,7 @@
 
 - 운영 `/account-deletion` 404와 방침 v1.0은 **코드 결함이 아니라 prod 릴리즈 미반영**이다. 운영(main `addcb7e0`, 10/18)이 SDD-220 머지 전 빌드다. 운영에 반영하려면 DEPLOY의 prod 릴리즈(Brian 승인)가 필요하다.
 - 소스 쪽은 보강했다: 공개 삭제 페이지를 Google Play 삭제 URL 항목에 맞게 채웠고, 공개 `/support` 페이지를 새로 만들었고, 공개 문구를 명상 클래스 중심으로 바꿨고(상담·AI 플래그가 꺼져 있을 때), PostgreSQL 운영용 심사 계정 시드를 만들었다.
-- 기존 SQLite 심사 시드는 **PostgreSQL에서 실패하는 결함 2건**이 있었다(PG 시험에서 발견해 수정, §4).
+- 기존 SQLite 심사 시드는 **PostgreSQL에서 실패하거나 진행자 화면이 막히는 결함 3건**이 있었다(PG 시험·실제 ASGI 앱 호출로 발견해 수정, §4).
 
 ## 2. 공개 페이지
 
@@ -50,7 +50,7 @@ python scripts/seed_store_review_ops.py --deactivate --apply --allow-production
 ```
 
 - 계정: `store-review-counselor@example.com`(진행자), `store-review-client@example.com`(회원). 탈퇴되면 `-1`, `-2` 새 주소로 대체(되살리지 않음). `--deactivate`로 정지한 계정은 다음 `--apply`에서 다시 활성화
-- 합성 자료: 진행자 프로필, 명상 클래스 1·회차 1·참여 1·지표 60창·리포트 2(실제 개인정보 0, "합성 예시 데이터" 표기)
+- 합성 자료: 진행자 프로필·개인 상담소(실제 가입 경로와 같은 구조), 명상 클래스 1·회차 1·참여 1·지표 60창·리포트 2(실제 개인정보 0, "합성 예시 데이터" 표기)
 - 비밀번호: 실행 시 생성 → `backend/.secrets/store-review-accounts.json`(디렉터리 700·파일 600, gitignore)에만 기록. 화면·로그에는 "keep/new"만 표시. 다른 경로는 `--secrets-file`
 - 가드: `ENVIRONMENT=production/prod`이거나 로컬·dev RDS가 아닌 DB면 `--allow-production` 없이 **접속 전** 거부. SQLite·URL query 우회 거부
 - 발송 0: 서비스 함수를 거치지 않고 DB에 직접 넣는다. 두 계정의 이메일·푸시 알림 설정을 모든 이벤트 off로 둔다. 기기 토큰 없음
@@ -61,6 +61,7 @@ python scripts/seed_store_review_ops.py --deactivate --apply --allow-production
 |---|---|---|
 | 진행자 프로필 삽입 실패 | `counselor_code='SR'+8자`(10자)인데 PG 컬럼은 `String(6)`. SQLite는 길이를 검사하지 않아 기존 시험이 통과했다 | 서비스와 같은 6자리 발급기 `code_service.generate_unique_code` 사용 |
 | 회차 삽입 실패 | `host_state` 누락 → PG `ck_sessions_one_parent` 위반 | `host_state='assigned'` |
+| 진행자가 합성 클래스의 회차 리포트를 열면 404(`class_not_found`) | 클래스 권한은 "클래스 기관의 활성 상담사 소속 + 진행자"일 때만 진행자로 인정(`class_access_service.class_role`)하는데, 시드가 기관 없이 클래스를 만들었다. SQLite 시험은 리포트 API만 불러 드러나지 않았다 | 실제 가입처럼 `personal_office_service.ensure_personal_office`(flush만, 알림 없음)로 개인 상담소를 보장하고 클래스를 그 기관에 둔다. 이전 시드 클래스는 기관을 채워 보정 |
 
 - 합성 자료 생성은 `seed_synthetic_content(..., dry_run=)` 한 곳에서 dry-run 계획과 실제 적용을 같이 처리한다. 기존 SQLite 시드 동작·시험은 유지.
 
@@ -105,11 +106,12 @@ python scripts/seed_store_review_ops.py --deactivate --apply --allow-production
 | V10 | `npx tsc --noEmit -p tsconfig.app.json`, `npm run build` | 통과 |
 | V11 실렌더 | `npm run build` → `vite preview` → `PW_CHANNEL=chrome EVIDENCE_DIR=… node e2e/public-pages.mjs` (설치된 Chrome, 새 임시 프로필, 비로그인) | 390·1440 × `/account-deletion`·`/support` 4/4 통과(제목·핵심 문구·메일 링크 표시, NotFound·로그인 화면 아님). 스크린샷 `evidence/` |
 | 랜딩 실렌더 | 같은 빌드, 390·1440 | title 새 부제, 본문에 "상담"·"AI" 없음. 스크린샷 `evidence/landing-*.png` |
-| B1~B11 PG | 로컬 임시 PG 16 + `alembic upgrade head` → `PG_SMOKE=1 pytest --confcutdir=tests/pg tests/pg/test_store_review_ops_seed.py` | 9건 통과 |
-| PG 전체 | 새 DB에서 `pytest --confcutdir=tests/pg tests/pg -m pg` | 501 통과 |
+| B1~B11 PG | 로컬 임시 PG 16 + `alembic upgrade head` → `PG_SMOKE=1 pytest --confcutdir=tests/pg tests/pg/test_store_review_ops_seed.py` | 10건 통과 |
+| 심사자 실제 경로(PG) | 같은 파일 `test_review_accounts_login_and_read_synthetic_reports_via_asgi`: 운영 시드 경로(`run --apply`)로 PG에 넣은 뒤 실제 FastAPI 앱을 `httpx.ASGITransport`로 호출(DB는 같은 PG 연결, Redis만 fakeredis) | 진행자·회원 로그인 200 → 회원: 리포트 목록·상세(`source=synthetic`, "합성 예시 데이터")·클래스 목록·상세 200 → 진행자: 클래스 목록·상세·회차 목록·회차 리포트(진행자·회원 2건, 출석 1)·회원 리포트 상세 200. 틀린 비밀번호는 401. 메일·푸시·Celery·HTTP·S3 호출 0회 |
+| PG 전체 | 새 DB에서 `pytest --confcutdir=tests/pg tests/pg -m pg` | 501 통과(ASGI 시험 추가 전 실행. 추가 후에는 이 파일 10건만 재실행) |
 | 발송 0 | 메일(`_send_email` 2곳)·푸시·웹푸시·리포트 메일 큐·Celery `delay/apply_async`·httpx·requests·boto3 mock 호출 0회 + 알림·outbox·토큰 등 다른 테이블 행 변화 0 | 통과. 일시 변형(apply 안에서 메일 함수 호출 후 예외 삼킴)으로도 시험이 실패함을 확인 후 원복 |
-| CLI 실제 실행 | 로컬 임시 DB에 dry-run → apply → 재실행 → `ENVIRONMENT=production` | 68행 계획 → 68행 생성 → 0행·비밀번호 유지 → 접속 전 거부. 파일 600·디렉터리 700, 출력에 비밀번호 0 |
-| B12 SQLite 회귀 | `pytest tests/test_sdd220_*.py tests/test_sdd211_pg_fixture_hygiene.py` | 177 통과 |
+| CLI 실제 실행 | 로컬 임시 DB에 dry-run → apply → 재실행 → `ENVIRONMENT=production` | 70행 계획 → 70행 생성 → 0행·비밀번호 유지 → 접속 전 거부. 클래스가 진행자 개인 상담소(kind=individual)에 소속. 파일 600·디렉터리 700, 출력에 비밀번호 0 |
+| B12 SQLite 회귀 | `pytest tests/test_sdd220_*.py tests/test_sdd211_pg_fixture_hygiene.py` | 177 통과(개인 상담소 보정 후 `test_sdd220_review_seed`·`account_deletion` 33건 재실행 통과) |
 
 - 시험 중 덮어써진 다른 SDD 산출물(`specs/sdd-234…/screens/test-a/*`)은 HEAD로 되돌렸다. 임시 DB·임시 워크트리·비밀 파일은 삭제했다.
 
@@ -123,6 +125,6 @@ python scripts/seed_store_review_ops.py --deactivate --apply --allow-production
 ## 8. 미실시
 
 - 운영·dev 서버 실행, 운영 DB 접속, 운영 시드 실행, prod 반영 확인(범위 밖)
-- PostgreSQL 위에서 시드 계정으로 로그인 API·리포트 API 호출(같은 합성 자료로 SQLite 시험 `test_seed_accounts_can_login_and_read_reports`는 통과, PG에서는 비밀번호 해시 검증·행 생성까지만 확인)
+- 운영 서버에서의 실제 로그인. PG 검증은 로컬 임시 PG + 실제 ASGI 앱 호출까지다(운영 RDS·nginx·실제 Redis·앱 빌드는 거치지 않음). 운영 심사 로그인은 OPS 시드 실행 후 APP이 운영 앱에서 직접 확인해야 한다
 - 실제 앱(iOS·Android) 안에서의 공개 페이지 화면 확인(웹 빌드 실렌더만 확인)
 - `specs/sdd-220-store-review-readiness/appstore-metadata.md`의 "운영 실행 방법은 제공하지 않습니다" 문구는 과거 SDD 문서라 고치지 않았다(이 카드의 운영 시드로 대체됨)

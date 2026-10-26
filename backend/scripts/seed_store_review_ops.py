@@ -1,7 +1,8 @@
 """스토어 심사 전용 계정·합성 샘플 시드 — 운영 PostgreSQL용 (대표님 결정 D6, 2026-10-24 승인).
 
 만드는 것: 진행자 1·회원 1 심사 전용 계정(store-review-{counselor,client}@example.com),
-합성 클래스·회차·참여·지표 60창·리포트 2건(실제 개인정보 0, `seed_store_review.seed_synthetic_content` 재사용).
+진행자 개인 상담소(실제 가입 경로와 같은 구조), 합성 클래스·회차·참여·지표 60창·리포트 2건
+(실제 개인정보 0, `seed_store_review.seed_synthetic_content` 재사용).
 
 안전장치
 - 기본은 dry-run: 읽기 전용 트랜잭션에서 계획만 출력한다(쓰기·비밀 파일 생성 0). `--apply`를 줄 때만 기록한다.

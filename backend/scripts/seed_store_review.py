@@ -66,8 +66,8 @@ def seed_review(db, password: str) -> dict[str, int]:
 
 
 FEATURE_WINDOWS = 60
-# 진행자 프로필 1 + 클래스·진행자·회원 3 + 회차 1 + 참여 1 + 지표 창 60 + 리포트 2
-CONTENT_ROWS_TOTAL = 1 + 3 + 1 + 1 + FEATURE_WINDOWS + 2
+# 진행자 프로필 1 + 개인 상담소·소속 2 + 클래스·진행자·회원 3 + 회차 1 + 참여 1 + 지표 창 60 + 리포트 2
+CONTENT_ROWS_TOTAL = 1 + 2 + 3 + 1 + 1 + FEATURE_WINDOWS + 2
 
 
 def seed_synthetic_content(db, host, member_user, *, dry_run: bool = False) -> dict[str, int]:
@@ -100,15 +100,30 @@ def seed_synthetic_content(db, host, member_user, *, dry_run: bool = False) -> d
 
             add(CounselorProfile(user_id=host.id, specialties=[],
                                  counselor_code=generate_unique_code(db, CounselorProfile, 'counselor_code')))
+    # 클래스 권한은 "클래스 기관의 활성 상담사 소속 + 진행자"일 때만 진행자로 인정한다(class_access_service.class_role).
+    # 실제 가입처럼 개인 상담소를 보장하고 클래스를 그 기관에 둔다. ensure_personal_office 는 flush 만 하고 알림을 보내지 않는다.
+    from app.services.personal_office_service import ensure_personal_office, get_personal_office
+
+    office = get_personal_office(db, host)
+    if office is None:
+        created += 2  # 개인 상담소·소속
+        if not dry_run:
+            office = ensure_personal_office(db, host)
+    elif not dry_run:
+        office = ensure_personal_office(db, host)  # 소속 active 보장(멱등)
     key = f'{host.id}:{member_user.id}'
     class_id = stable_id(key + ':class')
     session_id = stable_id(key + ':session')
     participant_id = stable_id(key + ':participant')
     member_id = stable_id(key + ':member')
     now = datetime.now(timezone.utc)
-    if db.get(Class, class_id) is None:
+    existing_class = db.get(Class, class_id)
+    if existing_class is not None and not dry_run and office is not None and existing_class.organization_id is None:
+        existing_class.organization_id = office.id  # 이전 시드(기관 없음)로 만든 클래스 보정
+    if existing_class is None:
         created += 3  # 클래스·진행자·회원
-        add(Class(id=class_id, created_by=host.id, title='예시 데이터 · 명상 클래스',
+        add(Class(id=class_id, created_by=host.id, organization_id=office.id if office else None,
+                  title='예시 데이터 · 명상 클래스',
                   status='completed', default_duration_min=1, record_audio=False, record_video=False,
                   linkband_mode='optional'))
         add(ClassInstructor(class_id=class_id, user_id=host.id, role='lead', status='active'),
