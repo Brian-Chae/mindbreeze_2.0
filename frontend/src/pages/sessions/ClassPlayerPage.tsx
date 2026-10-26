@@ -376,16 +376,21 @@ export default function ClassPlayerPage() {
   }, [inviteClassId, id, currentUserId]);
   const canInvite = Boolean(inviteClassId && inviteDetail?.id === inviteClassId && inviteDetail.status === 'active' && inviteDetail.capabilities?.invite === true);
 
+  // 마이크·카메라 없음/거부는 전용 안내 배너가 이미 보여 준다 — 브라우저 원문(Requested device not found)을 오류 띠로 띄우지 않는다.
+  const onRecorderError = useCallback((err: Error) => {
+    if (err.name === 'NotFoundError' || err.name === 'NotAllowedError' || err.name === 'OverconstrainedError') return;
+    setError(err.message);
+  }, []);
   const recorder = useAudioRecorder({
     sessionId: id ?? '',
-    onError: (err) => setError(err.message),
+    onError: onRecorderError,
   });
 
   // SDD-084/085: 상담사 본인 카메라 영상 녹화 — 마이크 오프 세션은 무음 영상
   const videoRecorder = useVideoRecorder({
     sessionId: id ?? '',
     withAudio: mediaPrefs.micOn,
-    onError: (err) => setError(err.message),
+    onError: onRecorderError,
   });
 
   /** 호스트 본인 참가자 id — live-metrics 행의 user_id 매칭 */
@@ -621,7 +626,7 @@ export default function ClassPlayerPage() {
       setError(null);
       try {
         if (v2Flag && liveV2.client && v2Ready) {
-          const ack = await liveV2.client.request('speaking.set', { can_publish: granted }, { targetId: participantId });
+          const ack = await liveV2.client.request('speaking.set', { target_id: participantId, can_publish: granted, expected_grant_version: null }, { targetId: participantId });
           if (ack.status !== 'applied' && ack.status !== 'duplicate') throw new Error(ack.code ?? '발언권 변경에 실패했습니다');
           return; // 표시는 LiveState(speaking 도메인)가 출처 — 로컬 patch 를 만들지 않는다
         }
@@ -798,7 +803,9 @@ export default function ClassPlayerPage() {
   ): Promise<SessionDto> => {
     const client = liveV2.client;
     if (v2Flag && v2Ready && client && !opts) {
-      const ack = await client.request(`session.${action}`, {});
+      // 계약상 session.end/cancel 은 payload.reason 필수 — 없으면 서버가 missing_field 로 거절한다.
+      const payload = action === 'end' || action === 'cancel' ? { reason: 'host_request' } : {};
+      const ack = await client.request(`session.${action}`, payload);
       if (ack.status === 'applied' || ack.status === 'duplicate') return getSession(sid);
     }
     return opts ? transitionSession(sid, action, opts) : transitionSession(sid, action);
@@ -849,6 +856,7 @@ export default function ClassPlayerPage() {
             action: payload.action,
             track_id: payload.track_id,
             position_ms: Math.max(0, Math.round(payload.position_sec * 1000)),
+            expected_revision: null,
           });
           return true;
         }
@@ -1457,7 +1465,7 @@ export default function ClassPlayerPage() {
           waitingEntries={waitingRoom.entries}
           quietSignals={shownSignals}
           v2LowerHand={v2Flag && v2Ready && liveV2.client ? async (participantId) => {
-            const ack = await liveV2.client!.request('hand.lower', {}, { targetId: participantId });
+            const ack = await liveV2.client!.request('hand.lower', { target_id: participantId }, { targetId: participantId });
             return ack.status === 'applied' || ack.status === 'duplicate';
           } : undefined}
           onHandLowered={v2Flag ? undefined : (participantId) => {

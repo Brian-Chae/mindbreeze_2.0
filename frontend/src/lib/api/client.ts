@@ -4,12 +4,21 @@
 import { loginPathForRole } from '../auth-routing';
 import type { UserRole } from './auth';
 import { Capacitor } from '@capacitor/core';
+import { isLiveProtocolV2Enabled } from '../feature-flags';
 
 // 네이티브 앱(Capacitor)은 앱 오리진(https://localhost)이 API와 달라 SameSite=Lax 쿠키가 전송되지 않는다.
 // 그래서 앱에서만 서버가 응답 헤더로 주는 refresh token 을 로컬에 보관하고, refresh/logout 때 본문으로 보낸다.
 const NATIVE_HEADER = 'X-MB-Native';
 const NATIVE_REFRESH_RESPONSE_HEADER = 'X-MB-Refresh-Token';
 const NATIVE_REFRESH_KEY = 'mb_native_refresh';
+
+/**
+ * SDD-246: v2 회차는 `X-Live-Protocol` 없는 REST 를 구 클라이언트로 보고 426 으로 거절한다.
+ * 신규 웹·앱은 모든 REST 에 지원 버전을 실어 보낸다(종료·시작 REST 폴백 포함).
+ */
+function liveProtocolHeaders(): Record<string, string> {
+  return isLiveProtocolV2Enabled() ? { 'X-Live-Protocol': '1,2' } : {};
+}
 const isNativeClient = (): boolean => {
   try { return Capacitor.isNativePlatform(); } catch { return false; }
 };
@@ -362,7 +371,7 @@ async function requestActive<T>(path: string, options: RequestOptions): Promise<
   const { method = 'GET', body, skipAuth = false, headers = {} } = options;
 
   const buildHeaders = (token: string | null): Record<string, string> => {
-    const h: Record<string, string> = { ...headers, ...nativeHeaders() };
+    const h: Record<string, string> = { ...liveProtocolHeaders(), ...headers, ...nativeHeaders() };
     if (body !== undefined && !isFormDataBody(body)) h['Content-Type'] = 'application/json';
     if (!skipAuth && token) h.Authorization = `Bearer ${token}`;
     return h;
