@@ -12,6 +12,7 @@ from app.models.account_deletion import SocialIdentity
 from app.models.consent import Consent
 from app.models.user import User
 from app.services import apple_auth_service
+from app.services.signup_policy_service import CONSENT_VERSIONS
 from tests.sdd220_helpers import APPLE_AUD, AppleKey, consents
 
 URL = "/api/v1/auth/apple"
@@ -110,7 +111,8 @@ def test_ts9_신규_가입_relay이메일_최초이름_동의버전(client, key,
     assert apple_auth_service.decrypt_token(idents[0].encrypted_refresh_token) == "apple-refresh-secret"
     rows = {c.type: c for c in db.query(Consent).filter(Consent.user_id == user.id).all()}
     assert set(rows) == {"tos", "privacy", "sensitive", "eeg", "research"}
-    assert all(r.version == "1.0" for r in rows.values())
+    # 동의 버전은 정책 표(CONSENT_VERSIONS)를 따른다(방침 2.3 개정으로 privacy 만 2.3).
+    assert {t: r.version for t, r in rows.items()} == {t: CONSENT_VERSIONS[t] for t in rows}
     assert rows["tos"].agreed and not rows["eeg"].agreed and not rows["research"].agreed
     assert str(user.birth_date) == "1990-05-01"
 
