@@ -4,6 +4,7 @@ import { useMobileSwipeProtection } from './use-mobile-swipe-protection';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { uploadChunk } from '../lib/api/audio';
+import { RESUME_ORDER, subscribeAppResume } from '../lib/native/app-lifecycle';
 
 const CHUNK_DURATION_MS = 5000;
 
@@ -36,6 +37,41 @@ export function useAudioRecorder({ sessionId, onError }: UseAudioRecorderOptions
 
   useEffect(() => () => cleanup(), [cleanup]);
 
+  // 스트림 + MediaRecorder 를 새로 만들어 청크 업로드에 연결한다(시작·복귀 복구 공용). 인덱스는 이어간다.
+  const attachRecorder = useCallback(async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    streamRef.current = stream;
+    const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus'
+      : 'audio/webm';
+    const rec = new MediaRecorder(stream, { mimeType: mime });
+    recorderRef.current = rec;
+
+    rec.ondataavailable = (ev) => {
+      if (ev.data && ev.data.size > 0) {
+        const idx = indexRef.current++;
+        const task = uploadChunk(sessionId, idx, ev.data)
+          .then(() => {
+            setUploadedChunks((n) => n + 1);
+          })
+          .catch((err) => {
+            // SDD-137: 네트워크 실패 시 인덱스와 함께 로컬 버퍼링 — 종료 시 재전송
+            pendingRef.current.push({ index: idx, blob: ev.data });
+            onError?.(err as Error);
+          });
+        inflightRef.current.add(task);
+        void task.finally(() => inflightRef.current.delete(task));
+      }
+    };
+
+    rec.onerror = (e) => {
+      setState('error');
+      onError?.(new Error(String((e as ErrorEvent).message ?? '녹음 오류')));
+    };
+
+    rec.start(CHUNK_DURATION_MS);
+  }, [sessionId, onError]);
+
   const start = useCallback(async () => {
     // MB2-10: idle/stopped/error 에서만 시작을 허용한다. recording/paused 등
     // 진행 중 상태에서 재진입하면 기존 recorder·stream 을 정리하지 않고 ref 를
@@ -47,43 +83,36 @@ export function useAudioRecorder({ sessionId, onError }: UseAudioRecorderOptions
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error('이 브라우저는 마이크 녹음을 지원하지 않습니다');
       }
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : 'audio/webm';
-      const rec = new MediaRecorder(stream, { mimeType: mime });
-      recorderRef.current = rec;
-
-      rec.ondataavailable = (ev) => {
-        if (ev.data && ev.data.size > 0) {
-          const idx = indexRef.current++;
-          const task = uploadChunk(sessionId, idx, ev.data)
-            .then(() => {
-              setUploadedChunks((n) => n + 1);
-            })
-            .catch((err) => {
-              // SDD-137: 네트워크 실패 시 인덱스와 함께 로컬 버퍼링 — 종료 시 재전송
-              pendingRef.current.push({ index: idx, blob: ev.data });
-              onError?.(err as Error);
-            });
-          inflightRef.current.add(task);
-          void task.finally(() => inflightRef.current.delete(task));
-        }
-      };
-
-      rec.onerror = (e) => {
-        setState('error');
-        onError?.(new Error(String((e as ErrorEvent).message ?? '녹음 오류')));
-      };
-
-      rec.start(CHUNK_DURATION_MS);
+      await attachRecorder();
       setState('recording');
     } catch (err) {
       setState('error');
       onError?.(err as Error);
     }
-  }, [sessionId, state, onError, cleanup]);
+  }, [state, cleanup, attachRecorder, onError]);
+
+  // 백그라운드 복구: iOS 인터럽션·OS 회수로 마이크 track 이 끝났거나 recorder 가 멈췄으면 새로 이어서 녹음한다.
+  // 녹음 중(recording)일 때만 동작 — 마이크 오프·정지·일시정지 상태는 건드리지 않는다.
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  useEffect(
+    () =>
+      subscribeAppResume(async () => {
+        if (stateRef.current !== 'recording') return;
+        const rec = recorderRef.current;
+        const trackEnded = streamRef.current?.getTracks().some((t) => t.readyState === 'ended') ?? true;
+        if (rec && rec.state === 'recording' && !trackEnded) return;
+        try {
+          if (rec && rec.state !== 'inactive') rec.stop();
+          if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
+          await attachRecorder();
+        } catch (err) {
+          setState('error');
+          onError?.(err as Error);
+        }
+      }, RESUME_ORDER.audio),
+    [attachRecorder, onError],
+  );
 
   const pause = useCallback(() => {
     if (recorderRef.current && recorderRef.current.state === 'recording') {

@@ -20,15 +20,23 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
         return true
     }
 
-    // 화면 잠금·앱 전환 중에도 수업 음성과 프로세스가 유지되도록 playback 카테고리를 사용한다(SDD-222).
-    // mixWithOthers 는 실기기 확인 후 결정하므로 기본 미사용. 실패해도 앱 시작을 막지 않는다.
+    // 화면 잠금·앱 전환 중에도 수업 음성 녹음·송출이 유지되도록 playAndRecord 카테고리를 사용한다(SDD-222 + 백그라운드 녹음 FIX).
+    // 마이크 권한 프롬프트는 기존대로 getUserMedia 시점에 뜬다. 실패해도 앱 시작을 막지 않는다.
     private func configureAudioSession() {
-        let session = AVAudioSession.sharedInstance()
         do {
-            try session.setCategory(.playback, mode: .default, options: [])
-            try session.setActive(true)
+            try AudioSessionConfig.apply()
         } catch {
-            NSLog("[SDD-222] AVAudioSession 설정 실패: \(error.localizedDescription)")
+            NSLog("[AudioSession] 설정 실패: \(error.localizedDescription)")
+        }
+        let nc = NotificationCenter.default
+        // 전화·Siri 등 인터럽션이 끝나면 세션을 다시 활성화해 WebView 녹음이 이어지게 한다.
+        nc.addObserver(forName: AVAudioSession.interruptionNotification, object: nil, queue: .main) { note in
+            guard let raw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+                  AVAudioSession.InterruptionType(rawValue: raw) == .ended else { return }
+            try? AudioSessionConfig.apply()
+        }
+        nc.addObserver(forName: AVAudioSession.mediaServicesWereResetNotification, object: nil, queue: .main) { _ in
+            try? AudioSessionConfig.apply()
         }
     }
 

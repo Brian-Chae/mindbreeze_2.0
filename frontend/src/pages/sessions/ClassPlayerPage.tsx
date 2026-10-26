@@ -867,7 +867,13 @@ export default function ClassPlayerPage() {
   // 대기·진행 중 화면 꺼짐 방지 (회원 immersive 와 동일 정책)
   useWakeLock(isLobby || isRunning);
   // SDD-222 D3: 상담사도 화면이 꺼지거나 앱이 백그라운드여도 BLE·음성 송출·소켓이 유지되도록 Foreground Service 를 켠다.
-  useHostBackgroundSession({ isHost, isLobby, isRunning, online: session?.location_type === 'online' });
+  useHostBackgroundSession({
+    isHost,
+    isLobby,
+    isRunning,
+    online: session?.location_type === 'online',
+    recording: recorder.state === 'recording' || recorder.state === 'paused',
+  });
   // 앱 복귀 시 경과 시각을 즉시 다시 계산한다 — setInterval 은 백그라운드에서 멈추므로 서버 기준 시각(started_at·opened_at)으로 보정.
   const [resumeTick, setResumeTick] = useState(0);
   useAppResume(() => setResumeTick((n) => n + 1));
