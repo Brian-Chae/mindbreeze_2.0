@@ -1,7 +1,4 @@
 // 내담자 상세 페이지와 모달이 공유하는 리포트 본문
-import EegQualityBanner from './EegQualityBanner';
-import EegMetricsGrid from './EegMetricsGrid';
-import EegTimeline from './EegTimeline';
 import NarrativeSections from './NarrativeSections';
 import ReportCoverSection from './ReportCoverSection';
 import SubjectiveCheckinCard from './SubjectiveCheckinCard';
@@ -107,19 +104,6 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
               ))}
             </div>
           </SummaryCard>
-        )}
-
-        {/* EEG — not_measured면 미마운트. 마커는 내담자 미노출 */}
-        {adapted.showEegSection && eeg && (
-          <div className="space-y-4" data-testid="eeg-section">
-            <EegQualityBanner eeg={eeg} reportType="client" />
-            {adapted.showEegMetrics && (
-              <EegMetricsGrid eeg={eeg} reportType="client" />
-            )}
-            {adapted.showEegTimeline && (
-              <EegTimeline data={adapted.eeg_timeline} dense />
-            )}
-          </div>
         )}
 
         <div className="flex mobile:flex-wrap items-center gap-3 pt-4 border-t border-[#EFEFEF]">
