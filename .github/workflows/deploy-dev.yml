@@ -41,6 +41,8 @@ jobs:
           rm -rf dist node_modules/.tmp
           echo "VITE_API_BASE_URL=https://dev-api.mindbreeze.looxidlabs.com/api/v1" > .env
           echo "VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}" >> .env
+          # SDD-246: dev 는 실시간 v2 프로토콜 on (운영 deploy-prod.yml 은 건드리지 않는다)
+          echo "VITE_LIVE_PROTOCOL_V2=true" >> .env
           # SDD-197: 개발용 역할 시뮬레이션(무인증 계정 생성·무비번 로그인)은 실사용자가 있는 환경에서 끈다.
           npm install --legacy-peer-deps
           npx tsc -b --clean 2>/dev/null; true
@@ -226,6 +228,12 @@ jobs:
               sed -i "s#^GEMINI_API_KEY=.*#GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}#" ./.env.dev
             else
               echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> ./.env.dev
+            fi
+            # SDD-246: dev 는 실시간 v2 프로토콜 on (재기동 필요 — 아래 서비스 재시작 단계에서 반영)
+            if grep -qE '^LIVE_PROTOCOL_V2=' ./.env.dev; then
+              sed -i 's#^LIVE_PROTOCOL_V2=.*#LIVE_PROTOCOL_V2=true#' ./.env.dev
+            else
+              echo 'LIVE_PROTOCOL_V2=true' >> ./.env.dev
             fi
             # SDD-197: 역할 시뮬레이션은 항상 끈다(이전에는 true 로 강제). DEBUG 도 끈다(SQL echo 에
             #   바인드 파라미터=개인정보가 로그로 남고 디스크를 채웠다).
