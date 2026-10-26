@@ -44,10 +44,15 @@ SDD-246 소유 경로·`api/v1/admin.py`·`backend/app/ws` 변경 0(V-60, `git d
 
 | 스위트 | 기준선(`f13cc705` 스냅샷) | 이 브랜치 |
 |---|---|---|
-| pytest 전체(SQLite) | 4563 passed · 508 skipped · 0 failed | (아래 6절에 최종 기록) |
+| pytest 전체(SQLite) | 4563 passed · 508 skipped · 0 failed | 4625 passed · 509 skipped · 0 failed (+62 신규, skip +1 = PG 전용 파일) |
 | vitest 전체 | 17 failed / 8 files · 3275 passed | 17 failed / 8 files(같은 파일 집합) · 3296 passed |
 | tsc -b / 변경 파일 eslint / build | – | 0 오류 / 0 / 성공 |
 | alembic 헤드 | 1 | 1 (`e261026c0001`) |
+
+### rebase 후 재확인 (origin/develop `6d89088e` = PR #117·#119·#122 반영, 충돌 없음)
+- 헤드 1개(`e261026c0001`, develop 쪽 새 마이그레이션 없음)
+- 채팅·신고·탈퇴 스위프 관련 pytest 12파일 178 passed
+- 관련 vitest 6파일 69 passed, #117·#119 신규 vitest 2파일 24 passed, tsc 0 · build 성공
 
 ## 4. 계획 대비 달라진 점과 이유
 
