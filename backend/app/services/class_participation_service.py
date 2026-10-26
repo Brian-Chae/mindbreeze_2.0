@@ -855,6 +855,7 @@ class RunOutcome:
     result: Any = None
     degraded: bool = False
     committed: bool = False
+    auth_revision: int | None = None  # 명령이 올린 auth_revision(호스트 자기 명령 후 연결 상태 갱신용)
 
 
 def _cursors_for(live, session_id, scope) -> list[dict]:
@@ -959,26 +960,41 @@ def run_live_command(db, actor, command, *, live=None, auth_revision: int | None
         callbacks = pop_after_commit(command.command_id)
     if result.transient or not result.committed:  # 일시 거절·충돌: 부작용 0
         return RunOutcome(ack_from_result(result), result)
+    # commit 된 명령의 부수효과(종료 후 STT/리포트 등)는 projection/권한 상태와 무관하게 정확히 한 번 실행한다.
+    def _run_callbacks() -> None:
+        if result.status == "applied" and not result.duplicate:
+            for cb in callbacks:
+                try:
+                    cb()
+                except Exception:  # noqa: BLE001 — 부수효과는 best-effort(상태는 이미 commit)
+                    _live_log.warning("[live-v2] commit 후 부수효과 실패", exc_info=True)
+
+    new_auth_rev: int | None = None
     try:
         res = ob.drain(db, live, sid, wait_s=drain_wait_s)
         if res.busy or res.applied_revision < int(result.revision):
             raise LiveNotReady("projection_pending")
         cursors = _cursors_for(live, sid, scope_of(actor, auth_revision))
     except (LiveRedisUnavailable, LiveNotReady) as exc:
+        _run_callbacks()
         ack = ack_from_result(result)
         ack.update(status="retryable", committed=True, code="live_unavailable" if isinstance(exc, LiveRedisUnavailable) else "projection_pending",
                    retry_after_ms=1000)
         return RunOutcome(ack, result, degraded=True, committed=True)
-    except ScopeStale:  # 권한이 회수/변경됐다: 업무는 commit 됐으므로 결과 조회 + 재인가(완전 snapshot)
+    except ScopeStale as stale:  # 권한이 회수/변경됐다: 업무는 commit 됐으므로 결과 조회 + 재인가(완전 snapshot)
+        _run_callbacks()
+        if result.status == "applied" and actor.role in ("host", "system"):
+            # 호스트의 session.end/cancel 은 자기 명령이 auth_revision 을 올린다. 호스트 권한은 유지되므로
+            # 현재 revision 으로 cursor 를 다시 읽어 committed ACK 를 즉시 돌려준다(retryable 로 늦추지 않는다).
+            try:
+                cursors = _cursors_for(live, sid, scope_of(actor, stale.current))
+                return RunOutcome(ack_from_result(result, cursors), result, committed=True, auth_revision=stale.current)
+            except (LiveRedisUnavailable, LiveNotReady, ScopeStale):
+                pass
         ack = ack_from_result(result)
         ack.update(status="retryable", committed=True, code="scope_stale", retry_after_ms=0)
         return RunOutcome(ack, result, committed=True)
-    if result.status == "applied" and not result.duplicate:
-        for cb in callbacks:
-            try:
-                cb()
-            except Exception:  # noqa: BLE001 — 부수효과는 best-effort(상태는 이미 commit)
-                _live_log.warning("[live-v2] commit 후 부수효과 실패", exc_info=True)
+    _run_callbacks()
     return RunOutcome(ack_from_result(result, cursors), result, committed=True)
 
 

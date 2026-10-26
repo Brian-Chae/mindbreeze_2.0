@@ -137,6 +137,9 @@ def create_sessions(db, cls, rows, *, allow_inactive=False, open_now=False):
         )
         db.add(session)
         db.flush()
+        from app.services.session_live_legacy import pin_new_run_if_enabled
+
+        pin_new_run_if_enabled(db, sid)  # SDD-246: 플래그 on 이면 새 회차는 v2 로 고정
         effect(db, cls, "session_prepare", f"prepare:{sid}", {}, sid)
         sessions.append(session)
     for host_id in {

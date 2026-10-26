@@ -133,14 +133,12 @@ def _v1_via_live(db, session_id: str, op: str, params: dict, current_user, entry
 
 
 def _pin_new_run(db, session_id) -> None:
-    """회차 생성/새 실행 시점에 protocol 을 고정한다. 플래그 off 면 아무것도 하지 않는다(현행 동일)."""
-    from app.schemas.session_live_v2 import live_protocol_v2_enabled
+    """POST /sessions 직후 v2 고정(플래그 off 면 no-op). 서비스 계층 pin 이 이미 했으면 멱등으로 기존 값을 유지한다."""
+    from app.services.session_live_legacy import pin_new_run_if_enabled
 
-    if not live_protocol_v2_enabled():
-        return
-    from app.services.session_live_legacy import PROTOCOL_V2, pin_session_protocol
+    pin_new_run_if_enabled(db, UUID(str(session_id)))
+    db.commit()
 
-    pin_session_protocol(db, UUID(str(session_id)), protocol=PROTOCOL_V2)
 
 # 세션 생성·수정·복제·템플릿 저장·새 실행 — client 만 차단한다(platform_admin 은 현행 보존, SDD-211 U4).
 SESSION_MANAGE_ROLES = ("counselor", "org_admin", "platform_admin")

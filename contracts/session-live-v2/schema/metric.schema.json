@@ -42,9 +42,11 @@
           "$ref": "common.schema.json#/definitions/U64"
         },
         "window_start_us": {
+          "description": "창 시작/끝의 시간축은 capture.reanchor 의 monotonic_us 와 반드시 같은 축(코어 창 시간축, μs)이어야 한다. 서버는 anchor_server_at + (window_start_us − reanchor.monotonic_us) 로 서버시계로 환산해 신선도를 판정한다. 축이 다르면 창이 미래/과거로 환산되어 time_uncertain 이 된다.",
           "$ref": "common.schema.json#/definitions/U64"
         },
         "window_end_us": {
+          "description": "창 시작/끝의 시간축은 capture.reanchor 의 monotonic_us 와 반드시 같은 축(코어 창 시간축, μs)이어야 한다. 서버는 anchor_server_at + (window_end_us − reanchor.monotonic_us) 로 서버시계로 환산해 신선도를 판정한다. 축이 다르면 창이 미래/과거로 환산되어 time_uncertain 이 된다.",
           "$ref": "common.schema.json#/definitions/U64"
         },
         "observed_at_ms": {

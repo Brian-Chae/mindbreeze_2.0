@@ -2212,6 +2212,8 @@ def register_v2_handlers(sio, ns):
         db = _open_db()
         try:
             outcome = cps.run_live_command(db, conn.actor, cmd, auth_revision=conn.auth_revision)
+            if outcome.auth_revision is not None:  # 호스트 자기 명령(session.end 등)이 올린 revision 을 연결에 반영
+                conn.auth_revision = outcome.auth_revision
             if outcome.committed and not outcome.degraded:
                 try:
                     publish_session_sync(cmd.session_id)
