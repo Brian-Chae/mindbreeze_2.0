@@ -47,3 +47,44 @@
 
 ## 필요 조치
 - google-services.json(dev 앱 패키지 com.looxidlabs.mindbreeze2.dev 용 클라이언트 포함)을 워크트리에 배치 후 APK 재빌드·재설치.
+
+---
+# 3차 시도 (google-services.json 포함 APK, 설치 20:19:38) — 판정: **불합격** (네이티브 녹음이 시작되지 않음)
+
+## 시각별 절차 (KST)
+- 20:20 앱 실행, API=dev-api 유지. counselor@test.com 로그인 1회 → `auth/login` **200**, 크래시 없음(Firebase 수정 확인).
+- 20:21 새 클래스 → "지금 바로 시작" → 오프라인(대면)·30분·주소 입력(초대 없음) → 대기실(코드 4198, 세션 699d2cc8-1a4c-4539-9d7c-cb3bb02c416d) → "지금 시작하기"(수업 시작, 20:21:45경).
+- 20:22:01 녹음 패널 → "녹음 시작" → 동의 모달 → 20:22:24 "동의하고 녹음 시작".
+  - `POST /sessions/{id}/audio/start` 200 (2회).
+  - 그러나 UI 는 "녹음 전 / 아직 녹음되지 않았습니다" 그대로, 녹음 타이머 00:00, 상태 recording 으로 전환 안 됨. 에러 토스트·권한 팝업 없음. 20:24 재시도도 동일.
+  - 앱 프로세스 RECORD_AUDIO `granted=false` 유지(권한 요청조차 안 뜸), 마이크 사용(`rec update`) 기록 없음, 이후 5분 대기 단계는 진행할 의미가 없어 생략(화면 끄기·battery unplug·deviceidle 미조작).
+  - Capacitor 브리지 호출 추적: `NativeAudioRecorder.isAvailable` 만 호출되고 `addListener`/`start` 호출 0건. isAvailable 응답은 `{"available":true}`.
+- 20:26 클래스 종료(재로딩 후 "클래스 종료" 확인) → 세션 status=completed, 요약 화면 정상.
+- DB(읽기 전용): 해당 세션 `audio_chunks` **0건**, `sessions.status`=completed, `session_records.status`=recording(종료 후 확인 전 값; 쓰기 없음).
+
+## 청크 표
+| 항목 | 값 |
+|---|---|
+| 청크 수 / 인덱스 범위 | 0 / 없음 |
+| 누락·간격·크기·ffprobe | 해당 없음(청크 없음) — 저장 파일 ftyp 확인 불가 |
+
+## logcat 요약
+- 필터(NativeAudioRecorder·AndroidRuntime·Capacitor/Console, 토큰 제외): 로그인 후 크래시 없음.
+- 핵심 1건: `E Capacitor/Console: Uncaught (in promise) Error: "NativeAudioRecorder.then()" is not implemented on android` — 녹음 시작 시도마다(20:21:39, 20:22:24, 20:24:04) 직후 발생.
+- FGS: 수업용 `AndroidForegroundService`(채널 mindbreeze_class_session)만 동작. 녹음용 FGS·업로드 로그 없음.
+
+## 결함 (원인 확정)
+1. **[치명] 네이티브 플러그인 프록시를 async 함수에서 반환** — `frontend/src/lib/native-audio-recorder/index.ts:32` (`return res?.available ? plugin : null;` in `async resolveNativeAudioRecorder`).
+   - Capacitor `registerPlugin` 프록시를 Promise 로 resolve 하면 JS 가 `.then` 을 조회하고, 프록시는 이를 플러그인 메서드 호출로 취급해 `"NativeAudioRecorder.then() is not implemented on android"` 로 reject.
+   - 결과: `useAudioRecorder.ts:107` `await resolveNativeAudioRecorder()` 가 throw → `startNative` 실패 → `start()` catch(`useAudioRecorder.ts` 약 176~186행)에서 에러 처리되나 UI 에는 표시되지 않아 사용자는 "아무 일도 안 일어남"을 겪고, 서버에는 `audio/start` 만 200 으로 남아 세션 기록 상태 `recording` 인데 청크 0.
+   - 수정 방향(참고, 이번 검증에서 수정하지 않음): 프록시를 직접 반환하지 말고 `{ plugin }` 같은 래퍼로 감싸거나 boolean 만 반환(`isNativeRecorderAvailable()`) 후 호출부에서 `getNativeAudioRecorder()` 사용. 단위 테스트가 mock 객체여서 통과했을 가능성 — 실제 Capacitor 프록시 `then` 동작 테스트 필요.
+2. `useAudioRecorder.start` 에러가 UI 에 드러나지 않음(state=error 인데 패널이 "녹음 전" 표시, 사용자 피드백 없음) — 보조 결함. 
+3. `종료` 버튼이 한 번 클릭 후 `meta.ending` 으로 잠긴 채 확인 모달이 열리지 않는 현상(HostLiveView.tsx:257 `endDisabled={meta.ending}`) — 페이지 새로고침 후 정상. 녹음 실패와 무관한 별도 관찰, 재현 조건 미확인.
+
+## 원복
+- 배터리 unplug·deviceidle force·화면 끄기 미실시(해당 단계 도달 못 함) → 원복 대상 없음. battery status 5/level 100, mForceIdle=false 확인.
+- adb forward 9333 제거. 시험 클래스 종료(completed). /tmp 사본 없음. RECORD_AUDIO 권한은 부여된 적 없음.
+- 참고: 시험 세션의 `session_records.status` 가 recording 으로 남아 있을 수 있음(서버 정리 로직 확인 필요).
+
+## 다음 단계
+- index.ts:32 수정 후 APK 재빌드·재설치 → 본 시험(5분 화면 꺼짐) 재실행.
