@@ -575,20 +575,26 @@ class LiveSession(
         val seq = frame.optString("sequence").toLongOrNull() ?: return
         // T05b: sequence ≤ 2^31−1 (서버 entity_version = generation<<31 | sequence). 범위 밖은 live 에서 격리.
         if (seq < 0 || seq > MAX_SEQUENCE) { outbox.quarantine(seq, "sequence_out_of_range"); return }
-        outbox.add(seq, frame)
+        outbox.add(seq, frame, currentTag())
         if (state == LiveState.READY) pump()
+    }
+
+    /** 지금 활성 stream 의 신원. stream 이 없으면(capture.start 전) null — 이후 첫 stream 이 귀속한다. */
+    private fun currentTag(): StreamTag? {
+        val s = streamId ?: return null; val g = ownerGeneration ?: return null; val p = participantId ?: return null
+        return StreamTag(s, g, anchorId, p)
     }
 
     fun pump() {
         if (state != LiveState.READY || metricInflight) return
-        val stream = streamId ?: return
-        val pid = participantId ?: return
-        val gen = ownerGeneration ?: return
-        val batch = outbox.newestFirst(60).sortedBy { it.first } // 최신 배치 우선, 배치 안은 순번 오름차순
+        val cur = currentTag() ?: return
+        // 창은 만들어진 stream 의 신원으로 보낸다(재시작·재연결 후 옛 창이 새 stream 으로 귀속되지 않음). 한 묶음=한 stream.
+        val batch = (outbox.nextBatch(cur, 60) ?: return).sortedBy { it.seq } // 최신 배치 우선, 배치 안은 순번 오름차순
         if (batch.isEmpty()) return
         val windows = JSONArray()
-        for ((_, f) in batch) windows.put(envelope(f, pid, stream, gen))
-        val sentSeqs = batch.map { it.first }
+        for (e in batch) windows.put(envelope(e.json, e.tag.participantId, e.tag.streamId, e.tag.generation,
+            if (e.tag.streamId == cur.streamId && e.tag.generation == cur.generation) cur.anchorId else e.tag.anchorId)) // 같은 stream 은 최신 앵커, 옛 stream 은 그때 앵커
+        val sentSeqs = batch.map { it.seq }
         val msg = JSONObject().put("protocol_version", 2).put("schema_version", 1).put("windows", windows)
         metricInflight = true
         pumpTimer?.cancel()
@@ -596,11 +602,11 @@ class LiveSession(
         transport.emit("live:metric", msg) { res -> onMetricAck(sentSeqs, res) }
     }
 
-    private fun envelope(f: JSONObject, pid: String, stream: String, gen: String): JSONObject {
+    private fun envelope(f: JSONObject, pid: String, stream: String, gen: String, anchor: String): JSONObject {
         val o = JSONObject()
         o.put("session_id", cfg.sessionId).put("participant_id", pid).put("stream_id", stream).put("stream_generation", gen)
         o.put("sequence", f.getString("sequence")).put("window_start_us", f.getString("window_start_us")).put("window_end_us", f.getString("window_end_us"))
-        o.put("observed_at_ms", f.opt("observed_at_ms")).put("clock_anchor_id", anchorId).put("clock_uncertainty_ms", clockUncertaintyMs)
+        o.put("observed_at_ms", f.opt("observed_at_ms")).put("clock_anchor_id", anchor).put("clock_uncertainty_ms", clockUncertaintyMs)
         o.put("device_profile_version", cfg.deviceProfile).put("algorithm_version", cfg.algorithmVersion).put("model_version", cfg.modelVersion)
         o.put("feature_hash", f.getString("feature_hash")).put("contact", f.opt("contact")).put("sqi", f.opt("sqi") ?: JSONObject.NULL).put("metrics", f.opt("metrics"))
         return o

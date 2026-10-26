@@ -167,6 +167,30 @@ class LiveContractT05bTest {
         assertEquals(2L, e.box.quarantinedByCode()["invalid_field"])
     }
 
+    @Test fun restartThenNewStreamNeverMixesOldWindows() {
+        val f = File(tmp.root, "restart.log")
+        // 프로세스 1: stream(구)으로 3개 창을 만들었지만 ACK 전에 종료
+        val e1 = env(f); toCapturing(e1)
+        e1.t.acks["live:metric"] = { JSONObject().put("ok", false).put("code", "not_ready").put("retryable", true) }
+        for (i in 1L..3L) e1.live.onFrame(frame(i))
+        e1.box.close()
+        // 프로세스 2: 같은 outbox, 서버가 capture.start 로 새 stream2(generation 9)를 준다
+        val e2 = env(f, captureResult = { defaultResult("9", stream2) })
+        e2.t.acks["live:metric"] = metricAcks { "accepted" to null }
+        toCapturing(e2)
+        e2.live.onFrame(frame(4))
+        val sent = e2.t.sentOf("live:metric").map { m -> val w = m.getJSONArray("windows"); (0 until w.length()).map { w.getJSONObject(it) } }
+        assertTrue(sent.isNotEmpty())
+        for (batch in sent) assertEquals("한 묶음=한 stream", 1, batch.map { it.getString("stream_id") }.toSet().size)
+        val byStream = sent.flatten().groupBy({ it.getString("stream_id") }, { it.getString("sequence") })
+        assertEquals("새 stream 에는 새 창만", setOf("4"), byStream.getValue(stream2).toSet())
+        assertEquals("옛 창은 옛 stream 신원으로", setOf("1", "2", "3"), byStream.getValue(stream).toSet())
+        val old = sent.flatten().first { it.getString("stream_id") == stream }
+        assertEquals("3", old.getString("stream_generation"))
+        assertEquals("9", sent.flatten().first { it.getString("stream_id") == stream2 }.getString("stream_generation"))
+        assertEquals(0, e2.box.size())
+    }
+
     @Test fun quarantineSurvivesRestartAndBlocksReAdd() {
         val f = File(tmp.root, "q.log")
         val b1 = MetricOutbox(f)
