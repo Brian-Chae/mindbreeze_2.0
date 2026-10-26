@@ -95,7 +95,10 @@ let activeBandOwners = 0;
 let bandConnectInFlight = false;
 
 /** raw indices → 표시용 0~100 정규화 (활성 모델 > 코호트 B0) */
-function toScoredIndices(raw: BandRawIndices, model: NormalizationModelDto | null = getActiveModelCache()): BandRawIndices {
+/** 표시 점수 묶음 — 이완도(두뇌 휴식)는 활성 모델 없으면 null(pending) */
+export type BandScoredIndices = Omit<BandRawIndices, 'relaxationIndex'> & { relaxationIndex: number | null };
+
+function toScoredIndices(raw: BandRawIndices, model: NormalizationModelDto | null = getActiveModelCache()): BandScoredIndices {
   const scores = scoreIndices({
     focusIndex: raw.focusIndex,
     relaxationIndex: raw.relaxationIndex,
@@ -245,7 +248,7 @@ export interface UseBandResult {
   /** playground — 7지표 raw */
   rawIndices: BandRawIndices | null;
   /** playground — 정규화 점수 (활성 모델 > 코호트 B0). raw는 유지 */
-  scoredIndices: BandRawIndices | null;
+  scoredIndices: BandScoredIndices | null;
   /** playground — 전극/센서 접촉 */
   sensors: BandSensors;
   /** playground — 연결 이후 경과 초 */
@@ -863,7 +866,7 @@ export function useBand({
       }
       setSensors(sensorFromLeadOff(leadOffRef.current, true));
       // 차트도 표시 지표와 동일한 정규화 점수(0~100)로 축적한다 (raw 비율 혼용 금지)
-      pushChartPoint(scored.relaxationIndex);
+      if (scored.relaxationIndex !== null) pushChartPoint(scored.relaxationIndex);
     },
     [emitQueuedItem, pushChartPoint, sessionId],
   );
@@ -1630,7 +1633,7 @@ export function useBand({
         // feature 계약은 raw 비율 — 표시 전 표준모델/코호트 정규화(0~100)
         const scored = scoreIndices({ relaxationIndex: efficiency }).relaxationIndex;
         setCurrentEfficiency(scored);
-        pushChartPoint(scored);
+        if (scored !== null) pushChartPoint(scored);
       }
       const focus = event.focus_index ?? event.feature?.focus_index;
       if (typeof focus === 'number') {

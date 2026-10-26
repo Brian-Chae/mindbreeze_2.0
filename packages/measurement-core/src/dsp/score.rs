@@ -56,6 +56,8 @@ pub struct ScoreSet {
     pub hemispheric_balance: f64,
     pub cognitive_load: f64,
     pub emotional_stability: f64,
+    /// 두뇌 휴식(하루명상): 활성 모델 totalNeuralActivity params + direction -1 강제. 모델/params 없으면 None(pending, 0 아님).
+    pub brain_rest: Option<f64>,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
@@ -102,6 +104,7 @@ pub fn cohort(i: &RawInput) -> ScoreSet {
         },
         cognitive_load: if !i.cognitive_load.is_finite() { 0.0 } else { to_score((COG.1 - i.cognitive_load) / (COG.1 - COG.0)) },
         emotional_stability: if !i.emotional_stability.is_finite() { 0.0 } else { to_score((i.emotional_stability - EMO.0) / (EMO.1 - EMO.0)) },
+        brain_rest: None,
     }
 }
 
@@ -184,5 +187,43 @@ pub fn score(i: &RawInput, model: Option<&ModelParams>) -> ScoreSet {
         hemispheric_balance: get("faa", faa_raw).unwrap_or(c.hemispheric_balance),
         cognitive_load: get("cognitiveLoad", i.cognitive_load).unwrap_or(c.cognitive_load),
         emotional_stability: get("emotionalStability", i.emotional_stability).unwrap_or(c.emotional_stability),
+        brain_rest: brain_rest(i.tna, m),
+    }
+}
+
+/// 두뇌 휴식 = 활성 모델 totalNeuralActivity(m,s) + direction -1 강제 sigmoid. 신경 활동↓ = 휴식↑.
+pub fn brain_rest(tna: f64, model: &ModelParams) -> Option<f64> {
+    let p = model.get("totalNeuralActivity")?;
+    sigmoid_score("totalNeuralActivity", tna, &SigmoidParam { m: p.m, s: p.s, direction: -1 })
+}
+
+#[cfg(test)]
+mod brain_rest_tests {
+    use super::*;
+
+    fn model(m: f64, s: f64, d: i8) -> ModelParams {
+        let mut mp = ModelParams::new();
+        mp.insert("totalNeuralActivity".into(), SigmoidParam { m, s, direction: d });
+        mp
+    }
+
+    #[test]
+    fn brain_rest_inverts_tna_and_forces_direction() {
+        // direction 이 +1 로 저장돼 있어도 -1 로 강제 — 활동 높을수록 점수 낮음
+        let mp = model(2.3252, 2.3342, 1);
+        let at_mean = brain_rest(2.3252f64.exp(), &mp).unwrap();
+        assert_eq!(at_mean, 50.0);
+        let hi = brain_rest(1000.0, &mp).unwrap();
+        let lo = brain_rest(1.0, &mp).unwrap();
+        assert!(lo > hi, "lo={lo} hi={hi}");
+        assert_eq!(brain_rest(1000.0, &model(2.3252, 2.3342, -1)), Some(hi));
+    }
+
+    #[test]
+    fn brain_rest_none_without_params() {
+        assert_eq!(brain_rest(10.0, &ModelParams::new()), None);
+        let i = RawInput { tna: 10.0, ..Default::default() };
+        assert_eq!(score(&i, None).brain_rest, None);
+        assert_eq!(cohort(&i).brain_rest, None);
     }
 }

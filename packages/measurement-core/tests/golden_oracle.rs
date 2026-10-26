@@ -116,13 +116,14 @@ fn eeg_check(filter: FilterImpl, dir: &str) {
         c.num(&format!("[{i}] faa"), &ri["faa"], x.faa, 1e-6, 1e-6);
         // 표시값(0.1 단위 이내가 아니라 정수 완전 일치)
         let d = &disp[i];
-        let g = |m: &measurement_core::dsp::score::ScoreSet| [m.focus, m.relaxation, m.stress, m.total_power, m.hemispheric_balance, m.cognitive_load, m.emotional_stability];
+        // 이완도 표시 = 두뇌 휴식(brain_rest, 모델 없으면 None). 나머지는 기존 점수.
+        let g = |m: &measurement_core::dsp::score::ScoreSet| [Some(m.focus), m.brain_rest, Some(m.stress), Some(m.total_power), Some(m.hemispheric_balance), Some(m.cognitive_load), Some(m.emotional_stability)];
         let keys = ["focusIndex", "relaxationIndex", "stressIndex", "totalPower", "hemisphericBalance", "cognitiveLoad", "emotionalStability"];
         for (k, v) in keys.iter().zip(g(&e.scores_cohort)) {
-            c.exact(&format!("[{i}] legacy_cohort.{k}"), &d["legacy_cohort"][*k], Some(v));
+            c.exact(&format!("[{i}] legacy_cohort.{k}"), &d["legacy_cohort"][*k], v);
         }
         for (k, v) in keys.iter().zip(g(&e.scores_model.unwrap())) {
-            c.exact(&format!("[{i}] active_sigmoid.{k}"), &d["active_sigmoid"][*k], Some(v));
+            c.exact(&format!("[{i}] active_sigmoid.{k}"), &d["active_sigmoid"][*k], v);
         }
     }
     c.assert_ok(&format!("{dir}/eeg+display"));

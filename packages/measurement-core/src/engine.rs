@@ -766,7 +766,15 @@ impl Core {
         let focus_raw = mk(0, "index_raw", raw(|e| e.focus));
         let focus_display = mk(1, "score_0_100", displ(|s| s.focus));
         let relaxation_raw = mk(2, "index_raw", raw(|e| e.relaxation));
-        let relaxation_display = mk(3, "score_0_100", displ(|s| s.relaxation));
+        // 이완도 표시 = 하루명상 '두뇌 휴식'(TNA 반전). 모델 없으면 코호트 폴백 없이 pending.
+        let relaxation_display = mk(
+            3,
+            "score_0_100",
+            eeg_state.and_then(|e| match (mode, &e.model) {
+                (ModelMode::ActiveSigmoid, Some(m)) => m.brain_rest.ok_or(("invalid", "model_unavailable")),
+                _ => Err(("invalid", "model_unavailable")),
+            }),
+        );
         let emotion_raw = mk(4, "index_raw", raw(|e| e.emotion));
         let emotion_display = mk(5, "score_0_100", displ(|s| s.emotional_stability));
 

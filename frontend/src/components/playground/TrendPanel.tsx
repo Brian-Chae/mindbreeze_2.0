@@ -17,6 +17,9 @@ import { AXIS_TICK, CATEGORY_PALETTE, CHART_COLORS, TOOLTIP_STYLE } from './char
 import { PanelEmpty, PanelShell } from './PanelShell';
 import { trendAxisOf } from './trend-metric-keys';
 
+/** 이완도(두뇌 휴식)는 모델 없으면 null(pending) — 표시는 0 대체 */
+type PanelIndices = Omit<BandRawIndices, 'relaxationIndex'> & { relaxationIndex: number | null };
+
 const METRIC_LABEL: Record<string, string> = {
   focusIndex: '집중도',
   relaxationIndex: '이완도',
@@ -44,7 +47,7 @@ const MAX_POINTS = 300;
 interface Props {
   connected: boolean;
   selectedMetrics: string[];
-  rawIndices: BandRawIndices | null;
+  rawIndices: PanelIndices | null;
   heartRate: number | null;
   sdnn: number | null;
   rmssd: number | null;
