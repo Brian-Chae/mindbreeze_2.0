@@ -24,7 +24,7 @@ from app.services import report_progress_service
 from app.services import report_scope
 from app.services.eeg_rollup_service import summarize_hrv_motion
 from app.services.report_narrative import build_metrics_summary
-from app.services.normalization_score import sigmoid_score
+from app.services.normalization_score import brain_rest_score, sigmoid_score
 from app.tasks.summary_task import _call_narrative_llm
 
 logger = logging.getLogger(__name__)
@@ -329,7 +329,8 @@ def _build_eeg_content(
                 else None
             ),
             "concentration": mind_score("focusIndex", w.focus_index, eeg_metrics.normalize_focus),
-            "relaxation": mind_score("relaxationIndex", w.relaxation_index, eeg_metrics.normalize_relaxation),
+            # 이완도 = 두뇌 휴식(TNA 반전, 모델 없으면 None) — 웹·Rust 와 동일 정의
+            "relaxation": brain_rest_score(w.total_neural_activity, std_params),
             "stress": mind_score("stressIndex", w.stress_index, eeg_metrics.normalize_stress),
             "emotional_stability": mind_score(
                 "emotionalStability", w.emotional_stability, eeg_metrics.normalize_emotional_stability

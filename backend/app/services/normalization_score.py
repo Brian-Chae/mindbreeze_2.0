@@ -69,3 +69,14 @@ def sigmoid_score(key: str, raw: float | None, params: object) -> int | None:
         return None
     ratio = math.exp(-math.log(2) * t * t) if key == 'faa' else sigmoid(int(direction) * SIGMOID_C * t)
     return to_percent_score(ratio)
+
+
+def brain_rest_score(tna: float | None, params: object) -> int | None:
+    """이완도 = 하루명상 '두뇌 휴식': totalNeuralActivity params(m,s) + direction -1 강제.
+
+    신경 활동↓ = 휴식↑. params 없으면 None(pending, 0 아님). Rust score::brain_rest·웹과 동일.
+    """
+    p = params.get('totalNeuralActivity') if isinstance(params, Mapping) else None
+    if not isinstance(p, Mapping):
+        return None
+    return sigmoid_score('totalNeuralActivity', tna, {**p, 'direction': -1})

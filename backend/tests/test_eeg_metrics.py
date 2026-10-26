@@ -51,6 +51,10 @@ def test_seven_metrics_computed_on_valid_session():
     assert m.eeg_reliability == 1.0
     for key in SEVEN_METRIC_KEYS:
         v = getattr(m, key)
+        if key == "relaxation_score":
+            # 이완도=두뇌 휴식: 활성 모델 없으면 pending(None), 0 아님
+            assert v is None
+            continue
         assert v is not None, f"{key} 는 valid 세션에서 산출돼야 한다"
         assert 0.0 <= v <= 100.0
     # 종합점수 + 메타
@@ -100,7 +104,7 @@ def test_null_input_preserved_not_zeroed():
     assert m.total_neural_activity_score != 0
     # 나머지 지표는 정상 산출
     assert m.stress_score is not None
-    assert m.relaxation_score is not None
+    assert m.relaxation_score is None  # 모델 없음 → pending
     # 종합점수는 null 지표를 제외하고 여전히 산출된다
     assert m.meditation_total_score is not None
 

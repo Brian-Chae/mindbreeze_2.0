@@ -25,3 +25,8 @@
 
 ## 작업
 T1 Rust RED→GREEN(score.rs, engine.rs, golden_oracle.rs) / T2 웹 RED→GREEN(eegPersonalScore.ts, 호출처 null 처리) / T3 골든 갱신 / T4 cargo·vitest·tsc·gradle.
+
+## 구현 중 추가 결정
+- 백엔드: `normalization_score.brain_rest_score(tna, params)` 신설(TNA params + direction -1 강제, 없으면 None). `eeg_metrics.compute_session_metrics` 의 `relaxation_score`(세션 이완 점수)와 `report_task` timeline `relaxation` 이 같은 함수 사용 → 화면·리포트 일치. `relaxation_index_mean` raw 는 α/(α+β) 그대로. 모델 없으면 None(코호트 폴백 제거). 종합점수 가중합은 None 지표 제외 처리(기존 동작).
+- 웹: `useBand` 에 `BandScoredIndices`(relaxationIndex: number|null) 도입, null 이면 차트 점 추가 안 함. Playground Metrics/Trend 패널 타입만 null 허용.
+- contracts(최소 변경): scoring.oracle.test.ts 의 이완도 기대식을 두뇌 휴식으로 교체, `ORACLE_WRITE=1`(oracle·legacy_fallback) + build_manifest 로 display/summary/manifest 재생성. Rust tests/golden_oracle.rs 는 relaxation 표시를 `brain_rest`(Option) 기준으로 비교.

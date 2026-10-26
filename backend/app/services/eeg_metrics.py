@@ -24,7 +24,7 @@ import os
 import statistics
 from typing import Optional, Sequence
 
-from app.services.normalization_score import sigmoid_score
+from app.services.normalization_score import brain_rest_score, sigmoid_score
 
 logger = logging.getLogger(__name__)
 
@@ -445,13 +445,19 @@ def compute_session_metrics(
         ("focusIndex", mean(focus_index), "focus_level_score", True),
         ("focusIndex", mean(focus_index), "focus_index_stability_score", stability_ok),
         ("cognitiveLoad", mean(cognitive_load), "cognitive_load_stability_score", stability_ok),
-        ("relaxationIndex", mean(relaxation_index), "relaxation_score", True),
         ("stressIndex", median(stress_index), "stress_score", True),
         ("emotionalStability", median(emotional_stability), "emotional_stability_score", True),
         ("totalNeuralActivity", mean(total_neural_activity), "total_neural_activity_score", True),
         ("faa", mean(faa), "hemispheric_balance_score", True),
     )
     params = normalization_params if isinstance(normalization_params, dict) else {}
+    # 이완도 = 두뇌 휴식(TNA 반전). 코호트 폴백 없이 모델 없으면 None(pending).
+    out["relaxation_score"] = brain_rest_score(mean(total_neural_activity), params)
+    if out["relaxation_score"] is not None:
+        out["normalization_source"] = "standard_model"
+        out["normalization_version"] = (
+            str(normalization_version) if normalization_version is not None else None
+        )
     for key, raw, target, allowed in model_inputs:
         score = sigmoid_score(key, raw, params.get(key)) if allowed else None
         if score is not None:

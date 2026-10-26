@@ -13,7 +13,7 @@ import java.io.File
 class NativeScoreModelTest {
     @get:Rule val tmp = TemporaryFolder()
     private val synth = File(System.getProperty("mb.contract.dir") ?: "../../contracts", "biosignal-golden/v1/synth")
-    private val model = """{"focusIndex":{"m":-1.2,"s":0.5,"direction":1},"relaxationIndex":{"m":-0.3,"s":0.4,"direction":1},"emotionalStability":{"m":3.5,"s":0.8,"direction":1}}"""
+    private val model = """{"focusIndex":{"m":-1.2,"s":0.5,"direction":1},"relaxationIndex":{"m":-0.3,"s":0.4,"direction":1},"emotionalStability":{"m":3.5,"s":0.8,"direction":1},"totalNeuralActivity":{"m":2.3252,"s":2.3342,"direction":1}}"""
 
     private fun run(pin: ModelPin?, name: String): List<JSONObject> {
         val blob = File(synth, "stream.bin").readBytes()
@@ -40,8 +40,8 @@ class NativeScoreModelTest {
         val cohort = run(null, "c")
         val pinned = run(ModelPin.build(model, "t1"), "m")
         val c = cohort.mapNotNull { disp(it, "relaxation_display") }; val m = pinned.mapNotNull { disp(it, "relaxation_display") }
-        assertTrue("코호트 display 가 있어야 함", c.isNotEmpty()); assertTrue("모델 적용 시 display 가 valid 여야 함", m.isNotEmpty())
-        assertNotEquals(c.toString(), m.toString())
+        // 이완도 = 두뇌 휴식: 모델 없으면 pending(valid 없음), 모델 적용 시에만 valid
+        assertTrue("코호트에서는 이완도 display 가 pending 이어야 함", c.isEmpty()); assertTrue("모델 적용 시 display 가 valid 여야 함", m.isNotEmpty())
         // raw 는 모델과 무관(이중 정규화 금지)
         assertEquals(cohort.mapNotNull { disp(it, "focus_raw") }, pinned.mapNotNull { disp(it, "focus_raw") })
     }

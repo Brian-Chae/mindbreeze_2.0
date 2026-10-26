@@ -102,7 +102,7 @@
       },
       "display": {
         "count": 140,
-        "sha256": "4c1230028b3f02cffe42cc01f4e7e9ef2edec2309e1cd729306004dbcf8d49ee"
+        "sha256": "965926f26ef64f25a424bd86745975d42da164892dd36e863bdbf83d50c14911"
       },
       "acc": {
         "count": 1491,
@@ -151,7 +151,7 @@
         },
         "display": {
           "count": 140,
-          "sha256": "3f396d53323f9ad9d3a351ee295ebbabe1c399e3adbbf41fc693ca9aa8937a03"
+          "sha256": "e6fd3e5c77cc81f3358cc0db10d9cedffae6c3ec23f8e72f86a84bbabe3dafb4"
         },
         "acc": {
           "count": 1491,
@@ -217,11 +217,11 @@
   "sources": {
     "oracle_ts_eeg": {
       "files": 29,
-      "tree_sha256": "ff55c85b2981e74f834dba29f093a11b55f1721168972a20d65e27ba6e39ce86"
+      "tree_sha256": "f1122785a548b58b576771e652904a4c7ff9e2a534e68ace4cfa7a9ee38a2d12"
     },
     "backend_scoring": {
-      "backend/app/services/eeg_metrics.py": "17ed7b1e80c5b139a26b7d70a84e520f806494946f830b511ea5ad6e0fc98a07",
-      "backend/app/services/normalization_score.py": "29c20ebcf84b5dd7ba2cba86f8fa6b62cb903874f21ab2934d42b7b27a069f4a",
+      "backend/app/services/eeg_metrics.py": "bb5a5e9cf53a7134331c41011df40c28396b696ececd49fee3ac54f9f4e9fe2d",
+      "backend/app/services/normalization_score.py": "e6049bc9e5f36f83204b7e871a1ab773ab9003648faf28e83b37ae12995864e9",
       "backend/app/services/normalization_constants.json": "bb600a2d1020c714a4cb0468e422ab27ea388377ad60812432d249f7da941051"
     },
     "source_commit_base": "60365fbaaf02954ba154631032bba9123cec7673",
@@ -273,28 +273,28 @@
     "expected/legacy_fallback/acc.json": "06d44fdd4da5f5023c589a78ab983228263da956117bb08dd4ab146cd103eb7b",
     "expected/legacy_fallback/clock.json": "97f76fb441e6622548a6c9836e97a93563c8971c871b06cfbcbb213af910a122",
     "expected/legacy_fallback/decoded.json": "a524fcc4bdefc5ed88cfb7e0c5851aebe0368dc13d29380b7d471813907d99d9",
-    "expected/legacy_fallback/display.json": "a4d16f5ae245c862e94dc278443c61fcf51628fb84ec3132ccf5abe07657a9bb",
+    "expected/legacy_fallback/display.json": "736ee55bcd5bf27b21c4722ffc6719b3c46b007872b60cdb628777c71571a900",
     "expected/legacy_fallback/divergences.json": "55de8bba70d698bf85d7a9800e6951edc8c8dd31aadf976f1640ff93fa51328a",
     "expected/legacy_fallback/eeg_psd_bandpower.json": "8675d404d3c753b5b31797aa2beb3e8c3fbb5c3a16fded55e1fb69c248d45489",
     "expected/legacy_fallback/eeg_raw_indices.json": "15527d87b83590f96293c1b25b46c0d6d5db139a5ac2ca48eda37ab24b57a02a",
     "expected/legacy_fallback/hrv_sdnn_respiration.json": "8b1df43b61c543a8ba135a9a40ea02e736dcc7cd7188859273a9f8e57964924e",
     "expected/legacy_fallback/ppg_peaks_rr.json": "5012ba46fc5844111f3347947f1c690d13afcbc475a5f6443f030497b14c022f",
-    "expected/legacy_fallback/summary.json": "2e380d71fb9bc2ed20aa78cebc74fa7e51e1809c9a68fbd620f2e98e2b148998",
+    "expected/legacy_fallback/summary.json": "91f5f0725f6eaa4c1f9cc06308b06723152f711c04eb8f6c40228a472d082384",
     "expected/oracle/acc.json": "06d44fdd4da5f5023c589a78ab983228263da956117bb08dd4ab146cd103eb7b",
     "expected/oracle/clock.json": "97f76fb441e6622548a6c9836e97a93563c8971c871b06cfbcbb213af910a122",
     "expected/oracle/decoded.json": "a524fcc4bdefc5ed88cfb7e0c5851aebe0368dc13d29380b7d471813907d99d9",
-    "expected/oracle/display.json": "5b234386928235fd2a87878f6e9d6e1f4d16972e564978b80e3275e45dfad9ff",
+    "expected/oracle/display.json": "09f2f0ae1ebce550f94daca522c57c943084200fb54ec9d167060bf0b60ea0d6",
     "expected/oracle/divergences.json": "55de8bba70d698bf85d7a9800e6951edc8c8dd31aadf976f1640ff93fa51328a",
     "expected/oracle/eeg_psd_bandpower.json": "d67cdc8abede8c699033bb96a90169b2df5c4d9f70d734c415f56fce32c60f3b",
     "expected/oracle/eeg_raw_indices.json": "b01dc444445741a62a93b82f2fa2f6f3642f616544d66080051b0b50d980b939",
     "expected/oracle/hrv_sdnn_respiration.json": "6624bf28aaffaefb86c4ff0bb73160091b418cf0baee41c09dbbc15ba9bfc0ab",
     "expected/oracle/ppg_peaks_rr.json": "572375b31d78e1f46d01f1c010453a0346aaf1a77ddb5647be01aa7f567fb639",
-    "expected/oracle/summary.json": "48a4581d3cdc0e02afff06a5eafca4d1b0cb0e907d12c4881ded6f63ef06be41",
+    "expected/oracle/summary.json": "300f910316dedc99b7f92ead6083e87c39f8fc54ea3a8be8c7cf94fb6e8b529c",
     "expected/scoring/gf05_scoring.json": "87724a8a05988553440220334e3f2230054a7d1913b090bfbcb007093ffc2d2d",
     "oracle/gf04.oracle.test.ts": "2ad0c10886701d6b930b9113230e906d602e32c43f72a6bcc078d662fb45c996",
     "oracle/oracle.oracle.test.ts": "015693ea41c5abfebac2b338e6e7af6aa0308b0fe75e38de439dbc66717a8bba",
     "oracle/run-oracle.ts": "332718963db9ca7ebd8a18f6a12f89c01ff83fae0e5befcca6ad88b91327a1fb",
-    "oracle/scoring.oracle.test.ts": "d006a4f28502290b3b9d76aad35db886814a8ef232b3128b8ad150411ee077bc",
+    "oracle/scoring.oracle.test.ts": "96ae85b181aa4d2b4f89e9aacdd2865ae713f1b91dc96f2c16ac4f684044f21d",
     "oracle/vitest.oracle.config.mjs": "db5809ac97b38cecd301d938584a7572b3fe0d6c843a4543fe6cab5860b6aa70",
     "packets/gf01_acc_signed16.bin": "5ac357ad90d39d6ff2e9aa41eb3dbf2bbb3b08890ba7628eb198c5e25a2ea5dc",
     "packets/gf01_eeg_signed24_leadoff.bin": "3feeef30211c9e6ee05e0c7004af54e2ef81304935d9d7c5102413f12aa6faaf",
