@@ -39,6 +39,7 @@ import { useLiveKit } from '../../hooks/useLiveKit';
 import { useParticipationSnapshot } from '../../hooks/useParticipationSnapshot';
 import { useSessionLiveSocket } from '../../hooks/useSessionLiveSocket';
 import { useLiveV2 } from '../../lib/session-live/use-live-v2';
+import { participantsToMetrics } from './participants-to-metrics';
 import { isLiveProtocolV2Enabled } from '../../lib/session-live/live-flag';
 import { activeSignals, sessionStatusOf, toSessionLiveMetrics, toWaitingEntries } from '../../lib/session-live/live-legacy-adapter';
 import { useWakeLock } from '../../hooks/useWakeLock';
@@ -140,29 +141,6 @@ function scoreServerRows(rows: SessionLiveMetric[]): SessionLiveMetric[] {
     current_efficiency: scoreEfficiency(r.current_efficiency),
     avg_efficiency: scoreEfficiency(r.avg_efficiency),
   }));
-}
-
-/** live-metrics가 없을 때 세션 참가자로 테이블 행을 만든다 (시작 전 대기 표시) */
-function participantsToMetrics(session: SessionDto): SessionLiveMetric[] {
-  return session.participants
-    .filter((p) => !p.is_waitlisted)
-    .map((p, index) => ({
-      participant_id: p.user_id ?? `guest-${index}-${p.guest_name ?? 'unknown'}`,
-      display_name:
-        p.user_name || p.guest_name || p.user_email || (p.is_guest ? '게스트' : '참가자'),
-      is_guest: p.is_guest,
-      band_connected: p.band_connected,
-      device_status: null,
-      band_battery: null,
-      avg_efficiency: null,
-      current_efficiency: null,
-      upload_status: null,
-      last_eeg_at: null,
-      // SDD-094: 세션 상세에 실린 발언권 상태를 그대로 승계
-      // (게스트 id 는 실제 participant_id 가 아니므로 부여/해제 버튼은 패널에서 막힌다)
-      raise_hand: p.raise_hand ?? false,
-      speaking: p.speaking ?? false,
-    }));
 }
 
 /** SDD-094: 참여자별 발언권 상태 — WS 이벤트/API 응답으로 갱신되는 오버레이 */

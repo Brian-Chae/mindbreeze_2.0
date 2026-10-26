@@ -31,11 +31,11 @@ describe('v2 호스트 타일 접속·체크인 상태', () => {
     expect(host.checkinState).toBe('completed');
   });
 
-  it('연결이 끊기면 disconnected, 대기 도메인 ready 면 체크인 완료', () => {
+  it('퇴장(left)하면 disconnected, 대기 도메인 ready 면 체크인 완료', () => {
     let st = ready();
     st = {
       ...st,
-      participation: { ...st.participation, [PID]: { version: '9', data: { participant_id: PID, role: 'member', attendance: 'attending', connected: false } } },
+      participation: { ...st.participation, [PID]: { version: '9', data: { participant_id: PID, role: 'member', attendance: 'left', connected: false } } },
       waiting: { ...st.waiting, [PID]: { version: '2', data: { participant_id: PID, ready: true, checkin_revision: '1', waitlist_position: null } } },
     } as LiveState;
     const rows = toSessionLiveMetrics(st, { nowMs: 1_760_000_002_000 });

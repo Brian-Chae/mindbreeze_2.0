@@ -30,6 +30,8 @@ export interface SessionParticipant {
   speaking?: boolean;
   user_name?: string;
   user_email?: string;
+  /** SDD-209: 최초 입장 시각(호스트 뷰 전용). 미입장이면 null */
+  entered_at?: string | null;
 }
 
 export interface SessionDto {
