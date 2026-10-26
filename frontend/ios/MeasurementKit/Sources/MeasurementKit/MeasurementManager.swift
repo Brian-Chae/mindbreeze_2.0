@@ -122,7 +122,7 @@ public final class MeasurementManager: BandLinkDelegate {
     // MARK: 시작·정지 (브리지 API)
 
     @discardableResult
-    public func startMeasurement(sessionId: String, credentialHandle: String, configHash: String, requestId: String) throws -> [String: Any] {
+    public func startMeasurement(sessionId: String, credentialHandle: String, configHash: String, requestId: String, peripheralId: String? = nil) throws -> [String: Any] {
         lock.lock(); defer { lock.unlock() }
         if let cur = self.requestId, cur == requestId, state != .idle, state != .closed {
             return startResult(replay: true)                       // 같은 requestId 는 새 수집을 시작하지 않는다
@@ -136,6 +136,8 @@ public final class MeasurementManager: BandLinkDelegate {
         }
         generation += 1; managerId = UUID().uuidString.lowercased()
         self.requestId = requestId; self.sessionId = sessionId; self.credentialHandle = credentialHandle; self.configHash = configHash
+        // 웹뷰 BLE 로 선택된 밴드(UUID 문자열)를 이어받는다. 없거나 UUID 가 아니면 현행 스캔.
+        self.peripheralId = peripheralId.flatMap(UUID.init(uuidString:))
         streamId = nil; ownerGeneration = nil; participantId = nil; engine = nil; lastEnvelope = nil; blockedReason = nil
         bleGaps = []; openBleGapStart = nil; anchor = nil; needsRecoveryMark = false
         resetStreamRuntime()
@@ -149,7 +151,7 @@ public final class MeasurementManager: BandLinkDelegate {
                                   "payload": ["device_profile": profile.device, "algorithm_version": profile.algorithm, "model_version": profile.model]]
         captureStartCommand = cmd
         l.dispatch(command: cmd)
-        band.connect(expectedPeripheral: peripheralId)
+        band.connect(expectedPeripheral: self.peripheralId)
         emitMeasurementUpdated()
         return startResult(replay: false)
     }
