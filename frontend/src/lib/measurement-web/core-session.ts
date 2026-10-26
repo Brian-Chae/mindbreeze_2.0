@@ -59,9 +59,11 @@ export class CoreSession {
   /** 패킷이 없어도 시간이 흐르면 gap 프레임을 만든다 */
   advance(monoUs: number): PushOutput {
     if (!this.core) return { envelopes: [], error: { code: 'closed', message: 'session closed' }, status: null };
-    const r = parse<{ frames: CoreMetricFrame[] }>(this.core.advance(monoUs));
+    // advance 의 value 는 프레임 배열 그대로다(push 의 {packet,frames} 와 다름 — wasm.rs advance_json)
+    const r = parse<CoreMetricFrame[]>(this.core.advance(monoUs));
     if (!r.ok) return { envelopes: [], error: r.error, status: null };
-    return { envelopes: r.value.frames.map((f) => toMetricEnvelope(f, this.meta)), error: null, status: null };
+    const frames = Array.isArray(r.value) ? r.value : [];
+    return { envelopes: frames.map((f) => toMetricEnvelope(f, this.meta)), error: null, status: null };
   }
 
   checkpoint(): Uint8Array | null {

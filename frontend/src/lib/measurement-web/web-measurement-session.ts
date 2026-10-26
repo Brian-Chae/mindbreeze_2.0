@@ -74,7 +74,7 @@ export class WebMeasurementSession {
       algorithmVersion: WEB_CORE_CONFIG.algorithm_version,
       modelVersion: WEB_CORE_CONFIG.model_version,
       uuid: this.d.uuid,
-      monotonicUs: () => this.mono(),
+      // reanchor 는 기본(Date.now()×1000) — 코어 window 가 wall µs 라서. this.mono()(도착 monotonic)는 advance 용이다.
       deviceTicks: () => this.lastEegTick,
       onStopped: (code) => { void this.teardown('stopped', code); },
     });

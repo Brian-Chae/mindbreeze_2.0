@@ -17,7 +17,8 @@ function fakeCore(frames: unknown[] = [FRAME]): McCoreLike & { pushed: number; f
     pushed: 0,
     freed: false,
     push_packet_raw: vi.fn((): string => { c.pushed += 1; return JSON.stringify({ ok: true, value: { packet: { status: 'accepted' }, frames: c.pushed === 1 ? frames : [] } }); }),
-    advance: vi.fn((): string => JSON.stringify({ ok: true, value: { frames: [] } })),
+    // 실제 코어(wasm.rs advance) 는 value 에 프레임 배열을 그대로 싣는다(T06c 로컬 왕복에서 확인) — push 의 {packet,frames} 와 다르다
+    advance: vi.fn((): string => JSON.stringify({ ok: true, value: [] })),
     checkpoint: vi.fn(() => new Uint8Array([1])),
     close: vi.fn((): string => JSON.stringify({ ok: true, value: { final_sequences: { eeg: '1', ppg: '0', acc: '0', metric: '1' }, segments: 1, raw_sha256: 'a'.repeat(64), feature_sha256: 'b'.repeat(64) } })),
     free: vi.fn(() => { c.freed = true; }),
@@ -45,6 +46,15 @@ describe('toMetricEnvelope', () => {
 });
 
 describe('CoreSession (워커 내부 로직)', () => {
+  it('advance 는 코어가 돌려준 프레임 배열(gap 프레임)을 envelope 로 바꾼다', () => {
+    const core = fakeCore();
+    (core.advance as ReturnType<typeof vi.fn>).mockReturnValueOnce(JSON.stringify({ ok: true, value: [FRAME] }));
+    const s = new CoreSession(core, META);
+    const out = s.advance(10_000_000);
+    expect(out.error).toBeNull();
+    expect(out.envelopes.map((e) => e.sequence)).toEqual(['5']);
+  });
+
   it('packet → 프레임을 envelope 로 반환하고 오류 값은 throw 하지 않는다', () => {
     const core = fakeCore();
     const s = new CoreSession(core, META);

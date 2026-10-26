@@ -104,11 +104,19 @@ describe('T06c — capture.start ACK result 직접 사용', () => {
 
   it('start 직후 reanchor(clock_probe→capture.reanchor) 로 time_uncertain 해소를 시도한다', async () => {
     const f = fakeClient();
-    const c = controller(f, { monotonicUs: () => 5_000_000, deviceTicks: () => '1234' });
+    const c = controller(f, { anchorClockUs: () => 5_000_000, deviceTicks: () => '1234' });
     await c.start();
     await flush();
     const re = f.calls.find((x) => x.kind === 'capture.reanchor');
     expect(re?.payload).toMatchObject({ stream_id: STREAM, clock_probe_id: '0000000b-0000-4000-8000-00000000000b', device_ticks: '1234', monotonic_us: '5000000' });
+  });
+
+  it('reanchor 기준점은 기본으로 envelope window 와 같은 wall(UTC) µs 시간축을 쓴다(코어 window_*_us = WallAnchor 기준)', async () => {
+    vi.setSystemTime(new Date(1_760_000_000_123));
+    const f = fakeClient();
+    await controller(f).start();
+    await flush();
+    expect(f.calls.find((x) => x.kind === 'capture.reanchor')?.payload).toMatchObject({ monotonic_us: '1760000000123000' });
   });
 
   it('renew 가 stale_owner_generation 으로 거절되면 수집을 멈춘다(fencing)', async () => {

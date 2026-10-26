@@ -24,8 +24,12 @@ export interface CaptureControllerOptions {
   algorithmVersion: string;
   modelVersion: string;
   uuid?: () => string;
-  /** envelope window_*_us 와 같은 시간축(µs). 기본 performance.now()×1000 */
-  monotonicUs?: () => number;
+  /**
+   * reanchor 기준점 시계(µs) — 반드시 envelope window_*_us 와 같은 시간축이어야 한다.
+   * 서버는 창 시각을 anchor_server_at + (window_end_us − monotonic_us) 로 환산한다. 웹 코어는 패킷마다 받은
+   * WallAnchor(wall_ms) 로 window 를 UTC µs 로 내므로 기본값은 Date.now()×1000 이다(T06c 로컬 왕복에서 확인).
+   */
+  anchorClockUs?: () => number;
   /** 최근 패킷의 장치 tick(십진 문자열). 모르면 '0' */
   deviceTicks?: () => string;
   /** fencing·권한 회수·종료로 수집이 멈췄을 때(code = 서버 거절 코드 또는 stream 상태) */
@@ -189,8 +193,8 @@ export class CaptureController {
 
   /** 지금 시각으로 기준점을 다시 잡는다(clock_probe → capture.reanchor). */
   reanchorNow(): Promise<boolean> {
-    const mono = Math.round((this.o.monotonicUs ?? (() => performance.now() * 1000))());
-    return this.reanchor({ deviceTicks: (this.o.deviceTicks ?? (() => '0'))(), monotonicUs: String(mono) });
+    const at = Math.round((this.o.anchorClockUs ?? (() => Date.now() * 1000))());
+    return this.reanchor({ deviceTicks: (this.o.deviceTicks ?? (() => '0'))(), monotonicUs: String(at) });
   }
 
   async reanchor(anchor: { deviceTicks: string; monotonicUs: string }): Promise<boolean> {

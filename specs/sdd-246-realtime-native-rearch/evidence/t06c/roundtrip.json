@@ -1,0 +1,137 @@
+{
+ "session_id": "1a013d79-879d-4035-beac-b84e6cb9746c",
+ "participant_id": "f902340b-01af-4c49-8d20-cc2fc8690a78",
+ "replay_s": 40,
+ "steps": [
+  {
+   "name": "host READY",
+   "ok": true
+  },
+  {
+   "name": "member READY",
+   "ok": true
+  },
+  {
+   "name": "session.start",
+   "ok": true,
+   "status": "applied",
+   "code": null
+  },
+  {
+   "name": "entry.enter",
+   "ok": true,
+   "status": "applied",
+   "code": null
+  },
+  {
+   "name": "capture.start(ACK result 사용)",
+   "ok": true,
+   "startRes": "started",
+   "info": {
+    "streamId": "acfafc0b-9fb3-4d27-b230-901532a37214",
+    "participantId": "f902340b-01af-4c49-8d20-cc2fc8690a78",
+    "generation": "1",
+    "leaseExpiresAtMs": 1792980544650,
+    "clockAnchorId": "f3f1e9fa-7127-40d2-8fea-fe9ae574f210"
+   }
+  },
+  {
+   "name": "host 가 metrics.updated 수신",
+   "ok": true,
+   "n": 39
+  },
+  {
+   "name": "live:device → host device.changed(밴드 필드)",
+   "ok": true,
+   "dev": "accepted",
+   "host_device": {
+    "participant_id": "f902340b-01af-4c49-8d20-cc2fc8690a78",
+    "stream_id": "acfafc0b-9fb3-4d27-b230-901532a37214",
+    "generation": "1",
+    "status": "active",
+    "clock_uncertain": false,
+    "cutoff_code": null,
+    "device_seq": "1",
+    "band_state": "connected",
+    "contact": {
+     "fp1": "contact",
+     "fp2": "leadoff"
+    },
+    "sqi": 0.7,
+    "battery_pct": 81,
+    "state_reason": null
+   }
+  },
+  {
+   "name": "observed_at 이 수신 시각과 같은 시간축(|차이|<5초)",
+   "ok": true,
+   "p50": 108,
+   "min": 61,
+   "max": 722
+  },
+  {
+   "name": "fencing: 새 stream 시작 → 이전 controller 정지",
+   "ok": true,
+   "s2": "started",
+   "stopped": [
+    "stream_superseded"
+   ],
+   "gen2": "2"
+  },
+  {
+   "name": "fencing: 이전 stream 늦은 창은 이력만(host live 불변)",
+   "ok": true,
+   "late_status": "accepted",
+   "hostSeqBefore": "39",
+   "hostSeqAfter": "39"
+  },
+  {
+   "name": "fencing: 세대 불일치 창은 stale_owner_generation",
+   "ok": true,
+   "wrongGen": {
+    "session_id": "1a013d79-879d-4035-beac-b84e6cb9746c",
+    "participant_id": "f902340b-01af-4c49-8d20-cc2fc8690a78",
+    "stream_id": "acfafc0b-9fb3-4d27-b230-901532a37214",
+    "sequence": "999991",
+    "status": "rejected",
+    "durable": false,
+    "feature_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "received_at_server_ms": 1792980557815,
+    "code": "stale_owner_generation"
+   }
+  }
+ ],
+ "core_frames": 39,
+ "core_errors": [],
+ "ack_tally": {
+  "accepted": 39
+ },
+ "pending_after": 0,
+ "host_updates": 39,
+ "host_freshness": {
+  "fresh": 39
+ },
+ "first_host": {
+  "seq": "1",
+  "freshness": "fresh",
+  "observed": 1792980515801,
+  "recvAt": 1792980516040
+ },
+ "last_host": {
+  "seq": "39",
+  "freshness": "fresh",
+  "observed": 1792980553801,
+  "recvAt": 1792980553910
+ },
+ "send_to_host_ms": {
+  "p50": 24,
+  "p95": 300,
+  "max": 652,
+  "n": 39
+ },
+ "observed_vs_recv_ms": {
+  "p50": 108,
+  "min": 61,
+  "max": 722
+ }
+}
