@@ -17,7 +17,7 @@ await client('클래스: 목록 표시(달력 없음)', async (p) => {
 });
 await client('코드로 입장하기: 홈에서 /join 으로 이동', async (p) => {
   await go(p, '/app');
-  await p.getByTestId('enter-with-code').click();
+  await p.getByTestId('enter-with-code').first().click();
   await p.waitForURL((u) => u.pathname === '/join', { timeout: 8000 });
 });
 await client('구 경로 /app/sessions → /app/classes 이동', async (p) => {
@@ -52,7 +52,7 @@ await client('다음 클래스 카드: 제목·설명 글자가 흰색(어두운
   }
 });
 await client('설정: 계정 정보 표시 및 카드 제목 중복 없음', async (p) => {
-  const t = await expectText(p, '/app/profile', 'e2e-client@e2e.looxidlabs.com', '계정 정보');
+  const t = await expectText(p, '/app/profile', 'e2e-client@e2e.looxidlabs.com', '내 계정');
   const heads = await p.locator('h2,h3').allInnerTexts();
   const dup = heads.map((h) => h.trim()).filter((h, i, a) => a.indexOf(h) !== i);
   if (dup.length) throw new Error(`카드 제목 중복: ${dup.join(',')}`);
@@ -105,7 +105,7 @@ await cou('리포트: 목록·샘플 리포트 열기', async (p) => {
   await expectText(p, '/reports/sample', '샘플 리포트', '호흡수');
 });
 await cou('설정: 코드·카드 제목 중복 없음', async (p) => {
-  await expectText(p, '/settings', 'E2E0C1', '계정 정보');
+  await expectText(p, '/settings', 'E2E0C1', '내 계정');
   const heads = (await p.locator('h2,h3').allInnerTexts()).map((h) => h.trim());
   const dup = heads.filter((h, i, a) => a.indexOf(h) !== i);
   if (dup.length) throw new Error(`카드 제목 중복: ${dup.join(',')}`);
@@ -121,7 +121,7 @@ await org('상담사 관리: 소속 상담사 목록', async (p) => { await expe
 await org('상담사 초대 폼 노출 (제출 안 함)', async (p) => { await expectText(p, '/dashboard/org', '상담사 초대', '초대 발송'); });
 await org('내담자·세션·리포트 메뉴 로딩', async (p) => { for (const x of ['/clients', '/sessions', '/reports']) await expectText(p, x); });
 await org('설정: 계정 정보·카드 제목 중복 없음', async (p) => {
-  await expectText(p, '/settings', 'E2E-기관관리자', '계정 정보');
+  await expectText(p, '/settings', 'E2E-기관관리자', '내 계정');
   const heads = (await p.locator('h2,h3').allInnerTexts()).map((h) => h.trim());
   const dup = heads.filter((h, i, a) => a.indexOf(h) !== i);
   if (dup.length) throw new Error(`카드 제목 중복: ${dup.join(',')}`);
