@@ -120,6 +120,11 @@ def _v1_via_live(db, session_id: str, op: str, params: dict, current_user, entry
     try:
         outcome = execute_v1(db, actor, op, sid, params, hello=_hello_from_header(live_protocol))
     except LegacyError as exc:
+        # 일정 겹침은 기존 경로만 확인용 지문(409 schedule_conflict)을 줄 수 있다 — 화면이 확인 후 force 로 재요청한다.
+        # command 는 거절로 끝나 상태 변화가 없으므로 기존 경로로 넘겨 같은 규칙으로 다시 판정받는다.
+        if exc.code == "schedule_conflict":
+            db.rollback()
+            return None
         from fastapi import HTTPException as _HE
 
         raise _HE(status_code=exc.status_code, detail=exc.detail)
@@ -344,10 +349,10 @@ def _make_transition_endpoint(action: str):
         x_live_protocol: LiveProtocolHeader = None,
     ):
         # SDD-246: v2 회차의 전이는 live command 한 경로로 처리하고 응답만 기존 직렬화로 돌려준다.
-        # force/충돌 확인 같은 기존 확인 옵션이 필요한 요청은 어댑터가 표현하지 못하므로 기존 경로로 둔다.
-        if not (payload and any(payload.model_dump().values())):
-            if _v1_via_live(db, session_id, "transition", {"action": action}, current_user, live_protocol=x_live_protocol) is not None:
-                return class_read_service.add_parent_fields(db, session_service.get_session(session_id, current_user["id"], db))
+        # 겹침 확인 후 재요청(force+지문)도 같은 경로로 보내야 회원 화면이 outbox event 로 시작을 받는다.
+        params = {"action": action, **(payload.model_dump() if payload else {})}
+        if _v1_via_live(db, session_id, "transition", params, current_user, live_protocol=x_live_protocol) is not None:
+            return class_read_service.add_parent_fields(db, session_service.get_session(session_id, current_user["id"], db))
         return class_read_service.add_parent_fields(
             db, session_service.transition_status(session_id, current_user["id"], action, db, **(payload.model_dump() if payload else {}))
         )

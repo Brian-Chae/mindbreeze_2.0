@@ -656,7 +656,10 @@ def _make_transition_handler(action: str):
         host_id = str(ctx.actor.actor_id)
         if ctx.actor.role == "system":
             host_id = str(ctx.session.host_id)
-        s, parent, early = session_service.transition_tx(str(ctx.session.id), host_id, action, ctx.db, commit=False)
+        pl = ctx.command.payload or {}
+        s, parent, early = session_service.transition_tx(
+            str(ctx.session.id), host_id, action, ctx.db, commit=False,
+            force=bool(pl.get("force")), confirmed_conflict_fingerprint=pl.get("confirmed_conflict_fingerprint"))
         ctx.session = s
         if early:  # 이미 종료된 회차의 멱등 재요청: 새 event 없음
             ctx.entity_version = int(s.state_version or 0)
