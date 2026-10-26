@@ -19,7 +19,7 @@ export interface SurveyStepViewProps {
   /** 시작 후 시트(StartedSheet) — 열려 있으면 하단 푸터는 inert */
   startedSheet?: ReactNode;
   sheetOpen?: boolean;
-  onSelect: (axis: AxisKey, value: SamValue) => void;
+  onSelect: (axis: AxisKey, value: SamValue, auto?: boolean) => void;
   onNote: (note: string) => void;
   onNext: () => void;
   onSkip: () => void;
@@ -87,7 +87,7 @@ export function SurveyStepView({
                 onSelect(current.axis, current.options[target]!.value);
                 event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[target]?.focus();
               }}
-              onClick={() => onSelect(current.axis, option.value)}
+              onClick={() => onSelect(current.axis, option.value, true)}
             >
               <span className="fm-radio" />
               {option.label}
