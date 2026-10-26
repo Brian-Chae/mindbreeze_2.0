@@ -99,7 +99,7 @@ class MeasurementService : Service() {
         com.looxidlabs.mindbreeze.measurement.runtime.RuntimeConfig.save(java.io.File(filesDir, "measurement/runtime.json"), cfg)
         nativeRt = rt
         MeasurementManager.adopt(rt.engine, isSynthetic, rt)
-        if (isSynthetic) synth = SyntheticSource(applicationContext, rt.engine).also { it.start() }
+        if (isSynthetic) { synth = SyntheticSource(applicationContext, rt.engine).also { it.start() }; rt.bandState = "connected" } // 합성 원본은 연결 상태로 보고
         else {
             if (cfg.bandAddress == null) { MeasurementManager.setState(MeasurementState.BLOCKED, "no_address"); teardown(); return START_NOT_STICKY }
             if (!MeasurementManager.ownership.claim(BandOwnership.Owner.NATIVE)) { MeasurementManager.setState(MeasurementState.BLOCKED, "band_owned_by_js"); teardown(); return START_NOT_STICKY }

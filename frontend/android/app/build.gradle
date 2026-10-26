@@ -38,6 +38,8 @@ android {
     }
     sourceSets {
         main { jniLibs.srcDirs += [measurementCoreJniDir] }
+        // SDD-246 T08d: adb 시험용 서비스 export 는 opt-in(-PmbAdbExport=true). 기본 debug/dev 빌드에는 export 없음.
+        if (project.hasProperty('mbAdbExport')) { debug { manifest.srcFile 'src/adbtest/AndroidManifest.xml' } }
     }
     defaultConfig {
         applicationId "com.looxidlabs.mindbreeze2"

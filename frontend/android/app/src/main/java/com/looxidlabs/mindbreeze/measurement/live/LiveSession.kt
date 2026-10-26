@@ -98,6 +98,7 @@ class LiveSession(
     private var deviceInflight = false
     private var deviceTimer: Cancelable? = null
     private var deviceStoppedFor: String? = null
+    private var renewTimer: Cancelable? = null
 
     private class Pending(val cmd: JSONObject, val queuedAt: Long) {
         var attempts = 0; var inflightSince = -1L; var committedHint = false; var timer: Cancelable? = null; var lastSentAt = -1L
@@ -133,8 +134,8 @@ class LiveSession(
     }
 
     private fun cancelAll() {
-        for (c in listOf(reconnectTimer, presenceTimer, watchdog, probeTimer, appliedTimer, pumpTimer, deviceTimer)) c?.cancel()
-        reconnectTimer = null; presenceTimer = null; watchdog = null; probeTimer = null; appliedTimer = null; pumpTimer = null; deviceTimer = null
+        for (c in listOf(reconnectTimer, presenceTimer, watchdog, probeTimer, appliedTimer, pumpTimer, deviceTimer, renewTimer)) c?.cancel()
+        reconnectTimer = null; presenceTimer = null; watchdog = null; probeTimer = null; appliedTimer = null; pumpTimer = null; deviceTimer = null; renewTimer = null
         deviceInflight = false
         for (p in pending.values) p.timer?.cancel()
     }
@@ -159,6 +160,7 @@ class LiveSession(
         pumpTimer?.cancel(); pumpTimer = null
         metricInflight = false
         deviceTimer?.cancel(); deviceTimer = null; deviceInflight = false
+        renewTimer?.cancel(); renewTimer = null
         for (p in pending.values) { p.timer?.cancel(); p.timer = null; p.inflightSince = -1 }
     }
 
@@ -296,7 +298,7 @@ class LiveSession(
         val buf = ArrayList(buffered); buffered.clear()
         for (e in buf) applyEvent(e)
         startPresence(); startWatchdog()
-        flushCommands(); pump(); maybeScheduleProbe(1_000); flushDevice()
+        flushCommands(); pump(); maybeScheduleProbe(1_000); flushDevice(); scheduleRenew()
     }
 
     private fun appliedMsg() = JSONObject().put("protocol_version", 2).put("schema_version", 1)
@@ -309,10 +311,17 @@ class LiveSession(
             "live:sync_complete" -> if (data != null && !terminalLike()) onSyncComplete(data)
             "live:event" -> if (data != null && !terminalLike()) onLiveEvent(data)
             "live:heartbeat" -> onHeartbeat(data)
-            "live:access_revoked" -> { events.offer(JSONObject().put("kind", "access_revoked").put("payload", data ?: JSONObject())); revoke() }
+            "live:access_revoked" -> {
+                events.offer(JSONObject().put("kind", "access_revoked").put("payload", data ?: JSONObject()))
+                // 추방·권한 회수: 이 회차의 capture 도 끝났다(이후 창은 서버가 거절). device.changed 를 기다리지 않고 정지·봉인.
+                if (streamId != null) endStream("revoked", data?.optString("code")?.ifEmpty { null })
+                revoke()
+            }
             "live:terminal" -> {
                 endCutoff = data?.opt("end_cutoff_ms")?.toString()?.takeIf { it != "null" }
                 events.offer(JSONObject().put("kind", "terminal").put("payload", data ?: JSONObject()))
+                // 회차 종료: live:terminal 이 device.changed 보다 먼저 오면 이후 이벤트는 버려지므로 여기서 정지·봉인한다(실측 결함).
+                if (streamId != null) endStream("ended", data?.optString("code")?.ifEmpty { null })
                 cancelAll(); transport.disconnect(); setState(LiveState.TERMINAL)
             }
             "live:resync_required" -> resync(data?.optString("reason", "server_request") ?: "server_request")
@@ -388,6 +397,7 @@ class LiveSession(
         streamEnded = status
         streamId = null; ownerGeneration = null; leaseExpiresAtMs = null
         probeTimer?.cancel(); probeTimer = null
+        renewTimer?.cancel(); renewTimer = null
         pendingDevice = null; deviceTimer?.cancel(); deviceTimer = null; deviceInflight = false
         onStreamEnded?.invoke(status, cutoff) // fencing: 구 owner 는 live 갱신 금지, 수집분은 봉인해 archive 로
     }
@@ -408,7 +418,25 @@ class LiveSession(
         }
         ownerGeneration = gen
         r.optJSONObject("lease")?.let { l -> if (l.has("expires_at_ms")) leaseExpiresAtMs = l.optLong("expires_at_ms") }
-        if (state == LiveState.READY) { maybeScheduleProbe(1_000); pump(); flushDevice() }
+        if (state == LiveState.READY) { maybeScheduleProbe(1_000); pump(); flushDevice(); scheduleRenew() }
+    }
+
+    /**
+     * capture lease 갱신(서버 CAPTURE_LEASE_SECONDS=30). 실측 결함: 갱신이 없으면 30초 뒤 lease 가 끝나 live 투영이 멈추고
+     * offline bound 판정으로 넘어간다. READY 동안 10초마다 capture.renew(같은 ID 재시도는 dispatch 가 맡는다), 이전 갱신이 미확정이면 쌓지 않는다.
+     */
+    private fun scheduleRenew() {
+        if (renewTimer != null || state != LiveState.READY || streamId == null) return
+        renewTimer = sched.postDelayed(RENEW_INTERVAL_MS) {
+            renewTimer = null
+            val sid = streamId; val gen = ownerGeneration
+            if (state == LiveState.READY && sid != null && gen != null) {
+                if (pending.values.none { it.cmd.optString("kind") == "capture.renew" })
+                    dispatch(JSONObject().put("kind", "capture.renew").put("payload", JSONObject()
+                        .put("stream_id", sid).put("owner_generation", gen).put("clock_anchor_id", anchorId)))
+                scheduleRenew()
+            }
+        }
     }
 
     private fun onHeartbeat(h: JSONObject?) {
@@ -706,6 +734,7 @@ class LiveSession(
 
     companion object {
         const val MAX_SEQUENCE = 2_147_483_647L
+        const val RENEW_INTERVAL_MS = 10_000L
         private val U64 = Regex("^(0|[1-9][0-9]{0,19})$")
 
         /** 계약 U64(십진 문자열, 선행 0 금지, ≤ 2^64−1). JSON 숫자는 거부(정수 가정 금지). 정상값은 그대로 문자열로 돌려준다. */

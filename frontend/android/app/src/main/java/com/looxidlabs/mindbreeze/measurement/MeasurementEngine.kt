@@ -43,9 +43,16 @@ class MeasurementEngine(
     @Volatile var frameSink: ((JSONObject) -> Unit)? = null
     @Volatile var coreError: String? = null
         private set
-    /** 마지막 EEG 패킷의 (wrap 확장 device tick, 도착 단조 µs) — capture.reanchor 의 장치 시각 쌍. */
+    /**
+     * 마지막 EEG 패킷의 (wrap 확장 device tick, 도착 시각 µs) — capture.reanchor 의 장치 시각 쌍.
+     * 도착 시각은 코어가 창(window_start/end_us)에 쓰는 시간축과 같다: 창시각축 µs = 벽시계앵커ms×1000 + (도착 단조µs − 앵커 단조µs).
+     * 서버가 `anchor_server_at + (window_start_us − monotonic_us)` 로 환산하므로 elapsedRealtime µs 를 그대로 보내면 안 된다(T08d 실측 결함).
+     */
     @Volatile var lastEegAnchor: Pair<Long, Long>? = null
         private set
+
+    /** 단조 µs → 코어 창 시간축 µs. */
+    fun windowTimelineUs(monoUs: Long): Long = wallAnchor * 1000 + (monoUs - anchorMono)
 
     /** 열면서 기존 journal 레코드 수를 돌려준다(프로세스 재생성 후 이어쓰기에서 사용). */
     fun open(): Long { val j = AppendOnlyJournal.open(journalFile, syncEach); journal = j; return j.count }
@@ -62,7 +69,7 @@ class MeasurementEngine(
             is ParseResult.Invalid -> counters.invalid()
             is ParseResult.Ok -> {
                 counters.samples(sensor, r.packet.sampleCount)
-                if (sensor == Sensor.EEG) lastEegAnchor = tickUnwrapForAnchor.unwrap(sensor, r.packet.rawTick) to now * 1000
+                if (sensor == Sensor.EEG) lastEegAnchor = tickUnwrapForAnchor.unwrap(sensor, r.packet.rawTick) to windowTimelineUs(now * 1000)
             }
         }
         if (core != null) pushCore(sensor, bytes, now) else legacyFrame(sensor, bytes)

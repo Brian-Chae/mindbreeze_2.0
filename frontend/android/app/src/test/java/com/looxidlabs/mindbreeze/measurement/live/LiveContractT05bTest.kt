@@ -38,6 +38,8 @@ class LiveContractT05bTest {
             val a = JSONObject().put("command_id", d.getString("command_id")).put("status", "applied").put("epoch", "1")
                 .put("cursors", JSONArray()).put("committed", true)
             if (d.getString("kind") == "capture.start") captureResult?.invoke()?.let { a.put("result", it) }
+            if (d.getString("kind") == "capture.renew") a.put("result", JSONObject().put("stream_id", d.getJSONObject("payload").getString("stream_id"))
+                .put("generation", "3").put("owner_generation", "3").put("lease", JSONObject().put("expires_at_ms", 1760000099000L)))
             a
         }
         val cfg = LiveConfig(sessionId = sid, instanceId = "00000050-0000-4000-8000-000000000050", appBuild = "android-test", coreVersion = "core-1.0.0",
@@ -267,6 +269,42 @@ class LiveContractT05bTest {
         assertEquals(2, e.t.sentOf("live:device").size)
         e.s.advance(10_000)
         assertEquals("확정 후 재전송 없음", 2, e.t.sentOf("live:device").size)
+    }
+
+    @Test fun terminalOrAccessRevokedWhileCapturingEndsStream() {
+        // 실측: session.end 시 live:terminal 이 device.changed 보다 먼저 오면 TERMINAL 상태라 이벤트가 버려져 측정이 계속됐다
+        for ((name, payload, expect) in listOf(
+            Triple("live:terminal", """{"code":"session_ended","revision":"6","end_cutoff_ms":"1760000100000"}""", "ended" to "session_ended"),
+            Triple("live:access_revoked", """{"code":"expelled","revision":"5"}""", "revoked" to "expelled"),
+        )) {
+            val e = env(); toCapturing(e)
+            val ended = ArrayList<Pair<String, String?>>()
+            e.live.onStreamEnded = { st, c -> ended += st to c }
+            e.t.server(name, JSONObject(payload))
+            assertEquals(name, listOf(expect), ended)
+            assertEquals(expect.first, e.live.streamEnded); assertNull(e.live.streamId)
+            e.t.server("live:event", deviceEvent("""{"stream_id":"$stream","generation":"3","status":"ended","cutoff_code":"completed"}"""))
+            assertEquals("중복 종료 신호 없음", 1, ended.size)
+        }
+    }
+
+    // ------------------------------------------------------------------ lease 갱신(실측 결함: renew 없으면 30초 뒤 lease 만료)
+    private fun Env.alive(ms: Long) { var left = ms; while (left > 0) { val st = minOf(left, 4_000L); s.advance(st); left -= st
+        t.server("live:heartbeat", JSONObject("""{"epoch":"1","through":[],"auth_revision":"4","server_time_ms":1}""")) } }
+
+    @Test fun captureLeaseIsRenewedBeforeExpiryAndStopsAfterStreamEnds() {
+        val e = env(); toCapturing(e)
+        e.alive(25_000)
+        val renews = e.t.sentOf("live:command").filter { it.getString("kind") == "capture.renew" }
+        assertTrue("30초 lease 안에 2회 이상 갱신: ${renews.size}", renews.size >= 2)
+        val p = renews.first().getJSONObject("payload")
+        assertEquals(stream, p.getString("stream_id")); assertEquals("3", p.getString("owner_generation"))
+        assertTrue(p.getString("clock_anchor_id").matches(Regex("^[0-9a-f-]{36}$")))
+        assertEquals("renew ACK lease 반영", 1760000099000L, e.live.leaseExpiresAtMs)
+        e.t.server("live:event", deviceEvent("""{"stream_id":"$stream","generation":"3","status":"ended","cutoff_code":"session_ended"}"""))
+        val n = e.t.sentOf("live:command").count { it.getString("kind") == "capture.renew" }
+        e.alive(30_000)
+        assertEquals("종료 후 갱신 없음", n, e.t.sentOf("live:command").count { it.getString("kind") == "capture.renew" })
     }
 
     // ------------------------------------------------------------------ 4. 토큰 비노출
