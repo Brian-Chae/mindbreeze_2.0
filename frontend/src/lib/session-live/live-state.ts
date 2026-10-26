@@ -209,6 +209,48 @@ function dropOrApplyEntity<T>(
   return { map: { ...map, [id]: { version, data } }, applied: true };
 }
 
+const BAND_FIELDS = ['device_seq', 'band_state', 'contact', 'sqi', 'battery_pct', 'state_reason'] as const;
+
+/**
+ * device.changed(T05b 합집합 스키마) 적용 규칙.
+ * - 순서: (generation, entity_version) 사전식. 서버 entity_version 은 stream 마다 1부터 다시 시작하므로
+ *   generation 이 큰 새 stream 은 version 이 작아도 수용하고, generation 이 작은 늦은 event 는 버린다(문자열 u64 비교).
+ * - 밴드 필드 부재 = 미보고. 같은 stream 이면 이전 밴드 값을 유지하고, 다른 stream 이면 끌고 오지 않는다(부재 그대로).
+ * - 같은 stream 의 밴드 보고는 device_seq 가 앞설 때만 밴드 필드를 바꾼다.
+ */
+function applyDevice(
+  cur: Versioned<DeviceData> | undefined,
+  id: string,
+  version: U64,
+  incoming: DeviceData,
+  removed: Record<string, U64>,
+): Versioned<DeviceData> | null {
+  const tomb = removed[id];
+  if (tomb !== undefined && !cur && compareU64(version, tomb) <= 0) return null;
+  if (!cur) return { version, data: incoming };
+  const cg = cur.data.generation;
+  const ig = incoming.generation;
+  const genCmp = cg !== undefined && ig !== undefined ? compareU64(ig, cg) : 0;
+  if (genCmp < 0) return null;
+  const sameStream = cur.data.stream_id === incoming.stream_id;
+  if (genCmp === 0 && sameStream && compareU64(version, cur.version) < 0) return null;
+  if (!sameStream) return { version, data: incoming };
+  const hasBand = BAND_FIELDS.some((f) => incoming[f] !== undefined);
+  const bandFresher = hasBand && (incoming.device_seq === undefined || cur.data.device_seq === undefined
+    || compareU64(incoming.device_seq, cur.data.device_seq) >= 0);
+  const band: Partial<DeviceData> = {};
+  for (const f of BAND_FIELDS) {
+    const src = bandFresher ? incoming : cur.data;
+    if (src[f] !== undefined) Object.assign(band, { [f]: src[f] });
+  }
+  const streamPart: DeviceData = { participant_id: incoming.participant_id, stream_id: incoming.stream_id };
+  for (const f of ['generation', 'status', 'clock_uncertain', 'cutoff_code'] as const) {
+    const val = incoming[f] !== undefined ? incoming[f] : cur.data[f];
+    if (val !== undefined) Object.assign(streamPart, { [f]: val });
+  }
+  return { version, data: { ...streamPart, ...band } };
+}
+
 function isEntityDomain(d: Domain): d is EntityDomainName {
   return d in DOMAIN_FIELD;
 }
@@ -245,8 +287,8 @@ function applyPayload(state: LiveState, ev: LiveEvent): LiveState {
       return r.applied ? { ...state, signal: r.map } : state;
     }
     case 'device.changed': {
-      const r = dropOrApplyEntity(state.devices, state.removed, ev.entity_id, v, ev.payload as DeviceData);
-      return r.applied ? { ...state, devices: r.map } : state;
+      const next = applyDevice(state.devices[ev.entity_id], ev.entity_id, v, ev.payload as DeviceData, state.removed);
+      return next ? { ...state, devices: { ...state.devices, [ev.entity_id]: next } } : state;
     }
     case 'metrics.updated': {
       const incoming = ev.payload as MetricsEntityData;

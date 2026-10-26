@@ -9,14 +9,20 @@ export const FRESH_STALE_MS = 10_000;
 
 export type Freshness = 'fresh' | 'delayed' | 'stale' | 'time_uncertain' | 'none';
 
-/** 관측 나이(ms) 기준 신선도. 재전송·paint 시각이 아니라 observed_at 으로만 판정한다. */
+const SEVERITY: Record<'fresh' | 'delayed' | 'stale', number> = { fresh: 0, delayed: 1, stale: 2 };
+
+/**
+ * 신선도 — 서버 판정(`metrics.updated.freshness`, T05b)이 기준이다. 클라이언트는 fresh 를 스스로 만들지 않는다.
+ * - 서버 판정이 없으면 'none', time_uncertain 이면 관측 시각과 무관하게 time_uncertain(observed_at_ms=null).
+ * - 새 관측이 오지 않는 동안에만 경과 시간(nowMs=서버 시각 추정 − observed_at)으로 *낮출* 수 있다(3초 지연/10초 stale). 올리지는 않는다.
+ */
 export function freshnessOf(observedAtMs: number | null, nowMs: number, serverHint?: string): Freshness {
   if (serverHint === 'time_uncertain') return 'time_uncertain';
-  if (observedAtMs == null) return 'none';
+  if (serverHint !== 'fresh' && serverHint !== 'delayed' && serverHint !== 'stale') return 'none';
+  if (observedAtMs == null) return serverHint;
   const age = nowMs - observedAtMs;
-  if (age >= FRESH_STALE_MS) return 'stale';
-  if (age >= FRESH_DELAY_MS) return 'delayed';
-  return 'fresh';
+  const aged = age >= FRESH_STALE_MS ? 'stale' : age >= FRESH_DELAY_MS ? 'delayed' : 'fresh';
+  return SEVERITY[aged] > SEVERITY[serverHint] ? aged : serverHint;
 }
 
 export const METRIC_KEYS = ['focus_display', 'relaxation_display', 'emotion_display', 'bpm', 'respiration', 'sdnn'] as const;

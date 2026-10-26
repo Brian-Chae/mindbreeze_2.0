@@ -3,7 +3,7 @@
 // legacy(rich participant) 는 신원 필드(live-view 의 allowlist)만 참조한다.
 import type { DeviceStatus, SessionLiveMetric } from '../api/session';
 import type { LiveState } from './live-state';
-import { buildMemberRows, freshnessOf, type LegacyIdentity, type MemberRow } from './live-view';
+import { buildMemberRows, type LegacyIdentity, type MemberRow } from './live-view';
 
 export interface LegacyAdapterOptions {
   nowMs: number;
@@ -33,7 +33,7 @@ export function toSessionLiveMetrics(state: LiveState, opts: LegacyAdapterOption
       participant_id: row.participantId,
       display_name: row.displayName,
       is_guest: row.isGuest,
-      band_connected: row.observedAtMs != null && freshnessOf(row.observedAtMs, opts.nowMs) !== 'none',
+      band_connected: row.freshness !== 'none',
       device_status: status,
       band_battery: row.batteryPct,
       avg_efficiency: null,

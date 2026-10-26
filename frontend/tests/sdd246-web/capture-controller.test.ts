@@ -1,4 +1,5 @@
 // SDD-246 T06 후속 — WebCaptureAdapter → live:metric, capture.start/renew/reanchor/close 흐름.
+// T06c: stream 은 capture.start ACK result 에서 읽는다(readStream 제거), live:metric 은 windows 배치.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CaptureController, RENEW_INTERVAL_MS } from '../../src/lib/measurement-web/capture-controller';
 import type { CommandAck } from '../../src/lib/session-live/live-types';
@@ -17,9 +18,15 @@ function makeClient() {
     client: {
       request: vi.fn(async (kind: string, payload: Record<string, unknown>) => {
         calls.push({ kind, payload });
-        return ack();
+        return kind === 'capture.start'
+          ? ack({ result: { stream_id: '0000000a-0000-4000-8000-00000000000a', participant_id: '00000002-0000-4000-8000-000000000002', generation: '1', owner_generation: '1', lease: { expires_at_ms: 1 } } })
+          : ack();
       }),
-      sendMetric: vi.fn((m: Record<string, unknown>) => { metrics.push(m); return sendOk; }),
+      sendMetricBatch: vi.fn(async (w: Array<Record<string, unknown>>) => {
+        metrics.push(...w);
+        return sendOk ? { kind: 'acks' as const, acks: [] } : { kind: 'not_sent' as const };
+      }),
+      sendDevice: vi.fn(async () => ({ kind: 'ack' as const, status: 'accepted' as const })),
       clockProbe: vi.fn(async () => ({ probeId: '0000000b-0000-4000-8000-00000000000b', rttMs: 20, offsetMs: 3, serverReceiveMs: 1, serverSendMs: 2 })),
     },
   };
@@ -31,40 +38,41 @@ describe('CaptureController', () => {
 
   it('미착용·EEG 미동의면 capture 요청 0', async () => {
     const { client, calls } = makeClient();
-    const c = new CaptureController({ client: client as never, eegConsent: false, bandConnected: true, readStream: () => null, deviceProfile: 'linkband2-v1', algorithmVersion: 'web-ts-1', modelVersion: 'm' });
+    const c = new CaptureController({ client: client as never, sessionId: '00000001-0000-4000-8000-000000000001', eegConsent: false, bandConnected: true, deviceProfile: 'linkband2-v1', algorithmVersion: 'web-ts-1', modelVersion: 'm' });
     await expect(c.start()).resolves.toBe('not_allowed');
-    const d = new CaptureController({ client: client as never, eegConsent: true, bandConnected: false, readStream: () => null, deviceProfile: 'p', algorithmVersion: 'a', modelVersion: 'm' });
+    const d = new CaptureController({ client: client as never, sessionId: '00000001-0000-4000-8000-000000000001', eegConsent: true, bandConnected: false, deviceProfile: 'p', algorithmVersion: 'a', modelVersion: 'm' });
     await expect(d.start()).resolves.toBe('not_allowed');
     expect(calls).toHaveLength(0);
   });
 
   it('start → capture.start 후 stream_id 로 envelope 을 live:metric 으로 보낸다', async () => {
     const { client, calls, metrics } = makeClient();
-    const c = new CaptureController({ client: client as never, eegConsent: true, bandConnected: true, readStream: () => ({ streamId: '0000000a-0000-4000-8000-00000000000a', generation: '1' }), deviceProfile: 'linkband2-v1', algorithmVersion: 'web-ts-1', modelVersion: 'm' });
+    const c = new CaptureController({ client: client as never, sessionId: '00000001-0000-4000-8000-000000000001', eegConsent: true, bandConnected: true, deviceProfile: 'linkband2-v1', algorithmVersion: 'web-ts-1', modelVersion: 'm' });
     expect(await c.start()).toBe('started');
     expect(calls[0]).toMatchObject({ kind: 'capture.start', payload: { device_profile: 'linkband2-v1', algorithm_version: 'web-ts-1', model_version: 'm' } });
     expect(c.streamId()).toBe('0000000a-0000-4000-8000-00000000000a');
-    expect(c.pushEnvelope({ sequence: '1', sqi: 0.9 })).toBe(true);
+    expect(c.pushEnvelope({ sequence: '1', sqi: 0.9 } as never)).toBe(true);
+    await Promise.resolve();
     expect(metrics[0]).toMatchObject({ stream_id: '0000000a-0000-4000-8000-00000000000a', sequence: '1' });
   });
 
   it('start 거절이면 envelope 을 보내지 않는다', async () => {
     const { client, metrics } = makeClient();
     client.request.mockResolvedValueOnce(ack({ status: 'rejected', code: 'eeg_consent_required' }));
-    const c = new CaptureController({ client: client as never, eegConsent: true, bandConnected: true, readStream: () => ({ streamId: '0000000a-0000-4000-8000-00000000000a', generation: '1' }), deviceProfile: 'p', algorithmVersion: 'a', modelVersion: 'm' });
+    const c = new CaptureController({ client: client as never, sessionId: '00000001-0000-4000-8000-000000000001', eegConsent: true, bandConnected: true, deviceProfile: 'p', algorithmVersion: 'a', modelVersion: 'm' });
     expect(await c.start()).toBe('rejected');
-    expect(c.pushEnvelope({ sequence: '1' })).toBe(false);
+    expect(c.pushEnvelope({ sequence: '1' } as never)).toBe(false);
     expect(metrics).toHaveLength(0);
   });
 
   it('주기적으로 capture.renew, reanchor 는 clock_probe 를 거친다, close 는 capture.close', async () => {
     const { client, calls } = makeClient();
-    const c = new CaptureController({ client: client as never, eegConsent: true, bandConnected: true, readStream: () => ({ streamId: '0000000a-0000-4000-8000-00000000000a', generation: '1' }), deviceProfile: 'p', algorithmVersion: 'a', modelVersion: 'm' });
+    const c = new CaptureController({ client: client as never, sessionId: '00000001-0000-4000-8000-000000000001', eegConsent: true, bandConnected: true, deviceProfile: 'p', algorithmVersion: 'a', modelVersion: 'm' });
     await c.start();
     await vi.advanceTimersByTimeAsync(RENEW_INTERVAL_MS + 10);
     expect(calls.some((x) => x.kind === 'capture.renew' && x.payload.owner_generation === '1')).toBe(true);
     await c.reanchor({ deviceTicks: '100', monotonicUs: '200' });
-    expect(calls.find((x) => x.kind === 'capture.reanchor')?.payload).toMatchObject({ clock_probe_id: '0000000b-0000-4000-8000-00000000000b', device_ticks: '100', monotonic_us: '200' });
+    expect(calls.filter((x) => x.kind === 'capture.reanchor').at(-1)?.payload).toMatchObject({ clock_probe_id: '0000000b-0000-4000-8000-00000000000b', device_ticks: '100', monotonic_us: '200' });
     await c.close('user_end');
     expect(calls.at(-1)).toMatchObject({ kind: 'capture.close' });
     expect(c.streamId()).toBeNull();

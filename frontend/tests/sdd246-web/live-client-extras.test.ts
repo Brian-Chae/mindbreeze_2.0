@@ -60,13 +60,7 @@ describe('LiveClient 확장', () => {
     expect(ack).toMatchObject({ status: 'rejected', code: 'forbidden' });
   });
 
-  it('sendMetric 은 READY 에서만 live:metric 을 emit 한다', async () => {
-    const { sock, client } = await ready();
-    expect(client.sendMetric({ sequence: '1' })).toBe(true);
-    expect(sock.emitted.at(-1)).toMatchObject({ ev: 'live:metric', payload: { sequence: '1' } });
-    sock.connected = false;
-    expect(client.sendMetric({ sequence: '2' })).toBe(false);
-  });
+  // sendMetric(단건 envelope) 은 T06c 에서 서버 계약(windows 배치)에 맞춘 sendMetricBatch 로 대체 — t06c-contract.test.ts
 
   it('clockProbe 는 RTT·offset 을 계산한다', async () => {
     const { sock, client, tick } = await ready();

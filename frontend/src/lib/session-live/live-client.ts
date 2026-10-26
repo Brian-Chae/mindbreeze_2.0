@@ -9,8 +9,24 @@ import {
   type LiveEffect, type LiveState,
 } from './live-state';
 import type {
-  CommandAck, CommandKind, HeartbeatMessage, LiveCommand, LiveEvent, LiveSnapshot, ResyncReason,
+  CommandAck, CommandKind, DeviceReport, HeartbeatMessage, LiveCommand, LiveEvent, LiveSnapshot, MetricAck, ResyncReason,
 } from './live-types';
+import type { MetricEnvelope } from '../measurement-web/envelope';
+
+/** live:metric 결과. acks = 창별 결과, error = 배치 전체 실패({ok:false}), not_sent = READY/연결 아님(보내지 않음) */
+export type MetricSendOutcome =
+  | { kind: 'acks'; acks: MetricAck[] }
+  | { kind: 'error'; code: string; retryable: boolean; retryAfterMs: number | null }
+  | { kind: 'not_sent' };
+
+/** live:device 결과 */
+export type DeviceSendOutcome =
+  | { kind: 'ack'; status: 'accepted' | 'duplicate' }
+  | { kind: 'error'; code: string; retryable: boolean; retryAfterMs: number | null }
+  | { kind: 'not_sent' };
+
+/** 측정 ACK 대기 상한 — 응답이 없으면 retryable timeout 으로 돌려준다(창은 호출자 큐에 남는다) */
+export const INGEST_ACK_TIMEOUT_MS = 5_000;
 
 export interface LiveSocketLike {
   connected: boolean;
@@ -75,6 +91,8 @@ export class LiveClient {
   private waiters = new Map<string, Array<(ack: CommandAck) => void>>();
   private sentAtMs = new Map<string, number>();
   private renderedListeners = new Set<(m: { commandId: string; rttMs: number }) => void>();
+  /** server_time_ms − 로컬 수신 시각(RTT/2 미보정, 근사) */
+  private serverOffsetMs = 0;
 
   constructor(o: LiveClientOptions) {
     this.o = o;
@@ -231,6 +249,7 @@ export class LiveClient {
   private onSnapshot(snap: LiveSnapshot): void {
     const r = applySnapshot(this.state, snap);
     if (!r.applied) return;
+    this.serverOffsetMs = snap.server_time_ms - this.now();
     this.set(r.state);
     this.run(r.effects);
     this.armHeartbeatWatchdog();
@@ -288,6 +307,7 @@ export class LiveClient {
   }
 
   private onHeartbeat(hb: HeartbeatMessage): void {
+    if (hb.session_id === this.o.sessionId && typeof hb.server_time_ms === 'number') this.serverOffsetMs = hb.server_time_ms - this.now();
     const r = applyHeartbeat(this.state, hb);
     this.set(pruneIntents(r.state, this.now()));
     this.run(r.effects);
@@ -437,11 +457,57 @@ export class LiveClient {
     });
   }
 
-  /** 측정 envelope(live:metric) 송신. READY·연결 중에만 보내고, 아니면 false(조용히 버리지 않고 호출자가 판단). */
-  sendMetric(envelope: Record<string, unknown>): boolean {
-    if (this.state.phase !== 'READY' || !this.o.socket.connected) return false;
-    this.o.socket.emit('live:metric', { protocol_version: 2, schema_version: 1, ...envelope });
-    return true;
+  /**
+   * 측정 창 배치(live:metric, 최대 60창) 송신. 서버 계약(T05b): `{protocol_version,schema_version,windows}` →
+   * 성공 `{acks:[MetricAck…]}` / 검증·준비 실패 `{ok:false,code,retryable}`. READY·연결 중이 아니면 보내지 않는다(not_sent).
+   */
+  sendMetricBatch(windows: readonly MetricEnvelope[]): Promise<MetricSendOutcome> {
+    if (windows.length === 0 || this.state.phase !== 'READY' || !this.o.socket.connected) return Promise.resolve({ kind: 'not_sent' });
+    return this.emitIngest('live:metric', { protocol_version: 2, schema_version: 1, windows: windows.slice(0, 60) }, (r) => {
+      const acks = (r as { acks?: unknown }).acks;
+      return Array.isArray(acks) ? { kind: 'acks', acks: acks as MetricAck[] } : null;
+    });
+  }
+
+  /** 밴드 상태 보고(live:device). Device wire 스키마 그대로, device_seq 단조는 호출자(CaptureController)가 보장한다. */
+  sendDevice(report: Omit<DeviceReport, 'protocol_version' | 'schema_version'>): Promise<DeviceSendOutcome> {
+    if (this.state.phase !== 'READY' || !this.o.socket.connected) return Promise.resolve({ kind: 'not_sent' });
+    return this.emitIngest('live:device', { protocol_version: 2, schema_version: 1, ...report }, (r) => {
+      const st = (r as { status?: unknown }).status;
+      return st === 'accepted' || st === 'duplicate' ? { kind: 'ack', status: st } : null;
+    });
+  }
+
+  private emitIngest<T extends { kind: string }>(
+    ev: 'live:metric' | 'live:device',
+    payload: Record<string, unknown>,
+    parseOk: (r: object) => T | null,
+  ): Promise<T | { kind: 'error'; code: string; retryable: boolean; retryAfterMs: number | null }> {
+    type Err = { kind: 'error'; code: string; retryable: boolean; retryAfterMs: number | null };
+    return new Promise((resolve) => {
+      let done = false;
+      const finish = (v: T | Err): void => { if (!done) { done = true; clearTimeout(timer); resolve(v); } };
+      const timer = setTimeout(() => finish({ kind: 'error', code: 'timeout', retryable: true, retryAfterMs: null }), INGEST_ACK_TIMEOUT_MS);
+      this.o.socket.emit(ev, payload, (res) => {
+        if (!res || typeof res !== 'object') { finish({ kind: 'error', code: 'invalid_response', retryable: true, retryAfterMs: null }); return; }
+        const r = res as { ok?: unknown; code?: unknown; retryable?: unknown; retry_after_ms?: unknown };
+        if (r.ok === false) {
+          finish({
+            kind: 'error',
+            code: typeof r.code === 'string' ? r.code : 'unknown',
+            retryable: r.retryable === true,
+            retryAfterMs: typeof r.retry_after_ms === 'number' ? r.retry_after_ms : null,
+          });
+          return;
+        }
+        finish(parseOk(res) ?? { kind: 'error', code: 'invalid_response', retryable: true, retryAfterMs: null });
+      });
+    });
+  }
+
+  /** 서버 시각 추정(ms) — 마지막 snapshot/heartbeat 의 server_time_ms 와 수신 시각 차이로 보정. 신선도 경과 판정에 쓴다. */
+  serverNowMs(): number {
+    return this.now() + this.serverOffsetMs;
   }
 
   /** NTP 식 왕복: RTT = (t1-t0) - (server_send - server_receive), offset = ((recv-t0)+(send-t1))/2 */
