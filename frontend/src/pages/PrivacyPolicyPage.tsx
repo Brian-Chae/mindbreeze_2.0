@@ -45,6 +45,16 @@ export default function PrivacyPolicyPage() {
                   <li key={text}>{text}</li>
                 ))}
               </ol>
+              {/* 방침 본문(버전 고정)과 별개인 안내 링크 — 앱 안 삭제 단계와 앱 밖 요청 방법은 공개 삭제 페이지에 있다. */}
+              {a.id === 'account-deletion' && (
+                <p className="mt-3 text-sm text-ink-secondary">
+                  탈퇴 방법과 앱 밖에서 삭제를 요청하는 방법은{' '}
+                  <Link to="/account-deletion" className="underline hover:text-brand-primary">
+                    계정 삭제 안내
+                  </Link>
+                  에서 확인할 수 있습니다.
+                </p>
+              )}
             </section>
           ))}
         </div>

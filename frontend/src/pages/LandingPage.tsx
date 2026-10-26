@@ -1,4 +1,5 @@
-import { isAiEnabled } from '../lib/feature-flags';
+import { isAiEnabled, isCounselingEnabled } from '../lib/feature-flags';
+import { SERVICE_SUBTITLE } from '../lib/legal-copy';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
@@ -57,14 +58,14 @@ function LandingHero() {
   return <section className="overflow-hidden bg-[#F7F4F0]">
     <div className={`${sectionContainer} grid items-center gap-8 pb-14 pt-12 lg:grid-cols-[1.1fr_1fr] lg:gap-14 lg:pb-20 lg:pt-16`}>
       <div className="relative z-10">
-        <p className="inline-flex items-center gap-2 rounded-full border border-[#DED3E3] bg-white/70 px-3.5 py-2 text-xs font-semibold text-[#5F0080]"><span className="h-1.5 w-1.5 rounded-full bg-[#5F0080]" />상담과 명상, 사람에게 더 가까이</p>
+        <p className="inline-flex items-center gap-2 rounded-full border border-[#DED3E3] bg-white/70 px-3.5 py-2 text-xs font-semibold text-[#5F0080]"><span className="h-1.5 w-1.5 rounded-full bg-[#5F0080]" />{isCounselingEnabled() ? '상담과 명상, 사람에게 더 가까이' : SERVICE_SUBTITLE}</p>
         <h1 className="mt-7 text-[39px] font-bold leading-[1.25] tracking-[-0.055em] text-[#29212E] sm:text-[56px] lg:text-[64px]">마음을 돌보는 일,<br /><span className="text-[#5F0080]">변화가 보이도록.</span></h1>
-        <p className="mt-6 max-w-[470px] text-base leading-8 text-[#68606A] sm:text-lg">{isAiEnabled() ? '기록은 AI에게, 집중은 사람에게.' : '기록과 리포트를 한곳에서.'}<br />상담과 명상의 순간을 기록하고,<br className="sm:hidden" /> 몸과 마음의 변화를 함께 읽어보세요.</p>
+        <p className="mt-6 max-w-[470px] text-base leading-8 text-[#68606A] sm:text-lg">{isAiEnabled() ? '기록은 AI에게, 집중은 사람에게.' : '기록과 리포트를 한곳에서.'}<br />{isCounselingEnabled() ? '상담과 명상의 순간을 기록하고,' : '명상 클래스의 순간을 기록하고,'}<br className="sm:hidden" /> 몸과 마음의 변화를 함께 읽어보세요.</p>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <Link to="/register" className={primaryButton}>마인드브리즈 시작하기 <Arrow /></Link>
           <a href="#reports" className={secondaryButton}>리포트 먼저 살펴보기 <Arrow diagonal /></a>
         </div>
-        <p className="mt-5 text-xs leading-6 text-[#756C78]">상담센터 · 상담사 · 명상가를 위한 통합 플랫폼</p>
+        <p className="mt-5 text-xs leading-6 text-[#756C78]">{isCounselingEnabled() ? '상담센터 · 상담사 · 명상가를 위한 통합 플랫폼' : '명상 지도자 · 기관 · 참여자를 위한 명상 클래스 서비스'}</p>
       </div>
       <div className="relative mx-auto w-full max-w-[500px] pb-7 pl-6 sm:pl-10">
         <div className="absolute inset-x-8 bottom-10 top-12 rounded-full bg-[#E8DCEC]" aria-hidden="true" />

@@ -1,8 +1,10 @@
-import { isAiEnabled } from '../../lib/feature-flags';
+import { isAiEnabled, isCounselingEnabled } from '../../lib/feature-flags';
 import { SectionHeading, sectionContainer } from './landing-ui';
 
 const steps = () => [
-  { title: '세션을 준비하고', body: '상담·명상 일정을 등록하고, 참여자와 측정 여부를 정해요.' },
+  isCounselingEnabled()
+    ? { title: '세션을 준비하고', body: '상담·명상 일정을 등록하고, 참여자와 측정 여부를 정해요.' }
+    : { title: '클래스를 준비하고', body: '명상 클래스 일정을 등록하고, 참여자와 측정 여부를 정해요.' },
   { title: '사람에게 집중하면', body: '동의받은 음성을 기록하고, 원할 때 LINK BAND로 신호를 측정해요.' },
   { title: isAiEnabled() ? 'AI가 기록을 정리해요' : '기록을 함께 정리해요', body: isAiEnabled() ? '기록과 요약을 검토하고, 측정된 변화도 함께 살펴보세요.' : '기록과 리포트를 검토하고, 측정된 변화도 함께 살펴보세요.' },
   { title: '변화를 함께 나눠요', body: '리포트를 확인한 뒤 전달하고, 다음 만남의 대화를 이어가세요.' },
