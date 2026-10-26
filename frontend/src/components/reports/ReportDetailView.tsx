@@ -8,9 +8,6 @@ import { createPortal } from 'react-dom';
 import { downloadReportPdf } from '../../lib/report/print-report';
 import CounselorCommentCard from './CounselorCommentCard';
 import DataExportButton from './DataExportButton';
-import EegQualityBanner from './EegQualityBanner';
-import EegMetricsGrid from './EegMetricsGrid';
-import EegTimeline from './EegTimeline';
 import NarrativeSections from './NarrativeSections';
 import SessionReplayPanel from './SessionReplayPanel';
 import ReportCoverSection from './ReportCoverSection';
@@ -27,26 +24,8 @@ import {
   resolveReportStatus,
   type ReportDto,
 } from '../../lib/api/reports';
-import type { EegQualityStatus } from '../../lib/api/report';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function eegQualitySummaryLabel(status: EegQualityStatus): string | null {
-  switch (status) {
-    case 'valid':
-      return '품질 양호';
-    case 'degraded':
-      return '품질 주의';
-    case 'invalid':
-      return '품질 미달';
-    case 'insufficient':
-      return '데이터 부족';
-    case 'lost':
-      return '데이터 유실';
-    default:
-      return null;
-  }
-}
 
 // SDD-087 — content.counselor_comment 파싱 (문자열만 인정, 빈 값은 null)
 function commentOf(content: Record<string, unknown> | null | undefined): string | null {
@@ -232,7 +211,6 @@ export default function ReportDetailView({
   const aiRecordReasonText = aiRecordUnavailableText(adapted.aiRecord?.reason);
   const isCounselor = report.type === 'counselor';
   const eeg = adapted.eeg;
-  const eegQualityLabel = eeg ? eegQualitySummaryLabel(eeg.status) : null;
   const pipelineStatus = resolveReportStatus(report);
   const credibility = resolveDataCredibility(
     report.data_credibility,
@@ -379,44 +357,6 @@ export default function ReportDetailView({
         <SummaryCard title="세션 영상 & 상담 기록지">
           <SessionReplayPanel sessionId={report.session_id} segments={transcriptSegments} />
         </SummaryCard>
-      )}
-
-      {adapted.showEegSection && eeg && (
-        <details
-          className="group rounded-2xl border border-[#E8D9F5] bg-[#FDFAFF] open:bg-white"
-          data-testid="eeg-section"
-          data-print-exclude
-        >
-          <summary className="mobile:min-h-11 mobile:min-w-11 flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 md:px-6 [&::-webkit-details-marker]:hidden">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <span className="text-[15px] mobile:text-mb-body font-bold text-[#5F0080]">
-                뇌파 상세 지표 보기
-              </span>
-              {eegQualityLabel && (
-                <span className="rounded-lg border border-[#E8D9F5] bg-white px-2.5 py-0.5 text-[12px] mobile:text-mb-caption font-medium text-[#6D547A]">
-                  {eegQualityLabel}
-                </span>
-              )}
-            </div>
-            <span
-              aria-hidden="true"
-              className="shrink-0 text-[12px] mobile:text-mb-caption text-[#9B9B9B] transition-transform group-open:rotate-180"
-            >
-              ▾
-            </span>
-          </summary>
-          <div className="space-y-4 border-t border-[#E8D9F5] px-5 pb-5 pt-4 md:px-6 md:pb-6">
-            <EegQualityBanner eeg={eeg} reportType={report.type} />
-
-            {adapted.showEegMetrics && (
-              <EegMetricsGrid eeg={eeg} reportType={report.type} compact />
-            )}
-
-            {adapted.showEegTimeline && (
-              <EegTimeline data={adapted.eeg_timeline} dense={!isCounselor} />
-            )}
-          </div>
-        </details>
       )}
 
       {actionContainer ? createPortal(actions, actionContainer) : actions}
