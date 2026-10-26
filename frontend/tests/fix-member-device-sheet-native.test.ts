@@ -41,12 +41,12 @@ describe('facade.getRawPreview', () => {
     return { p, f: new NativeMeasurementFacade(p) };
   };
   const good = { eegFp1: [1, 2], eegFp2: [3, 4], ppgRed: [5, 6], ppgIr: [7, 8] };
-  it('android 만 호출', async () => {
+  it('android·ios 만 호출(web 은 null)', async () => {
     const { p, f } = mk(async () => good);
     expect(await f.getRawPreview('android')).toEqual(good);
-    expect(await f.getRawPreview('ios')).toBeNull();
+    expect(await f.getRawPreview('ios')).toEqual(good);
     expect(await f.getRawPreview('web')).toBeNull();
-    expect((p.getRawPreview as ReturnType<typeof vi.fn>).mock.calls.length).toBe(1);
+    expect((p.getRawPreview as ReturnType<typeof vi.fn>).mock.calls.length).toBe(2);
   });
   it('reject(UNIMPLEMENTED)·형식 불일치 → null', async () => {
     expect(await mk(async () => { throw new Error('UNIMPLEMENTED'); }).f.getRawPreview('android')).toBeNull();

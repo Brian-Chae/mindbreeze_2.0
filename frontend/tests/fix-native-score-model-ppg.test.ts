@@ -66,6 +66,12 @@ describe('startForSession — 모델·밴드 소유', () => {
     await new NativeMeasurementFacade(p).startForSession({ ...base('android'), releaseJsBand: vi.fn(async () => { throw new Error('x'); }) });
     expect(p.startMeasurement).toHaveBeenCalledTimes(1);
   });
+  it('iOS: 모델이 start 요청에 실린다(없으면 생략)', async () => {
+    const p = plugin(); await new NativeMeasurementFacade(p).startForSession({ ...base('ios'), model });
+    expect(p.startMeasurement.mock.calls[0][0]).toMatchObject({ modelParams: model.modelParams, modelVersion: '7' });
+    const q = plugin(); await new NativeMeasurementFacade(q).startForSession(base('ios'));
+    expect('modelParams' in q.startMeasurement.mock.calls[0][0]).toBe(false);
+  });
   it('iOS: releaseJsBand 는 호출하지 않는다(setJSBandOwnership 경로 유지)', async () => {
     const p = plugin(); const releaseJsBand = vi.fn(async () => undefined);
     await new NativeMeasurementFacade(p).startForSession({ ...base('ios'), releaseJsBand });

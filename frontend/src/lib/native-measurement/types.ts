@@ -86,6 +86,9 @@ export interface StartMeasurementRequest {
   requestId: string;
   /** iOS: BLE peripheral UUID(T12 요청 — iOS 플러그인이 아직 읽지 않으면 무시된다) */
   peripheralId?: string;
+  /** 시작 시점 활성 표준 모델(JSON 문자열)·버전. 없으면 코호트. */
+  modelParams?: string;
+  modelVersion?: string;
 }
 export interface StartMeasurementResult { managerId: string; streamId: string; ownerGeneration: string }
 export interface StopMeasurementRequest { reason: string; requestId: string }
@@ -134,7 +137,7 @@ export interface NativeMeasurementPlugin {
   registerCredential?(req: RegisterCredentialRequest): Promise<RegisterCredentialResult>;
   handoffCredentials?(req: HandoffCredentialsRequest): Promise<HandoffCredentialsResult>;
   getMeasurementSnapshot(req: { sessionId: string }): Promise<MeasurementSnapshot>;
-  /** Android 전용: 최근 N초 원시 샘플 미리보기 */
+  /** 최근 N초 원시 샘플 미리보기(Android·iOS) */
   getRawPreview?(req: { seconds: number; points: number }): Promise<RawPreview>;
   dispatchLiveCommand(cmd: LiveCommand): Promise<DispatchLiveCommandResult>;
   stopMeasurement(req: StopMeasurementRequest): Promise<{ accepted: boolean }>;

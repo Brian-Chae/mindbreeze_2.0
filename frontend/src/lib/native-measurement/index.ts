@@ -44,7 +44,7 @@ export interface NativeStartWithCredentials {
   /** iOS CoreBluetooth peripheral UUID(= BLE deviceId). 현 iOS startMeasurement 는 받지 않아 optional 로만 전달한다(progress/t12-fe.md 'iOS 워커 요청') */
   peripheralId?: string;
   tokens: { accessToken: string; refreshToken: string };
-  /** Android: 시작 시점 활성 표준 모델(1회 pin 은 네이티브가 한다) */
+  /** 시작 시점 활성 표준 모델(1회 pin 은 네이티브가 한다) */
   model?: NativeModelPayload | null;
 }
 
@@ -183,6 +183,7 @@ export class NativeMeasurementFacade {
       started = await this.plugin.startMeasurement({
         sessionId: req.sessionId, credentialHandle: r.credentialHandle, configHash: req.configHash, requestId: req.requestId,
         ...(req.peripheralId ? { peripheralId: req.peripheralId } : {}),
+        ...(req.model ? { modelParams: req.model.modelParams, modelVersion: req.model.modelVersion } : {}),
       });
     } else {
       if (!this.plugin.handoffCredentials) throw new Error('native_method_unavailable');
@@ -236,7 +237,7 @@ export class NativeMeasurementFacade {
    * 미구현(UNIMPLEMENTED)·형식 불일치는 null 로 폴백한다.
    */
   async getRawPreview(platform: string, seconds = 4, points = 120): Promise<RawPreview | null> {
-    if (platform !== 'android' || !this.plugin.getRawPreview) return null;
+    if ((platform !== 'android' && platform !== 'ios') || !this.plugin.getRawPreview) return null;
     try {
       const r = await this.plugin.getRawPreview({ seconds, points });
       const ok = (a: unknown): a is number[] => Array.isArray(a) && a.every((v) => typeof v === 'number');
