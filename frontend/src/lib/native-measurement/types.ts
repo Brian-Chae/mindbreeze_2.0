@@ -98,10 +98,33 @@ export type BridgeEvent =
 
 export interface ListenerHandle { remove(): Promise<void> }
 
+/** iOS: 웹→native 1회 인계. 값은 Keychain 으로만 가고 결과로는 credentialHandle 만 돌아온다(bridge.schema RegisterCredential*) */
+export interface RegisterCredentialRequest { accountId: string; accessToken: string; refreshToken: string; apiBase: string }
+export interface RegisterCredentialResult { credentialHandle: string }
+/** Android: 웹→native 1회 인계(Keystore). 결과는 handoff 여부만 */
+export interface HandoffCredentialsRequest { accessToken: string; refreshToken: string }
+export interface HandoffCredentialsResult { handoff: boolean }
+/**
+ * Android 플러그인(T08b) 의 실제 startMeasurement 입력. 계약 StartMeasurementRequest(credentialHandle/configHash)와 다르다 —
+ * 토큰은 handoffCredentials 로 이미 넘어가 있어 핸들이 없다(T01/T08 정합 요청 대상).
+ */
+export interface AndroidStartMeasurementRequest {
+  sessionId: string;
+  apiBase: string;
+  socketBase: string;
+  requestId: string;
+  instanceId: string;
+  address?: string;
+}
+
 /** Capacitor 플러그인 `NativeMeasurement` (iOS/Android 네이티브가 구현) */
 export interface NativeMeasurementPlugin {
   getCapabilities(): Promise<Capabilities>;
-  startMeasurement(req: StartMeasurementRequest): Promise<StartMeasurementResult>;
+  startMeasurement(req: StartMeasurementRequest | AndroidStartMeasurementRequest): Promise<StartMeasurementResult>;
+  setNativeOwnership?(req: { enabled: boolean }): Promise<{ enabled: boolean }>;
+  setJSBandOwnership?(req: { owning: boolean }): Promise<{ accepted: boolean }>;
+  registerCredential?(req: RegisterCredentialRequest): Promise<RegisterCredentialResult>;
+  handoffCredentials?(req: HandoffCredentialsRequest): Promise<HandoffCredentialsResult>;
   getMeasurementSnapshot(req: { sessionId: string }): Promise<MeasurementSnapshot>;
   dispatchLiveCommand(cmd: LiveCommand): Promise<DispatchLiveCommandResult>;
   stopMeasurement(req: StopMeasurementRequest): Promise<{ accepted: boolean }>;

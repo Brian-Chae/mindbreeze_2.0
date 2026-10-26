@@ -263,8 +263,9 @@ describe('T06c — device.changed 합집합 reducer', () => {
 
   it('더 작은 generation 의 늦은 event 는 현재 stream 을 덮지 못한다', () => {
     let s = ready();
-    s = applyEvent(s, event('device', 'device.changed', '2', '1', { participant_id: PID, stream_id: STREAM2, generation: '9007199254740994', status: 'active', clock_uncertain: true, cutoff_code: null })).state;
-    s = applyEvent(s, event('device', 'device.changed', '3', '5', { participant_id: PID, stream_id: STREAM, generation: '9007199254740993', status: 'superseded', clock_uncertain: true, cutoff_code: null })).state;
+    // 2^53+1 과 2^53 은 Number 로 바꾸면 같은 값 — 문자열 u64 비교여야 늦은 event 를 버린다
+    s = applyEvent(s, event('device', 'device.changed', '2', '1', { participant_id: PID, stream_id: STREAM2, generation: '9007199254740993', status: 'active', clock_uncertain: true, cutoff_code: null })).state;
+    s = applyEvent(s, event('device', 'device.changed', '3', '5', { participant_id: PID, stream_id: STREAM, generation: '9007199254740992', status: 'superseded', clock_uncertain: true, cutoff_code: null })).state;
     expect(s.devices[PID]!.data).toMatchObject({ stream_id: STREAM2, status: 'active' });
   });
 });

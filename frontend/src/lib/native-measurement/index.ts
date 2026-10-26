@@ -9,7 +9,37 @@ import type {
   NativeMeasurementPlugin, QueueCounts, BlockedReason, StartMeasurementRequest, StartMeasurementResult,
 } from './types';
 
+/** 자격 인계 후 native 측정 시작(웹뷰는 토큰을 1회 넘기고, 이후 native 가 소켓·갱신을 소유한다) */
+export interface NativeStartWithCredentials {
+  platform: 'ios' | 'android';
+  sessionId: string;
+  requestId: string;
+  accountId: string;
+  apiBase: string;
+  socketBase: string;
+  configHash: string;
+  instanceId: string;
+  address?: string;
+  tokens: { accessToken: string; refreshToken: string };
+}
+
+const CREDENTIAL_HANDLE = /^[A-Za-z0-9_-]{16,128}$/;
+/** 키 이름 전체가 비밀값 필드인 경우만(예: pending_authorization 같은 정상 집계 필드는 제외) */
+const SECRET_KEY = /^(?:(?:access|refresh|id)_?token|token|secret|client_?secret|password|authorization)$/i;
+
+/** 결과·이벤트에 토큰 모양 키나 인계한 토큰 값이 섞여 있는지(값 자체는 어디에도 남기지 않는다) */
+function containsSecret(v: unknown, secrets: readonly string[], depth = 0): boolean {
+  if (depth > 8 || v === null || v === undefined) return false;
+  if (typeof v === 'string') return secrets.some((s) => s.length > 0 && v.includes(s));
+  if (Array.isArray(v)) return v.some((x) => containsSecret(x, secrets, depth + 1));
+  if (typeof v === 'object') {
+    return Object.entries(v as Record<string, unknown>).some(([k, x]) => SECRET_KEY.test(k) || containsSecret(x, secrets, depth + 1));
+  }
+  return false;
+}
+
 export type { BridgeEvent, Capabilities, MeasurementSnapshot, NativeMeasurementPlugin, QueueCounts, BlockedReason } from './types';
+export { decideMeasurementPath, type MeasurementPath } from '../measurement-web/measurement-path';
 export { describeArchiveStatus } from './archive-status';
 
 const EVENTS: Array<BridgeEvent['event']> = ['measurementUpdated', 'liveStateUpdated', 'commandAck', 'archiveStatus'];
@@ -36,6 +66,7 @@ export class NativeMeasurementFacade {
   private sessionId: string | null = null;
   private attachToken = 0;
   private startFlights = new Map<string, Promise<StartMeasurementResult>>();
+  private droppedSecrets = 0;
   private measurementCbs = new Set<Cb<MeasurementSnapshot>>();
   private liveCbs = new Set<Cb<LiveEvent>>();
   private ackCbs = new Set<Cb<CommandAck>>();
@@ -87,6 +118,54 @@ export class NativeMeasurementFacade {
     return p;
   }
 
+  /**
+   * 앱 측정 시작: setNativeOwnership → (iOS) registerCredential→credentialHandle / (Android) handoffCredentials → startMeasurement.
+   * 토큰은 인계 호출에만 싣고 start 요청·결과·이벤트 어디에도 싣지 않는다. native 가 토큰을 되돌리면 'credential_echo' 로 거절한다.
+   * 같은 requestId 는 한 번만 실행된다.
+   */
+  startWithCredentials(req: NativeStartWithCredentials): Promise<StartMeasurementResult> {
+    const inflight = this.startFlights.get(req.requestId);
+    if (inflight) return inflight;
+    const p = this.doStartWithCredentials(req);
+    this.startFlights.set(req.requestId, p);
+    p.catch(() => { this.startFlights.delete(req.requestId); });
+    return p;
+  }
+
+  private async doStartWithCredentials(req: NativeStartWithCredentials): Promise<StartMeasurementResult> {
+    const secrets = [req.tokens.accessToken, req.tokens.refreshToken];
+    const guard = <T>(v: T): T => {
+      if (containsSecret(v, secrets)) throw new Error('credential_echo');
+      return v;
+    };
+    if (this.plugin.setNativeOwnership) guard(await this.plugin.setNativeOwnership({ enabled: true }));
+    let started: StartMeasurementResult;
+    if (req.platform === 'ios') {
+      if (!this.plugin.registerCredential) throw new Error('native_method_unavailable');
+      const r = guard(await this.plugin.registerCredential({
+        accountId: req.accountId, accessToken: req.tokens.accessToken, refreshToken: req.tokens.refreshToken, apiBase: req.apiBase,
+      }));
+      if (!CREDENTIAL_HANDLE.test(r.credentialHandle)) throw new Error('invalid_credential_handle');
+      started = await this.plugin.startMeasurement({
+        sessionId: req.sessionId, credentialHandle: r.credentialHandle, configHash: req.configHash, requestId: req.requestId,
+      });
+    } else {
+      if (!this.plugin.handoffCredentials) throw new Error('native_method_unavailable');
+      const r = guard(await this.plugin.handoffCredentials({ accessToken: req.tokens.accessToken, refreshToken: req.tokens.refreshToken }));
+      if (!r.handoff) throw new Error('credential_handoff_failed');
+      started = await this.plugin.startMeasurement({
+        sessionId: req.sessionId, apiBase: req.apiBase, socketBase: req.socketBase, requestId: req.requestId, instanceId: req.instanceId,
+        ...(req.address ? { address: req.address } : {}),
+      });
+    }
+    return guard(started);
+  }
+
+  /** 토큰 모양 필드를 실어 버린 bridge 이벤트 수(진단용) */
+  droppedSecretEvents(): number {
+    return this.droppedSecrets;
+  }
+
   stop(req: { reason: string; requestId: string }): Promise<{ accepted: boolean }> {
     return this.plugin.stopMeasurement(req);
   }
@@ -106,6 +185,8 @@ export class NativeMeasurementFacade {
   }
 
   private onEvent(e: BridgeEvent): void {
+    // native 는 토큰을 이벤트로 되돌리면 안 된다(bridge 계약). 섞여 오면 화면에 전달하지 않고 버린다.
+    if (containsSecret(e.payload, [])) { this.droppedSecrets += 1; return; }
     const gen = BigInt(e.managerGeneration);
     if (this.generation !== null) {
       const cur = BigInt(this.generation);

@@ -26,7 +26,7 @@ export interface UseLiveV2Result {
   state: LiveState | null;
   /** effect 가 만든 뒤 state 로 노출 — 첫 렌더에서는 null 이다 */
   client: LiveClient | null;
-  /** 1초마다 갱신되는 시계 — 신선도(3초 지연/10초 stale)가 이벤트 없이도 화면에 반영된다 */
+  /** 1초마다 갱신되는 시계(서버 시각 추정) — 신선도 경과(3초 지연/10초 stale)가 이벤트 없이도 화면에 반영된다 */
   nowMs: number;
   /** READY 이면 REST 폴링이 불필요하다(페이지가 자기 폴링을 멈추는 기준) */
   ready: boolean;
@@ -68,9 +68,10 @@ export function useLiveV2({ sessionId, selfParticipantId, enabled, entryCredenti
 
   useEffect(() => {
     if (!active) return undefined;
-    const t = window.setInterval(() => setNowMs(Date.now()), 1000);
+    // observed_at_ms 는 서버 시계 기준이다 — 로컬 시계가 어긋나도 경과 판정이 틀어지지 않게 서버 시각 추정을 쓴다.
+    const t = window.setInterval(() => setNowMs(client ? client.serverNowMs() : Date.now()), 1000);
     return () => window.clearInterval(t);
-  }, [active]);
+  }, [active, client]);
 
   return {
     active,

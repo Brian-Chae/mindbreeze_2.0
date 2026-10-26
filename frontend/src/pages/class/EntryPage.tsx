@@ -381,6 +381,7 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
           maxParticipants={info.maxParticipants}
           linkbandMode={info.linkbandMode}
           liveV2={v2Flag ? liveV2 : null}
+          eegConsent={eegChoice === true}
         />
       </div>
     );

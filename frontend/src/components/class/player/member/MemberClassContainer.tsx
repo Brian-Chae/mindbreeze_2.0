@@ -25,6 +25,8 @@ import { isLiveProtocolV2Enabled } from '../../../../lib/session-live/live-flag'
 import type { UseLiveV2Result } from '../../../../lib/session-live/use-live-v2';
 import type { LiveClient } from '../../../../lib/session-live/live-client';
 import { useMetricBars } from '../../../../lib/session-live/metric-bars';
+import { useWebMeasurementV2 } from '../../../../lib/measurement-web/use-web-measurement';
+import { toBandReport } from '../../../../lib/measurement-web/band-report';
 import { ClassChatPanel } from '../../../chat/ClassChatPanel';
 import { LeaveConfirmModal } from '../../../player/LeaveConfirmModal';
 import { ClassOnboardingCoachmarks } from '../../ClassOnboardingCoachmarks';
@@ -53,6 +55,8 @@ interface MemberClassContainerProps {
   waitlisted?: boolean;
   /** SDD-246: v2 on 이면 EntryPage 가 만든 LiveClient/LiveState 하나를 받는다(없으면 v1 훅) */
   liveV2?: UseLiveV2Result | null;
+  /** SDD-246 T06c: 회차 EEG 수집 동의(true 일 때만 v2 웹 측정을 시작한다) */
+  eegConsent?: boolean;
 }
 
 const AI_ANALYZING_MS = 15_000;
@@ -112,7 +116,7 @@ function sendSignalV2(client: LiveClient): MemberClassViewProps['actions']['onSi
 
 export function MemberClassContainer({
   title, startedAt, durationMin, onLeave, sessionId, participantId, entryCredential, hostName = null,
-  locationType, participantMode, maxParticipants, linkbandMode, waitlisted = false, liveV2 = null,
+  locationType, participantMode, maxParticipants, linkbandMode, waitlisted = false, liveV2 = null, eegConsent = false,
 }: MemberClassContainerProps) {
   const v2On = isLiveProtocolV2Enabled() && liveV2 !== null;
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -199,6 +203,22 @@ export function MemberClassContainer({
   const bandRef = useRef(band);
   useEffect(() => {
     bandRef.current = band;
+  });
+
+  // SDD-246 T06c: v2 on + 웹 + 밴드 착용 + EEG 동의일 때만 WASM 코어 측정 → live:metric. 그 밖에는 아무 것도 만들지 않는다(현행 경로 유지).
+  const bandReport = useMemo(
+    () => toBandReport({ connectionState: band.connectionState, leadOff: band.leadOff, signalQuality: band.signalQuality, battery: band.battery }),
+    [band.connectionState, band.leadOff?.ch1, band.leadOff?.ch2, band.signalQuality, band.battery], // eslint-disable-line react-hooks/exhaustive-deps -- leadOff 는 값으로 비교
+  );
+  useWebMeasurementV2({
+    liveV2: v2On ? liveV2 : null,
+    sessionId,
+    selfParticipantId: participantId,
+    bandOptIn: linkbandMode !== 'none',
+    eegConsent,
+    bandConnected: band.connectionState === 'connected',
+    band: bandReport,
+    enabled: connectionsActive,
   });
 
   const [everConnected, setEverConnected] = useState(false);
