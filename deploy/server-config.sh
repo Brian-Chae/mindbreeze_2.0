@@ -19,6 +19,8 @@ log() { echo "[server-config] $*"; }
 # ── 1. 패키지·계정·livekit ───────────────────────────────────────────
 export DEBIAN_FRONTEND=noninteractive
 dpkg -s coturn >/dev/null 2>&1 || { apt-get update -y -qq; apt-get install -y -qq coturn; }
+# SDD-247: 네이티브 녹음(m4a) 병합·STT 변환에 ffmpeg 필요
+command -v ffmpeg >/dev/null 2>&1 || { apt-get update -y -qq; apt-get install -y -qq ffmpeg; }
 id mindbreeze >/dev/null 2>&1 || useradd --system --create-home --home-dir /home/mindbreeze --shell /usr/sbin/nologin mindbreeze
 install -d -o mindbreeze -g mindbreeze /opt/mindbreeze /opt/mindbreeze/releases /opt/mindbreeze/venvs /opt/mindbreeze/incoming /opt/mindbreeze/state
 install -d -m 0750 -o root -g mindbreeze /etc/mindbreeze

@@ -10,8 +10,10 @@ interface HostBackgroundSessionArgs {
   isRunning: boolean;
   /** 온라인 수업 여부 (location_type === 'online') */
   online: boolean;
+  /** 수업 음성 녹음 중 여부 — 녹음 중에는 오프라인 수업도 microphone 타입이 필요하다(백그라운드 마이크) */
+  recording?: boolean;
 }
 
-export function useHostBackgroundSession({ isHost, isLobby, isRunning, online }: HostBackgroundSessionArgs) {
-  return useBackgroundSession(isHost && (isLobby || isRunning), 'host', online);
+export function useHostBackgroundSession({ isHost, isLobby, isRunning, online, recording = false }: HostBackgroundSessionArgs) {
+  return useBackgroundSession(isHost && (isLobby || isRunning), 'host', online || recording);
 }

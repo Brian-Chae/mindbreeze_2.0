@@ -15,6 +15,7 @@ from app.core.ai_features import is_stt_enabled
 from app.config import settings
 from app.models.session import Session, SessionParticipant
 from app.models.record import SessionRecord, AudioChunk
+from app.services import audio_merge_service
 from app.services.session_authz import SessionAction, get_session_authorized
 
 logger = logging.getLogger(__name__)
@@ -122,7 +123,11 @@ def save_chunk(session_id: str, host_id: str, chunk_index: int, content: bytes, 
         }
 
     CHUNK_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
-    file_path = CHUNK_STORAGE_DIR / f"{s.id}_{chunk_index}_{uuid.uuid4().hex}.bin"
+    # SDD-247: 바이트 매직으로 형식 판별(mp4→.m4a, webm→.webm, 그 외→.bin). unknown 은 거부하지 않는다.
+    #   연속 webm 의 2번째 이후 청크는 EBML 헤더가 없어 unknown(.bin)이 정상이다.
+    fmt = audio_merge_service.sniff_format(content[:16])
+    ext = audio_merge_service.EXTENSIONS[fmt]
+    file_path = CHUNK_STORAGE_DIR / f"{s.id}_{chunk_index}_{uuid.uuid4().hex}{ext}"
     file_path.write_bytes(content)
 
     chunk = AudioChunk(
