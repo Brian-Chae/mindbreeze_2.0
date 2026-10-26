@@ -3,8 +3,9 @@ import XCTest
 
 final class FakeBand: BandControlling {
     var connects = 0, disconnects = 0
+    var lastExpected: UUID?
     weak var delegate: BandLinkDelegate?
-    func connect(expectedPeripheral: UUID?) { connects += 1 }
+    func connect(expectedPeripheral: UUID?) { connects += 1; lastExpected = expectedPeripheral }
     func disconnect() { disconnects += 1 }
 }
 final class FakeLive: LiveControlling {

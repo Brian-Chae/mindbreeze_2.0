@@ -90,11 +90,12 @@ public class NativeMeasurementPlugin: CAPPlugin, CAPBridgedPlugin {
         guard let sid = call.getString("sessionId"), let h = call.getString("credentialHandle"), let cfg = call.getString("configHash"), let rid = call.getString("requestId") else {
             call.reject("invalid_argument", "start"); return
         }
+        let pid = call.getString("peripheralId")   // 선택(하위호환): 웹뷰 BLE 로 고른 장치 UUID
         host.ensureManager()
         host.setHandle(h)
         host.queue.async { [host, weak self] in
             guard let m = host.manager else { call.reject("native_ownership_disabled", "native_ownership_disabled"); return }
-            do { call.resolve(try m.startMeasurement(sessionId: sid, credentialHandle: h, configHash: cfg, requestId: rid)) } catch { self?.fail(call, error) }
+            do { call.resolve(try m.startMeasurement(sessionId: sid, credentialHandle: h, configHash: cfg, requestId: rid, peripheralId: pid)) } catch { self?.fail(call, error) }
         }
     }
 
