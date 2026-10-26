@@ -84,6 +84,8 @@ export interface StartMeasurementRequest {
   credentialHandle: string;
   configHash: string;
   requestId: string;
+  /** iOS: BLE peripheral UUID(T12 요청 — iOS 플러그인이 아직 읽지 않으면 무시된다) */
+  peripheralId?: string;
 }
 export interface StartMeasurementResult { managerId: string; streamId: string; ownerGeneration: string }
 export interface StopMeasurementRequest { reason: string; requestId: string }

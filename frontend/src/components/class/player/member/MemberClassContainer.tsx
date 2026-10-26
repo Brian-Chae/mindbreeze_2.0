@@ -26,6 +26,10 @@ import type { UseLiveV2Result } from '../../../../lib/session-live/use-live-v2';
 import type { LiveClient } from '../../../../lib/session-live/live-client';
 import { useMetricBars } from '../../../../lib/session-live/metric-bars';
 import { useWebMeasurementV2 } from '../../../../lib/measurement-web/use-web-measurement';
+import { useNativeMeasurementV2 } from '../../../../lib/measurement-web/use-native-measurement';
+import { decideMeasurementPath } from '../../../../lib/measurement-web/measurement-path';
+import { isNativeMeasurementAvailable } from '../../../../lib/native-measurement';
+import { isBleSupported } from '../../../../lib/ble';
 import { toBandReport } from '../../../../lib/measurement-web/band-report';
 import { ClassChatPanel } from '../../../chat/ClassChatPanel';
 import { LeaveConfirmModal } from '../../../player/LeaveConfirmModal';
@@ -199,7 +203,14 @@ export function MemberClassContainer({
   }, [isAuthenticated, participantId, entryCredential, sessionId, v2ChatReady]);
 
   /* ───────── 밴드(useBand 단일 인스턴스) ───────── */
-  const band = useBand({ sessionId, participantId, enabled: connectionsActive, skipAuth: !isAuthenticated, entryCredential });
+  // SDD-246 T12: v2 수집 경로(web_wasm/native)가 활성이면 v1 feature 업로드를 끈다(이중 집계 방지). 판정은 band 연결 상태가 필요해 ref 로 읽는다.
+  const bandConnectedRef = useRef(false);
+  const v2Path = decideMeasurementPath({
+    v2: v2On && connectionsActive, native: isNativeMeasurementAvailable(), webBluetooth: isBleSupported(),
+    bandConnected: bandConnectedRef.current, eegConsent, bandOptIn: linkbandMode !== 'none',
+  });
+  const band = useBand({ sessionId, participantId, enabled: connectionsActive, skipAuth: !isAuthenticated, entryCredential, v1FeatureUpload: v2Path !== 'web_wasm' && v2Path !== 'native' });
+  bandConnectedRef.current = band.connectionState === 'connected';
   const bandRef = useRef(band);
   useEffect(() => {
     bandRef.current = band;
@@ -220,6 +231,10 @@ export function MemberClassContainer({
     band: bandReport,
     enabled: connectionsActive,
   });
+  const nativeM = useNativeMeasurementV2({
+    v2: v2On, sessionId, participantId, accountId: user?.id ?? null, bandOptIn: linkbandMode !== 'none', eegConsent,
+    bandConnected: band.connectionState === 'connected', enabled: connectionsActive,
+  });
 
   const [everConnected, setEverConnected] = useState(false);
   useEffect(() => {
@@ -229,12 +244,15 @@ export function MemberClassContainer({
   const isLive = band.connectionState === 'connected';
   const linkState = resolveBandLinkState({ bleConnected: isLive, lastEegAt: band.lastEegAt, nowMs });
   const metricsBlocked = band.deviceStatus === 'lead_off' || linkState === 'stale';
-  const snapshot = buildSnapshot(band, metricsBlocked, remoteEfficiency);
+  // native 소유 동안 6지표는 native snapshot.metrics(null 보존)로 표시한다.
+  const snapshot = nativeM.metrics ?? buildSnapshot(band, metricsBlocked, remoteEfficiency);
 
   // 1Hz 링버퍼 — readSnapshot 을 ref 로 안정화해 타이머를 1회만 만든다(서버 신호에 의한 리셋·샘플 누락 방지, SDD-127)
+  const nativeMetricsRef = useRef(nativeM.metrics);
+  nativeMetricsRef.current = nativeM.metrics;
   const readSnapshotRef = useRef<() => MetricSnapshot>(() => NO_METRICS);
   useEffect(() => {
-    readSnapshotRef.current = () => buildSnapshot(bandRef.current, metricsBlocked, remoteEfficiency);
+    readSnapshotRef.current = () => nativeMetricsRef.current ?? buildSnapshot(bandRef.current, metricsBlocked, remoteEfficiency);
   });
   useEffect(() => {
     const id = window.setInterval(() => {

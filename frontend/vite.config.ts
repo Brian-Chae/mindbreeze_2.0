@@ -54,6 +54,8 @@ export default defineConfig({
       copy(path.join(rootDir, 'public'));
     },
   }],
+  // SDD-246 T12: core.worker 는 동적 import(WASM 글루)를 쓰므로 ES 모듈 워커로 번들한다.
+  worker: { format: 'es' },
   resolve: {
     alias: {
       '@': path.resolve(rootDir, 'src'),

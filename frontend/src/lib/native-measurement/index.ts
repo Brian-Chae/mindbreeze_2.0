@@ -20,6 +20,8 @@ export interface NativeStartWithCredentials {
   configHash: string;
   instanceId: string;
   address?: string;
+  /** iOS CoreBluetooth peripheral UUID(= BLE deviceId). 현 iOS startMeasurement 는 받지 않아 optional 로만 전달한다(progress/t12-fe.md 'iOS 워커 요청') */
+  peripheralId?: string;
   tokens: { accessToken: string; refreshToken: string };
 }
 
@@ -148,6 +150,7 @@ export class NativeMeasurementFacade {
       if (!CREDENTIAL_HANDLE.test(r.credentialHandle)) throw new Error('invalid_credential_handle');
       started = await this.plugin.startMeasurement({
         sessionId: req.sessionId, credentialHandle: r.credentialHandle, configHash: req.configHash, requestId: req.requestId,
+        ...(req.peripheralId ? { peripheralId: req.peripheralId } : {}),
       });
     } else {
       if (!this.plugin.handoffCredentials) throw new Error('native_method_unavailable');
@@ -159,6 +162,32 @@ export class NativeMeasurementFacade {
       });
     }
     return guard(started);
+  }
+
+  /**
+   * 앱 회원 화면 진입점: 플랫폼 차이(iOS peripheralId / Android address=MAC)를 여기서 흡수한다.
+   * JS 밴드 소유를 먼저 놓는다(iOS setJSBandOwnership(false)) — 소유가 풀리지 않으면 시작하지 않고 'js_band_release_failed'.
+   */
+  async startForSession(a: {
+    platform: 'ios' | 'android'; sessionId: string; requestId: string; accountId: string; apiBase: string; socketBase: string;
+    instanceId: string; deviceId: string | null; tokens: { accessToken: string; refreshToken: string }; configHash?: string;
+  }): Promise<StartMeasurementResult> {
+    const inflight = this.startFlights.get(a.requestId);
+    if (inflight) return inflight;
+    const p = (async () => {
+      if (this.plugin.setJSBandOwnership) {
+        const r = await this.plugin.setJSBandOwnership({ owning: false });
+        if (!r.accepted) throw new Error('js_band_release_failed');
+      }
+      return this.doStartWithCredentials({
+        platform: a.platform, sessionId: a.sessionId, requestId: a.requestId, accountId: a.accountId, apiBase: a.apiBase,
+        socketBase: a.socketBase, configHash: a.configHash ?? 'linkband2-v1', instanceId: a.instanceId, tokens: a.tokens,
+        ...(a.deviceId ? (a.platform === 'android' ? { address: a.deviceId } : { peripheralId: a.deviceId }) : {}),
+      });
+    })();
+    this.startFlights.set(a.requestId, p);
+    p.catch(() => { this.startFlights.delete(a.requestId); });
+    return p;
   }
 
   /** 토큰 모양 필드를 실어 버린 bridge 이벤트 수(진단용) */
