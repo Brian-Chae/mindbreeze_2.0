@@ -13,6 +13,7 @@ public class NativeMeasurementPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "getCapabilities", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startMeasurement", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getMeasurementSnapshot", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getRawPreview", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "dispatchLiveCommand", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stopMeasurement", returnType: CAPPluginReturnPromise),
         // 계약 외 확장(T01 에 반영 요청): 기능 플래그 / 계정 scope 자격 인계
@@ -91,11 +92,12 @@ public class NativeMeasurementPlugin: CAPPlugin, CAPBridgedPlugin {
             call.reject("invalid_argument", "start"); return
         }
         let pid = call.getString("peripheralId")   // 선택(하위호환): 웹뷰 BLE 로 고른 장치 UUID
+        let modelParams = call.getString("modelParams"), modelVersion = call.getString("modelVersion")   // 활성 표준 모델(비밀 아님). 없으면 코호트
         host.ensureManager()
         host.setHandle(h)
         host.queue.async { [host, weak self] in
             guard let m = host.manager else { call.reject("native_ownership_disabled", "native_ownership_disabled"); return }
-            do { call.resolve(try m.startMeasurement(sessionId: sid, credentialHandle: h, configHash: cfg, requestId: rid, peripheralId: pid)) } catch { self?.fail(call, error) }
+            do { call.resolve(try m.startMeasurement(sessionId: sid, credentialHandle: h, configHash: cfg, requestId: rid, peripheralId: pid, modelParams: modelParams, modelVersion: modelVersion)) } catch { self?.fail(call, error) }
         }
     }
 
@@ -103,6 +105,14 @@ public class NativeMeasurementPlugin: CAPPlugin, CAPBridgedPlugin {
         host.queue.async { [host] in
             guard let m = host.manager else { call.reject("not_active", "not_active"); return }
             call.resolve(m.snapshot())
+        }
+    }
+
+    /// 기기 시트 원시 파형 미리보기(시트가 열려 있을 때만 JS 가 1초 폴링). 결과는 숫자 배열뿐 — 토큰·원문 바이트 없음. 측정 중이 아니면 빈 배열.
+    @objc func getRawPreview(_ call: CAPPluginCall) {
+        let points = min(max(call.getInt("points") ?? 120, 2), 500)
+        host.queue.async { [host] in
+            call.resolve(host.manager?.rawPreview(points: points) ?? ["eegFp1": [Double](), "eegFp2": [Double](), "ppgRed": [Double](), "ppgIr": [Double]()])
         }
     }
 

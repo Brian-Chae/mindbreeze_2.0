@@ -56,10 +56,13 @@ public final class MeasurementManager: BandLinkDelegate {
     private let band: BandControlling
     private let ownership: BandOwnership
     private let makeLive: (String) -> LiveControlling
-    private let makeEngine: (URL, StreamContext) throws -> MeasurementEngine
+    private let makeEngine: (URL, StreamContext, ModelPin?) throws -> MeasurementEngine
     private let scheduler: Scheduler
     private let monoUs: () -> UInt64
     private let profile: (device: String, algorithm: String, model: String)
+    /// 세션 단위 활성 표준 모델 pin(없으면 코호트 profile.model). capture.start·snapshot·envelope 가 같은 값을 쓴다.
+    private var pin: ModelPin?
+    private var modelVersion: String { pin?.modelVersion ?? profile.model }
     private let nowMs: () -> UInt64
     private let lock = NSRecursiveLock()
 
@@ -108,7 +111,7 @@ public final class MeasurementManager: BandLinkDelegate {
 
     public init(root: URL, band: BandControlling, ownership: BandOwnership,
                 makeLive: @escaping (String) -> LiveControlling,
-                makeEngine: @escaping (URL, StreamContext) throws -> MeasurementEngine,
+                makeEngine: @escaping (URL, StreamContext, ModelPin?) throws -> MeasurementEngine,
                 scheduler: Scheduler = DispatchScheduler(queue: DispatchQueue(label: "com.looxidlabs.mindbreeze2.measurement.manager")),
                 profile: (device: String, algorithm: String, model: String) = ("linkband2-v1", "web-ts-1", "b0-cohort-2"),
                 nowMs: @escaping () -> UInt64 = { MonotonicClock.wallMs() },
@@ -122,7 +125,8 @@ public final class MeasurementManager: BandLinkDelegate {
     // MARK: 시작·정지 (브리지 API)
 
     @discardableResult
-    public func startMeasurement(sessionId: String, credentialHandle: String, configHash: String, requestId: String, peripheralId: String? = nil) throws -> [String: Any] {
+    public func startMeasurement(sessionId: String, credentialHandle: String, configHash: String, requestId: String, peripheralId: String? = nil,
+                                  modelParams: String? = nil, modelVersion: String? = nil) throws -> [String: Any] {
         lock.lock(); defer { lock.unlock() }
         if let cur = self.requestId, cur == requestId, state != .idle, state != .closed {
             return startResult(replay: true)                       // 같은 requestId 는 새 수집을 시작하지 않는다
@@ -141,6 +145,8 @@ public final class MeasurementManager: BandLinkDelegate {
         streamId = nil; ownerGeneration = nil; participantId = nil; engine = nil; lastEnvelope = nil; blockedReason = nil
         bleGaps = []; openBleGapStart = nil; anchor = nil; needsRecoveryMark = false
         resetStreamRuntime()
+        // 활성 표준 모델 1회 pin: 세션 디렉터리의 pin 파일이 있으면 그것을 쓰고(도중 교체 금지), 없을 때만 새로 기록한다.
+        pin = ModelPin.loadOrCreate(file: sessionDir(sessionId).appendingPathComponent("model-pin.json"), rawParams: modelParams, version: modelVersion)
         archive = openArchive(sessionId)
         state = .arming
         let l = makeLive(sessionId); live = l; wire(l)
@@ -148,7 +154,7 @@ public final class MeasurementManager: BandLinkDelegate {
         persistActive()
         // expected_epoch 는 넣지 않는다 — LiveSession 이 보낼 때 서버 epoch 로 채운다("0" 고정이면 매번 epoch_mismatch).
         let cmd: [String: Any] = ["command_id": UUID().uuidString.lowercased(), "kind": "capture.start", "client_generation": String(generation),
-                                  "payload": ["device_profile": profile.device, "algorithm_version": profile.algorithm, "model_version": profile.model]]
+                                  "payload": ["device_profile": profile.device, "algorithm_version": profile.algorithm, "model_version": self.modelVersion]]
         captureStartCommand = cmd
         l.dispatch(command: cmd)
         band.connect(expectedPeripheral: self.peripheralId)
@@ -229,6 +235,13 @@ public final class MeasurementManager: BandLinkDelegate {
         }
     }
 
+    /// 기기 시트 원시 파형 미리보기. 측정 중이 아니면 빈 배열.
+    public func rawPreview(points: Int) -> [String: Any] {
+        lock.lock(); defer { lock.unlock() }
+        let p = engine?.rawPreview.preview(points: min(max(points, 2), 500))
+        return p?.dictionary ?? ["eegFp1": [Double](), "eegFp2": [Double](), "ppgRed": [Double](), "ppgIr": [Double]()]
+    }
+
     public var archiveQueue: ArchiveQueue? { lock.lock(); defer { lock.unlock() }; return archive }
     public func archiveFileURL(_ item: ArchiveItem) -> URL {
         lock.lock(); defer { lock.unlock() }
@@ -261,6 +274,7 @@ public final class MeasurementManager: BandLinkDelegate {
         requestId = a["requestId"] as? String; sessionId = sid; credentialHandle = a["credentialHandle"] as? String; configHash = a["configHash"] as? String
         peripheralId = (a["peripheralId"] as? String).flatMap(UUID.init(uuidString:))
         resetStreamRuntime()
+        pin = ModelPin.loadOrCreate(file: sessionDir(sid).appendingPathComponent("model-pin.json"), rawParams: nil, version: nil)
         deviceSeq = U64.parse(a["deviceSeq"]) ?? 0
         guard let cred = credentialHandle else { ownership.releaseNative(); return false }
         _ = cred
@@ -423,7 +437,7 @@ public final class MeasurementManager: BandLinkDelegate {
                                 clockAnchorId: clockAnchorId, clockUncertaintyMs: clockUncertaintyMs)
         let dir = sessionDir(sid)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        do { engine = try makeEngine(dir, ctx) } catch { return false }
+        do { engine = try makeEngine(dir, ctx, pin) } catch { return false }
         engine?.onFrame = { [weak self] env in self?.frameArrived(env) }
         if anchor == nil { anchor = (nowMs(), monoUs()) }
         return true
@@ -594,7 +608,7 @@ public final class MeasurementManager: BandLinkDelegate {
         return [
             "bridge_version": 1, "managerGeneration": String(generation), "seq": String(eventSeq), "sessionId": sessionId ?? "00000000-0000-4000-8000-000000000000",
             "state": state.rawValue, "blocked_reason": blockedReason ?? NSNull(), "streamId": streamId ?? NSNull(), "ownerGeneration": ownerGeneration.map(String.init) ?? NSNull(),
-            "versions": ["native_runtime": Self.nativeRuntimeVersion, "core": Self.coreVersion, "algorithm": profile.algorithm, "model": profile.model, "device_profile": profile.device],
+            "versions": ["native_runtime": Self.nativeRuntimeVersion, "core": Self.coreVersion, "algorithm": profile.algorithm, "model": modelVersion, "device_profile": profile.device],
             "metrics": metrics,
             "collection": ["band_state": bandState, "last_committed_sample_sequence": String(engine?.lastCommittedRawSequence ?? 0),
                            "counters": ["packets": ["eeg": String(c?.packets["eeg"] ?? 0), "ppg": String(c?.packets["ppg"] ?? 0), "acc": String(c?.packets["acc"] ?? 0)],

@@ -42,7 +42,7 @@ public final class MeasurementHost {
             let m = MeasurementManager(
                 root: root, band: link, ownership: ownership,
                 makeLive: { [unowned self] sid in self.makeLive(sessionId: sid) },
-                makeEngine: { dir, ctx in try MeasurementEngine(dir: dir, configJSON: Self.coreConfig, context: ctx) },
+                makeEngine: { dir, ctx, pin in try MeasurementEngine(dir: dir, configJSON: ModelPin.configJSON(pin), context: ctx, modelParamsJSON: pin?.paramsJSON) },
                 scheduler: DispatchScheduler(queue: queue))
             m.onBridgeEvent = { [weak self] e in self?.onBridgeEvent?(e) }
             // 사용자 정지·회차 종료(live:terminal)·stream ended 모두 봉인 직후 archive 업로드를 시작한다.
@@ -64,10 +64,6 @@ public final class MeasurementHost {
         bootstrap()
         queue.sync {}
     }
-
-    static let coreConfig = """
-    {"abi_version":1,"device_profile_version":"linkband2-v1","algorithm_version":"web-ts-1","model_version":"b0-cohort-2","model_hash":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","model_mode":"legacy_cohort","rates_hz":{"eeg":250,"ppg":50,"acc":30},"anchor":"last_sample_web_v1","acc_interval_profile":"rounded_33333us_v1"}
-    """
 
     // MARK: 자격·live
 

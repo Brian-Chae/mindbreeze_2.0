@@ -42,6 +42,10 @@ public final class MeasurementEngine {
     public var diskUsedBytes: UInt64 { lock.lock(); defer { lock.unlock() }; return raw.byteSize + feature.byteSize }
     public let diskLimitBytes: UInt64
     public var onFrame: (([String: Any]) -> Void)?
+    /// 기기 시트용 최근 원시 샘플. ingest 가 채운다.
+    public let rawPreview = RawPreviewBuffer()
+    /// 활성 표준 모델 params(JSON). 있으면 코어 생성/복원 직후 주입한다(체크포인트는 모델을 담지 않는다).
+    private let modelParamsJSON: String?
 
     private let dir: URL, configJSON: String, ctx: StreamContext
     /// 서버 anchor(capture.reanchor) 이후 바뀌는 시계 필드. 이후 생성되는 envelope 에만 적용한다(이미 영속된 창은 그대로).
@@ -61,7 +65,9 @@ public final class MeasurementEngine {
     private var gapJournal: AppendOnlyJournal
 
     public init(dir: URL, configJSON: String, context: StreamContext, checkpointEveryPackets: Int = 400,
-                diskLimitBytes: UInt64 = MeasurementEngine.defaultDiskLimit, journalSync: JournalSync = .full, crashHook: CrashHook? = nil) throws {
+                diskLimitBytes: UInt64 = MeasurementEngine.defaultDiskLimit, journalSync: JournalSync = .full, crashHook: CrashHook? = nil,
+                modelParamsJSON: String? = nil) throws {
+        self.modelParamsJSON = modelParamsJSON
         self.dir = dir; self.configJSON = configJSON; self.ctx = context; self.checkpointEvery = checkpointEveryPackets
         self.clockAnchorId = context.clockAnchorId; self.clockUncertaintyMs = min(max(context.clockUncertaintyMs, 0), 300_000)
         self.diskLimitBytes = diskLimitBytes; self.hook = crashHook
@@ -154,6 +160,7 @@ public final class MeasurementEngine {
             } else { recoveryUsedFullReplay = true }
         }
         if core == nil { core = try CoreBridge(configJSON: configJSON) }
+        if let m = modelParamsJSON { try core!.setModel(json: m) }
         // checkpoint 이후 raw 재생. feature/outbox 는 sequence 멱등이므로 중복 기록되지 않는다.
         let replayFrom = startSeq
         for r in rawRecords where r.sequence > replayFrom {
@@ -225,6 +232,7 @@ public final class MeasurementEngine {
         catch let e as CoreBridgeError { throw EngineError.core("\(e)") }
         counters.packets[Self.name(sensor), default: 0] += 1
         counters.samples[Self.name(sensor), default: 0] += UInt64(out.samples)
+        rawPreview.add(sensor: sensor, bytes: bytes)
         if sensor == .eeg, let t = out.extendedTicks { lastDeviceTicks = t }
         try fire(.afterCore)
         for f in out.frames { try persist(frame: f, replaying: false) }
