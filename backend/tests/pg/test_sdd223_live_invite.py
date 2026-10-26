@@ -171,7 +171,7 @@ def test_class_invited_notification_without_live_keeps_default(pg_session, monke
     intent = pg_session.query(ClassEffect).filter_by(class_id=cls.id, kind="class_invited").one()
     effects._deliver(pg_session, intent, NOW)
     (_, _, payload), = sent
-    assert payload["title"] == "명상 클래스 안내" and "session_id" not in payload["extra"]["params"]
+    assert payload["title"] == "클래스 초대" and "session_id" not in payload["extra"]["params"]
 
 
 def test_email_invite_body_has_entry_link(pg_session, monkeypatch):

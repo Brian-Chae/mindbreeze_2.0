@@ -111,6 +111,30 @@ def _recipients(db, cls, session, intent, now):
     }
 
 
+# 알림 종류별 구체 문구. 모호한 "변경 내용을 확인해 주세요"는 쓰지 않는다.
+_MESSAGES = {
+    "class_invited": ("클래스 초대", "{title} 클래스에 초대되었어요."),
+    "class_member_joined": ("새 회원 참여", "{title} 클래스에 새 회원이 참여했어요."),
+    "class_session_added": ("회차 추가", "{title} 클래스에 새 회차가 추가되었어요."),
+    "session_updated": ("회차 일시 변경", "{title} 클래스의 회차 일시가 변경되었어요."),
+    "session_cancelled": ("회차 취소", "{title} 클래스의 회차가 취소되었어요."),
+    "session_host_changed": ("진행자 변경", "{title} 클래스의 진행자가 변경되었어요."),
+    "session_host_assigned": ("진행자 배정", "{title} 클래스의 진행자로 배정되었어요."),
+    "session_host_needed": ("진행자 필요", "{title} 클래스에 진행자 지정이 필요해요."),
+    "session_host_released": ("진행자 해제", "{title} 클래스의 진행자가 해제되었어요."),
+    "session_host_transfer_requested": ("진행자 인계 요청", "{title} 클래스의 진행자 인계가 요청되었어요."),
+    "session_host_change_resolved": ("진행자 변경 처리", "{title} 클래스의 진행자 변경 요청이 처리되었어요."),
+    "class_waitlist_promoted": ("대기 순번 확정", "{title} 클래스에 참여할 수 있게 되었어요."),
+    "class_completed": ("클래스 종료", "{title} 클래스가 종료되었어요."),
+    "class_cancelled": ("클래스 취소", "{title} 클래스가 취소되었어요."),
+}
+
+
+def _message(kind, class_title):
+    title, body = _MESSAGES.get(kind, ("명상 클래스 안내", "{title} 클래스에 새 소식이 있어요."))
+    return title, body.format(title=class_title)
+
+
 def _deliver(db, intent, now):
     cls = db.query(Class).filter(Class.id == intent.class_id).first()
     if cls is None:
@@ -218,7 +242,7 @@ def _deliver(db, intent, now):
     target = "class" if intent.kind.startswith("class_") else "session"
     target_id = str(cls.id) if target == "class" else str(intent.session_id)
     instant_invite = intent.kind == "class_invited" and instant_session is not None
-    body = "클래스의 변경 내용을 확인해 주세요."
+    msg_title, body = _message(intent.kind, cls.title)
     if instant_invite:
         from app.config import settings
 
@@ -228,7 +252,7 @@ def _deliver(db, intent, now):
             intent.kind,
             recipient,
             {
-                "title": "클래스 초대" if instant_invite else "명상 클래스 안내",
+                "title": msg_title,
                 "body": body,
                 "extra": build_standard_extra(
                     intent.kind,
@@ -289,8 +313,8 @@ def _deliver(db, intent, now):
                     channel="push",
                     notification_id=notification.id if notification else None,
                     payload={
-                        "title": "명상 클래스 안내",
-                        "body": "곧 시작하는 회차의 변경 내용을 확인해 주세요.",
+                        "title": msg_title,
+                        "body": f"곧 시작하는 회차예요. {body}",
                         "deeplink": path,
                         "message_id": str(intent.id),
                     },
