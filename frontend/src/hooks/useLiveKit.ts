@@ -1,3 +1,4 @@
+import { userErrorMessage } from '../lib/api/user-error';
 import { useMobileSwipeProtection } from './use-mobile-swipe-protection';
 // LiveKit 토큰 발급 + 방 연결 훅
 // 세션 참여(join) 후 LiveKit 토큰을 받아 VideoConference에 전달
@@ -27,7 +28,8 @@ export function useLiveKit(sessionId: string | undefined) {
       const t = await getLiveKitToken(sessionId);
       setToken(t.livekit_token);
     } catch (e) {
-      setError((e as Error).message);
+      const text = userErrorMessage(e, '화상 연결에 실패했어요');
+      if (text) setError(text);
     } finally {
       setLoading(false);
     }

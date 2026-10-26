@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LiveClient } from '../lib/session-live/live-client';
 import type { LiveState } from '../lib/session-live/live-state';
 import { ApiError, tokenStorage } from '../lib/api/client';
+import { userErrorMessage } from '../lib/api/user-error';
 import { getEntryLiveKitToken, lowerEntryHand, raiseEntryHand } from '../lib/api/class-flow';
 import {
   getActiveSessionLiveSocket,
@@ -65,6 +66,13 @@ export function useMemberLiveKit({
   const raisingRef = useRef(false);
   const [raiseError, setRaiseError] = useState<string | null>(null);
 
+  /** 언마운트(종료 후 화면 전환) 뒤 늦게 도착한 응답·오류로 상태를 갱신하지 않는다 */
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   const connect = useCallback(async () => {
     if (!entryCredential || !participantId || !sessionId) return;
     setLoading(true);
@@ -87,10 +95,10 @@ export function useMemberLiveKit({
         setAttemptCount((c) => c + 1);
       } else {
         setNotReady(false);
-        setError((e as Error).message);
+        if (mountedRef.current) setError(userErrorMessage(e, '화상 연결에 실패했어요'));
       }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, [participantId, entryCredential, sessionId]);
 
@@ -177,7 +185,7 @@ export function useMemberLiveKit({
       await raiseEntryHand(sessionId, participantId, entryCredential);
     } catch (e) {
       setRaisedHand(false);
-      setRaiseError(e instanceof Error ? e.message : '손들기에 실패했습니다');
+      if (mountedRef.current) setRaiseError(userErrorMessage(e, '손들기에 실패했습니다'));
     } finally {
       raisingRef.current = false;
       setRaising(false);

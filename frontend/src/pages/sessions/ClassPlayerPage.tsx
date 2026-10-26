@@ -1,3 +1,4 @@
+import { userErrorMessage } from '../../lib/api/user-error';
 import { BiosignalRecordingStatus } from '../../lib/biosignal/recording-status';
 import type { RenderedMetrics } from '../../lib/biosignal/display-snapshot';
 import { toHostParticipant } from '../../components/class/player/host/host-live-model';
@@ -633,7 +634,7 @@ export default function ClassPlayerPage() {
         const res = await setParticipantSpeaking(id, participantId, granted);
         recordSpeaking(res.participant_id ?? participantId, res.speaking, res.raise_hand);
       } catch (e) {
-        setError(e instanceof Error ? e.message : '발언권 변경에 실패했습니다');
+        { const text = userErrorMessage(e, '발언권 변경에 실패했습니다'); if (text) setError(text); }
       } finally {
         setSpeakingBusyId(null);
       }
@@ -660,7 +661,7 @@ export default function ClassPlayerPage() {
       // 켜면 바로 펼쳐서 대화를 확인할 수 있게 한다
       if (value) setChatExpanded(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : '채팅 설정 변경에 실패했습니다');
+      { const text = userErrorMessage(e, '채팅 설정 변경에 실패했습니다'); if (text) setError(text); }
     } finally {
       setChatBusy(false);
     }
@@ -745,7 +746,7 @@ export default function ClassPlayerPage() {
       setLoadErrorKind(null);
     } catch (e) {
       if (!isCurrentRoute(id)) return;
-      setError(e instanceof Error ? e.message : '클래스를 불러오지 못했습니다');
+      { const text = userErrorMessage(e, '클래스를 불러오지 못했습니다'); if (text) setError(text); }
       setLoadErrorKind(deriveHostStateKind({ error: e, online: typeof navigator === 'undefined' ? undefined : navigator.onLine }));
     }
   }, [id, isCurrentRoute]);
@@ -956,7 +957,7 @@ export default function ClassPlayerPage() {
       setSession(updated);
       await refreshMetrics();
     } catch (e) {
-      setError(e instanceof Error ? e.message : '클래스 오픈에 실패했습니다');
+      { const text = userErrorMessage(e, '클래스 오픈에 실패했습니다'); if (text) setError(text); }
     } finally {
       setTransitioning(false);
     }
@@ -1014,7 +1015,7 @@ export default function ClassPlayerPage() {
         }
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : '클래스 시작에 실패했습니다');
+      { const text = userErrorMessage(e, '클래스 시작에 실패했습니다'); if (text) setError(text); }
     } finally {
       setTransitioning(false);
     }
@@ -1035,7 +1036,7 @@ export default function ClassPlayerPage() {
         navigate('/sessions');
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : '클래스 닫기에 실패했습니다');
+      { const text = userErrorMessage(e, '클래스 닫기에 실패했습니다'); if (text) setError(text); }
     } finally {
       setTransitioning(false);
     }
@@ -1148,8 +1149,8 @@ export default function ClassPlayerPage() {
       if (destination) navigate(destination, { replace: !leaveTo });
     } catch (e) {
       // SDD-101 D3: 종료 확정 실패 — 에러 + 재시도 CTA(미디어는 이미 stop 되어 있어 재시도 시 handleStop 생략됨)
-      setError((e as Error).message);
-      setEndFailed(true);
+      const text = userErrorMessage(e, '클래스 종료에 실패했습니다');
+      if (text) { setError(text); setEndFailed(true); }
     } finally {
       setTransitioning(false);
     }

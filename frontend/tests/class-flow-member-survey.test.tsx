@@ -98,7 +98,7 @@ describe('FM06b 화면', () => {
     const onSelect = vi.fn();
     await render(<SurveyStepView {...survey({ question: 1, onSelect })} />);
     await act(async () => { qa('[role="radio"]')[3]!.click(); });
-    expect(onSelect).toHaveBeenCalledWith('arousal', 4);
+    expect(onSelect).toHaveBeenCalledWith('arousal', 4, true);
     await render(<SurveyStepView {...survey({ question: 1, draft: { answers: { arousal: 4, valence: null, emotion: null }, note: '' }, onSelect })} />);
     expect(btn('다음')!.disabled).toBe(false);
     expect(qa<HTMLButtonElement>('[role="radio"]').map((r) => r.tabIndex)).toEqual([-1, -1, -1, 0, -1]);
