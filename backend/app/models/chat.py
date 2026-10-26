@@ -1,4 +1,4 @@
-"""채팅 모델 — ChatRoom, ChatMessage, ChatMessageRead, ChatReport, ChatBlock"""
+"""채팅 모델 — ChatRoom, ChatMessage, ChatMessageRead, ChatReport, ChatBlock, ChatFilterTerm"""
 
 import uuid
 from datetime import datetime
@@ -85,6 +85,8 @@ class ChatReport(Base):
         # 같은 신고자의 같은 operation 재전송은 새 행을 만들지 않는다(멱등).
         UniqueConstraint("reporter_id", "operation_key", name="uq_chat_reports_reporter_operation"),
         Index("ix_chat_reports_reported_user_id", "reported_user_id"),
+        # [MB261026][FIX] D4: 관리자 신고 목록(상태 필터 + 최신순)
+        Index("ix_chat_reports_status_created_at", "status", "created_at"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -104,9 +106,18 @@ class ChatReport(Base):
     # 증거 보존용 메시지 본문 사본(최대 500자). 개인정보 복제본이므로 탈퇴 삭제 대상에 포함한다.
     message_excerpt: Mapped[str | None] = mapped_column(Text, nullable=True)
     operation_key: Mapped[str] = mapped_column(String(100), nullable=False)
-    # 처리 상태: submitted(접수) → withdrawn(신고자 철회). 관리자 처리 상태(resolved 등)는 철회 불가.
+    # 처리 상태: submitted(접수) → reviewing(검토 중) → actioned(조치 완료) | dismissed(조치 없음 종결).
+    #   submitted 에서만 신고자가 withdrawn(철회)으로 바꿀 수 있다. 관리자 처리가 시작되면 철회 불가.
+    #   actioned 는 운영자가 별도로 조치했다는 기록일 뿐 — 자동 삭제·정지·차단은 하지 않는다.
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="submitted", server_default="submitted")
     withdrawn_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # [MB261026][FIX] D4 처리 추적: 접수 확인(처음 submitted 를 벗어난 시각)·1차 판단(종결 시각)·처리자·메모.
+    acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    handled_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    resolution_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -133,5 +144,23 @@ class ChatBlock(Base):
     )
     report_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("chat_reports.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ChatFilterTerm(Base):
+    """[MB261026][FIX] Apple 1.2 게시 필터 — 운영자가 관리하는 금칙어.
+
+    정규화(NFKC·소문자·공백/구분 기호 제거)한 값이 메시지 정규화 결과에 들어 있으면 전송을 막는다.
+    단어 목록은 코드·마이그레이션에 넣지 않는다(관리자 화면 또는 시드 스크립트로 등록).
+    """
+
+    __tablename__ = "chat_filter_terms"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    term: Mapped[str] = mapped_column(String(100), nullable=False)
+    normalized_term: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

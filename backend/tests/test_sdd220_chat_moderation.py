@@ -16,6 +16,12 @@ from app.models.notification_outbox import NotificationOutbox
 from tests.test_chat import _close_db, _link, _register, _test_db
 
 
+@pytest.fixture(autouse=True)
+def _moderation_notice_email(monkeypatch):
+    """[MB261026][FIX] D4: 신고 알림은 운영 전용 주소로만 간다(미설정 시 outbox 없음 — test_chat_report_admin V-40)."""
+    monkeypatch.setattr(settings, "moderation_notice_email", "moderation-test@example.invalid")
+
+
 def _post(client, room_id, who, text="안녕하세요"):
     return client.post(
         f"/api/v1/chat/rooms/{room_id}/messages",
@@ -81,7 +87,7 @@ def test_TS32_메시지_신고는_상호_차단과_운영_알림을_같이_만�
         assert str(blocks[0].user_low_id) < str(blocks[0].user_high_id)  # 정규화
         mails = db.query(NotificationOutbox).filter(NotificationOutbox.channel == "email").all()
         assert len(mails) == 1
-        assert mails[0].recipient == settings.signup_notice_email
+        assert mails[0].recipient == settings.moderation_notice_email
         assert mails[0].status == "pending"
         assert "문제 발언" not in str(mails[0].payload)  # 대화 내용은 메일에 싣지 않는다
     finally:

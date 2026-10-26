@@ -5,6 +5,7 @@ from app.config import settings
 from app.api.v1 import normalization
 from app.api.v1 import auth, client, client_portal, credential, dashboard, onboarding, org, org_public, session, chat, audio, video, records, reports, admin, notifications, signup_applications, research_export
 from app.api.v1 import class_audio
+from app.api.v1 import admin_chat_reports
 # SDD-214: 클래스·상담 읽기 API
 from app.api.v1 import classes, counseling, class_membership, class_guests, class_reports
 # SDD-188: AI 에이전트 채널(내담자 전용)
@@ -42,6 +43,8 @@ router.include_router(video.router)
 router.include_router(records.router)
 router.include_router(reports.router)
 router.include_router(admin.router)
+# [MB261026][FIX] D4: 채팅 신고 처리·금칙어 관리(플랫폼 관리자)
+router.include_router(admin_chat_reports.router)
 router.include_router(research_export.router)
 router.include_router(signup_applications.router)
 router.include_router(signup_applications.admin_router)

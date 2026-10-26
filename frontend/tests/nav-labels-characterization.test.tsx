@@ -144,7 +144,7 @@ describe('FE-NAV-01 사이드바 라벨·경로 골든(역할 4종)', () => {
     expect(sidebarEntries()).toEqual([
       ['/chat', '채팅'], ['/admin/data-center', '데이터 센터'], ['/notifications', '알림'], ['/settings', '설정'],
       ['/admin/orgs', '기관 관리'], ['/admin/applications', '가입 신청'], ['/admin/users', '상담사 관리'],
-      ['/admin/clients', '회원 관리'], ['/playground', '플레이그라운드'],
+      ['/admin/clients', '회원 관리'], ['/admin/chat-reports', '채팅 신고'], ['/playground', '플레이그라운드'],
     ]);
   });
   it('role=client prop 은 로그인 역할과 무관하게 회원 목록을 쓴다', async () => {

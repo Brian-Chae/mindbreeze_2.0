@@ -251,6 +251,15 @@ const CODE_MESSAGES: Record<string, string> = {
   schedule_conflict: '같은 시간에 겹치는 다른 클래스 일정이 있어요. 확인 후 다시 시도해 주세요.',
   stale_class: '다른 변경이 먼저 저장됐어요. 최신 내용을 불러온 뒤 다시 시도해 주세요.',
   stale_session: '회차가 변경됐어요. 최신 내용을 불러온 뒤 다시 시도해 주세요.',
+  // [MB261026][FIX] 채팅 게시 필터 · 관리자 신고 처리
+  CHAT_CONTENT_BLOCKED: '운영정책에 맞지 않는 표현이 있어 보낼 수 없어요. 내용을 고쳐 다시 보내 주세요.',
+  CHAT_FILTER_TERM_EXISTS: '이미 등록된 단어입니다.',
+  CHAT_FILTER_TERM_LIMIT: '금칙어는 최대 500개까지 등록할 수 있습니다.',
+  CHAT_FILTER_TERM_INVALID: '금칙어는 공백·기호를 뺀 2~50자여야 합니다.',
+  REPORT_CLOSED: '이미 판단이 끝난 신고입니다.',
+  REPORT_WITHDRAWN: '신고자가 철회한 신고입니다.',
+  INVALID_REPORT_TRANSITION: '이 상태로 바꿀 수 없습니다.',
+  RESOLUTION_NOTE_REQUIRED: '판단 내용을 메모로 남겨 주세요.',
 };
 
 export function formatErrorDetail(detail: unknown): string | null {

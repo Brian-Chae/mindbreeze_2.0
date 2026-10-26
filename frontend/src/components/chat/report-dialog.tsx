@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   CHAT_REPORT_CONTACT_EMAIL,
+  CHAT_REPORT_HANDLING_NOTICE,
   CHAT_REPORT_REASONS,
   reportChatUser,
   type ChatReportReason,
@@ -83,6 +84,7 @@ export function ReportDialog({ targetUserId, targetName, roomId, messageId, onCl
         {done ? (
           <div className="mt-3 space-y-3 text-sm mobile:text-mb-compact text-[#1F1F1F]">
             <p>이제 서로 메시지를 주고받을 수 없고, 상대의 기존 메시지도 보이지 않아요.</p>
+            <p>{CHAT_REPORT_HANDLING_NOTICE}</p>
             <p className="text-[#6F6F6F]">
               추가로 알리실 내용이 있으면{' '}
               <a href={`mailto:${CHAT_REPORT_CONTACT_EMAIL}`} className="text-[#5F0080] underline">

@@ -70,6 +70,8 @@ SESSIONS_SCOPE_KEEP = SESSIONS_SCOPE_KEEP | frozenset({
     "normalization_snapshots",  # SDD-244 M2: 전역 content-addressed 정규화 모델 snapshot(세션 비종속)
     "social_identities", "social_revoke_outbox", "account_deletion_ledger",
     "account_deletion_objects", "account_deletion_requests",
+    # [MB261026][FIX] 채팅 금칙어: 운영자가 관리하는 설정(users FK 만 참조)이라 세션 초기화로 지우지 않는다.
+    "chat_filter_terms",
 })
 
 

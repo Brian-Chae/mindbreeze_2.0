@@ -129,7 +129,7 @@ describe('TS32 신고 → 즉시 상호 차단 UI', () => {
     const state = useChatStore.getState();
     expect(state.messagesByRoom.room.map((m) => m.sender_id)).not.toContain(PEER);
     expect(state.rooms[0]).toMatchObject({ is_blocked: true, last_message: null, unread_count: 0 });
-    expect(document.querySelector('a[href^="mailto:"]')?.getAttribute('href')).toBe('mailto:brian.chae@looxidlabs.com');
+    expect(document.querySelector('a[href^="mailto:"]')?.getAttribute('href')).toBe('mailto:admin-mindbreeze@looxidlabs.com'); // [MB261026][FIX] 개인 주소 → 승인된 운영 이메일
     expect(document.body.textContent).not.toContain('내용-m1');
   });
 

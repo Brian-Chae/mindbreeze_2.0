@@ -173,6 +173,12 @@ class Settings(BaseSettings):
     # 클라이언트 입력으로 바꿀 수 없다.
     signup_notice_email: str = "brian.chae@looxidlabs.com"
 
+    # [MB261026][FIX] D4: 채팅 신고 운영 알림 전용 수신 주소. 값은 OPS 가 SSM 으로 넣는다(코드에 실주소 없음).
+    #   비어 있으면 메일 outbox 를 만들지 않고 경고 로그만 남긴다 — 신고는 관리자 화면(/admin/chat-reports)에서 확인.
+    moderation_notice_email: str = ""
+    # 신고 처리 기한(영업일)에서 뺄 휴일. 쉼표 구분 YYYY-MM-DD. 비면 주말만 뺀다(기한이 더 짧아지는 안전 측).
+    moderation_holidays: str = ""
+
     # S3
     s3_bucket: str = "mindbreeze-dev"
     s3_region: str = "ap-northeast-1"

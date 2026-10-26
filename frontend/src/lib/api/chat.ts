@@ -2,6 +2,7 @@
 
 import { apiClient, ApiError } from './client';
 import type { UserRole } from './auth';
+import { OPERATIONS_EMAIL } from '../legal-copy';
 
 export type ChatMessageType = 'text' | 'image' | 'file' | 'system';
 export type RoomType = 'direct' | 'session' | 'group';
@@ -203,8 +204,11 @@ export const CHAT_REPORT_REASONS: ReadonlyArray<{ value: ChatReportReason; label
   { value: 'other', label: '기타' },
 ];
 
-/** 신고·차단 문의를 받는 운영 이메일 */
-export const CHAT_REPORT_CONTACT_EMAIL = 'brian.chae@looxidlabs.com';
+/** 신고·차단 문의를 받는 운영 이메일 — 승인된 공개 문의 주소와 같다([MB261026][FIX] 개인 주소 노출 제거). */
+export const CHAT_REPORT_CONTACT_EMAIL = OPERATIONS_EMAIL;
+
+/** 신고 처리 기한 안내(D4 승인: 접수 확인 2영업일 · 1차 판단 5영업일). 약관 문구와 같은 약속이다. */
+export const CHAT_REPORT_HANDLING_NOTICE = '운영팀이 영업일 기준 2일 안에 접수를 확인하고, 5일 안에 1차 판단해요.';
 
 export interface ChatReportPayload {
   target_user_id: string;
@@ -223,6 +227,13 @@ export interface ChatReportResult {
 
 export const reportChatUser = (payload: ChatReportPayload): Promise<ChatReportResult> =>
   apiClient.post<ChatReportResult>('/chat/reports', payload);
+
+/** 서버 게시 필터가 운영정책 위반 표현으로 거부했는지(detail.code === 'CHAT_CONTENT_BLOCKED') — [MB261026][FIX] */
+export function isChatContentBlockedError(error: unknown): boolean {
+  if (!(error instanceof ApiError) || error.status !== 422) return false;
+  const data = error.data as { detail?: { code?: string } } | null;
+  return data?.detail?.code === 'CHAT_CONTENT_BLOCKED';
+}
 
 /** 서버가 차단 때문에 거부했는지(detail.code === 'CHAT_BLOCKED') */
 export function isChatBlockedError(error: unknown): boolean {
