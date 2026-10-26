@@ -287,7 +287,9 @@ await scenario('[클래스] (A) 비회원 입장: 4자리 코드 → 개인정�
   await p.getByText('정보를 입력해 주세요').first().waitFor({ timeout: 15000 });
   await p.fill('#fm-name', 'E2E-게스트');
   await p.getByRole('radio', { name: '여성' }).click();
-  await p.fill('#fm-birth', '1990.03.12');
+  // 비회원 생년월은 연도·월 다이얼(listbox)이다
+  await p.getByRole('listbox', { name: '출생 연도' }).getByRole('option', { name: '1990년', exact: true }).click();
+  await p.getByRole('listbox', { name: '출생 월' }).getByRole('option', { name: '3월', exact: true }).click();
   await p.fill('#fm-email', GUEST_EMAIL);
   await p.fill('#fm-email2', GUEST_EMAIL);
   await checkRecordingConsent(p);

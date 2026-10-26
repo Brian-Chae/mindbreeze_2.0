@@ -54,7 +54,7 @@ await client('다음 클래스 카드: 제목·설명 글자가 흰색(어두운
 await client('설정: 계정 정보 표시 및 카드 제목 중복 없음', async (p) => {
   const t = await expectText(p, '/app/profile', 'e2e-client@e2e.looxidlabs.com', '내 계정');
   const heads = await p.locator('h2,h3').allInnerTexts();
-  const dup = heads.map((h) => h.trim()).filter((h, i, a) => a.indexOf(h) !== i);
+  const dup = heads.map((h) => h.trim()).filter(Boolean).filter((h, i, a) => a.indexOf(h) !== i);
   if (dup.length) throw new Error(`카드 제목 중복: ${dup.join(',')}`);
 });
 await client('로그아웃 → 로그인 화면, 보호 페이지 재접근 차단', async (p) => {
@@ -108,7 +108,7 @@ await cou('설정: 코드·카드 제목 중복 없음', async (p) => {
   await expectText(p, '/settings', '내 계정');
   await expectText(p, '/clients/invite', 'E2E0C1'); // 상담사 코드는 회원 초대 화면에 표시된다
   await go(p, '/settings');
-  const heads = (await p.locator('h2,h3').allInnerTexts()).map((h) => h.trim());
+  const heads = (await p.locator('h2,h3').allInnerTexts()).map((h) => h.trim()).filter(Boolean);
   const dup = heads.filter((h, i, a) => a.indexOf(h) !== i);
   if (dup.length) throw new Error(`카드 제목 중복: ${dup.join(',')}`);
 });
@@ -124,7 +124,7 @@ await org('상담사 초대 폼 노출 (제출 안 함)', async (p) => { await e
 await org('내담자·세션·리포트 메뉴 로딩', async (p) => { for (const x of ['/clients', '/sessions', '/reports']) await expectText(p, x); });
 await org('설정: 계정 정보·카드 제목 중복 없음', async (p) => {
   await expectText(p, '/settings', 'E2E-기관관리자', '내 계정');
-  const heads = (await p.locator('h2,h3').allInnerTexts()).map((h) => h.trim());
+  const heads = (await p.locator('h2,h3').allInnerTexts()).map((h) => h.trim()).filter(Boolean);
   const dup = heads.filter((h, i, a) => a.indexOf(h) !== i);
   if (dup.length) throw new Error(`카드 제목 중복: ${dup.join(',')}`);
 });
