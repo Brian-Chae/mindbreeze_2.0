@@ -583,6 +583,10 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
     )
     _attach_parent(session, db)
     _add_session_with_code_retry(session, db)
+    if not getattr(payload, "is_template", False):
+        from app.services.session_live_legacy import pin_new_run_if_enabled
+
+        pin_new_run_if_enabled(db, session.id)  # SDD-246: 같은 트랜잭션에서 v2 고정(템플릿 제외)
 
     # SDD-028: 기본 run_id = session_id. 최초 실행의 회차 식별자로 자기 id 를 채운다.
     # 이후 "새 실행(명시적)"은 start_new_run 이 새 run_id 를 발급하고, pause/resume·이어하기는
@@ -741,6 +745,10 @@ def _clone_session_config(
     )
     _attach_parent(clone, db)
     _add_session_with_code_retry(clone, db)
+    if not is_template:
+        from app.services.session_live_legacy import pin_new_run_if_enabled
+
+        pin_new_run_if_enabled(db, clone.id)  # SDD-246: 복제 회차도 v2 고정(템플릿 제외)
     # SDD-028: 복제본도 새 실행 회차 — run_id = 자기 id.
     clone.run_id = clone.id
     return clone

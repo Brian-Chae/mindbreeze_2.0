@@ -1154,7 +1154,7 @@
         },
         "kind": {
           "const": "capture.renew",
-          "description": "인가: self"
+          "description": "인가: self. lease 유지 필수 명령: 서버 lease(30초)가 만료되면 metric 은 저장만 되고 live 에 투영되지 않는다. 수집 중에는 10초 주기로 반드시 보낸다."
         },
         "target_id": {
           "$ref": "common.schema.json#/definitions/Uuid"
@@ -1249,6 +1249,7 @@
               "$ref": "common.schema.json#/definitions/U64"
             },
             "monotonic_us": {
+              "description": "metric 의 window_start_us/window_end_us 와 같은 시간축(코어 창 시간축, μs)의 현재 값. 서버는 anchor_server_at(수신 시각) 에 (window_*_us − monotonic_us) 를 더해 창의 서버시각을 환산한다.",
               "$ref": "common.schema.json#/definitions/U64"
             }
           }

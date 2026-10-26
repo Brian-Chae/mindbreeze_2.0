@@ -146,6 +146,19 @@ def pin_session_protocol(db: DBSession, session_id: uuid.UUID, *, protocol: int 
     return ProtocolPin(session_id=session_id, protocol=chosen, origin=origin)
 
 
+def pin_new_run_if_enabled(db: DBSession, session_id: uuid.UUID) -> None:
+    """회차 생성 시점 v2 고정 — 모든 생성 경로(단건·클래스 회차·복제·반복 생성)가 공유한다.
+
+    플래그 off 면 아무것도 하지 않는다. 호출자의 트랜잭션 안에서 실행되므로 commit/rollback 하지 않는다
+    (생성과 pin 이 같이 commit 되거나 같이 사라진다). PostgreSQL 이 아니면(시험용 SQLite) 건너뛴다.
+    """
+    from app.schemas.session_live_v2 import live_protocol_v2_enabled
+
+    if not live_protocol_v2_enabled() or db.get_bind().dialect.name != "postgresql":
+        return
+    pin_session_protocol(db, uuid.UUID(str(session_id)), protocol=PROTOCOL_V2, commit=False)
+
+
 # ---------------------------------------------------------------------------
 # 클라이언트 capability 입장 규칙
 # ---------------------------------------------------------------------------

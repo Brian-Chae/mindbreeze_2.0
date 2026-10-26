@@ -42,6 +42,7 @@ logger = logging.getLogger(__name__)
 
 FRESH_MAX_MS = 5_000       # 서버 수신시각 − 창 종료 ≤ 5초 → fresh
 DELAYED_MAX_MS = 30_000    # ≤ 30초 → delayed, 초과 → stale
+FUTURE_TOLERANCE_MS = 2_000  # 창 종료가 서버시계보다 이만큼 넘게 미래면 시계/anchor 오류 → time_uncertain
 _GEN_SHIFT = 31            # entity_version = (generation << 31) | sequence  (sequence ≤ 2^31-1)
 
 
@@ -85,6 +86,8 @@ def freshness_of(stream: CaptureStream, end_at: datetime, now: datetime, anchore
     if stream.clock_uncertain or not anchored:
         return "time_uncertain"
     age_ms = (now - end_at).total_seconds() * 1000
+    if age_ms < -FUTURE_TOLERANCE_MS:  # 미래 창은 fresh 가 될 수 없다(anchor/시계 오류)
+        return "time_uncertain"
     if age_ms <= FRESH_MAX_MS:
         return "fresh"
     return "delayed" if age_ms <= DELAYED_MAX_MS else "stale"
