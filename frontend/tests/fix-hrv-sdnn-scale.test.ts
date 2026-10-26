@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AnalysisMetricsService } from '../src/lib/eeg/AnalysisMetricsService';
 import { StreamProcessor } from '../src/lib/eeg/StreamProcessor';
-import { resolveBodyScale } from '../src/components/reports/NarrativeSections';
+import { resolveBodyScale } from '../src/components/reports/body-scale';
 
 // 알려진 RR 열(평균 ~830ms, SDNN ≈ 40ms)로 박동 시각을 만들고, 호흡·기저선 드리프트가 큰 IR/RED 를 합성한다.
 const FS = 50;
