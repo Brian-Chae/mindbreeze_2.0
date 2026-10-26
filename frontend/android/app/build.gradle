@@ -137,11 +137,11 @@ dependencies {
     testImplementation "junit:junit:$junitVersion"
     implementation "androidx.core:core:$androidxCoreVersion"
     // SDD-246 T08: Rust 코어 C ABI 호출(JNA), native Socket.IO(v4 wire)·HTTP, 지연 재시도(WorkManager)
-    implementation 'net.java.dev.jna:jna:5.14.0@aar'
+    implementation 'net.java.dev.jna:jna:5.17.0@aar'
     implementation 'io.socket:socket.io-client:2.1.2'
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
     implementation 'androidx.work:work-runtime:2.9.1'
-    testImplementation 'net.java.dev.jna:jna:5.14.0'
+    testImplementation 'net.java.dev.jna:jna:5.17.0'
     testImplementation 'org.json:json:20250517'
     testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
