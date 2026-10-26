@@ -27,6 +27,7 @@ METRIC_UNITS: dict[str, str] = {
     "focus_raw": "index_raw", "focus_display": "score_0_100", "relaxation_raw": "index_raw",
     "relaxation_display": "score_0_100", "emotion_raw": "index_raw", "emotion_display": "score_0_100",
     "bpm": "beats_per_min", "respiration": "breaths_per_min", "sdnn": "ms",
+    "tna_raw": "index_raw",  # 선택(구 클라 미전송) — 리포트 두뇌 휴식 점수 입력
 }
 _METRIC_KEYS = frozenset({"value", "unit", "validity", "reason", "last_valid_sequence", "last_valid_observed_at_ms"})
 _ENVELOPE_KEYS = frozenset({

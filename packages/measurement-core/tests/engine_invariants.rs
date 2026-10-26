@@ -292,3 +292,19 @@ fn advance_emits_single_gap_frame_after_silence() {
     assert_eq!(g[0].metrics.focus_raw.validity, "gap");
     assert!(c.advance(last_arr + 9_000_000).is_empty(), "같은 공백에서 gap 프레임을 반복하지 않음");
 }
+
+#[test]
+fn tna_raw_is_emitted_as_index_raw() {
+    let (eeg, ppg) = data();
+    let mut c = Core::new(CoreConfig::default()).unwrap();
+    let a = run(&mut c, &eeg, &ppg, 25, 5, (0, 0));
+    let valid: Vec<_> = a.iter().filter(|f| f.metrics.tna_raw.value.is_some()).collect();
+    assert!(!valid.is_empty(), "tna_raw 가 한 번도 valid 가 아님");
+    for f in &valid {
+        assert_eq!(f.metrics.tna_raw.unit, "index_raw");
+        assert_eq!(f.metrics.tna_raw.validity, "valid");
+        assert!(f.metrics.tna_raw.value.unwrap().is_finite());
+    }
+    // 워밍업 구간은 null (0 치환 금지)
+    assert!(a.iter().any(|f| f.metrics.tna_raw.value.is_none()));
+}

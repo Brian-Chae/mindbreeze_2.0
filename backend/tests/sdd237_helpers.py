@@ -107,10 +107,15 @@ def start_ms(session) -> int:
 
 
 def add_windows(db, session, participant, n, *, start_offset=0, quality="valid", seg=None,
-                focus=2.0, relax=1.0, emo=0.5, hr=70.0, rr=14.0, sdnn=40.0, ms=None):
+                focus=2.0, relax=1.0, emo=0.5, hr=70.0, rr=14.0, sdnn=40.0, ms=None, tna=2.0, no_tna=False):
     """participant 에게 1초 간격 윈도우 n개를 넣는다. device_timestamp_ms = 수업 시작 + 오프셋."""
     from app.models.eeg_feature import EEGFeatureWindow
+    from app.models.normalization_model import NormalizationModel
 
+    # 이완도 = 두뇌 휴식(TNA 반전, 활성 모델 필수) — 모델이 없으면 TNA 파라미터만 가진 활성 모델을 심는다.
+    if db.query(NormalizationModel).filter(NormalizationModel.is_active.is_(True)).first() is None:
+        db.add(NormalizationModel(version=990, n_samples=1, is_active=True,
+                                  params={"totalNeuralActivity": {"m": 2.3252, "s": 2.3342}}))
     base_ms = start_ms(session)
     for i in range(n):
         idx = start_offset + i
@@ -119,7 +124,8 @@ def add_windows(db, session, participant, n, *, start_offset=0, quality="valid",
             user_id=participant.user_id, play_group_id=seg, window_index=idx, quality=quality,
             device_timestamp_ms=(base_ms + idx * 1000) if ms is None else ms + i * 1000,
             focus_index=_v(focus, i), relaxation_index=_v(relax, i), emotional_stability=_v(emo, i),
-            heart_rate=_v(hr, i), respiratory_rate=_v(rr, i), sdnn=_v(sdnn, i)))
+            heart_rate=_v(hr, i), respiratory_rate=_v(rr, i), sdnn=_v(sdnn, i),
+            total_neural_activity=None if no_tna else _v(tna, i)))
     db.commit()
 
 

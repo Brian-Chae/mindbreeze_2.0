@@ -102,7 +102,8 @@ def _feature_item(w: MetricWindow, end_at: datetime, anchored: bool) -> EEGFeatu
     return EEGFeatureItem(
         second_offset=w.sequence, timestamp=float(_ms(end_at)) if anchored else None, play_group_id=w.stream_id,
         focus_index=v("focus_raw"), relaxation_index=v("relaxation_raw"), emotional_stability=v("emotion_raw"),
-        heart_rate=v("bpm"), respiratory_rate=v("respiration"), sdnn=v("sdnn"), signal_quality=w.sqi,
+        heart_rate=v("bpm"), respiratory_rate=v("respiration"), sdnn=v("sdnn"), total_neural_activity=v("tna_raw"),
+        signal_quality=w.sqi,
         source_feature_alias=w.feature_hash, algorithm_version=w.algorithm_version[:40],
     )
 

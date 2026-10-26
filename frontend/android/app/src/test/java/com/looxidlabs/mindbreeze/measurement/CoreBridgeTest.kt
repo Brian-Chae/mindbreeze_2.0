@@ -39,8 +39,8 @@ class CoreBridgeTest {
         }
         // cargo run --example replay 로 얻은 기준값(T02 패리티): 149 프레임, 첫/마지막 feature_hash (fix-hrv-sdnn-scale: RR 필터 변경으로 마지막 hash 갱신)
         assertEquals(149, frames.size)
-        assertEquals("34239a58b2f8701b168848c10df50c3891b69af8cd4d95f74da4089eb74a3fa7", frames.first().getString("feature_hash"))
-        assertEquals("fdff5422202a8ef81af0cb7f3d52f41e2cb7695f28367a3785d644a7e9411406", frames.last().getString("feature_hash"))
+        assertEquals("640c1c46443774575887efa5c3fa4fcc05c747b7ffdc77e4373153e28b1660ea", frames.first().getString("feature_hash"))
+        assertEquals("35c98f8a606d8b8433022d3369cb6356205a745a76f673dda4123c111ba8994f", frames.last().getString("feature_hash"))
         val fin = core.close()
         assertEquals("149", fin.getJSONObject("final_sequences").getString("metric"))
         assertEquals("7eabba3da72b3796b608557ed08d89991e1d212f3d4dedf926cf107ce643d145", fin.getString("raw_sha256"))
