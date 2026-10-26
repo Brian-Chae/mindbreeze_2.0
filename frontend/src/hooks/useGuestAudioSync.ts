@@ -92,7 +92,13 @@ export function useGuestAudioSync({
     engineRef.current = track ? createAudioEngine(track) : null;
     setPlaying(false);
     setPositionSec(0);
+    const engine = engineRef.current;
+    const unsubscribe = engine?.subscribe(() => {
+      setBlocked(engine.isBlocked());
+      setPlaying(engine.isPlaying());
+    });
     return () => {
+      unsubscribe?.();
       engineRef.current?.dispose();
       engineRef.current = null;
     };
