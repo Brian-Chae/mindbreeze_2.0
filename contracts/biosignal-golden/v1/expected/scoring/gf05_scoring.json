@@ -1,0 +1,968 @@
+{
+ "cohort_backend": {
+  "emotional_stability": [
+   {
+    "x": -1.0,
+    "y": 0.0
+   },
+   {
+    "x": 0.0,
+    "y": 0.0
+   },
+   {
+    "x": 1e-09,
+    "y": 0.0
+   },
+   {
+    "x": 0.185214,
+    "y": 0.0
+   },
+   {
+    "x": 0.235213,
+    "y": 0.0
+   },
+   {
+    "x": 0.235214,
+    "y": 0.0
+   },
+   {
+    "x": 0.235215,
+    "y": 0.0
+   },
+   {
+    "x": 0.285214,
+    "y": 0.7
+   },
+   {
+    "x": 7.191375,
+    "y": 99.3
+   },
+   {
+    "x": 7.241374,
+    "y": 100.0
+   },
+   {
+    "x": 7.241375,
+    "y": 100.0
+   },
+   {
+    "x": 7.241376,
+    "y": 100.0
+   },
+   {
+    "x": 7.291375,
+    "y": 100.0
+   },
+   {
+    "x": 1000000000.0,
+    "y": 100.0
+   }
+  ],
+  "focus": [
+   {
+    "x": -1.0,
+    "y": 0.0
+   },
+   {
+    "x": 0.0,
+    "y": 0.0
+   },
+   {
+    "x": 1e-09,
+    "y": 0.0
+   },
+   {
+    "x": 0.331252,
+    "y": 0.0
+   },
+   {
+    "x": 0.381251,
+    "y": 0.0
+   },
+   {
+    "x": 0.381252,
+    "y": 0.0
+   },
+   {
+    "x": 0.381253,
+    "y": 0.0
+   },
+   {
+    "x": 0.431252,
+    "y": 15.3
+   },
+   {
+    "x": 0.65725,
+    "y": 84.7
+   },
+   {
+    "x": 0.707249,
+    "y": 100.0
+   },
+   {
+    "x": 0.70725,
+    "y": 100.0
+   },
+   {
+    "x": 0.707251,
+    "y": 100.0
+   },
+   {
+    "x": 0.75725,
+    "y": 100.0
+   },
+   {
+    "x": 3.135884,
+    "y": 100.0
+   },
+   {
+    "x": 3.185883,
+    "y": 100.0
+   },
+   {
+    "x": 3.185884,
+    "y": 100.0
+   },
+   {
+    "x": 3.185885,
+    "y": 100.0
+   },
+   {
+    "x": 3.235884,
+    "y": 97.9
+   },
+   {
+    "x": 5.558388,
+    "y": 2.1
+   },
+   {
+    "x": 5.608387,
+    "y": 0.0
+   },
+   {
+    "x": 5.608388,
+    "y": 0.0
+   },
+   {
+    "x": 5.608389,
+    "y": 0.0
+   },
+   {
+    "x": 5.658388,
+    "y": 0.0
+   },
+   {
+    "x": 1000000000.0,
+    "y": 0.0
+   }
+  ],
+  "null_input": {
+   "emotional_stability": null,
+   "focus": null,
+   "relaxation": null,
+   "stress": null
+  },
+  "relaxation": [
+   {
+    "x": -1.0,
+    "y": 0.0
+   },
+   {
+    "x": 0.0,
+    "y": 0.0
+   },
+   {
+    "x": 1e-09,
+    "y": 0.0
+   },
+   {
+    "x": 0.048243,
+    "y": 0.0
+   },
+   {
+    "x": 0.098242,
+    "y": 0.0
+   },
+   {
+    "x": 0.098243,
+    "y": 0.0
+   },
+   {
+    "x": 0.098244,
+    "y": 0.0
+   },
+   {
+    "x": 0.148243,
+    "y": 31.0
+   },
+   {
+    "x": 0.209726,
+    "y": 69.0
+   },
+   {
+    "x": 0.259725,
+    "y": 100.0
+   },
+   {
+    "x": 0.259726,
+    "y": 100.0
+   },
+   {
+    "x": 0.259727,
+    "y": 100.0
+   },
+   {
+    "x": 0.309726,
+    "y": 100.0
+   },
+   {
+    "x": 0.378846,
+    "y": 100.0
+   },
+   {
+    "x": 0.428845,
+    "y": 100.0
+   },
+   {
+    "x": 0.428846,
+    "y": 100.0
+   },
+   {
+    "x": 0.428847,
+    "y": 100.0
+   },
+   {
+    "x": 0.478846,
+    "y": 96.5
+   },
+   {
+    "x": 1000000000.0,
+    "y": -70033651039.4
+   }
+  ],
+  "stress": [
+   {
+    "x": -1.0,
+    "y": 100.0
+   },
+   {
+    "x": 0.0,
+    "y": 100.0
+   },
+   {
+    "x": 1e-09,
+    "y": 100.0
+   },
+   {
+    "x": 0.411857,
+    "y": 100.0
+   },
+   {
+    "x": 0.461856,
+    "y": 100.0
+   },
+   {
+    "x": 0.461857,
+    "y": 100.0
+   },
+   {
+    "x": 0.461858,
+    "y": 100.0
+   },
+   {
+    "x": 0.511857,
+    "y": 99.4
+   },
+   {
+    "x": 8.670813,
+    "y": 0.6
+   },
+   {
+    "x": 8.720812,
+    "y": 0.0
+   },
+   {
+    "x": 8.720813,
+    "y": 0.0
+   },
+   {
+    "x": 8.720814,
+    "y": 0.0
+   },
+   {
+    "x": 8.770813,
+    "y": 0.0
+   },
+   {
+    "x": 1000000000.0,
+    "y": 0.0
+   }
+  ]
+ },
+ "sigmoid": {
+  "SIGMOID_C": 1.7145034475475829,
+  "half_rounding": [
+   {
+    "key": "focusIndex",
+    "model": {
+     "direction": 1,
+     "m": 0.0,
+     "s": 1.0
+    },
+    "raw": 0.04562182586258849,
+    "score": 1,
+    "target_percent": 0.5
+   },
+   {
+    "key": "focusIndex",
+    "model": {
+     "direction": 1,
+     "m": 0.0,
+     "s": 1.0
+    },
+    "raw": 0.08709971312779574,
+    "score": 2,
+    "target_percent": 1.5
+   },
+   {
+    "key": "focusIndex",
+    "model": {
+     "direction": 1,
+     "m": 0.0,
+     "s": 1.0
+    },
+    "raw": 0.988402204069299,
+    "score": 50,
+    "target_percent": 49.5
+   },
+   {
+    "key": "focusIndex",
+    "model": {
+     "direction": 1,
+     "m": 0.0,
+     "s": 1.0
+    },
+    "raw": 1.011733881088909,
+    "score": 50,
+    "target_percent": 50.5
+   },
+   {
+    "key": "focusIndex",
+    "model": {
+     "direction": 1,
+     "m": 0.0,
+     "s": 1.0
+    },
+    "raw": 21.9193326686883,
+    "score": 100,
+    "target_percent": 99.5
+   }
+  ],
+  "model": {
+   "cognitiveLoad": {
+    "direction": -1,
+    "m": 1.1,
+    "s": 0.4
+   },
+   "emotionalStability": {
+    "direction": 1,
+    "m": 0.5,
+    "s": 0.9
+   },
+   "faa": {
+    "direction": -1,
+    "m": 0,
+    "s": 0.6
+   },
+   "focusIndex": {
+    "direction": 1,
+    "m": 0.3,
+    "s": 0.8
+   },
+   "relaxationIndex": {
+    "direction": 1,
+    "m": -1.4,
+    "s": 0.5
+   },
+   "stressIndex": {
+    "direction": -1,
+    "m": 0.2,
+    "s": 0.9
+   },
+   "totalNeuralActivity": {
+    "direction": 1,
+    "m": 5.0,
+    "s": 2.0
+   }
+  },
+  "vectors": [
+   {
+    "key": "focusIndex",
+    "raw": 0.0,
+    "score": 1
+   },
+   {
+    "key": "focusIndex",
+    "raw": 1e-09,
+    "score": 1
+   },
+   {
+    "key": "focusIndex",
+    "raw": 0.05,
+    "score": 1
+   },
+   {
+    "key": "focusIndex",
+    "raw": 0.1,
+    "score": 1
+   },
+   {
+    "key": "focusIndex",
+    "raw": 0.25,
+    "score": 3
+   },
+   {
+    "key": "focusIndex",
+    "raw": 0.3,
+    "score": 4
+   },
+   {
+    "key": "focusIndex",
+    "raw": 0.5,
+    "score": 11
+   },
+   {
+    "key": "focusIndex",
+    "raw": 1.0,
+    "score": 34
+   },
+   {
+    "key": "focusIndex",
+    "raw": 1.0000001,
+    "score": 34
+   },
+   {
+    "key": "focusIndex",
+    "raw": 2.0,
+    "score": 70
+   },
+   {
+    "key": "focusIndex",
+    "raw": 2.7182818284590455,
+    "score": 82
+   },
+   {
+    "key": "focusIndex",
+    "raw": 5.0,
+    "score": 94
+   },
+   {
+    "key": "focusIndex",
+    "raw": 10.0,
+    "score": 99
+   },
+   {
+    "key": "focusIndex",
+    "raw": 148.4131591025766,
+    "score": 100
+   },
+   {
+    "key": "focusIndex",
+    "raw": 1000.0,
+    "score": 100
+   },
+   {
+    "key": "focusIndex",
+    "raw": -0.5,
+    "score": null
+   },
+   {
+    "key": "focusIndex",
+    "raw": null,
+    "score": null
+   },
+   {
+    "key": "relaxationIndex",
+    "raw": 0.0,
+    "score": 1
+   },
+   {
+    "key": "relaxationIndex",
+    "raw": 1e-09,
+    "score": 1
+   },
+   {
+    "key": "relaxationIndex",
+    "raw": 0.05,
+    "score": 1
+   },
+   {
+    "key": "relaxationIndex",
+    "raw": 0.1,
+    "score": 4
+   },
+   {
+    "key": "relaxationIndex",
+    "raw": 0.25,
+    "score": 51
+   },
+   {
+    "key": "relaxationIndex",
+    "raw": 0.3,
+    "score": 66
+   },
+   {
+    "key": "relaxationIndex",
+    "raw": 0.5,
+    "score": 92
+   },
+   {
+    "key": "relaxationIndex",
+    "raw": 1.0,
+    "score": 99
+   },
+   {
+    "key": "relaxationIndex",
+    "raw": 1.0000001,
+    "score": 99
+   },
+   {
+    "key": "relaxationIndex",
+    "raw": 2.0,
+    "score": 100
+   },
+   {
+    "key": "relaxationIndex",
+    "raw": 2.7182818284590455,
+    "score": 100
+   },
+   {
+    "key": "relaxationIndex",
+    "raw": 5.0,
+    "score": 100
+   },
+   {
+    "key": "relaxationIndex",
+    "raw": 10.0,
+    "score": 100
+   },
+   {
+    "key": "relaxationIndex",
+    "raw": 148.4131591025766,
+    "score": 100
+   },
+   {
+    "key": "relaxationIndex",
+    "raw": 1000.0,
+    "score": 100
+   },
+   {
+    "key": "relaxationIndex",
+    "raw": -0.5,
+    "score": null
+   },
+   {
+    "key": "relaxationIndex",
+    "raw": null,
+    "score": null
+   },
+   {
+    "key": "stressIndex",
+    "raw": 0.0,
+    "score": 100
+   },
+   {
+    "key": "stressIndex",
+    "raw": 1e-09,
+    "score": 100
+   },
+   {
+    "key": "stressIndex",
+    "raw": 0.05,
+    "score": 100
+   },
+   {
+    "key": "stressIndex",
+    "raw": 0.1,
+    "score": 99
+   },
+   {
+    "key": "stressIndex",
+    "raw": 0.25,
+    "score": 95
+   },
+   {
+    "key": "stressIndex",
+    "raw": 0.3,
+    "score": 94
+   },
+   {
+    "key": "stressIndex",
+    "raw": 0.5,
+    "score": 85
+   },
+   {
+    "key": "stressIndex",
+    "raw": 1.0,
+    "score": 59
+   },
+   {
+    "key": "stressIndex",
+    "raw": 1.0000001,
+    "score": 59
+   },
+   {
+    "key": "stressIndex",
+    "raw": 2.0,
+    "score": 28
+   },
+   {
+    "key": "stressIndex",
+    "raw": 2.7182818284590455,
+    "score": 18
+   },
+   {
+    "key": "stressIndex",
+    "raw": 5.0,
+    "score": 6
+   },
+   {
+    "key": "stressIndex",
+    "raw": 10.0,
+    "score": 2
+   },
+   {
+    "key": "stressIndex",
+    "raw": 148.4131591025766,
+    "score": 1
+   },
+   {
+    "key": "stressIndex",
+    "raw": 1000.0,
+    "score": 1
+   },
+   {
+    "key": "stressIndex",
+    "raw": -0.5,
+    "score": null
+   },
+   {
+    "key": "stressIndex",
+    "raw": null,
+    "score": null
+   },
+   {
+    "key": "totalNeuralActivity",
+    "raw": 0.0,
+    "score": 1
+   },
+   {
+    "key": "totalNeuralActivity",
+    "raw": 1e-09,
+    "score": 1
+   },
+   {
+    "key": "totalNeuralActivity",
+    "raw": 0.05,
+    "score": 1
+   },
+   {
+    "key": "totalNeuralActivity",
+    "raw": 0.1,
+    "score": 1
+   },
+   {
+    "key": "totalNeuralActivity",
+    "raw": 0.25,
+    "score": 1
+   },
+   {
+    "key": "totalNeuralActivity",
+    "raw": 0.3,
+    "score": 1
+   },
+   {
+    "key": "totalNeuralActivity",
+    "raw": 0.5,
+    "score": 1
+   },
+   {
+    "key": "totalNeuralActivity",
+    "raw": 1.0,
+    "score": 1
+   },
+   {
+    "key": "totalNeuralActivity",
+    "raw": 1.0000001,
+    "score": 1
+   },
+   {
+    "key": "totalNeuralActivity",
+    "raw": 2.0,
+    "score": 2
+   },
+   {
+    "key": "totalNeuralActivity",
+    "raw": 2.7182818284590455,
+    "score": 3
+   },
+   {
+    "key": "totalNeuralActivity",
+    "raw": 5.0,
+    "score": 5
+   },
+   {
+    "key": "totalNeuralActivity",
+    "raw": 10.0,
+    "score": 9
+   },
+   {
+    "key": "totalNeuralActivity",
+    "raw": 148.4131591025766,
+    "score": 50
+   },
+   {
+    "key": "totalNeuralActivity",
+    "raw": 1000.0,
+    "score": 84
+   },
+   {
+    "key": "totalNeuralActivity",
+    "raw": -0.5,
+    "score": null
+   },
+   {
+    "key": "totalNeuralActivity",
+    "raw": null,
+    "score": null
+   },
+   {
+    "key": "faa",
+    "raw": 0.0,
+    "score": 100
+   },
+   {
+    "key": "faa",
+    "raw": 0.1,
+    "score": 98
+   },
+   {
+    "key": "faa",
+    "raw": -0.1,
+    "score": 98
+   },
+   {
+    "key": "faa",
+    "raw": 0.4161,
+    "score": 72
+   },
+   {
+    "key": "faa",
+    "raw": 0.6,
+    "score": 50
+   },
+   {
+    "key": "faa",
+    "raw": -0.6,
+    "score": 50
+   },
+   {
+    "key": "faa",
+    "raw": 0.8,
+    "score": 29
+   },
+   {
+    "key": "faa",
+    "raw": 1.5,
+    "score": 1
+   },
+   {
+    "key": "faa",
+    "raw": 3.0,
+    "score": 1
+   },
+   {
+    "key": "faa",
+    "raw": null,
+    "score": null
+   },
+   {
+    "key": "cognitiveLoad",
+    "raw": 0.0,
+    "score": 100
+   },
+   {
+    "key": "cognitiveLoad",
+    "raw": 1e-09,
+    "score": 100
+   },
+   {
+    "key": "cognitiveLoad",
+    "raw": 0.05,
+    "score": 100
+   },
+   {
+    "key": "cognitiveLoad",
+    "raw": 0.1,
+    "score": 100
+   },
+   {
+    "key": "cognitiveLoad",
+    "raw": 0.25,
+    "score": 100
+   },
+   {
+    "key": "cognitiveLoad",
+    "raw": 0.3,
+    "score": 100
+   },
+   {
+    "key": "cognitiveLoad",
+    "raw": 0.5,
+    "score": 100
+   },
+   {
+    "key": "cognitiveLoad",
+    "raw": 1.0,
+    "score": 99
+   },
+   {
+    "key": "cognitiveLoad",
+    "raw": 1.0000001,
+    "score": 99
+   },
+   {
+    "key": "cognitiveLoad",
+    "raw": 2.0,
+    "score": 85
+   },
+   {
+    "key": "cognitiveLoad",
+    "raw": 2.7182818284590455,
+    "score": 61
+   },
+   {
+    "key": "cognitiveLoad",
+    "raw": 5.0,
+    "score": 10
+   },
+   {
+    "key": "cognitiveLoad",
+    "raw": 10.0,
+    "score": 1
+   },
+   {
+    "key": "cognitiveLoad",
+    "raw": 148.4131591025766,
+    "score": 1
+   },
+   {
+    "key": "cognitiveLoad",
+    "raw": 1000.0,
+    "score": 1
+   },
+   {
+    "key": "cognitiveLoad",
+    "raw": -0.5,
+    "score": null
+   },
+   {
+    "key": "cognitiveLoad",
+    "raw": null,
+    "score": null
+   },
+   {
+    "key": "emotionalStability",
+    "raw": 0.0,
+    "score": 1
+   },
+   {
+    "key": "emotionalStability",
+    "raw": 1e-09,
+    "score": 1
+   },
+   {
+    "key": "emotionalStability",
+    "raw": 0.05,
+    "score": 1
+   },
+   {
+    "key": "emotionalStability",
+    "raw": 0.1,
+    "score": 1
+   },
+   {
+    "key": "emotionalStability",
+    "raw": 0.25,
+    "score": 3
+   },
+   {
+    "key": "emotionalStability",
+    "raw": 0.3,
+    "score": 4
+   },
+   {
+    "key": "emotionalStability",
+    "raw": 0.5,
+    "score": 9
+   },
+   {
+    "key": "emotionalStability",
+    "raw": 1.0,
+    "score": 28
+   },
+   {
+    "key": "emotionalStability",
+    "raw": 1.0000001,
+    "score": 28
+   },
+   {
+    "key": "emotionalStability",
+    "raw": 2.0,
+    "score": 59
+   },
+   {
+    "key": "emotionalStability",
+    "raw": 2.7182818284590455,
+    "score": 72
+   },
+   {
+    "key": "emotionalStability",
+    "raw": 5.0,
+    "score": 89
+   },
+   {
+    "key": "emotionalStability",
+    "raw": 10.0,
+    "score": 97
+   },
+   {
+    "key": "emotionalStability",
+    "raw": 148.4131591025766,
+    "score": 100
+   },
+   {
+    "key": "emotionalStability",
+    "raw": 1000.0,
+    "score": 100
+   },
+   {
+    "key": "emotionalStability",
+    "raw": -0.5,
+    "score": null
+   },
+   {
+    "key": "emotionalStability",
+    "raw": null,
+    "score": null
+   }
+  ]
+ },
+ "source": {
+  "backend_constants_sha256": "bb600a2d1020c714a4cb0468e422ab27ea388377ad60812432d249f7da941051",
+  "constants_version": 2,
+  "note": "legacy_cohort(backend normalize_*)와 active_sigmoid 는 mode 가 다르므로 서로 비교하지 않는다.",
+  "pipeline_version": "v2-morlet7-linear-geomean",
+  "provisional": true
+ }
+}

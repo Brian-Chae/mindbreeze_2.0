@@ -1,0 +1,439 @@
+{
+  "manifest_version": 1,
+  "golden_set": "biosignal-golden/v1",
+  "generated_by": "tools/build_manifest.py",
+  "status": {
+    "G1_real_golden": "NOT_SATISFIED",
+    "reason": "동의된 실측 raw(정상/접촉불량/운동·PPG 저품질/재연결, 정상 30분 ≥3건)가 아직 확보·검증되지 않았다. 아래 합성 fixture 통과는 G1 통과가 아니다.",
+    "G1_remaining": [
+      "GF03 실측 raw 세트(비식별 동의, arrival schedule 포함) 수집 — 정상 30분 ≥3 + 실패 사례 각각",
+      "firmware/명세로 헤더 tick = 첫 샘플 vs 마지막 샘플 anchor 의미 교차 확인(D09)",
+      "iOS/Android/WASM 3 플랫폼 실행 결과 비교(T02·T07·T08 이후, T11 독립 실행)",
+      "native 음성 off·잠금 30분 spike(T07/T08)는 이 manifest 범위가 아님"
+    ],
+    "synthetic_only": true
+  },
+  "classification": {
+    "GF01": "독립 산술 — 완료(합성 바이트, 정답은 손계산/다른 구현)",
+    "GF02": "합성 — 완료(clock 규칙 reference 포함)",
+    "GF03": "실측 — 미확보. synth/ 는 GF03 대역 대체가 아닌 oracle 구동용 합성 입력",
+    "GF04": "부분 — RSA 0.25Hz 합성 PPG 포함. RR boundary·누적 59/60/61초·flat/noise·NaN 전용 벡터는 T02 RED 시 추가(소유: T01 후속)",
+    "GF05": "완료 — backend 독립 Python 스코어링 vs TS sigmoid exact. legacy_cohort 와 active_sigmoid 분리"
+  },
+  "tick_clock": {
+    "hz": 32768,
+    "header": "uint32 little endian (EEG/PPG/ACC 모두)",
+    "wrap_bits": 32
+  },
+  "packet_rules": {
+    "eeg": {
+      "sample_bytes": 7,
+      "layout": "leadoff(1: bit0=ch1, bit2=ch2) + ch1 BE signed24 + ch2 BE signed24",
+      "uv": "signed*4.033/12/(2^23-1)*1e6",
+      "min_len": 8,
+      "rate_hz": 250
+    },
+    "ppg": {
+      "sample_bytes": 6,
+      "layout": "red BE uint24 + ir BE uint24 (헤더는 little endian)",
+      "min_len": 8,
+      "rate_hz": 50
+    },
+    "acc": {
+      "sample_bytes": 6,
+      "layout": "x,y,z LE int16",
+      "g": "raw*2/32768",
+      "min_len": 10,
+      "rate_hz": 30
+    },
+    "strict": "(len-4) % sample_bytes != 0 이면 invalid_remainder, 최소 길이 미만이면 invalid_too_short, 헤더 4바이트 미만이면 invalid_header_short. 원문은 보관하고 분석에서 제외. (공식 SDK 는 나머지 바이트를 조용히 버린다)"
+  },
+  "clock_rules": {
+    "per_sensor_independent_origin": true,
+    "wrap": "32bit 확장: 이전 raw 대비 (raw-prev) mod 2^32 가 2^31 미만이고 raw<prev 이면 wrap",
+    "duplicate_window_ticks": 65536,
+    "duplicate": "역행 또는 동일 tick 이 2초(65536 tick) 이내: 동일 tick+동일 payload hash=duplicate, 동일 tick+다른 payload=conflict(원문 보존), 그 외=out_of_order. 모두 분석 제외",
+    "reset": "2초 초과 역행 → 새 segment(reset_new_segment)",
+    "forward_gap": "10분(19660800 tick) 초과 전진 → 새 segment(forward_gap_new_segment), 보간하지 않음",
+    "anchor": "v1 profile = 헤더가 패킷의 마지막 샘플(현 웹, D09). 원 device tick 은 항상 저장. SDK 는 첫 샘플 — expected 에 두 의미 offset 을 모두 기록",
+    "acc_interval": "현 웹 profile 33333µs 반올림. 새 rational 보간과 같은 버전으로 섞지 않는다"
+  },
+  "oracle": {
+    "runner": "oracle/run-oracle.ts (vitest, fake timers, base_ms=1760000000000)",
+    "canonical_filter_path": "biquad",
+    "canonical_expected_dir": "expected/oracle",
+    "command": "(cd frontend && npx vitest run --config ../contracts/biosignal-golden/v1/oracle/vitest.oracle.config.mjs)  # ORACLE_FILTER 기본=biquad(정본)",
+    "legacy_command": "(cd frontend && ORACLE_FILTER=legacy_fallback npx vitest run --config ../contracts/biosignal-golden/v1/oracle/vitest.oracle.config.mjs)",
+    "regenerate_command": "ORACLE_WRITE=1 을 붙여 두 모드 각각 실행  # 감독 승인 변경에서만",
+    "stages": [
+      "decoded",
+      "clock",
+      "eeg_psd_bandpower",
+      "eeg_raw_indices",
+      "ppg_peaks_rr",
+      "hrv_sdnn_respiration",
+      "display",
+      "acc"
+    ],
+    "stage_hashes": {
+      "decoded": {
+        "count": 4500,
+        "sha256": "36a8c6fb068a21107104a382b8fa6d98e97bdb2ecb2a6b1b0db076ce1a478fe6"
+      },
+      "clock": {
+        "count": 4500,
+        "sha256": "5dccd5f3ec2941d5bd10a8f0397c6f1b6f56f599ba9e2313d6da44879522e741"
+      },
+      "eeg_psd_bandpower": {
+        "count": 140,
+        "sha256": "ab4e27e3855e1c632eb21fc8df2b323a6231ea4322a9c0434b764246daecf2bc"
+      },
+      "eeg_raw_indices": {
+        "count": 140,
+        "sha256": "614322ece8a555735f496465d4dcb455ec5e48f05128111800b2d7c909f3f088"
+      },
+      "ppg_peaks_rr": {
+        "count": 1491,
+        "sha256": "0280b411ee88015a0f20e5dabb45234364b86dd5bf39faa0311fb9e850f907ef"
+      },
+      "hrv_sdnn_respiration": {
+        "count": 1491,
+        "sha256": "e51b7cdf8364a2e61ef62a18e82ec490e75f763ea4ecdc6704e0c2edb76e188f"
+      },
+      "display": {
+        "count": 140,
+        "sha256": "4c1230028b3f02cffe42cc01f4e7e9ef2edec2309e1cd729306004dbcf8d49ee"
+      },
+      "acc": {
+        "count": 1491,
+        "sha256": "a026c952b07d0321f7d16bdb9421a149a57e352b8072863bcd0dd4e35461c799"
+      }
+    },
+    "input": {
+      "stream_sha256": "99a9c75f850a7edf78d37230fcaf7140034d2171e8e2fbab5c83118ab6b55e27",
+      "schedule_sha256": "6e82d4ba705527abe080371de5618ebb0c7aac67f2292f29747891a05ac0cfa2"
+    },
+    "meta": {
+      "filter_mode": "biquad",
+      "fallback_warnings": 0,
+      "packets": 4500,
+      "eeg_emissions": 140,
+      "ppg_emissions": 1491,
+      "base_ms": 1760000000000
+    },
+    "legacy_fallback": {
+      "expected_dir": "expected/legacy_fallback",
+      "status": "NON_CANONICAL — 제품 번들과 다른 필터 경로(1극 HP/LP·이동평균). 이전 expected 를 이름만 바꿔 보존. T02 의 기준으로 쓰지 않는다.",
+      "stage_hashes": {
+        "decoded": {
+          "count": 4500,
+          "sha256": "36a8c6fb068a21107104a382b8fa6d98e97bdb2ecb2a6b1b0db076ce1a478fe6"
+        },
+        "clock": {
+          "count": 4500,
+          "sha256": "5dccd5f3ec2941d5bd10a8f0397c6f1b6f56f599ba9e2313d6da44879522e741"
+        },
+        "eeg_psd_bandpower": {
+          "count": 140,
+          "sha256": "bb6aab31a93e3d9410039ed1b70338d34515d697bc1fd7076f1e57c18797c414"
+        },
+        "eeg_raw_indices": {
+          "count": 140,
+          "sha256": "26e24e15a61239275533e22e61988a5fe52a6851dacd354a4d606fa066d71940"
+        },
+        "ppg_peaks_rr": {
+          "count": 1491,
+          "sha256": "a27a7a7998bcfeb9e597b275d49f7b4c60bbeff12d8d3cb0207983ffb4cc62c9"
+        },
+        "hrv_sdnn_respiration": {
+          "count": 1491,
+          "sha256": "7d9e9cd065135bbe1cf81586f41f10821ae691087b9b5468546a40484e731311"
+        },
+        "display": {
+          "count": 140,
+          "sha256": "3f396d53323f9ad9d3a351ee295ebbabe1c399e3adbbf41fc693ca9aa8937a03"
+        },
+        "acc": {
+          "count": 1491,
+          "sha256": "a026c952b07d0321f7d16bdb9421a149a57e352b8072863bcd0dd4e35461c799"
+        }
+      },
+      "meta": {
+        "filter_mode": "legacy_fallback",
+        "fallback_warnings": 3542,
+        "packets": 4500,
+        "eeg_emissions": 140,
+        "ppg_emissions": 1491,
+        "base_ms": 1760000000000
+      }
+    },
+    "filter_path_evidence": {
+      "cause": "biquadjs package.json main=dist/BiquadFilters.js(IIFE, export 없음), module=dist/BiquadFilters.esm.js(export{makeBandpassFilter,makeNotchFilter,...}). vitest 기본 해석은 main → named import undefined → TS try/catch fallback.",
+      "product_bundle": "vite build --mode development(2026-10-26) 산출물 assets/useBand-*.js: applyNotchFilter 가 biquad 인스턴스(applyFilter 가 b0..b2,a1,a2 직접형 II 전치 구현)를 사용, fallbackNotchFilter 는 catch 경로로만 존재. 즉 제품은 진짜 biquad 사용.",
+      "oracle_fix": "vitest.oracle.config.mjs resolve.alias biquadjs → dist/BiquadFilters.esm.js (frontend/src 무수정). 시험이 named export 해석과 fallback 경고 0 건을 검증하고, legacy 모드는 fallback 경고>0 을 검증한다.",
+      "impact_on_numbers": "EEG 밴드파워·raw index 와 PPG RR/HR 가 달라진다(예: focusIndex 샘플점 0.055→0.266, 100초대 HR 105→134). 정본은 biquad."
+    },
+    "hash_method": "sha256(canonical JSON: 키 순서 보존, NaN/±Infinity/-0 는 문자열 토큰)",
+    "no_rust_generated_expected": true
+  },
+  "gf04": {
+    "cases": "expected/gf04/cases.json (독립 Python 기대값 16건: 누적 58~62s, RR 199/200/2000/2001, 최소박동 29/30, SDNN 합 29970/30000, 분모 N, 최근60, 버퍼120)",
+    "degenerate": "expected/gf04/ppg_degenerate.json (flat/noise/NaN/zeros — 기존 TS 거동 기록, oracle 특성)",
+    "ts_findings": [
+      "flat/zeros PPG: heartRate 0 이지만 sqi_overall=100(완벽 품질로 보고) — 유효 신호가 아닌데 품질 100",
+      "NaN 포함 PPG: sqi_overall=NaN, filteredData 에 NaN 전파(threw=false) — 0/null 로 격리하지 않음",
+      "noise PPG: 박동이 없는데 RR 16개·HR 113 산출 — 저품질 게이트 부재"
+    ],
+    "policy": "위 결함 후보는 이식 차이로 숨기지 않는다. 새 코어가 null/invalid 로 바꾸려면 algorithm_version 증가 + 골든 승인 필요(plan §5.2)."
+  },
+  "oracle_divergences": {
+    "truncated": {
+      "packets/gf02_truncated/001_eeg.bin": {
+        "strict": "invalid_remainder",
+        "ts_samples": 3,
+        "ts_threw": false
+      },
+      "packets/gf02_truncated/005_ppg.bin": {
+        "strict": "invalid_remainder",
+        "ts_samples": 1,
+        "ts_threw": false
+      },
+      "packets/gf02_truncated/008_acc.bin": {
+        "strict": "invalid_remainder",
+        "ts_samples": 1,
+        "ts_threw": false
+      }
+    },
+    "meaning": "기존 TS 파서는 나머지 바이트가 있는 패킷을 floor 로 일부 샘플만 내고 조용히 받아들인다. v1 계약은 invalid_remainder 로 분리하고 원문 보존이다 — T02 는 strict 를 따르고, 이 차이는 '이식 차이'로 숨기지 않고 감독이 profile 변경으로 확정한다.",
+    "duplicates_conflicts_out_of_order": "TS(isDuplicatePacket)는 2초 이내 역행/동일 tick 패킷을 0샘플로 거른다 — conflict 의 원문 보관 여부는 TS 가 하지 않으므로 T02 가 추가(분석 출력은 동일)."
+  },
+  "scoring": {
+    "file": "expected/scoring/gf05_scoring.json",
+    "legacy_cohort": "backend eeg_metrics.normalize_* (사다리꼴/선형, 반올림 1자리) — 점 벡터 71개",
+    "active_sigmoid": "backend normalization_score.sigmoid_score == frontend eegSigmoidScore.sigmoidScore (정수, JS half-up) — 점 벡터 112개 + half 경계 5개",
+    "mode_rule": "같은 mode·model 에서 대응 함수만 비교. TS 실시간 코호트(eegScore.ts 선형)와 backend 코호트(trapezoid)는 정의가 달라 같은 숫자를 기대하지 않는다.",
+    "no_composite_score": "meditation_total_score 등 종합점수는 새 live schema·리포트에 노출하지 않는다(계약 schema 가 거절)."
+  },
+  "sources": {
+    "oracle_ts_eeg": {
+      "files": 29,
+      "tree_sha256": "ff55c85b2981e74f834dba29f093a11b55f1721168972a20d65e27ba6e39ce86"
+    },
+    "backend_scoring": {
+      "backend/app/services/eeg_metrics.py": "17ed7b1e80c5b139a26b7d70a84e520f806494946f830b511ea5ad6e0fc98a07",
+      "backend/app/services/normalization_score.py": "29c20ebcf84b5dd7ba2cba86f8fa6b62cb903874f21ab2934d42b7b27a069f4a",
+      "backend/app/services/normalization_constants.json": "bb600a2d1020c714a4cb0468e422ab27ea388377ad60812432d249f7da941051"
+    },
+    "source_commit_base": "60365fbaaf02954ba154631032bba9123cec7673",
+    "haru": {
+      "repo_path": "/Volumes/Looxid SSD/looxid/repository/haru_band_app",
+      "commit": "dec498634975ac63be7c931c4e04e2830955b018",
+      "constants_v2_path": "specs/040-meditation-metrics-redesign/cohort/constants_v2.json",
+      "constants_v2_last_commit": "e60a3e2c050ec669fb0a6dba3cc59cdaede74666",
+      "constants_v2_sha256": "bb600a2d1020c714a4cb0468e422ab27ea388377ad60812432d249f7da941051",
+      "equals_backend_constants": true,
+      "note": "HARU 작업트리는 로컬 clone 이며 commit 은 읽은 시점의 HEAD. constants_v2.json 은 backend 상수 파일과 바이트 동일."
+    },
+    "sdk_device_py": {
+      "path": "/Volumes/Looxid SSD/looxid/repository/link_band_sdk/python_core/app/core/device.py",
+      "sha256": "7abd13319fddc688c478d0e158b85af93268a0334969192502fe818686558022"
+    }
+  },
+  "toolchain": {
+    "node": "v26.10.0",
+    "python_for_generators": "stdlib only (3.9+)",
+    "python_for_scoring": "backend venv 3.11 (읽기 전용 import)",
+    "vitest": "5.0.2",
+    "biquadjs": "1.1.0"
+  },
+  "add_real_fixture_procedure": [
+    "1. 대상: 동의서가 있는 테스트 참가자(고객 DB·운영 데이터 사용 금지). 기기/펌웨어/앱 build, OS, 착용 상태를 기록한다.",
+    "2. 수집: 앱 BLE 콜백의 원 바이트를 도착 monotonic µs 와 함께 그대로 저장(packets/real/<id>/NNNN_<sensor>.bin 또는 단일 stream.bin + schedule.json). 바이트를 가공·재정렬하지 않는다.",
+    "3. 비식별: 참가자 식별자 제거, 파일명은 무작위 id. 원문 repository 반입이 부적절하면 암호화 artifact 의 sha256+보관 위치 reference 만 manifest.real_fixtures 에 기록한다.",
+    "4. 분류: 정상(≥30분 ×3), 접촉불량, 운동, PPG 저품질, 재연결(tick reset) 각각 최소 1건. scenario.json 에 구간 라벨을 사람이 기록한다(알고리즘 출력으로 라벨 생성 금지).",
+    "5. expected: oracle/run-oracle.ts 를 해당 stream 으로 구동(runOracle(streamDir))해 단계 hash 를 생성하고, GF01 방식의 독립 산술(Python/표준 라이브러리)로 decoded 단계를 교차 확인한다. Rust(T02) 결과로 expected 를 만들지 않는다.",
+    "6. 불일치는 단계별로 resolve(TS 결함 vs 규칙 vs 산술 오류)하고 결정을 oracle_divergences 와 specs 문서에 남긴다. 감독 승인 후 manifest 를 재생성한다.",
+    "7. firmware/명세로 anchor 의미(첫 vs 마지막 샘플)를 확정해 tick_clock.anchor 를 갱신한다. 변경 시 algorithm_version 증가와 골든 재인증.",
+    "8. HARU 기준 commit/상수 hash 를 sources.haru 에 갱신하고, 3 플랫폼 실행(T11)을 evidence 에 기록한 뒤에만 G1 을 충족으로 표시한다."
+  ],
+  "real_fixtures": [],
+  "files": {
+    "consumers/decode-conformance.test.mjs": "03a4b9487b9373957d8b86daee5c15b452dca4864178f8fc399af77f04cc0756",
+    "expected/gf01_acc_signed16.json": "1fc316a53c750909a46ed068d026c7fa3139e9b44331045cb2d4541fa63322c4",
+    "expected/gf01_eeg_signed24_leadoff.json": "2ebda46c4f3d99c98a5b567d013d69698810b6f27be4e594813df558b2d6a869",
+    "expected/gf01_ppg_header_endian_probe.json": "1a2da27bf54880e049887753020371963fe7a487299702127405c10007f04111",
+    "expected/gf01_ppg_header_le_1s.json": "c9461d81c58b2dc57cc11e3138c32d4e33948f6e206baa132c24236b8a5f2bbe",
+    "expected/gf02_duplicate_conflict_order.json": "d65893763f37456cec9a7a7a9efd42d3ac28167d05ab1238ad22cceaf56703a4",
+    "expected/gf02_multisensor_origin.json": "0057ee8030d01d3ff5dccac72a5c4d86636ce44a36d221110738935c6c26951d",
+    "expected/gf02_reset_segment.json": "e28123f4bff195c063c0404ed6b2f9cc40bd9a37aa9e1e408aebc095ccc42e38",
+    "expected/gf02_truncated.json": "40c9f8a0d56cc67e969d5ae5f00c678a99c7a9ffe30fc11bf4e630d00aa1745c",
+    "expected/gf02_wrap32.json": "2b9336f0ffaac87b9b1ef4b0acdde142fd0cee47bcd9bd5939d9af71f6f18551",
+    "expected/gf04/cases.json": "0074442204be09acb845d0b3529a370d03dbc2aa55a8a434add7eb1358915ceb",
+    "expected/gf04/ppg_degenerate.json": "ca31099c0b41ef9184d737c5e95799d61434d3d999f3a2a8dd7102242c0f660f",
+    "expected/legacy_fallback/acc.json": "06d44fdd4da5f5023c589a78ab983228263da956117bb08dd4ab146cd103eb7b",
+    "expected/legacy_fallback/clock.json": "97f76fb441e6622548a6c9836e97a93563c8971c871b06cfbcbb213af910a122",
+    "expected/legacy_fallback/decoded.json": "a524fcc4bdefc5ed88cfb7e0c5851aebe0368dc13d29380b7d471813907d99d9",
+    "expected/legacy_fallback/display.json": "a4d16f5ae245c862e94dc278443c61fcf51628fb84ec3132ccf5abe07657a9bb",
+    "expected/legacy_fallback/divergences.json": "55de8bba70d698bf85d7a9800e6951edc8c8dd31aadf976f1640ff93fa51328a",
+    "expected/legacy_fallback/eeg_psd_bandpower.json": "8675d404d3c753b5b31797aa2beb3e8c3fbb5c3a16fded55e1fb69c248d45489",
+    "expected/legacy_fallback/eeg_raw_indices.json": "15527d87b83590f96293c1b25b46c0d6d5db139a5ac2ca48eda37ab24b57a02a",
+    "expected/legacy_fallback/hrv_sdnn_respiration.json": "8b1df43b61c543a8ba135a9a40ea02e736dcc7cd7188859273a9f8e57964924e",
+    "expected/legacy_fallback/ppg_peaks_rr.json": "5012ba46fc5844111f3347947f1c690d13afcbc475a5f6443f030497b14c022f",
+    "expected/legacy_fallback/summary.json": "2e380d71fb9bc2ed20aa78cebc74fa7e51e1809c9a68fbd620f2e98e2b148998",
+    "expected/oracle/acc.json": "06d44fdd4da5f5023c589a78ab983228263da956117bb08dd4ab146cd103eb7b",
+    "expected/oracle/clock.json": "97f76fb441e6622548a6c9836e97a93563c8971c871b06cfbcbb213af910a122",
+    "expected/oracle/decoded.json": "a524fcc4bdefc5ed88cfb7e0c5851aebe0368dc13d29380b7d471813907d99d9",
+    "expected/oracle/display.json": "5b234386928235fd2a87878f6e9d6e1f4d16972e564978b80e3275e45dfad9ff",
+    "expected/oracle/divergences.json": "55de8bba70d698bf85d7a9800e6951edc8c8dd31aadf976f1640ff93fa51328a",
+    "expected/oracle/eeg_psd_bandpower.json": "d67cdc8abede8c699033bb96a90169b2df5c4d9f70d734c415f56fce32c60f3b",
+    "expected/oracle/eeg_raw_indices.json": "b01dc444445741a62a93b82f2fa2f6f3642f616544d66080051b0b50d980b939",
+    "expected/oracle/hrv_sdnn_respiration.json": "6624bf28aaffaefb86c4ff0bb73160091b418cf0baee41c09dbbc15ba9bfc0ab",
+    "expected/oracle/ppg_peaks_rr.json": "572375b31d78e1f46d01f1c010453a0346aaf1a77ddb5647be01aa7f567fb639",
+    "expected/oracle/summary.json": "48a4581d3cdc0e02afff06a5eafca4d1b0cb0e907d12c4881ded6f63ef06be41",
+    "expected/scoring/gf05_scoring.json": "87724a8a05988553440220334e3f2230054a7d1913b090bfbcb007093ffc2d2d",
+    "oracle/gf04.oracle.test.ts": "2ad0c10886701d6b930b9113230e906d602e32c43f72a6bcc078d662fb45c996",
+    "oracle/oracle.oracle.test.ts": "015693ea41c5abfebac2b338e6e7af6aa0308b0fe75e38de439dbc66717a8bba",
+    "oracle/run-oracle.ts": "332718963db9ca7ebd8a18f6a12f89c01ff83fae0e5befcca6ad88b91327a1fb",
+    "oracle/scoring.oracle.test.ts": "d006a4f28502290b3b9d76aad35db886814a8ef232b3128b8ad150411ee077bc",
+    "oracle/vitest.oracle.config.mjs": "db5809ac97b38cecd301d938584a7572b3fe0d6c843a4543fe6cab5860b6aa70",
+    "packets/gf01_acc_signed16.bin": "5ac357ad90d39d6ff2e9aa41eb3dbf2bbb3b08890ba7628eb198c5e25a2ea5dc",
+    "packets/gf01_eeg_signed24_leadoff.bin": "3feeef30211c9e6ee05e0c7004af54e2ef81304935d9d7c5102413f12aa6faaf",
+    "packets/gf01_ppg_header_endian_probe.bin": "cae24e0d2bae260c0909d53b969622372f427c2aa11c75b7f575fec0fee941f1",
+    "packets/gf01_ppg_header_le_1s.bin": "0d313deb0ff66a5782361538a9638431c1c89a6bb5ab0a5e02e5864074722a5e",
+    "packets/gf02_duplicate_conflict_order/000_eeg.bin": "f30d0a974cfdff106a1365094e222964506fd9711f85fce1f75070b580eb053e",
+    "packets/gf02_duplicate_conflict_order/001_eeg.bin": "719ff5fce2fa75ee42ad2eb72aba9e9d839f77799129835ba189b01ac6ae2de5",
+    "packets/gf02_duplicate_conflict_order/002_eeg.bin": "719ff5fce2fa75ee42ad2eb72aba9e9d839f77799129835ba189b01ac6ae2de5",
+    "packets/gf02_duplicate_conflict_order/003_eeg.bin": "1bb0e901bce5f64cbebc071a2d5d0bbf8ccfc01ed94ac9a238c91c4f2177dab8",
+    "packets/gf02_duplicate_conflict_order/004_eeg.bin": "27847f0406c21a9449be227146be0857634504787d49802b3ca44ad3c96617d9",
+    "packets/gf02_duplicate_conflict_order/005_eeg.bin": "caf71f2d97037f18b2bb858f135ea8889734b8e3d81a489c2db41b724d8b5044",
+    "packets/gf02_duplicate_conflict_order/006_eeg.bin": "a4c326fad2b60c0806b526473d903a14e7dc76a55b87999ab1ef5f65eaf6e160",
+    "packets/gf02_duplicate_conflict_order/007_eeg.bin": "1bb0e901bce5f64cbebc071a2d5d0bbf8ccfc01ed94ac9a238c91c4f2177dab8",
+    "packets/gf02_duplicate_conflict_order/008_eeg.bin": "b1c588efaf7195e6b4d4b012a6b09a829e8072263ad028d51298e7629f0ea9df",
+    "packets/gf02_multisensor_origin/000_ppg.bin": "29dc648115bfc631a88476333a82f453689116aeb4918ea58060be660c0606cf",
+    "packets/gf02_multisensor_origin/001_eeg.bin": "ad5a79f022998df0961ddc3a15447f01835c4c090845c1d3c35b81da0e5a199a",
+    "packets/gf02_multisensor_origin/002_acc.bin": "94484d614255fc698e403cb394c4e2a8f6ad1445901a3cf366953492d4884e9c",
+    "packets/gf02_multisensor_origin/003_eeg.bin": "c36d5c3517d20bb3ac13f37dbd94c8ebd2cfa21fc9343d9ffb50c7d76c030495",
+    "packets/gf02_multisensor_origin/004_ppg.bin": "e340fb43c681b4eb3102420faa3bf207ce8c65c96434a005200c6b9afbd5207f",
+    "packets/gf02_multisensor_origin/005_acc.bin": "baf396108df147dd442f5c191bae30d11dcb70a8a4ca2e1aae500a06aafb07af",
+    "packets/gf02_multisensor_origin/006_acc.bin": "221600c34731e5d3924d3b163bfe953809ef62b973e1a7ab415a3495a9c03831",
+    "packets/gf02_multisensor_origin/007_eeg.bin": "197aaaa79873143d1d9324a84bba24c17ee7a861ec19eda7a743d7e59366b534",
+    "packets/gf02_multisensor_origin/008_ppg.bin": "4d8b49dcdc660e25fab58b596e43a012e49f4ef04169937e0c7629b05a25b3b9",
+    "packets/gf02_multisensor_origin/009_eeg.bin": "0d53e6f44076b9ccc072f25ddc2f0348ad78e5b880036b9e262cc0a1f11d569e",
+    "packets/gf02_multisensor_origin/010_ppg.bin": "5325c1666c038d580b32b5ced46b1fec7cacfadf11fca417e326dd702cd6e3d2",
+    "packets/gf02_multisensor_origin/011_acc.bin": "9a46915cc0131ae23ac42172bba2d1adee00cfe22dbb344316e5e3ca48d221b1",
+    "packets/gf02_multisensor_origin/012_ppg.bin": "e1e9fbeb1e124db40437c49fb3dad2aa372485b67ab388cb824edada3fde856b",
+    "packets/gf02_multisensor_origin/013_acc.bin": "abb7cb33f7ecb26655b2e274267aedb41b12b105426c19f4957f4f0696f9619d",
+    "packets/gf02_multisensor_origin/014_eeg.bin": "26d721bab72bdf49a8db29d49b6a01d14315a7ca87f89f5a6c013cf1e6a7af46",
+    "packets/gf02_multisensor_origin/015_eeg.bin": "6e5711c8400c9797c87b094dd5bb4e7f77b0a073bc5ad9d05fe64c0e7a7fa4bb",
+    "packets/gf02_multisensor_origin/016_acc.bin": "e269c36ff4615d5e6f9ff33a73b9d352425df449e86881110d645def6fcd88ff",
+    "packets/gf02_multisensor_origin/017_ppg.bin": "f73e1540689be8153373e6a287b09d9786626c19817bed831406c772356d1632",
+    "packets/gf02_multisensor_origin/018_eeg.bin": "26c9680ac87151a2ac1862ead98c1ad690fe3228bba88db5a1e8f07d2f9f4490",
+    "packets/gf02_multisensor_origin/019_acc.bin": "d996db438d37ea1837ae2c85bf3885ae93f7087ad64f30447c5295043305a977",
+    "packets/gf02_multisensor_origin/020_ppg.bin": "d466ee91251b666969ff8533220b3bf7de6fd605c225a2c033d8ffdb1a49413c",
+    "packets/gf02_multisensor_origin/021_eeg.bin": "616fb3b55e6d8d7b934fcdf4c048229dbbec192c8731f90508d8d0fa71958b87",
+    "packets/gf02_multisensor_origin/022_acc.bin": "c4482859ab8a85a5210b15b064b2edff069a1b1e981007adfb25432130424c3f",
+    "packets/gf02_multisensor_origin/023_ppg.bin": "4ff061a11511cb57a8e23cb9b8f6f2c722a33c226fc2166d829190bb9b770e3d",
+    "packets/gf02_multisensor_origin/024_ppg.bin": "d18dc76a4d4ac1fac2a9c2b03fe80689a2f372d9c7960ec8cebc04fc41fc74b3",
+    "packets/gf02_multisensor_origin/025_eeg.bin": "a1a98053d9a9e3e32511ae3ac862f635dc5e37d4a24729f229dc7560d06de958",
+    "packets/gf02_multisensor_origin/026_acc.bin": "9c47856894d21ff569579123cc477d41256efe90eb90b89ce7b9217eaeb7b500",
+    "packets/gf02_multisensor_origin/027_acc.bin": "973b582190d60064d0b685a67a8ffbaa8837c55a45b6b53e97b1a9d55ad52f74",
+    "packets/gf02_multisensor_origin/028_eeg.bin": "8fd78686db73546d987d6f98392a7a9e6959ea8b0a2a4f59828996cd58f36039",
+    "packets/gf02_multisensor_origin/029_ppg.bin": "8c5d0c14b9c6bf9f6a42ed8c82ba9ae87e2ad15c84a14a54a3aa88ba7e694745",
+    "packets/gf02_multisensor_origin/030_acc.bin": "d35ec943d807466262a8b2619c8ee00068d8aaee377a2d2a6d69f421b85a76f2",
+    "packets/gf02_multisensor_origin/031_ppg.bin": "ace4c8350eef918ede23d7aa0a310fe9b6ca90c012f4861496f928fcbe55b1f2",
+    "packets/gf02_multisensor_origin/032_eeg.bin": "44272cf042c6ef49bede1b1c4ad08bbc7f64e9ff078571c56ceff0d60ed58f72",
+    "packets/gf02_multisensor_origin/033_eeg.bin": "62ef4150989a5fc7a81d759abd2fae3b39e5b446e4b67d96323621f9f9eaabcc",
+    "packets/gf02_multisensor_origin/034_acc.bin": "804e24844442efa5d483b264f16d3907cfb37e91a6f7ad81d83efca07eaee4ea",
+    "packets/gf02_multisensor_origin/035_ppg.bin": "bd7a0390bff077735d5229f5015bdcd27db6b5a5db2457aaac8cfa11dae3a47f",
+    "packets/gf02_multisensor_origin/036_acc.bin": "bbe7ecd63b71448d24f546a584be2741e7b72041f872ea5a9200a2299a4126be",
+    "packets/gf02_multisensor_origin/037_eeg.bin": "34beee2351addbdd65a5a36bf5d71f0ee5e35cb6c1e7e484b866d55a5fae6014",
+    "packets/gf02_multisensor_origin/038_ppg.bin": "9a6b631e3159a6b68ab842f46e8c3c58d10488de5dec3a3ef25f40479c251ecb",
+    "packets/gf02_multisensor_origin/039_eeg.bin": "cdbce7c1a3be69146b844a40ca46c3748eff2f04f9a8dd57f9d624109498838b",
+    "packets/gf02_multisensor_origin/040_ppg.bin": "246d9c290e7793c8a8580ce30902bab7785f17b6b2ea5dedddbce0cce1004795",
+    "packets/gf02_multisensor_origin/041_acc.bin": "0165c61100a15574bafe6d79ccd59f1ea48bec03b68df6080f9db1b7265d94cc",
+    "packets/gf02_multisensor_origin/042_eeg.bin": "760361a35895f9989de157ef208f0b6e07bd47996a9bbd713b1ed90ff7b1cb3f",
+    "packets/gf02_multisensor_origin/043_ppg.bin": "47b5fe16e3d622e050a99912ffd432a7e5be581ab3ee60ace5e74efa8a6dc6f6",
+    "packets/gf02_multisensor_origin/044_acc.bin": "b3de2ad2e57984a40ce636aa7339bcd5733f5714795bf42c2cfd7d7d4a73b70f",
+    "packets/gf02_multisensor_origin/045_acc.bin": "a50942dcb872af64010e1fed41ab4db4c853f0ac9cd9d4e9020f33708206a549",
+    "packets/gf02_multisensor_origin/046_eeg.bin": "006c7beaecb605a1450cfb46408d9857036a1b56135a459be66388b86044e5e5",
+    "packets/gf02_multisensor_origin/047_ppg.bin": "8fd0d38e9b835bb3f5d9f1789693c61ad7b62d1af5271d1f94912f0b4d398292",
+    "packets/gf02_multisensor_origin/048_acc.bin": "0ef16ad213aaff8d5879b344d45ab1dfd699e8158ab9f4a60348f7b77542a18f",
+    "packets/gf02_multisensor_origin/049_eeg.bin": "64de0b398cc8a3b1b916b9f7616b69c71ea575f7013a3b9729fac67a76da6226",
+    "packets/gf02_multisensor_origin/050_ppg.bin": "4ef77c328365ccead072c56b290b7d9da40becca2a36f2f888873d95b541fd71",
+    "packets/gf02_multisensor_origin/051_ppg.bin": "5288e7433c25b012a7759157465d83ff73f3d3cc35756f66cdff80b49c0e1f5a",
+    "packets/gf02_multisensor_origin/052_eeg.bin": "63646e5b17b4b30924734554cab740d2e1a422afc395bfde32750ffac56d5c59",
+    "packets/gf02_multisensor_origin/053_acc.bin": "a0939b2633a6b1e7134741317065735af048b2f2da851b61ff8764873c3a55e1",
+    "packets/gf02_multisensor_origin/054_ppg.bin": "2be1120488b71ccc3b558859997ae29afa2fc77f7c354f1db70ad18206a90f12",
+    "packets/gf02_multisensor_origin/055_acc.bin": "6689df47473419e7fd0ee373cfc58ec32d6a15e626b4f8d051ef02dcfe44baea",
+    "packets/gf02_multisensor_origin/056_eeg.bin": "229b09dadcc0c816ac2ca08035c95a1fe31e683cfb615c82b3683802aff98327",
+    "packets/gf02_multisensor_origin/057_acc.bin": "61d0465e197d2548189236106a72f5de0234ddf5202a38d191331979b415ee32",
+    "packets/gf02_multisensor_origin/058_ppg.bin": "937cf75d045f627750fe59fc55da6bc9dd86181ae49c993a5085f23592b08bed",
+    "packets/gf02_multisensor_origin/059_eeg.bin": "73d5291ee57c35ce30d72c298c8245b56240674e1b636115d919bc559ee52adb",
+    "packets/gf02_multisensor_origin/060_eeg.bin": "b68e9c40ad2572f196f3668e366c82c8af28888e44f712c112885e9eebc110b9",
+    "packets/gf02_multisensor_origin/061_ppg.bin": "07e63506f7f66436b2bb2e1d1add6536cc6397895dd8dffa0fad44bf57e84bfb",
+    "packets/gf02_multisensor_origin/062_acc.bin": "4756e9182f0178899b4b2f199c05a1af49ff3adb77839f2b7ea9e711d1068ad0",
+    "packets/gf02_multisensor_origin/063_acc.bin": "870f4bdf80bc2860c54840ed36ef3550329f46039663ff62435d05e15294f7c7",
+    "packets/gf02_multisensor_origin/064_eeg.bin": "051c02317d401b3976e296397027e12af4ac1da010e27826b5c8dddede0b3c71",
+    "packets/gf02_multisensor_origin/065_ppg.bin": "01cf8bc362b517efb48f3b77c644b12a8d48a009a5052e3ac50fc71c40a17d3c",
+    "packets/gf02_multisensor_origin/066_ppg.bin": "b2cf4c7945313d4cdd7a55158096a81631f070dae773645694d7d408a979d766",
+    "packets/gf02_multisensor_origin/067_acc.bin": "73144cd88a716038afb0b22653cfd0383a9950bc93aaa7bf5a7ed322d46f5d66",
+    "packets/gf02_multisensor_origin/068_eeg.bin": "9d07a0cd7454d5e154184471fb0a9b901a142c88151c5399ab5edd3c9e406908",
+    "packets/gf02_multisensor_origin/069_ppg.bin": "f5baef438499063bab592a5e5e0e95a133c7f6589ad868be16d73eb263f4ab62",
+    "packets/gf02_multisensor_origin/070_eeg.bin": "60fcd323f33e3f0a74ece67a0a069a7fb6af45bb246d8d8601c4dbf16e9e48a9",
+    "packets/gf02_multisensor_origin/071_acc.bin": "3a6db00e8d413300acee35495038004e66a47508e0d1aa691b2ba3991886d9eb",
+    "packets/gf02_multisensor_origin/072_eeg.bin": "ad6409a84628ab5ed71f16bda85e3c601cf6f9df8472f10b9d73066cf500efc8",
+    "packets/gf02_multisensor_origin/073_ppg.bin": "d8ff1d29096c189a7776178b517f484c6a26e80974a7c572a25f3b845986e303",
+    "packets/gf02_multisensor_origin/074_acc.bin": "e46bd6d343f014aa8b95d9b9ff986eda5c8ce4fb5a9d050659f7f9026ee4f690",
+    "packets/gf02_multisensor_origin/075_eeg.bin": "9c55df6a6d526f977ee39722631f49e86b9dbc977fe7447b3151ee680774e12d",
+    "packets/gf02_multisensor_origin/076_acc.bin": "4ec7b17e89d022facf37caaabba006971605fe2e49bbe26ea67987eed9a73985",
+    "packets/gf02_multisensor_origin/077_ppg.bin": "0c0edbe5978ffe7cd2fc13c2513b7cfd36b36a38336564d3603ee04203ea6bb5",
+    "packets/gf02_multisensor_origin/078_eeg.bin": "81100108770abd88a35866f47f94af06eb3f459497b212b6ce5353e5be4d10d4",
+    "packets/gf02_multisensor_origin/079_ppg.bin": "500d3851d2512874f8f45b5b2a9e07eb68ba4d7c76abdcc44e070d2492f00b47",
+    "packets/gf02_multisensor_origin/080_acc.bin": "962493ed2f42e084e577c5cdbd033019362389ec77271c491e3c999213ae3108",
+    "packets/gf02_multisensor_origin/081_acc.bin": "33f6075e5555f3e6620aa980713f01ec6d710a49fa34cdaac06bc172be2ff66e",
+    "packets/gf02_multisensor_origin/082_ppg.bin": "4f2cad1cf710205b83dff85318cfde29a5a063258f3eddc39c747d69969126cd",
+    "packets/gf02_multisensor_origin/083_eeg.bin": "9e56270b93660b568de0fc146cd9e28289390386b9e6d5e1cd94042d22c71f9f",
+    "packets/gf02_multisensor_origin/084_eeg.bin": "c9763713b46b0f5b86e13b7436b57252f8e92fa8aaf43c0cedbb695207bd568d",
+    "packets/gf02_multisensor_origin/085_acc.bin": "c3a7ec11d9ad7206455846d1c1e45b0e701ce534f81d1e30bb94a4d21fb98c5a",
+    "packets/gf02_multisensor_origin/086_ppg.bin": "b9c6db6b65714975091c42081a31c116a098e3853d14f14a922a64e0b52556af",
+    "packets/gf02_multisensor_origin/087_ppg.bin": "7557f61af844cf4468fc990593d201fac4629f30b78f2216b50d2a5e3db8b95e",
+    "packets/gf02_multisensor_origin/088_acc.bin": "82872e8810fc5b58e0069e7f3ded2e86d0aaa0f8d460d3fe76f78592e1317ca4",
+    "packets/gf02_multisensor_origin/089_eeg.bin": "af2c6a18be8991e2934c705e82b9d55de97636b983a5e5e7e947db8d9095bb98",
+    "packets/gf02_reset_segment/000_eeg.bin": "ce67aa2d294a35a3de9043fb88873942f54d5c09b8f320483312ce327a4d95a6",
+    "packets/gf02_reset_segment/001_eeg.bin": "ad7bc72656754141fa1c1d33f4b9f8c47f123720ccf3070e459119f04dd7b714",
+    "packets/gf02_reset_segment/002_eeg.bin": "13cb51fc2edebf23ca28ef296876d3a1aaed73d27a2485964e33d7c216c34b99",
+    "packets/gf02_reset_segment/003_eeg.bin": "1db701b51bd573c0214116c6c1686ea6eb9c077f2977e4187b23cb99ee6ff258",
+    "packets/gf02_reset_segment/004_eeg.bin": "b30b807e07d4559bdbf9e7353ee32dabb2d1f724ff11d239c738d5bb6544f8dd",
+    "packets/gf02_reset_segment/005_eeg.bin": "a7eafcef13a0a41a5283b34fa5e2855c2c9d2613ea4a01509b0f8e37f070a35e",
+    "packets/gf02_reset_segment/006_eeg.bin": "5b40c67563ae737046ae99e6aec9ad32e057b14372d4665b1caf228cf2f8348d",
+    "packets/gf02_reset_segment/007_eeg.bin": "8e9a381478dc9f237aaaf47c41b4efe12a58f1f077b484f997715885ba851be5",
+    "packets/gf02_reset_segment/008_eeg.bin": "5fac9b81d0e382616d6c8d18a57e9c54cc14f9a9ff7018dd4b541966a4a50521",
+    "packets/gf02_reset_segment/009_eeg.bin": "75168bbe98949b590d30278b3125e165322147e573bb392fbd0eb2c833a52a40",
+    "packets/gf02_truncated/000_eeg.bin": "20951845213255ed04328ef231ba5ca2cac54a1a87cc8f52132c7b5784d22ab8",
+    "packets/gf02_truncated/001_eeg.bin": "58d772ea879a0328e40f5f772f2aa6819076e191f84ee2b6bd6c9c98f09574f5",
+    "packets/gf02_truncated/002_eeg.bin": "3f150df9daaa816c9e861a6a9a2bba9a6add225949185e2faafe8a88a34044a0",
+    "packets/gf02_truncated/003_eeg.bin": "a12871fee210fb8619291eaea194581cbd2531e4b23759d225f6806923f63222",
+    "packets/gf02_truncated/004_ppg.bin": "df89dc4e8bafbf0b638cc08d9ab4b3894516c3a7c396650a9a0ba89a624af2fa",
+    "packets/gf02_truncated/005_ppg.bin": "add80b343c5f8b083b83379977d6c962a78c713d50099f3e77186be52fdb1d8f",
+    "packets/gf02_truncated/006_acc.bin": "22a32c1db4be348c9826a4fdb3960394f2f27162a9737e42c9c5b38cff9e8ba5",
+    "packets/gf02_truncated/007_acc.bin": "fb0c658e9c16bf3810463b25eb42eab9307ed715032cdc84c94bd96b5bedf64e",
+    "packets/gf02_truncated/008_acc.bin": "7d4197b8c78ed4d2a0f14ed30682a62d6df3c3774da7f0b2be5ab198124f12d4",
+    "packets/gf02_wrap32/000_eeg.bin": "63af0370e2dcb8995a7ea4a61705277909836a8e813fc8f882055a2518dd8e1a",
+    "packets/gf02_wrap32/001_eeg.bin": "ad1ca3c74835b5fe784e9036c973b655b3259793c27be6c59d4ebc0421ef94bf",
+    "packets/gf02_wrap32/002_eeg.bin": "8923945c74c6a71f9211d97cd0bc5cf581c46ea9ec50cc8de5f390cbea6d4d4f",
+    "packets/gf02_wrap32/003_eeg.bin": "aa97be77875e92a98709b80fbf17140bf3c41ea64bf47df84559171044706823",
+    "packets/gf02_wrap32/004_eeg.bin": "ea2cba6b77ea26b18021be764de9337ef7b7cf509cd2c6031bd6ccfe1916a7e0",
+    "packets/gf02_wrap32/005_eeg.bin": "7a45ad36a817652df83fc13631a6a1930ca5cdcb516b6f48a3cb457767c4d557",
+    "packets/gf02_wrap32/006_eeg.bin": "58dc1630bbb50013dd2936aa66d82c4986d3301a92444858eef9d54f9df11d8d",
+    "packets/gf02_wrap32/007_eeg.bin": "8433d39a2acd3632c324690f5673438ee74db8e5b7ebdcdaab15748afc876719",
+    "synth/scenario.json": "bceb420784c939cf9c538da927da69be4f6020a21e571180c5fa58b57865219b",
+    "synth/schedule.json": "6e82d4ba705527abe080371de5618ebb0c7aac67f2292f29747891a05ac0cfa2",
+    "synth/stream.bin": "99a9c75f850a7edf78d37230fcaf7140034d2171e8e2fbab5c83118ab6b55e27",
+    "tools/build_manifest.py": "120f8ccf2c1c883668c947f5dd971ee13d15849e17354b601cf9ec5c87d6526f",
+    "tools/gen_gf04.py": "95582f7eb832cfd28b55ac158af4e2a2cd7b5bc0f2a6add150fcfc4a44feb86e",
+    "tools/gen_packets.py": "48194145439aac1a14c0c52383c92b2719424dc8ef28d7864a7bf595214d3fa9",
+    "tools/gen_scoring.py": "d75c079503d66ce68831138b7773c8863219cbf6ef1ea9fab7eb1734ff0833f4",
+    "tools/gen_synthetic.py": "2349dea2c0c46e4beb61260cc4567d46ffa97ff46e6079645471dad05f03461e",
+    "tools/verify_packets.py": "c3743a89f3eb6d86510fa66143f885bbcdb77f699447ce6d0b3a565786e57173"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "$fixture": {
+    "schema": "stop-result"
+  },
+  "message": {
+    "seal_started": true,
+    "state": "SEALING",
+    "note": "seal_started_is_not_archive_complete"
+  }
+}

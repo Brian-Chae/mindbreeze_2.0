@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- debug 빌드: 로컬 합성 서버(cleartext) 허용만. 측정 서비스 adb export 는 -PmbAdbExport=true 일 때 src/adbtest 로 opt-in(SDD-246 T08d). -->
+    <application
+        android:usesCleartextTraffic="true"
+        tools:replace="android:usesCleartextTraffic" />
+</manifest>

@@ -1,0 +1,1283 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://contracts.mindbreeze.local/session-live-v2/command.schema.json",
+  "title": "LiveCommand (plan §3.1/§3.2). kind별 discriminated union, unknown 필드·kind 거절",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "command_id",
+        "session_id",
+        "expected_epoch",
+        "kind",
+        "client_generation",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "entry.enter",
+          "description": "인가: self"
+        },
+        "target_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "client_generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [],
+          "properties": {}
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "command_id",
+        "session_id",
+        "expected_epoch",
+        "kind",
+        "client_generation",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "entry.leave",
+          "description": "인가: self"
+        },
+        "target_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "client_generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "target_id"
+          ],
+          "properties": {
+            "target_id": {
+              "$ref": "common.schema.json#/definitions/Uuid"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "command_id",
+        "session_id",
+        "expected_epoch",
+        "kind",
+        "client_generation",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "waiting.set_ready",
+          "description": "인가: self"
+        },
+        "target_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "client_generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ready",
+            "checkin_revision"
+          ],
+          "properties": {
+            "ready": {
+              "type": "boolean"
+            },
+            "checkin_revision": {
+              "$ref": "common.schema.json#/definitions/U64"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "command_id",
+        "session_id",
+        "expected_epoch",
+        "kind",
+        "client_generation",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "session.open",
+          "description": "인가: host"
+        },
+        "target_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "client_generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [],
+          "properties": {}
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "command_id",
+        "session_id",
+        "expected_epoch",
+        "kind",
+        "client_generation",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "session.start",
+          "description": "인가: host"
+        },
+        "target_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "client_generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [],
+          "properties": {}
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "command_id",
+        "session_id",
+        "expected_epoch",
+        "kind",
+        "client_generation",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "session.end",
+          "description": "인가: host"
+        },
+        "target_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "client_generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reason"
+          ],
+          "properties": {
+            "reason": {
+              "$ref": "common.schema.json#/definitions/ReasonCode"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "command_id",
+        "session_id",
+        "expected_epoch",
+        "kind",
+        "client_generation",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "session.cancel",
+          "description": "인가: host"
+        },
+        "target_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "client_generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reason"
+          ],
+          "properties": {
+            "reason": {
+              "$ref": "common.schema.json#/definitions/ReasonCode"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "command_id",
+        "session_id",
+        "expected_epoch",
+        "kind",
+        "client_generation",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "waiting.remind",
+          "description": "인가: host"
+        },
+        "target_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "client_generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "target_scope"
+          ],
+          "properties": {
+            "target_scope": {
+              "type": "string",
+              "enum": [
+                "all_waiting",
+                "not_ready"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "command_id",
+        "session_id",
+        "expected_epoch",
+        "kind",
+        "client_generation",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "waitlist.cancel",
+          "description": "인가: self"
+        },
+        "target_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "client_generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [],
+          "properties": {}
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "command_id",
+        "session_id",
+        "expected_epoch",
+        "kind",
+        "client_generation",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "waitlist.promote",
+          "description": "인가: host"
+        },
+        "target_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "client_generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "target_id"
+          ],
+          "properties": {
+            "target_id": {
+              "$ref": "common.schema.json#/definitions/Uuid"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "command_id",
+        "session_id",
+        "expected_epoch",
+        "kind",
+        "client_generation",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "hand.set",
+          "description": "인가: self"
+        },
+        "target_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "client_generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "raised"
+          ],
+          "properties": {
+            "raised": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "command_id",
+        "session_id",
+        "expected_epoch",
+        "kind",
+        "client_generation",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "hand.lower",
+          "description": "인가: host"
+        },
+        "target_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "client_generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "target_id"
+          ],
+          "properties": {
+            "target_id": {
+              "$ref": "common.schema.json#/definitions/Uuid"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "command_id",
+        "session_id",
+        "expected_epoch",
+        "kind",
+        "client_generation",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "speaking.set",
+          "description": "인가: host"
+        },
+        "target_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "client_generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "target_id",
+            "can_publish",
+            "expected_grant_version"
+          ],
+          "properties": {
+            "target_id": {
+              "$ref": "common.schema.json#/definitions/Uuid"
+            },
+            "can_publish": {
+              "type": "boolean"
+            },
+            "expected_grant_version": {
+              "$ref": "common.schema.json#/definitions/U64"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "command_id",
+        "session_id",
+        "expected_epoch",
+        "kind",
+        "client_generation",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "signal.send",
+          "description": "인가: self"
+        },
+        "target_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "client_generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "signal_type",
+            "target_scope"
+          ],
+          "properties": {
+            "signal_type": {
+              "$ref": "state.schema.json#/definitions/SignalType"
+            },
+            "target_scope": {
+              "type": "string",
+              "enum": [
+                "host"
+              ]
+            },
+            "ttl_ms": {
+              "type": "integer",
+              "minimum": 1000,
+              "maximum": 30000
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "command_id",
+        "session_id",
+        "expected_epoch",
+        "kind",
+        "client_generation",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "signal.clear",
+          "description": "인가: self"
+        },
+        "target_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "client_generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "signal_id"
+          ],
+          "properties": {
+            "signal_id": {
+              "$ref": "common.schema.json#/definitions/Uuid"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "command_id",
+        "session_id",
+        "expected_epoch",
+        "kind",
+        "client_generation",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "audio.set",
+          "description": "인가: host"
+        },
+        "target_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "client_generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "track_id",
+            "action",
+            "position_ms",
+            "expected_revision"
+          ],
+          "properties": {
+            "track_id": {
+              "$ref": "common.schema.json#/definitions/Uuid"
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "play",
+                "pause",
+                "seek",
+                "stop"
+              ]
+            },
+            "position_ms": {
+              "$ref": "common.schema.json#/definitions/Ms"
+            },
+            "expected_revision": {
+              "$ref": "common.schema.json#/definitions/U64"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "command_id",
+        "session_id",
+        "expected_epoch",
+        "kind",
+        "client_generation",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "chat.set_enabled",
+          "description": "인가: host"
+        },
+        "target_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "client_generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "command_id",
+        "session_id",
+        "expected_epoch",
+        "kind",
+        "client_generation",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "capture.start",
+          "description": "인가: self"
+        },
+        "target_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "client_generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "device_profile",
+            "algorithm_version",
+            "model_version"
+          ],
+          "properties": {
+            "device_profile": {
+              "$ref": "common.schema.json#/definitions/VersionLabel"
+            },
+            "algorithm_version": {
+              "$ref": "common.schema.json#/definitions/VersionLabel"
+            },
+            "model_version": {
+              "$ref": "common.schema.json#/definitions/VersionLabel"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "command_id",
+        "session_id",
+        "expected_epoch",
+        "kind",
+        "client_generation",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "capture.close",
+          "description": "인가: self"
+        },
+        "target_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "client_generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "stream_id",
+            "final_sequences",
+            "reason"
+          ],
+          "properties": {
+            "stream_id": {
+              "$ref": "common.schema.json#/definitions/Uuid"
+            },
+            "final_sequences": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "metric"
+              ],
+              "properties": {
+                "eeg": {
+                  "$ref": "common.schema.json#/definitions/U64"
+                },
+                "ppg": {
+                  "$ref": "common.schema.json#/definitions/U64"
+                },
+                "acc": {
+                  "$ref": "common.schema.json#/definitions/U64"
+                },
+                "metric": {
+                  "$ref": "common.schema.json#/definitions/U64"
+                }
+              }
+            },
+            "reason": {
+              "$ref": "common.schema.json#/definitions/ReasonCode"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "command_id",
+        "session_id",
+        "expected_epoch",
+        "kind",
+        "client_generation",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "capture.renew",
+          "description": "인가: self. lease 유지 필수 명령: 서버 lease(30초)가 만료되면 metric 은 저장만 되고 live 에 투영되지 않는다. 수집 중에는 10초 주기로 반드시 보낸다."
+        },
+        "target_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "client_generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "stream_id",
+            "owner_generation",
+            "clock_anchor_id"
+          ],
+          "properties": {
+            "stream_id": {
+              "$ref": "common.schema.json#/definitions/Uuid"
+            },
+            "owner_generation": {
+              "$ref": "common.schema.json#/definitions/U64"
+            },
+            "clock_anchor_id": {
+              "$ref": "common.schema.json#/definitions/Uuid"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "command_id",
+        "session_id",
+        "expected_epoch",
+        "kind",
+        "client_generation",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "capture.reanchor",
+          "description": "인가: self"
+        },
+        "target_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "expected_entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "client_generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "stream_id",
+            "clock_probe_id",
+            "device_ticks",
+            "monotonic_us"
+          ],
+          "properties": {
+            "stream_id": {
+              "$ref": "common.schema.json#/definitions/Uuid"
+            },
+            "clock_probe_id": {
+              "$ref": "common.schema.json#/definitions/Uuid"
+            },
+            "device_ticks": {
+              "$ref": "common.schema.json#/definitions/U64"
+            },
+            "monotonic_us": {
+              "description": "metric 의 window_start_us/window_end_us 와 같은 시간축(코어 창 시간축, μs)의 현재 값. 서버는 anchor_server_at(수신 시각) 에 (window_*_us − monotonic_us) 를 더해 창의 서버시각을 환산한다.",
+              "$ref": "common.schema.json#/definitions/U64"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "x-authorization": {
+    "entry.enter": "self",
+    "entry.leave": "self",
+    "waiting.set_ready": "self",
+    "session.open": "host",
+    "session.start": "host",
+    "session.end": "host",
+    "session.cancel": "host",
+    "waiting.remind": "host",
+    "waitlist.cancel": "self",
+    "waitlist.promote": "host",
+    "hand.set": "self",
+    "hand.lower": "host",
+    "speaking.set": "host",
+    "signal.send": "self",
+    "signal.clear": "self",
+    "audio.set": "host",
+    "chat.set_enabled": "host",
+    "capture.start": "self",
+    "capture.close": "self",
+    "capture.renew": "self",
+    "capture.reanchor": "self"
+  }
+}

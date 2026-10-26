@@ -1,0 +1,5711 @@
+{
+  "$fixture": {
+    "schema": "metric-batch"
+  },
+  "message": {
+    "protocol_version": 2,
+    "schema_version": 1,
+    "windows": [
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "100",
+        "window_start_us": "0",
+        "window_end_us": "1000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "101",
+        "window_start_us": "1000000",
+        "window_end_us": "2000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "102",
+        "window_start_us": "2000000",
+        "window_end_us": "3000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "103",
+        "window_start_us": "3000000",
+        "window_end_us": "4000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "104",
+        "window_start_us": "4000000",
+        "window_end_us": "5000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "105",
+        "window_start_us": "5000000",
+        "window_end_us": "6000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "106",
+        "window_start_us": "6000000",
+        "window_end_us": "7000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "107",
+        "window_start_us": "7000000",
+        "window_end_us": "8000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "108",
+        "window_start_us": "8000000",
+        "window_end_us": "9000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "109",
+        "window_start_us": "9000000",
+        "window_end_us": "10000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "110",
+        "window_start_us": "10000000",
+        "window_end_us": "11000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "111",
+        "window_start_us": "11000000",
+        "window_end_us": "12000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "112",
+        "window_start_us": "12000000",
+        "window_end_us": "13000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "113",
+        "window_start_us": "13000000",
+        "window_end_us": "14000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "114",
+        "window_start_us": "14000000",
+        "window_end_us": "15000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "115",
+        "window_start_us": "15000000",
+        "window_end_us": "16000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "116",
+        "window_start_us": "16000000",
+        "window_end_us": "17000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "117",
+        "window_start_us": "17000000",
+        "window_end_us": "18000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "118",
+        "window_start_us": "18000000",
+        "window_end_us": "19000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "119",
+        "window_start_us": "19000000",
+        "window_end_us": "20000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "120",
+        "window_start_us": "20000000",
+        "window_end_us": "21000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "121",
+        "window_start_us": "21000000",
+        "window_end_us": "22000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "122",
+        "window_start_us": "22000000",
+        "window_end_us": "23000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "123",
+        "window_start_us": "23000000",
+        "window_end_us": "24000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "124",
+        "window_start_us": "24000000",
+        "window_end_us": "25000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "125",
+        "window_start_us": "25000000",
+        "window_end_us": "26000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "126",
+        "window_start_us": "26000000",
+        "window_end_us": "27000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "127",
+        "window_start_us": "27000000",
+        "window_end_us": "28000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "128",
+        "window_start_us": "28000000",
+        "window_end_us": "29000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "129",
+        "window_start_us": "29000000",
+        "window_end_us": "30000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "130",
+        "window_start_us": "30000000",
+        "window_end_us": "31000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "131",
+        "window_start_us": "31000000",
+        "window_end_us": "32000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "132",
+        "window_start_us": "32000000",
+        "window_end_us": "33000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "133",
+        "window_start_us": "33000000",
+        "window_end_us": "34000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "134",
+        "window_start_us": "34000000",
+        "window_end_us": "35000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "135",
+        "window_start_us": "35000000",
+        "window_end_us": "36000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "136",
+        "window_start_us": "36000000",
+        "window_end_us": "37000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "137",
+        "window_start_us": "37000000",
+        "window_end_us": "38000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "138",
+        "window_start_us": "38000000",
+        "window_end_us": "39000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "139",
+        "window_start_us": "39000000",
+        "window_end_us": "40000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "140",
+        "window_start_us": "40000000",
+        "window_end_us": "41000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "141",
+        "window_start_us": "41000000",
+        "window_end_us": "42000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "142",
+        "window_start_us": "42000000",
+        "window_end_us": "43000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "143",
+        "window_start_us": "43000000",
+        "window_end_us": "44000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "144",
+        "window_start_us": "44000000",
+        "window_end_us": "45000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "145",
+        "window_start_us": "45000000",
+        "window_end_us": "46000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "146",
+        "window_start_us": "46000000",
+        "window_end_us": "47000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "147",
+        "window_start_us": "47000000",
+        "window_end_us": "48000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "148",
+        "window_start_us": "48000000",
+        "window_end_us": "49000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "149",
+        "window_start_us": "49000000",
+        "window_end_us": "50000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "150",
+        "window_start_us": "50000000",
+        "window_end_us": "51000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "151",
+        "window_start_us": "51000000",
+        "window_end_us": "52000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "152",
+        "window_start_us": "52000000",
+        "window_end_us": "53000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "153",
+        "window_start_us": "53000000",
+        "window_end_us": "54000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "154",
+        "window_start_us": "54000000",
+        "window_end_us": "55000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "155",
+        "window_start_us": "55000000",
+        "window_end_us": "56000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "156",
+        "window_start_us": "56000000",
+        "window_end_us": "57000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "157",
+        "window_start_us": "57000000",
+        "window_end_us": "58000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "158",
+        "window_start_us": "58000000",
+        "window_end_us": "59000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      },
+      {
+        "session_id": "00000001-0000-4000-8000-000000000001",
+        "participant_id": "00000002-0000-4000-8000-000000000002",
+        "stream_id": "00000014-0000-4000-8000-000000000014",
+        "stream_generation": "3",
+        "sequence": "159",
+        "window_start_us": "59000000",
+        "window_end_us": "60000000",
+        "observed_at_ms": 1760000000000,
+        "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+        "clock_uncertainty_ms": 12.5,
+        "device_profile_version": "linkband2-v1",
+        "algorithm_version": "web-ts-1",
+        "model_version": "b0-cohort-2",
+        "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contact": {
+          "fp1": "contact",
+          "fp2": "leadoff"
+        },
+        "sqi": 0.82,
+        "metrics": {
+          "focus_raw": {
+            "value": 1.8,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "focus_display": {
+            "value": 62,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_raw": {
+            "value": 0.3,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "relaxation_display": {
+            "value": 71,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_raw": {
+            "value": 2.2,
+            "unit": "index_raw",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "emotion_display": {
+            "value": 55,
+            "unit": "score_0_100",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "bpm": {
+            "value": 68.5,
+            "unit": "beats_per_min",
+            "validity": "valid",
+            "reason": null,
+            "last_valid_sequence": "42",
+            "last_valid_observed_at_ms": 1760000000000
+          },
+          "respiration": {
+            "value": null,
+            "unit": "breaths_per_min",
+            "validity": "warming_up",
+            "reason": "insufficient_window",
+            "last_valid_sequence": null,
+            "last_valid_observed_at_ms": null
+          },
+          "sdnn": {
+            "value": null,
+            "unit": "ms",
+            "validity": "invalid",
+            "reason": "ppg_low_quality",
+            "last_valid_sequence": "41",
+            "last_valid_observed_at_ms": 1759999990000
+          }
+        }
+      }
+    ]
+  }
+}

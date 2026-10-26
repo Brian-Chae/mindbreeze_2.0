@@ -1,0 +1,30 @@
+/* tslint:disable */
+/* eslint-disable */
+export const memory: WebAssembly.Memory;
+export const __wbg_mccore_free: (a: number, b: number) => void;
+export const abiVersion: () => number;
+export const mc_advance: (a: bigint, b: bigint, c: number) => number;
+export const mc_buffer_free: (a: number) => void;
+export const mc_checkpoint: (a: bigint, b: number) => number;
+export const mc_close: (a: bigint, b: number) => number;
+export const mc_create: (a: number, b: number, c: number, d: number) => number;
+export const mc_destroy: (a: bigint) => number;
+export const mc_push_packet: (a: bigint, b: number, c: number, d: number) => number;
+export const mc_push_packet_raw: (a: bigint, b: number, c: number, d: number, e: bigint, f: bigint, g: bigint, h: number) => number;
+export const mc_restore: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
+export const mc_set_model: (a: bigint, b: number, c: number, d: number) => number;
+export const mccore_advance: (a: number, b: number) => [number, number];
+export const mccore_checkpoint: (a: number) => [number, number];
+export const mccore_close: (a: number) => [number, number];
+export const mccore_new: (a: number, b: number) => [number, number, number];
+export const mccore_push_packet: (a: number, b: number, c: number) => [number, number];
+export const mccore_push_packet_raw: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
+export const mccore_restore: (a: number, b: number, c: number, d: number) => [number, number, number];
+export const mccore_set_model: (a: number, b: number, c: number) => [number, number];
+export const mc_abi_version: () => number;
+export const __wbindgen_externrefs: WebAssembly.Table;
+export const __wbindgen_free: (a: number, b: number, c: number) => void;
+export const __wbindgen_malloc: (a: number, b: number) => number;
+export const __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
+export const __externref_table_dealloc: (a: number) => void;
+export const __wbindgen_start: () => void;

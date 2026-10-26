@@ -1,0 +1,28 @@
+{
+  "$fixture": {
+    "schema": "capabilities"
+  },
+  "message": {
+    "bridge_version": 1,
+    "platform": "web",
+    "os_version": "chrome-126",
+    "native_runtime_version": null,
+    "core_version": "wasm-1.0.0",
+    "live_protocol_versions": [
+      2
+    ],
+    "device_profiles": [
+      "linkband2-v1"
+    ],
+    "background": {
+      "capture": "unsupported",
+      "live_socket": "unsupported",
+      "archive_upload": "unsupported"
+    },
+    "permissions": {
+      "bluetooth": "granted",
+      "notifications": "denied",
+      "microphone": "not_determined"
+    }
+  }
+}

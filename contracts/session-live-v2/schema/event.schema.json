@@ -1,0 +1,895 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://contracts.mindbreeze.local/session-live-v2/event.schema.json",
+  "title": "LiveEvent (plan §3.1/§3.2). (session,epoch,audience,domain)마다 촘촘한 seq",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "event_id",
+        "session_id",
+        "epoch",
+        "audience",
+        "domain",
+        "seq",
+        "entity_id",
+        "entity_version",
+        "kind",
+        "observed_at_ms",
+        "received_at_server_ms",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "event_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "audience": {
+          "$ref": "common.schema.json#/definitions/Audience"
+        },
+        "domain": {
+          "const": "session"
+        },
+        "seq": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "entity_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "session.changed"
+        },
+        "observed_at_ms": {
+          "oneOf": [
+            {
+              "$ref": "common.schema.json#/definitions/Ms"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "received_at_server_ms": {
+          "$ref": "common.schema.json#/definitions/Ms"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "payload": {
+          "$ref": "state.schema.json#/definitions/SessionState"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "event_id",
+        "session_id",
+        "epoch",
+        "audience",
+        "domain",
+        "seq",
+        "entity_id",
+        "entity_version",
+        "kind",
+        "observed_at_ms",
+        "received_at_server_ms",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "event_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "audience": {
+          "$ref": "common.schema.json#/definitions/Audience"
+        },
+        "domain": {
+          "const": "participation"
+        },
+        "seq": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "entity_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "participant.changed"
+        },
+        "observed_at_ms": {
+          "oneOf": [
+            {
+              "$ref": "common.schema.json#/definitions/Ms"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "received_at_server_ms": {
+          "$ref": "common.schema.json#/definitions/Ms"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "payload": {
+          "$ref": "state.schema.json#/definitions/ParticipationEntity"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "event_id",
+        "session_id",
+        "epoch",
+        "audience",
+        "domain",
+        "seq",
+        "entity_id",
+        "entity_version",
+        "kind",
+        "observed_at_ms",
+        "received_at_server_ms",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "event_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "audience": {
+          "$ref": "common.schema.json#/definitions/Audience"
+        },
+        "domain": {
+          "const": "participation"
+        },
+        "seq": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "entity_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "participant.removed"
+        },
+        "observed_at_ms": {
+          "oneOf": [
+            {
+              "$ref": "common.schema.json#/definitions/Ms"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "received_at_server_ms": {
+          "$ref": "common.schema.json#/definitions/Ms"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "payload": {
+          "$ref": "state.schema.json#/definitions/Tombstone"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "event_id",
+        "session_id",
+        "epoch",
+        "audience",
+        "domain",
+        "seq",
+        "entity_id",
+        "entity_version",
+        "kind",
+        "observed_at_ms",
+        "received_at_server_ms",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "event_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "audience": {
+          "$ref": "common.schema.json#/definitions/Audience"
+        },
+        "domain": {
+          "const": "waiting"
+        },
+        "seq": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "entity_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "waiting.changed"
+        },
+        "observed_at_ms": {
+          "oneOf": [
+            {
+              "$ref": "common.schema.json#/definitions/Ms"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "received_at_server_ms": {
+          "$ref": "common.schema.json#/definitions/Ms"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "payload": {
+          "$ref": "state.schema.json#/definitions/WaitingEntity"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "event_id",
+        "session_id",
+        "epoch",
+        "audience",
+        "domain",
+        "seq",
+        "entity_id",
+        "entity_version",
+        "kind",
+        "observed_at_ms",
+        "received_at_server_ms",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "event_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "audience": {
+          "$ref": "common.schema.json#/definitions/Audience"
+        },
+        "domain": {
+          "const": "speaking"
+        },
+        "seq": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "entity_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "speaking.changed"
+        },
+        "observed_at_ms": {
+          "oneOf": [
+            {
+              "$ref": "common.schema.json#/definitions/Ms"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "received_at_server_ms": {
+          "$ref": "common.schema.json#/definitions/Ms"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "payload": {
+          "$ref": "state.schema.json#/definitions/SpeakingEntity"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "event_id",
+        "session_id",
+        "epoch",
+        "audience",
+        "domain",
+        "seq",
+        "entity_id",
+        "entity_version",
+        "kind",
+        "observed_at_ms",
+        "received_at_server_ms",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "event_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "audience": {
+          "$ref": "common.schema.json#/definitions/Audience"
+        },
+        "domain": {
+          "const": "signal"
+        },
+        "seq": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "entity_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "signal.changed"
+        },
+        "observed_at_ms": {
+          "oneOf": [
+            {
+              "$ref": "common.schema.json#/definitions/Ms"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "received_at_server_ms": {
+          "$ref": "common.schema.json#/definitions/Ms"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "payload": {
+          "$ref": "state.schema.json#/definitions/SignalEntity"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "event_id",
+        "session_id",
+        "epoch",
+        "audience",
+        "domain",
+        "seq",
+        "entity_id",
+        "entity_version",
+        "kind",
+        "observed_at_ms",
+        "received_at_server_ms",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "event_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "audience": {
+          "$ref": "common.schema.json#/definitions/Audience"
+        },
+        "domain": {
+          "const": "signal"
+        },
+        "seq": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "entity_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "signal.expired"
+        },
+        "observed_at_ms": {
+          "oneOf": [
+            {
+              "$ref": "common.schema.json#/definitions/Ms"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "received_at_server_ms": {
+          "$ref": "common.schema.json#/definitions/Ms"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "payload": {
+          "$ref": "state.schema.json#/definitions/Tombstone"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "event_id",
+        "session_id",
+        "epoch",
+        "audience",
+        "domain",
+        "seq",
+        "entity_id",
+        "entity_version",
+        "kind",
+        "observed_at_ms",
+        "received_at_server_ms",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "event_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "audience": {
+          "$ref": "common.schema.json#/definitions/Audience"
+        },
+        "domain": {
+          "const": "audio"
+        },
+        "seq": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "entity_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "audio.changed"
+        },
+        "observed_at_ms": {
+          "oneOf": [
+            {
+              "$ref": "common.schema.json#/definitions/Ms"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "received_at_server_ms": {
+          "$ref": "common.schema.json#/definitions/Ms"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "payload": {
+          "$ref": "state.schema.json#/definitions/AudioState"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "event_id",
+        "session_id",
+        "epoch",
+        "audience",
+        "domain",
+        "seq",
+        "entity_id",
+        "entity_version",
+        "kind",
+        "observed_at_ms",
+        "received_at_server_ms",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "event_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "audience": {
+          "$ref": "common.schema.json#/definitions/Audience"
+        },
+        "domain": {
+          "const": "device"
+        },
+        "seq": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "entity_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "device.changed"
+        },
+        "observed_at_ms": {
+          "oneOf": [
+            {
+              "$ref": "common.schema.json#/definitions/Ms"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "received_at_server_ms": {
+          "$ref": "common.schema.json#/definitions/Ms"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "payload": {
+          "$ref": "state.schema.json#/definitions/DeviceEntity"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "event_id",
+        "session_id",
+        "epoch",
+        "audience",
+        "domain",
+        "seq",
+        "entity_id",
+        "entity_version",
+        "kind",
+        "observed_at_ms",
+        "received_at_server_ms",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "event_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "audience": {
+          "$ref": "common.schema.json#/definitions/Audience"
+        },
+        "domain": {
+          "const": "metrics"
+        },
+        "seq": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "entity_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "metrics.updated"
+        },
+        "observed_at_ms": {
+          "oneOf": [
+            {
+              "$ref": "common.schema.json#/definitions/Ms"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "received_at_server_ms": {
+          "$ref": "common.schema.json#/definitions/Ms"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "payload": {
+          "$ref": "state.schema.json#/definitions/MetricsEntity"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "event_id",
+        "session_id",
+        "epoch",
+        "audience",
+        "domain",
+        "seq",
+        "entity_id",
+        "entity_version",
+        "kind",
+        "observed_at_ms",
+        "received_at_server_ms",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "event_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "audience": {
+          "$ref": "common.schema.json#/definitions/Audience"
+        },
+        "domain": {
+          "const": "aggregate"
+        },
+        "seq": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "entity_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "aggregate.updated"
+        },
+        "observed_at_ms": {
+          "oneOf": [
+            {
+              "$ref": "common.schema.json#/definitions/Ms"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "received_at_server_ms": {
+          "$ref": "common.schema.json#/definitions/Ms"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "payload": {
+          "$ref": "state.schema.json#/definitions/AggregateEntity"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "event_id",
+        "session_id",
+        "epoch",
+        "audience",
+        "domain",
+        "seq",
+        "entity_id",
+        "entity_version",
+        "kind",
+        "observed_at_ms",
+        "received_at_server_ms",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "event_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "audience": {
+          "$ref": "common.schema.json#/definitions/Audience"
+        },
+        "domain": {
+          "const": "policy"
+        },
+        "seq": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "entity_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "entity_version": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "kind": {
+          "const": "policy.changed"
+        },
+        "observed_at_ms": {
+          "oneOf": [
+            {
+              "$ref": "common.schema.json#/definitions/Ms"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "received_at_server_ms": {
+          "$ref": "common.schema.json#/definitions/Ms"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "payload": {
+          "$ref": "state.schema.json#/definitions/PolicyState"
+        }
+      }
+    }
+  ]
+}

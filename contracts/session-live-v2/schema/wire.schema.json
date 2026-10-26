@@ -1,0 +1,507 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://contracts.mindbreeze.local/session-live-v2/wire.schema.json",
+  "title": "그 외 Socket.IO v2 wire 메시지 (plan §3.2 표)",
+  "definitions": {
+    "Hello": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "supported_protocol_versions",
+        "app_build",
+        "client_instance_id",
+        "capabilities",
+        "core_version"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "supported_protocol_versions": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/definitions/ProtocolVersion"
+          },
+          "minItems": 1
+        },
+        "app_build": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "client_instance_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "capabilities": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "native_background",
+              "wasm_core",
+              "ble_capture",
+              "paint_ack",
+              "http_fallback"
+            ]
+          }
+        },
+        "core_version": {
+          "oneOf": [
+            {
+              "$ref": "common.schema.json#/definitions/VersionLabel"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "Join": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "session_id",
+        "request_id",
+        "generation",
+        "last_cursors",
+        "entry_credential"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "request_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "last_cursors": {
+          "$ref": "common.schema.json#/definitions/Cursors"
+        },
+        "entry_credential": {
+          "oneOf": [
+            {
+              "$ref": "common.schema.json#/definitions/OpaqueCredential"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "ClockProbe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "probe_id",
+        "client_monotonic_us",
+        "server_receive_ms",
+        "server_send_ms"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "probe_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "client_monotonic_us": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "server_receive_ms": {
+          "oneOf": [
+            {
+              "$ref": "common.schema.json#/definitions/Ms"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "server_send_ms": {
+          "oneOf": [
+            {
+              "$ref": "common.schema.json#/definitions/Ms"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "Device": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "session_id",
+        "stream_id",
+        "device_seq",
+        "band_state",
+        "contact",
+        "sqi",
+        "battery_pct",
+        "state_reason"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "stream_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "device_seq": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "band_state": {
+          "type": "string",
+          "enum": [
+            "not_worn",
+            "connecting",
+            "connected",
+            "reconnecting",
+            "lost",
+            "unknown"
+          ]
+        },
+        "contact": {
+          "$ref": "common.schema.json#/definitions/Contact"
+        },
+        "sqi": {
+          "$ref": "common.schema.json#/definitions/Sqi"
+        },
+        "battery_pct": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100
+        },
+        "state_reason": {
+          "oneOf": [
+            {
+              "$ref": "common.schema.json#/definitions/ReasonCode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "Presence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "session_id",
+        "instance_id",
+        "lease_generation",
+        "visibility"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "instance_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "lease_generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "visibility": {
+          "type": "string",
+          "enum": [
+            "foreground",
+            "background",
+            "locked"
+          ]
+        },
+        "stream_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "owner_generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        }
+      }
+    },
+    "Applied": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "session_id",
+        "cursors"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "cursors": {
+          "$ref": "common.schema.json#/definitions/Cursors"
+        },
+        "snapshot_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "rendered_command_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/definitions/Uuid"
+          },
+          "maxItems": 100
+        }
+      }
+    },
+    "Rendered": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "command_id",
+        "target_role",
+        "target_instance",
+        "connection_generation",
+        "rendered_cursors",
+        "delivery_id"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "command_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "target_role": {
+          "type": "string",
+          "enum": [
+            "host",
+            "member"
+          ]
+        },
+        "target_instance": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "connection_generation": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "rendered_cursors": {
+          "$ref": "common.schema.json#/definitions/Cursors"
+        },
+        "delivery_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        }
+      }
+    },
+    "Resync": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "session_id",
+        "reason",
+        "request_id",
+        "last_cursors"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "reason": {
+          "$ref": "common.schema.json#/definitions/ReasonCode"
+        },
+        "request_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "last_cursors": {
+          "$ref": "common.schema.json#/definitions/Cursors"
+        }
+      }
+    },
+    "Heartbeat": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "session_id",
+        "epoch",
+        "through",
+        "auth_revision",
+        "server_time_ms"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "epoch": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "through": {
+          "$ref": "common.schema.json#/definitions/Cursors"
+        },
+        "auth_revision": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "server_time_ms": {
+          "$ref": "common.schema.json#/definitions/Ms"
+        }
+      }
+    },
+    "SyncComplete": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "session_id",
+        "snapshot_id",
+        "through"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "snapshot_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "through": {
+          "$ref": "common.schema.json#/definitions/Cursors"
+        }
+      }
+    },
+    "AccessRevoked": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "session_id",
+        "code",
+        "revision"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "code": {
+          "$ref": "common.schema.json#/definitions/ReasonCode"
+        },
+        "revision": {
+          "$ref": "common.schema.json#/definitions/U64"
+        }
+      }
+    },
+    "Terminal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "schema_version",
+        "session_id",
+        "code",
+        "revision",
+        "end_cutoff_ms"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "common.schema.json#/definitions/ProtocolVersion"
+        },
+        "schema_version": {
+          "$ref": "common.schema.json#/definitions/SchemaVersion"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/definitions/Uuid"
+        },
+        "code": {
+          "$ref": "common.schema.json#/definitions/ReasonCode"
+        },
+        "revision": {
+          "$ref": "common.schema.json#/definitions/U64"
+        },
+        "end_cutoff_ms": {
+          "oneOf": [
+            {
+              "$ref": "common.schema.json#/definitions/Ms"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

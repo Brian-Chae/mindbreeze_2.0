@@ -1,0 +1,17 @@
+{
+  "$fixture": {
+    "schema": "command",
+    "why": "알 수 없는 kind",
+    "reject_by": "schema"
+  },
+  "message": {
+    "protocol_version": 2,
+    "schema_version": 1,
+    "command_id": "0000000a-0000-4000-8000-00000000000a",
+    "session_id": "00000001-0000-4000-8000-000000000001",
+    "expected_epoch": "1",
+    "kind": "hand.toggle",
+    "client_generation": "7",
+    "payload": {}
+  }
+}

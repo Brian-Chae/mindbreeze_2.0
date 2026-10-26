@@ -22,6 +22,7 @@
     "cap:android:prod": "npm run build:prod && cap sync android && cap open android",
     "android:build:dev": "tsc -b && vite build --mode dev && cap sync android && cd android && ./gradlew assembleDevDebug",
     "android:bundle:prod": "npm run build:prod && cap sync android && cd android && ./gradlew bundleProdRelease",
+    "wasm:build": "bash scripts/build-measurement-wasm.sh",
     "build:prod": "tsc -b && vite build --mode prod && node scripts/check-release-bundle.mjs"
   },
   "dependencies": {

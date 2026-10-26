@@ -583,6 +583,10 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
     )
     _attach_parent(session, db)
     _add_session_with_code_retry(session, db)
+    if not getattr(payload, "is_template", False):
+        from app.services.session_live_legacy import pin_new_run_if_enabled
+
+        pin_new_run_if_enabled(db, session.id)  # SDD-246: 같은 트랜잭션에서 v2 고정(템플릿 제외)
 
     # SDD-028: 기본 run_id = session_id. 최초 실행의 회차 식별자로 자기 id 를 채운다.
     # 이후 "새 실행(명시적)"은 start_new_run 이 새 run_id 를 발급하고, pause/resume·이어하기는
@@ -741,6 +745,10 @@ def _clone_session_config(
     )
     _attach_parent(clone, db)
     _add_session_with_code_retry(clone, db)
+    if not is_template:
+        from app.services.session_live_legacy import pin_new_run_if_enabled
+
+        pin_new_run_if_enabled(db, clone.id)  # SDD-246: 복제 회차도 v2 고정(템플릿 제외)
     # SDD-028: 복제본도 새 실행 회차 — run_id = 자기 id.
     clone.run_id = clone.id
     return clone
@@ -1107,6 +1115,21 @@ def _close_out_media_on_cancel(s: Session, db: DBSession) -> None:
 
 def transition_status(session_id: str, host_id: str, action: str, db: DBSession,
                       *, restrict_from: set[str] | None = None, force: bool = False, confirmed_conflict_fingerprint: str | None = None) -> dict:
+    s, parent, early = transition_tx(session_id, host_id, action, db, restrict_from=restrict_from, force=force,
+                                     confirmed_conflict_fingerprint=confirmed_conflict_fingerprint, commit=True)
+    if early:
+        return _with_chat_room(_serialize(s, include_participant_pii=True), s.id, db)
+    return transition_after_commit(s, parent, action, db)
+
+
+def transition_tx(session_id: str, host_id: str, action: str, db: DBSession,
+                  *, restrict_from: set[str] | None = None, force: bool = False,
+                  confirmed_conflict_fingerprint: str | None = None, commit: bool = True):
+    """상태 전이의 DB 변경 부분. commit=False 면 호출자(SDD-246 live command)의 트랜잭션 안에서 실행되고 commit/rollback 을 하지 않는다.
+
+    반환: (세션, 부모 클래스, early) — early=True 면 이미 완료된 종료의 멱등 재응답(후속 부수효과 없음).
+    commit 이후 부수효과(알림·영상/음성 마감·채팅방)는 `transition_after_commit` 이 맡는다.
+    """
     if action not in TRANSITIONS:
         raise HTTPException(status_code=400, detail="알 수 없는 액션입니다")
     s = get_session_authorized(db, session_id, host_id, SessionAction.SESSION_TRANSITION)
@@ -1133,8 +1156,9 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession,
     # SDD-217: 같은 클래스 회차 종료의 응답 유실·동시 재시도는 읽기로 끝낸다.
     # 권한 재검사와 공통 잠금 이후이므로 제거된 진행자에게 재응답하지 않는다.
     if parent and action == "end" and s.status == "completed" and restrict_from is None:
-        db.commit()
-        return _with_chat_room(_serialize(s, include_participant_pii=True), s.id, db)
+        if commit:
+            db.commit()
+        return s, parent, True
 
     allowed_from, target = TRANSITIONS[action]
     # STATE-SWEEP-TOCTOU: 호출부가 전이 출발 상태를 더 좁힐 수 있다(예: 스윕은 open 에서만
@@ -1196,11 +1220,20 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession,
             # 즉석 클래스의 유일한 회차가 취소되면 부모·멤버도 닫는다(회원 '참여 중' 고착 방지).
             from app.services.class_rolling_service import close_cancelled_instant_class
             close_cancelled_instant_class(db,parent,now)
-        db.commit()
+        if commit:
+            db.commit()
+        else:
+            db.flush()
     except Exception:
-        db.rollback()
+        if commit:
+            db.rollback()
         raise
     db.refresh(s)
+    return s, parent, False
+
+
+def transition_after_commit(s: Session, parent, action: str, db: DBSession) -> dict:
+    """transition_tx commit 이후의 부수효과(알림·마감·채팅방)와 응답 직렬화. best-effort 이며 실패해도 전이는 유지된다."""
     if parent and action == "end":
         _notify_participant_changed(s, db)
 
@@ -1785,6 +1818,9 @@ def remove_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
     participant.raise_hand = False
     db.flush()
     db.refresh(s)
+    # SDD-246: v2 회차면 제거(추방)를 같은 commit 에 outbox·auth_revision·capture 차단으로 남긴다(v1 회차는 no-op).
+    from app.services.class_participation_service import emit_participant_removed
+    emit_participant_removed(db, s, participant)
 
     promoted: list[SessionParticipant] = []
     if was_waitlisted and removed_position is not None:
@@ -2356,6 +2392,11 @@ def participant_livekit_token(
 
     # SDD-231: 열리기 전 사전 입장자는 입장 시각·출석이 비어 있다 — 실제 라이브 입장(토큰 발급)에서 최초 1회 기록한다.
     if s.class_id and participant.entered_at is None:
+        # SDD-246: v2 회차에서는 미디어 토큰 조회가 입장(출석)을 만들지 않는다. 입장은 entry.enter command 하나로만 일어난다.
+        from app.services.session_live_legacy import PROTOCOL_V2, get_session_protocol
+        pin = get_session_protocol(db, s.id)
+        if pin is not None and pin.protocol == PROTOCOL_V2:
+            raise HTTPException(status_code=409, detail={"code": "entry_required"})
         from app.services.class_attendance_service import mark_entered
         mark_entered(db, s, participant, _now())
         db.commit()
@@ -2547,16 +2588,21 @@ def cancel_waitlist(
     if not participant.is_waitlisted:
         raise HTTPException(status_code=409, detail="이미 입장한 참여자는 대기 취소를 할 수 없어요")
 
+    apply_waitlist_cancel(s, participant, db)
+    db.commit()
+    db.refresh(s)
+    _notify_participant_changed(s, db)
+    return {"participant_id": str(participant.id), "cancelled": True, "changed": True}
+
+
+def apply_waitlist_cancel(s: Session, participant: SessionParticipant, db: DBSession) -> None:
+    """대기 취소의 DB 변경(commit 없음). REST(cancel_waitlist)와 SDD-246 live command 가 같은 단계를 쓴다."""
     participant.waitlist_cancelled_at = _now()
     participant.waitlist_position = None
     participant.raise_hand = False
     participant.speaking = False
     db.flush()
     _renumber_waitlist(s, db)
-    db.commit()
-    db.refresh(s)
-    _notify_participant_changed(s, db)
-    return {"participant_id": str(participant.id), "cancelled": True, "changed": True}
 
 
 def resolve_participant_actor(

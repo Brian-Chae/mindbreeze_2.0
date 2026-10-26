@@ -1,0 +1,30 @@
+{
+  "$fixture": {
+    "schema": "capabilities",
+    "why": "미지원 bridge major",
+    "reject_by": "schema"
+  },
+  "message": {
+    "bridge_version": 2,
+    "platform": "ios",
+    "os_version": "17.5",
+    "native_runtime_version": "native-1.0.0",
+    "core_version": "core-1.0.0",
+    "live_protocol_versions": [
+      2
+    ],
+    "device_profiles": [
+      "linkband2-v1"
+    ],
+    "background": {
+      "capture": "supported",
+      "live_socket": "supported",
+      "archive_upload": "supported"
+    },
+    "permissions": {
+      "bluetooth": "granted",
+      "notifications": "granted",
+      "microphone": "not_required"
+    }
+  }
+}

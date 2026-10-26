@@ -1,0 +1,22 @@
+{
+  "$fixture": {
+    "schema": "core-output",
+    "why": "패킷 상태 enum",
+    "reject_by": "schema"
+  },
+  "message": {
+    "packet": {
+      "sensor": "eeg",
+      "status": "dropped",
+      "segment": 0,
+      "extended_ticks": null,
+      "samples": 0,
+      "raw_preserved": true
+    },
+    "frames": [],
+    "error": {
+      "code": "ok",
+      "message": ""
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "$fixture": {
+    "schema": "event"
+  },
+  "message": {
+    "protocol_version": 2,
+    "schema_version": 1,
+    "event_id": "0000003c-0000-4000-8000-00000000003c",
+    "session_id": "00000001-0000-4000-8000-000000000001",
+    "epoch": "1",
+    "audience": "host",
+    "domain": "signal",
+    "seq": "8",
+    "entity_id": "00000028-0000-4000-8000-000000000028",
+    "entity_version": "3",
+    "kind": "signal.expired",
+    "observed_at_ms": null,
+    "received_at_server_ms": 1760000000500,
+    "payload": {
+      "entity_id": "00000028-0000-4000-8000-000000000028",
+      "version": "6"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "$fixture": {
+    "schema": "event"
+  },
+  "message": {
+    "protocol_version": 2,
+    "schema_version": 1,
+    "event_id": "0000003c-0000-4000-8000-00000000003c",
+    "session_id": "00000001-0000-4000-8000-000000000001",
+    "epoch": "1",
+    "audience": "public",
+    "domain": "session",
+    "seq": "8",
+    "entity_id": "00000001-0000-4000-8000-000000000001",
+    "entity_version": "3",
+    "kind": "session.changed",
+    "observed_at_ms": null,
+    "received_at_server_ms": 1760000000500,
+    "payload": {
+      "phase": "in_progress",
+      "status": "in_progress",
+      "started_at_ms": 1760000000000,
+      "ended_at_ms": null,
+      "cutoff_ms": null
+    }
+  }
+}

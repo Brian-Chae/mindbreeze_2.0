@@ -1,0 +1,13 @@
+{
+  "$fixture": {
+    "schema": "start-request",
+    "why": "sha256",
+    "reject_by": "schema"
+  },
+  "message": {
+    "sessionId": "00000001-0000-4000-8000-000000000001",
+    "credentialHandle": "cred_handle_AbCdEfGh0123",
+    "configHash": "zz",
+    "requestId": "0000001e-0000-4000-8000-00000000001e"
+  }
+}

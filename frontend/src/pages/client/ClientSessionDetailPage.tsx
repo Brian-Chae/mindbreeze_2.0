@@ -12,6 +12,9 @@ import { useAuthStore } from '../../stores/authStore';
 import { ClientReportDetailModal } from './ClientReportDetailModal';
 import ClientShell from '../../components/client/ClientShell';
 import { useSessionLiveSocket } from '../../hooks/useSessionLiveSocket';
+import { isLiveProtocolV2Enabled } from '../../lib/session-live/live-flag';
+import { useLiveV2 } from '../../lib/session-live/use-live-v2';
+import { sessionStatusOf } from '../../lib/session-live/live-legacy-adapter';
 import { useEnterClass } from '../../hooks/useEnterClass';
 import { deriveDetailAction } from '../../lib/class/enter-action';
 import { ClassDetailBody, ClassDetailFoot } from '../../components/class/flow/shell/ClassDetailView';
@@ -82,11 +85,23 @@ export default function ClientSessionDetailPage() {
     [applyStatus],
   );
 
-  const { isReady } = useSessionLiveSocket({
+  // SDD-246 T06: v2 on 이면 LiveState.session 이 상태의 유일한 출처다(rich 참여 REST 응답으로 상태를 덮지 않는다).
+  const v2Flag = isLiveProtocolV2Enabled();
+  const liveV2 = useLiveV2({ sessionId: id, selfParticipantId: null, enabled: Boolean(id) });
+  const v1Socket = useSessionLiveSocket({
     sessionId: id,
+    enabled: !v2Flag,
     onSnapshot: handleSnapshot,
     onSessionStateChanged: handleSessionStateChanged,
   });
+  const isReady = v2Flag ? liveV2.ready : v1Socket.isReady;
+  const v2Status = v2Flag && liveV2.ready ? sessionStatusOf(liveV2.state) : null;
+  const v2StartedAtMs = v2Flag && liveV2.ready ? liveV2.state?.session?.data.started_at_ms ?? null : null;
+  const v2EndedAtMs = v2Flag && liveV2.ready ? liveV2.state?.session?.data.ended_at_ms ?? null : null;
+  useEffect(() => {
+    if (!v2Status) return;
+    applyStatus(v2Status, v2StartedAtMs != null ? new Date(v2StartedAtMs).toISOString() : null, v2EndedAtMs != null ? new Date(v2EndedAtMs).toISOString() : null);
+  }, [v2Status, v2StartedAtMs, v2EndedAtMs, applyStatus]);
 
   // WS 폴백: 스냅샷을 아직 못 받으면(미연결·비참가자) 5초 폴링으로 상태 자동 갱신
   useEffect(() => {

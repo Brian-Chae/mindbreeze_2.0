@@ -1,0 +1,16 @@
+{
+  "$fixture": {
+    "schema": "heartbeat",
+    "why": "미지원 major",
+    "reject_by": "schema"
+  },
+  "message": {
+    "protocol_version": 1,
+    "schema_version": 1,
+    "session_id": "00000001-0000-4000-8000-000000000001",
+    "epoch": "1",
+    "through": [],
+    "auth_revision": "4",
+    "server_time_ms": 1
+  }
+}

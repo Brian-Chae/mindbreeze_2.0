@@ -12,6 +12,7 @@ import { QuietSignalButtons } from '../../QuietSignalButtons';
 import { MemberIcon } from './MemberIcon';
 import { metricFraction } from './member-metrics';
 import type { MemberClassViewProps, MemberSheetKey } from './member-view-types';
+import { MetricBars } from './MetricBars';
 import './member-player.css';
 
 const BAND_LIVE: readonly BandUi[] = ['on', 'weak', 'low'];
@@ -55,6 +56,7 @@ function StatusSheet({ props }: { props: MemberClassViewProps }) {
   }
   return (
     <>
+      {props.v2Bars ? <MetricBars mode={typeof window !== 'undefined' && window.innerWidth >= 768 ? 'desktop' : 'mobile'} label={props.v2Bars.label} current={props.v2Bars.current} bars={props.v2Bars.bars} /> : null}
       <div className="mp-status-grid">
         {GROUPS.map((group) => (
           <GroupRow key={group.key} group={group} props={{ hero, snapshot, onHeroChange: actions.onHeroChange }} />

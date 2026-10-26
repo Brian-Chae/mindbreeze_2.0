@@ -1,0 +1,17 @@
+{
+  "$fixture": {
+    "schema": "join",
+    "why": "토큰 필드",
+    "reject_by": "schema"
+  },
+  "message": {
+    "protocol_version": 2,
+    "schema_version": 1,
+    "session_id": "00000001-0000-4000-8000-000000000001",
+    "request_id": "00000047-0000-4000-8000-000000000047",
+    "generation": "7",
+    "last_cursors": [],
+    "entry_credential": null,
+    "access_token": "abc"
+  }
+}

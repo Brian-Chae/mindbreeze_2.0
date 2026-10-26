@@ -702,3 +702,26 @@ class EntryStateResponse(GuestSessionStateResponse):
     # 서버 기준 클래스 시작·종료 시각 — 종료 화면의 `함께한 시간`을 클라이언트 관찰 시각으로 근사하지 않기 위함.
     started_at: datetime | None = None
     ended_at: datetime | None = None
+
+
+# ---------------------------------------------------------------------------
+# SDD-246 T03: 실시간 v2 영속 결과 (ledger 조회/명령 결과의 서버 내부·REST 표현)
+# ---------------------------------------------------------------------------
+
+
+class LiveDurableResultResponse(BaseModel):
+    """`session_live_commands.DurableResult` 의 직렬화. ACK 매핑(wire)은 T05 가 contracts/session-live-v2 기준으로 한다.
+
+    숫자 U64 는 wire 에서 문자열이므로 여기서도 문자열로 내보낸다.
+    """
+
+    command_id: UUID
+    status: Literal["applied", "rejected"]
+    code: str | None = None
+    epoch: str
+    revision: str
+    entity_version: str | None = None
+    result: dict = Field(default_factory=dict)
+    duplicate: bool = False
+    committed: bool = True
+    transient: bool = False

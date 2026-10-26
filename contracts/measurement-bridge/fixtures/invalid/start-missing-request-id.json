@@ -1,0 +1,12 @@
+{
+  "$fixture": {
+    "schema": "start-request",
+    "why": "requestId 필수(멱등)",
+    "reject_by": "schema"
+  },
+  "message": {
+    "sessionId": "00000001-0000-4000-8000-000000000001",
+    "credentialHandle": "cred_handle_AbCdEfGh0123",
+    "configHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+}

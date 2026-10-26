@@ -14,6 +14,8 @@ import { getActiveModelCache } from '../lib/eeg/eegPersonalScore';
 import type { Scalars } from '../lib/biosignal/feature-record';
 import { subscribeRawPackets } from '../lib/biosignal/raw-capture';
 import { sendBiosignalEvents, uploadBiosignalQueue } from '../lib/biosignal/upload-queue';
+import { recoverOversized } from '../lib/biosignal/archive-recovery';
+import { isArchiveV3Enabled } from '../lib/feature-flags';
 import type { Signal } from '../lib/biosignal/raw-types';
 import { createLogger } from '../lib/eeg/logger';
 import { useAuthStore } from '../stores/authStore';
@@ -37,6 +39,10 @@ export interface UseBiosignalCaptureOptions {
   skipAuth?: boolean; entryCredential?: string | null;
   /** 화면 snapshot의 view 종류(기본 participant_player) */
   displayViewKind?: ViewKind;
+  /** SDD-246 T09: 서버가 등록한 capture stream(있으면 presign 에 실려 종료 cutoff 판정을 받는다). archive v3 플래그가 켜진 때만 사용. */
+  captureStreamId?: string | null;
+  /** SDD-246 T09: 서버 close deadline(epoch ms). 지나면 전송 시도 없이 사유와 함께 보존한다. */
+  closeDeadlineMs?: number | null;
 }
 export interface UseBiosignalCaptureResult {
   status: CaptureStatus | 'inactive'; stopReason: StopReason | null;
@@ -60,7 +66,9 @@ const suspendedRuntimes = new Map<string, CaptureRuntime>();
 const cleanupBarriers = new Map<string, Promise<void>>();
 
 export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBiosignalCaptureResult {
-  const { sessionId, participantId, enabled, connected, skipAuth = false, entryCredential = null, displayViewKind = 'participant_player' } = options;
+  const { sessionId, participantId, enabled, connected, skipAuth = false, entryCredential = null, displayViewKind = 'participant_player', captureStreamId = null, closeDeadlineMs = null } = options;
+  const archiveOpts = useRef({ captureStreamId, closeDeadlineMs });
+  archiveOpts.current = { captureStreamId, closeDeadlineMs };
   const userId = useAuthStore(state => state.user?.id ?? null);
   const [status, setStatus] = useState<CaptureStatus | 'inactive'>('inactive');
   const [stopReason, setStopReason] = useState<StopReason | null>(null);
@@ -123,8 +131,12 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
       await rt.collector.flush(rt.session.status !== 'running');
       await rt.display.flush(rt.session.status !== 'running');
       if (typeof navigator !== 'undefined' && navigator.onLine === false) { await refresh(); return; }
+      const v3 = isArchiveV3Enabled();
+      if (v3) await recoverOversized(rt.queue).catch(error => logger.warn('과대 산출물 분할 복구 실패, 원본 보존', error));
       for (let round = 0; round < PUMP_MAX_ROUNDS && rt.active(); round++) {
-        const summary = await uploadBiosignalQueue(rt.queue, rt.api, (url, payload, headers) => putEegRawToPresignedUrl(url, payload, headers), rt.active);
+        const summary = await uploadBiosignalQueue(rt.queue, rt.api, (url, payload, headers) => putEegRawToPresignedUrl(url, payload, headers), rt.active, Date.now,
+          v3 ? { archiveV3: true, captureStreamId: archiveOpts.current.captureStreamId, originMonotonicUs: rt.session.originMonotonicUs, closeDeadlineMs: archiveOpts.current.closeDeadlineMs } : {});
+        if (summary.halted) { logger.warn('archive 전송 중단(권한·동의)', summary.halted); break; }
         if (summary.acked === 0 || summary.failed > 0) break;
         if (mounted.current) await refresh();
       }

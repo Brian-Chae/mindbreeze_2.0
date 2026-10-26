@@ -1,0 +1,15 @@
+{
+  "$fixture": {
+    "schema": "start-result",
+    "why": "상태 enum",
+    "reject_by": "schema"
+  },
+  "message": {
+    "managerId": "00000003-0000-4000-8000-000000000003",
+    "streamId": "00000014-0000-4000-8000-000000000014",
+    "ownerGeneration": "3",
+    "managerGeneration": "1",
+    "state": "RUNNING",
+    "idempotentReplay": false
+  }
+}

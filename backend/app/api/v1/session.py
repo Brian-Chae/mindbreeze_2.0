@@ -1,6 +1,6 @@
 """세션 관리 API"""
 
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi.responses import HTMLResponse
@@ -80,6 +80,66 @@ from app.services.session_authz import SessionAction, get_session_authorized
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
+
+# ---------------------------------------------------------------------------
+# SDD-246 T05 — v1 REST → T10 어댑터 연결.
+# 기능 플래그가 꺼져 있거나 회차가 v2 로 고정되지 않았으면 None 을 돌려 기존 경로를 그대로 탄다(회귀 0).
+# v2 회차에서는 구 REST 호출도 apply_command 한 경로(execute_v1)를 거쳐 WS·REST 가 같은 ledger 를 공유한다.
+# ---------------------------------------------------------------------------
+def _hello_from_header(value: str | None):
+    """REST 에는 live:hello 가 없다. v2 를 지원하는 신규 클라이언트는 `X-Live-Protocol: 1,2` 로 능력을 알린다(없으면 구 클라이언트)."""
+    from app.services.session_live_legacy import ClientHello
+
+    if not value:
+        return None
+    try:
+        versions = frozenset(int(v) for v in value.split(",") if v.strip())
+    except ValueError:
+        return None
+    return ClientHello(versions, frozenset()) if versions else None
+
+
+def _v1_via_live(db, session_id: str, op: str, params: dict, current_user, entry_credential=None, live_protocol: str | None = None):
+    from app.schemas.session_live_v2 import live_protocol_v2_enabled
+
+    if not live_protocol_v2_enabled():
+        return None
+    from app.services import class_participation_service as cps
+    from app.services.session_live_legacy import PROTOCOL_V2, LegacyError, execute_v1, get_session_protocol
+
+    try:
+        sid = UUID(session_id)
+    except ValueError:
+        return None
+    pin = get_session_protocol(db, sid)
+    if pin is None or pin.protocol != PROTOCOL_V2:
+        return None
+    actor = cps.resolve_live_actor(db, sid, current_user["id"] if current_user else None, entry_credential)
+    if actor is None:
+        return None  # 인증 실패는 기존 경로가 기존 오류 형식으로 거절한다
+    try:
+        outcome = execute_v1(db, actor, op, sid, params, hello=_hello_from_header(live_protocol))
+    except LegacyError as exc:
+        from fastapi import HTTPException as _HE
+
+        raise _HE(status_code=exc.status_code, detail=exc.detail)
+    try:
+        from app.ws import session_live_namespace as ns
+
+        ns.schedule_publish(sid)
+    except Exception:  # noqa: BLE001 — 방송은 응답을 막지 않는다(heartbeat self-heal)
+        pass
+    return outcome
+
+
+def _pin_new_run(db, session_id) -> None:
+    """POST /sessions 직후 v2 고정(플래그 off 면 no-op). 서비스 계층 pin 이 이미 했으면 멱등으로 기존 값을 유지한다."""
+    from app.services.session_live_legacy import pin_new_run_if_enabled
+
+    pin_new_run_if_enabled(db, UUID(str(session_id)))
+    db.commit()
+
+
 # 세션 생성·수정·복제·템플릿 저장·새 실행 — client 만 차단한다(platform_admin 은 현행 보존, SDD-211 U4).
 SESSION_MANAGE_ROLES = ("counselor", "org_admin", "platform_admin")
 
@@ -104,12 +164,16 @@ def create_session(
     current_user: dict = Depends(require_roles(*SESSION_MANAGE_ROLES)),
     db: DBSession = Depends(get_db),
 ):
-    return class_read_service.add_parent_fields(db, session_service.create_session(current_user["id"], payload, db))
+    created = session_service.create_session(current_user["id"], payload, db)
+    if not getattr(payload, "is_template", False) and created.get("id"):
+        _pin_new_run(db, created["id"])  # SDD-246: 플래그 on 이면 새 회차는 v2 로 고정(off 면 no-op)
+    return class_read_service.add_parent_fields(db, created)
 
 
 # ── SDD-209(B5a): 로그인 없는 4자리 코드 입장 ──
 # 주의: "/{session_id}" 라우트보다 먼저 선언해야 "enter"가 세션 ID로 해석되지 않는다.
 EntryCredential = Annotated[str | None, Header(alias="X-Entry-Credential")]
+LiveProtocolHeader = Annotated[str | None, Header(alias="X-Live-Protocol")]
 
 
 def _client_ip(request: Request) -> str | None:
@@ -260,8 +324,12 @@ def set_session_chat_enabled(
     payload: SessionChatEnabledRequest,
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
+    x_live_protocol: LiveProtocolHeader = None,
 ):
     """클래스 실시간 채팅 켜기/끄기 — host(상담사) 전용. 참여자 호출은 403."""
+    outcome = _v1_via_live(db, session_id, "chat_enabled", {"enabled": payload.enabled}, current_user, live_protocol=x_live_protocol)
+    if outcome is not None:
+        return session_service.get_session_chat_room(session_id, current_user["id"], db)
     return session_service.set_chat_enabled(
         session_id, current_user["id"], payload.enabled, db
     )
@@ -273,7 +341,13 @@ def _make_transition_endpoint(action: str):
         payload: TransitionConfirmation | None = None,
         current_user: dict = Depends(get_current_user),
         db: DBSession = Depends(get_db),
+        x_live_protocol: LiveProtocolHeader = None,
     ):
+        # SDD-246: v2 회차의 전이는 live command 한 경로로 처리하고 응답만 기존 직렬화로 돌려준다.
+        # force/충돌 확인 같은 기존 확인 옵션이 필요한 요청은 어댑터가 표현하지 못하므로 기존 경로로 둔다.
+        if not (payload and any(payload.model_dump().values())):
+            if _v1_via_live(db, session_id, "transition", {"action": action}, current_user, live_protocol=x_live_protocol) is not None:
+                return class_read_service.add_parent_fields(db, session_service.get_session(session_id, current_user["id"], db))
         return class_read_service.add_parent_fields(
             db, session_service.transition_status(session_id, current_user["id"], action, db, **(payload.model_dump() if payload else {}))
         )
@@ -426,6 +500,7 @@ def raise_hand(
     session_id: str,
     participant_id: str,
     x_entry_credential: EntryCredential = None,
+    x_live_protocol: LiveProtocolHeader = None,
     current_user: dict | None = Depends(get_current_user_optional),
     db: DBSession = Depends(get_db),
 ):
@@ -433,6 +508,9 @@ def raise_hand(
 
     로그인 회원은 본인 참여자만, 비회원은 입장 자격(X-Entry-Credential)이 필요하다.
     """
+    outcome = _v1_via_live(db, session_id, "raise_hand", {"participant_id": participant_id}, current_user, x_entry_credential, x_live_protocol)
+    if outcome is not None:
+        return outcome.body
     return session_service.raise_hand(
         session_id,
         participant_id,
@@ -450,6 +528,7 @@ def lower_hand(
     session_id: str,
     participant_id: str,
     x_entry_credential: EntryCredential = None,
+    x_live_protocol: LiveProtocolHeader = None,
     current_user: dict | None = Depends(get_current_user_optional),
     db: DBSession = Depends(get_db),
 ):
@@ -457,6 +536,9 @@ def lower_hand(
 
     응답 lowered_by: self|host. 타인·비진행자는 403.
     """
+    outcome = _v1_via_live(db, session_id, "lower_hand", {"participant_id": participant_id}, current_user, x_entry_credential, x_live_protocol)
+    if outcome is not None:
+        return outcome.body
     return session_service.lower_hand(
         session_id,
         participant_id,
@@ -633,6 +715,7 @@ def research_consent_summary(
 def cancel_waitlist(
     session_id: str,
     x_entry_credential: EntryCredential = None,
+    x_live_protocol: LiveProtocolHeader = None,
     current_user: dict | None = Depends(get_current_user_optional),
     db: DBSession = Depends(get_db),
 ):
@@ -640,6 +723,9 @@ def cancel_waitlist(
 
     활성 참가자·종료 클래스는 409. 취소자는 자동 승격·토큰·상태 접근에서 제외되고 재대기는 대기열 끝 순번이다.
     """
+    outcome = _v1_via_live(db, session_id, "waitlist_cancel", {}, current_user, x_entry_credential, x_live_protocol)
+    if outcome is not None:
+        return outcome.body
     return session_service.cancel_waitlist(
         session_id,
         db,
@@ -680,11 +766,15 @@ def set_speaking(
     payload: SpeakingRequest,
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
+    x_live_protocol: LiveProtocolHeader = None,
 ):
     """상담사 발언권 부여/해제 — speaking=granted. 호스트(상담사) 전용.
 
     부여 시 손들기(raise_hand)는 자동 해제된다.
     """
+    outcome = _v1_via_live(db, session_id, "set_speaking", {"participant_id": participant_id, "granted": payload.granted}, current_user, live_protocol=x_live_protocol)
+    if outcome is not None:
+        return outcome.body
     return session_service.set_speaking(
         session_id, current_user["id"], participant_id, payload.granted, db
     )
@@ -970,3 +1060,107 @@ def view_report_email(session_id: UUID, token: str, db: DBSession = Depends(get_
     return HTMLResponse(report_email_service.view_report_email(session_id, token, db),
                         headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer",
                                  "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'"})
+
+
+# ===========================================================================
+# SDD-246 T05 — v2 REST 폴백 (DEGRADED 상태머신): WS 와 같은 command service / 같은 snapshot 을 쓴다.
+# 기능 플래그 live_protocol_v2 가 꺼져 있으면 404(존재하지 않는 경로처럼) — 현행 동작과 동일.
+# ===========================================================================
+from fastapi import HTTPException as _HTTPException  # noqa: E402
+from fastapi.responses import JSONResponse as _JSONResponse  # noqa: E402
+
+
+def _v2_or_404() -> None:
+    from app.schemas.session_live_v2 import live_protocol_v2_enabled
+
+    if not live_protocol_v2_enabled():
+        raise _HTTPException(status_code=404, detail="Not Found")
+
+
+def _live_actor(db, session_id, current_user, entry_credential):
+    from app.services import class_participation_service as cps
+
+    try:
+        sid = UUID(session_id)
+    except ValueError:
+        raise _HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+    actor = cps.resolve_live_actor(db, sid, current_user["id"] if current_user else None, entry_credential)
+    if actor is None:
+        raise _HTTPException(status_code=403 if current_user else 401, detail="접근 권한이 없습니다")
+    return sid, actor
+
+
+@router.get("/{session_id}/live-v2/snapshot", response_model=dict[str, Any])
+def live_v2_snapshot(
+    session_id: str,
+    request_id: str | None = Query(None),
+    generation: str = Query("0"),
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """완전 snapshot(WS live:snapshot 과 같은 서비스). Redis 불가 시 503 — 별도 메모리 상태를 돌려주지 않는다."""
+    import uuid as _uuid
+
+    from app.schemas.session_live_v2 import is_uuid, parse_u64, WireError
+    from app.services import class_participation_service as cps
+    from app.services import session_live_outbox as ob
+    from app.services.live_redis.client import LiveNotReady, LiveRedisUnavailable
+    from app.services.session_live_state import ScopeStale, SnapshotIncomplete
+
+    _v2_or_404()
+    sid, actor = _live_actor(db, session_id, current_user, x_entry_credential)
+    try:
+        gen = parse_u64(generation, "generation")
+    except WireError:
+        raise _HTTPException(status_code=400, detail="generation 이 올바르지 않습니다")
+    try:
+        cps.seed_live_state(db, sid)
+        from app.models.live_state import LiveSessionEpoch
+
+        auth_rev = int(db.get(LiveSessionEpoch, sid).auth_revision)
+        return ob.snapshot_ready(db, cps.get_live_redis(), sid, cps.scope_of(actor, auth_rev),
+                                 request_id=_uuid.UUID(request_id) if is_uuid(request_id) else _uuid.uuid4(), connection_generation=gen)
+    except LiveRedisUnavailable:
+        return _JSONResponse(status_code=503, content={"code": "live_unavailable", "retryable": True})
+    except (LiveNotReady, SnapshotIncomplete):
+        return _JSONResponse(status_code=503, content={"code": "not_ready", "retryable": True})
+    except ScopeStale:
+        return _JSONResponse(status_code=409, content={"code": "scope_stale", "retryable": True})
+
+
+@router.post("/{session_id}/live-v2/commands", response_model=dict[str, Any])
+def live_v2_command(
+    session_id: str,
+    body: dict,
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """WS live:command 와 같은 command service(apply_command). 같은 command_id 면 REST/WS 어느 쪽이든 부작용은 한 번이다."""
+    from app.schemas import session_live_v2 as w
+    from app.services import class_participation_service as cps
+
+    _v2_or_404()
+    sid, actor = _live_actor(db, session_id, current_user, x_entry_credential)
+    cid = body.get("command_id") if isinstance(body, dict) and isinstance(body.get("command_id"), str) else None
+    try:
+        cmd = w.parse_command(body)
+    except w.WireError as exc:
+        return _JSONResponse(status_code=400, content=w.error_ack(cid, exc.code))
+    if cmd.session_id != sid:
+        return _JSONResponse(status_code=400, content=w.error_ack(cid, "session_mismatch"))
+    outcome = cps.run_live_command(db, actor, cmd)
+    if outcome.committed and not outcome.degraded:
+        try:
+            from app.ws import session_live_namespace as ns
+
+            ns.schedule_publish(sid)
+        except Exception:  # noqa: BLE001 — 방송은 ACK 를 막지 않는다
+            pass
+    status_code = 200
+    if outcome.ack.get("code") == w.IDEMPOTENCY_CONFLICT_CODE:
+        status_code = 409
+    elif outcome.degraded and not outcome.committed:
+        status_code = 503
+    return _JSONResponse(status_code=status_code, content=outcome.ack)

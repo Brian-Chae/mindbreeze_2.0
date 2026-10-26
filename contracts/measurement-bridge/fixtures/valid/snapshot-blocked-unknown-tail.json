@@ -1,0 +1,76 @@
+{
+  "$fixture": {
+    "schema": "snapshot"
+  },
+  "message": {
+    "bridge_version": 1,
+    "managerGeneration": "1",
+    "seq": "57",
+    "sessionId": "00000001-0000-4000-8000-000000000001",
+    "state": "BLOCKED",
+    "blocked_reason": "bluetooth_off",
+    "streamId": "00000014-0000-4000-8000-000000000014",
+    "ownerGeneration": "3",
+    "versions": {
+      "native_runtime": "native-1.0.0",
+      "core": "core-1.0.0",
+      "algorithm": "web-ts-1",
+      "model": "b0-cohort-2",
+      "device_profile": "linkband2-v1"
+    },
+    "metrics": null,
+    "collection": {
+      "band_state": "connected",
+      "last_committed_sample_sequence": "12345",
+      "counters": {
+        "packets": {
+          "eeg": "720",
+          "ppg": "720",
+          "acc": "720"
+        },
+        "samples": {
+          "eeg": "18000",
+          "ppg": "3600",
+          "acc": "2160"
+        },
+        "native_metric_windows": "41",
+        "native_heartbeat": "120",
+        "js_heartbeat_independent": true
+      }
+    },
+    "live": {
+      "socket": "ready",
+      "last_ack_sequence": "41",
+      "snapshot_through": [
+        {
+          "audience": "host",
+          "domain": "metrics",
+          "seq": "41"
+        }
+      ]
+    },
+    "archive": {
+      "queue": {
+        "live_pending": 0,
+        "live_acked": 41,
+        "archive_pending": 3,
+        "archive_verified": 10,
+        "pending_authorization": 0,
+        "pending_time_review": 0,
+        "oldest_pending_age_ms": 4200,
+        "disk_used_bytes": 1048576,
+        "disk_limit_bytes": 536870912
+      },
+      "last_verified_at_ms": 1760000000000
+    },
+    "gaps": [
+      {
+        "gap_id": "00000029-0000-4000-8000-000000000029",
+        "kind": "unknown",
+        "start_sample_sequence": "6000",
+        "end_sample_sequence": null,
+        "bounded": false
+      }
+    ]
+  }
+}

@@ -21,6 +21,9 @@ import { useBackgroundSession } from '../../hooks/useBackgroundSession';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { useEntryPrep } from '../../hooks/useEntryPrep';
 import { useWaitingRoomPresence } from '../../hooks/useWaitingRoomPresence';
+import { isLiveProtocolV2Enabled } from '../../lib/session-live/live-flag';
+import { useLiveV2 } from '../../lib/session-live/use-live-v2';
+import { sessionStatusOf } from '../../lib/session-live/live-legacy-adapter';
 import { useNow } from '../../hooks/useNow';
 import { useEntryState } from '../../hooks/useEntryState';
 import { useEntrySurvey } from '../../hooks/useEntrySurvey';
@@ -160,8 +163,15 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
 
   const terminalState = machine.phase === 'state' && (machine.stateKind === 'cancelled' || machine.stateKind === 'closed' || machine.stateKind === 'entry-expired');
   const polling = entry !== null && machine.phase !== 'end' && !terminalState;
+  // SDD-246 T06: v2 on 이면 LiveClient/LiveState 하나가 입장·대기·시작·종료의 출처다. READY 에서는 entry-state 주기 폴링 0.
+  const v2Flag = isLiveProtocolV2Enabled();
+  const liveV2 = useLiveV2({
+    sessionId, selfParticipantId: entry?.participantId ?? null, enabled: entry !== null && machine.phase !== 'end',
+    entryCredential: entry?.credential ?? null, skipAuth: !isAuthenticated,
+  });
+  const v2Ready = liveV2.ready;
   const { state: serverState, error: pollError, refresh } = useEntryState({
-    sessionId, credential: entry?.credential ?? null, enabled: polling,
+    sessionId, credential: entry?.credential ?? null, enabled: polling && !(v2Flag && v2Ready),
   });
 
   // 서버 상태 → 머신
@@ -169,6 +179,24 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
     if (!serverState) return;
     dispatch({ type: 'sync', stage: deriveEnterStage({ status: serverState.status, isWaitlisted: serverState.is_waitlisted }) });
   }, [serverState]);
+
+  // v2: 회차 전이·대기열은 LiveState 에서 파생해 같은 머신에 넣는다(종료 화면용 시각은 전이 때 한 번만 REST 로 읽는다).
+  const v2Status = v2Flag && v2Ready ? sessionStatusOf(liveV2.state) : null;
+  const v2Waitlisted = Boolean(v2Flag && v2Ready && entry && (entry.participantId ? liveV2.state?.waiting[entry.participantId]?.data.waitlist_position : null) != null);
+  useEffect(() => {
+    if (!v2Status) return;
+    dispatch({ type: 'sync', stage: deriveEnterStage({ status: v2Status, isWaitlisted: v2Waitlisted }) });
+  }, [v2Status, v2Waitlisted]);
+  useEffect(() => {
+    if (v2Status === 'completed' || v2Status === 'in_progress') void refresh();
+  }, [v2Status, refresh]);
+  // 입장 확정(entry.enter) — READY 가 될 때 한 번. 서버는 멱등(command_id 별)이라 재접속에도 안전하다.
+  const enteredRef = useRef(false);
+  useEffect(() => {
+    if (!v2Flag || !v2Ready || !liveV2.client || enteredRef.current) return;
+    enteredRef.current = true;
+    liveV2.client.sendCommand('entry.enter', {});
+  }, [v2Flag, v2Ready, liveV2.client]);
 
   // 만료·종료 같은 확정 오류는 상태 화면으로, 일시적 끊김은 화면을 유지한 채 안내만 한다
   const failureKind = useMemo<FlowStateKind | null>(
@@ -212,13 +240,23 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
     }),
     [info, prep.draft.survey, prep.draft.bandOutcome, prep.draft.mic, bandSnapshot],
   );
+  // v2: 준비 현황은 waiting.set_ready 명령(단조 checkin_revision) — v1 presence 소켓 이벤트는 쓰지 않는다.
+  const readyDone = presenceReadiness.surveyDone && presenceReadiness.bandDone && presenceReadiness.deviceDone;
+  const lastReadyRef = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (!v2Flag || !v2Ready || !liveV2.client) return;
+    if (!(machine.phase === 'wizard' || machine.phase === 'wait' || (machine.phase === 'confirm' && machine.stage === 'unopened'))) return;
+    if (lastReadyRef.current === readyDone) return;
+    lastReadyRef.current = readyDone;
+    liveV2.client.sendCommand('waiting.set_ready', { ready: readyDone, checkin_revision: String(Date.now()) });
+  }, [v2Flag, v2Ready, liveV2.client, readyDone, machine.phase, machine.stage]);
   useWaitingRoomPresence({
     sessionId,
     participantId: entry?.participantId ?? null,
     nickname: displayName,
     readiness: presenceReadiness,
     // SDD-231: 열리기 전 대기(확인 화면·unopened)에서도 상담사 로비에 대기 중임을 알린다.
-    enabled: entry !== null && (machine.phase === 'wizard' || machine.phase === 'wait' || (machine.phase === 'confirm' && machine.stage === 'unopened')),
+    enabled: !v2Flag && entry !== null && (machine.phase === 'wizard' || machine.phase === 'wait' || (machine.phase === 'confirm' && machine.stage === 'unopened')),
     skipAuth: !isAuthenticated,
     entryCredential: entry?.credential ?? null,
   });
@@ -342,6 +380,8 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
           participantMode={info.participantMode}
           maxParticipants={info.maxParticipants}
           linkbandMode={info.linkbandMode}
+          liveV2={v2Flag ? liveV2 : null}
+          eegConsent={eegChoice === true}
         />
       </div>
     );

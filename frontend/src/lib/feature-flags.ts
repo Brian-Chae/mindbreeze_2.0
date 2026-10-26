@@ -17,3 +17,15 @@ export function isAiEnabled(): boolean {
 export function isDesignRoutesEnabled(): boolean {
   return import.meta.env.DEV || import.meta.env.VITE_DESIGN_ROUTES_ENABLED === 'true';
 }
+
+/** SDD-246 T09 — archive 업로드 v3(단계별 재시도·분할 복구·종료 후 사후전송 판정). 기본 off: 켜지 않으면 현행 v1/v2 동작이다. */
+export function isArchiveV3Enabled(): boolean {
+  return import.meta.env.VITE_ARCHIVE_V3 === 'true';
+}
+
+/** SDD-246 T06 — session-live v2 실시간 프로토콜(LiveClient/LiveState 단일 출처). 기본 off: 켜지 않으면 현행(v1) 경로 그대로다. */
+export function isLiveProtocolV2Enabled(
+  env: { VITE_LIVE_PROTOCOL_V2?: string } = import.meta.env as { VITE_LIVE_PROTOCOL_V2?: string },
+): boolean {
+  return env.VITE_LIVE_PROTOCOL_V2 === 'true';
+}

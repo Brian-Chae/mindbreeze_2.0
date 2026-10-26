@@ -14,6 +14,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
             FirebaseApp.configure()
             Messaging.messaging().delegate = self
         }
+        // SDD-246 T07: 측정 매니저는 WebView(CAPBridgeViewController) 로드 전에 복구한다. 플래그 기본 off → off 면 아무 동작도 하지 않는다.
+        MeasurementHost.shared.bootstrap()
         configureAudioSession()
         return true
     }
@@ -51,6 +53,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
         NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+    }
+
+    // SDD-246 T07: archive 전용 background URLSession 이 앱을 깨웠을 때 완료 handler 를 연결한다.
+    func application(_ application: UIApplication, handleEventsForBackgroundURLSession identifier: String, completionHandler: @escaping () -> Void) {
+        MeasurementHost.shared.bootstrap()
+        if !MeasurementHost.shared.handleBackgroundSession(identifier: identifier, completion: completionHandler) { completionHandler() }
     }
 
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
