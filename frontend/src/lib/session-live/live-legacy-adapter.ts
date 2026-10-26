@@ -23,7 +23,21 @@ function deviceStatusOf(row: MemberRow): DeviceStatus {
 const num = (m: { value: number | null; validity: string } | undefined): number | null =>
   m && m.validity === 'valid' && m.value != null ? m.value : null;
 
+type PresenceFields = { entered_at?: string | null; checkin_state?: 'completed' | 'not_completed' | 'unknown' };
+
+/** 접속은 v2 participation.connected 가 출처. 체크인은 신원 행(REST)값 → 없으면 v2 waiting.ready. 입장 시각은 신원 행. */
+function presenceOf(state: LiveState, pid: string, legacy: PresenceFields | undefined) {
+  const part = state.participation[pid]?.data;
+  const presence_state: 'connected' | 'disconnected' | 'unknown' = part ? (part.connected ? 'connected' : 'disconnected') : 'unknown';
+  const waitingReady = state.waiting[pid]?.data.ready;
+  const checkin_state = legacy?.checkin_state && legacy.checkin_state !== 'unknown'
+    ? legacy.checkin_state
+    : waitingReady === true ? 'completed' : waitingReady === false ? 'not_completed' : 'unknown';
+  return { presence_state, checkin_state, entered_at: legacy?.entered_at ?? null } as const;
+}
+
 export function toSessionLiveMetrics(state: LiveState, opts: LegacyAdapterOptions): SessionLiveMetric[] {
+  const legacyById = new Map((opts.legacy ?? []).map((p) => [p.participant_id, p as LegacyIdentity & PresenceFields]));
   return buildMemberRows(state, opts).map((row): SessionLiveMetric => {
     const status = deviceStatusOf(row);
     const usable = row.freshness === 'fresh' || row.freshness === 'delayed';
@@ -47,6 +61,7 @@ export function toSessionLiveMetrics(state: LiveState, opts: LegacyAdapterOption
       sdnn: usable ? num(row.metrics.sdnn) : null,
       raise_hand: row.handRaised,
       speaking: row.canPublish,
+      ...presenceOf(state, row.participantId, legacyById.get(row.participantId)),
     };
   });
 }

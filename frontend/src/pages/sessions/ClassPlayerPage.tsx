@@ -1221,7 +1221,8 @@ export default function ClassPlayerPage() {
   const displayMetrics = useMemo(() => {
     // SDD-246 T06: v2 on 이면 지표·손·장치는 LiveState 단일 reducer 만 출처다(rich participant 의 `...p` 병합 금지).
     if (liveV2.active && liveV2.state && liveV2.state.phase !== 'CONNECTING') {
-      return toSessionLiveMetrics(liveV2.state, { nowMs: liveV2.nowMs, legacy: Object.values(participation.participants) });
+      // 신원·입장 시각·체크인은 REST 행(speakingMetrics)에서만 가져온다(v2 에서는 participation 스냅샷을 구독하지 않아 비어 있다).
+      return toSessionLiveMetrics(liveV2.state, { nowMs: liveV2.nowMs, legacy: [...speakingMetrics, ...Object.values(participation.participants)] });
     }
     const base: SessionLiveMetric[] = participation.version >= 0
       ? Object.values(participation.participants).map(p => ({

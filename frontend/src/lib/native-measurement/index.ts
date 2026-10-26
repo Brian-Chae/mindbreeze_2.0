@@ -175,7 +175,8 @@ export class NativeMeasurementFacade {
     const inflight = this.startFlights.get(a.requestId);
     if (inflight) return inflight;
     const p = (async () => {
-      if (this.plugin.setJSBandOwnership) {
+      // Capacitor 프록시는 구현 없는 메서드도 truthy 다 — 존재 검사로는 못 거른다. 이 메서드는 iOS 에만 있다.
+      if (a.platform === 'ios' && this.plugin.setJSBandOwnership) {
         const r = await this.plugin.setJSBandOwnership({ owning: false });
         if (!r.accepted) throw new Error('js_band_release_failed');
       }
