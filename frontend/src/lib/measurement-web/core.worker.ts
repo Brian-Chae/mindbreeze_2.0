@@ -1,5 +1,5 @@
 // SDD-246 T06 — Web Worker 진입점. WASM(measurement-core, `--target web`) 로드 후 CoreSession 을 구동한다.
-// WASM 산출물은 T12 빌드가 `frontend/src/lib/measurement-web/wasm/` 에 배치한다(없으면 init_error=wasm_unavailable).
+// WASM 산출물은 `npm run wasm:build` 가 `frontend/src/lib/measurement-web/wasm/` 에 배치한다(로드 실패 시 init_error=wasm_unavailable).
 import { CoreSession, type McCoreLike, type PacketInput } from './core-session';
 import type { EnvelopeMeta } from './envelope';
 
@@ -11,9 +11,8 @@ interface WasmModule {
 let session: CoreSession | null = null;
 
 async function loadWasm(): Promise<WasmModule> {
-  // 변수 경로로 import 하여 번들러가 정적 해석하지 않게 한다(산출물이 없는 빌드에서도 앱이 깨지지 않음).
-  const path = './wasm/measurement_core.js';
-  return (await import(/* @vite-ignore */ path)) as WasmModule;
+  // 정적 경로 import — 번들러가 wasm-bindgen 글루와 .wasm 을 asset 으로 묶는다(산출물: npm run wasm:build, 커밋됨).
+  return (await import('./wasm/measurement_core.js')) as unknown as WasmModule;
 }
 
 type In =

@@ -193,6 +193,11 @@ export interface UseBandOptions {
   observationOnly?: boolean;
   /** true=예시, false=실측 강제. 미지정 시에만 환경 설정을 따른다. */
   forceMock?: boolean;
+  /**
+   * SDD-246 T12: false 면 v1 feature 업로드(REST feature 배치·WS session-live feature)를 끈다 — v2 수집 경로(web_wasm/native)가
+   * 같은 지표를 live:metric 으로 보내므로 이중 집계를 막는다. raw 업로드·화면 로컬 지표는 영향 없음. 기본 true(현행).
+   */
+  v1FeatureUpload?: boolean;
 }
 
 export interface UseBandResult {
@@ -355,7 +360,10 @@ export function useBand({
   observationOnly: requestedObservationOnly = false,
   forceMock,
   displayViewKind,
+  v1FeatureUpload = true,
 }: UseBandOptions): UseBandResult {
+  const v1FeatureUploadRef = useRef(v1FeatureUpload);
+  v1FeatureUploadRef.current = v1FeatureUpload;
   const isMock = forceMock ?? envMockEeg();
   // 예시 데이터는 호출자의 옵션과 관계없이 영속 경로에서 격리한다.
   const observationOnly = requestedObservationOnly || isMock;
@@ -613,7 +621,9 @@ export function useBand({
   /** feature 배치 REST 업로드 — 입장 자격이 있으면 자격으로, 없으면 현행(로그인/skipAuth)대로 */
   const uploadFeatureBatch = useCallback(
     (targetSessionId: string, payload: { participant_id?: string | null; features: EegFeatureItem[] }) =>
-      entryCredentialRef.current
+      !v1FeatureUploadRef.current
+        ? Promise.reject(new Error('v1_feature_upload_disabled'))
+        : entryCredentialRef.current
         ? postEntryFeatures(targetSessionId, entryCredentialRef.current, payload)
         : postSessionFeatures(targetSessionId, payload, { skipAuth }),
     [skipAuth],
@@ -622,6 +632,7 @@ export function useBand({
   /** 큐 항목 1건 WS emit — 성공해도 ACK 전까지 삭제하지 않음 */
   const emitQueuedItem = useCallback(
     (item: QueuedFeatureItem): boolean => {
+      if (!v1FeatureUploadRef.current) return false;
       const socket = getSessionLiveSocket(skipAuth ? null : tokenStorage.getAccess());
       if (!wsConnectedRef.current || !socket.connected) return false;
       // join 확정 전(서버 재시작 직후 등)에는 서버가 join 불일치로 버릴 수 있다 — REST 폴백에 맡긴다.
@@ -650,7 +661,7 @@ export function useBand({
    */
   const retransmitPending = useCallback(async (): Promise<void> => {
     // SDD-112: in-flight 가드 — 5초 타이머·재연결 중복 호출이 동시 재전송하지 않게 한다.
-    if (!sessionId || drainingRef.current || retransmitInFlightRef.current) return;
+    if (!sessionId || drainingRef.current || retransmitInFlightRef.current || !v1FeatureUploadRef.current) return;
     retransmitInFlightRef.current = true;
     try {
       const pending = await listPendingFeatures(sessionId, participantIdRef.current);
@@ -771,7 +782,7 @@ export function useBand({
       const contactStatus = deviceStatusFromLeadOff(true, leadOffRef.current);
       const signal01 = sqi == null ? null : toApiSignalQuality(sqi);
 
-      if (!observation && sessionId && streamIdRef.current && cursorReadyRef.current) {
+      if (!observation && v1FeatureUploadRef.current && sessionId && streamIdRef.current && cursorReadyRef.current) {
         // SDD-113: 세션 경과시간 기반 window_index — remount 시 0으로 재시작해
         // 이전 구간과 window_index가 충돌(서버 멱등 폐기)하던 것을 방지.
         if (baseOffsetRef.current == null) {
