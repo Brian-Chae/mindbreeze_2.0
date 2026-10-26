@@ -24,7 +24,7 @@ export async function scenario(name, fn, { mobile = false } = {}) {
   page.on('response', (r) => { if (r.status() >= 500) problems.push(`HTTP ${r.status()} ${r.url()}`); });
   const started = Date.now();
   let error = null;
-  try { await fn(page); } catch (e) { error = e.message.split('\n')[0]; }
+  try { await fn(page); } catch (e) { error = e.message.split('\n').slice(0, 4).map((l) => l.trim()).join(' / '); }
   if (!error && problems.length) error = problems.slice(0, 3).join(' | ');
   results.push({ name, ok: !error, error, ms: Date.now() - started });
   console.log(`${error ? 'FAIL' : 'PASS'}  ${name}${error ? ' — ' + error : ''}`);
