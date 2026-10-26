@@ -38,7 +38,8 @@ import { LeaveConfirmModal } from '../../../player/LeaveConfirmModal';
 import { ClassOnboardingCoachmarks } from '../../ClassOnboardingCoachmarks';
 import { MemberClassView } from './MemberClassView';
 import { MemberMediaControls, type MemberMediaBinding } from './MemberMediaControls';
-import { downsample, emptySeries, formatClock, pushRingPoint, type MetricSeries, type MetricSnapshot } from './member-metrics';
+import { filterEegPreview, filterPpgPreview, minMaxDecimate, smoothAutoScale } from '../../../../lib/eeg/raw-preview-filter';
+import { emptySeries, formatClock, pushRingPoint, type MetricSeries, type MetricSnapshot } from './member-metrics';
 import type { MemberClassViewProps, MemberDeviceModel, MemberHostVideoIssue, MemberSheetKey } from './member-view-types';
 import './member-player.css';
 
@@ -71,6 +72,9 @@ const CHAT_STATE_POLL_MS = 5_000;
 /** 기기 시트의 원시 파형 갱신 주기·표시 점 수 */
 const RAW_REFRESH_MS = 1_000;
 const RAW_POINTS = 120;
+// 필터는 원 샘플레이트가 필요하므로 다운샘플 전 EEG 4초(250Hz)=1000, PPG 4초(50Hz)=200점을 받는다
+const RAW_EEG_SAMPLES = 1000;
+const RAW_PPG_SAMPLES = 200;
 /** 상담사 영상 토큰 재시도 상한(지수 백오프 5s→10s→20s→30s) */
 const LIVEKIT_RETRY_MAX = 5;
 
@@ -151,6 +155,8 @@ export function MemberClassContainer({
   const [series, setSeries] = useState<MetricSeries>(() => emptySeries());
   const [raw, setRaw] = useState<MemberDeviceModel['raw']>(null);
   const [ppg, setPpg] = useState<MemberDeviceModel['ppg']>(null);
+  // 채널별 자동 스케일 피크(감쇠 smoothing) — fp1, fp2, red, ir
+  const rawPeaksRef = useRef([1, 1, 1, 1]);
 
   /* ───────── 클래스 정보(상담사 이름): 클래스 요약에서 받은 값을 그대로 쓴다 ───────── */
   const counselorName = hostName;
@@ -337,19 +343,27 @@ export function MemberClassContainer({
   useEffect(() => {
     if (sheet !== 'device' || !(isLive || nativeOwned)) return undefined;
     let cancelled = false;
+    // 원 샘플 → 필터 → 화면용 min/max 다운샘플 → 채널별 자동 스케일(±1)
+    const view = (idx: number, x: readonly number[], filter: (v: readonly number[]) => number[]): number[] => {
+      const r = smoothAutoScale(minMaxDecimate(filter(x), RAW_POINTS), rawPeaksRef.current[idx]);
+      rawPeaksRef.current[idx] = r.peak;
+      return r.values;
+    };
+    const show = (fp1: readonly number[], fp2: readonly number[], red: readonly number[], ir: readonly number[]): void => {
+      setRaw({ fp1: view(0, fp1, filterEegPreview), fp2: view(1, fp2, filterEegPreview) });
+      setPpg(red.length > 1 ? { red: view(2, red, filterPpgPreview), ir: view(3, ir, filterPpgPreview) } : null);
+    };
     const sample = (): void => {
       if (nativeOwned) {
-        void getNativeMeasurement().getRawPreview(Capacitor.getPlatform(), 4, RAW_POINTS).then((p) => {
+        void getNativeMeasurement().getRawPreview(Capacitor.getPlatform(), 4, RAW_EEG_SAMPLES).then((p) => {
           if (cancelled || !p) return; // iOS 등 미지원은 null → 파형 영역을 그리지 않는다
-          setRaw({ fp1: p.eegFp1, fp2: p.eegFp2 });
-          setPpg({ red: p.ppgRed, ir: p.ppgIr });
+          show(p.eegFp1, p.eegFp2, p.ppgRed, p.ppgIr);
         });
         return;
       }
       const wave = bandRef.current.getEegWaveformSamples();
-      setRaw({ fp1: downsample(wave.fp1, RAW_POINTS), fp2: downsample(wave.fp2, RAW_POINTS) });
       const pw = bandRef.current.getPpgWaveformSamples?.() ?? { red: [], ir: [] };
-      setPpg(pw.red.length > 1 ? { red: downsample(pw.red, RAW_POINTS), ir: downsample(pw.ir, RAW_POINTS) } : null);
+      show(wave.fp1.slice(-RAW_EEG_SAMPLES), wave.fp2.slice(-RAW_EEG_SAMPLES), pw.red.slice(-RAW_PPG_SAMPLES), pw.ir.slice(-RAW_PPG_SAMPLES));
     };
     sample();
     const id = window.setInterval(sample, RAW_REFRESH_MS);

@@ -10,7 +10,7 @@ import type { MemberCase, MemberIconName } from '../../../../lib/class/member-pl
 import { PLAYER_METRICS } from '../../../../lib/class/player-case';
 import { QuietSignalButtons } from '../../QuietSignalButtons';
 import { MemberIcon } from './MemberIcon';
-import { centerSeries, metricFraction } from './member-metrics';
+import { metricFraction } from './member-metrics';
 import type { MemberClassViewProps, MemberSheetKey } from './member-view-types';
 import { MetricBars } from './MetricBars';
 import './member-player.css';
@@ -257,7 +257,7 @@ function DeviceSheet({ props }: { props: MemberClassViewProps }) {
         {errorLine}
         {wave ? (
           <div className="mp-raw">
-            <span>뇌파 원시 · 2채널</span>
+            <span>뇌파 · 8–30Hz</span>
             <svg viewBox="0 0 240 40" preserveAspectRatio="none" aria-hidden="true">
               <path stroke="#B373EF" d={wavePath(wave.fp1)} />
               <path stroke="#01F0C8" d={wavePath(wave.fp2)} />
@@ -266,10 +266,10 @@ function DeviceSheet({ props }: { props: MemberClassViewProps }) {
         ) : null}
         {device.ppg ? (
           <div className="mp-raw">
-            <span>맥파 원시 · Red·IR</span>
+            <span>맥파 · Red·IR</span>
             <svg viewBox="0 0 240 40" preserveAspectRatio="none" aria-hidden="true">
-              <path stroke="#B373EF" d={wavePath(centerSeries(device.ppg.red))} />
-              <path stroke="#01F0C8" d={wavePath(centerSeries(device.ppg.ir))} />
+              <path stroke="#B373EF" d={wavePath(device.ppg.red)} />
+              <path stroke="#01F0C8" d={wavePath(device.ppg.ir)} />
             </svg>
           </div>
         ) : null}

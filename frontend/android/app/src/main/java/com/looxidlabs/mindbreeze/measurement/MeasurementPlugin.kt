@@ -161,7 +161,7 @@ class MeasurementPlugin : Plugin() {
      */
     @PluginMethod
     fun getRawPreview(call: PluginCall) {
-        val points = (call.getInt("points") ?: 120).coerceIn(2, 500)
+        val points = (call.getInt("points") ?: 120).coerceIn(2, 1000)
         val p = MeasurementManager.engine?.rawPreview(points)
         fun arr(l: List<Double>?) = org.json.JSONArray().also { a -> l?.forEach { a.put(it) } }
         call.resolve(JSObject().put("eegFp1", arr(p?.eegFp1)).put("eegFp2", arr(p?.eegFp2)).put("ppgRed", arr(p?.ppgRed)).put("ppgIr", arr(p?.ppgIr)))
