@@ -89,7 +89,7 @@ export function useAudioRecorder({ sessionId, onError }: UseAudioRecorderOptions
       setState('error');
       onError?.(err as Error);
     }
-  }, [state, cleanup, attachRecorder]);
+  }, [state, cleanup, attachRecorder, onError]);
 
   // 백그라운드 복구: iOS 인터럽션·OS 회수로 마이크 track 이 끝났거나 recorder 가 멈췄으면 새로 이어서 녹음한다.
   // 녹음 중(recording)일 때만 동작 — 마이크 오프·정지·일시정지 상태는 건드리지 않는다.
