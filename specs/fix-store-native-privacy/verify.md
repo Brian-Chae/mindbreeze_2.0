@@ -19,6 +19,7 @@
   - 매니페스트에만 있음: `SensitiveInfo` — APP는 EEG/PPG를 "건강"으로 신고하고 민감 정보는 미선택(콘솔 정의가 EEG/PPG를 명시하지 않음).
   - APP에만 있음: 채팅(`EmailsOrTextMessages`, `backend/app/models/chat.py`), 제품 상호작용(`ProductInteraction`, 클래스 참여 기록), 기타 데이터(`OtherDataTypes`, 성별·생년월 — `models/research.py:38-39`, `client_profile.py:18-19` 등).
   - 목적: 선택 연구 활용(연구 동의자) 대상 = 생체신호·성별·생년월·측정 시각·프로그램 정보·가명 참여자 ID·진행자 실명/계정 ID/역할(`backend/app/services/research_export_service.py:85-88`). 이 유형들에 `Other` 목적이 빠져 있다.
+- (구현 후 정정, 감독 요청: 아래 소스 스캔 결론은 바이너리 기준으로 틀렸다. App 실행 파일에 정적 링크된 Rust std가 `_fstat`을 부른다. 정정 내용은 summary.md "Required Reason API 바이너리 재검증")
 - Required Reason API: 앱·로컬 패키지·플러그인 소스(Swift/ObjC) 스캔 결과 `UserDefaults`만 사용(`ios/App/App/Measurement/MeasurementHost.swift:97`, `MeasurementKit/Fencing.swift:10`, social-login Apple/Twitter/Telegram 공급자). 파일 타임스탬프·부팅 시간·디스크 용량·키보드 API 0건 → 기존 `CA92.1` 선언 하나로 충분(변경 없음).
 
 ### C. 백그라운드 권한
