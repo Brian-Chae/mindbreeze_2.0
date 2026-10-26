@@ -113,7 +113,9 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
         if (cancelled) return;
         startedRef.current = true;
         setStatus('running');
+        console.info('[native-measurement] startForSession 성공', platform);
       } catch (err) {
+        console.warn('[native-measurement] 시작 실패', platform, err instanceof Error ? err.message : String(err));
         if (cancelled) return;
         setStatus('failed'); setCode(err instanceof Error ? err.message : 'native_start_failed');
       }

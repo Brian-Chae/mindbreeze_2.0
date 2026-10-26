@@ -131,7 +131,17 @@ export class NativeMeasurementFacade {
       const h = await this.plugin.addListener(name, (e) => { if (token === this.attachToken) this.onEvent(e); });
       this.handles.push(h);
     }
-    const snap = normalizeSnapshot(await this.plugin.getMeasurementSnapshot({ sessionId }));
+    // iOS 는 manager 가 setNativeOwnership(true) 이후에야 생겨, 첫 실행의 attach 시점에는 snapshot 이 not_active 로 거절된다.
+    // 이는 '아직 측정 전'일 뿐이므로 listener 만 붙이고 진행해야 한다(throw 하면 startForSession 이 영영 불리지 않는다).
+    let snap: MeasurementSnapshot;
+    try {
+      snap = normalizeSnapshot(await this.plugin.getMeasurementSnapshot({ sessionId }));
+    } catch (err) {
+      const code = (err as { code?: unknown; message?: unknown } | null)?.code ?? (err as { message?: unknown } | null)?.message;
+      if (code !== 'not_active') throw err;
+      console.info('[native-measurement] attach: 측정 전(not_active) — listener 만 연결');
+      return { seq: '0', managerGeneration: '0', sessionId, state: 'IDLE' } as unknown as MeasurementSnapshot;
+    }
     if (token !== this.attachToken) return snap;
     this.accept(snap);
     return snap;
