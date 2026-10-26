@@ -41,6 +41,9 @@ class NativeRuntime private constructor(
     private var tick: Cancelable? = null
     private var captureRequested = false
     var onArchiveDrained: ((Int) -> Unit)? = null
+    /** 서버가 stream 을 끝냄(status, cutoff_code) → 서비스가 측정 정지·봉인(archive 는 계속). */
+    var onCaptureEnded: ((String, String?) -> Unit)? = null
+    private val devicePolicy = DeviceReportPolicy()
 
     fun start() {
         engine.frameSink = { f ->
@@ -50,10 +53,11 @@ class NativeRuntime private constructor(
         }
         live.anchorProvider = { engine.lastEegAnchor?.let { it.first.toString() to it.second.toString() } }
         live.onStateChanged = { s ->
-            if (s == LiveState.READY && live.streamId == null && !captureRequested) { captureRequested = true; live.startCapture() }
+            // 서버가 끝낸 stream(추방·동의철회·종료·교체) 뒤에는 자동으로 새 capture.start 를 보내지 않는다
+            if (s == LiveState.READY && live.streamId == null && !captureRequested) { captureRequested = live.startCaptureIfAllowed() != null }
             if (s != LiveState.READY) captureRequested = live.streamId != null
         }
-        live.onStreamSuperseded = { _ -> sched.post { /* 새 owner 가 생겼다 — live 갱신 중단, 수집은 로컬 보관 */ } }
+        live.onStreamEnded = { status, cutoff -> onCaptureEnded?.invoke(status, cutoff) }
         sched.post {
             live.start()
             engine.replayPending() // 복구 재생 프레임 → outbox(순번 중복 거름)
@@ -64,10 +68,20 @@ class NativeRuntime private constructor(
     private fun scheduleTick() {
         tick = sched.postDelayed(1_000) {
             nativeHeartbeat.incrementAndGet()
-            if (!stopping) engine.advance()
+            if (!stopping) { engine.advance(); maybeReportDevice() }
             RuntimeConfig.save(File(dir, "runtime.json"), cfg.copy(active = !stopping, streamId = live.streamId, participantId = live.participantId, ownerGeneration = live.ownerGeneration))
             scheduleTick()
         }
+    }
+
+    /** live:device: 밴드 상태·접촉이 바뀌거나 30초마다(직렬 컨텍스트). 배터리 잔량은 밴드에서 아직 읽지 않아 null. */
+    private fun maybeReportDevice() {
+        if (live.streamId == null) return
+        val frame = engine.lastCoreFrame
+        val contact = StreamLifecycle.contactOf(frame)
+        if (!devicePolicy.shouldReport(System.currentTimeMillis(), bandState, contact)) return
+        val sqi = frame?.opt("sqi")?.let { (it as? Number)?.toDouble() }?.takeIf { it in 0.0..1.0 }
+        live.reportDevice(bandState, contact, sqi, null, if (bandState == "reconnecting") "ble_disconnect" else null)
     }
 
     /** feeder 가 봉인한 항목을 즉시 올려 본다(실패하면 backoff 는 큐가, 재시도는 WorkManager 가 맡는다). */

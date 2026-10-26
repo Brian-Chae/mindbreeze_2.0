@@ -98,7 +98,16 @@ class LiveSessionTest {
 
     private fun frame(seq: Int) = JSONObject("""{"sequence":"$seq","window_start_us":"${seq * 1000000L}","window_end_us":"${(seq + 1) * 1000000L}","observed_at_ms":1760000000000,"sqi":0.8,"contact":{"fp1":"contact","fp2":"contact"},"metrics":{},"feature_hash":"${"a".repeat(64)}"}""")
 
-    private fun device(streamId: String = stream, gen: String = "3") = JSONObject("""{"protocol_version":2,"schema_version":1,"event_id":"0000003c-0000-4000-8000-00000000003c","session_id":"$sid","epoch":"1","audience":"member:$pid","domain":"device","seq":"1","entity_id":"$pid","entity_version":"2","kind":"device.changed","observed_at_ms":null,"received_at_server_ms":1,"payload":{"stream_id":"$streamId","generation":"$gen","status":"active","clock_uncertain":true,"cutoff_code":null}}""")
+
+    /** capture.start 를 보내고 ACK result(stream·participant·owner_generation)를 받는다(T05b: device.changed 대기 불필요). */
+    private fun capture(e: Env, gen: String = "3") {
+        val prev = e.t.acks["live:command"]
+        e.t.acks["live:command"] = { d ->
+            if (d.getString("kind") == "capture.start") JSONObject("""{"command_id":"${d.getString("command_id")}","status":"applied","epoch":"1","cursors":[],"committed":true,"result":{"stream_id":"$stream","participant_id":"$pid","generation":"$gen","owner_generation":"$gen","lease":{"expires_at_ms":1760000030000},"clock_uncertain":true}}""")
+            else prev?.invoke(d)
+        }
+        e.live.startCapture()
+    }
 
     @Test fun handshakeOrderAndReadyOnlyAfterApplied() {
         val e = env()
@@ -115,7 +124,7 @@ class LiveSessionTest {
         val applied = e.t.sentOf("live:applied").single()
         assertEquals("00000046-0000-4000-8000-000000000046", applied.getString("snapshot_id"))
         assertEquals(2, applied.getInt("protocol_version"))
-        assertEquals(pid, e.live.participantId)
+        assertNull("participant_id 는 snapshot 이 아니라 capture.start ACK 로", e.live.participantId)
     }
 
     @Test fun helloCarriesVersionsAndCapabilities() {
@@ -140,7 +149,7 @@ class LiveSessionTest {
         for (i in 1..100) e.live.onFrame(frame(i))
         assertTrue(e.t.sentOf("live:metric").isEmpty())
         e.t.server("live:snapshot", snapshot()); e.t.server("live:sync_complete", JSONObject("""{"snapshot_id":"00000046-0000-4000-8000-000000000046"}"""))
-        e.t.server("live:event", device())
+        capture(e)
         e.live.pump()
         val first = e.t.sentOf("live:metric")
         assertTrue(first.isNotEmpty())
@@ -166,7 +175,7 @@ class LiveSessionTest {
             }
             JSONObject().put("ok", true).put("acks", acks)
         }
-        toReady(e); e.t.server("live:event", device())
+        toReady(e); capture(e)
         for (i in 1..3) e.live.onFrame(frame(i))
         e.live.pump()
         assertFalse(e.box.contains(1)); assertFalse(e.box.contains(2)); assertTrue(e.box.contains(3))
@@ -174,7 +183,7 @@ class LiveSessionTest {
     }
 
     @Test fun presenceEveryFiveSecondsWithStreamAndOwnerGeneration() {
-        val e = env(); toReady(e); e.t.server("live:event", device())
+        val e = env(); toReady(e); capture(e)
         val before = e.t.sentOf("live:presence").size
         e.s.advance(5_000); e.s.advance(5_000)
         val p = e.t.sentOf("live:presence")
@@ -364,7 +373,7 @@ class LiveSessionTest {
         val e = env()
         e.t.acks["live:command"] = { d -> JSONObject("""{"command_id":"${d.getString("command_id")}","status":"applied","epoch":"1","cursors":[],"committed":true}""") }
         e.live.anchorProvider = { "3276800" to "1000000" }
-        toReady(e); e.t.server("live:event", device())
+        toReady(e); capture(e)
         e.s.advance(1_500)
         val probe = e.t.sentOf("live:clock_probe").first()
         val cmds = e.t.sentOf("live:command").filter { it.getString("kind") == "capture.reanchor" }
@@ -380,7 +389,7 @@ class LiveSessionTest {
         e.live.onFrame(frame(1)); e.live.pump()
         assertTrue(e.t.sentOf("live:metric").isEmpty())
         assertTrue(e.box.contains(1))
-        e.t.server("live:event", device()); e.live.pump()
+        capture(e); e.live.pump()
         assertEquals(1, e.t.sentOf("live:metric").size)
     }
 }

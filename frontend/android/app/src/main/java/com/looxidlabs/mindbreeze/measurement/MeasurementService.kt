@@ -11,6 +11,7 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import com.looxidlabs.mindbreeze.measurement.runtime.StreamLifecycle
 
 /** connectedDevice 포그라운드 서비스. 마이크 타입/권한을 요구하지 않는다. */
 class MeasurementService : Service() {
@@ -105,6 +106,11 @@ class MeasurementService : Service() {
             gatt = BandGattClient(applicationContext, rt.engine, cfg.bandAddress, { MeasurementManager.setState(it); rt.bandState = if (it == MeasurementState.CAPTURING) "connected" else "reconnecting"; updateNotification(it) }).also { it.start() }
         }
         rt.live.visibility = "locked"
+        rt.onCaptureEnded = { status, cutoff ->
+            // 서버 cutoff: 측정을 멈추고 남은 창을 봉인한다(사용자 중지와 같은 경로, active=false 로 재개 안 함). archive 업로드는 WorkManager 가 이어간다.
+            StreamLifecycle.blockedReason(status, cutoff)?.let { MeasurementManager.setState(MeasurementState.BLOCKED, it) }
+            stop(applicationContext)
+        }
         rt.start()
         updateNotification(MeasurementState.CAPTURING)
         logHandler.removeCallbacks(logTask); logHandler.post(logTask)

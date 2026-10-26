@@ -32,6 +32,7 @@ class LiveSession(
     private val sched: LiveScheduler,
     private val tokens: TokenSource,
     private val outbox: MetricOutbox,
+    private val wallMs: () -> Long = { System.currentTimeMillis() },
 ) : LiveTransport.Listener {
 
     init { transport.listener = this }
@@ -54,9 +55,16 @@ class LiveSession(
     /** 밴드 tick 기준 (device_ticks, monotonic_us) 문자열. capture.reanchor 에 쓴다. */
     @Volatile var anchorProvider: (() -> Pair<String, String>?)? = null
     @Volatile var onStateChanged: ((LiveState) -> Unit)? = null
-    @Volatile var onStreamSuperseded: ((String) -> Unit)? = null
     @Volatile var lastAckSequence: Long = -1
         private set
+    /** capture.start/renew ACK result.lease.expires_at_ms. */
+    @Volatile var leaseExpiresAtMs: Long? = null
+        private set
+    /** 서버가 우리 stream 을 끝낸 상태(closed/superseded/ended/revoked). null 이면 진행 중이거나 아직 없음. 끝난 뒤에는 자동 재캡처하지 않는다. */
+    @Volatile var streamEnded: String? = null
+        private set
+    /** (status, cutoff_code) — 측정 정지·봉인 신호. 직렬 컨텍스트에서 호출된다. */
+    @Volatile var onStreamEnded: ((String, String?) -> Unit)? = null
 
     /** 브리지로 전달할 서버 이벤트·명령 ACK(최종). 브리지 쪽이 소비한다. */
     val events = LinkedBlockingQueue<JSONObject>()
@@ -84,6 +92,12 @@ class LiveSession(
     private var anchorId: String = UUID.randomUUID().toString()
     private var clockUncertaintyMs = 300_000.0
     private var probeSentAtMs = 0L
+    // live:device 보고(최신값만 의미). device_seq 는 같은 stream 안에서 단조(서버가 작거나 같으면 duplicate).
+    private var lastDeviceSeq = 0L
+    private var pendingDevice: JSONObject? = null
+    private var deviceInflight = false
+    private var deviceTimer: Cancelable? = null
+    private var deviceStoppedFor: String? = null
 
     private class Pending(val cmd: JSONObject, val queuedAt: Long) {
         var attempts = 0; var inflightSince = -1L; var committedHint = false; var timer: Cancelable? = null; var lastSentAt = -1L
@@ -119,8 +133,9 @@ class LiveSession(
     }
 
     private fun cancelAll() {
-        for (c in listOf(reconnectTimer, presenceTimer, watchdog, probeTimer, appliedTimer, pumpTimer)) c?.cancel()
-        reconnectTimer = null; presenceTimer = null; watchdog = null; probeTimer = null; appliedTimer = null; pumpTimer = null
+        for (c in listOf(reconnectTimer, presenceTimer, watchdog, probeTimer, appliedTimer, pumpTimer, deviceTimer)) c?.cancel()
+        reconnectTimer = null; presenceTimer = null; watchdog = null; probeTimer = null; appliedTimer = null; pumpTimer = null; deviceTimer = null
+        deviceInflight = false
         for (p in pending.values) p.timer?.cancel()
     }
 
@@ -143,6 +158,7 @@ class LiveSession(
         presenceTimer?.cancel(); presenceTimer = null; watchdog?.cancel(); watchdog = null; probeTimer?.cancel(); probeTimer = null
         pumpTimer?.cancel(); pumpTimer = null
         metricInflight = false
+        deviceTimer?.cancel(); deviceTimer = null; deviceInflight = false
         for (p in pending.values) { p.timer?.cancel(); p.timer = null; p.inflightSince = -1 }
     }
 
@@ -256,11 +272,10 @@ class LiveSession(
         cursors.clear()
         val th = s.optJSONArray("through")
         if (th != null) for (i in 0 until th.length()) { val c = th.getJSONObject(i); cursors[c.getString("audience") + "|" + c.getString("domain")] = parseU64(c.getString("seq")) }
-        // 본인 participant: member:<pid> audience
-        val auds = s.optJSONArray("audiences")
-        if (auds != null) for (i in 0 until auds.length()) { val a = auds.getString(i); if (a.startsWith("member:")) participantId = a.removePrefix("member:") }
+        // participant_id 는 capture.start ACK result 에서만 얻는다(T05b: snapshot audiences 추출 금지).
+        // devices 는 재연결 사이에 놓친 우리 stream 의 종료/교체만 반영한다(새 stream 채택은 ACK 로만).
         val devs = s.optJSONObject("devices")?.optJSONObject("entities")
-        if (devs != null) for (k in devs.keys()) applyDeviceData(k, devs.getJSONObject(k).optJSONObject("data"))
+        if (devs != null) for (k in devs.keys()) devs.getJSONObject(k).optJSONObject("data")?.let { applyDeviceState(k, it) }
         events.offer(JSONObject().put("kind", "snapshot").put("payload", s))
     }
 
@@ -281,7 +296,7 @@ class LiveSession(
         val buf = ArrayList(buffered); buffered.clear()
         for (e in buf) applyEvent(e)
         startPresence(); startWatchdog()
-        flushCommands(); pump(); maybeScheduleProbe(1_000)
+        flushCommands(); pump(); maybeScheduleProbe(1_000); flushDevice()
     }
 
     private fun appliedMsg() = JSONObject().put("protocol_version", 2).put("schema_version", 1)
@@ -340,27 +355,60 @@ class LiveSession(
 
     private fun handleDevice(e: JSONObject) {
         val p = e.optJSONObject("payload") ?: return
-        val sid = p.optString("stream_id").ifEmpty { return }
-        val status = p.optString("status", "active")
-        if (status == "active") {
-            val pid = e.optString("entity_id")
-            if (participantId == null || pid == participantId) {
-                if (streamId != sid) { streamId = sid; anchorId = UUID.randomUUID().toString(); clockUncertaintyMs = 300_000.0 }
-                ownerGeneration = p.optString("generation").ifEmpty { ownerGeneration }
-                if (state == LiveState.READY) { maybeScheduleProbe(1_000); pump() }
-            }
-        } else if (sid == streamId) {
-            onStreamSuperseded?.invoke(status) // fencing: 구 owner 는 live 갱신 금지
-            streamId = null; ownerGeneration = null
-        }
+        applyDeviceState(e.optString("entity_id"), p)
     }
 
-    private fun applyDeviceData(entityId: String, data: JSONObject?) {
-        if (data == null) return
-        val sid = data.optString("stream_id").ifEmpty { return }
-        if (data.optString("status", "active") == "active" && (participantId == null || entityId == participantId)) {
-            streamId = sid; ownerGeneration = data.optString("generation").ifEmpty { ownerGeneration }
+    /**
+     * device.changed(합집합 스키마) 소비. stream 수명 필드(generation·status·cutoff_code)만 본다 — 밴드 필드는 상태 표시용이며 부재 = 미보고.
+     *  - 우리 stream 의 status≠active 또는 cutoff_code 가 있으면 측정 정지·봉인(onStreamEnded).
+     *  - 같은 participant 의 다른 stream 이 더 큰 generation(u64 비교)으로 active 면 우리 stream 은 superseded.
+     *  - 다른 participant·형식 위반 generation(숫자·선행 0·범위 초과)은 무시한다.
+     */
+    private fun applyDeviceState(entityId: String, p: JSONObject) {
+        val mine = streamId ?: return
+        val pid = participantId ?: return
+        if (entityId != pid) return
+        val sid = p.optString("stream_id").ifEmpty { return }
+        val status = p.optString("status").ifEmpty { null }
+        val cutoff = if (p.isNull("cutoff_code")) null else p.optString("cutoff_code").ifEmpty { null }
+        if (sid == mine) {
+            when {
+                status != null && status != "active" -> endStream(status, cutoff)
+                cutoff != null -> endStream(status ?: "ended", cutoff)
+            }
+            return
         }
+        if (status != "active") return
+        val theirs = parseU64Strict(p.opt("generation")) ?: return
+        val ours = ownerGeneration ?: return
+        if (java.lang.Long.compareUnsigned(java.lang.Long.parseUnsignedLong(theirs), java.lang.Long.parseUnsignedLong(ours)) > 0) endStream("superseded", cutoff)
+    }
+
+    private fun endStream(status: String, cutoff: String?) {
+        streamEnded = status
+        streamId = null; ownerGeneration = null; leaseExpiresAtMs = null
+        probeTimer?.cancel(); probeTimer = null
+        pendingDevice = null; deviceTimer?.cancel(); deviceTimer = null; deviceInflight = false
+        onStreamEnded?.invoke(status, cutoff) // fencing: 구 owner 는 live 갱신 금지, 수집분은 봉인해 archive 로
+    }
+
+    /** capture.start/renew ACK result 채택(T05b). 형식이 틀리면(u64 문자열 아님) 채택하지 않는다. */
+    private fun adoptCaptureResult(kind: String, r: JSONObject) {
+        val sid = r.optString("stream_id").ifEmpty { return }
+        if (r.has("generation") && parseU64Strict(r.opt("generation")) == null) return
+        val gen = parseU64Strict(r.opt("owner_generation") ?: r.opt("generation")) ?: return
+        if (kind == "capture.renew" && sid != streamId) return
+        if (kind == "capture.start") {
+            val pid = r.optString("participant_id").ifEmpty { return }
+            val cur = ownerGeneration
+            if (streamId != null && streamId != sid && cur != null &&
+                java.lang.Long.compareUnsigned(java.lang.Long.parseUnsignedLong(gen), java.lang.Long.parseUnsignedLong(cur)) < 0) return
+            if (streamId != sid) { anchorId = UUID.randomUUID().toString(); clockUncertaintyMs = 300_000.0; lastDeviceSeq = 0; deviceStoppedFor = null }
+            streamId = sid; participantId = pid; streamEnded = null
+        }
+        ownerGeneration = gen
+        r.optJSONObject("lease")?.let { l -> if (l.has("expires_at_ms")) leaseExpiresAtMs = l.optLong("expires_at_ms") }
+        if (state == LiveState.READY) { maybeScheduleProbe(1_000); pump(); flushDevice() }
     }
 
     private fun onHeartbeat(h: JSONObject?) {
@@ -481,7 +529,12 @@ class LiveSession(
             scheduleCommandRetry(id, res.optLong("retry_after_ms", 0)); return
         }
         when (res.getString("status")) {
-            "applied", "duplicate", "rejected" -> { pending.remove(id); acks.offer(res); lastAckSequence++ }
+            "applied", "duplicate", "rejected" -> {
+                pending.remove(id)
+                val kind = p.cmd.optString("kind")
+                if (res.getString("status") != "rejected" && (kind == "capture.start" || kind == "capture.renew")) res.optJSONObject("result")?.let { adoptCaptureResult(kind, it) }
+                acks.offer(res); lastAckSequence++
+            }
             else -> { // retryable
                 if (res.optBoolean("committed", false)) p.committedHint = true // 새 ID 금지, ledger 결과 조회(같은 ID 재시도)
                 scheduleCommandRetry(id, res.optLong("retry_after_ms", 0))
@@ -492,6 +545,8 @@ class LiveSession(
     // ------------------------------------------------------------------ 지표 창
     fun onFrame(frame: JSONObject) {
         val seq = frame.optString("sequence").toLongOrNull() ?: return
+        // T05b: sequence ≤ 2^31−1 (서버 entity_version = generation<<31 | sequence). 범위 밖은 live 에서 격리.
+        if (seq < 0 || seq > MAX_SEQUENCE) { outbox.quarantine(seq, "sequence_out_of_range"); return }
         outbox.add(seq, frame)
         if (state == LiveState.READY) pump()
     }
@@ -505,11 +560,12 @@ class LiveSession(
         if (batch.isEmpty()) return
         val windows = JSONArray()
         for ((_, f) in batch) windows.put(envelope(f, pid, stream, gen))
+        val sentSeqs = batch.map { it.first }
         val msg = JSONObject().put("protocol_version", 2).put("schema_version", 1).put("windows", windows)
         metricInflight = true
         pumpTimer?.cancel()
         pumpTimer = sched.postDelayed(2_000) { pumpTimer = null; metricInflight = false; pump() } // ACK 유실: 같은 순번 재전송(서버가 duplicate 처리)
-        transport.emit("live:metric", msg) { res -> onMetricAck(res) }
+        transport.emit("live:metric", msg) { res -> onMetricAck(sentSeqs, res) }
     }
 
     private fun envelope(f: JSONObject, pid: String, stream: String, gen: String): JSONObject {
@@ -522,22 +578,38 @@ class LiveSession(
         return o
     }
 
-    private fun onMetricAck(res: JSONObject?) {
+    /**
+     * live:metric 응답(T05b). 창별: accepted/duplicate(durable) 만 제거, rejected 는 재전송해도 같은 결과라 격리(코드별 카운터),
+     * retryable 은 유지·재전송. 배치 오류 {ok:false}: not_ready·*_ingest_unavailable(또는 서버가 retryable=true 로 표시한 일시 장애)만
+     * 재시도하고, 그 밖의 배치 거절(검증 실패·forbidden)은 보낸 창 전부를 격리해 재전송 루프를 막는다.
+     */
+    private fun onMetricAck(sent: List<Long>, res: JSONObject?) {
         pumpTimer?.cancel(); pumpTimer = null; metricInflight = false
         if (res == null) return
+        var retry = false
+        var retryAfter = 1_000L
         val acks = res.optJSONArray("acks")
-        var retry = !res.optBoolean("ok", true)
-        if (acks != null) for (i in 0 until acks.length()) {
+        if (acks == null) {
+            val code = res.optString("code").ifEmpty { "unknown" }
+            if (isRetryableError(res)) { retry = true; retryAfter = res.optLong("retry_after_ms", 1_000L).coerceIn(100L, 60_000L) }
+            else for (seq in sent) outbox.quarantine(seq, code)
+        } else for (i in 0 until acks.length()) {
             val a = acks.getJSONObject(i)
             val seq = a.optString("sequence").toLongOrNull() ?: continue
             when (a.optString("status")) {
-                "accepted", "duplicate" -> { outbox.ack(seq); lastAckSequence = maxOf(lastAckSequence, seq) }
-                "rejected" -> { outbox.ack(seq) /* 영구 거절은 live 에서 제외, archive 가 보존 */ }
+                "accepted", "duplicate" ->
+                    if (a.optBoolean("durable", false)) { outbox.ack(seq); lastAckSequence = maxOf(lastAckSequence, seq) } else retry = true
+                "rejected" -> outbox.quarantine(seq, a.optString("code").ifEmpty { "rejected" })
                 else -> retry = true
             }
         }
-        if (retry) pumpTimer = sched.postDelayed(1_000) { pumpTimer = null; pump() }
+        if (retry) pumpTimer = sched.postDelayed(retryAfter) { pumpTimer = null; pump() }
         else pump()
+    }
+
+    private fun isRetryableError(res: JSONObject): Boolean {
+        val code = res.optString("code")
+        return code == "not_ready" || code.endsWith("_ingest_unavailable") || res.optBoolean("retryable", false)
     }
 
     // ------------------------------------------------------------------ clock probe / reanchor / capture
@@ -568,7 +640,7 @@ class LiveSession(
         probeTimer = sched.postDelayed(5 * 60_000L) { probeTimer = null; sendProbe() } // 5분마다 재앵커
     }
 
-    /** capture.start 명령(EEG 동의·본인). stream_id 는 이후 device.changed 이벤트로 도착한다. */
+    /** capture.start 명령(EEG 동의·본인). stream_id·participant_id·owner_generation·lease 는 ACK result 로 바로 온다(T05b). */
     fun startCapture(): DispatchResult = dispatch(JSONObject().put("kind", "capture.start").put("payload", JSONObject()
         .put("device_profile", cfg.deviceProfile).put("algorithm_version", cfg.algorithmVersion).put("model_version", cfg.modelVersion)))
 
@@ -578,14 +650,48 @@ class LiveSession(
             .put("stream_id", sid).put("final_sequences", finalSequences).put("reason", reason)))
     }
 
-    /** device 상태(밴드/접촉/SQI/배터리) 전송. READY 아닐 때는 버린다(상태는 최신값만 의미). */
-    fun sendDevice(deviceSeq: Long, bandState: String, contact: JSONObject, sqi: Double?, batteryPct: Int?, reason: String?) {
+    /** 서버가 끝낸 stream 이 있거나 이미 진행 중이면 새 capture.start 를 보내지 않는다(추방·동의철회·종료 후 자동 재캡처 금지). */
+    fun startCaptureIfAllowed(): DispatchResult? = if (streamEnded != null || streamId != null) null else startCapture()
+
+    /**
+     * live:device 보고(Device wire 스키마). 최신값만 의미가 있어 마지막 보고 하나만 보관·재시도한다.
+     * device_seq 는 같은 stream 안에서 단조: max(직전+1, 벽시계 ms) — 재시작 후에도 이전 값보다 커진다.
+     * 서버가 stream_not_active(superseded 등)/stream_not_found 로 답하면 그 stream 에 대한 보고를 멈춘다.
+     */
+    fun reportDevice(bandState: String, contact: JSONObject, sqi: Double?, batteryPct: Int?, reason: String?) {
         val sid = streamId ?: return
-        if (state != LiveState.READY) return
-        val m = JSONObject().put("protocol_version", 2).put("schema_version", 1).put("session_id", cfg.sessionId).put("stream_id", sid)
-            .put("device_seq", deviceSeq.toString()).put("band_state", bandState).put("contact", contact)
+        if (deviceStoppedFor == sid) return
+        lastDeviceSeq = maxOf(lastDeviceSeq + 1, wallMs())
+        pendingDevice = JSONObject().put("protocol_version", 2).put("schema_version", 1).put("session_id", cfg.sessionId).put("stream_id", sid)
+            .put("device_seq", java.lang.Long.toUnsignedString(lastDeviceSeq)).put("band_state", bandState).put("contact", contact)
             .put("sqi", sqi ?: JSONObject.NULL).put("battery_pct", batteryPct ?: JSONObject.NULL).put("state_reason", reason ?: JSONObject.NULL)
-        transport.emit("live:device", m, null)
+        flushDevice()
+    }
+
+    private fun flushDevice() {
+        if (state != LiveState.READY || deviceInflight || deviceTimer != null) return
+        val m = pendingDevice ?: return
+        if (m.getString("stream_id") != streamId) { pendingDevice = null; return }
+        deviceInflight = true
+        deviceTimer = sched.postDelayed(2_000) { deviceTimer = null; deviceInflight = false; flushDevice() } // ACK 유실: 같은 device_seq 재전송(서버 duplicate)
+        transport.emit("live:device", m) { res -> onDeviceAck(m, res) }
+    }
+
+    private fun onDeviceAck(sent: JSONObject, res: JSONObject?) {
+        if (res == null) return
+        deviceTimer?.cancel(); deviceTimer = null; deviceInflight = false
+        val status = res.optString("status")
+        if (status == "accepted" || status == "duplicate") {
+            if (pendingDevice === sent) pendingDevice = null
+            flushDevice(); return
+        }
+        val code = res.optString("code")
+        when {
+            code == "stream_not_active" || code == "stream_not_found" -> { deviceStoppedFor = sent.getString("stream_id"); pendingDevice = null }
+            isRetryableError(res) ->
+                deviceTimer = sched.postDelayed(res.optLong("retry_after_ms", 1_000L).coerceIn(100L, 60_000L)) { deviceTimer = null; flushDevice() }
+            else -> if (pendingDevice === sent) pendingDevice = null // 검증 실패 등: 같은 값 재전송 금지
+        }
     }
 
     // ------------------------------------------------------------------ 진단
@@ -597,4 +703,15 @@ class LiveSession(
     fun pendingCommands(): Int = pending.size
 
     private fun parseU64(s: String): Long = try { java.lang.Long.parseUnsignedLong(s) } catch (_: Exception) { 0L }
+
+    companion object {
+        const val MAX_SEQUENCE = 2_147_483_647L
+        private val U64 = Regex("^(0|[1-9][0-9]{0,19})$")
+
+        /** 계약 U64(십진 문자열, 선행 0 금지, ≤ 2^64−1). JSON 숫자는 거부(정수 가정 금지). 정상값은 그대로 문자열로 돌려준다. */
+        fun parseU64Strict(v: Any?): String? {
+            if (v !is String || !U64.matches(v)) return null
+            return try { java.lang.Long.parseUnsignedLong(v); v } catch (_: NumberFormatException) { null }
+        }
+    }
 }
