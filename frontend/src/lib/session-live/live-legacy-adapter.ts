@@ -28,7 +28,10 @@ type PresenceFields = { entered_at?: string | null; checkin_state?: 'completed' 
 /** 접속은 v2 participation.connected 가 출처. 체크인은 신원 행(REST)값 → 없으면 v2 waiting.ready. 입장 시각은 신원 행. */
 function presenceOf(state: LiveState, pid: string, legacy: PresenceFields | undefined) {
   const part = state.participation[pid]?.data;
-  const presence_state: 'connected' | 'disconnected' | 'unknown' = part ? (part.connected ? 'connected' : 'disconnected') : 'unknown';
+  // 서버는 입장 이벤트에 connected=false 를 싣고 별도 갱신을 보내지 않는다 → 출석(attending)을 접속 근거로 함께 본다.
+  const presence_state: 'connected' | 'disconnected' | 'unknown' = !part
+    ? 'unknown'
+    : part.connected || part.attendance === 'attending' ? 'connected' : 'disconnected';
   const waitingReady = state.waiting[pid]?.data.ready;
   const checkin_state = legacy?.checkin_state && legacy.checkin_state !== 'unknown'
     ? legacy.checkin_state

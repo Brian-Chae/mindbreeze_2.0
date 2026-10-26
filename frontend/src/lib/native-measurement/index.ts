@@ -44,6 +44,15 @@ export type { BridgeEvent, Capabilities, MeasurementSnapshot, NativeMeasurementP
 export { decideMeasurementPath, type MeasurementPath } from '../measurement-web/measurement-path';
 export { describeArchiveStatus } from './archive-status';
 
+const isU64 = (v: unknown): v is string => typeof v === 'string' && /^\d+$/.test(v);
+
+/** Android getMeasurementSnapshot 은 계약 스냅샷을 `bridge` 아래에 두고 최상위에 진단 필드를 싣는다 — 계약 형태로 맞춘다. */
+function normalizeSnapshot(raw: MeasurementSnapshot): MeasurementSnapshot {
+  const r = raw as unknown as { seq?: unknown; bridge?: unknown };
+  if (!isU64(r.seq) && r.bridge && typeof r.bridge === 'object') return r.bridge as MeasurementSnapshot;
+  return raw;
+}
+
 const EVENTS: Array<BridgeEvent['event']> = ['measurementUpdated', 'liveStateUpdated', 'commandAck', 'archiveStatus'];
 
 export const WEB_CAPABILITIES: Capabilities = {
@@ -99,7 +108,7 @@ export class NativeMeasurementFacade {
       const h = await this.plugin.addListener(name, (e) => { if (token === this.attachToken) this.onEvent(e); });
       this.handles.push(h);
     }
-    const snap = await this.plugin.getMeasurementSnapshot({ sessionId });
+    const snap = normalizeSnapshot(await this.plugin.getMeasurementSnapshot({ sessionId }));
     if (token !== this.attachToken) return snap;
     this.accept(snap);
     return snap;
@@ -205,6 +214,7 @@ export class NativeMeasurementFacade {
   }
 
   private accept(snap: MeasurementSnapshot): boolean {
+    if (!isU64(snap.seq) || !isU64(snap.managerGeneration)) return false; // 측정 전·형식 불일치 스냅샷은 무시(attach 를 깨뜨리지 않는다)
     const seq = BigInt(snap.seq);
     if (this.generation === snap.managerGeneration && seq <= this.lastSeq) return false;
     if (this.generation !== null && BigInt(snap.managerGeneration) < BigInt(this.generation)) return false;
@@ -233,7 +243,7 @@ export class NativeMeasurementFacade {
   private async resnapshot(): Promise<void> {
     if (!this.sessionId) return;
     const token = this.attachToken;
-    const snap = await this.plugin.getMeasurementSnapshot({ sessionId: this.sessionId });
+    const snap = normalizeSnapshot(await this.plugin.getMeasurementSnapshot({ sessionId: this.sessionId }));
     if (token === this.attachToken) {
       this.generation = null; this.lastSeq = -1n; // 새 세대는 seq 가 다시 시작한다
       this.accept(snap);
