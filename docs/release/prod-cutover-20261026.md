@@ -59,6 +59,8 @@
 
 병합 방식: develop→main 머지 커밋(기존 방식).
 
+**기준 SHA 정정(지휘 3f0465c1, 10/26):** 현재 prod가 실행 중인 코드는 main 헤드 `addcb7e0`가 아니라 `c8d4d8bb`다(B-1). 두 커밋의 트리는 다르다(77파일, 대부분 `specs/`·문서). 코드 쪽 차이는 `backend/app` 일부 서비스(`record_service.py`, `report_service.py`, `research_consent_service.py` 등)와 `.github/workflows/ci-feature.yml`이다. `deploy/jobs.tsv`·`deploy/env-manifest.tsv`·`backend/alembic/versions`는 두 커밋에서 동일하고, A-3이 인용한 모델·서비스 8개 파일(`user.py`, `chat.py`, `career.py`, `qualification.py`, `chat_service.py`, `counselor_info_service.py`, `auth.py`, `system_message_service.py`)도 동일해서 A-3 결론은 `c8d4d8bb`에도 유효하다. 다만 `research_consent_service.py` 등 일부 파일은 두 커밋에서 다르므로, A-5·C-6의 "이전 릴리스 동작" 비교는 **`c8d4d8bb` 기준**으로 해야 한다.
+
 ### A-2. 마이그레이션 18건 — 대상 테이블·작업·잠금·가역성
 
 `deploy/ci/check_migrations.py --base-sha addcb7e0`(정적, DB 접속 없음) 결과: head 1개(`e246a0301001`), 검사 18건, **destructive=true, 경고 14건.** 경고 분류(소스 대조 판단): `0052` 8건 + `0057` 2건은 **실제 UPDATE**, `0057` 3건 + `244003` 1건은 `BEFORE UPDATE OR DELETE` 트리거 정의 문자열로 정규식에 걸린 **오탐으로 보인다.**
@@ -155,7 +157,7 @@
 
 ### A-6. 신규 주기 작업 4개와 retention_sweep의 코드상 동작
 
-`deploy/jobs.tsv`: main 17개 → develop 21개. 신규 4개(`report_backlog_probe`, `class_operations`, `class_rolling`, `account_deletion_sweep`)와 `retention_sweep`(0→1 활성).
+`deploy/jobs.tsv`(헤더 제외): main **16행(활성 14, 비활성 2: `retention_sweep`·`research_export`)** → develop **20행(활성 19, 비활성 1: `research_export`)**. 신규 4개(`report_backlog_probe`, `class_operations`, `class_rolling`, `account_deletion_sweep`)와 `retention_sweep`(0→1 활성)을 합쳐 **컷오버 후 새로 생기는 timer는 5개**(14→19)이며 `class_rolling` timer도 여기 포함된다. 설치 후 활성 19개는 `backend/tests/test_sdd210_install_release.py:87`의 기대값과 같다. `jobs.tsv`·`env-manifest.tsv`·`alembic/versions`는 `c8d4d8bb`와 main 헤드 `addcb7e0`에서 동일하다.
 
 | 작업 | 주기 | 플래그 off일 때 코드상 동작 | 근거 |
 |---|---|---|---|
@@ -196,9 +198,9 @@ prod 실효값은 B-4에서 확인한다. 아래는 **코드 기본값과 manife
 | `RESEARCH_EXPORT_ENABLED` | False(`config.py:124`) | static false | — | off |
 | `PIPELINE_QUEUE_SPLIT_ENABLED` | False(`config.py:97`) | static **true** | 코드 기본과 prod가 **다름** | on (롤백: false) |
 | `PIPELINE_METRICS_CLOUDWATCH_ENABLED` | False(`config.py:107`) | static false | A-6 | off |
-| `CLASS_SCHEDULING_ENABLED` | False(`config.py:46`) | ssm 선택, 미설정 | `classes.py:77` 404, `session_service.py:511,776`, `class_read_service.py:328-329` | **D-1** |
-| `CLASS_ROLLING_ENABLED` | False(`config.py:47`) | ssm 선택 | `class_operations_service.py:71` | D-1 |
-| `CLASS_TEAM_READ_ENABLED` | False(`config.py:48`) | ssm 선택 | — | D-1 |
+| `CLASS_SCHEDULING_ENABLED` | False(`config.py:46`) | ssm 선택(`env-manifest.tsv:47`), 현재 prod SSM에 키 없음(B-5) | `classes.py:77` 404, `session_service.py:511,776`, `class_read_service.py:328-329` | **출시 때 true** (Brian 결정 10/26, D-1) |
+| `CLASS_ROLLING_ENABLED` | False(`config.py:47`) | ssm 선택(`env-manifest.tsv:48`), 키 없음 | `class_operations_service.py:71`(편성·롤링 둘 다 true여야 동작) | **출시 때 true** (D-1) |
+| `CLASS_TEAM_READ_ENABLED` | False(`config.py:48`) | ssm 선택(`env-manifest.tsv:49`), 키 없음 | `class_access_service.py:93`, `:184`(false면 팀 열람·참관 차단) | **출시 때 false 유지.** 개인정보처리방침 개정 고지가 운영에 반영된 뒤 켠다 (D-1) |
 | `ENABLE_DEV_ROLE_SIMULATION` | False(`config.py:198`) | static false | — | off |
 
 ### A-9. 10/18 Deploy Prod 실패 원인과 재발 방지
@@ -210,7 +212,7 @@ prod 실효값은 B-4에서 확인한다. 아래는 **코드 기본값과 manife
 | 39077484296 | `dbf19cfa` | 실패 | SSM `RunShellScript` 기본 셸이 dash → `set -o pipefail` 오류(`Illegal option -o`) | `ssm-install-cmd.sh`가 bash로 재실행(`13fc1e0d`) |
 | 39079034212 | `3f6ed588` | 실패 | 빈 DB에 체인 85개를 적용할 때 드리프트 마이그레이션 `30c1bfbc724f`가 `chat_room_participants`를 중복 생성(`DuplicateTable`) | `IF NOT EXISTS` 보호(`494c682a`). 롤백 트랩 정상, 서버 변경 0 |
 | 39082258294 | `494c682a` | 실패 | **의도된 실패 주입**: `alembic_version`을 없는 `deadbeef0000`으로 바꿔 재배포 → `Can't locate revision`, exit 20, 코드·서비스 변경 없음(T-16 롤백 리허설) | 결함 아님 |
-| 39098860208 | develop `7d924816` | **성공**(10/18 04:57Z) | — | prod 마지막 성공 배포 |
+| 39098860208 | develop `7d924816`(배포를 건 ref) | **성공**(10/18 04:57Z) | — | prod 마지막 성공 배포. 지휘 정정: 실제 실행 코드는 `c8d4d8bb`(B-1) |
 
 재발 방지:
 1. 10/18 실패 두 건은 모두 "이전에 적용해 본 적 없는 DB 상태"에서 났다. 이번 18건은 **prod 복제본에 먼저 적용**한다(C).
@@ -254,7 +256,7 @@ prod 실효값은 B-4에서 확인한다. 아래는 **코드 기본값과 manife
 | 5 | `deploy-prod` 실행: `confirm_destructive=true`, `observe_minutes`≥10. `environment: production` 승인 게이트에서 Brian 승인 | Brian |
 | 6 | 서버 설치(마이그레이션 → 원자 전환 → 헬스) → 공개 스모크 → 관찰 → 성공 확정 | 자동 |
 | 7 | 아래 검증 | — |
-| 8 | 플래그 조정(CLASS_* 등)은 **별도 변경**으로 검증 후 하나씩 | Brian |
+| 8 | 그 밖의 플래그 조정은 **별도 변경**으로 검증 후 하나씩. `CLASS_TEAM_READ_ENABLED`는 V-1(처리방침 v2.2 렌더)이 prod에서 통과한 **뒤에** 별도 변경으로 켠다(D-1) | Brian |
 
 **검증(화면 실렌더 기준, HTTP 200은 근거 아님):**
 
@@ -263,7 +265,7 @@ prod 실효값은 B-4에서 확인한다. 아래는 **코드 기본값과 manife
 | V-1 | 비로그인 `/privacy` 렌더 | h1 "개인정보 처리방침", "시행일 2026년 10월 24일 · 버전 2.2" |
 | V-2 | 비로그인 `/account-deletion` 렌더 | h1 "MIND BREEZE 계정 삭제 요청" (현재 prod는 404 화면) |
 | V-3 | `/health`, `/health/ready` | 200, database·redis ok |
-| V-4 | 서비스·타이머 | 워커 5종 active, 타이머가 `jobs.tsv` 21개와 일치 |
+| V-4 | 서비스·타이머 | 워커 5종 active, 활성 타이머 19개가 `jobs.tsv`(활성 19)와 일치(신규 5: `retention_sweep`·`report_backlog_probe`·`class_operations`·`class_rolling`·`account_deletion_sweep`) |
 | V-5 | 마이그레이션 | 배포 로그 `Running upgrade … → e246a0301001`, 오류 없음. prod `alembic current` 읽기 확인(OPS) |
 | V-6 | 로그인·클래스 입장 | 회원·상담사 계정으로 입장·채팅 송신 |
 | V-7 | live-v2 off | **로그인 계정**으로 `GET /api/v1/sessions/{id}/live-v2/snapshot`이 404 (비로그인은 인증이 먼저라 401일 수 있음) |
@@ -288,15 +290,15 @@ prod 실효값은 B-4에서 확인한다. 아래는 **코드 기본값과 manife
 
 | # | 항목 | 확인 방법(읽기만) | 결과 |
 |---|---|---|---|
-| B-1 | prod 실제 실행 릴리스·git SHA | `/opt/mindbreeze/current` 링크, MANIFEST `git_sha`. 참고: 마지막 성공 run의 ref는 develop `7d924816` | |
+| B-1 | prod 실제 실행 릴리스·git SHA | `/opt/mindbreeze/current` 링크, MANIFEST `git_sha`. **지휘 3f0465c1 정정(10/26): 현재 prod 실행 코드 SHA는 `c8d4d8bb`** 이며, `7d924816`은 배포를 건 develop 커밋(마지막 성공 run 39098860208의 ref)이다. 이 값은 지휘 보고를 옮긴 것으로 서버 MANIFEST로 직접 확인하지 않았다 → 확인 대기 | `c8d4d8bb`(지휘 정정, 서버 확인 대기) |
 | B-2 | prod `alembic current` | 읽기 전용 조회. 기대 `e036a0000051` | |
 | B-3 | 행 수: `session_participants`, `chat_messages`, `users`, `careers`, `qualifications`, `data_export_jobs` + `account_deletion_requests`·`social_revoke_outbox` 대기 건수 | 건수만(개인정보 열람 금지). `0052`가 고칠 NULL 행 수도 건수만 | |
 | B-4 | 서버 실효값 유무·true/false: `RETENTION_SWEEP_ENABLED`, `ACCOUNT_DELETION_SWEEP_ENABLED`, `RESEARCH_EXPORT_ENABLED`, `LIVE_PROTOCOL_V2`, `DATA_CENTER_ENABLED`, `ENVIRONMENT` | 값 원문 출력 없이 유무·불리언만 | |
-| B-5 | `CLASS_SCHEDULING_ENABLED`·`CLASS_ROLLING_ENABLED`·`CLASS_TEAM_READ_ENABLED` 현재값 | SSM 파라미터 유무 | |
+| B-5 | `CLASS_SCHEDULING_ENABLED`·`CLASS_ROLLING_ENABLED`·`CLASS_TEAM_READ_ENABLED` 현재값 | SSM 파라미터 유무. 지휘 보고: 현재 prod SSM에 `CLASS_*` 키 없음(OPS 확인 대기) | 키 없음(지휘 보고, OPS 확인 대기) |
 | B-6 | `signup_notice_email` 설정 유무와 도메인 (삭제 요청 접수 알림 수신처, A-7) | 유무·도메인만 | |
 | B-7 | 지원 문의·신고 접수 경로와 수신자(운영 설정) | 설정 유무 | |
 | B-8 | RDS: 엔진 버전, 자동백업 최신 시각·보존일, 삭제방지, 스토리지 여유 | RDS 읽기 (PG≥11이면 `0059`의 NOT NULL 상수 DEFAULT가 메타데이터 변경) | |
-| B-9 | 설치된 systemd 타이머 목록 ↔ main `jobs.tsv` 17개 | `systemctl list-timers` | |
+| B-9 | 설치된 systemd 타이머 목록 ↔ main `jobs.tsv` **16행(활성 14)** (지휘 정정; 종전 '17개'는 헤더 줄을 센 오류) | `systemctl list-timers`. 기대: 활성 14개 | |
 | B-10 | `FCM_PROJECT_ID`·`FCM_SERVICE_ACCOUNT_JSON` 설정 유무(푸시) | 유무만 | |
 | B-11 | 현재 prod 프론트 번들의 상담·AI 노출 효과 | 공개 번들 대조 + 비로그인 화면(로그인 후 화면은 합성 계정 확보 후) | |
 | B-12 | 앱(Android·iOS) × prod live-v2 off 호환 — **O13, APP 창구 검증** | 최종 prod 호환 SHA와 합성 계정 확보 후 실제 서명 산출물·화면으로 확인 | **미확인** |
@@ -311,18 +313,18 @@ prod 실효값은 B-4에서 확인한다. 아래는 **코드 기본값과 manife
 | C-2 | 스냅샷에서 **임시 인스턴스 복원** | `alembic_version = e036a0000051`, `pg_is_in_recovery=False` |
 | C-3 | 복제본에서 `alembic upgrade head` — 마이그레이션별 소요와 잠금 대기 기록 | 오류 없음. 전체 10분 이내, 5초 `lock_timeout` 실패 0건. 초과 시 본 배포를 보류하고 A-4 권고를 재검토 |
 | C-4 | 전후 행 수 비교(`session_participants`, `chat_messages`, `users`, `careers`, `qualifications`) | 삭제 0, 행 수 동일(UPDATE는 값만 변경) |
-| C-5 | **이전 릴리스(main `addcb7e0`) 코드**를 복제본(`0052` 적용 후)에 붙여 로그인·채팅 송신·상담사 경력/자격 저장·사용자 생성 스모크 | NOT NULL 위반 0건 (A-3 보강: 앱 코드 밖의 쓰기 경로 확인) |
+| C-5 | **이전 릴리스(현재 prod 실행 코드 `c8d4d8bb`) 코드**를 복제본(`0052` 적용 후)에 붙여 로그인·채팅 송신·상담사 경력/자격 저장·사용자 생성 스모크 | NOT NULL 위반 0건 (A-3 보강: 앱 코드 밖의 쓰기 경로 확인) |
 | C-6 | **연구 동의 불변**(A-5): `0057` 전후 실효 연구 동의 `participant_id` 집합의 건수·해시 비교, 근거 없는 대상 수 | 건수·해시 **동일**, 근거 없는 연구 이용·내보내기 대상 **0건** |
 | C-7 | 새 코드(후보 SHA)로 같은 스모크 + live-v2 off 확인 + 상담 API 직접 호출 결과 기록(A-10) | 입장·채팅 정상, live-v2 404 |
 | C-8 | 외부 발송 0건 확인: `account_deletion_sweep_cron.py --dry-run`, `retention_sweep_cron.py --dry-run`만 실행 | 메일·Apple/Google 호출 0건. `mode=dry_run`, 삭제 0건 |
 
 ## D. Brian 사업 결정
 
-진입 조건: Brian 답변. 답이 없어도 A·B·C는 진행할 수 있으나 **배포 착수는 D-1~D-4가 정해져야 한다.**
+진입 조건: Brian 답변. 답이 없어도 A·B·C는 진행할 수 있으나 **배포 착수는 D-1~D-4가 정해져야 한다.** D-1은 10/26 결정됨(아래 D-1 상세), D-2~D-4는 대기.
 
 | # | 결정 | 선택지·메모 |
 |---|---|---|
-| D-1 | `CLASS_SCHEDULING`·`CLASS_ROLLING`·`CLASS_TEAM_READ`의 prod 개방 범위 | 미설정이면 전부 false → 예약 클래스 편성(SDD-216·231 흐름)이 prod에서 동작하지 않음(`classes.py:77` 404). 명상 클래스 중심 방침(상담·AI 비공개)과 맞춰 정한다 |
+| D-1 | `CLASS_SCHEDULING`·`CLASS_ROLLING`·`CLASS_TEAM_READ`의 prod 개방 범위 | **결정됨(Brian, 10/26).** 출시 때 `CLASS_SCHEDULING_ENABLED=true`, `CLASS_ROLLING_ENABLED=true`. `CLASS_TEAM_READ_ENABLED`는 개인정보처리방침 개정 고지가 운영에 반영된 뒤 켠다. 컷오버 SSM 파라미터 계획은 아래 D-1 상세 |
 | D-2 | 후보 SHA 포함 범위 | 스토어 FIX 카드 2건, 열린 PR #115(연결 불안정 배너), #116 실측 이후 여부 |
 | D-3 | 배포 시간대 | `0057` 전 행 UPDATE·`0052` NOT NULL이 진행 중 클래스를 막을 수 있어 **진행 중 클래스가 없는 시간**으로 정한다 |
 | D-4 | 상담 API 서버 측 플래그 가드 추가 FIX 카드 | A-10. 하지 않으면 상담 비공개는 화면에서만 지켜짐 |
@@ -330,6 +332,23 @@ prod 실효값은 B-4에서 확인한다. 아래는 **코드 기본값과 manife
 | D-6 | 계정 삭제 접수 알림의 운영 정책 | 기존 설정(`signup_notice_email`) 유지가 기본. 수신처·발송 정책 변경은 사용자 결정 |
 | D-7 | 확인 요청: 처리방침 v2.2 법무 승인, 연구 가명 키(`RESEARCH_ID_KEY_V1`) 오프라인 백업 | 10/18 컷오버 차단 요소 #2·#3(`rehearsal-result.md` §7)과 동일 |
 | D-8 | **스토어 심사 제출과 공개 출시의 경계** | 아래 D-8 상세 |
+
+### D-1. CLASS 플래그 컷오버 SSM 파라미터 계획
+
+결정(Brian, 10/26): 출시 때 편성·롤링을 켜고, 팀 열람은 방침 개정 고지 반영 뒤에 켠다.
+
+| SSM 키 (`/mindbreeze/prod/`) | 컷오버 시 값 | 시점 | 근거 |
+|---|---|---|---|
+| `CLASS_SCHEDULING_ENABLED` | `true` | 배포 전에 등록(아래 순서) | `env-manifest.tsv:47` ssm 선택 키. 값이 비면 `render_env.py:83-87`이 줄을 생략해 코드 기본 false가 됨 |
+| `CLASS_ROLLING_ENABLED` | `true` | 같은 시점 | `class_operations_service.py:71`은 **편성과 롤링 둘 다 true**일 때만 동작. 롤링은 KST 02시에만 보충(`:75`) |
+| `CLASS_TEAM_READ_ENABLED` | **등록하지 않음(또는 false)** | V-1 통과 후 별도 변경 | `class_access_service.py:93`, `:184` |
+
+- 현재 prod SSM에는 `CLASS_*` 키가 없다(B-5, 지휘 보고).
+- **순서:** ① 키 2개를 SSM에 등록 → ② 환경 렌더(`render_env.py`)가 `prod.env`에 포함 → ③ 배포 때 서비스가 새 환경으로 기동. 키를 배포 뒤에 넣으면 환경 재적용과 서비스 재시작이 한 번 더 필요하다.
+- **영향:** 편성이 켜지면 `class_operations` timer(매분)가 첫 실행부터 실제 작업을 한다(요청 만료·마무리·전달 의도 처리). 꺼져 있을 때는 즉시 종료하던 작업이다(A-6). 롤링이 켜지면 `class_rolling` timer(매시)가 KST 02시에 정기 클래스를 보충한다.
+- **timer:** 컷오버 후 새로 생기는 timer는 5개이며 `class_rolling`이 포함된다(A-6). 플래그가 꺼져 있어도 timer 자체는 설치된다.
+- **리허설(C-7):** 복제본 스모크를 후보 SHA로 돌릴 때 편성·롤링을 켠 상태로도 한 번 확인한다. 이 항목은 아직 C-7 문구에 반영하지 않았고 OPS 실행 전에 확정한다.
+- **팀 열람을 켜는 조건:** 방침 개정 고지가 prod에 반영됐는지는 prod `/privacy` 렌더(현재 1.0, V-1 합격 기준 2.2)로 판정한다. 고지 문구의 법무 승인은 D-7이다.
 
 ### D-8. 스토어 심사 제출과 공개 출시의 경계
 
