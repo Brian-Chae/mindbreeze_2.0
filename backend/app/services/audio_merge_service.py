@@ -74,22 +74,29 @@ def _byte_merge(paths: list[str], out_path: str) -> None:
                 shutil.copyfileobj(src, out)
 
 
-def _ffmpeg_concat(paths: list[str], out_path: str) -> None:
+def _ffmpeg_concat(paths: list[str], out_path: str, all_mp4: bool = False) -> None:
     ffmpeg = _ffmpeg_bin()
     if not ffmpeg:
         raise RuntimeError("ffmpeg 가 설치되어 있지 않아 m4a/혼재 청크를 병합할 수 없습니다")
+    if all_mp4:
+        _concat_demuxer(ffmpeg, paths, out_path)
+        if os.path.exists(out_path) and os.path.getsize(out_path) > 0:
+            return
+    _concat_filter(ffmpeg, paths, out_path)
+
+
+def _concat_demuxer(ffmpeg: str, paths: list[str], out_path: str) -> None:
+    """동일 코덱 m4a 전용. 혼재 형식에서는 성공 코드로 잘못된 길이를 만들 수 있어 쓰지 않는다."""
     list_file = tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False)
     try:
         with list_file:
             for p in paths:
                 escaped = os.path.abspath(p).replace("'", "'\\''")
                 list_file.write(f"file '{escaped}'\n")
-        # concat demuxer 는 포맷이 섞이면 실패하므로 입력별 디코드가 되는 filter 대신,
-        # 청크를 각각 m4a 로 통일하지 않고 concat 프로토콜 대신 demuxer 를 시도한 뒤 실패하면 filter 로 폴백한다.
         cmd = [ffmpeg, "-y", "-loglevel", "error", "-f", "concat", "-safe", "0",
                "-i", list_file.name, "-vn", "-c:a", "aac", "-b:a", "64k", out_path]
         res = subprocess.run(cmd, capture_output=True, timeout=FFMPEG_TIMEOUT_SECONDS)
-        if res.returncode == 0 and os.path.exists(out_path) and os.path.getsize(out_path) > 0:
+        if res.returncode == 0:
             return
         logger.warning("[audio_merge] concat demuxer 실패 — filter_complex 폴백: %s",
                        res.stderr.decode("utf-8", "ignore")[-300:])
@@ -99,7 +106,9 @@ def _ffmpeg_concat(paths: list[str], out_path: str) -> None:
         except OSError:
             pass
 
-    # 폴백: 입력을 모두 디코드해 concat 필터로 이어붙임(webm+m4a 혼재 등)
+
+def _concat_filter(ffmpeg: str, paths: list[str], out_path: str) -> None:
+    # 입력을 모두 디코드해 concat 필터로 이어붙임(webm+m4a 혼재 등)
     cmd = [ffmpeg, "-y", "-loglevel", "error"]
     for p in paths:
         cmd += ["-i", p]
@@ -145,7 +154,7 @@ def merge_chunks_for_stt(chunk_paths: list[str]) -> tuple[str, str]:
     fd = tempfile.NamedTemporaryFile(suffix=EXTENSIONS[FORMAT_MP4], delete=False)
     fd.close()
     try:
-        _ffmpeg_concat(existing, fd.name)
+        _ffmpeg_concat(existing, fd.name, all_mp4=all(f == FORMAT_MP4 for f in formats))
     except Exception:
         _safe_unlink(fd.name)
         raise
