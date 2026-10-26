@@ -182,6 +182,10 @@ export interface SessionLiveMetric extends Partial<ParticipationRow> {
   sdnn?: number | null;
   /** 몸 지표 — HRV RMSSD ms (산출 불가 시 null) */
   rmssd?: number | null;
+  /** v2 LiveState focus_display(0~100). 구 경로는 없음 → extras 폴백 */
+  focus_score?: number | null;
+  /** v2 LiveState emotion_display(0~100). 구 경로는 없음 → extras 폴백 */
+  emotional_score?: number | null;
   /** SDD-094: 손들기 상태 (온라인 그룹에서 기본 뮤트 → 손들기로 발언 요청) */
   raise_hand?: boolean;
   /** SDD-094: 발언권(송출) 부여 상태 — true면 can_publish */

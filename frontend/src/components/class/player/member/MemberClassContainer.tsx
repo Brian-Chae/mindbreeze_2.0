@@ -4,6 +4,7 @@
 // 이 파일만 useBand 를 호출한다(plan R4: BLE 연결·업로드 인스턴스는 화면당 1개).
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { freshnessOf } from '../../../../lib/session-live/live-view';
+import { liveMetricSnapshot } from '../../../../lib/session-live/live-metric-snapshot';
 import { ConnectionState } from 'livekit-client';
 import { useBand, type UseBandResult } from '../../../../hooks/useBand';
 import { BiosignalRecordingStatus } from '../../../../lib/biosignal/recording-status';
@@ -245,11 +246,13 @@ export function MemberClassContainer({
   const linkState = resolveBandLinkState({ bleConnected: isLive, lastEegAt: band.lastEegAt, nowMs });
   const metricsBlocked = band.deviceStatus === 'lead_off' || linkState === 'stale';
   // native 소유 동안 6지표는 native snapshot.metrics(null 보존)로 표시한다.
-  const snapshot = nativeM.metrics ?? buildSnapshot(band, metricsBlocked, remoteEfficiency);
+  // 상담사 타일과 같은 출처(LiveState)·같은 규칙을 우선한다 — 두 화면 숫자 불일치 방지. LiveState 에 내 지표가 없을 때만 앱/웹 자체값.
+  const liveSnap = v2On ? liveMetricSnapshot(liveV2?.state, participantId, liveV2?.nowMs ?? nowMs) : null;
+  const snapshot = liveSnap ?? nativeM.metrics ?? buildSnapshot(band, metricsBlocked, remoteEfficiency);
 
   // 1Hz 링버퍼 — readSnapshot 을 ref 로 안정화해 타이머를 1회만 만든다(서버 신호에 의한 리셋·샘플 누락 방지, SDD-127)
-  const nativeMetricsRef = useRef(nativeM.metrics);
-  nativeMetricsRef.current = nativeM.metrics;
+  const nativeMetricsRef = useRef(liveSnap ?? nativeM.metrics);
+  nativeMetricsRef.current = liveSnap ?? nativeM.metrics;
   const readSnapshotRef = useRef<() => MetricSnapshot>(() => NO_METRICS);
   useEffect(() => {
     readSnapshotRef.current = () => nativeMetricsRef.current ?? buildSnapshot(bandRef.current, metricsBlocked, remoteEfficiency);
