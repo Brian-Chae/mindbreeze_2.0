@@ -162,7 +162,8 @@ try {
 
 // debug·조회 작업은 허용하되 모든 release 패키징은 완전한 서명 설정을 요구한다.
 gradle.taskGraph.whenReady { graph ->
-    if (graph.allTasks.any { it.project == project && it.name.toLowerCase().contains('release') }) {
+    // -PallowUnsignedRelease=true: 서명 없는 검증 전용 빌드(AAB 구성·매니페스트 점검용, 배포 불가). 기본은 서명 필수.
+    if (!project.hasProperty('allowUnsignedRelease') && graph.allTasks.any { it.project == project && it.name.toLowerCase().contains('release') }) {
         def requiredKeys = ['storeFile', 'storePassword', 'keyAlias', 'keyPassword']
         if (!keystorePropertiesFile.exists() || requiredKeys.any { !keystoreProperties[it]?.toString()?.trim() }) {
             throw new GradleException('릴리스 서명 설정이 없습니다. keystore.properties의 필수 항목을 설정해 주세요.')
