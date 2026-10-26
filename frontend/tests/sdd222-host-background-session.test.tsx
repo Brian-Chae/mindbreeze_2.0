@@ -69,3 +69,14 @@ describe('V40 호스트 밴드 관찰 모드 (정적 확인)', () => {
     expect(band).toMatch(/useEegRawUpload\(\{[\s\S]*?enabled: !observationOnly &&/);
   });
 });
+
+describe('FIX 백그라운드 녹음 — 녹음 중 마이크 타입', () => {
+  it('V1 오프라인 수업이라도 녹음 중이면 마이크 타입으로 켠다', async () => {
+    await render({ isHost: true, isLobby: false, isRunning: true, online: false, recording: true });
+    expect(last()).toEqual([true, 'host', true]);
+  });
+  it('V2 녹음 아님·오프라인이면 마이크 타입 없음', async () => {
+    await render({ isHost: true, isLobby: false, isRunning: true, online: false, recording: false });
+    expect(last()).toEqual([true, 'host', false]);
+  });
+});
