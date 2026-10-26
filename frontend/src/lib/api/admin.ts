@@ -343,3 +343,104 @@ export const resetAdminOrgCounselorPassword = (
   orgId: string, userId: string, reason: string,
 ): Promise<PasswordResetIssueResponse> =>
   apiClient.post<PasswordResetIssueResponse>(`/admin/orgs/${orgId}/counselors/${userId}/password-reset`, { reason });
+
+// ── [MB261026][FIX] D4: 채팅 신고 처리 · 금칙어 관리 (플랫폼 관리자) ──────────────
+
+export type ChatReportStatus = 'submitted' | 'reviewing' | 'actioned' | 'dismissed' | 'withdrawn';
+export type ChatReportTransitionTarget = 'reviewing' | 'actioned' | 'dismissed';
+
+export interface ChatReportPersonDto {
+  id: string | null;
+  name: string | null;
+}
+
+/** 목록 항목 — 메시지 발췌·이메일 없음(최소 열람). */
+export interface ChatReportItemDto {
+  id: string;
+  status: ChatReportStatus;
+  reason: string | null;
+  created_at: string | null;
+  reporter: ChatReportPersonDto;
+  reported_user: ChatReportPersonDto;
+  room_type: string | null;
+  has_message: boolean;
+  ack_due_at: string;
+  decision_due_at: string;
+  acknowledged_at: string | null;
+  decided_at: string | null;
+  withdrawn_at: string | null;
+  ack_overdue: boolean;
+  decision_overdue: boolean;
+  handled_by_name: string | null;
+}
+
+export interface ChatReportHistoryDto {
+  from_status: string | null;
+  to_status: string | null;
+  note: string | null;
+  admin_name: string | null;
+  at: string | null;
+}
+
+export interface ChatReportTransitionResultDto extends ChatReportItemDto {
+  resolution_note: string | null;
+  history: ChatReportHistoryDto[];
+}
+
+/** 상세 — 열람 1회가 서버 감사 로그 1행이 된다. */
+export interface ChatReportDetailDto extends Omit<ChatReportItemDto, 'reporter' | 'reported_user'> {
+  reporter: ChatReportPersonDto & { email: string | null };
+  reported_user: ChatReportPersonDto & { email: string | null };
+  room_id: string | null;
+  message_id: string | null;
+  message_excerpt: string | null;
+  resolution_note: string | null;
+  history: ChatReportHistoryDto[];
+}
+
+export interface ChatReportListResponse {
+  items: ChatReportItemDto[];
+  total: number;
+  page: number;
+  size: number;
+  counts: Record<ChatReportStatus, number>;
+  notice_email_configured: boolean;
+}
+
+export interface ChatFilterTermDto {
+  id: string;
+  term: string;
+  created_at: string | null;
+  created_by_name: string | null;
+}
+
+export const listChatReports = (
+  params?: { status?: ChatReportStatus; overdue?: boolean; page?: number; size?: number },
+): Promise<ChatReportListResponse> => {
+  const qs = buildQuery({
+    status: params?.status,
+    overdue: params?.overdue ? 'true' : undefined,
+    page: params?.page,
+    size: params?.size,
+  });
+  return apiClient.get<ChatReportListResponse>(`/admin/chat-reports${qs}`);
+};
+
+export const getChatReport = (id: string): Promise<ChatReportDetailDto> =>
+  apiClient.get<ChatReportDetailDto>(`/admin/chat-reports/${id}`);
+
+export const transitionChatReport = (
+  id: string,
+  to: ChatReportTransitionTarget,
+  note?: string,
+): Promise<ChatReportTransitionResultDto> =>
+  apiClient.post<ChatReportTransitionResultDto>(`/admin/chat-reports/${id}/transition`, note ? { to, note } : { to });
+
+export const listChatFilterTerms = (): Promise<{ items: ChatFilterTermDto[] }> =>
+  apiClient.get<{ items: ChatFilterTermDto[] }>('/admin/chat-filter-terms');
+
+export const addChatFilterTerm = (term: string): Promise<ChatFilterTermDto> =>
+  apiClient.post<ChatFilterTermDto>('/admin/chat-filter-terms', { term });
+
+export const removeChatFilterTerm = (id: string): Promise<void> =>
+  apiClient.delete<void>(`/admin/chat-filter-terms/${id}`);

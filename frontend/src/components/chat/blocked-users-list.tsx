@@ -10,6 +10,14 @@ import {
 const btn =
   'min-h-11 rounded-lg border border-[#DDDEE7] px-3 py-2 text-[13px] text-[#5B1A8A] disabled:opacity-50';
 
+// 신고자에게 보이는 운영 처리 상태(접수는 별도 표시 없이 철회 버튼만). [MB261026][FIX]
+const REPORT_STATUS_LABELS: Readonly<Record<string, string>> = {
+  withdrawn: '신고 철회됨',
+  reviewing: '운영 검토 중',
+  actioned: '처리 완료',
+  dismissed: '처리 완료',
+};
+
 export function BlockedUsersList() {
   const [items, setItems] = useState<ChatBlockItem[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -55,8 +63,8 @@ export function BlockedUsersList() {
             <li key={item.user_id} className="flex flex-wrap items-center gap-2 rounded-xl border border-[#F0EBF2] p-3">
               <span className="min-w-0 flex-1 text-[14px]">
                 {item.name ?? '알 수 없는 사용자'}
-                {item.report_status === 'withdrawn' && (
-                  <span className="ml-2 text-[12px] text-[#776D7B]">신고 철회됨</span>
+                {item.report_status && REPORT_STATUS_LABELS[item.report_status] && (
+                  <span className="ml-2 text-[12px] text-[#776D7B]">{REPORT_STATUS_LABELS[item.report_status]}</span>
                 )}
               </span>
               {item.report_id && item.report_status === 'submitted' && (

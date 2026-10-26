@@ -6,6 +6,7 @@
 """
 
 import logging
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException
@@ -24,6 +25,7 @@ from app.models.chat import (
 from app.models.notification_outbox import NotificationOutbox
 from app.models.session import Session, SessionParticipant
 from app.models.user import User
+from app.services.business_days import parse_holidays, report_deadlines
 
 logger = logging.getLogger(__name__)
 
@@ -202,6 +204,46 @@ def _resolve_target_context(
     return room, message
 
 
+def _queue_moderation_notice(report: ChatReport, reporter: UUID, reason: str | None, db: DBSession) -> None:
+    """[MB261026][FIX] D4: 운영 전용 주소로만 알림 outbox 를 만든다.
+
+    - 본문에는 대화 내용·이름·이메일을 싣지 않는다. 신고 ID·사유·기한과 관리자 화면 링크만.
+    - moderation_notice_email 이 비어 있으면 메일을 만들지 않는다(개인 주소로 폴백하지 않는다).
+      신고는 관리자 화면(/admin/chat-reports)에서 확인한다.
+    """
+    recipient = (settings.moderation_notice_email or "").strip()
+    if not recipient:
+        logger.warning(
+            "chat report %s: 운영 신고 수신 주소(MODERATION_NOTICE_EMAIL) 미설정 — 메일 알림 생략, 관리자 화면에서 확인",
+            report.id,
+        )
+        return
+    ack_due, decision_due = report_deadlines(
+        datetime.now(timezone.utc), parse_holidays(settings.moderation_holidays)
+    )
+    link = f"{settings.report_email_base_url.rstrip('/')}/admin/chat-reports?report={report.id}"
+    db.add(
+        NotificationOutbox(
+            user_id=reporter,
+            channel="email",
+            recipient=recipient,
+            payload={
+                "subject": "[MIND BREEZE] 채팅 신고가 접수되었습니다",
+                "body": (
+                    f"신고 ID: {report.id}\n"
+                    f"사유: {reason or '미선택'}\n"
+                    f"접수 확인 기한: {ack_due:%Y-%m-%d %H:%M} (KST)\n"
+                    f"1차 판단 기한: {decision_due:%Y-%m-%d %H:%M} (KST)\n"
+                    f"관리자 화면에서 확인해 주세요: {link}"
+                ),
+                "kind": "chat_report",
+                "report_id": str(report.id),
+            },
+            status="pending",
+        )
+    )
+
+
 def report_user(
     reporter_id: str,
     target_user_id: str,
@@ -275,29 +317,7 @@ def report_user(
                 # 동시 신고가 먼저 같은 pair 를 만들었다 — unique 가 지켜졌으므로 그대로 둔다.
                 logger.info("chat_blocks pair already created concurrently (pair=%s,%s)", low, high)
 
-        # 운영 알림: 본문에는 대화 내용을 싣지 않고 신고 ID 로 DB 를 조회하게 한다.
-        db.add(
-            NotificationOutbox(
-                user_id=reporter,
-                channel="email",
-                recipient=settings.signup_notice_email,
-                payload={
-                    "subject": "[MIND BREEZE] 채팅 신고가 접수되었습니다",
-                    "body": (
-                        f"신고 ID: {report.id}\n"
-                        f"신고자 ID: {reporter}\n"
-                        f"대상 ID: {target}\n"
-                        f"사유: {reason or '미선택'}\n"
-                        f"방 ID: {room.id if room else '-'}\n"
-                        f"메시지 ID: {message.id if message else '-'}\n"
-                        "chat_reports 테이블에서 내용을 확인해 주세요."
-                    ),
-                    "kind": "chat_report",
-                    "report_id": str(report.id),
-                },
-                status="pending",
-            )
-        )
+        _queue_moderation_notice(report, reporter, reason, db)
         db.commit()
     except IntegrityError:
         # 같은 operation 이 동시에 들어온 경우 — 먼저 커밋된 신고를 돌려준다.
@@ -373,7 +393,8 @@ def withdraw_report(user_id, report_id, db: DBSession) -> dict:
         rid = UUID(str(report_id))
     except ValueError:
         raise not_found
-    report = db.query(ChatReport).filter(ChatReport.id == rid).first()
+    # 관리자 상태 전이(chat_report_admin_service)와 동시에 와도 한쪽만 이기도록 행을 잠근다.
+    report = db.query(ChatReport).filter(ChatReport.id == rid).with_for_update().first()
     if report is None or report.reporter_id != _uid(user_id):
         raise not_found
     if report.status == REPORT_WITHDRAWN:
@@ -383,8 +404,6 @@ def withdraw_report(user_id, report_id, db: DBSession) -> dict:
             status_code=409,
             detail={"code": "REPORT_ALREADY_PROCESSED", "message": "이미 처리된 신고는 철회할 수 없습니다"},
         )
-    from datetime import datetime, timezone
-
     report.status = REPORT_WITHDRAWN
     report.withdrawn_at = datetime.now(timezone.utc)
     db.commit()

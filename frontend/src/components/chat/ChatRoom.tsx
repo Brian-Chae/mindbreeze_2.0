@@ -1,6 +1,6 @@
 // 채팅방 — iOS 모바일 대응 재구현 + WebSocket 실시간
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CHAT_REPORT_CONTACT_EMAIL, isChatBlockedError, listChatMessages, listChatMessagesAround, sendChatMessage, markRoomRead, markMessagesRead, type ChatMessage } from '../../lib/api/chat';
+import { CHAT_REPORT_CONTACT_EMAIL, isChatBlockedError, isChatContentBlockedError, listChatMessages, listChatMessagesAround, sendChatMessage, markRoomRead, markMessagesRead, type ChatMessage } from '../../lib/api/chat';
 import { useChatStore } from '../../stores/chatStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
@@ -362,6 +362,12 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent, tone
           // 차단된 상대에게는 다시 보내도 같은 결과이므로 재전송 버튼을 두지 않는다.
           useChatStore.getState().updateRoom(roomId, { is_blocked: true });
           setError('차단된 상대와는 대화할 수 없습니다');
+          return;
+        }
+        if (isChatContentBlockedError(err)) {
+          // [MB261026][FIX] 게시 필터: 같은 문장은 다시 보내도 막히므로 재전송 버튼 대신 원문을 입력란에 돌려준다.
+          setInput(content);
+          setError(err instanceof Error ? err.message : '운영정책에 맞지 않는 표현이 있어 보낼 수 없어요.');
           return;
         }
         setFailedContent(content);

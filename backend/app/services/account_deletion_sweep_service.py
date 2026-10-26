@@ -110,6 +110,10 @@ PARTICIPANT_OWNED: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
 
 # 타인과 공유되는 행에서 탈퇴자 참조만 NULL 로 바꾼다(nullable FK).
 NULLIFY: dict[str, tuple[str, ...]] = {
+    # [MB261026][FIX] 신고 처리자·금칙어 등록자(관리자)가 탈퇴해도 처리 기록·금칙어는 남기고 참조만 지운다.
+    #   신고 행 자체는 신고자·대상 탈퇴 시 USER_OWNED 로 삭제된다.
+    "chat_filter_terms": ("created_by",),
+    "chat_reports": ("handled_by",),
     "chat_messages": ("sender_id",),
     "chat_rooms": ("host_id",),
     "class_instructors": ("added_by",),

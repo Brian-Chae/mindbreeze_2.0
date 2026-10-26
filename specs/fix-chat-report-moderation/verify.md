@@ -124,6 +124,27 @@
 | G-4 실기기 | APP | iOS·Android 앱에서 금칙어 안내·신고 완료 문구·연락처 링크 확인 |
 | G-5 운영 반영 | DEPLOY (Brian 승인) | prod 마이그레이션·배포, 심사 메모에 신고 절차·기한·필터 반영 |
 
-## 결과 (구현 후 기록)
+## 결과 (구현 후 기록, 2026-10-26)
 
-- (구현 전 — 비어 있음)
+| 시나리오 | 결과 | 근거(테스트) |
+|---|---|---|
+| V-01~V-04 권한 | PASS | `backend/tests/test_chat_report_admin.py` V01_V02·V03·V04 |
+| V-05~V-15 목록·상세·전이·감사·자동 조치 0 | PASS | 같은 파일 V05~V15 (V-07에 "전이 응답에 발췌·이메일 없음" 단언 추가) |
+| V-16~V-18 철회 | PASS | 같은 파일 V16_V17·V18 |
+| V-19 동시 철회·전이 | PASS(PG) | `backend/tests/pg/test_fix_chat_report_moderation.py` V19 |
+| V-20 철회 표시 | PASS | `frontend/tests/fix-chat-report-moderation.test.tsx` V-20 |
+| V-21~V-26 영업일 | PASS | `backend/tests/test_business_days.py` |
+| V-27~V-28 기한 초과 | PASS | `test_chat_report_admin.py` V27_V28·기한 전 |
+| V-29~V-37 게시 필터 | PASS | `backend/tests/test_chat_content_filter.py` |
+| V-38 차단 안내·원문 유지 | PASS | vitest V-38 + E2E V-54(실제 API 클라이언트 경로) |
+| V-39~V-41 운영 주소·메일 0 | PASS | `test_chat_report_admin.py` V39·V40·V41(자동 fixture 가 모든 테스트에서 발송 경로 호출 0 단언) |
+| V-42~V-43 하드코딩·매니페스트 | PASS | vitest V-42, `deploy/env-manifest.tsv` 선택 행 2개(값 없음) |
+| V-44~V-52 프론트 | PASS | `fix-chat-report-moderation.test.tsx` |
+| V-53~V-56 실렌더 | PASS 6/6 | `frontend/e2e/chat-report-moderation.mjs`, `evidence/` |
+| V-57 회귀 | PASS | 채팅·신고 관련 기존 테스트 포함 백엔드 전체(summary 3절) |
+| V-58 마이그레이션 왕복·헤드 | PASS | PG 테스트 `왕복에서_기존_신고_행이_보존된다`, `scripts/check-alembic-heads.py` 헤드 1 |
+| V-59 vitest·tsc·eslint·build | PASS | vitest 17 fail/8 files(기준선과 같은 파일), tsc 0, eslint 0, build 성공 |
+| V-60 범위 | PASS | SDD-246 경로·`api/v1/admin.py`·`backend/app/ws` 변경 0 |
+
+- 추가 발견(E2E): 공용 오류 포맷터가 새 오류 코드를 "API 요청 실패 (422)"로 보여 주던 문제 → `client.ts` 코드 문구 8개 등록(RED 8 → GREEN). 상세는 summary 4절.
+- 별도 게이트 G-1~G-5는 미실행(이 카드 범위 밖).

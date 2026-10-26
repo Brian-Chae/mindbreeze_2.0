@@ -1,0 +1,142 @@
+{
+  "synthetic": true,
+  "base": "http://127.0.0.1:18472",
+  "api": "http://127.0.0.1:18471/api/v1",
+  "results": [
+    {
+      "name": "합성 계정·대화·신고 준비(로컬 API)",
+      "status": "PASS",
+      "detail": {
+        "reportId": "[합성 ID]"
+      }
+    },
+    {
+      "name": "V-53 관리자: 사이드바 → 신고 목록 → 메시지 보기 → 검토 시작 → 조치 없음 종결",
+      "status": "PASS",
+      "detail": {
+        "badgeBackground": "rgb(237, 233, 240)"
+      }
+    },
+    {
+      "name": "V-53 모바일 390 렌더",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "V-54 금칙어 등록 → 회원 전송 차단(원문 유지) → 삭제 → 재전송 성공",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "V-55 회원은 관리자 신고 화면을 볼 수 없다",
+      "status": "PASS",
+      "detail": {
+        "landedOn": "/app"
+      }
+    },
+    {
+      "name": "V-56 콘솔 error 0 · 5xx 0 (V-54 의 의도된 422 1건 제외)",
+      "status": "PASS",
+      "detail": {
+        "expected422": 1,
+        "ignoredEnvNoise": 21
+      }
+    }
+  ],
+  "consoleErrors": [
+    {
+      "who": "E2E회원",
+      "text": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    }
+  ],
+  "serverErrors": [],
+  "ignoredEnvNoise": [
+    {
+      "who": "E2E관리자",
+      "url": "http://127.0.0.1:18471/api/v1/devices/web-push/public-key",
+      "status": 503
+    },
+    {
+      "who": "E2E관리자",
+      "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    },
+    {
+      "who": "E2E관리자",
+      "text": "WebSocket connection to 'ws://127.0.0.1:18471/socket.io/?EIO=4&transport=websocket' failed: Error during WebSocket handshake: Unexpected response code: 403"
+    },
+    {
+      "who": "E2E관리자",
+      "text": "[WS] socket.io connect error: websocket error"
+    },
+    {
+      "who": "E2E관리자",
+      "text": "WebSocket connection to 'ws://127.0.0.1:18471/socket.io/?EIO=4&transport=websocket' failed: Error during WebSocket handshake: Unexpected response code: 403"
+    },
+    {
+      "who": "E2E관리자",
+      "text": "[WS] socket.io connect error: websocket error"
+    },
+    {
+      "who": "E2E관리자",
+      "text": "WebSocket connection to 'ws://127.0.0.1:18471/socket.io/?EIO=4&transport=websocket' failed: Error during WebSocket handshake: Unexpected response code: 403"
+    },
+    {
+      "who": "E2E관리자",
+      "text": "[WS] socket.io connect error: websocket error"
+    },
+    {
+      "who": "E2E관리자",
+      "url": "http://127.0.0.1:18471/api/v1/devices/web-push/public-key",
+      "status": 503
+    },
+    {
+      "who": "E2E관리자",
+      "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    },
+    {
+      "who": "E2E관리자",
+      "text": "WebSocket connection to 'ws://127.0.0.1:18471/socket.io/?EIO=4&transport=websocket' failed: Error during WebSocket handshake: Unexpected response code: 403"
+    },
+    {
+      "who": "E2E관리자",
+      "text": "[WS] socket.io connect error: websocket error"
+    },
+    {
+      "who": "E2E회원",
+      "url": "http://127.0.0.1:18471/api/v1/devices/web-push/public-key",
+      "status": 503
+    },
+    {
+      "who": "E2E회원",
+      "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    },
+    {
+      "who": "E2E관리자",
+      "text": "WebSocket connection to 'ws://127.0.0.1:18471/socket.io/?EIO=4&transport=websocket' failed: Error during WebSocket handshake: Unexpected response code: 403"
+    },
+    {
+      "who": "E2E관리자",
+      "text": "[WS] socket.io connect error: websocket error"
+    },
+    {
+      "who": "E2E회원",
+      "text": "WebSocket connection to 'ws://127.0.0.1:18471/socket.io/?EIO=4&transport=websocket' failed: Error during WebSocket handshake: Unexpected response code: 403"
+    },
+    {
+      "who": "E2E회원",
+      "text": "[WS] socket.io connect error: websocket error"
+    },
+    {
+      "who": "E2E회원",
+      "text": "WebSocket connection to 'ws://127.0.0.1:18471/socket.io/?EIO=4&transport=websocket' failed: Error during WebSocket handshake: Unexpected response code: 403"
+    },
+    {
+      "who": "E2E회원",
+      "text": "WebSocket connection to 'ws://127.0.0.1:18471/socket.io/?EIO=4&transport=websocket' failed: Error during WebSocket handshake: Unexpected response code: 403"
+    },
+    {
+      "who": "E2E회원",
+      "text": "[WS] socket.io connect error: websocket error"
+    }
+  ]
+}

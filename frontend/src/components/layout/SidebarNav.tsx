@@ -141,6 +141,7 @@ const ADMIN_NAV_ITEMS: NavItem[] = [
   { to: '/admin/applications', key: 'admin-applications', icon: ICONS.report },
   { to: '/admin/users', key: 'admin-users', icon: ICONS.users },
   { to: '/admin/clients', key: 'admin-clients', icon: ICONS.users },
+  { to: '/admin/chat-reports', label: '채팅 신고', icon: ICONS.message },
   { to: '/playground', key: 'playground', icon: ICONS.activity },
 ];
 

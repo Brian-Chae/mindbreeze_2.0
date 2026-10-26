@@ -73,6 +73,7 @@ const UserManagementPage = lazy(() => import('./pages/admin/UserManagementPage')
 const ClientManagementPage = lazy(() => import('./pages/admin/ClientManagementPage'));
 const AdminOrgManagementPage = lazy(() => import('./pages/admin/OrgManagementPage'));
 const SignupApplicationsPage = lazy(() => import('./pages/admin/SignupApplicationsPage'));
+const ChatReportsPage = lazy(() => import('./pages/admin/ChatReportsPage'));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 // SDD-220: 약관·위기 도움·측정 안내·계정 삭제 요청(공개 경로)
 const TermsPage = lazy(() => import('./pages/terms-page').then((m) => ({ default: m.TermsPage })));
@@ -299,6 +300,14 @@ const router = createBrowserRouter(
           element={(
             <PlatformAdminRoute>
               <UserManagementPage />
+            </PlatformAdminRoute>
+          )}
+        />
+        <Route
+          path="/admin/chat-reports"
+          element={(
+            <PlatformAdminRoute>
+              <ChatReportsPage />
             </PlatformAdminRoute>
           )}
         />

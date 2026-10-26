@@ -15,6 +15,7 @@ from app.models.client_counselor_link import ClientCounselorLink
 from app.models.organization import Organization
 from app.models.user_org_membership import UserOrgMembership
 from app.models.user import User
+from app.services import chat_content_filter
 from app.services import chat_moderation_service as moderation
 
 logger = logging.getLogger(__name__)
@@ -1557,6 +1558,8 @@ async def post_message(room_id: str, user_id: str, content: str, msg_type: str, 
             moderation.ensure_not_blocked(user_id, member, db)
     if not content or not content.strip():
         raise HTTPException(status_code=422, detail="메시지 내용이 비어있습니다")
+    # [MB261026][FIX] Apple 1.2 게시 필터: 운영자 금칙어가 들어 있으면 저장·알림 없이 막는다.
+    chat_content_filter.ensure_allowed(content, user_id, db)
     msg = ChatMessage(
         room_id=rid,
         sender_id=_uuid(user_id),
