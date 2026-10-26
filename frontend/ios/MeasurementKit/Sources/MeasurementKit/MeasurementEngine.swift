@@ -44,6 +44,9 @@ public final class MeasurementEngine {
     public var onFrame: (([String: Any]) -> Void)?
 
     private let dir: URL, configJSON: String, ctx: StreamContext
+    /// 서버 anchor(capture.reanchor) 이후 바뀌는 시계 필드. 이후 생성되는 envelope 에만 적용한다(이미 영속된 창은 그대로).
+    private var clockAnchorId: String, clockUncertaintyMs: Double
+    public private(set) var lastDeviceTicks: String?
     private let versions: (profile: String, algorithm: String, model: String)
     private let checkpointEvery: Int
     private let hook: CrashHook?
@@ -60,6 +63,7 @@ public final class MeasurementEngine {
     public init(dir: URL, configJSON: String, context: StreamContext, checkpointEveryPackets: Int = 400,
                 diskLimitBytes: UInt64 = MeasurementEngine.defaultDiskLimit, journalSync: JournalSync = .full, crashHook: CrashHook? = nil) throws {
         self.dir = dir; self.configJSON = configJSON; self.ctx = context; self.checkpointEvery = checkpointEveryPackets
+        self.clockAnchorId = context.clockAnchorId; self.clockUncertaintyMs = min(max(context.clockUncertaintyMs, 0), 300_000)
         self.diskLimitBytes = diskLimitBytes; self.hook = crashHook
         guard let cd = configJSON.data(using: .utf8), let c = try JSONSerialization.jsonObject(with: cd) as? [String: Any],
               let p = c["device_profile_version"] as? String, let a = c["algorithm_version"] as? String, let m = c["model_version"] as? String
@@ -186,7 +190,7 @@ public final class MeasurementEngine {
     private func envelope(from f: CoreFrame) throws -> [String: Any] {
         var e = f.json
         e["session_id"] = ctx.sessionId; e["participant_id"] = ctx.participantId; e["stream_id"] = ctx.streamId
-        e["stream_generation"] = String(ctx.streamGeneration); e["clock_anchor_id"] = ctx.clockAnchorId; e["clock_uncertainty_ms"] = ctx.clockUncertaintyMs
+        e["stream_generation"] = String(ctx.streamGeneration); e["clock_anchor_id"] = clockAnchorId; e["clock_uncertainty_ms"] = clockUncertaintyMs
         e["device_profile_version"] = versions.profile; e["algorithm_version"] = versions.algorithm; e["model_version"] = versions.model
         if e["sqi"] == nil { e["sqi"] = NSNull() }
         return e
@@ -221,6 +225,7 @@ public final class MeasurementEngine {
         catch let e as CoreBridgeError { throw EngineError.core("\(e)") }
         counters.packets[Self.name(sensor), default: 0] += 1
         counters.samples[Self.name(sensor), default: 0] += UInt64(out.samples)
+        if sensor == .eeg, let t = out.extendedTicks { lastDeviceTicks = t }
         try fire(.afterCore)
         for f in out.frames { try persist(frame: f, replaying: false) }
         sinceCheckpoint += 1
@@ -248,6 +253,13 @@ public final class MeasurementEngine {
         finalManifest = fin; sealedFlag = true
         return fin
     }
+
+    /// 서버가 anchor 를 확정(clock_uncertain=false)했을 때 호출. 오차는 계약 범위 [0, 300000]ms 로 제한한다.
+    public func updateClock(anchorId: String, uncertaintyMs: Double) {
+        lock.lock(); defer { lock.unlock() }
+        clockAnchorId = anchorId; clockUncertaintyMs = min(max(uncertaintyMs, 0), 300_000)
+    }
+    public var currentClock: (anchorId: String, uncertaintyMs: Double) { lock.lock(); defer { lock.unlock() }; return (clockAnchorId, clockUncertaintyMs) }
 
     public var isSealed: Bool { lock.lock(); defer { lock.unlock() }; return sealedFlag }
 }

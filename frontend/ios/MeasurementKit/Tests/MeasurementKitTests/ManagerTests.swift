@@ -20,8 +20,30 @@ final class FakeLive: LiveControlling {
     func setOwner(streamId: String, generation: UInt64) { owner = (streamId, generation) }
     func clearOwner() { owner = nil }
     func setVisibility(_ v: Visibility) { vis = v }
-    func attach(outbox: MetricOutbox) {}
+    var outbox: MetricOutbox?
+    func attach(outbox: MetricOutbox) { self.outbox = outbox }
     func pump() {}
+    var onDeviceRejected: ((String) -> Void)?
+    var devices: [[String: Any]] = []
+    func reportDevice(_ report: [String: Any]) { devices.append(report) }
+    var probes: [(us: UInt64, done: (Result<ClockProbeResult, ClockProbeError>) -> Void)] = []
+    func clockProbe(clientMonotonicUs: UInt64, _ done: @escaping (Result<ClockProbeResult, ClockProbeError>) -> Void) { probes.append((clientMonotonicUs, done)) }
+
+    static let stream = "00000014-0000-4000-8000-000000000014", pid = "00000004-0000-4000-8000-000000000004"
+    func command(_ kind: String) -> [String: Any]? { dispatched.last { ($0["kind"] as? String) == kind } }
+    /// 서버 capture.start ACK(T05b: result 에 stream_id·participant_id·generation·owner_generation·lease, u64 는 문자열).
+    func ackCaptureStart(stream: String = FakeLive.stream, generation: String = "3", participant: String = FakeLive.pid, status: String = "applied") {
+        let id = command("capture.start")!["command_id"] as! String
+        onCommandAck?(["command_id": id, "status": status, "epoch": "1", "cursors": [], "entity_version": "1", "committed": true,
+                       "result": ["stream_id": stream, "participant_id": participant, "generation": generation, "owner_generation": generation,
+                                  "lease": ["expires_at_ms": 1_760_000_030_000, "offline_bound_until_ms": 1_760_000_600_000], "clock_uncertain": true]])
+    }
+    func ack(_ kind: String, status: String = "applied", code: String? = nil, result: [String: Any]? = nil) {
+        var a: [String: Any] = ["command_id": command(kind)!["command_id"] as! String, "status": status, "epoch": "1", "cursors": [], "committed": status != "retryable"]
+        if let c = code { a["code"] = c }
+        if let r = result { a["result"] = r }
+        onCommandAck?(a)
+    }
 }
 
 final class ManagerTests: XCTestCase {
@@ -37,7 +59,7 @@ final class ManagerTests: XCTestCase {
         own = BandOwnership(defaults: UserDefaults(suiteName: "m-\(UUID().uuidString)")!)
         m = MeasurementManager(root: dir, band: band, ownership: own, makeLive: { [unowned self] _ in self.live },
                                makeEngine: { [unowned self] d, ctx in try MeasurementEngine(dir: d, configJSON: CoreBridgeTests.cfg, context: ctx, journalSync: .none) },
-                               participantId: { _ in "00000004-0000-4000-8000-000000000004" })
+                               scheduler: ManualScheduler())
         m.onBridgeEvent = { [unowned self] in events.append($0) }
     }
     override func tearDownWithError() throws { try? FileManager.default.removeItem(at: dir) }
@@ -62,14 +84,13 @@ final class ManagerTests: XCTestCase {
         XCTAssertThrowsError(try start()) { XCTAssertEqual($0 as? ManagerError, .jsOwnsBand) }
         XCTAssertEqual(band.connects, 0)
     }
-    func testCaptureStartCommandUsesUniqueIdAndStreamFromDeviceEventPromotesToCapturing() throws {
+    func testCaptureStartAckResultPromotesToCapturing() throws {
         own.nativeEnabled = true; _ = try start()
         let cmd = live.dispatched.first
         XCTAssertEqual(cmd?["kind"] as? String, "capture.start")
         XCTAssertEqual((cmd?["payload"] as? [String: Any])?["device_profile"] as? String, "linkband2-v1")
         m.liveStateChanged(.ready)
-        live.onEvent?(["domain": "device", "kind": "device.changed", "audience": "member:00000004-0000-4000-8000-000000000004",
-                       "payload": ["stream_id": "00000014-0000-4000-8000-000000000014", "generation": 3, "status": "active"]])
+        live.ackCaptureStart()
         XCTAssertEqual(live.owner?.0, "00000014-0000-4000-8000-000000000014"); XCTAssertEqual(live.owner?.1, 3)
         XCTAssertEqual(m.state, .capturing)
         let snap = m.snapshot()
@@ -77,8 +98,8 @@ final class ManagerTests: XCTestCase {
     }
     func testNewerOwnerGenerationFencesAndBlocks() throws {
         own.nativeEnabled = true; _ = try start()
-        live.onEvent?(["domain": "device", "kind": "device.changed", "payload": ["stream_id": "00000014-0000-4000-8000-000000000014", "generation": 3, "status": "active"]])
-        live.onEvent?(["domain": "device", "kind": "device.changed", "payload": ["stream_id": "00000099-0000-4000-8000-000000000099", "generation": 4, "status": "active"]])
+        live.ackCaptureStart()
+        live.onEvent?(["domain": "device", "kind": "device.changed", "payload": ["stream_id": "00000099-0000-4000-8000-000000000099", "generation": "4", "status": "active"]])
         XCTAssertEqual(m.state, .blocked); XCTAssertEqual(m.blockedReason, "owner_fenced")
         XCTAssertEqual(band.disconnects, 1)
     }
@@ -100,7 +121,7 @@ final class ManagerTests: XCTestCase {
     }
     func testStopStartsSealWithoutClaimingArchiveComplete() throws {
         own.nativeEnabled = true; _ = try start()
-        live.onEvent?(["domain": "device", "kind": "device.changed", "payload": ["stream_id": "00000014-0000-4000-8000-000000000014", "generation": 3, "status": "active"]])
+        live.ackCaptureStart()
         let r = try m.stopMeasurement(reason: "user_stop", requestId: "0000001f-0000-4000-8000-00000000001f")
         XCTAssertEqual(r["seal_started"] as? Bool, true); XCTAssertEqual(r["state"] as? String, "SEALING")
         XCTAssertEqual(r["note"] as? String, "seal_started_is_not_archive_complete")
@@ -114,7 +135,7 @@ final class ManagerTests: XCTestCase {
     }
     func testAuthExpiredLiveBlocksButKeepsCollecting() throws {
         own.nativeEnabled = true; _ = try start()
-        live.onEvent?(["domain": "device", "kind": "device.changed", "payload": ["stream_id": "00000014-0000-4000-8000-000000000014", "generation": 3, "status": "active"]])
+        live.ackCaptureStart()
         m.liveStateChanged(.authBlocked)
         XCTAssertEqual(m.state, .capturing, "수집은 계속, live 만 막힘")
         XCTAssertEqual(m.snapshot()["blocked_reason"] as? String, "auth_expired")
@@ -127,7 +148,7 @@ final class ManagerTests: XCTestCase {
     }
     func testBleLossMovesToReconnectingAndBackToCapturing() throws {
         own.nativeEnabled = true; _ = try start()
-        live.onEvent?(["domain": "device", "kind": "device.changed", "payload": ["stream_id": "00000014-0000-4000-8000-000000000014", "generation": 3, "status": "active"]])
+        live.ackCaptureStart()
         m.bandLink(didChange: .reconnecting, reason: "ble_disconnect")
         XCTAssertEqual(m.state, .reconnecting)
         m.bandLink(didChange: .subscribed, reason: nil)
@@ -141,7 +162,7 @@ final class ManagerRecoveryAndContractTests: XCTestCase {
     func make(_ band: FakeBand, _ live: FakeLive, _ own: BandOwnership) -> MeasurementManager {
         let m = MeasurementManager(root: dir, band: band, ownership: own, makeLive: { _ in live },
                                    makeEngine: { d, ctx in try MeasurementEngine(dir: d, configJSON: CoreBridgeTests.cfg, context: ctx, journalSync: .none) },
-                                   participantId: { _ in "00000004-0000-4000-8000-000000000004" }, nowMs: { 1_760_000_000_000 })
+                                   scheduler: ManualScheduler(), nowMs: { 1_760_000_000_000 })
         return m
     }
     override func setUpWithError() throws {
@@ -150,16 +171,18 @@ final class ManagerRecoveryAndContractTests: XCTestCase {
     }
     override func tearDownWithError() throws { try? FileManager.default.removeItem(at: dir) }
 
-    /// 서버 live:event(T04 _wire_event)와 같은 전체 LiveEvent 형태.
-    func deviceEvent(stream: String, generation: Int, status: String = "active") -> [String: Any] {
+    /// 서버 live:event(T04 _wire_event)와 같은 전체 LiveEvent 형태. DeviceEntity 합집합(T05b): participant_id 필수, generation 은 문자열.
+    func deviceEvent(stream: String, generation: String, status: String = "active", cutoff: String? = nil) -> [String: Any] {
         ["protocol_version": 2, "schema_version": 1, "event_id": UUID().uuidString.lowercased(), "session_id": sid, "epoch": "1",
          "audience": "member:00000004-0000-4000-8000-000000000004", "domain": "device", "seq": "1", "entity_id": "00000004-0000-4000-8000-000000000004",
          "entity_version": "1", "kind": "device.changed", "observed_at_ms": NSNull(), "received_at_server_ms": 1_760_000_000_000,
-         "payload": ["stream_id": stream, "generation": generation, "status": status, "clock_uncertain": true, "cutoff_code": NSNull()]]
+         "payload": ["participant_id": "00000004-0000-4000-8000-000000000004", "stream_id": stream, "generation": generation, "status": status,
+                     "clock_uncertain": true, "cutoff_code": cutoff.map { $0 as Any } ?? NSNull()]]
     }
     func startCapturing(_ m: MeasurementManager, _ live: FakeLive) throws {
         _ = try m.startMeasurement(sessionId: sid, credentialHandle: "cred_handle_AbCdEfGh0123", configHash: String(repeating: "a", count: 64), requestId: "0000001e-0000-4000-8000-00000000001e")
-        live.onEvent?(deviceEvent(stream: "00000014-0000-4000-8000-000000000014", generation: 3))
+        live.ackCaptureStart()
+        live.onEvent?(deviceEvent(stream: "00000014-0000-4000-8000-000000000014", generation: "3"))
     }
 
     func testRecoverOnLaunchRestoresEngineAndReconnectsBandWithoutNewCaptureStart() throws {
@@ -225,7 +248,10 @@ final class ManagerRecoveryAndContractTests: XCTestCase {
         m.emitArchiveStatus(stage: "put", code: "http_503")
         let out: [String: Any] = ["snapshot": m.snapshot(), "events": evs,
                                   "start": ["managerId": "00000003-0000-4000-8000-000000000003", "streamId": "00000014-0000-4000-8000-000000000014", "ownerGeneration": "3", "managerGeneration": "1", "state": "ARMING", "idempotentReplay": false],
-                                  "capabilities": NativeCapabilities.make(osVersion: "17.5", bluetooth: "granted", notifications: "granted")]
+                                  "capabilities": NativeCapabilities.make(osVersion: "17.5", bluetooth: "granted", notifications: "granted"),
+                                  // 웹→native 인계 요청(토큰 포함 허용)과 결과(핸들만)를 플러그인과 같은 함수로 만든다
+                                  "registerCredential": ["request": ["accountId": "acct-0001", "accessToken": "opaque-access", "refreshToken": "opaque-refresh", "apiBase": "https://api.example.test"],
+                                                         "result": NativeBridgeAPI.registerCredentialResult(handle: "cred_handle_AbCdEfGh0123")]]
         let data = try JSONSerialization.data(withJSONObject: out, options: [.sortedKeys])
         if let path = ProcessInfo.processInfo.environment["MK_CONTRACT_OUT"] { try data.write(to: URL(fileURLWithPath: path)) }
         XCTAssertFalse(evs.isEmpty)

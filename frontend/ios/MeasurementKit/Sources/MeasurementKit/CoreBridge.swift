@@ -25,6 +25,8 @@ public struct CorePushOutput {
     public let samples: Int
     public let rawPreserved: Bool
     public let frames: [CoreFrame]
+    /// 수락된 패킷의 장치 sample clock 확장 tick(u64 십진 문자열). capture.reanchor 의 device_ticks 로 쓴다.
+    public let extendedTicks: String?
 }
 
 public struct CoreFinal {
@@ -91,7 +93,7 @@ public final class CoreBridge {
               let status = p["status"] as? String else { throw CoreBridgeError.malformed("push") }
         let frames = try ((o["frames"] as? [[String: Any]]) ?? []).map(Self.frame)
         return CorePushOutput(packetStatus: status, segment: (p["segment"] as? Int) ?? 0, samples: (p["samples"] as? Int) ?? 0,
-                              rawPreserved: (p["raw_preserved"] as? Bool) ?? false, frames: frames)
+                              rawPreserved: (p["raw_preserved"] as? Bool) ?? false, frames: frames, extendedTicks: p["extended_ticks"] as? String)
     }
 
     public func advance(monotonicUs: UInt64) throws -> [CoreFrame] {

@@ -43,8 +43,13 @@ public final class MeasurementHost {
                 root: root, band: link, ownership: ownership,
                 makeLive: { [unowned self] sid in self.makeLive(sessionId: sid) },
                 makeEngine: { dir, ctx in try MeasurementEngine(dir: dir, configJSON: Self.coreConfig, context: ctx) },
-                participantId: { _ in "" })
+                scheduler: DispatchScheduler(queue: queue))
             m.onBridgeEvent = { [weak self] e in self?.onBridgeEvent?(e) }
+            // 사용자 정지·회차 종료(live:terminal)·stream ended 모두 봉인 직후 archive 업로드를 시작한다.
+            m.onSealed = { [weak self] sid, handle in
+                guard let self = self, let h = handle ?? self.currentHandle else { return }
+                self.startArchive(sessionId: sid, participantId: nil, handle: h)
+            }
             manager = m
             uploader.onCompleted = { [weak self] task, status, err in self?.queue.async { self?.uploaderFor(task: task)?.uploadCompleted(taskId: task, status: status, error: err) } }
             _ = m.recoverOnLaunch()

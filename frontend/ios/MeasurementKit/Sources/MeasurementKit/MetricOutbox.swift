@@ -4,7 +4,9 @@ import Foundation
 /// 서버 ACK(accepted/duplicate + durable:true)가 온 창만 acked 로 기록한다. rejected 는 재전송하지 않고 격리 표시하되 pending(미완료)으로 남긴다.
 /// 레코드 JSON: {"k":"m","p":{...}} 창 / {"k":"a","s":[...]} ACK / {"k":"r","s":[...],"c":"code"} 거절
 public final class MetricOutbox {
-    public struct Counts { public let livePending: Int, liveAcked: Int, rejected: Int, oldestPendingSeq: UInt64? }
+    public struct Counts { public let livePending: Int, liveAcked: Int, rejected: Int, oldestPendingSeq: UInt64?, outOfRange: Int }
+    /// 서버 eeg_feature_windows.window_index(Integer) 한도. 넘는 sequence 는 live 로 보내지 않는다(feature journal·archive 에는 남는다).
+    public static let maxLiveSequence: UInt64 = 2_147_483_647
 
     private let journal: AppendOnlyJournal
     private let lock = NSLock()
@@ -13,6 +15,7 @@ public final class MetricOutbox {
     private var rejected: Set<UInt64> = []
     private var rejectCodes: [UInt64: String] = [:]
     public private(set) var persistFailure = false
+    private var outOfRange = 0
 
     public init(dir: URL, name: String = "metric-outbox.journal", sync: JournalSync = .full) throws {
         journal = try AppendOnlyJournal(url: dir.appendingPathComponent(name), sync: sync)
@@ -38,6 +41,7 @@ public final class MetricOutbox {
     public func enqueue(_ envelope: [String: Any]) throws -> UInt64 {
         guard let seq = Self.seq(envelope) else { throw OutboxError.missingSequence }
         lock.lock(); defer { lock.unlock() }
+        if seq > Self.maxLiveSequence { outOfRange += 1; return seq }
         if windows[seq] != nil { return seq }
         let rec = try JSONSerialization.data(withJSONObject: ["k": "m", "p": envelope], options: [.sortedKeys])
         try journal.append(rec)
@@ -64,6 +68,8 @@ public final class MetricOutbox {
     public var pendingSequences: [UInt64] { lock.lock(); defer { lock.unlock() }; return windows.keys.filter { !acked.contains($0) }.sorted() }
     public var ackedSequences: [UInt64] { lock.lock(); defer { lock.unlock() }; return acked.sorted() }
     public var rejectedSequences: [UInt64] { lock.lock(); defer { lock.unlock() }; return rejected.sorted() }
+    /// 격리(rejected) 사유 코드. 재전송해도 같은 결과라 다시 보내지 않는다.
+    public func rejectCode(_ seq: UInt64) -> String? { lock.lock(); defer { lock.unlock() }; return rejected.contains(seq) ? rejectCodes[seq] : nil }
 
     /// 전송 대상: 미ACK·미거절·전송중 아님, 최신창 우선, 최대 max(≤60).
     public func nextBatch(max: Int, excluding inflight: Set<UInt64>) -> [[String: Any]] {
@@ -75,6 +81,6 @@ public final class MetricOutbox {
     public func counts() -> Counts {
         lock.lock(); defer { lock.unlock() }
         let pend = windows.keys.filter { !acked.contains($0) }
-        return Counts(livePending: pend.filter { !rejected.contains($0) }.count, liveAcked: acked.count, rejected: rejected.count, oldestPendingSeq: pend.min())
+        return Counts(livePending: pend.filter { !rejected.contains($0) }.count, liveAcked: acked.count, rejected: rejected.count, oldestPendingSeq: pend.min(), outOfRange: outOfRange)
     }
 }

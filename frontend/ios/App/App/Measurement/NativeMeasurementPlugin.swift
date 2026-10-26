@@ -76,11 +76,14 @@ public class NativeMeasurementPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func registerCredential(_ call: CAPPluginCall) {
-        guard let acct = call.getString("accountId"), let at = call.getString("accessToken"), let rt = call.getString("refreshToken"), let base = call.getString("apiBase") else {
+        // 요청에는 토큰이 들어온다(웹→native 1회 인계, 계약 허용). 결과로는 불투명 핸들만 — 토큰을 되돌리면 계약 위반.
+        guard let req = NativeBridgeAPI.parseRegisterCredential(call.options as? [String: Any] ?? [:]) else {
             call.reject("invalid_argument", "credential"); return
         }
-        do { let h = try host.registerCredential(accountId: acct, accessToken: at, refreshToken: rt, apiBase: base); host.setHandle(h); call.resolve(["credentialHandle": h]) }
-        catch { call.reject("credential_store_failed") }
+        do {
+            let h = try host.registerCredential(accountId: req.accountId, accessToken: req.accessToken, refreshToken: req.refreshToken, apiBase: req.apiBase)
+            host.setHandle(h); call.resolve(NativeBridgeAPI.registerCredentialResult(handle: h))
+        } catch { call.reject("credential_store_failed") }
     }
 
     @objc func startMeasurement(_ call: CAPPluginCall) {
@@ -115,9 +118,7 @@ public class NativeMeasurementPlugin: CAPPlugin, CAPBridgedPlugin {
         host.queue.async { [host, weak self] in
             guard let m = host.manager else { call.reject("not_active", "not_active"); return }
             do {
-                let r = try m.stopMeasurement(reason: reason, requestId: rid)
-                if let sid = m.snapshot()["sessionId"] as? String, let h = host.currentHandle { host.startArchive(sessionId: sid, participantId: nil, handle: h) }
-                call.resolve(r)
+                call.resolve(try m.stopMeasurement(reason: reason, requestId: rid))   // archive 시작은 manager.onSealed 가 한다
             } catch { self?.fail(call, error) }
         }
     }
