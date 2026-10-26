@@ -54,8 +54,9 @@ export function hostMetricValues(row: SessionLiveMetric, extra: HostMetricExtra 
     // BPM·호흡·HRV 는 행(4초 폴링) 우선, extras(WS) 폴백 — 폴링이 WS 패치를 덮어도 깜빡이지 않는다
     heartRate: rounded(valid ? finite(row.heart_rate) ?? (extraValid ? extra.heartRate : null) : null),
     respiratoryRate: rounded(valid ? finite(row.respiratory_rate) ?? (extraValid ? extra.respiratoryRate : null) : null),
-    focus: rounded(extraValid ? extra.focus : null),
-    emotionalStability: rounded(extraValid ? extra.emotionalStability : null),
+    // v2 는 행(LiveState)에 실려 온다. 구 경로는 extras(WS)만 있다.
+    focus: rounded(valid ? finite(row.focus_score) ?? (extraValid ? extra.focus : null) : null),
+    emotionalStability: rounded(valid ? finite(row.emotional_score) ?? (extraValid ? extra.emotionalStability : null) : null),
     // 회원 화면과 같은 SDNN 기준(rmssd 혼용 금지)
     hrv: rounded(valid ? finite(row.sdnn) ?? (extraValid ? extra.hrv : null) : null),
   });

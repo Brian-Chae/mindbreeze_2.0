@@ -62,6 +62,8 @@ export function toSessionLiveMetrics(state: LiveState, opts: LegacyAdapterOption
       heart_rate: usable ? num(row.metrics.bpm) : null,
       respiratory_rate: usable ? num(row.metrics.respiration) : null,
       sdnn: usable ? num(row.metrics.sdnn) : null,
+      focus_score: usable ? num(row.metrics.focus_display) : null,
+      emotional_score: usable ? num(row.metrics.emotion_display) : null,
       raise_hand: row.handRaised,
       speaking: row.canPublish,
       ...presenceOf(state, row.participantId, legacyById.get(row.participantId)),
