@@ -1,5 +1,9 @@
 package com.looxidlabs.mindbreeze.measurement
 
+import android.app.Activity
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -9,6 +13,7 @@ import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import com.looxidlabs.mindbreeze.measurement.bridge.BridgeModel
+import com.looxidlabs.mindbreeze.measurement.runtime.BatteryPolicy
 import com.looxidlabs.mindbreeze.measurement.runtime.KeystoreFactory
 import com.looxidlabs.mindbreeze.measurement.runtime.RuntimeConfig
 import org.json.JSONObject
@@ -35,6 +40,14 @@ class MeasurementPlugin : Plugin() {
     }
 
     override fun handleOnStart() { foreground = true; startEmit() }
+    /** 사용자가 설정 화면에서 돌아오면 배터리 최적화 상태를 다시 읽어 바뀌었을 때만 알린다(읽기만, 변경하지 않음). */
+    override fun handleOnResume() {
+        val now = BatteryPolicy.read(context)
+        val prev = lastBattery
+        lastBattery = now.toString()
+        if (prev != null && prev != lastBattery) notifyListeners("batteryOptimizationChanged", JSObject(lastBattery))
+    }
+    private var lastBattery: String? = null
     override fun handleOnStop() { foreground = false }
     override fun handleOnDestroy() { emitting = false; ui.removeCallbacks(emitTask) }
 
@@ -54,6 +67,7 @@ class MeasurementPlugin : Plugin() {
             put("rustCore", MeasurementCore.available()); put("nativeEnabled", MeasurementManager.ownership.nativeEnabled)
             put("platform_detail", "android")
             put("foregroundServiceType", "connectedDevice"); put("microphoneRequired", false)
+            put("batteryOptimization", BatteryPolicy.read(context).getString("batteryOptimization"))
         })
     }
 
@@ -69,7 +83,7 @@ class MeasurementPlugin : Plugin() {
         val at = call.getString("accessToken"); val rt = call.getString("refreshToken")
         if (at.isNullOrEmpty() && rt.isNullOrEmpty()) { call.reject("credential_missing"); return }
         KeystoreFactory.tokenStore(context).save(at, rt)
-        call.resolve(JSObject().put("handoff", true))
+        call.resolve(json(BridgeModel.handoffResult(saved = true)))
     }
 
     @PluginMethod
@@ -133,8 +147,35 @@ class MeasurementPlugin : Plugin() {
                 else -> o.put(k, v.toString())
             }
         }
+        // 계약 MeasurementSnapshot(bridge) 밖의 진단 필드: 배터리 최적화 상태·live 격리 수(T01 계약 반영 전까지 최상위에 둔다)
+        o.put("batteryOptimization", json(BatteryPolicy.read(context)))
+        if (rt != null) o.put("liveQuarantined", rt.box.quarantined())
         if (rt != null) o.put("bridge", json(BridgeModel.snapshot(rt.inputs(MeasurementManager.state.name, MeasurementManager.blockedReason))))
         call.resolve(o)
+    }
+
+    /** 배터리 최적화 상태 읽기(측정 시작 전 안내용). {batteryOptimization: exempt|optimized|restricted|unknown, backgroundRestricted, vendorPolicy, settingsTargets} */
+    @PluginMethod
+    fun getBatteryOptimization(call: PluginCall) {
+        val s = BatteryPolicy.read(context); lastBattery = s.toString()
+        call.resolve(json(s))
+    }
+
+    /**
+     * 사용자가 직접 "제한 없음"을 고르도록 설정 화면을 연다. 예외를 자동으로 걸지 않으며 직접 요청 다이얼로그(REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)도 쓰지 않는다.
+     * 입력 {target?: "app_details"|"battery_optimization_list"}, 결과 {opened, target}.
+     */
+    @PluginMethod
+    fun openBatteryOptimizationSettings(call: PluginCall) {
+        val host: android.content.Context = activity ?: context
+        for (t in BatteryPolicy.settingsTargets(call.getString("target"))) {
+            val i = Intent(t.action)
+            if (t.withPackageUri) i.data = Uri.parse("package:" + context.packageName)
+            if (host !is Activity) i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            try { host.startActivity(i); call.resolve(JSObject().put("opened", true).put("target", t.id)); return }
+            catch (_: ActivityNotFoundException) { } catch (_: SecurityException) { }
+        }
+        call.resolve(JSObject().put("opened", false).put("target", JSObject.NULL))
     }
 
     /** foreground 에서만: commandAck → liveStateUpdated → measurementUpdated(전체 snapshot) → archiveStatus 순 batch emit. raw 전량은 보내지 않는다. */

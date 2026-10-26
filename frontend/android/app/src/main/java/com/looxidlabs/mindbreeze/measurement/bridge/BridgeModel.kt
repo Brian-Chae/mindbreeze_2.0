@@ -69,6 +69,9 @@ object BridgeModel {
         .put("sessionId", sessionId).put("queue", q).put("blocked_reason", blocked ?: JSONObject.NULL)
         .put("stage", stage ?: JSONObject.NULL).put("code", code ?: JSONObject.NULL)
 
+    /** handoffCredentials 결과. 인계받은 토큰은 어떤 형태로도 되돌리지 않는다(계약 HandoffCredentialsResult = {handoff} 만). */
+    fun handoffResult(saved: Boolean) = JSONObject().put("handoff", saved)
+
     fun liveStatePayload(sessionId: String, event: JSONObject) = JSONObject().put("sessionId", sessionId).put("event", event)
 }
 

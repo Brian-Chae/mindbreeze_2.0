@@ -42,6 +42,13 @@ class BridgeModelTest {
         assertTrue(BridgeModel.snapshot(inputs(withFrame = false)).isNull("metrics"))
     }
 
+    @Test fun handoffResultNeverEchoesTokens() {
+        val r = BridgeModel.handoffResult(saved = true)
+        assertEquals(setOf("handoff"), r.keys().asSequence().toSet())
+        assertTrue(r.getBoolean("handoff"))
+        assertFalse(BridgeModel.handoffResult(saved = false).getBoolean("handoff"))
+    }
+
     @Test fun generatedMessagesPassContractSchema() {
         assumeTrue("node 필요", File("/opt/homebrew/bin/node").exists() || File("/usr/local/bin/node").exists() || File("/usr/bin/node").exists())
         assumeTrue(File(contractDir, "measurement-bridge/validate.mjs").exists())
@@ -53,6 +60,7 @@ class BridgeModelTest {
         msgs.put(JSONObject().put("kind", "event").put("message", BridgeModel.event("measurementUpdated", 1, seq.next(), 1760000000200, snap)))
         msgs.put(JSONObject().put("kind", "event").put("message", BridgeModel.event("archiveStatus", 1, seq.next(), 1760000000300,
             BridgeModel.archiveStatusPayload(i.sessionId, BridgeModel.queue(i), null, "presign", "http_503"))))
+        msgs.put(JSONObject().put("kind", "handoff-credentials-result").put("message", BridgeModel.handoffResult(saved = true)))
         msgs.put(JSONObject().put("kind", "event").put("message", BridgeModel.event("commandAck", 1, seq.next(), 1760000000400,
             JSONObject("""{"command_id":"0000000a-0000-4000-8000-00000000000a","status":"applied","epoch":"1","cursors":[],"committed":true}"""))))
         val f = File(tmp.root, "msgs.json"); f.writeText(msgs.toString())
