@@ -29,6 +29,9 @@ class MeasurementEngine(
     /** 복구 중 재생해서 만들어진 프레임(아직 sink 로 전달되지 않음). replayPending() 이 전달한다. */
     private var replayBuffer: List<JSONObject> = emptyList()
     val counters = MeasurementCounters()
+    private val rawPreview = RawPreviewBuffer()
+    /** 기기 시트용 최근 원시 샘플(다운샘플). */
+    fun rawPreview(points: Int): RawPreviewBuffer.Preview = rawPreview.preview(points)
     val fence = InstanceFence()
     private val unwrap = TickUnwrapper()
     private val tickUnwrapForAnchor = TickUnwrapper()
@@ -69,6 +72,8 @@ class MeasurementEngine(
             is ParseResult.Invalid -> counters.invalid()
             is ParseResult.Ok -> {
                 counters.samples(sensor, r.packet.sampleCount)
+                r.packet.eeg?.let { rawPreview.addEeg(it) }
+                r.packet.ppg?.let { rawPreview.addPpg(it) }
                 if (sensor == Sensor.EEG) lastEegAnchor = tickUnwrapForAnchor.unwrap(sensor, r.packet.rawTick) to windowTimelineUs(now * 1000)
             }
         }

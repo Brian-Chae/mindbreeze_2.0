@@ -122,6 +122,9 @@ export interface AndroidStartMeasurementRequest {
   modelVersion?: string;
 }
 
+/** 기기 시트용 최근 원시 샘플(다운샘플된 숫자 배열만 — 토큰·원문 바이트 없음) */
+export interface RawPreview { eegFp1: number[]; eegFp2: number[]; ppgRed: number[]; ppgIr: number[] }
+
 /** Capacitor 플러그인 `NativeMeasurement` (iOS/Android 네이티브가 구현) */
 export interface NativeMeasurementPlugin {
   getCapabilities(): Promise<Capabilities>;
@@ -131,6 +134,8 @@ export interface NativeMeasurementPlugin {
   registerCredential?(req: RegisterCredentialRequest): Promise<RegisterCredentialResult>;
   handoffCredentials?(req: HandoffCredentialsRequest): Promise<HandoffCredentialsResult>;
   getMeasurementSnapshot(req: { sessionId: string }): Promise<MeasurementSnapshot>;
+  /** Android 전용: 최근 N초 원시 샘플 미리보기 */
+  getRawPreview?(req: { seconds: number; points: number }): Promise<RawPreview>;
   dispatchLiveCommand(cmd: LiveCommand): Promise<DispatchLiveCommandResult>;
   stopMeasurement(req: StopMeasurementRequest): Promise<{ accepted: boolean }>;
   addListener(event: BridgeEvent['event'], fn: (e: BridgeEvent) => void): Promise<ListenerHandle>;

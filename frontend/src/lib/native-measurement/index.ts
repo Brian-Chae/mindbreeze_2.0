@@ -6,7 +6,7 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 import type { CommandAck, LiveCommand, LiveEvent } from '../session-live/live-types';
 import type {
   BridgeEvent, Capabilities, DispatchLiveCommandResult, ListenerHandle, MeasurementSnapshot,
-  NativeMeasurementPlugin, QueueCounts, BlockedReason, StartMeasurementRequest, StartMeasurementResult,
+  NativeMeasurementPlugin, QueueCounts, BlockedReason, RawPreview, StartMeasurementRequest, StartMeasurementResult,
 } from './types';
 import { parseModelParams } from '../eeg/eegPersonalScore';
 import type { CalibrationMetricKey } from '../eeg/eegSigmoidScore';
@@ -229,6 +229,20 @@ export class NativeMeasurementFacade {
     this.startFlights.set(a.requestId, p);
     p.catch(() => { this.startFlights.delete(a.requestId); });
     return p;
+  }
+
+  /**
+   * 기기 시트 원시 파형 미리보기. Capacitor 프록시는 없는 메서드도 truthy 라 platform 으로 거르고,
+   * 미구현(UNIMPLEMENTED)·형식 불일치는 null 로 폴백한다.
+   */
+  async getRawPreview(platform: string, seconds = 4, points = 120): Promise<RawPreview | null> {
+    if (platform !== 'android' || !this.plugin.getRawPreview) return null;
+    try {
+      const r = await this.plugin.getRawPreview({ seconds, points });
+      const ok = (a: unknown): a is number[] => Array.isArray(a) && a.every((v) => typeof v === 'number');
+      if (!r || !ok(r.eegFp1) || !ok(r.eegFp2) || !ok(r.ppgRed) || !ok(r.ppgIr)) return null;
+      return { eegFp1: r.eegFp1, eegFp2: r.eegFp2, ppgRed: r.ppgRed, ppgIr: r.ppgIr };
+    } catch { return null; }
   }
 
   /** 토큰 모양 필드를 실어 버린 bridge 이벤트 수(진단용) */
