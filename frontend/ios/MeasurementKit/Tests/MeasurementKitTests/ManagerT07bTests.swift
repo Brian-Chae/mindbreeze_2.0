@@ -291,4 +291,24 @@ final class ManagerT07bTests: XCTestCase {
         _ = try m.startMeasurement(sessionId: sid, credentialHandle: "cred_handle_AbCdEfGh0123", configHash: String(repeating: "a", count: 64), requestId: "0000003e-0000-4000-8000-00000000003e")
         XCTAssertNil(band.lastExpected, "peripheralId 를 안 주면 이전 값이 아니라 스캔")
     }
+
+    // MARK: T12 시간축 — window_*_us 와 reanchor monotonic_us 가 같은 축(wall_ms·1000 + 단조 경과)
+
+    func testWindowEndUsSharesAxisWithReanchorMonotonicUs() throws {
+        try startAndAdopt()
+        feed(0..<300)
+        let ws = windows()
+        let lastEnd = ws.compactMap { U64.parse($0["window_end_us"]) }.max()!
+        let lastArrival = EngineTests.packets[0..<300].map { $0.arrivalUs }.max()!
+        // 기대 축: anchor wall(1_760_000_000_000ms)·1000 + (도착 단조 − anchor 단조 5_000_000)
+        let expected = UInt64(1_760_000_000_000) * 1000 + (lastArrival - 5_000_000)
+        let diff = lastEnd > expected ? lastEnd - expected : expected - lastEnd
+        XCTAssertLessThan(diff, 5_000_000, "창 끝은 도착 시각 축에서 5초 이내 — 다른 축이면 1e15 단위로 어긋난다")
+        // reanchor 는 같은 축의 '현재' 값
+        mono = lastArrival
+        live.probes[0].done(.success(ClockProbeResult(probeId: "0000001f-0000-4000-8000-00000000001f", clientMonotonicUs: live.probes[0].us, serverReceiveMs: 1, serverSendMs: 2, rttSeconds: 0.01)))
+        let mu = U64.parse((live.command("capture.reanchor")!["payload"] as! [String: Any])["monotonic_us"])!
+        XCTAssertEqual(mu, expected, "reanchor monotonic_us 는 도착 시각 축 그대로")
+        XCTAssertLessThan(mu > lastEnd ? mu - lastEnd : lastEnd - mu, 5_000_000)
+    }
 }
