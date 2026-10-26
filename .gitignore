@@ -33,3 +33,6 @@ specs/.sdd-counter
 backend/.venv/
 
 frontend/node_modules/
+
+# 스토어 심사 계정 비밀번호 등 로컬 비밀 파일(seed_store_review_ops.py)
+backend/.secrets/

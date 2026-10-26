@@ -1,5 +1,11 @@
-import { isAiEnabled } from '../../lib/feature-flags';
+import { isAiEnabled, isCounselingEnabled } from '../../lib/feature-flags';
 import { SectionHeading, sectionContainer } from './landing-ui';
+
+// 상담 비공개(기본)에서는 첫 출시 범위(명상 클래스) 기준 대상 소개를 쓴다.
+const classAudiences = () => [
+  { label: '기관 · 센터', number: '01', question: '운영은 체계적으로,\n돌봄의 질은 한결같이.', pain: '흩어진 클래스 기록과 리포트, 매번 정리하기 버거우셨나요?', solution: '클래스 일정부터 참여 기록·리포트까지 한곳에서 관리해 기관의 프로그램이 꾸준히 이어지도록 돕습니다.', tags: ['클래스 운영', '기록 연결'], icon: 'M4 21V7l8-4 8 4v14M2 21h20M9 21v-6h6v6M8 9h1m6 0h1M8 12h1m6 0h1' },
+  { label: '참여자', number: '02', question: '오늘의 명상을,\n나만의 기록으로.', pain: '수업이 끝나면 느꼈던 변화가 금방 흐려지지 않나요?', solution: '참여한 클래스의 기록과 리포트를 다시 보고, 선택적으로 측정한 몸·마음의 흐름도 함께 돌아볼 수 있습니다.', tags: ['클래스 참여', '나의 기록'], icon: 'M5 3h11l3 3v15H5V3Zm4 5h6M9 12h6M9 16h4' },
+];
 
 const audiences = () => [
   { label: '상담센터 · 기관', number: '01', question: '운영은 체계적으로,\n돌봄의 질은 한결같이.', pain: '흩어진 세션 기록과 리포트, 매번 정리하기 버거우셨나요?', solution: '세션부터 기록·리포트까지 한곳에서 관리해 센터의 돌봄이 꾸준히 이어지도록 돕습니다.', tags: ['세션 관리', '기록 연결'], icon: 'M4 21V7l8-4 8 4v14M2 21h20M9 21v-6h6v6M8 9h1m6 0h1M8 12h1m6 0h1' },
@@ -15,7 +21,7 @@ export default function PeopleSection() {
         <p className="max-w-[330px] text-base leading-7 text-[#776C7D]">반복되는 일은 가볍게.<br />사람을 이해하는 시간은 더 깊게.</p>
       </div>
       <div className="mt-12 grid gap-5 md:grid-cols-3">
-        {audiences().map((item) => <article key={item.label} className="flex flex-col rounded-3xl border border-[#E7DFE9] bg-[#FCFAFD] p-6 sm:p-8">
+        {(isCounselingEnabled() ? audiences() : [...classAudiences(), audiences()[2]]).map((item) => <article key={item.label} className="flex flex-col rounded-3xl border border-[#E7DFE9] bg-[#FCFAFD] p-6 sm:p-8">
           <div className="flex items-center justify-between"><span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#EDE3F1] text-[#5F0080]"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={item.icon} /></svg></span><span className="text-xs tracking-widest text-[#95809E]">{item.number}</span></div>
           <p className="mt-7 text-xs font-bold text-[#5F0080]">{item.label}</p>
           <h3 className="mt-3 whitespace-pre-line text-[24px] font-bold leading-[1.5] tracking-[-0.035em]">{item.question}</h3>

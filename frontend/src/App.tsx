@@ -79,6 +79,7 @@ const TermsPage = lazy(() => import('./pages/terms-page').then((m) => ({ default
 const CrisisHelpPage = lazy(() => import('./pages/crisis-help-page').then((m) => ({ default: m.CrisisHelpPage })));
 const MeasurementGuidePage = lazy(() => import('./pages/measurement-guide-page').then((m) => ({ default: m.MeasurementGuidePage })));
 const AccountDeletionPage = lazy(() => import('./pages/account-deletion-page'));
+const SupportPage = lazy(() => import('./pages/support-page'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const NotificationCenterPage = lazy(() => import('./pages/notifications/NotificationCenterPage'));
 const ProfessionalProfilePage = lazy(() => import('./pages/settings/professional-profile-page'));
@@ -174,6 +175,7 @@ const router = createBrowserRouter(
         <Route path="/crisis-help" element={<CrisisHelpPage />} />
         <Route path="/measurement-guide" element={<MeasurementGuidePage />} />
         <Route path="/account-deletion" element={<AccountDeletionPage />} />
+        <Route path="/support" element={<SupportPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/login/client" element={<ClientLoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

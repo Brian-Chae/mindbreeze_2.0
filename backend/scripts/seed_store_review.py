@@ -37,11 +37,6 @@ def seed_review(db, password: str) -> dict[str, int]:
     from app.core.security import hash_password
     from app.models.user import User
     from app.models.onboarding_progress import OnboardingProgress
-    from app.models.counselor_profile import CounselorProfile
-    from app.models.class_program import Class, ClassInstructor, ClassMember
-    from app.models.session import Session, SessionParticipant
-    from app.models.record import Report
-    from app.models.eeg_feature import EEGFeatureWindow
 
     users = {}
     created = 0
@@ -66,61 +61,112 @@ def seed_review(db, password: str) -> dict[str, int]:
         if not db.scalar(select(OnboardingProgress).where(OnboardingProgress.user_id == user.id)):
             db.add(OnboardingProgress(user_id=user.id, current_step=1, completed=True,
                                       completed_at=datetime.now(timezone.utc), steps={}))
-    host, member_user = users['counselor'], users['client']
+    seed_synthetic_content(db, users['counselor'], users['client'])
+    return {'created_users': created}
+
+
+FEATURE_WINDOWS = 60
+# 진행자 프로필 1 + 개인 상담소·소속 2 + 클래스·진행자·회원 3 + 회차 1 + 참여 1 + 지표 창 60 + 리포트 2
+CONTENT_ROWS_TOTAL = 1 + 2 + 3 + 1 + 1 + FEATURE_WINDOWS + 2
+
+
+def seed_synthetic_content(db, host, member_user, *, dry_run: bool = False) -> dict[str, int]:
+    """진행자 프로필·합성 클래스·회차·참여·지표 60창·리포트 2건. stable_id 기준 멱등, 커밋은 호출자가 한다.
+
+    운영 시드(seed_store_review_ops.py)도 이 함수를 쓴다. 서비스 함수를 거치지 않아 초대·알림·outbox가 생기지 않는다.
+    dry_run=True면 조회만 하고 새로 만들 행 수만 센다(계정이 아직 없으면 전부 신규).
+    """
+    if dry_run and (host is None or member_user is None):
+        return {'created_rows': CONTENT_ROWS_TOTAL}
+    from sqlalchemy import select
+    from app.models.counselor_profile import CounselorProfile
+    from app.models.class_program import Class, ClassInstructor, ClassMember
+    from app.models.session import Session, SessionParticipant
+    from app.models.record import Report
+    from app.models.eeg_feature import EEGFeatureWindow
+
+    def add(*rows) -> None:
+        if not dry_run:
+            for row in rows:
+                db.add(row)
+            db.flush()
+
+    created = 0
     if not db.scalar(select(CounselorProfile).where(CounselorProfile.user_id == host.id)):
-        db.add(CounselorProfile(user_id=host.id, counselor_code='SR' + host.id.hex[:8].upper(), specialties=[]))
+        created += 1
+        if not dry_run:
+            # 서비스와 같은 6자리 발급기(컬럼 String(6)·unique — PG가 길이를 강제한다).
+            from app.services.code_service import generate_unique_code
+
+            add(CounselorProfile(user_id=host.id, specialties=[],
+                                 counselor_code=generate_unique_code(db, CounselorProfile, 'counselor_code')))
+    # 클래스 권한은 "클래스 기관의 활성 상담사 소속 + 진행자"일 때만 진행자로 인정한다(class_access_service.class_role).
+    # 실제 가입처럼 개인 상담소를 보장하고 클래스를 그 기관에 둔다. ensure_personal_office 는 flush 만 하고 알림을 보내지 않는다.
+    from app.services.personal_office_service import ensure_personal_office, get_personal_office
+
+    office = get_personal_office(db, host)
+    if office is None:
+        created += 2  # 개인 상담소·소속
+        if not dry_run:
+            office = ensure_personal_office(db, host)
+    elif not dry_run:
+        office = ensure_personal_office(db, host)  # 소속 active 보장(멱등)
     key = f'{host.id}:{member_user.id}'
     class_id = stable_id(key + ':class')
     session_id = stable_id(key + ':session')
     participant_id = stable_id(key + ':participant')
     member_id = stable_id(key + ':member')
     now = datetime.now(timezone.utc)
-    if db.get(Class, class_id) is None:
-        db.add(Class(id=class_id, created_by=host.id, title='예시 데이터 · 명상 클래스',
-                     status='completed', default_duration_min=1, record_audio=False, record_video=False,
-                     linkband_mode='optional'))
-        db.flush()
-        db.add(ClassInstructor(class_id=class_id, user_id=host.id, role='lead', status='active'))
-        db.add(ClassMember(id=member_id, class_id=class_id, user_id=member_user.id,
-                           status='completed', joined_via='host_invite', report_included_default=True))
-        db.flush()
+    existing_class = db.get(Class, class_id)
+    if existing_class is not None and not dry_run and office is not None and existing_class.organization_id is None:
+        existing_class.organization_id = office.id  # 이전 시드(기관 없음)로 만든 클래스 보정
+    if existing_class is None:
+        created += 3  # 클래스·진행자·회원
+        add(Class(id=class_id, created_by=host.id, organization_id=office.id if office else None,
+                  title='예시 데이터 · 명상 클래스',
+                  status='completed', default_duration_min=1, record_audio=False, record_video=False,
+                  linkband_mode='optional'))
+        add(ClassInstructor(class_id=class_id, user_id=host.id, role='lead', status='active'),
+            ClassMember(id=member_id, class_id=class_id, user_id=member_user.id,
+                        status='completed', joined_via='host_invite', report_included_default=True))
     if db.get(Session, session_id) is None:
-        db.add(Session(id=session_id, class_id=class_id, seq=1, type='meditation', status='completed',
-                       host_id=host.id, title='예시 데이터 · 1분 명상', duration_min=1,
-                       started_at=now - timedelta(minutes=1), ended_at=now,
-                       record_audio=False, record_video=False, linkband_mode='optional'))
-        db.flush()
+        created += 1
+        add(Session(id=session_id, class_id=class_id, seq=1, type='meditation', status='completed',
+                    host_id=host.id, host_state='assigned', title='예시 데이터 · 1분 명상', duration_min=1,
+                    started_at=now - timedelta(minutes=1), ended_at=now,
+                    record_audio=False, record_video=False, linkband_mode='optional'))
     if db.get(SessionParticipant, participant_id) is None:
-        db.add(SessionParticipant(id=participant_id, session_id=session_id, user_id=member_user.id,
-                                  member_id=member_id, report_included=True, attendance_status='attended',
-                                  band_connected=False, consent_eeg=False, entered_at=now))
-        db.flush()
-    for index in range(60):
+        created += 1
+        add(SessionParticipant(id=participant_id, session_id=session_id, user_id=member_user.id,
+                               member_id=member_id, report_included=True, attendance_status='attended',
+                               band_connected=False, consent_eeg=False, entered_at=now))
+    for index in range(FEATURE_WINDOWS):
         feature_id = stable_id(key + f':feature:{index}')
         if db.get(EEGFeatureWindow, feature_id) is None:
-            db.add(EEGFeatureWindow(id=feature_id, session_id=session_id, user_id=member_user.id,
-                                   participant_id=participant_id, window_index=index,
-                                   play_group_id='synthetic-review', quality='valid',
-                                   focus_index=0.4 + index / 300, relaxation_index=0.5 + index / 400,
-                                   stress_index=0.3 - index / 600))
+            created += 1
+            add(EEGFeatureWindow(id=feature_id, session_id=session_id, user_id=member_user.id,
+                                 participant_id=participant_id, window_index=index,
+                                 play_group_id='synthetic-review', quality='valid',
+                                 focus_index=0.4 + index / 300, relaxation_index=0.5 + index / 400,
+                                 stress_index=0.3 - index / 600))
     for role, user in [('counselor', host), ('client', member_user)]:
         report_id = stable_id(key + ':report:' + role)
         if db.get(Report, report_id) is None:
-            db.add(Report(id=report_id, session_id=session_id, participant_id=participant_id,
-                          user_id=user.id, type=role, status='completed', generation_status='ready',
-                          approved_by_user_id=host.id, approved_at=now,
-                          content={'title': '예시 데이터 · 명상 기록',
-                                   'summary': '합성 예시 데이터입니다. 실제 측정값이 아닙니다.',
-                                   'source': 'synthetic', 'insights': ['추정 참고 지표'],
-                                   'counselor_comment': '합성 예시 데이터입니다. 실제 측정값이 아닙니다.',
-                                   'eeg': {'status': 'valid',
-                                           'timeline': [{'t': i, 'concentration': 50 + i / 6,
-                                                         'relaxation': 52 + i / 10, 'stress': 40 - i / 10}
-                                                        for i in range(60)],
-                                           'metrics': {'focus_index_stability_score': 62,
-                                                       'relaxation_score': 58, 'stress_score': 35}}}))
-    db.flush()
-    return {'created_users': created}
+            created += 1
+            add(Report(id=report_id, session_id=session_id, participant_id=participant_id,
+                       user_id=user.id, type=role, status='completed', generation_status='ready',
+                       approved_by_user_id=host.id, approved_at=now,
+                       content={'title': '예시 데이터 · 명상 기록',
+                                'summary': '합성 예시 데이터입니다. 실제 측정값이 아닙니다.',
+                                'source': 'synthetic', 'insights': ['추정 참고 지표'],
+                                'counselor_comment': '합성 예시 데이터입니다. 실제 측정값이 아닙니다.',
+                                'eeg': {'status': 'valid',
+                                        'timeline': [{'t': i, 'concentration': 50 + i / 6,
+                                                      'relaxation': 52 + i / 10, 'stress': 40 - i / 10}
+                                                     for i in range(FEATURE_WINDOWS)],
+                                        'metrics': {'focus_index_stability_score': 62,
+                                                    'relaxation_score': 58, 'stress_score': 35}}}))
+    return {'created_rows': created}
 
 
 def run_seed(database_url: str, *, apply: bool = False, password: str | None = None,

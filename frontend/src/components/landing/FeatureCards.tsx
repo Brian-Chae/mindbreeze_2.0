@@ -1,4 +1,5 @@
 import { WellnessNotice } from '../legal/wellness-notice';
+import { isCounselingEnabled } from '../../lib/feature-flags';
 import { Arrow, SectionHeading, secondaryButton, sectionContainer } from './landing-ui';
 
 const specs = [
@@ -17,7 +18,7 @@ export default function FeatureCards() {
         </div>
         <div>
           <SectionHeading label="MEET LINK BAND">말로 다 전하지 못한 순간,<br />몸의 신호도 함께 읽어요.</SectionHeading>
-          <p className="mt-6 text-base leading-8 text-[#716675]">머리에 가볍게 착용하는 LINK BAND.<br />뇌파와 맥파, 움직임을 함께 기록해 상담과 명상 속 변화를 이해하는 또 하나의 단서를 제공합니다.</p>
+          <p className="mt-6 text-base leading-8 text-[#716675]">머리에 가볍게 착용하는 LINK BAND.<br />뇌파와 맥파, 움직임을 함께 기록해 {isCounselingEnabled() ? '상담과 명상' : '명상'} 속 변화를 이해하는 또 하나의 단서를 제공합니다.</p>
           <div className="mt-7 flex flex-wrap gap-2">{['EEG · 뇌파', 'PPG · 맥파', 'ACC · 움직임'].map((label) => <span key={label} className="rounded-full border border-[#DACEDD] px-3 py-2 text-xs font-semibold text-[#66546F]">{label}</span>)}</div>
           <a href="https://linkband.looxidlabs.com/ko" target="_blank" rel="noopener noreferrer" className={`${secondaryButton} mt-8`}>LINK BAND 자세히 보기 <span className="sr-only">(새 창)</span><Arrow diagonal /></a>
         </div>
