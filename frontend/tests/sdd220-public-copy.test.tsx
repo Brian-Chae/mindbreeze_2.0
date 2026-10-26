@@ -30,7 +30,7 @@ describe('SDD-220 공개 정책', () => {
   });
   it('방침은 선택 동의와 탈퇴, 위탁, 광고 미사용을 구분한다', () => {
     const text = JSON.stringify(PRIVACY_ARTICLES);
-    for (const term of ['30일', '재가입', 'AWS S3', 'Resend', 'FCM', 'LiveKit', '광고', '선택', '현재 제공하지']) expect(text).toContain(term);
+    for (const term of ['30일', '재가입', 'AWS S3', 'Resend', 'FCM', 'LiveKit', '광고', '선택', 'Gemini']) expect(text).toContain(term);
     expect(text).not.toContain('보관 기한을 두지 않고');
   });
   it('위기 도움은 검증되지 않은 전화번호를 게시하지 않는다', () => {

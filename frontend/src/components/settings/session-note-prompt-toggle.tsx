@@ -27,7 +27,6 @@ export function SessionNotePromptToggle() {
       <SettingsSwitch checked={enabled === true} label="진행 기록 안내 받기" disabled={enabled === null || saving} onChange={() => void toggle()} />
     </div>
     <p className="mt-2 text-[13px] mobile:text-mb-caption text-[#6F6F6F]">안내를 다시 켜면 아직 안내하지 않은 회차에서만 보여요. 진행 기록은 언제든 남길 수 있어요.</p>
-    <p className="mt-2 text-[13px] mobile:text-mb-caption text-[#6F6F6F]">AI 요약 기능 사용 시 이름·연락처 없는 수업 통계를 외부 AI(Google Gemini)로 전송해 문장으로 정리해요.</p>
     {error && <p role="alert" className="mt-2 text-[13px] mobile:text-mb-caption">{error}</p>}
   </section>;
 }

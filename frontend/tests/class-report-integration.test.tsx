@@ -26,14 +26,14 @@ describe('명상 종료와 상담 회귀 경계', () => {
     expect(completedClassDestination({ id: 's1', class_id: 'c1', status: 'in_progress' }, '/classes')).toBeNull();
   });
 });
-describe('수업 통계 AI 고지', () => {
+describe('수업 통계 위탁 고지', () => {
   it('통계 전송 고지가 미제공 문구와 충돌하지 않고 기관 비회원 개정 방침과 일치한다', () => {
     const text = PRIVACY_ARTICLES.flatMap((a) => a.items).join(' ');
-    expect(text).toContain('이름·연락처가 없는 수업 통계(지표 요약)를 외부 AI(Google Gemini)로 전송');
+    expect(text).toContain('Google(Gemini API)');
     expect(text).not.toContain('AI 기능은 현재 제공하지 않');
     expect(text).not.toContain('AI 미제공');
-    expect(PRIVACY_POLICY_VERSION).toBe('2.2');
-    expect(PRIVACY_POLICY_EFFECTIVE_ISO).toBe('2026-10-24');
+    expect(PRIVACY_POLICY_VERSION).toBe('2.3');
+    expect(PRIVACY_POLICY_EFFECTIVE_ISO).toBe('2026-10-26');
   });
 });
 
