@@ -22,3 +22,28 @@
 
 ## 원복
 - 기기 설정 변경 없음(화면 해제·앱 실행만). adb forward 9333 은 제거함.
+
+---
+# 2차 시도 (dev-api 재빌드 APK, 설치 20:16:23) — 판정: 보류 (앱 크래시)
+
+## 절차
+- 20:17 앱 재실행(pid 31778). CDP로 번들 JS 9개 검사: `dev-api.mindbreeze` 4건, 운영 `//api.mindbreeze` 0건 → API 주소 dev 확인.
+- 상담사 탭에서 counselor@test.com 로그인 1회 제출 → 20:17:34 로그인 직후 **앱 크래시**(ApplicationExitInfo reason=4 APP CRASH).
+- 20:19 재실행(pid 32045): 세션 유지 안 됨(로그인 화면). CDP에서 `PushNotifications.register` 를 JS로 덮어쓴 뒤 다시 로그인 시도 → 다시 크래시(덮어쓰기는 네이티브 브리지에 무효). 이후 재시도 중단.
+
+## 크래시 원인 (logcat -b crash)
+- `FATAL EXCEPTION: CapacitorPlugins`
+- `IllegalStateException: Default FirebaseApp is not initialized in this process com.looxidlabs.mindbreeze2.dev`
+  at `PushNotificationsPlugin.register(PushNotificationsPlugin.java:114)` → `FirebaseMessaging.getInstance`.
+- 원인: 이 워크트리에 `frontend/android/app/google-services.json` 이 없어 Firebase 미초기화(.env 누락과 같은 계열의 gitignore 파일). 로그인 성공 직후 `frontend/src/lib/native/push.ts:73,138,147,154` 의 `PushNotifications.register()` 가 호출되며 네이티브 예외로 프로세스가 종료됨. JS try/catch 로 못 잡는 네이티브 스레드 예외.
+
+## 결함
+1. (빌드/환경) 워크트리 빌드에 google-services.json 누락 → 로그인 후 크래시. 메인 체크아웃의 파일을 복사해 재빌드하면 해결 예상.
+2. (코드, 방어) Firebase 미구성 빌드에서도 앱이 죽지 않도록 push.ts register 호출 전 가드(또는 네이티브 측 try/catch)가 없음. 선택 개선 사항.
+
+## 미수행/원복
+- 녹음·청크·logcat 대기·DB 조회 미수행. 기기 설정 변경 없음(배터리·deviceidle 미조작), adb forward 제거 완료.
+- 로그인 요청의 서버 응답 코드는 크래시로 확인 못 함(크래시 직전까지 진행했으므로 인증 자체는 통과했을 가능성).
+
+## 필요 조치
+- google-services.json(dev 앱 패키지 com.looxidlabs.mindbreeze2.dev 용 클라이언트 포함)을 워크트리에 배치 후 APK 재빌드·재설치.
