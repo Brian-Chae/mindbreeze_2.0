@@ -225,7 +225,7 @@ def test_ts14_게시_버전이_바뀌면_제출_당시_값이_저장(client, mon
     monkeypatch.setitem(policy.CONSENT_VERSIONS, "tos", "2.0")
     assert client.post(REGISTER, json=email_register_payload("ver@x.com")).status_code == 201
     rows = {c.type: c.version for c in _db().query(Consent).all()}
-    assert rows["tos"] == "2.0" and rows["privacy"] == "1.0"
+    assert rows["tos"] == "2.0" and rows["privacy"] == policy.CONSENT_VERSIONS["privacy"] == "2.3"
 
 
 # ── TS13: 진행자(개인 상담사) 신청·초대 경로 ─────────────────────────────
@@ -283,3 +283,13 @@ def uuid4_():
     import uuid
 
     return uuid.uuid4()
+
+
+def test_방침_버전과_동의_버전이_프론트_방침과_연동():
+    """CONSENT_VERSIONS['privacy'] 는 frontend/src/lib/privacy-policy.ts 의 PRIVACY_POLICY_VERSION 과 같아야 한다."""
+    import re
+    from pathlib import Path
+
+    ts = Path(__file__).resolve().parents[2] / "frontend" / "src" / "lib" / "privacy-policy.ts"
+    m = re.search(r"PRIVACY_POLICY_VERSION\s*=\s*'([^']+)'", ts.read_text(encoding="utf-8"))
+    assert m and m.group(1) == policy.CONSENT_VERSIONS["privacy"]

@@ -26,7 +26,7 @@ MIN_SIGNUP_AGE = 14
 # 게시된 약관 버전. 가입 시점의 게시 버전을 그대로 consents.version 에 저장한다(기존 컬럼 재사용).
 CONSENT_VERSIONS: dict[str, str] = {
     "tos": "1.0",
-    "privacy": "1.0",
+    "privacy": "2.3",
     "sensitive": "1.0",
     "eeg": "1.0",
     "research": "1.0",

@@ -7,7 +7,7 @@ import { RESEARCH_NOTICE_VERSION } from '../src/lib/class/flow/member-prep';
 describe('SDD-241 연구 사본 고지', () => {
   it('확장된 항목과 참여자 개인정보 제외를 게시한다', () => {
     const text = PRIVACY_ARTICLES.flatMap(article => article.items).join(' ');
-    expect(PRIVACY_POLICY_VERSION).toBe('2.2');
+    expect(PRIVACY_POLICY_VERSION).toBe('2.3');
     expect(text).not.toContain('이름은 암호화한 식별값으로만');
     expect(text).toContain('참여자 이름은 이름과 생년월일에서 생성한 HMAC 가명 식별값');
     for (const field of ['진행자 실명', '계정 ID', '역할', '측정 시작·종료', '프로그램', '참여자 이름 원문']) expect(text).toContain(field);

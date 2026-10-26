@@ -181,7 +181,7 @@ describe('V6 상담·AI 비공개 랜딩은 명상 클래스 중심', () => {
 
 describe('V7 개인정보 처리방침', () => {
   it('최신 버전 2.2를 유지하고 계정 삭제 안내 링크를 둔다', () => {
-    expect(PRIVACY_POLICY_VERSION).toBe('2.2');
+    expect(PRIVACY_POLICY_VERSION).toBe('2.3');
     const host = show(<PrivacyPolicyPage />);
     const section = host.querySelector('section#account-deletion');
     expect(section?.querySelector('a[href="/account-deletion"]')).not.toBeNull();

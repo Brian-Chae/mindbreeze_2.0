@@ -1,11 +1,11 @@
 // 개인정보 처리방침 본문 데이터 — /privacy 페이지와 화면 고지 문구가 같은 값을 쓰도록 한 곳에 둔다.
 
 /** 방침 버전 */
-export const PRIVACY_POLICY_VERSION = '2.2';
+export const PRIVACY_POLICY_VERSION = '2.3';
 /** 시행일 (표시용) */
-export const PRIVACY_POLICY_EFFECTIVE_DATE = '2026년 10월 24일';
+export const PRIVACY_POLICY_EFFECTIVE_DATE = '2026년 10월 26일';
 /** 시행일 (ISO) */
-export const PRIVACY_POLICY_EFFECTIVE_ISO = '2026-10-24';
+export const PRIVACY_POLICY_EFFECTIVE_ISO = '2026-10-26';
 /** 기록 원본(뇌파·음성·영상·전사 원문) 및 비회원 개인정보 삭제 기한(일) — 서버 RETENTION_RAW_DAYS 기본값과 동일 */
 export const RAW_RETENTION_DAYS = 90;
 /** 개인정보 문의처 */
@@ -37,6 +37,7 @@ export const PROCESSOR_DISCLOSURES: ProcessorDisclosure[] = [
   { service: 'FCM(Firebase Cloud Messaging·Apple 푸시)', recipient: 'Google LLC(Firebase), Apple Inc.', purpose: '푸시 알림 전송', data: '기기 푸시 토큰, 비식별 알림 문구', country: '미국 등 해외(구글·애플 글로벌 인프라)', timingAndMethod: '알림 신청 후 알림 발송 시 암호화 통신으로 이전', retention: '구글은 전달되지 않은 알림을 최대 4주 보관 후 폐기하고, 기기 식별자는 회사가 삭제할 때까지 보관합니다. 애플은 자체 정책에 따릅니다.' },
   { service: '소셜 로그인(Google·Apple)', recipient: 'Google LLC, Apple Inc.', purpose: '소셜 로그인 본인 확인', data: '인증 토큰, 이메일·이름(로그인 시 제공)', country: '미국 등 해외', timingAndMethod: '소셜 로그인을 선택한 경우 로그인 시 이전', retention: '회사는 탈퇴 시 연결 해제(토큰 철회)를 요청하며, 사업자 보관은 각사 정책에 따릅니다' },
   { service: 'LiveKit', recipient: '해당 없음 — 회사가 직접 운영하는 서버(제3자 위탁 아님)', purpose: '실시간 음성·영상 전달', data: '참여자 식별 정보, 음성·영상(전달 중)', country: '일본(AWS 도쿄 리전의 회사 운영 서버)', timingAndMethod: '클래스 참여 중 암호화 통신', retention: '전달 중에만 처리하며 서버에서 녹화하지 않습니다. 호스트 단말이 올린 기록은 제3조 기준을 따릅니다' },
+  { service: 'Google(Gemini API)', recipient: 'Google LLC', purpose: '텍스트 생성 처리', data: '이름·연락처가 없는 수업 통계(지표 요약)', country: '미국 등 해외', timingAndMethod: '해당 처리를 실행할 때 암호화 통신으로 이전', retention: '구글 정책에 따름(회사는 처리 결과만 서비스 내에 보관)' },
   { service: 'Google STUN(연결 보조)', recipient: 'Google LLC', purpose: '실시간 통신 연결 경로 확인', data: '접속 IP 주소', country: '미국 등 해외', timingAndMethod: '클래스 연결 설정 시', retention: '구글 정책에 따름(회사는 저장하지 않음)' },
 ];
 
@@ -49,7 +50,6 @@ export const PRIVACY_ARTICLES: PrivacyArticle[] = [
   { id: 'processors', title: '처리 위탁 및 국외 이전', items: [
     '아래는 현재 확인된 개인정보 처리 위탁 및 국외 이전 현황입니다. 국외 이전에 관한 문의는 제11조의 문의처로 접수합니다. 변경되는 경우 이 방침을 개정하여 안내합니다.',
     ...PROCESSOR_DISCLOSURES.map((p) => `${p.service}: 수탁자 ${p.recipient}; 업무 ${p.purpose}; 항목 ${p.data}; 국가 ${p.country}; 시점·방법 ${p.timingAndMethod}; 보유기간 ${p.retention}.`),
-    'AI 요약 기능을 사용하는 경우 이름·연락처가 없는 수업 통계(지표 요약)를 외부 AI(Google Gemini)로 전송해 문장으로 정리합니다.',
     '광고·마케팅·데이터 브로커에게 개인정보를 제공하지 않으며 광고 목적으로 사용하지 않습니다.',
   ] },
   { id: 'automatic-data', title: '접속 및 알림 정보', items: [
@@ -69,9 +69,10 @@ export const PRIVACY_ARTICLES: PrivacyArticle[] = [
     title: '제2조 (수집하는 개인정보의 항목과 이용 목적)',
     items: [
       '회원가입 및 로그인: 이름, 이메일, 비밀번호(암호화 저장), 역할 구분, 생년월일. 만 14세 미만은 가입할 수 없습니다. 서비스 제공과 계정 관리에 이용합니다.',
-      '상담·명상 클래스 진행 중 수집하는 정보: 음성, 영상(카메라를 켠 경우에 한함), 채팅 내용. 음성 자동 전사는 현재 제공하지 않으며, 수업 통계 AI 요약은 이름·연락처 없는 지표 요약만 사용합니다. 기존 음성 전사 원문은 보관 기준에 따라 처리합니다. 기록지 및 리포트 작성에 이용합니다.',
+      '상담·명상 클래스 진행 중 수집하는 정보: 음성, 영상(카메라를 켠 경우에 한함), 채팅 내용. 기록지 및 리포트 작성에 이용합니다.',
+      '계정 설정에서 입력하는 정보(선택): 전화번호, 주소, 프로필 사진. 입력하지 않아도 서비스를 이용할 수 있으며, 계정 관리와 진행자 안내에 이용합니다.',
       '생체신호 정보: LINK BAND를 착용한 경우에 한하여 뇌파(EEG), 맥박(PPG), 움직임(ACC) 데이터와 이로부터 산출한 지표(집중도·이완도·스트레스 등)를 수집합니다. 착용하지 않아도 서비스를 이용할 수 있습니다.',
-      '회차별 녹음·녹화 고지에 필수 동의한 이후 입장할 수 있습니다. 뇌파 수집은 별도 선택 동의와 LINK BAND 착용 시에만 이루어집니다.',
+      '음성 녹음·영상 녹화는 회차별 고지에 필수 동의한 이후에 입장할 수 있으며, 동의하지 않으면 해당 클래스에 입장할 수 없습니다. 뇌파 수집은 별도 선택 동의와 LINK BAND 착용 시에만 이루어집니다.',
       '이용약관·개인정보 처리·클래스 기록의 민감정보 동의는 필수이며, 뇌파 수집과 회원의 연구 활용은 각각 독립된 선택 동의입니다. 비회원에게는 연구 동의를 받지 않습니다. 선택 동의 거부는 기본 서비스 이용을 제한하지 않습니다.',
     ],
   },
@@ -178,7 +179,7 @@ export const PRIVACY_ARTICLES: PrivacyArticle[] = [
     title: '부칙 (시행일과 개정 이력)',
     items: [
       `이 방침은 ${PRIVACY_POLICY_EFFECTIVE_DATE}부터 시행합니다.`,
-      `개정 이력: 버전 ${PRIVACY_POLICY_VERSION} (${PRIVACY_POLICY_EFFECTIVE_DATE}) — 기관 제공 기기의 비회원 이용, 보호자 서면 동의 확보에 대한 기관 책임, 실명 불필요, 생년월만 수집 및 비회원 연구 활용 제외를 반영하였습니다. 같은 날 개정하여 시행일은 유지합니다. 이전 개정의 연구 사본의 진행자 실명·계정 ID·역할, 정확한 측정 시작·종료 시각 및 구조화된 프로그램 정보 고지를 추가하였습니다. 이전 개정에서 반영한 탈퇴 30일 후 개인 데이터 삭제, 선택 동의 구분, 처리 위탁·국외 이전, 보호책임자, 수업 통계 AI 요약 및 광고 미사용 안내를 반영하였습니다. 기록 원본 ${RAW_RETENTION_DAYS}일 보관 기준은 유지합니다.`,
+      `개정 이력: 버전 ${PRIVACY_POLICY_VERSION} (${PRIVACY_POLICY_EFFECTIVE_DATE}) — 수집 항목(전화번호·주소·프로필 사진) 추가, 처리 위탁·국외 이전 표 정비, 기능별 서술 간소화. 이전 버전(2.2): 기관 제공 기기 비회원 이용, 연구 사본 고지. 방침이 바뀌면 시행 전에 서비스 공지로 안내합니다.`,
     ],
   },
 ];
