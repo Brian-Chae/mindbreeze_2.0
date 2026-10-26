@@ -139,22 +139,16 @@ def _call_whisper(chunk_paths: list[str]) -> dict:
         logger.warning("[stt_task] [청크 누락] Whisper %d개 건너뜀: %s", len(missing), missing)
     logger.info("[stt_task] Whisper API: %d chunks(누락 %d)", len(existing), len(missing))
 
-    # 청크 파일들을 읽어서 하나의 파일로 병합 후 Whisper에 전송
-    # Whisper는 multipart/form-data로 파일 업로드
-    merged = tempfile.NamedTemporaryFile(suffix=".webm", delete=False)
-    merged_path = merged.name
-    try:
-        # STT-02: 병합 파일 핸들을 with 로 관리해 병합 중 예외가 나도 반드시 닫히게 한다.
-        with merged:
-            for path in existing:
-                with open(path, "rb") as src:
-                    shutil.copyfileobj(src, merged)
+    # SDD-247: 형식별 병합(webm 연속→바이트 병합, m4a/혼재→ffmpeg concat). mime·확장자는 병합 결과를 따른다.
+    from app.services import audio_merge_service
 
+    merged_path, merged_mime = audio_merge_service.merge_chunks_for_stt(existing)
+    try:
         with open(merged_path, "rb") as f:
             resp = requests.post(
                 "https://api.openai.com/v1/audio/transcriptions",
                 headers={"Authorization": f"Bearer {openai_api_key}"},
-                files={"file": ("audio.webm", f, "audio/webm")},
+                files={"file": ("audio" + os.path.splitext(merged_path)[1], f, merged_mime)},
                 data={
                     "model": settings.whisper_model,
                     "language": "ko",
@@ -212,14 +206,11 @@ def _transcribe_batch(chunk_paths: list[str], session_type: str) -> tuple[list[d
     if missing:
         logger.warning("[stt_task] [청크 누락] %d개 건너뜀: %s", len(missing), missing)
 
-    # 1) 존재하는 청크만 병합 → base64
-    merged = tempfile.NamedTemporaryFile(suffix=".webm", delete=False)
-    merged_path = merged.name
+    # 1) 존재하는 청크만 병합 → base64 (SDD-247: 형식별 병합, mime 은 병합 결과를 따른다)
+    from app.services import audio_merge_service
+
+    merged_path, merged_mime = audio_merge_service.merge_chunks_for_stt(existing)
     try:
-        with open(merged_path, "wb") as out:
-            for path in existing:
-                with open(path, "rb") as src:
-                    shutil.copyfileobj(src, out)
         with open(merged_path, "rb") as f:
             audio_b64 = base64.b64encode(f.read()).decode("utf-8")
     finally:
@@ -253,7 +244,7 @@ def _transcribe_batch(chunk_paths: list[str], session_type: str) -> tuple[list[d
                 {
                     "parts": [
                         {"text": prompt},
-                        {"inline_data": {"mime_type": "audio/webm", "data": audio_b64}},
+                        {"inline_data": {"mime_type": merged_mime, "data": audio_b64}},
                     ]
                 }
             ],
