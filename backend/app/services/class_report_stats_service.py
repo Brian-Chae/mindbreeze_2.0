@@ -325,7 +325,7 @@ def compute_class_stats(db, session) -> dict:
     from app.models.normalization_model import NormalizationModel
     from app.models.session import SessionParticipant
     from app.services import eeg_metrics, report_scope
-    from app.services.normalization_score import sigmoid_score
+    from app.services.normalization_score import brain_rest_score, sigmoid_score
     from app.tasks.report_task import _ensure_aware_dt, _longest_usable_run
 
     scope = report_scope.scope_for_session(session.id, db)
@@ -408,7 +408,8 @@ def compute_class_stats(db, session) -> dict:
                 quality=w.quality, rel_sec=math.floor(ms / 1000) - base_sec,
                 respiratory_rate=w.respiratory_rate, heart_rate=w.heart_rate, sdnn=w.sdnn,
                 focus_index=mind("focusIndex", w.focus_index, eeg_metrics.normalize_focus),
-                relaxation_index=mind("relaxationIndex", w.relaxation_index, eeg_metrics.normalize_relaxation),
+                # 이완도 = 두뇌 휴식(TNA 반전, 활성 모델). TNA/모델 없으면 None(0 금지, α/(α+β) 폴백 금지)
+                relaxation_index=brain_rest_score(w.total_neural_activity, params),
                 emotional_stability=mind("emotionalStability", w.emotional_stability,
                                          eeg_metrics.normalize_emotional_stability),
             ))

@@ -4,9 +4,12 @@ import type { BandAccSnapshot, BandRawIndices } from '../../types/playground';
 import { MetricGauge, ValueCard } from './MetricGauge';
 import { PanelShell } from './PanelShell';
 
+/** 이완도(두뇌 휴식)는 모델 없으면 null(pending) — 표시는 0 대체 */
+type PanelIndices = Omit<BandRawIndices, 'relaxationIndex'> & { relaxationIndex: number | null };
+
 interface Props {
   connected: boolean;
-  rawIndices: BandRawIndices | null;
+  rawIndices: PanelIndices | null;
   heartRate: number | null;
   sdnn: number | null;
   rmssd: number | null;
@@ -36,7 +39,7 @@ const ACTIVITY_LABEL: Record<string, string> = {
   running: '달리기',
 };
 
-function eegValue(raw: BandRawIndices | null, key: string): number {
+function eegValue(raw: PanelIndices | null, key: string): number {
   if (!raw) return 0;
   if (key === 'totalPower') return raw.totalNeuralActivity;
   return Number(raw[key as keyof BandRawIndices] ?? 0);

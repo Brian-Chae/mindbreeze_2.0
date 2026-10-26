@@ -59,7 +59,7 @@ final class ManagerTests: XCTestCase {
         band = FakeBand(); live = FakeLive()
         own = BandOwnership(defaults: UserDefaults(suiteName: "m-\(UUID().uuidString)")!)
         m = MeasurementManager(root: dir, band: band, ownership: own, makeLive: { [unowned self] _ in self.live },
-                               makeEngine: { [unowned self] d, ctx in try MeasurementEngine(dir: d, configJSON: CoreBridgeTests.cfg, context: ctx, journalSync: .none) },
+                               makeEngine: { [unowned self] d, ctx, _ in try MeasurementEngine(dir: d, configJSON: CoreBridgeTests.cfg, context: ctx, journalSync: .none) },
                                scheduler: ManualScheduler())
         m.onBridgeEvent = { [unowned self] in events.append($0) }
     }
@@ -79,6 +79,29 @@ final class ManagerTests: XCTestCase {
         XCTAssertEqual(r2["idempotentReplay"] as? Bool, true); XCTAssertEqual(r2["managerId"] as? String, r1["managerId"] as? String)
         XCTAssertEqual(band.connects, 1, "같은 requestId 는 새 수집을 시작하지 않는다")
         XCTAssertThrowsError(try start("0000001f-0000-4000-8000-00000000001f")) { XCTAssertEqual($0 as? ManagerError, .alreadyActive) }
+    }
+    /// A7: 활성 모델 pin — capture.start·snapshot 의 model 이 pin 버전, 모델 없으면 코호트.
+    func testModelPinFlowsToCaptureStartAndSnapshot() throws {
+        own.nativeEnabled = true
+        let model = #"{"focusIndex":{"m":-1.2,"s":0.5,"direction":1}}"#
+        _ = try m.startMeasurement(sessionId: sid, credentialHandle: handle, configHash: cfgHash, requestId: req, modelParams: model, modelVersion: "v7")
+        let payload = live.dispatched.first?["payload"] as? [String: Any]
+        XCTAssertEqual(payload?["model_version"] as? String, "sigmoid-v7")
+        XCTAssertEqual((m.snapshot()["versions"] as? [String: Any])?["model"] as? String, "sigmoid-v7")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: dir.appendingPathComponent("sessions/\(sid)/model-pin.json").path))
+    }
+    /// C1: iOS 스냅샷은 계약 필드를 최상위에 둔다(Android 의 `bridge` 중첩 결함 없음). 이벤트 payload 도 같은 형태.
+    func testSnapshotIsContractShapedWithoutBridgeNesting() throws {
+        own.nativeEnabled = true; _ = try start()
+        let snap = m.snapshot()
+        XCTAssertNil(snap["bridge"]); XCTAssertEqual(snap["bridge_version"] as? Int, 1); XCTAssertNotNil(snap["seq"] as? String)
+        let upd = events.last { $0["event"] as? String == "measurementUpdated" }
+        XCTAssertNil((upd?["payload"] as? [String: Any])?["bridge"]); XCTAssertNotNil((upd?["payload"] as? [String: Any])?["seq"] as? String)
+    }
+    func testNoModelKeepsCohortVersion() throws {
+        own.nativeEnabled = true; _ = try start()
+        XCTAssertEqual((live.dispatched.first?["payload"] as? [String: Any])?["model_version"] as? String, "b0-cohort-2")
+        XCTAssertEqual((m.snapshot()["versions"] as? [String: Any])?["model"] as? String, "b0-cohort-2")
     }
     func testJSOwningBandBlocksNativeStart() throws {
         own.nativeEnabled = true; own.setJSOwning(true)
@@ -162,7 +185,7 @@ final class ManagerRecoveryAndContractTests: XCTestCase {
     let sid = "00000001-0000-4000-8000-000000000001"
     func make(_ band: FakeBand, _ live: FakeLive, _ own: BandOwnership) -> MeasurementManager {
         let m = MeasurementManager(root: dir, band: band, ownership: own, makeLive: { _ in live },
-                                   makeEngine: { d, ctx in try MeasurementEngine(dir: d, configJSON: CoreBridgeTests.cfg, context: ctx, journalSync: .none) },
+                                   makeEngine: { d, ctx, _ in try MeasurementEngine(dir: d, configJSON: CoreBridgeTests.cfg, context: ctx, journalSync: .none) },
                                    scheduler: ManualScheduler(), nowMs: { 1_760_000_000_000 })
         return m
     }

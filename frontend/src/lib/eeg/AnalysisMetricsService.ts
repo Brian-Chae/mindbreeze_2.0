@@ -397,12 +397,39 @@ export class AnalysisMetricsService {
       // 중첩 창이 다시 보낸 박동(이미 받은 시각 이하)은 버린다.
       candidates = candidates.filter(c => Number.isFinite(c.ts) && c.ts > this.lastRrEndTimestamp);
     }
-    const valid = candidates.filter(c => c.rr >= 200 && c.rr <= 2000);
-    if (valid.length === 0) return;
+    let valid = candidates.filter(c => c.rr >= 200 && c.rr <= 2000);
+    // 하루명상 SDD-052 filterArtifactRr: 버퍼 중앙값 ±25% 이탈 RR 은 박동 누락/가짜 피크로 보고 제외한다.
+    // (시각 커서는 아래에서 유효 박동 기준으로 갱신하므로 제외된 박동이 재유입되지는 않는다.)
+    // 버퍼가 5개 미만인 초기에는 들어온 윈도우 자체의 중앙값을 기준으로 삼는다(윈도우에 RR 3개 이상일 때).
+    const refPool = this.rrIntervalBuffer.length >= 5 ? this.rrIntervalBuffer : valid.map(c => c.rr);
+    if (refPool.length >= 3) {
+      const sortedRef = [...refPool].sort((a, b) => a - b);
+      const median = sortedRef[sortedRef.length >> 1];
+      if (median > 0) valid = valid.filter(c => Math.abs(c.rr - median) <= median * 0.25);
+    }
+    if (valid.length === 0) {
+      if (stamped) {
+        const seen = candidates.map(c => c.ts).filter(Number.isFinite);
+        if (seen.length > 0) this.lastRrEndTimestamp = Math.max(this.lastRrEndTimestamp, ...seen);
+      }
+      return;
+    }
 
     this.rrIntervalBuffer.push(...valid.map(c => c.rr));
     this.rrTimestampBuffer.push(...valid.map(c => c.ts));
-    if (stamped) this.lastRrEndTimestamp = Math.max(this.lastRrEndTimestamp, ...valid.map(c => c.ts));
+    if (stamped) this.lastRrEndTimestamp = Math.max(this.lastRrEndTimestamp, ...candidates.map(c => c.ts));
+    // 초기(기준 부족)에 통과한 이상치를 버퍼가 5개 이상이 되면 중앙값 ±25% 기준으로 소급 정리한다.
+    if (this.rrIntervalBuffer.length >= 5) {
+      const sortedAll = [...this.rrIntervalBuffer].sort((a, b) => a - b);
+      const med = sortedAll[sortedAll.length >> 1];
+      if (med > 0) {
+        const keep = this.rrIntervalBuffer.map(r => Math.abs(r - med) <= med * 0.25);
+        if (keep.some(k => !k)) {
+          this.rrIntervalBuffer = this.rrIntervalBuffer.filter((_, i) => keep[i]);
+          this.rrTimestampBuffer = this.rrTimestampBuffer.filter((_, i) => keep[i]);
+        }
+      }
+    }
     if (this.rrIntervalBuffer.length > this.LF_HF_BUFFER_SIZE) {
       this.rrIntervalBuffer = this.rrIntervalBuffer.slice(-this.LF_HF_BUFFER_SIZE);
       this.rrTimestampBuffer = this.rrTimestampBuffer.slice(-this.LF_HF_BUFFER_SIZE);

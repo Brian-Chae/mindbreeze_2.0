@@ -233,10 +233,10 @@ export class PPGSignalProcessor {
     try {
       advancedHRV = this.calculateAdvancedHRV(filteredIR);
       
-      // 🔧 RR 간격 추출 (LF/HF 계산용) - 원시 IR 데이터 사용
-      // ⚠️ 중요: HRV 계산에는 밴드패스 필터를 거치지 않은 원시 데이터 사용
-      // LF(0.04-0.15Hz), HF(0.15-0.4Hz) 대역이 1.0Hz 하이패스로 제거되지 않도록
-      const peaks = this.detectPeaksForHRV(irData);
+      // 🔧 RR 간격 추출 — 필터드 IR(1~5Hz 밴드패스) 사용 (하루명상 SDD-052 와 동일).
+      // 원시 IR 은 호흡·기저선 드리프트(<1Hz)가 남아 박동 누락(RR≈2배)·가짜 피크(RR 300~500ms)가
+      // 섞여 SDNN 이 3배 이상 부풀려졌다. RR 간격은 피크 시각 차이이므로 LF/HF 정보는 필터로 사라지지 않는다.
+      const peaks = this.detectPeaksForHRV(filteredIR);
       if (peaks.length >= 2) {
         for (let i = 1; i < peaks.length; i++) {
           const interval = (peaks[i] - peaks[i-1]) * (1000 / this.ppgSamplingRate);

@@ -257,10 +257,19 @@ function DeviceSheet({ props }: { props: MemberClassViewProps }) {
         {errorLine}
         {wave ? (
           <div className="mp-raw">
-            <span>원시 데이터 · 2채널</span>
+            <span>뇌파 · 8–30Hz</span>
             <svg viewBox="0 0 240 40" preserveAspectRatio="none" aria-hidden="true">
               <path stroke="#B373EF" d={wavePath(wave.fp1)} />
               <path stroke="#01F0C8" d={wavePath(wave.fp2)} />
+            </svg>
+          </div>
+        ) : null}
+        {device.ppg ? (
+          <div className="mp-raw">
+            <span>맥파 · Red·IR</span>
+            <svg viewBox="0 0 240 40" preserveAspectRatio="none" aria-hidden="true">
+              <path stroke="#B373EF" d={wavePath(device.ppg.red)} />
+              <path stroke="#01F0C8" d={wavePath(device.ppg.ir)} />
             </svg>
           </div>
         ) : null}

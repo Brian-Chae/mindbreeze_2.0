@@ -21,7 +21,7 @@ final class T05RoundTripTests: XCTestCase {
                                appBuild: "t07b-roundtrip", coreVersion: MeasurementManager.coreVersion, refreshToken: { $0(.success(info["token"]!)) })
         let own = BandOwnership(defaults: UserDefaults(suiteName: "t05-\(UUID().uuidString)")!); own.nativeEnabled = true
         let m = MeasurementManager(root: dir, band: FakeBand(), ownership: own, makeLive: { _ in live },
-                                   makeEngine: { d, ctx in try MeasurementEngine(dir: d, configJSON: CoreBridgeTests.cfg, context: ctx, journalSync: .none) },
+                                   makeEngine: { d, ctx, _ in try MeasurementEngine(dir: d, configJSON: CoreBridgeTests.cfg, context: ctx, journalSync: .none) },
                                    scheduler: sch)
         var acks: [[String: Any]] = [], metricAcks: [[String: Any]] = [], deviceRejected: [String] = []
         var t0 = Date(), tStartAck: TimeInterval?, tFirstMetricAck: TimeInterval?
@@ -97,7 +97,7 @@ final class T05RoundTripTests: XCTestCase {
         let (hc, host) = makeLive(info["host_token"]!)
         let own = BandOwnership(defaults: UserDefaults(suiteName: "t05t-\(UUID().uuidString)")!); own.nativeEnabled = true
         let m = MeasurementManager(root: dir, band: FakeBand(), ownership: own, makeLive: { _ in member },
-                                   makeEngine: { d, ctx in try MeasurementEngine(dir: d, configJSON: CoreBridgeTests.cfg, context: ctx, journalSync: .none) },
+                                   makeEngine: { d, ctx, _ in try MeasurementEngine(dir: d, configJSON: CoreBridgeTests.cfg, context: ctx, journalSync: .none) },
                                    scheduler: sch)
         var acks: [[String: Any]] = [], hostAcks: [[String: Any]] = [], sealed: [String] = []
         var endIdBox = ""

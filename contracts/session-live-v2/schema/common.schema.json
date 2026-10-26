@@ -69,7 +69,8 @@
         "emotion_display": { "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "score_0_100" }, "value": { "minimum": 0, "maximum": 100 } } }] },
         "bpm": { "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "beats_per_min" } } }] },
         "respiration": { "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "breaths_per_min" } } }] },
-        "sdnn": { "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "ms" } } }] }
+        "sdnn": { "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "ms" } } }] },
+        "tna_raw": { "description": "선택 필드(구 클라이언트 미전송). 총 신경활동 raw — 서버가 활성 모델로 두뇌 휴식 점수를 재계산.", "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "index_raw" } } }] }
       }
     }
   }

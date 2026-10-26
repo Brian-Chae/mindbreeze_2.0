@@ -29,6 +29,9 @@ class MeasurementEngine(
     /** 복구 중 재생해서 만들어진 프레임(아직 sink 로 전달되지 않음). replayPending() 이 전달한다. */
     private var replayBuffer: List<JSONObject> = emptyList()
     val counters = MeasurementCounters()
+    private val rawPreview = RawPreviewBuffer()
+    /** 기기 시트용 최근 원시 샘플(다운샘플). */
+    fun rawPreview(points: Int): RawPreviewBuffer.Preview = rawPreview.preview(points)
     val fence = InstanceFence()
     private val unwrap = TickUnwrapper()
     private val tickUnwrapForAnchor = TickUnwrapper()
@@ -69,6 +72,8 @@ class MeasurementEngine(
             is ParseResult.Invalid -> counters.invalid()
             is ParseResult.Ok -> {
                 counters.samples(sensor, r.packet.sampleCount)
+                r.packet.eeg?.let { rawPreview.addEeg(it) }
+                r.packet.ppg?.let { rawPreview.addPpg(it) }
                 if (sensor == Sensor.EEG) lastEegAnchor = tickUnwrapForAnchor.unwrap(sensor, r.packet.rawTick) to windowTimelineUs(now * 1000)
             }
         }
@@ -156,6 +161,8 @@ class MeasurementEngine(
             clockMs: () -> Long = { SystemClock.elapsedRealtime() }, syncEach: Boolean = true,
             wallAnchorMs: Long = System.currentTimeMillis(), anchorMonoUs: Long = clockMs() * 1000,
             checkpointEveryPackets: Int = 300, configJson: String = MeasurementCore.DEFAULT_CONFIG,
+            /** 활성 표준 모델 params(JSON). 있으면 코어에 주입한다(restore 도 동일 — 체크포인트는 모델을 담지 않는다). */
+            modelParamsJson: String? = null,
         ): MeasurementEngine {
             val rec = AppendOnlyJournal.recover(journalFile) // 꼬리 절단 포함
             var core: MeasurementCore? = null
@@ -170,6 +177,7 @@ class MeasurementEngine(
                 } catch (_: CoreException) { core = null; start = 0 }
             }
             val c = core ?: MeasurementCore.create(configJson)
+            if (modelParamsJson != null) c.setModel(modelParamsJson)
             val buf = ArrayList<JSONObject>()
             for (i in start until rec.records.size) {
                 val r = rec.records[i]

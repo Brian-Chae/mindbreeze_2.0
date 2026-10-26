@@ -102,7 +102,8 @@ class MeasurementPlugin : Plugin() {
             val apiBase = call.getString("apiBase"); val socketBase = call.getString("socketBase")
             if (apiBase.isNullOrEmpty() || socketBase.isNullOrEmpty()) { call.reject("bad_config"); return }
             if (address == null && !synthetic) { call.reject("address_required"); return }
-            val cfg = RuntimeConfig(sessionId, apiBase, socketBase, address, call.getString("instanceId") ?: UUID.randomUUID().toString(), true)
+            val cfg = RuntimeConfig(sessionId, apiBase, socketBase, address, call.getString("instanceId") ?: UUID.randomUUID().toString(), true,
+                modelParams = call.getString("modelParams"), modelVersion = call.getString("modelVersion"))
             MeasurementService.startNative(context, cfg, synthetic)
             lastRequestId = requestId
             val res = JSObject().put("managerId", UUID.randomUUID().toString()).put("streamId", JSONObject.NULL).put("ownerGeneration", JSONObject.NULL)
@@ -152,6 +153,18 @@ class MeasurementPlugin : Plugin() {
         if (rt != null) o.put("liveQuarantined", rt.box.quarantined())
         if (rt != null) o.put("bridge", json(BridgeModel.snapshot(rt.inputs(MeasurementManager.state.name, MeasurementManager.blockedReason))))
         call.resolve(o)
+    }
+
+    /**
+     * 기기 시트 원시 파형 미리보기(시트가 열려 있을 때만 JS 가 1초 폴링). 입력 {seconds?, points?}.
+     * 결과는 {eegFp1, eegFp2, ppgRed, ppgIr} 숫자 배열뿐 — 토큰·원문 바이트·URL 은 싣지 않는다. 측정 중이 아니면 빈 배열.
+     */
+    @PluginMethod
+    fun getRawPreview(call: PluginCall) {
+        val points = (call.getInt("points") ?: 120).coerceIn(2, 1000)
+        val p = MeasurementManager.engine?.rawPreview(points)
+        fun arr(l: List<Double>?) = org.json.JSONArray().also { a -> l?.forEach { a.put(it) } }
+        call.resolve(JSObject().put("eegFp1", arr(p?.eegFp1)).put("eegFp2", arr(p?.eegFp2)).put("ppgRed", arr(p?.ppgRed)).put("ppgIr", arr(p?.ppgIr)))
     }
 
     /** 배터리 최적화 상태 읽기(측정 시작 전 안내용). {batteryOptimization: exempt|optimized|restricted|unknown, backgroundRestricted, vendorPolicy, settingsTargets} */

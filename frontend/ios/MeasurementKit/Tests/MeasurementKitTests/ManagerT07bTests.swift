@@ -22,7 +22,7 @@ final class ManagerT07bTests: XCTestCase {
 
     func make(_ b: FakeBand, _ l: FakeLive, _ o: BandOwnership) -> MeasurementManager {
         let mm = MeasurementManager(root: dir, band: b, ownership: o, makeLive: { _ in l },
-                                    makeEngine: { d, ctx in try MeasurementEngine(dir: d, configJSON: CoreBridgeTests.cfg, context: ctx, journalSync: .none) },
+                                    makeEngine: { d, ctx, _ in try MeasurementEngine(dir: d, configJSON: CoreBridgeTests.cfg, context: ctx, journalSync: .none) },
                                     scheduler: sch, nowMs: { 1_760_000_000_000 }, monoUs: { [unowned self] in self.mono })
         mm.onSealed = { [unowned self] s, h in sealed.append((s, h)) }
         return mm

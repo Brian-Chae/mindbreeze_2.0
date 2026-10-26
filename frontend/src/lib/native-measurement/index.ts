@@ -6,8 +6,29 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 import type { CommandAck, LiveCommand, LiveEvent } from '../session-live/live-types';
 import type {
   BridgeEvent, Capabilities, DispatchLiveCommandResult, ListenerHandle, MeasurementSnapshot,
-  NativeMeasurementPlugin, QueueCounts, BlockedReason, StartMeasurementRequest, StartMeasurementResult,
+  NativeMeasurementPlugin, QueueCounts, BlockedReason, RawPreview, StartMeasurementRequest, StartMeasurementResult,
 } from './types';
+import { parseModelParams } from '../eeg/eegPersonalScore';
+import type { CalibrationMetricKey } from '../eeg/eegSigmoidScore';
+import type { NormalizationModelDto } from '../api/normalization-api';
+
+/** Android start 에 싣는 활성 표준 모델(비밀 아님). 없으면 필드를 보내지 않아 네이티브가 코호트를 유지한다. */
+export interface NativeModelPayload { modelParams: string; modelVersion: string }
+
+const MODEL_METRICS = new Set(['focusIndex', 'relaxationIndex', 'stressIndex', 'totalNeuralActivity', 'faa', 'cognitiveLoad', 'emotionalStability', 'autonomicStability', 'sdnn', 'avgHeartRate', 'breathingStability']);
+
+/** 서버 활성 모델 DTO → 네이티브 전달 형태. 웹 parseModelParams 와 같은 검증(s>0, direction ±1)을 통과한 지표만. 하나도 없으면 null. */
+export function buildNativeModelPayload(model: NormalizationModelDto | null | undefined): NativeModelPayload | null {
+  if (!model || typeof model.params !== 'object' || model.params === null) return null;
+  const out: Record<string, { m: number; s: number; direction: 1 | -1 }> = {};
+  for (const key of Object.keys(model.params).sort()) {
+    if (!MODEL_METRICS.has(key)) continue;
+    const p = parseModelParams(key as CalibrationMetricKey, model.params[key]);
+    if (p) out[key] = { m: p.m, s: p.s, direction: p.direction };
+  }
+  if (Object.keys(out).length === 0) return null;
+  return { modelParams: JSON.stringify(out), modelVersion: String(model.version) };
+}
 
 /** 자격 인계 후 native 측정 시작(웹뷰는 토큰을 1회 넘기고, 이후 native 가 소켓·갱신을 소유한다) */
 export interface NativeStartWithCredentials {
@@ -23,6 +44,8 @@ export interface NativeStartWithCredentials {
   /** iOS CoreBluetooth peripheral UUID(= BLE deviceId). 현 iOS startMeasurement 는 받지 않아 optional 로만 전달한다(progress/t12-fe.md 'iOS 워커 요청') */
   peripheralId?: string;
   tokens: { accessToken: string; refreshToken: string };
+  /** 시작 시점 활성 표준 모델(1회 pin 은 네이티브가 한다) */
+  model?: NativeModelPayload | null;
 }
 
 const CREDENTIAL_HANDLE = /^[A-Za-z0-9_-]{16,128}$/;
@@ -160,6 +183,7 @@ export class NativeMeasurementFacade {
       started = await this.plugin.startMeasurement({
         sessionId: req.sessionId, credentialHandle: r.credentialHandle, configHash: req.configHash, requestId: req.requestId,
         ...(req.peripheralId ? { peripheralId: req.peripheralId } : {}),
+        ...(req.model ? { modelParams: req.model.modelParams, modelVersion: req.model.modelVersion } : {}),
       });
     } else {
       if (!this.plugin.handoffCredentials) throw new Error('native_method_unavailable');
@@ -168,6 +192,7 @@ export class NativeMeasurementFacade {
       started = await this.plugin.startMeasurement({
         sessionId: req.sessionId, apiBase: req.apiBase, socketBase: req.socketBase, requestId: req.requestId, instanceId: req.instanceId,
         ...(req.address ? { address: req.address } : {}),
+        ...(req.model ? { modelParams: req.model.modelParams, modelVersion: req.model.modelVersion } : {}),
       });
     }
     return guard(started);
@@ -180,6 +205,9 @@ export class NativeMeasurementFacade {
   async startForSession(a: {
     platform: 'ios' | 'android'; sessionId: string; requestId: string; accountId: string; apiBase: string; socketBase: string;
     instanceId: string; deviceId: string | null; tokens: { accessToken: string; refreshToken: string }; configHash?: string;
+    model?: NativeModelPayload | null;
+    /** Android: 네이티브가 밴드를 잡기 전에 JS(BLE 플러그인) 연결을 놓는다. 같은 링크에 두 클라이언트가 CCCD 를 쓰면 PPG/ACC 구독이 깨진다. */
+    releaseJsBand?: () => Promise<unknown>;
   }): Promise<StartMeasurementResult> {
     const inflight = this.startFlights.get(a.requestId);
     if (inflight) return inflight;
@@ -189,15 +217,33 @@ export class NativeMeasurementFacade {
         const r = await this.plugin.setJSBandOwnership({ owning: false });
         if (!r.accepted) throw new Error('js_band_release_failed');
       }
+      if (a.platform === 'android' && a.releaseJsBand) {
+        // 해제 실패는 시작을 막지 않는다(수신 여부는 snapshot 의 ppgPackets 로 진단).
+        try { await a.releaseJsBand(); } catch { /* 계속 */ }
+      }
       return this.doStartWithCredentials({
         platform: a.platform, sessionId: a.sessionId, requestId: a.requestId, accountId: a.accountId, apiBase: a.apiBase,
-        socketBase: a.socketBase, configHash: a.configHash ?? 'linkband2-v1', instanceId: a.instanceId, tokens: a.tokens,
+        socketBase: a.socketBase, configHash: a.configHash ?? 'linkband2-v1', instanceId: a.instanceId, tokens: a.tokens, model: a.model ?? null,
         ...(a.deviceId ? (a.platform === 'android' ? { address: a.deviceId } : { peripheralId: a.deviceId }) : {}),
       });
     })();
     this.startFlights.set(a.requestId, p);
     p.catch(() => { this.startFlights.delete(a.requestId); });
     return p;
+  }
+
+  /**
+   * 기기 시트 원시 파형 미리보기. Capacitor 프록시는 없는 메서드도 truthy 라 platform 으로 거르고,
+   * 미구현(UNIMPLEMENTED)·형식 불일치는 null 로 폴백한다.
+   */
+  async getRawPreview(platform: string, seconds = 4, points = 120): Promise<RawPreview | null> {
+    if ((platform !== 'android' && platform !== 'ios') || !this.plugin.getRawPreview) return null;
+    try {
+      const r = await this.plugin.getRawPreview({ seconds, points });
+      const ok = (a: unknown): a is number[] => Array.isArray(a) && a.every((v) => typeof v === 'number');
+      if (!r || !ok(r.eegFp1) || !ok(r.eegFp2) || !ok(r.ppgRed) || !ok(r.ppgIr)) return null;
+      return { eegFp1: r.eegFp1, eegFp2: r.eegFp2, ppgRed: r.ppgRed, ppgIr: r.ppgIr };
+    } catch { return null; }
   }
 
   /** 토큰 모양 필드를 실어 버린 bridge 이벤트 수(진단용) */

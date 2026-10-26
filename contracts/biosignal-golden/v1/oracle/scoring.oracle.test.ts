@@ -33,7 +33,9 @@ describe('GF05 sigmoid: Python 정수 점수 == TS 정수 점수 (exact)', () =>
     const s = scoreIndices(idx, m);
     const by = (k: string, x: number) => exp.sigmoid.vectors.find((v: any) => v.key === k && v.raw === x)?.score;
     expect(s.focusIndex).toBe(by('focusIndex', 1.0));
-    expect(s.relaxationIndex).toBe(by('relaxationIndex', 0.3));
+    // 이완도 = 두뇌 휴식: TNA params + direction -1 강제 (신경 활동↓ = 휴식↑)
+    const rest = sigmoidScore('totalNeuralActivity', 10, { ...(m.params.totalNeuralActivity as any), direction: -1 });
+    expect(s.relaxationIndex).toBe(rest);
     expect(s.totalPower).toBe(by('totalNeuralActivity', 10.0));
     expect(s.cognitiveLoad).toBe(by('cognitiveLoad', 2.0));
     expect(s.hemisphericBalance).toBe(by('faa', 0.1));

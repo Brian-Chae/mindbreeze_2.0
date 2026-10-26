@@ -17,7 +17,7 @@ final class NativeWireContractTests: XCTestCase {
         let own = BandOwnership(defaults: UserDefaults(suiteName: "nw-\(UUID().uuidString)")!); own.nativeEnabled = true
         var mono: UInt64 = 5_000_000
         let m = MeasurementManager(root: dir, band: FakeBand(), ownership: own, makeLive: { _ in live },
-                                   makeEngine: { d, ctx in try MeasurementEngine(dir: d, configJSON: CoreBridgeTests.cfg, context: ctx, journalSync: .none) },
+                                   makeEngine: { d, ctx, _ in try MeasurementEngine(dir: d, configJSON: CoreBridgeTests.cfg, context: ctx, journalSync: .none) },
                                    scheduler: sch, nowMs: { 1_760_000_000_000 }, monoUs: { mono })
 
         func sent() -> [(name: String, id: Int?, payload: [String: Any])] {

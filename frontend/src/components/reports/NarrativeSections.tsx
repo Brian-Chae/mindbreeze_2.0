@@ -5,6 +5,7 @@ import { useId, type MouseEvent } from 'react';
 import { METRIC_DEFINITIONS, metricChangeInterpretation, metricDirectionGuide, type MetricId, type MetricNarrative } from '../../lib/report/narrative';
 import { chipLabel, type DisplayNarrative, type TimelineLikePoint } from '../../lib/report/resolve-narrative';
 import './narrative-sections.css';
+import { resolveBodyScale } from './body-scale';
 
 // 권장(정상) 범위 — 차트 배경 밴드로 표시. 호흡수·심박수는 안정 시 성인 정상범위,
 // 심박변이(SDNN)는 코드베이스 참조("정상 SDNN: 30-100ms")를 따른다.
@@ -124,14 +125,15 @@ function TrendLineChart({ metric, timeline, duration }: {
   const range = BODY_RANGES[metric.id];
   const unit = UNIT_LABELS[metric.id];
   // 몸 지표는 고정 스케일(y축)로 그려 작은 변동이 과장되지 않게 한다. 마음 지표는 자동 스케일 유지.
-  const low = scale ? scale[0] : Math.min(...valid);
-  const high = scale ? scale[1] : Math.max(...valid);
+  const [low, high] = scale
+    ? resolveBodyScale(scale, [...valid, ...smoothed.filter((v): v is number => v !== null)])
+    : [Math.min(...valid), Math.max(...valid)];
   const span = high - low || 1;
   // 플롯 영역 — 왼쪽에 y축 눈금(단위 포함)을 둘 공간을 확보한다.
   const TOP = 18, BOTTOM = 158, LEFT = 48, RIGHT = 300;
   const MID = (LEFT + RIGHT) / 2;
   const toX = (min: number) => LEFT + (min / duration) * (RIGHT - LEFT);
-  // 고정 스케일을 벗어난 측정값은 차트 가장자리에 붙여(클램프) 선이 밖으로 넘치지 않게 한다.
+  // 고정 스케일을 벗어난 값은 위 resolveBodyScale 이 표시 범위를 넓혀 담으므로 클램프로 평평해지지 않는다.
   const toY = (value: number) => {
     const clamped = Math.min(high, Math.max(low, value));
     return high === low ? (TOP + BOTTOM) / 2 : BOTTOM - ((clamped - low) / span) * (BOTTOM - TOP);

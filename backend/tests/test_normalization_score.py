@@ -122,13 +122,15 @@ def test_all_seven_model_scores_and_stability_gate():
     for key, raw, target in [
         ('focusIndex', 1.1, 'focus_index_stability_score'),
         ('cognitiveLoad', 2.1, 'cognitive_load_stability_score'),
-        ('relaxationIndex', 0.3, 'relaxation_score'),
         ('stressIndex', 2, 'stress_score'),
         ('totalNeuralActivity', 400, 'total_neural_activity_score'),
         ('emotionalStability', 3, 'emotional_stability_score'),
         ('faa', 0.1, 'hemispheric_balance_score'),
     ]:
         assert getattr(result, target) == sigmoid_score(key, raw, params[key])
+    # 이완도 = 두뇌 휴식: TNA params + direction -1 강제(저장 direction +1 이어도)
+    assert result.relaxation_score == sigmoid_score(
+        'totalNeuralActivity', 400, {**params['totalNeuralActivity'], 'direction': -1})
     gated = em.compute_session_metrics(**series, normalization_params=params, longest_usable_run=10)
     assert gated.focus_index_stability_score is None
     assert gated.cognitive_load_stability_score is None
@@ -143,8 +145,19 @@ def test_missing_or_invalid_model_preserves_cohort(params):
 
 def test_raw_is_not_rounded_before_model_score():
     series = _valid_series()
-    series['relaxation_index'] = [0.300049]*50
-    params = {'m': math.log(0.300049+1e-9), 's': 0.00001, 'direction': 1}
-    result = em.compute_session_metrics(**series, normalization_params={'relaxationIndex': params})
-    assert result.relaxation_score == 50
-    assert result.relaxation_index_mean == 0.3
+    series['total_neural_activity'] = [400.000049]*50
+    params = {'m': math.log(400.000049+1e-9), 's': 0.00001, 'direction': 1}
+    result = em.compute_session_metrics(**series, normalization_params={'totalNeuralActivity': params})
+    assert result.total_neural_activity_score == 50
+    assert result.relaxation_score == 50  # 두뇌 휴식도 같은 raw 로 평균점
+    assert result.total_neural_activity_mean == 400.0
+
+
+def test_brain_rest_inverts_tna_and_is_pending_without_model():
+    from app.services.normalization_score import brain_rest_score
+    p = {'totalNeuralActivity': {'m': 2.3252, 's': 2.3342, 'direction': 1}}
+    assert brain_rest_score(math.exp(2.3252), p) == 50
+    assert brain_rest_score(1.0, p) > brain_rest_score(1000.0, p)
+    assert brain_rest_score(10.0, None) is None
+    assert brain_rest_score(10.0, {}) is None
+    assert brain_rest_score(None, p) is None

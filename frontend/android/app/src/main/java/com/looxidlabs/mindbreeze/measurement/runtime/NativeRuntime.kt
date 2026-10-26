@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.SystemClock
 import com.looxidlabs.mindbreeze.measurement.MeasurementCore
 import com.looxidlabs.mindbreeze.measurement.MeasurementEngine
+import com.looxidlabs.mindbreeze.measurement.ModelPin
 import com.looxidlabs.mindbreeze.measurement.Sensor
 import com.looxidlabs.mindbreeze.measurement.archive.ArchiveFeeder
 import com.looxidlabs.mindbreeze.measurement.archive.ArchiveQueue
@@ -28,6 +29,8 @@ class NativeRuntime private constructor(
     val engine: MeasurementEngine, val sched: HandlerLiveScheduler, val live: LiveSession, val box: MetricOutbox,
     val queue: ArchiveQueue, val feeder: ArchiveFeeder, val tokens: HttpTokenSource, val transport: IoSocketTransport,
     val sequencer: BridgeSequencer,
+    /** pin 된 모델 버전(없으면 코호트 b0-cohort-2). capture.start·bridge snapshot 에 같은 값을 쓴다. */
+    val modelVersion: String = "b0-cohort-2",
 ) {
     private val archiveExec = Executors.newSingleThreadExecutor()
     private val nativeHeartbeat = AtomicLong()
@@ -126,7 +129,7 @@ class NativeRuntime private constructor(
         val fresh = when { age == null -> "stale"; age < 3_000 -> "fresh"; age < 10_000 -> "delayed"; else -> "stale" }
         return BridgeInputs(
             sequencer.managerGeneration, sequencer.current(), cfg.sessionId, state, blocked, live.streamId, live.ownerGeneration,
-            "native-1.0.0", "core-1.0.0", "web-ts-1", "b0-cohort-2", "linkband2-v1", last, fresh, bandState,
+            "native-1.0.0", "core-1.0.0", "web-ts-1", modelVersion, "linkband2-v1", last, fresh, bandState,
             if (c.eegSamples > 0) c.eegSamples else null,
             c.eegPackets, c.ppgPackets, c.accPackets, c.eegSamples, c.ppgSamples, c.accSamples, c.frames, nativeHeartbeat.get(),
             live.socketStatus(), live.lastAckSequence, live.cursorsSnapshot(), box.acked(), box.size(), queue.counts(), lastVerifiedAtMs, emptyList(),
@@ -140,16 +143,20 @@ class NativeRuntime private constructor(
         /** 서비스 생성/재생성에서 호출. 이전 journal·체크포인트·outbox·archive 큐를 이어받는다. */
         fun open(ctx: Context, cfg: RuntimeConfig, store: TokenStore, nowMono: () -> Long = { SystemClock.elapsedRealtime() }): NativeRuntime {
             val dir = File(ctx.filesDir, "measurement/${cfg.sessionId}").apply { mkdirs() }
-            val engine = MeasurementEngine.openOrResume(File(dir, "raw.journal"), File(dir, "raw.ck"), clockMs = nowMono, syncEach = true)
+            // 활성 표준 모델 1회 pin(웹 scoreIndices 와 같은 규칙: 활성 모델 > 코호트). 파일이 있으면 도중 교체하지 않는다.
+            val pin = ModelPin.loadOrCreate(File(dir, "model-pin.json"), cfg.modelParams, cfg.modelVersion)
+            val engine = MeasurementEngine.openOrResume(File(dir, "raw.journal"), File(dir, "raw.ck"), clockMs = nowMono, syncEach = true,
+                configJson = ModelPin.configJson(pin), modelParamsJson = pin?.paramsJson)
             val sched = HandlerLiveScheduler()
             val box = MetricOutbox(File(dir, "outbox.log"))
             val tokens = HttpTokenSource(cfg.apiBase, store)
             val transport = IoSocketTransport(cfg.socketBase, sched)
-            val lc = LiveConfig(cfg.sessionId, cfg.instanceId, "android-native-1", "core-1.0.0", "linkband2-v1", ALGORITHM, "b0-cohort-2")
+            val modelVersion = pin?.modelVersion ?: "b0-cohort-2"
+            val lc = LiveConfig(cfg.sessionId, cfg.instanceId, "android-native-1", "core-1.0.0", "linkband2-v1", ALGORITHM, modelVersion)
             val live = LiveSession(lc, transport, sched, tokens, box)
             val queue = ArchiveQueue(File(dir, "archive"))
             val feeder = ArchiveFeeder(queue, cfg.sessionId, { live.participantId ?: cfg.participantId }, { live.streamId ?: cfg.streamId })
-            return NativeRuntime(ctx.applicationContext, cfg, dir, engine, sched, live, box, queue, feeder, tokens, transport, BridgeSequencer(System.currentTimeMillis() / 1000))
+            return NativeRuntime(ctx.applicationContext, cfg, dir, engine, sched, live, box, queue, feeder, tokens, transport, BridgeSequencer(System.currentTimeMillis() / 1000), modelVersion)
         }
     }
 }

@@ -6,6 +6,7 @@ import android.content.Context
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import java.util.UUID
 
 /**
@@ -19,12 +20,14 @@ class BandGattClient(
     private val address: String,
     private val onState: (MeasurementState) -> Unit,
 ) {
+    private val TAG = "MBMeas"
     private val handler = Handler(Looper.getMainLooper())
     private var gatt: BluetoothGatt? = null
     private var gen = 0L
     private var backoffMs = 1000L
     private var stopped = false
-    private val pending = ArrayDeque<BluetoothGattCharacteristic>()
+    private val pending = ArrayList<BluetoothGattCharacteristic>()
+    private var sequencer: SubscribeSequencer? = null
 
     private val targets = listOf(
         Triple(Sensor.EEG, UUID.fromString(BandUuids.EEG_SERVICE), UUID.fromString(BandUuids.EEG_CHAR)),
@@ -36,6 +39,7 @@ class BandGattClient(
 
     fun stop() {
         stopped = true
+        sequencer?.stop(); sequencer = null
         handler.removeCallbacksAndMessages(null)
         engine.fence.release(gen)
         gatt?.let { it.disconnect(); it.close() }
@@ -44,6 +48,7 @@ class BandGattClient(
 
     private fun connect() {
         if (stopped) return
+        sequencer?.stop(); sequencer = null
         gatt?.close()
         gen = engine.fence.acquire()
         val myGen = gen
@@ -82,16 +87,17 @@ class BandGattClient(
             if (!engine.fence.isCurrent(myGen)) return
             pending.clear()
             for ((_, s, c) in targets) {
-                g.getService(s)?.getCharacteristic(c)?.let { pending.addLast(it) }
+                g.getService(s)?.getCharacteristic(c)?.let { pending.add(it) }
             }
+            Log.i(TAG, "services discovered: ${pending.size}/${targets.size} characteristics")
             if (pending.size < targets.size) { g.disconnect(); return }
-            subscribeNext(g)
+            subscribeAll(g, myGen)
         }
 
         override fun onDescriptorWrite(g: BluetoothGatt, d: BluetoothGattDescriptor, status: Int) {
             if (!engine.fence.isCurrent(myGen)) return
-            if (status != BluetoothGatt.GATT_SUCCESS) { g.disconnect(); return }
-            subscribeNext(g)
+            Log.i(TAG, "cccd written ${d.characteristic.uuid} status=$status")
+            sequencer?.onWritten(status == BluetoothGatt.GATT_SUCCESS)
         }
 
         @Deprecated("API 33 미만 호환")
@@ -104,13 +110,29 @@ class BandGattClient(
         }
     }
 
-    private fun subscribeNext(g: BluetoothGatt) {
-        val c = pending.removeFirstOrNull()
-        if (c == null) { backoffMs = 1000L; onState(MeasurementState.CAPTURING); return }
+    /**
+     * EEG→PPG→ACC CCCD 를 하나씩 쓴다. 이전 구현은 writeDescriptor 반환값(false=GATT 바쁨)을 무시해 EEG 만 붙고 큐가 멈췄다.
+     * 거절은 재시도, 무응답은 워치독으로 끊어 재연결 경로(gen fencing)를 탄다.
+     */
+    private fun subscribeAll(g: BluetoothGatt, myGen: Long) {
+        sequencer?.stop()
+        val chars = ArrayList(pending)
+        sequencer = SubscribeSequencer(
+            count = chars.size,
+            write = { i -> writeCccd(g, chars[i]) },
+            post = { delay, fn -> val r = Runnable { if (engine.fence.isCurrent(myGen)) fn() }; handler.postDelayed(r, delay); { handler.removeCallbacks(r) } },
+            onDone = { Log.i(TAG, "all subscribed"); backoffMs = 1000L; onState(MeasurementState.CAPTURING) },
+            onFail = { reason -> Log.w(TAG, "subscribe failed: $reason"); if (engine.fence.isCurrent(myGen)) g.disconnect() },
+        ).also { it.start() }
+    }
+
+    private fun writeCccd(g: BluetoothGatt, c: BluetoothGattCharacteristic): Boolean {
         g.setCharacteristicNotification(c, true)
-        val cccd = c.getDescriptor(UUID.fromString(BandUuids.CCCD)) ?: run { g.disconnect(); return }
-        if (Build.VERSION.SDK_INT >= 33) g.writeDescriptor(cccd, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
+        val cccd = c.getDescriptor(UUID.fromString(BandUuids.CCCD)) ?: return false
+        val ok = if (Build.VERSION.SDK_INT >= 33) g.writeDescriptor(cccd, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE) == BluetoothStatusCodes.SUCCESS
         else { @Suppress("DEPRECATION") cccd.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE; @Suppress("DEPRECATION") g.writeDescriptor(cccd) }
+        Log.i(TAG, "cccd write ${c.uuid} accepted=$ok")
+        return ok
     }
 
     private fun dispatch(myGen: Long, c: BluetoothGattCharacteristic, bytes: ByteArray) {

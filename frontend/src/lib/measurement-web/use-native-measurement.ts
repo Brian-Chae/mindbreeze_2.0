@@ -5,11 +5,13 @@ import { Capacitor } from '@capacitor/core';
 import { BASE_URL, getNativeRefreshBody, tokenStorage } from '../api/client';
 import { bluetoothService } from '../eeg/bluetoothService';
 import { SOCKET_URL } from '../socket';
-import { getNativeMeasurement } from '../native-measurement';
+import { buildNativeModelPayload, getNativeMeasurement } from '../native-measurement';
+import { getActiveModelCache, refreshActiveModel } from '../eeg/eegPersonalScore';
 import { decideMeasurementPath, type MeasurementPath } from './measurement-path';
 import { isLiveProtocolV2Enabled } from '../session-live/live-flag';
 import { isNativeMeasurementAvailable } from '../native-measurement';
 import type { MeasurementSnapshot } from '../native-measurement/types';
+import { toNativeDevice, type NativeDeviceState } from '../native-measurement/device-status';
 import type { MetricSnapshot } from '../../components/class/player/member/member-metrics';
 
 export type NativeMeasurementStatus = 'idle' | 'starting' | 'running' | 'failed';
@@ -30,6 +32,8 @@ export interface UseNativeMeasurementResult {
   code: string | null;
   /** native 소유 동안 회원 6지표(null 보존). 아니면 null */
   metrics: MetricSnapshot | null;
+  /** native 소유 동안 기기 메뉴용 신호·접촉·연결(JS BLE 는 놓았으므로 native snapshot 에서). 아니면 null */
+  device: NativeDeviceState | null;
 }
 
 /** sessionId+participantId 로 결정되는 UUID 형식 requestId(멱등) */
@@ -72,9 +76,11 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
   const [status, setStatus] = useState<NativeMeasurementStatus>('idle');
   const [code, setCode] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<MetricSnapshot | null>(null);
+  const [device, setDevice] = useState<NativeDeviceState | null>(null);
   const instanceRef = useRef<string>(crypto.randomUUID());
   const startedRef = useRef(false);
-  const ready = path === 'native' && o.bandConnected && Boolean(o.participantId && o.accountId);
+  // 시작 후에는 래치한다: Android 는 JS 연결을 일부러 놓으므로 useBand 의 connectionState 가 풀려도 native 측정은 계속한다.
+  const ready = path === 'native' && (o.bandConnected || startedRef.current) && Boolean(o.participantId && o.accountId);
 
   useEffect(() => {
     if (!ready || !o.participantId || !o.accountId) return undefined;
@@ -94,11 +100,15 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
       try {
         await facade.attach(o.sessionId);
         if (cancelled) return;
-        off = facade.onMeasurement((snap) => { if (!cancelled) setMetrics(toMetricSnapshot(snap)); });
+        off = facade.onMeasurement((snap) => { if (!cancelled) { setMetrics(toMetricSnapshot(snap)); setDevice(toNativeDevice(snap)); } });
         const deviceId = bluetoothService.getDeviceId() || bluetoothService.getCachedDeviceId();
+        // 웹과 같은 규칙: 서버 활성 표준 모델 > 코호트. 시작 시 1회 조회해 넘기고, 이후 교체는 네이티브가 막는다(pin).
+        const model = buildNativeModelPayload(getActiveModelCache() ?? (await refreshActiveModel().catch(() => null)));
+        if (cancelled) return;
         await facade.startForSession({
           platform, sessionId: o.sessionId, requestId, accountId: o.accountId as string, apiBase: BASE_URL, socketBase: SOCKET_URL,
-          instanceId: instanceRef.current, deviceId: deviceId || null, tokens: { accessToken: access, refreshToken: refresh },
+          instanceId: instanceRef.current, deviceId: deviceId || null, tokens: { accessToken: access, refreshToken: refresh }, model,
+          ...(platform === 'android' ? { releaseJsBand: () => bluetoothService.releaseForNative() } : {}),
         });
         if (cancelled) return;
         startedRef.current = true;
@@ -116,9 +126,10 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
         startedRef.current = false;
         void facade.stop({ reason: 'user_left', requestId: crypto.randomUUID() }).catch(() => undefined);
       }
-      setMetrics(null);
+      setMetrics(null); setDevice(null);
     };
   }, [ready, o.sessionId, o.participantId, o.accountId]);
 
-  return { path, status: path === 'native' ? status : 'idle', code: path === 'native' ? code : null, metrics: path === 'native' && status === 'running' ? metrics : null };
+  return { path, status: path === 'native' ? status : 'idle', code: path === 'native' ? code : null, metrics: path === 'native' && status === 'running' ? metrics : null,
+    device: path === 'native' && status === 'running' ? device : null };
 }

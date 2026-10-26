@@ -433,13 +433,13 @@
   },
   {
    "independent": {
-    "avnn": 980.4878048780488,
+    "avnn": 1000.0,
     "calc": true,
-    "elapsed_ms": 40000,
+    "elapsed_ms": 39000,
     "resp_gate": "insufficient_window",
-    "rr_sum_ms": 40200,
-    "sdnn": 123.40595746998561,
-    "valid_rr": 41
+    "rr_sum_ms": 40000,
+    "sdnn": 0.0,
+    "valid_rr": 40
    },
    "name": "rr_bound_200",
    "rr": [
@@ -489,13 +489,13 @@
   },
   {
    "independent": {
-    "avnn": 1024.3902439024391,
+    "avnn": 1000.0,
     "calc": true,
-    "elapsed_ms": 40000,
+    "elapsed_ms": 39000,
     "resp_gate": "insufficient_window",
-    "rr_sum_ms": 42000,
-    "sdnn": 154.2574468374818,
-    "valid_rr": 41
+    "rr_sum_ms": 40000,
+    "sdnn": 0.0,
+    "valid_rr": 40
    },
    "name": "rr_bound_2000",
    "rr": [

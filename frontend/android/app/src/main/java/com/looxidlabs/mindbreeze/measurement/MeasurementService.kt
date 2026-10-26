@@ -48,6 +48,7 @@ class MeasurementService : Service() {
                 MeasurementManager.ownership.nativeEnabled = true
                 resumed = Intent().putExtra(EXTRA_SESSION, c.sessionId).putExtra(EXTRA_API_BASE, c.apiBase).putExtra(EXTRA_SOCKET_BASE, c.socketBase)
                     .putExtra(EXTRA_ADDRESS, c.bandAddress).putExtra(EXTRA_INSTANCE, c.instanceId)
+                    .putExtra(EXTRA_MODEL_PARAMS, c.modelParams).putExtra(EXTRA_MODEL_VERSION, c.modelVersion)
                     .putExtra(EXTRA_SYNTHETIC, c.bandAddress == null)
             } else { stopSelf(startId); return START_NOT_STICKY }
         }
@@ -89,7 +90,8 @@ class MeasurementService : Service() {
     private fun startNative(intent: Intent, sessionId: String): Int {
         val cfg = com.looxidlabs.mindbreeze.measurement.runtime.RuntimeConfig(
             sessionId, intent.getStringExtra(EXTRA_API_BASE) ?: "", intent.getStringExtra(EXTRA_SOCKET_BASE) ?: "",
-            intent.getStringExtra(EXTRA_ADDRESS), intent.getStringExtra(EXTRA_INSTANCE) ?: java.util.UUID.randomUUID().toString(), true)
+            intent.getStringExtra(EXTRA_ADDRESS), intent.getStringExtra(EXTRA_INSTANCE) ?: java.util.UUID.randomUUID().toString(), true,
+            modelParams = intent.getStringExtra(EXTRA_MODEL_PARAMS), modelVersion = intent.getStringExtra(EXTRA_MODEL_VERSION))
         val isSynthetic = intent.getBooleanExtra(EXTRA_SYNTHETIC, false)
         if (!MeasurementCore.available()) { MeasurementManager.setState(MeasurementState.BLOCKED, "core_unavailable"); teardown(); return START_NOT_STICKY }
         if (cfg.apiBase.isEmpty() || cfg.socketBase.isEmpty()) { MeasurementManager.setState(MeasurementState.BLOCKED, "bad_config"); teardown(); return START_NOT_STICKY }
@@ -178,12 +180,15 @@ class MeasurementService : Service() {
         const val EXTRA_API_BASE = "api_base"
         const val EXTRA_SOCKET_BASE = "socket_base"
         const val EXTRA_INSTANCE = "instance_id"
+        const val EXTRA_MODEL_PARAMS = "model_params"
+        const val EXTRA_MODEL_VERSION = "model_version"
         private const val CHANNEL = "measurement"
         private const val NOTIF_ID = 24601
 
         fun startNative(ctx: Context, cfg: com.looxidlabs.mindbreeze.measurement.runtime.RuntimeConfig, synthetic: Boolean) {
             val i = Intent(ctx, MeasurementService::class.java).putExtra(EXTRA_ADDRESS, cfg.bandAddress).putExtra(EXTRA_SYNTHETIC, synthetic)
                 .putExtra(EXTRA_SESSION, cfg.sessionId).putExtra(EXTRA_API_BASE, cfg.apiBase).putExtra(EXTRA_SOCKET_BASE, cfg.socketBase).putExtra(EXTRA_INSTANCE, cfg.instanceId)
+                .putExtra(EXTRA_MODEL_PARAMS, cfg.modelParams).putExtra(EXTRA_MODEL_VERSION, cfg.modelVersion)
             androidx.core.content.ContextCompat.startForegroundService(ctx, i)
         }
 

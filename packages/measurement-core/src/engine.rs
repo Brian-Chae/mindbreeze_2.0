@@ -201,6 +201,8 @@ pub struct MetricSet {
     pub bpm: MetricValue,
     pub respiration: MetricValue,
     pub sdnn: MetricValue,
+    /// 총 신경활동 raw(서버가 활성 모델로 두뇌 휴식 점수를 재계산하는 입력). 구 클라이언트는 미전송.
+    pub tna_raw: MetricValue,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -315,6 +317,7 @@ struct LatestEeg {
     focus: f64,
     relaxation: f64,
     emotion: f64,
+    tna: f64,
     cohort: ScoreSet,
     model: Option<ScoreSet>,
 }
@@ -344,7 +347,7 @@ struct CoreState {
     wm_us: [Option<u64>; 2],
     next_frame_us: Option<u64>,
     seq: u64,
-    last_valid: [Option<(u64, u64)>; 9],
+    last_valid: [Option<(u64, u64)>; 10],
     last_push_mono_us: Option<u64>,
     last_data_end_us: u64,
     gap_open: bool,
@@ -413,7 +416,7 @@ impl Core {
             wm_us: [None, None],
             next_frame_us: None,
             seq: 0,
-            last_valid: [None; 9],
+            last_valid: [None; 10],
             last_push_mono_us: None,
             last_data_end_us: 0,
             gap_open: false,
@@ -618,6 +621,7 @@ impl Core {
             focus: ix.focus_index,
             relaxation: ix.relaxation_index,
             emotion: ix.emotional_stability,
+            tna: ix.total_neural_activity,
             cohort,
             model,
         });
@@ -766,9 +770,19 @@ impl Core {
         let focus_raw = mk(0, "index_raw", raw(|e| e.focus));
         let focus_display = mk(1, "score_0_100", displ(|s| s.focus));
         let relaxation_raw = mk(2, "index_raw", raw(|e| e.relaxation));
-        let relaxation_display = mk(3, "score_0_100", displ(|s| s.relaxation));
+        // 이완도 표시 = 하루명상 '두뇌 휴식'(TNA 반전). 모델 없으면 코호트 폴백 없이 pending.
+        let relaxation_display = mk(
+            3,
+            "score_0_100",
+            eeg_state.and_then(|e| match (mode, &e.model) {
+                (ModelMode::ActiveSigmoid, Some(m)) => m.brain_rest.ok_or(("invalid", "model_unavailable")),
+                _ => Err(("invalid", "model_unavailable")),
+            }),
+        );
         let emotion_raw = mk(4, "index_raw", raw(|e| e.emotion));
         let emotion_display = mk(5, "score_0_100", displ(|s| s.emotional_stability));
+
+        let tna_raw = mk(9, "index_raw", raw(|e| e.tna));
 
         let ppg_gate = |p: Option<&LatestPpg>, have_any: bool| -> Result<(), (&'static str, &'static str)> {
             match p {
@@ -802,7 +816,7 @@ impl Core {
         );
         self.s.last_valid = lv;
 
-        let metrics = MetricSet { focus_raw, focus_display, relaxation_raw, relaxation_display, emotion_raw, emotion_display, bpm, respiration: resp, sdnn };
+        let metrics = MetricSet { focus_raw, focus_display, relaxation_raw, relaxation_display, emotion_raw, emotion_display, bpm, respiration: resp, sdnn, tna_raw };
         let contact = Contact { fp1: contact_now[0].name(), fp2: contact_now[1].name() };
         let sqi = match &eeg_at {
             Some(e) if end_us.saturating_sub(e.end_us) <= STALE_US => Some(e.sqi01),

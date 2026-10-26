@@ -29,7 +29,8 @@ import { useMetricBars } from '../../../../lib/session-live/metric-bars';
 import { useWebMeasurementV2 } from '../../../../lib/measurement-web/use-web-measurement';
 import { useNativeMeasurementV2 } from '../../../../lib/measurement-web/use-native-measurement';
 import { decideMeasurementPath } from '../../../../lib/measurement-web/measurement-path';
-import { isNativeMeasurementAvailable } from '../../../../lib/native-measurement';
+import { getNativeMeasurement, isNativeMeasurementAvailable } from '../../../../lib/native-measurement';
+import { Capacitor } from '@capacitor/core';
 import { isBleSupported } from '../../../../lib/ble';
 import { toBandReport } from '../../../../lib/measurement-web/band-report';
 import { ClassChatPanel } from '../../../chat/ClassChatPanel';
@@ -37,7 +38,8 @@ import { LeaveConfirmModal } from '../../../player/LeaveConfirmModal';
 import { ClassOnboardingCoachmarks } from '../../ClassOnboardingCoachmarks';
 import { MemberClassView } from './MemberClassView';
 import { MemberMediaControls, type MemberMediaBinding } from './MemberMediaControls';
-import { downsample, emptySeries, formatClock, pushRingPoint, type MetricSeries, type MetricSnapshot } from './member-metrics';
+import { filterEegPreview, filterPpgPreview, minMaxDecimate, smoothAutoScale } from '../../../../lib/eeg/raw-preview-filter';
+import { emptySeries, formatClock, pushRingPoint, type MetricSeries, type MetricSnapshot } from './member-metrics';
 import type { MemberClassViewProps, MemberDeviceModel, MemberHostVideoIssue, MemberSheetKey } from './member-view-types';
 import './member-player.css';
 
@@ -70,6 +72,9 @@ const CHAT_STATE_POLL_MS = 5_000;
 /** 기기 시트의 원시 파형 갱신 주기·표시 점 수 */
 const RAW_REFRESH_MS = 1_000;
 const RAW_POINTS = 120;
+// 필터는 원 샘플레이트가 필요하므로 다운샘플 전 EEG 4초(250Hz)=1000, PPG 4초(50Hz)=200점을 받는다
+const RAW_EEG_SAMPLES = 1000;
+const RAW_PPG_SAMPLES = 200;
 /** 상담사 영상 토큰 재시도 상한(지수 백오프 5s→10s→20s→30s) */
 const LIVEKIT_RETRY_MAX = 5;
 
@@ -149,6 +154,9 @@ export function MemberClassContainer({
   const [remoteEfficiency, setRemoteEfficiency] = useState<number | null>(null);
   const [series, setSeries] = useState<MetricSeries>(() => emptySeries());
   const [raw, setRaw] = useState<MemberDeviceModel['raw']>(null);
+  const [ppg, setPpg] = useState<MemberDeviceModel['ppg']>(null);
+  // 채널별 자동 스케일 피크(감쇠 smoothing) — fp1, fp2, red, ir
+  const rawPeaksRef = useRef([1, 1, 1, 1]);
 
   /* ───────── 클래스 정보(상담사 이름): 클래스 요약에서 받은 값을 그대로 쓴다 ───────── */
   const counselorName = hostName;
@@ -237,14 +245,18 @@ export function MemberClassContainer({
     bandConnected: band.connectionState === 'connected', enabled: connectionsActive,
   });
 
+  // native 소유 동안 JS BLE 는 놓였으므로 신호·접촉·연결은 native snapshot 값을 쓴다(없으면 기존 useBand).
+  const nd = nativeM.device;
+  const deviceStatus = nd ? nd.deviceStatus : band.deviceStatus;
+  const signalLevel = nd ? nd.signalQualityLevel : band.signalQualityLevel;
   const [everConnected, setEverConnected] = useState(false);
   useEffect(() => {
-    if (band.connectionState === 'connected') setEverConnected(true);
-  }, [band.connectionState]);
+    if (band.connectionState === 'connected' || nd?.connected) setEverConnected(true);
+  }, [band.connectionState, nd?.connected]);
 
   const isLive = band.connectionState === 'connected';
   const linkState = resolveBandLinkState({ bleConnected: isLive, lastEegAt: band.lastEegAt, nowMs });
-  const metricsBlocked = band.deviceStatus === 'lead_off' || linkState === 'stale';
+  const metricsBlocked = deviceStatus === 'lead_off' || linkState === 'stale';
   // native 소유 동안 6지표는 native snapshot.metrics(null 보존)로 표시한다.
   // 상담사 타일과 같은 출처(LiveState)·같은 규칙을 우선한다 — 두 화면 숫자 불일치 방지. LiveState 에 내 지표가 없을 때만 앱/웹 자체값.
   const liveSnap = v2On ? liveMetricSnapshot(liveV2?.state, participantId, liveV2?.nowMs ?? nowMs) : null;
@@ -279,7 +291,7 @@ export function MemberClassContainer({
   const wasLeadOffRef = useRef(false);
   const analyzingTimerRef = useRef<number | null>(null);
   useEffect(() => {
-    if (band.deviceStatus === 'lead_off') {
+    if (deviceStatus === 'lead_off') {
       wasLeadOffRef.current = true;
       setLeadOffDismissed(false);
       setIsAnalyzing(false);
@@ -298,7 +310,7 @@ export function MemberClassContainer({
         analyzingTimerRef.current = null;
       }, AI_ANALYZING_MS);
     }
-  }, [band.deviceStatus]);
+  }, [deviceStatus]);
   useEffect(
     () => () => {
       if (analyzingTimerRef.current != null) window.clearTimeout(analyzingTimerRef.current);
@@ -306,7 +318,7 @@ export function MemberClassContainer({
     [],
   );
   // 접촉 불량이 새로 감지되면 전체 화면 모달 대신 기기 시트(코랄 안내)를 연다
-  const showLeadOffSheet = band.deviceStatus === 'lead_off' && !leadOffDismissed;
+  const showLeadOffSheet = deviceStatus === 'lead_off' && !leadOffDismissed;
   const leadOffAutoOpenedRef = useRef(false);
   useEffect(() => {
     if (showLeadOffSheet) {
@@ -320,22 +332,43 @@ export function MemberClassContainer({
   }, [leadOffDismissed]);
   // 자동으로 열린 접촉 확인 시트는 접촉이 복구되면 저절로 닫는다
   useEffect(() => {
-    if (band.deviceStatus === 'lead_off' || !leadOffAutoOpenedRef.current) return;
+    if (deviceStatus === 'lead_off' || !leadOffAutoOpenedRef.current) return;
     leadOffAutoOpenedRef.current = false;
     setSheet((prev) => (prev === 'device' ? null : prev));
-  }, [band.deviceStatus]);
+  }, [deviceStatus]);
 
-  // 기기 시트가 열려 있고 연결 중일 때만 원시 파형을 1초마다 읽는다(250Hz 렌더 부하 회피)
+  // 기기 시트가 열려 있고 연결 중일 때만 원시 파형을 1초마다 읽는다(250Hz 렌더 부하 회피).
+  // native 소유 중이면 플러그인 getRawPreview(Android), 아니면 useBand 버퍼.
+  const nativeOwned = nd !== null;
   useEffect(() => {
-    if (sheet !== 'device' || !isLive) return undefined;
+    if (sheet !== 'device' || !(isLive || nativeOwned)) return undefined;
+    let cancelled = false;
+    // 원 샘플 → 필터 → 화면용 min/max 다운샘플 → 채널별 자동 스케일(±1)
+    const view = (idx: number, x: readonly number[], filter: (v: readonly number[]) => number[]): number[] => {
+      const r = smoothAutoScale(minMaxDecimate(filter(x), RAW_POINTS), rawPeaksRef.current[idx]);
+      rawPeaksRef.current[idx] = r.peak;
+      return r.values;
+    };
+    const show = (fp1: readonly number[], fp2: readonly number[], red: readonly number[], ir: readonly number[]): void => {
+      setRaw({ fp1: view(0, fp1, filterEegPreview), fp2: view(1, fp2, filterEegPreview) });
+      setPpg(red.length > 1 ? { red: view(2, red, filterPpgPreview), ir: view(3, ir, filterPpgPreview) } : null);
+    };
     const sample = (): void => {
+      if (nativeOwned) {
+        void getNativeMeasurement().getRawPreview(Capacitor.getPlatform(), 4, RAW_EEG_SAMPLES).then((p) => {
+          if (cancelled || !p) return; // iOS 등 미지원은 null → 파형 영역을 그리지 않는다
+          show(p.eegFp1, p.eegFp2, p.ppgRed, p.ppgIr);
+        });
+        return;
+      }
       const wave = bandRef.current.getEegWaveformSamples();
-      setRaw({ fp1: downsample(wave.fp1, RAW_POINTS), fp2: downsample(wave.fp2, RAW_POINTS) });
+      const pw = bandRef.current.getPpgWaveformSamples?.() ?? { red: [], ir: [] };
+      show(wave.fp1.slice(-RAW_EEG_SAMPLES), wave.fp2.slice(-RAW_EEG_SAMPLES), pw.red.slice(-RAW_PPG_SAMPLES), pw.ir.slice(-RAW_PPG_SAMPLES));
     };
     sample();
     const id = window.setInterval(sample, RAW_REFRESH_MS);
-    return () => window.clearInterval(id);
-  }, [sheet, isLive]);
+    return () => { cancelled = true; window.clearInterval(id); };
+  }, [sheet, isLive, nativeOwned]);
 
   /* ───────── 실시간 소켓 — 다른 참가자와 견주는 평균 수신은 구독하지 않는다(spec 합의 #5) ───────── */
   const handleEegFeature = useCallback(
@@ -414,12 +447,12 @@ export function MemberClassContainer({
   const bandEnabled = linkbandMode !== 'none';
   const bandUi = deriveBandUi(
     {
-      connectionState: band.connectionState,
+      connectionState: nd ? (nd.connected ? 'connected' : 'connecting') : band.connectionState,
       everConnected,
-      deviceStatus: band.deviceStatus,
-      signalQualityLevel: band.signalQualityLevel,
+      deviceStatus,
+      signalQualityLevel: signalLevel,
       battery: band.battery,
-      lastEegAt: band.lastEegAt,
+      lastEegAt: nd ? null : band.lastEegAt,
     },
     nowMs,
   );
@@ -448,12 +481,13 @@ export function MemberClassContainer({
     v2Bars: v2On ? { label: '이완', current: v2Current, bars: v2Bars } : null,
     device: {
       battery: band.battery,
-      signalLabel: signalQualityLevelLabel(band.signalQualityLevel),
-      contactLabel: contactStatusLabel(band.deviceStatus),
+      signalLabel: signalQualityLevelLabel(signalLevel),
+      contactLabel: contactStatusLabel(deviceStatus),
       connectedElapsedSec: band.connectedElapsedSec,
       error: band.error,
       analyzing: isAnalyzing,
       raw,
+      ppg,
       isMock: band.isMock,
       pendingCount: band.pendingCount,
     },
