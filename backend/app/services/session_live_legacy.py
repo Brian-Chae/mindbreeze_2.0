@@ -270,6 +270,9 @@ def normalize(op: str, actor: Actor, params: Mapping[str, Any] | None = None) ->
             raise UnsupportedLegacyOp(f"transition:{action}", "알 수 없는 전이")
         kind = TRANSITIONS[action]
         payload = {"reason": "legacy_v1"} if action in ("end", "cancel") else {}
+        # 일정 겹침 확인 후 재요청(force + 지문)은 REST 어댑터 내부 payload 로만 싣는다(wire 계약 밖, 핸들러가 읽는다).
+        if action in ("open", "start") and p.get("force"):
+            payload = {"force": True, "confirmed_conflict_fingerprint": p.get("confirmed_conflict_fingerprint")}
         return LegacyCall(kind, None, payload, op)
     if op == "enter":
         return LegacyCall("entry.enter", _pid(p), {}, op)
