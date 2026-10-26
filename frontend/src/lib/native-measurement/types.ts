@@ -117,6 +117,9 @@ export interface AndroidStartMeasurementRequest {
   requestId: string;
   instanceId: string;
   address?: string;
+  /** 시작 시점 활성 표준 모델(JSON 문자열)·버전. 없으면 코호트. */
+  modelParams?: string;
+  modelVersion?: string;
 }
 
 /** Capacitor 플러그인 `NativeMeasurement` (iOS/Android 네이티브가 구현) */

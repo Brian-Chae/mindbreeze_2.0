@@ -95,6 +95,8 @@ export interface BluetoothEEGService {
   /** 재연결용 — 예기치 않은 끊김 후 같은 디바이스로 재연결하기 위한 캐시 ID */
   getCachedDeviceId(): string | null;
   clearDeviceCache(): void;
+  /** 네이티브 측정이 밴드를 잡기 전에 JS 연결을 놓는다. 해제 전 연결 ID(MAC)를 돌려준다(연결 없으면 null). */
+  releaseForNative(): Promise<string | null>;
 }
 
 class LinkBandBluetoothService implements BluetoothEEGService {
@@ -974,6 +976,18 @@ class LinkBandBluetoothService implements BluetoothEEGService {
    */
   getCachedDeviceId(): string | null {
     return this.lastDeviceId;
+  }
+
+  /**
+   * Android 앱: 네이티브 측정이 같은 밴드를 직접 구독하기 전에 JS(BLE 플러그인) 연결을 놓는다.
+   * 같은 링크에서 두 클라이언트가 CCCD 를 쓰면(JS 의 stop→start) 네이티브의 PPG/ACC 구독이 끊기거나 GATT 바쁨으로 드롭된다.
+   * 해제 전에 장치 ID 를 확보해 돌려준다. disconnect() 는 forceCleanup 으로 캐시 ID 도 지운다.
+   */
+  async releaseForNative(): Promise<string | null> {
+    const id = this.deviceId || this.lastDeviceId || null;
+    if (!id) return null;
+    await this.disconnect();
+    return id;
   }
 }
 

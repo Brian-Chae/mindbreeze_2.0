@@ -49,13 +49,16 @@ class SealedTokenStore(
 data class RuntimeConfig(
     val sessionId: String, val apiBase: String, val socketBase: String, val bandAddress: String?, val instanceId: String,
     val active: Boolean, val streamId: String? = null, val participantId: String? = null, val ownerGeneration: String? = null,
+    /** 시작 시점 활성 표준 모델(JSON)·버전. 최초 1회만 model-pin.json 으로 고정되며 이후 값은 무시된다. 토큰 아님. */
+    val modelParams: String? = null, val modelVersion: String? = null,
 ) {
     companion object {
         fun load(f: File): RuntimeConfig? = try {
             if (!f.exists()) null else JSONObject(f.readText()).let {
                 RuntimeConfig(it.getString("sessionId"), it.getString("apiBase"), it.getString("socketBase"), it.optString("bandAddress").ifEmpty { null },
                     it.getString("instanceId"), it.optBoolean("active"), it.optString("streamId").ifEmpty { null },
-                    it.optString("participantId").ifEmpty { null }, it.optString("ownerGeneration").ifEmpty { null })
+                    it.optString("participantId").ifEmpty { null }, it.optString("ownerGeneration").ifEmpty { null },
+                    it.optString("modelParams").ifEmpty { null }, it.optString("modelVersion").ifEmpty { null })
             }
         } catch (_: Exception) { null }
 
@@ -63,6 +66,7 @@ data class RuntimeConfig(
             val o = JSONObject().put("sessionId", c.sessionId).put("apiBase", c.apiBase).put("socketBase", c.socketBase)
                 .put("bandAddress", c.bandAddress ?: "").put("instanceId", c.instanceId).put("active", c.active)
                 .put("streamId", c.streamId ?: "").put("participantId", c.participantId ?: "").put("ownerGeneration", c.ownerGeneration ?: "")
+                .put("modelParams", c.modelParams ?: "").put("modelVersion", c.modelVersion ?: "")
             val tmp = File(f.path + ".tmp")
             FileOutputStream(tmp).use { it.write(o.toString().toByteArray()); it.flush(); it.fd.sync() }
             f.parentFile?.mkdirs(); tmp.renameTo(f)

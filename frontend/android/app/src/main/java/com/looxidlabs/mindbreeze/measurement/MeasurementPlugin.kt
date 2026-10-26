@@ -102,7 +102,8 @@ class MeasurementPlugin : Plugin() {
             val apiBase = call.getString("apiBase"); val socketBase = call.getString("socketBase")
             if (apiBase.isNullOrEmpty() || socketBase.isNullOrEmpty()) { call.reject("bad_config"); return }
             if (address == null && !synthetic) { call.reject("address_required"); return }
-            val cfg = RuntimeConfig(sessionId, apiBase, socketBase, address, call.getString("instanceId") ?: UUID.randomUUID().toString(), true)
+            val cfg = RuntimeConfig(sessionId, apiBase, socketBase, address, call.getString("instanceId") ?: UUID.randomUUID().toString(), true,
+                modelParams = call.getString("modelParams"), modelVersion = call.getString("modelVersion"))
             MeasurementService.startNative(context, cfg, synthetic)
             lastRequestId = requestId
             val res = JSObject().put("managerId", UUID.randomUUID().toString()).put("streamId", JSONObject.NULL).put("ownerGeneration", JSONObject.NULL)
