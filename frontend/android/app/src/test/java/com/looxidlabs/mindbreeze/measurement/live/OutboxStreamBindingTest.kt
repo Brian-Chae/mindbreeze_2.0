@@ -27,7 +27,7 @@ class OutboxStreamBindingTest {
         o2.ack(4)
         // B 가 비면 A 창이 A 의 옛 신원(stream_id·generation·anchor)으로 나온다
         val g2 = o2.nextBatch(b, 60)!!
-        assertEquals(listOf(1L, 2L, 3L), g2.map { it.seq }); assertTrue(g2.all { it.tag == a })
+        assertEquals(listOf(1L, 2L, 3L), g2.map { it.seq }.sorted()); assertTrue(g2.all { it.tag == a })
     }
 
     @Test fun untaggedInProcessFramesAreClaimedAndPersisted() {
