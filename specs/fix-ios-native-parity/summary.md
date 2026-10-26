@@ -17,7 +17,7 @@ Android 실기기 검증 수정(fb21827f 까지)을 iOS 에 같은 의미로 적
 - TNA raw(2ebdf629): `MeasurementEngine.envelope` 은 Rust frame JSON(`f.json`) 전체를 복사한 뒤 세션 필드만 덧붙인다 → Rust 가 내는 필드는 그대로 투과. iOS 추가 작업 불필요(단, 계약 envelope 키 수를 17개로 고정하는 EngineTests 가 있어 TNA 필드가 metrics 안에 들어가는지 최상위인지에 따라 이 시험이 깨질 수 있음 — 해당 워커 병합 시 확인).
 
 ## 시험
-- swift test: 170건 중 7 skip(서버 의존) 실패 0 — 기존 + ModelPinTests 7·RawPreviewTests 4·ManagerTests 3 신규.
+- swift test: 169건 중 7 skip(서버 의존) 실패 0 — 기존 + ModelPinTests 7·RawPreviewTests 4·ManagerTests 3 신규.
 - xcodebuild 시뮬레이터(arm64, Debug) BUILD SUCCEEDED.
 - vitest 17 fail/8파일(기준선과 동일), 신규 JS 시험 통과, tsc -b 0.
 
