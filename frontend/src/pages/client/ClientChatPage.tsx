@@ -89,6 +89,7 @@ export default function ClientChatPage() {
     let cancelled = false;
     setLoading(true);
     let requestId = 0;
+    let abortRetries = 0;
     const refreshRooms = () => {
       const currentRequest = ++requestId;
       const snapshot = useChatStore.getState().rooms;
@@ -101,6 +102,12 @@ export default function ClientChatPage() {
       })
       .catch((err) => {
         if (cancelled || currentRequest !== requestId) return;
+        // 새로고침 직후 계정 복원과 첫 조회가 겹치면 '만료된 계정 조회'(AbortError)가 난다 — 오류로 노출하지 않고 현재 계정으로 다시 조회한다.
+        if (err instanceof DOMException && err.name === 'AbortError' && abortRetries < 2) {
+          abortRetries += 1;
+          window.setTimeout(() => { if (!cancelled) refreshRooms(); }, 150);
+          return;
+        }
         setError(err instanceof Error ? err.message : '채팅방 목록을 불러올 수 없습니다');
         setLoading(false);
       });

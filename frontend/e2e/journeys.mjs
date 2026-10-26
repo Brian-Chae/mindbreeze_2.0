@@ -105,7 +105,9 @@ await cou('리포트: 목록·샘플 리포트 열기', async (p) => {
   await expectText(p, '/reports/sample', '샘플 리포트', '호흡수');
 });
 await cou('설정: 코드·카드 제목 중복 없음', async (p) => {
-  await expectText(p, '/settings', 'E2E0C1', '내 계정');
+  await expectText(p, '/settings', '내 계정');
+  await expectText(p, '/clients/invite', 'E2E0C1'); // 상담사 코드는 회원 초대 화면에 표시된다
+  await go(p, '/settings');
   const heads = (await p.locator('h2,h3').allInnerTexts()).map((h) => h.trim());
   const dup = heads.filter((h, i, a) => a.indexOf(h) !== i);
   if (dup.length) throw new Error(`카드 제목 중복: ${dup.join(',')}`);

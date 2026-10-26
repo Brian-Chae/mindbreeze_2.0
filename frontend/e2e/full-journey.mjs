@@ -32,8 +32,11 @@ async function cleanupClass(token, classId, sessionId) {
   const out = [];
   try {
     if (sessionId) {
-      const e = await fetch(`${API}/sessions/${sessionId}/end`, { method: 'POST', headers: H(token) });
-      out.push(`end ${e.status}`);
+      // 진행 중이면 end, 오픈·예정 상태면 cancel(오픈 회차가 남으면 클래스 전이가 409 로 막힌다)
+      const cur = await fetch(`${API}/sessions/${sessionId}`, { headers: H(token) });
+      const st = cur.ok ? (await cur.json()).status : null;
+      const op = st === 'in_progress' ? 'end' : ['open', 'ready', 'scheduled'].includes(st) ? 'cancel' : null;
+      if (op) out.push(`${op} ${(await fetch(`${API}/sessions/${sessionId}/${op}`, { method: 'POST', headers: H(token) })).status}`);
     }
     for (const action of ['cancel', 'archive']) {
       const g = await fetch(`${API}/classes/${classId}`, { headers: H(token) });
