@@ -88,3 +88,48 @@
 
 ## 다음 단계
 - index.ts:32 수정 후 APK 재빌드·재설치 → 본 시험(5분 화면 꺼짐) 재실행.
+
+---
+# 4차 시도 (플러그인 프록시 수정 APK, 설치 20:31:40) — 판정: **합격**
+
+세션 be82ac44-fde4-4d01-8f69-1e0da753cb25 ("SDD247 실기기 시험2", 대면, 초대 없음)
+
+## 시각별 절차 (KST)
+- 20:32 앱 실행(로그인 세션 유지), `pm grant RECORD_AUDIO`(원복하지 않음, 기록만), 대면 즉석 클래스 → 수업 시작.
+- 20:33:04 녹음 시작(동의) → `rec start src:MIC`. 20:33:12 첫 청크 업로드(idx0, 41,740B). 녹음 중 표시·타이머 정상.
+- 20:33:33 `dumpsys battery unplug`, 20:33:35 화면 끔(Dozing).
+- 20:33~20:39 화면 꺼진 채 대기. 청크 업로드 5초 간격으로 지속(logcat).
+- 20:39:15 `deviceidle force-idle`(deep idle) 약 85초 — 이 동안에도 업로드 지속(20:40:32 마지막 확인).
+- 20:40:33 unforce + battery reset, 20:40:44 화면 켬·복귀. 녹음 타이머 07:40.
+- 20:40:44 녹음 종료(`rec stop`), 20:41 클래스 종료 → sessions.status=completed.
+
+## 청크 표 (dev DB 읽기 전용 + logcat)
+| 항목 | 값 |
+|---|---|
+| 총수 / 인덱스 | 93개, 0~92 |
+| 누락 | 0 |
+| created_at 간격 | 최대 5.25초, 평균 4.94초, 7초 초과 0회 |
+| 크기 | 평균 41,351B, 최소 4,324B(마지막 청크), 최대 41,784B |
+| 시간 범위 | 11:33:11.99Z ~ 11:40:46.73Z (= KST 20:33:12 ~ 20:40:47) |
+| ffprobe | 전 청크 aac 44.1kHz mono, 청크당 4.99초(idx92만 0.39초), **합계 459.7초(7분 39.7초)** |
+| 포맷 | 전 청크 앞 12바이트 `ftyp`(mp42) — 정상 m4a 컨테이너 (저장: /var/lib/mindbreeze/audio/{session}_{idx}_{uuid}.bin) |
+- 경과 시간: 녹음 시작 20:33:04 ~ 종료 20:40:44 = 7분 40초 ≈ 합계 길이 459.7초. 일치.
+- 화면 꺼짐 구간(20:33:35~20:40:44, 약 7분) 동안 누락·지연 없음. Doze 강제 구간 포함.
+- logcat 상 업로드 알림 52건(20:33:12~20:37:27 구간 조회 기준) 간격 최대 5.26초, `pendingCount` 항상 0(재시도 큐 적체 없음).
+- /tmp/sdd247v 사본 삭제 확인.
+
+## logcat 요약
+- 필터(NativeAudioRecorderPlugin·FATAL·AndroidRuntime, 토큰 제외): 크래시·오류 이벤트 0건. `chunkUploaded` 이벤트만 연속.
+- MPEG4Writer 청크 롤링 5초마다 정상(moov 기록, 5초 단위 파일 확정).
+- FGS: 녹음 전용 별도 ServiceRecord 는 보이지 않고, 기존 `AndroidForegroundService`(채널 mindbreeze_class_session, isForeground=true)가 유지됨. 매니페스트(AndroidManifest.xml:33)상 `connectedDevice|microphone` 타입. 녹음 프로세스(pid 2407)는 시험 내내 생존.
+
+## 발견 사항 (결함 아님/관찰)
+- 마지막 청크(idx92) 0.39초: 녹음 종료 시 잔여분이 정상 업로드됨(손실 없음).
+- 앞선 3차 결함(프록시 then)은 수정 확인됨.
+- 3차에서 관찰한 종료 버튼 잠김(HostLiveView.tsx:257)은 이번엔 미재현(새로고침 없이 정상 종료).
+- 시험 세션 사후 `session_records.status` 는 확인하지 않음.
+
+## 원복
+- `dumpsys battery reset`, `deviceidle unforce`, 화면 켬 완료. battery status/level 정상, mForceIdle=false.
+- RECORD_AUDIO 권한은 grant 상태로 유지(지시에 따라 원복 안 함).
+- 시험 클래스 종료(completed), adb forward 제거, DB 쓰기 없음.
