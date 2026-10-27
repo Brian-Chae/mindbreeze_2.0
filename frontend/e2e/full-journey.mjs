@@ -25,7 +25,42 @@ async function client() {
   if (!cliToken) { const r = await apiLoginFull('client'); cliToken = r.token; cliUser = r.user; }
   return { token: cliToken, user: cliUser };
 }
-const H = (t) => ({ Authorization: `Bearer ${t}`, 'Content-Type': 'application/json' });
+const H = (t) => ({ Authorization: `Bearer ${t}`, 'Content-Type': 'application/json', 'X-Live-Protocol': '1,2' });
+
+// ── 정리 헬퍼: 실패해도 클래스가 dev 에 남아 다음 실행이 409 schedule_conflict 로 연쇄 실패하지 않게 한다 ──
+async function cleanupClass(token, classId, sessionId) {
+  const out = [];
+  try {
+    if (sessionId) {
+      // 진행 중이면 end, 오픈·예정 상태면 cancel(오픈 회차가 남으면 클래스 전이가 409 로 막힌다)
+      const cur = await fetch(`${API}/sessions/${sessionId}`, { headers: H(token) });
+      const st = cur.ok ? (await cur.json()).status : null;
+      const op = st === 'in_progress' ? 'end' : ['open', 'ready', 'scheduled'].includes(st) ? 'cancel' : null;
+      if (op) out.push(`${op} ${(await fetch(`${API}/sessions/${sessionId}/${op}`, { method: 'POST', headers: H(token) })).status}`);
+    }
+    for (const action of ['cancel', 'archive']) {
+      const g = await fetch(`${API}/classes/${classId}`, { headers: H(token) });
+      if (!g.ok) { out.push(`get ${g.status}`); break; }
+      const detail = await g.json();
+      if (action === 'cancel' && detail.status !== 'active') continue;
+      if (action === 'archive' && !['completed', 'cancelled'].includes(detail.status)) continue;
+      const t = await fetch(`${API}/classes/${classId}/transition`, { method: 'POST', headers: H(token),
+        body: JSON.stringify({ operation_key: randomUUID(), expected_revision: detail.revision, action }) });
+      out.push(`${action} ${t.status}`);
+    }
+  } catch (e) { out.push(`오류 ${e.message}`); }
+  return out.join(', ');
+}
+
+/** 이전 실행이 남긴 E2E-전수-* 클래스 중 진행·대기 중인 것을 먼저 정리한다. */
+async function purgeStaleClasses() {
+  const c = await counselor();
+  const r = await fetch(`${API}/sessions?limit=100`, { headers: H(c.token) });
+  if (!r.ok) { console.log(`      사전 정리 목록 조회 ${r.status} — 건너뜀`); return; }
+  const stale = ((await r.json()).sessions ?? []).filter((x) =>
+    String(x.class_title ?? x.title ?? '').startsWith('E2E-전수-') && ['open', 'in_progress', 'ready', 'scheduled'].includes(x.status));
+  for (const x of stale) console.log(`      사전 정리 ${x.id}: ${await cleanupClass(c.token, x.class_id, x.id)}`);
+}
 
 /** dev 서버 Redis 에서 OTP 를 읽는다(SSH). 접근 불가면 null. */
 function readOtpFromRedis(email) {
@@ -175,9 +210,13 @@ async function createStartedClass(title, participantIds) {
     title, memberIds: participantIds, instant: true });
   const s = { id: fixture.session_ids[0] };
   const t = await fetch(`${API}/sessions/${s.id}/start`, { method: 'POST', headers: H(c.token) });
-  if (t.status !== 200) throw new Error(`클래스 start ${t.status}: ${JSON.stringify((await t.json()).detail)}`);
+  if (t.status !== 200) {
+    const detail = JSON.stringify((await t.json().catch(() => ({}))).detail);
+    await cleanupClass(c.token, fixture.class_id, s.id);
+    throw new Error(`클래스 start ${t.status}: ${detail}`);
+  }
   const chk = await (await fetch(`${API}/sessions/${s.id}`, { headers: H(c.token) })).json();
-  if (chk.status !== 'in_progress') throw new Error('클래스가 in_progress 가 아님');
+  if (chk.status !== 'in_progress') { await cleanupClass(c.token, fixture.class_id, s.id); throw new Error('클래스가 in_progress 가 아님'); }
   return { id: s.id, classId: fixture.class_id, code: chk.access_code ?? null };
 }
 
@@ -228,6 +267,8 @@ async function walkToLive(p, { includeReport }) {
   return seen;
 }
 
+await purgeStaleClasses();
+
 await scenario('[클래스] (A) 상담사 클래스 생성 → 오픈 → 시작 (4자리 코드 발급)', async () => {
   const made = await createStartedClass(TITLE, []);
   classes.A.id = made.id;
@@ -241,12 +282,15 @@ await scenario('[클래스] (A) 비회원 입장: 4자리 코드 → 개인정�
   // ① 코드 확인(FM04)
   await p.getByRole('group', { name: '입장 코드 4자리' }).waitFor({ timeout: 10000 });
   for (let i = 0; i < 4; i += 1) await p.getByLabel(`${i + 1}번째 숫자`).fill(classes.A.code[i]);
-  await p.getByRole('button', { name: '코드 확인', exact: true }).click();
+  // 4자리를 채우면 자동 확인된다(0f40ca28) — 버튼은 verifying 동안 disabled 이므로 누르지 않고 다음 단계를 기다린다.
   // ② 개인정보(FM04b)
   await p.getByText('정보를 입력해 주세요').first().waitFor({ timeout: 15000 });
   await p.fill('#fm-name', 'E2E-게스트');
   await p.getByRole('radio', { name: '여성' }).click();
-  await p.fill('#fm-birth', '1990.03.12');
+  // 비회원 생년월은 연도·월 다이얼(listbox)이다
+  await p.getByRole('listbox', { name: '출생 연도' }).getByRole('option', { name: '1990년', exact: true }).dispatchEvent('click');
+  await p.getByRole('listbox', { name: '출생 월' }).getByRole('option', { name: '3월', exact: true }).dispatchEvent('click');
+  await p.getByRole('listbox', { name: '출생 월' }).getByRole('option', { name: '3월', exact: true }).and(p.locator('[aria-selected="true"]')).waitFor({ timeout: 5000 });
   await p.fill('#fm-email', GUEST_EMAIL);
   await p.fill('#fm-email2', GUEST_EMAIL);
   await checkRecordingConsent(p);
@@ -374,15 +418,16 @@ await scenario('[리포트] (A) 리포트 이메일 재발송(승인 후) → qu
 // ════════════════════════════════════════════════════════════════════════
 await scenario('[정리] 완료된 테스트 클래스 보관', async () => {
   const c = await counselor();
+  const failed = [];
   for (const key of ['A', 'B']) {
     if (!classes[key].id) continue;
-    const parent = await fetch(`${API}/classes/${classes[key].classId}`, { headers: H(c.token) });
-    if (!parent.ok) throw new Error(`정리 클래스 조회 ${parent.status}`);
-    const detail = await parent.json();
-    const d = await fetch(`${API}/classes/${classes[key].classId}/transition`, { method: 'POST', headers: H(c.token),
-      body: JSON.stringify({ operation_key: randomUUID(), expected_revision: detail.revision, action: 'archive' }) });
-    if (d.status !== 200) throw new Error(`클래스 ${key} 보관 ${d.status}`);
+    // 앞 단계가 실패해 종료되지 않은 회차도 end → cancel/archive 로 모두 치운다
+    const log = await cleanupClass(c.token, classes[key].classId, classes[key].id);
+    const g = await fetch(`${API}/classes/${classes[key].classId}`, { headers: H(c.token) });
+    const st = g.ok ? (await g.json()).status : `조회 ${g.status}`;
+    if (st !== 'archived') failed.push(`${key}: ${st} (${log})`);
   }
+  if (failed.length) throw new Error(`클래스 보관 실패 ${failed.join(' | ')}`);
 });
 
 await finish('full-journey-result.json', '전수조사');
