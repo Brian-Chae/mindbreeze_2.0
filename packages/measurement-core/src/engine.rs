@@ -8,6 +8,7 @@ use crate::clock::{Admission, ClockConfig, SensorClock, Verdict};
 use crate::dsp::biquad::FilterImpl;
 use crate::dsp::acc::{self, AccPoint, AccResult};
 use crate::dsp::eeg::{self, EegPoint, EegResult};
+use crate::guard::{self, GuardReason, GuardStats};
 use crate::dsp::hrv::{HrvSnapshot, HrvState};
 use crate::dsp::ppg::{self, PpgPoint, PpgResult};
 use crate::dsp::score::{self, ModelParams, RawInput, ScoreSet};
@@ -320,6 +321,8 @@ struct LatestEeg {
     tna: f64,
     cohort: ScoreSet,
     model: Option<ScoreSet>,
+    /// 윈도 유효성 가드에 걸리면 사유. Some 이면 EEG 지표는 모두 invalid(null).
+    guard: Option<GuardReason>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct LatestPpg {
@@ -355,6 +358,7 @@ struct CoreState {
     raw_chain: [u8; 32],
     feature_chain: [u8; 32],
     segments_seen: u32,
+    guard_stats: GuardStats,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -424,8 +428,14 @@ impl Core {
             raw_chain: [0; 32],
             feature_chain: [0; 32],
             segments_seen: 1,
+            guard_stats: GuardStats::default(),
         };
         Ok(Core { cfg, tuning, s })
+    }
+
+    /// 윈도 유효성 가드 진단 카운터(총 윈도 수·사유별 무효 수).
+    pub fn guard_stats(&self) -> &GuardStats {
+        &self.s.guard_stats
     }
 
     pub fn config(&self) -> &CoreConfig {
@@ -536,6 +546,11 @@ impl Core {
         }
         let times = self.s.timelines[i].sample_times(adm.ext_tick, n, now_ms);
         out.sample_times = times.clone();
+        // 규칙 4: 장치 tick 기준 누락이 GAP_SAMPLES_LIMIT 초과면 링을 비우고 재충전한다(재충전 중 EEG 무효).
+        if sensor == Sensor::Eeg && adm.gap_samples > guard::GAP_SAMPLES_LIMIT && !adm.flags.segment_reset {
+            self.s.eeg.clear();
+            self.push_guard_marker(GuardReason::Gap, times[0]);
+        }
         let arrival_ms = (arrival_monotonic_us / 1000) as i64;
         let legacy = self.tuning.cadence == Cadence::LegacyPacket;
 
@@ -598,8 +613,19 @@ impl Core {
 
     fn run_eeg(&mut self, last_ts: f64, now_ms: f64, out: &mut PushOutput) {
         let win: Vec<EegPoint> = self.s.eeg.iter().copied().collect();
+        // 규칙 1~3: 포화·계단·lead-off 윈도. 분석·emission(진단/패리티)은 그대로 두고,
+        // 프레임 지표만 invalid(null)로 내보내도록 사유를 기록한다.
+        let mut guard = guard::check_window(&win);
         let Some(res) = eeg::analyze(&win, self.tuning.emit_spectrum, self.tuning.filter) else { return };
         let ix = res.indices;
+        // 규칙 5(안전망): 규칙을 통과했어도 TNA 가 비정상적으로 크면 무효.
+        if guard.is_none() && !(ix.total_neural_activity <= guard::OUTLIER_TNA_LIMIT) {
+            guard = Some(GuardReason::Outlier);
+        }
+        self.s.guard_stats.windows_total += 1;
+        if let Some(r) = guard {
+            self.s.guard_stats.invalid_by_reason[r.index()] += 1;
+        }
         let input = RawInput {
             focus: ix.focus_index,
             relaxation: ix.relaxation_index,
@@ -624,12 +650,39 @@ impl Core {
             tna: ix.total_neural_activity,
             cohort,
             model,
+            guard,
         });
         if self.s.eeg_hist.len() > 8 {
             self.s.eeg_hist.pop_front();
         }
         self.anchor_grid(end_us);
         out.emissions.push(Emission::Eeg(EegEmission { now_ms, end_sample_index: self.s.totals[0], window_end_ts: last_ts, result: res, scores_cohort: cohort, scores_model: model }));
+    }
+
+    /// 무효 윈도 마커: 지표 없이 사유만 담아 프레임에서 invalid(null)로 방출되게 한다.
+    fn push_guard_marker(&mut self, reason: GuardReason, last_ts: f64) {
+        let end_us = ts_us(last_ts);
+        if reason != GuardReason::Gap {
+            self.s.guard_stats.windows_total += 1;
+        }
+        self.s.guard_stats.invalid_by_reason[reason.index()] += 1;
+        self.s.eeg_hist.push_back(LatestEeg {
+            end_us,
+            contact: self.s.contact,
+            observed_ms: last_ts.max(0.0).floor() as u64,
+            sqi01: 0.0,
+            focus: 0.0,
+            relaxation: 0.0,
+            emotion: 0.0,
+            tna: 0.0,
+            cohort: ScoreSet::default(),
+            model: None,
+            guard: Some(reason),
+        });
+        if self.s.eeg_hist.len() > 8 {
+            self.s.eeg_hist.pop_front();
+        }
+        self.anchor_grid(end_us);
     }
 
     fn run_ppg(&mut self, last_ts: f64, now_ms: f64, out: &mut PushOutput) {
@@ -725,6 +778,7 @@ impl Core {
             None => Err(("warming_up", "insufficient_window")),
             Some(e) if end_us.saturating_sub(e.end_us) > STALE_US => Err(("gap", "no_recent_eeg")),
             Some(_) if both_off => Err(("invalid", "leadoff")),
+            Some(e) if e.guard.is_some() => Err(("invalid", e.guard.unwrap().code())),
             Some(e) => Ok(e),
         };
         let ppg_fresh = ppg_at.as_ref().filter(|p| end_us.saturating_sub(p.end_us) <= STALE_US);
