@@ -324,7 +324,7 @@ function readScope(): string | null {
   try { return localStorage.getItem(PERSISTED_USER_KEY); } catch { return null; }
 }
 
-function sharedRead<T>(path: string, options: RequestOptions, staleRetries = 2): Promise<T> {
+function sharedRead<T>(path: string, options: RequestOptions): Promise<T> {
   const scope = readScope();
   if (scope !== sharedReadScope) {
     sharedReadScope = scope;
@@ -339,9 +339,8 @@ function sharedRead<T>(path: string, options: RequestOptions, staleRetries = 2):
     // caller의 abort는 아래 request에서 처리한다. 공유 네트워크는 별도로 유지한다.
     created.promise = requestActive<T>(path, { ...options, signal: undefined }).then(data => {
       if (epoch !== sharedReadEpoch || scope !== readScope()) {
-        // 새로고침 직후 계정 복원과 겹치면 응답이 이전 계정 것이 된다 — 버리고 현재 계정으로 다시 조회해 합류시킨다(오류 노출 없음).
+        // 이전 계정 응답은 호출자에게 거부로 돌려주되, 거부된 promise 를 캐시에 남기면 호출자의 재시도가 같은 거부를 받는다 — 먼저 비운다.
         if (sharedReads.get(path) === created) sharedReads.delete(path);
-        if (staleRetries > 0) return sharedRead<T>(path, options, staleRetries - 1);
         throw new DOMException('만료된 계정 조회', 'AbortError');
       }
       // 소켓/변경 요청과 겹친 소비자는 실패시키지 않고 최신 조회에 합류시킨다.

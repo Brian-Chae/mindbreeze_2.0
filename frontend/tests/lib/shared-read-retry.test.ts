@@ -9,7 +9,7 @@ const jsonResponse = (body: unknown): Response =>
 describe('공유 조회(/chat/rooms) 계정 전환 재시도', () => {
   afterEach(() => { vi.restoreAllMocks(); localStorage.clear(); });
 
-  it('조회 중 계정 범위가 바뀌어도 오류 없이 현재 계정으로 재조회한 결과를 돌려준다', async () => {
+  it('계정 전환으로 거부된 조회는 캐시에 남지 않아 재조회가 성공한다', async () => {
     localStorage.setItem('mb_user', JSON.stringify({ id: 'a', role: 'client' }));
     let resolveFirst: (r: Response) => void = () => {};
     const fetchMock = vi.spyOn(globalThis, 'fetch')
@@ -19,7 +19,9 @@ describe('공유 조회(/chat/rooms) 계정 전환 재시도', () => {
     const first = apiClient.get('/chat/rooms');
     localStorage.setItem('mb_user', JSON.stringify({ id: 'b', role: 'client' })); // 응답 전에 계정 복원
     resolveFirst(jsonResponse({ rooms: [] }));
-    await expect(first).resolves.toEqual({ rooms: [{ id: 'r1' }] });
+    await expect(first).rejects.toMatchObject({ name: 'AbortError' });
+
+    await expect(apiClient.get('/chat/rooms')).resolves.toEqual({ rooms: [{ id: 'r1' }] });
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
