@@ -56,3 +56,4 @@ APPLE_KEY_ID	ssm	0		Apple Sign in 키 ID
 APPLE_PRIVATE_KEY	ssm	0		SecureString. .p8 PEM 을 개행 대신 \n 이스케이프한 한 줄(-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----) 또는 서버 파일 경로
 SOCIAL_TOKEN_ENCRYPTION_KEY	ssm	0		SecureString. Apple refresh token 암호화(Fernet 32바이트 urlsafe base64 44자). 없으면 토큰 미저장·revoke 는 outbox 대기
 ORG_INQUIRY_NOTIFY_EMAIL	ssm	0		SDD-248 기관 문의 알림 수신 주소. 없으면 코드 기본값(brian.chae@looxidlabs.com)
+DATA_CENTER_ENABLED	static	1	true	데이터 센터(내보내기) — 2026-10-27 대표 승인, 출시부터 활성
