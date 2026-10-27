@@ -706,11 +706,88 @@ def send_org_inquiry_notice(
         ("문의 내용", msg_txt),
     ]
     body_text = "새 기관 도입 문의가 접수되었습니다.\n\n" + "\n".join(f"· {k}: {v}" for k, v in rows) + "\n"
-    items = "".join(
-        f"<li>{escape(k)}: " + (f'<span style="white-space:pre-wrap">{escape(v)}</span>' if k == "문의 내용" else escape(v)) + "</li>"
-        for k, v in rows
-    )
-    body_html = f"<p>새 <strong>기관 도입 문의</strong>가 접수되었습니다.</p><ul>{items}</ul>"
+    # 브랜드 카드 메일(초대 메일과 같은 밝은 테마). 모든 값은 HTML 이스케이프한다.
+    def _row(label: str, value: str, link: str | None = None) -> str:
+        val = (
+            f'<a href="{escape(link, quote=True)}" style="color:#5F0080;text-decoration:none;font-weight:700;">{escape(value)}</a>'
+            if link
+            else escape(value)
+        )
+        return (
+            '<tr>'
+            f'<td style="padding:10px 0;width:120px;vertical-align:top;font-size:13px;line-height:20px;color:#7A6A90;">{escape(label)}</td>'
+            f'<td style="padding:10px 0;vertical-align:top;font-size:15px;line-height:22px;color:#2A1C3D;font-weight:600;word-break:break-all;">{val}</td>'
+            '</tr>'
+        )
+
+    tel = "".join(ch for ch in phone if ch.isdigit() or ch == "+")
+    org_rows = _row("기관명", org_name) + _row("기관 유형", org_type_label) + _row("예상 이용 인원", users_txt) + _row("LINK BAND 관심", band_txt)
+    contact_rows = _row("담당자", contact_name) + _row("이메일", email, f"mailto:{email}") + _row("연락처", phone, f"tel:{tel}" if tel else None)
+    sep = '<tr><td colspan="2" style="border-top:1px solid #EFE8F7;font-size:0;line-height:0;">&nbsp;</td></tr>'
+    body_html = f"""\
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background:#F4F1F8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Neo',sans-serif;color:#1F1630;">
+<table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;background:#F4F1F8;">
+  <tr>
+    <td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border:1px solid #E9E2F2;border-radius:24px;overflow:hidden;box-shadow:0 10px 30px rgba(31,22,48,0.08);">
+        <tr>
+          <td style="padding:32px 32px 24px;background:#2B1340;background:linear-gradient(135deg,#21112F 0%,#4A1F6A 100%);text-align:center;">
+            <div style="font-size:13px;line-height:20px;font-weight:700;letter-spacing:1.6px;color:#DCC8F2;">MIND BREEZE</div>
+            <div style="margin-top:10px;font-size:26px;line-height:36px;font-weight:800;color:#FFFFFF;">새 기관 도입 문의</div>
+            <div style="margin-top:8px;font-size:15px;line-height:22px;color:#E9DDF8;">{escape(org_name)}</div>
+            <div style="margin-top:14px;display:inline-block;padding:6px 14px;border-radius:999px;background:rgba(255,255,255,0.14);font-size:12px;line-height:18px;color:#F1E8FB;">접수 {escape(received_at_kst)} (KST)</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:28px 32px 8px;">
+            <div style="font-size:12px;line-height:18px;font-weight:700;letter-spacing:1px;color:#7A4FB0;">기관 정보</div>
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px;">{org_rows}</table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:12px 32px 8px;">
+            <table width="100%" cellpadding="0" cellspacing="0">{sep}</table>
+            <div style="margin-top:12px;font-size:12px;line-height:18px;font-weight:700;letter-spacing:1px;color:#7A4FB0;">담당자</div>
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px;">{contact_rows}</table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:12px 32px 0;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#F7F3FB;border:1px solid #E7DCF5;border-radius:16px;">
+              <tr>
+                <td style="padding:18px 20px;">
+                  <div style="font-size:12px;line-height:18px;font-weight:700;letter-spacing:1px;color:#7A4FB0;">문의 내용</div>
+                  <div style="margin-top:8px;font-size:15px;line-height:24px;color:#2A1C3D;white-space:pre-wrap;word-break:break-word;">{escape(msg_txt)}</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:28px 32px 8px;" align="center">
+            <a href="mailto:{escape(email, quote=True)}?subject={escape('Re: ' + subject, quote=True)}" style="display:inline-block;background:#5F0080;color:#FFFFFF;text-decoration:none;font-size:16px;line-height:24px;font-weight:800;padding:14px 28px;border-radius:999px;">담당자에게 회신하기</a>
+            <div style="margin-top:10px;font-size:12px;line-height:18px;color:#7A6A90;">이 메일에서 바로 답장해도 담당자에게 전달됩니다.</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:20px 32px 28px;">
+            <div style="padding-top:16px;border-top:1px solid #EFE8F7;font-size:12px;line-height:20px;color:#9A8BAE;">
+              접수 번호 {escape(inquiry_id)}<br>MIND BREEZE 랜딩 페이지의 기관 가입 문의로 접수된 운영 알림입니다.
+            </div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>"""
     return _send_email(recipients, subject, body_text, body_html, reply_to=email)
 
 
