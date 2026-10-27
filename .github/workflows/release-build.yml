@@ -67,6 +67,7 @@ jobs:
   build:
     needs: [e2e]
     runs-on: ubuntu-latest
+    timeout-minutes: 60   # 정상 약 20분. 멈추면 1시간 넘게 붙잡지 말고 실패시킨다.
     permissions:
       contents: read
       id-token: write   # S3 업로드용 OIDC (변수 설정 시에만 사용)
@@ -113,10 +114,17 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends libcairo2 libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 fonts-noto-cjk
       - name: 백엔드 설치·테스트
+        timeout-minutes: 40
+        env:
+          # ci-feature.yml 과 동일: Celery 브로커를 테스트 프로세스 안(메모리)으로 격리한다.
+          # 없으면 Celery 가 localhost redis 로 접속을 재시도하며 pytest 가 끝나지 않는다.
+          CELERY_BROKER_URL: memory://
+          CELERY_RESULT_BACKEND: cache+memory://
         run: |
           cd backend
-          pip install -r requirements.txt
-          pytest -q --tb=short --ignore=tests/test_sprint4_integration.py \
+          pip install -r requirements.txt pytest-timeout==2.4.0
+          # 테스트 하나가 멈춰도 --timeout 초 뒤 해당 테스트만 실패 처리하고 스택을 남긴다.
+          pytest -q --tb=short --timeout=180 --durations=15 --ignore=tests/test_sprint4_integration.py \
             --deselect=tests/test_sdd070_pdf_metrics.py::test_real_pdf_metric_pages
 
       # ── 게이트 3: 프론트 타입체크 + prod 설정 빌드 ──────────────────────
