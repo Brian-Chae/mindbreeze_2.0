@@ -282,7 +282,7 @@ await scenario('[클래스] (A) 비회원 입장: 4자리 코드 → 개인정�
   // ① 코드 확인(FM04)
   await p.getByRole('group', { name: '입장 코드 4자리' }).waitFor({ timeout: 10000 });
   for (let i = 0; i < 4; i += 1) await p.getByLabel(`${i + 1}번째 숫자`).fill(classes.A.code[i]);
-  await p.getByRole('button', { name: '코드 확인', exact: true }).click();
+  // 4자리를 채우면 자동 확인된다(0f40ca28) — 버튼은 verifying 동안 disabled 이므로 누르지 않고 다음 단계를 기다린다.
   // ② 개인정보(FM04b)
   await p.getByText('정보를 입력해 주세요').first().waitFor({ timeout: 15000 });
   await p.fill('#fm-name', 'E2E-게스트');
