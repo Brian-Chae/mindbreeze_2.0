@@ -232,6 +232,9 @@ pub struct EegEmission {
     pub result: EegResult,
     pub scores_cohort: ScoreSet,
     pub scores_model: Option<ScoreSet>,
+    /// 가드 무효 윈도 사유(None=유효). 웹 TS 처리기는 무효 윈도를 emission 으로 내지 않으므로
+    /// 패리티 비교(golden_oracle)는 guard 가 있는 emission 을 제외한다. 프레임 지표는 이미 invalid(null).
+    pub guard: Option<GuardReason>,
 }
 #[derive(Clone, Debug)]
 pub struct PpgEmission {
@@ -656,7 +659,7 @@ impl Core {
             self.s.eeg_hist.pop_front();
         }
         self.anchor_grid(end_us);
-        out.emissions.push(Emission::Eeg(EegEmission { now_ms, end_sample_index: self.s.totals[0], window_end_ts: last_ts, result: res, scores_cohort: cohort, scores_model: model }));
+        out.emissions.push(Emission::Eeg(EegEmission { now_ms, end_sample_index: self.s.totals[0], window_end_ts: last_ts, result: res, scores_cohort: cohort, scores_model: model, guard }));
     }
 
     /// 무효 윈도 마커: 지표 없이 사유만 담아 프레임에서 invalid(null)로 방출되게 한다.
