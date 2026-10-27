@@ -1,7 +1,7 @@
 {
   "eeg": {
     "source": "frontend/src/lib/eeg/EEGSignalProcessor.ts",
-    "signature_sha256": "c9ad0296c49c9ae6fdf5b1d8d489f9e4c78ae59afaadf15de9308104478f1d91",
+    "signature_sha256": "7372ac25ebf0e773f0630a5124e79f193207b0e75d5fd5059d530480041c95f3",
     "fields": [
       "bandPowers",
       "brainState",
@@ -23,15 +23,17 @@
       "overall",
       "overallSQI",
       "rawAnalysis",
+      "reason",
       "relaxationIndex",
       "signalQuality",
       "sqi",
       "stressIndex",
       "timestamp",
       "totalNeuralActivity",
-      "totalPower"
+      "totalPower",
+      "validity"
     ],
-    "note": "당시 반환 타입 inventory. waveform/SQI/magnitude는 raw-derived 참조, 현재 미emit channelBandPowers/beats는 null+reason."
+    "note": "당시 반환 타입 inventory. waveform/SQI/magnitude는 raw-derived 참조, 현재 미emit channelBandPowers/beats는 null+reason. 측정 가드: validity/reason 추가(destination=EEGOutput.validity/reason, 무효 창은 지표 null)."
   },
   "ppg": {
     "source": "frontend/src/lib/eeg/PPGSignalProcessor.ts",

@@ -507,6 +507,9 @@ class EEGRawAnalysis(Contract):
 
 
 class EEGOutput(Contract):
+    # 측정 가드(SDD 측정 가드): invalid 면 지표는 null. 과거 payload 호환을 위해 기본값 valid/None.
+    validity: Literal['valid', 'invalid'] = 'valid'
+    reason: Literal['saturated', 'step', 'leadoff', 'gap', 'outlier'] | None = None
     filteredData: DerivedReference
     signalQuality: EEGQuality
     bandPowers: BandPowers
