@@ -25,3 +25,11 @@ export function toNativeDevice(s: MeasurementSnapshot): NativeDeviceState {
     connected: s.collection?.band_state === 'connected',
   };
 }
+
+/**
+ * 네이티브가 밴드를 소유 중인가: 앱 네이티브 경로에서 시작 중·실행 중이거나 snapshot 을 한 번이라도 받았으면 true.
+ * 이때 JS BLE(useBand)는 놓인 상태라 '연결 끊김' 판정·재연결 버튼에 쓰면 안 된다.
+ */
+export function isNativeBandOwned(path: string, status: string, device: NativeDeviceState | null): boolean {
+  return path === 'native' && (device !== null || status === 'starting' || status === 'running');
+}

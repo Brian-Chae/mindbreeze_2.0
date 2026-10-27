@@ -51,6 +51,17 @@ describe('NativeMeasurementFacade', () => {
     expect(seen).toEqual(['10', '11']);
   });
 
+  it('iOS 첫 실행: manager 가 아직 없어 snapshot 이 not_active 로 거절돼도 attach 는 listener 만 붙이고 성공한다', async () => {
+    const { plugin, fire } = fakePlugin();
+    (plugin.getMeasurementSnapshot as ReturnType<typeof vi.fn>).mockRejectedValue(Object.assign(new Error('not_active'), { code: 'not_active' }));
+    const f = new NativeMeasurementFacade(plugin);
+    const seen: string[] = [];
+    f.onMeasurement((s) => seen.push(s.seq));
+    await expect(f.attach(SESSION)).resolves.toBeDefined();
+    fire('measurementUpdated', ev('measurementUpdated', '1', '5', snapshotMsg('5')));
+    expect(seen).toEqual(['5']);
+  });
+
   it('이전 managerGeneration 이벤트는 폐기하고 새 세대는 snapshot 재조회', async () => {
     const { plugin, fire } = fakePlugin();
     const f = new NativeMeasurementFacade(plugin);
