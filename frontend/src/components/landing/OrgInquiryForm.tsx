@@ -22,9 +22,11 @@ const labelClass = 'block text-sm font-semibold text-[#44324E]';
 
 interface OrgInquiryFormProps {
   onSuccess?: () => void;
+  /** true 면 동의·오류·제출 버튼을 스크롤 영역 하단에 고정한다(모달용). */
+  stickyFooter?: boolean;
 }
 
-export function OrgInquiryForm({ onSuccess }: OrgInquiryFormProps) {
+export function OrgInquiryForm({ onSuccess, stickyFooter = false }: OrgInquiryFormProps) {
   const [orgName, setOrgName] = useState('');
   const [contactName, setContactName] = useState('');
   const [email, setEmail] = useState('');
@@ -145,18 +147,20 @@ export function OrgInquiryForm({ onSuccess }: OrgInquiryFormProps) {
       <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, overflow: 'hidden' }}>
         <label>웹사이트<input type="text" name="website" tabIndex={-1} autoComplete="off" value={website} onChange={(e) => setWebsite(e.target.value)} /></label>
       </div>
-      <div className="rounded-xl bg-[#FAF8FB] p-4 text-xs leading-6 text-[#6F5F78]">
-        <p><strong>개인정보 수집·이용 안내</strong></p>
-        <p>목적: 도입 상담 회신 / 항목: 기관명·이름·이메일·연락처·문의내용 / 보관: 1년</p>
-        <label className="mt-2 flex min-h-11 items-center gap-3 text-sm font-semibold text-[#44324E]">
-          <input type="checkbox" checked={consent} disabled={loading} onChange={(e) => setConsent(e.target.checked)} />
-          개인정보 수집·이용에 동의합니다 (필수) <PrivacyPolicyLink className="font-normal underline underline-offset-2">자세히</PrivacyPolicyLink>
-        </label>
+      <div className={stickyFooter ? 'sticky bottom-0 z-10 -mx-5 space-y-3 border-t border-[#E4DBEA] bg-white px-5 pb-4 pt-3 shadow-[0_-10px_20px_rgba(56,37,66,0.07)] sm:-mx-9 sm:px-9' : 'space-y-4'}>
+        <div className="rounded-xl bg-[#FAF8FB] p-4 text-xs leading-6 text-[#6F5F78]">
+          <p><strong>개인정보 수집·이용 안내</strong></p>
+          <p>목적: 도입 상담 회신 / 항목: 기관명·이름·이메일·연락처·문의내용 / 보관: 1년</p>
+          <label className="mt-2 flex min-h-11 items-center gap-3 text-sm font-semibold text-[#44324E]">
+            <input type="checkbox" checked={consent} disabled={loading} onChange={(e) => setConsent(e.target.checked)} />
+            개인정보 수집·이용에 동의합니다 (필수) <PrivacyPolicyLink className="font-normal underline underline-offset-2">자세히</PrivacyPolicyLink>
+          </label>
+        </div>
+        {error && <p role="alert" className="text-sm font-semibold text-[#B3261E]">{error}</p>}
+        <button type="submit" disabled={loading} className={`${primaryButton} w-full disabled:opacity-60`}>
+          {loading ? '접수 중…' : '문의 보내기'}
+        </button>
       </div>
-      {error && <p role="alert" className="text-sm font-semibold text-[#B3261E]">{error}</p>}
-      <button type="submit" disabled={loading} className={`${primaryButton} w-full disabled:opacity-60`}>
-        {loading ? '접수 중…' : '문의 보내기'}
-      </button>
     </form>
   );
 }
