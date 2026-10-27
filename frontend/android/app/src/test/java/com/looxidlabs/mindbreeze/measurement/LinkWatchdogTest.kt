@@ -14,9 +14,9 @@ class LinkWatchdogTest {
             val end = now + ms
             while (true) {
                 val next = tasks.filter { !it.cancelled && it.at <= end }.minByOrNull { it.at } ?: break
-                tasks.remove(next); now = next.at; next.fn()
+                tasks.remove(next); now = maxOf(now, next.at); next.fn()
             }
-            now = end
+            now = maxOf(now, end)
         }
     }
 
@@ -69,5 +69,37 @@ class LinkWatchdogTest {
         val c = Clock(); val f = ArrayList<String>(); val w = make(c, f)
         w.startSilence(); c.advance(6_000); assertEquals(1, f.size)
         w.startSilence(); c.advance(6_000); assertEquals(2, f.size)
+    }
+
+    @Test fun cpuSleepDelayedCheckGetsOneGraceBeforeReconnect() {
+        val c = Clock(); val f = ArrayList<String>(); val w = make(c, f)
+        w.startSilence()
+        c.advance(500)  // 첫 점검(1s) 전
+        // CPU 수면 모사: 시계만 10초 점프, 예약된 점검 타이머는 깨어난 직후 한 번에 돈다
+        c.now += 10_000
+        c.advance(0)  // 밀린 점검 타이머 1회 실행
+        assertTrue("수면 직후 첫 무수신 판정은 유예", f.isEmpty())
+        c.advance(1_000)  // 다음 정상 주기 점검에서도 무수신 → 재연결
+        assertEquals(1, f.size); assertTrue(f[0].startsWith("silence:"))
+    }
+
+    @Test fun packetAfterSleepGraceKeepsLinkAlive() {
+        val c = Clock(); val f = ArrayList<String>(); val w = make(c, f)
+        w.startSilence()
+        c.advance(500)
+        c.now += 10_000
+        c.advance(0)  // 유예
+        w.touch()         // 밀린 BLE 콜백 도착
+        c.advance(4_000); assertTrue(f.isEmpty())
+        c.advance(2_000); assertEquals(1, f.size)  // 이후 진짜 무수신은 정상 동작
+    }
+
+    @Test fun graceIsOnlyOncePerQuietPeriod() {
+        val c = Clock(); val f = ArrayList<String>(); val w = make(c, f)
+        w.startSilence()
+        c.advance(500); c.now += 10_000; c.advance(0)  // 1회 유예
+        assertTrue(f.isEmpty())
+        c.now += 10_000; c.advance(0)                   // 또 지연돼도 유예 재사용 불가
+        assertEquals(1, f.size)
     }
 }
