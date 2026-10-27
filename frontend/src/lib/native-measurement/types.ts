@@ -134,6 +134,8 @@ export interface NativeMeasurementPlugin {
   startMeasurement(req: StartMeasurementRequest | AndroidStartMeasurementRequest): Promise<StartMeasurementResult>;
   setNativeOwnership?(req: { enabled: boolean }): Promise<{ enabled: boolean }>;
   setJSBandOwnership?(req: { owning: boolean }): Promise<{ accepted: boolean }>;
+  /** iOS: 네이티브가 소유한 밴드 링크를 재연결한다(수집 중이 아니면 not_active 거절) */
+  reconnectBand?(): Promise<{ accepted: boolean }>;
   registerCredential?(req: RegisterCredentialRequest): Promise<RegisterCredentialResult>;
   handoffCredentials?(req: HandoffCredentialsRequest): Promise<HandoffCredentialsResult>;
   getMeasurementSnapshot(req: { sessionId: string }): Promise<MeasurementSnapshot>;

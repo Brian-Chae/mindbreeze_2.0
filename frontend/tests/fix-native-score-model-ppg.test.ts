@@ -72,9 +72,18 @@ describe('startForSession — 모델·밴드 소유', () => {
     const q = plugin(); await new NativeMeasurementFacade(q).startForSession(base('ios'));
     expect('modelParams' in q.startMeasurement.mock.calls[0][0]).toBe(false);
   });
-  it('iOS: releaseJsBand 는 호출하지 않는다(setJSBandOwnership 경로 유지)', async () => {
-    const p = plugin(); const releaseJsBand = vi.fn(async () => undefined);
+  it('iOS: releaseJsBand 로 JS BLE 를 실제로 끊은 뒤 setJSBandOwnership(false) → 시작(두 클라이언트가 한 링크를 잡지 않는다)', async () => {
+    const order: string[] = [];
+    const p = plugin();
+    p.setJSBandOwnership.mockImplementation(async () => { order.push('own'); return { accepted: true }; });
+    p.startMeasurement.mockImplementation(async () => { order.push('start'); return { managerId: 'm', streamId: 's', ownerGeneration: '1' }; });
+    const releaseJsBand = vi.fn(async () => { order.push('release'); });
     await new NativeMeasurementFacade(p).startForSession({ ...base('ios'), releaseJsBand });
-    expect(releaseJsBand).not.toHaveBeenCalled(); expect(p.setJSBandOwnership).toHaveBeenCalledWith({ owning: false });
+    expect(order).toEqual(['release', 'own', 'start']);
+  });
+  it('iOS: releaseJsBand 가 실패해도 시작은 계속된다', async () => {
+    const p = plugin();
+    await new NativeMeasurementFacade(p).startForSession({ ...base('ios'), releaseJsBand: vi.fn(async () => { throw new Error('x'); }) });
+    expect(p.startMeasurement).toHaveBeenCalledTimes(1);
   });
 });

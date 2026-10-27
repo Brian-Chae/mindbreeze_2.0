@@ -4,9 +4,9 @@ import { readFileSync } from 'node:fs';
 
 describe('use-native-measurement 배선', () => {
   const src = readFileSync('src/lib/measurement-web/use-native-measurement.ts', 'utf8');
-  it('Android 에서만 releaseForNative 를 넘기고, 시작 전에 활성 모델을 조회한다', () => {
+  it('iOS·Android 모두 releaseForNative 를 넘기고, 시작 전에 활성 모델을 조회한다', () => {
     expect(src).toContain('releaseForNative');
-    expect(src).toMatch(/platform === 'android'/);
+    expect(src).toMatch(/releaseJsBand: \(\) => bluetoothService\.releaseForNative\(\)/);
     expect(src).toContain('buildNativeModelPayload');
     expect(src).toMatch(/getActiveModelCache\(\)/);
   });

@@ -173,6 +173,17 @@ public final class MeasurementManager: BandLinkDelegate {
         return r
     }
 
+    /// 화면의 '다시 연결' — 수집 중일 때만 밴드 링크를 끊었다 다시 붙인다(백오프 초기화). JS BLE 를 거치지 않는다.
+    @discardableResult
+    public func reconnectBand() throws -> [String: Any] {
+        lock.lock(); defer { lock.unlock() }
+        guard state == .arming || state == .capturing || state == .reconnecting else { throw ManagerError.notActive }
+        Self.log.info("밴드 재연결 요청 band_state=\(self.bandState, privacy: .public) state=\(self.state.rawValue, privacy: .public)")
+        band.disconnect()
+        band.connect(expectedPeripheral: peripheralId)
+        return ["accepted": true, "band_state": bandState, "state": state.rawValue]
+    }
+
     /// 서버가 capture.start ACK(result)로 stream 을 발급하면 호출된다. 이미 있으면 즉시.
     public func awaitStream(_ done: @escaping (Result<(String, UInt64), ManagerError>) -> Void) {
         lock.lock(); defer { lock.unlock() }
@@ -573,7 +584,10 @@ public final class MeasurementManager: BandLinkDelegate {
         case .idle: bandState = "not_worn"
         }
         if s == .subscribed, blockedReason == "bluetooth_off" { blockedReason = nil }
-        if bandState != before { reportDevice() }
+        if bandState != before {
+            Self.log.info("band_state \(before, privacy: .public) -> \(self.bandState, privacy: .public) reason=\(reason ?? "-", privacy: .public) manager=\(self.state.rawValue, privacy: .public)")
+            reportDevice()
+        }
         persistActive(); emitMeasurementUpdated()
     }
     public func bandLink(didReadBattery pct: Int) {

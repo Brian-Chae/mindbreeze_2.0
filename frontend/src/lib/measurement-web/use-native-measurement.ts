@@ -108,7 +108,7 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
         await facade.startForSession({
           platform, sessionId: o.sessionId, requestId, accountId: o.accountId as string, apiBase: BASE_URL, socketBase: SOCKET_URL,
           instanceId: instanceRef.current, deviceId: deviceId || null, tokens: { accessToken: access, refreshToken: refresh }, model,
-          ...(platform === 'android' ? { releaseJsBand: () => bluetoothService.releaseForNative() } : {}),
+          releaseJsBand: () => bluetoothService.releaseForNative(),
         });
         if (cancelled) return;
         startedRef.current = true;
