@@ -139,6 +139,15 @@ export class AnalysisMetricsService {
     return this.latestEeg;
   }
 
+  /**
+   * EEG 무효 윈도 수신 — 직전 유효 feature 를 지우고(폴백 금지) 구독자에게 'eeg_invalid' 로 알린다.
+   * 지표를 0 이나 직전값으로 대체하지 않는다.
+   */
+  async processEEGInvalid(reason: string): Promise<void> {
+    this.latestEeg = null;
+    this.callbacks.onMetricsUpdate?.('eeg_invalid', { timestamp: Date.now(), reason });
+  }
+
   /** EEG 1초 지표 수신 — StreamProcessor.performAdvancedEEGProcessing에서 호출 */
   async processEEGAnalysisMetrics(
     processedEEGData: ProcessedEEGData,

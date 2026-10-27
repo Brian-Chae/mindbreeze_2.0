@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 public enum ManagerState: String { case idle = "IDLE", arming = "ARMING", capturing = "CAPTURING", reconnecting = "RECONNECTING", sealing = "SEALING", draining = "DRAINING", closed = "CLOSED", blocked = "BLOCKED" }
 public enum ManagerError: Error, Equatable { case nativeDisabled, jsOwnsBand, alreadyActive, notActive, invalidArgument(String) }
@@ -43,6 +44,9 @@ enum U64 {
 /// BLE → engine(raw journal→코어→feature journal→outbox) → LiveSession(native Socket.IO) 와 archive 큐를 소유한다.
 /// 앱 시작 시 WebView 보다 먼저 `recoverOnLaunch()` 로 복구한다. 기능 플래그 off 이면 아무 BLE 도 만지지 않는다.
 public final class MeasurementManager: BandLinkDelegate {
+    /// 실기기 진단용(Console.app 에서 subsystem 으로 필터). 토큰·값은 싣지 않는다.
+    private static let log = Logger(subsystem: "com.looxidlabs.mindbreeze2", category: "measurement")
+
     public static let nativeRuntimeVersion = "native-1.0.0", coreVersion = "core-1.0.0"
     public static let diskLimit = 536_870_912
     /// 서버 capture lease 는 30초(CAPTURE_LEASE_SECONDS). lease 가 유효해야 live 투영되므로 10초마다 갱신한다.
@@ -156,6 +160,7 @@ public final class MeasurementManager: BandLinkDelegate {
         let cmd: [String: Any] = ["command_id": UUID().uuidString.lowercased(), "kind": "capture.start", "client_generation": String(generation),
                                   "payload": ["device_profile": profile.device, "algorithm_version": profile.algorithm, "model_version": self.modelVersion]]
         captureStartCommand = cmd
+        Self.log.info("capture.start 송신 session=\(sessionId, privacy: .public) gen=\(self.generation) cmd=\((cmd["command_id"] as? String) ?? "", privacy: .public)")
         l.dispatch(command: cmd)
         band.connect(expectedPeripheral: self.peripheralId)
         emitMeasurementUpdated()
@@ -166,6 +171,17 @@ public final class MeasurementManager: BandLinkDelegate {
         var r: [String: Any] = ["managerId": managerId, "managerGeneration": String(generation), "state": state.rawValue, "idempotentReplay": replay]
         r["ownerGeneration"] = ownerGeneration.map(String.init) ?? NSNull(); r["streamId"] = streamId ?? NSNull()
         return r
+    }
+
+    /// 화면의 '다시 연결' — 수집 중일 때만 밴드 링크를 끊었다 다시 붙인다(백오프 초기화). JS BLE 를 거치지 않는다.
+    @discardableResult
+    public func reconnectBand() throws -> [String: Any] {
+        lock.lock(); defer { lock.unlock() }
+        guard state == .arming || state == .capturing || state == .reconnecting else { throw ManagerError.notActive }
+        Self.log.info("밴드 재연결 요청 band_state=\(self.bandState, privacy: .public) state=\(self.state.rawValue, privacy: .public)")
+        band.disconnect()
+        band.connect(expectedPeripheral: peripheralId)
+        return ["accepted": true, "band_state": bandState, "state": state.rawValue]
     }
 
     /// 서버가 capture.start ACK(result)로 stream 을 발급하면 호출된다. 이미 있으면 즉시.
@@ -352,6 +368,9 @@ public final class MeasurementManager: BandLinkDelegate {
         guard let id = a["command_id"] as? String else { return }
         let status = a["status"] as? String, code = a["code"] as? String
         let result = a["result"] as? [String: Any]
+        if let start = captureStartCommand, id == start["command_id"] as? String {
+            Self.log.info("capture.start ACK status=\(status ?? "nil", privacy: .public) code=\(code ?? "nil", privacy: .public)")
+        }
         if let start = captureStartCommand, id == start["command_id"] as? String {
             switch status {
             case "applied", "duplicate":
@@ -565,7 +584,10 @@ public final class MeasurementManager: BandLinkDelegate {
         case .idle: bandState = "not_worn"
         }
         if s == .subscribed, blockedReason == "bluetooth_off" { blockedReason = nil }
-        if bandState != before { reportDevice() }
+        if bandState != before {
+            Self.log.info("band_state \(before, privacy: .public) -> \(self.bandState, privacy: .public) reason=\(reason ?? "-", privacy: .public) manager=\(self.state.rawValue, privacy: .public)")
+            reportDevice()
+        }
         persistActive(); emitMeasurementUpdated()
     }
     public func bandLink(didReadBattery pct: Int) {

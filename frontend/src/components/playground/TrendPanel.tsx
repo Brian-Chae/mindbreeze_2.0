@@ -89,16 +89,16 @@ export function TrendPanel({
       const t = Math.floor((Date.now() - startedAtRef.current) / 1000);
       const next: TrendPoint = {
         t,
-        focusIndex: rawIndicesRef.current?.focusIndex ?? 0,
-        relaxationIndex: rawIndicesRef.current?.relaxationIndex ?? 0,
-        stressIndex: rawIndicesRef.current?.stressIndex ?? 0,
-        cognitiveLoad: rawIndicesRef.current?.cognitiveLoad ?? 0,
-        totalPower: rawIndicesRef.current?.totalNeuralActivity ?? 0,
-        hemisphericBalance: rawIndicesRef.current?.hemisphericBalance ?? 0,
-        emotionalStability: rawIndicesRef.current?.emotionalStability ?? 0,
-        bpm: heartRateRef.current ?? 0,
-        sdnn: sdnnRef.current ?? 0,
-        rmssd: rmssdRef.current ?? 0,
+        focusIndex: rawIndicesRef.current?.focusIndex ?? null,
+        relaxationIndex: rawIndicesRef.current?.relaxationIndex ?? null,
+        stressIndex: rawIndicesRef.current?.stressIndex ?? null,
+        cognitiveLoad: rawIndicesRef.current?.cognitiveLoad ?? null,
+        totalPower: rawIndicesRef.current?.totalNeuralActivity ?? null,
+        hemisphericBalance: rawIndicesRef.current?.hemisphericBalance ?? null,
+        emotionalStability: rawIndicesRef.current?.emotionalStability ?? null,
+        bpm: heartRateRef.current ?? null,
+        sdnn: sdnnRef.current ?? null,
+        rmssd: rmssdRef.current ?? null,
       };
       setPoints((prev) => {
         const merged = [...prev, next];

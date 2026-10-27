@@ -31,6 +31,7 @@ import { useNativeMeasurementV2 } from '../../../../lib/measurement-web/use-nati
 import { decideMeasurementPath } from '../../../../lib/measurement-web/measurement-path';
 import { getNativeMeasurement, isNativeMeasurementAvailable } from '../../../../lib/native-measurement';
 import { Capacitor } from '@capacitor/core';
+import { isNativeBandOwned } from '../../../../lib/native-measurement/device-status';
 import { isBleSupported } from '../../../../lib/ble';
 import { toBandReport } from '../../../../lib/measurement-web/band-report';
 import { ClassChatPanel } from '../../../chat/ClassChatPanel';
@@ -78,7 +79,7 @@ const RAW_PPG_SAMPLES = 200;
 /** 상담사 영상 토큰 재시도 상한(지수 백오프 5s→10s→20s→30s) */
 const LIVEKIT_RETRY_MAX = 5;
 
-type BandSnapshotSource = Pick<UseBandResult, 'connectionState' | 'scoredIndices' | 'heartRate' | 'respiratoryRate' | 'sdnn'>;
+type BandSnapshotSource = Pick<UseBandResult, 'connectionState' | 'scoredIndices' | 'heartRate' | 'respiratoryRate' | 'sdnn'> & { eegInvalidReason?: string | null };
 
 const NO_METRICS: MetricSnapshot = { focus: null, relaxation: null, emotional: null, bpm: null, respiration: null, hrv: null };
 
@@ -88,7 +89,8 @@ function buildSnapshot(band: BandSnapshotSource, metricsBlocked: boolean, remote
   const live = band.connectionState === 'connected';
   return {
     focus: live ? (band.scoredIndices?.focusIndex ?? null) : null,
-    relaxation: live ? (band.scoredIndices?.relaxationIndex ?? remoteEfficiency) : remoteEfficiency,
+    // 측정 가드: 로컬 EEG 윈도가 무효면 원격(직전) 값으로 대체하지 않는다 — 측정 중/빈칸
+    relaxation: live ? (band.eegInvalidReason ? null : (band.scoredIndices?.relaxationIndex ?? remoteEfficiency)) : remoteEfficiency,
     emotional: live ? (band.scoredIndices?.emotionalStability ?? null) : null,
     bpm: live ? band.heartRate : null,
     respiration: live ? band.respiratoryRate : null,
@@ -376,7 +378,9 @@ export function MemberClassContainer({
       if (!participantId || event.participant_id !== participantId) return;
       if (event.session_id && event.session_id !== sessionId) return;
       const efficiency = event.current_efficiency ?? event.relaxation_index ?? event.feature?.relaxation_index ?? null;
+      // 서버 feature 계약은 raw 비율 → 1회만 점수화한다. 명시적 null(무효 윈도)이면 원격값도 비운다.
       if (typeof efficiency === 'number') setRemoteEfficiency(scoreIndices({ relaxationIndex: efficiency }).relaxationIndex);
+      else if (event.feature?.relaxation_index === null || event.relaxation_index === null || event.current_efficiency === null) setRemoteEfficiency(null);
     },
     [participantId, sessionId],
   );
@@ -445,10 +449,12 @@ export function MemberClassContainer({
 
   /* ───────── 뷰 모델 조립 ───────── */
   const bandEnabled = linkbandMode !== 'none';
+  // 네이티브가 밴드를 소유한 동안(시작 직후 첫 snapshot 전 포함) JS BLE 상태는 보지 않는다 — 놓인 JS 연결을 '끊김'으로 오판하던 문제.
+  const nativeOwnsBand = isNativeBandOwned(nativeM.path, nativeM.status, nd);
   const bandUi = deriveBandUi(
     {
-      connectionState: nd ? (nd.connected ? 'connected' : 'connecting') : band.connectionState,
-      everConnected,
+      connectionState: nd ? (nd.connected ? 'connected' : 'connecting') : nativeOwnsBand ? 'connecting' : band.connectionState,
+      everConnected: nd ? everConnected : nativeOwnsBand ? false : everConnected,
       deviceStatus,
       signalQualityLevel: signalLevel,
       battery: band.battery,
@@ -475,7 +481,7 @@ export function MemberClassContainer({
   }, [connectLiveKit]);
 
   const shared: SharedScreenProps = {
-    place, mode, viewerOnly, bandVisible, bandUi, waitlisted, nowMs, hostVideoIssue,
+    place, mode, viewerOnly, bandVisible, bandUi, nativeOwnsBand, waitlisted, nowMs, hostVideoIssue,
     header: { title: title ?? '클래스', elapsedSec, totalSec, counselorName, myInitial: user?.name?.trim().charAt(0) || '나' },
     hero, snapshot, series, sheet, screenOff, confirmLeave,
     v2Bars: v2On ? { label: '이완', current: v2Current, bars: v2Bars } : null,
@@ -578,6 +584,8 @@ interface SharedScreenProps {
   viewerOnly: boolean;
   bandVisible: boolean;
   bandUi: MemberCaseInput['band'];
+  /** 앱 네이티브가 밴드를 소유 중 — 재연결 버튼은 JS BLE 가 아니라 네이티브로 */
+  nativeOwnsBand: boolean;
   waitlisted: boolean;
   nowMs: number;
   hostVideoIssue: MemberHostVideoIssue | null;
@@ -690,10 +698,11 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
     onHeroChange: controls.setHero,
     onSheetChange: controls.setSheet,
     ...media.actions,
-    onBandConnect: () => void band.connect(),
-    onBandDisconnect: () => void band.disconnect(),
-    onBandCancel: () => void band.disconnect(),
-    onBandRetry: () => void band.connect(),
+    // 네이티브 소유 중이면 JS BLE 가 아니라 네이티브 링크를 재연결한다(JS 로 붙으면 같은 밴드를 두 클라이언트가 잡는다).
+    onBandConnect: () => void (shared.nativeOwnsBand ? getNativeMeasurement().reconnectBand(Capacitor.getPlatform()) : band.connect()),
+    onBandDisconnect: () => void (shared.nativeOwnsBand ? undefined : band.disconnect()),
+    onBandCancel: () => void (shared.nativeOwnsBand ? undefined : band.disconnect()),
+    onBandRetry: () => void (shared.nativeOwnsBand ? getNativeMeasurement().reconnectBand(Capacitor.getPlatform()) : band.connect()),
     onBandContinue: () => controls.setBandContinued(true),
     onBandRecheck: () => {
       controls.setLeadOffDismissed(true);

@@ -245,6 +245,8 @@ export interface UseBandResult {
   ppgWaveform: BandPpgWaveform;
   /** playground — ACC 요약 + magnitude */
   acc: BandAccSnapshot;
+  /** 측정 가드: 최신 EEG 윈도가 무효면 reason(saturated/step/leadoff/gap/outlier), 유효/미수신이면 null */
+  eegInvalidReason: string | null;
   /** playground — 7지표 raw */
   rawIndices: BandRawIndices | null;
   /** playground — 정규화 점수 (활성 모델 > 코호트 B0). raw는 유지 */
@@ -301,6 +303,33 @@ function trimWaveform(points: WaveformPoint[], max: number): WaveformPoint[] {
 
 function trimNumbers(values: number[], max: number): number[] {
   return values.length > max ? values.slice(values.length - max) : values;
+}
+
+/**
+ * 측정 가드: 무효 EEG 윈도의 업로드 feature — EEG 지표·밴드파워·품질은 전부 null(0 치환 금지).
+ * 몸 지표(PPG/ACC)는 EEG 불량과 무관하므로 그대로 싣는다.
+ */
+export function invalidEegFeature(timestamp: number, secondOffset: number, battery: number | null): EegFeatureItem {
+  const hrv = AnalysisMetricsService.getInstance();
+  return {
+    second_offset: secondOffset,
+    timestamp,
+    delta_power: null, theta_power: null, alpha_power: null, beta_power: null, gamma_power: null,
+    total_power: null,
+    focus_index: null, relaxation_index: null, stress_index: null,
+    meditation_level: null, attention_level: null, cognitive_load: null,
+    emotional_stability: null, hemispheric_balance: null,
+    total_neural_activity: null, faa: null, signal_quality: null,
+    sdnn: hrv.getCurrentSDNN(),
+    rmssd: hrv.getCurrentRMSSD(),
+    lf_power: hrv.getCurrentLfPower(),
+    hf_power: hrv.getCurrentHfPower(),
+    lf_hf_ratio: hrv.getCurrentLfHfRatio(),
+    heart_rate: hrv.getCurrentHeartRate(),
+    respiratory_rate: hrv.getCurrentRespiratoryRate(),
+    motion: hrv.getCurrentMotion(),
+    band_battery: battery,
+  };
 }
 
 export function metricsToFeature(
@@ -400,6 +429,7 @@ export function useBand({
   const [ppgWaveform, setPpgWaveform] = useState<BandPpgWaveform>({ red: [], ir: [] });
   const [acc, setAcc] = useState<BandAccSnapshot>(INITIAL_ACC);
   const [rawIndices, setRawIndices] = useState<BandRawIndices | null>(null);
+  const [eegInvalidReason, setEegInvalidReason] = useState<string | null>(null);
   const [sensors, setSensors] = useState<BandSensors>(INITIAL_SENSORS);
   const [connectedElapsedSec, setConnectedElapsedSec] = useState(0);
 
@@ -847,6 +877,7 @@ export function useBand({
         faa: metrics.faa,
       };
       setRawIndices(raw);
+      setEegInvalidReason(null);
       const scored = toScoredIndices(raw);
       setCurrentEfficiency(scored.relaxationIndex);
       setFocusIndex(scored.focusIndex);
@@ -869,6 +900,63 @@ export function useBand({
       if (scored.relaxationIndex !== null) pushChartPoint(scored.relaxationIndex);
     },
     [emitQueuedItem, pushChartPoint, sessionId],
+  );
+
+  /**
+   * 측정 가드: 무효(invalid) EEG 윈도 — 표시 지표를 0·직전값으로 두지 않고 전부 비운다.
+   * 업로드 feature 는 EEG 지표를 null 로 보낸다(서버가 validity 로 집계에서 제외).
+   */
+  const ingestInvalid = useCallback(
+    (reason: string, timestamp: number) => {
+      if (mountedRef.current) {
+        setRawIndices(null);
+        setCurrentEfficiency(null);
+        setFocusIndex(null);
+        setStressIndex(null);
+        setEegInvalidReason(reason);
+        bandPowersRef.current = null;
+        setBandPowers(null);
+      }
+      if (!collectingRef.current || drainingRef.current) return;
+      if (observationOnlyRef.current) return;
+      if (!v1FeatureUploadRef.current || !sessionId || !streamIdRef.current || !cursorReadyRef.current) return;
+      if (baseOffsetRef.current == null) {
+        const key = eegOffsetBaseKey(sessionId, participantIdRef.current);
+        const stored = Number(localStorage.getItem(key));
+        const base = Number.isFinite(stored) && stored > 0 ? stored : Date.now();
+        localStorage.setItem(key, String(base));
+        baseOffsetRef.current = base;
+      }
+      const elapsedOffset = Math.max(0, Math.floor((Date.now() - baseOffsetRef.current) / 1000));
+      const offset = Math.max(elapsedOffset, secondOffsetRef.current);
+      secondOffsetRef.current = offset + 1;
+      const feature = invalidEegFeature(timestamp, offset, batteryRef.current);
+      const contactStatus = deviceStatusFromLeadOff(true, leadOffRef.current);
+      void (async () => {
+        try {
+          const item = await enqueueFeature({
+            sessionId,
+            participantId: participantIdRef.current,
+            streamId: streamIdRef.current,
+            sequence: offset,
+            feature,
+            bandBattery: batteryRef.current,
+            deviceStatus: contactStatus,
+            leadOff: leadOffRef.current,
+            signalQuality: null,
+            createdAt: Date.now(),
+          });
+          if (mountedRef.current) {
+            setPendingCount((c) => c + 1);
+            setUploadStatus('streaming');
+          }
+          if (wsConnectedRef.current) emitQueuedItem(item);
+        } catch (err) {
+          logger.error('영속 큐 적재 실패', err);
+        }
+      })();
+    },
+    [emitQueuedItem, sessionId],
   );
 
   const stopMock = useCallback(() => {
@@ -1046,26 +1134,43 @@ export function useBand({
         if (mountedRef.current) setBandPowers(payload.bandPowers);
       }
       if (payload?.indices && mountedRef.current) {
+        // 측정 가드: 필드가 비어 있으면 0 으로 메우지 않는다 — 하나라도 숫자가 아니면 해당 윈도 지표는 무효로 본다.
+        const ix = payload.indices as Record<string, unknown>;
+        const keys = ['focusIndex', 'relaxationIndex', 'stressIndex', 'cognitiveLoad', 'emotionalStability', 'hemisphericBalance', 'totalNeuralActivity'] as const;
+        if (keys.some((k) => typeof ix[k] !== 'number' || !Number.isFinite(ix[k] as number))) {
+          setRawIndices(null);
+          setCurrentEfficiency(null);
+          setFocusIndex(null);
+          setStressIndex(null);
+          return;
+        }
         const raw: BandRawIndices = {
-          focusIndex: Number(payload.indices.focusIndex ?? 0),
-          relaxationIndex: Number(payload.indices.relaxationIndex ?? 0),
-          stressIndex: Number(payload.indices.stressIndex ?? 0),
-          cognitiveLoad: Number(payload.indices.cognitiveLoad ?? 0),
-          emotionalStability: Number(payload.indices.emotionalStability ?? 0),
-          hemisphericBalance: Number(payload.indices.hemisphericBalance ?? 0),
-          totalNeuralActivity: Number(payload.indices.totalNeuralActivity ?? 0),
+          focusIndex: ix.focusIndex as number,
+          relaxationIndex: ix.relaxationIndex as number,
+          stressIndex: ix.stressIndex as number,
+          cognitiveLoad: ix.cognitiveLoad as number,
+          emotionalStability: ix.emotionalStability as number,
+          hemisphericBalance: ix.hemisphericBalance as number,
+          totalNeuralActivity: ix.totalNeuralActivity as number,
           // EEG-NUM-002: 실파이프라인 indices.faa(로그비)를 그대로 실어 보낸다.
           faa:
             payload.indices.faa === null || payload.indices.faa === undefined
               ? payload.indices.faa
               : Number(payload.indices.faa),
         };
+        setEegInvalidReason(null);
         setRawIndices(raw);
         const scored = toScoredIndices(raw);
         setCurrentEfficiency(scored.relaxationIndex);
         setFocusIndex(scored.focusIndex);
         setStressIndex(scored.stressIndex);
       }
+      return;
+    }
+    if (action === 'updateEEGInvalid') {
+      // 무효 윈도 — 스펙트럼 표시도 비운다(직전 스펙트럼 잔존 방지). 지표/업로드는 ingestInvalid 가 처리한다.
+      spectrumRef.current = null;
+      playgroundDirtyRef.current = true;
       return;
     }
     if (action === 'updateACCAnalysis') {
@@ -1311,6 +1416,11 @@ export function useBand({
       const analysis = AnalysisMetricsService.getInstance();
       analysis.setCallbacks({
         onMetricsUpdate: (action, data) => {
+          if (action === 'eeg_invalid') {
+            const inv = data as { reason: string; timestamp: number };
+            ingestInvalid(inv.reason, inv.timestamp);
+            return;
+          }
           if (action !== 'eeg') return;
           const metrics = data as EEGAnalysisMetrics;
           const latest = analysis.getLatestEegFeature();
@@ -1445,6 +1555,7 @@ export function useBand({
     handleRawEegData,
     handleStoreUpdate,
     ingestMetrics,
+    ingestInvalid,
     isMock,
     isSupported,
     markConnected,
@@ -1629,6 +1740,10 @@ export function useBand({
       if (collectingRef.current) return;
 
       const efficiency = efficiencyFromEvent(event);
+      if (efficiency === null && (event.feature?.relaxation_index === null || event.relaxation_index === null || event.current_efficiency === null)) {
+        // 측정 가드: 무효 윈도 echo 는 직전 표시값을 남기지 않는다
+        setCurrentEfficiency(null);
+      }
       if (efficiency !== null) {
         // feature 계약은 raw 비율 — 표시 전 표준모델/코호트 정규화(0~100)
         const scored = scoreIndices({ relaxationIndex: efficiency }).relaxationIndex;
@@ -1774,6 +1889,7 @@ export function useBand({
     spectrum,
     ppgWaveform,
     acc,
+    eegInvalidReason,
     rawIndices,
     scoredIndices: rawIndices ? toScoredIndices(rawIndices, normalizationModel) : null,
     sensors,

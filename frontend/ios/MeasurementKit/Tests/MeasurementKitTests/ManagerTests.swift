@@ -80,6 +80,16 @@ final class ManagerTests: XCTestCase {
         XCTAssertEqual(band.connects, 1, "같은 requestId 는 새 수집을 시작하지 않는다")
         XCTAssertThrowsError(try start("0000001f-0000-4000-8000-00000000001f")) { XCTAssertEqual($0 as? ManagerError, .alreadyActive) }
     }
+    /// 재연결 버튼: 수집 중이면 밴드 링크를 끊었다 다시 붙인다(백오프 초기화). 수집 중이 아니면 거절.
+    func testReconnectBandRestartsLinkOnlyWhileCollecting() throws {
+        own.nativeEnabled = true
+        XCTAssertThrowsError(try m.reconnectBand()) { XCTAssertEqual($0 as? ManagerError, .notActive) }
+        _ = try start()
+        let before = (band.connects, band.disconnects)
+        let r = try m.reconnectBand()
+        XCTAssertEqual(r["accepted"] as? Bool, true)
+        XCTAssertEqual(band.disconnects, before.1 + 1); XCTAssertEqual(band.connects, before.0 + 1)
+    }
     /// A7: 활성 모델 pin — capture.start·snapshot 의 model 이 pin 버전, 모델 없으면 코호트.
     func testModelPinFlowsToCaptureStartAndSnapshot() throws {
         own.nativeEnabled = true

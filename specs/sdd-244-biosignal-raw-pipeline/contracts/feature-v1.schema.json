@@ -761,6 +761,34 @@
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
+        "validity": {
+          "default": "valid",
+          "enum": [
+            "valid",
+            "invalid"
+          ],
+          "title": "Validity",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "enum": [
+                "saturated",
+                "step",
+                "leadoff",
+                "gap",
+                "outlier"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
         "filteredData": {
           "$ref": "#/$defs/DerivedReference"
         },

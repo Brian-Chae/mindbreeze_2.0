@@ -1226,7 +1226,8 @@ export default function ClassPlayerPage() {
         band_connected: linkState === 'connected',
         band_battery: band.battery ?? row.band_battery,
         device_status: band.deviceStatus ?? row.device_status,
-        current_efficiency: band.currentEfficiency ?? row.current_efficiency,
+        // 측정 가드: 로컬 값이 null(무효·측정 중)이면 원격/직전 행 값으로 되살리지 않는다
+        current_efficiency: band.currentEfficiency,
         upload_status: band.uploadStatus ?? row.upload_status,
         last_eeg_at: band.lastEegAt ?? row.last_eeg_at,
         signal_quality: sq01 ?? row.signal_quality ?? null,

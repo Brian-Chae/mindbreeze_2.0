@@ -5,6 +5,7 @@ pub mod clock;
 pub mod dsp;
 pub mod engine;
 pub mod ffi;
+pub mod guard;
 pub mod parser;
 pub mod timeline;
 #[cfg(feature = "wasm")]

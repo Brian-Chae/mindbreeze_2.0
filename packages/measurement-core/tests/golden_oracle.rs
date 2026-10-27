@@ -72,7 +72,10 @@ fn eeg_stages_match_legacy_fallback() {
 
 fn eeg_check(filter: FilterImpl, dir: &str) {
     let run = replay(filter);
-    let eegs: Vec<_> = run.emissions.iter().filter_map(|e| if let Emission::Eeg(x) = e { Some(x) } else { None }).collect();
+    let eegs: Vec<_> = run.emissions.iter().filter_map(|e| if let Emission::Eeg(x) = e { Some(x) } else { None })
+        // 가드 무효 윈도(포화·계단·lead-off·outlier)는 웹 TS oracle 이 emission 을 내지 않으므로 비교 제외
+        .filter(|x| x.guard.is_none())
+        .collect();
     let psd = read_json(&format!("expected/{dir}/eeg_psd_bandpower.json"));
     let raw = read_json(&format!("expected/{dir}/eeg_raw_indices.json"));
     let disp = read_json(&format!("expected/{dir}/display.json"));

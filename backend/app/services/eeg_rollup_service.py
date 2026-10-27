@@ -17,6 +17,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session as DBSession
 
 from app.services import eeg_query
+from app.services.normalization_score import TNA_OUTLIER_MAX
 
 # 롤업 대상 지표(원천 feature 컬럼). 밴드파워는 재분석 자산이므로 롤업에서 제외한다.
 ROLLUP_METRIC_KEYS: tuple[str, ...] = (
@@ -56,6 +57,17 @@ def _mean_non_null(values: list) -> float | None:
     if not usable:
         return None
     return round(sum(usable) / len(usable), 4)
+
+
+def _rollup_values(windows: list, key: str) -> list:
+    """롤업 평균 입력값. total_neural_activity 는 극단값(>TNA_OUTLIER_MAX)을 None 으로 제외한다(0 치환 금지)."""
+    values = [getattr(w, key) for w in windows]
+    if key != "total_neural_activity":
+        return values
+    return [
+        None if v is not None and isinstance(v, (int, float)) and v > TNA_OUTLIER_MAX else v
+        for v in values
+    ]
 
 
 def summarize_hrv_motion(windows: list) -> dict[str, float | None]:
@@ -107,7 +119,7 @@ def _bucket_payload(bucket_index: int, windows: list, resolution_sec: int,
     coverage = round(min(valid_count / (resolution_sec * participant_count), 1.0), 4)
 
     metrics = {
-        key: _mean_non_null([getattr(w, key) for w in windows])
+        key: _mean_non_null(_rollup_values(windows, key))
         for key in ROLLUP_METRIC_KEYS
     }
 

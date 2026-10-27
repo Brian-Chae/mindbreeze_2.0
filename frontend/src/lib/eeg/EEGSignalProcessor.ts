@@ -4,6 +4,7 @@ import type { ProcessedEEGData, BandPowers, BrainStateAnalysis, SignalQuality } 
 
 // BiquadFilters.js 라이브러리 추가 - EEG 전용 고품질 신호 처리
 import { makeNotchFilter, makeBandpassFilter } from 'biquadjs';
+import { checkEegWindow, isOutlierTna, type GuardReason, type EegValidity } from './measureGuard';
 
 /** Morlet 웨이블렛 복소수 샘플 */
 interface ComplexSample {
@@ -94,6 +95,9 @@ export class EEGSignalProcessor {
    * Python 코드와 동일한 완전한 EEG 분석 수행
    */
   async processEEGData(data: EEGDataPoint[]): Promise<{
+    /** 측정 가드: 'invalid' 면 지표(indices/bandPowers 등)는 전부 null — 0·직전값으로 바꾸지 않는다 */
+    validity: EegValidity;
+    reason: GuardReason | null;
     filteredData: EEGDataPoint[];
     signalQuality: {
       overall: number;
@@ -130,6 +134,10 @@ export class EEGSignalProcessor {
       throw new Error('EEG 데이터가 부족합니다. 최소 2초(500샘플) 필요');
     }
 
+    // 측정 가드 규칙 1~3: 포화·직류 계단·lead-off 윈도는 분석(필터·PSD·점수)을 건너뛰고 명시적 무효로 낸다.
+    const guardReason = checkEegWindow(data);
+    if (guardReason) return this.invalidResult(data, guardReason);
+
     // 1. EEG 신호 처리 (Python processEEGSegment와 동일한 로직)
     const processedData = this.processEEGSegment(data);
     
@@ -143,7 +151,12 @@ export class EEGSignalProcessor {
     const totalPower = (processedData as any).totalPower || 0;
     
     // 3. EEG 특화 결과 구성
+    // 규칙 5(안전망): 규칙을 통과했어도 TNA 폭주/비유한이면 outlier 무효 — 값을 자르지 않고 버린다.
+    if (isOutlierTna(totalPower)) return this.invalidResult(data, 'outlier');
+
     const result = {
+      validity: 'valid' as EegValidity,
+      reason: null as GuardReason | null,
       filteredData: processedData.filteredRawData,
       signalQuality: {
         overall: processedData.signalQuality.overall,
@@ -173,6 +186,21 @@ export class EEGSignalProcessor {
     };
 
     return result;
+  }
+
+  /** 가드에 걸린 윈도의 결과 — 지표·밴드파워·스펙트럼을 null 로 낸다(0 치환 금지). */
+  private invalidResult(data: EEGDataPoint[], reason: GuardReason): any {
+    return {
+      validity: 'invalid',
+      reason,
+      filteredData: [],
+      signalQuality: null,
+      bandPowers: null,
+      brainState: null,
+      frequencySpectrum: null,
+      indices: null,
+      rawAnalysis: null,
+    };
   }
 
   /**

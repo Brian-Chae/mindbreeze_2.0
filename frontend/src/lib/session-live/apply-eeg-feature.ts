@@ -62,6 +62,13 @@ export function applyEegFeatureToMetricsDetailed(
     event.relaxation_index ??
     feature?.relaxation_index ??
     null;
+  // 측정 가드: 이벤트가 두뇌휴식도를 '명시적 null' 로 보내면(무효 윈도) 직전값을 남기지 않고 비운다.
+  // 필드 자체가 없는 이벤트(다른 용도)만 기존 행 값을 유지한다.
+  const efficiencyExplicitNull =
+    event.current_efficiency === null ||
+    (event.current_efficiency === undefined &&
+      (event.relaxation_index === null ||
+        (event.relaxation_index === undefined && feature != null && feature.relaxation_index === null)));
   const sq01 = normalizeSignalQuality01(
     event.signal_quality ?? feature?.signal_quality ?? null,
   );
@@ -106,7 +113,7 @@ export function applyEegFeatureToMetricsDetailed(
       device_status: contactStatus ?? row.device_status,
       band_battery: event.band_battery ?? row.band_battery,
       current_efficiency:
-        typeof efficiency === 'number' ? efficiency : row.current_efficiency,
+        typeof efficiency === 'number' ? efficiency : efficiencyExplicitNull ? null : row.current_efficiency,
       upload_status: event.upload_status ?? row.upload_status,
       last_eeg_at: newerLastAt(row.last_eeg_at),
       signal_quality: sq01 ?? row.signal_quality ?? null,

@@ -108,12 +108,14 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
         await facade.startForSession({
           platform, sessionId: o.sessionId, requestId, accountId: o.accountId as string, apiBase: BASE_URL, socketBase: SOCKET_URL,
           instanceId: instanceRef.current, deviceId: deviceId || null, tokens: { accessToken: access, refreshToken: refresh }, model,
-          ...(platform === 'android' ? { releaseJsBand: () => bluetoothService.releaseForNative() } : {}),
+          releaseJsBand: () => bluetoothService.releaseForNative(),
         });
         if (cancelled) return;
         startedRef.current = true;
         setStatus('running');
+        console.info('[native-measurement] startForSession 성공', platform);
       } catch (err) {
+        console.warn('[native-measurement] 시작 실패', platform, err instanceof Error ? err.message : String(err));
         if (cancelled) return;
         setStatus('failed'); setCode(err instanceof Error ? err.message : 'native_start_failed');
       }

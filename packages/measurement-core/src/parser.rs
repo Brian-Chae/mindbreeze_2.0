@@ -141,6 +141,9 @@ pub fn fnv1a64(bytes: &[u8]) -> u64 {
     h
 }
 
+/// 24비트 signed ADC 풀스케일 raw (2^23 - 1).
+pub(crate) const EEG_FULL_SCALE_RAW: i32 = 8_388_607;
+
 fn signed24(b0: u8, b1: u8, b2: u8) -> i32 {
     let raw = ((b0 as i32) << 16) | ((b1 as i32) << 8) | (b2 as i32);
     if raw & 0x80_0000 != 0 {
@@ -151,7 +154,7 @@ fn signed24(b0: u8, b1: u8, b2: u8) -> i32 {
 }
 
 /// EEG µV 변환 — JS 원본과 같은 연산 순서(좌→우)를 유지한다.
-fn eeg_uv(signed: i32) -> f64 {
+pub fn eeg_uv(signed: i32) -> f64 {
     (signed as f64) * 4.033 / 12.0 / (8_388_608.0 - 1.0) * 1e6
 }
 

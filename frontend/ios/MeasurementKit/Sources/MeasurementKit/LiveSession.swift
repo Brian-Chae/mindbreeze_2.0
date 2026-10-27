@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 public enum LiveState: String, Equatable { case idle, connecting, resyncing, ready, degraded, terminal, revoked, authBlocked }
 public enum Visibility: String { case foreground, background, locked }
@@ -28,7 +29,11 @@ public final class LiveSession {
     private let sessionId: String, instanceId: String, appBuild: String, coreVersion: String
     private let refreshToken: (@escaping (Result<String, Error>) -> Void) -> Void
 
-    public private(set) var state: LiveState = .idle { didSet { if state != oldValue { onState?(state) } } }
+    /// 실기기 진단용(Console.app 에서 subsystem 으로 필터). 토큰·측정값은 싣지 않는다(seq·code·개수만).
+    private static let log = Logger(subsystem: "com.looxidlabs.mindbreeze2", category: "measurement")
+    public private(set) var state: LiveState = .idle {
+        didSet { if state != oldValue { Self.log.info("live 상태 \(oldValue.rawValue, privacy: .public) -> \(self.state.rawValue, privacy: .public)"); onState?(state) } }
+    }
     public var onState: ((LiveState) -> Void)?
     public var onCommandAck: (([String: Any]) -> Void)?
     public var onEvent: (([String: Any]) -> Void)?
@@ -127,6 +132,7 @@ public final class LiveSession {
             case .success(let v):
                 let o = v as? [String: Any]
                 if (o?["ok"] as? Bool) == false {
+                    Self.log.error("live:hello 거절 code=\((o?["code"] as? String) ?? "-", privacy: .public)")
                     if (o?["code"] as? String) == "token_expired" { self.refreshAndReconnect() }
                     else if (o?["retryable"] as? Bool) == true { self.client.reconnectNow() }
                     else { self.state = .degraded }
@@ -139,6 +145,7 @@ public final class LiveSession {
     }
 
     private func handleDisconnected() {
+        Self.log.error("live 소켓 끊김 inflight=\(self.inflight.count)")
         stopTimers()
         inflight.removeAll()
         for id in commands.keys { commands[id]?.inFlight = false; commands[id]?.timer?.cancel(); commands[id]?.timer = nil }
@@ -146,6 +153,7 @@ public final class LiveSession {
     }
 
     private func handleConnectError(_ message: String) {
+        Self.log.error("live 연결 오류 \(message, privacy: .public)")
         if message == "token_expired" || message == "auth_expired" { refreshAndReconnect() }
         else if message == "access_revoked" { handleRevoked() }
     }
@@ -171,6 +179,7 @@ public final class LiveSession {
         guard let self = self else { return }
         guard case .success(let v) = r, let o = v as? [String: Any], (o["ok"] as? Bool) != false else {
             if case .success(let v) = r, let o = v as? [String: Any] {
+                Self.log.error("live:join/resync 거절 code=\((o["code"] as? String) ?? "-", privacy: .public)")
                 switch o["code"] as? String {
                 case "access_revoked": self.handleRevoked()
                 case "token_expired": self.refreshAndReconnect()
@@ -345,10 +354,14 @@ public final class LiveSession {
         let seqs = Set(windows.compactMap { ($0["sequence"] as? String).flatMap { UInt64($0) } })
         inflight = seqs
         var payload = base(); payload["windows"] = windows
+        Self.log.info("live:metric 송신 windows=\(windows.count) seq=\(seqs.min() ?? 0)...\(seqs.max() ?? 0)")
         client.emit("live:metric", payload, ackTimeout: 2) { [weak self] r in
             guard let self = self else { return }
             self.inflight.subtract(seqs)
-            guard case .success(let v) = r, let o = v as? [String: Any] else { self.scheduleMetricRetry(after: 1); return }
+            guard case .success(let v) = r, let o = v as? [String: Any] else {
+                if case .failure(let e) = r { Self.log.error("live:metric 응답 실패 \(String(describing: e), privacy: .public) — 1초 뒤 재시도") }
+                self.scheduleMetricRetry(after: 1); return
+            }
             if o["acks"] is [[String: Any]] {
                 if self.isolateMetrics && seqs.count == 1 { self.isolateMetrics = false }
                 self.applyMetricAck(o); return
@@ -361,6 +374,7 @@ public final class LiveSession {
     /// 연결 단위 오류는 다음 READY 까지 중단, 그 밖의 검증 실패는 창 하나씩 분리해 원인 창만 격리한다.
     private func handleMetricError(_ o: [String: Any], seqs: Set<UInt64>, box: MetricOutbox) {
         let code = (o["code"] as? String) ?? "rejected"
+        Self.log.error("live:metric 배치 거절 code=\(code, privacy: .public) field=\((o["field"] as? String) ?? "-", privacy: .public) retryable=\(((o["retryable"] as? Bool) == true) ? "y" : "n", privacy: .public) windows=\(seqs.count)")
         if (o["retryable"] as? Bool) == true {
             scheduleMetricRetry(after: TimeInterval((o["retry_after_ms"] as? NSNumber)?.doubleValue ?? 1000) / 1000)
         } else if Self.connectionLevelMetricErrors.contains(code) {
@@ -392,6 +406,8 @@ public final class LiveSession {
             default: break          // retryable: pending 유지(다음 pump 에서 재전송)
             }
         }
+        if !bad.isEmpty { Self.log.error("live:metric 창 거절 \(bad.count)건 codes=\(bad.map { $0.1 ?? "-" }.prefix(5).joined(separator: ","), privacy: .public) first_seq=\(bad.first?.0 ?? 0)") }
+        Self.log.info("live:metric ACK durable=\(ok.count) rejected=\(bad.count) total=\(acks.count)")
         box.markAcked(ok)
         for (s, c) in bad { box.markRejected([s], code: c) }
         if let m = ok.max() { lastAckSequence = max(lastAckSequence, m) }
@@ -451,6 +467,7 @@ public final class LiveSession {
     private func handleCommandAck(_ ack: [String: Any]) {
         guard let id = ack["command_id"] as? String, commands[id] != nil else { return }
         noteEpoch(ack["epoch"])
+        Self.log.info("live:command ACK kind=\((self.commands[id]?.command["kind"] as? String) ?? "-", privacy: .public) status=\((ack["status"] as? String) ?? "-", privacy: .public) code=\((ack["code"] as? String) ?? "-", privacy: .public)")
         if (ack["status"] as? String) == "retryable" {
             // committed:true 이면 재실행이 아니라 같은 ID 의 ledger 결과 조회 — 어느 쪽이든 새 ID 는 만들지 않는다.
             retryCommand(id, after: TimeInterval((ack["retry_after_ms"] as? NSNumber)?.doubleValue ?? 500) / 1000)
@@ -497,6 +514,7 @@ public final class LiveSession {
                 self.retryDevice(after: TimeInterval((o["retry_after_ms"] as? NSNumber)?.doubleValue ?? 1000) / 1000)
             } else {
                 if samePending { self.pendingDevice = nil }
+                Self.log.error("live:device 거절 code=\((o["code"] as? String) ?? "-", privacy: .public)")
                 self.onDeviceRejected?((o["code"] as? String) ?? "rejected")
             }
         }
