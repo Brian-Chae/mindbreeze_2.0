@@ -87,9 +87,9 @@ def test_왕복에서_기존_신고_행이_보존된다(scratch_db):
                 ),
                 {"id": report, "r": reporter, "t": target},
             )
-        alembic_ok(url, "upgrade", "head")
+        alembic_ok(url, "upgrade", REV)  # 후속 SDD 가 헤드를 올려도 이 리비전 기준으로 왕복한다
         alembic_ok(url, "downgrade", "-1")
-        alembic_ok(url, "upgrade", "head")
+        alembic_ok(url, "upgrade", REV)
         with engine.connect() as conn:
             row = conn.execute(
                 sa.text("select status, acknowledged_at, decided_at, handled_by, resolution_note from chat_reports where id = :id"),

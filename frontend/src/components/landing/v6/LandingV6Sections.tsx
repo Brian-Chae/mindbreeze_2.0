@@ -12,9 +12,9 @@ function InquiryCta({ source, className = 'btn btn-cta', children }: { source: I
 
 interface RoleCard { label: string; title: string; sub: string; body: string; points: string[]; img: string; alt: string }
 const ROLES: RoleCard[] = [
-  { label: '01　기관', title: '운영의 흐름을 한눈에', sub: '사람과 일정이 연결되는 운영', body: '소속 지도자와 회원, 클래스 일정을 함께 관리하세요. 기관이 준비하는 여러 만남의 흐름을 살펴볼 수 있습니다.', points: ['지도자·회원 관리', '클래스 일정'], img: 'device-02', alt: '클래스 일정 대표 화면' },
-  { label: '02　상담사 · 지도자', title: '함께하는 시간에 집중', sub: '수업의 준비와 진행을 한곳에서', body: '클래스 일정을 준비하고 회원과 소통하세요. LINK BAND를 연결한 참여자의 몸과 마음의 흐름도 함께 살펴볼 수 있습니다.', points: ['클래스 준비·진행', '회원과 소통', '선택형 신호 확인'], img: 'device-01', alt: '진행자의 회원별 흐름 화면' },
-  { label: '03　회원', title: '오늘의 경험을 나의 기록으로', sub: '함께한 시간을 다시 돌아보세요', body: '초대나 입장 코드로 클래스에 참여하세요. 수업 후에는 자신의 클래스 기록과 제공된 리포트를 확인할 수 있습니다.', points: ['초대·코드 참여', '나의 기록', '제공된 리포트'], img: 'device-04', alt: '회원의 몸·마음 리포트 화면' },
+  { label: '01 기관', title: '운영의 흐름을 한눈에', sub: '사람과 일정이 연결되는 운영', body: '소속 지도자와 회원, 클래스 일정을 함께 관리하세요. 기관이 준비하는 여러 만남의 흐름을 살펴볼 수 있습니다.', points: ['지도자·회원 관리', '클래스 일정'], img: 'device-02', alt: '클래스 일정 대표 화면' },
+  { label: '02 상담사 · 지도자', title: '함께하는 시간에 집중', sub: '수업의 준비와 진행을 한곳에서', body: '클래스 일정을 준비하고 회원과 소통하세요. LINK BAND를 연결한 참여자의 몸과 마음의 흐름도 함께 살펴볼 수 있습니다.', points: ['클래스 준비·진행', '회원과 소통', '선택형 신호 확인'], img: 'device-01', alt: '진행자의 회원별 흐름 화면' },
+  { label: '03 회원', title: '오늘의 경험을 나의 기록으로', sub: '함께한 시간을 다시 돌아보세요', body: '초대나 입장 코드로 클래스에 참여하세요. 수업 후에는 자신의 클래스 기록과 제공된 리포트를 확인할 수 있습니다.', points: ['초대·코드 참여', '나의 기록', '제공된 리포트'], img: 'device-04', alt: '회원의 몸·마음 리포트 화면' },
 ];
 
 const FAQS: ReadonlyArray<{ q: string; a: string }> = [
@@ -53,7 +53,7 @@ export function LandingV6Sections() {
             <div className="story-note"><small>● BODY &amp; MIND</small><h3>작은 변화에도,<br />이야기가 있으니까.</h3><p>나를 이해하는 새로운 기록</p></div>
           </div>
         </div>
-        <div className="wrap points"><span>01　클래스·일정 관리</span><span>02　몸·마음 서사형 리포트</span><span>03　LINK BAND 선택 연결</span></div>
+        <div className="wrap points"><span>01 클래스·일정 관리</span><span>02 몸·마음 서사형 리포트</span><span>03 LINK BAND 선택 연결</span></div>
       </section>
 
       <section className="anywhere" aria-label="이용 환경">
@@ -213,9 +213,9 @@ export function LandingV6Sections() {
             <p className="body">진행자는 클래스와 일정을 준비하고, 회원은 초대나 입장 코드로 참여합니다. 수업 전 안내와 동의를 확인한 뒤 함께하는 시간에 집중하세요. 수업 후에는 제공된 기록과 리포트를 돌아보고 채팅으로 대화를 이어갈 수 있습니다.</p>
           </div>
           <ol className="steps">
-            <li><span>01　준비</span><h3>일정·입장 안내·동의 확인</h3></li>
-            <li><span>02　참여</span><h3>수업 진행·선택형 밴드 연결</h3></li>
-            <li><span>03　돌아보기</span><h3>기록·리포트·채팅</h3></li>
+            <li><span>01 준비</span><h3>일정·입장 안내·동의 확인</h3></li>
+            <li><span>02 참여</span><h3>수업 진행·선택형 밴드 연결</h3></li>
+            <li><span>03 돌아보기</span><h3>기록·리포트·채팅</h3></li>
           </ol>
           <div className="phones">
             <figure><img className="device" src={`${IMG}/device-05.webp`} alt="클래스 시작을 기다리는 화면" width={864} height={1816} loading="lazy" decoding="async" /><figcaption>대기실</figcaption></figure>
