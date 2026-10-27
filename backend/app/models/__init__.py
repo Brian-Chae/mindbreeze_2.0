@@ -24,6 +24,7 @@ from app.models.org_document import OrgDocument
 from app.models.qualification import Qualification
 from app.models.career import Career
 from app.models.signup_application import SignupApplication
+from app.models.org_inquiry import OrgInquiry
 from app.models.agent import (
     AgentConversation,
     AgentMessage,
@@ -188,3 +189,4 @@ __all__ += [
     "BiosignalManifestRevision", "BiosignalManifestCurrent", "BiosignalArtifact", "BiosignalFeatureAlias",
     "DisplaySnapshot", "NormalizationSnapshotRow",
 ]
+__all__ += ["OrgInquiry"]

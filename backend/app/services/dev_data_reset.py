@@ -67,6 +67,7 @@ SESSIONS_SCOPE_KEEP = frozenset({
 #   (삭제 원장은 영구 삭제 완료의 근거이므로 개발 초기화로 지우지 않는다.)
 SESSIONS_SCOPE_KEEP = SESSIONS_SCOPE_KEEP | frozenset({
     "research_signal_receipts", "object_deletion_outbox",  # SDD-244 M3: FK 없는 연구 영수증·삭제 outbox 는 초기화로 지우지 않는다
+    "org_inquiries",  # SDD-248: 공개 기관 도입 문의 운영 데이터(세션 비종속)라 초기화로 지우지 않는다
     "normalization_snapshots",  # SDD-244 M2: 전역 content-addressed 정규화 모델 snapshot(세션 비종속)
     "social_identities", "social_revoke_outbox", "account_deletion_ledger",
     "account_deletion_objects", "account_deletion_requests",
