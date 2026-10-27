@@ -34,7 +34,8 @@ export interface BandPowerView {
 
 export interface TrendPoint {
   t: number;
-  [metricKey: string]: number;
+  /** null = 미측정/무효 — 0 이 아니라 차트에서 끊어 그린다 */
+  [metricKey: string]: number | null;
 }
 
 export type PanelState = 'disconnected' | 'waiting' | 'ready' | 'error';

@@ -79,7 +79,7 @@ const RAW_PPG_SAMPLES = 200;
 /** 상담사 영상 토큰 재시도 상한(지수 백오프 5s→10s→20s→30s) */
 const LIVEKIT_RETRY_MAX = 5;
 
-type BandSnapshotSource = Pick<UseBandResult, 'connectionState' | 'scoredIndices' | 'heartRate' | 'respiratoryRate' | 'sdnn'>;
+type BandSnapshotSource = Pick<UseBandResult, 'connectionState' | 'scoredIndices' | 'heartRate' | 'respiratoryRate' | 'sdnn'> & { eegInvalidReason?: string | null };
 
 const NO_METRICS: MetricSnapshot = { focus: null, relaxation: null, emotional: null, bpm: null, respiration: null, hrv: null };
 
@@ -89,7 +89,8 @@ function buildSnapshot(band: BandSnapshotSource, metricsBlocked: boolean, remote
   const live = band.connectionState === 'connected';
   return {
     focus: live ? (band.scoredIndices?.focusIndex ?? null) : null,
-    relaxation: live ? (band.scoredIndices?.relaxationIndex ?? remoteEfficiency) : remoteEfficiency,
+    // 측정 가드: 로컬 EEG 윈도가 무효면 원격(직전) 값으로 대체하지 않는다 — 측정 중/빈칸
+    relaxation: live ? (band.eegInvalidReason ? null : (band.scoredIndices?.relaxationIndex ?? remoteEfficiency)) : remoteEfficiency,
     emotional: live ? (band.scoredIndices?.emotionalStability ?? null) : null,
     bpm: live ? band.heartRate : null,
     respiration: live ? band.respiratoryRate : null,
@@ -377,7 +378,9 @@ export function MemberClassContainer({
       if (!participantId || event.participant_id !== participantId) return;
       if (event.session_id && event.session_id !== sessionId) return;
       const efficiency = event.current_efficiency ?? event.relaxation_index ?? event.feature?.relaxation_index ?? null;
+      // 서버 feature 계약은 raw 비율 → 1회만 점수화한다. 명시적 null(무효 윈도)이면 원격값도 비운다.
       if (typeof efficiency === 'number') setRemoteEfficiency(scoreIndices({ relaxationIndex: efficiency }).relaxationIndex);
+      else if (event.feature?.relaxation_index === null || event.relaxation_index === null || event.current_efficiency === null) setRemoteEfficiency(null);
     },
     [participantId, sessionId],
   );

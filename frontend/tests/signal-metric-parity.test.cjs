@@ -50,6 +50,23 @@ function withRealBiquadFilters(fn) {
   }
 }
 
+// 측정 가드: 처리기가 같은 폴더의 .ts 모듈(measureGuard)을 상대 import 하므로, 로드 동안만 .ts 변환 훅을 둔다.
+function withTsExtension(fn) {
+  const previous = Module._extensions['.ts'];
+  Module._extensions['.ts'] = (mod, filename) => {
+    const compiled = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
+      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+    });
+    mod._compile(compiled.outputText, filename);
+  };
+  try {
+    return fn();
+  } finally {
+    if (previous) Module._extensions['.ts'] = previous;
+    else delete Module._extensions['.ts'];
+  }
+}
+
 function loadProcessor(name) {
   const filename = path.resolve(__dirname, '../src/lib/eeg', `${name}.ts`);
   const compiled = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
@@ -63,10 +80,10 @@ function loadProcessor(name) {
 }
 
 // 모듈 로드 시점에 biquadjs named export 를 실제 구현으로 고정한다(DSP 스텁 없음).
-const { EEGSignalProcessor, PPGSignalProcessor } = withRealBiquadFilters(() => ({
+const { EEGSignalProcessor, PPGSignalProcessor } = withRealBiquadFilters(() => withTsExtension(() => ({
   EEGSignalProcessor: loadProcessor('EEGSignalProcessor'),
   PPGSignalProcessor: loadProcessor('PPGSignalProcessor'),
-}));
+})));
 
 const SAMPLE_RATE = 250;
 const near = (actual, expected, tolerance = 1e-8) =>

@@ -39,10 +39,11 @@ const ACTIVITY_LABEL: Record<string, string> = {
   running: '달리기',
 };
 
-function eegValue(raw: PanelIndices | null, key: string): number {
-  if (!raw) return 0;
-  if (key === 'totalPower') return raw.totalNeuralActivity;
-  return Number(raw[key as keyof BandRawIndices] ?? 0);
+/** null 은 0 으로 바꾸지 않는다 — 호출부가 pending('--')로 표시한다 */
+function eegValue(raw: PanelIndices | null, key: string): number | null {
+  if (!raw) return null;
+  const v = key === 'totalPower' ? raw.totalNeuralActivity : raw[key as keyof BandRawIndices];
+  return typeof v === 'number' && Number.isFinite(v) ? v : null;
 }
 
 export function MetricsPanel({
@@ -74,12 +75,12 @@ export function MetricsPanel({
               label: def.label,
               unit: def.unit,
               range: def.range,
-              value: eegValue(rawIndices, def.key),
+              value: eegValue(rawIndices, def.key) ?? 0,
             }}
             selected={selectedMetrics.includes(def.key)}
             onToggle={onToggleMetric}
             bidirectional={false}
-            pending={eegPending}
+            pending={eegPending || eegValue(rawIndices, def.key) === null}
           />
         ))}
       </div>
