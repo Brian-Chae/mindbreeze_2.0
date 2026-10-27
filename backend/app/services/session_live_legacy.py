@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import logging
 import math
 import uuid
 from dataclasses import dataclass, field
@@ -32,6 +33,8 @@ from app.services.session_live_ledger import (
     insert_entry,
     lock_epoch,
 )
+
+logger = logging.getLogger(__name__)
 
 PROTOCOL_V1 = 1
 PROTOCOL_V2 = 2
@@ -436,7 +439,21 @@ def execute_v1(db: DBSession, actor: Actor, op: str, session_id: uuid.UUID, para
     if adm.action != "allow":
         raise LegacyError(adm.http_status, adm.message or "업데이트가 필요합니다", code=adm.code or "upgrade_required")
     command_id = derive_command_id(db, session_id=session_id, actor=actor, call=call, idempotency_key=idempotency_key, now=now)
-    result = apply_command(db, actor, to_legacy_command(session_id, call, command_id), now=now)
+    command = to_legacy_command(session_id, call, command_id)
+    # 핸들러가 _defer 로 등록한 commit 후 부수효과(종료 후 STT·리포트 파이프라인 적재 등)는 호출자가 꺼내 실행해야 한다.
+    # 꺼내지 않으면 REST 종료(end)에서 리포트가 영구히 생성되지 않고 콜백이 모듈 전역에 쌓인다(WS 는 run_live_command 가 실행).
+    from app.services import class_participation_service as cps
+
+    try:
+        result = apply_command(db, actor, command, now=now)
+    finally:
+        callbacks = cps.pop_after_commit(command.command_id)
+    if result.committed and not result.transient and result.status == "applied" and not result.duplicate:
+        for cb in callbacks:
+            try:
+                cb()
+            except Exception:  # noqa: BLE001 — 부수효과는 best-effort(상태는 이미 commit)
+                logger.warning("[live-v1] commit 후 부수효과 실패", exc_info=True)
     return to_legacy_response(db, call, session_id, result, actor=actor)
 
 
