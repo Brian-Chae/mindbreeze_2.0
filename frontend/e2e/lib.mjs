@@ -24,7 +24,7 @@ export async function scenario(name, fn, { mobile = false } = {}) {
   page.on('response', (r) => { if (r.status() >= 500) problems.push(`HTTP ${r.status()} ${r.url()}`); });
   const started = Date.now();
   let error = null;
-  try { await fn(page); } catch (e) { error = e.message.split('\n')[0]; }
+  try { await fn(page); } catch (e) { error = e.message.split('\n').slice(0, 4).map((l) => l.trim()).join(' / '); }
   if (!error && problems.length) error = problems.slice(0, 3).join(' | ');
   results.push({ name, ok: !error, error, ms: Date.now() - started });
   console.log(`${error ? 'FAIL' : 'PASS'}  ${name}${error ? ' — ' + error : ''}`);
@@ -53,9 +53,11 @@ export async function bodyText(page) {
 // 페이지 이동 후 본문에 기대 문구가 모두 있는지 확인 (에러 화면 감지 포함)
 export async function expectText(page, path, ...texts) {
   await go(page, path);
+  // 설정 화면의 그룹은 접힌 <details> 라 innerText 에 내용이 안 잡힌다 — 전부 펼친 뒤 읽는다.
+  await page.evaluate(() => document.querySelectorAll('details').forEach((d) => { d.open = true; }));
   const t = await bodyText(page);
   if (/Something went wrong|문제가 발생했습니다|페이지를 찾을 수 없/.test(t.slice(0, 600))) throw new Error(`${path} 에러 화면`);
-  for (const x of texts) if (!t.includes(x)) throw new Error(`${path}: "${x}" 없음`);
+  for (const x of texts) if (!t.includes(x)) throw new Error(`${path}: "${x}" 없음 (본문: ${t.slice(0, 200)})`);
   return t;
 }
 

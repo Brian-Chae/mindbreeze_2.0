@@ -7,6 +7,7 @@ import { PPGSignalProcessor } from './PPGSignalProcessor';
 import { ACCSignalProcessor } from './ACCSignalProcessor';
 import type { ProcessedEEGData } from './types/eeg';
 import { AnalysisMetricsService } from './AnalysisMetricsService';
+import { EegGapTracker, type GuardReason } from './measureGuard';
 import type { ChunkMetadata } from './blePacketParser';
 import { createLogger } from "./logger";
 import type { SampleWindow } from '../biosignal/capture-session';
@@ -89,6 +90,12 @@ export class StreamProcessor {
   private isAnalyzingEEG: boolean = false;
   /** STREAM-PERF-001: 마지막 고급 EEG 재분석 시각(performance.now()) — 최소 간격 쓰로틀 */
   private lastEegAnalysisAt: number = 0;
+  /** 측정 가드 규칙 4: 장치 tick 기반 갭 추적 + 갭 이후 재충전 중 표시 */
+  private eegGapTracker = new EegGapTracker();
+  private eegGapPending = false;
+  /** 갭/초기화마다 증가 — 갭 이전 창으로 늦게 끝난 비동기 분석이 새 null 을 덮지 못하게 한다 */
+  private eegGeneration = 0;
+  private lastGapEmitAt = 0;
 
   // 타임스탬프 동기화
   private timestampSynchronizer: TimestampSynchronizer;
@@ -294,6 +301,17 @@ export class StreamProcessor {
     this.isProcessing = true;
     
     try {
+      // 0) 측정 가드 규칙 4: 패킷 헤더 tick 으로 누락 샘플을 추정(도착 시각 사용 금지). 갭이면 링을 비우고 재충전한다.
+      if (_metadata && _metadata.numSamples > 0) {
+        const missing = this.eegGapTracker.observe(_metadata.deviceTimestampSec, _metadata.numSamples);
+        if (this.eegGapTracker.isGap(missing)) {
+          this.eegBuffer.clear();
+          this.eegGeneration++;
+          this.eegGapPending = true;
+          this.emitEegInvalid('gap');
+        }
+      }
+
       // 1) EEG CircularBuffer에 데이터 추가
       const eegDataPoints: EEGDataPoint[] = [];
       data.forEach(sample => {
@@ -318,6 +336,11 @@ export class StreamProcessor {
       
       // 3) 충분한 데이터가 있을 때 비동기로 고급 신호 처리
       const bufferData = this.eegBuffer.toArray();
+
+      // 재충전 중(링 500샘플 미만)에는 분석이 없어 갭 마커를 1초 간격으로 다시 알린다(직전 유효값 유지 방지).
+      if (this.eegGapPending && bufferData.length < 500 && startTime - this.lastGapEmitAt >= EEG_ANALYSIS_MIN_INTERVAL_MS) {
+        this.emitEegInvalid('gap');
+      }
       
       if (
         bufferData.length >= 500 &&
@@ -530,6 +553,9 @@ export class StreamProcessor {
   }
 
   clearBuffers(): void {
+    this.eegGeneration++;
+    this.eegGapTracker.reset();
+    this.eegGapPending = false;
     this.eegBuffer.clear();
     this.ppgBuffer.clear();
     this.accBuffer.clear();
@@ -553,13 +579,35 @@ export class StreamProcessor {
   /**
    * 고급 EEG 처리 (비동기) - 직접 ProcessedDataStore 업데이트
    */
+  /** 무효(invalid) EEG 방출 — 지표를 0·직전값으로 바꾸지 않고 명시적 null 로 전파한다 */
+  private emitEegInvalid(reason: GuardReason): void {
+    this.lastGapEmitAt = performance.now();
+    try {
+      void this.analysisMetricsService.processEEGInvalid(reason);
+      this.systemCallbacks.onStoreUpdate?.('updateEEGInvalid', { reason, timestamp: Date.now() });
+    } catch (error) {
+      logger.warn('EEG 무효 방출 실패', error);
+    }
+  }
+
   private async performAdvancedEEGProcessing(bufferData: EEGDataPoint[]): Promise<void> {
     // STREAM-PERF-001: Morlet 재분석은 메인스레드를 블로킹한다 — in-flight 가드로 중복 방지.
     this.isAnalyzingEEG = true;
     const featureWindow = this.featureWindow('eeg', bufferData.length);
+    const generation = this.eegGeneration;
     try {
       // bufferData는 이미 EEGDataPoint[]이므로 직접 사용
       const result = await this.eegProcessor.processEEGData(bufferData);
+
+      // 갭으로 링이 비워진 뒤 늦게 끝난 분석은 버린다(새 갭 null 을 덮어쓰지 않음)
+      if (generation !== this.eegGeneration) return;
+
+      // 측정 가드: 무효 윈도는 지표 전부 null 로 방출하고 이후 처리를 건너뛴다
+      if (result.validity === 'invalid') {
+        this.emitEegInvalid(result.reason as GuardReason);
+        return;
+      }
+      this.eegGapPending = false;
       
       // 콜백을 통해 ProcessedDataStore 업데이트
       {

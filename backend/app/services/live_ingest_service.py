@@ -93,6 +93,16 @@ def freshness_of(stream: CaptureStream, end_at: datetime, now: datetime, anchore
     return "delayed" if age_ms <= DELAYED_MAX_MS else "stale"
 
 
+_EEG_METRIC_KEYS = ("focus_raw", "relaxation_raw", "emotion_raw", "tna_raw",
+                    "focus_display", "relaxation_display", "emotion_display")
+
+
+def eeg_window_invalid(w: MetricWindow) -> bool:
+    """EEG 지표가 하나 이상 있고 전부 validity='invalid' 면 무효 창(포화·계단·lead-off 등). warming_up/gap 은 해당 없음."""
+    vs = [w.metrics[k]["validity"] for k in _EEG_METRIC_KEYS if k in w.metrics]
+    return bool(vs) and all(v == "invalid" for v in vs)
+
+
 def _feature_item(w: MetricWindow, end_at: datetime, anchored: bool) -> EEGFeatureItem:
     """MetricWindow → 기존 feature 저장 형식. invalid/warming_up/gap 은 null 보존(0 치환 금지). display 값은 raw 에서 재계산 가능해 저장하지 않는다."""
     def v(name: str) -> float | None:
@@ -226,7 +236,9 @@ def _store_windows(db: DBSession, actor: Actor, session_id: uuid.UUID, windows: 
     saved_keys: set[tuple[str, int]] = set()
     if fresh_items:
         # 같은 배치 안에 서로 다른 stream 이 섞여도 participant 단위 한 번에 저장한다(기존 저장 경로, 내부 SAVEPOINT 멱등)
-        saved = session_service._persist_feature_items(session_id, participant, fresh_items, db)  # commit 포함
+        invalid_keys = {(w.stream_id, w.sequence): "invalid" for _, w, _, _ in to_save if eeg_window_invalid(w)}
+        saved = session_service._persist_feature_items(session_id, participant, fresh_items, db,
+                                                       quality_overrides=invalid_keys)  # commit 포함
         saved_keys = {(str(i.play_group_id), int(i.second_offset)) for i in saved}
     else:
         db.rollback()

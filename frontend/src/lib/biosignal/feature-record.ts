@@ -107,6 +107,9 @@ function buildEeg(d: Obj, r: Reasons, ref: BuildInput['ref'], firstSample: numbe
     rawAnalysis: { ch1SQI: refOf('ch1SQI', obj(d.rawAnalysis).ch1SQI), ch2SQI: refOf('ch2SQI', obj(d.rawAnalysis).ch2SQI), overallSQI: refOf('overallSQI', obj(d.rawAnalysis).overallSQI) },
     // 현재 처리기는 채널별 band power를 내놓지 않는다 — 만들어 채우지 않고 사유만 남긴다.
     channelBandPowers: null, channelBandPowers_reason: NOT_EMITTED,
+    // 측정 가드 결과(무효 창은 지표가 null). 처리기가 내지 않은 과거 입력은 valid/null 로 본다.
+    validity: d.validity === 'invalid' ? 'invalid' : 'valid',
+    reason: typeof d.reason === 'string' ? d.reason : null,
   };
   void firstSample;
   const idx = out as { indices: Record<string, number | null>; bandPowers: Record<string, number | null> };

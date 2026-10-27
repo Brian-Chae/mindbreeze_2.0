@@ -24,7 +24,7 @@ import os
 import statistics
 from typing import Optional, Sequence
 
-from app.services.normalization_score import brain_rest_score, sigmoid_score
+from app.services.normalization_score import TNA_OUTLIER_MAX, brain_rest_score, sigmoid_score
 
 logger = logging.getLogger(__name__)
 
@@ -334,6 +334,15 @@ def evaluate_session_quality(windows_total: int, windows_valid: int,
     return "valid", "OK", reliability, usable
 
 
+def _drop_tna_outliers(values: Sequence[float]) -> list:
+    """TNA 극단값(>TNA_OUTLIER_MAX, 입력 불량 의심)을 None 으로 바꿔 평균에서 제외한다. 0 으로 바꾸지 않는다."""
+    out = []
+    for v in values:
+        f = _finite(v)
+        out.append(None if f is not None and f > TNA_OUTLIER_MAX else v)
+    return out
+
+
 def compute_session_metrics(
     *,
     focus_index: Sequence[float],
@@ -358,6 +367,7 @@ def compute_session_metrics(
     ★ 어떤 경우에도 None 을 0 으로 치환하지 않는다.
     """
     c = constants or get_constants()
+    total_neural_activity = _drop_tna_outliers(total_neural_activity)
 
     n = windows_total if windows_total is not None else len(focus_index)
     valid = windows_valid if windows_valid is not None else n

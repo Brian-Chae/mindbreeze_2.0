@@ -7,9 +7,9 @@
   },
   "meta": {
     "filter_mode": "legacy_fallback",
-    "fallback_warnings": 3542,
+    "fallback_warnings": 3494,
     "packets": 4500,
-    "eeg_emissions": 140,
+    "eeg_emissions": 128,
     "ppg_emissions": 1491,
     "base_ms": 1760000000000
   },
@@ -23,12 +23,12 @@
       "sha256": "5dccd5f3ec2941d5bd10a8f0397c6f1b6f56f599ba9e2313d6da44879522e741"
     },
     "eeg_psd_bandpower": {
-      "count": 140,
-      "sha256": "bb6aab31a93e3d9410039ed1b70338d34515d697bc1fd7076f1e57c18797c414"
+      "count": 128,
+      "sha256": "11d62741ae83eacff7b470c7ecc479e8bdfdf56c0ffc8c9c13f36f93e801e9a8"
     },
     "eeg_raw_indices": {
-      "count": 140,
-      "sha256": "26e24e15a61239275533e22e61988a5fe52a6851dacd354a4d606fa066d71940"
+      "count": 128,
+      "sha256": "b99a6a1ca8babe6ccbcc71aa4d8f2f88bc692f895d665439816d092dc3632b34"
     },
     "ppg_peaks_rr": {
       "count": 1491,
@@ -39,8 +39,8 @@
       "sha256": "ccfe7e5fae4a44447c9906ac8a709f87aaf3445a18d9a5a135532c7d565bf3be"
     },
     "display": {
-      "count": 140,
-      "sha256": "e6fd3e5c77cc81f3358cc0db10d9cedffae6c3ec23f8e72f86a84bbabe3dafb4"
+      "count": 128,
+      "sha256": "c5966676ce3d2c36e788ef10e6a2f8bc84ce71c3fa777c50a4cd3cb3e65bc385"
     },
     "acc": {
       "count": 1491,

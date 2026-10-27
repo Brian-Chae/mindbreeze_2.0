@@ -131,7 +131,17 @@ export class NativeMeasurementFacade {
       const h = await this.plugin.addListener(name, (e) => { if (token === this.attachToken) this.onEvent(e); });
       this.handles.push(h);
     }
-    const snap = normalizeSnapshot(await this.plugin.getMeasurementSnapshot({ sessionId }));
+    // iOS 는 manager 가 setNativeOwnership(true) 이후에야 생겨, 첫 실행의 attach 시점에는 snapshot 이 not_active 로 거절된다.
+    // 이는 '아직 측정 전'일 뿐이므로 listener 만 붙이고 진행해야 한다(throw 하면 startForSession 이 영영 불리지 않는다).
+    let snap: MeasurementSnapshot;
+    try {
+      snap = normalizeSnapshot(await this.plugin.getMeasurementSnapshot({ sessionId }));
+    } catch (err) {
+      const code = (err as { code?: unknown; message?: unknown } | null)?.code ?? (err as { message?: unknown } | null)?.message;
+      if (code !== 'not_active') throw err;
+      console.info('[native-measurement] attach: 측정 전(not_active) — listener 만 연결');
+      return { seq: '0', managerGeneration: '0', sessionId, state: 'IDLE' } as unknown as MeasurementSnapshot;
+    }
     if (token !== this.attachToken) return snap;
     this.accept(snap);
     return snap;
@@ -206,13 +216,17 @@ export class NativeMeasurementFacade {
     platform: 'ios' | 'android'; sessionId: string; requestId: string; accountId: string; apiBase: string; socketBase: string;
     instanceId: string; deviceId: string | null; tokens: { accessToken: string; refreshToken: string }; configHash?: string;
     model?: NativeModelPayload | null;
-    /** Android: 네이티브가 밴드를 잡기 전에 JS(BLE 플러그인) 연결을 놓는다. 같은 링크에 두 클라이언트가 CCCD 를 쓰면 PPG/ACC 구독이 깨진다. */
+    /** Android·iOS: 네이티브가 밴드를 잡기 전에 JS(BLE 플러그인) 연결을 놓는다. 같은 링크에 두 클라이언트가 CCCD 를 쓰면 PPG/ACC 구독이 깨진다. */
     releaseJsBand?: () => Promise<unknown>;
   }): Promise<StartMeasurementResult> {
     const inflight = this.startFlights.get(a.requestId);
     if (inflight) return inflight;
     const p = (async () => {
       // Capacitor 프록시는 구현 없는 메서드도 truthy 다 — 존재 검사로는 못 거른다. 이 메서드는 iOS 에만 있다.
+      // iOS 도 JS(BLE 플러그인) 연결을 먼저 실제로 끊는다 — 소유 플래그만 내리면 JS 가 같은 밴드를 계속 잡아 native 와 구독이 겹친다.
+      if (a.platform === 'ios' && a.releaseJsBand) {
+        try { await a.releaseJsBand(); } catch { /* 계속 */ }
+      }
       if (a.platform === 'ios' && this.plugin.setJSBandOwnership) {
         const r = await this.plugin.setJSBandOwnership({ owning: false });
         if (!r.accepted) throw new Error('js_band_release_failed');
@@ -244,6 +258,12 @@ export class NativeMeasurementFacade {
       if (!r || !ok(r.eegFp1) || !ok(r.eegFp2) || !ok(r.ppgRed) || !ok(r.ppgIr)) return null;
       return { eegFp1: r.eegFp1, eegFp2: r.eegFp2, ppgRed: r.ppgRed, ppgIr: r.ppgIr };
     } catch { return null; }
+  }
+
+  /** 네이티브 소유 밴드 재연결(iOS). 미지원 플랫폼·수집 전·실패는 false — 호출자가 JS BLE 로 폴백하지 않는다. */
+  async reconnectBand(platform: string): Promise<boolean> {
+    if (platform !== 'ios' || !this.plugin.reconnectBand) return false;
+    try { return (await this.plugin.reconnectBand()).accepted === true; } catch { return false; }
   }
 
   /** 토큰 모양 필드를 실어 버린 bridge 이벤트 수(진단용) */

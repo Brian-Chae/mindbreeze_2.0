@@ -384,3 +384,22 @@ def test_shadow_비교는_락을_잡지_않는다(world, maker):
     finally:
         holder.rollback()
         holder.close()
+
+
+def test_구경로_전이의_commit후_부수효과를_실행한다(world, db):
+    """REST(v1 호출)로 종료해도 handler 가 _defer 한 종료 후 파이프라인(리포트 생성 적재)이 실행돼야 한다."""
+    from app.services import class_participation_service as cps
+
+    ran: list[str] = []
+
+    def end_handler(ctx):
+        ctx.entity_version = 1
+        cps._defer(ctx, lambda: ran.append("pipeline"))
+
+    slc.register_handler("session.end", end_handler)
+    try:
+        leg.execute_v1(db, world.host(), "transition", world.session_id, {"action": "end"})
+    finally:
+        slc.register_handler("session.end", slc._handle_session_end)
+    assert ran == ["pipeline"]
+    assert cps._AFTER_COMMIT == {}

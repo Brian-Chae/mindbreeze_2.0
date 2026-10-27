@@ -57,16 +57,16 @@ interface ScoreSums {
 
 interface BodyPoint {
   t: number;
-  bpm: number;
-  respiratoryRate: number;
-  sdnn: number;
+  bpm: number | null;
+  respiratoryRate: number | null;
+  sdnn: number | null;
 }
 
 interface MindPoint {
   t: number;
-  relaxation: number;
-  focus: number;
-  emotional: number;
+  relaxation: number | null;
+  focus: number | null;
+  emotional: number | null;
 }
 
 interface Props {
@@ -190,17 +190,17 @@ export function PlaygroundMeditationPanel({ band, connected }: Props) {
       setBodySeries((prev) =>
         pushRing(prev, {
           t,
-          bpm: heartRate ?? 0,
-          respiratoryRate: respiratoryRate ?? 0,
-          sdnn: sdnn ?? 0,
+          bpm: heartRate ?? null,
+          respiratoryRate: respiratoryRate ?? null,
+          sdnn: sdnn ?? null,
         }),
       );
       setMindSeries((prev) =>
         pushRing(prev, {
           t,
-          relaxation: relaxation ?? 0,
-          focus: focus ?? 0,
-          emotional: emotional ?? 0,
+          relaxation: relaxation ?? null,
+          focus: focus ?? null,
+          emotional: emotional ?? null,
         }),
       );
 

@@ -187,7 +187,9 @@
         }
       },
       "channelBandPowers": null,
-      "channelBandPowers_reason": "not_emitted_by_current_processor"
+      "channelBandPowers_reason": "not_emitted_by_current_processor",
+      "validity": "valid",
+      "reason": null
     },
     "ppg": null,
     "acc": null,

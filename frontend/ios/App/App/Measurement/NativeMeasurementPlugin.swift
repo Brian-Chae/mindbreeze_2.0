@@ -20,6 +20,7 @@ public class NativeMeasurementPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "setNativeOwnership", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "registerCredential", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setJSBandOwnership", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "reconnectBand", returnType: CAPPluginReturnPromise),
     ]
 
     private var observers: [NSObjectProtocol] = []
@@ -113,6 +114,14 @@ public class NativeMeasurementPlugin: CAPPlugin, CAPBridgedPlugin {
         let points = min(max(call.getInt("points") ?? 120, 2), 500)
         host.queue.async { [host] in
             call.resolve(host.manager?.rawPreview(points: points) ?? ["eegFp1": [Double](), "eegFp2": [Double](), "ppgRed": [Double](), "ppgIr": [Double]()])
+        }
+    }
+
+    /// '다시 연결' 버튼: 네이티브가 밴드를 소유한 동안 JS BLE 가 아니라 네이티브 링크를 재연결한다.
+    @objc func reconnectBand(_ call: CAPPluginCall) {
+        host.queue.async { [host, weak self] in
+            guard let m = host.manager else { call.reject("not_active", "not_active"); return }
+            do { call.resolve(try m.reconnectBand()) } catch { self?.fail(call, error) }
         }
     }
 
