@@ -24,8 +24,19 @@ def _mask_email(email: str) -> str:
     return f"{head}{'*' * max(len(local) - 2, 1)}@{domain}"
 
 
-def _send_email(to_email: str, subject: str, body_text: str, body_html: str | None = None) -> bool:
-    """Resend로 이메일 발송. 실패 시 로그만 남기고 False 반환."""
+def _send_email(
+    to_email: str | list[str],
+    subject: str,
+    body_text: str,
+    body_html: str | None = None,
+    reply_to: str | None = None,
+) -> bool:
+    """Resend로 이메일 발송. 실패 시 로그만 남기고 False 반환.
+
+    to_email 은 단일 주소 또는 주소 목록(SDD-248). reply_to 는 선택.
+    """
+    recipients = [to_email] if isinstance(to_email, str) else list(to_email)
+    to_email = ", ".join(_mask_email(r) for r in recipients) if len(recipients) != 1 else recipients[0]
     if settings.debug and not settings.resend_api_key:
         # SDD-016: 본문에는 초대 토큰·재설정 링크·OTP 등 비밀 값이 들어있으므로
         # 디버그 모드라도 본문을 로그에 남기지 않는다. 수신자와 제목, 길이만 기록한다.
@@ -37,10 +48,12 @@ def _send_email(to_email: str, subject: str, body_text: str, body_html: str | No
 
     payload: dict = {
         "from": settings.resend_from_email,
-        "to": [to_email],
+        "to": recipients,
         "subject": subject,
         "text": body_text,
     }
+    if reply_to:
+        payload["reply_to"] = reply_to
     if body_html:
         payload["html"] = body_html
 
@@ -653,6 +666,52 @@ def send_signup_application_notice(
         f'<p><a href="{escape(admin_link, quote=True)}">관리자 신청 관리 화면에서 확인</a></p>'
     )
     return _send_email(settings.signup_notice_email, subject, body_text, body_html)
+
+
+def send_org_inquiry_notice(
+    *,
+    recipients: list[str],
+    org_name: str,
+    contact_name: str,
+    email: str,
+    phone: str,
+    org_type_label: str,
+    expected_users: int | None,
+    band_interest: bool | None,
+    message: str | None,
+    received_at_kst: str,
+    inquiry_id: str,
+) -> bool:
+    """기관 도입 문의 운영 알림 메일 (SDD-248).
+
+    - 제목 `[MIND BREEZE] 기관 도입 문의 — {기관명}`, reply_to=문의자 이메일.
+    - IP 는 수집·기재하지 않는다. 모든 값은 HTML 이스케이프한다.
+    """
+    from html import escape
+
+    subject = f"[MIND BREEZE] 기관 도입 문의 — {org_name}"
+    users_txt = "미입력" if expected_users is None else f"{expected_users}명"
+    band_txt = "미입력" if band_interest is None else ("관심 있음" if band_interest else "관심 없음")
+    msg_txt = (message or "").strip() or "없음"
+    rows = [
+        ("접수 번호", inquiry_id),
+        ("접수 일시(KST)", received_at_kst),
+        ("기관명", org_name),
+        ("기관 유형", org_type_label),
+        ("담당자", contact_name),
+        ("이메일", email),
+        ("연락처", phone),
+        ("예상 이용 인원", users_txt),
+        ("LINK BAND 관심", band_txt),
+        ("문의 내용", msg_txt),
+    ]
+    body_text = "새 기관 도입 문의가 접수되었습니다.\n\n" + "\n".join(f"· {k}: {v}" for k, v in rows) + "\n"
+    items = "".join(
+        f"<li>{escape(k)}: " + (f'<span style="white-space:pre-wrap">{escape(v)}</span>' if k == "문의 내용" else escape(v)) + "</li>"
+        for k, v in rows
+    )
+    body_html = f"<p>새 <strong>기관 도입 문의</strong>가 접수되었습니다.</p><ul>{items}</ul>"
+    return _send_email(recipients, subject, body_text, body_html, reply_to=email)
 
 
 def send_report_email(to_email: str, report_link: str) -> bool:

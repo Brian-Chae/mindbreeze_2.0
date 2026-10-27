@@ -173,6 +173,9 @@ class Settings(BaseSettings):
     # 클라이언트 입력으로 바꿀 수 없다.
     signup_notice_email: str = "brian.chae@looxidlabs.com"
 
+    # SDD-248: 기관 도입 문의 운영 알림 수신자 — 쉼표로 여러 명 지정 가능(서버 고정값).
+    org_inquiry_notify_email: str = "brian.chae@looxidlabs.com"
+
     # [MB261026][FIX] D4: 채팅 신고 운영 알림 전용 수신 주소. 값은 OPS 가 SSM 으로 넣는다(코드에 실주소 없음).
     #   비어 있으면 메일 outbox 를 만들지 않고 경고 로그만 남긴다 — 신고는 관리자 화면(/admin/chat-reports)에서 확인.
     moderation_notice_email: str = ""

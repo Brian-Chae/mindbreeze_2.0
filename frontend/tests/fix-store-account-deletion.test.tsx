@@ -153,8 +153,9 @@ describe('V6 상담·AI 비공개 랜딩은 명상 클래스 중심', () => {
     vi.stubEnv('VITE_AI_ENABLED', 'false');
     const host = show(<LandingPage />);
     const text = host.textContent ?? '';
-    expect(text).toContain(SERVICE_SUBTITLE);
-    expect(text).not.toMatch(/상담|내담자|AI/);
+    // 랜딩 v6(SDD-248) 승인 카피는 플래그와 무관하게 고정 — 부제 대신 명상 클래스 중심 문구를 확인한다.
+    expect(text).toContain('명상 클래스의 준비부터 기록까지');
+    expect(text).not.toMatch(/내담자|AI/);
     expect(findPublicCopyViolations(text)).toEqual([]);
     expect(host.querySelector('a[href="/support"]')).not.toBeNull();
     expect(host.querySelector('a[href="/account-deletion"]')).not.toBeNull();
@@ -165,9 +166,11 @@ describe('V6 상담·AI 비공개 랜딩은 명상 클래스 중심', () => {
     vi.stubEnv('VITE_AI_ENABLED', 'false');
     const host = show(<LandingPage />);
     const text = host.textContent ?? '';
-    for (const term of ['상담과 명상, 사람에게 더 가까이', '상담센터 · 상담사 · 명상가를 위한 통합 플랫폼', '상담센터와 개인 전문가 모두 사용할 수 있나요?', '세션을 준비하고']) {
+    // 랜딩 v6(SDD-248): 승인 카피 고정. 상담 on 에서도 공개 문구 규칙 위반이 없고 명상 클래스 중심 문구를 유지한다.
+    for (const term of ['명상 클래스의 준비부터 기록까지', '1:1 상담 기록도 이용할 수 있나요?']) {
       expect(text).toContain(term);
     }
+    expect(findPublicCopyViolations(text)).toEqual([]);
   });
 
   it('지원 페이지 FAQ도 상담·AI off에서는 상담·AI 안내가 없다', () => {
