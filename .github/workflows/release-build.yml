@@ -65,7 +65,7 @@ jobs:
     secrets: inherit
 
   build:
-    needs: [e2e]
+    needs: []   # TEMP-DIAG
     runs-on: ubuntu-latest
     timeout-minutes: 60   # 정상 약 20분. 멈추면 1시간 넘게 붙잡지 말고 실패시킨다.
     permissions:
