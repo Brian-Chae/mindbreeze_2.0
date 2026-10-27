@@ -28,6 +28,12 @@ class BandGattClient(
     private var stopped = false
     private val pending = ArrayList<BluetoothGattCharacteristic>()
     private var sequencer: SubscribeSequencer? = null
+    private var watchdogGen = 0L
+    private val watchdog = LinkWatchdog(
+        post = { delay, fn -> val r = Runnable { fn() }; handler.postDelayed(r, delay); { handler.removeCallbacks(r) } },
+        now = { android.os.SystemClock.elapsedRealtime() },
+        onTimeout = { reason -> onLinkTimeout(watchdogGen, reason) },
+    )
 
     private val targets = listOf(
         Triple(Sensor.EEG, UUID.fromString(BandUuids.EEG_SERVICE), UUID.fromString(BandUuids.EEG_CHAR)),
@@ -40,6 +46,7 @@ class BandGattClient(
     fun stop() {
         stopped = true
         sequencer?.stop(); sequencer = null
+        watchdog.stop()
         handler.removeCallbacksAndMessages(null)
         engine.fence.release(gen)
         gatt?.let { it.disconnect(); it.close() }
@@ -49,12 +56,26 @@ class BandGattClient(
     private fun connect() {
         if (stopped) return
         sequencer?.stop(); sequencer = null
+        watchdog.stop()
         gatt?.close()
         gen = engine.fence.acquire()
         val myGen = gen
+        watchdogGen = myGen
+        watchdog.armStage("connect", LinkWatchdog.CONNECT_TIMEOUT_MS)
         val adapter = (ctx.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
         val dev = adapter.getRemoteDevice(address)
         gatt = dev.connectGatt(ctx, false, callback(myGen), BluetoothDevice.TRANSPORT_LE)
+    }
+
+    /** 워치독 타임아웃: 현재 세대일 때만 링크를 닫고 기존 재연결 경로(백오프·gen fence)를 탄다. */
+    private fun onLinkTimeout(timeoutGen: Long, reason: String) {
+        if (stopped || !engine.fence.isCurrent(timeoutGen)) return
+        Log.w(TAG, "link watchdog: $reason — reconnect")
+        watchdog.stop()
+        sequencer?.stop(); sequencer = null
+        gatt?.let { it.disconnect(); it.close() }
+        gatt = null
+        scheduleReconnect()
     }
 
     private fun scheduleReconnect() {
@@ -70,8 +91,11 @@ class BandGattClient(
             if (!engine.fence.isCurrent(myGen)) { g.close(); return }
             if (newState == BluetoothProfile.STATE_CONNECTED && status == BluetoothGatt.GATT_SUCCESS) {
                 g.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
-                g.requestMtu(247)
+                watchdog.armStage("mtu", LinkWatchdog.MTU_TIMEOUT_MS)
+                // requestMtu 가 거절(false)되면 onMtuChanged 가 오지 않는다 → 서비스 발견으로 바로 진행한다.
+                if (!g.requestMtu(247)) { Log.w(TAG, "requestMtu rejected — discoverServices"); startDiscovery(g) }
             } else {
+                watchdog.stop()
                 g.close()
                 if (gatt === g) gatt = null
                 scheduleReconnect()
@@ -80,17 +104,25 @@ class BandGattClient(
 
         override fun onMtuChanged(g: BluetoothGatt, mtu: Int, status: Int) {
             if (!engine.fence.isCurrent(myGen)) return
-            g.discoverServices()
+            Log.i(TAG, "mtu changed mtu=$mtu status=$status")  // status 실패여도 기본 MTU 로 진행한다
+            startDiscovery(g)
         }
 
         override fun onServicesDiscovered(g: BluetoothGatt, status: Int) {
             if (!engine.fence.isCurrent(myGen)) return
+            watchdog.stageDone()
+            if (status != BluetoothGatt.GATT_SUCCESS) {
+                Log.w(TAG, "services discovery failed status=$status")
+                onLinkTimeout(myGen, "discover_status:$status")
+                return
+            }
             pending.clear()
             for ((_, s, c) in targets) {
                 g.getService(s)?.getCharacteristic(c)?.let { pending.add(it) }
             }
             Log.i(TAG, "services discovered: ${pending.size}/${targets.size} characteristics")
-            if (pending.size < targets.size) { g.disconnect(); return }
+            if (pending.size < targets.size) { onLinkTimeout(myGen, "missing_characteristics"); return }
+            watchdog.armStage("subscribe", LinkWatchdog.SUBSCRIBE_TIMEOUT_MS)
             subscribeAll(g, myGen)
         }
 
@@ -121,9 +153,15 @@ class BandGattClient(
             count = chars.size,
             write = { i -> writeCccd(g, chars[i]) },
             post = { delay, fn -> val r = Runnable { if (engine.fence.isCurrent(myGen)) fn() }; handler.postDelayed(r, delay); { handler.removeCallbacks(r) } },
-            onDone = { Log.i(TAG, "all subscribed"); backoffMs = 1000L; onState(MeasurementState.CAPTURING) },
+            onDone = { Log.i(TAG, "all subscribed"); backoffMs = 1000L; watchdog.stageDone(); watchdog.startSilence(); onState(MeasurementState.CAPTURING) },
             onFail = { reason -> Log.w(TAG, "subscribe failed: $reason"); if (engine.fence.isCurrent(myGen)) g.disconnect() },
         ).also { it.start() }
+    }
+
+    /** onMtuChanged / requestMtu 거절 / 둘 다 안 오는 경우(워치독)에서 서비스 발견을 정확히 한 번 시작한다. */
+    private fun startDiscovery(g: BluetoothGatt) {
+        watchdog.armStage("discover", LinkWatchdog.DISCOVER_TIMEOUT_MS)
+        if (!g.discoverServices()) { Log.w(TAG, "discoverServices rejected"); onLinkTimeout(watchdogGen, "discover_rejected") }
     }
 
     private fun writeCccd(g: BluetoothGatt, c: BluetoothGattCharacteristic): Boolean {
@@ -142,6 +180,7 @@ class BandGattClient(
             BandUuids.ACC_CHAR -> Sensor.ACC
             else -> return
         }
+        if (engine.fence.isCurrent(myGen)) watchdog.touch()
         engine.onNotification(myGen, sensor, bytes.copyOf())
         MeasurementManager.ensureWake(ctx)
     }
