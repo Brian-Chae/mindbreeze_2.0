@@ -8,7 +8,8 @@ export interface MetricView {
   label: string;
   unit: string;
   range: [number, number];
-  value: number;
+  /** null 이면 값 없음 — 게이지는 0 으로 그리지 않고 '--' 로 표시 */
+  value: number | null;
   stale?: boolean;
 }
 
@@ -60,7 +61,10 @@ export function MetricGauge({
   bidirectional = false,
 }: MetricGaugeProps) {
   const [min, max] = metric.range;
-  const ratio = max > min ? Math.min(1, Math.max(0, (metric.value - min) / (max - min))) : 0;
+  const ratio =
+    metric.value !== null && max > min
+      ? Math.min(1, Math.max(0, (metric.value - min) / (max - min)))
+      : 0;
   const interactive = typeof onToggle === 'function';
 
   const body = (
@@ -75,7 +79,7 @@ export function MetricGauge({
             pending ? 'text-[#9A9BA8]' : metric.stale ? 'text-[#6F6F6F]' : 'text-[#1F1F1F]',
           ].join(' ')}
         >
-          {pending ? '--' : formatValue(metric.value)}
+          {pending || metric.value === null ? '--' : formatValue(metric.value)}
         </span>
         {metric.unit && !pending && (
           <span className="text-xs text-[#6F6F6F]">{metric.unit}</span>

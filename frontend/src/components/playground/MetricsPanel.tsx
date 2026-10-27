@@ -75,7 +75,7 @@ export function MetricsPanel({
               label: def.label,
               unit: def.unit,
               range: def.range,
-              value: eegValue(rawIndices, def.key) ?? 0,
+              value: eegValue(rawIndices, def.key),
             }}
             selected={selectedMetrics.includes(def.key)}
             onToggle={onToggleMetric}
