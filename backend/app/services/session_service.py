@@ -3507,8 +3507,13 @@ def _persist_feature_items(
     participant: SessionParticipant,
     features: list[EEGFeatureItem],
     db: DBSession,
+    quality_overrides: dict[tuple, str] | None = None,
 ) -> list[EEGFeatureItem]:
-    """저장에 성공한 항목만 반환해 중복 입력의 미저장 값이 라이브로 발행되지 않게 한다."""
+    """저장에 성공한 항목만 반환해 중복 입력의 미저장 값이 라이브로 발행되지 않게 한다.
+
+    quality_overrides: {(play_group_id, second_offset): quality}. EEG 무효(invalid) 창은 sqi 가 높아도
+    quality='invalid' 로 저장해 리포트 valid/coverage 집계에서 빠지게 한다(measure-guard).
+    """
     # SDD-026: 멱등 키를 (play_group_id, window_index) 로 확장한다.
     # pause/resume 으로 second_offset 이 0 부터 재시작해도 실행 세그먼트(play_group_id)가 다르면
     # 별개 키가 되어 skip 되지 않는다(데이터 보존). 레거시(play_group_id=None)는 기존과 동일 동작.
@@ -3547,7 +3552,7 @@ def _persist_feature_items(
             participant_id=participant.id,
             play_group_id=play_group_id,
             window_index=f.second_offset,
-            quality=_quality_from_signal(f.signal_quality),
+            quality=(quality_overrides or {}).get(key) or _quality_from_signal(f.signal_quality),
             device_timestamp_ms=f.timestamp,
             delta_power=f.delta_power,
             theta_power=f.theta_power,
