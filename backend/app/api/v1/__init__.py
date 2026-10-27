@@ -3,7 +3,7 @@
 from fastapi import APIRouter
 from app.config import settings
 from app.api.v1 import normalization
-from app.api.v1 import auth, client, client_portal, credential, dashboard, onboarding, org, org_public, session, chat, audio, video, records, reports, admin, notifications, signup_applications, research_export
+from app.api.v1 import auth, client, client_portal, credential, dashboard, onboarding, org, org_public, session, chat, audio, video, records, reports, admin, notifications, signup_applications, research_export, org_inquiries
 from app.api.v1 import class_audio
 from app.api.v1 import admin_chat_reports
 # SDD-214: 클래스·상담 읽기 API
@@ -48,6 +48,7 @@ router.include_router(admin_chat_reports.router)
 router.include_router(research_export.router)
 router.include_router(signup_applications.router)
 router.include_router(signup_applications.admin_router)
+router.include_router(org_inquiries.router)
 router.include_router(notifications.router)
 router.include_router(dashboard.router)
 router.include_router(org_public.router)
