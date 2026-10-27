@@ -777,8 +777,9 @@ impl Core {
         let eeg_state: Result<&LatestEeg, (&'static str, &'static str)> = match &eeg_at {
             None => Err(("warming_up", "insufficient_window")),
             Some(e) if end_us.saturating_sub(e.end_us) > STALE_US => Err(("gap", "no_recent_eeg")),
-            Some(_) if both_off => Err(("invalid", "leadoff")),
+            // 계약 §2 순서(saturated→step→leadoff): 윈도 가드 사유가 현재 접촉 상태(both_off)보다 우선한다.
             Some(e) if e.guard.is_some() => Err(("invalid", e.guard.unwrap().code())),
+            Some(_) if both_off => Err(("invalid", "leadoff")),
             Some(e) => Ok(e),
         };
         let ppg_fresh = ppg_at.as_ref().filter(|p| end_us.saturating_sub(p.end_us) <= STALE_US);

@@ -131,3 +131,31 @@ fn small_gap_within_limit_is_not_invalid() {
     let fr = run(400, |_, _, _, _| {}, |_| false);
     assert!(fr.iter().all(|f| f.metrics.tna_raw.reason.as_deref() != Some("gap")));
 }
+
+#[test]
+fn saturation_takes_precedence_over_frame_level_leadoff() {
+    // 계약 §2 순서(saturated→step→leadoff): 포화 + 양 채널 lead-off 가 겹쳐도 reason 은 saturated.
+    let fr = run(
+        600,
+        |i, a, _, lo| {
+            if (5000..5300).contains(&i) {
+                *a = 336_083.0;
+                *lo = 0x05;
+            }
+        },
+        |_| false,
+    );
+    let sat = fr.iter().filter(|f| f.metrics.tna_raw.reason.as_deref() == Some("saturated")).count();
+    assert!(sat > 0, "포화 reason 없음");
+    // 포화가 윈도에 남아 있는 동안 현재 접촉이 양쪽 off 여도 leadoff 로 덮어쓰지 않는다.
+    let both_off_leadoff = fr
+        .iter()
+        .filter(|f| f.contact.fp1 == "leadoff" && f.contact.fp2 == "leadoff" && f.metrics.tna_raw.reason.as_deref() == Some("leadoff"))
+        .count();
+    let both_off_sat = fr
+        .iter()
+        .filter(|f| f.contact.fp1 == "leadoff" && f.contact.fp2 == "leadoff" && f.metrics.tna_raw.reason.as_deref() == Some("saturated"))
+        .count();
+    assert!(both_off_sat > 0, "양 채널 off 인 포화 프레임이 없어 시험이 무의미");
+    assert_eq!(both_off_leadoff, 0, "포화 창이 leadoff 로 표기됨");
+}
