@@ -152,7 +152,7 @@ await scenario('[접근통제] 없는 계정 로그인 → 오류 안내 (E2E �
 // ── 플랫폼 관리자 API (2) ──────────────────────────────
 await scenario('[플랫폼관리자] 계정 목록 조회 (E2E 계정 포함)', async () => {
   const t = await apiLogin('platform_admin');
-  const r = await fetch(`${API}/admin/users?limit=200`, { headers: { Authorization: `Bearer ${t}` } });
+  const r = await fetch(`${API}/admin/users?q=e2e-client%40&size=100`, { headers: { Authorization: `Bearer ${t}` } });
   if (!r.ok) throw new Error(`admin/users ${r.status}`);
   if (!JSON.stringify(await r.json()).includes('e2e-client@')) throw new Error('E2E 계정이 목록에 없음');
 });
