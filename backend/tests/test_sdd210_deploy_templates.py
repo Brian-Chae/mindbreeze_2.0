@@ -225,7 +225,8 @@ def test_env_매니페스트_키가_Settings_필드와_정합한다():
     from app.config import Settings
 
     fields = {n.upper() for n in Settings.model_fields}
-    extra_ok = {"ALERT_SNS_TOPIC_ARN", "DATABASE_URL_SYNC", "AGENT_LLM_MODEL", "DEEPSEEK_API_KEY"}
+    extra_ok = {"ALERT_SNS_TOPIC_ARN", "DATABASE_URL_SYNC", "AGENT_LLM_MODEL", "DEEPSEEK_API_KEY",
+                "ORG_INQUIRY_NOTIFY_EMAIL"}  # SDD-248 예정 키(Settings 필드 추가 전 매니페스트 선반영)
     for row in render_env.load_manifest():
         assert row["key"] in fields or row["key"] in extra_ok, row["key"]
 
@@ -375,3 +376,16 @@ def test_클래스_스위치는_기본_미설정이며_명시한_값만_환경�
     assert all(f"{key}=" not in body for key in flags)
     body, _ = render_env.build_env({**_good_params(), **{key: "false" for key in flags}})
     assert all(f'{key}="false"' in body for key in flags)
+
+
+def test_애플_개인키는_이스케이프_한줄로_렌더되고_복원된다(monkeypatch):
+    """APPLE_PRIVATE_KEY 표준 = \\n 이스케이프 한 줄. env 렌더(개행 금지) → 앱 복원(_load_private_key) 왕복 확인."""
+    pem = "-----BEGIN PRIVATE KEY-----\nABCDEF\n-----END PRIVATE KEY-----"
+    escaped = pem.replace("\n", "\\n")
+    body, _ = render_env.build_env({**_good_params(), "APPLE_PRIVATE_KEY": escaped, "ACCOUNT_DELETION_SWEEP_ENABLED": "true"})
+    assert "APPLE_PRIVATE_KEY=" in body and "ACCOUNT_DELETION_SWEEP_ENABLED=\"true\"" in body
+    from app.config import settings
+    from app.services import apple_auth_service as svc
+
+    monkeypatch.setattr(settings, "apple_private_key", escaped)
+    assert svc._load_private_key() == pem
