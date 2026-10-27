@@ -1,12 +1,34 @@
+import { useEffect, useRef, useState } from 'react';
 import { supportQuestions } from '../../lib/support-faq';
 import { Link } from 'react-router-dom';
-import { Arrow, SectionHeading, sectionContainer } from './landing-ui';
+import { Arrow, SectionHeading, primaryButton, sectionContainer } from './landing-ui';
+import { OrgInquiryForm } from './OrgInquiryForm';
 
+
+function OrgInquiryDialog({ onClose }: { onClose: () => void }) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    closeRef.current?.focus();
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  return <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:items-center" onClick={onClose}>
+    <div role="dialog" aria-modal="true" aria-labelledby="org-inquiry-title" className="relative w-full max-w-[560px] rounded-3xl bg-white p-6 sm:p-8" onClick={(event) => event.stopPropagation()}>
+      <button ref={closeRef} type="button" aria-label="닫기" onClick={onClose} className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full text-[#5F0080] hover:bg-[#F6F1F8]">✕</button>
+      <h2 id="org-inquiry-title" className="pr-10 text-2xl font-bold tracking-[-0.04em] text-[#2F2335]">기관 도입 문의</h2>
+      <p className="mb-6 mt-2 text-sm leading-6 text-[#7D6D86]">남겨주신 내용을 확인한 뒤 영업일 기준 2일 안에 회신드려요.</p>
+      <OrgInquiryForm />
+    </div>
+  </div>;
+}
 
 export function CTASection() {
+  const [inquiryOpen, setInquiryOpen] = useState(false);
   return <>
+    {inquiryOpen && <OrgInquiryDialog onClose={() => setInquiryOpen(false)} />}
     <section className="py-20 sm:py-28"><div className={`${sectionContainer} grid gap-10 lg:grid-cols-[0.7fr_1.3fr] lg:gap-20`}>
-      <div><SectionHeading label="HERE TO HELP">궁금한 점이<br />있으신가요?</SectionHeading><p className="mt-5 text-sm leading-7 text-[#7D6D86]">시작하기 전, 자주 묻는 질문을 모았어요.<br />기관 도입에 대해 더 이야기하고 싶다면</p><a href="mailto:admin-mindbreeze@looxidlabs.com?subject=Mind%20Breeze%20도입%20문의" className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-[#5F0080] underline decoration-[#D3BDD9] underline-offset-4">이메일로 도입 문의 <Arrow diagonal /></a></div>
+      <div><SectionHeading label="HERE TO HELP">궁금한 점이<br />있으신가요?</SectionHeading><p className="mt-5 text-sm leading-7 text-[#7D6D86]">시작하기 전, 자주 묻는 질문을 모았어요.<br />기관 도입에 대해 더 이야기하고 싶다면</p><button type="button" onClick={() => setInquiryOpen(true)} className={`${primaryButton} mt-5`}>기관 도입 문의 <Arrow /></button></div>
       <div className="border-t border-[#E4DDE8]">{supportQuestions().map((item) => <details key={item.question} className="group border-b border-[#E4DDE8] py-1"><summary className="flex min-h-20 cursor-pointer list-none items-center justify-between gap-5 py-5 text-[15px] font-semibold text-[#44324E] [&::-webkit-details-marker]:hidden">{item.question}<span aria-hidden="true" className="text-xl font-normal text-[#896495] group-open:rotate-45">+</span></summary><p className="pb-6 pr-8 text-sm leading-7 text-[#796985]">{item.answer}</p></details>)}</div>
     </div></section>
     <section className="px-6 pb-20 sm:px-10 sm:pb-24"><div className="relative mx-auto max-w-[1160px] overflow-hidden rounded-[32px] bg-[#5F0080] px-7 py-14 text-white sm:px-14 sm:py-16">
