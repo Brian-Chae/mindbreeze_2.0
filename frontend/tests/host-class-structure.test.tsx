@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { afterEach, expect, it, vi } from 'vitest';
 import { HostClassesPage } from '../src/pages/classes/host-classes-page';
+import { useAuthStore } from '../src/stores/authStore';
 import { HostClassDetailPage } from '../src/pages/classes/host-class-detail-page';
 vi.mock('../src/components/class/structure/class-create-action', () => ({ ClassCreateAction: () => <a href="/classes/new">새 클래스 만들기</a> }));
 const mocks = vi.hoisted(() => ({ list: vi.fn(), detail: vi.fn(), retry: vi.fn() }));
@@ -121,4 +122,18 @@ it('상세 다음 회차를 시안 이미지와 진행자·상태·행동 영역
     expect(hero?.textContent).toContain('김지도사');
     expect(hero?.textContent).toContain('4회차');
     expect(hero?.querySelector('[data-hero-actions] a')?.getAttribute('href')).toBe('/classes/c1/sessions/s4');
+});
+
+it('열린 회차: 바로 입장 → 플레이어, 히어로 칩 → 회차 상세, 다른 지도사면 숨김', async () => {
+    useAuthStore.setState({ user: { id: 'h1', role: 'counselor' } as never });
+    const open = { ...row, open_session_id: 's9', open_session_host_id: 'h1', open_session_host_state: 'assigned' };
+    mocks.list.mockReturnValue({ state: { status: 'success', data: { classes: [open, { ...open, id: 'c2', open_session_id: 's8', open_session_host_id: 'other' }], total: 2 } }, retry: mocks.retry });
+    await render();
+    const enters = box.querySelectorAll('a[data-enter-session]');
+    expect(enters).toHaveLength(1);
+    expect(enters[0].getAttribute('href')).toBe('/sessions/s9/player');
+    const chips = [...box.querySelectorAll('[aria-label="열려 있는 회차"] a')].map(a => a.getAttribute('href'));
+    expect(chips).toEqual(['/classes/c1/sessions/s9', '/classes/c2/sessions/s8']);
+    expect(box.textContent).toContain('회차 보기');
+    useAuthStore.setState({ user: null });
 });

@@ -160,6 +160,19 @@ def _next_session(rows: list, now: datetime):
 # ───────────────────────── 클래스 ─────────────────────────
 
 
+def _open_session(rows: list):
+    """목록 '바로 입장'용 대표 열린 회차. has_open_session 과 같은 기준(open/in_progress).
+
+    여러 개면 진행 중(in_progress) 우선 → 입장 중(open) → 같은 상태 안에서는 일정이 가장 최근인 회차 → seq 큰 회차.
+    """
+    candidates = [r for r in rows if r.status in _OPEN_STATUSES]
+    return max(
+        candidates,
+        key=lambda r: (r.status == "in_progress", _aware(r.scheduled_at or r.started_at).timestamp() if (r.scheduled_at or r.started_at) else 0.0, r.seq or 0),
+        default=None,
+    )
+
+
 def _class_summary(cls: Class, rows: list, names: dict, now: datetime) -> dict:
     completed = sum(1 for r in rows if r.status == "completed" and r.session_kind == "regular")
     cancelled = sum(1 for r in rows if r.status == "cancelled" and r.session_kind == "regular")
@@ -173,6 +186,7 @@ def _class_summary(cls: Class, rows: list, names: dict, now: datetime) -> dict:
         next((r for r in assigned if r.status in _OPEN_STATUSES), None)
         or max(assigned, key=lambda r: (_aware(r.scheduled_at) if r.scheduled_at else now, r.seq or 0), default=None)
     )
+    opened = _open_session(rows)
     return {
         "host": {"id": str(rep.host_id), "name": names.get(rep.host_id)} if rep else None,
         "id": str(cls.id),
@@ -194,7 +208,11 @@ def _class_summary(cls: Class, rows: list, names: dict, now: datetime) -> dict:
             if nxt
             else None
         ),
-        "has_open_session": any(r.status in _OPEN_STATUSES for r in rows),
+        "has_open_session": opened is not None,
+        # 열린 회차 바로 입장용(계산 필드). 선택 규칙은 _open_session 참고.
+        "open_session_id": str(opened.id) if opened else None,
+        "open_session_host_id": str(opened.host_id) if opened and opened.host_id else None,
+        "open_session_host_state": opened.host_state if opened else None,
         # SDD-226: '지금 바로 시작'으로 만든 즉석 클래스 구분(목록 칩·다시 열기)
         "is_instant": (cls.recurrence_rule or {}).get("start_now") is True,
     }
