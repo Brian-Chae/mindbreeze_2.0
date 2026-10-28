@@ -13,6 +13,8 @@ interface AppleLoginButtonProps {
   /** 신규 가입 시에만 서버가 검사한다 — 재로그인에는 보내지 않아도 된다. */
   consents?: ConsentPayload;
   birthDate?: string;
+  /** 서버 호출 전 입력 검증 — 문구를 돌려주면 onError 로 알리고 인증 창을 열지 않는다. */
+  validateBeforeSubmit?: () => string | null;
   disabled?: boolean;
   /** 로그인 성공 */
   onSuccess?: (user: ReturnType<typeof useAuthStore.getState>['user']) => void;
@@ -38,6 +40,7 @@ export default function AppleLoginButton({
   rememberMe = true,
   consents,
   birthDate,
+  validateBeforeSubmit,
   disabled,
   onSuccess,
   onNeedsSignupInfo,
@@ -50,6 +53,8 @@ export default function AppleLoginButton({
 
   const handleClick = async (): Promise<void> => {
     if (loading || disabled) return;
+    const blocked = validateBeforeSubmit?.();
+    if (blocked) { onError?.(blocked); return; }
     setLoading(true);
     try {
       const { nonce } = await requestAppleChallenge();
