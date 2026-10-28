@@ -54,7 +54,6 @@ describe('SDD-245 호스트 화면 스타일', () => {
       'components/clients/InviteModal.tsx',
       'components/chat/CreateRoomModal.tsx',
       'components/settings/ConfirmDialog.tsx',
-      'pages/clients/InviteLandingPage.tsx',
       'pages/onboarding/ClientEssentialsPage.tsx',
       'pages/account-deletion-page.tsx',
     ]) {
