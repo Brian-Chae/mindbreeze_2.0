@@ -152,3 +152,20 @@ def test_기관_홈_total_classes와_class_count는_고유_클래스_수(client,
     assert body["completed_classes"] == 2
     lead_stat = next(c for c in body["counselors"] if c["id"] == seeded_distinct["lead"])
     assert lead_stat["class_count"] == 3
+
+
+def test_총_참여자는_회차_합이_아니라_서로_다른_사람_수(client):
+    """같은 회원이 여러 회차에 참여해도 1명으로 센다(운영 제보: 1명인데 61명 표시)."""
+    with database.SessionLocal() as db:
+        org, lead, member, parent = world(db)
+        for seq in (1, 2, 3):
+            s = _class_session(db, lead, parent, seq, "completed")
+            db.add(SessionParticipant(session_id=s.id, user_id=member.id, is_waitlisted=False))
+        s4 = _class_session(db, lead, parent, 4, "in_progress")
+        db.add(SessionParticipant(session_id=s4.id, user_id=member.id, is_waitlisted=False))
+        db.add(SessionParticipant(session_id=s4.id, guest_name="게스트", is_waitlisted=False))
+        db.add(SessionParticipant(session_id=s4.id, guest_name="대기", is_waitlisted=True))
+        db.commit()
+        lead_id = str(lead.id)
+    body = _get(client, lead_id, "counselor", "/api/v1/dashboard/counselor")
+    assert body["total_participants"] == 2  # 회원 1 + 게스트 1, 대기열 제외
