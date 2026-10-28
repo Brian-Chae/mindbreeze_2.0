@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import ReportDetailView from './ReportDetailView';
 import { getReport, type ReportDto } from '../../lib/api/reports';
 import '../reports/narrative-sections.css';
+import './report-review-pane.css';
 
 interface Props {
   reportId: string;
@@ -34,7 +35,7 @@ export default function ReportReviewPane({ reportId, onClose, onReportChange }: 
   const path = report ? [report.session_title, report.counselor_name && `담당 ${report.counselor_name}`, report.participant_name].filter(Boolean).join(' › ') : '';
 
   return (
-    <section aria-label="리포트 검토" className="flex min-h-[640px] min-w-0 flex-col overflow-hidden rounded-2xl border border-[#DED6E3] bg-white">
+    <section aria-label="리포트 검토" className="report-review-pane sticky top-4 flex h-[calc(100vh-168px)] min-h-[520px] min-w-0 flex-col overflow-hidden rounded-2xl border border-[#DED6E3] bg-white">
       <header className="flex items-center justify-between gap-3 border-b border-[#E8E0EC] px-7 py-4">
         <div className="min-w-0">
           <p className="m-0 truncate text-[13px] text-[#8B8191]">{path || '불러오는 중'}</p>

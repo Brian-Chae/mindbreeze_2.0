@@ -305,6 +305,16 @@ def test_계층_구조와_개인정보_투영(client, db, world):
 def test_상담사용_공통_문서는_검토_대기에_중복_집계되지_않는다(client, db, world):
     body = client.get("/api/v1/reports/hierarchy", headers=world["auth"]).json()
     assert body["summary"]["needs_review"] == 3  # 회원용 3건, 상담사용(approval_required=false) 제외
+    assert body["summary"]["total_members"] == 3
+
+
+def test_탭을_바꿔도_요약_집계는_흔들리지_않는다(client, db, world):
+    _failed(client, db, world)
+    base = client.get("/api/v1/reports/hierarchy", headers=world["auth"]).json()["summary"]
+    for tab in ("needs_review", "failed"):
+        s = client.get(f"/api/v1/reports/hierarchy?tab={tab}", headers=world["auth"]).json()["summary"]
+        assert (s["needs_review"], s["failed_delivery"], s["total_members"]) == (
+            base["needs_review"], base["failed_delivery"], base["total_members"])
 
 
 def test_탭_필터와_검색은_상위_경로를_유지한다(client, db, world):

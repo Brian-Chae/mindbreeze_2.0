@@ -58,7 +58,7 @@ export interface HierarchyGroup {
 }
 
 export interface HierarchyResponse {
-  summary: { needs_review: number; failed_delivery: number; generation_failed: number; total_sessions: number };
+  summary: { needs_review: number; failed_delivery: number; generation_failed: number; total_sessions: number; total_members?: number };
   groups: HierarchyGroup[];
   total_sessions: number;
   page: number;

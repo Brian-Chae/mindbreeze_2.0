@@ -149,7 +149,7 @@ def build_hierarchy(
 
     needle = (q or "").strip().lower()
     groups: dict[str, dict] = {}
-    summary = {"needs_review": 0, "failed_delivery": 0, "generation_failed": 0, "total_sessions": 0}
+    summary = {"needs_review": 0, "failed_delivery": 0, "generation_failed": 0, "total_sessions": 0, "total_members": 0}
 
     for s in session_rows:
         reps = by_session.get(s.id, [])
@@ -204,6 +204,11 @@ def build_hierarchy(
                 matched_ids = {m["participant_id"] for m in members if m["name"] and needle in m["name"].lower()}
             if not matched_ids:
                 continue
+        # 탭 숫자는 탭과 무관하게(검색 조건만 반영해) 세어, 탭을 바꿔도 집계가 흔들리지 않게 한다.
+        scope_members = [m for m in members if matched_ids is None or m["participant_id"] in matched_ids]
+        summary["needs_review"] += sum(1 for m in scope_members if _needs_review(m["client_report"]))
+        summary["failed_delivery"] += sum(1 for m in scope_members if _failed(m["client_report"]))
+        summary["total_members"] += len(scope_members)
         if tab == "needs_review":
             matched = {m["participant_id"] for m in members if _needs_review(m["client_report"])}
         elif tab == "failed":
@@ -219,8 +224,6 @@ def build_hierarchy(
         failed_n = sum(1 for m in members if _failed(m["client_report"]))
         gen_failed = sum(1 for m in members if m["client_report"] and m["client_report"]["generation_status"] == "partial"
                          and m["client_report"]["status"] == "error")
-        summary["needs_review"] += pending
-        summary["failed_delivery"] += failed_n
         summary["generation_failed"] += gen_failed
         summary["total_sessions"] += 1
         key = f"class:{s.class_id}" if s.class_id else "solo"

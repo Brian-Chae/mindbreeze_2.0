@@ -102,19 +102,21 @@ function SessionBlock({ session, selectedId, compact, onOpen }: { session: Hiera
       <header className="flex flex-wrap items-center gap-3 bg-[#F8F6F9] px-5 py-3.5">
         <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-label={open ? '회차 접기' : '회차 펼치기'} className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-[#6C5C75] hover:bg-[#EFE9F2]">{open ? '−' : '＋'}</button>
         <div className="min-w-0 flex-1">
-          <strong className="block truncate text-[15px] text-[#3A2F42]">{session.title ?? '제목 없는 회차'}</strong>
-          <span className="block whitespace-nowrap text-[12px] text-[#8B8191]">
+          <strong className={`block text-[15px] text-[#3A2F42] ${compact ? 'line-clamp-2' : 'truncate'}`} title={session.title ?? ''}>{session.title ?? '제목 없는 회차'}</strong>
+          <span className={`block text-[12px] text-[#8B8191] ${compact ? '' : 'whitespace-nowrap'}`}>
             {formatKst(session.scheduled_at)} · 담당 {session.counselor_name ?? '미확인'} · 참여 {session.participant_count}명
             {session.matched_count !== session.participant_count ? ` · 일치 ${session.matched_count}명` : ''}
           </span>
         </div>
-        {session.needs_review > 0 && <Chip>검토 필요 {session.needs_review}</Chip>}
-        {session.delivery_failed > 0 && <Chip>발송 실패 {session.delivery_failed}</Chip>}
-        {common && (
-          <button type="button" onClick={() => onOpen(common.report_id)} className="h-11 shrink-0 whitespace-nowrap rounded-[10px] border border-[#DED8E3] bg-white px-4 text-[13px] font-semibold text-[#5F0080] hover:bg-[#F5EDFC]">
-            상담사용 · 회차 공통
-          </button>
-        )}
+        <div className={`flex items-center gap-2 ${compact ? 'w-full flex-wrap pl-11' : ''}`}>
+          {session.needs_review > 0 && <Chip>이 회차 검토 필요 {session.needs_review}</Chip>}
+          {session.delivery_failed > 0 && <Chip>이 회차 발송 실패 {session.delivery_failed}</Chip>}
+          {common && (
+            <button type="button" onClick={() => onOpen(common.report_id)} className="h-11 shrink-0 whitespace-nowrap rounded-[10px] border border-[#DED8E3] bg-white px-4 text-[13px] font-semibold text-[#5F0080] hover:bg-[#F5EDFC]">
+              상담사용 · 회차 공통
+            </button>
+          )}
+        </div>
       </header>
       {open && (
         <ul className="m-0 list-none p-0">
@@ -137,12 +139,12 @@ function GroupBlock({ group, selectedId, compact, onOpen }: { group: HierarchyGr
     <div className="overflow-hidden rounded-[15px] border border-[#E5E0E7] bg-white">
       <div className="flex items-center gap-3 px-5 py-4">
         <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-label={open ? '클래스 접기' : '클래스 펼치기'} className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-[#6C5C75] hover:bg-[#EFE9F2]">{open ? '−' : '＋'}</button>
-        <strong className="min-w-0 flex-1 truncate text-[16px] text-[#29272D]">
+        <strong className={`min-w-0 flex-1 text-[16px] text-[#29272D] ${compact ? 'line-clamp-2' : 'truncate'}`} title={group.title}>
           {group.title}
           {group.continued && <span className="ml-2 text-[12px] font-normal text-[#8B8191]">이어지는 회차</span>}
         </strong>
-        <span className="whitespace-nowrap text-[13px] text-[#7C7482]">회차 {group.session_total}개</span>
-        {group.needs_review > 0 && <Chip>검토 필요 {group.needs_review}</Chip>}
+        {!compact && <span className="whitespace-nowrap text-[13px] text-[#7C7482]">회차 {group.session_total}개</span>}
+        {!compact && group.needs_review > 0 && <Chip>클래스 전체 검토 필요 {group.needs_review}</Chip>}
       </div>
       {open && group.sessions.map((s) => <SessionBlock key={s.session_id} session={s} selectedId={selectedId} compact={compact} onOpen={onOpen} />)}
     </div>
@@ -257,7 +259,7 @@ export default function ReportHierarchyList({ selectedReportId, onOpen, compact 
 
       <div role="tablist" aria-label="리포트 상태" className="flex gap-1.5 border-b border-[#E7E0EB] pb-3">
         {([
-          ['all', '전체', summary ? summary.total_sessions : null],
+          ['all', '전체', summary ? summary.total_members ?? summary.total_sessions : null],
           ['needs_review', '검토 필요', summary?.needs_review ?? null],
           ['failed', '발송 실패', summary?.failed_delivery ?? null],
         ] as const).map(([value, label, count]) => (
