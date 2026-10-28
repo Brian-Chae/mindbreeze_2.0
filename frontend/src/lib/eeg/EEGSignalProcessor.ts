@@ -4,7 +4,7 @@ import type { ProcessedEEGData, BandPowers, BrainStateAnalysis, SignalQuality } 
 
 // BiquadFilters.js 라이브러리 추가 - EEG 전용 고품질 신호 처리
 import { makeNotchFilter, makeBandpassFilter } from 'biquadjs';
-import { checkEegWindow, isOutlierTna, type GuardReason, type EegValidity } from './measureGuard';
+import { GUARD_ENFORCE, checkEegWindow, isOutlierTna, type GuardReason, type EegValidity } from './measureGuard';
 
 /** Morlet 웨이블렛 복소수 샘플 */
 interface ComplexSample {
@@ -135,8 +135,9 @@ export class EEGSignalProcessor {
     }
 
     // 측정 가드 규칙 1~3: 포화·직류 계단·lead-off 윈도는 분석(필터·PSD·점수)을 건너뛰고 명시적 무효로 낸다.
-    const guardReason = checkEegWindow(data);
-    if (guardReason) return this.invalidResult(data, guardReason);
+    // 기록만 모드(GUARD_ENFORCE=false)에서는 분석을 그대로 수행하고 사유만 result.reason 에 남긴다.
+    let guardReason: GuardReason | null = checkEegWindow(data);
+    if (guardReason && GUARD_ENFORCE) return this.invalidResult(data, guardReason);
 
     // 1. EEG 신호 처리 (Python processEEGSegment와 동일한 로직)
     const processedData = this.processEEGSegment(data);
@@ -152,11 +153,14 @@ export class EEGSignalProcessor {
     
     // 3. EEG 특화 결과 구성
     // 규칙 5(안전망): 규칙을 통과했어도 TNA 폭주/비유한이면 outlier 무효 — 값을 자르지 않고 버린다.
-    if (isOutlierTna(totalPower)) return this.invalidResult(data, 'outlier');
+    if (isOutlierTna(totalPower)) {
+      if (GUARD_ENFORCE) return this.invalidResult(data, 'outlier');
+      guardReason = guardReason ?? 'outlier';
+    }
 
     const result = {
       validity: 'valid' as EegValidity,
-      reason: null as GuardReason | null,
+      reason: guardReason as GuardReason | null,
       filteredData: processedData.filteredRawData,
       signalQuality: {
         overall: processedData.signalQuality.overall,

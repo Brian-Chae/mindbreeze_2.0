@@ -233,7 +233,7 @@ pub struct EegEmission {
     pub scores_cohort: ScoreSet,
     pub scores_model: Option<ScoreSet>,
     /// 가드 무효 윈도 사유(None=유효). 웹 TS 처리기는 무효 윈도를 emission 으로 내지 않으므로
-    /// 패리티 비교(golden_oracle)는 guard 가 있는 emission 을 제외한다. 프레임 지표는 이미 invalid(null).
+    /// 패리티 비교(golden_oracle)는 GUARD_ENFORCE=true 일 때만 guard 가 있는 emission 을 제외한다.
     pub guard: Option<GuardReason>,
 }
 #[derive(Clone, Debug)]
@@ -781,7 +781,8 @@ impl Core {
             None => Err(("warming_up", "insufficient_window")),
             Some(e) if end_us.saturating_sub(e.end_us) > STALE_US => Err(("gap", "no_recent_eeg")),
             // 계약 §2 순서(saturated→step→leadoff): 윈도 가드 사유가 현재 접촉 상태(both_off)보다 우선한다.
-            Some(e) if e.guard.is_some() => Err(("invalid", e.guard.unwrap().code())),
+            // 갭 마커는 지표값이 없어(분석 없음) 항상 invalid. 그 외 사유는 GUARD_ENFORCE 일 때만 null, 아니면 값을 내고 reason 만 남긴다.
+            Some(e) if e.guard == Some(GuardReason::Gap) || (guard::GUARD_ENFORCE && e.guard.is_some()) => Err(("invalid", e.guard.unwrap().code())),
             Some(_) if both_off => Err(("invalid", "leadoff")),
             Some(e) => Ok(e),
         };
@@ -874,7 +875,17 @@ impl Core {
         );
         self.s.last_valid = lv;
 
-        let metrics = MetricSet { focus_raw, focus_display, relaxation_raw, relaxation_display, emotion_raw, emotion_display, bpm, respiration: resp, sdnn, tna_raw };
+        let mut metrics = MetricSet { focus_raw, focus_display, relaxation_raw, relaxation_display, emotion_raw, emotion_display, bpm, respiration: resp, sdnn, tna_raw };
+        // 기록만 모드: 값은 정상 산출값 그대로 두고, 가드 사유를 유효한 EEG 지표의 reason 에 남겨 배포 후 분석에 쓴다.
+        if !guard::GUARD_ENFORCE {
+            if let Some(code) = eeg_state.ok().and_then(|e| e.guard).map(|g| g.code()) {
+                for m in [&mut metrics.focus_raw, &mut metrics.focus_display, &mut metrics.relaxation_raw, &mut metrics.relaxation_display, &mut metrics.emotion_raw, &mut metrics.emotion_display, &mut metrics.tna_raw] {
+                    if m.validity == "valid" {
+                        m.reason = Some(code.into());
+                    }
+                }
+            }
+        }
         let contact = Contact { fp1: contact_now[0].name(), fp2: contact_now[1].name() };
         let sqi = match &eeg_at {
             Some(e) if end_us.saturating_sub(e.end_us) <= STALE_US => Some(e.sqi01),

@@ -23,7 +23,7 @@ class ArchiveFeederTest {
         for (s in 1L..25L) f.onFrame(frame(s))
         assertEquals(2, q.all().size)
         val a = q.all()[0]
-        assertEquals(10, a.meta.getInt("row_count")); assertEquals("nf-00000014-1", a.alias)
+        assertEquals(10, a.meta.getInt("row_count")); assertEquals("NF-00000014-1", a.alias)
         assertEquals("1000000", a.meta.getJSONObject("monotonic_range").getString("from_us"))
         assertEquals("11000000", a.meta.getJSONObject("monotonic_range").getString("to_us"))
         val bytes = a.payloadFile.readBytes()

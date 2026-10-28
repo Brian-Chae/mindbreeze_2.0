@@ -37,7 +37,7 @@ class ArchiveFeeder(
         val payload = raw.toByteArray()
         val firstSeq = first.getString("sequence"); val lastSeq = last.getString("sequence")
         val stream = streamId()
-        val alias = "nf-${stream?.take(8) ?: "x"}-$firstSeq"
+        val alias = "NF-${stream?.take(8) ?: "X"}-$firstSeq" // 서버 Alias 규칙 ^[A-Z][A-Za-z0-9_-]{0,63}$ — 소문자 시작은 presign 422
         val sha = MessageDigest.getInstance("SHA-256").digest(payload).joinToString("") { "%02x".format(it) }
         val meta = JSONObject()
             .put("artifact_alias", alias).put("artifact_kind", "feature").put("stream_id", stream ?: JSONObject.NULL)
