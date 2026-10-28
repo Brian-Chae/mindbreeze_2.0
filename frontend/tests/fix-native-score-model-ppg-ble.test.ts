@@ -34,3 +34,17 @@ describe('LinkBandBluetoothService.releaseForNative', () => {
     expect(await bluetoothService.releaseForNative()).toBeNull(); expect(spy).not.toHaveBeenCalled();
   });
 });
+
+describe('releaseForNative 이후 JS 자동 재연결 억제', () => {
+  it('releaseForNative 후 isReleasedForNative=true, useBand 자동 재연결 경로가 이를 확인한다', async () => {
+    const { bluetoothService } = await import('../src/lib/eeg/bluetoothService');
+    vi.spyOn(bluetoothService, 'disconnect').mockResolvedValue();
+    (bluetoothService as unknown as { lastDeviceId: string }).lastDeviceId = 'AA:BB';
+    (bluetoothService as unknown as { releasedForNative: boolean }).releasedForNative = false;
+    expect(bluetoothService.isReleasedForNative()).toBe(false);
+    await bluetoothService.releaseForNative();
+    expect(bluetoothService.isReleasedForNative()).toBe(true);
+    const band = readFileSync('src/hooks/useBand.ts', 'utf8');
+    expect(band.match(/isReleasedForNative\(\)/g)?.length).toBe(2);
+  });
+});

@@ -1287,6 +1287,8 @@ export function useBand({
   /** SDD-222: 자동 재연결 예약 — 지수 백오프, 수동 해제·언마운트 시 실행되지 않는다 */
   const scheduleReconnect = useCallback(() => {
     if (!autoReconnectRef.current || !mountedRef.current) return;
+    // 네이티브 측정에 밴드를 넘긴 동안에는 JS 가 같은 밴드를 다시 잡지 않는다(끊었다 붙이는 반복·중복 연결 방지).
+    if (bluetoothService.isReleasedForNative()) return;
     if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
     const delay = nextReconnectDelay(reconnectAttemptRef.current);
     reconnectAttemptRef.current += 1;
@@ -1319,6 +1321,7 @@ export function useBand({
     }
     // 자동 복구는 이미 선택·연결한 기기에만 적용한다. 취소된 선택창을 다시 열지 않는다.
     if (isAuto && !isMock && !bluetoothService.isConnected() && !bluetoothService.getCachedDeviceId()) return;
+    if (isAuto && !isMock && bluetoothService.isReleasedForNative()) return;
     bandConnectInFlight = true;
     const attempt = connectionAttemptRef.current;
     const ownsAttempt = () => mountedRef.current && connectionAttemptRef.current === attempt;
