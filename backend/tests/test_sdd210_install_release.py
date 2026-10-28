@@ -59,6 +59,7 @@ def env(tmp_path):
         "MB_MIGRATE_CMD": f'echo "$MB_RELEASE_DIR" >> "{flags}/migrated"; test ! -f "{flags}/migrate_fail"',
         "MB_VENV_CREATE_CMD": 'mkdir -p "$MB_VENV/bin"',
         "MB_HEALTH_TIMEOUT": "3", "MB_SERVICE_USER": "nobody-xyz",
+        "MB_DATA_DIR": str(tmp_path / "var-lib-mindbreeze"),
     }
     return {"env": e, "prefix": prefix, "etc": etc, "flags": flags, "calls": calls, "base": tmp_path}
 
@@ -199,3 +200,12 @@ def test_오래된_릴리스는_보관_개수를_넘으면_삭제하되_current_
 def test_잘못된_인자는_사용법_오류다(env):
     assert run(env, "install", "--release-id", "bad", "--dir", "/tmp").returncode == 2
     assert run(env, "nope").returncode == 2
+
+
+def test_설치는_오디오_영상_청크_저장_디렉터리를_보장한다(env):
+    """2026-10-28 운영 장애: /var/lib/mindbreeze 부재 → audio/chunk 500. 설치 때마다 멱등 생성."""
+    r = install(env, RID_A)
+    assert r.returncode == 0, r.stderr
+    data = env["base"] / "var-lib-mindbreeze"
+    assert (data / "audio").is_dir() and (data / "video").is_dir()
+    assert install(env, RID_B).returncode == 0  # 재설치도 멱등

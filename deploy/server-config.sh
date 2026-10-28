@@ -24,6 +24,7 @@ command -v ffmpeg >/dev/null 2>&1 || { apt-get update -y -qq; apt-get install -y
 id mindbreeze >/dev/null 2>&1 || useradd --system --create-home --home-dir /home/mindbreeze --shell /usr/sbin/nologin mindbreeze
 install -d -o mindbreeze -g mindbreeze /opt/mindbreeze /opt/mindbreeze/releases /opt/mindbreeze/venvs /opt/mindbreeze/incoming /opt/mindbreeze/state
 install -d -m 0750 -o root -g mindbreeze /etc/mindbreeze
+install -d -m 0750 -o mindbreeze -g mindbreeze /var/lib/mindbreeze /var/lib/mindbreeze/audio /var/lib/mindbreeze/video   # 오디오·영상 청크 폴백 저장소(없으면 업로드 500)
 if ! /usr/local/bin/livekit-server --version 2>/dev/null | grep -q "$LIVEKIT_VERSION"; then
   log "livekit-server $LIVEKIT_VERSION 설치(arm64)"
   tmp="$(mktemp -d)"

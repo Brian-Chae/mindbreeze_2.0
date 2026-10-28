@@ -193,6 +193,7 @@ def test_TS5_dev_환경과_기본값_환경은_검사하지_않는다():
         ({"resend_from_email": "onboarding@resend.dev"}, "resend_from_email"),
         ({"resend_api_key": ""}, "resend_api_key"),
         ({"livekit_host": "ws://localhost:7880"}, "livekit_host"),
+        ({"livekit_api_url": "http://18.183.86.88:7880"}, "livekit_api_url"),
         ({"livekit_api_key": "devkey"}, "LiveKit"),
         ({"livekit_api_secret": "secret"}, "LiveKit"),
         ({"fcm_project_id": "mind-breeze-prod"}, "FCM"),

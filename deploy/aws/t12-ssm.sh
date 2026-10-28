@@ -31,6 +31,7 @@ cfg FRONTEND_BASE_URL https://mindbreeze.looxidlabs.com
 cfg REPORT_EMAIL_BASE_URL https://mindbreeze.looxidlabs.com
 cfg RESEND_FROM_EMAIL 'MIND BREEZE <noreply@mindbreeze.looxidlabs.com>'
 cfg LIVEKIT_HOST wss://api.mindbreeze.looxidlabs.com/livekit     # Phase C(T-3/T-14) 에서 nginx 경로와 확정
+cfg LIVEKIT_API_URL http://127.0.0.1:7880                         # 서버→LiveKit 관리 API(Twirp) 내부 주소 — 공개 /livekit 접두사 경유 시 404
 cfg REDIS_URL redis://127.0.0.1:6379/0
 cfg VAPID_SUBJECT mailto:developer@looxidlabs.com
 cfg RETENTION_SWEEP_ENABLED false          # SDD-209: 방침 게시·별도 승인 전 비활성
