@@ -1,5 +1,7 @@
 """AI 리포트 API"""
 
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, Header
 from sqlalchemy.orm import Session as DBSession
 
@@ -21,6 +23,7 @@ from app.services import report_comment_service
 from app.services import report_service
 from app.services import report_email_service
 from app.services.report_pdf_service import pdf_response
+from app.services import report_hierarchy_service
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -81,6 +84,26 @@ def list_all(
     db: DBSession = Depends(get_db),
 ):
     return report_service.list_reports(current_user["id"], db, page, limit)
+
+
+@router.get("/hierarchy")
+def hierarchy(
+    q: str | None = Query(default=None, max_length=100),
+    tab: str = Query(default="all"),
+    counselor_id: str | None = None,
+    activity: str | None = Query(default=None, max_length=20),
+    date_from: date | None = None,
+    date_to: date | None = None,
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=10, ge=1, le=50),
+    current_user: dict = Depends(require_roles("counselor", "org_admin")),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-253: 클래스 > 회차 > 회원 > 리포트 계층 조회(회차 단위 페이지네이션)."""
+    return report_hierarchy_service.build_hierarchy(
+        current_user["id"], db, q=q, tab=tab, counselor_id=counselor_id, activity=activity,
+        date_from=date_from, date_to=date_to, page=page, limit=limit,
+    )
 
 
 @router.put("/read-all")
@@ -169,6 +192,31 @@ def approve(
     db: DBSession = Depends(get_db),
 ):
     return report_service.approve_report(report_id, current_user["id"], db)
+
+
+@router.post("/{report_id}/approve-and-send", response_model=ReportResponse)
+def approve_and_send(
+    report_id: str,
+    current_user: dict = Depends(require_roles("counselor", "org_admin")),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-253 D4: 승인하고 발송 — 승인(멱등)과 발송 예약을 한 행동으로 묶는다.
+
+    기존 승인과 같은 경로를 재사용하므로 메일을 이중 예약하지 않고, 재호출로 승인자·시각이 바뀌지 않는다.
+    """
+    result = report_service.approve_report(report_id, current_user["id"], db)
+    return report_service.attach_capabilities(result, report_id, current_user["id"], db)
+
+
+@router.post("/{report_id}/retry-delivery", response_model=ReportResponse)
+def retry_delivery(
+    report_id: str,
+    current_user: dict = Depends(require_roles("counselor", "org_admin")),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-253 D4: 발송 실패 건 다시 발송(승인자·승인 시각 불변)."""
+    result = report_service.retry_report_delivery(report_id, current_user["id"], db)
+    return report_service.attach_capabilities(result, report_id, current_user["id"], db)
 
 
 @router.post(

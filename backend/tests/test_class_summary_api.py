@@ -47,13 +47,14 @@ def test_host는_요약과_리포트를_읽는다(client, world):
     assert client.get(url(world, "class-report"), headers=world["auth"]).status_code == 200
 
 
-def test_같은_기관_org_admin은_열람_가능_편집_불가(client, world, db):
+def test_같은_기관_org_admin은_열람_가능_편집_불가_승인은_가능(client, world, db):  # SDD-253 D3
     admin = make_user(db, role="org_admin", name="기관관리자", org=world["org"])
     db.commit()
     s = client.get(url(world), headers=auth_for(admin))
     assert s.status_code == 200, s.text
+    # SDD-253 D3: 승인은 기관관리자도 가능, 서사 편집·메모 작성은 여전히 불가(승인≠편집).
     assert s.json()["capabilities"] == {"can_edit_narrative": False, "can_write_note": False,
-                                        "can_approve": False}
+                                        "can_approve": True}
     assert s.json()["note_prompt"]["eligible"] is False
     r = client.get(url(world, "class-report"), headers=auth_for(admin))
     assert r.status_code == 200 and r.json()["capabilities"]["can_edit_narrative"] is False
