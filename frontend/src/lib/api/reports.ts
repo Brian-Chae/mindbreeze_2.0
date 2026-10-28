@@ -34,6 +34,7 @@ export {
   credibilityFromQuality,
   resolveDataCredibility,
   resolveReportStatus,
+  isAwaitingApproval,
 } from './report-status';
 
 // SDD-095 — 리포트 생성 진행 상태(승인 상태와 독립 축)
@@ -124,6 +125,8 @@ export interface ReportDto {
    * 상담사 확인 대기 건은 false. 구 응답에는 없을 수 있어 optional.
    */
   in_review_delayed?: boolean;
+  /** 승인 대상 여부 — false 면 클래스 회차 상담사용 리포트(검토중 집계·일괄 승인 제외). 구 응답엔 없음(=대상). */
+  approval_required?: boolean;
 }
 
 export interface ReportListResponse {

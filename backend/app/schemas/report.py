@@ -91,6 +91,8 @@ class ReportResponse(HRVMotionSummary):
     # SDD-212: 승인 전(in_review)이면서 리포트 생성이 지연 중일 때만 true (가산 필드, 기본 false).
     #   상담사 확인 대기(생성 완료) 건은 false — 보조 문구는 생성 지연에만 붙는다.
     in_review_delayed: bool = False
+    # 승인 대상 여부 — 클래스 회차 상담사용 리포트는 false (검토중 집계·일괄 승인 대상 아님)
+    approval_required: bool = True
 
 
 class ReportListResponse(BaseModel):

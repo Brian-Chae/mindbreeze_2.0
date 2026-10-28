@@ -76,7 +76,7 @@ PRESERVED_KEYS: tuple[str, ...] = (
 )
 # verify §2.4 박스에는 열거되지 않았지만 ReportResponse 에 존재하는 비내용 메타 키(값 비단언, 키 존재만 요구).
 # 분류 근거: 둘 다 내용이 아니라 생성 시작 시각/게스트 여부 메타다. X2 가 다르게 다루면 감독자 판단 필요.
-META_KEYS: tuple[str, ...] = ("generation_started_at", "is_guest")
+META_KEYS: tuple[str, ...] = ("generation_started_at", "is_guest", "approval_required")
 # 마스킹 content 의 허용 형태 = normalize_report_content({}, "client") 결과
 EMPTY_CONTENT: JsonDict = {
     "summary": None,
@@ -116,6 +116,7 @@ ALLOWED_TAGS: dict[str, set[str]] = {
     "birth_date": _STR_OR_NULL,
     "generation_started_at": _STR_OR_NULL,
     "is_guest": {"bool", "null"},
+    "approval_required": {"bool"},
     "content": {"object"},
     "in_review": {"bool"},
     # SDD-212: 생성 지연 안내 가산 필드(비내용 메타 — 마스킹 대상 아님)
