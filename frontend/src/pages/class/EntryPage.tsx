@@ -17,6 +17,7 @@ import { EndContainer } from '../../components/class/flow/member/EndContainer';
 import { MemberClassContainer } from '../../components/class/player/member/MemberClassContainer';
 import { WaitlistView } from '../../components/class/flow/member/WaitlistView';
 import { WaitStartContainer } from '../../components/class/flow/member/WaitStartContainer';
+import { resolveEntryBack } from '../../lib/class/entry-back';
 import { useBackgroundSession } from '../../hooks/useBackgroundSession';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { useEntryPrep } from '../../hooks/useEntryPrep';
@@ -540,7 +541,13 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
       wait={machine.stage === 'unopened'}
       countdown={countdown}
       onEnter={() => dispatch({ type: 'enter' })}
-      onBack={() => navigate('/join')}
+      onBack={() => {
+        // 코드 입장이 아닌 로그인 회원(알림·푸시·홈 카드)은 들어온 곳으로, 기록이 없으면 회원 홈으로 돌려보낸다.
+        const idx = (window.history.state as { idx?: number } | null)?.idx;
+        const target = resolveEntryBack({ historyIdx: idx, isAuthenticated, isGuest: entry.isGuest });
+        if (target.kind === 'history') navigate(-1);
+        else navigate(target.path, { replace: true });
+      }}
     />
   );
 }
