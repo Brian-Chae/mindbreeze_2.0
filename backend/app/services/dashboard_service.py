@@ -107,6 +107,35 @@ def _build_summaries(sessions: list[Session], db: DBSession) -> list[dict]:
     ]
 
 
+def _participant_key(p: SessionParticipant) -> str:
+    """같은 사람을 한 번만 세기 위한 키. 회원=계정, 비회원(게스트)=멤버십·상담 비회원·참여 행 순."""
+    if p.user_id:
+        return f"u:{p.user_id}"
+    member_id = getattr(p, "member_id", None)
+    if member_id:
+        return f"m:{member_id}"
+    guest_client_id = getattr(p, "guest_client_id", None)
+    if guest_client_id:
+        return f"g:{guest_client_id}"
+    return f"p:{p.id}"
+
+
+def _distinct_participant_count(sessions: list[Session], db: DBSession) -> int:
+    """대시보드 '총 참여자' — 회차별 인원을 더하지 않고 서로 다른 사람 수를 센다(대기열 제외).
+
+    회차별 합산은 한 회원이 61회 참여하면 61명으로 보였다.
+    """
+    if not sessions:
+        return 0
+    ids = [s.id for s in sessions]
+    rows = (
+        db.query(SessionParticipant)
+        .filter(SessionParticipant.session_id.in_(ids), SessionParticipant.is_waitlisted.is_(False))
+        .all()
+    )
+    return len({_participant_key(p) for p in rows})
+
+
 def _distinct_class_count(sessions: list[Session]) -> int:
     """서로 다른 클래스 수 — class_id 기준 고유 개수. class_id 없는 레거시 단건 회차는 회차 1건 = 클래스 1개."""
     return len({s.class_id if s.class_id is not None else s.id for s in sessions})
@@ -216,7 +245,7 @@ def counselor_dashboard(user_id: str, db: DBSession) -> dict:
         "total_classes": _distinct_class_count(all_sessions),
         "in_progress_classes": sum(1 for c in summaries if c["status"] in _IN_PROGRESS),
         "completed_classes": sum(1 for c in summaries if c["status"] == "completed"),
-        "total_participants": sum(c["participant_count"] for c in summaries),
+        "total_participants": _distinct_participant_count(all_sessions, db),
         "pending_review_count": sum(c["pending_review_count"] for c in summaries),
         "classes": summaries,
     }
@@ -280,7 +309,7 @@ def org_dashboard(user_id: str, db: DBSession) -> dict:
         "org_code": org.org_code,
         "total_counselors": len(counselor_stats),
         "total_classes": _distinct_class_count(sessions),
-        "total_participants": sum(c["participant_count"] for c in summaries),
+        "total_participants": _distinct_participant_count(sessions, db),
         "completed_classes": sum(1 for c in summaries if c["status"] == "completed"),
         "in_progress_classes": sum(1 for c in summaries if c["status"] in _IN_PROGRESS),
         "counselors": counselor_stats,
