@@ -48,6 +48,11 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
+
+        <!-- SDD-250: 서버가 채널을 지정하지 않은 FCM 알림도 헤드업 채널(앱 시작 시 생성)로 보낸다. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="mindbreeze_default" />
     </application>
 
     <!-- LINK BAND 연결은 선택 사항이며 위치 추적에 사용하지 않는다. -->

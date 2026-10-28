@@ -3,6 +3,25 @@ import type { PluginListenerHandle } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { apiClient } from '../api/client';
 import { getPlatform, isNativeApp } from './platform';
+import { useNotificationStore } from '../../stores/notificationStore';
+
+/** 서버 FCM android.notification.channel_id(backend push_service.ANDROID_CHANNEL_ID)와 같아야 한다. */
+export const ANDROID_CHANNEL_ID = 'mindbreeze_default';
+
+interface ForegroundPush { id?: string; title?: string; body?: string; data?: Record<string, unknown> }
+
+/** D3: 앱을 보고 있을 때는 OS 배너 대신 인앱 토스트로 보여준다. 소켓과 같은 알림 id(message_id)로 1회만. */
+export function toastFromForegroundPush(push: ForegroundPush): void {
+  const data = push.data ?? {};
+  const messageId = typeof data.message_id === 'string' && data.message_id ? data.message_id : push.id;
+  if (!push.title || !messageId) return;
+  const deeplink = allowedPushDeeplink(data.deeplink);
+  useNotificationStore.getState().showToast({
+    id: messageId, type: 'push', title: push.title, body: push.body ?? '',
+    // 푸시에는 표준 extra 가 없어 허용 딥링크만 이동 대상으로 쓴다(소켓이 먼저 오면 이 호출은 dedupe 로 무시).
+    extra: deeplink ? { target_type: 'deeplink', params: { path: deeplink } } : null,
+  });
+}
 
 /** 외부 URL, 인코딩 우회, 경로 정규화 우회를 허용하지 않는다. */
 export function allowedPushDeeplink(value: unknown): string | null {
@@ -123,9 +142,20 @@ export function startPushRegistration(
     handles.push(await PushNotifications.addListener('registrationError', () => {
       console.warn('[push] 네이티브 토큰 발급 실패(FCM/APNs 설정 확인)');
     }));
-    handles.push(await PushNotifications.addListener('pushNotificationReceived', () => {
-      if (!stopped) refreshNotifications();
+    handles.push(await PushNotifications.addListener('pushNotificationReceived', (push: ForegroundPush) => {
+      if (stopped) return;
+      refreshNotifications();
+      toastFromForegroundPush(push);
     }));
+    // Android 8+ 는 채널 중요도로 헤드업 여부가 정해진다. 서버 FCM 메시지가 이 채널을 지정한다.
+    if (platform === 'android') {
+      try {
+        await PushNotifications.createChannel({
+          id: ANDROID_CHANNEL_ID, name: '일반 알림', description: '클래스 초대·채팅·리포트 알림',
+          importance: 5, visibility: 1, vibration: true,
+        });
+      } catch { console.warn('[push] 알림 채널 생성 실패'); }
+    }
     handles.push(await PushNotifications.addListener('pushNotificationActionPerformed', (action: { notification: { data?: Record<string, unknown> } }) => {
       const data = action.notification.data as Record<string, unknown> | undefined;
       const path = allowedPushDeeplink(data?.deeplink);

@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   check: vi.fn(async () => ({ receive: 'prompt' })),
   request: vi.fn(async () => ({ receive: 'granted' })),
   register: vi.fn(async () => {}),
+  createChannel: vi.fn(async () => {}),
   post: vi.fn(async () => ({})),
   delete: vi.fn(async () => {}),
 }));
@@ -26,7 +27,7 @@ vi.mock('@capacitor/push-notifications', () => ({ PushNotifications: {
     mocks.listeners.set(event, callback);
     return { remove: mocks.remove };
   }),
-  checkPermissions: mocks.check, requestPermissions: mocks.request, register: mocks.register,
+  checkPermissions: mocks.check, requestPermissions: mocks.request, register: mocks.register, createChannel: mocks.createChannel,
 } }));
 vi.mock('../src/lib/api/client', () => ({ apiClient: { post: mocks.post, delete: mocks.delete } }));
 import { allowedPushDeeplink, revokePushRegistration, startPushRegistration } from '../src/lib/native/push';

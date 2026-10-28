@@ -1,0 +1,21 @@
+/* SDD-250 공용 토스트 — 모바일: 상단바(56px)+safe-area 아래 좌우 16px, 데스크톱: 종 아래 우측 360px */
+.nt-host{position:fixed;z-index:60;left:16px;right:16px;top:calc(env(safe-area-inset-top,0px) + 64px);display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.nt-host>*{pointer-events:auto}
+@media (min-width:768px){.nt-host{left:auto;right:32px;top:84px;width:360px}}
+.nt-toast{position:relative;overflow:hidden;border-radius:12px;background:#F5EDFC;border:1px solid #DDD0EA;box-shadow:0 8px 20px #5F008018;animation:nt-in .18s ease-out}
+.nt-toast::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:#5F0080}
+.nt-toast__body{display:flex;flex-direction:column;gap:2px;width:100%;min-height:44px;padding:14px 44px 14px 18px;text-align:left;cursor:pointer}
+.nt-toast__title{font-size:13px;font-weight:700;color:#1F1F1F}
+.nt-toast__text{font-size:12px;color:#6F6F6F;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.nt-toast__close{position:absolute;top:0;right:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#6E1A8C}
+.nt-toast--class{background:#5F0080;border-color:transparent}
+.nt-toast--class::before{display:none}
+.nt-toast--class .nt-toast__title{color:#fff;font-size:14px}
+.nt-toast--class .nt-toast__text{color:#E9DCF5}
+.nt-toast--class .nt-toast__close{color:#fff}
+.nt-toast__live{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:#7DE3C8}
+.nt-toast__live i{width:8px;height:8px;border-radius:50%;background:#7DE3C8}
+.nt-toast__go{margin-top:10px;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:9999px;background:#fff;color:#5F0080;font-size:14px;font-weight:700}
+.nt-more{align-self:center;padding:6px 12px;border-radius:9999px;background:#1F1F1F;color:#fff;font-size:11px;font-weight:600}
+@keyframes nt-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.nt-toast{animation:none}}

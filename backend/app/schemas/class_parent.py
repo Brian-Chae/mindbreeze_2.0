@@ -53,6 +53,8 @@ class ClassSummary(BaseModel):
     progress: Progress
     session_count: int
     next_session: NextSession | None = None
+    # SDD-250: 홈 '다음 일정' 후보용 열린 회차(시작 후 6시간 이내). 가산 필드.
+    open_session: NextSession | None = None
     has_open_session: bool
     open_session_id: str | None = None
     open_session_host_id: str | None = None

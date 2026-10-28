@@ -12,7 +12,7 @@ import { useReportStore } from '../../stores/reportStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationSocket } from '../../hooks/useNotificationSocket';
 import { listChatRooms } from '../../lib/api/chat';
-import { resolveNotificationTarget } from '../../lib/api/notifications';
+import NotificationToastHost from '../notifications/notification-toast-host';
 
 export interface AppShellProps {
   children: ReactNode;
@@ -47,8 +47,6 @@ export default function AppShell({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const navigate = useNavigate();
   const unread = useNotificationStore((s) => s.unread);
-  const toast = useNotificationStore((s) => s.toast);
-  const dismissToast = useNotificationStore((s) => s.dismissToast);
   const sessionInvites = useNotificationStore((s) => s.sessionInvites);
   // NAV-01: 하단 탭 홈 경로를 역할에 맞춘다(org_admin → /dashboard/org).
   const userRole = useAuthStore((s) => s.user?.role);
@@ -80,16 +78,6 @@ export default function AppShell({
     void refreshReports();
   }, [refreshReports]);
 
-  const handleToastClick = () => {
-    // SDD-093: 토스트 클릭 → 딥링크 후속 행위 (표준 extra 기반)
-    if (toast) {
-      // NOTIF-FE-03: role 을 전달해야 client 가 상담사 경로(/chat, /sessions)가 아닌
-      // 본인 경로(/app/...)로 이동한다. (알림 센터 딥링크와 동일 규칙)
-      const target = resolveNotificationTarget(toast.extra, userRole);
-      if (target) navigate(target.path);
-    }
-    dismissToast();
-  };
 
   const handleBellClick = () => {
     navigate('/notifications');
@@ -167,50 +155,6 @@ export default function AppShell({
                 </span>
               )}
             </button>
-            {/* 토스트 팝업 */}
-            {toast && (
-              <div
-                className="fixed inset-0 z-40"
-                onClick={dismissToast}
-                aria-hidden="true"
-              />
-            )}
-            {toast && (
-              <button
-                type="button"
-                onClick={handleToastClick}
-                className="absolute top-full right-0 mt-2 w-72 bg-[#F5EDFC] border border-[#DDD0EA] rounded-xl shadow-lg shadow-[#5F0080]/10 p-3.5 z-50 text-left hover:bg-[#EFE3FA] hover:border-[#C9B0E8] transition-all cursor-pointer overflow-hidden"
-              >
-                {/* 왼쪽 악센트 바 */}
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#5F0080] rounded-l-xl" />
-                <div className="flex items-start gap-3 pl-1">
-                  {/* 알림 아이콘 */}
-                  <div className="shrink-0 w-8 h-8 rounded-lg bg-[#5F0080]/10 flex items-center justify-center mt-0.5">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5F0080" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-bold text-[#1F1F1F] truncate pr-5">
-                      {toast.title}
-                    </div>
-                    <div className="text-[12px] text-[#6F6F6F] mt-0.5 line-clamp-2">
-                      {toast.body}
-                    </div>
-                  </div>
-                </div>
-                {/* 닫기 버튼 */}
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => { e.stopPropagation(); dismissToast(); }}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); dismissToast(); } }}
-                  className="absolute top-2 right-2 w-5 h-5 rounded-full bg-[#DDD0EA]/50 flex items-center justify-center text-[#6E1A8C] hover:bg-[#DDD0EA] hover:text-[#5F0080] text-[10px] transition-colors"
-                >
-                  ✕
-                </span>
-              </button>
-            )}
           </div>
         </header>
 
@@ -231,6 +175,7 @@ export default function AppShell({
 
       <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
       {!hideBottomTab && <BottomTabBar role={userRole} />}
+      <NotificationToastHost />
     </div>
   );
 }
