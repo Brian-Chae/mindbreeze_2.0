@@ -76,10 +76,11 @@ describe('RX-17 목록', () => {
     expect(row.textContent).not.toContain('대기');
     expect(row.textContent).not.toContain('확인 가능');
     expect(row.textContent).not.toContain('NEW');
+    expect(row.textContent).not.toContain('아직 읽지 않음');
     expect(row.textContent).not.toContain(SECRET);
     const ok = rowOf('승인 클래스');
     expect(ok.textContent).toContain('확인 가능');
-    expect(ok.textContent).toContain('NEW');
+    expect(ok.textContent).toContain('아직 읽지 않음'); // SDD-253: 데스크톱 표는 NEW 대신 의미가 드러나는 표기
     expect(ok.textContent).toContain('호흡으로 긴장을 풀었어요');
     expect(ok.textContent).not.toContain(REPORT_IN_REVIEW_BADGE);
   });

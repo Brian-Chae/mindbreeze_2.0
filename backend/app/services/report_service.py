@@ -1,6 +1,7 @@
 """AI 리포트 서비스"""
 
 import logging
+from contextvars import ContextVar
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -19,6 +20,10 @@ from app.services.session_authz import SessionAction, get_session_authorized
 from app.schemas.eeg import HRVMotionSummary
 
 logger = logging.getLogger(__name__)
+
+# SDD-253: 승인 경로 구분(manual | auto). 자동 승인 호출부만 _approve_auto 로 감싸 값을 바꾼다.
+#   approve_report 의 시그니처를 유지해 기존 호출부·테스트 스파이를 깨지 않는다.
+_APPROVAL_SOURCE: ContextVar[str] = ContextVar("report_approval_source", default="manual")
 
 
 def generate_report_inline(report_id: str, db: DBSession):
@@ -171,6 +176,7 @@ def _serialize(
     counselor_names: dict[UUID, str] | None = None,
     strip_timeline: bool = False,
     scope: "report_scope.ReportScope | None" = None,
+    ops: bool = False,
 ) -> dict:
     content = normalize_report_content(report.content, report.type)
     # SDD-209(B3): 저장된 스냅샷이 구버전이어도 제외 참가자 기여분이 나가지 않도록 조회 시점에 한 번 더 거른다.
@@ -241,6 +247,49 @@ def _serialize(
         "in_review_delayed": False,
         # 클래스 회차의 상담사용 리포트는 승인 대상이 아니다(approve-all 제외, SDD-237) — 목록 검토중 집계에서 제외하기 위한 표시.
         "approval_required": not (report.type == "counselor" and session is not None and session.class_id is not None),
+        **(_ops_fields(report) if ops else _EMPTY_OPS),
+    }
+
+
+# 회원·토큰 경로 응답의 운영 필드: 키는 항상 존재(구 앱 호환·키 집합 불변), 값은 항상 null.
+_EMPTY_OPS: dict = {
+    "approved_at": None,
+    "approved_by_name": None,
+    "approved_by_role": None,
+    "approval_source": None,
+    "delivery_status": None,
+    "delivery_attempted_at": None,
+    "delivery_attempt_count": None,
+    "delivery_failure_code": None,
+    "capabilities": None,
+}
+
+
+def _ops_fields(report: Report) -> dict:
+    """SDD-253: 승인 감사·발송 상태(가산 필드). 상담사·기관관리자 경로에서만 채운다(회원·토큰 경로는 null 유지)."""
+    return {
+        "approved_at": report.approved_at,
+        "approved_by_name": report.approved_by_name,
+        "approved_by_role": report.approved_by_role,
+        "approval_source": report.approval_source,
+        "delivery_status": report.delivery_status,
+        "delivery_attempted_at": report.delivery_attempted_at,
+        "delivery_attempt_count": report.delivery_attempt_count or 0,
+        "delivery_failure_code": report.delivery_failure_code,
+    }
+
+
+def report_capabilities(report: Report, session: Session | None, viewer: User | None, db: DBSession) -> dict:
+    """SDD-253: 화면이 버튼을 그릴 근거. 승인 권한과 코멘트 편집 권한은 별개다."""
+    authority = bool(viewer and session and can_approve_report(db, viewer, session))
+    approval_required = not (report.type == "counselor" and session is not None and session.class_id is not None)
+    editable = bool(viewer and session and _can_edit_report(str(viewer.id), session, db))
+    return {
+        "can_view": True,
+        "can_approve": authority and approval_required and report.status == "pending_review",
+        "can_edit_comment": editable and report.type == "client" and report.status == "pending_review",
+        "can_retry_delivery": authority and report.type == "client"
+        and report.status == "completed" and report.delivery_status == "failed",
     }
 
 
@@ -427,7 +476,7 @@ def generate_report(
         from app.services.report_comment_service import ensure_auto_comment
 
         ensure_auto_comment(report, db)
-        return approve_report(str(report.id), host_id, db)
+        return _approve_auto(str(report.id), host_id, db)
     return _serialize(report, s, subjective=_subjective_for_report(report, db))
 
 
@@ -514,7 +563,7 @@ def generate_client_reports_for_session(session_id: str, db: DBSession) -> list[
 
             # SDD-237: 명상 회차의 자동 초안은 비공개 메모(counselor_notes)를 입력으로 쓰지 않는다.
             ensure_auto_comment(report, db, include_private_notes=report_domain(s) != "meditation")
-            results.append(approve_report(str(report.id), str(s.host_id), db))
+            results.append(_approve_auto(str(report.id), str(s.host_id), db))
         else:
             results.append(
                 _serialize(report, s, subjective=_subjective_from_map(report, records_map))
@@ -791,6 +840,7 @@ def list_reports(
                 counselor_names=counselor_names,
                 strip_timeline=True,
                 scope=scopes_map.get(report.session_id),
+                ops=is_staff,
             )
             # SDD-211(R6-X1): 회원(비-staff) 조회에서는 승인 전 행을 '리뷰 중' 으로 마스킹한다(총계·페이지 불변).
             if not is_staff and _is_unapproved(report):
@@ -901,7 +951,11 @@ def get_report(report_id: str, user_id: str | None, db: DBSession, *, member_cre
         db.add(report)
         db.commit()
     from app.services.class_access_service import project_report_for_viewer
-    return project_report_for_viewer(result,viewer,session)
+    projected = project_report_for_viewer(result, viewer, session)
+    if viewer and viewer.role in ("counselor", "org_admin"):
+        projected.update(_ops_fields(report))
+        projected["capabilities"] = report_capabilities(report, session, viewer, db)
+    return projected
 
 
 def _collect_client_comments(session_id, db: DBSession) -> list[dict]:
@@ -1046,6 +1100,12 @@ def can_approve_report(db: DBSession, user, session) -> bool:
     """
     if user is None or session is None or getattr(user, "status", None) != "active":
         return False
+    if user.role == "org_admin":
+        # SDD-253 D3: 허용 기관·귀속 확인된 명상 클래스에서 활성 기관관리자의 승인을 허용한다.
+        #   코멘트 편집(_can_edit_report)은 확대하지 않는다 — 승인과 편집은 다른 권한이다.
+        from app.services.class_access_service import admin_can_read_meditation_report
+
+        return admin_can_read_meditation_report(db, user, session)
     if _can_edit_report(str(user.id), session, db):
         return True
     if not session.class_id:
@@ -1096,6 +1156,9 @@ def _enqueue_client_email_on_approval(report: Report, db: DBSession) -> None:
     생성 시점(FUNC-04)에 예약된 태스크는 deliver_report_email 이 status!=completed 라
     실발송 없이 소비되므로, 승인으로 completed 가 되면 여기서 재예약해야 발송이 이어진다.
     브로커 장애 등 예약 실패는 승인 자체를 막지 않는다.
+
+    SDD-253: 예약 결과를 delivery_status 로 남긴다(승인 상태와 독립).
+      pending(예약됨) / not_requested(수신 주소 없음) / unavailable(제외·파기) / failed(예약 실패) / sent(이미 발송됨).
     """
     if report.type != "client" or not report.participant_id:
         return
@@ -1107,20 +1170,51 @@ def _enqueue_client_email_on_approval(report: Report, db: DBSession) -> None:
         )
         .first()
     )
+    if participant is not None and participant.pii_scrubbed_at is not None:
+        _set_delivery(report, db, "unavailable", code="pii_scrubbed")
+        return
+    if participant is not None and not participant.report_included:
+        _set_delivery(report, db, "unavailable", code="excluded")
+        return
     if not fill_member_report_email(participant, db):
+        _set_delivery(report, db, "not_requested")
         return
     if participant.report_email_sent_at is not None:
+        _set_delivery(report, db, "sent")
         return
     try:
         from app.services.report_email_service import enqueue_report_email
 
         enqueue_report_email(str(report.id))
+        _set_delivery(report, db, "pending")
     except Exception:  # noqa: BLE001 — 예약 실패가 승인을 막지 않도록
         logger.exception(
             "[report_service] 내담자 리포트 메일 예약 실패: report_id=%s participant_id=%s",
             report.id,
             report.participant_id,
         )
+        _set_delivery(report, db, "failed", code="enqueue_failed", attempted=True)
+
+
+def _set_delivery(
+    report: Report, db: DBSession, status: str, *, code: str | None = None, attempted: bool = False
+) -> None:
+    """발송 상태 기록(승인·sent_at 과 독립). attempted=True 면 시도 수·시각을 올린다."""
+    report.delivery_status = status
+    report.delivery_failure_code = code if status in ("failed", "unavailable") else None
+    if attempted:
+        report.delivery_attempted_at = _now()
+        report.delivery_attempt_count = (report.delivery_attempt_count or 0) + 1
+    db.commit()
+
+
+def _approve_auto(report_id: str, host_id: str, db: DBSession) -> dict:
+    """자동 승인 경로 — 감사 스냅샷에 approval_source='auto' 로 남긴다."""
+    token = _APPROVAL_SOURCE.set("auto")
+    try:
+        return approve_report(report_id, host_id, db)
+    finally:
+        _APPROVAL_SOURCE.reset(token)
 
 
 def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
@@ -1138,8 +1232,8 @@ def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
         report=db.query(Report).filter_by(id=rid).populate_existing().with_for_update().one()
     # SDD-218 D-36: 클래스 회차는 현재 주강사의 대행 승인을 허용한다.
     # 클래스에 속하지 않은 상담 세션은 기존 판정(_can_edit_report)을 그대로 쓴다.
+    actor = db.query(User).filter(User.id == _to_uuid(host_id)).first()
     if session is not None and session.class_id:
-        actor = db.query(User).filter(User.id == _to_uuid(host_id)).first()
         approved = can_approve_report(db, actor, session)
     else:
         approved = _can_edit_report(host_id, session, db)
@@ -1156,6 +1250,11 @@ def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
     report.sent_at = report.sent_at or _now()
     report.approved_at = report.approved_at or _now()
     report.approved_by_user_id = report.approved_by_user_id or _to_uuid(host_id)
+    if not already_completed:
+        # SDD-253: 최초 승인 시점의 승인자 스냅샷. 재승인·재발송으로 덮어쓰지 않는다.
+        report.approved_by_name = (getattr(actor, "name", None) if actor else None) or None
+        report.approved_by_role = getattr(actor, "role", None) if actor else None
+        report.approval_source = _APPROVAL_SOURCE.get()
     content = dict(report.content or {})
     content["approved"] = True
     report.content = content
@@ -1208,7 +1307,46 @@ def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
                 "[report_service] AI 비서 리포트 대화 시작 실패: report_id=%s", report.id
             )
 
-    return _serialize(report, session, subjective=_subjective_for_report(report, db))
+    return _serialize(report, session, subjective=_subjective_for_report(report, db), ops=True)
+
+
+def attach_capabilities(result: dict, report_id: str, user_id: str, db: DBSession) -> dict:
+    """응답에 capability 를 붙인다(스태프 경로 전용)."""
+    report = db.query(Report).filter(Report.id == _to_uuid(report_id)).first()
+    viewer = db.query(User).filter(User.id == _to_uuid(user_id)).first()
+    session = db.query(Session).filter(Session.id == report.session_id).first() if report else None
+    if report and viewer:
+        result["capabilities"] = report_capabilities(report, session, viewer, db)
+    return result
+
+
+def retry_report_delivery(report_id: str, actor_id: str, db: DBSession) -> dict:
+    """SDD-253 D4: 발송 실패 건 '다시 발송'. 승인자·승인 시각은 바꾸지 않는다."""
+    rid = _to_uuid(report_id)
+    report = db.query(Report).filter(Report.id == rid).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="리포트를 찾을 수 없습니다")
+    session = db.query(Session).filter(Session.id == report.session_id).first()
+    actor = db.query(User).filter(User.id == _to_uuid(actor_id)).first()
+    if not (can_approve_report(db, actor, session) or _can_edit_report(actor_id, session, db)):
+        raise HTTPException(status_code=403, detail="발송 권한이 없습니다")
+    if report.type != "client" or report.status != "completed":
+        raise HTTPException(status_code=409, detail="승인 완료된 회원용 리포트만 다시 발송할 수 있습니다")
+    if report.delivery_status != "failed":
+        raise HTTPException(status_code=409, detail="발송 실패 상태의 리포트만 다시 발송할 수 있습니다")
+    participant = (
+        db.query(SessionParticipant)
+        .filter(SessionParticipant.id == report.participant_id, SessionParticipant.session_id == report.session_id)
+        .first()
+    )
+    email = fill_member_report_email(participant, db)
+    if not email:
+        raise HTTPException(status_code=409, detail="등록된 수신 주소가 없어 발송할 수 없습니다")
+    from app.services.report_email_service import resend_report_email
+
+    resend_report_email(str(report.id), email, db)
+    db.refresh(report)
+    return _serialize(report, session, subjective=_subjective_for_report(report, db), ops=True)
 
 
 def mark_all_read(user_id: str, db: DBSession) -> int:

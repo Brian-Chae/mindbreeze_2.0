@@ -1,6 +1,8 @@
 import { SettingsSwitch } from '../../components/settings/settings-switch';
 import { SessionNotePromptToggle } from '../../components/settings/session-note-prompt-toggle';
 import { useAuthStore } from '../../stores/authStore';
+import { useIsDesktop } from '../../hooks/use-is-desktop';
+import ReportsDesktopPage from './ReportsDesktopPage';
 import { useMobileSwipeProtection } from '../../hooks/use-mobile-swipe-protection';
 // AI 리포트 목록 페이지 — 테이블 + 검색/필터/정렬/세션 그룹핑 (SDD-053)
 
@@ -169,7 +171,8 @@ function groupBySession(reports: ReportDto[]): { sessionId: string; label: strin
   return Array.from(map.values());
 }
 
-export default function ReportListPage() {
+// SDD-253: 모바일은 기존 카드 목록·전체화면 상세를 그대로 쓴다(데스크톱은 ReportsDesktopPage).
+export function LegacyReportListPage() {
   const [sampleOpen, setSampleOpen] = useState(false);
   /** SDD-064 — 목록에서 팝업으로 상세 보기 */
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
@@ -728,4 +731,9 @@ export default function ReportListPage() {
       )}
     </AppShell>
   );
+}
+
+export default function ReportListPage() {
+  const isDesktop = useIsDesktop();
+  return isDesktop ? <ReportsDesktopPage /> : <LegacyReportListPage />;
 }

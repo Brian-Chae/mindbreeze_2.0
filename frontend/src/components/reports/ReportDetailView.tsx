@@ -12,10 +12,11 @@ import NarrativeSections from './NarrativeSections';
 import SessionReplayPanel from './SessionReplayPanel';
 import ReportCoverSection from './ReportCoverSection';
 import ReportStatusBadge from './ReportStatusBadge';
+import ReportApprovalStatus from './ReportApprovalStatus';
 import { useAuthStore } from '../../stores/authStore';
 import { aiRecordUnavailableText } from '../../lib/features';
 import {
-  approveReport,
+  approveAndSendReport,
   resendReportEmail,
   adaptReportContent,
   canApproveReport,
@@ -155,7 +156,8 @@ export default function ReportDetailView({
     setApproving(true);
     setError(null);
     try {
-      await approveReport(report.id!);
+      // SDD-253 D4: 승인과 발송 예약을 한 행동으로 — 서버가 승인(멱등)·감사 기록·발송 상태를 돌려준다.
+      await approveAndSendReport(report.id!);
       setApproved(true);
       const updated = await getReport(report.id!);
       updateReport(updated);
@@ -222,12 +224,18 @@ export default function ReportDetailView({
   // 측정 데이터 없음 = EEG 미측정(not_measured) + AI 기록 없음(not_available)
   const noMeasuredData = !adapted.eeg && adapted.aiRecord?.status === 'not_available';
   const showCommentEditor =
-    isCounselorUser && report.type === 'client' && pipelineStatus === 'pending_review';
-  const showApprove = isCounselorUser && canApproveReport({
-    status: report.status,
-    sent_at: report.sent_at,
-    alreadyApprovedLocally: approved,
-  });
+    report.type === 'client' &&
+    pipelineStatus === 'pending_review' &&
+    (report.capabilities ? report.capabilities.can_edit_comment : isCounselorUser);
+  // SDD-253 D3: 승인 가능 여부는 서버 capability 가 우선한다(기관관리자 포함). 구 응답은 기존 규칙으로 폴백.
+  const isStaffUser = isCounselorUser || userRole === 'org_admin';
+  const showApprove =
+    !approved &&
+    isStaffUser &&
+    (report.capabilities
+      ? report.capabilities.can_approve
+      : isCounselorUser &&
+        canApproveReport({ status: report.status, sent_at: report.sent_at, alreadyApprovedLocally: approved }));
   // 승인 완료 후 상담사가 수신 주소를 확인하고 별도로 발송한다.
   const showResendEmail = isCounselorUser && report.status === 'completed';
   const displayError = externalError || error;
@@ -251,7 +259,7 @@ export default function ReportDetailView({
             disabled={approving}
             className={buttonClass()}
           >
-            {approving ? '승인 중...' : '승인하기'}
+            {approving ? '승인 중...' : '승인하고 발송'}
           </button>
         )}
 
@@ -291,6 +299,8 @@ export default function ReportDetailView({
         credibility={credibility}
         showApprovalHint={isCounselor}
       /></div>
+
+      {isStaffUser && <ReportApprovalStatus report={report} onChange={updateReport} />}
 
       {/* SDD-087 — 코멘트 작성 카드 (pending_review · client · 상담사) */}
       {showCommentEditor && (

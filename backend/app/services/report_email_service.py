@@ -173,6 +173,17 @@ def _generation_in_progress(report: Report, db: DBSession) -> bool:
     return bool(record and record.status in ("recording", "processing"))
 
 
+def _record_delivery(report: Report, status: str, code: str | None) -> None:
+    """SDD-253: 발송 시도 결과를 리포트에 남긴다. 승인(status)·sent_at 은 건드리지 않는다.
+
+    'sent' 는 메일 제공자 인계 기준이며 수신함 도착·열람을 뜻하지 않는다.
+    """
+    report.delivery_status = status
+    report.delivery_failure_code = code
+    report.delivery_attempted_at = datetime.now(timezone.utc)
+    report.delivery_attempt_count = (report.delivery_attempt_count or 0) + 1
+
+
 def deliver_report_email(report_id: str, db: DBSession) -> str:
     report = db.query(Report).filter(Report.id == UUID(report_id)).first()
     if not report or report.type != "client" or not report.participant_id:
@@ -200,6 +211,7 @@ def deliver_report_email(report_id: str, db: DBSession) -> str:
         sent = send_report_email(participant.report_email, link)
     except Exception:
         participant.report_email_status = "failed"
+        _record_delivery(report, "failed", "send_exception")
         db.commit()
         logger.exception(
             "[report_email] delivery exception: report_id=%s session_id=%s participant_id=%s",
@@ -211,6 +223,7 @@ def deliver_report_email(report_id: str, db: DBSession) -> str:
         return "failed"
     if not sent:
         participant.report_email_status = "failed"
+        _record_delivery(report, "failed", "send_failed")
         db.commit()
         logger.warning(
             "[report_email] delivery failed: report_id=%s session_id=%s participant_id=%s",
@@ -222,6 +235,7 @@ def deliver_report_email(report_id: str, db: DBSession) -> str:
         return "failed"
     participant.report_email_status = "sent"
     participant.report_email_sent_at = datetime.now(timezone.utc)
+    _record_delivery(report, "sent", None)
     db.commit()
     return "sent"
 
@@ -273,6 +287,8 @@ def resend_report_email(report_id: str, email: str, db: DBSession) -> bool:
             report.session_id,
             participant.id,
         )
+        _record_delivery(report, "failed", "send_exception")
+        db.commit()
         return False
     if not sent:
         logger.warning(
@@ -281,6 +297,8 @@ def resend_report_email(report_id: str, email: str, db: DBSession) -> bool:
             report.session_id,
             participant.id,
         )
+        _record_delivery(report, "failed", "send_failed")
+        db.commit()
         return False
 
     # FUNC-06: 최초 발송(deliver_report_email)과 동일하게 상태·시각도 함께 갱신한다.
@@ -289,6 +307,7 @@ def resend_report_email(report_id: str, email: str, db: DBSession) -> bool:
         participant.report_email = email
     participant.report_email_status = "sent"
     participant.report_email_sent_at = datetime.now(timezone.utc)
+    _record_delivery(report, "sent", None)
     db.commit()
     return True
 

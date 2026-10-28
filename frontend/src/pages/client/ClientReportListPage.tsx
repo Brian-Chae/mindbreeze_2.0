@@ -6,6 +6,7 @@ import { useMobileSwipeProtection } from '../../hooks/use-mobile-swipe-protectio
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ClientReportDetailModal } from './ClientReportDetailModal';
+import { MEMBER_UNREAD_LABEL } from '../../lib/report-ops-labels';
 import { listReports, markAllReportsRead, type ReportDto } from '../../lib/api/reports';
 import { useReportStore } from '../../stores/reportStore';
 import {
@@ -285,7 +286,7 @@ export default function ClientReportListPage() {
           >
             <td className="px-5 py-3.5"><div className="flex items-center gap-1.5">
               {!report.is_read && !isReportInReview(report) && (
-                <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[12px] mobile:text-mb-caption font-bold text-white">NEW</span>
+                <span className="shrink-0 whitespace-nowrap rounded-full bg-[#5F0080] px-2 py-0.5 text-[12px] mobile:text-mb-caption font-bold text-white">{MEMBER_UNREAD_LABEL}</span>
               )}
               <span className="font-bold text-[#1F1F1F] truncate" title={reportTitle(report)}>{reportTitle(report)}</span>
             </div>
