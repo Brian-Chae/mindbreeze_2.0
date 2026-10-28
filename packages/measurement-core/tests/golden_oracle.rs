@@ -73,8 +73,9 @@ fn eeg_stages_match_legacy_fallback() {
 fn eeg_check(filter: FilterImpl, dir: &str) {
     let run = replay(filter);
     let eegs: Vec<_> = run.emissions.iter().filter_map(|e| if let Emission::Eeg(x) = e { Some(x) } else { None })
-        // 가드 무효 윈도(포화·계단·lead-off·outlier)는 웹 TS oracle 이 emission 을 내지 않으므로 비교 제외
-        .filter(|x| x.guard.is_none())
+        // 기록만 모드(GUARD_ENFORCE=false): 가드 사유 윈도도 웹 TS oracle 과 같이 정상 emission 을 내므로 전부 비교한다.
+        // 강제 모드로 되돌리면 TS oracle 은 가드 윈도 emission 을 내지 않으므로 아래 필터가 필요하다.
+        .filter(|x| !measurement_core::guard::GUARD_ENFORCE || x.guard.is_none())
         .collect();
     let psd = read_json(&format!("expected/{dir}/eeg_psd_bandpower.json"));
     let raw = read_json(&format!("expected/{dir}/eeg_raw_indices.json"));

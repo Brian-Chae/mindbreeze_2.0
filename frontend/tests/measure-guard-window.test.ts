@@ -12,6 +12,7 @@ import {
   STEP_COUNT_LIMIT,
   STEP_UV,
   EegGapTracker,
+  GUARD_ENFORCE,
   checkEegWindow,
   isOutlierTna,
   saturationThresholdUv,
@@ -124,7 +125,7 @@ describe('규칙 4 갭 — 장치 tick 기준(도착 시각 사용 금지)', () 
   });
 });
 
-describe('EEGSignalProcessor — 불량 윈도는 명시적 invalid(null)', () => {
+describe('EEGSignalProcessor — 불량 윈도는 기록만(지표 유지, 사유 기록)', () => {
   const synth = (n: number): EEGDataPoint[] =>
     Array.from({ length: n }, (_, i) =>
       pt(i, 20 * Math.sin((2 * Math.PI * 10 * i) / 250) + 5 * Math.sin((2 * Math.PI * 20 * i) / 250), 18 * Math.sin((2 * Math.PI * 10 * i) / 250 + 0.4)),
@@ -136,25 +137,29 @@ describe('EEGSignalProcessor — 불량 윈도는 명시적 invalid(null)', () =
     expect(r.reason).toBeNull();
     expect(Number.isFinite(r.indices.relaxationIndex)).toBe(true);
   });
-  it('포화 윈도는 분석을 건너뛰고 invalid/saturated, 지표는 전부 null', async () => {
+  it('기록만 모드: 포화 윈도도 지표를 정상 산출하고 reason=saturated 만 남긴다', async () => {
+    expect(GUARD_ENFORCE).toBe(false);
     const d = synth(1250);
     for (let i = 600; i < 640; i++) d[i] = pt(i, 336_083, -336_083);
     const r = await new EEGSignalProcessor().processEEGData(d);
-    expect(r.validity).toBe('invalid');
+    expect(r.validity).toBe('valid');
     expect(r.reason).toBe('saturated');
-    expect(r.indices).toBeNull();
-    expect(r.bandPowers).toBeNull();
+    expect(Number.isFinite(r.indices.focusIndex)).toBe(true);
+    expect(Number.isFinite(r.indices.relaxationIndex)).toBe(true);
+    expect(r.bandPowers).not.toBeNull();
   });
-  it('계단 윈도 invalid/step', async () => {
+  it('기록만 모드: 계단 윈도 reason=step, 지표 유지', async () => {
     const d = synth(1250);
     for (const k of [400, 600, 800]) d[k] = pt(k, 9000, 0);
     const r = await new EEGSignalProcessor().processEEGData(d);
     expect(r.reason).toBe('step');
-    expect(r.indices).toBeNull();
+    expect(r.validity).toBe('valid');
+    expect(r.indices).not.toBeNull();
   });
-  it('lead-off 윈도 invalid/leadoff', async () => {
+  it('기록만 모드: lead-off 윈도 reason=leadoff, 지표 유지', async () => {
     const d = synth(1250).map((p, i) => (i % 5 === 0 ? { ...p, leadOff: { ch1: true, ch2: false } } : p));
     const r = await new EEGSignalProcessor().processEEGData(d);
     expect(r.reason).toBe('leadoff');
+    expect(r.indices).not.toBeNull();
   });
 });

@@ -6,6 +6,12 @@
 #include <stdint.h>
 #include <stddef.h>
 
+// 가드 강제 여부. false(기록만) = 판정 사유는 프레임 지표의 `reason` 과 GuardStats 에 남기되
+// 정상 산출한 지표값을 null 로 지우지 않는다(2026-10-28 대표 결정). true 로 되돌리면 무효 창 지표를 invalid(null)로 낸다.
+// 단 갭(Gap)은 분석 자체가 없어 값이 존재하지 않으므로 이 플래그와 무관하게 invalid 다.
+// 웹 TS 의 GUARD_ENFORCE(measureGuard.ts) 와 같은 값으로 유지한다.
+#define GUARD_ENFORCE false
+
 // 상태 코드 — 값은 안정(ABI). 계약 CoreError.code 와 이름이 대응한다.
 enum McStatus
 #if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
