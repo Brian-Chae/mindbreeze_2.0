@@ -133,6 +133,8 @@ jobs:
           VITE_API_BASE_URL: https://${{ env.PROD_API_HOST }}/api/v1
           VITE_PUBLIC_APP_URL: https://${{ env.PROD_WEB_HOST }}
           VITE_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID_PROD }}
+          # 서버(SSM LIVE_PROTOCOL_V2=true)와 웹 클라이언트 프로토콜을 일치시킨다. 누락 시 v2 회차에서 426 발생.
+          VITE_LIVE_PROTOCOL_V2: 'true'
         run: |
           if [ -z "${VITE_GOOGLE_CLIENT_ID:-}" ]; then
             echo "::warning::GOOGLE_CLIENT_ID_PROD 저장소 변수가 비어 있음 — 운영 Google 로그인이 동작하지 않는 빌드입니다(변수 설정 후 재빌드 필요)."
@@ -145,6 +147,8 @@ jobs:
           npm run build   # = tsc -b && vite build (mode production). .env 파일을 만들지 않는다.
           # prod API 주소가 번들에 실제로 들어갔는지 확인 (미주입 시 localhost 폴백으로 빌드되는 사고 방지)
           grep -rqF "$PROD_API_HOST" dist || { echo "::error::dist 에 운영 API 주소($PROD_API_HOST)가 없음"; exit 1; }
+          # 라이브 프로토콜 v2 플래그가 번들에 실제로 박혔는지 확인 (미주입 시 웹이 v1 로 동작해 426 사고)
+          grep -rqE 'VITE_LIVE_PROTOCOL_V2:[`"'"'"']true[`"'"'"']' dist || { echo "::error::dist 에 VITE_LIVE_PROTOCOL_V2=true 가 없음 (웹이 v1 클라이언트로 빌드됨)"; exit 1; }
 
       # ── 산출물 조립 + 게이트 4: dev 흔적 검사 ───────────────────────────
       - name: 릴리스 조립
