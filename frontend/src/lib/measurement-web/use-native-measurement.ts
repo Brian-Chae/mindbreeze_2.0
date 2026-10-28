@@ -68,6 +68,23 @@ export function toMetricSnapshot(s: MeasurementSnapshot): MetricSnapshot {
   };
 }
 
+/**
+ * 네이티브 측정을 시작해도 되는가(순수). JS BLE 연결 순간에 묶지 않는다.
+ * - 이미 시도/실행 중(latched)이면 JS 연결이 풀려도(releaseForNative) 유지한다.
+ * - iOS: 저장된 기기 ID 가 없어도 네이티브가 스캔으로 밴드를 찾는다.
+ * - Android: 주소(MAC) 가 필요하므로 JS 연결 중이거나 캐시된 기기 ID 가 있어야 한다.
+ */
+export function shouldStartNative(i: {
+  path: MeasurementPath; hasIds: boolean; platform: string; bandConnected: boolean; latched: boolean; knownDeviceId: string | null;
+}): boolean {
+  if (i.path !== 'native' || !i.hasIds) return false;
+  if (i.latched || i.bandConnected || Boolean(i.knownDeviceId)) return true;
+  return i.platform === 'ios';
+}
+
+const RETRY_MAX = 5;
+const RETRY_BASE_MS = 3000;
+
 export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativeMeasurementResult {
   const path = decideMeasurementPath({
     v2: o.v2 && o.enabled && isLiveProtocolV2Enabled(), native: isNativeMeasurementAvailable(),
@@ -79,8 +96,15 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
   const [device, setDevice] = useState<NativeDeviceState | null>(null);
   const instanceRef = useRef<string>(crypto.randomUUID());
   const startedRef = useRef(false);
-  // 시작 후에는 래치한다: Android 는 JS 연결을 일부러 놓으므로 useBand 의 connectionState 가 풀려도 native 측정은 계속한다.
-  const ready = path === 'native' && (o.bandConnected || startedRef.current) && Boolean(o.participantId && o.accountId);
+  // 시도 시작 시점부터 래치한다: startForSession 이 JS 연결을 놓으면 useBand 의 connectionState 가 풀려
+  // ready 가 꺼지고, 그러면 진행 중이던 시작이 cancelled 처리돼 리스너·재시도가 사라졌다.
+  const latchedRef = useRef(false);
+  const retryRef = useRef(0);
+  const [retryTick, setRetryTick] = useState(0);
+  const ready = shouldStartNative({
+    path, hasIds: Boolean(o.participantId && o.accountId), platform: Capacitor.getPlatform(), bandConnected: o.bandConnected,
+    latched: latchedRef.current, knownDeviceId: bluetoothService.getDeviceId() || bluetoothService.getCachedDeviceId() || null,
+  });
 
   useEffect(() => {
     if (!ready || !o.participantId || !o.accountId) return undefined;
@@ -95,7 +119,9 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
       setStatus('failed'); setCode(!access || !refresh ? 'credentials_unavailable' : 'platform_unsupported');
       return undefined;
     }
+    latchedRef.current = true;
     setStatus('starting'); setCode(null);
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
     void (async () => {
       try {
         await facade.attach(o.sessionId);
@@ -112,25 +138,36 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
         });
         if (cancelled) return;
         startedRef.current = true;
+        retryRef.current = 0;
         setStatus('running');
         console.info('[native-measurement] startForSession 성공', platform);
       } catch (err) {
         console.warn('[native-measurement] 시작 실패', platform, err instanceof Error ? err.message : String(err));
         if (cancelled) return;
         setStatus('failed'); setCode(err instanceof Error ? err.message : 'native_start_failed');
+        // 시작 실패 후 재시도 없이 멈추던 문제: 지수 백오프로 다시 시도한다(같은 requestId 는 facade 가 실패 시 비운다).
+        if (retryRef.current < RETRY_MAX) {
+          const delay = RETRY_BASE_MS * 2 ** retryRef.current;
+          retryRef.current += 1;
+          retryTimer = setTimeout(() => setRetryTick((n) => n + 1), delay);
+        } else {
+          latchedRef.current = false;
+        }
       }
     })();
     return () => {
       cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
       off?.();
       void facade.detach();
+      latchedRef.current = false;
       if (startedRef.current) {
         startedRef.current = false;
         void facade.stop({ reason: 'user_left', requestId: crypto.randomUUID() }).catch(() => undefined);
       }
       setMetrics(null); setDevice(null);
     };
-  }, [ready, o.sessionId, o.participantId, o.accountId]);
+  }, [ready, retryTick, o.sessionId, o.participantId, o.accountId]);
 
   return { path, status: path === 'native' ? status : 'idle', code: path === 'native' ? code : null, metrics: path === 'native' && status === 'running' ? metrics : null,
     device: path === 'native' && status === 'running' ? device : null };

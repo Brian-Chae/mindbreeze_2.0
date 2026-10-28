@@ -457,7 +457,7 @@ export function MemberClassContainer({
       everConnected: nd ? everConnected : nativeOwnsBand ? false : everConnected,
       deviceStatus,
       signalQualityLevel: signalLevel,
-      battery: band.battery,
+      battery: nativeOwnsBand ? null : band.battery,
       lastEegAt: nd ? null : band.lastEegAt,
     },
     nowMs,
@@ -486,7 +486,8 @@ export function MemberClassContainer({
     hero, snapshot, series, sheet, screenOff, confirmLeave,
     v2Bars: v2On ? { label: '이완', current: v2Current, bars: v2Bars } : null,
     device: {
-      battery: band.battery,
+      // 네이티브가 밴드를 잡으면 JS 는 연결을 놓아 배터리를 알 수 없다(스냅샷에도 필드 없음) → 0% 대신 '—'(null).
+      battery: nativeOwnsBand ? null : band.battery,
       signalLabel: signalQualityLevelLabel(signalLevel),
       contactLabel: contactStatusLabel(deviceStatus),
       connectedElapsedSec: band.connectedElapsedSec,
