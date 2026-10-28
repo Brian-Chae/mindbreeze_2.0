@@ -160,6 +160,19 @@ def _next_session(rows: list, now: datetime):
 # ───────────────────────── 클래스 ─────────────────────────
 
 
+def _open_session(rows: list):
+    """목록 '바로 입장'용 대표 열린 회차. has_open_session 과 같은 기준(open/in_progress).
+
+    여러 개면 진행 중(in_progress) 우선 → 입장 중(open) → 같은 상태 안에서는 일정이 가장 최근인 회차 → seq 큰 회차.
+    """
+    candidates = [r for r in rows if r.status in _OPEN_STATUSES]
+    return max(
+        candidates,
+        key=lambda r: (r.status == "in_progress", _aware(r.scheduled_at or r.started_at).timestamp() if (r.scheduled_at or r.started_at) else 0.0, r.seq or 0),
+        default=None,
+    )
+
+
 def _class_summary(cls: Class, rows: list, names: dict, now: datetime) -> dict:
     completed = sum(1 for r in rows if r.status == "completed" and r.session_kind == "regular")
     cancelled = sum(1 for r in rows if r.status == "cancelled" and r.session_kind == "regular")
@@ -173,6 +186,7 @@ def _class_summary(cls: Class, rows: list, names: dict, now: datetime) -> dict:
         next((r for r in assigned if r.status in _OPEN_STATUSES), None)
         or max(assigned, key=lambda r: (_aware(r.scheduled_at) if r.scheduled_at else now, r.seq or 0), default=None)
     )
+    opened = _open_session(rows)
     return {
         "host": {"id": str(rep.host_id), "name": names.get(rep.host_id)} if rep else None,
         "id": str(cls.id),
@@ -194,7 +208,11 @@ def _class_summary(cls: Class, rows: list, names: dict, now: datetime) -> dict:
             if nxt
             else None
         ),
-        "has_open_session": any(r.status in _OPEN_STATUSES for r in rows),
+        "has_open_session": opened is not None,
+        # 열린 회차 바로 입장용(계산 필드). 선택 규칙은 _open_session 참고.
+        "open_session_id": str(opened.id) if opened else None,
+        "open_session_host_id": str(opened.host_id) if opened and opened.host_id else None,
+        "open_session_host_state": opened.host_state if opened else None,
         # SDD-226: '지금 바로 시작'으로 만든 즉석 클래스 구분(목록 칩·다시 열기)
         "is_instant": (cls.recurrence_rule or {}).get("start_now") is True,
     }
@@ -615,10 +633,14 @@ def _viewer_fields(db, cls, uid, *, now=None):
     return {"membership": None, "attendance_summary": None, "capabilities": caps}
 
 
-def require_own_approved_report(db, report, session, *, user_id=None, member_credential=None):
-    """개인 리포트 원본 FK를 보존하며 canonical 본인 소유권만 검사한다."""
+def require_own_approved_report(db, report, session, *, user_id=None, member_credential=None, allow_unapproved=False):
+    """개인 리포트 원본 FK를 보존하며 canonical 본인 소유권만 검사한다.
+
+    allow_unapproved=True 면 승인 전(pending_review 등) 본인 리포트도 통과시킨다 — 호출자가 반드시 마스킹한다(SDD-211).
+    승인 전 404 는 '리뷰 중' 안내를 막아 회원에게 오류로 보였다.
+    """
     try:
-        if session is None or session.class_id is None or session.status != "completed" or report.type != "client" or report.status != "completed":
+        if session is None or session.class_id is None or session.status != "completed" or report.type != "client" or (report.status != "completed" and not allow_unapproved):
             raise HTTPException(404, detail=NOT_FOUND)
         cls, member = _read_context(db, session.class_id, user_id=user_id, member_credential=member_credential)
         _, originals, _, own = _member_rows(db, cls, member)

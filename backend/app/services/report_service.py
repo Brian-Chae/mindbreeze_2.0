@@ -239,6 +239,8 @@ def _serialize(
         "is_guest": participant_info.get("is_guest") if participant_info else None,
         "in_review": False,
         "in_review_delayed": False,
+        # 클래스 회차의 상담사용 리포트는 승인 대상이 아니다(approve-all 제외, SDD-237) — 목록 검토중 집계에서 제외하기 위한 표시.
+        "approval_required": not (report.type == "counselor" and session is not None and session.class_id is not None),
     }
 
 
@@ -835,7 +837,13 @@ def get_report(report_id: str, user_id: str | None, db: DBSession, *, member_cre
     if personal:
         from app.services.class_read_service import require_own_approved_report
         from app.services.class_access_service import without_raw_material
-        member, participant = require_own_approved_report(db, report, session, user_id=user_id, member_credential=member_credential)
+        member, participant = require_own_approved_report(db, report, session, user_id=user_id, member_credential=member_credential, allow_unapproved=True)
+        if _is_unapproved(report):
+            # SDD-211: 승인 전 본인 리포트는 404 가 아니라 '리뷰 중' 마스킹 200 — 읽음 처리하지 않는다.
+            masked = _mask_unapproved(_serialize(report, session), report, session)
+            masked["content"].pop("class_report", None)
+            masked.update(pdf_url=None, report_email=None, generation_error=None)
+            return masked
         # 클래스 회원 본인 리포트도 최초 열람 시 읽음 처리한다 — 이 분기가 일찍 반환해
         #   읽음 마킹이 빠져 하단 탭 배지·NEW 가 계속 남던 문제. (본인 소유·승인 완료는 위에서 검사됨)
         if not report.is_read:

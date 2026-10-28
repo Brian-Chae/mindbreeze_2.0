@@ -324,6 +324,7 @@ def test_클래스_목록_호스트_시점_필드와_진행률(client, world):
     assert set(item) == {
         "id", "title", "status", "schedule_mode", "planned_session_count", "area",
         "progress", "session_count", "next_session", "has_open_session",
+        "open_session_id", "open_session_host_id", "open_session_host_state",
         "is_instant",  # SDD-226 가산
         "host",  # 대표 진행자(다음 회차 없어도 표시)
     }
@@ -345,6 +346,7 @@ def test_클래스_목록_생성_경로가_만든_클래스는_계획_1회이고
     assert item["planned_session_count"] == 1
     assert item["progress"] == {"completed": 0, "total": 1}
     assert item["has_open_session"] is True
+    assert item["open_session_id"] is not None
     assert item["next_session"]["id"] == str(world["c2_sessions"][0].id)
 
 
@@ -828,6 +830,14 @@ def test_RD10_열린_세션_유무는_open_과_in_progress(client, world):
         _make_class(db, host, "대기 중", None, [("scheduled", NOW + timedelta(days=1))])
         assert _summary(db, host, "진행 중", NOW)["has_open_session"] is True
         assert _summary(db, host, "대기 중", NOW)["has_open_session"] is False
+        assert _summary(db, host, "대기 중", NOW)["open_session_id"] is None
+        assert _summary(db, host, "진행 중", NOW)["open_session_id"] is not None
+        _make_class(db, host, "여럿 열림", None, [("open", NOW + timedelta(hours=2)), ("in_progress", NOW - timedelta(days=1)), ("open", NOW - timedelta(hours=1))])
+        multi = _summary(db, host, "여럿 열림", NOW)
+        assert multi["has_open_session"] is True
+        from app.models.session import Session as _S
+        picked = db.query(_S).filter(_S.id == multi["open_session_id"]).one()
+        assert picked.status == "in_progress"  # 진행 중 우선
     finally:
         db.close()
 

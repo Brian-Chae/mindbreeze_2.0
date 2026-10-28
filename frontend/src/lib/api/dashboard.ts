@@ -39,6 +39,7 @@ export interface CounselorDashboardResponse {
   in_progress_classes: number;
   completed_classes: number;
   total_participants: number;
+  total_members?: number;
   pending_review_count: number;
   classes: ClassSummary[];
 }
@@ -59,6 +60,7 @@ export interface OrgDashboardResponse {
   total_counselors: number;
   total_classes: number;
   total_participants: number;
+  total_members?: number;
   completed_classes: number;
   in_progress_classes: number;
   counselors: OrgCounselorStat[];

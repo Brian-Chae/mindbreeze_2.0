@@ -5,6 +5,7 @@ import type { HostClassReadModel, SessionReadModel } from '../../../lib/class-st
 import type { DisplayField, ClassId } from '../../../lib/class-structure/read-model';
 import { classPath, classSessionPath } from '../../../lib/class-structure/navigation';
 import { ReadField } from './read-state';
+import { useAuthStore } from '../../../stores/authStore';
 function fieldValue<T>(field: DisplayField<T>): T | undefined { return field.kind === 'value' ? field.value : undefined; }
 const labels: Record<string, string> = { active: '진행 중', ready: '준비', draft: '편성 중', completed: '완료', cancelled: '취소', scheduled: '예정', waiting: '대기 중', in_progress: '진행 중', open: '입장 중', fixed: '고정형', rolling: '정기형', online: '온라인', offline: '오프라인', hybrid: '온·오프라인', optional: '선택', required: '필수', none: '사용 안 함', regular: '정규', makeup: '보강', assigned: '배정 완료', pending_ack: '수락 대기', needs_reassign: '재배정 필요' };
 export function LabelField({ field }: {
@@ -28,13 +29,15 @@ export function ClassCard({ model }: { model: HostClassReadModel }) {
     const status = fieldValue(model.status);
     const mode = fieldValue(model.scheduleMode);
     const count = fieldValue(model.plannedSessionCount);
+    const user = useAuthStore(s => s.user);
+    const canEnter = Boolean(model.openSessionId && user?.role === 'counselor' && user.id === model.openSessionHostId && model.openSessionHostState === 'assigned');
     return <div className="relative"><Link data-class-card to={classPath('host', model.id)} className="cs-class-row">
         <div className="cs-class-identity"><span className="cs-class-icon"><Leaf size={24} aria-hidden="true"/></span><div className="min-w-0"><h2 className="cs-class-title">{model.is_instant && <span className="cs-instant-chip">즉석</span>}<span className="cs-class-title__text" title={fieldValue(model.title) ?? undefined}><ReadField value={fieldValue(model.title)}/></span></h2><p><LabelField field={model.scheduleMode}/>{mode === 'fixed' && count != null ? ` ${count}회` : ''}</p></div></div>
         <div className="cs-class-next"><span className="cs-class-key">다음 회차</span>{next ? <><strong>{fieldValue(next.seq) == null ? '다음 일정' : `${fieldValue(next.seq)}회차`}</strong><small><DateField field={next.scheduledAt}/></small></> : <strong>{status === 'completed' ? '모두 마쳤어요' : status === 'draft' ? '아직 공개 전' : '다음 일정 없음'}</strong>}</div>
         <ProgressView model={model}/>
         <div className="cs-class-host"><span className="cs-class-key">진행 지도사</span><strong><ReadField value={(next ? fieldValue(next.hostName) : undefined) ?? (model.hostName ? fieldValue(model.hostName) : undefined)}/></strong>{next && fieldValue(next.hostName) === undefined && !(model.hostName && fieldValue(model.hostName)) && <small>진행 지도사를 확인해 주세요</small>}</div>
-        <div className="cs-class-state"><span className={`cs-state-chip ${status === 'completed' || status === 'cancelled' || status === 'draft' ? 'cs-muted-chip' : ''}`}><LabelField field={model.status}/></span>{fieldValue(model.hasOpenSession) === true && <span className="cs-state-chip cs-open-chip">열려 있는 회차</span>}</div>
-    </Link>{model.is_instant && status === 'completed' && <Link className="cs-reopen-link" to={`/classes/now?from=${encodeURIComponent(model.id)}`}>다시 열기</Link>}</div>;
+        <div className="cs-class-state"><span className={`cs-state-chip ${status === 'completed' || status === 'cancelled' || status === 'draft' ? 'cs-muted-chip' : ''}`}><LabelField field={model.status}/></span>{fieldValue(model.hasOpenSession) === true && !canEnter && <span className="cs-state-chip cs-open-chip">열려 있는 회차</span>}</div>
+    </Link>{canEnter && <Link className="cs-enter-link" data-enter-session to={`/sessions/${model.openSessionId}/player`}>바로 입장</Link>}{model.is_instant && status === 'completed' && <Link className="cs-reopen-link" to={`/classes/now?from=${encodeURIComponent(model.id)}`}>다시 열기</Link>}</div>;
 }
 export function NextClassView({ model, showClassTitle = false }: { model: HostClassReadModel; showClassTitle?: boolean }) {
     const next = fieldValue(model.nextSession);

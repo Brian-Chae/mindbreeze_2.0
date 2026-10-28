@@ -228,7 +228,7 @@ def test_report_09_자동승인_설정_조회와_변경(client):
 
     initial = client.get("/api/v1/reports/auto-approve", headers=host["auth"])
     assert initial.status_code == 200, initial.text
-    assert initial.json() == {"enabled": False}
+    assert initial.json() == {"enabled": False}  # create_test_counselor 헬퍼는 끔을 기본으로 한다(운영 기본값 켜짐은 test_report_auto_approve_default.py)
 
     updated = client.patch(
         "/api/v1/reports/auto-approve",

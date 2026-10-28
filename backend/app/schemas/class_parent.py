@@ -54,6 +54,9 @@ class ClassSummary(BaseModel):
     session_count: int
     next_session: NextSession | None = None
     has_open_session: bool
+    open_session_id: str | None = None
+    open_session_host_id: str | None = None
+    open_session_host_state: str | None = None
     is_instant: bool = False
     # 대표 진행자 — 목록 '진행 지도사' 열(다음 회차가 없어도 표시)
     host: UserBrief | None = None

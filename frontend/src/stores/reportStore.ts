@@ -3,7 +3,7 @@
 // 전체 읽음/일괄 승인/단일 열람 시 즉시 갱신해 두 뷰에서 일관되게 표시한다.
 
 import { create } from 'zustand';
-import { listReports, resolveReportStatus } from '../lib/api/reports';
+import { isAwaitingApproval, listReports } from '../lib/api/reports';
 import { isReportInReview } from '../lib/report-review-copy';
 
 interface ReportState {
@@ -28,7 +28,7 @@ export const useReportStore = create<ReportState>((set) => ({
       set({
         // 승인 전(리뷰 중) 행은 NEW 로 세지 않는다 — 승인 후에 NEW 로 나타난다.
         unread: reports.filter((r) => !r.is_read && !isReportInReview(r)).length,
-        pendingReview: reports.filter((r) => resolveReportStatus(r) === 'pending_review').length,
+        pendingReview: reports.filter((r) => isAwaitingApproval(r)).length,
       });
     } catch {
       // 조용히 실패 — 배지는 보조 정보이므로 차단하지 않는다.

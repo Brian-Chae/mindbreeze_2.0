@@ -26,6 +26,7 @@ RESEND_FROM_EMAIL	ssm	1		MIND BREEZE <noreply@mindbreeze.looxidlabs.com>
 GOOGLE_CLIENT_ID	ssm	1		
 GOOGLE_EXTRA_CLIENT_IDS	ssm	0		네이티브 앱 추가 aud
 LIVEKIT_HOST	ssm	1		wss://api.mindbreeze.looxidlabs.com/livekit
+LIVEKIT_API_URL	ssm	0		서버→LiveKit 관리 API 내부 주소 http://127.0.0.1:7880 (비우면 LIVEKIT_HOST 사용 — 운영은 /livekit 접두사 때문에 404)
 LIVEKIT_API_KEY	ssm	1		신규 발급
 LIVEKIT_API_SECRET	ssm	1		신규 발급
 GEMINI_API_KEY	ssm	1		

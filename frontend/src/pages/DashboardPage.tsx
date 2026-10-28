@@ -360,8 +360,8 @@ export default function DashboardPage() {
             />
             <StatTile label="오늘 예정 회차" value={todaySessions.length} to={TODAY_TILE_TARGET} hint="일정 보기 →" />
             <StatTile
-              label="총 참여자"
-              value={`${data.total_participants.toLocaleString('ko-KR')}명`}
+              label="총 회원"
+              value={`${(data.total_members ?? data.total_participants).toLocaleString('ko-KR')}명`}
               to={PARTICIPANTS_TILE_TARGET}
               hint="회원 관리 →"
             />

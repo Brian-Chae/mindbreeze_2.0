@@ -205,6 +205,7 @@ def test_블록이_error면_리포트_상태는_ready_그대로_error_상태를_
 
 # ── 승인 현황 (type=client 만, P8) ───────────────────────────────
 def test_승인_집계는_client_리포트만_센다(client, world, db):
+    world["host"].auto_approve_report = False  # 기본값이 켜짐이므로 끔 경로를 명시
     reps = world["client_reports"]
     reps[0].status = "completed"
     reps[1].status = "pending_review"
@@ -233,6 +234,7 @@ def test_자동_승인_켬이고_무데이터_리포트가_검토_대기면_no_d
 
 
 def test_자동_승인_끔이면_no_data_manual은_0(client, world, db):
+    world["host"].auto_approve_report = False  # 기본값이 켜짐이므로 끔 경로를 명시
     reps = world["client_reports"]
     reps[0].status = "pending_review"
     reps[0].content = {"eeg": {"status": "not_measured"}}

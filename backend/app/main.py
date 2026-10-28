@@ -85,6 +85,10 @@ def _production_extra_problems(cfg) -> list[str]:
     lk_host = (cfg.livekit_host or "").strip().lower()
     if not lk_host or "localhost" in lk_host or "127.0.0.1" in lk_host or _is_dev_value(lk_host):
         problems.append("livekit_host 가 기본/개발 주소를 가리킴")
+    # livekit_api_url 은 서버 내부 호출용이라 loopback 을 허용하되, 비어 있지 않으면 dev 흔적만 금지
+    lk_api = (getattr(cfg, "livekit_api_url", "") or "").strip().lower()
+    if lk_api and _is_dev_value(lk_api):
+        problems.append("livekit_api_url 가 개발 주소를 가리킴")
     if (cfg.livekit_api_key or "") in ("", "devkey") or (cfg.livekit_api_secret or "") in ("", "secret"):
         problems.append("LiveKit API 키/시크릿이 기본값이거나 비어 있음")
 

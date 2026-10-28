@@ -105,6 +105,15 @@ switch_to() { # <release_id> — current·venv 링크 전환(원자), previous �
   if [ -n "$old" ] && [ "$old" != "$PREFIX/releases/$rid" ]; then atomic_link "$old" "$PREFIX/previous"; fi
 }
 
+ensure_data_dirs() {
+  local base="${MB_DATA_DIR:-/var/lib/mindbreeze}"
+  if [ "$(id -u)" = "0" ] && id "$SERVICE_USER" >/dev/null 2>&1; then
+    install -d -m 0750 -o "$SERVICE_USER" -g "$SERVICE_USER" "$base" "$base/audio" "$base/video"
+  else
+    mkdir -p "$base/audio" "$base/video" 2>/dev/null || true
+  fi
+}
+
 write_state() { # <event> <release_id> <previous_id>
   mkdir -p "$PREFIX/state"
   python3 - "$PREFIX/state/last_deploy.json" "$1" "$2" "$3" <<'PY'
@@ -161,6 +170,8 @@ cmd_install() {
   [ -f "$tgz" ] && [ -f "$tgz.sha256" ] || die 13 "산출물/체크섬 파일 없음"
 
   mkdir -p "$PREFIX/releases" "$PREFIX/venvs" "$PREFIX/incoming" "$PREFIX/state"
+  # 오디오·영상 청크 폴백 저장소 — 없으면 업로드가 PermissionError 500 이 된다(2026-10-28 운영 장애). 배포마다 멱등 보장.
+  ensure_data_dirs
   if command -v flock >/dev/null 2>&1; then
     exec 9>"$PREFIX/state/deploy.lock"
     flock -n 9 || die 12 "다른 배포가 진행 중"

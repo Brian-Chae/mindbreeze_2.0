@@ -12,7 +12,8 @@ describe('use-native-measurement 배선', () => {
   });
   it('시작 후 래치: stale band 상태가 풀려도 native 를 멈추지 않는다', () => {
     expect(src).toContain('startedRef.current');
-    expect(src).toMatch(/o\.bandConnected \|\| startedRef\.current/);
+    expect(src).toContain('latchedRef.current');
+    expect(src).toMatch(/latched: latchedRef\.current/);
   });
 });
 

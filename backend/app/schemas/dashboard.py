@@ -46,6 +46,8 @@ class CounselorDashboardResponse(BaseModel):
     in_progress_classes: int = 0
     completed_classes: int = 0
     total_participants: int = 0
+    # 대시보드 '총 회원' 타일 — 회원 화면과 같은 수
+    total_members: int = 0
     pending_review_count: int = 0
     classes: list[ClassSummary] = []
 
@@ -68,6 +70,8 @@ class OrgDashboardResponse(BaseModel):
     total_counselors: int = 0
     total_classes: int = 0
     total_participants: int = 0
+    # 대시보드 '총 회원' 타일 — 회원 화면과 같은 수
+    total_members: int = 0
     completed_classes: int = 0
     in_progress_classes: int = 0
     counselors: list[OrgCounselorStat] = []

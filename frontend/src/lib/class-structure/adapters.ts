@@ -31,6 +31,9 @@ export interface ClassReadModel {
   progress: DisplayField<ProgressDto>;
   nextSession: DisplayField<SessionReadModel>;
   hasOpenSession: DisplayField<boolean>;
+  openSessionId?: string;
+  openSessionHostId?: string;
+  openSessionHostState?: string;
   locationType: DisplayField<string>;
   locationAddress: DisplayField<string>;
   linkbandMode: DisplayField<string>;
@@ -95,7 +98,9 @@ export function adaptMemberClass(row: ClassSummaryDto | ClassDetailDto): ClassRe
       ? { completed: row.progress.completed, total: row.progress.total } : null),
     nextSession: displayField(row.next_session ? session(row.next_session, row.next_session.host?.name) : null),
     hostName: text(row.next_session?.host?.name ?? row.host?.name),
-    hasOpenSession: displayField(row.has_open_session), locationType: text(detail?.location_type),
+    hasOpenSession: displayField(row.has_open_session),
+    openSessionId: row.open_session_id ?? undefined, openSessionHostId: row.open_session_host_id ?? undefined, openSessionHostState: row.open_session_host_state ?? undefined,
+    locationType: text(detail?.location_type),
     locationAddress: text(detail?.location_address), linkbandMode: text(detail?.linkband_mode),
     recordAudio: displayField(detail?.record_audio), capacity: displayField(detail?.capacity),
     participantMode: text(detail?.participant_mode), defaultDurationMin: displayField(detail?.default_duration_min),

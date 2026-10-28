@@ -22,6 +22,13 @@ export const GAP_SAMPLES_LIMIT = 2;
 /** 규칙 5: 위 규칙 통과 후에도 TNA 가 이 값을 넘으면 outlier. */
 export const OUTLIER_TNA_LIMIT = 1000;
 
+/**
+ * 가드 강제 여부. false(기록만) = 판정 사유는 결과의 reason 에 남기되 정상 산출한 지표를 null 로 지우지 않는다(2026-10-28 대표 결정).
+ * true 로 되돌리면 무효 창의 EEG 지표를 invalid(null)로 낸다. 코어 guard.rs 의 GUARD_ENFORCE 와 같은 값으로 유지한다.
+ * 갭(gap)은 링을 비워 분석할 값이 없으므로 이 플래그와 무관하게 항상 invalid 다.
+ */
+export const GUARD_ENFORCE = false;
+
 /** reason 코드(소문자 snake, 서버 정규식 통과). 코어 GuardReason::code 와 동일. */
 export const GUARD_REASONS = ['saturated', 'step', 'leadoff', 'gap', 'outlier'] as const;
 export type GuardReason = (typeof GUARD_REASONS)[number];

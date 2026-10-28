@@ -270,3 +270,13 @@ export const getSessionReportStatus = async (sessionId: string): Promise<ReportP
   const raw = await apiClient.get<unknown>(`/sessions/${sessionId}/report-status`);
   return parseReportProgress(raw);
 };
+
+/** 상담사 '검토중' 집계 대상 — 승인 대상(approval_required !== false)이면서 pending_review 인 행만. */
+export function isAwaitingApproval(input: {
+  status?: string | null;
+  sent_at?: string | null;
+  approval_required?: boolean | null;
+}): boolean {
+  if (input.approval_required === false) return false;
+  return resolveReportStatus(input) === 'pending_review';
+}
