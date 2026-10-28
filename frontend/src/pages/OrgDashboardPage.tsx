@@ -343,7 +343,7 @@ export default function OrgDashboardPage() {
           <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             <StatCard label="활성 상담사" value={activeCounselorCount} />
             <StatCard label="총 클래스" value={data.total_classes} accent="text-[#5F0080]" />
-            <StatCard label="총 참여자" value={data.total_participants} />
+            <StatCard label="총 회원" value={data.total_members ?? data.total_participants} />
             <StatCard label="완료" value={data.completed_classes} accent="text-[#1F8A5B]" />
             <StatCard label="진행중" value={data.in_progress_classes} accent="text-[#1F8A5B]" />
           </div>

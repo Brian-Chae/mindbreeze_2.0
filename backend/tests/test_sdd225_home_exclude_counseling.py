@@ -169,3 +169,21 @@ def test_총_참여자는_회차_합이_아니라_서로_다른_사람_수(clien
         lead_id = str(lead.id)
     body = _get(client, lead_id, "counselor", "/api/v1/dashboard/counselor")
     assert body["total_participants"] == 2  # 회원 1 + 게스트 1, 대기열 제외
+
+
+def test_총_회원은_회원_화면과_같은_수(client):
+    """대시보드 '총 회원' = 회원 화면(GET /clients) 전체 수(운영 제보: 회원 1명인데 4명 표시)."""
+    from app.models.client_counselor_link import ClientCounselorLink
+
+    with database.SessionLocal() as db:
+        org, lead, member, parent = world(db)
+        db.add(ClientCounselorLink(client_id=member.id, counselor_id=lead.id, status="active"))
+        for seq in (1, 2):
+            s = _class_session(db, lead, parent, seq, "completed")
+            db.add(SessionParticipant(session_id=s.id, user_id=member.id, is_waitlisted=False))
+            db.add(SessionParticipant(session_id=s.id, guest_name=f"게스트{seq}", is_waitlisted=False))
+        db.commit()
+        lead_id = str(lead.id)
+    body = _get(client, lead_id, "counselor", "/api/v1/dashboard/counselor")
+    clients = _get(client, lead_id, "counselor", "/api/v1/clients")
+    assert body["total_members"] == clients["total"] == 1

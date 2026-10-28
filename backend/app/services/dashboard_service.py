@@ -136,6 +136,17 @@ def _distinct_participant_count(sessions: list[Session], db: DBSession) -> int:
     return len({_participant_key(p) for p in rows})
 
 
+def _member_total(user_id: str, db: DBSession) -> int:
+    """대시보드 '총 회원' — 회원 화면(GET /clients)과 같은 모집단·같은 수.
+
+    상담사=본인 active 연결 회원, 기관관리자=여기에 관리 기관 회원을 더한다(client_overview_service 와 동일 기준).
+    """
+    from app.services import client_overview_service
+
+    data = client_overview_service.list_clients_overview(str(user_id), None, 1, 1, None, None, db)
+    return int(data["total"])
+
+
 def _distinct_class_count(sessions: list[Session]) -> int:
     """서로 다른 클래스 수 — class_id 기준 고유 개수. class_id 없는 레거시 단건 회차는 회차 1건 = 클래스 1개."""
     return len({s.class_id if s.class_id is not None else s.id for s in sessions})
@@ -246,6 +257,7 @@ def counselor_dashboard(user_id: str, db: DBSession) -> dict:
         "in_progress_classes": sum(1 for c in summaries if c["status"] in _IN_PROGRESS),
         "completed_classes": sum(1 for c in summaries if c["status"] == "completed"),
         "total_participants": _distinct_participant_count(all_sessions, db),
+        "total_members": _member_total(str(uid), db),
         "pending_review_count": sum(c["pending_review_count"] for c in summaries),
         "classes": summaries,
     }
@@ -310,6 +322,7 @@ def org_dashboard(user_id: str, db: DBSession) -> dict:
         "total_counselors": len(counselor_stats),
         "total_classes": _distinct_class_count(sessions),
         "total_participants": _distinct_participant_count(sessions, db),
+        "total_members": _member_total(str(uid), db),
         "completed_classes": sum(1 for c in summaries if c["status"] == "completed"),
         "in_progress_classes": sum(1 for c in summaries if c["status"] in _IN_PROGRESS),
         "counselors": counselor_stats,
