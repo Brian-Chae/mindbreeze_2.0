@@ -5,6 +5,7 @@ import { useState, useCallback } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useAuthStore } from '../../stores/authStore';
 import { ApiError } from '../../lib/api/client';
+import { BIRTH_DATE_MESSAGES, checkBirthDate } from '../../lib/auth/age';
 import type { Consents } from './ConsentCheckList';
 
 interface GoogleLoginButtonProps {
@@ -64,9 +65,19 @@ export default function GoogleLoginButton({
 
   const handleClick = useCallback(() => {
     if (loading) return;
+    // 입력했는데 잘못된 생년월일은 서버 왕복 없이 바로 안내한다(빈 값은 기존 사용자 재로그인일 수 있어 서버 판정에 맡긴다).
+    if (birthDate) {
+      const birthCheck = checkBirthDate(birthDate);
+      if (birthCheck !== 'ok') {
+        const message = BIRTH_DATE_MESSAGES[birthCheck];
+        setError(message);
+        onError?.(new Error(message));
+        return;
+      }
+    }
     setError(null);
     googleLogin();
-  }, [loading, googleLogin]);
+  }, [loading, googleLogin, birthDate, onError]);
 
   return (
     <div className="flex flex-col items-center gap-2">
