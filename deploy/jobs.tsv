@@ -10,6 +10,7 @@ process_email_outbox	process_email_outbox_cron.py	*-*-* *:*:00 UTC	55	1	이메�
 cleanup_data_exports	cleanup_data_exports_cron.py	*-*-* *:00/5:00 UTC	240	1	데이터 내보내기 만료 정리
 upgrade_narrative_cache	upgrade_narrative_cache_cron.py	*-*-* 05:00:00 UTC	1800	1	서사 캐시 업그레이드
 sweep_stale_eeg_raw	sweep_stale_eeg_raw_cron.py	*-*-* 04:30:00 UTC	1800	1	EEG raw 고아·보관기간 정리
+sweep_biosignal_orphans	sweep_biosignal_orphans_cron.py	*-*-* *:00/15:00 UTC	240	1	생체 신호 고아 pending 산출물 종결·ended stream closed_at 기록
 sweep_stale_media	sweep_stale_media_cron.py	*-*-* 04:45:00 UTC	1800	1	미디어 고아 정리
 process_push_outbox	process_push_outbox_cron.py	*-*-* *:*:00 UTC	55	1	푸시 outbox 발송(FCM/VAPID)
 sweep_agent_checkins	sweep_agent_checkins_cron.py	*-*-* *:00/5:00 UTC	240	1	AI 비서 안부 체크인

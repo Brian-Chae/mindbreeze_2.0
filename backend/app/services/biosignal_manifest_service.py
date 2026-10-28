@@ -34,6 +34,8 @@ logger = logging.getLogger(__name__)
 
 SIGNALS = ("eeg", "ppg", "acc")
 UNKNOWN_SHA = "0" * 64
+# 서버가 고아 pending 산출물을 정리하며 남기는 failure_reason — evaluate 가 선언된 유실(lost)과 같게 취급한다.
+ABANDONED_REASON = "abandoned_orphan"
 
 
 def _canon(obj) -> str:
@@ -169,6 +171,10 @@ def evaluate(db: DBSession, sid, pid) -> Evaluation:
     intent_row = _latest_intent(db, sid, pid)
     intent = CloseIntentIn.model_validate(intent_row.payload) if intent_row else None
     lost = {(x["kind"], x["alias"]): x["reason"] for x in (intent_row.payload.get("lost_artifacts", []) if intent_row else [])}
+    # 앱 재시작·연결 대체로 업로드가 영영 오지 않는 산출물은 서버 sweep 이 abandoned 로 종결한다 → 일부 누락(partial) 완료로 본다.
+    for a in arts:
+        if a.upload_status == "failed" and a.failure_reason == ABANDONED_REASON:
+            lost.setdefault((a.artifact_kind, a.artifact_alias), ABANDONED_REASON)
 
     raw_by_alias = {r.chunk_alias: r for r in raws if r.chunk_alias}
     art_by_alias = {a.artifact_alias: a for a in arts}
