@@ -633,10 +633,14 @@ def _viewer_fields(db, cls, uid, *, now=None):
     return {"membership": None, "attendance_summary": None, "capabilities": caps}
 
 
-def require_own_approved_report(db, report, session, *, user_id=None, member_credential=None):
-    """개인 리포트 원본 FK를 보존하며 canonical 본인 소유권만 검사한다."""
+def require_own_approved_report(db, report, session, *, user_id=None, member_credential=None, allow_unapproved=False):
+    """개인 리포트 원본 FK를 보존하며 canonical 본인 소유권만 검사한다.
+
+    allow_unapproved=True 면 승인 전(pending_review 등) 본인 리포트도 통과시킨다 — 호출자가 반드시 마스킹한다(SDD-211).
+    승인 전 404 는 '리뷰 중' 안내를 막아 회원에게 오류로 보였다.
+    """
     try:
-        if session is None or session.class_id is None or session.status != "completed" or report.type != "client" or report.status != "completed":
+        if session is None or session.class_id is None or session.status != "completed" or report.type != "client" or (report.status != "completed" and not allow_unapproved):
             raise HTTPException(404, detail=NOT_FOUND)
         cls, member = _read_context(db, session.class_id, user_id=user_id, member_credential=member_credential)
         _, originals, _, own = _member_rows(db, cls, member)

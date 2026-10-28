@@ -62,7 +62,8 @@ def test_pending_own_and_guessed_reports_are_404_without_raw_url(client,monkeypa
         _,_,cls,owner,member,sessions=scene(db)
         pending=report(db,sessions[1],participant(db,member,sessions[1]),'pending_review');db.commit();api=http(db,monkeypatch)
         path=f'/api/v1/reports/{pending.id}';headers=bearer(owner)
-        assert api.get(path,headers=headers).status_code==404
+        pend=api.get(path,headers=headers);assert pend.status_code==200,pend.text  # 승인 전 본인 리포트: 404 대신 '리뷰 중' 마스킹 200
+        assert pend.json()['in_review'] is True and pend.json()['pdf_url'] is None
         assert api.get(f'/api/v1/reports/{uuid4()}',headers=headers).status_code==404
         pending.status='completed';db.commit();result=api.get(path,headers=headers)
         assert result.status_code==200,result.text

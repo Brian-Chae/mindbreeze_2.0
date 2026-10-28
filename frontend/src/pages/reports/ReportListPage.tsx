@@ -16,6 +16,7 @@ import {
   getAutoApprove,
   listReports,
   resolveReportStatus,
+  isAwaitingApproval,
   setAutoApprove,
   type ReportDto,
 } from '../../lib/api/reports';
@@ -126,7 +127,7 @@ function filterAndSortReports(
   let filtered = reports.filter((r) => {
     const pipeline = resolveReportStatus(r);
     const failed = isGenerationFailed(r);
-    if (statusFilter === 'pending' && pipeline !== 'pending_review') return false;
+    if (statusFilter === 'pending' && !isAwaitingApproval(r)) return false;
     if (statusFilter === 'approved' && pipeline !== 'completed') return false;
     if (statusFilter === 'failed' && !failed) return false;
     if (typeFilter !== 'all' && r.type !== typeFilter) return false;
@@ -307,7 +308,7 @@ export default function ReportListPage() {
 
   // 일괄 승인 대상 — 현재 목록에서 검토중(pending_review) 상태 개수.
   const pendingCount = useMemo(
-    () => reports.filter((r) => resolveReportStatus(r) === 'pending_review').length,
+    () => reports.filter((r) => isAwaitingApproval(r)).length,
     [reports],
   );
 
@@ -421,7 +422,7 @@ export default function ReportListPage() {
       <td className="px-5 py-3.5 text-[13px] mobile:text-mb-caption text-[#6F6F6F] whitespace-nowrap">{sessionTypeLabel(r.session_type)}</td>
       <td className="px-5 py-3.5 text-[12px] mobile:text-mb-caption text-[#9B9B9B] font-mono whitespace-nowrap">{formatDate(reportDateIso(r))}</td>
       <td className="px-5 py-3.5">
-        <ReportStatusChip status={r.status} sentAt={r.sent_at} />
+        <ReportStatusChip status={r.approval_required === false && r.status === 'pending_review' ? 'completed' : r.status} sentAt={r.sent_at} />
       </td>
       <td className="px-5 py-3.5">
         <GenerationStatusBadge
@@ -465,7 +466,7 @@ export default function ReportListPage() {
           <TypeBadge type={r.type} />
           <MembershipBadge isGuest={r.is_guest} />
         </div>
-        <ReportStatusChip status={r.status} sentAt={r.sent_at} />
+        <ReportStatusChip status={r.approval_required === false && r.status === 'pending_review' ? 'completed' : r.status} sentAt={r.sent_at} />
       </div>
       <div className="flex items-center gap-1.5 mb-1">
         {!r.is_read && (
