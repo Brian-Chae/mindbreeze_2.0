@@ -15,6 +15,8 @@ export type CaptureStatus = 'idle' | 'running' | 'stopped';
 export type StopReason = 'journal_failed' | 'seal_failed' | 'lease_lost' | 'memory_cap' | 'quota' | 'closed';
 export const SIGNALS: Signal[] = ['eeg', 'ppg', 'acc'];
 const RATES: Record<Signal, number> = { eeg: 250, ppg: 50, acc: 30 };
+/** 패킷 간 tick 경과가 기대(샘플 수/rate)와 이만큼 어긋나면 새 segment. EEG 는 2샘플, PPG/ACC 는 tick 갱신이 불규칙해 500ms(그 미만은 정상 흐름으로 본다). */
+export const GAP_TOLERANCE_US: Record<Signal, number> = { eeg: 2_000_000 / 250, ppg: 500_000, acc: 500_000 };
 const SAMPLE_STRIDE: Record<Signal, number> = { eeg: 17, ppg: 8, acc: 18 };
 const SCALES: Record<Signal, number[]> = { eeg: [EEG_ADC_SCALE, EEG_ADC_SCALE], ppg: [1, 1], acc: [ACC_ADC_SCALE, ACC_ADC_SCALE, ACC_ADC_SCALE] };
 const CHANNELS: Record<Signal, { channels: string[]; units: string[] }> = {
@@ -143,7 +145,7 @@ export class BiosignalCaptureSession {
       const tick = BigInt(obs.unwrappedTick);
       const elapsedUs = s.lastTick === null ? null : Number(tick - s.lastTick) * 1_000_000 / 32768;
       const expectedUs = rows * 1_000_000 / RATES[signal];
-      const packetGap = !obs.reason && elapsedUs !== null && Math.abs(elapsedUs - expectedUs) > 2_000_000 / RATES[signal];
+      const packetGap = !obs.reason && elapsedUs !== null && Math.abs(elapsedUs - expectedUs) > GAP_TOLERANCE_US[signal];
       if (packetGap) { s.clock.reanchor(); obs = s.clock.observe(packet.tickRaw, packet.receivedUtcUs, packet.receivedMonotonicUs); }
       s.lastTick = BigInt(obs.unwrappedTick);
       tickUnwrapped = obs.unwrappedTick; const reason = packetGap ? 'packet_gap' : obs.reason;
