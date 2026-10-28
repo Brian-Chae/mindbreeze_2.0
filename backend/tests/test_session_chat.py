@@ -303,14 +303,15 @@ def test_10_채팅off면_참여자_발신403_host는_가능(client):
     )
     assert res.status_code == 403
     assert res.json()["detail"] == "채팅이 꺼져 있는 클래스입니다"
-    # host 는 off 여도 발신 가능(공지)
+    # host 는 off 여도 발신 가능 — 발신하면 채팅이 열린다(자동 chat_enabled=true)
     assert client.post(
         f"/api/v1/chat/rooms/{room_id}/messages",
         json={"content": "공지입니다"},
         headers=host["auth"],
     ).status_code == 201
+    assert client.get(f"/api/v1/sessions/{s['id']}", headers=member["auth"]).json()["chat_enabled"] is True
 
-    # 켜면 참여자도 발신 가능
+    # 명시적으로 켜도 참여자 발신 가능
     assert client.post(
         f"/api/v1/sessions/{s['id']}/chat-enabled", json={"enabled": True}, headers=host["auth"]
     ).status_code == 200
@@ -377,3 +378,25 @@ def test_12_채팅_켠_세션에서_읽음처리_동작(client):
         f"/api/v1/chat/rooms/{room_id}/unread-counts", headers=member["auth"]
     ).json()["unread_counts"]
     assert counts[msg["id"]] == 0
+
+
+def test_13_채팅없음_회차에서_상담사가_발신하면_열리고_회원이_이전대화를_보고_답한다(client):
+    host = _register(client, "sesschat13@test.com")
+    member = _register(client, "sesschat13m@test.com", role="client")
+    s = _create_session(client, host["auth"], participant_ids=[member["id"]])
+    room_id = s["chat_room_id"]
+    assert s["chat_enabled"] is False
+    assert client.post(
+        f"/api/v1/chat/rooms/{room_id}/messages", json={"content": "어서오세요"}, headers=host["auth"]
+    ).status_code == 201
+    # 회원 폴링(GET session)이 열림 상태와 방 ID 를 받는다
+    detail = client.get(f"/api/v1/sessions/{s['id']}", headers=member["auth"]).json()
+    assert detail["chat_enabled"] is True and detail["chat_room_id"] == room_id
+    # 이전 대화 조회 + 안읽음 1 + 답장
+    msgs = client.get(f"/api/v1/chat/rooms/{room_id}/messages", headers=member["auth"]).json()["messages"]
+    assert [m["content"] for m in msgs] == ["어서오세요"]
+    room = client.get(f"/api/v1/chat/rooms/{room_id}", headers=member["auth"]).json()
+    assert room["unread_count"] == 1
+    assert client.post(
+        f"/api/v1/chat/rooms/{room_id}/messages", json={"content": "안녕하세요"}, headers=member["auth"]
+    ).status_code == 201
