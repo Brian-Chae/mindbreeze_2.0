@@ -115,6 +115,13 @@ import {
 
 const LIVE_METRICS_POLL_MS = 4000;
 const SESSION_POLL_MS = 5000;
+
+/** 업로드 실패를 브라우저 원문("Failed to fetch")이 아닌 안내 문구로 바꾼다 — 청크는 로컬에 보관해 종료 시 재전송한다 */
+function uploadErrorMessage(err: Error, label: string): string {
+  return err instanceof TypeError || /failed to fetch|networkerror|load failed/i.test(err.message)
+    ? `${label} 업로드가 지연되고 있어요. 녹음은 계속되며 연결이 복구되면 다시 전송해요.`
+    : err.message;
+}
 /** SDD-083: 상태 변화 시계열 누적 최소 간격 — 3초 평균 표시와 동일 리듬 */
 const HISTORY_MIN_INTERVAL_MS = 3000;
 /** 시작 확인 시트에 보여 주는 기록 보관 기간(서버 설정값, 모르면 null) */
@@ -358,7 +365,7 @@ export default function ClassPlayerPage() {
   // 마이크·카메라 없음/거부는 전용 안내 배너가 이미 보여 준다 — 브라우저 원문(Requested device not found)을 오류 띠로 띄우지 않는다.
   const onRecorderError = useCallback((err: Error) => {
     if (err.name === 'NotFoundError' || err.name === 'NotAllowedError' || err.name === 'OverconstrainedError') return;
-    setError(err.message);
+    setError(uploadErrorMessage(err, '녹음'));
   }, []);
   const recorder = useAudioRecorder({
     sessionId: id ?? '',

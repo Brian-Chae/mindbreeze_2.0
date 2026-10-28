@@ -249,8 +249,17 @@ class Settings(BaseSettings):
 
     # LiveKit WebRTC
     livekit_host: str = "ws://localhost:7880"
+    # 서버→LiveKit 관리 API(Twirp) 주소. 비우면 livekit_host 를 쓴다.
+    # 운영의 livekit_host 는 클라이언트용 공개 주소(wss://api…/livekit)라 python SDK 가
+    # /livekit 접두사를 떼어 404 가 나므로, 서버 내부 주소(http://127.0.0.1:7880)를 따로 둔다.
+    livekit_api_url: str = ""
     livekit_api_key: str = "devkey"
     livekit_api_secret: str = "secret"
+
+    @property
+    def livekit_server_api_url(self) -> str:
+        """서버→LiveKit API 호출에 쓸 주소 (livekit_api_url 우선, 없으면 livekit_host)."""
+        return (self.livekit_api_url or "").strip() or self.livekit_host
 
     # SDD-190: 앱 푸시(FCM HTTP v1). 둘 다 설정된 환경에서만 실제 발송한다.
     # fcm_service_account_json 은 서비스 계정 키 **파일 경로** 또는 JSON 문자열.

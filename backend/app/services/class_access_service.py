@@ -271,7 +271,7 @@ async def reconcile_observers(db, session, client=None):
         return 0
     owned = client is None
     client = client or api.LiveKitAPI(
-        settings.livekit_host, settings.livekit_api_key, settings.livekit_api_secret
+        settings.livekit_server_api_url, settings.livekit_api_key, settings.livekit_api_secret
     )
     count = 0
     try:

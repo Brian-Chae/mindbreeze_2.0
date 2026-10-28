@@ -389,3 +389,29 @@ def test_애플_개인키는_이스케이프_한줄로_렌더되고_복원된다
 
     monkeypatch.setattr(settings, "apple_private_key", escaped)
     assert svc._load_private_key() == pem
+
+
+def test_LIVEKIT_API_URL_는_선택_키이며_서버_API_주소가_공개_주소와_분리된다():
+    from app.config import Settings
+
+    keys = {r["key"]: r for r in render_env.load_manifest()}
+    assert keys["LIVEKIT_API_URL"]["required"] == "0"
+    # 비우면 공개 주소(livekit_host) 폴백, 지정하면 내부 주소 사용
+    public = Settings(livekit_host="wss://api.mindbreeze.looxidlabs.com/livekit")
+    assert public.livekit_server_api_url == "wss://api.mindbreeze.looxidlabs.com/livekit"
+    internal = Settings(livekit_host="wss://api.mindbreeze.looxidlabs.com/livekit", livekit_api_url="http://127.0.0.1:7880")
+    assert internal.livekit_server_api_url == "http://127.0.0.1:7880"
+
+
+def test_운영_env_에_LIVEKIT_API_URL_이_렌더된다():
+    params = _good_params()
+    params["LIVEKIT_API_URL"] = "http://127.0.0.1:7880"
+    text, _ = render_env.build_env(params)
+    assert 'LIVEKIT_API_URL="http://127.0.0.1:7880"' in text
+
+
+def test_class_access_service_는_서버_API_주소를_쓴다():
+    import inspect
+    from app.services import class_access_service
+
+    assert "livekit_server_api_url" in inspect.getsource(class_access_service.reconcile_observers)
