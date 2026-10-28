@@ -94,6 +94,7 @@ jobs:
             backend/upgrade_narrative_cache_cron.py \
             backend/sweep_stale_eeg_raw_cron.py \
             backend/sweep_stale_media_cron.py \
+            backend/sweep_biosignal_orphans_cron.py \
             backend/retention_sweep_cron.py \
             backend/class_operations_cron.py \
             backend/class_rolling_cron.py \
