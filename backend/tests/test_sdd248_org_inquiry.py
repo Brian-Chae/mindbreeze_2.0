@@ -245,4 +245,7 @@ def test_V10_마이그레이션_head_단일():
         if r:
             revs[r.group(1)] = f
             downs.update(re.findall(r"['\"](\w+)['\"]", d[0] if d else ""))
-    assert [r for r in revs if r not in downs] == ["e261027a0248"]
+    heads = [r for r in revs if r not in downs]
+    # 단일 헤드 + 기관 문의 마이그레이션이 체인에 포함(이후 마이그레이션이 쌓여도 깨지지 않게 헤드 고정 비교는 하지 않는다)
+    assert len(heads) == 1, heads
+    assert "e261027a0248" in downs or heads == ["e261027a0248"]
