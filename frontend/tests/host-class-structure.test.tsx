@@ -135,5 +135,9 @@ it('열린 회차: 바로 입장 → 플레이어, 히어로 칩 → 회차 상�
     const chips = [...box.querySelectorAll('[aria-label="열려 있는 회차"] a')].map(a => a.getAttribute('href'));
     expect(chips).toEqual(['/classes/c1/sessions/s9', '/classes/c2/sessions/s8']);
     expect(box.textContent).toContain('회차 보기');
+    // 바로 입장 버튼이 있는 행은 '열려 있는 회차' 칩을 숨겨 겹침을 막고, 버튼이 없는 행은 칩을 유지한다
+    const rows = [...box.querySelectorAll('a[data-class-card]')].map(a => a.parentElement as HTMLElement);
+    expect(rows[0].querySelector('.cs-open-chip')).toBeNull();
+    expect(rows[1].querySelector('.cs-open-chip')).not.toBeNull();
     useAuthStore.setState({ user: null });
 });
