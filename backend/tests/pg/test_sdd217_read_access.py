@@ -62,7 +62,9 @@ def test_v26_regular_departed_history_and_own_approved_only(pg_session,monkeypat
 def test_v26_unapproved_and_group_never_personal(pg_session,monkeypatch):
     db=pg_session;_,_,cls,o,m,ss=scene(db);pending=report(db,ss[1],participant(db,m,ss[1]),'pending_review')
     group=Report(session_id=ss[1].id,type='counselor',status='completed',content={});db.add(group);db.commit();c=http(db,monkeypatch);h=bearer(o)
-    for rid in (pending.id,group.id):assert c.get(f'/api/v1/reports/{rid}',headers=h).status_code==404
+    # 승인 전 본인 리포트는 404 대신 '리뷰 중' 마스킹 200(SDD-211), 그룹(상담사용) 리포트는 여전히 404
+    pr=c.get(f'/api/v1/reports/{pending.id}',headers=h);assert pr.status_code==200,pr.text;assert pr.json()['in_review'] is True and pr.json()['pdf_url'] is None
+    assert c.get(f'/api/v1/reports/{group.id}',headers=h).status_code==404
     res=c.get(f'/api/v1/classes/{cls.id}/me/attendance',headers=h);assert res.status_code==200,res.text
     assert all(not i['approved_report_ids'] for i in res.json()['sessions'])
 
@@ -128,7 +130,7 @@ def test_v26_different_org_unapproved_guest_and_logout(pg_session,monkeypatch):
     assert c.get(f'/api/v1/reports/{r.id}',headers=bearer(other)).status_code==404
     guest=ClassMember(class_id=cls.id,kind='guest',status='completed',joined_via='code',joined_at=NOW-timedelta(days=3));db.add(guest);db.flush()
     gr=report(db,ss[1],participant(db,guest,ss[1]),'pending_review');token=issue_bundle(db,cls,guest,now=NOW)['read_credential'];db.commit();h={'X-Class-Member-Credential':token}
-    assert c.get(f'/api/v1/reports/{gr.id}',headers=h).status_code==404
+    gres=c.get(f'/api/v1/reports/{gr.id}',headers=h);assert gres.status_code==200,gres.text;assert gres.json()['in_review'] is True and gres.json()['pdf_url'] is None
     logout_guest(db,cls.id,token,now=NOW)
     assert c.get(f'/api/v1/classes/{cls.id}/me/membership',headers=h).status_code==401
 
