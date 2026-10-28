@@ -482,8 +482,13 @@ def create_test_counselor(
     name: str = "상담사",
     password: str = "Passw0rd!",
     org_code: str | None = None,
+    auto_approve_report: bool = False,
 ) -> dict:
     """SDD-073 — 상담사 직접 가입 API가 차단되어 테스트용 상담사는 DB에 직접 만든다.
+
+    auto_approve_report: 운영 기본값은 켜짐(2026-10-28 대표 결정)이지만, 기존 리포트 테스트가
+    수동 승인(pending_review) 흐름을 전제하므로 이 헬퍼는 끔을 기본으로 한다. 켜짐 기본값은
+    tests/test_report_auto_approve_default.py 가 모델 기본값으로 직접 검증한다.
 
     active 상태의 counselor User를 생성하고 {id, access_token}을 반환한다.
     org_code를 주면 해당 기관 소속으로 만든다.
@@ -508,6 +513,7 @@ def create_test_counselor(
             status="active",
             verified_tier="email",
             org_id=org_id,
+            auto_approve_report=auto_approve_report,
         )
         db.add(user)
         db.flush()

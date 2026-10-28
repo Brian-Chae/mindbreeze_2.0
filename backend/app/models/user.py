@@ -127,7 +127,7 @@ class User(Base):
     org_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id"))
     notification_preferences: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     auto_approve_report: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False, server_default="false"
+        Boolean, default=True, nullable=False, server_default="true"
     )
     # SDD-237: 클래스 종료 후 '진행 기록 남기기' 1회 안내를 모든 회차에서 끌 수 있다(기본 켜짐).
     #   deferred: 052 스키마에서 시드하는 스크립트처럼 컬럼 추가 이전 스키마에 ORM 으로 붙는 경로를 깨지 않는다(birth_date 와 같은 이유). Python default 를 두지 않아 INSERT 에서 빠지고 DB 기본값(true)이 쓰인다.
