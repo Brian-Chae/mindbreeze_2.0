@@ -44,6 +44,8 @@ class MeasurementEngine(
         private set
     /** 프레임이 생길 때마다 호출(같은 스레드). 업로더·소켓 큐가 구독한다. */
     @Volatile var frameSink: ((JSONObject) -> Unit)? = null
+    /** 원문 패킷이 journal 에 영속된 직후 호출(센서, 창 시간축 µs, 원문). 원시 청크 봉인 입력이다. */
+    @Volatile var rawSink: ((Sensor, Long, ByteArray) -> Unit)? = null
     @Volatile var coreError: String? = null
         private set
     /**
@@ -68,6 +70,7 @@ class MeasurementEngine(
         val j = journal ?: return false
         // 원문 먼저 영속화 후 파싱(파싱 실패 원문도 보관)
         j.append(JournalRecord(sensor, now, bytes)); counters.journaled()
+        try { rawSink?.invoke(sensor, windowTimelineUs(now * 1000), bytes) } catch (_: Exception) { /* 원시 업로드 실패가 수집을 멈추지 않는다 — 원문은 journal 에 있다 */ }
         when (val r = PacketParser.parse(sensor, bytes)) {
             is ParseResult.Invalid -> counters.invalid()
             is ParseResult.Ok -> {

@@ -98,6 +98,25 @@ class ArchiveQueue(private val dir: File, private val nowMs: () -> Long = { Syst
         )
     }
 
+    /**
+     * 구 앱이 signal·segment_id 없이 만든 feature 항목(서버 presign 422)을 보정해 다시 올릴 수 있게 한다.
+     * DEAD_LETTER 였던 항목은 PENDING 으로 되돌린다. payload·checksum 은 그대로라 서버 멱등 규칙에 걸리지 않는다.
+     * 반환: 보정한 항목 수.
+     */
+    @Synchronized
+    fun repairLegacyFeatures(streamFor: (String) -> String, segmentFor: (String) -> String): Int {
+        var n = 0
+        for (i in items.values) {
+            if (i.kind != "feature" || i.status == ArchiveStatus.VERIFIED) continue
+            if (!i.meta.isNull("signal") && !i.meta.isNull("segment_id") && !i.meta.isNull("stream_id")) continue
+            i.meta.put("signal", "eeg").put("stream_id", streamFor(i.sessionId)).put("segment_id", segmentFor(i.sessionId))
+            if (i.status == ArchiveStatus.DEAD_LETTER || i.status == ArchiveStatus.TIME_REVIEW) { i.status = ArchiveStatus.PENDING; i.attempts = 0; i.nextAttemptAtMs = 0 }
+            i.lastReason = null; i.lastStage = null
+            persist(i); n++
+        }
+        return n
+    }
+
     /** 영수증을 받은 항목의 payload 만 정리(GC). 메타(영수증)는 완결성 검증용으로 남긴다. */
     @Synchronized
     fun gcVerified() { for (i in items.values) if (i.status == ArchiveStatus.VERIFIED && i.payloadFile.exists()) i.payloadFile.delete() }

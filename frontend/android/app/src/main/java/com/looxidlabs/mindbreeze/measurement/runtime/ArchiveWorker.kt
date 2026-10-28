@@ -42,6 +42,8 @@ object NativeArchiveOnly {
         val store = KeystoreFactory.tokenStore(ctx)
         val tokens = com.looxidlabs.mindbreeze.measurement.live.HttpTokenSource(cfg.apiBase, store)
         val q = com.looxidlabs.mindbreeze.measurement.archive.ArchiveQueue(java.io.File(ctx.filesDir, "measurement/${cfg.sessionId}/archive"))
+        q.repairLegacyFeatures({ com.looxidlabs.mindbreeze.measurement.archive.RawIds.streamId(it, com.looxidlabs.mindbreeze.measurement.Sensor.EEG) },
+            { com.looxidlabs.mindbreeze.measurement.archive.RawIds.segmentId(it, com.looxidlabs.mindbreeze.measurement.Sensor.EEG, 0) })
         if (q.counts().archivePending == 0) return true
         if (tokens.current() == null) return true // 권한 없으면 올리지 않는다
         var sum = com.looxidlabs.mindbreeze.measurement.archive.ArchiveUploader(cfg.apiBase, q, { tokens.current() }, okhttp3.OkHttpClient(), { cfg.streamId }).drain()

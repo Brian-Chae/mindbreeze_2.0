@@ -16,6 +16,8 @@ class ArchiveFeeder(
     private val participantId: () -> String?,
     private val streamId: () -> String?,
     private val windowFrames: Int = 60,
+    /** feature 산출물이 가리키는 원시 scope(stream_id, segment_id). 서버 규칙: feature 는 signal·segment_id·stream_id 필수. */
+    private val scope: (() -> Pair<String, String>)? = null,
 ) {
     private val buf = ArrayList<JSONObject>()
 
@@ -37,11 +39,12 @@ class ArchiveFeeder(
         val payload = raw.toByteArray()
         val firstSeq = first.getString("sequence"); val lastSeq = last.getString("sequence")
         val stream = streamId()
+        val (scopeStream, scopeSegment) = scope?.invoke() ?: (RawIds.streamId(sessionId, com.looxidlabs.mindbreeze.measurement.Sensor.EEG) to RawIds.segmentId(sessionId, com.looxidlabs.mindbreeze.measurement.Sensor.EEG, 0))
         val alias = "NF-${stream?.take(8) ?: "X"}-$firstSeq" // 서버 Alias 규칙 ^[A-Z][A-Za-z0-9_-]{0,63}$ — 소문자 시작은 presign 422
         val sha = MessageDigest.getInstance("SHA-256").digest(payload).joinToString("") { "%02x".format(it) }
         val meta = JSONObject()
-            .put("artifact_alias", alias).put("artifact_kind", "feature").put("stream_id", stream ?: JSONObject.NULL)
-            .put("segment_id", JSONObject.NULL).put("signal", JSONObject.NULL)
+            .put("artifact_alias", alias).put("artifact_kind", "feature").put("stream_id", scopeStream)
+            .put("segment_id", scopeSegment).put("signal", "eeg")
             .put("sequence", firstSeq.toLong()).put("first_sequence", firstSeq.toLong()).put("last_sequence", lastSeq.toLong())
             .put("row_count", buf.size).put("content_encoding", "gzip").put("schema_version", "feature-v1")
             .put("checksum", sha).put("size_bytes", payload.size).put("content_type", "application/x-ndjson")

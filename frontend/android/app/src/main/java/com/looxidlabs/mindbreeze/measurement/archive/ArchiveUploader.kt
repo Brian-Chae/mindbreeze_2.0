@@ -55,7 +55,7 @@ class ArchiveUploader(
         when (d.action) {
             ArchiveAction.HALT -> { item.status = ArchiveStatus.HALTED; item.lastReason = d.code; queue.update(item); sum.halted = d.code; return false }
             ArchiveAction.TIME_REVIEW -> { item.status = ArchiveStatus.TIME_REVIEW; item.lastReason = d.code; queue.update(item); sum.timeReview++ }
-            ArchiveAction.QUARANTINE -> { item.status = ArchiveStatus.DEAD_LETTER; item.lastReason = e.msg ?: d.code; queue.update(item); sum.blocked++ }
+            ArchiveAction.QUARANTINE -> { item.status = ArchiveStatus.DEAD_LETTER; item.lastReason = if (e.body != null && e.msg != null && e.msg != d.code) "${d.code}: ${e.msg}".take(200) else (e.msg ?: d.code); queue.update(item); sum.blocked++ }
             ArchiveAction.REPRESIGN, ArchiveAction.BACKOFF -> {
                 // 횟수가 많아도 영구 실패로 만들지 않는다 — 유한 backoff 만 적용
                 item.lastReason = d.code
@@ -64,6 +64,13 @@ class ArchiveUploader(
             }
         }
         return true
+    }
+
+    /** 서버 오류 본문의 detail 을 진단용 짧은 문자열로(고정 문구뿐이라 개인정보·토큰 없음). */
+    private fun detailOf(body: JSONObject?): String? {
+        val d = body?.opt("detail") ?: return null
+        val text = when (d) { is String -> d; is JSONObject -> d.optString("code").ifEmpty { d.toString() }; else -> d.toString() }
+        return text.take(160).ifEmpty { null }
     }
 
     private fun sha256(b: ByteArray) = MessageDigest.getInstance("SHA-256").digest(b).joinToString("") { "%02x".format(it) }
@@ -117,7 +124,7 @@ class ArchiveUploader(
             http.newCall(req).execute().use { res ->
                 val text = res.body?.string().orEmpty()
                 val json = try { JSONObject(text) } catch (_: Exception) { null }
-                if (res.code !in 200..299) throw StageError(stage, res.code, json, res.header("Retry-After"))
+                if (res.code !in 200..299) throw StageError(stage, res.code, json, res.header("Retry-After"), detailOf(json))
                 return json ?: throw StageError(stage, 0, null, null, "response_not_json")
             }
         } catch (e: IOException) { throw StageError(stage, 0, null, null, e.javaClass.simpleName) }
