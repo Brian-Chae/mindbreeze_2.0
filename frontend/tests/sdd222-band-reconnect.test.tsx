@@ -46,6 +46,7 @@ vi.mock('../src/lib/eeg/bluetoothService', () => ({
   bluetoothService: {
     isConnected: () => ble.connected,
     getCachedDeviceId: () => ble.cached,
+    isReleasedForNative: () => false,
     scan: () => ble.scan(),
     connect: async (id: string) => {
       await ble.connectImpl(id);
