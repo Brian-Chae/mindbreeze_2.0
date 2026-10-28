@@ -89,7 +89,7 @@ export interface BluetoothEEGService {
   disconnect(): Promise<void>;
   isConnected(): boolean;
   onConnectionLost(callback: () => void): void;
-  getBatteryLevel(): Promise<number>;
+  getBatteryLevel(): Promise<number | null>;
   getDeviceName(): string;
   getDeviceId(): string;
   /** 재연결용 — 예기치 않은 끊김 후 같은 디바이스로 재연결하기 위한 캐시 ID */
@@ -127,6 +127,8 @@ class LinkBandBluetoothService implements BluetoothEEGService {
 
   // 배터리 레벨
   private batteryLevel: number = 0;
+  /** 실제로 읽은 마지막 정상 배터리(0=읽기 실패 기본값은 제외). 없으면 null = 모름 */
+  private lastKnownBattery: number | null = null;
   
   // 배터리 예측 시스템
   private batteryHistory: Array<{
@@ -707,6 +709,7 @@ class LinkBandBluetoothService implements BluetoothEEGService {
     if (!parsed) return;
 
     const newBatteryLevel = parsed.level;
+    if (newBatteryLevel > 0) this.lastKnownBattery = newBatteryLevel;
     if (newBatteryLevel !== this.batteryLevel) {
       this.batteryLevel = newBatteryLevel;
       this.addBatteryHistory(this.batteryLevel);
@@ -930,19 +933,24 @@ class LinkBandBluetoothService implements BluetoothEEGService {
     this.connectionLostCallback = callback;
   }
 
-  async getBatteryLevel(): Promise<number> {
-    // 배터리 특성이 사용 불가능한 경우 마지막 알려진 값 반환
+  async getBatteryLevel(): Promise<number | null> {
+    // 모르면 0 이 아니라 null — 0% 로 표시되던 문제.
     if (!this.provider || !this.deviceId || !this.batteryCharUuid) {
       logger.warn('배터리 특성을 사용할 수 없습니다. 마지막 알려진 값을 반환합니다.');
-      return this.batteryLevel;
+      return this.lastKnownBattery;
     }
 
     try {
-      this.batteryLevel = await this.provider.getBatteryLevel(this.deviceId);
-      return this.batteryLevel;
+      const level = await this.provider.getBatteryLevel(this.deviceId);
+      // 네이티브 BLE 어댑터는 읽기 실패 시 0 을 돌려준다 — 정상 읽기로 보지 않는다.
+      if (Number.isFinite(level) && level > 0) {
+        this.batteryLevel = level;
+        this.lastKnownBattery = level;
+      }
+      return this.lastKnownBattery;
     } catch (error) {
       logger.warn('배터리 레벨 읽기 실패:', error);
-      return this.batteryLevel; // 마지막 알려진 값 반환
+      return this.lastKnownBattery;
     }
   }
 

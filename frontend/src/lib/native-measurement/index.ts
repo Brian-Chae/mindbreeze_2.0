@@ -272,6 +272,8 @@ export class NativeMeasurementFacade {
   }
 
   stop(req: { reason: string; requestId: string }): Promise<{ accepted: boolean }> {
+    // 성공한 시작 promise 가 남아 있으면 같은 requestId 의 재시작(재입장)이 네이티브 호출 없이 옛 결과만 돌려준다.
+    this.startFlights.clear();
     return this.plugin.stopMeasurement(req);
   }
 
