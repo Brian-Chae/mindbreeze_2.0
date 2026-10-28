@@ -134,3 +134,51 @@ describe('SDD244 T08 capture session', () => {
     expect((await queue.pendingEvents()).some(e => e.event.event_type === 'close_intent')).toBe(true);
   });
 });
+
+describe('SDD252 PPG/ACC segment 분할 과다·꼬리 봉인', () => {
+  // 운영은 랜덤 UUID 라 alias 앞 8자리가 달라진다. 기본 createId 는 앞 8자리가 같아 segment 가 둘 이상이면 alias 가 충돌하므로 앞자리가 다른 ID 를 쓴다.
+  const spreadId = () => `${(++uuid).toString(16).padStart(8, '0')}-0000-4000-8000-000000000000`;
+  // PPG/ACC 의 장치 tick 은 패킷마다 균일하게 갱신되지 않는다(±수십~수백 ms). 정상 흐름을 패킷 단위 segment 로 쪼개면 안 된다.
+  function irregular(signal: Signal, rows: number, jitterTicks: number) {
+    let n = 0, tick = 1000;
+    return () => {
+      const bytes = new Uint8Array(4 + rows * STRIDE[signal]);
+      new DataView(bytes.buffer).setUint32(0, tick, signal !== 'ppg');
+      for (let i = 4; i < bytes.length; i++) bytes[i] = (n + i) & 0x3f;
+      const mono = String(Math.round(1_000_000 + n * rows / RATE[signal] * 1e6));
+      tick += Math.round(rows / RATE[signal] * 32768) + (n % 2 === 0 ? jitterTicks : -jitterTicks);
+      n += 1;
+      return parseRawPacket(signal, new DataView(bytes.buffer), String(1_780_000_000_000_000n + BigInt(mono)), mono);
+    };
+  }
+  it.each([['ppg', 5], ['acc', 3]] as const)('%s tick 이 ±100ms 흔들려도 정상 흐름은 한 segment 로 이어진다', async (signal, rows) => {
+    const { queue, session } = await build({ createId: spreadId });
+    const make = irregular(signal, rows, 3277); // ±100ms
+    for (let i = 0; i < 120; i++) session.receive(make());
+    await session.flush();
+    await session.sealOpen();
+    const metas = await rawMeta(queue);
+    expect(new Set(metas.map(m => m.header.segment_id)).size).toBe(1);
+    const gaps = (await queue.pendingEvents()).map(e => e.event).filter(e => e.event_type === 'gap');
+    expect(gaps).toHaveLength(0);
+  });
+  it('실제 큰 간극(>1초)은 여전히 새 segment 와 gap 으로 남는다', async () => {
+    const { queue, session } = await build({ createId: spreadId });
+    const make = irregular('ppg', 5, 0);
+    for (let i = 0; i < 20; i++) session.receive(make());
+    const jump = irregular('ppg', 5, 0); for (let i = 0; i < 20; i++) jump(); // 같은 tick 이 아닌 먼 미래 tick
+    const bytes = new Uint8Array(4 + 5 * 6); new DataView(bytes.buffer).setUint32(0, 1000 + 40 * 32768, false);
+    session.receive(parseRawPacket('ppg', new DataView(bytes.buffer), String(1_780_000_030_000_000n), '31000000'));
+    await session.flush(); await session.sealOpen();
+    expect(new Set((await rawMeta(queue)).map(m => m.header.segment_id)).size).toBe(2);
+  });
+  it('pause(탭 이동·언마운트)는 열린 청크의 꼬리를 모두 봉인한다', async () => {
+    const { queue, session } = await build();
+    const make = packetFactory('eeg', 50);
+    for (let i = 0; i < 7; i++) session.receive(make());   // 350샘플 — 10초 미만이라 봉인 전
+    await session.pause();
+    const metas = await rawMeta(queue);
+    expect(metas.reduce((n, m) => n + m.header.sample_count, 0)).toBe(350);
+    expect((await queue.allPackets()).length).toBe(0);
+  });
+});

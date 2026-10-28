@@ -207,4 +207,16 @@ class ArchiveUploaderTest {
         assertEquals("auth_missing", sum.halted)
         assertEquals(ArchiveStatus.PENDING, q.get(item.id)!!.status)
     }
+
+    @Test fun presign422KeepsServerDetailAsDiagnosticReason() {
+        val payload = "hello-payload".toByteArray()
+        script = { r -> if (r.path!!.endsWith("/biosignal-artifacts/presign")) MockResponse().setResponseCode(422).setBody("""{"detail":"feature 에는 signal, segment_id 가 필요합니다"}""") else MockResponse().setResponseCode(404) }
+        val base = start(); val q = queue(); val item = enqueue(q, payload = payload)
+        val sum = uploader(base, q).drain()
+        assertEquals(1, sum.blocked)
+        val r = q.get(item.id)!!
+        assertEquals(ArchiveStatus.DEAD_LETTER, r.status)
+        assertTrue(r.lastReason!!, r.lastReason!!.contains("signal, segment_id"))
+        assertTrue(r.lastReason!!.startsWith("http_422"))
+    }
 }

@@ -7,6 +7,8 @@ import com.looxidlabs.mindbreeze.measurement.MeasurementEngine
 import com.looxidlabs.mindbreeze.measurement.ModelPin
 import com.looxidlabs.mindbreeze.measurement.Sensor
 import com.looxidlabs.mindbreeze.measurement.archive.ArchiveFeeder
+import com.looxidlabs.mindbreeze.measurement.archive.RawArchiver
+import com.looxidlabs.mindbreeze.measurement.archive.RawIds
 import com.looxidlabs.mindbreeze.measurement.archive.ArchiveQueue
 import com.looxidlabs.mindbreeze.measurement.archive.ArchiveUploader
 import com.looxidlabs.mindbreeze.measurement.bridge.BridgeInputs
@@ -29,6 +31,7 @@ class NativeRuntime private constructor(
     val engine: MeasurementEngine, val sched: HandlerLiveScheduler, val live: LiveSession, val box: MetricOutbox,
     val queue: ArchiveQueue, val feeder: ArchiveFeeder, val tokens: HttpTokenSource, val transport: IoSocketTransport,
     val sequencer: BridgeSequencer,
+    val rawArchiver: RawArchiver,
     /** pin 된 모델 버전(없으면 코호트 b0-cohort-2). capture.start·bridge snapshot 에 같은 값을 쓴다. */
     val modelVersion: String = "b0-cohort-2",
 ) {
@@ -49,6 +52,7 @@ class NativeRuntime private constructor(
     private val devicePolicy = DeviceReportPolicy()
 
     fun start() {
+        engine.rawSink = { sensor, us, bytes -> rawArchiver.onPacket(sensor, us, bytes); kickArchive() }
         engine.frameSink = { f ->
             sched.post { live.onFrame(f) }
             feeder.onFrame(f)
@@ -115,6 +119,7 @@ class NativeRuntime private constructor(
         tick?.cancel()
         val finals = try { engine.writeCheckpoint(); engine.finalSequences() } catch (_: Exception) { null }
         feeder.flush()
+        rawArchiver.flush() // 남은 원시 샘플도 부분 청크로 봉인
         if (finals != null) sched.post { live.closeCapture(finals, reason) }
         RuntimeConfig.save(File(dir, "runtime.json"), cfg.copy(active = false, streamId = live.streamId, participantId = live.participantId))
         kickArchive()
@@ -155,8 +160,13 @@ class NativeRuntime private constructor(
             val lc = LiveConfig(cfg.sessionId, cfg.instanceId, "android-native-1", "core-1.0.0", "linkband2-v1", ALGORITHM, modelVersion)
             val live = LiveSession(lc, transport, sched, tokens, box)
             val queue = ArchiveQueue(File(dir, "archive"))
-            val feeder = ArchiveFeeder(queue, cfg.sessionId, { live.participantId ?: cfg.participantId }, { live.streamId ?: cfg.streamId })
-            return NativeRuntime(ctx.applicationContext, cfg, dir, engine, sched, live, box, queue, feeder, tokens, transport, BridgeSequencer(System.currentTimeMillis() / 1000), modelVersion)
+            val rawArchiver = RawArchiver(queue, cfg.sessionId, { live.participantId ?: cfg.participantId }, File(dir, "raw-archive.json"))
+            val feeder = ArchiveFeeder(queue, cfg.sessionId, { live.participantId ?: cfg.participantId }, { live.streamId ?: cfg.streamId },
+                scope = { rawArchiver.streamId(Sensor.EEG) to rawArchiver.segmentId(Sensor.EEG) })
+            // 구 앱이 남긴 scope 없는 feature 항목 보정 + 아직 청크에 못 든 원문(journal) 재생
+            queue.repairLegacyFeatures({ RawIds.streamId(it, Sensor.EEG) }, { RawIds.segmentId(it, Sensor.EEG, 0) })
+            try { rawArchiver.replay(com.looxidlabs.mindbreeze.measurement.AppendOnlyJournal.recover(File(dir, "raw.journal")).records) { ms -> engine.windowTimelineUs(ms * 1000) } } catch (_: Exception) { /* 원문은 journal 에 남아 다음 기회에 재생 */ }
+            return NativeRuntime(ctx.applicationContext, cfg, dir, engine, sched, live, box, queue, feeder, tokens, transport, BridgeSequencer(System.currentTimeMillis() / 1000), rawArchiver, modelVersion)
         }
     }
 }
