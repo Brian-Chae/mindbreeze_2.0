@@ -17,9 +17,9 @@ export default function AuthShell({ title, subtitle, maxWidthClass = 'max-w-[480
       <div className={`relative z-10 mx-auto flex min-h-screen w-full ${maxWidthClass} flex-col justify-center px-5 pb-[calc(2.5rem+env(safe-area-inset-bottom))] pt-[calc(2.5rem+env(safe-area-inset-top))]`}>
         <div className="mb-5 space-y-1 text-center text-white">
           <Link to="/" className="inline-block text-sm font-semibold tracking-tight text-white/90">Mind Breeze</Link>
-          <h1 className="text-[22px] font-bold">{title}</h1>
+          <h1 className="text-[22px] font-bold text-white [text-shadow:0_1px_12px_rgba(0,0,0,0.45)]">{title}</h1>
           {subtitle && <p className="text-sm text-white/80">{subtitle}</p>}
-          <p className="text-xs">
+          <p className="text-xs text-white/90">
             <Link to="/register" className="text-white/90 underline">다른 유형으로 가입하기</Link>
           </p>
         </div>
