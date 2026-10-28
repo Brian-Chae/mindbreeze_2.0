@@ -7,8 +7,8 @@ CALIBRATION_METRIC_KEYS = (
     'faa', 'cognitiveLoad', 'emotionalStability', 'autonomicStability',
     'sdnn', 'avgHeartRate', 'breathingStability',
 )
-# 진단 안전망: TNA(원시) 가 이 값을 넘으면 ADC 포화·직류 계단 등 입력 불량으로 본다 — 리포트/표시 집계에서 제외(0 치환 금지).
-TNA_OUTLIER_MAX = 1000.0
+# 진단 안전망: TNA(원시) 가 이 값(2000, 1600대도 정상)을 넘으면 ADC 포화·직류 계단 등 입력 불량으로 본다 — 리포트/표시 집계에서 제외(0 치환 금지).
+TNA_OUTLIER_MAX = 2000.0
 SIGMOID_C = math.log(9) / 1.2815515655446004
 MAD_TO_SIGMA = 1.4826
 POSITIVE_ONLY = frozenset(('autonomicStability', 'sdnn', 'avgHeartRate'))

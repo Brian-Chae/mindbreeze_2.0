@@ -22,8 +22,8 @@ pub(crate) const STEP_COUNT_LIMIT: usize = 3;
 pub(crate) const LEADOFF_RATIO_LIMIT: f64 = 0.05;
 /// 규칙 4: 장치 tick 기준 누락 샘플 수가 이 값을 초과하면 갭(링 비우고 재충전).
 pub(crate) const GAP_SAMPLES_LIMIT: u32 = 2;
-/// 규칙 5: 위 규칙을 통과했어도 TNA 가 이 값을 넘으면 outlier 무효.
-pub(crate) const OUTLIER_TNA_LIMIT: f64 = 1000.0;
+/// 규칙 5: 위 규칙을 통과했어도 TNA 가 이 값(2000, 1600대도 정상)을 넘으면 outlier 무효.
+pub(crate) const OUTLIER_TNA_LIMIT: f64 = 2000.0;
 /// 가드 강제 여부. false(기록만) = 판정 사유는 프레임 지표의 `reason` 과 GuardStats 에 남기되
 /// 정상 산출한 지표값을 null 로 지우지 않는다(2026-10-28 대표 결정). true 로 되돌리면 무효 창 지표를 invalid(null)로 낸다.
 /// 단 갭(Gap)은 분석 자체가 없어 값이 존재하지 않으므로 이 플래그와 무관하게 invalid 다.
@@ -128,6 +128,15 @@ mod tests {
     }
     fn clean(n: usize) -> Vec<EegPoint> {
         (0..n).map(|i| pt(i, (i as f64 * 0.3).sin() * 50.0, (i as f64 * 0.2).cos() * 40.0)).collect()
+    }
+
+    #[test]
+    fn outlier_tna_limit_is_2000() {
+        assert_eq!(OUTLIER_TNA_LIMIT, 2000.0);
+        for v in [1600.0, 1999.0, 2000.0] {
+            assert!(v <= OUTLIER_TNA_LIMIT);
+        }
+        assert!(!(2000.1 <= OUTLIER_TNA_LIMIT));
     }
 
     #[test]
