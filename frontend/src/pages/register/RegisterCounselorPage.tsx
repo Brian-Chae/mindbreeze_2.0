@@ -3,9 +3,10 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import ThemeToggle from '../../components/ThemeToggle';
+import { BirthDateInput } from '../../components/auth/BirthDateInput';
 import { OtpInput } from '../../components/auth/OtpInput';
 import { apiErrorCode, requestOtp, verifyOtp } from '../../lib/api/auth';
-import { BIRTH_DATE_MESSAGES, checkBirthDate, todayKst } from '../../lib/auth/age';
+import { BIRTH_DATE_MESSAGES, checkBirthDate } from '../../lib/auth/age';
 import { submitIndividualCounselorApplication } from '../../lib/api/signup';
 import { ApiError } from '../../lib/api/client';
 import { PrivacyPolicyLink } from '../../components/legal/PrivacyPolicyLink';
@@ -293,17 +294,13 @@ export default function RegisterCounselorPage() {
             )}
 
             <div className="space-y-2">
-              <label htmlFor="ind-birth" className="block text-sm font-medium text-ink-secondary">
-                생년월일
-              </label>
-              <input
+              <BirthDateInput
                 id="ind-birth"
-                type="date"
                 value={birthDate}
-                onChange={(e) => setBirthDate(e.target.value)}
-                max={todayKst()}
+                onChange={(iso) => setBirthDate(iso)}
                 disabled={loading}
-                className={inputClass}
+                labelClassName="block text-sm font-medium text-ink-secondary"
+                inputClassName={inputClass}
               />
             </div>
 

@@ -1,6 +1,7 @@
 // 내담자 프로필정보 섹션 (성별/생년월일/고민분야/관심분야)
 
 import { useId, useState } from 'react';
+import { BirthDateInput } from '../../components/auth/BirthDateInput';
 import type { ClientProfile, ClientProfileUpdate } from '../../lib/api/client-profile';
 import ConfirmDialog from './ConfirmDialog';
 import { buttonClass } from '../../components/ui';
@@ -137,13 +138,13 @@ export default function ClientProfileSection({ profile, onSave }: Props) {
             </select>
           </div>
           <div>
-            <label htmlFor={`${fid}-birth`} className={FIELD_LABEL}>생년월일</label>
-            <input
+            <BirthDateInput
               id={`${fid}-birth`}
-              className={INPUT_CLASS}
-              type="date"
+              ageRule="none"
+              labelClassName={FIELD_LABEL}
+              inputClassName={INPUT_CLASS}
               value={draft.birth_date}
-              onChange={(e) => update('birth_date', e.target.value)}
+              onChange={(iso) => update('birth_date', iso)}
             />
           </div>
           <div>

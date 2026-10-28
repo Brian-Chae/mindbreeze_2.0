@@ -1,6 +1,7 @@
 // SDD-077 상담사 정보 편집 폼 — 플랫폼/기관 관리자 공용 (기본 정보 / 전문 이력 / 개인정보 패널)
 
 import { useEffect, useRef, useState } from 'react';
+import { BirthDateInput } from '../../components/auth/BirthDateInput';
 import type {
   CounselorInfoDto,
   CounselorInfoUpdatePayload,
@@ -161,9 +162,9 @@ export default function CounselorInfoEditor({ load, save, onSaved, onCancel, onG
             <option value="">응답하지 않음</option><option value="male">남성</option><option value="female">여성</option><option value="other">기타</option>
           </select>
         </label>
-        <label className={label}>생년월일
-          <input type="date" value={draft.birth_date} onChange={(e) => set({ birth_date: e.target.value })} className={`${control} mt-1 w-full`} />
-        </label>
+        <div className={label}>
+          <BirthDateInput ageRule="none" value={draft.birth_date} onChange={(iso) => set({ birth_date: iso })} labelClassName={label} inputClassName={`${control} mt-1 w-full`} />
+        </div>
         <label className={label}>우편번호
           <input value={draft.postal_code} onChange={(e) => set({ postal_code: e.target.value })} maxLength={20} className={`${control} mt-1 w-full`} />
         </label>
