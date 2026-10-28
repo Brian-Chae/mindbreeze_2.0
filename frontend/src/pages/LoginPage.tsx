@@ -1,4 +1,3 @@
-import { RESEARCH_METADATA_NOTICE } from '../lib/privacy-policy';
 import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
@@ -7,11 +6,11 @@ import { isNativeApp } from '../lib/native/platform';
 import { nativeGoogleIdToken } from '../lib/native/google';
 import { useAuthStore } from '../stores/authStore';
 import { ApiError } from '../lib/api/client';
+import { apiErrorCode } from '../lib/api/auth';
 import { PrivacyPolicyLink } from '../components/legal/PrivacyPolicyLink';
 import { resolvePostLoginPath } from '../lib/auth-routing';
 import AppleLoginButton from '../components/auth/AppleLoginButton';
-import { toConsentPayload } from '../lib/auth/consents';
-import { BIRTH_DATE_MESSAGES, checkBirthDate, todayKst } from '../lib/auth/age';
+import { useSocialSignupStore, type SocialCredential } from '../stores/social-signup-store';
 
 // SEC-05: 역할 시뮬레이션 패널은 DEV 빌드에서만 조건부 동적 import 한다.
 // 프로덕션에서는 import.meta.env.DEV===false 로 분기가 제거되어 번들에 포함되지 않는다.
@@ -48,27 +47,12 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(true);
   // SDD-227: 이메일·비밀번호 입력 중(키보드 표시)에는 하단 코드 입장 카드를 숨긴다.
   const [typing, setTyping] = useState(false);
-  // SEC-04 / FUNC-10: Google 동의 — 백엔드는 '신규 가입'에만 동의를 요구한다.
-  // 기존 사용자는 체크 없이 통과하므로, 신규 가입 422를 받은 뒤에만 체크박스를 노출한다.
-  const [googleConsent, setGoogleConsent] = useState(false);
-  const [needsGoogleConsent, setNeedsGoogleConsent] = useState(false);
-  // SDD-220: 소셜 신규 가입은 생년월일(만 14세)과 선택 동의(뇌파·연구)를 함께 받는다. 기존 사용자 재로그인에는 불필요.
-  const [socialBirthDate, setSocialBirthDate] = useState('');
-  const [optEeg, setOptEeg] = useState(false);
-  const [optResearch, setOptResearch] = useState(false);
-  // iOS WebView 의 date input 은 state 반영이 늦을 수 있어, 클릭 시점에 DOM 값을 우선 읽는다(추정 방어).
-  const birthInputRef = useRef<HTMLInputElement | null>(null);
-  const currentBirthDate = () => birthInputRef.current?.value || socialBirthDate;
-  // 가입 정보 입력란이 열린 뒤에는 서버를 다시 부르기 전에 같은 문구로 먼저 안내한다(첫 시도는 기존 사용자도 있으므로 통과).
-  const signupInfoError = (): string | null => {
-    if (!needsGoogleConsent) return null;
-    const birthCheck = checkBirthDate(currentBirthDate());
-    if (birthCheck !== 'ok') return BIRTH_DATE_MESSAGES[birthCheck];
-    if (!googleConsent) return '이용약관·개인정보 처리방침·민감정보 처리에 동의해 주세요.';
-    return null;
+  // SDD-249: 소셜 신규 가입(서버 422)은 오류 문구 대신 공통 "가입 정보 확인" 화면(/signup/confirm)에서 생년월일·동의를 받는다.
+  const beginSocialSignup = useSocialSignupStore((st) => st.begin);
+  const goToSignupConfirm = (credential: SocialCredential, started: LoginIntent) => {
+    beginSocialSignup({ credential, role: started.role, rememberMe: started.rememberMe });
+    navigate('/signup/confirm');
   };
-  const socialConsents = () =>
-    toConsentPayload({ tos: googleConsent, privacy: googleConsent, sensitive: googleConsent, eeg: optEeg, research: optResearch });
   // 팝업이 열린 동안 URL이 바뀌어도 인증 시작 시 선택한 역할을 사용한다.
   const intent = useRef<LoginIntent | null>(null);
   const googleExchanging = useRef(false);
@@ -79,12 +63,7 @@ export default function LoginPage() {
   useEffect(() => {
     setPassword('');
     setError(null);
-    // 탭(역할)을 바꾸면 이전 탭에서 입력한 소셜 가입 동의·생년월일이 다른 계정에 따라가지 않게 비운다.
-    setNeedsGoogleConsent(false);
-    setGoogleConsent(false);
-    setSocialBirthDate('');
-    setOptEeg(false);
-    setOptResearch(false);
+    setGuide(null);
   }, [loginRole]);
 
   const finish = () => {
@@ -92,7 +71,14 @@ export default function LoginPage() {
     googleExchanging.current = false;
     setPending(null);
   };
+  // 계정 역할과 로그인 탭이 다르거나(403), 상담사·기관이 소셜로 처음 시도한 경우(사전 등록 없음)는 막다른 길 대신 다음 행동을 안내한다.
+  const [guide, setGuide] = useState<'role-mismatch' | 'no-account' | null>(null);
   const showError = (err: unknown) => {
+    setGuide(null);
+    if (err instanceof ApiError && err.status === 403) {
+      if (/로그인 유형|이 로그인 유형/.test(err.message) || apiErrorCode(err) === 'ROLE_MISMATCH') setGuide('role-mismatch');
+      else if (/사전 등록/.test(err.message)) setGuide('no-account');
+    }
     setError(err instanceof ApiError
       ? err.status === 423 ? '계정이 잠겼습니다. 15분 후 다시 시도해주세요'
         : err.message || '로그인에 실패했습니다.'
@@ -103,6 +89,7 @@ export default function LoginPage() {
     const started = { role: loginRole, next, rememberMe };
     intent.current = started;
     setError(null);
+    setGuide(null);
     setPending(method);
     return started;
   };
@@ -128,26 +115,12 @@ export default function LoginPage() {
       if (!started || googleExchanging.current) return;
       googleExchanging.current = true;
       try {
-        // SEC-04: 동의 체크 상태를 서버에 전달해 신규 가입 시 명시적 동의로 기록한다.
-        const user = await loginGoogle(
-          response.access_token,
-          undefined,
-          started.role,
-          started.rememberMe,
-          socialConsents(),
-          'access_token',
-          currentBirthDate() || undefined,
-        );
+        // 기존 계정은 바로 로그인. 신규 계정은 서버가 422(생년월일·동의 필요)를 주며 이때는 계정이 만들어지지 않는다.
+        const user = await loginGoogle(response.access_token, undefined, started.role, started.rememberMe, undefined, 'access_token');
         navigate(resolvePostLoginPath(user, started.next));
       } catch (err) {
-        // FUNC-10: 백엔드 google_auth 는 '신규 가입'에만 동의 미비 422를 반환한다.
-        // 기존 사용자는 동의 없이 통과하므로, 422일 때만 동의 체크박스를 노출해 재시도한다.
         if (err instanceof ApiError && err.status === 422) {
-          setNeedsGoogleConsent(true);
-          setError(
-            err.message ||
-              'Google로 처음 가입하는 경우 이용약관·개인정보 처리방침·민감정보 처리에 동의가 필요합니다.',
-          );
+          goToSignupConfirm({ provider: 'google', tokenKind: 'access_token', token: response.access_token }, started);
         } else {
           showError(err);
         }
@@ -171,16 +144,18 @@ export default function LoginPage() {
     if (!started) return;
     try {
       const idToken = await nativeGoogleIdToken();
-      const user = await loginGoogle(
-        idToken, undefined, started.role, started.rememberMe,
-        socialConsents(), 'id_token', currentBirthDate() || undefined,
-      );
-      navigate(resolvePostLoginPath(user, started.next));
+      try {
+        const user = await loginGoogle(idToken, undefined, started.role, started.rememberMe, undefined, 'id_token');
+        navigate(resolvePostLoginPath(user, started.next));
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 422) {
+          goToSignupConfirm({ provider: 'google', tokenKind: 'id_token', token: idToken }, started);
+          return;
+        }
+        throw err;
+      }
     } catch (err) {
-      if (err instanceof ApiError && err.status === 422) {
-        setNeedsGoogleConsent(true);
-        setError(err.message || 'Google로 처음 가입하는 경우 이용약관·개인정보 처리방침·민감정보 처리에 동의가 필요합니다.');
-      } else if (err instanceof ApiError) {
+      if (err instanceof ApiError) {
         showError(err);
       } else {
         const detail = err instanceof Error ? err.message : typeof err === 'object' && err !== null ? JSON.stringify(err) : String(err);
@@ -191,13 +166,9 @@ export default function LoginPage() {
     }
   };
   const handleGoogleClick = () => {
-    if (loginRole === 'org_admin' || (!hasGoogleClientId && !isNativeApp())) return;
-    const blocked = signupInfoError();
-    if (blocked) { setError(blocked); return; }
+    if (!hasGoogleClientId && !isNativeApp()) return;
     if (!begin('google')) return;
     if (isNativeApp()) { void nativeGoogleLogin(); return; }
-    // FUNC-10: 동의 여부와 무관하게 먼저 로그인을 시도한다. 기존 사용자는 그대로 통과하고,
-    // 신규 가입은 백엔드가 422(동의 필요)를 주면 그때 체크박스를 노출한다.
     try { googleLogin(); } catch (err) { showError(err); finish(); }
   };
   const selectTab = (index: number) => {
@@ -223,43 +194,10 @@ export default function LoginPage() {
       {pending === 'google' ? '연결 중…' : isAdmin ? 'Google Workspace로 로그인' : `Google로 ${config.label} 로그인`}
     </button>
   );
-  // SEC-04 / FUNC-10: Google 동의 체크박스 — 신규 가입 422를 받은 뒤에만 노출한다.
-  // 기존 사용자는 동의 없이 로그인되므로 처음부터 강제하지 않는다.
-  const googleConsentField = (
-    <div className="flex flex-col gap-3">
-    <label htmlFor="social-birth-date" className="flex flex-col gap-1 text-xs text-white/80">
-      생년월일 (만 14세 이상 가입)
-      <input id="social-birth-date" ref={birthInputRef} type="date" value={socialBirthDate} max={todayKst()} disabled={busy}
-        onChange={(event) => setSocialBirthDate(event.target.value)}
-        onInput={(event) => setSocialBirthDate(event.currentTarget.value)}
-        onBlur={(event) => setSocialBirthDate(event.currentTarget.value)}
-        className="h-11 rounded-full border border-[#DDDEE7] bg-white px-4 text-sm text-[#1F1F1F] outline-none focus:ring-2 focus:ring-[#5F0080] disabled:opacity-50" />
-    </label>
-    <label htmlFor="google-consent" className="flex cursor-pointer items-start gap-2 text-xs leading-relaxed text-white/80">
-      <input id="google-consent" type="checkbox" checked={googleConsent} disabled={busy}
-        onChange={(event) => setGoogleConsent(event.target.checked)}
-        className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border border-white/50 accent-[#5F0080] disabled:cursor-not-allowed disabled:opacity-50" />
-      <span>Google로 가입·로그인하면 <span className="underline">이용약관</span>, <PrivacyPolicyLink>개인정보 처리방침</PrivacyPolicyLink>, <span className="underline">민감정보 처리</span>에 동의합니다.</span>
-    </label>
-    <label htmlFor="social-opt-eeg" className="flex cursor-pointer items-start gap-2 text-xs leading-relaxed text-white/80">
-      <input id="social-opt-eeg" type="checkbox" checked={optEeg} disabled={busy} onChange={(event) => setOptEeg(event.target.checked)}
-        className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border border-white/50 accent-[#5F0080]" />
-      <span>[선택] 뇌파(LINK BAND) 측정 데이터 수집·이용에 동의합니다.</span>
-    </label>
-    <label htmlFor="social-opt-research" className="flex cursor-pointer items-start gap-2 text-xs leading-relaxed text-white/80">
-      <input id="social-opt-research" type="checkbox" checked={optResearch} disabled={busy} onChange={(event) => setOptResearch(event.target.checked)}
-        className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border border-white/50 accent-[#5F0080]" />
-      <span>[선택] 비식별 연구 목적 활용에 동의합니다.<span className="block">{RESEARCH_METADATA_NOTICE}</span></span>
-    </label>
-    </div>
-  );
   const appleButton = (
     <AppleLoginButton role={loginRole} rememberMe={rememberMe} disabled={busy}
-      consents={needsGoogleConsent ? socialConsents() : undefined}
-      birthDate={needsGoogleConsent ? currentBirthDate() : undefined}
-      validateBeforeSubmit={signupInfoError}
       onSuccess={(user) => user && navigate(resolvePostLoginPath(user, next))}
-      onNeedsSignupInfo={() => setNeedsGoogleConsent(true)}
+      onNeedsSignupInfo={(_code, credential) => credential && goToSignupConfirm(credential, { role: loginRole, next, rememberMe })}
       onError={setError} />
   );
   const dividerWith = (label: string) => <div className="flex items-center gap-3 text-[13px] text-white/80"><span className="h-px flex-1 bg-white/30" />{label}<span className="h-px flex-1 bg-white/30" /></div>;
@@ -316,11 +254,23 @@ export default function LoginPage() {
             {/* SDD-227: 회원 탭은 이메일 로그인을 위에, 간편 로그인(Google·Apple)을 아래에 둔다. */}
             {isClient && <>{emailForm}
               <p className="text-center text-sm text-white"><Link to="/forgot-password" className="text-white underline">비밀번호 찾기</Link><span aria-hidden="true" className="mx-2 text-white/60">·</span><Link to="/register?role=client" className="font-semibold text-white underline">회원가입</Link></p>
-              {dividerWith('간편 로그인')}{googleButton}{appleButton}{needsGoogleConsent && googleConsentField}</>}
-            {!isAdmin && loginRole === 'counselor' && <>{emailForm}{divider}{googleButton}{appleButton}<p className="text-center text-xs text-white/80">Google·Apple 로그인은 기존 상담사 계정만 이용할 수 있습니다.</p></>}
-            {!isAdmin && loginRole === 'org_admin' && emailForm}
+              {dividerWith('간편 로그인')}{googleButton}{appleButton}</>}
+            {!isAdmin && loginRole === 'counselor' && <>{emailForm}{divider}{googleButton}{appleButton}<p className="text-center text-xs text-white/80">Google·Apple로 상담사 계정을 만들 수 있어요. 처음이라면 아래 「상담사 가입」에서 시작해 주세요.</p></>}
+            {!isAdmin && loginRole === 'org_admin' && <>{emailForm}{divider}{googleButton}{appleButton}<p className="text-center text-xs text-white/80">기관 관리자는 운영자가 지정한 계정으로만 로그인할 수 있어요. 도입 문의는 <Link to="/register/organization" className="underline">기관 도입 문의</Link>에서 받아요.</p></>}
             {isAdmin && <>{rememberMeField}{googleButton}<p className="text-center text-[12.5px] text-white/78 text-white/[0.78]">Google Workspace 계정으로 로그인하세요.</p></>}
-            {error && <p role="alert" className="rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-red-900/30">{error}</p>}
+            {error && <div role="alert" className="rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-red-900/30">
+              <p>{error}</p>
+              {guide === 'role-mismatch' && <p className="mt-2 flex flex-wrap gap-2 text-[13px] font-medium">
+                {tabs.filter((tab) => tab.role !== loginRole).map((tab) => (
+                  <button key={tab.role} type="button" onClick={() => selectTab(tabs.findIndex((t) => t.role === tab.role))} className="rounded-full bg-white/20 px-3 py-1 underline">{tab.label} 로그인으로 이동</button>
+                ))}
+              </p>}
+              {guide === 'no-account' && <p className="mt-2 text-[13px] font-medium">
+                {loginRole === 'counselor'
+                  ? <Link to="/register?role=counselor" className="underline">상담사 가입 안내 보기</Link>
+                  : <Link to="/register/organization" className="underline">기관 도입 문의하기</Link>}
+              </p>}
+            </div>}
             {!isAdmin && !isClient && <Link to="/forgot-password" className="text-center text-sm underline">비밀번호 찾기</Link>}
             {loginRole === 'counselor' && <Link to="/register?role=counselor" className="text-center text-sm font-semibold underline">상담사 가입</Link>}
             {isAdmin && <Link to="/login?role=client" className="text-center text-sm underline">일반 로그인으로 돌아가기</Link>}

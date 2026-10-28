@@ -1,6 +1,7 @@
 // 내담자 온보딩 페이지 (4단계) — 로그인 페이지와 동일한 다크 테마
 
 import { useEffect, useState, useRef } from 'react';
+import { BirthDateInput } from '../../components/auth/BirthDateInput';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { StepIndicator } from '../../components/onboarding/StepIndicator';
 import { useAuthStore } from '../../stores/authStore';
@@ -580,54 +581,13 @@ export default function ClientOnboardingPage() {
                 </select>
               </div>
               <div>
-                <label htmlFor="onboarding-birth-year" className="block text-[13px] text-white/70 mb-1.5 ml-1">생년월일</label>
-                <div className="flex gap-2">
-                  <select
-                    id="onboarding-birth-year"
-                    aria-label="출생 연도"
-                    value={form.birthDate ? form.birthDate.split('-')[0] : ''}
-                    onChange={(e) => {
-                      const [_, m, d] = (form.birthDate || '--').split('-');
-                      setForm({ ...form, birthDate: `${e.target.value}-${m || ''}-${d || ''}` });
-                    }}
-                    className="flex-1 h-[52px] rounded-full bg-white/90 backdrop-blur border border-white/30 px-3 text-[15px] text-[#1F1F1F] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/20 focus:bg-white appearance-none text-center"
-                  >
-                    <option value="">년</option>
-                    {Array.from({ length: 100 }, (_, i) => 2026 - i).map((y) => (
-                      <option key={y} value={y}>{y}년</option>
-                    ))}
-                  </select>
-                  <select
-                    id="onboarding-birth-month"
-                    aria-label="출생 월"
-                    value={form.birthDate ? form.birthDate.split('-')[1] : ''}
-                    onChange={(e) => {
-                      const [y, _, d] = (form.birthDate || '--').split('-');
-                      setForm({ ...form, birthDate: `${y || ''}-${e.target.value}-${d || ''}` });
-                    }}
-                    className="flex-1 h-[52px] rounded-full bg-white/90 backdrop-blur border border-white/30 px-3 text-[15px] text-[#1F1F1F] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/20 focus:bg-white appearance-none text-center"
-                  >
-                    <option value="">월</option>
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                      <option key={m} value={String(m).padStart(2, '0')}>{m}월</option>
-                    ))}
-                  </select>
-                  <select
-                    id="onboarding-birth-day"
-                    aria-label="출생 일"
-                    value={form.birthDate ? form.birthDate.split('-')[2] : ''}
-                    onChange={(e) => {
-                      const [y, m] = (form.birthDate || '--').split('-');
-                      setForm({ ...form, birthDate: `${y || ''}-${m || ''}-${e.target.value}` });
-                    }}
-                    className="flex-1 h-[52px] rounded-full bg-white/90 backdrop-blur border border-white/30 px-3 text-[15px] text-[#1F1F1F] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/20 focus:bg-white appearance-none text-center"
-                  >
-                    <option value="">일</option>
-                    {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-                      <option key={d} value={String(d).padStart(2, '0')}>{d}일</option>
-                    ))}
-                  </select>
-                </div>
+                <BirthDateInput
+                  id="onboarding-birth"
+                  value={form.birthDate}
+                  onChange={(iso) => setForm((prev) => ({ ...prev, birthDate: iso }))}
+                  labelClassName="block text-[13px] text-white/70 mb-1.5 ml-1"
+                  inputClassName="h-[52px] w-full rounded-full bg-white/90 backdrop-blur border border-white/30 px-5 text-[15px] text-[#1F1F1F] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/20 focus:bg-white"
+                />
               </div>
               <div>
                 <p className="text-[13px] text-white/70 font-semibold mb-2">주요 호소 (다중 선택)</p>

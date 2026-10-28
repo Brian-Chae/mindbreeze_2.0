@@ -42,6 +42,7 @@ import { buildSummaryRows, remainingPrepLabels, type SurveyOutcome } from '../..
 import { buildMemberReadiness, type BandSnapshot } from '../../lib/class/flow/member-presence';
 import type { FlowBandMode } from '../../lib/class/flow/types';
 import { useAuthStore } from '../../stores/authStore';
+import { GuestSignupPrompt } from '../../components/auth/GuestSignupPrompt';
 
 /** 방침(/privacy)과 같은 보관 기간 — 환경 변수로 달리 표시하지 않는다 */
 const RETENTION_DAYS = RAW_RETENTION_DAYS;
@@ -423,6 +424,7 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
     return (
       <>
         {batteryGuide}
+        {entry.isGuest && <GuestSignupPrompt />}
         <WaitStartContainer
           place={place} size={size} bandMode={bandMode} title={title} hostName={info.hostName} scheduledAt={info.scheduledAt}
           address={info.locationType === 'offline' ? info.locationAddress : null}

@@ -2,6 +2,7 @@
 // 내담자 온보딩의 마지막 단계
 
 import { useState, type FormEvent } from 'react';
+import { BirthDateInput } from '../../components/auth/BirthDateInput';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useRequireAuth } from '../../hooks/useAuth';
@@ -159,15 +160,12 @@ export default function ClientEssentialsPage() {
 
             {/* 생년월일 */}
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-[#1F1F1F]">
-                생년월일
-              </label>
-              <input
-                type="date"
+              <BirthDateInput
                 value={form.birthDate}
-                onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
+                onChange={(iso) => setForm((prev) => ({ ...prev, birthDate: iso }))}
                 disabled={loading}
-                className="w-full px-4 py-3 border border-[#D4D4D4] rounded-xl text-[#1F1F1F] bg-white focus:ring-2 focus:ring-[#5F0080] focus:border-transparent outline-none disabled:opacity-50"
+                labelClassName="block text-sm font-medium text-[#1F1F1F]"
+                inputClassName="w-full px-4 py-3 border border-[#D4D4D4] rounded-xl text-[#1F1F1F] bg-white focus:ring-2 focus:ring-[#5F0080] focus:border-transparent outline-none disabled:opacity-50"
               />
             </div>
 

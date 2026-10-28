@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { resolvePostLoginPath } from '../lib/auth-routing';
 import '../components/landing/v6/landing-v6.css';
@@ -25,7 +25,9 @@ export default function LandingPage() {
     }
   }, [isInitialized, isAuthenticated, user, navigate]);
 
-  const [inquiryOpen, setInquiryOpen] = useState(false);
+  // SDD-249 D6: 앱의 기관 도입 안내가 `/?inquiry=1` 로 연결하면 기관 가입 문의 모달을 바로 연다.
+  const [searchParams] = useSearchParams();
+  const [inquiryOpen, setInquiryOpen] = useState(() => searchParams.get('inquiry') === '1');
   const closeInquiry = useCallback(() => setInquiryOpen(false), []);
   const modalApi = useMemo(() => ({ open: () => setInquiryOpen(true) }), []);
 

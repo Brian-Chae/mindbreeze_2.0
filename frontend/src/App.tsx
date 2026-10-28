@@ -25,6 +25,7 @@ import { LegacySessionRedirect } from './components/routing/legacy-session-redir
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const ClientLoginPage = lazy(() => import('./pages/ClientLoginPage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+const SignupConfirmPage = lazy(() => import('./pages/SignupConfirmPage'));
 const RegisterClientPage = lazy(() => import('./pages/register/RegisterClientPage'));
 const RegisterCounselorPage = lazy(() => import('./pages/register/RegisterCounselorPage'));
 const RegisterOrganizationPage = lazy(() => import('./pages/register/RegisterOrganizationPage'));
@@ -179,6 +180,7 @@ const router = createBrowserRouter(
         <Route path="/support" element={<SupportPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/login/client" element={<ClientLoginPage />} />
+        <Route path="/signup/confirm" element={<SignupConfirmPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/register/client" element={<RegisterClientPage />} />
         <Route path="/register/counselor" element={<RegisterCounselorPage />} />
@@ -204,9 +206,9 @@ const router = createBrowserRouter(
           return { element: <RoleGuard role="counselor"><module.default /></RoleGuard> };
         }} />
         <Route path="/dashboard/org" element={<RoleGuard role="org_admin"><OrgDashboardPage /></RoleGuard>} />
-        <Route path="/onboarding/counselor" element={<CounselorOnboardingPage />} />
-        <Route path="/onboarding/client" element={<ClientOnboardingPage />} />
-        <Route path="/onboarding/client/essentials" element={<ClientEssentialsPage />} />
+        <Route path="/onboarding/counselor" element={<RoleGuard role="counselor" onMismatch="notice"><CounselorOnboardingPage /></RoleGuard>} />
+        <Route path="/onboarding/client" element={<RoleGuard role="client" onMismatch="notice"><ClientOnboardingPage /></RoleGuard>} />
+        <Route path="/onboarding/client/essentials" element={<RoleGuard role="client" onMismatch="notice"><ClientEssentialsPage /></RoleGuard>} />
         <Route path="/clients" lazy={async () => {
           const module = await import('./pages/clients/ClientListPage');
           return { element: <RoleGuard role={['counselor', 'org_admin']}><module.default /></RoleGuard> };

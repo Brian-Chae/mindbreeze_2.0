@@ -4,8 +4,9 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import ThemeToggle from '../../components/ThemeToggle';
 import { OtpInput } from '../../components/auth/OtpInput';
+import { BirthDateInput } from '../../components/auth/BirthDateInput';
 import { ConsentCheckList, type Consents } from '../../components/auth/ConsentCheckList';
-import { BIRTH_DATE_MESSAGES, checkBirthDate, todayKst } from '../../lib/auth/age';
+import { BIRTH_DATE_MESSAGES, checkBirthDate } from '../../lib/auth/age';
 import { hasRequiredConsents, toConsentPayload } from '../../lib/auth/consents';
 import { apiErrorCode } from '../../lib/api/auth';
 import { requestOtp, verifyOtp } from '../../lib/api/auth';
@@ -426,17 +427,13 @@ export default function RegisterClientPage() {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="birthDate" className="block text-sm font-medium text-ink-secondary">
-                  생년월일
-                </label>
-                <input
+                <BirthDateInput
                   id="birthDate"
-                  type="date"
                   value={birthDate}
-                  onChange={(e) => setBirthDate(e.target.value)}
-                  max={todayKst()}
+                  onChange={(iso) => setBirthDate(iso)}
                   disabled={loading}
-                  className={inputClass}
+                  labelClassName="block text-sm font-medium text-ink-secondary"
+                  inputClassName={inputClass}
                 />
               </div>
 

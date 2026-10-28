@@ -2,6 +2,7 @@
 // 회원(client) 및 상담사 프로필이 없는 기관 관리자(org_admin)의 자기 정보 수정에 사용한다.
 
 import { useId, useState } from 'react';
+import { BirthDateInput } from '../../components/auth/BirthDateInput';
 import type { UpdateUserMePayload } from '../../lib/api/auth';
 import ConfirmDialog from './ConfirmDialog';
 import { buttonClass } from '../../components/ui';
@@ -168,13 +169,13 @@ export default function SelfInfoSection({ value, showPersonal, onSave }: SelfInf
                 </select>
               </div>
               <div>
-                <label htmlFor={`${fid}-birth`} className={FIELD_LABEL}>생년월일</label>
-                <input
+                <BirthDateInput
                   id={`${fid}-birth`}
-                  type="date"
-                  className={INPUT_CLASS}
+                  ageRule="none"
+                  labelClassName={FIELD_LABEL}
+                  inputClassName={INPUT_CLASS}
                   value={draft.birth_date}
-                  onChange={(e) => update('birth_date', e.target.value)}
+                  onChange={(iso) => update('birth_date', iso)}
                 />
               </div>
             </div>

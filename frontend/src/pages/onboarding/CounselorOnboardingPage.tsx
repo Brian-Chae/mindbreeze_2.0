@@ -1,6 +1,7 @@
 // 상담사 온보딩 페이지 (4단계) — UI Kit 보라색 스타일
 
 import { useEffect, useState } from 'react';
+import { BirthDateInput } from '../../components/auth/BirthDateInput';
 import { Link, useNavigate } from 'react-router-dom';
 import { StepIndicator } from '../../components/onboarding/StepIndicator';
 import { useAuthStore } from '../../stores/authStore';
@@ -264,12 +265,12 @@ export default function CounselorOnboardingPage() {
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-[#6F6F6F]">생년월일</label>
-                <input
-                  type="date"
+                <BirthDateInput
                   value={form.birthDate}
-                  onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
-                  className={INPUT_CLS}
+                  onChange={(iso) => setForm((prev) => ({ ...prev, birthDate: iso }))}
+                  ageRule="none"
+                  labelClassName="block text-sm font-semibold text-[#6F6F6F]"
+                  inputClassName={INPUT_CLS}
                 />
               </div>
               <div className="space-y-2">
