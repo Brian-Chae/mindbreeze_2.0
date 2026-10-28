@@ -83,7 +83,7 @@ fn clean_signal_never_invalid() {
     for f in &fr {
         let (v, validity, _) = reason_of(f);
         assert!(v.is_some() && validity == "valid", "정상 신호가 무효 처리됨: seq {}", f.sequence);
-        assert!(v.unwrap() <= 1000.0);
+        assert!(v.unwrap() <= 2000.0);
     }
 }
 

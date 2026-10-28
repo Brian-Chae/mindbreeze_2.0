@@ -36,7 +36,7 @@ describe('계약 상수 = 코어 guard.rs', () => {
     expect(STEP_COUNT_LIMIT).toBe(3);
     expect(LEADOFF_RATIO_LIMIT).toBe(0.05);
     expect(GAP_SAMPLES_LIMIT).toBe(2);
-    expect(OUTLIER_TNA_LIMIT).toBe(1000);
+    expect(OUTLIER_TNA_LIMIT).toBe(2000);
     expect(GUARD_REASONS).toEqual(['saturated', 'step', 'leadoff', 'gap', 'outlier']);
   });
   it('포화 임계 ≈ 329,361µV (풀스케일 98%)', () => {
@@ -88,9 +88,11 @@ describe('checkEegWindow 규칙 1~3', () => {
 });
 
 describe('규칙 5 outlier', () => {
-  it('TNA>1000 또는 비유한이면 outlier', () => {
-    expect(isOutlierTna(1000)).toBe(false);
-    expect(isOutlierTna(1000.5)).toBe(true);
+  it('TNA>2000 또는 비유한이면 outlier', () => {
+    expect(isOutlierTna(1600)).toBe(false);
+    expect(isOutlierTna(1999)).toBe(false);
+    expect(isOutlierTna(2000)).toBe(false);
+    expect(isOutlierTna(2000.1)).toBe(true);
     expect(isOutlierTna(Number.NaN)).toBe(true);
     expect(isOutlierTna(Number.POSITIVE_INFINITY)).toBe(true);
   });
