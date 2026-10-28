@@ -14,6 +14,7 @@ export interface ClassSummaryDto {
   progress: ProgressDto; session_count: number; next_session: NextSessionDto | null; has_open_session: boolean;
   /** 대표 진행자(다음 회차가 없어도 채워짐) */
   host?: UserBriefDto | null;
+  open_session_id?: string | null; open_session_host_id?: string | null; open_session_host_state?: string | null;
 }
 export interface ClassInstructorDto { user_id: string; name: string | null; role: string; status: string }
 export interface ClassHostViewDto { access_code: string | null; instructors: ClassInstructorDto[] }
