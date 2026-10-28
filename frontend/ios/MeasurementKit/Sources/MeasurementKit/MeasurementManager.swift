@@ -233,21 +233,59 @@ public final class MeasurementManager: BandLinkDelegate {
         seal(reason: reason, closeStream: true)
     }
 
-    /// 봉인 이후 raw/feature journal 을 불변 payload 로 보관하고 업로드 큐에 넣는다(T09 의 capture_stream_id/monotonic_range 포함).
+    /// 봉인 이후 raw/feature journal 을 서버 계약(raw-v2 청크 / feature-v1 ndjson)으로 변환해 업로드 큐에 넣는다(T09 의 capture_stream_id/monotonic_range 포함).
+    /// 통파일(journal 그대로)로 올리면 서버 필수 메타가 없어 항상 422 였다(SDD-252). alias 가 결정적이라 복구 재생에서도 한 번만 큐에 들어간다.
     private func enqueueArchive(of fin: CoreFinal) {
         guard let sid = sessionId, let stream = streamId, let q = archive else { return }
         let dir = sessionDir(sid)
         let out = dir.appendingPathComponent("archive")
         try? FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
-        for (kind, name) in [(ArchiveKind.raw, "raw.journal"), (ArchiveKind.feature, "feature.journal")] {
-            let src = dir.appendingPathComponent(name)
-            guard let data = try? Data(contentsOf: src), !data.isEmpty else { continue }
-            let alias = "\(stream)-\(kind.rawValue)-0001"
+        func put(_ alias: String, _ kind: ArchiveKind, _ data: Data, _ meta: [String: Any], range: (String, String)?) {
             let file = alias + ".bin"
             let dst = out.appendingPathComponent(file)
             if !FileManager.default.fileExists(atPath: dst.path) { try? data.write(to: dst, options: .atomic) }
-            let item = ArchiveItem(alias: alias, kind: kind, file: file, sha256: Hashing.sha256Hex(data), sizeBytes: data.count, captureStreamId: stream, monotonicRange: nil)
+            var item = ArchiveItem(alias: alias, kind: kind, file: file, sha256: Hashing.sha256Hex(data), sizeBytes: data.count, captureStreamId: stream, monotonicRange: range)
+            item.meta = meta
             try? q.enqueue(item)
+        }
+        // 1) 원시 EEG/PPG/ACC 청크 — raw.journal 을 도착 순서대로 센서별 RawChunker 에 먹인다.
+        let packets = MeasurementEngine.rawPackets(in: dir)
+        let origin: Int64 = packets.first.map { Int64($0.wall) * 1000 + Int64(bitPattern: $0.arrival &- $0.anchor) } ?? 0
+        var chunkers: [BandSensor: RawChunker] = [:]
+        func chunker(_ s: BandSensor) -> RawChunker {
+            if let c = chunkers[s] { return c }
+            let c = RawChunker(sensor: s, session: sid, originUs: origin) { chunk in
+                let h = chunk.meta["header"] as? [String: Any]
+                let a = h?["anchor"] as? [String: Any]
+                let from = (a?["monotonic_us"] as? String) ?? "0"
+                put(chunk.alias, .raw, chunk.payload, chunk.meta, range: (from, from)) // raw 는 header 가 창을 정의 — range 는 큐 표시용
+            }
+            chunkers[s] = c; return c
+        }
+        for p in packets {
+            let us = Int64(p.wall) * 1000 + Int64(bitPattern: p.arrival &- p.anchor)   // 코어 창과 같은 시간축
+            chunker(p.sensor).onPacket(p.bytes, arrivalUs: us)
+        }
+        for c in chunkers.values { c.flush() }
+        // 2) feature — feature.journal 의 프레임(envelope JSON)을 60개씩 ndjson 으로 묶는다.
+        let frames: [[String: Any]] = AppendOnlyJournal.scan(url: dir.appendingPathComponent("feature.journal")).records
+            .compactMap { try? JSONSerialization.jsonObject(with: $0.payload) as? [String: Any] }
+        let scopeStream = RawIds.streamId(session: sid, sensor: .eeg), scopeSegment = RawIds.segmentId(session: sid, sensor: .eeg, ordinal: 0)
+        var i = 0
+        while i < frames.count {
+            let slice = Array(frames[i..<min(i + 60, frames.count)])
+            i += 60
+            let seqs = slice.compactMap { ($0["sequence"] as? String).flatMap(UInt64.init) }
+            guard let first = seqs.first, let last = seqs.last, let s = slice.first, let e = slice.last else { continue }
+            var body = Data()
+            for f in slice { if let d = try? JSONSerialization.data(withJSONObject: f, options: [.sortedKeys]) { body += d; body.append(0x0A) } }
+            let alias = "NF-\(String(stream.prefix(8)))-\(first)"
+            let from = (s["window_start_us"] as? String) ?? "0", to = (e["window_end_us"] as? String) ?? from
+            let meta: [String: Any] = ["artifact_alias": alias, "artifact_kind": "feature", "stream_id": scopeStream, "segment_id": scopeSegment, "signal": "eeg",
+                "sequence": first, "first_sequence": first, "last_sequence": last, "row_count": slice.count, "content_encoding": "identity", "schema_version": "feature-v1",
+                "checksum": Hashing.sha256Hex(body), "size_bytes": body.count, "content_type": "application/x-ndjson",
+                "time_range": ["from_us": from, "to_us": to], "monotonic_range": ["from_us": from, "to_us": to]]
+            put(alias, .feature, body, meta, range: (from, to))
         }
     }
 

@@ -264,8 +264,14 @@ final class ManagerRecoveryAndContractTests: XCTestCase {
         for i in 0..<400 { let p = EngineTests.packets[i]; m.bandLink(didReceive: p.sensor, data: p.bytes, monotonicUs: p.arrivalUs) }
         _ = try m.stopMeasurement(reason: "user_stop", requestId: "0000001f-0000-4000-8000-00000000001f")
         let q = m.archiveQueue!
-        XCTAssertEqual(q.counts.pending, 2)
-        let item = q.dueItems(now: 0)[0]
+        // SDD-252: raw 는 센서별 청크(EEG/PPG/ACC), feature 는 60프레임 묶음으로 서버 계약 메타와 함께 큐에 들어간다.
+        let items = q.dueItems(now: 0)
+        XCTAssertGreaterThanOrEqual(q.counts.pending, 2)
+        XCTAssertTrue(items.contains { $0.kind == .raw }); XCTAssertTrue(items.contains { $0.kind == .feature })
+        for i in items { XCTAssertNotNil(i.meta, "서버 필수 메타 없는 통파일 금지: \(i.alias)") }
+        XCTAssertEqual((items.first { $0.kind == .feature }?.meta?["signal"]) as? String, "eeg")
+        XCTAssertNotNil((items.first { $0.kind == .raw }?.meta?["header"]))
+        let item = items[0]
         XCTAssertEqual(item.captureStreamId, "00000014-0000-4000-8000-000000000014")
         XCTAssertEqual(Hashing.sha256Hex(file: m.archiveFileURL(item)), item.sha256)
         XCTAssertEqual(m.state, .sealing)

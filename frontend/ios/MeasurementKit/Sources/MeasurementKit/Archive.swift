@@ -70,6 +70,8 @@ public struct ArchiveItem {
     public var taskId: Int?
     public var uploadURL: String?
     public var remoteId: String?                  // 서버 발급 chunk_id/artifact_id (ACK 용)
+    /// 서버 presign 청크 메타(raw: header 등, feature: signal/segment_id 등). nil 이면 구버전 항목.
+    public var meta: [String: Any]?
 
     public init(alias: String, kind: ArchiveKind, file: String, sha256: String, sizeBytes: Int, captureStreamId: String?, monotonicRange: (String, String)?) {
         self.alias = alias; self.kind = kind; self.file = file; self.sha256 = sha256; self.sizeBytes = sizeBytes
@@ -84,6 +86,7 @@ public struct ArchiveItem {
         if let v = taskId { d["task"] = v }
         if let v = uploadURL { d["url"] = v }
         if let v = remoteId { d["rid"] = v }
+        if let v = meta { d["meta"] = v }
         return d
     }
     static func from(_ d: [String: Any]) -> ArchiveItem? {
@@ -92,7 +95,7 @@ public struct ArchiveItem {
         var i = ArchiveItem(alias: a, kind: k, file: f, sha256: s, sizeBytes: z, captureStreamId: d["stream"] as? String,
                             monotonicRange: (d["from"] as? String).flatMap { f in (d["to"] as? String).map { (f, $0) } })
         i.state = st; i.attempts = (d["attempts"] as? Int) ?? 0; i.nextAttemptMs = (d["next"] as? Int) ?? 0
-        i.lastCode = d["code"] as? String; i.taskId = d["task"] as? Int; i.uploadURL = d["url"] as? String; i.remoteId = d["rid"] as? String
+        i.lastCode = d["code"] as? String; i.taskId = d["task"] as? Int; i.uploadURL = d["url"] as? String; i.remoteId = d["rid"] as? String; i.meta = d["meta"] as? [String: Any]
         return i
     }
 }
@@ -199,9 +202,9 @@ public final class ArchiveQueue {
 public enum ArchiveRequests {
     /// presign 본문. `capture_stream_id` 는 있을 때만(없으면 v1/v2 와 동일한 본문), `monotonic_range` 는 서버가 종료 이후 사후전송을 판정하는 근거.
     public static func presignBody(_ item: ArchiveItem, participantId: String?, playGroupId: String? = nil) -> [String: Any] {
-        var chunk: [String: Any] = [item.kind == .raw ? "chunk_alias" : "artifact_alias": item.alias, "checksum": item.sha256, "size_bytes": item.sizeBytes]
-        if item.kind != .raw { chunk["artifact_kind"] = item.kind.rawValue }
-        if let r = item.monotonicRange { chunk["monotonic_range"] = ["from_us": r.from, "to_us": r.to] }
+        var chunk: [String: Any] = item.meta ?? [item.kind == .raw ? "chunk_alias" : "artifact_alias": item.alias, "checksum": item.sha256, "size_bytes": item.sizeBytes]
+        if item.meta == nil, item.kind != .raw { chunk["artifact_kind"] = item.kind.rawValue }
+        if item.meta == nil || item.kind != .raw, let r = item.monotonicRange { chunk["monotonic_range"] = ["from_us": r.from, "to_us": r.to] }
         var body: [String: Any] = ["participant_id": participantId as Any? ?? NSNull(), "play_group_id": playGroupId as Any? ?? NSNull(), "chunks": [chunk]]
         if let s = item.captureStreamId { body["capture_stream_id"] = s }
         return body
