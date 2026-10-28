@@ -6,6 +6,7 @@ import type { User } from '../../lib/api/auth';
 import GoogleLoginButton from '../../components/auth/GoogleLoginButton';
 import { ConsentCheckList, type Consents } from '../../components/auth/ConsentCheckList';
 import { buttonClass } from '../../components/ui';
+import { todayKst } from '../../lib/auth/age';
 
 export default function InviteLandingPage() {
   const { token } = useParams<{ token: string }>();
@@ -18,6 +19,8 @@ export default function InviteLandingPage() {
   const [reloadKey, setReloadKey] = useState(0);
   // SEC-04: Google 신규 가입은 약관·개인정보·민감정보 동의를 서버에 명시적으로 전달해야 한다.
   const [consents, setConsents] = useState<Consents>({ tos: false, privacy: false, sensitive: false });
+  // 신규 Google 가입은 만 14세 확인을 위해 생년월일이 필수다(서버 BIRTH_DATE_REQUIRED).
+  const [birthDate, setBirthDate] = useState('');
 
   useEffect(() => {
     setLoading(true);
@@ -137,6 +140,19 @@ export default function InviteLandingPage() {
               상담사님이 MIND BREEZE에 초대했습니다.
             </p>
 
+            {/* 생년월일 (신규 가입 필수, 만 14세 이상) */}
+            <label htmlFor="invite-birth-date" className="mb-4 flex flex-col gap-1 text-left text-sm text-[#1F1F1F]">
+              생년월일 (만 14세 이상 가입)
+              <input
+                id="invite-birth-date"
+                type="date"
+                value={birthDate}
+                max={todayKst()}
+                onChange={(event) => setBirthDate(event.target.value)}
+                className="h-11 rounded-xl border border-[#DDDEE7] bg-white px-4 text-sm text-[#1F1F1F] outline-none focus:ring-2 focus:ring-[#5F0080]"
+              />
+            </label>
+
             {/* 약관 동의 (신규 가입 필수) */}
             <div className="mb-4 text-left">
               <ConsentCheckList consents={consents} onChange={setConsents} />
@@ -147,6 +163,7 @@ export default function InviteLandingPage() {
               <GoogleLoginButton
                 inviteToken={token}
                 consents={consents}
+                birthDate={birthDate}
                 onSuccess={handleGoogleSuccess}
               />
             </div>

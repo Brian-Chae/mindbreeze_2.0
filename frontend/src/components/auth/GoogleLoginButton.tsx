@@ -11,6 +11,8 @@ interface GoogleLoginButtonProps {
   inviteToken?: string;
   /** 신규 가입 시 서버로 전달할 약관 동의 상태 (SEC-04) */
   consents?: Consents;
+  /** 신규 가입 시 서버로 전달할 생년월일(YYYY-MM-DD) — 만 14세 확인용 */
+  birthDate?: string;
   onSuccess?: (user: ReturnType<typeof useAuthStore.getState>['user']) => void;
   onError?: (error: Error) => void;
 }
@@ -18,6 +20,7 @@ interface GoogleLoginButtonProps {
 export default function GoogleLoginButton({
   inviteToken,
   consents,
+  birthDate,
   onSuccess,
   onError,
 }: GoogleLoginButtonProps) {
@@ -37,6 +40,8 @@ export default function GoogleLoginButton({
           undefined,
           true,
           consents,
+          'access_token',
+          birthDate || undefined,
         );
         onSuccess?.(user);
       } catch (err) {
