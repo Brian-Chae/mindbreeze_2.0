@@ -12,6 +12,9 @@ import { useChatStore } from '../../stores/chatStore';
 import { getChatSocket } from '../../lib/socket';
 import { ChatRoom } from './ChatRoom';
 
+/** 접힘 상태 안읽음 수를 서버와 맞추는 주기 */
+const UNREAD_SYNC_MS = 5_000;
+
 interface ClassChatPanelProps {
   sessionId: string;
   /** 상담사 토글이 켜졌을 때만 true — false면 아무것도 렌더하지 않는다 */
@@ -107,6 +110,34 @@ export function ClassChatPanel({
         // 목록·알림 조회가 복구한다
       });
   }, [enabled, activeRoomId, token]);
+
+  // 접힘 상태의 안읽음 수는 서버 값을 단일 진실원으로 주기적으로 맞춘다.
+  // 소켓 구독이 늦거나 끊겨도(회원이 입장하기 전에 상담사가 남긴 메시지 포함) 배지가 0으로 남지 않게 한다.
+  useEffect(() => {
+    if (!enabled || !collapsed || !activeRoomId || !token) return undefined;
+    let cancelled = false;
+    const sync = (): void => {
+      void getChatRoom(activeRoomId)
+        .then((fresh) => {
+          if (cancelled) return;
+          const store = useChatStore.getState();
+          if (store.rooms.some((r) => r.id === activeRoomId)) {
+            store.updateRoom(activeRoomId, { unread_count: fresh.unread_count ?? 0 });
+          } else {
+            store.upsertRoom(fresh);
+          }
+        })
+        .catch(() => {
+          // 다음 주기에 다시 맞춘다
+        });
+    };
+    sync();
+    const timer = window.setInterval(sync, UNREAD_SYNC_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [enabled, collapsed, activeRoomId, token]);
 
   // 접힘 상태에서는 ChatRoom이 없어 새 메시지를 못 받으므로, 패널이 방에 join해
   // 배지만 올린다(메시지 본문은 펼칠 때 ChatRoom이 다시 조회한다).

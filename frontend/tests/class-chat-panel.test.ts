@@ -157,3 +157,25 @@ it('embedded 클래스 시트만 어두운 테마를 요청하고 일반 패널�
   await render(createElement(ClassChatPanel, props));
   expect(container.querySelector('[data-chat-tone]')?.getAttribute('data-chat-tone')).toBe('light');
 });
+
+it('접힘 상태에서는 서버 안읽음 수로 배지를 맞춘다(소켓 이벤트를 놓쳐도 표시)', async () => {
+  vi.useFakeTimers();
+  try {
+    useChatStore.setState({ rooms: [{ ...room, unread_count: 0 }], messagesByRoom: {}, activeRoomId: null });
+    vi.mocked(getChatRoom).mockResolvedValue({ ...room, unread_count: 2 });
+    const seen: number[] = [];
+    await act(async () => {
+      root.render(createElement(ClassChatPanel, {
+        sessionId: 'session-1', enabled: true, roomId: 'session-room', collapsed: true,
+        onCollapsedChange: () => undefined, embedded: true, onUnreadChange: (n: number) => seen.push(n),
+      }));
+    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(10); });
+    expect(seen.at(-1)).toBe(2);
+    vi.mocked(getChatRoom).mockResolvedValue({ ...room, unread_count: 5 });
+    await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+    expect(seen.at(-1)).toBe(5);
+  } finally {
+    vi.useRealTimers();
+  }
+});
