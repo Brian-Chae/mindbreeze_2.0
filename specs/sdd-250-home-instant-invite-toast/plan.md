@@ -12,7 +12,7 @@
 
 - **D4 N = 6시간**: 열린(`open`/`in_progress`) 회차는 `started_at ?? scheduled_at` 기준 6시간 이내만 홈 후보. 상수 `HOME_OPEN_SESSION_MAX_AGE_MS`.
 - **호환**: `next_session` 의미는 그대로(미래 회차). 열린 회차는 **새 가산 필드 `open_session`**(`NextSession` 형태 + `started_at`)으로 내려준다. 구 앱은 이 필드를 무시한다. DB 마이그레이션 없음.
-- **간격 규칙(대표 피드백)**: `.sh-hero__in` gap 12px, 칩→제목 8px(제목 margin-top -4px), 제목→박스 12px, 박스→CTA 12px. 홈 CSS(`home-card-parity.css`)에서 `.mh-home` 범위로만 적용.
+- **간격 규칙(대표 확정 2026-10-28)**: 칩→제목 글자 시각 간격 **28px**(박스 간격 21px = `.sh-hero__in` gap 16px + 제목 margin-top 5px, 제목 반 행간 약 7px). 제목→지도사 박스·박스→CTA 는 기존 16px 유지. 홈 CSS(`home-card-parity.css`)의 `.mh-home` 범위로만 적용.
 - **우선순위(H2)**: 진행 중 즉석(`is_instant`) > 진행 중 일반 > 입장 중(open) 즉석/일반 > 예정(가까운 순). 상담은 예정으로만 경쟁.
 
 ## Files to Change
