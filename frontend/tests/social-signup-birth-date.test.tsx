@@ -240,3 +240,23 @@ test('초대 페이지: 없는 초대 / 만료·사용된 초대 문구를 구�
     await act(async () => root.render(createElement('div')));
   }
 });
+
+test('역할 불일치(403)면 올바른 탭으로 이동하는 버튼이 나온다 (SDD-249 P1-1)', async () => {
+  h.loginGoogleApi.mockRejectedValueOnce(new ApiError(403, '선택한 Google 계정은 이 로그인 유형의 계정이 아니에요.', { detail: { code: 'ROLE_MISMATCH', message: 'x' } }));
+  await mountLogin();
+  await click(buttonByText('Google로 회원 로그인'));
+  const alertEl = container.querySelector('[role="alert"]');
+  expect(alertEl?.textContent).toContain('상담사 로그인으로 이동');
+  expect(alertEl?.textContent).toContain('기관 로그인으로 이동');
+  await click([...alertEl!.querySelectorAll('button')].find((b) => b.textContent?.includes('상담사')) as HTMLButtonElement);
+  expect(container.querySelector('[role="tab"][aria-selected="true"]')?.textContent).toBe('상담사');
+});
+
+test('상담사 탭 소셜 신규(사전 등록 없음 403)면 상담사 가입 안내로 가는 링크가 나온다', async () => {
+  h.loginGoogleApi.mockRejectedValueOnce(new ApiError(403, '사전 등록된 계정이 없습니다. 관리자에게 문의하세요.', null));
+  await act(async () => {
+    root.render(createElement(MemoryRouter, { initialEntries: ['/login?role=counselor'] }, createElement(LoginPage)));
+  });
+  await click(buttonByText('Google로 상담사 로그인'));
+  expect(container.querySelector('a[href="/register?role=counselor"]')).not.toBeNull();
+});

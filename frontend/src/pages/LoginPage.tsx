@@ -6,6 +6,7 @@ import { isNativeApp } from '../lib/native/platform';
 import { nativeGoogleIdToken } from '../lib/native/google';
 import { useAuthStore } from '../stores/authStore';
 import { ApiError } from '../lib/api/client';
+import { apiErrorCode } from '../lib/api/auth';
 import { PrivacyPolicyLink } from '../components/legal/PrivacyPolicyLink';
 import { resolvePostLoginPath } from '../lib/auth-routing';
 import AppleLoginButton from '../components/auth/AppleLoginButton';
@@ -62,6 +63,7 @@ export default function LoginPage() {
   useEffect(() => {
     setPassword('');
     setError(null);
+    setGuide(null);
   }, [loginRole]);
 
   const finish = () => {
@@ -69,7 +71,14 @@ export default function LoginPage() {
     googleExchanging.current = false;
     setPending(null);
   };
+  // 계정 역할과 로그인 탭이 다르거나(403), 상담사·기관이 소셜로 처음 시도한 경우(사전 등록 없음)는 막다른 길 대신 다음 행동을 안내한다.
+  const [guide, setGuide] = useState<'role-mismatch' | 'no-account' | null>(null);
   const showError = (err: unknown) => {
+    setGuide(null);
+    if (err instanceof ApiError && err.status === 403) {
+      if (/로그인 유형|이 로그인 유형/.test(err.message) || apiErrorCode(err) === 'ROLE_MISMATCH') setGuide('role-mismatch');
+      else if (/사전 등록/.test(err.message)) setGuide('no-account');
+    }
     setError(err instanceof ApiError
       ? err.status === 423 ? '계정이 잠겼습니다. 15분 후 다시 시도해주세요'
         : err.message || '로그인에 실패했습니다.'
@@ -80,6 +89,7 @@ export default function LoginPage() {
     const started = { role: loginRole, next, rememberMe };
     intent.current = started;
     setError(null);
+    setGuide(null);
     setPending(method);
     return started;
   };
@@ -156,7 +166,7 @@ export default function LoginPage() {
     }
   };
   const handleGoogleClick = () => {
-    if (loginRole === 'org_admin' || (!hasGoogleClientId && !isNativeApp())) return;
+    if (!hasGoogleClientId && !isNativeApp()) return;
     if (!begin('google')) return;
     if (isNativeApp()) { void nativeGoogleLogin(); return; }
     try { googleLogin(); } catch (err) { showError(err); finish(); }
@@ -245,10 +255,22 @@ export default function LoginPage() {
             {isClient && <>{emailForm}
               <p className="text-center text-sm text-white"><Link to="/forgot-password" className="text-white underline">비밀번호 찾기</Link><span aria-hidden="true" className="mx-2 text-white/60">·</span><Link to="/register?role=client" className="font-semibold text-white underline">회원가입</Link></p>
               {dividerWith('간편 로그인')}{googleButton}{appleButton}</>}
-            {!isAdmin && loginRole === 'counselor' && <>{emailForm}{divider}{googleButton}{appleButton}<p className="text-center text-xs text-white/80">Google·Apple 로그인은 기존 상담사 계정만 이용할 수 있습니다.</p></>}
-            {!isAdmin && loginRole === 'org_admin' && emailForm}
+            {!isAdmin && loginRole === 'counselor' && <>{emailForm}{divider}{googleButton}{appleButton}<p className="text-center text-xs text-white/80">Google·Apple로 상담사 계정을 만들 수 있어요. 처음이라면 아래 「상담사 가입」에서 시작해 주세요.</p></>}
+            {!isAdmin && loginRole === 'org_admin' && <>{emailForm}{divider}{googleButton}{appleButton}<p className="text-center text-xs text-white/80">기관 관리자는 운영자가 지정한 계정으로만 로그인할 수 있어요. 도입 문의는 <Link to="/register/organization" className="underline">기관 도입 문의</Link>에서 받아요.</p></>}
             {isAdmin && <>{rememberMeField}{googleButton}<p className="text-center text-[12.5px] text-white/78 text-white/[0.78]">Google Workspace 계정으로 로그인하세요.</p></>}
-            {error && <p role="alert" className="rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-red-900/30">{error}</p>}
+            {error && <div role="alert" className="rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-red-900/30">
+              <p>{error}</p>
+              {guide === 'role-mismatch' && <p className="mt-2 flex flex-wrap gap-2 text-[13px] font-medium">
+                {tabs.filter((tab) => tab.role !== loginRole).map((tab) => (
+                  <button key={tab.role} type="button" onClick={() => selectTab(tabs.findIndex((t) => t.role === tab.role))} className="rounded-full bg-white/20 px-3 py-1 underline">{tab.label} 로그인으로 이동</button>
+                ))}
+              </p>}
+              {guide === 'no-account' && <p className="mt-2 text-[13px] font-medium">
+                {loginRole === 'counselor'
+                  ? <Link to="/register?role=counselor" className="underline">상담사 가입 안내 보기</Link>
+                  : <Link to="/register/organization" className="underline">기관 도입 문의하기</Link>}
+              </p>}
+            </div>}
             {!isAdmin && !isClient && <Link to="/forgot-password" className="text-center text-sm underline">비밀번호 찾기</Link>}
             {loginRole === 'counselor' && <Link to="/register?role=counselor" className="text-center text-sm font-semibold underline">상담사 가입</Link>}
             {isAdmin && <Link to="/login?role=client" className="text-center text-sm underline">일반 로그인으로 돌아가기</Link>}
