@@ -77,7 +77,7 @@ def cur(env):
     return os.path.basename(os.readlink(env["prefix"] / "current"))
 
 
-def test_첫_설치는_current_venv_링크를_만들고_앱_유닛과_timer_19개를_설치한다(env):
+def test_첫_설치는_current_venv_링크를_만들고_앱_유닛과_timer_20개를_설치한다(env):
     r = install(env, RID_A)
     assert r.returncode == 0, r.stderr + r.stdout
     assert cur(env) == RID_A
@@ -85,7 +85,7 @@ def test_첫_설치는_current_venv_링크를_만들고_앱_유닛과_timer_19�
     assert os.readlink(env["prefix"] / "venv").endswith("/venvs/h1")
     units = env["etc"] / "systemd" / "system"
     assert (units / "mindbreeze-backend.service").is_file()
-    assert len(list(units.glob("mindbreeze-job-*.timer"))) == 19  # 기존 18 + SDD-238 retention_sweep(dry-run)
+    assert len(list(units.glob("mindbreeze-job-*.timer"))) == 20  # 기존 18 + SDD-238 retention_sweep(dry-run) + 고아 산출물 스윕(sweep_biosignal_orphans, PR #171)
     log = env["calls"].read_text()
     assert "restart mindbreeze-backend" in log and "restart mindbreeze-worker" in log
     # 컷오버 전(timer 비활성) 상태에서는 timer 를 enable 하지 않는다
