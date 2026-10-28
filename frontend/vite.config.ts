@@ -29,6 +29,9 @@ export default defineConfig({
           define: {
             'import.meta.env.VITE_API_BASE_URL': JSON.stringify(api),
             'import.meta.env.VITE_SOCKET_URL': JSON.stringify(url.origin),
+            // 운영 서버는 LIVE_PROTOCOL_V2=true 로 회차를 v2 에 고정한다. 앱·웹 운영 번들은 항상 v2 클라이언트여야 한다
+            // (미주입 시 앱이 v1 으로 동작해 상담사 대기 화면에 준비 현황이 반영되지 않는다). 시험 목적일 때만 환경변수로 끈다.
+            'import.meta.env.VITE_LIVE_PROTOCOL_V2': JSON.stringify(process.env.VITE_LIVE_PROTOCOL_V2 === 'false' ? 'false' : 'true'),
           },
         };
       }
