@@ -324,6 +324,7 @@ def test_클래스_목록_호스트_시점_필드와_진행률(client, world):
     assert set(item) == {
         "id", "title", "status", "schedule_mode", "planned_session_count", "area",
         "progress", "session_count", "next_session", "has_open_session",
+        "open_session",  # SDD-250 가산
         "open_session_id", "open_session_host_id", "open_session_host_state",
         "is_instant",  # SDD-226 가산
         "host",  # 대표 진행자(다음 회차 없어도 표시)
