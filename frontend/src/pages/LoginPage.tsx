@@ -11,7 +11,7 @@ import { PrivacyPolicyLink } from '../components/legal/PrivacyPolicyLink';
 import { resolvePostLoginPath } from '../lib/auth-routing';
 import AppleLoginButton from '../components/auth/AppleLoginButton';
 import { toConsentPayload } from '../lib/auth/consents';
-import { todayKst } from '../lib/auth/age';
+import { BIRTH_DATE_MESSAGES, checkBirthDate, todayKst } from '../lib/auth/age';
 
 // SEC-05: 역할 시뮬레이션 패널은 DEV 빌드에서만 조건부 동적 import 한다.
 // 프로덕션에서는 import.meta.env.DEV===false 로 분기가 제거되어 번들에 포함되지 않는다.
@@ -56,6 +56,17 @@ export default function LoginPage() {
   const [socialBirthDate, setSocialBirthDate] = useState('');
   const [optEeg, setOptEeg] = useState(false);
   const [optResearch, setOptResearch] = useState(false);
+  // iOS WebView 의 date input 은 state 반영이 늦을 수 있어, 클릭 시점에 DOM 값을 우선 읽는다(추정 방어).
+  const birthInputRef = useRef<HTMLInputElement | null>(null);
+  const currentBirthDate = () => birthInputRef.current?.value || socialBirthDate;
+  // 가입 정보 입력란이 열린 뒤에는 서버를 다시 부르기 전에 같은 문구로 먼저 안내한다(첫 시도는 기존 사용자도 있으므로 통과).
+  const signupInfoError = (): string | null => {
+    if (!needsGoogleConsent) return null;
+    const birthCheck = checkBirthDate(currentBirthDate());
+    if (birthCheck !== 'ok') return BIRTH_DATE_MESSAGES[birthCheck];
+    if (!googleConsent) return '이용약관·개인정보 처리방침·민감정보 처리에 동의해 주세요.';
+    return null;
+  };
   const socialConsents = () =>
     toConsentPayload({ tos: googleConsent, privacy: googleConsent, sensitive: googleConsent, eeg: optEeg, research: optResearch });
   // 팝업이 열린 동안 URL이 바뀌어도 인증 시작 시 선택한 역할을 사용한다.
@@ -125,7 +136,7 @@ export default function LoginPage() {
           started.rememberMe,
           socialConsents(),
           'access_token',
-          socialBirthDate || undefined,
+          currentBirthDate() || undefined,
         );
         navigate(resolvePostLoginPath(user, started.next));
       } catch (err) {
@@ -162,7 +173,7 @@ export default function LoginPage() {
       const idToken = await nativeGoogleIdToken();
       const user = await loginGoogle(
         idToken, undefined, started.role, started.rememberMe,
-        socialConsents(), 'id_token', socialBirthDate || undefined,
+        socialConsents(), 'id_token', currentBirthDate() || undefined,
       );
       navigate(resolvePostLoginPath(user, started.next));
     } catch (err) {
@@ -180,7 +191,10 @@ export default function LoginPage() {
     }
   };
   const handleGoogleClick = () => {
-    if (loginRole === 'org_admin' || (!hasGoogleClientId && !isNativeApp()) || !begin('google')) return;
+    if (loginRole === 'org_admin' || (!hasGoogleClientId && !isNativeApp())) return;
+    const blocked = signupInfoError();
+    if (blocked) { setError(blocked); return; }
+    if (!begin('google')) return;
     if (isNativeApp()) { void nativeGoogleLogin(); return; }
     // FUNC-10: 동의 여부와 무관하게 먼저 로그인을 시도한다. 기존 사용자는 그대로 통과하고,
     // 신규 가입은 백엔드가 422(동의 필요)를 주면 그때 체크박스를 노출한다.
@@ -215,8 +229,10 @@ export default function LoginPage() {
     <div className="flex flex-col gap-3">
     <label htmlFor="social-birth-date" className="flex flex-col gap-1 text-xs text-white/80">
       생년월일 (만 14세 이상 가입)
-      <input id="social-birth-date" type="date" value={socialBirthDate} max={todayKst()} disabled={busy}
+      <input id="social-birth-date" ref={birthInputRef} type="date" value={socialBirthDate} max={todayKst()} disabled={busy}
         onChange={(event) => setSocialBirthDate(event.target.value)}
+        onInput={(event) => setSocialBirthDate(event.currentTarget.value)}
+        onBlur={(event) => setSocialBirthDate(event.currentTarget.value)}
         className="h-11 rounded-full border border-[#DDDEE7] bg-white px-4 text-sm text-[#1F1F1F] outline-none focus:ring-2 focus:ring-[#5F0080] disabled:opacity-50" />
     </label>
     <label htmlFor="google-consent" className="flex cursor-pointer items-start gap-2 text-xs leading-relaxed text-white/80">
@@ -240,7 +256,8 @@ export default function LoginPage() {
   const appleButton = (
     <AppleLoginButton role={loginRole} rememberMe={rememberMe} disabled={busy}
       consents={needsGoogleConsent ? socialConsents() : undefined}
-      birthDate={needsGoogleConsent ? socialBirthDate : undefined}
+      birthDate={needsGoogleConsent ? currentBirthDate() : undefined}
+      validateBeforeSubmit={signupInfoError}
       onSuccess={(user) => user && navigate(resolvePostLoginPath(user, next))}
       onNeedsSignupInfo={() => setNeedsGoogleConsent(true)}
       onError={setError} />
