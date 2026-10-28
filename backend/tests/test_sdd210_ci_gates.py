@@ -149,6 +149,9 @@ def test_release_build_워크플로는_prod_도메인으로_빌드하고_dev_주
     assert "dev-api" not in text and "dev.mindbreeze" not in text
     assert "VITE_API_BASE_URL: https://${{ env.PROD_API_HOST }}/api/v1" in text
     assert "deploy/ci/check_migrations.py" in text and "deploy/ci/scan_dev_leaks.py" in text
+    # 라이브 프로토콜 v2: 서버 SSM 과 웹 번들 일치 + 번들 회귀 가드
+    assert "VITE_LIVE_PROTOCOL_V2: 'true'" in text
+    assert "grep -rqE 'VITE_LIVE_PROTOCOL_V2:" in text
     assert wf["permissions"] == {"contents": "read"}
     # 서버 설정을 sed 로 고치지 않는다(R1)
     assert "sed -i" not in text
