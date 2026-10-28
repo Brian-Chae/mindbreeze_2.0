@@ -77,6 +77,13 @@ export function ConsentCheckList({ consents, onChange }: ConsentCheckListProps) 
                 {item.label}
               </span>
             </label>
+            {item.key === 'tos' ? (
+              <p className="pl-11 pb-1 text-xs text-[var(--mb-fg-muted,#6F6F6F)]">
+                <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+                  이용약관 전문 보기
+                </a>
+              </p>
+            ) : null}
             {item.key === 'privacy' || item.key === 'sensitive' ? (
               <p className="pl-11 pb-1 text-xs text-[var(--mb-fg-muted,#6F6F6F)]">
                 <PrivacyPolicyLink>개인정보 처리방침 전문 보기</PrivacyPolicyLink>
