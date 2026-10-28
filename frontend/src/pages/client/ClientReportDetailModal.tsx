@@ -2,6 +2,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ClientReportViewer from '../../components/reports/ClientReportViewer';
+import PastReportsCompare from '../../components/reports/PastReportsCompare';
 import { getReport, listReports, type ReportDto } from '../../lib/api/reports';
 import {
   isReportDelayed,
@@ -97,6 +98,7 @@ export function ClientReportDetailModal({ reportId, sessionId, onClose, onReport
           </div>
         )}
         {!loading && report && !isReportInReview(report) && <ClientReportViewer report={report} onClose={onClose} />}
+        {!loading && report && !isReportInReview(report) && <PastReportsCompare current={report} />}
       </div>
     </dialog>,
     document.body,
