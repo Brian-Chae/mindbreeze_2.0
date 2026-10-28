@@ -84,7 +84,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   for (const key of Object.keys(listeners)) delete listeners[key];
   ioCalls.length = 0;
-  useNotificationStore.setState({ toast: null, unread: 0 });
+  useNotificationStore.setState({ toast: null, toasts: [], unread: 0 });
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   container = document.createElement('div');
   document.body.append(container);

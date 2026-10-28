@@ -93,3 +93,13 @@
     font-size:var(--mobile-type-caption-size);line-height:var(--mobile-type-caption-leading)
   }
 }
+
+/* SDD-250: 칩→제목 글자 시각 간격 28px(대표 확정). 박스 간격 = gap 16 + 5 = 21px, 제목 반 행간 약 7px. */
+:is(.cs-structure .mh-home) .sh-hero__row + .sh-hero__title{margin-top:5px}
+:is(.cs-structure .mh-home) .mh-upcoming{display:flex;flex-direction:column;gap:2px;background:#fff;border:1px solid var(--home-line);border-radius:var(--home-radius);padding:16px;box-shadow:var(--home-shadow)}
+:is(.cs-structure .mh-home) .mh-upcoming__title{font-size:14px;font-weight:800;margin:0 0 6px;color:#1f1f1f}
+:is(.cs-structure .mh-home) .mh-upcoming__row{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;padding:10px 0;border-top:1px solid #f0ecf2;text-decoration:none;color:#1f1f1f}
+:is(.cs-structure .mh-home) .mh-upcoming__row b{display:block;font-size:14px;font-weight:700}
+:is(.cs-structure .mh-home) .mh-upcoming__row small{display:block;font-size:12px;color:#716779}
+:is(.cs-structure .mh-home) .mh-upcoming__row em{font-style:normal;font-size:12px;font-weight:700;color:#5f0080}
+:is(.cs-structure .mh-home) .mh-upcoming__more{display:flex;justify-content:center;align-items:center;min-height:44px;font-size:12px;font-weight:700;color:#5f0080;border-top:1px solid #f0ecf2}

@@ -12,6 +12,7 @@ import type { NotificationExtra } from '../lib/api/notifications';
 // io()로 직접 생성하면 채팅 화면(ChatRoom·ClassChatPanel)과 함께 /chat 네임스페이스가
 // 2중 연결되고, cleanup 의 socket.off(event) 가 공유 소켓의 다른 리스너까지 제거한다.
 import { getChatSocket } from '../lib/socket';
+import { invalidateClassReads } from '../lib/class-structure/invalidation';
 
 // 최초 연결은 seed 요청을 공유하고, 재연결은 놓친 이벤트를 복구한다.
 const connectedSockets = new WeakSet<Socket>();
@@ -63,6 +64,8 @@ export function useNotificationSocket() {
       if (data.type === 'chat') invalidateSharedReads('chat');
       fetch();
       void useNotificationStore.getState().refreshSessionInvites();
+      // SDD-250: 클래스·회차 계열 알림이면 홈 '다음 일정'이 쓰는 클래스 목록을 즉시 다시 읽는다.
+      if (data.extra?.target_type === 'class' || data.extra?.target_type === 'session') invalidateClassReads();
       // 세션 초대 알림 → 홈/세션 화면 "초대된 클래스" 카드에 실시간 반영
       if (data.extra?.event_type === 'session_invited') {
         const sessionId =

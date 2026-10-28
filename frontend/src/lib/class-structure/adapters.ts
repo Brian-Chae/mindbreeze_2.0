@@ -6,6 +6,7 @@ import {
   asClassId, asRelationshipId, asSessionId, displayField,
   type ClassId, type RelationshipId, type SessionId, type DisplayField, type ReadState,
 } from './read-model';
+import { homeRank, withinOpenWindow } from './home-next';
 
 export interface SessionReadModel {
   id: SessionId;
@@ -67,11 +68,17 @@ export interface HomeNextSchedule {
   seq: DisplayField<number>;
   title: DisplayField<string>;
   hostName: DisplayField<string>;
+  /** SDD-250: 열려 있는(입장 가능) 회차 / 즉석 클래스 여부. */
+  open?: boolean;
+  instant?: boolean;
+  status?: string;
 }
 export interface MixedHomeModel {
   classes: ReadState<{ classes: ClassReadModel[]; total: number }>;
   counseling: ReadState<{ relationships: CounselingReadModel[]; total: number }>;
   next: DisplayField<HomeNextSchedule>;
+  /** SDD-250: 1순위를 뺀 나머지 후보 전체(홈은 최대 2건만 보인다). */
+  upcoming: HomeNextSchedule[];
   nextIsComplete: boolean;
 }
 
@@ -134,20 +141,33 @@ export function adaptMixedHome(
   classes: ReadState<ClassListResponse>, counseling: ReadState<CounselingListResponse>, now = Date.now(),
 ): MixedHomeModel {
   const candidates: HomeNextSchedule[] = [];
-  const add = (row: SessionBriefDto | null, candidate: Omit<HomeNextSchedule, 'sessionId' | 'scheduledAt' | 'seq'>) => {
-    if (!row?.scheduled_at || ['completed', 'cancelled'].includes(row.status)) return;
+  const seen = new Set<string>();
+  const add = (row: SessionBriefDto | null | undefined, candidate: Omit<HomeNextSchedule, 'sessionId' | 'scheduledAt' | 'seq'>) => {
+    if (!row?.scheduled_at || ['completed', 'cancelled'].includes(row.status) || seen.has(row.id)) return;
     const at = Date.parse(row.scheduled_at);
-    if (!Number.isFinite(at) || at < now) return;
-    candidates.push({ ...candidate, sessionId: asSessionId(row.id), scheduledAt: row.scheduled_at, seq: displayField(row.seq) });
+    if (!Number.isFinite(at)) return;
+    // 열린 회차는 시작 후 6시간 이내면 과거여도 후보(D4), 그 외는 미래 회차만.
+    if (candidate.open ? !withinOpenWindow(row.scheduled_at, now) : at < now) return;
+    seen.add(row.id);
+    candidates.push({ ...candidate, status: row.status, sessionId: asSessionId(row.id), scheduledAt: row.scheduled_at, seq: displayField(row.seq) });
   };
   if (classes.status === 'success') for (const row of classes.data.classes) {
-    add(row.next_session, { area: 'meditation', parentId: asClassId(row.id), title: text(row.title), hostName: text(row.next_session?.host?.name) });
+    const base = { area: 'meditation' as const, parentId: asClassId(row.id), title: text(row.title), instant: row.is_instant === true };
+    add(row.open_session, { ...base, hostName: text(row.open_session?.host?.name), open: true });
+    add(row.next_session, { ...base, hostName: text(row.next_session?.host?.name), open: false });
   }
   if (counseling.status === 'success') for (const row of counseling.data.relationships) {
     add(row.next_session, { area: 'counseling', parentId: asRelationshipId(row.id), title: text('상담 일정'), hostName: text(row.counselor?.name) });
   }
-  candidates.sort((left, right) => Date.parse(left.scheduledAt) - Date.parse(right.scheduledAt));
+  candidates.sort((left, right) => {
+    const rl = homeRank(left.open === true, left.instant === true, left.status ?? '');
+    const rr = homeRank(right.open === true, right.instant === true, right.status ?? '');
+    if (rl !== rr) return rl - rr;
+    const diff = Date.parse(left.scheduledAt) - Date.parse(right.scheduledAt);
+    return left.open ? -diff : diff; // 열린 회차는 최근 시작 순, 예정은 가까운 순
+  });
   return {
+    upcoming: candidates.slice(1),
     classes: mapState(classes, (data) => ({ classes: data.classes.map(adaptMemberClass), total: data.total })),
     counseling: mapState(counseling, (data) => ({ relationships: data.relationships.map(adaptCounseling), total: data.total })),
     next: displayField(candidates[0]), nextIsComplete: classes.status === 'success' && counseling.status === 'success'
