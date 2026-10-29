@@ -212,6 +212,28 @@ def test_invalid_warming_up_값은_0으로_저장되지_않고_null이다(maker,
     assert r.focus_index is None and r.relaxation_index is None and r.heart_rate is None
 
 
+_EXT_UNITS = {"delta_power": "power_raw", "theta_power": "power_raw", "alpha_power": "power_raw", "beta_power": "power_raw",
+              "gamma_power": "power_raw", "total_power": "power_raw", "stress_index": "index_raw", "cognitive_load": "index_raw",
+              "faa": "index_raw", "hemispheric_balance": "index_raw", "rmssd": "ms", "lf_power": "power_raw",
+              "hf_power": "power_raw", "lf_hf_ratio": "index_raw", "motion": "ratio_0_1"}
+
+
+def test_확장_feature_15종은_DB_컬럼에_저장되고_구_10종_메시지도_그대로_수락된다(maker, world, started):
+    ext = {k: {**MET(0.5), "unit": u} for k, u in _EXT_UNITS.items()}
+    m_new = {"focus_raw": MET(1.5), "relaxation_raw": MET(0.3), **ext}
+    out = _ingest(maker, world, _batch(_env(world, started, 1, metrics=m_new), _env(world, started, 2)))  # 2번째 = 구 클라(확장 없음)
+    assert [a["status"] for a in out.response["acks"]] == ["accepted", "accepted"]
+    with maker() as s:
+        rows = s.execute(sa.select(EEGFeatureWindow).where(EEGFeatureWindow.session_id == world.session_id)
+                         .order_by(EEGFeatureWindow.window_index)).scalars().all()
+    new, old = rows
+    for k in _EXT_UNITS:
+        assert getattr(new, k) == 0.5, k
+        assert getattr(old, k) is None, k  # 구 앱은 NULL(0 아님)
+    assert new.meditation_level == 0.3 and new.attention_level == 1.5  # v1 관례
+    assert old.focus_index == 1.5
+
+
 def test_같은_sequence_같은_hash는_duplicate_다른_hash는_충돌로_거절되고_덮어쓰지_않는다(maker, world, started):
     first = _ingest(maker, world, _batch(_env(world, started, 1)))
     assert first.response["acks"][0]["status"] == "accepted"

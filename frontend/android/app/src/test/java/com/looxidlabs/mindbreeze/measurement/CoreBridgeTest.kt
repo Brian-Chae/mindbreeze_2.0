@@ -37,10 +37,10 @@ class CoreBridgeTest {
             assertEquals("accepted", out.status)
             frames += out.frames
         }
-        // cargo run --example replay 로 얻은 기준값(T02 패리티): 149 프레임, 첫/마지막 feature_hash (fix-hrv-sdnn-scale: RR 필터 변경으로 마지막 hash 갱신)
+        // cargo run --example replay 로 얻은 기준값(T02 패리티): 149 프레임, 첫/마지막 feature_hash (fix-hrv-sdnn-scale: RR 필터 변경으로 마지막 hash 갱신; fix-live-v2-feature-fields: 확장 15종 추가로 hash 갱신)
         assertEquals(149, frames.size)
-        assertEquals("640c1c46443774575887efa5c3fa4fcc05c747b7ffdc77e4373153e28b1660ea", frames.first().getString("feature_hash"))
-        assertEquals("35c98f8a606d8b8433022d3369cb6356205a745a76f673dda4123c111ba8994f", frames.last().getString("feature_hash"))
+        assertEquals("727049b5c4876f68de7759ba767af07981f64b6ccce33b9ba651cb2dc6c23119", frames.first().getString("feature_hash"))
+        assertEquals("9ff5803c7b447ae373d0e31bf03c9731b351c4a159fcd2ca7ab3c237022bc39f", frames.last().getString("feature_hash"))
         val fin = core.close()
         assertEquals("149", fin.getJSONObject("final_sequences").getString("metric"))
         assertEquals("7eabba3da72b3796b608557ed08d89991e1d212f3d4dedf926cf107ce643d145", fin.getString("raw_sha256"))

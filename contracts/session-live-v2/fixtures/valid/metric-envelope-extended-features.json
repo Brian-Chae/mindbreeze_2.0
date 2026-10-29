@@ -1,0 +1,221 @@
+{
+  "$fixture": {
+    "schema": "metric-envelope",
+    "why": "확장 feature 15종 포함(선택 필드) — 구 10종 메시지(metric-envelope)와 함께 수락"
+  },
+  "message": {
+    "session_id": "00000001-0000-4000-8000-000000000001",
+    "participant_id": "00000002-0000-4000-8000-000000000002",
+    "stream_id": "00000014-0000-4000-8000-000000000014",
+    "stream_generation": "3",
+    "sequence": "42",
+    "window_start_us": "1000000",
+    "window_end_us": "2000000",
+    "observed_at_ms": 1760000000000,
+    "clock_anchor_id": "0000001e-0000-4000-8000-00000000001e",
+    "clock_uncertainty_ms": 12.5,
+    "device_profile_version": "linkband2-v1",
+    "algorithm_version": "web-ts-1",
+    "model_version": "b0-cohort-2",
+    "feature_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "contact": {
+      "fp1": "contact",
+      "fp2": "leadoff"
+    },
+    "sqi": 0.82,
+    "metrics": {
+      "focus_raw": {
+        "value": 1.8,
+        "unit": "index_raw",
+        "validity": "valid",
+        "reason": null,
+        "last_valid_sequence": "42",
+        "last_valid_observed_at_ms": 1760000000000
+      },
+      "focus_display": {
+        "value": 62,
+        "unit": "score_0_100",
+        "validity": "valid",
+        "reason": null,
+        "last_valid_sequence": "42",
+        "last_valid_observed_at_ms": 1760000000000
+      },
+      "relaxation_raw": {
+        "value": 0.3,
+        "unit": "index_raw",
+        "validity": "valid",
+        "reason": null,
+        "last_valid_sequence": "42",
+        "last_valid_observed_at_ms": 1760000000000
+      },
+      "relaxation_display": {
+        "value": 71,
+        "unit": "score_0_100",
+        "validity": "valid",
+        "reason": null,
+        "last_valid_sequence": "42",
+        "last_valid_observed_at_ms": 1760000000000
+      },
+      "emotion_raw": {
+        "value": 2.2,
+        "unit": "index_raw",
+        "validity": "valid",
+        "reason": null,
+        "last_valid_sequence": "42",
+        "last_valid_observed_at_ms": 1760000000000
+      },
+      "emotion_display": {
+        "value": 55,
+        "unit": "score_0_100",
+        "validity": "valid",
+        "reason": null,
+        "last_valid_sequence": "42",
+        "last_valid_observed_at_ms": 1760000000000
+      },
+      "bpm": {
+        "value": 68.5,
+        "unit": "beats_per_min",
+        "validity": "valid",
+        "reason": null,
+        "last_valid_sequence": "42",
+        "last_valid_observed_at_ms": 1760000000000
+      },
+      "respiration": {
+        "value": null,
+        "unit": "breaths_per_min",
+        "validity": "warming_up",
+        "reason": "insufficient_window",
+        "last_valid_sequence": null,
+        "last_valid_observed_at_ms": null
+      },
+      "sdnn": {
+        "value": null,
+        "unit": "ms",
+        "validity": "invalid",
+        "reason": "ppg_low_quality",
+        "last_valid_sequence": "41",
+        "last_valid_observed_at_ms": 1759999990000
+      },
+      "delta_power": {
+        "value": 0.5,
+        "unit": "power_raw",
+        "validity": "valid",
+        "reason": null,
+        "last_valid_sequence": "42",
+        "last_valid_observed_at_ms": 1760000000000
+      },
+      "theta_power": {
+        "value": 0.5,
+        "unit": "power_raw",
+        "validity": "valid",
+        "reason": null,
+        "last_valid_sequence": "42",
+        "last_valid_observed_at_ms": 1760000000000
+      },
+      "alpha_power": {
+        "value": 0.5,
+        "unit": "power_raw",
+        "validity": "valid",
+        "reason": null,
+        "last_valid_sequence": "42",
+        "last_valid_observed_at_ms": 1760000000000
+      },
+      "beta_power": {
+        "value": 0.5,
+        "unit": "power_raw",
+        "validity": "valid",
+        "reason": null,
+        "last_valid_sequence": "42",
+        "last_valid_observed_at_ms": 1760000000000
+      },
+      "gamma_power": {
+        "value": 0.5,
+        "unit": "power_raw",
+        "validity": "valid",
+        "reason": null,
+        "last_valid_sequence": "42",
+        "last_valid_observed_at_ms": 1760000000000
+      },
+      "total_power": {
+        "value": 0.5,
+        "unit": "power_raw",
+        "validity": "valid",
+        "reason": null,
+        "last_valid_sequence": "42",
+        "last_valid_observed_at_ms": 1760000000000
+      },
+      "stress_index": {
+        "value": 0.5,
+        "unit": "index_raw",
+        "validity": "valid",
+        "reason": null,
+        "last_valid_sequence": "42",
+        "last_valid_observed_at_ms": 1760000000000
+      },
+      "cognitive_load": {
+        "value": 0.5,
+        "unit": "index_raw",
+        "validity": "valid",
+        "reason": null,
+        "last_valid_sequence": "42",
+        "last_valid_observed_at_ms": 1760000000000
+      },
+      "faa": {
+        "value": 0.5,
+        "unit": "index_raw",
+        "validity": "valid",
+        "reason": null,
+        "last_valid_sequence": "42",
+        "last_valid_observed_at_ms": 1760000000000
+      },
+      "hemispheric_balance": {
+        "value": 0.5,
+        "unit": "index_raw",
+        "validity": "valid",
+        "reason": null,
+        "last_valid_sequence": "42",
+        "last_valid_observed_at_ms": 1760000000000
+      },
+      "rmssd": {
+        "value": 0.5,
+        "unit": "ms",
+        "validity": "valid",
+        "reason": null,
+        "last_valid_sequence": "42",
+        "last_valid_observed_at_ms": 1760000000000
+      },
+      "lf_power": {
+        "value": 0.5,
+        "unit": "power_raw",
+        "validity": "valid",
+        "reason": null,
+        "last_valid_sequence": "42",
+        "last_valid_observed_at_ms": 1760000000000
+      },
+      "hf_power": {
+        "value": 0.5,
+        "unit": "power_raw",
+        "validity": "valid",
+        "reason": null,
+        "last_valid_sequence": "42",
+        "last_valid_observed_at_ms": 1760000000000
+      },
+      "lf_hf_ratio": {
+        "value": 0.5,
+        "unit": "index_raw",
+        "validity": "valid",
+        "reason": null,
+        "last_valid_sequence": "42",
+        "last_valid_observed_at_ms": 1760000000000
+      },
+      "motion": {
+        "value": 0.5,
+        "unit": "ratio_0_1",
+        "validity": "valid",
+        "reason": null,
+        "last_valid_sequence": "42",
+        "last_valid_observed_at_ms": 1760000000000
+      }
+    }
+  }
+}
