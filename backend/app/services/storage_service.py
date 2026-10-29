@@ -181,6 +181,32 @@ def _b64_sha256(hex_digest: str) -> str:
     return base64.b64encode(bytes.fromhex(hex_digest)).decode()
 
 
+def _presign_client():
+    """checksum presign 전용 S3 클라이언트 — 설정 지문 기준 캐시.
+
+    호출마다 boto3.client 를 새로 만들면 인스턴스 역할 자격 조회(IMDS 네트워크 호출)가 매번 일어나
+    DB 세션을 쥔 채 지연된다. 한 번 만들어 재사용한다(boto3 client 는 스레드 안전).
+    """
+    global _presign_client_state
+    fingerprint = _s3_client_fingerprint()
+    state = _presign_client_state
+    if state is not None and state[0] == fingerprint:
+        return state[1]
+    import boto3
+    from botocore.config import Config
+
+    client = boto3.client(
+        "s3",
+        region_name=settings.s3_region,
+        endpoint_url=_endpoint_url() or f"https://s3.{settings.s3_region}.amazonaws.com",
+        config=Config(signature_version="s3v4", **_S3_CLIENT_CONFIG),
+        **_credential_kwargs(),
+    )
+    with _s3_client_lock:
+        _presign_client_state = (fingerprint, client)
+    return client
+
+
 def generate_presigned_put_checksummed(
     object_key: str,
     *,
@@ -204,16 +230,7 @@ def generate_presigned_put_checksummed(
     if not storage_configured():
         return _stub_url(object_key), headers
     try:
-        import boto3
-        from botocore.config import Config
-
-        client = boto3.client(
-            "s3",
-            region_name=settings.s3_region,
-            endpoint_url=_endpoint_url() or f"https://s3.{settings.s3_region}.amazonaws.com",
-            config=Config(signature_version="s3v4"),
-            **_credential_kwargs(),
-        )
+        client = _presign_client()
         url = client.generate_presigned_url(
             "put_object",
             Params={
@@ -273,6 +290,8 @@ def verify_object_sha256(
 #   @lru_cache(maxsize=1) 로 프로세스당 영구 고정하면 자격증명/엔드포인트가 바뀌어도 이전
 #   클라이언트가 계속 재사용돼 회전 자격증명이 반영되지 않는다(인증 실패·폐기 자격증명 잔존).
 _s3_client_lock = threading.Lock()
+# 연결 3초·읽기 10초·재시도 2회 — 기본값(연결·읽기 60초, 재시도 5회)은 느린 S3 한 건이 수 분 걸릴 수 있다.
+_S3_TIMEOUT_CONFIG = {"connect_timeout": 3, "read_timeout": 10, "retries": {"max_attempts": 2}}
 _s3_client_state = None  # (fingerprint, client) — 설정 지문이 바뀌면 재생성
 
 
@@ -304,11 +323,14 @@ def _s3_client():
         return state[1]
     try:
         import boto3
+        from botocore.config import Config
 
+        # DB 커넥션을 쥔 채 호출되는 경로(ack 검증)가 있어 S3 지연이 풀 고갈로 번지지 않게 상한을 둔다.
         client = boto3.client(
             "s3",
             region_name=settings.s3_region,
             endpoint_url=_endpoint_url(),
+            config=Config(**_S3_TIMEOUT_CONFIG),
             **_credential_kwargs(),
         )
     except Exception as exc:  # noqa: BLE001
@@ -316,6 +338,35 @@ def _s3_client():
         return None
     with _s3_client_lock:
         _s3_client_state = (fingerprint, client)
+    return client
+
+
+_presign_client_state = None  # (fingerprint, client) — presign 은 서명만(네트워크 없음)이라 전용 캐시
+
+
+def _presign_client():
+    """presign 전용 S3 클라이언트 — 호출마다 boto3.client 를 만들지 않고 설정 지문 기준으로 재사용한다.
+
+    클라이언트 생성은 자격증명 체인(인스턴스 역할 IMDS 조회 등)을 탈 수 있어 DB 세션을 쥔 요청 안에서
+    청크마다 반복하면 커넥션 점유 시간이 늘어난다.
+    """
+    global _presign_client_state
+    fingerprint = _s3_client_fingerprint()
+    state = _presign_client_state
+    if state is not None and state[0] == fingerprint:
+        return state[1]
+    import boto3
+    from botocore.config import Config
+
+    client = boto3.client(
+        "s3",
+        region_name=settings.s3_region,
+        endpoint_url=_endpoint_url() or f"https://s3.{settings.s3_region}.amazonaws.com",
+        config=Config(signature_version="s3v4", **_S3_TIMEOUT_CONFIG),
+        **_credential_kwargs(),
+    )
+    with _s3_client_lock:
+        _presign_client_state = (fingerprint, client)
     return client
 
 

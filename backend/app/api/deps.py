@@ -1,10 +1,13 @@
 """API Dependencies — DB Session, Current User"""
 
+import threading
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.core.database import get_db
 from app.core.security import decode_token
 
@@ -90,3 +93,27 @@ def require_roles(*roles: str):
         return current_user
 
     return _guard
+
+
+
+# ── archive(raw/산출물) presign·ack 동시 처리 상한 ─────────────────────────────
+# 앱이 백그라운드에서 돌아오면 쌓인 청크를 한꺼번에 올린다. 이 요청들은 S3 호출을 끼고 있어 길어질 수 있으므로
+# 프로세스 전역으로 동시 수를 제한해 DB 풀·스레드풀을 독점하지 못하게 한다(다른 요청이 항상 풀을 쓸 수 있게).
+_archive_slots = threading.BoundedSemaphore(settings.archive_max_concurrent)
+
+
+def archive_upload_slot():
+    """presign/ack 엔드포인트용 의존성(yield). 슬롯이 없으면 잠시 기다린 뒤 429 + Retry-After.
+
+    `get_db` 보다 먼저 평가되도록 엔드포인트 인자 맨 앞에 둔다 — 대기 중에는 DB 커넥션을 잡지 않는다.
+    """
+    if not _archive_slots.acquire(timeout=settings.archive_slot_wait_sec):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={"code": "archive_busy"},
+            headers={"Retry-After": "3"},
+        )
+    try:
+        yield
+    finally:
+        _archive_slots.release()

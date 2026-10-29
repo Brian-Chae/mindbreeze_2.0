@@ -658,6 +658,23 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
   useEffect(() => {
     setDownSince((prev) => (bad ? (prev ?? Date.now()) : null));
   }, [bad]);
+  // 앱/탭이 백그라운드에서 돌아오면 소켓·LiveKit 을 즉시 재연결하고 끊김 타이머를 처음부터 센다.
+  // (복귀 직전의 끊김 시간을 이어 세면 15초가 이미 지나 있어 곧바로 '연결 끊김'으로 보인다)
+  const retryNetworkRef = useRef(controls.retryNetwork);
+  retryNetworkRef.current = controls.retryNetwork;
+  useEffect(() => {
+    const onResume = (): void => {
+      if (document.visibilityState === 'hidden') return;
+      setDownSince((prev) => (prev === null ? null : Date.now()));
+      retryNetworkRef.current();
+    };
+    document.addEventListener('visibilitychange', onResume);
+    window.addEventListener('pageshow', onResume);
+    return () => {
+      document.removeEventListener('visibilitychange', onResume);
+      window.removeEventListener('pageshow', onResume);
+    };
+  }, []);
   const net = deriveNetUi({
     socketConnected: !socketBad && !rtcBad,
     browserOnline: online,
@@ -674,6 +691,7 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
     hand: media.input.hand,
     band: shared.bandUi,
     net,
+    browserOnline: online,
     battery: shared.device.battery,
     bandEnabled: shared.bandVisible,
     viewerOnly: shared.viewerOnly,

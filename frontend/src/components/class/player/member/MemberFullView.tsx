@@ -13,15 +13,17 @@ interface MemberNetDownCardProps {
   /** 서버로 아직 못 보낸 밴드 데이터 수 */
   pendingCount: number;
   onRetry: () => void;
+  /** 기기 인터넷은 정상, 서버 연결만 끊김(앱 복귀 직후 등) — 밴드는 앱이 따로 유지한다 */
+  serverOnly?: boolean;
 }
 
 /** M19 — 무대 안에 놓이는 끊김 안내. 링·추이·미디어 줄을 대신하고 도크는 남는다 */
-export function MemberNetDownCard({ pendingCount, onRetry }: MemberNetDownCardProps) {
+export function MemberNetDownCard({ pendingCount, onRetry, serverOnly = false }: MemberNetDownCardProps) {
   return (
     <section className="mp-netdown" data-pz="net-down" aria-live="polite">
       <span className="mp-netdown__ic"><WifiOff size={28} strokeWidth={2} aria-hidden="true" /></span>
-      <h3>연결이 끊겼어요</h3>
-      <p>인터넷 연결을 확인하고 다시 시도해 주세요.</p>
+      <h3>{serverOnly ? '서버에 다시 연결하는 중이에요' : '연결이 끊겼어요'}</h3>
+      <p>{serverOnly ? '밴드는 계속 연결돼 있어요. 잠시 후에도 안 되면 다시 연결을 눌러 주세요.' : '인터넷 연결을 확인하고 다시 시도해 주세요.'}</p>
       {pendingCount > 0 ? (
         <p className="mp-netdown__note">밴드로 측정한 데이터는 이 기기에 안전하게 보관 중이에요. 연결되면 이어서 기록돼요.</p>
       ) : null}

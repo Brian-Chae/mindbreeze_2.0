@@ -21,6 +21,13 @@ def build_engine_kwargs(database_url: str) -> dict:
         pool_pre_ping=settings.db_pool_pre_ping,
         pool_recycle=settings.db_pool_recycle,
     )
+    options = []
+    if settings.db_lock_timeout_ms > 0:
+        options.append(f"-c lock_timeout={int(settings.db_lock_timeout_ms)}")
+    if settings.db_statement_timeout_ms > 0:
+        options.append(f"-c statement_timeout={int(settings.db_statement_timeout_ms)}")
+    if options:
+        kwargs["connect_args"] = {"options": " ".join(options)}
     return kwargs
 
 

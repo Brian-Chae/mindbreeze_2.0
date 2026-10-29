@@ -343,6 +343,23 @@ def ack_raw(session_id: str, payload: AckRequest, db: DBSession, *, current_user
     if any(cid not in by_id for cid in wanted):
         raise HTTPException(status_code=404, detail="raw 청크를 찾을 수 없습니다")
 
+    # 저장소(S3) 검증은 네트워크 호출이라 느릴 수 있다 — DB 트랜잭션(커넥션)을 쥔 채 기다리면 풀이 고갈된다.
+    # 검증 대상을 값으로 복사한 뒤 트랜잭션을 닫아 커넥션을 반환하고, 검증 후 행을 다시 읽어 반영한다.
+    to_verify = [
+        (r.id, r.object_key, r.size_bytes, r.checksum)
+        for item in payload.chunks
+        for r in (by_id[item.chunk_id],)
+        if item.checksum == r.checksum and item.size_bytes == r.size_bytes and r.upload_status != "uploaded"
+    ]
+    db.commit()
+    verdicts = {
+        cid: storage_service.verify_object_sha256(key, expected_size=size, expected_sha256_hex=checksum)
+        for cid, key, size, checksum in to_verify
+    }
+    by_id = {r.id: r for r in db.query(EEGRawChunk).filter(EEGRawChunk.id.in_(wanted)).all()}
+    if any(cid not in by_id for cid in wanted):
+        raise HTTPException(status_code=404, detail="raw 청크를 찾을 수 없습니다")
+
     results: list[dict] = []
     acked = failed = 0
     for item in payload.chunks:
@@ -355,9 +372,7 @@ def ack_raw(session_id: str, payload: AckRequest, db: DBSession, *, current_user
         if row.upload_status == "uploaded":
             results.append(_result(row, "uploaded"))
             continue
-        ok, version = storage_service.verify_object_sha256(
-            row.object_key, expected_size=row.size_bytes, expected_sha256_hex=row.checksum
-        )
+        ok, version = verdicts.get(row.id, (False, None))
         if ok is True:
             row.upload_status, row.uploaded_at, row.verified_at = "uploaded", _now(), _now()
             row.object_version_id, row.failure_reason = version, None

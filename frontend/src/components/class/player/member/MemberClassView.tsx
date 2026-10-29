@@ -111,7 +111,7 @@ export function MemberClassView(props: MemberClassViewProps) {
         }
         sheetOpen={sheetOpen}
         onSlotAction={handleSlotAction}
-        netDownCard={<MemberNetDownCard pendingCount={device.pendingCount} onRetry={actions.onNetRetry} />}
+        netDownCard={<MemberNetDownCard pendingCount={device.pendingCount} onRetry={actions.onNetRetry} serverOnly={c.serverOnly} />}
       />
       {/* 채팅 시트가 닫혀 있어도 안읽음 집계가 이어지도록 채팅 노드는 계속 마운트해 둔다 */}
       {activeSheet !== 'chat' && chat.enabled && chat.authenticated ? <div hidden>{chat.node}</div> : null}
