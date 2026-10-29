@@ -35,3 +35,24 @@ describe('facade.reconnectBand', () => {
     expect(await new NativeMeasurementFacade({} as NativeMeasurementPlugin).reconnectBand('ios')).toBe(false);
   });
 });
+
+describe('facade.startForSession — iOS JS 해제가 돌려준 연결 ID 이월', () => {
+  const base = { platform: 'ios' as const, sessionId: '00000001-0000-4000-8000-000000000001', requestId: '00000003-0000-4000-8000-000000000003', accountId: 'u1', apiBase: 'https://a/api/v1', socketBase: 'https://a', instanceId: 'i', tokens: { accessToken: 'at-xxxxxxxx', refreshToken: 'rt-xxxxxxxx' } };
+  const plugin = () => ({
+    setNativeOwnership: vi.fn(async () => ({ enabled: true })), setJSBandOwnership: vi.fn(async () => ({ accepted: true })),
+    registerCredential: vi.fn(async () => ({ credentialHandle: 'abcdefghijklmnop1234' })), startMeasurement: vi.fn(async () => ({})),
+  });
+  it('저장된 deviceId 가 없어도 releaseJsBand 가 돌려준 ID 를 peripheralId 로 넘긴다', async () => {
+    const p = plugin();
+    await new NativeMeasurementFacade(p as unknown as NativeMeasurementPlugin).startForSession({ ...base, deviceId: null, releaseJsBand: async () => 'AAAAAAAA-0000-4000-8000-000000000001' });
+    expect(p.startMeasurement).toHaveBeenCalledWith(expect.objectContaining({ peripheralId: 'AAAAAAAA-0000-4000-8000-000000000001' }));
+  });
+  it('deviceId 가 있으면 그것을 우선, 둘 다 없으면 peripheralId 생략(스캔)', async () => {
+    const p = plugin();
+    await new NativeMeasurementFacade(p as unknown as NativeMeasurementPlugin).startForSession({ ...base, deviceId: 'D1', releaseJsBand: async () => 'D2' });
+    expect(p.startMeasurement).toHaveBeenCalledWith(expect.objectContaining({ peripheralId: 'D1' }));
+    const q = plugin();
+    await new NativeMeasurementFacade(q as unknown as NativeMeasurementPlugin).startForSession({ ...base, requestId: '00000004-0000-4000-8000-000000000004', deviceId: null, releaseJsBand: async () => null });
+    expect((q.startMeasurement.mock.calls[0] as unknown[])[0]).not.toHaveProperty('peripheralId');
+  });
+});
