@@ -13,6 +13,7 @@ import type { ClassDetailDto } from '../src/lib/api/class-structure';
 import { asClassId } from '../src/lib/class-structure/read-model';
 import { adaptHostClass } from '../src/lib/class-structure/adapters';
 import { NextClassView } from '../src/components/class/structure/host-class-views';
+import { resetFocusRefetchGuard } from '../src/lib/class-structure/invalidation';
 const io = vi.hoisted(() => ({ listeners: new Map<string, Set<(data: unknown) => void>>() }));
 vi.mock('../src/lib/socket', async original => ({ ...await original<typeof import('../src/lib/socket')>(), getSessionLiveSocket: () => ({ connected: true, emit: vi.fn(),
   on: (name: string, fn: (data: unknown) => void) => { const callbacks = io.listeners.get(name) ?? new Set(); callbacks.add(fn); io.listeners.set(name, callbacks); },
@@ -50,7 +51,7 @@ it.each(['counselor', 'client'] as const)('NV10 %s 종료 성공 직후 열린 �
 });
 it('NV10 열린 상세에 복귀하면 다른 탭에서 완료된 상태를 재조회한다', async () => {
   await render(); status = 'completed';
-  await act(async () => window.dispatchEvent(new Event('focus')));
+  resetFocusRefetchGuard(); await act(async () => window.dispatchEvent(new Event('focus')));
   expect(container.querySelector('[data-detail]')?.textContent).toBe('completed');
   expect(container.querySelector('[data-list]')?.textContent).toBe('completed');
 });

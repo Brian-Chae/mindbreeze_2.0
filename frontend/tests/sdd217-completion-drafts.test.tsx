@@ -8,6 +8,7 @@ import { apiClient, ApiError } from '../src/lib/api/client';
 import { useAuthStore } from '../src/stores/authStore';
 import type { ClassDetailDto, ClassSessionDto } from '../src/lib/api/class-structure';
 import type { User } from '../src/lib/api/auth';
+import { resetFocusRefetchGuard } from '../src/lib/class-structure/invalidation';
 vi.mock('../src/components/class/structure/structure-shell', () => ({ StructureShell: ({ children }: { children: ReactNode }) => <main>{children}</main> }));
 const user: User = { id: 'h', role: 'counselor', name: '합성 강사', email: 'synthetic@example.invalid', verified_tier: 'unverified', onboarding_completed: true, auth_provider: 'email', counselors: [] };
 let detail: ClassDetailDto;
@@ -36,7 +37,7 @@ async function change(element: HTMLInputElement | HTMLTextAreaElement, value: st
 }
 const titleInput = () => [...box.querySelectorAll<HTMLInputElement>('input')].find(input => input.closest('label')?.textContent?.startsWith('클래스 이름'))!;
 async function click(label: string) { const button = [...box.querySelectorAll('button')].find(item => item.textContent === label); expect(button).toBeTruthy(); await act(async () => button!.click()); }
-async function focus() { await act(async () => window.dispatchEvent(new Event('focus'))); }
+async function focus() { resetFocusRefetchGuard(); resetFocusRefetchGuard(); await act(async () => window.dispatchEvent(new Event('focus'))); }
 it('설정 미저장 입력은 같은 revision의 새 객체 재조회 중과 완료 후에도 보존한다', async () => {
   await mount('settings'); const input = titleInput(); await change(input, '미저장 이름');
   let resolve!: (value: ClassDetailDto) => void; hold = new Promise(done => { resolve = done; });
@@ -67,7 +68,7 @@ it('초대 이메일·열린 회원 검색 입력은 visible/focus와 새 revisi
   await mount('members'); await change(box.querySelector('textarea')!, 'draft@example.invalid'); await click('회원 초대');
   await change(box.querySelector<HTMLInputElement>('input[type="search"]')!, '검색 중인 회원');
   Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
-  await act(async () => document.dispatchEvent(new Event('visibilitychange')));
+  resetFocusRefetchGuard(); await act(async () => document.dispatchEvent(new Event('visibilitychange')));
   detail = { ...detail, revision: 2 }; await focus();
   expect(box.querySelector('textarea')?.value).toBe('draft@example.invalid');
   expect(box.querySelector<HTMLInputElement>('input[type="search"]')?.value).toBe('검색 중인 회원');

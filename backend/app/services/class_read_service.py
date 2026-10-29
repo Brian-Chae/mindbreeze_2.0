@@ -319,8 +319,9 @@ def list_classes(
     grouped = _visible_class_sessions(db, uid, [c.id for c in classes])
     names = _user_names(db, {r.host_id for rows in grouped.values() for r in rows})
     member_classes = {cid for cid, in db.query(ClassMember.class_id).filter(ClassMember.class_id.in_([c.id for c in classes]), ClassMember.user_id == uid).all()}
-    return [{**_class_summary(c, grouped.get(c.id, []), names, now),
-        **(_viewer_fields(db, c, uid, now=now) if c.recurrence_rule is not None or c.id in member_classes else {})} for c in classes], total
+    targets = [c for c in classes if c.recurrence_rule is not None or c.id in member_classes]
+    viewer = _viewer_fields_batch(db, targets, uid, now=now)
+    return [{**_class_summary(c, grouped.get(c.id, []), names, now), **viewer.get(c.id, {})} for c in classes], total
 
 
 def _load_class_for_viewer(db: DBSession, class_id: str, uid: UUID) -> tuple[Class, list]:
@@ -650,18 +651,36 @@ def _session_staff_capabilities(role, uid, cls, session):
         "excuse": False, "read_own_reports": False}
 
 
-def _viewer_fields(db, cls, uid, *, now=None):
-    from app.services.class_access_service import class_role
+def _viewer_fields_batch(db, classes, uid, *, now=None) -> dict:
+    """_viewer_fields 의 일괄 버전: role·세션·멤버십 조회를 IN 한 번으로 모은다(목록 N+1 제거)."""
+    if not classes:
+        return {}
+    from app.services.class_access_service import class_roles
     actor = db.get(User, uid)
-    role = class_role(db, actor, cls)
+    ids = [c.id for c in classes]
+    roles = class_roles(db, actor, classes)
+    sessions: dict = defaultdict(list)
+    for s in db.query(Session).filter(Session.class_id.in_(ids), Session.is_template.is_(False)).all():
+        sessions[s.class_id].append(s)
+    memberships = {}
+    for m in db.query(ClassMember).filter(ClassMember.class_id.in_(ids), ClassMember.user_id == uid, ClassMember.canonical_member_id.is_(None)).all():
+        memberships.setdefault(m.class_id, m)
+    return {c.id: _viewer_fields(db, c, uid, now=now, role=roles[c.id], sessions=sessions.get(c.id, []), membership=memberships.get(c.id), preloaded=True) for c in classes}
+
+
+def _viewer_fields(db, cls, uid, *, now=None, role=None, sessions=None, membership=None, preloaded=False):
+    if not preloaded:
+        from app.services.class_access_service import class_role
+        actor = db.get(User, uid)
+        role = class_role(db, actor, cls)
+        sessions = db.query(Session).filter(Session.class_id == cls.id, Session.is_template.is_(False)).all()
+        membership = db.query(ClassMember).filter_by(class_id=cls.id, user_id=uid, canonical_member_id=None).first()
     manager = role in ("lead", "assistant", "org_admin")
-    sessions = db.query(Session).filter(Session.class_id == cls.id, Session.is_template.is_(False)).all()
     clinical = role in ("lead", "assistant")
     caps = {"manage_members": manager, "merge_guests": manager,
         "correct_attendance": bool((clinical or role == "guest") and any(s.status == "completed" and (clinical or s.host_id == uid) for s in sessions)),
         "assign_makeup": bool((clinical or role == "guest") and cls.status in ("active", "completed") and any(s.status in ("ready", "scheduled") and (clinical or s.host_id == uid) for s in sessions)),
         **{key: False for key in ("leave", "cancel_waitlist", "rejoin", "excuse", "request_makeup", "edit_consents", "read_own_reports")}}
-    membership = db.query(ClassMember).filter_by(class_id=cls.id, user_id=uid, canonical_member_id=None).first()
     if membership and cls.status != "draft":
         data = get_my_membership(db, cls.id, user_id=uid, now=now)
         own_caps = data["capabilities"]

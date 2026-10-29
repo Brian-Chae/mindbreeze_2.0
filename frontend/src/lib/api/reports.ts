@@ -174,6 +174,11 @@ function buildReportListQuery(params?: ListReportsParams): string {
 
 export const listReports = (params?: ListReportsParams): Promise<ReportListResponse> =>
   apiClient.get<ReportListResponse>(`/reports${buildReportListQuery(params)}`);
+/** 사이드바·탭바 배지용 경량 집계 — 목록 본문 없이 숫자만 받는다(GET /reports/counts). */
+export interface ReportBadgeCounts { unread: number; pending_review: number }
+export const getReportBadgeCounts = (): Promise<ReportBadgeCounts> =>
+  apiClient.get<ReportBadgeCounts>('/reports/counts');
+
 /** SDD-253 D4 — 승인하고 발송(승인 멱등 + 발송 예약 1회). */
 export const approveAndSendReport = (id: string): Promise<ReportDto> =>
   apiClient.post<ReportDto>(`/reports/${id}/approve-and-send`, {});
