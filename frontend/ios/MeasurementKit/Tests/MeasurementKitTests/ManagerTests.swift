@@ -277,6 +277,19 @@ final class ManagerRecoveryAndContractTests: XCTestCase {
         XCTAssertEqual(m.state, .sealing)
     }
 
+    func testStopWritesCloseIntentToDiskBeforeServerAck() throws {
+        let own = BandOwnership(defaults: UserDefaults(suiteName: "r-\(UUID().uuidString)")!); own.nativeEnabled = true
+        let l = FakeLive(); let m = make(FakeBand(), l, own); try startCapturing(m, l)
+        for i in 0..<400 { let p = EngineTests.packets[i]; m.bandLink(didReceive: p.sensor, data: p.bytes, monotonicUs: p.arrivalUs) }
+        _ = try m.stopMeasurement(reason: "user_stop", requestId: "0000001f-0000-4000-8000-00000000001f")
+        let p = CloseIntentStore(file: dir.appendingPathComponent("sessions/\(sid)/close-intent.json")).pending()
+        XCTAssertNotNil(p, "stop 시 close intent 가 디스크에 선저장돼야 한다")
+        XCTAssertEqual(p?.intent["end_reason"] as? String, "user_stop")
+        XCTAssertEqual(p?.participantId, "00000004-0000-4000-8000-000000000004")
+        let aliases = Set((p?.intent["expected_artifacts"] as? [[String: Any]] ?? []).compactMap { $0["alias"] as? String })
+        XCTAssertEqual(aliases, Set(m.archiveQueue!.all().map { $0.alias }))
+    }
+
     /// Swift 가 만든 snapshot/event JSON 을 contracts/measurement-bridge 의 ajv 검증기로 확인한다(MK_CONTRACT_OUT 지정 시 파일로 내보냄).
     func testEmitContractSamplesForNodeValidation() throws {
         let own = BandOwnership(defaults: UserDefaults(suiteName: "r-\(UUID().uuidString)")!); own.nativeEnabled = true

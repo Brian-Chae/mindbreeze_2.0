@@ -90,5 +90,43 @@ final class RawChunkerTests: XCTestCase {
         let fc = ((ArchiveRequests.presignBody(f, participantId: nil)["chunks"] as! [[String: Any]])[0])
         XCTAssertEqual(fc["signal"] as? String, "eeg"); XCTAssertNotNil(fc["monotonic_range"])
     }
+
+    // MARK: ACC 실측 rate (Android RawChunkerTest 와 같은 의미)
+    /// ACC 26Hz: 패킷당 30샘플이 1.1556초(= 37866 tick @32768Hz) 간격으로 도착.
+    func testAccRecordsObservedRateFromDeviceTicks() {
+        var out: [RawChunk] = []
+        let c = RawChunker(sensor: .acc, session: sid, originUs: 0) { out.append($0) }
+        for i in 0..<12 { c.onPacket(packet(.acc, rows: 30, tick: UInt32(1000 + i * 37866)), arrivalUs: Int64(i) * 1_155_600) }
+        c.flush()
+        let h = out.last!.meta["header"] as! [String: Any]
+        let r = h["rate"] as! [String: Any]
+        XCTAssertEqual(r["numerator"] as? Int, 30); XCTAssertEqual(r["denominator"] as? Int, 1, "명목 rate 는 그대로")
+        let obs = h["observed_rate"] as! [String: Any]
+        let hz = Double(obs["numerator"] as! Int64) / Double(obs["denominator"] as! Int64)
+        XCTAssertEqual(hz, 26.0, accuracy: 0.1)
+        XCTAssertGreaterThan(h["observed_rate_window_us"] as! Int64, 1_000_000)
+        XCTAssertTrue(h["observed_rate_reason"] is NSNull)
+    }
+
+    func testAccWithoutEnoughTickSpanIsNotMeasured() {
+        var out: [RawChunk] = []
+        let c = RawChunker(sensor: .acc, session: sid, originUs: 0) { out.append($0) }
+        c.onPacket(packet(.acc, rows: 5, tick: 1000), arrivalUs: 0); c.onPacket(packet(.acc, rows: 5, tick: 1000 + 5 * 1092), arrivalUs: 100_000)
+        c.flush()
+        let h = out[0].meta["header"] as! [String: Any]
+        XCTAssertTrue(h["observed_rate"] is NSNull); XCTAssertTrue(h["observed_rate_window_us"] is NSNull); XCTAssertEqual(h["observed_rate_reason"] as? String, "not_measured")
+    }
+
+    func testEegPpgAreNotObserved() {
+        for (sensor, rate) in [(BandSensor.eeg, 250), (BandSensor.ppg, 50)] {
+            var out: [RawChunk] = []
+            let c = RawChunker(sensor: sensor, session: sid, originUs: 0) { out.append($0) }
+            var t = 100
+            for i in 0..<(rate * 3 / 5) { c.onPacket(packet(sensor, rows: 5, tick: UInt32(t)), arrivalUs: Int64(i) * 100_000); t += 5 * 32768 / rate }
+            c.flush()
+            let h = out[0].meta["header"] as! [String: Any]
+            XCTAssertTrue(h["observed_rate"] is NSNull, "\(sensor)"); XCTAssertEqual(h["observed_rate_reason"] as? String, "not_measured")
+        }
+    }
 }
 private extension Array { var single: Element? { count == 1 ? first : nil } }

@@ -134,6 +134,7 @@ public final class ArchiveQueue {
         try persist(item)
     }
 
+    public func all() -> [ArchiveItem] { lock.lock(); defer { lock.unlock() }; return items.values.sorted { $0.alias < $1.alias } }
     public func item(alias: String) -> ArchiveItem? { lock.lock(); defer { lock.unlock() }; return items[alias] }
     public func item(forTask id: Int) -> ArchiveItem? { lock.lock(); defer { lock.unlock() }; return items.values.first { $0.taskId == id } }
 

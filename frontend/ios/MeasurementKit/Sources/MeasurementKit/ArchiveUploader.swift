@@ -30,6 +30,12 @@ public final class ArchiveUploader {
     private let fileURL: (ArchiveItem) -> URL
     private let nowMs: () -> Int
     public var onChange: (() -> Void)?
+    /// 종료 기록(close intent) 저장소. 있으면 업로드가 한 차례 끝난 뒤 `biosignal-events` 로 보낸다.
+    public var closeIntents: CloseIntentStore?
+    /// 전송 실패 뒤 재시도 예약(초, 실행할 일). 호스트가 주입한다. 없으면 다음 pump(앱 시작·큐 변화·네트워크 복귀)에서 재시도한다.
+    public var scheduleRetry: ((Double, @escaping () -> Void) -> Void)?
+    private var sendingIntent = false
+    public static let intentRetrySeconds = 30.0
 
     public init(queue: ArchiveQueue, http: HTTPClient, files: FileUploading, apiBase: URL, sessionId: String, participantId: String?,
                 token: @escaping (@escaping (String?) -> Void) -> Void, fileURL: @escaping (ArchiveItem) -> URL, nowMs: @escaping () -> Int) {
@@ -54,10 +60,41 @@ public final class ArchiveUploader {
     public func pump() {
         token { [weak self] tk in
             guard let self = self, let tk = tk else { return }
-            for item in self.queue.dueItems(now: self.nowMs()) {
+            let due = self.queue.dueItems(now: self.nowMs())
+            // 시작할 항목이 없고 업로드 중인 것도 없을 때(= 한 차례 drain 이 끝났을 때) 종료 기록을 보낸다.
+            if due.isEmpty, self.queue.counts.uploading == 0 { self.sendPendingCloseIntent(tk) }
+            for item in due {
                 if self.queue.counts.uploading >= Self.maxConcurrent { break }
                 self.begin(item, tk)
             }
+        }
+    }
+
+    /// 종료 기록 전송: `POST /sessions/{sid}/biosignal-events`. 서버는 intent_id 기준 멱등(recorded/duplicate)이라 재전송이 안전하다.
+    /// 서버가 받았으면(recorded·duplicate·conflict) 닫는다 — conflict 는 같은 id 다른 내용이라 다시 보내도 같다. 4xx(401/408/429 제외)도 같은 본문으로 영영 통과 못 하므로 닫는다.
+    /// 네트워크/5xx/인증은 시도 횟수를 올리고 재시도한다(최대 12회).
+    private func sendPendingCloseIntent(_ tk: String) {
+        guard let store = closeIntents, !sendingIntent, let p = store.pending() else { return }
+        sendingIntent = true
+        let url = apiBase.appendingPathComponent("sessions").appendingPathComponent(sessionId).appendingPathComponent("biosignal-events")
+        post(url, ["participant_id": (p.participantId ?? participantId) as Any? ?? NSNull(), "events": [p.intent]], tk) { [weak self] r in
+            guard let self = self else { return }
+            self.sendingIntent = false
+            var done = false
+            if case .success(let (status, body, _)) = r {
+                if status / 100 == 2 {
+                    let o = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any]
+                    let st = ((o?["events"] as? [[String: Any]])?.first?["status"]) as? String
+                    done = st == "recorded" || st == "duplicate" || st == "conflict"
+                } else {
+                    done = status / 100 == 4 && status != 401 && status != 408 && status != 429
+                }
+            }
+            if done { store.markSent() } else {
+                store.markAttempt()
+                if store.pending() != nil { self.scheduleRetry?(Self.intentRetrySeconds) { [weak self] in self?.pump() } }
+            }
+            self.onChange?()
         }
     }
 
