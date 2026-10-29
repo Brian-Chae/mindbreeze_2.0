@@ -33,4 +33,13 @@ final class BandBLETests: XCTestCase {
         XCTAssertEqual((0..<8).map { _ in b.next() }, [1, 2, 4, 8, 15, 15, 15, 15])
         b.reset(); XCTAssertEqual(b.next(), 1)
     }
+
+    func testPeripheralPickPrefersKnownThenConnectedThenScan() {
+        let a = UUID(), b = UUID()
+        XCTAssertEqual(PeripheralPick.choose(expected: a, known: a, connected: []), a)
+        XCTAssertEqual(PeripheralPick.choose(expected: a, known: nil, connected: [b, a]), a)
+        XCTAssertNil(PeripheralPick.choose(expected: a, known: nil, connected: [b]), "다른 기기는 집지 않고 스캔")
+        XCTAssertEqual(PeripheralPick.choose(expected: nil, known: nil, connected: [b]), b, "ID 없어도 이미 연결된 밴드를 잡는다")
+        XCTAssertNil(PeripheralPick.choose(expected: nil, known: nil, connected: []))
+    }
 }

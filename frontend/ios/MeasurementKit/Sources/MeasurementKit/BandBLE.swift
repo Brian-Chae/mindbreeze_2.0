@@ -50,6 +50,15 @@ public struct ReconnectBackoff {
     public mutating func reset() { n = 0 }
 }
 
+/// 연결할 기기 선택(순수). 저장 ID → 이미 연결된 같은 ID → (ID 없음) 이미 연결된 첫 밴드. 없으면 nil = 스캔.
+public enum PeripheralPick {
+    public static func choose(expected: UUID?, known: UUID?, connected: [UUID]) -> UUID? {
+        if let k = known { return k }
+        if let e = expected { return connected.contains(e) ? e : nil }
+        return connected.first
+    }
+}
+
 public enum BandLinkState: String { case idle, scanning, connecting, discovering, subscribed, reconnecting, blocked }
 
 public protocol BandLinkDelegate: AnyObject {
@@ -103,7 +112,12 @@ public final class BandLink: NSObject, CBCentralManagerDelegate, CBPeripheralDel
 
     private func attempt() {
         guard wantConnected, central.state == .poweredOn else { return }
-        if let id = expected, let p = central.retrievePeripherals(withIdentifiers: [id]).first ?? central.retrieveConnectedPeripherals(withServices: [BandUUIDs.eegService]).first(where: { $0.identifier == id }) {
+        // 저장된 ID 가 없어도(JS 연결 해제 직후 캐시가 비는 경우) 이미 연결돼 있는 밴드를 먼저 집는다.
+        // 연결된 기기는 광고하지 않아 스캔으로는 영영 안 보인다 — 스캔만 하면 '연결하는 중' 에서 멈춘다.
+        let known = expected.flatMap { central.retrievePeripherals(withIdentifiers: [$0]).first }
+        let connected = central.retrieveConnectedPeripherals(withServices: [BandUUIDs.eegService])
+        if let pick = PeripheralPick.choose(expected: expected, known: known?.identifier, connected: connected.map { $0.identifier }),
+           let p = known ?? connected.first(where: { $0.identifier == pick }) {
             peripheral = p; p.delegate = self
             set(.connecting)
             central.connect(p, options: nil)       // 타임아웃 없는 pending connect — 범위 안에 들어오면 OS 가 깨워 준다
