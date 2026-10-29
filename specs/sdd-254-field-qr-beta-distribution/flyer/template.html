@@ -1,0 +1,44 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><style>
+@page{size:A4;margin:12mm}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:186mm}
+body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;color:#1a1530;font-size:12.5pt;line-height:1.4;height:273mm;display:flex;flex-direction:column;gap:3.2mm;overflow:hidden}
+header{background:linear-gradient(135deg,#4b2e83,#6d4fb3 70%,#5f8a72);color:#fff;border-radius:4mm;padding:5mm 6mm}
+header h1{font-size:25pt;font-weight:800;letter-spacing:-.5pt}
+header p{font-size:12.5pt;opacity:.95;margin-top:1mm}
+.info{display:flex;gap:4mm;margin-top:3mm;font-size:12pt;font-weight:600;border-top:.3mm solid rgba(255,255,255,.5);padding-top:2.5mm}
+.step{border:.5mm solid #4b2e83;border-radius:3.5mm;padding:3.5mm 5mm;display:flex;gap:4.5mm;align-items:center}
+.n{flex:none;width:11mm;height:11mm;border-radius:50%;background:#4b2e83;color:#fff;font-weight:800;font-size:17pt;display:flex;align-items:center;justify-content:center}
+.step h2{font-size:16pt;font-weight:800;color:#3a2266}
+.step p{font-size:12pt}
+.s1{display:flex;flex-direction:column;gap:2.5mm;align-items:stretch}
+.s1 .top{display:flex;gap:5mm;align-items:center}
+.qr{flex:none;width:46mm;height:46mm;border:.4mm solid #1a1530;padding:0}
+.qr img{width:100%;height:100%;display:block}
+.cols{display:flex;gap:3mm}
+.cols div{flex:1;background:#f1ecfa;border-radius:2.5mm;padding:2.5mm 3.5mm;font-size:11.5pt}
+.cols b{display:block;font-size:12.5pt;color:#3a2266}
+.url{font-weight:800;font-size:12.5pt;word-break:break-all}
+.code{font-family:'Menlo','SF Mono','Courier New',monospace;font-weight:700;font-size:34pt;letter-spacing:5mm;padding:1mm 3mm 1mm 8mm;border:.8mm solid #1a1530;border-radius:3mm;background:#fff;display:inline-block;margin-top:1.5mm}
+footer{margin-top:auto;border-top:.4mm solid #4b2e83;padding-top:2.5mm;font-size:11pt}
+footer .ok{font-weight:800;color:#3a2266;font-size:12pt}
+</style></head><body>
+<header><h1>MIND BREEZE 참여 안내</h1><p>뇌과학 기반 명상 클래스 서비스</p>
+<div class="info"><span>클래스: {{class_name}}</span><span>일시: {{date}}</span><span>장소: {{place}}</span></div></header>
+
+<section class="step s1"><div class="top"><div class="n">1</div>
+<div style="flex:1"><h2>앱 설치</h2><p>휴대폰 카메라로 오른쪽 QR을 비춘 뒤, 나온 안내를 따라 하세요.</p>
+<p style="margin-top:1.5mm">QR이 안 되면 인터넷 창에 직접 입력:<br><span class="url">mindbreeze.looxidlabs.com/beta</span></p></div>
+<div class="qr"><img src="{{qr_src}}" alt="QR"></div></div>
+<div class="cols"><div><b>iPhone</b>① TestFlight 앱 설치 ② ‘수락’ ③ ‘설치’</div>
+<div><b>Android</b>① ‘출처를 알 수 없는 앱 허용’ ② ‘그래도 설치’</div></div></section>
+
+<section class="step"><div class="n">2</div><div><h2>회원가입</h2><p>이메일 또는 Google / Apple 계정으로 가입하세요.</p></div></section>
+
+<section class="step"><div class="n">3</div><div><h2>상담사 코드 입력</h2><p>안내받은 6자리 코드를 입력하세요.</p><div class="code">{{counselor_code}}</div></div></section>
+
+<section class="step"><div class="n">4</div><div><h2>클래스 입장 · LINK BAND 연결</h2><p>앱에서 클래스에 입장하세요. 밴드를 쓰신다면 휴대폰 <b>블루투스를 켜고</b> 앱에서 밴드를 연결한 뒤 착용합니다.</p></div></section>
+
+<footer><p class="ok">LINK BAND 없이도 참여할 수 있어요.</p>
+<p>문의: {{contact}}</p><p>개인정보 처리방침: https://mindbreeze.looxidlabs.com/privacy</p></footer>
+</body></html>
