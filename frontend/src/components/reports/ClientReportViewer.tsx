@@ -1,9 +1,11 @@
 // 내담자 상세 페이지와 모달이 공유하는 리포트 본문
+// ClientReportBody = 회원이 보는 본문 그대로(커버+서사+코멘트+체크인+AI 요약). 상담사 검토 화면(ReportDetailView)도 이 컴포넌트를 쓴다.
 import NarrativeSections from './NarrativeSections';
 import ReportCoverSection from './ReportCoverSection';
 import SubjectiveCheckinCard from './SubjectiveCheckinCard';
 import { aiRecordUnavailableText, isSttAiRecordVisible } from '../../lib/features';
 import { parseSubjectiveState } from '../../lib/api/checkin';
+import { buildReportSessionInfo } from '../../lib/report/session-info';
 import { useNotificationStore } from '../../stores/notificationStore';
 import {
   adaptReportContent,
@@ -23,12 +25,11 @@ function SummaryCard({ title, children }: { title: string; children: React.React
   );
 }
 
-export default function ClientReportViewer({ report, onClose, closeLabel = '닫기' }: {
+export function ClientReportBody({ report, hideCounselorComment = false }: {
   report: ReportDto;
-  onClose: () => void;
-  closeLabel?: string;
+  /** 검토 화면에서 코멘트 편집 카드가 이미 같은 내용을 보여줄 때 중복 표시를 막는다. */
+  hideCounselorComment?: boolean;
 }) {
-  const showToast = useNotificationStore((s) => s.showToast);
   // 내담자 뷰로 강제 — 라벨·접힘 비대칭
   const adapted = adaptReportContent(report.content, 'client');
   const { summary, insights, displayNarrative } = adapted;
@@ -46,14 +47,15 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
   const counselorComment =
     (report.content?.counselor_comment as string | undefined)?.trim() || null;
 
+  const sessionInfo = buildReportSessionInfo(report, adapted);
+
   return (
-    <div className="bg-[#FAFAFA]">
-      <div className="max-w-4xl mx-auto p-4 space-y-6">
+    <div className="space-y-6" data-testid="client-report-body">
         {/* Cover — 서사 우선, 종합점수 대형 노출 없음 (SDD-054) */}
         {/* 이중 커버 방지: 커버는 ReportCoverSection이 담당하고 NarrativeSections는 본문만 렌더한다. */}
         <ReportCoverSection report={report} adapted={adapted} />
 
-        {displayNarrative && <NarrativeSections narrative={displayNarrative} showCover={false} />}
+        {displayNarrative && <NarrativeSections narrative={displayNarrative} showCover={false} session={sessionInfo} />}
 
         {aiRecordUnavailable && (
           <div className="rounded-2xl border border-[#EFEFEF] bg-white p-5 text-sm mobile:text-mb-body text-[#6F6F6F]">
@@ -62,7 +64,7 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
         )}
 
         {/* SDD-087 — 상담사 코멘트 (있을 때만) */}
-        {counselorComment && (
+        {counselorComment && !hideCounselorComment && (
           <SummaryCard title="상담사 코멘트">
             <p className="mobile:[overflow-wrap:anywhere] text-[15px] mobile:text-mb-body text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
               {counselorComment}
@@ -105,6 +107,21 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
             </div>
           </SummaryCard>
         )}
+    </div>
+  );
+}
+
+export default function ClientReportViewer({ report, onClose, closeLabel = '닫기' }: {
+  report: ReportDto;
+  onClose: () => void;
+  closeLabel?: string;
+}) {
+  const showToast = useNotificationStore((s) => s.showToast);
+
+  return (
+    <div className="bg-[#FAFAFA]">
+      <div className="max-w-4xl mx-auto p-4 space-y-6">
+        <ClientReportBody report={report} />
 
         <div className="flex mobile:flex-wrap items-center gap-3 pt-4 border-t border-[#EFEFEF]">
           <button

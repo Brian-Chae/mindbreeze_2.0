@@ -9,6 +9,8 @@ import { downloadReportPdf } from '../../lib/report/print-report';
 import CounselorCommentCard from './CounselorCommentCard';
 import DataExportButton from './DataExportButton';
 import NarrativeSections from './NarrativeSections';
+import { ClientReportBody } from './ClientReportViewer';
+import { buildReportSessionInfo } from '../../lib/report/session-info';
 import SessionReplayPanel from './SessionReplayPanel';
 import ReportCoverSection from './ReportCoverSection';
 import ReportStatusBadge from './ReportStatusBadge';
@@ -218,8 +220,6 @@ export default function ReportDetailView({
     report.data_credibility,
     eeg?.status ?? null,
   );
-  // SDD-087 — 상담사 코멘트
-  const counselorComment = commentOf(report.content);
   const clientComments = isCounselor ? parseClientComments(report.content) : [];
   // 측정 데이터 없음 = EEG 미측정(not_measured) + AI 기록 없음(not_available)
   const noMeasuredData = !adapted.eeg && adapted.aiRecord?.status === 'not_available';
@@ -292,7 +292,7 @@ export default function ReportDetailView({
         <div data-print-exclude role="alert" className="p-3 rounded-xl bg-red-50 text-red-700 text-sm mobile:text-mb-body">{displayError}</div>
       )}
 
-      <ReportCoverSection report={report} adapted={adapted} />
+      {isCounselor && <ReportCoverSection report={report} adapted={adapted} />}
 
       <div data-print-exclude><ReportStatusBadge
         status={pipelineStatus}
@@ -335,21 +335,17 @@ export default function ReportDetailView({
         </SummaryCard>
       )}
 
-      {displayNarrative && <NarrativeSections narrative={displayNarrative} />}
+      {/* 회원용: 회원이 실제로 보는 본문(ClientReportBody)을 그대로 렌더 — 코멘트 편집 카드가 보일 땐 같은 코멘트 중복 표시만 숨긴다. */}
+      {!isCounselor && <ClientReportBody report={report} hideCounselorComment={showCommentEditor} />}
 
-      {aiRecordUnavailable && (
+      {isCounselor && displayNarrative && (
+        <NarrativeSections narrative={displayNarrative} showCover={false} session={buildReportSessionInfo(report, adapted)} />
+      )}
+
+      {isCounselor && aiRecordUnavailable && (
         <div className="rounded-2xl border border-[#EFEFEF] bg-[#F9F9F9] p-5 text-sm mobile:text-mb-body text-[#6F6F6F]">
           {aiRecordReasonText}
         </div>
-      )}
-
-      {/* SDD-087 — 저장된 상담사 코멘트 (편집 카드 미노출 시 읽기 전용: 내담자 뷰 · completed) */}
-      {report.type === 'client' && counselorComment && !showCommentEditor && (
-        <SummaryCard title="상담사 코멘트">
-          <p className="mobile:[overflow-wrap:anywhere] text-[15px] mobile:text-mb-body text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
-            {counselorComment}
-          </p>
-        </SummaryCard>
       )}
 
       {isCounselor && markers.length > 0 && (
