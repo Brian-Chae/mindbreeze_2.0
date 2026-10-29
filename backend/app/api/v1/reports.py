@@ -86,6 +86,15 @@ def list_all(
     return report_service.list_reports(current_user["id"], db, page, limit)
 
 
+@router.get("/counts")
+def badge_counts(
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """배지용 경량 집계(unread, pending_review) — 목록 본문을 내려받지 않는다."""
+    return report_service.count_reports_badges(current_user["id"], db)
+
+
 @router.get("/hierarchy")
 def hierarchy(
     q: str | None = Query(default=None, max_length=100),

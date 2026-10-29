@@ -656,25 +656,14 @@ def _synthesize_missing_report(
     }
 
 
-def list_reports(
-    user_id: str,
-    db: DBSession,
-    page: int | None = None,
-    limit: int | None = None,
-) -> dict:
-    uid = _to_uuid(user_id)
+def _list_reports_base(uid: UUID, db: DBSession):
+    """list_reports·count_reports_badges 공용 — 권한 범위(조회 가능한 리포트/합성 행) 쿼리를 한 곳에서 만든다."""
     user = db.query(User).filter(User.id == uid).first()
     is_staff = bool(user and user.role in ("counselor", "org_admin"))
 
     # 정렬 키(활동 시각) — 세션 일정이 있으면 그 시각, 없으면 생성 시각.
     # 프론트 '최신순'(reportDateIso = scheduled_at ?? created_at)과 정합.
     activity = func.coalesce(Session.scheduled_at, Session.created_at)
-
-    # page·limit 이 모두 주어졌을 때만 DB 레벨 창을 적용한다.
-    window = page is not None and limit is not None
-    offset = 0
-    if page is not None and limit is not None:
-        offset = (page - 1) * limit
 
     if is_staff:
         assert user is not None  # is_staff 가 참이면 user 는 반드시 존재
@@ -727,6 +716,24 @@ def list_reports(
             Organization.deactivated_at.is_(None),
         )
         base = base.filter(Session.type == "meditation", Session.class_id.in_(permitted))
+
+    return user, is_staff, activity, base
+
+
+def list_reports(
+    user_id: str,
+    db: DBSession,
+    page: int | None = None,
+    limit: int | None = None,
+) -> dict:
+    uid = _to_uuid(user_id)
+    user, is_staff, activity, base = _list_reports_base(uid, db)
+
+    # page·limit 이 모두 주어졌을 때만 DB 레벨 창을 적용한다.
+    window = page is not None and limit is not None
+    offset = 0
+    if page is not None and limit is not None:
+        offset = (page - 1) * limit
 
     # 페이지네이션 total 은 별도 count 쿼리로 산출한다(창과 무관한 전체 건수).
     total = base.count()
@@ -866,6 +873,47 @@ def list_reports(
     if window:
         response.update({"page": page, "limit": limit})
     return response
+
+
+def count_reports_badges(user_id: str, db: DBSession) -> dict:
+    """사이드바·탭바 배지용 경량 집계 — list_reports 와 같은 권한 범위, 본문(content) 없이 컬럼 몇 개만 읽는다.
+
+    기존 프론트 계산을 서버로 옮긴 것: unread = 미열람이면서 '리뷰 중'(회원 마스킹) 아님,
+    pending_review = 승인 대상(approval_required)이면서 승인 대기 상태(상태 없으면 sent_at 폴백, 합성 행 포함).
+    """
+    uid = _to_uuid(user_id)
+    user, is_staff, _activity, base = _list_reports_base(uid, db)
+    rows = base.add_columns(
+        Report.status, Report.is_read, Report.type, Report.sent_at, Session.class_id, Session.status.label("session_status")
+    ).all()
+    # 합성(미생성) 행: 종료됐고 생성 진행 중이 아니면 'error'(검토중 아님), 그 외는 상태 없음(→ 검토중 폴백).
+    completed_missing = [r.session_id for r in rows if r.report_id is None and r.session_status == "completed"]
+    generating_ids: set = set()
+    if completed_missing:
+        from app.models.pipeline_outbox import PipelineOutbox
+
+        records = {r.session_id: r for r in db.query(SessionRecord).filter(SessionRecord.session_id.in_(completed_missing)).all()}
+        outboxes = {o.session_id: o for o in db.query(PipelineOutbox).filter(PipelineOutbox.session_id.in_(completed_missing)).all()}
+        generating_ids = {sid for sid in completed_missing if _report_generation_in_flight(records.get(sid), outboxes.get(sid))}
+    unread = 0
+    pending_review = 0
+    for row in rows:
+        has_report = row.report_id is not None
+        status = row.status
+        if not has_report and row.session_status == "completed" and row.session_id not in generating_ids:
+            status = "error"
+        # 회원(비-staff)에게 승인 전 행은 '리뷰 중'으로 마스킹되어 미열람에서 제외된다.
+        in_review = (not is_staff) and has_report and status != "completed"
+        if not bool(row.is_read) and not in_review:
+            unread += 1
+        approval_required = not (has_report and row.type == "counselor" and row.class_id is not None)
+        if status in ("pending_analysis", "pending_review", "completed", "error"):
+            resolved = status
+        else:
+            resolved = "completed" if row.sent_at else "pending_review"
+        if approval_required and resolved == "pending_review":
+            pending_review += 1
+    return {"unread": unread, "pending_review": pending_review}
 
 
 def get_report(report_id: str, user_id: str | None, db: DBSession, *, member_credential: str | None = None) -> dict:

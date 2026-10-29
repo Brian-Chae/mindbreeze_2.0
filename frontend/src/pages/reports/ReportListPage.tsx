@@ -229,6 +229,9 @@ export function LegacyReportListPage() {
     typeFilter !== 'all' ||
     sessionFilter !== '';
 
+  // 필터 활성 시에는 전체를 한 번만 받고 페이지 이동은 클라이언트에서 처리하므로, 페이지 번호를 재조회 키에서 뺀다.
+  const fetchPage = hasActiveFilter ? 0 : page;
+
   // SDD-058 — page/limit 조회. 필터 활성 시 전체 조회, BE 미적용 시(전체 반환) 클라이언트 슬라이스 폴백.
   useEffect(() => {
     let cancelled = false;
@@ -257,7 +260,8 @@ export function LegacyReportListPage() {
     return () => {
       cancelled = true;
     };
-  }, [page, reloadKey, hasActiveFilter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchPage, reloadKey, hasActiveFilter]);
 
   useEffect(() => {
     if (role !== 'counselor') { setAutoApproveLoading(false); return; }

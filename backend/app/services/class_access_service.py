@@ -65,6 +65,56 @@ def class_role(db, actor, cls):
     return None
 
 
+def class_roles(db, actor, classes):
+    """class_role 의 일괄 버전 — 클래스 N개에 대해 쿼리 수 상수(조직·강사·회원 각 1회). 결과는 class_role 과 동일."""
+    classes = list(classes)
+    if actor is None or actor.status != "active" or not classes:
+        return {c.id: None for c in classes}
+    org_ids = {c.organization_id for c in classes}
+    org_roles: dict = {}
+    for org_id, role in (
+        db.query(UserOrgMembership.org_id, UserOrgMembership.role)
+        .join(User, User.id == UserOrgMembership.user_id)
+        .join(Organization, Organization.id == UserOrgMembership.org_id)
+        .filter(
+            UserOrgMembership.user_id == actor.id,
+            UserOrgMembership.org_id.in_(org_ids),
+            UserOrgMembership.status == "active",
+            User.status == "active",
+            Organization.deactivated_at.is_(None),
+        )
+        .all()
+    ):
+        org_roles.setdefault(org_id, set()).add(role)
+    class_ids = [c.id for c in classes]
+    instructor_roles: dict = {}
+    if org_roles:
+        for class_id, role in (
+            db.query(ClassInstructor.class_id, ClassInstructor.role)
+            .filter(ClassInstructor.class_id.in_(class_ids), ClassInstructor.user_id == actor.id, ClassInstructor.status == "active")
+            .all()
+        ):
+            instructor_roles.setdefault(class_id, role)
+    member_ids = {
+        cid for (cid,) in db.query(ClassMember.class_id)
+        .filter(ClassMember.class_id.in_(class_ids), ClassMember.user_id == actor.id, ClassMember.status == "active")
+        .all()
+    }
+    result = {}
+    for c in classes:
+        roles = org_roles.get(c.organization_id)
+        role = None
+        if roles:
+            if actor.role == "org_admin" and "org_admin" in roles:
+                role = "org_admin"
+            elif c.id in instructor_roles and actor.role == "counselor" and "counselor" in roles:
+                role = instructor_roles[c.id]
+        if role is None and c.status != "draft" and c.id in member_ids:
+            role = "member"
+        result[c.id] = role
+    return result
+
+
 def authorize_class_action(db, actor, cls, action):
     role = class_role(db, actor, cls)
     if role is None or (
