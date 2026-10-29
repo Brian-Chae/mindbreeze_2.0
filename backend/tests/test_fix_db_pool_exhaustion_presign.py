@@ -156,7 +156,16 @@ def test_v6_느린_S3_ack_폭주에도_DB_풀이_고갈되지_않는다(ctx, mon
 
 # ── V7: outbox 폴링이 DB 대기 중에도 이벤트 루프를 막지 않는다 ───────────────
 def test_v7_outbox_poll은_DB가_느려도_이벤트루프를_막지_않는다(monkeypatch):
-    real = database.SessionLocal
+    # 실제 DB(localhost:5432)에 붙지 않도록 인메모리 SQLite 세션을 쓴다(CI 에는 PG 가 없다).
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.pool import StaticPool
+
+    import app.models  # noqa: F401  — 모든 테이블을 metadata 에 등록
+
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    database.Base.metadata.create_all(bind=engine)
+    real = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
     class SlowSession:
         def __init__(self):
