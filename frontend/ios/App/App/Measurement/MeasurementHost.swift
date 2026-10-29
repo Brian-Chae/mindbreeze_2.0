@@ -105,24 +105,31 @@ public final class MeasurementHost {
     /// 세션별 archive 업로더를 만들고(이미 있으면 재사용) 한 번 pump 한다.
     public func startArchive(sessionId: String, participantId: String?, handle: String) {
         queue.async { [self] in
-            guard let m = manager, let q = m.archiveQueue, let p = provider(for: handle), let c = try? store.load(handle: handle), let base = URL(string: c.apiBase) else { return }
+            guard let m = manager, let p = provider(for: handle), let c = try? store.load(handle: handle), let base = URL(string: c.apiBase) else { return }
+            // 앱 재시작 직후 manager 는 SEALING/CLOSED 세션의 큐를 들고 있지 않다 → 디스크의 세션 큐를 직접 열어 남은 업로드·종료 기록(close intent)을 이어 보낸다.
+            let sessionDir = root.appendingPathComponent("sessions").appendingPathComponent(sessionId)
+            let fromManager = m.archiveQueue(forSession: sessionId)
+            guard let q = uploaders[sessionId]?.queueRef ?? fromManager ?? (try? ArchiveQueue(dir: sessionDir.appendingPathComponent("archive"))) else { return }
             let up = uploaders[sessionId] ?? ArchiveUploader(queue: q, http: http, files: uploader, apiBase: base, sessionId: sessionId, participantId: participantId,
                 token: { done in p.accessToken(handle: handle) { r in done(try? r.get()) } },
-                fileURL: { [unowned m] in m.archiveFileURL($0) }, nowMs: { Int(Date().timeIntervalSince1970 * 1000) })
-            up.onChange = { [weak self, weak m] in m?.archiveProgressed(); m?.emitArchiveStatus(stage: nil, code: nil); self?.persistArchivePointer(sessionId: sessionId, participantId: participantId, handle: handle) }
+                fileURL: { item in sessionDir.appendingPathComponent("archive").appendingPathComponent(item.file) }, nowMs: { Int(Date().timeIntervalSince1970 * 1000) })
+            up.closeIntents = MeasurementManager.closeIntentStore(root: root, sessionId: sessionId)
+            up.scheduleRetry = { [queue] sec, work in queue.asyncAfter(deadline: .now() + sec, execute: work) }
+            up.onChange = { [weak self, weak m] in m?.archiveProgressed(); m?.emitArchiveStatus(stage: nil, code: nil); self?.persistArchivePointer(sessionId: sessionId, participantId: participantId, handle: handle, queue: q) }
             uploaders[sessionId] = up
-            persistArchivePointer(sessionId: sessionId, participantId: participantId, handle: handle)
+            persistArchivePointer(sessionId: sessionId, participantId: participantId, handle: handle, queue: q)
             up.pump()
         }
     }
 
     private var pointerDir: URL { root.appendingPathComponent("pending-archive", isDirectory: true) }
-    private func persistArchivePointer(sessionId: String, participantId: String?, handle: String) {
+    private func persistArchivePointer(sessionId: String, participantId: String?, handle: String, queue q: ArchiveQueue) {
         try? FileManager.default.createDirectory(at: pointerDir, withIntermediateDirectories: true)
         let f = pointerDir.appendingPathComponent("\(sessionId).json")
-        guard let q = manager?.archiveQueue else { return }
         let c = q.counts
-        if c.pending + c.uploading == 0 && c.pendingAuthorization == 0 && c.pendingTimeReview == 0 { try? FileManager.default.removeItem(at: f); return }
+        // 종료 기록(close intent)이 아직 안 갔으면 업로드가 다 끝나도 포인터를 지우지 않는다 — 다음 실행/깨움에서 이어 보낸다.
+        let intentPending = MeasurementManager.closeIntentStore(root: root, sessionId: sessionId).pending() != nil
+        if c.pending + c.uploading == 0 && c.pendingAuthorization == 0 && c.pendingTimeReview == 0 && !intentPending { try? FileManager.default.removeItem(at: f); return }
         let d: [String: Any] = ["sessionId": sessionId, "participantId": participantId ?? NSNull(), "handle": handle]
         try? JSONSerialization.data(withJSONObject: d).write(to: f, options: .atomic)
     }

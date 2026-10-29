@@ -212,6 +212,10 @@ public final class MeasurementManager: BandLinkDelegate {
             if let fin = try? e.seal() {
                 started = true
                 enqueueArchive(of: fin)
+                // 종료 기록(close intent)을 서버 응답 이전에 디스크에 먼저 남긴다 — 앱이 죽어도 다음 실행/업로드 완료 깨움에서 이어 보낸다.
+                if closeStream, let sid = sessionId, let q = archive {
+                    Self.closeIntentStore(root: root, sessionId: sid).record(queue: q, sessionId: sid, participantId: participantId, reason: reason, nowUs: Int64(nowMs()) * 1000)
+                }
                 if closeStream {
                     live?.dispatch(command: ["command_id": UUID().uuidString.lowercased(), "kind": "capture.close", "client_generation": String(generation),
                                              "payload": ["stream_id": s, "reason": reason,
@@ -296,6 +300,13 @@ public final class MeasurementManager: BandLinkDelegate {
         return p?.dictionary ?? ["eegFp1": [Double](), "eegFp2": [Double](), "ppgRed": [Double](), "ppgIr": [Double]()]
     }
 
+    /// 세션 디렉터리의 종료 기록 저장소(호스트가 앱 재시작 후에도 같은 파일로 재전송한다).
+    public static func closeIntentStore(root: URL, sessionId: String) -> CloseIntentStore {
+        CloseIntentStore(file: root.appendingPathComponent("sessions").appendingPathComponent(sessionId).appendingPathComponent(CloseIntentStore.fileName))
+    }
+    public func closeIntentStore(sessionId: String) -> CloseIntentStore { Self.closeIntentStore(root: root, sessionId: sessionId) }
+    /// 해당 세션이 지금 manager 가 들고 있는 세션일 때만 그 큐(다른 세션 큐를 잘못 쓰지 않는다).
+    public func archiveQueue(forSession sid: String) -> ArchiveQueue? { lock.lock(); defer { lock.unlock() }; return sessionId == sid ? archive : nil }
     public var archiveQueue: ArchiveQueue? { lock.lock(); defer { lock.unlock() }; return archive }
     public func archiveFileURL(_ item: ArchiveItem) -> URL {
         lock.lock(); defer { lock.unlock() }

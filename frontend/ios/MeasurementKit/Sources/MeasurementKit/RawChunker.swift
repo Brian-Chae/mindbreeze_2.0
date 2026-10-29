@@ -34,7 +34,10 @@ public final class RawChunker {
     private var ordinal: Int, segmentId = "", chunkIndex = 0, nextSample = 0
     private var anchorUs: Int64 = 0, anchorTick: UInt64?, anchorTickUnwrapped: UInt64?
     private var lastTick: UInt64?, lastRaw: UInt64?, wraps: UInt64 = 0
+    /// 실측 rate 계산용(ACC): segment 안의 첫·마지막 tick 과, 마지막 패킷을 뺀 누적 샘플(tick 차이는 직전 패킷의 샘플 수에 대응).
+    private var obsFirstTick: UInt64?, obsLastTick: UInt64?, obsSamples: Int64 = 0, obsPrevRows = 0
     private var pkts: [Pkt] = [], pktSamples = 0, pktBytes = 0
+    static let deviceTickHz: Int64 = 32768
 
     public init(sensor: BandSensor, session: String, originUs: Int64, sink: @escaping (RawChunk) -> Void) {
         self.sensor = sensor; self.session = session; self.originUs = originUs; self.sink = sink
@@ -66,6 +69,10 @@ public final class RawChunker {
             unwrapped = u; lastRaw = r; lastTick = u
         }
         if roll { startSegment(arrivalUs: arrivalUs, rows: rows, raw: raw, unwrapped: unwrapped) }
+        if let u = unwrapped, !malformed {
+            if obsFirstTick == nil { obsFirstTick = u } else { obsSamples += Int64(obsPrevRows) }
+            obsPrevRows = rows; obsLastTick = u
+        }
         pkts.append(Pkt(bytes: bytes, rows: rows, malformed: malformed ? "truncated_packet" : nil, tickRaw: raw, firstSample: rows > 0 ? nextSample : -1, arrivalUs: arrivalUs, tickUnwrapped: unwrapped))
         nextSample += rows; pktSamples += rows; pktBytes += bytes.count + rows * stride + Self.mapRowEstimate
         if pktSamples >= Self.chunkSeconds * rate || pktBytes >= Self.chunkSoftBytes { seal() }
@@ -76,9 +83,23 @@ public final class RawChunker {
         ordinal += 1
         segmentId = RawIds.segmentId(session: session, sensor: sensor, ordinal: ordinal)
         chunkIndex = 0; nextSample = 0
+        obsFirstTick = nil; obsLastTick = nil; obsSamples = 0; obsPrevRows = 0
         anchorUs = arrivalUs - Int64(max(0, rows - 1)) * 1_000_000 / Int64(rate) // 헤더 tick = 패킷 마지막 샘플 시각
         anchorTick = raw; anchorTickUnwrapped = unwrapped
         wraps = (raw != nil && unwrapped != nil) ? (unwrapped! - raw!) >> 32 : 0
+    }
+
+    /// ACC 는 명목 30Hz 와 실제(≈26Hz)가 달라, 명목 rate 로 시간축을 만들면 종료 시각이 약 13% 짧게 보인다.
+    /// segment 시작부터 지금까지 장치 tick 으로 잰 실측 rate(샘플/초)와 관측 구간(µs). 1초 미만이거나 tick 이 없으면 nil(not_measured).
+    /// EEG/PPG 는 명목과 일치해 기록하지 않는다(Android RawChunker.kt 와 동일).
+    private func observedRate() -> (rate: [String: Any], windowUs: Int64)? {
+        guard sensor == .acc, let first = obsFirstTick, let last = obsLastTick, last >= first else { return nil }
+        let ticks = Int64(last - first)
+        guard ticks >= Self.deviceTickHz, obsSamples > 0 else { return nil }
+        let num = obsSamples * Self.deviceTickHz
+        func gcd(_ a: Int64, _ b: Int64) -> Int64 { var x = a, y = b; while y != 0 { (x, y) = (y, x % y) }; return x }
+        let g = gcd(num, ticks)
+        return (["numerator": num / g, "denominator": ticks / g], ticks * 1_000_000 / Self.deviceTickHz)
     }
 
     /// 남은 샘플을 부분 청크로 봉인(정지·종료·segment 전환).
@@ -125,11 +146,13 @@ public final class RawChunker {
         let channels = sensor == .eeg ? ["fp1", "fp2"] : sensor == .ppg ? ["red", "ir"] : ["x", "y", "z"]
         let units = sensor == .eeg ? ["uV", "uV"] : sensor == .ppg ? ["ADC_count", "ADC_count"] : ["g", "g", "g"]
         let scale: [Double] = sensor == .eeg ? [Self.eegAdcScale, Self.eegAdcScale] : sensor == .ppg ? [1, 1] : [Self.accAdcScale, Self.accAdcScale, Self.accAdcScale]
+        let observed = observedRate()
         let header: [String: Any] = [
             "schema_version": "mb-biosignal-raw-v2", "signal_type": RawIds.name(sensor), "stream_id": streamId, "segment_id": segmentId, "chunk_index": chunkIndex,
             "parser_profile": ["firmware": "unknown", "device_model": "LINK-BAND-2.0", "profile_id": Self.profileId, "version": "1", "parameters_hash": Self.profileHash,
                                "platform": "native-candidate", "verification": "unverified", "packet_endian": "little", "tick_hz": 32768, "tick_bits": 32, "header_anchor": "last_sample"],
-            "rate": ["numerator": rate, "denominator": 1], "observed_rate": NSNull(), "observed_rate_window_us": NSNull(), "observed_rate_reason": "not_measured",
+            "rate": ["numerator": rate, "denominator": 1], "observed_rate": observed.map { $0.rate as Any } ?? NSNull(), "observed_rate_window_us": observed.map { $0.windowUs as Any } ?? NSNull(),
+            "observed_rate_reason": observed == nil ? "not_measured" as Any : NSNull(),
             "channels": channels, "units": units, "scale": scale, "sample_count": samples, "packet_count": pkts.count, "first_sample_index": firstIndex,
             "end_sample_index_exclusive": firstIndex + samples, "time_basis": "host_estimated",
             "anchor": ["sample_index": 0, "utc_us": String(anchorUs), "monotonic_us": String(anchorUs), "relative_us": String(anchorUs - originUs),
