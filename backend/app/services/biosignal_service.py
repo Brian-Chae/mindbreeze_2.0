@@ -120,7 +120,9 @@ def _object_key(sid: UUID, pid: UUID, meta: PresignChunk) -> str:
 def _time_ms(header, sample_index: int) -> float:
     """anchor 기준 유리수 시각(µs) → ms. 최종 출력에서만 float 로 변환한다."""
     a = header.anchor
-    us = Fraction(int(a.relative_us)) + Fraction(sample_index - a.sample_index) * 1_000_000 * header.rate.denominator / header.rate.numerator
+    # 실측 rate 가 있으면 그것으로 시간축을 만든다 — ACC 처럼 명목(30Hz)과 실제(≈26Hz)가 다른 신호가 종료 시각을 짧게 보이지 않게.
+    rate = header.observed_rate or header.rate
+    us = Fraction(int(a.relative_us)) + Fraction(sample_index - a.sample_index) * 1_000_000 * rate.denominator / rate.numerator
     return float(us / 1000)
 
 

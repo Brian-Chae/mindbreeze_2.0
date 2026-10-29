@@ -85,6 +85,35 @@ class RawChunkerTest {
         assertEquals(500, out.sumOf { it.meta.getJSONObject("header").getInt("sample_count") })
     }
 
+    /** 실기기 회차(2a11d64c): ACC 는 패킷당 30샘플이 1.1556초(≈26Hz)마다 온다. 명목 30Hz 로만 시간축을 만들면 종료가 약 13% 일찍 보인다. */
+    @Test fun accRecordsObservedRateFromDeviceTicks() {
+        val out = ArrayList<RawChunk>(); val c = RawChunker(Sensor.ACC, sid, 0, 0, sink(out))
+        val tickStep = (1.1556 * 32768).toLong() // 패킷 간 tick
+        var t = 1_000_000L
+        repeat(60) { c.onPacket(packet(Sensor.ACC, 30, t), us(it * 1156L), it + 1L); t += tickStep }
+        c.flush()
+        assertTrue(out.isNotEmpty())
+        val h = out.last().meta.getJSONObject("header")
+        assertEquals(30, h.getJSONObject("rate").getInt("numerator")) // 명목은 그대로
+        val obs = h.getJSONObject("observed_rate")
+        val hz = obs.getLong("numerator").toDouble() / obs.getLong("denominator")
+        assertEquals(25.96, hz, 0.1)
+        assertTrue(h.getLong("observed_rate_window_us") > 1_000_000L)
+        assertTrue(h.isNull("observed_rate_reason"))
+    }
+
+    @Test fun observedRateIsNotMeasuredForEegPpgOrShortWindows() {
+        for (sensor in listOf(Sensor.EEG, Sensor.PPG)) {
+            val out = ArrayList<RawChunk>(); val c = RawChunker(sensor, sid, 0, 0, sink(out))
+            repeat(40) { c.onPacket(packet(sensor, 5, 1000L + it * 3277), us(it * 100L), it + 1L) }; c.flush()
+            val h = out.last().meta.getJSONObject("header")
+            assertTrue(sensor.name, h.isNull("observed_rate")); assertEquals("not_measured", h.getString("observed_rate_reason"))
+        }
+        val out = ArrayList<RawChunk>(); val c = RawChunker(Sensor.ACC, sid, 0, 0, sink(out))
+        c.onPacket(packet(Sensor.ACC, 30, 1000), 0, 1); c.onPacket(packet(Sensor.ACC, 30, 1000 + 20000), us(600), 2); c.flush() // 0.6초
+        assertEquals("not_measured", out.last().meta.getJSONObject("header").getString("observed_rate_reason"))
+    }
+
     @Test fun malformedPacketKeepsBytesWithZeroSamples() {
         val out = ArrayList<RawChunk>(); val c = RawChunker(Sensor.EEG, sid, 0, 0, sink(out))
         val bad = ByteArray(10) { 1 }; tick(bad, 5)

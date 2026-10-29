@@ -50,6 +50,11 @@ class RawChunker(
     private var lastTick: Long? = null
     private var lastRaw: Long? = null
     private var wraps = 0L
+    /** 실측 rate 계산용(ACC): segment 안에서 첫 tick, 마지막 tick, 마지막 패킷을 뺀 누적 샘플(tick 차이는 직전 패킷의 샘플 수에 대응). */
+    private var obsFirstTick: Long? = null
+    private var obsLastTick: Long? = null
+    private var obsSamples = 0L
+    private var obsPrevRows = 0
     private val pkts = ArrayList<Pkt>()
     private var pktSamples = 0
     private var pktBytes = 0
@@ -78,6 +83,11 @@ class RawChunker(
             lastRaw = raw; lastTick = unwrapped
         }
         if (roll) startSegment(arrivalUs, rows, raw, tickUnwrapped)
+        if (tickUnwrapped != null && !malformed) {
+            if (obsFirstTick == null) obsFirstTick = tickUnwrapped else obsSamples += obsPrevRows
+            obsPrevRows = rows
+            obsLastTick = tickUnwrapped
+        }
         val first = if (rows > 0) nextSample else -1
         pkts.add(Pkt(bytes, rows, if (malformed) "truncated_packet" else null, raw, first, arrivalUs, tickUnwrapped, record))
         nextSample += rows; pktSamples += rows; pktBytes += bytes.size + rows * stride + MAP_ROW_ESTIMATE
@@ -89,6 +99,7 @@ class RawChunker(
         ordinal += 1
         segmentId = RawIds.segmentId(sessionId, sensor, ordinal)
         chunkIndex = 0; nextSample = 0
+        obsFirstTick = null; obsLastTick = null; obsSamples = 0; obsPrevRows = 0
         anchorUtcUs = arrivalUs - maxOf(0, rows - 1).toLong() * 1_000_000L / rate // 헤더 tick = 패킷 마지막 샘플 시각
         anchorTick = raw; anchorTickUnwrapped = unwrapped
         wraps = if (raw != null && unwrapped != null) (unwrapped - raw) / (1L shl 32) else 0
@@ -125,11 +136,12 @@ class RawChunker(
             .put(section("packets", samplesBytes.size, offset, 0, "bytes"))
             .put(section("packet_map", samplesBytes.size + offset, mapBytes.size, 0, "utf8-jsonl"))
         val streamId = RawIds.streamId(sessionId, sensor)
+        val observed = observedRate()
         val header = JSONObject()
             .put("schema_version", "mb-biosignal-raw-v2").put("signal_type", sensor.name.lowercase()).put("stream_id", streamId).put("segment_id", segmentId)
             .put("chunk_index", chunkIndex).put("parser_profile", profile())
-            .put("rate", JSONObject().put("numerator", rate).put("denominator", 1)).put("observed_rate", JSONObject.NULL)
-            .put("observed_rate_window_us", JSONObject.NULL).put("observed_rate_reason", "not_measured")
+            .put("rate", JSONObject().put("numerator", rate).put("denominator", 1)).put("observed_rate", observed?.first ?: JSONObject.NULL)
+            .put("observed_rate_window_us", observed?.second ?: JSONObject.NULL).put("observed_rate_reason", if (observed == null) "not_measured" else JSONObject.NULL)
             .put("channels", JSONArray(channels())).put("units", JSONArray(units())).put("scale", JSONArray(scale()))
             .put("sample_count", samples).put("packet_count", pkts.size).put("first_sample_index", firstIndex)
             .put("end_sample_index_exclusive", firstIndex + samples).put("time_basis", "host_estimated")
@@ -149,6 +161,22 @@ class RawChunker(
         pkts.clear(); pktSamples = 0; pktBytes = 0; chunkIndex += 1
         sink(RawChunk(alias, meta, payload, last))
     }
+
+    /**
+     * ACC 는 명목 30Hz 와 실제(≈26Hz)가 달라, 명목 rate 로 시간축을 만들면 종료 시각이 약 13% 짧게 보인다.
+     * segment 시작부터 지금까지 장치 tick 으로 잰 실측 rate(샘플/초)와 관측 구간(µs). 1초 미만이거나 tick 이 없으면 null(not_measured).
+     * EEG/PPG 는 명목과 일치해 기록하지 않는다.
+     */
+    private fun observedRate(): Pair<JSONObject, Long>? {
+        if (sensor != Sensor.ACC) return null
+        val first = obsFirstTick ?: return null; val last = obsLastTick ?: return null
+        val ticks = last - first
+        if (ticks < DEVICE_TICK_HZ || obsSamples <= 0) return null
+        val num = obsSamples * DEVICE_TICK_HZ
+        val g = gcd(num, ticks)
+        return JSONObject().put("numerator", num / g).put("denominator", ticks / g) to (ticks * 1_000_000L / DEVICE_TICK_HZ)
+    }
+    private fun gcd(a: Long, b: Long): Long { var x = a; var y = b; while (y != 0L) { val t = x % y; x = y; y = t }; return x }
 
     private fun section(name: String, offset: Int, length: Int, stride: Int, encoding: String) =
         JSONObject().put("name", name).put("offset", offset).put("length", length).put("row_stride", stride).put("encoding", encoding)

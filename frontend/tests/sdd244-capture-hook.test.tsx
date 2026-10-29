@@ -82,6 +82,23 @@ describe('SDD244 T08 useBiosignalCapture', () => {
     expect(api.events).toHaveBeenCalled();
     expect(latest.closeState).toBe('pending_upload');
   });
+  it('회차 종료로 화면이 내려가는 중에도 close intent 전송이 끝까지 수행된다(실기기 2a11d64c: intent 0건)', async () => {
+    api.capability.mockResolvedValue(capability());
+    const aliases = new Map<string, string>();
+    api.presign.mockImplementation(async (_s, _p, _k, meta: { chunk_alias: string; checksum: string; size_bytes: number }) => { aliases.set('srv', meta.chunk_alias); return { chunk_id: 'srv', chunk_alias: meta.chunk_alias, checksum: meta.checksum, size_bytes: meta.size_bytes, upload_url: 'https://s3/put', upload_headers: { a: 'b' }, upload_status: 'pending' }; });
+    api.ack.mockImplementation(async (_s, _p, _k, id: string, checksum: string, size: number) => ({ chunk_id: id, chunk_alias: aliases.get(id), checksum, size_bytes: size, upload_status: 'uploaded', verified_at_us: '1', failure_reason: null }));
+    api.events.mockImplementation(async (_s, _p, events: { event_type: string; intent_id?: string; event_id?: string }[]) => ({ events: events.map(e => ({ event_type: e.event_type, event_id: e.intent_id ?? e.event_id, status: 'recorded' })), manifest_revision: 1, close_state: 'complete', missing_artifacts: [] }));
+    await act(async () => root.render(<Probe />)); await ready();
+    act(() => { captureRawPacket('eeg', eegPacket()); });
+    // 종료 phase 에서 close 를 시작하자마자 같은 틱에 화면이 내려간다(EntryPage 가 종료 화면으로 전환 → unmount).
+    let pending: Promise<unknown> = Promise.resolve();
+    await act(async () => { pending = latest.close('session_ended'); root.unmount(); await pending; });
+    expect(api.events).toHaveBeenCalled();
+    const sent = api.events.mock.calls.flatMap(c => c[2] as { event_type: string }[]);
+    expect(sent.some(e => e.event_type === 'close_intent')).toBe(true);
+    expect(put).toHaveBeenCalled();
+  });
+
   it('H03: 오프라인 close 후 밴드 재연결 없이 online 이벤트로 영속 큐 업로드 재개', async () => {
     api.capability.mockResolvedValue(capability());
     Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });

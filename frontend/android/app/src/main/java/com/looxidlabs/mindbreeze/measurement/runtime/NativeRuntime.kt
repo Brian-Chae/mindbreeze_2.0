@@ -7,6 +7,7 @@ import com.looxidlabs.mindbreeze.measurement.MeasurementEngine
 import com.looxidlabs.mindbreeze.measurement.ModelPin
 import com.looxidlabs.mindbreeze.measurement.Sensor
 import com.looxidlabs.mindbreeze.measurement.archive.ArchiveFeeder
+import com.looxidlabs.mindbreeze.measurement.archive.CloseIntentStore
 import com.looxidlabs.mindbreeze.measurement.archive.RawArchiver
 import com.looxidlabs.mindbreeze.measurement.archive.RawIds
 import com.looxidlabs.mindbreeze.measurement.archive.ArchiveQueue
@@ -50,6 +51,7 @@ class NativeRuntime private constructor(
     /** 서버가 stream 을 끝냄(status, cutoff_code) → 서비스가 측정 정지·봉인(archive 는 계속). */
     var onCaptureEnded: ((String, String?) -> Unit)? = null
     private val devicePolicy = DeviceReportPolicy()
+    private val closeIntents = CloseIntentStore(File(dir, "close-intent.json"))
 
     fun start() {
         engine.rawSink = { sensor, us, bytes -> rawArchiver.onPacket(sensor, us, bytes); kickArchive() }
@@ -104,6 +106,7 @@ class NativeRuntime private constructor(
         try {
             val up = ArchiveUploader(cfg.apiBase, queue, tokenProvider = { tokens.current() }, http = HTTP, captureStreamId = { live.streamId ?: cfg.streamId })
             val sum = up.drain()
+            sendPendingCloseIntent(up)
             if (sum.acked > 0) lastVerifiedAtMs = System.currentTimeMillis()
             queue.all().lastOrNull { it.lastReason != null }?.let { lastArchiveStage = it.lastStage; lastArchiveCode = it.lastReason?.lowercase()?.replace(Regex("[^a-z0-9_]"), "_")?.take(64) }
             if (sum.acked > 0) queue.gcVerified()
@@ -113,6 +116,16 @@ class NativeRuntime private constructor(
         } finally { draining = false }
     }
 
+    /** 종료 기록이 있고 아직 못 보냈으면 보낸다. 실패(네트워크 등)는 다음 drain/WorkManager 가 다시 시도한다. */
+    private fun sendPendingCloseIntent(up: ArchiveUploader) {
+        val p = closeIntents.pending() ?: return
+        val ok = try { up.sendCloseIntent(cfg.sessionId, live.participantId ?: cfg.participantId, p.intent) } catch (_: Exception) { false }
+        if (ok) closeIntents.markSent() else {
+            closeIntents.markAttempt()
+            ArchiveWorker.schedule(ctx, 30)
+        }
+    }
+
     /** 정지: 남은 창 봉인 → capture.close → 체크포인트 → 엔진 정리. archive 는 계속(DRAINING). */
     fun stop(reason: String) {
         stopping = true
@@ -120,6 +133,8 @@ class NativeRuntime private constructor(
         val finals = try { engine.writeCheckpoint(); engine.finalSequences() } catch (_: Exception) { null }
         feeder.flush()
         rawArchiver.flush() // 남은 원시 샘플도 부분 청크로 봉인
+        // 종료 기록(close intent)을 서버 응답 이전에 디스크에 먼저 남긴다 — 앱이 죽어도 WorkManager 가 이어서 보낸다.
+        try { closeIntents.record(queue, cfg.sessionId, reason, System.currentTimeMillis() * 1000L) } catch (_: Exception) { /* 종료 기록 실패가 정지를 막지 않는다 */ }
         if (finals != null) sched.post { live.closeCapture(finals, reason) }
         RuntimeConfig.save(File(dir, "runtime.json"), cfg.copy(active = false, streamId = live.streamId, participantId = live.participantId))
         kickArchive()

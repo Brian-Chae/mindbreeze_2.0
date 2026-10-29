@@ -240,3 +240,43 @@ def test_행이_있는_lost_feature는_순번을_채운_것으로_본다(ctx):
     retry["lost_artifacts"] = [{"kind": "feature", "alias": "FEAT-EEG-0", "reason": "local_write_failed"}]
     res = _events(ctx, [retry]).json()
     assert res["close_state"] == "partial" and not res["missing_artifacts"], res
+
+
+# ── 네이티브(raw·feature)와 JS(indices·normalization)가 각자 보낸 close intent 는 합집합으로 판정한다 ──────
+
+def test_서로_다른_주체의_close_intent는_합집합으로_평가한다(ctx):
+    metas, _ = _upload(ctx, ("eeg", "ppg"))
+    eeg_only = _intent([metas[0]])
+    ppg_only = _intent([metas[1]], intent_id="99999999-9999-4999-8999-999999999999")
+    ppg_only["closed_at_us"] = "9500000"
+    ppg_only["streams"][0]["signal"] = "ppg"
+    first = _events(ctx, [eeg_only]).json()
+    assert first["close_state"] == "pending_upload"  # 아직 ppg 는 목록 밖 → 미확정
+    res = _events(ctx, [ppg_only]).json()
+    assert res["close_state"] == "complete" and not res["missing_artifacts"], res
+    m = ManifestRevision.model_validate(_manifest(ctx).json()["manifest"])
+    assert {s.signal for s in m.close_intent.streams} == {"eeg", "ppg"}
+    assert len(m.close_intent.expected_artifacts) == 2
+
+
+def test_ACC_실측_rate가_있으면_청크_종료_시각이_실측으로_계산된다(ctx):
+    import copy
+    from app.models.record import EEGRawChunk
+    meta = _meta("acc", 0)
+    base = copy.deepcopy(meta)
+    h = meta["header"]
+    h["observed_rate"] = {"numerator": 26, "denominator": 1}
+    h["observed_rate_window_us"] = 10_000_000
+    h["observed_rate_reason"] = None
+    assert _presign(ctx, [meta]).status_code == 200
+    assert _presign(ctx, [_meta("acc", 1)]).status_code == 200
+    db = _db()
+    try:
+        rows = {r.chunk_index: r for r in db.query(EEGRawChunk).filter(EEGRawChunk.signal_type == "acc").all()}
+        n = base["header"]["sample_count"]
+        span_obs = rows[0].end_ms - rows[0].start_ms
+        span_nom = rows[1].end_ms - rows[1].start_ms
+        assert span_obs > span_nom  # 26Hz 가 30Hz 보다 같은 샘플 수에 더 긴 시간
+        assert abs(span_obs - (n - 1) / 26 * 1000) < 1e-6
+    finally:
+        db.close()

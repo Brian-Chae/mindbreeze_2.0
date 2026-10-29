@@ -163,7 +163,9 @@ def measure_stats(db: DBSession, participant_ids: list[UUID]) -> dict[UUID, Stat
         s = stats[chunk.participant_id]
         s.raw_chunks += 1
         s.raw_bytes += chunk.size_bytes or 0
-        if chunk.start_ms is not None and chunk.end_ms is not None and chunk.end_ms >= chunk.start_ms:
+        if chunk.sample_count is not None:
+            s.raw_samples += chunk.sample_count  # v2 청크는 실제 샘플 수가 있다(실측 rate 로 시간축이 달라도 정확)
+        elif chunk.start_ms is not None and chunk.end_ms is not None and chunk.end_ms >= chunk.start_ms:
             s.raw_samples += round((chunk.end_ms - chunk.start_ms) / 1000 * (chunk.sample_rate or 250))
         stamp = aware(chunk.uploaded_at or chunk.created_at)
         if stamp and (s.raw_first is None or stamp < s.raw_first):
