@@ -1,6 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 const preset = require('../design-system/build/outputs/tailwind/preset.cjs');
 
+const plugin = require('tailwindcss/plugin');
+
 module.exports = {
   presets: [preset],
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
@@ -22,4 +24,10 @@ module.exports = {
       },
     },
   },
+  // SDD-255: 회원 리포트 뷰어 프레임(.member-report-frame) 폭 기준 모바일 변형. 프레임 밖에서는 적용되지 않는다.
+  plugins: [
+    plugin(({ addVariant }) => {
+      addVariant('frame', '@container member-report (max-width: 767px)');
+    }),
+  ],
 };

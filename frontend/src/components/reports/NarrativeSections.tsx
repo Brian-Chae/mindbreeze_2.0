@@ -243,7 +243,7 @@ export default function NarrativeSections({ narrative, session, isSample = false
     }
   };
   return <div className="narrative-report" data-testid="narrative-sections"><WellnessNotice />
-    <header className="topbar"><a className="mobile:min-h-11 mobile:min-w-11 mobile:inline-flex mobile:items-center brand" href="#cover" onClick={navigateSection}>mind breeze<span style={{ fontWeight: 400 }}> / 몸·마음 리포트</span></a>{isSample && <span className="sample-tag">디자인 미리보기 · 예시 데이터</span>}</header>
+    <header className="topbar"><a className="mobile:min-h-11 frame:min-h-11 mobile:min-w-11 frame:min-w-11 mobile:inline-flex frame:inline-flex mobile:items-center frame:items-center brand" href="#cover" onClick={navigateSection}>mind breeze<span style={{ fontWeight: 400 }}> / 몸·마음 리포트</span></a>{isSample && <span className="sample-tag">디자인 미리보기 · 예시 데이터</span>}</header>
     <div className="layout">
     <aside className="sidebar" aria-label="리포트 탐색">
       <p className="eyebrow">오늘의 명상 기록</p>

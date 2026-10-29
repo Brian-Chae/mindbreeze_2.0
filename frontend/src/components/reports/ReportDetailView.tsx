@@ -9,7 +9,7 @@ import { downloadReportPdf } from '../../lib/report/print-report';
 import CounselorCommentCard from './CounselorCommentCard';
 import DataExportButton from './DataExportButton';
 import NarrativeSections from './NarrativeSections';
-import { ClientReportBody } from './ClientReportViewer';
+import MemberReportViewer from './MemberReportViewer';
 import { buildReportSessionInfo } from '../../lib/report/session-info';
 import SessionReplayPanel from './SessionReplayPanel';
 import ReportCoverSection from './ReportCoverSection';
@@ -336,7 +336,7 @@ export default function ReportDetailView({
       )}
 
       {/* 회원용: 회원이 실제로 보는 본문(ClientReportBody)을 그대로 렌더 — 코멘트 편집 카드가 보일 땐 같은 코멘트 중복 표시만 숨긴다. */}
-      {!isCounselor && <ClientReportBody report={report} hideCounselorComment={showCommentEditor} />}
+      {!isCounselor && <MemberReportViewer report={report} hideCounselorComment={showCommentEditor} />}
 
       {isCounselor && displayNarrative && (
         <NarrativeSections narrative={displayNarrative} showCover={false} session={buildReportSessionInfo(report, adapted)} />

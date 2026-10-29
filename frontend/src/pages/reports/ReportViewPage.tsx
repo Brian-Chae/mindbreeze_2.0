@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import NarrativeSections from '../../components/reports/NarrativeSections';
 import ReportCoverSection from '../../components/reports/ReportCoverSection';
-import { ClientReportBody } from '../../components/reports/ClientReportViewer';
+import MemberReportViewer from '../../components/reports/MemberReportViewer';
 import { buildReportSessionInfo } from '../../lib/report/session-info';
 import SubjectiveCheckinCard from '../../components/reports/SubjectiveCheckinCard';
 import { downloadReportPdf } from '../../lib/report/print-report';
@@ -157,7 +157,7 @@ export default function ReportViewPage() {
         {downloadError && <p role="alert" className="text-sm mobile:text-mb-body text-red-600">{downloadError}</p>}
         {report.type === 'client' ? (
           // 회원용은 앱의 회원 화면과 같은 본문 컴포넌트를 쓴다.
-          <ClientReportBody report={report} />
+          <MemberReportViewer report={report} />
         ) : (
           <>
             <ReportCoverSection report={report} adapted={adapted} />
