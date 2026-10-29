@@ -1,6 +1,6 @@
 # SDD-254 Plan — 현장 QR 베타 배포
 
-> spec: `spec.md`. 대표 결정 #1~#5 확정 후 착수. 구현 담당은 트랙별 독립 워커(병렬), 같은 파일 동시 수정 금지.
+> spec: `spec.md`. 대표 결정 #1~#5 확정(10/29: 1=A 구글 서명 유니버설 APK, 2=A 공개, 3=알림 포함, 4=A 11/4, 5=A 갈음+랜딩 한 줄). T-9 포함. 구현 담당은 트랙별 독립 워커(병렬), 같은 파일 동시 수정 금지.
 
 ## 아키텍처 요약
 - 단일 QR → `frontend` 공개 라우트 `/beta` → `beta.json`(최신 APK URL·버전·SHA-256·TestFlight 링크) 읽어 UA 분기.
@@ -40,3 +40,15 @@ D0 결정·T-0·T-1 시작 → D1 T-3/T-5 + 운영 선반영(별도 승인) → 
 
 ## 금지(전 Task 공통)
 푸시·머지·운영 배포·메일 발송·스토어/TestFlight 설정 변경은 대표 승인 건별. AWS/Play/App Store Connect 쓰기 동작은 사전 승인.
+
+## 구현 현황 (Stage ④)
+| Task | 상태 | 비고 |
+|---|---|---|
+| T-1 /beta 랜딩 | 완료 | `/get` → `/beta` 리다이렉트 포함 |
+| T-2 beta.json | 완료(스키마·검증·기본값) | 게시 방식=웹 정적 파일(`frontend/public/beta.json`, 웹 배포 시 갱신). 즉시 교체는 S3 별도 보관으로 전환 가능(승인 후) |
+| T-4 안내 문구 | 완료(랜딩 한 줄) | |
+| T-5 CI | 부분: `android-beta-aab.yml`(업로드 키 서명 AAB, vc≥24 강제, 수동) + `scripts/beta-apk-prepare.py`(유니버설 APK 검수·beta.json 생성). 시크릿 4종은 지휘 승인 후 설정 | |
+| T-7 QR | 완료: `scripts/make-beta-qr.mjs` | A4 안내 시안은 summary 런북 요지로 갈음 |
+| T-8 런북 | 완료: `runbook.md` | |
+| T-9 새 버전 알림 | 완료 | |
+| T-0·T-3·T-6·T-10(실기기) | **외부 계정/실기기 필요 — 지휘 승인 필요 목록** | |

@@ -4,6 +4,7 @@ import { isAiEnabled, isDesignRoutesEnabled } from './lib/feature-flags';
 import { useStatusBar } from './lib/native/use-status-bar';
 import { isNativeApp } from './lib/native/platform';
 import { initNativeKeyboard } from './lib/native/keyboard';
+import BetaUpdateBanner from './components/beta/BetaUpdateBanner';
 // SDD-088: useBlocker(이탈 가드)는 데이터 라우터 전용 — createBrowserRouter 로 전환
 import {
   createBrowserRouter,
@@ -22,6 +23,7 @@ import { RoleGuard } from './components/auth/RoleGuard';
 import { LegacySessionRedirect } from './components/routing/legacy-session-redirect';
 
 // 랜딩에서 사용하지 않는 화면과 분석 라이브러리는 해당 경로를 열 때 불러온다.
+const BetaLandingPage = lazy(() => import('./pages/BetaLandingPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const ClientLoginPage = lazy(() => import('./pages/ClientLoginPage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
@@ -159,9 +161,12 @@ function RootLayout() {
   useEffect(() => { void initNativeKeyboard(); }, []);
 
   return (
-    <Suspense fallback={<div role="status" className="flex min-h-screen items-center justify-center bg-[#FAF8FB] text-sm text-[#5F0080]">화면을 불러오는 중이에요.</div>}>
-      <Outlet />
-    </Suspense>
+    <>
+      <BetaUpdateBanner />
+      <Suspense fallback={<div role="status" className="flex min-h-screen items-center justify-center bg-[#FAF8FB] text-sm text-[#5F0080]">화면을 불러오는 중이에요.</div>}>
+        <Outlet />
+      </Suspense>
+    </>
   );
 }
 
@@ -170,6 +175,8 @@ const router = createBrowserRouter(
     <Route element={<RootLayout />}>
         <Route path="/" element={<EntryRoute />} />
         <Route path="/join" element={<CodeEntryPage />} />
+        <Route path="/beta" element={<BetaLandingPage />} />
+        <Route path="/get" element={<Navigate to="/beta" replace />} />
         <Route path="/class/:sessionId/enter" element={<ClassEntryPage />} />
         <Route path="/o/:org_code" element={<OrgPublicPage />} />
         <Route path="/privacy" element={<PrivacyPolicyPage />} />

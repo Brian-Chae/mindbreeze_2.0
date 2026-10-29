@@ -1,0 +1,100 @@
+# ─────────────────────────────────────────
+# MIND BREEZE 2.0 — Android 베타 AAB 빌드 (SDD-254)
+# 목적: 운영 연결 + 업로드 키 서명 AAB 를 만들어 아티팩트로 보관한다(Play 내부 테스트 업로드용).
+#       배포용 APK 는 Play Console 의 '구글 서명 유니버설 APK' 를 쓴다(대표 결정 #1=A). 이 워크플로는 업로드·배포를 하지 않는다.
+# 트리거: 수동만. versionCode 는 입력(24 이상 필수 — 심사 중 vc23 보다 커야 함).
+# 필요 시크릿(저장소에 설정 필요, 값은 여기 없음): ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+# ─────────────────────────────────────────
+name: Android Beta AAB
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "빌드할 브랜치/태그/SHA (원신호 합격 시험을 통과한 커밋)"
+        required: true
+      version_code:
+        description: "versionCode (24 이상, Play 전체에서 유일·증가)"
+        required: true
+      version_name:
+        description: "versionName (예: 1.0.3)"
+        required: true
+      web_host:
+        required: false
+        default: "mindbreeze.looxidlabs.com"
+      api_host:
+        required: false
+        default: "api.mindbreeze.looxidlabs.com"
+
+permissions:
+  contents: read
+
+jobs:
+  aab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: 입력 검증
+        env:
+          VC: ${{ inputs.version_code }}
+        run: |
+          [[ "$VC" =~ ^[0-9]+$ ]] || { echo "::error::version_code 는 숫자"; exit 1; }
+          [ "$VC" -ge 24 ] || { echo "::error::version_code 는 24 이상이어야 합니다(Play vc23 심사 중)"; exit 1; }
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: 프론트 빌드 (운영 설정) + Capacitor 동기화
+        env:
+          VITE_API_BASE_URL: https://${{ inputs.api_host }}/api/v1
+          VITE_PUBLIC_APP_URL: https://${{ inputs.web_host }}
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID_PROD }}
+          VITE_LIVE_PROTOCOL_V2: 'true'
+        run: |
+          cd frontend
+          npm install --legacy-peer-deps
+          npm run build
+          grep -rqF "${{ inputs.api_host }}" dist || { echo "::error::dist 에 운영 API 주소 없음"; exit 1; }
+          npx cap sync android
+      - name: dev 흔적 0건 검사
+        run: python3 deploy/ci/scan_dev_leaks.py frontend/dist --allowlist deploy/ci/dev-leak-allowlist.txt
+      - name: 서명 설정 복원
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PW: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          [ -n "$KS_B64" ] || { echo "::error::ANDROID_KEYSTORE_BASE64 시크릿이 없습니다"; exit 1; }
+          echo "$KS_B64" | base64 -d > frontend/android/upload.keystore
+          {
+            echo "storeFile=upload.keystore"
+            echo "storePassword=$KS_PW"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PW"
+          } > frontend/android/keystore.properties
+      - name: AAB 빌드
+        run: |
+          cd frontend/android
+          ./gradlew bundleRelease -PversionCode=${{ inputs.version_code }} -PversionName=${{ inputs.version_name }}
+      - name: 서명 지문·메타 기록
+        run: |
+          AAB=frontend/android/app/build/outputs/bundle/release/app-release.aab
+          sha256sum "$AAB"
+          keytool -printcert -jarfile "$AAB" | grep -E "SHA256" | tee out-cert.txt
+          { echo "## Android 베타 AAB"; echo "- versionCode: ${{ inputs.version_code }} / versionName: ${{ inputs.version_name }}"; echo "- 커밋: $(git rev-parse HEAD)"; echo '- 업로드 키 지문은 아티팩트 out-cert.txt. Play 내부 테스트에 업로드 후 콘솔에서 유니버설 APK 를 받으세요.'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-beta-aab-${{ inputs.version_code }}
+          retention-days: 14
+          path: |
+            frontend/android/app/build/outputs/bundle/release/app-release.aab
+            out-cert.txt
