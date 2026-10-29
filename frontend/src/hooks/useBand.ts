@@ -266,6 +266,8 @@ export interface UseBandResult {
   disconnect: () => Promise<void>;
   /** SDD-244: 화면이 1초마다 보여 준 6지표를 DisplaySnapshot으로 보존(수집 중이 아니면 무시) */
   recordDisplay: (rendered: RenderedMetrics | null, visible: boolean) => void;
+  /** 회차 종료 감지 시 close intent 를 로컬에 기록하고 전송한다(밴드 해제 없이 회차가 끝나는 경로). */
+  closeBiosignal: (reason: string) => Promise<unknown>;
 }
 
 function isWebBluetoothSupported(): boolean {
@@ -1904,6 +1906,7 @@ export function useBand({
     connect,
     disconnect,
     recordDisplay: biosignal.recordDisplay,
+    closeBiosignal: biosignal.close,
     recordingStatus: biosignal,
   };
 }

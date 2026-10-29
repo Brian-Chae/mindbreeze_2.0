@@ -7,6 +7,7 @@ import { freshnessOf } from '../../../../lib/session-live/live-view';
 import { liveMetricSnapshot } from '../../../../lib/session-live/live-metric-snapshot';
 import { ConnectionState } from 'livekit-client';
 import { useBand, type UseBandResult } from '../../../../hooks/useBand';
+import { useCloseBiosignalOnEnd } from '../../../../hooks/useCloseBiosignalOnEnd';
 import { BiosignalRecordingStatus } from '../../../../lib/biosignal/recording-status';
 import type { RenderedMetrics } from '../../../../lib/biosignal/display-snapshot';
 import { AnalysisMetricsService } from '../../../../lib/eeg/AnalysisMetricsService';
@@ -222,6 +223,8 @@ export function MemberClassContainer({
   });
   const band = useBand({ sessionId, participantId, enabled: connectionsActive, skipAuth: !isAuthenticated, entryCredential, v1FeatureUpload: v2Path !== 'web_wasm' && v2Path !== 'native' });
   bandConnectedRef.current = band.connectionState === 'connected';
+  // 호스트가 회차를 종료하면 회원은 밴드 해제 없이 떠난다 → 종료 phase 에서 close intent 를 한 번 기록한다.
+  useCloseBiosignalOnEnd(v2On && liveV2?.state?.session?.data.phase === 'ended', band.closeBiosignal);
   const bandRef = useRef(band);
   useEffect(() => {
     bandRef.current = band;

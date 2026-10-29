@@ -133,12 +133,12 @@ def test_정리_후에도_늦게_도착한_업로드는_complete로_복구된다
 def test_cutoff_deadline이_지난_ended_stream에_closed_at을_기록한다(maker, world):
     now = datetime.now(timezone.utc)
     with maker() as s:
-        mk = lambda status, closed, deadline: CaptureStream(  # noqa: E731
+        mk = lambda status, closed, deadline, cutoff=now - timedelta(days=2): CaptureStream(  # noqa: E731
             id=uuid.uuid4(), session_id=world.session_id, participant_id=world.members[0][1], owner_actor_id=uuid.uuid4(),
             generation=int(uuid.uuid4().int % 10**9), status=status, device_profile="d", algorithm_version="a", model_version="m",
-            opened_at=now - timedelta(days=2), closed_at=closed, cutoff_at=now - timedelta(days=2), close_deadline_at=deadline)
+            opened_at=now - timedelta(days=2), closed_at=closed, cutoff_at=cutoff, close_deadline_at=deadline)
         expired = mk("ended", None, now - timedelta(hours=1))
-        fresh = mk("ended", None, now + timedelta(hours=1))
+        fresh = mk("ended", None, now + timedelta(hours=1), cutoff=now - timedelta(minutes=5))  # cutoff 직후: 클라이언트 close 유예 안
         s.add_all([expired, fresh])
         s.commit()
         ids = (expired.id, fresh.id)
@@ -148,3 +148,27 @@ def test_cutoff_deadline이_지난_ended_stream에_closed_at을_기록한다(mak
         e, f = s.get(CaptureStream, ids[0]), s.get(CaptureStream, ids[1])
         assert e.closed_at is not None and e.close_reason == "close_deadline_expired" and e.status == "ended"
         assert f.closed_at is None
+
+
+def test_정상_종료_후_유예_안에_클라이언트_close가_없으면_closed_at을_기록한다(maker, world):
+    """회원이 밴드 해제 없이 회차 종료로 떠나면 capture.close 가 오지 않는다 — 24h 를 기다리지 않고 30분 유예 뒤 기록."""
+    now = datetime.now(timezone.utc)
+    with maker() as s:
+        mk = lambda cutoff_ago, closed: CaptureStream(  # noqa: E731
+            id=uuid.uuid4(), session_id=world.session_id, participant_id=world.members[0][1], owner_actor_id=uuid.uuid4(),
+            generation=int(uuid.uuid4().int % 10**9), status="ended", device_profile="d", algorithm_version="a", model_version="m",
+            opened_at=now - timedelta(hours=2), closed_at=closed, cutoff_at=now - cutoff_ago,
+            close_deadline_at=now - cutoff_ago + timedelta(hours=24))
+        stale = mk(timedelta(minutes=40), None)
+        recent = mk(timedelta(minutes=5), None)
+        done = mk(timedelta(minutes=40), now - timedelta(minutes=30))
+        s.add_all([stale, recent, done])
+        s.commit()
+        ids = (stale.id, recent.id, done.id)
+    with maker() as s:
+        assert biosignal_orphan_sweep.run_sweep(s)["streams_closed"] == 1
+    with maker() as s:
+        a, b, c = (s.get(CaptureStream, i) for i in ids)
+        assert a.closed_at is not None and a.close_reason == "session_ended_no_client_close" and a.status == "ended"
+        assert b.closed_at is None
+        assert c.close_reason is None  # 이미 closed_at 이 있는 행은 건드리지 않는다
