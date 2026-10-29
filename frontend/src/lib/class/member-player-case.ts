@@ -22,6 +22,8 @@ export interface MemberCaseInput {
   hand: MemberHand;
   band: BandUi;
   net: NetUi;
+  /** 브라우저(기기) 네트워크 상태. false 가 아니면서 net 이 ok 가 아니면 '서버/소켓만' 끊긴 것이다(밴드 연결과 무관) */
+  browserOnline?: boolean;
   battery: number | null;
   /** linkband_mode !== 'none'. false 면 밴드 UI 전체를 숨긴다(plan D7) */
   bandEnabled: boolean;
@@ -120,6 +122,8 @@ export interface MemberCase {
   showTrend: boolean;
   ring: MemberRingModel;
   conn: { ok: boolean; label: string; icon: 'dot' | 'wifi' | 'wifiOff' };
+  /** 기기는 온라인인데 서버 연결만 안 된 상태 — 안내 문구를 '인터넷 확인'이 아니라 '서버 재연결'로 구분한다 */
+  serverOnly: boolean;
   banner: { title: string; text: string } | null;
   pipFrozen: boolean;
   netDown: boolean;
@@ -243,8 +247,10 @@ function handButton(input: MemberCaseInput): MediaButton {
   return { s: 'idle', label: '손들기', disabled: false, pressed: false };
 }
 
-function connIndicator(net: NetUi): MemberCase['conn'] {
+function connIndicator(net: NetUi, serverOnly: boolean): MemberCase['conn'] {
   if (net === 'ok') return { ok: true, label: '연결됨', icon: 'dot' };
+  // 앱 복귀 직후처럼 기기 인터넷은 정상인데 서버 소켓만 끊긴 경우 — '연결 끊김'(인터넷 문제로 오해) 대신 서버 재연결 중으로 표시
+  if (serverOnly) return { ok: false, label: '서버 재연결 중', icon: 'wifi' };
   if (net === 'reconnecting') return { ok: false, label: '재연결 중', icon: 'wifi' };
   return { ok: false, label: '연결 끊김', icon: 'wifiOff' };
 }
@@ -265,6 +271,7 @@ export function deriveMemberCase(input: MemberCaseInput): MemberCase {
   const online = input.place === 'online';
   const group = input.mode === 'group';
   const netDown = input.net === 'down';
+  const serverOnly = input.net !== 'ok' && input.browserOnline === true;
   const mediaRow = online && !netDown && !input.viewerOnly;
   const slot = deriveSlot(input);
 
@@ -284,7 +291,8 @@ export function deriveMemberCase(input: MemberCaseInput): MemberCase {
     slot,
     showTrend: slot === null && input.bandEnabled,
     ring: deriveRing(input),
-    conn: connIndicator(input.net),
+    conn: connIndicator(input.net, serverOnly),
+    serverOnly,
     banner: input.net === 'reconnecting' ? { title: '연결이 불안정해요', text: '· 다시 연결 중이에요' } : null,
     pipFrozen: input.net !== 'ok',
     netDown,

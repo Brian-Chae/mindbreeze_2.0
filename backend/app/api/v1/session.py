@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Header, Query, Request, Response, status
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session as DBSession
 
-from app.api.deps import get_current_user, get_current_user_optional, require_roles
+from app.api.deps import archive_upload_slot, get_current_user, get_current_user_optional, require_roles
 from app.api.v1.onboarding import _parse_date
 from app.core.database import get_db
 from app.core.redis import get_redis
@@ -882,7 +882,7 @@ def ack_eeg_raw(
     )
 
 
-@router.post("/{session_id}/biosignal-raw/presign", response_model=biosignal_schema.PresignResponse)
+@router.post("/{session_id}/biosignal-raw/presign", response_model=biosignal_schema.PresignResponse, dependencies=[Depends(archive_upload_slot)])
 def presign_biosignal_raw(
     session_id: str,
     payload: biosignal_schema.PresignRequest,
@@ -898,7 +898,7 @@ def presign_biosignal_raw(
     )
 
 
-@router.post("/{session_id}/biosignal-raw/ack", response_model=biosignal_schema.AckResponse)
+@router.post("/{session_id}/biosignal-raw/ack", response_model=biosignal_schema.AckResponse, dependencies=[Depends(archive_upload_slot)])
 def ack_biosignal_raw(
     session_id: str,
     payload: biosignal_schema.AckRequest,
@@ -914,7 +914,7 @@ def ack_biosignal_raw(
     )
 
 
-@router.post("/{session_id}/biosignal-artifacts/presign", response_model=biosignal_schema.ArtifactPresignResponse)
+@router.post("/{session_id}/biosignal-artifacts/presign", response_model=biosignal_schema.ArtifactPresignResponse, dependencies=[Depends(archive_upload_slot)])
 def presign_biosignal_artifacts(
     session_id: str,
     payload: biosignal_schema.ArtifactPresignRequest,
@@ -930,7 +930,7 @@ def presign_biosignal_artifacts(
     )
 
 
-@router.post("/{session_id}/biosignal-artifacts/ack", response_model=biosignal_schema.ArtifactAckResponse)
+@router.post("/{session_id}/biosignal-artifacts/ack", response_model=biosignal_schema.ArtifactAckResponse, dependencies=[Depends(archive_upload_slot)])
 def ack_biosignal_artifacts(
     session_id: str,
     payload: biosignal_schema.ArtifactAckRequest,

@@ -339,6 +339,22 @@ def ack(session_id: str, payload: ArtifactAckRequest, db: DBSession, *, current_
     if any(w not in rows for w in wanted):
         raise HTTPException(status_code=404, detail="산출물을 찾을 수 없습니다")
 
+    # S3 검증은 DB 트랜잭션 밖에서 한다(느린 저장소 한 건이 커넥션을 쥐고 풀을 고갈시키지 않게).
+    to_verify = [
+        (r.id, r.object_key, r.size_bytes, r.checksum)
+        for item in payload.chunks
+        for r in (rows[item.artifact_id],)
+        if item.checksum == r.checksum and item.size_bytes == r.size_bytes and r.upload_status != "uploaded"
+    ]
+    db.commit()
+    verdicts = {
+        aid: storage_service.verify_object_sha256(key, expected_size=size, expected_sha256_hex=checksum)
+        for aid, key, size, checksum in to_verify
+    }
+    rows = {r.id: r for r in db.query(BiosignalArtifact).filter(BiosignalArtifact.id.in_(wanted)).all()}
+    if any(w not in rows for w in wanted):
+        raise HTTPException(status_code=404, detail="산출물을 찾을 수 없습니다")
+
     results, acked, failed = [], 0, 0
     for item in payload.chunks:
         row = rows[item.artifact_id]
@@ -350,8 +366,7 @@ def ack(session_id: str, payload: ArtifactAckRequest, db: DBSession, *, current_
             indexed = db.query(DisplaySnapshot).filter_by(artifact_pk=row.id).count() if row.artifact_kind == "indices" else 0
             results.append(_result(row, "uploaded", indexed=indexed))
             continue
-        ok, version = storage_service.verify_object_sha256(
-            row.object_key, expected_size=row.size_bytes, expected_sha256_hex=row.checksum)
+        ok, version = verdicts.get(row.id, (False, None))
         if ok is not True:
             reason = "verification_unavailable" if ok is None else "object_verification_failed"
             row.upload_status, row.verified_at, row.failure_reason = "failed", None, reason

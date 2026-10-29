@@ -35,6 +35,13 @@ public final class ArchiveUploader {
     /// 전송 실패 뒤 재시도 예약(초, 실행할 일). 호스트가 주입한다. 없으면 다음 pump(앱 시작·큐 변화·네트워크 복귀)에서 재시도한다.
     public var scheduleRetry: ((Double, @escaping () -> Void) -> Void)?
     private var sendingIntent = false
+    /// presign 요청이 진행 중인 항목(alias). attach 전(pending)에는 `counts.uploading` 에 잡히지 않아,
+    /// 복귀 직후 pump 가 연속 호출되면 같은 항목에 presign 을 중복 발사해 서버 풀을 고갈시켰다(dev 사고).
+    private var inFlight = Set<String>()
+    private let inFlightLock = NSLock()
+    func inFlightCount() -> Int { inFlightLock.lock(); defer { inFlightLock.unlock() }; return inFlight.count }
+    private func claim(_ alias: String) -> Bool { inFlightLock.lock(); defer { inFlightLock.unlock() }; return inFlight.insert(alias).inserted }
+    private func release(_ alias: String) { inFlightLock.lock(); inFlight.remove(alias); inFlightLock.unlock() }
     public static let intentRetrySeconds = 30.0
 
     public init(queue: ArchiveQueue, http: HTTPClient, files: FileUploading, apiBase: URL, sessionId: String, participantId: String?,
@@ -64,7 +71,9 @@ public final class ArchiveUploader {
             // 시작할 항목이 없고 업로드 중인 것도 없을 때(= 한 차례 drain 이 끝났을 때) 종료 기록을 보낸다.
             if due.isEmpty, self.queue.counts.uploading == 0 { self.sendPendingCloseIntent(tk) }
             for item in due {
-                if self.queue.counts.uploading >= Self.maxConcurrent { break }
+                // 동시 상한에 presign 단계(inFlight)도 포함한다. 이미 presign 중인 항목은 건너뛴다.
+                if self.queue.counts.uploading + self.inFlightCount() >= Self.maxConcurrent { break }
+                guard self.claim(item.alias) else { continue }
                 self.begin(item, tk)
             }
         }
@@ -102,10 +111,11 @@ public final class ArchiveUploader {
         let url = fileURL(item)
         guard let actual = Hashing.sha256Hex(file: url), actual == item.sha256 else {
             try? queue.apply(ArchiveDecision(stage: .presign, action: .quarantine, code: FileManager.default.fileExists(atPath: url.path) ? "local_hash_mismatch" : "local_file_missing", retryAfterMs: nil, splitCandidate: false), alias: item.alias, now: nowMs())
-            onChange?(); return
+            release(item.alias); onChange?(); return
         }
         post(path(item.kind, "presign"), ArchiveRequests.presignBody(item, participantId: participantId), tk) { [weak self] r in
             guard let self = self else { return }
+            defer { self.release(item.alias) }     // attach/fail 처리 뒤에 해제(그 사이 중복 presign 차단)
             switch r {
             case .failure: self.fail(item.alias, ArchiveClassifier.classifyNetworkError(.presign))
             case .success(let (status, body, _)):

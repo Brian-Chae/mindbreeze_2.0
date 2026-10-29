@@ -1,5 +1,6 @@
 """outbox WS 채널 폴링 — WS 서버 이벤트 루프에서 실행 (동일 루프 emit 보장)"""
 
+import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 
@@ -21,7 +22,11 @@ async def poll_and_deliver_ws(limit: int = 100) -> int:
     """
     from app.core.database import SessionLocal
 
+    # 이 함수는 WS 서버 이벤트 루프에서 돈다. 동기 DB 호출(풀 대기 포함)을 루프 스레드에서 직접 하면
+    # 풀이 가득 찼을 때 pool_timeout(30s) 동안 /health·Socket.IO 까지 함께 멈춘다 → 모든 DB 접근을 스레드로 보낸다.
     db = SessionLocal()
+    # 행 단위 commit 후에도 다음 행 속성을 읽을 때 DB 재조회(=루프 스레드의 동기 IO)가 일어나지 않게 한다.
+    db.expire_on_commit = False
     delivered = 0
     try:
         now = datetime.now(timezone.utc)
@@ -37,10 +42,8 @@ async def poll_and_deliver_ws(limit: int = 100) -> int:
         bind = db.get_bind()
         if bind is not None and bind.dialect.name == "postgresql":
             query = query.with_for_update(skip_locked=True)
-        items = (
-            query.order_by(NotificationOutbox.created_at)
-            .limit(limit)
-            .all()
+        items = await asyncio.to_thread(
+            lambda: query.order_by(NotificationOutbox.created_at).limit(limit).all()
         )
         for item in items:
             try:
@@ -65,12 +68,12 @@ async def poll_and_deliver_ws(limit: int = 100) -> int:
                 )
             # CEL-OUTBOX-03: 행 단위 커밋 — 전달(또는 실패 마킹) 사실을 즉시 반영한다.
             try:
-                db.commit()
+                await asyncio.to_thread(db.commit)
             except Exception:  # noqa: BLE001
                 logger.exception(
                     "[OUTBOX-WS] 행 단위 커밋 실패 (id=%s) — 롤백 후 다음 행 진행", item.id
                 )
-                db.rollback()
+                await asyncio.to_thread(db.rollback)
     finally:
-        db.close()
+        await asyncio.to_thread(db.close)
     return delivered
