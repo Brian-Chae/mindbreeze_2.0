@@ -122,8 +122,12 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
   }, []);
 
   const pumping = useRef(false);
-  const pump = useCallback(async () => {
-    const rt = runtime.current; if (!rt) return;
+  /** 진행 중인 명시 종료(close). unmount cleanup 이 이게 끝날 때까지 lease 를 반납하지 않는다. */
+  const closeInflight = useRef<Promise<unknown> | null>(null);
+  /** force: 화면이 이미 내려간(unmount) 뒤의 종료 전송 — 호출 시점에 잡아 둔 런타임(forceRt)으로 rt.active() 가 false 여도 보낸다. */
+  const pump = useCallback(async (forceRt?: CaptureRuntime) => {
+    const rt = forceRt ?? runtime.current; if (!rt) return;
+    const force = forceRt !== undefined;
     // 재진입 금지: 4초 타이머·online·close 가 겹쳐 같은 객체를 동시에 presign 하던 문제를 막는다.
     if (pumping.current) return;
     pumping.current = true;
@@ -133,14 +137,15 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
       if (typeof navigator !== 'undefined' && navigator.onLine === false) { await refresh(); return; }
       const v3 = isArchiveV3Enabled();
       if (v3) await recoverOversized(rt.queue).catch(error => logger.warn('과대 산출물 분할 복구 실패, 원본 보존', error));
-      for (let round = 0; round < PUMP_MAX_ROUNDS && rt.active(); round++) {
-        const summary = await uploadBiosignalQueue(rt.queue, rt.api, (url, payload, headers) => putEegRawToPresignedUrl(url, payload, headers), rt.active, Date.now,
+      const live = force ? () => true : rt.active;
+      for (let round = 0; round < PUMP_MAX_ROUNDS && live(); round++) {
+        const summary = await uploadBiosignalQueue(rt.queue, rt.api, (url, payload, headers) => putEegRawToPresignedUrl(url, payload, headers), live, Date.now,
           v3 ? { archiveV3: true, captureStreamId: archiveOpts.current.captureStreamId, originMonotonicUs: rt.session.originMonotonicUs, closeDeadlineMs: archiveOpts.current.closeDeadlineMs } : {});
         if (summary.halted) { logger.warn('archive 전송 중단(권한·동의)', summary.halted); break; }
         if (summary.acked === 0 || summary.failed > 0) break;
         if (mounted.current) await refresh();
       }
-      const result = await sendBiosignalEvents(rt.queue, rt.api, rt.active);
+      const result = await sendBiosignalEvents(rt.queue, rt.api, live);
       if (result?.close_state && mounted.current) setCloseState(result.close_state);
     } catch (error) { logger.warn('biosignal 업로드 실패, 사본 보존', error); }
     finally { pumping.current = false; }
@@ -221,6 +226,8 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
       runtime.current = null;
       const cleanup = startup.then(async () => {
         if (!rt || rt.session !== session) return;
+        // 회차 종료로 화면이 내려가는 순간 close intent 기록·전송이 진행 중이면 끝날 때까지 기다린다(lease 반납이 기록을 깨뜨림).
+        await closeInflight.current?.catch(() => undefined);
         try { await session.sealOpen(); await rt.collector.flush(true); await rt.display.flush(true); }
         catch (error) { suspendedRuntimes.set(rt.queue.scopeKey, rt); logger.warn('종료 전 로컬 기록 실패 — 영속 journal 및 메모리 사본 유지', error); }
         finally { await session.pause(); }
@@ -230,7 +237,7 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
     };
   }, [active, accountId, sessionId, participantId, entryCredential, skipAuth, pump, displayViewKind, generation]);
 
-  const close = useCallback(async (reason: string) => {
+  const closeOnce = useCallback(async (reason: string): Promise<CloseIntent | null> => {
     const rt = runtime.current; if (!rt) return null;
     closing.current = true;
     try {
@@ -239,13 +246,20 @@ export function useBiosignalCapture(options: UseBiosignalCaptureOptions): UseBio
       await rt.collector.flush(true);
       await rt.display.flush(true);
       const intent = await rt.session.close(reason);
-      await pump();
+      await pump(rt); // 이 사이 화면이 내려가 runtime.current 가 비어도 잡아 둔 rt 로 전송한다
       return intent;
     } catch (error) { logger.warn('close intent 기록 실패', error); return null; } finally {
       closing.current = false; wasConnected.current = false;
       // 수집 종료 후에도 영속 큐 업로더와 online 재개는 살아 있다.
     }
   }, [pump]);
+
+  const close = useCallback((reason: string): Promise<CloseIntent | null> => {
+    const run = closeOnce(reason);
+    closeInflight.current = run;
+    void run.finally(() => { if (closeInflight.current === run) closeInflight.current = null; });
+    return run;
+  }, [closeOnce]);
 
   return {
     status: active ? status : 'inactive', stopReason, pendingCount, blockedCount, quotaWarning, closeState,

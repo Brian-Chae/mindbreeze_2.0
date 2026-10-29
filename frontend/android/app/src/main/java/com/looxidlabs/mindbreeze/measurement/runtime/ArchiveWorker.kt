@@ -44,10 +44,18 @@ object NativeArchiveOnly {
         val q = com.looxidlabs.mindbreeze.measurement.archive.ArchiveQueue(java.io.File(ctx.filesDir, "measurement/${cfg.sessionId}/archive"))
         q.repairLegacyFeatures({ com.looxidlabs.mindbreeze.measurement.archive.RawIds.streamId(it, com.looxidlabs.mindbreeze.measurement.Sensor.EEG) },
             { com.looxidlabs.mindbreeze.measurement.archive.RawIds.segmentId(it, com.looxidlabs.mindbreeze.measurement.Sensor.EEG, 0) })
-        if (q.counts().archivePending == 0) return true
+        val intents = com.looxidlabs.mindbreeze.measurement.archive.CloseIntentStore(java.io.File(ctx.filesDir, "measurement/${cfg.sessionId}/close-intent.json"))
+        if (q.counts().archivePending == 0 && intents.pending() == null) return true
         if (tokens.current() == null) return true // 권한 없으면 올리지 않는다
-        var sum = com.looxidlabs.mindbreeze.measurement.archive.ArchiveUploader(cfg.apiBase, q, { tokens.current() }, okhttp3.OkHttpClient(), { cfg.streamId }).drain()
-        if (sum.halted == null && sum.failed == 0) return true
+        val up = com.looxidlabs.mindbreeze.measurement.archive.ArchiveUploader(cfg.apiBase, q, { tokens.current() }, okhttp3.OkHttpClient(), { cfg.streamId })
+        var sum = up.drain()
+        // 프로세스가 죽어 서비스 없이 올리는 경로도 종료 기록을 보낸다.
+        var intentOk = true
+        intents.pending()?.let { p ->
+            intentOk = try { up.sendCloseIntent(cfg.sessionId, cfg.participantId, p.intent) } catch (_: Exception) { false }
+            if (intentOk) intents.markSent() else intents.markAttempt()
+        }
+        if (sum.halted == null && sum.failed == 0 && intentOk) return true
         return sum.halted != null // halt 은 재시도해도 같은 결과 → 종료, 그 외 실패는 WorkManager backoff
     }
 }
