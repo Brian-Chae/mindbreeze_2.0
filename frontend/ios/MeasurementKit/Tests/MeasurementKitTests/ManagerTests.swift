@@ -310,3 +310,71 @@ final class ManagerRecoveryAndContractTests: XCTestCase {
         XCTAssertFalse(evs.isEmpty)
     }
 }
+
+/// 앱 실행 직후 메모리 초과 종료 회귀: 낡은/거대한 세션은 되살리지 않고, 낡은 세션이 새 시작을 막지 않는다.
+final class RecoveryVetoTests: XCTestCase {
+    var dir: URL!
+    let sid = "00000001-0000-4000-8000-000000000001", sid2 = "00000002-0000-4000-8000-000000000002"
+    override func setUpWithError() throws {
+        dir = FileManager.default.temporaryDirectory.appendingPathComponent("rv-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    }
+    override func tearDownWithError() throws { try? FileManager.default.removeItem(at: dir) }
+
+    func make(_ b: FakeBand, _ l: FakeLive, _ o: BandOwnership, now: @escaping () -> UInt64 = { MonotonicClock.wallMs() }) -> MeasurementManager {
+        MeasurementManager(root: dir, band: b, ownership: o, makeLive: { _ in l },
+                           makeEngine: { d, ctx, _ in try MeasurementEngine(dir: d, configJSON: CoreBridgeTests.cfg, context: ctx, journalSync: .none) },
+                           scheduler: ManualScheduler(), nowMs: now)
+    }
+    func owner() -> BandOwnership { let o = BandOwnership(defaults: UserDefaults(suiteName: "rv-\(UUID().uuidString)")!); o.nativeEnabled = true; return o }
+    func sessionDir(_ s: String) -> URL { dir.appendingPathComponent("sessions").appendingPathComponent(s) }
+
+    func testVetoPureRules() throws {
+        let d = sessionDir(sid); try FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
+        let now = MonotonicClock.wallMs()
+        XCTAssertNil(MeasurementManager.recoveryVeto(sessionDir: d, nowMs: now), "저널 없음 = 허용")
+        FileManager.default.createFile(atPath: d.appendingPathComponent("raw.journal").path, contents: Data([1]))
+        XCTAssertNil(MeasurementManager.recoveryVeto(sessionDir: d, nowMs: now), "방금 쓴 raw = 허용")
+        XCTAssertEqual(MeasurementManager.recoveryVeto(sessionDir: d, nowMs: now + 4 * 3600 * 1000), "stale_session")
+        XCTAssertNil(MeasurementManager.recoveryVeto(sessionDir: d, nowMs: now + 2 * 3600 * 1000))
+        // sparse 파일로 129MB 모사(실제 디스크 사용 없음)
+        let f = d.appendingPathComponent("feature.journal"); FileManager.default.createFile(atPath: f.path, contents: nil)
+        let h = try FileHandle(forWritingTo: f); try h.truncate(atOffset: MeasurementManager.recoveryMaxJournalBytes + 1); try h.close()
+        XCTAssertEqual(MeasurementManager.recoveryVeto(sessionDir: d, nowMs: now), "journal_too_large")
+    }
+
+    func startCapturing(_ m: MeasurementManager, _ l: FakeLive, session: String) throws {
+        _ = try m.startMeasurement(sessionId: session, credentialHandle: "cred_handle_AbCdEfGh0123", configHash: String(repeating: "a", count: 64), requestId: "0000001e-0000-4000-8000-00000000001e")
+        l.ackCaptureStart()
+    }
+
+    func testStaleActiveSessionIsNotResurrectedAndEvidenceKept() throws {
+        let l1 = FakeLive(); let m1 = make(FakeBand(), l1, owner()); try startCapturing(m1, l1, session: sid)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: dir.appendingPathComponent("active.json").path))
+        // 이틀 뒤 앱 재시작
+        let b2 = FakeBand(), l2 = FakeLive(), o2 = owner()
+        let m2 = make(b2, l2, o2, now: { MonotonicClock.wallMs() + 48 * 3600 * 1000 })
+        XCTAssertFalse(m2.recoverOnLaunch())
+        XCTAssertEqual(b2.connects, 0); XCTAssertEqual(l2.started, 0); XCTAssertFalse(o2.isNativeOwning)
+        XCTAssertEqual(m2.state, .idle)
+        let names = try FileManager.default.contentsOfDirectory(atPath: dir.path)
+        XCTAssertFalse(names.contains("active.json"))
+        XCTAssertTrue(names.contains { $0.hasPrefix("active.abandoned-") && $0.hasSuffix("stale_session.json") }, "삭제하지 않고 보존")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: sessionDir(sid).appendingPathComponent("raw.journal").path), "세션 디렉터리는 그대로")
+        // 이어서 새 회차 시작이 막히지 않는다
+        _ = try m2.startMeasurement(sessionId: sid2, credentialHandle: "cred_handle_AbCdEfGh0123", configHash: String(repeating: "a", count: 64), requestId: "0000001f-0000-4000-8000-00000000001f")
+        XCTAssertEqual(m2.state, .arming)
+    }
+
+    func testStartingNewSessionSupersedesStaleActiveOne() throws {
+        let o = owner(); let b = FakeBand(), l = FakeLive(); let m = make(b, l, o)
+        try startCapturing(m, l, session: sid)
+        XCTAssertThrowsError(try m.startMeasurement(sessionId: sid, credentialHandle: "cred_handle_AbCdEfGh0123", configHash: String(repeating: "a", count: 64), requestId: "0000002a-0000-4000-8000-00000000002a")) {
+            XCTAssertEqual($0 as? ManagerError, .alreadyActive)        // 같은 회차 다른 requestId 는 기존대로 거절
+        }
+        let r = try m.startMeasurement(sessionId: sid2, credentialHandle: "cred_handle_AbCdEfGh0123", configHash: String(repeating: "a", count: 64), requestId: "0000002b-0000-4000-8000-00000000002b")
+        XCTAssertEqual(r["state"] as? String, "ARMING")
+        XCTAssertTrue(l.dispatched.contains { ($0["kind"] as? String) == "capture.close" }, "이전 회차는 봉인(capture.close)")
+        XCTAssertEqual(l.dispatched.filter { ($0["kind"] as? String) == "capture.start" }.count, 2)
+    }
+}

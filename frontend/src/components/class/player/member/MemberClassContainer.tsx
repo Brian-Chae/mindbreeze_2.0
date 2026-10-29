@@ -32,7 +32,7 @@ import { useNativeMeasurementV2 } from '../../../../lib/measurement-web/use-nati
 import { decideMeasurementPath } from '../../../../lib/measurement-web/measurement-path';
 import { getNativeMeasurement, isNativeMeasurementAvailable } from '../../../../lib/native-measurement';
 import { Capacitor } from '@capacitor/core';
-import { isNativeBandOwned } from '../../../../lib/native-measurement/device-status';
+import { describeNativeStartFailure, isNativeBandOwned } from '../../../../lib/native-measurement/device-status';
 import { isBleSupported } from '../../../../lib/ble';
 import { toBandReport } from '../../../../lib/measurement-web/band-report';
 import { ClassChatPanel } from '../../../chat/ClassChatPanel';
@@ -494,7 +494,7 @@ export function MemberClassContainer({
       signalLabel: signalQualityLevelLabel(signalLevel),
       contactLabel: contactStatusLabel(deviceStatus),
       connectedElapsedSec: band.connectedElapsedSec,
-      error: band.error,
+      error: describeNativeStartFailure(nativeM.path, nativeM.status, nativeM.code) ?? band.error,
       analyzing: isAnalyzing,
       raw,
       ppg,
