@@ -1,6 +1,7 @@
 // 서사형 리포트 커버 — ReportDetailPage / 토큰 열람 페이지 공용 (SDD-045 · SDD-052)
 
 import type { AdaptedReportContent, ReportDto } from '../../lib/api/reports';
+import { buildReportSessionInfo } from '../../lib/report/session-info';
 
 function formatDate(iso: string | null): string {
   if (!iso) return '-';
@@ -18,6 +19,13 @@ export default function ReportCoverSection({
   const headline = adapted.headline ?? '리포트';
   const sessionTitle = report.session_title || headline;
   const sessionType = report.session_type ?? '-';
+  const info = buildReportSessionInfo(report, adapted);
+  const summaryRows: Array<[string, string]> = [
+    ['클래스', info.className ?? '클래스 정보 없음'],
+    ['진행 시간', info.timeLabel ?? '진행 시간 정보 없음'],
+    ['기록된 신호', info.recordedSignals ?? '신호 정보 없음'],
+    ['데이터 품질', info.qualityLabel ?? '측정 품질 정보가 제공되지 않았어요.'],
+  ];
 
   return (
     <section className="report-print-cover relative overflow-hidden rounded-2xl border border-[#EFEFEF] bg-[#F5EDFC] p-8 mobile:p-4">
@@ -60,6 +68,14 @@ export default function ReportCoverSection({
         <p className="report-print-participant hidden">
           {report.participant_name ? `${report.participant_name}님을 위한 기록` : '참여자 정보 없음'}
         </p>
+        <dl data-testid="cover-session-summary" className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-[13px] mobile:text-mb-caption">
+          {summaryRows.map(([label, value]) => (
+            <div key={label} className="flex gap-2">
+              <dt className="shrink-0 font-bold text-[#5F0080]">{label}</dt>
+              <dd className="m-0 text-[#4A3A55] mobile:[overflow-wrap:anywhere]">{value}</dd>
+            </div>
+          ))}
+        </dl>
         {report.sent_at && (
           <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#F0F9F5] text-[12px] mobile:text-mb-caption font-bold text-[#26724B] border border-[#D8EFE3]">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
