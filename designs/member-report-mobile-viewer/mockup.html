@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>회원 리포트 모바일 뷰어 시안</title>
+<style>
+:root{--p:#5F0080;--pc:#F5EDFC;--g:#59CE90;--gc:#F0F9F5;--bc:#F2F3F8;--ink:#302b35;--line:#e9e4ec;--gray:#5A5A5A}
+*{box-sizing:border-box}body{margin:0;font:14px/1.7 -apple-system,"Apple SD Gothic Neo",sans-serif;color:var(--ink);background:#ece8ef;word-break:keep-all}
+h1.page{font-size:18px;margin:0;padding:20px 32px 0}p.sub{margin:4px 32px 0;color:var(--gray);font-size:13px}
+.boards{display:flex;gap:40px;padding:24px 32px 48px;flex-wrap:wrap;align-items:flex-start}
+.board{flex:0 0 auto}.board>h2{font-size:13px;margin:0 0 10px;color:var(--p)}
+.desk{width:760px;height:760px;background:#faf9fb;border:1px solid var(--line);border-radius:14px;overflow:hidden;position:relative}
+.bar{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:#fff;border-bottom:1px solid var(--line);font-weight:700;color:var(--p);font-size:13px}
+.btn{font:600 13px/1 inherit;border:1px solid #E8D9F5;background:#fff;color:var(--p);padding:11px 16px;border-radius:12px;min-height:44px;cursor:pointer}
+.stage{height:calc(100% - 62px);overflow-y:auto;padding:20px 0;display:flex;justify-content:center;background:linear-gradient(#f7f2fa,#efe9f3)}
+.phone{width:390px;background:#fff;border:1px solid var(--line);border-radius:28px;box-shadow:0 18px 50px #40234d22;overflow:hidden;align-self:flex-start}
+.cover{background:var(--pc);padding:26px 22px}.eb{font-size:11px;font-weight:700;letter-spacing:1.5px;color:var(--p)}
+.cover h3{margin:10px 0 6px;font-size:26px;line-height:1.35;color:var(--p);letter-spacing:-1px}
+.cover p{margin:0;color:#6d547a;font-size:13px}
+.sess{margin-top:18px;background:#ffffffd9;border-radius:14px;padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;font-size:12px}
+.sess b{display:block;color:var(--gray);font-weight:400;font-size:11px}.sess span{font-weight:600}
+.sec{padding:24px 22px}.sec.g{background:var(--gc)}.sec.b{background:var(--bc)}
+.sec h4{margin:6px 0 12px;font-size:18px;letter-spacing:-.5px}
+.metric{background:#fff;border:1px solid #e7ece9;border-radius:16px;padding:18px;margin-top:12px}
+.delta{font-size:26px;font-weight:700;color:var(--p);letter-spacing:-1px}.delta small{font-size:13px;font-weight:500;margin-left:6px}
+svg.t{width:100%;height:120px;display:block;margin-top:8px}
+.badge{font-size:11px;background:var(--gc);color:#26724b;padding:2px 8px;border-radius:20px}
+.x{background:#fff}.xwide{width:100%;max-width:none}
+.bad{width:1180px;transform:scale(.62);transform-origin:top left;height:760px}
+.badbox{width:732px;height:470px;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:#faf9fb}
+.badrow{display:grid;grid-template-columns:1fr 1.1fr;gap:20px;padding:24px;background:#fff;margin:16px 40px;border-radius:16px}
+.tag{display:inline-block;font-size:11px;padding:2px 9px;border-radius:20px;margin-left:6px}
+.no{background:#fde8e6;color:#b3362d}.ok{background:#e1f5ea;color:#26724b}
+.modal-bg{position:absolute;inset:0;background:#302b3566;display:grid;place-items:center}
+.modal{width:700px;height:680px;background:#faf9fb;border-radius:20px;overflow:hidden;box-shadow:0 24px 80px #302b3560;display:flex;flex-direction:column}
+.modal .bar{background:#fff}.mbody{flex:1;overflow:hidden;display:grid;grid-template-columns:130px 1fr;gap:18px;padding:18px}
+.side a{display:block;padding:8px 10px;font-size:12px;color:var(--gray);border-radius:8px}.side a:first-child{background:var(--pc);color:var(--p)}
+.wide{background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.wide .row{display:grid;grid-template-columns:1fr 1.1fr;gap:16px;padding:16px;align-items:center}
+.note{font-size:12px;color:var(--gray);margin:10px 0 0;max-width:760px}
+</style></head><body>
+<h1 class="page">회원 리포트 — 모바일 뷰어 + 데스크톱 보기 (시안 v1)</h1>
+<p class="sub">① 현재 문제 → ② 제안(기본: 모바일 뷰어) → ③ '데스크톱 보기' 팝업</p>
+<div class="boards">
+
+<div class="board"><h2>① 현재 — 넓은 화면에서 그래프가 퍼짐 <span class="tag no">문제</span></h2>
+<div class="desk" style="height:360px">
+ <div class="bar"><span>리포트 상세</span><span style="font-weight:400;color:var(--gray)">폭 1160px</span></div>
+ <div style="padding:16px 40px;background:#fff;margin-top:0">
+  <div class="eb">03 · 몸의 변화</div>
+  <div class="metric" style="display:grid;grid-template-columns:1fr 1.4fr;gap:20px;align-items:center">
+   <div><span class="badge">호흡수</span><div class="delta">0.5<small>유지</small></div><div style="font-size:12px;color:var(--gray)">전반 14.8 → 후반 14.3</div></div>
+   <svg viewBox="0 0 400 90" style="width:100%;height:90px"><path d="M0 50 C60 30 120 70 200 45 S340 30 400 55" fill="none" stroke="#5F0080" stroke-width="2"/></svg>
+  </div>
+ </div>
+ <p class="note" style="margin:6px 40px">그래프 가로로 길게 늘어나 변화가 평평해 보이고, 모바일 설계 의도와 다름.</p>
+</div></div>
+
+<div class="board"><h2>② 제안 — 데스크톱에서도 모바일 뷰어로 고정 <span class="tag ok">기본</span></h2>
+<div class="desk">
+ <div class="bar"><span>리포트 상세</span><button class="btn">🖥 데스크톱 보기</button></div>
+ <div class="stage"><div class="phone">
+  <div class="cover"><div class="eb">MIND BREEZE · 몸·마음 리포트</div><h3>나에게 돌아온 20분,<br>몸과 마음의 이야기</h3><p>오늘 나에게 일어난 작은 변화를 만나보세요.</p>
+   <div class="sess"><div><b>클래스</b><span>나를 돌보는 호흡 명상</span></div><div><b>진행 시간</b><span>오후 2:00–2:20 · 20분</span></div><div><b>기록된 신호</b><span>뇌파 · 맥파 · 호흡</span></div><div><b>데이터 품질</b><span>측정 신뢰도 높음</span></div></div></div>
+  <div class="sec g"><div class="eb" style="color:#26724b">03 · 몸의 변화</div><h4>몸이 들려주는 느긋해진 리듬</h4>
+   <div class="metric"><span class="badge">호흡수</span><div class="delta">0.5<small>비슷하게 유지됐어요</small></div>
+   <svg class="t" viewBox="0 0 300 120"><path d="M0 70 C40 50 80 90 140 62 S240 48 300 72" fill="none" stroke="#5F0080" stroke-width="2.5"/></svg></div>
+   <div class="metric"><span class="badge">심박수</span><div class="delta">−3.2<small>↓ 좋아졌어요</small></div>
+   <svg class="t" viewBox="0 0 300 120"><path d="M0 40 C60 50 120 70 180 78 S260 88 300 92" fill="none" stroke="#5F0080" stroke-width="2.5"/></svg></div></div>
+  <div class="sec b"><div class="eb">04 · 마음의 변화</div><h4>지금 이 순간에 조금 더 가까이</h4></div>
+ </div></div>
+</div>
+<p class="note">폭 430px 한 컬럼, 기기 프레임 카드. 상단 우측 '데스크톱 보기'는 561px 이상에서만 표시.</p></div>
+
+<div class="board"><h2>③ '데스크톱 보기' 클릭 — 팝업(모달) <span class="tag ok">선택</span></h2>
+<div class="desk">
+ <div class="bar"><span>리포트 상세</span><button class="btn">🖥 데스크톱 보기</button></div>
+ <div class="stage"><div class="phone" style="height:300px"><div class="cover"><div class="eb">MIND BREEZE</div><h3>나에게 돌아온 20분</h3></div></div></div>
+ <div class="modal-bg"><div class="modal">
+  <div class="bar"><span>데스크톱 보기</span><span><button class="btn" style="margin-right:6px">📱 모바일로 보기</button><button class="btn">닫기 ✕</button></span></div>
+  <div class="mbody"><nav class="side"><a>01 나의 명상</a><a>02 종합 여정</a><a>03 몸의 변화</a><a>04 마음의 변화</a><a>05 마무리</a></nav>
+   <div class="wide"><div class="cover" style="padding:22px"><div class="eb">MIND BREEZE · 명상 여정</div><h3 style="font-size:24px">나에게 돌아온 20분,<br>몸과 마음의 이야기</h3></div>
+    <div class="row"><div><span class="badge">호흡수</span><div class="delta">0.5<small>유지</small></div></div><svg viewBox="0 0 300 100" style="width:100%;height:90px"><path d="M0 55 C40 35 80 75 140 50 S240 38 300 58" fill="none" stroke="#5F0080" stroke-width="2.5"/></svg></div>
+    <div class="row"><div><span class="badge">심박수</span><div class="delta">−3.2<small>↓</small></div></div><svg viewBox="0 0 300 100" style="width:100%;height:90px"><path d="M0 30 C60 40 120 60 180 68 S260 78 300 82" fill="none" stroke="#5F0080" stroke-width="2.5"/></svg></div>
+   </div></div>
+ </div></div>
+</div>
+<p class="note">기존 넓은 레이아웃(사이드 목차 + 2열 지표)을 그대로 팝업으로 제공. ESC·바깥 클릭·닫기로 종료.</p></div>
+
+</div></body></html>
