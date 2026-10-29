@@ -7,7 +7,7 @@
 use crate::clock::{Admission, ClockConfig, SensorClock, Verdict};
 use crate::dsp::biquad::FilterImpl;
 use crate::dsp::acc::{self, AccPoint, AccResult};
-use crate::dsp::eeg::{self, EegPoint, EegResult};
+use crate::dsp::eeg::{self, Bands, EegPoint, EegResult};
 use crate::guard::{self, GuardReason, GuardStats};
 use crate::dsp::hrv::{HrvSnapshot, HrvState};
 use crate::dsp::ppg::{self, PpgPoint, PpgResult};
@@ -204,6 +204,22 @@ pub struct MetricSet {
     pub sdnn: MetricValue,
     /// 총 신경활동 raw(서버가 활성 모델로 두뇌 휴식 점수를 재계산하는 입력). 구 클라이언트는 미전송.
     pub tna_raw: MetricValue,
+    // ── 실시간 v2 feature 확장(선택 필드, 구 앱 메시지에는 없음) — v1 feature 정의·단위와 동일 ──
+    pub delta_power: MetricValue,
+    pub theta_power: MetricValue,
+    pub alpha_power: MetricValue,
+    pub beta_power: MetricValue,
+    pub gamma_power: MetricValue,
+    pub total_power: MetricValue,
+    pub stress_index: MetricValue,
+    pub cognitive_load: MetricValue,
+    pub faa: MetricValue,
+    pub hemispheric_balance: MetricValue,
+    pub rmssd: MetricValue,
+    pub lf_power: MetricValue,
+    pub hf_power: MetricValue,
+    pub lf_hf_ratio: MetricValue,
+    pub motion: MetricValue,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -322,6 +338,17 @@ struct LatestEeg {
     relaxation: f64,
     emotion: f64,
     tna: f64,
+    // 확장 feature 원천 — 구 체크포인트(필드 없음) 복원 호환을 위해 default
+    #[serde(default)]
+    bands: Bands,
+    #[serde(default)]
+    stress: f64,
+    #[serde(default)]
+    cognitive_load: f64,
+    #[serde(default)]
+    hemispheric_balance: f64,
+    #[serde(default)]
+    faa: Option<f64>,
     cohort: ScoreSet,
     model: Option<ScoreSet>,
     /// 윈도 유효성 가드에 걸리면 사유. Some 이면 EEG 지표는 모두 invalid(null).
@@ -353,7 +380,7 @@ struct CoreState {
     wm_us: [Option<u64>; 2],
     next_frame_us: Option<u64>,
     seq: u64,
-    last_valid: [Option<(u64, u64)>; 10],
+    last_valid: [Option<(u64, u64)>; 25],
     last_push_mono_us: Option<u64>,
     last_data_end_us: u64,
     gap_open: bool,
@@ -423,7 +450,7 @@ impl Core {
             wm_us: [None, None],
             next_frame_us: None,
             seq: 0,
-            last_valid: [None; 10],
+            last_valid: [None; 25],
             last_push_mono_us: None,
             last_data_end_us: 0,
             gap_open: false,
@@ -651,6 +678,11 @@ impl Core {
             relaxation: ix.relaxation_index,
             emotion: ix.emotional_stability,
             tna: ix.total_neural_activity,
+            bands: res.bands,
+            stress: ix.stress_index,
+            cognitive_load: ix.cognitive_load,
+            hemispheric_balance: ix.hemispheric_balance,
+            faa: ix.faa,
             cohort,
             model,
             guard,
@@ -678,6 +710,11 @@ impl Core {
             relaxation: 0.0,
             emotion: 0.0,
             tna: 0.0,
+            bands: Bands::default(),
+            stress: 0.0,
+            cognitive_load: 0.0,
+            hemispheric_balance: 0.0,
+            faa: None,
             cohort: ScoreSet::default(),
             model: None,
             guard: Some(reason),
@@ -843,6 +880,20 @@ impl Core {
 
         let tna_raw = mk(9, "index_raw", raw(|e| e.tna));
 
+        // 확장 EEG feature(v1 정의 그대로). 밴드파워·total_power 는 채널 가중 병합값, total_power = 5밴드 합.
+        let band_pick = |f: fn(&Bands) -> f64| eeg_state.map(|e| f(&e.bands));
+        let delta_power = mk(10, "power_raw", band_pick(|b| b.delta));
+        let theta_power = mk(11, "power_raw", band_pick(|b| b.theta));
+        let alpha_power = mk(12, "power_raw", band_pick(|b| b.alpha));
+        let beta_power = mk(13, "power_raw", band_pick(|b| b.beta));
+        let gamma_power = mk(14, "power_raw", band_pick(|b| b.gamma));
+        let total_power = mk(15, "power_raw", band_pick(|b| b.delta + b.theta + b.alpha + b.beta + b.gamma));
+        let stress_index = mk(16, "index_raw", raw(|e| e.stress));
+        let cognitive_load = mk(17, "index_raw", raw(|e| e.cognitive_load));
+        // FAA: 양 채널 접촉·알파 양수일 때만 산출(v1 동일). 아니면 null+사유.
+        let faa = mk(18, "index_raw", eeg_state.and_then(|e| e.faa.ok_or(("invalid", "faa_unavailable"))));
+        let hemispheric_balance = mk(19, "index_raw", raw(|e| e.hemispheric_balance));
+
         let ppg_gate = |p: Option<&LatestPpg>, have_any: bool| -> Result<(), (&'static str, &'static str)> {
             match p {
                 Some(_) => Ok(()),
@@ -854,6 +905,12 @@ impl Core {
         let gate = ppg_gate(ppg_fresh, have_ppg);
         let bpm = mk(6, "beats_per_min", gate.and_then(|_| ppg_fresh.unwrap().hrv.heart_rate.ok_or(("warming_up", "no_heartbeat_yet"))));
         let sdnn = mk(8, "ms", gate.and_then(|_| ppg_fresh.unwrap().hrv.sdnn.ok_or(("warming_up", "insufficient_rr_window"))));
+        let rmssd = mk(20, "ms", gate.and_then(|_| ppg_fresh.unwrap().hrv.rmssd.ok_or(("warming_up", "insufficient_rr_window"))));
+        let lf_power = mk(21, "power_raw", gate.and_then(|_| ppg_fresh.unwrap().hrv.lf_power.ok_or(("warming_up", "insufficient_rr_window"))));
+        let hf_power = mk(22, "power_raw", gate.and_then(|_| ppg_fresh.unwrap().hrv.hf_power.ok_or(("warming_up", "insufficient_rr_window"))));
+        let lf_hf_ratio = mk(23, "index_raw", gate.and_then(|_| ppg_fresh.unwrap().hrv.lf_hf_ratio.ok_or(("warming_up", "insufficient_rr_window"))));
+        // motion: ACC 강도/100(0~1) 최신값(PPG 와 무관). 아직 ACC 없음 → warming_up.
+        let motion = mk(24, "ratio_0_1", self.s.hrv.motion().ok_or(("warming_up", "no_acc_data")));
         let resp = mk(
             7,
             "breaths_per_min",
@@ -875,11 +932,15 @@ impl Core {
         );
         self.s.last_valid = lv;
 
-        let mut metrics = MetricSet { focus_raw, focus_display, relaxation_raw, relaxation_display, emotion_raw, emotion_display, bpm, respiration: resp, sdnn, tna_raw };
+        let mut metrics = MetricSet { focus_raw, focus_display, relaxation_raw, relaxation_display, emotion_raw, emotion_display, bpm, respiration: resp, sdnn, tna_raw,
+            delta_power, theta_power, alpha_power, beta_power, gamma_power, total_power, stress_index, cognitive_load, faa, hemispheric_balance,
+            rmssd, lf_power, hf_power, lf_hf_ratio, motion };
         // 기록만 모드: 값은 정상 산출값 그대로 두고, 가드 사유를 유효한 EEG 지표의 reason 에 남겨 배포 후 분석에 쓴다.
         if !guard::GUARD_ENFORCE {
             if let Some(code) = eeg_state.ok().and_then(|e| e.guard).map(|g| g.code()) {
-                for m in [&mut metrics.focus_raw, &mut metrics.focus_display, &mut metrics.relaxation_raw, &mut metrics.relaxation_display, &mut metrics.emotion_raw, &mut metrics.emotion_display, &mut metrics.tna_raw] {
+                for m in [&mut metrics.focus_raw, &mut metrics.focus_display, &mut metrics.relaxation_raw, &mut metrics.relaxation_display, &mut metrics.emotion_raw, &mut metrics.emotion_display, &mut metrics.tna_raw,
+                    &mut metrics.delta_power, &mut metrics.theta_power, &mut metrics.alpha_power, &mut metrics.beta_power, &mut metrics.gamma_power, &mut metrics.total_power,
+                    &mut metrics.stress_index, &mut metrics.cognitive_load, &mut metrics.faa, &mut metrics.hemispheric_balance] {
                     if m.validity == "valid" {
                         m.reason = Some(code.into());
                     }

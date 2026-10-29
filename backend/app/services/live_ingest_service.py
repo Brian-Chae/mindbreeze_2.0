@@ -114,6 +114,12 @@ def _feature_item(w: MetricWindow, end_at: datetime, anchored: bool) -> EEGFeatu
         focus_index=v("focus_raw"), relaxation_index=v("relaxation_raw"), emotional_stability=v("emotion_raw"),
         heart_rate=v("bpm"), respiratory_rate=v("respiration"), sdnn=v("sdnn"), total_neural_activity=v("tna_raw"),
         signal_quality=w.sqi,
+        delta_power=v("delta_power"), theta_power=v("theta_power"), alpha_power=v("alpha_power"), beta_power=v("beta_power"),
+        gamma_power=v("gamma_power"), total_power=v("total_power"), stress_index=v("stress_index"), cognitive_load=v("cognitive_load"),
+        faa=v("faa"), hemispheric_balance=v("hemispheric_balance"), rmssd=v("rmssd"), lf_power=v("lf_power"), hf_power=v("hf_power"),
+        lf_hf_ratio=v("lf_hf_ratio"), motion=v("motion"),
+        # v1 관례(useBand.metricsToFeature): 명상=이완지수, 주의=집중지수
+        meditation_level=v("relaxation_raw"), attention_level=v("focus_raw"),
         source_feature_alias=w.feature_hash, algorithm_version=w.algorithm_version[:40],
     )
 
