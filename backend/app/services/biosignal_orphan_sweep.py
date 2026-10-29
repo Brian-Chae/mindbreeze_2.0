@@ -29,6 +29,9 @@ logger = logging.getLogger(__name__)
 # 회차 종료 후 close deadline(24h)과 같다 — 앱은 그 안에 오프라인 큐를 비우는 것이 계약이다.
 ORPHAN_GRACE_SECONDS = CLOSE_DEADLINE_SECONDS
 CLOSE_REASON_DEADLINE = "close_deadline_expired"
+# 회차 종료(cutoff) 후 클라이언트가 capture.close 를 보낼 시간. 지나도 closed_at 이 비면 서버가 종료 시각을 기록한다(24h 를 기다리지 않는다).
+CLOSE_GRACE_SECONDS = 30 * 60
+CLOSE_REASON_NO_CLIENT_CLOSE = "session_ended_no_client_close"
 
 
 def _now() -> datetime:
@@ -75,19 +78,26 @@ def abandon_orphan_artifacts(db: DBSession, *, now: datetime | None = None, limi
 
 def close_expired_ended_streams(db: DBSession, *, now: datetime | None = None, limit: int = 1000) -> dict:
     now = now or _now()
+    grace_cutoff = now - timedelta(seconds=CLOSE_GRACE_SECONDS)
     rows = (
         db.query(CaptureStream)
         .filter(
             CaptureStream.status == "ended",
             CaptureStream.closed_at.is_(None),
             CaptureStream.close_deadline_at.isnot(None),
-            CaptureStream.close_deadline_at < now,
+            or_(
+                CaptureStream.close_deadline_at < now,
+                and_(CaptureStream.cutoff_at.isnot(None), CaptureStream.cutoff_at < grace_cutoff),
+            ),
         )
         .limit(limit)
         .all()
     )
     for s in rows:
-        s.closed_at, s.close_reason = s.close_deadline_at, CLOSE_REASON_DEADLINE
+        if s.close_deadline_at < now:
+            s.closed_at, s.close_reason = s.close_deadline_at, CLOSE_REASON_DEADLINE
+        else:
+            s.closed_at, s.close_reason = s.cutoff_at + timedelta(seconds=CLOSE_GRACE_SECONDS), CLOSE_REASON_NO_CLIENT_CLOSE
     db.commit()
     if rows:
         logger.info("[biosignal-orphan] ended stream closed_at 기록=%d", len(rows))

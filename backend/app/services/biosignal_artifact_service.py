@@ -80,6 +80,12 @@ def _check_aliases(sid, pid, aliases: set[str], db: DBSession) -> None:
         raise _conflict("alias_conflict", [{"artifact_alias": a} for (a,) in clash])
 
 
+# 산출물 PUT 의 서명 Content-Type 은 항상 octet-stream 으로 고정한다. 클라이언트가 application/json 을 요청하면
+# Capacitor Android 네이티브 HTTP 가 dataType='file' 을 무시하고 본문을 base64 문자열로 써서 SHA-256 서명이 어긋나 PUT 이 거절된다.
+# 객체는 checksum 으로 검증되는 불투명 바이트이므로 서명 Content-Type 은 의미가 없다.
+ARTIFACT_PUT_CONTENT_TYPE = "application/octet-stream"
+
+
 def _object_key(sid, pid, m: ArtifactPresignChunk) -> str:
     return f"biosignal-artifacts/{sid}/{pid}/{m.artifact_kind}/{m.artifact_alias}-{m.checksum}.bin"
 
@@ -172,7 +178,7 @@ def presign(session_id: str, payload: ArtifactPresignRequest, db: DBSession, *, 
             if row.upload_status == "failed":
                 row.upload_status, row.failure_reason = "pending", None
             url, headers = storage_service.generate_presigned_put_checksummed(
-                row.object_key, checksum_sha256_hex=row.checksum, content_type=m.content_type)
+                row.object_key, checksum_sha256_hex=row.checksum, content_type=ARTIFACT_PUT_CONTENT_TYPE)
             expires = biosignal_service.PRESIGN_EXPIRES_SEC
         items.append({
             "artifact_id": str(row.id), "artifact_alias": row.artifact_alias, "artifact_kind": row.artifact_kind,
