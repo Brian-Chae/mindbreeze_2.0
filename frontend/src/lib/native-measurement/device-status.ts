@@ -33,3 +33,18 @@ export function toNativeDevice(s: MeasurementSnapshot): NativeDeviceState {
 export function isNativeBandOwned(path: string, status: string, device: NativeDeviceState | null): boolean {
   return path === 'native' && (device !== null || status === 'starting' || status === 'running');
 }
+
+/**
+ * 네이티브 시작 실패 사유를 기기 시트 오류줄용 문구로 바꾼다(순수). 정상·대기 중이면 null.
+ * 이전에는 사유가 화면에 안 올라와 '연결하는 중'에서 멈춘 것처럼 보였다.
+ */
+export function describeNativeStartFailure(path: string, status: string, code: string | null): string | null {
+  if (path !== 'native' || status !== 'failed' || !code) return null;
+  const known: Record<string, string> = {
+    already_active: '이전 측정이 아직 정리되지 않았어요. 앱을 다시 열어 주세요.',
+    js_band_release_failed: '밴드 연결을 앱 측정으로 넘기지 못했어요.',
+    credentials_unavailable: '로그인 정보를 읽지 못했어요. 다시 로그인해 주세요.',
+    native_ownership_disabled: '이 기기에서는 앱 측정이 꺼져 있어요.',
+  };
+  return `측정을 시작하지 못했어요 (${known[code] ?? code})`;
+}

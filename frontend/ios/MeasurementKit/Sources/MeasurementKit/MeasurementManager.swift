@@ -136,7 +136,16 @@ public final class MeasurementManager: BandLinkDelegate {
             return startResult(replay: true)                       // 같은 requestId 는 새 수집을 시작하지 않는다
         }
         guard Self.isUUID(sessionId), Self.isUUID(requestId) else { throw ManagerError.invalidArgument("uuid") }
-        if state != .idle && state != .closed { throw ManagerError.alreadyActive }
+        if state != .idle && state != .closed {
+            // 다른 회차의 수집이 남아 있으면(앱 재시작 복구 등) 새 시작을 영구히 막지 않도록 그 회차를 봉인하고 넘긴다. 같은 회차는 기존대로 거절.
+            guard let old = self.sessionId, old != sessionId else { throw ManagerError.alreadyActive }
+            Self.log.error("다른 회차 수집이 남아 있어 봉인 후 교체 old=\(old, privacy: .public) state=\(self.state.rawValue, privacy: .public)")
+            if state == .arming || state == .capturing || state == .reconnecting { seal(reason: "superseded", closeStream: true) }
+            live?.stop(); live = nil
+            ownership.releaseNative()
+            state = .closed
+            persistActive()
+        }
         switch ownership.tryAcquireNative() {
         case .rejected(.nativeDisabled): throw ManagerError.nativeDisabled
         case .rejected(.jsOwnsBand): throw ManagerError.jsOwnsBand
@@ -334,6 +343,12 @@ public final class MeasurementManager: BandLinkDelegate {
               let sid = a["sessionId"] as? String, let st = a["state"] as? String, st != "CLOSED", st != "SEALING",
               let stream = a["streamId"] as? String, let gen = (a["ownerGeneration"] as? String).flatMap({ UInt64($0) }),
               let pid = a["participantId"] as? String else { return false }
+        if let why = Self.recoveryVeto(sessionDir: sessionDir(sid), nowMs: nowMs()) {
+            // 이틀 지난 CAPTURING 세션·수백 MB 저널을 매 실행마다 되살리다 3GB 메모리 한도로 앱이 죽었다. 되살리지 않고 증거를 보존한 채 치운다.
+            Self.log.error("세션 복구 거부 session=\(sid, privacy: .public) why=\(why, privacy: .public)")
+            abandonActive(reason: why)
+            return false
+        }
         guard case .acquired = ownership.tryAcquireNative() else { return false }
         generation = (a["managerGeneration"] as? UInt64) ?? 1; managerId = (a["managerId"] as? String) ?? UUID().uuidString.lowercased()
         requestId = a["requestId"] as? String; sessionId = sid; credentialHandle = a["credentialHandle"] as? String; configHash = a["configHash"] as? String
@@ -743,6 +758,28 @@ public final class MeasurementManager: BandLinkDelegate {
         if state == .closed || state == .idle { try? FileManager.default.removeItem(at: activeURL); return }
         if let d = try? JSONSerialization.data(withJSONObject: a) { try? d.write(to: activeURL, options: .atomic) }
     }
+    /// 복구 한도. 마지막 raw 기록이 이보다 오래됐으면(수집이 이미 끝난 세션) 또는 저널이 이보다 크면(전량 적재 시 메모리 한도 초과) 되살리지 않는다.
+    public static let recoveryMaxAgeSeconds: TimeInterval = 3 * 3600
+    public static let recoveryMaxJournalBytes: UInt64 = 128 * 1024 * 1024
+
+    /// 복구 거부 사유(순수). nil 이면 복구 허용. 파일을 읽지 않고 속성(수정 시각·크기)만 본다.
+    public static func recoveryVeto(sessionDir: URL, nowMs: UInt64) -> String? {
+        let fm = FileManager.default
+        func attrs(_ n: String) -> [FileAttributeKey: Any]? { try? fm.attributesOfItem(atPath: sessionDir.appendingPathComponent(n).path) }
+        for n in ["feature.journal", "metric-outbox.journal", "raw.journal"] {
+            if let sz = (attrs(n)?[.size] as? NSNumber)?.uint64Value, sz > recoveryMaxJournalBytes { return "journal_too_large" }
+        }
+        if let m = attrs("raw.journal")?[.modificationDate] as? Date, Double(nowMs) / 1000 - m.timeIntervalSince1970 > recoveryMaxAgeSeconds { return "stale_session" }
+        return nil
+    }
+
+    /// 복구하지 않기로 한 active.json 을 지우지 않고 옆으로 치운다(사후 분석용). 세션 디렉터리는 건드리지 않는다.
+    private func abandonActive(reason: String) {
+        let dst = activeURL.deletingLastPathComponent().appendingPathComponent("active.abandoned-\(nowMs())-\(reason).json")
+        try? FileManager.default.removeItem(at: dst)
+        try? FileManager.default.moveItem(at: activeURL, to: dst)
+    }
+
     private func loadActive() -> [String: Any]? {
         guard let d = try? Data(contentsOf: activeURL) else { return nil }
         var o = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any]
