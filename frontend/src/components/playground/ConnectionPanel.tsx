@@ -79,12 +79,21 @@ export function ConnectionPanel({ band, useMock, onToggleMock }: Props) {
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          onClick={() => void band.connect()}
+          onClick={() => void (band.isReconnecting ? band.disconnect().then(() => band.connect()) : band.connect())}
           disabled={!band.isSupported || isBusy || connected}
           className="rounded-lg bg-[#5F0080] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#4B0066] disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {isBusy ? '연결 중…' : band.isMock ? '체험 다시 시작' : '밴드 연결'}
+          {isBusy ? '연결 중…' : band.isReconnecting ? '다시 연결' : band.isMock ? '체험 다시 시작' : '밴드 연결'}
         </button>
+        {(isBusy || band.isReconnecting) && !band.isMock && (
+          <button
+            type="button"
+            onClick={() => void band.disconnect()}
+            className="rounded-lg border border-[#F5C2C0] bg-[#FDECEC] px-3 py-1.5 text-xs font-medium text-[#B3261E] hover:bg-[#FADBD9]"
+          >
+            {band.isReconnecting ? '재연결 취소' : '연결 취소'}
+          </button>
+        )}
         <button
           type="button"
           onClick={() => void band.disconnect()}

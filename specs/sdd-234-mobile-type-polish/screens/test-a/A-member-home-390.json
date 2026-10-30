@@ -6,7 +6,9 @@
   "width": 390,
   "failure": null,
   "errors": [],
-  "unknown": [],
+  "unknown": [
+    "/api/v1/reports/counts"
+  ],
   "shell": "structure",
   "scrollWidth": 390,
   "texts": [
@@ -1727,7 +1729,7 @@
       "inputType": null,
       "selector": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > a:nth-of-type(4)",
       "class": "flex-1",
-      "text": "리포트 1건",
+      "text": "리포트",
       "fontSize": 13,
       "lineHeight": "20px",
       "fontWeight": "400",
@@ -1765,7 +1767,7 @@
       "inputType": null,
       "selector": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1)",
       "class": "h-full w-full bg-[#F7F4F0] font-sans text-[#1F1F1F] md:grid md:grid-cols-[240px_1fr] flex flex-col",
-      "text": "Mind Breeze회원 전용홈내 클래스채팅1리포트1알림설정회원 전용샘플 회원client@example.test로그아웃서버연결: 끊김Mind Breeze안녕하세요, 샘플 회원님코드로 바로 입장안녕하세요, 샘플 회원님코드로 바로 입장\n.cs-structure .mc-stack{displa",
+      "text": "Mind Breeze회원 전용홈내 클래스채팅1리포트알림설정회원 전용샘플 회원client@example.test로그아웃서버연결: 끊김Mind Breeze안녕하세요, 샘플 회원님코드로 바로 입장안녕하세요, 샘플 회원님코드로 바로 입장\n.cs-structure .mc-stack{display",
       "fontSize": 14,
       "lineHeight": "21px",
       "fontWeight": "400",

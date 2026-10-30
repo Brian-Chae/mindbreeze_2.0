@@ -6,7 +6,9 @@
   "width": 1440,
   "failure": null,
   "errors": [],
-  "unknown": [],
+  "unknown": [
+    "/api/v1/reports/counts"
+  ],
   "shell": "default",
   "scrollWidth": 1440,
   "texts": [

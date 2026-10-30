@@ -7,7 +7,9 @@
     "width": 1440,
     "failure": null,
     "errors": [],
-    "unknown": [],
+    "unknown": [
+      "/api/v1/reports/counts"
+    ],
     "shell": "default",
     "scrollWidth": 1440,
     "sectionGaps": [
@@ -96,7 +98,9 @@
     "width": 390,
     "failure": null,
     "errors": [],
-    "unknown": [],
+    "unknown": [
+      "/api/v1/reports/counts"
+    ],
     "shell": "default",
     "scrollWidth": 390,
     "sectionGaps": [
@@ -180,7 +184,9 @@
     "width": 768,
     "failure": null,
     "errors": [],
-    "unknown": [],
+    "unknown": [
+      "/api/v1/reports/counts"
+    ],
     "shell": "default",
     "scrollWidth": 768,
     "sectionGaps": [
@@ -269,7 +275,9 @@
     "width": 1440,
     "failure": null,
     "errors": [],
-    "unknown": [],
+    "unknown": [
+      "/api/v1/reports/counts"
+    ],
     "shell": "structure",
     "scrollWidth": 1440,
     "sectionGaps": [
@@ -311,7 +319,7 @@
     ],
     "distributions": {
       "fontSize": {
-        "12": 20,
+        "12": 19,
         "13": 16,
         "14": 11,
         "15": 17,
@@ -324,7 +332,7 @@
       },
       "lineHeight": {
         "16.8px": 1,
-        "18px": 19,
+        "18px": 18,
         "19.5px": 7,
         "21px": 3,
         "22.1px": 8,
@@ -341,15 +349,15 @@
         "400": 28,
         "500": 6,
         "600": 14,
-        "700": 23,
+        "700": 22,
         "800": 13
       }
     },
     "summary": {
-      "textCount": 84,
+      "textCount": 83,
       "minFont": 11.2,
-      "smallTextCount": 21,
-      "smallTextRatio": 25,
+      "smallTextCount": 20,
+      "smallTextRatio": 24.1,
       "smallTouchCount": 0,
       "narrowTouchCount": 0
     }
@@ -362,7 +370,9 @@
     "width": 390,
     "failure": null,
     "errors": [],
-    "unknown": [],
+    "unknown": [
+      "/api/v1/reports/counts"
+    ],
     "shell": "structure",
     "scrollWidth": 390,
     "sectionGaps": [
@@ -451,7 +461,9 @@
     "width": 768,
     "failure": null,
     "errors": [],
-    "unknown": [],
+    "unknown": [
+      "/api/v1/reports/counts"
+    ],
     "shell": "structure",
     "scrollWidth": 768,
     "sectionGaps": [
@@ -493,7 +505,7 @@
     ],
     "distributions": {
       "fontSize": {
-        "12": 20,
+        "12": 19,
         "13": 15,
         "14": 10,
         "15": 17,
@@ -504,7 +516,7 @@
         "30": 4
       },
       "lineHeight": {
-        "18px": 19,
+        "18px": 18,
         "19.5px": 6,
         "21px": 2,
         "22.1px": 8,
@@ -522,15 +534,15 @@
         "400": 25,
         "500": 6,
         "600": 14,
-        "700": 23,
+        "700": 22,
         "800": 13
       }
     },
     "summary": {
-      "textCount": 81,
+      "textCount": 80,
       "minFont": 12,
-      "smallTextCount": 20,
-      "smallTextRatio": 24.7,
+      "smallTextCount": 19,
+      "smallTextRatio": 23.8,
       "smallTouchCount": 0,
       "narrowTouchCount": 0
     }
