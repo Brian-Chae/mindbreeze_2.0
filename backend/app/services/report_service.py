@@ -74,7 +74,10 @@ def _normalize_eeg(eeg) -> dict | None:
     if status == "not_measured":
         if eeg.get("excluded"):
             # SDD-209(B3): 리포트 반영 제외 안내는 축약 형태에서도 보존한다.
-            return {"status": "not_measured", "excluded": True, "notice": eeg.get("notice")}
+            out = {"status": "not_measured", "excluded": True, "notice": eeg.get("notice")}
+            if eeg.get("reason"):
+                out["reason"] = eeg.get("reason")
+            return out
         return {"status": "not_measured"}
 
     metrics_in = eeg.get("metrics") if isinstance(eeg.get("metrics"), dict) else {}

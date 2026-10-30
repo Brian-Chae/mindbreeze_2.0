@@ -22,6 +22,8 @@ from app.models.session import SessionParticipant
 # 상담사 리포트에 쓰는 안내(전원 제외) / 내담자 본인 리포트 안내(제외)
 COUNSELOR_ALL_EXCLUDED_NOTICE = "참가자가 제외를 선택했어요"
 CLIENT_EXCLUDED_NOTICE = "리포트에 반영되지 않아요"
+# 제외 때문에 비운 not_measured 와 실제 미측정을 구분하는 사유 코드(하위호환: 없으면 기존 문구)
+EXCLUDED_REASON = "participant_excluded"
 SCOPE_VERSION = 1
 
 
@@ -113,7 +115,7 @@ def scope_marker(scope: ReportScope) -> dict:
 
 def excluded_eeg_block() -> dict:
     """전원 제외 시 EEG 구간 — 비우고 안내만(프론트는 not_measured 로 섹션을 숨기고 notice 를 표기)."""
-    return {"status": "not_measured", "excluded": True, "notice": COUNSELOR_ALL_EXCLUDED_NOTICE}
+    return {"status": "not_measured", "excluded": True, "reason": EXCLUDED_REASON, "notice": COUNSELOR_ALL_EXCLUDED_NOTICE}
 
 
 def client_excluded_content(title: str | None, session_type: str | None, scheduled_at) -> dict:
@@ -123,7 +125,7 @@ def client_excluded_content(title: str | None, session_type: str | None, schedul
         "session_type": session_type,
         "scheduled_at": scheduled_at,
         "report_scope": {"version": SCOPE_VERSION, "excluded": True, "notice": CLIENT_EXCLUDED_NOTICE},
-        "eeg": {"status": "not_measured", "excluded": True, "notice": CLIENT_EXCLUDED_NOTICE},
+        "eeg": {"status": "not_measured", "excluded": True, "reason": EXCLUDED_REASON, "notice": CLIENT_EXCLUDED_NOTICE},
         "ai_record": {"status": "not_available", "reason": "excluded"},
         "approved": False,
     }

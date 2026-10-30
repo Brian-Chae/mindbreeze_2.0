@@ -369,7 +369,35 @@ describe('EntryPage — LINK BAND 단계 (M4)', () => {
     await toBand();
     expect(text()).toContain('접촉 불량');
     await act(async () => { find('다음')?.click(); });
+    // 리포트 반영이 제외 상태로 밴드를 착용했으므로 측정 전 재확인 시트가 먼저 뜬다
+    await act(async () => { find('이번엔 제외')?.click(); });
     expect(text()).not.toContain('LINK BAND를 연결해요');
+  });
+  it('밴드 착용 + 리포트 제외 상태면 측정 전에 한 번 재확인하고, 반영하기는 true 로 저장한다', async () => {
+    bandStepState.state = 'connected';
+    await toBand();
+    setReportChoice.mockClear();
+    await act(async () => { find('다음')?.click(); });
+    expect(text()).toContain('이번 수업 리포트에 측정 결과를 반영할까요?');
+    expect(text()).toContain('LINK BAND를 연결해요'); // 아직 다음 단계로 넘어가지 않았다
+    await act(async () => { find('반영하기')?.click(); });
+    expect(setReportChoice).toHaveBeenCalledWith('s1', 'cred', expect.objectContaining({ reportIncluded: true }));
+    expect(text()).not.toContain('LINK BAND를 연결해요');
+  });
+  it('이번엔 제외를 고르면 저장 호출 없이 진행하고, 같은 회차에서 다시 묻지 않는다', async () => {
+    bandStepState.state = 'connected';
+    await toBand();
+    setReportChoice.mockClear();
+    await act(async () => { find('다음')?.click(); });
+    await act(async () => { find('이번엔 제외')?.click(); });
+    expect(setReportChoice).not.toHaveBeenCalled();
+    expect(text()).not.toContain('이번 수업 리포트에 측정 결과를 반영할까요?');
+  });
+  it('밴드 없이 계속하면 재확인을 묻지 않는다(LINK BAND 선택 사용)', async () => {
+    bandStepState.state = 'idle';
+    await toBand();
+    await act(async () => { find('LINK BAND 없이 계속하기')?.click(); });
+    expect(text()).not.toContain('이번 수업 리포트에 측정 결과를 반영할까요?');
   });
 });
 
