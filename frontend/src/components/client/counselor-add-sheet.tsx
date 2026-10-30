@@ -51,7 +51,7 @@ export function CounselorAddSheet({ open, onOpenChange, addCounselor, onAdded }:
 
   const compact = raw.replace(/\s+/g, '');
   const normalized = normalizeCounselorCode(raw);
-  const formatInvalid = compact.length > 0 && !/^[A-Za-z0-9]*$/.test(compact);
+  const formatInvalid = compact.length > 0 && !/^[0-9]*$/.test(compact);
   const tooLong = compact.length > 6;
   const inlineError = error ?? (formatInvalid || tooLong ? T.invalidFormat : null);
   const canSubmit = !!normalized && !submitting && !done;
@@ -115,21 +115,22 @@ export function CounselorAddSheet({ open, onOpenChange, addCounselor, onAdded }:
             <input
               id={`${titleId}-code`}
               type="text"
-              inputMode="text"
-              autoCapitalize="characters"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={6}
               autoCorrect="off"
               autoComplete="off"
               spellCheck={false}
               value={raw}
               disabled={submitting}
               onChange={(e) => {
-                setRaw(e.target.value.toUpperCase());
+                setRaw(e.target.value.replace(/[^0-9]/g, '').slice(0, 6));
                 setError(null);
               }}
               aria-invalid={!!inlineError}
               aria-describedby={inlineError ? `${titleId}-err` : undefined}
-              placeholder="예: AB12CD"
-              className={`mb-2 min-h-12 w-full rounded-xl border-2 px-4 text-center text-[20px] font-bold uppercase tracking-[0.3em] outline-none ${
+              placeholder="예: 123456"
+              className={`mb-2 min-h-12 w-full rounded-xl border-2 px-4 text-center text-[20px] font-bold tracking-[0.3em] outline-none ${
                 inlineError ? 'border-red-400 bg-red-50' : 'border-[#E8E3EC] focus:border-[#5F0080]'
               }`}
             />
