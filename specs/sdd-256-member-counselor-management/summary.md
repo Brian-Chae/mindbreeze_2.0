@@ -15,5 +15,11 @@
 - 전체 vitest --cache false: 8파일·13건 실패 = 기준선과 동일(신규 실패 0). 실패 파일: agent-counselor-page, chat-message-deeplink, org-counselor-management-browser, org-management-browser, report-modal-pdf, report-server-pdf, sdd220-native-release, sdd234-a-mobile-home(specs 캡처는 원복).
 - 헤드리스(합성 API, 빌드 산출물): 390·1440 가로 넘침 0, 버튼 ≥48px, JS 오류 0, 추가 후 홈에 새 상담사 반영. 캡처: `screens/` (qa.json, capture.cjs).
 
+## 보완 — 실제 회원 홈(`/app`) 반영
+- 원인 재확인: `/app` 은 `MemberStructureHomePage`(내부에서 ClientHomePage hideHero 사용). 버튼은 우측 레일 맨 아래라 모바일에서 y≈1730(스크롤 끝)에 묻혀 있었음.
+- 수정: 공용 `components/client/counselor-section.tsx` 신설 → 회원 홈은 '내 상담' 아래(전폭, grid-row 5)에 배치, 레거시 ClientHomePage 는 기존 레일 위치에서 같은 컴포넌트 사용. 모바일 버튼 y 1729→1110.
+- dev 실연동(vite → dev-api 프록시, client@test.com, 390·1440): `/app` 에 담당 상담사 영역·`+ 상담사 추가` 노출, 시트 열림, 잘못된 코드(ZZZZZZ) → '유효하지 않은 상담사 코드입니다', `/app/profile` 에 '상담사 관리' 노출, JS 오류 0. 성공 추가는 dev 데이터 보호로 미실행. 캡처 `screens/real-*.png`.
+- 테스트: 실제 홈(MemberStructureHomePage) 기준 2건 추가, 훅 목 형태 수정 3파일. 전체 vitest 8파일·13건 실패 = 기준선 동일.
+
 ## 미확인(실기기·배포)
-- 실제 서버(dev) 연동, 가상 키보드 가림, 스크린리더, 채팅방 자동 생성(V16), 앱 재빌드·설치(V20)는 미실행. **앱 재빌드 필요**(웹 반영만으로 설치 앱에 생기지 않음).
+- 가상 키보드 가림, 스크린리더, 채팅방 자동 생성(V16), 앱 재빌드·설치(V20)는 미실행. **앱 재빌드 필요**(웹 반영만으로 설치 앱에 생기지 않음).

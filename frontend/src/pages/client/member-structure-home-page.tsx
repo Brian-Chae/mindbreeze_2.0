@@ -10,6 +10,7 @@ import '../../components/class/flow/shell/shell-kit.css';
 import { CodeEntryButton } from '../../components/client/code-entry-button';
 import ClientHomePage from './ClientHomePage';
 import { useClientCounselors } from '../../hooks/use-client-counselors';
+import { CounselorSection } from '../../components/client/counselor-section';
 import { useMixedHome } from '../../hooks/use-class-structure';
 import { adaptMixedHome } from '../../lib/class-structure/adapters';
 import { displayField } from '../../lib/class-structure/read-model';
@@ -61,6 +62,7 @@ export function MemberStructureHomePage() {
         <div className="mc-grid">{counseling.map((item) => <article className="mc-card" key={item.id}><Link className="mc-card-link" to={counselingPath('member', item.id)}><h3>상담 일정</h3><p className="mc-muted">상담사 · <ReadField value={memberValue(item.counselorName)} /></p><p className="mc-muted">다음 상담 · <ReadField value={item.nextSession.kind === 'value' ? memberDate(item.nextSession.value.scheduledAt) : undefined} /></p></Link></article>)}</div>
       </ReadStateView>
     </section>}
+    <CounselorSection />
     </>} />
   </div></StructureShell>;
 }

@@ -13,9 +13,7 @@ import { useEnterClass } from '../../hooks/useEnterClass';
 import { memberChipKey } from '../../lib/class/class-labels';
 import { ClassHero, ClassHeroEmpty } from '../../components/class/flow/shell/ClassHero';
 import { ClassRow } from '../../components/class/flow/shell/ClassRow';
-import { CounselorAddSheet } from '../../components/client/counselor-add-sheet';
-import { useClientCounselors } from '../../hooks/use-client-counselors';
-import { COUNSELOR_COPY } from '../../lib/client-counselor-copy';
+import { CounselorSection } from '../../components/client/counselor-section';
 import { CodeEntryButton } from '../../components/client/code-entry-button';
 import { heroBackdrop, toClassRowData, toHeroData } from '../../components/class/flow/shell/shell-data';
 import '../../components/class/flow/shell/shell-kit.css';
@@ -125,8 +123,6 @@ export default function ClientHomePage({ hideHero = false, classSections }: { hi
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const counselors: Counselor[] = useMemo(() => user?.counselors ?? [], [user?.counselors]);
-  const { addCounselor } = useClientCounselors();
-  const [addOpen, setAddOpen] = useState(false);
   const sessionInvites = useNotificationStore((s) => s.sessionInvites);
   const removeSessionInvite = useNotificationStore((s) => s.removeSessionInvite);
 
@@ -486,42 +482,8 @@ export default function ClientHomePage({ hideHero = false, classSections }: { hi
         {/* 요약 타일 */}
         {!hideHero && summaryTiles}
 
-        {/* 담당 상담사 (0명이어도 영역·추가 버튼 유지) */}
-        <section className={`${CARD_CLS} home-rail-card p-5`}>
-          <div className={SECTION_HEAD_CLS}>
-            <h2 className={SECTION_TITLE_CLS}>{COUNSELOR_COPY.listTitle}</h2>
-            <div className="flex items-center gap-3">
-              {counselors.length > 0 && (
-                <button type="button" onClick={() => navigate('/app/chat')} className={`${LINK_CLS} home-rail-link`}>
-                  대화하기 <ChevronRight size={14} aria-hidden="true" className="inline" />
-                </button>
-              )}
-              <button type="button" onClick={() => setAddOpen(true)} className={`${LINK_CLS} home-rail-link min-h-11`}>
-                + {COUNSELOR_COPY.addButton}
-              </button>
-            </div>
-          </div>
-          {counselors.length > 0 ? (
-            <ul className="space-y-3">
-              {counselors.map((c) => (
-                <li key={c.id}>
-                  <button type="button" onClick={() => navigate('/app/chat')} className="flex min-h-11 w-full items-center gap-3 text-left">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#5F0080] to-[#8A4FB8] text-[13px] font-bold text-white">
-                      {c.name?.charAt(0) ?? '상'}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="break-words text-[16px] font-semibold text-[#1F1F1F]">{c.name}</div>
-                      <div className="break-words text-[15px] text-[#6F6F6F]">{c.org_name || '임상·최면심리상담 전문'}</div>
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-[15px] text-[#6F6F6F]">{COUNSELOR_COPY.emptyList}</p>
-          )}
-          <CounselorAddSheet open={addOpen} onOpenChange={setAddOpen} addCounselor={addCounselor} />
-        </section>
+        {/* 담당 상담사 (0명이어도 영역·추가 버튼 유지) — 회원 홈(hideHero)은 상단 CounselorSection 사용 */}
+        {!hideHero && <CounselorSection className={`${CARD_CLS} home-rail-card p-5`} />}
 
         {/* 최근 대화 */}
         <section className={`${CARD_CLS} home-rail-card p-5`}>
