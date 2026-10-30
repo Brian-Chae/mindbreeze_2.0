@@ -35,13 +35,65 @@ function formatKoreanSub(): string {
 }
 
 /** 상담사 코드 입력 화면 */
-function CounselorCodeScreen() {
+type CounselorLite = { id: string; name: string; profile_image: string | null };
+
+export function CounselorCodeScreen({ onConnected }: { onConnected: (list: CounselorLite[]) => void }) {
   const [code, setCode] = useState<string[]>(Array(6).fill(''));
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const setUser = useAuthStore((s) => s.setUser);
-  const user = useAuthStore((s) => s.user);
+  const submittingRef = useRef(false);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  // 6자리 완성 시 1회 제출 (effect 아님 — user 변경으로 cleanup/재실행되지 않게 명시 호출)
+  const submitCode = useCallback(
+    async (fullCode: string) => {
+      if (submittingRef.current) return; // 중복 제출 방지
+      submittingRef.current = true;
+      setLoading(true);
+      setError(null);
+      try {
+        let fallback: CounselorLite[] = [];
+        try {
+          // 서버는 연결된 상담사 1명(CounselorInfo 단건)을 돌려준다.
+          const added = await apiClient.post<CounselorLite>('/client/counselors', { code: fullCode });
+          if (added && typeof added === 'object' && 'id' in added) fallback = [added];
+        } catch (err: unknown) {
+          // 409: 이미 연결된 상담사 → 아래 GET 으로 목록 새로고침
+          const is409 = err instanceof Error && 'status' in err && (err as { status: number }).status === 409;
+          if (!is409) throw err;
+        }
+        // 전체 목록은 GET 으로 다시 받는다 (실패 시 POST 결과로 대체)
+        let list = fallback;
+        try {
+          const fetched = await apiClient.get<CounselorLite[]>('/client/counselors');
+          if (Array.isArray(fetched) && fetched.length > 0) list = fetched;
+        } catch {
+          if (list.length === 0) throw new Error('연결 정보를 불러오지 못했습니다. 다시 시도해주세요.');
+        }
+        if (list.length === 0) throw new Error('연결 정보를 불러오지 못했습니다. 다시 시도해주세요.');
+        onConnected(list);
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : '연결에 실패했습니다. 코드를 다시 확인해주세요.';
+        if (mountedRef.current) {
+          setError(message);
+          setCode(Array(6).fill(''));
+          inputRefs.current[0]?.focus();
+        }
+      } finally {
+        submittingRef.current = false;
+        if (mountedRef.current) setLoading(false);
+      }
+    },
+    [onConnected],
+  );
 
   const handleChange = useCallback(
     (index: number, value: string) => {
@@ -57,8 +109,11 @@ function CounselorCodeScreen() {
       if (value && index < 5) {
         inputRefs.current[index + 1]?.focus();
       }
+
+      const full = newCode.join('');
+      if (full.length === 6) void submitCode(full);
     },
-    [code]
+    [code, submitCode]
   );
 
   const handleKeyDown = useCallback(
@@ -89,66 +144,9 @@ function CounselorCodeScreen() {
     // 마지막 칸 또는 복사한 마지막 위치로 포커스
     const focusIdx = Math.min(pasted.length, 5);
     inputRefs.current[focusIdx]?.focus();
-  }, []);
 
-  // 6자리 모두 입력 시 자동 제출
-  useEffect(() => {
-    const fullCode = code.join('');
-    if (fullCode.length !== 6) return;
-
-    let cancelled = false;
-
-    async function submit() {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await apiClient.post<{
-          counselors: Array<{ id: string; name: string; profile_image: string | null }>;
-        }>('/client/counselors', { code: fullCode });
-
-        if (cancelled) return;
-
-        // authStore의 user에 counselors 업데이트
-        if (user) {
-          setUser({
-            ...user,
-            counselors: res.counselors,
-          });
-        }
-      } catch (err: unknown) {
-        if (cancelled) return;
-        // 409: 이미 연결된 상담사 → GET으로 목록 새로고침
-        if (err instanceof Error && 'status' in err && (err as { status: number }).status === 409) {
-          try {
-            const list = await apiClient.get<
-              Array<{ id: string; name: string; profile_image: string | null }>
-            >('/client/counselors');
-            if (cancelled) return;
-            const counselors = Array.isArray(list) ? list : [];
-            if (user) {
-              setUser({ ...user, counselors });
-            }
-            return; // 성공 → 코드 입력 화면 빠져나감
-          } catch {
-            // GET도 실패하면 아래 일반 에러 처리로
-          }
-        }
-        const message =
-          err instanceof Error ? err.message : '연결에 실패했습니다. 코드를 다시 확인해주세요.';
-        setError(message);
-        // 입력 초기화
-        setCode(Array(6).fill(''));
-        inputRefs.current[0]?.focus();
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    submit();
-    return () => {
-      cancelled = true;
-    };
-  }, [code, user, setUser]);
+    if (pasted.length === 6) void submitCode(pasted);
+  }, [submitCode]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-dvh bg-[#FAFAFA] px-6">
@@ -253,6 +251,13 @@ export default function ClientAppPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchKey]);
 
+  // 코드 연결 성공 → 로컬 state 와 store 둘 다 갱신해 즉시 홈으로 전환
+  function handleConnected(list: Array<{ id: string; name: string; profile_image: string | null }>) {
+    setCounselors(list);
+    const current = useAuthStore.getState().user;
+    if (current) setUser({ ...current, counselors: list });
+  }
+
   // SDD-220: AI 비공개면 루시 직접 진입(구 경로·푸시 딥링크 포함)을 일반 채팅 목록으로 보낸다(루프 없음).
   if (!isAiEnabled() && (pathname === '/app/ai' || pathname.startsWith('/app/ai/') || pathname.startsWith('/app/chat/lucy'))) {
     return <Navigate to="/app/chat" replace />;
@@ -302,7 +307,7 @@ export default function ClientAppPage() {
 
   // 상담사 연결 전 → 코드 입력 화면
   if (!hasCounselors && !pathname.startsWith('/app/notifications')) {
-    return <CounselorCodeScreen />;
+    return <CounselorCodeScreen onConnected={handleConnected} />;
   }
 
   // /app/chat 또는 /app/chat/:roomId → ClientChatPage (자체 ClientShell 보유, 상담사 ChatPage와 동일 패턴)
