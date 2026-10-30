@@ -128,7 +128,7 @@ describe('RegisterClientPage 코치 코드 숫자 입력', () => {
     await flush();
 
     // OTP 입력 (첫 번째 OTP 입력칸에 '123456' 입력 시 OtpInput 내부에서 6자리 채워짐)
-    const otpInputs = host!.querySelectorAll('input[inputmode="text"]');
+    const otpInputs = host!.querySelectorAll('input[autocomplete="one-time-code"]');
     if (otpInputs.length > 0) {
       await act(async () => {
         setter.call(otpInputs[0], '123456');

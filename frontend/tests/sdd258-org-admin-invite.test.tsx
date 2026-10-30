@@ -61,9 +61,9 @@ describe("SDD-258 기관관리자 초대", () => {
     });
   });
 
-  it("기본은 role 없이 상담사 초대(하위호환)", async () => {
+  it("기본은 role 없이 코치 초대(하위호환)", async () => {
     const heading = await submit();
-    expect(heading).toBe("상담사 초대");
+    expect(heading).toBe("코치 초대");
     expect(inviteCounselor).toHaveBeenCalledWith("org-1", { name: "홍길동", email: "a@b.co" });
   });
 });

@@ -92,7 +92,7 @@ describe('상담사 코드 연결', () => {
   it('POST 가 단건 객체를 돌려줘도 홈으로 전환되고 연결 중이 사라진다', async () => {
     get.mockResolvedValueOnce([]); // 마운트 시 목록
     await mount();
-    expect(host!.textContent).toContain('상담사와 연결하기');
+    expect(host!.textContent).toContain('코치와 연결하기');
     post.mockResolvedValueOnce(COUNSELOR); // 서버: CounselorInfo 단건
     get.mockResolvedValueOnce([COUNSELOR]); // 재조회
     await typeCode('001131');

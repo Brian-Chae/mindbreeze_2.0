@@ -49,7 +49,7 @@ describe('순수 함수', () => {
     expect(normalizeCounselorCode('001131')).toBe('001131');
     expect(normalizeCounselorCode('ABC12')).toBeNull();
     expect(normalizeCounselorCode('ABC1234')).toBeNull();
-    expect(normalizeCounselorCode('AB-12C')).toBeNull();
+    expect(normalizeCounselorCode('12-345')).toBeNull();
   });
   it('오류 분류: 409 중복 vs 기관 비활성 구분, 네트워크는 결과 불명', () => {
     expect(classifyAddCounselorError(new ApiError(409, '이미 연결된 코치입니다', null)).kind).toBe('duplicate');
@@ -122,7 +122,7 @@ describe('코드 입력 시트', () => {
     await open();
     api.post.mockResolvedValue(B);
     api.get.mockRejectedValue(new Error('net'));
-    setInput(input(), 'ab12cd');
+    setInput(input(), '123456');
     await act(async () => { submitBtn().click(); });
     await flush();
     expect(document.body.textContent).toContain('목록을 새로 확인하려면 다시 시도해 주세요');
@@ -132,18 +132,18 @@ describe('코드 입력 시트', () => {
   it('404: 서버 문구, 입력 유지, 목록 불변', async () => {
     await open();
     api.post.mockRejectedValue(new ApiError(404, '유효하지 않은 코치 코드입니다', null));
-    setInput(input(), 'ZZZZZZ');
+    setInput(input(), '999999');
     await act(async () => { submitBtn().click(); });
     await flush();
     expect(document.body.textContent).toContain('유효하지 않은 코치 코드입니다');
-    expect(input().value).toBe('ZZZZZZ');
+    expect(input().value).toBe('999999');
     expect(useAuthStore.getState().user!.counselors).toHaveLength(1);
   });
 
   it('409 중복 안내, 네트워크 단절은 결과 불명 문구', async () => {
     await open();
     api.post.mockRejectedValueOnce(new ApiError(409, '이미 연결된 코치입니다', null));
-    setInput(input(), 'AB12CD');
+    setInput(input(), '123456');
     await act(async () => { submitBtn().click(); });
     await flush();
     expect(document.body.textContent).toContain('이미 연결된 코치입니다');
@@ -157,17 +157,18 @@ describe('코드 입력 시트', () => {
     await open();
     let resolve!: (v: unknown) => void;
     api.post.mockReturnValue(new Promise((r) => { resolve = r; }));
-    setInput(input(), 'AB12CD');
+    setInput(input(), '123456');
     await act(async () => { submitBtn().click(); submitBtn().click(); });
     expect(api.post).toHaveBeenCalledTimes(1);
     await act(async () => { resolve(B); });
   });
 
-  it('7자 이상·기호는 전송 불가', async () => {
+  it('숫자 외 문자는 제거·6자 초과는 잘라냄, 6자 미만은 전송 불가', async () => {
     await open();
-    setInput(input(), 'AB12CD9');
-    expect(submitBtn().disabled).toBe(true);
-    setInput(input(), 'AB-12C');
+    setInput(input(), '1234567');
+    expect(input().value).toBe('123456');
+    setInput(input(), '12-345');
+    expect(input().value).toBe('12345');
     expect(submitBtn().disabled).toBe(true);
     expect(api.post).not.toHaveBeenCalled();
   });

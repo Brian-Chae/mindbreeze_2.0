@@ -18,7 +18,7 @@ it.each(['client', 'counselor', 'org_admin', 'platform_admin'] as const)('%s는 
   await act(async () => root.render(<MemoryRouter><SettingsContent /></MemoryRouter>));
   expect(host.querySelectorAll('[data-settings-group]')).toHaveLength(role === 'client' ? 7 : 6); // SDD-256: client 만 상담사 관리 그룹 추가
   expect(host.textContent).toContain('차단한 사용자');
-  expect(host.textContent?.includes('상담사 관리')).toBe(role === 'client');
+  expect(host.textContent?.includes('코치 관리')).toBe(role === 'client');
   expect(host.querySelector('a[href="/playground"]')).not.toBeNull();
   expect(host.textContent).toContain('로그아웃');
   expect(host.querySelector('a[href="/reports?settings=operations"]') !== null).toBe(role === 'counselor' || role === 'org_admin');
