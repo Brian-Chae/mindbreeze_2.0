@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-10-30",
+  "updateBannerEnabled": false,
+  "minSupportedVersionCode": 0,
+  "android": {
+    "versionName": "",
+    "versionCode": 0,
+    "apkUrl": "",
+    "sha256": "",
+    "sizeBytes": 0,
+    "publishedAt": "",
+    "notes": ""
+  },
+  "ios": {
+    "testflightUrl": "https://testflight.apple.com/join/QjQGu3pG",
+    "latestBuild": 0
+  }
+}
