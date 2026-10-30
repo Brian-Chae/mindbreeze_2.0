@@ -59,7 +59,7 @@ export default function PastReportsCompare({ current }: { current: ReportDto }) 
           {!error && !items && <p role="status" className="m-0 text-sm text-[#6F6F6F]">불러오는 중...</p>}
           {items && !previous && (
             <p className="m-0 text-[14px] text-[#6F6F6F]">
-              함께 볼 지난 기록이 아직 없어요. 같은 상담사와의 이전 리포트가 승인되면 이곳에서 나란히 읽을 수 있습니다.
+              함께 볼 지난 기록이 아직 없어요. 같은 코치와의 이전 리포트가 승인되면 이곳에서 나란히 읽을 수 있습니다.
             </p>
           )}
           {previous && (

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// 개선 5: 무음 시그널 UI — 회원 3버튼(조용한 전송/실패 안내) · 상담사 카드 배지·상단 집계
+// 개선 5: 무음 시그널 UI — 회원 3버튼(조용한 전송/실패 안내) · 코치 카드 배지·상단 집계
 import { act, createElement, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -71,7 +71,7 @@ describe('QuietSignalButtons', () => {
     await render(createElement(QuietSignalButtons, { onSend }));
 
     // 라벨은 메타 정본(signal icon은 Lucide, 텍스트는 라벨만)
-    expect(text()).toContain('선택한 상태와 이름이 상담사에게만 보여요');
+    expect(text()).toContain('선택한 상태와 이름이 코치에게만 보여요');
     expect(button('잘 따라가요')).toBeDefined();
     expect(button('조금 어려워요')).toBeDefined();
     expect(button('잠시 쉴게요')).toBeDefined();
@@ -83,7 +83,7 @@ describe('QuietSignalButtons', () => {
     });
 
     expect(onSend).toHaveBeenCalledWith('following');
-    expect(text()).toContain('상담사에게 조용히 전달했어요');
+    expect(text()).toContain('코치에게 조용히 전달했어요');
     expect(button('잘 따라가요')?.getAttribute('aria-pressed')).toBe('true');
   });
 
@@ -97,7 +97,7 @@ describe('QuietSignalButtons', () => {
 
     expect(onSend).toHaveBeenCalledWith('resting');
     expect(text()).toContain('전송하지 못했어요');
-    expect(text()).not.toContain('상담사에게 조용히 전달했어요');
+    expect(text()).not.toContain('코치에게 조용히 전달했어요');
   });
 
   it('단절(버퍼링)이면 복구 안내 문구를 보여준다', async () => {
@@ -114,7 +114,7 @@ describe('QuietSignalButtons', () => {
   });
 });
 
-// ── 상담사 화면: 카드 배지(은은·페이드) + 상단 집계 ─────────────────
+// ── 코치 화면: 카드 배지(은은·페이드) + 상단 집계 ─────────────────
 
 describe('SessionParticipantCardGrid — 무음 시그널 배지', () => {
   const participants = [row('p1', '게스트A'), row('p2', '게스트B')];

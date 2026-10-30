@@ -174,11 +174,11 @@ describe('MemberMediaRow', () => {
 });
 
 describe('PiP', () => {
-  it('상담사 PiP: 이름 칩·크게 보기 토글·재연결 중 "영상 멈춤" 표시', async () => {
+  it('코치 PiP: 이름 칩·크게 보기 토글·재연결 중 "영상 멈춤" 표시', async () => {
     await render(<MemberHostPip name="채용욱" frozen={false} video={null} />);
     const pip = q('[data-pz="pip"]');
     expect(pip?.textContent).toContain('채용욱');
-    expect(pip?.textContent).toContain('상담사');
+    expect(pip?.textContent).toContain('코치');
     expect(pip?.getAttribute('aria-label')).toContain('채용욱');
     expect(pip?.getAttribute('data-expanded')).toBe('false');
     await act(async () => { pip?.click(); });
@@ -187,9 +187,9 @@ describe('PiP', () => {
     await render(<MemberHostPip name="채용욱" frozen video={null} />);
     expect(q('[data-pz="pip"]')?.textContent).toContain('영상 멈춤');
   });
-  it('이름이 없으면 "상담사" 만 표시', async () => {
+  it('이름이 없으면 "코치" 만 표시', async () => {
     await render(<MemberHostPip name={null} frozen={false} video={null} />);
-    expect(q('[data-pz="pip"]')?.textContent).toContain('상담사');
+    expect(q('[data-pz="pip"]')?.textContent).toContain('코치');
   });
   it('내 PiP 3상태: on=영상/아바타 · off=이니셜 + "카메라 꺼짐" 칩 · denied=안내', async () => {
     await render(<MemberMyPip cam="on" initial="수" video={null} />);
@@ -264,7 +264,7 @@ describe('MemberMediaControls — LiveKitRoom 설정(P8: 회원 영상 기본 �
     await render(<Controls override={{ place: 'offline' }} />);
     expect(q('[data-testid="lk-room"]')).toBeNull();
   });
-  it('상담사 음성은 스피커 선택에 따라 볼륨 0/1', async () => {
+  it('코치 음성은 스피커 선택에 따라 볼륨 0/1', async () => {
     await render(<Controls override={{ speakerOn: false }} />);
     expect(lk.rendererVolume.at(-1)).toBe(0);
     await render(<Controls override={{ speakerOn: true }} />);

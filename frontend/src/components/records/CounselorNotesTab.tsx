@@ -38,7 +38,7 @@ export function CounselorNotesTab({ record, onUpdated }: Props) {
     <div className="space-y-4">
       <div>
         <label className="mb-1.5 block text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">
-          상담사 메모
+          코치 메모
         </label>
         <textarea
           value={notes}

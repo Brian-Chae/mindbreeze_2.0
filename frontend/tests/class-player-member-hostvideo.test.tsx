@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// SDD-208 I1 — 상담사 영상 연결 안내 칩(뷰): 실패/기다림 두 종류, 재시도 버튼, 평상시·오프라인에서는 없음.
+// SDD-208 I1 — 코치 영상 연결 안내 칩(뷰): 실패/기다림 두 종류, 재시도 버튼, 평상시·오프라인에서는 없음.
 import { act, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -32,12 +32,12 @@ afterEach(async () => {
   container.remove();
 });
 
-describe('상담사 영상 안내 칩', () => {
+describe('코치 영상 안내 칩', () => {
   it('failed: 불러오지 못했다는 안내와 [영상 다시 시도], 누르면 onHostVideoRetry', async () => {
     const props = memberCaseViewProps('M01');
     const actions = await mount('M01', { input: { ...props.input, ...noTrack }, hostVideoIssue: 'failed' });
     const chip = q('[data-pz="pip-issue"]');
-    expect(chip?.textContent).toContain('상담사 영상을 불러오지 못했습니다');
+    expect(chip?.textContent).toContain('코치 영상을 불러오지 못했습니다');
     expect(q('[data-pz="pip"]')).toBeNull();
     await act(async () => { [...document.querySelectorAll('button')].find((b) => b.textContent === '영상 다시 시도')?.click(); });
     expect(actions.onHostVideoRetry).toHaveBeenCalledTimes(1);
@@ -46,7 +46,7 @@ describe('상담사 영상 안내 칩', () => {
   it('waiting: 기다리고 있다는 안내와 [영상 다시 시도]', async () => {
     const props = memberCaseViewProps('M01');
     await mount('M01', { input: { ...props.input, ...noTrack }, hostVideoIssue: 'waiting' });
-    expect(q('[data-pz="pip-issue"]')?.textContent).toContain('상담사 영상을 기다리고 있어요');
+    expect(q('[data-pz="pip-issue"]')?.textContent).toContain('코치 영상을 기다리고 있어요');
     expect([...document.querySelectorAll('button')].some((b) => b.textContent === '영상 다시 시도')).toBe(true);
   });
 
@@ -63,7 +63,7 @@ describe('상담사 영상 안내 칩', () => {
     expect(q('[data-pz="pip-issue"]')).toBeNull();
   });
 
-  it('상담사 카메라가 나오는 중이면 영상 PiP 만 보인다', async () => {
+  it('코치 카메라가 나오는 중이면 영상 PiP 만 보인다', async () => {
     await mount('M01', { hostVideoIssue: 'failed' });
     expect(q('[data-pz="pip"]')).not.toBeNull();
     expect(q('[data-pz="pip-issue"]')).toBeNull();

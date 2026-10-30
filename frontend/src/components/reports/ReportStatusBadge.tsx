@@ -65,7 +65,7 @@ function panelTone(status: ReportPipelineStatus): string {
 
 function statusHint(status: ReportPipelineStatus, showApprovalHint: boolean): string | null {
   if (status === 'pending_review' && showApprovalHint) {
-    return '상담사 승인 대기 중입니다. 검수 후 승인하고 메일 발송을 진행해 주세요.';
+    return '코치 승인 대기 중입니다. 검수 후 승인하고 메일 발송을 진행해 주세요.';
   }
   if (status === 'pending_analysis') {
     return isAiEnabled()

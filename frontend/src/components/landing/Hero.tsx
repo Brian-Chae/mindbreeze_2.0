@@ -36,7 +36,7 @@ const Hero: React.FC = () => {
           <p className="font-medium text-[18px] leading-[30px] text-black/60 max-w-[480px] mt-7">
             {isAiEnabled() ? 'LINK BAND가 뇌파를 측정하고 AI가 분석합니다.' : 'LINK BAND로 뇌파를 선택적으로 측정하고 기록을 살펴봅니다.'}
             <br />
-            상담사는 기록에서 자유로워지고 내담자에게 집중할 수 있습니다.
+            코치는 기록에서 자유로워지고 내담자에게 집중할 수 있습니다.
           </p>
           <div className="flex gap-3 mt-9 flex-wrap">
             <Link

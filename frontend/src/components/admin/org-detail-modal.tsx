@@ -17,7 +17,7 @@ import { orgKindLabel, orgDate } from '../../lib/org-format';
 const statusLabel = (status: string): string =>
   ({ active: '활성', pending: '가입 대기', suspended: '정지' })[status] ?? '확인 필요';
 const roleLabel = (role: string): string =>
-  ({ org_admin: '기관 관리자', counselor: '상담사' })[role] ?? '확인 필요';
+  ({ org_admin: '기관 관리자', counselor: '코치' })[role] ?? '확인 필요';
 const control = buttonClass({ variant: 'secondary', size: 'sm' });
 
 type LoadState<T> = { status: 'loading' } | { status: 'error' } | { status: 'success'; data: T };
@@ -151,7 +151,7 @@ export default function OrgDetailModal({ organization, onClose, onUpdated }: {
               setTab(next); document.getElementById(`org-tab-${next}`)?.focus();
             }
           }} className={`px-4 py-3 text-sm font-semibold ${tab === value ? 'border-b-2 border-[#5F0080] text-[#5F0080]' : 'text-[#6F6F6F]'}`}>
-          {value === 'info' ? '기관 정보' : `상담사 (${count})`}
+          {value === 'info' ? '기관 정보' : `코치 (${count})`}
         </button>)}
       </div>
       <div className="overflow-y-auto p-5">
@@ -180,12 +180,12 @@ export default function OrgDetailModal({ organization, onClose, onUpdated }: {
               submit={(reason) => resetPrimaryAdminPassword(org.id, reason)}
               onGuardChange={counselorGuardChange} onCancel={() => setResetTarget(null)}
               onSaved={(message) => { setResetTarget(null); counselorGuardChange(false, false); setResetMessage(message); }} />}
-            {!person ? <p className="text-sm text-[#6F6F6F]">{org.kind === 'individual' ? '소유자 미지정 — 상담사 탭에서 정보를 수정하세요' : '담당자 미지정'}</p> :
+            {!person ? <p className="text-sm text-[#6F6F6F]">{org.kind === 'individual' ? '소유자 미지정 — 코치 탭에서 정보를 수정하세요' : '담당자 미지정'}</p> :
               <dl className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <Field label="이름">{person.name}</Field><Field label="이메일">{person.email}</Field>
                 <Field label="전화">{person.phone}</Field><Field label="계정 상태">{statusLabel(person.status)}</Field>
-                {org.kind === 'individual' && <Field label="상담사 코드">{counselors.state.status === 'loading' ? '조회 중' : counselors.state.status === 'error'
-                  ? <Retry label="상담사 코드" onRetry={counselors.retry} />
+                {org.kind === 'individual' && <Field label="코치 코드">{counselors.state.status === 'loading' ? '조회 중' : counselors.state.status === 'error'
+                  ? <Retry label="코치 코드" onRetry={counselors.retry} />
                   : members.find((member) => member.id === person.id)?.counselor_code ?? '미등록'}</Field>}
               </dl>}
             {editingPrimary && person && <PrimaryAdminEdit orgId={org.id} person={person}
@@ -210,22 +210,22 @@ export default function OrgDetailModal({ organization, onClose, onUpdated }: {
             submit={(reason) => resetAdminOrgCounselorPassword(org.id, resetTarget.member.id, reason)}
             onGuardChange={counselorGuardChange} onCancel={() => setResetTarget(null)}
             onSaved={(message) => { setResetTarget(null); counselorGuardChange(false, false); setResetMessage(message); }} />}
-          {counselors.state.status === 'loading' && <p role="status">상담사를 불러오는 중...</p>}
-          {counselors.state.status === 'error' && <Retry label="상담사" onRetry={counselors.retry} />}
+          {counselors.state.status === 'loading' && <p role="status">코치를 불러오는 중...</p>}
+          {counselors.state.status === 'error' && <Retry label="코치" onRetry={counselors.retry} />}
           {counselors.state.status === 'success' && <>
-            <p className="mb-3 text-xs text-[#6F6F6F]">상담사와 기관 관리자를 포함한 총 {members.length}명 · 검색 결과 {filtered.length}명</p>
+            <p className="mb-3 text-xs text-[#6F6F6F]">코치와 기관 관리자를 포함한 총 {members.length}명 · 검색 결과 {filtered.length}명</p>
             <div className="mb-4 flex flex-wrap gap-2">
-              <input aria-label="상담사 검색" placeholder="이름·이메일·상담사 코드" value={query} onChange={(event) => setQuery(event.target.value)} className={fieldClass('input', 'min-w-0 flex-1')} />
-              <select aria-label="상담사 역할" value={role} onChange={(event) => setRole(event.target.value)} className={fieldClass('select', '!w-auto')}>
-                <option value="">전체 역할</option><option value="counselor">상담사</option><option value="org_admin">기관 관리자</option><option value="unknown">확인 필요</option>
+              <input aria-label="코치 검색" placeholder="이름·이메일·코치 코드" value={query} onChange={(event) => setQuery(event.target.value)} className={fieldClass('input', 'min-w-0 flex-1')} />
+              <select aria-label="코치 역할" value={role} onChange={(event) => setRole(event.target.value)} className={fieldClass('select', '!w-auto')}>
+                <option value="">전체 역할</option><option value="counselor">코치</option><option value="org_admin">기관 관리자</option><option value="unknown">확인 필요</option>
               </select>
-              <select aria-label="상담사 상태" value={status} onChange={(event) => setStatus(event.target.value)} className={fieldClass('select', '!w-auto')}>
+              <select aria-label="코치 상태" value={status} onChange={(event) => setStatus(event.target.value)} className={fieldClass('select', '!w-auto')}>
                 <option value="">전체 상태</option><option value="active">활성</option><option value="pending">가입 대기</option><option value="suspended">정지</option><option value="unknown">확인 필요</option>
               </select>
             </div>
-            {filtered.length === 0 ? <p className="py-8 text-center text-sm">{members.length === 0 ? '소속 상담사가 없습니다.' : '검색 조건에 맞는 상담사가 없습니다.'}</p> :
+            {filtered.length === 0 ? <p className="py-8 text-center text-sm">{members.length === 0 ? '소속 코치가 없습니다.' : '검색 조건에 맞는 코치가 없습니다.'}</p> :
               <div className="overflow-x-auto"><table className="w-full min-w-[620px] text-left text-sm">
-                <thead className="bg-slate-50"><tr>{['이름', '이메일', '상담사 코드', '역할', '계정 상태', '관리'].map((label) => <th key={label} className="p-3">{label}</th>)}</tr></thead>
+                <thead className="bg-slate-50"><tr>{['이름', '이메일', '코치 코드', '역할', '계정 상태', '관리'].map((label) => <th key={label} className="p-3">{label}</th>)}</tr></thead>
                 <tbody>{filtered.map((member) => <tr key={member.id} className="border-b">
                   <td className="p-3">{member.name}{member.is_primary_admin && <span className="ml-2 text-xs text-purple-800">주 담당자</span>}{member.is_owner && <span className="ml-2 text-xs text-purple-800">소유자</span>}</td>
                   <td className="p-3">{member.email}</td><td className="p-3 font-mono">{member.counselor_code ?? '미등록'}</td><td className="p-3">{roleLabel(member.role)}</td><td className="p-3">{statusLabel(member.status)}</td>

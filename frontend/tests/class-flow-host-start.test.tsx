@@ -56,7 +56,7 @@ describe('deriveStartSheet', () => {
     expect(v.note).toBe('녹음 없이 수동 기록으로 진행해요. 메모로 기록지를 만들어요.');
   });
 
-  it('상담사가 체크를 해제하면 수동 기록(참가자 리포트 제외와 무관)', () => {
+  it('코치가 체크를 해제하면 수동 기록(참가자 리포트 제외와 무관)', () => {
     const v = deriveStartSheet(input('g-on-8', { recordChecked: false, excluded: 2, research: 5 }));
     expect(v).toMatchObject({ micRow: 'on', checked: false, manual: true, checkboxDisabled: false });
     expect(v.countRows).toHaveLength(2);
@@ -145,7 +145,7 @@ describe('FH07 시트', () => {
   it('전원 준비: 시안 문구와 익명 인원 수 줄', async () => {
     await show(startSpec('g-on-8', { excluded: 2, research: 5 }));
     const t = dialog();
-    for (const s of ['시작 전에 확인해요', '준비 인원', '8명 모두 준비 완료', '마이크', '켜져 있어요', '기록 원본은 90일 후 삭제돼요', '나와 담당 상담사만 열람', '리포트에 반영하지 않는 참가자 2명', '연구 목적 활용에 동의한 참가자 5명', '녹음하고 AI 기록지를 만들어요', '녹음은 언제든 멈출 수 있어요.']) expect(t).toContain(s);
+    for (const s of ['시작 전에 확인해요', '준비 인원', '8명 모두 준비 완료', '마이크', '켜져 있어요', '기록 원본은 90일 후 삭제돼요', '나와 담당 코치만 열람', '리포트에 반영하지 않는 참가자 2명', '연구 목적 활용에 동의한 참가자 5명', '녹음하고 AI 기록지를 만들어요', '녹음은 언제든 멈출 수 있어요.']) expect(t).toContain(s);
     expect(byText('button', '시작하기')).toBeDefined();
     expect(byText('button', '돌아가기')).toBeDefined();
   });

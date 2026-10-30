@@ -63,7 +63,7 @@ export function ProfileEntryView({ summary, mode, draft, errors, submitError, su
           <h2>{summary.title}</h2>
           <div className="fm-sum__meta">
             {summary.startLabel ? <span><Clock size={16} aria-hidden="true" />{summary.startLabel}</span> : null}
-            {summary.hostName ? <span><User size={16} aria-hidden="true" />{summary.hostName} 상담사</span> : null}
+            {summary.hostName ? <span><User size={16} aria-hidden="true" />{summary.hostName} 코치</span> : null}
           </div>
         </section>
       </FlowCard>

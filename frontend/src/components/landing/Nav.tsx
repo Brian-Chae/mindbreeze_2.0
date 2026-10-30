@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { isAiEnabled, isCounselingEnabled } from '../../lib/feature-flags';
 
 // 상담·AI 비공개(기본)에서는 출시 범위(명상 클래스) 밖의 메뉴 이름을 쓰지 않는다.
-const navItems = (): string[] => ['서비스', isAiEnabled() ? 'AI 리포트' : '리포트', ...(isCounselingEnabled() ? ['상담사'] : []), '고객센터'];
+const navItems = (): string[] => ['서비스', isAiEnabled() ? 'AI 리포트' : '리포트', ...(isCounselingEnabled() ? ['코치'] : []), '고객센터'];
 
 const Nav: React.FC = () => {
   const [active, setActive] = useState<string>('서비스');
@@ -34,7 +34,7 @@ const Nav: React.FC = () => {
             코드로 입장
           </Link>
           <Link to="/login?role=counselor" className="mb-btn mb-btn--ghost h-10 px-4 text-[15px] whitespace-nowrap inline-flex items-center">
-            {isCounselingEnabled() ? '상담사 로그인' : '진행자 로그인'}
+            {isCounselingEnabled() ? '코치 로그인' : '진행자 로그인'}
           </Link>
           <Link to="/login/client" className="mb-btn mb-btn--ghost h-10 px-4 text-[15px] whitespace-nowrap inline-flex items-center">
             회원 로그인

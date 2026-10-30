@@ -109,7 +109,7 @@ export function CodeEntryView({ digits, status, memberName, backdropSrc, onChang
         <section className="fm-code-card" aria-label="코드 입력">
           <MemberBrandMark className="fm-logo" />
           <FlowH1>입장 코드를 입력해 주세요</FlowH1>
-          <FlowSub>상담사가 알려 준 숫자 4자리예요</FlowSub>
+          <FlowSub>코치가 알려 준 숫자 4자리예요</FlowSub>
           <div className="fm-codebox" role="group" aria-label="입장 코드 4자리">
             {Array.from({ length: CODE_LENGTH }, (_, i) => (
               <span key={i} data-active={!bad && !locked && activeIndex === i ? 'true' : undefined} data-bad={bad ? 'true' : undefined}>

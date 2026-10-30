@@ -21,7 +21,7 @@ describe('SDD235 상시 신호 진입점', () => {
     expect(button).not.toBeNull(); expect(button?.dataset.empty).toBe('true'); expect(button?.disabled).toBe(false);
     await act(async () => button?.click());
     const sheet = node.querySelector('[data-pz="sheet"]');
-    expect(sheet?.textContent).toContain('상담사에게만'); expect(sheet?.textContent).not.toContain('익명'); expect(sheet?.textContent).toContain('아직 없어요');
+    expect(sheet?.textContent).toContain('코치에게만'); expect(sheet?.textContent).not.toContain('익명'); expect(sheet?.textContent).toContain('아직 없어요');
     expect(sheet?.textContent).not.toContain('민준');
     const checkin = [...(sheet?.querySelectorAll('button') ?? [])].find((item) => item.textContent?.includes('체크인 요약 보기'));
     await act(async () => checkin?.click());

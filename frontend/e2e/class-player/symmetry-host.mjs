@@ -6,6 +6,6 @@ import { runCli } from './lib.mjs';
 await runCli({
   role: 'host',
   mode: 'symmetry',
-  title: 'MIND BREEZE 2.0 · 상담사 화면 좌우 대칭·비율 균형 측정 (균형.md S1~S10, CS1~CS5)',
+  title: 'MIND BREEZE 2.0 · 코치 화면 좌우 대칭·비율 균형 측정 (균형.md S1~S10, CS1~CS5)',
   defaultOut: 'host-symmetry.txt',
 });

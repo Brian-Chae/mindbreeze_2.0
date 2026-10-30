@@ -154,7 +154,7 @@ export function MyAvCheck(props: MyAvCheckProps) {
     } else if (mic === 'on' && (cam === 'denied' || cam === 'nodevice' || cam === 'inuse')) {
       body = (<><LevelBar level={level} /><Hint warn>{mediaDeviceMessage('카메라', cam)}</Hint>{cam === 'denied' ? <MiniButton icon={<Info size={16} />} onClick={() => onOpenHelp('카메라')}>카메라 허용 방법 보기</MiniButton> : null}</>);
     } else if (mic === 'on') {
-      body = (<><LevelBar level={level} /><Hint>말해 보세요. 막대가 움직이면 잘 들리는 거예요. {solo ? '카메라를 켜면 상담사에게 내 모습이 보여요.' : '카메라를 켜면 상담사와 다른 분들에게 내 모습이 보여요.'}</Hint></>);
+      body = (<><LevelBar level={level} /><Hint>말해 보세요. 막대가 움직이면 잘 들리는 거예요. {solo ? '카메라를 켜면 코치에게 내 모습이 보여요.' : '카메라를 켜면 코치와 다른 분들에게 내 모습이 보여요.'}</Hint></>);
     } else {
       body = <Hint>마이크를 켜면 입력 크기를 확인할 수 있어요.</Hint>;
     }

@@ -74,7 +74,7 @@ export function StartConfirmSheet({ open, address, starting = false, onClose, on
       <div className="fl-card fhb-consent" data-pz="flow-card" data-size="sm">
         <div className="fhb-facts">
           <span className="fhb-fact"><Calendar size={20} aria-hidden="true" />{v.retentionText}</span>
-          <span className="fhb-fact"><Shield size={20} aria-hidden="true" />나와 담당 상담사만 열람</span>
+          <span className="fhb-fact"><Shield size={20} aria-hidden="true" />나와 담당 코치만 열람</span>
         </div>
         {v.countRows.map((row) => (
           <div className="fhb-cnt" key={row.kind}>

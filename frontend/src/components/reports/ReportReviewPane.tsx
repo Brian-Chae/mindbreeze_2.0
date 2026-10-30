@@ -39,7 +39,7 @@ export default function ReportReviewPane({ reportId, onClose, onReportChange }: 
       <header className="flex items-center justify-between gap-3 border-b border-[#E8E0EC] px-7 py-4">
         <div className="min-w-0">
           <p className="m-0 truncate text-[13px] text-[#8B8191]">{path || '불러오는 중'}</p>
-          <h2 className="m-0 truncate text-[18px] font-bold text-[#29272D]">{report?.type === 'counselor' ? '상담사용 · 회차 공통' : '회원용 리포트 검토'}</h2>
+          <h2 className="m-0 truncate text-[18px] font-bold text-[#29272D]">{report?.type === 'counselor' ? '코치용 · 회차 공통' : '회원용 리포트 검토'}</h2>
         </div>
         <button type="button" onClick={onClose} className="h-11 shrink-0 whitespace-nowrap rounded-[10px] border border-[#DED8E3] bg-white px-4 text-[14px] font-semibold text-[#5F0080] hover:bg-[#F5EDFC]">목록으로</button>
       </header>

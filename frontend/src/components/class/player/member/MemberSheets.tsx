@@ -109,7 +109,7 @@ function GroupRow({ group, props }: GroupRowProps) {
 /* ───────── 채팅 ───────── */
 
 function ChatSheet({ chat }: { chat: MemberClassViewProps['chat'] }) {
-  if (!chat.enabled) return <p className="mp-chat__note">상담사가 채팅을 켜면 여기에서 대화할 수 있어요.</p>;
+  if (!chat.enabled) return <p className="mp-chat__note">코치가 채팅을 켜면 여기에서 대화할 수 있어요.</p>;
   if (!chat.authenticated) {
     return (
       <div className="mp-empty">
@@ -153,7 +153,7 @@ function SoundSheet({ props, c }: { props: MemberClassViewProps; c: MemberCase }
       {sound.trackTitle ? (
         <div className="mp-now">
           <span className="mp-now__ic"><Music size={20} strokeWidth={2} aria-hidden="true" /></span>
-          <span className="mp-now__tx"><b>{sound.trackTitle}</b><span>상담사가 재생 중인 가이드</span></span>
+          <span className="mp-now__tx"><b>{sound.trackTitle}</b><span>코치가 재생 중인 가이드</span></span>
         </div>
       ) : (
         <p className="mp-note">지금은 재생 중인 소리가 없어요.</p>
@@ -175,14 +175,14 @@ function SoundSheet({ props, c }: { props: MemberClassViewProps; c: MemberCase }
         <span className="mp-row__val">{percent}%</span>
       </div>
       <div className="mp-row">
-        <span className="mp-row__lbl">상담사 음성 듣기</span>
+        <span className="mp-row__lbl">코치 음성 듣기</span>
         <span className="mp-switch-wrap">
           <button
             type="button"
             className="mp-switch"
             role="switch"
             aria-checked={sound.speakerOn}
-            aria-label="상담사 음성 듣기"
+            aria-label="코치 음성 듣기"
             onClick={() => actions.onSpeakerChange(!sound.speakerOn)}
           />
         </span>

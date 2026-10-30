@@ -5,12 +5,12 @@ import { chromium } from 'playwright';
 import { mkdirSync, writeFileSync } from 'node:fs';
 const [label = 'after', out = '/tmp/w'] = process.argv.slice(2);
 mkdirSync(out, { recursive: true });
-const host = { id: 'qa-host', email: 'h@example.test', name: 'QA 상담사', role: 'counselor', verified_tier: 'verified', onboarding_completed: true, auth_provider: 'google', counselors: [] };
-const member = { id: 'qa-member', email: 'm@example.test', name: 'QA 회원', role: 'client', verified_tier: 'verified', onboarding_completed: true, auth_provider: 'google', counselors: [{ id: 'qa-host', name: 'QA 상담사', profile_image: null }] };
-const mkClass = (i) => ({ id: `c${i}`, title: `MBSR 클래스 ${i}`, status: 'active', schedule_mode: 'fixed', planned_session_count: 8, area: 'meditation', progress: { completed: 1, total: 8 }, session_count: 8, next_session: { id: `s${i}`, seq: 2, scheduled_at: '2026-11-20T10:00:00+09:00', status: 'scheduled', host: { id: 'qa-host', name: 'QA 상담사' } }, has_open_session: false });
+const host = { id: 'qa-host', email: 'h@example.test', name: 'QA 코치', role: 'counselor', verified_tier: 'verified', onboarding_completed: true, auth_provider: 'google', counselors: [] };
+const member = { id: 'qa-member', email: 'm@example.test', name: 'QA 회원', role: 'client', verified_tier: 'verified', onboarding_completed: true, auth_provider: 'google', counselors: [{ id: 'qa-host', name: 'QA 코치', profile_image: null }] };
+const mkClass = (i) => ({ id: `c${i}`, title: `MBSR 클래스 ${i}`, status: 'active', schedule_mode: 'fixed', planned_session_count: 8, area: 'meditation', progress: { completed: 1, total: 8 }, session_count: 8, next_session: { id: `s${i}`, seq: 2, scheduled_at: '2026-11-20T10:00:00+09:00', status: 'scheduled', host: { id: 'qa-host', name: 'QA 코치' } }, has_open_session: false });
 const classes = { classes: [1, 2, 3, 4].map(mkClass), total: 4 };
 const pages = [
-  ['host', '홈(상담사)', '/dashboard', '.ch-home'],
+  ['host', '홈(코치)', '/dashboard', '.ch-home'],
   ['host', '명상 클래스', '/classes', '.cs-structure-scroll > *'],
   ['host', '회원 목록', '/clients', null],
   ['host', '리포트', '/reports', null],
@@ -39,9 +39,9 @@ for (const [role, name, path, sel] of pages) {
       if (/\/clients\/?$/.test(p)) return j({ clients: [], items: [], total: 0 });
       if (process.env.LOGAPI) console.log('API', p);
       if (/chat\/rooms/.test(p)) return j({ rooms: [], total: 0 });
-      if (/dashboard\/counselor/.test(p)) return j({ counselor_id: 'qa-host', counselor_name: 'QA 상담사', org_id: null, org_name: null, org_kind: 'individual', total_classes: 0, in_progress_classes: 0, completed_classes: 0, total_participants: 0, pending_review_count: 0, classes: [] });
+      if (/dashboard\/counselor/.test(p)) return j({ counselor_id: 'qa-host', counselor_name: 'QA 코치', org_id: null, org_name: null, org_kind: 'individual', total_classes: 0, in_progress_classes: 0, completed_classes: 0, total_participants: 0, pending_review_count: 0, classes: [] });
       if (/me\/consents/.test(p)) return j({ tos: { agreed: true }, privacy: { agreed: true }, sensitive: { agreed: true }, marketing: { agreed: false }, research: { agreed: false } });
-      if (/client\/counselors/.test(p)) return j([{ id: 'qa-host', name: 'QA 상담사', profile_image: null }]);
+      if (/client\/counselors/.test(p)) return j([{ id: 'qa-host', name: 'QA 코치', profile_image: null }]);
       if (/notifications/.test(p)) return j({ notifications: [], items: [], unread: 0, unread_count: 0, total: 0 });
       if (/notifications|unread/.test(p)) return j({ notifications: [], items: [], unread: 0, unread_count: 0, total: 0 });
       return j({ classes: [], rooms: [], sessions: [], reports: [], items: [], relationships: [], notifications: [], total: 0 });

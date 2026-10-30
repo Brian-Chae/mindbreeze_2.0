@@ -46,7 +46,7 @@ export function GuestAudioPanel({
       <section className="player-bgm" aria-label="가이드·BGM">
         <div className="player-bgm-title">
           <p>가이드 · BGM</p>
-          <span title={trackTitle ?? undefined}>{trackTitle ?? '상담사의 재생을 기다리고 있어요'}</span>
+          <span title={trackTitle ?? undefined}>{trackTitle ?? '코치의 재생을 기다리고 있어요'}</span>
         </div>
         {blocked ? (
           <button type="button" className="player-audio-resume" onClick={onResume}>소리 켜기</button>
@@ -92,7 +92,7 @@ export function GuestAudioPanel({
             가이드 · BGM
           </p>
           <p className="mt-0.5 truncate text-sm font-medium text-white">
-            {trackTitle ?? '상담사가 재생을 시작하면 함께 재생됩니다'}
+            {trackTitle ?? '코치가 재생을 시작하면 함께 재생됩니다'}
           </p>
         </div>
         <span
@@ -105,7 +105,7 @@ export function GuestAudioPanel({
               playing ? 'animate-pulse bg-[#2F9E68]' : 'bg-white/40'
             }`}
           />
-          {playing ? '상담사와 동기 재생 중' : synced ? '일시정지' : '대기'}
+          {playing ? '코치와 동기 재생 중' : synced ? '일시정지' : '대기'}
         </span>
       </div>
 

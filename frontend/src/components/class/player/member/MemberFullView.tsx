@@ -95,7 +95,7 @@ interface MemberWaitlistViewProps {
 /** M20 — 정원이 차서 대기 중. 자리가 나면 자동으로 입장한다 */
 export function MemberWaitlistView({ waitlist, backdropSrc, onLeave }: MemberWaitlistViewProps) {
   const rows: InfoRow[] = [{ label: '수업', value: waitlist.title }];
-  if (waitlist.counselorName) rows.push({ label: '상담사', value: `${waitlist.counselorName} 상담사` });
+  if (waitlist.counselorName) rows.push({ label: '코치', value: `${waitlist.counselorName} 코치` });
   if (waitlist.startLabel) rows.push({ label: '시작', value: waitlist.startLabel });
   return (
     <FullScene backdropSrc={backdropSrc}>
