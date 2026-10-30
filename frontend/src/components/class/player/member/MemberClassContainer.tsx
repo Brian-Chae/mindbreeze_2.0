@@ -179,7 +179,10 @@ export function MemberClassContainer({
   const [unread, setUnread] = useState(0);
 
   const v2PolicyChat = v2On && liveV2?.ready ? liveV2.state?.policy?.data.chat_enabled ?? null : null;
-  const v2ChatReady = v2PolicyChat !== null;
+  // 서버는 호스트가 채팅을 보내면 chat_enabled 를 DB 에서만 켠다(policy 이벤트 없음) — policy 가 false 인 동안은 폴링을 계속해 따라간다
+  const v2ChatReady = v2PolicyChat === true;
+  // 채팅 패널·도크가 같은 값을 보게 한다 — v2 READY 면 policy 도메인이 정본(폴링 값은 갱신되지 않는다)
+  const effectiveChatEnabled = v2ChatReady || (isAuthenticated ? chatEnabled : guestChatEnabled);
   useEffect(() => {
     if (!isAuthenticated || !sessionId) return undefined;
     let cancelled = false;
@@ -519,13 +522,13 @@ export function MemberClassContainer({
       onsiteLabel: null,
     },
     chat: {
-      enabled: v2ChatReady ? Boolean(v2PolicyChat) : isAuthenticated ? chatEnabled : guestChatEnabled,
+      enabled: effectiveChatEnabled,
       authenticated: isAuthenticated,
       unread,
       node: isAuthenticated ? (
         <ClassChatPanel
           sessionId={sessionId}
-          enabled={chatEnabled}
+          enabled={effectiveChatEnabled}
           roomId={chatRoomId}
           title="클래스 채팅"
           collapsed={sheet !== 'chat'}
