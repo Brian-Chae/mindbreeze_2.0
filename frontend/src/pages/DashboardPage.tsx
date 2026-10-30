@@ -12,6 +12,7 @@ import { MemberClassStrip } from '../components/client/home/member-class-strip';
 import { MemberClassStyles } from '../components/class/structure/member-class-views';
 import { ReadStateView } from '../components/class/structure/read-state';
 import { useClasses } from '../hooks/use-class-structure';
+import { HOME_ACTIVE_CLASS_PARAMS } from '../lib/class-structure/home-params';
 import { adaptHostClass } from '../lib/class-structure/adapters';
 import { classPath } from '../lib/class-structure/navigation';
 import {
@@ -198,7 +199,7 @@ export default function DashboardPage() {
   const pastClasses = useMemo(() => pickPastRows(visibleClasses), [visibleClasses]);
 
   // 내 클래스 = 부모 클래스 1장(GET /classes). 실패해도 대시보드 나머지 영역은 유지한다.
-  const classesRead = useClasses();
+  const classesRead = useClasses(HOME_ACTIVE_CLASS_PARAMS);
   const homeClasses = useMemo(
     () => (classesRead.state.status === 'success'
       ? sortHomeClasses(classesRead.state.data.classes.map(adaptHostClass)).slice(0, HOME_CLASS_LIMIT)

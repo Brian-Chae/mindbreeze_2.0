@@ -1,6 +1,7 @@
 // 인증 전역 상태 (Zustand)
 // access token은 메모리에만 보관, refresh token은 httpOnly cookie로 관리
 
+import { clearListCache } from '../lib/class-structure/list-cache';
 import { create } from 'zustand';
 import {
   ApiError,
@@ -245,6 +246,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     tokenStorage.clear();
     clearNativeRefresh();
     persistUser(null);
+    clearListCache();
     set({ user: null, accessToken: null, isAuthenticated: false, sessionError: null });
     // API7-07: 로그아웃 후에도 이전 사용자 토큰으로 연결된 채 남던 실시간 소켓을 닫는다.
     disconnectAllSockets();
