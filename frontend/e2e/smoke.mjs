@@ -68,7 +68,7 @@ await scenario('2. 회원(내담자) 로그인 → 앱 홈', async (page) => {
   await expectLoaded(page, '/app');
 });
 
-await scenario('3. 상담사 로그인 → 대시보드', async (page) => {
+await scenario('3. 코치 로그인 → 대시보드', async (page) => {
   await uiLogin(page, 'counselor', `e2e-counselor@${DOMAIN}`, '/dashboard');
 });
 
@@ -87,7 +87,7 @@ await scenario('5. 플랫폼 관리자 로그인(API)', async () => {
   if (j.user?.role !== 'platform_admin') throw new Error(`role=${j.user?.role}`);
 });
 
-await scenario('6. 상담사 주요 페이지 로딩', async (page) => {
+await scenario('6. 코치 주요 페이지 로딩', async (page) => {
   await uiLogin(page, 'counselor', `e2e-counselor@${DOMAIN}`, '/dashboard');
   for (const p of ['/clients', '/sessions', '/reports', '/chat']) await expectLoaded(page, p);
 });

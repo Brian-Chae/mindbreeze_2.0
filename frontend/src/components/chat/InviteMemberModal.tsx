@@ -66,7 +66,7 @@ export function InviteMemberModal({ room, onClose, onSuccess }: Props) {
             <h2 ref={titleRef} id={titleId} tabIndex={-1} className="text-lg mobile:text-mb-subtitle font-bold outline-none">{invite.step === 'select' ? '채팅방에 회원 초대' : '어떻게 초대할까요?'}</h2>
             <button type="button" disabled={invite.busy} onClick={close} aria-label="회원 초대 닫기" className="h-10 w-10 shrink-0 rounded-full bg-[#F2F3F8] focus-visible:ring-2 focus-visible:ring-[#5F0080] disabled:opacity-50">✕</button>
           </div>
-          <p id={`${titleId}-description`} className="mt-2 text-sm mobile:text-mb-compact text-[#6F6F6F]">{invite.step === 'select' ? '초대할 상담사 또는 내담자를 선택해 주세요.' : `선택한 ${invite.selected.length}명을 초대할 방을 선택해 주세요.`}</p>
+          <p id={`${titleId}-description`} className="mt-2 text-sm mobile:text-mb-compact text-[#6F6F6F]">{invite.step === 'select' ? '초대할 코치 또는 내담자를 선택해 주세요.' : `선택한 ${invite.selected.length}명을 초대할 방을 선택해 주세요.`}</p>
           <p className="mt-2 break-words text-sm mobile:text-mb-compact font-medium text-[#5F0080]">{chatRoomDisplayName(invite.detail)}</p>
         </header>
         <div className="min-h-0 space-y-4 overflow-y-auto p-5">
@@ -79,9 +79,9 @@ export function InviteMemberModal({ room, onClose, onSuccess }: Props) {
                   if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
                     event.preventDefault(); const next = index === 0 ? 'client' : 'counselor'; invite.setTab(next); document.getElementById(`${searchId}-${next}`)?.focus();
                   }
-                }} className={`flex-1 rounded-lg px-3 py-2 text-sm mobile:text-mb-compact font-semibold focus-visible:ring-2 focus-visible:ring-[#5F0080] ${invite.tab === tab ? 'bg-white text-[#5F0080] shadow-sm' : 'text-[#6F6F6F]'}`}>{tab === 'counselor' ? '상담사' : '내담자'}</button>)}
+                }} className={`flex-1 rounded-lg px-3 py-2 text-sm mobile:text-mb-compact font-semibold focus-visible:ring-2 focus-visible:ring-[#5F0080] ${invite.tab === tab ? 'bg-white text-[#5F0080] shadow-sm' : 'text-[#6F6F6F]'}`}>{tab === 'counselor' ? '코치' : '내담자'}</button>)}
             </div>
-            <p className="text-xs mobile:text-mb-caption text-[#6F6F6F]">{invite.tab === 'client' ? '나와 연결된 내담자를 검색합니다.' : '같은 기관에 소속된 상담사를 검색합니다.'}</p>
+            <p className="text-xs mobile:text-mb-caption text-[#6F6F6F]">{invite.tab === 'client' ? '나와 연결된 내담자를 검색합니다.' : '같은 기관에 소속된 코치를 검색합니다.'}</p>
             <div><label htmlFor={searchId} className="mb-2 block text-sm mobile:text-mb-compact font-medium">이름 또는 이메일 검색</label>
               <input id={searchId} value={invite.search.query} onChange={(event) => invite.setQuery(event.target.value)} placeholder="이름 또는 이메일을 입력하세요" className="w-full rounded-xl border border-[#DDDEE7] px-3 py-3 text-sm mobile:text-mb-compact outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/15" />
             </div>
@@ -98,9 +98,9 @@ export function InviteMemberModal({ room, onClose, onSuccess }: Props) {
                   </span>{(self || member) && <span className="text-xs mobile:text-mb-caption">{self ? '나' : '이미 참여 중'}</span>}
                 </label>;
               })}
-              {invite.search.loading ? <p role="status" className="py-3 text-sm mobile:text-mb-compact">{invite.tab === 'counselor' ? '상담사를' : '내담자를'} 불러오는 중…</p>
+              {invite.search.loading ? <p role="status" className="py-3 text-sm mobile:text-mb-compact">{invite.tab === 'counselor' ? '코치를' : '내담자를'} 불러오는 중…</p>
                 : invite.search.error ? <p role="alert" className="py-3 text-sm mobile:text-mb-compact text-red-600">{invite.search.error} <button type="button" onClick={invite.retrySearch} className="underline">다시 시도</button></p>
-                : invite.search.items.length === 0 && <p className="py-3 text-sm mobile:text-mb-compact text-[#6F6F6F]">{invite.search.query.trim() ? '검색 결과가 없습니다. 이름 또는 이메일을 확인해 주세요.' : invite.tab === 'counselor' ? '초대 가능한 상담사가 없습니다. 같은 기관에 소속된 상담사만 초대할 수 있습니다.' : '초대 가능한 연결 내담자가 없습니다.'}</p>}
+                : invite.search.items.length === 0 && <p className="py-3 text-sm mobile:text-mb-compact text-[#6F6F6F]">{invite.search.query.trim() ? '검색 결과가 없습니다. 이름 또는 이메일을 확인해 주세요.' : invite.tab === 'counselor' ? '초대 가능한 코치가 없습니다. 같은 기관에 소속된 코치만 초대할 수 있습니다.' : '초대 가능한 연결 내담자가 없습니다.'}</p>}
               {invite.search.items.length < invite.search.total && <button type="button" disabled={invite.search.loading || !!invite.search.error} onClick={invite.loadMore} className={`${secondaryButton} w-full`}>더 보기</button>}
             </div>
           </> : <>

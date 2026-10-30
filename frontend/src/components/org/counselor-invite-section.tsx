@@ -151,9 +151,9 @@ export default function CounselorInviteSection({
     <section className="space-y-6">
       <div className={cardClass()}>
         <div className="mb-5">
-          <h2 className="text-[18px] font-bold text-[#1F1F1F]">상담사 초대</h2>
+          <h2 className="text-[18px] font-bold text-[#1F1F1F]">코치 초대</h2>
           <p className="mt-1 text-[13px] text-[#6F6F6F]">
-            이름과 이메일을 입력하면 초대 메일이 발송됩니다. 상담사는 메일의 링크로 비밀번호를
+            이름과 이메일을 입력하면 초대 메일이 발송됩니다. 코치는 메일의 링크로 비밀번호를
             설정한 뒤 바로 이용할 수 있습니다.
           </p>
         </div>
@@ -231,7 +231,7 @@ export default function CounselorInviteSection({
           </div>
         ) : sortedInviteList.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-[#DDDEE7] p-8 text-center">
-            <p className="text-sm text-[#6F6F6F]">아직 초대한 상담사가 없습니다.</p>
+            <p className="text-sm text-[#6F6F6F]">아직 초대한 코치가 없습니다.</p>
             <p className="mt-2 text-[13px] text-[#9B9B9B]">
               위 양식에서 이름과 이메일을 입력하고 초대를 발송해주세요.
             </p>

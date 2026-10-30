@@ -232,14 +232,14 @@ afterEach(async () => {
 /* ───────── 테스트 ───────── */
 
 describe('데이터 → 뷰 모델', () => {
-  it('연결된 밴드의 값이 링에 나오고, 제목·시계·상담사 이름이 채워진다', async () => {
+  it('연결된 밴드의 값이 링에 나오고, 제목·시계·코치 이름이 채워진다', async () => {
     await render(<Container />);
     await advance(1000);
     expect(q('[data-pz="ring"]')?.textContent).toContain('이완도');
     expect(q('[data-pz="ring"] .pz-ring__num b')?.textContent).toBe('72');
     expect(q('[data-pz="title"]')?.textContent).toContain('마음챙김 명상수업 · 4회차');
     expect(q('[data-pz="title"]')?.textContent).toMatch(/12:3[4-6]/);
-    expect(q('[data-pz="pip"]')).toBeNull(); // 상담사 카메라 트랙이 없으면 PiP 없음
+    expect(q('[data-pz="pip"]')).toBeNull(); // 코치 카메라 트랙이 없으면 PiP 없음
   });
   it('밴드 상태 파생: 처음부터 미연결이면 미착용(off), 연결했다 끊기면 끊김(lost)', async () => {
     h.band.connectionState = 'disconnected';
@@ -288,10 +288,10 @@ describe('데이터 → 뷰 모델', () => {
     await advance(1000);
     expect(q('[data-pz="guide"]')?.textContent).toBe('이 브라우저에서는 밴드 연결이 안 돼요');
   });
-  it('상담사 이름: 클래스 요약에서 받은 hostName 을 그대로 쓰고 이름 때문에 따로 조회하지 않는다', async () => {
+  it('코치 이름: 클래스 요약에서 받은 hostName 을 그대로 쓰고 이름 때문에 따로 조회하지 않는다', async () => {
     useAuthStore.setState({ isAuthenticated: false, user: null });
     await render(<Container waitlisted />);
-    expect(document.body.textContent).toContain('채용욱 상담사');
+    expect(document.body.textContent).toContain('채용욱 코치');
     expect(h.getSession).not.toHaveBeenCalled();
   });
 });
@@ -520,7 +520,7 @@ describe('조용한 신호·종료·화면 끄기', () => {
 });
 
 describe('스피커·오디오', () => {
-  it('온라인 기본 스피커 ON · 오프라인 기본 OFF, 소리 시트에서 바꾸면 방의 상담사 음성 볼륨이 따라간다', async () => {
+  it('온라인 기본 스피커 ON · 오프라인 기본 OFF, 소리 시트에서 바꾸면 방의 코치 음성 볼륨이 따라간다', async () => {
     await render(<Container />);
     expect(h.rendererVolume.at(-1)).toBe(1);
     await act(async () => { dockButton('소리')?.click(); });
@@ -584,7 +584,7 @@ describe('LiveKit·미디어 연결', () => {
     expect(q('[data-pz="media-row"]')).toBeNull();
     expect(text()).not.toContain('기본 뮤트');
   });
-  it('상담사 화상이 아직 시작되지 않았으면(notReady) 지수 백오프로 다시 연결한다', async () => {
+  it('코치 화상이 아직 시작되지 않았으면(notReady) 지수 백오프로 다시 연결한다', async () => {
     h.lk.token = null;
     h.lk.notReady = true;
     h.lk.attemptCount = 0;
@@ -756,23 +756,23 @@ describe('정적 검사 — verify §5', () => {
   });
 });
 
-describe('상담사 영상 연결 안내 복원(SDD-208 I1) — 옛 CounselorLiveTile 의 실패 안내·재시도', () => {
-  it('토큰 발급이 실패(error)하면 상담사 PiP 자리에 안내 칩과 [영상 다시 시도]가 나온다', async () => {
+describe('코치 영상 연결 안내 복원(SDD-208 I1) — 옛 CounselorLiveTile 의 실패 안내·재시도', () => {
+  it('토큰 발급이 실패(error)하면 코치 PiP 자리에 안내 칩과 [영상 다시 시도]가 나온다', async () => {
     h.lk.token = null;
     h.lk.error = '서버 오류';
     await render(<Container />);
     const issue = q('[data-pz="pip-issue"]');
-    expect(issue?.textContent).toContain('상담사 영상을 불러오지 못했습니다');
+    expect(issue?.textContent).toContain('코치 영상을 불러오지 못했습니다');
     h.lk.connect.mockClear();
     await act(async () => { buttonByText('영상 다시 시도')?.click(); });
     expect(h.lk.connect).toHaveBeenCalledTimes(1);
   });
-  it('상담사 화상이 아직 시작되지 않아 재시도를 모두 쓰면(notReady, 5회) 기다림 안내와 [영상 다시 시도]', async () => {
+  it('코치 화상이 아직 시작되지 않아 재시도를 모두 쓰면(notReady, 5회) 기다림 안내와 [영상 다시 시도]', async () => {
     h.lk.token = null;
     h.lk.notReady = true;
     h.lk.attemptCount = 5;
     await render(<Container />);
-    expect(q('[data-pz="pip-issue"]')?.textContent).toContain('상담사 영상을 기다리고 있어요');
+    expect(q('[data-pz="pip-issue"]')?.textContent).toContain('코치 영상을 기다리고 있어요');
     expect(buttonByText('영상 다시 시도')).toBeDefined();
   });
   it('아직 재시도 중이거나 정상 연결(트랙 없음)일 때는 칩을 보이지 않는다 — 트랙이 없는 것과 연결 실패를 구분', async () => {
@@ -785,7 +785,7 @@ describe('상담사 영상 연결 안내 복원(SDD-208 I1) — 옛 CounselorLiv
     await render(<Container />);
     expect(q('[data-pz="pip-issue"]')).toBeNull();
   });
-  it('오프라인 수업은 상담사 영상을 연결하지 않으므로(현행 변경, D2) 토큰을 요청하지도 안내 칩을 그리지도 않는다', async () => {
+  it('오프라인 수업은 코치 영상을 연결하지 않으므로(현행 변경, D2) 토큰을 요청하지도 안내 칩을 그리지도 않는다', async () => {
     h.lk.token = null;
     h.lk.error = '서버 오류';
     await render(<Container locationType="offline" participantMode="group" maxParticipants={30} />);

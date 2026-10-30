@@ -69,7 +69,7 @@ export default function AgentCheckinPanel({ clientId }: { clientId: string }) {
     {loading && <p role="status">불러오는 중…</p>}
     {error && <p role="alert">{error} <button onClick={() => setReload((value) => value + 1)} className="underline">다시 시도</button></p>}
     {client && <p className="text-sm text-gray-500">마지막 안부: {client.last_checkin_at ? new Date(client.last_checkin_at).toLocaleString('ko-KR') : '아직 없음'}</p>}
-    <h3 className="font-semibold">상담사 전용 프로파일</h3>
+    <h3 className="font-semibold">코치 전용 프로파일</h3>
     {Object.entries(profileCategoryLabels).map(([category, label]) => <section key={category} className="space-y-2">
       <h4 className="text-sm font-semibold">{label}</h4>
       {!items.some((item) => item.category === category && item.status !== 'dismissed') && <p className="text-sm text-gray-500">아직 정리된 내용이 없습니다.</p>}

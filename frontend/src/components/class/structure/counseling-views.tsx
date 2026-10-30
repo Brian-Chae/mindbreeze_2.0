@@ -43,7 +43,7 @@ export function CounselingRow({ role, row }: { role: StructureRole; row: Counsel
           <span className={chip}>{label(RELATIONSHIP_STATUS, row.status) ?? '상태 없음'}</span>
         </span>
         {role === 'host' && client !== null && <span className="text-sm">{client}</span>}
-        {role === 'member' && <span className="text-sm">상담사 <ReadField value={valueOf(row.counselorName)} /></span>}
+        {role === 'member' && <span className="text-sm">코치 <ReadField value={valueOf(row.counselorName)} /></span>}
         <span className="text-sm text-[#625b6c]">
           다음 상담 <ReadField value={next ? formatWhen(next.scheduledAt) : null} />
           {seq !== null && ` · ${seq}회차`}
@@ -94,7 +94,7 @@ export function CounselingDetailView({ role, model }: { role: StructureRole; mod
           {model.title}
           <span className={chip}>{label(RELATIONSHIP_STATUS, model.status) ?? '상태 없음'}</span>
         </h2>
-        <p className="m-0 mt-2 text-sm">상담사 <ReadField value={valueOf(model.counselorName)} /></p>
+        <p className="m-0 mt-2 text-sm">코치 <ReadField value={valueOf(model.counselorName)} /></p>
         {role === 'host' && client !== null && <p className="m-0 text-sm">{client}</p>}
         {role === 'host' && <Link to="/clients" className="mt-2 inline-flex text-sm text-[#5f0080]">내담자</Link>}
       </section>

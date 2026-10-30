@@ -119,7 +119,7 @@ describe('FM06b 화면', () => {
   it('q4: 전할 말(선택) · 글자 수 · 200자 제한 · 남기고 계속하기/건너뛰기', async () => {
     const onNote = vi.fn();
     await render(<SurveyStepView {...survey({ question: 4, draft: { answers: emptySurveyDraft().answers, note: '목이 조금 불편해요' }, onNote })} />);
-    expect(text()).toContain('상담사에게 전하고 싶은 말이 있나요?');
+    expect(text()).toContain('코치에게 전하고 싶은 말이 있나요?');
     expect(text()).toContain('선택이에요. 적지 않아도 괜찮아요.');
     expect(text()).toContain('10 / 200');
     const area = document.querySelector('textarea')!;
@@ -144,7 +144,7 @@ describe('FM06b 화면', () => {
         sheetOpen
       />,
     );
-    expect(text()).toContain('상담사가 클래스를 시작했어요');
+    expect(text()).toContain('코치가 클래스를 시작했어요');
     expect(text()).toContain('남은 준비: 오늘의 상태 · LINK BAND · 기기');
     expect(text()).toContain('건너뛴 준비는 입장한 뒤 진행 화면의 도구에서 이어서 할 수 있어요.');
     expect(document.querySelector('[data-pz="flow-foot"]')?.closest('[inert]')).not.toBeNull();

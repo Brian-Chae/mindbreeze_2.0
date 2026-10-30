@@ -472,7 +472,7 @@ describe('class:audio_sync 소켓 계약', () => {
   });
 });
 
-// ── 상담사 패널 UI ─────────────────────────────────────────────────
+// ── 코치 패널 UI ─────────────────────────────────────────────────
 
 function playerState(over: Partial<ClassAudioPlayerState> = {}): ClassAudioPlayerState {
   return {
@@ -502,7 +502,7 @@ function playerActions(): ClassAudioPlayerActions {
   };
 }
 
-describe('ClassAudioPanel (상담사)', () => {
+describe('ClassAudioPanel (코치)', () => {
   it('트랙 목록·재생 컨트롤을 렌더하고 조작을 전달한다', async () => {
     const actions = playerActions();
     await render(
@@ -613,7 +613,7 @@ describe('GuestAudioPanel (회원)', () => {
     );
 
     expect(text()).toContain(TONE_TRACK.title);
-    expect(text()).toContain('상담사와 동기 재생 중');
+    expect(text()).toContain('코치와 동기 재생 중');
     expect(text()).toContain('01:05');
     expect(text()).toContain('60%');
 
@@ -622,7 +622,7 @@ describe('GuestAudioPanel (회원)', () => {
     expect(onVolumeChange).toHaveBeenCalled();
   });
 
-  it('상담사 재생 전에는 대기 안내를 보여 준다', async () => {
+  it('코치 재생 전에는 대기 안내를 보여 준다', async () => {
     await render(
       createElement(GuestAudioPanel, {
         trackTitle: null,
@@ -636,7 +636,7 @@ describe('GuestAudioPanel (회원)', () => {
         synced: false,
       }),
     );
-    expect(text()).toContain('상담사가 재생을 시작하면 함께 재생됩니다');
+    expect(text()).toContain('코치가 재생을 시작하면 함께 재생됩니다');
     expect(text()).toContain('대기');
   });
 

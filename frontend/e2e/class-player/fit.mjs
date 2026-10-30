@@ -11,6 +11,6 @@ if (role !== 'member' && role !== 'host') {
 await runCli({
   role,
   mode: 'fit',
-  title: `MIND BREEZE 2.0 · ${role === 'member' ? '회원' : '상담사'} 화면 공통 합격 기준 측정 (verify P1~P3·P5·P9·P12~P14 + 글자 대비 PC)`,
+  title: `MIND BREEZE 2.0 · ${role === 'member' ? '회원' : '코치'} 화면 공통 합격 기준 측정 (verify P1~P3·P5·P9·P12~P14 + 글자 대비 PC)`,
   defaultOut: `${role}-fit.txt`,
 });

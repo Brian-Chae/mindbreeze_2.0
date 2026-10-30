@@ -33,8 +33,8 @@ export function RoleGuard({ role, requireFullyVerified = false, onMismatch = 're
     const roles = Array.isArray(role) ? role : [role];
     if (!roles.includes(user.role)) {
       if (onMismatch === 'notice') {
-        const targetLabel = roles.includes('client') ? '회원' : roles.includes('counselor') ? '상담사' : '다른 계정';
-        const currentLabel = user.role === 'client' ? '회원' : user.role === 'counselor' ? '상담사' : user.role === 'org_admin' ? '기관 관리자' : '관리자';
+        const targetLabel = roles.includes('client') ? '회원' : roles.includes('counselor') ? '코치' : '다른 계정';
+        const currentLabel = user.role === 'client' ? '회원' : user.role === 'counselor' ? '코치' : user.role === 'org_admin' ? '기관 관리자' : '관리자';
         return (
           <div className="grid min-h-screen place-items-center bg-[#F7F2FA] p-6">
             <main role="alert" className="w-full max-w-[420px] rounded-3xl bg-white p-6 text-center shadow-xl">

@@ -121,12 +121,12 @@ export default function CounselorInfoEditor({ load, save, onSaved, onCancel, onG
 
   if (loadError) {
     return <div role="alert" className="mb-4 rounded-xl bg-red-50 p-4 text-sm text-red-800">
-      상담사 정보 조회에 실패했습니다.
+      코치 정보 조회에 실패했습니다.
       <button type="button" className={`${control} ml-2`} onClick={() => setAttempt((n) => n + 1)}>다시 시도</button>
       <button type="button" className={`${control} ml-2`} onClick={onCancel}>닫기</button>
     </div>;
   }
-  if (!profile || !draft) return <p role="status" className="mb-4 text-sm">상담사 정보를 불러오는 중...</p>;
+  if (!profile || !draft) return <p role="status" className="mb-4 text-sm">코치 정보를 불러오는 중...</p>;
 
   return <form aria-label={`${profile.name} 정보 수정`} onSubmit={(event) => { event.preventDefault(); void submit(); }}
     className="mb-4 space-y-4 rounded-xl border border-purple-200 bg-purple-50 p-4 text-sm">

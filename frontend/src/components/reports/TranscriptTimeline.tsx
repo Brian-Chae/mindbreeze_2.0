@@ -10,7 +10,7 @@ function formatTimestamp(sec: number): string {
 
 function speakerLabel(speaker: string): { label: string; tone: string; color: string } {
   if (speaker === 'counselor') {
-    return { label: '상담사', tone: 'text-[#5F0080]', color: 'bg-[#F5EDFC] border-[#E8D9F5]' };
+    return { label: '코치', tone: 'text-[#5F0080]', color: 'bg-[#F5EDFC] border-[#E8D9F5]' };
   }
   if (speaker === 'client') {
     return { label: '내담자', tone: 'text-[#26724B]', color: 'bg-[#F0F9F5] border-[#D8EFE3]' };

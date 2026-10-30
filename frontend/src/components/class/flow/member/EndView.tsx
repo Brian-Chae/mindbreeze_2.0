@@ -61,11 +61,11 @@ export function EndView(props: EndViewProps) {
     : guest
       ? (maskedEmail ? `리포트를 ${maskedEmail} 로 보내 드려요` : '리포트를 입력한 이메일로 보내 드려요')
       : '리포트는 준비되면 메일로 보내 드려요.';
-  const reportRow = excluded ? '보낼 리포트가 없어요' : guest ? '상담사 확인 후 메일 발송' : '준비되면 메일 발송';
+  const reportRow = excluded ? '보낼 리포트가 없어요' : guest ? '코치 확인 후 메일 발송' : '준비되면 메일 발송';
   const note = excluded
-    ? '종료 전에는 설정에서 바꿀 수 있어요. 종료 뒤에는 상담사에게 요청해 주세요.'
+    ? '종료 전에는 설정에서 바꿀 수 있어요. 종료 뒤에는 코치에게 요청해 주세요.'
     : guest
-      ? '상담사가 확인하면 자동으로 보내져요.'
+      ? '코치가 확인하면 자동으로 보내져요.'
       : isAiEnabled()
         ? 'AI 기록과 리포트를 만드는 데 몇 분 걸릴 수 있어요.'
         : '리포트를 만드는 데 몇 분 걸릴 수 있어요.';
@@ -80,7 +80,7 @@ export function EndView(props: EndViewProps) {
             <span className="fl-label">받는 이메일</span>
             <div className="fm-ro">{maskedEmail ?? '계정 이메일'}</div>
           </div>
-          <p className="fm-sheet-sub">리포트는 상담사가 확인한 뒤 계정 이메일로 보내 드려요. 영업일 기준 1~2일 걸릴 수 있어요.</p>
+          <p className="fm-sheet-sub">리포트는 코치가 확인한 뒤 계정 이메일로 보내 드려요. 영업일 기준 1~2일 걸릴 수 있어요.</p>
           {errorText ? <Alert text={errorText} /> : null}
           <FlowButton kind="primary" disabled={working} onClick={props.onRequestReport}><Mail size={20} aria-hidden="true" />리포트 신청하기</FlowButton>
         </div>
@@ -93,7 +93,7 @@ export function EndView(props: EndViewProps) {
           <div className="fm-center" style={{ padding: '16px 0' }}>
             <span className="fm-ficon" data-tone="ok"><CheckCircle size={28} aria-hidden="true" /></span>
             <b>신청했어요</b>
-            <span className="d">상담사가 확인하면 이메일로 보내 드려요.</span>
+            <span className="d">코치가 확인하면 이메일로 보내 드려요.</span>
           </div>
           <FlowButton kind="primary" onClick={props.onCloseSheet}>확인</FlowButton>
         </div>

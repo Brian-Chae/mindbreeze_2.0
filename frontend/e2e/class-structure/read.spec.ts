@@ -65,7 +65,7 @@ test('레거시 목록·생성·회원 목록이 새 경로로 이동한다', as
   }
 });
 
-test('상담사 미연결 회원도 홈·내 클래스·내 상담 읽기 화면에 진입한다', async ({ browser }) => {
+test('코치 미연결 회원도 홈·내 클래스·내 상담 읽기 화면에 진입한다', async ({ browser }) => {
   for (const path of ['/app', '/app/classes', '/app/counseling']) {
     const context = await browser.newContext({ baseURL: 'http://127.0.0.1:5441' });
     const page = await context.newPage();

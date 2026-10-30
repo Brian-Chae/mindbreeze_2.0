@@ -55,7 +55,7 @@ export function EntryConfirmView({
           <h2>{title}</h2>
           <div className="fm-sum__meta">
             {startLabel ? <span><Clock size={16} aria-hidden="true" />{startLabel}</span> : null}
-            {hostName ? <span><User size={16} aria-hidden="true" />{hostName} 상담사 진행</span> : null}
+            {hostName ? <span><User size={16} aria-hidden="true" />{hostName} 코치 진행</span> : null}
             {address ? <span><MapPin size={16} aria-hidden="true" />{address}</span> : null}
           </div>
           <MethodChips place={place} size={size} bandMode={bandMode} tone="confirm" />

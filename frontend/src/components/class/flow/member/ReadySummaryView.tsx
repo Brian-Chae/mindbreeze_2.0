@@ -63,7 +63,7 @@ export function ReadySummaryView({ displayName, rows, steps, place = 'online', b
       <div className="fm-head">
         <span className="fm-hi"><CircleCheck size={28} aria-hidden="true" /></span>
         <FlowH1>준비를 마쳤어요</FlowH1>
-        <FlowSub>{displayName}님, 상담사가 시작하면 자동으로 입장해요.</FlowSub>
+        <FlowSub>{displayName}님, 코치가 시작하면 자동으로 입장해요.</FlowSub>
       </div>
       <div className="fm-sumlist">
         {rows.map((row) =>

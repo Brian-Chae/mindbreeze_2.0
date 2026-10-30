@@ -129,7 +129,7 @@ export function NoticeStepView({
     >
       <div className="fm-head fm-wiz-dense">
         <FlowH1>시작 전에 확인해 주세요</FlowH1>
-        <FlowSub>{hostName ? `${hostName} 상담사와 함께하는 ${title}` : title}</FlowSub>
+        <FlowSub>{hostName ? `${hostName} 코치와 함께하는 ${title}` : title}</FlowSub>
       </div>
       <MethodChips place={place} size={size} />
       <div className="notice-cards">
