@@ -1,10 +1,12 @@
 import { membershipApi } from '../lib/api/class-operations';
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import {
   getClasses, getClass, getClassSessions, getCounseling, getCounselingDetail,
   type ListParams, type CounselingListResponse, type ClassDetailDto, type ClassSessionsResponse,
 } from '../lib/api/class-structure';
 import { subscribeClassReads, classReadRevision } from '../lib/class-structure/invalidation';
+import { HOME_ACTIVE_CLASS_PARAMS } from '../lib/class-structure/home-params';
+import { readListCache, writeListCache } from '../lib/class-structure/list-cache';
 import { ApiError } from '../lib/api/client';
 import { isCounselingEnabled } from '../lib/feature-flags';
 import { useAuthStore } from '../stores/authStore';
@@ -70,6 +72,9 @@ function useRead<T>(resource: string, load: (signal: AbortSignal) => Promise<T>,
   const key = JSON.stringify([resourceKey, attempt, revision]);
   const [result, setResult] = useState<{ key: string; resourceKey: string; state: ReadState<T>; refreshError?: string; errorStatus?:number } | null>(null);
   const retry = useCallback(() => setAttempt((value) => value + 1), []);
+  // 목록(classes:·counseling:)은 마지막 성공값을 먼저 보여 주고 뒤에서 새로 받는다(stale-while-revalidate).
+  const isListRead = resource.startsWith('classes:') || resource.startsWith('counseling:');
+  const cached = useMemo(() => (isListRead && enabled ? readListCache<T>(resource) : null), [isListRead, enabled, resource]);
   useEffect(() => {
     if (!enabled) return;
     const auth = useAuthStore.getState();
@@ -77,7 +82,10 @@ function useRead<T>(resource: string, load: (signal: AbortSignal) => Promise<T>,
     let active = true;
     const request = acquire(key, load);
     request.promise.then((data) => {
-      if (active && scopeSnapshot() === scope) setResult({ key, resourceKey, state: { status: 'success', data } });
+      if (active && scopeSnapshot() === scope) {
+        if (isListRead) writeListCache(resource, data);
+        setResult({ key, resourceKey, state: { status: 'success', data } });
+      }
     }, (error: unknown) => {
       if (!active || scopeSnapshot() !== scope) return;
       const state: ReadState<T> = error instanceof ApiError && error.status === 404
@@ -92,10 +100,11 @@ function useRead<T>(resource: string, load: (signal: AbortSignal) => Promise<T>,
       });
     });
     return () => { active = false; request.release(); };
-  }, [key, resourceKey, scope, load, isClassRead, publicRead, enabled]);
+  }, [key, resourceKey, scope, load, isClassRead, isListRead, resource, publicRead, enabled]);
   // 같은 계정·부모의 성공 화면은 재조회 중 유지하되 계정/부모 전환에는 노출하지 않는다.
   const current = result?.resourceKey === resourceKey && (result.key === key || isClassRead && result.state.status === 'success') ? result : null;
-  return { state: current?.state ?? { status: 'loading' }, retry, refreshError: current?.refreshError, errorStatus:current?.errorStatus };
+  const fallback: ReadState<T> = cached ? { status: 'success', data: cached } : { status: 'loading' };
+  return { state: current?.state ?? fallback, retry, refreshError: current?.refreshError, errorStatus:current?.errorStatus };
 }
 function paramsKey(params?: ListParams): string {
   return JSON.stringify([params?.status ?? null, params?.page ?? null, params?.limit ?? null]);
@@ -123,7 +132,7 @@ export function useCounselingDetail(id: RelationshipId) {
   return useRead(`relationship:${id}`, load);
 }
 export function useMixedHome() {
-  const classes = useClasses();
+  const classes = useClasses(HOME_ACTIVE_CLASS_PARAMS);
   // SDD-219: 상담 비공개 시 상담 조회를 생략하고 빈 목록으로 취급한다.
   const counselingEnabled = isCounselingEnabled();
   const counseling = useCounseling(undefined, counselingEnabled);
