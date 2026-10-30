@@ -73,12 +73,25 @@ export function useMemberLiveKit({
     return () => { mountedRef.current = false; };
   }, []);
 
+  /** v2: 서버가 알린 송출 권한(speaking.changed) — 토큰 응답이 이보다 뒤처지면(커밋 전 조회) 다시 받는다 */
+  const expectedPublishRef = useRef<boolean | null>(null);
+  const staleRetryRef = useRef(0);
+
   const connect = useCallback(async () => {
     if (!entryCredential || !participantId || !sessionId) return;
     setLoading(true);
     setError(null);
     try {
       const res = await getEntryLiveKitToken(sessionId, entryCredential);
+      // 발언권 이벤트가 DB 커밋보다 먼저 도착하면 토큰이 구독 전용으로 발급된다 — 회원 마이크가 영영 안 켜지는 원인.
+      // 이벤트가 정본이므로 권한이 어긋나면 짧게 간격을 두고 재발급한다(최대 5회).
+      const expected = expectedPublishRef.current;
+      if (expected !== null && res.can_publish !== expected && staleRetryRef.current < 5) {
+        staleRetryRef.current += 1;
+        window.setTimeout(() => { if (mountedRef.current) void connectRef.current(); }, 400 * staleRetryRef.current);
+      } else {
+        staleRetryRef.current = 0;
+      }
       setToken(res.livekit_token);
       setRoomId(res.webrtc_room_id);
       setCanPublish(res.can_publish);
@@ -130,6 +143,7 @@ export function useMemberLiveKit({
       if (!event || event.participant_id !== participantId) return;
       if (sessionId && event.session_id && event.session_id !== sessionId) return;
       const publishChanged = event.speaking !== canPublishRef.current;
+      expectedPublishRef.current = event.speaking;
       setSpeaking(event.speaking);
       // BE는 부여 시 손들기를 내린다 — 해제 시에도 손들기 표시를 남기지 않는다
       setRaisedHand(event.raise_hand ?? false);
@@ -164,6 +178,7 @@ export function useMemberLiveKit({
   useEffect(() => {
     if (!v2 || !mySpeaking || !participantId) return;
     const next: MediaGrant = { participantId, canPublish: mySpeaking.can_publish, grantVersion: mySpeaking.grant_version };
+    expectedPublishRef.current = mySpeaking.can_publish;
     if (shouldRefreshMediaToken(grantRef.current, next)) void connectRef.current();
     grantRef.current = next;
   }, [v2, mySpeaking, participantId]);

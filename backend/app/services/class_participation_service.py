@@ -516,7 +516,7 @@ def apply_livekit_publish_permission(room: str, identity: str, can_publish: bool
     from app.config import settings
 
     async def _run() -> None:
-        client = api.LiveKitAPI(settings.livekit_host, settings.livekit_api_key, settings.livekit_api_secret)
+        client = api.LiveKitAPI(settings.livekit_server_api_url, settings.livekit_api_key, settings.livekit_api_secret)
         try:
             await client.room.update_participant(api.UpdateParticipantRequest(
                 room=room, identity=identity,

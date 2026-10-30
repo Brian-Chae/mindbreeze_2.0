@@ -152,9 +152,10 @@ interface Props {
   linkbandMode?: 'required' | 'optional' | 'none';
   waitlisted?: boolean;
   onLeave?: () => void;
+  liveV2?: unknown;
 }
 
-function Container({ locationType = 'online', participantMode = 'one_on_one', maxParticipants = 1, linkbandMode, waitlisted, onLeave = () => undefined }: Props) {
+function Container({ locationType = 'online', participantMode = 'one_on_one', maxParticipants = 1, linkbandMode, waitlisted, onLeave = () => undefined, liveV2 }: Props) {
   return (
     <MemberClassContainer
       title="마음챙김 명상수업 · 4회차"
@@ -170,6 +171,7 @@ function Container({ locationType = 'online', participantMode = 'one_on_one', ma
       maxParticipants={maxParticipants}
       linkbandMode={linkbandMode}
       waitlisted={waitlisted}
+      liveV2={liveV2 as never}
     />
   );
 }
@@ -366,6 +368,21 @@ describe('채팅', () => {
     expect(h.getSession.mock.calls.length).toBeGreaterThanOrEqual(2);
     expect(h.chatProps.at(-1)).toMatchObject({ sessionId: 's1', enabled: true, roomId: 'room-1', embedded: true, collapsed: true });
     expect(q('.pz-dk__badge')?.textContent).toBe('3');
+  });
+  it('v2 READY: 처음 조회 때 꺼져 있어도 policy 로 채팅이 켜지면 패널도 enabled 로 켜진다(회원 채팅 미활성 회귀)', async () => {
+    vi.stubEnv('VITE_LIVE_PROTOCOL_V2', 'true');
+    h.getSession.mockResolvedValue({ host_id: 'h1', participants: [], chat_enabled: false, chat_room_id: null });
+    const v2 = (on: boolean) => ({ ready: true, client: null, nowMs: 0, state: { phase: 'READY', policy: { data: { chat_enabled: on } }, speaking: {}, intents: {}, metrics: {}, devices: {} } });
+    await render(<Container liveV2={v2(false)} />);
+    await advance(100);
+    // 호스트가 채팅을 보내 DB 만 켜지고 policy 이벤트는 없는 경우 — 폴링이 계속 따라가야 한다
+    h.getSession.mockResolvedValue({ host_id: 'h1', participants: [], chat_enabled: true, chat_room_id: 'room-9' });
+    await advance(5000);
+    expect(h.chatProps.at(-1)).toMatchObject({ enabled: true, roomId: 'room-9' });
+    await render(<Container liveV2={v2(true)} />);
+    await advance(100);
+    expect(h.chatProps.at(-1)).toMatchObject({ enabled: true, roomId: 'room-9' });
+    vi.unstubAllEnvs();
   });
   it('채팅 시트를 열면 collapsed=false 로 바뀌어 채팅방이 보이고 배지는 사라진다', async () => {
     await render(<Container />);
