@@ -4,6 +4,9 @@ import type { ReportSessionInfo } from '../../components/reports/NarrativeSectio
 import { reliabilityLabel, type AdaptedReportContent, type EegQualityStatus } from '../api/report';
 import type { ReportDto } from '../api/reports';
 
+/** 참가자가 리포트 제외를 선택해 표시하지 않는 경우의 안내(실제 미측정 문구와 구분) */
+export const REPORT_EXCLUDED_NOTICE = '참가자가 리포트 제외를 선택해 표시하지 않아요 (측정 데이터는 보관 중)';
+
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'] as const;
 
 const QUALITY_STATUS_LABELS: Record<EegQualityStatus, string> = {
@@ -53,6 +56,7 @@ function hasValue(values: Array<number | null | undefined>): boolean {
 /** 실제 기록된 신호만 나열한다. 측정이 없으면 그에 맞는 문구를 돌려준다. */
 function resolveRecordedSignals(adapted: AdaptedReportContent): string {
   const eeg = adapted.eeg;
+  if (adapted.eegExcluded) return REPORT_EXCLUDED_NOTICE;
   if (!eeg || eeg.status === 'not_measured') return '밴드 측정 없음';
   const timeline = adapted.eeg_timeline;
   const signals: string[] = [];
@@ -66,6 +70,7 @@ function resolveRecordedSignals(adapted: AdaptedReportContent): string {
 }
 
 function resolveQualityLabel(adapted: AdaptedReportContent): string | undefined {
+  if (adapted.eegExcluded) return REPORT_EXCLUDED_NOTICE;
   const eeg = adapted.eeg;
   if (!eeg) return undefined;
   if (eeg.status === 'valid') return reliabilityLabel(eeg.reliability) ?? QUALITY_STATUS_LABELS.valid;

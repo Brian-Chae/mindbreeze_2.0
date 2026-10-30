@@ -155,6 +155,8 @@ export interface AdaptedReportContent {
   /** Cover 사유 칩 문구 (invalid/insufficient/degraded) */
   coverReasonChip: string | null;
   eeg: ReportEegContent | null;
+  /** 참가자가 리포트 제외를 선택해 EEG 를 비운 경우(서버 reason=participant_excluded). 실제 미측정과 구분 — 사유 없는 기존 리포트는 false */
+  eegExcluded: boolean;
   /** not_measured 또는 EEG 없음 → DOM 미노출 */
   showEegSection: boolean;
   /** valid/degraded만 지표·타임라인 표시 */
@@ -333,6 +335,11 @@ function coverReasonForStatus(status: EegQualityStatus): string | null {
   }
 }
 
+/** 제외 선택으로 비운 EEG 블록인지 — reason 이 없는 기존 리포트는 false(기존 문구 유지) */
+function isParticipantExcludedEeg(raw: unknown): boolean {
+  return isRecord(raw) && raw.status === 'not_measured' && raw.excluded === true && raw.reason === 'participant_excluded';
+}
+
 /** content.eeg 블록 파싱. 없거나 not_measured면 null */
 function parseEegBlock(raw: unknown): ReportEegContent | null {
   if (!isRecord(raw)) return null;
@@ -438,6 +445,7 @@ export function adaptReportContent(
       coverScore: null,
       coverReasonChip: null,
       eeg: null,
+      eegExcluded: false,
       showEegSection: false,
       showEegMetrics: false,
       showEegTimeline: false,
@@ -486,6 +494,7 @@ export function adaptReportContent(
     coverScore,
     coverReasonChip: eeg ? coverReasonForStatus(eeg.status) : null,
     eeg,
+    eegExcluded: isParticipantExcludedEeg(content.eeg),
     showEegSection,
     showEegMetrics,
     showEegTimeline,

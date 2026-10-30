@@ -345,3 +345,16 @@ def test_AI_비서_입력은_제외자_리포트를_쓰지_않는다(db):
                   status="completed", content={"headline": "h", "summary": "s"}))
     db.commit()
     assert agent_policy.approved_client_reports(user.id, db) == []
+
+
+def test_제외_사유가_eeg_블록에_구분되어_담긴다(db):
+    """제외로 비운 not_measured 는 reason=participant_excluded 로 실제 미측정과 구분된다."""
+    from app.services import report_scope, report_service
+
+    assert report_scope.excluded_eeg_block()["reason"] == "participant_excluded"
+    host, session, (p_in, p_out) = _class(db, included=(True, False))
+    eeg = _gen(db, host, session, "client", p_out)["content"]["eeg"]
+    assert eeg["reason"] == "participant_excluded"
+    # 정규화(조회) 경로에서도 보존, 사유 없는 기존 리포트는 기존 형태 그대로
+    assert report_service._normalize_eeg(eeg)["reason"] == "participant_excluded"
+    assert "reason" not in report_service._normalize_eeg({"status": "not_measured"})
