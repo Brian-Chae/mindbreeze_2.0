@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { useAuthStore } from '../../stores/authStore';
 import { isNativeApp } from './platform';
@@ -14,6 +15,16 @@ import { isNativeApp } from './platform';
  *   흰 단색 상태바를 칠하면 어두운 클래스 화면 위에 흰 띠가 생긴다.
  * - 그 밖의 로그인 전 화면: 어두운 상태바 + 밝은 아이콘(기존).
  */
+interface SystemChromePlugin { setChrome(opts: { color: string; lightIcons: boolean }): Promise<void> }
+const CLASS_BG = '#12081C';
+let chrome: SystemChromePlugin | null = null;
+/** Android 전용 네이티브 플러그인(MainActivity 등록). Android 15+ 는 StatusBar 배경색이 무시돼 decorView 를 직접 칠한다. */
+function androidChrome(): SystemChromePlugin | null {
+  if (Capacitor.getPlatform() !== 'android') return null;
+  chrome ??= registerPlugin<SystemChromePlugin>('SystemChrome');
+  return chrome;
+}
+
 /** 어두운 전체화면 배경이 상태바 뒤까지 이어져야 하는 클래스 모드 경로인지. */
 export function isClassModePath(pathname: string): boolean {
   return /^\/class\/[^/]+\/enter\/?$/.test(pathname) || /^\/sessions\/[^/]+\/player\/?$/.test(pathname);
@@ -28,6 +39,8 @@ export function useStatusBar(): void {
     if (!isNativeApp()) return;
     const apply = async () => {
       try {
+        const droid = androidChrome();
+        if (droid) await droid.setChrome(onClass ? { color: CLASS_BG, lightIcons: true } : { color: '#FFFFFF', lightIcons: false }).catch(() => undefined);
         if (onClass || (!authenticated && onLogin)) {
           await StatusBar.setOverlaysWebView({ overlay: true });
           await StatusBar.setStyle({ style: Style.Dark });
