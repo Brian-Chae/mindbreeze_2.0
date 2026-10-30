@@ -15,6 +15,7 @@ import {
   unsuspendCounselor,
   type CounselorActivity,
   type CounselorItem,
+  type CounselorRole,
 } from '../../lib/api/org';
 import {
   getOrgCounselorProfile,
@@ -349,6 +350,8 @@ export default function OrgCounselorsPage() {
   } | null>(null);
   const [busy, setBusy] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+  // SDD-258: 초대 팝업의 역할 — 상담사 / 기관관리자
+  const [inviteRole, setInviteRole] = useState<CounselorRole>('counselor');
   const inviteDialogRef = useDialogA11y(showInvite, () => setShowInvite(false));
 
   const refresh = useCallback(async (targetOrgId: string): Promise<void> => {
@@ -420,14 +423,29 @@ export default function OrgCounselorsPage() {
       wide
       rightSlot={
         orgId ? (
-          <button
-            data-header-action="primary"
-            type="button"
-            onClick={() => setShowInvite(true)}
-            className="mb-btn"
-          >
-            상담사 초대
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setInviteRole('org_admin');
+                setShowInvite(true);
+              }}
+              className="mb-btn"
+            >
+              기관관리자 초대
+            </button>
+            <button
+              data-header-action="primary"
+              type="button"
+              onClick={() => {
+                setInviteRole('counselor');
+                setShowInvite(true);
+              }}
+              className="mb-btn"
+            >
+              상담사 초대
+            </button>
+          </div>
         ) : undefined
       }
     >
@@ -564,7 +582,7 @@ export default function OrgCounselorsPage() {
                             >
                               이력
                             </button>
-                            {isCounselor && status !== 'pending' && (
+                            {status !== 'pending' && (
                               <button
                                 type="button"
                                 onClick={() =>
@@ -612,13 +630,14 @@ export default function OrgCounselorsPage() {
             tabIndex={-1}
             role="dialog"
             aria-modal="true"
-            aria-label="상담사 초대"
+            aria-label={inviteRole === 'org_admin' ? '기관관리자 초대' : '상담사 초대'}
             className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-4 shadow-xl"
           >
             <CounselorInviteSection
               orgId={orgId}
               inviteList={[]}
               showList={false}
+              inviteRole={inviteRole}
               onRefresh={() => refresh(orgId)}
             />
             <div className="mt-3 flex justify-end">

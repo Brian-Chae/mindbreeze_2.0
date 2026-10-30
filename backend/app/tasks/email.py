@@ -417,16 +417,18 @@ def send_membership_invite_email(
     counselor_name: str,
     org_name: str,
     expires_days: int,
+    role: str = "counselor",
 ) -> bool:
     """기존 상담사 대상 "소속 추가 초대" 메일 (SDD-079).
 
     이미 계정이 있는 상담사를 다른 기관이 초대할 때 보낸다 — 비밀번호 설정이 아니라
     소속 초대 수락 링크다. 수락하면 기존 계정에 해당 기관 소속이 추가된다.
     """
+    role_label = "기관 관리자" if role == "org_admin" else "소속 상담사"
     subject = f"[MIND BREEZE] {org_name} 소속 초대 안내"
     body_text = (
         f"{counselor_name}님, 안녕하세요.\n\n"
-        f"'{org_name}' 기관이 회원님을 소속 상담사로 초대했습니다.\n"
+        f"'{org_name}' 기관이 회원님을 {role_label}로 초대했습니다.\n"
         f"아래 링크에서 초대를 수락하시면 기존 계정에 소속이 추가됩니다.\n"
         f"(비밀번호 설정은 필요 없습니다 — 기존 계정으로 로그인하시면 됩니다.)\n\n"
         f"{invite_link}\n\n"
@@ -465,7 +467,7 @@ def send_membership_invite_email(
           <td style="padding:28px 32px 32px;">
             <div style="font-size:16px;line-height:26px;color:#2A1C3D;">{counselor_name}님, 안녕하세요.</div>
             <div style="margin-top:12px;font-size:15px;line-height:24px;color:#4A3B5F;">
-              <strong style="color:#2A1C3D;">{org_name}</strong> 기관이 회원님을 소속 상담사로 초대했습니다.<br>
+              <strong style="color:#2A1C3D;">{org_name}</strong> 기관이 회원님을 {role_label}로 초대했습니다.<br>
               아래 버튼에서 초대를 수락해 주세요. 비밀번호 설정은 필요 없습니다.
             </div>
             <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;background:#F7F3FB;border:1px solid #E7DCF5;border-radius:16px;">

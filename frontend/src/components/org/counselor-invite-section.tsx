@@ -2,7 +2,12 @@
 
 import { useState, type FormEvent } from 'react';
 import { buttonClass, cardClass, fieldClass } from '../ui';
-import { inviteCounselor, resendCounselorInvite, type CounselorItem } from '../../lib/api/org';
+import {
+  inviteCounselor,
+  resendCounselorInvite,
+  type CounselorItem,
+  type CounselorRole,
+} from '../../lib/api/org';
 import { ApiError } from '../../lib/api/client';
 
 function formatDate(iso: string | null | undefined): string {
@@ -76,6 +81,7 @@ export default function CounselorInviteSection({
   inviteListError,
   onRefresh,
   showList = true,
+  inviteRole = 'counselor',
 }: {
   orgId: string;
   inviteList: CounselorItem[];
@@ -83,7 +89,11 @@ export default function CounselorInviteSection({
   onRefresh: () => Promise<void>;
   /** false 면 초대 폼만 표시 (구성원 페이지 모달용) */
   showList?: boolean;
+  /** SDD-258: 초대할 역할 — 'org_admin' 이면 기관관리자 초대 문구·요청으로 전환 */
+  inviteRole?: CounselorRole;
 }) {
+  const isAdminInvite = inviteRole === 'org_admin';
+  const roleLabel = isAdminInvite ? '기관관리자' : '상담사';
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [inviting, setInviting] = useState(false);
@@ -109,7 +119,11 @@ export default function CounselorInviteSection({
     setInviteError(null);
     setInviteSuccess(null);
     try {
-      await inviteCounselor(orgId, { name: normalizedName, email: normalizedEmail });
+      await inviteCounselor(orgId, {
+        name: normalizedName,
+        email: normalizedEmail,
+        ...(isAdminInvite ? { role: inviteRole } : {}),
+      });
       setName('');
       setEmail('');
       setInviteSuccess(`${normalizedEmail}(으)로 초대 메일을 발송했습니다.`);
@@ -151,10 +165,11 @@ export default function CounselorInviteSection({
     <section className="space-y-6">
       <div className={cardClass()}>
         <div className="mb-5">
-          <h2 className="text-[18px] font-bold text-[#1F1F1F]">상담사 초대</h2>
+          <h2 className="text-[18px] font-bold text-[#1F1F1F]">{roleLabel} 초대</h2>
           <p className="mt-1 text-[13px] text-[#6F6F6F]">
-            이름과 이메일을 입력하면 초대 메일이 발송됩니다. 상담사는 메일의 링크로 비밀번호를
-            설정한 뒤 바로 이용할 수 있습니다.
+            {isAdminInvite
+              ? '이름과 이메일을 입력하면 초대 메일이 발송됩니다. 수락하면 이 기관의 기관관리자로 추가됩니다. 이미 계정이 있으면 기존 계정으로 수락합니다.'
+              : '이름과 이메일을 입력하면 초대 메일이 발송됩니다. 상담사는 메일의 링크로 비밀번호를 설정한 뒤 바로 이용할 수 있습니다.'}
           </p>
         </div>
 
