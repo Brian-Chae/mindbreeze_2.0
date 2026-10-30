@@ -1,6 +1,10 @@
-// 6자리 OTP 입력 컴포넌트
+// 6자리 숫자 OTP 입력 컴포넌트
+// 서버 OTP는 숫자 6자리(backend otp_service: secrets.randbelow → 06d)이므로 숫자 키패드를 쓴다.
+// 칸마다 input을 두면 포커스 이동 때 iOS 키패드가 문자로 바뀌고 SMS/메일 자동완성도 안 되므로
+// 단일 input 하나로 입력받는다(포커스 이동 없음 → 키패드 유지).
 
-import { useRef, type ChangeEvent, type KeyboardEvent, type ClipboardEvent } from 'react';
+import { type ChangeEvent, type ClipboardEvent } from 'react';
+import { sanitizeOtp } from '../../lib/sanitize-otp';
 
 interface OtpInputProps {
   value: string;
@@ -11,87 +15,34 @@ interface OtpInputProps {
 }
 
 export function OtpInput({ value, onChange, disabled = false, error, length = 6 }: OtpInputProps) {
-  const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
-
-  const digits = Array.from({ length }, (_, i) => value[i] ?? '');
-
-  const updateAt = (idx: number, char: string): void => {
-    const next = digits.slice();
-    next[idx] = char;
-    onChange(next.join('').slice(0, length));
-  };
-
-  const handleChange = (idx: number) => (e: ChangeEvent<HTMLInputElement>): void => {
-    const raw = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-    if (!raw) {
-      updateAt(idx, '');
-      return;
-    }
-    // 한 글자만 받고, 길면 다음 칸으로 분산
-    const chars = raw.split('');
-    let cursor = idx;
-    const next = digits.slice();
-    for (const c of chars) {
-      if (cursor >= length) break;
-      next[cursor] = c;
-      cursor += 1;
-    }
-    onChange(next.join('').slice(0, length));
-    const focusIdx = Math.min(cursor, length - 1);
-    inputsRef.current[focusIdx]?.focus();
-  };
-
-  const handleKeyDown = (idx: number) => (e: KeyboardEvent<HTMLInputElement>): void => {
-    if (e.key === 'Backspace') {
-      if (digits[idx]) {
-        updateAt(idx, '');
-        return;
-      }
-      if (idx > 0) {
-        inputsRef.current[idx - 1]?.focus();
-        updateAt(idx - 1, '');
-      }
-    } else if (e.key === 'ArrowLeft' && idx > 0) {
-      inputsRef.current[idx - 1]?.focus();
-    } else if (e.key === 'ArrowRight' && idx < length - 1) {
-      inputsRef.current[idx + 1]?.focus();
-    }
+  const handleChange = (e: ChangeEvent<HTMLInputElement>): void => {
+    onChange(sanitizeOtp(e.target.value, length));
   };
 
   const handlePaste = (e: ClipboardEvent<HTMLInputElement>): void => {
     e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, length);
-    if (!pasted) return;
-    onChange(pasted);
-    const focusIdx = Math.min(pasted.length, length - 1);
-    inputsRef.current[focusIdx]?.focus();
+    const pasted = sanitizeOtp(e.clipboardData.getData('text'), length);
+    if (pasted) onChange(pasted);
   };
 
   return (
     <div className="space-y-2">
-      <div className="flex gap-1.5 sm:gap-2 justify-center">
-        {digits.map((d, idx) => (
-          <input
-            key={idx}
-            ref={(el) => {
-              inputsRef.current[idx] = el;
-            }}
-            type="text"
-            inputMode="text"
-            autoComplete="one-time-code"
-            maxLength={1}
-            value={d}
-            disabled={disabled}
-            onChange={handleChange(idx)}
-            onKeyDown={handleKeyDown(idx)}
-            onPaste={handlePaste}
-            className={`w-10 sm:w-12 h-14 text-center text-2xl font-semibold rounded-lg border bg-[var(--mb-bg)] text-[var(--mb-fg)] focus:outline-none focus:ring-2 focus:ring-[var(--mb-primary)] disabled:opacity-50 ${
-              error ? 'border-[var(--mb-danger)]' : 'border-[var(--mb-border)]'
-            }`}
-            aria-label={`OTP 자리 ${idx + 1}`}
-          />
-        ))}
-      </div>
+      <input
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        autoComplete="one-time-code"
+        maxLength={length}
+        value={value}
+        disabled={disabled}
+        onChange={handleChange}
+        onPaste={handlePaste}
+        placeholder={'0'.repeat(length)}
+        className={`block mx-auto w-full max-w-[16rem] h-14 text-center text-2xl font-semibold tracking-[0.5em] rounded-lg border bg-[var(--mb-bg)] text-[var(--mb-fg)] focus:outline-none focus:ring-2 focus:ring-[var(--mb-primary)] disabled:opacity-50 ${
+          error ? 'border-[var(--mb-danger)]' : 'border-[var(--mb-border)]'
+        }`}
+        aria-label={`인증 코드 ${length}자리`}
+      />
       {error && <p className="text-sm text-[var(--mb-danger)] text-center">{error}</p>}
     </div>
   );

@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import AuthShell from '../../components/auth/AuthShell';
 import { BirthDateInput } from '../../components/auth/BirthDateInput';
 import { OtpInput } from '../../components/auth/OtpInput';
+import { useCooldown } from '../../hooks/useCooldown';
 import { apiErrorCode, requestOtp, verifyOtp } from '../../lib/api/auth';
 import { BIRTH_DATE_MESSAGES, checkBirthDate } from '../../lib/auth/age';
 import { submitIndividualCounselorApplication } from '../../lib/api/signup';
@@ -41,6 +42,7 @@ export default function RegisterCounselorPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
   const [emailVerifyToken, setEmailVerifyToken] = useState<string | null>(null);
+  const cooldown = useCooldown();
   const [phone, setPhone] = useState('');
   // SDD-220: 신규 계정이 만들어지므로 만 14세 확인용 생년월일을 받는다(서버가 최종 검증).
   const [birthDate, setBirthDate] = useState('');
@@ -59,11 +61,23 @@ export default function RegisterCounselorPage() {
     try {
       await requestOtp(email);
       setOtpSent(true);
+      setOtp('');
+      cooldown.start();
     } catch (err) {
+      if (err instanceof ApiError && err.status === 429) cooldown.start();
       setError(otpErrorMessage(err, '인증 코드 발송에 실패했습니다'));
     } finally {
       setLoading(false);
     }
+  };
+
+  // 이메일 오입력 시 입력 단계로 되돌아간다(코드·인증 토큰 초기화)
+  const handleChangeEmail = (): void => {
+    setError(null);
+    setOtpSent(false);
+    setOtp('');
+    setEmailVerifyToken(null);
+    cooldown.reset();
   };
 
   const handleVerifyOtp = async (): Promise<void> => {
@@ -267,6 +281,14 @@ export default function RegisterCounselorPage() {
                 >
                   {loading ? '확인 중...' : '이메일 인증 완료'}
                 </button>
+                <button
+                  type="button"
+                  onClick={handleRequestOtp}
+                  disabled={loading || cooldown.remaining > 0}
+                  className="w-full text-xs text-[#6F6F6F] hover:text-[#4B0066] disabled:opacity-60"
+                >
+                  {cooldown.remaining > 0 ? `인증번호 다시 받기 (${cooldown.remaining}초)` : '인증번호 다시 받기'}
+                </button>
               </div>
             )}
 
@@ -274,6 +296,17 @@ export default function RegisterCounselorPage() {
               <p className="text-xs text-[#5F0080] text-center font-medium">
                 이메일 인증이 완료되었습니다
               </p>
+            )}
+
+            {otpSent && (
+              <button
+                type="button"
+                onClick={handleChangeEmail}
+                disabled={loading}
+                className="w-full text-xs text-[#6F6F6F] underline hover:text-[#4B0066]"
+              >
+                이메일 변경
+              </button>
             )}
 
             <div className="space-y-2">

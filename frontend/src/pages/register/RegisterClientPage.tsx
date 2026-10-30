@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import AuthShell from '../../components/auth/AuthShell';
 import { OtpInput } from '../../components/auth/OtpInput';
+import { useCooldown } from '../../hooks/useCooldown';
 import { BirthDateInput } from '../../components/auth/BirthDateInput';
 import { ConsentCheckList, type Consents } from '../../components/auth/ConsentCheckList';
 import { BIRTH_DATE_MESSAGES, checkBirthDate } from '../../lib/auth/age';
@@ -91,6 +92,7 @@ export default function RegisterClientPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
   const [emailVerifyToken, setEmailVerifyToken] = useState<string | null>(null);
+  const cooldown = useCooldown();
 
   // Step 2
   const [consents, setConsents] = useState<Consents>({ tos: false, privacy: false, sensitive: false });
@@ -116,15 +118,29 @@ export default function RegisterClientPage() {
     try {
       await requestOtp(email);
       setOtpSent(true);
+      setOtp('');
+      cooldown.start();
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         setError('이미 등록된 이메일입니다');
+      } else if (err instanceof ApiError && err.status === 429) {
+        setError('잠시 후 다시 요청해 주세요 (60초 간격)');
+        cooldown.start();
       } else {
         setError('인증 코드 발송에 실패했습니다');
       }
     } finally {
       setLoading(false);
     }
+  };
+
+  // 이메일 오입력 시 입력 단계로 되돌아간다(코드·인증 토큰 초기화)
+  const handleChangeEmail = (): void => {
+    setError(null);
+    setOtpSent(false);
+    setOtp('');
+    setEmailVerifyToken(null);
+    cooldown.reset();
   };
 
   const handleVerifyOtp = async (): Promise<void> => {
@@ -324,10 +340,18 @@ export default function RegisterClientPage() {
                   <button
                     type="button"
                     onClick={handleRequestOtp}
-                    disabled={loading}
+                    disabled={loading || cooldown.remaining > 0}
                     className="w-full text-xs text-[#6F6F6F] hover:text-[#4B0066]"
                   >
-                    인증 코드 재발송
+                    {cooldown.remaining > 0 ? `인증번호 다시 받기 (${cooldown.remaining}초)` : '인증번호 다시 받기'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleChangeEmail}
+                    disabled={loading}
+                    className="w-full text-xs text-[#6F6F6F] underline hover:text-[#4B0066]"
+                  >
+                    이메일 변경
                   </button>
                 </div>
               )}
