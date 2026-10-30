@@ -17,9 +17,9 @@ CODE_LENGTH = 6
 MAX_CODE_RETRY = 5
 
 
-def random_code() -> str:
-    """6자리 대문자+숫자 코드 1개 생성."""
-    return "".join(secrets.choice(CODE_ALPHABET) for _ in range(CODE_LENGTH))
+def random_code(alphabet: str = CODE_ALPHABET, length: int = CODE_LENGTH) -> str:
+    """코드 1개 생성 (기본값: 대문자+숫자 6자리)."""
+    return "".join(secrets.choice(alphabet) for _ in range(length))
 
 
 def generate_unique_code(
@@ -28,14 +28,17 @@ def generate_unique_code(
     column_name: str,
     *,
     label: str = "코드",
+    alphabet: str = CODE_ALPHABET,
+    length: int = CODE_LENGTH,
+    max_retry: int = MAX_CODE_RETRY,
 ) -> str:
-    """지정한 모델·컬럼에서 중복되지 않는 6자리 코드를 발급한다.
+    """지정한 모델·컬럼에서 중복되지 않는 코드를 발급한다.
 
-    unique 충돌 시 최대 MAX_CODE_RETRY 회 재시도하고, 모두 실패하면 RuntimeError.
+    unique 충돌 시 최대 max_retry 회 재시도하고, 모두 실패하면 RuntimeError.
     """
     column = getattr(model, column_name)
-    for _ in range(MAX_CODE_RETRY):
-        code = random_code()
+    for _ in range(max_retry):
+        code = random_code(alphabet=alphabet, length=length)
         if db.query(model).filter(column == code).first() is None:
             return code
     raise RuntimeError(f"{label} 발급에 실패했습니다 (충돌)")

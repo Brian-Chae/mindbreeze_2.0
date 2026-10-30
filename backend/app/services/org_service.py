@@ -12,7 +12,7 @@ from app.models.organization import Organization
 from app.models.org_join_request import OrganizationJoinRequest
 from app.models.user import User
 from app.schemas.org import OrganizationCreate
-from app.services import code_service, membership_service
+from app.services import code_service, membership_service, onboarding_service
 from app.services.org_management_service import require_active_org
 
 
@@ -744,7 +744,7 @@ async def invite_counselor(
 
     - 이메일은 ``.strip().lower()`` 로 정규화해 전체 User 대상으로 중복 검사(409).
     - 계정은 status="pending" + 추측 불가능한 난수 해시로 만들어 초대 수락 전 로그인 불가.
-    - counselor_code 는 ``code_service.generate_unique_code`` 로 유니크 발급.
+    - counselor_code 는 ``onboarding_service.generate_counselor_code`` 로 6자리 숫자 유니크 발급.
     - 이메일 폭탄 방지를 위해 기관당 초기 초대 레이트리밋을 적용한다.
 
     반환값: (생성된 counselor User, 초대 메일 발송 성공 여부)
@@ -832,9 +832,7 @@ async def invite_counselor(
     db.add(user)
     db.flush()
 
-    code = code_service.generate_unique_code(
-        db, CounselorProfile, "counselor_code", label="코치 코드"
-    )
+    code = onboarding_service.generate_counselor_code(db)
     db.add(CounselorProfile(user_id=user.id, counselor_code=code, specialties=[]))
     membership_service.add_membership(
         db, user, org.id, status_="invited", invited_at=now, invite_expires_at=expires

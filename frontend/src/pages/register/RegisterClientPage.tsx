@@ -177,9 +177,9 @@ export default function RegisterClientPage() {
   const handleCheckCode = async (): Promise<void> => {
     setError(null);
     setMatchedCounselor(null);
-    const code = counselorCode.trim().toUpperCase();
+    const code = counselorCode.trim();
     if (code.length !== 6) {
-      setError('코치 코드는 6자리입니다');
+      setError('코치 코드는 6자리 숫자입니다');
       return;
     }
     if (!emailVerifyToken) {
@@ -252,14 +252,14 @@ export default function RegisterClientPage() {
         gender,
         birth_date: birthDate,
         phone: phone.trim() || undefined,
-        counselor_code: isInviteRegistration ? undefined : counselorCode.trim().toUpperCase(),
+        counselor_code: isInviteRegistration ? undefined : counselorCode.trim(),
       });
       // 초대 가입: 온보딩 Step 4에서 코드 입력 없이 연결 확인 화면으로 진입.
       // 코드 가입: ?code= 로 Step 4 자동 매칭(재입력 없이 연결 확인)을 유도한다.
       navigate(
         isInviteRegistration
           ? '/onboarding/client?source=invite'
-          : `/onboarding/client?code=${counselorCode.trim().toUpperCase()}`,
+          : `/onboarding/client?code=${counselorCode.trim()}`,
       );
     } catch (err) {
       if (err instanceof ApiError) {
@@ -499,12 +499,15 @@ export default function RegisterClientPage() {
                     <input
                       id="counselorCode"
                       type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoComplete="off"
                       value={counselorCode}
                       onChange={(e) => {
-                        setCounselorCode(e.target.value.toUpperCase());
+                        setCounselorCode(e.target.value.replace(/\D/g, '').slice(0, 6));
                         setMatchedCounselor(null);
                       }}
-                      placeholder="6자리 코드"
+                      placeholder="6자리 숫자"
                       maxLength={6}
                       disabled={loading}
                       className={`flex-1 font-mono tracking-widest ${inputClass}`}
@@ -531,7 +534,7 @@ export default function RegisterClientPage() {
                     </div>
                   ) : (
                     <p className="text-xs text-[#6F6F6F]">
-                      코드가 없다면 초대한 코치에게 코드를 요청해 주세요.
+                      코드가 없다면 초대한 코치에게 코드를 요청해 주세요. (6자리 숫자)
                     </p>
                   )}
                 </div>
