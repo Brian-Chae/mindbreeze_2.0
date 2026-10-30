@@ -13,7 +13,7 @@ it.each(MOCK_STATES)('요약 %s는 상태·공통 면책·서버 인원을 표�
   expect(markup).toContain(`참석`);
   expect(markup).not.toContain('data-section="S3"');
   expect(markup).not.toContain('data-section="S4"');
-  if (state !== 'zero') expect(markup).toContain('상담사 클래스 리포트 열기');
+  if (state !== 'zero') expect(markup).toContain('코치 클래스 리포트 열기');
   if (state === 'pending') expect(markup).toContain('확인 중');
 });
 it('측정 1명 요약에는 클래스 방향 칩을 노출하지 않는다', () => {

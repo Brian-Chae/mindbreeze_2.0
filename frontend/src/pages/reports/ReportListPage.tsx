@@ -89,7 +89,7 @@ function TypeBadge({ type }: { type: string }) {
         isCounselor ? 'bg-[#F5EDFC] text-[#5F0080]' : 'bg-[#E6F4EA] text-[#2E7D32]'
       }`}
     >
-      {isCounselor ? '상담사용' : '내담자용'}
+      {isCounselor ? '코치용' : '내담자용'}
     </span>
   );
 }
@@ -522,7 +522,7 @@ export function LegacyReportListPage() {
       {operationsOpen && <section id="report-operations-settings" aria-label="리포트 운영 설정" className="mb-6 space-y-4 rounded-2xl border border-[#E9E2EB] bg-[#F8F5EF] p-4">
         <h2 className="text-[18px] font-bold">운영 설정</h2>
         <SessionNotePromptToggle />
-        {role === 'counselor' ? <div className="rounded-2xl border border-[#EFEFEF] bg-white p-5"><div className="flex flex-wrap items-center justify-between gap-4"><h3 className="text-[16px] font-bold">리포트 승인</h3>{autoApproveToggle}</div><p className="mt-3 text-[13px] text-[#6F6F6F]">본인이 진행하는 회차에 기존 자동 승인 정책을 적용해요. 기록과 측정 데이터가 없는 명상 리포트는 자동 승인에서 제외돼요.</p></div> : <p className="text-[14px] text-[#6F6F6F]">자동 승인은 상담사 계정이 진행하는 회차에 적용돼요. 기관관리자는 리포트를 직접 검토·승인할 수 있어요.</p>}
+        {role === 'counselor' ? <div className="rounded-2xl border border-[#EFEFEF] bg-white p-5"><div className="flex flex-wrap items-center justify-between gap-4"><h3 className="text-[16px] font-bold">리포트 승인</h3>{autoApproveToggle}</div><p className="mt-3 text-[13px] text-[#6F6F6F]">본인이 진행하는 회차에 기존 자동 승인 정책을 적용해요. 기록과 측정 데이터가 없는 명상 리포트는 자동 승인에서 제외돼요.</p></div> : <p className="text-[14px] text-[#6F6F6F]">자동 승인은 코치 계정이 진행하는 회차에 적용돼요. 기관관리자는 리포트를 직접 검토·승인할 수 있어요.</p>}
       </section>}
       {autoApproveError && (
         <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm mobile:text-mb-body">{autoApproveError}</div>
@@ -576,7 +576,7 @@ export function LegacyReportListPage() {
               className={selectClass}
             >
               <option value="all">전체 타입</option>
-              <option value="counselor">상담사용</option>
+              <option value="counselor">코치용</option>
               <option value="client">회원용</option>
             </select>
             <select

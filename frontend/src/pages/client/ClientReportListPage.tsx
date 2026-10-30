@@ -31,7 +31,7 @@ function TypeBadge({ type }: { type: string }) {
         isCounselor ? 'bg-[#F5EDFC] text-[#5F0080]' : 'bg-[#E6F4EA] text-[#2E7D32]'
       }`}
     >
-      {isCounselor ? '상담사용' : '내담자용'}
+      {isCounselor ? '코치용' : '내담자용'}
     </span>
   );
 }
@@ -103,7 +103,7 @@ function reportSummary(report: ReportDto): string {
 }
 
 function counselorName(report: ReportDto): string {
-  return report.counselor_name || '상담사';
+  return report.counselor_name || '코치';
 }
 
 function reportKey(report: ReportDto): string {
@@ -321,7 +321,7 @@ export default function ClientReportListPage() {
         <button type="button" role="switch" aria-checked={groupByCounselor}
           onClick={() => setGroupByCounselor((value) => !value)}
           className={`mobile:min-h-11 mobile:min-w-11 h-10 px-4 rounded-xl text-[13px] mobile:text-mb-label font-semibold border transition-colors ${groupByCounselor ? 'bg-[#F5EDFC] text-[#5F0080] border-[#E8D9F5]' : 'bg-white text-[#6F6F6F] border-[#EFEFEF] hover:bg-[#F8FAFC]'}`}
-        >상담사별 그룹핑 {groupByCounselor ? 'ON' : 'OFF'}</button>
+        >코치별 그룹핑 {groupByCounselor ? 'ON' : 'OFF'}</button>
         {reports.some((r) => !r.is_read && !isReportInReview(r)) && (
           <button type="button" onClick={() => void handleMarkAllRead()} disabled={markingAllRead}
             className={buttonClass({ variant: 'secondary', size: 'sm' })}

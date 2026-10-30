@@ -204,7 +204,7 @@ export default function OrgManagementPage() {
         <div className="mb-5">
           <h2 className="text-[18px] font-bold text-[#1F1F1F]">새 기관 등록</h2>
           <p className="mt-1 text-[13px] text-[#6F6F6F]">
-            기관과 주 담당자를 등록하면 상담사용 기관 코드가 발급되고, 담당자에게 초대 메일이 발송됩니다.
+            기관과 주 담당자를 등록하면 코치용 기관 코드가 발급되고, 담당자에게 초대 메일이 발송됩니다.
           </p>
         </div>
 
@@ -316,7 +316,7 @@ export default function OrgManagementPage() {
         {createdResult && (
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             <div className="rounded-xl border border-[#DDD0EA] bg-[#F5EDFC] p-4">
-              <div className="text-[13px] font-semibold text-[#5F0080]">상담사용 기관 코드</div>
+              <div className="text-[13px] font-semibold text-[#5F0080]">코치용 기관 코드</div>
               <p className="mt-1 text-[12px] text-[#6F6F6F]">{createdResult.org.name}</p>
               <div className="mt-2 flex flex-wrap items-center gap-3">
                 <strong className="font-mono text-3xl tracking-[0.2em] text-[#5F0080]">

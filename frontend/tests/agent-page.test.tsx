@@ -60,7 +60,7 @@ it('동의 전에는 대화 조회와 입력을 차단하고 거절 후에도 �
   await render();
   expect(api.listMessages).not.toHaveBeenCalled();
   expect(container.querySelector('textarea')).toBeNull();
-  expect(container.textContent).toContain('피드백은 상담사에게 그대로 전달됩니다');
+  expect(container.textContent).toContain('피드백은 코치에게 그대로 전달됩니다');
   await act(async () => button('동의하지 않음').click());
   expect(container.textContent).toContain('동의하지 않으면 AI 대화를 이용할 수 없습니다.');
   expect(api.listMessages).not.toHaveBeenCalled();

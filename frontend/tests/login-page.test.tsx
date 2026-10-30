@@ -40,7 +40,7 @@ test('회원 탭에만 하단 코드 입장 카드가 있고 링크에 코드가
 test('상담사는 이메일 우선, 기관은 Google·Apple 제공(SDD-249 D2)·셀프 가입 없음', () => {
   const counselor = render('/login?role=counselor');
   expect(counselor.indexOf('type="email"')).toBeLessThan(
-    counselor.indexOf('Google로 상담사 로그인'),
+    counselor.indexOf('Google로 코치 로그인'),
   );
   expect(counselor).toMatch(/register\?role=counselor/);
   const org = render('/login?role=org_admin');
@@ -74,7 +74,7 @@ test('로그인 제목과 역할 스위치는 본문 앞의 헤더에 있고 브
 test('각 역할 안내는 로그인 버튼 바로 다음에 표시한다', () => {
   for (const [role, description] of [
     ['client', '상담과 명상을 이용하는 회원을 위한 로그인입니다.'],
-    ['counselor', '상담사 계정으로 세션과 회원을 관리하세요.'],
+    ['counselor', '코치 계정으로 세션과 회원을 관리하세요.'],
     ['org_admin', '기관에서 발급받은 관리자 계정을 사용하세요.'],
     ['platform_admin', 'Google Workspace 계정으로 로그인하세요.'],
   ]) {

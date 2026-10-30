@@ -14,7 +14,7 @@ it('다른 회차로 이동하면 이전 요청의 늦은 응답이 현재 회�
  const router=createMemoryRouter([{path:'/sessions/:id/summary',element:<SessionSummaryPage/>}],{initialEntries:['/sessions/first/summary']});
  const box=document.createElement('div'),root=createRoot(box);
  await act(async()=>root.render(<RouterProvider router={router}/>));
- expect(box.textContent).toContain('상담사에게만');expect(box.textContent).toContain('의료기기가 아니며');
+ expect(box.textContent).toContain('코치에게만');expect(box.textContent).toContain('의료기기가 아니며');
  await act(async()=>router.navigate('/sessions/second/summary'));
  expect(box.textContent).toContain('두 번째 수업');
  await act(async()=>resolveFirst(getMockSummary()));

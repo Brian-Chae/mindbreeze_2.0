@@ -418,8 +418,8 @@ export default function ClientProfilePage() {
         {isAiEnabled() && id && user?.role === 'counselor' && <AgentCheckinPanel key={id} clientId={id} />}
 
         {profile?.memo_editable !== false && (
-        <section aria-label="상담사 비공개 메모" className={panel}>
-          <h2 className="mb-2 text-lg font-semibold">상담사 비공개 메모</h2>
+        <section aria-label="코치 비공개 메모" className={panel}>
+          <h2 className="mb-2 text-lg font-semibold">코치 비공개 메모</h2>
           <p className="mb-3 text-xs text-gray-500">회원에게 공개되지 않습니다.</p>
           <textarea
             id="client-memo"

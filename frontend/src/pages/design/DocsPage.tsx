@@ -103,7 +103,7 @@ function TOCPage() {
           <div style={{ background: '#F5EDFC', borderRadius: 16, padding: 18 }}>
             <div style={{ fontFamily: 'var(--mb-font-mono)', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#5F0080', fontWeight: 700 }}>About this brochure</div>
             <p style={{ fontFamily: 'var(--mb-font-text)', fontWeight: 500, fontSize: 12, lineHeight: '20px', color: 'rgba(0,0,0,0.7)', margin: '8px 0 0' }}>
-              본 자료는 명상 지도사·상담사·기관 도입 담당자를 위한 제품 소개서입니다. MIND BREEZE 2.0의 철학, 기기, 분석 방식, 도입 사례를 한 권에 담았습니다.
+              본 자료는 명상 지도사·코치·기관 도입 담당자를 위한 제품 소개서입니다. MIND BREEZE 2.0의 철학, 기기, 분석 방식, 도입 사례를 한 권에 담았습니다.
             </p>
           </div>
         </div>

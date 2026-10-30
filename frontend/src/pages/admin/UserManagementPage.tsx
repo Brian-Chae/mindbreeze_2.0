@@ -8,7 +8,7 @@ import { listUsers, suspendUser, unsuspendUser, deleteUser, type UserDto } from 
 const ROLE_LABELS: Record<string, string> = {
   platform_admin: '플랫폼 관리자',
   org_admin: '센터 관리자',
-  counselor: '상담사',
+  counselor: '코치',
   client: '내담자',
 };
 
@@ -124,12 +124,12 @@ export default function UserManagementPage() {
   }, [modal]);
 
   return (
-    <AppShell title="상담사 관리" sub="COUNSELOR MANAGEMENT" wide>
+    <AppShell title="코치 관리" sub="COUNSELOR MANAGEMENT" wide>
       {/* 필터 */}
       <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
         <input
           type="text"
-          aria-label="상담사 검색"
+          aria-label="코치 검색"
           placeholder="이름 또는 이메일 검색..."
           value={q}
           onChange={(e) => { setQ(e.target.value); setPage(1); }}
