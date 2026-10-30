@@ -97,7 +97,7 @@ def test_TS8_내담자_응답에는_감지_사실이_드러나지_않는다(clie
     reply = body["agent_message"]["content"]
     for token in FORBIDDEN_TOKENS:
         assert token not in reply, token
-    assert "상담사" in reply
+    assert "코치" in reply
     # 메시지 kind 로도 드러나지 않는다 — 평범한 free 다.
     assert body["agent_message"]["kind"] == "free"
 

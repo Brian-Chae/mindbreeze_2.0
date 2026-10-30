@@ -278,7 +278,7 @@ async def check_counselor_send_cooldown(org_id: str, redis: Redis) -> None:
     if await redis.get(_counselor_send_key(org_id)):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"상담사 초대는 {RESEND_COOLDOWN_SECONDS}초에 한 번만 보낼 수 있습니다",
+            detail=f"코치 초대는 {RESEND_COOLDOWN_SECONDS}초에 한 번만 보낼 수 있습니다",
         )
 
 

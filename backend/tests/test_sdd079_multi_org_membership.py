@@ -168,7 +168,7 @@ def test_ts2_같은기관_재초대_409(client, monkeypatch, redis):
     _clear_cooldown(redis, ctx_a["org_id"])
     res = _invite(client, ctx_a, email)
     assert res.status_code == 409, res.text
-    assert "이미 이 기관에 소속(초대)된 상담사입니다" in res.json()["detail"]
+    assert "이미 이 기관에 소속(초대)된 코치입니다" in res.json()["detail"]
 
     # invited 상태 재초대도 409
     ctx_b = _make_org_admin(client, monkeypatch, sys_email="s79c@test.com", admin_email="a79c@test.com")
@@ -177,7 +177,7 @@ def test_ts2_같은기관_재초대_409(client, monkeypatch, redis):
     _clear_cooldown(redis, ctx_b["org_id"])
     res = _invite(client, ctx_b, email)
     assert res.status_code == 409
-    assert "이미 이 기관에 소속(초대)된 상담사입니다" in res.json()["detail"]
+    assert "이미 이 기관에 소속(초대)된 코치입니다" in res.json()["detail"]
 
 
 def test_ts2_상담사아닌_기존이메일_409(client, monkeypatch, redis):
@@ -185,7 +185,7 @@ def test_ts2_상담사아닌_기존이메일_409(client, monkeypatch, redis):
     _register(client, "client79@test.com")  # client 역할 계정
     res = _invite(client, ctx, "client79@test.com")
     assert res.status_code == 409, res.text
-    assert "상담사 계정이 아닌 이메일입니다" in res.json()["detail"]
+    assert "코치 계정이 아닌 이메일입니다" in res.json()["detail"]
 
 
 # ---------------------------------------------------------------------------

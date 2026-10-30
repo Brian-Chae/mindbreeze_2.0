@@ -296,7 +296,7 @@ def _with_llm_note(context: dict, template: str, kind: str) -> str:
         return template
 
     task = (
-        "아래 [허용 자료] 기준으로 상담사에게 오늘 흐름을 1문장으로만 짚어 주세요. "
+        "아래 [허용 자료] 기준으로 코치에게 오늘 흐름을 1문장으로만 짚어 주세요. "
         "숫자 점수·진단·병명은 쓰지 마세요. 장소·주소·연락처는 언급하지 마세요. "
         "새로운 사실을 만들지 말고 자료에 있는 것만 쓰세요."
         if kind == "morning"

@@ -123,7 +123,7 @@ def _session_selection(db: DBSession, selection, request: de.DataCenterExportReq
     query = selection_sessions(db, selection)
     start, end = kst_range(request.range.date_from, request.range.date_to)
     if selection.scope == 'facilitator' and (not request.range.date_from or not request.range.date_to):
-        raise deny(422, 'period_required', '상담사 단위는 시작일과 종료일이 필요합니다')
+        raise deny(422, 'period_required', '코치 단위는 시작일과 종료일이 필요합니다')
     if start:
         query = query.filter(SESSION_TIME >= start)
     if end:

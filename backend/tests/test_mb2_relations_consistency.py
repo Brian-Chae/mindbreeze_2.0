@@ -50,7 +50,7 @@ def _active_counselor_with_code(code: str) -> dict:
     from tests.conftest import create_test_counselor, create_test_org
 
     created = create_test_counselor(
-        f"mb2-{uuid.uuid4().hex[:8]}@test.com", name="코드상담사", org_code=create_test_org("MB2센터")
+        f"mb2-{uuid.uuid4().hex[:8]}@test.com", name="코드코치", org_code=create_test_org("MB2센터")
     )
     db = _db()
     try:
@@ -252,7 +252,7 @@ def test_mb2_org04_내담자는_소속신청_403(client):
     _, h = _register_client(client, "join-role-client@test.com")
     res = client.post(f"/api/v1/org/{org_id}/join", headers=h)
     assert res.status_code == 403
-    assert "상담사" in res.json()["detail"]
+    assert "코치" in res.json()["detail"]
 
 
 def test_mb2_org04_승인시_membership_역할_counselor_고정(client, monkeypatch):
@@ -272,7 +272,7 @@ def test_mb2_org04_승인시_membership_역할_counselor_고정(client, monkeypa
             role="org_admin", status="active",
         )
         applicant = User(
-            email="role-applicant@test.com", password_hash="x", name="신청상담사",
+            email="role-applicant@test.com", password_hash="x", name="신청코치",
             role="counselor", status="active",
         )
         db.add_all([org, admin, applicant])

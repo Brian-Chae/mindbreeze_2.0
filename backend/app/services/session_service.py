@@ -2374,7 +2374,7 @@ def participant_livekit_token(
     if s.class_id and s.status in ("ready", "scheduled"):
         raise HTTPException(status_code=409, detail=_session_not_open_detail(s))
     if not s.webrtc_room_id:
-        raise HTTPException(status_code=400, detail="아직 상담사 화상이 시작되지 않았습니다")
+        raise HTTPException(status_code=400, detail="아직 코치 화상이 시작되지 않았습니다")
 
     # AUTHZ-WAITLIST-SPEAKING: 대기열(waitlisted) 참여자는 아직 입장 허용되지 않았으므로
     #   LiveKit(음성 송수신) 토큰을 발급하지 않는다 — 정원 초과 대기자의 매체 접근 차단.
@@ -2875,7 +2875,7 @@ def set_speaking(
     if s.status in ("completed", "cancelled"):
         raise HTTPException(status_code=400, detail="종료된 세션입니다")
     if s.host_id != _to_uuid(host_id):
-        raise HTTPException(status_code=403, detail="발언권은 상담사만 부여/해제할 수 있습니다")
+        raise HTTPException(status_code=403, detail="발언권은 코치만 부여/해제할 수 있습니다")
 
     from app.services.session_authz import authorize_session
     authorize_session(db,host_id,s,SessionAction.LIVE_METRICS_READ)
@@ -3000,9 +3000,9 @@ def resolve_audio_sync_host(
     if not s:
         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
     if not current_user_id:
-        raise HTTPException(status_code=403, detail="상담사만 재생을 제어할 수 있습니다")
+        raise HTTPException(status_code=403, detail="코치만 재생을 제어할 수 있습니다")
     if s.host_id != _to_uuid(current_user_id):
-        raise HTTPException(status_code=403, detail="상담사만 재생을 제어할 수 있습니다")
+        raise HTTPException(status_code=403, detail="코치만 재생을 제어할 수 있습니다")
     from app.services.session_authz import authorize_session
     authorize_session(db,current_user_id,s,SessionAction.AUDIO_RECORD)
     return {"session_id": str(sid), "status": s.status}

@@ -275,7 +275,7 @@ def create_individual_counselor_application(
     )
 
     counselor_code = code_service.generate_unique_code(
-        db, CounselorProfile, "counselor_code", label="상담사 코드"
+        db, CounselorProfile, "counselor_code", label="코치 코드"
     )
     db.add(CounselorProfile(user_id=user.id, counselor_code=counselor_code, specialties=[]))
 
@@ -544,7 +544,7 @@ def validate_counselor_code(code: str, db: Session) -> tuple[User, CounselorProf
     if len(normalized) != code_service.CODE_LENGTH:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="상담사 코드는 6자리입니다",
+            detail="코치 코드는 6자리입니다",
         )
     profile = (
         db.query(CounselorProfile)
@@ -554,13 +554,13 @@ def validate_counselor_code(code: str, db: Session) -> tuple[User, CounselorProf
     if profile is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="상담사 코드를 찾을 수 없습니다",
+            detail="코치 코드를 찾을 수 없습니다",
         )
     counselor = db.query(User).filter(User.id == profile.user_id).first()
     if counselor is None or counselor.role not in ("counselor", "org_admin") or counselor.status != "active":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="아직 활동을 시작하지 않은 상담사입니다. 상담사에게 확인해 주세요.",
+            detail="아직 활동을 시작하지 않은 코치입니다. 코치에게 확인해 주세요.",
         )
 
     org_name = None

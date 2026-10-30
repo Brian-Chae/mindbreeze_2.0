@@ -1178,7 +1178,7 @@ def require_report_host(report_id: str, host_id: str, db: DBSession) -> None:
         raise HTTPException(status_code=404, detail="리포트를 찾을 수 없습니다")
     session = db.query(Session).filter(Session.id == report.session_id).first()
     if not _can_edit_report(host_id, session, db):
-        raise HTTPException(status_code=403, detail="host 상담사만 가능합니다")
+        raise HTTPException(status_code=403, detail="host 코치만 가능합니다")
 
 
 def update_report(report_id: str, host_id: str, payload, db: DBSession) -> dict:
@@ -1188,7 +1188,7 @@ def update_report(report_id: str, host_id: str, payload, db: DBSession) -> dict:
         raise HTTPException(status_code=404, detail="리포트를 찾을 수 없습니다")
     session = db.query(Session).filter(Session.id == report.session_id).first()
     if not _can_edit_report(host_id, session, db):
-        raise HTTPException(status_code=403, detail="host 상담사만 수정 가능합니다")
+        raise HTTPException(status_code=403, detail="host 코치만 수정 가능합니다")
 
     if payload.content is not None:
         report.content = payload.content
@@ -1286,7 +1286,7 @@ def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
     else:
         approved = _can_edit_report(host_id, session, db)
     if not approved:
-        raise HTTPException(status_code=403, detail="host 상담사만 승인 가능합니다")
+        raise HTTPException(status_code=403, detail="host 코치만 승인 가능합니다")
 
     # SDD-027: 승인 게이트 = pending_review → completed. 이미 completed 면 멱등 처리.
     # 분석 미완/실패(pending_analysis/error) 상태는 승인할 수 없다.

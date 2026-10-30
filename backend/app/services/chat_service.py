@@ -1054,7 +1054,7 @@ def _validate_invitee(host_uuid: UUID, target_uuid: UUID, db: DBSession) -> None
         return
     if target.role in ("counselor", "org_admin"):
         if target.status != "active" or not _share_org_counselor(host_uuid, target_uuid, db):
-            raise HTTPException(status_code=403, detail="같은 기관에 소속된 상담사만 초대할 수 있습니다")
+            raise HTTPException(status_code=403, detail="같은 기관에 소속된 코치만 초대할 수 있습니다")
         return
     raise HTTPException(status_code=403, detail="초대할 수 없는 사용자입니다")
 
@@ -1216,7 +1216,7 @@ def list_invitable_counselors(
     uid = _uuid(user_id)
     me = db.query(User).filter(User.id == uid).first()
     if not me or me.role not in ("counselor", "org_admin"):
-        raise HTTPException(status_code=403, detail="상담사만 초대 후보를 조회할 수 있습니다")
+        raise HTTPException(status_code=403, detail="코치만 초대 후보를 조회할 수 있습니다")
     my_org_ids = {
         m.org_id
         for m in db.query(UserOrgMembership)

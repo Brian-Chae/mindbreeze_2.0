@@ -15,7 +15,7 @@ import pytest
 from tests.conftest import create_test_org
 
 DETAIL_ROLE_DENIED = "이 작업을 수행할 권한이 없습니다"
-DETAIL_HOST_ONLY = "host 상담사만 가능합니다"
+DETAIL_HOST_ONLY = "host 코치만 가능합니다"
 
 ALLOWED_ROLES = ["counselor", "org_admin", "platform_admin"]
 ROUTE_NAMES = ["create", "update", "duplicate", "save_template", "new_run"]

@@ -318,19 +318,19 @@ def client_step4_match(
     if profile is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="상담사 코드를 찾을 수 없습니다",
+            detail="코치 코드를 찾을 수 없습니다",
         )
     counselor = db.query(User).filter(User.id == profile.user_id).first()
     if counselor is None or counselor.verified_tier == "unverified":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="해당 상담사는 아직 인증이 완료되지 않아 매칭할 수 없습니다",
+            detail="해당 코치는 아직 인증이 완료되지 않아 매칭할 수 없습니다",
         )
     # SDD-073: 승인 전(pending) 개인 상담사 등 비활성 계정의 코드는 사용 불가
     if counselor.status != "active":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="아직 활동을 시작하지 않은 상담사입니다. 상담사에게 확인해 주세요.",
+            detail="아직 활동을 시작하지 않은 코치입니다. 코치에게 확인해 주세요.",
         )
 
     # MB2-ONB-01: ended 연결은 재활성화하고, 신규·재활성화 모두 1:1 채팅방을 보장한다.

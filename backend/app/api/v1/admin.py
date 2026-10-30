@@ -251,7 +251,7 @@ async def create_client(
     if req.send_invite:
         # 담당 상담사 이름을 초대 메일 카피에 사용
         counselor = db.query(User).filter(User.id == uuid.UUID(req.counselor_id)).first()
-        counselor_name = counselor.name if counselor else "상담사"
+        counselor_name = counselor.name if counselor else "코치"
         invite_sent = await org_invite_service.issue_client_invite(
             client_user, counselor_name, redis
         )
@@ -568,7 +568,7 @@ def admin_reactivate_org(org_id: uuid.UUID, req: OrganizationReactivate,
 @router.patch("/orgs/{org_id}/counselors/{user_id}", response_model=OrganizationAdminCounselor)
 def admin_patch_org_counselor(org_id: uuid.UUID, user_id: uuid.UUID, req: OrganizationCounselorPatch,
                               admin: User = Depends(require_platform_admin), db: Session = Depends(get_db)):
-    user = org_management_service.change_counselor(org_id, user_id, admin.id, req.reason or "상담사 권한 조정", db, role=req.role)
+    user = org_management_service.change_counselor(org_id, user_id, admin.id, req.reason or "코치 권한 조정", db, role=req.role)
     org = _admin_org_or_404(org_id, db)
     code = db.query(CounselorProfile.counselor_code).filter(CounselorProfile.user_id == user.id).scalar()
     # AUTH4-02/05: 응답 역할은 이 기관의 membership role 을 우선한다(전역 미러 오염 방지).
@@ -768,7 +768,7 @@ async def admin_reset_org_counselor_password(
         membership_service.get_membership(db, user_id, org.id) if target is not None else None
     )
     if target is None or membership is None or membership.role not in ("counselor", "org_admin"):
-        raise HTTPException(status_code=404, detail="대상 상담사를 찾을 수 없습니다")
+        raise HTTPException(status_code=404, detail="대상 코치를 찾을 수 없습니다")
     email_sent, expires_at = await admin_password_reset_service.issue_admin_reset(
         target, actor_id=admin.id, actor_name=admin.name, actor_role="platform_admin",
         reason=req.reason, org_id=org.id, db=db, redis=redis,

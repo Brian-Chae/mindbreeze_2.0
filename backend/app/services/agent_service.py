@@ -538,7 +538,7 @@ def build_session_ctas(
     ctas.append({
         "id": "open_chat",
         "action": "open_chat",
-        "label": "상담사에게 메시지",
+        "label": "코치에게 메시지",
         "payload": {
             "room_id": room_id,
             "url": f"/app/chat/{room_id}" if room_id else "/app/chat",
@@ -549,7 +549,7 @@ def build_session_ctas(
         ctas.append({
             "id": "call_counselor",
             "action": "call_counselor",
-            "label": "상담사에게 전화",
+            "label": "코치에게 전화",
             "payload": {"tel": facts["counselor_phone"]},
         })
     return ctas
@@ -639,7 +639,7 @@ def _append_feedback_text(db: DBSession, event: AgentRelayEvent, text: str) -> N
 # 리포트 범위를 벗어난 질문(진단·병명·약 등)에 쓰는 안내. LLM 을 거치지 않는다.
 OUT_OF_SCOPE_REPLY = (
     "그 부분은 제가 말씀드릴 수 있는 범위가 아니에요. "
-    "상담사님과 직접 이야기 나눌 수 있도록 채팅을 연결해 드릴까요? 그 전에 지금 마음을 들려주셔도 좋아요."
+    "코치님과 직접 이야기 나눌 수 있도록 채팅을 연결해 드릴까요? 그 전에 지금 마음을 들려주셔도 좋아요."
 )
 
 # SDD-202: 상담사 채팅 연결을 제안하는 문장("…연결해 드릴까요?") — 최종 응답에 이 패턴이 있으면 [상담사님과 채팅하기]
@@ -649,7 +649,7 @@ _HANDOFF_OFFER = re.compile(r"연결(?:해)?\s*드릴까요")
 
 # 내담자가 상담사 연결을 원하지 않는다고 말한 표현 — 이후 버튼·제안을 반복하지 않는다.
 _HANDOFF_DECLINE = re.compile(
-    r"상담사[^.?!\n]{0,20}(?:싶지(?:는|도)?\s*않|싫|안\s*(?:할|하고|하려|만나|볼|가)|말고|필요\s*없|나중에)"
+    r"(?:상담사|코치)[^.?!\n]{0,20}(?:싶지(?:는|도)?\s*않|싫|안\s*(?:할|하고|하려|만나|볼|가)|말고|필요\s*없|나중에)"
     r"|(?:채팅|연결)[^.?!\n]{0,10}(?:싫|안\s*(?:할|해)|필요\s*없|하지\s*마)"
 )
 _HANDOFF_DECLINE_WINDOW = 6  # 최근 내담자 발화 몇 건까지 거절을 기억할지
@@ -829,7 +829,7 @@ def stream_user_message(db: DBSession, user_id: str | UUID, content: str):
         fallback = _fallback_reply(context)
         task = (
             "내담자가 남긴 이야기에 짧게 공감하고, [허용 자료]의 리포트 본문 범위 안에서만 "
-            "설명하세요. 자료에 없는 내용은 \"상담사님과 직접 이야기 나눌 수 있게 채팅을 연결해 드릴까요?\"처럼 연결을 제안하세요. "
+            "설명하세요. 자료에 없는 내용은 \"코치님과 직접 이야기 나눌 수 있게 채팅을 연결해 드릴까요?\"처럼 연결을 제안하세요. "
             "마지막에 열린 질문 하나를 덧붙이세요."
         )
         prompt = agent_llm.build_chat_request(
@@ -908,7 +908,7 @@ def _build_reply(
     fallback = _fallback_reply(context, in_feedback=in_feedback)
     task = (
         "내담자가 남긴 이야기에 짧게 공감하고, [허용 자료]의 리포트 본문 범위 안에서만 "
-        "설명하세요. 자료에 없는 내용은 \"상담사님과 직접 이야기 나눌 수 있게 채팅을 연결해 드릴까요?\"처럼 연결을 제안하세요. "
+        "설명하세요. 자료에 없는 내용은 \"코치님과 직접 이야기 나눌 수 있게 채팅을 연결해 드릴까요?\"처럼 연결을 제안하세요. "
         "마지막에 열린 질문 하나를 덧붙이세요."
     )
     prompt = agent_llm.build_chat_request(
@@ -925,7 +925,7 @@ def _fallback_reply(context: dict, *, in_feedback: bool = False) -> str:
     """LLM 없이 쓰는 규칙 템플릿 — 키 부재·지연·실패 시 항상 이 문장으로 응답한다."""
     if in_feedback:
         return (
-            "들려주셔서 고맙습니다. 남겨 주신 이야기는 상담사님께 그대로 전해 드릴게요. "
+            "들려주셔서 고맙습니다. 남겨 주신 이야기는 코치님께 그대로 전해 드릴게요. "
             "더 하고 싶은 말씀이 있으면 편하게 이어서 적어 주세요."
         )
     reports = context.get("reports") or []
@@ -1120,9 +1120,9 @@ def _handle_request_change(
     when = session and agent_policy.format_schedule(session.scheduled_at)
     confirm = (
         f"일정 변경 문의를 접수했어요. 현재 예약은 {when} 입니다. "
-        "상담사님께 전달해 두었으니 확인 후 안내드릴게요."
+        "코치님께 전달해 두었으니 확인 후 안내드릴게요."
         if when
-        else "일정 변경 문의를 접수했어요. 상담사님께 전달해 두었으니 확인 후 안내드릴게요."
+        else "일정 변경 문의를 접수했어요. 코치님께 전달해 두었으니 확인 후 안내드릴게요."
     )
     agent_message = post_agent_message(
         db, uid, kind="free", content=confirm, notify=False, commit=False
@@ -1194,7 +1194,7 @@ def _feedback_follow_up(choice: str) -> str:
     if choice == "disappointed":
         return (
             "알려 주셔서 고맙습니다. 어떤 점이 아쉬우셨는지 조금 더 이야기해 주실래요? "
-            "남겨 주신 말씀은 상담사님께 그대로 전해 드려요."
+            "남겨 주신 말씀은 코치님께 그대로 전해 드려요."
         )
     if choice == "neutral":
         return (
@@ -1203,5 +1203,5 @@ def _feedback_follow_up(choice: str) -> str:
         )
     return (
         "도움이 되셨다니 다행이에요. 어떤 점이 특히 그러셨는지 조금 더 이야기해 주실래요? "
-        "남겨 주신 말씀은 상담사님께 그대로 전해 드려요."
+        "남겨 주신 말씀은 코치님께 그대로 전해 드려요."
     )
