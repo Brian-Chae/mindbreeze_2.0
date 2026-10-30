@@ -134,7 +134,7 @@ export default function RegisterCounselorPage() {
   };
 
   return (
-    <AuthShell title="상담사 가입" maxWidthClass="max-w-[520px]">
+    <AuthShell title="코치 가입" maxWidthClass="max-w-[520px]">
       <div className="space-y-5">
 
         {/* 신청 완료 화면 */}
@@ -161,7 +161,7 @@ export default function RegisterCounselorPage() {
               onClick={() => setMode('org')}
               className="block w-full text-left bg-white rounded-3xl border-2 border-transparent p-6 shadow-xl hover:border-[#5F0080] transition-colors"
             >
-              <p className="text-lg font-bold text-[#1F1F1F]">기관 소속 상담사</p>
+              <p className="text-lg font-bold text-[#1F1F1F]">기관 소속 코치</p>
               <p className="text-sm text-[#6F6F6F] mt-1">
                 소속 기관의 초대를 받아 가입해요.
               </p>
@@ -171,16 +171,16 @@ export default function RegisterCounselorPage() {
               onClick={() => setMode('individual')}
               className="block w-full text-left bg-white rounded-3xl border-2 border-transparent p-6 shadow-xl hover:border-[#5F0080] transition-colors"
             >
-              <p className="text-lg font-bold text-[#1F1F1F]">개인 상담사</p>
+              <p className="text-lg font-bold text-[#1F1F1F]">개인 코치</p>
               <p className="text-sm text-[#6F6F6F] mt-1">
-                개인 상담사 이용을 신청하고 승인 후 시작해요.
+                개인 코치 이용을 신청하고 승인 후 시작해요.
               </p>
             </button>
           </div>
         ) : mode === 'org' ? (
           <div className="bg-white rounded-3xl p-6 shadow-xl sm:p-8 space-y-4">
             <p className="text-[#1F1F1F] font-semibold text-center">
-              상담사는 기관 담당자의 초대로 가입합니다
+              코치는 기관 담당자의 초대로 가입합니다
             </p>
             <ol className="text-sm text-[#6F6F6F] leading-relaxed list-decimal pl-5 space-y-1.5">
               <li>소속 기관 담당자에게 초대를 요청해 주세요.</li>
@@ -209,7 +209,7 @@ export default function RegisterCounselorPage() {
             onSubmit={handleSubmit}
             className="bg-white rounded-3xl p-6 shadow-xl sm:p-8 space-y-4"
           >
-            <h2 className="text-xl font-bold text-[#1F1F1F] text-center">개인 상담사 이용 신청</h2>
+            <h2 className="text-xl font-bold text-[#1F1F1F] text-center">개인 코치 이용 신청</h2>
             <p className="text-xs text-[#6F6F6F] text-center leading-relaxed">
               신청 검토 후 승인되면 이메일로 이용 안내(비밀번호 설정)를 보내드립니다.
             </p>
@@ -366,7 +366,7 @@ export default function RegisterCounselorPage() {
                 disabled={loading || !emailVerifyToken}
                 className="flex-1 h-[52px] rounded-full bg-[#5F0080] text-white font-semibold hover:opacity-90 disabled:opacity-50"
               >
-                {loading ? '신청 중...' : '개인 상담사 이용 신청'}
+                {loading ? '신청 중...' : '개인 코치 이용 신청'}
               </button>
             </div>
           </form>

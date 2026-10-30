@@ -21,7 +21,7 @@ const DevRoleSimulationPanel = import.meta.env.DEV
 const isRoleSimEnabled = import.meta.env.VITE_ENABLE_ROLE_SIM === 'true';
 const tabs = [
   { role: 'client', label: '회원', description: '상담과 명상을 이용하는 회원을 위한 로그인입니다.', submit: '이메일로 회원 로그인' },
-  { role: 'counselor', label: '상담사', description: '상담사 계정으로 세션과 회원을 관리하세요.', submit: '상담사 로그인' },
+  { role: 'counselor', label: '코치', description: '코치 계정으로 세션과 회원을 관리하세요.', submit: '코치 로그인' },
   { role: 'org_admin', label: '기관', description: '기관에서 발급받은 관리자 계정을 사용하세요.', submit: '기관 관리자 로그인' },
 ] as const;
 type PublicRole = typeof tabs[number]['role'];
@@ -255,7 +255,7 @@ export default function LoginPage() {
             {isClient && <>{emailForm}
               <p className="text-center text-sm text-white"><Link to="/forgot-password" className="text-white underline">비밀번호 찾기</Link><span aria-hidden="true" className="mx-2 text-white/60">·</span><Link to="/register?role=client" className="font-semibold text-white underline">회원가입</Link></p>
               {dividerWith('간편 로그인')}{googleButton}{appleButton}</>}
-            {!isAdmin && loginRole === 'counselor' && <>{emailForm}{divider}{googleButton}{appleButton}<p className="text-center text-xs text-white/80">Google·Apple로 상담사 계정을 만들 수 있어요. 처음이라면 아래 「상담사 가입」에서 시작해 주세요.</p></>}
+            {!isAdmin && loginRole === 'counselor' && <>{emailForm}{divider}{googleButton}{appleButton}<p className="text-center text-xs text-white/80">Google·Apple로 코치 계정을 만들 수 있어요. 처음이라면 아래 「코치 가입」에서 시작해 주세요.</p></>}
             {!isAdmin && loginRole === 'org_admin' && <>{emailForm}{divider}{googleButton}{appleButton}<p className="text-center text-xs text-white/80">기관 관리자는 운영자가 지정한 계정으로만 로그인할 수 있어요. 도입 문의는 <Link to="/register/organization" className="underline">기관 도입 문의</Link>에서 받아요.</p></>}
             {isAdmin && <>{rememberMeField}{googleButton}<p className="text-center text-[12.5px] text-white/78 text-white/[0.78]">Google Workspace 계정으로 로그인하세요.</p></>}
             {error && <div role="alert" className="rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-red-900/30">
@@ -267,12 +267,12 @@ export default function LoginPage() {
               </p>}
               {guide === 'no-account' && <p className="mt-2 text-[13px] font-medium">
                 {loginRole === 'counselor'
-                  ? <Link to="/register?role=counselor" className="underline">상담사 가입 안내 보기</Link>
+                  ? <Link to="/register?role=counselor" className="underline">코치 가입 안내 보기</Link>
                   : <Link to="/register/organization" className="underline">기관 도입 문의하기</Link>}
               </p>}
             </div>}
             {!isAdmin && !isClient && <Link to="/forgot-password" className="text-center text-sm underline">비밀번호 찾기</Link>}
-            {loginRole === 'counselor' && <Link to="/register?role=counselor" className="text-center text-sm font-semibold underline">상담사 가입</Link>}
+            {loginRole === 'counselor' && <Link to="/register?role=counselor" className="text-center text-sm font-semibold underline">코치 가입</Link>}
             {isAdmin && <Link to="/login?role=client" className="text-center text-sm underline">일반 로그인으로 돌아가기</Link>}
             <p className="text-center text-xs text-white/80"><PrivacyPolicyLink>개인정보 처리방침</PrivacyPolicyLink></p>
           </section>

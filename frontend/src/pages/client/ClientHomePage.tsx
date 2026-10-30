@@ -403,7 +403,7 @@ export default function ClientHomePage({ hideHero = false, classSections }: { hi
                 <CalendarDays size={20} aria-hidden="true" />
               </div>
               <p className="text-[15px] mobile:text-mb-compact font-bold text-[#1F1F1F]">이번 주 예정된 클래스가 없어요</p>
-              <p className="mt-1 text-[13px] mobile:text-mb-compact text-[#6F6F6F]">상담사에게 클래스를 신청해 보세요.</p>
+              <p className="mt-1 text-[13px] mobile:text-mb-compact text-[#6F6F6F]">코치에게 클래스를 신청해 보세요.</p>
               <button
                 type="button"
                 onClick={() => navigate('/app/classes', { state: { openApply: true } })}
@@ -508,7 +508,7 @@ export default function ClientHomePage({ hideHero = false, classSections }: { hi
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                       <span className="text-[16px] font-semibold text-[#1F1F1F]">
-                        {room.display_name || room.peer_name || '상담사'}
+                        {room.display_name || room.peer_name || '코치'}
                       </span>
                       {(room.unread_count ?? 0) > 0 && (
                         <span className="rounded-full bg-[#5F0080] px-1.5 text-[12px] font-extrabold text-white">

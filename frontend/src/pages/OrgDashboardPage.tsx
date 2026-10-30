@@ -229,7 +229,7 @@ function OrgCodeCard({ orgCode }: { orgCode: string | null }) {
         <div>
           <h2 className="text-[15px] font-bold text-[#5F0080]">기관 코드</h2>
           <p className="mt-1 text-[13px] text-[#6F6F6F]">
-            상담사는 기관 담당자의 초대로 가입합니다. 아래 코드는 기관 식별용이며, 직접 회원가입 시
+            코치는 기관 담당자의 초대로 가입합니다. 아래 코드는 기관 식별용이며, 직접 회원가입 시
             더 이상 사용하지 않습니다.
           </p>
         </div>
@@ -268,7 +268,7 @@ export default function OrgDashboardPage() {
     } catch (err) {
       setInviteList([]);
       setInviteListError(
-        err instanceof Error ? err.message : '상담사 목록을 불러오지 못했습니다.',
+        err instanceof Error ? err.message : '코치 목록을 불러오지 못했습니다.',
       );
     }
   }, []);
@@ -300,7 +300,7 @@ export default function OrgDashboardPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : '목록을 새로고침하지 못했습니다');
       setInviteListError(
-        err instanceof Error ? err.message : '상담사 목록을 불러오지 못했습니다.',
+        err instanceof Error ? err.message : '코치 목록을 불러오지 못했습니다.',
       );
     }
   }, [data?.org_id]);
@@ -341,7 +341,7 @@ export default function OrgDashboardPage() {
           />
 
           <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            <StatCard label="활성 상담사" value={activeCounselorCount} />
+            <StatCard label="활성 코치" value={activeCounselorCount} />
             <StatCard label="총 클래스" value={data.total_classes} accent="text-[#5F0080]" />
             <StatCard label="총 회원" value={data.total_members ?? data.total_participants} />
             <StatCard label="완료" value={data.completed_classes} accent="text-[#1F8A5B]" />
@@ -351,7 +351,7 @@ export default function OrgDashboardPage() {
           <section>
             <div className="flex items-baseline justify-between mb-4">
               <h2 className="font-bold text-[18px] text-[#1F1F1F] tracking-tight">
-                소속 상담사 실적
+                소속 코치 실적
               </h2>
               <span className="font-mono text-[12px] text-[#6F6F6F]">
                 {activeCounselors.length}명
@@ -360,7 +360,7 @@ export default function OrgDashboardPage() {
 
             {activeCounselors.length === 0 ? (
               <div className="border border-dashed border-[#DDDEE7] rounded-2xl p-8 text-center text-[#6F6F6F] text-sm">
-                활성 상담사 실적이 없습니다. 초대가 완료된 상담사만 표시됩니다.
+                활성 코치 실적이 없습니다. 초대가 완료된 코치만 표시됩니다.
               </div>
             ) : (
               <>

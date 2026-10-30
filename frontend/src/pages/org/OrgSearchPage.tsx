@@ -17,7 +17,7 @@ import {
 const ROLE_LABELS: Record<string, string> = {
   platform_admin: '플랫폼 관리자',
   org_admin: '센터 관리자',
-  counselor: '상담사',
+  counselor: '코치',
   client: '내담자',
   admin: '관리자',
 };
@@ -108,7 +108,7 @@ export default function OrgSearchPage() {
 
         {user?.role !== 'counselor' && (
           <div className={cardClass('compact', 'text-sm text-ink-secondary')}>
-            상담사 계정으로만 가입 신청이 가능합니다 (현재 역할: {user?.role ? ROLE_LABELS[user.role] ?? user.role : '알 수 없음'})
+            코치 계정으로만 가입 신청이 가능합니다 (현재 역할: {user?.role ? ROLE_LABELS[user.role] ?? user.role : '알 수 없음'})
           </div>
         )}
 

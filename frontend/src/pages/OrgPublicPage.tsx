@@ -206,7 +206,7 @@ function OrgPublicContent({ data }: { data: OrgPublicResponse }) {
           {/* 소속 상담사/명상지도사 */}
           <section>
             <h2 className="text-[22px] font-bold text-[#1F1F1F] mb-4">
-              소속 상담사 · 명상지도사
+              소속 코치 · 명상지도사
             </h2>
             {data.counselors.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -220,7 +220,7 @@ function OrgPublicContent({ data }: { data: OrgPublicResponse }) {
               </div>
             ) : (
               <div className={cardClass('default', 'text-[#6F6F6F] text-[15px]')}>
-                등록된 상담사·명상지도사가 없습니다.
+                등록된 코치·명상지도사가 없습니다.
               </div>
             )}
           </section>
@@ -252,7 +252,7 @@ function OrgPublicContent({ data }: { data: OrgPublicResponse }) {
           <section className={cardClass('default', 'text-center')}>
             <h2 className="text-[20px] font-bold text-[#1F1F1F] mb-2">코드로 입장</h2>
             <p className="text-[15px] text-[#6F6F6F] mb-6">
-              상담사·지도사가 안내한 입장 코드 4자리를 입력하면 바로 입장할 수 있습니다.
+              코치·지도사가 안내한 입장 코드 4자리를 입력하면 바로 입장할 수 있습니다.
             </p>
             <ButtonLink to="/join" size="lg" className="whitespace-normal">
               입장 코드 입력

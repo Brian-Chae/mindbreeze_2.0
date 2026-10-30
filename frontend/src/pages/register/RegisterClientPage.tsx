@@ -163,7 +163,7 @@ export default function RegisterClientPage() {
     setMatchedCounselor(null);
     const code = counselorCode.trim().toUpperCase();
     if (code.length !== 6) {
-      setError('상담사 코드는 6자리입니다');
+      setError('코치 코드는 6자리입니다');
       return;
     }
     if (!emailVerifyToken) {
@@ -176,7 +176,7 @@ export default function RegisterClientPage() {
       setMatchedCounselor(res);
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(err.message || '상담사 코드를 확인할 수 없습니다');
+        setError(err.message || '코치 코드를 확인할 수 없습니다');
       } else {
         setError('네트워크 오류가 발생했습니다');
       }
@@ -220,7 +220,7 @@ export default function RegisterClientPage() {
       return;
     }
     if (!isInviteRegistration && !matchedCounselor) {
-      setError('상담사 코드를 확인해주세요. 코드가 없다면 초대한 상담사에게 요청해 주세요.');
+      setError('코치 코드를 확인해주세요. 코드가 없다면 초대한 코치에게 요청해 주세요.');
       return;
     }
 
@@ -270,10 +270,10 @@ export default function RegisterClientPage() {
         {isInviteRegistration && (
           <div className="rounded-3xl bg-white px-5 py-4 shadow-xl text-center space-y-1">
             <p className="text-sm font-semibold text-[#1F1F1F]">
-              상담사님의 초대로 가입 중입니다
+              코치님의 초대로 가입 중입니다
             </p>
             <p className="text-xs text-[#6F6F6F]">
-              가입 완료 시 상담사와 자동으로 연결됩니다
+              가입 완료 시 코치와 자동으로 연결됩니다
             </p>
           </div>
         )}
@@ -469,7 +469,7 @@ export default function RegisterClientPage() {
               {!isInviteRegistration && (
                 <div className="space-y-2">
                   <label htmlFor="counselorCode" className="block text-sm font-medium text-[#4A4A4A]">
-                    초대 상담사 코드
+                    초대 코치 코드
                   </label>
                   <div className="flex gap-2">
                     <input
@@ -497,7 +497,7 @@ export default function RegisterClientPage() {
                   {matchedCounselor ? (
                     <div className="rounded-xl border border-[#5F0080]/30 bg-[#5F0080]/5 px-4 py-3 text-sm">
                       <p className="font-semibold text-[#1F1F1F]">
-                        {matchedCounselor.counselor_name} 상담사와 연결하여 가입합니다
+                        {matchedCounselor.counselor_name} 코치와 연결하여 가입합니다
                       </p>
                       {matchedCounselor.organization_name && (
                         <p className="text-xs text-[#6F6F6F] mt-0.5">
@@ -507,7 +507,7 @@ export default function RegisterClientPage() {
                     </div>
                   ) : (
                     <p className="text-xs text-[#6F6F6F]">
-                      코드가 없다면 초대한 상담사에게 코드를 요청해 주세요.
+                      코드가 없다면 초대한 코치에게 코드를 요청해 주세요.
                     </p>
                   )}
                 </div>

@@ -28,7 +28,7 @@ it('순수기관은 전문 프로필 폼을 제공하지 않는다', async () =>
   vi.spyOn(counselorApi, 'getCounselorProfile').mockResolvedValue({...profile, counselor_code:null});
   const host = document.createElement('div'); const root = createRoot(host);
   await act(async () => root.render(<MemoryRouter><ProfessionalProfilePage /></MemoryRouter>));
-  expect(host.textContent).toContain('상담사 프로필이 있는 계정만');
+  expect(host.textContent).toContain('코치 프로필이 있는 계정만');
   expect(host.querySelector('button')).toBeNull();
   await act(async () => root.unmount());
 });

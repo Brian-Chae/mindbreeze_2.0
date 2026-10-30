@@ -66,7 +66,7 @@ export default function MembershipInvitePage() {
             to="/login"
             className="text-[13px] text-white/90 hover:text-white font-medium px-4 py-2 rounded-full border border-white/30 hover:border-white/60 transition-colors"
           >
-            상담사 로그인
+            코치 로그인
           </Link>
         </div>
 
@@ -111,7 +111,7 @@ export default function MembershipInvitePage() {
         ) : (
           <div className="flex flex-col items-center gap-4 text-center max-w-[360px]">
             <div className="text-[15px] text-white/60">
-              기관의 소속 상담사 초대 링크로 접속하셨습니다.
+              기관의 소속 코치 초대 링크로 접속하셨습니다.
               <br />
               수락하면 기존 계정에 소속이 추가됩니다. 비밀번호 설정은 필요 없습니다.
             </div>

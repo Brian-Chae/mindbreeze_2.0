@@ -154,10 +154,10 @@ function CounselorCodeScreen() {
     <div className="flex flex-col items-center justify-center min-h-dvh bg-[#FAFAFA] px-6">
       <div className="text-center w-full max-w-sm">
         <h1 className="text-2xl font-bold text-[#1F1F1F] mb-2">
-          상담사와 연결하기
+          코치와 연결하기
         </h1>
         <p className="text-[#6F6F6F] mb-8">
-          상담사에게 받은 6자리 코드를 입력하여 연결을 시작하세요.
+          코치에게 받은 6자리 코드를 입력하여 연결을 시작하세요.
         </p>
 
         {/* 6자리 코드 입력 */}
@@ -199,7 +199,7 @@ function CounselorCodeScreen() {
         )}
 
         <p className="text-xs text-[#6F6F6F] mt-6">
-          상담사 코드는 상담사 프로필에서 확인할 수 있습니다
+          코치 코드는 코치 프로필에서 확인할 수 있습니다
         </p>
       </div>
     </div>
@@ -243,7 +243,7 @@ export default function ClientAppPage() {
         console.error('Failed to fetch counselors:', err);
         // 실패 시 counselors를 null로 유지 — '상담사 코드 입력' 화면 오표시를 막고 에러+재시도 노출
         setFetchError(
-          err instanceof Error ? err.message : '상담사 연결 정보를 불러오지 못했습니다',
+          err instanceof Error ? err.message : '코치 연결 정보를 불러오지 못했습니다',
         );
       }
     }

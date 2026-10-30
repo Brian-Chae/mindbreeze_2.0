@@ -195,7 +195,7 @@ export default function ClientChatPage() {
               <div className="p-6 text-center text-sm mobile:text-mb-compact text-red-500">{error}</div>
             ) : rooms.length === 0 ? (
               !hasCounselors ? (
-                <div className="px-6 py-10 text-center text-sm mobile:text-mb-compact text-[#6F6F6F]">상담사와 연결하면 상담사와의 1:1 채팅이 여기에 표시돼요.</div>
+                <div className="px-6 py-10 text-center text-sm mobile:text-mb-compact text-[#6F6F6F]">코치와 연결하면 코치와의 1:1 채팅이 여기에 표시돼요.</div>
               ) : (
               <div className="flex flex-col items-center justify-center flex-1 min-h-[40vh] px-6">
                 <div className="w-16 h-16 rounded-full bg-[#EFEFEF] flex items-center justify-center mb-4">

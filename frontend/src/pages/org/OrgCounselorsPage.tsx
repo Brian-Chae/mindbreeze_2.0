@@ -108,12 +108,12 @@ function StatusChangeDialog({
         className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
       >
         <h3 id="status-change-title" className="text-[18px] font-bold text-[#1F1F1F]">
-          {isSuspend ? '상담사 비활성화' : '상담사 활성화'}
+          {isSuspend ? '코치 비활성화' : '코치 활성화'}
         </h3>
         <p className="mt-2 text-[13px] leading-relaxed text-[#6F6F6F]">
           <span className="font-semibold text-[#1F1F1F]">{counselor.name}</span>
           {isSuspend
-            ? ' 계정을 비활성화합니다. 비활성화된 상담사는 로그인이 차단되며, 데이터는 삭제되지 않습니다.'
+            ? ' 계정을 비활성화합니다. 비활성화된 코치는 로그인이 차단되며, 데이터는 삭제되지 않습니다.'
             : ' 계정을 다시 활성화합니다. 활성화 즉시 로그인이 가능해집니다.'}
         </p>
         <label className="mt-4 block text-[12px] font-semibold text-[#6F6F6F]">
@@ -215,8 +215,8 @@ function CounselorDetailPanel({
       {/* 프로필 요약 */}
       <dl className="mt-4 grid grid-cols-2 gap-3 text-[13px] sm:grid-cols-4">
         {[
-          ['상담사 코드', counselor.counselor_code ?? profile?.counselor_code ?? '-'],
-          ['역할', counselor.role === 'org_admin' ? '기관 관리자' : '상담사'],
+          ['코치 코드', counselor.counselor_code ?? profile?.counselor_code ?? '-'],
+          ['역할', counselor.role === 'org_admin' ? '기관 관리자' : '코치'],
           ['전화번호', profile?.phone ?? '-'],
           ['활동 형태', counselor.has_personal_office ? '개인 상담소 운영' : '기관 소속'],
         ].map(([k, v]) => (
@@ -317,7 +317,7 @@ function CounselorDetailPanel({
               {activity.reports.map((r) => (
                 <tr key={r.id} className="border-b border-[#EFEFEF] last:border-0">
                   <td className="px-3 py-2.5 font-medium text-[#1F1F1F]">{r.title || '제목 없음'}</td>
-                  <td className="px-3 py-2.5 text-[#6F6F6F]">{r.type === 'counselor' ? '상담사용' : '내담자용'}</td>
+                  <td className="px-3 py-2.5 text-[#6F6F6F]">{r.type === 'counselor' ? '코치용' : '내담자용'}</td>
                   <td className="px-3 py-2.5 text-[#6F6F6F]">{REPORT_STATUS_LABELS[r.status] ?? r.status}</td>
                   <td className="px-3 py-2.5 font-mono text-[12px] text-[#6F6F6F]">{formatDateTime(r.created_at)}</td>
                 </tr>
@@ -367,7 +367,7 @@ export default function OrgCounselorsPage() {
       })
       .catch((err) => {
         if (cancelled) return;
-        setError(err instanceof ApiError ? err.message : '상담사 목록을 불러오지 못했습니다');
+        setError(err instanceof ApiError ? err.message : '코치 목록을 불러오지 못했습니다');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -415,7 +415,7 @@ export default function OrgCounselorsPage() {
 
   return (
     <AppShell
-      title="상담사 관리"
+      title="코치 관리"
       sub="COUNSELORS"
       wide
       rightSlot={
@@ -426,7 +426,7 @@ export default function OrgCounselorsPage() {
             onClick={() => setShowInvite(true)}
             className="mb-btn"
           >
-            상담사 초대
+            코치 초대
           </button>
         ) : undefined
       }
@@ -462,7 +462,7 @@ export default function OrgCounselorsPage() {
           {/* 검색 + 필터 */}
           <div className="flex flex-wrap gap-2">
             <input
-              aria-label="상담사 검색"
+              aria-label="코치 검색"
               placeholder="이름·이메일·코드 검색"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -475,7 +475,7 @@ export default function OrgCounselorsPage() {
               className={fieldClass('select', '!w-auto')}
             >
               <option value="">전체 역할</option>
-              <option value="counselor">상담사</option>
+              <option value="counselor">코치</option>
               <option value="org_admin">기관 관리자</option>
             </select>
             <select
@@ -494,11 +494,11 @@ export default function OrgCounselorsPage() {
           {/* 목록 */}
           {counselors.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-[#DDDEE7] p-8 text-center text-sm text-[#6F6F6F]">
-              아직 소속된 상담사가 없습니다. 상단의 '상담사 초대' 버튼으로 초대해 보세요.
+              아직 소속된 코치가 없습니다. 상단의 '코치 초대' 버튼으로 초대해 보세요.
             </div>
           ) : filtered.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-[#DDDEE7] p-8 text-center text-sm text-[#6F6F6F]">
-              검색 조건에 맞는 상담사가 없습니다.
+              검색 조건에 맞는 코치가 없습니다.
             </div>
           ) : (
             <div className={cardClass('none', 'overflow-x-auto')}>
@@ -537,7 +537,7 @@ export default function OrgCounselorsPage() {
                           {c.counselor_code ?? '-'}
                         </td>
                         <td className="px-5 py-3.5 text-[#6F6F6F]">
-                          {c.role === 'org_admin' ? '기관 관리자' : '상담사'}
+                          {c.role === 'org_admin' ? '기관 관리자' : '코치'}
                         </td>
                         <td className="px-5 py-3.5">
                           <StatusBadge status={status} />
@@ -612,7 +612,7 @@ export default function OrgCounselorsPage() {
             tabIndex={-1}
             role="dialog"
             aria-modal="true"
-            aria-label="상담사 초대"
+            aria-label="코치 초대"
             className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-4 shadow-xl"
           >
             <CounselorInviteSection
