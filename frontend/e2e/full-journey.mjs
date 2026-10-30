@@ -81,23 +81,23 @@ function readOtpFromRedis(email) {
 // ════════════════════════════════════════════════════════════════════════
 await scenario('[기업] 기관 관리자 로그인 → 대시보드(기관명·코드·실적)', async (p) => {
   await uiLogin(p, 'org_admin', HOME.org_admin);
-  await expectText(p, '/dashboard/org', 'E2E-테스트기관', 'E2E001', '소속 상담사 실적');
+  await expectText(p, '/dashboard/org', 'E2E-테스트기관', 'E2E001', '소속 코치 실적');
 });
 
-await scenario('[기업] 소속 상담사 목록 노출', async (p) => {
+await scenario('[기업] 소속 코치 목록 노출', async (p) => {
   await uiLogin(p, 'org_admin', HOME.org_admin);
-  await expectText(p, '/org/counselors', '상담사 관리', 'E2E-상담사', 'E2E0C1');
+  await expectText(p, '/org/counselors', '코치 관리', 'E2E-코치', 'E2E0C1');
 });
 
 // ════════════════════════════════════════════════════════════════════════
 // 2. 상담사 계층
 // ════════════════════════════════════════════════════════════════════════
-await scenario('[상담사] 로그인 → 대시보드(내 클래스·일정)', async (p) => {
+await scenario('[코치] 로그인 → 대시보드(내 클래스·일정)', async (p) => {
   await uiLogin(p, 'counselor', HOME.counselor);
   await expectText(p, '/dashboard', '오늘 · 다가오는 일정', '내 클래스');
 });
 
-await scenario('[상담사] 내담자 목록에 연결된 내담자 노출', async (p) => {
+await scenario('[코치] 내담자 목록에 연결된 내담자 노출', async (p) => {
   await uiLogin(p, 'counselor', HOME.counselor);
   await expectText(p, '/clients', 'E2E-내담자', 'e2e-client@e2e.looxidlabs.com');
 });
@@ -179,11 +179,11 @@ await scenario('[로그인] 4역할 API 로그인 → 역할 정합성', async (
   }
 });
 
-await scenario('[로그인] 내담자 → 상담사 대시보드 접근 차단', async (p) => {
+await scenario('[로그인] 내담자 → 코치 대시보드 접근 차단', async (p) => {
   await uiLogin(p, 'client', HOME.client);
   await go(p, '/dashboard');
   if (new URL(p.url()).pathname === '/dashboard' && (await bodyText(p)).includes('오늘 · 다가오는 일정')) {
-    throw new Error('내담자가 상담사 화면에 접근');
+    throw new Error('내담자가 코치 화면에 접근');
   }
 });
 
@@ -269,7 +269,7 @@ async function walkToLive(p, { includeReport }) {
 
 await purgeStaleClasses();
 
-await scenario('[클래스] (A) 상담사 클래스 생성 → 오픈 → 시작 (4자리 코드 발급)', async () => {
+await scenario('[클래스] (A) 코치 클래스 생성 → 오픈 → 시작 (4자리 코드 발급)', async () => {
   const made = await createStartedClass(TITLE, []);
   classes.A.id = made.id;
   classes.A.classId = made.classId; classes.A.code = made.code;
@@ -304,7 +304,7 @@ await scenario('[클래스] (A) 비회원 입장: 4자리 코드 → 개인정�
 });
 
 async function endClass(key) {
-  await scenario(`[클래스] (${key}) 상담사 종료(end) → 상태 completed`, async () => {
+  await scenario(`[클래스] (${key}) 코치 종료(end) → 상태 completed`, async () => {
     if (!classes[key].id) throw new Error('선행 클래스 생성 실패');
     const c = await counselor();
     const r = await fetch(`${API}/sessions/${classes[key].id}/end`, { method: 'POST', headers: H(c.token) });
@@ -372,7 +372,7 @@ await scenario('[리포트] (B) 기본(리포트 제외) → counselor 만 생�
     if (reports.some((x) => x.type === 'counselor')) break;
     await new Promise((res) => setTimeout(res, 2000));
   }
-  if (!reports.some((x) => x.type === 'counselor')) throw new Error('상담사 리포트 미생성');
+  if (!reports.some((x) => x.type === 'counselor')) throw new Error('코치 리포트 미생성');
   // client 리포트 행은 같은 후처리에서 만들어진다 — 상담사 리포트 확인 후 여유를 두고 다시 확인한다.
   await new Promise((res) => setTimeout(res, 6000));
   reports = await sessionReports(c.token, classes.B.id);
@@ -381,7 +381,7 @@ await scenario('[리포트] (B) 기본(리포트 제외) → counselor 만 생�
   console.log('      리포트 제외 → client 리포트 0건 확인');
 });
 
-await scenario('[리포트] 상담사 리포트 열람(UI)', async (p) => {
+await scenario('[리포트] 코치 리포트 열람(UI)', async (p) => {
   await uiLogin(p, 'counselor', HOME.counselor);
   await expectText(p, '/reports', TITLE);
 });

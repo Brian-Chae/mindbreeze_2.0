@@ -244,8 +244,13 @@ def can_observe(db, user_id, session):
     actor = db.query(User).filter(User.id == UUID(str(user_id))).first()
     if (
         not cls
-        or class_role(db, actor, cls) not in ("lead", "assistant")
+        or class_role(db, actor, cls) not in ("lead", "assistant", "org_admin")
         or session.host_id == actor.id
+    ):
+        return False
+    # 기관관리자는 자기 기관 명상 클래스 회차만 참관한다(상담 세션 제외, 기관 귀속 확인된 클래스).
+    if class_role(db, actor, cls) == "org_admin" and (
+        session.type != "meditation" or not cls.organization_attribution_known
     ):
         return False
     # 라이브는 보고서 포함 여부와 무관하게 실제 입장한 모든 회원의 고지를 확인한다.

@@ -101,7 +101,7 @@ def add_counselor_by_code(
     if user.role != "client":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="내담자만 상담사를 추가할 수 있습니다",
+            detail="내담자만 코치를 추가할 수 있습니다",
         )
 
     # AUTH4-03: 가입·온보딩 매칭 경로와 동일하게 공백 제거·대문자화 후 조회한다.
@@ -118,28 +118,28 @@ def add_counselor_by_code(
     if not profile:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="유효하지 않은 상담사 코드입니다",
+            detail="유효하지 않은 코치 코드입니다",
         )
 
     counselor = db.query(User).filter(User.id == profile.user_id).first()
     if not counselor:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="상담사를 찾을 수 없습니다",
+            detail="코치를 찾을 수 없습니다",
         )
 
     # SDD-073: 승인 전(pending) 개인 상담사 등 비활성 계정의 코드는 사용 불가
     if counselor.status != "active":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="아직 활동을 시작하지 않은 상담사입니다. 상담사에게 확인해 주세요.",
+            detail="아직 활동을 시작하지 않은 코치입니다. 코치에게 확인해 주세요.",
         )
 
     # AUTH4-04: 인증 미완료(자격 증빙 없음) 상담사는 연결 불가 — 온보딩 매칭(step4)과 동일 기준.
     if counselor.verified_tier == "unverified":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="해당 상담사는 아직 인증이 완료되지 않아 연결할 수 없습니다",
+            detail="해당 코치는 아직 인증이 완료되지 않아 연결할 수 없습니다",
         )
 
     # AUTH4-04: 비활성화된 기관 소속 상담사는 연결 불가(활성 기관 소속 검증).
@@ -160,7 +160,7 @@ def add_counselor_by_code(
         if existing.status == "active":
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="이미 연결된 상담사입니다",
+                detail="이미 연결된 코치입니다",
             )
         else:
             # ended 상태면 재활성화 — AUTH4-09: status 만 되돌리고 ended_at 을 초기화하지

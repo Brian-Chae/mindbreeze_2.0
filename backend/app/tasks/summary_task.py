@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
 TEMPLATE_BY_TYPE = {
-    "clinical": ["주요 주제", "감정 분석", "상담사 소견", "권고사항", "진행 단계"],
+    "clinical": ["주요 주제", "감정 분석", "코치 소견", "권고사항", "진행 단계"],
     "hypnosis": ["유도 단계", "관찰", "후처리", "권고"],
     "meditation": ["수업 흐름", "참여자 반응", "권고"],
 }

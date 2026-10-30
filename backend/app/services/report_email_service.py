@@ -121,7 +121,7 @@ def request_report_email(session_id: UUID, payload, db: DBSession, user_id: str 
     if report.status == "error":
         raise HTTPException(503, "리포트 생성에 실패했습니다. 다시 요청해주세요")
     if report.status != "completed":
-        return {"status": "pending_review", "message": "상담사 승인 후 이메일로 발송됩니다"}
+        return {"status": "pending_review", "message": "코치 승인 후 이메일로 발송됩니다"}
     if participant.report_email_sent_at:
         return {"status": "sent", "message": "이미 발송된 리포트입니다"}
     try:
@@ -395,8 +395,8 @@ def view_report_email(session_id: UUID, token: str, db: DBSession) -> str:
         comment_section = (
             '<section aria-labelledby="comment-title" '
             'style="padding:clamp(28px,6vw,48px) clamp(20px,5vw,48px);border-top:1px solid #E8D9EF;">'
-            '<p style="margin:0 0 8px;color:#5F0080;font-size:12px;letter-spacing:2px;">상담사 코멘트</p>'
-            '<h2 id="comment-title" style="margin:0 0 20px;font-size:24px;line-height:1.5;">상담사가 전하는 말</h2>'
+            '<p style="margin:0 0 8px;color:#5F0080;font-size:12px;letter-spacing:2px;">코치 코멘트</p>'
+            '<h2 id="comment-title" style="margin:0 0 20px;font-size:24px;line-height:1.5;">코치가 전하는 말</h2>'
             '<p style="margin:0;padding:20px 22px;background:#F1FAF5;border-left:3px solid #59CE90;'
             'border-radius:0 12px 12px 0;color:#1F1F1F;font-size:15px;line-height:1.9;white-space:pre-wrap;">'
             f'{escape(counselor_comment)}</p></section>'

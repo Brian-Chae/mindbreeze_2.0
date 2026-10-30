@@ -223,7 +223,7 @@ export default function SidebarNav({
         ? '플랫폼 관리자'
         : user?.role === 'org_admin'
           ? '기관 관리자'
-          : '상담사 전용';
+          : '코치 전용';
 
   const handleLogout = async () => {
     await logout();

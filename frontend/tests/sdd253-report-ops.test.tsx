@@ -96,7 +96,7 @@ describe('ReportApprovalStatus', () => {
     await act(async () => root.render(
       <ReportApprovalStatus report={{ ...base, delivery_status: 'failed', delivery_failure_code: 'send_failed', capabilities: { can_view: true, can_approve: false, can_edit_comment: false, can_retry_delivery: true } }} onChange={() => {}} />,
     ));
-    expect(container.textContent).toContain('승인 완료 · 채 상담사 · 상담사');
+    expect(container.textContent).toContain('승인 완료 · 채 상담사 · 코치');
     expect(container.textContent).toContain('발송 실패');
     expect(container.textContent).toContain('메일 서비스가 발송을 받지 않았습니다');
     expect(container.textContent).toContain('다시 발송');

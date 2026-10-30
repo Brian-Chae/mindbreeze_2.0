@@ -127,7 +127,7 @@ describe('FM04b 개인정보 입력', () => {
     expect(qa('input[type=month],input[type=date]')).toHaveLength(0);
     expect(text()).not.toContain('생년월일');
     expect(qa('[role="radio"]').map((r) => r.textContent)).toEqual(['여성', '남성', '선택 안 함']);
-    expect(text()).toContain('채용욱 상담사');
+    expect(text()).toContain('채용욱 코치');
     expect(text()).toContain('리포트는 입력한 이메일로 보내 드려요');
     expect(text()).not.toMatch(/인증|OTP|인증 요청/);
     expect(btn('입장하기').disabled).toBe(true);

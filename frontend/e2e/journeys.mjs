@@ -7,7 +7,7 @@ const TITLE = `E2E-여정-${Date.now()}`;
 
 // ── 내담자 (7) ─────────────────────────────────────────
 const client = (name, fn, o) => scenario(`[내담자] ${name}`, async (p) => { await uiLogin(p, 'client', HOME.client); await fn(p); }, o);
-await client('홈: 인사·담당 상담사·이번 주 클래스 영역', async (p) => { await expectText(p, '/app', '안녕하세요, E2E-내담자님', '담당 상담사', '이번 주 클래스'); });
+await client('홈: 인사·담당 코치·이번 주 클래스 영역', async (p) => { await expectText(p, '/app', '안녕하세요, E2E-내담자님', '담당 코치', '이번 주 클래스'); });
 // SDD-209: 달력 제거(D-5②) — 목록(예정/지난 클래스 섹션)이 보이는지 확인한다.
 await client('클래스: 목록 표시(달력 없음)', async (p) => {
   const t = await expectText(p, '/app/classes', '내 클래스', '클래스 신청하기');
@@ -26,7 +26,7 @@ await client('구 경로 /app/sessions → /app/classes 이동', async (p) => {
 });
 await client('리포트: 빈 상태 안내', async (p) => { await expectText(p, '/app/reports', '리포트'); });
 // SDD-220: AI 비공개 기본값 — 루시 대화방이 없어야 한다
-await client('채팅: 담당 상담사 대화방 노출(AI 비공개 시 루시 없음)', async (p) => { const t = await expectText(p, '/app/chat', 'E2E-상담사'); if (t.includes('루시')) throw new Error('AI 비공개인데 루시 노출'); });
+await client('채팅: 담당 코치 대화방 노출(AI 비공개 시 루시 없음)', async (p) => { const t = await expectText(p, '/app/chat', 'E2E-코치'); if (t.includes('루시')) throw new Error('AI 비공개인데 루시 노출'); });
 await client('알림: 빈 상태', async (p) => { await expectText(p, '/app/notifications', '알림'); });
 await client('다음 클래스 카드: 제목·설명 글자가 흰색(어두운 배경 대비)', async (p) => {
   // 상담사가 E2E 세션을 만들어 내담자를 참여시킨 뒤, 내담자 홈의 '다음 클래스' 히어로(class-hero) 글자색을 확인하고 삭제한다.
@@ -66,7 +66,7 @@ await client('로그아웃 → 로그인 화면, 보호 페이지 재접근 차�
 });
 
 // ── 상담사 (11) ────────────────────────────────────────
-const cou = (name, fn, o) => scenario(`[상담사] ${name}`, async (p) => { await uiLogin(p, 'counselor', HOME.counselor); await fn(p); }, o);
+const cou = (name, fn, o) => scenario(`[코치] ${name}`, async (p) => { await uiLogin(p, 'counselor', HOME.counselor); await fn(p); }, o);
 await cou('대시보드: 핵심 영역 4개', async (p) => { await expectText(p, '/dashboard', '오늘 · 다가오는 일정', '내 클래스', '최근 대화', '새 알림'); });
 await cou('내담자 목록: 연결된 E2E-내담자 노출', async (p) => { await expectText(p, '/clients', 'E2E-내담자', 'e2e-client@e2e.looxidlabs.com'); });
 await cou('내담자 검색: 없는 이름 → 결과 없음', async (p) => {
@@ -119,9 +119,9 @@ await cou('인증 등급 페이지', async (p) => { await expectText(p, '/creden
 
 // ── 기관 관리자 (5) ────────────────────────────────────
 const org = (name, fn, o) => scenario(`[기관] ${name}`, async (p) => { await uiLogin(p, 'org_admin', HOME.org_admin); await fn(p); }, o);
-await org('대시보드: 기관명·기관 코드', async (p) => { await expectText(p, '/dashboard/org', 'E2E-테스트기관', 'E2E001', '소속 상담사 실적'); });
-await org('상담사 관리: 소속 상담사 목록', async (p) => { await expectText(p, '/org/counselors', '상담사 관리', 'E2E-상담사', 'E2E0C1'); });
-await org('상담사 초대 폼 노출 (제출 안 함)', async (p) => { await expectText(p, '/dashboard/org', '상담사 초대', '초대 발송'); });
+await org('대시보드: 기관명·기관 코드', async (p) => { await expectText(p, '/dashboard/org', 'E2E-테스트기관', 'E2E001', '소속 코치 실적'); });
+await org('코치 관리: 소속 코치 목록', async (p) => { await expectText(p, '/org/counselors', '코치 관리', 'E2E-코치', 'E2E0C1'); });
+await org('코치 초대 폼 노출 (제출 안 함)', async (p) => { await expectText(p, '/dashboard/org', '코치 초대', '초대 발송'); });
 await org('내담자·세션·리포트 메뉴 로딩', async (p) => { for (const x of ['/clients', '/sessions', '/reports']) await expectText(p, x); });
 await org('설정: 계정 정보·카드 제목 중복 없음', async (p) => {
   await expectText(p, '/settings', 'E2E-기관관리자', '내 계정');
@@ -135,13 +135,13 @@ await scenario('[접근통제] 비로그인 → 보호 페이지는 로그인으
   await go(p, '/dashboard');
   if (!new URL(p.url()).pathname.startsWith('/login')) throw new Error(`이동: ${p.url()}`);
 });
-await scenario('[접근통제] 내담자가 상담사 대시보드 접근 차단', async (p) => {
+await scenario('[접근통제] 내담자가 코치 대시보드 접근 차단', async (p) => {
   await uiLogin(p, 'client', HOME.client); await go(p, '/dashboard');
-  if (new URL(p.url()).pathname === '/dashboard' && (await bodyText(p)).includes('오늘 · 다가오는 일정')) throw new Error('내담자가 상담사 화면 접근');
+  if (new URL(p.url()).pathname === '/dashboard' && (await bodyText(p)).includes('오늘 · 다가오는 일정')) throw new Error('내담자가 코치 화면 접근');
 });
-await scenario('[접근통제] 상담사가 기관 대시보드 접근 차단', async (p) => {
+await scenario('[접근통제] 코치가 기관 대시보드 접근 차단', async (p) => {
   await uiLogin(p, 'counselor', HOME.counselor); await go(p, '/dashboard/org');
-  if ((await bodyText(p)).includes('소속 상담사 실적')) throw new Error('상담사가 기관 화면 접근');
+  if ((await bodyText(p)).includes('소속 코치 실적')) throw new Error('코치가 기관 화면 접근');
 });
 await scenario('[접근통제] 없는 계정 로그인 → 오류 안내 (E2E 계정 잠금 방지)', async (p) => {
   await p.goto(`${BASE}/login?role=client`, { waitUntil: 'domcontentloaded' });

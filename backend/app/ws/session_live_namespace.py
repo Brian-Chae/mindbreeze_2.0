@@ -920,7 +920,7 @@ def register_session_live_namespace(sio):
         session_id = data.get("session_id")
         session = await sio.get_session(sid, namespace=_NAMESPACE) or {}
         if session.get("role") != "host" or session.get("session_id") != session_id:
-            return {"ok": False, "error": "상담사만 안내를 보낼 수 있습니다."}
+            return {"ok": False, "error": "코치만 안내를 보낼 수 있습니다."}
         targets = data.get("participant_ids")
         if not isinstance(targets, list) or not targets or len(targets) > 500 or not all(isinstance(pid, str) for pid in targets):
             return {"ok": False, "error": "대상 참가자를 확인해 주세요."}
@@ -929,7 +929,7 @@ def register_session_live_namespace(sio):
                 _resolve_join, session_id, session.get("user_id"), None
             )
             if not resolved or resolved.get("role") != "host":
-                return {"ok": False, "error": "상담사 권한을 확인해 주세요."}
+                return {"ok": False, "error": "코치 권한을 확인해 주세요."}
             # LIVE-01: 호스트 join 스냅샷(get_live_metrics)은 'metrics' 키에 참가자 목록을 담는다.
             #   기존 'participants' 키는 존재하지 않아 허용 집합이 항상 비어 리마인드가 100% 실패했다.
             allowed = {
@@ -943,7 +943,7 @@ def register_session_live_namespace(sio):
             for participant_id in targets:
                 await sio.emit("waiting_room_reminder", {
                     "session_id": session_id,
-                    "message": "상담사가 준비 상태 확인을 부탁했어요. 설문·링크밴드·기기를 확인해 주세요. 건너뛰어도 괜찮아요.",
+                    "message": "코치가 준비 상태 확인을 부탁했어요. 설문·링크밴드·기기를 확인해 주세요. 건너뛰어도 괜찮아요.",
                 }, room=_room_self(session_id, participant_id), namespace=_NAMESPACE)
             return {"ok": True, "sent": len(targets)}
         except Exception:

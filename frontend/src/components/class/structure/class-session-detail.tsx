@@ -60,7 +60,7 @@ export function ClassSessionDetail({ classId, sessionId }: { classId: string; se
           </div>
           <div className="co-hero-actions">
             {isHost && session.host_state === 'assigned' && ['ready', 'scheduled', 'open', 'in_progress'].includes(session.status) && <Link className="co-primary" to={`/sessions/${sessionId}/player`}><DoorOpen size={20} aria-hidden="true"/>진행 화면으로</Link>}
-            {isHost && session.status === 'completed' && <Link className="co-primary" to={`/sessions/${sessionId}/record`}><FileText size={20} aria-hidden="true"/>기록과 리포트</Link>}
+            {(isHost || admin) && session.status === 'completed' && <Link className="co-primary" to={`/sessions/${sessionId}/record`}><FileText size={20} aria-hidden="true"/>기록과 리포트</Link>}
             {manager && session.host_state === 'needs_reassign' && <Link className="co-primary" to={`/classes/${classId}/schedule`}>진행 지도사 정하기</Link>}
             {manager && session.status === 'cancelled' && <Link className="co-primary" to={`/classes/${classId}/schedule`}>보강 회차 추가</Link>}
           </div>
@@ -81,11 +81,11 @@ export function ClassSessionDetail({ classId, sessionId }: { classId: string; se
               <div><dt>장소</dt><dd>{session.location_type === 'offline' ? session.location_address ?? '장소 미확인' : session.location_type === 'online' ? '온라인' : '방식 미확인'}</dd></div>
               <div><dt>기록</dt><dd>{recordingLabel} · {bandLabel}</dd></div>
             </dl><div className="co-info-actions"><Link className={operationButton} to={`/classes/${classId}/${manager ? 'schedule' : 'sessions'}`}>{manager ? '일정·장소 편집' : '회차 목록'}</Link><ClassSessionCancel detail={detail} session={session} admin={admin} onSaved={retry}/></div></section>
-            <section className="co-card"><h2>기록</h2><p className="co-note">{session.status === 'completed' ? '역할에 따라 제공되는 기록과 리포트를 확인해요.' : session.status === 'cancelled' ? '취소된 회차예요. 다른 회차의 기록은 클래스에서 확인해요.' : '회차가 끝난 뒤에 기록과 리포트가 만들어져요. 녹음 동의는 멤버가 시작 전에 선택해요.'}</p>{isHost && session.status === 'completed' && <Link className={operationButton} to={`/sessions/${sessionId}/record`}>기록 보기</Link>}</section>
+            <section className="co-card"><h2>기록</h2><p className="co-note">{session.status === 'completed' ? '역할에 따라 제공되는 기록과 리포트를 확인해요.' : session.status === 'cancelled' ? '취소된 회차예요. 다른 회차의 기록은 클래스에서 확인해요.' : '회차가 끝난 뒤에 기록과 리포트가 만들어져요. 녹음 동의는 멤버가 시작 전에 선택해요.'}</p>{(isHost || admin) && session.status === 'completed' && <Link className={operationButton} to={`/sessions/${sessionId}/record`}>기록 보기</Link>}</section>
           </div>
         </div>
         {detail.capabilities?.host_request === true && <ClassHostRequests teamCandidates={detail.host_view?.instructors.filter(i => i.status === 'active').map(i => ({ id: i.user_id, name: i.name }))} instructorIds={detail.host_view?.instructors.filter(i => i.status === 'active').map(i => i.user_id)} requestId={new URLSearchParams(location.search).get('requestId')} classId={classId} sessionId={sessionId} revision={detail.revision} stateVersion={session.state_version} status={session.status} hostId={session.host?.id ?? null} manager={manager} onSaved={retry}/>}
-        {!admin && !isHost && instructor && ['lead', 'assistant'].includes(instructor.role) && ['open', 'in_progress'].includes(session.status) && <ClassObserverView key={sessionId} classId={classId} sessionId={sessionId}/>}
+        {!isHost && (admin || (instructor && ['lead', 'assistant'].includes(instructor.role))) && ['open', 'in_progress'].includes(session.status) && <ClassObserverView key={sessionId} classId={classId} sessionId={sessionId}/>}
         {manager && session.status === 'completed' && <ClassHostCorrection classId={classId} sessionId={sessionId} revision={detail.revision} stateVersion={session.state_version} instructors={detail.host_view?.instructors.filter(i => i.status === 'active') ?? []} onSaved={retry}/>}
         {!isHost && (admin || instructor) && session.status === 'completed' && <ClassReportTab key={`reports:${classId}`} classId={classId} sessions={state.status === 'success' ? state.data.sessions.sessions : []}/>}
         {/* SDD-219: 리포트 본문 열람(회차 단위)은 기존 화면을 유지한다. 관리 화면(클래스 단위)과 함께 노출 */}

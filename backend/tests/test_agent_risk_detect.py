@@ -113,7 +113,7 @@ def test_TS8_안전_응답에는_금지_단어가_없다(reply: str):
 
 def test_TS8_안전_응답은_상담사_대화를_권유한다():
     for reply in agent_risk.all_safe_reply_texts():
-        assert "상담사" in reply
+        assert "코치" in reply
 
 
 def test_Edge_연속_감지_시_세번째부터는_일반_공감으로_바뀐다():

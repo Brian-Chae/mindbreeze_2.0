@@ -202,8 +202,8 @@ export default function AiAgentPage({ embedded = false }: { embedded?: boolean }
           <h2 id="agent-consent-title" className="mt-4 text-xl font-bold">AI 대화를 시작하기 전에</h2>
           <ul className="my-5 space-y-3 text-sm leading-relaxed">
             <li>AI가 예약 안내와 리포트에 관해 먼저 연락합니다.</li>
-            <li>대화는 요약으로 상담사에게 전달됩니다.</li>
-            <li><strong>피드백은 상담사에게 그대로 전달됩니다.</strong></li>
+            <li>대화는 요약으로 코치에게 전달됩니다.</li>
+            <li><strong>피드백은 코치에게 그대로 전달됩니다.</strong></li>
             <li>AI 대화는 상담을 대신하지 않습니다.</li>
           </ul>
           {declined && <p role="status" className="mb-3 text-sm">동의하지 않으면 AI 대화를 이용할 수 없습니다.</p>}
@@ -215,7 +215,7 @@ export default function AiAgentPage({ embedded = false }: { embedded?: boolean }
         </section>
       ) : <>
         <CheckinPreferences />
-        {!embedded && <p className="shrink-0 px-4 py-1.5 text-[13px] text-[#6F6F6F] bg-white">루시(AI)는 상담을 대신하지 않아요. 피드백은 상담사에게 그대로 전달돼요.</p>}
+        {!embedded && <p className="shrink-0 px-4 py-1.5 text-[13px] text-[#6F6F6F] bg-white">루시(AI)는 상담을 대신하지 않아요. 피드백은 코치에게 그대로 전달돼요.</p>}
         <div ref={scroller} role="log" aria-label="루시 (AI) 대화 메시지" className="flex-1 min-h-0 overflow-y-auto px-4 py-2 md:px-6 md:py-4 bg-white">
           <div className="mx-auto w-full max-w-[760px]">
           {hasMore && <button disabled={olderBusy} onClick={() => void loadOlder()} className="mx-auto my-2 block rounded-full bg-[#F5EDFC] px-4 py-2 text-sm text-[#5F0080]">{olderBusy ? '불러오는 중…' : '이전 메시지 더보기'}</button>}

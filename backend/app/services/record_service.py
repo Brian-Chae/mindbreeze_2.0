@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from app.models.session import Session, SessionParticipant
 from app.models.record import SessionRecord, VideoChunk
+from app.models.user import User
 from app.schemas.record import SubjectiveSlot
 from app.services.session_authz import SessionAction, get_session_authorized
 
@@ -172,8 +173,16 @@ def get_record(session_id: str, user_id: str, db: DBSession) -> dict:
         )
         subjective = participant_subjective_state(record, participant.id if participant else None)
     if not is_host:
-        from app.services.class_access_service import can_read_team_material, without_raw_material
-        if can_read_team_material(db,user_id,s):
+        from app.services.class_access_service import (
+            admin_can_read_meditation_report,
+            can_read_team_material,
+            without_raw_material,
+        )
+        # 기관관리자(자기 기관 명상 클래스): 팀 열람과 같은 범위 — 전사 원문·내부 메모·마커 제외.
+        admin = db.query(User).filter(User.id == _to_uuid(user_id)).first()
+        if can_read_team_material(db,user_id,s) or (
+            admin is not None and admin_can_read_meditation_report(db, admin, s)
+        ):
             result=_serialize(record,s.id,None,video_actual_chunks=None,include_internal=False)
             result["ai_summary"]=without_raw_material(record.ai_summary or {}) if record else {}
             result["markers"]=[]

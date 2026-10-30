@@ -11,6 +11,7 @@ import { DeviceStepContainer } from '../../components/class/flow/member/DeviceSt
 import { MemberStateScreen } from '../../components/class/flow/member/MemberStateScreen';
 import { NoticeStepView } from '../../components/class/flow/member/NoticeStepView';
 import { ReadySummaryView } from '../../components/class/flow/member/ReadySummaryView';
+import { FlowButton, FlowSheet } from '../../components/class/flow/shared/flow-primitives';
 import { StartedSheet } from '../../components/class/flow/member/StartedSheet';
 import { SurveyStepView } from '../../components/class/flow/member/SurveyStepView';
 import { EndContainer } from '../../components/class/flow/member/EndContainer';
@@ -39,7 +40,7 @@ import {
 } from '../../lib/class/flow/member-machine';
 import { RAW_RETENTION_DAYS } from '../../lib/privacy-policy';
 import { writeBandSkip } from '../../lib/class/flow/band-skip';
-import { buildSummaryRows, remainingPrepLabels, type SurveyOutcome } from '../../lib/class/flow/member-prep';
+import { buildSummaryRows, remainingPrepLabels, type BandOutcome, type SurveyOutcome } from '../../lib/class/flow/member-prep';
 import { buildMemberReadiness, type BandSnapshot } from '../../lib/class/flow/member-presence';
 import type { FlowBandMode } from '../../lib/class/flow/types';
 import { useAuthStore } from '../../stores/authStore';
@@ -113,6 +114,9 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
   const [startedDismissed, setStartedDismissed] = useState(false);
   /** 밴드 단계에서 본 마지막 상태 — 준비 현황(presence)으로 상담사 로비에 중계된다(서버 저장 없음) */
   const [bandSnapshot, setBandSnapshot] = useState<BandSnapshot | null>(null);
+  // 밴드를 착용하고 측정을 시작하는데 리포트 반영이 '제외'면 측정 전에 한 번만 다시 묻는다(같은 회차 1회, 미착용이면 묻지 않음)
+  const [reportReconfirm, setReportReconfirm] = useState<{ outcome: BandOutcome } | null>(null);
+  const reportReconfirmedRef = useRef(false);
 
   // 초대받은 로그인 회원의 편의 입장: 저장된 자격이 없으면 초대 행으로 같은 자격을 받는다(자격이 없으면 코드 입장 안내)
   useEffect(() => {
@@ -482,7 +486,21 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
     );
   }
   if (machine.phase === 'wizard' && machine.step === 'c' && bandMode !== 'none') {
+    const answerReconfirm = (include: boolean): void => {
+      const pending = reportReconfirm;
+      reportReconfirmedRef.current = true;
+      setReportReconfirm(null);
+      if (include) {
+        prep.chooseReport('included');
+        void prep.commitReportChoice('included');
+      }
+      if (pending) {
+        prep.patch({ bandOutcome: pending.outcome });
+        dispatch({ type: 'next', steps });
+      }
+    };
     return (
+      <>
       <BandStepContainer
         bandMode={bandMode} place={place} steps={stepsView}
         startedRemaining={startedOpen ? remainingPrepLabels(steps, 'c') : null}
@@ -493,6 +511,10 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
         }}
         onDone={(outcome) => {
           writeBandSkip(sessionId, outcome === 'skipped');
+          if (outcome === 'connected' && prep.draft.reportChoice !== 'included' && !reportReconfirmedRef.current) {
+            setReportReconfirm({ outcome });
+            return;
+          }
           prep.patch({ bandOutcome: outcome });
           dispatch({ type: 'next', steps });
         }}
@@ -501,6 +523,22 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
         onBack={() => dispatch({ type: 'back', steps })}
         onExit={exit}
       />
+      <FlowSheet
+        open={reportReconfirm !== null}
+        title="이번 수업 리포트에 측정 결과를 반영할까요?"
+        sub="반영하지 않아도 측정 데이터는 보관되고, 수업에는 그대로 참여할 수 있어요."
+        onClose={() => answerReconfirm(false)}
+        dismissOnOutside={false}
+        footer={
+          <div className="fm-stack" style={{ gap: 8 }}>
+            <FlowButton kind="primary" onClick={() => answerReconfirm(true)}>반영하기</FlowButton>
+            <FlowButton kind="soft" onClick={() => answerReconfirm(false)}>이번엔 제외</FlowButton>
+          </div>
+        }
+      >
+        <p className="fm-sheet-sub">지금은 리포트 반영이 &lsquo;제외&rsquo;로 되어 있어요.</p>
+      </FlowSheet>
+      </>
     );
   }
   if (machine.phase === 'wizard' && machine.step === 'd' && place === 'online') {

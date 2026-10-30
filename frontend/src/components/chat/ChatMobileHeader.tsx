@@ -35,5 +35,5 @@ export function ChatMobileHeader({ title, sub, onBack, rightSlot }: Props) {
 }
 
 /** 루시(AI) 채널 안내 — 헤더 보조 문구로 쓴다. */
-export const LUCY_NOTICE = '상담을 대신하지 않아요 · 피드백은 상담사에게 전달돼요';
+export const LUCY_NOTICE = '상담을 대신하지 않아요 · 피드백은 코치에게 전달돼요';
 export const LUCY_COUNSELOR_NOTICE = '일정과 상담 기록을 확인하고 초안을 정리할 수 있어요';

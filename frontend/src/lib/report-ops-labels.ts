@@ -28,7 +28,7 @@ export const DELIVERY_LABELS: Record<string, string> = {
 };
 
 export const ROLE_LABELS: Record<string, string> = {
-  counselor: '상담사',
+  counselor: '코치',
   org_admin: '기관관리자',
   platform_admin: '운영자',
 };

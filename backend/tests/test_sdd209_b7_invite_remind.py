@@ -270,7 +270,7 @@ def test_BT46_구_6자리_코드는_본문과_extra에_노출하지_않는다(cl
 
     _, msg, svc = _message(client, host, legacy)
     assert "123456" not in msg["body_text"] and "123456" not in msg["body_html"]
-    assert "상담사에게" in msg["body_text"]
+    assert "코치에게" in msg["body_text"]
     assert svc.public_access_code("123456") is None and svc.public_access_code("0042") == "0042"
 
 

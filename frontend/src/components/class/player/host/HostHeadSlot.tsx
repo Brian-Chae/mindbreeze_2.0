@@ -18,6 +18,8 @@ interface HostSelfViewProps {
   netBad: boolean;
   /** denied 면 설정 안내 시트를, 아니면 크기 전환을 연다 */
   onPress: () => void;
+  /** 마이크 아이콘을 눌렀을 때(켜짐/꺼짐일 때만). 없으면 아이콘도 onPress 로 간다 */
+  onToggleMic?: () => void;
 }
 
 function SelfVideo({ stream, track }: { stream: MediaStream | null; track?: LocalVideoTrack | null }) {
@@ -53,7 +55,7 @@ function Silhouette() {
   );
 }
 
-export function HostSelfView({ cam, mic, big, stream, track, netBad, onPress }: HostSelfViewProps) {
+export function HostSelfView({ cam, mic, big, stream, track, netBad, onPress, onToggleMic }: HostSelfViewProps) {
   const denied = cam === 'denied' || cam === 'nodevice';
   const micOff = mic === 'off' || mic === 'denied';
   const camText = denied ? '카메라 사용 불가' : cam === 'on' ? '카메라 켜짐' : '카메라 꺼짐';
@@ -66,7 +68,14 @@ export function HostSelfView({ cam, mic, big, stream, track, netBad, onPress }: 
       data-denied={denied ? 'true' : undefined}
       data-net-bad={netBad ? 'true' : undefined}
       aria-label={`내 화면 ${camText}, 마이크 ${micOff ? '꺼짐' : '켜짐'}. ${denied ? '탭하면 설정 안내' : '탭하면 크기 전환'}`}
-      onClick={onPress}
+      onClick={(event) => {
+        // 마이크 아이콘 탭은 음소거 토글 — 버튼 안의 장식 span 이라 closest 로 판별한다(iPad 터치 포함)
+        if (onToggleMic && mic !== 'denied' && (event.target as Element).closest('[data-mic-toggle]')) {
+          onToggleMic();
+          return;
+        }
+        onPress();
+      }}
     >
       {denied ? (
         <span className="hp-selfview__off" data-deny="true">
@@ -87,7 +96,7 @@ export function HostSelfView({ cam, mic, big, stream, track, netBad, onPress }: 
           {big ? <Minimize2 strokeWidth={2} /> : <Maximize2 strokeWidth={2} />}
         </span>
       )}
-      <span className="hp-selfview__ic hp-selfview__mic" data-off={micOff ? 'true' : undefined} aria-hidden="true">
+      <span className="hp-selfview__ic hp-selfview__mic" data-mic-toggle={onToggleMic && mic !== 'denied' ? 'true' : undefined} data-off={micOff ? 'true' : undefined} aria-hidden="true">
         {micOff ? <MicOff strokeWidth={2} /> : <Mic strokeWidth={2} />}
       </span>
       <span className="hp-selfview__lb">

@@ -45,10 +45,10 @@ const TERMS: Readonly<Record<TermKey, Readonly<Record<TermArea, string>>>> = {
   playground: same('플레이그라운드'),
   notification: same('알림'),
   setting: same('설정'),
-  'org-counselors': same('상담사'),
+  'org-counselors': same('코치'),
   'admin-orgs': same('기관 관리'),
   'admin-applications': same('가입 신청'),
-  'admin-users': same('상담사 관리'),
+  'admin-users': same('코치 관리'),
   'admin-clients': same('회원 관리'),
   more: same('더보기'),
   'meditation-class': same('명상 클래스'),
@@ -56,7 +56,7 @@ const TERMS: Readonly<Record<TermKey, Readonly<Record<TermArea, string>>>> = {
   'my-class': same('내 클래스'),
   'my-counseling': same('내 상담'),
   members: same('구성원'),
-  instructor: { meditation: '지도사', counseling: '상담사' },
+  instructor: { meditation: '지도사', counseling: '코치' },
 };
 
 export function term(key: TermKey, area: TermArea = 'meditation'): string {

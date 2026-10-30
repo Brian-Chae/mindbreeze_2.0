@@ -25,7 +25,7 @@ export interface EnterClassError {
 /** 서버 원문(detail)은 쓰지 않는다 — 상태 코드로만 분기해 문구를 정한다 */
 function toEnterError(error: unknown): EnterClassError {
   if (error instanceof ApiError) {
-    if (error.status === 403) return { kind: 'invite-required', message: '초대받은 클래스가 아니에요. 상담사에게 받은 코드로 입장해 주세요.' };
+    if (error.status === 403) return { kind: 'invite-required', message: '초대받은 클래스가 아니에요. 코치에게 받은 코드로 입장해 주세요.' };
     if (error.status === 409 || error.status === 400) return { kind: 'closed', message: '이미 끝났거나 닫힌 클래스예요.' };
     if (error.status === 404) return { kind: 'not-found', message: '클래스를 찾을 수 없어요.' };
   }

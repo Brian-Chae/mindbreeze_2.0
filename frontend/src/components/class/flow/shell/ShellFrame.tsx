@@ -58,8 +58,8 @@ export function ShellFrame({ role, active, head, children, foot, over, hold = fa
           ))}
         </nav>
         <div className="sh-side__me">
-          <b>{role === 'member' ? '지은 님' : '이서윤 상담사'}</b>
-          <span>{role === 'member' ? '내담자' : '상담사 전용'}</span>
+          <b>{role === 'member' ? '지은 님' : '이서윤 코치'}</b>
+          <span>{role === 'member' ? '내담자' : '코치 전용'}</span>
         </div>
       </aside>
       <main className="sh-main">

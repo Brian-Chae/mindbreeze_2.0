@@ -73,7 +73,7 @@ function ClientTable({ clients, showCounselor }: { clients: ClientListItem[]; sh
             <th scope="col" className="px-4 py-3 font-semibold">연락처</th>
             <th scope="col" className="px-4 py-3 font-semibold">최근 활동</th>
             <th scope="col" className="px-4 py-3 font-semibold">소속 클래스</th>
-            {showCounselor && <th scope="col" className="px-4 py-3 font-semibold">담당 상담사</th>}
+            {showCounselor && <th scope="col" className="px-4 py-3 font-semibold">담당 코치</th>}
           </tr>
         </thead>
         <tbody>
@@ -124,7 +124,7 @@ function ClientCards({ clients, showCounselor }: { clients: ClientListItem[]; sh
               <div className="mt-3"><ActivityCell c={c} /></div>
               <div className="mt-3"><ClassChips classes={c.classes} /></div>
               {showCounselor && (
-                <p className="mt-2 text-[13px] text-[#6F6F6F]">담당 상담사 · <CounselorCell counselors={c.counselors} /></p>
+                <p className="mt-2 text-[13px] text-[#6F6F6F]">담당 코치 · <CounselorCell counselors={c.counselors} /></p>
               )}
             </div>
           </div>
@@ -242,7 +242,7 @@ export default function ClientListPage() {
         <div className="flex items-center justify-center py-24">
           <div className="max-w-md text-center">
             <h1 className="mb-2 text-xl font-bold text-[#1F1F1F]">접근 권한이 없습니다</h1>
-            <p className="text-sm text-[#6F6F6F]">상담사·기관관리자 전용 페이지입니다.</p>
+            <p className="text-sm text-[#6F6F6F]">코치·기관관리자 전용 페이지입니다.</p>
           </div>
         </div>
       </AppShell>
@@ -330,7 +330,7 @@ export default function ClientListPage() {
             )}
             {isOrgAdmin && (
               <label className="grid min-w-[145px] flex-1 gap-1.5 text-[12px] text-[#6F6F6F]">
-                담당 상담사
+                담당 코치
                 <select
                   className={fieldClass}
                   value={counselorId}

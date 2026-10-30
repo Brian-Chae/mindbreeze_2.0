@@ -4,5 +4,5 @@ import type { MemberType } from '../api/clients';
 export const MEMBER_TYPE_LABEL: Record<MemberType, string> = { member: '회원', non_member: '비회원' };
 export const MEMBER_TYPE_HELP: Record<MemberType, string> = {
   member: '기관 클래스 또는 기관 상담에 등록된 회원',
-  non_member: '기관 상담사와 연결만 되어 있고 기관에는 아직 등록되지 않은 사람',
+  non_member: '기관 코치와 연결만 되어 있고 기관에는 아직 등록되지 않은 사람',
 };

@@ -122,12 +122,12 @@ def send_invite_email(to_email: str, invite_url: str, counselor_name: str):
     - 로고는 이메일 클라이언트에서 CSS filter/외부 이미지 차단으로 깨질 수 있어
       텍스트 로고로 대체한다 (기관/상담사 초대 메일과 동일한 밝은 테마).
     """
-    subject = f"[MIND BREEZE] {counselor_name} 상담사님의 초대"
+    subject = f"[MIND BREEZE] {counselor_name} 코치님의 초대"
 
     body_text = (
         f"안녕하세요, MIND BREEZE입니다.\n\n"
-        f"{counselor_name} 상담사님께서 MIND BREEZE에 초대하셨습니다.\n\n"
-        f"아래 링크를 클릭하여 가입하시면 자동으로 상담사-내담자 관계가 연결됩니다:\n\n"
+        f"{counselor_name} 코치님께서 MIND BREEZE에 초대하셨습니다.\n\n"
+        f"아래 링크를 클릭하여 가입하시면 자동으로 코치-내담자 관계가 연결됩니다:\n\n"
         f"{invite_url}\n\n"
         f"이 초대 링크는 7일간 유효합니다.\n"
         f"본인이 요청하지 않은 경우 이 메일을 무시해주세요.\n\n"
@@ -157,14 +157,14 @@ def send_invite_email(to_email: str, invite_url: str, counselor_name: str):
           <td style="padding:32px 32px 20px;background:linear-gradient(135deg,#21112F 0%,#4A1F6A 100%);text-align:center;">
             <div style="font-size:13px;line-height:20px;font-weight:700;letter-spacing:1.6px;color:#DCC8F2;">MIND BREEZE</div>
             <div style="margin-top:10px;font-size:26px;line-height:36px;font-weight:800;color:#FFFFFF;">내담자 초대</div>
-            <div style="margin-top:8px;font-size:14px;line-height:22px;color:#E9DDF8;">가입하면 상담사-내담자 관계가 자동으로 연결됩니다.</div>
+            <div style="margin-top:8px;font-size:14px;line-height:22px;color:#E9DDF8;">가입하면 코치-내담자 관계가 자동으로 연결됩니다.</div>
           </td>
         </tr>
         <tr>
           <td style="padding:28px 32px 32px;">
             <div style="font-size:16px;line-height:26px;color:#2A1C3D;">안녕하세요.</div>
             <div style="margin-top:12px;font-size:15px;line-height:24px;color:#4A3B5F;">
-              <strong style="color:#2A1C3D;">{counselor_name}</strong> 상담사님께서 MIND BREEZE에 초대하셨습니다.<br>
+              <strong style="color:#2A1C3D;">{counselor_name}</strong> 코치님께서 MIND BREEZE에 초대하셨습니다.<br>
               아래 버튼을 눌러 가입을 완료하세요.
             </div>
             <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;background:#F7F3FB;border:1px solid #E7DCF5;border-radius:16px;">
@@ -322,10 +322,10 @@ def send_counselor_invite_email(
     org 담당자 초대와 동일한 HTML 버튼형 템플릿을 쓰되 카피만 '상담사 초대'로 바꾼다.
     ``admin_name`` 은 수신자(상담사) 본인의 이름이다.
     """
-    subject = "[MIND BREEZE] 상담사 계정 비밀번호 설정 안내"
+    subject = "[MIND BREEZE] 코치 계정 비밀번호 설정 안내"
     body_text = (
         f"{admin_name}님, 안녕하세요.\n\n"
-        f"MIND BREEZE에 '{org_name}' 기관 소속 상담사로 초대되었습니다.\n"
+        f"MIND BREEZE에 '{org_name}' 기관 소속 코치로 초대되었습니다.\n"
         f"아래 링크에서 비밀번호를 설정하시면 계정이 활성화됩니다.\n\n"
         f"{invite_link}\n\n"
         f"· 이 링크는 {expires_days}일간 유효하며 한 번만 사용할 수 있습니다.\n"
@@ -356,15 +356,15 @@ def send_counselor_invite_email(
         <tr>
           <td style="padding:32px 32px 20px;background:linear-gradient(135deg,#21112F 0%,#4A1F6A 100%);text-align:center;">
             <div style="font-size:13px;line-height:20px;font-weight:700;letter-spacing:1.6px;color:#DCC8F2;">MIND BREEZE</div>
-            <div style="margin-top:10px;font-size:26px;line-height:36px;font-weight:800;color:#FFFFFF;">상담사 계정 초대</div>
-            <div style="margin-top:8px;font-size:14px;line-height:22px;color:#E9DDF8;">비밀번호를 설정하면 바로 상담사 대시보드에 접속할 수 있습니다.</div>
+            <div style="margin-top:10px;font-size:26px;line-height:36px;font-weight:800;color:#FFFFFF;">코치 계정 초대</div>
+            <div style="margin-top:8px;font-size:14px;line-height:22px;color:#E9DDF8;">비밀번호를 설정하면 바로 코치 대시보드에 접속할 수 있습니다.</div>
           </td>
         </tr>
         <tr>
           <td style="padding:28px 32px 32px;">
             <div style="font-size:16px;line-height:26px;color:#2A1C3D;">{admin_name}님, 안녕하세요.</div>
             <div style="margin-top:12px;font-size:15px;line-height:24px;color:#4A3B5F;">
-              MIND BREEZE에 <strong style="color:#2A1C3D;">{org_name}</strong> 기관 소속 상담사로 초대되었습니다.<br>
+              MIND BREEZE에 <strong style="color:#2A1C3D;">{org_name}</strong> 기관 소속 코치로 초대되었습니다.<br>
               아래 버튼에서 비밀번호를 설정하시면 계정이 활성화됩니다.
             </div>
             <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;background:#F7F3FB;border:1px solid #E7DCF5;border-radius:16px;">
@@ -417,16 +417,18 @@ def send_membership_invite_email(
     counselor_name: str,
     org_name: str,
     expires_days: int,
+    role: str = "counselor",
 ) -> bool:
     """기존 상담사 대상 "소속 추가 초대" 메일 (SDD-079).
 
     이미 계정이 있는 상담사를 다른 기관이 초대할 때 보낸다 — 비밀번호 설정이 아니라
     소속 초대 수락 링크다. 수락하면 기존 계정에 해당 기관 소속이 추가된다.
     """
+    role_label = "기관 관리자" if role == "org_admin" else "소속 코치"
     subject = f"[MIND BREEZE] {org_name} 소속 초대 안내"
     body_text = (
         f"{counselor_name}님, 안녕하세요.\n\n"
-        f"'{org_name}' 기관이 회원님을 소속 상담사로 초대했습니다.\n"
+        f"'{org_name}' 기관이 회원님을 {role_label}로 초대했습니다.\n"
         f"아래 링크에서 초대를 수락하시면 기존 계정에 소속이 추가됩니다.\n"
         f"(비밀번호 설정은 필요 없습니다 — 기존 계정으로 로그인하시면 됩니다.)\n\n"
         f"{invite_link}\n\n"
@@ -465,7 +467,7 @@ def send_membership_invite_email(
           <td style="padding:28px 32px 32px;">
             <div style="font-size:16px;line-height:26px;color:#2A1C3D;">{counselor_name}님, 안녕하세요.</div>
             <div style="margin-top:12px;font-size:15px;line-height:24px;color:#4A3B5F;">
-              <strong style="color:#2A1C3D;">{org_name}</strong> 기관이 회원님을 소속 상담사로 초대했습니다.<br>
+              <strong style="color:#2A1C3D;">{org_name}</strong> 기관이 회원님을 {role_label}로 초대했습니다.<br>
               아래 버튼에서 초대를 수락해 주세요. 비밀번호 설정은 필요 없습니다.
             </div>
             <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;background:#F7F3FB;border:1px solid #E7DCF5;border-radius:16px;">
@@ -529,11 +531,11 @@ def send_client_invite_email(
     subject = "[MIND BREEZE] 회원 계정 비밀번호 설정 안내"
     body_text = (
         f"{client_name}님, 안녕하세요.\n\n"
-        f"MIND BREEZE에 {counselor_name} 상담사님의 회원으로 초대되었습니다.\n"
+        f"MIND BREEZE에 {counselor_name} 코치님의 회원으로 초대되었습니다.\n"
         f"아래 링크에서 비밀번호를 설정하시면 계정이 활성화됩니다.\n\n"
         f"{invite_link}\n\n"
         f"· 이 링크는 {expires_days}일간 유효하며 한 번만 사용할 수 있습니다.\n"
-        f"· 링크가 만료된 경우 담당 상담사 또는 관리자에게 재발송을 요청해 주세요.\n"
+        f"· 링크가 만료된 경우 담당 코치 또는 관리자에게 재발송을 요청해 주세요.\n"
         f"· 본인이 요청하지 않았다면 이 메일을 무시해 주세요.\n\n"
         f"감사합니다.\nMIND BREEZE 드림"
     )
@@ -568,7 +570,7 @@ def send_client_invite_email(
           <td style="padding:28px 32px 32px;">
             <div style="font-size:16px;line-height:26px;color:#2A1C3D;">{client_name}님, 안녕하세요.</div>
             <div style="margin-top:12px;font-size:15px;line-height:24px;color:#4A3B5F;">
-              MIND BREEZE에 <strong style="color:#2A1C3D;">{counselor_name}</strong> 상담사님의 회원으로 초대되었습니다.<br>
+              MIND BREEZE에 <strong style="color:#2A1C3D;">{counselor_name}</strong> 코치님의 회원으로 초대되었습니다.<br>
               아래 버튼에서 비밀번호를 설정하시면 계정이 활성화됩니다.
             </div>
             <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:28px;">
@@ -633,7 +635,7 @@ def send_signup_application_notice(
     """
     from html import escape
 
-    type_label = "기관 가입 상담" if application_type == "organization" else "개인 상담사 신청"
+    type_label = "기관 가입 상담" if application_type == "organization" else "개인 코치 신청"
     subject = f"[MIND BREEZE][{type_label}] 신청 {application_id}"
     admin_link = f"{settings.frontend_base_url.rstrip('/')}/admin/applications"
     inquiry_summary = (inquiry or "").strip()
@@ -959,7 +961,7 @@ def send_org_removed_email(
         f"{counselor_name}님, 안녕하세요.\n\n"
         f"'{org_name}' 기관에서 회원님의 소속이 해제되어\n"
         f"'{office_name}'(개인 상담소)로 등록되었습니다.\n\n"
-        f"계정과 상담사 코드, 기존 상담 기록은 그대로 유지되며,\n"
+        f"계정과 코치 코드, 기존 상담 기록은 그대로 유지되며,\n"
         f"개인 상담소 소속으로 계속 서비스를 이용하실 수 있습니다.\n\n"
         f"문의 사항이 있으시면 해당 기관 또는 운영팀에 연락해 주세요.\n\n"
         f"감사합니다.\nMIND BREEZE 드림"

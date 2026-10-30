@@ -66,7 +66,7 @@ export default function BulkApproveModal({
           일괄 승인
         </h2>
         <p id="bulk-approve-desc" className="mt-3 text-[15px] mobile:text-mb-body leading-relaxed text-[#4A4A4A]">
-          상담사 코멘트 없이 검토중인 리포트{pendingCount > 0 ? ` ${pendingCount}건` : ''}이
+          코치 코멘트 없이 검토중인 리포트{pendingCount > 0 ? ` ${pendingCount}건` : ''}이
           내담자에게 일괄 발송됩니다.
           <br />
           일괄 승인 처리 하시겠습니까?

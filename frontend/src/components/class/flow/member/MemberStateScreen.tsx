@@ -50,7 +50,7 @@ const COPY: Record<FlowStateKind, StateCopy> = {
     icon: <Key size={28} />, warn: false, heading: '입장 정보가 만료됐어요',
     lead: () => <>입장 정보를 더는 쓸 수 없어요.<br />코드를 다시 입력해 주세요.</>,
     secondRow: () => ['상태', '다시 입력이 필요해요'],
-    note: '코드는 상담사에게 받을 수 있어요.', primary: '코드 입력하기', secondary: '나가기',
+    note: '코드는 코치에게 받을 수 있어요.', primary: '코드 입력하기', secondary: '나가기',
   },
 };
 

@@ -226,7 +226,7 @@ export default function DashboardPage() {
   }, [notifications]);
 
   // 인사말은 이름만 간단히 보여 준다(역할 표기 '(상담사)' 등은 뺀다).
-  const displayName = (data?.counselor_name ?? user?.name ?? '상담사').replace(/\s*\([^)]*\)\s*$/, '') || '상담사';
+  const displayName = (data?.counselor_name ?? user?.name ?? '코치').replace(/\s*\([^)]*\)\s*$/, '') || '코치';
   const orgLabel =
     data?.org_kind === 'individual'
       ? '내 개인 상담소'
@@ -434,7 +434,7 @@ export default function DashboardPage() {
                     className="mobile:min-h-11 flex w-full items-center justify-between text-left"
                   >
                     <div>
-                      <div className="text-[12px] mobile:text-mb-caption font-semibold text-[#6F6F6F]">내 상담사 코드</div>
+                      <div className="text-[12px] mobile:text-mb-caption font-semibold text-[#6F6F6F]">내 코치 코드</div>
                       <div className="mt-0.5 font-mono text-[15px] mobile:text-mb-compact font-extrabold tracking-[0.14em] text-[#5F0080]">
                         {codeOpen ? counselorCode : counselorCode.slice(0, 2) + '••••'}
                       </div>

@@ -40,7 +40,7 @@ afterEach(async () => {
 });
 
 describe('M18 네트워크 재연결 중', () => {
-  it('상단 코랄 배너 + 연결 표시 "재연결 중" + 상담사 PiP 정지, 링·도크는 유지', async () => {
+  it('상단 코랄 배너 + 연결 표시 "재연결 중" + 코치 PiP 정지, 링·도크는 유지', async () => {
     await mount('M18');
     const banner = q('[data-pz="banner"]');
     expect(banner?.getAttribute('data-tone')).toBe('coral');
@@ -85,13 +85,13 @@ describe('M19 네트워크 끊김 — 화면 중앙 전체 안내', () => {
 });
 
 describe('M20 대기열', () => {
-  it('전체 화면 카드: 제목·안내·수업/상담사/시작 정보, 상단 바·도크는 없다', async () => {
+  it('전체 화면 카드: 제목·안내·수업/코치/시작 정보, 상단 바·도크는 없다', async () => {
     await mount('M20');
     const card = q('[data-pz="fv-card"]');
     expect(card?.querySelector('h2')?.textContent).toBe('대기 중이에요');
     expect(card?.textContent).toMatch(/자리가 나면 자동으로 입장해요\.\s*이 화면을 열어 둬 주세요\./);
     const rows = qa('[data-pz="fv-card"] .mp-fv-info div').map((d) => d.textContent);
-    expect(rows).toEqual(['수업마음챙김 명상수업 · 4회차', '상담사채용욱 상담사', '시작14:00']);
+    expect(rows).toEqual(['수업마음챙김 명상수업 · 4회차', '코치채용욱 코치', '시작14:00']);
     for (const hidden of ['topbar', 'dock', 'ring', 'sheet']) expect(q(`[data-pz="${hidden}"]`), hidden).toBeNull();
   });
   it('로그인 회원에게만 푸시 안내 문구를 보여 준다(게스트는 알림이 없다)', async () => {
@@ -106,7 +106,7 @@ describe('M20 대기열', () => {
     await act(async () => { buttonByText('대기열에서 나가기')?.click(); });
     expect(actions.onWaitlistLeave).toHaveBeenCalledTimes(1);
   });
-  it('상담사·시작 시각이 없으면 해당 줄을 그리지 않는다', async () => {
+  it('코치·시작 시각이 없으면 해당 줄을 그리지 않는다', async () => {
     const base = memberCaseViewProps('M20');
     await mount('M20', { waitlist: { ...base.waitlist!, counselorName: null, startLabel: null } });
     expect(qa('[data-pz="fv-card"] .mp-fv-info div').map((d) => d.textContent)).toEqual(['수업마음챙김 명상수업 · 4회차']);

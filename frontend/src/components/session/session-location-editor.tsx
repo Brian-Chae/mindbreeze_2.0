@@ -42,7 +42,7 @@ export function SessionLocationEditor({ session, onSaved, onCancel }: SessionLoc
         <div>
           <label htmlFor="edit-location-address" className="mb-1 block text-sm font-medium">장소 (주소)</label>
           <input id="edit-location-address" value={address} disabled={saving} onChange={(event) => setAddress(event.target.value)} maxLength={300} placeholder="상담 장소 주소를 입력해 주세요" className="w-full rounded-xl border border-[#DDD0EA] px-3 py-2 text-sm focus:ring-2 focus:ring-[#5F0080]" />
-          <p className="mt-1 text-xs text-[#6F6F6F]">비워 두면 기관 또는 상담사 프로필의 기본 주소가 사용됩니다.</p>
+          <p className="mt-1 text-xs text-[#6F6F6F]">비워 두면 기관 또는 코치 프로필의 기본 주소가 사용됩니다.</p>
         </div>
       )}
       {error && <p role="alert" className="text-sm text-[#B3261E]">{error}</p>}

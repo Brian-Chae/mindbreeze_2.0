@@ -103,7 +103,7 @@ export default function ClassFlowCasesPage() {
       <div style={{ ...pageStyle, display: 'block' }}>
         <h1 style={{ fontSize: 24, margin: '0 0 8px' }}>클래스 사전·사후 흐름 케이스 인덱스</h1>
         <p data-testid="index-total" style={{ fontSize: 15, margin: '0 0 16px' }}>
-          등록 {rows.length}건 · 회원 {REGISTRY.member.length} · 상담사 {REGISTRY.host.length}
+          등록 {rows.length}건 · 회원 {REGISTRY.member.length} · 코치 {REGISTRY.host.length}
         </p>
         <table style={{ fontSize: 13, borderCollapse: 'collapse' }}>
           <tbody>
@@ -130,7 +130,7 @@ export default function ClassFlowCasesPage() {
           <p style={{ fontSize: 15, margin: '0 0 16px' }}>
             요청: screen={screen ?? '-'} · case={caseKey ?? '-'}
           </p>
-          <p style={{ fontSize: 13, margin: '0 0 8px' }}>회원 케이스 {REGISTRY.member.length}건 · 상담사 케이스 {REGISTRY.host.length}건 (?index=1 로 전체 목록)</p>
+          <p style={{ fontSize: 13, margin: '0 0 8px' }}>회원 케이스 {REGISTRY.member.length}건 · 코치 케이스 {REGISTRY.host.length}건 (?index=1 로 전체 목록)</p>
         </div>
       </div>
     );

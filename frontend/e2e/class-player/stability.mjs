@@ -28,13 +28,13 @@ const SETS = [
     steps: [['band', ['leadoff', 'lost', 'weak', 'off']], ['hand', ['waiting', 'speaking']]],
   },
   {
-    role: 'host', id: 'C01', label: '상담사 온라인 그룹',
+    role: 'host', id: 'C01', label: '코치 온라인 그룹',
     boxes: { top: pz('top'), head: pz('head'), gridscroll: pz('gridscroll'), dock: pz('dock') },
     base: { cam: 'on', mic: 'on', rec: 'none', net: 'ok' },
     steps: [['cam', ['off', 'denied']], ['mic', ['off', 'denied']], ['rec', ['rec', 'paused']], ['net', ['reconnecting']]],
   },
   {
-    role: 'host', id: 'C05', label: '상담사 온라인 1:1',
+    role: 'host', id: 'C05', label: '코치 온라인 1:1',
     boxes: { top: pz('top'), head: pz('head'), solo: pz('solo'), dock: pz('dock') },
     base: { cam: 'on', mic: 'on', rec: 'none', net: 'ok' },
     steps: [['cam', ['off', 'denied']], ['mic', ['off', 'denied']], ['rec', ['rec', 'paused']], ['net', ['reconnecting']]],

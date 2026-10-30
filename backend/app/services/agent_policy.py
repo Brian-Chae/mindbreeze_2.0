@@ -140,7 +140,7 @@ def session_facts(session: Session, db: DBSession) -> dict:
             session.location_address if session.location_type == "offline" else None
         ),
         "counselor_id": str(session.host_id),
-        "counselor_name": (host.name if host else None) or "상담사",
+        "counselor_name": (host.name if host else None) or "코치",
         # D11: 전화 CTA 는 번호가 있을 때만 붙인다.
         "counselor_phone": (host.phone if host and host.phone else None),
         "linkband_mode": session.linkband_mode,
@@ -208,7 +208,7 @@ def report_facts(report: Report, db: DBSession) -> dict:
             session_type_label(session) if session else session_terms.session_type_fallback_label(variant="reminder")
         ),
         "scheduled_text": format_schedule(session.scheduled_at) if session else "일정 미정",
-        "counselor_name": (host.name if host else None) or "상담사",
+        "counselor_name": (host.name if host else None) or "코치",
         "headline": headline,
         "summary": summary,
         "counselor_comment": comment,
@@ -398,7 +398,7 @@ def context_to_text(context: dict, *, include_recent: bool = True) -> str:
             for key, label in (
                 ("headline", "핵심"),
                 ("summary", "요약"),
-                ("counselor_comment", "상담사 코멘트"),
+                ("counselor_comment", "코치 코멘트"),
             ):
                 if item.get(key):
                     lines.append(f"  · {label}: {item[key]}")
@@ -896,7 +896,7 @@ def counselor_context(
     base_day = day or kst_today()
 
     return {
-        "user": {"id": str(cid), "name": (user.name if user else None) or "상담사"},
+        "user": {"id": str(cid), "name": (user.name if user else None) or "코치"},
         "day": base_day,
         # 오늘 세션은 저녁 정리가 기록 요약을 쓰므로 요약을 포함해 한 번만 조회한다.
         "today": counselor_day_sessions(cid, base_day, db, with_summary=True),

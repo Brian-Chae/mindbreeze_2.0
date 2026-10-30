@@ -62,7 +62,7 @@ export default function ClientInvitePage() {
   if (user && user.role !== 'counselor') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface-canvas p-6">
-        <p className="text-gray-600">상담사 전용 페이지입니다.</p>
+        <p className="text-gray-600">코치 전용 페이지입니다.</p>
       </div>
     );
   }
@@ -84,13 +84,13 @@ export default function ClientInvitePage() {
             초대할 회원의 이메일을 입력하면 초대 링크가 생성됩니다.
           </p>
 
-          {user?.counselor_code && <section aria-label="상담사 초대 코드" className="mb-6 rounded-xl bg-[#F5EDFC] p-4">
+          {user?.counselor_code && <section aria-label="코치 초대 코드" className="mb-6 rounded-xl bg-[#F5EDFC] p-4">
             <h2 className="text-base font-bold text-[#5F0080]">내 초대 코드</h2>
             <div className="mt-2 flex flex-wrap items-center justify-between gap-3"><strong className="break-all font-mono text-xl tracking-widest text-[#5F0080]">{user.counselor_code}</strong><button type="button" className={buttonClass({ variant: 'secondary', size: 'sm', className: 'bg-white' })} onClick={() => {
               if (!navigator.clipboard) { setError('초대 코드를 직접 선택해 복사해 주세요.'); return; }
               void navigator.clipboard.writeText(user.counselor_code ?? '').then(() => setCodeCopied(true)).catch(() => setError('초대 코드를 복사하지 못했어요. 직접 선택해 복사해 주세요.'));
             }}>초대 코드 복사</button></div>
-            <p className="mt-2 text-sm text-[#6F6F6F]">이 코드를 회원에게 공유하면 상담사와 연결할 수 있어요.</p>{codeCopied && <p role="status" className="mt-2 text-sm">초대 코드를 복사했어요.</p>}
+            <p className="mt-2 text-sm text-[#6F6F6F]">이 코드를 회원에게 공유하면 코치와 연결할 수 있어요.</p>{codeCopied && <p role="status" className="mt-2 text-sm">초대 코드를 복사했어요.</p>}
           </section>}
 
           <form onSubmit={handleSubmit} className="space-y-4">

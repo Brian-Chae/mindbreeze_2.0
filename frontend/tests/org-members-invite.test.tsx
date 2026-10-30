@@ -70,7 +70,7 @@ const mountMembers = async (): Promise<void> => {
 describe('기관 구성원 페이지 상담사 초대', () => {
   it('상단 액션에 상담사 초대 주 버튼이 있고 누르면 폼이 열린다', async () => {
     await mountMembers();
-    const btn = byText('button[data-header-action="primary"]', '상담사 초대');
+    const btn = byText('button[data-header-action="primary"]', '코치 초대');
     expect(btn).not.toBeNull();
     expect(container.querySelector('input[type="email"]')).toBeNull();
     await act(async () => { btn!.click(); });
@@ -79,7 +79,7 @@ describe('기관 구성원 페이지 상담사 초대', () => {
 
   it('초대 발송 시 API 호출 후 구성원 목록을 다시 불러온다', async () => {
     await mountMembers();
-    await act(async () => { byText('button', '상담사 초대')!.click(); });
+    await act(async () => { byText('button', '코치 초대')!.click(); });
     const before = api.listCounselors.mock.calls.length;
     api.listCounselors.mockResolvedValue([pendingItem]);
     await typeInto(container.querySelector<HTMLInputElement>('input[type="text"][placeholder="홍길동"]')!, ' 홍길동 ');
@@ -94,7 +94,7 @@ describe('기관 구성원 페이지 상담사 초대', () => {
 
   it('잘못된 이메일은 API 호출 없이 오류를 보인다', async () => {
     await mountMembers();
-    await act(async () => { byText('button', '상담사 초대')!.click(); });
+    await act(async () => { byText('button', '코치 초대')!.click(); });
     await typeInto(container.querySelector<HTMLInputElement>('input[type="text"][placeholder="홍길동"]')!, '홍길동');
     await typeInto(container.querySelector<HTMLInputElement>('input[type="email"]')!, 'bad');
     await act(async () => { container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });

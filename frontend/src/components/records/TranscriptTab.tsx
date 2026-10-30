@@ -9,7 +9,7 @@ interface Props {
 }
 
 const SPEAKER_LABELS: Record<string, string> = {
-  counselor: '상담사',
+  counselor: '코치',
   client: '내담자',
   speaker_0: '화자 1',
   speaker_1: '화자 2',

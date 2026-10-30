@@ -39,7 +39,7 @@ export function MemberChatDemo() {
       <ul className="mp-msgs" aria-live="polite">
         {messages.map((m, i) => (
           <li key={`${m.time}-${i}`} className={`mp-msg ${m.me ? 'mp-msg--me' : 'mp-msg--them'}`}>
-            <span className="mp-msg__who">{m.me ? '나' : '채용욱 상담사'} · {m.time}</span>
+            <span className="mp-msg__who">{m.me ? '나' : '채용욱 코치'} · {m.time}</span>
             <p className="mp-msg__bub">{m.text}</p>
           </li>
         ))}

@@ -6,7 +6,7 @@ export function SignalsSheet({ counts, onCheckin, signals = {} }: { counts: Host
   const total = counts.following + counts.difficult + counts.resting;
   const recent = Object.entries(signals).filter(([, signal]) => Date.now() - signal.at < SIGNAL_ACTIVE_MS);
   return <div className="hp-sheet hp-signals-sheet">
-    <p className="hp-note">최근 10초 동안 회원별 최신 선택을 보여요. 이름과 선택은 상담사에게만 보여요.</p>
+    <p className="hp-note">최근 10초 동안 회원별 최신 선택을 보여요. 이름과 선택은 코치에게만 보여요.</p>
     {([['following', '잘 따라가요'], ['difficult', '조금 어려워요'], ['resting', '잠시 쉴게요']] as const).map(([key, label]) =>
       <div className="hp-row" key={key}><b>{label}</b><b>{counts[key]}</b></div>)}
     {recent.map(([id, signal]) => <div className="hp-row" data-signal-person key={id}>

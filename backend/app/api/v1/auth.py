@@ -199,7 +199,7 @@ async def register(req: RegisterRequest, db: Session = Depends(get_db)):
         # SDD-017: 상담사는 직접 가입하지 않고 기관 담당자의 초대로 계정이 생성된다.
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="상담사는 직접 가입할 수 없습니다. 소속 기관 담당자에게 초대를 요청하세요",
+            detail="코치는 직접 가입할 수 없습니다. 소속 기관 담당자에게 초대를 요청하세요",
         )
 
     # SEC-11: 이메일 OTP 검증 토큰 필수 — 없으면 우회 가입으로 간주해 차단.
@@ -388,8 +388,8 @@ async def register_counselor():
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail=(
-            "상담사 직접 가입은 지원하지 않습니다. 기관 담당자의 초대를 받거나 "
-            "개인 상담사 신청을 이용해 주세요."
+            "코치 직접 가입은 지원하지 않습니다. 기관 담당자의 초대를 받거나 "
+            "개인 코치 신청을 이용해 주세요."
         ),
     )
 

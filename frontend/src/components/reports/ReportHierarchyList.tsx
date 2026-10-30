@@ -113,7 +113,7 @@ function SessionBlock({ session, selectedId, compact, onOpen }: { session: Hiera
           {session.delivery_failed > 0 && <Chip>이 회차 발송 실패 {session.delivery_failed}</Chip>}
           {common && (
             <button type="button" onClick={() => onOpen(common.report_id)} className="h-11 shrink-0 whitespace-nowrap rounded-[10px] border border-[#DED8E3] bg-white px-4 text-[13px] font-semibold text-[#5F0080] hover:bg-[#F5EDFC]">
-              상담사용 · 회차 공통
+              코치용 · 회차 공통
             </button>
           )}
         </div>
@@ -244,8 +244,8 @@ export default function ReportHierarchyList({ selectedReportId, onOpen, compact 
           <option value="hypnosis">최면심리상담</option>
           <option value="custom">{ACTIVITY_LABELS.custom}</option>
         </select>
-        <select value={counselorId} onChange={(e) => setCounselorId(e.target.value)} aria-label="상담사 필터" className={`${field} w-[175px]`}>
-          <option value="">전체 상담사</option>
+        <select value={counselorId} onChange={(e) => setCounselorId(e.target.value)} aria-label="코치 필터" className={`${field} w-[175px]`}>
+          <option value="">전체 코치</option>
           {[...counselors.entries()].map(([id, name]) => <option key={id} value={id}>{name}</option>)}
         </select>
         <select value={period} onChange={(e) => setPeriod(e.target.value)} aria-label="기간 필터" className={`${field} w-[139px]`}>

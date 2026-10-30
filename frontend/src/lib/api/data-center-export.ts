@@ -11,7 +11,7 @@ export function validateExportRequest(request:ExportRequest,maxSessions=50):stri
  if(!request.include.length)return '신호 또는 데이터 항목을 하나 이상 선택하세요.';
  if(['member','facilitator'].includes(request.scope)&&new Set(request.range.session_ids).size>maxSessions)return `최대 ${maxSessions}회차입니다. 기간 또는 묶음을 다시 선택하세요.`;
  if(request.range.batch_index!==undefined&&(!Number.isInteger(request.range.batch_index)||request.range.batch_index<1))return '회차 묶음 번호는 1 이상의 정수여야 합니다.';
- if(request.scope==='facilitator'&&(!request.range.date_from||!request.range.date_to))return '상담사 다운로드는 시작·종료 기간이 필수입니다.';
+ if(request.scope==='facilitator'&&(!request.range.date_from||!request.range.date_to))return '코치 다운로드는 시작·종료 기간이 필수입니다.';
  if(request.range.date_from&&request.range.date_to&&request.range.date_from>request.range.date_to)return '기간의 시작일은 종료일보다 늦을 수 없습니다.';
  if((request.from_us===undefined)!==(request.to_us===undefined))return '측정 구간의 시작과 끝을 함께 지정하세요.';
  if(request.from_us!==undefined&&request.to_us!==undefined&&BigInt(request.from_us)>=BigInt(request.to_us))return '측정 구간의 끝은 시작보다 커야 합니다.';

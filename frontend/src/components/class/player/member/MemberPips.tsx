@@ -31,7 +31,7 @@ interface MemberHostPipProps {
 
 export function MemberHostPip({ name, frozen, video }: MemberHostPipProps) {
   const [expanded, setExpanded] = useState(false);
-  const who = name ? `${name} 상담사` : '상담사';
+  const who = name ? `${name} 코치` : '코치';
   return (
     <button
       type="button"
@@ -46,8 +46,8 @@ export function MemberHostPip({ name, frozen, video }: MemberHostPipProps) {
       <Maximize2 className="mp-pip__expand" size={16} strokeWidth={2} aria-hidden="true" />
       <span className="mp-pip__chip">
         <i className="mp-pip__dot" />
-        {name ?? '상담사'}
-        {name ? <span className="mp-pip__long">&nbsp;상담사</span> : null}
+        {name ?? '코치'}
+        {name ? <span className="mp-pip__long">&nbsp;코치</span> : null}
       </span>
       {frozen ? (
         <span className="mp-pip__freeze">
@@ -68,7 +68,7 @@ interface MemberHostPipIssueProps {
 export function MemberHostPipIssue({ issue, onRetry }: MemberHostPipIssueProps) {
   return (
     <div className="mp-pip mp-pip--issue" data-pz="pip-issue" data-issue={issue} role="status">
-      <p className="mp-pip__issue-text">{issue === 'failed' ? '상담사 영상을 불러오지 못했습니다' : '상담사 영상을 기다리고 있어요'}</p>
+      <p className="mp-pip__issue-text">{issue === 'failed' ? '코치 영상을 불러오지 못했습니다' : '코치 영상을 기다리고 있어요'}</p>
       <button type="button" className="mp-pip__retry" onClick={onRetry}>영상 다시 시도</button>
     </div>
   );

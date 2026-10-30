@@ -1,7 +1,7 @@
 import type { NarrativeField, NarrativeFieldKey } from './types';
 import { formatEditedAt } from './format';
 export function sourceLabel(field: Pick<NarrativeField, 'source' | 'edited_by_name' | 'edited_at'>): string {
-  return field.source === 'ai' ? 'AI 요약' : field.source === 'edited' ? ['상담사 수정', field.edited_by_name, formatEditedAt(field.edited_at)].filter(Boolean).join(' · ') : '';
+  return field.source === 'ai' ? 'AI 요약' : field.source === 'edited' ? ['코치 수정', field.edited_by_name, formatEditedAt(field.edited_at)].filter(Boolean).join(' · ') : '';
 }
 export function narrativeMaxLength(key: NarrativeFieldKey): number {
   return key === 'headline' ? 200 : key === 'flow' || key.endsWith('_subtitle') ? 150 : 100;

@@ -89,7 +89,7 @@ describe('ClassDetailBody / ClassDetailFoot', () => {
     expect(hero.textContent).toContain('명상 클래스');
     expect(hero.querySelector('[data-chip="open"]')).not.toBeNull();
     expect(hero.textContent).toContain('마음챙김 명상 · 4회차');
-    expect(hero.textContent).toContain('김하늘 상담사');
+    expect(hero.textContent).toContain('김하늘 코치');
     expect(q('.sh-prep')!.querySelectorAll('li')).toHaveLength(3);
   });
   it('푸터: 안내 한 줄 + 주 버튼 1개(flow-cta). 비활성이면 disabled', async () => {

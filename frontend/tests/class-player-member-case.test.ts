@@ -77,7 +77,7 @@ describe('M02~M04 온라인 그룹(기본 뮤트·손들기·발언권)', () => 
   });
   it('M03: 손들기 대기 — 상태 문구 유지, 버튼은 활성 "손 내리기"(손들기 취소)', () => {
     const c = derive('M03');
-    expect(c.notice).toEqual({ tone: 'info', icon: 'hand', text: '손들었어요 · 상담사가 확인 중이에요' });
+    expect(c.notice).toEqual({ tone: 'info', icon: 'hand', text: '손들었어요 · 코치가 확인 중이에요' });
     expect(c.hand).toMatchObject({ s: 'waiting', label: '손 내리기', disabled: false });
   });
   it('M04: 발언권 부여 — 마이크 "말하는 중"(상태 표시) · "말하기 종료" 버튼', () => {
@@ -174,7 +174,7 @@ describe('M14~M17 마이크·카메라 상태(온라인 1:1)', () => {
     expect(c.mic).toMatchObject({ s: 'off', label: '마이크 꺼짐', disabled: false });
     expect(c.notice).toEqual({
       tone: 'caution', icon: 'micOff',
-      text: '마이크 꺼짐 · 상담사에게 내 목소리가 전달되지 않아요(뇌파는 계속 기록돼요)',
+      text: '마이크 꺼짐 · 코치에게 내 목소리가 전달되지 않아요(뇌파는 계속 기록돼요)',
     });
     expect(c.notice?.text).not.toContain('AI 기록');
     expect(c.ring.core).toBe('gauge');

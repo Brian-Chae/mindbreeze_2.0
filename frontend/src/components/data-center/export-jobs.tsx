@@ -5,7 +5,7 @@ import { ReauthMethod } from './social-reauth-button';
 import { useExportReauthProvider } from './use-export-reauth-provider';
 import './export.css';
 const labels:Record<string,string>={queued:'대기',preparing:'준비 중',ready:'준비 완료',ready_with_warnings:'제외 항목 있음',failed:'실패',expired:'만료',cancelled:'취소',pending:'대기',building:'생성 중'};
-const scopeLabels:Record<string,string>={session:'회차',class:'클래스',member:'회원',facilitator:'상담사',participant:'참여자'};
+const scopeLabels:Record<string,string>={session:'회차',class:'클래스',member:'회원',facilitator:'코치',participant:'참여자'};
 const when=(iso:string)=>new Date(iso).toLocaleString('ko-KR');
 const formatBytes=(bytes:number)=>bytes>=1e9?`${(bytes/1e9).toFixed(1)}GB`:bytes>=1e6?`${(bytes/1e6).toFixed(1)}MB`:`${Math.max(1,Math.round(bytes/1e3))}KB`;
 export interface ExportJobsProps {reauthRequired?:boolean;orgId?:string;refreshKey?:number;client?:ExportClient}

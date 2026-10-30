@@ -38,13 +38,13 @@ export default function OrgCounselorAction({ orgId, member, action, onCancel, on
       submitting.current = false; setBusy(false);
     }
   };
-  return <form aria-label={`상담사 ${label} 확인`} onSubmit={(event) => { event.preventDefault(); void submit(); }}
+  return <form aria-label={`코치 ${label} 확인`} onSubmit={(event) => { event.preventDefault(); void submit(); }}
     className="mb-4 space-y-3 rounded-xl border border-purple-200 bg-purple-50 p-4 text-sm">
     <h3 className="font-bold">{member.name} · {label} 확인</h3>
     <p>{action === 'role'
-      ? `계정 전체 역할을 ${nextRole === 'org_admin' ? '기관 관리자' : '상담사'}로 변경합니다. 접근 권한이 변경됩니다.`
-      : '기관 소속을 해제합니다. 기관 관리자라면 상담사로 변경됩니다. 계정과 과거 상담 기록은 삭제되지 않습니다.'}</p>
-    <label className="block">상담사 변경 사유 (필수)
+      ? `계정 전체 역할을 ${nextRole === 'org_admin' ? '기관 관리자' : '코치'}로 변경합니다. 접근 권한이 변경됩니다.`
+      : '기관 소속을 해제합니다. 기관 관리자라면 코치로 변경됩니다. 계정과 과거 상담 기록은 삭제되지 않습니다.'}</p>
+    <label className="block">코치 변경 사유 (필수)
       <textarea value={reason} onChange={(event) => setReason(event.target.value)} disabled={busy} required maxLength={2000}
         className={fieldClass('textarea', 'mt-1')} rows={3} />
     </label>

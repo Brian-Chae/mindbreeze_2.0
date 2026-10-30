@@ -78,10 +78,10 @@ export function ClassHeroEmpty({ backdropSrc, onApply }: ClassHeroEmptyProps) {
       <div className="sh-hero__in">
         <div className="sh-hero__row"><span className="sh-hchip"><Clock size={16} aria-hidden="true" />예정 없음</span></div>
         <h2 className="sh-hero__title">예정된 클래스가 없어요</h2>
-        <div className="sh-hero__meta"><span><Bell size={16} aria-hidden="true" />상담사가 클래스를 만들면 알려드려요</span></div>
+        <div className="sh-hero__meta"><span><Bell size={16} aria-hidden="true" />코치가 클래스를 만들면 알려드려요</span></div>
         <div className="sh-hbox">
           <Send size={20} aria-hidden="true" />
-          <div className="sh-hbox__tx"><b>하고 싶은 클래스가 있나요?</b><span>상담사에게 신청 메시지를 보내 보세요</span></div>
+          <div className="sh-hbox__tx"><b>하고 싶은 클래스가 있나요?</b><span>코치에게 신청 메시지를 보내 보세요</span></div>
         </div>
         <button type="button" className="sh-hcta" data-testid="class-hero-cta" onClick={onApply}>
           <Plus size={20} aria-hidden="true" />클래스 신청하기

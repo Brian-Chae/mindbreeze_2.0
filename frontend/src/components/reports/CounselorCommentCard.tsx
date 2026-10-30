@@ -10,6 +10,7 @@ import {
   type ReportDto,
 } from '../../lib/api/reports';
 import { isAiEnabled } from '../../lib/feature-flags';
+import { REPORT_EXCLUDED_NOTICE } from '../../lib/report/session-info';
 
 const COMMENT_MAX_LENGTH = 1000;
 
@@ -27,6 +28,8 @@ export interface CounselorCommentCardProps {
   onReportChange: (report: ReportDto) => void;
   /** 측정 데이터 없는 세션 안내 배너 */
   showNoDataBanner: boolean;
+  /** 측정 데이터가 없는 이유가 참가자의 리포트 제외 선택일 때 true — 문구를 구분한다 */
+  noDataExcluded?: boolean;
   /** 미저장 변경 여부 — 부모의 승인 confirm에 사용 */
   onDirtyChange?: (dirty: boolean) => void;
 }
@@ -35,6 +38,7 @@ export default function CounselorCommentCard({
   report,
   onReportChange,
   showNoDataBanner,
+  noDataExcluded = false,
   onDirtyChange,
 }: CounselorCommentCardProps) {
   const savedComment = savedCommentOf(report);
@@ -107,7 +111,9 @@ export default function CounselorCommentCard({
           role="note"
           className="mt-4 p-3 rounded-xl bg-[#FFF7E8] border border-[#F3E2B8] text-[#8A6A1F] text-[13px] mobile:text-mb-caption"
         >
-          이 세션에는 측정 데이터가 없습니다. 코멘트를 작성해 내담자에게 전달해 주세요.
+          {noDataExcluded
+            ? `${REPORT_EXCLUDED_NOTICE}. 코멘트를 작성해 전달해 주세요.`
+            : '이 세션에는 측정 데이터가 없습니다. 코멘트를 작성해 내담자에게 전달해 주세요.'}
         </div>
       )}
 

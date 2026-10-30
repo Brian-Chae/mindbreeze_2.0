@@ -96,9 +96,9 @@ describe('MyAvCheck', () => {
     expect(onCopyLink).toHaveBeenCalledTimes(1);
   });
 
-  it('1:1 이면 카메라 안내가 상담사에게로 바뀐다', async () => {
+  it('1:1 이면 카메라 안내가 코치에게로 바뀐다', async () => {
     await render(<MyAvCheck {...base({ solo: true })} />);
-    expect(text()).toContain('상담사에게 내 모습이 보여요');
+    expect(text()).toContain('코치에게 내 모습이 보여요');
     expect(text()).not.toContain('다른 분들');
   });
 

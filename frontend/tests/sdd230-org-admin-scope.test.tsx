@@ -79,7 +79,7 @@ describe('SDD-230 기관관리자 범위 (A10)', () => {
     setRole('org_admin');
     await render(<ClientListPage />);
     const text = container.textContent ?? '';
-    expect(text).toContain('담당 상담사');
+    expect(text).toContain('담당 코치');
     expect(text).toContain('가담당');
     expect(container.querySelectorAll('select').length).toBeGreaterThanOrEqual(4);
     expect(text).not.toMatch(/종합점수|순위|온라인|최근 접속/);
@@ -88,7 +88,7 @@ describe('SDD-230 기관관리자 범위 (A10)', () => {
   it('상담사 목록에는 담당 상담사 열·필터가 없다', async () => {
     setRole('counselor');
     await render(<ClientListPage />);
-    expect(container.textContent).not.toContain('담당 상담사');
+    expect(container.textContent).not.toContain('담당 코치');
   });
 
   it('관리자 필터 선택 시 counselor_id 로 서버 재조회', async () => {
@@ -107,13 +107,13 @@ describe('SDD-230 기관관리자 범위 (A10)', () => {
     vi.mocked(api.getClientReports).mockResolvedValue({ reports: [], changes: [] });
     vi.mocked(api.getClientProfile).mockResolvedValue({ ...base, memo_editable: false });
     await render(<ClientProfilePage />, '/clients/a');
-    expect(container.querySelector('[aria-label="상담사 비공개 메모"]')).toBeNull();
+    expect(container.querySelector('[aria-label="코치 비공개 메모"]')).toBeNull();
     expect(container.querySelector('[data-testid="ai-panel"]')).toBeNull();
 
     act(() => root.unmount());
     root = createRoot(container);
     vi.mocked(api.getClientProfile).mockResolvedValue({ ...base, memo_editable: true });
     await render(<ClientProfilePage />, '/clients/a');
-    expect(container.querySelector('[aria-label="상담사 비공개 메모"]')).not.toBeNull();
+    expect(container.querySelector('[aria-label="코치 비공개 메모"]')).not.toBeNull();
   });
 });

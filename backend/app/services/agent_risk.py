@@ -55,7 +55,7 @@ SAFE_REPLY_WINDOW_MIN = 30
 # 상담사 채널 메시지 kind / CTA — Contract 확장분.
 KIND_RISK_ALERT = "risk_alert"
 CTA_TALK_TO_COUNSELOR = "talk_to_counselor"
-CTA_LABEL_TALK_TO_COUNSELOR = "상담사님과 채팅하기"
+CTA_LABEL_TALK_TO_COUNSELOR = "코치님과 채팅하기"
 
 # 인앱 알림 이벤트 (notification_service.EVENT_CATALOG 등록분)
 RISK_NOTIFICATION_EVENT = "risk_signal"
@@ -239,18 +239,18 @@ def detect(text: str) -> tuple[str, str] | None:
 
 SAFE_REPLIES_HIGH: tuple[str, ...] = (
     "많이 힘든 마음을 꺼내 주셔서 고맙습니다. 혼자 담아 두기에 무거운 이야기예요. "
-    "상담사님과 직접 이야기 나눌 수 있도록 채팅을 연결해 드릴까요?",
+    "코치님과 직접 이야기 나눌 수 있도록 채팅을 연결해 드릴까요?",
     "그 마음을 적어 주시기까지 많이 애쓰셨을 것 같아요. 제가 임의로 판단하지 않고 그대로 들을게요. "
-    "상담사님과 직접 이야기 나눌 수 있도록 채팅을 연결해 드릴까요?",
+    "코치님과 직접 이야기 나눌 수 있도록 채팅을 연결해 드릴까요?",
     "지금 마음이 많이 무거우신 것 같아요. 들려주셔서 고맙습니다. "
-    "상담사님과 직접 이야기 나눌 수 있도록 채팅을 연결해 드릴까요?",
+    "코치님과 직접 이야기 나눌 수 있도록 채팅을 연결해 드릴까요?",
 )
 
 SAFE_REPLIES_WATCH: tuple[str, ...] = (
     "그런 마음이 드실 만큼 지치셨던 것 같아요. 들려주셔서 고맙습니다. "
-    "상담사님과 직접 이야기 나눌 수 있도록 채팅을 연결해 드릴까요?",
+    "코치님과 직접 이야기 나눌 수 있도록 채팅을 연결해 드릴까요?",
     "말씀해 주신 마음을 가볍게 넘기지 않고 듣고 있어요. "
-    "상담사님과 직접 이야기 나눌 수 있도록 채팅을 연결해 드릴까요?",
+    "코치님과 직접 이야기 나눌 수 있도록 채팅을 연결해 드릴까요?",
 )
 
 # 연속 감지 시 안전 템플릿을 반복하지 않고 쓰는 일반 공감 문장(Edge Case).
@@ -349,7 +349,7 @@ def _risk_alert_content(client_name: str, level: str, excerpt: str) -> str:
     return (
         f"{client_name} 님의 AI 대화에서 {level_label}이 확인되었어요.\n"
         f"확인된 문장: “{excerpt}”\n"
-        "내담자에게는 이 사실을 알리지 않았고, 상담사님과 이야기해 보도록 안내만 했어요."
+        "내담자에게는 이 사실을 알리지 않았고, 코치님과 이야기해 보도록 안내만 했어요."
     )
 
 

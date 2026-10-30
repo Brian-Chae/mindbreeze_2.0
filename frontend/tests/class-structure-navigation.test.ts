@@ -77,7 +77,7 @@ describe('현재 계약 보존', () => {
   it('기존 용어 키와 기본 영역을 보존한다', () => {
     expect(term('class')).toBe('클래스');
     expect(term('client', 'counseling')).toBe('회원');
-    expect(term('org-counselors')).toBe('상담사');
+    expect(term('org-counselors')).toBe('코치');
   });
   it('기존 알림과 회원 입장 경로를 보존한다', () => {
     expect(resolveNotificationTarget({ target_type: 'session', target_id: 's' })).toEqual({ path: '/sessions/s' });
@@ -95,7 +95,7 @@ describe('새 내비게이션', () => {
     expect(term('my-counseling')).toBe('내 상담');
     expect(term('members')).toBe('구성원');
     expect(term('instructor')).toBe('지도사');
-    expect(term('instructor', 'counseling')).toBe('상담사');
+    expect(term('instructor', 'counseling')).toBe('코치');
   });
   it('회원 사이드바는 두 영역을 항상 표시하고 active와 배지를 분리한다', () => {
     const html = render(createElement(SidebarNav, { role: 'client', notificationBadge: 3, sessionBadge: 2 }), '/app/counseling/r');

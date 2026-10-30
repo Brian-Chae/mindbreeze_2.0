@@ -137,7 +137,7 @@ describe('내 상태 시트 — 6지표 2×3 격자', () => {
 });
 
 describe('채팅 시트', () => {
-  it('상담사가 채팅을 켠 회원: 시트 본문에 채팅(node)이 들어가고 도크에 안읽음 배지', async () => {
+  it('코치가 채팅을 켠 회원: 시트 본문에 채팅(node)이 들어가고 도크에 안읽음 배지', async () => {
     const node = <p data-testid="chat-node">채팅방</p>;
     await mount('M01', 'chat', { chat: { enabled: true, authenticated: true, unread: 2, node } });
     expect(sheetEl()?.querySelector('[data-testid="chat-node"]')).not.toBeNull();
@@ -165,7 +165,7 @@ describe('채팅 시트', () => {
   });
   it('채팅이 꺼져 있으면 안내 문구, 배지는 없다', async () => {
     await mount('M01', 'chat', { chat: { enabled: false, authenticated: true, unread: 5, node: null } });
-    expect(sheetEl()?.textContent).toContain('상담사가 채팅을 켜면 여기에서 대화할 수 있어요.');
+    expect(sheetEl()?.textContent).toContain('코치가 채팅을 켜면 여기에서 대화할 수 있어요.');
     expect(q('.pz-dk__badge')).toBeNull();
   });
 });
@@ -177,13 +177,13 @@ describe('조용한 신호 시트', () => {
     expect(labels).toEqual(['잘 따라가요', '조금 어려워요', '잠시 쉴게요']);
     await act(async () => { qa('[data-pz="sheet"] .player-signal')[0].click(); });
     expect(actions.onSignal).toHaveBeenCalledWith('following');
-    expect(sheetEl()?.textContent).toContain('선택한 상태와 이름이 상담사에게만 보여요');
-    expect(sheetEl()?.textContent).toContain('상담사에게 조용히 전달했어요');
+    expect(sheetEl()?.textContent).toContain('선택한 상태와 이름이 코치에게만 보여요');
+    expect(sheetEl()?.textContent).toContain('코치에게 조용히 전달했어요');
   });
 });
 
 describe('소리 시트(D3: BGM 행 없음)', () => {
-  it('온라인: 가이드 이름·볼륨·상담사 음성 스위치·화면 끄기', async () => {
+  it('온라인: 가이드 이름·볼륨·코치 음성 스위치·화면 끄기', async () => {
     const actions = await mount('M01', 'sound');
     expect(sheetEl()?.textContent).toContain('고요한 숲의 아침');
     expect(sheetEl()?.textContent).toContain('60%');
@@ -191,7 +191,7 @@ describe('소리 시트(D3: BGM 행 없음)', () => {
     expect(slider?.getAttribute('aria-label')).toBe('볼륨');
     expect(slider?.value).toBe('60');
     const sw = q('[data-pz="sheet"] [role="switch"]');
-    expect(sw?.getAttribute('aria-label')).toBe('상담사 음성 듣기');
+    expect(sw?.getAttribute('aria-label')).toBe('코치 음성 듣기');
     expect(sw?.getAttribute('aria-checked')).toBe('true');
     await act(async () => { (sw as HTMLButtonElement).click(); });
     expect(actions.onSpeakerChange).toHaveBeenCalledWith(false);

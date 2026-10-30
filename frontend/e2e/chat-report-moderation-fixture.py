@@ -1,4 +1,4 @@
-"""[MB261026][FIX] 채팅 신고 E2E 픽스처 — 로컬 PG 에만 상담사-회원 연결 1행을 넣는다(pytest 대상 아님).
+"""[MB261026][FIX] 채팅 신고 E2E 픽스처 — 로컬 PG 에만 코치-회원 연결 1행을 넣는다(pytest 대상 아님).
 
 사용: DATABASE_URL=postgresql://localhost:5432/<로컬 DB> python chat-report-moderation-fixture.py link <counselor_id> <client_id>
 계정은 로컬 API(dev 시뮬레이션)로 만들고, 이 스크립트는 API 가 없는 연결만 만든다. 로컬 호스트가 아니면 거부한다.

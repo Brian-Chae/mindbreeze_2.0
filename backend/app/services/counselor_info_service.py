@@ -65,10 +65,10 @@ def get_target_counselor(user_id: uuid.UUID, db: Session, *, org_id: uuid.UUID |
 
     user = db.query(User).filter(User.id == user_id).first()
     if user is None or user.role not in ("counselor", "org_admin"):
-        raise HTTPException(status_code=404, detail="대상 상담사를 찾을 수 없습니다")
+        raise HTTPException(status_code=404, detail="대상 코치를 찾을 수 없습니다")
     # SDD-079: 소속 검사는 membership 기준 — 다중 소속 상담사도 소속 기관 관리자가 조회 가능
     if org_id is not None and membership_service.get_membership(db, user.id, org_id) is None:
-        raise HTTPException(status_code=404, detail="대상 상담사를 찾을 수 없습니다")
+        raise HTTPException(status_code=404, detail="대상 코치를 찾을 수 없습니다")
     return user
 
 

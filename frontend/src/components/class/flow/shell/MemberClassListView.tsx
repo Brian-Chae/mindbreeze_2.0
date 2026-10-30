@@ -19,7 +19,7 @@ interface MemberClassListViewProps {
 
 export function MemberClassListView({ sections, onOpen, onEnter, onConfirmInvite, enteringId = null }: MemberClassListViewProps) {
   if (sections.length === 0) {
-    return <EmptyRow icon={<CalendarX size={20} aria-hidden="true" />} title="아직 예정된 클래스가 없어요" sub="상담사가 클래스를 등록하면 여기에 표시돼요" />;
+    return <EmptyRow icon={<CalendarX size={20} aria-hidden="true" />} title="아직 예정된 클래스가 없어요" sub="코치가 클래스를 등록하면 여기에 표시돼요" />;
   }
   return (
     <>

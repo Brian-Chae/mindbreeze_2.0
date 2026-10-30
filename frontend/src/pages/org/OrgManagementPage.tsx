@@ -61,7 +61,7 @@ export default function OrgManagementPage() {
     if (!orgId) return;
     const current = counselors.find((c) => c.id === userId);
     if (current?.role === role) return;
-    const roleLabel = role === 'org_admin' ? '관리자' : '상담사';
+    const roleLabel = role === 'org_admin' ? '관리자' : '코치';
     if (!confirm(`역할을 '${roleLabel}'(으)로 변경하시겠습니까?`)) return;
     setBusyUser(userId);
     try {
@@ -128,7 +128,7 @@ export default function OrgManagementPage() {
 
         {/* 소속 상담사 — 테이블 + 검색/상태 필터 + 정보 수정 (SDD-077) */}
         <section className={cardClass('default', 'space-y-4')}>
-          <h2 className="text-lg font-medium text-ink-primary">소속 상담사 ({counselors.length}명)</h2>
+          <h2 className="text-lg font-medium text-ink-primary">소속 코치 ({counselors.length}명)</h2>
           {editingUser && orgId && (
             <CounselorInfoEditor
               load={() => getOrgCounselorProfile(orgId, editingUser.id)}
@@ -142,7 +142,7 @@ export default function OrgManagementPage() {
           )}
           <div className="flex flex-wrap gap-2">
             <input
-              aria-label="상담사 검색"
+              aria-label="코치 검색"
               placeholder="이름·이메일 검색"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -160,9 +160,9 @@ export default function OrgManagementPage() {
             </select>
           </div>
           {counselors.length === 0 ? (
-            <p className="text-sm text-ink-tertiary">아직 소속된 상담사가 없습니다.</p>
+            <p className="text-sm text-ink-tertiary">아직 소속된 코치가 없습니다.</p>
           ) : filteredCounselors.length === 0 ? (
-            <p className="text-sm text-ink-tertiary">검색 조건에 맞는 상담사가 없습니다.</p>
+            <p className="text-sm text-ink-tertiary">검색 조건에 맞는 코치가 없습니다.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[560px] text-left text-sm">
@@ -187,7 +187,7 @@ export default function OrgManagementPage() {
                           disabled={busyUser === c.id}
                           className={fieldClass('select', '!w-auto')}
                         >
-                          <option value="counselor">상담사</option>
+                          <option value="counselor">코치</option>
                           <option value="org_admin">관리자</option>
                         </select>
                       </td>

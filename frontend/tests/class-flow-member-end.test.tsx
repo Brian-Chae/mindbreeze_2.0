@@ -84,15 +84,15 @@ describe('FM09 종료 카드', () => {
     await render(<EndView {...props({ reportMode: 'excluded', maskedEmail: null })} />);
     expect(text()).toContain('이번 클래스는 내 기록이 리포트에 반영되지 않아요');
     expect(text()).toContain('보낼 리포트가 없어요');
-    expect(text()).toContain('종료 전에는 설정에서 바꿀 수 있어요. 종료 뒤에는 상담사에게 요청해 주세요.');
+    expect(text()).toContain('종료 전에는 설정에서 바꿀 수 있어요. 종료 뒤에는 코치에게 요청해 주세요.');
     expect(btn('리포트 받기')).toBeUndefined();
     expect(btn('오늘 상태 남기기')!.getAttribute('data-kind')).toBe('primary');
   });
   it('비회원: 마스킹된 이메일로 자동 발송 안내, 이메일 입력·인증 DOM 없음, 신청 버튼 없음', async () => {
     await render(<EndView {...props({ reportMode: 'guest', maskedEmail: 'se***@example.com' })} />);
     expect(text()).toContain('리포트를 se***@example.com 로 보내 드려요');
-    expect(text()).toContain('상담사 확인 후 메일 발송');
-    expect(text()).toContain('상담사가 확인하면 자동으로 보내져요.');
+    expect(text()).toContain('코치 확인 후 메일 발송');
+    expect(text()).toContain('코치가 확인하면 자동으로 보내져요.');
     expect(btn('리포트 받기')).toBeUndefined();
     expect(qa('input')).toHaveLength(0);
     expect(text()).not.toMatch(/인증|OTP/);
@@ -113,7 +113,7 @@ describe('FM09 시트', () => {
     await render(<EndView {...props({ sheet: 'report', onRequestReport })} />);
     expect(text()).toContain('받는 이메일');
     expect(text()).toContain('se***@example.com');
-    expect(text()).toContain('리포트는 상담사가 확인한 뒤 계정 이메일로 보내 드려요. 영업일 기준 1~2일 걸릴 수 있어요.');
+    expect(text()).toContain('리포트는 코치가 확인한 뒤 계정 이메일로 보내 드려요. 영업일 기준 1~2일 걸릴 수 있어요.');
     expect(qa('[data-pz="flow-sheet"] input')).toHaveLength(0);
     expect(text()).not.toMatch(/인증 코드|재발송/);
     await act(async () => { btn('리포트 신청하기')!.click(); });
@@ -122,7 +122,7 @@ describe('FM09 시트', () => {
   it('신청 완료 시트와 중복 신청(진행 중) 비활성', async () => {
     await render(<EndView {...props({ sheet: 'reportsent' })} />);
     expect(text()).toContain('신청했어요');
-    expect(text()).toContain('상담사가 확인하면 이메일로 보내 드려요.');
+    expect(text()).toContain('코치가 확인하면 이메일로 보내 드려요.');
     expect(btn('확인')).toBeDefined();
     await render(<EndView {...props({ sheet: 'report', working: true })} />);
     expect(btn('리포트 신청하기')!.disabled).toBe(true);

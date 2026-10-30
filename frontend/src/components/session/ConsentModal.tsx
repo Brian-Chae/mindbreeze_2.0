@@ -36,7 +36,7 @@ export function ConsentModal({ open, onConfirm, onCancel }: Props) {
         </p>
         <ul className="mt-4 list-disc space-y-1 pl-5 text-xs text-neutral-500 dark:text-neutral-400">
           <li>{aiEnabled ? '녹음 데이터는 STT/요약 처리 후 ' : '녹음 데이터는 '}클래스 종료일부터 {RAW_RETENTION_DAYS}일이 지나면 삭제됩니다</li>
-          <li>본인 세션과 담당 상담사만 접근할 수 있습니다</li>
+          <li>본인 세션과 담당 코치만 접근할 수 있습니다</li>
           <li>언제든지 녹음을 중지할 수 있습니다</li>
           <li><PrivacyPolicyLink>개인정보 처리방침</PrivacyPolicyLink>에서 자세한 내용을 확인할 수 있습니다</li>
         </ul>

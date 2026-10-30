@@ -36,7 +36,7 @@ async function mount(path: string, need: 'client' | 'counselor') {
   });
 }
 
-test('상담사 계정이 회원 온보딩에 들어가면 안내와 상담사 홈 이동 버튼이 나오고 본문은 보이지 않는다', async () => {
+test('코치 계정이 회원 온보딩에 들어가면 안내와 코치 홈 이동 버튼이 나오고 본문은 보이지 않는다', async () => {
   setUser('counselor');
   await mount('/onboarding/x', 'client');
   expect(container.textContent).toContain('이 화면은 회원용이에요');
@@ -44,10 +44,10 @@ test('상담사 계정이 회원 온보딩에 들어가면 안내와 상담사 �
   expect(container.querySelector('a[href="/dashboard"]')?.textContent).toContain('내 홈으로');
 });
 
-test('회원 계정이 상담사 온보딩에 들어가면 안내와 회원 홈 이동 버튼', async () => {
+test('회원 계정이 코치 온보딩에 들어가면 안내와 회원 홈 이동 버튼', async () => {
   setUser('client');
   await mount('/onboarding/x', 'counselor');
-  expect(container.textContent).toContain('이 화면은 상담사용이에요');
+  expect(container.textContent).toContain('이 화면은 코치용이에요');
   expect(container.querySelector('a[href="/app"]')).not.toBeNull();
 });
 

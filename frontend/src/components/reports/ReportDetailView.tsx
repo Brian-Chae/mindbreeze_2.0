@@ -308,6 +308,7 @@ export default function ReportDetailView({
           report={report}
           onReportChange={updateReport}
           showNoDataBanner={noMeasuredData}
+          noDataExcluded={adapted.eegExcluded}
           onDirtyChange={setCommentDirty}
         />
       )}

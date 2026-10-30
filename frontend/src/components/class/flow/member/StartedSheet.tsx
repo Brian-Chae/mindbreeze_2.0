@@ -14,7 +14,7 @@ export function StartedSheet({ open, remaining, onEnterNow, onContinue }: Starte
   return (
     <FlowSheet
       open={open}
-      title="상담사가 클래스를 시작했어요"
+      title="코치가 클래스를 시작했어요"
       onClose={onContinue}
       dismissOnOutside={false}
       footer={

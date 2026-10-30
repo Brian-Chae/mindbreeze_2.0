@@ -72,14 +72,14 @@ export function buildCoachmarkSteps(mode: CoachmarkMode): CoachmarkStep[] {
       id: 'publish',
       icon: '🏫',
       title: '대면으로 진행되는 수업이에요',
-      body: '한 공간에 모여 진행하는 수업이라, 하울링 방지를 위해 상담사 음성은 기본 음소거 상태로 시작해요.',
+      body: '한 공간에 모여 진행하는 수업이라, 하울링 방지를 위해 코치 음성은 기본 음소거 상태로 시작해요.',
     });
   } else {
     steps.push({
       id: 'publish',
       icon: '💬',
       title: '1:1 수업은 상시 송출이에요',
-      body: '상담사와 바로 대화할 수 있도록 마이크와 카메라가 켜진 상태로 진행돼요. 준비되면 그대로 이야기해 주세요.',
+      body: '코치와 바로 대화할 수 있도록 마이크와 카메라가 켜진 상태로 진행돼요. 준비되면 그대로 이야기해 주세요.',
     });
   }
 
@@ -89,7 +89,7 @@ export function buildCoachmarkSteps(mode: CoachmarkMode): CoachmarkStep[] {
       id: 'hand',
       icon: '🙋',
       title: '발언은 [손 들기]로 요청해요',
-      body: '말하고 싶을 때 [손 들기]를 누르면 상담사에게 알림이 가요. 발언권을 받으면 마이크와 카메라가 함께 켜져요.',
+      body: '말하고 싶을 때 [손 들기]를 누르면 코치에게 알림이 가요. 발언권을 받으면 마이크와 카메라가 함께 켜져요.',
     });
   }
 
@@ -99,8 +99,8 @@ export function buildCoachmarkSteps(mode: CoachmarkMode): CoachmarkStep[] {
     icon: '🔊',
     title: '스피커는 언제든 켜고 끌 수 있어요',
     body: offline
-      ? '우측 상단 스피커 버튼을 누르면 상담사 음성을 켤 수 있어요. 소리가 커지면 다시 눌러 음소거할 수 있어요.'
-      : '우측 상단 스피커 버튼으로 상담사 음성을 음소거하거나 다시 켤 수 있어요.',
+      ? '우측 상단 스피커 버튼을 누르면 코치 음성을 켤 수 있어요. 소리가 커지면 다시 눌러 음소거할 수 있어요.'
+      : '우측 상단 스피커 버튼으로 코치 음성을 음소거하거나 다시 켤 수 있어요.',
   });
 
   // (4) 몰입(화면 끄기) 모드

@@ -76,11 +76,11 @@ describe('buildClassSections', () => {
     expect(sections[3].entries.map((e) => e.data.id)).toEqual(['canc', 'past-done']);
     expect(buildClassSections([], new Set(), NOW)).toEqual([]);
   });
-  it('입장 가능 카드는 강조 + 입장하기, 초대 카드는 클래스 확인 + 초대한 상담사', () => {
+  it('입장 가능 카드는 강조 + 입장하기, 초대 카드는 클래스 확인 + 초대한 코치', () => {
     const sections = buildClassSections(list, new Set(['inv1']), NOW);
     expect(sections[0].entries[0]).toMatchObject({ highlight: true, action: { label: '입장하기', kind: 'enter' } });
     expect(sections[1].entries[0]).toMatchObject({ chip: 'invited', action: { label: '클래스 확인', kind: 'confirm' } });
-    expect(sections[1].entries[0].data.subLine).toBe('박서연 상담사가 초대했어요');
+    expect(sections[1].entries[0].data.subLine).toBe('박서연 코치가 초대했어요');
     expect(sections[2].entries[0].action).toBeUndefined();
   });
   it('이미 입장 가능한 초대 클래스는 초대 섹션에 중복하지 않는다', () => {
@@ -112,8 +112,8 @@ describe('MemberClassListView', () => {
 });
 
 describe('ApplySheet', () => {
-  const options = [{ id: 'r1', name: '김하늘 상담사' }, { id: 'r2', name: '박서연 상담사' }];
-  it('상담사 라디오 선택 → 신청 메시지 보내기', async () => {
+  const options = [{ id: 'r1', name: '김하늘 코치' }, { id: 'r2', name: '박서연 코치' }];
+  it('코치 라디오 선택 → 신청 메시지 보내기', async () => {
     const onSelect = vi.fn(); const onSend = vi.fn();
     await render(<ApplySheet open options={options} selectedId="r1" onSelect={onSelect} onSend={onSend} onClose={() => {}} />);
     const radios = qa('[role="radio"]');
@@ -128,7 +128,7 @@ describe('ApplySheet', () => {
   it('채팅방이 없으면 안내, 불러오기 실패면 다시 시도', async () => {
     const onRetry = vi.fn();
     await render(<ApplySheet open options={[]} selectedId={null} onSelect={() => {}} onSend={() => {}} onClose={() => {}} />);
-    expect(q('[role="dialog"]')!.textContent).toContain('연결된 상담사 채팅방이 없어요');
+    expect(q('[role="dialog"]')!.textContent).toContain('연결된 코치 채팅방이 없어요');
     expect(q<HTMLButtonElement>('[data-testid="apply-send"]')!.disabled).toBe(true);
     await render(<ApplySheet open options={[]} selectedId={null} loadError="불러오지 못했어요" onRetry={onRetry} onSelect={() => {}} onSend={() => {}} onClose={() => {}} />);
     await act(async () => { q<HTMLButtonElement>('[data-testid="apply-retry"]')!.click(); });
@@ -142,7 +142,7 @@ function Probe() {
 }
 async function renderPage(sessions: SessionDto[], entry: string | { pathname: string; state: unknown } = '/app/sessions'): Promise<void> {
   vi.mocked(listSessions).mockResolvedValue({ sessions, total: sessions.length });
-  vi.mocked(listChatRooms).mockResolvedValue({ rooms: [{ id: 'r1', room_type: 'direct', peer_name: '김하늘 상담사', name: '김하늘' } as unknown as ChatRoom] });
+  vi.mocked(listChatRooms).mockResolvedValue({ rooms: [{ id: 'r1', room_type: 'direct', peer_name: '김하늘 코치', name: '김하늘' } as unknown as ChatRoom] });
   vi.mocked(sendChatMessage).mockResolvedValue({} as never);
   await render(
     <MemoryRouter initialEntries={[entry]}>
@@ -190,11 +190,11 @@ describe('ClientSessionListPage — FM02', () => {
     await act(async () => { await Promise.resolve(); });
     expect(q('[data-testid="where"]')!.textContent).toBe('/app/sessions/b');
   });
-  it('신청 시트: 이벤트로 열고 상담사에게 신청 메시지를 보낸다', async () => {
+  it('신청 시트: 이벤트로 열고 코치에게 신청 메시지를 보낸다', async () => {
     await renderPage([session('a')]);
     await act(async () => { window.dispatchEvent(new CustomEvent('open-session-request')); });
     await act(async () => { await Promise.resolve(); });
-    expect(q('[role="dialog"]')!.textContent).toContain('김하늘 상담사');
+    expect(q('[role="dialog"]')!.textContent).toContain('김하늘 코치');
     await act(async () => { q<HTMLButtonElement>('[data-testid="apply-send"]')!.click(); });
     await act(async () => { await Promise.resolve(); });
     expect(sendChatMessage).toHaveBeenCalledWith('r1', { content: '클래스 신청합니다', type: 'system', event_type: 'session_request' });

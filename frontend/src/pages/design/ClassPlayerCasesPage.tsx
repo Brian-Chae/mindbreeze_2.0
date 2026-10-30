@@ -97,7 +97,7 @@ export default function ClassPlayerCasesPage() {
             요청: role={role ?? '-'} · case={caseId ?? '-'}
           </p>
           <p style={{ fontSize: 13, margin: '0 0 8px' }}>회원 케이스: {REGISTRY.member.join(', ') || '없음'}</p>
-          <p style={{ fontSize: 13, margin: 0 }}>상담사 케이스: {REGISTRY.host.join(', ') || '없음'}</p>
+          <p style={{ fontSize: 13, margin: 0 }}>코치 케이스: {REGISTRY.host.join(', ') || '없음'}</p>
         </div>
       </div>
     );

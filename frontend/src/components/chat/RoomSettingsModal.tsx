@@ -19,12 +19,12 @@ interface Props {
 }
 
 const disabledReasons: Record<string, string> = {
-  not_host: '채팅방을 만든 상담사만 이름을 변경할 수 있습니다.',
-  role_not_allowed: '상담사만 채팅방 이름을 변경할 수 있습니다.',
+  not_host: '채팅방을 만든 코치만 이름을 변경할 수 있습니다.',
+  role_not_allowed: '코치만 채팅방 이름을 변경할 수 있습니다.',
   membership_required: '소속 기관 정보를 확인한 후 변경할 수 있습니다.',
   participant_scope_invalid: '참여자 연결 정보를 확인한 후 변경할 수 있습니다.',
   session_managed: '세션 채팅방 이름은 세션 제목을 따릅니다.',
-  host_missing: '채팅방의 상담사 정보를 확인할 수 없습니다.',
+  host_missing: '채팅방의 코치 정보를 확인할 수 없습니다.',
 };
 
 function roomLabel(room: ChatRoom): string {

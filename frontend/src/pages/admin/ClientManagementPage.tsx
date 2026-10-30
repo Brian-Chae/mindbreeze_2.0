@@ -143,7 +143,7 @@ function CounselorPicker({ selected, onSelect, error }: CounselorPickerProps) {
               type="button"
               onClick={() => onSelect(null)}
               className="ml-1 text-[#075985]/70 hover:text-[#075985]"
-              aria-label="상담사 선택 해제"
+              aria-label="코치 선택 해제"
             >
               ×
             </button>
@@ -160,7 +160,7 @@ function CounselorPicker({ selected, onSelect, error }: CounselorPickerProps) {
       <div className="relative">
         <input
           type="text"
-          aria-label="상담사 검색"
+          aria-label="코치 검색"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -168,7 +168,7 @@ function CounselorPicker({ selected, onSelect, error }: CounselorPickerProps) {
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder="상담사 이름 또는 이메일 검색..."
+          placeholder="코치 이름 또는 이메일 검색..."
           className={fieldClass('input')}
         />
         {loading && (
@@ -204,7 +204,7 @@ function CounselorPicker({ selected, onSelect, error }: CounselorPickerProps) {
           )}
           {results.some((c) => c.suspended) && (
             <li className="border-t border-[#EFEFEF] px-4 py-2 text-[12px] text-[#9B9B9B]">
-              정지된 상담사는 선택할 수 없습니다
+              정지된 코치는 선택할 수 없습니다
             </li>
           )}
         </ul>
@@ -331,7 +331,7 @@ export default function ClientManagementPage() {
       fieldErrors.email = '이메일을 입력해주세요.';
     }
     if (!addCounselor) {
-      fieldErrors.counselor = '담당 상담사를 선택해주세요.';
+      fieldErrors.counselor = '담당 코치를 선택해주세요.';
     }
     if (Object.keys(fieldErrors).length > 0) {
       setAddFieldErrors(fieldErrors);
@@ -353,8 +353,8 @@ export default function ClientManagementPage() {
         type: 'success',
         title: '회원 추가 완료',
         body: result.invite_sent
-          ? `${result.client.name} 님이 추가되었고 ${addCounselor!.name} 상담사와 연결되었습니다. 초대 메일을 발송했습니다.`
-          : `${result.client.name} 님이 추가되었고 ${addCounselor!.name} 상담사와 연결되었습니다.`,
+          ? `${result.client.name} 님이 추가되었고 ${addCounselor!.name} 코치와 연결되었습니다. 초대 메일을 발송했습니다.`
+          : `${result.client.name} 님이 추가되었고 ${addCounselor!.name} 코치와 연결되었습니다.`,
       });
       closeAddModal();
       await fetchUsers();
@@ -363,7 +363,7 @@ export default function ClientManagementPage() {
         if (e.status === 409) {
           setAddFieldErrors({ email: '이미 등록된 이메일입니다.' });
         } else if (e.status === 404 || e.status === 422) {
-          setAddFieldErrors({ counselor: '선택한 상담사를 찾을 수 없거나 배정할 수 없습니다.' });
+          setAddFieldErrors({ counselor: '선택한 코치를 찾을 수 없거나 배정할 수 없습니다.' });
         } else {
           setAddError(e.message);
         }
@@ -507,7 +507,7 @@ export default function ClientManagementPage() {
                 <tr className="bg-[#F8FAFC] border-b border-[#EFEFEF]">
                   <th className="text-left px-6 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">이름</th>
                   <th className="text-left px-6 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">이메일</th>
-                  <th className="text-left px-6 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">담당 상담사</th>
+                  <th className="text-left px-6 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">담당 코치</th>
                   <th className="text-left px-6 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">상태</th>
                   <th className="text-left px-6 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">가입일</th>
                   <th className="text-left px-6 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">관리</th>
@@ -712,7 +712,7 @@ export default function ClientManagementPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 id="client-add-modal-title" className="text-[18px] font-bold text-[#1F1F1F] mb-1">회원 추가</h3>
-            <p className="text-[13px] text-[#6F6F6F] mb-5">내담자(client) 계정을 생성하고 담당 상담사를 배정합니다.</p>
+            <p className="text-[13px] text-[#6F6F6F] mb-5">내담자(client) 계정을 생성하고 담당 코치를 배정합니다.</p>
 
             {addError && (
               <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm">{addError}</div>
@@ -751,7 +751,7 @@ export default function ClientManagementPage() {
 
               <div>
                 <label className="block text-[13px] font-medium text-[#1F1F1F] mb-1.5">
-                  담당 상담사 <span className="text-red-500">*</span>
+                  담당 코치 <span className="text-red-500">*</span>
                 </label>
                 <CounselorPicker
                   selected={addCounselor}

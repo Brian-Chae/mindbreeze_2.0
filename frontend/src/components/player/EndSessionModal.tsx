@@ -26,7 +26,7 @@ export function EndSessionModal({ open, ending, onConfirm, onCancel }: EndSessio
         <h4 id="end-session-title" className="text-lg font-semibold text-[#1F1F1F]">클래스를 종료할까요?</h4>
         <ul className="mt-3 space-y-1.5 text-sm text-[#6F6F6F]">
           <li>· 진행 중인 음성 녹음·영상 녹화가 종료됩니다</li>
-          <li>· 상담사·회원 리포트가 자동 생성됩니다</li>
+          <li>· 코치·회원 리포트가 자동 생성됩니다</li>
           <li>· 참여 중인 회원의 화면도 함께 종료됩니다</li>
         </ul>
         <div className="mt-6 flex justify-end gap-2">

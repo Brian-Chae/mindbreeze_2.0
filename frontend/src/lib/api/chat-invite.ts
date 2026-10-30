@@ -51,4 +51,4 @@ export function inviteRoomMetadata(room: ChatRoom): Partial<ChatRoom> {
   };
 }
 export const inviteRoleLabel = (role: InviteRole): string =>
-  role === 'client' ? '내담자' : role === 'org_admin' ? '기관 관리자' : '상담사';
+  role === 'client' ? '내담자' : role === 'org_admin' ? '기관 관리자' : '코치';

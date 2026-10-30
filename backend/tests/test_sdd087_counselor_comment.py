@@ -214,7 +214,7 @@ def test_09_메일_HTML에_코멘트_섹션_escape_노출(client):
     )
     res = client.get(f"/api/v1/sessions/{sid}/report-email/view", params={"token": token})
     assert res.status_code == 200, res.text
-    assert "상담사 코멘트" in res.text
+    assert "코치 코멘트" in res.text
     # escape + pre-wrap: 원문 태그는 이스케이프되어야 한다
     assert "&lt;스스로&gt;" in res.text
     assert "<스스로>" not in res.text
@@ -233,7 +233,7 @@ def test_10_코멘트_없으면_메일_HTML에_섹션_미노출(client):
     )
     res = client.get(f"/api/v1/sessions/{sid}/report-email/view", params={"token": token})
     assert res.status_code == 200, res.text
-    assert "상담사 코멘트" not in res.text
+    assert "코치 코멘트" not in res.text
 
 
 def test_11_counselor_리포트_상세에_client_코멘트_파생표시(client):
@@ -379,7 +379,7 @@ def test_18_자동승인_기존_코멘트는_덮어쓰지_않음(client, monkeyp
     host, sid, db, _, report = _setup_client_report(client, "sdd087r@test.com")
     client.patch(
         f"/api/v1/reports/{report.id}/comment",
-        json={"comment": "상담사가 직접 쓴 코멘트"},
+        json={"comment": "코치가 직접 쓴 코멘트"},
         headers=host["auth"],
     )
     assert (
@@ -392,7 +392,7 @@ def test_18_자동승인_기존_코멘트는_덮어쓰지_않음(client, monkeyp
     generate_client_reports_for_session(sid, db)
     db.expire_all()
     assert report.status == "completed"
-    assert report.content["counselor_comment"] == "상담사가 직접 쓴 코멘트"
+    assert report.content["counselor_comment"] == "코치가 직접 쓴 코멘트"
 
 
 def test_19_자동승인_규칙폴백으로도_빈리포트_발송없음(client, monkeypatch):

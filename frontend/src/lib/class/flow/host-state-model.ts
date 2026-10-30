@@ -58,8 +58,8 @@ export function hostStateCopy(kind: HostStateKind, opts: { waiting?: number; clo
       };
     case 'error-forbidden':
       return {
-        top: '문제가 생겼어요', icon: 'lock', warn: true, heading: '내가 연 클래스가 아니에요', lead: '이 클래스는 다른 상담사가 열었어요. 내 클래스는 목록에서 확인해요.',
-        rows: [{ icon: 'user', title: '호스트만 열 수 있어요', sub: '클래스를 만든 상담사가 열고 진행해요' }, { icon: 'list', title: '내 클래스 보기', sub: '목록에서 내가 만든 클래스를 찾아요' }],
+        top: '문제가 생겼어요', icon: 'lock', warn: true, heading: '내가 연 클래스가 아니에요', lead: '이 클래스는 다른 코치가 열었어요. 내 클래스는 목록에서 확인해요.',
+        rows: [{ icon: 'user', title: '호스트만 열 수 있어요', sub: '클래스를 만든 코치가 열고 진행해요' }, { icon: 'list', title: '내 클래스 보기', sub: '목록에서 내가 만든 클래스를 찾아요' }],
         primary: { label: '내 클래스 보기', action: 'list' }, secondary: { label: '홈으로', action: 'home' },
       };
     case 'error-network':

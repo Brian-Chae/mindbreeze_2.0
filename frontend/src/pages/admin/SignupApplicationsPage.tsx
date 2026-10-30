@@ -15,7 +15,7 @@ import {
 
 const TYPE_LABELS: Record<string, string> = {
   organization: '기관 가입 상담',
-  individual_counselor: '개인 상담사',
+  individual_counselor: '개인 코치',
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -147,7 +147,7 @@ export default function SignupApplicationsPage() {
         >
           <option value="">전체 유형</option>
           <option value="organization">기관 가입 상담</option>
-          <option value="individual_counselor">개인 상담사</option>
+          <option value="individual_counselor">개인 코치</option>
         </select>
         <select
           aria-label="신청 상태 필터"
@@ -272,7 +272,7 @@ export default function SignupApplicationsPage() {
 
           {detail.application_type === 'individual_counselor' && canReview && (
             <p className="mt-4 rounded-xl bg-[#F5EDFC] p-3 text-[13px] text-[#5F0080]">
-              승인하면 개인 상담사 계정이 바로 활성화되고, 신청자에게 비밀번호 설정(초대) 메일이 발송됩니다.
+              승인하면 개인 코치 계정이 바로 활성화되고, 신청자에게 비밀번호 설정(초대) 메일이 발송됩니다.
             </p>
           )}
           {detail.application_type === 'organization' && canReview && (

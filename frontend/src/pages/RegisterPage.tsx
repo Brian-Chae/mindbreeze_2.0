@@ -70,13 +70,13 @@ export default function RegisterPage() {
           <RoleCard
             to="/register/client"
             title="회원 가입"
-            description="상담사와 연결해 상담·명상 서비스를 이용해요."
+            description="코치와 연결해 상담·명상 서비스를 이용해요."
             cta="가입하기"
           />
           <RoleCard
             to="/register/counselor"
-            title="상담사 가입"
-            description="기관 초대를 받았거나 개인 상담사로 시작해요."
+            title="코치 가입"
+            description="기관 초대를 받았거나 개인 코치로 시작해요."
             cta="시작하기"
           />
           {!isNativeApp() && <RoleCard
