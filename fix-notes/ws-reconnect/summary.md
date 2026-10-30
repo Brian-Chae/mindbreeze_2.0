@@ -19,3 +19,10 @@
 
 ## 한계
 실기기(Android+LINK BAND)·dev 서버 재시작 재현은 미실행. 배포 후 대표님이 클래스 중 서버 재시작 → 30초 내 지표 복구를 확인해야 함.
+
+## 추가 변경 — 상담사 '연결이 불안정' 배너 A안 (Brian 결정, 브랜치 fix/live-banner-polling)
+- 정책: 소켓이 끊겨도 live-metrics 폴링(4초)이 최근 성공 중이면 배너·흐림 숨김. 폴링 실패 또는 정체면 표시.
+- 판정: `pollHealthy = !metricsPollFailing && metricsLastOkAt != null && now - metricsLastOkAt <= METRICS_FRESH_MS(12초 = 폴링주기 4초×3)`. 소켓 정상 또는 pollHealthy 이면 링크 정상. 폴링 건강하지 않은 채 소켓 끊김이 15초(NET_DOWN_AFTER_MS) 지속되면 '연결이 끊겼어요'.
+- 변경: `HostLiveContainer.tsx:219-230`, `player-case.ts:51`(METRICS_FRESH_MS), `ClassPlayerPage.tsx`(metricsLastOkAt 상태 기록/전달).
+- 테스트: 기존 '소켓 끊김=배너' 2건을 새 정책으로 교체 + 신규(정상·실패·정체·성공이력 없음·장기 정상) 6건, 페이지 1건. RED(신규 3건 실패) → GREEN. 전체 vitest 17건/8파일 실패 = 기준선 동일(신규 실패 0), tsc·eslint·build 통과.
+- 회원 화면: 미적용(제안). 회원 배너는 소켓·LiveKit·브라우저 온라인을 합산하고, REST 폴백 송신의 건강 신호(최근 성공 시각)가 외부에 노출되어 있지 않다. useBand 에 마지막 feature 송신 성공 시각을 노출하면 동일 원칙 적용 가능 — 별도 작업 권고.

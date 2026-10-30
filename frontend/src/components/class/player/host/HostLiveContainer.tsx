@@ -16,7 +16,7 @@ import {
   type HostQueueEntry,
   type HostSelfBand,
 } from '../../../../lib/class/host-player-case';
-import { deriveNetUi, type PlayerMetricKey } from '../../../../lib/class/player-case';
+import { deriveNetUi, METRICS_FRESH_MS, type PlayerMetricKey } from '../../../../lib/class/player-case';
 import { countSignals, type ActiveSignal } from '../../../../lib/class/quiet-signal';
 import {
   contactStatusLabel,
@@ -85,7 +85,7 @@ export interface HostLiveContainerProps {
   /** 대기실 준비 현황 — 진행 중에는 보통 빈 배열이다 */
   waitingEntries: readonly WaitingRoomEntry[];
   quietSignals: Readonly<Record<string, ActiveSignal>>;
-  live: { socketConnected: boolean; metricsPollFailing: boolean; onRetry: () => void };
+  live: { socketConnected: boolean; metricsPollFailing: boolean; /** 마지막으로 live-metrics 폴링이 성공한 시각(epoch ms). 아직 없으면 null */ metricsLastOkAt: number | null; onRetry: () => void };
   speaking: { busyId: string | null; onSet: (participantId: string, granted: boolean) => void };
   chat: { enabled: boolean; busy: boolean; onToggleEnabled: () => void };
   recorder: ContainerRecorder;
@@ -223,14 +223,17 @@ export function HostLiveContainer(props: HostLiveContainerProps) {
 
   /* ───── 네트워크(C16) ───── */
   const browserOnline = useBrowserOnline();
-  const linkDown = !live.socketConnected || !browserOnline;
+  // 소켓이 끊겨도 live-metrics 폴링이 최근(METRICS_FRESH_MS 이내)에 성공했다면 지표는 오고 있으므로 배너를 숨긴다
+  const pollHealthy = !live.metricsPollFailing && live.metricsLastOkAt !== null && nowMs - live.metricsLastOkAt <= METRICS_FRESH_MS;
+  const socketEffective = live.socketConnected || pollHealthy;
+  const linkDown = !socketEffective || !browserOnline;
   const [downSince, setDownSince] = useState<number | null>(null);
   useEffect(() => {
     setDownSince((prev) => (linkDown ? (prev ?? Date.now()) : null));
   }, [linkDown]);
-  // 폴링까지 실패 중일 때만 "끊김"으로 본다 — 폴링이 살아 있으면 느리지만 데이터는 오고 있다
-  const downForMs = live.metricsPollFailing && downSince !== null ? Math.max(0, nowMs - downSince) : 0;
-  const net = deriveNetUi({ socketConnected: live.socketConnected, browserOnline, downForMs });
+  // 폴링까지 실패하거나 정체 중일 때만 "끊김"으로 본다
+  const downForMs = !pollHealthy && downSince !== null ? Math.max(0, nowMs - downSince) : 0;
+  const net = deriveNetUi({ socketConnected: socketEffective, browserOnline, downForMs });
 
   /* ───── 내 밴드 ───── */
   const [bandEverUsed, setBandEverUsed] = useState(false);
