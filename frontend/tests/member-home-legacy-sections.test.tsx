@@ -104,11 +104,11 @@ describe('회원 홈 기존 섹션 복원', () => {
     expect(view.querySelector('a[href="/app/classes/class-1"]')).not.toBeNull();
     expect(view.querySelectorAll('[role="alert"]')).toHaveLength(1);
   });
-  it('상담사 미연결 회원도 홈이 열린다', async () => {
+  it('상담사 미연결 회원도 홈이 열린다(SDD-256: 담당 상담사 영역·추가 버튼 유지)', async () => {
     useAuthStore.setState({ user: { id: 'u', name: '홍길동', counselors: [] } as never });
     const view = await render(<MemberStructureHomePage />);
     expect(view.querySelector('h1')?.textContent).toBe('안녕하세요, 홍길동님');
-    expect([...view.querySelectorAll('h2')].map((h) => h.textContent)).not.toContain('담당 상담사');
+    expect([...view.querySelectorAll('h2')].map((h) => h.textContent)).toContain('담당 상담사');
   });
 });
 

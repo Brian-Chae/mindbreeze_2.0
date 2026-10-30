@@ -1,0 +1,34 @@
+{
+  "kind": "static-mockup-only",
+  "browser": "156.0.8078.76",
+  "results": [
+    {
+      "board": "a",
+      "viewport": 390,
+      "overflow": 0,
+      "phoneWidth": 390,
+      "minimumButtonHeight": 44,
+      "font": "-apple-system, \"system-ui\", \"Apple SD Gothic Neo\", sans-serif"
+    },
+    {
+      "board": "b",
+      "viewport": 390,
+      "overflow": 0,
+      "phoneWidth": 390,
+      "minimumButtonHeight": 44,
+      "font": "-apple-system, \"system-ui\", \"Apple SD Gothic Neo\", sans-serif"
+    },
+    {
+      "board": "c",
+      "viewport": 390,
+      "overflow": 0,
+      "phoneWidth": 390,
+      "minimumButtonHeight": 48,
+      "font": "-apple-system, \"system-ui\", \"Apple SD Gothic Neo\", sans-serif"
+    }
+  ],
+  "errors": [],
+  "localInteractionAddsRow": true,
+  "realApiTested": false,
+  "realDeviceTested": false
+}
