@@ -108,6 +108,7 @@
 .hp-selfview__ic svg { width: 16px; height: 16px; }
 .hp-selfview__sz { left: 6px; }
 .hp-selfview__mic { right: 6px; }
+.hp-selfview__mic[data-mic-toggle="true"]::after { content: ""; position: absolute; inset: -8px; } /* 터치 영역 44px 확보 */
 .hp-selfview__mic[data-off="true"] { color: var(--mb-coral); }
 .hp-selfview__lb {
   position: absolute; left: 6px; bottom: 6px; max-width: calc(100% - 12px); height: 24px; padding: 0 8px; border-radius: var(--r-pill);

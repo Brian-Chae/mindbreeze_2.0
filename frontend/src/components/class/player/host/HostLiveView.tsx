@@ -273,6 +273,7 @@ export function HostLiveView(props: HostLiveViewProps) {
             <HostSelfView
               cam={hostCase.cam} mic={hostCase.mic} big={camBig} stream={selfStream} track={selfTrack} netBad={netBad}
               onPress={hostCase.cam === 'denied' || hostCase.cam === 'nodevice' ? () => uiActions.openSheet('permcam') : uiActions.toggleCamBig}
+              onToggleMic={actions.toggleMic}
             />
           ) : hostCase.summary ? (
             <HostSummaryPanel summary={hostCase.summary} />
