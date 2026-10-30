@@ -117,6 +117,16 @@ POLICIES: dict[SessionAction, ActionPolicy] = {
 }
 
 
+_ORG_ADMIN_READ_ACTIONS = frozenset(
+    {
+        SessionAction.SESSION_VIEW,
+        SessionAction.RECORD_VIEW,
+        SessionAction.TRANSCRIPT_VIEW,
+        SessionAction.REPORT_STATUS_VIEW,
+    }
+)
+
+
 def _to_uuid(value: str | UUID) -> UUID:
     try:
         return UUID(str(value))
@@ -131,7 +141,17 @@ def authorize_session(
     policy = POLICIES[action]
     uid = _to_uuid(user_id)
     actor = db.query(User).filter(User.id==uid).first()
-    if actor and (actor.status!="active" or actor.role=="org_admin"):
+    if actor and actor.status!="active":
+        raise HTTPException(403,detail=policy.deny_detail)
+    if actor and actor.role=="org_admin":
+        # 기관관리자: 호스트가 아니면 원칙적으로 403. 예외는 자기 기관 명상 클래스 회차의 열람 계열뿐
+        # (기록지·리포트 상태·회차 조회·전사 응답). 타 기관·상담 세션·쓰기 계열은 그대로 403.
+        from app.services.class_access_service import admin_can_read_meditation_report
+        if (
+            action in _ORG_ADMIN_READ_ACTIONS
+            and admin_can_read_meditation_report(db,actor,session)
+        ):
+            return session
         raise HTTPException(403,detail=policy.deny_detail)
     if session.class_id:
         from app.models.class_program import Class

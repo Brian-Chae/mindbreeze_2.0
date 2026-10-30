@@ -50,6 +50,31 @@ def _share_org(counselor_id, client_id, db: DBSession) -> bool:
     return client_org in counselor_org_ids
 
 
+def _can_chat_with_client(host_id, client_id, db: DBSession) -> bool:
+    """상담사/기관관리자 → 회원 채팅 허용 판정.
+
+    ① active 연결(ClientCounselorLink) ② 같은 기관 소속(_share_org)
+    ③ 기관관리자의 관리 기관 회원(클래스 멤버·기관 상담관계·소속 상담사 연결 회원).
+    타 기관 회원은 불가. 회원 선택 목록(/clients)과 같은 범위(org_scope_ids)를 쓴다.
+    """
+    link = (
+        db.query(ClientCounselorLink)
+        .filter(
+            ClientCounselorLink.counselor_id == host_id,
+            ClientCounselorLink.client_id == client_id,
+        )
+        .first()
+    )
+    if link or _share_org(host_id, client_id, db):
+        return True
+    from app.services import client_overview_service as cos
+
+    orgs = cos.admin_org_ids(db, host_id)
+    if not orgs:
+        return False
+    return _uuid(client_id) in cos.org_scope_ids(db, orgs)[1]
+
+
 def _share_org_counselor(host_id, target_id, db: DBSession) -> bool:
     """host 상담사와 대상 상담사가 같은 기관에 소속되어 있는지 확인 (SDD-092).
 
@@ -207,15 +232,7 @@ def _ensure_member(room: ChatRoom, user_id: str, db: DBSession) -> Session | Non
     if room.room_type == "direct":
         if room.host_id == uid:
             return None
-        link = (
-            db.query(ClientCounselorLink)
-            .filter(
-                ClientCounselorLink.counselor_id == room.host_id,
-                ClientCounselorLink.client_id == uid,
-            )
-            .first()
-        )
-        if not link and not _share_org(room.host_id, uid, db):
+        if not _can_chat_with_client(room.host_id, uid, db):
             raise HTTPException(status_code=403, detail="채팅방 접근 권한이 없습니다")
         return None
     if room.room_type == "group":
@@ -388,15 +405,7 @@ def create_group_room(
         puid = _uuid(pid)
         if puid == host_uuid:
             continue
-        link = (
-            db.query(ClientCounselorLink)
-            .filter(
-                ClientCounselorLink.counselor_id == host_uuid,
-                ClientCounselorLink.client_id == puid,
-            )
-            .first()
-        )
-        if not link and not _share_org(host_uuid, puid, db):
+        if not _can_chat_with_client(host_uuid, puid, db):
             raise HTTPException(status_code=403, detail="연결되지 않은 내담자가 포함되어 있습니다")
         participant_uuids.append(puid)
     if not participant_uuids:
@@ -433,15 +442,7 @@ def create_room(
             raise HTTPException(status_code=422, detail="client_id가 필요합니다")
         counselor_uuid = _uuid(host_id)
         client_uuid = _uuid(client_id)
-        link = (
-            db.query(ClientCounselorLink)
-            .filter(
-                ClientCounselorLink.counselor_id == counselor_uuid,
-                ClientCounselorLink.client_id == client_uuid,
-            )
-            .first()
-        )
-        if not link and not _share_org(counselor_uuid, client_uuid, db):
+        if not _can_chat_with_client(counselor_uuid, client_uuid, db):
             raise HTTPException(status_code=403, detail="연결되지 않은 내담자입니다")
         # SDD-220: 신고·차단된 상대와는 방을 새로 만들 수 없다(방 재생성 우회 차단).
         moderation.ensure_not_blocked(counselor_uuid, client_uuid, db)
@@ -893,6 +894,20 @@ def list_my_rooms(user_id: str, db: DBSession) -> list[dict]:
     for cid in linked_counselor_ids:
         rooms.append(get_or_create_direct_room(cid, uid, db))
 
+    # 기관관리자가 만든 1:1 방은 연결(ClientCounselorLink)이 없어 위 루프에 안 잡힌다.
+    # 관리자 본인(host)과 상대 회원 양쪽 목록에 이미 만들어진 방을 노출한다.
+    admin_direct = (
+        db.query(ChatRoom)
+        .join(User, User.id == ChatRoom.host_id)
+        .filter(
+            ChatRoom.room_type == "direct",
+            User.role == "org_admin",
+            or_(ChatRoom.host_id == uid, ChatRoom.name == str(uid)),
+        )
+        .all()
+    )
+    rooms.extend(admin_direct)
+
     # 그룹방: 본인이 host(상담사) 이거나 ChatRoomParticipant 인 경우
     group_as_host = (
         db.query(ChatRoom)
@@ -1041,15 +1056,7 @@ def _validate_invitee(host_uuid: UUID, target_uuid: UUID, db: DBSession) -> None
     if not target:
         raise HTTPException(status_code=404, detail="초대할 사용자를 찾을 수 없습니다")
     if target.role == "client":
-        link = (
-            db.query(ClientCounselorLink)
-            .filter(
-                ClientCounselorLink.counselor_id == host_uuid,
-                ClientCounselorLink.client_id == target_uuid,
-            )
-            .first()
-        )
-        if not link and not _share_org(host_uuid, target_uuid, db):
+        if not _can_chat_with_client(host_uuid, target_uuid, db):
             raise HTTPException(status_code=403, detail="연결되지 않은 내담자가 포함되어 있습니다")
         return
     if target.role in ("counselor", "org_admin"):

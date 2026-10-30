@@ -376,6 +376,7 @@ def test_AZ2_대조군_기관_활성이면_계열A_C_응답이_비활성과_동�
 # AZ-3 — role 우회 없음: org_admin·platform_admin 도 타인 세션에서는 호스트가 아니다
 # ═════════════════════════════════════════════════════════════════════════
 _ADMIN_ACTORS = ["org_admin", "platform_admin"]
+_ORG_ADMIN_CLASS_READ = {"SESSION_VIEW", "RECORD_VIEW", "TRANSCRIPT_VIEW", "REPORT_STATUS_VIEW"}
 
 
 @pytest.mark.parametrize("actor", _ADMIN_ACTORS)
@@ -390,6 +391,12 @@ def test_AZ3_관리자_role도_호스트전용_액션은_403(client, world, case
 @pytest.mark.parametrize("actor", _ADMIN_ACTORS)
 @pytest.mark.parametrize("case", PARTICIPANT_CASES, ids=_ids(PARTICIPANT_CASES))
 def test_AZ3_관리자_role도_계열D_비참여자는_403(client, world, case, actor):
+    # 의도된 예외: 같은 기관 org_admin 은 자기 기관 명상 클래스 회차의 열람 4종(회차·기록지·전사·리포트 상태)만 허용.
+    # 그 외 계열D(채팅방·입장·구독)와 platform_admin 은 계속 403. 타 기관 차단은 test_org_admin_class_read.py 가 검증.
+    if actor == "org_admin" and case.action in _ORG_ADMIN_CLASS_READ:
+        res = _send(client, world, case, world.org_admin["h"])
+        assert res.status_code == 200, (case.action, res.status_code, res.text)
+        return
     res = _send(client, world, case, getattr(world, actor)["h"])
     assert res.status_code == 403, (case.action, actor, res.status_code, res.text)
     assert res.json()["detail"] == case.detail
