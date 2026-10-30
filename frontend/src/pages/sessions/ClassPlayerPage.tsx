@@ -1806,9 +1806,9 @@ export default function ClassPlayerPage() {
   );
 
   return (
-    <main className="min-h-screen bg-[#12081C] pb-10">
+    <main className="min-h-screen bg-[#12081C] pb-[calc(2.5rem+env(safe-area-inset-bottom,0px))]">
       {/* 플레이어 헤더 — 풀스크린 셸 (AppShell 밖) */}
-      <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-white/10 bg-[#12081C]/95 px-4 py-3 backdrop-blur sm:flex-nowrap sm:px-6">
+      <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-white/10 bg-[#12081C]/95 px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] backdrop-blur sm:flex-nowrap sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <button
             type="button"

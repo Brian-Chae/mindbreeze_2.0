@@ -1,0 +1,7 @@
+/* 기록·전송 문제 안내 — 앱 토스트(.nt-toast) 모양을 쓰되, 상단 바(클래스 이름·시간 배지) 아래에 띄워 가리지 않는다. */
+.rs-notice { position: fixed; z-index: 60; left: 16px; right: 16px; top: calc(max(16px, env(safe-area-inset-top, 0px)) + 64px); display: flex; justify-content: center; pointer-events: none; }
+.rs-notice__toast { pointer-events: auto; width: min(100%, 420px); }
+.rs-notice__body { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 12px 16px 12px 18px; }
+.rs-notice__body > .nt-toast__text { flex-basis: 100%; }
+.rs-notice__chip { font-size: 12px; font-weight: 700; color: #6e1a8c; }
+.rs-notice__retry { min-height: 44px; padding: 0 12px; font-size: 13px; font-weight: 700; color: #5f0080; text-decoration: underline; }

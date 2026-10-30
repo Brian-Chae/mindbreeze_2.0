@@ -608,7 +608,9 @@ describe('SDD244 기록 상태', () => {
     h.band.recordingStatus = { status:'stopped', stopReason:'quota', pendingCount:3, blockedCount:1, quotaWarning:true, resumeBlocked:vi.fn() };
     await render(<Container />);
     expect(q('[data-testid="biosignal-recording-status"]')?.textContent).toContain('저장 공간 부족으로 기록 중단');
-    expect(q('[data-testid="biosignal-recording-status"]')?.textContent).toContain('기록 저장 중');
+    // 정상 전송 대기(3건)는 숫자·'저장 중' 문구 없이 숨긴다 — 문제 상황(중단·확인 필요)만 보인다
+    expect(q('[data-testid="biosignal-recording-status"]')?.textContent).not.toContain('기록 저장 중');
+    expect(q('[data-testid="biosignal-saving"]')).toBeNull();
     expect(q('[data-testid="biosignal-recording-status"]')?.textContent).not.toContain('3건');
     expect(q('[data-testid="biosignal-blocked"]')?.textContent).toBe('전송 확인 필요 1건');
     await act(async()=>buttonByText('전송 재개')!.click());
