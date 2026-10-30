@@ -65,7 +65,7 @@ export const EVENT_LABELS: Record<string, string> = {
   organization_role_changed: '기관 역할 변경',
   organization_removed: '기관 제외',
   // 계정·프로필
-  counselor_profile_updated: '상담사 프로필 변경',
+  counselor_profile_updated: '코치 프로필 변경',
   primary_admin_profile_updated: '대표 관리자 프로필 변경',
   account_suspended: '계정 정지',
   account_reactivated: '계정 재활성화',

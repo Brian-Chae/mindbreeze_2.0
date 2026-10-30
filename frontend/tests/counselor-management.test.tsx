@@ -52,9 +52,9 @@ describe('순수 함수', () => {
     expect(normalizeCounselorCode('AB-12C')).toBeNull();
   });
   it('오류 분류: 409 중복 vs 기관 비활성 구분, 네트워크는 결과 불명', () => {
-    expect(classifyAddCounselorError(new ApiError(409, '이미 연결된 상담사입니다', null)).kind).toBe('duplicate');
+    expect(classifyAddCounselorError(new ApiError(409, '이미 연결된 코치입니다', null)).kind).toBe('duplicate');
     expect(classifyAddCounselorError(new ApiError(409, '비활성화된 기관에서는 이 작업을 수행할 수 없습니다', null)).kind).toBe('org_inactive');
-    expect(classifyAddCounselorError(new ApiError(404, '유효하지 않은 상담사 코드입니다', null)).message).toBe('유효하지 않은 상담사 코드입니다');
+    expect(classifyAddCounselorError(new ApiError(404, '유효하지 않은 코치 코드입니다', null)).message).toBe('유효하지 않은 코치 코드입니다');
     expect(classifyAddCounselorError(new TypeError('Failed to fetch')).kind).toBe('unknown_result');
   });
   it('불변 병합', () => {
@@ -75,7 +75,7 @@ describe('설정 > 상담사 관리 패널', () => {
     expect(el.textContent).toContain('대구교육청');
     expect(el.textContent).toContain('박코치');
     expect(el.textContent).toContain('소속 기관 정보 없음');
-    expect(el.textContent).toContain('코드로 상담사 추가');
+    expect(el.textContent).toContain('코드로 코치 추가');
   });
 
   it('0명이어도 빈 상태와 추가 버튼 유지, 조회 실패는 0명으로 오인하지 않고 재시도 제공', async () => {
@@ -84,8 +84,8 @@ describe('설정 > 상담사 관리 패널', () => {
     const el = await render(<CounselorManagementPanel />);
     await flush();
     expect(el.textContent).toContain('불러오지 못했어요');
-    expect(el.textContent).not.toContain('아직 연결된 상담사가 없어요');
-    expect(el.textContent).toContain('코드로 상담사 추가');
+    expect(el.textContent).not.toContain('아직 연결된 코치가 없어요');
+    expect(el.textContent).toContain('코드로 코치 추가');
   });
 });
 
@@ -93,7 +93,7 @@ describe('코드 입력 시트', () => {
   async function open() {
     const el = await render(<CounselorManagementPanel />);
     await flush();
-    act(() => { (Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.includes('코드로 상담사 추가')) as HTMLButtonElement).click(); });
+    act(() => { (Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.includes('코드로 코치 추가')) as HTMLButtonElement).click(); });
     return el;
   }
   const submitBtn = () => document.querySelector('button[type="submit"]') as HTMLButtonElement;
@@ -114,7 +114,7 @@ describe('코드 입력 시트', () => {
     await act(async () => { submitBtn().click(); });
     await flush();
     expect(api.post).toHaveBeenCalledWith('/client/counselors', { code: '001131' });
-    expect(document.body.textContent).toContain('상담사를 추가했어요');
+    expect(document.body.textContent).toContain('코치를 추가했어요');
     expect(useAuthStore.getState().user!.counselors.map((c) => c.id)).toEqual(['a', 'b']);
   });
 
@@ -131,22 +131,22 @@ describe('코드 입력 시트', () => {
 
   it('404: 서버 문구, 입력 유지, 목록 불변', async () => {
     await open();
-    api.post.mockRejectedValue(new ApiError(404, '유효하지 않은 상담사 코드입니다', null));
+    api.post.mockRejectedValue(new ApiError(404, '유효하지 않은 코치 코드입니다', null));
     setInput(input(), 'ZZZZZZ');
     await act(async () => { submitBtn().click(); });
     await flush();
-    expect(document.body.textContent).toContain('유효하지 않은 상담사 코드입니다');
+    expect(document.body.textContent).toContain('유효하지 않은 코치 코드입니다');
     expect(input().value).toBe('ZZZZZZ');
     expect(useAuthStore.getState().user!.counselors).toHaveLength(1);
   });
 
   it('409 중복 안내, 네트워크 단절은 결과 불명 문구', async () => {
     await open();
-    api.post.mockRejectedValueOnce(new ApiError(409, '이미 연결된 상담사입니다', null));
+    api.post.mockRejectedValueOnce(new ApiError(409, '이미 연결된 코치입니다', null));
     setInput(input(), 'AB12CD');
     await act(async () => { submitBtn().click(); });
     await flush();
-    expect(document.body.textContent).toContain('이미 연결된 상담사입니다');
+    expect(document.body.textContent).toContain('이미 연결된 코치입니다');
     api.post.mockRejectedValueOnce(new TypeError('Failed to fetch'));
     await act(async () => { submitBtn().click(); });
     await flush();

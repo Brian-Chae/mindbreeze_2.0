@@ -14,10 +14,10 @@ const GOLDEN = {
   playground: '플레이그라운드',
   notification: '알림',
   setting: '설정',
-  'org-counselors': '상담사',
+  'org-counselors': '코치',
   'admin-orgs': '기관 관리',
   'admin-applications': '가입 신청',
-  'admin-users': '상담사 관리',
+  'admin-users': '코치 관리',
   'admin-clients': '회원 관리',
   more: '더보기',
 } as const satisfies Partial<Record<TermKey, string>>;
@@ -28,7 +28,7 @@ const ADDED_GOLDEN = {
   'my-class': { meditation: '내 클래스', counseling: '내 클래스' },
   'my-counseling': { meditation: '내 상담', counseling: '내 상담' },
   members: { meditation: '구성원', counseling: '구성원' },
-  instructor: { meditation: '지도사', counseling: '상담사' },
+  instructor: { meditation: '지도사', counseling: '코치' },
 } as const satisfies Record<Exclude<TermKey, keyof typeof GOLDEN>, Record<TermArea, string>>;
 const AREAS: TermArea[] = ['meditation', 'counseling'];
 

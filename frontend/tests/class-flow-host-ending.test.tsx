@@ -114,7 +114,7 @@ describe('EndConfirmScreen', () => {
     const onContinue = vi.fn();
     await mount(false, onEnd, onContinue);
     const t = container.querySelector('[role="dialog"]')?.textContent ?? '';
-    for (const s of ['클래스를 끝낼까요?', '녹음과 녹화가 저장돼요', '상담사·회원 리포트가 자동으로 만들어져요', '참여 중인 회원 8명의 화면도 함께 끝나요', '클래스 끝내기', '계속 진행']) expect(t).toContain(s);
+    for (const s of ['클래스를 끝낼까요?', '녹음과 녹화가 저장돼요', '코치·회원 리포트가 자동으로 만들어져요', '참여 중인 회원 8명의 화면도 함께 끝나요', '클래스 끝내기', '계속 진행']) expect(t).toContain(s);
     expect(onEnd).not.toHaveBeenCalled();
     await click(btn('클래스 끝내기'));
     expect(onEnd).toHaveBeenCalledTimes(1);

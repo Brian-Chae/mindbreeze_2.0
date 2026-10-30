@@ -6,7 +6,7 @@ export const DEMO = {
   title: '마음챙김 명상 · 4회차',
   soloTitle: '마음챙김 상담 · 3회차',
   host: '채용욱',
-  hostLabel: '채용욱 상담사',
+  hostLabel: '채용욱 코치',
   time: '오늘 오후 3:00',
   startLabel: '오늘 오후 3:00 시작',
   place: '서울 강남구 테헤란로 123, 5층 명상실',

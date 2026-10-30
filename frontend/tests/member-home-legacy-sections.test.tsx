@@ -63,7 +63,7 @@ describe('회원 홈 기존 섹션 복원', () => {
     const view = await render(<MemberStructureHomePage />);
     expect(view.querySelector('h1')?.textContent).toBe('안녕하세요, 홍길동님');
     const heads = [...view.querySelectorAll('h2')].map((h) => h.textContent);
-    for (const name of ['초대된 클래스', '이번 주 클래스', '내 리포트', '담당 상담사', '최근 대화', '새 알림', '내 클래스', '내 상담']) expect(heads).toContain(name);
+    for (const name of ['초대된 클래스', '이번 주 클래스', '내 리포트', '담당 코치', '최근 대화', '새 알림', '내 클래스', '내 상담']) expect(heads).toContain(name);
     expect(view.querySelector('a[data-testid="enter-with-code"]')?.getAttribute('href')).toBe('/join');
     expect(view.querySelector('a[data-testid="enter-with-code"]')?.textContent).toBe('코드로 바로 입장');
     expect(view.textContent).toContain('초대받은 호흡 명상');
@@ -109,7 +109,7 @@ describe('회원 홈 기존 섹션 복원', () => {
     useAuthStore.setState({ user: { id: 'u', name: '홍길동', counselors: [] } as never });
     const view = await render(<MemberStructureHomePage />);
     expect(view.querySelector('h1')?.textContent).toBe('안녕하세요, 홍길동님');
-    expect([...view.querySelectorAll('h2')].map((h) => h.textContent)).toContain('담당 상담사');
+    expect([...view.querySelectorAll('h2')].map((h) => h.textContent)).toContain('담당 코치');
   });
 });
 
@@ -134,12 +134,12 @@ describe('내 클래스 신청 진입', () => {
 });
 
 describe('SDD-256 실제 회원 홈(/app) 상담사 추가', () => {
-  it('실제 홈에 담당 상담사 영역·추가 버튼이 있고 누르면 시트가 열린다', async () => {
+  it('실제 홈에 담당 코치 영역·추가 버튼이 있고 누르면 시트가 열린다', async () => {
     useAuthStore.setState({ user: { id: 'u', name: '홍길동', counselors: [] } as never });
     const view = await render(<MemberStructureHomePage />);
     const section = view.querySelector('[data-testid="home-counselors"]')!;
-    expect(section.textContent).toContain('아직 연결된 상담사가 없어요');
-    const add = [...section.querySelectorAll('button')].find((b) => b.textContent?.includes('상담사 추가'))!;
+    expect(section.textContent).toContain('아직 연결된 코치가 없어요');
+    const add = [...section.querySelectorAll('button')].find((b) => b.textContent?.includes('코치 추가'))!;
     expect(add).toBeDefined();
     await act(async () => add.click());
     expect(document.querySelector('[role="dialog"]')).not.toBeNull();

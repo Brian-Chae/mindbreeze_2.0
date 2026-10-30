@@ -139,7 +139,7 @@ export function deriveEnding(input: EndingInput): EndingView {
 
 /** FH09 종료 확인 시트의 3줄. 인원을 모르면 숫자 없이, 0명이면 줄을 뺀다 */
 export function endConfirmLines(headcount: number | null): string[] {
-  const lines = ['녹음과 녹화가 저장돼요', '상담사·회원 리포트가 자동으로 만들어져요'];
+  const lines = ['녹음과 녹화가 저장돼요', '코치·회원 리포트가 자동으로 만들어져요'];
   if (headcount === null) lines.push('참여 중인 회원의 화면도 함께 끝나요');
   else if (headcount > 0) lines.push(`참여 중인 회원 ${headcount}명의 화면도 함께 끝나요`);
   return lines;
