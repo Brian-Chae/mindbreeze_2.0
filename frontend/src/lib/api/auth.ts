@@ -15,7 +15,7 @@ export interface User {
   verified_tier: VerifiedTier;
   onboarding_completed: boolean;
   auth_provider: string;
-  counselors: Array<{ id: string; name: string; profile_image: string | null }>;
+  counselors: Array<{ id: string; name: string; profile_image: string | null; org_name?: string | null; status?: string }>;
   counselor_code?: string | null;
 }
 

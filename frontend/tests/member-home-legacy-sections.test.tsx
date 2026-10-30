@@ -75,11 +75,12 @@ describe('회원 홈 기존 섹션 복원', () => {
   it('레일은 상담사 대화 버튼과 전체 알림 행 클릭을 제공한다', async () => {
     const view = await render(<><MemberStructureHomePage /><LocationMarker /></>);
     const rail = view.querySelector('.mh-rail')!;
-    expect([...rail.querySelectorAll('button')].some(b => b.textContent?.includes('대화하기'))).toBe(true);
+    const counselors = view.querySelector('[data-testid="home-counselors"]')!;
+    expect([...counselors.querySelectorAll('button')].some(b => b.textContent?.includes('대화하기'))).toBe(true);
     const notification = [...rail.querySelectorAll('button')].find(b => b.textContent?.includes('새 알림 제목'));
     expect(notification).toBeDefined();
     expect(notification?.querySelector('button')).toBeNull();
-    const chatButton = [...rail.querySelectorAll('button')].find(b => b.textContent?.includes('대화하기'))!;
+    const chatButton = [...counselors.querySelectorAll('button')].find(b => b.textContent?.includes('대화하기'))!;
     await act(async () => chatButton.click());
     expect(view.querySelector('[data-testid="rail-location"]')?.textContent).toBe('/app/chat');
     await act(async () => notification!.click());
@@ -104,11 +105,11 @@ describe('회원 홈 기존 섹션 복원', () => {
     expect(view.querySelector('a[href="/app/classes/class-1"]')).not.toBeNull();
     expect(view.querySelectorAll('[role="alert"]')).toHaveLength(1);
   });
-  it('상담사 미연결 회원도 홈이 열린다', async () => {
+  it('상담사 미연결 회원도 홈이 열린다(SDD-256: 담당 상담사 영역·추가 버튼 유지)', async () => {
     useAuthStore.setState({ user: { id: 'u', name: '홍길동', counselors: [] } as never });
     const view = await render(<MemberStructureHomePage />);
     expect(view.querySelector('h1')?.textContent).toBe('안녕하세요, 홍길동님');
-    expect([...view.querySelectorAll('h2')].map((h) => h.textContent)).not.toContain('담당 상담사');
+    expect([...view.querySelectorAll('h2')].map((h) => h.textContent)).toContain('담당 상담사');
   });
 });
 
@@ -129,5 +130,25 @@ describe('내 클래스 신청 진입', () => {
     expect(send?.disabled).toBe(false);
     await act(async () => { send?.click(); });
     expect(api.send).toHaveBeenCalledWith('room-1', { content: '클래스 신청합니다', type: 'system', event_type: 'session_request' });
+  });
+});
+
+describe('SDD-256 실제 회원 홈(/app) 상담사 추가', () => {
+  it('실제 홈에 담당 상담사 영역·추가 버튼이 있고 누르면 시트가 열린다', async () => {
+    useAuthStore.setState({ user: { id: 'u', name: '홍길동', counselors: [] } as never });
+    const view = await render(<MemberStructureHomePage />);
+    const section = view.querySelector('[data-testid="home-counselors"]')!;
+    expect(section.textContent).toContain('아직 연결된 상담사가 없어요');
+    const add = [...section.querySelectorAll('button')].find((b) => b.textContent?.includes('상담사 추가'))!;
+    expect(add).toBeDefined();
+    await act(async () => add.click());
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+  });
+  it('연결된 상담사가 여러 명이면 모두 목록에 나온다', async () => {
+    useAuthStore.setState({ user: { id: 'u', name: '홍길동', counselors: [{ id: 'a', name: '김상담', profile_image: null }, { id: 'b', name: '이코치', profile_image: null }] } as never });
+    const view = await render(<MemberStructureHomePage />);
+    const text = view.querySelector('[data-testid="home-counselors"]')!.textContent;
+    expect(text).toContain('김상담');
+    expect(text).toContain('이코치');
   });
 });
