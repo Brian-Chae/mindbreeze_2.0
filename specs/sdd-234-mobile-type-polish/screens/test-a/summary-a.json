@@ -7,9 +7,7 @@
     "width": 1440,
     "failure": null,
     "errors": [],
-    "unknown": [
-      "/api/v1/reports/counts"
-    ],
+    "unknown": [],
     "shell": "default",
     "scrollWidth": 1440,
     "sectionGaps": [
@@ -98,9 +96,7 @@
     "width": 390,
     "failure": null,
     "errors": [],
-    "unknown": [
-      "/api/v1/reports/counts"
-    ],
+    "unknown": [],
     "shell": "default",
     "scrollWidth": 390,
     "sectionGaps": [
@@ -184,9 +180,7 @@
     "width": 768,
     "failure": null,
     "errors": [],
-    "unknown": [
-      "/api/v1/reports/counts"
-    ],
+    "unknown": [],
     "shell": "default",
     "scrollWidth": 768,
     "sectionGaps": [
@@ -275,9 +269,7 @@
     "width": 1440,
     "failure": null,
     "errors": [],
-    "unknown": [
-      "/api/v1/reports/counts"
-    ],
+    "unknown": [],
     "shell": "structure",
     "scrollWidth": 1440,
     "sectionGaps": [
@@ -319,7 +311,7 @@
     ],
     "distributions": {
       "fontSize": {
-        "12": 19,
+        "12": 20,
         "13": 16,
         "14": 11,
         "15": 17,
@@ -332,7 +324,7 @@
       },
       "lineHeight": {
         "16.8px": 1,
-        "18px": 18,
+        "18px": 19,
         "19.5px": 7,
         "21px": 3,
         "22.1px": 8,
@@ -349,15 +341,15 @@
         "400": 28,
         "500": 6,
         "600": 14,
-        "700": 22,
+        "700": 23,
         "800": 13
       }
     },
     "summary": {
-      "textCount": 83,
+      "textCount": 84,
       "minFont": 11.2,
-      "smallTextCount": 20,
-      "smallTextRatio": 24.1,
+      "smallTextCount": 21,
+      "smallTextRatio": 25,
       "smallTouchCount": 0,
       "narrowTouchCount": 0
     }
@@ -370,9 +362,7 @@
     "width": 390,
     "failure": null,
     "errors": [],
-    "unknown": [
-      "/api/v1/reports/counts"
-    ],
+    "unknown": [],
     "shell": "structure",
     "scrollWidth": 390,
     "sectionGaps": [
@@ -461,9 +451,7 @@
     "width": 768,
     "failure": null,
     "errors": [],
-    "unknown": [
-      "/api/v1/reports/counts"
-    ],
+    "unknown": [],
     "shell": "structure",
     "scrollWidth": 768,
     "sectionGaps": [
@@ -505,7 +493,7 @@
     ],
     "distributions": {
       "fontSize": {
-        "12": 19,
+        "12": 20,
         "13": 15,
         "14": 10,
         "15": 17,
@@ -516,7 +504,7 @@
         "30": 4
       },
       "lineHeight": {
-        "18px": 18,
+        "18px": 19,
         "19.5px": 6,
         "21px": 2,
         "22.1px": 8,
@@ -534,15 +522,15 @@
         "400": 25,
         "500": 6,
         "600": 14,
-        "700": 22,
+        "700": 23,
         "800": 13
       }
     },
     "summary": {
-      "textCount": 80,
+      "textCount": 81,
       "minFont": 12,
-      "smallTextCount": 19,
-      "smallTextRatio": 23.8,
+      "smallTextCount": 20,
+      "smallTextRatio": 24.7,
       "smallTouchCount": 0,
       "narrowTouchCount": 0
     }
