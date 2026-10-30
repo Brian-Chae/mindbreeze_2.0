@@ -1,0 +1,24 @@
+{
+  "first_sequence": 1,
+  "size_bytes": 92,
+  "last_sequence": 3,
+  "content_encoding": "gzip",
+  "artifact_alias": "NF-00000014-1",
+  "row_count": 3,
+  "schema_version": "feature-v1",
+  "sequence": 1,
+  "content_type": "application/x-ndjson",
+  "stream_id": "27d369f0-844c-39b4-8ce1-7b200482c714",
+  "time_range": {
+    "from_us": "1000000",
+    "to_us": "4000000"
+  },
+  "monotonic_range": {
+    "from_us": "1000000",
+    "to_us": "4000000"
+  },
+  "checksum": "574838278a11fa43bcebd2b6adef5318a94aea7d827cd6f2eba2c0a82926b59f",
+  "segment_id": "ad2beca4-787d-30f3-9e4c-48ad87165ab0",
+  "signal": "eeg",
+  "artifact_kind": "feature"
+}

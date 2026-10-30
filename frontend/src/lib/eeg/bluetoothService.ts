@@ -97,6 +97,8 @@ export interface BluetoothEEGService {
   clearDeviceCache(): void;
   /** 네이티브 측정이 밴드를 잡기 전에 JS 연결을 놓는다. 해제 전 연결 ID(MAC)를 돌려준다(연결 없으면 null). */
   releaseForNative(): Promise<string | null>;
+  /** releaseForNative 로 JS 연결을 네이티브에 넘긴 상태인가. true 인 동안 JS 자동 재연결은 밴드를 다시 잡지 않는다. */
+  isReleasedForNative(): boolean;
 }
 
 class LinkBandBluetoothService implements BluetoothEEGService {
@@ -118,6 +120,8 @@ class LinkBandBluetoothService implements BluetoothEEGService {
   private batteryCharUuid: string | null = null;
 
   private connectionLostCallback: (() => void) | null = null;
+  /** releaseForNative 이후 사용자가 직접 connect() 하기 전까지 true — JS 자동 재연결 억제용 */
+  private releasedForNative = false;
 
   // StreamProcessor 인스턴스
   private streamProcessor: StreamProcessor;
@@ -457,6 +461,7 @@ class LinkBandBluetoothService implements BluetoothEEGService {
   }
 
   async connect(deviceId: string): Promise<void> {
+    this.releasedForNative = false;
     try {
       const provider = await this.ensureProvider();
 
@@ -994,8 +999,14 @@ class LinkBandBluetoothService implements BluetoothEEGService {
   async releaseForNative(): Promise<string | null> {
     const id = this.deviceId || this.lastDeviceId || null;
     if (!id) return null;
+    // disconnect() 도중 발화하는 connectionLost 가 useBand 의 자동 재연결을 예약해, 네이티브가 잡은 밴드를 JS 가 다시 잡는 경합을 막는다.
+    this.releasedForNative = true;
     await this.disconnect();
     return id;
+  }
+
+  isReleasedForNative(): boolean {
+    return this.releasedForNative;
   }
 }
 

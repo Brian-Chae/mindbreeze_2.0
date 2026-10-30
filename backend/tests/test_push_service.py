@@ -106,6 +106,11 @@ def test_TS3_FCM_v1_엔드포인트와_메시지_형태가_규격을_따른다(m
     # data 값은 모두 문자열
     assert message["data"] == {"deeplink": "/app/ai", "message_id": "mid-1"}
     assert all(isinstance(v, str) for v in message["data"].values())
+    # SDD-250: Android 백그라운드 헤드업용 채널·우선순위
+    assert message["android"] == {
+        "priority": "HIGH",
+        "notification": {"channel_id": "mindbreeze_default", "sound": "default", "notification_priority": "PRIORITY_HIGH"},
+    }
 
 
 def test_TS3_data_값은_문자열로_강제된다():

@@ -631,12 +631,18 @@ def test_AZ8_approve_report_비호스트_403_승인_전용_문구(client, world)
     assert res.json()["detail"] == DETAIL_APPROVE_HOST_ONLY
 
 
-@pytest.mark.parametrize("actor", _ADMIN_ACTORS)
-def test_AZ8_approve_report_관리자_role도_403(client, world, actor):
+def test_AZ8_approve_report_플랫폼_관리자는_403(client, world):
     rid = _make_report(world.sid, world.host["id"])
-    res = client.post(f"/api/v1/reports/{rid}/approve", headers=getattr(world, actor)["h"])
+    res = client.post(f"/api/v1/reports/{rid}/approve", headers=world.platform_admin["h"])
     assert res.status_code == 403
     assert res.json()["detail"] == DETAIL_APPROVE_HOST_ONLY
+
+
+def test_AZ8_approve_report_같은_기관_기관관리자는_승인_가능_SDD253_D3(client, world):
+    """SDD-253 D3(대표 결정): 허용 기관의 활성 기관관리자는 승인할 수 있다. 다른 기관은 별도 테스트가 403 을 단언한다."""
+    rid = _make_report(world.sid, world.host["id"])
+    res = client.post(f"/api/v1/reports/{rid}/approve", headers=world.org_admin["h"])
+    assert res.status_code == 200, res.text
 
 
 def test_AZ8_approve_report_존재하지_않는_리포트는_404(client, lone):

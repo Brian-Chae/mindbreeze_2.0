@@ -1,7 +1,7 @@
 """measure-guard C1: 무효 EEG 구간(null+invalid) 수신·품질·집계 방어.
 
 - live:metric 의 EEG 지표 전부 null+invalid 를 거부하지 않고 저장하되 quality 는 invalid (sqi 가 높아도 valid 로 세지 않는다).
-- 리포트·클래스 집계는 TNA 극단값(>1000)을 0 이 아니라 제외한다.
+- 리포트·클래스 집계는 TNA 극단값(>2000)을 0 이 아니라 제외한다.
 """
 from datetime import datetime, timezone
 
@@ -75,6 +75,13 @@ def test_brain_rest_score_는_TNA_극단값을_None_으로_제외한다():
     assert brain_rest_score(TNA_OUTLIER_MAX, PARAMS) is not None
     assert brain_rest_score(TNA_OUTLIER_MAX + 1, PARAMS) is None
     assert brain_rest_score(2.4e7, PARAMS) is None
+
+
+def test_TNA_경계값_1600_1999_2000_은_포함_2000_1_은_제외():
+    assert TNA_OUTLIER_MAX == 2000.0
+    for v in (1600.0, 1999.0, 2000.0):
+        assert brain_rest_score(v, PARAMS) is not None
+    assert brain_rest_score(2000.1, PARAMS) is None
 
 
 def test_세션_지표_평균에서_TNA_극단값은_제외된다():

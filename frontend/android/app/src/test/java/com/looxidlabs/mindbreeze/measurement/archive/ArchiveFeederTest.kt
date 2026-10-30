@@ -52,4 +52,27 @@ class ArchiveFeederTest {
         assertEquals(listOf(1L, 7L), metas.map { it.getLong("first_sequence") })
         assertEquals(listOf(3L, 8L), metas.map { it.getLong("last_sequence") })
     }
+
+    @Test fun featureMetaCarriesServerRequiredScope() {
+        val q = ArchiveQueue(File(tmp.root, "q")); val f = feeder(q)
+        for (s in 1L..10L) f.onFrame(frame(s))
+        val m = q.all()[0].meta
+        assertEquals("eeg", m.getString("signal"))
+        for (k in listOf("stream_id", "segment_id")) assertTrue(k, m.getString(k).matches(Regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")))
+        assertEquals(RawIds.streamId("00000001-0000-4000-8000-000000000001", com.looxidlabs.mindbreeze.measurement.Sensor.EEG), m.getString("stream_id"))
+    }
+
+    @Test fun legacyNullScopeFeaturesAreRepairedAndRequeued() {
+        val q = ArchiveQueue(File(tmp.root, "q"))
+        val bad = org.json.JSONObject().put("artifact_alias", "NF-X-1").put("artifact_kind", "feature").put("signal", org.json.JSONObject.NULL)
+            .put("segment_id", org.json.JSONObject.NULL).put("stream_id", "x").put("checksum", "a".repeat(64)).put("size_bytes", 3)
+        val item = q.enqueue("feature", "s1", "p1", "NF-X-1", bad, byteArrayOf(1, 2, 3))
+        item.status = ArchiveStatus.DEAD_LETTER; item.lastReason = "http_422"; q.update(item)
+        val n = q.repairLegacyFeatures({ "stream-of-$it" }, { "segment-of-$it" })
+        assertEquals(1, n)
+        val r = q.get(item.id)!!
+        assertEquals(ArchiveStatus.PENDING, r.status); assertEquals("eeg", r.meta.getString("signal"))
+        assertEquals("segment-of-s1", r.meta.getString("segment_id")); assertEquals(0, r.attempts)
+        assertEquals(0, q.repairLegacyFeatures({ "x" }, { "y" })) // 두 번째는 보정할 것이 없다
+    }
 }

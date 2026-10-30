@@ -100,10 +100,10 @@ function useRead<T>(resource: string, load: (signal: AbortSignal) => Promise<T>,
 function paramsKey(params?: ListParams): string {
   return JSON.stringify([params?.status ?? null, params?.page ?? null, params?.limit ?? null]);
 }
-export function useClasses(params?: ListParams) {
+export function useClasses(params?: ListParams, enabled = true) {
   const { status, page, limit } = params ?? {};
   const load = useCallback((signal: AbortSignal) => getClasses({ status, page, limit }, signal), [status, page, limit]);
-  return useRead(`classes:${paramsKey(params)}`, load);
+  return useRead(`classes:${paramsKey(params)}`, load, false, enabled);
 }
 export function useCounseling(params?: ListParams, enabled = true) {
   const { status, page, limit } = params ?? {};

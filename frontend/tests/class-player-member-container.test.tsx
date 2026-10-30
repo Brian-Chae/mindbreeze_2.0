@@ -608,7 +608,9 @@ describe('SDD244 기록 상태', () => {
     h.band.recordingStatus = { status:'stopped', stopReason:'quota', pendingCount:3, blockedCount:1, quotaWarning:true, resumeBlocked:vi.fn() };
     await render(<Container />);
     expect(q('[data-testid="biosignal-recording-status"]')?.textContent).toContain('저장 공간 부족으로 기록 중단');
-    expect(q('[data-testid="biosignal-recording-status"]')?.textContent).toContain('기록 저장 중');
+    // 정상 전송 대기(3건)는 숫자·'저장 중' 문구 없이 숨긴다 — 문제 상황(중단·확인 필요)만 보인다
+    expect(q('[data-testid="biosignal-recording-status"]')?.textContent).not.toContain('기록 저장 중');
+    expect(q('[data-testid="biosignal-saving"]')).toBeNull();
     expect(q('[data-testid="biosignal-recording-status"]')?.textContent).not.toContain('3건');
     expect(q('[data-testid="biosignal-blocked"]')?.textContent).toBe('전송 확인 필요 1건');
     await act(async()=>buttonByText('전송 재개')!.click());
@@ -635,12 +637,28 @@ describe('네트워크 상태(M18·M19)', () => {
     await advance(1000);
     expect(q('[data-pz="banner"]')?.textContent).toContain('연결이 불안정해요');
     await advance(15_000);
-    expect(q('[data-pz="net-down"]')?.textContent).toContain('연결이 끊겼어요');
+    // 기기 인터넷은 정상, 서버 소켓만 끊김 → '인터넷 확인' 대신 서버 재연결 안내 + 밴드 유지 안내
+    expect(q('[data-pz="net-down"]')?.textContent).toContain('서버에 다시 연결하는 중이에요');
+    expect(q('[data-pz="net-down"]')?.textContent).toContain('밴드는 계속 연결돼 있어요');
     h.socket.isConnected = true;
     await render(<Container />);
     await advance(1000);
     expect(q('[data-pz="net-down"]')).toBeNull();
     expect(q('[data-pz="banner"]')).toBeNull();
+  });
+  it('앱 복귀(visibilitychange) 시 소켓·LiveKit 즉시 재연결을 시도하고 끊김 타이머를 처음부터 센다', async () => {
+    await render(<Container />);
+    await advance(1000);
+    h.socket.isConnected = false;
+    await render(<Container />);
+    await advance(10_000);
+    h.lk.connect.mockClear();
+    await act(async () => { document.dispatchEvent(new Event('visibilitychange')); });
+    expect(h.lk.connect).toHaveBeenCalledTimes(1);
+    await advance(10_000); // 복귀 시점부터 10초 — 복귀 전 10초와 합쳐 20초지만 끊김 카드는 아직 아니다
+    expect(q('[data-pz="net-down"]')).toBeNull();
+    await advance(6_000);
+    expect(q('[data-pz="net-down"]')).not.toBeNull();
   });
   it('처음 연결되기 전의 isConnected=false 는 끊김으로 보지 않는다', async () => {
     h.socket.isConnected = false;

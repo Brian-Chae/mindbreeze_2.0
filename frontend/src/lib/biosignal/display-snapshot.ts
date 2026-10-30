@@ -205,7 +205,7 @@ export class DisplayRecorder {
     const bytes = new TextEncoder().encode(JSON.stringify(snapshot));
     const payload = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
     await this.queue.enqueueArtifact({ artifact_alias: alias, artifact_kind: 'normalization', stream_id: null, segment_id: null, signal: null, sequence: await this.queue.artifactSequence('normalization', alias), row_count: 1, content_encoding: 'identity',
-      schema_version: 'normalization-v1', checksum: await sha256(payload), size_bytes: payload.byteLength, content_type: 'application/json' }, payload);
+      schema_version: 'normalization-v1', checksum: await sha256(payload), size_bytes: payload.byteLength, content_type: 'application/octet-stream' }, payload);
     this.normalization = snapshot; this.modelSeen = true; this.lastModel = model;
   }
 

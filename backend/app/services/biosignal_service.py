@@ -120,7 +120,9 @@ def _object_key(sid: UUID, pid: UUID, meta: PresignChunk) -> str:
 def _time_ms(header, sample_index: int) -> float:
     """anchor 기준 유리수 시각(µs) → ms. 최종 출력에서만 float 로 변환한다."""
     a = header.anchor
-    us = Fraction(int(a.relative_us)) + Fraction(sample_index - a.sample_index) * 1_000_000 * header.rate.denominator / header.rate.numerator
+    # 실측 rate 가 있으면 그것으로 시간축을 만든다 — ACC 처럼 명목(30Hz)과 실제(≈26Hz)가 다른 신호가 종료 시각을 짧게 보이지 않게.
+    rate = header.observed_rate or header.rate
+    us = Fraction(int(a.relative_us)) + Fraction(sample_index - a.sample_index) * 1_000_000 * rate.denominator / rate.numerator
     return float(us / 1000)
 
 
@@ -341,6 +343,23 @@ def ack_raw(session_id: str, payload: AckRequest, db: DBSession, *, current_user
     if any(cid not in by_id for cid in wanted):
         raise HTTPException(status_code=404, detail="raw 청크를 찾을 수 없습니다")
 
+    # 저장소(S3) 검증은 네트워크 호출이라 느릴 수 있다 — DB 트랜잭션(커넥션)을 쥔 채 기다리면 풀이 고갈된다.
+    # 검증 대상을 값으로 복사한 뒤 트랜잭션을 닫아 커넥션을 반환하고, 검증 후 행을 다시 읽어 반영한다.
+    to_verify = [
+        (r.id, r.object_key, r.size_bytes, r.checksum)
+        for item in payload.chunks
+        for r in (by_id[item.chunk_id],)
+        if item.checksum == r.checksum and item.size_bytes == r.size_bytes and r.upload_status != "uploaded"
+    ]
+    db.commit()
+    verdicts = {
+        cid: storage_service.verify_object_sha256(key, expected_size=size, expected_sha256_hex=checksum)
+        for cid, key, size, checksum in to_verify
+    }
+    by_id = {r.id: r for r in db.query(EEGRawChunk).filter(EEGRawChunk.id.in_(wanted)).all()}
+    if any(cid not in by_id for cid in wanted):
+        raise HTTPException(status_code=404, detail="raw 청크를 찾을 수 없습니다")
+
     results: list[dict] = []
     acked = failed = 0
     for item in payload.chunks:
@@ -353,9 +372,7 @@ def ack_raw(session_id: str, payload: AckRequest, db: DBSession, *, current_user
         if row.upload_status == "uploaded":
             results.append(_result(row, "uploaded"))
             continue
-        ok, version = storage_service.verify_object_sha256(
-            row.object_key, expected_size=row.size_bytes, expected_sha256_hex=row.checksum
-        )
+        ok, version = verdicts.get(row.id, (False, None))
         if ok is True:
             row.upload_status, row.uploaded_at, row.verified_at = "uploaded", _now(), _now()
             row.object_version_id, row.failure_reason = version, None

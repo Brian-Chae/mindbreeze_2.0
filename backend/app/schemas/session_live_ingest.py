@@ -28,6 +28,11 @@ METRIC_UNITS: dict[str, str] = {
     "relaxation_display": "score_0_100", "emotion_raw": "index_raw", "emotion_display": "score_0_100",
     "bpm": "beats_per_min", "respiration": "breaths_per_min", "sdnn": "ms",
     "tna_raw": "index_raw",  # 선택(구 클라 미전송) — 리포트 두뇌 휴식 점수 입력
+    # 선택(구 클라 미전송) — v1 feature 와 같은 정의·단위. 없으면 해당 컬럼은 NULL(하위호환).
+    "delta_power": "power_raw", "theta_power": "power_raw", "alpha_power": "power_raw", "beta_power": "power_raw",
+    "gamma_power": "power_raw", "total_power": "power_raw", "stress_index": "index_raw", "cognitive_load": "index_raw",
+    "faa": "index_raw", "hemispheric_balance": "index_raw", "rmssd": "ms", "lf_power": "power_raw",
+    "hf_power": "power_raw", "lf_hf_ratio": "index_raw", "motion": "ratio_0_1",
 }
 _METRIC_KEYS = frozenset({"value", "unit", "validity", "reason", "last_valid_sequence", "last_valid_observed_at_ms"})
 _ENVELOPE_KEYS = frozenset({

@@ -3,7 +3,7 @@ import { NativeOrganizationGate } from '../../components/routing/native-organiza
 
 import { useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import ThemeToggle from '../../components/ThemeToggle';
+import AuthShell from '../../components/auth/AuthShell';
 import { submitOrganizationApplication } from '../../lib/api/signup';
 import { ApiError } from '../../lib/api/client';
 import { PrivacyPolicyLink } from '../../components/legal/PrivacyPolicyLink';
@@ -12,7 +12,7 @@ import { PrivacyPolicyLink } from '../../components/legal/PrivacyPolicyLink';
 const PHONE_REGEX = /^0\d{1,2}-\d{3,4}-\d{4}$/;
 
 const inputClass =
-  'w-full h-11 px-4 rounded-xl bg-surface-raised border border-border-default text-sm text-ink-primary placeholder:text-ink-tertiary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 disabled:opacity-60';
+  'w-full h-11 px-4 rounded-xl bg-white border border-[#D4D4D4] text-sm text-[#1F1F1F] placeholder:text-[#6F6F6F] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/15 disabled:opacity-60';
 
 export default function RegisterOrganizationPage() {
   return <NativeOrganizationGate><OrganizationApplicationForm /></NativeOrganizationGate>;
@@ -84,38 +84,21 @@ function OrganizationApplicationForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface-canvas p-4 sm:p-8 relative">
-      <div className="absolute top-6 right-6">
-        <ThemeToggle />
-      </div>
-
-      <div className="w-full max-w-[520px] space-y-8">
-        <div className="text-center space-y-2">
-          <Link to="/" className="inline-block">
-            <h1 className="font-display text-3xl font-light text-ink-primary tracking-tight">
-              Mind Breeze
-            </h1>
-          </Link>
-          <p className="text-sm text-ink-tertiary">기관 가입 상담 신청</p>
-          <p className="text-xs text-ink-tertiary">
-            <Link to="/register" className="underline hover:text-brand-primary">
-              다른 유형으로 가입하기
-            </Link>
-          </p>
-        </div>
+    <AuthShell title="기관 가입 상담 신청" maxWidthClass="max-w-[520px]">
+      <div className="space-y-5">
 
         {applicationId ? (
-          <div className="bg-surface-raised rounded-2xl border border-border-default p-6 sm:p-8 text-center space-y-4">
-            <p className="text-lg font-bold text-ink-primary">상담 신청이 접수되었습니다</p>
-            <p className="text-sm text-ink-tertiary leading-relaxed">
+          <div className="bg-white rounded-3xl p-6 shadow-xl sm:p-8 text-center space-y-4">
+            <p className="text-lg font-bold text-[#1F1F1F]">상담 신청이 접수되었습니다</p>
+            <p className="text-sm text-[#6F6F6F] leading-relaxed">
               담당자가 연락드려 도입 조건을 안내드립니다.
               <br />
               접수만으로 계정이나 기관이 생성되지는 않습니다.
             </p>
-            <p className="text-xs text-ink-tertiary font-mono">접수 번호: {applicationId}</p>
+            <p className="text-xs text-[#6F6F6F] font-mono">접수 번호: {applicationId}</p>
             <Link
               to="/"
-              className="inline-block w-full h-11 rounded-pill bg-brand-deep text-white font-semibold hover:opacity-90 flex items-center justify-center"
+              className="inline-block w-full h-[52px] rounded-full bg-[#5F0080] text-white font-semibold hover:opacity-90 flex items-center justify-center"
             >
               홈으로 돌아가기
             </Link>
@@ -123,15 +106,15 @@ function OrganizationApplicationForm() {
         ) : (
           <form
             onSubmit={handleSubmit}
-            className="bg-surface-raised rounded-2xl border border-border-default p-6 sm:p-8 space-y-4"
+            className="bg-white rounded-3xl p-6 shadow-xl sm:p-8 space-y-4"
           >
-            <p className="text-xs text-ink-tertiary leading-relaxed">
+            <p className="text-xs text-[#6F6F6F] leading-relaxed">
               영업 담당자가 상담 후 도입을 진행합니다. 상담 사례나 건강정보 등 민감한 내용은
               입력하지 말아 주세요.
             </p>
 
             <div className="space-y-2">
-              <label htmlFor="org-name" className="block text-sm font-medium text-ink-secondary">
+              <label htmlFor="org-name" className="block text-sm font-medium text-[#4A4A4A]">
                 기업/기관명
               </label>
               <input
@@ -147,7 +130,7 @@ function OrganizationApplicationForm() {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="org-contact" className="block text-sm font-medium text-ink-secondary">
+              <label htmlFor="org-contact" className="block text-sm font-medium text-[#4A4A4A]">
                 담당자 이름
               </label>
               <input
@@ -162,8 +145,8 @@ function OrganizationApplicationForm() {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="org-phone" className="block text-sm font-medium text-ink-secondary">
-                연락처 <span className="font-normal text-ink-tertiary">(선택)</span>
+              <label htmlFor="org-phone" className="block text-sm font-medium text-[#4A4A4A]">
+                연락처 <span className="font-normal text-[#6F6F6F]">(선택)</span>
               </label>
               <input
                 id="org-phone"
@@ -179,7 +162,7 @@ function OrganizationApplicationForm() {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="org-email" className="block text-sm font-medium text-ink-secondary">
+              <label htmlFor="org-email" className="block text-sm font-medium text-[#4A4A4A]">
                 업무 이메일
               </label>
               <input
@@ -194,8 +177,8 @@ function OrganizationApplicationForm() {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="org-inquiry" className="block text-sm font-medium text-ink-secondary">
-                상담 요청 내용 <span className="font-normal text-ink-tertiary">(선택)</span>
+              <label htmlFor="org-inquiry" className="block text-sm font-medium text-[#4A4A4A]">
+                상담 요청 내용 <span className="font-normal text-[#6F6F6F]">(선택)</span>
               </label>
               <textarea
                 id="org-inquiry"
@@ -205,11 +188,11 @@ function OrganizationApplicationForm() {
                 rows={4}
                 maxLength={2000}
                 disabled={loading}
-                className="w-full px-4 py-3 rounded-xl bg-surface-raised border border-border-default text-sm text-ink-primary placeholder:text-ink-tertiary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 disabled:opacity-60 resize-none"
+                className="w-full px-4 py-3 rounded-xl bg-white border border-[#D4D4D4] text-sm text-[#1F1F1F] placeholder:text-[#6F6F6F] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/15 disabled:opacity-60 resize-none"
               />
             </div>
 
-            <label className="flex items-start gap-2 text-sm text-ink-secondary cursor-pointer">
+            <label className="flex items-start gap-2 text-sm text-[#4A4A4A] cursor-pointer">
               <input
                 type="checkbox"
                 checked={privacyAgreed}
@@ -229,20 +212,20 @@ function OrganizationApplicationForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-11 rounded-pill bg-brand-deep text-white font-semibold hover:opacity-90 disabled:opacity-50"
+              className="w-full h-[52px] rounded-full bg-[#5F0080] text-white font-semibold hover:opacity-90 disabled:opacity-50"
             >
               {loading ? '신청 중...' : '기관 가입 상담 신청'}
             </button>
           </form>
         )}
 
-        <p className="text-center text-sm text-ink-tertiary">
+        <p className="text-center text-sm text-white/90">
           이미 기관 계정이 있으신가요?{' '}
-          <Link to="/login?role=org_admin" className="text-brand-primary hover:text-brand-primary-hover font-medium">
+          <Link to="/login?role=org_admin" className="font-semibold text-white underline">
             로그인
           </Link>
         </p>
       </div>
-    </div>
+    </AuthShell>
   );
 }

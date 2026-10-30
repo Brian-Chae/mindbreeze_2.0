@@ -1,0 +1,12 @@
+/* SDD-253 — 분할 검토 패널은 폭이 좁으므로(1200px 기준 약 500px) 서사 본문을 한 열로 접는다.
+   모바일 전체화면·모달·공개 열람의 기존 레이아웃에는 영향을 주지 않는다(.report-review-pane 하위에만 적용). */
+.report-review-pane .narrative-report .layout{grid-template-columns:minmax(0,1fr);max-width:none;padding:0;margin:0;gap:0}
+.report-review-pane .narrative-report .sidebar{display:none}
+.report-review-pane .narrative-report section{padding:28px 22px}
+.report-review-pane .narrative-report .journey-stages{grid-template-columns:minmax(0,1fr);gap:14px}
+.report-review-pane .narrative-report .metric,
+.report-review-pane .narrative-report .distribution{grid-template-columns:minmax(0,1fr);gap:14px}
+.report-review-pane .narrative-report .session dl{grid-template-columns:repeat(2,minmax(0,1fr))}
+.report-review-pane .narrative-report .cover-art{display:none}
+.report-review-pane .narrative-report .cover{min-height:0}
+.report-review-pane .narrative-report .cover h1{font-size:2rem;max-width:none}

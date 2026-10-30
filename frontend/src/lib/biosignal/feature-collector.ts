@@ -145,7 +145,7 @@ export class FeatureCollector {
       const payload = new TextEncoder().encode(JSON.stringify(snapshot));
       const buffer = payload.buffer.slice(payload.byteOffset, payload.byteOffset + payload.byteLength) as ArrayBuffer;
       await this.queue.enqueueArtifact({ artifact_alias: `ALGO-${signal.toUpperCase()}-${hash.slice(0, 8)}`, artifact_kind: 'algorithm', stream_id: null, segment_id: null, signal, sequence: 0,
-        row_count: 1, content_encoding: 'identity', schema_version: 'algorithm-v1', checksum: await sha256(buffer), size_bytes: buffer.byteLength, content_type: 'application/json' }, buffer);
+        row_count: 1, content_encoding: 'identity', schema_version: 'algorithm-v1', checksum: await sha256(buffer), size_bytes: buffer.byteLength, content_type: 'application/octet-stream' }, buffer);
       this.algorithms.set(signal, snapshot);
     }
     return snapshot;

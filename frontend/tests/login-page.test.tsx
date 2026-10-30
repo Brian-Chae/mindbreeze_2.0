@@ -37,7 +37,7 @@ test('회원 탭에만 하단 코드 입장 카드가 있고 링크에 코드가
   }
 });
 
-test('상담사는 이메일 우선, 기관은 Google과 가입이 없다', () => {
+test('상담사는 이메일 우선, 기관은 Google·Apple 제공(SDD-249 D2)·셀프 가입 없음', () => {
   const counselor = render('/login?role=counselor');
   expect(counselor.indexOf('type="email"')).toBeLessThan(
     counselor.indexOf('Google로 상담사 로그인'),
@@ -45,7 +45,10 @@ test('상담사는 이메일 우선, 기관은 Google과 가입이 없다', () =
   expect(counselor).toMatch(/register\?role=counselor/);
   const org = render('/login?role=org_admin');
   expect(org).toMatch(/기관 관리자 로그인/);
-  expect(org).not.toMatch(/Google|href="\/register/);
+  expect(org).toMatch(/Google로 기관 로그인/);
+  expect(org).toMatch(/운영자가 지정한 계정/);
+  expect(org).toMatch(/href="\/register\/organization"/);
+  expect(org).not.toMatch(/href="\/register\?role/);
 });
 
 test('관리자 모드는 공개 탭과 이메일을 숨긴다', () => {

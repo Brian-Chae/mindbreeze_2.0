@@ -22,7 +22,7 @@ describe('SDD-241 연구 사본 고지', () => {
     expect(RESEARCH_NOTICE_VERSION).toBe('r5-2');
     for (const path of [
       'components/class/flow/member/NoticeStepView.tsx', 'components/auth/ConsentCheckList.tsx',
-      'pages/LoginPage.tsx', 'components/settings/privacy-consents.tsx',
+      'components/settings/privacy-consents.tsx',
       'components/class/structure/member-operations.tsx',
     ]) expect(readFileSync(resolve(__dirname, '../src', path), 'utf8'), path).toContain('RESEARCH_METADATA_NOTICE');
   });

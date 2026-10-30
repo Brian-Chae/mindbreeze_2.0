@@ -19,8 +19,8 @@ export const STEP_COUNT_LIMIT = 3;
 export const LEADOFF_RATIO_LIMIT = 0.05;
 /** 규칙 4: 장치 tick 기준 누락 샘플 수가 이 값을 초과하면 갭. */
 export const GAP_SAMPLES_LIMIT = 2;
-/** 규칙 5: 위 규칙 통과 후에도 TNA 가 이 값을 넘으면 outlier. */
-export const OUTLIER_TNA_LIMIT = 1000;
+/** 규칙 5: 위 규칙 통과 후에도 TNA 가 이 값(2000, 1600대도 정상)을 넘으면 outlier. */
+export const OUTLIER_TNA_LIMIT = 2000;
 
 /**
  * 가드 강제 여부. false(기록만) = 판정 사유는 결과의 reason 에 남기되 정상 산출한 지표를 null 로 지우지 않는다(2026-10-28 대표 결정).

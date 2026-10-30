@@ -76,7 +76,22 @@ PRESERVED_KEYS: tuple[str, ...] = (
 )
 # verify §2.4 박스에는 열거되지 않았지만 ReportResponse 에 존재하는 비내용 메타 키(값 비단언, 키 존재만 요구).
 # 분류 근거: 둘 다 내용이 아니라 생성 시작 시각/게스트 여부 메타다. X2 가 다르게 다루면 감독자 판단 필요.
-META_KEYS: tuple[str, ...] = ("generation_started_at", "is_guest", "approval_required")
+META_KEYS: tuple[str, ...] = (
+    "generation_started_at",
+    "is_guest",
+    "approval_required",
+    # SDD-253: 승인 감사·발송 상태 가산 필드 — 스태프 경로에서만 값이 채워지고 회원 경로는 항상 null 이다
+    #   (값 비단언 대신 test_sdd253_report_ops 가 회원 응답의 null 을 단언한다).
+    "approved_at",
+    "approved_by_name",
+    "approved_by_role",
+    "approval_source",
+    "delivery_status",
+    "delivery_attempted_at",
+    "delivery_attempt_count",
+    "delivery_failure_code",
+    "capabilities",
+)
 # 마스킹 content 의 허용 형태 = normalize_report_content({}, "client") 결과
 EMPTY_CONTENT: JsonDict = {
     "summary": None,
@@ -121,6 +136,16 @@ ALLOWED_TAGS: dict[str, set[str]] = {
     "in_review": {"bool"},
     # SDD-212: 생성 지연 안내 가산 필드(비내용 메타 — 마스킹 대상 아님)
     "in_review_delayed": {"bool"},
+    # SDD-253: 회원 경로에서는 전부 null
+    "approved_at": _STR_OR_NULL,
+    "approved_by_name": _STR_OR_NULL,
+    "approved_by_role": _STR_OR_NULL,
+    "approval_source": _STR_OR_NULL,
+    "delivery_status": _STR_OR_NULL,
+    "delivery_attempted_at": _STR_OR_NULL,
+    "delivery_attempt_count": {"number", "null"},
+    "delivery_failure_code": _STR_OR_NULL,
+    "capabilities": {"object", "null"},
 }
 
 # sentinel 접두 — 승인 전 영구 비공개 / 승인 후 공개 / 처음부터 공개

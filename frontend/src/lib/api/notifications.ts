@@ -196,6 +196,11 @@ export function resolveNotificationTarget(
       };
     case 'credentials':
       return { path: '/credentials' };
+    case 'deeplink': {
+      // SDD-250: 포그라운드 푸시 토스트 — push.ts 가 allowedPushDeeplink 를 통과시킨 경로만 넣는다(여기서는 형식만 재확인).
+      const path = extra.params?.path;
+      return typeof path === 'string' && path.startsWith('/') && !path.startsWith('//') ? { path } : null;
+    }
     case 'self_profile':
       return { path: isClient ? '/app/profile' : '/settings' };
     case 'organization':

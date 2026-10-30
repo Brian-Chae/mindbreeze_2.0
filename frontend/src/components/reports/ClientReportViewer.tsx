@@ -1,9 +1,12 @@
 // 내담자 상세 페이지와 모달이 공유하는 리포트 본문
+// ClientReportBody = 회원이 보는 본문 그대로(커버+서사+코멘트+체크인+AI 요약). 상담사 검토 화면(ReportDetailView)도 이 컴포넌트를 쓴다.
 import NarrativeSections from './NarrativeSections';
+import MemberReportViewer from './MemberReportViewer';
 import ReportCoverSection from './ReportCoverSection';
 import SubjectiveCheckinCard from './SubjectiveCheckinCard';
 import { aiRecordUnavailableText, isSttAiRecordVisible } from '../../lib/features';
 import { parseSubjectiveState } from '../../lib/api/checkin';
+import { buildReportSessionInfo } from '../../lib/report/session-info';
 import { useNotificationStore } from '../../stores/notificationStore';
 import {
   adaptReportContent,
@@ -13,8 +16,8 @@ import {
 
 function SummaryCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white border border-[#EFEFEF] rounded-2xl p-6 mobile:p-4">
-      <h3 className="mobile:[overflow-wrap:anywhere] text-[15px] mobile:text-mb-subtitle font-bold text-[#1F1F1F] mb-4 flex items-center gap-2">
+    <div className="bg-white border border-[#EFEFEF] rounded-2xl p-6 mobile:p-4 frame:p-4">
+      <h3 className="mobile:[overflow-wrap:anywhere] frame:[overflow-wrap:anywhere] text-[15px] mobile:text-mb-subtitle frame:text-mb-subtitle font-bold text-[#1F1F1F] mb-4 flex items-center gap-2">
         <span className="w-1.5 h-1.5 rounded-sm bg-[#5F0080]" />
         {title}
       </h3>
@@ -23,12 +26,11 @@ function SummaryCard({ title, children }: { title: string; children: React.React
   );
 }
 
-export default function ClientReportViewer({ report, onClose, closeLabel = '닫기' }: {
+export function ClientReportBody({ report, hideCounselorComment = false }: {
   report: ReportDto;
-  onClose: () => void;
-  closeLabel?: string;
+  /** 검토 화면에서 코멘트 편집 카드가 이미 같은 내용을 보여줄 때 중복 표시를 막는다. */
+  hideCounselorComment?: boolean;
 }) {
-  const showToast = useNotificationStore((s) => s.showToast);
   // 내담자 뷰로 강제 — 라벨·접힘 비대칭
   const adapted = adaptReportContent(report.content, 'client');
   const { summary, insights, displayNarrative } = adapted;
@@ -46,25 +48,26 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
   const counselorComment =
     (report.content?.counselor_comment as string | undefined)?.trim() || null;
 
+  const sessionInfo = buildReportSessionInfo(report, adapted);
+
   return (
-    <div className="bg-[#FAFAFA]">
-      <div className="max-w-4xl mx-auto p-4 space-y-6">
+    <div className="space-y-6" data-testid="client-report-body">
         {/* Cover — 서사 우선, 종합점수 대형 노출 없음 (SDD-054) */}
         {/* 이중 커버 방지: 커버는 ReportCoverSection이 담당하고 NarrativeSections는 본문만 렌더한다. */}
         <ReportCoverSection report={report} adapted={adapted} />
 
-        {displayNarrative && <NarrativeSections narrative={displayNarrative} showCover={false} />}
+        {displayNarrative && <NarrativeSections narrative={displayNarrative} showCover={false} session={sessionInfo} />}
 
         {aiRecordUnavailable && (
-          <div className="rounded-2xl border border-[#EFEFEF] bg-white p-5 text-sm mobile:text-mb-body text-[#6F6F6F]">
+          <div className="rounded-2xl border border-[#EFEFEF] bg-white p-5 text-sm mobile:text-mb-body frame:text-mb-body text-[#6F6F6F]">
             {aiRecordReasonText}
           </div>
         )}
 
         {/* SDD-087 — 상담사 코멘트 (있을 때만) */}
-        {counselorComment && (
+        {counselorComment && !hideCounselorComment && (
           <SummaryCard title="상담사 코멘트">
-            <p className="mobile:[overflow-wrap:anywhere] text-[15px] mobile:text-mb-body text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
+            <p className="mobile:[overflow-wrap:anywhere] frame:[overflow-wrap:anywhere] text-[15px] mobile:text-mb-body frame:text-mb-body text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
               {counselorComment}
             </p>
           </SummaryCard>
@@ -82,7 +85,7 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
 
         {!aiRecordUnavailable && isSttAiRecordVisible() && summary && (
           <SummaryCard title="AI 요약">
-            <p className="mobile:[overflow-wrap:anywhere] text-[15px] mobile:text-mb-body text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
+            <p className="mobile:[overflow-wrap:anywhere] frame:[overflow-wrap:anywhere] text-[15px] mobile:text-mb-body frame:text-mb-body text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
               {summary}
             </p>
           </SummaryCard>
@@ -96,20 +99,35 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
                   key={i}
                   className="bg-gradient-to-br from-[#F5EDFC] to-white border border-[#EFEFEF] rounded-xl p-4"
                 >
-                  <div className="text-[12px] mobile:text-mb-caption text-[#6F6F6F] font-mono mb-1">
+                  <div className="text-[12px] mobile:text-mb-caption frame:text-mb-caption text-[#6F6F6F] font-mono mb-1">
                     INSIGHT {String(i + 1).padStart(2, '0')}
                   </div>
-                  <p className="text-[15px] mobile:text-mb-body text-[#1F1F1F] leading-relaxed">{insight}</p>
+                  <p className="text-[15px] mobile:text-mb-body frame:text-mb-body text-[#1F1F1F] leading-relaxed">{insight}</p>
                 </div>
               ))}
             </div>
           </SummaryCard>
         )}
+    </div>
+  );
+}
 
-        <div className="flex mobile:flex-wrap items-center gap-3 pt-4 border-t border-[#EFEFEF]">
+export default function ClientReportViewer({ report, onClose, closeLabel = '닫기' }: {
+  report: ReportDto;
+  onClose: () => void;
+  closeLabel?: string;
+}) {
+  const showToast = useNotificationStore((s) => s.showToast);
+
+  return (
+    <div className="bg-[#FAFAFA]">
+      <div className="max-w-4xl mx-auto p-4 space-y-6">
+        <MemberReportViewer report={report} />
+
+        <div className="flex mobile:flex-wrap frame:flex-wrap items-center gap-3 pt-4 border-t border-[#EFEFEF]">
           <button
             onClick={onClose}
-            className="mobile:min-h-11 mobile:min-w-11 px-5 py-2.5 rounded-xl bg-white border border-[#EFEFEF] text-[15px] mobile:text-mb-label text-[#1F1F1F] hover:bg-[#F5F5F5] transition-colors"
+            className="mobile:min-h-11 frame:min-h-11 mobile:min-w-11 frame:min-w-11 px-5 py-2.5 rounded-xl bg-white border border-[#EFEFEF] text-[15px] mobile:text-mb-label frame:text-mb-label text-[#1F1F1F] hover:bg-[#F5F5F5] transition-colors"
           >
             {closeLabel}
           </button>
@@ -119,7 +137,7 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
               href={report.pdf_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="mobile:min-h-11 mobile:min-w-11 mobile:inline-flex mobile:items-center px-5 py-2.5 rounded-xl bg-white border border-[#EFEFEF] text-[15px] mobile:text-mb-label text-[#1F1F1F] hover:bg-[#F5F5F5] transition-colors"
+              className="mobile:min-h-11 frame:min-h-11 mobile:min-w-11 frame:min-w-11 mobile:inline-flex frame:inline-flex mobile:items-center frame:items-center px-5 py-2.5 rounded-xl bg-white border border-[#EFEFEF] text-[15px] mobile:text-mb-label frame:text-mb-label text-[#1F1F1F] hover:bg-[#F5F5F5] transition-colors"
             >
               PDF 다운로드
             </a>
@@ -134,14 +152,14 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
                   body: 'PDF 생성 기능은 추후 제공됩니다.',
                 })
               }
-              className="mobile:min-h-11 mobile:min-w-11 px-5 py-2.5 rounded-xl bg-white border border-[#EFEFEF] text-[15px] mobile:text-mb-label text-[#1F1F1F] hover:bg-[#F5F5F5] transition-colors"
+              className="mobile:min-h-11 frame:min-h-11 mobile:min-w-11 frame:min-w-11 px-5 py-2.5 rounded-xl bg-white border border-[#EFEFEF] text-[15px] mobile:text-mb-label frame:text-mb-label text-[#1F1F1F] hover:bg-[#F5F5F5] transition-colors"
             >
               PDF 생성 (준비 중)
             </button>
           ) : null}
         </div>
 
-        <p className="text-center text-[12px] mobile:text-mb-caption text-[#9B9B9B] pb-4">
+        <p className="text-center text-[12px] mobile:text-mb-caption frame:text-mb-caption text-[#9B9B9B] pb-4">
           본 리포트는 의료 진단이 아닌 두뇌건강 관리 목적의 참고 자료입니다.
         </p>
       </div>

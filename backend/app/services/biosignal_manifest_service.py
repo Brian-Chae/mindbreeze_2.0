@@ -34,6 +34,8 @@ logger = logging.getLogger(__name__)
 
 SIGNALS = ("eeg", "ppg", "acc")
 UNKNOWN_SHA = "0" * 64
+# 서버가 고아 pending 산출물을 정리하며 남기는 failure_reason — evaluate 가 선언된 유실(lost)과 같게 취급한다.
+ABANDONED_REASON = "abandoned_orphan"
 
 
 def _canon(obj) -> str:
@@ -146,6 +148,43 @@ def _latest_intent(db: DBSession, sid, pid) -> BiosignalCloseIntent | None:
     return max(rows, key=lambda r: (int(r.payload.get("closed_at_us", "0")), r.created_at or 0, str(r.id)))
 
 
+def _merged_intent(db: DBSession, sid, pid) -> tuple[CloseIntentIn | None, BiosignalCloseIntent | None]:
+    """참가자의 모든 close intent 를 합집합으로 본다.
+
+    네이티브(raw·feature)와 JS(indices·normalization)가 각자 종료 기록을 보내므로 최신 1건만 보면 서로의 산출물을 누락으로 판정한다.
+    expected/stream/snapshot/lost 는 합집합(같은 키는 더 늦은 intent 가 우선), last_gap_sequence 는 최댓값, end_reason·intent_id 는 최신 intent.
+    """
+    rows = db.query(BiosignalCloseIntent).filter_by(session_id=sid, participant_id=pid).all()
+    if not rows:
+        return None, None
+    ordered = sorted(rows, key=lambda r: (int(r.payload.get("closed_at_us", "0")), r.created_at or 0, str(r.id)))
+    latest = ordered[-1]
+    if len(ordered) == 1:
+        return CloseIntentIn.model_validate(latest.payload), latest
+    expected: dict[tuple[str, str], dict] = {}
+    streams: dict[tuple, dict] = {}
+    snapshots: dict[tuple, dict] = {}
+    lost: dict[tuple[str, str], dict] = {}
+    last_gap: int | None = None
+    for r in ordered:
+        p = r.payload
+        for e in p.get("expected_artifacts", []):
+            expected[(e["kind"], e["alias"])] = e
+        for st in p.get("streams", []):
+            streams[(st["stream_id"], st["segment_id"], st["signal"])] = st
+        for v in p.get("snapshots", []):
+            snapshots[(v["stream_id"], v["view_instance_id"])] = v
+        for x in p.get("lost_artifacts", []):
+            lost[(x["kind"], x["alias"])] = x
+        g = p.get("last_gap_sequence")
+        if g is not None:
+            last_gap = g if last_gap is None else max(last_gap, g)
+    merged = dict(latest.payload)
+    merged.update(expected_artifacts=list(expected.values()), streams=list(streams.values()),
+                  snapshots=list(snapshots.values()), lost_artifacts=list(lost.values()), last_gap_sequence=last_gap)
+    return CloseIntentIn.model_validate(merged), latest
+
+
 def _covered(ranges: list[tuple[int, int]], last: int) -> list[tuple[int, int]]:
     """0..last 중 ranges 로 덮이지 않은 구간(포함 범위)."""
     gaps, cursor = [], 0
@@ -166,9 +205,12 @@ def evaluate(db: DBSession, sid, pid) -> Evaluation:
         EEGRawChunk.schema_version == biosignal_service.RAW_V2_SCHEMA).all()
     arts = db.query(BiosignalArtifact).filter_by(session_id=sid, participant_id=pid).all()
     all_gaps = db.query(BiosignalGapEvent).filter_by(session_id=sid, participant_id=pid).order_by(BiosignalGapEvent.sequence).all()
-    intent_row = _latest_intent(db, sid, pid)
-    intent = CloseIntentIn.model_validate(intent_row.payload) if intent_row else None
-    lost = {(x["kind"], x["alias"]): x["reason"] for x in (intent_row.payload.get("lost_artifacts", []) if intent_row else [])}
+    intent, intent_row = _merged_intent(db, sid, pid)
+    lost = {(x.kind, x.alias): x.reason for x in (intent.lost_artifacts if intent else [])}
+    # 앱 재시작·연결 대체로 업로드가 영영 오지 않는 산출물은 서버 sweep 이 abandoned 로 종결한다 → 일부 누락(partial) 완료로 본다.
+    for a in arts:
+        if a.upload_status == "failed" and a.failure_reason == ABANDONED_REASON:
+            lost.setdefault((a.artifact_kind, a.artifact_alias), ABANDONED_REASON)
 
     raw_by_alias = {r.chunk_alias: r for r in raws if r.chunk_alias}
     art_by_alias = {a.artifact_alias: a for a in arts}

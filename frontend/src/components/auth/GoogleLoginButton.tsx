@@ -5,23 +5,19 @@ import { useState, useCallback } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useAuthStore } from '../../stores/authStore';
 import { ApiError } from '../../lib/api/client';
-import { BIRTH_DATE_MESSAGES, checkBirthDate } from '../../lib/auth/age';
-import type { Consents } from './ConsentCheckList';
+import type { SocialCredential } from '../../stores/social-signup-store';
 
 interface GoogleLoginButtonProps {
   inviteToken?: string;
-  /** 신규 가입 시 서버로 전달할 약관 동의 상태 (SEC-04) */
-  consents?: Consents;
-  /** 신규 가입 시 서버로 전달할 생년월일(YYYY-MM-DD) — 만 14세 확인용 */
-  birthDate?: string;
+  /** 신규 가입(서버 422: 생년월일·동의 필요) — 공통 가입 정보 확인 화면으로 보낸다(SDD-249) */
+  onNeedsSignupInfo?: (credential: SocialCredential) => void;
   onSuccess?: (user: ReturnType<typeof useAuthStore.getState>['user']) => void;
   onError?: (error: Error) => void;
 }
 
 export default function GoogleLoginButton({
   inviteToken,
-  consents,
-  birthDate,
+  onNeedsSignupInfo,
   onSuccess,
   onError,
 }: GoogleLoginButtonProps) {
@@ -35,17 +31,13 @@ export default function GoogleLoginButton({
       setLoading(true);
       try {
         // access_token을 id_token으로 서버에 전달
-        const user = await loginGoogle(
-          tokenResponse.access_token,
-          inviteToken,
-          undefined,
-          true,
-          consents,
-          'access_token',
-          birthDate || undefined,
-        );
+        const user = await loginGoogle(tokenResponse.access_token, inviteToken, undefined, true, undefined, 'access_token');
         onSuccess?.(user);
       } catch (err) {
+        if (err instanceof ApiError && err.status === 422 && onNeedsSignupInfo) {
+          onNeedsSignupInfo({ provider: 'google', tokenKind: 'access_token', token: tokenResponse.access_token });
+          return;
+        }
         const message =
           err instanceof ApiError
             ? err.message
@@ -65,19 +57,9 @@ export default function GoogleLoginButton({
 
   const handleClick = useCallback(() => {
     if (loading) return;
-    // 입력했는데 잘못된 생년월일은 서버 왕복 없이 바로 안내한다(빈 값은 기존 사용자 재로그인일 수 있어 서버 판정에 맡긴다).
-    if (birthDate) {
-      const birthCheck = checkBirthDate(birthDate);
-      if (birthCheck !== 'ok') {
-        const message = BIRTH_DATE_MESSAGES[birthCheck];
-        setError(message);
-        onError?.(new Error(message));
-        return;
-      }
-    }
     setError(null);
     googleLogin();
-  }, [loading, googleLogin, birthDate, onError]);
+  }, [loading, googleLogin]);
 
   return (
     <div className="flex flex-col items-center gap-2">

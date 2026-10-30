@@ -2,10 +2,11 @@
 
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import ThemeToggle from '../../components/ThemeToggle';
+import AuthShell from '../../components/auth/AuthShell';
 import { OtpInput } from '../../components/auth/OtpInput';
+import { BirthDateInput } from '../../components/auth/BirthDateInput';
 import { ConsentCheckList, type Consents } from '../../components/auth/ConsentCheckList';
-import { BIRTH_DATE_MESSAGES, checkBirthDate, todayKst } from '../../lib/auth/age';
+import { BIRTH_DATE_MESSAGES, checkBirthDate } from '../../lib/auth/age';
 import { hasRequiredConsents, toConsentPayload } from '../../lib/auth/consents';
 import { apiErrorCode } from '../../lib/api/auth';
 import { requestOtp, verifyOtp } from '../../lib/api/auth';
@@ -50,20 +51,20 @@ function StepIndicator({ current }: StepIndicatorProps) {
           <div
             className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
               current >= s.n
-                ? 'bg-brand-primary text-ink-on-brand'
-                : 'bg-surface-sunken text-ink-tertiary'
+                ? 'bg-[#5F0080] text-white'
+                : 'bg-[#EDEDED] text-[#6F6F6F]'
             }`}
           >
             {s.n}
           </div>
           <span
             className={`text-xs ${
-              current >= s.n ? 'text-ink-primary font-medium' : 'text-ink-tertiary'
+              current >= s.n ? 'text-[#1F1F1F] font-medium' : 'text-[#6F6F6F]'
             }`}
           >
             {s.label}
           </span>
-          {idx < steps.length - 1 && <div className="w-6 h-px bg-border-default" />}
+          {idx < steps.length - 1 && <div className="w-6 h-px bg-[#D4D4D4]" />}
         </div>
       ))}
     </div>
@@ -71,7 +72,7 @@ function StepIndicator({ current }: StepIndicatorProps) {
 }
 
 const inputClass =
-  'w-full h-11 px-4 rounded-xl bg-surface-raised border border-border-default text-sm text-ink-primary placeholder:text-ink-tertiary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 disabled:opacity-60';
+  'w-full h-11 px-4 rounded-xl bg-white border border-[#D4D4D4] text-sm text-[#1F1F1F] placeholder:text-[#6F6F6F] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/15 disabled:opacity-60';
 
 export default function RegisterClientPage() {
   const [params] = useSearchParams();
@@ -263,43 +264,24 @@ export default function RegisterClientPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface-canvas p-4 sm:p-8 relative">
-      <div className="absolute top-6 right-6">
-        <ThemeToggle />
-      </div>
-
-      <div className="w-full max-w-[480px] space-y-8">
-        <div className="text-center space-y-2">
-          <Link to="/" className="inline-block">
-            <h1 className="font-display text-3xl font-light text-ink-primary tracking-tight">
-              Mind Breeze
-            </h1>
-          </Link>
-          <p className="text-sm text-ink-tertiary">
-            {isInviteRegistration ? '초대받은 회원 가입' : '회원 가입'}
-          </p>
-          <p className="text-xs text-ink-tertiary">
-            <Link to="/register" className="underline hover:text-brand-primary">
-              다른 유형으로 가입하기
-            </Link>
-          </p>
-        </div>
+    <AuthShell title={isInviteRegistration ? '초대받은 회원 가입' : '회원 가입'} maxWidthClass="max-w-[480px]">
+      <div className="space-y-5">
 
         {isInviteRegistration && (
-          <div className="rounded-2xl border border-brand-primary/30 bg-brand-primary/5 px-5 py-4 text-center space-y-1">
-            <p className="text-sm font-semibold text-ink-primary">
+          <div className="rounded-3xl bg-white px-5 py-4 shadow-xl text-center space-y-1">
+            <p className="text-sm font-semibold text-[#1F1F1F]">
               상담사님의 초대로 가입 중입니다
             </p>
-            <p className="text-xs text-ink-tertiary">
+            <p className="text-xs text-[#6F6F6F]">
               가입 완료 시 상담사와 자동으로 연결됩니다
             </p>
           </div>
         )}
 
-        <div className="bg-surface-raised rounded-2xl border border-border-default p-6 sm:p-8 space-y-6">
+        <div className="bg-white rounded-3xl p-6 shadow-xl sm:p-8 space-y-6">
           <StepIndicator current={step} />
 
-          <h2 className="text-2xl font-bold text-ink-primary text-center">
+          <h2 className="text-2xl font-bold text-[#1F1F1F] text-center">
             {step === 1 && '이메일 인증'}
             {step === 2 && '약관 동의'}
             {step === 3 && '정보 입력'}
@@ -309,7 +291,7 @@ export default function RegisterClientPage() {
           {step === 1 && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <label htmlFor="email" className="block text-sm font-medium text-ink-secondary">
+                <label htmlFor="email" className="block text-sm font-medium text-[#4A4A4A]">
                   이메일
                 </label>
                 <div className="flex gap-2">
@@ -326,7 +308,7 @@ export default function RegisterClientPage() {
                     type="button"
                     onClick={handleRequestOtp}
                     disabled={loading || !email || otpSent}
-                    className="px-4 h-11 rounded-pill bg-brand-primary text-ink-on-brand text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+                    className="px-4 h-[52px] rounded-full bg-[#5F0080] text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50"
                   >
                     {otpSent ? '발송됨' : '인증 요청'}
                   </button>
@@ -335,7 +317,7 @@ export default function RegisterClientPage() {
 
               {otpSent && (
                 <div className="space-y-3">
-                  <label className="block text-sm font-medium text-ink-secondary text-center">
+                  <label className="block text-sm font-medium text-[#4A4A4A] text-center">
                     6자리 인증 코드를 입력해주세요
                   </label>
                   <OtpInput value={otp} onChange={setOtp} disabled={loading} />
@@ -343,7 +325,7 @@ export default function RegisterClientPage() {
                     type="button"
                     onClick={handleRequestOtp}
                     disabled={loading}
-                    className="w-full text-xs text-ink-tertiary hover:text-brand-primary"
+                    className="w-full text-xs text-[#6F6F6F] hover:text-[#4B0066]"
                   >
                     인증 코드 재발송
                   </button>
@@ -356,7 +338,7 @@ export default function RegisterClientPage() {
                 type="button"
                 onClick={handleVerifyOtp}
                 disabled={loading || !otpSent || otp.length !== 6}
-                className="w-full h-11 rounded-pill bg-brand-deep text-white font-semibold hover:opacity-90 disabled:opacity-50"
+                className="w-full h-[52px] rounded-full bg-[#5F0080] text-white font-semibold hover:opacity-90 disabled:opacity-50"
               >
                 {loading ? '확인 중...' : '다음'}
               </button>
@@ -372,14 +354,14 @@ export default function RegisterClientPage() {
                 <button
                   type="button"
                   onClick={() => setStep(1)}
-                  className="flex-1 h-11 rounded-pill border border-border-default text-ink-secondary font-semibold hover:bg-surface-elevated"
+                  className="flex-1 h-[52px] rounded-full border border-[#D4D4D4] text-[#4A4A4A] font-semibold hover:bg-[#F3E9F8]"
                 >
                   이전
                 </button>
                 <button
                   type="button"
                   onClick={handleConsentNext}
-                  className="flex-1 h-11 rounded-pill bg-brand-deep text-white font-semibold hover:opacity-90"
+                  className="flex-1 h-[52px] rounded-full bg-[#5F0080] text-white font-semibold hover:opacity-90"
                 >
                   다음
                 </button>
@@ -391,7 +373,7 @@ export default function RegisterClientPage() {
           {step === 3 && (
             <form onSubmit={handleRegister} className="space-y-4">
               <div className="space-y-2">
-                <label htmlFor="name" className="block text-sm font-medium text-ink-secondary">
+                <label htmlFor="name" className="block text-sm font-medium text-[#4A4A4A]">
                   이름
                 </label>
                 <input
@@ -405,7 +387,7 @@ export default function RegisterClientPage() {
               </div>
 
               <div className="space-y-2">
-                <span className="block text-sm font-medium text-ink-secondary">성별</span>
+                <span className="block text-sm font-medium text-[#4A4A4A]">성별</span>
                 <div className="flex gap-2">
                   {GENDER_OPTIONS.map((opt) => (
                     <button
@@ -415,8 +397,8 @@ export default function RegisterClientPage() {
                       disabled={loading}
                       className={`flex-1 h-11 rounded-xl border text-sm font-medium transition-colors ${
                         gender === opt.value
-                          ? 'border-brand-primary bg-brand-primary/10 text-brand-primary'
-                          : 'border-border-default text-ink-secondary hover:bg-surface-elevated'
+                          ? 'border-[#5F0080] bg-[#5F0080]/10 text-[#5F0080]'
+                          : 'border-[#D4D4D4] text-[#4A4A4A] hover:bg-[#F3E9F8]'
                       }`}
                     >
                       {opt.label}
@@ -426,23 +408,19 @@ export default function RegisterClientPage() {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="birthDate" className="block text-sm font-medium text-ink-secondary">
-                  생년월일
-                </label>
-                <input
+                <BirthDateInput
                   id="birthDate"
-                  type="date"
                   value={birthDate}
-                  onChange={(e) => setBirthDate(e.target.value)}
-                  max={todayKst()}
+                  onChange={(iso) => setBirthDate(iso)}
                   disabled={loading}
-                  className={inputClass}
+                  labelClassName="block text-sm font-medium text-[#4A4A4A]"
+                  inputClassName={inputClass}
                 />
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="phone" className="block text-sm font-medium text-ink-secondary">
-                  전화번호 <span className="font-normal text-ink-tertiary">(선택)</span>
+                <label htmlFor="phone" className="block text-sm font-medium text-[#4A4A4A]">
+                  전화번호 <span className="font-normal text-[#6F6F6F]">(선택)</span>
                 </label>
                 <input
                   id="phone"
@@ -458,7 +436,7 @@ export default function RegisterClientPage() {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="password" className="block text-sm font-medium text-ink-secondary">
+                <label htmlFor="password" className="block text-sm font-medium text-[#4A4A4A]">
                   비밀번호
                 </label>
                 <input
@@ -474,7 +452,7 @@ export default function RegisterClientPage() {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="passwordConfirm" className="block text-sm font-medium text-ink-secondary">
+                <label htmlFor="passwordConfirm" className="block text-sm font-medium text-[#4A4A4A]">
                   비밀번호 확인
                 </label>
                 <input
@@ -490,7 +468,7 @@ export default function RegisterClientPage() {
 
               {!isInviteRegistration && (
                 <div className="space-y-2">
-                  <label htmlFor="counselorCode" className="block text-sm font-medium text-ink-secondary">
+                  <label htmlFor="counselorCode" className="block text-sm font-medium text-[#4A4A4A]">
                     초대 상담사 코드
                   </label>
                   <div className="flex gap-2">
@@ -511,24 +489,24 @@ export default function RegisterClientPage() {
                       type="button"
                       onClick={handleCheckCode}
                       disabled={loading || codeChecking || counselorCode.trim().length !== 6}
-                      className="px-4 h-11 rounded-pill bg-brand-primary text-ink-on-brand text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+                      className="px-4 h-[52px] rounded-full bg-[#5F0080] text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50"
                     >
                       {codeChecking ? '확인 중...' : '코드 확인'}
                     </button>
                   </div>
                   {matchedCounselor ? (
-                    <div className="rounded-xl border border-brand-primary/30 bg-brand-primary/5 px-4 py-3 text-sm">
-                      <p className="font-semibold text-ink-primary">
+                    <div className="rounded-xl border border-[#5F0080]/30 bg-[#5F0080]/5 px-4 py-3 text-sm">
+                      <p className="font-semibold text-[#1F1F1F]">
                         {matchedCounselor.counselor_name} 상담사와 연결하여 가입합니다
                       </p>
                       {matchedCounselor.organization_name && (
-                        <p className="text-xs text-ink-tertiary mt-0.5">
+                        <p className="text-xs text-[#6F6F6F] mt-0.5">
                           {matchedCounselor.organization_name}
                         </p>
                       )}
                     </div>
                   ) : (
-                    <p className="text-xs text-ink-tertiary">
+                    <p className="text-xs text-[#6F6F6F]">
                       코드가 없다면 초대한 상담사에게 코드를 요청해 주세요.
                     </p>
                   )}
@@ -542,14 +520,14 @@ export default function RegisterClientPage() {
                   type="button"
                   onClick={() => setStep(2)}
                   disabled={loading}
-                  className="flex-1 h-11 rounded-pill border border-border-default text-ink-secondary font-semibold hover:bg-surface-elevated"
+                  className="flex-1 h-[52px] rounded-full border border-[#D4D4D4] text-[#4A4A4A] font-semibold hover:bg-[#F3E9F8]"
                 >
                   이전
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 h-11 rounded-pill bg-brand-deep text-white font-semibold hover:opacity-90 disabled:opacity-50"
+                  className="flex-1 h-[52px] rounded-full bg-[#5F0080] text-white font-semibold hover:opacity-90 disabled:opacity-50"
                 >
                   {loading ? '가입 중...' : '가입 완료'}
                 </button>
@@ -558,13 +536,13 @@ export default function RegisterClientPage() {
           )}
         </div>
 
-        <p className="text-center text-sm text-ink-tertiary">
+        <p className="text-center text-sm text-white/90">
           이미 계정이 있으신가요?{' '}
-          <Link to="/login?role=client" className="text-brand-primary hover:text-brand-primary-hover font-medium">
+          <Link to="/login?role=client" className="font-semibold text-white underline">
             로그인
           </Link>
         </p>
       </div>
-    </div>
+    </AuthShell>
   );
 }

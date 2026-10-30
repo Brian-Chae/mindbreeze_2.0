@@ -37,7 +37,7 @@
       }
     },
     "Sqi": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
-    "MetricUnit": { "type": "string", "enum": ["index_raw", "score_0_100", "beats_per_min", "breaths_per_min", "ms", "ratio_0_1"] },
+    "MetricUnit": { "type": "string", "enum": ["index_raw", "score_0_100", "beats_per_min", "breaths_per_min", "ms", "ratio_0_1", "power_raw"] },
     "Validity": { "type": "string", "enum": ["valid", "warming_up", "invalid", "gap"] },
     "MetricValue": {
       "type": "object",
@@ -70,7 +70,22 @@
         "bpm": { "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "beats_per_min" } } }] },
         "respiration": { "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "breaths_per_min" } } }] },
         "sdnn": { "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "ms" } } }] },
-        "tna_raw": { "description": "선택 필드(구 클라이언트 미전송). 총 신경활동 raw — 서버가 활성 모델로 두뇌 휴식 점수를 재계산.", "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "index_raw" } } }] }
+        "tna_raw": { "description": "선택 필드(구 클라이언트 미전송). 총 신경활동 raw — 서버가 활성 모델로 두뇌 휴식 점수를 재계산.", "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "index_raw" } } }] },
+        "delta_power": { "description": "선택 필드(구 클라이언트 미전송). v1 feature 와 같은 정의·단위.", "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "power_raw" } } }] },
+        "theta_power": { "description": "선택 필드(구 클라이언트 미전송). v1 feature 와 같은 정의·단위.", "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "power_raw" } } }] },
+        "alpha_power": { "description": "선택 필드(구 클라이언트 미전송). v1 feature 와 같은 정의·단위.", "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "power_raw" } } }] },
+        "beta_power": { "description": "선택 필드(구 클라이언트 미전송). v1 feature 와 같은 정의·단위.", "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "power_raw" } } }] },
+        "gamma_power": { "description": "선택 필드(구 클라이언트 미전송). v1 feature 와 같은 정의·단위.", "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "power_raw" } } }] },
+        "total_power": { "description": "선택 필드(구 클라이언트 미전송). v1 feature 와 같은 정의·단위.", "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "power_raw" } } }] },
+        "stress_index": { "description": "선택 필드(구 클라이언트 미전송). v1 feature 와 같은 정의·단위.", "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "index_raw" } } }] },
+        "cognitive_load": { "description": "선택 필드(구 클라이언트 미전송). v1 feature 와 같은 정의·단위.", "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "index_raw" } } }] },
+        "faa": { "description": "선택 필드(구 클라이언트 미전송). v1 feature 와 같은 정의·단위.", "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "index_raw" } } }] },
+        "hemispheric_balance": { "description": "선택 필드(구 클라이언트 미전송). v1 feature 와 같은 정의·단위.", "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "index_raw" } } }] },
+        "rmssd": { "description": "선택 필드(구 클라이언트 미전송). v1 feature 와 같은 정의·단위.", "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "ms" } } }] },
+        "lf_power": { "description": "선택 필드(구 클라이언트 미전송). v1 feature 와 같은 정의·단위.", "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "power_raw" } } }] },
+        "hf_power": { "description": "선택 필드(구 클라이언트 미전송). v1 feature 와 같은 정의·단위.", "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "power_raw" } } }] },
+        "lf_hf_ratio": { "description": "선택 필드(구 클라이언트 미전송). v1 feature 와 같은 정의·단위.", "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "index_raw" } } }] },
+        "motion": { "description": "선택 필드(구 클라이언트 미전송). v1 feature 와 같은 정의·단위.", "allOf": [{ "$ref": "#/definitions/MetricValue" }, { "properties": { "unit": { "const": "ratio_0_1" } } }] }
       }
     }
   }

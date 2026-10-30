@@ -224,8 +224,10 @@ export class NativeMeasurementFacade {
     const p = (async () => {
       // Capacitor 프록시는 구현 없는 메서드도 truthy 다 — 존재 검사로는 못 거른다. 이 메서드는 iOS 에만 있다.
       // iOS 도 JS(BLE 플러그인) 연결을 먼저 실제로 끊는다 — 소유 플래그만 내리면 JS 가 같은 밴드를 계속 잡아 native 와 구독이 겹친다.
+      // 해제가 돌려준 연결 ID 는 저장된 ID 가 비어 있을 때의 대체값이다(네이티브가 스캔만 하면 이미 연결된 밴드를 못 찾는다).
+      let releasedId: string | null = null;
       if (a.platform === 'ios' && a.releaseJsBand) {
-        try { await a.releaseJsBand(); } catch { /* 계속 */ }
+        try { const r = await a.releaseJsBand(); if (typeof r === 'string' && r) releasedId = r; } catch { /* 계속 */ }
       }
       if (a.platform === 'ios' && this.plugin.setJSBandOwnership) {
         const r = await this.plugin.setJSBandOwnership({ owning: false });
@@ -238,7 +240,7 @@ export class NativeMeasurementFacade {
       return this.doStartWithCredentials({
         platform: a.platform, sessionId: a.sessionId, requestId: a.requestId, accountId: a.accountId, apiBase: a.apiBase,
         socketBase: a.socketBase, configHash: a.configHash ?? 'linkband2-v1', instanceId: a.instanceId, tokens: a.tokens, model: a.model ?? null,
-        ...(a.deviceId ? (a.platform === 'android' ? { address: a.deviceId } : { peripheralId: a.deviceId }) : {}),
+        ...((a.deviceId || releasedId) ? (a.platform === 'android' ? { address: a.deviceId as string } : { peripheralId: (a.deviceId || releasedId) as string }) : {}),
       });
     })();
     this.startFlights.set(a.requestId, p);

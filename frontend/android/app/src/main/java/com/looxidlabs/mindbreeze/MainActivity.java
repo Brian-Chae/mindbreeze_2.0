@@ -2,6 +2,7 @@ package com.looxidlabs.mindbreeze;
 
 import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;
+import com.looxidlabs.mindbreeze.chrome.SystemChromePlugin;
 import com.looxidlabs.mindbreeze.audiorecorder.NativeAudioRecorderPlugin;
 import com.looxidlabs.mindbreeze.measurement.MeasurementPlugin;
 
@@ -12,6 +13,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(MeasurementPlugin.class);
         // SDD-247: 앱 자체 백그라운드 수업 녹음.
         registerPlugin(NativeAudioRecorderPlugin.class);
+        // 클래스 모드 시스템 바 배경·아이콘 제어(Android 15+ edge-to-edge 대응).
+        registerPlugin(SystemChromePlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

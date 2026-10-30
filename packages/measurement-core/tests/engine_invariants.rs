@@ -308,3 +308,55 @@ fn tna_raw_is_emitted_as_index_raw() {
     // 워밍업 구간은 null (0 치환 금지)
     assert!(a.iter().any(|f| f.metrics.tna_raw.value.is_none()));
 }
+
+#[test]
+fn extended_feature_metrics_are_emitted_with_v1_units() {
+    let (eeg, ppg) = data();
+    let mut c = Core::new(CoreConfig::default()).unwrap();
+    let a = run(&mut c, &eeg, &ppg, 25, 5, (0, 0));
+    // 밴드파워·total_power: 단위 power_raw, total = 5밴드 합(독립 계산), 워밍업은 null
+    let v: Vec<_> = a.iter().filter(|f| f.metrics.total_power.value.is_some()).collect();
+    assert!(!v.is_empty(), "total_power 가 한 번도 valid 가 아님");
+    for f in &v {
+        let m = &f.metrics;
+        for x in [&m.delta_power, &m.theta_power, &m.alpha_power, &m.beta_power, &m.gamma_power, &m.total_power] {
+            assert_eq!((x.unit, x.validity), ("power_raw", "valid"));
+        }
+        let sum = m.delta_power.value.unwrap() + m.theta_power.value.unwrap() + m.alpha_power.value.unwrap() + m.beta_power.value.unwrap() + m.gamma_power.value.unwrap();
+        assert!((sum - m.total_power.value.unwrap()).abs() < 1e-9, "total_power != 5밴드 합");
+        // v1 정의 대조: focus = beta/(alpha+theta+eps), stress = (beta+gamma)/(alpha+theta+eps), cognitive_load = theta/(alpha+eps)
+        let (al, be, th, ga) = (m.alpha_power.value.unwrap(), m.beta_power.value.unwrap(), m.theta_power.value.unwrap(), m.gamma_power.value.unwrap());
+        let close = |a: f64, b: f64| (a - b).abs() <= 1e-6 * (1.0 + b.abs());
+        assert!(close(m.stress_index.value.unwrap(), (be + ga) / (al + th + 1e-10)), "stress");
+        assert!(close(m.cognitive_load.value.unwrap(), th / (al + 1e-10)), "cognitive_load");
+        assert!(close(m.focus_raw.value.unwrap(), be / (al + th + 1e-10)), "focus");
+        assert_eq!(m.stress_index.unit, "index_raw");
+        assert_eq!(m.cognitive_load.unit, "index_raw");
+        assert_eq!(m.hemispheric_balance.unit, "index_raw");
+        assert!(m.hemispheric_balance.value.unwrap().abs() <= 1.0);
+        // FAA 는 값이 없으면 null+사유(0 치환 금지)
+        match m.faa.value {
+            Some(x) => assert!(x.is_finite()),
+            None => assert_eq!(m.faa.reason.as_deref(), Some("faa_unavailable")),
+        }
+    }
+    // HRV: 단위, 값이 나온 프레임에서 rmssd/lf/hf/ratio 도 계약 단위
+    for f in &a {
+        let m = &f.metrics;
+        assert_eq!(m.rmssd.unit, "ms");
+        assert_eq!(m.lf_power.unit, "power_raw");
+        assert_eq!(m.hf_power.unit, "power_raw");
+        assert_eq!(m.lf_hf_ratio.unit, "index_raw");
+        assert_eq!(m.motion.unit, "ratio_0_1");
+        for x in [&m.rmssd, &m.lf_power, &m.hf_power, &m.lf_hf_ratio, &m.motion] {
+            if x.validity != "valid" { assert!(x.value.is_none(), "null 이어야 함(0 치환 금지)"); }
+        }
+    }
+    // 워밍업 구간은 null
+    assert!(a.iter().any(|f| f.metrics.total_power.value.is_none()));
+    // 직렬화 키 확인: 신규 15키가 프레임 JSON 에 모두 존재
+    let j = serde_json::to_value(&a.last().unwrap().metrics).unwrap();
+    for k in ["delta_power","theta_power","alpha_power","beta_power","gamma_power","total_power","stress_index","cognitive_load","faa","hemispheric_balance","rmssd","lf_power","hf_power","lf_hf_ratio","motion"] {
+        assert!(j.get(k).is_some(), "{k} 누락");
+    }
+}

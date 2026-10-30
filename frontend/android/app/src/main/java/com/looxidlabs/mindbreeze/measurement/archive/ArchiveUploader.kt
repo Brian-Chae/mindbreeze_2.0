@@ -48,6 +48,23 @@ class ArchiveUploader(
         return sum
     }
 
+    /**
+     * 종료 기록(close intent) 전송: `POST /sessions/{sid}/biosignal-events`. 서버는 intent_id 기준 멱등(recorded/duplicate)이라 재전송이 안전하다.
+     * 반환: 서버가 받았으면(recorded·duplicate·conflict) true — conflict 는 같은 id 다른 내용이라 다시 보내도 같아서 닫는다. 네트워크/5xx/인증은 false(재시도).
+     */
+    fun sendCloseIntent(sessionId: String, participantId: String?, intent: JSONObject): Boolean {
+        val token = tokenProvider() ?: return false
+        val body = JSONObject().put("participant_id", participantId ?: JSONObject.NULL).put("events", JSONArray().put(intent))
+        return try {
+            val res = postJson(ArchiveStage.VERIFY, "$apiBase/sessions/${java.net.URLEncoder.encode(sessionId, "UTF-8")}/biosignal-events", body, token)
+            val st = res.optJSONArray("events")?.optJSONObject(0)?.optString("status")
+            st == "recorded" || st == "duplicate" || st == "conflict"
+        } catch (e: StageError) {
+            // 4xx(검증 거절 등)는 같은 본문으로 영영 통과 못 하므로 닫는다. 401/408/429/5xx/네트워크는 재시도.
+            e.status in 400..499 && e.status != 401 && e.status != 408 && e.status != 429
+        }
+    }
+
     /** 반환: 다음 항목을 계속 처리할지(halt 면 false). */
     private fun handle(item: ArchiveItem, e: StageError, sum: ArchiveSummary): Boolean {
         val d = ArchiveClassifier.classify(e.stage, e.status, e.body, e.retryAfterHeader)
@@ -55,7 +72,7 @@ class ArchiveUploader(
         when (d.action) {
             ArchiveAction.HALT -> { item.status = ArchiveStatus.HALTED; item.lastReason = d.code; queue.update(item); sum.halted = d.code; return false }
             ArchiveAction.TIME_REVIEW -> { item.status = ArchiveStatus.TIME_REVIEW; item.lastReason = d.code; queue.update(item); sum.timeReview++ }
-            ArchiveAction.QUARANTINE -> { item.status = ArchiveStatus.DEAD_LETTER; item.lastReason = e.msg ?: d.code; queue.update(item); sum.blocked++ }
+            ArchiveAction.QUARANTINE -> { item.status = ArchiveStatus.DEAD_LETTER; item.lastReason = if (e.body != null && e.msg != null && e.msg != d.code) "${d.code}: ${e.msg}".take(200) else (e.msg ?: d.code); queue.update(item); sum.blocked++ }
             ArchiveAction.REPRESIGN, ArchiveAction.BACKOFF -> {
                 // 횟수가 많아도 영구 실패로 만들지 않는다 — 유한 backoff 만 적용
                 item.lastReason = d.code
@@ -64,6 +81,13 @@ class ArchiveUploader(
             }
         }
         return true
+    }
+
+    /** 서버 오류 본문의 detail 을 진단용 짧은 문자열로(고정 문구뿐이라 개인정보·토큰 없음). */
+    private fun detailOf(body: JSONObject?): String? {
+        val d = body?.opt("detail") ?: return null
+        val text = when (d) { is String -> d; is JSONObject -> d.optString("code").ifEmpty { d.toString() }; else -> d.toString() }
+        return text.take(160).ifEmpty { null }
     }
 
     private fun sha256(b: ByteArray) = MessageDigest.getInstance("SHA-256").digest(b).joinToString("") { "%02x".format(it) }
@@ -117,7 +141,7 @@ class ArchiveUploader(
             http.newCall(req).execute().use { res ->
                 val text = res.body?.string().orEmpty()
                 val json = try { JSONObject(text) } catch (_: Exception) { null }
-                if (res.code !in 200..299) throw StageError(stage, res.code, json, res.header("Retry-After"))
+                if (res.code !in 200..299) throw StageError(stage, res.code, json, res.header("Retry-After"), detailOf(json))
                 return json ?: throw StageError(stage, 0, null, null, "response_not_json")
             }
         } catch (e: IOException) { throw StageError(stage, 0, null, null, e.javaClass.simpleName) }

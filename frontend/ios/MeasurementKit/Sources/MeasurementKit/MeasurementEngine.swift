@@ -176,6 +176,13 @@ public final class MeasurementEngine {
         sinceCheckpoint = 0
     }
 
+    /// raw.journal 의 (센서, 원문, 도착 단조 µs, 벽시계 ms, 앵커 단조 µs) 목록. 봉인·복구 시 원시 청크를 다시 만들 때 쓴다.
+    public static func rawPackets(in dir: URL) -> [(sensor: BandSensor, bytes: Data, arrival: UInt64, wall: UInt64, anchor: UInt64)] {
+        AppendOnlyJournal.scan(url: dir.appendingPathComponent("raw.journal")).records.compactMap { r in
+            Self.decodeRaw(r.payload).map { (sensor: $0.sensor, bytes: $0.bytes, arrival: $0.arrival, wall: $0.wall, anchor: $0.anchor) }
+        }
+    }
+
     private static func name(_ s: BandSensor) -> String { s == .eeg ? "eeg" : s == .ppg ? "ppg" : "acc" }
 
     private static func finalFrom(_ o: [String: Any]) -> CoreFinal? {

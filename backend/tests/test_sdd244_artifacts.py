@@ -234,3 +234,13 @@ def test_feature_alias_색인이_저장된다(ctx, store):
         assert svc.resolve_feature_alias(db, ctx["sid"], ctx["pid"], "Nope") is None
     finally:
         db.close()
+
+
+def test_normalization_presign은_요청_content_type과_무관하게_octet_stream으로_서명한다(ctx, store):
+    """Android 네이티브 HTTP 는 application/json 서명 PUT 의 본문을 base64 문자열로 써서 SHA-256 서명이 어긋난다(정규화만 영구 pending)."""
+    data = _jsonl([INDICES[0]["normalization"]])
+    meta = _art("normalization", "NORM-CT", data, content_type="application/json")
+    res = _post(ctx, "biosignal-artifacts/presign", {"chunks": [meta]})
+    assert res.status_code == 200
+    headers = res.json()["chunks"][0]["upload_headers"]
+    assert headers["Content-Type"] == "application/octet-stream"

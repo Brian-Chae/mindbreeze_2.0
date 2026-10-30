@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import NarrativeSections from '../../components/reports/NarrativeSections';
 import ReportCoverSection from '../../components/reports/ReportCoverSection';
+import MemberReportViewer from '../../components/reports/MemberReportViewer';
+import { buildReportSessionInfo } from '../../lib/report/session-info';
 import SubjectiveCheckinCard from '../../components/reports/SubjectiveCheckinCard';
 import { downloadReportPdf } from '../../lib/report/print-report';
 import { ApiError } from '../../lib/api/client';
@@ -153,15 +155,24 @@ export default function ReportViewPage() {
           </button>
         </div>
         {downloadError && <p role="alert" className="text-sm mobile:text-mb-body text-red-600">{downloadError}</p>}
-        <ReportCoverSection report={report} adapted={adapted} />
-        {displayNarrative && <NarrativeSections narrative={displayNarrative} />}
-        {subjective && (
-          <SubjectiveCheckinCard
-            subjective={subjective}
-            relaxationScore={relaxationScore}
-            relaxationTrend={relaxationTrend}
-            eegMeasured={eegMeasured}
-          />
+        {report.type === 'client' ? (
+          // 회원용은 앱의 회원 화면과 같은 본문 컴포넌트를 쓴다.
+          <MemberReportViewer report={report} />
+        ) : (
+          <>
+            <ReportCoverSection report={report} adapted={adapted} />
+            {displayNarrative && (
+              <NarrativeSections narrative={displayNarrative} showCover={false} session={buildReportSessionInfo(report, adapted)} />
+            )}
+            {subjective && (
+              <SubjectiveCheckinCard
+                subjective={subjective}
+                relaxationScore={relaxationScore}
+                relaxationTrend={relaxationTrend}
+                eegMeasured={eegMeasured}
+              />
+            )}
+          </>
         )}
         <p className="text-center text-[12px] mobile:text-mb-caption text-[#9B9B9B] pb-8">
           본 리포트는 의료 진단이 아닌 두뇌건강 관리 목적의 참고 자료입니다.

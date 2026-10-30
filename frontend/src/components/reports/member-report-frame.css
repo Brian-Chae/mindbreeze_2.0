@@ -1,0 +1,85 @@
+/* SDD-255 — 회원 리포트 모바일 뷰어. 프레임(.member-report-frame)은 항상 ≤430px 이므로
+   narrative-sections.css 의 모바일 규칙(≤900/≤560/≤767px)을 뷰포트가 아니라 프레임 안에서 항상 적용한다.
+   narrative-sections.css 원본은 변경하지 않으며, 이 파일의 모든 규칙은 .member-report-frame 하위로 한정된다. */
+.member-report-frame{width:100%;max-width:430px;margin:0 auto;container-type:inline-size;container-name:member-report}
+@media(min-width:561px){.member-report-frame{background:#F5EDFC;border:1px solid #E8D9F5;border-radius:28px;box-shadow:0 12px 40px #5f008014;overflow:hidden}}
+.member-report-frame .narrative-report .cover{min-height:0}
+.member-report-frame .narrative-report .cover h1{max-width:none}
+.member-report-frame .narrative-report .layout{grid-template-columns:minmax(0,1fr);max-width:640px;padding:0 24px;gap:0}.member-report-frame .narrative-report .sidebar{display:none}.member-report-frame .narrative-report .topbar{max-width:640px;padding:20px 24px}.member-report-frame .narrative-report .cover-art{opacity:.4;right:0;top:90px;width:170px}
+.member-report-frame .narrative-report .topbar{padding:15px 22px;flex-direction:column;align-items:flex-start;gap:6px}.member-report-frame .narrative-report .topbar .brand,.member-report-frame .narrative-report .sample-tag{white-space:nowrap}.member-report-frame .narrative-report .layout{padding:0;margin:0 auto 0;max-width:576px}.member-report-frame .narrative-report .report-main{border:0;border-radius:0;box-shadow:none}.member-report-frame .narrative-report section{padding:34px 22px}.member-report-frame .narrative-report .cover{padding-top:24px}.member-report-frame .narrative-report .cover .eyebrow{margin-top:18px}.member-report-frame .narrative-report .cover h1{font-size:2.5rem}.member-report-frame .narrative-report .cover-art{width:130px;right:4px;top:102px;opacity:.25}.member-report-frame .narrative-report .cover-lead{font-size:.875rem}.member-report-frame .narrative-report .cover-info{margin-top:30px}.member-report-frame .narrative-report .session{padding:18px}.member-report-frame .narrative-report .session dl{gap:14px}.member-report-frame .narrative-report .session dd{font-size:.8125rem}.member-report-frame .narrative-report .journey-quote{padding:20px;font-size:.9375rem}.member-report-frame .narrative-report .journey-stages{gap:12px}.member-report-frame .narrative-report .stage strong{font-size:.8125rem}.member-report-frame .narrative-report .stage .caption{font-size:.6875rem}.member-report-frame .narrative-report .metric{grid-template-columns:1fr;gap:14px;padding:22px}.member-report-frame .narrative-report .metric-copy{position:relative}.member-report-frame .narrative-report .metric-copy .delta{margin:12px 0}.member-report-frame .narrative-report .metric figure{border-top:1px solid #f0ecf3;padding-top:12px}.member-report-frame .narrative-report .trend{max-height:210px}.member-report-frame .narrative-report .distribution{grid-template-columns:1fr;gap:14px;padding:22px}.member-report-frame .narrative-report .bar-chart{max-height:210px}.member-report-frame .narrative-report .footer{padding:24px 22px}.member-report-frame .narrative-report .footer .brand{font-size:.875rem}.member-report-frame .narrative-report .sample-tag{font-size:.6875rem}
+
+  .member-report-frame .narrative-report {
+    font-size: var(--mobile-type-body-size);
+    line-height: var(--mobile-type-body-leading);
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+  .member-report-frame .narrative-report h1, .member-report-frame .narrative-report .cover h1 {
+    font-size: var(--mobile-type-title-size);
+    line-height: var(--mobile-type-title-leading);
+    letter-spacing: 0;
+  }
+  .member-report-frame .narrative-report h2, .member-report-frame .narrative-report h3, .member-report-frame .narrative-report .distribution h3 {
+    font-size: var(--mobile-type-subtitle-size);
+    line-height: var(--mobile-type-subtitle-leading);
+    letter-spacing: 0;
+  }
+  .member-report-frame .narrative-report .caption, .member-report-frame .narrative-report figcaption,
+  .member-report-frame .narrative-report .eyebrow, .member-report-frame .narrative-report .sample-tag,
+  .member-report-frame .narrative-report .session dt, .member-report-frame .narrative-report .quality,
+  .member-report-frame .narrative-report .stage .caption, .member-report-frame .narrative-report .badge,
+  .member-report-frame .narrative-report .legend-ends, .member-report-frame .narrative-report .practice-label,
+  .member-report-frame .narrative-report .closing-note, .member-report-frame .narrative-report .chart-empty,
+  .member-report-frame .narrative-report .metric-copy .avg-label, .member-report-frame .narrative-report .metric-copy .delta-pill,
+  .member-report-frame .narrative-report .metric-copy .avg-unit, .member-report-frame .narrative-report .delta span,
+  .member-report-frame .narrative-report svg text {
+    font-size: var(--mobile-type-caption-size);
+    line-height: var(--mobile-type-caption-leading);
+    letter-spacing: 0;
+  }
+  .member-report-frame .narrative-report .cover-lead, .member-report-frame .narrative-report .journey-quote,
+  .member-report-frame .narrative-report .section-note, .member-report-frame .narrative-report .legend-panel p,
+  .member-report-frame .narrative-report .distribution p, .member-report-frame .narrative-report .practice p,
+  .member-report-frame .narrative-report .closing .closing-message,
+  .member-report-frame .narrative-report .metric-copy > p:not(.delta) {
+    font-size: var(--mobile-type-body-size);
+    line-height: var(--mobile-type-body-leading);
+  }
+  .member-report-frame .narrative-report .session dd, .member-report-frame .narrative-report .stage strong,
+  .member-report-frame .narrative-report .summary-chip, .member-report-frame .narrative-report .metric-copy .delta-row {
+    font-size: var(--mobile-type-compact-size);
+    line-height: var(--mobile-type-compact-leading);
+  }
+  .member-report-frame .narrative-report .metric-copy .avg-value, .member-report-frame .narrative-report .delta {
+    font-size: var(--mobile-type-number-size);
+    line-height: var(--mobile-type-number-leading);
+  }
+  .member-report-frame .narrative-report .brand, .member-report-frame .narrative-report .footer .brand,
+  .member-report-frame .narrative-report .footer a, .member-report-frame .narrative-report .legend-panel summary {
+    font-size: var(--mobile-type-label-size);
+    line-height: var(--mobile-type-label-leading);
+    min-height: var(--mobile-touch-minimum);
+    min-width: var(--mobile-touch-minimum);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .member-report-frame .narrative-report .topbar, .member-report-frame .narrative-report .footer { padding: 16px; gap: 8px; flex-wrap: wrap; }
+  .member-report-frame .narrative-report .layout { padding: 0; }
+  .member-report-frame .narrative-report section { padding: 24px 16px; }
+  .member-report-frame .narrative-report .session, .member-report-frame .narrative-report .journey-quote,
+  .member-report-frame .narrative-report .metric, .member-report-frame .narrative-report .distribution,
+  .member-report-frame .narrative-report .legend-panel, .member-report-frame .narrative-report .practice { padding: 16px; }
+  .member-report-frame .narrative-report .metric, .member-report-frame .narrative-report .distribution { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .member-report-frame .narrative-report .session dl { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .member-report-frame .narrative-report .journey-stages { gap: 12px; }
+  .member-report-frame .narrative-report .journey-summary { gap: 8px; }
+  .member-report-frame .narrative-report .summary-chip { padding: 8px 12px; gap: 8px; }
+  .member-report-frame .narrative-report .practice { gap: 16px; }
+  .member-report-frame .narrative-report .metric-copy .avg-row, .member-report-frame .narrative-report .metric-copy .delta-row { flex-wrap: wrap; }
+
+
+/* '데스크톱 보기' 버튼 줄: ≥561px 에서만 표시 (뷰어 상단 우측, 프레임 폭에 맞춤) */
+.member-report-desktop-toggle{display:none;max-width:430px;margin:0 auto 12px;justify-content:flex-end}
+@media(min-width:561px){.member-report-desktop-toggle{display:flex}}

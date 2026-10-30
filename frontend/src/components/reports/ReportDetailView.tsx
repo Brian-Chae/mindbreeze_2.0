@@ -9,13 +9,16 @@ import { downloadReportPdf } from '../../lib/report/print-report';
 import CounselorCommentCard from './CounselorCommentCard';
 import DataExportButton from './DataExportButton';
 import NarrativeSections from './NarrativeSections';
+import MemberReportViewer from './MemberReportViewer';
+import { buildReportSessionInfo } from '../../lib/report/session-info';
 import SessionReplayPanel from './SessionReplayPanel';
 import ReportCoverSection from './ReportCoverSection';
 import ReportStatusBadge from './ReportStatusBadge';
+import ReportApprovalStatus from './ReportApprovalStatus';
 import { useAuthStore } from '../../stores/authStore';
 import { aiRecordUnavailableText } from '../../lib/features';
 import {
-  approveReport,
+  approveAndSendReport,
   resendReportEmail,
   adaptReportContent,
   canApproveReport,
@@ -155,7 +158,8 @@ export default function ReportDetailView({
     setApproving(true);
     setError(null);
     try {
-      await approveReport(report.id!);
+      // SDD-253 D4: 승인과 발송 예약을 한 행동으로 — 서버가 승인(멱등)·감사 기록·발송 상태를 돌려준다.
+      await approveAndSendReport(report.id!);
       setApproved(true);
       const updated = await getReport(report.id!);
       updateReport(updated);
@@ -216,18 +220,22 @@ export default function ReportDetailView({
     report.data_credibility,
     eeg?.status ?? null,
   );
-  // SDD-087 — 상담사 코멘트
-  const counselorComment = commentOf(report.content);
   const clientComments = isCounselor ? parseClientComments(report.content) : [];
   // 측정 데이터 없음 = EEG 미측정(not_measured) + AI 기록 없음(not_available)
   const noMeasuredData = !adapted.eeg && adapted.aiRecord?.status === 'not_available';
   const showCommentEditor =
-    isCounselorUser && report.type === 'client' && pipelineStatus === 'pending_review';
-  const showApprove = isCounselorUser && canApproveReport({
-    status: report.status,
-    sent_at: report.sent_at,
-    alreadyApprovedLocally: approved,
-  });
+    report.type === 'client' &&
+    pipelineStatus === 'pending_review' &&
+    (report.capabilities ? report.capabilities.can_edit_comment : isCounselorUser);
+  // SDD-253 D3: 승인 가능 여부는 서버 capability 가 우선한다(기관관리자 포함). 구 응답은 기존 규칙으로 폴백.
+  const isStaffUser = isCounselorUser || userRole === 'org_admin';
+  const showApprove =
+    !approved &&
+    isStaffUser &&
+    (report.capabilities
+      ? report.capabilities.can_approve
+      : isCounselorUser &&
+        canApproveReport({ status: report.status, sent_at: report.sent_at, alreadyApprovedLocally: approved }));
   // 승인 완료 후 상담사가 수신 주소를 확인하고 별도로 발송한다.
   const showResendEmail = isCounselorUser && report.status === 'completed';
   const displayError = externalError || error;
@@ -251,7 +259,7 @@ export default function ReportDetailView({
             disabled={approving}
             className={buttonClass()}
           >
-            {approving ? '승인 중...' : '승인하기'}
+            {approving ? '승인 중...' : '승인하고 발송'}
           </button>
         )}
 
@@ -284,13 +292,15 @@ export default function ReportDetailView({
         <div data-print-exclude role="alert" className="p-3 rounded-xl bg-red-50 text-red-700 text-sm mobile:text-mb-body">{displayError}</div>
       )}
 
-      <ReportCoverSection report={report} adapted={adapted} />
+      {isCounselor && <ReportCoverSection report={report} adapted={adapted} />}
 
       <div data-print-exclude><ReportStatusBadge
         status={pipelineStatus}
         credibility={credibility}
         showApprovalHint={isCounselor}
       /></div>
+
+      {isStaffUser && <ReportApprovalStatus report={report} onChange={updateReport} />}
 
       {/* SDD-087 — 코멘트 작성 카드 (pending_review · client · 상담사) */}
       {showCommentEditor && (
@@ -325,21 +335,17 @@ export default function ReportDetailView({
         </SummaryCard>
       )}
 
-      {displayNarrative && <NarrativeSections narrative={displayNarrative} />}
+      {/* 회원용: 회원이 실제로 보는 본문(ClientReportBody)을 그대로 렌더 — 코멘트 편집 카드가 보일 땐 같은 코멘트 중복 표시만 숨긴다. */}
+      {!isCounselor && <MemberReportViewer report={report} hideCounselorComment={showCommentEditor} />}
 
-      {aiRecordUnavailable && (
+      {isCounselor && displayNarrative && (
+        <NarrativeSections narrative={displayNarrative} showCover={false} session={buildReportSessionInfo(report, adapted)} />
+      )}
+
+      {isCounselor && aiRecordUnavailable && (
         <div className="rounded-2xl border border-[#EFEFEF] bg-[#F9F9F9] p-5 text-sm mobile:text-mb-body text-[#6F6F6F]">
           {aiRecordReasonText}
         </div>
-      )}
-
-      {/* SDD-087 — 저장된 상담사 코멘트 (편집 카드 미노출 시 읽기 전용: 내담자 뷰 · completed) */}
-      {report.type === 'client' && counselorComment && !showCommentEditor && (
-        <SummaryCard title="상담사 코멘트">
-          <p className="mobile:[overflow-wrap:anywhere] text-[15px] mobile:text-mb-body text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
-            {counselorComment}
-          </p>
-        </SummaryCard>
       )}
 
       {isCounselor && markers.length > 0 && (

@@ -80,6 +80,12 @@ def _check_aliases(sid, pid, aliases: set[str], db: DBSession) -> None:
         raise _conflict("alias_conflict", [{"artifact_alias": a} for (a,) in clash])
 
 
+# 산출물 PUT 의 서명 Content-Type 은 항상 octet-stream 으로 고정한다. 클라이언트가 application/json 을 요청하면
+# Capacitor Android 네이티브 HTTP 가 dataType='file' 을 무시하고 본문을 base64 문자열로 써서 SHA-256 서명이 어긋나 PUT 이 거절된다.
+# 객체는 checksum 으로 검증되는 불투명 바이트이므로 서명 Content-Type 은 의미가 없다.
+ARTIFACT_PUT_CONTENT_TYPE = "application/octet-stream"
+
+
 def _object_key(sid, pid, m: ArtifactPresignChunk) -> str:
     return f"biosignal-artifacts/{sid}/{pid}/{m.artifact_kind}/{m.artifact_alias}-{m.checksum}.bin"
 
@@ -172,7 +178,7 @@ def presign(session_id: str, payload: ArtifactPresignRequest, db: DBSession, *, 
             if row.upload_status == "failed":
                 row.upload_status, row.failure_reason = "pending", None
             url, headers = storage_service.generate_presigned_put_checksummed(
-                row.object_key, checksum_sha256_hex=row.checksum, content_type=m.content_type)
+                row.object_key, checksum_sha256_hex=row.checksum, content_type=ARTIFACT_PUT_CONTENT_TYPE)
             expires = biosignal_service.PRESIGN_EXPIRES_SEC
         items.append({
             "artifact_id": str(row.id), "artifact_alias": row.artifact_alias, "artifact_kind": row.artifact_kind,
@@ -333,6 +339,22 @@ def ack(session_id: str, payload: ArtifactAckRequest, db: DBSession, *, current_
     if any(w not in rows for w in wanted):
         raise HTTPException(status_code=404, detail="산출물을 찾을 수 없습니다")
 
+    # S3 검증은 DB 트랜잭션 밖에서 한다(느린 저장소 한 건이 커넥션을 쥐고 풀을 고갈시키지 않게).
+    to_verify = [
+        (r.id, r.object_key, r.size_bytes, r.checksum)
+        for item in payload.chunks
+        for r in (rows[item.artifact_id],)
+        if item.checksum == r.checksum and item.size_bytes == r.size_bytes and r.upload_status != "uploaded"
+    ]
+    db.commit()
+    verdicts = {
+        aid: storage_service.verify_object_sha256(key, expected_size=size, expected_sha256_hex=checksum)
+        for aid, key, size, checksum in to_verify
+    }
+    rows = {r.id: r for r in db.query(BiosignalArtifact).filter(BiosignalArtifact.id.in_(wanted)).all()}
+    if any(w not in rows for w in wanted):
+        raise HTTPException(status_code=404, detail="산출물을 찾을 수 없습니다")
+
     results, acked, failed = [], 0, 0
     for item in payload.chunks:
         row = rows[item.artifact_id]
@@ -344,8 +366,7 @@ def ack(session_id: str, payload: ArtifactAckRequest, db: DBSession, *, current_
             indexed = db.query(DisplaySnapshot).filter_by(artifact_pk=row.id).count() if row.artifact_kind == "indices" else 0
             results.append(_result(row, "uploaded", indexed=indexed))
             continue
-        ok, version = storage_service.verify_object_sha256(
-            row.object_key, expected_size=row.size_bytes, expected_sha256_hex=row.checksum)
+        ok, version = verdicts.get(row.id, (False, None))
         if ok is not True:
             reason = "verification_unavailable" if ok is None else "object_verification_failed"
             row.upload_status, row.verified_at, row.failure_reason = "failed", None, reason

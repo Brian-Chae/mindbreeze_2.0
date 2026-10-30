@@ -93,6 +93,16 @@ class ReportResponse(HRVMotionSummary):
     in_review_delayed: bool = False
     # 승인 대상 여부 — 클래스 회차 상담사용 리포트는 false (검토중 집계·일괄 승인 대상 아님)
     approval_required: bool = True
+    # SDD-253: 승인 감사·발송 상태(가산 필드). 상담사·기관관리자 경로에서만 값이 채워지고 회원·토큰 경로는 항상 null.
+    approved_at: datetime | None = None
+    approved_by_name: str | None = None
+    approved_by_role: str | None = None
+    approval_source: str | None = None  # manual | auto | null(기존 기록·승인자 미확인)
+    delivery_status: str | None = None  # pending|sending|sent|failed|not_requested|unavailable
+    delivery_attempted_at: datetime | None = None
+    delivery_attempt_count: int | None = None
+    delivery_failure_code: str | None = None
+    capabilities: dict[str, bool] | None = None
 
 
 class ReportListResponse(BaseModel):

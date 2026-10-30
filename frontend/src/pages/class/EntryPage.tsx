@@ -17,6 +17,7 @@ import { EndContainer } from '../../components/class/flow/member/EndContainer';
 import { MemberClassContainer } from '../../components/class/player/member/MemberClassContainer';
 import { WaitlistView } from '../../components/class/flow/member/WaitlistView';
 import { WaitStartContainer } from '../../components/class/flow/member/WaitStartContainer';
+import { resolveEntryBack } from '../../lib/class/entry-back';
 import { useBackgroundSession } from '../../hooks/useBackgroundSession';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { useEntryPrep } from '../../hooks/useEntryPrep';
@@ -37,10 +38,12 @@ import {
   buildSteps, deriveEnterStage, deriveFlowStateKind, entryReducer, initialEntryState, notYetScheduledAt, startedSheetApplies, type FlowStateKind,
 } from '../../lib/class/flow/member-machine';
 import { RAW_RETENTION_DAYS } from '../../lib/privacy-policy';
+import { writeBandSkip } from '../../lib/class/flow/band-skip';
 import { buildSummaryRows, remainingPrepLabels, type SurveyOutcome } from '../../lib/class/flow/member-prep';
 import { buildMemberReadiness, type BandSnapshot } from '../../lib/class/flow/member-presence';
 import type { FlowBandMode } from '../../lib/class/flow/types';
 import { useAuthStore } from '../../stores/authStore';
+import { GuestSignupPrompt } from '../../components/auth/GuestSignupPrompt';
 
 /** 방침(/privacy)과 같은 보관 기간 — 환경 변수로 달리 표시하지 않는다 */
 const RETENTION_DAYS = RAW_RETENTION_DAYS;
@@ -422,6 +425,7 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
     return (
       <>
         {batteryGuide}
+        {entry.isGuest && <GuestSignupPrompt />}
         <WaitStartContainer
           place={place} size={size} bandMode={bandMode} title={title} hostName={info.hostName} scheduledAt={info.scheduledAt}
           address={info.locationType === 'offline' ? info.locationAddress : null}
@@ -488,6 +492,7 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
           setEegChoiceOverride(agree);
         }}
         onDone={(outcome) => {
+          writeBandSkip(sessionId, outcome === 'skipped');
           prep.patch({ bandOutcome: outcome });
           dispatch({ type: 'next', steps });
         }}
@@ -540,7 +545,13 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
       wait={machine.stage === 'unopened'}
       countdown={countdown}
       onEnter={() => dispatch({ type: 'enter' })}
-      onBack={() => navigate('/join')}
+      onBack={() => {
+        // 코드 입장이 아닌 로그인 회원(알림·푸시·홈 카드)은 들어온 곳으로, 기록이 없으면 회원 홈으로 돌려보낸다.
+        const idx = (window.history.state as { idx?: number } | null)?.idx;
+        const target = resolveEntryBack({ historyIdx: idx, isAuthenticated, isGuest: entry.isGuest });
+        if (target.kind === 'history') navigate(-1);
+        else navigate(target.path, { replace: true });
+      }}
     />
   );
 }

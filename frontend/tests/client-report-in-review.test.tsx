@@ -11,7 +11,7 @@ import ClientReportListPage from '../src/pages/client/ClientReportListPage';
 import { ClientReportDetailModal } from '../src/pages/client/ClientReportDetailModal';
 import { REPORT_IN_REVIEW_BADGE, REPORT_IN_REVIEW_NOTICE } from '../src/lib/report-review-copy';
 import { composeBanned } from '../e2e/class-flow/lib.mjs';
-import { getReport, listReports, type ReportDto } from '../src/lib/api/reports';
+import { getReport, getReportBadgeCounts, listReports, type ReportDto } from '../src/lib/api/reports';
 import { listSessions } from '../src/lib/api/session';
 import { listNotifications } from '../src/lib/api/notifications';
 import { listChatRooms } from '../src/lib/api/chat';
@@ -19,7 +19,7 @@ import { useReportStore } from '../src/stores/reportStore';
 
 vi.mock('../src/lib/api/reports', async (original) => ({
   ...await original<typeof import('../src/lib/api/reports')>(),
-  getReport: vi.fn(), listReports: vi.fn(), markAllReportsRead: vi.fn(),
+  getReport: vi.fn(), getReportBadgeCounts: vi.fn(), listReports: vi.fn(), markAllReportsRead: vi.fn(),
 }));
 vi.mock('../src/lib/api/session', async (importOriginal) => ({ ...(await importOriginal<typeof import('../src/lib/api/session')>()), listSessions: vi.fn() }));
 vi.mock('../src/lib/api/notifications', async (importOriginal) => ({
@@ -76,10 +76,11 @@ describe('RX-17 목록', () => {
     expect(row.textContent).not.toContain('대기');
     expect(row.textContent).not.toContain('확인 가능');
     expect(row.textContent).not.toContain('NEW');
+    expect(row.textContent).not.toContain('아직 읽지 않음');
     expect(row.textContent).not.toContain(SECRET);
     const ok = rowOf('승인 클래스');
     expect(ok.textContent).toContain('확인 가능');
-    expect(ok.textContent).toContain('NEW');
+    expect(ok.textContent).toContain('아직 읽지 않음'); // SDD-253: 데스크톱 표는 NEW 대신 의미가 드러나는 표기
     expect(ok.textContent).toContain('호흡으로 긴장을 풀었어요');
     expect(ok.textContent).not.toContain(REPORT_IN_REVIEW_BADGE);
   });
@@ -182,10 +183,8 @@ describe('RX-19 홈 카드', () => {
 
 describe('RX-20 reportStore.refresh', () => {
   it('unread 는 is_read=false 이면서 in_review 가 아닌 행만 센다, pendingReview 집계는 불변', async () => {
-    vi.mocked(listReports).mockResolvedValue({
-      reports: [approved, inReview, readOnlyInReview, { ...approved, id: 'p', status: 'pending_review', sent_at: null }],
-      total: 4,
-    });
+    // 집계는 서버(GET /reports/counts)가 목록과 같은 규칙으로 계산한다 — 동치는 backend/tests/test_list_latency_batching.py 가 검증.
+    vi.mocked(getReportBadgeCounts).mockResolvedValue({ unread: 2, pending_review: 3 });
     await useReportStore.getState().refresh();
     expect(useReportStore.getState().unread).toBe(2);
     expect(useReportStore.getState().pendingReview).toBe(3);

@@ -3,8 +3,7 @@
 // 전체 읽음/일괄 승인/단일 열람 시 즉시 갱신해 두 뷰에서 일관되게 표시한다.
 
 import { create } from 'zustand';
-import { isAwaitingApproval, listReports } from '../lib/api/reports';
-import { isReportInReview } from '../lib/report-review-copy';
+import { getReportBadgeCounts } from '../lib/api/reports';
 
 interface ReportState {
   /** 미열람 수 (내담자 배지 기준) */
@@ -23,13 +22,9 @@ export const useReportStore = create<ReportState>((set) => ({
   pendingReview: 0,
   refresh: async () => {
     try {
-      const res = await listReports({ limit: 100 });
-      const reports = res.reports;
-      set({
-        // 승인 전(리뷰 중) 행은 NEW 로 세지 않는다 — 승인 후에 NEW 로 나타난다.
-        unread: reports.filter((r) => !r.is_read && !isReportInReview(r)).length,
-        pendingReview: reports.filter((r) => isAwaitingApproval(r)).length,
-      });
+      // 서버가 목록과 같은 권한 범위로 집계한다(승인 전 행은 NEW 제외, 클래스 상담사 리포트는 검토중 제외).
+      const counts = await getReportBadgeCounts();
+      set({ unread: counts.unread, pendingReview: counts.pending_review });
     } catch {
       // 조용히 실패 — 배지는 보조 정보이므로 차단하지 않는다.
     }

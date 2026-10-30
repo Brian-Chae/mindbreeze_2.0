@@ -1,0 +1,257 @@
+{
+  "acc": {
+    "chunk_alias": "RAW-ACC-180e3881-789b4322-000000",
+    "size_bytes": 3596,
+    "content_type": "application/octet-stream",
+    "checksum": "97ada9d9aa741fe0c3e68fc12149328ba9478ef876722f424268ac3255aee4af",
+    "header": {
+      "chunk_index": 0,
+      "observed_rate": null,
+      "observed_rate_window_us": null,
+      "scale": [
+        6.103515625E-5,
+        6.103515625E-5,
+        6.103515625E-5
+      ],
+      "units": [
+        "g",
+        "g",
+        "g"
+      ],
+      "first_sample_index": 0,
+      "sections": [
+        {
+          "offset": 0,
+          "name": "samples",
+          "length": 450,
+          "encoding": "acc-i16-i16-i16-f32-f32-f32-le",
+          "row_stride": 18
+        },
+        {
+          "offset": 450,
+          "name": "packets",
+          "length": 170,
+          "encoding": "bytes",
+          "row_stride": 0
+        },
+        {
+          "offset": 620,
+          "name": "packet_map",
+          "length": 1527,
+          "encoding": "utf8-jsonl",
+          "row_stride": 0
+        }
+      ],
+      "signal_type": "acc",
+      "schema_version": "mb-biosignal-raw-v2",
+      "time_basis": "host_estimated",
+      "observed_rate_reason": "not_measured",
+      "channels": [
+        "x",
+        "y",
+        "z"
+      ],
+      "stream_id": "180e3881-be9e-3d7f-b072-87f2feff62bb",
+      "rate": {
+        "numerator": 30,
+        "denominator": 1
+      },
+      "packet_count": 5,
+      "anchor": {
+        "utc_us": "-133333",
+        "device_tick_raw": "5000",
+        "clock_segment_id": "789b4322-2de8-3ee5-8aa9-7dc23f5d4088",
+        "uncertainty_us": null,
+        "device_tick_unwrapped": "5000",
+        "rule": "anchor_plus_index_delta_over_rate",
+        "sample_index": 0,
+        "monotonic_us": "-133333",
+        "relative_us": "-133333"
+      },
+      "sample_count": 25,
+      "end_sample_index_exclusive": 25,
+      "segment_id": "789b4322-2de8-3ee5-8aa9-7dc23f5d4088",
+      "parser_profile": {
+        "tick_hz": 32768,
+        "parameters_hash": "8e3afcb46a7904c7e81fefed5a4b8c0fb3e2e10deb73c1d2a1bf4aa473f44d18",
+        "device_model": "LINK-BAND-2.0",
+        "profile_id": "mb-native-clock-v1",
+        "packet_endian": "little",
+        "header_anchor": "last_sample",
+        "firmware": "unknown",
+        "version": "1",
+        "platform": "native-candidate",
+        "verification": "unverified",
+        "tick_bits": 32
+      }
+    }
+  },
+  "eeg": {
+    "chunk_alias": "RAW-EEG-27d369f0-ad2beca4-000000",
+    "size_bytes": 5999,
+    "content_type": "application/octet-stream",
+    "checksum": "c0f65828779169642e3aaf07e87a0b7e6ef9293d25a79dd88b223bd119b83cda",
+    "header": {
+      "chunk_index": 0,
+      "observed_rate": null,
+      "observed_rate_window_us": null,
+      "scale": [
+        0.04006426017255706,
+        0.04006426017255706
+      ],
+      "units": [
+        "uV",
+        "uV"
+      ],
+      "first_sample_index": 0,
+      "sections": [
+        {
+          "offset": 0,
+          "name": "samples",
+          "length": 2125,
+          "encoding": "eeg-i32-i32-u8-f32-f32-le",
+          "row_stride": 17
+        },
+        {
+          "offset": 2125,
+          "name": "packets",
+          "length": 895,
+          "encoding": "bytes",
+          "row_stride": 0
+        },
+        {
+          "offset": 3020,
+          "name": "packet_map",
+          "length": 1539,
+          "encoding": "utf8-jsonl",
+          "row_stride": 0
+        }
+      ],
+      "signal_type": "eeg",
+      "schema_version": "mb-biosignal-raw-v2",
+      "time_basis": "host_estimated",
+      "observed_rate_reason": "not_measured",
+      "channels": [
+        "fp1",
+        "fp2"
+      ],
+      "stream_id": "27d369f0-844c-39b4-8ce1-7b200482c714",
+      "rate": {
+        "numerator": 250,
+        "denominator": 1
+      },
+      "packet_count": 5,
+      "anchor": {
+        "utc_us": "-96000",
+        "device_tick_raw": "5000",
+        "clock_segment_id": "ad2beca4-787d-30f3-9e4c-48ad87165ab0",
+        "uncertainty_us": null,
+        "device_tick_unwrapped": "5000",
+        "rule": "anchor_plus_index_delta_over_rate",
+        "sample_index": 0,
+        "monotonic_us": "-96000",
+        "relative_us": "-96000"
+      },
+      "sample_count": 125,
+      "end_sample_index_exclusive": 125,
+      "segment_id": "ad2beca4-787d-30f3-9e4c-48ad87165ab0",
+      "parser_profile": {
+        "tick_hz": 32768,
+        "parameters_hash": "8e3afcb46a7904c7e81fefed5a4b8c0fb3e2e10deb73c1d2a1bf4aa473f44d18",
+        "device_model": "LINK-BAND-2.0",
+        "profile_id": "mb-native-clock-v1",
+        "packet_endian": "little",
+        "header_anchor": "last_sample",
+        "firmware": "unknown",
+        "version": "1",
+        "platform": "native-candidate",
+        "verification": "unverified",
+        "tick_bits": 32
+      }
+    }
+  },
+  "ppg": {
+    "chunk_alias": "RAW-PPG-b11e6d56-6cffe006-000000",
+    "size_bytes": 3294,
+    "content_type": "application/octet-stream",
+    "checksum": "e1dafbe29183f27b9b5e3f711b085ee5a7d6b59a071d99669b8478c5089eab9a",
+    "header": {
+      "chunk_index": 0,
+      "observed_rate": null,
+      "observed_rate_window_us": null,
+      "scale": [
+        1,
+        1
+      ],
+      "units": [
+        "ADC_count",
+        "ADC_count"
+      ],
+      "first_sample_index": 0,
+      "sections": [
+        {
+          "offset": 0,
+          "name": "samples",
+          "length": 200,
+          "encoding": "ppg-u32-u32-le",
+          "row_stride": 8
+        },
+        {
+          "offset": 200,
+          "name": "packets",
+          "length": 170,
+          "encoding": "bytes",
+          "row_stride": 0
+        },
+        {
+          "offset": 370,
+          "name": "packet_map",
+          "length": 1525,
+          "encoding": "utf8-jsonl",
+          "row_stride": 0
+        }
+      ],
+      "signal_type": "ppg",
+      "schema_version": "mb-biosignal-raw-v2",
+      "time_basis": "host_estimated",
+      "observed_rate_reason": "not_measured",
+      "channels": [
+        "red",
+        "ir"
+      ],
+      "stream_id": "b11e6d56-3a30-35ae-9445-f674777bd2fa",
+      "rate": {
+        "numerator": 50,
+        "denominator": 1
+      },
+      "packet_count": 5,
+      "anchor": {
+        "utc_us": "-80000",
+        "device_tick_raw": "5000",
+        "clock_segment_id": "6cffe006-f4b2-3414-af6d-602e40c6d2eb",
+        "uncertainty_us": null,
+        "device_tick_unwrapped": "5000",
+        "rule": "anchor_plus_index_delta_over_rate",
+        "sample_index": 0,
+        "monotonic_us": "-80000",
+        "relative_us": "-80000"
+      },
+      "sample_count": 25,
+      "end_sample_index_exclusive": 25,
+      "segment_id": "6cffe006-f4b2-3414-af6d-602e40c6d2eb",
+      "parser_profile": {
+        "tick_hz": 32768,
+        "parameters_hash": "8e3afcb46a7904c7e81fefed5a4b8c0fb3e2e10deb73c1d2a1bf4aa473f44d18",
+        "device_model": "LINK-BAND-2.0",
+        "profile_id": "mb-native-clock-v1",
+        "packet_endian": "little",
+        "header_anchor": "last_sample",
+        "firmware": "unknown",
+        "version": "1",
+        "platform": "native-candidate",
+        "verification": "unverified",
+        "tick_bits": 32
+      }
+    }
+  }
+}

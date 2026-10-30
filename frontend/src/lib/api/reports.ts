@@ -127,6 +127,26 @@ export interface ReportDto {
   in_review_delayed?: boolean;
   /** 승인 대상 여부 — false 면 클래스 회차 상담사용 리포트(검토중 집계·일괄 승인 제외). 구 응답엔 없음(=대상). */
   approval_required?: boolean;
+  /** SDD-253 — 승인 감사·발송 상태(상담사·기관관리자 응답에서만 채워짐. 회원·토큰 응답은 항상 없음). */
+  approved_at?: string | null;
+  approved_by_name?: string | null;
+  approved_by_role?: string | null;
+  /** manual | auto | null(기존 기록·승인자 미확인) */
+  approval_source?: string | null;
+  /** pending | sending | sent | failed | not_requested | unavailable — 승인과 독립 축 */
+  delivery_status?: string | null;
+  delivery_attempted_at?: string | null;
+  delivery_attempt_count?: number | null;
+  delivery_failure_code?: string | null;
+  capabilities?: ReportCapabilities | null;
+}
+
+/** SDD-253 — 서버가 계산한 화면 버튼 근거. 승인 권한과 코멘트 편집 권한은 별개다. */
+export interface ReportCapabilities {
+  can_view: boolean;
+  can_approve: boolean;
+  can_edit_comment: boolean;
+  can_retry_delivery: boolean;
 }
 
 export interface ReportListResponse {
@@ -154,6 +174,19 @@ function buildReportListQuery(params?: ListReportsParams): string {
 
 export const listReports = (params?: ListReportsParams): Promise<ReportListResponse> =>
   apiClient.get<ReportListResponse>(`/reports${buildReportListQuery(params)}`);
+/** 사이드바·탭바 배지용 경량 집계 — 목록 본문 없이 숫자만 받는다(GET /reports/counts). */
+export interface ReportBadgeCounts { unread: number; pending_review: number }
+export const getReportBadgeCounts = (): Promise<ReportBadgeCounts> =>
+  apiClient.get<ReportBadgeCounts>('/reports/counts');
+
+/** SDD-253 D4 — 승인하고 발송(승인 멱등 + 발송 예약 1회). */
+export const approveAndSendReport = (id: string): Promise<ReportDto> =>
+  apiClient.post<ReportDto>(`/reports/${id}/approve-and-send`, {});
+
+/** SDD-253 D4 — 발송 실패 건 다시 발송(승인자·승인 시각 불변). */
+export const retryReportDelivery = (id: string): Promise<ReportDto> =>
+  apiClient.post<ReportDto>(`/reports/${id}/retry-delivery`, {});
+
 export const getReport = (id: string): Promise<ReportDto> =>
   apiClient.get<ReportDto>(`/reports/${id}`);
 

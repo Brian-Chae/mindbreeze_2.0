@@ -256,8 +256,12 @@ def test_upgrade_backfills_only_before_evidence_and_is_repeatable(scratch_db):
             states = {str(r.id): r.checkin_state for r in conn.execute(text('SELECT id,checkin_state FROM session_participants'))}
             assert states == {before: 'completed', after_only: None, no_evidence: None}
             assert conn.execute(text('SELECT participation_version FROM sessions WHERE id=:id'), {'id': sid}).scalar_one() == 0
-            # head 는 새 SDD 마다 올라간다. 057 이 체인에 적용됐고 그 이상인지만 본다.
+            # head 는 새 SDD 마다 올라간다. revision id 는 사전순이 아니므로 057 이 적용 리비전의 조상 체인에 있는지만 본다.
+            from alembic.config import Config
+            from alembic.script import ScriptDirectory
             applied = conn.execute(text('SELECT version_num FROM alembic_version')).scalar_one()
-            assert applied >= 'e036a0000057'
+            script = ScriptDirectory.from_config(Config('alembic.ini'))
+            ancestors = {r.revision for r in script.walk_revisions(base='base', head=applied)}
+            assert 'e036a0000057' in ancestors
     finally:
         engine.dispose()

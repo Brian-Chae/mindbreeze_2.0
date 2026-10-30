@@ -136,7 +136,16 @@ public final class MeasurementManager: BandLinkDelegate {
             return startResult(replay: true)                       // 같은 requestId 는 새 수집을 시작하지 않는다
         }
         guard Self.isUUID(sessionId), Self.isUUID(requestId) else { throw ManagerError.invalidArgument("uuid") }
-        if state != .idle && state != .closed { throw ManagerError.alreadyActive }
+        if state != .idle && state != .closed {
+            // 다른 회차의 수집이 남아 있으면(앱 재시작 복구 등) 새 시작을 영구히 막지 않도록 그 회차를 봉인하고 넘긴다. 같은 회차는 기존대로 거절.
+            guard let old = self.sessionId, old != sessionId else { throw ManagerError.alreadyActive }
+            Self.log.error("다른 회차 수집이 남아 있어 봉인 후 교체 old=\(old, privacy: .public) state=\(self.state.rawValue, privacy: .public)")
+            if state == .arming || state == .capturing || state == .reconnecting { seal(reason: "superseded", closeStream: true) }
+            live?.stop(); live = nil
+            ownership.releaseNative()
+            state = .closed
+            persistActive()
+        }
         switch ownership.tryAcquireNative() {
         case .rejected(.nativeDisabled): throw ManagerError.nativeDisabled
         case .rejected(.jsOwnsBand): throw ManagerError.jsOwnsBand
@@ -212,6 +221,10 @@ public final class MeasurementManager: BandLinkDelegate {
             if let fin = try? e.seal() {
                 started = true
                 enqueueArchive(of: fin)
+                // 종료 기록(close intent)을 서버 응답 이전에 디스크에 먼저 남긴다 — 앱이 죽어도 다음 실행/업로드 완료 깨움에서 이어 보낸다.
+                if closeStream, let sid = sessionId, let q = archive {
+                    Self.closeIntentStore(root: root, sessionId: sid).record(queue: q, sessionId: sid, participantId: participantId, reason: reason, nowUs: Int64(nowMs()) * 1000)
+                }
                 if closeStream {
                     live?.dispatch(command: ["command_id": UUID().uuidString.lowercased(), "kind": "capture.close", "client_generation": String(generation),
                                              "payload": ["stream_id": s, "reason": reason,
@@ -233,21 +246,59 @@ public final class MeasurementManager: BandLinkDelegate {
         seal(reason: reason, closeStream: true)
     }
 
-    /// 봉인 이후 raw/feature journal 을 불변 payload 로 보관하고 업로드 큐에 넣는다(T09 의 capture_stream_id/monotonic_range 포함).
+    /// 봉인 이후 raw/feature journal 을 서버 계약(raw-v2 청크 / feature-v1 ndjson)으로 변환해 업로드 큐에 넣는다(T09 의 capture_stream_id/monotonic_range 포함).
+    /// 통파일(journal 그대로)로 올리면 서버 필수 메타가 없어 항상 422 였다(SDD-252). alias 가 결정적이라 복구 재생에서도 한 번만 큐에 들어간다.
     private func enqueueArchive(of fin: CoreFinal) {
         guard let sid = sessionId, let stream = streamId, let q = archive else { return }
         let dir = sessionDir(sid)
         let out = dir.appendingPathComponent("archive")
         try? FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
-        for (kind, name) in [(ArchiveKind.raw, "raw.journal"), (ArchiveKind.feature, "feature.journal")] {
-            let src = dir.appendingPathComponent(name)
-            guard let data = try? Data(contentsOf: src), !data.isEmpty else { continue }
-            let alias = "\(stream)-\(kind.rawValue)-0001"
+        func put(_ alias: String, _ kind: ArchiveKind, _ data: Data, _ meta: [String: Any], range: (String, String)?) {
             let file = alias + ".bin"
             let dst = out.appendingPathComponent(file)
             if !FileManager.default.fileExists(atPath: dst.path) { try? data.write(to: dst, options: .atomic) }
-            let item = ArchiveItem(alias: alias, kind: kind, file: file, sha256: Hashing.sha256Hex(data), sizeBytes: data.count, captureStreamId: stream, monotonicRange: nil)
+            var item = ArchiveItem(alias: alias, kind: kind, file: file, sha256: Hashing.sha256Hex(data), sizeBytes: data.count, captureStreamId: stream, monotonicRange: range)
+            item.meta = meta
             try? q.enqueue(item)
+        }
+        // 1) 원시 EEG/PPG/ACC 청크 — raw.journal 을 도착 순서대로 센서별 RawChunker 에 먹인다.
+        let packets = MeasurementEngine.rawPackets(in: dir)
+        let origin: Int64 = packets.first.map { Int64($0.wall) * 1000 + Int64(bitPattern: $0.arrival &- $0.anchor) } ?? 0
+        var chunkers: [BandSensor: RawChunker] = [:]
+        func chunker(_ s: BandSensor) -> RawChunker {
+            if let c = chunkers[s] { return c }
+            let c = RawChunker(sensor: s, session: sid, originUs: origin) { chunk in
+                let h = chunk.meta["header"] as? [String: Any]
+                let a = h?["anchor"] as? [String: Any]
+                let from = (a?["monotonic_us"] as? String) ?? "0"
+                put(chunk.alias, .raw, chunk.payload, chunk.meta, range: (from, from)) // raw 는 header 가 창을 정의 — range 는 큐 표시용
+            }
+            chunkers[s] = c; return c
+        }
+        for p in packets {
+            let us = Int64(p.wall) * 1000 + Int64(bitPattern: p.arrival &- p.anchor)   // 코어 창과 같은 시간축
+            chunker(p.sensor).onPacket(p.bytes, arrivalUs: us)
+        }
+        for c in chunkers.values { c.flush() }
+        // 2) feature — feature.journal 의 프레임(envelope JSON)을 60개씩 ndjson 으로 묶는다.
+        let frames: [[String: Any]] = AppendOnlyJournal.scan(url: dir.appendingPathComponent("feature.journal")).records
+            .compactMap { try? JSONSerialization.jsonObject(with: $0.payload) as? [String: Any] }
+        let scopeStream = RawIds.streamId(session: sid, sensor: .eeg), scopeSegment = RawIds.segmentId(session: sid, sensor: .eeg, ordinal: 0)
+        var i = 0
+        while i < frames.count {
+            let slice = Array(frames[i..<min(i + 60, frames.count)])
+            i += 60
+            let seqs = slice.compactMap { ($0["sequence"] as? String).flatMap(UInt64.init) }
+            guard let first = seqs.first, let last = seqs.last, let s = slice.first, let e = slice.last else { continue }
+            var body = Data()
+            for f in slice { if let d = try? JSONSerialization.data(withJSONObject: f, options: [.sortedKeys]) { body += d; body.append(0x0A) } }
+            let alias = "NF-\(String(stream.prefix(8)))-\(first)"
+            let from = (s["window_start_us"] as? String) ?? "0", to = (e["window_end_us"] as? String) ?? from
+            let meta: [String: Any] = ["artifact_alias": alias, "artifact_kind": "feature", "stream_id": scopeStream, "segment_id": scopeSegment, "signal": "eeg",
+                "sequence": first, "first_sequence": first, "last_sequence": last, "row_count": slice.count, "content_encoding": "identity", "schema_version": "feature-v1",
+                "checksum": Hashing.sha256Hex(body), "size_bytes": body.count, "content_type": "application/x-ndjson",
+                "time_range": ["from_us": from, "to_us": to], "monotonic_range": ["from_us": from, "to_us": to]]
+            put(alias, .feature, body, meta, range: (from, to))
         }
     }
 
@@ -258,6 +309,13 @@ public final class MeasurementManager: BandLinkDelegate {
         return p?.dictionary ?? ["eegFp1": [Double](), "eegFp2": [Double](), "ppgRed": [Double](), "ppgIr": [Double]()]
     }
 
+    /// 세션 디렉터리의 종료 기록 저장소(호스트가 앱 재시작 후에도 같은 파일로 재전송한다).
+    public static func closeIntentStore(root: URL, sessionId: String) -> CloseIntentStore {
+        CloseIntentStore(file: root.appendingPathComponent("sessions").appendingPathComponent(sessionId).appendingPathComponent(CloseIntentStore.fileName))
+    }
+    public func closeIntentStore(sessionId: String) -> CloseIntentStore { Self.closeIntentStore(root: root, sessionId: sessionId) }
+    /// 해당 세션이 지금 manager 가 들고 있는 세션일 때만 그 큐(다른 세션 큐를 잘못 쓰지 않는다).
+    public func archiveQueue(forSession sid: String) -> ArchiveQueue? { lock.lock(); defer { lock.unlock() }; return sessionId == sid ? archive : nil }
     public var archiveQueue: ArchiveQueue? { lock.lock(); defer { lock.unlock() }; return archive }
     public func archiveFileURL(_ item: ArchiveItem) -> URL {
         lock.lock(); defer { lock.unlock() }
@@ -285,6 +343,12 @@ public final class MeasurementManager: BandLinkDelegate {
               let sid = a["sessionId"] as? String, let st = a["state"] as? String, st != "CLOSED", st != "SEALING",
               let stream = a["streamId"] as? String, let gen = (a["ownerGeneration"] as? String).flatMap({ UInt64($0) }),
               let pid = a["participantId"] as? String else { return false }
+        if let why = Self.recoveryVeto(sessionDir: sessionDir(sid), nowMs: nowMs()) {
+            // 이틀 지난 CAPTURING 세션·수백 MB 저널을 매 실행마다 되살리다 3GB 메모리 한도로 앱이 죽었다. 되살리지 않고 증거를 보존한 채 치운다.
+            Self.log.error("세션 복구 거부 session=\(sid, privacy: .public) why=\(why, privacy: .public)")
+            abandonActive(reason: why)
+            return false
+        }
         guard case .acquired = ownership.tryAcquireNative() else { return false }
         generation = (a["managerGeneration"] as? UInt64) ?? 1; managerId = (a["managerId"] as? String) ?? UUID().uuidString.lowercased()
         requestId = a["requestId"] as? String; sessionId = sid; credentialHandle = a["credentialHandle"] as? String; configHash = a["configHash"] as? String
@@ -694,6 +758,28 @@ public final class MeasurementManager: BandLinkDelegate {
         if state == .closed || state == .idle { try? FileManager.default.removeItem(at: activeURL); return }
         if let d = try? JSONSerialization.data(withJSONObject: a) { try? d.write(to: activeURL, options: .atomic) }
     }
+    /// 복구 한도. 마지막 raw 기록이 이보다 오래됐으면(수집이 이미 끝난 세션) 또는 저널이 이보다 크면(전량 적재 시 메모리 한도 초과) 되살리지 않는다.
+    public static let recoveryMaxAgeSeconds: TimeInterval = 3 * 3600
+    public static let recoveryMaxJournalBytes: UInt64 = 128 * 1024 * 1024
+
+    /// 복구 거부 사유(순수). nil 이면 복구 허용. 파일을 읽지 않고 속성(수정 시각·크기)만 본다.
+    public static func recoveryVeto(sessionDir: URL, nowMs: UInt64) -> String? {
+        let fm = FileManager.default
+        func attrs(_ n: String) -> [FileAttributeKey: Any]? { try? fm.attributesOfItem(atPath: sessionDir.appendingPathComponent(n).path) }
+        for n in ["feature.journal", "metric-outbox.journal", "raw.journal"] {
+            if let sz = (attrs(n)?[.size] as? NSNumber)?.uint64Value, sz > recoveryMaxJournalBytes { return "journal_too_large" }
+        }
+        if let m = attrs("raw.journal")?[.modificationDate] as? Date, Double(nowMs) / 1000 - m.timeIntervalSince1970 > recoveryMaxAgeSeconds { return "stale_session" }
+        return nil
+    }
+
+    /// 복구하지 않기로 한 active.json 을 지우지 않고 옆으로 치운다(사후 분석용). 세션 디렉터리는 건드리지 않는다.
+    private func abandonActive(reason: String) {
+        let dst = activeURL.deletingLastPathComponent().appendingPathComponent("active.abandoned-\(nowMs())-\(reason).json")
+        try? FileManager.default.removeItem(at: dst)
+        try? FileManager.default.moveItem(at: activeURL, to: dst)
+    }
+
     private func loadActive() -> [String: Any]? {
         guard let d = try? Data(contentsOf: activeURL) else { return nil }
         var o = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any]

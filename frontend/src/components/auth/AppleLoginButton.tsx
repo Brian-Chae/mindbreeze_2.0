@@ -5,6 +5,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { ApiError } from '../../lib/api/client';
 import { apiErrorCode, requestAppleChallenge, type ConsentPayload } from '../../lib/api/auth';
 import { isAppleLoginAvailable, nativeAppleCredential } from '../../lib/native/apple';
+import type { SocialCredential } from '../../stores/social-signup-store';
 
 interface AppleLoginButtonProps {
   role?: string;
@@ -19,7 +20,7 @@ interface AppleLoginButtonProps {
   /** 로그인 성공 */
   onSuccess?: (user: ReturnType<typeof useAuthStore.getState>['user']) => void;
   /** 신규 가입에 필요한 동의·생년월일이 비어 서버가 422 를 준 경우(화면이 입력란을 보여 준다) */
-  onNeedsSignupInfo?: (code: string | null) => void;
+  onNeedsSignupInfo?: (code: string | null, credential?: SocialCredential) => void;
   onError?: (message: string) => void;
 }
 
@@ -56,9 +57,10 @@ export default function AppleLoginButton({
     const blocked = validateBeforeSubmit?.();
     if (blocked) { onError?.(blocked); return; }
     setLoading(true);
+    let credential: Awaited<ReturnType<typeof nativeAppleCredential>> | null = null;
     try {
       const { nonce } = await requestAppleChallenge();
-      const credential = await nativeAppleCredential(nonce);
+      credential = await nativeAppleCredential(nonce);
       const user = await loginApple(
         {
           id_token: credential.idToken,
@@ -76,6 +78,17 @@ export default function AppleLoginButton({
     } catch (err) {
       const code = apiErrorCode(err);
       if (err instanceof ApiError && err.status === 422 && code && SIGNUP_INFO_CODES.has(code)) {
+        // 계정은 만들어지지 않았고 nonce 도 소비되지 않았다 — 같은 자격으로 확인 화면에서 다시 제출한다.
+        if (onNeedsSignupInfo && credential) {
+          onNeedsSignupInfo(code, {
+            provider: 'apple',
+            idToken: credential.idToken,
+            nonce: credential.nonce,
+            authorizationCode: credential.authorizationCode,
+            name: credential.name,
+          });
+          return;
+        }
         onNeedsSignupInfo?.(code);
       }
       onError?.(messageFor(err));

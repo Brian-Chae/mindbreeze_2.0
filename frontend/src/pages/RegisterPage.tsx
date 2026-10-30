@@ -31,6 +31,11 @@ function RoleCard({ to, title, description, cta }: RoleCardProps) {
   );
 }
 
+// 앱(Capacitor) 내부 origin 은 외부에서 열 수 없으므로 공개 웹 주소(VITE_PUBLIC_APP_URL)를 우선한다.
+function webBaseUrl(): string {
+  return ((import.meta.env.VITE_PUBLIC_APP_URL as string | undefined)?.replace(/\/+$/, '')) || window.location.origin;
+}
+
 export default function RegisterPage() {
   const [params] = useSearchParams();
   const roleParam = params.get('role');
@@ -80,6 +85,19 @@ export default function RegisterPage() {
             description="우리 기관의 MIND BREEZE 도입을 상담해요."
             cta="상담 신청"
           />}
+          {isNativeApp() && (
+            <a
+              href={`${webBaseUrl()}/?inquiry=1`}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="app-org-inquiry"
+              className="block bg-surface-raised rounded-2xl border border-border-default p-6 hover:border-brand-primary hover:shadow-sm transition-all"
+            >
+              <p className="text-lg font-bold text-ink-primary">기관 도입은 웹에서 문의해요</p>
+              <p className="mt-1 text-sm text-ink-tertiary leading-relaxed">기관 가입 문의는 웹 문의 창에서 접수해요. 담당자가 확인 후 연락드려요.</p>
+              <span className="mt-3 inline-block text-sm font-semibold text-brand-primary">웹에서 문의하기 →</span>
+            </a>
+          )}
         </div>
 
         <p className="text-center text-sm text-ink-tertiary">

@@ -84,6 +84,13 @@ class Settings(BaseSettings):
     db_pool_pre_ping: bool = True
     # 30분마다 연결 재생성(방화벽·RDS 유휴 타임아웃 대비)
     db_pool_recycle: int = 1800
+    # PostgreSQL 세션 타임아웃(ms, 0=해제). 잠금 대기·긴 쿼리가 커넥션을 무기한 쥐지 않게 한다.
+    db_lock_timeout_ms: int = 10_000
+    db_statement_timeout_ms: int = 120_000
+    # 한 프로세스에서 동시에 처리하는 raw/산출물 presign·ack 요청 수. 복귀 직후 한 참가자의 폭주가
+    # DB 풀(10+10)·스레드풀을 독점해 로그인 등 다른 요청이 멈추는 것을 막는다. 초과분은 429(Retry-After).
+    archive_max_concurrent: int = 6
+    archive_slot_wait_sec: float = 1.5
 
     # Redis
     redis_url: str = "redis://localhost:6379/0"

@@ -14,6 +14,8 @@ export interface ClassSummaryDto {
   progress: ProgressDto; session_count: number; next_session: NextSessionDto | null; has_open_session: boolean;
   /** 대표 진행자(다음 회차가 없어도 채워짐) */
   host?: UserBriefDto | null;
+  /** SDD-250: 홈 '다음 일정' 후보용 열린 회차(시작 후 6시간 이내). 구 서버는 필드 없음. */
+  open_session?: NextSessionDto | null;
   open_session_id?: string | null; open_session_host_id?: string | null; open_session_host_state?: string | null;
 }
 export interface ClassInstructorDto { user_id: string; name: string | null; role: string; status: string }

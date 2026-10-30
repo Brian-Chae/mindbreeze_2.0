@@ -253,12 +253,19 @@ def _ensure_session_chat_enabled(room: ChatRoom, user_id: str, db: DBSession) ->
     """클래스(세션) 채팅 on/off 게이트 — 발신 전용.
 
     세션 방에서 `Session.chat_enabled=False` 이면 참여자(비 host)의 발신을 막는다.
-    host 상담사는 항상 발신 가능하고, 과거 메시지·시스템 공지 조회(읽기)는 막지 않는다.
+    host 상담사는 항상 발신 가능하며, 발신하면 chat_enabled 가 자동으로 켜진다(열림).
+    과거 메시지·시스템 공지 조회(읽기)는 막지 않는다.
     """
     if room.room_type != "session" or not room.session_id:
         return
     session = db.query(Session).filter(Session.id == room.session_id).first()
-    if session is None or session.chat_enabled or session.host_id == _uuid(user_id):
+    if session is None or session.chat_enabled:
+        return
+    if session.host_id == _uuid(user_id):
+        # 상담사가 채팅을 남기면 '채팅 없음'으로 시작한 회차도 열린 것으로 본다 —
+        # 열림 상태를 따라 회원 화면에 채팅창이 나타나고 회원도 답할 수 있게 한다.
+        session.chat_enabled = True
+        db.commit()
         return
     raise HTTPException(status_code=403, detail="채팅이 꺼져 있는 클래스입니다")
 

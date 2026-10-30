@@ -21,6 +21,8 @@ from app.services.device_service import mask_token
 logger = logging.getLogger(__name__)
 
 FCM_SCOPE = "https://www.googleapis.com/auth/firebase.messaging"
+# SDD-250: 앱이 시작 시 같은 id 로 생성하는 Android 알림 채널(중요도 HIGH). frontend/src/lib/native/push.ts 와 일치해야 한다.
+ANDROID_CHANNEL_ID = "mindbreeze_default"
 FCM_ENDPOINT = "https://fcm.googleapis.com/v1/projects/{project_id}/messages:send"
 REQUEST_TIMEOUT_SEC = 10.0
 
@@ -101,6 +103,15 @@ def build_message(token: str, *, title: str, body: str, data: dict[str, str]) ->
             "token": token,
             "notification": {"title": title, "body": body},
             "data": {str(k): str(v) for k, v in data.items()},
+            # SDD-250: 백그라운드에서 헤드업 배너가 뜨도록 채널·우선순위를 지정한다(앱이 같은 id 로 채널을 만든다).
+            "android": {
+                "priority": "HIGH",
+                "notification": {
+                    "channel_id": ANDROID_CHANNEL_ID,
+                    "sound": "default",
+                    "notification_priority": "PRIORITY_HIGH",
+                },
+            },
         }
     }
 

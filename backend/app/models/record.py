@@ -271,5 +271,14 @@ class Report(Base):
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # SDD-253: 승인 감사 스냅샷(승인 당시 성명·역할·경로). NULL = 기존 기록·승인자 미확인(추정 금지).
+    approved_by_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    approved_by_role: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    approval_source: Mapped[str | None] = mapped_column(String(20), nullable=True)  # manual | auto
+    # SDD-253: 발송 상태 — 승인(status)·sent_at 과 독립 축. 'sent' 는 메일 제공자 인계 기준이며 수신함 도착이 아니다.
+    delivery_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    delivery_attempted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    delivery_attempt_count: Mapped[int | None] = mapped_column(Integer, nullable=True, server_default="0")
+    delivery_failure_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     session = relationship("Session", back_populates="reports")

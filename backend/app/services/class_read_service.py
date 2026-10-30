@@ -8,7 +8,7 @@ EEG·녹음·전사·리포트 본문은 조회하지 않는다(진행 상태 �
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import HTTPException
@@ -157,6 +157,30 @@ def _next_session(rows: list, now: datetime):
     return min(candidates, key=lambda r: (_aware(r.scheduled_at), r.seq or 0), default=None)
 
 
+# SDD-250(D4): 홈 '다음 일정'에 열린 회차를 올릴 때, 시작(예정) 후 이 시간이 지난 회차는 제외한다.
+HOME_OPEN_WINDOW_HOURS = 6
+
+
+def _home_open_session(rows: list, now: datetime):
+    """홈 '다음 일정'용 열린 회차. `_open_session` 규칙에 시작 후 6시간 윈도우를 더한다.
+
+    기준 시각 = max(started_at, scheduled_at). 둘 다 없으면 오래됐는지 알 수 없어 제외한다.
+    미래 예정인데 열려 있는 회차는 일정이 가까운 순으로 후보에 남는다.
+    """
+    limit = now - timedelta(hours=HOME_OPEN_WINDOW_HOURS)
+
+    def stamp(r):
+        times = [_aware(t) for t in (r.started_at, r.scheduled_at) if t is not None]
+        return max(times) if times else None
+
+    candidates = [r for r in rows if r.status in _OPEN_STATUSES and stamp(r) is not None and stamp(r) >= limit]
+    return max(
+        candidates,
+        key=lambda r: (r.status == "in_progress", stamp(r).timestamp(), r.seq or 0),
+        default=None,
+    )
+
+
 # ───────────────────────── 클래스 ─────────────────────────
 
 
@@ -187,6 +211,7 @@ def _class_summary(cls: Class, rows: list, names: dict, now: datetime) -> dict:
         or max(assigned, key=lambda r: (_aware(r.scheduled_at) if r.scheduled_at else now, r.seq or 0), default=None)
     )
     opened = _open_session(rows)
+    home_open = _home_open_session(rows, now)
     return {
         "host": {"id": str(rep.host_id), "name": names.get(rep.host_id)} if rep else None,
         "id": str(cls.id),
@@ -206,6 +231,18 @@ def _class_summary(cls: Class, rows: list, names: dict, now: datetime) -> dict:
                 "host": {"id": str(nxt.host_id), "name": names.get(nxt.host_id)} if nxt.host_state == "assigned" else None,
             }
             if nxt
+            else None
+        ),
+        # SDD-250: 홈 '다음 일정' 후보용 열린 회차(가산 필드). next_session 의미는 그대로(미래 예정만).
+        "open_session": (
+            {
+                "id": str(home_open.id),
+                "seq": home_open.seq,
+                "scheduled_at": home_open.scheduled_at or home_open.started_at,
+                "status": home_open.status,
+                "host": {"id": str(home_open.host_id), "name": names.get(home_open.host_id)} if home_open.host_state == "assigned" else None,
+            }
+            if home_open
             else None
         ),
         "has_open_session": opened is not None,
@@ -282,8 +319,9 @@ def list_classes(
     grouped = _visible_class_sessions(db, uid, [c.id for c in classes])
     names = _user_names(db, {r.host_id for rows in grouped.values() for r in rows})
     member_classes = {cid for cid, in db.query(ClassMember.class_id).filter(ClassMember.class_id.in_([c.id for c in classes]), ClassMember.user_id == uid).all()}
-    return [{**_class_summary(c, grouped.get(c.id, []), names, now),
-        **(_viewer_fields(db, c, uid, now=now) if c.recurrence_rule is not None or c.id in member_classes else {})} for c in classes], total
+    targets = [c for c in classes if c.recurrence_rule is not None or c.id in member_classes]
+    viewer = _viewer_fields_batch(db, targets, uid, now=now)
+    return [{**_class_summary(c, grouped.get(c.id, []), names, now), **viewer.get(c.id, {})} for c in classes], total
 
 
 def _load_class_for_viewer(db: DBSession, class_id: str, uid: UUID) -> tuple[Class, list]:
@@ -613,18 +651,36 @@ def _session_staff_capabilities(role, uid, cls, session):
         "excuse": False, "read_own_reports": False}
 
 
-def _viewer_fields(db, cls, uid, *, now=None):
-    from app.services.class_access_service import class_role
+def _viewer_fields_batch(db, classes, uid, *, now=None) -> dict:
+    """_viewer_fields 의 일괄 버전: role·세션·멤버십 조회를 IN 한 번으로 모은다(목록 N+1 제거)."""
+    if not classes:
+        return {}
+    from app.services.class_access_service import class_roles
     actor = db.get(User, uid)
-    role = class_role(db, actor, cls)
+    ids = [c.id for c in classes]
+    roles = class_roles(db, actor, classes)
+    sessions: dict = defaultdict(list)
+    for s in db.query(Session).filter(Session.class_id.in_(ids), Session.is_template.is_(False)).all():
+        sessions[s.class_id].append(s)
+    memberships = {}
+    for m in db.query(ClassMember).filter(ClassMember.class_id.in_(ids), ClassMember.user_id == uid, ClassMember.canonical_member_id.is_(None)).all():
+        memberships.setdefault(m.class_id, m)
+    return {c.id: _viewer_fields(db, c, uid, now=now, role=roles[c.id], sessions=sessions.get(c.id, []), membership=memberships.get(c.id), preloaded=True) for c in classes}
+
+
+def _viewer_fields(db, cls, uid, *, now=None, role=None, sessions=None, membership=None, preloaded=False):
+    if not preloaded:
+        from app.services.class_access_service import class_role
+        actor = db.get(User, uid)
+        role = class_role(db, actor, cls)
+        sessions = db.query(Session).filter(Session.class_id == cls.id, Session.is_template.is_(False)).all()
+        membership = db.query(ClassMember).filter_by(class_id=cls.id, user_id=uid, canonical_member_id=None).first()
     manager = role in ("lead", "assistant", "org_admin")
-    sessions = db.query(Session).filter(Session.class_id == cls.id, Session.is_template.is_(False)).all()
     clinical = role in ("lead", "assistant")
     caps = {"manage_members": manager, "merge_guests": manager,
         "correct_attendance": bool((clinical or role == "guest") and any(s.status == "completed" and (clinical or s.host_id == uid) for s in sessions)),
         "assign_makeup": bool((clinical or role == "guest") and cls.status in ("active", "completed") and any(s.status in ("ready", "scheduled") and (clinical or s.host_id == uid) for s in sessions)),
         **{key: False for key in ("leave", "cancel_waitlist", "rejoin", "excuse", "request_makeup", "edit_consents", "read_own_reports")}}
-    membership = db.query(ClassMember).filter_by(class_id=cls.id, user_id=uid, canonical_member_id=None).first()
     if membership and cls.status != "draft":
         data = get_my_membership(db, cls.id, user_id=uid, now=now)
         own_caps = data["capabilities"]

@@ -1,6 +1,8 @@
 import { SettingsSwitch } from '../../components/settings/settings-switch';
 import { SessionNotePromptToggle } from '../../components/settings/session-note-prompt-toggle';
 import { useAuthStore } from '../../stores/authStore';
+import { useIsDesktop } from '../../hooks/use-is-desktop';
+import ReportsDesktopPage from './ReportsDesktopPage';
 import { useMobileSwipeProtection } from '../../hooks/use-mobile-swipe-protection';
 // AI 리포트 목록 페이지 — 테이블 + 검색/필터/정렬/세션 그룹핑 (SDD-053)
 
@@ -169,7 +171,8 @@ function groupBySession(reports: ReportDto[]): { sessionId: string; label: strin
   return Array.from(map.values());
 }
 
-export default function ReportListPage() {
+// SDD-253: 모바일은 기존 카드 목록·전체화면 상세를 그대로 쓴다(데스크톱은 ReportsDesktopPage).
+export function LegacyReportListPage() {
   const [sampleOpen, setSampleOpen] = useState(false);
   /** SDD-064 — 목록에서 팝업으로 상세 보기 */
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
@@ -226,6 +229,9 @@ export default function ReportListPage() {
     typeFilter !== 'all' ||
     sessionFilter !== '';
 
+  // 필터 활성 시에는 전체를 한 번만 받고 페이지 이동은 클라이언트에서 처리하므로, 페이지 번호를 재조회 키에서 뺀다.
+  const fetchPage = hasActiveFilter ? 0 : page;
+
   // SDD-058 — page/limit 조회. 필터 활성 시 전체 조회, BE 미적용 시(전체 반환) 클라이언트 슬라이스 폴백.
   useEffect(() => {
     let cancelled = false;
@@ -254,7 +260,8 @@ export default function ReportListPage() {
     return () => {
       cancelled = true;
     };
-  }, [page, reloadKey, hasActiveFilter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchPage, reloadKey, hasActiveFilter]);
 
   useEffect(() => {
     if (role !== 'counselor') { setAutoApproveLoading(false); return; }
@@ -728,4 +735,9 @@ export default function ReportListPage() {
       )}
     </AppShell>
   );
+}
+
+export default function ReportListPage() {
+  const isDesktop = useIsDesktop();
+  return isDesktop ? <ReportsDesktopPage /> : <LegacyReportListPage />;
 }
