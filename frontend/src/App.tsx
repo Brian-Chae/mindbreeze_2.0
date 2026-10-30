@@ -1,3 +1,4 @@
+import { MemberStructureHomePage, MemberClassesPage } from './route-pages';
 import { lazy, Suspense, useEffect, type ReactElement } from 'react';
 import { CounselingGate } from './components/routing/counseling-gate';
 import { isAiEnabled, isDesignRoutesEnabled } from './lib/feature-flags';
@@ -88,9 +89,7 @@ const ProfessionalProfilePage = lazy(() => import('./pages/settings/professional
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const ClientAppPage = lazy(() => import('./pages/client/ClientAppPage'));
 const HostClassDetailPage = lazy(() => import('./pages/classes/host-class-detail-page').then((module) => ({ default: module.HostClassDetailPage })));
-const MemberStructureHomePage = lazy(() => import('./pages/client/member-structure-home-page').then((module) => ({ default: module.MemberStructureHomePage })));
 const GuestClassMembershipPage = lazy(() => import('./pages/client/guest-class-membership-page').then(module => ({ default: module.GuestClassMembershipPage })));
-const MemberClassesPage = lazy(() => import('./pages/client/member-classes-page').then((module) => ({ default: module.MemberClassesPage })));
 const MemberClassDetailPage = lazy(() => import('./pages/client/member-class-detail-page').then((module) => ({ default: module.MemberClassDetailPage })));
 const CounselingListPage = lazy(() => import('./pages/counseling/counseling-list-page').then((module) => ({ default: module.CounselingListPage })));
 const CounselingDetailPage = lazy(() => import('./pages/counseling/counseling-detail-page').then((module) => ({ default: module.CounselingDetailPage })));

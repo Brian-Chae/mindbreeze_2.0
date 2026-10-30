@@ -265,7 +265,7 @@ describe('읽기 hook 수명', () => {
   });
   it('혼합 홈은 한쪽 오류를 유지하고 목록 두 GET 외 상세를 요청하지 않는다', async () => {
     const hooks = await import('../src/hooks/use-class-structure');
-    const get = vi.spyOn(apiClient, 'get').mockImplementation((path) => path === '/classes'
+    const get = vi.spyOn(apiClient, 'get').mockImplementation((path) => path === '/classes?status=active'
       ? Promise.resolve({ classes: [classFixture(), classFixture({ id: 'second' })], total: 2 })
       : Promise.reject(new ApiError(500, '민감한 원문', null)));
     function Probe() { const home = hooks.useMixedHome(); return createElement('span', null, JSON.stringify(home)); }
@@ -273,7 +273,7 @@ describe('읽기 hook 수명', () => {
     expect(container.textContent).toContain('"status":"success"');
     expect(container.textContent).toContain('목록을 불러오지 못했어요');
     expect(container.textContent).not.toContain('민감한 원문');
-    expect(get.mock.calls.map(([path]) => path)).toEqual(['/classes', '/counseling']);
+    expect(get.mock.calls.map(([path]) => path)).toEqual(['/classes?status=active', '/counseling']);
   });
 });
 
