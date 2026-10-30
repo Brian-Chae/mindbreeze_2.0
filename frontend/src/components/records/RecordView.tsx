@@ -28,13 +28,13 @@ export function RecordView({ record, transcript, onUpdated }: Props) {
   );
 
   const tabs: { id: TabId; label: string }[] = !showSttTabs
-    ? [{ id: 'notes', label: '상담사 메모' }]
+    ? [{ id: 'notes', label: '코치 메모' }]
     : isManual
-      ? [{ id: 'notes', label: '상담사 메모' }]
+      ? [{ id: 'notes', label: '코치 메모' }]
       : [
           ...(isLowConfidence ? [] : [{ id: 'summary' as TabId, label: 'AI 요약' }]),
           { id: 'transcript', label: '전사문' },
-          { id: 'notes', label: '상담사 메모' },
+          { id: 'notes', label: '코치 메모' },
         ];
 
   // 상태가 나중에 manual/low 로 갱신돼도 존재하지 않는 탭이 남지 않도록 보정

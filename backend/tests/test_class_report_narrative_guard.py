@@ -35,7 +35,7 @@ def test_입력에_이름_이메일_ID_클래스명_기관명_메모_수정문�
     block["counselor_notes"] = "비공개 메모 본문"
     text = json.dumps(nar.build_ai_input(block), ensure_ascii=False)
     for forbidden in ("수정된_민감_문장_XYZ", "비공개 메모 본문", "11111111-2222", "77.7", "@", "participant",
-                      "개인 한 줄", "counselor_notes", "transcript", "아침 호흡 명상", "기관", "채 상담사", "회원"):
+                      "개인 한 줄", "counselor_notes", "transcript", "아침 호흡 명상", "기관", "채 코치", "회원"):
         assert forbidden not in text, forbidden
     assert re.search(r"[0-9a-f]{8}-[0-9a-f]{4}", text) is None
 
@@ -82,7 +82,7 @@ def test_입력_해시는_결정적이고_숫자가_바뀌면_바뀐다():
 def test_프롬프트에_입력이_들어가고_버전이_기록된다():
     data = ai_input()
     prompt = nar.build_prompt(data)
-    assert "당신은 명상 수업을 관찰한 내용을 상담사에게 전달하는 기록 보조입니다" in prompt
+    assert "당신은 명상 수업을 관찰한 내용을 코치에게 전달하는 기록 보조입니다" in prompt
     assert json.dumps(data, ensure_ascii=False, sort_keys=True) in prompt
     assert nar.PROMPT_VERSION == "cr-1"
 

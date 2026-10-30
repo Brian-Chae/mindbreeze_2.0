@@ -104,7 +104,7 @@ async function installStub(ctx, role) {
         is_waitlisted: false, report_included: true, started_at: stubState.startedAt, ended_at: done ? new Date().toISOString() : null, chat_enabled: false, band_connected: false,
       });
     }
-    if (path === '/sessions/s1/entry/livekit-token') return json({ detail: '상담사 화상이 아직 시작되지 않았습니다' }, 400);
+    if (path === '/sessions/s1/entry/livekit-token') return json({ detail: '코치 화상이 아직 시작되지 않았습니다' }, 400);
     if (path === '/sessions/s1') return json(stubSession());
     if (path === '/sessions/s1/live-metrics') return json({ metrics: [stubMetric()] });
     return json({}, 404);
@@ -183,7 +183,7 @@ let sessionId = STUB ? 's1' : null;
 let counselorToken = null;
 
 if (!STUB) {
-  await scenario('[준비] 상담사 API 로 온라인 1:1 클래스 생성 → 오픈 → 시작', async () => {
+  await scenario('[준비] 코치 API 로 온라인 1:1 클래스 생성 → 오픈 → 시작', async () => {
     const c = await apiLogin('counselor');
     const cl = await apiLogin('client');
     counselorToken = c.token;
@@ -267,7 +267,7 @@ if (!STUB) {
   });
 }
 
-await scenario('[상담사] /sessions/:id/player → 새 진행 화면(1:1 카드·도크), 페이지 버튼 없음 · 측정 위반 0', async () => {
+await scenario('[코치] /sessions/:id/player → 새 진행 화면(1:1 카드·도크), 페이지 버튼 없음 · 측정 위반 0', async () => {
   if (!sessionId) throw new Error('선행 세션 생성 실패');
   for (const vp of VIEWPORTS) {
     const ctx = await newContext(browser, vp, 'counselor');
@@ -282,7 +282,7 @@ await scenario('[상담사] /sessions/:id/player → 새 진행 화면(1:1 카�
       const text = await bodyText(page);
       if (/‹|›|다음 참가자 페이지|이전 참가자 페이지/.test(text)) throw new Error('페이지 이동 버튼이 남아 있음');
       // 스텁은 실시간 소켓이 없어 재연결 배너가 뜬다 — 배너 자체의 대비·크기만 확인하고 나머지 규칙은 그대로 적용한다
-      await assertFit(page, 'host', `상담사 ${vp.join('x')}`);
+      await assertFit(page, 'host', `코치 ${vp.join('x')}`);
       await shot(page, `host-live${GROUP ? '-group' : ''}-${vp.join('x')}`);
     } finally {
       await ctx.close();
@@ -290,7 +290,7 @@ await scenario('[상담사] /sessions/:id/player → 새 진행 화면(1:1 카�
   }
 });
 
-await scenario('[종료] 상담사 종료 → 회원 화면이 점수 없는 종료 카드(수고하셨어요)로 바뀐다', async () => {
+await scenario('[종료] 코치 종료 → 회원 화면이 점수 없는 종료 카드(수고하셨어요)로 바뀐다', async () => {
   if (!sessionId) throw new Error('선행 세션 생성 실패');
   const ctx = await newContext(browser, VIEWPORTS[0], 'client');
   const page = await ctx.newPage();

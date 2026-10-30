@@ -1,0 +1,23 @@
+{
+  "kind": "synthetic-api-headless",
+  "results": [
+    {
+      "width": 390,
+      "homeAddButtons": 1,
+      "successText": "상담사 추가 상담사에게 받은 영문·숫자 6자리 코드를 입력해 주세요. 클래스 입장 코드는 사용할 수 없어요. 이나래 상담사를 추가했어요. 완료",
+      "homeShowsNewAfterAdd": true,
+      "overflow": 0,
+      "minBtn": 48,
+      "errors": []
+    },
+    {
+      "width": 1440,
+      "homeAddButtons": 1,
+      "successText": "상담사 추가 상담사에게 받은 영문·숫자 6자리 코드를 입력해 주세요. 클래스 입장 코드는 사용할 수 없어요. 이나래 상담사를 추가했어요. 완료",
+      "homeShowsNewAfterAdd": true,
+      "overflow": 0,
+      "minBtn": 48,
+      "errors": []
+    }
+  ]
+}

@@ -53,7 +53,7 @@ afterEach(async () => {
 
 function heroData(over: Partial<ClassHeroData> = {}): ClassHeroData {
   return {
-    chip: 'open', countdown: '오늘 오후 3:00', title: '마음챙김 명상 · 4회차', meta: '오늘 오후 3:00 · 50분', hostName: '김하늘 상담사',
+    chip: 'open', countdown: '오늘 오후 3:00', title: '마음챙김 명상 · 4회차', meta: '오늘 오후 3:00 · 50분', hostName: '김하늘 코치',
     place: 'online', mode: 'group', band: 'optional', backdropSrc: '/images/background8.webp',
     box: { icon: 'check', title: '지금 입장할 수 있어요', sub: '입장하면 간단한 준비를 먼저 해요' },
     ...over,
@@ -67,7 +67,7 @@ describe('ClassHero', () => {
     const hero = q('[data-testid="class-hero"]')!;
     expect(hero.querySelector('[data-chip="open"]')).not.toBeNull();
     expect(hero.textContent).toContain('마음챙김 명상 · 4회차');
-    expect(hero.textContent).toContain('김하늘 상담사');
+    expect(hero.textContent).toContain('김하늘 코치');
     expect(hero.textContent).toContain('LINK BAND 선택');
     expect(hero.textContent).toContain('지금 입장할 수 있어요');
     const cta = q<HTMLButtonElement>('[data-testid="class-hero-cta"]')!;
@@ -108,7 +108,7 @@ describe('deriveHeroCopy / toHeroData', () => {
     const data = toHeroData(session({ id: 'x1', status: 'scheduled', scheduled_at: L(20, 15), host_name: '김하늘' }), NOW);
     expect(data.chip).toBe('scheduled');
     expect(data.countdown).toBe('D-3');
-    expect(data.hostName).toBe('김하늘 상담사');
+    expect(data.hostName).toBe('김하늘 코치');
     expect(data.meta).toContain('50분');
     expect(data.place).toBe('online');
   });

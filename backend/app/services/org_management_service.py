@@ -268,13 +268,13 @@ def change_counselor(org_id: uuid.UUID, user_id: uuid.UUID, admin_id: uuid.UUID,
     )
     # membership 미보유라도 org_id 미러가 이 기관이면 기존 계약(role 422 등)을 유지한다
     if user is None or (membership is None and user.org_id != org.id):
-        raise HTTPException(404, "대상 상담사를 찾을 수 없습니다")
+        raise HTTPException(404, "대상 코치를 찾을 수 없습니다")
     # AUTH4-02: 역할 판정·중복 단락은 전역 User.role 이 아니라 이 기관의 membership role 을 기준으로
     #   한다. 다기관 소속에서 미러(전역 role)는 주 소속 기관 역할만 반영하므로, 부 소속에서의
     #   role 비교가 틀어져 멱등 요청이 오판되거나 불필요한 변경이 일어난다.
     current_role = membership.role if membership is not None else user.role
     if current_role not in ("counselor", "org_admin") or role not in (None, "counselor", "org_admin"):
-        raise HTTPException(422, "상담사와 기관 관리자 역할만 변경할 수 있습니다")
+        raise HTTPException(422, "코치와 기관 관리자 역할만 변경할 수 있습니다")
     if org.kind == "individual" and org.owner_user_id == user.id:
         raise HTTPException(409, "개인 기관 소유자는 역할 변경이나 소속 해제를 할 수 없습니다")
     if role == current_role:

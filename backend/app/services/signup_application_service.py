@@ -23,7 +23,7 @@ from app.models.counselor_profile import CounselorProfile
 from app.models.organization import Organization
 from app.models.signup_application import SignupApplication
 from app.models.user import User
-from app.services import code_service, email_verify_service
+from app.services import code_service, email_verify_service, onboarding_service
 
 logger = logging.getLogger(__name__)
 
@@ -274,9 +274,7 @@ def create_individual_counselor_application(
         db, user, org.id, status_="invited", invited_at=datetime.now(timezone.utc)
     )
 
-    counselor_code = code_service.generate_unique_code(
-        db, CounselorProfile, "counselor_code", label="상담사 코드"
-    )
+    counselor_code = onboarding_service.generate_counselor_code(db)
     db.add(CounselorProfile(user_id=user.id, counselor_code=counselor_code, specialties=[]))
 
     app_row = SignupApplication(
@@ -544,7 +542,7 @@ def validate_counselor_code(code: str, db: Session) -> tuple[User, CounselorProf
     if len(normalized) != code_service.CODE_LENGTH:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="상담사 코드는 6자리입니다",
+            detail="코치 코드는 6자리입니다",
         )
     profile = (
         db.query(CounselorProfile)
@@ -554,13 +552,13 @@ def validate_counselor_code(code: str, db: Session) -> tuple[User, CounselorProf
     if profile is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="상담사 코드를 찾을 수 없습니다",
+            detail="코치 코드를 찾을 수 없습니다",
         )
     counselor = db.query(User).filter(User.id == profile.user_id).first()
     if counselor is None or counselor.role not in ("counselor", "org_admin") or counselor.status != "active":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="아직 활동을 시작하지 않은 상담사입니다. 상담사에게 확인해 주세요.",
+            detail="아직 활동을 시작하지 않은 코치입니다. 코치에게 확인해 주세요.",
         )
 
     org_name = None

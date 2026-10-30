@@ -46,7 +46,7 @@ try {
     await page.getByRole('textbox', { name:'서사 문장 수정' }).fill('오늘 수업에서 관찰한 흐름을 함께 기록했어요.');
     await page.getByRole('button', { name:'저장', exact:true }).click();
     await page.getByText('저장됨', {exact:true}).waitFor();
-    if (!(await page.locator('[data-section="S1"]').textContent()).includes('상담사 수정')) throw new Error('저장 후 출처 전환 누락');
+    if (!(await page.locator('[data-section="S1"]').textContent()).includes('코치 수정')) throw new Error('저장 후 출처 전환 누락');
     await page.getByRole('button',{name:'AI 초안으로 되돌리기',exact:true}).first().click();
     await page.getByRole('button',{name:'되돌리기',exact:true}).click();
     await page.locator('[data-section="S1"]').getByText('AI 요약',{exact:true}).waitFor();

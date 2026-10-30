@@ -45,7 +45,7 @@ export default function ReportCoverSection({
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[12px] mobile:text-mb-caption frame:text-mb-caption font-bold bg-white text-[#5F0080] border border-[#E8D9F5]">
-            {report.type === 'counselor' ? '상담사용' : '내담자용'}
+            {report.type === 'counselor' ? '코치용' : '내담자용'}
           </span>
           <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[12px] mobile:text-mb-caption frame:text-mb-caption font-bold bg-white text-[#5F0080] border border-[#E8D9F5]">
             {sessionType}

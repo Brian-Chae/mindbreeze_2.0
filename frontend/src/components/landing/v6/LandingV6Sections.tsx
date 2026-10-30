@@ -13,7 +13,7 @@ function InquiryCta({ source, className = 'btn btn-cta', children }: { source: I
 interface RoleCard { label: string; title: string; sub: string; body: string; points: string[]; img: string; alt: string }
 const ROLES: RoleCard[] = [
   { label: '01 기관', title: '운영의 흐름을 한눈에', sub: '사람과 일정이 연결되는 운영', body: '소속 지도자와 회원, 클래스 일정을 함께 관리하세요. 기관이 준비하는 여러 만남의 흐름을 살펴볼 수 있습니다.', points: ['지도자·회원 관리', '클래스 일정'], img: 'device-02', alt: '클래스 일정 대표 화면' },
-  { label: '02 상담사 · 지도자', title: '함께하는 시간에 집중', sub: '수업의 준비와 진행을 한곳에서', body: '클래스 일정을 준비하고 회원과 소통하세요. LINK BAND를 연결한 참여자의 몸과 마음의 흐름도 함께 살펴볼 수 있습니다.', points: ['클래스 준비·진행', '회원과 소통', '선택형 신호 확인'], img: 'device-01', alt: '진행자의 회원별 흐름 화면' },
+  { label: '02 코치 · 지도자', title: '함께하는 시간에 집중', sub: '수업의 준비와 진행을 한곳에서', body: '클래스 일정을 준비하고 회원과 소통하세요. LINK BAND를 연결한 참여자의 몸과 마음의 흐름도 함께 살펴볼 수 있습니다.', points: ['클래스 준비·진행', '회원과 소통', '선택형 신호 확인'], img: 'device-01', alt: '진행자의 회원별 흐름 화면' },
   { label: '03 회원', title: '오늘의 경험을 나의 기록으로', sub: '함께한 시간을 다시 돌아보세요', body: '초대나 입장 코드로 클래스에 참여하세요. 수업 후에는 자신의 클래스 기록과 제공된 리포트를 확인할 수 있습니다.', points: ['초대·코드 참여', '나의 기록', '제공된 리포트'], img: 'device-04', alt: '회원의 몸·마음 리포트 화면' },
 ];
 
@@ -69,7 +69,7 @@ export function LandingV6Sections() {
           <div className="head-center">
             <p className="eyebrow">one service, three perspectives</p>
             <h2>각자의 역할에 맞게,<br />하나의 흐름으로.</h2>
-            <p className="lead">기관의 운영, 상담사·지도자의 클래스, 회원의 기록을 이어줍니다.</p>
+            <p className="lead">기관의 운영, 코치·지도자의 클래스, 회원의 기록을 이어줍니다.</p>
             <p className="body">같은 클래스를 함께해도 필요한 화면은 다릅니다. 각자의 역할에서 필요한 정보를 살피고, 준비부터 기록까지 연결하세요.</p>
           </div>
           <div className="role-grid">
@@ -119,10 +119,10 @@ export function LandingV6Sections() {
             <p className="eyebrow">web &amp; app, anywhere</p>
             <h2>노트북에서 관리하고,<br />휴대폰으로 함께합니다.</h2>
             <p className="lead">웹과 앱, 같은 계정으로 이어집니다.</p>
-            <p className="body">상담사·지도자는 웹에서 클래스 일정·회차·회원·리포트를 넓은 화면으로 관리하고, 회원은 앱이나 웹 링크로 바로 참여합니다.</p>
+            <p className="body">코치·지도자는 웹에서 클래스 일정·회차·회원·리포트를 넓은 화면으로 관리하고, 회원은 앱이나 웹 링크로 바로 참여합니다.</p>
           </div>
           <div className="multi-stage">
-            <div className="laptop" role="img" aria-label="노트북 웹 브라우저에서 상담사가 명상 클래스 목록을 관리하는 화면">
+            <div className="laptop" role="img" aria-label="노트북 웹 브라우저에서 코치가 명상 클래스 목록을 관리하는 화면">
               <div className="laptop-screen">
                 <div className="chrome-bar"><i /><i /><i /><span>mindbreeze.looxidlabs.com</span></div>
                 <img src={`${IMG}/web-classes.webp`} alt="" width={1600} height={1000} loading="lazy" decoding="async" />

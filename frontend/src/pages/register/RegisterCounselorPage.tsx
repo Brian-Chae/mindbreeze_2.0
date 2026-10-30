@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import AuthShell from '../../components/auth/AuthShell';
 import { BirthDateInput } from '../../components/auth/BirthDateInput';
 import { OtpInput } from '../../components/auth/OtpInput';
+import { useCooldown } from '../../hooks/useCooldown';
 import { apiErrorCode, requestOtp, verifyOtp } from '../../lib/api/auth';
 import { BIRTH_DATE_MESSAGES, checkBirthDate } from '../../lib/auth/age';
 import { submitIndividualCounselorApplication } from '../../lib/api/signup';
@@ -41,6 +42,7 @@ export default function RegisterCounselorPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
   const [emailVerifyToken, setEmailVerifyToken] = useState<string | null>(null);
+  const cooldown = useCooldown();
   const [phone, setPhone] = useState('');
   // SDD-220: 신규 계정이 만들어지므로 만 14세 확인용 생년월일을 받는다(서버가 최종 검증).
   const [birthDate, setBirthDate] = useState('');
@@ -59,11 +61,23 @@ export default function RegisterCounselorPage() {
     try {
       await requestOtp(email);
       setOtpSent(true);
+      setOtp('');
+      cooldown.start();
     } catch (err) {
+      if (err instanceof ApiError && err.status === 429) cooldown.start();
       setError(otpErrorMessage(err, '인증 코드 발송에 실패했습니다'));
     } finally {
       setLoading(false);
     }
+  };
+
+  // 이메일 오입력 시 입력 단계로 되돌아간다(코드·인증 토큰 초기화)
+  const handleChangeEmail = (): void => {
+    setError(null);
+    setOtpSent(false);
+    setOtp('');
+    setEmailVerifyToken(null);
+    cooldown.reset();
   };
 
   const handleVerifyOtp = async (): Promise<void> => {
@@ -134,7 +148,7 @@ export default function RegisterCounselorPage() {
   };
 
   return (
-    <AuthShell title="상담사 가입" maxWidthClass="max-w-[520px]">
+    <AuthShell title="코치 가입" maxWidthClass="max-w-[520px]">
       <div className="space-y-5">
 
         {/* 신청 완료 화면 */}
@@ -161,7 +175,7 @@ export default function RegisterCounselorPage() {
               onClick={() => setMode('org')}
               className="block w-full text-left bg-white rounded-3xl border-2 border-transparent p-6 shadow-xl hover:border-[#5F0080] transition-colors"
             >
-              <p className="text-lg font-bold text-[#1F1F1F]">기관 소속 상담사</p>
+              <p className="text-lg font-bold text-[#1F1F1F]">기관 소속 코치</p>
               <p className="text-sm text-[#6F6F6F] mt-1">
                 소속 기관의 초대를 받아 가입해요.
               </p>
@@ -171,16 +185,16 @@ export default function RegisterCounselorPage() {
               onClick={() => setMode('individual')}
               className="block w-full text-left bg-white rounded-3xl border-2 border-transparent p-6 shadow-xl hover:border-[#5F0080] transition-colors"
             >
-              <p className="text-lg font-bold text-[#1F1F1F]">개인 상담사</p>
+              <p className="text-lg font-bold text-[#1F1F1F]">개인 코치</p>
               <p className="text-sm text-[#6F6F6F] mt-1">
-                개인 상담사 이용을 신청하고 승인 후 시작해요.
+                개인 코치 이용을 신청하고 승인 후 시작해요.
               </p>
             </button>
           </div>
         ) : mode === 'org' ? (
           <div className="bg-white rounded-3xl p-6 shadow-xl sm:p-8 space-y-4">
             <p className="text-[#1F1F1F] font-semibold text-center">
-              상담사는 기관 담당자의 초대로 가입합니다
+              코치는 기관 담당자의 초대로 가입합니다
             </p>
             <ol className="text-sm text-[#6F6F6F] leading-relaxed list-decimal pl-5 space-y-1.5">
               <li>소속 기관 담당자에게 초대를 요청해 주세요.</li>
@@ -209,7 +223,7 @@ export default function RegisterCounselorPage() {
             onSubmit={handleSubmit}
             className="bg-white rounded-3xl p-6 shadow-xl sm:p-8 space-y-4"
           >
-            <h2 className="text-xl font-bold text-[#1F1F1F] text-center">개인 상담사 이용 신청</h2>
+            <h2 className="text-xl font-bold text-[#1F1F1F] text-center">개인 코치 이용 신청</h2>
             <p className="text-xs text-[#6F6F6F] text-center leading-relaxed">
               신청 검토 후 승인되면 이메일로 이용 안내(비밀번호 설정)를 보내드립니다.
             </p>
@@ -267,6 +281,14 @@ export default function RegisterCounselorPage() {
                 >
                   {loading ? '확인 중...' : '이메일 인증 완료'}
                 </button>
+                <button
+                  type="button"
+                  onClick={handleRequestOtp}
+                  disabled={loading || cooldown.remaining > 0}
+                  className="w-full text-xs text-[#6F6F6F] hover:text-[#4B0066] disabled:opacity-60"
+                >
+                  {cooldown.remaining > 0 ? `인증번호 다시 받기 (${cooldown.remaining}초)` : '인증번호 다시 받기'}
+                </button>
               </div>
             )}
 
@@ -274,6 +296,17 @@ export default function RegisterCounselorPage() {
               <p className="text-xs text-[#5F0080] text-center font-medium">
                 이메일 인증이 완료되었습니다
               </p>
+            )}
+
+            {otpSent && (
+              <button
+                type="button"
+                onClick={handleChangeEmail}
+                disabled={loading}
+                className="w-full text-xs text-[#6F6F6F] underline hover:text-[#4B0066]"
+              >
+                이메일 변경
+              </button>
             )}
 
             <div className="space-y-2">
@@ -366,7 +399,7 @@ export default function RegisterCounselorPage() {
                 disabled={loading || !emailVerifyToken}
                 className="flex-1 h-[52px] rounded-full bg-[#5F0080] text-white font-semibold hover:opacity-90 disabled:opacity-50"
               >
-                {loading ? '신청 중...' : '개인 상담사 이용 신청'}
+                {loading ? '신청 중...' : '개인 코치 이용 신청'}
               </button>
             </div>
           </form>

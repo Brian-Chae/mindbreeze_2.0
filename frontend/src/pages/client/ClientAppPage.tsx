@@ -35,157 +35,127 @@ function formatKoreanSub(): string {
 }
 
 /** 상담사 코드 입력 화면 */
-function CounselorCodeScreen() {
-  const [code, setCode] = useState<string[]>(Array(6).fill(''));
+type CounselorLite = { id: string; name: string; profile_image: string | null };
+
+export function CounselorCodeScreen({ onConnected }: { onConnected: (list: CounselorLite[]) => void }) {
+  const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const setUser = useAuthStore((s) => s.setUser);
-  const user = useAuthStore((s) => s.user);
-
-  const handleChange = useCallback(
-    (index: number, value: string) => {
-      // 영문+숫자만 허용, 대문자로 변환
-      if (value && !/^[A-Za-z0-9]$/.test(value)) return;
-
-      setError(null);
-      const newCode = [...code];
-      newCode[index] = value.toUpperCase();
-      setCode(newCode);
-
-      // 다음 칸으로 포커스 이동
-      if (value && index < 5) {
-        inputRefs.current[index + 1]?.focus();
-      }
-    },
-    [code]
-  );
-
-  const handleKeyDown = useCallback(
-    (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-      // Backspace: 현재 칸이 비어있으면 이전 칸으로 이동
-      if (e.key === 'Backspace' && !code[index] && index > 0) {
-        const newCode = [...code];
-        newCode[index - 1] = '';
-        setCode(newCode);
-        inputRefs.current[index - 1]?.focus();
-      }
-    },
-    [code]
-  );
-
-  const handlePaste = useCallback((e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 6);
-    if (!pasted) return;
-
-    const newCode = Array(6).fill('');
-    for (let i = 0; i < pasted.length; i++) {
-      newCode[i] = pasted[i];
-    }
-    setCode(newCode);
-    setError(null);
-
-    // 마지막 칸 또는 복사한 마지막 위치로 포커스
-    const focusIdx = Math.min(pasted.length, 5);
-    inputRefs.current[focusIdx]?.focus();
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const submittingRef = useRef(false);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
-  // 6자리 모두 입력 시 자동 제출
-  useEffect(() => {
-    const fullCode = code.join('');
-    if (fullCode.length !== 6) return;
-
-    let cancelled = false;
-
-    async function submit() {
+  // 6자리 완성 시 1회 제출 (effect 아님 — user 변경으로 cleanup/재실행되지 않게 명시 호출)
+  const submitCode = useCallback(
+    async (fullCode: string) => {
+      if (submittingRef.current) return; // 중복 제출 방지
+      submittingRef.current = true;
       setLoading(true);
       setError(null);
       try {
-        const res = await apiClient.post<{
-          counselors: Array<{ id: string; name: string; profile_image: string | null }>;
-        }>('/client/counselors', { code: fullCode });
-
-        if (cancelled) return;
-
-        // authStore의 user에 counselors 업데이트
-        if (user) {
-          setUser({
-            ...user,
-            counselors: res.counselors,
-          });
+        let fallback: CounselorLite[] = [];
+        try {
+          // 서버는 연결된 상담사 1명(CounselorInfo 단건)을 돌려준다.
+          const added = await apiClient.post<CounselorLite>('/client/counselors', { code: fullCode });
+          if (added && typeof added === 'object' && 'id' in added) fallback = [added];
+        } catch (err: unknown) {
+          // 409: 이미 연결된 상담사 → 아래 GET 으로 목록 새로고침
+          const is409 = err instanceof Error && 'status' in err && (err as { status: number }).status === 409;
+          if (!is409) throw err;
         }
+        // 전체 목록은 GET 으로 다시 받는다 (실패 시 POST 결과로 대체)
+        let list = fallback;
+        try {
+          const fetched = await apiClient.get<CounselorLite[]>('/client/counselors');
+          if (Array.isArray(fetched) && fetched.length > 0) list = fetched;
+        } catch {
+          if (list.length === 0) throw new Error('연결 정보를 불러오지 못했습니다. 다시 시도해주세요.');
+        }
+        if (list.length === 0) throw new Error('연결 정보를 불러오지 못했습니다. 다시 시도해주세요.');
+        onConnected(list);
       } catch (err: unknown) {
-        if (cancelled) return;
-        // 409: 이미 연결된 상담사 → GET으로 목록 새로고침
-        if (err instanceof Error && 'status' in err && (err as { status: number }).status === 409) {
-          try {
-            const list = await apiClient.get<
-              Array<{ id: string; name: string; profile_image: string | null }>
-            >('/client/counselors');
-            if (cancelled) return;
-            const counselors = Array.isArray(list) ? list : [];
-            if (user) {
-              setUser({ ...user, counselors });
-            }
-            return; // 성공 → 코드 입력 화면 빠져나감
-          } catch {
-            // GET도 실패하면 아래 일반 에러 처리로
-          }
-        }
         const message =
           err instanceof Error ? err.message : '연결에 실패했습니다. 코드를 다시 확인해주세요.';
-        setError(message);
-        // 입력 초기화
-        setCode(Array(6).fill(''));
-        inputRefs.current[0]?.focus();
+        if (mountedRef.current) {
+          setError(message);
+          setCode('');
+          inputRef.current?.focus();
+        }
       } finally {
-        if (!cancelled) setLoading(false);
+        submittingRef.current = false;
+        if (mountedRef.current) setLoading(false);
       }
-    }
+    },
+    [onConnected],
+  );
 
-    submit();
-    return () => {
-      cancelled = true;
-    };
-  }, [code, user, setUser]);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // 숫자 외 입력 제거, 최대 6자리
+    const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setCode(val);
+    setError(null);
+    if (val.length === 6) {
+      void submitCode(val);
+    }
+  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-dvh bg-[#FAFAFA] px-6">
       <div className="text-center w-full max-w-sm">
         <h1 className="text-2xl font-bold text-[#1F1F1F] mb-2">
-          상담사와 연결하기
+          코치와 연결하기
         </h1>
         <p className="text-[#6F6F6F] mb-8">
-          상담사에게 받은 6자리 코드를 입력하여 연결을 시작하세요.
+          코치에게 받은 6자리 숫자를 입력하여 연결을 시작하세요.
         </p>
 
-        {/* 6자리 코드 입력 */}
-        <div className="flex gap-2 sm:gap-3 justify-center mb-4">
-          {code.map((digit, i) => (
-            <input
-              key={i}
-              ref={(el) => {
-                inputRefs.current[i] = el;
-              }}
-              type="text"
-              inputMode="text"
-              maxLength={1}
-              autoFocus={i === 0}
-              value={digit}
-              onChange={(e) => handleChange(i, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(i, e)}
-              onPaste={handlePaste}
-              disabled={loading}
-              className={`w-9 sm:w-10 h-12 shrink-0 text-center text-lg font-bold rounded-lg border-2 outline-none transition-colors ${
-                error
-                  ? 'border-red-400 bg-red-50'
-                  : digit
-                    ? 'border-[#5F0080] bg-[#F3E5F5]'
-                    : 'border-[#D4D4D4] bg-white focus:border-[#5F0080]'
-              } text-[#1F1F1F] disabled:opacity-50`}
-            />
-          ))}
+        {/* 6자리 코드 입력: 단일 input + 시각적 6칸 (모바일 포커스 이동 시 키패드 유지) */}
+        <div
+          className="relative flex justify-center mb-4 cursor-text"
+          onClick={() => inputRef.current?.focus()}
+        >
+          <input
+            ref={inputRef}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            autoComplete="off"
+            maxLength={6}
+            autoFocus
+            value={code}
+            onChange={handleInputChange}
+            disabled={loading}
+            aria-label="코치 코드 6자리 숫자"
+            className="absolute inset-0 w-full h-full opacity-0 cursor-text"
+          />
+          <div className="flex gap-2 sm:gap-3 pointer-events-none" aria-hidden="true">
+            {Array.from({ length: 6 }).map((_, i) => {
+              const digit = code[i] || '';
+              const isFocused = !loading && (code.length === i || (code.length === 6 && i === 5));
+              return (
+                <div
+                  key={i}
+                  className={`w-9 sm:w-10 h-12 shrink-0 flex items-center justify-center text-lg font-bold rounded-lg border-2 transition-colors ${
+                    error
+                      ? 'border-red-400 bg-red-50'
+                      : digit
+                        ? 'border-[#5F0080] bg-[#F3E5F5]'
+                        : isFocused
+                          ? 'border-[#5F0080] bg-white ring-2 ring-[#5F0080]/20'
+                          : 'border-[#D4D4D4] bg-white'
+                  } text-[#1F1F1F]`}
+                >
+                  {digit}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* 에러 메시지 */}
@@ -199,7 +169,7 @@ function CounselorCodeScreen() {
         )}
 
         <p className="text-xs text-[#6F6F6F] mt-6">
-          상담사 코드는 상담사 프로필에서 확인할 수 있습니다
+          코치 코드는 코치 프로필에서 확인할 수 있습니다
         </p>
       </div>
     </div>
@@ -243,7 +213,7 @@ export default function ClientAppPage() {
         console.error('Failed to fetch counselors:', err);
         // 실패 시 counselors를 null로 유지 — '상담사 코드 입력' 화면 오표시를 막고 에러+재시도 노출
         setFetchError(
-          err instanceof Error ? err.message : '상담사 연결 정보를 불러오지 못했습니다',
+          err instanceof Error ? err.message : '코치 연결 정보를 불러오지 못했습니다',
         );
       }
     }
@@ -252,6 +222,13 @@ export default function ClientAppPage() {
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchKey]);
+
+  // 코드 연결 성공 → 로컬 state 와 store 둘 다 갱신해 즉시 홈으로 전환
+  function handleConnected(list: Array<{ id: string; name: string; profile_image: string | null }>) {
+    setCounselors(list);
+    const current = useAuthStore.getState().user;
+    if (current) setUser({ ...current, counselors: list });
+  }
 
   // SDD-220: AI 비공개면 루시 직접 진입(구 경로·푸시 딥링크 포함)을 일반 채팅 목록으로 보낸다(루프 없음).
   if (!isAiEnabled() && (pathname === '/app/ai' || pathname.startsWith('/app/ai/') || pathname.startsWith('/app/chat/lucy'))) {
@@ -302,7 +279,7 @@ export default function ClientAppPage() {
 
   // 상담사 연결 전 → 코드 입력 화면
   if (!hasCounselors && !pathname.startsWith('/app/notifications')) {
-    return <CounselorCodeScreen />;
+    return <CounselorCodeScreen onConnected={handleConnected} />;
   }
 
   // /app/chat 또는 /app/chat/:roomId → ClientChatPage (자체 ClientShell 보유, 상담사 ChatPage와 동일 패턴)

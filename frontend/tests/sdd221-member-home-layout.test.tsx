@@ -6,7 +6,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { MemberStructureHomePage } from '../src/pages/client/member-structure-home-page';
 const mocks = vi.hoisted(() => ({ home: vi.fn() }));
 vi.mock('../src/hooks/use-class-structure', () => ({ useMixedHome: mocks.home }));
-vi.mock('../src/hooks/use-client-counselors', () => ({ useClientCounselors: vi.fn() }));
+vi.mock('../src/hooks/use-client-counselors', () => ({ useClientCounselors: () => ({ counselors: [], loading: false, error: false, refresh: async () => true, addCounselor: async () => { throw new Error('unused'); } }) }));
 vi.mock('../src/components/class/structure/structure-shell', () => ({ StructureShell: ({ children }: { children: React.ReactNode }) => <main className="cs-structure">{children}</main> }));
 vi.mock('../src/pages/client/ClientHomePage', () => ({ default: ({ classSections }: { classSections?: React.ReactNode }) => <div className="mh-legacy">{classSections}</div> }));
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;

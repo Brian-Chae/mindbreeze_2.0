@@ -26,7 +26,7 @@ vi.mock('../src/lib/api/class-structure', async (importOriginal) => ({
 }));
 vi.mock('../src/components/class/structure/structure-shell', () => ({ StructureShell: ({ children }: { children: ReactNode }) => <main>{children}</main> }));
 vi.mock('../src/pages/client/ClientHomePage', () => ({ default: ({ classSections }: { classSections?: React.ReactNode }) => <>{classSections}</> }));
-vi.mock('../src/hooks/use-client-counselors', () => ({ useClientCounselors: () => undefined }));
+vi.mock('../src/hooks/use-client-counselors', () => ({ useClientCounselors: () => ({ counselors: [], loading: false, error: false, refresh: async () => true, addCounselor: async () => { throw new Error('unused'); } }) }));
 
 let cleanup: (() => void) | undefined;
 function render(node: ReactNode, path = '/') {

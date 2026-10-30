@@ -32,7 +32,7 @@ const CONCERN_OPTIONS = [
 
 const INTEREST_OPTIONS = ['명상', '인지행동', '마음챙김', '수용전념', '미술 활동'];
 
-const STEP_LABELS = ['기본 정보', '상세 정보', '프로필', '상담사 매칭'];
+const STEP_LABELS = ['기본 정보', '상세 정보', '프로필', '코치 매칭'];
 
 /**
  * FORM-01: YYYY-MM-DD 문자열이 실제로 존재하는 달력 날짜인지 검증한다.
@@ -210,13 +210,13 @@ export default function ClientOnboardingPage() {
             }
           } catch {
             if (!cancelled) {
-              setError('상담사 연결을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.');
+              setError('코치 연결을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.');
             }
           }
         }
       } catch {
         if (!cancelled) {
-          setError('상담사 연결 정보를 불러오지 못했습니다.');
+          setError('코치 연결 정보를 불러오지 못했습니다.');
         }
       } finally {
         if (!cancelled) setInviteConfirmLoading(false);
@@ -321,7 +321,7 @@ export default function ClientOnboardingPage() {
     setError(null);
     const code = form.counselorCode.trim();
     if (code.length !== 6) {
-      setError('6자리 상담사 코드를 입력해주세요');
+      setError('6자리 숫자를 입력해주세요');
       return;
     }
     setLoading(true);
@@ -331,9 +331,9 @@ export default function ClientOnboardingPage() {
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 404) {
-          setError('상담사 코드를 찾을 수 없습니다');
+          setError('코치 코드를 찾을 수 없습니다');
         } else if (err.status === 403) {
-          setError('해당 상담사는 아직 인증이 완료되지 않아 매칭할 수 없습니다');
+          setError('해당 코치는 아직 인증이 완료되지 않아 매칭할 수 없습니다');
         } else {
           setError(err.message || '매칭에 실패했습니다');
         }
@@ -448,7 +448,7 @@ export default function ClientOnboardingPage() {
           </div>
           <h1 className="text-2xl font-bold text-white">온보딩 완료</h1>
           <p className="text-[15px] text-white/70 text-center">
-            상담사와 매칭되었습니다. 이제 세션을 시작할 수 있습니다.
+            코치와 매칭되었습니다. 이제 세션을 시작할 수 있습니다.
           </p>
           <button
             type="button"
@@ -501,7 +501,7 @@ export default function ClientOnboardingPage() {
             to="/login"
             className="text-[13px] text-white/90 hover:text-white font-medium px-4 py-2 rounded-full border border-white/30 hover:border-white/60 transition-colors"
           >
-            상담사 로그인
+            코치 로그인
           </Link>
         </div>
 
@@ -529,7 +529,7 @@ export default function ClientOnboardingPage() {
             {step === 1 && '기본 정보'}
             {step === 2 && '상세 정보'}
             {step === 3 && '프로필'}
-            {step === 4 && (isInviteFlow ? '상담사 연결' : '상담사 코드 매칭')}
+            {step === 4 && (isInviteFlow ? '코치 연결' : '코치 코드 매칭')}
           </h2>
 
           {/* Step 1: 기본 정보 */}
@@ -661,15 +661,15 @@ export default function ClientOnboardingPage() {
                 <>
                   {inviteConfirmLoading ? (
                     <p className="text-[13px] text-white/70 text-center py-4">
-                      상담사 연결을 확인하는 중...
+                      코치 연결을 확인하는 중...
                     </p>
                   ) : matchedCounselor ? (
                     <>
                       <p className="text-[15px] font-semibold text-white text-center">
-                        상담사와 연결되었습니다
+                        코치와 연결되었습니다
                       </p>
                       <div className="rounded-2xl bg-white/10 border border-white/20 p-5 space-y-3">
-                        <p className="text-sm font-semibold text-[#C38BFF]">연결된 상담사</p>
+                        <p className="text-sm font-semibold text-[#C38BFF]">연결된 코치</p>
                         <div>
                           <p className="text-xs text-white/70">이름</p>
                           <p className="text-lg font-semibold text-white">
@@ -690,7 +690,7 @@ export default function ClientOnboardingPage() {
                   ) : (
                     <div className="space-y-3">
                       <p className="text-[13px] text-white/70 text-center">
-                        상담사 연결 정보를 확인할 수 없습니다.
+                        코치 연결 정보를 확인할 수 없습니다.
                       </p>
                       <button
                         type="button"
@@ -707,30 +707,33 @@ export default function ClientOnboardingPage() {
                 <>
                   <div>
                     <label htmlFor="onboarding-counselor-code" className="block text-[13px] text-white/70 mb-1.5 ml-1">
-                      상담사 코드 (6자리)
+                      코치 코드 (6자리 숫자)
                     </label>
                     <input
                       id="onboarding-counselor-code"
                       type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoComplete="off"
                       maxLength={6}
                       value={form.counselorCode}
                       onChange={(e) =>
                         setForm({
                           ...form,
-                          counselorCode: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''),
+                          counselorCode: e.target.value.replace(/\D/g, '').slice(0, 6),
                         })
                       }
-                      placeholder="ABC123"
+                      placeholder="000000"
                       className="w-full h-[52px] rounded-full bg-white/90 backdrop-blur border border-white/30 px-5 text-center text-xl font-bold tracking-[0.3em] text-[#1F1F1F] placeholder:text-[#9A9BA8] placeholder:tracking-normal outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/20 focus:bg-white"
                     />
                   </div>
                   <p className="text-[13px] text-white/70 text-center">
-                    상담사로부터 전달받은 6자리 코드를 입력해주세요.
+                    코치로부터 전달받은 6자리 숫자를 입력해주세요.
                   </p>
                 </>
               ) : (
                 <div className="rounded-2xl bg-white/10 border border-white/20 p-5 space-y-3">
-                  <p className="text-sm font-semibold text-[#C38BFF]">매칭된 상담사</p>
+                  <p className="text-sm font-semibold text-[#C38BFF]">매칭된 코치</p>
                   <div>
                     <p className="text-xs text-white/70">이름</p>
                     <p className="text-lg font-semibold text-white">

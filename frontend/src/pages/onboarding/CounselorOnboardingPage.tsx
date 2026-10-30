@@ -174,10 +174,10 @@ export default function CounselorOnboardingPage() {
         <div className="w-full max-w-[480px] bg-white rounded-[20px] border border-[#EFEFEF] shadow-sm p-8 space-y-6 text-center">
           <h1 className="text-2xl font-bold text-[#1F1F1F]">온보딩 완료</h1>
           <p className="text-sm text-[#6F6F6F]">
-            상담사 등록이 완료되었습니다. 아래 코드를 내담자에게 공유하세요.
+            코치 등록이 완료되었습니다. 아래 코드를 내담자에게 공유하세요.
           </p>
           <div className="bg-[#F5EDFC] rounded-xl border border-[#EFEFEF] p-6 space-y-2">
-            <p className="text-xs text-[#6F6F6F] font-mono uppercase tracking-wider">상담사 코드</p>
+            <p className="text-xs text-[#6F6F6F] font-mono uppercase tracking-wider">코치 코드</p>
             <p className="text-3xl font-bold tracking-widest text-[#5F0080]">
               {result.counselor_code}
             </p>
@@ -200,7 +200,7 @@ export default function CounselorOnboardingPage() {
               Mind Breeze
             </h1>
           </Link>
-          <p className="text-sm text-[#6F6F6F]">상담사 온보딩 (선택)</p>
+          <p className="text-sm text-[#6F6F6F]">코치 온보딩 (선택)</p>
         </div>
 
         <div className="bg-white rounded-[20px] border border-[#EFEFEF] shadow-sm p-6 sm:p-8 space-y-6">

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// SDD-209 M6 — FM07 시작 대기 · 시작 시각 계산 · 상담사 시작 시 자동 진행
+// SDD-209 M6 — FM07 시작 대기 · 시작 시각 계산 · 코치 시작 시 자동 진행
 import { act, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -64,7 +64,7 @@ describe('FM07 시작 대기', () => {
     expect(text()).toContain('약 5분 뒤에 시작해요');
     expect(text()).toContain('대기실 BGM · 재생 중');
     expect(btn('준비 다시 확인하기')).toBeDefined();
-    expect(text()).toContain('상담사가 시작하면 자동으로 입장해요.');
+    expect(text()).toContain('코치가 시작하면 자동으로 입장해요.');
   });
   it('준비 인원은 데이터가 올 때만 `N명 중 M명`, 아니면 내 준비 문구(숫자를 지어내지 않는다)', async () => {
     await render(<WaitStartView {...props()} />);
@@ -73,10 +73,10 @@ describe('FM07 시작 대기', () => {
     await render(<WaitStartView {...props({ readyCount: { ready: 4, total: 6 } })} />);
     expect(text()).toContain('6명 중 4명이 준비를 마쳤어요');
   });
-  it('1:1 은 `내 준비를 마쳤어요` + 상담사가 곧 시작해요', async () => {
+  it('1:1 은 `내 준비를 마쳤어요` + 코치가 곧 시작해요', async () => {
     await render(<WaitStartView {...props({ size: 'solo' })} />);
     expect(text()).toContain('내 준비를 마쳤어요');
-    expect(text()).toContain('채용욱 상담사가 곧 시작해요.');
+    expect(text()).toContain('채용욱 코치가 곧 시작해요.');
   });
   it('BGM 꺼짐 표기와 토글·볼륨 동작', async () => {
     const onBgmToggle = vi.fn();

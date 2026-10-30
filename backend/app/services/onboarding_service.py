@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import string
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
@@ -66,10 +67,14 @@ def complete_onboarding(user_id: str, db: Session) -> OnboardingProgress:
 
 
 def generate_counselor_code(db: Session) -> str:
-    """6자리 대문자+숫자 상담사 코드 발급 — unique 충돌 시 최대 5회 재시도.
+    """6자리 숫자 코치 코드 발급 (000000~999999) — unique 충돌 시 최대 5회 재시도.
 
-    SDD-015에서 발급 로직을 code_service로 공용화했다 (동작 동일).
+    코치 코드는 숫자 6자리로 발급된다. code_service 공용 기본값은 유지하되 alphabet=string.digits 전달.
     """
     return code_service.generate_unique_code(
-        db, CounselorProfile, "counselor_code", label="상담사 코드"
+        db,
+        CounselorProfile,
+        "counselor_code",
+        label="코치 코드",
+        alphabet=string.digits,
     )

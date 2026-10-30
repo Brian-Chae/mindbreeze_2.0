@@ -138,7 +138,7 @@ export function memberCaseViewProps(id: string, ctx?: Partial<Pick<PlayerCaseCon
       title: '마음챙김 명상수업 · 4회차',
       durationLabel: '30분',
       actionLabel: '대시보드로 이동',
-      reportPanel: createElement('p', { className: 'mp-note' }, '리포트를 받을 이메일을 입력하면 상담사 승인 후 메일로 보내 드려요.'),
+      reportPanel: createElement('p', { className: 'mp-note' }, '리포트를 받을 이메일을 입력하면 코치 승인 후 메일로 보내 드려요.'),
       checkinPanel: createElement('p', { className: 'mp-note' }, '오늘 수업 이후 상태를 남길 수 있어요.'),
     },
     waitlist: { title: '마음챙김 명상수업 · 4회차', counselorName: '채용욱', startLabel: '14:00', notifyByPush: true },

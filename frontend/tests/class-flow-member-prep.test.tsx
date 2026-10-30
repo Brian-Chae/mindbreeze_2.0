@@ -106,7 +106,7 @@ describe('FM06a 고지·리포트 반영 선택·연구 동의', () => {
   it('명상이 아닌 클래스에는 원문에 없는 열람 권한을 추정하지 않는다', async () => {
     await render(<NoticeStepView {...notice({ sessionType: 'clinical' })} />);
     expect(qa('.notice-tiles > div')).toHaveLength(2);
-    expect(text()).not.toContain('진행 상담사');
+    expect(text()).not.toContain('진행 코치');
     await openNoticeSheet('기록 안내');
     expect(text()).not.toContain('클래스의 진행 지도사');
   });
@@ -120,7 +120,7 @@ describe('FM06a 고지·리포트 반영 선택·연구 동의', () => {
   it('고지 영역: 녹음과 AI 기록 · 뇌파 · 영상 · 보관 기간(서버 값)', async () => {
     await render(<NoticeStepView {...notice()} />);
     expect(text()).toContain('시작 전에 확인해 주세요');
-    expect(text()).toContain('채용욱 상담사와 함께하는 마음챙김 명상 · 4회차');
+    expect(text()).toContain('채용욱 코치와 함께하는 마음챙김 명상 · 4회차');
     await openNoticeSheet('기록 안내');
     expect(text()).toContain('녹음과 AI 기록');
     expect(text()).toContain('음성을 녹음하고 AI가 기록지를 만들어요');
@@ -225,7 +225,7 @@ describe('FM06e 준비 완료 요약', () => {
     const rows = buildSummaryRows({ place: 'online', bandMode: 'opt', draft: emptyPrepDraft() });
     await render(<ReadySummaryView displayName="지은" rows={rows} steps={{ total: 5, current: 4 }} onGoto={onGoto} onReady={onReady} onBack={noop} onExit={noop} />);
     expect(text()).toContain('준비를 마쳤어요');
-    expect(text()).toContain('지은님, 상담사가 시작하면 자동으로 입장해요.');
+    expect(text()).toContain('지은님, 코치가 시작하면 자동으로 입장해요.');
     expect(text()).toContain('항목을 눌러 다시 바꿀 수 있어요.');
     const report = qa<HTMLButtonElement>('button').find((b) => b.textContent?.includes('리포트 반영하지 않아요'));
     await act(async () => { report!.click(); });

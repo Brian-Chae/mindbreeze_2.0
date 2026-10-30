@@ -23,7 +23,7 @@ export type SessionWithHost = SessionDto & { host_name?: string | null };
 /** `김하늘 상담사`. 이름이 없으면 null */
 export function hostLabel(session: SessionWithHost): string | null {
   const name = session.host_name?.trim();
-  return name ? `${name} 상담사` : null;
+  return name ? `${name} 코치` : null;
 }
 
 export function toClassCardData(session: SessionWithHost, now: Date = new Date()): ClassCardData {
@@ -131,7 +131,7 @@ export function buildClassSections(sessions: SessionWithHost[], invitedIds: Read
     const data = toClassCardData(s, now);
     if (kind === 'invited') {
       const host = hostLabel(s);
-      data.subLine = host ? `${host}가 초대했어요` : '상담사가 초대했어요';
+      data.subLine = host ? `${host}가 초대했어요` : '코치가 초대했어요';
     }
     return {
       data,

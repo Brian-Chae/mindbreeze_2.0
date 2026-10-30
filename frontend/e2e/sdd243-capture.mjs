@@ -121,7 +121,7 @@ for (const role of ['platform_admin', 'org_admin']) {
       await page.getByRole('button',{name:'part1 링크 발급',exact:true}).first().waitFor({timeout:10000}).catch(async error=>{console.log(await page.locator('body').innerText());console.log(JSON.stringify({errors,requests}));throw error;}); await snap('jobs');
       await page.getByRole('button',{name:'다운로드 기록',exact:true}).click();
       await page.getByRole('heading',{name:'다운로드 감사 기록',exact:true}).waitFor(); await page.getByText('합성 운영 점검',{exact:true}).waitFor(); await snap('audits');
-      for(const mode of ['회원 단위','상담사 단위']) {
+      for(const mode of ['회원 단위','코치 단위']) {
         await page.getByRole('button',{name:'클래스 데이터',exact:true}).click();
         await page.getByRole('button',{name:mode,exact:true}).click();
         await page.getByRole('button',{name:/회차 보기/}).first().click();

@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import AuthShell from '../../components/auth/AuthShell';
 import { OtpInput } from '../../components/auth/OtpInput';
+import { useCooldown } from '../../hooks/useCooldown';
 import { BirthDateInput } from '../../components/auth/BirthDateInput';
 import { ConsentCheckList, type Consents } from '../../components/auth/ConsentCheckList';
 import { BIRTH_DATE_MESSAGES, checkBirthDate } from '../../lib/auth/age';
@@ -91,6 +92,7 @@ export default function RegisterClientPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
   const [emailVerifyToken, setEmailVerifyToken] = useState<string | null>(null);
+  const cooldown = useCooldown();
 
   // Step 2
   const [consents, setConsents] = useState<Consents>({ tos: false, privacy: false, sensitive: false });
@@ -116,15 +118,29 @@ export default function RegisterClientPage() {
     try {
       await requestOtp(email);
       setOtpSent(true);
+      setOtp('');
+      cooldown.start();
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         setError('이미 등록된 이메일입니다');
+      } else if (err instanceof ApiError && err.status === 429) {
+        setError('잠시 후 다시 요청해 주세요 (60초 간격)');
+        cooldown.start();
       } else {
         setError('인증 코드 발송에 실패했습니다');
       }
     } finally {
       setLoading(false);
     }
+  };
+
+  // 이메일 오입력 시 입력 단계로 되돌아간다(코드·인증 토큰 초기화)
+  const handleChangeEmail = (): void => {
+    setError(null);
+    setOtpSent(false);
+    setOtp('');
+    setEmailVerifyToken(null);
+    cooldown.reset();
   };
 
   const handleVerifyOtp = async (): Promise<void> => {
@@ -161,9 +177,9 @@ export default function RegisterClientPage() {
   const handleCheckCode = async (): Promise<void> => {
     setError(null);
     setMatchedCounselor(null);
-    const code = counselorCode.trim().toUpperCase();
+    const code = counselorCode.trim();
     if (code.length !== 6) {
-      setError('상담사 코드는 6자리입니다');
+      setError('코치 코드는 6자리 숫자입니다');
       return;
     }
     if (!emailVerifyToken) {
@@ -176,7 +192,7 @@ export default function RegisterClientPage() {
       setMatchedCounselor(res);
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(err.message || '상담사 코드를 확인할 수 없습니다');
+        setError(err.message || '코치 코드를 확인할 수 없습니다');
       } else {
         setError('네트워크 오류가 발생했습니다');
       }
@@ -220,7 +236,7 @@ export default function RegisterClientPage() {
       return;
     }
     if (!isInviteRegistration && !matchedCounselor) {
-      setError('상담사 코드를 확인해주세요. 코드가 없다면 초대한 상담사에게 요청해 주세요.');
+      setError('코치 코드를 확인해주세요. 코드가 없다면 초대한 코치에게 요청해 주세요.');
       return;
     }
 
@@ -236,14 +252,14 @@ export default function RegisterClientPage() {
         gender,
         birth_date: birthDate,
         phone: phone.trim() || undefined,
-        counselor_code: isInviteRegistration ? undefined : counselorCode.trim().toUpperCase(),
+        counselor_code: isInviteRegistration ? undefined : counselorCode.trim(),
       });
       // 초대 가입: 온보딩 Step 4에서 코드 입력 없이 연결 확인 화면으로 진입.
       // 코드 가입: ?code= 로 Step 4 자동 매칭(재입력 없이 연결 확인)을 유도한다.
       navigate(
         isInviteRegistration
           ? '/onboarding/client?source=invite'
-          : `/onboarding/client?code=${counselorCode.trim().toUpperCase()}`,
+          : `/onboarding/client?code=${counselorCode.trim()}`,
       );
     } catch (err) {
       if (err instanceof ApiError) {
@@ -270,10 +286,10 @@ export default function RegisterClientPage() {
         {isInviteRegistration && (
           <div className="rounded-3xl bg-white px-5 py-4 shadow-xl text-center space-y-1">
             <p className="text-sm font-semibold text-[#1F1F1F]">
-              상담사님의 초대로 가입 중입니다
+              코치님의 초대로 가입 중입니다
             </p>
             <p className="text-xs text-[#6F6F6F]">
-              가입 완료 시 상담사와 자동으로 연결됩니다
+              가입 완료 시 코치와 자동으로 연결됩니다
             </p>
           </div>
         )}
@@ -324,10 +340,18 @@ export default function RegisterClientPage() {
                   <button
                     type="button"
                     onClick={handleRequestOtp}
-                    disabled={loading}
+                    disabled={loading || cooldown.remaining > 0}
                     className="w-full text-xs text-[#6F6F6F] hover:text-[#4B0066]"
                   >
-                    인증 코드 재발송
+                    {cooldown.remaining > 0 ? `인증번호 다시 받기 (${cooldown.remaining}초)` : '인증번호 다시 받기'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleChangeEmail}
+                    disabled={loading}
+                    className="w-full text-xs text-[#6F6F6F] underline hover:text-[#4B0066]"
+                  >
+                    이메일 변경
                   </button>
                 </div>
               )}
@@ -469,18 +493,21 @@ export default function RegisterClientPage() {
               {!isInviteRegistration && (
                 <div className="space-y-2">
                   <label htmlFor="counselorCode" className="block text-sm font-medium text-[#4A4A4A]">
-                    초대 상담사 코드
+                    초대 코치 코드
                   </label>
                   <div className="flex gap-2">
                     <input
                       id="counselorCode"
                       type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoComplete="off"
                       value={counselorCode}
                       onChange={(e) => {
-                        setCounselorCode(e.target.value.toUpperCase());
+                        setCounselorCode(e.target.value.replace(/\D/g, '').slice(0, 6));
                         setMatchedCounselor(null);
                       }}
-                      placeholder="6자리 코드"
+                      placeholder="6자리 숫자"
                       maxLength={6}
                       disabled={loading}
                       className={`flex-1 font-mono tracking-widest ${inputClass}`}
@@ -497,7 +524,7 @@ export default function RegisterClientPage() {
                   {matchedCounselor ? (
                     <div className="rounded-xl border border-[#5F0080]/30 bg-[#5F0080]/5 px-4 py-3 text-sm">
                       <p className="font-semibold text-[#1F1F1F]">
-                        {matchedCounselor.counselor_name} 상담사와 연결하여 가입합니다
+                        {matchedCounselor.counselor_name} 코치와 연결하여 가입합니다
                       </p>
                       {matchedCounselor.organization_name && (
                         <p className="text-xs text-[#6F6F6F] mt-0.5">
@@ -507,7 +534,7 @@ export default function RegisterClientPage() {
                     </div>
                   ) : (
                     <p className="text-xs text-[#6F6F6F]">
-                      코드가 없다면 초대한 상담사에게 코드를 요청해 주세요.
+                      코드가 없다면 초대한 코치에게 코드를 요청해 주세요. (6자리 숫자)
                     </p>
                   )}
                 </div>

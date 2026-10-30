@@ -34,7 +34,7 @@ def _load_client_report(report_id: str, host_id: str, db: DBSession) -> tuple[Re
         raise HTTPException(status_code=404, detail="리포트를 찾을 수 없습니다")
     session = db.query(Session).filter(Session.id == report.session_id).first()
     if not _can_edit_report(host_id, session, db):
-        raise HTTPException(status_code=403, detail="host 상담사만 가능합니다")
+        raise HTTPException(status_code=403, detail="host 코치만 가능합니다")
     if report.type != "client":
         raise HTTPException(status_code=400, detail="내담자 리포트에만 코멘트를 작성할 수 있습니다")
     return report, session
@@ -179,14 +179,14 @@ def _draft_context(report: Report, session: Session, db: DBSession, *, include_p
 
 def _build_prompt(context: dict) -> str:
     lines = [
-        "당신은 심리상담사를 돕는 글쓰기 보조자입니다.",
-        "상담사가 내담자에게 보내는 세션 리포트에 첨부할 짧은 코멘트 초안을 작성하세요.",
+        "당신은 심리코치를 돕는 글쓰기 보조자입니다.",
+        "코치가 내담자에게 보내는 세션 리포트에 첨부할 짧은 코멘트 초안을 작성하세요.",
         "",
         "규칙:",
         "- 따뜻한 존댓말, 내담자를 수신자로 하는 3~5문장.",
         "- 의료 진단·치료 효과를 단정하지 마세요 (진단/치료 목적 아님).",
         "- 아래에 없는 측정 결과나 대화 내용을 지어내지 마세요. 측정·기록이 없으면 언급하지 마세요.",
-        "- 상담사 내부 메모가 있다면 소재로만 참고하고 원문을 인용하지 마세요.",
+        "- 코치 내부 메모가 있다면 소재로만 참고하고 원문을 인용하지 마세요.",
         f"- {COMMENT_MAX_LENGTH}자 이내의 순수 텍스트만 출력하세요 (JSON·머리말·따옴표 금지).",
         "",
         "세션 정보:",
@@ -209,7 +209,7 @@ def _build_prompt(context: dict) -> str:
     if context.get("eeg_narrative"):
         lines.append(f"- 뇌파 분석 서사: {context['eeg_narrative']}")
     if context.get("counselor_notes"):
-        lines.append(f"- 상담사 내부 메모(인용 금지, 소재로만): {context['counselor_notes']}")
+        lines.append(f"- 코치 내부 메모(인용 금지, 소재로만): {context['counselor_notes']}")
     return "\n".join(lines)
 
 

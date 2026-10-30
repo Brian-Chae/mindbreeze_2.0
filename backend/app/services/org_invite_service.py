@@ -143,7 +143,9 @@ async def issue_counselor_invite(user: User, org_name: str, redis: Redis) -> boo
     )
 
 
-async def issue_membership_invite(user: User, org, redis: Redis) -> bool:
+async def issue_membership_invite(
+    user: User, org, redis: Redis, *, role: str = "counselor"
+) -> bool:
     """기존 상담사 대상 "소속 추가 초대" 토큰 발급 + 수락 링크 이메일 발송 (SDD-079).
 
     set-password 가 아니라 /membership-invite 수락 링크다. 토큰에 org 클레임을 넣고
@@ -163,12 +165,15 @@ async def issue_membership_invite(user: User, org, redis: Redis) -> bool:
         _invite_key(jti, MEMBERSHIP_TOKEN_TYPE), INVITE_TTL_SECONDS, f"{user.id}:{org.id}"
     )
     invite_link = f"{settings.frontend_base_url.rstrip('/')}/membership-invite?token={token}"
+    # SDD-258: 기관관리자 초대일 때만 role kwarg 전달 (상담사 호출 시그니처 유지)
+    extra = {"role": role} if role == "org_admin" else {}
     return send_membership_invite_email(
         user.email,
         invite_link,
         counselor_name=user.name,
         org_name=org.name,
         expires_days=INVITE_TTL_DAYS,
+        **extra,
     )
 
 
@@ -233,6 +238,9 @@ async def consume_membership_invite(token: str, db: Session, redis: Redis):
         )
 
     membership_service.activate_membership(db, membership, user)
+    # SDD-258: 기관관리자 초대 수락 시 이 기관이 주 소속이면 User.role 미러도 org_admin 으로 동기
+    if membership.role == "org_admin" and user.org_id == org.id and user.role == "counselor":
+        user.role = "org_admin"
     db.commit()
     db.refresh(user)
 
@@ -278,7 +286,7 @@ async def check_counselor_send_cooldown(org_id: str, redis: Redis) -> None:
     if await redis.get(_counselor_send_key(org_id)):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"상담사 초대는 {RESEND_COOLDOWN_SECONDS}초에 한 번만 보낼 수 있습니다",
+            detail=f"코치 초대는 {RESEND_COOLDOWN_SECONDS}초에 한 번만 보낼 수 있습니다",
         )
 
 

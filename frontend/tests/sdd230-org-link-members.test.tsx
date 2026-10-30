@@ -117,6 +117,6 @@ describe('SDD-230 회원/비회원 구분 (L8)', () => {
     });
     await render(<ClientProfilePage />, '/clients/b');
     expect(container.querySelector('[data-testid="member-type-badge"]')?.textContent).toBe('비회원');
-    expect(container.querySelector('[data-testid="member-type-desc"]')?.textContent).toContain('기관 상담사와 연결만');
+    expect(container.querySelector('[data-testid="member-type-desc"]')?.textContent).toContain('기관 코치와 연결만');
   });
 });

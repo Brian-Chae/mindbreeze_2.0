@@ -93,6 +93,8 @@ const logger = createLogger('useBand');
  */
 let activeBandOwners = 0;
 let bandConnectInFlight = false;
+/** 진행 중 연결 시도의 소유 토큰 — 취소(disconnect) 후 늦게 끝난 옛 시도가 새 시도의 플래그를 지우지 않게 한다 */
+let bandConnectToken: symbol | null = null;
 
 /** raw indices → 표시용 0~100 정규화 (활성 모델 > 코호트 B0) */
 /** 표시 점수 묶음 — 이완도(두뇌 휴식)는 활성 모델 없으면 null(pending) */
@@ -211,6 +213,8 @@ export interface UseBandResult {
   isSupported: boolean;
   isMock: boolean;
   connectionState: BandConnectionState;
+  /** 예기치 않은 끊김 후 자동 재연결 루프가 돌고 있는지 — true 면 UI 가 '연결 취소'를 노출한다 */
+  isReconnecting: boolean;
   battery: number | null;
   /** SDK 스케일 0~100 */
   signalQuality: number | null;
@@ -460,6 +464,7 @@ export function useBand({
   const mountedRef = useRef(true);
   // 비동기 연결의 늦은 완료가 수동 해제·소유자 교체를 되돌리지 않게 한다.
   const connectionAttemptRef = useRef(0);
+  const [isReconnecting, setIsReconnecting] = useState(false);
   /** SDD-120 후속: 밴드 끊김(gattserverdisconnected) 시 자동 재연결 */
   const autoReconnectRef = useRef(true);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1234,6 +1239,13 @@ export function useBand({
     // 수동 해제 시 자동 재연결 중단 — 예기치 않은 끊김(gattserverdisconnected)만 자동 재연결한다.
     autoReconnectRef.current = false;
     reconnectAttemptRef.current = 0;
+    // 취소·해제 시 진행 중이던(멈춘) 연결 시도가 새 연결을 막지 않게 플래그를 즉시 푼다.
+    bandConnectInFlight = false;
+    bandConnectToken = null;
+    if (mountedRef.current) {
+      setIsReconnecting(false);
+      setError((prev) => (prev && prev.includes('자동 재연결') ? null : prev));
+    }
     if (gapOpenRef.current) {
       gapOpenRef.current = false;
       bleGapLog.close();
@@ -1330,6 +1342,8 @@ export function useBand({
     if (isAuto && !isMock && !bluetoothService.isConnected() && !bluetoothService.getCachedDeviceId()) return;
     if (isAuto && !isMock && bluetoothService.isReleasedForNative()) return;
     bandConnectInFlight = true;
+    const myToken = Symbol('band-connect');
+    bandConnectToken = myToken;
     const attempt = connectionAttemptRef.current;
     const ownsAttempt = () => mountedRef.current && connectionAttemptRef.current === attempt;
 
@@ -1340,6 +1354,7 @@ export function useBand({
       // 사용자 연결 시도 — 자동 재연결 재활성화 (수동 해제로 꺼진 플래그 복원)
       autoReconnectRef.current = true;
       reconnectAttemptRef.current = 0;
+      setIsReconnecting(false);
     }
     // 살아 있는 BLE를 인계할 때는 UI를 재연결/끊김 상태로 낮추지 않는다.
     const alreadyConnected = !isMock && bluetoothService.isConnected();
@@ -1508,6 +1523,7 @@ export function useBand({
             bleGapLog.open('connection-lost');
           }
           reconnectAttemptRef.current = 0;
+          setIsReconnecting(true);
           scheduleReconnect();
         }
       });
@@ -1518,6 +1534,7 @@ export function useBand({
         bleGapLog.close();
       }
       collectingRef.current = true;
+      setIsReconnecting(false);
       setConnectionState('connected');
       setUploadStatus(observationOnly ? 'idle' : 'streaming');
       markConnected();
@@ -1534,6 +1551,7 @@ export function useBand({
         if (!observationOnlyRef.current) flushRawChunk();
         setConnectionState('disconnected');
         setError('LINK BAND 연결이 끊어졌습니다 — 자동 재연결 시도 중');
+        setIsReconnecting(true);
         scheduleReconnect();
       } else {
         await disconnect();
@@ -1553,7 +1571,10 @@ export function useBand({
           if (!autoReconnectRef.current && bluetoothService.isConnected()) await bluetoothService.disconnect();
         }
       } finally {
-        bandConnectInFlight = false;
+        if (bandConnectToken === myToken) {
+          bandConnectInFlight = false;
+          bandConnectToken = null;
+        }
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- enabled는 BLE 연결 게이트였던 잔여 의존성으로 connect 본문에서 더 이상 직접 읽지 않는다. 다만 기존 의존성 항목을 제거하지 않는 원칙에 따라 유지한다(제거 시 connect identity 안정성이 달라짐).
@@ -1876,6 +1897,7 @@ export function useBand({
     isSupported,
     isMock,
     connectionState,
+    isReconnecting,
     battery,
     signalQuality,
     signalQualityLevel: sqLevel,

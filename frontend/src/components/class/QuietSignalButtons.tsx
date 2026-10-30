@@ -58,7 +58,7 @@ export function QuietSignalButtons({ onSend }: QuietSignalButtonsProps) {
 
   return (
     <section className="player-signals" aria-label="조용한 상태 신호">
-      <p className="player-signals-hint">선택한 상태와 이름이 상담사에게만 보여요</p>
+      <p className="player-signals-hint">선택한 상태와 이름이 코치에게만 보여요</p>
       <div className="player-signals-row">
         {CLASS_SIGNAL_TYPES.map((type) => {
           const meta = CLASS_SIGNAL_META[type];
@@ -85,7 +85,7 @@ export function QuietSignalButtons({ onSend }: QuietSignalButtonsProps) {
       <p role="status" aria-live="polite" className="player-signals-status">
         {feedback
           ? feedback.result === 'sent'
-            ? '상담사에게 조용히 전달했어요'
+            ? '코치에게 조용히 전달했어요'
             : feedback.result === 'queued'
               ? '연결을 복구하는 중이에요 — 복구되면 전달할게요'
               : '전송하지 못했어요 — 연결을 확인해 주세요'

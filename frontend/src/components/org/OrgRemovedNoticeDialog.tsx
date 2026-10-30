@@ -68,7 +68,7 @@ export default function OrgRemovedNoticeDialog() {
           {officeName ? `'${officeName}'(개인 상담소)로 등록되었습니다.` : '개인 상담소로 등록되었습니다.'}
         </p>
         <p className="mt-3 text-[13px] leading-relaxed text-[#6F6F6F]">
-          계정과 상담사 코드, 기존 상담 기록은 그대로 유지되며 개인 상담소 소속으로 계속
+          계정과 코치 코드, 기존 상담 기록은 그대로 유지되며 개인 상담소 소속으로 계속
           이용하실 수 있습니다.
         </p>
         <div className="mt-6 flex justify-end">

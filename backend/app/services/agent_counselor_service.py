@@ -269,7 +269,7 @@ def build_reply(db: DBSession, counselor_id: UUID, user_text: str) -> str:
 
     fallback = _schedule_reply(context.get("today") or [], NO_SESSION_REPLY_TODAY, "오늘")
     task = (
-        "상담사가 물은 내용에 [허용 자료] 범위 안에서만 간결하게 답하세요. "
+        "코치가 물은 내용에 [허용 자료] 범위 안에서만 간결하게 답하세요. "
         "자료에 없는 내용은 만들지 말고 확인이 필요하다고 안내하세요. "
         "일정을 바꾸거나 메시지를 보내겠다고 말하지 마세요. "
         "장소·주소·연락처는 언급하지 마세요."
@@ -279,9 +279,9 @@ def build_reply(db: DBSession, counselor_id: UUID, user_text: str) -> str:
     # (브리핑 등 자동 생성 프롬프트에는 넣지 않는다 — excerpt·요약 재유출 방지)
     recent = agent_policy.counselor_recent_messages(counselor_id, db)
     if recent:
-        lines = [context_text, "", "■ 최근 대화 (상담사님과 루시가 나눈 최근 대화)"]
+        lines = [context_text, "", "■ 최근 대화 (코치님과 루시가 나눈 최근 대화)"]
         for item in recent:
-            who = "상담사" if item["sender"] == "user" else "루시"
+            who = "코치" if item["sender"] == "user" else "루시"
             lines.append(f"- {who}: {item['content']}")
         context_text = "\n".join(lines)
     prompt = agent_llm.build_prompt(context_text, user_text=text, task=task)

@@ -27,7 +27,7 @@ export function ApplySheet({ open, options, selectedId, onSelect, onSend, onClos
     <ShellSheet
       open={open}
       title="클래스 신청하기"
-      description="신청 메시지를 상담사에게 보내요. 답을 받으면 알림으로 알려드려요."
+      description="신청 메시지를 코치에게 보내요. 답을 받으면 알림으로 알려드려요."
       onClose={onClose}
       footer={
         <>
@@ -44,9 +44,9 @@ export function ApplySheet({ open, options, selectedId, onSelect, onSend, onClos
           {onRetry ? <button type="button" className="sh-btn line" data-testid="apply-retry" onClick={onRetry}>다시 시도</button> : null}
         </div>
       ) : options.length === 0 ? (
-        <p className="sh-sheet__desc">연결된 상담사 채팅방이 없어요</p>
+        <p className="sh-sheet__desc">연결된 코치 채팅방이 없어요</p>
       ) : (
-        <div className="sh-picks" role="radiogroup" aria-label="상담사 선택">
+        <div className="sh-picks" role="radiogroup" aria-label="코치 선택">
           {options.map((option) => {
             const checked = option.id === selectedId;
             return (

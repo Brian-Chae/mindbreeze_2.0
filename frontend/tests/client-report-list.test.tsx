@@ -75,7 +75,7 @@ it('세션 제목과 숨겨진 headline도 공백과 대소문자를 정리해 �
 });
 it('그룹핑을 끄고 날짜 및 제목 순서를 바꾼다', async () => {
   await render();
-  await act(async () => button('상담사별 그룹핑').click());
+  await act(async () => button('코치별 그룹핑').click());
   expect(container.querySelectorAll('table')).toHaveLength(1);
   expect(titles()).toEqual(['가 명상', '가 명상', '나 상담']);
   await sort('oldest');
@@ -162,7 +162,7 @@ it('상담사와 요약이 없으면 이름과 headline을 폴백하고 잘못�
   ], total: 1 });
   await render();
   const table = container.querySelector('table')!;
-  expect(table.parentElement?.textContent).toContain('상담사');
+  expect(table.parentElement?.textContent).toContain('코치');
   expect(table.textContent).toContain('폴백 요약');
   expect(table.textContent).not.toContain('NaN');
   expect(table.querySelectorAll('tbody td')[2].textContent).toBe('-');

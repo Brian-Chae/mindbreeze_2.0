@@ -86,7 +86,7 @@ export function WaitStartView({
       foot={
         <>
           <FlowButton kind="soft" onClick={onRecheck}><RefreshCw size={20} aria-hidden="true" />준비 다시 확인하기</FlowButton>
-          <p className="fl-note fm-slot">상담사가 시작하면 자동으로 입장해요.</p>
+          <p className="fl-note fm-slot">코치가 시작하면 자동으로 입장해요.</p>
         </>
       }
     >
@@ -100,7 +100,7 @@ export function WaitStartView({
         <section className="fm-ready" aria-label="준비 상태">
           <div className="fm-rrow">{solo ? <UserCheck size={20} aria-hidden="true" /> : <Users size={20} aria-hidden="true" />}<span>{readyText}</span></div>
           <div className="fm-bar" aria-hidden="true"><i style={{ width: `${ratio}%` }} /></div>
-          {solo && hostName ? <p className="fm-hint2">{hostName} 상담사가 곧 시작해요.</p> : null}
+          {solo && hostName ? <p className="fm-hint2">{hostName} 코치가 곧 시작해요.</p> : null}
         </section>
       </FlowCard>
       {place_}

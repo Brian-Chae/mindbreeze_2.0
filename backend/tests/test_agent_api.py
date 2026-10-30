@@ -217,7 +217,7 @@ def test_TS18_리포트_범위_질문은_본문_안에서_답하고_범위밖은
     )
     assert res.status_code == 200, res.text
     reply = res.json()["agent_message"]
-    assert "상담사" in reply["content"]
+    assert "코치" in reply["content"]
     assert "병명" not in reply["content"]
 
 

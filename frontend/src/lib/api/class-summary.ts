@@ -35,7 +35,7 @@ export const classSummaryApi = {
     if (!request.revert && !text) throw new ApiError(422, 'empty_text', null);
     if (text && (text.length > field.max_len || Array.from(text).some((character) => character.charCodeAt(0) < 32))) throw new ApiError(422, 'text_too_long', null);
     const now = new Date().toISOString();
-    const value = request.revert ? { ...field, text: field.ai_draft ?? field.rule_text, source: field.ai_draft ? 'ai' as const : 'rule' as const, edited_text: null, edited_by: null, edited_by_name: null, edited_at: null, stale: false } : { ...field, text: text!, source: 'edited' as const, edited_text: text!, edited_by: 'u_1', edited_by_name: '채 상담사', edited_at: now, stale: false };
+    const value = request.revert ? { ...field, text: field.ai_draft ?? field.rule_text, source: field.ai_draft ? 'ai' as const : 'rule' as const, edited_text: null, edited_by: null, edited_by_name: null, edited_at: null, stale: false } : { ...field, text: text!, source: 'edited' as const, edited_text: text!, edited_by: 'u_1', edited_by_name: '채 코치', edited_at: now, stale: false };
     if (report.block) report.block = { ...report.block, narrative: { ...report.block.narrative, fields: { ...report.block.narrative.fields, [request.field]: value } } };
     reports.set(`${id}:${getMockState()}`, report);
     return { field: request.field, value, fetched_at: now };

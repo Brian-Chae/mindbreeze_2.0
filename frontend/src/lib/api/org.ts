@@ -56,6 +56,8 @@ export interface CounselorItem {
 export interface InviteCounselorPayload {
   name: string;
   email: string;
+  // SDD-258: 생략하면 상담사(코치) 초대, 'org_admin' 이면 기관관리자 초대
+  role?: CounselorRole;
 }
 
 export interface InviteCounselorResponse {

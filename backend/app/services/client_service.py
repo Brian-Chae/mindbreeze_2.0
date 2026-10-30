@@ -218,7 +218,7 @@ def create_invite(counselor_id: str, email: str, db: Session) -> dict:
 
     # 상담사 이름 조회 (상담사 코드는 더 이상 사용하지 않음)
     counselor = db.query(User).filter(User.id == UUID(counselor_id)).first()
-    counselor_name = counselor.name if counselor else "상담사"
+    counselor_name = counselor.name if counselor else "코치"
 
     # 이메일 발송 (실패해도 초대 자체는 성공)
     try:

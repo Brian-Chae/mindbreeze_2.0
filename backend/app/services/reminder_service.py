@@ -148,8 +148,8 @@ def build_reminder_message(session: Session, offset_min: int) -> dict[str, str]:
             f"{escape(code)}</span>"
         )
     else:
-        code_line = "· 클래스 코드: 상담사에게 확인해 주세요"
-        code_html = "상담사에게 확인해 주세요"
+        code_line = "· 클래스 코드: 코치에게 확인해 주세요"
+        code_html = "코치에게 확인해 주세요"
 
     subject = f"[MIND BREEZE] {title} 클래스 안내 ({label})"
     body_text = (

@@ -17,7 +17,7 @@ export interface UseEntryPrepResult {
   patch: (partial: Partial<PrepDraft>) => void;
   chooseReport: (choice: Exclude<ReportChoice, null>) => void;
   /** 확인하고 계속하기 — 고지를 확인했다는 증빙과 함께 선택을 1회 보낸다. 실패해도 던지지 않는다 */
-  commitReportChoice: () => Promise<void>;
+  commitReportChoice: (choice?: Exclude<ReportChoice, null>) => Promise<void>;
   /** 연구 동의 체크 — 즉시 저장하고, 실패하면 이전 값(미동의)으로 두고 안내만 한다 */
   changeResearch: (consented: boolean) => Promise<void>;
 }
@@ -37,12 +37,12 @@ export function useEntryPrep({ sessionId, credential, participantId, sessionType
 
   const chooseReport = useCallback((choice: Exclude<ReportChoice, null>): void => patch({ reportChoice: choice, reportSaveFailed: false }), [patch]);
 
-  const commitReportChoice = useCallback(async (): Promise<void> => {
+  const commitReportChoice = useCallback(async (choice?: Exclude<ReportChoice, null>): Promise<void> => {
     if (!participantId) return;
     try {
       await setReportChoice(sessionId, credential, {
         participantId,
-        reportIncluded: draftRef.current.reportChoice === 'included',
+        reportIncluded: (choice ?? draftRef.current.reportChoice) === 'included',
         noticeAcknowledged: true,
         noticeVersion: reportNoticeVersion(sessionType),
       });

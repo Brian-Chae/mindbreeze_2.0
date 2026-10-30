@@ -67,7 +67,7 @@ export function SurveyStepView({
       }
     >
       <div className="fm-head">
-        <FlowH1>{current ? current.heading : '상담사에게 전하고 싶은 말이 있나요?'}</FlowH1>
+        <FlowH1>{current ? current.heading : '코치에게 전하고 싶은 말이 있나요?'}</FlowH1>
         <FlowSub>{current ? '가장 가까운 느낌을 하나 골라 주세요.' : '선택이에요. 적지 않아도 괜찮아요.'}</FlowSub>
       </div>
       {axes}
@@ -97,7 +97,7 @@ export function SurveyStepView({
       ) : (
         <div className="fm-field">
           <textarea
-            className="fm-ta" maxLength={SURVEY_NOTE_MAX} aria-label="상담사에게 전하고 싶은 말" placeholder="예: 오늘 목이 조금 불편해서 소리를 내기 어려워요"
+            className="fm-ta" maxLength={SURVEY_NOTE_MAX} aria-label="코치에게 전하고 싶은 말" placeholder="예: 오늘 목이 조금 불편해서 소리를 내기 어려워요"
             value={draft.note} onChange={(e) => onNote(e.target.value)}
           />
           <p className="fm-count">{draft.note.length} / {SURVEY_NOTE_MAX}</p>

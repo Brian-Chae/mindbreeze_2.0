@@ -126,7 +126,7 @@ export default function SetPasswordPage() {
             to="/login"
             className="text-[13px] text-white/90 hover:text-white font-medium px-4 py-2 rounded-full border border-white/30 hover:border-white/60 transition-colors"
           >
-            {isReset ? '로그인' : isCounselorInvite ? '상담사 로그인' : '기관 로그인'}
+            {isReset ? '로그인' : isCounselorInvite ? '코치 로그인' : '기관 로그인'}
           </Link>
         </div>
 
@@ -139,7 +139,7 @@ export default function SetPasswordPage() {
         />
         <div className="font-extrabold text-[22px] text-white/70 tracking-tight">Mind&nbsp;Breeze</div>
         <h1 className="text-[36px] font-extrabold text-white tracking-tighter leading-tight">
-          {isReset ? '새 비밀번호 설정' : isCounselorInvite ? '상담사 계정 활성화' : '비밀번호 설정'}
+          {isReset ? '새 비밀번호 설정' : isCounselorInvite ? '코치 계정 활성화' : '비밀번호 설정'}
         </h1>
         <div className="text-[15px] text-white/70 mb-7 text-center">
           {isReset ? (
@@ -152,7 +152,7 @@ export default function SetPasswordPage() {
             <>
               기관 담당자의 초대로 접속하셨습니다.
               <br />
-              상담사 계정 활성화를 위해 비밀번호를 설정해주세요.
+              코치 계정 활성화를 위해 비밀번호를 설정해주세요.
             </>
           ) : (
             <>
@@ -174,7 +174,7 @@ export default function SetPasswordPage() {
               to="/login"
               className="text-[13px] text-white/85 hover:text-white underline-offset-2 hover:underline"
             >
-              {isReset ? '로그인 페이지로 이동' : isCounselorInvite ? '상담사 로그인 페이지로 이동' : '기관 로그인 페이지로 이동'}
+              {isReset ? '로그인 페이지로 이동' : isCounselorInvite ? '코치 로그인 페이지로 이동' : '기관 로그인 페이지로 이동'}
             </Link>
           </div>
         ) : (

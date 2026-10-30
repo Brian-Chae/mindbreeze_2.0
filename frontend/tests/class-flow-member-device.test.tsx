@@ -64,7 +64,7 @@ describe('FM06d 화면', () => {
     expect(text()).toContain('마이크는 꼭 필요하고, 카메라와 스피커는 선택이에요.');
     expect(text()).toContain('필수');
     expect(text()).toContain('정상');
-    expect(text()).toContain('말해 보세요. 막대가 움직이면 잘 들리는 거예요. 카메라를 켜면 상담사와 다른 분들에게 내 모습이 보여요.');
+    expect(text()).toContain('말해 보세요. 막대가 움직이면 잘 들리는 거예요. 카메라를 켜면 코치와 다른 분들에게 내 모습이 보여요.');
     expect(text()).toContain('스피커');
     expect(text()).toContain('테스트음 듣기');
     expect(text()).toContain('마이크는 입장한 뒤에도 다시 켤 수 있어요.');
@@ -72,9 +72,9 @@ describe('FM06d 화면', () => {
     expect(qa('circle[data-seg]')).toHaveLength(0);
     expect(btn('다음')!.disabled).toBe(false);
   });
-  it('1:1 은 카메라 안내가 상담사에게로 바뀐다', async () => {
+  it('1:1 은 카메라 안내가 코치에게로 바뀐다', async () => {
     await render(<DeviceStepView {...props({ solo: true })} />);
-    expect(text()).toContain('카메라를 켜면 상담사에게 내 모습이 보여요.');
+    expect(text()).toContain('카메라를 켜면 코치에게 내 모습이 보여요.');
   });
   it('카메라 켜짐: 하나의 컴포넌트에 5단계 링, 가로 막대 없음. 조용해요 칩', async () => {
     await render(<DeviceStepView {...props({ cam: 'on', ringSteps: 3 })} />);
@@ -134,7 +134,7 @@ describe('FM06d 화면', () => {
   });
   it('시작 후 시트: 남은 준비는 기기', async () => {
     await render(<DeviceStepView {...props({ startedRemaining: ['기기'] })} />);
-    expect(text()).toContain('상담사가 클래스를 시작했어요');
+    expect(text()).toContain('코치가 클래스를 시작했어요');
     expect(text()).toContain('남은 준비: 기기');
   });
   it('코랄 경고색은 카메라 켜짐·마이크 정상 상태에 쓰지 않는다', async () => {

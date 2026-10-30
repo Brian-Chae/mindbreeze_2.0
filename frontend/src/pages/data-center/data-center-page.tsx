@@ -357,7 +357,7 @@ export function DataCenterWorkspace({
                 {[
                   ["classes", "클래스 탐색"],
                   ["member", "회원 단위"],
-                  ["facilitator", "상담사 단위"],
+                  ["facilitator", "코치 단위"],
                 ].map(([key, label]) => (
                   <button
                     key={key}
@@ -483,8 +483,8 @@ export function DataCenterWorkspace({
                   />
                 </label>
                 <p>
-                  회원·상담사 반출은 요청당 최대{" "}
-                  {context.limits.member_facilitator_max_sessions}회차 · 상담사
+                  회원·코치 반출은 요청당 최대{" "}
+                  {context.limits.member_facilitator_max_sessions}회차 · 코치
                   기간 필수
                 </p>
               </div>
@@ -609,7 +609,7 @@ export function DataCenterWorkspace({
                                         {item.org_names.join(", ")}
                                         <small>
                                           {item.role === "counselor"
-                                            ? "상담사"
+                                            ? "코치"
                                             : "회원"}{" "}
                                           · {item.status}
                                         </small>
@@ -768,7 +768,7 @@ export function DataCenterWorkspace({
                   subject &&
                   (!dateFrom || !dateTo) && (
                     <div className="dc-notice">
-                      상담사 회차를 보려면 시작일과 종료일을 선택하세요.
+                      코치 회차를 보려면 시작일과 종료일을 선택하세요.
                     </div>
                   )}
               </>

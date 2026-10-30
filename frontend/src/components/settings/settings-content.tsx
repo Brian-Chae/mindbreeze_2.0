@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Ban, Bell, Bluetooth, ChevronRight, Info, ShieldCheck, UserRound } from 'lucide-react';
+import { Ban, Bell, Bluetooth, ChevronRight, Info, ShieldCheck, UserPlus, UserRound } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { PrivacyPolicyLink } from '../legal/PrivacyPolicyLink';
@@ -11,6 +11,8 @@ import WebPushCard from './WebPushCard';
 import { PrivacyConsentsSection } from './privacy-consents';
 import { AccountDeletionSection } from './account-deletion';
 import { BlockedUsersList } from '../chat/blocked-users-list';
+import { CounselorManagementPanel } from '../client/counselor-management-panel';
+import { COUNSELOR_COPY } from '../../lib/client-counselor-copy';
 
 function Group({ title, description, icon, children }: { title: string; description: string; icon: ReactNode; children: ReactNode }) {
   return <details data-settings-group className="group border-b border-[#E9E2EB] last:border-b-0">
@@ -43,6 +45,7 @@ export default function SettingsContent() {
     </section>
     <div className="overflow-hidden rounded-[18px] border border-[#E9E2EB] bg-white">
       <Group title="내 계정" description={user?.role === 'platform_admin' ? '계정 정보 확인' : '기본 정보 · 프로필 관리'} icon={<UserRound size={24} />}><AccountSettings /></Group>
+      {user?.role === 'client' && <Group title={COUNSELOR_COPY.settingsTitle} description={COUNSELOR_COPY.settingsDescription} icon={<UserPlus size={24} />}><CounselorManagementPanel /></Group>}
       <Group title="알림" description="일정·참여, 대화, 리포트·운영" icon={<Bell size={24} />}><NotificationGroups /><WebPushCard /></Group>
       <Group title="차단한 사용자" description="채팅 차단 해제 · 신고 철회" icon={<Ban size={24} />}><BlockedUsersList /></Group>
       <Group title="기기 · LINK BAND" description="연결 방법과 측정 안내" icon={<Bluetooth size={24} />}><Link className={linkClass} to="/measurement-guide">밴드 연결 · 측정 방법 <span aria-hidden="true">↗</span></Link><Link className={linkClass} to="/playground">플레이그라운드 다시 열기 <span aria-hidden="true">↗</span></Link><p className="text-[13px] text-[#776D7B]">밴드를 착용하지 않아도 클래스와 리포트를 이용할 수 있어요.</p></Group>

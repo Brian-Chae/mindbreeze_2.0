@@ -18,8 +18,8 @@ function classifyInviteError(err: unknown): InviteProblem {
 }
 
 const PROBLEM_COPY: Record<InviteProblem, { title: string; body: string }> = {
-  invalid: { title: '확인할 수 없는 링크예요', body: '링크가 잘못되었거나 지워졌을 수 있어요. 상담사님께 새 초대를 요청해 주세요.' },
-  expired: { title: '만료되었거나 이미 사용한 초대예요', body: '이미 가입했다면 로그인해 주세요. 아니라면 상담사님께 새 초대를 요청해 주세요.' },
+  invalid: { title: '확인할 수 없는 링크예요', body: '링크가 잘못되었거나 지워졌을 수 있어요. 코치님께 새 초대를 요청해 주세요.' },
+  expired: { title: '만료되었거나 이미 사용한 초대예요', body: '이미 가입했다면 로그인해 주세요. 아니라면 코치님께 새 초대를 요청해 주세요.' },
   network: { title: '초대 정보를 불러오지 못했어요', body: '연결이 잠시 끊겼어요. 다시 시도해 주세요.' },
 };
 
@@ -109,14 +109,14 @@ export default function InviteLandingPage() {
 
           {!loading && info && (
             <>
-              <p className="text-xs font-semibold text-[#5F0080]">상담사님이 초대했어요</p>
+              <p className="text-xs font-semibold text-[#5F0080]">코치님이 초대했어요</p>
               <div className="mx-auto mt-3 grid h-16 w-16 place-items-center rounded-full bg-[#F3E9F8] text-2xl font-bold text-[#5F0080]" aria-hidden="true">
                 {info.counselor_name.slice(0, 1)}
               </div>
-              <h1 className="mt-3 text-2xl font-bold text-[#1F1F1F]">{info.counselor_name} 상담사</h1>
+              <h1 className="mt-3 text-2xl font-bold text-[#1F1F1F]">{info.counselor_name} 코치</h1>
               {info.organization && <p className="mt-1 text-sm text-[#6F6F6F]">{info.organization}</p>}
-              <p className="mt-1 text-xs text-[#6F6F6F]">상담사 코드 {info.counselor_code}</p>
-              <p className="mb-5 mt-4 text-sm text-[#6F6F6F]">인증 후 생년월일과 동의 항목을 확인해요. 가입하면 자동으로 상담사와 연결돼요.</p>
+              <p className="mt-1 text-xs text-[#6F6F6F]">코치 코드 {info.counselor_code}</p>
+              <p className="mb-5 mt-4 text-sm text-[#6F6F6F]">인증 후 생년월일과 동의 항목을 확인해요. 가입하면 자동으로 코치와 연결돼요.</p>
 
               <div className="flex flex-col gap-3">
                 <GoogleLoginButton inviteToken={token} onSuccess={handleSuccess} onNeedsSignupInfo={goToConfirm} onError={(e) => setError(e.message)} />

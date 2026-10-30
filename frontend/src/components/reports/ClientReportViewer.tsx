@@ -66,7 +66,7 @@ export function ClientReportBody({ report, hideCounselorComment = false }: {
 
         {/* SDD-087 — 상담사 코멘트 (있을 때만) */}
         {counselorComment && !hideCounselorComment && (
-          <SummaryCard title="상담사 코멘트">
+          <SummaryCard title="코치 코멘트">
             <p className="mobile:[overflow-wrap:anywhere] frame:[overflow-wrap:anywhere] text-[15px] mobile:text-mb-body frame:text-mb-body text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
               {counselorComment}
             </p>

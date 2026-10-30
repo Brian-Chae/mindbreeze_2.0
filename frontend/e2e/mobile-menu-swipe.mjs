@@ -32,9 +32,9 @@ await new Promise(r => server.listen(5442, '127.0.0.1', r));
 const browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
 const results = []; const pageErrors = []; const unknownApi = new Set();
 const record = (name, detail = {}) => { results.push({ name, ...detail }); console.log(`통과: ${name}`); };
-const classes = Array.from({ length: 5 }, (_, i) => ({ id: `class-${i}`, title: `합성 검증 클래스 ${i + 1}`, status: 'active', schedule_mode: 'fixed', planned_session_count: 3, area: 'meditation', progress: { completed: 1, total: 3 }, session_count: 3, next_session: { id: `session-${i}`, seq: 2, scheduled_at: '2026-11-20T10:00:00+09:00', status: 'scheduled', host: { id: 'qa-host', name: '합성 상담사' } }, has_open_session: false }));
-const counselor = { id: 'qa-host', name: '합성 상담사', profile_image: null };
-const dashboard = { counselor_id: 'qa-host', counselor_name: '합성 상담사', org_id: 'qa-org', org_name: '합성 검증 기관', org_code: 'QAONLY', org_kind: 'institution', total_counselors: 0, total_classes: 5, in_progress_classes: 0, completed_classes: 0, total_participants: 0, pending_review_count: 0, counselors: [], classes: [] };
+const classes = Array.from({ length: 5 }, (_, i) => ({ id: `class-${i}`, title: `합성 검증 클래스 ${i + 1}`, status: 'active', schedule_mode: 'fixed', planned_session_count: 3, area: 'meditation', progress: { completed: 1, total: 3 }, session_count: 3, next_session: { id: `session-${i}`, seq: 2, scheduled_at: '2026-11-20T10:00:00+09:00', status: 'scheduled', host: { id: 'qa-host', name: '합성 코치' } }, has_open_session: false }));
+const counselor = { id: 'qa-host', name: '합성 코치', profile_image: null };
+const dashboard = { counselor_id: 'qa-host', counselor_name: '합성 코치', org_id: 'qa-org', org_name: '합성 검증 기관', org_code: 'QAONLY', org_kind: 'institution', total_counselors: 0, total_classes: 5, in_progress_classes: 0, completed_classes: 0, total_participants: 0, pending_review_count: 0, counselors: [], classes: [] };
 const shell = '[data-mobile-menu-swipe]'; const pageLayer = '[data-mobile-swipe-page]';
 async function install(context, role) {
   const user = { id: `qa-${role}`, email: `${role}@example.test`, name: '합성 검증', role, verified_tier: 'verified', onboarding_completed: true, auth_provider: 'google', counselors: [counselor] };

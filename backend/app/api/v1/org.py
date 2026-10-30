@@ -81,7 +81,8 @@ def _counselor_to_response(u, membership=None, *, has_personal_office: bool = Fa
         id=str(u.id),
         name=u.name,
         email=u.email,
-        role=u.role,
+        # SDD-258: 다기관 소속에서는 전역 role 이 아니라 이 기관의 멤버십 역할을 표시한다
+        role=membership.role if membership is not None and membership.role in ("counselor", "org_admin") else u.role,
         status=status_str,
         invited_at=invited_at.isoformat() if invited_at else None,
         invite_expires_at=invite_expires_at.isoformat() if invite_expires_at else None,
@@ -265,7 +266,7 @@ async def invite_counselor(
     """
     _require_org_admin(db, current_user, org_id)
     user, invite_sent = await org_service.invite_counselor(
-        org_id, req.name, str(req.email), redis, db
+        org_id, req.name, str(req.email), redis, db, role=req.role
     )
     membership = membership_service.get_membership(db, user.id, org_id)
     return CounselorInviteResponse(
@@ -325,7 +326,7 @@ def _parse_target_uuid(user_id: str) -> uuid.UUID:
     try:
         return uuid.UUID(user_id)
     except ValueError:
-        raise HTTPException(status_code=404, detail="대상 상담사를 찾을 수 없습니다")
+        raise HTTPException(status_code=404, detail="대상 코치를 찾을 수 없습니다")
 
 
 @router.get("/{org_id}/counselors/{user_id}/profile", response_model=CounselorInfoResponse)
@@ -411,7 +412,7 @@ async def reset_org_counselor_password(
     if target is None or membership_service.get_membership(
         db, target.id, org.id, statuses=("active",)
     ) is None:
-        raise HTTPException(status_code=404, detail="대상 상담사를 찾을 수 없습니다")
+        raise HTTPException(status_code=404, detail="대상 코치를 찾을 수 없습니다")
     if target.role != "counselor":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

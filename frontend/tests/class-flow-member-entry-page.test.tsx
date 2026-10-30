@@ -89,7 +89,7 @@ describe('FM05 입장 확인', () => {
     expect(qa('input, textarea, select')).toHaveLength(0);
     expect(text()).toContain('지은님');
     expect(text()).toContain('입력한 정보로 확인했어요');
-    expect(text()).toContain('채용욱 상담사 진행');
+    expect(text()).toContain('채용욱 코치 진행');
     expect(qa('.fl-chip').map((c) => c.textContent)).toEqual(['온라인', '그룹', 'LINK BAND 선택']);
     expect(qa('button').some((b) => b.textContent === '입장하기')).toBe(true);
   });
@@ -166,7 +166,7 @@ function renderPage(): Promise<void> {
   );
 }
 
-describe('EntryPage — 상담사 로비로 준비 현황 중계 (BE-10)', () => {
+describe('EntryPage — 코치 로비로 준비 현황 중계 (BE-10)', () => {
   it('준비 마법사 동안 입장 자격·준비 현황(완료 boolean 3종 + 밴드 계약)으로 presence 를 켠다', async () => {
     presenceCalls.length = 0;
     seedEntry();
@@ -302,7 +302,7 @@ describe('EntryPage — 오늘의 상태 (M3)', () => {
     expect(find('다음')!.disabled).toBe(true);
     await act(async () => { radio('긍정적')?.click(); });
     await act(async () => { find('다음')?.click(); });
-    expect(text()).toContain('상담사에게 전하고 싶은 말이 있나요?');
+    expect(text()).toContain('코치에게 전하고 싶은 말이 있나요?');
     const area = document.querySelector('textarea')!;
     await act(async () => {
       Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(area, '목이 불편해요');
@@ -313,7 +313,7 @@ describe('EntryPage — 오늘의 상태 (M3)', () => {
     expect(submitEntryCheckin).toHaveBeenCalledWith('s1', 'cred', {
       phase: 'before', arousal: 4, valence: 3, emotion: 4, note: '목이 불편해요', participant_id: 'p1',
     });
-    expect(text()).not.toContain('상담사에게 전하고 싶은 말이 있나요?');
+    expect(text()).not.toContain('코치에게 전하고 싶은 말이 있나요?');
   });
   it('저장이 실패하면 안내를 보여 주고 머물되, 건너뛰기로 계속할 수 있다', async () => {
     submitEntryCheckin.mockRejectedValue(new ApiError(500, '서버 원문', null));
@@ -328,7 +328,7 @@ describe('EntryPage — 오늘의 상태 (M3)', () => {
     expect(text()).toContain('저장하지 못했어요. 건너뛰고 계속할 수 있어요.');
     expect(text()).not.toContain('서버 원문');
     await act(async () => { find('건너뛰기')?.click(); });
-    expect(text()).not.toContain('상담사에게 전하고 싶은 말이 있나요?');
+    expect(text()).not.toContain('코치에게 전하고 싶은 말이 있나요?');
   });
   it('건너뛰기는 저장 호출 없이 다음 단계로', async () => {
     await toSurvey();
@@ -338,10 +338,10 @@ describe('EntryPage — 오늘의 상태 (M3)', () => {
   });
   it('시작된 뒤에 들어와도 단계를 막지 않고, 시트에서 준비 이어서 하기를 고르면 다시 묻지 않는다', async () => {
     await toSurvey('in_progress');
-    expect(text()).toContain('상담사가 클래스를 시작했어요');
+    expect(text()).toContain('코치가 클래스를 시작했어요');
     expect(text()).toContain('남은 준비: 오늘의 상태 · LINK BAND · 기기');
     await act(async () => { find('준비 이어서 하기')?.click(); });
-    expect(text()).not.toContain('상담사가 클래스를 시작했어요');
+    expect(text()).not.toContain('코치가 클래스를 시작했어요');
     expect(text()).toContain('지금 집중은 어떤가요?');
   });
 });
@@ -369,7 +369,35 @@ describe('EntryPage — LINK BAND 단계 (M4)', () => {
     await toBand();
     expect(text()).toContain('접촉 불량');
     await act(async () => { find('다음')?.click(); });
+    // 리포트 반영이 제외 상태로 밴드를 착용했으므로 측정 전 재확인 시트가 먼저 뜬다
+    await act(async () => { find('이번엔 제외')?.click(); });
     expect(text()).not.toContain('LINK BAND를 연결해요');
+  });
+  it('밴드 착용 + 리포트 제외 상태면 측정 전에 한 번 재확인하고, 반영하기는 true 로 저장한다', async () => {
+    bandStepState.state = 'connected';
+    await toBand();
+    setReportChoice.mockClear();
+    await act(async () => { find('다음')?.click(); });
+    expect(text()).toContain('이번 수업 리포트에 측정 결과를 반영할까요?');
+    expect(text()).toContain('LINK BAND를 연결해요'); // 아직 다음 단계로 넘어가지 않았다
+    await act(async () => { find('반영하기')?.click(); });
+    expect(setReportChoice).toHaveBeenCalledWith('s1', 'cred', expect.objectContaining({ reportIncluded: true }));
+    expect(text()).not.toContain('LINK BAND를 연결해요');
+  });
+  it('이번엔 제외를 고르면 저장 호출 없이 진행하고, 같은 회차에서 다시 묻지 않는다', async () => {
+    bandStepState.state = 'connected';
+    await toBand();
+    setReportChoice.mockClear();
+    await act(async () => { find('다음')?.click(); });
+    await act(async () => { find('이번엔 제외')?.click(); });
+    expect(setReportChoice).not.toHaveBeenCalled();
+    expect(text()).not.toContain('이번 수업 리포트에 측정 결과를 반영할까요?');
+  });
+  it('밴드 없이 계속하면 재확인을 묻지 않는다(LINK BAND 선택 사용)', async () => {
+    bandStepState.state = 'idle';
+    await toBand();
+    await act(async () => { find('LINK BAND 없이 계속하기')?.click(); });
+    expect(text()).not.toContain('이번 수업 리포트에 측정 결과를 반영할까요?');
   });
 });
 
@@ -429,7 +457,7 @@ describe('EntryPage — 시작 대기 (M6)', () => {
   }
   it('입장 대기 → FM07, 준비 다시 확인하기는 요약으로 돌아가며 초안이 보존된다', async () => {
     await toWait();
-    expect(text()).toContain('상담사가 시작하면 자동으로 입장해요.');
+    expect(text()).toContain('코치가 시작하면 자동으로 입장해요.');
     expect(text()).toContain('시작 예정');
     await act(async () => { find('준비 다시 확인하기')?.click(); });
     expect(text()).toContain('준비를 마쳤어요');
