@@ -48,4 +48,13 @@ describe('useStatusBar 로그인 화면 overlay', () => {
     await mount('/home');
     expect(calls).toEqual(['overlay:false', 'bg:#FFFFFF', 'style:LIGHT']);
   });
+  it('클래스 모드(입장·플레이어): 로그인 여부와 무관하게 상태바 뒤까지 확장 + 밝은 글자', async () => {
+    authed = true;
+    await mount('/sessions/abc/player');
+    expect(calls).toEqual(['overlay:true', 'style:DARK']);
+    calls.length = 0;
+    authed = false;
+    await mount('/class/abc/enter');
+    expect(calls).toEqual(['overlay:true', 'style:DARK']);
+  });
 });
