@@ -23,7 +23,7 @@ from app.models.counselor_profile import CounselorProfile
 from app.models.organization import Organization
 from app.models.signup_application import SignupApplication
 from app.models.user import User
-from app.services import code_service, email_verify_service
+from app.services import code_service, email_verify_service, onboarding_service
 
 logger = logging.getLogger(__name__)
 
@@ -274,9 +274,7 @@ def create_individual_counselor_application(
         db, user, org.id, status_="invited", invited_at=datetime.now(timezone.utc)
     )
 
-    counselor_code = code_service.generate_unique_code(
-        db, CounselorProfile, "counselor_code", label="상담사 코드"
-    )
+    counselor_code = onboarding_service.generate_counselor_code(db)
     db.add(CounselorProfile(user_id=user.id, counselor_code=counselor_code, specialties=[]))
 
     app_row = SignupApplication(

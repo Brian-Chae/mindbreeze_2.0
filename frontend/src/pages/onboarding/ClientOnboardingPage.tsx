@@ -321,7 +321,7 @@ export default function ClientOnboardingPage() {
     setError(null);
     const code = form.counselorCode.trim();
     if (code.length !== 6) {
-      setError('6자리 상담사 코드를 입력해주세요');
+      setError('6자리 숫자를 입력해주세요');
       return;
     }
     setLoading(true);
@@ -707,25 +707,28 @@ export default function ClientOnboardingPage() {
                 <>
                   <div>
                     <label htmlFor="onboarding-counselor-code" className="block text-[13px] text-white/70 mb-1.5 ml-1">
-                      상담사 코드 (6자리)
+                      상담사 코드 (6자리 숫자)
                     </label>
                     <input
                       id="onboarding-counselor-code"
                       type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoComplete="off"
                       maxLength={6}
                       value={form.counselorCode}
                       onChange={(e) =>
                         setForm({
                           ...form,
-                          counselorCode: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''),
+                          counselorCode: e.target.value.replace(/\D/g, '').slice(0, 6),
                         })
                       }
-                      placeholder="ABC123"
+                      placeholder="000000"
                       className="w-full h-[52px] rounded-full bg-white/90 backdrop-blur border border-white/30 px-5 text-center text-xl font-bold tracking-[0.3em] text-[#1F1F1F] placeholder:text-[#9A9BA8] placeholder:tracking-normal outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/20 focus:bg-white"
                     />
                   </div>
                   <p className="text-[13px] text-white/70 text-center">
-                    상담사로부터 전달받은 6자리 코드를 입력해주세요.
+                    상담사로부터 전달받은 6자리 숫자를 입력해주세요.
                   </p>
                 </>
               ) : (

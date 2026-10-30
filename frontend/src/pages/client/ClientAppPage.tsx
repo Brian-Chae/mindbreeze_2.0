@@ -38,10 +38,10 @@ function formatKoreanSub(): string {
 type CounselorLite = { id: string; name: string; profile_image: string | null };
 
 export function CounselorCodeScreen({ onConnected }: { onConnected: (list: CounselorLite[]) => void }) {
-  const [code, setCode] = useState<string[]>(Array(6).fill(''));
+  const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const submittingRef = useRef(false);
   const mountedRef = useRef(true);
   useEffect(() => {
@@ -84,8 +84,8 @@ export function CounselorCodeScreen({ onConnected }: { onConnected: (list: Couns
           err instanceof Error ? err.message : '연결에 실패했습니다. 코드를 다시 확인해주세요.';
         if (mountedRef.current) {
           setError(message);
-          setCode(Array(6).fill(''));
-          inputRefs.current[0]?.focus();
+          setCode('');
+          inputRef.current?.focus();
         }
       } finally {
         submittingRef.current = false;
@@ -95,58 +95,15 @@ export function CounselorCodeScreen({ onConnected }: { onConnected: (list: Couns
     [onConnected],
   );
 
-  const handleChange = useCallback(
-    (index: number, value: string) => {
-      // 영문+숫자만 허용, 대문자로 변환
-      if (value && !/^[A-Za-z0-9]$/.test(value)) return;
-
-      setError(null);
-      const newCode = [...code];
-      newCode[index] = value.toUpperCase();
-      setCode(newCode);
-
-      // 다음 칸으로 포커스 이동
-      if (value && index < 5) {
-        inputRefs.current[index + 1]?.focus();
-      }
-
-      const full = newCode.join('');
-      if (full.length === 6) void submitCode(full);
-    },
-    [code, submitCode]
-  );
-
-  const handleKeyDown = useCallback(
-    (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-      // Backspace: 현재 칸이 비어있으면 이전 칸으로 이동
-      if (e.key === 'Backspace' && !code[index] && index > 0) {
-        const newCode = [...code];
-        newCode[index - 1] = '';
-        setCode(newCode);
-        inputRefs.current[index - 1]?.focus();
-      }
-    },
-    [code]
-  );
-
-  const handlePaste = useCallback((e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 6);
-    if (!pasted) return;
-
-    const newCode = Array(6).fill('');
-    for (let i = 0; i < pasted.length; i++) {
-      newCode[i] = pasted[i];
-    }
-    setCode(newCode);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // 숫자 외 입력 제거, 최대 6자리
+    const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setCode(val);
     setError(null);
-
-    // 마지막 칸 또는 복사한 마지막 위치로 포커스
-    const focusIdx = Math.min(pasted.length, 5);
-    inputRefs.current[focusIdx]?.focus();
-
-    if (pasted.length === 6) void submitCode(pasted);
-  }, [submitCode]);
+    if (val.length === 6) {
+      void submitCode(val);
+    }
+  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-dvh bg-[#FAFAFA] px-6">
@@ -155,35 +112,50 @@ export function CounselorCodeScreen({ onConnected }: { onConnected: (list: Couns
           상담사와 연결하기
         </h1>
         <p className="text-[#6F6F6F] mb-8">
-          상담사에게 받은 6자리 코드를 입력하여 연결을 시작하세요.
+          상담사에게 받은 6자리 숫자를 입력하여 연결을 시작하세요.
         </p>
 
-        {/* 6자리 코드 입력 */}
-        <div className="flex gap-2 sm:gap-3 justify-center mb-4">
-          {code.map((digit, i) => (
-            <input
-              key={i}
-              ref={(el) => {
-                inputRefs.current[i] = el;
-              }}
-              type="text"
-              inputMode="text"
-              maxLength={1}
-              autoFocus={i === 0}
-              value={digit}
-              onChange={(e) => handleChange(i, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(i, e)}
-              onPaste={handlePaste}
-              disabled={loading}
-              className={`w-9 sm:w-10 h-12 shrink-0 text-center text-lg font-bold rounded-lg border-2 outline-none transition-colors ${
-                error
-                  ? 'border-red-400 bg-red-50'
-                  : digit
-                    ? 'border-[#5F0080] bg-[#F3E5F5]'
-                    : 'border-[#D4D4D4] bg-white focus:border-[#5F0080]'
-              } text-[#1F1F1F] disabled:opacity-50`}
-            />
-          ))}
+        {/* 6자리 코드 입력: 단일 input + 시각적 6칸 (모바일 포커스 이동 시 키패드 유지) */}
+        <div
+          className="relative flex justify-center mb-4 cursor-text"
+          onClick={() => inputRef.current?.focus()}
+        >
+          <input
+            ref={inputRef}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            autoComplete="off"
+            maxLength={6}
+            autoFocus
+            value={code}
+            onChange={handleInputChange}
+            disabled={loading}
+            aria-label="상담사 코드 6자리 숫자"
+            className="absolute inset-0 w-full h-full opacity-0 cursor-text"
+          />
+          <div className="flex gap-2 sm:gap-3 pointer-events-none" aria-hidden="true">
+            {Array.from({ length: 6 }).map((_, i) => {
+              const digit = code[i] || '';
+              const isFocused = !loading && (code.length === i || (code.length === 6 && i === 5));
+              return (
+                <div
+                  key={i}
+                  className={`w-9 sm:w-10 h-12 shrink-0 flex items-center justify-center text-lg font-bold rounded-lg border-2 transition-colors ${
+                    error
+                      ? 'border-red-400 bg-red-50'
+                      : digit
+                        ? 'border-[#5F0080] bg-[#F3E5F5]'
+                        : isFocused
+                          ? 'border-[#5F0080] bg-white ring-2 ring-[#5F0080]/20'
+                          : 'border-[#D4D4D4] bg-white'
+                  } text-[#1F1F1F]`}
+                >
+                  {digit}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* 에러 메시지 */}

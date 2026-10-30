@@ -47,14 +47,11 @@ async function mount() {
 }
 async function typeCode(code: string) {
   const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-  const inputs = () => Array.from(host!.querySelectorAll('input')) as HTMLInputElement[];
-  for (let i = 0; i < code.length; i++) {
-    await act(async () => {
-      const el = inputs()[i];
-      setter.call(el, code[i]);
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-  }
+  const input = host!.querySelector('input') as HTMLInputElement;
+  await act(async () => {
+    setter.call(input, code);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
   await flush();
   await flush();
 }
@@ -72,6 +69,26 @@ afterEach(async () => {
 });
 
 describe('상담사 코드 연결', () => {
+  it('inputMode="numeric", pattern="[0-9]*", autoComplete="off" 속성과 안내 문구(6자리 숫자)를 단언한다', async () => {
+    get.mockResolvedValueOnce([]);
+    await mount();
+    const input = host!.querySelector('input') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    expect(input.getAttribute('inputmode')).toBe('numeric');
+    expect(input.getAttribute('pattern')).toBe('[0-9]*');
+    expect(input.getAttribute('autocomplete')).toBe('off');
+    expect(host!.textContent).toContain('6자리 숫자');
+  });
+
+  it('영문·특수문자 등 숫자 외 문자는 제거되어 숫자만 반영된다', async () => {
+    get.mockResolvedValueOnce([]);
+    await mount();
+    const input = host!.querySelector('input') as HTMLInputElement;
+    await typeCode('AB12#$34');
+    expect(input.value).toBe('1234');
+    expect(post).not.toHaveBeenCalled();
+  });
+
   it('POST 가 단건 객체를 돌려줘도 홈으로 전환되고 연결 중이 사라진다', async () => {
     get.mockResolvedValueOnce([]); // 마운트 시 목록
     await mount();
@@ -99,7 +116,7 @@ describe('상담사 코드 연결', () => {
     get.mockResolvedValueOnce([]);
     await mount();
     post.mockRejectedValueOnce(Object.assign(new Error('유효하지 않은 상담사 코드입니다'), { status: 404 }));
-    await typeCode('ZZZZZZ');
+    await typeCode('999999');
     expect(host!.textContent).toContain('유효하지 않은 상담사 코드입니다');
     expect(host!.textContent).not.toContain('연결 중');
     expect((host!.querySelector('input') as HTMLInputElement).value).toBe('');
