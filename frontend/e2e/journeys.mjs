@@ -101,7 +101,8 @@ await cou('클래스 생성 → 목록 노출 → 미진행 클래스 숨김', a
   }
 });
 await cou('리포트: 목록·샘플 리포트 열기', async (p) => {
-  await expectText(p, '/reports', '샘플 보기');
+  // SDD-253: 샘플 리포트 진입은 데스크톱 '더 보기' 메뉴로 이동했다(직접 경로는 그대로).
+  await expectText(p, '/reports', '더 보기');
   await expectText(p, '/reports/sample', '샘플 리포트', '호흡수');
 });
 await cou('설정: 코드·카드 제목 중복 없음', async (p) => {
