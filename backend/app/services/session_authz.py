@@ -75,7 +75,7 @@ class ActionPolicy:
     validate_actor_before_lookup: bool = False
 
 
-DENY_HOST_ONLY = "host 상담사만 가능합니다"
+DENY_HOST_ONLY = "host 코치만 가능합니다"
 DENY_EMAIL_INVITE = "호스트만 초대할 수 있습니다"
 DENY_NO_ACCESS = "접근 권한이 없습니다"
 

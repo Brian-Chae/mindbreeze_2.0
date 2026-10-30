@@ -152,7 +152,7 @@ def upload_credential(
         .all()
     )
     submitter = db.query(User).filter(User.id == user_id).first()
-    submitter_name = submitter.name if submitter else "상담사"
+    submitter_name = submitter.name if submitter else "코치"
     for admin in platform_admins:
         notify_event("verification_requested", admin.id, {
             "title": "새 자격 검증 요청이 도착했습니다",

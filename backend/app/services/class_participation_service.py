@@ -407,7 +407,7 @@ def _notify_remind(session_id: str, targets: list[str]) -> None:
     for pid in targets:
         ns.emit_to_room("waiting_room_reminder", {
             "session_id": session_id,
-            "message": "상담사가 준비 상태 확인을 부탁했어요. 설문·링크밴드·기기를 확인해 주세요. 건너뛰어도 괜찮아요."},
+            "message": "코치가 준비 상태 확인을 부탁했어요. 설문·링크밴드·기기를 확인해 주세요. 건너뛰어도 괜찮아요."},
             ns.room_audience(session_id, f"member:{pid}"))
 
 

@@ -176,7 +176,7 @@ def request_join(org_id: str, user_id: str, db: Session) -> OrganizationJoinRequ
     if user.role not in ("counselor", "org_admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="상담사·기관 관리자만 소속 신청을 할 수 있습니다",
+            detail="코치·기관 관리자만 소속 신청을 할 수 있습니다",
         )
     if not _eligible_for_join(user, db):
         raise HTTPException(
@@ -381,10 +381,10 @@ def _get_org_counselor(org_id: str, user_id: str, db: Session) -> User:
     try:
         target_uuid = uuid.UUID(str(user_id))
     except ValueError:
-        raise HTTPException(status_code=404, detail="대상 상담사를 찾을 수 없습니다")
+        raise HTTPException(status_code=404, detail="대상 코치를 찾을 수 없습니다")
     target = db.query(User).filter(User.id == target_uuid).first()
     if target is None or membership_service.get_membership(db, target.id, org_id) is None:
-        raise HTTPException(status_code=404, detail="대상 상담사를 찾을 수 없습니다")
+        raise HTTPException(status_code=404, detail="대상 코치를 찾을 수 없습니다")
     return target
 
 
@@ -420,7 +420,7 @@ def set_counselor_suspension(
         if target.status != "active":
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="활성 상태의 상담사만 비활성화할 수 있습니다",
+                detail="활성 상태의 코치만 비활성화할 수 있습니다",
             )
         from app.services.class_instructor_service import mark_needs_reassign
         mark_needs_reassign(db, target.id, None, datetime.now(timezone.utc))
@@ -553,7 +553,7 @@ def update_counselor_role(
         uuid.UUID(str(org_id)),
         uuid.UUID(str(user_id)),
         admin.id,
-        reason or "상담사 권한 조정",
+        reason or "코치 권한 조정",
         db,
         role=new_role,
     )
@@ -583,7 +583,7 @@ def remove_counselor(org_id: str, user_id: str, admin_user_id: str, db: Session)
         uuid.UUID(str(org_id)),
         uuid.UUID(str(user_id)),
         admin.id,
-        "상담사 소속 해제",
+        "코치 소속 해제",
         db,
         role=None,
     )
@@ -762,14 +762,14 @@ async def invite_counselor(
     if not clean_name:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="상담사 이름을 입력해야 합니다",
+            detail="코치 이름을 입력해야 합니다",
         )
 
     email_norm = (email or "").strip().lower()
     if not email_norm:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="상담사 이메일을 입력해야 합니다",
+            detail="코치 이메일을 입력해야 합니다",
         )
 
     now = datetime.now(timezone.utc)
@@ -784,12 +784,12 @@ async def invite_counselor(
         if existing.role != "counselor":
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="상담사 계정이 아닌 이메일입니다",
+                detail="코치 계정이 아닌 이메일입니다",
             )
         if membership_service.get_membership(db, existing.id, org.id) is not None:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="이미 이 기관에 소속(초대)된 상담사입니다",
+                detail="이미 이 기관에 소속(초대)된 코치입니다",
             )
 
         await org_invite_service.check_counselor_send_cooldown(str(org.id), redis)
@@ -833,7 +833,7 @@ async def invite_counselor(
     db.flush()
 
     code = code_service.generate_unique_code(
-        db, CounselorProfile, "counselor_code", label="상담사 코드"
+        db, CounselorProfile, "counselor_code", label="코치 코드"
     )
     db.add(CounselorProfile(user_id=user.id, counselor_code=code, specialties=[]))
     membership_service.add_membership(
@@ -864,7 +864,7 @@ async def resend_counselor_invite(
         uid = uuid.UUID(str(user_id))
     except (TypeError, ValueError):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="대상 상담사를 찾을 수 없습니다"
+            status_code=status.HTTP_404_NOT_FOUND, detail="대상 코치를 찾을 수 없습니다"
         )
 
     user = db.query(User).filter(User.id == uid, User.role == "counselor").first()
@@ -873,12 +873,12 @@ async def resend_counselor_invite(
     )
     if user is None or membership is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="대상 상담사를 찾을 수 없습니다"
+            status_code=status.HTTP_404_NOT_FOUND, detail="대상 코치를 찾을 수 없습니다"
         )
     if membership.status != "invited":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="이미 활성화된 상담사에게는 초대를 재발송할 수 없습니다",
+            detail="이미 활성화된 코치에게는 초대를 재발송할 수 없습니다",
         )
 
     await org_invite_service.check_counselor_resend_cooldown(str(org.id), redis)

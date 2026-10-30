@@ -716,7 +716,7 @@ def facilitator_sessions(db: DBSession, context: ResolvedContext, facilitator_id
                         and not _active_facilitator_member(db, context.scope_org_id, facilitator_id)):
         raise not_found()
     if not query.date_from or not query.date_to:
-        raise deny(422, 'period_required', '상담사 단위는 시작일과 종료일이 필요합니다')
+        raise deny(422, 'period_required', '코치 단위는 시작일과 종료일이 필요합니다')
     base = scoped_sessions(db, context).filter(Session.host_id == facilitator_id)
     flt = filters_hash(context, 'facilitator_sessions', query, facilitator=facilitator_id)
     result, total = _sessions_page(db, context, base, query, flt, desc=False)

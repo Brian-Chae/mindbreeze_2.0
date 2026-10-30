@@ -248,7 +248,7 @@ def test_ts4_이메일_중복초대_409_대소문자(client, monkeypatch):
         headers=ctx["h"],
     )
     assert second.status_code == 409, second.text
-    assert "이미 이 기관에 소속(초대)된 상담사입니다" in second.json()["detail"]
+    assert "이미 이 기관에 소속(초대)된 코치입니다" in second.json()["detail"]
 
 
 # ---------------------------------------------------------------------------
@@ -264,7 +264,7 @@ def test_ts5_레거시_register_counselor_차단(client):
             "org_code": code,
             "email": "legacy_c5@test.com",
             "password": VALID_PASSWORD,
-            "name": "레거시상담사",
+            "name": "레거시코치",
             "email_verify_token": email_verify_service.generate_email_verify_token("legacy_c5@test.com"),
             "consents": _consents(),
         },

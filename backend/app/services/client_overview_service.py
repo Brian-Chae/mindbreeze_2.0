@@ -690,7 +690,7 @@ def get_reports(db: DBSession, counselor_id: str, client_id: str) -> dict:
         title = s.title or "세션 리포트"
         reports.append({
             "id": str(r.id), "session_id": str(s.id), "title": title,
-            "type": r.type, "type_label": "회원용" if r.type == "client" else "상담사용",
+            "type": r.type, "type_label": "회원용" if r.type == "client" else "코치용",
             "status": r.status, "status_label": label,
             "occurred_at": _iso(occurred), "created_at": _iso(r.created_at),
         })

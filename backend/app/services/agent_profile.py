@@ -130,7 +130,7 @@ def _extract_with_keywords(texts: list[tuple[str, str]]) -> list[dict]:
 
 
 _LLM_TASK = (
-    "아래 [사용자 입력]은 내담자가 안부 대화에서 남긴 말입니다. 상담사가 참고할 관찰 항목을 "
+    "아래 [사용자 입력]은 내담자가 안부 대화에서 남긴 말입니다. 코치가 참고할 관찰 항목을 "
     "JSON 배열로만 출력하세요. 형식: [{\"category\":\"sleep|stress|emotion|coping|people_events\","
     "\"text\":\"관찰 한 문장\"}]. 진단명·병명·점수·숫자 척도를 쓰지 말고, 입력에 있는 내용만 "
     "적으세요. 추측해서 새 사실을 만들지 마세요. 설명 문장 없이 JSON 만 출력하세요."

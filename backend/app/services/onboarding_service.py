@@ -71,5 +71,5 @@ def generate_counselor_code(db: Session) -> str:
     SDD-015에서 발급 로직을 code_service로 공용화했다 (동작 동일).
     """
     return code_service.generate_unique_code(
-        db, CounselorProfile, "counselor_code", label="상담사 코드"
+        db, CounselorProfile, "counselor_code", label="코치 코드"
     )

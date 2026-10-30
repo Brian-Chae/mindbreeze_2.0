@@ -120,7 +120,7 @@ def test_report_03_생성_타인_403(client):
         headers=other["auth"],
     )
     assert res.status_code == 403
-    assert res.json()["detail"] == "host 상담사만 가능합니다"
+    assert res.json()["detail"] == "host 코치만 가능합니다"
 
 
 def test_report_04_목록_조회(client):

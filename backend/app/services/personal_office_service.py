@@ -54,7 +54,7 @@ def active_institution_org_ids(db: Session, user: User) -> list[uuid.UUID]:
 
 def _office_name(db: Session, user: User) -> str:
     """`{이름} 개인 상담소`. 동명 기관이 이미 있으면 사용자 id 앞자리로 구분한다."""
-    base = f"{(user.name or '').strip() or '상담사'} {OFFICE_NAME_SUFFIX}"
+    base = f"{(user.name or '').strip() or '코치'} {OFFICE_NAME_SUFFIX}"
     exists = db.query(Organization.id).filter(Organization.name == base).first()
     if exists is None:
         return base

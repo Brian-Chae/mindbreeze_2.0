@@ -123,7 +123,7 @@ def create_invite(
     if current_user.get("role") != "counselor":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="상담사만 초대할 수 있습니다",
+            detail="코치만 초대할 수 있습니다",
         )
     result = client_service.create_invite(
         current_user["id"], req.email, db

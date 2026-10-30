@@ -558,19 +558,19 @@ def create_client(
         counselor_uuid = uuid.UUID(str(counselor_id))
     except (TypeError, ValueError):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="상담사 ID 형식이 올바르지 않습니다"
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="코치 ID 형식이 올바르지 않습니다"
         )
     counselor = db.query(User).filter(User.id == counselor_uuid).first()
     if counselor is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="상담사를 찾을 수 없습니다")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="코치를 찾을 수 없습니다")
     if counselor.role != "counselor":
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="지정한 사용자는 상담사가 아닙니다"
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="지정한 사용자는 코치가 아닙니다"
         )
     if counselor.status != "active":
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="활성 상태(인증 완료)의 상담사에게만 회원을 배정할 수 있습니다",
+            detail="활성 상태(인증 완료)의 코치에게만 회원을 배정할 수 있습니다",
         )
 
     # SDD-220(F2): 탈퇴 처리 중인 이메일로는 초대 계정도 만들 수 없다.
