@@ -201,6 +201,8 @@ export interface UseBandOptions {
    * 같은 지표를 live:metric 으로 보내므로 이중 집계를 막는다. raw 업로드·화면 로컬 지표는 영향 없음. 기본 true(현행).
    */
   v1FeatureUpload?: boolean;
+  /** false 면 마운트·앱 복귀 시 이전 기기 자동 연결을 하지 않는다('밴드 없이 입장'). 사용자가 connect() 를 부를 때만 연결. 기본 true */
+  autoResume?: boolean;
 }
 
 export interface UseBandResult {
@@ -395,7 +397,10 @@ export function useBand({
   forceMock,
   displayViewKind,
   v1FeatureUpload = true,
+  autoResume = true,
 }: UseBandOptions): UseBandResult {
+  const autoResumeRef = useRef(autoResume);
+  autoResumeRef.current = autoResume;
   const v1FeatureUploadRef = useRef(v1FeatureUpload);
   v1FeatureUploadRef.current = v1FeatureUpload;
   const isMock = forceMock ?? envMockEeg();
@@ -1588,7 +1593,7 @@ export function useBand({
     onResume: async () => {
       if (isMock || !isSupported) return;
       if (gapOpenRef.current) {
-        if (!bandConnectInFlight && autoReconnectRef.current && mountedRef.current) {
+        if (autoResumeRef.current && !bandConnectInFlight && autoReconnectRef.current && mountedRef.current) {
           if (reconnectTimerRef.current) {
             clearTimeout(reconnectTimerRef.current);
             reconnectTimerRef.current = null;
@@ -1652,7 +1657,7 @@ export function useBand({
   // 준비 단계 이후 소유자가 없는 대기 중 끊겼어도 이전 기기를 이어받는다.
   // 수동 해제는 기기 캐시를 지우므로 재연결하지 않으며, 새 선택창도 띄우지 않는다.
   useEffect(() => {
-    if (!isMock && (bluetoothService.isConnected() || bluetoothService.getCachedDeviceId() || bandConnectInFlight)) {
+    if (!isMock && autoResumeRef.current && (bluetoothService.isConnected() || bluetoothService.getCachedDeviceId() || bandConnectInFlight)) {
       void autoConnectRef.current();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

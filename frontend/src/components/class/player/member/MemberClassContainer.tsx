@@ -34,6 +34,7 @@ import { getNativeMeasurement, isNativeMeasurementAvailable } from '../../../../
 import { Capacitor } from '@capacitor/core';
 import { describeNativeStartFailure, isNativeBandOwned } from '../../../../lib/native-measurement/device-status';
 import { isBleSupported } from '../../../../lib/ble';
+import { applyBandSkipUi, readBandSkip, shouldAutoConnectBand, writeBandSkip } from '../../../../lib/class/flow/band-skip';
 import { toBandReport } from '../../../../lib/measurement-web/band-report';
 import { ClassChatPanel } from '../../../chat/ClassChatPanel';
 import { LeaveConfirmModal } from '../../../player/LeaveConfirmModal';
@@ -154,6 +155,13 @@ export function MemberClassContainer({
   const [screenOff, setScreenOff] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [bandContinued, setBandContinued] = useState(false);
+  // '밴드 없이 입장' 선택(회차 단위 보존). true 인 동안은 자동 스캔·연결·네이티브 측정 시작을 하지 않는다.
+  const [bandSkipped, setBandSkippedState] = useState(() => readBandSkip(sessionId));
+  const setBandSkipped = useCallback((skipped: boolean): void => {
+    writeBandSkip(sessionId, skipped);
+    setBandSkippedState(skipped);
+  }, [sessionId]);
+  const bandAuto = shouldAutoConnectBand(linkbandMode, bandSkipped);
   const [remoteEfficiency, setRemoteEfficiency] = useState<number | null>(null);
   const [series, setSeries] = useState<MetricSeries>(() => emptySeries());
   const [raw, setRaw] = useState<MemberDeviceModel['raw']>(null);
@@ -219,9 +227,9 @@ export function MemberClassContainer({
   const bandConnectedRef = useRef(false);
   const v2Path = decideMeasurementPath({
     v2: v2On && connectionsActive, native: isNativeMeasurementAvailable(), webBluetooth: isBleSupported(),
-    bandConnected: bandConnectedRef.current, eegConsent, bandOptIn: linkbandMode !== 'none',
+    bandConnected: bandConnectedRef.current, eegConsent, bandOptIn: bandAuto,
   });
-  const band = useBand({ sessionId, participantId, enabled: connectionsActive, skipAuth: !isAuthenticated, entryCredential, v1FeatureUpload: v2Path !== 'web_wasm' && v2Path !== 'native' });
+  const band = useBand({ sessionId, participantId, enabled: connectionsActive, skipAuth: !isAuthenticated, entryCredential, v1FeatureUpload: v2Path !== 'web_wasm' && v2Path !== 'native', autoResume: bandAuto });
   bandConnectedRef.current = band.connectionState === 'connected';
   // 호스트가 회차를 종료하면 회원은 밴드 해제 없이 떠난다 → 종료 phase 에서 close intent 를 한 번 기록한다.
   useCloseBiosignalOnEnd(v2On && liveV2?.state?.session?.data.phase === 'ended', band.closeBiosignal);
@@ -239,14 +247,14 @@ export function MemberClassContainer({
     liveV2: v2On ? liveV2 : null,
     sessionId,
     selfParticipantId: participantId,
-    bandOptIn: linkbandMode !== 'none',
+    bandOptIn: bandAuto,
     eegConsent,
     bandConnected: band.connectionState === 'connected',
     band: bandReport,
     enabled: connectionsActive,
   });
   const nativeM = useNativeMeasurementV2({
-    v2: v2On, sessionId, participantId, accountId: user?.id ?? null, bandOptIn: linkbandMode !== 'none', eegConsent,
+    v2: v2On, sessionId, participantId, accountId: user?.id ?? null, bandOptIn: bandAuto, eegConsent,
     bandConnected: band.connectionState === 'connected', enabled: connectionsActive,
   });
 
@@ -454,7 +462,7 @@ export function MemberClassContainer({
   const bandEnabled = linkbandMode !== 'none';
   // 네이티브가 밴드를 소유한 동안(시작 직후 첫 snapshot 전 포함) JS BLE 상태는 보지 않는다 — 놓인 JS 연결을 '끊김'으로 오판하던 문제.
   const nativeOwnsBand = isNativeBandOwned(nativeM.path, nativeM.status, nd);
-  const bandUi = deriveBandUi(
+  const derivedBandUi = deriveBandUi(
     {
       connectionState: nd ? (nd.connected ? 'connected' : 'connecting') : nativeOwnsBand ? 'connecting' : band.connectionState,
       everConnected: nd ? everConnected : nativeOwnsBand ? false : everConnected,
@@ -465,6 +473,8 @@ export function MemberClassContainer({
     },
     nowMs,
   );
+  // '밴드 없이 입장'이면 '연결하는 중' 표시·대기 카드를 만들지 않는다(사용자가 직접 연결을 누르면 해제됨)
+  const bandUi = applyBandSkipUi(derivedBandUi, bandSkipped, everConnected);
   // 미지원 브라우저에서 "밴드 없이 계속"을 고르면 밴드 UI 를 접는다
   const bandVisible = bandEnabled && !(bandContinued && bandUi === 'unsupported');
 
@@ -484,7 +494,7 @@ export function MemberClassContainer({
   }, [connectLiveKit]);
 
   const shared: SharedScreenProps = {
-    place, mode, viewerOnly, bandVisible, bandUi, nativeOwnsBand, waitlisted, nowMs, hostVideoIssue,
+    place, mode, viewerOnly, bandVisible, bandUi, nativeOwnsBand, nativeAuto: isNativeMeasurementAvailable() && eegConsent && linkbandMode !== 'none' && v2On, waitlisted, nowMs, hostVideoIssue,
     header: { title: title ?? '클래스', elapsedSec, totalSec, counselorName, myInitial: user?.name?.trim().charAt(0) || '나' },
     hero, snapshot, series, sheet, screenOff, confirmLeave,
     v2Bars: v2On ? { label: '이완', current: v2Current, bars: v2Bars } : null,
@@ -537,6 +547,8 @@ export function MemberClassContainer({
     setScreenOff,
     setConfirmLeave,
     setBandContinued,
+    setBandSkipped,
+    bandSkipped,
     setLeadOffDismissed,
     band,
     retryNetwork,
@@ -590,6 +602,8 @@ interface SharedScreenProps {
   bandUi: MemberCaseInput['band'];
   /** 앱 네이티브가 밴드를 소유 중 — 재연결 버튼은 JS BLE 가 아니라 네이티브로 */
   nativeOwnsBand: boolean;
+  /** 앱 네이티브 측정 경로(동의+밴드 사용) — 선택 해제만으로 측정이 자동 시작되는 환경 */
+  nativeAuto: boolean;
   waitlisted: boolean;
   nowMs: number;
   hostVideoIssue: MemberHostVideoIssue | null;
@@ -616,6 +630,8 @@ interface ScreenControls {
   setScreenOff: (off: boolean) => void;
   setConfirmLeave: (open: boolean) => void;
   setBandContinued: (on: boolean) => void;
+  setBandSkipped: (skipped: boolean) => void;
+  bandSkipped: boolean;
   setLeadOffDismissed: (dismissed: boolean) => void;
   band: UseBandResult;
   retryNetwork: () => void;
@@ -721,10 +737,25 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
     onSheetChange: controls.setSheet,
     ...media.actions,
     // 네이티브 소유 중이면 JS BLE 가 아니라 네이티브 링크를 재연결한다(JS 로 붙으면 같은 밴드를 두 클라이언트가 잡는다).
-    onBandConnect: () => void (shared.nativeOwnsBand ? getNativeMeasurement().reconnectBand(Capacitor.getPlatform()) : band.connect()),
+    // 사용자가 직접 연결을 누른 때만 '밴드 없이 입장'을 해제한다. 앱은 해제 즉시 네이티브 측정이 시작돼 밴드를 스캔한다.
+    onBandConnect: () => {
+      const wasSkipped = controls.bandSkipped;
+      if (wasSkipped) controls.setBandSkipped(false);
+      if (wasSkipped && shared.nativeAuto) return;
+      void (shared.nativeOwnsBand ? getNativeMeasurement().reconnectBand(Capacitor.getPlatform()) : band.connect());
+    },
     onBandDisconnect: () => void (shared.nativeOwnsBand ? undefined : band.disconnect()),
-    onBandCancel: () => void (shared.nativeOwnsBand ? undefined : band.disconnect()),
-    onBandRetry: () => void (shared.nativeOwnsBand ? getNativeMeasurement().reconnectBand(Capacitor.getPlatform()) : band.connect()),
+    // 취소 = 연결 시도 중단 + 밴드 없이 계속(네이티브는 선택이 켜지면 측정 정리 효과가 스캔도 멈춘다)
+    onBandCancel: () => {
+      controls.setBandSkipped(true);
+      void band.disconnect();
+    },
+    onBandRetry: () => {
+      const wasSkipped = controls.bandSkipped;
+      if (wasSkipped) controls.setBandSkipped(false);
+      if (wasSkipped && shared.nativeAuto) return;
+      void (shared.nativeOwnsBand ? getNativeMeasurement().reconnectBand(Capacitor.getPlatform()) : band.connect());
+    },
     onBandContinue: () => controls.setBandContinued(true),
     onBandRecheck: () => {
       controls.setLeadOffDismissed(true);

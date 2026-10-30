@@ -38,6 +38,7 @@ import {
   buildSteps, deriveEnterStage, deriveFlowStateKind, entryReducer, initialEntryState, notYetScheduledAt, startedSheetApplies, type FlowStateKind,
 } from '../../lib/class/flow/member-machine';
 import { RAW_RETENTION_DAYS } from '../../lib/privacy-policy';
+import { writeBandSkip } from '../../lib/class/flow/band-skip';
 import { buildSummaryRows, remainingPrepLabels, type SurveyOutcome } from '../../lib/class/flow/member-prep';
 import { buildMemberReadiness, type BandSnapshot } from '../../lib/class/flow/member-presence';
 import type { FlowBandMode } from '../../lib/class/flow/types';
@@ -491,6 +492,7 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
           setEegChoiceOverride(agree);
         }}
         onDone={(outcome) => {
+          writeBandSkip(sessionId, outcome === 'skipped');
           prep.patch({ bandOutcome: outcome });
           dispatch({ type: 'next', steps });
         }}
