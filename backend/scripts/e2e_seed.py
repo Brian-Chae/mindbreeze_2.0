@@ -34,7 +34,7 @@ COUNSELOR_CODE = "E2E0C1"
 # (역할, 이메일, 이름)
 ACCOUNTS = [
     ("client", f"e2e-client@{DOMAIN}", "E2E-내담자"),
-    ("counselor", f"e2e-counselor@{DOMAIN}", "E2E-상담사"),
+    ("counselor", f"e2e-counselor@{DOMAIN}", "E2E-코치"),
     ("org_admin", f"e2e-orgadmin@{DOMAIN}", "E2E-기관관리자"),
     ("platform_admin", f"e2e-admin@{DOMAIN}", "E2E-플랫폼관리자"),
 ]

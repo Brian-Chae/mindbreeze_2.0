@@ -43,7 +43,7 @@ COUNSELOR_CODE = "TST001"
 
 # (역할, 이메일, 이름)
 ACCOUNTS = [
-    ("counselor", COUNSELOR_EMAIL, "테스트상담사"),
+    ("counselor", COUNSELOR_EMAIL, "테스트코치"),
     ("client", CLIENT_EMAIL, "테스트내담자"),
     ("org_admin", ORGADMIN_EMAIL, "테스트기관관리자"),
 ]
