@@ -219,7 +219,7 @@ def _transcribe_batch(chunk_paths: list[str], session_type: str) -> tuple[list[d
     # 2) 유형별 화자 안내 — 1:1 상담 프레임을 무조건 강제하지 않는다.
     if session_type in ("clinical", "hypnosis"):
         speaker_hint = (
-            "이 녹음이 상담사와 내담자 2명의 대화로 명확하면 'counselor'/'client'로 구분하고, "
+            "이 녹음이 코치와 내담자 2명의 대화로 명확하면 'counselor'/'client'로 구분하고, "
             "2명인지 불분명하거나 1명이면 모두 'speaker_0'으로 표시하세요. "
         )
     else:
@@ -364,7 +364,7 @@ def _extract_segments_json(text: str) -> list[dict]:
         if not isinstance(item, dict):
             continue
         speaker = str(item.get("speaker", "")).strip().lower()
-        if speaker in ("상담사", "counselor", "호스트"):
+        if speaker in ("상담사", "코치", "counselor", "호스트"):
             speaker = "counselor"
         elif speaker in ("내담자", "client", "고객"):
             speaker = "client"
@@ -606,7 +606,7 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
     if result.get("diarization_fallback"):
         summary["diarization_fallback"] = True
         summary["diarization_note"] = (
-            "Whisper 폴백으로 전사 — 화자 분리(상담사/내담자) 소실, "
+            "Whisper 폴백으로 전사 — 화자 분리(코치/내담자) 소실, "
             "모든 발화가 speaker_0 로 통합됨"
         )
     record.ai_summary = summary
