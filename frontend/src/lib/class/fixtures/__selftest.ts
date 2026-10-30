@@ -88,7 +88,7 @@ function MemberSelftest({ ctx, skew }: { ctx: PlayerCaseContext; skew: boolean }
     { style: { display: 'grid', gridTemplateRows: 'minmax(0, 1fr) auto minmax(0, 1fr)', justifyItems: 'center', alignItems: 'center', minHeight: 0 } },
     compact
       ? h('div', { style: { gridRow: 1 } })
-      : h('div', { style: { gridRow: 1, alignSelf: 'end', paddingBottom: 16, display: 'flex', justifyContent: 'center', gap: 16 } }, pip('pip', '상담사'), pip('mypip', '나')),
+      : h('div', { style: { gridRow: 1, alignSelf: 'end', paddingBottom: 16, display: 'flex', justifyContent: 'center', gap: 16 } }, pip('pip', '코치'), pip('mypip', '나')),
     h(
       'div',
       { style: { gridRow: 2, ...vars({ '--ring': compact ? '144px' : '180px' }), transform: skew ? 'translateX(32px)' : undefined } },

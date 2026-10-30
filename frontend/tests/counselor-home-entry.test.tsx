@@ -32,16 +32,16 @@ describe('홈 담당 상담사 영역', () => {
   it('0명이어도 영역과 추가 버튼이 보인다', async () => {
     useAuthStore.setState({ user: user([]) });
     const el = await render();
-    expect(el.textContent).toContain('담당 상담사');
-    expect(el.textContent).toContain('+ 상담사 추가');
-    expect(el.textContent).toContain('아직 연결된 상담사가 없어요');
+    expect(el.textContent).toContain('담당 코치');
+    expect(el.textContent).toContain('+ 코치 추가');
+    expect(el.textContent).toContain('아직 연결된 코치가 없어요');
   });
   it('여러 명이면 전부 표시하고 추가 버튼으로 시트가 열린다', async () => {
     useAuthStore.setState({ user: user([{ id: 'a', name: '김상담', profile_image: null, org_name: '대구교육청' }, { id: 'b', name: '이코치', profile_image: null }]) });
     const el = await render();
     expect(el.textContent).toContain('김상담');
     expect(el.textContent).toContain('이코치');
-    const add = [...el.querySelectorAll('button')].find((b) => b.textContent?.includes('상담사 추가'))!;
+    const add = [...el.querySelectorAll('button')].find((b) => b.textContent?.includes('코치 추가'))!;
     await act(async () => add.click());
     expect(document.querySelector('[role="dialog"]')).not.toBeNull();
   });

@@ -19,7 +19,7 @@ describe('SDD-237 계약 fixture', () => {
     const field = getMockReport('edited').block!.narrative.fields.headline;
     expect(field.source).toBe('edited');
     expect(field.ai_draft).toBeTruthy();
-    expect(sourceLabel(field)).toContain('상담사 수정');
+    expect(sourceLabel(field)).toContain('코치 수정');
   });
   it('잘못된 응답은 거절한다', () => {
     expect(isClassReportResponse({ block: {} })).toBe(false);

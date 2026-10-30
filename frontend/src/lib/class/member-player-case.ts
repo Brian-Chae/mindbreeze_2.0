@@ -137,7 +137,7 @@ function batteryText(battery: number | null): string {
 }
 
 function groupNotice(input: MemberCaseInput): MemberNotice {
-  if (input.hand === 'waiting') return { tone: 'info', icon: 'hand', text: '손들었어요 · 상담사가 확인 중이에요' };
+  if (input.hand === 'waiting') return { tone: 'info', icon: 'hand', text: '손들었어요 · 코치가 확인 중이에요' };
   if (input.hand === 'speaking') return { tone: 'live', icon: 'mic', text: '말하는 중이에요 · 끝나면 말하기 종료를 눌러 주세요' };
   return { tone: 'info', icon: 'micOff', text: '이 수업은 기본 뮤트예요 · 말하고 싶을 땐 손들기를 눌러 주세요' };
 }
@@ -164,7 +164,7 @@ function deriveNotice(input: MemberCaseInput): MemberNotice | null {
     if (input.mode === 'group' && !input.viewerOnly) return groupNotice(input);
     // D4: 회원 음성은 어떤 경우에도 AI 기록에 쓰이지 않으므로(F8) "AI 기록에서 빠져요" 대신 사실대로 안내한다
     if (input.mic === 'off') {
-      return { tone: 'caution', icon: 'micOff', text: '마이크 꺼짐 · 상담사에게 내 목소리가 전달되지 않아요(뇌파는 계속 기록돼요)' };
+      return { tone: 'caution', icon: 'micOff', text: '마이크 꺼짐 · 코치에게 내 목소리가 전달되지 않아요(뇌파는 계속 기록돼요)' };
     }
     if (input.cam === 'denied' || input.cam === 'nodevice') {
       return { tone: 'coral', icon: 'cameraOff', text: '수업은 그대로 계속돼요 · 설정에서 카메라를 허용해 주세요' };

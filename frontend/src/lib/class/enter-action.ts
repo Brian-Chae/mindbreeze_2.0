@@ -154,7 +154,7 @@ export function derivePrepRows(chip: ClassChipKey, input: PrepInput): { title: s
         band ?? { icon: 'phone', title: '휴대폰 무음', sub: '진행 중 알림이 울리지 않게 해요' },
       ]
     : [
-        { icon: 'map-pin', title: '장소', sub: input.address || '상담사에게 장소를 확인해 주세요' },
+        { icon: 'map-pin', title: '장소', sub: input.address || '코치에게 장소를 확인해 주세요' },
         { icon: 'phone', title: '휴대폰 무음', sub: '진행 중 알림이 울리지 않게 해요' },
         band ?? { icon: 'clock', title: '10분 전 도착', sub: '시작 전에 자리를 잡아요' },
       ];

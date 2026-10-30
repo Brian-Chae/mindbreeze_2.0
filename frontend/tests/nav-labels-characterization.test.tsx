@@ -143,7 +143,7 @@ describe('FE-NAV-01 사이드바 라벨·경로 골든(역할 4종)', () => {
     await renderSidebar();
     expect(sidebarEntries()).toEqual([
       ['/chat', '채팅'], ['/admin/data-center', '데이터 센터'], ['/notifications', '알림'], ['/settings', '설정'],
-      ['/admin/orgs', '기관 관리'], ['/admin/applications', '가입 신청'], ['/admin/users', '상담사 관리'],
+      ['/admin/orgs', '기관 관리'], ['/admin/applications', '가입 신청'], ['/admin/users', '코치 관리'],
       ['/admin/clients', '회원 관리'], ['/admin/chat-reports', '채팅 신고'], ['/playground', '플레이그라운드'],
     ]);
   });
