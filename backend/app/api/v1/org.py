@@ -81,7 +81,8 @@ def _counselor_to_response(u, membership=None, *, has_personal_office: bool = Fa
         id=str(u.id),
         name=u.name,
         email=u.email,
-        role=u.role,
+        # SDD-258: 다기관 소속에서는 전역 role 이 아니라 이 기관의 멤버십 역할을 표시한다
+        role=membership.role if membership is not None and membership.role in ("counselor", "org_admin") else u.role,
         status=status_str,
         invited_at=invited_at.isoformat() if invited_at else None,
         invite_expires_at=invite_expires_at.isoformat() if invite_expires_at else None,
@@ -265,7 +266,7 @@ async def invite_counselor(
     """
     _require_org_admin(db, current_user, org_id)
     user, invite_sent = await org_service.invite_counselor(
-        org_id, req.name, str(req.email), redis, db
+        org_id, req.name, str(req.email), redis, db, role=req.role
     )
     membership = membership_service.get_membership(db, user.id, org_id)
     return CounselorInviteResponse(

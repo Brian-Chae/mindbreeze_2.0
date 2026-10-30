@@ -408,7 +408,28 @@ def set_counselor_suspension(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="자기 자신은 정지/해제할 수 없습니다"
         )
-    if target.role != "counselor":
+    # SDD-258: 이 기관의 org_admin 멤버십이 있는 대상은 주 담당자가 아니면 정지/해제 가능.
+    # 정지는 기관에 다른 활성 기관관리자가 1명 이상 남을 때만 허용한다(최소 1명 가드).
+    from app.services import membership_service
+    from app.services.org_management_service import _has_other_active_org_admin
+
+    org_membership = membership_service.get_membership(db, target.id, org_id)
+    is_org_admin_target = target.role == "org_admin" or (
+        org_membership is not None and org_membership.role == "org_admin"
+    )
+    if is_org_admin_target:
+        org_row = require_active_org(org_id, db)
+        if org_row.primary_admin_id == target.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="기관 관리자 계정은 정지/해제할 수 없습니다",
+            )
+        if suspend and not _has_other_active_org_admin(db, org_row.id, target.id):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="기관 관리자는 최소 1명이 활성 상태여야 합니다",
+            )
+    elif target.role != "counselor":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="기관 관리자 계정은 정지/해제할 수 없습니다",
@@ -738,7 +759,7 @@ def create_org_with_admin(
 
 
 async def invite_counselor(
-    org_id: str, name: str, email: str, redis, db: Session
+    org_id: str, name: str, email: str, redis, db: Session, role: str = "counselor"
 ) -> tuple[User, bool]:
     """상담사를 초대한다 — pending 계정 + CounselorProfile + 초대 토큰/메일.
 
@@ -746,6 +767,9 @@ async def invite_counselor(
     - 계정은 status="pending" + 추측 불가능한 난수 해시로 만들어 초대 수락 전 로그인 불가.
     - counselor_code 는 ``onboarding_service.generate_counselor_code`` 로 6자리 숫자 유니크 발급.
     - 이메일 폭탄 방지를 위해 기관당 초기 초대 레이트리밋을 적용한다.
+
+    SDD-258: role="org_admin" 이면 기관관리자 초대 — 신규 이메일은 org_admin pending 계정
+    (CounselorProfile 없음), 기존 계정은 org_admin 멤버십(invited) 추가 후 본인 수락.
 
     반환값: (생성된 counselor User, 초대 메일 발송 성공 여부)
     """
@@ -757,6 +781,18 @@ async def invite_counselor(
     from app.services import membership_service, org_invite_service
 
     org = require_active_org(org_id, db)
+
+    if role not in ("counselor", "org_admin"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="초대 역할이 올바르지 않습니다"
+        )
+    is_admin_invite = role == "org_admin"
+    # 개인 상담소는 소유자 1인 전용 — 기관관리자 초대 불가
+    if is_admin_invite and org.kind == "individual":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="개인 상담소에는 기관관리자를 초대할 수 없습니다",
+        )
 
     clean_name = (name or "").strip()
     if not clean_name:
@@ -781,7 +817,8 @@ async def invite_counselor(
     if existing is not None:
         # SDD-079 분기: 기존 계정 — 상담사면 "소속 추가 초대", 아니면 409.
         # 계정 생성·CounselorProfile 발급 없이 membership(invited)만 추가한다.
-        if existing.role != "counselor":
+        allowed_roles = ("counselor", "org_admin") if is_admin_invite else ("counselor",)
+        if existing.role not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="코치 계정이 아닌 이메일입니다",
@@ -799,6 +836,7 @@ async def invite_counselor(
             existing,
             org.id,
             status_="invited",
+            role=role,
             invited_at=now,
             invite_expires_at=expires,
         )
@@ -806,7 +844,9 @@ async def invite_counselor(
         db.refresh(existing)
 
         # 소속 추가는 반드시 본인 수락을 거친다 — 관리자 일방 배정 금지
-        invite_sent = await org_invite_service.issue_membership_invite(existing, org, redis)
+        invite_sent = await org_invite_service.issue_membership_invite(
+            existing, org, redis, role=role
+        )
         await org_invite_service.mark_counselor_sent(str(org.id), redis)
         return existing, invite_sent
 
@@ -822,7 +862,7 @@ async def invite_counselor(
         # 초대 수락 전까지 아무도 알 수 없는 난수 — 실질적으로 로그인 불가
         password_hash=hash_password(secrets.token_urlsafe(32)),
         name=clean_name,
-        role="counselor",
+        role=role,
         org_id=org.id,
         status="pending",
         verified_tier="unverified",
@@ -832,15 +872,25 @@ async def invite_counselor(
     db.add(user)
     db.flush()
 
-    code = onboarding_service.generate_counselor_code(db)
-    db.add(CounselorProfile(user_id=user.id, counselor_code=code, specialties=[]))
+    if not is_admin_invite:
+        code = onboarding_service.generate_counselor_code(db)
+        db.add(CounselorProfile(user_id=user.id, counselor_code=code, specialties=[]))
     membership_service.add_membership(
-        db, user, org.id, status_="invited", invited_at=now, invite_expires_at=expires
+        db,
+        user,
+        org.id,
+        status_="invited",
+        role=role,
+        invited_at=now,
+        invite_expires_at=expires,
     )
     db.commit()
     db.refresh(user)
 
-    invite_sent = await org_invite_service.issue_counselor_invite(user, org.name, redis)
+    if is_admin_invite:
+        invite_sent = await org_invite_service.issue_invite(user, org.name, redis)
+    else:
+        invite_sent = await org_invite_service.issue_counselor_invite(user, org.name, redis)
     await org_invite_service.mark_counselor_sent(str(org.id), redis)
     return user, invite_sent
 
@@ -865,7 +915,7 @@ async def resend_counselor_invite(
             status_code=status.HTTP_404_NOT_FOUND, detail="대상 코치를 찾을 수 없습니다"
         )
 
-    user = db.query(User).filter(User.id == uid, User.role == "counselor").first()
+    user = db.query(User).filter(User.id == uid, User.role.in_(("counselor", "org_admin"))).first()
     membership = (
         membership_service.get_membership(db, uid, org.id) if user is not None else None
     )
@@ -894,10 +944,14 @@ async def resend_counselor_invite(
     db.commit()
     db.refresh(user)
 
-    if is_new_account:
+    if is_new_account and membership.role == "org_admin":
+        invite_sent = await org_invite_service.issue_invite(user, org.name, redis)
+    elif is_new_account:
         invite_sent = await org_invite_service.issue_counselor_invite(user, org.name, redis)
     else:
-        invite_sent = await org_invite_service.issue_membership_invite(user, org, redis)
+        invite_sent = await org_invite_service.issue_membership_invite(
+            user, org, redis, role=membership.role
+        )
     await org_invite_service.mark_counselor_resent(str(org.id), redis)
     return user, invite_sent
 

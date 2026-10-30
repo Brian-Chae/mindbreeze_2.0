@@ -221,6 +221,8 @@ class CounselorInviteRequest(BaseModel):
 
     name: str = Field(min_length=1, max_length=100)
     email: EmailStr
+    # SDD-258: 초대할 역할 — 기본은 상담사(코치), org_admin 이면 기관관리자 초대
+    role: Literal["counselor", "org_admin"] = "counselor"
 
 
 class CounselorInviteResponse(BaseModel):
