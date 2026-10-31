@@ -2,13 +2,15 @@
 // 이식 범위: useBand(+everConnected) · useSessionLiveSocket(평균 수신 구독 없음) · 1Hz 링버퍼 · useGuestAudioSync · 채팅 폴링 · 접촉 불량 상태.
 // useWakeLock 은 호출부(class-join-page: step waiting|meditation)가 이미 걸고 있어 여기서 다시 걸지 않는다(센티널 중복 방지).
 // 이 파일만 useBand 를 호출한다(plan R4: BLE 연결·업로드 인스턴스는 화면당 1개).
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { freshnessOf } from '../../../../lib/session-live/live-view';
 import { liveMetricSnapshot } from '../../../../lib/session-live/live-metric-snapshot';
 import { ConnectionState } from 'livekit-client';
 import { useBand, type UseBandResult } from '../../../../hooks/useBand';
 import { useCloseBiosignalOnEnd } from '../../../../hooks/useCloseBiosignalOnEnd';
 import { BiosignalRecordingStatus } from '../../../../lib/biosignal/recording-status';
+import { UploadProgressNotice } from '../../../../lib/biosignal/upload-progress-notice';
+import { uploadProgressStore } from '../../../../lib/measurement-web/upload-progress';
 import type { RenderedMetrics } from '../../../../lib/biosignal/display-snapshot';
 import { AnalysisMetricsService } from '../../../../lib/eeg/AnalysisMetricsService';
 import { useGuestAudioSync } from '../../../../hooks/useGuestAudioSync';
@@ -494,6 +496,7 @@ export function MemberClassContainer({
   }, [connectLiveKit]);
 
   const shared: SharedScreenProps = {
+    sessionId,
     place, mode, viewerOnly, bandVisible, bandUi, nativeOwnsBand, nativeAuto: isNativeMeasurementAvailable() && eegConsent && linkbandMode !== 'none' && v2On, waitlisted, nowMs, hostVideoIssue,
     header: { title: title ?? '클래스', elapsedSec, totalSec, counselorName, myInitial: user?.name?.trim().charAt(0) || '나' },
     hero, snapshot, series, sheet, screenOff, confirmLeave,
@@ -595,6 +598,8 @@ function noop(): void {
 /* ───────── 화면 본체: LiveKit 연결 상태가 필요한 파생(네트워크)과 모달·덮개를 담당 ───────── */
 
 interface SharedScreenProps {
+  /** SDD-260: 업로드 진행 표시를 세션별로 구독 */
+  sessionId: string;
   place: 'online' | 'offline';
   mode: '1on1' | 'group';
   viewerOnly: boolean;
@@ -650,6 +655,8 @@ interface MemberLiveScreenProps {
 
 function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
   const { band } = controls;
+  // SDD-260: 종료 후 업로드 진행(네이티브 이벤트). 화면 이탈 가능, 완료는 summary 대조 후에만 표시
+  const uploadProgress = useSyncExternalStore(uploadProgressStore.subscribe, () => uploadProgressStore.get(shared.sessionId), () => null);
 
   /* 네트워크: 소켓·브라우저 온라인·LiveKit 재연결을 합쳐 ok/재연결 중/끊김으로. 처음 연결되기 전의 끊김은 오류로 보지 않는다 */
   const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
@@ -777,6 +784,7 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
     <>
       <div inert={shared.screenOff}>
         <BiosignalRecordingStatus state={band.recordingStatus} />
+        <UploadProgressNotice progress={uploadProgress} />
         <MemberClassView
           input={input}
           header={shared.header}

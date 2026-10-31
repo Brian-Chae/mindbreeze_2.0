@@ -7,6 +7,7 @@ import { bluetoothService } from '../eeg/bluetoothService';
 import { SOCKET_URL } from '../socket';
 import { buildNativeModelPayload, getNativeMeasurement } from '../native-measurement';
 import { getActiveModelCache, refreshActiveModel } from '../eeg/eegPersonalScore';
+import { uploadProgressStore } from './upload-progress';
 import { decideMeasurementPath, type MeasurementPath } from './measurement-path';
 import { isLiveProtocolV2Enabled } from '../session-live/live-flag';
 import { isNativeMeasurementAvailable } from '../native-measurement';
@@ -127,6 +128,10 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
         await facade.attach(o.sessionId);
         if (cancelled) return;
         off = facade.onMeasurement((snap) => { if (!cancelled) { setMetrics(toMetricSnapshot(snap)); setDevice(toNativeDevice(snap)); } });
+        // SDD-260: 저장 진행(feature.counts·archive.counts·reconcile.state) → 전역 스토어. 화면을 떠나도 네이티브가 계속 올리므로 detach 후에도 마지막 값을 남긴다.
+        const offUpload = facade.onUploadProgress((patch) => { if (!cancelled) uploadProgressStore.update(o.sessionId, patch); });
+        const offMeasurement = off;
+        off = () => { offMeasurement(); offUpload(); };
         const deviceId = bluetoothService.getDeviceId() || bluetoothService.getCachedDeviceId();
         // 웹과 같은 규칙: 서버 활성 표준 모델 > 코호트. 시작 시 1회 조회해 넘기고, 이후 교체는 네이티브가 막는다(pin).
         const model = buildNativeModelPayload(getActiveModelCache() ?? (await refreshActiveModel().catch(() => null)));
