@@ -145,6 +145,14 @@ public final class ArchiveQueue {
         try persist(i)
     }
 
+    /// 서버 대조에서 누락이 확인된 항목을 처음부터 다시 올린다(verified/격리 → pending, presign 부터).
+    public func requeue(alias: String) throws {
+        lock.lock(); defer { lock.unlock() }
+        guard var i = items[alias] else { throw QueueError.unknownAlias }
+        i.state = .pending; i.taskId = nil; i.uploadURL = nil; i.remoteId = nil; i.lastCode = nil; i.attempts = 0; i.nextAttemptMs = 0
+        try persist(i)
+    }
+
     public func markVerified(alias: String) throws {
         lock.lock(); defer { lock.unlock() }
         guard var i = items[alias] else { throw QueueError.unknownAlias }
