@@ -31,11 +31,11 @@ from sqlalchemy.orm import Session as DBSession
 
 from app.models.eeg_feature import EEGFeatureWindow
 from app.models.live_state import CaptureStream, LiveOutbox
-from app.models.session import SessionParticipant
+from app.models.session import Session as SessionModel, SessionParticipant
 from app.schemas.session import EEGFeatureItem
 from app.schemas.session_live_ingest import DeviceReport, MetricWindow, parse_device, parse_metric_batch
 from app.schemas.session_live_v2 import PROTOCOL_VERSION, SCHEMA_VERSION, WireError
-from app.services.session_live_commands import Actor, device_payload, evaluate_ingest, last_device_payload
+from app.services.session_live_commands import CUTOFF_CONSENT_WITHDRAWN, Actor, device_payload, evaluate_ingest, last_device_payload
 from app.services.session_live_ledger import append_outbox, lock_epoch
 
 logger = logging.getLogger(__name__)
@@ -259,6 +259,133 @@ def _store_windows(db: DBSession, actor: Actor, session_id: uuid.UUID, windows: 
         else:  # 동시 저장 경합으로 건너뜀 → 이미 저장된 중복
             acks[idx] = _ack(w, "duplicate", now, durable=True)
     return acks, candidates
+
+
+# ---------------------------------------------------------------------------
+# SDD-260 S1 — REST 배치 저장(정본 저장 경로). 소켓·READY·lease·24h 판정과 무관하다.
+# ---------------------------------------------------------------------------
+
+def _rest_result(w: MetricWindow, status: str, *, code: str | None = None) -> dict[str, Any]:
+    r: dict[str, Any] = {"stream_id": w.stream_id, "sequence": str(w.sequence), "status": status,
+                         "durable": status in ("accepted", "duplicate")}
+    if code:
+        r["code"] = code
+    return r
+
+
+def store_batch(db: DBSession, participant: SessionParticipant, session_id: uuid.UUID, windows: list[MetricWindow],
+                now: datetime | None = None) -> list[dict[str, Any]]:
+    """창 목록을 eeg_feature_windows 에 멱등 저장하고 창별 결과(요청과 같은 순서)를 돌려준다.
+
+    수락 조건 = (세션·참가자 일치) ∧ (stream 이 그 참가자 소유) ∧ (동의 철회 아님). 그 밖의 판정은 하지 않는다.
+    투영(metrics.updated)·방송은 하지 않는다. `device_timestamp_ms` = 기기 보고 observed_at_ms.
+    """
+    from app.services import session_service
+
+    now = now or _now()
+    pid = participant.id
+    session = db.get(SessionModel, session_id)
+    ended_ms = _ms(session.ended_at) if session is not None and session.ended_at is not None else None
+    streams: dict[str, CaptureStream | None] = {}
+    results: list[dict[str, Any]] = []
+    todo: list[tuple[int, MetricWindow]] = []
+    for w in windows:
+        if w.session_id != str(session_id) or w.participant_id != str(pid) or participant.session_id != session_id:
+            results.append(_rest_result(w, "rejected", code="participant_mismatch"))
+            continue
+        if w.stream_id not in streams:
+            streams[w.stream_id] = _load_stream(db, session_id, pid, w.stream_id)
+        stream = streams[w.stream_id]
+        if stream is None:
+            results.append(_rest_result(w, "rejected", code="stream_not_owned"))
+            continue
+        if stream.cutoff_code == CUTOFF_CONSENT_WITHDRAWN:
+            results.append(_rest_result(w, "rejected", code="consent_withdrawn"))
+            continue
+        todo.append((len(results), w))
+        results.append(_rest_result(w, "accepted"))  # 아래에서 저장 결과로 확정
+    if not todo:
+        db.rollback()
+        return results
+
+    seqs = {w.sequence for _, w in todo}
+    existing = {
+        (pg, idx): alias
+        for pg, idx, alias in db.execute(
+            select(EEGFeatureWindow.play_group_id, EEGFeatureWindow.window_index, EEGFeatureWindow.source_feature_alias).where(
+                EEGFeatureWindow.session_id == session_id, EEGFeatureWindow.participant_id == pid,
+                EEGFeatureWindow.window_index.in_(seqs), EEGFeatureWindow.play_group_id.in_({w.stream_id for _, w in todo}))
+        ).all()
+    }
+    fresh_items: list[EEGFeatureItem] = []
+    quality: dict[tuple, str] = {}
+    extras: dict[tuple, dict[str, Any]] = {}
+    seen: dict[tuple[str, int], str] = {}
+    for idx, w in todo:
+        key = (w.stream_id, w.sequence)
+        prev = existing.get(key, seen.get(key))
+        if prev is not None:
+            results[idx] = _rest_result(w, "duplicate") if prev == w.feature_hash else _rest_result(w, "rejected", code="hash_conflict")
+            continue
+        seen[key] = w.feature_hash
+        end_at = datetime.fromtimestamp(w.observed_at_ms / 1000, tz=timezone.utc)
+        # device_timestamp_ms 는 기기 보고값 그대로(ms 정밀도 손실 방지로 float 직접 지정)
+        fresh_items.append(_feature_item(w, end_at, True).model_copy(update={"timestamp": float(w.observed_at_ms)}))
+        if eeg_window_invalid(w):
+            quality[key] = "invalid"
+        extras[key] = {"late": ended_ms is not None and w.observed_at_ms > ended_ms, "ingest_path": "rest"}
+    saved_keys: set[tuple[str, int]] = set()
+    if fresh_items:
+        saved = session_service._persist_feature_items(session_id, participant, fresh_items, db,
+                                                       quality_overrides=quality, row_extras=extras)  # commit 포함
+        saved_keys = {(str(i.play_group_id), int(i.second_offset)) for i in saved}
+    else:
+        db.rollback()
+    for idx, w in todo:
+        if results[idx]["status"] != "accepted":
+            continue
+        if (w.stream_id, w.sequence) not in saved_keys:  # 동시 저장 경합으로 건너뜀 → 이미 저장된 중복
+            results[idx] = _rest_result(w, "duplicate")
+    return results
+
+
+def feature_summary(db: DBSession, session_id: uuid.UUID, participant_id: uuid.UUID, *, max_ranges: int = 200) -> dict[str, Any]:
+    """SDD-260 S2 — 참가자의 저장 현황. stream(play_group_id)별 개수·구간·결측 구간(종료 대조용)."""
+    rows = db.execute(
+        select(EEGFeatureWindow.play_group_id, EEGFeatureWindow.window_index, EEGFeatureWindow.created_at)
+        .where(EEGFeatureWindow.session_id == session_id, EEGFeatureWindow.participant_id == participant_id)
+        .order_by(EEGFeatureWindow.play_group_id, EEGFeatureWindow.window_index)
+    ).all()
+    by_stream: dict[str, list[int]] = {}
+    latest = None
+    for pg, idx, created in rows:
+        if created is not None and (latest is None or created > latest):
+            latest = created
+        if pg is not None:
+            by_stream.setdefault(pg, []).append(int(idx))
+    streams = []
+    for pg, idxs in by_stream.items():  # 쿼리가 정렬해 왔다
+        missing: list[list[int]] = []
+        truncated = False
+        prev = idxs[0]
+        for cur in idxs[1:]:
+            if cur - prev > 1:
+                if len(missing) >= max_ranges:
+                    truncated = True
+                    break
+                missing.append([prev + 1, cur - 1])
+            prev = cur
+        contiguous = -1
+        if idxs[0] == 0:
+            contiguous = 0
+            for cur in idxs[1:]:
+                if cur != contiguous + 1:
+                    break
+                contiguous = cur
+        streams.append({"stream_id": pg, "count": len(idxs), "min_index": idxs[0], "max_index": idxs[-1],
+                        "contiguous_through": contiguous, "missing_ranges": missing, "truncated": truncated})
+    return {"session_id": str(session_id), "participant_id": str(participant_id), "total_count": len(rows),
+            "streams": streams, "updated_at": latest.isoformat() if latest is not None else None}
 
 
 def _project_latest(db: DBSession, session_id: uuid.UUID, pid: uuid.UUID,

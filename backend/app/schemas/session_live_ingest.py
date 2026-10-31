@@ -90,6 +90,7 @@ class MetricWindow:
     contact: dict[str, str]
     sqi: float | None
     metrics: dict[str, dict[str, Any]]
+    observed_at_ms: int = 0  # SDD-260: REST 배치 저장이 device_timestamp_ms 로 쓴다(소켓 투영은 서버 anchor 환산값을 쓴다)
 
 
 def _metric_value(name: str, raw: Any) -> dict[str, Any]:
@@ -141,6 +142,7 @@ def parse_metric_window(raw: Any) -> MetricWindow:
         sequence=seq, window_start_us=start, window_end_us=end, clock_anchor_id=raw["clock_anchor_id"], clock_uncertainty_ms=float(unc),
         algorithm_version=raw["algorithm_version"], feature_hash=raw["feature_hash"], contact=_contact(raw["contact"], "contact"),
         sqi=_sqi(raw["sqi"], "sqi"), metrics={k: _metric_value(k, v) for k, v in metrics_raw.items()},
+        observed_at_ms=int(raw["observed_at_ms"]),
     )
 
 
@@ -152,6 +154,22 @@ def parse_metric_batch(raw: Any) -> list[MetricWindow]:
     wins = raw.get("windows")
     _need(isinstance(wins, list) and 1 <= len(wins) <= MAX_WINDOWS, "invalid_message", "windows")
     return [parse_metric_window(w) for w in wins]
+
+
+FEATURE_BATCH_MAX = 300  # SDD-260: POST /features/batch 한 요청의 최대 창 수
+_FEATURE_BATCH_KEYS = frozenset({"participant_id", "windows"})
+
+
+def parse_feature_batch(raw: Any) -> tuple[str | None, list[MetricWindow]]:
+    """SDD-260 REST 배치 본문 검증 → (participant_id|None, windows). 위반은 WireError(invalid_message, field)."""
+    _need(isinstance(raw, Mapping), "invalid_message")
+    extra = set(raw) - _FEATURE_BATCH_KEYS
+    _need(not extra, "invalid_message", sorted(extra)[0] if extra else None)
+    pid = raw.get("participant_id")
+    _need(pid is None or is_uuid(pid), "invalid_message", "participant_id")
+    wins = raw.get("windows")
+    _need(isinstance(wins, list) and 1 <= len(wins) <= FEATURE_BATCH_MAX, "invalid_message", "windows")
+    return pid, [parse_metric_window(w) for w in wins]
 
 
 @dataclass(frozen=True)

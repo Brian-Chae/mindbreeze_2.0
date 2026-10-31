@@ -3508,11 +3508,13 @@ def _persist_feature_items(
     features: list[EEGFeatureItem],
     db: DBSession,
     quality_overrides: dict[tuple, str] | None = None,
+    row_extras: dict[tuple, dict] | None = None,
 ) -> list[EEGFeatureItem]:
     """저장에 성공한 항목만 반환해 중복 입력의 미저장 값이 라이브로 발행되지 않게 한다.
 
     quality_overrides: {(play_group_id, second_offset): quality}. EEG 무효(invalid) 창은 sqi 가 높아도
     quality='invalid' 로 저장해 리포트 valid/coverage 집계에서 빠지게 한다(measure-guard).
+    row_extras: {(play_group_id, second_offset): {컬럼: 값}}. SDD-260 REST 배치가 late/ingest_path 를 행에 싣는다.
     """
     # SDD-026: 멱등 키를 (play_group_id, window_index) 로 확장한다.
     # pause/resume 으로 second_offset 이 0 부터 재시작해도 실행 세그먼트(play_group_id)가 다르면
@@ -3582,6 +3584,8 @@ def _persist_feature_items(
             respiratory_rate=f.respiratory_rate,
             motion=f.motion,
         )
+        for col, val in (row_extras or {}).get(key, {}).items():
+            setattr(row, col, val)
         try:
             # SAVEPOINT 단위 flush — 동시 저장 경합(유니크 위반)은 롤백 후 skip
             with db.begin_nested():
@@ -3662,53 +3666,6 @@ def _has_newer_feature(
             EEGFeatureWindow.window_index > latest.second_offset,
         )
     return newer.first() is not None
-
-
-def ingest_features(
-    session_id: str,
-    payload,
-    db: DBSession,
-    *,
-    current_user_id: str | None = None,
-    entry_credential: str | None = None,
-) -> dict:
-    """5초 배치 EEG feature 업로드 → EEGFeatureWindow 일괄 저장.
-
-    참가자 검증: participant_id(게스트/명시) 또는 인증 사용자(user_id)가 세션 참가자여야 한다.
-    비참가자는 403. 호스트는 참가자 행이 아니므로 업로드 대상이 아니다.
-    중복 초 인덱스(재업로드)는 건너뛰고, 실제 저장한 윈도우 수만 반환한다.
-    """
-    sid = _to_uuid(session_id)
-    s = db.query(Session).filter(Session.id == sid).first()
-    if not s:
-        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
-
-    participant = resolve_upload_participant(
-        sid, payload.participant_id, current_user_id, db, entry_credential=entry_credential
-    )
-    saved_features = _persist_feature_items(sid, participant, payload.features, db)
-    saved = len(saved_features)
-    # WS가 끊겨 REST 폴백만 성공해도 상담사의 참가자 카드와 그룹 집계를 갱신한다.
-    # WS로 이미 저장된 재전송은 발행하지 않아 과거 배치로 실시간 표시가 되돌아가지 않게 한다.
-    if saved:
-        from app.ws import session_live_namespace as live
-
-        latest = max(
-            saved_features,
-            key=lambda feature: (feature.timestamp is not None, feature.timestamp or 0, feature.second_offset),
-        )
-        # 더 새로운 창이 이미 있으면(WS가 앞서 저장) 발행을 생략 — 과거 배치로 실시간 표시가
-        # 되돌아가지 않게 한다(WS on_feature 와 동일한 newer 가드).
-        if not _has_newer_feature(sid, participant.id, latest, db):
-            live.notify_session_eeg(
-                str(sid),
-                {
-                    "participant_id": str(participant.id),
-                    "feature": latest.model_dump(),
-                    "saved": saved,
-                },
-            )
-    return {"session_id": str(sid), "saved": saved}
 
 
 def report_choice_summary(session_id: str, host_id: str, db: DBSession) -> dict:
