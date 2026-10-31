@@ -5,10 +5,13 @@ import java.io.File
 import java.io.FileOutputStream
 
 /**
- * live 지표 창의 durable 송신 큐. ACK(accepted/duplicate)가 오기 전에는 지우지 않는다(메모리만 보관한 창은 완료가 아님).
- * 형식: 줄 단위 "E\t<seq>\t<json>" 추가 / "A\t<seq>" 확정 / "Q\t<seq>\t<code>" 격리. 열 때 재생해 미확정만 복원한다.
- * 격리(T05b): 서버가 창을 rejected 로 답하면 재전송해도 같은 결과라 live 송신에서 빼고 코드별로 센다(acked 와 별도).
- * 원본은 journal·archive 경로에 남는다. 격리된 순번은 같은 outbox 수명 동안 다시 넣지 않는다.
+ * feature 창의 durable 송신 큐(SDD-260: REST 배치 업로드의 정본 전송원).
+ * 서버 REST ACK(accepted/duplicate)가 오면 pending 에서 빼되, **삭제하지 않고 ackedItems 로 보관**한다 — 종료 후 summary 대조에서
+ * 서버에 없는 창을 다시 보내기 위한 로컬 사본이다. 소켓 ACK 는 이 큐를 건드리지 않는다(소켓은 방송 전용).
+ *
+ * 형식: 줄 단위 "E\t<seq>\t<json>" 추가 / "B\t<seq>\t<tag>" stream 귀속 / "A\t<seq>" REST 확정 / "R\t<seq>" 재큐잉(확정 취소) /
+ * "Q\t<seq>\t<code>" 격리 / "C\t1" 서버 대조 완료 표식(이후 E 가 오면 무효). 열 때 재생해 상태를 복원한다.
+ * 격리: 서버가 4종 거절 코드(consent_withdrawn·participant_mismatch·stream_not_owned·hash_conflict)로 답한 창. 재전송해도 같은 결과다.
  */
 /** 창이 만들어진 시점의 stream 신원. 재연결·재시작 후에도 이 신원으로만 전송한다. */
 data class StreamTag(val streamId: String, val generation: String, val anchorId: String, val participantId: String)
@@ -17,12 +20,14 @@ data class StreamTag(val streamId: String, val generation: String, val anchorId:
 class OutboxEntry(val seq: Long, val json: JSONObject, val tag: StreamTag)
 
 class MetricOutbox(private val file: File, private val nowMs: () -> Long = { System.currentTimeMillis() }) {
-    private class Item(val seq: Long, val json: JSONObject, val addedAtMs: Long, var tag: StreamTag? = null, val fromDisk: Boolean = false)
+    private class Item(val seq: Long, val json: JSONObject, val addedAtMs: Long, var tag: StreamTag? = null)
 
     private val pending = java.util.TreeMap<Long, Item>()
+    private val ackedItems = java.util.TreeMap<Long, Item>()
     private var out: FileOutputStream? = null
     private var ackedTotal = 0L
     private var lines = 0
+    private var reconciled = false
     private val quarantinedSeqs = java.util.TreeMap<Long, String>() // seq -> 거절 코드
 
     init { load(); out = FileOutputStream(file, true) }
@@ -31,73 +36,117 @@ class MetricOutbox(private val file: File, private val nowMs: () -> Long = { Sys
         if (!file.exists()) return
         val acked = HashSet<Long>()
         val bound = HashMap<Long, StreamTag>()
-        val items = LinkedHashMap<Long, Item>()
+        val items = LinkedHashMap<Long, JSONObject>()
         file.useLines { seq ->
             for (line in seq) {
                 lines++
                 val p = line.split('\t', limit = 3)
                 try {
                     when (p[0]) {
-                        "E" -> items[p[1].toLong()] = Item(p[1].toLong(), JSONObject(p[2]), nowMs(), null, true)
+                        "E" -> { items[p[1].toLong()] = JSONObject(p[2]); reconciled = false }
                         "B" -> { val t = JSONObject(p[2]); bound[p[1].toLong()] = StreamTag(t.getString("s"), t.getString("g"), t.getString("a"), t.getString("p")) }
                         "A" -> acked += p[1].toLong()
+                        "R" -> acked -= p[1].toLong()
                         "Q" -> quarantinedSeqs.putIfAbsent(p[1].toLong(), p.getOrElse(2) { "unknown" })
+                        "C" -> reconciled = true
                     }
                 } catch (_: Exception) { /* 찢긴 마지막 줄 무시 */ }
             }
         }
-        for ((k, v) in items) if (k !in acked && !quarantinedSeqs.containsKey(k)) { v.tag = bound[k]; pending[k] = v }
-        ackedTotal = acked.size.toLong()
+        for ((k, json) in items) {
+            if (quarantinedSeqs.containsKey(k)) continue
+            val item = Item(k, json, nowMs(), bound[k])
+            if (k in acked) ackedItems[k] = item else pending[k] = item
+        }
+        ackedTotal = ackedItems.size.toLong()
     }
 
     @Synchronized
     fun add(seq: Long, json: JSONObject, tag: StreamTag? = null) {
-        if (pending.containsKey(seq) || quarantinedSeqs.containsKey(seq)) return // 같은 순번 재투입은 한 번만(중복 창 방어), 격리 순번은 재투입 금지
+        if (pending.containsKey(seq) || ackedItems.containsKey(seq) || quarantinedSeqs.containsKey(seq)) return // 같은 순번 재투입은 한 번만, 격리 순번은 재투입 금지
         append("E\t$seq\t$json\n")
-        pending[seq] = Item(seq, json, nowMs())
-        if (tag != null) bind(pending.getValue(seq), tag)
+        reconciled = false
+        val item = Item(seq, json, nowMs())
+        pending[seq] = item
+        if (tag != null) bind(item, tag)
     }
 
     private fun bind(i: Item, tag: StreamTag) {
         i.tag = tag
-        append("B\t${i.seq}\t${JSONObject().put("s", tag.streamId).put("g", tag.generation).put("a", tag.anchorId).put("p", tag.participantId)}\n")
+        append("B\t${i.seq}\t${tagJson(tag)}\n")
+    }
+
+    private fun tagJson(t: StreamTag) = JSONObject().put("s", t.streamId).put("g", t.generation).put("a", t.anchorId).put("p", t.participantId)
+
+    /**
+     * 귀속 없이 쌓인 창(stream 이 생기기 전에 만든 창, 또는 귀속 기록 없이 복원된 창)을 주어진 stream 에 귀속(영속)한다.
+     * 같은 세션 디렉터리의 창이라 세션·참가자는 같다. 반환: 귀속한 창 수.
+     */
+    @Synchronized
+    fun bindUntagged(tag: StreamTag): Int {
+        var n = 0
+        for (i in pending.values) if (i.tag == null) { bind(i, tag); n++ }
+        return n
     }
 
     /**
-     * 다음 송신 묶음. 현재 stream 의 창이 있으면 그것만(최신 우선, 최대 max), 없으면 가장 오래된 다른 stream 의 창을
-     * 그 stream 의 옛 신원으로 보낸다 — 한 묶음에 서로 다른 stream 을 섞지 않는다.
-     * 귀속 없이 이번 프로세스에서 넣은 창은 현재 stream 에 귀속(영속)하고, 디스크에서 복원했는데 귀속 기록이 없는 창은
-     * 어느 stream 의 것인지 알 수 없어 새 stream 으로 보내지 않고 격리(stream_unattributed)한다.
+     * REST 전송 후보(오래된 순서, 최대 max). 귀속된 창만, 한 묶음은 한 참가자(요청의 participant_id 가 하나다). stream 은 섞여도 된다.
+     * 귀속 전 창은 격리하지 않고 보관한다(귀속은 stream 이 생기면 bindUntagged 가 한다).
      */
     @Synchronized
-    fun nextBatch(current: StreamTag?, max: Int): List<OutboxEntry>? {
-        for (i in pending.values.filter { it.tag == null && it.fromDisk }) quarantine(i.seq, "stream_unattributed")
-        if (current != null) for (i in pending.values) if (i.tag == null) bind(i, current)
-        val tagged = pending.descendingMap().values.filter { it.tag != null }
-        if (tagged.isEmpty()) return null
-        fun key(t: StreamTag) = t.streamId + "/" + t.generation
-        val group = current?.let { c -> tagged.filter { key(it.tag!!) == key(c) } }?.takeIf { it.isNotEmpty() }
-            ?: tagged.last().let { oldest -> tagged.filter { key(it.tag!!) == key(oldest.tag!!) } }
-        return group.take(max).map { OutboxEntry(it.seq, it.json, it.tag!!) }
+    fun pendingBatch(max: Int): List<OutboxEntry> {
+        val result = ArrayList<OutboxEntry>()
+        var pid: String? = null
+        for (i in pending.values) {
+            val t = i.tag ?: continue
+            if (pid == null) pid = t.participantId else if (t.participantId != pid) continue
+            result += OutboxEntry(i.seq, i.json, t)
+            if (result.size >= max) break
+        }
+        return result
     }
 
+    /** REST 가 저장을 확인(accepted/duplicate)한 창. 삭제하지 않고 대조용으로 보관한다. */
     @Synchronized
     fun ack(seq: Long) {
-        if (pending.remove(seq) == null) return
+        val it = pending.remove(seq) ?: return
+        ackedItems[seq] = it
         ackedTotal++
         append("A\t$seq\n")
-        if (lines > 5000 && pending.size < lines / 4) compact()
     }
 
-    /** 최신 창 우선(plan §3.4: 복구 시 최신창 먼저, 빠진 창은 뒤에서 모두 전송). */
+    /** 대조에서 서버에 없다고 확인된 창을 다시 전송 대상으로 되돌린다. 반환: 되돌린 수. */
     @Synchronized
-    fun newestFirst(max: Int): List<Pair<Long, JSONObject>> = pending.descendingMap().values.take(max).map { it.seq to it.json }
+    fun requeue(seqs: Collection<Long>): Int {
+        var n = 0
+        for (s in seqs) {
+            val it = ackedItems.remove(s) ?: continue
+            pending[s] = it; ackedTotal--; n++
+            append("R\t$s\n")
+        }
+        if (n > 0) reconciled = false
+        return n
+    }
 
-    /** 영구 거절(재전송 금지) 창을 live 송신에서 뺀다. 아직 큐에 없던 순번(예: 범위 초과)도 기록만 한다. */
+    /** 확정(REST ACK)된 채 보관 중인 창(귀속된 것만). 대조용. */
+    @Synchronized
+    fun ackedEntries(): List<OutboxEntry> = ackedItems.values.mapNotNull { i -> i.tag?.let { OutboxEntry(i.seq, i.json, it) } }
+
+    /** 서버 summary 대조가 끝났음을 영속한다. 새 창이 들어오면 자동 무효. */
+    @Synchronized
+    fun markReconciled() {
+        if (reconciled) return
+        reconciled = true
+        append("C\t1\n")
+    }
+
+    @Synchronized fun isReconciled(): Boolean = reconciled && pending.isEmpty()
+
+    /** 영구 거절(재전송 금지) 창을 송신에서 뺀다. 아직 큐에 없던 순번(예: 범위 초과)도 기록만 한다. */
     @Synchronized
     fun quarantine(seq: Long, code: String) {
         if (quarantinedSeqs.containsKey(seq)) return
-        pending.remove(seq)
+        pending.remove(seq); ackedItems.remove(seq)
         val c = code.takeIf { REASON.matches(it) } ?: "unknown"
         quarantinedSeqs[seq] = c
         append("Q\t$seq\t$c\n")
@@ -109,25 +158,30 @@ class MetricOutbox(private val file: File, private val nowMs: () -> Long = { Sys
     @Synchronized fun acked(): Long = ackedTotal
     @Synchronized fun oldestAgeMs(): Long? = pending.firstEntry()?.value?.let { nowMs() - it.addedAtMs }
     @Synchronized fun contains(seq: Long) = pending.containsKey(seq)
+    /** 로컬에 보관 중인(격리 제외) 창의 가장 큰 순번. 없으면 null. */
+    @Synchronized fun maxSequence(): Long? = listOfNotNull(pending.lastEntry()?.key, ackedItems.lastEntry()?.key).maxOrNull()
 
     private fun append(s: String) {
         val o = out ?: return
         o.write(s.toByteArray()); o.flush(); o.fd.sync(); lines++
+        // 확정 창도 보관하므로 줄 수는 보관 창 수에 비례한다. 재큐잉·격리로 죽은 줄이 많이 쌓였을 때만 압축한다.
+        if (lines > 20_000 && lines > 6 * (pending.size + ackedItems.size) + 1000) compact()
     }
 
     private fun compact() {
         out?.close()
         val tmp = File(file.path + ".tmp")
         tmp.bufferedWriter().use { w ->
-            for (i in pending.values) {
+            for (i in (ackedItems.values + pending.values).sortedBy { it.seq }) {
                 w.write("E\t${i.seq}\t${i.json}\n")
-                i.tag?.let { t -> w.write("B\t${i.seq}\t${JSONObject().put("s", t.streamId).put("g", t.generation).put("a", t.anchorId).put("p", t.participantId)}\n") }
+                i.tag?.let { t -> w.write("B\t${i.seq}\t${tagJson(t)}\n") }
+                if (ackedItems.containsKey(i.seq)) w.write("A\t${i.seq}\n")
             }
-            // 격리 기록은 압축 후에도 남긴다(재시작 후 재투입·재전송 방지, 카운터 유지)
             for ((q, c) in quarantinedSeqs) w.write("Q\t$q\t$c\n")
+            if (reconciled) w.write("C\t1\n")
         }
         tmp.renameTo(file)
-        lines = pending.size + quarantinedSeqs.size
+        lines = (ackedItems.size * 3) + (pending.size * 2) + quarantinedSeqs.size
         out = FileOutputStream(file, true)
     }
 

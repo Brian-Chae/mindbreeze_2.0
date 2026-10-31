@@ -37,6 +37,10 @@ class NativeRuntime private constructor(
     val modelVersion: String = "b0-cohort-2",
 ) {
     private val archiveExec = Executors.newSingleThreadExecutor()
+    /** SDD-260 N1: feature 정본 저장 = REST 배치. 소켓(READY·방송)과 무관하게 5초 주기로 돈다. */
+    private val syncExec = Executors.newSingleThreadScheduledExecutor()
+    private val uploader = FeatureUploader(cfg.apiBase, cfg.sessionId, box, { live.featureMeta() }, { tokens.current() }, { tokens.refresh() is RefreshOutcome.Ok }, HTTP)
+    private val syncRunner = FeatureSyncRunner(FeatureSyncLoop({ uploader.flushOnce() }), syncExec)
     private val nativeHeartbeat = AtomicLong()
     @Volatile var lastVerifiedAtMs: Long? = null
         private set
@@ -67,6 +71,8 @@ class NativeRuntime private constructor(
             if (s != LiveState.READY) captureRequested = live.streamId != null
         }
         live.onStreamEnded = { status, cutoff -> onCaptureEnded?.invoke(status, cutoff) }
+        live.onStreamBound = { syncRunner.trigger() } // stream 확정 즉시 쌓인 창을 REST 로 보낸다
+        syncRunner.start(0)
         sched.post {
             live.start()
             engine.replayPending() // 복구 재생 프레임 → outbox(순번 중복 거름)
@@ -138,7 +144,8 @@ class NativeRuntime private constructor(
         if (finals != null) sched.post { live.closeCapture(finals, reason) }
         RuntimeConfig.save(File(dir, "runtime.json"), cfg.copy(active = false, streamId = live.streamId, participantId = live.participantId))
         kickArchive()
-        sched.postDelayed(5_000) { live.stop(); box.close(); sched.quit() }
+        syncRunner.trigger() // 마지막 배치 전송 시도(종료 후 잔여는 ScopeSweeper 가 이어받는다)
+        sched.postDelayed(5_000) { live.stop(); syncRunner.stop(); syncExec.shutdown(); box.close(); sched.quit() }
         engine.close()
     }
 

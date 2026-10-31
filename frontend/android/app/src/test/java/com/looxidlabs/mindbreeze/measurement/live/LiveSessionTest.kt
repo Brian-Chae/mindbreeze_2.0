@@ -143,43 +143,38 @@ class LiveSessionTest {
         assertEquals(LiveState.RESYNCING, e.live.state)
     }
 
-    @Test fun metricsNotSentBeforeReadyAndNewestFirstBatchOf60AfterReady() {
+    @Test fun metricsNotBroadcastBeforeReadyButAlwaysQueuedForRest() {
         val e = env()
         e.live.start(); e.t.open()
         for (i in 1..100) e.live.onFrame(frame(i))
         assertTrue(e.t.sentOf("live:metric").isEmpty())
+        assertEquals("소켓이 준비되지 않아도 창은 모두 outbox 에 쌓인다(REST 정본)", 100, e.box.size())
         e.t.server("live:snapshot", snapshot()); e.t.server("live:sync_complete", JSONObject("""{"snapshot_id":"00000046-0000-4000-8000-000000000046"}"""))
         capture(e)
-        e.live.pump()
-        val first = e.t.sentOf("live:metric")
-        assertTrue(first.isNotEmpty())
-        val w = first[0].getJSONArray("windows")
-        assertEquals(60, w.length())
-        assertEquals("100", w.getJSONObject(59).getString("sequence")) // 최신 배치 우선(배치 내부는 오름차순)
-        assertEquals("41", w.getJSONObject(0).getString("sequence"))
-        assertEquals(stream, w.getJSONObject(0).getString("stream_id"))
-        assertEquals(pid, w.getJSONObject(0).getString("participant_id"))
-        assertEquals("3", w.getJSONObject(0).getString("stream_generation"))
-        assertEquals(sid, w.getJSONObject(0).getString("session_id"))
+        e.live.onFrame(frame(101))
+        val sent = e.t.sentOf("live:metric")
+        assertEquals("방송은 현재 창 하나뿐(옛 창 일괄 재전송 없음)", 1, sent.size)
+        val w = sent[0].getJSONArray("windows")
+        assertEquals(1, w.length())
+        assertEquals("101", w.getJSONObject(0).getString("sequence"))
+        assertEquals(stream, w.getJSONObject(0).getString("stream_id")); assertEquals(pid, w.getJSONObject(0).getString("participant_id"))
+        assertEquals("3", w.getJSONObject(0).getString("stream_generation")); assertEquals(sid, w.getJSONObject(0).getString("session_id"))
+        assertEquals("귀속된 100창 + 방송 1창 모두 REST 전송 후보", 60, e.box.pendingBatch(60).size)
+        assertEquals(101, e.box.size())
     }
 
-    @Test fun metricAckRemovesAcceptedAndDuplicateButKeepsRetryable() {
+    @Test fun metricSocketAckDoesNotRemoveFromOutbox() {
         val e = env()
         e.t.acks["live:metric"] = { d ->
             val acks = JSONArray()
             val ws = d.getJSONArray("windows")
-            for (i in 0 until ws.length()) {
-                val seq = ws.getJSONObject(i).getString("sequence")
-                val st = when (seq) { "1" -> "accepted"; "2" -> "duplicate"; else -> "retryable" }
-                acks.put(JSONObject().put("sequence", seq).put("status", st).put("durable", st != "retryable").put("code", if (st == "retryable") "db_busy" else JSONObject.NULL))
-            }
+            for (i in 0 until ws.length()) acks.put(JSONObject().put("sequence", ws.getJSONObject(i).getString("sequence")).put("status", "projected"))
             JSONObject().put("ok", true).put("acks", acks)
         }
         toReady(e); capture(e)
         for (i in 1..3) e.live.onFrame(frame(i))
-        e.live.pump()
-        assertFalse(e.box.contains(1)); assertFalse(e.box.contains(2)); assertTrue(e.box.contains(3))
-        assertEquals(2L, e.box.acked())
+        assertTrue(e.box.contains(1)); assertTrue(e.box.contains(2)); assertTrue(e.box.contains(3))
+        assertEquals("소켓 ACK 로는 acked 처리되지 않는다", 0L, e.box.acked())
     }
 
     @Test fun presenceEveryFiveSecondsWithStreamAndOwnerGeneration() {
@@ -386,10 +381,12 @@ class LiveSessionTest {
 
     @Test fun framesForUnknownStreamStayQueuedUntilStreamIsKnown() {
         val e = env(); toReady(e)
-        e.live.onFrame(frame(1)); e.live.pump()
+        e.live.onFrame(frame(1))
         assertTrue(e.t.sentOf("live:metric").isEmpty())
-        assertTrue(e.box.contains(1))
-        capture(e); e.live.pump()
+        assertTrue(e.box.contains(1)); assertTrue(e.box.pendingBatch(60).isEmpty())
+        capture(e)
+        assertEquals(listOf(1L), e.box.pendingBatch(60).map { it.seq })
+        e.live.onFrame(frame(2))
         assertEquals(1, e.t.sentOf("live:metric").size)
     }
 }
