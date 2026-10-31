@@ -65,7 +65,7 @@ final class LiveSessionTests: XCTestCase {
         live.pump()
         XCTAssertFalse(sentEvents().contains { $0.name == "live:metric" })
     }
-    func testMetricBatchSentNewestFirstAndAckedOnlyWhenDurable() throws {
+    func testMetricBroadcastSentAscendingAndSocketAckNeverAcks() throws {
         driveToReady(); ackLast("{\"ok\":true,\"state\":\"READY\"}")
         let box = try MetricOutbox(dir: dir, sync: .none); live.attach(outbox: box)
         for i in 1...3 { _ = try box.enqueue(["sequence": "\(i)", "feature_hash": "h\(i)"]) }
@@ -73,11 +73,10 @@ final class LiveSessionTests: XCTestCase {
         let m = sentEvents().last!
         XCTAssertEqual(m.name, "live:metric")
         let seqs = (m.payload["windows"] as! [[String: Any]]).map { $0["sequence"] as! String }
-        XCTAssertEqual(seqs, ["3", "2", "1"], "최신창 우선")
-        ackLast("{\"acks\":[{\"sequence\":\"3\",\"status\":\"accepted\",\"durable\":true},{\"sequence\":\"2\",\"status\":\"retryable\",\"durable\":false},{\"sequence\":\"1\",\"status\":\"rejected\",\"durable\":false,\"code\":\"hash\"}]}")
-        XCTAssertEqual(box.ackedSequences, [3])
-        XCTAssertEqual(box.pendingSequences, [1, 2], "ACK 안 된 창은 완료로 세지 않는다")
-        XCTAssertEqual(box.rejectedSequences, [1], "거절은 격리(재전송 안 함), 보존")
+        XCTAssertEqual(seqs, ["1", "2", "3"], "방송은 오름차순")
+        ackLast("{\"acks\":[{\"sequence\":\"3\",\"status\":\"projected\"},{\"sequence\":\"2\",\"status\":\"ignored\"},{\"sequence\":\"1\",\"status\":\"accepted\",\"durable\":true}]}")
+        XCTAssertEqual(box.ackedSequences, [], "소켓 ACK(durable:true 포함)로 acked 하지 않는다")
+        XCTAssertEqual(box.pendingSequences, [1, 2, 3])
     }
     func testAckedSetSurvivesReopen() throws {
         let box = try MetricOutbox(dir: dir, sync: .none)
@@ -172,15 +171,6 @@ final class LiveSessionTests: XCTestCase {
         XCTAssertEqual(live.state, .terminal)
     }
 
-    func testAcceptedButNotDurableIsNotCountedAsAcked() throws {
-        driveToReady(); ackLast("{\"ok\":true,\"state\":\"READY\"}")
-        let box = try MetricOutbox(dir: dir, sync: .none); live.attach(outbox: box)
-        _ = try box.enqueue(["sequence": "1", "feature_hash": "h"])
-        live.pump()
-        ackLast("{\"acks\":[{\"sequence\":\"1\",\"status\":\"accepted\",\"durable\":false}]}")
-        XCTAssertEqual(box.ackedSequences, [], "durable:true 가 아니면 완료가 아니다")
-        XCTAssertEqual(box.pendingSequences, [1])
-    }
     func testRevokedSessionRefusesToRejoinEvenIfSocketReconnects() throws {
         driveToReady(); ackLast("{\"ok\":true,\"state\":\"READY\"}")
         t.serverSend("42/session-live,[\"live:access_revoked\",{\"code\":\"expelled\",\"revision\":\"4\"}]")

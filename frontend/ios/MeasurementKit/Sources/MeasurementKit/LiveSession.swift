@@ -67,9 +67,6 @@ public final class LiveSession {
     private struct Pending { var command: [String: Any]; var attempt: Int; var firstSentAt: TimeInterval; var inFlight: Bool; var timer: Cancellable?; var autoEpoch: Bool }
     private var commands: [String: Pending] = [:]
     private var commandOrder: [String] = []
-    private var isolateMetrics = false          // 배치 전체 검증 실패 → 창 하나씩 보내 원인 창만 격리
-    private var metricHalted = false            // forbidden 등 연결 단위 오류 — 다음 READY 까지 보내지 않는다
-    private var metricRetryTimer: Cancellable?
     private var pendingDevice: [String: Any]?
     private var deviceInFlight = false
     private var deviceRetryTimer: Cancellable?
@@ -82,7 +79,7 @@ public final class LiveSession {
     }
 
     public func attach(outbox: MetricOutbox) { self.outbox = outbox }
-    /// 진단용: 연결된 live outbox 의 현재 카운트(pending/acked/rejected).
+    /// 진단용: 연결된 outbox 의 현재 카운트(pending/acked/rejected). acked 는 REST 응답으로만 늘어난다.
     public var outboxCounts: MetricOutbox.Counts? { outbox?.counts() }
     public func setOwner(streamId: String, generation: UInt64) { owner = (streamId, generation) }
     public func clearOwner() { owner = nil }
@@ -106,7 +103,7 @@ public final class LiveSession {
         client.on("live:resync_required") { [weak self] args, _ in self?.sendResync(reason: ((args.first as? [String: Any])?["reason"] as? String) ?? "server_requested") }
         client.on("live:degraded") { [weak self] _, _ in if self?.state == .ready { self?.state = .degraded } }
         client.on("live:auth_expired") { [weak self] _, _ in self?.refreshAndReauth() }
-        client.on("live:metric_ack") { [weak self] args, _ in if let o = args.first as? [String: Any] { self?.applyMetricAck(o) } }
+        client.on("live:metric_ack") { [weak self] args, _ in if let o = args.first as? [String: Any] { self?.noteBroadcastAck(o) } }
         client.on("live:ack") { [weak self] args, _ in if let o = args.first as? [String: Any] { self?.handleCommandAck(o) } }
     }
 
@@ -232,7 +229,6 @@ public final class LiveSession {
         let buffered = eventBuffer; eventBuffer.removeAll()
         for e in buffered { handleEvent([e]) }
         armHeartbeat(); startPresence()
-        metricHalted = false
         flushCommands()
         pump()
         sendDevice()
@@ -311,8 +307,8 @@ public final class LiveSession {
     // MARK: 권한·종료
 
     private func handleRevoked() { stopTimers(); state = .revoked; client.close() }
-    /// 업무 종료: presence/heartbeat 는 멈추지만 cutoff 이전 창 drain 을 위해 metric 전송과 capture.close 는 허용한다.
-    private func handleTerminal() { stopTimers(); state = .terminal; pump() }
+    /// 업무 종료: presence/heartbeat 는 멈춘다. capture.close 는 허용한다(feature 저장은 소켓이 아니라 REST 가 계속한다).
+    private func handleTerminal() { stopTimers(); state = .terminal }
 
     // MARK: 토큰
 
@@ -344,75 +340,36 @@ public final class LiveSession {
         }
     }
 
-    // MARK: metric
+    // MARK: metric (SDD-260: 방송 전용 — 저장은 FeatureUploader(REST)가 한다)
 
+    /// 방송 1회에 싣는 최신창 수. 코치 화면용 best-effort 라 적체를 따라잡지 않는다(저장과 무관).
+    static let broadcastWindows = 5
+    private var lastBroadcastSequence: UInt64 = 0
+
+    /// 소켓 `live:metric` 은 코치 실시간 화면용 방송이다. DB 저장 경로가 아니므로 ACK·거절·오류로 outbox 상태를 바꾸지 않고, 재시도·격리·분할도 하지 않는다.
     public func pump() {
-        guard state == .ready || state == .terminal, client.isConnected, !metricHalted, metricRetryTimer == nil,
-              let box = outbox, inflight.isEmpty else { return }
-        let windows = box.nextBatch(max: isolateMetrics ? 1 : 60, excluding: inflight)
+        guard state == .ready, client.isConnected, let box = outbox, inflight.isEmpty else { return }
+        let windows = box.broadcastWindows(after: lastBroadcastSequence, count: Self.broadcastWindows)
         guard !windows.isEmpty else { return }
         let seqs = Set(windows.compactMap { ($0["sequence"] as? String).flatMap { UInt64($0) } })
         inflight = seqs
         var payload = base(); payload["windows"] = windows
-        Self.log.info("live:metric 송신 windows=\(windows.count) seq=\(seqs.min() ?? 0)...\(seqs.max() ?? 0)")
         client.emit("live:metric", payload, ackTimeout: 2) { [weak self] r in
             guard let self = self else { return }
             self.inflight.subtract(seqs)
-            guard case .success(let v) = r, let o = v as? [String: Any] else {
-                if case .failure(let e) = r { Self.log.error("live:metric 응답 실패 \(String(describing: e), privacy: .public) — 1초 뒤 재시도") }
-                self.scheduleMetricRetry(after: 1); return
-            }
-            if o["acks"] is [[String: Any]] {
-                if self.isolateMetrics && seqs.count == 1 { self.isolateMetrics = false }
-                self.applyMetricAck(o); return
-            }
-            self.handleMetricError(o, seqs: seqs, box: box)
+            // 응답 종류와 무관하게 이 창들은 다시 방송하지 않는다(실패해도 다음 최신창이 곧 온다). 저장은 REST 가 보장한다.
+            if let m = seqs.max() { self.lastBroadcastSequence = max(self.lastBroadcastSequence, m) }
+            if case .success(let v) = r, let o = v as? [String: Any] { self.noteBroadcastAck(o) }
         }
     }
 
-    /// 배치 단위 오류({ok:false,code}). 재시도 가능(not_ready·*_ingest_unavailable·db_unavailable)은 pending 유지 후 재시도,
-    /// 연결 단위 오류는 다음 READY 까지 중단, 그 밖의 검증 실패는 창 하나씩 분리해 원인 창만 격리한다.
-    private func handleMetricError(_ o: [String: Any], seqs: Set<UInt64>, box: MetricOutbox) {
-        let code = (o["code"] as? String) ?? "rejected"
-        Self.log.error("live:metric 배치 거절 code=\(code, privacy: .public) field=\((o["field"] as? String) ?? "-", privacy: .public) retryable=\(((o["retryable"] as? Bool) == true) ? "y" : "n", privacy: .public) windows=\(seqs.count)")
-        if (o["retryable"] as? Bool) == true {
-            scheduleMetricRetry(after: TimeInterval((o["retry_after_ms"] as? NSNumber)?.doubleValue ?? 1000) / 1000)
-        } else if Self.connectionLevelMetricErrors.contains(code) {
-            metricHalted = true
-        } else if seqs.count == 1 {
-            box.markRejected(Array(seqs), code: code)
-            pump()
-        } else {
-            isolateMetrics = true
-            scheduleMetricRetry(after: 0)
+    private func noteBroadcastAck(_ o: [String: Any]) {
+        guard let acks = o["acks"] as? [[String: Any]] else { return }
+        let projected = acks.compactMap { a -> UInt64? in
+            (a["status"] as? String) == "projected" ? (a["sequence"] as? String).flatMap { UInt64($0) } : nil
         }
-    }
-    static let connectionLevelMetricErrors: Set<String> = ["forbidden", "unsupported_protocol", "unsupported_schema", "access_revoked"]
-
-    private func scheduleMetricRetry(after t: TimeInterval) {
-        metricRetryTimer?.cancel()
-        metricRetryTimer = scheduler.schedule(after: t) { [weak self] in self?.metricRetryTimer = nil; self?.pump() }
-    }
-
-    private func applyMetricAck(_ o: [String: Any]) {
-        guard let acks = o["acks"] as? [[String: Any]], let box = outbox else { return }   // ok:false(not_ready 등)는 pending 유지
-        var ok: [UInt64] = [], bad: [(UInt64, String?)] = []
-        for a in acks {
-            guard let s = (a["sequence"] as? String).flatMap({ UInt64($0) }) else { continue }
-            let durable = (a["durable"] as? Bool) == true
-            switch a["status"] as? String {
-            case "accepted", "duplicate": if durable { ok.append(s) }
-            case "rejected": bad.append((s, a["code"] as? String))
-            default: break          // retryable: pending 유지(다음 pump 에서 재전송)
-            }
-        }
-        if !bad.isEmpty { Self.log.error("live:metric 창 거절 \(bad.count)건 codes=\(bad.map { $0.1 ?? "-" }.prefix(5).joined(separator: ","), privacy: .public) first_seq=\(bad.first?.0 ?? 0)") }
-        Self.log.info("live:metric ACK durable=\(ok.count) rejected=\(bad.count) total=\(acks.count)")
-        box.markAcked(ok)
-        for (s, c) in bad { box.markRejected([s], code: c) }
-        if let m = ok.max() { lastAckSequence = max(lastAckSequence, m) }
+        if let m = projected.max() { lastAckSequence = max(lastAckSequence, m) }
         onMetricAck?(o)
-        pump()
     }
 
     // MARK: command
