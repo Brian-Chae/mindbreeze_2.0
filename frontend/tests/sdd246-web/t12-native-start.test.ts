@@ -82,8 +82,8 @@ describe('T12 v1 feature 업로드 차단 배선', () => {
     expect(src).toMatch(/retransmitInFlightRef\.current \|\| !v1FeatureUploadRef\.current/);
     expect(src).toMatch(/!observation && v1FeatureUploadRef\.current && sessionId/);
   });
-  it('MemberClassContainer 는 web_wasm/native 일 때 끈다', () => {
+  it('SDD-260: MemberClassContainer 는 v1 feature 업로드를 항상 끈다(정본 = REST 배치)', () => {
     const c = readFileSync('src/components/class/player/member/MemberClassContainer.tsx', 'utf8');
-    expect(c).toContain("v1FeatureUpload: v2Path !== 'web_wasm' && v2Path !== 'native'");
+    expect(c).toContain('v1FeatureUpload: false');
   });
 });

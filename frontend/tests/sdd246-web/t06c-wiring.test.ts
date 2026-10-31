@@ -71,7 +71,7 @@ function deps(opts: { initOk?: boolean; startAck?: CommandAck } = {}) {
   };
   const createWorker = vi.fn(() => worker);
   const session = new WebMeasurementSession({
-    client, sessionId: SID, createWorker,
+    client, sessionId: SID, accountId: 'user:u1', createWorker,
     subscribeRaw: (fn) => { rawFn = fn; return unsub; },
     monotonicUs: () => 6_000_000, uuid: () => '0000000c-0000-4000-8000-00000000000c',
   });

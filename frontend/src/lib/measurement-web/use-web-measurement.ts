@@ -5,6 +5,7 @@ import { isBleSupported } from '../ble';
 import { isNativeMeasurementAvailable } from '../native-measurement';
 import { isLiveProtocolV2Enabled } from '../session-live/live-flag';
 import type { UseLiveV2Result } from '../session-live/use-live-v2';
+import type { FeatureAuth } from '../api/feature-batch';
 import type { WorkerLike } from './capture-adapter';
 import type { BandReport } from './capture-controller';
 import { decideMeasurementPath, type MeasurementPath } from './measurement-path';
@@ -21,6 +22,10 @@ export interface UseWebMeasurementOptions {
   band: BandReport | null;
   /** 대기열·종료 등 측정하지 않을 화면 */
   enabled: boolean;
+  /** SDD-260: feature outbox 소유 계정 id(없으면 정본 저장을 시작하지 않는다) */
+  accountId: string | null;
+  /** SDD-260: feature REST 인증 */
+  featureAuth?: FeatureAuth;
 }
 
 export interface UseWebMeasurementResult {
@@ -47,8 +52,10 @@ export function useWebMeasurementV2(o: UseWebMeasurementOptions): UseWebMeasurem
   const [status, setStatus] = useState<WebMeasurementStatus>('idle');
   const [code, setCode] = useState<string | null>(null);
   const sessionRef = useRef<WebMeasurementSession | null>(null);
+  const authRef = useRef<FeatureAuth | undefined>(o.featureAuth);
+  authRef.current = o.featureAuth;
   // READY 가 된 뒤 한 번 시작한다. 이후 DEGRADED 로 잠시 떨어져도 수집은 유지(전송만 대기열에서 기다린다).
-  const canStart = path === 'web_wasm' && client !== null && ready;
+  const canStart = path === 'web_wasm' && client !== null && ready && o.accountId !== null;
   const [armed, setArmed] = useState(false);
   useEffect(() => {
     if (canStart) setArmed(true);
@@ -60,6 +67,8 @@ export function useWebMeasurementV2(o: UseWebMeasurementOptions): UseWebMeasurem
     const s = new WebMeasurementSession({
       client,
       sessionId: o.sessionId,
+      accountId: o.accountId as string,
+      featureAuth: authRef.current,
       createWorker: createCoreWorker,
       onStatus: (st, c) => { setStatus(st); setCode(c); },
     });
@@ -69,7 +78,7 @@ export function useWebMeasurementV2(o: UseWebMeasurementOptions): UseWebMeasurem
       sessionRef.current = null;
       void s.stop('client_stopped');
     };
-  }, [armed, client, o.sessionId]);
+  }, [armed, client, o.sessionId, o.accountId]);
 
   const self = o.selfParticipantId;
   const myDevice = self ? o.liveV2?.state?.devices[self]?.data : undefined;
