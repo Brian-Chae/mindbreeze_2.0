@@ -421,3 +421,66 @@ def capabilities(session_id: str, participant_id: UUID | None, db: DBSession, *,
         "events": True, "max_batch": MAX_BATCH, "max_object_bytes": MAX_OBJECT_BYTES,
         "upload_immutability": "checksum_bound", "legacy_eeg_raw": True, "signals": signals,
     }
+
+
+# ---------------------------------------------------------------------------
+# SDD-260 — 원시 업로드 현황(종료 후 대조용). 계약: specs/sdd-260-live-ingest-bottleneck/contract.md §3
+# ---------------------------------------------------------------------------
+
+RAW_SUMMARY_ALIAS_MAX = 5000
+RAW_SUMMARY_MAX_RANGES = 200
+
+
+def raw_summary(db: DBSession, sid: UUID, participant_id: UUID) -> dict:
+    """참가자의 eeg_raw_chunks 상태 집계 + uploaded 청크의 영수증 해시. 슬롯 비적용(읽기 전용)."""
+    import hashlib
+
+    rows = db.query(
+        EEGRawChunk.stream_id, EEGRawChunk.segment_id, EEGRawChunk.signal_type, EEGRawChunk.chunk_index,
+        EEGRawChunk.upload_status, EEGRawChunk.checksum, EEGRawChunk.size_bytes, EEGRawChunk.chunk_alias,
+        EEGRawChunk.uploaded_at, EEGRawChunk.created_at,
+    ).filter(EEGRawChunk.session_id == sid, EEGRawChunk.participant_id == participant_id).all()
+    groups: dict[tuple, dict] = {}
+    receipt: list[tuple] = []
+    aliases: list[str] = []
+    latest = None
+    for stream_id, seg, sig, idx, status, checksum, size, alias, up_at, cr_at in rows:
+        g = groups.setdefault((stream_id, seg, sig), {"uploaded": 0, "pending": 0, "failed": 0, "idxs": []})
+        key = status if status in ("uploaded", "failed") else "pending"
+        g[key] += 1
+        ts = up_at or cr_at
+        if ts is not None and (latest is None or ts > latest):
+            latest = ts
+        if status == "uploaded":
+            g["idxs"].append(int(idx))
+            receipt.append((stream_id, seg, sig, int(idx), checksum or "", int(size or 0)))
+            if alias:
+                aliases.append(alias)
+    streams = []
+    for (stream_id, seg, sig), g in sorted(groups.items()):
+        idxs = sorted(g["idxs"])
+        missing: list[list[int]] = []
+        truncated = False
+        for a, b in zip(idxs, idxs[1:]):
+            if b - a > 1:
+                if len(missing) >= RAW_SUMMARY_MAX_RANGES:
+                    truncated = True
+                    break
+                missing.append([a + 1, b - 1])
+        streams.append({
+            "stream_id": stream_id, "segment_id": seg, "signal_type": sig,
+            "uploaded": g["uploaded"], "pending": g["pending"], "failed": g["failed"],
+            "min_index": idxs[0] if idxs else None, "max_index": idxs[-1] if idxs else None,
+            "missing_ranges": missing, "truncated": truncated,
+        })
+    receipt.sort()
+    digest = hashlib.sha256("|".join("|".join(str(x) for x in r) for r in receipt).encode()).hexdigest()
+    aliases.sort()
+    return {
+        "session_id": str(sid), "participant_id": str(participant_id),
+        "total": len(rows), "uploaded": sum(s["uploaded"] for s in streams),
+        "pending": sum(s["pending"] for s in streams), "failed": sum(s["failed"] for s in streams),
+        "streams": streams,
+        "aliases_uploaded": aliases[:RAW_SUMMARY_ALIAS_MAX], "aliases_truncated": len(aliases) > RAW_SUMMARY_ALIAS_MAX,
+        "receipt_hash": digest, "updated_at": latest.isoformat() if latest is not None else None,
+    }

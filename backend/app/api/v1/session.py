@@ -943,6 +943,19 @@ def ack_eeg_raw(
     )
 
 
+@router.get("/{session_id}/biosignal-raw/summary")
+def get_biosignal_raw_summary(
+    session_id: str,
+    participant_id: str | None = Query(None),
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-260: 원시 업로드 현황(종료 후 대조). 본인·호스트만, 슬롯 비적용. 계약: contract.md §3."""
+    sid, pid = _summary_target(session_id, participant_id, x_entry_credential, current_user, db)
+    return biosignal_service.raw_summary(db, sid, pid)
+
+
 @router.post("/{session_id}/biosignal-raw/presign", response_model=biosignal_schema.PresignResponse, dependencies=[Depends(archive_upload_slot)])
 def presign_biosignal_raw(
     session_id: str,
