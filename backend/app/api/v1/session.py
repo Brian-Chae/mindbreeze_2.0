@@ -804,7 +804,7 @@ def add_marker(
     )
 
 
-@router.post("/{session_id}/features/batch", response_model=FeatureBatchResponse)
+@router.post("/{session_id}/features/batch", response_model=FeatureBatchResponse, response_model_exclude_none=True)
 def ingest_features_batch(
     session_id: str,
     payload: dict = Body(...),
