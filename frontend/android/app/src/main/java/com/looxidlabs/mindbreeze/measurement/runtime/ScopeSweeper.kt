@@ -188,6 +188,16 @@ class ScopeSweeper(
 
     companion object {
         const val MARKER = "sync-complete.json"
+
+        /** 앱 컨텍스트용: 현재 로그인 토큰 저장소 + 실행 중 NativeRuntime 의 세션은 건너뜀. */
+        fun forContext(ctx: android.content.Context): ScopeSweeper {
+            val root = File(ctx.filesDir, "measurement")
+            val cfg = RuntimeConfig.load(File(root, "runtime.json"))
+            val store = KeystoreFactory.tokenStore(ctx)
+            val tokens = com.looxidlabs.mindbreeze.measurement.live.HttpTokenSource(cfg?.apiBase ?: "", store)
+            return ScopeSweeper(root, { tokens }, OkHttpClient(), { sid -> NativeRuntimeHolder.current()?.cfg?.sessionId == sid })
+        }
+
         private const val MAX_FLUSHES = 2000
         private const val MAX_ROUNDS = 6
     }

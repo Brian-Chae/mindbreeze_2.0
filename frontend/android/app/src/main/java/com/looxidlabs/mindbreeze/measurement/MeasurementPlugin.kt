@@ -39,7 +39,20 @@ class MeasurementPlugin : Plugin() {
         }
     }
 
-    override fun handleOnStart() { foreground = true; startEmit() }
+    override fun handleOnStart() { foreground = true; startEmit(); resumeAll() }
+
+    /** SDD-260 N3·N6: 앱 시작/포그라운드 복귀 때 측정 중이면 즉시 REST 1회, 끊긴 모든 세션 scope 는 지터를 두고 이어 올린다. */
+    private fun resumeAll() {
+        MeasurementManager.runtime?.resumeUploads()
+        com.looxidlabs.mindbreeze.measurement.runtime.ArchiveWorker.scheduleWithJitter(context, 0, 20)
+    }
+
+    private var netCb: android.net.ConnectivityManager.NetworkCallback? = null
+    override fun load() {
+        val cm = context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager ?: return
+        val cb = object : android.net.ConnectivityManager.NetworkCallback() { override fun onAvailable(network: android.net.Network) { resumeAll() } }
+        try { cm.registerDefaultNetworkCallback(cb); netCb = cb } catch (_: Exception) { }
+    }
     /** 사용자가 설정 화면에서 돌아오면 배터리 최적화 상태를 다시 읽어 바뀌었을 때만 알린다(읽기만, 변경하지 않음). */
     override fun handleOnResume() {
         val now = BatteryPolicy.read(context)
@@ -49,7 +62,10 @@ class MeasurementPlugin : Plugin() {
     }
     private var lastBattery: String? = null
     override fun handleOnStop() { foreground = false }
-    override fun handleOnDestroy() { emitting = false; ui.removeCallbacks(emitTask) }
+    override fun handleOnDestroy() {
+        emitting = false; ui.removeCallbacks(emitTask)
+        netCb?.let { try { (context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager).unregisterNetworkCallback(it) } catch (_: Exception) { } }
+    }
 
     private fun startEmit() { if (!emitting) { emitting = true; ui.postDelayed(emitTask, 1000) } }
 
@@ -151,6 +167,7 @@ class MeasurementPlugin : Plugin() {
         // 계약 MeasurementSnapshot(bridge) 밖의 진단 필드: 배터리 최적화 상태·live 격리 수(T01 계약 반영 전까지 최상위에 둔다)
         o.put("batteryOptimization", json(BatteryPolicy.read(context)))
         if (rt != null) o.put("liveQuarantined", rt.box.quarantined())
+        if (rt != null) o.put("uploadCounts", json(rt.uploadCounts()))
         if (rt != null) o.put("bridge", json(BridgeModel.snapshot(rt.inputs(MeasurementManager.state.name, MeasurementManager.blockedReason))))
         call.resolve(o)
     }

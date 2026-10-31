@@ -23,6 +23,13 @@ object ArchiveClassifier {
         return maxOf(exp, retryAfterMs ?: 0L)
     }
 
+    /** SDD-260 V-C10: Retry-After 는 하한, 그 위에 full jitter(0..상한)를 더해 40대가 같은 순간에 몰리지 않게 한다. */
+    fun jitteredBackoffMs(attempts: Int, retryAfterMs: Long?, rnd: Double = Math.random()): Long {
+        val floor = retryAfterMs ?: 0L
+        val cap = minOf(BACKOFF_MAX_MS, BACKOFF_BASE_MS * (1L shl minOf(maxOf(0, attempts), 20)))
+        return floor + (rnd * cap).toLong()
+    }
+
     /** body 는 파싱된 오류 본문(없으면 빈 객체), status<=0 은 네트워크 오류. */
     @Suppress("UNUSED_PARAMETER")
     fun classify(stage: ArchiveStage, status: Int, body: JSONObject?, headerRetryAfterSec: String?): ArchiveDecision {

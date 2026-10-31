@@ -85,9 +85,27 @@ class NativeRuntime private constructor(
             nativeHeartbeat.incrementAndGet()
             if (!stopping) { engine.advance(); maybeReportDevice() }
             RuntimeConfig.save(File(dir, "runtime.json"), cfg.copy(active = !stopping, streamId = live.streamId, participantId = live.participantId, ownerGeneration = live.ownerGeneration))
+            writeScope()
             scheduleTick()
         }
     }
+
+    /** 세션 디렉터리에 재개 정보(scope.json)를 남긴다 — 앱이 죽어도 계정·참가자·stream 을 알고 이어 올린다(N3). 값이 바뀔 때만 기록. */
+    private var lastScope: ScopeInfo? = null
+    private fun writeScope() {
+        val prev = lastScope
+        val info = ScopeInfo(cfg.sessionId, cfg.apiBase, JwtSub.of(tokens.current()) ?: prev?.account, live.participantId ?: prev?.participantId ?: cfg.participantId,
+            live.streamId ?: prev?.streamId ?: cfg.streamId, "linkband2-v1", ALGORITHM, modelVersion, live.featureMeta().clockUncertaintyMs, live.ownerGeneration ?: prev?.generation)
+        if (info != lastScope) { ScopeInfo.save(File(dir, ScopeInfo.FILE), info); lastScope = info }
+    }
+
+    /** N6 복귀 재개(포그라운드·네트워크 복귀): REST 즉시 1회 + archive drain. 측정은 계속된다. */
+    fun resumeUploads() { syncRunner.trigger(); kickArchive() }
+
+    /** feature·원시 업로드 진행(UI "업로드 중 feature N창 · 원시 M건"). */
+    fun uploadCounts(): JSONObject = JSONObject()
+        .put("feature_pending", box.size()).put("feature_acked", box.acked()).put("feature_quarantined", box.quarantined())
+        .put("archive_pending", queue.counts().archivePending).put("archive_verified", queue.counts().archiveVerified)
 
     /** live:device: 밴드 상태·접촉이 바뀌거나 30초마다(직렬 컨텍스트). 배터리 잔량은 밴드에서 아직 읽지 않아 null. */
     private fun maybeReportDevice() {
@@ -116,7 +134,7 @@ class NativeRuntime private constructor(
             if (sum.acked > 0) lastVerifiedAtMs = System.currentTimeMillis()
             queue.all().lastOrNull { it.lastReason != null }?.let { lastArchiveStage = it.lastStage; lastArchiveCode = it.lastReason?.lowercase()?.replace(Regex("[^a-z0-9_]"), "_")?.take(64) }
             if (sum.acked > 0) queue.gcVerified()
-            if (sum.failed > 0 || queue.counts().archivePending > 0) ArchiveWorker.schedule(ctx, 30)
+            if (sum.failed > 0 || queue.counts().archivePending > 0) ArchiveWorker.scheduleWithJitter(ctx, 15, 30)
             onArchiveDrained?.invoke(sum.acked)
             return sum.acked
         } finally { draining = false }
@@ -145,6 +163,8 @@ class NativeRuntime private constructor(
         RuntimeConfig.save(File(dir, "runtime.json"), cfg.copy(active = false, streamId = live.streamId, participantId = live.participantId))
         kickArchive()
         syncRunner.trigger() // 마지막 배치 전송 시도(종료 후 잔여는 ScopeSweeper 가 이어받는다)
+        try { writeScope() } catch (_: Exception) { }
+        ArchiveWorker.scheduleWithJitter(ctx, 5, 55) // N4 종료 비차단: 40대 동시 종료도 5~60초에 분산해 대조·업로드 시작
         sched.postDelayed(5_000) { live.stop(); syncRunner.stop(); syncExec.shutdown(); box.close(); sched.quit() }
         engine.close()
     }
