@@ -26,3 +26,10 @@
 
 ## D. 실기기 절차(감독 수행, 본 작업 미실행)
 summary.md 에 절차 기록.
+
+## E. 추가 시나리오 — 회원 셸 누락 수정 (fix, 구현 전 작성)
+- E1 ClientShell 렌더 시 `AppUpdateBanner` 가 포함된다(소스 계약 + 렌더 시 `/app` 에서 시트 노출).
+- E2 AppShell·ClientShell 둘 다 배너를 포함하되, 한 화면에 두 셸이 동시에 마운트되지 않는다(StructureShell 은 role 로 하나만 선택) → 배너·매니페스트 조회 1회.
+- E3 셸별 경로 노출: ClientShell `/app` 노출 / `/app/classes`·`/class/x/enter`·`/sessions/x/player` 미노출. AppShell `/dashboard`·`/dashboard/org` 노출.
+- E4 역할 홈 라우트 전수: 회원 `/app`(StructureShell→ClientShell), 코치 `/dashboard`(AppShell), 기관관리자 `/dashboard/org`(AppShell) 가 isUpdateHomePath 와 일치.
+- E5 tsc·eslint(변경 파일)·vite build 통과, 전체 vitest 신규 실패 0.

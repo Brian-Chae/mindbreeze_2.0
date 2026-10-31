@@ -19,6 +19,7 @@ import { useReportStore } from '../../stores/reportStore';
 import { useNotificationSocket } from '../../hooks/useNotificationSocket';
 import { listChatRooms } from '../../lib/api/chat';
 import NotificationToastHost from '../notifications/notification-toast-host';
+import AppUpdateBanner from '../update/AppUpdateBanner';
 
 export interface ClientShellProps {
   children: ReactNode;
@@ -200,6 +201,7 @@ export default function ClientShell({
       <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} role="client" />
       {!hideBottomTab && <BottomTabBar />}
       <NotificationToastHost />
+      <AppUpdateBanner />
     </div>
   );
 }
