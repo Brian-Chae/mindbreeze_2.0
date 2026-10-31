@@ -1,255 +1,241 @@
-# SDD-260 — 40명 클래스 실시간 지표 저장 병목 해소 · 통합 Plan (Stage ②, 10/31 "저장 완결성 단일 목표" 판)
+# SDD-260 — 40명 클래스 실시간 지표 저장 병목 해소 · 통합 Plan (Stage ②, 10/31 3차 "호환 제약 폐기 · 저장 100% 단일 목표" 판)
 
-- 작성: 2026-10-31. 감독 통합안 → 대표 지시 1차(오프라인 클래스·완결성 우선) → **대표 추가 지시 2차(앱 수정 허용, 목표는 "40명 전원 데이터 빠짐없이 저장" 하나)** 순으로 같은 날 재작성. 입력: `plan-astra.md`, `plan-fable.md`(수정 금지, 근거 보존), `~/.hermes/share/loadtest-40/report*.md`, `~/.hermes/share/band-analysis/report.md`, `~/.hermes/share/briefs/sdd260-*.md`.
-- 표기: **[확인]** = 이 워크트리 코드·실측으로 확인, **[추정]** = 미확인. 변경 ID(T2-x, P2-Nx, P3-Bx, P4-x, P5-x)는 이전 plan 과 호환되게 유지하고 새 ID(A·F·R·M·C)를 병기한다.
+- 작성: 2026-10-31. 같은 날 대표 지시 3회를 순서대로 반영: 1차 오프라인 클래스·완결성 우선 → 2차 앱 수정 허용·저장 단일 목표 → **3차 현재 앱 설치자 0명, 구앱 호환 제약 전부 삭제, 서버·앱·웹을 함께 자유롭게 바꿔 가장 단순하고 확실한 설계로**. 입력: `plan-astra.md`, `plan-fable.md`(수정 금지, 근거 보존), `~/.hermes/share/loadtest-40/report*.md`, `~/.hermes/share/band-analysis/report.md`, `~/.hermes/share/briefs/sdd260-*.md`.
+- 이 문서는 **구현 워커에게 그대로 주는 작업 지시서**다. 작업 단위마다 파일·함수·verify ID 를 적는다. 표기: **[확인]** = 코드·실측 확인, **[추정]** = 미확인(구현 전 정독).
 
 ---
 
 # 1페이지 요약
 
-## 목표 (대표 지시, 단 하나)
+## 목표 (하나)
 
-**40명 전원이 밴드만 연결돼 있으면, 그 데이터가 빠짐없이 서버에 저장된다.** feature(리포트 입력)→DB 100% 가 1순위, 원시→S3 100% 가 2순위. 리포트는 데이터만 있으면 무조건 나온다는 전제로 리포트·자기 화면·코치 모니터링은 §9 "후속(저장 완결성에 영향 없음)"으로 분리한다(삭제 아님). 앱 수정은 허용(재빌드·설치 감수). 구앱 호환은 **선호**로 낮춘다 — 서버 단독으로 되면 좋지만, 앱 수정이 더 확실하면 앱 수정안을 채택한다.
+**11/4 현장 40명 전원의 feature(리포트 입력)와 원시 데이터를 100% 서버에 저장한다.** 저장 경로는 실시간 연결(소켓 READY·방송·투영)과 **완전히 분리**한다. 호환 때문에 우회한 설계는 모두 제거한다. 리포트·자기 화면·코치 모니터링은 §9 후속(저장에 영향 없음).
+
+## 새 프로토콜 (가장 단순한 형태)
+
+```
+[밴드] → BLE → [앱 코어 1Hz MetricFrame]
+                 ├─ ① feature journal(fsync) + MetricOutbox 영속      ← 유일한 정본 사본(이미 있음)
+                 ├─ ② FeatureUploader: 5초마다 REST POST /features/batch(≤60창) → ACK → outbox acked   ← **정본 저장 경로**
+                 │     실패·오프라인이면 그대로 쌓였다가 재시도. 종료·앱시작·포그라운드·네트워크복귀에도 실행
+                 ├─ ③ 종료 후 대조: GET /features/summary → missing_ranges → 그 창만 ② 로 재전송 → 빈 배열이면 완료
+                 └─ ④ 소켓 live:metric = **방송 전용**(DB 저장 없음, 코치 화면용). 끊겨도 저장과 무관
+[원시] RawChunker → archive 큐(봉인·sha256) → presign/ack(배치) → 종료 후 GET /biosignal-raw/summary 대조 → 모자란 alias 재전송
+```
+
+| 원칙 | 내용 |
+|---|---|
+| 정본 저장 = REST 배치 | feature 는 `POST /api/v1/sessions/{id}/features/batch` 가 **유일한 DB 기록 경로**. 소켓은 저장하지 않는다 → READY/DEGRADED/락/heartbeat 가 저장을 막을 수 없다 |
+| 서버 판정 최소화 | 저장 수락 조건 = (세션·참가자 일치) ∧ (stream 이 그 참가자 소유) ∧ (동의 철회 아님). **lease·offline_bound·24h deadline·straddle·시간검토 격리는 전부 삭제** — 늦게 와도 저장하고 `late=true` 표식만 |
+| 멱등 | 키 (session, participant, play_group_id=stream_id, window_index=sequence) 유지[확인 F15]. 같은 키·같은 `feature_hash` = duplicate, 다른 hash = 첫 저장 보존 + conflict 카운트 |
+| 로컬이 유일 사본 | 서버 ACK 전에는 삭제하지 않는다. ACK 받은 창도 summary `missing_ranges=[]` 확인 후 세션 단위로 정리 |
+| 소켓 거절 코드 제거 | `not_ready`·`stale_owner_generation` 등 저장 거절 개념이 소켓에서 사라짐(방송만). REST 응답은 `accepted/duplicate/rejected(consent_withdrawn|participant_mismatch|stream_not_owned|hash_conflict)` 4종 |
+| 원시 | 기존 archive 큐·presign/ack 유지, **24h 409·`pending_time_review` 삭제**(늦어도 받음), 슬롯 16, 종료 후 summary 대조 |
 
 ## 합격선 (하나)
 
-착용 40명(밴드 연결) · 10분 기준:
+착용 40명(밴드 연결)·10분:
 
 | 항목 | 기준 | verify |
 |---|---|---|
-| feature→DB | 참여자별 **600/600**, (participant, stream, window_index) **중복 0**, `not_ready`·거절 0 | V-L2 저장 열, V-A1~A4 |
-| 원시→S3 | 청크 **100% `uploaded`**, chunk_index 갭 0, **S3 HEAD size·sha256 대조 100%**(무작위 아님, 전수) | V-L4 |
-| 종료 후 재접속 복구 | 40기기 동시 종료 + 네트워크 불안 + 강제종료 혼합에서 **3단계 대조**로 feature·원시 모두 서버 수량 == 로컬 수량 | V-A10, V-C4·C5·C9, V-B5·B6·B9 |
-| DEGRADED·Redis 장애 중 | 저장 계속(`accepted durable:true`), 복구 후 결측 0 | V-A1, V-L11 |
+| feature→DB | 참여자별 **600/600**, 중복 0, REST `rejected` 0 | V-L2, V-A1~A4 |
+| 원시→S3 | 청크 **100% `uploaded`**, 갭 0, **S3 HEAD size·sha256 전수 일치** | V-L4 |
+| 종료 후 재접속 복구 | 40기기 혼합(네트워크 단절·강제종료·종료 시 Wi-Fi 끊김)에서 20분 안에 feature·원시 서버 수량 == 로컬 수량, summary 빈 배열 | V-A10 |
+| 소켓·Redis 장애 무관 | 소켓 차단·Redis 60초 정지 중에도 REST 저장 지속, 결측 0 | V-A11, V-L11 |
 
-실시간 지연(호스트 수신·ACK·presence) 합격선은 **제거**(측정은 하되 판정에 쓰지 않음).
+호스트 수신 지연·ACK 지연·presence 는 측정만(후속).
 
-## 핵심 설계: "로컬 영속 → 서버 확인 → 모자란 것 재전송" 3단계 대조 프로토콜
-
-| 단계 | feature (1순위) | 원시 (2순위) |
-|---|---|---|
-| ① 로컬 영속 | 네이티브: feature journal(fsync) + `MetricOutbox`(상한 없음, 창 전체 envelope 영속)[확인 F20] — **이미 있음**. 웹: `MetricOutbox` 300 폐기 → IndexedDB 영속·무상한으로 교체(F-W1) | 네이티브 archive 큐(봉인 청크·receipt)·iOS/Android **이미 있음**. 웹 `BiosignalQueue` 있음 |
-| ② 서버 확인 | **신규 `GET /sessions/{id}/live-features/summary?participant_id`**(F-S2): stream·generation 별 `count, contiguous_through, missing_ranges(window_index), last_window_index` | `GET /sessions/{id}/biosignal-raw/summary`(A12/P2-S1): 그룹별 `uploaded_count, missing_ranges, receipt_hash` |
-| ③ 모자란 것 재전송 | **신규 `POST /sessions/{id}/live-features/batch`**(F-S1): live:metric 과 **같은 envelope** 를 REST 로 ≤300창 묶음 접수. 판정은 `_store_windows` 와 동일(participant·stream·`evaluate_ingest(historical=True)`) → live 투영 없음. 클라는 ②의 `missing_ranges` 에 드는 창만 outbox/journal 에서 꺼내 보낸다. 소켓 상태와 무관 | 서버에 없는 alias 만 재큐잉(P2-N5), 로컬에도 없으면 `gap(local_missing)` |
-| 서버 측 안전망 | **A6 feature archive→DB 재생**: 클라가 feature artifact(코어 프레임 ndjson)만 올리면 서버가 `eeg_feature_windows` 로 채운다[확인 F14]. 구앱·앱 미설치 기기까지 살린다 | A7 24h 이후 검역 접수 |
-| 실행 시점 | 세션 종료 직후(비차단, 지터 0~60s) · 앱 시작 · 포그라운드 · 네트워크 복귀 · 60초 주기(미완료 있을 때만). 다른 계정 scope 는 보존만 | 동일 |
-| 완료 판정 | 서버 summary 의 `missing_ranges=[]` 이고 로컬 outbox pending 0 | `missing_ranges=[]`·`receipt_hash` 일치·manifest `close_state=complete` |
-
-왜 REST 배치(F-S1)인가: 네이티브 outbox 는 이미 창 전체를 영속하지만 **소켓 READY 에서만 흘려보낸다**(F5·F20). 소켓 재연결·lease·snapshot 과 무관한 통로가 있어야 "연결 상태 독립"이 완성된다. 기존 v1 `POST /features` 는 stream·generation·동의 판정이 없어(F21) 재사용하지 않는다.
-
-## 결정 표
-
-| 쟁점 | 채택 | 이유 |
-|---|---|---|
-| 저장 경로의 연결 상태 독립화 | **(a) `_ingest` 저장 우선(A1) + (b) REST 배치 접수(F-S1) + (c) DEGRADED 복귀(A2) 전부** | (a) 는 구앱 즉시 수혜·와이어 변경 0. (b) 는 소켓 자체가 없어도 저장. (c) 는 live 품질. 저장 판정은 DB 만 보므로(F15) 셋 다 fencing·동의·시간창 의미를 유지 |
-| feature archive→DB 재생 | **P2 필수(A6)**, 서버 단독 | 앱 미설치·구앱 기기의 유일한 복구 경로. 리포트 입력은 `eeg_feature_windows` 뿐(F16) |
-| 투영 회차 락 | **NOWAIT(A4)는 필수**(10초 락 대기가 저장 스레드를 점유, F7). pending 테이블(C2)은 후속 | 저장을 막는 요인만 필수 |
-| heartbeat·스레드풀·archive 슬롯 | **필수**(A2·A3·A5) | 스레드풀 고갈(F6)·슬롯 429(F11)는 저장을 막는다 |
-| 구앱 호환 | **선호**. 서버 API 는 additive 로 만들되(비용 0), 앱이 바뀌어야 완성되는 기능(F-N1~N3·F-W1)은 **앱 수정으로 확정** | 대표 지시 2차 |
-| 리포트·자기 화면·코치 모니터링 | **§9 후속으로 분리**(R1~R3, M1~M2, C1~C5) | 저장 완결성에 영향 없음. 데이터만 있으면 리포트는 사후 생성 가능(F16·F18) |
-| 실밴드 시험 | 구현 후(대표 결정) | — |
-
-## Phase · 게이트 · 일정
+## Phase · 게이트 · 일정 (앱은 신규 설치 1회)
 
 | Phase | 내용 | 게이트 | 일정 |
 |---|---|---|---|
-| **P0** 선행 | S3 HEAD 403, 부하 스크립트(묶음·거절 코드별·DB 대조 1급 출력), 계측, **feature artifact→행 매핑 코드 확정(P0-4)**, 10/31 시연 세션 artifact 존재 확인 | G0 | 11/1 오전 |
-| **P1** 서버: 저장 우선 + 저장을 막는 요인 제거 | A1 `_ingest` 저장 우선, A2 DEGRADED 복귀·heartbeat 1회, A3 스레드풀·DB 풀, A4 NOWAIT, A5 archive 슬롯, **F-S1 REST 배치 접수, F-S2 feature summary API**, A12 원시 summary API | **G1**: V-A1~A4·A8·A9, V-L1·L2 저장 열, V-S15 | 11/1 18:00 배포·재시험 1차 |
-| **P2** 서버: 재생·검역 | A6 feature archive→DB 재생 + 소급 스크립트, A7 24h 검역 접수 | **G2**: V-S16·S17, V-A5~A7 | 11/2, 서버 동결 11/2 22:00 |
-| **P3** 앱: 3단계 대조 + 이어올림 | F-N1 종료·복귀 시 feature 대조(summary→missing→REST 배치), F-N2 outbox 는 소켓 없이도 REST 로 drain, F-N3 거절 창 격리 대신 `pending_time_review` 는 재시도 큐 유지, A8 Android 전 scope drain, A9 iOS 전 scope drain + background URLSession, A10 종료 비차단·지터·배치, A11 복귀 재개(renew·flush·drain), P2-N5 원시 종료 대조, F-W1 웹 outbox IndexedDB 영속, P2-W1 웹 스위퍼 | **G3**: V-A10·A11, V-C1~C6·C8~C10, V-M 없음 | FE/네이티브 동결 **11/2 12:00** → 빌드 → 11/3 09:00 설치 |
-| **P4** 실밴드·소크·go/no-go | §D V-B1~B11, 60분 소크, 합격선 판정 | **go/no-go** | 11/3 09:00~15:00 |
-| **§9 후속** | 리포트 보장(R1~R3), 자기 화면(M1~M2), 실시간 투영(C1~C4), 다중 워커(C5), iOS BGProcessingTask, 보관 정책 표시 | 각자 게이트 | 11/5~ |
+| **P0** 선행 | S3 HEAD 403, 부하 스크립트(REST 배치 모드·40기기 혼합 종료), API 스키마·네이티브↔JS 이벤트 계약 고정 | G0 | 11/1 09:00~12:00 |
+| **P1** 서버 | S1 REST 배치 저장, S2 summary, S3 소켓 metric 방송 전용화, S4 시간검토·24h 삭제(원시·feature), S5 DB 풀·스레드풀·슬롯, S6 마이그레이션(late·hash_conflict 컬럼), S7 부하 계측 | **G1**: V-A1~A4·A8·A9, V-L1·L2 저장 열, V-L4, V-S15 | 11/1 18:00 dev 배포·재시험 1차 |
+| **P2** 앱(Android/iOS/웹) | N1 FeatureUploader(REST 정본), N2 종료 대조, N3 전 scope 이어올림, N4 종료 비차단·지터·배치, N5 원시 대조, N6 복귀 재개, W1 웹 outbox IndexedDB, W2 웹 스위퍼, UI "업로드 중 N건" | **G2**: V-A10~A13, V-C1~C6·C8~C10 (디버그 빌드) | **FE/네이티브 동결 11/2 12:00** → 빌드 → **사이트 APK·TestFlight 교체 11/2 밤** |
+| **P3** 검증 | 후보 빌드 설치(실기기 ≥2/플랫폼) → 실밴드 §D → 60분 소크(실밴드 ≥5 + 합성 35) → go/no-go | **go/no-go** | 11/3 09:00~15:00 |
+| **11/4** 현장 | 참가자 신규 설치 안내(QR·사이트·TestFlight) → 클래스 → 종료 후 summary 전원 빈 배열 확인 | — | — |
+| **§9 후속** | 리포트 결측 표기·재생성, 자기 화면 로컬 우선, publish 틱·pending 투영·백프레셔, 다중 워커, feature archive 재생, iOS BGProcessingTask | — | 11/5~ |
 
-## 구현 병렬화 (5트랙, 파일 겹침 없음 — §8 소유표)
+## 병렬화 (5트랙, 파일 겹침 없음 — §8)
 
-| 트랙 | 담당 | P1~P3 작업 | PR |
+| 트랙 | 담당 | 작업 | PR |
 |---|---|---|---|
-| **BE** | BE1 | A1~A7, F-S1, F-S2, A12 서버, P0-3·P0-4 | `[SDD-260] 서버: 저장 우선·REST 배치·재생` 1~2개 |
-| **Android** | Native-A | F-N1~N3(Kotlin), A8, A10, A11, P2-N5 | `[SDD-260] Android: 3단계 대조·이어올림` 1개 |
-| **iOS** | Native-I | F-N1~N3(Swift), A9, A10, A11, P2-N5 | `[SDD-260] iOS: 3단계 대조·이어올림` 1개 |
-| **웹·공통** | FE1 | F-W1, P2-W1, `recording-status.tsx` "업로드 중 N건", `use-native-measurement.ts` counts 이벤트 수신, 네이티브↔JS 이벤트 계약 문서 | `[SDD-260] 웹·공통` 1개 |
-| **QA(독립)** | QA | P0-2 부하 스크립트, DB 대조 스크립트, V-A10 40기기 합성 종료 시험, 결과 기록 | `backend/scripts/loadtest/**` |
+| **BE** | BE1 | S1~S7, P0-3 | `[SDD-260] 서버: feature REST 정본 저장·summary·소켓 방송 전용화` |
+| **Android** | Native-A | N1~N6(Kotlin) | `[SDD-260] Android: FeatureUploader·대조·이어올림` |
+| **iOS** | Native-I | N1~N6(Swift) | `[SDD-260] iOS: FeatureUploader·대조·이어올림` |
+| **웹·공통** | FE1 | W1·W2·UI, 계약 문서, 네이티브↔JS 이벤트 | `[SDD-260] 웹·공통` |
+| **QA(독립)** | QA | P0-2 스크립트, 대조 스크립트, V-A10 혼합 시험, 결과 기록 | `backend/scripts/loadtest/**` |
 
-DEPLOY/OPS/APP: `.env`·IAM·배포·사이트 APK·TestFlight(코드 커밋 없음).
+DEPLOY/OPS/APP: `.env`·IAM·dev 배포·사이트 APK·TestFlight(코드 커밋 없음). 머지는 DEPLOY 창구.
 
 ## 대표 결정 사항 (≤5)
 
-1. 11/3 합격선 미달 시 (a) 검증된 착용 상한 (b) 2회차 분할 (c) EEG 없이 진행 중 택일.
-2. **앱 빌드가 11/3 09:00 설치에 못 맞추면**: 서버 단독분(P1·P2)으로 가고 앱 변경은 11/4 당일 현장 설치 시도 vs 포기. 기본안: 서버 단독 + 운영 지침(앱 전면 유지·절전 제외·수업 뒤 앱을 바로 끄지 않기).
-3. 로컬 미완료 원본 보관 정책(기본안: 7일 경고·자동 삭제 없음). 24h 이후 검역 접수 승인 주체.
-4. 셀룰러 잔여 전송 기본 허용 여부(기본안: 허용 — 저장 완결성 우선).
-5. 현장 기기 정책: 회원 앱 후보 빌드 설치 필수, 웹 브라우저 참가자 허용 여부(기본안: 앱만).
+1. 11/3 합격선 미달 시 (a) 검증된 착용 상한 (b) 2회차 분할 (c) EEG 없이 진행.
+2. 11/2 12:00 동결을 못 지켜 11/3 09:00 설치가 불가하면: 동결을 11/2 18:00 으로 늦추고 11/3 오후 설치·시험 축소 vs 서버만으로 가기(앱은 현행 빌드 신규 설치 — 저장은 소켓 의존이라 100% 보장 불가). 기본안: 동결 연기.
+3. 로컬 미완료 원본 보관: 서버 summary 빈 배열 확인 전 삭제 금지, 그 뒤 7일 보관(자동 삭제 없음).
+4. 셀룰러 잔여 전송 기본 허용(저장 우선).
+5. 현장 기기 정책: 앱만(웹 브라우저 참가자 불허). 설치 안내는 QR 1장(Android 사이트 APK · iOS TestFlight 링크).
 
 ---
 
 ## 1. 결론 (근거 요약)
 
-1. **저장 가능 여부가 실시간 연결 상태에 종속된 구조**가 핵심 위험. `_ingest` 는 READY 가 아니면 저장 전에 `not_ready` 로 거절(F5) → 40명 시험 559건 거절 = 저장 누락. 네이티브 outbox 는 창을 영속하지만 **소켓 READY 에서만** 흘려보낸다(F20). 저장 판정은 DB 만 보므로(F15) 연결 상태와 분리할 수 있다.
-2. 저장을 막는 서버 요인은 스레드풀 고갈(F6)·10초 락 대기(F7)·heartbeat 세션 전체 드레인·archive 슬롯 429(F11). 이것만 필수로 남긴다. 호스트 수신 지연은 후속.
-3. 리포트는 `eeg_feature_windows` 만 읽는다(F16). 네이티브 feature artifact 는 live envelope 와 같은 본체라 서버가 그대로 행으로 만들 수 있다(F14) → 앱 미설치 기기까지 살리는 안전망.
-4. 네이티브는 서버가 `rejected`(특히 lease 만료 후 `pending_time_review`)로 답한 창을 격리하고 재전송하지 않는다(F20). 복귀 후 flush 해도 이 창들은 live 로 영영 못 들어온다 → REST 배치(historical) 또는 A6 가 필요.
+1. 현행은 저장이 소켓 READY 에 종속(`_ingest` 가 READY 아니면 `not_ready`, F5)이고, 네이티브 outbox 는 영속하지만 소켓으로만 흘려보낸다(F20). 40명 시험 559건 거절 = 저장 누락. **소켓에서 저장을 떼고 REST 배치를 정본으로** 하면 READY·heartbeat·락·투영이 저장을 막을 수 없다.
+2. 저장 판정 중 lease·offline_bound·24h·straddle·시간검토(F12·F15)는 "구앱·시계 불확실·권한 철회 뒤 유입"을 막기 위한 장치였다. 현장은 신규 설치·전담 운영이므로 **동의 철회만 남기고 삭제**한다. 늦게 온 창은 `late=true` 로 저장해 리포트 입력으로 쓴다.
+3. 리포트는 `eeg_feature_windows` 만 읽고 `device_timestamp_ms` 우선으로 구간을 자른다(F16). REST 저장 시 `device_timestamp_ms=observed_at_ms` 를 채우면 리포트는 그대로 동작한다.
+4. 원시는 archive 큐·presign/ack·manifest 가 이미 있고, 빈 곳은 "전 scope 이어올림"(F3·F4)과 "종료 후 서버 대조"다. 24h 409 는 유실 경로라 삭제.
+5. feature archive→DB 재생(A6)은 구앱 안전망이었다. 앱이 journal 에서 REST 로 직접 재전송하므로 **후속**으로 내린다(feature artifact 업로드 자체는 그대로 둔다).
 
 ## 2. 코드로 확정한 사실
 
 | # | 사실 | 근거 | 영향 |
 |---|---|---|---|
-| F1 | 앱 웹 번들 내장 | `frontend/capacitor.config.ts:6` | 프런트 변경 = 앱 재빌드 |
-| F2 | 앱이면 측정 경로는 항상 `native` | `measurement-web/measurement-path.ts:21-27` | 필수 = 네이티브 코드 |
-| F3 | Android `ArchiveWorker` 는 `runtime.json` 1개만 읽어 마지막 세션만 drain | `runtime/ArchiveWorker.kt:16-18,41-50` | A8 |
-| F4 | iOS `recoverOnLaunch` 는 CAPTURING 만 복구, 시작 외 drain 트리거 없음 | `MeasurementManager.swift:340-345`, `MeasurementHost.swift:55`, `NativeMeasurementPlugin.swift:33` | A9 |
-| F5 | `DEGRADED→READY` 복귀 없음. **`_ingest` 는 READY 아니면 저장 전에 `not_ready`** | `session_live_namespace.py:2151,2251,2299-2303,2340` | A1·A2 |
-| F6 | 기본 executor 미설정 → 8스레드 | grep `set_default_executor` 0건 | A3 |
-| F7 | `_project_latest` 락 먼저, 충돌 시 10초 대기 | `live_ingest_service.py:265-283`, `config.py:88` | A4 |
-| F8 | 투영 실패는 ACK 를 막지 않음 | `live_ingest_service.py:163-170` | 후속 C1 |
-| F9 | `capture.renew` 는 만료 lease 도 갱신 | `session_live_commands.py:361-371` | A11 |
-| F10 | feature archive→`eeg_feature_windows` 재생 경로 없음 | `biosignal_artifact_service.py:236-254` 는 indices·normalization 만 디코드 | A6 |
-| F11 | archive 슬롯 6/1.5s/Retry-After 3, 프로세스 로컬 | `config.py:92-93`, `api/deps.py:102-114` | A5 |
-| F12 | 24h 이후 `pending_time_review` 는 409 | `biosignal_service.py:100-101` | A7 |
+| F1 | 앱 웹 번들 내장 | `frontend/capacitor.config.ts:6` | 프런트 변경 = 앱 빌드 |
+| F2 | 앱이면 측정 경로는 항상 `native` | `measurement-web/measurement-path.ts:21-27` | 네이티브가 정본 |
+| F3 | Android `ArchiveWorker` 는 `runtime.json` 1개만 읽어 마지막 세션만 drain | `runtime/ArchiveWorker.kt:16-18,41-50` | N3 |
+| F4 | iOS `recoverOnLaunch` 는 CAPTURING 만 복구, 시작 외 drain 트리거 없음 | `MeasurementManager.swift:340-345`, `MeasurementHost.swift:55`, `NativeMeasurementPlugin.swift:33` | N3 |
+| F5 | `_ingest` 는 READY 아니면 저장 전에 `not_ready`; DEGRADED→READY 복귀 없음 | `session_live_namespace.py:2299-2303,2151,2251,2340` | S3 로 저장을 소켓에서 분리 |
+| F6 | 기본 executor 미설정(8스레드) | grep | S5 |
+| F7 | `_project_latest` 락 10초 대기 | `live_ingest_service.py:265-283`, `config.py:88` | 저장과 분리되므로 후속(C1) |
+| F11 | archive 슬롯 6/1.5s/Retry-After 3 | `config.py:92-93`, `api/deps.py:102-114` | S5 |
+| F12 | 24h 이후 `pending_time_review` 409 | `biosignal_service.py:65-101` `archive_gate` | S4 삭제 |
 | F13 | S3 HEAD 403(새 dev) | report-rerun §3 | P0-1 |
-| **F14** | 네이티브 feature artifact = 코어 `MetricFrame` ndjson 60창 묶음(`artifact_kind='feature'`, `schema_version='feature-v1'`, `first/last_sequence`, `time_range`). 프레임 = `sequence, window_start_us, window_end_us, observed_at_ms, sqi, contact, metrics{name:{value,validity}}, feature_hash` = live envelope 본체(stream_id·generation·algorithm_version 만 없음). alias `NF-<stream 앞 8자>-<first_seq>` | Android `archive/ArchiveFeeder.kt:23-55`; iOS `MeasurementManager.swift:283-301`; `envelope.ts:4-13,52-73`; `measurement-core/src/engine.rs:232-240` | **A6 재생 가능** — `_feature_item()`(`live_ingest_service.py:106-124`) 입력이 전부 있음 |
-| **F15** | 저장 판정은 DB 만 본다: participant 일치 → `CaptureStream` → generation fencing → `evaluate_ingest`(cutoff·동의철회·lease·offline_bound·24h) → `_persist_feature_items`(멱등키 session·participant·play_group_id·window_index). Redis·READY 미참조 | `live_ingest_service.py:173-262`, `session_live_commands.py:471-510`, `session_service.py:3505-3535` | A1·F-S1 은 입구만 바꾸면 됨 |
-| **F16** | 리포트는 `eeg_feature_windows` 만 읽음(`device_timestamp_ms` 우선 구간 필터) | `class_report_stats_service.py:324-369`; `class_report*.py`·`tasks/*report*` 에 원시·artifact 참조 0건 | 재생 행은 `device_timestamp_ms` 필수 |
-| F17 | 회원 자기 화면(v2)은 서버 LiveState 우선, 10초 지연이면 null | `MemberClassContainer.tsx:279-286`, `host-live-model.ts:49-63`, `signal-status.ts:16` | 후속 M1 |
-| F18 | 리포트 트리거는 세션 종료 1회, 데이터 유입 재생성 없음 | `audio_service.py:210-290`, `report_task.py:774-800`, `report_service.py:550-556` | 후속 R2 |
-| F19 | 클래스 통계에 기대 창 수 대비 결측 판정 없음 | `class_report_stats_service.py:394-420` | 후속 R1 |
-| **F20** | 웹 `MetricOutbox` 300 초과 폐기. **네이티브 outbox 상한 없음**(Android pending TreeMap + 파일, iOS journal 전량 + `maxLiveSequence`). Android 는 `StreamTag(streamId, generation, anchorId, participantId)` 를 창에 바인딩해 영속, iOS 는 envelope 전체 영속. **양쪽 다 서버 `rejected` 는 격리·재전송 안 함** | `metric-outbox.ts:13,53`; `MetricOutbox.kt:14-60,98`; `MetricOutbox.swift:4-60` | F-N2(REST drain)·F-N3(격리 정책)·F-W1 |
-| F21 | v1 REST `POST /sessions/{id}/features` 는 stream·generation·`evaluate_ingest` 없이 저장 | `api/v1/session.py:800-823`, `session_service.py:3667-3711` | 재사용 금지 → F-S1 신설 |
+| F14 | 네이티브 feature artifact = 코어 `MetricFrame` ndjson(live envelope 본체와 동일) | `ArchiveFeeder.kt:23-55`, `MeasurementManager.swift:283-301`, `envelope.ts`, `engine.rs:232-240` | 후속 A6 재생 가능 근거 |
+| **F15** | 저장 로직 `_store_windows`: participant 일치 → `_load_stream` → generation fencing → `evaluate_ingest` → `_feature_item` → `_persist_feature_items`(멱등키·SAVEPOINT·commit). Redis·READY 미참조 | `live_ingest_service.py:173-262`, `session_live_commands.py:471-510`, `session_service.py:3505-3535` | S1 은 이 함수를 REST 에서 호출하고 판정을 줄인다 |
+| F16 | 리포트는 `eeg_feature_windows` 만 읽음(`device_timestamp_ms` 우선 구간 필터) | `class_report_stats_service.py:324-369` | S1 은 `device_timestamp_ms` 필수 |
+| F18 | 리포트 트리거는 세션 종료 1회 | `audio_service.py:210-290`, `report_task.py:774-800` | 후속 R2 |
+| **F20** | 웹 `MetricOutbox` 300 초과 폐기. 네이티브 outbox 상한 없음, Android 는 `StreamTag(streamId, generation, anchorId, participantId)` 바인딩 영속, iOS 는 envelope 전체 영속. 양쪽 `rejected` 는 격리·재전송 안 함 | `metric-outbox.ts:13,53`, `MetricOutbox.kt:14-60,98`, `MetricOutbox.swift:4-60` | N1 은 outbox 를 그대로 REST 전송원으로 쓴다. W1 |
+| F21 | v1 REST `POST /sessions/{id}/features` 는 stream·동의 판정 없이 저장 | `api/v1/session.py:800-823`, `session_service.py:3667-3711` | **삭제 대상**(S1 이 대체, 호환 불필요) |
+| F22 | 기존 소켓 metric 처리 = `make_sinks` → `_METRIC_SINK` → `ingest_metrics` → `_store_windows` + `_project_latest` + publish | `live_ingest_service.py:147-170,347-360` | S3 은 `_store_windows` 호출을 빼고 투영만 남긴다 |
 
 ---
 
-## 3. Phase 0 — 선행 (11/1 오전)
+## 3. Phase 0 — 선행 (11/1 09:00~12:00)
 
-| ID | 내용 | 소유 | 게이트 |
+| ID | 내용 | 소유 | 산출·게이트 |
 |---|---|---|---|
 | P0-1 | S3 HEAD 403 원인(인스턴스 프로파일 vs `.env.dev` 키, 접두사·길이만). ack HEAD 검증(`storage_service.py:251-272`) 성공 확인 | DEPLOY/OPS | 403 해소 또는 원인 기록 |
-| P0-2 | 부하 스크립트: 1Hz 생산 시계·ACK 분리, `MetricOutbox` 와 같은 묶음, `not_ready`→재join, 429 재시도, **거절 코드별 카운트·참여자별 DB 600/600 대조·S3 전수 대조를 1급 출력**, **40기기 동시 종료 + 네트워크 단절 + 강제종료 혼합 모드**(V-A10) | QA | 스모크 1회 |
-| P0-3 | 서버 계측: executor 대기·loop lag·락 대기·**저장 거절 코드별 카운터**·REST 배치 접수 카운터 | BE1 | 대시보드 1장 |
-| P0-4 | **feature artifact→행 매핑 확정**: dev DB 에서 10/31 시연 세션 `biosignal_artifacts(feature, uploaded)` 1건 디코드 → 프레임 ↔ `_feature_item` 대조. alias 8자 = `CaptureStream.id` 접두인지, `observed_at_ms` 시계 확인 | BE1 | 매핑표 |
+| P0-2 | 부하 스크립트 `backend/scripts/loadtest/`: 기기 시뮬레이터가 **REST 배치(5초·≤60창)** 로 저장하고 소켓은 방송만; 모드 `--mixed-close`(10기기 네트워크 3분 단절·10기기 종료 직후 kill→2분 뒤 재실행·10기기 종료 시 Wi-Fi 5분 끊김·10기기 정상, 전원 동시 종료); 출력 = 참여자별 DB 창 수·중복·REST 거절 코드·원시 `uploaded`·S3 전수 대조·summary 결과 | QA | 스모크 1회 |
+| P0-3 | 서버 계측: REST 배치 접수·거절 코드·처리 ms·DB 활성·스레드풀 대기를 로그/`/metrics` | BE1 | 대시보드 1장 |
+| P0-4 | **계약 고정(11/1 12:00)**: BE 가 S1·S2 OpenAPI 스키마를 `docs/sdd-260-api.md` 에, FE1 이 네이티브↔JS 이벤트(`feature.counts`, `archive.counts`, `reconcile.state`)를 `docs/sdd-260-native-js-events.md` 에 고정. 이후 변경은 TASK BOX 승인 | BE1·FE1 | 문서 2건 |
 
-## 4. Phase 1 — 서버: 저장 우선 + 저장을 막는 요인 제거 (BE1, 11/1 18:00 배포)
+## 4. Phase 1 — 서버 (BE1, 11/1 18:00 dev 배포)
 
-| ID | 변경 | 파일 | 플래그 | verify |
-|---|---|---|---|---|
-| **A1** | `_ingest` 상태 가드를 `actor None / session None / state ∈ {CONNECTING, REVOKED, TERMINAL}` 로. **DEGRADED·RESYNCING 에서도 저장.** 투영·publish best-effort. 토큰 만료는 저장을 막지 않음(동의·소유권은 `evaluate_ingest`·fencing) | `session_live_namespace.py` | `LIVE_V2_INGEST_STORE_FIRST`(기본 on) | V-A1~A4 |
-| A2 (T2-3) | heartbeat: 연속 3회 실패 시 DEGRADED, 성공 1회면 READY(`pending_snapshot` 없을 때), `recovered:true`. `publish_session_sync` 세션당 1회, heartbeat 경로 `publish_pending(wait_s=0)` | 동일 | `LIVE_V2_DEGRADED_RECOVER`, `LIVE_V2_HB_SINGLE_DRAIN` | V-S5, V-S8 |
-| A3 (T2-1) | `set_default_executor(ThreadPoolExecutor(32))`, DB 풀 20/20(웹 합계 ≤40, RDS 79) | `main.py`, `config.py`, `.env` | `WS_THREAD_POOL_SIZE`, `DB_POOL_SIZE`, `DB_MAX_OVERFLOW` | V-S14 |
-| A4 (T2-2) | `_project_latest`: prev 선독 → `lock_epoch(nowait=True)` → 충돌 시 rollback·dirty 표시, 재투영은 다음 heartbeat 드레인(후속 C1 이 틱으로 대체) | `live_ingest_service.py`, `session_live_ledger.py` | `LIVE_V2_PROJECT_NOWAIT` | V-S4(후속)·S6·S7 |
-| A5 (T2-5) | archive 슬롯 6→16, 대기 0.5s, Retry-After 2~6 | `config.py`, `api/deps.py` | `ARCHIVE_MAX_CONCURRENT`, `ARCHIVE_SLOT_WAIT_SEC` | V-L4 |
-| **F-S1** | **`POST /sessions/{id}/live-features/batch`**: body `{participant_id, windows:[MetricEnvelope…≤300]}`. 인증 JWT 또는 `X-Entry-Credential`(v1 `/features` 와 같은 `resolve_upload_participant`). 처리 = `_store_windows(..., historical=True)`: participant·stream·`evaluate_ingest(historical=True)`(lease·offline_bound 건너뜀, cutoff·consent_withdrawn·close_deadline 적용) → `_persist_feature_items`. generation fencing: `stream_generation ≤ stream.generation` 이고 stream 소유 participant 일치면 수락(`historical` 표식), 아니면 `stale_owner_generation`. **live 투영·outbox 기록 없음.** 응답 = live:metric 과 같은 ACK 배열(`accepted/duplicate/rejected`+code). 슬롯(`archive_upload_slot`) 비적용, 요청당 ≤300창·5초 타임아웃 | `api/v1/session.py`, `services/live_ingest_service.py`, `session_live_commands.py`(evaluate_ingest 인자), `schemas/session_live.py` | `LIVE_V2_REST_FEATURE_BATCH` | V-A8, V-A9 |
-| **F-S2** | **`GET /sessions/{id}/live-features/summary?participant_id`**: 본인·호스트만. (stream_id, generation) 별 `count, min_index, max_index, contiguous_through, missing_ranges(≤200, truncated)`, 상위 `total_count`. 소스: `eeg_feature_windows`(play_group_id=stream_id) | 동일 | — | V-A8 |
-| A12 (P2-S1) | `GET /sessions/{id}/biosignal-raw/summary?participant_id` (기존 설계 그대로) | `api/v1/session.py`, `biosignal_service.py`, `schemas/biosignal.py` | — | V-S15 |
+| ID | 작업 | 파일·함수 | 통과 기준 |
+|---|---|---|---|
+| **S1** | **REST 배치 저장** `POST /api/v1/sessions/{session_id}/features/batch`. 요청 `{participant_id, windows: [MetricEnvelope…] (1≤n≤300)}`; 인증 JWT 또는 `X-Entry-Credential`(`resolve_upload_participant` 재사용). 처리 `live_ingest_service.store_batch(db, participant, session_id, windows, now)`: ① `w.session_id/participant_id` 일치 ② `_load_stream` → `stream.participant_id == participant.id` 아니면 `stream_not_owned` ③ `stream.cutoff_code == CUTOFF_CONSENT_WITHDRAWN` 면 `consent_withdrawn` ④ `_feature_item(w, end_at=observed_at_ms 기반, anchored=True)` + `late = (session.ended_at and observed_at > ended_at)` ⑤ `_persist_feature_items(..., quality_overrides)` ⑥ 응답 `[{sequence, status: accepted|duplicate|rejected, code?, durable: true}]`. **`_project_latest`·publish 호출 없음.** 슬롯 비적용. `evaluate_ingest` 는 호출하지 않는다(판정 ②③ 로 대체). 기존 v1 `POST /{session_id}/features`(`ingest_eeg_features`) 와 `session_service.ingest_features` 삭제 | `api/v1/session.py`(라우트 추가·구 라우트 삭제), `services/live_ingest_service.py`(`store_batch` 신설, `_store_windows` 에서 판정 분리), `schemas/session_live.py`(`FeatureBatchRequest/Response`), `services/session_service.py`(구 함수 삭제) | pytest: 300창 1회 < 2s, 멱등·hash 충돌·소유권·동의 철회 4경로, 301창 422. V-A1~A4·A9 |
+| **S2** | **summary** `GET /api/v1/sessions/{session_id}/features/summary?participant_id=`: 본인·호스트만(타인 403). `eeg_feature_windows` 에서 (play_group_id) 별 `{stream_id, count, min_index, max_index, contiguous_through, missing_ranges[[lo,hi]…] (≤200, truncated:bool)}`, 상위 `total_count, updated_at`. 쿼리 1회(window_index 정렬 → 파이썬에서 구간 계산) | `api/v1/session.py`, `services/live_ingest_service.py`(`feature_summary`) | pytest: 결측 구간 정확, 600창 조회 < 200ms. V-A8 |
+| **S3** | **소켓 metric 방송 전용화**: `ingest_metrics` 에서 `_store_windows` 호출 제거 → 창마다 ① participant·stream 소유 확인(캐시) ② `_project_latest` + publish 만. ACK `{sequence, status: projected|ignored, code?}` (`durable` 필드 삭제). `_ingest` 상태 가드는 그대로(방송은 READY 에서만 의미). `live:device` 는 현행 유지 | `services/live_ingest_service.py`(`ingest_metrics`, `make_sinks`), `ws/session_live_namespace.py`(ACK 스키마 주석) | 기존 live 테스트 갱신: metric 소켓 수신 후 DB 행 **0**, outbox 갱신 1. V-A2 |
+| **S4** | **시간검토·24h 삭제**: `biosignal_service.archive_gate` 에서 `close_deadline`·`pending_time_review`·`window_unproven`·409 경로 제거 → 동의 철회(`archive_rejected`)만 403. `evaluate_ingest` 의 lease·offline_bound·straddle·close_deadline 분기 삭제(소켓 투영의 `live_fresh_allowed` 판정용 최소형만 남김). artifact presign 도 동일. `CaptureStream.close_deadline_at`·`offline_bound_until` 은 컬럼 유지(쓰지 않음) | `services/biosignal_service.py:65-101`, `biosignal_artifact_service.py:113-122`, `session_live_commands.py:471-510` | pytest: deadline 24h 지난 presign/ack 200, `uploaded`. V-S17(재정의) |
+| **S5** | **저장을 막는 자원**: DB 풀 `DB_POOL_SIZE=20/DB_MAX_OVERFLOW=20`(웹 합계 ≤40, RDS 79), `loop.set_default_executor(ThreadPoolExecutor(32))`(소켓 방송·REST 공용), anyio threadpool 토큰 40→64(`anyio.to_thread.current_default_thread_limiter().total_tokens`), archive 슬롯 16/0.5s/Retry-After 2~6 | `main.py`(lifespan), `config.py`, `api/deps.py:102-114`, `.env`(DEPLOY) | V-S14, V-L4, V-L6 |
+| **S6** | **마이그레이션 1개**: `eeg_feature_windows.late BOOLEAN DEFAULT false`, `eeg_feature_windows.ingest_path VARCHAR(8) DEFAULT 'rest'`(rest/legacy), `biosignal_stream_stats`(선택) 없음. heads 1 확인 | `models/eeg_feature.py`, `alembic/versions/<ts>_sdd260_feature_late.py` | `python3 scripts/check-alembic-heads.py` = 1. V-D2 |
+| **S7** | 계측(P0-3) + REST 배치 429 없음 확인(슬롯 비적용) | `services/live_ingest_service.py`, `core/metrics.py`[추정] | 대시보드 |
 
-**G1** = V-A1~A4·A8·A9, V-L1·L2 저장 열(`not_ready` 0·거절 0·600/600·중복 0·≥40창/s), V-L4, V-S15. 지연 열은 기록만. 커밋: 변경 하나당 1커밋. 롤백 플래그 off(V-D1).
+**G1** = V-A1~A4·A8·A9, V-L1·L2 저장 열(REST 거절 0·600/600·중복 0), V-L4, V-S15, V-S14. 커밋: S 하나당 1커밋. 롤백: 직전 릴리즈 재배포(플래그 없음 — 단일 경로가 더 확실).
 
-## 5. Phase 2 — 서버: feature 재생 · 24h 검역 (BE1, 11/2, 동결 22:00)
+## 5. Phase 2 — 앱 (Android / iOS / 웹·공통, 동결 11/2 12:00)
 
-### A6 feature archive → `eeg_feature_windows` 재생 (P3-B1 승격)
+### 5.1 공통 계약 (3트랙 동일)
 
-재생 가능[확인 F14·F16]. 매핑과 부족분 처리:
+- **FeatureUploader(N1)**: outbox 의 미ACK 창을 `sequence` 오름차순으로 ≤60창씩 **5초 주기** REST 전송(측정 중·종료 후 동일). 응답 `accepted|duplicate` → outbox acked, `rejected` → 코드별 격리(`consent_withdrawn`·`participant_mismatch`·`stream_not_owned`·`hash_conflict` 4종, 그 외 코드는 재시도). 네트워크·5xx·타임아웃은 full jitter `0..min(60s, 1s×2^n)` 로 무한 재시도. 401 은 토큰 갱신 대기. 동시 요청 1.
+- **소켓**: `live:metric` 은 방송 전용. ACK 로 outbox 를 acked 하지 **않는다**(REST ACK 만 정본). 끊겨도 FeatureUploader 는 계속 돈다.
+- **종료 대조(N2)**: 세션 종료 후 outbox pending 0 이 되면 `GET /features/summary` → `missing_ranges` ∩ 로컬 journal 보유 창 → N1 로 재전송 → summary 재조회 → 빈 배열이면 feature 완료. 로컬에도 없는 구간은 `gap(local_missing)` 진단 기록. 원시는 `GET /biosignal-raw/summary` 로 동일(N5).
+- **트리거**: 종료 직후(지터 0~60s) · 앱 시작 · 포그라운드 · 네트워크 복귀 · 60초 주기(미완료 scope 있을 때만). 동시 scope 1. 다른 계정 scope 는 보존만.
+- **종료 비차단(N4)**: 종료 = 봉인 + close intent + 마지막 배치 전송 시도. 화면 "수업 종료 · 데이터 업로드 중 feature N창 · 원시 M건(MB)" → "업로드 완료". 화면 이탈 가능.
+- **보관**: summary 빈 배열 확인 전 삭제 금지. 확인 후 7일 보관(대표 결정 3).
+- **"무조건 백그라운드 재개"**: 인증·네트워크·OS 실행 기회가 오면 화면과 무관하게 재시도. OS 강제종료 중 상시 실행은 약속하지 않음 → 합격은 재실행 후 복구.
 
-| 부족 | 해결 |
-|---|---|
-| `stream_id`(=play_group_id)·generation 없음 | alias `NF-<8자>` ↔ `CaptureStream.id` 접두(P0-4 확정) → 아니면 (session, participant) CaptureStream 중 `time_range` 를 덮는 1개 → 불명이면 격리(`replay_status='unresolved_stream'`) |
-| `algorithm_version` 없음 | 같은 세션·참여자의 `algorithm` artifact 또는 `'archive'` |
-| 시각 | `device_timestamp_ms = observed_at_ms`. **필수**(F16). 세션 `started_at~ended_at` 밖이면 `time_range` 로 보정 여부 기록 |
-| 동의·cutoff | `evaluate_ingest(historical=True)` — F-S1 과 같은 함수 |
-| 멱등 | 기존 키 + `source_feature_alias==feature_hash` 면 duplicate, 다르면 첫 저장 보존·충돌 기록. 투영·outbox 없음 |
-| 웹 `FeatureRecord`(scalars dict) | 두 번째 디코더(스칼라 키 = 컬럼명). 우선순위 낮음 |
+### 5.2 작업 (Android)
 
-구현: feature artifact ack `uploaded` 시 Celery `tasks.biosignal_feature_replay(artifact_id)`. `biosignal_artifacts` 에 `replay_status/replay_rows/replayed_at` additive 컬럼(마이그레이션 1개, BE1). 소급 `scripts/replay_feature_artifacts.py --session <id> [--dry-run]`. 플래그 `BIOSIGNAL_FEATURE_REPLAY`.
+| ID | 작업 | 파일·함수 [확인/추정] | verify |
+|---|---|---|---|
+| N1-A | `live/FeatureUploader.kt` 신설: `MetricOutbox.nextBatch(tag, 60)`[확인 :73] → `POST /features/batch`(OkHttp, JWT/entry 헤더는 기존 `ArchiveUploader` 의 인증 공급자 재사용[추정]) → `ack(seq)`[확인 :85]/`quarantine(seq, code)`[확인 :98]. 5초 타이머 + 트리거. `LiveSession.kt` 의 metric 소켓 ACK 처리에서 `outbox.ack` 호출 제거(방송 전용) | `measurement/live/FeatureUploader.kt`(신규), `live/LiveSession.kt`, `live/MetricOutbox.kt`(`pendingInRanges(ranges)` 추가) | V-A1, V-A11, V-A12 |
+| N2-A | `live/FeatureReconciler.kt` 신설: summary 호출 → ranges → `MetricOutbox.pendingInRanges`/journal 재적재 → N1 → 재조회 | `live/FeatureReconciler.kt`(신규) | V-A10 |
+| N3-A | `runtime/ArchiveWorker.kt`: `filesDir/measurement/*/archive` + outbox 파일 전부 탐색, pending>0 또는 close-intent 미전송 세션 모두 처리(동시 1). `RuntimeConfig` 에 scope account 저장, 토큰 account ≠ scope 면 건너뜀. 앱 시작(`NativeRuntime` init)·`ConnectivityManager` 콜백·포그라운드에서 `schedule(ctx, jitter)` | `runtime/ArchiveWorker.kt:16-50`, `runtime/NativeRuntime.kt`, `archive/ArchiveQueue.kt` | V-C5, V-C6 |
+| N4-A | 종료 비차단·지터·presign/ack 배치 ≤24·`archive.counts`/`feature.counts` 이벤트 | `archive/ArchiveUploader.kt`[추정], `NativeMeasurementPlugin.kt`[추정] | V-C4, V-C8, V-C3 |
+| N5-A | 원시 종료 대조(`GET /biosignal-raw/summary` → 없는 alias 재큐잉) | `archive/ArchiveUploader.kt` | V-C3 |
+| N6-A | 복귀 재개: 포그라운드·네트워크 복귀 시 `capture.renew`(소켓 있으면) → FeatureUploader 즉시 1회 → archive drain → 측정 계속 | `live/LiveSession.kt` | V-C9 |
 
-### A7 24h 이후 검역 접수 (P3-B2)
+### 5.3 작업 (iOS)
 
-`pending_time_review` 를 409 대신 `upload_status='time_review'` 로 접수(S3 올림), live 미반영, 감사 기록, 승인 시 `uploaded` → A6 실행. 플래그 `BIOSIGNAL_TIME_REVIEW_INTAKE`.
+| ID | 작업 | 파일·함수 | verify |
+|---|---|---|---|
+| N1-I | `MeasurementKit/FeatureUploader.swift` 신설: `MetricOutbox.windows`(미acked)[확인] 60개 → URLSession POST → `markAcked`[확인]/`markRejected(code)`[확인]. 5초 타이머 + 트리거. `LiveSession.swift` 의 소켓 ACK→`markAcked` 제거 | `Sources/MeasurementKit/FeatureUploader.swift`(신규), `LiveSession.swift`[추정], `MetricOutbox.swift`(`pending(in ranges:)` 추가) | V-A1, V-A11, V-A12 |
+| N2-I | `FeatureReconciler.swift` 신설(summary→ranges→재전송→재조회) | 신규 | V-A10 |
+| N3-I | `MeasurementManager.drainPendingArchives()` 신설: `sessionDir(*)` 중 pending>0 또는 close intent 미전송 세션 전부(SEALING/CLOSED/DRAINING 포함, CAPTURING 복구와 분리). 호출: `MeasurementHost.swift:55` 직후·`willEnterForeground`(`NativeMeasurementPlugin.swift:33`)·`NWPathMonitor` 복귀. background URLSession task↔alias 재연결 | `MeasurementManager.swift:340-345`, `ArchiveUploader.swift`[추정], `MeasurementHost.swift`, `NativeMeasurementPlugin.swift` | V-C5, V-C6 |
+| N4-I | 종료 비차단·지터·배치·counts 이벤트 | `ArchiveUploader.swift`, `NativeMeasurementPlugin.swift` | V-C4, V-C8, V-C3 |
+| N5-I | 원시 종료 대조 | `ArchiveUploader.swift` | V-C3 |
+| N6-I | 복귀 재개 | `LiveSession.swift`, `MeasurementManager.swift` | V-C9 |
 
-**G2** = V-S16·S17, V-A5~A7(10/31 시연 세션 소급 리허설 포함).
+### 5.4 작업 (웹·공통)
 
-## 6. Phase 3 — 앱: 3단계 대조 + 이어올림 (Android / iOS / 웹·공통, 동결 11/2 12:00)
+| ID | 작업 | 파일 | verify |
+|---|---|---|---|
+| W1 | `metric-outbox.ts`: `DEFAULT_MAX_PENDING` 폐기 제거, IndexedDB(`queue-db.ts` 재사용) 영속, `FeatureUploader`(웹판, 5초·60창·REST) + 소켓 ACK 분리 | `lib/measurement-web/metric-outbox.ts`, `web-measurement-session.ts`, `use-web-measurement.ts`, `lib/biosignal/queue-db.ts` | V-A13 |
+| W2 | `BiosignalQueue.listScopes()` + `useBiosignalResumeSweeper()`(앱 셸, 시작·online·복귀·60초) | `lib/biosignal/durable-queue.ts`, `hooks/use-biosignal-resume-sweeper.ts`(신규) | V-C5(웹) |
+| UI | `recording-status.tsx` "업로드 중 feature N창 · 원시 M건(MB)" / "완료"; `use-native-measurement.ts` 가 `feature.counts`·`archive.counts`·`reconcile.state` 수신 | `components/.../recording-status.tsx`, `lib/measurement-web/use-native-measurement.ts` | V-C8 |
+| 계약 | `docs/sdd-260-native-js-events.md`(P0-4) | docs | — |
 
-### 6.1 공통 계약
+**G2** = V-A10~A13, V-C1~C6·C8~C10 (로컬 디버그 빌드, dev 서버 P1 반영본에 연결).
 
-- **종료 비차단**: 종료 = 로컬 봉인 + close intent 영속 + feature flush. 화면 "수업 종료 · 데이터 업로드 중 N건(MB)" → "업로드 완료"/"확인 필요". 화면 이탈 가능.
-- **대조 트리거**: 종료 직후(지터 0~60s) · 앱 시작 · 포그라운드 · 네트워크 복귀 · 60초 주기(미완료 있을 때만). 동시 scope 1, 기기 동시 PUT 1(유휴 2).
-- **feature 대조 루프(F-N1)**: ① F-S2 summary → ② `missing_ranges` ∩ 로컬 outbox/journal 보유 창 → ③ F-S1 로 ≤300창씩 전송 → ④ ACK 로 outbox acked 표시 → ⑤ summary 재조회, `missing_ranges=[]` 면 완료. 로컬에도 없는 구간은 `gap(local_missing)` 진단. 재시도 full jitter `0..min(60s, 1s×2^n)`, 429/5xx/네트워크는 횟수 제한 없음, 401 인증 대기, 403 사유별, 409 격리.
-- **원시 대조 루프(P2-N5)**: A12 summary → 서버에 없는 alias 만 재큐잉 → receipt_hash 일치·manifest complete 로 완료.
-- **격리 정책(F-N3)**: 서버 `rejected` 중 `pending_time_review`·`beyond_offline_bound`·`straddles_cutoff` 는 **격리하지 않고 historical 재시도 큐**로 넘겨 F-S1 로 재전송(서버가 historical 로 판정). `consent_withdrawn`·`window_after_cutoff`·`feature_hash_conflict`·`stale_owner_generation(소유권 불일치)` 만 최종 격리.
-- **scope 격리**: API 환경 + account + participant + session. 다른 principal scope 는 전송하지 않고 보존.
-- **"무조건 백그라운드 재개"**: 인증·네트워크·OS 실행 기회가 오면 화면과 무관하게 재시도. OS 강제종료 중 상시 실행은 약속하지 않는다 → 합격 조건은 재실행 후 복구.
+## 6. Phase 3 — 검증·go/no-go (11/3)
 
-### 6.2 작업
-
-| ID | 트랙 | 변경 | 파일 | verify |
-|---|---|---|---|---|
-| **F-N1** | Android / iOS | feature 대조 루프(§6.1) 구현. `MetricOutbox` 에서 `missing_ranges` 로 창 조회(`newestFirst`/`windows` 활용), REST 전송, ACK 반영 | `live/FeatureReconciler.kt`(신규), `LiveSession.kt`; `MeasurementKit/FeatureReconciler.swift`(신규), `MeasurementManager.swift` | V-A10, V-A11 |
-| **F-N2** | Android / iOS | outbox drain 을 **소켓 없이도** REST 배치로: 소켓 READY 면 live:metric, 아니면 N초 후 F-S1 폴백(같은 창을 둘 다 보내도 멱등) | `LiveSession.kt/.swift`, `MetricOutbox.kt/.swift` | V-A11 |
-| **F-N3** | Android / iOS | 격리 정책 변경(§6.1): 시간검토 류는 historical 재시도 큐 | `MetricOutbox.kt:98 quarantine`, `MetricOutbox.swift markRejected` | V-A12 |
-| A8 (P2-N1) | Android | `ArchiveWorker` 전 scope 탐색·drain, 시작·네트워크·포그라운드 schedule | `runtime/ArchiveWorker.kt`, `NativeRuntime.kt`, `archive/ArchiveQueue.kt` | V-C5, V-C6 |
-| A9 (P2-N2) | iOS | `drainPendingArchives()`(SEALING/CLOSED/DRAINING 포함), 시작·`willEnterForeground`·네트워크 복귀, background URLSession 재연결 | `MeasurementManager.swift`, `ArchiveUploader.swift`, `MeasurementHost.swift`, `NativeMeasurementPlugin.swift` | V-C5, V-C6 |
-| A10 (P2-N3·N4) | Android / iOS | 종료 비차단·지터·presign/ack 배치 ≤24·`archive.counts` 이벤트 | `ArchiveUploader.kt/.swift`, `NativeMeasurementPlugin` | V-C4, V-C8, V-C3 |
-| A11 (P3-N1) | Android / iOS | 복귀 재개: `capture.renew` 1회 → outbox flush(live 또는 REST) → archive drain → 측정 계속 | `LiveSession.kt/.swift` | V-C9 |
-| P2-N5 | Android / iOS | 원시 종료 대조(A12 summary) | `ArchiveUploader.kt/.swift` | V-C3 |
-| **F-W1** | 웹·공통 | 웹 `MetricOutbox` 300 폐기 제거 → IndexedDB 영속·무상한 + 웹용 F-N1·F-N2 | `measurement-web/metric-outbox.ts`, `web-measurement-session.ts` | V-A13 |
-| P2-W1 | 웹·공통 | `BiosignalQueue.listScopes()` + `useBiosignalResumeSweeper()` | `lib/biosignal/durable-queue.ts`, 신규 훅 | V-C5(웹) |
-| UI | 웹·공통 | "업로드 중 N건(MB)" 표시, 네이티브 counts 이벤트 수신 | `recording-status.tsx`, `use-native-measurement.ts` | V-C8 |
-
-**G3** = V-A10~A13, V-C1~C6·C8~C10(로컬 디버그 빌드 선행, 후보 빌드 재확인).
-
-## 7. 일정 (11/4 목표 마일스톤 · 앱 빌드 소요 반영)
-
-| 일시 | 작업 | 게이트 |
+| 시각 | 내용 | 기준 |
 |---|---|---|
-| 10/31(토) | plan·verify 재정렬, Brian 승인 | — |
-| 11/1(일) 09:00 | P0 전부. **5트랙 동시 착수**: BE A1~A5·F-S1·F-S2·A12 / Android F-N1~N3·A8 / iOS F-N1~N3·A9 / 웹 F-W1 / QA P0-2 | G0 |
-| 11/1(일) 18:00 | BE PR → DEPLOY dev 반영 → **부하 재시험 1차**(착용 30·40, 거절 코드별·DB 대조) | G1 / 플래그 off |
-| 11/2(월) 09:00 | G1 판정(저장 열). BE A6·A7 + 10/31 시연 세션 소급 리허설(V-A5). 네이티브는 dev 의 F-S1/F-S2 에 붙여 F-N1 디버그 빌드 시험 | — |
-| 11/2(월) **12:00** | **FE/네이티브 동결 #1** → APP: Android 사이트용 AAB→Play 서명 APK→사이트 업로드+`latest.json`(반나절~1일), iOS TestFlight 업로드+베타 심사(수 시간) | 직전 빌드 유지 |
-| 11/2(월) 오후 | 디버그 빌드로 V-A10~A13·V-C 실행(합성 40기기 + 실기기 2대). BE dev 반영 → **부하 재시험 2차** | G2·G3(디버그) |
-| 11/2(월) **22:00** | **서버 동결 #1**(A1~A7·F-S1·F-S2·A12) | — |
-| 11/3(화) 09:00 | 후보 빌드 설치(Android APK 사이트·iOS TestFlight) → **실밴드 시험(§D)** V-B1~B11 + dev 소크 60분(착용 ≥5 실밴드 + 합성 35) | G3(후보 빌드) |
-| 11/3(화) **15:00** | **go/no-go**(합격선 §1). go 면 prod 릴리즈(별도 승인) + 현장 지침·앱 설치 안내(QR·사이트) | no-go: 대표 결정 1·2 |
-| 11/4(수) | 현장. 모니터: 거절 코드별 카운터(0)·참여자별 DB 창 수·archive pending·REST 배치 접수·CPU | 플래그 off |
-| 11/5~ | §9 후속 | — |
+| 09:00 | 후보 빌드 설치(Android 사이트 APK · iOS TestFlight, 실기기 각 ≥2) | V-D4 |
+| 09:30~12:00 | 실밴드 §D V-B1~B10 (잠금·백그라운드·BLE OFF·비행기 모드·강제종료·종료 후 앱 종료) | 전부 통과 |
+| 12:00~13:30 | 60분 소크: 실밴드 ≥5 + 합성 35(REST 배치 모드), 종료 후 전원 summary 빈 배열 | V-L7, V-A10 |
+| 15:00 | **go/no-go** — 합격선 §1 | 미달 시 대표 결정 1 |
 
-**일정 위험**: ① Android APK 1일 → 11/3 09:00 빠듯. 11/2 12:00 동결을 못 지키면 대표 결정 2. ② P0-4 alias 매핑 불일치 → A6 time_range 해석, 격리율을 V-A5 로 보고. ③ F-S1 과 live:metric 을 같은 창에 동시 보내는 경합 → 멱등키·SAVEPOINT 로 duplicate 처리(V-S1 확장). ④ 현장 Wi-Fi·40폰 리허설 불가 → 실기기 2~5 + 합성.
+## 7. 일정 (앱은 신규 설치 1회 — 업데이트·구버전 항목 없음)
+
+| 일시 | 작업 |
+|---|---|
+| 10/31(토) | plan·verify 확정, Brian 승인 |
+| 11/1(일) 09:00 | P0. **5트랙 동시 착수**(BE S1~S7 / Android N1~N6 / iOS N1~N6 / 웹 W1·W2·UI / QA P0-2). 12:00 계약 고정(P0-4) |
+| 11/1(일) 18:00 | BE PR → DEPLOY dev 반영 → **부하 재시험 1차**(착용 30·40, REST 배치 모드) → G1 |
+| 11/2(월) 09:00 | G1 판정. 미달이면 BE 는 저장 원인(DB 풀·스레드·쿼리)만 잡는다. 앱 3트랙은 dev 에 붙여 디버그 빌드 시험 시작 |
+| 11/2(월) **12:00** | **FE/네이티브 동결** → APP: Android AAB→Play 서명 APK→사이트 업로드(반나절~1일) · iOS TestFlight 업로드+베타 심사(수 시간) |
+| 11/2(월) 오후 | 디버그 빌드로 V-A10~A13·V-C (합성 40 + 실기기 2~4). **부하 재시험 2차**(`--mixed-close`) → G2 |
+| 11/2(월) **22:00** | **서버 동결**. 사이트 APK·TestFlight 교체 완료 확인 |
+| 11/3(화) 09:00~15:00 | P3 검증 → go/no-go. go 면 prod 릴리즈(별도 승인) + 현장 설치 안내 QR |
+| 11/4(수) | 현장: 참가자 신규 설치 → 클래스 → 종료 후 전원 summary 빈 배열·원시 100% 확인(OPS) |
+| 11/5~ | §9 후속 |
+
+**일정 위험**: ① Android APK 1일 → 11/2 12:00 동결 필수(대표 결정 2). ② REST 배치와 소켓 방송이 같은 창을 쓰지만 DB 기록은 REST 뿐이라 경합 없음. 소켓 ACK 로 acked 처리하는 코드가 남으면 유실 → 3트랙 공통 리뷰 항목. ③ 현장 Wi-Fi 40폰 → 실기기 2~5 + 합성. ④ iOS 베타 심사 지연 → 내부 테스터 배포(심사 불필요) 사용.
 
 ## 8. 파일 소유 (트랙 간 겹침 없음)
 
-| 트랙 | 소유 파일 | 커밋 |
+| 트랙 | 소유 파일 |
+|---|---|
+| **BE** | `backend/app/api/v1/session.py`, `services/live_ingest_service.py`, `services/session_service.py`(구 `ingest_features` 삭제), `services/session_live_commands.py`(`evaluate_ingest` 축소), `services/biosignal_service.py`, `services/biosignal_artifact_service.py`, `ws/session_live_namespace.py`(ACK 주석만), `schemas/session_live.py`, `schemas/biosignal.py`, `config.py`, `main.py`, `api/deps.py`, `models/eeg_feature.py`, `alembic/versions/`(1개), `backend/tests/`, `docs/sdd-260-api.md` |
+| **Android** | `frontend/android/app/src/main/java/com/looxidlabs/mindbreeze/measurement/**`(`live/`, `archive/`, `runtime/`), `app/src/test/**` |
+| **iOS** | `frontend/ios/MeasurementKit/**`, `frontend/ios/App/App/Measurement/**` |
+| **웹·공통** | `frontend/src/lib/measurement-web/**`, `frontend/src/lib/biosignal/**`, `frontend/src/hooks/use-biosignal-resume-sweeper.ts`, `components/.../recording-status.tsx`, `docs/sdd-260-native-js-events.md` |
+| **QA** | `backend/scripts/loadtest/**`, `specs/sdd-260-*/test-results/` |
+
+공통 리뷰 체크(3트랙): "소켓 ACK 로 outbox acked 처리하는 코드가 0건인가", "REST 거절 4종 외 코드는 재시도인가", "summary 빈 배열 전 삭제 0인가".
+
+## 9. 후속 (저장 100% 에 영향 없음 — 삭제하지 않고 한곳에)
+
+| ID | 내용 | 근거 |
 |---|---|---|
-| **BE** | `backend/app/ws/session_live_namespace.py`, `services/live_ingest_service.py`, `session_live_ledger.py`, `session_live_commands.py`, `config.py`, `main.py`, `api/deps.py`, `api/v1/session.py`, `services/biosignal_service.py`, `biosignal_artifact_service.py`, `schemas/biosignal.py`, `schemas/session_live.py`, `tasks/biosignal_feature_replay.py`(신규), `scripts/replay_feature_artifacts.py`(신규), `models/biosignal.py`·`alembic/versions/`(1개), `backend/tests/` | 변경당 1 |
-| **Android** | `frontend/android/app/src/main/java/com/looxidlabs/mindbreeze/measurement/**`(`live/`, `archive/`, `runtime/`), 해당 테스트 | F-N 1, A8 1, A10·A11·N5 1 |
-| **iOS** | `frontend/ios/MeasurementKit/**`, `frontend/ios/App/App/Measurement/**` | 동일 분할 |
-| **웹·공통** | `frontend/src/lib/measurement-web/**`, `lib/biosignal/**`, `components/.../recording-status.tsx`, 신규 sweeper 훅, 네이티브↔JS 이벤트 계약 문서 `docs/sdd-260-native-js-events.md` | F-W1 1, W1 1, UI 1 |
-| **QA** | `backend/scripts/loadtest/**`, 대조 스크립트, `specs/sdd-260-*/test-results/` | 시험당 1 |
+| A2 | heartbeat DEGRADED→READY 복귀(방송 품질) | F5 |
+| A4 / C1 | `_project_latest` NOWAIT + publish 틱·dirty 재투영(호스트 지연) | F7·F8 |
+| A6 | feature archive→DB 재생(2중 안전망; 네이티브 artifact 는 그대로 올라옴) | F14 |
+| C2~C4 | `live_metric_projection_pending`·백프레셔·왕복 축소 | — |
+| C5 | 다중 uvicorn 워커(Redis 이관) | 11/9~ |
+| R1~R3 | 리포트 결측 판정·"데이터 확인 중"·재생성·`pending_upload` 표시 | F16·F18 |
+| M1~M2 | 회원 자기 화면 로컬 우선·끊김 중 유지 | F17 |
+| P3-N2 | iOS `BGProcessingTask` | — |
+| P3-N3 | 로컬 보관 정책 화면 표시 | 대표 결정 3 |
+| V-S13·V-L3·V-L5 | 영상·음성 동시 부하·호스트 지연 — 기록만 | — |
 
-네이티브↔JS 이벤트 이름·필드(`archive.counts`, `feature.reconcile`)는 웹·공통 트랙이 11/1 12:00 까지 문서로 고정하고 Android/iOS 가 따른다. 서버 API 스키마(F-S1·F-S2·A12)는 BE 가 11/1 12:00 까지 OpenAPI 로 고정한다.
+## 10. 확인하지 못한 것 (구현 전 정독)
 
-## 9. 후속 (저장 완결성에 영향 없음 — 삭제하지 않고 한곳에 모음, 11/5~)
-
-| ID | 등급 | 내용 | 근거·비고 |
-|---|---|---|---|
-| R1 | 리포트 | 결측 판정·"데이터 확인 중"(참여자별 coverage·missing_ranges, 0 채움 금지, 종합점수 금지) | F19 |
-| R2 | 리포트 | A6 재생·지각 저장 후 승인 전 리포트 자동 재생성(디바운스 60s), 승인 리포트 불변(RPT-REGEN-005) | F18 |
-| R3 | 리포트 | `pending_upload`·`replay_state` API 필드 + 화면 | — |
-| M1 | 자기 화면 | 지표 출처 로컬 우선(`nativeM.metrics ?? buildSnapshot ?? liveSnap`) | F17 |
-| M2 | 자기 화면 | 끊김 중 지표 유지·복귀 후 링버퍼 연속(이미 로컬 타이머[확인 :282-292]) 회귀 시험 | — |
-| C1 (T2-4) | 모니터링 | publish 틱 + dirty 재투영 | F8 |
-| C2 (P4-1~4) | 모니터링 | `live_metric_projection_pending` + 1초 묶음 투영, 락 순서 고정 | — |
-| C3 (P4-5) | 모니터링 | 적응형 백프레셔(`overloaded`) — 저장을 늦출 뿐 거절 아님 | — |
-| C4 (P4-6) | 모니터링 | `_store_windows` 왕복 축소 | — |
-| C5 (P5-1~5) | 다중 워커 | v1 dict·presence·슬롯 Redis 이관 → `--workers 2`(워커당 풀 15/10) | 11/9~ |
-| P3-N2 | 앱 | iOS `BGProcessingTask` | OS 보장 없음 |
-| P3-W2 | 웹 | presign/ack 배치 | — |
-| P3-N3 | 앱 | 로컬 보관 정책 표시 | 대표 결정 3 |
-| V-S13·V-L3·V-L5 | 시험 | 영상·음성 동시 부하·호스트 지연 — 기록만 | 합격선 아님 |
-
-## 10. 확인하지 못한 것
-
-- alias `NF-<8자>` 의 8자가 `CaptureStream.id` 인지(Android `streamId()`·iOS `stream` 출처) — P0-4.
-- 코어 `observed_at_ms` 시계와 리포트 구간 필터 정합 — 재생 시 `time_range` 대조로 결정.
-- 10/31 시연 세션에 feature artifact 가 `uploaded` 로 있는지(dev DB 읽기, P0-4).
-- iOS `ArchiveUploader.swift` 본문(429·background URLSession), Android `LinkWatchdog.kt` 재연결 정책.
-- 네이티브 outbox 에서 "서버 missing_ranges 에 드는 창"을 꺼내는 조회가 양 플랫폼에 있는지(Android `newestFirst`/`contains` 만 확인, iOS `windows` dict) — F-N1 구현 전 정독.
-- 웹 참가자용 feature artifact(`FeatureRecord`) 디코더의 필요성(현장이 앱만이면 불필요).
+- Android/iOS 기존 REST 인증 공급자(`ArchiveUploader` 의 토큰·entry credential 주입 방식) — N1 이 재사용.
+- iOS `LiveSession.swift`·`ArchiveUploader.swift` 본문(소켓 ACK→`markAcked` 호출 위치, 429·background URLSession).
+- Android `LinkWatchdog.kt` 재연결 정책, `ArchiveUploader.kt` 위치·구조.
+- `core/metrics.py` 존재 여부(계측 노출 방식).
 - 운영 서버 사양·`LIVE_PROTOCOL_V2`·prod S3 권한.
 - 60분·1인 원시 용량 → V-B1 실측.
