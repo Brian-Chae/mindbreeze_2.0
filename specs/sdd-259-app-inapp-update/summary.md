@@ -51,3 +51,19 @@
 - 실기기 설치 화면 동작은 미시험(절차만 기술).
 - `getInstallCapability` 는 매니페스트 선언 여부로 sideload 빌드를 판별.
 - 측정·수업 중 비노출은 홈 경로 한정 렌더로 보장(별도 상태 스토어 의존 없음).
+
+## 후속 수정 — 회원 화면 업데이트 시트 미노출 (fix)
+- 원인: `AppUpdateBanner` 가 `AppShell` 에만 있어 회원(`StructureShell`→`ClientShell`)에서 렌더되지 않음.
+- 조치: `ClientShell` 끝에 `<AppUpdateBanner />` 추가. 시험 `frontend/tests/sdd259-shell-banner.test.tsx` (verify E1~E4).
+- 셸별 노출
+
+| 역할 | 홈 경로 | 셸 | 배너 |
+|---|---|---|---|
+| 회원 | `/app` | StructureShell → ClientShell | 노출(이번에 추가) |
+| 코치 | `/dashboard` | AppShell | 노출 |
+| 기관관리자 | `/dashboard/org` | AppShell | 노출 |
+| 클래스 입장·플레이어·측정·그 외 | — | — | 미노출(`isUpdateHomePath`) |
+
+- 중복: StructureShell 은 role 로 셸 하나만 마운트 → 배너·매니페스트 조회 1회. 코치/기관관리자는 셸 중첩 없음.
+- 이 수정이 들어간 앱 빌드가 필요하다(웹 번들만이 아니라 앱 재빌드·사이트 업로드는 감독 수행).
+- 재발 방지: 기존 verify 는 컴포넌트·경로 판정만 보고 "셸별 마운트"를 시험하지 않았다 → 셸 소스 계약 시험 추가.
