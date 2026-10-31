@@ -3,7 +3,10 @@
 import asyncio
 import logging
 import re
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
+
+import anyio.to_thread
 
 from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
@@ -149,6 +152,11 @@ async def lifespan(app: FastAPI):
     problems = production_config_problems(settings)
     if problems:
         raise RuntimeError("운영 설정 오류: " + "; ".join(problems))
+    # SDD-260 S5: 소켓 방송(asyncio.to_thread)·REST 공용 기본 executor(기본 8스레드)와 anyio 스레드풀을 키워
+    # 40기기 동시 저장이 스레드 대기로 막히지 않게 한다.
+    asyncio.get_running_loop().set_default_executor(
+        ThreadPoolExecutor(max_workers=settings.default_executor_workers, thread_name_prefix="mb-default"))
+    anyio.to_thread.current_default_thread_limiter().total_tokens = settings.anyio_thread_tokens
     task = asyncio.create_task(_outbox_ws_poll_loop())
     yield
     task.cancel()
