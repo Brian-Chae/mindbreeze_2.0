@@ -12,6 +12,8 @@ public final class FeatureUploader {
     /// 적체가 남았을 때 다음 배치까지의 짧은 간격(5초를 기다리지 않는다).
     public static let drainDelay: TimeInterval = 0.2
     public static let maxBackoff: TimeInterval = 60
+    /// 재시도 지연 하한 — full jitter 가 0 에 가까워도 핫루프가 되지 않게 한다.
+    public static let minRetryDelay: TimeInterval = 0.1
     public static let quarantineCodes: Set<String> = ["consent_withdrawn", "participant_mismatch", "stream_not_owned", "hash_conflict"]
 
     private let outbox: MetricOutbox
@@ -164,7 +166,7 @@ public final class FeatureUploader {
         let cap = min(Self.maxBackoff, pow(2, Double(min(failures, 20))))
         failures += 1
         retryTimer?.cancel()
-        retryTimer = scheduler.schedule(after: jitter(cap)) { [weak self] in
+        retryTimer = scheduler.schedule(after: max(Self.minRetryDelay, jitter(cap))) { [weak self] in
             guard let self = self else { return }
             self.lock.lock(); self.retryTimer = nil; self.lock.unlock()
             self.attempt(external: true)
