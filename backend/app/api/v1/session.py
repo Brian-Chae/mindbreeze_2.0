@@ -1,5 +1,7 @@
 """세션 관리 API"""
 
+import logging
+import time
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -10,6 +12,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from app.api.deps import archive_upload_slot, get_current_user, get_current_user_optional, require_roles
 from app.api.v1.onboarding import _parse_date
+from app.core import ingest_metrics
 from app.core.database import get_db
 from app.models.session import Session as SessionModel, SessionParticipant
 from app.core.redis import get_redis
@@ -76,6 +79,8 @@ from app.services import (
     session_service,
 )
 from app.services.session_authz import SessionAction, get_session_authorized
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -827,8 +832,18 @@ def ingest_features_batch(
         if exc.field:
             detail["field"] = exc.field
         raise _HTTPException(status_code=422, detail=detail)
-    results = live_ingest_service.store_batch(db, participant, sid, windows)
+    t0 = time.perf_counter()
+    try:
+        results = live_ingest_service.store_batch(db, participant, sid, windows)
+    except Exception:
+        ingest_metrics.record_error()
+        raise
+    elapsed_ms = (time.perf_counter() - t0) * 1000
     counts = {k: sum(1 for r in results if r["status"] == k) for k in ("accepted", "duplicate", "rejected")}
+    ingest_metrics.record_batch(results, elapsed_ms)
+    logger.info("[ingest-batch] session=%s participant=%s windows=%d accepted=%d duplicate=%d rejected=%d ms=%.0f codes=%s",
+                sid, participant.id, len(results), counts["accepted"], counts["duplicate"], counts["rejected"], elapsed_ms,
+                sorted({r["code"] for r in results if r.get("code")}))
     return {"session_id": str(sid), "participant_id": str(participant.id), "results": results, "counts": counts}
 
 

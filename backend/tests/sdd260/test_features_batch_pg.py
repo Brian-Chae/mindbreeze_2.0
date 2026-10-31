@@ -259,3 +259,27 @@ def test_S3_소켓_검증_거절은_ignored_코드이고_저장이_없다(maker,
         out = li.ingest_metrics(s, world.member(0), world.session_id, {"protocol_version": 2, "schema_version": 1, "windows": [forged, stale]})
     assert [(a["status"], a["code"]) for a in out.response["acks"]] == [("ignored", "participant_mismatch"), ("ignored", "stale_owner_generation")]
     assert len(_rows(maker, world)) == 0
+
+
+# ---------------- S7 계측 ----------------
+
+def test_S7_배치_접수가_계측에_집계되고_admin_엔드포인트로_조회된다(api, maker, world, started):
+    from app.core import ingest_metrics
+    from app.models.user import User
+
+    ingest_metrics.reset()
+    bad = _env(world, started, 3)
+    bad["participant_id"] = str(world.members[1][1])
+    _post(api, world, [_env(world, started, 1), _env(world, started, 2), bad])
+    _post(api, world, [_env(world, started, 1)])  # duplicate
+    snap = ingest_metrics.snapshot()
+    assert snap["batches"] == 2 and snap["windows"] == {"accepted": 2, "rejected": 1, "duplicate": 1}
+    assert snap["rejected_codes"] == {"participant_mismatch": 1} and snap["batch_ms"]["count"] == 2 and snap["batch_ms"]["p95"] is not None
+    with maker() as s:  # 관리자 계정 생성 후 조회, 일반 참가자는 403
+        adm = User(email=f"adm-{uuid.uuid4().hex[:8]}@example.test", password_hash="x", name="a", role="platform_admin")
+        s.add(adm)
+        s.commit()
+        adm_id = adm.id
+    r = api.get("/api/v1/admin/ingest-metrics", headers=_auth(adm_id))
+    assert r.status_code == 200 and r.json()["windows"]["accepted"] == 2
+    assert api.get("/api/v1/admin/ingest-metrics", headers=_auth(world.members[0][0])).status_code == 403
