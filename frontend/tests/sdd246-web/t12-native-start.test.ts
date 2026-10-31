@@ -75,12 +75,17 @@ describe('T12 requestId·지표', () => {
 
 describe('T12 v1 feature 업로드 차단 배선', () => {
   const src = readFileSync('src/hooks/useBand.ts', 'utf8');
-  it('옵션 기본 true, REST/WS/재전송/적재 경로가 모두 ref 로 가드된다', () => {
-    expect(src).toContain('v1FeatureUpload = true');
+  it('옵션 기본 false(SDD-260), REST/WS/재전송/적재 경로가 모두 ref 로 가드된다', () => {
+    expect(src).toContain('v1FeatureUpload = false,');
     expect(src).toMatch(/if \(!v1FeatureUploadRef\.current\) return false;/);
     expect(src).toContain("v1_feature_upload_disabled");
     expect(src).toMatch(/retransmitInFlightRef\.current \|\| !v1FeatureUploadRef\.current/);
     expect(src).toMatch(/!observation && v1FeatureUploadRef\.current && sessionId/);
+  });
+  it('SDD-260: 호스트 화면·플레이그라운드·밴드 스텝은 v1 업로드를 켜지 않는다(기본 false, 명시 true 호출자 없음)', () => {
+    for (const f of ['src/pages/sessions/ClassPlayerPage.tsx','src/pages/playground/PlaygroundPage.tsx','src/hooks/useBandStep.ts']) {
+      expect(readFileSync(f, 'utf8')).not.toMatch(/v1FeatureUpload:\s*true/);
+    }
   });
   it('SDD-260: MemberClassContainer 는 v1 feature 업로드를 항상 끈다(정본 = REST 배치)', () => {
     const c = readFileSync('src/components/class/player/member/MemberClassContainer.tsx', 'utf8');

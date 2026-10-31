@@ -35,3 +35,9 @@
 3. **summary 호출 부담**: 스위퍼가 60초마다 미완료 scope 에 대해서만 summary 를 부른다. 완료 마커가 있고 대기 0 이면 호출하지 않는다.
 4. **앱(native)**: 이 트랙은 이벤트 수신·표시만 맡는다. 네이티브가 이벤트를 실제로 내보내는지는 iOS(`MeasurementManager.swift:726-731`) 만 확인, Android 방출부는 grep 에서 확인되지 않음(Android 트랙 확인 필요).
 5. 완료 마커(`completedCount`)는 acked 건수와 같을 때만 "done". 이후 새 창이 쌓이면 다시 대조한다.
+
+## 5. 후속 수정 — 호스트 화면 v1 feature 업로드 (W3)
+
+- **조치**: `useBand.ts` `v1FeatureUpload` 기본값 true→false. `ClassPlayerPage.tsx:400`·`PlaygroundPage`·`useBandStep` 은 모두 명시 true 가 없으므로 업로드 비활성(404 재시도·큐 적체 중단). 명시 `true` 호출자는 코드베이스에 0곳(grep) — 코드경로(useBand.ts 669~934)는 옵션으로만 도달하는 죽은 경로이나, 큐/ack 훅과 얽혀 있어 이번 범위에선 삭제하지 않고 기본 차단만 했다(후속 정리 후보).
+- **호스트 feature 가 저장 대상인가 → 아니오(표시만 유지)**. 근거: 리포트 통계는 `class_report_stats_service.py:~340-358` 에서 `report_scope.scope_for_session` 의 `included_ids`(= `SessionParticipant.report_included` 참인 참가자, `report_scope.py:62-80`) 의 `EEGFeatureWindow` 만 읽는다. 호스트는 회원 입장 플로우의 `report_included` 선택(`api/v1/session.py:761` 본인 참여자 선택)을 거치는 대상이 아니고 행 기본값은 False(`models/session.py:193`)라 리포트에 포함되지 않는다. 호스트 화면은 `ClassPlayerPage.tsx:1220-1280` 에서 `band.*` 로컬 값을 표시에만 쓴다.
+- **확인하지 못한 것**: 호스트가 `report_included=true` 로 바뀌는 운영 경로가 있는지는 코드상 확인되지 않음(없다고 단정은 못함). 있다면 호스트용 REST 배치 연결이 필요하며 그건 별도 결정.
