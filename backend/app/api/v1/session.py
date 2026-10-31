@@ -18,6 +18,9 @@ from app.models.session import Session as SessionModel, SessionParticipant
 from app.core.redis import get_redis
 from app.schemas.class_scheduling import TransitionConfirmation
 from app.schemas.session import (
+    FeatureBatchResponse,
+    FeatureSummaryResponse,
+    RawSummaryResponse,
     RecordingConsentRequest,
     ReportEmailRequest,
     ReportEmailResponse,
@@ -801,7 +804,7 @@ def add_marker(
     )
 
 
-@router.post("/{session_id}/features/batch")
+@router.post("/{session_id}/features/batch", response_model=FeatureBatchResponse)
 def ingest_features_batch(
     session_id: str,
     payload: dict = Body(...),
@@ -880,7 +883,7 @@ def _summary_target(session_id: str, participant_id: str | None, x_entry_credent
     return sid, me.id
 
 
-@router.get("/{session_id}/features/summary")
+@router.get("/{session_id}/features/summary", response_model=FeatureSummaryResponse)
 def get_features_summary(
     session_id: str,
     participant_id: str | None = Query(None),
@@ -958,7 +961,7 @@ def ack_eeg_raw(
     )
 
 
-@router.get("/{session_id}/biosignal-raw/summary")
+@router.get("/{session_id}/biosignal-raw/summary", response_model=RawSummaryResponse)
 def get_biosignal_raw_summary(
     session_id: str,
     participant_id: str | None = Query(None),

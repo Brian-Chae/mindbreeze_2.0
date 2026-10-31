@@ -662,21 +662,65 @@ class EEGFeatureItem(HRVMotionFeatures):
     band_battery: int | None = Field(default=None, ge=0, le=100)
 
 
-class EEGFeatureBatchRequest(BaseModel):
-    """5초 배치 업로드 — 초당 1개 feature 배열.
-
-    participant_id: 게스트/특정 참가자 식별용. 미지정 시 인증 사용자를 참가자로 해석한다.
-    """
-
-    participant_id: str | None = None
-    # VB-02: 배치 순회 DoS 방지 — 1회 업로드 윈도우 수 상한(초당 1개).
-    features: list[EEGFeatureItem] = Field(..., min_length=1, max_length=5000)
+# SDD-260: 정본 저장 경로 POST /sessions/{id}/features/batch · 현황 조회 응답 (계약: specs/sdd-260-*/contract.md)
+class FeatureBatchResult(BaseModel):
+    stream_id: str
+    sequence: str
+    status: str  # accepted | duplicate | rejected
+    durable: bool
+    code: str | None = None  # rejected: participant_mismatch|stream_not_owned|consent_withdrawn|hash_conflict
 
 
-class EEGFeatureBatchResponse(BaseModel):
+class FeatureBatchResponse(BaseModel):
     session_id: str
-    # 실제 저장된 윈도우 수 (중복 초 인덱스는 제외)
-    saved: int
+    participant_id: str
+    results: list[FeatureBatchResult]
+    counts: dict[str, int]
+
+
+class FeatureSummaryStream(BaseModel):
+    stream_id: str
+    count: int
+    min_index: int
+    max_index: int
+    contiguous_through: int
+    missing_ranges: list[list[int]]
+    truncated: bool
+
+
+class FeatureSummaryResponse(BaseModel):
+    session_id: str
+    participant_id: str
+    total_count: int
+    streams: list[FeatureSummaryStream]
+    updated_at: str | None = None
+
+
+class RawSummaryStream(BaseModel):
+    stream_id: str
+    segment_id: str
+    signal_type: str
+    uploaded: int
+    pending: int
+    failed: int
+    min_index: int | None = None
+    max_index: int | None = None
+    missing_ranges: list[list[int]]
+    truncated: bool
+
+
+class RawSummaryResponse(BaseModel):
+    session_id: str
+    participant_id: str
+    total: int
+    uploaded: int
+    pending: int
+    failed: int
+    streams: list[RawSummaryStream]
+    aliases_uploaded: list[str]
+    aliases_truncated: bool
+    receipt_hash: str
+    updated_at: str | None = None
 
 
 # SDD-029: 이메일 OTP 인증 결과와 참가자 소유 증명을 함께 제출한다.

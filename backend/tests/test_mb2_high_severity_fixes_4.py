@@ -136,35 +136,34 @@ def test_broadcast_report_progress_emit_실패해도_예외없이_로깅(monkeyp
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# [2] VB-02 — EEGFeatureBatchRequest.features 상한
+# [2] VB-02 — feature 배치 상한 (SDD-260: v1 5000 → 정본 REST 배치 300창)
 # ─────────────────────────────────────────────────────────────────────────────
 
 
 def test_eeg_feature_batch_상한초과_스키마거부():
-    from app.schemas.session import EEGFeatureBatchRequest
+    from app.schemas.session_live_ingest import FEATURE_BATCH_MAX, parse_feature_batch
+    from app.schemas.session_live_v2 import WireError
 
-    with pytest.raises(ValidationError):
-        EEGFeatureBatchRequest(features=[{"second_offset": i} for i in range(5001)])
+    assert FEATURE_BATCH_MAX == 300
+    with pytest.raises(WireError) as e:
+        parse_feature_batch({"windows": [{}] * (FEATURE_BATCH_MAX + 1)})
+    assert (e.value.code, e.value.field) == ("invalid_message", "windows")
 
 
 def test_eeg_feature_batch_상한이내_허용():
-    from app.schemas.session import EEGFeatureBatchRequest
+    from app.schemas.session_live_ingest import FEATURE_BATCH_MAX
 
-    req = EEGFeatureBatchRequest(features=[{"second_offset": i} for i in range(5000)])
-    assert len(req.features) == 5000
+    # 상한 경계(300)는 tests/sdd260/test_features_batch_pg.py V-A9 가 실제 저장으로 검증한다
+    assert FEATURE_BATCH_MAX == 300
 
 
 def test_eeg_feature_batch_상한초과_엔드포인트422(client):
-    """API 계층도 상한 초과 배치를 422 로 거부한다(서비스 순회 진입 차단)."""
+    """API 계층도 상한 초과 배치를 422 로 거부한다(서비스 순회 진입 차단). 인증 통과 후 본문 검증."""
     counselor = _register(client, "vb02-host@test.com")
     cls = _create_group_class(client, counselor["h"])
     pid = _join_guest(client, cls["access_code"], "VB02게스트")
 
-    body = {
-        "participant_id": pid,
-        "features": [{"second_offset": i} for i in range(5001)],
-    }
-    res = post_features(client, f"/api/v1/sessions/{cls['id']}/features", json=body)
+    res = client.post(f"/api/v1/sessions/{cls['id']}/features/batch", json={"participant_id": pid, "windows": [{}] * 301})
     assert res.status_code == 422, res.text
 
 
