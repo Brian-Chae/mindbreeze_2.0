@@ -13,6 +13,11 @@ import uuid
 import httpx
 import pytest
 
+# 실제 시계를 120배속으로 돌리는 시간 의존 시험이라 실행 환경(CPU·라이브러리 버전)에 따라 결과가 달라진다.
+# CI 전체 pytest 에서는 제외하고, 부하 스크립트를 수정했을 때만 LT40S_UNIT=1 로 수동 실행한다.
+if os.environ.get("LT40S_UNIT") != "1":
+    pytest.skip("LT40S_UNIT=1 일 때만 실행(시간 의존 모의 시험, CI 제외)", allow_module_level=True)
+
 sys.path.insert(0, os.path.dirname(__file__))
 import loadtest_ingest_v3_40 as lt  # noqa: E402
 from mock_ingest_server import MockState, build_app  # noqa: E402
