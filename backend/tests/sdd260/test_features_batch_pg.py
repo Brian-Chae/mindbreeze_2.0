@@ -283,3 +283,23 @@ def test_S7_배치_접수가_계측에_집계되고_admin_엔드포인트로_조
     r = api.get("/api/v1/admin/ingest-metrics", headers=_auth(adm_id))
     assert r.status_code == 200 and r.json()["windows"]["accepted"] == 2
     assert api.get("/api/v1/admin/ingest-metrics", headers=_auth(world.members[0][0])).status_code == 403
+
+
+def test_V_S2_같은_키_다른_hash_동시_2건은_한쪽만_저장되고_다른쪽은_hash_conflict(maker, world, started):
+    from app.schemas.session_live_ingest import parse_metric_window
+    pid = world.members[0][1]
+    a = parse_metric_window(_env(world, started, 1, h="a" * 64, metrics={"focus_raw": MET(1.0)}))
+    b = parse_metric_window(_env(world, started, 1, h="b" * 64, metrics={"focus_raw": MET(2.0)}))
+
+    def call(w):
+        with maker() as s:
+            return li.store_batch(s, s.get(SessionParticipant, pid), world.session_id, [w])[0]
+
+    with ThreadPoolExecutor(max_workers=2) as ex:
+        ra, rb = list(ex.map(call, [a, b]))
+    statuses = sorted([ra["status"], rb["status"]])
+    assert statuses == ["accepted", "rejected"], (ra, rb)
+    loser = ra if ra["status"] == "rejected" else rb
+    assert loser["code"] == "hash_conflict"
+    rows = _rows(maker, world)
+    assert len(rows) == 1

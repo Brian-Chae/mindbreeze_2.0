@@ -290,11 +290,21 @@ def store_batch(db: DBSession, participant: SessionParticipant, session_id: uuid
         saved_keys = {(str(i.play_group_id), int(i.second_offset)) for i in saved}
     else:
         db.rollback()
-    for idx, w in todo:
-        if results[idx]["status"] != "accepted":
-            continue
-        if (w.stream_id, w.sequence) not in saved_keys:  # 동시 저장 경합으로 건너뜀 → 이미 저장된 중복
-            results[idx] = _rest_result(w, "duplicate")
+    lost = [(idx, w) for idx, w in todo if results[idx]["status"] == "accepted" and (w.stream_id, w.sequence) not in saved_keys]
+    if lost:
+        # 동시 저장 경합으로 건너뜀 → 승자의 hash 와 비교해 같으면 duplicate, 다르면 hash_conflict(첫 저장 보존)
+        winners = {
+            (pg, idx): alias
+            for pg, idx, alias in db.execute(
+                select(EEGFeatureWindow.play_group_id, EEGFeatureWindow.window_index, EEGFeatureWindow.source_feature_alias).where(
+                    EEGFeatureWindow.session_id == session_id, EEGFeatureWindow.participant_id == pid,
+                    EEGFeatureWindow.window_index.in_({w.sequence for _, w in lost}),
+                    EEGFeatureWindow.play_group_id.in_({w.stream_id for _, w in lost}))
+            ).all()
+        }
+        for idx, w in lost:
+            same = winners.get((w.stream_id, w.sequence)) == w.feature_hash
+            results[idx] = _rest_result(w, "duplicate") if same else _rest_result(w, "rejected", code="hash_conflict")
     return results
 
 
