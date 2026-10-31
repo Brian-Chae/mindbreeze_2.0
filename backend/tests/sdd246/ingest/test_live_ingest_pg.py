@@ -84,6 +84,19 @@ def _ingest(maker, world, data, i=0, now=None):
         return li.ingest_metrics(s, world.member(i), world.session_id, data, now=now)
 
 
+def _store(maker, world, data, i=0):
+    """SDD-260: feature DB 저장은 REST store_batch 가 유일한 경로다(소켓 ingest_metrics 는 방송 전용)."""
+    from app.schemas.session_live_ingest import parse_metric_batch
+    with maker() as s:
+        p = s.get(SessionParticipant, world.members[i][1])
+        return li.store_batch(s, p, world.session_id, parse_metric_batch(data))
+
+
+def _count_rows(maker, world):
+    with maker() as s:
+        return s.scalar(sa.select(sa.func.count()).select_from(EEGFeatureWindow).where(EEGFeatureWindow.session_id == world.session_id))
+
+
 def _metrics_events(maker, world):
     with maker() as s:
         return s.execute(sa.select(LiveOutbox).where(LiveOutbox.session_id == world.session_id, LiveOutbox.domain == "metrics")
@@ -186,27 +199,29 @@ def test_device_seq는_단조_작거나_같으면_duplicate_타인_stream과_비
 
 # ---------------- (3) metric ingest ----------------
 
-def test_metric_수락은_feature를_저장하고_durable_ack와_최신값_metrics_event를_만든다(maker, world, started):
+def test_metric_소켓은_저장하지_않고_최신값_metrics_event만_만들고_REST가_feature를_저장한다(maker, world, started):
     out = _ingest(maker, world, _batch(_env(world, started, 1), _env(world, started, 2)))
     acks = out.response["acks"]
-    assert [a["status"] for a in acks] == ["accepted", "accepted"] and all(a["durable"] for a in acks)
-    assert not _validate("metric.schema.json", "MetricAckBatch", out.response)
-    with maker() as s:
-        rows = s.execute(sa.select(EEGFeatureWindow).where(EEGFeatureWindow.session_id == world.session_id)
-                         .order_by(EEGFeatureWindow.window_index)).scalars().all()
-    assert [r.window_index for r in rows] == [1, 2] and rows[0].focus_index == 1.5 and rows[0].relaxation_index == 0.3
-    assert rows[0].play_group_id == started.result["stream_id"] and rows[0].source_feature_alias == HASH
+    assert [a["status"] for a in acks] == ["projected", "projected"] and all("durable" not in a for a in acks)
+    assert _count_rows(maker, world) == 0  # SDD-260: 소켓은 저장하지 않는다
     evs = _metrics_events(maker, world)
     assert len(evs) == 1, "한 배치는 가장 새 창 하나만 투영(고빈도 outbox 폭증 방지)"
     assert evs[0].payload["sequence"] == "2" and evs[0].audience_policy == ["host", f"member:{world.members[0][1]}"]
     assert not _validate("state.schema.json", "MetricsEntity", evs[0].payload)
     assert out.projected
+    res = _store(maker, world, _batch(_env(world, started, 1), _env(world, started, 2)))
+    assert [r["status"] for r in res] == ["accepted", "accepted"] and all(r["durable"] for r in res)
+    with maker() as s:
+        rows = s.execute(sa.select(EEGFeatureWindow).where(EEGFeatureWindow.session_id == world.session_id)
+                         .order_by(EEGFeatureWindow.window_index)).scalars().all()
+    assert [r.window_index for r in rows] == [1, 2] and rows[0].focus_index == 1.5 and rows[0].relaxation_index == 0.3
+    assert rows[0].play_group_id == started.result["stream_id"] and rows[0].source_feature_alias == HASH
 
 
 def test_invalid_warming_up_값은_0으로_저장되지_않고_null이다(maker, world, started):
     m = {"focus_raw": MET(None, "invalid"), "relaxation_raw": MET(None, "warming_up"), "bpm": {**MET(None, "gap"), "unit": "beats_per_min"}}
-    out = _ingest(maker, world, _batch(_env(world, started, 1, metrics=m)))
-    assert out.response["acks"][0]["status"] == "accepted"
+    res = _store(maker, world, _batch(_env(world, started, 1, metrics=m)))
+    assert res[0]["status"] == "accepted"
     with maker() as s:
         r = s.scalars(sa.select(EEGFeatureWindow).where(EEGFeatureWindow.session_id == world.session_id)).one()
     assert r.focus_index is None and r.relaxation_index is None and r.heart_rate is None
@@ -221,8 +236,8 @@ _EXT_UNITS = {"delta_power": "power_raw", "theta_power": "power_raw", "alpha_pow
 def test_확장_feature_15종은_DB_컬럼에_저장되고_구_10종_메시지도_그대로_수락된다(maker, world, started):
     ext = {k: {**MET(0.5), "unit": u} for k, u in _EXT_UNITS.items()}
     m_new = {"focus_raw": MET(1.5), "relaxation_raw": MET(0.3), **ext}
-    out = _ingest(maker, world, _batch(_env(world, started, 1, metrics=m_new), _env(world, started, 2)))  # 2번째 = 구 클라(확장 없음)
-    assert [a["status"] for a in out.response["acks"]] == ["accepted", "accepted"]
+    res = _store(maker, world, _batch(_env(world, started, 1, metrics=m_new), _env(world, started, 2)))  # 2번째 = 확장 없는 창
+    assert [a["status"] for a in res] == ["accepted", "accepted"]
     with maker() as s:
         rows = s.execute(sa.select(EEGFeatureWindow).where(EEGFeatureWindow.session_id == world.session_id)
                          .order_by(EEGFeatureWindow.window_index)).scalars().all()
@@ -235,52 +250,44 @@ def test_확장_feature_15종은_DB_컬럼에_저장되고_구_10종_메시지�
 
 
 def test_같은_sequence_같은_hash는_duplicate_다른_hash는_충돌로_거절되고_덮어쓰지_않는다(maker, world, started):
-    first = _ingest(maker, world, _batch(_env(world, started, 1)))
-    assert first.response["acks"][0]["status"] == "accepted"
-    dup = _ingest(maker, world, _batch(_env(world, started, 1)))
-    assert dup.response["acks"][0]["status"] == "duplicate" and dup.response["acks"][0]["durable"] is True
-    bad = _ingest(maker, world, _batch(_env(world, started, 1, h="b" * 64, metrics={"focus_raw": MET(9.9)})))
-    a = bad.response["acks"][0]
-    assert a["status"] == "rejected" and a["code"] == "feature_hash_conflict" and a["durable"] is False
+    first = _store(maker, world, _batch(_env(world, started, 1)))
+    assert first[0]["status"] == "accepted"
+    dup = _store(maker, world, _batch(_env(world, started, 1)))
+    assert dup[0]["status"] == "duplicate" and dup[0]["durable"] is True
+    bad = _store(maker, world, _batch(_env(world, started, 1, h="b" * 64, metrics={"focus_raw": MET(9.9)})))
+    assert bad[0]["status"] == "rejected" and bad[0]["code"] == "hash_conflict" and bad[0]["durable"] is False
     with maker() as s:
         r = s.scalars(sa.select(EEGFeatureWindow).where(EEGFeatureWindow.session_id == world.session_id)).one()
     assert r.focus_index == 1.5  # 덮어쓰기 없음
-    assert len(_metrics_events(maker, world)) == 1  # duplicate 는 새 투영을 만들지 않는다
 
 
-def test_participant_mismatch_타인_stream_구_generation은_저장도_투영도_없다(maker, world, started):
+def test_participant_mismatch_타인_stream_구_generation은_소켓에서_ignored이고_투영도_없다(maker, world, started):
     other = _start(maker, world, i=1)
-    # 타인 participant 를 주장
     forged = _env(world, started, 1)
     forged["participant_id"] = str(world.members[1][1])
-    # 타인 stream 을 내 participant 로 전송
     steal = _env(world, other, 2)
     steal["participant_id"] = str(world.members[0][1])
-    # 구 generation
     stale = _env(world, started, 3, gen="9")
     acks = _ingest(maker, world, _batch(forged, steal, stale)).response["acks"]
     assert [a["code"] for a in acks] == ["participant_mismatch", "stream_not_found", "stale_owner_generation"]
-    assert all(a["status"] == "rejected" and a["durable"] is False for a in acks)
-    with maker() as s:
-        assert s.scalar(sa.select(sa.func.count()).select_from(EEGFeatureWindow).where(EEGFeatureWindow.session_id == world.session_id)) == 0
-    assert _metrics_events(maker, world) == []
+    assert all(a["status"] == "ignored" for a in acks)
+    assert _count_rows(maker, world) == 0 and _metrics_events(maker, world) == []
 
 
-def test_superseded_stream의_늦은_metric은_이력으로만_저장되고_live를_못_바꾼다(maker, world, started):
+def test_superseded_stream의_늦은_metric은_소켓에서_투영되지_않고_REST로는_이력이_저장된다(maker, world, started):
     new = _start(maker, world)  # started 는 superseded
     assert new.result["generation"] == "2"
     late = _ingest(maker, world, _batch(_env(world, started, 1)))
-    a = late.response["acks"][0]
-    assert a["status"] == "accepted" and a["durable"] is True  # 이력은 보존(데이터 유실 방지)
-    assert late.projected is False and _metrics_events(maker, world) == []  # 구 owner 는 live 최신값을 못 바꾼다
-    # 구 generation 을 새 stream 에 주장하면 fencing 거절
+    assert late.response["acks"][0]["status"] == "ignored" and late.projected is False and _metrics_events(maker, world) == []
+    assert _store(maker, world, _batch(_env(world, started, 1)))[0]["status"] == "accepted"  # 이력은 REST 로 보존(유실 방지)
+    # 구 generation 을 새 stream 에 주장하면 소켓 fencing 으로 무시
     forged = _ingest(maker, world, _batch(_env(world, new, 1, gen="1")))
     assert forged.response["acks"][0]["code"] == "stale_owner_generation"
     ok = _ingest(maker, world, _batch(_env(world, new, 1)))
-    assert ok.response["acks"][0]["status"] == "accepted" and ok.projected
+    assert ok.response["acks"][0]["status"] == "projected" and ok.projected
 
 
-def test_종료_cutoff_이후_창은_거절_이전_창은_저장하되_live에는_투영하지_않는다(maker, world):
+def test_종료_cutoff_이후_창도_REST로_저장되지만_live에는_투영하지_않는다(maker, world):
     now = datetime.now(timezone.utc)
     with maker() as s:
         cps.seed_live_state(s, world.session_id)
@@ -292,12 +299,12 @@ def test_종료_cutoff_이후_창은_거절_이전_창은_저장하되_live에�
         st.cutoff_at, st.cutoff_code, st.status, st.close_deadline_at = now - timedelta(minutes=1), "completed", "ended", now + timedelta(hours=24)
         st.lease_expires_at = None
         s.commit()
-    before = _env(world, r, 5)   # [4s,5s] → anchor 기준 2분 전 → cutoff(1분 전) 이전
-    after = _env(world, r, 130)  # [129s,130s] → 2분 전 + 130s = 10초 후 → cutoff 이후
+    before, after = _env(world, r, 5), _env(world, r, 130)  # 종료 cutoff 이전/이후 창 — SDD-260 은 둘 다 저장한다
+    res = _store(maker, world, _batch(before, after))
+    assert [x["status"] for x in res] == ["accepted", "accepted"]
     acks = _ingest(maker, world, _batch(before, after), now=now).response["acks"]
-    assert acks[0]["status"] == "accepted" and acks[0]["durable"] is True
-    assert acks[1]["status"] == "rejected" and acks[1]["code"] == "window_after_cutoff"
-    assert _metrics_events(maker, world) == [], "종료된 stream 은 이력 저장만, live 최신값으로 투영하지 않는다"
+    assert [a["status"] for a in acks] == ["ignored", "ignored"]
+    assert _metrics_events(maker, world) == [], "종료된 stream 은 live 최신값으로 투영하지 않는다"
 
 
 def test_신선도는_서버시각과_anchor로_판정하고_클라이언트_observed_at은_쓰지_않는다(maker, world, started):
@@ -326,15 +333,13 @@ def test_신선도는_서버시각과_anchor로_판정하고_클라이언트_obs
     assert ev.payload["freshness"] == "time_uncertain" and ev.payload["observed_at_ms"] is None
 
 
-def test_투영은_최신값만_이미_더_새_값이_있으면_뒤늦은_창은_저장만_한다(maker, world, started):
+def test_투영은_최신값만_이미_더_새_값이_있으면_뒤늦은_창은_투영하지_않는다(maker, world, started):
     _ingest(maker, world, _batch(_env(world, started, 10)))
     late = _ingest(maker, world, _batch(_env(world, started, 3, h="c" * 64)))
-    assert late.response["acks"][0]["status"] == "accepted" and late.response["acks"][0]["durable"] is True
-    assert late.projected is False
+    assert late.response["acks"][0]["status"] == "projected" and late.projected is False
     evs = _metrics_events(maker, world)
     assert [e.payload["sequence"] for e in evs] == ["10"]
-    with maker() as s:
-        assert s.scalar(sa.select(sa.func.count()).select_from(EEGFeatureWindow).where(EEGFeatureWindow.session_id == world.session_id)) == 2  # 저장은 둘 다
+    assert _count_rows(maker, world) == 0  # 소켓은 저장하지 않는다
 
 
 def test_배치_검증_종합점수_unknown필드_61창_u64_범위는_거절(maker, world, started):
@@ -346,8 +351,7 @@ def test_배치_검증_종합점수_unknown필드_61창_u64_범위는_거절(mak
     big["sequence"] = str(2 ** 40)
     assert _ingest(maker, world, _batch(big)).response["code"] == "sequence_out_of_range"
     assert _ingest(maker, world, _batch({**e, "metrics": {"focus_display": {**MET(1), "unit": "score_0_100", "value": 101}}})).response["code"] == "invalid_message"
-    with maker() as s:
-        assert s.scalar(sa.select(sa.func.count()).select_from(EEGFeatureWindow).where(EEGFeatureWindow.session_id == world.session_id)) == 0
+    assert _count_rows(maker, world) == 0
 
 
 def test_고빈도_metrics_event는_Redis_dedupe_키를_만들지_않는다(maker, world, started, live):
@@ -386,7 +390,7 @@ def test_기본_sink가_네임스페이스에_연결되어_ingest_unavailable이
     ns.install_default_ingest_sinks()
     assert ns._METRIC_SINK is not None and ns._DEVICE_SINK is not None
     resp = ns._METRIC_SINK(world.member(0), world.session_id, _batch(_env(world, started, 1)))
-    assert resp["acks"][0]["status"] == "accepted"
+    assert resp["acks"][0]["status"] == "projected"
     # 이미 등록된 sink 는 덮어쓰지 않는다
     sentinel = lambda *a: {"ok": True}  # noqa: E731
     ns.set_metric_sink(sentinel)
@@ -438,9 +442,11 @@ def test_LIVE_PROTOCOL_V2는_settings_필드_기본_False이고_env가_우선한
     assert w.live_protocol_v2_enabled() is False
 
 
-def test_lease_만료_후_수신한_창은_저장만_하고_live로_투영하지_않는다(maker, world, started):
+def test_lease_만료_후_수신한_창은_소켓에서_투영하지_않고_REST로는_저장된다(maker, world, started):
     anchor = _stream(maker, started.result["stream_id"]).anchor_server_at
-    out = _ingest(maker, world, _batch(_env(world, started, 1)), now=anchor + timedelta(seconds=45))  # lease 30초 초과, offline 상한 10분 이내
-    a = out.response["acks"][0]
-    assert a["status"] == "accepted" and a["durable"] is True
+    out = _ingest(maker, world, _batch(_env(world, started, 1)), now=anchor + timedelta(seconds=45))  # lease 30초 초과
+    assert out.response["acks"][0]["status"] == "ignored"
     assert out.projected is False and _metrics_events(maker, world) == []
+    assert _store(maker, world, _batch(_env(world, started, 1)))[0]["status"] == "accepted"
+
+
