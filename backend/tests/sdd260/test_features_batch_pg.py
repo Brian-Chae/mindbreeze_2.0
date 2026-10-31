@@ -227,3 +227,35 @@ def test_인증_타인_대리_401_403_스키마_위반_422(api, maker, world, st
 def test_V_D9_구_v1_features_엔드포인트는_삭제됐다(api, world, started):
     r = api.post(f"/api/v1/sessions/{world.session_id}/features", json={"features": [{"second_offset": 0}]}, headers=_auth(world.members[0][0]))
     assert r.status_code in (404, 405)
+
+
+# ---------------- V-A2 / S3 소켓은 저장하지 않는다 ----------------
+
+def test_V_A2_소켓_live_metric은_저장하지_않고_방송만_한다(api, maker, world, started):
+    from sqlalchemy import func
+    from app.models.live_state import LiveOutbox
+
+    wins = [_env(world, started, n) for n in range(1, 61)]
+    with maker() as s:
+        out = li.ingest_metrics(s, world.member(0), world.session_id, {"protocol_version": 2, "schema_version": 1, "windows": wins})
+    acks = out.response["acks"]
+    assert len(acks) == 60 and {a["status"] for a in acks} <= {"projected", "ignored"}
+    assert all("durable" not in a for a in acks)
+    assert acks[-1]["status"] == "projected" and out.projected
+    with maker() as s:
+        assert s.scalar(sa.select(func.count()).select_from(EEGFeatureWindow).where(EEGFeatureWindow.session_id == world.session_id)) == 0
+        assert s.scalar(sa.select(func.count()).select_from(LiveOutbox).where(
+            LiveOutbox.session_id == world.session_id, LiveOutbox.domain == "metrics")) == 1
+    # 그 뒤 같은 60창을 REST 로 보내면 전부 accepted
+    r = _post(api, world, wins)
+    assert r.json()["counts"] == {"accepted": 60, "duplicate": 0, "rejected": 0}
+
+
+def test_S3_소켓_검증_거절은_ignored_코드이고_저장이_없다(maker, world, started):
+    forged = _env(world, started, 1)
+    forged["participant_id"] = str(world.members[1][1])
+    stale = _env(world, started, 2, gen="9")
+    with maker() as s:
+        out = li.ingest_metrics(s, world.member(0), world.session_id, {"protocol_version": 2, "schema_version": 1, "windows": [forged, stale]})
+    assert [(a["status"], a["code"]) for a in out.response["acks"]] == [("ignored", "participant_mismatch"), ("ignored", "stale_owner_generation")]
+    assert len(_rows(maker, world)) == 0
