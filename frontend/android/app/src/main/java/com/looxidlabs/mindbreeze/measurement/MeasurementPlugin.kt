@@ -16,6 +16,11 @@ import com.looxidlabs.mindbreeze.measurement.bridge.BridgeModel
 import com.looxidlabs.mindbreeze.measurement.runtime.BatteryPolicy
 import com.looxidlabs.mindbreeze.measurement.runtime.KeystoreFactory
 import com.looxidlabs.mindbreeze.measurement.runtime.RuntimeConfig
+import com.looxidlabs.mindbreeze.measurement.runtime.SyncCounts
+import com.looxidlabs.mindbreeze.measurement.runtime.SyncEmitter
+import com.looxidlabs.mindbreeze.measurement.runtime.SyncEventGate
+import com.looxidlabs.mindbreeze.measurement.runtime.SyncStatusBoard
+import com.looxidlabs.mindbreeze.measurement.bridge.BridgeSequencer
 import org.json.JSONObject
 import java.util.UUID
 
@@ -208,9 +213,28 @@ class MeasurementPlugin : Plugin() {
         call.resolve(JSObject().put("opened", false).put("target", JSObject.NULL))
     }
 
+    private val syncSeq = BridgeSequencer(System.currentTimeMillis() / 1000)
+    private val syncEmitter = SyncEmitter(SyncStatusBoard.global, SyncEventGate(2000)) { name, payload ->
+        val rt = MeasurementManager.runtime
+        val gen = rt?.sequencer?.managerGeneration ?: syncSeq.managerGeneration
+        val seq = rt?.sequencer?.next() ?: syncSeq.next()
+        notifyListeners(name, JSObject(BridgeModel.event(name, gen, seq, System.currentTimeMillis(), payload).toString()))
+    }
+
+    /** SDD-260: feature.counts · archive.counts · reconcile.state — 변경 즉시, 아니면 2초마다. 화면 표시용(저장 판정에 쓰지 않는다). */
+    private fun emitSync() {
+        val rt = MeasurementManager.runtime
+        val live = rt?.let {
+            val u = it.uploadCounts()
+            SyncCounts.of(u.optInt("feature_pending"), u.optLong("feature_acked"), u.optLong("feature_quarantined"), it.queue.counts())
+        }
+        syncEmitter.emit(rt?.cfg?.sessionId, live, System.currentTimeMillis())
+    }
+
     /** foreground 에서만: commandAck → liveStateUpdated → measurementUpdated(전체 snapshot) → archiveStatus 순 batch emit. raw 전량은 보내지 않는다. */
     private fun emitBatch() {
         if (!foreground) return
+        emitSync()
         val rt = MeasurementManager.runtime ?: return
         val now = System.currentTimeMillis()
         val gen = rt.sequencer.managerGeneration

@@ -82,6 +82,7 @@ class ScopeSweeper(
     private val isActive: (String) -> Boolean,
     private val quietMs: Long = 0,
     private val nowMs: () -> Long = { System.currentTimeMillis() },
+    private val board: SyncStatusBoard = SyncStatusBoard.global,
 ) {
     @Synchronized
     fun sweepOnce(): SweepReport {
@@ -123,15 +124,20 @@ class ScopeSweeper(
             val up = FeatureUploader(info.apiBase, info.sessionId, outbox, { info.meta() }, { ts.current() }, refresh, http)
             val rec = FeatureReconciler(info.apiBase, info.sessionId, outbox, { info.participantId }, { ts.current() }, http)
             var rounds = 0
+            val sid = info.sessionId
+            board.setFeature(sid, "syncing"); board.setRaw(sid, "syncing")
+            publishFeatureCounts(sid, outbox)
             while (true) {
-                if (!flushAll(up)) return if (ts.current() == null) Outcome.AuthWait else Outcome.Incomplete
+                if (!flushAll(up)) { board.setFeature(sid, "retrying"); publishFeatureCounts(sid, outbox); return if (ts.current() == null) Outcome.AuthWait else Outcome.Incomplete }
+                publishFeatureCounts(sid, outbox)
                 when (val r = rec.run()) {
-                    is ReconcileResult.Complete -> break
-                    is ReconcileResult.Resending -> if (++rounds > MAX_ROUNDS) return Outcome.Incomplete
-                    is ReconcileResult.Waiting -> if (++rounds > MAX_ROUNDS) return Outcome.Incomplete
-                    is ReconcileResult.Failed -> return if (r.authWait) Outcome.AuthWait else Outcome.Incomplete
+                    is ReconcileResult.Complete -> { board.setFeature(sid, "complete"); break }
+                    is ReconcileResult.Resending -> { board.setFeature(sid, "resending"); if (++rounds > MAX_ROUNDS) return Outcome.Incomplete }
+                    is ReconcileResult.Waiting -> { board.setFeature(sid, "syncing"); if (++rounds > MAX_ROUNDS) return Outcome.Incomplete }
+                    is ReconcileResult.Failed -> { board.setFeature(sid, "retrying"); return if (r.authWait) Outcome.AuthWait else Outcome.Incomplete }
                 }
             }
+            publishFeatureCounts(sid, outbox)
         } finally { outbox.close() }
         return drainArchive(dir, info, ts)
     }
@@ -150,8 +156,11 @@ class ScopeSweeper(
 
     private fun drainArchive(dir: File, info: ScopeInfo, ts: TokenSource): Outcome {
         val archiveDir = File(dir, "archive")
-        if (!archiveDir.exists()) return markComplete(dir, info)
+        if (!archiveDir.exists()) { board.setRaw(info.sessionId, "complete"); return markComplete(dir, info) }
         val q = ArchiveQueue(archiveDir)
+        val sid = info.sessionId
+        fun pub() { val prev = board.counts(sid); board.setCounts(sid, SyncCounts.of(prev.featurePending, prev.featureAcked, prev.featureRejected, q.counts())) }
+        pub()
         val up = ArchiveUploader(info.apiBase, q, { ts.current() }, http, { info.streamId })
         val intents = CloseIntentStore(File(dir, "close-intent.json"))
         val rec = RawReconciler(info.apiBase, info.sessionId, q, { info.participantId }, { ts.current() }, http)
@@ -160,29 +169,37 @@ class ScopeSweeper(
             var progress = true
             while (q.counts().archivePending > 0 && progress) {
                 val sum = up.drain()
-                if (sum.halted != null) return if (ts.current() == null) Outcome.AuthWait else Outcome.Incomplete
+                pub()
+                if (sum.halted != null) { board.setRaw(sid, "retrying"); return if (ts.current() == null) Outcome.AuthWait else Outcome.Incomplete }
                 progress = sum.acked > 0
             }
-            if (q.counts().archivePending > 0) return Outcome.Incomplete // 백오프 중 → 다음 스윕에서
+            if (q.counts().archivePending > 0) { board.setRaw(sid, "retrying"); return Outcome.Incomplete } // 백오프 중 → 다음 스윕에서
             intents.pending()?.let { p ->
                 val ok = try { up.sendCloseIntent(info.sessionId, info.participantId, p.intent) } catch (_: Exception) { false }
                 if (ok) intents.markSent() else intents.markAttempt()
             }
             when (val r = rec.run()) {
-                RawReconcileResult.Complete -> break
-                is RawReconcileResult.Resending -> if (++rounds > MAX_ROUNDS) return Outcome.Incomplete
-                RawReconcileResult.Waiting -> if (++rounds > MAX_ROUNDS) return Outcome.Incomplete
-                RawReconcileResult.Unverifiable -> return Outcome.Incomplete
-                is RawReconcileResult.Failed -> return if (r.authWait) Outcome.AuthWait else Outcome.Incomplete
+                RawReconcileResult.Complete -> { board.setRaw(sid, "complete"); break }
+                is RawReconcileResult.Resending -> { board.setRaw(sid, "resending"); pub(); if (++rounds > MAX_ROUNDS) return Outcome.Incomplete }
+                RawReconcileResult.Waiting -> { board.setRaw(sid, "syncing"); if (++rounds > MAX_ROUNDS) return Outcome.Incomplete }
+                RawReconcileResult.Unverifiable -> { board.setRaw(sid, "unverifiable"); return Outcome.Incomplete }
+                is RawReconcileResult.Failed -> { board.setRaw(sid, "retrying"); return if (r.authWait) Outcome.AuthWait else Outcome.Incomplete }
             }
         }
+        pub()
         return markComplete(dir, info)
+    }
+
+    private fun publishFeatureCounts(sid: String, outbox: MetricOutbox) {
+        val prev = board.counts(sid)
+        board.setCounts(sid, prev.copy(featurePending = outbox.size(), featureAcked = outbox.acked(), featureRejected = outbox.quarantined()))
     }
 
     private fun markComplete(dir: File, info: ScopeInfo): Outcome {
         val tmp = File(dir, "$MARKER.tmp")
         FileOutputStream(tmp).use { it.write(JSONObject().put("session_id", info.sessionId).put("completed_at_ms", nowMs()).toString().toByteArray()); it.flush(); it.fd.sync() }
         tmp.renameTo(File(dir, MARKER))
+        board.markComplete(info.sessionId) // feature·원시 대조가 모두 끝난 뒤에만 complete=true
         return Outcome.Complete
     }
 
