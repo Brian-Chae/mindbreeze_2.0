@@ -140,7 +140,13 @@ class MetricOutbox(private val file: File, private val nowMs: () -> Long = { Sys
         append("C\t1\n")
     }
 
-    @Synchronized fun isReconciled(): Boolean = reconciled && pending.isEmpty()
+    @Synchronized fun isReconciled(): Boolean = reconciled && sendableCount() == 0
+
+    /** 귀속(stream 신원)이 있어 REST 로 보낼 수 있는 대기 창 수. */
+    @Synchronized fun sendableCount(): Int = pending.values.count { it.tag != null }
+
+    /** stream 이 한 번도 확정되지 않아 보낼 수 없는 창 수(gap(local_unattributed) 진단). */
+    @Synchronized fun untaggedCount(): Int = pending.values.count { it.tag == null }
 
     /** 영구 거절(재전송 금지) 창을 송신에서 뺀다. 아직 큐에 없던 순번(예: 범위 초과)도 기록만 한다. */
     @Synchronized

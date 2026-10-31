@@ -34,7 +34,7 @@ class FeatureReconciler(
 ) {
     @Synchronized
     fun run(): ReconcileResult {
-        if (outbox.size() > 0) return ReconcileResult.Waiting
+        if (outbox.sendableCount() > 0) return ReconcileResult.Waiting
         val local = outbox.ackedEntries()
         if (local.isEmpty()) { outbox.markReconciled(); return ReconcileResult.Complete(0) }
         val tok = token() ?: return ReconcileResult.Failed("auth_missing", true)

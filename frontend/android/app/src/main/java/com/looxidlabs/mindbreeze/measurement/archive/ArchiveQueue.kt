@@ -117,7 +117,21 @@ class ArchiveQueue(private val dir: File, private val nowMs: () -> Long = { Syst
         return n
     }
 
-    /** 영수증을 받은 항목의 payload 만 정리(GC). 메타(영수증)는 완결성 검증용으로 남긴다. */
+    /**
+     * 서버 대조에서 서버에 없다고 확인된 항목을 다시 올릴 수 있게 PENDING 으로 되돌린다(presign → PUT → ack 재수행).
+     * payload 가 없으면 되돌릴 수 없다 → false(복구 불가 구멍, 진단용).
+     */
+    @Synchronized
+    fun requeue(alias: String, kind: String = "raw"): Boolean {
+        val i = items.values.firstOrNull { it.alias == alias && it.kind == kind } ?: return false
+        if (!i.payloadFile.exists()) return false
+        i.status = ArchiveStatus.PENDING; i.attempts = 0; i.nextAttemptAtMs = 0
+        i.lastReason = null; i.lastStage = null; i.verifiedAtUs = null; i.serverId = null
+        persist(i)
+        return true
+    }
+
+    /** 영수증을 받은 항목의 payload 만 정리(GC). SDD-260: 서버 대조(RawReconciler)가 끝나기 전에는 호출하지 않는다 — 서버에 없으면 이 사본으로 다시 올려야 한다. 메타(영수증)는 완결성 검증용으로 남긴다. */
     @Synchronized
     fun gcVerified() { for (i in items.values) if (i.status == ArchiveStatus.VERIFIED && i.payloadFile.exists()) i.payloadFile.delete() }
 }
