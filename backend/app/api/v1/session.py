@@ -814,17 +814,19 @@ def ingest_features_batch(
         raise _HTTPException(status_code=400, detail="잘못된 ID 형식입니다")
     if db.get(SessionModel, sid) is None:
         raise _HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+    raw_pid = payload.get("participant_id") if isinstance(payload, dict) else None
+    # 인증·소유 확정이 본문 검증보다 먼저다(미인증 401/타인 403 이 422 에 가려지지 않게)
+    participant = session_service.resolve_upload_participant(
+        sid, raw_pid if isinstance(raw_pid, str) else None, current_user["id"] if current_user else None, db,
+        entry_credential=x_entry_credential, allow_completed=True,
+    )
     try:
-        body_pid, windows = parse_feature_batch(payload)
+        _, windows = parse_feature_batch(payload)
     except WireError as exc:
         detail: dict[str, Any] = {"code": exc.code}
         if exc.field:
             detail["field"] = exc.field
         raise _HTTPException(status_code=422, detail=detail)
-    participant = session_service.resolve_upload_participant(
-        sid, body_pid, current_user["id"] if current_user else None, db,
-        entry_credential=x_entry_credential, allow_completed=True,
-    )
     results = live_ingest_service.store_batch(db, participant, sid, windows)
     counts = {k: sum(1 for r in results if r["status"] == k) for k in ("accepted", "duplicate", "rejected")}
     return {"session_id": str(sid), "participant_id": str(participant.id), "results": results, "counts": counts}

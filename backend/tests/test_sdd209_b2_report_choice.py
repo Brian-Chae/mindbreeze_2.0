@@ -3,6 +3,7 @@
 선택(report_included)은 consent_audio/eeg 와 별개이며, 거부(제외)는 원본 수집 중지가 아니다.
 """
 
+from tests.feature_seed import post_features
 import uuid
 
 from tests.entry_helpers import no_credential
@@ -153,8 +154,7 @@ def test_BT7_제외_동의없는_참여자도_입장_업로드_200_타인_403(cl
         db.close()
     assert _row(pid)["included"] is False and _row(pid)["consent_eeg"] is False
 
-    up = client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    up = post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"participant_id": pid, "features": [{"second_offset": 0, "relaxation_index": 0.5, "signal_quality": 0.9}]},
         headers={"X-Entry-Credential": joined["entry_credential"]},
     )
@@ -165,8 +165,7 @@ def test_BT7_제외_동의없는_참여자도_입장_업로드_200_타인_403(cl
     # 타 참여자 id 로 비소유 업로드는 여전히 403 (회원 사칭)
     other = _register(client, "b2m7@test.com", role="client")
     mpid = client.post("/api/v1/sessions/enter", json={"code": cls["access_code"]}, headers=other["h"]).json()["participant_id"]
-    bad = client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    bad = post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"participant_id": mpid, "features": [{"second_offset": 1, "relaxation_index": 0.5, "signal_quality": 0.9}]},
         headers={"X-Entry-Credential": joined["entry_credential"]},  # 비회원 자격으로 타 참여자 대리 업로드
     )

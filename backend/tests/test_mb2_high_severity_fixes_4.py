@@ -9,6 +9,7 @@
     모델 + alembic 마이그레이션으로 추가한다.
 """
 
+from tests.feature_seed import post_features
 import asyncio
 import logging
 from pathlib import Path
@@ -163,7 +164,7 @@ def test_eeg_feature_batch_상한초과_엔드포인트422(client):
         "participant_id": pid,
         "features": [{"second_offset": i} for i in range(5001)],
     }
-    res = client.post(f"/api/v1/sessions/{cls['id']}/features", json=body)
+    res = post_features(client, f"/api/v1/sessions/{cls['id']}/features", json=body)
     assert res.status_code == 422, res.text
 
 

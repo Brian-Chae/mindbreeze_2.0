@@ -35,7 +35,7 @@ from app.models.session import Session as SessionModel, SessionParticipant
 from app.schemas.session import EEGFeatureItem
 from app.schemas.session_live_ingest import DeviceReport, MetricWindow, parse_device, parse_metric_batch
 from app.schemas.session_live_v2 import PROTOCOL_VERSION, SCHEMA_VERSION, WireError
-from app.services.session_live_commands import CUTOFF_CONSENT_WITHDRAWN, Actor, device_payload, evaluate_ingest, last_device_payload
+from app.services.session_live_commands import CUTOFF_CONSENT_WITHDRAWN, Actor, device_payload, last_device_payload
 from app.services.session_live_ledger import append_outbox, lock_epoch
 
 logger = logging.getLogger(__name__)

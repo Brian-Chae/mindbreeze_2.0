@@ -8,6 +8,7 @@
 - 중복 초 인덱스 멱등, null 보존(0 치환 금지)
 """
 
+from tests.feature_seed import post_features
 from tests.entry_helpers import guest_body
 from app.services import email_verify_service
 from tests.conftest import create_test_org
@@ -94,7 +95,7 @@ def test_01_게스트_participant_id로_5초배치_저장(client):
         )
         for i in range(5)
     ]
-    res = client.post(f"/api/v1/sessions/{cls['id']}/features", json={"participant_id": pid, "features": features})
+    res = post_features(client, f"/api/v1/sessions/{cls['id']}/features", json={"participant_id": pid, "features": features})
     assert res.status_code == 200, res.text
     body = res.json()
     assert body["session_id"] == cls["id"]
@@ -109,8 +110,7 @@ def test_02_로그인_참가자_JWT로_업로드(client):
     client.post("/api/v1/sessions/enter", json={"code": cls['access_code']}, headers=member["h"])
 
     # participant_id 없이 인증 토큰만으로 업로드
-    res = client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    res = post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"features": _batch(range(3), relaxation_index=0.5, signal_quality=0.9)},
         headers=member["h"],
     )
@@ -128,8 +128,7 @@ def test_03_비참가자_인증사용자_업로드_403(client):
     other = _register(client, "s023o03@test.com", role="client")  # 세션에 참여하지 않은 사용자
     cls = _create_group_class(client, counselor["h"])
 
-    res = client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    res = post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"features": _batch(range(2), relaxation_index=0.5)},
         headers=other["h"],
     )
@@ -140,8 +139,7 @@ def test_04_인증도_입장자격도_없으면_401(client):
     counselor = _register(client, "s023c04@test.com")
     cls = _create_group_class(client, counselor["h"])
 
-    res = client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    res = post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"features": _batch(range(2), relaxation_index=0.5)},
     )
     assert res.status_code == 401, res.text
@@ -152,8 +150,7 @@ def test_05_자격없는_participant_id_단독은_401(client):
     cls = _create_group_class(client, counselor["h"])
     import uuid as _uuid
 
-    res = client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    res = post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"participant_id": str(_uuid.uuid4()), "features": _batch(range(2))},
     )
     assert res.status_code == 401, res.text  # participant_id 단독은 인증 수단이 아니다
@@ -170,7 +167,7 @@ def test_06_live_metrics_실데이터_두뇌휴식도_연결상태(client):
     pid = _join_guest(client, cls["access_code"], "모니터게스트")
 
     features = [_feature(i, relaxation_index=0.4 + i * 0.1, signal_quality=0.9) for i in range(3)]
-    client.post(f"/api/v1/sessions/{cls['id']}/features", json={"participant_id": pid, "features": features})
+    post_features(client, f"/api/v1/sessions/{cls['id']}/features", json={"participant_id": pid, "features": features})
 
     res = client.get(f"/api/v1/sessions/{cls['id']}/live-metrics", headers=counselor["h"])
     assert res.status_code == 200, res.text
@@ -191,8 +188,7 @@ def test_07_live_metrics_신호불량_접촉실패_집계(client):
     pid = _join_guest(client, cls["access_code"], "불량게스트")
 
     # 최신 윈도우 signal_quality 0.5 → degraded → lead_off
-    client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"participant_id": pid, "features": [_feature(0, relaxation_index=0.5, signal_quality=0.5)]},
     )
     res = client.get(f"/api/v1/sessions/{cls['id']}/live-metrics", headers=counselor["h"])
@@ -221,8 +217,7 @@ def test_09_null_보존_relaxation_null이면_효율_null(client):
     cls = _create_group_class(client, counselor["h"])
     pid = _join_guest(client, cls["access_code"], "널게스트")
 
-    client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"participant_id": pid, "features": [_feature(0, relaxation_index=None, signal_quality=0.9)]},
     )
     res = client.get(f"/api/v1/sessions/{cls['id']}/live-metrics", headers=counselor["h"])
@@ -245,7 +240,7 @@ def test_10_게스트_state_실데이터_반영(client):
     pid = _join_guest(client, cls["access_code"], "명상게스트")
 
     features = [_feature(i, relaxation_index=0.4 + i * 0.1, focus_index=0.7, signal_quality=0.95) for i in range(3)]
-    client.post(f"/api/v1/sessions/{cls['id']}/features", json={"participant_id": pid, "features": features})
+    post_features(client, f"/api/v1/sessions/{cls['id']}/features", json={"participant_id": pid, "features": features})
 
     res = client.get(f"/api/v1/sessions/{cls['id']}/entry-state?participant_id={pid}")
     assert res.status_code == 200, res.text
@@ -280,15 +275,13 @@ def test_12_중복_초인덱스_재업로드_skip(client):
     cls = _create_group_class(client, counselor["h"])
     pid = _join_guest(client, cls["access_code"], "재업로드게스트")
 
-    b1 = client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    b1 = post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"participant_id": pid, "features": _batch(range(0, 5), relaxation_index=0.5, signal_quality=0.9)},
     )
     assert b1.json()["saved"] == 5
 
     # 3~7 재업로드 → 3,4 는 중복 skip, 5,6,7 만 저장
-    b2 = client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    b2 = post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"participant_id": pid, "features": _batch(range(3, 8), relaxation_index=0.5, signal_quality=0.9)},
     )
     assert b2.json()["saved"] == 3
@@ -301,12 +294,10 @@ def test_13_그룹세션_다참가자_동일초인덱스_공존(client):
     p1 = _join_guest(client, cls["access_code"], "게스트1")
     p2 = _join_guest(client, cls["access_code"], "게스트2")
 
-    r1 = client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    r1 = post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"participant_id": p1, "features": _batch(range(3), relaxation_index=0.5, signal_quality=0.9)},
     )
-    r2 = client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    r2 = post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"participant_id": p2, "features": _batch(range(3), relaxation_index=0.8, signal_quality=0.9)},
     )
     assert r1.json()["saved"] == 3
@@ -335,8 +326,7 @@ def test_14_signal_quality_null이면_quality_unknown(client):
     pid = _join_guest(client, cls["access_code"], "널SQI게스트")
 
     # signal_quality 미지정 → None. relaxation 만 보고.
-    res = client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    res = post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"participant_id": pid, "features": [_feature(0, relaxation_index=0.5)]},
     )
     assert res.status_code == 200, res.text

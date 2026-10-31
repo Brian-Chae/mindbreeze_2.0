@@ -6,6 +6,7 @@
 3. 리포트 상태머신 4단계(pending_analysis→pending_review→completed/error), data_credibility 파생
 """
 
+from tests.feature_seed import post_features
 from tests.entry_helpers import guest_body
 from app.services import email_verify_service
 from app.models.session import SessionParticipant
@@ -91,7 +92,7 @@ def test_01_롤업_버킷_valid_count_coverage_시간범위(client):
 
     # 버킷0: 0~59초(60개) valid, 버킷1: 60~69초(10개) valid
     feats = [_feature(i, relaxation_index=0.5, signal_quality=0.9) for i in range(70)]
-    r = client.post(f"/api/v1/sessions/{cls['id']}/features", json={"participant_id": pid, "features": feats})
+    r = post_features(client, f"/api/v1/sessions/{cls['id']}/features", json={"participant_id": pid, "features": feats})
     assert r.json()["saved"] == 70
 
     res = client.get(f"/api/v1/sessions/{cls['id']}/eeg-rollup", headers=counselor["h"])
@@ -120,7 +121,7 @@ def test_02_롤업_유효샘플_가중평균(client):
         [_feature(i, relaxation_index=0.0, signal_quality=0.9) for i in range(60)]  # 버킷0: 60개 0.0
         + [_feature(60 + i, relaxation_index=1.0, signal_quality=0.9) for i in range(10)]  # 버킷1: 10개 1.0
     )
-    client.post(f"/api/v1/sessions/{cls['id']}/features", json={"participant_id": pid, "features": feats})
+    post_features(client, f"/api/v1/sessions/{cls['id']}/features", json={"participant_id": pid, "features": feats})
 
     body = client.get(f"/api/v1/sessions/{cls['id']}/eeg-rollup", headers=counselor["h"]).json()
     overall = body["overall"]["metrics"]["relaxation_index"]
@@ -144,7 +145,7 @@ def test_03_롤업_null_0치환_없음(client):
         _feature(1, relaxation_index=0.6, focus_index=None, signal_quality=0.9),
         _feature(2, relaxation_index=None, focus_index=None, signal_quality=0.9),
     ]
-    client.post(f"/api/v1/sessions/{cls['id']}/features", json={"participant_id": pid, "features": feats})
+    post_features(client, f"/api/v1/sessions/{cls['id']}/features", json={"participant_id": pid, "features": feats})
 
     body = client.get(f"/api/v1/sessions/{cls['id']}/eeg-rollup", headers=counselor["h"]).json()
     metrics = body["buckets"][0]["metrics"]
@@ -160,9 +161,9 @@ def test_04_롤업_참가자_필터(client):
     p1 = _join_guest(client, cls["access_code"], "게스트1")
     p2 = _join_guest(client, cls["access_code"], "게스트2")
 
-    client.post(f"/api/v1/sessions/{cls['id']}/features",
+    post_features(client, f"/api/v1/sessions/{cls['id']}/features",
                 json={"participant_id": p1, "features": [_feature(0, relaxation_index=0.2, signal_quality=0.9)]})
-    client.post(f"/api/v1/sessions/{cls['id']}/features",
+    post_features(client, f"/api/v1/sessions/{cls['id']}/features",
                 json={"participant_id": p2, "features": [_feature(0, relaxation_index=0.8, signal_quality=0.9)]})
 
     b1 = client.get(f"/api/v1/sessions/{cls['id']}/eeg-rollup?participant_id={p1}", headers=counselor["h"]).json()
@@ -397,7 +398,7 @@ def test_16_data_credibility_high_유효EEG(client):
     feats = [_feature(i, focus_index=0.6, cognitive_load=0.4, relaxation_index=0.5,
                       stress_index=0.3, emotional_stability=0.55, total_neural_activity=0.5,
                       hemispheric_balance=0.1, signal_quality=0.95) for i in range(45)]
-    client.post(f"/api/v1/sessions/{cls['id']}/features", json={"participant_id": pid, "features": feats})
+    post_features(client, f"/api/v1/sessions/{cls['id']}/features", json={"participant_id": pid, "features": feats})
 
     res = client.post(f"/api/v1/reports/generate/{cls['id']}", json={"type": "counselor"}, headers=host["h"])
     body = res.json()

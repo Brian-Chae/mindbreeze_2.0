@@ -2,6 +2,7 @@
 
 스토리지 읽기/검증은 모의다(실제 객체 저장소 증거 아님).
 """
+from tests.feature_seed import post_features
 import gzip
 import hashlib
 import json
@@ -63,7 +64,7 @@ def test_feature_batch가_faa_total_neural_activity_play_group_provenance를_저
         "second_offset": 3, "timestamp": 1234.5, "focus_index": 0.5, "faa": -0.25, "total_neural_activity": 7.5,
         "play_group_id": "PG-1", "source_feature_alias": "Featureeeg1", "algorithm_version": "eeg-algo-1",
     }
-    res = ctx["client"].post(f"/api/v1/sessions/{ctx['sid']}/features", json={"participant_id": ctx["pid"], "features": [item]})
+    res = post_features(ctx["client"], f"/api/v1/sessions/{ctx['sid']}/features", json={"participant_id": ctx["pid"], "features": [item]})
     assert res.status_code == 200 and res.json()["saved"] == 1
     from app.models.eeg_feature import EEGFeatureWindow
     db = _db()
@@ -79,8 +80,8 @@ def test_기존_feature_멱등과_null_보존은_유지(ctx):
     item = {"second_offset": 0, "focus_index": 0.1}
     body = {"participant_id": ctx["pid"], "features": [item]}
     url = f"/api/v1/sessions/{ctx['sid']}/features"
-    assert ctx["client"].post(url, json=body).json()["saved"] == 1
-    assert ctx["client"].post(url, json=body).json()["saved"] == 0
+    assert post_features(ctx["client"], url, json=body).json()["saved"] == 1
+    assert post_features(ctx["client"], url, json=body).json()["saved"] == 0
     from app.models.eeg_feature import EEGFeatureWindow
     db = _db()
     try:
