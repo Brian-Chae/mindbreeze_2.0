@@ -75,6 +75,8 @@ public final class SessionSync {
     private var snap = SyncSnapshot()
     public var onSnapshot: ((SyncSnapshot) -> Void)?
     public var onComplete: (() -> Void)?
+    /// 모든 진행 변화(큐·ACK·대조 상태) 뒤 — 호스트가 manager.archiveProgressed()·브리지 이벤트에 쓴다.
+    public var onProgress: ((SyncSnapshot) -> Void)?
 
     /// - archiveStartJitter: 종료 직후 40기기가 동시에 presign 을 몰아치지 않도록 archive 첫 pump 를 0~60초 지연(상한 초).
     public init(scope: SessionScope, dir: URL, outbox: MetricOutbox, queue: ArchiveQueue, http: HTTPClient, files: FileUploading, scheduler: Scheduler,
@@ -115,6 +117,16 @@ public final class SessionSync {
     public func stop() {
         lock.lock(); stopped = true; tickTimer?.cancel(); tickTimer = nil; archiveStartTimer?.cancel(); archiveStartTimer = nil; lock.unlock()
         features.stop()
+    }
+
+    /// 봉인 직후(사용자 정지·회차 종료): feature 는 마지막 배치를 즉시 보내고, 원시 업로드는 0~60초 지터 후 시작한다(40기기 동시 종료 완화, N4).
+    public func sealed() {
+        lock.lock(); let s = stopped; lock.unlock()
+        if s { start() }
+        features.kick()
+        archiveStartTimer?.cancel()
+        archiveStartTimer = scheduler.schedule(after: jitter(60)) { [weak self] in self?.archive.pump(); self?.reconcile() }
+        publish()
     }
 
     /// 포그라운드·네트워크 복귀·앱 시작 트리거. 백오프 중이어도 즉시 한 번 시도한다.
@@ -187,7 +199,7 @@ public final class SessionSync {
         snap.complete = isSealed && isComplete
         let s = snap, justDone = snap.complete && !wasComplete
         lock.unlock()
-        onSnapshot?(s)
+        onSnapshot?(s); onProgress?(s)
         if justDone { stop(); onComplete?() }
     }
 }

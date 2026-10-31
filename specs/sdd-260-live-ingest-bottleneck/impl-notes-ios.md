@@ -26,3 +26,16 @@
 7. **뱃지 이벤트 이름**(FE1 계약 `docs/sdd-260-native-js-events.md` 과 맞출 것): `feature.counts`, `archive.counts`, `reconcile.state` — payload 는 §4.
 
 ## 3. 변경 내역 / 검증은 커밋별로 아래에 누적한다.
+
+## 3. 구현 결과 (커밋 c2f747a1 · 8603f826 · f49c7472 · 이번 커밋)
+
+- N1 `FeatureUploader`(REST 정본), `LiveSession.pump` 방송 전용(최신 5창, ACK/오류가 outbox 불변). `markAcked/markRejected` 호출처는 FeatureUploader 뿐(grep 확인).
+- N2·N5 `FeatureReconciler`/`RawReconciler`: contract §2 에 맞춰 로컬 sequence − 서버 보유([min,max]−missing) 로 판정(빈 배열만으로 완료 금지, max 이후·미존재 stream 도 결측). 원시는 `aliases_uploaded` 비교, truncated 면 `unverifiable`(완료 단정 금지).
+- N3 `SessionSync`/`SessionDrain`/`MeasurementManager.drainPendingArchives`: scope.json(계정) 기반 전 세션 drain, 호스트가 앱 시작·willEnterForeground·NWPath 복귀에서 호출. `BackgroundFileUploader` 조기 완료 버퍼링 + `whenReady` 후 `releaseOrphans`.
+- N4 종료 시 마지막 배치 즉시 + archive 0~60s 지터(`sealed()`), 브리지 이벤트 `feature.counts`·`archive.counts`·`reconcile.state`.
+- 호스트 `pending-archive` 포인터 방식 폐기(디스크 scope 스캔으로 대체).
+
+## 4. 정직한 한계 / TDD 편차
+- SessionSync·Host 배선은 구현을 먼저 쓰고 테스트를 뒤에 작성(RED 미확인). MeasurementHost 는 `swiftc -typecheck` 통과만 확인, 앱 타깃 xcodebuild 는 GoogleService-Info.plist·capacitor.config.json 부재로 이 워크트리에서 불가. NativeMeasurementPlugin 은 컴파일 미확인(1줄 변경).
+- 실기기·백그라운드 URLSession 실동작, 종료 시 Wi-Fi 단절 혼합(V-A10)은 미검증. 구 포인터 파일 마이그레이션 없음(설치자 0명).
+- 6 N6 복귀 재개: willEnterForeground→kick(featureUploader 즉시·archive pump·대조). LiveSession 의 renew는 기존 READY 경로 유지.

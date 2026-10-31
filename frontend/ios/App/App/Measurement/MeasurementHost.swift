@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import CoreBluetooth
+import Network
 import MeasurementKit
 
 /// 앱 프로세스 수명 동안 하나만 존재하는 측정 호스트. AppDelegate.didFinishLaunching 에서 WebView 보다 먼저 `bootstrap()` 한다.
@@ -45,15 +46,14 @@ public final class MeasurementHost {
                 makeEngine: { dir, ctx, pin in try MeasurementEngine(dir: dir, configJSON: ModelPin.configJSON(pin), context: ctx, modelParamsJSON: pin?.paramsJSON) },
                 scheduler: DispatchScheduler(queue: queue))
             m.onBridgeEvent = { [weak self] e in self?.onBridgeEvent?(e) }
-            // 사용자 정지·회차 종료(live:terminal)·stream ended 모두 봉인 직후 archive 업로드를 시작한다.
-            m.onSealed = { [weak self] sid, handle in
-                guard let self = self, let h = handle ?? self.currentHandle else { return }
-                self.startArchive(sessionId: sid, participantId: nil, handle: h)
-            }
+            // 사용자 정지·회차 종료(live:terminal)·stream ended 모두 봉인 직후 저장 완결(마지막 배치·원시·대조)을 시작한다.
+            m.onSealed = { [weak self] sid, handle in self?.sessionSealed(sessionId: sid, handle: handle) }
+            m.onSessionReady = { [weak self] sid, handle, pid in self?.sessionReady(sessionId: sid, handle: handle, participantId: pid) }
             manager = m
             uploader.onCompleted = { [weak self] task, status, err in self?.queue.async { self?.uploaderFor(task: task)?.uploadCompleted(taskId: task, status: status, error: err) } }
             _ = m.recoverOnLaunch()
-            resumeArchiveUploads()
+            drainPendingArchives()
+            startPathMonitor()
         }
     }
 
@@ -98,49 +98,102 @@ public final class MeasurementHost {
         }
     }
 
-    // MARK: archive
+    // MARK: 저장 완결 (SDD-260) — feature REST 정본 + 원시 archive + 종료 후 대조. 세션 단위 SessionSync 가 소유한다.
 
-    private func uploaderFor(task: Int) -> ArchiveUploader? { uploaders.values.first { $0.owns(task: task) } }
+    private var syncs: [String: SessionSync] = [:]                 // sessionId → 오케스트레이터(호스트 큐에서만 접근)
+    private var diskHandles: [String: (outbox: MetricOutbox, queue: ArchiveQueue)] = [:]   // 수집 중이 아닌 세션을 디스크에서 연 인스턴스(세션당 1개)
+    private let pathMonitor = NWPathMonitor()
+    private var lastPathSatisfied = false
 
-    /// 세션별 archive 업로더를 만들고(이미 있으면 재사용) 한 번 pump 한다.
-    public func startArchive(sessionId: String, participantId: String?, handle: String) {
+    private func accountId(of handle: String?) -> String? { handle.flatMap { try? store.load(handle: $0) }.map { $0.accountId } }
+
+    /// 세션 scope 를 보장한다(없으면 현재 계정으로 기록). 이미 있으면 그대로(원 소유 계정 유지).
+    private func ensureScope(sessionId: String, handle: String?, participantId: String?) -> SessionScope? {
+        let dir = sessionDir(sessionId)
+        if let sc = SessionScope.load(dir: dir) { return sc }
+        guard let acct = accountId(of: handle) else { return nil }
+        let sc = SessionScope(sessionId: sessionId, accountId: acct, participantId: participantId)
+        sc.save(dir: dir); return sc
+    }
+
+    private func sessionDir(_ sid: String) -> URL { root.appendingPathComponent("sessions").appendingPathComponent(sid) }
+
+    /// 세션의 SessionSync 를 만들거나 기존 것을 돌려준다. 수집 중 세션은 manager 의 outbox/queue 인스턴스를 공유하고, 아니면 디스크에서 세션당 한 번만 연다.
+    private func sync(for scope: SessionScope, handleHint: String?) -> SessionSync? {
+        if let s = syncs[scope.sessionId] { return s }
+        // 재로그인으로 handle 이 바뀌어도 계정으로 현재 handle 을 찾는다. 계정 자격이 없으면(로그아웃) 만들지 않고 보존만 한다.
+        guard let handle = store.handle(forAccount: scope.accountId) ?? (accountId(of: handleHint) == scope.accountId ? handleHint : nil),
+              let p = provider(for: handle), let c = try? store.load(handle: handle), c.accountId == scope.accountId, let base = URL(string: c.apiBase) else { return nil }
+        let dir = sessionDir(scope.sessionId)
+        let outbox: MetricOutbox, aq: ArchiveQueue
+        if let o = manager?.outbox(forSession: scope.sessionId), let q = manager?.archiveQueue(forSession: scope.sessionId) { outbox = o; aq = q }
+        else if let h = diskHandles[scope.sessionId] { outbox = h.outbox; aq = h.queue }
+        else {
+            guard let o = try? MetricOutbox(dir: dir), let q = try? ArchiveQueue(dir: dir.appendingPathComponent("archive")) else { return nil }
+            diskHandles[scope.sessionId] = (o, q); outbox = o; aq = q
+        }
+        let sch = DispatchScheduler(queue: self.queue)
+        let s = SessionSync(scope: scope, dir: dir, outbox: outbox, queue: aq, http: http, files: uploader, scheduler: sch, apiBase: base,
+                            token: { force, done in p.accessToken(handle: handle, forceRefresh: force) { r in done(try? r.get()) } },
+                            nowMs: { Int(Date().timeIntervalSince1970 * 1000) })
+        let sid = scope.sessionId
+        s.onProgress = { [weak self] snap in self?.queue.async { self?.manager?.archiveProgressed(); self?.manager?.emitSyncStatus(sessionId: sid, snap) } }
+        s.onComplete = { [weak self] in self?.queue.async { self?.syncs[sid] = nil; self?.diskHandles[sid] = nil } }
+        syncs[sid] = s
+        return s
+    }
+
+    /// stream 확정(신규 채택·앱 재시작 복구) → 이 세션의 REST 저장 업로더를 켠다. 소켓/READY 와 무관하게 동작한다.
+    private func sessionReady(sessionId: String, handle: String?, participantId: String) {
         queue.async { [self] in
-            guard let m = manager, let p = provider(for: handle), let c = try? store.load(handle: handle), let base = URL(string: c.apiBase) else { return }
-            // 앱 재시작 직후 manager 는 SEALING/CLOSED 세션의 큐를 들고 있지 않다 → 디스크의 세션 큐를 직접 열어 남은 업로드·종료 기록(close intent)을 이어 보낸다.
-            let sessionDir = root.appendingPathComponent("sessions").appendingPathComponent(sessionId)
-            let fromManager = m.archiveQueue(forSession: sessionId)
-            guard let q = uploaders[sessionId]?.queueRef ?? fromManager ?? (try? ArchiveQueue(dir: sessionDir.appendingPathComponent("archive"))) else { return }
-            let up = uploaders[sessionId] ?? ArchiveUploader(queue: q, http: http, files: uploader, apiBase: base, sessionId: sessionId, participantId: participantId,
-                token: { done in p.accessToken(handle: handle) { r in done(try? r.get()) } },
-                fileURL: { item in sessionDir.appendingPathComponent("archive").appendingPathComponent(item.file) }, nowMs: { Int(Date().timeIntervalSince1970 * 1000) })
-            up.closeIntents = MeasurementManager.closeIntentStore(root: root, sessionId: sessionId)
-            up.scheduleRetry = { [queue] sec, work in queue.asyncAfter(deadline: .now() + sec, execute: work) }
-            up.onChange = { [weak self, weak m] in m?.archiveProgressed(); m?.emitArchiveStatus(stage: nil, code: nil); self?.persistArchivePointer(sessionId: sessionId, participantId: participantId, handle: handle, queue: q) }
-            uploaders[sessionId] = up
-            persistArchivePointer(sessionId: sessionId, participantId: participantId, handle: handle, queue: q)
-            up.pump()
+            guard let sc = ensureScope(sessionId: sessionId, handle: handle ?? currentHandle, participantId: participantId),
+                  let s = sync(for: sc, handleHint: handle ?? currentHandle) else { return }
+            uploader.whenReady { [weak self] in self?.queue.async { s.start() } }
         }
     }
 
-    private var pointerDir: URL { root.appendingPathComponent("pending-archive", isDirectory: true) }
-    private func persistArchivePointer(sessionId: String, participantId: String?, handle: String, queue q: ArchiveQueue) {
-        try? FileManager.default.createDirectory(at: pointerDir, withIntermediateDirectories: true)
-        let f = pointerDir.appendingPathComponent("\(sessionId).json")
-        let c = q.counts
-        // 종료 기록(close intent)이 아직 안 갔으면 업로드가 다 끝나도 포인터를 지우지 않는다 — 다음 실행/깨움에서 이어 보낸다.
-        let intentPending = MeasurementManager.closeIntentStore(root: root, sessionId: sessionId).pending() != nil
-        if c.pending + c.uploading == 0 && c.pendingAuthorization == 0 && c.pendingTimeReview == 0 && !intentPending { try? FileManager.default.removeItem(at: f); return }
-        let d: [String: Any] = ["sessionId": sessionId, "participantId": participantId ?? NSNull(), "handle": handle]
-        try? JSONSerialization.data(withJSONObject: d).write(to: f, options: .atomic)
-    }
-    private func resumeArchiveUploads() {
-        guard let files = try? FileManager.default.contentsOfDirectory(at: pointerDir, includingPropertiesForKeys: nil) else { return }
-        for f in files where f.pathExtension == "json" {
-            guard let d = try? Data(contentsOf: f), let o = try? JSONSerialization.jsonObject(with: d) as? [String: Any],
-                  let sid = o["sessionId"] as? String, let h = o["handle"] as? String else { continue }
-            startArchive(sessionId: sid, participantId: o["participantId"] as? String, handle: h)
+    /// 봉인(사용자 정지·회차 종료·terminal) → 마지막 배치 즉시 + 원시 업로드 지터 시작 + 종료 후 대조.
+    private func sessionSealed(sessionId: String, handle: String?) {
+        queue.async { [self] in
+            guard let sc = ensureScope(sessionId: sessionId, handle: handle ?? currentHandle, participantId: nil),
+                  let s = sync(for: sc, handleHint: handle ?? currentHandle) else { return }
+            uploader.whenReady { [weak self] in self?.queue.async { s.sealed() } }
         }
     }
+
+    /// 앱 시작·포그라운드·네트워크 복귀 — 디스크의 미완료 전 세션(SEALING/CLOSED/DRAINING 포함)을 이어서 전송한다. CAPTURING 복구와 별개.
+    /// 다른 계정 scope 는 보존만 하고 건드리지 않는다(해당 계정 자격이 Keychain 에 없으면 sync 가 만들어지지 않는다).
+    public func drainPendingArchives() {
+        queue.async { [self] in
+            guard let m = manager else { return }
+            uploader.whenReady { [weak self] in
+                self?.queue.async {
+                    guard let self = self else { return }
+                    for s in self.syncs.values { s.kick() }
+                    for p in m.drainPendingArchives() {
+                        guard let s = self.sync(for: p.scope, handleHint: nil) else { continue }
+                        // OS 에 살아 있는 task 가 없는 uploading 항목은 pending 으로 되돌린다(앱 재시작 후 영구 정체 방지).
+                        if let q = self.diskHandles[p.scope.sessionId]?.queue { try? q.releaseOrphans(liveTaskIds: self.uploader.liveTaskIds()) }
+                        s.kick()
+                    }
+                }
+            }
+        }
+    }
+
+    private func startPathMonitor() {
+        pathMonitor.pathUpdateHandler = { [weak self] path in
+            guard let self = self else { return }
+            let ok = path.status == .satisfied
+            self.queue.async {
+                let wasOk = self.lastPathSatisfied; self.lastPathSatisfied = ok
+                if ok && !wasOk { self.drainPendingArchives() }      // 네트워크 복귀
+            }
+        }
+        pathMonitor.start(queue: DispatchQueue(label: "com.looxidlabs.mindbreeze2.measurement.path"))
+    }
+
+    private func uploaderFor(task: Int) -> ArchiveUploader? { syncs.values.map { $0.archive }.first { $0.owns(task: task) } }
 
     public func handleBackgroundSession(identifier: String, completion: @escaping () -> Void) -> Bool {
         guard identifier == BackgroundFileUploader.sessionIdentifier else { return false }

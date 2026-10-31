@@ -20,6 +20,8 @@ public protocol CredentialStore: AnyObject {
     func load(handle: String) throws -> Credential?
     func update(handle: String, access: String, refresh: String?) throws
     func wipe(accountId: String)
+    /// 계정의 현재 handle(재로그인으로 handle 이 바뀌어도 계정으로 다시 찾는다). 없으면 nil.
+    func handle(forAccount accountId: String) -> String?
 }
 
 public final class InMemoryCredentialStore: CredentialStore {
@@ -41,6 +43,7 @@ public final class InMemoryCredentialStore: CredentialStore {
         lock.lock(); defer { lock.unlock() }
         if let h = handleOfAccount.removeValue(forKey: accountId) { byHandle[h] = nil }
     }
+    public func handle(forAccount accountId: String) -> String? { lock.lock(); defer { lock.unlock() }; return handleOfAccount[accountId] }
     static func newHandle() -> String {
         var b = [UInt8](repeating: 0, count: 24); _ = SecRandomCopyBytes(kSecRandomDefault, b.count, &b)
         return Data(b).base64EncodedString().replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
@@ -92,6 +95,7 @@ public final class KeychainCredentialStore: CredentialStore {
         SecItemAdd(q as CFDictionary, nil)
     }
     public func wipe(accountId: String) { SecItemDelete(base("acct:" + accountId) as CFDictionary) }
+    public func handle(forAccount accountId: String) -> String? { existingHandle(account: accountId) }
 }
 
 public protocol HTTPClient: AnyObject {
