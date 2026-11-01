@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { measurementApi, type MeasurementMetadata, type FeaturePage, type IndicesPage, type MeasurementSelection, type SignalType, type SpectrumResponse, type WaveformResponse } from '../../lib/api/data-center-measurement';
+import { measurementApi, type MeasurementMetadata, type FeaturePage, type IndicesPage, type MeasurementSelection, type SignalType, type SpectrumResponse, type WaveformResponse, type GapSummary } from '../../lib/api/data-center-measurement';
 import { SignalWaveform } from './signal-waveform';
 import { FeatureTable } from './feature-table';
 import { availabilityLabel, consentStateLabel, defaultViewLabel, manifestStateLabel, signalLabel } from '../../lib/data-center-labels';
@@ -7,8 +7,8 @@ import { IndicesChart } from './indices-chart';
 import { SpectrumPanel } from './spectrum-panel';
 import './measurement-detail.css';
 export interface MeasurementDetailProps { sessionId: string; participantId: string; orgId?: string; onClose?: () => void; onSelectionChange?: (selection: MeasurementSelection) => void }
-interface DetailData { metadata: MeasurementMetadata | null; waveform: WaveformResponse | null; features: FeaturePage | null; indices: IndicesPage | null; spectrum: SpectrumResponse | null }
-const empty: DetailData = { metadata:null, waveform:null, features:null, indices:null, spectrum:null };
+interface DetailData { metadata: MeasurementMetadata | null; waveform: WaveformResponse | null; features: FeaturePage | null; indices: IndicesPage | null; spectrum: SpectrumResponse | null; gapSummary: GapSummary | null }
+const empty: DetailData = { metadata:null, waveform:null, features:null, indices:null, spectrum:null, gapSummary:null };
 export function MeasurementDetail(props: MeasurementDetailProps) {
  // 측정 키 변경 시 이전 버퍼를 즉시 폐기한다.
  return <MeasurementDetailBody key={`${props.orgId ?? ''}:${props.sessionId}:${props.participantId}`} {...props}/>;
@@ -34,6 +34,8 @@ function MeasurementDetailBody({ sessionId, participantId, orgId, onClose, onSel
    measurementApi.features(...options).then(value=>publish('features',value)).catch(fail),
    measurementApi.indices(...options).then(value=>publish('indices',value)).catch(fail),
    measurementApi.spectrum(...options).then(value=>publish('spectrum',value)).catch(fail),
+   // 보조 요약 — 실패해도 화면 오류로 올리지 않는다
+   Promise.resolve().then(()=>measurementApi.gaps(sessionId,participantId,orgId,controller.signal)).then(value=>{ if(value) publish('gapSummary',value); }).catch(()=>undefined),
   ];
   void Promise.all(requests).then(()=>{ if (!controller.signal.aborted && generation.current === request) setLoading(false); });
   // eslint-disable-next-line react-hooks/exhaustive-deps -- 범위·탭 전환/언마운트 시 늦은 응답을 폐기하려고 세대를 증가시킨다
@@ -56,6 +58,7 @@ function MeasurementDetailBody({ sessionId, participantId, orgId, onClose, onSel
  }
  return <section className="dc-measurement" aria-label="측정 상세"><header className="dc-measure-heading"><div><h2>측정 데이터</h2><p>측정 1건의 원파형·분석 값·당시 표시 이력</p></div>{onClose && <button type="button" onClick={onClose}>닫기</button>}</header>
  {data.metadata && <div className="dc-measure-note"><strong>참여자 {data.metadata.alias}</strong><p>{data.metadata.band_used?'밴드 사용':'밴드 미착용 · 정상 이용'} · 파일 준비 상태 {manifestStateLabel(data.metadata.manifest_state)} · 분석 값 {data.metadata.feature_windows.value ?? '집계 중'}{data.metadata.feature_windows.partial?' (일부)':''}</p><p>뇌파 수집 동의 {consentStateLabel(data.metadata.consent)} · 보관 기한 {data.metadata.retention_deadline ? new Date(data.metadata.retention_deadline).toLocaleString('ko-KR') : '미확인'} · 허용 포맷 {data.metadata.allowed_formats.join(', ') || '없음'}</p><p>기본 표시 기준 {defaultViewLabel(data.metadata.default_view)} · 조회 기준 {new Date(data.metadata.as_of).toLocaleString('ko-KR')}</p>{data.metadata.signals.map(signal=><p key={signal.signal}>{signalLabel(signal.signal)} · {availabilityLabel(signal.availability)} · 샘플 {signal.sample_count.value ?? '집계 중'}</p>)}</div>}
+ {data.gapSummary && data.gapSummary.count > 0 && <p className="dc-measure-note">측정 중 신호가 끊긴 구간 {data.gapSummary.count}회, 합계 {data.gapSummary.total_seconds.toFixed(1)}초</p>}
  <div className="dc-measure-tabs" role="tablist" aria-label="측정 신호">{(['eeg','ppg','acc','features'] as const).map(value=><button key={value} type="button" role="tab" aria-selected={tab===value} onClick={()=>{if(tab!==value){setData(empty);setTab(value);}}}>{value==='features'?'feature 표':`${value.toUpperCase()} 원파형`}</button>)}</div>
  <div className="dc-measure-controls"><button type="button" disabled={Number(range.fromUs)===0} onClick={()=>{const from=Math.max(0,Number(range.fromUs)/1e6-span);selectRange(from,from+span);}}>← 이전</button><label>표시 구간<select aria-label="원파형표시 구간" value={span} onChange={event=>{const value=Number(event.target.value);setSpan(value);selectRange(Number(range.fromUs)/1e6,Number(range.fromUs)/1e6+value);}}>{[10,30,60].map(value=><option key={value} value={value}>{value}초</option>)}</select></label><button type="button" onClick={()=>selectRange(Number(range.fromUs)/1e6+span,Number(range.fromUs)/1e6+span*2)}>다음 →</button><label>선택 시작 초<input type="number" aria-label="선택 시작 초" min="0" value={start} onChange={e=>setStart(e.target.value)}/></label><label>선택 종료 초<input type="number" aria-label="선택 종료 초" min="0" value={end} onChange={e=>setEnd(e.target.value)}/></label><button type="button" onClick={()=>selectRange(Number(start),Number(end))}>구간 적용</button></div>
  <p className="dc-measure-note">선택 {Number(range.fromUs)/1e6}–{Number(range.toUs)/1e6}초 · [시작, 종료) · 파형·feature·표시값·PSD 공통 범위</p>

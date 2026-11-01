@@ -65,6 +65,41 @@ class ArchiveUploader(
         }
     }
 
+    /**
+     * SDD-270: 대기 중인 구멍(gap)을 sequence 순 50건씩 `biosignal-events` 로 올린다. 서버는 event_id 멱등이라 재전송이 안전하다.
+     * recorded·duplicate·conflict 는 닫는다(conflict 는 같은 id 다른 내용이라 다시 보내도 같다). 일괄 요청이 검증 거절(4xx)이면
+     * 한 건씩 나눠 보내 나쁜 한 건이 나머지를 막지 않게 한다. 네트워크/5xx/401/408/429 는 대기 유지(false).
+     * 반환: 대기 구멍이 모두 정리됐는지.
+     */
+    fun sendGapEvents(participantId: String?, store: GapEventStore): Boolean {
+        val token = tokenProvider()
+        while (true) {
+            val batch = store.pending(50)
+            if (batch.isEmpty()) return true
+            if (token == null) return false
+            if (!postGapBatch(participantId, store, batch, token)) return false
+        }
+    }
+
+    private fun postGapBatch(participantId: String?, store: GapEventStore, batch: List<GapEventStore.Entry>, token: String): Boolean {
+        val arr = JSONArray(); batch.forEach { arr.put(it.event) }
+        val ids = batch.map { it.event.getString("event_id") }
+        val body = JSONObject().put("participant_id", participantId ?: JSONObject.NULL).put("events", arr)
+        try {
+            val res = postJson(ArchiveStage.VERIFY, "$apiBase/sessions/${java.net.URLEncoder.encode(store.sessionId, "UTF-8")}/biosignal-events", body, token)
+            val ok = HashSet<String>(); val evs = res.optJSONArray("events")
+            if (evs != null) for (i in 0 until evs.length()) { val o = evs.getJSONObject(i); if (o.optString("status") in setOf("recorded", "duplicate", "conflict")) ok += o.optString("event_id") }
+            store.mark(ok.filter { it in ids }, "sent")
+            if (!ids.all { it in ok }) { store.noteAttempt(); return false }
+            return true
+        } catch (e: StageError) {
+            val permanent = e.status in 400..499 && e.status != 401 && e.status != 408 && e.status != 429
+            if (!permanent) { store.noteAttempt(); return false }
+            if (batch.size > 1) { for (x in batch) if (!postGapBatch(participantId, store, listOf(x), token)) return false; return true }
+            store.mark(ids, "rejected"); return true
+        }
+    }
+
     /** 반환: 다음 항목을 계속 처리할지(halt 면 false). */
     private fun handle(item: ArchiveItem, e: StageError, sum: ArchiveSummary): Boolean {
         val d = ArchiveClassifier.classify(e.stage, e.status, e.body, e.retryAfterHeader)

@@ -16,16 +16,16 @@ const P = (o: Partial<UploadProgress> = {}): UploadProgress => ({
 });
 
 describe('describeUploadProgress', () => {
-  it('대기가 있으면 업로드 중 feature N창 · 원시 M건', () => {
+  it('대기가 있으면 전송 중 분석 데이터 N개 · 측정 기록 파일 M개(SDD-268 문구)', () => {
     expect(describeUploadProgress(P({ featurePending: 12, rawPending: 3, rawUploading: 1 }))).toEqual({
-      kind: 'uploading', text: '데이터 업로드 중 · feature 12창 · 원시 4건',
+      kind: 'uploading', text: '전송 중 · 분석 데이터 12개 · 측정 기록 파일 4개',
     });
   });
   it('대기 0 이어도 summary 대조(complete)가 안 끝났으면 완료라 하지 않는다', () => {
     expect(describeUploadProgress(P({ featureAcked: 600 })).kind).toBe('checking');
   });
-  it('complete=true 면 업로드 완료', () => {
-    expect(describeUploadProgress(P({ featureAcked: 600, complete: true }))).toEqual({ kind: 'done', text: '업로드 완료' });
+  it('complete=true 면 모두 도착(SDD-268 문구)', () => {
+    expect(describeUploadProgress(P({ featureAcked: 600, complete: true }))).toEqual({ kind: 'done', text: '모두 도착했어요' });
   });
   it('격리(거절·quarantine)는 별도 안내로 센다', () => {
     expect(describeUploadProgress(P({ featureRejected: 2, rawQuarantined: 1, complete: true })).kind).toBe('needs_review');
@@ -65,11 +65,11 @@ async function mount(progress: UploadProgress | null): Promise<{ host: HTMLDivEl
 }
 
 describe('UploadProgressNotice', () => {
-  it('업로드 중 문구와 완료 문구를 그린다', async () => {
+  it('전송 중 문구와 모두 도착 문구를 그린다', async () => {
     const { host, root } = await mount(P({ featurePending: 7, rawPending: 1 }));
-    expect(host.querySelector('[data-testid="upload-progress"]')?.textContent).toContain('feature 7창');
+    expect(host.querySelector('[data-testid="upload-progress"]')?.textContent).toContain('분석 데이터 7개');
     await act(async () => { root.render(<UploadProgressNotice progress={P({ featureAcked: 7, complete: true })} />); });
-    expect(host.querySelector('[data-testid="upload-progress"]')?.textContent).toContain('업로드 완료');
+    expect(host.querySelector('[data-testid="upload-progress"]')?.textContent).toContain('모두 도착했어요');
     act(() => root.unmount());
   });
   it('progress 가 없으면 아무것도 그리지 않는다', async () => {

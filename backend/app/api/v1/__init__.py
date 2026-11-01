@@ -19,6 +19,8 @@ from app.api.v1 import account
 from app.api.v1 import class_summary
 # SDD-243: 플랫폼·기관 데이터 센터
 from app.api.v1 import data_center
+# SDD-263: 전체 회차 업로드 현황 목록
+from app.api.v1 import upload_status
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(auth.router)
@@ -33,6 +35,7 @@ router.include_router(client_portal.router)
 router.include_router(session.router)
 router.include_router(class_audio.router)
 router.include_router(classes.router)
+router.include_router(upload_status.router)
 router.include_router(class_membership.router)
 router.include_router(class_guests.router)
 router.include_router(class_reports.router)

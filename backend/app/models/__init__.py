@@ -4,6 +4,7 @@ from app.models.user import User
 from app.models.session import Session, SessionParticipant, SessionReminderLog, ReportChoiceEvent
 from app.models.record import SessionRecord, EEGRecord, EEGRawChunk, Report, AudioChunk, VideoChunk
 from app.models.eeg_feature import EEGFeatureWindow
+from app.models.session_ingest_expected import SessionIngestExpected
 from app.models.credential import Credential, VerificationAudit
 from app.models.notification import Notification
 from app.models.notification_outbox import NotificationOutbox

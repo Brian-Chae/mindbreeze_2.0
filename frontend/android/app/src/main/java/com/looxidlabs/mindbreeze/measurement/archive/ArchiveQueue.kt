@@ -14,6 +14,16 @@ class ArchiveItem(
     var lastReason: String? = null, var lastStage: String? = null, var verifiedAtUs: String? = null, var serverId: String? = null,
 )
 
+/**
+ * SDD-264: raw 청크 1개 = 큐 항목 1개 = presign 1건 = 서버 eeg_raw_chunks 행 1개. 신호별(eeg/ppg/acc) 상태별 개수.
+ * quarantined = 사람이 봐야 하는 항목(중단·사망 편지·시간 검토). 안드로이드 큐에는 uploading 상태가 없어 0.
+ */
+data class SignalCounts(val pending: Int = 0, val uploading: Int = 0, val verified: Int = 0, val quarantined: Int = 0) {
+    val total: Int get() = pending + uploading + verified + quarantined
+}
+
+object RawSignals { val ALL = listOf("eeg", "ppg", "acc") }
+
 data class ArchiveCounts(
     val archivePending: Int, val archiveVerified: Int, val pendingTimeReview: Int, val halted: Int, val deadLetter: Int,
     val oldestPendingAgeMs: Long?, val diskUsedBytes: Long,
@@ -39,11 +49,14 @@ class ArchiveQueue(private val dir: File, private val nowMs: () -> Long = { Syst
             try {
                 val o = JSONObject(f.readText())
                 val id = o.getString("id")
-                if (!payloadOf(id).exists()) return@forEach
+                // SDD-266: VERIFIED 는 gcVerified() 가 payload 를 지운 뒤에도 총량(signalCounts)에 남아야 한다. 안 그러면 재기동·스윕 큐가
+                // 세션 일부(꼬리)만 세어 기대량 보고가 낮아진다. 그 외 상태는 payload 없이는 올릴 수 없어 기존처럼 건너뛴다.
+                val status = ArchiveStatus.valueOf(o.getString("status"))
+                if (!payloadOf(id).exists() && status != ArchiveStatus.VERIFIED) return@forEach
                 loaded += ArchiveItem(
                     id, o.getLong("seq"), o.getString("kind"), o.getString("session_id"), o.optString("participant_id").ifEmpty { null },
                     o.getString("alias"), o.getJSONObject("meta"), payloadOf(id),
-                    ArchiveStatus.valueOf(o.getString("status")), o.optInt("attempts"), o.optLong("next_attempt_at"),
+                    status, o.optInt("attempts"), o.optLong("next_attempt_at"),
                     o.optString("last_reason").ifEmpty { null }, o.optString("last_stage").ifEmpty { null },
                     o.optString("verified_at_us").ifEmpty { null }, o.optString("server_id").ifEmpty { null },
                 ).also { enqueuedAt[id] = o.optLong("enqueued_at", nowMs()) }
@@ -96,6 +109,24 @@ class ArchiveQueue(private val dir: File, private val nowMs: () -> Long = { Syst
             pend.minOfOrNull { enqueuedAt[it.id] ?: now }?.let { now - it },
             items.values.sumOf { it.payloadFile.length() },
         )
+    }
+
+    /** SDD-264: kind=raw 항목만 신호별로 센다(feature 산출물 NF-* 은 제외). 착용 안 한 신호도 0 으로 항상 3개 키를 돌려준다. */
+    @Synchronized
+    fun signalCounts(): Map<String, SignalCounts> {
+        val acc = HashMap<String, SignalCounts>()
+        for (sig in RawSignals.ALL) acc[sig] = SignalCounts()
+        for (i in items.values) {
+            if (i.kind != "raw") continue
+            val sig = i.meta.optJSONObject("header")?.optString("signal_type") ?: continue
+            val c = acc[sig] ?: continue
+            acc[sig] = when (i.status) {
+                ArchiveStatus.PENDING -> c.copy(pending = c.pending + 1)
+                ArchiveStatus.VERIFIED -> c.copy(verified = c.verified + 1)
+                ArchiveStatus.HALTED, ArchiveStatus.TIME_REVIEW, ArchiveStatus.DEAD_LETTER -> c.copy(quarantined = c.quarantined + 1)
+            }
+        }
+        return acc
     }
 
     /**

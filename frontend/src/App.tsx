@@ -87,8 +87,9 @@ const SupportPage = lazy(() => import('./pages/support-page'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const NotificationCenterPage = lazy(() => import('./pages/notifications/NotificationCenterPage'));
 const ProfessionalProfilePage = lazy(() => import('./pages/settings/professional-profile-page'));
-const SettingsUploadStatusPage = lazy(() => import('./pages/settings/upload-status-page'));
-const AdminUploadStatusPage = lazy(() => import('./pages/admin/upload-status-page'));
+const UploadOverviewPage = lazy(() => import('./pages/upload-status/overview-page'));
+const AdminUploadStatusDetailPage = lazy(() => import('./pages/admin/upload-status-detail-page'));
+const MyUploadStatusPage = lazy(() => import('./pages/client/my-upload-status-page'));
 const ClassUploadStatusPage = lazy(() => import('./pages/classes/class-upload-status-page'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const ClientAppPage = lazy(() => import('./pages/client/ClientAppPage'));
@@ -199,6 +200,7 @@ const router = createBrowserRouter(
         <Route path="/app/counseling" element={<CounselingGate area="member"><RoleGuard role="client"><CounselingListPage role="member" /></RoleGuard></CounselingGate>} />
         <Route path="/app/counseling/:relationshipId" element={<CounselingGate area="member"><RoleGuard role="client"><CounselingDetailPage role="member" /></RoleGuard></CounselingGate>} />
         <Route path="/app/sessions" element={<RoleGuard role="client"><Navigate to="/app/classes" replace /></RoleGuard>} />
+        <Route path="/app/profile/upload-status" element={<RoleGuard role="client"><MyUploadStatusPage /></RoleGuard>} />
         <Route path="/app/*" element={<RoleGuard role="client"><ClientAppPage /></RoleGuard>} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -344,8 +346,11 @@ const router = createBrowserRouter(
         <Route path="/notifications" element={<RoleGuard><NotificationCenterPage /></RoleGuard>} />
         <Route path="/settings" element={<RoleGuard><SettingsPage /></RoleGuard>} />
         {/* SDD-261: 데이터 저장·업로드 현황(서버 수신 기준). 권한은 서버가 최종 판정한다. */}
-        <Route path="/settings/upload-status" element={<RoleGuard role={['counselor', 'org_admin']}><SettingsUploadStatusPage /></RoleGuard>} />
-        <Route path="/admin/upload-status" element={<PlatformAdminRoute><AdminUploadStatusPage /></PlatformAdminRoute>} />
+        {/* SDD-263: 데이터 현황 전체 회차 목록(정식 메뉴). SDD-261 의 설정 하위 picker 화면은 목록으로 대체한다. */}
+        <Route path="/upload-status" element={<RoleGuard role={['counselor', 'org_admin']}><UploadOverviewPage /></RoleGuard>} />
+        <Route path="/settings/upload-status" element={<Navigate to="/upload-status" replace />} />
+        <Route path="/admin/upload-status" element={<PlatformAdminRoute><UploadOverviewPage platform /></PlatformAdminRoute>} />
+        <Route path="/admin/upload-status/:classId/:sessionId" element={<PlatformAdminRoute><AdminUploadStatusDetailPage /></PlatformAdminRoute>} />
         <Route path="/classes/:classId/sessions/:sessionId/upload-status" element={<RoleGuard role={['counselor', 'org_admin']}><ClassUploadStatusPage /></RoleGuard>} />
         <Route path="/profile/professional" element={<RoleGuard role={['counselor', 'org_admin']}><ProfessionalProfilePage /></RoleGuard>} />
         <Route path="/playground" element={<RoleGuard><PlaygroundPage /></RoleGuard>} />

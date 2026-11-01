@@ -7,6 +7,7 @@ import { IdbOutboxStore, type OutboxScope } from '../lib/measurement-web/metric-
 import { SWEEP_INTERVAL_MS, sweepFeatureScopes, type SweepAuth } from '../lib/measurement-web/feature-sweeper';
 import { subscribeAppResume } from '../lib/native/app-lifecycle';
 import { useAuthStore } from '../stores/authStore';
+import { useBiosignalExpectedReporter } from './use-biosignal-expected-reporter';
 
 /** scope.accountId 가 지금 이 기기의 로그인/입장 자격과 일치할 때만 인증을 돌려준다(아니면 null → 보존만) */
 export function resolveSweepAuth(scope: OutboxScope, userId: string | null): SweepAuth | null {
@@ -22,6 +23,7 @@ export function resolveSweepAuth(scope: OutboxScope, userId: string | null): Swe
 }
 
 export function useBiosignalResumeSweeper(): void {
+  useBiosignalExpectedReporter(); // SDD-264: 폰 생성량(기대량) 보고 — App.tsx 변경 없이 같은 앱 셸 훅에서 구동
   const userId = useAuthStore((s) => s.user?.id ?? null);
   useEffect(() => {
     if (typeof indexedDB === 'undefined') return undefined;

@@ -93,6 +93,7 @@ PARTICIPANT_OWNED: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "capture_stream": (("participant_id",), ()),  # SDD-246 T03
     "eeg_raw_chunks": (("participant_id",), ("user_id",)),
     "eeg_feature_windows": (("participant_id",), ("user_id",)),
+    "session_ingest_expected": (("participant_id",), ()),  # SDD-264: 폰 생성량 보고(참여자 소유)
     "reports": (("participant_id",), ("user_id",)),
     "session_presence_leases": (("participant_id",), ()),
     "class_makeup_assignments": (("source_participant_id", "target_participant_id"), ()),

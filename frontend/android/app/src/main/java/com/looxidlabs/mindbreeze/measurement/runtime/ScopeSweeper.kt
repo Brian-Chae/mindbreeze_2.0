@@ -159,10 +159,11 @@ class ScopeSweeper(
         if (!archiveDir.exists()) { board.setRaw(info.sessionId, "complete"); return markComplete(dir, info) }
         val q = ArchiveQueue(archiveDir)
         val sid = info.sessionId
-        fun pub() { val prev = board.counts(sid); board.setCounts(sid, SyncCounts.of(prev.featurePending, prev.featureAcked, prev.featureRejected, q.counts())) }
+        fun pub() { val prev = board.counts(sid); board.setCounts(sid, SyncCounts.of(prev.featurePending, prev.featureAcked, prev.featureRejected, q.counts(), q.signalCounts())) }
         pub()
         val up = ArchiveUploader(info.apiBase, q, { ts.current() }, http, { info.streamId })
         val intents = CloseIntentStore(File(dir, "close-intent.json"))
+        val gaps = com.looxidlabs.mindbreeze.measurement.archive.GapEventStore(File(dir, "gap-events.json"), info.sessionId)
         val rec = RawReconciler(info.apiBase, info.sessionId, q, { info.participantId }, { ts.current() }, http)
         var rounds = 0
         while (true) {
@@ -174,6 +175,8 @@ class ScopeSweeper(
                 progress = sum.acked > 0
             }
             if (q.counts().archivePending > 0) { board.setRaw(sid, "retrying"); return Outcome.Incomplete } // 백오프 중 → 다음 스윕에서
+            // SDD-270: 구멍이 서버에 다 닿기 전에는 완료 표식을 쓰지 않는다(종료 기록보다 먼저 보낸다).
+            if (!(try { up.sendGapEvents(info.participantId, gaps) } catch (_: Exception) { false })) { board.setRaw(sid, "retrying"); return Outcome.Incomplete }
             intents.pending()?.let { p ->
                 val ok = try { up.sendCloseIntent(info.sessionId, info.participantId, p.intent) } catch (_: Exception) { false }
                 if (ok) intents.markSent() else intents.markAttempt()

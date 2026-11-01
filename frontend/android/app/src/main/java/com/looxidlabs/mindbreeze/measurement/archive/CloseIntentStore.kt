@@ -19,7 +19,7 @@ class CloseIntentStore(private val file: File) {
 
     /** 종료 시점 큐 스냅샷으로 intent 를 만들어 저장한다. 큐에 raw·feature 가 없으면 만들지 않는다(null). 같은 내용이 이미 보내졌으면 다시 쓰지 않는다. */
     @Synchronized
-    fun record(queue: ArchiveQueue, sessionId: String, reason: String, nowUs: Long): JSONObject? {
+    fun record(queue: ArchiveQueue, sessionId: String, reason: String, nowUs: Long, lastGapSequence: Long? = null): JSONObject? {
         val items = queue.all().filter { it.sessionId == sessionId && (it.kind == "raw" || it.kind == "feature") }
         if (items.isEmpty()) return null
         val expected = JSONArray()
@@ -37,11 +37,11 @@ class CloseIntentStore(private val file: File) {
         for ((k, v) in streams) streamArr.put(JSONObject().put("stream_id", k.first).put("segment_id", k.second).put("signal", k.third)
             // feature 순번은 코어 프레임 순번(1부터)이라 서버의 0..last 구멍 판정과 맞지 않아 보내지 않는다 — feature 는 expected set 으로 대조한다.
             .put("last_chunk_sequence", if (v[0] >= 0) v[0] else JSONObject.NULL).put("last_feature_sequence", JSONObject.NULL).put("received_samples", v[1]))
-        val intentId = UUID.nameUUIDFromBytes(("mb-close-intent|$sessionId|" + items.map { it.alias }.sorted().joinToString(",")).toByteArray()).toString()
+        val intentId = UUID.nameUUIDFromBytes(("mb-close-intent|$sessionId|" + items.map { it.alias }.sorted().joinToString(",") + (if (lastGapSequence != null) "|g$lastGapSequence" else "")).toByteArray()).toString()
         val prev = load()
         if (prev != null && prev.first.optString("intent_id") == intentId) return prev.first // 같은 내용: 그대로(이미 보냈으면 다시 보내지 않는다)
         val intent = JSONObject().put("event_type", "close_intent").put("intent_id", intentId).put("expected_artifacts", expected)
-            .put("streams", streamArr).put("snapshots", JSONArray()).put("last_gap_sequence", JSONObject.NULL)
+            .put("streams", streamArr).put("snapshots", JSONArray()).put("last_gap_sequence", lastGapSequence ?: JSONObject.NULL)
             .put("end_reason", reason.take(64)).put("closed_at_us", nowUs.toString())
         save(intent, sent = false, attempts = 0)
         return intent

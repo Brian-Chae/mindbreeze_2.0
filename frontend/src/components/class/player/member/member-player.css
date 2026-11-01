@@ -25,6 +25,8 @@
   display: grid; place-items: center; width: var(--tap); height: var(--tap); border-radius: 50%;
   background: var(--sheet-bg); color: var(--tx-hi);
 }
+.mp-conn--btn { border: 0; cursor: pointer; font: inherit; }
+.mp-conn--btn:focus-visible { outline: 2px solid var(--mb-mint); outline-offset: 2px; }
 .mp-conn[data-ok="false"] { background: rgba(62, 26, 24, 0.84); }
 .mp-conn__dot { width: 10px; height: 10px; border-radius: 50%; background: var(--mb-mint); box-shadow: 0 0 0 4px rgba(1, 240, 200, 0.18); }
 .mp-conn__ic { color: var(--mb-coral); }

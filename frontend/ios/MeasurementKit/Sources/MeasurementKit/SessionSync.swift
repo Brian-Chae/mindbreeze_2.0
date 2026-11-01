@@ -32,6 +32,7 @@ public enum SessionDrain {
         func has(_ n: String) -> Bool { fm.fileExists(atPath: dir.appendingPathComponent(n).path) }
         if !has(FeatureReconciler.markerName) || !has(RawReconciler.markerName) { return true }
         if CloseIntentStore(file: dir.appendingPathComponent(CloseIntentStore.fileName)).pending() != nil { return true }
+        if GapEventStore(file: dir.appendingPathComponent(GapEventStore.fileName), sessionId: "").hasPending() { return true } // SDD-270
         return false
     }
 
@@ -51,6 +52,8 @@ public struct SyncSnapshot: Equatable {
     public var archivePending = 0, archiveUploading = 0, archiveVerified = 0, archiveQuarantined = 0
     public var featureState = "syncing", rawState = "syncing"
     public var complete = false
+    /// SDD-264: raw 청크 신호별 개수. nil = 아직 큐를 못 읽음(이벤트에 싣지 않는다).
+    public var signals: [String: SignalCounts]? = nil
 }
 
 /// 세션 하나의 "저장 완결" 오케스트레이터 — FeatureUploader(REST 정본) · ArchiveUploader(원시) · 종료 후 summary 대조 · 종료 기록.
@@ -88,6 +91,7 @@ public final class SessionSync {
         archive = ArchiveUploader(queue: queue, http: http, files: files, apiBase: apiBase, sessionId: sid, participantId: pid,
                                   token: { done in token(false, done) }, fileURL: { dir.appendingPathComponent("archive").appendingPathComponent($0.file) }, nowMs: nowMs)
         archive.closeIntents = CloseIntentStore(file: dir.appendingPathComponent(CloseIntentStore.fileName))
+        archive.gapStore = GapEventStore(file: dir.appendingPathComponent(GapEventStore.fileName), sessionId: sid)
         archive.scheduleRetry = { [weak scheduler] sec, work in _ = scheduler?.schedule(after: sec, work) }
         featureRec = FeatureReconciler(outbox: outbox, uploader: features, http: http, apiBase: apiBase, sessionId: sid, participantId: pid, token: token, markerDir: dir)
         rawRec = RawReconciler(queue: queue, http: http, apiBase: apiBase, sessionId: sid, participantId: pid, token: token, markerDir: dir)
@@ -100,6 +104,7 @@ public final class SessionSync {
     public var isSealed: Bool { FileManager.default.fileExists(atPath: dir.appendingPathComponent("final.json").path) }
     public var isComplete: Bool {
         featureRec.isComplete && rawRec.isComplete && CloseIntentStore(file: dir.appendingPathComponent(CloseIntentStore.fileName)).pending() == nil
+            && archive.gapStore?.hasPending() != true
     }
     public var snapshot: SyncSnapshot { lock.lock(); defer { lock.unlock() }; return snap }
 
@@ -195,6 +200,7 @@ public final class SessionSync {
         lock.lock()
         snap.featurePending = oc.livePending; snap.featureAcked = oc.liveAcked; snap.featureRejected = oc.rejected
         snap.archivePending = ac.pending; snap.archiveUploading = ac.uploading; snap.archiveVerified = ac.verified; snap.archiveQuarantined = ac.quarantined
+        snap.signals = queue.signalCounts()
         let wasComplete = snap.complete
         snap.complete = isSealed && isComplete
         let s = snap, justDone = snap.complete && !wasComplete

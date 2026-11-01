@@ -226,7 +226,7 @@ class MeasurementPlugin : Plugin() {
         val rt = MeasurementManager.runtime
         val live = rt?.let {
             val u = it.uploadCounts()
-            SyncCounts.of(u.optInt("feature_pending"), u.optLong("feature_acked"), u.optLong("feature_quarantined"), it.queue.counts())
+            SyncCounts.of(u.optInt("feature_pending"), u.optLong("feature_acked"), u.optLong("feature_quarantined"), it.queue.counts(), it.queue.signalCounts())
         }
         syncEmitter.emit(rt?.cfg?.sessionId, live, System.currentTimeMillis())
     }

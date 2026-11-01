@@ -17,6 +17,7 @@ from app.core.database import get_db
 from app.models.session import Session as SessionModel, SessionParticipant
 from app.core.redis import get_redis
 from app.schemas.class_scheduling import TransitionConfirmation
+from app.schemas.ingest_expected import IngestExpectedResponse
 from app.schemas.session import (
     FeatureBatchResponse,
     FeatureSummaryResponse,
@@ -848,6 +849,32 @@ def ingest_features_batch(
                 sid, participant.id, len(results), counts["accepted"], counts["duplicate"], counts["rejected"], elapsed_ms,
                 sorted({r["code"] for r in results if r.get("code")}))
     return {"session_id": str(sid), "participant_id": str(participant.id), "results": results, "counts": counts}
+
+
+@router.put("/{session_id}/ingest-expected", response_model=IngestExpectedResponse)
+def put_ingest_expected(
+    session_id: str,
+    payload: dict = Body(...),
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-264: 폰이 만든 총량(기대량) 보고. 필드별 단조·멱등. 계약: sdd-264 contract.md §1."""
+    from app.services import ingest_expected_service
+
+    sid = UUID(session_id) if _is_uuid_str(session_id) else None
+    if sid is None:
+        raise _HTTPException(status_code=400, detail="잘못된 ID 형식입니다")
+    if db.get(SessionModel, sid) is None:
+        raise _HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+    raw_pid = payload.get("participant_id") if isinstance(payload, dict) else None
+    # 인증·소유 확정이 본문 검증보다 먼저다(미인증 401/타인 403 이 422 에 가려지지 않게)
+    participant = session_service.resolve_upload_participant(
+        sid, raw_pid if isinstance(raw_pid, str) else None, current_user["id"] if current_user else None, db,
+        entry_credential=x_entry_credential, allow_completed=True,
+    )
+    report = ingest_expected_service.parse_report(payload)
+    return ingest_expected_service.report_expected(db, sid, participant.id, report)
 
 
 def _is_uuid_str(value: str) -> bool:

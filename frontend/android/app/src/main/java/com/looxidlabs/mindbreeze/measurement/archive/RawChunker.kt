@@ -26,6 +26,9 @@ class RawChunk(val alias: String, val meta: JSONObject, val payload: ByteArray, 
  * - 패킷은 쪼개지 않는다. 길이가 안 맞는 패킷도 바이트를 그대로 보존하고 샘플은 0 으로 둔다.
  * 시간축 `arrivalUs` 는 코어 창과 같은 창 시간축 µs 이다(서버 raw_window_mono 가 환산하는 축).
  */
+/** SDD-270: raw segment 경계 = 구멍. start 는 이전 segment 마지막 샘플, end 는 새 segment 첫 샘플(시계 되감김이면 null). */
+class RawGap(val signal: String, val segmentId: String, val startUs: Long, val endUs: Long?, val reason: String)
+
 class RawChunker(
     private val sensor: Sensor,
     private val sessionId: String,
@@ -33,7 +36,9 @@ class RawChunker(
     firstOrdinal: Int,
     private val sink: (RawChunk) -> Unit,
     private val onNewSegment: (Int) -> Unit = {},
+    private val onGap: (RawGap) -> Unit = {},
 ) {
+    private var lastPacketUs = 0L
     private class Pkt(val bytes: ByteArray, val rows: Int, val malformed: String?, val tickRaw: Long?, val firstSample: Int, val arrivalUs: Long, val tickUnwrapped: Long?, val record: Long)
 
     private val stride = when (sensor) { Sensor.EEG -> 17; Sensor.PPG -> 8; Sensor.ACC -> 18 }
@@ -68,6 +73,7 @@ class RawChunker(
         val rows = if (malformed) 0 else (bytes.size - 4) / sampleBytes
         var tickUnwrapped: Long? = null
         var roll = segmentId.isEmpty()
+        var rewind = false
         if (raw != null) {
             val prev = lastRaw
             if (prev != null && raw < prev && prev - raw > 0x80000000L) wraps++ // 32bit wrap
@@ -76,25 +82,30 @@ class RawChunker(
             if (prevTick != null && !roll) {
                 val elapsedUs = (unwrapped - prevTick) * 1_000_000L / DEVICE_TICK_HZ
                 val expectedUs = rows.toLong() * 1_000_000L / rate
-                if (unwrapped < prevTick || kotlin.math.abs(elapsedUs - expectedUs) > toleranceUs) roll = true
+                if (unwrapped < prevTick || kotlin.math.abs(elapsedUs - expectedUs) > toleranceUs) { roll = true; rewind = unwrapped < prevTick }
             }
             if (roll && !segmentId.isEmpty()) { /* 이전 segment 봉인은 아래 startSegment 에서 */ }
             tickUnwrapped = unwrapped
             lastRaw = raw; lastTick = unwrapped
         }
-        if (roll) startSegment(arrivalUs, rows, raw, tickUnwrapped)
+        if (roll) startSegment(arrivalUs, rows, raw, tickUnwrapped, rewind)
         if (tickUnwrapped != null && !malformed) {
             if (obsFirstTick == null) obsFirstTick = tickUnwrapped else obsSamples += obsPrevRows
             obsPrevRows = rows
             obsLastTick = tickUnwrapped
         }
         val first = if (rows > 0) nextSample else -1
+        lastPacketUs = arrivalUs
         pkts.add(Pkt(bytes, rows, if (malformed) "truncated_packet" else null, raw, first, arrivalUs, tickUnwrapped, record))
         nextSample += rows; pktSamples += rows; pktBytes += bytes.size + rows * stride + MAP_ROW_ESTIMATE
         if (pktSamples >= CHUNK_SECONDS * rate || pktBytes >= CHUNK_SOFT_BYTES) seal()
     }
 
-    private fun startSegment(arrivalUs: Long, rows: Int, raw: Long?, unwrapped: Long?) {
+    private fun startSegment(arrivalUs: Long, rows: Int, raw: Long?, unwrapped: Long?, rewind: Boolean = false) {
+        val newStartUs = arrivalUs - maxOf(0, rows - 1).toLong() * 1_000_000L / rate
+        if (segmentId.isNotEmpty()) {
+            try { onGap(RawGap(sensor.name.lowercase(), segmentId, lastPacketUs, if (newStartUs < lastPacketUs) null else newStartUs, if (rewind) "clock_reset" else "packet_gap")) } catch (_: Exception) { /* 구멍 기록 실패가 수집을 막지 않는다 */ }
+        }
         seal() // 이전 segment 의 남은 샘플
         ordinal += 1
         segmentId = RawIds.segmentId(sessionId, sensor, ordinal)

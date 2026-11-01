@@ -46,6 +46,8 @@ SESSIONS_SCOPE_DELETE = SESSIONS_SCOPE_DELETE | frozenset({
     "live_session_epoch", "live_command_ledger", "live_outbox", "capture_stream",
     # SDD-244 M2: 산출물 원장·화면 스냅샷·feature alias 색인(세션 종속). 정규화 모델 snapshot 은 전역 content-addressed 라 보존.
     "biosignal_artifacts", "biosignal_feature_aliases", "display_snapshots",
+    # SDD-264: 폰 생성량(기대량) 보고. 세션·참가자 FK 종속이라 세션 초기화 범위에 포함한다.
+    "session_ingest_expected",
 })
 
 # scope=sessions 에서 보존하는 테이블(계정·기관·인증·에이전트·연구·감사).
