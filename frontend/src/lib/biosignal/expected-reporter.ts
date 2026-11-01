@@ -70,17 +70,18 @@ export class IdbExpectedStore implements ExpectedStore {
 
 const isCount = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 10_000_000;
 
-/** 두 보고의 병합(단조): 필드별 최댓값. final 은 서버 규칙(contract §1)과 같게 — 뒤처진 값이면 무시, 증가했으면 새 값, 아니면 OR */
+/**
+ * 두 보고의 병합(단조): 필드별 최댓값. final 은 **한 번 true 면 되돌리지 않는다**(OR).
+ * 서버 규칙 ①(뒤처진 보고의 final 무시)은 "서버 저장값보다 낮은 값을 보낼 때"의 규칙인데, 우리는 항상 병합 최댓값을 보내므로
+ * 뒤처진 값이 서버에 가지 않는다. 따라서 이어올림 스윕이 꼬리만 센 부분합(예: 1/1/1)과 complete=true 를 내도
+ * final 신호를 버리지 않는다(SDD-266). 증가 보고가 final=false 로 확정을 되돌리는 일도 막는다(서버 ②는 증가 시 새 값을 덮어씀).
+ */
 export function mergeReport(prev: ExpectedReport | null, next: ExpectedReport): ExpectedReport {
   if (!prev) return { feature: next.feature, raw: next.raw ? { ...next.raw } : null, final: next.final };
   const raw: RawTotals | null = prev.raw && next.raw
     ? { eeg: Math.max(prev.raw.eeg, next.raw.eeg), ppg: Math.max(prev.raw.ppg, next.raw.ppg), acc: Math.max(prev.raw.acc, next.raw.acc) }
     : (next.raw ?? prev.raw);
-  const lagging = next.feature < prev.feature || (prev.raw !== null && next.raw !== null && SIGNALS.some((s) => next.raw![s] < prev.raw![s]));
-  const feature = Math.max(prev.feature, next.feature);
-  const increased = next.feature > prev.feature || (next.raw !== null && (prev.raw === null || SIGNALS.some((s) => next.raw![s] > prev.raw![s])));
-  const final = lagging ? prev.final : increased ? next.final : prev.final || next.final;
-  return { feature, raw, final };
+  return { feature: Math.max(prev.feature, next.feature), raw, final: prev.final || next.final };
 }
 
 export const sameReport = (a: ExpectedReport | null, b: ExpectedReport | null): boolean => {

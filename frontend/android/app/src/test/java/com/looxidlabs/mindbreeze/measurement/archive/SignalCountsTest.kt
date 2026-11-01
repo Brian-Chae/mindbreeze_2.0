@@ -50,4 +50,34 @@ class SignalCountsTest {
         q.enqueue("raw", "s1", "p1", "RAW-X", JSONObject(), byteArrayOf(1))
         assertEquals(0, q.signalCounts().values.sumOf { it.total })
     }
+
+    // SDD-266: gcVerified 로 payload 가 지워진 VERIFIED 항목도 재생성(재기동·스윕) 후 총량에 남는다
+    @Test fun verifiedItemsStayCountedAfterGcAndReload() {
+        val dir = File(tmp.root, "q5")
+        val q = ArchiveQueue(dir)
+        val items = (0 until 8).map { raw(q, "eeg", it) } + (0 until 8).map { raw(q, "ppg", it) } + (0 until 7).map { raw(q, "acc", it) }
+        items.take(items.size - 3).forEach { it.status = ArchiveStatus.VERIFIED; q.update(it) }
+        q.gcVerified()
+        val c = ArchiveQueue(dir).signalCounts()
+        assertEquals(8, c["eeg"]!!.total); assertEquals(8, c["ppg"]!!.total); assertEquals(7, c["acc"]!!.total)
+    }
+
+    @Test fun nonVerifiedItemWithoutPayloadIsStillSkipped() {
+        val dir = File(tmp.root, "q6")
+        val q = ArchiveQueue(dir)
+        val a = raw(q, "eeg", 0); val b = raw(q, "eeg", 1)
+        b.status = ArchiveStatus.VERIFIED; q.update(b)
+        a.payloadFile.delete(); b.payloadFile.delete()
+        val c = ArchiveQueue(dir).signalCounts()["eeg"]!!
+        assertEquals(1, c.total); assertEquals(1, c.verified)
+    }
+
+    @Test fun aliasDedupeSurvivesGcAndReload() {
+        val dir = File(tmp.root, "q7")
+        val q = ArchiveQueue(dir)
+        val a = raw(q, "eeg", 0); a.status = ArchiveStatus.VERIFIED; q.update(a); q.gcVerified()
+        val q2 = ArchiveQueue(dir)
+        raw(q2, "eeg", 0) // 같은 alias 재투입 → 새 청크로 세지 않는다
+        assertEquals(1, q2.signalCounts()["eeg"]!!.total)
+    }
 }

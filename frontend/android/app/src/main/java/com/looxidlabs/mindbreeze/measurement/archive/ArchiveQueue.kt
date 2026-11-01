@@ -49,11 +49,14 @@ class ArchiveQueue(private val dir: File, private val nowMs: () -> Long = { Syst
             try {
                 val o = JSONObject(f.readText())
                 val id = o.getString("id")
-                if (!payloadOf(id).exists()) return@forEach
+                // SDD-266: VERIFIED 는 gcVerified() 가 payload 를 지운 뒤에도 총량(signalCounts)에 남아야 한다. 안 그러면 재기동·스윕 큐가
+                // 세션 일부(꼬리)만 세어 기대량 보고가 낮아진다. 그 외 상태는 payload 없이는 올릴 수 없어 기존처럼 건너뛴다.
+                val status = ArchiveStatus.valueOf(o.getString("status"))
+                if (!payloadOf(id).exists() && status != ArchiveStatus.VERIFIED) return@forEach
                 loaded += ArchiveItem(
                     id, o.getLong("seq"), o.getString("kind"), o.getString("session_id"), o.optString("participant_id").ifEmpty { null },
                     o.getString("alias"), o.getJSONObject("meta"), payloadOf(id),
-                    ArchiveStatus.valueOf(o.getString("status")), o.optInt("attempts"), o.optLong("next_attempt_at"),
+                    status, o.optInt("attempts"), o.optLong("next_attempt_at"),
                     o.optString("last_reason").ifEmpty { null }, o.optString("last_stage").ifEmpty { null },
                     o.optString("verified_at_us").ifEmpty { null }, o.optString("server_id").ifEmpty { null },
                 ).also { enqueuedAt[id] = o.optLong("enqueued_at", nowMs()) }

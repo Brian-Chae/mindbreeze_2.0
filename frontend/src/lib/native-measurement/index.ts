@@ -122,6 +122,10 @@ export class NativeMeasurementFacade {
   private liveCbs = new Set<Cb<LiveEvent>>();
   private ackCbs = new Set<Cb<CommandAck>>();
   private uploadCbs = new Set<Cb<Partial<UploadProgress>>>();
+  /** SDD-266: 마지막으로 시작·붙은 회차(stop 응답 시 합성 종료 이벤트의 sessionId) */
+  private lastSessionId: string | null = null;
+  /** SDD-266: subscribeUploadEvents 구독자 — stop 응답으로 종료를 알릴 때 쓴다 */
+  private readonly uploadEventSubs = new Set<(name: UploadEventName | 'measurementUpdated', payload: unknown) => void>();
   private archiveCbs = new Set<Cb<{ queue: QueueCounts; blocked_reason: BlockedReason | null; stage: string | null; code: string | null }>>();
 
   constructor(plugin: NativeMeasurementPlugin) {
@@ -147,8 +151,12 @@ export class NativeMeasurementFacade {
     }
     // 종료 감지(SEALING·DRAINING·CLOSED)용 — 세션 필터 없이 payload 의 sessionId/state 만 넘긴다
     hs.push(await this.plugin.addListener('measurementUpdated', (e) => cb('measurementUpdated', (e as { payload?: unknown }).payload)));
-    return () => { for (const h of hs) void h.remove().catch(() => undefined); };
+    this.uploadEventSubs.add(cb);
+    return () => { this.uploadEventSubs.delete(cb); for (const h of hs) void h.remove().catch(() => undefined); };
   }
+
+  /** SDD-266: 어느 회차를 측정 중인지 기억한다(stop 합성 종료 이벤트용). */
+  noteSession(sessionId: string): void { this.lastSessionId = sessionId; }
 
   getCapabilities(): Promise<Capabilities> {
     return this.plugin.getCapabilities();
@@ -158,6 +166,7 @@ export class NativeMeasurementFacade {
   async attach(sessionId: string): Promise<MeasurementSnapshot> {
     await this.detach();
     this.sessionId = sessionId;
+    this.lastSessionId = sessionId;
     const token = ++this.attachToken;
     for (const name of UPLOAD_EVENTS) {
       const h = await this.plugin.addListener(name as BridgeEvent['event'], (e) => {
@@ -218,6 +227,7 @@ export class NativeMeasurementFacade {
   }
 
   private async doStartWithCredentials(req: NativeStartWithCredentials): Promise<StartMeasurementResult> {
+    this.lastSessionId = req.sessionId;
     const secrets = [req.tokens.accessToken, req.tokens.refreshToken];
     const guard = <T>(v: T): T => {
       if (containsSecret(v, secrets)) throw new Error('credential_echo');
@@ -314,10 +324,19 @@ export class NativeMeasurementFacade {
     return this.droppedSecrets;
   }
 
-  stop(req: { reason: string; requestId: string }): Promise<{ accepted: boolean }> {
+  async stop(req: { reason: string; requestId: string }): Promise<{ accepted: boolean }> {
     // 성공한 시작 promise 가 남아 있으면 같은 requestId 의 재시작(재입장)이 네이티브 호출 없이 옛 결과만 돌려준다.
     this.startFlights.clear();
-    return this.plugin.stopMeasurement(req);
+    const res = await this.plugin.stopMeasurement(req);
+    // SDD-266: 네이티브는 정지 직후 SEALING 상태 이벤트를 foreground·runtime 가드 때문에 내지 못할 수 있다(실기기 확인).
+    // stop 응답이 정지 수락을 알려 주므로 같은 payload({sessionId,state})를 구독자에게 최소 1회 합성해 전달한다 — Android·iOS 공통 경로.
+    const r = res as { accepted?: unknown; state?: unknown; seal_started?: unknown } | null | undefined;
+    const accepted = r?.accepted === true || r?.seal_started === true || r?.state === 'SEALING';
+    if (accepted && this.lastSessionId) {
+      const payload = { sessionId: this.lastSessionId, state: 'SEALING' };
+      for (const cb of [...this.uploadEventSubs]) { try { cb('measurementUpdated', payload); } catch { /* 구독자 오류가 정지를 막지 않는다 */ } }
+    }
+    return res;
   }
 
   dispatchLiveCommand(cmd: LiveCommand): Promise<DispatchLiveCommandResult> {

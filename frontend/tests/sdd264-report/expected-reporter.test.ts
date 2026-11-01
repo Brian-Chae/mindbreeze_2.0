@@ -39,8 +39,9 @@ describe('mergeReport — 단조 병합', () => {
     const m = mergeReport(R(100, [10, 5, 5]), R(90, [12, 4, 5]));
     expect(m).toEqual(R(100, [12, 5, 5], false));
   });
-  it('뒤처진 보고의 final 은 무시한다(서버 규칙 ①)', () => {
-    expect(mergeReport(R(100, null, false), R(90, null, true)).final).toBe(false);
+  it('뒤처진 부분합의 final=true 도 반영한다(SDD-266 — 보내는 값은 병합 최댓값이라 서버 규칙 ① 에 걸리지 않는다)', () => {
+    const m = mergeReport(R(100, null, false), R(90, null, true));
+    expect(m).toEqual(R(100, null, true));
   });
   it('증가한 보고는 새 final 을, 증가 없는 같은 값 final=false 는 확정을 되돌리지 않는다(②③)', () => {
     expect(mergeReport(R(100, null, false), R(120, null, true)).final).toBe(true);
