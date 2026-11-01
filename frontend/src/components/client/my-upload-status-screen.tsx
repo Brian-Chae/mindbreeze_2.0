@@ -1,12 +1,12 @@
 // SDD-265: 회원 "내 데이터 저장 현황"(시안 안3-A 회원 화면). 최근 10회차 선택 → 상태·내 측정 길이·내 데이터 크기·전송 현황·한 줄 조치를 한 화면에.
 // 서버에 도착한 기록 기준. 점수·완료·보증 표현 없음. 수집 제외(미착용·마이크 끔)는 문제가 아니다.
 import { useEffect, useMemo, useState } from 'react';
-import { Metric, TransferBar, cardClass, fieldClass } from '../class/upload-board-parts';
+import { FinalPendingChip, Metric, TransferBar, cardClass, fieldClass } from '../class/upload-board-parts';
 import { useMyUploadStatus } from '../../hooks/use-my-upload-status';
 import type { MySessionRow } from '../../lib/api/my-upload-status';
 import { DASH, formatBytes, formatMinutes, percentText } from '../../lib/upload-status/board';
 import {
-  MEMBER_KIND_ICON, MEMBER_KIND_LABEL, MEMBER_KIND_TONE, memberKind, memberLine, memberPercent,
+  MEMBER_KIND_ICON, MEMBER_KIND_LABEL, MEMBER_KIND_TONE, memberFinalPending, memberKind, memberLine, memberPercent,
 } from '../../lib/upload-status/member-view';
 import { formatClock } from '../../lib/upload-status/view';
 
@@ -20,19 +20,20 @@ const optionText = (r: MySessionRow): string => `${fmtDate(r.started_at)} · ${r
 function Detail({ row }: { row: MySessionRow }) {
   const kind = memberKind(row);
   const percent = memberPercent(row, kind);
+  const finalPending = memberFinalPending(row, kind);
   const unknown = kind === 'pending';
   const noPercent = percent === null;
   return (
     <section data-testid="my-upload-status" data-kind={kind} aria-label="내 데이터 저장 현황" className={`${cardClass} border-t-[3px] border-t-[#5F0080]`}>
       <h2 className="text-[18px] font-bold">내 데이터 저장 현황</h2>
       <div className="mt-3 grid grid-cols-2 gap-2 md:gap-3">
-        <Metric testId="my-state" title="내 상태" value={<span data-testid="my-state-badge" className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[16px] font-semibold ${MEMBER_KIND_TONE[kind]}`}><span aria-hidden="true">{MEMBER_KIND_ICON[kind]}</span>{MEMBER_KIND_LABEL[kind]}</span>} sub={kind === 'ok' ? '추가 조치 없음' : undefined} />
+        <Metric testId="my-state" title="내 상태" value={<span data-testid="my-state-badge" className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[16px] font-semibold ${MEMBER_KIND_TONE[kind]}`}><span aria-hidden="true">{MEMBER_KIND_ICON[kind]}</span>{MEMBER_KIND_LABEL[kind]}</span>} sub={finalPending ? <FinalPendingChip className="!text-[11px]" /> : kind === 'ok' ? '추가 조치 없음' : undefined} />
         <Metric testId="my-duration" title="내 측정 길이" value={formatMinutes(row.measured_min ?? row.duration_min)} sub={row.duration_min !== null ? `회차 ${formatMinutes(row.duration_min)}` : '선택한 회차'} />
         <Metric testId="my-bytes" title="내 데이터 크기" value={unknown || kind === 'excluded' ? DASH : formatBytes(row.bytes_arrived)} sub={row.bytes_expected !== null && kind !== 'excluded' ? `예상 ${formatBytes(row.bytes_expected)}` : unknown ? '연결 후 확인' : undefined} />
         <Metric testId="my-percent" title="전송 현황" value={kind === 'excluded' ? DASH : percentText(percent)} sub={noPercent ? '최신 현황 확인 대기' : '도착한 크기 기준'} />
       </div>
       {kind !== 'excluded' && <div className="mt-3"><TransferBar percent={percent} /></div>}
-      <p data-testid="my-action" className={`mt-3 rounded-xl px-3 py-2.5 text-[13px] ${kind === 'warn' ? 'bg-[#FFF2DD] text-[#805000]' : 'bg-[#F4EDF8] text-[#5F0080]'}`}>{memberLine(kind)}</p>
+      <p data-testid="my-action" className={`mt-3 rounded-xl px-3 py-2.5 text-[13px] ${kind === 'warn' ? 'bg-[#FFF2DD] text-[#805000]' : 'bg-[#F4EDF8] text-[#5F0080]'}`}>{memberLine(kind, finalPending)}</p>
       <p className="mt-2 text-[12px] text-[#776D7B]">마지막 도착 {formatClock(row.last_received_at)}</p>
     </section>
   );

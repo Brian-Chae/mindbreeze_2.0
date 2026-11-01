@@ -1,7 +1,7 @@
 // SDD-265: 회원 본인 "내 데이터 저장 현황" 순수 로직. 서버에 도착한 기록 기준이며 점수·완료·보증 표현을 만들지 않는다.
 // 수집 제외(미착용·마이크 OFF)는 문제가 아니다. 한 줄 조치는 서버가 주지 않으므로 상태로 FE 가 만든다.
 import type { MySessionRow } from '../api/my-upload-status';
-import { MEMBER_LABEL, memberAction, type BoardState } from './board';
+import { FINAL_PENDING_MEMBER, MEMBER_LABEL, memberAction, type BoardState } from './board';
 
 export type MemberKind = BoardState | 'excluded';
 export const MEMBER_KIND_LABEL: Record<MemberKind, string> = { ...MEMBER_LABEL, excluded: '수집 제외' };
@@ -23,7 +23,9 @@ export function memberKind(r: MySessionRow): MemberKind {
   return 'pending';
 }
 
-export const memberLine = (k: MemberKind): string => (k === 'excluded' ? '이 회차는 수집 대상이 아니에요. 문제가 아니에요' : memberAction(k));
+/** SDD-267: 전송 중인데 서버에 모두 도착(최종 확인 대기)인 본인 회차. */
+export const memberFinalPending = (r: MySessionRow, k: MemberKind): boolean => r.final_pending && (k === 'sending' || k === 'pending');
+export const memberLine = (k: MemberKind, finalPending = false): string => finalPending ? FINAL_PENDING_MEMBER : (k === 'excluded' ? '이 회차는 수집 대상이 아니에요. 문제가 아니에요' : memberAction(k));
 
 /** 전송 현황 %. 서버 percent 우선, 없으면 도착/예상 크기. 모두 도착이 아니면 99% 상한(내림). */
 export function memberPercent(r: MySessionRow, kind: MemberKind): number | null {

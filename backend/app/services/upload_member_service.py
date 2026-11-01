@@ -75,6 +75,7 @@ def _item(c, s: dict, as_of: datetime) -> MemberSessionItem:
         collection_state=part.collection_state if part else "unknown",
         progress_state=prog.state if prog else "expected_unknown",
         percent=prog.total.percent if prog else None,
+        final_pending=bool(prog and prog.final_pending),
         bytes_arrived=pm.bytes_arrived if pm else 0, bytes_expected=pm.bytes_expected if pm else None,
         bytes_basis="estimate" if pm and pm.bytes_expected is not None else None,
         duration_min=metrics_svc.duration_minutes(c.started_at, c.ended_at, c.status, as_of),

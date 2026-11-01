@@ -21,6 +21,8 @@ export interface MySessionRow {
   progress_state: MyProgressState | null;
   /** 본인 전송 현황 %. 근거 없으면 null. */
   percent: number | null;
+  /** SDD-267 가산: 모두 도착 + 최종 확인 대기(보조 표기). 없으면 false. */
+  final_pending: boolean;
   bytes_arrived: number | null;
   bytes_expected: number | null;
   duration_min: number | null;
@@ -59,7 +61,7 @@ export function normalizeMySessions(raw: unknown): MySessionsResponse {
       status: STATUSES.find((s) => s === e.status) ?? 'no_data',
       collection_state: COLLECTIONS.find((s) => s === e.collection_state) ?? 'unknown',
       progress_state: PROGRESS.find((s) => s === e.progress_state) ?? null,
-      percent: numOrNull(e.percent), bytes_arrived: numOrNull(e.bytes_arrived), bytes_expected: numOrNull(e.bytes_expected),
+      percent: numOrNull(e.percent), final_pending: e.final_pending === true, bytes_arrived: numOrNull(e.bytes_arrived), bytes_expected: numOrNull(e.bytes_expected),
       duration_min: numOrNull(e.duration_min), measured_min: numOrNull(e.measured_min), last_received_at: str(e.last_received_at),
     };
   }).filter((i) => i.session_id);

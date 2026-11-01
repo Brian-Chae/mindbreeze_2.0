@@ -7,12 +7,12 @@ import { listAdminOrganizations, type AdminOrganizationDto } from '../../lib/api
 import type { UploadOverviewItem } from '../../lib/api/upload-overview';
 import { useAuthStore } from '../../stores/authStore';
 import {
-  BOARD_LABEL, BOARD_ORDER, COACH_OK_NOTE, percentText, arrivedText, attentionCount, boardState, coachAction, formatBytes, formatMinutes,
+  BOARD_LABEL, BOARD_ORDER, COACH_OK_NOTE, percentText, arrivedText, attentionCount, boardState, coachAction, finalPendingCount, showFinalPending, finalPendingAll, FINAL_PENDING_COACH, formatBytes, formatMinutes,
   formatTotalHours, transferPercent, type BoardState,
 } from '../../lib/upload-status/board';
 import { PERIOD_LABEL, detailPathFor, periodSince, type OverviewPeriod } from '../../lib/upload-status/overview-view';
 import { formatClock, formatCount } from '../../lib/upload-status/view';
-import { Metric, StateBadge, TransferBar, cardClass, fieldClass } from './upload-board-parts';
+import { FinalPendingChip, Metric, StateBadge, TransferBar, cardClass, fieldClass } from './upload-board-parts';
 import { UploadStatusLiveBar } from './upload-status-live-bar';
 
 export const PAGE_LIMIT = 10;
@@ -34,6 +34,7 @@ function Row({ i, to }: { i: UploadOverviewItem; to: string }) {
   const n = attentionCount(i);
   const percent = transferPercent(i.metrics, i.progress?.overall, state === 'ok');
   const action = coachAction(state, n);
+  const showFinal = showFinalPending(state, finalPendingCount(i));
   return (
     <li data-testid="overview-row" data-state={state} data-session-id={i.session_id} className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1 border-t border-[#EEE8F1] px-3 py-1 md:grid-cols-[1.3fr_3fr_auto] md:gap-y-1.5 md:px-4 md:py-3">
       <div className="min-w-0">
@@ -41,13 +42,14 @@ function Row({ i, to }: { i: UploadOverviewItem; to: string }) {
         <small className="text-[12px] text-[#776D7B]">{dateText(i.session_at)} · 마지막 도착 {formatClock(i.last_received_at)}{i.org_name ? ` · ${i.org_name}` : ''}{i.host_name ? ` · ${i.host_name} 코치` : ''}</small>
       </div>
       <div className="order-3 col-span-2 grid grid-cols-5 items-start gap-1.5 md:order-none md:col-span-1 md:gap-2.5">
-        <div className="min-w-0"><StateBadge state={state} label={state === 'warn' ? `${BOARD_LABEL.warn} ${n}명` : BOARD_LABEL[state]} className="!px-1.5 text-[10px] md:!px-2.5 md:text-[12px]" /></div>
+        <div className="min-w-0"><StateBadge state={state} label={state === 'warn' ? `${BOARD_LABEL.warn} ${n}명` : BOARD_LABEL[state]} className="!px-1.5 text-[10px] md:!px-2.5 md:text-[12px]" />{showFinal && <FinalPendingChip className="mt-1 !px-1.5 !text-[10px] md:!text-[12px]" />}</div>
         <Num value={arrivedText(i.metrics)} label="도착한 참여자" />
         <Num value={percentText(percent)} label="전송 현황"><TransferBar percent={percent} thin /></Num>
         <Num value={formatBytes(i.metrics.bytes_arrived)} label="데이터 크기" />
         <Num value={formatMinutes(i.metrics.duration_min)} label={i.metrics.participant_minutes_total === null ? '측정 길이' : `합계 ${formatTotalHours(i.metrics.participant_minutes_total)}`} />
       </div>
       <Link to={to} aria-label={`${sessionName(i)} 상세`} className="inline-flex min-h-11 items-center rounded-[10px] border border-[#E8E2ED] bg-white px-3 text-[14px] text-[#5F0080]">상세</Link>
+      {showFinal && finalPendingAll(i.progress) && <p data-testid="final-pending-line" className="order-4 col-span-2 text-[12px] text-[#655173] md:order-none md:col-span-3">{FINAL_PENDING_COACH}</p>}
       {(action || state === 'ok') && <p className={`order-4 col-span-2 text-[12px] md:order-none md:col-span-3 ${state === 'warn' ? 'text-[#805000]' : 'text-[#776D7B]'}`}>{action ?? COACH_OK_NOTE}</p>}
     </li>
   );

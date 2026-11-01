@@ -9,9 +9,13 @@ export interface PersonProgress {
   feature: ProgressRatio;
   raw: { eeg: ProgressRatio; ppg: ProgressRatio; acc: ProgressRatio };
   total: ProgressRatio;
+  /** SDD-267: 모두 도착했지만 폰의 최종 확인만 대기. state 는 바뀌지 않는 보조 표기. 없으면 false. */
+  final_pending: boolean;
 }
 export interface ProgressParticipants {
   total: number; counted: number; all_received: number; in_progress: number; needs_attention: number; expected_unknown: number; not_collected: number;
+  /** SDD-267 가산: 최종 확인 대기 인원. 구 서버는 0. */
+  final_pending: number;
 }
 export interface SessionProgress {
   participants: ProgressParticipants;
@@ -50,7 +54,7 @@ export function normalizePersonProgress(raw: unknown): PersonProgress | null {
   const r = rec(raw);
   const state = STATES.find((s) => s === r.state);
   if (!state) return null;
-  return { state, feature: normalizeRatio(r.feature), raw: normalizeRaw(r.raw), total: normalizeRatio(r.total) };
+  return { state, feature: normalizeRatio(r.feature), raw: normalizeRaw(r.raw), total: normalizeRatio(r.total), final_pending: r.final_pending === true };
 }
 
 export function normalizeSessionProgress(raw: unknown): SessionProgress | null {
@@ -59,7 +63,7 @@ export function normalizeSessionProgress(raw: unknown): SessionProgress | null {
   return {
     participants: {
       total: num(p.total), counted: num(p.counted), all_received: num(p.all_received), in_progress: num(p.in_progress),
-      needs_attention: num(p.needs_attention), expected_unknown: num(p.expected_unknown), not_collected: num(p.not_collected),
+      needs_attention: num(p.needs_attention), expected_unknown: num(p.expected_unknown), not_collected: num(p.not_collected), final_pending: num(p.final_pending),
     },
     feature: normalizeRatio(r.feature), raw: normalizeRaw(r.raw), overall: normalizeRatio(r.overall),
   };
