@@ -3,11 +3,11 @@
 import { useMemo, useState } from 'react';
 import type { UploadParticipantDto, UploadStatusResponse } from '../../lib/api/upload-status';
 import {
-  BOARD_LABEL, COACH_OK_NOTE, DASH, PAGE_SIZE, percentText, arrivedText, basisNote, boardState, coachAction, formatBytes, formatMinutes, formatTotalHours,
+  BOARD_LABEL, COACH_OK_NOTE, DASH, FINAL_PENDING_COACH, FINAL_PENDING_PERSON_NOTE, showFinalPending, PAGE_SIZE, percentText, arrivedText, basisNote, boardState, coachAction, formatBytes, formatMinutes, formatTotalHours,
   pageCount, personAction, personBucket, slicePage, transferPercent, type BoardState, type PersonBucket,
 } from '../../lib/upload-status/board';
 import { displayName, formatClock, formatCount, latestReceived, rawTotals } from '../../lib/upload-status/view';
-import { Metric, StateBadge, TransferBar, cardClass, fieldClass } from './upload-board-parts';
+import { FinalPendingChip, Metric, StateBadge, TransferBar, cardClass, fieldClass } from './upload-board-parts';
 
 export const SERVER_BASIS_NOTE = '서버에 도착한 기록 기준이에요. 리포트 반영 여부는 별도예요.';
 const SIGNAL_NAME = { eeg: '뇌파', ppg: '맥박', acc: '움직임' } as const;
@@ -98,7 +98,7 @@ export function UploadStatusTable({ data }: UploadStatusTableProps) {
   const uncertain = state === 'pending';
   const buckets = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const b: Record<PersonBucket, UploadParticipantDto[]> = { attention: [], arrived: [], waiting: [], excluded: [] };
+    const b: Record<PersonBucket, UploadParticipantDto[]> = { attention: [], arrived: [], final_pending: [], waiting: [], excluded: [] };
     for (const p of data.participants) {
       if (q && !displayName(p).toLowerCase().includes(q)) continue;
       b[personBucket(p)].push(p);
@@ -107,6 +107,9 @@ export function UploadStatusTable({ data }: UploadStatusTableProps) {
     return b;
   }, [data.participants, query]);
   const action = coachAction(state, attentionN);
+  const finalPendingN = prog?.participants.final_pending ?? buckets.final_pending.length;
+  const showFinal = showFinalPending(state, finalPendingN);
+  const pendingN = buckets.final_pending.length;
   const waitingN = buckets.waiting.length;
   const excludedN = buckets.excluded.length;
 
@@ -121,7 +124,9 @@ export function UploadStatusTable({ data }: UploadStatusTableProps) {
           <Metric testId="metric-duration" title="측정 길이" value={formatMinutes(m?.duration_min)} sub={m?.participant_minutes_total != null ? `참여자 합계 ${formatTotalHours(m.participant_minutes_total)}` : '참여자 합계 확인 전'} />
         </div>
         <div className="mt-4 flex justify-between"><b>전송 현황</b><b data-testid="transfer-percent">{percentText(percent)}</b></div>
+        {showFinal && <div className="mb-1"><FinalPendingChip /></div>}
         <TransferBar percent={percent} />
+        {showFinal && <p data-testid="final-pending-line" className="text-[12px] text-[#655173]">{FINAL_PENDING_COACH}</p>}
         <p className="text-[12px] text-[#776D7B]">{basisNote(prog, state)}</p>
         {(action || state === 'ok') && <p data-testid="action-line" className="mt-2 text-[12px] text-[#805000]">{action ?? COACH_OK_NOTE}</p>}
         <details className="mt-3 rounded-[10px] bg-[#F8F5FA] p-2.5 text-[12px]">
@@ -138,7 +143,7 @@ export function UploadStatusTable({ data }: UploadStatusTableProps) {
 
       {data.participants.length === 0 ? (
         <p role="status" className={`${cardClass} text-center text-[#776D7B]`}>등록된 참여자가 없어요</p>
-      ) : buckets.attention.length + buckets.arrived.length + waitingN + excludedN === 0 ? (
+      ) : buckets.attention.length + buckets.arrived.length + pendingN + waitingN + excludedN === 0 ? (
         <p role="status" className={`${cardClass} text-center text-[#776D7B]`}>조건에 맞는 참여자가 없어요</p>
       ) : (
         <section className={cardClass} aria-label="참여자">
@@ -149,6 +154,13 @@ export function UploadStatusTable({ data }: UploadStatusTableProps) {
             <details data-testid="group-arrived" className="mt-2">
               <summary className="min-h-11 cursor-pointer py-2 font-medium text-[#5F0080]">모두 도착 {formatCount(buckets.arrived.length)}명 보기</summary>
               <Paged rows={buckets.arrived} label="arrived" />
+            </details>
+          )}
+          {pendingN > 0 && (
+            <details data-testid="group-final-pending" className="mt-2">
+              <summary className="min-h-11 cursor-pointer py-2 font-medium text-[#5F0080]">최종 확인 대기 {formatCount(pendingN)}명</summary>
+              <p className="text-[12px] text-[#776D7B]">{FINAL_PENDING_PERSON_NOTE}</p>
+              <Paged rows={buckets.final_pending} label="final-pending" />
             </details>
           )}
           {waitingN + excludedN > 0 && (
