@@ -12,10 +12,10 @@ vi.mock('../src/components/settings/WebPushCard', () => ({ default: () => null }
 vi.mock('../src/components/settings/privacy-consents', () => ({ PrivacyConsentsSection: () => null }));
 vi.mock('../src/components/chat/blocked-users-list', () => ({ BlockedUsersList: () => null }));
 vi.mock('../src/components/settings/account-deletion', () => ({ AccountDeletionSection: () => null }));
-it.each([['counselor', '/settings/upload-status'], ['org_admin', '/settings/upload-status'], ['platform_admin', '/admin/upload-status'], ['client', null]] as const)('설정 링크: %s', async (role, to) => {
+it.each([['counselor', '/upload-status'], ['org_admin', '/upload-status'], ['platform_admin', '/admin/upload-status'], ['client', null]] as const)('설정 링크: %s', async (role, to) => {
   useAuthStore.setState({ user: { id: 'u', role, name: 'n', email: 'e@e.test' } as never });
   const host = document.createElement('div'); const root = createRoot(host);
   await act(async () => root.render(<MemoryRouter><SettingsContent /></MemoryRouter>));
-  expect(host.querySelector('[data-upload-status-link] a')?.getAttribute('href') ?? null).toBe(to);
+  expect(host.querySelector('a[data-upload-status-link]')?.getAttribute('href') ?? null).toBe(to);
   await act(async () => root.unmount());
 });

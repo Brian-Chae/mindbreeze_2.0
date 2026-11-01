@@ -103,6 +103,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/counseling', key: 'counseling', icon: ICONS.users },
   { to: '/chat', key: 'chat', icon: ICONS.message },
   { to: '/reports', key: 'report', icon: ICONS.report },
+  { to: '/upload-status', label: '데이터 현황', icon: ICONS.activity },
   { to: '/playground', key: 'playground', icon: ICONS.activity },
   { to: '/notifications', key: 'notification', icon: ICONS.bell },
   { to: '/settings', key: 'setting', icon: ICONS.settings },
@@ -118,6 +119,7 @@ const ORG_ADMIN_NAV_ITEMS: NavItem[] = [
   { to: '/org/counselors', key: 'members', icon: ICONS.users },
   { to: '/reports', key: 'report', icon: ICONS.report },
   { to: "/org/data-center", label: "데이터 센터", icon: ICONS.activity },
+  { to: '/upload-status', label: '데이터 현황', icon: ICONS.activity },
   { to: '/notifications', key: 'notification', icon: ICONS.bell },
   { to: '/settings', key: 'setting', icon: ICONS.settings },
 ];
@@ -135,6 +137,7 @@ const CLIENT_NAV_ITEMS: NavItem[] = [
 const ADMIN_NAV_ITEMS: NavItem[] = [
   { to: '/chat', key: 'chat', icon: ICONS.message },
   { to: "/admin/data-center", label: "데이터 센터", icon: ICONS.activity },
+  { to: '/admin/upload-status', label: '데이터 현황', icon: ICONS.activity },
   { to: '/notifications', key: 'notification', icon: ICONS.bell },
   { to: '/settings', key: 'setting', icon: ICONS.settings },
   { to: '/admin/orgs', key: 'admin-orgs', icon: ICONS.users },
