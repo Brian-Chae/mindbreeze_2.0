@@ -64,3 +64,42 @@ class UploadStatusOverviewResponse(BaseModel):
     next_cursor: str | None = None   # SDD-265
     has_more: bool = False
     scan_limited: bool = False
+
+
+# ---------------------------------------------------------------------------
+# SDD-265 — 회원 본인 목록
+# ---------------------------------------------------------------------------
+
+class MemberSessionItem(BaseModel):
+    session_id: str
+    class_id: str | None
+    class_title: str | None
+    session_title: str | None
+    seq: int | None
+    organization_name: str | None
+    session_status: str
+    started_at: str | None
+    ended_at: str | None
+    status: OverviewStatus
+    collection_state: Literal["eligible", "excluded", "unknown"]
+    progress_state: Literal["all_received", "in_progress", "needs_attention", "expected_unknown", "not_collected"]
+    percent: float | None
+    bytes_arrived: int
+    bytes_expected: int | None
+    bytes_basis: Literal["estimate"] | None
+    duration_min: int | None
+    measured_min: int
+    last_received_at: str | None
+
+
+class MemberSessionsResponse(BaseModel):
+    as_of: str
+    basis: Literal["server_received"] = "server_received"
+    poll_interval_sec: int
+    etag: str
+    since: str
+    limit: int
+    total_candidates: int
+    items: list[MemberSessionItem]
+    next_cursor: str | None = None
+    has_more: bool = False

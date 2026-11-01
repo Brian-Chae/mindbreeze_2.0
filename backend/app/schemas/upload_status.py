@@ -62,6 +62,9 @@ class UploadStatusParticipant(BaseModel):
     status: UploadStatusState
     reasons: list[str]
     progress: ParticipantProgress
+    # SDD-265
+    bytes_arrived: int = 0
+    measured_min: int = 0
 
 
 class UploadStatusSummary(BaseModel):
@@ -84,3 +87,11 @@ class UploadStatusResponse(BaseModel):
     summary: UploadStatusSummary
     participants: list[UploadStatusParticipant]
     progress: AggregateProgress
+    # SDD-265: 숫자 중심 상황판 가산 필드(목록 항목과 같은 정의·같은 계산)
+    participants_expected: int = 0
+    participants_arrived: int = 0
+    bytes_arrived: int = 0
+    bytes_expected: int | None = None
+    bytes_basis: Literal["estimate"] | None = None
+    duration_min: int | None = None
+    participant_minutes_total: int = 0

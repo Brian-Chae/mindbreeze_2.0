@@ -9,7 +9,8 @@ from sqlalchemy.orm import Session as DBSession
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.schemas.upload_status_overview import UploadStatusOverviewResponse
-from app.services import upload_status_overview_service as svc
+from app.schemas.upload_status_overview import MemberSessionsResponse
+from app.services import upload_member_service, upload_status_overview_service as svc
 
 router = APIRouter(prefix="/upload-status", tags=["upload-status"])
 
@@ -32,6 +33,31 @@ def get_upload_status_overview(
     result = svc.load_overview(db, current_user, limit=limit, since=since, org_id=org_id, class_id=class_id,
                                status=status, if_none_match=if_none_match, cursor=cursor,
                                needs_attention_only=needs_attention_only)
+    headers = {
+        "ETag": result.etag,
+        "Cache-Control": "no-store, private",
+        "Vary": "Authorization",
+        "X-Poll-Interval": str(result.poll_interval_sec),
+    }
+    if result.body is None:
+        return Response(status_code=304, headers=headers)
+    response.headers.update(headers)
+    return result.body
+
+
+@router.get("/me/sessions", response_model=MemberSessionsResponse)
+def get_my_upload_sessions(
+    response: Response,
+    limit: int = Query(upload_member_service.DEFAULT_LIMIT, ge=1, le=svc.MAX_LIMIT),
+    since: str | None = Query(None),
+    cursor: str | None = Query(None, max_length=200),
+    if_none_match: str | None = Header(default=None, alias="If-None-Match"),
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-265: 로그인 본인의 최근 회차별 데이터 저장 현황(본인 한 명 기준). 계약: specs/sdd-265-*/contract.md §3"""
+    result = upload_member_service.load_member_sessions(db, current_user, limit=limit, since=since, cursor=cursor,
+                                                        if_none_match=if_none_match)
     headers = {
         "ETag": result.etag,
         "Cache-Control": "no-store, private",

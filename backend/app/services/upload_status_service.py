@@ -21,6 +21,7 @@ from sqlalchemy import and_, case, exists, func, or_, select
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import Session as DBSession
 
+from app.models.biosignal import BiosignalArtifact
 from app.models.class_program import Class
 from app.models.eeg_feature import EEGFeatureWindow
 from app.models.organization import Organization
@@ -29,6 +30,7 @@ from app.models.session import Session, SessionParticipant
 from app.models.user import User
 from app.models.user_org_membership import UserOrgMembership
 from app.models.session_ingest_expected import SessionIngestExpected
+from app.services import upload_metrics_service as metrics_svc
 from app.services import upload_progress_service as progress_svc
 from app.schemas.upload_status import (
     FeatureReceipt,
@@ -90,6 +92,7 @@ class UploadStatusResult:
 class _Scope:
     status: str
     ended_at: datetime | None
+    started_at: datetime | None = None   # SDD-265: 측정 길이 계산용
 
 
 # ---------------------------------------------------------------------------
@@ -115,7 +118,7 @@ def _authorize(db: DBSession, actor: dict, class_id: uuid.UUID, session_id: uuid
     actor_active = exists().where(User.id == actor_id, User.status == "active")
     row = db.execute(
         select(
-            Session.status, Session.ended_at, Session.host_id,
+            Session.status, Session.ended_at, Session.started_at, Session.host_id,
             member_of_class_org("org_admin").label("is_org_admin"),
             member_of_class_org("counselor").label("is_counselor"),
             actor_active.label("actor_active"),
@@ -141,7 +144,7 @@ def _authorize(db: DBSession, actor: dict, class_id: uuid.UUID, session_id: uuid
             raise HTTPException(403, detail={"code": "upload_status_forbidden"})
     else:
         raise HTTPException(403, detail={"code": "upload_status_forbidden"})
-    return _Scope(status=row.status, ended_at=row.ended_at)
+    return _Scope(status=row.status, ended_at=row.ended_at, started_at=row.started_at)
 
 
 # ---------------------------------------------------------------------------
@@ -191,6 +194,12 @@ def _revision(db: DBSession, session_id: uuid.UUID, as_of: datetime) -> dict:
         .scalar_subquery().label("e_sum"),
         select(func.coalesce(func.sum(case((E.final.is_(True), 1), else_=0)), 0))
         .where(E.session_id == session_id).scalar_subquery().label("e_final"),
+        # SDD-265: 도착 크기 지문 — 바이트만 바뀌어도 ETag 가 바뀐다.
+        rscalar(func.coalesce(func.sum(case((r.upload_status == "uploaded", func.coalesce(r.size_bytes, 0)),
+                                            else_=0)), 0)).label("r_bytes"),
+        select(func.coalesce(func.sum(BiosignalArtifact.size_bytes), 0))
+        .where(BiosignalArtifact.session_id == session_id, BiosignalArtifact.upload_status == "uploaded")
+        .scalar_subquery().label("a_bytes"),
     )).one()
     return dict(row._mapping)
 
@@ -211,7 +220,7 @@ def _progress_time_key(rev: dict, scope: _Scope, as_of: datetime) -> str | None:
 def _etag(rev: dict, scope: _Scope, as_of: datetime | None = None) -> str:
     parts = [rev["f_count"], _iso(rev["f_max"]), rev["r_count"], rev["r_up"], rev["r_fail"], _iso(rev["r_created_max"]),
              _iso(rev["r_up_max"]), rev["r_pending"], rev["r_stale"], rev["p_count"], rev["p_band"], rev["p_report"],
-             rev["p_wait"], rev["p_consent"], rev["e_count"], _iso(rev["e_max"]), rev["e_sum"], rev["e_final"],
+             rev["p_wait"], rev["p_consent"], rev["e_count"], _iso(rev["e_max"]), rev["e_sum"], rev["e_final"], rev["r_bytes"], rev["a_bytes"],
              scope.status, _iso(scope.ended_at), _progress_time_key(rev, scope, as_of) if as_of else None]
     digest = hashlib.sha256("|".join("" if v is None else str(v) for v in parts).encode()).hexdigest()[:32]
     return f'W/"{digest}"'
@@ -419,8 +428,16 @@ def _compute_body(db: DBSession, class_id: uuid.UUID, session_id: uuid.UUID, sco
     fstats = _feature_stats(db, session_id)
     rstats = _raw_stats(db, session_id)
     expected = progress_svc.load_expected_by_session(db, [session_id])
+    bstats = metrics_svc.load_bytes_by_session(db, [session_id]).get(session_id, {})   # SDD-265
     items = [_build_participant(pr, fstats.get(pr.id), rstats.get(pr.id, {}), as_of, expected.get(pr.id), scope)
              for pr in prows]
+    pms = []
+    for pr, it in zip(prows, items):
+        pm = metrics_svc.participant_metrics(it, bstats.get(pr.id))
+        it.bytes_arrived = pm.bytes_arrived
+        it.measured_min = pm.windows // 60
+        pms.append(pm)
+    roll = metrics_svc.rollup(pms)
     items.sort(key=lambda it: it.participant_id)
     counts = {k: 0 for k in ("needs_attention", "uploading", "received_unreconciled", "no_data", "excluded")}
     for it in items:
@@ -430,6 +447,10 @@ def _compute_body(db: DBSession, class_id: uuid.UUID, session_id: uuid.UUID, sco
         poll_interval_sec=poll, etag=etag,
         summary=UploadStatusSummary(participants=len(items), **counts), participants=items,
         progress=progress_svc.aggregate([it.progress for it in items]),
+        participants_expected=roll.participants_expected, participants_arrived=roll.participants_arrived,
+        bytes_arrived=roll.bytes_arrived, bytes_expected=roll.bytes_expected, bytes_basis=roll.bytes_basis,
+        duration_min=metrics_svc.duration_minutes(scope.started_at, scope.ended_at, scope.status, as_of),
+        participant_minutes_total=roll.participant_minutes_total,
     )
 
 
