@@ -87,7 +87,7 @@ export function HostSessionViews({ classId, sessions }: { classId: ClassId; sess
                             <div role="cell"><Link className="inline-flex items-center font-semibold text-purple-800" to={classSessionPath('host', classId, session.id)}>{number(session)}</Link></div>
                             <div role="cell"><DateField field={session.scheduledAt}/></div>
                             <div role="cell"><ReadField value={fieldValue(session.hostName)}/></div>
-                            <div role="cell">{status(session)}</div>
+                            <div role="cell">{status(session)}<Link className="ml-3 inline-flex min-h-11 items-center text-sm text-purple-800 underline" to={`${classSessionPath('host', classId, session.id)}/upload-status`}>업로드 현황</Link></div>
                         </div>
                     ))}
                 </div>

@@ -1,0 +1,125 @@
+// SDD-261: 데이터 저장·업로드 현황 조회 API (계약: specs/sdd-261-upload-status-screens/contract.md)
+// apiClient 는 응답 헤더·304 를 노출하지 않아 전용 fetch 를 쓴다. ETag 는 메모리에서만 다룬다(영구 저장 금지).
+import { ApiError, BASE_URL, refreshAccessToken, tokenStorage } from './client';
+
+export type UploadStatusKind = 'needs_attention' | 'excluded' | 'uploading' | 'received_unreconciled' | 'no_data';
+export type CollectionState = 'eligible' | 'excluded' | 'unknown';
+export type UploadSignalType = 'eeg' | 'ppg' | 'acc';
+
+export interface UploadFeatureDto {
+  received: number;
+  legacy_count: number;
+  internal_missing: number;
+  expected: number | null;
+  expected_basis: string;
+  completeness: string;
+  last_received_at: string | null;
+}
+export interface UploadRawSignalDto {
+  signal_type: UploadSignalType;
+  registered: number;
+  uploaded: number;
+  pending: number;
+  failed: number;
+  internal_missing: number;
+  oldest_pending_at: string | null;
+}
+export interface UploadRawDto {
+  signals: UploadRawSignalDto[];
+  last_received_at: string | null;
+  completeness: string;
+}
+export interface UploadParticipantDto {
+  participant_id: string;
+  display_name: string | null;
+  is_guest: boolean;
+  participation_status: 'active' | 'waitlisted';
+  collection_state: CollectionState;
+  band_connected: boolean;
+  report_included: boolean | null;
+  feature: UploadFeatureDto;
+  raw: UploadRawDto;
+  phone_report: null;
+  status: UploadStatusKind;
+  reasons: string[];
+}
+export interface UploadStatusSummaryDto {
+  participants: number;
+  needs_attention: number;
+  uploading: number;
+  received_unreconciled: number;
+  no_data: number;
+  excluded: number;
+}
+export interface UploadStatusResponse {
+  class_id: string;
+  session_id: string;
+  session_status: string;
+  as_of: string;
+  basis: 'server_received';
+  poll_interval_sec: number;
+  etag: string;
+  summary: UploadStatusSummaryDto;
+  participants: UploadParticipantDto[];
+}
+
+export type UploadStatusFetchResult =
+  | { kind: 'ok'; data: UploadStatusResponse; etag: string | null; pollIntervalSec: number | null }
+  | { kind: 'not_modified'; etag: string | null; pollIntervalSec: number | null };
+
+export interface FetchUploadStatusOptions {
+  signal?: AbortSignal;
+  /** 직전 응답의 ETag. 있으면 If-None-Match 로 보낸다. */
+  etag?: string | null;
+}
+
+const parseInterval = (value: string | null): number | null => {
+  if (value === null) return null;
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
+};
+const abortError = () => new DOMException('요청 취소', 'AbortError');
+
+export const uploadStatusPath = (classId: string, sessionId: string): string =>
+  `/classes/${encodeURIComponent(classId)}/sessions/${encodeURIComponent(sessionId)}/upload-status`;
+
+async function errorFrom(res: Response): Promise<ApiError> {
+  let data: unknown = null;
+  try { data = await res.json(); } catch { /* 본문 없음 */ }
+  const detail = data && typeof data === 'object' ? (data as { detail?: unknown }).detail : null;
+  const code = detail && typeof detail === 'object' ? (detail as { code?: unknown }).code : null;
+  return new ApiError(res.status, typeof code === 'string' ? code : `API 요청 실패 (${res.status})`, data);
+}
+
+export async function fetchUploadStatus(
+  classId: string,
+  sessionId: string,
+  { signal, etag }: FetchUploadStatusOptions = {},
+): Promise<UploadStatusFetchResult> {
+  if (signal?.aborted) throw abortError();
+  const call = async (token: string | null): Promise<Response> => {
+    const headers: Record<string, string> = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+    if (etag) headers['If-None-Match'] = etag;
+    return fetch(`${BASE_URL}${uploadStatusPath(classId, sessionId)}`, { method: 'GET', headers, credentials: 'include', signal, cache: 'no-store' });
+  };
+  let res = await call(tokenStorage.getAccess());
+  if (res.status === 401) {
+    const token = await refreshAccessToken();
+    if (!token) throw new ApiError(401, '인증이 만료되었습니다.', null);
+    res = await call(token);
+  }
+  if (signal?.aborted) throw abortError();
+  const nextEtag = res.headers.get('ETag');
+  const pollIntervalSec = parseInterval(res.headers.get('X-Poll-Interval'));
+  if (res.status === 304) return { kind: 'not_modified', etag: nextEtag ?? etag ?? null, pollIntervalSec };
+  if (!res.ok) throw await errorFrom(res);
+  const data = (await res.json()) as UploadStatusResponse;
+  return {
+    kind: 'ok',
+    data,
+    // CORS 로 헤더가 안 보이면 본문 etag/poll_interval_sec 를 쓴다(계약 §5).
+    etag: nextEtag ?? data.etag ?? null,
+    pollIntervalSec: pollIntervalSec ?? (typeof data.poll_interval_sec === 'number' ? data.poll_interval_sec : null),
+  };
+}
