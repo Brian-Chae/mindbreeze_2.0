@@ -6,13 +6,15 @@ export interface MeasurementMetadata {
  signals:{signal:string;availability:string;unavailable_reason:string|null;sample_count:{value:number|null;partial:boolean;unavailable_reason:string|null}}[];
  feature_windows:{value:number|null;partial:boolean;unavailable_reason:string|null};consent:string;retention_deadline:string|null;allowed_formats:string[];band_used:boolean;default_view:string;
 }
+export interface GapRange { start_us: string; end_us: string; reason: string; source?: 'recorded' | 'derived' }
+export interface GapSummary { gaps: GapRange[]; count: number; total_seconds: number }
 export interface WaveformChannel { name: string; unit: string; values: (number | null)[] | null; min: (number | null)[] | null; max: (number | null)[] | null }
 export interface WaveformResponse {
  session_id: string; participant_id: string; signal_type: SignalType; availability: string; unavailable_reason: string | null;
  manifest_revision: number | null; from_us: string | null; to_us: string | null; method: 'raw' | 'minmax_envelope' | 'none'; max_points: number; source_sample_count: number; returned_count: number;
  nominal_rate_hz: number | null; observed_rate_hz: number | null; time_basis: string; t_us: string[]; channels: WaveformChannel[];
  segments: { stream_id: string; segment_id: string; point_start: number; point_end: number }[];
- gaps: { start_us: string; end_us: string; reason: string }[]; null_reasons: Record<string, string>;
+ gaps: GapRange[]; null_reasons: Record<string, string>;
 }
 export interface FeaturePage { session_id: string; participant_id: string; as_of: string; detail_emit?: string; time_origin?: string; algorithm_versions: Record<string, string>; items: { window_index: number; t_rel_ms: number | null; quality: string; source: string; values: Record<string, number | null>; units: Record<string,string> }[]; next_cursor: string | null; total: number | null }
 export interface IndexMetric { value: number | null; status: string; source: string; reason: string | null }
@@ -35,5 +37,7 @@ export const measurementApi = {
   const query=new URLSearchParams({limit:'1000',...(org?{org_id:org}:{}),...(cursor?{cursor}:{})});
   return apiClient.get<IndicesPage>(`/data-center/measurements/${encodeURIComponent(s)}/${encodeURIComponent(p)}/indices?${query}`,{signal:abort});
  },
+ // SDD-269: 기록된 구간 + 저장 데이터로 계산한 결측 구간 요약(범위 무관, 회차 전체)
+ gaps: (s: string,p: string,org?: string,abort?: AbortSignal) => apiClient.get<GapSummary>(`/data-center/measurements/${encodeURIComponent(s)}/${encodeURIComponent(p)}/gaps${org?'?org_id='+encodeURIComponent(org):''}`,{signal:abort}),
  spectrum: (s: string,p: string,range: MeasurementSelection,org?: string,abort?: AbortSignal) => get<SpectrumResponse>(s,p,'spectrum',range,org,abort),
 };

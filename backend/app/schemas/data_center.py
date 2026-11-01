@@ -388,6 +388,14 @@ class GapRange(Contract):
     end_us: DecimalInt | None
     reason: str
     observed_or_estimated: Literal['observed', 'estimated', 'unknown']
+    source: Literal['recorded', 'derived'] = 'recorded'  # SDD-269: 기록된 구간 / 저장 데이터로 계산한 구간
+
+
+class GapSummary(Contract):
+    """SDD-269 참여자 1명의 결측 구간 목록과 합계."""
+    gaps: list[GapRange] = Field(default_factory=list)
+    count: int = 0
+    total_seconds: float = 0.0
 
 
 class WaveformSegment(Contract):

@@ -13,6 +13,7 @@ from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.schemas import data_center as dc
 from app.services import data_center_policy as policy
+from app.services import data_center_gaps as dgaps
 from app.services import data_center_query as q
 
 router = APIRouter(prefix='/data-center', tags=['data-center'])
@@ -194,7 +195,20 @@ def waveform(session_id: UUID, participant_id: UUID, signal_type: dc.SignalType 
              ctx: policy.ResolvedContext = Depends(context_dep), db: DBSession = Depends(get_db),
              backend: dm.MeasurementBackend = Depends(backend_dep)):
     dm.authorize_measurement(db, ctx, session_id, participant_id)
-    return dm.read_waveform(backend, _selection(session_id, participant_id, from_us, to_us), signal_type, max_points)
+    sel = _selection(session_id, participant_id, from_us, to_us)
+    result = dm.read_waveform(backend, sel, signal_type, max_points)
+    # SDD-269: 저장 데이터에서 계산한 결측 구간을 가산(기존 gaps 는 그대로, 중복 시각은 기록 구간 우선)
+    extra = [g for g in dgaps.overlapping(dgaps.collect_gaps(db, session_id, participant_id), dm.parse_us(sel.from_us), dm.parse_us(sel.to_us))
+             if g.source == 'derived']
+    if extra:
+        result = result.model_copy(update={'gaps': [*result.gaps, *extra]})
+    return result
+
+
+@router.get('/measurements/{session_id}/{participant_id}/gaps', response_model=dc.GapSummary)
+def gaps(session_id: UUID, participant_id: UUID, ctx: policy.ResolvedContext = Depends(context_dep), db: DBSession = Depends(get_db)):
+    dm.authorize_measurement(db, ctx, session_id, participant_id)
+    return dgaps.summarize(dgaps.collect_gaps(db, session_id, participant_id))
 
 
 @router.get('/measurements/{session_id}/{participant_id}/features', response_model=dc.FeaturePage)
