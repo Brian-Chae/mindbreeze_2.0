@@ -89,6 +89,7 @@ const NotificationCenterPage = lazy(() => import('./pages/notifications/Notifica
 const ProfessionalProfilePage = lazy(() => import('./pages/settings/professional-profile-page'));
 const SettingsUploadStatusPage = lazy(() => import('./pages/settings/upload-status-page'));
 const AdminUploadStatusPage = lazy(() => import('./pages/admin/upload-status-page'));
+const MyUploadStatusPage = lazy(() => import('./pages/client/my-upload-status-page'));
 const ClassUploadStatusPage = lazy(() => import('./pages/classes/class-upload-status-page'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const ClientAppPage = lazy(() => import('./pages/client/ClientAppPage'));
@@ -199,6 +200,7 @@ const router = createBrowserRouter(
         <Route path="/app/counseling" element={<CounselingGate area="member"><RoleGuard role="client"><CounselingListPage role="member" /></RoleGuard></CounselingGate>} />
         <Route path="/app/counseling/:relationshipId" element={<CounselingGate area="member"><RoleGuard role="client"><CounselingDetailPage role="member" /></RoleGuard></CounselingGate>} />
         <Route path="/app/sessions" element={<RoleGuard role="client"><Navigate to="/app/classes" replace /></RoleGuard>} />
+        <Route path="/app/profile/upload-status" element={<RoleGuard role="client"><MyUploadStatusPage /></RoleGuard>} />
         <Route path="/app/*" element={<RoleGuard role="client"><ClientAppPage /></RoleGuard>} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
