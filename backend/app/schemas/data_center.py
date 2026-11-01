@@ -389,6 +389,7 @@ class GapRange(Contract):
     reason: str
     observed_or_estimated: Literal['observed', 'estimated', 'unknown']
     source: Literal['recorded', 'derived'] = 'recorded'  # SDD-269: 기록된 구간 / 저장 데이터로 계산한 구간
+    end_inferred: bool = False  # SDD-271: 기록에 끝이 없어 서버가 다음 데이터 시점으로 닫은 구간
 
 
 class GapSummary(Contract):
