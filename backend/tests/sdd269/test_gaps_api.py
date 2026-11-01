@@ -127,3 +127,39 @@ def test_V_P02_대용량_응답시간(client, world, db, dc_enabled):
     assert r.status_code == 200 and r.json()['count'] > 0
     print(f'GAPS_600_WINDOWS_MS={ms:.0f}')
     assert ms < 300
+
+
+def seed_real_shape(db, sess, part):
+    """dev 실측 모양: 창=절대 epoch ms(원점 1793533138216), 측정 기록 파일=세션 상대 ms(최소 -55), 원점 다름."""
+    base = 1_793_533_138_216.0
+    for i in range(0, 143):
+        if i in (102,):
+            continue
+        t = base + i * 1000 + (11_730 - 1000 if i >= 102 else 0)
+        bad = i in Q0
+        db.add(EEGFeatureWindow(id=uuid.uuid4(), session_id=sess.id, participant_id=part.id, window_index=i,
+                                quality='invalid' if bad else 'valid', signal_quality=0.0 if bad else 0.9,
+                                device_timestamp_ms=t))
+    # 창 101 -> 103 로 만들어 간격 11.73초 재현(위에서 102 제거 + 이후 시각 이동은 index 결번 포함)
+    spans = [(-55.0, 100_270.0), (115_342.0, 144_238.0)]
+    for k, (a, b) in enumerate(spans):
+        db.add(EEGRawChunk(id=uuid.uuid4(), session_id=sess.id, participant_id=part.id, stream_id='s', chunk_index=k,
+                           start_ms=a, end_ms=b, object_key=f'k{k}', signal_type='eeg', segment_id=f'seg{k}',
+                           upload_status='uploaded'))
+    db.flush()
+
+
+def test_실데이터_모양_원점_다름_RED(client, world, db, dc_enabled):
+    seed_real_shape(db, world.s_a1, world.p_a1_c)
+    gaps = get_gaps(client, world).json()['gaps']
+    assert gaps and max(int(g['end_us']) for g in gaps) < 200_000_000, gaps  # 1.79e12 ms 위치로 튀지 않는다
+    assert all(int(g['start_us']) >= 0 for g in gaps)
+
+
+def test_창기반과_파일기반_같은_끊김은_하나로_병합(client, world, db, dc_enabled):
+    seed_real_shape(db, world.s_a1, world.p_a1_c)
+    body = get_gaps(client, world).json()
+    around = [g for g in body['gaps'] if int(g['end_us']) > 100_000_000 and int(g['start_us']) < 116_000_000]
+    assert len(around) == 1, around  # 11.7초(창) 와 15.1초(파일) 가 겹쳐 하나
+    length = (int(around[0]['end_us']) - int(around[0]['start_us'])) / 1e6
+    assert 14.9 <= length <= 15.2
