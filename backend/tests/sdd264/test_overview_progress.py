@@ -116,7 +116,10 @@ def test_V_X42_목록_응답에도_금지_문구_없음(client, db, world):
     s, ps = world["session"], world["participants"]
     add_features(db, s, ps[0], range(5))
     report(db, s, ps[0], 5, 1, 1, 1)
+    import re
+
     text = json.dumps(overview(client, world), ensure_ascii=False).lower()
+    text = re.sub(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", "<id>", text)
     for banned in ("score", "점수", "완료", "100%", "보증", "complete", "guarantee"):
         assert banned not in text, banned
 

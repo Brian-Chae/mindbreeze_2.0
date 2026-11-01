@@ -198,10 +198,13 @@ def test_V_X42_응답_전체에_금지_문구_없음(client, db, world):
     p = world["participants"][0]
     add_features(db, world, p, 5)
     report(db, world, p, 5, 1, 1, 1, final=True)
+    import re
+
     text = json.dumps(body_of(client, world), ensure_ascii=False).lower()
-    for banned in ("score", "점수", "완료", "100%", "보증", "guarantee", "good", "bad"):
+    text = re.sub(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", "<id>", text)   # 무작위 UUID 제외
+    for banned in ("score", "점수", "완료", "100%", "보증", "guarantee"):
         assert banned not in text, banned
-    assert "\"complete\"" not in text
+    assert not re.search(r"\b(good|bad|complete)\b", text)
 
 
 def test_V_X52_기대량만_바뀌어도_ETag_변경_그대로면_304(client, db, world):
