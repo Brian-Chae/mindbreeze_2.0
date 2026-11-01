@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+from app.services.upload_progress_service import AggregateProgress
+
 OverviewStatus = Literal["needs_attention", "uploading", "received_unreconciled", "no_data"]
 
 
@@ -36,6 +38,7 @@ class OverviewItem(BaseModel):
     band_not_connected: int
     last_received_at: str | None
     status: OverviewStatus
+    progress: AggregateProgress  # SDD-264: 폰 보고 기대량 대비 수신(회차 합계)
 
 
 class UploadStatusOverviewResponse(BaseModel):
@@ -49,3 +52,4 @@ class UploadStatusOverviewResponse(BaseModel):
     truncated: bool
     summary: OverviewSummary
     items: list[OverviewItem]
+    progress: AggregateProgress  # SDD-264: items 전체 합계
