@@ -188,7 +188,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["X-MB-Refresh-Token"],
+    expose_headers=["X-MB-Refresh-Token", "ETag", "X-Poll-Interval"],
 )
 
 app.include_router(v1_router)
