@@ -33,7 +33,7 @@ SDD-261 화면은 클래스→회차를 직접 골라야 현황이 보이고, �
 | 회차 상태 배지 | 위쪽 우선: `needs_attention` > `uploading` > `received_unreconciled` > `no_data`(참여자 0명 포함). 완료·보증 값 없음 |
 | `status` 필터 | 후보 회차 내 사후 필터(후보 상한은 필터 전 적용). `total_candidates`·`truncated` 로 잘림 여부 노출 |
 | 성능 | 50회차 기준 SQL ≤ 10회(목표 4회: 후보+권한 1, 참여자 1, feature 1, raw 1; 캐시 적중 시 1~2). 결측은 윈도 함수 대신 스트림별 `max-min+1-count`(유일 제약 하의 내부 결측과 동일). p95 < 1.5s, 304(캐시 적중) < 0.15s |
-| 캐시·ETag | 회차별 요약 프로세스 내 캐시(진행 중 2s / 종료 30분 내 10s / 그 외 60s). 본문 내용 해시 `ETag: W/"…"`(시각 필드 제외), `If-None-Match` 일치 시 304. `Cache-Control: no-store, private`, `Vary: Authorization`, `X-Poll-Interval` |
+| 캐시·ETag | 회차별 요약 프로세스 내 캐시(진행 중 2s / 종료 30분 내 10s / 그 외 300s). 본문 내용 해시 `ETag: W/"…"`(시각 필드 제외), `If-None-Match` 일치 시 304. `Cache-Control: no-store, private`, `Vary: Authorization`, `X-Poll-Interval` |
 | 폴링 주기 | 진행 중 회차 있음 3s / 종료 30분 내 수신 중·대기 있음 7s / 그 외 60s |
 | 마이그레이션 | 없음(기존 `ix_eeg_feature_windows_session_id`·`ix_eeg_raw_chunks_session_id` 활용). 필요 시 EXPLAIN 근거 기록 후 가산 인덱스 |
 
