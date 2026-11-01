@@ -1,4 +1,4 @@
-// SDD-261: 리포트 화면의 "데이터 수신 확인 필요 N명" 칩. 업로드 현황과 같은 훅을 쓰며 표를 만들지 않는다.
+// SDD-261/265: 리포트 화면의 "확인할 사람 N명" 칩. 업로드 현황과 같은 훅을 쓰며 표를 만들지 않는다.
 // 조회 실패·403·404·0명이면 아무것도 그리지 않는다(리포트 화면은 기존 그대로 동작 — 실패 격리).
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -8,12 +8,12 @@ import { uploadStatusScreenPath } from '../../lib/upload-status/view';
 
 export function UploadAttentionChip({ classId, sessionId, live = true }: { classId: string | null | undefined; sessionId: string | null | undefined; live?: boolean }) {
   const { data, error } = useUploadStatus(classId, sessionId, { live });
-  const count = error ? 0 : data?.summary.needs_attention ?? 0;
+  const count = error ? 0 : data?.progress?.participants.needs_attention ?? data?.summary.needs_attention ?? 0;
   if (!classId || !sessionId || count <= 0) return null;
   return (
     <Link data-testid="upload-attention-chip" to={uploadStatusScreenPath(classId, sessionId)}
       className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-amber-50 px-3 text-[13px] font-semibold text-amber-900 hover:bg-amber-100">
-      <span aria-hidden="true">!</span>데이터 수신 확인 필요 {count}명
+      <span aria-hidden="true">!</span>확인할 사람 {count}명
     </Link>
   );
 }

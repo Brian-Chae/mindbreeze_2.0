@@ -40,7 +40,7 @@ export function UploadStatusLiveBar({ paused, loading, error, forbidden, offline
         </button>
       </div>
       <p className="text-[13px] text-[#776D7B]">
-        마지막 조회 {formatClock(lastFetchedAt)} · 마지막 수신 {formatClock(lastReceivedAt)}
+        마지막 조회 {formatClock(lastFetchedAt)} · 마지막 도착 {formatClock(lastReceivedAt)}
       </p>
       {offline && (
         <p role="alert" className="rounded-xl bg-amber-50 px-3 py-2 text-[13px] text-amber-900">

@@ -136,33 +136,38 @@ describe('useUploadStatus', () => {
   });
 });
 
+const ratio = { expected: 10, received: 10, percent: 100 };
+const prog = (state: NonNullable<UploadParticipantDto['progress']>['state']): NonNullable<UploadParticipantDto['progress']> =>
+  ({ state, feature: ratio, raw: { eeg: ratio, ppg: ratio, acc: ratio }, total: ratio });
+
 describe('UploadStatusTable', () => {
   const mixed = response([
-    person('1', '박지민', { status: 'needs_attention', reasons: ['raw_failed'], feature: { ...person('x', null).feature, received: 354, last_received_at: '2026-11-04T05:09:58Z' },
+    person('1', '박지민', { status: 'needs_attention', reasons: ['raw_failed'], progress: prog('needs_attention'), feature: { ...person('x', null).feature, received: 354, last_received_at: '2026-11-04T05:09:58Z' },
       raw: { signals: [sig('eeg', { registered: 180, uploaded: 174, failed: 6 }), sig('ppg'), sig('acc')], last_received_at: '2026-11-04T05:09:55Z', completeness: 'unknown' } }),
     person('2', null, { status: 'no_data', band_connected: false }),
-    person('3', '수신후보', { status: 'received_unreconciled', feature: { ...person('x', null).feature, received: 10 },
+    person('3', '도착후보', { status: 'received_unreconciled', progress: prog('all_received'), feature: { ...person('x', null).feature, received: 10 },
       raw: { signals: [sig('eeg', { registered: 10, uploaded: 10 }), sig('ppg'), sig('acc')], last_received_at: null, completeness: 'unknown' } }),
-    person('4', '제외', { status: 'excluded', collection_state: 'excluded' }),
+    person('4', '제외', { status: 'excluded', collection_state: 'excluded', progress: prog('not_collected') }),
   ]);
   const render = async () => mount(<MemoryRouter><UploadStatusTable data={mixed} /></MemoryRouter>);
 
-  it('미착용 확정·완료·100%·점수 표현이 없다 (V-U29/32/64)', async () => {
+  it('SDD-265: 금지어·구 용어가 없고 새 용어로 보인다 (V-U29/32/64)', async () => {
     await render();
     const text = host.textContent ?? '';
-    expect(text).toContain('미수신 · 착용 여부 미확인');
+    expect(text).toContain('회차 데이터 상황판');
+    expect(text).toContain('확인할 사람 · 1명');
     expect(text).toContain('이름 미확인');
-    expect(text).toContain('수신 확인 · 전체 대조 미확인');
-    for (const banned of ['미착용', '완료', '100%', '리포트 생성 가능', '점수', '좋음', '나쁨', '양호']) expect(text).not.toContain(banned);
-    expect(text).toContain('폰 대기량: 미확인');
+    for (const banned of ['미착용', '완료', '리포트 생성 가능', '점수', '좋음', '나쁨', '양호', 'feature', '원시', 'EEG', 'PPG', 'ACC', '업로드', '수신']) expect(text).not.toContain(banned);
   });
 
-  it('확인 필요 참여자가 먼저 나오고 사유를 문구로 보인다', async () => {
+  it('확인할 사람이 먼저 나오고 정상·대기는 접혀 있다', async () => {
     await render();
-    const rows = [...host.querySelectorAll('[data-testid="upload-row"]')];
-    expect(rows[0].textContent).toContain('박지민');
-    expect(rows[0].textContent).toContain('서버가 받지 않음(재전송해도 같음)');
-    expect(rows).toHaveLength(4);
+    const first = host.querySelector('[data-testid="group-attention"] [data-testid="upload-row"]');
+    expect(first?.textContent).toContain('박지민');
+    expect(first?.textContent).toContain('앱 다시 켜기');
+    expect((host.querySelector('[data-testid="group-arrived"]') as HTMLDetailsElement).open).toBe(false);
+    expect((host.querySelector('[data-testid="group-waiting"]') as HTMLDetailsElement).open).toBe(false);
+    expect(host.querySelectorAll('[data-testid="upload-row"]')).toHaveLength(4);
   });
 
   it('검색 결과가 없으면 안내 문구를 보인다', async () => {

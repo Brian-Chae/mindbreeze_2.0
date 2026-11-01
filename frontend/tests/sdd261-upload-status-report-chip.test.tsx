@@ -27,7 +27,7 @@ it('확인 필요 N명 칩이 현황 화면으로 링크한다', async () => {
   api.fetchUploadStatus.mockResolvedValue(body(3));
   await render(<UploadAttentionChip classId="c1" sessionId="s1" live={false} />);
   const a = host.querySelector('[data-testid="upload-attention-chip"]');
-  expect(a?.textContent).toContain('데이터 수신 확인 필요 3명');
+  expect(a?.textContent).toContain('확인할 사람 3명');
   expect(a?.getAttribute('href')).toBe('/classes/c1/sessions/s1/upload-status');
   expect(host.textContent).not.toMatch(/점수|좋음|나쁨|완료|100%/);
 });
@@ -53,7 +53,7 @@ it('리포트 상세: 해당 참여자가 확인 필요일 때만 한 줄 안내
   api.getSession.mockResolvedValue({ class_id: 'c1' });
   api.fetchUploadStatus.mockResolvedValue(body(1));
   await render(<UploadParticipantNotice sessionId="s1" participantId="p1" />);
-  expect(host.textContent).toBe('데이터가 아직 더 들어오고 있을 수 있어요');
+  expect(host.textContent).toBe('데이터가 아직 더 도착할 수 있어요');
 });
 it('리포트 상세: 다른 상태 참여자·조회 실패·클래스 없음이면 숨긴다', async () => {
   api.getSession.mockResolvedValue({ class_id: 'c1' });
