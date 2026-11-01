@@ -104,3 +104,26 @@ def test_V_P01_쿼리_수_고정(client, world, db, dc_enabled):
         event.remove(db.bind, 'before_cursor_execute', hook)
     mine = [s for s in stmts if 'eeg_feature_windows' in s or 'eeg_raw_chunks' in s or 'biosignal_gap_events' in s]
     assert len(mine) == 3, mine
+
+
+def test_V_P02_대용량_응답시간(client, world, db, dc_enabled):
+    """회차에 600창 × 참여자 2명(결번 2%·품질0 3%)이 쌓인 상태에서 참여자 1명 요청 시간.
+    쿼리가 참여자 단위(3개 고정)라 같은 회차의 다른 참여자 수와 무관하다."""
+    import random
+    import time
+    rnd = random.Random(269)
+    for part in (world.p_a1_c, world.p_a1_c2):
+        for i in range(600):
+            if rnd.random() < 0.02:
+                continue
+            bad = rnd.random() < 0.03
+            db.add(EEGFeatureWindow(id=uuid.uuid4(), session_id=world.s_a1.id, participant_id=part.id, window_index=i,
+                                    quality='invalid' if bad else 'valid', signal_quality=0.0 if bad else 0.9,
+                                    device_timestamp_ms=T0_MS + i * 1000))
+    db.flush()
+    t = time.perf_counter()
+    r = get_gaps(client, world)
+    ms = (time.perf_counter() - t) * 1000
+    assert r.status_code == 200 and r.json()['count'] > 0
+    print(f'GAPS_600_WINDOWS_MS={ms:.0f}')
+    assert ms < 300
