@@ -34,9 +34,11 @@ from app.schemas.upload_status_overview import (
     OverviewSummary,
     UploadStatusOverviewResponse,
 )
+from app.services import upload_progress_service as progress_svc
 from app.services.upload_status_service import (
     POST_END_ACTIVE_SEC,
     RECENT_RECEIVE_SEC,
+    _Scope,
     _aware,
     _build_participant,
     _i,
@@ -239,19 +241,24 @@ def _raw_bulk(db: DBSession, session_ids: list[uuid.UUID]) -> dict[uuid.UUID, di
     return acc
 
 
-def _summarize(prows: list, fstats: dict, rstats: dict, as_of: datetime) -> dict:
+def _summarize(prows: list, fstats: dict, rstats: dict, as_of: datetime, expected: dict | None = None,
+               scope: _Scope | None = None) -> dict:
     counts = {k: 0 for k in (*BADGES, "excluded")}
     band_not_connected = 0
     last: str | None = None
+    progresses = []
     for pr in prows:
-        part = _build_participant(pr, fstats.get(pr.id), rstats.get(pr.id, {}), as_of)
+        part = _build_participant(pr, fstats.get(pr.id), rstats.get(pr.id, {}), as_of,
+                                  (expected or {}).get(pr.id), scope)
+        progresses.append(part.progress)
         counts[part.status] += 1
         if part.collection_state == "eligible" and not part.band_connected:
             band_not_connected += 1
         for ts in (part.feature.last_received_at, part.raw.last_received_at):
             if ts is not None and (last is None or ts > last):
                 last = ts
-    return {"participants": len(prows), **counts, "band_not_connected": band_not_connected, "last_received_at": last}
+    return {"participants": len(prows), **counts, "band_not_connected": band_not_connected, "last_received_at": last,
+            "progress": progress_svc.aggregate(progresses)}
 
 
 def _badge(s: dict) -> str:
@@ -285,7 +292,10 @@ def _summaries(db: DBSession, cands: list, as_of: datetime) -> dict[uuid.UUID, d
         pbulk = _participants_bulk(db, miss)
         fbulk = _feature_bulk(db, miss)
         rbulk = _raw_bulk(db, miss)
-        fresh = {sid: _summarize(pbulk.get(sid, []), fbulk.get(sid, {}), rbulk.get(sid, {}), as_of) for sid in miss}
+        ebulk = progress_svc.load_expected_by_session(db, miss)   # SDD-264: 기대량 1회 일괄
+        scopes = {c.session_id: _Scope(status=c.status, ended_at=c.ended_at) for c in cands}
+        fresh = {sid: _summarize(pbulk.get(sid, []), fbulk.get(sid, {}), rbulk.get(sid, {}), as_of, ebulk,
+                                 scopes[sid]) for sid in miss}
         out.update(fresh)
         with _cache_lock:
             if len(_cache) + len(fresh) >= _CACHE_MAX:
@@ -340,7 +350,8 @@ def load_overview(db: DBSession, actor: dict, *, limit: int = DEFAULT_LIMIT, sin
             started_at=_iso(c.started_at), ended_at=_iso(c.ended_at),
             participants=s["participants"], needs_attention=s["needs_attention"], uploading=s["uploading"],
             received_unreconciled=s["received_unreconciled"], no_data=s["no_data"], excluded=s["excluded"],
-            band_not_connected=s["band_not_connected"], last_received_at=s["last_received_at"], status=badge))
+            band_not_connected=s["band_not_connected"], last_received_at=s["last_received_at"], status=badge,
+            progress=s["progress"]))
 
     etag = _etag(items, total, limit)
     poll = _poll_interval(items, as_of)
@@ -352,5 +363,5 @@ def load_overview(db: DBSession, actor: dict, *, limit: int = DEFAULT_LIMIT, sin
         total_candidates=total, truncated=total > limit,
         summary=OverviewSummary(sessions=len(items),
                                 in_progress=sum(1 for it in items if it.session_status == "in_progress"), **counts),
-        items=items)
+        items=items, progress=progress_svc.merge([it.progress for it in items]))
     return OverviewResult(etag, poll, body)

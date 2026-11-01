@@ -426,4 +426,5 @@ def test_V_O30_금지_키_문구_없음(client, world, db):
     assert set(body["items"][0]) == {
         "session_id", "class_id", "class_title", "session_title", "seq", "organization_id", "organization_name",
         "session_status", "started_at", "ended_at", "participants", "needs_attention", "uploading",
-        "received_unreconciled", "no_data", "excluded", "band_not_connected", "last_received_at", "status"}
+        "received_unreconciled", "no_data", "excluded", "band_not_connected", "last_received_at", "status",
+        "progress"}  # SDD-264 가산
