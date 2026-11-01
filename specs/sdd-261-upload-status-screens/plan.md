@@ -2,14 +2,14 @@
 
 > 구현 담당: 감독 승인 후 `superpowers:subagent-driven-development` 또는 `superpowers:executing-plans`로 작업별 수행한다. 현재는 기획만 작성하며 구현을 시작하지 않는다.
 
-**목표:** 앱을 변경하지 않고 브라우저에서 회차 참여자별 서버 저장 현황을 조회한다.
+**목표:** 수집 로직을 변경하지 않고 브라우저·모바일·앱 WebView 에서 회차 참여자별 서버 저장 현황을 2~3초 주기로 조회한다.
 **구조:** 단일 회차 배치 API → 공통 조회 훅/테이블 → 설정 및 클래스 관리 두 진입점. 기존 수집 파이프라인은 변경하지 않는다.
 **기술:** FastAPI/SQLAlchemy/PostgreSQL, React/TypeScript, 기존 UI 토큰과 조회 패턴.
 **정본:** `specs/sdd-261-upload-status-screens/spec.md`.
 
 ## 공통 제약·승인 경계
 
-- 현재 산출물은 spec/plan만. verify는 감독 승인 후 구현 전에 작성한다. summary는 실제 검증 결과로 작성한다.
+- verify.md 는 구현 전 작성 완료(Stage ③). 승인 후 구현.  summary는 실제 검증 결과로 작성한다.
 - 11/4 전 MVP는 웹+BE만. 네이티브/measurement-core/수집 로직 변경 금지. designs/는 디자인 담당 소유.
 - 서버 수신 기준 명시, 기대 수 null, 폰 보고 null. 100% 완료 및 리포트 생성 가능 확정 금지.
 - 미수신과 미착용 구분, 개인정보 최소화, 이름 기존 규칙 유지, 점수·좋음/나쁨 없음.
@@ -31,8 +31,8 @@
 
 | 작업 | 단독 소유 파일 | 입력→산출 |
 |---|---|---|
-| BE-1 | 신규 `backend/app/services/upload_status_service.py`, `backend/app/schemas/upload_status.py`; 기존 `backend/app/api/v1/classes.py` 라우터; 신규 `backend/tests/test_upload_status.py` | JWT·class_id·session_id → spec §3 JSON. `get_upload_status(db, actor, class_id: UUID, session_id: UUID) -> UploadStatusResponse` |
-| FE-1 | 신규 `frontend/src/lib/api/upload-status.ts`, `frontend/src/hooks/use-upload-status.ts`, `frontend/src/components/class/upload-status-table.tsx`, `frontend/src/pages/settings/upload-status-page.tsx`, `frontend/src/pages/classes/class-upload-status-page.tsx`; 기존 `frontend/src/components/settings/settings-content.tsx`, `frontend/src/pages/classes/host-class-detail-page.tsx`, `frontend/src/App.tsx`; 신규 `frontend/tests/sdd261-upload-status.test.tsx` | `fetchUploadStatus(classId, sessionId, signal): Promise<UploadStatusResponse>`; 공유 훅 `useUploadStatus(classId, sessionId)` → 두 화면. 프런트 DTO는 spec JSON과 일치 |
+| BE-1 | 신규 `backend/app/services/upload_status_service.py`(권한 3분기·집계·revision/ETag·1초 TTL 캐시), `backend/app/schemas/upload_status.py`; 기존 `backend/app/api/v1/classes.py` 라우터(엔드포인트 1개만 추가); platform_admin 기관 목록은 기존 admin 조회 재사용; 신규 `backend/tests/test_upload_status.py` | JWT·class_id·session_id → spec §3 JSON. `get_upload_status(db, actor, class_id: UUID, session_id: UUID) -> UploadStatusResponse` |
+| FE-1 | 신규 `frontend/src/lib/api/upload-status.ts`, `frontend/src/hooks/use-upload-status.ts`, `frontend/src/components/class/upload-status-table.tsx`, `frontend/src/components/class/upload-status-live-bar.tsx`(실시간 표시·정지/재개), `frontend/src/pages/admin/upload-status-page.tsx`(platform_admin 기관 선택), `frontend/src/pages/settings/upload-status-page.tsx`, `frontend/src/pages/classes/class-upload-status-page.tsx`; 기존 `frontend/src/components/settings/settings-content.tsx`, `frontend/src/pages/classes/host-class-detail-page.tsx`(회차 링크만), `frontend/src/App.tsx`(라우트 3개만); 신규 `frontend/tests/sdd261-upload-status.test.tsx` | `fetchUploadStatus(classId, sessionId, signal): Promise<UploadStatusResponse>`; 공유 훅 `useUploadStatus(classId, sessionId)` → 두 화면. 프런트 DTO는 spec JSON과 일치 |
 | QA-1 | 신규 `frontend/e2e/class-structure/sdd261-upload-status.spec.ts`, 기존 `frontend/e2e/class-structure/playwright.config.ts`의 testMatch, `backend/tests/test_upload_status_integration.py`, `specs/sdd-261-upload-status-screens/verify.md` 및 검증 후 `summary.md` | 승인된 spec → 사전 시나리오, 권한/API/실화면/쿼리·성능 결과 |
 | 디자인(별도 워커) | `designs/` | 기존 토큰 기반 시안. 본 담당은 읽기 검토만 |
 
@@ -51,8 +51,8 @@ BE와 FE는 spec의 응답 필드/enum을 계약으로 병렬 가능. 계약 변
 - [ ] fixture 기반 테스트: 두 경로 같은 응답, 이름 검색/상태 필터/그룹, 회차 없음/참여자 없음, 0건=미수신, band_connected=false≠미착용, raw 10/10≠100% 완료를 작성한다.
 - [ ] `cd frontend && npx vitest run tests/sdd261-upload-status.test.tsx`로 실패를 확인한다.
 - [ ] DTO·fetch 함수·훅·테이블을 구현한다. 인증은 기존 API 클라이언트 사용, 회차 선택 목록은 기존 접근 가능 클래스/회차 조회를 재사용한다. 기관관리자 접근 범위를 프런트 필터만으로 보장하지 않는다.
-- [ ] 진행 10초/종료 30초, 오류 backoff 10/20/40/60초, visibility/offline 중단·복귀 즉시 조회·수동 중복 방지·변경 시 AbortSignal 취소를 구현한다. 403에서는 이전 이름/건수도 제거한다.
-- [ ] 설정 링크와 회차 목록 링크, 두 신규 경로의 counselor/org_admin RoleGuard를 추가한다. 부모 경로 클래스 > 회차(담당 상담사)를 유지한다.
+- [ ] 진행 3초/종료 직후 7초/완결 60초(서버 `X-Poll-Interval` 우선), `If-None-Match` 로 304 처리, 오류 backoff 3/6/12/30/60초, visibility/offline 중단·복귀 즉시 조회·수동 중복 방지·변경 시 AbortSignal 취소를 구현한다. 403에서는 이전 이름/건수도 제거한다.
+- [ ] 설정 링크와 회차 목록 링크, 세 신규 경로(counselor/org_admin 2개, platform_admin 1개)의 가드를 추가한다. 부모 경로 클래스 > 회차(담당 상담사)를 유지한다.
 - [ ] 테스트 통과 후 `npm run build`로 빌드 확인. 데스크톱 상세와 모바일 핵심 열은 QA가 실제 브라우저에서 확인한다.
 
 ## QA-1 — 독립 검증과 인계
@@ -61,24 +61,41 @@ BE와 FE는 spec의 응답 필드/enum을 계약으로 병렬 가능. 계약 변
 
 - [ ] 감독 승인 후 **코드 수정 전** verify.md 작성. spec의 역할·표시·정확성·오프라인·성능·모바일 시나리오를 승인된 체크리스트로 고정한다.
 - [ ] 기존 Playwright 설정의 testMatch는 read/visual 두 파일만 허용하므로 신규 sdd261 파일을 명시 추가한다. 기존 테스트는 보존한다.
-- [ ] 합성 PostgreSQL fixture로 40명×1시간 feature 및 3신호 raw를 생성한다. 파일/운영DB/실개인정보를 사용하지 않는다. SQL 로그 카운터로 1명/40명 모두 최대8회, EXPLAIN ANALYZE 및 30회 응답 p95<1초 목표를 기록한다.
+- [ ] 합성 PostgreSQL fixture로 40명×1시간 feature 및 3신호 raw를 생성한다. 파일/운영DB/실개인정보를 사용하지 않는다. SQL 로그 카운터로 1명/40명 모두 최대 8회(304 경로 최대 2회), EXPLAIN ANALYZE 및 30회 응답 p95<1초 목표를 기록한다.
 - [ ] 독립 COUNT/DISTINCT 및 stream별 집합 차이 계산으로 API 결과와 대조한다. 재전송 중복·중간 공백·선두/꼬리 미상·NULL legacy·pending→uploaded 변경을 포함한다. 기존 summary를 정답 함수로 호출하지 않는다.
 - [ ] `cd backend && pytest tests/test_upload_status.py tests/test_upload_status_integration.py -q`; `cd frontend && npx vitest run tests/sdd261-upload-status.test.tsx`; `npx playwright test --config e2e/class-structure/playwright.config.ts sdd261-upload-status.spec.ts` 실행. 프로젝트 실제 Playwright 설정에 따른 로컬 fixture 서버만 사용한다.
 - [ ] PC 1440px/모바일 390px에서 실제 캡처: 두 경로, 필터 유지, 긴 이름, 오류/오프라인/403. API 응답·네트워크 호출 수·브라우저 문구를 함께 기록한다. 빌드 통과를 동작 증거로 대체하지 않는다.
 - [ ] summary.md에 통과/실패/미검증, 배포 미수행, 앱 실기기 미검증을 기록하고 감독에게 인계한다. 폰 종료 대조까지 검증했다는 주장은 별도 실기기 증거 없으면 금지한다.
 
-## 제안 일정(KST, 승인 지연 시 압축하지 않고 재판단)
+## 확정 일정(KST, 현재 11/1 12:40 기준)
 
-| 시각 | 담당·작업 | 종료 조건 |
-|---|---|---|
-| 11/1 | 기획·디자인 → 감독 | spec/plan 및 별도 시안 검토. 문서만 로컬 커밋 |
-| 11/2 09:00~10:00 | 감독·QA | 범위 승인, 구현 전 verify 작성 |
-| 11/2 10:00~16:00 | BE/FE 병렬 | 계약 테스트와 단위 검증 통과. 12:00 앱 동결에 영향 없음 |
-| 11/2 16:00~19:00 | 독립 QA·감독 | API/권한/40명 부하/2화면 실제 검증, 발견 결함 재검증 |
-| 11/2 19:00~21:00 | 감독 | 승인 시 별도 배포 담당이 Web+BE 배포·현장 URL 확인. 본 기획 작업 범위 아님 |
-| 11/2 22:00 | 서버 동결 | 미통과면 연기. 운영/개발 배포 승인 구분 |
-| 11/3~11/4 | 현장 운영 | 브라우저 계정/URL 준비 및 기존 폰 종료 대조 절차 확인 |
-| 11/4 이후 | 후속 SDD | 폰 보고 경로·종료 manifest/sequence 정합·착용 이력·완전성 대조 |
+앱·웹번들 동결 11/2 12:00, 서버 동결 11/2 22:00. 앱 WebView 노출까지 하려면 FE 를 11/2 12:00 전 develop 에 머지해야 하므로 **오늘 구현 착수**한다.
+
+| 시각 | 담당 | 작업 | 종료 조건 |
+|---|---|---|---|
+| 11/1 13:00 | 감독 | verify.md 승인(Stage ③ 게이트) | 승인 즉시 아래 병렬 착수 |
+| 11/1 13:00~ | 디자인 워커(별도) | 시안 보강(아래 요청 목록), `designs/` 만 수정 | 11/1 18:00 시안 갱신 |
+| 11/1 13:00~19:00 | BE 워커(Claude sonnet-5-5) | BE-1: 계약 테스트→권한 3분기→집계→ETag/304 | 단위 테스트 통과, 11/1 19:00 FE 에 실제 응답 샘플 인계 |
+| 11/1 13:00~19:00 | FE 워커(Claude sonnet-5-5) | FE-1: spec §3 JSON fixture 기준 테이블·훅·3라우트(목 데이터 병렬) | vitest 통과, 빌드 통과 |
+| 11/1 19:00~22:00 | BE+FE 통합 | 실제 API 연결, 모바일 390px 확인 | 감독 diff 재검증 후 develop 머지 요청 |
+| 11/2 09:00~11:00 | 독립 QA(Gemini 또는 별도 Claude 워커) | verify 우선순위 A 전체, 권한·정확성·실시간 | A 항목 전부 통과 |
+| **11/2 12:00** | 앱·웹번들 동결 | FE develop 머지 마감(앱 내 노출 조건). 미통과 시 브라우저 전용으로 전환 | |
+| 11/2 12:00~19:00 | QA | verify B/C, 40명 부하, 관리자 N명 동시 폴링 | 결함 재검증 |
+| 11/2 19:00~21:00 | 감독 | 배포 승인 시 Web+BE 배포(별도 승인) | |
+| 11/2 22:00 | 서버 동결 | 미통과면 연기 | |
+
+작업 단위·파일 소유는 위 표(파일 소유 및 인터페이스) 그대로 BE/FE 가 겹치지 않는다. 계약(spec §3 JSON, `ETag`, `X-Poll-Interval`) 변경은 spec 부터 동기화한다.
+
+## 시안 보강 요청(별도 디자인 워커, `designs/sdd-261-upload-status/` 만 수정)
+
+1. “실시간 · N초 전 갱신” 표시와 정지/재개 버튼(01·02·03 공통, 정지 상태 스타일 포함).
+2. platform_admin 기관 선택 드롭다운(클래스/회차 선택 앞단, 01 상단).
+3. 오프라인 카드(04) 안 “다시 조회” 버튼 배치(시안만, 연결 안 함 문구 제거).
+4. 모바일(03) “먼저 확인할 4명”을 문제 참여자 **전체 스크롤 목록**으로 변경(상단 요약 유지, 행 펼침).
+5. “feature 대조 완료” 등 완료로 오해될 문구를 “수신”으로 변경(전 화면). 완료·100% 표현 금지.
+6. “영구 거절/격리” 문구를 명확화: 서버 거절은 “서버가 받지 않음(재전송해도 같음)”, 격리는 “폰에서 보류 중, 저장 완료 아님”.
+7. “마지막 조회”(화면이 물은 시각)와 “마지막 수신”(데이터가 서버에 도착한 시각) 라벨을 분리 표기.
+8. 점수·종합점수·좋음/나쁨 표현 없음 유지.
 
 ## 자기 검토 결과
 
