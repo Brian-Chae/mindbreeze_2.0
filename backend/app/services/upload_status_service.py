@@ -28,8 +28,11 @@ from app.models.record import EEGRawChunk
 from app.models.session import Session, SessionParticipant
 from app.models.user import User
 from app.models.user_org_membership import UserOrgMembership
+from app.models.session_ingest_expected import SessionIngestExpected
+from app.services import upload_progress_service as progress_svc
 from app.schemas.upload_status import (
     FeatureReceipt,
+    PhoneReport,
     RawReceipt,
     RawSignalReceipt,
     UploadStatusParticipant,
@@ -147,7 +150,7 @@ def _authorize(db: DBSession, actor: dict, class_id: uuid.UUID, session_id: uuid
 
 def _revision(db: DBSession, session_id: uuid.UUID, as_of: datetime) -> dict:
     cutoff = as_of - timedelta(seconds=PENDING_STALE_SEC)
-    f, r, p = EEGFeatureWindow, EEGRawChunk, SessionParticipant
+    f, r, p, E = EEGFeatureWindow, EEGRawChunk, SessionParticipant, SessionIngestExpected
     not_done = r.upload_status.notin_(("uploaded", "failed"))
 
     def fscalar(expr):
@@ -180,14 +183,36 @@ def _revision(db: DBSession, session_id: uuid.UUID, as_of: datetime) -> dict:
         pscalar(flag(p.is_waitlisted)).label("p_wait"),
         pscalar(func.coalesce(func.sum(case((p.eeg_collection_consented.is_(True), 1),
                                             (p.eeg_collection_consented.is_(False), 2), else_=0)), 0)).label("p_consent"),
+        # SDD-264: 기대량 보고 지문 — 보고만 바뀌어도 ETag 가 바뀐다.
+        select(func.count()).where(E.session_id == session_id).scalar_subquery().label("e_count"),
+        select(func.max(E.updated_at)).where(E.session_id == session_id).scalar_subquery().label("e_max"),
+        select(func.coalesce(func.sum(E.feature + func.coalesce(E.raw_eeg, 0) + func.coalesce(E.raw_ppg, 0)
+                                      + func.coalesce(E.raw_acc, 0)), 0)).where(E.session_id == session_id)
+        .scalar_subquery().label("e_sum"),
+        select(func.coalesce(func.sum(case((E.final.is_(True), 1), else_=0)), 0))
+        .where(E.session_id == session_id).scalar_subquery().label("e_final"),
     )).one()
     return dict(row._mapping)
 
 
-def _etag(rev: dict, scope: _Scope) -> str:
+def _progress_time_key(rev: dict, scope: _Scope, as_of: datetime) -> str | None:
+    """SDD-264: 정체(120초)·종료 30분 유예는 시간 경과로 판정이 바뀌므로, 기대량이 보고된 활성 구간에서만
+    30초 버킷을 ETag 에 넣는다(조용한 완료 회차는 304 유지). 유예 경과는 불리언으로 별도 반영."""
+    if not _i(rev["e_count"]):
+        return None
+    ended = _aware(scope.ended_at)
+    since_end = (as_of - ended).total_seconds() if ended is not None else None
+    grace_over = since_end is not None and since_end >= POST_END_ACTIVE_SEC
+    active = scope.status != "completed" or since_end is None or since_end < POST_END_ACTIVE_SEC + 600
+    bucket = int(as_of.timestamp() // 30) if active else "-"
+    return f"{bucket}:{int(grace_over)}"
+
+
+def _etag(rev: dict, scope: _Scope, as_of: datetime | None = None) -> str:
     parts = [rev["f_count"], _iso(rev["f_max"]), rev["r_count"], rev["r_up"], rev["r_fail"], _iso(rev["r_created_max"]),
              _iso(rev["r_up_max"]), rev["r_pending"], rev["r_stale"], rev["p_count"], rev["p_band"], rev["p_report"],
-             rev["p_wait"], rev["p_consent"], scope.status, _iso(scope.ended_at)]
+             rev["p_wait"], rev["p_consent"], rev["e_count"], _iso(rev["e_max"]), rev["e_sum"], rev["e_final"],
+             scope.status, _iso(scope.ended_at), _progress_time_key(rev, scope, as_of) if as_of else None]
     digest = hashlib.sha256("|".join("" if v is None else str(v) for v in parts).encode()).hexdigest()[:32]
     return f'W/"{digest}"'
 
@@ -280,7 +305,8 @@ def _raw_stats(db: DBSession, session_id: uuid.UUID) -> dict:
     return out
 
 
-def _build_participant(prow, fstat, rstats: dict, as_of: datetime) -> UploadStatusParticipant:
+def _build_participant(prow, fstat, rstats: dict, as_of: datetime, expected_row=None,
+                       scope: _Scope | None = None) -> UploadStatusParticipant:
     waitlisted = bool(prow.is_waitlisted)
     consent = prow.eeg_collection_consented
     collection = "excluded" if (waitlisted or consent is False) else ("eligible" if consent is True else "unknown")
@@ -343,6 +369,33 @@ def _build_participant(prow, fstat, rstats: dict, as_of: datetime) -> UploadStat
     elif has_data and collection == "excluded":
         reasons.append("collection_excluded_now")
 
+    # SDD-264: 폰 보고 기대량 대비 수신 — 기존 status/reasons 는 건드리지 않고 병렬 블록으로 채운다.
+    snap = progress_svc.snapshot_of(expected_row)
+    feature_last = _aware(fstat.last) if fstat and fstat.last else None
+    last_any = max([t for t in (feature_last, raw_last) if t is not None], default=None)
+    progress = progress_svc.build_participant_progress(progress_svc.ProgressInput(
+        excluded=collection == "excluded", has_data=has_data, expected=snap,
+        feature_received=feature.received,
+        raw_received={s.signal_type: s.uploaded for s in signals}, raw_failed=failed,
+        last_received_at=last_any,
+        session_status=scope.status if scope else "in_progress", ended_at=scope.ended_at if scope else None,
+        as_of=as_of))
+    phone_report = None
+    if snap is not None:
+        feature.expected = snap.feature
+        feature.expected_basis = "phone_report"
+        feature.completeness = "all_received" if feature.received >= snap.feature else "short"
+        for s in signals:
+            s.expected = snap.raw.get(s.signal_type)
+        if all(s.expected is not None for s in signals):
+            raw_complete = all(s.uploaded >= s.expected for s in signals)
+            raw_completeness = "all_received" if raw_complete else "short"
+        else:
+            raw_completeness = "unknown"
+        phone_report = PhoneReport(reported_at=_iso(expected_row.reported_at), final=snap.final)
+    else:
+        raw_completeness = "unknown"
+
     return UploadStatusParticipant(
         participant_id=str(prow.id),
         display_name=(prow.name or prow.guest_name or None) if prow.user_id else (prow.guest_name or None),
@@ -352,9 +405,11 @@ def _build_participant(prow, fstat, rstats: dict, as_of: datetime) -> UploadStat
         band_connected=bool(prow.band_connected),
         report_included=bool(prow.report_included),
         feature=feature,
-        raw=RawReceipt(signals=signals, last_received_at=_iso(raw_last)),
+        raw=RawReceipt(signals=signals, last_received_at=_iso(raw_last), completeness=raw_completeness),
+        phone_report=phone_report,
         status=status,
         reasons=reasons,
+        progress=progress,
     )
 
 
@@ -363,7 +418,9 @@ def _compute_body(db: DBSession, class_id: uuid.UUID, session_id: uuid.UUID, sco
     prows = _participants(db, session_id)
     fstats = _feature_stats(db, session_id)
     rstats = _raw_stats(db, session_id)
-    items = [_build_participant(pr, fstats.get(pr.id), rstats.get(pr.id, {}), as_of) for pr in prows]
+    expected = progress_svc.load_expected_by_session(db, [session_id])
+    items = [_build_participant(pr, fstats.get(pr.id), rstats.get(pr.id, {}), as_of, expected.get(pr.id), scope)
+             for pr in prows]
     items.sort(key=lambda it: it.participant_id)
     counts = {k: 0 for k in ("needs_attention", "uploading", "received_unreconciled", "no_data", "excluded")}
     for it in items:
@@ -372,6 +429,7 @@ def _compute_body(db: DBSession, class_id: uuid.UUID, session_id: uuid.UUID, sco
         class_id=str(class_id), session_id=str(session_id), session_status=scope.status, as_of=_iso(as_of),
         poll_interval_sec=poll, etag=etag,
         summary=UploadStatusSummary(participants=len(items), **counts), participants=items,
+        progress=progress_svc.aggregate([it.progress for it in items]),
     )
 
 
@@ -425,7 +483,7 @@ def load_upload_status(db: DBSession, actor: dict, class_id: uuid.UUID, session_
     as_of = _utcnow()
     with _consistent_read(db):
         rev = _revision(db, session_id, as_of)
-        etag = _etag(rev, scope)
+        etag = _etag(rev, scope, as_of)
         poll = _poll_interval(scope, rev, as_of)
         if _matches(if_none_match, etag):
             return UploadStatusResult(etag, poll, None)

@@ -159,6 +159,30 @@ def build_participant_progress(inp: ProgressInput) -> ParticipantProgress:
 
 
 # ---------------------------------------------------------------------------
+# 기대량 적재 (DB 1회, 인원·회차 수 무관)
+# ---------------------------------------------------------------------------
+
+def snapshot_of(row) -> ExpectedSnapshot | None:
+    if row is None:
+        return None
+    return ExpectedSnapshot(
+        feature=row.feature, raw={"eeg": row.raw_eeg, "ppg": row.raw_ppg, "acc": row.raw_acc},
+        final=bool(row.final), first_reported_at=row.first_reported_at)
+
+
+def load_expected_by_session(db, session_ids: list) -> dict:
+    """session_id 목록의 보고 행을 한 번에 읽어 {participant_id: 행} 으로 돌려준다."""
+    from sqlalchemy import select
+
+    from app.models.session_ingest_expected import SessionIngestExpected as E
+
+    if not session_ids:
+        return {}
+    rows = db.execute(select(E).where(E.session_id.in_(session_ids))).scalars().all()
+    return {r.participant_id: r for r in rows}
+
+
+# ---------------------------------------------------------------------------
 # 합계
 # ---------------------------------------------------------------------------
 
