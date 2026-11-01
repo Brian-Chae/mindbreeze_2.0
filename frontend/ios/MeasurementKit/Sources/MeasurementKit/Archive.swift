@@ -104,6 +104,15 @@ public struct ArchiveCounts: Equatable {
     public var pending = 0, uploading = 0, verified = 0, pendingAuthorization = 0, pendingTimeReview = 0, quarantined = 0
 }
 
+/// SDD-264: raw 청크 1개 = 큐 항목 1개 = presign 1건 = 서버 eeg_raw_chunks 행 1개. 신호별(eeg/ppg/acc) 상태별 개수.
+/// quarantined = 사람이 봐야 하는 모든 항목(quarantined + pendingAuthorization + pendingTimeReview) — Android 와 같은 의미(총량에서 빠지지 않게).
+public struct SignalCounts: Equatable {
+    public var pending = 0, uploading = 0, verified = 0, quarantined = 0
+    public init(pending: Int = 0, uploading: Int = 0, verified: Int = 0, quarantined: Int = 0) { self.pending = pending; self.uploading = uploading; self.verified = verified; self.quarantined = quarantined }
+    public var total: Int { pending + uploading + verified + quarantined }
+}
+public enum RawSignals { public static let all = ["eeg", "ppg", "acc"] }
+
 /// 업로드 대기열. 상태 전이마다 journal 에 항목 스냅샷을 fsync 로 남기고(마지막 기록이 현재 상태), task_id↔항목 매핑도 같이 저장한다.
 /// 재실행된 앱에서 OS 의 background URLSession 완료 callback 이 이 매핑으로 항목에 재연결된다.
 public final class ArchiveQueue {
@@ -187,6 +196,32 @@ public final class ArchiveQueue {
     public func dueItems(now: Int) -> [ArchiveItem] {
         lock.lock(); defer { lock.unlock() }
         return items.values.filter { $0.state == .pending && $0.nextAttemptMs <= now }.sorted { $0.alias < $1.alias }
+    }
+
+    /// SDD-264: kind=raw 항목만 신호별로 센다(feature 산출물 제외). 착용 안 한 신호도 0 으로 항상 3개 키를 돌려준다.
+    public func signalCounts() -> [String: SignalCounts] {
+        lock.lock(); defer { lock.unlock() }
+        var out: [String: SignalCounts] = Dictionary(uniqueKeysWithValues: RawSignals.all.map { ($0, SignalCounts()) })
+        for i in items.values where i.kind == .raw {
+            guard let sig = (i.meta?["header"] as? [String: Any])?["signal_type"] as? String, var c = out[sig] else { continue }
+            switch i.state {
+            case .pending: c.pending += 1
+            case .uploading: c.uploading += 1
+            case .verified: c.verified += 1
+            case .pendingAuthorization, .pendingTimeReview, .quarantined: c.quarantined += 1
+            }
+            out[sig] = c
+        }
+        return out
+    }
+
+    public static func signalsPayload(_ m: [String: SignalCounts]) -> [String: Any] {
+        var o: [String: Any] = [:]
+        for sig in RawSignals.all {
+            let c = m[sig] ?? SignalCounts()
+            o[sig] = ["pending": c.pending, "uploading": c.uploading, "verified": c.verified, "quarantined": c.quarantined]
+        }
+        return o
     }
 
     public var counts: ArchiveCounts {

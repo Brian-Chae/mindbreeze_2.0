@@ -106,6 +106,7 @@ class NativeRuntime private constructor(
     fun uploadCounts(): JSONObject = JSONObject()
         .put("feature_pending", box.size()).put("feature_acked", box.acked()).put("feature_quarantined", box.quarantined())
         .put("archive_pending", queue.counts().archivePending).put("archive_verified", queue.counts().archiveVerified)
+        .put("archive_signals", SyncEvents.signalsJson(queue.signalCounts()))
 
     /** live:device: 밴드 상태·접촉이 바뀌거나 30초마다(직렬 컨텍스트). 배터리 잔량은 밴드에서 아직 읽지 않아 null. */
     private fun maybeReportDevice() {

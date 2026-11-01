@@ -159,7 +159,7 @@ class ScopeSweeper(
         if (!archiveDir.exists()) { board.setRaw(info.sessionId, "complete"); return markComplete(dir, info) }
         val q = ArchiveQueue(archiveDir)
         val sid = info.sessionId
-        fun pub() { val prev = board.counts(sid); board.setCounts(sid, SyncCounts.of(prev.featurePending, prev.featureAcked, prev.featureRejected, q.counts())) }
+        fun pub() { val prev = board.counts(sid); board.setCounts(sid, SyncCounts.of(prev.featurePending, prev.featureAcked, prev.featureRejected, q.counts(), q.signalCounts())) }
         pub()
         val up = ArchiveUploader(info.apiBase, q, { ts.current() }, http, { info.streamId })
         val intents = CloseIntentStore(File(dir, "close-intent.json"))
