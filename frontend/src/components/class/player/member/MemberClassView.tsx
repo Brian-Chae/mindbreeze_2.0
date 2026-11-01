@@ -32,7 +32,7 @@ const SHEET_KEYS: readonly string[] = ['status', 'chat', 'signal', 'sound', 'dev
 const isSheetKey = (key: string | null): key is MemberSheetKey => key !== null && SHEET_KEYS.includes(key);
 
 export function MemberClassView(props: MemberClassViewProps) {
-  const { input, header, hero, snapshot, series, device, chat, sound, checkin, sheet, backdropSrc, hostVideo, myVideo, hostVideoIssue, end, waitlist, actions } = props;
+  const { input, header, hero, snapshot, series, device, chat, sound, checkin, sheet, backdropSrc, hostVideo, myVideo, hostVideoIssue, end, waitlist, connToggle, actions } = props;
   const c = useMemo(() => deriveMemberCase(input), [input]);
   // 도크에 없는 시트(오프라인의 조용한 신호 등)는 열지 않는다
   const activeSheet = sheet !== null && c.dock.some((item) => item.key === sheet) ? sheet : null;
@@ -70,7 +70,7 @@ export function MemberClassView(props: MemberClassViewProps) {
       place={c.place}
       sheetOpen={sheetOpen}
       backdrop={<PlayerBackdrop imageSrc={backdropSrc} />}
-      top={<MemberTopBar header={header} conn={c.conn} onLeave={actions.onLeave} />}
+      top={<MemberTopBar header={header} conn={c.conn} onLeave={actions.onLeave} connToggle={connToggle} />}
       dock={
         <>
           <MemberMediaRow c={c} sheetOpen={sheetOpen} actions={actions} />

@@ -122,6 +122,8 @@ export interface MemberClassViewProps {
   end?: MemberEndModel;
   /** 대기열 화면(M20) 정보 */
   waitlist?: MemberWaitlistModel;
+  /** SDD-268: 연결 아이콘을 업로드 안내 토글 버튼으로 쓴다 */
+  connToggle?: { expanded: boolean; onToggle: () => void };
   actions: MemberViewActions;
 }
 

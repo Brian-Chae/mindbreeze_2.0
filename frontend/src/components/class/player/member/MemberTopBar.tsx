@@ -12,9 +12,11 @@ interface MemberTopBarProps {
   header: MemberHeaderModel;
   conn: MemberCase['conn'];
   onLeave: () => void;
+  /** SDD-268: 있으면 연결 표시가 토글 버튼이 된다(업로드 안내 열기/닫기). */
+  connToggle?: { expanded: boolean; onToggle: () => void };
 }
 
-export function MemberTopBar({ header, conn, onLeave }: MemberTopBarProps) {
+export function MemberTopBar({ header, conn, onLeave, connToggle }: MemberTopBarProps) {
   const progress = header.totalSec > 0 ? Math.min(100, Math.max(0, (header.elapsedSec / header.totalSec) * 100)) : 0;
   return (
     <PlayerTopBar
@@ -30,14 +32,24 @@ export function MemberTopBar({ header, conn, onLeave }: MemberTopBarProps) {
           <div className="mp-title-pill__bar" aria-hidden="true"><i style={{ width: `${progress}%` }} /></div>
         </div>
       }
-      right={
-        <div className="mp-conn" data-pz="conn" data-ok={conn.ok ? 'true' : 'false'} role="status" aria-label={conn.label}>
-          {conn.icon === 'dot' ? <i className="mp-conn__dot" /> : (
-            <span className="mp-conn__ic">{conn.icon === 'wifi' ? <Wifi size={20} strokeWidth={2} aria-hidden="true" /> : <WifiOff size={20} strokeWidth={2} aria-hidden="true" />}</span>
-          )}
-          <span className="mp-conn__txt">{conn.label}</span>
-        </div>
-      }
+      right={(() => {
+        const inner = (
+          <>
+            {conn.icon === 'dot' ? <i className="mp-conn__dot" /> : (
+              <span className="mp-conn__ic">{conn.icon === 'wifi' ? <Wifi size={20} strokeWidth={2} aria-hidden="true" /> : <WifiOff size={20} strokeWidth={2} aria-hidden="true" />}</span>
+            )}
+            <span className="mp-conn__txt">{conn.label}</span>
+          </>
+        );
+        return connToggle ? (
+          <button type="button" className="mp-conn mp-conn--btn" data-pz="conn" data-ok={conn.ok ? 'true' : 'false'}
+            aria-label={`${conn.label} · 데이터 전송 상태 보기`} aria-expanded={connToggle.expanded} onClick={connToggle.onToggle}>
+            {inner}
+          </button>
+        ) : (
+          <div className="mp-conn" data-pz="conn" data-ok={conn.ok ? 'true' : 'false'} role="status" aria-label={conn.label}>{inner}</div>
+        );
+      })()}
     />
   );
 }
