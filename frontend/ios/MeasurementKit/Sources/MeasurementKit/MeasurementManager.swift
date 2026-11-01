@@ -225,7 +225,8 @@ public final class MeasurementManager: BandLinkDelegate {
                 enqueueArchive(of: fin)
                 // 종료 기록(close intent)을 서버 응답 이전에 디스크에 먼저 남긴다 — 앱이 죽어도 다음 실행/업로드 완료 깨움에서 이어 보낸다.
                 if closeStream, let sid = sessionId, let q = archive {
-                    Self.closeIntentStore(root: root, sessionId: sid).record(queue: q, sessionId: sid, participantId: participantId, reason: reason, nowUs: Int64(nowMs()) * 1000)
+                    Self.closeIntentStore(root: root, sessionId: sid).record(queue: q, sessionId: sid, participantId: participantId, reason: reason, nowUs: Int64(nowMs()) * 1000,
+                                                                              lastGapSequence: GapEventStore(file: sessionDir(sid).appendingPathComponent(GapEventStore.fileName), sessionId: sid).lastSequence())
                 }
                 if closeStream {
                     live?.dispatch(command: ["command_id": UUID().uuidString.lowercased(), "kind": "capture.close", "client_generation": String(generation),
@@ -267,9 +268,17 @@ public final class MeasurementManager: BandLinkDelegate {
         let packets = MeasurementEngine.rawPackets(in: dir)
         let origin: Int64 = packets.first.map { Int64($0.wall) * 1000 + Int64(bitPattern: $0.arrival &- $0.anchor) } ?? 0
         var chunkers: [BandSensor: RawChunker] = [:]
+        // SDD-270: 구멍 저장소 — event_id 가 결정적이라 복구로 enqueueArchive 가 다시 돌아도 중복되지 않는다.
+        let gapStore = GapEventStore(file: dir.appendingPathComponent(GapEventStore.fileName), sessionId: sid)
+        let linkLog = LinkDropLog(file: dir.appendingPathComponent(LinkDropLog.fileName))
+        let reconnectCount = Int64(bleGaps.count + (openBleGapStart != nil ? 1 : 0))
         func chunker(_ s: BandSensor) -> RawChunker {
             if let c = chunkers[s] { return c }
-            let c = RawChunker(sensor: s, session: sid, originUs: origin) { chunk in
+            let c = RawChunker(sensor: s, session: sid, originUs: origin, onGap: { g in
+                let reason = g.reason == "clock_reset" ? "clock_reset" : (linkLog.kind(startUs: g.startUs, endUs: g.endUs) ?? "packet_gap")
+                let est = reason == "process_terminated" ? "estimated" : "observed"
+                gapStore.append(signal: g.signal, streamId: RawIds.streamId(session: sid, sensor: s), segmentId: g.segmentId, startUs: g.startUs, endUs: g.endUs, reason: reason, observedOrEstimated: est, reconnectCount: reconnectCount)
+            }) { chunk in
                 let h = chunk.meta["header"] as? [String: Any]
                 let a = h?["anchor"] as? [String: Any]
                 let from = (a?["monotonic_us"] as? String) ?? "0"
@@ -631,12 +640,18 @@ public final class MeasurementManager: BandLinkDelegate {
         deviceReportingStopped = true            // stream_not_active(superseded 등)·stream_not_found: 이 stream 으로는 더 보고하지 않는다
     }
 
+    /// SDD-270: 밴드 끊김·앱 종료 시각을 창 시간축(µs)으로 남긴다 — raw segment 경계로 만든 구멍의 사유를 가린다.
+    private func noteLinkDrop(_ kind: String, monoUs m: UInt64) {
+        guard let sid = sessionId, let a = anchor else { return }
+        LinkDropLog(file: sessionDir(sid).appendingPathComponent(LinkDropLog.fileName)).record(us: Int64(a.wallMs) * 1000 + Int64(bitPattern: m &- a.monoUs), kind: kind)
+    }
+
     // MARK: BandLinkDelegate
 
     public func bandLink(didReceive sensor: BandSensor, data: Data, monotonicUs: UInt64) {
         lock.lock(); defer { lock.unlock() }
         guard state == .capturing || state == .reconnecting, let e = engine, let a = anchor else { return }
-        if needsRecoveryMark { e.markResumeAfterRecovery(firstMonotonicUs: monotonicUs); needsRecoveryMark = false }
+        if needsRecoveryMark { noteLinkDrop("process_terminated", monoUs: monotonicUs); e.markResumeAfterRecovery(firstMonotonicUs: monotonicUs); needsRecoveryMark = false }
         if let start = openBleGapStart { bleGaps.append((UUID().uuidString.lowercased(), start, e.lastCommittedRawSequence)); openBleGapStart = nil }
         do { try e.ingest(sensor: sensor, bytes: data, arrivalMonotonicUs: monotonicUs, wallMs: a.wallMs, anchorMonotonicUs: a.monoUs) }
         catch MeasurementEngine.EngineError.storageFull {
@@ -653,7 +668,7 @@ public final class MeasurementManager: BandLinkDelegate {
             if state == .reconnecting, streamId != nil { state = .capturing }
         case .reconnecting, .connecting, .discovering, .scanning:
             bandState = s == .reconnecting ? "reconnecting" : "connecting"
-            if state == .capturing { state = .reconnecting; openBleGapStart = engine?.lastCommittedRawSequence }
+            if state == .capturing { state = .reconnecting; openBleGapStart = engine?.lastCommittedRawSequence; noteLinkDrop("ble_disconnect", monoUs: monoUs()) }
             if reason == "bluetooth_off" { blockedReason = "bluetooth_off" }
         case .blocked:
             bandState = "lost"
