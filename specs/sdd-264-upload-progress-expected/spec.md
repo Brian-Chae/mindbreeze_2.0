@@ -80,7 +80,7 @@
 
 ### D6. 합계 · 진행률 수식
 
-- 분모 포함 참여자 = `state ∉ {not_collected, expected_unknown}` (기대량 보고된 사람).
+- 합계 분모 = **그 컴포넌트의 기대량이 보고된 참여자**(수집 제외 `not_collected` 는 전부 제외). 기대량 미확인 참여자는 사람 수 분모("N명 중")에는 남고 수치 합계에는 보고된 컴포넌트만 들어간다(정본: contract §2.3).
 - `기대 합` = Σ expected, `수신 합(상한)` = Σ min(received, expected) → 초과 수신이 다른 사람의 부족분을 가리지 않는다.
 - `overall.percent = floor(수신합 / 기대합 × 1000) / 10` (기대합=0 이면 `null` → 화면은 중립 표기).
 - 기대 미확인 참여자는 **분모에서 빼지 않고 `expected_unknown` 으로 따로 센다**(`participants.expected_unknown = K`) — FE 가 진행률 옆에 "기대량 미확인 K명" 표시.
