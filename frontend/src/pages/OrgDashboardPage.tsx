@@ -324,7 +324,7 @@ export default function OrgDashboardPage() {
       <OrgRemovedNoticeDialog />
 
       <Link to="/upload-status" data-upload-status-shortcut className="mb-4 flex min-h-12 items-center justify-between rounded-2xl border border-[#DDD0EA] bg-white p-4 text-[#5F0080]">
-        <span><strong>데이터 현황</strong><span className="ml-3 text-sm text-[#6F6F6F]">회차별 서버 수신·업로드 확인</span></span><span aria-hidden="true">→</span>
+        <span><strong>데이터 현황</strong><span className="ml-3 text-sm text-[#6F6F6F]">회차별 데이터 도착 확인</span></span><span aria-hidden="true">→</span>
       </Link>
 
       {error && (

@@ -10,6 +10,9 @@ export interface UploadOverviewView {
   items: UploadOverviewItem[] | null;
   asOf: string | null;
   truncated: boolean;
+  /** SDD-265: 다음 페이지 커서(없으면 마지막 페이지). */
+  nextCursor: string | null;
+  hasMore: boolean;
   error: ApiError | null;
   forbidden: boolean;
   loading: boolean;
@@ -30,6 +33,7 @@ export function useUploadOverview(query: UploadOverviewQuery, enabled = true): U
   const [items, setItems] = useState<UploadOverviewItem[] | null>(null);
   const [asOf, setAsOf] = useState<string | null>(null);
   const [truncated, setTruncated] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -37,10 +41,10 @@ export function useUploadOverview(query: UploadOverviewQuery, enabled = true): U
   const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
   const pausedRef = useRef(false);
   const controls = useRef<{ load: () => void; halt: () => void }>({ load: () => undefined, halt: () => undefined });
-  const { limit, since, orgId, classId, status } = query;
+  const { limit, since, orgId, classId, status, cursor, needsAttentionOnly } = query;
 
   useEffect(() => {
-    setItems(null); setAsOf(null); setTruncated(false); setError(null); setLastFetchedAt(null); setLoading(false);
+    setItems(null); setAsOf(null); setTruncated(false); setNextCursor(null); setError(null); setLastFetchedAt(null); setLoading(false);
     if (!enabled) { controls.current = { load: () => undefined, halt: () => undefined }; return undefined; }
     let disposed = false; let stopped = false; let inflight = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -59,10 +63,10 @@ export function useUploadOverview(query: UploadOverviewQuery, enabled = true): U
       const mine = new AbortController(); ctrl = mine;
       setLoading(true);
       try {
-        const result = await fetchUploadOverview({ limit, since, orgId, classId, status }, { signal: mine.signal, etag });
+        const result = await fetchUploadOverview({ limit, since, orgId, classId, status, cursor, needsAttentionOnly }, { signal: mine.signal, etag });
         if (mine.signal.aborted || disposed) return;
         failures = 0; etag = result.etag ?? etag;
-        if (result.kind === 'ok') { current = result.data.items; setItems(current); setAsOf(result.data.as_of); setTruncated(result.data.truncated); }
+        if (result.kind === 'ok') { current = result.data.items; setItems(current); setAsOf(result.data.as_of); setTruncated(result.data.truncated); setNextCursor(result.data.next_cursor); }
         setError(null); setLastFetchedAt(new Date());
         schedule(overviewPollMs(result.pollIntervalSec, current));
       } catch (e) {
@@ -94,7 +98,7 @@ export function useUploadOverview(query: UploadOverviewQuery, enabled = true): U
       window.removeEventListener('online', onOnline);
       window.removeEventListener('offline', onOffline);
     };
-  }, [enabled, limit, since, orgId, classId, status]);
+  }, [enabled, limit, since, orgId, classId, status, cursor, needsAttentionOnly]);
 
   const pause = useCallback(() => { pausedRef.current = true; setPaused(true); controls.current.halt(); }, []);
   const resume = useCallback(() => { pausedRef.current = false; setPaused(false); controls.current.load(); }, []);
@@ -106,5 +110,5 @@ export function useUploadOverview(query: UploadOverviewQuery, enabled = true): U
     return best;
   }, [items]);
 
-  return { items, asOf, truncated, error, forbidden: error?.status === 403, loading, paused, offline, lastFetchedAt, lastReceivedAt, pause, resume, refresh };
+  return { items, asOf, truncated, nextCursor, hasMore: nextCursor !== null, error, forbidden: error?.status === 403, loading, paused, offline, lastFetchedAt, lastReceivedAt, pause, resume, refresh };
 }

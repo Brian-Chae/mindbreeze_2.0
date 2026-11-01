@@ -14,9 +14,11 @@ export interface UploadStatusLiveBarProps {
   onPause: () => void;
   onResume: () => void;
   onRefresh: () => void;
+  /** 390px 목록처럼 세로 공간이 귀한 화면: 보조 한 줄(마지막 조회·도착)을 모바일에서 숨긴다. */
+  compactMobile?: boolean;
 }
 
-export function UploadStatusLiveBar({ paused, loading, error, forbidden, offline, lastFetchedAt, lastReceivedAt, onPause, onResume, onRefresh }: UploadStatusLiveBarProps) {
+export function UploadStatusLiveBar({ paused, loading, error, forbidden, offline, lastFetchedAt, lastReceivedAt, onPause, onResume, onRefresh, compactMobile = false }: UploadStatusLiveBarProps) {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     if (paused || !lastFetchedAt) return undefined;
@@ -39,8 +41,8 @@ export function UploadStatusLiveBar({ paused, loading, error, forbidden, offline
           ↻ 새로고침
         </button>
       </div>
-      <p className="text-[13px] text-[#776D7B]">
-        마지막 조회 {formatClock(lastFetchedAt)} · 마지막 수신 {formatClock(lastReceivedAt)}
+      <p className={`text-[13px] text-[#776D7B] ${compactMobile ? 'hidden md:block' : ''}`}>
+        마지막 조회 {formatClock(lastFetchedAt)} · 마지막 도착 {formatClock(lastReceivedAt)}
       </p>
       {offline && (
         <p role="alert" className="rounded-xl bg-amber-50 px-3 py-2 text-[13px] text-amber-900">

@@ -727,8 +727,19 @@ public final class MeasurementManager: BandLinkDelegate {
     public func emitSyncStatus(sessionId sid: String, _ s: SyncSnapshot) {
         lock.lock(); defer { lock.unlock() }
         emit(event: "feature.counts", payload: ["sessionId": sid, "pending": s.featurePending, "acked": s.featureAcked, "rejected": s.featureRejected])
-        emit(event: "archive.counts", payload: ["sessionId": sid, "pending": s.archivePending, "uploading": s.archiveUploading, "verified": s.archiveVerified, "quarantined": s.archiveQuarantined])
+        var archivePayload: [String: Any] = ["sessionId": sid, "pending": s.archivePending, "uploading": s.archiveUploading, "verified": s.archiveVerified, "quarantined": s.archiveQuarantined]
+        if let sig = s.signals { archivePayload["signals"] = ArchiveQueue.signalsPayload(sig) }   // SDD-264 additive
+        emit(event: "archive.counts", payload: archivePayload)
         emit(event: "reconcile.state", payload: ["sessionId": sid, "feature": s.featureState, "raw": s.rawState, "complete": s.complete])
+    }
+
+    /// SDD-264: 앱 재기동 직후 JS 가 전체 로컬 총량을 얻는 용도(getMeasurementSnapshot 의 `uploadCounts`). Android uploadCounts() 와 같은 키.
+    public func uploadCounts() -> [String: Any] {
+        lock.lock(); defer { lock.unlock() }
+        let oc = engine?.outbox.counts(), ac = archive?.counts ?? ArchiveCounts()
+        return ["feature_pending": oc?.livePending ?? 0, "feature_acked": oc?.liveAcked ?? 0, "feature_quarantined": oc?.rejected ?? 0,
+                "archive_pending": ac.pending + ac.uploading, "archive_verified": ac.verified,
+                "archive_signals": ArchiveQueue.signalsPayload(archive?.signalCounts() ?? [:])]
     }
 
     public func emitMeasurementUpdated() { emit(event: "measurementUpdated", payload: nil, snapshot: true) }

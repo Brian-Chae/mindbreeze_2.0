@@ -80,7 +80,7 @@ function normalizeSnapshot(raw: MeasurementSnapshot): MeasurementSnapshot {
 const EVENTS: Array<BridgeEvent['event']> = ['measurementUpdated', 'liveStateUpdated', 'commandAck', 'archiveStatus'];
 /** SDD-260: 저장 진행 이벤트 3종(docs/sdd-260-native-js-events.md). seq 는 manager 와 별개라 세대 필터 없이 세션만 맞춰 전달한다 */
 const UPLOAD_EVENTS = ['feature.counts', 'archive.counts', 'reconcile.state'] as const;
-type UploadEventName = typeof UPLOAD_EVENTS[number];
+export type UploadEventName = typeof UPLOAD_EVENTS[number];
 
 const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
 const str = (v: unknown): string => (typeof v === 'string' ? v : 'idle');
@@ -134,6 +134,20 @@ export class NativeMeasurementFacade {
   onUploadProgress(cb: Cb<Partial<UploadProgress>>): () => void { this.uploadCbs.add(cb); return () => { this.uploadCbs.delete(cb); }; }
   onArchive(cb: Cb<{ queue: QueueCounts; blocked_reason: BlockedReason | null; stage: string | null; code: string | null }>): () => void {
     this.archiveCbs.add(cb); return () => { this.archiveCbs.delete(cb); };
+  }
+
+  /**
+   * SDD-264: 세션 필터 없이 저장 진행 3종(feature.counts·archive.counts·reconcile.state)을 raw payload 로 받는다.
+   * 앱 셸의 기대량 보고기가 쓴다(화면을 떠나거나 앱 재기동 뒤 이어올림 중인 세션의 총량도 받아야 한다). 반환 = 해제 함수.
+   */
+  async subscribeUploadEvents(cb: (name: UploadEventName | 'measurementUpdated', payload: unknown) => void): Promise<() => void> {
+    const hs: ListenerHandle[] = [];
+    for (const name of UPLOAD_EVENTS) {
+      hs.push(await this.plugin.addListener(name as BridgeEvent['event'], (e) => cb(name, (e as { payload?: unknown }).payload)));
+    }
+    // 종료 감지(SEALING·DRAINING·CLOSED)용 — 세션 필터 없이 payload 의 sessionId/state 만 넘긴다
+    hs.push(await this.plugin.addListener('measurementUpdated', (e) => cb('measurementUpdated', (e as { payload?: unknown }).payload)));
+    return () => { for (const h of hs) void h.remove().catch(() => undefined); };
   }
 
   getCapabilities(): Promise<Capabilities> {

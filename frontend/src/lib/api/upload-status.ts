@@ -1,6 +1,7 @@
 // SDD-261: 데이터 저장·업로드 현황 조회 API (계약: specs/sdd-261-upload-status-screens/contract.md)
 // apiClient 는 응답 헤더·304 를 노출하지 않아 전용 fetch 를 쓴다. ETag 는 메모리에서만 다룬다(영구 저장 금지).
 import { ApiError, BASE_URL, refreshAccessToken, tokenStorage } from './client';
+import { normalizePersonProgress, normalizeSessionMetrics, normalizeSessionProgress, type PersonProgress, type SessionMetrics, type SessionProgress } from './upload-progress';
 
 export type UploadStatusKind = 'needs_attention' | 'excluded' | 'uploading' | 'received_unreconciled' | 'no_data';
 export type CollectionState = 'eligible' | 'excluded' | 'unknown';
@@ -42,6 +43,10 @@ export interface UploadParticipantDto {
   phone_report: null;
   status: UploadStatusKind;
   reasons: string[];
+  /** SDD-264/265: 참여자 전송 현황. 구 서버면 null. */
+  progress?: PersonProgress | null;
+  /** SDD-265: 참여자 데이터 크기·측정 길이(참여자 기준). */
+  metrics?: SessionMetrics;
 }
 export interface UploadStatusSummaryDto {
   participants: number;
@@ -61,6 +66,10 @@ export interface UploadStatusResponse {
   etag: string;
   summary: UploadStatusSummaryDto;
   participants: UploadParticipantDto[];
+  progress?: SessionProgress | null;
+  metrics?: SessionMetrics;
+  /** 회차 시작·종료(측정 길이 계산 근거). */
+  started_at?: string | null;
 }
 
 export type UploadStatusFetchResult =
@@ -82,6 +91,19 @@ const abortError = () => new DOMException('요청 취소', 'AbortError');
 
 export const uploadStatusPath = (classId: string, sessionId: string): string =>
   `/classes/${encodeURIComponent(classId)}/sessions/${encodeURIComponent(sessionId)}/upload-status`;
+
+/** 가산 필드만 정규화한다. 기존 필드는 서버 값을 그대로 둔다. */
+export function normalizeStatus(raw: unknown): UploadStatusResponse {
+  const r = raw as UploadStatusResponse & Record<string, unknown>;
+  const list = Array.isArray(r.participants) ? r.participants : [];
+  return {
+    ...r,
+    participants: list.map((p) => ({ ...p, progress: normalizePersonProgress((p as unknown as Record<string, unknown>).progress), metrics: normalizeSessionMetrics(p) })),
+    progress: normalizeSessionProgress(r.progress),
+    metrics: normalizeSessionMetrics(r),
+    started_at: typeof r.started_at === 'string' ? r.started_at : null,
+  };
+}
 
 async function errorFrom(res: Response): Promise<ApiError> {
   let data: unknown = null;
@@ -114,7 +136,7 @@ export async function fetchUploadStatus(
   const pollIntervalSec = parseInterval(res.headers.get('X-Poll-Interval'));
   if (res.status === 304) return { kind: 'not_modified', etag: nextEtag ?? etag ?? null, pollIntervalSec };
   if (!res.ok) throw await errorFrom(res);
-  const data = (await res.json()) as UploadStatusResponse;
+  const data = normalizeStatus(await res.json());
   return {
     kind: 'ok',
     data,

@@ -1,6 +1,8 @@
 package com.looxidlabs.mindbreeze.measurement.runtime
 
 import com.looxidlabs.mindbreeze.measurement.archive.ArchiveCounts
+import com.looxidlabs.mindbreeze.measurement.archive.RawSignals
+import com.looxidlabs.mindbreeze.measurement.archive.SignalCounts
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 
@@ -11,11 +13,13 @@ import java.util.concurrent.ConcurrentHashMap
 data class SyncCounts(
     val featurePending: Int = 0, val featureAcked: Long = 0, val featureRejected: Long = 0,
     val archivePending: Int = 0, val archiveUploading: Int = 0, val archiveVerified: Int = 0, val archiveQuarantined: Int = 0,
+    /** SDD-264: raw 청크 신호별 상태 개수. null = 아직 큐를 못 읽음(이벤트에 싣지 않는다 — 0 으로 오해하면 안 된다). */
+    val signals: Map<String, SignalCounts>? = null,
 ) {
     companion object {
         /** archiveQuarantined = 사람이 봐야 하는 항목(중단·사망 편지·시간 검토). 안드로이드 큐에는 uploading 상태가 없어 0. */
-        fun of(featurePending: Int, featureAcked: Long, featureRejected: Long, a: ArchiveCounts) = SyncCounts(
-            featurePending, featureAcked, featureRejected, a.archivePending, 0, a.archiveVerified, a.halted + a.deadLetter + a.pendingTimeReview,
+        fun of(featurePending: Int, featureAcked: Long, featureRejected: Long, a: ArchiveCounts, signals: Map<String, SignalCounts>? = null) = SyncCounts(
+            featurePending, featureAcked, featureRejected, a.archivePending, 0, a.archiveVerified, a.halted + a.deadLetter + a.pendingTimeReview, signals,
         )
     }
 }
@@ -28,11 +32,22 @@ object SyncEvents {
     const val ARCHIVE_COUNTS = "archive.counts"
     const val RECONCILE_STATE = "reconcile.state"
 
+    /** SDD-264 `signals` payload: {eeg|ppg|acc: {pending,uploading,verified,quarantined}} — iOS 와 동일 형태. */
+    fun signalsJson(m: Map<String, SignalCounts>): JSONObject {
+        val o = JSONObject()
+        for (sig in RawSignals.ALL) {
+            val c = m[sig] ?: SignalCounts()
+            o.put(sig, JSONObject().put("pending", c.pending).put("uploading", c.uploading).put("verified", c.verified).put("quarantined", c.quarantined))
+        }
+        return o
+    }
+
     /** 이벤트명 → payload, 항상 이 순서(feature.counts, archive.counts, reconcile.state). */
     fun payloads(sessionId: String, c: SyncCounts, s: SyncState): List<Pair<String, JSONObject>> = listOf(
         FEATURE_COUNTS to JSONObject().put("sessionId", sessionId).put("pending", c.featurePending).put("acked", c.featureAcked).put("rejected", c.featureRejected),
         ARCHIVE_COUNTS to JSONObject().put("sessionId", sessionId).put("pending", c.archivePending).put("uploading", c.archiveUploading)
-            .put("verified", c.archiveVerified).put("quarantined", c.archiveQuarantined),
+            .put("verified", c.archiveVerified).put("quarantined", c.archiveQuarantined)
+            .also { o -> c.signals?.let { o.put("signals", signalsJson(it)) } },
         RECONCILE_STATE to JSONObject().put("sessionId", sessionId).put("feature", s.feature).put("raw", s.raw).put("complete", s.complete),
     )
 }

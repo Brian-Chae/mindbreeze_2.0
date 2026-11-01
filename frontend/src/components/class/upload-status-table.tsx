@@ -1,161 +1,164 @@
-// SDD-261: 설정·클래스 관리가 공유하는 회차 참여자 서버 수신 현황 표.
-// 서버 수신 기준만 표시한다. 점수·완료·100%·좋음/나쁨 표현 없음. 폰 대기량은 "미확인"(0건 아님).
+// SDD-265: 회차 상세 상황판(시안 안3-A). 상단 숫자 4칸 + 전송 막대 + "확인할 사람" 표 먼저, 정상은 접고 10명씩 페이지.
+// 신호별(뇌파·맥박·움직임) 세부는 참여자 '기록 보기'에서만 보인다. 점수·완료·보증 표현 없음.
 import { useMemo, useState } from 'react';
 import type { UploadParticipantDto, UploadStatusResponse } from '../../lib/api/upload-status';
 import {
-  COLLECTION_LABEL, DEFAULT_FILTERS, SIGNAL_LABEL, STATUS_ICON, STATUS_LABEL, STATUS_ORDER,
-  displayName, filterParticipants, formatClock, formatCount, groupParticipants, latestReceived, rawTotals, reasonLabel,
-  type UploadFilters, type UploadGrouping,
-} from '../../lib/upload-status/view';
+  BOARD_LABEL, COACH_OK_NOTE, DASH, PAGE_SIZE, percentText, arrivedText, basisNote, boardState, coachAction, formatBytes, formatMinutes, formatTotalHours,
+  pageCount, personAction, personBucket, slicePage, transferPercent, type BoardState, type PersonBucket,
+} from '../../lib/upload-status/board';
+import { displayName, formatClock, formatCount, latestReceived, rawTotals } from '../../lib/upload-status/view';
+import { Metric, StateBadge, TransferBar, cardClass, fieldClass } from './upload-board-parts';
 
-const statusTone = (s: UploadParticipantDto['status']): string =>
-  s === 'needs_attention' ? 'bg-amber-50 text-amber-900' : s === 'uploading' ? 'bg-[#F3E9F8] text-[#5B1A8A]' : 'bg-gray-100 text-gray-700';
+export const SERVER_BASIS_NOTE = '서버에 도착한 기록 기준이에요. 리포트 반영 여부는 별도예요.';
+const SIGNAL_NAME = { eeg: '뇌파', ppg: '맥박', acc: '움직임' } as const;
 
-export const SERVER_BASIS_NOTE = '서버에서 받은 데이터만 표시해요. 전체 생성 범위와의 대조는 미확인이에요.';
-export const PHONE_QUEUE_NOTE = '폰에 남아 있는 전송 대기량은 현재 서버에 보고되지 않아요. 서버 등록 대기 건수와는 다르며, 미확인은 0건을 뜻하지 않아요.';
+const personComponents = (p: UploadParticipantDto): string => {
+  const prog = p.progress;
+  if (!prog) return '집계 대기';
+  const parts: string[] = [];
+  if (prog.feature.expected !== null && prog.feature.received < prog.feature.expected) parts.push('분석 데이터');
+  const rawShort = (['eeg', 'ppg', 'acc'] as const).some((k) => prog.raw[k].expected !== null && prog.raw[k].received < (prog.raw[k].expected as number));
+  if (rawShort) parts.push('측정 기록 파일');
+  return parts.length ? `${parts.join('·')} 일부 도착` : '일부 도착';
+};
 
-function PhoneQueue() {
+const compState = (received: number, expected: number | null): string => (expected === null ? '집계 대기' : received >= expected ? '모두 도착' : '일부 도착');
+
+function Evidence({ p }: { p: UploadParticipantDto }) {
+  const prog = p.progress;
   return (
-    <details className="inline text-[12px] text-[#776D7B]">
-      <summary className="inline cursor-pointer">폰 대기량: 미확인 ⓘ</summary>
-      <span className="mt-1 block">{PHONE_QUEUE_NOTE}</span>
+    <details className="text-[12px]">
+      <summary className="min-h-11 cursor-pointer py-2 text-[#5F0080]">기록 보기</summary>
+      <div data-testid="upload-detail" className="space-y-1 rounded-[10px] bg-[#F8F5FA] p-2.5 text-[#4A3F52]">
+        {prog ? <>
+          <p>분석 데이터 · {compState(prog.feature.received, prog.feature.expected)}</p>
+          <p>측정 기록 파일 · {(['eeg', 'ppg', 'acc'] as const).some((k) => prog.raw[k].expected === null) ? '집계 대기' : (['eeg', 'ppg', 'acc'] as const).every((k) => prog.raw[k].received >= (prog.raw[k].expected as number)) ? '모두 도착' : '일부 도착'}</p>
+          {(['eeg', 'ppg', 'acc'] as const).map((k) => <p key={k}>{SIGNAL_NAME[k]} · {compState(prog.raw[k].received, prog.raw[k].expected)}</p>)}
+        </> : <p>집계 대기</p>}
+        <p>마지막 도착 {formatClock(latestReceived(p))}</p>
+      </div>
     </details>
   );
 }
 
-function StatusBadge({ p }: { p: UploadParticipantDto }) {
+function PersonTable({ rows, attention }: { rows: UploadParticipantDto[]; attention?: boolean }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-semibold ${statusTone(p.status)}`}>
-      <span aria-hidden="true">{STATUS_ICON[p.status]}</span>{STATUS_LABEL[p.status]}
-    </span>
+    <table className="w-full border-collapse text-left text-[13px]">
+      <thead className="hidden md:table-header-group"><tr className="bg-[#F2F3F8] text-[12px]"><th className="p-3">이름</th><th className="p-3">마지막 도착</th><th className="p-3">{attention ? '덜 도착한 기록' : '데이터 크기 · 측정 길이'}</th><th className="p-3">{attention ? '할 일' : '기록'}</th></tr></thead>
+      <tbody>
+        {rows.map((p) => {
+          const failed = rawTotals(p).failed > 0;
+          const stalled = p.reasons.includes('raw_pending_stale');
+          return (
+            <tr key={p.participant_id} data-testid="upload-row" data-bucket={attention ? 'attention' : 'other'} className="grid grid-cols-2 border-t border-[#EEE8F1] md:table-row">
+              <td className="p-2.5 font-semibold md:p-3">{displayName(p)}{p.is_guest && <small className="ml-1 font-normal text-[#776D7B]">게스트</small>}</td>
+              <td className="p-2.5 md:p-3">{formatClock(latestReceived(p))}</td>
+              <td className="col-span-2 p-2.5 md:col-span-1 md:p-3">{attention ? personComponents(p) : `${formatBytes(p.metrics?.bytes_arrived)} · ${formatMinutes(p.metrics?.measured_min)}`}</td>
+              <td className="col-span-2 p-2.5 md:col-span-1 md:p-3">{attention ? personAction({ failed, stalled }) : null}<Evidence p={p} /></td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 }
 
-function RawLine({ p }: { p: UploadParticipantDto }) {
-  const t = rawTotals(p);
-  return <>원시 {formatCount(t.uploaded)}건 수신{t.pending > 0 ? ` · 서버 등록 대기 ${formatCount(t.pending)}건` : ''}</>;
-}
-
-function ReasonLines({ p }: { p: UploadParticipantDto }) {
-  const failed = rawTotals(p).failed;
-  if (p.reasons.length === 0) return p.status === 'received_unreconciled' ? <span>알려진 내부 결측 없음 · 전체 대조 미확인</span> : null;
+function Paged({ rows, label, attention }: { rows: UploadParticipantDto[]; label: string; attention?: boolean }) {
+  const [page, setPage] = useState(0);
+  const last = pageCount(rows.length) - 1;
+  const cur = Math.min(page, last);
   return (
-    <ul className="space-y-0.5">
-      {p.reasons.map((r) => (
-        <li key={r}>{reasonLabel(r)}{r === 'raw_failed' && failed > 0 ? ` · ${formatCount(failed)}건` : ''}</li>
-      ))}
-    </ul>
-  );
-}
-
-function Detail({ p }: { p: UploadParticipantDto }) {
-  return (
-    <div className="space-y-1.5 bg-[#FAF7FC] px-4 py-3 text-[13px] text-[#4A3F52]" data-testid="upload-detail">
-      <p>마지막 수신 {formatClock(latestReceived(p))}</p>
-      <p>
-        {p.raw.signals.map((s) => `${SIGNAL_LABEL[s.signal_type]} ${formatCount(s.uploaded)}건`).join(' · ')} 수신
-        {p.raw.signals.some((s) => s.pending > 0) && ` · 서버 등록 대기 ${p.raw.signals.map((s) => `${SIGNAL_LABEL[s.signal_type]} ${s.pending}`).join('/')}`}
-      </p>
-      <p>feature 내부 결측 {formatCount(p.feature.internal_missing)} · 원시 내부 결측 {formatCount(p.raw.signals.reduce((n, s) => n + s.internal_missing, 0))}</p>
-      <p>리포트 입력 데이터 수신 여부와 리포트 선택({p.report_included === null ? '미확인' : p.report_included ? '선택' : '제외'})은 별도예요.</p>
-      <p>전체 대조 미확인</p>
-      <div><PhoneQueue /></div>
+    <div data-testid={`paged-${label}`}>
+      <PersonTable rows={slicePage(rows, cur)} attention={attention} />
+      {rows.length > PAGE_SIZE && (
+        <div className="mt-2 flex items-center justify-between">
+          <button type="button" data-testid="person-prev" disabled={cur === 0} onClick={() => setPage(cur - 1)} className={`${fieldClass} disabled:opacity-40`}>이전 {PAGE_SIZE}명</button>
+          <span data-testid="person-info" className="text-[12px] text-[#776D7B]">{cur + 1} / {last + 1} · {formatCount(rows.length)}명</span>
+          <button type="button" data-testid="person-next" disabled={cur === last} onClick={() => setPage(cur + 1)} className={`${fieldClass} disabled:opacity-40`}>다음 {PAGE_SIZE}명</button>
+        </div>
+      )}
     </div>
   );
 }
 
-function Row({ p }: { p: UploadParticipantDto }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <li data-testid="upload-row" data-status={p.status} className="border-b border-[#F0EBF2] last:border-b-0">
-      <div className="grid items-center gap-2 px-4 py-3 text-[14px] md:grid-cols-[1.2fr_0.9fr_1.1fr_1.3fr_0.9fr_1.4fr_auto]">
-        <div className="min-w-0 break-words font-semibold text-[#2C2133]">{displayName(p)}{p.is_guest && <span className="ml-1 text-[12px] font-normal text-[#776D7B]">게스트</span>}</div>
-        <div className="text-[#4A3F52]">{p.participation_status === 'waitlisted' ? '대기열' : COLLECTION_LABEL[p.collection_state]}</div>
-        <div className="text-[#4A3F52]">feature {formatCount(p.feature.received)}창 수신</div>
-        <div className="text-[#4A3F52]"><RawLine p={p} /></div>
-        <div className="text-[13px] text-[#776D7B]">{formatClock(latestReceived(p))}</div>
-        <div className="space-y-1"><StatusBadge p={p} /><div className="text-[12px] text-[#4A3F52]"><ReasonLines p={p} /></div></div>
-        <button type="button" aria-expanded={open} aria-label={`${displayName(p)} 상세 ${open ? '접기' : '확인'}`} onClick={() => setOpen((v) => !v)} className="min-h-11 min-w-11 rounded-lg text-[#5B1A8A]">{open ? '▲' : '▼'}</button>
-      </div>
-      {open && <Detail p={p} />}
-    </li>
-  );
-}
-
-const HEADERS = ['참여자', '수집 대상', 'feature 수신', '원시 수신', '마지막 수신', '확인 상태', '상세'];
-
 export interface UploadStatusTableProps { data: UploadStatusResponse }
 
+/** 회차 상태: 상세는 목록과 같은 판정을 쓰되 최상위 progress 를 그대로 넘긴다. */
+function sessionState(data: UploadStatusResponse): BoardState {
+  return boardState({ progress: data.progress ?? null, summary: data.summary, session_status: data.session_status, status: null });
+}
+
 export function UploadStatusTable({ data }: UploadStatusTableProps) {
-  const [filters, setFilters] = useState<UploadFilters>(DEFAULT_FILTERS);
-  const [grouping, setGrouping] = useState<UploadGrouping>('attention');
-  const filtered = useMemo(() => filterParticipants(data.participants, filters), [data.participants, filters]);
-  const groups = useMemo(() => groupParticipants(filtered, grouping), [filtered, grouping]);
-  const s = data.summary;
-  const featureTotal = data.participants.reduce((n, p) => n + p.feature.received, 0);
-  const rawTotal = data.participants.reduce((n, p) => n + rawTotals(p).uploaded, 0);
-  const rawPending = data.participants.reduce((n, p) => n + rawTotals(p).pending, 0);
-  const rawFailed = data.participants.reduce((n, p) => n + rawTotals(p).failed, 0);
-  const set = <K extends keyof UploadFilters>(key: K, value: UploadFilters[K]) => setFilters((f) => ({ ...f, [key]: value }));
-  const field = 'min-h-11 rounded-xl border border-[#E8E2ED] bg-white px-3 text-[14px]';
+  const [query, setQuery] = useState('');
+  const state = sessionState(data);
+  const m = data.metrics;
+  const prog = data.progress ?? null;
+  const attentionN = prog ? prog.participants.needs_attention : data.summary.needs_attention;
+  const percent = transferPercent(m, prog?.overall, state === 'ok');
+  const uncertain = state === 'pending';
+  const buckets = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const b: Record<PersonBucket, UploadParticipantDto[]> = { attention: [], arrived: [], waiting: [], excluded: [] };
+    for (const p of data.participants) {
+      if (q && !displayName(p).toLowerCase().includes(q)) continue;
+      b[personBucket(p)].push(p);
+    }
+    for (const k of Object.keys(b) as PersonBucket[]) b[k].sort((x, y) => displayName(x).localeCompare(displayName(y), 'ko') || x.participant_id.localeCompare(y.participant_id));
+    return b;
+  }, [data.participants, query]);
+  const action = coachAction(state, attentionN);
+  const waitingN = buckets.waiting.length;
+  const excludedN = buckets.excluded.length;
 
   return (
-    <div className="space-y-4" data-testid="upload-status-table">
-      <section aria-label="요약" className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-2xl border border-[#E9E2EB] bg-white p-4">
-          <p className="text-[13px] text-[#776D7B]">참여자 {formatCount(s.participants)}명 · 확인 상태</p>
-          <p className="mt-1 text-[22px] font-bold text-[#2C2133]">{formatCount(s.needs_attention)}명 <span className="text-[14px] font-semibold text-amber-900">! 확인 필요</span></p>
-          <p className="text-[13px] text-[#4A3F52]">수신 확인 {formatCount(s.received_unreconciled)}명 · 수집 제외 {formatCount(s.excluded)}명 · 등록 건 업로드 중 {formatCount(s.uploading)}명 · 미수신 {formatCount(s.no_data)}명</p>
-          <p className="text-[12px] text-[#776D7B]">전체 대조 미확인</p>
+    <div className="space-y-3" data-testid="upload-status-table">
+      <section aria-label="회차 상황판" className={`${cardClass} border-t-[3px] border-t-[#5F0080]`}>
+        <h2 className="text-[18px] font-bold">회차 데이터 상황판</h2>
+        <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-3">
+          <Metric testId="metric-state" title="상태" value={<StateBadge state={state} label={state === 'warn' ? `${BOARD_LABEL.warn} ${attentionN}명` : BOARD_LABEL[state]} className="!text-[14px]" />} sub={state === 'ok' ? COACH_OK_NOTE : state === 'warn' ? '앱 연결 확인' : state === 'live' ? '현재까지 도착한 기록' : '최신 현황 확인 대기'} />
+          <Metric testId="metric-people" title="참여자" value={uncertain ? DASH : arrivedText(m)} sub="도착 / 확인된 대상" />
+          <Metric testId="metric-bytes" title="데이터 크기" value={uncertain ? DASH : formatBytes(m?.bytes_arrived)} sub={m?.bytes_expected != null ? `예상 ${formatBytes(m.bytes_expected)}` : '연결 후 확인'} />
+          <Metric testId="metric-duration" title="측정 길이" value={formatMinutes(m?.duration_min)} sub={m?.participant_minutes_total != null ? `참여자 합계 ${formatTotalHours(m.participant_minutes_total)}` : '참여자 합계 확인 전'} />
         </div>
-        <div className="rounded-2xl border border-[#E9E2EB] bg-white p-4">
-          <p className="text-[13px] text-[#776D7B]">feature · 리포트 입력 데이터 수신</p>
-          <p className="mt-1 text-[22px] font-bold text-[#2C2133]">{formatCount(featureTotal)} <span className="text-[14px] font-semibold">창 수신</span></p>
-          <p className="text-[12px] text-[#776D7B]">↓ 서버 수신 기준 · 리포트 선택 여부·품질은 별도 확인</p>
-        </div>
-        <div className="rounded-2xl border border-[#E9E2EB] bg-white p-4">
-          <p className="text-[13px] text-[#776D7B]">원시 데이터 · EEG / PPG / ACC</p>
-          <p className="mt-1 text-[22px] font-bold text-[#2C2133]">{formatCount(rawTotal)} <span className="text-[14px] font-semibold">건 수신</span></p>
-          <p className="text-[12px] text-[#4A3F52]">◷ 서버 등록 대기 {formatCount(rawPending)}건 · 서버가 받지 않은 등록 건 {formatCount(rawFailed)}건</p>
-          <p className="text-[12px] text-[#776D7B]">전체 생성 건수 미확인</p>
-        </div>
+        <div className="mt-4 flex justify-between"><b>전송 현황</b><b data-testid="transfer-percent">{percentText(percent)}</b></div>
+        <TransferBar percent={percent} />
+        <p className="text-[12px] text-[#776D7B]">{basisNote(prog, state)}</p>
+        {(action || state === 'ok') && <p data-testid="action-line" className="mt-2 text-[12px] text-[#805000]">{action ?? COACH_OK_NOTE}</p>}
+        <details className="mt-3 rounded-[10px] bg-[#F8F5FA] p-2.5 text-[12px]">
+          <summary className="min-h-11 cursor-pointer py-2 text-[#5F0080]">전송 세부 보기</summary>
+          <p>분석 데이터 · {prog ? compState(prog.feature.received, prog.feature.expected) : '집계 대기'}</p>
+          <p>측정 기록 파일 · {prog ? (['eeg', 'ppg', 'acc'] as const).some((k) => prog.raw[k].expected === null) ? '집계 대기' : (['eeg', 'ppg', 'acc'] as const).every((k) => prog.raw[k].received >= (prog.raw[k].expected as number)) ? '모두 도착' : '일부 도착' : '집계 대기'}</p>
+          <p className="text-[#776D7B]">{SERVER_BASIS_NOTE}</p>
+        </details>
       </section>
-      <div className="text-[13px] text-[#776D7B]">ⓘ {SERVER_BASIS_NOTE} <PhoneQueue /></div>
 
-      <div className="flex flex-wrap gap-2" role="search">
-        <input type="search" aria-label="참여자 이름 검색" placeholder="참여자 이름" value={filters.query} onChange={(e) => set('query', e.target.value)} className={`${field} min-w-0 flex-1`} />
-        <select aria-label="상태 필터" value={filters.status} onChange={(e) => set('status', e.target.value as UploadFilters['status'])} className={field}>
-          <option value="all">전체 상태</option>
-          {STATUS_ORDER.map((k) => <option key={k} value={k}>{STATUS_LABEL[k]}</option>)}
-        </select>
-        <select aria-label="수집 대상 필터" value={filters.collection} onChange={(e) => set('collection', e.target.value as UploadFilters['collection'])} className={field}>
-          <option value="all">전체 수집 대상</option>
-          <option value="eligible">수집 대상</option><option value="excluded">수집 제외</option><option value="unknown">수집 대상 미확인</option>
-        </select>
-        <select aria-label="리포트 선택 필터" value={filters.report} onChange={(e) => set('report', e.target.value as UploadFilters['report'])} className={field}>
-          <option value="all">리포트 선택 전체</option><option value="included">리포트 선택</option><option value="excluded">리포트 제외</option>
-        </select>
-        <select aria-label="그룹핑" value={grouping} onChange={(e) => setGrouping(e.target.value as UploadGrouping)} className={field}>
-          <option value="attention">확인 필요 / 그 외</option><option value="collection">수집 대상별</option>
-        </select>
+      <div className="flex gap-2" role="search">
+        <input type="search" aria-label="참여자 이름 검색" placeholder="참여자 이름" value={query} onChange={(e) => setQuery(e.target.value)} className={`${fieldClass} min-w-0 flex-1`} />
       </div>
 
       {data.participants.length === 0 ? (
-        <p role="status" className="rounded-2xl border border-[#E9E2EB] bg-white p-6 text-center text-[#776D7B]">등록된 참여자가 없어요</p>
-      ) : filtered.length === 0 ? (
-        <p role="status" className="rounded-2xl border border-[#E9E2EB] bg-white p-6 text-center text-[#776D7B]">조건에 맞는 참여자가 없어요</p>
+        <p role="status" className={`${cardClass} text-center text-[#776D7B]`}>등록된 참여자가 없어요</p>
+      ) : buckets.attention.length + buckets.arrived.length + waitingN + excludedN === 0 ? (
+        <p role="status" className={`${cardClass} text-center text-[#776D7B]`}>조건에 맞는 참여자가 없어요</p>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-[#E9E2EB] bg-white">
-          <div className="hidden bg-[#FAF7FC] px-4 py-2 text-[12px] text-[#776D7B] md:grid md:grid-cols-[1.2fr_0.9fr_1.1fr_1.3fr_0.9fr_1.4fr_auto] md:gap-2" aria-hidden="true">
-            {HEADERS.map((h) => <div key={h}>{h}</div>)}
-          </div>
-          {groups.map((g) => (
-            <section key={g.key} aria-label={g.label}>
-              <h3 className="border-y border-[#F0EBF2] bg-[#FDFBFE] px-4 py-2 text-[13px] font-semibold text-[#5B1A8A]">{g.label} · {formatCount(g.rows.length)}명</h3>
-              <ul>{g.rows.map((p) => <Row key={p.participant_id} p={p} />)}</ul>
-            </section>
-          ))}
-        </div>
+        <section className={cardClass} aria-label="참여자">
+          {buckets.attention.length > 0 && (
+            <div data-testid="group-attention"><h2 className="mb-1 text-[18px] font-bold">확인할 사람 · {formatCount(buckets.attention.length)}명</h2><Paged rows={buckets.attention} label="attention" attention /></div>
+          )}
+          {buckets.arrived.length > 0 && (
+            <details data-testid="group-arrived" className="mt-2">
+              <summary className="min-h-11 cursor-pointer py-2 font-medium text-[#5F0080]">모두 도착 {formatCount(buckets.arrived.length)}명 보기</summary>
+              <Paged rows={buckets.arrived} label="arrived" />
+            </details>
+          )}
+          {waitingN + excludedN > 0 && (
+            <details data-testid="group-waiting" className="mt-2">
+              <summary className="min-h-11 cursor-pointer py-2 font-medium text-[#5F0080]">{[waitingN > 0 && `집계 대기·전송 중 ${formatCount(waitingN)}명`, excludedN > 0 && `수집 제외 ${formatCount(excludedN)}명`].filter(Boolean).join(' · ')}</summary>
+              {waitingN > 0 && <Paged rows={buckets.waiting} label="waiting" />}
+              {excludedN > 0 && <div className="mt-2"><p className="text-[12px] text-[#776D7B]">수집 제외는 문제가 아니에요</p><Paged rows={buckets.excluded} label="excluded" /></div>}
+            </details>
+          )}
+        </section>
       )}
     </div>
   );

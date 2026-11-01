@@ -1,0 +1,186 @@
+{
+  "baseline": [
+    {
+      "file": "02-class-participants.html",
+      "width": 1440,
+      "height": 3721,
+      "overflow": 0
+    },
+    {
+      "file": "03-mobile.html",
+      "width": 1440,
+      "height": 6727,
+      "overflow": 0
+    },
+    {
+      "file": "02-class-participants.html",
+      "width": 390,
+      "height": 4107,
+      "overflow": 0
+    },
+    {
+      "file": "03-mobile.html",
+      "width": 390,
+      "height": 7150,
+      "overflow": 0
+    }
+  ],
+  "results": [
+    {
+      "variant": 1,
+      "width": 1440,
+      "mode": "coach",
+      "height": 1454,
+      "overflow": 0,
+      "firstRowTop": 462.5
+    },
+    {
+      "variant": 1,
+      "width": 1440,
+      "mode": "detail",
+      "height": 1517,
+      "overflow": 0,
+      "firstRowTop": 711
+    },
+    {
+      "variant": 1,
+      "width": 1440,
+      "interactions": "검색·필터・회차/회원/참여자 페이지・행 펼침・시트/ESC/포커스 복귀・상태 변주・조회 시각",
+      "passed": true
+    },
+    {
+      "variant": 1,
+      "width": 390,
+      "mode": "coach",
+      "height": 1837,
+      "overflow": 0,
+      "firstRowTop": 442
+    },
+    {
+      "variant": 1,
+      "width": 390,
+      "mode": "detail",
+      "height": 1547,
+      "overflow": 0,
+      "firstRowTop": 735
+    },
+    {
+      "variant": 1,
+      "width": 390,
+      "mode": "member",
+      "height": 1304,
+      "overflow": 0,
+      "firstRowTop": 546.5
+    },
+    {
+      "variant": 1,
+      "width": 390,
+      "interactions": "검색·필터・회차/회원/참여자 페이지・행 펼침・시트/ESC/포커스 복귀・상태 변주・조회 시각",
+      "passed": true
+    },
+    {
+      "variant": 2,
+      "width": 1440,
+      "mode": "coach",
+      "height": 2015,
+      "overflow": 0,
+      "firstRowTop": 421
+    },
+    {
+      "variant": 2,
+      "width": 1440,
+      "mode": "detail",
+      "height": 1504,
+      "overflow": 0,
+      "firstRowTop": 697
+    },
+    {
+      "variant": 2,
+      "width": 1440,
+      "interactions": "검색·필터・회차/회원/참여자 페이지・행 펼침・시트/ESC/포커스 복귀・상태 변주・조회 시각",
+      "passed": true
+    },
+    {
+      "variant": 2,
+      "width": 390,
+      "mode": "coach",
+      "height": 3348,
+      "overflow": 0,
+      "firstRowTop": 402.5
+    },
+    {
+      "variant": 2,
+      "width": 390,
+      "mode": "detail",
+      "height": 1533,
+      "overflow": 0,
+      "firstRowTop": 720
+    },
+    {
+      "variant": 2,
+      "width": 390,
+      "mode": "member",
+      "height": 1406,
+      "overflow": 0,
+      "firstRowTop": 648.5
+    },
+    {
+      "variant": 2,
+      "width": 390,
+      "interactions": "검색·필터・회차/회원/참여자 페이지・행 펼침・시트/ESC/포커스 복귀・상태 변주・조회 시각",
+      "passed": true
+    },
+    {
+      "variant": 3,
+      "width": 1440,
+      "mode": "coach",
+      "height": 999,
+      "overflow": 0,
+      "firstRowTop": 520.5
+    },
+    {
+      "variant": 3,
+      "width": 1440,
+      "mode": "detail",
+      "height": 1504,
+      "overflow": 0,
+      "firstRowTop": 697
+    },
+    {
+      "variant": 3,
+      "width": 1440,
+      "interactions": "검색·필터・회차/회원/참여자 페이지・행 펼침・시트/ESC/포커스 복귀・상태 변주・조회 시각",
+      "passed": true
+    },
+    {
+      "variant": 3,
+      "width": 390,
+      "mode": "coach",
+      "height": 1149,
+      "overflow": 0,
+      "firstRowTop": 520
+    },
+    {
+      "variant": 3,
+      "width": 390,
+      "mode": "detail",
+      "height": 1533,
+      "overflow": 0,
+      "firstRowTop": 720
+    },
+    {
+      "variant": 3,
+      "width": 390,
+      "mode": "member",
+      "height": 1304,
+      "overflow": 0,
+      "firstRowTop": 546.5
+    },
+    {
+      "variant": 3,
+      "width": 390,
+      "interactions": "검색·필터・회차/회원/참여자 페이지・행 펼침・시트/ESC/포커스 복귀・상태 변주・조회 시각",
+      "passed": true
+    }
+  ]
+}

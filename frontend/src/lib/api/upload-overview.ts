@@ -3,6 +3,7 @@
 // 단일 회차 API 와 같이 전용 fetch 로 ETag·X-Poll-Interval 을 다룬다. ETag 는 메모리에서만 보관한다.
 import { ApiError, BASE_URL, refreshAccessToken, tokenStorage } from './client';
 import type { UploadStatusKind, UploadStatusSummaryDto } from './upload-status';
+import { normalizeSessionMetrics, normalizeSessionProgress, type SessionMetrics, type SessionProgress } from './upload-progress';
 
 export interface UploadOverviewItem {
   class_id: string;
@@ -21,6 +22,10 @@ export interface UploadOverviewItem {
   summary: UploadStatusSummaryDto;
   /** 서버가 준 회차 대표 상태. 없으면 summary 로 계산한다. */
   status: UploadStatusKind | null;
+  /** SDD-264/265: 전송 현황 합계. 구 서버·미보고면 null(화면은 '집계 대기'). */
+  progress: SessionProgress | null;
+  /** SDD-265: 데이터 크기·측정 길이. 모르면 각 필드 null. */
+  metrics: SessionMetrics;
 }
 export interface UploadOverviewResponse {
   as_of: string | null;
@@ -28,13 +33,18 @@ export interface UploadOverviewResponse {
   etag: string | null;
   truncated: boolean;
   total_candidates: number | null;
+  /** SDD-265: 다음 페이지 커서. 없으면 마지막 페이지. */
+  next_cursor: string | null;
+  has_more: boolean;
+  /** needs_attention_only 스캔이 상한에서 멈췄으면 true(더 있을 수 있음). */
+  scan_limited: boolean;
   items: UploadOverviewItem[];
 }
 export type UploadOverviewFetchResult =
   | { kind: 'ok'; data: UploadOverviewResponse; etag: string | null; pollIntervalSec: number | null }
   | { kind: 'not_modified'; etag: string | null; pollIntervalSec: number | null };
 
-export interface UploadOverviewQuery { limit?: number; since?: string | null; orgId?: string | null; classId?: string | null; status?: UploadStatusKind | null }
+export interface UploadOverviewQuery { limit?: number; since?: string | null; orgId?: string | null; classId?: string | null; status?: UploadStatusKind | null; cursor?: string | null; needsAttentionOnly?: boolean }
 export interface FetchUploadOverviewOptions { signal?: AbortSignal; etag?: string | null }
 
 const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
@@ -59,9 +69,11 @@ export function normalizeOverview(raw: unknown): UploadOverviewResponse {
         received_unreconciled: num(e.received_unreconciled), no_data: num(e.no_data), excluded: num(e.excluded),
       },
       status: (str(e.status) as UploadStatusKind | null),
+      progress: normalizeSessionProgress(e.progress),
+      metrics: normalizeSessionMetrics(e),
     };
   }).filter((i) => i.class_id && i.session_id);
-  return { as_of: str(r.as_of), poll_interval_sec: typeof r.poll_interval_sec === 'number' ? r.poll_interval_sec : null, etag: str(r.etag), truncated: r.truncated === true, total_candidates: typeof r.total_candidates === 'number' ? r.total_candidates : null, items };
+  return { as_of: str(r.as_of), poll_interval_sec: typeof r.poll_interval_sec === 'number' ? r.poll_interval_sec : null, etag: str(r.etag), truncated: r.truncated === true, total_candidates: typeof r.total_candidates === 'number' ? r.total_candidates : null, next_cursor: str(r.next_cursor), has_more: r.has_more === true || str(r.next_cursor) !== null, scan_limited: r.scan_limited === true, items };
 }
 
 const parseInterval = (value: string | null): number | null => {
@@ -78,6 +90,8 @@ export const uploadOverviewPath = (q: UploadOverviewQuery = {}): string => {
   if (q.orgId) p.set('org_id', q.orgId);
   if (q.classId) p.set('class_id', q.classId);
   if (q.status) p.set('status', q.status);
+  if (q.cursor) p.set('cursor', q.cursor);
+  if (q.needsAttentionOnly) p.set('needs_attention_only', 'true');
   const qs = p.toString();
   return `/upload-status/overview${qs ? `?${qs}` : ''}`;
 };

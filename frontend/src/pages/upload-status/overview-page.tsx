@@ -6,7 +6,7 @@ export default function UploadOverviewPage({ platform = false }: { platform?: bo
   return (
     <AppShell title="데이터 현황" sub={platform ? 'ADMIN' : 'DATA'}>
       <div className="mx-auto max-w-6xl space-y-4 text-[#2C2133]">
-        <p className="text-[14px] text-[#776D7B]">내가 볼 수 있는 회차의 서버 수신 현황이에요. 회차를 누르면 참여자별 상세를 볼 수 있어요.</p>
+        <p className="hidden text-[14px] text-[#776D7B] md:block">최근 회차의 데이터가 서버에 얼마나 도착했는지 숫자로 보여 줘요. 확인할 곳이 먼저 나와요.</p>
         <UploadOverviewScreen platform={platform} />
       </div>
     </AppShell>

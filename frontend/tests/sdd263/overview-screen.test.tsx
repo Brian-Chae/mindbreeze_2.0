@@ -13,9 +13,12 @@ vi.mock('../../src/lib/api/admin', () => ({ listAdminOrganizations: () => Promis
 import { UploadOverviewScreen } from '../../src/components/class/upload-overview-screen';
 
 const sum = (o = {}) => ({ participants: 40, needs_attention: 2, uploading: 1, received_unreconciled: 30, no_data: 5, excluded: 2, ...o });
-const data = { as_of: null, poll_interval_sec: 3, etag: null, items: [
-  { class_id: 'c1', class_title: 'A반', session_id: 's1', seq: 3, session_status: 'in_progress', band_not_connected: 4, org_id: null, org_name: null, host_name: '김', session_at: new Date().toISOString(), last_received_at: '2026-11-01T01:02:03Z', summary: sum(), status: null },
-  { class_id: 'c2', class_title: 'B반', session_id: 's2', seq: 1, session_status: 'completed', band_not_connected: 0, org_id: null, org_name: null, host_name: null, session_at: new Date().toISOString(), last_received_at: null, summary: sum({ needs_attention: 0, uploading: 0 }), status: null },
+const M = (e: number, a: number, b: number, d: number, t: number) => ({ participants_expected: e, participants_arrived: a, measured_min: null, bytes_arrived: b, bytes_expected: null, duration_min: d, participant_minutes_total: t });
+const r1 = { expected: 10, received: 10, percent: 100 };
+const okProg = () => ({ participants: { total: 40, counted: 40, all_received: 40, in_progress: 0, needs_attention: 0, expected_unknown: 0, not_collected: 0 }, feature: r1, raw: { eeg: r1, ppg: r1, acc: r1 }, overall: r1 });
+const data = { as_of: null, next_cursor: null, has_more: false, scan_limited: false, poll_interval_sec: 3, etag: null, items: [
+  { class_id: 'c1', class_title: 'A반', session_id: 's1', seq: 3, session_status: 'in_progress', band_not_connected: 4, org_id: null, org_name: null, host_name: '김', session_at: new Date().toISOString(), last_received_at: '2026-11-01T01:02:03Z', summary: sum(), status: null, progress: null, metrics: M(38, 36, 1180000000, 52, 2082) },
+  { class_id: 'c2', class_title: 'B반', session_id: 's2', seq: 1, session_status: 'completed', band_not_connected: 0, org_id: null, org_name: null, host_name: null, session_at: new Date().toISOString(), last_received_at: null, summary: sum({ needs_attention: 0, uploading: 0 }), status: null, progress: okProg(), metrics: M(40, 40, 1310000000, 60, 2400) },
 ] };
 async function mount(platform = false) {
   const host = document.createElement('div'); document.body.appendChild(host); const root = createRoot(host);
@@ -26,26 +29,52 @@ async function mount(platform = false) {
 beforeEach(() => { fetchMock.mockReset(); useAuthStore.setState({ user: { id: 'u', role: 'counselor', name: 'n', email: 'e@e.test' } as never }); });
 afterEach(() => { document.body.innerHTML = ''; });
 
-it('V-O 목록: 회차별 요약·진행 중 먼저·상세 링크', async () => {
+it('SDD-265 목록: 확인할 곳 먼저·숫자 칸·상세 링크·정상 접기', async () => {
   fetchMock.mockResolvedValue({ kind: 'ok', data, etag: null, pollIntervalSec: 3 });
   const { host, root } = await mount();
   const rows = host.querySelectorAll('[data-testid="overview-row"]');
   expect(rows).toHaveLength(2);
   expect(rows[0].getAttribute('data-session-id')).toBe('s1');
-  expect(rows[0].textContent).toContain('수신 확인 30');
-  expect(rows[0].textContent).toContain('확인 필요 2');
+  expect(rows[0].getAttribute('data-state')).toBe('warn');
+  expect(rows[0].textContent).toContain('확인할 사람 2명');
+  expect(rows[0].textContent).toContain('36/38명');
+  expect(rows[0].textContent).toContain('1.10GB');
+  expect(rows[0].textContent).toContain('52분');
+  expect(rows[0].textContent).toContain('합계 34.7시간');
+  expect(rows[0].textContent).toContain('2명이 앱을 다시 켜고');
   expect(rows[0].querySelector('a')?.getAttribute('href')).toBe('/classes/c1/sessions/s1/upload-status');
-  expect(rows[0].textContent).toContain('밴드 연결 안 됨 4명');
-  expect(host.textContent).not.toMatch(/완료|점수|100%|좋음|나쁨|보증/);
+  expect((host.querySelector('[data-testid="group-warn"]') as HTMLDetailsElement).open).toBe(true);
+  expect((host.querySelector('[data-testid="group-ok"]') as HTMLDetailsElement).open).toBe(false);
+  expect(host.querySelector('[data-testid="hero-people"]')?.textContent).toContain('2명');
+  expect(host.textContent).not.toMatch(/완료|점수|좋음|나쁨|보증|feature|원시|EEG|PPG|ACC|업로드|수신/);
   await act(async () => root.unmount());
 });
-it('V-O 상태 필터·검색·빈 상태', async () => {
+it('SDD-265 목록: 한 쪽 10건 요청·커서로 다음/이전 페이지', async () => {
+  fetchMock.mockResolvedValueOnce({ kind: 'ok', data: { ...data, next_cursor: 'C1', has_more: true }, etag: null, pollIntervalSec: 60 });
+  const { host, root } = await mount();
+  expect(fetchMock.mock.calls[0][0]).toMatchObject({ limit: 10, cursor: null });
+  const next = host.querySelector('[data-testid="page-next"]') as HTMLButtonElement;
+  const prev = host.querySelector('[data-testid="page-prev"]') as HTMLButtonElement;
+  expect(next.disabled).toBe(false); expect(prev.disabled).toBe(true);
+  fetchMock.mockResolvedValue({ kind: 'ok', data: { ...data, items: [data.items[1]], next_cursor: null, has_more: false }, etag: null, pollIntervalSec: 60 });
+  await act(async () => { next.click(); await Promise.resolve(); });
+  await act(async () => { await Promise.resolve(); });
+  expect(fetchMock.mock.calls.at(-1)?.[0]).toMatchObject({ limit: 10, cursor: 'C1' });
+  expect(host.querySelector('[data-testid="page-info"]')?.textContent).toContain('2쪽');
+  expect((host.querySelector('[data-testid="page-next"]') as HTMLButtonElement).disabled).toBe(true);
+  await act(async () => { (host.querySelector('[data-testid="page-prev"]') as HTMLButtonElement).click(); await Promise.resolve(); });
+  await act(async () => { await Promise.resolve(); });
+  expect(fetchMock.mock.calls.at(-1)?.[0]).toMatchObject({ cursor: null });
+  await act(async () => root.unmount());
+});
+it('SDD-265 목록: 확인할 사람 필터는 서버에 needs_attention_only 로 보낸다', async () => {
   fetchMock.mockResolvedValue({ kind: 'ok', data, etag: null, pollIntervalSec: 3 });
   const { host, root } = await mount();
   const sel = host.querySelector('select[aria-label="상태 필터"]') as HTMLSelectElement;
-  await act(async () => { const set = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!; set.call(sel, 'needs_attention'); sel.dispatchEvent(new Event('change', { bubbles: true })); });
+  await act(async () => { Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!.call(sel, 'warn'); sel.dispatchEvent(new Event('change', { bubbles: true })); });
+  expect(fetchMock.mock.calls.at(-1)?.[0]).toMatchObject({ needsAttentionOnly: true, cursor: null });
   expect(host.querySelectorAll('[data-testid="overview-row"]')).toHaveLength(1);
-  await act(async () => { const set = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!; set.call(sel, 'excluded'); sel.dispatchEvent(new Event('change', { bubbles: true })); });
+  await act(async () => { Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!.call(sel, 'pending'); sel.dispatchEvent(new Event('change', { bubbles: true })); });
   expect(host.textContent).toContain('조건에 맞는 회차가 없어요');
   await act(async () => root.unmount());
 });

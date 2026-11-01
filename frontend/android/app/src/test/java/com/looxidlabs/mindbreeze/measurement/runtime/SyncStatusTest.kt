@@ -1,5 +1,6 @@
 package com.looxidlabs.mindbreeze.measurement.runtime
 
+import com.looxidlabs.mindbreeze.measurement.archive.SignalCounts
 import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
@@ -51,5 +52,20 @@ class SyncStatusTest {
         assertEquals("retrying", out.first { it.first == "reconcile.state" && it.second.getString("sessionId") == "old" }.second.getString("feature"))
         out.clear(); e.emit("live", SyncCounts(featurePending = 5), 500); assertTrue("2초 전엔 보내지 않는다", out.isEmpty())
         e.emit(null, null, 2500); assertEquals("old 만 주기 도래", 3, out.size)
+    }
+
+    // ---- SDD-264: archive.counts additive `signals` ----
+    @Test fun archiveCountsCarriesSignalsOnlyWhenKnownAndKeepsLegacyFields() {
+        val none = SyncEvents.payloads(sid, c, SyncState())[1].second
+        assertFalse("signals 를 모르면 싣지 않는다(0 으로 오해 금지)", none.has("signals"))
+        val sig = mapOf("eeg" to SignalCounts(3, 0, 70, 2), "ppg" to SignalCounts(0, 0, 40, 0))
+        val a = SyncEvents.payloads(sid, c.copy(signals = sig), SyncState())[1].second
+        assertEquals(setOf("sessionId", "pending", "uploading", "verified", "quarantined", "signals"), a.keys().asSequence().toSet())
+        assertEquals(2, a.getInt("pending")); assertEquals(9, a.getInt("verified")) // 기존 필드 불변
+        val s = a.getJSONObject("signals")
+        assertEquals(setOf("eeg", "ppg", "acc"), s.keys().asSequence().toSet())
+        assertEquals(setOf("pending", "uploading", "verified", "quarantined"), s.getJSONObject("eeg").keys().asSequence().toSet())
+        assertEquals(75, s.getJSONObject("eeg").let { it.getInt("pending") + it.getInt("uploading") + it.getInt("verified") + it.getInt("quarantined") })
+        assertEquals("착용 안 한 신호는 0 으로 항상 존재", 0, s.getJSONObject("acc").getInt("verified"))
     }
 }

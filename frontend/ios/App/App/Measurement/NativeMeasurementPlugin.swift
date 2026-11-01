@@ -105,7 +105,9 @@ public class NativeMeasurementPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func getMeasurementSnapshot(_ call: CAPPluginCall) {
         host.queue.async { [host] in
             guard let m = host.manager else { call.reject("not_active", "not_active"); return }
-            call.resolve(m.snapshot())
+            var snap = m.snapshot()
+            snap["uploadCounts"] = m.uploadCounts()   // SDD-264 additive: 계약 snapshot 밖 진단 필드(Android 와 동일)
+            call.resolve(snap)
         }
     }
 
