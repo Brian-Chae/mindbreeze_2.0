@@ -15,3 +15,21 @@
 ## 미검증
 - 실제 BE 응답과의 연결(BE 계약 contract.md 기준 DTO 만 맞춤), CORS 에서 `ETag`/`X-Poll-Interval` 헤더 노출 여부(본문 `etag`/`poll_interval_sec` 로 폴백).
 - 앱 WebView 실기기, 390px/1440px 실브라우저 캡처(아래 별도 기록).
+
+## 리포트 칩(대표 확정 11/1) — 구현 위치
+- 칩 `components/class/upload-attention-chip.tsx`(같은 `useUploadStatus` 훅, `live=false` 로 첫 조회 1회만). 0명·오류(401/403/404/5xx)면 아무것도 그리지 않음(실패 격리).
+- (1) 리포트 목록: 데스크톱 `ReportHierarchyList` 회차 헤더(그룹 `class_id` 있을 때), 모바일 구 목록 `ReportListPage` 세션 필터 선택 시 상단. (2) `class-team-reports.tsx` 상단, 클래스 리포트 페이지 `ClassNarrativeReport` 헤더(`ClassReportResponse.session` 에 class_id 가 없어 `getSession` 으로 해석). (3) `ReportDetailView` 에 `UploadParticipantNotice`(staff 역할만, 해당 참여자가 needs_attention 일 때 한 줄).
+- 리포트 DTO 에 `class_id` 가 없어 상세·클래스 리포트는 `getSession(sessionId).class_id` 1회 조회를 더함. 해석 실패 시 숨김.
+- 리포트 목록은 회차가 많을수록 회차 수만큼 현황 API 가 1회씩 호출됨(페이지당 limit 만큼). 11/4 현장은 문제 없을 규모이나 부하 우려 시 목록 칩을 끄는 것이 가장 단순(`live=false` 로 폴링은 없음).
+
+## verify.md 추가 제안 (리포트 칩, V-U 형식)
+| ID | 영역 | 시나리오 | 검증 방법 | 합격선 | 우선 |
+|---|---|---|---|---|---|
+| V-U66 | 리포트 칩 | needs_attention N>0 회차의 리포트 목록/클래스 리포트 | 실화면 DOM | “데이터 수신 확인 필요 N명” 칩, 클릭 시 `/classes/:c/sessions/:s/upload-status` | A |
+| V-U67 | 리포트 칩 | 현황 API 403/404/5xx 또는 N=0 | 응답 주입 후 DOM | 칩 0개, 리포트 승인·열람 동작 불변 | A |
+| V-U68 | 리포트 칩 | 칩 문구 | 화면 문자열 검색 | 점수·판정·완료·100% 0건 | A |
+| V-U69 | 리포트 상세 | 해당 참여자 needs_attention | 상세 DOM | “데이터가 아직 더 들어오고 있을 수 있어요” 한 줄, 그 외 참여자엔 없음 | B |
+| V-U70 | 리포트 칩 | 목록 칩 폴링 | 네트워크 | 칩이 주기 폴링하지 않음(첫 조회 1회) | B |
+
+## 미검증 (추가)
+- 실화면 Playwright 캡처(390/1440px)는 BE 연결 전이라 이번 커밋 범위에서 수행하지 못함. QA 단계에서 BE 연결 후 확인 필요.

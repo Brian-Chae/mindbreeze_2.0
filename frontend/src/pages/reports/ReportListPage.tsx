@@ -1,4 +1,5 @@
 import { SettingsSwitch } from '../../components/settings/settings-switch';
+import { UploadAttentionChipBySession } from '../../components/class/upload-attention-chip';
 import { SessionNotePromptToggle } from '../../components/settings/session-note-prompt-toggle';
 import { useAuthStore } from '../../stores/authStore';
 import { useIsDesktop } from '../../hooks/use-is-desktop';
@@ -540,6 +541,7 @@ export function LegacyReportListPage() {
         </div>
       ) : hasActiveFilter || total > 0 ? (
         <div className="space-y-4">
+          {sessionFilter && <div><UploadAttentionChipBySession sessionId={sessionFilter} /></div>}
           {/* 툴바: 검색 / 상태 / 정렬 / 세션 / 그룹핑 */}
           <div className="flex flex-col lg:flex-row lg:items-center gap-3 flex-wrap">
             <input

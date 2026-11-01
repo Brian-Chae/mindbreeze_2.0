@@ -26,7 +26,13 @@ const isAbort = (e: unknown): boolean => typeof e === 'object' && e !== null && 
 const isOffline = (): boolean => typeof navigator !== 'undefined' && navigator.onLine === false;
 const isHidden = (): boolean => typeof document !== 'undefined' && document.visibilityState === 'hidden';
 
-export function useUploadStatus(classId: string | null | undefined, sessionId: string | null | undefined): UploadStatusView {
+export interface UploadStatusOptions {
+  /** false 면 첫 조회 1회만 하고 폴링·복귀 재조회를 하지 않는다(목록 칩처럼 여러 개가 뜨는 곳). 기본 true. */
+  live?: boolean;
+}
+
+export function useUploadStatus(classId: string | null | undefined, sessionId: string | null | undefined, options: UploadStatusOptions = {}): UploadStatusView {
+  const live = options.live !== false;
   const [data, setData] = useState<UploadStatusResponse | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(false);
@@ -61,7 +67,7 @@ export function useUploadStatus(classId: string | null | undefined, sessionId: s
         failures = 0; etag = result.etag ?? etag;
         if (result.kind === 'ok') { setData(result.data); sessionStatus = result.data.session_status; }
         setError(null); setLastFetchedAt(new Date());
-        schedule(pollDelayMs(result.pollIntervalSec, sessionStatus));
+        if (live) schedule(pollDelayMs(result.pollIntervalSec, sessionStatus));
       } catch (e) {
         if (mine.signal.aborted || disposed || isAbort(e)) return;
         const apiError = e instanceof ApiError ? e : new ApiError(0, e instanceof Error ? e.message : '조회 실패', null);
@@ -70,7 +76,7 @@ export function useUploadStatus(classId: string | null | undefined, sessionId: s
           stopped = true; etag = null; setData(null); setError(apiError); return;
         }
         failures += 1; setError(apiError);
-        schedule(errorBackoffMs(failures));
+        if (live) schedule(errorBackoffMs(failures));
       } finally {
         inflight = false;
         if (!disposed && ctrl === mine) setLoading(false);
@@ -78,8 +84,8 @@ export function useUploadStatus(classId: string | null | undefined, sessionId: s
     }
 
     controls.current = { load: () => void load(), halt };
-    const onVisibility = () => { if (isHidden()) { clear(); } else { void load(); } };
-    const onOnline = () => { setOffline(false); void load(); };
+    const onVisibility = () => { if (!live) return; if (isHidden()) { clear(); } else { void load(); } };
+    const onOnline = () => { setOffline(false); if (live) void load(); };
     const onOffline = () => { setOffline(true); clear(); };
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('online', onOnline);
@@ -91,7 +97,7 @@ export function useUploadStatus(classId: string | null | undefined, sessionId: s
       window.removeEventListener('online', onOnline);
       window.removeEventListener('offline', onOffline);
     };
-  }, [classId, sessionId]);
+  }, [classId, sessionId, live]);
 
   const pause = useCallback(() => { pausedRef.current = true; setPaused(true); controls.current.halt(); }, []);
   const resume = useCallback(() => { pausedRef.current = false; setPaused(false); controls.current.load(); }, []);

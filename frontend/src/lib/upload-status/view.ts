@@ -82,7 +82,7 @@ export const SIGNAL_LABEL = { eeg: 'EEG', ppg: 'PPG', acc: 'ACC' } as const;
 
 /** 두 시각 중 늦은 값. */
 export function latestReceived(p: UploadParticipantDto): string | null {
-  const a = p.feature.last_received_at; const b = p.raw.last_received_at;
+  const a = p.feature?.last_received_at ?? null; const b = p.raw?.last_received_at ?? null;
   if (a && b) return a > b ? a : b;
   return a ?? b;
 }
@@ -110,3 +110,6 @@ export const formatClock = (iso: string | Date | null): string => {
   return d.toLocaleTimeString('ko-KR', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
 };
 export const formatCount = (n: number): string => n.toLocaleString('ko-KR');
+
+export const uploadStatusScreenPath = (classId: string, sessionId: string): string =>
+  `/classes/${encodeURIComponent(classId)}/sessions/${encodeURIComponent(sessionId)}/upload-status`;
