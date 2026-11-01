@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Ban, Bell, Bluetooth, ChevronRight, Info, ShieldCheck, UserPlus, UserRound } from 'lucide-react';
+import { Ban, Bell, Bluetooth, ChevronRight, CloudUpload, Info, ShieldCheck, UserPlus, UserRound } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { PrivacyPolicyLink } from '../legal/PrivacyPolicyLink';
@@ -50,6 +50,7 @@ export default function SettingsContent() {
       <Group title="알림" description="일정·참여, 대화, 리포트·운영" icon={<Bell size={24} />}><NotificationGroups /><WebPushCard /></Group>
       <Group title="차단한 사용자" description="채팅 차단 해제 · 신고 철회" icon={<Ban size={24} />}><BlockedUsersList /></Group>
       <Group title="기기 · LINK BAND" description="연결 방법과 측정 안내" icon={<Bluetooth size={24} />}><Link className={linkClass} to="/measurement-guide">밴드 연결 · 측정 방법 <span aria-hidden="true">↗</span></Link><Link className={linkClass} to="/playground">플레이그라운드 다시 열기 <span aria-hidden="true">↗</span></Link><p className="text-[13px] text-[#776D7B]">밴드를 착용하지 않아도 클래스와 리포트를 이용할 수 있어요.</p></Group>
+      {user?.role === 'client' && <Group title="내 데이터 저장 현황" description="회차별 서버 수신 확인" icon={<CloudUpload size={24} />}><p className="text-[13px] text-[#776D7B]">내 측정 데이터가 서버에 도착했는지 회차별로 확인해요.</p><Link className={linkClass} to="/app/profile/upload-status">내 데이터 저장 현황 열기 <span aria-hidden="true">↗</span></Link></Group>}
       <Group title="개인정보 · 약관" description="동의 관리 · 연구 동의 철회 · 계정 삭제" icon={<ShieldCheck size={24} />}><PrivacyConsentsSection /><PrivacyPolicyLink className={linkClass}>개인정보 처리방침</PrivacyPolicyLink><AccountDeletionSection /></Group>
       <Group title="앱 정보" description="버전 · 도움말 · 연결 상태" icon={<Info size={24} />}><p className="text-[15px] font-semibold">MIND BREEZE 2.0 · Looxid Labs</p><p className="text-[14px]">서버연결: {connected ? '양호' : '끊김'}</p><Link className={linkClass} to="/measurement-guide">이용 도움말 · LINK BAND 안내 <span aria-hidden="true">↗</span></Link></Group>
     </div>
