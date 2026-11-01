@@ -44,7 +44,7 @@ final class GapEventTests: XCTestCase {
         c.onPacket(pkt(25, UInt32(1000 + 10 * 3277 + 2 * 32768)), arrivalUs: 3_000_000)
         XCTAssertEqual(gaps.count, 1); XCTAssertEqual(gaps[0].reason, "packet_gap"); XCTAssertEqual(gaps[0].startUs, 900_000); XCTAssertEqual(gaps[0].endUs, 3_000_000 - 24 * 4_000)
         c.onPacket(pkt(25, 50), arrivalUs: 3_100_000)
-        XCTAssertEqual(gaps.count, 2); XCTAssertEqual(gaps[1].reason, "clock_reset"); XCTAssertNil(gaps[1].endUs)
+        XCTAssertEqual(gaps.count, 2); XCTAssertEqual(gaps[1].reason, "clock_reset"); XCTAssertEqual(gaps[1].endUs, 3_100_000 - 24 * 4_000)  // SDD-271: 되감김도 끝을 채운다
     }
 
     func testLinkDropLogAssignsReasonNearTheGap() {

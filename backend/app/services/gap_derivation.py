@@ -133,3 +133,23 @@ def subtract_recorded(derived: list[tuple[float, float, frozenset[str]]],
             pieces = nxt
         out += [(ps, pe, r) for ps, pe in pieces if pe - ps >= MIN_GAP_MS]
     return out
+
+
+def close_open(open_gaps: list[tuple[str, float]], segment_starts: dict[str, list[float]],
+               window_ms: list[float]) -> dict[int, tuple[float, str]]:
+    """SDD-271 end 없는 기록 구간(signal, start_ms)을 "데이터가 다시 들어온 시점"으로 닫는다.
+
+    우선순위: 1) 같은 신호의 다음 측정 기록 파일(segment) 시작  2) 다음 분석 창 시각.
+    둘 다 없으면 결과에서 빠진다 = 측정 종료까지 이어진 열린 구간. 반환: {입력 index: (end_ms, 'segment'|'window')}.
+    """
+    out: dict[int, tuple[float, str]] = {}
+    wins = sorted(window_ms)
+    for i, (sig, start) in enumerate(open_gaps):
+        seg = min((x for x in segment_starts.get(sig, []) if x > start), default=None)
+        if seg is not None:
+            out[i] = (seg, 'segment')
+            continue
+        win = next((x for x in wins if x > start), None)
+        if win is not None:
+            out[i] = (win, 'window')
+    return out

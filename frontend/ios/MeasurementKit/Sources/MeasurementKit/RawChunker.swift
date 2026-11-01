@@ -88,7 +88,7 @@ public final class RawChunker {
     private func startSegment(arrivalUs: Int64, rows: Int, raw: UInt64?, unwrapped: UInt64?, rewind: Bool = false) {
         let newStartUs = arrivalUs - Int64(max(0, rows - 1)) * 1_000_000 / Int64(rate)
         if !segmentId.isEmpty {
-            onGap(RawGap(signal: RawIds.name(sensor), segmentId: segmentId, startUs: lastPacketUs, endUs: (rewind || newStartUs < lastPacketUs) ? nil : newStartUs, reason: rewind ? "clock_reset" : "packet_gap"))
+            onGap(RawGap(signal: RawIds.name(sensor), segmentId: segmentId, startUs: lastPacketUs, endUs: newStartUs < lastPacketUs ? nil : newStartUs, reason: rewind ? "clock_reset" : "packet_gap"))
         }
         seal()
         ordinal += 1

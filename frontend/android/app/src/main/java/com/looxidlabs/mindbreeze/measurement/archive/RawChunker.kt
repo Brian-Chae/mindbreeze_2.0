@@ -104,7 +104,7 @@ class RawChunker(
     private fun startSegment(arrivalUs: Long, rows: Int, raw: Long?, unwrapped: Long?, rewind: Boolean = false) {
         val newStartUs = arrivalUs - maxOf(0, rows - 1).toLong() * 1_000_000L / rate
         if (segmentId.isNotEmpty()) {
-            try { onGap(RawGap(sensor.name.lowercase(), segmentId, lastPacketUs, if (rewind || newStartUs < lastPacketUs) null else newStartUs, if (rewind) "clock_reset" else "packet_gap")) } catch (_: Exception) { /* 구멍 기록 실패가 수집을 막지 않는다 */ }
+            try { onGap(RawGap(sensor.name.lowercase(), segmentId, lastPacketUs, if (newStartUs < lastPacketUs) null else newStartUs, if (rewind) "clock_reset" else "packet_gap")) } catch (_: Exception) { /* 구멍 기록 실패가 수집을 막지 않는다 */ }
         }
         seal() // 이전 segment 의 남은 샘플
         ordinal += 1

@@ -34,6 +34,16 @@ class RawGapTest {
         for (i in 0 until 5) c.onPacket(pkt(Sensor.EEG, 25, 100_000L + i * 3277), i * 100_000L, i + 1L)
         c.onPacket(pkt(Sensor.EEG, 25, 50L), 500_000L, 6)
         assertEquals("clock_reset", gaps.single().reason)
+        // SDD-271: 되감김이어도 새 segment 첫 샘플 시각을 알므로 끝을 채운다(열린 구멍을 만들지 않는다)
+        assertEquals(500_000L - 24 * 4_000L, gaps.single().endUs)
+    }
+
+    @Test fun overlappingRolloverKeepsEndNull() {
+        val gaps = ArrayList<RawGap>()
+        val c = RawChunker(Sensor.EEG, sid, 0, 0, {}, {}, { gaps += it })
+        for (i in 0 until 5) c.onPacket(pkt(Sensor.EEG, 25, 100_000L + i * 3277), i * 100_000L, i + 1L)
+        c.onPacket(pkt(Sensor.EEG, 25, 50L), 410_000L, 6) // 새 첫 샘플(314000)이 이전 마지막(400000)보다 앞 → 구멍 아님
+        assertEquals(null, gaps.single().endUs)
     }
 
     @Test fun smoothStreamAndFirstSegmentMakeNoGap() {
