@@ -39,6 +39,14 @@ class OverviewItem(BaseModel):
     last_received_at: str | None
     status: OverviewStatus
     progress: AggregateProgress  # SDD-264: 폰 보고 기대량 대비 수신(회차 합계)
+    # SDD-265: 숫자 중심 상황판 가산 필드
+    participants_expected: int = 0
+    participants_arrived: int = 0
+    bytes_arrived: int = 0
+    bytes_expected: int | None = None
+    bytes_basis: Literal["estimate"] | None = None
+    duration_min: int | None = None
+    participant_minutes_total: int = 0
 
 
 class UploadStatusOverviewResponse(BaseModel):
@@ -53,3 +61,6 @@ class UploadStatusOverviewResponse(BaseModel):
     summary: OverviewSummary
     items: list[OverviewItem]
     progress: AggregateProgress  # SDD-264: items 전체 합계
+    next_cursor: str | None = None   # SDD-265
+    has_more: bool = False
+    scan_limited: bool = False

@@ -155,8 +155,8 @@ def test_V_X50_쿼리_수는_회차_참여자_수와_무관(client, db, world):
         svc.load_overview(db, actor)
     finally:
         event.remove(engine, "before_cursor_execute", on_exec)
-    # 후보 1 + 참여자 1 + feature 1 + raw 1 + 기대량 1 = 5
-    assert counter["n"] <= 5, counter["n"]
+    # 후보 1 + 참여자 1 + feature 1 + raw 1 + 기대량 1 + (SDD-265) 도착 크기 1 = 6
+    assert counter["n"] <= 6, counter["n"]
 
 
 def test_V_X9_권한_비담당_코치는_빈_목록_progress_도_비어있다(client, db, world):

@@ -427,4 +427,7 @@ def test_V_O30_금지_키_문구_없음(client, world, db):
         "session_id", "class_id", "class_title", "session_title", "seq", "organization_id", "organization_name",
         "session_status", "started_at", "ended_at", "participants", "needs_attention", "uploading",
         "received_unreconciled", "no_data", "excluded", "band_not_connected", "last_received_at", "status",
-        "progress"}  # SDD-264 가산
+        "progress",  # SDD-264 가산
+        # SDD-265 가산
+        "participants_expected", "participants_arrived", "bytes_arrived", "bytes_expected", "bytes_basis",
+        "duration_min", "participant_minutes_total"}

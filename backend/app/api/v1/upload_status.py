@@ -22,13 +22,16 @@ def get_upload_status_overview(
     org_id: UUID | None = None,
     class_id: UUID | None = None,
     status: Literal["needs_attention", "uploading", "received_unreconciled", "no_data"] | None = None,
+    cursor: str | None = Query(None, max_length=200),
+    needs_attention_only: bool = False,
     if_none_match: str | None = Header(default=None, alias="If-None-Match"),
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
     """회차별 서버 수신 요약 목록(최근순·진행 중 우선). ETag/304 지원. 계약: specs/sdd-263-*/contract.md"""
     result = svc.load_overview(db, current_user, limit=limit, since=since, org_id=org_id, class_id=class_id,
-                               status=status, if_none_match=if_none_match)
+                               status=status, if_none_match=if_none_match, cursor=cursor,
+                               needs_attention_only=needs_attention_only)
     headers = {
         "ETag": result.etag,
         "Cache-Control": "no-store, private",
