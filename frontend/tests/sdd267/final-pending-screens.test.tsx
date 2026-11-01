@@ -44,8 +44,8 @@ function detail(fpN: number, extra: Record<string, unknown> = {}): UploadStatusR
   return {
     session_status: 'completed',
     summary: { participants: 3, needs_attention: 0, uploading: 3, received_unreconciled: 0, no_data: 0, excluded: 0 },
-    participants: [person('a', '가온', true), person('b', '나래', false, 'all_received'), person('c', '다솜', false)],
-    progress: normalizeSessionProgress({ participants: { total: 3, counted: 3, all_received: 1, in_progress: 2, needs_attention: 0, expected_unknown: 0, not_collected: 0, final_pending: fpN }, feature: r(3, 3, 100), raw: { eeg: r(3, 3, 100), ppg: r(3, 3, 100), acc: r(3, 3, 100) }, overall: r(12, 12, 100) }),
+    participants: [person('a', '가온', true), person('b', '나래', false, 'all_received'), person('c', '다솜', false, 'all_received')],
+    progress: normalizeSessionProgress({ participants: { total: 3, counted: 3, all_received: 2, in_progress: 1, needs_attention: 0, expected_unknown: 0, not_collected: 0, final_pending: fpN }, feature: r(3, 3, 100), raw: { eeg: r(3, 3, 100), ppg: r(3, 3, 100), acc: r(3, 3, 100) }, overall: r(12, 12, 100) }),
     metrics: { participants_expected: 3, participants_arrived: 3, measured_min: null, bytes_arrived: 10, bytes_expected: 10, duration_min: 50, participant_minutes_total: 150 },
     ...extra,
   } as unknown as UploadStatusResponse;
@@ -69,7 +69,7 @@ it('상세: 칩·한 줄·99%, 참여자는 정상 접힘 그룹의 "최종 확�
   expect(g?.textContent).toContain('최종 확인 대기 1명');
   expect(g?.textContent).toContain('폰에서 앱을 한 번 열면 곧 확인돼요');
   expect(g?.textContent).toContain('가온');
-  expect(host.querySelector('[data-testid="group-waiting"]')?.textContent).not.toContain('가온');
+  expect(host.querySelector('[data-testid="group-waiting"]')).toBeNull();
   expect(host.textContent).not.toMatch(BAN);
   await unmount();
 });
@@ -79,5 +79,13 @@ it('상세: final_pending 이 없으면 칩·그룹이 없다', async () => {
   const { host, unmount } = await mountTable(d);
   expect(host.querySelector('[data-testid="final-pending-chip"]')).toBeNull();
   expect(host.querySelector('[data-testid="group-final-pending"]')).toBeNull();
+  await unmount();
+});
+
+it('상세: 남은 사람 중 일부만 final_pending 이면 칩은 있고 안내 한 줄은 없다', async () => {
+  const d = detail(1);
+  const { host, unmount } = await mountTable({ ...d, progress: { ...d.progress!, participants: { ...d.progress!.participants, counted: 4 } } } as UploadStatusResponse);
+  expect(host.querySelector('[data-testid="final-pending-chip"]')).not.toBeNull();
+  expect(host.querySelector('[data-testid="final-pending-line"]')).toBeNull();
   await unmount();
 });

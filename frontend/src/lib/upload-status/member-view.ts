@@ -24,7 +24,7 @@ export function memberKind(r: MySessionRow): MemberKind {
 }
 
 /** SDD-267: 전송 중인데 서버에 모두 도착(최종 확인 대기)인 본인 회차. */
-export const memberFinalPending = (r: MySessionRow, k: MemberKind): boolean => r.final_pending && k === 'sending';
+export const memberFinalPending = (r: MySessionRow, k: MemberKind): boolean => r.final_pending && (k === 'sending' || k === 'pending');
 export const memberLine = (k: MemberKind, finalPending = false): string => finalPending ? FINAL_PENDING_MEMBER : (k === 'excluded' ? '이 회차는 수집 대상이 아니에요. 문제가 아니에요' : memberAction(k));
 
 /** 전송 현황 %. 서버 percent 우선, 없으면 도착/예상 크기. 모두 도착이 아니면 99% 상한(내림). */

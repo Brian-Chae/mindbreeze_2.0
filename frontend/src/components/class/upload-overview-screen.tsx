@@ -7,7 +7,7 @@ import { listAdminOrganizations, type AdminOrganizationDto } from '../../lib/api
 import type { UploadOverviewItem } from '../../lib/api/upload-overview';
 import { useAuthStore } from '../../stores/authStore';
 import {
-  BOARD_LABEL, BOARD_ORDER, COACH_OK_NOTE, percentText, arrivedText, attentionCount, boardState, coachAction, finalPendingCount, showFinalPending, FINAL_PENDING_COACH, formatBytes, formatMinutes,
+  BOARD_LABEL, BOARD_ORDER, COACH_OK_NOTE, percentText, arrivedText, attentionCount, boardState, coachAction, finalPendingCount, showFinalPending, finalPendingAll, FINAL_PENDING_COACH, formatBytes, formatMinutes,
   formatTotalHours, transferPercent, type BoardState,
 } from '../../lib/upload-status/board';
 import { PERIOD_LABEL, detailPathFor, periodSince, type OverviewPeriod } from '../../lib/upload-status/overview-view';
@@ -49,7 +49,7 @@ function Row({ i, to }: { i: UploadOverviewItem; to: string }) {
         <Num value={formatMinutes(i.metrics.duration_min)} label={i.metrics.participant_minutes_total === null ? '측정 길이' : `합계 ${formatTotalHours(i.metrics.participant_minutes_total)}`} />
       </div>
       <Link to={to} aria-label={`${sessionName(i)} 상세`} className="inline-flex min-h-11 items-center rounded-[10px] border border-[#E8E2ED] bg-white px-3 text-[14px] text-[#5F0080]">상세</Link>
-      {showFinal && <p data-testid="final-pending-line" className="order-4 col-span-2 text-[12px] text-[#655173] md:order-none md:col-span-3">{FINAL_PENDING_COACH}</p>}
+      {showFinal && finalPendingAll(i.progress) && <p data-testid="final-pending-line" className="order-4 col-span-2 text-[12px] text-[#655173] md:order-none md:col-span-3">{FINAL_PENDING_COACH}</p>}
       {(action || state === 'ok') && <p className={`order-4 col-span-2 text-[12px] md:order-none md:col-span-3 ${state === 'warn' ? 'text-[#805000]' : 'text-[#776D7B]'}`}>{action ?? COACH_OK_NOTE}</p>}
     </li>
   );

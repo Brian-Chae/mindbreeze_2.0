@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import type { UploadParticipantDto, UploadStatusResponse } from '../../lib/api/upload-status';
 import {
-  BOARD_LABEL, COACH_OK_NOTE, DASH, FINAL_PENDING_COACH, FINAL_PENDING_PERSON_NOTE, showFinalPending, PAGE_SIZE, percentText, arrivedText, basisNote, boardState, coachAction, formatBytes, formatMinutes, formatTotalHours,
+  BOARD_LABEL, COACH_OK_NOTE, DASH, FINAL_PENDING_COACH, FINAL_PENDING_PERSON_NOTE, showFinalPending, finalPendingAll, PAGE_SIZE, percentText, arrivedText, basisNote, boardState, coachAction, formatBytes, formatMinutes, formatTotalHours,
   pageCount, personAction, personBucket, slicePage, transferPercent, type BoardState, type PersonBucket,
 } from '../../lib/upload-status/board';
 import { displayName, formatClock, formatCount, latestReceived, rawTotals } from '../../lib/upload-status/view';
@@ -126,7 +126,7 @@ export function UploadStatusTable({ data }: UploadStatusTableProps) {
         <div className="mt-4 flex justify-between"><b>전송 현황</b><b data-testid="transfer-percent">{percentText(percent)}</b></div>
         {showFinal && <div className="mb-1"><FinalPendingChip /></div>}
         <TransferBar percent={percent} />
-        {showFinal && <p data-testid="final-pending-line" className="text-[12px] text-[#655173]">{FINAL_PENDING_COACH}</p>}
+        {showFinal && finalPendingAll(prog) && <p data-testid="final-pending-line" className="text-[12px] text-[#655173]">{FINAL_PENDING_COACH}</p>}
         <p className="text-[12px] text-[#776D7B]">{basisNote(prog, state)}</p>
         {(action || state === 'ok') && <p data-testid="action-line" className="mt-2 text-[12px] text-[#805000]">{action ?? COACH_OK_NOTE}</p>}
         <details className="mt-3 rounded-[10px] bg-[#F8F5FA] p-2.5 text-[12px]">

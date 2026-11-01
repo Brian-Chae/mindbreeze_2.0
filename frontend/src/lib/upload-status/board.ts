@@ -38,7 +38,13 @@ export function boardState(i: Pick<UploadOverviewItem, 'progress' | 'summary' | 
 /** SDD-267: 최종 확인 대기 인원(회차 기준). 판정(boardState)은 바꾸지 않는 보조 표기. */
 export const finalPendingCount = (i: Pick<UploadOverviewItem, 'progress'>): number => i.progress?.participants.final_pending ?? 0;
 /** 칩/안내는 측정이 끝났고 확인할 사람이 없을 때만(경고와 섞지 않는다). */
-export const showFinalPending = (state: BoardState, n: number): boolean => n > 0 && state === 'sending';
+export const showFinalPending = (state: BoardState, n: number): boolean => n > 0 && (state === 'sending' || state === 'pending');
+/** 안내 한 줄은 남은 사람이 전부 최종 확인 대기일 때만(contract §3: final_pending === counted − all_received − not_collected). */
+export function finalPendingAll(p: SessionProgress | null | undefined): boolean {
+  if (!p) return false;
+  const q = p.participants;
+  return q.final_pending > 0 && q.final_pending === q.counted - q.all_received;
+}
 export const FINAL_PENDING_CHIP = '모두 도착 · 최종 확인 대기';
 export const FINAL_PENDING_COACH = '서버에 모두 도착했어요. 폰의 최종 확인만 기다리고 있어요';
 export const FINAL_PENDING_PERSON_NOTE = '조치는 필요 없어요. 폰에서 앱을 한 번 열면 곧 확인돼요';
@@ -122,7 +128,7 @@ export function personBucket(p: { progress?: PersonProgress | null; status?: str
     case 'needs_attention': return 'attention';
     case 'all_received': return 'arrived';
     case 'not_collected': return 'excluded';
-    case 'in_progress': return prog.final_pending ? 'final_pending' : 'waiting';
+    case 'in_progress': case 'expected_unknown': return prog.final_pending ? 'final_pending' : 'waiting';
     default: return 'waiting'; // in_progress·expected_unknown
   }
 }

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { normalizePersonProgress, normalizeSessionProgress } from '../../src/lib/api/upload-progress';
 import { normalizeMySessions } from '../../src/lib/api/my-upload-status';
 import {
-  BUCKET_LABEL, FINAL_PENDING_CHIP, FINAL_PENDING_COACH, FINAL_PENDING_MEMBER, FINAL_PENDING_PERSON_NOTE, boardState, finalPendingCount, personBucket, showFinalPending, transferPercent,
+  BUCKET_LABEL, finalPendingAll, FINAL_PENDING_CHIP, FINAL_PENDING_COACH, FINAL_PENDING_MEMBER, FINAL_PENDING_PERSON_NOTE, boardState, finalPendingCount, personBucket, showFinalPending, transferPercent,
 } from '../../src/lib/upload-status/board';
 import { memberFinalPending, memberKind, memberLine, memberPercent } from '../../src/lib/upload-status/member-view';
 import type { MySessionRow } from '../../src/lib/api/my-upload-status';
@@ -46,6 +46,7 @@ describe('판정 불변', () => {
     expect(showFinalPending('ok', 1)).toBe(false);
     expect(showFinalPending('sending', 0)).toBe(false);
     expect(showFinalPending('sending', 2)).toBe(true);
+    expect(showFinalPending('pending', 2)).toBe(true);
   });
   it('finalPendingCount: progress 없으면 0', () => {
     expect(finalPendingCount({ progress: null })).toBe(0);
@@ -60,6 +61,15 @@ describe('참여자 분류', () => {
   });
   it('needs_attention 이면 final_pending 이 있어도 attention', () => {
     expect(personBucket({ progress: normalizePersonProgress(personRaw({ state: 'needs_attention', final_pending: true })) })).toBe('attention');
+  });
+  it('expected_unknown(종료 30분 후) + final_pending 도 최종 확인 대기', () => {
+    expect(personBucket({ progress: normalizePersonProgress(personRaw({ state: 'expected_unknown', final_pending: true })) })).toBe('final_pending');
+  });
+  it('안내 한 줄: 남은 사람이 전부 final_pending 일 때만', () => {
+    expect(finalPendingAll(normalizeSessionProgress(sessRaw(part({ counted: 4, all_received: 3, final_pending: 1 }))))).toBe(true);
+    expect(finalPendingAll(normalizeSessionProgress(sessRaw(part({ counted: 4, all_received: 2, final_pending: 1 }))))).toBe(false);
+    expect(finalPendingAll(normalizeSessionProgress(sessRaw(part({ final_pending: 0, all_received: 4 }))))).toBe(false);
+    expect(finalPendingAll(null)).toBe(false);
   });
   it('all_received 는 arrived 그대로', () => {
     expect(personBucket({ progress: normalizePersonProgress(personRaw({ state: 'all_received', final_pending: true })) })).toBe('arrived');
