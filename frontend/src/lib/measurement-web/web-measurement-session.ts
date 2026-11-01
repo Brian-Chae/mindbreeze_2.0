@@ -7,6 +7,7 @@ import type { RawPacket } from '../biosignal/raw-types';
 import type { DeviceData } from '../session-live/live-types';
 import { WebCaptureAdapter, type WorkerLike } from './capture-adapter';
 import { CaptureController, type BandReport, type CaptureClientLike } from './capture-controller';
+import type { FeatureAuth } from '../api/feature-batch';
 import { WEB_CORE_CONFIG, WEB_CORE_CONFIG_JSON } from './core-config';
 
 export type WebMeasurementStatus = 'idle' | 'not_allowed' | 'core_unavailable' | 'rejected' | 'capturing' | 'stopped';
@@ -16,6 +17,10 @@ export const TICK_MS = 1_000;
 export interface WebMeasurementDeps {
   client: CaptureClientLike;
   sessionId: string;
+  /** SDD-260: feature outbox 소유 계정(`user:<id>` | `entry:<participantId>`) */
+  accountId: string;
+  /** SDD-260: feature REST 인증(JWT 또는 입장 자격) */
+  featureAuth?: FeatureAuth;
   createWorker: () => WorkerLike;
   subscribeRaw?: (fn: (p: RawPacket) => void) => () => void;
   monotonicUs?: () => number;
@@ -68,6 +73,8 @@ export class WebMeasurementSession {
     const controller = new CaptureController({
       client: this.d.client,
       sessionId: this.d.sessionId,
+      accountId: this.d.accountId,
+      featureAuth: this.d.featureAuth,
       eegConsent,
       bandConnected,
       deviceProfile: WEB_CORE_CONFIG.device_profile_version,

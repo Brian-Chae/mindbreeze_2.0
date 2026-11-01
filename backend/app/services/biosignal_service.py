@@ -64,41 +64,25 @@ def raw_window_mono(meta: PresignChunk) -> tuple[Fraction, Fraction]:
 
 def archive_gate(db: DBSession, sid: UUID, participant, capture_stream_id: UUID | None,
                  windows: list[tuple[Fraction, Fraction] | None], *, windowless_ok: list[bool] | None = None) -> dict | None:
-    """SDD-246 T09 — 종료 이후·오프라인 사후전송 수락 판정(T03 evaluate_ingest 가 기준).
+    """SDD-260 S4 — archive(raw/산출물) 수락 판정. 소유(404/403)와 동의 철회(403 archive_rejected)만 본다.
 
-    capture_stream_id 가 없으면 None(현행 동작 유지). 하나라도 거절·격리면 요청 전체를 반영하지 않는다.
+    24h close_deadline·pending_time_review(409)·window_unproven·cutoff 걸침/이후·offline 상한 판정은 삭제했다
+    (늦어도 받는다 — 로컬이 유일한 사본이라 거절은 곧 유실). capture_stream_id 가 없으면 None(현행 동작 유지).
     archive 수락은 live 최신성을 바꾸지 않는다: capture_stream/outbox 를 쓰지 않고 live_fresh_applied=False 로 고정한다.
+    `windows`/`windowless_ok` 는 호출부 호환을 위해 받지만 더 이상 판정에 쓰지 않는다.
     """
     if capture_stream_id is None:
         return None
     from app.models.live_state import CaptureStream
-    from app.services.session_live_commands import evaluate_ingest
+    from app.services.session_live_commands import CUTOFF_CONSENT_WITHDRAWN
 
     stream = db.get(CaptureStream, capture_stream_id)
     if stream is None or stream.session_id != sid:
         raise HTTPException(status_code=404, detail={"code": "capture_stream_not_found"})
     if stream.participant_id != participant.id:
         raise HTTPException(status_code=403, detail={"code": "capture_stream_not_owned"})
-    for i, window in enumerate(windows):
-        if window is None and windowless_ok and windowless_ok[i]:
-            # 측정 구간이 없는 메타(normalization/algorithm): stream 개설 시각(항상 cutoff 이전)으로 권한 코드·deadline 만 판정한다.
-            decision = evaluate_ingest(db, stream_id=stream.id, window_start_at=stream.opened_at, window_end_at=stream.opened_at, now=_now())
-            if decision.verdict != "accept":
-                status = 403 if decision.verdict == "reject" else 409
-                code = "archive_rejected" if decision.verdict == "reject" else "pending_time_review"
-                raise HTTPException(status_code=status, detail={"code": code, "reason": decision.code})
-            continue
-        if window is None or stream.anchor_server_at is None or stream.anchor_monotonic_us is None:
-            # 창을 서버 시계로 환산할 수 없다: 종료/철회 cutoff 가 있으면 입증 불가 → 격리, 없으면 현행대로 수락.
-            if stream.cutoff_at is not None:
-                raise HTTPException(status_code=409, detail={"code": "pending_time_review", "reason": "window_unproven"})
-            continue
-        start, end = _window_server_time(stream, window[0]), _window_server_time(stream, window[1])
-        decision = evaluate_ingest(db, stream_id=stream.id, window_start_at=start, window_end_at=end, now=_now())
-        if decision.verdict == "reject":
-            raise HTTPException(status_code=403, detail={"code": "archive_rejected", "reason": decision.code})
-        if decision.verdict == "pending_time_review":
-            raise HTTPException(status_code=409, detail={"code": "pending_time_review", "reason": decision.code})
+    if stream.cutoff_code == CUTOFF_CONSENT_WITHDRAWN:
+        raise HTTPException(status_code=403, detail={"code": "archive_rejected", "reason": CUTOFF_CONSENT_WITHDRAWN})
     return {"verdict": "accept", "code": None, "live_fresh_applied": False}
 
 
@@ -436,4 +420,67 @@ def capabilities(session_id: str, participant_id: UUID | None, db: DBSession, *,
         "raw_schemas": [RAW_V2_SCHEMA], "artifact_kinds": ["feature", "raw_derived", "indices", "normalization", "algorithm"],
         "events": True, "max_batch": MAX_BATCH, "max_object_bytes": MAX_OBJECT_BYTES,
         "upload_immutability": "checksum_bound", "legacy_eeg_raw": True, "signals": signals,
+    }
+
+
+# ---------------------------------------------------------------------------
+# SDD-260 — 원시 업로드 현황(종료 후 대조용). 계약: specs/sdd-260-live-ingest-bottleneck/contract.md §3
+# ---------------------------------------------------------------------------
+
+RAW_SUMMARY_ALIAS_MAX = 5000
+RAW_SUMMARY_MAX_RANGES = 200
+
+
+def raw_summary(db: DBSession, sid: UUID, participant_id: UUID) -> dict:
+    """참가자의 eeg_raw_chunks 상태 집계 + uploaded 청크의 영수증 해시. 슬롯 비적용(읽기 전용)."""
+    import hashlib
+
+    rows = db.query(
+        EEGRawChunk.stream_id, EEGRawChunk.segment_id, EEGRawChunk.signal_type, EEGRawChunk.chunk_index,
+        EEGRawChunk.upload_status, EEGRawChunk.checksum, EEGRawChunk.size_bytes, EEGRawChunk.chunk_alias,
+        EEGRawChunk.uploaded_at, EEGRawChunk.created_at,
+    ).filter(EEGRawChunk.session_id == sid, EEGRawChunk.participant_id == participant_id).all()
+    groups: dict[tuple, dict] = {}
+    receipt: list[tuple] = []
+    aliases: list[str] = []
+    latest = None
+    for stream_id, seg, sig, idx, status, checksum, size, alias, up_at, cr_at in rows:
+        g = groups.setdefault((stream_id, seg, sig), {"uploaded": 0, "pending": 0, "failed": 0, "idxs": []})
+        key = status if status in ("uploaded", "failed") else "pending"
+        g[key] += 1
+        ts = up_at or cr_at
+        if ts is not None and (latest is None or ts > latest):
+            latest = ts
+        if status == "uploaded":
+            g["idxs"].append(int(idx))
+            receipt.append((stream_id, seg, sig, int(idx), checksum or "", int(size or 0)))
+            if alias:
+                aliases.append(alias)
+    streams = []
+    for (stream_id, seg, sig), g in sorted(groups.items()):
+        idxs = sorted(g["idxs"])
+        missing: list[list[int]] = []
+        truncated = False
+        for a, b in zip(idxs, idxs[1:]):
+            if b - a > 1:
+                if len(missing) >= RAW_SUMMARY_MAX_RANGES:
+                    truncated = True
+                    break
+                missing.append([a + 1, b - 1])
+        streams.append({
+            "stream_id": stream_id, "segment_id": seg, "signal_type": sig,
+            "uploaded": g["uploaded"], "pending": g["pending"], "failed": g["failed"],
+            "min_index": idxs[0] if idxs else None, "max_index": idxs[-1] if idxs else None,
+            "missing_ranges": missing, "truncated": truncated,
+        })
+    receipt.sort()
+    digest = hashlib.sha256("|".join("|".join(str(x) for x in r) for r in receipt).encode()).hexdigest()
+    aliases.sort()
+    return {
+        "session_id": str(sid), "participant_id": str(participant_id),
+        "total": len(rows), "uploaded": sum(s["uploaded"] for s in streams),
+        "pending": sum(s["pending"] for s in streams), "failed": sum(s["failed"] for s in streams),
+        "streams": streams,
+        "aliases_uploaded": aliases[:RAW_SUMMARY_ALIAS_MAX], "aliases_truncated": len(aliases) > RAW_SUMMARY_ALIAS_MAX,
+        "receipt_hash": digest, "updated_at": latest.isoformat() if latest is not None else None,
     }

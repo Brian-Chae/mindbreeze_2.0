@@ -76,8 +76,9 @@ class Settings(BaseSettings):
     #   웹: anyio 스레드풀(40)이 동시에 DB 를 쓸 수 있으나 요청 대부분이 짧아 20이면 충분.
     #   Celery 자식(email 2·exports 1·main 1·report 2·stt 2 = 8)은 태스크당 1~2개만 쓴다.
     #   → 평상시 합계 약 25~40, 이론 상한은 웹 20 + 자식 8 x 20 = 180 (RDS 소형 ≈ 112~225 이므로 확인 필요).
-    db_pool_size: int = 10
-    db_max_overflow: int = 10
+    # SDD-260: 40명 동시 REST 배치 저장 + 소켓 방송이 풀을 동시에 쓴다 → 20+20(웹 프로세스 합계 ≤40, RDS 79 이내).
+    db_pool_size: int = 20
+    db_max_overflow: int = 20
     # 연결 대기 상한(초). 기존 SQLAlchemy 기본값(30초) 유지.
     db_pool_timeout: int = 30
     # RDS 유휴 연결 끊김·재기동 후 죽은 커넥션 사용 방지
@@ -89,8 +90,12 @@ class Settings(BaseSettings):
     db_statement_timeout_ms: int = 120_000
     # 한 프로세스에서 동시에 처리하는 raw/산출물 presign·ack 요청 수. 복귀 직후 한 참가자의 폭주가
     # DB 풀(10+10)·스레드풀을 독점해 로그인 등 다른 요청이 멈추는 것을 막는다. 초과분은 429(Retry-After).
-    archive_max_concurrent: int = 6
-    archive_slot_wait_sec: float = 1.5
+    # SDD-260: 슬롯 16 / 대기 0.5s — 40기기 종료 직후 presign/ack 폭주를 흡수하되 풀을 독점하지 않는다.
+    archive_max_concurrent: int = 16
+    archive_slot_wait_sec: float = 0.5
+    # SDD-260: 소켓 방송·REST 공용 기본 executor 와 anyio 스레드풀 상한.
+    default_executor_workers: int = 32
+    anyio_thread_tokens: int = 64
 
     # Redis
     redis_url: str = "redis://localhost:6379/0"

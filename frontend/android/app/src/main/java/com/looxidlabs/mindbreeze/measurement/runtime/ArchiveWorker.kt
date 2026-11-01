@@ -11,15 +11,18 @@ import java.util.concurrent.TimeUnit
 class ArchiveWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, params) {
     override fun doWork(): Result {
         val rt = NativeRuntimeHolder.current()
-        if (rt != null) { rt.drainArchive(); return Result.success() }
-        // 서비스가 없는 상태(프로세스 재생성) — 마지막 설정으로 큐만 열어 올린다
-        val cfg = RuntimeConfig.load(java.io.File(applicationContext.filesDir, "measurement/runtime.json")) ?: return Result.success()
-        val ok = NativeArchiveOnly.drain(applicationContext, cfg)
-        return if (ok) Result.success() else Result.retry()
+        rt?.drainArchive()
+        // SDD-260 N3: runtime.json 의 마지막 세션 하나가 아니라 남아 있는 모든 세션 scope 를 이어 올린다(측정 중인 scope 는 건드리지 않음).
+        val rep = ScopeSweeper.forContext(applicationContext).sweepOnce()
+        return if (rep.incomplete > 0) Result.retry() else Result.success()
     }
 
     companion object {
         const val NAME = "mb-archive-drain"
+        /** 앱 시작·포그라운드·네트워크 복귀·종료 직후에 부른다. 동시에 40대가 몰리지 않도록 jitterSec 안에서 무작위 지연. */
+        fun scheduleWithJitter(ctx: Context, baseSec: Long = 0, jitterSec: Long = 60) =
+            schedule(ctx, baseSec + (Math.random() * jitterSec).toLong())
+
         fun schedule(ctx: Context, delaySec: Long) {
             val req = OneTimeWorkRequestBuilder<ArchiveWorker>()
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())

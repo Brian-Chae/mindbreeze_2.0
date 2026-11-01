@@ -22,6 +22,7 @@
    - play_group_id 로 window_index 재시작 충돌 없이 데이터 보존
 """
 
+from tests.feature_seed import post_features
 from tests.entry_helpers import guest_body
 import asyncio
 
@@ -275,8 +276,7 @@ def test_08_회원_타인_participant_id_업로드_403(client, monkeypatch):
     client.post("/api/v1/sessions/enter", json={"code": cls['access_code']}, headers=attacker["h"])
 
     # REST: 인증 회원이 타인(게스트) participant_id 로 업로드 시도
-    res = client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    res = post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"participant_id": victim, "features": [_feature(0, relaxation_index=0.5, signal_quality=0.9)]},
         headers=attacker["h"],
     )
@@ -292,16 +292,14 @@ def test_09_게스트_회원_participant_id_사칭_업로드_차단(client, monk
     member_pid = lm["metrics"][0]["participant_id"]
 
     # REST: 자격 없는 호출자가 회원 participant_id 로 업로드 시도 → 401 (participant_id 단독은 인증 수단 아님)
-    res = client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    res = post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"participant_id": member_pid, "features": [_feature(0, relaxation_index=0.5, signal_quality=0.9)]},
         headers={"X-Entry-Credential": ""},
     )
     assert res.status_code == 401
     # 다른 비회원의 입장 자격으로 회원 participant_id 대리 업로드 → 403
     other = _join_guest(client, cls["access_code"], "사칭게스트")
-    res = client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    res = post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"participant_id": member_pid, "features": [_feature(0, relaxation_index=0.5, signal_quality=0.9)]},
         headers={"X-Entry-Credential": client.credential(other)},
     )
@@ -326,8 +324,7 @@ def test_10_초대회원_동의미완료여도_소유참여자_업로드_200_SDD
 
     # SDD-209(B2): 업로드 게이트는 consent_eeg 와 분리됐다 — 소유 참여자 본인은 동의 값과 무관하게 200
     # (consent_eeg 컬럼 값/의미는 그대로 False 로 유지).
-    up = client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    up = post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"features": [_feature(0, relaxation_index=0.5, signal_quality=0.9)]},
         headers=member["h"],
     )
@@ -347,8 +344,7 @@ def test_11_대기열_참가자_업로드_403(client, monkeypatch):
     m1 = _register(client, "s026m11a@test.com", role="client")
     client.post(f"/api/v1/sessions/{cls['id']}/invite", json={"user_id": m1["id"]}, headers=counselor["h"])
     # 대기열 상태(초대만 받고 미입장)에서는 업로드가 대기열 게이트로 차단되어야 한다
-    up = client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    up = post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"features": [_feature(0, relaxation_index=0.5, signal_quality=0.9)]},
         headers=m1["h"],
     )
@@ -357,8 +353,7 @@ def test_11_대기열_참가자_업로드_403(client, monkeypatch):
     # FUNC-03: 정원이 찬 상태에서 코드로 자발 입장해도 대기열 유지 → 여전히 차단
     j = client.post("/api/v1/sessions/enter", json={"code": cls['access_code']}, headers=m1["h"])
     assert j.status_code == 200
-    up2 = client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    up2 = post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"features": [_feature(0, relaxation_index=0.5, signal_quality=0.9)]},
         headers=m1["h"],
     )
@@ -369,8 +364,7 @@ def test_11_대기열_참가자_업로드_403(client, monkeypatch):
         f"/api/v1/sessions/{cls['id']}/participants/{filler['id']}", headers=counselor["h"]
     )
     assert rem.status_code == 200, rem.text
-    up3 = client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    up3 = post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"features": [_feature(0, relaxation_index=0.5, signal_quality=0.9)]},
         headers=m1["h"],
     )
@@ -463,8 +457,7 @@ def test_17_SQI_null_unknown_valid승격금지(client, monkeypatch):
     pid = _join_guest(client, cls["access_code"], "널SQI게스트")
 
     # signal_quality 미전달(null)
-    client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"participant_id": pid, "features": [_feature(0, relaxation_index=0.5)]},
     )
     lm = client.get(f"/api/v1/sessions/{cls['id']}/live-metrics", headers=counselor["h"]).json()
@@ -480,8 +473,7 @@ def test_18_SQI_분리표시_WS_REST_동일(client, monkeypatch):
     cls = _create_group_class(client, counselor["h"])
     pid = _join_guest(client, cls["access_code"], "품질게스트")
 
-    client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"participant_id": pid, "features": [_feature(0, relaxation_index=0.5, signal_quality=0.5)]},
     )
     # REST live-metrics
@@ -501,8 +493,7 @@ def test_19_배터리_전달(client, monkeypatch):
     cls = _create_group_class(client, counselor["h"])
     pid = _join_guest(client, cls["access_code"], "배터리게스트")
 
-    client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"participant_id": pid, "features": [_feature(0, relaxation_index=0.5, signal_quality=0.9, band_battery=15)]},
     )
     m = client.get(f"/api/v1/sessions/{cls['id']}/live-metrics", headers=counselor["h"]).json()
@@ -523,8 +514,7 @@ def test_20_pause_resume_window_index_재시작_데이터보존(client, monkeypa
     pid = _join_guest(client, cls["access_code"], "이어하기게스트")
 
     # 1차 실행(play A): 초 0,1,2
-    r1 = client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    r1 = post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={
             "participant_id": pid,
             "features": [_feature(i, relaxation_index=0.4, signal_quality=0.9, play_group_id="playA") for i in range(3)],
@@ -533,8 +523,7 @@ def test_20_pause_resume_window_index_재시작_데이터보존(client, monkeypa
     assert r1.json()["saved"] == 3
 
     # pause 후 resume → 밴드 second_offset 이 0 부터 재시작(play B): 초 0,1,2
-    r2 = client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    r2 = post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={
             "participant_id": pid,
             "features": [_feature(i, relaxation_index=0.8, signal_quality=0.9, play_group_id="playB") for i in range(3)],
@@ -553,6 +542,6 @@ def test_21_동일_play_group_재전송은_멱등_skip(client, monkeypatch):
         "participant_id": pid,
         "features": [_feature(i, relaxation_index=0.5, signal_quality=0.9, play_group_id="playA") for i in range(3)],
     }
-    assert client.post(f"/api/v1/sessions/{cls['id']}/features", json=body).json()["saved"] == 3
+    assert post_features(client, f"/api/v1/sessions/{cls['id']}/features", json=body).json()["saved"] == 3
     # 동일 play_group + 동일 초 인덱스 재전송 → 전부 skip
-    assert client.post(f"/api/v1/sessions/{cls['id']}/features", json=body).json()["saved"] == 0
+    assert post_features(client, f"/api/v1/sessions/{cls['id']}/features", json=body).json()["saved"] == 0

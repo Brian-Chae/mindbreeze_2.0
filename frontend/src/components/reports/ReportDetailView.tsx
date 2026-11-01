@@ -16,6 +16,7 @@ import ReportCoverSection from './ReportCoverSection';
 import ReportStatusBadge from './ReportStatusBadge';
 import ReportApprovalStatus from './ReportApprovalStatus';
 import { useAuthStore } from '../../stores/authStore';
+import { UploadParticipantNotice } from '../class/upload-participant-notice';
 import { aiRecordUnavailableText } from '../../lib/features';
 import {
   approveAndSendReport,
@@ -293,6 +294,7 @@ export default function ReportDetailView({
       )}
 
       {isCounselor && <ReportCoverSection report={report} adapted={adapted} />}
+      {isStaffUser && report.participant_id && <UploadParticipantNotice sessionId={report.session_id} participantId={report.participant_id} />}
 
       <div data-print-exclude><ReportStatusBadge
         status={pipelineStatus}

@@ -1,8 +1,8 @@
 // SDD-246 T06c — T05b 계약 맞춤(웹): capture ACK result·u64 문자열·live:metric 배치/ACK·live:device·device.changed 합집합·서버 신선도.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PID, SID, STREAM, event, metricsData, snapshot } from './fixtures';
+import { MemoryOutboxStore } from '../../src/lib/measurement-web/metric-outbox';
 import { CaptureController } from '../../src/lib/measurement-web/capture-controller';
-import { MetricOutbox } from '../../src/lib/measurement-web/metric-outbox';
 import type { MetricEnvelope } from '../../src/lib/measurement-web/envelope';
 import { applyEvent, applySnapshot, beginResync, createLiveState } from '../../src/lib/session-live/live-state';
 import { freshnessOf } from '../../src/lib/session-live/live-view';
@@ -67,6 +67,7 @@ const flush = async (): Promise<void> => { for (let i = 0; i < 10; i += 1) await
 
 function controller(f: ReturnType<typeof fakeClient>, over: Partial<ConstructorParameters<typeof CaptureController>[0]> = {}) {
   return new CaptureController({
+    accountId: 'user:u1', outboxStore: new MemoryOutboxStore(), sendFeatures: async () => [],
     client: f.client, sessionId: SID, eegConsent: true, bandConnected: true,
     deviceProfile: 'linkband2-v1', algorithmVersion: 'core-1', modelVersion: 'm1', uuid: () => ANCHOR, ...over,
   });
@@ -156,68 +157,7 @@ describe('T06c — device.changed 로 owner 교체·권한 회수 판단', () =>
   });
 });
 
-describe('T06c — MetricOutbox(live:metric 응답 처리)', () => {
-  beforeEach(() => vi.useFakeTimers());
-  afterEach(() => vi.useRealTimers());
-
-  it('accepted·duplicate 만 제거, rejected 는 재시도 금지, 창별 retryable 은 유지', async () => {
-    const sent: MetricEnvelope[][] = [];
-    const ob = new MetricOutbox({
-      send: async (w) => { sent.push(w); return { kind: 'acks', acks: [mack(w[0]!, 'accepted'), mack(w[1]!, 'duplicate'), mack(w[2]!, 'rejected', 'feature_hash_conflict'), mack(w[3]!, 'retryable')] }; },
-    });
-    for (const s of ['1', '2', '3', '4']) ob.enqueue(env(s, { stream_id: STREAM }));
-    await ob.flush();
-    expect(ob.pendingKeys()).toEqual([`${STREAM}:4`]);
-    expect(ob.rejected()).toEqual([{ key: `${STREAM}:3`, code: 'feature_hash_conflict' }]);
-    await vi.advanceTimersByTimeAsync(5_000);
-    await ob.flush();
-    expect(sent.at(-1)!.map((x) => x.sequence)).toEqual(['4']); // 3 은 다시 보내지 않는다
-  });
-
-  it('not_ready(retryable) 는 전부 보존하고 retry_after_ms 이후 재전송, 비재시도 배치 오류는 버린다', async () => {
-    let reply: MetricSendOutcome = { kind: 'error', code: 'not_ready', retryable: true, retryAfterMs: 500 };
-    const sent: MetricEnvelope[][] = [];
-    const ob = new MetricOutbox({ send: async (w) => { sent.push(w); return reply; } });
-    ob.enqueue(env('1', { stream_id: STREAM }));
-    await ob.flush();
-    expect(ob.pendingKeys()).toEqual([`${STREAM}:1`]);
-    await ob.flush(); // 대기 시간 전에는 보내지 않는다
-    expect(sent).toHaveLength(1);
-    await vi.advanceTimersByTimeAsync(600);
-    reply = { kind: 'error', code: 'invalid_message', retryable: false, retryAfterMs: null };
-    await ob.flush();
-    expect(sent).toHaveLength(2);
-    expect(ob.pendingKeys()).toEqual([]);
-    expect(ob.rejected()).toEqual([{ key: `${STREAM}:1`, code: 'invalid_message' }]);
-  });
-
-  it('stream 단위 거절(stale_owner_generation)은 그 stream 의 대기 창을 모두 버리고 onFenced 를 알린다', async () => {
-    const fenced: string[] = [];
-    const ob = new MetricOutbox({
-      maxBatch: 1,
-      send: async (w) => ({ kind: 'acks', acks: [mack(w[0]!, 'rejected', 'stale_owner_generation')] }),
-      onFenced: (code) => fenced.push(code),
-    });
-    ob.enqueue(env('1', { stream_id: STREAM }));
-    ob.enqueue(env('2', { stream_id: STREAM }));
-    await ob.flush();
-    expect(fenced).toEqual(['stale_owner_generation']);
-    expect(ob.pendingKeys()).toEqual([]);
-  });
-
-  it('배치 상한 60창, 대기 상한 초과 시 가장 오래된 창부터 버린다(archive 가 정본)', async () => {
-    const sent: MetricEnvelope[][] = [];
-    const ob = new MetricOutbox({ maxPending: 3, send: async (w) => { sent.push(w); return { kind: 'not_sent' }; } });
-    for (const s of ['1', '2', '3', '4']) ob.enqueue(env(s, { stream_id: STREAM }));
-    expect(ob.pendingKeys()).toEqual([`${STREAM}:2`, `${STREAM}:3`, `${STREAM}:4`]);
-    expect(ob.droppedCount()).toBe(1);
-    const big = new MetricOutbox({ send: async (w) => { sent.push(w); return { kind: 'acks', acks: w.map((x) => mack(x, 'accepted')) }; } });
-    for (let i = 1; i <= 70; i += 1) big.enqueue(env(String(i), { stream_id: STREAM }));
-    sent.length = 0;
-    await big.flush();
-    expect(sent[0]).toHaveLength(60);
-  });
-});
+// MetricOutbox(구 live:metric 응답 처리) 시험은 SDD-260 로 REST 배치 정본 outbox 로 대체됨 — tests/sdd260-web/feature-outbox.test.ts
 
 describe('T06c — live:device 보고', () => {
   beforeEach(() => vi.useFakeTimers());

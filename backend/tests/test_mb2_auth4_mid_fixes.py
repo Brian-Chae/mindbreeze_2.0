@@ -15,6 +15,7 @@
   [12] RPT-EMAIL-CONTRACT-004 재발송 응답 계약 {success, sent, message}
 """
 
+from tests.feature_seed import post_features
 import asyncio
 import uuid
 from datetime import date
@@ -400,8 +401,7 @@ def test_persist_feature_items_passes_session_version(client, monkeypatch):
         session_service, "_notify_device_status",
         lambda sid, participant, **kw: captured.append(kw),
     )
-    res = client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    res = post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"participant_id": pid, "features": [_feature(0, relaxation_index=0.5, band_battery=55)]},
     )
     assert res.status_code == 200, res.text

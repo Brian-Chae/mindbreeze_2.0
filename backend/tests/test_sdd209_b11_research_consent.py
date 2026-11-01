@@ -5,6 +5,7 @@
 - 동의 이력은 불변(append-only). 철회는 플랫폼 관리자 경로만(사유 필수).
 """
 
+from tests.feature_seed import post_features
 import hashlib
 import hmac
 import logging
@@ -210,7 +211,7 @@ def test_BT50_연구_동의는_입장_업로드_리포트_게이트가_아니다
     url = f"/api/v1/sessions/{cls['id']}/features"
     batch = [{"second_offset": 0, "relaxation_index": 0.5}]
     for who in (no, yes, declined):
-        assert client.post(url, json={"features": batch}, headers=_cred(who)).status_code == 200
+        assert post_features(client, url, json={"features": batch}, headers=_cred(who)).status_code == 200
         assert client.get(f"/api/v1/sessions/{cls['id']}/entry-state", headers=_cred(who)).status_code == 200
 
 

@@ -44,6 +44,13 @@ class ArchiveClassifierTest {
         assertEquals(ArchiveAction.QUARANTINE, d(ArchiveStage.PRESIGN, 404).action)
     }
 
+    @Test fun jitteredBackoffKeepsRetryAfterAsFloor() {
+        assertEquals(4000L, ArchiveClassifier.jitteredBackoffMs(0, 4000, 0.0))
+        assertEquals(4000L + 1000L, ArchiveClassifier.jitteredBackoffMs(0, 4000, 1.0))
+        assertTrue(ArchiveClassifier.jitteredBackoffMs(500, 2000, 1.0) <= 2000L + 60_000L)
+        assertTrue(ArchiveClassifier.jitteredBackoffMs(3, null, 0.5) in 0L..60_000L)
+    }
+
     @Test fun backoffIsBoundedForAnyAttemptCount() {
         assertEquals(1000L, ArchiveClassifier.backoffMs(0, null))
         assertEquals(60_000L, ArchiveClassifier.backoffMs(500, null))

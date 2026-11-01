@@ -1,24 +1,29 @@
 """세션 관리 API"""
 
+import logging
+import time
 from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi.responses import HTMLResponse
-from fastapi import APIRouter, Depends, Header, Query, Request, Response, status
+from fastapi import APIRouter, Body, Depends, Header, Query, Request, Response, status
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session as DBSession
 
 from app.api.deps import archive_upload_slot, get_current_user, get_current_user_optional, require_roles
 from app.api.v1.onboarding import _parse_date
+from app.core import ingest_metrics
 from app.core.database import get_db
+from app.models.session import Session as SessionModel, SessionParticipant
 from app.core.redis import get_redis
 from app.schemas.class_scheduling import TransitionConfirmation
 from app.schemas.session import (
+    FeatureBatchResponse,
+    FeatureSummaryResponse,
+    RawSummaryResponse,
     RecordingConsentRequest,
     ReportEmailRequest,
     ReportEmailResponse,
-    EEGFeatureBatchRequest,
-    EEGFeatureBatchResponse,
     EnterRequest,
     EnterResponse,
     EnterVerifyRequest,
@@ -77,6 +82,8 @@ from app.services import (
     session_service,
 )
 from app.services.session_authz import SessionAction, get_session_authorized
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -797,26 +804,98 @@ def add_marker(
     )
 
 
-@router.post("/{session_id}/features", response_model=EEGFeatureBatchResponse)
-def ingest_eeg_features(
+@router.post("/{session_id}/features/batch", response_model=FeatureBatchResponse, response_model_exclude_none=True)
+def ingest_features_batch(
     session_id: str,
-    payload: EEGFeatureBatchRequest,
+    payload: dict = Body(...),
     x_entry_credential: EntryCredential = None,
     current_user: dict | None = Depends(get_current_user_optional),
     db: DBSession = Depends(get_db),
 ):
-    """SDD-023: LINK BAND 5초 배치 EEG feature 업로드.
+    """SDD-260 S1: feature 정본 저장(REST 배치, ≤300창). 소켓 live:metric 은 저장하지 않는다. 계약: contract.md §1."""
+    from app.schemas.session_live_ingest import parse_feature_batch
+    from app.schemas.session_live_v2 import WireError
+    from app.services import live_ingest_service
 
-    비회원은 입장 자격(X-Entry-Credential)으로, 로그인 참가자는 인증 토큰으로 식별한다
-    (자격 없음 401 · 비참가자/타인 403).
-    """
-    return session_service.ingest_features(
-        session_id,
-        payload,
-        db,
-        current_user_id=current_user["id"] if current_user else None,
-        entry_credential=x_entry_credential,
+    sid = UUID(session_id) if _is_uuid_str(session_id) else None
+    if sid is None:
+        raise _HTTPException(status_code=400, detail="잘못된 ID 형식입니다")
+    if db.get(SessionModel, sid) is None:
+        raise _HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+    raw_pid = payload.get("participant_id") if isinstance(payload, dict) else None
+    # 인증·소유 확정이 본문 검증보다 먼저다(미인증 401/타인 403 이 422 에 가려지지 않게)
+    participant = session_service.resolve_upload_participant(
+        sid, raw_pid if isinstance(raw_pid, str) else None, current_user["id"] if current_user else None, db,
+        entry_credential=x_entry_credential, allow_completed=True,
     )
+    try:
+        _, windows = parse_feature_batch(payload)
+    except WireError as exc:
+        detail: dict[str, Any] = {"code": exc.code}
+        if exc.field:
+            detail["field"] = exc.field
+        raise _HTTPException(status_code=422, detail=detail)
+    t0 = time.perf_counter()
+    try:
+        results = live_ingest_service.store_batch(db, participant, sid, windows)
+    except Exception:
+        ingest_metrics.record_error()
+        raise
+    elapsed_ms = (time.perf_counter() - t0) * 1000
+    counts = {k: sum(1 for r in results if r["status"] == k) for k in ("accepted", "duplicate", "rejected")}
+    ingest_metrics.record_batch(results, elapsed_ms)
+    logger.info("[ingest-batch] session=%s participant=%s windows=%d accepted=%d duplicate=%d rejected=%d ms=%.0f codes=%s",
+                sid, participant.id, len(results), counts["accepted"], counts["duplicate"], counts["rejected"], elapsed_ms,
+                sorted({r["code"] for r in results if r.get("code")}))
+    return {"session_id": str(sid), "participant_id": str(participant.id), "results": results, "counts": counts}
+
+
+def _is_uuid_str(value: str) -> bool:
+    try:
+        UUID(str(value))
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
+def _summary_target(session_id: str, participant_id: str | None, x_entry_credential, current_user, db) -> tuple[UUID, UUID]:
+    """summary 조회 대상 확정: 본인(JWT·입장 자격) 또는 세션 호스트(participant_id 필수). 타인 403."""
+    if not _is_uuid_str(session_id):
+        raise _HTTPException(status_code=400, detail="잘못된 ID 형식입니다")
+    sid = UUID(session_id)
+    sess = db.get(SessionModel, sid)
+    if sess is None:
+        raise _HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+    if participant_id is not None and not _is_uuid_str(participant_id):
+        raise _HTTPException(status_code=422, detail={"code": "invalid_message", "field": "participant_id"})
+    if current_user is not None and str(sess.host_id) == str(current_user["id"]):
+        if participant_id is None:
+            raise _HTTPException(status_code=422, detail={"code": "invalid_message", "field": "participant_id"})
+        target = db.get(SessionParticipant, UUID(participant_id))
+        if target is None or target.session_id != sid:
+            raise _HTTPException(status_code=404, detail="참가자를 찾을 수 없습니다")
+        return sid, target.id
+    me = session_service.resolve_participant_actor(
+        sid, db, entry_credential=x_entry_credential,
+        current_user_id=current_user["id"] if current_user else None,
+        participant_id=participant_id, allow_completed=True,
+    )
+    return sid, me.id
+
+
+@router.get("/{session_id}/features/summary", response_model=FeatureSummaryResponse)
+def get_features_summary(
+    session_id: str,
+    participant_id: str | None = Query(None),
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-260 S2: 서버 저장 현황(종료 대조). 본인·호스트만. 계약: contract.md §2."""
+    from app.services import live_ingest_service
+
+    sid, pid = _summary_target(session_id, participant_id, x_entry_credential, current_user, db)
+    return live_ingest_service.feature_summary(db, sid, pid)
 
 
 @router.get("/{session_id}/eeg-rollup", response_model=EEGRollupResponse)
@@ -880,6 +959,19 @@ def ack_eeg_raw(
         current_user_id=current_user["id"] if current_user else None,
         entry_credential=x_entry_credential,
     )
+
+
+@router.get("/{session_id}/biosignal-raw/summary", response_model=RawSummaryResponse)
+def get_biosignal_raw_summary(
+    session_id: str,
+    participant_id: str | None = Query(None),
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-260: 원시 업로드 현황(종료 후 대조). 본인·호스트만, 슬롯 비적용. 계약: contract.md §3."""
+    sid, pid = _summary_target(session_id, participant_id, x_entry_credential, current_user, db)
+    return biosignal_service.raw_summary(db, sid, pid)
 
 
 @router.post("/{session_id}/biosignal-raw/presign", response_model=biosignal_schema.PresignResponse, dependencies=[Depends(archive_upload_slot)])

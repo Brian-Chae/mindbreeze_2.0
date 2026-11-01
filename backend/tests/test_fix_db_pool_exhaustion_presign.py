@@ -103,7 +103,8 @@ def test_v5_archive_slot_한도_초과는_429_RetryAfter(monkeypatch):
     for t in threads:
         t.join(10)
     assert sorted(results) == [200, 200, 429, 429]
-    assert all(h.get("retry-after") == "3" for h in headers)
+    # SDD-260 S5: Retry-After 는 2~6 정수(재시도 분산)
+    assert headers and all(h.get("retry-after", "").isdigit() and 2 <= int(h["retry-after"]) <= 6 for h in headers)
     # 해제 후 재통과
     assert TestClient(app).get("/slow").status_code == 200
 

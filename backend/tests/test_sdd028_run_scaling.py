@@ -8,6 +8,7 @@
 3. 회귀: 기존 라이브·롤업 동작 유지
 """
 
+from tests.feature_seed import post_features
 from tests.entry_helpers import guest_body
 from sqlalchemy import inspect as sa_inspect
 
@@ -154,8 +155,7 @@ def test_06_batch_key_범위조회는_전체스캔과_동일하다(client):
     pid = _join_guest(client, cls["access_code"], "batch게스트")
 
     feats = [_feature(i, relaxation_index=0.1 * i, signal_quality=0.9) for i in range(150)]
-    r = client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    r = post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"participant_id": pid, "features": feats},
     )
     assert r.json()["saved"] == 150
@@ -195,8 +195,7 @@ def test_07_latest_feature_window는_최신1건만_반환한다(client):
     pid = _join_guest(client, cls["access_code"], "latest게스트")
 
     feats = [_feature(i, relaxation_index=0.5) for i in range(10)]
-    client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"participant_id": pid, "features": feats},
     )
 
@@ -218,8 +217,7 @@ def test_08_rollup_batch_key_범위는_전체와_정합한다(client):
     pid = _join_guest(client, cls["access_code"], "rollup게스트")
 
     feats = [_feature(i, relaxation_index=0.5, signal_quality=0.9) for i in range(180)]
-    client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"participant_id": pid, "features": feats},
     )
 

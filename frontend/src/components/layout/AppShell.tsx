@@ -13,6 +13,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useNotificationSocket } from '../../hooks/useNotificationSocket';
 import { listChatRooms } from '../../lib/api/chat';
 import NotificationToastHost from '../notifications/notification-toast-host';
+import AppUpdateBanner from '../update/AppUpdateBanner';
 
 export interface AppShellProps {
   children: ReactNode;
@@ -176,6 +177,7 @@ export default function AppShell({
       <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
       {!hideBottomTab && <BottomTabBar role={userRole} />}
       <NotificationToastHost />
+      <AppUpdateBanner />
     </div>
   );
 }

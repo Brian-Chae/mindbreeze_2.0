@@ -76,7 +76,7 @@ class ArchiveUploader(
             ArchiveAction.REPRESIGN, ArchiveAction.BACKOFF -> {
                 // 횟수가 많아도 영구 실패로 만들지 않는다 — 유한 backoff 만 적용
                 item.lastReason = d.code
-                item.nextAttemptAtMs = nowMs() + ArchiveClassifier.backoffMs(item.attempts, d.retryAfterMs)
+                item.nextAttemptAtMs = nowMs() + ArchiveClassifier.jitteredBackoffMs(item.attempts, d.retryAfterMs)
                 queue.update(item); sum.failed++
             }
         }

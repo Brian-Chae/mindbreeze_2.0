@@ -200,7 +200,8 @@ export interface UseBandOptions {
   forceMock?: boolean;
   /**
    * SDD-246 T12: false 면 v1 feature 업로드(REST feature 배치·WS session-live feature)를 끈다 — v2 수집 경로(web_wasm/native)가
-   * 같은 지표를 live:metric 으로 보내므로 이중 집계를 막는다. raw 업로드·화면 로컬 지표는 영향 없음. 기본 true(현행).
+   * 같은 지표를 live:metric 으로 보내므로 이중 집계를 막는다. raw 업로드·화면 로컬 지표는 영향 없음.
+   * SDD-260: 기본 false — 서버가 v1 `/features`(404)·소켓 `session:feature` 저장을 없앴다. 정본 저장은 lib/measurement-web 의 REST 배치뿐.
    */
   v1FeatureUpload?: boolean;
   /** false 면 마운트·앱 복귀 시 이전 기기 자동 연결을 하지 않는다('밴드 없이 입장'). 사용자가 connect() 를 부를 때만 연결. 기본 true */
@@ -400,7 +401,7 @@ export function useBand({
   observationOnly: requestedObservationOnly = false,
   forceMock,
   displayViewKind,
-  v1FeatureUpload = true,
+  v1FeatureUpload = false,
   autoResume = true,
 }: UseBandOptions): UseBandResult {
   const autoResumeRef = useRef(autoResume);

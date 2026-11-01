@@ -75,6 +75,8 @@ public final class MeasurementManager: BandLinkDelegate {
     public var onBridgeEvent: (([String: Any]) -> Void)?
     /// 봉인(사용자 정지·회차 종료·terminal) 직후 — 호스트가 archive 업로드를 시작한다. (sessionId, credentialHandle)
     public var onSealed: ((String, String?) -> Void)?
+    /// SDD-260: stream 확정(신규 채택·앱 재시작 복구) 직후 — 호스트가 이 세션의 REST 저장 업로더(SessionSync)를 켠다. (sessionId, credentialHandle, participantId)
+    public var onSessionReady: ((String, String?, String) -> Void)?
 
     private var generation: UInt64 = 0
     private var eventSeq: UInt64 = 0
@@ -317,6 +319,16 @@ public final class MeasurementManager: BandLinkDelegate {
     /// 해당 세션이 지금 manager 가 들고 있는 세션일 때만 그 큐(다른 세션 큐를 잘못 쓰지 않는다).
     public func archiveQueue(forSession sid: String) -> ArchiveQueue? { lock.lock(); defer { lock.unlock() }; return sessionId == sid ? archive : nil }
     public var archiveQueue: ArchiveQueue? { lock.lock(); defer { lock.unlock() }; return archive }
+    /// 지금 manager 가 들고 있는 세션의 outbox(소켓 방송과 REST 업로더가 같은 인스턴스를 써야 journal 이 둘로 갈라지지 않는다).
+    public func outbox(forSession sid: String) -> MetricOutbox? { lock.lock(); defer { lock.unlock() }; return sessionId == sid ? engine?.outbox : nil }
+
+    /// 앱 시작·포그라운드·네트워크 복귀에서 호출 — 디스크에 남은 **전 세션**(SEALING/CLOSED/DRAINING 포함) 중 저장 완결 전인 것.
+    /// 수집 중(ARMING/CAPTURING/RECONNECTING) 세션은 SessionSync 가 이미 돌고 있어 제외한다. CAPTURING 복구(`recoverOnLaunch`)와는 별개다.
+    public func drainPendingArchives() -> [PendingSession] {
+        lock.lock(); defer { lock.unlock() }
+        let activeSid: String? = (state == .arming || state == .capturing || state == .reconnecting) ? sessionId : nil
+        return SessionDrain.pending(root: root, excluding: activeSid.map { [$0] } ?? [])
+    }
     public func archiveFileURL(_ item: ArchiveItem) -> URL {
         lock.lock(); defer { lock.unlock() }
         return sessionDir(sessionId ?? "").appendingPathComponent("archive").appendingPathComponent(item.file)
@@ -367,6 +379,7 @@ public final class MeasurementManager: BandLinkDelegate {
         l.start()
         band.connect(expectedPeripheral: peripheralId)
         armStreamTimers()
+        onSessionReady?(sid, credentialHandle, pid)
         return true
     }
 
@@ -507,6 +520,7 @@ public final class MeasurementManager: BandLinkDelegate {
         state = .capturing
         deviceReportingStopped = false
         persistActive()
+        onSessionReady?(sid, credentialHandle, participant)
         let ws = streamWaiters; streamWaiters = []
         ws.forEach { $0(.success((stream, gen))) }
         armStreamTimers()
@@ -707,6 +721,14 @@ public final class MeasurementManager: BandLinkDelegate {
                                   "disk_used_bytes": disk, "disk_limit_bytes": Self.diskLimit], "last_verified_at_ms": NSNull()],
             "gaps": gaps,
         ]
+    }
+
+    /// SDD-260: 저장 진행(plan §5.1 UI). 이벤트명은 `feature.counts` · `archive.counts` · `reconcile.state`(docs/sdd-260-native-js-events.md).
+    public func emitSyncStatus(sessionId sid: String, _ s: SyncSnapshot) {
+        lock.lock(); defer { lock.unlock() }
+        emit(event: "feature.counts", payload: ["sessionId": sid, "pending": s.featurePending, "acked": s.featureAcked, "rejected": s.featureRejected])
+        emit(event: "archive.counts", payload: ["sessionId": sid, "pending": s.archivePending, "uploading": s.archiveUploading, "verified": s.archiveVerified, "quarantined": s.archiveQuarantined])
+        emit(event: "reconcile.state", payload: ["sessionId": sid, "feature": s.featureState, "raw": s.rawState, "complete": s.complete])
     }
 
     public func emitMeasurementUpdated() { emit(event: "measurementUpdated", payload: nil, snapshot: true) }

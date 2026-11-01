@@ -30,7 +30,7 @@ public class NativeMeasurementPlugin: CAPPlugin, CAPBridgedPlugin {
     override public func load() {
         host.onBridgeEvent = { [weak self] e in self?.forward(e) }
         let nc = NotificationCenter.default
-        observers.append(nc.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: nil) { [weak self] _ in self?.setVisibility(.foreground) })
+        observers.append(nc.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: nil) { [weak self] _ in self?.setVisibility(.foreground); self?.host.drainPendingArchives() })
         observers.append(nc.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: nil) { [weak self] _ in self?.setVisibility(.background) })
         observers.append(nc.addObserver(forName: UIApplication.protectedDataWillBecomeUnavailableNotification, object: nil, queue: nil) { [weak self] _ in self?.setVisibility(.locked) })
         observers.append(nc.addObserver(forName: UIApplication.protectedDataDidBecomeAvailableNotification, object: nil, queue: nil) { [weak self] _ in self?.setVisibility(UIApplication.shared.applicationState == .active ? .foreground : .background) })

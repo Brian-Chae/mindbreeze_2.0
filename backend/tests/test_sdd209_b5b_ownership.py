@@ -4,6 +4,7 @@ REST·WS·LiveKit·EEG 업로드·체크인·손들기·리포트 선택·entry-
 본인 참여자를 증명한다. 코드·participant_id 단독은 인증 수단이 아니다. 구 by-code 4개 경로는 폴백 없이 제거.
 """
 
+from tests.feature_seed import post_features
 import uuid
 
 import pytest
@@ -125,7 +126,7 @@ def test_AZ6_타_클래스_자격은_모든_엔드포인트_403(client):
     for method, url, kw in (
         ("get", f"{base2}/entry-state", {}),
         ("post", f"{base2}/entry/livekit-token", {}),
-        ("post", f"{base2}/features", {"json": {"features": [_feature(0, relaxation_index=0.5)]}}),
+        ("post", f"{base2}/features/batch", {"json": {"windows": []}}),
         ("post", f"{base2}/eeg-raw/presign", {"json": {"chunks": [{"stream_id": "s", "chunk_index": 0,
                                                                   "sample_rate": 250, "channel_count": 2}]}}),
     ):
@@ -140,9 +141,9 @@ def test_AZ7_BT28_EEG_업로드는_소유_자격만_타인_403_자격없음_401(
     url = f"/api/v1/sessions/{cls['id']}/features"
     batch = [_feature(0, relaxation_index=0.5, signal_quality=0.9)]
 
-    assert client.post(url, json={"features": batch}, headers=_cred(a)).status_code == 200  # participant_id 생략도 자격으로
-    assert client.post(url, json={"participant_id": a["participant_id"], "features": batch}, headers=_cred(b)).status_code == 403
-    assert client.post(url, json={"participant_id": a["participant_id"], "features": batch},
+    assert post_features(client, url, json={"features": batch}, headers=_cred(a)).status_code == 200  # participant_id 생략도 자격으로
+    assert post_features(client, url, json={"participant_id": a["participant_id"], "features": batch}, headers=_cred(b)).status_code == 403
+    assert post_features(client, url, json={"participant_id": a["participant_id"], "features": batch},
                        headers=no_credential()).status_code == 401
 
     chunks = [{"stream_id": "s", "chunk_index": 0, "sample_rate": 250, "channel_count": 2}]
@@ -165,9 +166,9 @@ def test_AZ8_BT30_코드는_인증수단이_아니다(client):
         {"X-Access-Code": code, **no_credential()},
         {"Authorization": f"Bearer {code}", **no_credential()},
     ):
-        res = client.post(url, json={"participant_id": j["participant_id"], "features": batch}, headers=headers)
+        res = post_features(client, url, json={"participant_id": j["participant_id"], "features": batch}, headers=headers)
         assert res.status_code == 401, (headers, res.status_code)
-    res = client.post(url, json={"participant_id": j["participant_id"], "access_code": code, "features": batch},
+    res = post_features(client, url, json={"participant_id": j["participant_id"], "access_code": code, "features": batch},
                       headers=no_credential())
     assert res.status_code == 401
     assert client.get(f"/api/v1/sessions/{cls['id']}/entry-state?code={code}", headers=no_credential()).status_code == 401
@@ -288,6 +289,6 @@ def test_로그인_회원은_자격없이_로그인만으로_본인_업로드_�
     client.post("/api/v1/sessions/enter", json={"code": cls["access_code"]}, headers=m2["h"])
     url = f"/api/v1/sessions/{cls['id']}/features"
     batch = [_feature(0, relaxation_index=0.5, signal_quality=0.9)]
-    assert client.post(url, json={"features": batch}, headers={**m1["h"], **no_credential()}).status_code == 200
-    assert client.post(url, json={"participant_id": p1, "features": batch},
+    assert post_features(client, url, json={"features": batch}, headers={**m1["h"], **no_credential()}).status_code == 200
+    assert post_features(client, url, json={"participant_id": p1, "features": batch},
                        headers={**m2["h"], **no_credential()}).status_code == 403

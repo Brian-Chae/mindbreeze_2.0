@@ -1,5 +1,6 @@
 """API Dependencies — DB Session, Current User"""
 
+import random
 import threading
 
 from fastapi import Depends, HTTPException, status
@@ -111,7 +112,7 @@ def archive_upload_slot():
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail={"code": "archive_busy"},
-            headers={"Retry-After": "3"},
+            headers={"Retry-After": str(random.randint(2, 6))},  # SDD-260: 재시도 분산(앱은 하한 준수 + full jitter)
         )
     try:
         yield

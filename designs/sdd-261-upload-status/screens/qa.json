@@ -1,0 +1,58 @@
+[
+  {
+    "file": "01-settings-desktop.html",
+    "width": 1440,
+    "height": 900,
+    "pageOverflow": false
+  },
+  {
+    "file": "01-settings-desktop.html",
+    "width": 390,
+    "height": 844,
+    "pageOverflow": false
+  },
+  {
+    "file": "02-class-participants.html",
+    "width": 1440,
+    "height": 900,
+    "pageOverflow": false
+  },
+  {
+    "interaction": "검색 / 필터 35명 / 그룹핑 / 행 펼침 / 검색 빈 상태",
+    "passed": true
+  },
+  {
+    "file": "02-class-participants.html",
+    "width": 390,
+    "height": 844,
+    "pageOverflow": false
+  },
+  {
+    "file": "03-mobile.html",
+    "width": 1440,
+    "height": 900,
+    "pageOverflow": false
+  },
+  {
+    "file": "03-mobile.html",
+    "width": 390,
+    "height": 844,
+    "pageOverflow": false
+  },
+  {
+    "file": "04-states.html",
+    "width": 1440,
+    "height": 900,
+    "pageOverflow": false
+  },
+  {
+    "file": "04-states.html",
+    "width": 390,
+    "height": 844,
+    "pageOverflow": false
+  },
+  {
+    "interaction": "정지/재개(01·02·03), 모바일 40명 마지막 행 스크롤·펼침, 오프라인 카드 재조회",
+    "passed": true
+  }
+]

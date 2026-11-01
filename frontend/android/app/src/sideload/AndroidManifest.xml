@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SDD-259: 다운로드 사이트용 sideload 빌드(-PmbSideload=true) 전용. Play 제출용 AAB 에는 포함되지 않는다. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+</manifest>

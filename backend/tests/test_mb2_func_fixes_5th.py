@@ -15,6 +15,7 @@
 - EEG-RUP-01/02: rollup play_group_id 노출 + coverage 참가자 정규화
 """
 
+from tests.feature_seed import post_features
 import os
 import tempfile
 import uuid
@@ -632,7 +633,7 @@ def test_rollup_api_buckets_include_play_group_id(client):
     cls = _create_group_class(client, counselor["h"])
     pid = _join_guest(client, cls["access_code"], "pg게스트")
     feats = [_feature(i, relaxation_index=0.5, signal_quality=0.9) for i in range(10)]
-    client.post(f"/api/v1/sessions/{cls['id']}/features",
+    post_features(client, f"/api/v1/sessions/{cls['id']}/features",
                 json={"participant_id": pid, "features": feats})
 
     body = client.get(f"/api/v1/sessions/{cls['id']}/eeg-rollup", headers=counselor["h"]).json()

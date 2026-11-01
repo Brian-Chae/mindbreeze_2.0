@@ -63,52 +63,42 @@ final class LiveSessionT07bTests: XCTestCase {
         XCTAssertEqual(named("live:command").last?.payload["expected_epoch"] as? String, "5")
     }
 
-    // MARK: live:metric 응답
+    // MARK: live:metric = 방송 전용 (SDD-260: 소켓 ACK/오류는 outbox 를 바꾸지 않는다)
 
     func box(_ n: Int) throws -> MetricOutbox {
         let b = try MetricOutbox(dir: dir, sync: .none); live.attach(outbox: b)
         for i in 1...n { _ = try b.enqueue(["sequence": "\(i)", "feature_hash": "h\(i)"]) }
         return b
     }
-    func testRejectedCodesAreQuarantinedWithCodeAndNeverResent() throws {
+    func testSocketAckNeverChangesOutboxState() throws {
         ready()
         let b = try box(3)
         live.pump()
-        ack("live:metric", "{\"protocol_version\":2,\"schema_version\":1,\"acks\":[{\"sequence\":\"3\",\"status\":\"rejected\",\"durable\":false,\"code\":\"stale_owner_generation\"},{\"sequence\":\"2\",\"status\":\"rejected\",\"durable\":false,\"code\":\"feature_hash_conflict\"},{\"sequence\":\"1\",\"status\":\"duplicate\",\"durable\":true}]}")
-        XCTAssertEqual(b.rejectedSequences, [2, 3]); XCTAssertEqual(b.ackedSequences, [1])
-        XCTAssertEqual(b.rejectCode(3), "stale_owner_generation"); XCTAssertEqual(b.rejectCode(2), "feature_hash_conflict")
-        sch.advance(30); live.pump()
-        XCTAssertEqual(named("live:metric").count, 1, "거절 창은 재전송하지 않는다")
-        let reopened = try MetricOutbox(dir: dir, sync: .none)
-        XCTAssertEqual(reopened.rejectCode(3), "stale_owner_generation", "격리 사유는 영속")
+        ack("live:metric", "{\"protocol_version\":2,\"schema_version\":1,\"acks\":[{\"sequence\":\"3\",\"status\":\"projected\"},{\"sequence\":\"2\",\"status\":\"ignored\",\"code\":\"stream_not_owned\"},{\"sequence\":\"1\",\"status\":\"accepted\",\"durable\":true}]}")
+        XCTAssertEqual(b.ackedSequences, [], "소켓 ACK 로 acked 되는 창 0 — 정본은 REST 응답뿐")
+        XCTAssertEqual(b.rejectedSequences, [], "소켓 거절/무시로 격리되는 창 0")
+        XCTAssertEqual(b.pendingSequences, [1, 2, 3])
     }
-    func testNotReadyOrIngestUnavailableKeepsPendingAndRetriesAfterRetryAfter() throws {
-        ready()
-        let b = try box(2)
-        live.pump()
-        ack("live:metric", "{\"ok\":false,\"code\":\"metric_ingest_unavailable\",\"retryable\":true,\"retry_after_ms\":1000}")
-        XCTAssertEqual(b.pendingSequences, [1, 2]); XCTAssertEqual(b.rejectedSequences, [])
-        XCTAssertEqual(named("live:metric").count, 1)
-        sch.advance(1.1)
-        XCTAssertEqual(named("live:metric").count, 2, "새 프레임이 없어도(봉인 후 drain) 타이머로 재시도")
-    }
-    func testWholeBatchValidationFailureIsolatesPoisonWindowOneByOne() throws {
+    func testSocketErrorsNeverHaltOrIsolateNorRetryStale() throws {
         ready()
         let b = try box(3)
         live.pump()
         ack("live:metric", "{\"ok\":false,\"code\":\"invalid_message\",\"retryable\":false,\"field\":\"sqi\"}")
-        sch.advance(0.01)
-        let single = named("live:metric").last!
-        XCTAssertEqual((single.payload["windows"] as? [Any])?.count, 1, "배치 전체 오류는 창 하나씩 분리해 원인 창만 격리")
-        ack("live:metric", "{\"ok\":false,\"code\":\"invalid_message\",\"retryable\":false,\"field\":\"sqi\"}")
-        XCTAssertEqual(b.rejectedSequences, [3]); XCTAssertEqual(b.rejectCode(3), "invalid_message")
-        sch.advance(0.01)
-        let next = named("live:metric").last!
-        XCTAssertEqual((next.payload["windows"] as? [[String: Any]])?.map { $0["sequence"] as? String }, ["2"])
-        ack("live:metric", "{\"acks\":[{\"sequence\":\"2\",\"status\":\"accepted\",\"durable\":true}]}")
-        sch.advance(0.01)
-        let rest = named("live:metric").last!
-        XCTAssertEqual((rest.payload["windows"] as? [[String: Any]])?.map { $0["sequence"] as? String }, ["1"])
+        sch.advance(3)
+        XCTAssertEqual(named("live:metric").count, 1, "방송은 재시도/분할 전송하지 않는다")
+        XCTAssertEqual(b.rejectedSequences, []); XCTAssertEqual(b.pendingSequences, [1, 2, 3])
+        // 다음 새 창이 오면 방송은 계속된다(연결 단위 오류로 영구 중단되지 않는다)
+        _ = try b.enqueue(["sequence": "4", "feature_hash": "h4"])
+        live.pump()
+        let last = named("live:metric").last!
+        XCTAssertEqual((last.payload["windows"] as? [[String: Any]])?.compactMap { $0["sequence"] as? String }, ["4"], "이미 방송한 창은 다시 보내지 않는다")
+    }
+    func testBroadcastCarriesOnlyLatestFiveWindowsAscending() throws {
+        ready()
+        _ = try box(12)
+        live.pump()
+        let w = named("live:metric").last!.payload["windows"] as! [[String: Any]]
+        XCTAssertEqual(w.compactMap { $0["sequence"] as? String }, ["8", "9", "10", "11", "12"], "적체를 따라잡지 않고 최신 5창만 방송")
     }
     func testSequenceAboveInt31IsNeverQueuedForLive() throws {
         let b = try MetricOutbox(dir: dir, sync: .none)
@@ -117,15 +107,14 @@ final class LiveSessionT07bTests: XCTestCase {
         XCTAssertEqual(b.pendingSequences, [2147483647], "서버 window_index(Integer) 한도 초과 창은 live 로 보내지 않는다(feature journal·archive 에는 남음)")
         XCTAssertEqual(b.counts().outOfRange, 1)
     }
-    func testTerminalStillDrainsPendingMetrics() throws {
+    func testTerminalStopsBroadcastButDoesNotTouchOutbox() throws {
         ready()
         let b = try box(1)
         t.serverSend("42/session-live,[\"live:terminal\",{\"session_id\":\"\(sid)\",\"code\":\"completed\",\"revision\":\"9\"}]")
         XCTAssertEqual(live.state, .terminal)
         live.pump()
-        XCTAssertEqual(named("live:metric").count, 1, "종료 cutoff 이전 창은 terminal 후에도 drain")
-        ack("live:metric", "{\"acks\":[{\"sequence\":\"1\",\"status\":\"accepted\",\"durable\":true}]}")
-        XCTAssertEqual(b.ackedSequences, [1])
+        XCTAssertEqual(named("live:metric").count, 0, "종료 후 방송 없음")
+        XCTAssertEqual(b.pendingSequences, [1], "저장 대기 창은 그대로(REST 가 계속 처리)")
     }
 
     // MARK: live:device
