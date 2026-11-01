@@ -365,7 +365,7 @@ def test_V_O24_304_헤더_권한_먼저(client, world, db):
     r = client.get(URL, headers=world["auth"])
     etag = r.headers["ETag"]
     assert etag.startswith('W/"') and r.json()["etag"] == etag
-    assert r.headers["Cache-Control"] == "no-store, private" and r.headers["Vary"] == "Authorization"
+    assert r.headers["Cache-Control"] == "no-store, private" and "Authorization" in r.headers["Vary"]  # CORS 미들웨어가 Origin 을 덧붙일 수 있음
     r2 = client.get(URL, headers={**world["auth"], "If-None-Match": etag})
     assert r2.status_code == 304 and r2.content == b""
     assert r2.headers["ETag"] == etag and r2.headers["X-Poll-Interval"] == r.headers["X-Poll-Interval"]
