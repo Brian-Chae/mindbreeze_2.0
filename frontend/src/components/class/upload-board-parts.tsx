@@ -25,11 +25,11 @@ export function TransferBar({ percent, label = '전송 현황', thin = false }: 
     );
 }
 
-export function Metric({ title, value, sub, testId }: { title: string; value: ReactNode; sub?: ReactNode; testId?: string }) {
+export function Metric({ title, value, sub, testId, compact = false }: { title: string; value: ReactNode; sub?: ReactNode; testId?: string; compact?: boolean }) {
   return (
-    <div data-testid={testId} className="min-w-0 rounded-2xl bg-[#F8F5FA] p-3 md:p-4">
+    <div data-testid={testId} className={`min-w-0 rounded-2xl bg-[#F8F5FA] ${compact ? 'p-2 md:p-4' : 'p-3 md:p-4'}`}>
       <p className="text-[12px] text-[#776D7B]">{title}</p>
-      <p className="my-1 break-words text-[25px] font-bold leading-tight tracking-tight text-[#29232E] md:text-[29px]">{value}</p>
+      <p className={`my-1 break-words font-bold leading-tight tracking-tight text-[#29232E] md:text-[29px] ${compact ? 'text-[18px]' : 'text-[25px]'}`}>{value}</p>
       {sub && <p className="text-[12px] text-[#776D7B]">{sub}</p>}
     </div>
   );

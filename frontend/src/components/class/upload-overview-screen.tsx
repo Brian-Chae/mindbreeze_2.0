@@ -35,7 +35,7 @@ function Row({ i, to }: { i: UploadOverviewItem; to: string }) {
   const percent = transferPercent(i.metrics, i.progress?.overall, state === 'ok');
   const action = coachAction(state, n);
   return (
-    <li data-testid="overview-row" data-state={state} data-session-id={i.session_id} className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1.5 border-t border-[#EEE8F1] px-3 py-2 md:grid-cols-[1.3fr_3fr_auto] md:px-4 md:py-3">
+    <li data-testid="overview-row" data-state={state} data-session-id={i.session_id} className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1 border-t border-[#EEE8F1] px-3 py-1 md:grid-cols-[1.3fr_3fr_auto] md:gap-y-1.5 md:px-4 md:py-3">
       <div className="min-w-0">
         <b className="block break-words text-[13px] md:text-[14px]">{sessionName(i)}</b>
         <small className="text-[12px] text-[#776D7B]">{dateText(i.session_at)} · 마지막 도착 {formatClock(i.last_received_at)}{i.org_name ? ` · ${i.org_name}` : ''}{i.host_name ? ` · ${i.host_name} 코치` : ''}</small>
@@ -97,7 +97,7 @@ export function UploadOverviewScreen({ platform = false }: { platform?: boolean 
   if (v.error?.status === 401) return <p role="alert" className="rounded-2xl border border-[#E8E2ED] bg-white p-6 text-[#4A3F52]">로그인이 필요해요. 다시 로그인해 주세요.</p>;
 
   return (
-    <div className="space-y-3" data-testid="upload-overview">
+    <div className="space-y-2 md:space-y-3" data-testid="upload-overview">
       {platform && (
         <label className="flex max-w-sm flex-col gap-1 text-[12px] text-[#776D7B]">기관 · platform_admin
           <select aria-label="기관 선택" className={fieldClass} value={orgId} onChange={(e) => { setOrgId(e.target.value); resetPaging(); }}>
@@ -108,14 +108,14 @@ export function UploadOverviewScreen({ platform = false }: { platform?: boolean 
       {orgsFailed && <p role="alert" className="text-[13px] text-amber-900">기관 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>}
       {needsOrg ? <p role="status" className={`${cardClass} text-center text-[#776D7B]`}>기관 선택 후 해당 기관의 회차를 조회해요.</p> : (
         <>
-          <section aria-label="요약" className={`${cardClass} border-t-[3px] border-t-[#5F0080]`}>
-            <p className="text-[12px] text-[#776D7B]">최근 {formatCount(PAGE_LIMIT)}회차 · 확인할 곳 먼저</p>
-            <h2 className="text-[18px] font-bold">{hero.warnSessions > 0 ? `확인할 회차 ${formatCount(hero.warnSessions)}건` : '확인할 회차가 없어요'}</h2>
-            <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-3">
-              <Metric testId="hero-people" title="확인할 사람" value={`${formatCount(hero.people)}명`} />
-              <Metric title="측정 중" value={`${formatCount(hero.live)}회차`} />
-              <Metric title="모두 도착" value={`${formatCount(hero.ok)}회차`} />
-              <Metric title="이 쪽 회차" value={`${formatCount(all.length)}건`} />
+          <section aria-label="요약" className={`${cardClass} border-t-[3px] border-t-[#5F0080] !p-3 md:!p-5`}>
+            <p className="hidden text-[12px] text-[#776D7B] md:block">최근 {formatCount(PAGE_LIMIT)}회차 · 확인할 곳 먼저</p>
+            <h2 className="text-[16px] font-bold md:text-[18px]">{hero.warnSessions > 0 ? `확인할 회차 ${formatCount(hero.warnSessions)}건` : '확인할 회차가 없어요'}</h2>
+            <div className="mt-2 grid grid-cols-4 gap-1.5 md:mt-3 md:gap-3">
+              <Metric compact testId="hero-people" title="확인할 사람" value={`${formatCount(hero.people)}명`} />
+              <Metric compact title="측정 중" value={`${formatCount(hero.live)}회차`} />
+              <Metric compact title="모두 도착" value={`${formatCount(hero.ok)}회차`} />
+              <Metric compact title="이 쪽 회차" value={`${formatCount(all.length)}건`} />
             </div>
           </section>
 
@@ -129,15 +129,15 @@ export function UploadOverviewScreen({ platform = false }: { platform?: boolean 
             </select>
           </div>
           <UploadStatusLiveBar paused={v.paused} loading={v.loading} error={v.error} forbidden={v.forbidden} offline={v.offline}
-            lastFetchedAt={v.lastFetchedAt} lastReceivedAt={v.lastReceivedAt} onPause={v.pause} onResume={v.resume} onRefresh={v.refresh} />
+            lastFetchedAt={v.lastFetchedAt} lastReceivedAt={v.lastReceivedAt} compactMobile onPause={v.pause} onResume={v.resume} onRefresh={v.refresh} />
 
           {v.items === null ? <p role="status" className="text-[#776D7B]">불러오는 중이에요…</p>
             : v.items.length === 0 ? <p role="status" className={`${cardClass} text-center text-[#776D7B]`}>조회 기간에 볼 수 있는 회차가 없어요</p>
               : rows.length === 0 ? <p role="status" className={`${cardClass} text-center text-[#776D7B]`}>조건에 맞는 회차가 없어요</p> : (
                 <div id="overview-rows">
                   {groups.map((g) => (
-                    <details key={g.state} open={g.state !== 'ok'} data-testid={`group-${g.state}`} className="my-2 overflow-hidden rounded-[20px] border border-[#E8E2ED] bg-white">
-                      <summary className="min-h-11 cursor-pointer px-3 py-3 font-bold text-[#655173] md:px-4">{g.state === 'warn' ? '확인할 곳 먼저' : BOARD_LABEL[g.state]} · {formatCount(g.rows.length)}회차</summary>
+                    <details key={g.state} open={g.state !== 'ok'} data-testid={`group-${g.state}`} className="my-1.5 overflow-hidden rounded-[20px] border border-[#E8E2ED] bg-white md:my-2">
+                      <summary className="min-h-11 cursor-pointer px-3 py-2.5 font-bold text-[#655173] md:px-4 md:py-3">{g.state === 'warn' ? '확인할 곳 먼저' : BOARD_LABEL[g.state]} · {formatCount(g.rows.length)}회차</summary>
                       <ul>{g.rows.map((i) => <Row key={i.session_id} i={i} to={detailPathFor(role, i.class_id, i.session_id)} />)}</ul>
                     </details>
                   ))}
@@ -149,7 +149,7 @@ export function UploadOverviewScreen({ platform = false }: { platform?: boolean 
             <span data-testid="page-info" className="text-[13px] text-[#776D7B]">{page + 1}쪽 · 한 쪽에 {formatCount(PAGE_LIMIT)}회차</span>
             <button type="button" data-testid="page-next" disabled={!v.hasMore} onClick={() => { const c = v.nextCursor; if (c) setCursors((s) => [...s, c]); }} className={`${fieldClass} disabled:opacity-40`}>다음</button>
           </nav>
-          <p className="text-[11px] text-[#776D7B]">서버에 도착한 기록 기준이에요. 데이터 크기와 측정 길이는 도착한 기록에서 계산해요.</p>
+          <p className="hidden text-[11px] text-[#776D7B] md:block">서버에 도착한 기록 기준이에요. 데이터 크기와 측정 길이는 도착한 기록에서 계산해요.</p>
         </>
       )}
     </div>
