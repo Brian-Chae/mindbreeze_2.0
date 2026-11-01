@@ -25,7 +25,7 @@ describe('SDD-263 overview-view', () => {
     expect(rows[0].session_id).toBe('old'); // 원본 불변
   });
   it('V-O 필터: 클래스·상태·기간·검색', () => {
-    const rows = [item({ session_id: 'a' }), item({ session_id: 'b', class_id: 'c2', class_title: 'B반', summary: sum({ needs_attention: 1 }) }), item({ session_id: 'c', session_at: '2026-08-01T00:00:00Z' })];
+    const rows = [item({ session_id: 'a' }), item({ session_id: 'b', class_id: 'c2', class_title: 'B반', summary: sum({ needs_attention: 1 }) }), item({ session_id: 'c', session_at: '2026-09-15T00:00:00Z' })];
     const f = DEFAULT_OVERVIEW_FILTERS;
     expect(filterOverview(rows, f, NOW).map((r) => r.session_id)).toEqual(['a', 'b']); // 30일 밖 제외
     expect(filterOverview(rows, { ...f, period: '90d' }, NOW)).toHaveLength(3);
