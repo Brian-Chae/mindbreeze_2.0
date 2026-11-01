@@ -32,6 +32,7 @@ public enum SessionDrain {
         func has(_ n: String) -> Bool { fm.fileExists(atPath: dir.appendingPathComponent(n).path) }
         if !has(FeatureReconciler.markerName) || !has(RawReconciler.markerName) { return true }
         if CloseIntentStore(file: dir.appendingPathComponent(CloseIntentStore.fileName)).pending() != nil { return true }
+        if GapEventStore(file: dir.appendingPathComponent(GapEventStore.fileName), sessionId: "").hasPending() { return true } // SDD-270
         return false
     }
 
@@ -90,6 +91,7 @@ public final class SessionSync {
         archive = ArchiveUploader(queue: queue, http: http, files: files, apiBase: apiBase, sessionId: sid, participantId: pid,
                                   token: { done in token(false, done) }, fileURL: { dir.appendingPathComponent("archive").appendingPathComponent($0.file) }, nowMs: nowMs)
         archive.closeIntents = CloseIntentStore(file: dir.appendingPathComponent(CloseIntentStore.fileName))
+        archive.gapStore = GapEventStore(file: dir.appendingPathComponent(GapEventStore.fileName), sessionId: sid)
         archive.scheduleRetry = { [weak scheduler] sec, work in _ = scheduler?.schedule(after: sec, work) }
         featureRec = FeatureReconciler(outbox: outbox, uploader: features, http: http, apiBase: apiBase, sessionId: sid, participantId: pid, token: token, markerDir: dir)
         rawRec = RawReconciler(queue: queue, http: http, apiBase: apiBase, sessionId: sid, participantId: pid, token: token, markerDir: dir)
@@ -102,6 +104,7 @@ public final class SessionSync {
     public var isSealed: Bool { FileManager.default.fileExists(atPath: dir.appendingPathComponent("final.json").path) }
     public var isComplete: Bool {
         featureRec.isComplete && rawRec.isComplete && CloseIntentStore(file: dir.appendingPathComponent(CloseIntentStore.fileName)).pending() == nil
+            && archive.gapStore?.hasPending() != true
     }
     public var snapshot: SyncSnapshot { lock.lock(); defer { lock.unlock() }; return snap }
 

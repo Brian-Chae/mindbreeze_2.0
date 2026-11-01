@@ -38,6 +38,9 @@ public final class ArchiveUploader {
     /// 전송 실패 뒤 재시도 예약(초, 실행할 일). 호스트가 주입한다. 없으면 다음 pump(앱 시작·큐 변화·네트워크 복귀)에서 재시도한다.
     public var scheduleRetry: ((Double, @escaping () -> Void) -> Void)?
     private var sendingIntent = false
+    /// SDD-270: 측정 구멍 저장소. 있으면 업로드가 한 차례 끝난 뒤 종료 기록보다 먼저 `biosignal-events` 로 보낸다.
+    public var gapStore: GapEventStore?
+    private var sendingGaps = false
     /// presign 요청이 진행 중인 항목(alias). attach 전(pending)에는 `counts.uploading` 에 잡히지 않아,
     /// 복귀 직후 pump 가 연속 호출되면 같은 항목에 presign 을 중복 발사해 서버 풀을 고갈시켰다(dev 사고).
     private var inFlight = Set<String>()
@@ -72,7 +75,7 @@ public final class ArchiveUploader {
             guard let self = self, let tk = tk else { return }
             let due = self.queue.dueItems(now: self.nowMs())
             // 시작할 항목이 없고 업로드 중인 것도 없을 때(= 한 차례 drain 이 끝났을 때) 종료 기록을 보낸다.
-            if due.isEmpty, self.queue.counts.uploading == 0 { self.sendPendingCloseIntent(tk) }
+            if due.isEmpty, self.queue.counts.uploading == 0 { self.sendPendingGaps(tk); self.sendPendingCloseIntent(tk) }
             for item in due {
                 // 동시 상한에 presign 단계(inFlight)도 포함한다. 이미 presign 중인 항목은 건너뛴다.
                 if self.queue.counts.uploading + self.inFlightCount() >= Self.maxConcurrent { break }
@@ -82,10 +85,57 @@ public final class ArchiveUploader {
         }
     }
 
+    /// SDD-270: 대기 구멍을 sequence 순 50건씩 보낸다. recorded·duplicate·conflict 는 닫고, 일괄이 검증 거절(4xx)이면 한 건씩 나눠
+    /// 나쁜 한 건이 나머지를 막지 않게 한다. 네트워크/5xx/401/408/429 는 대기 유지 후 재시도 예약.
+    private func sendPendingGaps(_ tk: String) {
+        guard let store = gapStore, !sendingGaps else { return }
+        let batch = store.pending(50)
+        if batch.isEmpty { return }
+        sendingGaps = true
+        postGaps(batch, store, tk) { [weak self] ok in
+            guard let self = self else { return }
+            self.sendingGaps = false
+            if ok { if store.hasPending() { self.pump() } else { self.pump() } }
+            else { store.noteAttempt(); self.scheduleRetry?(Self.intentRetrySeconds) { [weak self] in self?.pump() } }
+            self.onChange?()
+        }
+    }
+
+    private func postGaps(_ batch: [GapEventStore.Entry], _ store: GapEventStore, _ tk: String, _ done: @escaping (Bool) -> Void) {
+        let ids = batch.compactMap { $0.event["event_id"] as? String }
+        let url = apiBase.appendingPathComponent("sessions").appendingPathComponent(sessionId).appendingPathComponent("biosignal-events")
+        post(url, ["participant_id": participantId as Any? ?? NSNull(), "events": batch.map { $0.event }], tk) { [weak self] r in
+            guard let self = self else { return }
+            switch r {
+            case .failure: done(false)
+            case .success(let (status, body, _)):
+                if status / 100 == 2 {
+                    let evs = ((try? JSONSerialization.jsonObject(with: body)) as? [String: Any])?["events"] as? [[String: Any]] ?? []
+                    let okIds = Set(evs.compactMap { e -> String? in
+                        guard let st = e["status"] as? String, ["recorded", "duplicate", "conflict"].contains(st) else { return nil }
+                        return e["event_id"] as? String
+                    }).intersection(ids)
+                    store.mark(okIds, status: "sent")
+                    done(okIds.count == ids.count)
+                } else if status / 100 == 4 && status != 401 && status != 408 && status != 429 {
+                    if batch.count > 1 {
+                        // 한 건씩 나눠 보낸다 — 순차(앞 건이 끝나야 다음)
+                        func step(_ i: Int) {
+                            if i >= batch.count { done(true); return }
+                            self.postGaps([batch[i]], store, tk) { ok in ok ? step(i + 1) : done(false) }
+                        }
+                        step(0)
+                    } else { store.mark(Set(ids), status: "rejected"); done(true) }
+                } else { done(false) }
+            }
+        }
+    }
+
     /// 종료 기록 전송: `POST /sessions/{sid}/biosignal-events`. 서버는 intent_id 기준 멱등(recorded/duplicate)이라 재전송이 안전하다.
     /// 서버가 받았으면(recorded·duplicate·conflict) 닫는다 — conflict 는 같은 id 다른 내용이라 다시 보내도 같다. 4xx(401/408/429 제외)도 같은 본문으로 영영 통과 못 하므로 닫는다.
     /// 네트워크/5xx/인증은 시도 횟수를 올리고 재시도한다(최대 12회).
     private func sendPendingCloseIntent(_ tk: String) {
+        if gapStore?.hasPending() == true || sendingGaps { return } // 구멍이 먼저 — 서버가 last_gap_sequence 까지 도착을 대조한다
         guard let store = closeIntents, !sendingIntent, let p = store.pending() else { return }
         sendingIntent = true
         let url = apiBase.appendingPathComponent("sessions").appendingPathComponent(sessionId).appendingPathComponent("biosignal-events")

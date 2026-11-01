@@ -27,7 +27,7 @@ public final class CloseIntentStore {
 
     /// 종료 시점 큐 스냅샷으로 intent 를 만들어 저장한다. 큐에 raw·feature 가 없으면 만들지 않는다(nil). 같은 내용이 이미 있으면 다시 쓰지 않는다.
     @discardableResult
-    public func record(queue: ArchiveQueue, sessionId: String, participantId: String?, reason: String, nowUs: Int64) -> [String: Any]? {
+    public func record(queue: ArchiveQueue, sessionId: String, participantId: String?, reason: String, nowUs: Int64, lastGapSequence: Int64? = nil) -> [String: Any]? {
         lock.lock(); defer { lock.unlock() }
         let items = queue.all().filter { $0.kind == .raw || $0.kind == .feature }
         if items.isEmpty { return nil }
@@ -49,10 +49,10 @@ public final class CloseIntentStore {
             streams[k].map { ["stream_id": $0.stream, "segment_id": $0.segment, "signal": $0.signal,
                               "last_chunk_sequence": $0.lastChunk >= 0 ? $0.lastChunk as Any : NSNull(), "last_feature_sequence": NSNull(), "received_samples": $0.samples] }
         }
-        let intentId = Self.nameUUID("mb-close-intent|\(sessionId)|" + items.map { $0.alias }.sorted().joined(separator: ","))
+        let intentId = Self.nameUUID("mb-close-intent|\(sessionId)|" + items.map { $0.alias }.sorted().joined(separator: ",") + (lastGapSequence.map { "|g\($0)" } ?? ""))
         if let prev = load(), (prev.intent["intent_id"] as? String) == intentId { return prev.intent }
         let intent: [String: Any] = ["event_type": "close_intent", "intent_id": intentId, "expected_artifacts": expected, "streams": streamArr,
-                                     "snapshots": [Any](), "last_gap_sequence": NSNull(), "end_reason": String(reason.prefix(64)), "closed_at_us": String(nowUs)]
+                                     "snapshots": [Any](), "last_gap_sequence": lastGapSequence.map { $0 as Any } ?? NSNull(), "end_reason": String(reason.prefix(64)), "closed_at_us": String(nowUs)]
         save(intent, participantId: participantId, sent: false, attempts: 0)
         return intent
     }

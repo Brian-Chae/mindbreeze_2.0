@@ -35,6 +35,8 @@ class NativeRuntime private constructor(
     val rawArchiver: RawArchiver,
     /** pin 된 모델 버전(없으면 코호트 b0-cohort-2). capture.start·bridge snapshot 에 같은 값을 쓴다. */
     val modelVersion: String = "b0-cohort-2",
+    /** SDD-270: 측정 구멍 내구 저장소. RawArchiver 와 같은 인스턴스를 공유한다(읽기-수정-쓰기 경합 방지). */
+    val gapStore: com.looxidlabs.mindbreeze.measurement.archive.GapEventStore = com.looxidlabs.mindbreeze.measurement.archive.GapEventStore(File(dir, "gap-events.json"), cfg.sessionId),
 ) {
     private val archiveExec = Executors.newSingleThreadExecutor()
     /** SDD-260 N1: feature 정본 저장 = REST 배치. 소켓(READY·방송)과 무관하게 5초 주기로 돈다. */
@@ -131,6 +133,7 @@ class NativeRuntime private constructor(
         try {
             val up = ArchiveUploader(cfg.apiBase, queue, tokenProvider = { tokens.current() }, http = HTTP, captureStreamId = { live.streamId ?: cfg.streamId })
             val sum = up.drain()
+            sendPendingGaps(up) // 구멍이 종료 기록보다 먼저 — 서버가 last_gap_sequence 까지 도착을 대조한다
             sendPendingCloseIntent(up)
             if (sum.acked > 0) lastVerifiedAtMs = System.currentTimeMillis()
             queue.all().lastOrNull { it.lastReason != null }?.let { lastArchiveStage = it.lastStage; lastArchiveCode = it.lastReason?.lowercase()?.replace(Regex("[^a-z0-9_]"), "_")?.take(64) }
@@ -139,6 +142,13 @@ class NativeRuntime private constructor(
             onArchiveDrained?.invoke(sum.acked)
             return sum.acked
         } finally { draining = false }
+    }
+
+    /** SDD-270: 대기 중인 측정 구멍 전송. 실패(네트워크·인증)는 디스크에 남아 다음 drain/WorkManager/ScopeSweeper 가 다시 올린다. */
+    private fun sendPendingGaps(up: ArchiveUploader) {
+        if (!gapStore.hasPending()) return
+        val ok = try { up.sendGapEvents(live.participantId ?: cfg.participantId, gapStore) } catch (_: Exception) { false }
+        if (!ok) ArchiveWorker.schedule(ctx, 30)
     }
 
     /** 종료 기록이 있고 아직 못 보냈으면 보낸다. 실패(네트워크 등)는 다음 drain/WorkManager 가 다시 시도한다. */
@@ -159,7 +169,7 @@ class NativeRuntime private constructor(
         feeder.flush()
         rawArchiver.flush() // 남은 원시 샘플도 부분 청크로 봉인
         // 종료 기록(close intent)을 서버 응답 이전에 디스크에 먼저 남긴다 — 앱이 죽어도 WorkManager 가 이어서 보낸다.
-        try { closeIntents.record(queue, cfg.sessionId, reason, System.currentTimeMillis() * 1000L) } catch (_: Exception) { /* 종료 기록 실패가 정지를 막지 않는다 */ }
+        try { closeIntents.record(queue, cfg.sessionId, reason, System.currentTimeMillis() * 1000L, gapStore.lastSequence()) } catch (_: Exception) { /* 종료 기록 실패가 정지를 막지 않는다 */ }
         if (finals != null) sched.post { live.closeCapture(finals, reason) }
         RuntimeConfig.save(File(dir, "runtime.json"), cfg.copy(active = false, streamId = live.streamId, participantId = live.participantId))
         kickArchive()
@@ -203,13 +213,14 @@ class NativeRuntime private constructor(
             val lc = LiveConfig(cfg.sessionId, cfg.instanceId, "android-native-1", "core-1.0.0", "linkband2-v1", ALGORITHM, modelVersion)
             val live = LiveSession(lc, transport, sched, tokens, box)
             val queue = ArchiveQueue(File(dir, "archive"))
-            val rawArchiver = RawArchiver(queue, cfg.sessionId, { live.participantId ?: cfg.participantId }, File(dir, "raw-archive.json"))
+            val gapStore = com.looxidlabs.mindbreeze.measurement.archive.GapEventStore(File(dir, "gap-events.json"), cfg.sessionId)
+            val rawArchiver = RawArchiver(queue, cfg.sessionId, { live.participantId ?: cfg.participantId }, File(dir, "raw-archive.json"), gapStore, { engine.counters.snapshot().reconnects })
             val feeder = ArchiveFeeder(queue, cfg.sessionId, { live.participantId ?: cfg.participantId }, { live.streamId ?: cfg.streamId },
                 scope = { rawArchiver.streamId(Sensor.EEG) to rawArchiver.segmentId(Sensor.EEG) })
             // 구 앱이 남긴 scope 없는 feature 항목 보정 + 아직 청크에 못 든 원문(journal) 재생
             queue.repairLegacyFeatures({ RawIds.streamId(it, Sensor.EEG) }, { RawIds.segmentId(it, Sensor.EEG, 0) })
             try { rawArchiver.replay(com.looxidlabs.mindbreeze.measurement.AppendOnlyJournal.recover(File(dir, "raw.journal")).records) { ms -> engine.windowTimelineUs(ms * 1000) } } catch (_: Exception) { /* 원문은 journal 에 남아 다음 기회에 재생 */ }
-            return NativeRuntime(ctx.applicationContext, cfg, dir, engine, sched, live, box, queue, feeder, tokens, transport, BridgeSequencer(System.currentTimeMillis() / 1000), rawArchiver, modelVersion)
+            return NativeRuntime(ctx.applicationContext, cfg, dir, engine, sched, live, box, queue, feeder, tokens, transport, BridgeSequencer(System.currentTimeMillis() / 1000), rawArchiver, modelVersion, gapStore)
         }
     }
 }

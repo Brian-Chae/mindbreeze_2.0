@@ -15,6 +15,9 @@ public enum RawIds {
     static func name(_ s: BandSensor) -> String { s == .eeg ? "eeg" : s == .ppg ? "ppg" : "acc" }
 }
 
+/// SDD-270: raw segment 경계 = 구멍. start 는 이전 segment 마지막 패킷, end 는 새 segment 첫 샘플(시계 되감김이면 nil).
+public struct RawGap { public let signal: String; public let segmentId: String; public let startUs: Int64; public let endUs: Int64?; public let reason: String }
+
 /// 봉인된 원시 청크 1개(서버 raw presign 메타 + MBRAW002 바이트).
 public struct RawChunk { public let alias: String; public let meta: [String: Any]; public let payload: Data; public let sha256: String }
 
@@ -30,6 +33,8 @@ public final class RawChunker {
     public static let profileHash = Hashing.sha256Hex(Data("{\"profile\":\"\(profileId)\",\"tick_hz\":32768,\"tick_bits\":32,\"endian\":\"little\",\"anchor\":\"last_sample\"}".utf8))
 
     private let sensor: BandSensor, session: String, originUs: Int64, sink: (RawChunk) -> Void
+    private let onGap: (RawGap) -> Void
+    private var lastPacketUs: Int64 = 0
     private let stride: Int, sampleBytes: Int, rate: Int, toleranceUs: Int64
     private var ordinal: Int, segmentId = "", chunkIndex = 0, nextSample = 0
     private var anchorUs: Int64 = 0, anchorTick: UInt64?, anchorTickUnwrapped: UInt64?
@@ -39,8 +44,8 @@ public final class RawChunker {
     private var pkts: [Pkt] = [], pktSamples = 0, pktBytes = 0
     static let deviceTickHz: Int64 = 32768
 
-    public init(sensor: BandSensor, session: String, originUs: Int64, sink: @escaping (RawChunk) -> Void) {
-        self.sensor = sensor; self.session = session; self.originUs = originUs; self.sink = sink
+    public init(sensor: BandSensor, session: String, originUs: Int64, onGap: @escaping (RawGap) -> Void = { _ in }, sink: @escaping (RawChunk) -> Void) {
+        self.sensor = sensor; self.session = session; self.originUs = originUs; self.sink = sink; self.onGap = onGap
         stride = sensor == .eeg ? 17 : sensor == .ppg ? 8 : 18
         sampleBytes = sensor == .eeg ? 7 : 6
         rate = sensor == .eeg ? 250 : sensor == .ppg ? 50 : 30
@@ -58,17 +63,19 @@ public final class RawChunker {
         let rows = malformed ? 0 : (b.count - 4) / sampleBytes
         var unwrapped: UInt64?
         var roll = segmentId.isEmpty
+        var rewind = false
         if let r = raw {
             if let p = lastRaw, r < p, p - r > 0x8000_0000 { wraps += 1 }
             let u = wraps << 32 + r
             if let pt = lastTick, !roll {
                 let elapsed = (Int64(u) - Int64(pt)) * 1_000_000 / 32768
                 let expected = Int64(rows) * 1_000_000 / Int64(rate)
-                if u < pt || abs(elapsed - expected) > toleranceUs { roll = true }
+                if u < pt || abs(elapsed - expected) > toleranceUs { roll = true; rewind = u < pt }
             }
             unwrapped = u; lastRaw = r; lastTick = u
         }
-        if roll { startSegment(arrivalUs: arrivalUs, rows: rows, raw: raw, unwrapped: unwrapped) }
+        if roll { startSegment(arrivalUs: arrivalUs, rows: rows, raw: raw, unwrapped: unwrapped, rewind: rewind) }
+        lastPacketUs = arrivalUs
         if let u = unwrapped, !malformed {
             if obsFirstTick == nil { obsFirstTick = u } else { obsSamples += Int64(obsPrevRows) }
             obsPrevRows = rows; obsLastTick = u
@@ -78,7 +85,11 @@ public final class RawChunker {
         if pktSamples >= Self.chunkSeconds * rate || pktBytes >= Self.chunkSoftBytes { seal() }
     }
 
-    private func startSegment(arrivalUs: Int64, rows: Int, raw: UInt64?, unwrapped: UInt64?) {
+    private func startSegment(arrivalUs: Int64, rows: Int, raw: UInt64?, unwrapped: UInt64?, rewind: Bool = false) {
+        let newStartUs = arrivalUs - Int64(max(0, rows - 1)) * 1_000_000 / Int64(rate)
+        if !segmentId.isEmpty {
+            onGap(RawGap(signal: RawIds.name(sensor), segmentId: segmentId, startUs: lastPacketUs, endUs: (rewind || newStartUs < lastPacketUs) ? nil : newStartUs, reason: rewind ? "clock_reset" : "packet_gap"))
+        }
         seal()
         ordinal += 1
         segmentId = RawIds.segmentId(session: session, sensor: sensor, ordinal: ordinal)
