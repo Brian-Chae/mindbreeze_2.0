@@ -1,5 +1,6 @@
 // SDD-253 — 데스크톱 리포트 목록: 클래스 > 회차(담당 상담사) > 회원 > 리포트 계층 (A안 '상태 하나 크게 + 행 끝 단일 주 버튼').
 // 모바일은 기존 카드 목록을 유지하므로 이 컴포넌트는 데스크톱에서만 쓴다.
+import { UploadAttentionChip } from '../class/upload-attention-chip';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   getReportHierarchy,
@@ -94,7 +95,7 @@ function MemberRow({ member, selected, compact, onOpen }: { member: HierarchyMem
   );
 }
 
-function SessionBlock({ session, selectedId, compact, onOpen }: { session: HierarchySession; selectedId: string | null; compact: boolean; onOpen: (id: string) => void }) {
+function SessionBlock({ session, classId, selectedId, compact, onOpen }: { session: HierarchySession; classId: string | null; selectedId: string | null; compact: boolean; onOpen: (id: string) => void }) {
   const [open, setOpen] = useState(true);
   const common: HierarchyDoc | null = session.common_report;
   return (
@@ -111,6 +112,7 @@ function SessionBlock({ session, selectedId, compact, onOpen }: { session: Hiera
         <div className={`flex items-center gap-2 ${compact ? 'w-full flex-wrap pl-11' : ''}`}>
           {session.needs_review > 0 && <Chip>이 회차 검토 필요 {session.needs_review}</Chip>}
           {session.delivery_failed > 0 && <Chip>이 회차 발송 실패 {session.delivery_failed}</Chip>}
+          {classId && <UploadAttentionChip classId={classId} sessionId={session.session_id} live={false} />}
           {common && (
             <button type="button" onClick={() => onOpen(common.report_id)} className="h-11 shrink-0 whitespace-nowrap rounded-[10px] border border-[#DED8E3] bg-white px-4 text-[13px] font-semibold text-[#5F0080] hover:bg-[#F5EDFC]">
               코치용 · 회차 공통
@@ -146,7 +148,7 @@ function GroupBlock({ group, selectedId, compact, onOpen }: { group: HierarchyGr
         {!compact && <span className="whitespace-nowrap text-[13px] text-[#7C7482]">회차 {group.session_total}개</span>}
         {!compact && group.needs_review > 0 && <Chip>클래스 전체 검토 필요 {group.needs_review}</Chip>}
       </div>
-      {open && group.sessions.map((s) => <SessionBlock key={s.session_id} session={s} selectedId={selectedId} compact={compact} onOpen={onOpen} />)}
+      {open && group.sessions.map((s) => <SessionBlock key={s.session_id} session={s} classId={group.class_id} selectedId={selectedId} compact={compact} onOpen={onOpen} />)}
     </div>
   );
 }

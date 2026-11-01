@@ -87,6 +87,9 @@ const SupportPage = lazy(() => import('./pages/support-page'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const NotificationCenterPage = lazy(() => import('./pages/notifications/NotificationCenterPage'));
 const ProfessionalProfilePage = lazy(() => import('./pages/settings/professional-profile-page'));
+const SettingsUploadStatusPage = lazy(() => import('./pages/settings/upload-status-page'));
+const AdminUploadStatusPage = lazy(() => import('./pages/admin/upload-status-page'));
+const ClassUploadStatusPage = lazy(() => import('./pages/classes/class-upload-status-page'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const ClientAppPage = lazy(() => import('./pages/client/ClientAppPage'));
 const HostClassDetailPage = lazy(() => import('./pages/classes/host-class-detail-page').then((module) => ({ default: module.HostClassDetailPage })));
@@ -340,6 +343,10 @@ const router = createBrowserRouter(
         />
         <Route path="/notifications" element={<RoleGuard><NotificationCenterPage /></RoleGuard>} />
         <Route path="/settings" element={<RoleGuard><SettingsPage /></RoleGuard>} />
+        {/* SDD-261: 데이터 저장·업로드 현황(서버 수신 기준). 권한은 서버가 최종 판정한다. */}
+        <Route path="/settings/upload-status" element={<RoleGuard role={['counselor', 'org_admin']}><SettingsUploadStatusPage /></RoleGuard>} />
+        <Route path="/admin/upload-status" element={<PlatformAdminRoute><AdminUploadStatusPage /></PlatformAdminRoute>} />
+        <Route path="/classes/:classId/sessions/:sessionId/upload-status" element={<RoleGuard role={['counselor', 'org_admin']}><ClassUploadStatusPage /></RoleGuard>} />
         <Route path="/profile/professional" element={<RoleGuard role={['counselor', 'org_admin']}><ProfessionalProfilePage /></RoleGuard>} />
         <Route path="/playground" element={<RoleGuard><PlaygroundPage /></RoleGuard>} />
         {/* 정의되지 않은 경로는 전역 404 화면으로 처리한다 */}

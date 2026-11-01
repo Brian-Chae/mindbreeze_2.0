@@ -1,0 +1,2239 @@
+{
+  "_note": "합성 데이터(운영 DB·실개인정보 아님) PostgreSQL 실응답. etag/poll 헤더는 응답 본문 값과 동일.",
+  "headers": {
+    "ETag": "W/\"ca7ec89c371bab3af5f4b65262255cd3\"",
+    "X-Poll-Interval": "3",
+    "Cache-Control": "no-store, private"
+  },
+  "response": {
+    "class_id": "94ca0ad4-9a63-47e0-b0ca-eb382c7d8c70",
+    "session_id": "475f32ff-d56c-4050-bcd3-84d24e9cd285",
+    "session_status": "in_progress",
+    "as_of": "2026-11-04T05:10:00Z",
+    "basis": "server_received",
+    "poll_interval_sec": 3,
+    "etag": "W/\"ca7ec89c371bab3af5f4b65262255cd3\"",
+    "summary": {
+      "participants": 40,
+      "needs_attention": 16,
+      "uploading": 0,
+      "received_unreconciled": 19,
+      "no_data": 4,
+      "excluded": 1
+    },
+    "participants": [
+      {
+        "participant_id": "0e7cb8f4-781d-4d23-8892-6ce0794a516e",
+        "display_name": "참여자37",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "eligible",
+        "band_connected": false,
+        "report_included": true,
+        "feature": {
+          "received": 3650,
+          "legacy_count": 50,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 360,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "received_unreconciled",
+        "reasons": []
+      },
+      {
+        "participant_id": "18d028ad-059b-4811-8bcb-4c83f089dc45",
+        "display_name": "참여자18",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "excluded",
+        "band_connected": true,
+        "report_included": false,
+        "feature": {
+          "received": 3600,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 360,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "received_unreconciled",
+        "reasons": [
+          "collection_excluded_now"
+        ]
+      },
+      {
+        "participant_id": "18f317c8-0e3f-475d-b4f8-409f79cea726",
+        "display_name": "참여자28",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "eligible",
+        "band_connected": true,
+        "report_included": false,
+        "feature": {
+          "received": 3600,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 356,
+              "pending": 4,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": "2026-11-04T05:09:20Z"
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 236,
+              "pending": 4,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": "2026-11-04T04:49:20Z"
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 236,
+              "pending": 4,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": "2026-11-04T04:49:20Z"
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:12Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "needs_attention",
+        "reasons": [
+          "raw_pending_stale"
+        ]
+      },
+      {
+        "participant_id": "1aeb7984-9ef3-4b65-8cd5-2c84d85bbcb5",
+        "display_name": "참여자17",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "unknown",
+        "band_connected": false,
+        "report_included": true,
+        "feature": {
+          "received": 3600,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 356,
+              "pending": 4,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": "2026-11-04T05:09:20Z"
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 236,
+              "pending": 4,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": "2026-11-04T04:49:20Z"
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 236,
+              "pending": 4,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": "2026-11-04T04:49:20Z"
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:12Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "needs_attention",
+        "reasons": [
+          "raw_pending_stale"
+        ]
+      },
+      {
+        "participant_id": "1c53f4dc-6ae2-47ce-a987-8db73fd0b4e8",
+        "display_name": "참여자19",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "eligible",
+        "band_connected": true,
+        "report_included": true,
+        "feature": {
+          "received": 3650,
+          "legacy_count": 50,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 360,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "received_unreconciled",
+        "reasons": []
+      },
+      {
+        "participant_id": "3810f979-879b-4901-a17d-2f1c1442c1ad",
+        "display_name": "참여자06",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "excluded",
+        "band_connected": true,
+        "report_included": false,
+        "feature": {
+          "received": 3890,
+          "legacy_count": 0,
+          "internal_missing": 10,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 356,
+              "pending": 4,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": "2026-11-04T05:09:20Z"
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 236,
+              "pending": 4,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": "2026-11-04T04:49:20Z"
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 236,
+              "pending": 4,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": "2026-11-04T04:49:20Z"
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:12Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "needs_attention",
+        "reasons": [
+          "feature_internal_gap",
+          "raw_pending_stale",
+          "collection_excluded_now"
+        ]
+      },
+      {
+        "participant_id": "3a418b2c-4ae2-48e7-99b0-81b4fb4f9e6a",
+        "display_name": "참여자24",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "excluded",
+        "band_connected": true,
+        "report_included": false,
+        "feature": {
+          "received": 0,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": null
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 0,
+              "uploaded": 0,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 0,
+              "uploaded": 0,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 0,
+              "uploaded": 0,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": null,
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "excluded",
+        "reasons": [
+          "collection_excluded"
+        ]
+      },
+      {
+        "participant_id": "4b2a8d77-71d5-4817-ab84-f1f32fa81614",
+        "display_name": "참여자39",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "excluded",
+        "band_connected": true,
+        "report_included": true,
+        "feature": {
+          "received": 3600,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 356,
+              "pending": 4,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": "2026-11-04T05:09:20Z"
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 236,
+              "pending": 4,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": "2026-11-04T04:49:20Z"
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 236,
+              "pending": 4,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": "2026-11-04T04:49:20Z"
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:12Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "needs_attention",
+        "reasons": [
+          "raw_pending_stale",
+          "collection_excluded_now"
+        ]
+      },
+      {
+        "participant_id": "5659e019-66c2-402f-ac63-9039a2d2080b",
+        "display_name": "참여자01",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "eligible",
+        "band_connected": false,
+        "report_included": true,
+        "feature": {
+          "received": 3940,
+          "legacy_count": 50,
+          "internal_missing": 10,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 360,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "needs_attention",
+        "reasons": [
+          "feature_internal_gap"
+        ]
+      },
+      {
+        "participant_id": "5693d41a-9b84-4208-aa0c-e770ec7e617b",
+        "display_name": "참여자07",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "eligible",
+        "band_connected": true,
+        "report_included": true,
+        "feature": {
+          "received": 3650,
+          "legacy_count": 50,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 359,
+              "pending": 0,
+              "failed": 1,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 239,
+              "pending": 0,
+              "failed": 1,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 239,
+              "pending": 0,
+              "failed": 1,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "needs_attention",
+        "reasons": [
+          "raw_failed"
+        ]
+      },
+      {
+        "participant_id": "5cf98aad-2181-4475-838e-1807690e961b",
+        "display_name": "참여자08",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "eligible",
+        "band_connected": true,
+        "report_included": false,
+        "feature": {
+          "received": 0,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": null
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 0,
+              "uploaded": 0,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 0,
+              "uploaded": 0,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 0,
+              "uploaded": 0,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": null,
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "no_data",
+        "reasons": []
+      },
+      {
+        "participant_id": "5f9d0b48-4054-4149-9034-1acb46c95483",
+        "display_name": "참여자03",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "excluded",
+        "band_connected": true,
+        "report_included": true,
+        "feature": {
+          "received": 3600,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 360,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "received_unreconciled",
+        "reasons": [
+          "collection_excluded_now"
+        ]
+      },
+      {
+        "participant_id": "64d2caa7-db38-4d01-b862-68ff55e969c9",
+        "display_name": "참여자05",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "unknown",
+        "band_connected": false,
+        "report_included": true,
+        "feature": {
+          "received": 3600,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 360,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "received_unreconciled",
+        "reasons": []
+      },
+      {
+        "participant_id": "6bfc7e71-417b-483b-b05d-3ea6512c9188",
+        "display_name": "참여자26",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "unknown",
+        "band_connected": true,
+        "report_included": false,
+        "feature": {
+          "received": 3890,
+          "legacy_count": 0,
+          "internal_missing": 10,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 360,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "needs_attention",
+        "reasons": [
+          "feature_internal_gap"
+        ]
+      },
+      {
+        "participant_id": "6e0a6050-231b-4c50-a74d-3804d2838831",
+        "display_name": "참여자16",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "eligible",
+        "band_connected": true,
+        "report_included": false,
+        "feature": {
+          "received": 0,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": null
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 0,
+              "uploaded": 0,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 0,
+              "uploaded": 0,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 0,
+              "uploaded": 0,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": null,
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "no_data",
+        "reasons": []
+      },
+      {
+        "participant_id": "70d56644-c031-486d-b944-2114b918dedf",
+        "display_name": "참여자13",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "eligible",
+        "band_connected": false,
+        "report_included": true,
+        "feature": {
+          "received": 3650,
+          "legacy_count": 50,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 357,
+              "uploaded": 357,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 3,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 237,
+              "uploaded": 237,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 3,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 237,
+              "uploaded": 237,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 3,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "needs_attention",
+        "reasons": [
+          "raw_internal_gap"
+        ]
+      },
+      {
+        "participant_id": "76597f2e-d96e-4b62-b1c3-d2e895ae6823",
+        "display_name": "참여자22",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "eligible",
+        "band_connected": true,
+        "report_included": false,
+        "feature": {
+          "received": 3600,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 357,
+              "uploaded": 357,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 3,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 237,
+              "uploaded": 237,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 3,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 237,
+              "uploaded": 237,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 3,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "needs_attention",
+        "reasons": [
+          "raw_internal_gap"
+        ]
+      },
+      {
+        "participant_id": "7e85b1e4-7d9a-4d77-9c12-1e893345c235",
+        "display_name": "참여자27",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "excluded",
+        "band_connected": true,
+        "report_included": true,
+        "feature": {
+          "received": 3600,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 360,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "received_unreconciled",
+        "reasons": [
+          "collection_excluded_now"
+        ]
+      },
+      {
+        "participant_id": "8aaaa473-cfc5-4ac7-bc7f-9333907eebb3",
+        "display_name": "참여자04",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "eligible",
+        "band_connected": true,
+        "report_included": false,
+        "feature": {
+          "received": 3600,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 357,
+              "uploaded": 357,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 3,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 237,
+              "uploaded": 237,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 3,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 237,
+              "uploaded": 237,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 3,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "needs_attention",
+        "reasons": [
+          "raw_internal_gap"
+        ]
+      },
+      {
+        "participant_id": "8c1bdb59-dac7-45b7-8bff-bca390607ad3",
+        "display_name": "참여자33",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "excluded",
+        "band_connected": false,
+        "report_included": true,
+        "feature": {
+          "received": 3600,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 359,
+              "pending": 0,
+              "failed": 1,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 239,
+              "pending": 0,
+              "failed": 1,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 239,
+              "pending": 0,
+              "failed": 1,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "needs_attention",
+        "reasons": [
+          "raw_failed",
+          "collection_excluded_now"
+        ]
+      },
+      {
+        "participant_id": "8d5d7e6b-09b1-4086-a594-4eecd62ba262",
+        "display_name": "참여자21",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "excluded",
+        "band_connected": false,
+        "report_included": true,
+        "feature": {
+          "received": 3890,
+          "legacy_count": 0,
+          "internal_missing": 10,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 360,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "needs_attention",
+        "reasons": [
+          "feature_internal_gap",
+          "collection_excluded_now"
+        ]
+      },
+      {
+        "participant_id": "97fdbf88-3b51-4a3c-b840-5224bda4b5b3",
+        "display_name": "참여자34",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "eligible",
+        "band_connected": true,
+        "report_included": false,
+        "feature": {
+          "received": 3600,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 360,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "received_unreconciled",
+        "reasons": []
+      },
+      {
+        "participant_id": "9bb4308f-273e-4da2-912e-d7fdd0b5fa22",
+        "display_name": "참여자36",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "eligible",
+        "band_connected": true,
+        "report_included": false,
+        "feature": {
+          "received": 3890,
+          "legacy_count": 0,
+          "internal_missing": 10,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 360,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "needs_attention",
+        "reasons": [
+          "feature_internal_gap"
+        ]
+      },
+      {
+        "participant_id": "9d0b486f-3155-47d0-bdb6-c14367426c7d",
+        "display_name": "참여자38",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "unknown",
+        "band_connected": true,
+        "report_included": false,
+        "feature": {
+          "received": 3600,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 360,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "received_unreconciled",
+        "reasons": []
+      },
+      {
+        "participant_id": "a07f3c88-7c8b-4cb3-84a4-25400c2695dc",
+        "display_name": "참여자02",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "unknown",
+        "band_connected": true,
+        "report_included": false,
+        "feature": {
+          "received": 3600,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 360,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "received_unreconciled",
+        "reasons": []
+      },
+      {
+        "participant_id": "adbd285a-2606-49f2-8aa2-308b1da49daa",
+        "display_name": "참여자32",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "unknown",
+        "band_connected": true,
+        "report_included": false,
+        "feature": {
+          "received": 0,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": null
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 0,
+              "uploaded": 0,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 0,
+              "uploaded": 0,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 0,
+              "uploaded": 0,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": null,
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "no_data",
+        "reasons": []
+      },
+      {
+        "participant_id": "b0a52c4b-13a2-46ca-a517-aac4965d7cb5",
+        "display_name": "참여자29",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "eligible",
+        "band_connected": false,
+        "report_included": true,
+        "feature": {
+          "received": 3600,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 360,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "received_unreconciled",
+        "reasons": []
+      },
+      {
+        "participant_id": "b100c20f-169d-4fbc-9fdf-6ebdfe1b1768",
+        "display_name": "참여자35",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "unknown",
+        "band_connected": true,
+        "report_included": true,
+        "feature": {
+          "received": 3600,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 360,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "received_unreconciled",
+        "reasons": []
+      },
+      {
+        "participant_id": "b2d6e774-03a8-43c1-bff0-84adb2733d97",
+        "display_name": "게스트30",
+        "is_guest": true,
+        "participation_status": "active",
+        "collection_state": "excluded",
+        "band_connected": true,
+        "report_included": false,
+        "feature": {
+          "received": 3600,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 360,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "received_unreconciled",
+        "reasons": [
+          "collection_excluded_now"
+        ]
+      },
+      {
+        "participant_id": "b5504f56-1218-4859-a7ac-5ecee8913103",
+        "display_name": "게스트20",
+        "is_guest": true,
+        "participation_status": "active",
+        "collection_state": "unknown",
+        "band_connected": true,
+        "report_included": false,
+        "feature": {
+          "received": 3600,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 359,
+              "pending": 0,
+              "failed": 1,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 239,
+              "pending": 0,
+              "failed": 1,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 239,
+              "pending": 0,
+              "failed": 1,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "needs_attention",
+        "reasons": [
+          "raw_failed"
+        ]
+      },
+      {
+        "participant_id": "b842b017-5e50-46df-afcd-cf8d030a2e74",
+        "display_name": "참여자09",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "excluded",
+        "band_connected": false,
+        "report_included": true,
+        "feature": {
+          "received": 3600,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 360,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "received_unreconciled",
+        "reasons": [
+          "collection_excluded_now"
+        ]
+      },
+      {
+        "participant_id": "c2fc77cc-e802-4a3e-a6f6-3995a622f737",
+        "display_name": "참여자15",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "eligible",
+        "band_connected": true,
+        "report_included": true,
+        "feature": {
+          "received": 3600,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 360,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "received_unreconciled",
+        "reasons": []
+      },
+      {
+        "participant_id": "c41e5dd8-0747-4513-8bf2-46735f0c61dc",
+        "display_name": "참여자23",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "unknown",
+        "band_connected": true,
+        "report_included": true,
+        "feature": {
+          "received": 3600,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 360,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "received_unreconciled",
+        "reasons": []
+      },
+      {
+        "participant_id": "ce5cba15-ded6-4629-bb3e-85001213bddc",
+        "display_name": "참여자31",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "eligible",
+        "band_connected": true,
+        "report_included": true,
+        "feature": {
+          "received": 3940,
+          "legacy_count": 50,
+          "internal_missing": 10,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 357,
+              "uploaded": 357,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 3,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 237,
+              "uploaded": 237,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 3,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 237,
+              "uploaded": 237,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 3,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "needs_attention",
+        "reasons": [
+          "feature_internal_gap",
+          "raw_internal_gap"
+        ]
+      },
+      {
+        "participant_id": "d95b3b7a-73e3-427c-800b-462c16d6830d",
+        "display_name": "참여자12",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "excluded",
+        "band_connected": true,
+        "report_included": false,
+        "feature": {
+          "received": 3600,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 360,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "received_unreconciled",
+        "reasons": [
+          "collection_excluded_now"
+        ]
+      },
+      {
+        "participant_id": "dd267b46-3218-4a2f-a724-c0f751aaf438",
+        "display_name": "게스트10",
+        "is_guest": true,
+        "participation_status": "active",
+        "collection_state": "eligible",
+        "band_connected": true,
+        "report_included": false,
+        "feature": {
+          "received": 3600,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 360,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "received_unreconciled",
+        "reasons": []
+      },
+      {
+        "participant_id": "f2ca147c-6e0d-43bb-bc94-9fbdd91911ea",
+        "display_name": "참여자25",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "eligible",
+        "band_connected": false,
+        "report_included": true,
+        "feature": {
+          "received": 3650,
+          "legacy_count": 50,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 360,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "received_unreconciled",
+        "reasons": []
+      },
+      {
+        "participant_id": "f51868dd-904a-4f92-b2dd-8c2e72e39827",
+        "display_name": "참여자14",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "unknown",
+        "band_connected": true,
+        "report_included": false,
+        "feature": {
+          "received": 3600,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 360,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "received_unreconciled",
+        "reasons": []
+      },
+      {
+        "participant_id": "fa2e2266-e35a-4f75-8c7d-5e09f4ce6609",
+        "display_name": "참여자11",
+        "is_guest": false,
+        "participation_status": "active",
+        "collection_state": "unknown",
+        "band_connected": true,
+        "report_included": true,
+        "feature": {
+          "received": 3890,
+          "legacy_count": 0,
+          "internal_missing": 10,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": "2026-11-04T05:10:00Z"
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 360,
+              "uploaded": 360,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 240,
+              "uploaded": 240,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": "2026-11-04T05:09:52Z",
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "needs_attention",
+        "reasons": [
+          "feature_internal_gap"
+        ]
+      },
+      {
+        "participant_id": "fa7b835e-7aee-47da-8a71-2892e25b59b6",
+        "display_name": "게스트40",
+        "is_guest": true,
+        "participation_status": "active",
+        "collection_state": "eligible",
+        "band_connected": true,
+        "report_included": false,
+        "feature": {
+          "received": 0,
+          "legacy_count": 0,
+          "internal_missing": 0,
+          "expected": null,
+          "expected_basis": "unknown",
+          "completeness": "unknown",
+          "last_received_at": null
+        },
+        "raw": {
+          "signals": [
+            {
+              "signal_type": "eeg",
+              "registered": 0,
+              "uploaded": 0,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "ppg",
+              "registered": 0,
+              "uploaded": 0,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            },
+            {
+              "signal_type": "acc",
+              "registered": 0,
+              "uploaded": 0,
+              "pending": 0,
+              "failed": 0,
+              "internal_missing": 0,
+              "oldest_pending_at": null
+            }
+          ],
+          "last_received_at": null,
+          "completeness": "unknown"
+        },
+        "phone_report": null,
+        "status": "no_data",
+        "reasons": []
+      }
+    ]
+  }
+}
