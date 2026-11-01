@@ -10,7 +10,7 @@ import { useBand, type UseBandResult } from '../../../../hooks/useBand';
 import { useCloseBiosignalOnEnd } from '../../../../hooks/useCloseBiosignalOnEnd';
 import { BiosignalRecordingStatus } from '../../../../lib/biosignal/recording-status';
 import { UploadProgressNotice } from '../../../../lib/biosignal/upload-progress-notice';
-import { uploadProgressStore } from '../../../../lib/measurement-web/upload-progress';
+import { describeUploadProgress, shouldShowUploadNotice, uploadProgressStore } from '../../../../lib/measurement-web/upload-progress';
 import type { RenderedMetrics } from '../../../../lib/biosignal/display-snapshot';
 import { AnalysisMetricsService } from '../../../../lib/eeg/AnalysisMetricsService';
 import { useGuestAudioSync } from '../../../../hooks/useGuestAudioSync';
@@ -657,6 +657,9 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
   const { band } = controls;
   // SDD-260: 종료 후 업로드 진행(네이티브 이벤트). 화면 이탈 가능, 완료는 summary 대조 후에만 표시
   const uploadProgress = useSyncExternalStore(uploadProgressStore.subscribe, () => uploadProgressStore.get(shared.sessionId), () => null);
+  // SDD-268: 업로드 안내는 기본 숨김. 연결 아이콘으로 열고 닫으며, 이상(확인 필요)이면 자동으로 보인다.
+  const [uploadNoticeOpen, setUploadNoticeOpen] = useState(false);
+  const showUploadNotice = shouldShowUploadNotice(describeUploadProgress(uploadProgress), uploadNoticeOpen);
 
   /* 네트워크: 소켓·브라우저 온라인·LiveKit 재연결을 합쳐 ok/재연결 중/끊김으로. 처음 연결되기 전의 끊김은 오류로 보지 않는다 */
   const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
@@ -784,8 +787,9 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
     <>
       <div inert={shared.screenOff}>
         <BiosignalRecordingStatus state={band.recordingStatus} />
-        <UploadProgressNotice progress={uploadProgress} />
+        {showUploadNotice ? <UploadProgressNotice progress={uploadProgress} /> : null}
         <MemberClassView
+          connToggle={{ expanded: showUploadNotice, onToggle: () => setUploadNoticeOpen((v) => !v) }}
           input={input}
           header={shared.header}
           hero={shared.hero}

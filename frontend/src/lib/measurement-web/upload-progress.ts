@@ -17,10 +17,17 @@ export const emptyUploadProgress = (): UploadProgress => ({
 export function describeUploadProgress(p: UploadProgress | null): UploadProgressView | null {
   if (!p) return null;
   const raw = p.rawPending + p.rawUploading;
-  if (p.featurePending > 0 || raw > 0) return { kind: 'uploading', text: `데이터 업로드 중 · feature ${p.featurePending}창 · 원시 ${raw}건` };
-  if (!p.complete) return { kind: 'checking', text: '서버 저장 여부를 확인하고 있어요' };
-  if (p.featureRejected > 0 || p.rawQuarantined > 0) return { kind: 'needs_review', text: `업로드 완료 · 확인 필요 ${p.featureRejected + p.rawQuarantined}건` };
-  return { kind: 'done', text: '업로드 완료' };
+  // SDD-268: 회원 화면에는 내부 용어(feature·원시·업로드)를 쓰지 않는다.
+  if (p.featurePending > 0 || raw > 0) return { kind: 'uploading', text: `전송 중 · 분석 데이터 ${p.featurePending}개 · 측정 기록 파일 ${raw}개` };
+  if (!p.complete) return { kind: 'checking', text: '서버에 잘 도착했는지 확인하고 있어요' };
+  if (p.featureRejected > 0 || p.rawQuarantined > 0) return { kind: 'needs_review', text: `확인이 필요한 데이터 ${p.featureRejected + p.rawQuarantined}건이 있어요` };
+  return { kind: 'done', text: '모두 도착했어요' };
+}
+
+/** SDD-268: 기본은 숨김. 연결 아이콘으로 연 경우, 또는 이상(needs_review)이면 표시한다. */
+export function shouldShowUploadNotice(view: UploadProgressView | null, open: boolean): boolean {
+  if (!view) return false;
+  return view.kind === 'needs_review' || open;
 }
 
 export interface UploadProgressStore {
