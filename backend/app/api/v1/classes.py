@@ -1,6 +1,6 @@
 """클래스 읽기(SDD-214)와 편성·강사·최소 멤버십(SDD-216) API."""
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Query, HTTPException, Request, Header
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, HTTPException, Request, Header, Response
 from app.core.redis import get_redis
 from app.schemas.class_scheduling import (
     UpdateClassCommand,
@@ -41,7 +41,8 @@ from app.schemas.class_parent import (
     ClassListResponse,
     ClassSessionsResponse,
 )
-from app.services import class_read_service
+from app.services import class_read_service, upload_status_service
+from app.schemas.upload_status import UploadStatusResponse
 
 router = APIRouter(prefix="/classes", tags=["classes"])
 
@@ -923,3 +924,26 @@ def my_attendance(class_id: UUID, current_user: dict | None = Depends(get_curren
     member_credential: str | None = Header(default=None, alias="X-Class-Member-Credential"), db: DBSession = Depends(get_db)):
     return class_read_service.get_my_attendance(db, class_id,
         user_id=current_user["id"] if current_user else None, member_credential=member_credential)
+
+
+@router.get("/{class_id}/sessions/{session_id}/upload-status", response_model=UploadStatusResponse)
+def get_session_upload_status(
+    class_id: UUID,
+    session_id: UUID,
+    response: Response,
+    if_none_match: str | None = Header(default=None, alias="If-None-Match"),
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-261 — 회차 참여자별 서버 수신 현황(org_admin·platform_admin·담당 코치). ETag/304 지원."""
+    result = upload_status_service.load_upload_status(db, current_user, class_id, session_id, if_none_match)
+    headers = {
+        "ETag": result.etag,
+        "Cache-Control": "no-store, private",
+        "Vary": "Authorization",
+        "X-Poll-Interval": str(result.poll_interval_sec),
+    }
+    if result.body is None:
+        return Response(status_code=304, headers=headers)
+    response.headers.update(headers)
+    return result.body
