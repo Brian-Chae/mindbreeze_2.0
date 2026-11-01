@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Ban, Bell, Bluetooth, ChevronRight, Info, ShieldCheck, UserPlus, UserRound } from 'lucide-react';
+import { Ban, Bell, Bluetooth, ChevronRight, Database, Info, ShieldCheck, UserPlus, UserRound } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { PrivacyPolicyLink } from '../legal/PrivacyPolicyLink';
@@ -30,7 +30,7 @@ export default function SettingsContent() {
   const navigate = useNavigate();
   const [error, setError] = useState('');
   const counselorLike = user?.role === 'counselor' || user?.role === 'org_admin';
-  const uploadStatusTo = user?.role === 'platform_admin' ? '/admin/upload-status' : counselorLike ? '/settings/upload-status' : null;
+  const uploadStatusTo = user?.role === 'platform_admin' ? '/admin/upload-status' : counselorLike ? '/upload-status' : null;
   async function handleLogout() {
     try { await logout(); navigate(user?.role === 'client' ? '/login?role=client' : '/login'); }
     catch { setError('로그아웃에 실패했어요. 다시 시도해 주세요.'); }
@@ -47,13 +47,13 @@ export default function SettingsContent() {
     <div className="overflow-hidden rounded-[18px] border border-[#E9E2EB] bg-white">
       <Group title="내 계정" description={user?.role === 'platform_admin' ? '계정 정보 확인' : '기본 정보 · 프로필 관리'} icon={<UserRound size={24} />}><AccountSettings /></Group>
       {user?.role === 'client' && <Group title={COUNSELOR_COPY.settingsTitle} description={COUNSELOR_COPY.settingsDescription} icon={<UserPlus size={24} />}><CounselorManagementPanel /></Group>}
+      {uploadStatusTo && <Group title="데이터 현황" description="회차별 서버 수신·업로드 현황" icon={<Database size={24} />}><Link className={linkClass} to={uploadStatusTo} data-upload-status-link>전체 회차 데이터 현황 보기 <span aria-hidden="true">↗</span></Link><p className="text-[13px] text-[#776D7B]">서버에서 받은 데이터만 보여 줘요. 밴드 미착용과 미수신은 구분해서 봐요.</p></Group>}
       <Group title="알림" description="일정·참여, 대화, 리포트·운영" icon={<Bell size={24} />}><NotificationGroups /><WebPushCard /></Group>
       <Group title="차단한 사용자" description="채팅 차단 해제 · 신고 철회" icon={<Ban size={24} />}><BlockedUsersList /></Group>
       <Group title="기기 · LINK BAND" description="연결 방법과 측정 안내" icon={<Bluetooth size={24} />}><Link className={linkClass} to="/measurement-guide">밴드 연결 · 측정 방법 <span aria-hidden="true">↗</span></Link><Link className={linkClass} to="/playground">플레이그라운드 다시 열기 <span aria-hidden="true">↗</span></Link><p className="text-[13px] text-[#776D7B]">밴드를 착용하지 않아도 클래스와 리포트를 이용할 수 있어요.</p></Group>
       <Group title="개인정보 · 약관" description="동의 관리 · 연구 동의 철회 · 계정 삭제" icon={<ShieldCheck size={24} />}><PrivacyConsentsSection /><PrivacyPolicyLink className={linkClass}>개인정보 처리방침</PrivacyPolicyLink><AccountDeletionSection /></Group>
       <Group title="앱 정보" description="버전 · 도움말 · 연결 상태" icon={<Info size={24} />}><p className="text-[15px] font-semibold">MIND BREEZE 2.0 · Looxid Labs</p><p className="text-[14px]">서버연결: {connected ? '양호' : '끊김'}</p><Link className={linkClass} to="/measurement-guide">이용 도움말 · LINK BAND 안내 <span aria-hidden="true">↗</span></Link></Group>
     </div>
-    {uploadStatusTo && <p className="text-[13px] leading-relaxed text-[#776D7B]" data-upload-status-link>회차별 서버 수신 상태는 <Link className="inline-flex min-h-11 items-center text-[#5B1A8A] underline underline-offset-4" to={uploadStatusTo}>데이터 저장·업로드 현황 ↗</Link>에서 확인해요.</p>}
     {counselorLike && <p className="text-[13px] leading-relaxed text-[#776D7B]">수업 운영과 리포트 승인은 <Link className="inline-flex min-h-11 items-center text-[#5B1A8A] underline underline-offset-4" to="/reports?settings=operations">리포트 · 운영 설정 ↗</Link>에서 관리해요.</p>}
     {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
     <div className="flex flex-wrap items-center justify-between gap-3"><button type="button" onClick={() => void handleLogout()} className="min-h-11 py-2 text-[14px] text-[#776D7B] underline underline-offset-4">로그아웃</button><span className="text-[13px] text-[#776D7B]">MIND BREEZE 2.0</span></div>
