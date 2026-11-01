@@ -51,6 +51,8 @@ public struct SyncSnapshot: Equatable {
     public var archivePending = 0, archiveUploading = 0, archiveVerified = 0, archiveQuarantined = 0
     public var featureState = "syncing", rawState = "syncing"
     public var complete = false
+    /// SDD-264: raw 청크 신호별 개수. nil = 아직 큐를 못 읽음(이벤트에 싣지 않는다).
+    public var signals: [String: SignalCounts]? = nil
 }
 
 /// 세션 하나의 "저장 완결" 오케스트레이터 — FeatureUploader(REST 정본) · ArchiveUploader(원시) · 종료 후 summary 대조 · 종료 기록.
@@ -195,6 +197,7 @@ public final class SessionSync {
         lock.lock()
         snap.featurePending = oc.livePending; snap.featureAcked = oc.liveAcked; snap.featureRejected = oc.rejected
         snap.archivePending = ac.pending; snap.archiveUploading = ac.uploading; snap.archiveVerified = ac.verified; snap.archiveQuarantined = ac.quarantined
+        snap.signals = queue.signalCounts()
         let wasComplete = snap.complete
         snap.complete = isSealed && isComplete
         let s = snap, justDone = snap.complete && !wasComplete

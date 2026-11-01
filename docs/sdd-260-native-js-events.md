@@ -8,7 +8,7 @@
 | 이벤트 | payload | 의미 |
 |---|---|---|
 | `feature.counts` | `{ sessionId, pending, acked, rejected }` | feature outbox 현황. `rejected` = 격리(4종 거절) 건수 |
-| `archive.counts` | `{ sessionId, pending, uploading, verified, quarantined }` | 원시 archive 큐 현황 |
+| `archive.counts` | `{ sessionId, pending, uploading, verified, quarantined, signals? }` | 원시 archive 큐 현황. SDD-264: `signals`={eeg,ppg,acc 각각 {pending,uploading,verified,quarantined}} additive(폰 기대량 보고용, Android·iOS 동일) |
 | `reconcile.state` | `{ sessionId, feature, raw, complete }` | 종료 후 summary 대조 상태. `feature`/`raw` = `idle`/`checking`/`resending`/`done` 등 문자열(표시에는 쓰지 않음), `complete` = **feature·원시 summary 대조 모두 끝남** |
 
 ## 화면 문구 규칙 (`describeUploadProgress`)
