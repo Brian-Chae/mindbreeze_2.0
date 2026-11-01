@@ -312,3 +312,41 @@ final class ManagerT07bTests: XCTestCase {
         XCTAssertLessThan(mu > lastEnd ? mu - lastEnd : lastEnd - mu, 5_000_000)
     }
 }
+
+/// SDD-260 N3 — 세션 준비 콜백 · 미완료 세션 drain 목록(수집 중 세션 제외, SEALING/CLOSED 포함).
+extension ManagerT07bTests {
+    func testSessionReadyFiresOnAdoptWithParticipantAndSharedOutbox() throws {
+        var got: [(String, String?, String)] = []
+        m.onSessionReady = { sid, handle, pid in got.append((sid, handle, pid)) }
+        try startAndAdopt()
+        XCTAssertEqual(got.count, 1)
+        XCTAssertEqual(got.first?.0, sid); XCTAssertEqual(got.first?.1, "cred_handle_AbCdEfGh0123"); XCTAssertEqual(got.first?.2, ackPid)
+        XCTAssertTrue(m.outbox(forSession: sid) === live.outbox, "소켓 방송과 REST 업로더는 같은 outbox 인스턴스를 공유한다(이중 journal 금지)")
+        XCTAssertNil(m.outbox(forSession: "other"))
+    }
+    func testDrainCandidatesExcludeActiveCaptureButIncludeSealedAndOthers() throws {
+        let other = root("sessions/OTHER"); try FileManager.default.createDirectory(at: other, withIntermediateDirectories: true)
+        SessionScope(sessionId: "OTHER", accountId: "a", participantId: "p").save(dir: other)
+        try startAndAdopt()
+        let act = dir.appendingPathComponent("sessions").appendingPathComponent(sid)
+        SessionScope(sessionId: sid, accountId: "a", participantId: ackPid).save(dir: act)
+        XCTAssertEqual(m.drainPendingArchives().map { $0.scope.sessionId }, ["OTHER"], "수집 중 세션은 SessionSync 가 이미 돌고 있어 제외")
+        _ = try m.stopMeasurement(reason: "user_stop", requestId: "0000002e-0000-4000-8000-00000000002e")
+        XCTAssertEqual(Set(m.drainPendingArchives().map { $0.scope.sessionId }), ["OTHER", sid], "봉인(SEALING) 이후는 포함")
+    }
+    func root(_ rel: String) -> URL { dir.appendingPathComponent(rel) }
+}
+
+extension ManagerT07bTests {
+    func testEmitSyncStatusPublishesThreeContractEvents() throws {
+        try startAndAdopt()
+        var names: [String] = [], payloads: [String: [String: Any]] = [:]
+        m.onBridgeEvent = { e in if let n = e["event"] as? String, n.hasSuffix(".counts") || n == "reconcile.state" { names.append(n); payloads[n] = e["payload"] as? [String: Any] } }
+        var s = SyncSnapshot(); s.featurePending = 3; s.featureAcked = 57; s.archivePending = 2; s.featureState = "resending"
+        m.emitSyncStatus(sessionId: sid, s)
+        XCTAssertEqual(names, ["feature.counts", "archive.counts", "reconcile.state"])
+        XCTAssertEqual(payloads["feature.counts"]?["pending"] as? Int, 3); XCTAssertEqual(payloads["feature.counts"]?["acked"] as? Int, 57)
+        XCTAssertEqual(payloads["archive.counts"]?["pending"] as? Int, 2)
+        XCTAssertEqual(payloads["reconcile.state"]?["feature"] as? String, "resending"); XCTAssertEqual(payloads["reconcile.state"]?["complete"] as? Bool, false)
+    }
+}

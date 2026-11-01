@@ -64,9 +64,11 @@ def test_풀_설정이_settings_를_반영한다(monkeypatch):
     assert kwargs["pool_recycle"] == 600
 
 
-def test_풀_기본값은_보수적이다():
-    assert settings.db_pool_size == 10
-    assert settings.db_max_overflow == 10
+def test_풀_기본값은_상한이_있다():
+    # SDD-260 S5: 40명 동시 저장을 위해 20+20 (웹 프로세스 합계 ≤40, RDS max_connections 79 이내)
+    assert settings.db_pool_size == 20
+    assert settings.db_max_overflow == 20
+    assert settings.db_pool_size + settings.db_max_overflow <= 40
     assert settings.db_pool_pre_ping is True
     assert settings.db_pool_recycle > 0
 

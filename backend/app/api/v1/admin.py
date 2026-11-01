@@ -774,3 +774,11 @@ async def admin_reset_org_counselor_password(
         reason=req.reason, org_id=org.id, db=db, redis=redis,
     )
     return PasswordResetIssueResponse(email_sent=email_sent, expires_at=expires_at.isoformat())
+
+
+@router.get("/ingest-metrics")
+def ingest_metrics_snapshot(admin: User = Depends(require_platform_admin)):
+    """SDD-260 S7: REST 배치 저장 계측(접수·거절 코드·처리 ms·DB 풀·스레드풀). platform_admin 전용."""
+    from app.core import ingest_metrics
+
+    return ingest_metrics.snapshot()

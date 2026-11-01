@@ -1,6 +1,7 @@
 // SDD-246 T06 후속 — WebCaptureAdapter → live:metric, capture.start/renew/reanchor/close 흐름.
 // T06c: stream 은 capture.start ACK result 에서 읽는다(readStream 제거), live:metric 은 windows 배치.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryOutboxStore } from '../../src/lib/measurement-web/metric-outbox';
 import { CaptureController, RENEW_INTERVAL_MS } from '../../src/lib/measurement-web/capture-controller';
 import type { CommandAck } from '../../src/lib/session-live/live-types';
 
@@ -38,16 +39,16 @@ describe('CaptureController', () => {
 
   it('미착용·EEG 미동의면 capture 요청 0', async () => {
     const { client, calls } = makeClient();
-    const c = new CaptureController({ client: client as never, sessionId: '00000001-0000-4000-8000-000000000001', eegConsent: false, bandConnected: true, deviceProfile: 'linkband2-v1', algorithmVersion: 'web-ts-1', modelVersion: 'm' });
+    const c = new CaptureController({ accountId: 'user:u1', outboxStore: new MemoryOutboxStore(), sendFeatures: async () => [], client: client as never, sessionId: '00000001-0000-4000-8000-000000000001', eegConsent: false, bandConnected: true, deviceProfile: 'linkband2-v1', algorithmVersion: 'web-ts-1', modelVersion: 'm' });
     await expect(c.start()).resolves.toBe('not_allowed');
-    const d = new CaptureController({ client: client as never, sessionId: '00000001-0000-4000-8000-000000000001', eegConsent: true, bandConnected: false, deviceProfile: 'p', algorithmVersion: 'a', modelVersion: 'm' });
+    const d = new CaptureController({ accountId: 'user:u1', outboxStore: new MemoryOutboxStore(), sendFeatures: async () => [], client: client as never, sessionId: '00000001-0000-4000-8000-000000000001', eegConsent: true, bandConnected: false, deviceProfile: 'p', algorithmVersion: 'a', modelVersion: 'm' });
     await expect(d.start()).resolves.toBe('not_allowed');
     expect(calls).toHaveLength(0);
   });
 
   it('start → capture.start 후 stream_id 로 envelope 을 live:metric 으로 보낸다', async () => {
     const { client, calls, metrics } = makeClient();
-    const c = new CaptureController({ client: client as never, sessionId: '00000001-0000-4000-8000-000000000001', eegConsent: true, bandConnected: true, deviceProfile: 'linkband2-v1', algorithmVersion: 'web-ts-1', modelVersion: 'm' });
+    const c = new CaptureController({ accountId: 'user:u1', outboxStore: new MemoryOutboxStore(), sendFeatures: async () => [], client: client as never, sessionId: '00000001-0000-4000-8000-000000000001', eegConsent: true, bandConnected: true, deviceProfile: 'linkband2-v1', algorithmVersion: 'web-ts-1', modelVersion: 'm' });
     expect(await c.start()).toBe('started');
     expect(calls[0]).toMatchObject({ kind: 'capture.start', payload: { device_profile: 'linkband2-v1', algorithm_version: 'web-ts-1', model_version: 'm' } });
     expect(c.streamId()).toBe('0000000a-0000-4000-8000-00000000000a');
@@ -59,7 +60,7 @@ describe('CaptureController', () => {
   it('start 거절이면 envelope 을 보내지 않는다', async () => {
     const { client, metrics } = makeClient();
     client.request.mockResolvedValueOnce(ack({ status: 'rejected', code: 'eeg_consent_required' }));
-    const c = new CaptureController({ client: client as never, sessionId: '00000001-0000-4000-8000-000000000001', eegConsent: true, bandConnected: true, deviceProfile: 'p', algorithmVersion: 'a', modelVersion: 'm' });
+    const c = new CaptureController({ accountId: 'user:u1', outboxStore: new MemoryOutboxStore(), sendFeatures: async () => [], client: client as never, sessionId: '00000001-0000-4000-8000-000000000001', eegConsent: true, bandConnected: true, deviceProfile: 'p', algorithmVersion: 'a', modelVersion: 'm' });
     expect(await c.start()).toBe('rejected');
     expect(c.pushEnvelope({ sequence: '1' } as never)).toBe(false);
     expect(metrics).toHaveLength(0);
@@ -67,7 +68,7 @@ describe('CaptureController', () => {
 
   it('주기적으로 capture.renew, reanchor 는 clock_probe 를 거친다, close 는 capture.close', async () => {
     const { client, calls } = makeClient();
-    const c = new CaptureController({ client: client as never, sessionId: '00000001-0000-4000-8000-000000000001', eegConsent: true, bandConnected: true, deviceProfile: 'p', algorithmVersion: 'a', modelVersion: 'm' });
+    const c = new CaptureController({ accountId: 'user:u1', outboxStore: new MemoryOutboxStore(), sendFeatures: async () => [], client: client as never, sessionId: '00000001-0000-4000-8000-000000000001', eegConsent: true, bandConnected: true, deviceProfile: 'p', algorithmVersion: 'a', modelVersion: 'm' });
     await c.start();
     await vi.advanceTimersByTimeAsync(RENEW_INTERVAL_MS + 10);
     expect(calls.some((x) => x.kind === 'capture.renew' && x.payload.owner_generation === '1')).toBe(true);

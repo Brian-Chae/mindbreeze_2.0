@@ -108,7 +108,7 @@ class LiveContractT05bTest {
     @Test fun deviceChangedAloneDoesNotStartMetricSending() {
         val e = env(captureResult = null); toReady(e)
         e.t.server("live:event", deviceEvent("""{"stream_id":"$stream","generation":"3","status":"active","clock_uncertain":true,"cutoff_code":null}"""))
-        e.live.onFrame(frame(1)); e.live.pump()
+        e.live.onFrame(frame(1))
         assertTrue(e.t.sentOf("live:metric").isEmpty())
         assertNull(e.live.streamId)
     }
@@ -131,64 +131,69 @@ class LiveContractT05bTest {
     }
 
     // ------------------------------------------------------------------ 2. live:metric 응답
-    @Test fun rejectedWindowsAreQuarantinedAndNeverResent() {
-        val e = env(); toCapturing(e)
-        e.t.acks["live:metric"] = metricAcks { s -> when (s) { "1" -> "rejected" to "stale_owner_generation"; "2" -> "accepted" to null; else -> "retryable" to "db_busy" } }
-        for (i in 1L..3L) e.live.onFrame(frame(i))
-        e.s.advance(10_000)
-        val sent = sentSequences(e)
-        assertEquals("거절 창 1 은 한 번만 전송: $sent", 1, sent.count { it == "1" })
-        assertTrue("retryable 3 은 재전송: $sent", sent.count { it == "3" } >= 2)
-        assertFalse(e.box.contains(1)); assertFalse(e.box.contains(2)); assertTrue(e.box.contains(3))
-        assertEquals("rejected 는 acked 로 세지 않음", 1L, e.box.acked())
-        assertEquals(1L, e.box.quarantined())
-        assertEquals(1L, e.box.quarantinedByCode()["stale_owner_generation"])
-    }
-
-    @Test fun batchNotReadyAndIngestUnavailableAreRetriedWithoutLoss() {
-        for (code in listOf("not_ready", "metric_ingest_unavailable")) {
+    @Test fun socketAcksNeverTouchTheOutbox() {
+        // V-A2·V-A12: 소켓 ACK(projected·ignored·rejected·ok:false 어느 것이든)로 outbox 를 acked/격리하지 않는다. 정본은 REST ACK 뿐.
+        for (ackBody in listOf(
+            metricAcks { "projected" to null }, metricAcks { "ignored" to "not_ready" }, metricAcks { "rejected" to "stale_owner_generation" },
+            { _: JSONObject -> JSONObject().put("ok", false).put("code", "invalid_field").put("retryable", false) },
+            { _: JSONObject -> JSONObject().put("ok", false).put("code", "not_ready").put("retryable", true) })) {
             val e = env(); toCapturing(e)
-            var calls = 0
-            e.t.acks["live:metric"] = { d -> if (calls++ == 0) JSONObject().put("ok", false).put("code", code).put("retryable", true).put("retry_after_ms", 500) else metricAcks { "accepted" to null }(d) }
-            e.live.onFrame(frame(1)); e.live.onFrame(frame(2))
-            e.s.advance(1_000)
-            assertEquals(code, 2, e.t.sentOf("live:metric").size)
-            assertEquals(code, 0, e.box.size()); assertEquals(code, 0L, e.box.quarantined())
+            e.t.acks["live:metric"] = ackBody
+            for (i in 1L..3L) e.live.onFrame(frame(i))
+            e.s.advance(10_000)
+            assertEquals("outbox 3창 그대로", 3, e.box.size())
+            assertEquals(0L, e.box.acked()); assertEquals(0L, e.box.quarantined())
         }
     }
 
-    @Test fun batchNonRetryableErrorQuarantinesBatchWithoutResend() {
+    @Test fun metricIsBroadcastOnlyAsSingleCurrentWindowAndNeverResent() {
         val e = env(); toCapturing(e)
-        e.t.acks["live:metric"] = { JSONObject().put("ok", false).put("code", "invalid_field").put("retryable", false).put("field", "windows[0].metrics") }
-        e.live.onFrame(frame(1)); e.live.onFrame(frame(2))
-        e.s.advance(20_000)
-        assertEquals("창마다 한 번만 전송(재전송 없음)", listOf("1", "2"), sentSequences(e))
-        assertEquals(0, e.box.size())
-        assertEquals(2L, e.box.quarantinedByCode()["invalid_field"])
+        e.t.acks["live:metric"] = metricAcks { "projected" to null }
+        for (i in 1L..5L) e.live.onFrame(frame(i))
+        e.s.advance(10_000)
+        val sent = sentSequences(e)
+        assertEquals("창마다 한 번만 방송(재전송·배치 없음): $sent", listOf("1", "2", "3", "4", "5"), sent)
+        assertEquals(5, e.box.size())
     }
 
-    @Test fun restartThenNewStreamNeverMixesOldWindows() {
+    @Test fun broadcastSkipsWhileInflightAndNeverQueuesBacklog() {
+        val e = env(); toCapturing(e)
+        e.t.acks.remove("live:metric") // ACK 없음
+        for (i in 1L..3L) e.live.onFrame(frame(i))
+        assertEquals("ACK 대기 중에는 다음 방송을 쌓지 않는다", listOf("1"), sentSequences(e))
+        e.s.advance(2_100)
+        e.live.onFrame(frame(4))
+        assertEquals(listOf("1", "4"), sentSequences(e))
+        assertEquals(4, e.box.size())
+    }
+
+    @Test fun framesBeforeStreamAreBoundWhenCaptureStartsAndNotifyUploader() {
+        val e = env(); toReady(e)
+        var bound = 0; e.live.onStreamBound = { bound++ }
+        e.live.onFrame(frame(1)); e.live.onFrame(frame(2))
+        assertTrue("stream 전에는 전송 후보가 아니다", e.box.pendingBatch(60).isEmpty()); assertEquals(0L, e.box.quarantined())
+        e.live.startCapture()
+        assertEquals(1, bound)
+        val batch = e.box.pendingBatch(60)
+        assertEquals(listOf(1L, 2L), batch.map { it.seq })
+        assertTrue(batch.all { it.tag.streamId == stream && it.tag.participantId == pidAck && it.tag.generation == "3" })
+    }
+
+    @Test fun restartThenNewStreamKeepsOldWindowsOnOldIdentityForRest() {
         val f = File(tmp.root, "restart.log")
-        // 프로세스 1: stream(구)으로 3개 창을 만들었지만 ACK 전에 종료
+        // 프로세스 1: stream(구)으로 3개 창을 만들었지만 REST 확정 전에 종료
         val e1 = env(f); toCapturing(e1)
-        e1.t.acks["live:metric"] = { JSONObject().put("ok", false).put("code", "not_ready").put("retryable", true) }
         for (i in 1L..3L) e1.live.onFrame(frame(i))
         e1.box.close()
         // 프로세스 2: 같은 outbox, 서버가 capture.start 로 새 stream2(generation 9)를 준다
         val e2 = env(f, captureResult = { defaultResult("9", stream2) })
-        e2.t.acks["live:metric"] = metricAcks { "accepted" to null }
         toCapturing(e2)
         e2.live.onFrame(frame(4))
-        val sent = e2.t.sentOf("live:metric").map { m -> val w = m.getJSONArray("windows"); (0 until w.length()).map { w.getJSONObject(it) } }
-        assertTrue(sent.isNotEmpty())
-        for (batch in sent) assertEquals("한 묶음=한 stream", 1, batch.map { it.getString("stream_id") }.toSet().size)
-        val byStream = sent.flatten().groupBy({ it.getString("stream_id") }, { it.getString("sequence") })
-        assertEquals("새 stream 에는 새 창만", setOf("4"), byStream.getValue(stream2).toSet())
-        assertEquals("옛 창은 옛 stream 신원으로", setOf("1", "2", "3"), byStream.getValue(stream).toSet())
-        val old = sent.flatten().first { it.getString("stream_id") == stream }
-        assertEquals("3", old.getString("stream_generation"))
-        assertEquals("9", sent.flatten().first { it.getString("stream_id") == stream2 }.getString("stream_generation"))
-        assertEquals(0, e2.box.size())
+        val batch = e2.box.pendingBatch(60)
+        assertEquals(listOf(1L, 2L, 3L, 4L), batch.map { it.seq })
+        assertEquals("옛 창은 옛 stream 신원으로", setOf(stream), batch.filter { it.seq <= 3 }.map { it.tag.streamId }.toSet())
+        assertEquals("3", batch.first().tag.generation)
+        assertEquals("새 창은 새 stream", stream2, batch.last().tag.streamId); assertEquals("9", batch.last().tag.generation)
     }
 
     @Test fun quarantineSurvivesRestartAndBlocksReAdd() {
@@ -218,7 +223,7 @@ class LiveContractT05bTest {
             assertEquals(payload, listOf(p.getString("status") to p.optString("cutoff_code").ifEmpty { null }), ended)
             assertNull(e.live.streamId)
             assertEquals(p.getString("status"), e.live.streamEnded)
-            e.live.onFrame(frame(1)); e.live.pump()
+            e.live.onFrame(frame(1))
             assertTrue("종료 후 live 송신 없음", e.t.sentOf("live:metric").isEmpty())
         }
     }

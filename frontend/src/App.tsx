@@ -3,6 +3,7 @@ import { lazy, Suspense, useEffect, type ReactElement } from 'react';
 import { CounselingGate } from './components/routing/counseling-gate';
 import { isAiEnabled, isDesignRoutesEnabled } from './lib/feature-flags';
 import { useStatusBar } from './lib/native/use-status-bar';
+import { useBiosignalResumeSweeper } from './hooks/use-biosignal-resume-sweeper';
 import { isNativeApp } from './lib/native/platform';
 import { initNativeKeyboard } from './lib/native/keyboard';
 // SDD-088: useBlocker(이탈 가드)는 데이터 라우터 전용 — createBrowserRouter 로 전환
@@ -155,6 +156,7 @@ function PlatformAdminRoute({ children }: { children: ReactElement }) {
 /** 데이터 라우터 루트 — 부가 화면의 Suspense 셸. 주요 목록은 라우터가 청크를 먼저 준비한다. */
 function RootLayout() {
   useStatusBar();
+  useBiosignalResumeSweeper(); // SDD-260 W2: 미완료 feature 이어올림(시작·online·복귀·60초)
   useEffect(() => { void initNativeKeyboard(); }, []);
 
   return (

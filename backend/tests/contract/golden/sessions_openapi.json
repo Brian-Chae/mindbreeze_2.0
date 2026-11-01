@@ -330,47 +330,6 @@
    ],
    "type": "object"
   },
-  "EEGFeatureBatchRequest": {
-   "properties": {
-    "features": {
-     "items": {
-      "$ref": "#/components/schemas/EEGFeatureItem"
-     },
-     "maxItems": 5000,
-     "minItems": 1,
-     "type": "array"
-    },
-    "participant_id": {
-     "anyOf": [
-      {
-       "type": "string"
-      },
-      {
-       "type": "null"
-      }
-     ]
-    }
-   },
-   "required": [
-    "features"
-   ],
-   "type": "object"
-  },
-  "EEGFeatureBatchResponse": {
-   "properties": {
-    "saved": {
-     "type": "integer"
-    },
-    "session_id": {
-     "type": "string"
-    }
-   },
-   "required": [
-    "session_id",
-    "saved"
-   ],
-   "type": "object"
-  },
   "EEGFeatureItem": {
    "properties": {
     "alpha_power": {
@@ -1227,6 +1186,145 @@
    ],
    "type": "object"
   },
+  "FeatureBatchResponse": {
+   "properties": {
+    "counts": {
+     "additionalProperties": {
+      "type": "integer"
+     },
+     "type": "object"
+    },
+    "participant_id": {
+     "type": "string"
+    },
+    "results": {
+     "items": {
+      "$ref": "#/components/schemas/FeatureBatchResult"
+     },
+     "type": "array"
+    },
+    "session_id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "session_id",
+    "participant_id",
+    "results",
+    "counts"
+   ],
+   "type": "object"
+  },
+  "FeatureBatchResult": {
+   "properties": {
+    "code": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "durable": {
+     "type": "boolean"
+    },
+    "sequence": {
+     "type": "string"
+    },
+    "status": {
+     "type": "string"
+    },
+    "stream_id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "stream_id",
+    "sequence",
+    "status",
+    "durable"
+   ],
+   "type": "object"
+  },
+  "FeatureSummaryResponse": {
+   "properties": {
+    "participant_id": {
+     "type": "string"
+    },
+    "session_id": {
+     "type": "string"
+    },
+    "streams": {
+     "items": {
+      "$ref": "#/components/schemas/FeatureSummaryStream"
+     },
+     "type": "array"
+    },
+    "total_count": {
+     "type": "integer"
+    },
+    "updated_at": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "required": [
+    "session_id",
+    "participant_id",
+    "total_count",
+    "streams"
+   ],
+   "type": "object"
+  },
+  "FeatureSummaryStream": {
+   "properties": {
+    "contiguous_through": {
+     "type": "integer"
+    },
+    "count": {
+     "type": "integer"
+    },
+    "max_index": {
+     "type": "integer"
+    },
+    "min_index": {
+     "type": "integer"
+    },
+    "missing_ranges": {
+     "items": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array"
+     },
+     "type": "array"
+    },
+    "stream_id": {
+     "type": "string"
+    },
+    "truncated": {
+     "type": "boolean"
+    }
+   },
+   "required": [
+    "stream_id",
+    "count",
+    "min_index",
+    "max_index",
+    "contiguous_through",
+    "missing_ranges",
+    "truncated"
+   ],
+   "type": "object"
+  },
   "InviteChannelResults": {
    "properties": {
     "email": {
@@ -2012,6 +2110,134 @@
    "required": [
     "session_id",
     "chunks"
+   ],
+   "type": "object"
+  },
+  "RawSummaryResponse": {
+   "properties": {
+    "aliases_truncated": {
+     "type": "boolean"
+    },
+    "aliases_uploaded": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "failed": {
+     "type": "integer"
+    },
+    "participant_id": {
+     "type": "string"
+    },
+    "pending": {
+     "type": "integer"
+    },
+    "receipt_hash": {
+     "type": "string"
+    },
+    "session_id": {
+     "type": "string"
+    },
+    "streams": {
+     "items": {
+      "$ref": "#/components/schemas/RawSummaryStream"
+     },
+     "type": "array"
+    },
+    "total": {
+     "type": "integer"
+    },
+    "updated_at": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "uploaded": {
+     "type": "integer"
+    }
+   },
+   "required": [
+    "session_id",
+    "participant_id",
+    "total",
+    "uploaded",
+    "pending",
+    "failed",
+    "streams",
+    "aliases_uploaded",
+    "aliases_truncated",
+    "receipt_hash"
+   ],
+   "type": "object"
+  },
+  "RawSummaryStream": {
+   "properties": {
+    "failed": {
+     "type": "integer"
+    },
+    "max_index": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "min_index": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "missing_ranges": {
+     "items": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array"
+     },
+     "type": "array"
+    },
+    "pending": {
+     "type": "integer"
+    },
+    "segment_id": {
+     "type": "string"
+    },
+    "signal_type": {
+     "type": "string"
+    },
+    "stream_id": {
+     "type": "string"
+    },
+    "truncated": {
+     "type": "boolean"
+    },
+    "uploaded": {
+     "type": "integer"
+    }
+   },
+   "required": [
+    "stream_id",
+    "segment_id",
+    "signal_type",
+    "uploaded",
+    "pending",
+    "failed",
+    "missing_ranges",
+    "truncated"
    ],
    "type": "object"
   },
@@ -4158,6 +4384,62 @@
     "OAuth2PasswordBearer"
    ]
   },
+  "GET /api/v1/sessions/{session_id}/biosignal-raw/summary": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    },
+    {
+     "in": "query",
+     "name": "participant_id",
+     "required": false,
+     "schema": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    {
+     "in": "header",
+     "name": "X-Entry-Credential",
+     "required": false,
+     "schema": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RawSummaryResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
   "GET /api/v1/sessions/{session_id}/chat-room": {
    "parameters": [
     {
@@ -4300,6 +4582,62 @@
       "application/json": {
        "schema": {
         "$ref": "#/components/schemas/EntryStateResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "GET /api/v1/sessions/{session_id}/features/summary": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    },
+    {
+     "in": "query",
+     "name": "participant_id",
+     "required": false,
+     "schema": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    {
+     "in": "header",
+     "name": "X-Entry-Credential",
+     "required": false,
+     "schema": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/FeatureSummaryResponse"
        }
       }
      }
@@ -5249,7 +5587,7 @@
     "OAuth2PasswordBearer"
    ]
   },
-  "POST /api/v1/sessions/{session_id}/features": {
+  "POST /api/v1/sessions/{session_id}/features/batch": {
    "parameters": [
     {
      "in": "path",
@@ -5279,7 +5617,8 @@
     "content": {
      "application/json": {
       "schema": {
-       "$ref": "#/components/schemas/EEGFeatureBatchRequest"
+       "additionalProperties": true,
+       "type": "object"
       }
      }
     },
@@ -5290,7 +5629,7 @@
      "content": {
       "application/json": {
        "schema": {
-        "$ref": "#/components/schemas/EEGFeatureBatchResponse"
+        "$ref": "#/components/schemas/FeatureBatchResponse"
        }
       }
      }

@@ -10,7 +10,7 @@ from pathlib import Path
 import sqlalchemy as sa
 
 from app.models.live_state import CaptureStream
-from app.models.session import Session as SessionModel
+from app.models.session import SessionParticipant, Session as SessionModel
 from app.services import class_participation_service as cps
 from app.services import live_ingest_service as li
 from app.services.session_live_legacy import PROTOCOL_V2, get_session_protocol, pin_new_run_if_enabled
@@ -201,7 +201,12 @@ def test_v2로_저장된_창은_play_group_id가_stream_id이고_리포트_통�
     r = _start(maker, world, now=now)
     sid = r.result["stream_id"]
     _anchor(maker, sid, at=now, mono_us=0)
-    _ingest(maker, world, _batch(*[_env(world, r, n) for n in (1, 2, 3)]), now=now + timedelta(seconds=3))
+    from app.schemas.session_live_ingest import parse_metric_batch
+    from app.services import live_ingest_service as _li
+    with maker() as s:  # SDD-260: 저장은 REST store_batch
+        res = _li.store_batch(s, s.get(SessionParticipant, world.members[0][1]), world.session_id,
+                              parse_metric_batch(_batch(*[_env(world, r, n) for n in (1, 2, 3)])))
+        assert [x["status"] for x in res] == ["accepted"] * 3
     with maker() as s:
         rows = s.execute(sa.select(EEGFeatureWindow).where(EEGFeatureWindow.session_id == world.session_id)).scalars().all()
         assert len(rows) == 3 and {str(x.play_group_id) for x in rows} == {sid}

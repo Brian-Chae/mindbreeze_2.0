@@ -6,6 +6,7 @@
 """
 
 from __future__ import annotations
+from tests.feature_seed import post_features
 
 import uuid
 from unittest.mock import Mock
@@ -214,7 +215,7 @@ def test_S16_eeg_rollup과_checkin과_invite_email(client, recorder, invite_enqu
     member, _pid = _member_in(client, cls, "shape-s16-m@test.com")
     assert client.post(f"{API}/{cls['id']}/start", headers=host["h"]).status_code == 200
     features = [{"second_offset": i, "relaxation_index": 0.5, "signal_quality": 0.9} for i in range(10)]
-    ing = client.post(f"{API}/{cls['id']}/features", json={"participant_id": joined["participant_id"], "features": features},
+    ing = post_features(client, f"{API}/{cls['id']}/features", json={"participant_id": joined["participant_id"], "features": features},
                       headers={"X-Entry-Credential": joined["entry_credential"]})
     assert ing.status_code == 200, ing.text
     recorder.check("S16 POST features", ing)

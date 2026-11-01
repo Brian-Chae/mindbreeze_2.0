@@ -2,13 +2,15 @@
 // 이식 범위: useBand(+everConnected) · useSessionLiveSocket(평균 수신 구독 없음) · 1Hz 링버퍼 · useGuestAudioSync · 채팅 폴링 · 접촉 불량 상태.
 // useWakeLock 은 호출부(class-join-page: step waiting|meditation)가 이미 걸고 있어 여기서 다시 걸지 않는다(센티널 중복 방지).
 // 이 파일만 useBand 를 호출한다(plan R4: BLE 연결·업로드 인스턴스는 화면당 1개).
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { freshnessOf } from '../../../../lib/session-live/live-view';
 import { liveMetricSnapshot } from '../../../../lib/session-live/live-metric-snapshot';
 import { ConnectionState } from 'livekit-client';
 import { useBand, type UseBandResult } from '../../../../hooks/useBand';
 import { useCloseBiosignalOnEnd } from '../../../../hooks/useCloseBiosignalOnEnd';
 import { BiosignalRecordingStatus } from '../../../../lib/biosignal/recording-status';
+import { UploadProgressNotice } from '../../../../lib/biosignal/upload-progress-notice';
+import { uploadProgressStore } from '../../../../lib/measurement-web/upload-progress';
 import type { RenderedMetrics } from '../../../../lib/biosignal/display-snapshot';
 import { AnalysisMetricsService } from '../../../../lib/eeg/AnalysisMetricsService';
 import { useGuestAudioSync } from '../../../../hooks/useGuestAudioSync';
@@ -29,11 +31,9 @@ import type { LiveClient } from '../../../../lib/session-live/live-client';
 import { useMetricBars } from '../../../../lib/session-live/metric-bars';
 import { useWebMeasurementV2 } from '../../../../lib/measurement-web/use-web-measurement';
 import { useNativeMeasurementV2 } from '../../../../lib/measurement-web/use-native-measurement';
-import { decideMeasurementPath } from '../../../../lib/measurement-web/measurement-path';
 import { getNativeMeasurement, isNativeMeasurementAvailable } from '../../../../lib/native-measurement';
 import { Capacitor } from '@capacitor/core';
 import { describeNativeStartFailure, isNativeBandOwned } from '../../../../lib/native-measurement/device-status';
-import { isBleSupported } from '../../../../lib/ble';
 import { applyBandSkipUi, readBandSkip, shouldAutoConnectBand, writeBandSkip } from '../../../../lib/class/flow/band-skip';
 import { toBandReport } from '../../../../lib/measurement-web/band-report';
 import { ClassChatPanel } from '../../../chat/ClassChatPanel';
@@ -226,13 +226,9 @@ export function MemberClassContainer({
   }, [isAuthenticated, participantId, entryCredential, sessionId, v2ChatReady]);
 
   /* ───────── 밴드(useBand 단일 인스턴스) ───────── */
-  // SDD-246 T12: v2 수집 경로(web_wasm/native)가 활성이면 v1 feature 업로드를 끈다(이중 집계 방지). 판정은 band 연결 상태가 필요해 ref 로 읽는다.
+  // SDD-260: feature 정본 저장은 REST 배치(lib/measurement-web)뿐이다. 서버가 v1 `/features`·소켓 session:feature 저장을 없애므로 useBand 의 v1 feature 업로드는 항상 끈다.
   const bandConnectedRef = useRef(false);
-  const v2Path = decideMeasurementPath({
-    v2: v2On && connectionsActive, native: isNativeMeasurementAvailable(), webBluetooth: isBleSupported(),
-    bandConnected: bandConnectedRef.current, eegConsent, bandOptIn: bandAuto,
-  });
-  const band = useBand({ sessionId, participantId, enabled: connectionsActive, skipAuth: !isAuthenticated, entryCredential, v1FeatureUpload: v2Path !== 'web_wasm' && v2Path !== 'native', autoResume: bandAuto });
+  const band = useBand({ sessionId, participantId, enabled: connectionsActive, skipAuth: !isAuthenticated, entryCredential, v1FeatureUpload: false, autoResume: bandAuto });
   bandConnectedRef.current = band.connectionState === 'connected';
   // 호스트가 회차를 종료하면 회원은 밴드 해제 없이 떠난다 → 종료 phase 에서 close intent 를 한 번 기록한다.
   useCloseBiosignalOnEnd(v2On && liveV2?.state?.session?.data.phase === 'ended', band.closeBiosignal);
@@ -255,6 +251,9 @@ export function MemberClassContainer({
     bandConnected: band.connectionState === 'connected',
     band: bandReport,
     enabled: connectionsActive,
+    // SDD-260: feature 정본 저장(REST 배치)의 소유 계정·인증 — 로그인 회원은 JWT, 게스트는 입장 자격
+    accountId: entryCredential ? `entry:${participantId ?? ''}` : user?.id ? `user:${user.id}` : null,
+    featureAuth: { entryCredential, skipAuth: !isAuthenticated },
   });
   const nativeM = useNativeMeasurementV2({
     v2: v2On, sessionId, participantId, accountId: user?.id ?? null, bandOptIn: bandAuto, eegConsent,
@@ -497,6 +496,7 @@ export function MemberClassContainer({
   }, [connectLiveKit]);
 
   const shared: SharedScreenProps = {
+    sessionId,
     place, mode, viewerOnly, bandVisible, bandUi, nativeOwnsBand, nativeAuto: isNativeMeasurementAvailable() && eegConsent && linkbandMode !== 'none' && v2On, waitlisted, nowMs, hostVideoIssue,
     header: { title: title ?? '클래스', elapsedSec, totalSec, counselorName, myInitial: user?.name?.trim().charAt(0) || '나' },
     hero, snapshot, series, sheet, screenOff, confirmLeave,
@@ -598,6 +598,8 @@ function noop(): void {
 /* ───────── 화면 본체: LiveKit 연결 상태가 필요한 파생(네트워크)과 모달·덮개를 담당 ───────── */
 
 interface SharedScreenProps {
+  /** SDD-260: 업로드 진행 표시를 세션별로 구독 */
+  sessionId: string;
   place: 'online' | 'offline';
   mode: '1on1' | 'group';
   viewerOnly: boolean;
@@ -653,6 +655,8 @@ interface MemberLiveScreenProps {
 
 function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
   const { band } = controls;
+  // SDD-260: 종료 후 업로드 진행(네이티브 이벤트). 화면 이탈 가능, 완료는 summary 대조 후에만 표시
+  const uploadProgress = useSyncExternalStore(uploadProgressStore.subscribe, () => uploadProgressStore.get(shared.sessionId), () => null);
 
   /* 네트워크: 소켓·브라우저 온라인·LiveKit 재연결을 합쳐 ok/재연결 중/끊김으로. 처음 연결되기 전의 끊김은 오류로 보지 않는다 */
   const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
@@ -780,6 +784,7 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
     <>
       <div inert={shared.screenOff}>
         <BiosignalRecordingStatus state={band.recordingStatus} />
+        <UploadProgressNotice progress={uploadProgress} />
         <MemberClassView
           input={input}
           header={shared.header}

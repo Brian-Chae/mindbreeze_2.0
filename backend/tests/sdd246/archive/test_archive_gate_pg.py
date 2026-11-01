@@ -129,57 +129,60 @@ def test_종료_이전_창은_종료_후에도_수락되고_live_신선도를_�
     assert len(res["chunks"]) == 1 and _raw_rows(maker, world) == 1
 
 
-def test_cutoff를_걸친_창은_pending_time_review로_격리되고_행이_만들어지지_않는다(maker, world, store):
+def test_cutoff를_걸친_창도_수락된다_S4_시간검토_삭제(maker, world, store):
     stream = _start_stream(maker, world)
     _cutoff(maker, world, "completed", T0 + timedelta(seconds=60))
-    # 창 sample 14_998~15_002 → 서버시각 T0+59.992s ~ T0+60.008s (cutoff 를 걸친다)
-    with pytest.raises(HTTPException) as e:
-        _presign(maker, world, [_raw_meta(14_998)], stream)
-    assert e.value.status_code == 409 and _code(e.value) == "pending_time_review" and e.value.detail["reason"] == "straddles_cutoff"
-    assert _raw_rows(maker, world) == 0
+    res = _presign(maker, world, [_raw_meta(14_998)], stream)  # cutoff 를 걸치는 창 — 구 정책은 409 pending_time_review
+    assert res["archive_ingest"]["verdict"] == "accept" and _raw_rows(maker, world) == 1
 
 
-def test_cutoff_이후_창은_403으로_거절한다(maker, world, store):
+
+def test_cutoff_이후_창도_수락된다_S4(maker, world, store):
     stream = _start_stream(maker, world)
     _cutoff(maker, world, "completed", T0 + timedelta(seconds=60))
-    with pytest.raises(HTTPException) as e:
-        _presign(maker, world, [_raw_meta(15_020)], stream)  # 서버시각 T0+60.08s (cutoff+오차 50ms 이후)
-    assert e.value.status_code == 403 and e.value.detail["reason"] == "window_after_cutoff"
-    assert _raw_rows(maker, world) == 0
+    res = _presign(maker, world, [_raw_meta(15_020)], stream)  # 구 정책은 403 window_after_cutoff
+    assert res["archive_ingest"]["verdict"] == "accept" and _raw_rows(maker, world) == 1
 
 
-def test_cutoff_직전_정확히_맞닿는_창과_직후_1창을_구분한다(maker, world, store):
+
+def test_cutoff_전후_창이_모두_수락된다_S4(maker, world, store):
     stream = _start_stream(maker, world, uncertainty_ms=0)
     _cutoff(maker, world, "completed", T0 + timedelta(seconds=60))
-    ok = _presign(maker, world, [_raw_meta(14_996, index=0)], stream)  # 끝(배타)이 정확히 cutoff
-    assert ok["archive_ingest"]["verdict"] == "accept"
-    with pytest.raises(HTTPException) as e:
-        _presign(maker, world, [_raw_meta(15_000, index=1)], stream)  # 시작이 cutoff → 이후 창
-    assert e.value.status_code == 403
+    assert _presign(maker, world, [_raw_meta(14_996, index=0)], stream)["archive_ingest"]["verdict"] == "accept"
+    assert _presign(maker, world, [_raw_meta(15_000, index=1)], stream)["archive_ingest"]["verdict"] == "accept"
 
 
-def test_다중_청크_중_하나라도_거절이면_전체_미반영(maker, world, store):
+
+def test_다중_청크는_cutoff_전후가_섞여도_전체_수락된다_S4(maker, world, store):
     stream = _start_stream(maker, world, uncertainty_ms=0)
     _cutoff(maker, world, "completed", T0 + timedelta(seconds=60))
-    with pytest.raises(HTTPException):
+    res = _presign(maker, world, [_raw_meta(0, index=0), _raw_meta(15_020, index=1)], stream)
+    assert len(res["chunks"]) == 2 and _raw_rows(maker, world) == 2
+
+
+def test_다중_청크_중_동의철회_stream이면_전체_미반영(maker, world, store):
+    stream = _start_stream(maker, world, uncertainty_ms=0)
+    _cutoff(maker, world, "consent_withdrawn", T0 + timedelta(seconds=60))
+    with pytest.raises(HTTPException) as e:
         _presign(maker, world, [_raw_meta(0, index=0), _raw_meta(15_020, index=1)], stream)
+    assert e.value.status_code == 403
     assert _raw_rows(maker, world) == 0
 
 
-def test_offline_10분_상한_밖의_미확정_구간은_격리(maker, world, store):
+
+def test_offline_상한_밖의_구간도_수락된다_S4(maker, world, store):
     stream = _start_stream(maker, world, uncertainty_ms=0)
-    # lease(30s) 만료 + offline 상한(10분) 이후로 환산되는 창: sample 150_000 → 600s
-    with pytest.raises(HTTPException) as e:
-        _presign(maker, world, [_raw_meta(150_000)], stream, )
-    assert e.value.status_code == 409 and e.value.detail["reason"] == "beyond_offline_bound"
+    res = _presign(maker, world, [_raw_meta(150_000)], stream)  # 구 정책은 409 beyond_offline_bound
+    assert res["archive_ingest"]["verdict"] == "accept"
 
 
-def test_시계_불확실_stream은_cutoff_후_모두_격리(maker, world, store):
+
+def test_시계_불확실_stream도_수락된다_S4(maker, world, store):
     stream = _start_stream(maker, world, certain=False)
     _cutoff(maker, world, "completed", T0 + timedelta(seconds=60))
-    with pytest.raises(HTTPException) as e:
-        _presign(maker, world, [_raw_meta(0)], stream)
-    assert e.value.status_code == 409 and e.value.detail["reason"] == "clock_uncertain"
+    res = _presign(maker, world, [_raw_meta(0)], stream)  # 구 정책은 409 clock_uncertain
+    assert res["archive_ingest"]["verdict"] == "accept"
+
 
 
 # ── 권한 코드 ──────────────────────────────────────────────────────────────
@@ -189,7 +192,7 @@ def test_동의철회는_종료_이전_창이라도_거절(maker, world, store):
     _cutoff(maker, world, "consent_withdrawn", T0 + timedelta(seconds=60))
     with pytest.raises(HTTPException) as e:
         _presign(maker, world, [_raw_meta(0)], stream)
-    assert e.value.status_code == 403 and e.value.detail["reason"] == "consent_withdrawn"
+    assert e.value.status_code == 403 and e.value.detail["code"] == "archive_rejected" and e.value.detail["reason"] == "consent_withdrawn"
 
 
 def test_추방은_종료_이전_창을_보관_수락하되_live는_아니다(maker, world, store):
@@ -199,16 +202,13 @@ def test_추방은_종료_이전_창을_보관_수락하되_live는_아니다(ma
     assert res["archive_ingest"]["verdict"] == "accept" and res["archive_ingest"]["live_fresh_applied"] is False
 
 
-def test_completed_close_deadline_24h_초과는_거절(maker, world, store, monkeypatch):
+def test_V_S17_close_deadline_24h_초과도_수락된다(maker, world, store, monkeypatch):
     stream = _start_stream(maker, world)
     _cutoff(maker, world, "completed", T0 + timedelta(seconds=60))
-    monkeypatch.setattr(biosignal_service, "_now", lambda: T0 + timedelta(hours=24, seconds=61))
-    with pytest.raises(HTTPException) as e:
-        _presign(maker, world, [_raw_meta(0)], stream)
-    assert e.value.status_code == 403 and e.value.detail["reason"] == "close_deadline_passed"
-    # 경계 직전(24h-1s)은 수락
-    monkeypatch.setattr(biosignal_service, "_now", lambda: T0 + timedelta(hours=24, seconds=58))
-    assert _presign(maker, world, [_raw_meta(0)], stream)["archive_ingest"]["verdict"] == "accept"
+    for hours in (24, 48, 24 * 7):  # 구 정책은 24h 뒤 403 close_deadline_passed
+        monkeypatch.setattr(biosignal_service, "_now", lambda h=hours: T0 + timedelta(hours=h, seconds=61))
+        assert _presign(maker, world, [_raw_meta(0, index=hours)], stream)["archive_ingest"]["verdict"] == "accept"
+
 
 
 def test_타인_stream이나_없는_stream은_거절(maker, world, store):
@@ -229,17 +229,12 @@ def test_타인_stream이나_없는_stream은_거절(maker, world, store):
 
 # ── 산출물(artifact) 게이트 ────────────────────────────────────────────────
 
-def test_artifact는_monotonic_range로_판정하고_범위_없으면_cutoff_후_격리(maker, world, store):
+def test_artifact는_범위가_없거나_cutoff_후여도_수락된다_S4(maker, world, store):
     stream = _start_stream(maker, world, uncertainty_ms=0)
     _cutoff(maker, world, "completed", T0 + timedelta(seconds=60))
-    ok = _presign_art(maker, world, [_art_meta("FEAT-OK", (2_000_000, 3_000_000), 0)], stream)
-    assert ok["archive_ingest"]["verdict"] == "accept"
-    with pytest.raises(HTTPException) as e:
-        _presign_art(maker, world, [_art_meta("FEAT-NORANGE", None, 1)], stream)
-    assert e.value.status_code == 409 and e.value.detail["reason"] == "window_unproven"
-    with pytest.raises(HTTPException) as e:
-        _presign_art(maker, world, [_art_meta("FEAT-LATE", (63_000_000, 64_000_000), 2)], stream)
-    assert e.value.status_code == 403
+    for alias, mono, seq in (("FEAT-OK", (2_000_000, 3_000_000), 0), ("FEAT-NORANGE", None, 1), ("FEAT-LATE", (63_000_000, 64_000_000), 2)):
+        assert _presign_art(maker, world, [_art_meta(alias, mono, seq)], stream)["archive_ingest"]["verdict"] == "accept", alias
+
 
 
 # ── PUT 성공 + ACK 유실 ────────────────────────────────────────────────────

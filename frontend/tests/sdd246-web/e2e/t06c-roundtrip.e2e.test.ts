@@ -9,6 +9,7 @@ import { randomUUID } from 'node:crypto';
 import { io } from 'socket.io-client';
 import { describe, expect, it } from 'vitest';
 import { LiveClient, type LiveSocketLike, type MetricSendOutcome, type RestFallback } from '../../../src/lib/session-live/live-client';
+import { MemoryOutboxStore } from '../../../src/lib/measurement-web/metric-outbox';
 import { CaptureController } from '../../../src/lib/measurement-web/capture-controller';
 import { CoreSession, type McCoreLike, type SensorName } from '../../../src/lib/measurement-web/core-session';
 import { WEB_CORE_CONFIG, WEB_CORE_CONFIG_JSON } from '../../../src/lib/measurement-web/core-config';
@@ -89,6 +90,7 @@ describe.skipIf(!RUN)('T06c 로컬 왕복', () => {
     let lastTick = '0';
     const stopped: string[] = [];
     const ctl = new CaptureController({
+      accountId: 'user:u1', outboxStore: new MemoryOutboxStore(), sendFeatures: async () => [],
       client: member.client, sessionId: sid, eegConsent: true, bandConnected: true,
       deviceProfile: WEB_CORE_CONFIG.device_profile_version, algorithmVersion: WEB_CORE_CONFIG.algorithm_version, modelVersion: WEB_CORE_CONFIG.model_version,
       deviceTicks: () => lastTick, onStopped: (c) => stopped.push(c),
@@ -130,13 +132,13 @@ describe.skipIf(!RUN)('T06c 로컬 왕복', () => {
       if (frames > 0 && frames % 5 === 0) void ctl.flush();
     }
     await ctl.flush();
-    await until(() => ctl.pendingMetricCount() === 0, 10_000);
+    await ctl.outboxHandle()!.flushAll();
     await new Promise((r) => setTimeout(r, 1_500));
     const lat = hostSeen.map((h) => (sentAt.has(h.seq) ? h.recvAt - sentAt.get(h.seq)! : null)).filter((x): x is number => x !== null);
     const fresh: Record<string, number> = {};
     for (const h of hostSeen) fresh[h.freshness] = (fresh[h.freshness] ?? 0) + 1;
     Object.assign(out, {
-      core_frames: frames, core_errors: [...new Set(coreErrors)], ack_tally: ackTally, pending_after: ctl.pendingMetricCount(),
+      core_frames: frames, core_errors: [...new Set(coreErrors)], ack_tally: ackTally, pending_after: await ctl.outboxHandle()!.pendingCount(),
       host_updates: hostSeen.length, host_freshness: fresh, first_host: hostSeen[0] ?? null, last_host: hostSeen.at(-1) ?? null,
       send_to_host_ms: { p50: pct(lat, 50), p95: pct(lat, 95), max: lat.length ? Math.max(...lat) : null, n: lat.length },
     });
@@ -156,6 +158,7 @@ describe.skipIf(!RUN)('T06c 로컬 왕복', () => {
     // 세대가 다른 창은 stale_owner_generation 으로 거절된다.
     const old = ctl.capture()!;
     const ctl2 = new CaptureController({
+      accountId: 'user:u1', outboxStore: new MemoryOutboxStore(), sendFeatures: async () => [],
       client: member.client, sessionId: sid, eegConsent: true, bandConnected: true,
       deviceProfile: WEB_CORE_CONFIG.device_profile_version, algorithmVersion: WEB_CORE_CONFIG.algorithm_version, modelVersion: WEB_CORE_CONFIG.model_version,
     });

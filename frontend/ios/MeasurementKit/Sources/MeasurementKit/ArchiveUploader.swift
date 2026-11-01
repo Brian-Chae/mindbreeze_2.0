@@ -17,7 +17,10 @@ public protocol FileUploading: AnyObject {
     /// 파일을 PUT 하는 task 를 시작하고 task 식별자를 돌려준다. task 는 앱이 죽어도 OS 가 이어 간다.
     func startUpload(to url: URL, headers: [String: String], file: URL, alias: String) -> Int
     func liveTaskIds() -> Set<Int>
+    /// OS 에 남아 있는 task 목록 조회가 끝난 뒤(앱 재시작 직후 releaseOrphans 의 전제). 가짜는 즉시.
+    func whenReady(_ done: @escaping () -> Void)
 }
+extension FileUploading { public func whenReady(_ done: @escaping () -> Void) { done() } }
 
 /// presign(JSON 제어 요청) → 파일 PUT(background) → ACK(검증) 파이프라인. 라이브 1Hz 경로와 분리된 archive 전용이다.
 /// 완료 기준: 서버 verify ACK 의 `upload_status == uploaded` + `verified_at_us != null` 뿐(PUT HTTP 200 만으로 receipt 를 만들지 않음).
@@ -180,10 +183,23 @@ public final class ArchiveUploader {
 /// 시스템이 스케줄하므로 지연될 수 있다 — 이 경로는 archive 전용이며 1Hz 원격 표시의 대체가 아니다.
 public final class BackgroundFileUploader: NSObject, FileUploading, URLSessionTaskDelegate, URLSessionDelegate {
     public static let sessionIdentifier = "com.looxidlabs.mindbreeze2.archive.upload"
-    public var onCompleted: ((Int, Int, Error?) -> Void)?
+    /// 설정되기 전에 도착한 완료(앱이 background 완료로 깨어난 직후 등)는 버퍼에 쌓았다가 설정 시 한 번에 전달한다(유실 금지).
+    public var onCompleted: ((Int, Int, Error?) -> Void)? {
+        get { lock.lock(); defer { lock.unlock() }; return _onCompleted }
+        set {
+            lock.lock(); _onCompleted = newValue
+            let buffered = newValue == nil ? [] : earlyCompletions; if newValue != nil { earlyCompletions = [] }
+            lock.unlock()
+            buffered.forEach { newValue?($0.0, $0.1, $0.2) }
+        }
+    }
     public var backgroundCompletionHandler: (() -> Void)?
     private var session: URLSession!
     private var live = Set<Int>()
+    private var ready = false
+    private var readyWaiters: [() -> Void] = []
+    private var _onCompleted: ((Int, Int, Error?) -> Void)?
+    private var earlyCompletions: [(Int, Int, Error?)] = []
     private let lock = NSLock()
 
     public override init() {
@@ -192,7 +208,10 @@ public final class BackgroundFileUploader: NSObject, FileUploading, URLSessionTa
         cfg.sessionSendsLaunchEvents = true; cfg.isDiscretionary = false; cfg.waitsForConnectivity = true
         session = URLSession(configuration: cfg, delegate: self, delegateQueue: nil)
         session.getAllTasks { [weak self] tasks in
-            self?.lock.lock(); tasks.forEach { self?.live.insert($0.taskIdentifier) }; self?.lock.unlock()
+            guard let self = self else { return }
+            self.lock.lock(); tasks.forEach { self.live.insert($0.taskIdentifier) }; self.ready = true
+            let ws = self.readyWaiters; self.readyWaiters = []; self.lock.unlock()
+            ws.forEach { $0() }
         }
     }
 
@@ -206,10 +225,18 @@ public final class BackgroundFileUploader: NSObject, FileUploading, URLSessionTa
         return t.taskIdentifier
     }
     public func liveTaskIds() -> Set<Int> { lock.lock(); defer { lock.unlock() }; return live }
+    public func whenReady(_ done: @escaping () -> Void) {
+        lock.lock()
+        if ready { lock.unlock(); done(); return }
+        readyWaiters.append(done); lock.unlock()
+    }
 
     public func urlSession(_ s: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        lock.lock(); live.remove(task.taskIdentifier); lock.unlock()
-        onCompleted?(task.taskIdentifier, (task.response as? HTTPURLResponse)?.statusCode ?? 0, error)
+        let status = (task.response as? HTTPURLResponse)?.statusCode ?? 0
+        lock.lock(); live.remove(task.taskIdentifier)
+        guard let cb = _onCompleted else { earlyCompletions.append((task.taskIdentifier, status, error)); lock.unlock(); return }
+        lock.unlock()
+        cb(task.taskIdentifier, status, error)
     }
     public func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
         DispatchQueue.main.async { [weak self] in self?.backgroundCompletionHandler?(); self?.backgroundCompletionHandler = nil }

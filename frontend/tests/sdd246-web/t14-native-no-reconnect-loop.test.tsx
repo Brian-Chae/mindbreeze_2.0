@@ -22,7 +22,7 @@ vi.mock('../../src/lib/native-measurement', () => ({
   isNativeMeasurementAvailable: () => true,
   buildNativeModelPayload: () => null,
   getNativeMeasurement: () => ({
-    attach: async () => { h.attach(); }, detach: async () => { h.detach(); }, onMeasurement: () => () => undefined, stop: async (r: unknown) => { h.stop(r); return { accepted: true }; },
+    attach: async () => { h.attach(); }, detach: async () => { h.detach(); }, onMeasurement: () => () => undefined, onUploadProgress: () => () => undefined, stop: async (r: unknown) => { h.stop(r); return { accepted: true }; },
     startForSession: async (a: { releaseJsBand?: () => Promise<unknown> }) => {
       h.start();
       await a.releaseJsBand?.();

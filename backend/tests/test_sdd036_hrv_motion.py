@@ -1,4 +1,5 @@
 """HRV·움직임 저장 및 리포트 회귀: null, 0, 참가자 격리 검증."""
+from tests.feature_seed import post_features
 from uuid import UUID
 import pytest
 from app.models.eeg_feature import EEGFeatureWindow
@@ -16,7 +17,7 @@ def setup_session(client):
 
 
 def upload(client, session, pid, features):
-    response = client.post(f"/api/v1/sessions/{session['id']}/features", json={'participant_id': pid, 'features': features})
+    response = post_features(client, f"/api/v1/sessions/{session['id']}/features", json={'participant_id': pid, 'features': features})
     assert response.status_code == 200, response.text
     return response.json()
 
@@ -109,7 +110,7 @@ def test_empty_rollup_preserves_null(client):
 @pytest.mark.parametrize('motion', [-.01, 1.01])
 def test_motion_rejects_out_of_contract_range(client, motion):
     _, session, pid = setup_session(client)
-    response = client.post(f"/api/v1/sessions/{session['id']}/features", json={
+    response = post_features(client, f"/api/v1/sessions/{session['id']}/features", json={
         'participant_id': pid, 'features': [{'second_offset': 0, 'motion': motion}],
     })
     assert response.status_code == 422

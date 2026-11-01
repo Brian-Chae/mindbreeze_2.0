@@ -8,6 +8,7 @@ import type {
   BridgeEvent, Capabilities, DispatchLiveCommandResult, ListenerHandle, MeasurementSnapshot,
   NativeMeasurementPlugin, QueueCounts, BlockedReason, RawPreview, StartMeasurementRequest, StartMeasurementResult,
 } from './types';
+import type { UploadProgress } from '../measurement-web/upload-progress';
 import { parseModelParams } from '../eeg/eegPersonalScore';
 import type { CalibrationMetricKey } from '../eeg/eegSigmoidScore';
 import type { NormalizationModelDto } from '../api/normalization-api';
@@ -77,6 +78,22 @@ function normalizeSnapshot(raw: MeasurementSnapshot): MeasurementSnapshot {
 }
 
 const EVENTS: Array<BridgeEvent['event']> = ['measurementUpdated', 'liveStateUpdated', 'commandAck', 'archiveStatus'];
+/** SDD-260: 저장 진행 이벤트 3종(docs/sdd-260-native-js-events.md). seq 는 manager 와 별개라 세대 필터 없이 세션만 맞춰 전달한다 */
+const UPLOAD_EVENTS = ['feature.counts', 'archive.counts', 'reconcile.state'] as const;
+type UploadEventName = typeof UPLOAD_EVENTS[number];
+
+const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+const str = (v: unknown): string => (typeof v === 'string' ? v : 'idle');
+
+/** 이벤트 payload → 진행 부분 갱신. 세션이 다르거나 형식이 아니면 null */
+function toUploadPatch(name: UploadEventName, payload: unknown, sessionId: string | null): Partial<UploadProgress> | null {
+  if (typeof payload !== 'object' || payload === null) return null;
+  const p = payload as Record<string, unknown>;
+  if (sessionId !== null && p.sessionId !== sessionId) return null;
+  if (name === 'feature.counts') return { featurePending: num(p.pending), featureAcked: num(p.acked), featureRejected: num(p.rejected) };
+  if (name === 'archive.counts') return { rawPending: num(p.pending), rawUploading: num(p.uploading), rawVerified: num(p.verified), rawQuarantined: num(p.quarantined) };
+  return { featureState: str(p.feature), rawState: str(p.raw), complete: p.complete === true };
+}
 
 export const WEB_CAPABILITIES: Capabilities = {
   bridge_version: 1,
@@ -104,6 +121,7 @@ export class NativeMeasurementFacade {
   private measurementCbs = new Set<Cb<MeasurementSnapshot>>();
   private liveCbs = new Set<Cb<LiveEvent>>();
   private ackCbs = new Set<Cb<CommandAck>>();
+  private uploadCbs = new Set<Cb<Partial<UploadProgress>>>();
   private archiveCbs = new Set<Cb<{ queue: QueueCounts; blocked_reason: BlockedReason | null; stage: string | null; code: string | null }>>();
 
   constructor(plugin: NativeMeasurementPlugin) {
@@ -113,6 +131,7 @@ export class NativeMeasurementFacade {
   onMeasurement(cb: Cb<MeasurementSnapshot>): () => void { this.measurementCbs.add(cb); return () => { this.measurementCbs.delete(cb); }; }
   onLiveEvent(cb: Cb<LiveEvent>): () => void { this.liveCbs.add(cb); return () => { this.liveCbs.delete(cb); }; }
   onCommandAck(cb: Cb<CommandAck>): () => void { this.ackCbs.add(cb); return () => { this.ackCbs.delete(cb); }; }
+  onUploadProgress(cb: Cb<Partial<UploadProgress>>): () => void { this.uploadCbs.add(cb); return () => { this.uploadCbs.delete(cb); }; }
   onArchive(cb: Cb<{ queue: QueueCounts; blocked_reason: BlockedReason | null; stage: string | null; code: string | null }>): () => void {
     this.archiveCbs.add(cb); return () => { this.archiveCbs.delete(cb); };
   }
@@ -126,6 +145,14 @@ export class NativeMeasurementFacade {
     await this.detach();
     this.sessionId = sessionId;
     const token = ++this.attachToken;
+    for (const name of UPLOAD_EVENTS) {
+      const h = await this.plugin.addListener(name as BridgeEvent['event'], (e) => {
+        if (token !== this.attachToken) return;
+        const patch = toUploadPatch(name, (e as { payload?: unknown }).payload, this.sessionId);
+        if (patch) for (const cb of this.uploadCbs) cb(patch);
+      });
+      this.handles.push(h);
+    }
     // listener 를 먼저 설치하고 snapshot 을 읽는다 — snapshot 이전 이벤트는 seq 로 걸러진다.
     for (const name of EVENTS) {
       const h = await this.plugin.addListener(name, (e) => { if (token === this.attachToken) this.onEvent(e); });

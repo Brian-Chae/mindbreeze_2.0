@@ -65,6 +65,8 @@ class LiveSession(
         private set
     /** (status, cutoff_code) — 측정 정지·봉인 신호. 직렬 컨텍스트에서 호출된다. */
     @Volatile var onStreamEnded: ((String, String?) -> Unit)? = null
+    /** capture.start 로 stream 이 확정돼 귀속 전 창이 귀속됐다 → FeatureUploader 를 바로 한 번 돌린다. */
+    @Volatile var onStreamBound: (() -> Unit)? = null
 
     /** 브리지로 전달할 서버 이벤트·명령 ACK(최종). 브리지 쪽이 소비한다. */
     val events = LinkedBlockingQueue<JSONObject>()
@@ -90,7 +92,7 @@ class LiveSession(
     private var hbMismatch = 0
     private var metricInflight = false
     private var anchorId: String = UUID.randomUUID().toString()
-    private var clockUncertaintyMs = 300_000.0
+    @Volatile private var clockUncertaintyMs = 300_000.0
     private var probeSentAtMs = 0L
     // live:device 보고(최신값만 의미). device_seq 는 같은 stream 안에서 단조(서버가 작거나 같으면 duplicate).
     private var lastDeviceSeq = 0L
@@ -298,7 +300,7 @@ class LiveSession(
         val buf = ArrayList(buffered); buffered.clear()
         for (e in buf) applyEvent(e)
         startPresence(); startWatchdog()
-        flushCommands(); pump(); maybeScheduleProbe(1_000); flushDevice(); scheduleRenew()
+        flushCommands(); maybeScheduleProbe(1_000); flushDevice(); scheduleRenew()
     }
 
     private fun appliedMsg() = JSONObject().put("protocol_version", 2).put("schema_version", 1)
@@ -418,7 +420,8 @@ class LiveSession(
         }
         ownerGeneration = gen
         r.optJSONObject("lease")?.let { l -> if (l.has("expires_at_ms")) leaseExpiresAtMs = l.optLong("expires_at_ms") }
-        if (state == LiveState.READY) { maybeScheduleProbe(1_000); pump(); flushDevice(); scheduleRenew() }
+        if (kind == "capture.start") currentTag()?.let { outbox.bindUntagged(it); onStreamBound?.invoke() } // stream 이 생기기 전에 쌓인 창을 귀속 → REST 가 보낼 수 있다
+        if (state == LiveState.READY) { maybeScheduleProbe(1_000); flushDevice(); scheduleRenew() }
     }
 
     /**
@@ -571,12 +574,15 @@ class LiveSession(
     }
 
     // ------------------------------------------------------------------ 지표 창
+    /** feature 세션 공통 값(REST envelope). 시계 불확실도는 최신 clock probe 결과. */
+    fun featureMeta() = FeatureMeta(cfg.deviceProfile, cfg.algorithmVersion, cfg.modelVersion, clockUncertaintyMs)
+
     fun onFrame(frame: JSONObject) {
         val seq = frame.optString("sequence").toLongOrNull() ?: return
-        // T05b: sequence ≤ 2^31−1 (서버 entity_version = generation<<31 | sequence). 범위 밖은 live 에서 격리.
+        // T05b: sequence ≤ 2^31−1 (서버 entity_version = generation<<31 | sequence). 범위 밖은 격리.
         if (seq < 0 || seq > MAX_SEQUENCE) { outbox.quarantine(seq, "sequence_out_of_range"); return }
-        outbox.add(seq, frame, currentTag())
-        if (state == LiveState.READY) pump()
+        outbox.add(seq, frame, currentTag()) // 정본 저장 경로(FeatureUploader/REST)의 전송원. 소켓과 무관하게 쌓인다.
+        broadcast(frame)
     }
 
     /** 지금 활성 stream 의 신원. stream 이 없으면(capture.start 전) null — 이후 첫 stream 이 귀속한다. */
@@ -585,21 +591,19 @@ class LiveSession(
         return StreamTag(s, g, anchorId, p)
     }
 
-    fun pump() {
+    /**
+     * 코치 화면용 방송: 현재 창 하나를 live:metric 으로 보낸다(최선 노력). 저장하지 않으므로 ACK 를 기다리며 재시도하지 않고,
+     * 이전 방송이 끝나지 않았으면 건너뛴다. 어떤 응답도 outbox 를 건드리지 않는다.
+     */
+    private fun broadcast(frame: JSONObject) {
         if (state != LiveState.READY || metricInflight) return
         val cur = currentTag() ?: return
-        // 창은 만들어진 stream 의 신원으로 보낸다(재시작·재연결 후 옛 창이 새 stream 으로 귀속되지 않음). 한 묶음=한 stream.
-        val batch = (outbox.nextBatch(cur, 60) ?: return).sortedBy { it.seq } // 최신 배치 우선, 배치 안은 순번 오름차순
-        if (batch.isEmpty()) return
-        val windows = JSONArray()
-        for (e in batch) windows.put(envelope(e.json, e.tag.participantId, e.tag.streamId, e.tag.generation,
-            if (e.tag.streamId == cur.streamId && e.tag.generation == cur.generation) cur.anchorId else e.tag.anchorId)) // 같은 stream 은 최신 앵커, 옛 stream 은 그때 앵커
-        val sentSeqs = batch.map { it.seq }
+        val windows = JSONArray().put(envelope(frame, cur.participantId, cur.streamId, cur.generation, cur.anchorId))
         val msg = JSONObject().put("protocol_version", 2).put("schema_version", 1).put("windows", windows)
         metricInflight = true
         pumpTimer?.cancel()
-        pumpTimer = sched.postDelayed(2_000) { pumpTimer = null; metricInflight = false; pump() } // ACK 유실: 같은 순번 재전송(서버가 duplicate 처리)
-        transport.emit("live:metric", msg) { res -> onMetricAck(sentSeqs, res) }
+        pumpTimer = sched.postDelayed(2_000) { pumpTimer = null; metricInflight = false } // ACK 유실: 이 방송은 포기(다음 창이 곧 온다)
+        transport.emit("live:metric", msg) { res -> onMetricAck(res) }
     }
 
     private fun envelope(f: JSONObject, pid: String, stream: String, gen: String, anchor: String): JSONObject {
@@ -612,33 +616,10 @@ class LiveSession(
         return o
     }
 
-    /**
-     * live:metric 응답(T05b). 창별: accepted/duplicate(durable) 만 제거, rejected 는 재전송해도 같은 결과라 격리(코드별 카운터),
-     * retryable 은 유지·재전송. 배치 오류 {ok:false}: not_ready·*_ingest_unavailable(또는 서버가 retryable=true 로 표시한 일시 장애)만
-     * 재시도하고, 그 밖의 배치 거절(검증 실패·forbidden)은 보낸 창 전부를 격리해 재전송 루프를 막는다.
-     */
-    private fun onMetricAck(sent: List<Long>, res: JSONObject?) {
+    /** live:metric 방송 응답: 결과를 쓰지 않는다. 저장 확정은 REST ACK 뿐이고 outbox·명령 ACK 카운터(lastAckSequence)는 건드리지 않는다. */
+    @Suppress("UNUSED_PARAMETER")
+    private fun onMetricAck(res: JSONObject?) {
         pumpTimer?.cancel(); pumpTimer = null; metricInflight = false
-        if (res == null) return
-        var retry = false
-        var retryAfter = 1_000L
-        val acks = res.optJSONArray("acks")
-        if (acks == null) {
-            val code = res.optString("code").ifEmpty { "unknown" }
-            if (isRetryableError(res)) { retry = true; retryAfter = res.optLong("retry_after_ms", 1_000L).coerceIn(100L, 60_000L) }
-            else for (seq in sent) outbox.quarantine(seq, code)
-        } else for (i in 0 until acks.length()) {
-            val a = acks.getJSONObject(i)
-            val seq = a.optString("sequence").toLongOrNull() ?: continue
-            when (a.optString("status")) {
-                "accepted", "duplicate" ->
-                    if (a.optBoolean("durable", false)) { outbox.ack(seq); lastAckSequence = maxOf(lastAckSequence, seq) } else retry = true
-                "rejected" -> outbox.quarantine(seq, a.optString("code").ifEmpty { "rejected" })
-                else -> retry = true
-            }
-        }
-        if (retry) pumpTimer = sched.postDelayed(retryAfter) { pumpTimer = null; pump() }
-        else pump()
     }
 
     private fun isRetryableError(res: JSONObject): Boolean {

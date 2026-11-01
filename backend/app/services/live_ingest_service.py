@@ -1,4 +1,4 @@
-"""SDD-246 T05/T09 — live:metric · live:device 수집(저장 + 라이브 투영).
+"""SDD-246 T05/T09 — live:metric · live:device 수집(라이브 투영). SDD-260: feature DB 저장은 REST store_batch 만 한다(소켓은 방송 전용).
 
 규칙(contracts/session-live-v2 와 progress/t05.md 에 명문화):
 - **participant_id 획득**: 서버가 인증 문맥에서 확정한 본인 participant(actor.participant_id)만 쓴다. 클라이언트는
@@ -31,11 +31,11 @@ from sqlalchemy.orm import Session as DBSession
 
 from app.models.eeg_feature import EEGFeatureWindow
 from app.models.live_state import CaptureStream, LiveOutbox
-from app.models.session import SessionParticipant
+from app.models.session import Session as SessionModel, SessionParticipant
 from app.schemas.session import EEGFeatureItem
 from app.schemas.session_live_ingest import DeviceReport, MetricWindow, parse_device, parse_metric_batch
 from app.schemas.session_live_v2 import PROTOCOL_VERSION, SCHEMA_VERSION, WireError
-from app.services.session_live_commands import Actor, device_payload, evaluate_ingest, last_device_payload
+from app.services.session_live_commands import CUTOFF_CONSENT_WITHDRAWN, Actor, device_payload, last_device_payload
 from app.services.session_live_ledger import append_outbox, lock_epoch
 
 logger = logging.getLogger(__name__)
@@ -135,9 +135,10 @@ def _load_stream(db: DBSession, session_id: uuid.UUID, participant_id: uuid.UUID
     return s if s is not None and s.participant_id == participant_id else None
 
 
-def _ack(w: MetricWindow, status: str, now: datetime, *, code: str | None = None, durable: bool = False) -> dict[str, Any]:
+def _ack(w: MetricWindow, status: str, now: datetime, *, code: str | None = None) -> dict[str, Any]:
+    """SDD-260: 소켓 ACK 는 방송 접수 결과일 뿐 저장 보증이 아니다(durable 필드 없음). status = projected|ignored."""
     a: dict[str, Any] = {"session_id": w.session_id, "participant_id": w.participant_id, "stream_id": w.stream_id,
-                         "sequence": str(w.sequence), "status": status, "durable": durable, "feature_hash": w.feature_hash,
+                         "sequence": str(w.sequence), "status": status, "feature_hash": w.feature_hash,
                          "received_at_server_ms": _ms(now)}
     if code:
         a["code"] = code
@@ -145,7 +146,10 @@ def _ack(w: MetricWindow, status: str, now: datetime, *, code: str | None = None
 
 
 def ingest_metrics(db: DBSession, actor: Actor, session_id: uuid.UUID, data: Any, *, now: datetime | None = None) -> IngestOutcome:
-    """live:metric 배치 처리. 항상 DB 트랜잭션을 정리하고 wire 응답을 돌려준다(MetricAckBatch 또는 {ok:false})."""
+    """live:metric 배치 처리 — SDD-260: **방송 전용**(DB feature 저장 없음, 정본 저장은 REST /features/batch).
+
+    창마다 참가자·stream 소유를 확인하고, 투영 가능한 가장 새 창 하나만 metrics.updated 로 투영한다.
+    """
     now = now or _now()
     if actor.participant_id is None:
         return IngestOutcome(_err("forbidden"))
@@ -155,10 +159,10 @@ def ingest_metrics(db: DBSession, actor: Actor, session_id: uuid.UUID, data: Any
         return IngestOutcome(_err(exc.code, field=exc.field))
     pid = actor.participant_id
     try:
-        acks, live_candidates = _store_windows(db, actor, session_id, windows, now)
+        acks, live_candidates = _screen_windows(db, pid, session_id, windows, now)
     except SQLAlchemyError:
         db.rollback()
-        logger.warning("[live-ingest] metric 저장 실패", exc_info=True)
+        logger.warning("[live-ingest] metric 검증 실패", exc_info=True)
         return IngestOutcome(_err("db_unavailable", retry=True, retry_after_ms=1000))
     projected = False
     if live_candidates:
@@ -166,99 +170,181 @@ def ingest_metrics(db: DBSession, actor: Actor, session_id: uuid.UUID, data: Any
             projected = _project_latest(db, session_id, pid, live_candidates)
         except SQLAlchemyError:
             db.rollback()
-            logger.warning("[live-ingest] metric 투영 실패 — 저장은 완료, 다음 수신이 최신값을 갱신한다", exc_info=True)
+            logger.warning("[live-ingest] metric 투영 실패 — 저장과 무관, 다음 수신이 최신값을 갱신한다", exc_info=True)
     return IngestOutcome({"protocol_version": PROTOCOL_VERSION, "schema_version": SCHEMA_VERSION, "acks": acks}, projected)
 
 
-def _store_windows(db: DBSession, actor: Actor, session_id: uuid.UUID, windows: list[MetricWindow],
-                   now: datetime) -> tuple[list[dict[str, Any]], list[tuple[MetricWindow, dict[str, Any]]]]:
-    from app.services import session_service
-
-    pid = actor.participant_id
+def _screen_windows(db: DBSession, pid: uuid.UUID, session_id: uuid.UUID, windows: list[MetricWindow],
+                    now: datetime) -> tuple[list[dict[str, Any]], list[tuple[MetricWindow, dict[str, Any]]]]:
+    """창별 소유 검증 + 투영 후보 선별(저장 없음). 후보 = stream active + lease 유효 + 현재 generation."""
     participant = db.get(SessionParticipant, pid)
     streams: dict[str, CaptureStream | None] = {}
     acks: list[dict[str, Any]] = []
     candidates: list[tuple[MetricWindow, dict[str, Any]]] = []
-    to_save: list[tuple[int, MetricWindow, EEGFeatureItem, dict[str, Any]]] = []
     for w in windows:
         if w.session_id != str(session_id):
-            acks.append(_ack(w, "rejected", now, code="session_mismatch"))
+            acks.append(_ack(w, "ignored", now, code="session_mismatch"))
             continue
         if w.participant_id != str(pid) or participant is None or participant.session_id != session_id:
-            acks.append(_ack(w, "rejected", now, code="participant_mismatch"))
+            acks.append(_ack(w, "ignored", now, code="participant_mismatch"))
             continue
         if w.stream_id not in streams:
             streams[w.stream_id] = _load_stream(db, session_id, pid, w.stream_id)
         stream = streams[w.stream_id]
         if stream is None:
-            acks.append(_ack(w, "rejected", now, code="stream_not_found"))
+            acks.append(_ack(w, "ignored", now, code="stream_not_found"))
             continue
         if w.stream_generation != int(stream.generation):
-            acks.append(_ack(w, "rejected", now, code="stale_owner_generation"))  # fencing: 구 owner 는 저장도 live 도 못 한다
+            acks.append(_ack(w, "ignored", now, code="stale_owner_generation"))  # fencing: 구 owner 는 live 를 못 바꾼다
             continue
-        start_at, end_at, anchored = _window_server_times(stream, w, now)
-        decision = evaluate_ingest(db, stream_id=stream.id, window_start_at=start_at, window_end_at=end_at, now=now)
-        if decision.verdict != "accept":
-            # 격리(pending_time_review)·거절 모두 live/DB 에 반영하지 않는다. 원본은 archive(T09 v3) 경로가 시간검토로 보존한다.
-            acks.append(_ack(w, "rejected", now, code=decision.code or decision.verdict))
-            continue
+        _, end_at, anchored = _window_server_times(stream, w, now)
         lease_ok = stream.lease_expires_at is not None and now <= stream.lease_expires_at
-        item = _feature_item(w, end_at, anchored)
-        live = None
-        if stream.status == "active" and lease_ok:
-            live = {"freshness": freshness_of(stream, end_at, now, anchored),
-                    "observed_at_ms": _ms(end_at) if anchored and not stream.clock_uncertain else None,
-                    "generation": int(stream.generation)}
-        to_save.append((len(acks), w, item, live or {}))
-        acks.append(_ack(w, "accepted", now))  # 아래에서 저장 결과로 확정/수정
+        if stream.status == "active" and stream.cutoff_at is None and lease_ok:
+            candidates.append((w, {"freshness": freshness_of(stream, end_at, now, anchored),
+                                   "observed_at_ms": _ms(end_at) if anchored and not stream.clock_uncertain else None,
+                                   "generation": int(stream.generation)}))
+            acks.append(_ack(w, "projected", now))
+        else:
+            acks.append(_ack(w, "ignored", now, code="not_live"))  # 종료·만료 stream: 방송 대상 아님(저장은 REST)
+    db.rollback()  # 읽기만 했다 — 트랜잭션 정리
+    return acks, candidates
 
-    if not to_save:
+
+# ---------------------------------------------------------------------------
+# SDD-260 S1 — REST 배치 저장(정본 저장 경로). 소켓·READY·lease·24h 판정과 무관하다.
+# ---------------------------------------------------------------------------
+
+def _rest_result(w: MetricWindow, status: str, *, code: str | None = None) -> dict[str, Any]:
+    r: dict[str, Any] = {"stream_id": w.stream_id, "sequence": str(w.sequence), "status": status,
+                         "durable": status in ("accepted", "duplicate")}
+    if code:
+        r["code"] = code
+    return r
+
+
+def store_batch(db: DBSession, participant: SessionParticipant, session_id: uuid.UUID, windows: list[MetricWindow],
+                now: datetime | None = None) -> list[dict[str, Any]]:
+    """창 목록을 eeg_feature_windows 에 멱등 저장하고 창별 결과(요청과 같은 순서)를 돌려준다.
+
+    수락 조건 = (세션·참가자 일치) ∧ (stream 이 그 참가자 소유) ∧ (동의 철회 아님). 그 밖의 판정은 하지 않는다.
+    투영(metrics.updated)·방송은 하지 않는다. `device_timestamp_ms` = 기기 보고 observed_at_ms.
+    """
+    from app.services import session_service
+
+    now = now or _now()
+    pid = participant.id
+    session = db.get(SessionModel, session_id)
+    ended_ms = _ms(session.ended_at) if session is not None and session.ended_at is not None else None
+    streams: dict[str, CaptureStream | None] = {}
+    results: list[dict[str, Any]] = []
+    todo: list[tuple[int, MetricWindow]] = []
+    for w in windows:
+        if w.session_id != str(session_id) or w.participant_id != str(pid) or participant.session_id != session_id:
+            results.append(_rest_result(w, "rejected", code="participant_mismatch"))
+            continue
+        if w.stream_id not in streams:
+            streams[w.stream_id] = _load_stream(db, session_id, pid, w.stream_id)
+        stream = streams[w.stream_id]
+        if stream is None:
+            results.append(_rest_result(w, "rejected", code="stream_not_owned"))
+            continue
+        if stream.cutoff_code == CUTOFF_CONSENT_WITHDRAWN:
+            results.append(_rest_result(w, "rejected", code="consent_withdrawn"))
+            continue
+        todo.append((len(results), w))
+        results.append(_rest_result(w, "accepted"))  # 아래에서 저장 결과로 확정
+    if not todo:
         db.rollback()
-        return acks, candidates
+        return results
 
-    # 기존 행 조회: 중복(duplicate)·해시 충돌 판정. play_group_id=stream_id 라 같은 키가 곧 같은 창이다.
-    seqs = {w.sequence for _, w, _, _ in to_save}
+    seqs = {w.sequence for _, w in todo}
     existing = {
         (pg, idx): alias
         for pg, idx, alias in db.execute(
             select(EEGFeatureWindow.play_group_id, EEGFeatureWindow.window_index, EEGFeatureWindow.source_feature_alias).where(
                 EEGFeatureWindow.session_id == session_id, EEGFeatureWindow.participant_id == pid,
-                EEGFeatureWindow.window_index.in_(seqs), EEGFeatureWindow.play_group_id.in_({w.stream_id for _, w, _, _ in to_save}))
+                EEGFeatureWindow.window_index.in_(seqs), EEGFeatureWindow.play_group_id.in_({w.stream_id for _, w in todo}))
         ).all()
     }
     fresh_items: list[EEGFeatureItem] = []
+    quality: dict[tuple, str] = {}
+    extras: dict[tuple, dict[str, Any]] = {}
     seen: dict[tuple[str, int], str] = {}
-    for idx, w, item, live in to_save:
+    for idx, w in todo:
         key = (w.stream_id, w.sequence)
         prev = existing.get(key, seen.get(key))
         if prev is not None:
-            if prev == w.feature_hash:
-                acks[idx] = _ack(w, "duplicate", now, durable=True)
-            else:
-                acks[idx] = _ack(w, "rejected", now, code="feature_hash_conflict")
+            results[idx] = _rest_result(w, "duplicate") if prev == w.feature_hash else _rest_result(w, "rejected", code="hash_conflict")
             continue
         seen[key] = w.feature_hash
-        fresh_items.append(item)
+        end_at = datetime.fromtimestamp(w.observed_at_ms / 1000, tz=timezone.utc)
+        # device_timestamp_ms 는 기기 보고값 그대로(ms 정밀도 손실 방지로 float 직접 지정)
+        fresh_items.append(_feature_item(w, end_at, True).model_copy(update={"timestamp": float(w.observed_at_ms)}))
+        if eeg_window_invalid(w):
+            quality[key] = "invalid"
+        extras[key] = {"late": ended_ms is not None and w.observed_at_ms > ended_ms, "ingest_path": "rest"}
     saved_keys: set[tuple[str, int]] = set()
     if fresh_items:
-        # 같은 배치 안에 서로 다른 stream 이 섞여도 participant 단위 한 번에 저장한다(기존 저장 경로, 내부 SAVEPOINT 멱등)
-        invalid_keys = {(w.stream_id, w.sequence): "invalid" for _, w, _, _ in to_save if eeg_window_invalid(w)}
         saved = session_service._persist_feature_items(session_id, participant, fresh_items, db,
-                                                       quality_overrides=invalid_keys)  # commit 포함
+                                                       quality_overrides=quality, row_extras=extras)  # commit 포함
         saved_keys = {(str(i.play_group_id), int(i.second_offset)) for i in saved}
     else:
         db.rollback()
-    for idx, w, item, live in to_save:
-        key = (w.stream_id, w.sequence)
-        if acks[idx]["status"] != "accepted":
-            continue
-        if key in saved_keys:
-            acks[idx]["durable"] = True
-            if live:
-                candidates.append((w, live))
-        else:  # 동시 저장 경합으로 건너뜀 → 이미 저장된 중복
-            acks[idx] = _ack(w, "duplicate", now, durable=True)
-    return acks, candidates
+    lost = [(idx, w) for idx, w in todo if results[idx]["status"] == "accepted" and (w.stream_id, w.sequence) not in saved_keys]
+    if lost:
+        # 동시 저장 경합으로 건너뜀 → 승자의 hash 와 비교해 같으면 duplicate, 다르면 hash_conflict(첫 저장 보존)
+        winners = {
+            (pg, idx): alias
+            for pg, idx, alias in db.execute(
+                select(EEGFeatureWindow.play_group_id, EEGFeatureWindow.window_index, EEGFeatureWindow.source_feature_alias).where(
+                    EEGFeatureWindow.session_id == session_id, EEGFeatureWindow.participant_id == pid,
+                    EEGFeatureWindow.window_index.in_({w.sequence for _, w in lost}),
+                    EEGFeatureWindow.play_group_id.in_({w.stream_id for _, w in lost}))
+            ).all()
+        }
+        for idx, w in lost:
+            same = winners.get((w.stream_id, w.sequence)) == w.feature_hash
+            results[idx] = _rest_result(w, "duplicate") if same else _rest_result(w, "rejected", code="hash_conflict")
+    return results
+
+
+def feature_summary(db: DBSession, session_id: uuid.UUID, participant_id: uuid.UUID, *, max_ranges: int = 200) -> dict[str, Any]:
+    """SDD-260 S2 — 참가자의 저장 현황. stream(play_group_id)별 개수·구간·결측 구간(종료 대조용)."""
+    rows = db.execute(
+        select(EEGFeatureWindow.play_group_id, EEGFeatureWindow.window_index, EEGFeatureWindow.created_at)
+        .where(EEGFeatureWindow.session_id == session_id, EEGFeatureWindow.participant_id == participant_id)
+        .order_by(EEGFeatureWindow.play_group_id, EEGFeatureWindow.window_index)
+    ).all()
+    by_stream: dict[str, list[int]] = {}
+    latest = None
+    for pg, idx, created in rows:
+        if created is not None and (latest is None or created > latest):
+            latest = created
+        if pg is not None:
+            by_stream.setdefault(pg, []).append(int(idx))
+    streams = []
+    for pg, idxs in by_stream.items():  # 쿼리가 정렬해 왔다
+        missing: list[list[int]] = []
+        truncated = False
+        prev = idxs[0]
+        for cur in idxs[1:]:
+            if cur - prev > 1:
+                if len(missing) >= max_ranges:
+                    truncated = True
+                    break
+                missing.append([prev + 1, cur - 1])
+            prev = cur
+        contiguous = -1
+        if idxs[0] == 0:
+            contiguous = 0
+            for cur in idxs[1:]:
+                if cur != contiguous + 1:
+                    break
+                contiguous = cur
+        streams.append({"stream_id": pg, "count": len(idxs), "min_index": idxs[0], "max_index": idxs[-1],
+                        "contiguous_through": contiguous, "missing_ranges": missing, "truncated": truncated})
+    return {"session_id": str(session_id), "participant_id": str(participant_id), "total_count": len(rows),
+            "streams": streams, "updated_at": latest.isoformat() if latest is not None else None}
 
 
 def _project_latest(db: DBSession, session_id: uuid.UUID, pid: uuid.UUID,

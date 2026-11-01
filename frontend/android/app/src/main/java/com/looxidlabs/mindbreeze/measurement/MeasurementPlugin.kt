@@ -16,6 +16,11 @@ import com.looxidlabs.mindbreeze.measurement.bridge.BridgeModel
 import com.looxidlabs.mindbreeze.measurement.runtime.BatteryPolicy
 import com.looxidlabs.mindbreeze.measurement.runtime.KeystoreFactory
 import com.looxidlabs.mindbreeze.measurement.runtime.RuntimeConfig
+import com.looxidlabs.mindbreeze.measurement.runtime.SyncCounts
+import com.looxidlabs.mindbreeze.measurement.runtime.SyncEmitter
+import com.looxidlabs.mindbreeze.measurement.runtime.SyncEventGate
+import com.looxidlabs.mindbreeze.measurement.runtime.SyncStatusBoard
+import com.looxidlabs.mindbreeze.measurement.bridge.BridgeSequencer
 import org.json.JSONObject
 import java.util.UUID
 
@@ -39,7 +44,20 @@ class MeasurementPlugin : Plugin() {
         }
     }
 
-    override fun handleOnStart() { foreground = true; startEmit() }
+    override fun handleOnStart() { foreground = true; startEmit(); resumeAll() }
+
+    /** SDD-260 N3·N6: 앱 시작/포그라운드 복귀 때 측정 중이면 즉시 REST 1회, 끊긴 모든 세션 scope 는 지터를 두고 이어 올린다. */
+    private fun resumeAll() {
+        MeasurementManager.runtime?.resumeUploads()
+        com.looxidlabs.mindbreeze.measurement.runtime.ArchiveWorker.scheduleWithJitter(context, 0, 20)
+    }
+
+    private var netCb: android.net.ConnectivityManager.NetworkCallback? = null
+    override fun load() {
+        val cm = context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager ?: return
+        val cb = object : android.net.ConnectivityManager.NetworkCallback() { override fun onAvailable(network: android.net.Network) { resumeAll() } }
+        try { cm.registerDefaultNetworkCallback(cb); netCb = cb } catch (_: Exception) { }
+    }
     /** 사용자가 설정 화면에서 돌아오면 배터리 최적화 상태를 다시 읽어 바뀌었을 때만 알린다(읽기만, 변경하지 않음). */
     override fun handleOnResume() {
         val now = BatteryPolicy.read(context)
@@ -49,7 +67,10 @@ class MeasurementPlugin : Plugin() {
     }
     private var lastBattery: String? = null
     override fun handleOnStop() { foreground = false }
-    override fun handleOnDestroy() { emitting = false; ui.removeCallbacks(emitTask) }
+    override fun handleOnDestroy() {
+        emitting = false; ui.removeCallbacks(emitTask)
+        netCb?.let { try { (context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager).unregisterNetworkCallback(it) } catch (_: Exception) { } }
+    }
 
     private fun startEmit() { if (!emitting) { emitting = true; ui.postDelayed(emitTask, 1000) } }
 
@@ -151,6 +172,7 @@ class MeasurementPlugin : Plugin() {
         // 계약 MeasurementSnapshot(bridge) 밖의 진단 필드: 배터리 최적화 상태·live 격리 수(T01 계약 반영 전까지 최상위에 둔다)
         o.put("batteryOptimization", json(BatteryPolicy.read(context)))
         if (rt != null) o.put("liveQuarantined", rt.box.quarantined())
+        if (rt != null) o.put("uploadCounts", json(rt.uploadCounts()))
         if (rt != null) o.put("bridge", json(BridgeModel.snapshot(rt.inputs(MeasurementManager.state.name, MeasurementManager.blockedReason))))
         call.resolve(o)
     }
@@ -191,9 +213,28 @@ class MeasurementPlugin : Plugin() {
         call.resolve(JSObject().put("opened", false).put("target", JSObject.NULL))
     }
 
+    private val syncSeq = BridgeSequencer(System.currentTimeMillis() / 1000)
+    private val syncEmitter = SyncEmitter(SyncStatusBoard.global, SyncEventGate(2000)) { name, payload ->
+        val rt = MeasurementManager.runtime
+        val gen = rt?.sequencer?.managerGeneration ?: syncSeq.managerGeneration
+        val seq = rt?.sequencer?.next() ?: syncSeq.next()
+        notifyListeners(name, JSObject(BridgeModel.event(name, gen, seq, System.currentTimeMillis(), payload).toString()))
+    }
+
+    /** SDD-260: feature.counts · archive.counts · reconcile.state — 변경 즉시, 아니면 2초마다. 화면 표시용(저장 판정에 쓰지 않는다). */
+    private fun emitSync() {
+        val rt = MeasurementManager.runtime
+        val live = rt?.let {
+            val u = it.uploadCounts()
+            SyncCounts.of(u.optInt("feature_pending"), u.optLong("feature_acked"), u.optLong("feature_quarantined"), it.queue.counts())
+        }
+        syncEmitter.emit(rt?.cfg?.sessionId, live, System.currentTimeMillis())
+    }
+
     /** foreground 에서만: commandAck → liveStateUpdated → measurementUpdated(전체 snapshot) → archiveStatus 순 batch emit. raw 전량은 보내지 않는다. */
     private fun emitBatch() {
         if (!foreground) return
+        emitSync()
         val rt = MeasurementManager.runtime ?: return
         val now = System.currentTimeMillis()
         val gen = rt.sequencer.managerGeneration

@@ -6,7 +6,11 @@ import type { DeviceSendOutcome, LiveClient } from '../session-live/live-client'
 import { compareU64 } from '../session-live/live-state';
 import type { BandState, CommandAck, Contact, DeviceData } from '../session-live/live-types';
 import type { MetricEnvelope } from './envelope';
-import { MetricOutbox } from './metric-outbox';
+import { MetricOutbox, type FeatureResult, type OutboxStore } from './metric-outbox';
+import { postFeatureBatch, type FeatureAuth } from '../api/feature-batch';
+
+/** feature 정본 REST 배치 전송 주기(5초). 1초 tick 이 불러도 이 간격으로만 보낸다(종료·복귀는 force) */
+export const FEATURE_FLUSH_INTERVAL_MS = 5_000;
 
 /** 서버 capture lease 는 30초 — 10초마다 갱신해 두 번 실패해도 끊기지 않게 한다 */
 export const RENEW_INTERVAL_MS = 10_000;
@@ -34,6 +38,14 @@ export interface CaptureControllerOptions {
   deviceTicks?: () => string;
   /** fencing·권한 회수·종료로 수집이 멈췄을 때(code = 서버 거절 코드 또는 stream 상태) */
   onStopped?: (code: string) => void;
+  /** SDD-260: outbox 소유 계정(로그아웃·계정 전환 시 다른 계정 창을 건드리지 않는다) */
+  accountId: string;
+  /** SDD-260: REST 인증(JWT 또는 입장 자격) */
+  featureAuth?: FeatureAuth;
+  /** SDD-260: 테스트용 주입 */
+  sendFeatures?: (participantId: string, windows: MetricEnvelope[]) => Promise<FeatureResult[]>;
+  outboxStore?: OutboxStore;
+  now?: () => number;
 }
 
 export type StartResult = 'started' | 'rejected' | 'not_allowed';
@@ -67,17 +79,32 @@ export class CaptureController {
   private renewTimer: ReturnType<typeof setInterval> | null = null;
   private reanchorTimer: ReturnType<typeof setInterval> | null = null;
   private readonly anchorId: string;
-  private readonly outbox: MetricOutbox;
+  private outbox: MetricOutbox | null = null;
+  private lastFlushAt = 0;
   private deviceSeq = 0n;
   private deviceStopped = false;
 
   constructor(o: CaptureControllerOptions) {
     this.o = o;
     this.anchorId = (o.uuid ?? (() => crypto.randomUUID()))();
-    this.outbox = new MetricOutbox({
-      send: (w) => this.o.client.sendMetricBatch(w),
-      onFenced: (code, streamId) => { if (this.info?.streamId === streamId) this.halt(code); },
+  }
+
+  /** 참가자 확정 후(capture.start ACK) outbox 를 만든다 — 정본 저장은 REST 배치 */
+  private makeOutbox(participantId: string): MetricOutbox {
+    return new MetricOutbox({
+      scope: { accountId: this.o.accountId, sessionId: this.o.sessionId, participantId },
+      store: this.o.outboxStore,
+      now: this.o.now,
+      send: async (w) => {
+        if (this.o.sendFeatures) return this.o.sendFeatures(participantId, w);
+        return (await postFeatureBatch(this.o.sessionId, participantId, w, this.o.featureAuth ?? {})).results;
+      },
     });
+  }
+
+  /** 재전송 가능한 미전송 창 수(비동기 집계 전 동기 근사: 마지막 조회값) */
+  outboxHandle(): MetricOutbox | null {
+    return this.outbox;
   }
 
   capture(): CaptureInfo | null {
@@ -88,9 +115,6 @@ export class CaptureController {
     return this.info?.streamId ?? null;
   }
 
-  pendingMetricCount(): number {
-    return this.outbox.pendingKeys().length;
-  }
 
   async start(): Promise<StartResult> {
     if (this.info) return 'started';
@@ -110,6 +134,7 @@ export class CaptureController {
       leaseExpiresAtMs: r.lease?.expires_at_ms ?? null,
       clockAnchorId: this.anchorId,
     };
+    this.outbox = this.makeOutbox(r.participant_id);
     this.deviceSeq = 0n;
     this.deviceStopped = false;
     this.renewTimer = setInterval(() => { void this.renew(); }, RENEW_INTERVAL_MS);
@@ -121,22 +146,30 @@ export class CaptureController {
   /** 코어 envelope 을 대기열에 넣고 보낸다. stream 이 없으면 false. 신원·세대 필드는 ACK 값으로 덮는다(코어 meta 를 믿지 않음). */
   pushEnvelope(envelope: MetricEnvelope): boolean {
     const i = this.info;
-    if (!i) return false;
-    this.outbox.enqueue({
+    const ob = this.outbox;
+    if (!i || !ob) return false;
+    const env: MetricEnvelope = {
       ...envelope,
       session_id: this.o.sessionId,
       participant_id: i.participantId,
       stream_id: i.streamId,
       stream_generation: i.generation,
       clock_anchor_id: i.clockAnchorId,
-    });
-    void this.outbox.flush();
+    };
+    // 정본: 영속 outbox 적재 → REST 배치. 소켓은 방송 전용(결과를 보지 않는다, 실패해도 저장과 무관).
+    void ob.enqueue(env).then(() => this.flush()).catch(() => undefined);
+    void this.o.client.sendMetricBatch([env]).catch(() => undefined);
     return true;
   }
 
-  /** 재시도 대기 창을 보낸다(호출자가 1초 tick 등으로 부른다) */
-  flush(): Promise<void> {
-    return this.outbox.flush();
+  /** 5초 주기로 REST 배치 전송(호출자가 1초 tick 등으로 불러도 간격을 지킨다). force 면 즉시 */
+  async flush(force = false): Promise<void> {
+    const ob = this.outbox;
+    if (!ob) return;
+    const t = (this.o.now ?? Date.now)();
+    if (!force && t - this.lastFlushAt < FEATURE_FLUSH_INTERVAL_MS) return;
+    this.lastFlushAt = t;
+    await ob.flush();
   }
 
   /** 밴드 상태 보고. device_seq 는 stream 마다 1부터 단조. stream_not_active 를 받으면 이후 보고하지 않는다. */
@@ -213,11 +246,13 @@ export class CaptureController {
     this.stopTimers();
     this.info = null;
     if (!i) return;
-    this.outbox.discardStream(i.streamId);
     await this.o.client.request('capture.close', {
       stream_id: i.streamId, reason,
       final_sequences: finalSequences ?? { eeg: '0', ppg: '0', acc: '0', metric: '0' },
-    });
+    }).catch(() => undefined);
+    // 종료 비차단: 마지막 배치 전송을 한 번 시도하고, 남은 창은 outbox(IndexedDB)가 끝까지 올린다(스위퍼).
+    this.outbox?.resetBackoff();
+    void this.outbox?.flushAll().catch(() => undefined);
   }
 
   /** 서버가 이 stream 을 더 받지 않는다 — 요청 없이 로컬만 멈춘다(close 는 서버 쪽에서 이미 정리됨) */
@@ -226,8 +261,7 @@ export class CaptureController {
     if (!i) return;
     this.stopTimers();
     this.info = null;
-    this.outbox.discardStream(i.streamId);
-    this.o.onStopped?.(code);
+    this.o.onStopped?.(code); // 서버가 소켓 stream 을 닫아도 로컬 창은 outbox 에 남아 REST 로 계속 올라간다
   }
 
   private stopTimers(): void {

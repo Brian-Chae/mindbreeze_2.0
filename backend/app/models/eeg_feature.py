@@ -10,7 +10,7 @@ null 보존 원칙: 산출 불가한 feature 는 NULL 로 저장하며 0 으로 
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Float, Integer, String, DateTime, ForeignKey, Index, UniqueConstraint, func, text
+from sqlalchemy import Boolean, Float, Integer, String, DateTime, ForeignKey, Index, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -111,5 +111,9 @@ class EEGFeatureWindow(Base):
     # SDD-244 M2: 상세 feature(JSONL) 원천 추적. 1Hz 검색 스칼라가 어느 emit 에서 왔는지(null 허용)
     source_feature_alias: Mapped[str | None] = mapped_column(String(64), nullable=True)
     algorithm_version: Mapped[str | None] = mapped_column(String(40), nullable=True)
+
+    # SDD-260: 세션 종료 후 도착해 저장된 창이면 true(저장은 항상 하고 표식만). 저장 경로: rest(features/batch)|legacy
+    late: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"), nullable=False)
+    ingest_path: Mapped[str] = mapped_column(String(8), default="legacy", server_default="legacy", nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

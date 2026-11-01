@@ -12,6 +12,7 @@ Socket.IO 핸들러를 FakeSio 로 잡아 직접 호출하고, DB 는 REST 와 �
 인메모리 세션을 공유하도록 `_open_db` / `_get_sio` 를 monkeypatch 한다.
 """
 
+from tests.feature_seed import post_features
 from tests.entry_helpers import guest_body
 import asyncio
 
@@ -395,8 +396,7 @@ def test_09_REST_배치후_WS_동일인덱스_재전송_과거값_발행안함(c
     cls = _create_group_class(client, counselor["h"])
     pid = _join_guest(client, cls["access_code"], "이중저장게스트")
 
-    client.post(
-        f"/api/v1/sessions/{cls['id']}/features",
+    post_features(client, f"/api/v1/sessions/{cls['id']}/features",
         json={"participant_id": pid, "features": [_feature(i, relaxation_index=0.5, signal_quality=0.9) for i in range(3)]},
     )
 

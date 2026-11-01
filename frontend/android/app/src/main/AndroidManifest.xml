@@ -65,6 +65,7 @@
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- SDD-222: 백그라운드 BLE 유지(포그라운드 서비스 connectedDevice) + 화면 꺼짐 방지 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
