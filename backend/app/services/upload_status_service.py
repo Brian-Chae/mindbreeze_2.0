@@ -214,7 +214,8 @@ def _progress_time_key(rev: dict, scope: _Scope, as_of: datetime) -> str | None:
     grace_over = since_end is not None and since_end >= POST_END_ACTIVE_SEC
     active = scope.status != "completed" or since_end is None or since_end < POST_END_ACTIVE_SEC + 600
     bucket = int(as_of.timestamp() // 30) if active else "-"
-    return f"{bucket}:{int(grace_over)}"
+    pending_after = since_end is not None and since_end >= progress_svc.FINAL_PENDING_AFTER_END_SEC   # SDD-267
+    return f"{bucket}:{int(grace_over)}:{int(pending_after)}"
 
 
 def _etag(rev: dict, scope: _Scope, as_of: datetime | None = None) -> str:

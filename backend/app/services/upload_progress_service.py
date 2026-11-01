@@ -16,6 +16,7 @@ from pydantic import BaseModel
 
 STALL_SEC = 120
 FINAL_GRACE_SEC = 30 * 60
+FINAL_PENDING_AFTER_END_SEC = 180   # SDD-267: 종료 후 N분(3분) 경과해야 '최종 확인 대기' 표기
 SIGNALS = ("eeg", "ppg", "acc")
 
 ProgressState = Literal["all_received", "in_progress", "needs_attention", "expected_unknown", "not_collected"]
@@ -74,6 +75,7 @@ class ParticipantProgress(BaseModel):
     feature: Component
     raw: RawComponents
     total: Component
+    final_pending: bool = False   # SDD-267: 보조 표기(판정 불변). 모두 도착했으나 폰의 final 확인만 없는 상태
 
 
 class ParticipantCounts(BaseModel):
@@ -84,6 +86,7 @@ class ParticipantCounts(BaseModel):
     needs_attention: int
     expected_unknown: int
     not_collected: int
+    final_pending: int = 0        # SDD-267: 다른 state 와 겹치는 부분집합(합 불변식에 불포함)
 
 
 class AggregateProgress(BaseModel):
@@ -130,6 +133,19 @@ def _stalled(inp: ProgressInput) -> bool:
     return first is not None and (inp.as_of - first).total_seconds() >= STALL_SEC
 
 
+def _final_pending(inp: ProgressInput, comps: tuple[Component, ...]) -> bool:
+    """SDD-267: 종료 N분 경과 + 전 구성요소 received>=expected + 120초 수신 정체 + final=false. state 와 독립."""
+    e = inp.expected
+    if e is None or e.final or inp.excluded or inp.raw_failed > 0 or inp.session_status != "completed":
+        return False
+    ended = _aware(inp.ended_at)
+    if ended is None or (inp.as_of - ended).total_seconds() < FINAL_PENDING_AFTER_END_SEC:
+        return False
+    if any(c.expected is None or c.received < c.expected for c in comps):
+        return False
+    return _stalled(inp)
+
+
 def build_participant_progress(inp: ProgressInput) -> ParticipantProgress:
     e = inp.expected
     feature = _component(e.feature if e else None, inp.feature_received)
@@ -155,7 +171,8 @@ def build_participant_progress(inp: ProgressInput) -> ParticipantProgress:
                 state = "all_received"
             else:
                 state = "in_progress"
-    return ParticipantProgress(state=state, feature=feature, raw=raw, total=total)
+    pending = state != "not_collected" and _final_pending(inp, (feature, raw.eeg, raw.ppg, raw.acc))
+    return ParticipantProgress(state=state, feature=feature, raw=raw, total=total, final_pending=pending)
 
 
 # ---------------------------------------------------------------------------
@@ -190,7 +207,8 @@ def _count_states(plist: list[ParticipantProgress]) -> ParticipantCounts:
     n = {k: 0 for k in ("all_received", "in_progress", "needs_attention", "expected_unknown", "not_collected")}
     for p in plist:
         n[p.state] += 1
-    return ParticipantCounts(total=len(plist), counted=len(plist) - n["not_collected"], **n)
+    return ParticipantCounts(total=len(plist), counted=len(plist) - n["not_collected"], **n,
+                             final_pending=sum(1 for p in plist if p.final_pending))
 
 
 def aggregate(plist: list[ParticipantProgress]) -> AggregateProgress:
