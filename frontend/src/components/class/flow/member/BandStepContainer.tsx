@@ -1,5 +1,5 @@
 // SDD-209 M4 — FM06c 연결 컨테이너. 이 단계에 있는 동안만 관찰용 useBand 를 쓰고, 떠나면 훅이 정리된다(BLE 연결은 전역이라 유지).
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useBandStep } from '../../../../hooks/useBandStep';
 import { bandOutcomeOf, type BandOutcome } from '../../../../lib/class/flow/member-prep';
 import type { BandSnapshot } from '../../../../lib/class/flow/member-presence';
@@ -12,6 +12,8 @@ interface BandStepContainerProps {
   place: 'online' | 'offline';
   steps: MemberFlowSteps;
   startedRemaining: readonly string[] | null;
+  /** SDD-272 — 화면 틀 안에 띄울 시트(리포트 반영 재확인 등) */
+  overlaySheet?: ReactNode;
   onDone: (outcome: BandOutcome) => void;
   /** 밴드 상태가 바뀔 때마다 알린다(상담사 로비의 접촉 표시용). 값은 서버에 저장되지 않는다 */
   onBandChange?: (snapshot: BandSnapshot) => void;

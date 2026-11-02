@@ -291,7 +291,8 @@ function applyPayload(state: LiveState, ev: LiveEvent): LiveState {
       return next ? { ...state, devices: { ...state.devices, [ev.entity_id]: next } } : state;
     }
     case 'metrics.updated': {
-      const incoming = ev.payload as MetricsEntityData;
+      // SDD-272: 서버 수신 시각(서버 시계)을 함께 보관 — 시각 보정 전(time_uncertain) 값의 신선도 판정에만 쓴다.
+      const incoming = { ...(ev.payload as MetricsEntityData), received_at_server_ms: ev.received_at_server_ms };
       const cur = state.metrics[ev.entity_id];
       // 같은 stream 안에서는 sequence 가 앞서야 한다 — 늦은 backlog 가 최신 관측으로 부활하지 못한다.
       if (cur && cur.data.stream_id === incoming.stream_id && compareU64(incoming.sequence, cur.data.sequence) <= 0) return state;

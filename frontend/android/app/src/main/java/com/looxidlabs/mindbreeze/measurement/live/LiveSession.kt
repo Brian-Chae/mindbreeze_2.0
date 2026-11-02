@@ -79,6 +79,15 @@ class LiveSession(
     private var presenceTimer: Cancelable? = null
     private var watchdog: Cancelable? = null
     private var probeTimer: Cancelable? = null
+    // SDD-272 시각 보정 재시도: 앵커 없음·probe 실패·reanchor 거절/clock_uncertain 이면 2~15초 간격으로 최대 8회, 이후 5분 주기만.
+    private var clockSynced = false
+    private var clockRetryIndex = 0
+    private var clockRetryTimer: Cancelable? = null
+    private var probeInFlight = false
+    private var probeSeq = 0L
+    private var probeWaitTimer: Cancelable? = null
+    private var reanchorCmdId: String? = null
+    private var reanchorWaitTimer: Cancelable? = null
     private var appliedTimer: Cancelable? = null
     private var pumpTimer: Cancelable? = null
     private var refreshing = false
@@ -159,6 +168,7 @@ class LiveSession(
 
     private fun stopLiveTimers() {
         presenceTimer?.cancel(); presenceTimer = null; watchdog?.cancel(); watchdog = null; probeTimer?.cancel(); probeTimer = null
+        stopClockRetry()
         pumpTimer?.cancel(); pumpTimer = null
         metricInflight = false
         deviceTimer?.cancel(); deviceTimer = null; deviceInflight = false
@@ -399,6 +409,7 @@ class LiveSession(
         streamEnded = status
         streamId = null; ownerGeneration = null; leaseExpiresAtMs = null
         probeTimer?.cancel(); probeTimer = null
+        stopClockRetry(); clockSynced = false; clockRetryIndex = 0
         renewTimer?.cancel(); renewTimer = null
         pendingDevice = null; deviceTimer?.cancel(); deviceTimer = null; deviceInflight = false
         onStreamEnded?.invoke(status, cutoff) // fencing: 구 owner 는 live 갱신 금지, 수집분은 봉인해 archive 로
@@ -415,7 +426,7 @@ class LiveSession(
             val cur = ownerGeneration
             if (streamId != null && streamId != sid && cur != null &&
                 java.lang.Long.compareUnsigned(java.lang.Long.parseUnsignedLong(gen), java.lang.Long.parseUnsignedLong(cur)) < 0) return
-            if (streamId != sid) { anchorId = UUID.randomUUID().toString(); clockUncertaintyMs = 300_000.0; lastDeviceSeq = 0; deviceStoppedFor = null }
+            if (streamId != sid) { anchorId = UUID.randomUUID().toString(); clockUncertaintyMs = 300_000.0; lastDeviceSeq = 0; deviceStoppedFor = null; stopClockRetry(); clockSynced = false; clockRetryIndex = 0 }
             streamId = sid; participantId = pid; streamEnded = null
         }
         ownerGeneration = gen
@@ -565,6 +576,7 @@ class LiveSession(
                 val kind = p.cmd.optString("kind")
                 if (res.getString("status") != "rejected" && (kind == "capture.start" || kind == "capture.renew")) res.optJSONObject("result")?.let { adoptCaptureResult(kind, it) }
                 acks.offer(res); lastAckSequence++
+                if (id == reanchorCmdId) onReanchorResult(res)
             }
             else -> { // retryable
                 if (res.optBoolean("committed", false)) p.committedHint = true // 새 ID 금지, ledger 결과 조회(같은 ID 재시도)
@@ -630,29 +642,87 @@ class LiveSession(
     // ------------------------------------------------------------------ clock probe / reanchor / capture
     private fun maybeScheduleProbe(delayMs: Long) {
         if (probeTimer != null || state != LiveState.READY || streamId == null) return
-        probeTimer = sched.postDelayed(delayMs) { probeTimer = null; sendProbe() }
+        probeTimer = sched.postDelayed(delayMs) { probeTimer = null; cycleProbe() }
     }
 
+    /** 5분 주기 진입점(첫 시도 포함). 재시도 순서를 처음부터 다시 시작한다. */
+    private fun cycleProbe() {
+        if (state != LiveState.READY || streamId == null) return
+        clockRetryIndex = 0
+        clockSynced = false
+        probeTimer = sched.postDelayed(5 * 60_000L) { probeTimer = null; cycleProbe() } // 5분마다 재앵커(재시도와 별개로 유지)
+        sendProbe()
+    }
+
+    /** SDD-272: 첫 뇌파 패킷으로 앵커가 처음 생겼다 — 시각 보정이 아직이면 재시도 간격을 기다리지 않고 바로 한 번 시도한다. */
+    fun onAnchorAvailable() {
+        if (clockSynced || state != LiveState.READY || streamId == null || probeInFlight || reanchorCmdId != null) return
+        clockRetryTimer?.cancel(); clockRetryTimer = null
+        sendProbe()
+    }
+
+    private fun scheduleClockRetry() {
+        clockRetryTimer?.cancel(); clockRetryTimer = null
+        if (clockSynced || state != LiveState.READY || streamId == null) return
+        val delay = CLOCK_RETRY_DELAYS_MS.getOrNull(clockRetryIndex) ?: return // 소진 → 5분 주기만
+        clockRetryIndex++
+        clockRetryTimer = sched.postDelayed(delay) { clockRetryTimer = null; sendProbe() }
+    }
+
+    private fun stopClockRetry() {
+        clockRetryTimer?.cancel(); clockRetryTimer = null
+        probeWaitTimer?.cancel(); probeWaitTimer = null
+        reanchorWaitTimer?.cancel(); reanchorWaitTimer = null
+        probeInFlight = false; reanchorCmdId = null
+    }
+
+    /** 매 시도는 새 probe 로 시작한다. 서버는 probe 후 10초 안의 reanchor 만 오차를 인정하므로 오래된 probe 는 재사용하지 않는다. */
     private fun sendProbe() {
-        if (state != LiveState.READY) return
+        if (state != LiveState.READY || probeInFlight || reanchorCmdId != null) return
         val sid = streamId ?: return
         val probeId = UUID.randomUUID().toString()
         val sentAt = sched.nowMs()
+        val seq = ++probeSeq
+        probeInFlight = true
+        probeWaitTimer?.cancel()
+        probeWaitTimer = sched.postDelayed(3_000) { // probe ACK 유실
+            probeWaitTimer = null
+            if (probeSeq == seq && probeInFlight) { probeInFlight = false; scheduleClockRetry() }
+        }
         val m = JSONObject().put("protocol_version", 2).put("schema_version", 1).put("probe_id", probeId)
             .put("client_monotonic_us", (sentAt * 1000).toString()).put("server_receive_ms", JSONObject.NULL).put("server_send_ms", JSONObject.NULL)
         transport.emit("live:clock_probe", m) { res ->
-            if (res != null && res.optBoolean("ok", false)) {
-                val rtt = (sched.nowMs() - sentAt).coerceAtLeast(0)
-                clockUncertaintyMs = (rtt / 2.0 + 5.0).coerceAtMost(300_000.0)
-                val a = anchorProvider?.invoke()
-                if (a != null) {
-                    anchorId = UUID.randomUUID().toString()
-                    dispatch(JSONObject().put("kind", "capture.reanchor").put("payload", JSONObject()
-                        .put("stream_id", sid).put("clock_probe_id", probeId).put("device_ticks", a.first).put("monotonic_us", a.second)))
-                }
+            if (probeSeq != seq || !probeInFlight) return@emit
+            probeWaitTimer?.cancel(); probeWaitTimer = null
+            probeInFlight = false
+            if (res == null || !res.optBoolean("ok", false)) { scheduleClockRetry(); return@emit }
+            val rtt = (sched.nowMs() - sentAt).coerceAtLeast(0)
+            clockUncertaintyMs = (rtt / 2.0 + 5.0).coerceAtMost(300_000.0)
+            val a = anchorProvider?.invoke()
+            if (a == null) { scheduleClockRetry(); return@emit } // 뇌파 패킷이 아직 없다 — onAnchorAvailable 이나 다음 재시도가 이어받는다
+            anchorId = UUID.randomUUID().toString()
+            val cid = UUID.randomUUID().toString()
+            reanchorCmdId = cid
+            reanchorWaitTimer?.cancel()
+            reanchorWaitTimer = sched.postDelayed(10_000) { // reanchor ACK 유실/지연: 실패로 보고 재시도
+                reanchorWaitTimer = null
+                if (reanchorCmdId == cid) { reanchorCmdId = null; scheduleClockRetry() }
             }
+            dispatch(JSONObject().put("command_id", cid).put("kind", "capture.reanchor").put("payload", JSONObject()
+                .put("stream_id", sid).put("clock_probe_id", probeId).put("device_ticks", a.first).put("monotonic_us", a.second)))
         }
-        probeTimer = sched.postDelayed(5 * 60_000L) { probeTimer = null; sendProbe() } // 5분마다 재앵커
+    }
+
+    /** capture.reanchor 최종 응답. 서버가 probe 를 확인(clock_uncertain=false)했을 때만 성공이다. */
+    private fun onReanchorResult(res: JSONObject) {
+        reanchorWaitTimer?.cancel(); reanchorWaitTimer = null
+        reanchorCmdId = null
+        val st = res.optString("status")
+        val uncertain = res.optJSONObject("result")?.optBoolean("clock_uncertain", false) ?: false
+        if ((st == "applied" || st == "duplicate") && !uncertain) {
+            clockSynced = true
+            clockRetryTimer?.cancel(); clockRetryTimer = null
+        } else scheduleClockRetry()
     }
 
     /** capture.start 명령(EEG 동의·본인). stream_id·participant_id·owner_generation·lease 는 ACK result 로 바로 온다(T05b). */
@@ -722,6 +792,8 @@ class LiveSession(
     companion object {
         const val MAX_SEQUENCE = 2_147_483_647L
         const val RENEW_INTERVAL_MS = 10_000L
+        /** SDD-272 시각 보정 재시도 간격(최대 8회). 소진하면 5분 주기만 남는다. */
+        val CLOCK_RETRY_DELAYS_MS = longArrayOf(2_000, 4_000, 8_000, 15_000, 15_000, 15_000, 15_000, 15_000)
         private val U64 = Regex("^(0|[1-9][0-9]{0,19})$")
 
         /** 계약 U64(십진 문자열, 선행 0 금지, ≤ 2^64−1). JSON 숫자는 거부(정수 가정 금지). 정상값은 그대로 문자열로 돌려준다. */

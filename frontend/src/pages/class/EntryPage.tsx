@@ -504,6 +504,23 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
       <BandStepContainer
         bandMode={bandMode} place={place} steps={stepsView}
         startedRemaining={startedOpen ? remainingPrepLabels(steps, 'c') : null}
+        overlaySheet={reportReconfirm !== null ? (
+      <FlowSheet
+        open
+        title="이번 수업 리포트에 측정 결과를 반영할까요?"
+        sub="반영하지 않아도 측정 데이터는 보관되고, 수업에는 그대로 참여할 수 있어요."
+        onClose={() => answerReconfirm(false)}
+        dismissOnOutside={false}
+        footer={
+          <div className="fm-stack" style={{ gap: 8 }}>
+            <FlowButton kind="primary" onClick={() => answerReconfirm(true)}>반영하기</FlowButton>
+            <FlowButton kind="soft" onClick={() => answerReconfirm(false)}>이번엔 제외</FlowButton>
+          </div>
+        }
+      >
+        <p className="fm-sheet-sub">지금은 리포트 반영이 &lsquo;제외&rsquo;로 되어 있어요.</p>
+      </FlowSheet>
+        ) : null}
         onBandChange={setBandSnapshot}
         onEegChoice={eegChoice === undefined || eegChoice === true ? undefined : async (agree) => {
           await setEegCollectionConsent(sessionId, entry.credential, { consented: agree, noticeVersion: EEG_COLLECTION_NOTICE_VERSION });
@@ -523,21 +540,6 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
         onBack={() => dispatch({ type: 'back', steps })}
         onExit={exit}
       />
-      <FlowSheet
-        open={reportReconfirm !== null}
-        title="이번 수업 리포트에 측정 결과를 반영할까요?"
-        sub="반영하지 않아도 측정 데이터는 보관되고, 수업에는 그대로 참여할 수 있어요."
-        onClose={() => answerReconfirm(false)}
-        dismissOnOutside={false}
-        footer={
-          <div className="fm-stack" style={{ gap: 8 }}>
-            <FlowButton kind="primary" onClick={() => answerReconfirm(true)}>반영하기</FlowButton>
-            <FlowButton kind="soft" onClick={() => answerReconfirm(false)}>이번엔 제외</FlowButton>
-          </div>
-        }
-      >
-        <p className="fm-sheet-sub">지금은 리포트 반영이 &lsquo;제외&rsquo;로 되어 있어요.</p>
-      </FlowSheet>
       </>
     );
   }

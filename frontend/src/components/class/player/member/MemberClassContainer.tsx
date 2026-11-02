@@ -445,7 +445,7 @@ export function MemberClassContainer({
   const v2Current = (() => {
     const m = v2On && participantId ? liveV2?.state?.metrics[participantId]?.data : undefined;
     const v = m?.metrics.relaxation_display;
-    return m && v && v.validity === 'valid' && freshnessOf(m.observed_at_ms, v2NowMs, m.freshness) === 'fresh' ? v.value : null;
+    return m && v && v.validity === 'valid' && freshnessOf(m.observed_at_ms, v2NowMs, m.freshness, m.received_at_server_ms) === 'fresh' ? v.value : null;
   })();
   const liveKit = useMemberLiveKit({ participantId, entryCredential, sessionId, listenSpeakingChanges: speakingManaged, v2: v2Binding });
   const { connect: connectLiveKit, notReady, attemptCount } = liveKit;

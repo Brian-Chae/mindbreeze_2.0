@@ -107,6 +107,10 @@ public final class MeasurementManager: BandLinkDelegate {
     private var renewCommandId: String?
     private var renewTimer: Cancellable?, clockTimer: Cancellable?
     private var probing = false
+    // SDD-272: 시각 보정 실패(probe 실패·reanchor 거절·clock_uncertain=true) 시 짧은 간격 재시도. 소진하면 5분 주기만 남는다.
+    public static let clockRetryDelays: [TimeInterval] = [2, 4, 8, 15, 15, 15, 15, 15]
+    private var clockRetryIndex = 0
+    private var clockRetryTimer: Cancellable?
     private var reanchorPending: (commandId: String, probe: ClockProbeResult)?
     private var clockAnchorId = UUID().uuidString.lowercased()
     private var clockUncertaintyMs = MeasurementManager.unknownClockUncertaintyMs
@@ -483,7 +487,11 @@ public final class MeasurementManager: BandLinkDelegate {
             }
         } else if let rp = reanchorPending, id == rp.commandId {
             reanchorPending = nil
-            guard status == "applied" || status == "duplicate", (result?["clock_uncertain"] as? Bool) == false else { return }
+            guard status == "applied" || status == "duplicate", (result?["clock_uncertain"] as? Bool) == false else {
+                scheduleClockRetry()    // SDD-272: 거절·서버가 probe 를 확인 못 함 → 새 probe 로 재시도
+                return
+            }
+            clockRetryTimer?.cancel(); clockRetryTimer = nil
             // 서버가 probe 를 확인했다. 오차 상한 = probe 왕복시간(서버 판정 오차도 probe→reanchor 경과 기반). 고정값 대신 실측.
             clockAnchorId = rp.probe.probeId
             clockUncertaintyMs = max(1, ((rp.probe.rttSeconds * 1_000_000).rounded() / 1000).rounded(.up))   // µs 로 먼저 반올림(부동소수 오차로 1ms 과대 방지)
@@ -564,6 +572,7 @@ public final class MeasurementManager: BandLinkDelegate {
     private func resetStreamRuntime() {
         stopStreamTimers()
         leaseExpiresAtMs = nil; renewCommandId = nil; probing = false; reanchorPending = nil
+        clockRetryTimer?.cancel(); clockRetryTimer = nil; clockRetryIndex = 0
         clockAnchorId = UUID().uuidString.lowercased(); clockUncertaintyMs = Self.unknownClockUncertaintyMs
         deviceSeq = 0; deviceReportingStopped = false; lastContact = nil; lastSqi = NSNull()
     }
@@ -583,10 +592,24 @@ public final class MeasurementManager: BandLinkDelegate {
         clockTimer = scheduler.schedule(after: Self.clockResyncInterval) { [weak self] in
             guard let self = self else { return }
             self.lock.lock(); defer { self.lock.unlock() }
+            self.clockRetryIndex = 0
             self.syncClock(); self.armClock()
         }
     }
-    private func stopStreamTimers() { renewTimer?.cancel(); renewTimer = nil; clockTimer?.cancel(); clockTimer = nil }
+
+    /// SDD-272 — 시각 보정이 실패했을 때 다음 재시도를 예약한다(2·4·8·15초…, 최대 8회). 매번 새 probe 로 시작한다.
+    private func scheduleClockRetry() {
+        clockRetryTimer?.cancel(); clockRetryTimer = nil
+        guard clockRetryIndex < Self.clockRetryDelays.count else { return }   // 소진 → 5분 주기만
+        let delay = Self.clockRetryDelays[clockRetryIndex]; clockRetryIndex += 1
+        clockRetryTimer = scheduler.schedule(after: delay) { [weak self] in
+            guard let self = self else { return }
+            self.lock.lock(); defer { self.lock.unlock() }
+            self.clockRetryTimer = nil
+            self.syncClock()
+        }
+    }
+    private func stopStreamTimers() { renewTimer?.cancel(); renewTimer = nil; clockTimer?.cancel(); clockTimer = nil; clockRetryTimer?.cancel(); clockRetryTimer = nil }
 
     private var collecting: Bool { state == .capturing || state == .reconnecting }
 
@@ -615,7 +638,10 @@ public final class MeasurementManager: BandLinkDelegate {
             guard let self = self else { return }
             self.lock.lock(); defer { self.lock.unlock() }
             self.probing = false
-            guard case .success(let probe) = r, self.collecting, self.streamId == s, let l2 = self.live, l2.state == .ready else { return }
+            guard case .success(let probe) = r, self.collecting, self.streamId == s, let l2 = self.live, l2.state == .ready else {
+                if self.collecting, self.streamId == s { self.scheduleClockRetry() }   // probe 실패
+                return
+            }
             let cid = UUID().uuidString.lowercased()
             self.reanchorPending = (cid, probe)
             l2.dispatch(command: ["command_id": cid, "kind": "capture.reanchor", "client_generation": String(self.generation),
