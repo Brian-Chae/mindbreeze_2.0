@@ -26,13 +26,15 @@ export interface WebCaptureOptions {
   onError?: (code: string, message: string) => void;
   /** SDD-273: 워커가 세는 PPG 패킷 판정 누계(1초 tick 마다) */
   onPpgDiag?: (t: { acc: number; dup: number; ooo: number; conf: number; inv: number }) => void;
+  /** SDD-274: 워커가 세는 EEG 패킷 판정 누계(1초 tick 마다) */
+  onEegDiag?: (t: { acc: number; dup: number; ooo: number; conf: number; inv: number }) => void;
 }
 
 type WorkerMsg =
   | { type: 'ready' }
   | { type: 'init_error'; message: string }
   | { type: 'frames'; envelopes: MetricEnvelope[]; error: { code: string; message: string } | null }
-  | { type: 'diag'; ppg: { acc: number; dup: number; ooo: number; conf: number; inv: number } }
+  | { type: 'diag'; ppg: { acc: number; dup: number; ooo: number; conf: number; inv: number }; eeg?: { acc: number; dup: number; ooo: number; conf: number; inv: number } }
   | { type: 'closed'; final: CoreFinalManifest | null };
 
 export class WebCaptureAdapter {
@@ -64,7 +66,7 @@ export class WebCaptureAdapter {
           reject(new Error(m.message));
           return;
         }
-        if (m.type === 'diag') { this.o.onPpgDiag?.(m.ppg); return; }
+        if (m.type === 'diag') { this.o.onPpgDiag?.(m.ppg); if (m.eeg) this.o.onEegDiag?.(m.eeg); return; }
         if (m.type === 'frames') {
           if (m.error) this.o.onError?.(m.error.code, m.error.message);
           for (const env of m.envelopes) this.o.onEnvelope(env);
