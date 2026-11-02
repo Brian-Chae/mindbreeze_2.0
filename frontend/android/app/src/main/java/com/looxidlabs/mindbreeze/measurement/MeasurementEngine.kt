@@ -56,6 +56,9 @@ class MeasurementEngine(
     @Volatile var lastEegAnchor: Pair<Long, Long>? = null
         private set
 
+    /** SDD-272: 첫 뇌파 패킷으로 시각 보정 기준(앵커)이 처음 생겼을 때 한 번 호출 — 5분 대기 없이 바로 시각 보정을 시도하게 한다. */
+    @Volatile var onFirstEegAnchor: (() -> Unit)? = null
+
     /** 단조 µs → 코어 창 시간축 µs. */
     fun windowTimelineUs(monoUs: Long): Long = wallAnchor * 1000 + (monoUs - anchorMono)
 
@@ -77,7 +80,11 @@ class MeasurementEngine(
                 counters.samples(sensor, r.packet.sampleCount)
                 r.packet.eeg?.let { rawPreview.addEeg(it) }
                 r.packet.ppg?.let { rawPreview.addPpg(it) }
-                if (sensor == Sensor.EEG) lastEegAnchor = tickUnwrapForAnchor.unwrap(sensor, r.packet.rawTick) to windowTimelineUs(now * 1000)
+                if (sensor == Sensor.EEG) {
+                    val first = lastEegAnchor == null
+                    lastEegAnchor = tickUnwrapForAnchor.unwrap(sensor, r.packet.rawTick) to windowTimelineUs(now * 1000)
+                    if (first) try { onFirstEegAnchor?.invoke() } catch (_: Exception) { /* 시각 보정 트리거 실패가 수집을 멈추지 않는다 */ }
+                }
             }
         }
         if (core != null) pushCore(sensor, bytes, now) else legacyFrame(sensor, bytes)
