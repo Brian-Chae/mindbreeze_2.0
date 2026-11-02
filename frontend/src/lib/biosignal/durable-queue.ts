@@ -5,7 +5,7 @@
  * payload는 검증 ACK receipt가 영속된 뒤에만 삭제한다. 실패·8회 초과·403/409는 dead_letter로 보관한다.
  */
 import type { ArtifactKind, ArtifactMeta, ExpectedArtifact, GapEvent, CloseIntent, RawMeta } from '../api/biosignal';
-import { idbRequest, openRawDb, transactionDone, type BiosignalStore } from './queue-db';
+import { idbRequest, rawTransaction, resetSharedRawDb, transactionDone, type BiosignalStore } from './queue-db';
 
 export interface CaptureScope { accountId: string; sessionId: string; participantId: string | null; deviceAlias: string }
 export type ObjectKind = 'raw' | ArtifactKind;
@@ -50,7 +50,6 @@ const OBJECT_STORES: BiosignalStore[] = ['sealed_chunks', 'feature_outbox', 'ind
 
 export class BiosignalQueue {
   private token = 0;
-  private dbPromise: Promise<IDBDatabase> | null = null;
   private metaIndex: Map<string, QueuedMeta> | null = null;
   private metaLoading: Promise<Map<string, QueuedMeta>> | null = null;
   private readonly scope: CaptureScope;
@@ -62,7 +61,8 @@ export class BiosignalQueue {
 
   /** lease 키에는 실제 장치 ID가 아닌 alias만 쓴다. */
   get scopeKey(): string { return [this.scope.accountId, this.scope.sessionId, this.scope.participantId ?? '-', this.scope.deviceAlias].join('|'); }
-  private db(): Promise<IDBDatabase> { return this.dbPromise ??= openRawDb(); }
+  /** SDD-277: 저장소 연결이 끊겼다고 판단되면 다음 사용에서 다시 열도록 공유 연결을 버린다. */
+  reconnect(): void { resetSharedRawDb(); }
   get sessionId(): string { return this.scope.sessionId; }
   get participantId(): string | null { return this.scope.participantId; }
   private owns(record: { accountId: string; sessionId: string; participantId: string | null }): boolean {
@@ -71,7 +71,7 @@ export class BiosignalQueue {
 
   // ── lease ──
   async acquire(): Promise<number> {
-    const tx = (await this.db()).transaction(['leases'], 'readwrite');
+    const tx = await rawTransaction(['leases'], 'readwrite');
     const store = tx.objectStore('leases');
     const current = await idbRequest<LeaseRecord | undefined>(store.get(this.scopeKey));
     if (current && current.owner !== this.tabId && current.expiresAt > this.now()) { tx.abort(); throw new Error('lease_held: 다른 탭이 수집 중입니다'); }
@@ -81,13 +81,13 @@ export class BiosignalQueue {
     return this.token;
   }
   async renew(): Promise<void> {
-    const tx = (await this.db()).transaction(['leases'], 'readwrite');
+    const tx = await rawTransaction(['leases'], 'readwrite');
     await this.checkLease(tx);
     tx.objectStore('leases').put({ id: this.scopeKey, owner: this.tabId, token: this.token, expiresAt: this.now() + LEASE_TTL_MS } satisfies LeaseRecord);
     await transactionDone(tx);
   }
   async release(): Promise<void> {
-    const tx = (await this.db()).transaction(['leases'], 'readwrite');
+    const tx = await rawTransaction(['leases'], 'readwrite');
     const store = tx.objectStore('leases');
     const current = await idbRequest<LeaseRecord | undefined>(store.get(this.scopeKey));
     if (current && current.owner === this.tabId && current.token === this.token) store.delete(this.scopeKey);
@@ -103,7 +103,7 @@ export class BiosignalQueue {
   }
   /** 쓰기 트랜잭션: 같은 tx 안에서 fencing token을 검사한 뒤 body 실행. */
   private async write<T>(stores: BiosignalStore[], body: (tx: IDBTransaction) => Promise<T>): Promise<T> {
-    const tx = (await this.db()).transaction([...stores, 'leases'], 'readwrite');
+    const tx = await rawTransaction([...stores, 'leases'], 'readwrite');
     const done = transactionDone(tx);
     done.catch(() => undefined);
     await this.checkLease(tx);
@@ -112,7 +112,7 @@ export class BiosignalQueue {
     return result;
   }
   private async read<T>(store: BiosignalStore, body: (s: IDBObjectStore) => IDBRequest<T>): Promise<T> {
-    const tx = (await this.db()).transaction([store], 'readonly');
+    const tx = await rawTransaction([store], 'readonly');
     return idbRequest(body(tx.objectStore(store)));
   }
 
@@ -226,12 +226,12 @@ export class BiosignalQueue {
   private async ensureIndex(): Promise<Map<string, QueuedMeta>> {
     if (this.metaIndex) return this.metaIndex;
     this.metaLoading ??= (async () => {
-      const db = await this.db();
       const index = new Map<string, QueuedMeta>();
       const prefix = `${this.scopeKey}|`;
       for (const store of OBJECT_STORES) {
+        const readTx = await rawTransaction([store], 'readonly');
         await new Promise<void>((resolve, reject) => {
-          const request = db.transaction([store], 'readonly').objectStore(store).openCursor();
+          const request = readTx.objectStore(store).openCursor();
           request.onerror = () => reject(request.error);
           request.onsuccess = () => {
             const cursor = request.result;

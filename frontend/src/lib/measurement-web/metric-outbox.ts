@@ -5,7 +5,7 @@
 //    그 외 코드·네트워크·5xx·타임아웃·401 → full jitter 무한 재시도. 422 는 1창씩 분리해 독 창만 invalid_message 로 격리.
 //  - summary 대조 완료 전에는 아무 것도 삭제하지 않는다(acked 도 보관).
 import { ApiError } from '../api/client';
-import { idbRequest, openRawDb, transactionDone } from '../biosignal/queue-db';
+import { idbRequest, rawTransaction, transactionDone } from '../biosignal/queue-db';
 import type { MetricEnvelope } from './envelope';
 
 export const MAX_BATCH_WINDOWS = 60;
@@ -70,42 +70,40 @@ export class MemoryOutboxStore implements OutboxStore {
 
 /** IndexedDB(`mindbreeze-eeg-raw` v3 / `feature_rest_outbox`) — 탭 새로고침·앱 재실행 뒤에도 보존 */
 export class IdbOutboxStore implements OutboxStore {
-  private dbp: Promise<IDBDatabase> | null = null;
-  private db(): Promise<IDBDatabase> { return (this.dbp ??= openRawDb()); }
   private range(scope: OutboxScope): IDBKeyRange {
     const p = prefixOf(scope);
     return IDBKeyRange.bound(p, `${p}\uffff`);
   }
   async putIfAbsent(r: OutboxRecord): Promise<void> {
-    const tx = (await this.db()).transaction([OUTBOX_STORE], 'readwrite');
+    const tx = await rawTransaction([OUTBOX_STORE], 'readwrite');
     const store = tx.objectStore(OUTBOX_STORE);
     if (!(await idbRequest(store.get(r.id)))) store.put(r);
     await transactionDone(tx);
   }
   async putMany(rs: OutboxRecord[]): Promise<void> {
     if (rs.length === 0) return;
-    const tx = (await this.db()).transaction([OUTBOX_STORE], 'readwrite');
+    const tx = await rawTransaction([OUTBOX_STORE], 'readwrite');
     const store = tx.objectStore(OUTBOX_STORE);
     for (const r of rs) store.put(r);
     await transactionDone(tx);
   }
   async list(scope: OutboxScope): Promise<OutboxRecord[]> {
-    const tx = (await this.db()).transaction([OUTBOX_STORE], 'readonly');
+    const tx = await rawTransaction([OUTBOX_STORE], 'readonly');
     const rows = await idbRequest(tx.objectStore(OUTBOX_STORE).getAll(this.range(scope)) as IDBRequest<Array<OutboxRecord & { id: string }>>);
     return rows.filter((r) => !r.id.endsWith(META_SUFFIX));
   }
   async getMeta(scope: OutboxScope): Promise<OutboxMeta | null> {
-    const tx = (await this.db()).transaction([OUTBOX_STORE], 'readonly');
+    const tx = await rawTransaction([OUTBOX_STORE], 'readonly');
     const row = await idbRequest(tx.objectStore(OUTBOX_STORE).get(`${prefixOf(scope)}${META_SUFFIX}`) as IDBRequest<{ meta?: OutboxMeta } | undefined>);
     return row?.meta ?? null;
   }
   async putMeta(scope: OutboxScope, meta: OutboxMeta): Promise<void> {
-    const tx = (await this.db()).transaction([OUTBOX_STORE], 'readwrite');
+    const tx = await rawTransaction([OUTBOX_STORE], 'readwrite');
     tx.objectStore(OUTBOX_STORE).put({ id: `${prefixOf(scope)}${META_SUFFIX}`, meta });
     await transactionDone(tx);
   }
   async listScopes(): Promise<OutboxScope[]> {
-    const tx = (await this.db()).transaction([OUTBOX_STORE], 'readonly');
+    const tx = await rawTransaction([OUTBOX_STORE], 'readonly');
     const keys = await idbRequest(tx.objectStore(OUTBOX_STORE).getAllKeys());
     const seen = new Map<string, OutboxScope>();
     for (const k of keys) { const s = scopeFromId(String(k)); if (s) seen.set(prefixOf(s), s); }

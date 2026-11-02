@@ -5,7 +5,7 @@
 import { ApiError } from '../api/client';
 import type { FeatureAuth } from '../api/feature-batch';
 import { putIngestExpected, type IngestExpectedBody, type IngestExpectedResponse } from '../api/ingest-expected';
-import { idbRequest, openRawDb, transactionDone } from './queue-db';
+import { idbRequest, rawTransaction, transactionDone } from './queue-db';
 
 export const EXPECTED_STORE = 'expected_report';
 /** 측정 중 값이 바뀌었을 때 보고 최소 간격 */
@@ -55,19 +55,17 @@ export class MemoryExpectedStore implements ExpectedStore {
 
 /** IndexedDB(`mindbreeze-eeg-raw` v4 / `expected_report`) — 앱 재실행 뒤에도 마지막 값 1건이 남는다 */
 export class IdbExpectedStore implements ExpectedStore {
-  private dbp: Promise<IDBDatabase> | null = null;
-  private db(): Promise<IDBDatabase> { return (this.dbp ??= openRawDb()); }
   async get(id: string): Promise<ExpectedRecord | null> {
-    const tx = (await this.db()).transaction([EXPECTED_STORE], 'readonly');
+    const tx = await rawTransaction([EXPECTED_STORE], 'readonly');
     return (await idbRequest(tx.objectStore(EXPECTED_STORE).get(id) as IDBRequest<ExpectedRecord | undefined>)) ?? null;
   }
   async put(r: ExpectedRecord): Promise<void> {
-    const tx = (await this.db()).transaction([EXPECTED_STORE], 'readwrite');
+    const tx = await rawTransaction([EXPECTED_STORE], 'readwrite');
     tx.objectStore(EXPECTED_STORE).put(r);
     await transactionDone(tx);
   }
   async list(): Promise<ExpectedRecord[]> {
-    const tx = (await this.db()).transaction([EXPECTED_STORE], 'readonly');
+    const tx = await rawTransaction([EXPECTED_STORE], 'readonly');
     return idbRequest(tx.objectStore(EXPECTED_STORE).getAll() as IDBRequest<ExpectedRecord[]>);
   }
 }
