@@ -5,10 +5,11 @@ import type { EnvelopeMeta } from './envelope';
 
 interface WasmModule {
   default: (input?: unknown) => Promise<unknown>;
-  McCore: new (cfgJson: string) => McCoreLike;
+  McCore: new (cfgJson: string) => McCoreLike & { set_model?: (modelJson: string) => string };
 }
 
 let session: CoreSession | null = null;
+const ppgTotals = { acc: 0, dup: 0, ooo: 0, conf: 0, inv: 0 };
 
 async function loadWasm(): Promise<WasmModule> {
   // 정적 경로 import — 번들러가 wasm-bindgen 글루와 .wasm 을 asset 으로 묶는다(산출물: npm run wasm:build, 커밋됨).
@@ -16,7 +17,7 @@ async function loadWasm(): Promise<WasmModule> {
 }
 
 type In =
-  | { type: 'init'; configJson: string; meta: EnvelopeMeta }
+  | { type: 'init'; configJson: string; meta: EnvelopeMeta; modelJson?: string | null }
   | ({ type: 'packet' } & PacketInput)
   | { type: 'advance'; monoUs: number }
   | { type: 'close' };
@@ -27,13 +28,24 @@ self.onmessage = async (e: MessageEvent<In>): Promise<void> => {
     if (m.type === 'init') {
       const wasm = await loadWasm();
       await wasm.default();
-      session = new CoreSession(new wasm.McCore(m.configJson), m.meta);
+      const core = new wasm.McCore(m.configJson);
+      // SDD-273: 활성 표준 모델은 시작 시 1회만 코어에 pin 한다(세션 중 교체 없음). 실패하면 legacy 로 몰래 돌지 않고 init_error.
+      if (m.modelJson) {
+        const r = JSON.parse(core.set_model?.(m.modelJson) ?? '{"ok":false}') as { ok: boolean };
+        if (!r.ok) { core.free(); throw new Error('set_model_failed'); }
+      }
+      session = new CoreSession(core, m.meta);
       self.postMessage({ type: 'ready' });
     } else if (m.type === 'packet' && session) {
       const out = session.push(m);
+      if (m.sensor === 'ppg' && out.status) {
+        if (out.status === 'accepted') ppgTotals.acc += 1; else if (out.status === 'duplicate') ppgTotals.dup += 1;
+        else if (out.status === 'out_of_order') ppgTotals.ooo += 1; else if (out.status === 'conflict') ppgTotals.conf += 1; else ppgTotals.inv += 1;
+      }
       if (out.envelopes.length > 0 || out.error) self.postMessage({ type: 'frames', envelopes: out.envelopes, error: out.error });
     } else if (m.type === 'advance' && session) {
       const out = session.advance(m.monoUs);
+      self.postMessage({ type: 'diag', ppg: { ...ppgTotals } });
       if (out.envelopes.length > 0 || out.error) self.postMessage({ type: 'frames', envelopes: out.envelopes, error: out.error });
     } else if (m.type === 'close') {
       const final = session ? session.close() : null;
