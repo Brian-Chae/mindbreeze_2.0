@@ -42,4 +42,26 @@ final class BandBLETests: XCTestCase {
         XCTAssertEqual(PeripheralPick.choose(expected: nil, known: nil, connected: [b]), b, "ID 없어도 이미 연결된 밴드를 잡는다")
         XCTAssertNil(PeripheralPick.choose(expected: nil, known: nil, connected: []))
     }
+
+    func testScanRecheckFiresEveryFiveSecondsUntilCancelled() {
+        let sch = ManualScheduler(); let r = ScanRecheck(scheduler: sch)
+        var ticks = 0
+        func arm() { r.start { ticks += 1; arm() } }
+        arm()
+        sch.advance(4.9); XCTAssertEqual(ticks, 0)
+        sch.advance(0.2); XCTAssertEqual(ticks, 1)
+        sch.advance(5); XCTAssertEqual(ticks, 2)
+        r.cancel()
+        XCTAssertFalse(r.isArmed); XCTAssertEqual(sch.pendingCount, 0)
+        sch.advance(60); XCTAssertEqual(ticks, 2, "취소 뒤 늦은 콜백 없음")
+        r.cancel() // 멱등
+    }
+
+    func testScanRecheckStartReplacesPreviousTimer() {
+        let sch = ManualScheduler(); let r = ScanRecheck(scheduler: sch)
+        var a = 0, b = 0
+        r.start { a += 1 }; r.start { b += 1 }
+        XCTAssertEqual(sch.pendingCount, 1)
+        sch.advance(6); XCTAssertEqual(a, 0); XCTAssertEqual(b, 1)
+    }
 }

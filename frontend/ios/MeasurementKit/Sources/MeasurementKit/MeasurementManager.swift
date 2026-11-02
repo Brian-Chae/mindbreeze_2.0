@@ -160,7 +160,8 @@ public final class MeasurementManager: BandLinkDelegate {
         generation += 1; managerId = UUID().uuidString.lowercased()
         self.requestId = requestId; self.sessionId = sessionId; self.credentialHandle = credentialHandle; self.configHash = configHash
         // 웹뷰 BLE 로 선택된 밴드(UUID 문자열)를 이어받는다. 없거나 UUID 가 아니면 현행 스캔.
-        self.peripheralId = peripheralId.flatMap(UUID.init(uuidString:))
+        // 인자가 없거나 UUID 가 아니면 직전(user_left 로 멈춘) 밴드 ID 를 유지한다(재시작 때 ID 를 잃고 스캔만 하다 실패하던 문제)
+        self.peripheralId = peripheralId.flatMap(UUID.init(uuidString:)) ?? self.peripheralId
         streamId = nil; ownerGeneration = nil; participantId = nil; engine = nil; lastEnvelope = nil; blockedReason = nil
         bleGaps = []; openBleGapStart = nil; anchor = nil; needsRecoveryMark = false
         resetStreamRuntime()
@@ -213,6 +214,8 @@ public final class MeasurementManager: BandLinkDelegate {
         guard state != .idle, state != .closed else { throw ManagerError.notActive }
         guard Self.isReason(reason), Self.isUUID(requestId) else { throw ManagerError.invalidArgument("reason") }
         let started = seal(reason: reason, closeStream: true)
+        // 화면 정리(user_left)로 멈춘 경우에만 밴드 ID 를 다음 시작에 이어간다. 사용자가 직접 멈춘 뒤에는 이전 ID 를 끌고 가지 않는다(다른 밴드로 바꿀 수 있다).
+        if reason != "user_left" { peripheralId = nil }
         return ["seal_started": started, "state": state.rawValue, "note": "seal_started_is_not_archive_complete"]
     }
 
