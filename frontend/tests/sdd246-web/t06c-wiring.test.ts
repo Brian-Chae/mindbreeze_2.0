@@ -74,6 +74,7 @@ function deps(opts: { initOk?: boolean; startAck?: CommandAck } = {}) {
     client, sessionId: SID, accountId: 'user:u1', createWorker,
     subscribeRaw: (fn) => { rawFn = fn; return unsub; },
     monotonicUs: () => 6_000_000, uuid: () => '0000000c-0000-4000-8000-00000000000c',
+    fetchModel: async () => null, // SDD-273: 활성 모델 조회는 별도 시험(sdd273-*) — 여기서는 legacy 시작 고정
   });
   return { session, worker, client, calls, batches, createWorker, unsub, raw: (p: RawPacket) => rawFn?.(p), hasRaw: () => rawFn !== null };
 }
