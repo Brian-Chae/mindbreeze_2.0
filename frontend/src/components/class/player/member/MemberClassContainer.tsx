@@ -254,6 +254,8 @@ export function MemberClassContainer({
     // SDD-260: feature 정본 저장(REST 배치)의 소유 계정·인증 — 로그인 회원은 JWT, 게스트는 입장 자격
     accountId: entryCredential ? `entry:${participantId ?? ''}` : user?.id ? `user:${user.id}` : null,
     featureAuth: { entryCredential, skipAuth: !isAuthenticated },
+    // 코드 입장 게스트는 앱에서도 JS BLE + WASM 로 측정한다(네이티브는 계정 JWT 가 필요)
+    guest: !user?.id,
   });
   const nativeM = useNativeMeasurementV2({
     v2: v2On, sessionId, participantId, accountId: user?.id ?? null, bandOptIn: bandAuto, eegConsent,
@@ -497,7 +499,7 @@ export function MemberClassContainer({
 
   const shared: SharedScreenProps = {
     sessionId,
-    place, mode, viewerOnly, bandVisible, bandUi, nativeOwnsBand, nativeAuto: isNativeMeasurementAvailable() && eegConsent && linkbandMode !== 'none' && v2On, waitlisted, nowMs, hostVideoIssue,
+    place, mode, viewerOnly, bandVisible, bandUi, nativeOwnsBand, nativeAuto: isNativeMeasurementAvailable() && Boolean(user?.id) && eegConsent && linkbandMode !== 'none' && v2On, waitlisted, nowMs, hostVideoIssue,
     header: { title: title ?? '클래스', elapsedSec, totalSec, counselorName, myInitial: user?.name?.trim().charAt(0) || '나' },
     hero, snapshot, series, sheet, screenOff, confirmLeave,
     v2Bars: v2On ? { label: '이완', current: v2Current, bars: v2Bars } : null,

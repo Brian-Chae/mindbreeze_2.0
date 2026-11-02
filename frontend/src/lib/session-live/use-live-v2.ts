@@ -9,6 +9,7 @@ import type { LiveState } from './live-state';
 import { toSessionLiveMetrics } from './live-legacy-adapter';
 import type { SessionLiveMetric } from '../api/session';
 import type { LegacyIdentity } from './live-view';
+import { setLiveDiag } from './live-diag';
 
 const uuid = (): string => crypto.randomUUID();
 
@@ -41,8 +42,16 @@ export function useLiveV2({ sessionId, selfParticipantId, enabled, entryCredenti
   const instanceId = useMemo(() => uuid(), []);
 
   useEffect(() => {
+    setLiveDiag({ active, flag: isLiveProtocolV2Enabled() });
     if (!active || !sessionId) return undefined;
-    const socket = getSessionLiveSocket(skipAuth ? null : tokenStorage.getAccess()) as unknown as LiveSocketLike;
+    let socket: LiveSocketLike;
+    try {
+      socket = getSessionLiveSocket(skipAuth ? null : tokenStorage.getAccess()) as unknown as LiveSocketLike;
+      setLiveDiag({ created: true, connected: socket.connected });
+    } catch (e) {
+      setLiveDiag({ err: `create_${e instanceof Error ? e.name : 'unknown'}` });
+      throw e;
+    }
     const next = new LiveClient({
       sessionId,
       selfParticipantId,
@@ -54,7 +63,7 @@ export function useLiveV2({ sessionId, selfParticipantId, enabled, entryCredenti
       capabilities: ['paint_ack'],
       entryCredential: entryCredential ?? null,
     });
-    const unsub = next.subscribe(setState);
+    const unsub = next.subscribe((st) => { setLiveDiag({ phase: String(st?.phase ?? '-') }); setState(st); });
     next.start();
     setState(next.getState());
     setClient(next);
