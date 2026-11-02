@@ -5,6 +5,7 @@ import { getExpectedHub } from '../lib/biosignal/expected-hub';
 import type { ExpectedScope, StoredEntryAuth } from '../lib/biosignal/expected-reporter';
 import { BiosignalQueue } from '../lib/biosignal/durable-queue';
 import { computeWebRawTotals } from '../lib/biosignal/web-raw-totals';
+import { readLegacyRawCount } from '../lib/session-live/raw-chunk-queue';
 import { getNativeMeasurement, isNativeMeasurementAvailable } from '../lib/native-measurement';
 import { subscribeAppResume } from '../lib/native/app-lifecycle';
 import { IdbOutboxStore, MetricOutbox } from '../lib/measurement-web/metric-outbox';
@@ -61,7 +62,9 @@ export function useBiosignalExpectedReporter(): void {
         const ob = new MetricOutbox({ scope, store: outboxStore, send: async () => { throw new Error('observe_only'); } });
         const c = await ob.counts();
         const meta = await ob.getMeta();
-        const raw = await computeWebRawTotals(new BiosignalQueue({ ...scope, deviceAlias: 'LINK-BAND' }, 'expected-observer')).catch(() => null);
+        // SDD-276: 레거시(v1) 뇌파 청크도 서버에서는 eeg 행이다 — 읽기 실패는 0 으로 두되 보고 자체는 막지 않는다
+        const legacyEeg = await readLegacyRawCount(scope.sessionId, scope.participantId).catch(() => 0);
+        const raw = await computeWebRawTotals(new BiosignalQueue({ ...scope, deviceAlias: 'LINK-BAND' }, 'expected-observer'), legacyEeg).catch(() => null);
         await hub.observeWebFeatureTotal(scope, c.pending + c.acked + c.rejected, c.pending === 0 && meta !== null && meta.completedCount === c.acked, { raw, entryAuth: entryAuthOf(scope) });
       }
     };
