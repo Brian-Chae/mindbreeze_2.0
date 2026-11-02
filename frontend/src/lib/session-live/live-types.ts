@@ -27,6 +27,11 @@ export interface MetricsEntityData {
   sequence: U64;
   observed_at_ms: number | null;
   freshness: EntityFreshness;
+  /**
+   * SDD-272 — 이벤트 봉투의 서버 수신 시각(서버 시계). 계약 payload 가 아니라 클라이언트가 보관한다.
+   * 없으면(snapshot 복원) time_uncertain 값을 신선하다고 보지 않는다.
+   */
+  received_at_server_ms?: number;
   sqi: number | null;
   contact: Contact;
   metrics: MetricSet;

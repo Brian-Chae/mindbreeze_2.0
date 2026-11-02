@@ -384,6 +384,17 @@ describe('EntryPage — LINK BAND 단계 (M4)', () => {
     expect(setReportChoice).toHaveBeenCalledWith('s1', 'cred', expect.objectContaining({ reportIncluded: true }));
     expect(text()).not.toContain('LINK BAND를 연결해요');
   });
+  it('SDD-272 재확인 시트는 화면 틀(PlayerShell) 안에 열려 실제로 보이고 뒤 화면은 막힌다(비회원 다음 무반응 방지)', async () => {
+    bandStepState.state = 'connected';
+    await toBand();
+    await act(async () => { find('다음')?.click(); });
+    const sheet = document.querySelector('[data-pz="flow-sheet"]');
+    expect(sheet).not.toBeNull();
+    const shell = sheet!.closest('.pz-shell');
+    expect(shell, '시트가 고정 전체화면 틀 밖에 있으면 틀에 가려 안 보인다').not.toBeNull();
+    expect(shell!.getAttribute('data-sheet-open')).toBe('true');
+    expect(shell!.querySelector('[data-pz="flow-stage"]')!.hasAttribute('inert')).toBe(true);
+  });
   it('이번엔 제외를 고르면 저장 호출 없이 진행하고, 같은 회차에서 다시 묻지 않는다', async () => {
     bandStepState.state = 'connected';
     await toBand();

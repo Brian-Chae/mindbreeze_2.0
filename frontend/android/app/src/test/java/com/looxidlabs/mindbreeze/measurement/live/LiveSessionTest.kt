@@ -379,6 +379,95 @@ class LiveSessionTest {
         assertTrue(probe.getString("client_monotonic_us").toLong() > 0)
     }
 
+    // ------------------------------------------------------------------ SDD-272 시각 보정 재시도
+    /** reanchor 응답을 시험이 정한다. capture.start 는 capture() 가 감싸 처리한다. */
+    private fun reanchorAcks(e: Env, clockUncertain: Boolean = false, rejected: () -> Boolean = { false }) {
+        e.t.acks["live:command"] = { d ->
+            val id = d.getString("command_id")
+            if (d.getString("kind") == "capture.reanchor") {
+                if (rejected()) JSONObject("""{"command_id":"$id","status":"rejected","epoch":"1","cursors":[],"committed":false,"code":"clock_probe_expired"}""")
+                else JSONObject("""{"command_id":"$id","status":"applied","epoch":"1","cursors":[],"committed":true,"result":{"stream_id":"$stream","clock_uncertain":$clockUncertain}}""")
+            } else JSONObject("""{"command_id":"$id","status":"applied","epoch":"1","cursors":[],"committed":true}""")
+        }
+    }
+    private fun Env.probes() = t.sentOf("live:clock_probe")
+    private fun Env.reanchors() = t.sentOf("live:command").filter { it.getString("kind") == "capture.reanchor" }
+
+    @Test fun anchorNullThenFirstPacketTriggersImmediateReanchorWithNewProbe() {
+        val e = env(); reanchorAcks(e)
+        var anchor: Pair<String, String>? = null
+        e.live.anchorProvider = { anchor }
+        toReady(e); capture(e)
+        e.s.advance(1_500)
+        assertEquals(1, e.probes().size); assertEquals("앵커가 없으면 reanchor 를 보내지 않는다", 0, e.reanchors().size)
+        anchor = "3276800" to "1000000"
+        e.live.onAnchorAvailable()
+        assertEquals(2, e.probes().size)
+        assertNotEquals(e.probes()[0].getString("probe_id"), e.probes()[1].getString("probe_id"))
+        assertEquals(1, e.reanchors().size)
+        assertEquals(e.probes()[1].getString("probe_id"), e.reanchors()[0].getJSONObject("payload").getString("clock_probe_id"))
+    }
+
+    @Test fun anchorNullRetriesEvery2s4s8sWithoutWaitingFiveMinutes() {
+        val e = env(); reanchorAcks(e)
+        var anchor: Pair<String, String>? = null
+        e.live.anchorProvider = { anchor }
+        toReady(e); capture(e)
+        e.advanceAlive(1_100)                      // 첫 시도(READY 1초 뒤)
+        assertEquals(1, e.probes().size)
+        e.advanceAlive(1_800); assertEquals("2초 전", 1, e.probes().size)
+        e.advanceAlive(300); assertEquals("2초 뒤 재시도", 2, e.probes().size)
+        e.advanceAlive(3_700); assertEquals("4초 전", 2, e.probes().size)
+        e.advanceAlive(400); assertEquals("4초 뒤 재시도", 3, e.probes().size)
+        anchor = "3276800" to "1000000"
+        e.advanceAlive(8_000); assertEquals("8초 뒤 재시도", 4, e.probes().size)
+        assertEquals("앵커가 생긴 뒤 시도에서 reanchor", 1, e.reanchors().size)
+        e.advanceAlive(60_000); assertEquals("성공하면 재시도 중단", 4, e.probes().size)
+    }
+
+    @Test fun rejectedOrStillUncertainReanchorRetriesWithFreshProbe() {
+        val e = env(); var reject = true
+        reanchorAcks(e, rejected = { reject })
+        e.live.anchorProvider = { "3276800" to "1000000" }
+        toReady(e); capture(e)
+        e.s.advance(1_100)
+        assertEquals(1, e.reanchors().size)
+        e.s.advance(2_100)
+        assertEquals(2, e.probes().size); assertEquals(2, e.reanchors().size)
+        assertNotEquals(e.probes()[0].getString("probe_id"), e.probes()[1].getString("probe_id"))
+        reject = false
+        e.s.advance(4_100)
+        assertEquals(3, e.reanchors().size)
+        e.s.advance(30_000); assertEquals("성공 뒤 재시도 없음", 3, e.probes().size)
+        val e2 = env(); reanchorAcks(e2, clockUncertain = true)
+        e2.live.anchorProvider = { "3276800" to "1000000" }
+        toReady(e2); capture(e2)
+        e2.s.advance(3_200)
+        assertEquals("applied 라도 clock_uncertain=true 면 실패로 본다", 2, e2.probes().size)
+    }
+
+    @Test fun afterEightRetriesWaitsForFiveMinuteCycle() {
+        val e = env(); reanchorAcks(e, rejected = { true })
+        e.live.anchorProvider = { "3276800" to "1000000" }
+        toReady(e); capture(e)
+        e.advanceAlive(1_100 + 89_000 + 1_000)   // 첫 시도 + 재시도 8회(2+4+8+15×5=89초)
+        assertEquals(9, e.probes().size)
+        e.advanceAlive(200_000)
+        assertEquals("소진 뒤 5분 전까지 추가 probe 없음", 9, e.probes().size)
+        e.advanceAlive(10_000)                    // 첫 시도로부터 5분(그 직후 첫 재시도 +2초는 아직)
+        assertEquals("기존 5분 주기 시도", 10, e.probes().size)
+    }
+
+    @Test fun successfulReanchorKeepsFiveMinuteCycle() {
+        val e = env(); reanchorAcks(e)
+        e.live.anchorProvider = { "3276800" to "1000000" }
+        toReady(e); capture(e)
+        e.advanceAlive(100_000)
+        assertEquals(1, e.probes().size); assertEquals(1, e.reanchors().size)
+        e.advanceAlive(205_000)
+        assertEquals("5분 주기 재앵커 유지", 2, e.probes().size)
+    }
+
     @Test fun framesForUnknownStreamStayQueuedUntilStreamIsKnown() {
         val e = env(); toReady(e)
         e.live.onFrame(frame(1))

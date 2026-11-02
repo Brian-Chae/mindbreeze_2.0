@@ -67,6 +67,7 @@ class NativeRuntime private constructor(
             kickArchive()
         }
         live.anchorProvider = { engine.lastEegAnchor?.let { it.first.toString() to it.second.toString() } }
+        engine.onFirstEegAnchor = { sched.post { live.onAnchorAvailable() } } // SDD-272: 앵커가 처음 생기면 즉시 시각 보정 시도
         live.onStateChanged = { s ->
             // 서버가 끝낸 stream(추방·동의철회·종료·교체) 뒤에는 자동으로 새 capture.start 를 보내지 않는다
             if (s == LiveState.READY && live.streamId == null && !captureRequested) { captureRequested = live.startCaptureIfAllowed() != null }

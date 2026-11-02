@@ -16,8 +16,29 @@ const SEVERITY: Record<'fresh' | 'delayed' | 'stale', number> = { fresh: 0, dela
  * - 서버 판정이 없으면 'none', time_uncertain 이면 관측 시각과 무관하게 time_uncertain(observed_at_ms=null).
  * - 새 관측이 오지 않는 동안에만 경과 시간(nowMs=서버 시각 추정 − observed_at)으로 *낮출* 수 있다(3초 지연/10초 stale). 올리지는 않는다.
  */
-export function freshnessOf(observedAtMs: number | null, nowMs: number, serverHint?: string): Freshness {
-  if (serverHint === 'time_uncertain') return 'time_uncertain';
+/** SDD-272 — 시각 보정 전 값의 보정 신선도 상한(서버 수신 후 경과). 5초 이내 fresh, 30초 이내 delayed, 초과 stale. */
+export const UNCERTAIN_FRESH_MS = 5_000;
+export const UNCERTAIN_DELAYED_MS = 30_000;
+
+/**
+ * SDD-272 — 서버가 시각을 믿을 수 없다고(time_uncertain) 표시한 값도, 서버가 *방금 받은* 값이면 가리지 않는다.
+ * 판정은 서버 수신 시각과 서버 시각 추정(nowMs) 두 서버 시계끼리의 경과로만 한다(기기 시계 오차와 무관).
+ * 수신 시각을 모르면(snapshot 복원 등) 기존대로 time_uncertain 을 유지한다.
+ */
+function uncertainFreshness(nowMs: number, receivedAtServerMs?: number | null): Freshness {
+  if (receivedAtServerMs == null) return 'time_uncertain';
+  const age = nowMs - receivedAtServerMs;
+  if (age < 0) return 'fresh';
+  return age <= UNCERTAIN_FRESH_MS ? 'fresh' : age <= UNCERTAIN_DELAYED_MS ? 'delayed' : 'stale';
+}
+
+/** 서버가 time_uncertain 으로 보냈고 수신 시각이 있어 값을 보이는 중인가(UI 보조 표기 "시각 보정 중"). */
+export function isTimeCorrecting(serverHint: string | undefined, receivedAtServerMs: number | null | undefined, nowMs: number): boolean {
+  return serverHint === 'time_uncertain' && uncertainFreshness(nowMs, receivedAtServerMs) !== 'time_uncertain';
+}
+
+export function freshnessOf(observedAtMs: number | null, nowMs: number, serverHint?: string, receivedAtServerMs?: number | null): Freshness {
+  if (serverHint === 'time_uncertain') return uncertainFreshness(nowMs, receivedAtServerMs);
   if (serverHint !== 'fresh' && serverHint !== 'delayed' && serverHint !== 'stale') return 'none';
   if (observedAtMs == null) return serverHint;
   const age = nowMs - observedAtMs;
@@ -52,6 +73,8 @@ export interface MemberRow {
   sequence: string | null;
   observedAtMs: number | null;
   freshness: Freshness;
+  /** SDD-272: 서버 시각 보정 전이지만 방금 받은 값이라 보이는 중 — 보조 표기만 한다 */
+  timeUncertain: boolean;
   sqi: number | null;
   deviceContact: Contact | null;
   bandState: string | null;
@@ -108,7 +131,8 @@ export function buildMemberRows(state: LiveState, opts: RowOptions): MemberRow[]
       canPublish: spk?.can_publish ?? false,
       sequence: met?.sequence ?? null,
       observedAtMs: met?.observed_at_ms ?? null,
-      freshness: freshnessOf(met?.observed_at_ms ?? null, opts.nowMs, met?.freshness),
+      freshness: freshnessOf(met?.observed_at_ms ?? null, opts.nowMs, met?.freshness, met?.received_at_server_ms),
+      timeUncertain: isTimeCorrecting(met?.freshness, met?.received_at_server_ms, opts.nowMs),
       sqi: met?.sqi ?? dev?.sqi ?? null,
       deviceContact: met?.contact ?? dev?.contact ?? null,
       bandState: dev?.band_state ?? null,
