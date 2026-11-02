@@ -217,6 +217,45 @@ final class ManagerT07bTests: XCTestCase {
         XCTAssertEqual(live.probes.count, 2)
     }
 
+    // MARK: SDD-272 시각 보정 재시도
+
+    private func probeOK(_ i: Int) {
+        live.probes[i].done(.success(ClockProbeResult(probeId: "0000001f-0000-4000-8000-0000000000\(10 + i)", clientMonotonicUs: 1,
+                                                       serverReceiveMs: 1, serverSendMs: 2, rttSeconds: 0.01)))
+    }
+    func testProbeFailureRetriesAt2sThen4sWithNewProbe() throws {
+        try startAndAdopt()
+        live.probes[0].done(.failure(.transport))
+        sch.advance(1.9); XCTAssertEqual(live.probes.count, 1, "2초 전")
+        sch.advance(0.2); XCTAssertEqual(live.probes.count, 2, "2초 뒤 새 probe")
+        live.probes[1].done(.failure(.transport))
+        sch.advance(3.9); XCTAssertEqual(live.probes.count, 2, "4초 전")
+        sch.advance(0.2); XCTAssertEqual(live.probes.count, 3, "4초 뒤 새 probe")
+    }
+    func testRejectedOrUncertainReanchorRetriesAndSuccessStops() throws {
+        try startAndAdopt()
+        probeOK(0)
+        live.ack("capture.reanchor", status: "rejected", code: "clock_probe_expired")
+        sch.advance(2.1); XCTAssertEqual(live.probes.count, 2, "거절 → 새 probe")
+        probeOK(1)
+        live.ack("capture.reanchor", result: ["stream_id": stream, "clock_uncertain": true])
+        sch.advance(4.1); XCTAssertEqual(live.probes.count, 3, "clock_uncertain=true → 재시도")
+        probeOK(2)
+        live.ack("capture.reanchor", result: ["stream_id": stream, "clock_uncertain": false])
+        sch.advance(60); XCTAssertEqual(live.probes.count, 3, "성공 뒤 재시도 없음")
+    }
+    func testRetriesStopAfterEightThenFiveMinuteCycle() throws {
+        try startAndAdopt()
+        live.probes[0].done(.failure(.transport))
+        for i in 0..<MeasurementManager.clockRetryDelays.count {
+            sch.advance(MeasurementManager.clockRetryDelays[i] + 0.1)
+            live.probes[i + 1].done(.failure(.transport))
+        }
+        XCTAssertEqual(live.probes.count, 9)
+        sch.advance(200); XCTAssertEqual(live.probes.count, 9, "소진 뒤 5분 전까지 추가 없음")
+        sch.advance(12); XCTAssertEqual(live.probes.count, 10, "5분 주기 시도")
+    }
+
     // MARK: 3. live:device
 
     func testDeviceReportOnAdoptAndChangesWithMonotonicSeq() throws {
