@@ -1,5 +1,8 @@
 // SDD-209 M1 — `/class/:sessionId/enter` 참가자 입장 흐름 오케스트레이터(입장 자격 기반, 로그인 불필요).
 // FM05 입장 확인 → (M2~M5 준비 마법사) → (M6 시작 대기) → (M7 대기열) → 진행 화면 → (M8 종료) 를 하나의 상태 머신으로 돌린다.
+import { currentEntryAuth } from '../../hooks/use-biosignal-expected-reporter';
+import { reportNoBandFinal } from '../../lib/biosignal/no-band-final';
+import { isNativeMeasurementAvailable } from '../../lib/native-measurement';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Key } from 'lucide-react';
@@ -197,6 +200,16 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     if (v2Status === 'completed' || v2Status === 'in_progress') void refresh();
   }, [v2Status, refresh]);
+  // SDD-277: 밴드 없이 참여한 입장은 회차가 끝나면 "만든 것 없음"(0/0/0/0)을 final 로 보고해 "집계 대기"에 머물지 않게 한다.
+  // 측정 흔적이 있으면 reportNoBandFinal 이 보내지 않는다. 네이티브 앱의 회원 측정은 네이티브 보고 경로가 따로 있어 건드리지 않는다.
+  useEffect(() => {
+    if (machine.phase !== 'end' || !entry?.participantId) return;
+    if (!entry.isGuest && isNativeMeasurementAvailable()) return;
+    const accountId = entry.isGuest ? `entry:${entry.participantId}` : user ? `user:${user.id}` : null;
+    if (!accountId) return;
+    const scope = { accountId, sessionId, participantId: entry.participantId };
+    void reportNoBandFinal({ scope, entryAuth: entry.isGuest ? currentEntryAuth(scope) : null }).catch(() => undefined);
+  }, [machine.phase, entry, user, sessionId]);
   // 입장 확정(entry.enter) — READY 가 될 때 한 번. 서버는 멱등(command_id 별)이라 재접속에도 안전하다.
   const enteredRef = useRef(false);
   useEffect(() => {

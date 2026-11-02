@@ -214,7 +214,7 @@ export class DisplayRecorder {
     const nowMs = this.now();
     this.renderRequests.push({ rendered: rendered ? structuredClone(rendered) : null, visible, model: model ? structuredClone(model) : null, nowMs });
     const task = this.renderChain.then(() => this.drainRenders());
-    this.renderChain = task.catch(() => { this.session.abort('journal_failed'); });
+    this.renderChain = task.catch(() => undefined);
     return task;
   }
   private async drainRenders(): Promise<void> {
@@ -245,7 +245,8 @@ export class DisplayRecorder {
     const id = this.rowId(row);
     const scope = { streamId: this.streamId, viewInstanceId: this.viewInstanceId };
     this.rowScopes.set(id, scope);
-    this.writes = this.writes.then(() => this.queue.saveDraft('display', id, { row, ...scope })).catch(error => { this.persistenceError = error; this.session.abort('journal_failed'); });
+    // SDD-277: 화면 기록 초안 쓰기 실패도 원시 기록을 멈추지 않는다(rows 에 사본 유지, persist() 에서 재시도).
+    this.writes = this.writes.then(() => this.queue.saveDraft('display', id, { row, ...scope })).catch(error => { this.persistenceError = error; });
   }
   async persist(): Promise<void> {
     await this.writes;

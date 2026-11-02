@@ -95,7 +95,8 @@ export class FeatureCollector {
     const pending: Pending = { signal, sequence, alias: `FEAT-${signal.toUpperCase()}-${short(window.streamId)}-${short(window.segmentId)}-${String(sequence).padStart(8, '0')}`, result, window: { ...window },
       windowIndex: context.windowIndex, extras: { ...context.extras }, computedAtUs: (BigInt(this.now()) * 1000n).toString(), emittedMs: this.now(), payloads, bytes };
     this.pending.push(pending);
-    this.writes = this.writes.then(() => this.queue.saveDraft('feature', pending.alias, pending)).catch(error => { this.persistenceError = error; this.session.abort('journal_failed'); });
+    // SDD-277: 파생(feature) 초안 쓰기 실패는 원시 기록을 멈추지 않는다. 사본은 pending 에 남고 persist()/flush 에서 다시 쓴다.
+    this.writes = this.writes.then(() => this.queue.saveDraft('feature', pending.alias, pending)).catch(error => { this.persistenceError = error; });
   }
 
   async persist(): Promise<void> {
