@@ -83,13 +83,12 @@ export function shouldStartNative(i: {
   return i.platform === 'ios';
 }
 
-/** effect 정리 직후 같은 회차로 곧바로 재실행되면(bandSkipped 토글 등) stop→start 를 만들지 않고 제자리에서 재연결한다. */
-export function shouldRestartNativeInPlace(i: { active: boolean; sameSession: boolean }): boolean {
-  return i.active && i.sameSession;
-}
+/**
+ * 네이티브 세션 소유권(모듈 단위). stop 은 "내가 시작해 아직 내가 소유한" 세션에만 보낸다.
+ * 이전 화면(A)의 늦은 정리가 새 화면(B)이 시작한 회차를 끊지 못하게 한다.
+ */
+let activeOwner: symbol | null = null;
 
-/** 정리 후 이 시간 안에 같은 회차로 재실행되면 stop 을 취소한다(실제 이탈이면 이 시간 뒤 stop) */
-const STOP_GRACE_MS = 2500;
 const RETRY_MAX = 5;
 const RETRY_BASE_MS = 3000;
 
@@ -111,16 +110,27 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
   const retryRef = useRef(0);
   // 한 번 성공한 밴드 ID — releaseForNative 가 JS 캐시 ID 를 지우므로 재시작 때 이 값을 네이티브에 넘긴다(iOS 스캔만 하다 실패 방지)
   const lastGoodDeviceIdRef = useRef<string | null>(null);
-  // 정리 직후 유예 중인 stop 과 그 대상 키 — 같은 키로 곧바로 재실행되면 stop 을 취소하고 재시작하지 않는다
-  const pendingStopRef = useRef<{ timer: ReturnType<typeof setTimeout>; key: string } | null>(null);
-  const activeKeyRef = useRef<string | null>(null);
+  // 이 훅 인스턴스가 시작 시도한 네이티브 세션(소유 키). effect 재실행(입력 흔들림)과 무관하게 유지되고 실제 이탈·종료·동의 철회에서만 stop 한다.
+  const ownerRef = useRef<{ token: symbol; key: string } | null>(null);
   const prevDepsRef = useRef<string>('');
-  // 화면 언마운트(실제 이탈)는 즉시 stop 한다 — 유예는 입력 변화로 effect 만 다시 도는 경우에만 쓴다. 이 effect 가 메인 effect 보다 먼저 선언돼 정리도 먼저 실행된다.
-  const unmountingRef = useRef(false);
+  const optionsRef = useRef(o);
+  optionsRef.current = o;
+  /** 소유한 세션에만 stop. 소유권이 다른 인스턴스로 넘어갔으면(새 화면이 시작함) 건드리지 않는다. */
+  const stopOwned = (reason: string) => {
+    const owned = ownerRef.current;
+    if (!owned) return;
+    ownerRef.current = null; startedRef.current = false;
+    if (activeOwner !== owned.token) return;
+    activeOwner = null;
+    void getNativeMeasurement().stop({ reason, requestId: crypto.randomUUID() }).catch(() => undefined);
+  };
+  // 실제 이탈(언마운트)·회차/참가자/계정 변경 → 즉시 stop. 화면이 유지되는 입력 흔들림(bandOptIn·연결 상태·재시도)은 여기 오지 않는다.
+  useEffect(() => () => stopOwned('user_left'), [o.sessionId, o.participantId, o.accountId]); // eslint-disable-line react-hooks/exhaustive-deps -- stopOwned 는 ref 만 쓴다
+  // 동의 철회·수업 비활성(회차 종료/대기열)은 명시적으로 수집을 끝낸다. bandOptIn(밴드 건너뛰기) 토글은 세션을 끊지 않는다.
   useEffect(() => {
-    unmountingRef.current = false;
-    return () => { unmountingRef.current = true; };
-  }, []);
+    if (!o.eegConsent) stopOwned('consent_withdrawn');
+    else if (!o.enabled || !o.v2) stopOwned('user_left');
+  }, [o.eegConsent, o.enabled, o.v2]); // eslint-disable-line react-hooks/exhaustive-deps
   const [retryTick, setRetryTick] = useState(0);
   const ready = shouldStartNative({
     path, hasIds: Boolean(o.participantId && o.accountId), platform: Capacitor.getPlatform(), bandConnected: o.bandConnected,
@@ -143,11 +153,14 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
     const key = `${o.sessionId}:${o.participantId}:${o.accountId}`;
     // 시작 사유·직전 effect 와 달라진 입력을 남긴다(현장 재시작 원인 확정용)
     const depsNow = JSON.stringify({ ready, retryTick, s: o.sessionId, p: o.participantId, a: o.accountId });
-    console.info('[native-measurement] start_reason', { reason: pendingStopRef.current ? 'resume_in_grace' : retryTick > 0 ? 'retry' : 'initial', changed: prevDepsRef.current === depsNow ? 'none' : { prev: prevDepsRef.current, now: depsNow } });
+    console.info('[native-measurement] start_reason', { reason: startedRef.current ? 'resume_in_place' : retryTick > 0 ? 'retry' : 'initial', changed: prevDepsRef.current === depsNow ? 'none' : { prev: prevDepsRef.current, now: depsNow } });
     prevDepsRef.current = depsNow;
-    const pending = pendingStopRef.current;
-    const resumeInPlace = pending !== null && shouldRestartNativeInPlace({ active: true, sameSession: pending.key === key });
-    if (pending) { clearTimeout(pending.timer); pendingStopRef.current = null; }
+    // 이미 같은 키로 시작에 성공한 세션이 있으면 새 capture.start 없이 밴드 링크만 다시 잡는다
+    const resumeInPlace = startedRef.current && ownerRef.current?.key === key;
+    if (!resumeInPlace) {
+      const token = ownerRef.current?.key === key ? ownerRef.current.token : Symbol('native-session');
+      ownerRef.current = { token, key }; activeOwner = token;
+    }
     latchedRef.current = true;
     setStatus('starting'); setCode(null);
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -164,7 +177,7 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
           // 이미 네이티브가 수집 중 — 새 capture.start 를 만들지 않고 밴드 링크만 다시 잡는다
           await facade.reconnectBand(platform);
           if (cancelled) return;
-          startedRef.current = true; activeKeyRef.current = key;
+          startedRef.current = true;
           setStatus('running');
           console.info('[native-measurement] 제자리 재연결(stop→start 생략)', platform);
           return;
@@ -179,7 +192,7 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
           releaseJsBand: () => bluetoothService.releaseForNative(),
         });
         if (cancelled) return;
-        startedRef.current = true; activeKeyRef.current = key;
+        startedRef.current = true;
         if (deviceId) lastGoodDeviceIdRef.current = deviceId;
         retryRef.current = 0;
         setStatus('running');
@@ -203,23 +216,7 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
       if (retryTimer) clearTimeout(retryTimer);
       off?.();
       void facade.detach();
-      latchedRef.current = false;
-      if (startedRef.current) {
-        startedRef.current = false;
-        if (unmountingRef.current) {
-          activeKeyRef.current = null;
-          void facade.stop({ reason: 'user_left', requestId: crypto.randomUUID() }).catch(() => undefined);
-        } else {
-        // 즉시 stop 하지 않는다: 입력 흔들림으로 effect 가 다시 도는 경우 stop→start 로 밴드를 잃던 문제. 유예 뒤에도 재실행이 없으면 이탈로 보고 stop.
-        console.info('[native-measurement] cleanup → stop 유예', STOP_GRACE_MS, 'ms', { key });
-        const timer = setTimeout(() => {
-          if (pendingStopRef.current?.timer !== timer) return;
-          pendingStopRef.current = null; activeKeyRef.current = null;
-          void facade.stop({ reason: 'user_left', requestId: crypto.randomUUID() }).catch(() => undefined);
-        }, STOP_GRACE_MS);
-        pendingStopRef.current = { timer, key: activeKeyRef.current ?? '' };
-        }
-      }
+      latchedRef.current = ownerRef.current !== null; // 소유 세션이 있으면 JS 연결이 풀려도(ready) 유지
       setMetrics(null); setDevice(null);
     };
   }, [ready, retryTick, o.sessionId, o.participantId, o.accountId]);

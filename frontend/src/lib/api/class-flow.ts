@@ -2,6 +2,7 @@
 // 구 by-code 경로는 제거되었고 폴백도 없다.
 // 코드는 입장 요청에만 쓰고 이후 요청의 인증 수단은 입장 자격(X-Entry-Credential)이다.
 import { apiClient, refreshAccessToken, tokenStorage } from './client';
+import { liveDiagCode } from '../session-live/live-diag';
 import { isAccessTokenExpiring } from './token-expiry';
 import type { EegFeatureBatchPayload, EegFeatureBatchResponse, SessionDto } from './session';
 import type {
@@ -148,7 +149,8 @@ export async function setEegCollectionConsent(
 
 export async function getEntryState(sessionId: string, credential: string | null): Promise<EntryStateDto> {
   await prepareMemberToken();
-  return apiClient.get<EntryStateDto>(`/sessions/${encodeURIComponent(sessionId)}/entry-state`, entryRequestOptions(credential));
+  // ld: 라이브 소켓 진단 코드(서버 접근 로그에서 게스트 소켓 미개설 사유 확정용, 서버는 무시한다)
+  return apiClient.get<EntryStateDto>(`/sessions/${encodeURIComponent(sessionId)}/entry-state?ld=${encodeURIComponent(liveDiagCode())}`, entryRequestOptions(credential));
 }
 
 export async function setReportChoice(

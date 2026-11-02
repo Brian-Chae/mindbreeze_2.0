@@ -2,7 +2,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { decideMeasurementPath } from '../src/lib/measurement-web/measurement-path';
-import { shouldRestartNativeInPlace } from '../src/lib/measurement-web/use-native-measurement';
 
 const base = { v2: true, native: true, webBluetooth: true, bandConnected: true, eegConsent: true, bandOptIn: true };
 
@@ -45,15 +44,10 @@ describe('배선', () => {
 });
 
 describe('native 재시작 안정화 (iOS)', () => {
-  it('같은 회차·계정 재실행이면 stop→start 대신 제자리 재연결', () => {
-    expect(shouldRestartNativeInPlace({ active: true, sameSession: true })).toBe(true);
-    expect(shouldRestartNativeInPlace({ active: true, sameSession: false })).toBe(false);
-    expect(shouldRestartNativeInPlace({ active: false, sameSession: true })).toBe(false);
-  });
   it('성공한 deviceId 를 보관해 재시작에 전달', () => {
     const s = readFileSync('src/lib/measurement-web/use-native-measurement.ts', 'utf8');
     expect(s).toContain('lastGoodDeviceIdRef');
     expect(s).toContain('start_reason');
-    expect(s).toContain('unmountingRef'); // 언마운트는 즉시 stop
+    expect(s).toContain('ownerRef'); // stop 은 소유 세션에만
   });
 });
