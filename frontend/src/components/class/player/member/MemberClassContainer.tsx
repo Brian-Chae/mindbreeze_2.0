@@ -4,6 +4,8 @@
 // 이 파일만 useBand 를 호출한다(plan R4: BLE 연결·업로드 인스턴스는 화면당 1개).
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { freshnessOf } from '../../../../lib/session-live/live-view';
+import { holdMindMetrics, type HeldMind } from '../../../../lib/session-live/hold-last-snapshot';
+import { getPlatform } from '../../../../lib/native/platform';
 import { liveMetricSnapshot } from '../../../../lib/session-live/live-metric-snapshot';
 import { ConnectionState } from 'livekit-client';
 import { useBand, type UseBandResult } from '../../../../hooks/useBand';
@@ -277,7 +279,14 @@ export function MemberClassContainer({
   // native 소유 동안 6지표는 native snapshot.metrics(null 보존)로 표시한다.
   // 상담사 타일과 같은 출처(LiveState)·같은 규칙을 우선한다 — 두 화면 숫자 불일치 방지. LiveState 에 내 지표가 없을 때만 앱/웹 자체값.
   const liveSnap = v2On ? liveMetricSnapshot(liveV2?.state, participantId, liveV2?.nowMs ?? nowMs) : null;
-  const snapshot = liveSnap ?? nativeM.metrics ?? buildSnapshot(band, metricsBlocked, remoteEfficiency);
+  const rawSnapshot = liveSnap ?? nativeM.metrics ?? buildSnapshot(band, metricsBlocked, remoteEfficiency);
+  // SDD-274: 코드 입장 비회원 + Android(JS BLE) 는 EEG 알림 유실로 지표가 2~7초씩 무효가 된다 — 집중·이완·감정균형만 직전 유효값을 15초 유지.
+  // 회원(네이티브)·iOS·상담사 화면은 적용하지 않는다. 접촉 불량·연결 해제·링크 stale 이면 즉시 "-".
+  const heldMindRef = useRef<HeldMind>({});
+  const holdMind = !user?.id && getPlatform() === 'android' && !nativeM.metrics;
+  const held = holdMindMetrics(rawSnapshot, heldMindRef.current, liveV2?.nowMs ?? nowMs, { enabled: holdMind, blocked: metricsBlocked || !isLive });
+  heldMindRef.current = held.held;
+  const snapshot = held.snapshot;
 
   // 1Hz 링버퍼 — readSnapshot 을 ref 로 안정화해 타이머를 1회만 만든다(서버 신호에 의한 리셋·샘플 누락 방지, SDD-127)
   const nativeMetricsRef = useRef(liveSnap ?? nativeM.metrics);

@@ -6,7 +6,7 @@ import type { DeviceSendOutcome, LiveClient } from '../session-live/live-client'
 import { compareU64 } from '../session-live/live-state';
 import type { BandState, CommandAck, Contact, DeviceData } from '../session-live/live-types';
 import type { MetricEnvelope } from './envelope';
-import { MetricOutbox, type FeatureResult, type OutboxStore } from './metric-outbox';
+import { IdbOutboxStore, MetricOutbox, type FeatureResult, type OutboxStore } from './metric-outbox';
 import { postFeatureBatch, type FeatureAuth } from '../api/feature-batch';
 
 /** feature 정본 REST 배치 전송 주기(5초). 1초 tick 이 불러도 이 간격으로만 보낸다(종료·복귀는 force) */
@@ -100,7 +100,8 @@ export class CaptureController {
   private makeOutbox(participantId: string): MetricOutbox {
     return new MetricOutbox({
       scope: { accountId: this.o.accountId, sessionId: this.o.sessionId, participantId },
-      store: this.o.outboxStore,
+      // SDD-275: 운영 기본은 IndexedDB(앱 셸 훅·복구 스윕이 같은 저장소를 훑는다). 메모리는 IndexedDB 불가 환경·시험 주입용.
+      store: this.o.outboxStore ?? (typeof indexedDB !== 'undefined' ? new IdbOutboxStore() : undefined),
       now: this.o.now,
       send: async (w) => {
         if (this.o.sendFeatures) return this.o.sendFeatures(participantId, w);
