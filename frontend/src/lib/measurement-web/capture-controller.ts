@@ -16,6 +16,11 @@ export const FEATURE_FLUSH_INTERVAL_MS = 5_000;
 export const RENEW_INTERVAL_MS = 10_000;
 /** 시계 기준점 재설정 주기(native 와 같은 5분). 서버 probe 유효시간(10초) 안에 reanchor 가 도착해야 time_uncertain 이 풀린다 */
 export const REANCHOR_INTERVAL_MS = 5 * 60_000;
+/**
+ * SDD-272 — 시각 보정 실패(probe 없음·거절·clock_uncertain=true) 시 짧은 간격 재시도. 소진하면 위 5분 주기만 남는다.
+ * 서버는 probe 후 10초 안의 reanchor 만 인정하므로 매 재시도는 새 probe 부터 시작한다(오래된 probe 재사용 금지).
+ */
+export const REANCHOR_RETRY_DELAYS_MS: readonly number[] = [2_000, 4_000, 8_000, 15_000, 15_000, 15_000, 15_000, 15_000];
 
 export type CaptureClientLike = Pick<LiveClient, 'request' | 'sendMetricBatch' | 'sendDevice' | 'clockProbe'>;
 
@@ -78,6 +83,8 @@ export class CaptureController {
   private info: CaptureInfo | null = null;
   private renewTimer: ReturnType<typeof setInterval> | null = null;
   private reanchorTimer: ReturnType<typeof setInterval> | null = null;
+  private reanchorRetryTimer: ReturnType<typeof setTimeout> | null = null;
+  private reanchorRetryIndex = 0;
   private readonly anchorId: string;
   private outbox: MetricOutbox | null = null;
   private lastFlushAt = 0;
@@ -138,8 +145,9 @@ export class CaptureController {
     this.deviceSeq = 0n;
     this.deviceStopped = false;
     this.renewTimer = setInterval(() => { void this.renew(); }, RENEW_INTERVAL_MS);
-    this.reanchorTimer = setInterval(() => { void this.reanchorNow(); }, REANCHOR_INTERVAL_MS);
-    void this.reanchorNow();
+    this.reanchorTimer = setInterval(() => { this.reanchorRetryIndex = 0; void this.reanchorWithRetry(); }, REANCHOR_INTERVAL_MS);
+    this.reanchorRetryIndex = 0;
+    void this.reanchorWithRetry();
     return 'started';
   }
 
@@ -224,6 +232,19 @@ export class CaptureController {
     if (ack.status === 'rejected' && ack.code && RENEW_FATAL.has(ack.code)) this.halt(ack.code);
   }
 
+  /** 한 번 시도하고, 실패하면 다음 재시도를 예약한다(성공하면 재시도 없음). 5분 주기·start 가 이 함수를 부른다. */
+  private async reanchorWithRetry(): Promise<void> {
+    if (this.reanchorRetryTimer) { clearTimeout(this.reanchorRetryTimer); this.reanchorRetryTimer = null; }
+    const streamId = this.info?.streamId;
+    if (!streamId) return;
+    const ok = await this.reanchorNow().catch(() => false);
+    if (ok || this.info?.streamId !== streamId) return;
+    const delay = REANCHOR_RETRY_DELAYS_MS[this.reanchorRetryIndex];
+    if (delay === undefined) return;
+    this.reanchorRetryIndex += 1;
+    this.reanchorRetryTimer = setTimeout(() => { this.reanchorRetryTimer = null; void this.reanchorWithRetry(); }, delay);
+  }
+
   /** 지금 시각으로 기준점을 다시 잡는다(clock_probe → capture.reanchor). */
   reanchorNow(): Promise<boolean> {
     const at = Math.round((this.o.anchorClockUs ?? (() => Date.now() * 1000))());
@@ -238,7 +259,8 @@ export class CaptureController {
     const ack = await this.o.client.request('capture.reanchor', {
       stream_id: i.streamId, clock_probe_id: probe.probeId, device_ticks: anchor.deviceTicks, monotonic_us: anchor.monotonicUs,
     });
-    return isOk(ack);
+    // 서버가 probe 를 확인해야(clock_uncertain=false) 보정 완료다. 확인 못 했으면 실패로 보고 재시도한다.
+    return isOk(ack) && (ack.result as { clock_uncertain?: boolean } | undefined)?.clock_uncertain !== true;
   }
 
   async close(reason: string, finalSequences?: { eeg: string; ppg: string; acc: string; metric: string }): Promise<void> {
@@ -267,6 +289,8 @@ export class CaptureController {
   private stopTimers(): void {
     if (this.renewTimer) clearInterval(this.renewTimer);
     if (this.reanchorTimer) clearInterval(this.reanchorTimer);
+    if (this.reanchorRetryTimer) clearTimeout(this.reanchorRetryTimer);
+    this.reanchorRetryTimer = null;
     this.renewTimer = null;
     this.reanchorTimer = null;
   }
