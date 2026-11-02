@@ -54,5 +54,6 @@ describe('native 재시작 안정화 (iOS)', () => {
     const s = readFileSync('src/lib/measurement-web/use-native-measurement.ts', 'utf8');
     expect(s).toContain('lastGoodDeviceIdRef');
     expect(s).toContain('start_reason');
+    expect(s).toContain('unmountingRef'); // 언마운트는 즉시 stop
   });
 });

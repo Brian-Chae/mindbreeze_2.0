@@ -115,6 +115,12 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
   const pendingStopRef = useRef<{ timer: ReturnType<typeof setTimeout>; key: string } | null>(null);
   const activeKeyRef = useRef<string | null>(null);
   const prevDepsRef = useRef<string>('');
+  // 화면 언마운트(실제 이탈)는 즉시 stop 한다 — 유예는 입력 변화로 effect 만 다시 도는 경우에만 쓴다. 이 effect 가 메인 effect 보다 먼저 선언돼 정리도 먼저 실행된다.
+  const unmountingRef = useRef(false);
+  useEffect(() => {
+    unmountingRef.current = false;
+    return () => { unmountingRef.current = true; };
+  }, []);
   const [retryTick, setRetryTick] = useState(0);
   const ready = shouldStartNative({
     path, hasIds: Boolean(o.participantId && o.accountId), platform: Capacitor.getPlatform(), bandConnected: o.bandConnected,
@@ -200,6 +206,10 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
       latchedRef.current = false;
       if (startedRef.current) {
         startedRef.current = false;
+        if (unmountingRef.current) {
+          activeKeyRef.current = null;
+          void facade.stop({ reason: 'user_left', requestId: crypto.randomUUID() }).catch(() => undefined);
+        } else {
         // 즉시 stop 하지 않는다: 입력 흔들림으로 effect 가 다시 도는 경우 stop→start 로 밴드를 잃던 문제. 유예 뒤에도 재실행이 없으면 이탈로 보고 stop.
         console.info('[native-measurement] cleanup → stop 유예', STOP_GRACE_MS, 'ms', { key });
         const timer = setTimeout(() => {
@@ -208,6 +218,7 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
           void facade.stop({ reason: 'user_left', requestId: crypto.randomUUID() }).catch(() => undefined);
         }, STOP_GRACE_MS);
         pendingStopRef.current = { timer, key: activeKeyRef.current ?? '' };
+        }
       }
       setMetrics(null); setDevice(null);
     };
