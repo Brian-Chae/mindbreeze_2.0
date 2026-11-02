@@ -83,6 +83,13 @@ export function shouldStartNative(i: {
   return i.platform === 'ios';
 }
 
+/** effect 정리 직후 같은 회차로 곧바로 재실행되면(bandSkipped 토글 등) stop→start 를 만들지 않고 제자리에서 재연결한다. */
+export function shouldRestartNativeInPlace(i: { active: boolean; sameSession: boolean }): boolean {
+  return i.active && i.sameSession;
+}
+
+/** 정리 후 이 시간 안에 같은 회차로 재실행되면 stop 을 취소한다(실제 이탈이면 이 시간 뒤 stop) */
+const STOP_GRACE_MS = 2500;
 const RETRY_MAX = 5;
 const RETRY_BASE_MS = 3000;
 
@@ -90,6 +97,7 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
   const path = decideMeasurementPath({
     v2: o.v2 && o.enabled && isLiveProtocolV2Enabled(), native: isNativeMeasurementAvailable(),
     webBluetooth: false, bandConnected: o.bandConnected, eegConsent: o.eegConsent, bandOptIn: o.bandOptIn,
+    guest: !o.accountId, // 게스트는 네이티브를 시작하지 않는다(웹 훅이 web_wasm 으로 측정)
   });
   const [status, setStatus] = useState<NativeMeasurementStatus>('idle');
   const [code, setCode] = useState<string | null>(null);
@@ -101,6 +109,12 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
   // ready 가 꺼지고, 그러면 진행 중이던 시작이 cancelled 처리돼 리스너·재시도가 사라졌다.
   const latchedRef = useRef(false);
   const retryRef = useRef(0);
+  // 한 번 성공한 밴드 ID — releaseForNative 가 JS 캐시 ID 를 지우므로 재시작 때 이 값을 네이티브에 넘긴다(iOS 스캔만 하다 실패 방지)
+  const lastGoodDeviceIdRef = useRef<string | null>(null);
+  // 정리 직후 유예 중인 stop 과 그 대상 키 — 같은 키로 곧바로 재실행되면 stop 을 취소하고 재시작하지 않는다
+  const pendingStopRef = useRef<{ timer: ReturnType<typeof setTimeout>; key: string } | null>(null);
+  const activeKeyRef = useRef<string | null>(null);
+  const prevDepsRef = useRef<string>('');
   const [retryTick, setRetryTick] = useState(0);
   const ready = shouldStartNative({
     path, hasIds: Boolean(o.participantId && o.accountId), platform: Capacitor.getPlatform(), bandConnected: o.bandConnected,
@@ -120,6 +134,14 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
       setStatus('failed'); setCode(!access || !refresh ? 'credentials_unavailable' : 'platform_unsupported');
       return undefined;
     }
+    const key = `${o.sessionId}:${o.participantId}:${o.accountId}`;
+    // 시작 사유·직전 effect 와 달라진 입력을 남긴다(현장 재시작 원인 확정용)
+    const depsNow = JSON.stringify({ ready, retryTick, s: o.sessionId, p: o.participantId, a: o.accountId });
+    console.info('[native-measurement] start_reason', { reason: pendingStopRef.current ? 'resume_in_grace' : retryTick > 0 ? 'retry' : 'initial', changed: prevDepsRef.current === depsNow ? 'none' : { prev: prevDepsRef.current, now: depsNow } });
+    prevDepsRef.current = depsNow;
+    const pending = pendingStopRef.current;
+    const resumeInPlace = pending !== null && shouldRestartNativeInPlace({ active: true, sameSession: pending.key === key });
+    if (pending) { clearTimeout(pending.timer); pendingStopRef.current = null; }
     latchedRef.current = true;
     setStatus('starting'); setCode(null);
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -132,7 +154,16 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
         const offUpload = facade.onUploadProgress((patch) => { if (!cancelled) uploadProgressStore.update(o.sessionId, patch); });
         const offMeasurement = off;
         off = () => { offMeasurement(); offUpload(); };
-        const deviceId = bluetoothService.getDeviceId() || bluetoothService.getCachedDeviceId();
+        if (resumeInPlace) {
+          // 이미 네이티브가 수집 중 — 새 capture.start 를 만들지 않고 밴드 링크만 다시 잡는다
+          await facade.reconnectBand(platform);
+          if (cancelled) return;
+          startedRef.current = true; activeKeyRef.current = key;
+          setStatus('running');
+          console.info('[native-measurement] 제자리 재연결(stop→start 생략)', platform);
+          return;
+        }
+        const deviceId = bluetoothService.getDeviceId() || bluetoothService.getCachedDeviceId() || lastGoodDeviceIdRef.current;
         // 웹과 같은 규칙: 서버 활성 표준 모델 > 코호트. 시작 시 1회 조회해 넘기고, 이후 교체는 네이티브가 막는다(pin).
         const model = buildNativeModelPayload(getActiveModelCache() ?? (await refreshActiveModel().catch(() => null)));
         if (cancelled) return;
@@ -142,7 +173,8 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
           releaseJsBand: () => bluetoothService.releaseForNative(),
         });
         if (cancelled) return;
-        startedRef.current = true;
+        startedRef.current = true; activeKeyRef.current = key;
+        if (deviceId) lastGoodDeviceIdRef.current = deviceId;
         retryRef.current = 0;
         setStatus('running');
         console.info('[native-measurement] startForSession 성공', platform);
@@ -168,7 +200,14 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
       latchedRef.current = false;
       if (startedRef.current) {
         startedRef.current = false;
-        void facade.stop({ reason: 'user_left', requestId: crypto.randomUUID() }).catch(() => undefined);
+        // 즉시 stop 하지 않는다: 입력 흔들림으로 effect 가 다시 도는 경우 stop→start 로 밴드를 잃던 문제. 유예 뒤에도 재실행이 없으면 이탈로 보고 stop.
+        console.info('[native-measurement] cleanup → stop 유예', STOP_GRACE_MS, 'ms', { key });
+        const timer = setTimeout(() => {
+          if (pendingStopRef.current?.timer !== timer) return;
+          pendingStopRef.current = null; activeKeyRef.current = null;
+          void facade.stop({ reason: 'user_left', requestId: crypto.randomUUID() }).catch(() => undefined);
+        }, STOP_GRACE_MS);
+        pendingStopRef.current = { timer, key: activeKeyRef.current ?? '' };
       }
       setMetrics(null); setDevice(null);
     };

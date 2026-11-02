@@ -156,7 +156,8 @@ public final class MeasurementManager: BandLinkDelegate {
         generation += 1; managerId = UUID().uuidString.lowercased()
         self.requestId = requestId; self.sessionId = sessionId; self.credentialHandle = credentialHandle; self.configHash = configHash
         // 웹뷰 BLE 로 선택된 밴드(UUID 문자열)를 이어받는다. 없거나 UUID 가 아니면 현행 스캔.
-        self.peripheralId = peripheralId.flatMap(UUID.init(uuidString:))
+        // 인자가 없거나 UUID 가 아니면 직전에 잡았던 밴드 ID 를 유지한다(재시작 때 ID 를 잃고 스캔만 하다 실패하던 문제)
+        self.peripheralId = peripheralId.flatMap(UUID.init(uuidString:)) ?? self.peripheralId
         streamId = nil; ownerGeneration = nil; participantId = nil; engine = nil; lastEnvelope = nil; blockedReason = nil
         bleGaps = []; openBleGapStart = nil; anchor = nil; needsRecoveryMark = false
         resetStreamRuntime()

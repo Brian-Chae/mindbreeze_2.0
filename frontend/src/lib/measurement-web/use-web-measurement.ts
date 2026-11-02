@@ -26,6 +26,8 @@ export interface UseWebMeasurementOptions {
   accountId: string | null;
   /** SDD-260: feature REST 인증 */
   featureAuth?: FeatureAuth;
+  /** 코드 입장 게스트 — 앱에서도 web_wasm 경로로 측정한다 */
+  guest?: boolean;
 }
 
 export interface UseWebMeasurementResult {
@@ -46,6 +48,7 @@ export function useWebMeasurementV2(o: UseWebMeasurementOptions): UseWebMeasurem
     bandConnected: o.bandConnected,
     eegConsent: o.eegConsent,
     bandOptIn: o.bandOptIn,
+    guest: o.guest,
   });
   const client = o.liveV2?.client ?? null;
   const ready = o.liveV2?.ready ?? false;
