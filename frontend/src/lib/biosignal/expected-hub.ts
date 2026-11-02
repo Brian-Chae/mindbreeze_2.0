@@ -1,6 +1,6 @@
 // SDD-264 — 네이티브 저장 진행 이벤트(feature.counts·archive.counts[signals]·reconcile.state)·종료 신호를
 // 기대량 보고(ExpectedReporter)로 잇는다. 화면과 무관(앱 셸 훅이 소유). 값은 폰이 만든 총량이며 서버 수신과 무관하다.
-import { ExpectedReporter, IdbExpectedStore, SIGNALS, type ExpectedReport, type ExpectedScope, type ExpectedStore, type RawTotals, type Signal } from './expected-reporter';
+import { ExpectedReporter, IdbExpectedStore, SIGNALS, type ExpectedReport, type ExpectedScope, type ExpectedStore, type RawTotals, type Signal, type StoredEntryAuth } from './expected-reporter';
 
 export interface SignalState { pending: number; uploading: number; verified: number; quarantined: number }
 export type SignalStates = Record<Signal, SignalState>;
@@ -34,6 +34,8 @@ interface SessionObs {
   signals: SignalStates | null;
   complete: boolean;
   ending: boolean;
+  /** SDD-275: 웹 경로의 신호별 원시 총량 */
+  rawWeb?: RawTotals;
 }
 
 export class ExpectedHub {
@@ -101,16 +103,19 @@ export class ExpectedHub {
   markEnding(sessionId: string): void { for (const e of this.entries(sessionId)) { e.ending = true; this.push(e); } }
 
   /** 웹 브라우저 경로: outbox 총량(feature 만, raw 는 생략)과 완료 여부. scope 는 outbox 가 아는 계정·참가자 그대로 쓴다 */
-  async observeWebFeatureTotal(scope: ExpectedScope, total: number, complete: boolean): Promise<void> {
+  async observeWebFeatureTotal(scope: ExpectedScope, total: number, complete: boolean, extra: { raw?: RawTotals | null; entryAuth?: StoredEntryAuth | null } = {}): Promise<void> {
     await this.registerScope(scope);
+    if (extra.entryAuth) await this.reporter.attachEntryAuth(scope, extra.entryAuth);
     const e = this.remember(scope);
     e.feature = total; e.complete = complete;
+    // SDD-275: 웹 경로도 원시 신호별 총량을 보고한다(서버는 raw 미보고를 "집계 대기"로 본다). 네이티브 signals 파싱 경로는 건드리지 않는다
+    if (extra.raw) e.rawWeb = { ...extra.raw };
     this.push(e);
   }
 
   private push(e: SessionObs): void {
     if (e.feature === null) return; // feature 총량 없이는 보고하지 않는다(필수 필드)
-    const report: ExpectedReport = { feature: e.feature, raw: e.signals ? rawTotals(e.signals) : null, final: e.ending || e.complete };
+    const report: ExpectedReport = { feature: e.feature, raw: e.signals ? rawTotals(e.signals) : (e.rawWeb ?? null), final: e.ending || e.complete };
     void this.reporter.submit(e.scope, report).catch(() => undefined);
   }
 }

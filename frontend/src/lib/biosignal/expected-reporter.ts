@@ -22,6 +22,8 @@ export interface ExpectedReport { feature: number; raw: RawTotals | null; final:
 
 /** participantId 가 빈 문자열이면 JWT 로 본인 행을 확정한다(본문에서 생략) */
 export interface ExpectedScope { accountId: string; sessionId: string; participantId: string }
+/** SDD-275: 비회원 입장 자격 사본(탭 종료·"홈으로" 뒤에도 보고를 마치기 위해 보고 레코드에 함께 영속). expiresAtMs=null 이면 만료 없음 */
+export interface StoredEntryAuth { credential: string; expiresAtMs: number | null }
 export interface ExpectedRecord extends ExpectedScope {
   id: string;
   /** 지금까지의 최대 총량(마지막 값 1건) */
@@ -32,6 +34,8 @@ export interface ExpectedRecord extends ExpectedScope {
   attempts: number;
   /** 요청 오류로 중단된 사유(HTTP 상태:코드). 값은 보존한다 */
   halted: string | null;
+  /** SDD-275: 비회원 입장 자격 사본(additive, 없으면 sessionStorage 입장 자격만 사용) */
+  entryAuth?: StoredEntryAuth | null;
 }
 
 export interface ExpectedStore {
@@ -142,6 +146,19 @@ export class ExpectedReporter {
   }
   private readonly chain = new Map<string, Promise<void>>();
 
+  /** SDD-275: 입장 자격 사본을 레코드에 영속(같은 scope 직렬 체인). 값이 같으면 쓰지 않는다 */
+  async attachEntryAuth(scope: ExpectedScope, entryAuth: StoredEntryAuth): Promise<void> {
+    const id = expectedRecordId(scope);
+    const prev = this.chain.get(id) ?? Promise.resolve();
+    const run = prev.then(async () => {
+      const cur = (await this.d.store.get(id)) ?? this.blank(scope);
+      const same = cur.entryAuth?.credential === entryAuth.credential && cur.entryAuth?.expiresAtMs === entryAuth.expiresAtMs;
+      if (!same) await this.d.store.put({ ...cur, entryAuth });
+    });
+    this.chain.set(id, run.catch(() => undefined));
+    await run;
+  }
+
   private blank(s: ExpectedScope): ExpectedRecord {
     return { id: expectedRecordId(s), accountId: s.accountId, sessionId: s.sessionId, participantId: s.participantId, report: null, sent: null, lastSentAtMs: 0, attempts: 0, halted: null };
   }
@@ -151,6 +168,8 @@ export class ExpectedReporter {
     const id = expectedRecordId(scope);
     void this.flushOne(id).catch(() => undefined);
   }
+
+  listRecords(): Promise<ExpectedRecord[]> { return this.d.store.list(); }
 
   /** 앱 시작·online·복귀·주기: 영속된 모든 scope 를 훑어 밀린 값을 보낸다 */
   async flushAll(): Promise<void> {
@@ -195,7 +214,8 @@ export class ExpectedReporter {
     }
     this.notBefore.delete(id);
     const latest = (await this.d.store.get(id)) ?? rec;
-    await this.d.store.put({ ...latest, sent: posting, lastSentAtMs: this.now(), attempts: 0, halted: null });
+    // final 이 서버에 반영되면 자격 사본은 더 쓸 데가 없으니 지운다(SDD-275)
+    await this.d.store.put({ ...latest, sent: posting, lastSentAtMs: this.now(), attempts: 0, halted: null, ...(posting.final ? { entryAuth: null } : {}) });
     // 전송 중에 값이 더 늘었으면 이어서 처리(간격 제한 적용)
     const after = await this.d.store.get(id);
     if (after && !sameReport(after.report, after.sent)) this.arm(id, after.report?.final && !after.sent?.final ? 0 : this.interval());
