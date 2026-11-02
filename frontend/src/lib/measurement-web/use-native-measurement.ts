@@ -113,6 +113,7 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
   // 이 훅 인스턴스가 시작 시도한 네이티브 세션(소유 키). effect 재실행(입력 흔들림)과 무관하게 유지되고 실제 이탈·종료·동의 철회에서만 stop 한다.
   const ownerRef = useRef<{ token: symbol; key: string } | null>(null);
   const prevDepsRef = useRef<string>('');
+  const lastStopReasonRef = useRef('user_left');
   const optionsRef = useRef(o);
   optionsRef.current = o;
   /** 소유한 세션에만 stop. 소유권이 다른 인스턴스로 넘어갔으면(새 화면이 시작함) 건드리지 않는다. */
@@ -120,6 +121,7 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
     const owned = ownerRef.current;
     if (!owned) return;
     ownerRef.current = null; startedRef.current = false;
+    lastStopReasonRef.current = reason;
     if (activeOwner !== owned.token) return;
     activeOwner = null;
     void getNativeMeasurement().stop({ reason, requestId: crypto.randomUUID() }).catch(() => undefined);
@@ -164,6 +166,9 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
     latchedRef.current = true;
     setStatus('starting'); setCode(null);
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    // 시작 비동기 흐름의 각 await 뒤에 확인한다: 이 시도가 잡은 소유권이 아직 유효하고 동의가 유지되는가
+    const myToken = ownerRef.current?.token ?? null;
+    const stillOwned = () => myToken !== null && ownerRef.current?.token === myToken && optionsRef.current.eegConsent;
     void (async () => {
       try {
         await facade.attach(o.sessionId);
@@ -185,12 +190,21 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
         const deviceId = bluetoothService.getDeviceId() || bluetoothService.getCachedDeviceId() || lastGoodDeviceIdRef.current;
         // 웹과 같은 규칙: 서버 활성 표준 모델 > 코호트. 시작 시 1회 조회해 넘기고, 이후 교체는 네이티브가 막는다(pin).
         const model = buildNativeModelPayload(getActiveModelCache() ?? (await refreshActiveModel().catch(() => null)));
-        if (cancelled) return;
+        if (cancelled || !stillOwned()) return;
         await facade.startForSession({
           platform, sessionId: o.sessionId, requestId, accountId: o.accountId as string, apiBase: BASE_URL, socketBase: SOCKET_URL,
           instanceId: instanceRef.current, deviceId: deviceId || null, tokens: { accessToken: access, refreshToken: refresh }, model,
           releaseJsBand: () => bluetoothService.releaseForNative(),
+          isValid: stillOwned,
         });
+        if (!stillOwned()) {
+          // 시작 요청이 이미 나간 뒤 철회됐다 — 완료 직후 정지를 보내 최종 상태가 정지가 되게 한다(새 소유자가 있으면 건드리지 않음)
+          if (activeOwner === null || activeOwner === myToken) {
+            if (activeOwner === myToken) activeOwner = null;
+            void facade.stop({ reason: lastStopReasonRef.current, requestId: crypto.randomUUID() }).catch(() => undefined);
+          }
+          return;
+        }
         if (cancelled) return;
         startedRef.current = true;
         if (deviceId) lastGoodDeviceIdRef.current = deviceId;
@@ -199,7 +213,7 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
         console.info('[native-measurement] startForSession 성공', platform);
       } catch (err) {
         console.warn('[native-measurement] 시작 실패', platform, err instanceof Error ? err.message : String(err));
-        if (cancelled) return;
+        if (cancelled || !stillOwned()) return;
         setStatus('failed'); setCode(err instanceof Error ? err.message : 'native_start_failed');
         // 시작 실패 후 재시도 없이 멈추던 문제: 지수 백오프로 다시 시도한다(같은 requestId 는 facade 가 실패 시 비운다).
         if (retryRef.current < RETRY_MAX) {

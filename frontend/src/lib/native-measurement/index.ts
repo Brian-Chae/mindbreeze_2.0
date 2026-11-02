@@ -226,7 +226,10 @@ export class NativeMeasurementFacade {
     return p;
   }
 
-  private async doStartWithCredentials(req: NativeStartWithCredentials): Promise<StartMeasurementResult> {
+  private async doStartWithCredentials(req: NativeStartWithCredentials, isValid?: () => boolean): Promise<StartMeasurementResult> {
+    // 소유권·동의가 철회된 시작은 plugin.startMeasurement 직전에 중단한다(철회 후 수집 시작 방지)
+    const assertValid = () => { if (isValid && !isValid()) throw new Error('start_cancelled'); };
+    assertValid();
     this.lastSessionId = req.sessionId;
     const secrets = [req.tokens.accessToken, req.tokens.refreshToken];
     const guard = <T>(v: T): T => {
@@ -241,6 +244,7 @@ export class NativeMeasurementFacade {
         accountId: req.accountId, accessToken: req.tokens.accessToken, refreshToken: req.tokens.refreshToken, apiBase: req.apiBase,
       }));
       if (!CREDENTIAL_HANDLE.test(r.credentialHandle)) throw new Error('invalid_credential_handle');
+      assertValid();
       started = await this.plugin.startMeasurement({
         sessionId: req.sessionId, credentialHandle: r.credentialHandle, configHash: req.configHash, requestId: req.requestId,
         ...(req.peripheralId ? { peripheralId: req.peripheralId } : {}),
@@ -250,6 +254,7 @@ export class NativeMeasurementFacade {
       if (!this.plugin.handoffCredentials) throw new Error('native_method_unavailable');
       const r = guard(await this.plugin.handoffCredentials({ accessToken: req.tokens.accessToken, refreshToken: req.tokens.refreshToken }));
       if (!r.handoff) throw new Error('credential_handoff_failed');
+      assertValid();
       started = await this.plugin.startMeasurement({
         sessionId: req.sessionId, apiBase: req.apiBase, socketBase: req.socketBase, requestId: req.requestId, instanceId: req.instanceId,
         ...(req.address ? { address: req.address } : {}),
@@ -269,6 +274,8 @@ export class NativeMeasurementFacade {
     model?: NativeModelPayload | null;
     /** Android·iOS: 네이티브가 밴드를 잡기 전에 JS(BLE 플러그인) 연결을 놓는다. 같은 링크에 두 클라이언트가 CCCD 를 쓰면 PPG/ACC 구독이 깨진다. */
     releaseJsBand?: () => Promise<unknown>;
+    /** false 를 돌려주면(동의 철회·소유권 상실) 각 await 뒤 시작을 중단한다 */
+    isValid?: () => boolean;
   }): Promise<StartMeasurementResult> {
     const inflight = this.startFlights.get(a.requestId);
     if (inflight) return inflight;
@@ -277,6 +284,7 @@ export class NativeMeasurementFacade {
       // iOS 도 JS(BLE 플러그인) 연결을 먼저 실제로 끊는다 — 소유 플래그만 내리면 JS 가 같은 밴드를 계속 잡아 native 와 구독이 겹친다.
       // 해제가 돌려준 연결 ID 는 저장된 ID 가 비어 있을 때의 대체값이다(네이티브가 스캔만 하면 이미 연결된 밴드를 못 찾는다).
       let releasedId: string | null = null;
+      if (a.isValid && !a.isValid()) throw new Error('start_cancelled');
       if (a.platform === 'ios' && a.releaseJsBand) {
         try { const r = await a.releaseJsBand(); if (typeof r === 'string' && r) releasedId = r; } catch { /* 계속 */ }
       }
@@ -292,7 +300,7 @@ export class NativeMeasurementFacade {
         platform: a.platform, sessionId: a.sessionId, requestId: a.requestId, accountId: a.accountId, apiBase: a.apiBase,
         socketBase: a.socketBase, configHash: a.configHash ?? 'linkband2-v1', instanceId: a.instanceId, tokens: a.tokens, model: a.model ?? null,
         ...((a.deviceId || releasedId) ? (a.platform === 'android' ? { address: a.deviceId as string } : { peripheralId: (a.deviceId || releasedId) as string }) : {}),
-      });
+      }, a.isValid);
     })();
     this.startFlights.set(a.requestId, p);
     p.catch(() => { this.startFlights.delete(a.requestId); });

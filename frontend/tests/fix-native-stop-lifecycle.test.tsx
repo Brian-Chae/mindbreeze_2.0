@@ -4,13 +4,13 @@ import { act, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const h = vi.hoisted(() => ({ calls: [] as unknown[][], stopDelay: 0 }));
+const h = vi.hoisted(() => ({ calls: [] as unknown[][], stopDelay: 0, releaseGate: null as null | Promise<string>, startGate: null as null | Promise<unknown> }));
 vi.mock('@capacitor/core', () => ({ Capacitor: { getPlatform: () => 'ios' } }));
 vi.mock('../src/lib/session-live/live-flag', () => ({ isLiveProtocolV2Enabled: () => true }));
 vi.mock('../src/lib/api/client', () => ({ BASE_URL: 'https://api/api/v1', getNativeRefreshBody: () => ({ refresh_token: 'rt' }), tokenStorage: { getAccess: () => 'at' } }));
 vi.mock('../src/lib/socket', () => ({ SOCKET_URL: 'https://api' }));
 vi.mock('../src/lib/eeg/eegPersonalScore', () => ({ getActiveModelCache: () => null, refreshActiveModel: async () => null }));
-vi.mock('../src/lib/eeg/bluetoothService', () => ({ bluetoothService: { getDeviceId: () => 'DEV-1', getCachedDeviceId: () => 'DEV-1', releaseForNative: async () => 'DEV-1' } }));
+vi.mock('../src/lib/eeg/bluetoothService', () => ({ bluetoothService: { getDeviceId: () => 'DEV-1', getCachedDeviceId: () => 'DEV-1', releaseForNative: async () => (h.releaseGate ? h.releaseGate : 'DEV-1') } }));
 vi.mock('../src/lib/native-measurement', () => ({
   isNativeMeasurementAvailable: () => true,
   buildNativeModelPayload: () => null,
@@ -18,7 +18,14 @@ vi.mock('../src/lib/native-measurement', () => ({
     attach: async () => undefined, detach: async () => undefined, onMeasurement: () => () => undefined, onUploadProgress: () => () => undefined,
     reconnectBand: async () => { h.calls.push(['reconnect']); return true; },
     stop: async (r: { reason: string }) => { h.calls.push(['stop', r.reason]); return { accepted: true }; },
-    startForSession: async (a: { sessionId: string }) => { h.calls.push(['start', a.sessionId]); return {}; },
+    startForSession: async (a: { sessionId: string; releaseJsBand?: () => Promise<unknown>; isValid?: () => boolean }) => {
+      // 실제 facade 순서 재현: release await → 유효성 재확인 → native start → (진행 중 await)
+      if (a.releaseJsBand) await a.releaseJsBand();
+      if (a.isValid && !a.isValid()) throw new Error('start_cancelled');
+      h.calls.push(['start', a.sessionId]);
+      if (h.startGate) await h.startGate;
+      return {};
+    },
   }),
 }));
 
@@ -71,5 +78,37 @@ describe('useNativeMeasurementV2 — stop 생명주기 (실제 마운트 경계)
     await flush();
     expect(names()).toContain('stop:consent_withdrawn');
     expect(names().filter((n) => n.startsWith('stop'))).toHaveLength(1);
+  });
+
+  it('경합1: BLE release 대기 중 동의 철회 → start 가 실행되지 않고 최종 정지', async () => {
+    let release!: (v: string) => void;
+    h.releaseGate = new Promise<string>((r) => { release = r; });
+    await act(async () => { root.render(<Probe {...opts()} />); });
+    await flush();
+    await act(async () => { root.render(<Probe {...opts({ eegConsent: false })} />); });
+    await flush();
+    release('DEV-1');
+    await flush();
+    await act(async () => { vi.advanceTimersByTime(60_000); });
+    await flush();
+    expect(names().filter((n) => n.startsWith('start'))).toEqual([]);
+    expect(names().filter((n) => n.startsWith('stop'))).toEqual(['stop:consent_withdrawn']);
+    h.releaseGate = null;
+  });
+
+  it('경합2: start 요청이 나간 뒤(완료 전) 동의 철회 → 완료 직후 stop(consent_withdrawn)이 마지막', async () => {
+    let done!: () => void;
+    h.startGate = new Promise<unknown>((r) => { done = () => r({}); });
+    await act(async () => { root.render(<Probe {...opts()} />); });
+    await flush();
+    expect(names()).toEqual(['start:00000001-0000-4000-8000-00000000000A']);
+    await act(async () => { root.render(<Probe {...opts({ eegConsent: false })} />); });
+    await flush();
+    done();
+    await flush();
+    const stops = names().filter((n) => n.startsWith('stop'));
+    expect(stops.length).toBeGreaterThanOrEqual(1);
+    expect(names()[names().length - 1]).toBe('stop:consent_withdrawn');
+    h.startGate = null;
   });
 });
