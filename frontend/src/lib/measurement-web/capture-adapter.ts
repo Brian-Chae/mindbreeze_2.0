@@ -14,6 +14,8 @@ export interface StartArgs extends EnvelopeMeta {
   bandConnected: boolean;
   /** 계약 CoreConfig JSON(문자열) */
   configJson: string;
+  /** SDD-273: 활성 표준 모델 params JSON(없으면 legacy_cohort) */
+  modelJson?: string | null;
 }
 
 export interface WebCaptureOptions {
@@ -70,9 +72,9 @@ export class WebCaptureAdapter {
           done?.(m.final);
         }
       };
-      const { eegConsent: _c, bandConnected: _b, configJson, ...meta } = args;
+      const { eegConsent: _c, bandConnected: _b, configJson, modelJson, ...meta } = args;
       void _c; void _b;
-      worker.postMessage({ type: 'init', configJson, meta });
+      worker.postMessage({ type: 'init', configJson, meta, modelJson: modelJson ?? null });
     });
   }
 

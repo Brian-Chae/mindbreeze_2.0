@@ -27,6 +27,7 @@ import {
   type AudioSyncEvent,
 } from './class/audio-sync';
 import { refreshAccessToken, tokenStorage } from './api/client';
+import { setLiveDiag } from './session-live/live-diag';
 
 // FE-RT-002: 소켓 URL 단일 출처 — /chat · /session-live · /record 네임스페이스가 모두 이 값을 쓴다.
 export const SOCKET_URL =
@@ -474,8 +475,11 @@ export const getSessionLiveSocket = (token: string | null = null): Socket => {
   // SDD-107: 만료 토큰 거부 시 1회 refresh 후 재연결한다 (무한 재시도 busy-loop 방지).
   sessionLiveSocket.on('connect', () => {
     sessionLiveTokenRefreshAttempted = false;
+    setLiveDiag({ connected: true, err: '-' });
   });
+  sessionLiveSocket.on('disconnect', (reason: string) => setLiveDiag({ connected: false, err: `dc_${reason}` }));
   sessionLiveSocket.on('connect_error', (err: Error) => {
+    setLiveDiag({ connected: false, err: `ce_${err?.message ?? 'unknown'}` });
     console.warn('[session-live] connect_error:', err?.message);
     if (err?.message !== 'token_expired' || sessionLiveTokenRefreshAttempted) return;
     sessionLiveTokenRefreshAttempted = true;

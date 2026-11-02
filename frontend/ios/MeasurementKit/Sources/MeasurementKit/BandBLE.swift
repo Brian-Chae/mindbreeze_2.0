@@ -59,6 +59,20 @@ public enum PeripheralPick {
     }
 }
 
+/// ID 없는 스캔이 길어질 때 이미 연결된 밴드를 주기적으로 다시 확인하는 타이머. start 는 이전 예약을 대체하고 cancel 은 멱등이다.
+public final class ScanRecheck {
+    public static let interval: TimeInterval = 5
+    private let scheduler: Scheduler
+    private var timer: Cancellable?
+    public init(scheduler: Scheduler) { self.scheduler = scheduler }
+    public var isArmed: Bool { timer != nil }
+    public func start(_ tick: @escaping () -> Void) {
+        timer?.cancel()
+        timer = scheduler.schedule(after: Self.interval) { [weak self] in self?.timer = nil; tick() }
+    }
+    public func cancel() { timer?.cancel(); timer = nil }
+}
+
 public enum BandLinkState: String { case idle, scanning, connecting, discovering, subscribed, reconnecting, blocked }
 
 public protocol BandLinkDelegate: AnyObject {
@@ -84,6 +98,7 @@ public final class BandLink: NSObject, CBCentralManagerDelegate, CBPeripheralDel
     private var backoff = ReconnectBackoff()
     private var scheduler: Scheduler
     private var retry: Cancellable?
+    private lazy var scanRecheck = ScanRecheck(scheduler: scheduler)
 
     /// 앱 시작(didFinishLaunching)에서 WebView 보다 먼저 만든다. 만들기만 해도 OS 복원 콜백이 오게 된다.
     public init(queue: DispatchQueue, expectedPeripheral: UUID?, delegate: BandLinkDelegate? = nil) {
@@ -103,7 +118,7 @@ public final class BandLink: NSObject, CBCentralManagerDelegate, CBPeripheralDel
     }
     public func disconnect() {
         queue.async { [self] in
-            wantConnected = false; retry?.cancel(); retry = nil
+            wantConnected = false; retry?.cancel(); retry = nil; scanRecheck.cancel()
             if central.isScanning { central.stopScan() }
             if let p = peripheral { central.cancelPeripheralConnection(p) }
             set(.idle)
@@ -118,17 +133,25 @@ public final class BandLink: NSObject, CBCentralManagerDelegate, CBPeripheralDel
         let connected = central.retrieveConnectedPeripherals(withServices: [BandUUIDs.eegService])
         if let pick = PeripheralPick.choose(expected: expected, known: known?.identifier, connected: connected.map { $0.identifier }),
            let p = known ?? connected.first(where: { $0.identifier == pick }) {
+            scanRecheck.cancel()
+            if central.isScanning { central.stopScan() }
             peripheral = p; p.delegate = self
             set(.connecting)
             central.connect(p, options: nil)       // 타임아웃 없는 pending connect — 범위 안에 들어오면 OS 가 깨워 준다
         } else {
             set(.scanning)
             central.scanForPeripherals(withServices: [BandUUIDs.eegService], options: nil)
+            // 연결된 밴드는 광고하지 않아 스캔에 안 보인다 — 스캔이 계속되는 동안 5초마다 연결 목록을 다시 확인한다
+            scanRecheck.start { [weak self] in
+                guard let self, self.wantConnected, self.state == .scanning else { return }
+                self.attempt()
+            }
         }
     }
 
     private func scheduleRetry(_ reason: String) {
         guard wantConnected else { return }
+        scanRecheck.cancel()
         set(.reconnecting, reason)
         retry?.cancel()
         retry = scheduler.schedule(after: backoff.next()) { [weak self] in self?.attempt() }
@@ -169,7 +192,7 @@ public final class BandLink: NSObject, CBCentralManagerDelegate, CBPeripheralDel
 
     public func centralManager(_ c: CBCentralManager, didDiscover p: CBPeripheral, advertisementData: [String: Any], rssi: NSNumber) {
         if let id = expected, p.identifier != id { return }
-        c.stopScan(); peripheral = p; p.delegate = self; set(.connecting); c.connect(p, options: nil)
+        scanRecheck.cancel(); c.stopScan(); peripheral = p; p.delegate = self; set(.connecting); c.connect(p, options: nil)
     }
     public func centralManager(_ c: CBCentralManager, didConnect p: CBPeripheral) {
         backoff.reset(); expected = p.identifier; delegate?.bandLink(didSelect: p.identifier)

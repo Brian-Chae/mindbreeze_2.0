@@ -9,8 +9,10 @@ import type { LiveClient } from '../../src/lib/session-live/live-client';
 
 const h = vi.hoisted(() => ({ v2: true, native: false, ble: true, workers: 0 }));
 vi.mock('../../src/lib/session-live/live-flag', () => ({ isLiveProtocolV2Enabled: () => h.v2 }));
-vi.mock('../../src/lib/native-measurement', () => ({ isNativeMeasurementAvailable: () => h.native }));
+vi.mock('../../src/lib/native-measurement', async (orig) => ({ ...(await orig<object>()), isNativeMeasurementAvailable: () => h.native }));
 vi.mock('../../src/lib/ble', () => ({ isBleSupported: () => h.ble }));
+// SDD-273: 시작 전 활성 모델 조회는 별도 시험(sdd273-*) — 이 시험은 네트워크 없이 legacy 시작으로 고정한다.
+vi.mock('../../src/lib/measurement-web/model-pin', async (orig) => ({ ...(await orig<object>()), fetchActiveModelForStart: async () => null }));
 
 import { useWebMeasurementV2, type UseWebMeasurementResult } from '../../src/lib/measurement-web/use-web-measurement';
 

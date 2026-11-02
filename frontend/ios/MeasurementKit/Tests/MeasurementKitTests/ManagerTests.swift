@@ -90,6 +90,19 @@ final class ManagerTests: XCTestCase {
         XCTAssertEqual(r["accepted"] as? Bool, true)
         XCTAssertEqual(band.disconnects, before.1 + 1); XCTAssertEqual(band.connects, before.0 + 1)
     }
+    /// 재시작(stop→start) 때 JS 가 밴드 ID 를 못 주어도 직전 ID 를 유지한다(스캔만 하다 실패 방지). 새 ID 가 오면 교체.
+    func testRestartWithoutPeripheralIdKeepsPreviousId() throws {
+        own.nativeEnabled = true
+        let id1 = "AAAAAAAA-0000-4000-8000-000000000001", id2 = "BBBBBBBB-0000-4000-8000-000000000002"
+        _ = try m.startMeasurement(sessionId: sid, credentialHandle: handle, configHash: cfgHash, requestId: req, peripheralId: id1)
+        XCTAssertEqual(band.lastExpected?.uuidString, id1)
+        _ = try m.stopMeasurement(reason: "user_left", requestId: "00000020-0000-4000-8000-000000000020")
+        _ = try m.startMeasurement(sessionId: sid, credentialHandle: handle, configHash: cfgHash, requestId: "00000021-0000-4000-8000-000000000021")
+        XCTAssertEqual(band.lastExpected?.uuidString, id1, "ID 없이 재시작해도 직전 밴드 ID 유지")
+        _ = try m.stopMeasurement(reason: "user_left", requestId: "00000022-0000-4000-8000-000000000022")
+        _ = try m.startMeasurement(sessionId: sid, credentialHandle: handle, configHash: cfgHash, requestId: "00000023-0000-4000-8000-000000000023", peripheralId: id2)
+        XCTAssertEqual(band.lastExpected?.uuidString, id2, "새 ID 가 오면 교체")
+    }
     /// A7: 활성 모델 pin — capture.start·snapshot 의 model 이 pin 버전, 모델 없으면 코호트.
     func testModelPinFlowsToCaptureStartAndSnapshot() throws {
         own.nativeEnabled = true

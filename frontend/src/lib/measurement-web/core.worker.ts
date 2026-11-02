@@ -5,7 +5,7 @@ import type { EnvelopeMeta } from './envelope';
 
 interface WasmModule {
   default: (input?: unknown) => Promise<unknown>;
-  McCore: new (cfgJson: string) => McCoreLike;
+  McCore: new (cfgJson: string) => McCoreLike & { set_model?: (modelJson: string) => string };
 }
 
 let session: CoreSession | null = null;
@@ -16,7 +16,7 @@ async function loadWasm(): Promise<WasmModule> {
 }
 
 type In =
-  | { type: 'init'; configJson: string; meta: EnvelopeMeta }
+  | { type: 'init'; configJson: string; meta: EnvelopeMeta; modelJson?: string | null }
   | ({ type: 'packet' } & PacketInput)
   | { type: 'advance'; monoUs: number }
   | { type: 'close' };
@@ -27,7 +27,13 @@ self.onmessage = async (e: MessageEvent<In>): Promise<void> => {
     if (m.type === 'init') {
       const wasm = await loadWasm();
       await wasm.default();
-      session = new CoreSession(new wasm.McCore(m.configJson), m.meta);
+      const core = new wasm.McCore(m.configJson);
+      // SDD-273: 활성 표준 모델은 시작 시 1회만 코어에 pin 한다(세션 중 교체 없음). 실패하면 legacy 로 몰래 돌지 않고 init_error.
+      if (m.modelJson) {
+        const r = JSON.parse(core.set_model?.(m.modelJson) ?? '{"ok":false}') as { ok: boolean };
+        if (!r.ok) { core.free(); throw new Error('set_model_failed'); }
+      }
+      session = new CoreSession(core, m.meta);
       self.postMessage({ type: 'ready' });
     } else if (m.type === 'packet' && session) {
       const out = session.push(m);

@@ -8,7 +8,8 @@ import type { DeviceData } from '../session-live/live-types';
 import { WebCaptureAdapter, type WorkerLike } from './capture-adapter';
 import { CaptureController, type BandReport, type CaptureClientLike } from './capture-controller';
 import type { FeatureAuth } from '../api/feature-batch';
-import { WEB_CORE_CONFIG, WEB_CORE_CONFIG_JSON } from './core-config';
+import { WEB_CORE_CONFIG } from './core-config';
+import { buildWebModelPin, fetchActiveModelForStart, resolveWebCore } from './model-pin';
 
 export type WebMeasurementStatus = 'idle' | 'not_allowed' | 'core_unavailable' | 'rejected' | 'capturing' | 'stopped';
 
@@ -26,6 +27,8 @@ export interface WebMeasurementDeps {
   monotonicUs?: () => number;
   uuid?: () => string;
   onStatus?: (s: WebMeasurementStatus, code: string | null) => void;
+  /** SDD-273: 시작 시점 활성 표준 모델 조회(테스트 주입). 기본 = 캐시 → 공개 API 조회(재시도 포함) */
+  fetchModel?: typeof fetchActiveModelForStart;
 }
 
 const sameBand = (a: BandReport | null, b: BandReport): boolean => a !== null
@@ -70,6 +73,10 @@ export class WebMeasurementSession {
 
   private async doStart({ eegConsent, bandConnected }: { eegConsent: boolean; bandConnected: boolean }): Promise<WebMeasurementStatus> {
     if (!eegConsent || !bandConnected) return this.set('not_allowed');
+    // SDD-273: 시작 전에 활성 표준 모델을 1회 조회해 코어에 pin(네이티브 ModelPin 과 같은 규칙). 못 받으면 legacy_cohort 로 시작하고 세션 중 교체하지 않는다.
+    // 조회·검증·해시 어느 단계가 실패해도 시작을 막지 않는다(→ legacy_cohort).
+    const pin = await (async () => buildWebModelPin(await (this.d.fetchModel ?? fetchActiveModelForStart)()))().catch(() => null);
+    const core = resolveWebCore(pin);
     const controller = new CaptureController({
       client: this.d.client,
       sessionId: this.d.sessionId,
@@ -79,7 +86,7 @@ export class WebMeasurementSession {
       bandConnected,
       deviceProfile: WEB_CORE_CONFIG.device_profile_version,
       algorithmVersion: WEB_CORE_CONFIG.algorithm_version,
-      modelVersion: WEB_CORE_CONFIG.model_version,
+      modelVersion: core.modelVersion,
       uuid: this.d.uuid,
       // reanchor 는 기본(Date.now()×1000) — 코어 window 가 wall µs 라서. this.mono()(도착 monotonic)는 advance 용이다.
       deviceTicks: () => this.lastEegTick,
@@ -95,8 +102,8 @@ export class WebMeasurementSession {
       await adapter.start({
         sessionId: this.d.sessionId, participantId: 'pending', streamId: 'pending', streamGeneration: '0', clockAnchorId: 'pending',
         clockUncertaintyMs: 300_000, deviceProfileVersion: WEB_CORE_CONFIG.device_profile_version,
-        algorithmVersion: WEB_CORE_CONFIG.algorithm_version, modelVersion: WEB_CORE_CONFIG.model_version,
-        eegConsent, bandConnected, configJson: WEB_CORE_CONFIG_JSON,
+        algorithmVersion: WEB_CORE_CONFIG.algorithm_version, modelVersion: core.modelVersion,
+        eegConsent, bandConnected, configJson: core.configJson, modelJson: core.modelJson,
       });
     } catch (e) {
       return this.set('core_unavailable', e instanceof Error ? e.message : 'core_unavailable');
