@@ -4,6 +4,7 @@
 import { apiClient, refreshAccessToken, tokenStorage } from './client';
 import { liveDiagCode } from '../session-live/live-diag';
 import { ppgDiagCode } from '../measurement-web/ppg-diag';
+import { eegDiagCode } from '../measurement-web/eeg-diag';
 import { isAccessTokenExpiring } from './token-expiry';
 import type { EegFeatureBatchPayload, EegFeatureBatchResponse, SessionDto } from './session';
 import type {
@@ -151,7 +152,7 @@ export async function setEegCollectionConsent(
 export async function getEntryState(sessionId: string, credential: string | null): Promise<EntryStateDto> {
   await prepareMemberToken();
   // ld: 라이브 소켓 진단 코드(서버 접근 로그에서 게스트 소켓 미개설 사유 확정용, 서버는 무시한다)
-  return apiClient.get<EntryStateDto>(`/sessions/${encodeURIComponent(sessionId)}/entry-state?ld=${encodeURIComponent(liveDiagCode())}&pd=${encodeURIComponent(ppgDiagCode())}`, entryRequestOptions(credential));
+  return apiClient.get<EntryStateDto>(`/sessions/${encodeURIComponent(sessionId)}/entry-state?ld=${encodeURIComponent(liveDiagCode())}&pd=${encodeURIComponent(ppgDiagCode())}&ed=${encodeURIComponent(eegDiagCode())}`, entryRequestOptions(credential));
 }
 
 export async function setReportChoice(

@@ -10,6 +10,7 @@ interface WasmModule {
 
 let session: CoreSession | null = null;
 const ppgTotals = { acc: 0, dup: 0, ooo: 0, conf: 0, inv: 0 };
+const eegTotals = { acc: 0, dup: 0, ooo: 0, conf: 0, inv: 0 };
 
 async function loadWasm(): Promise<WasmModule> {
   // 정적 경로 import — 번들러가 wasm-bindgen 글루와 .wasm 을 asset 으로 묶는다(산출물: npm run wasm:build, 커밋됨).
@@ -42,10 +43,14 @@ self.onmessage = async (e: MessageEvent<In>): Promise<void> => {
         if (out.status === 'accepted') ppgTotals.acc += 1; else if (out.status === 'duplicate') ppgTotals.dup += 1;
         else if (out.status === 'out_of_order') ppgTotals.ooo += 1; else if (out.status === 'conflict') ppgTotals.conf += 1; else ppgTotals.inv += 1;
       }
+      if (m.sensor === 'eeg' && out.status) {
+        if (out.status === 'accepted') eegTotals.acc += 1; else if (out.status === 'duplicate') eegTotals.dup += 1;
+        else if (out.status === 'out_of_order') eegTotals.ooo += 1; else if (out.status === 'conflict') eegTotals.conf += 1; else eegTotals.inv += 1;
+      }
       if (out.envelopes.length > 0 || out.error) self.postMessage({ type: 'frames', envelopes: out.envelopes, error: out.error });
     } else if (m.type === 'advance' && session) {
       const out = session.advance(m.monoUs);
-      self.postMessage({ type: 'diag', ppg: { ...ppgTotals } });
+      self.postMessage({ type: 'diag', ppg: { ...ppgTotals }, eeg: { ...eegTotals } });
       if (out.envelopes.length > 0 || out.error) self.postMessage({ type: 'frames', envelopes: out.envelopes, error: out.error });
     } else if (m.type === 'close') {
       const final = session ? session.close() : null;
