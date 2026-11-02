@@ -78,12 +78,13 @@ it('M03: 표시하지 않는 지표는 숫자 대신 not_rendered 사유', () =>
  expect(row.focus.value).toBeNull(); expect(row.focus.null_reason).toBe('not_rendered'); expect(row.relaxation.value).toBe(60);
 });
 it('H05: raw journal 실패 사본은 중단 후 저장 재시도·close에서도 복구된다', async () => {
- const { queue, session } = await setup();
- const write = vi.spyOn(queue, 'journalPacket').mockRejectedValueOnce(new Error('disk failure'));
+ // SDD-277: 일시 오류는 재시도로 견디므로, 재시도(3회)까지 모두 실패하는 지속 장애를 모사한다.
+ const { queue, session } = await setup({ journalRetryDelaysMs: [0, 0, 0] } as never);
+ const write = vi.spyOn(queue, 'journalPacket').mockRejectedValue(new Error('disk failure'));
  session.receive(parseRawPacket('eeg', new DataView(new Uint8Array(74).buffer), '10000000', '1000000'));
  await session.flush(); expect(session.stopReason).toBe('journal_failed');
+ expect(write).toHaveBeenCalledTimes(4); write.mockRestore();
  await session.sealOpen();
- expect(write).toHaveBeenCalledTimes(2);
  expect((await queue.objects()).filter(o => o.kind === 'raw')).toHaveLength(1);
 });
 

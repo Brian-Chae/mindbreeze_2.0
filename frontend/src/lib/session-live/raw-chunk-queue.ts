@@ -8,6 +8,10 @@
 
 import { openRawDb } from '../biosignal/queue-db';
 const STORE_QUEUE = 'pending_raw_chunks';
+// SDD-276: 레거시(v1) 뇌파 청크는 ack 되면 큐에서 지워지므로, "만든 청크 수"를 별도 카운터로 남긴다(폰 보고 기대량용).
+// 기존 next_indices 스토어를 재사용하고(스키마 버전 불변) 키 접두사로 구분한다.
+const STORE_COUNTER = 'next_indices';
+const legacyCountKey = (sessionId: string, participantId: string | null): string => `legacy-raw|${sessionId}|${participantId ?? '-'}`;
 const MAX_QUEUE_BYTES = 64 * 1024 * 1024;
 const QUARANTINE_MS = 60_000;
 const LOSS_LOG_KEY = 'mindbreeze:eeg-raw-loss-events';
@@ -119,7 +123,7 @@ export async function enqueueRawChunk(
 
   const db = await openDb();
   try {
-    const tx = db.transaction(STORE_QUEUE, 'readwrite');
+    const tx = db.transaction([STORE_QUEUE, STORE_COUNTER], 'readwrite');
     const store = tx.objectStore(STORE_QUEUE);
     const existing = await idbReq<QueuedRawChunkItem | undefined>(
       store.get(item.id),
@@ -141,6 +145,11 @@ export async function enqueueRawChunk(
       // 로그 기록까지 모두 성공해야 단일 IDB 트랜잭션에서 큐를 변경한다.
       for (const id of evicted) store.delete(id);
       if (!evicted.has(item.id)) store.put(item);
+      // SDD-276: 새로 만들어진 청크만 센다(같은 청크 재적재는 existing 으로 여기 오지 않는다). 용량 초과로 밀려난 청크도 만들어진 것이므로 센다.
+      const counters = tx.objectStore(STORE_COUNTER);
+      const key = legacyCountKey(item.sessionId, item.participantId);
+      const row = await idbReq<{ id: string; count: number } | undefined>(counters.get(key));
+      counters.put({ id: key, count: (row?.count ?? 0) + 1 });
     }
     await txDone(tx);
     return existing ?? item;
@@ -167,6 +176,18 @@ export async function listPendingRawChunks(
         return item.sessionId === sessionId && (participantId === undefined || item.participantId === participantId);
       });
     return filtered.sort((a, b) => a.chunkIndex - b.chunkIndex);
+  } finally {
+    db.close();
+  }
+}
+
+/** SDD-276: 이 회차·참가자가 지금까지 레거시(v1) 경로로 만든 뇌파 청크 수(ack 로 지워져도 유지). 읽기 실패는 0. */
+export async function readLegacyRawCount(sessionId: string, participantId: string | null): Promise<number> {
+  const db = await openDb();
+  try {
+    const tx = db.transaction(STORE_COUNTER, 'readonly');
+    const row = await idbReq<{ count?: number } | undefined>(tx.objectStore(STORE_COUNTER).get(legacyCountKey(sessionId, participantId)));
+    return typeof row?.count === 'number' && row.count > 0 ? row.count : 0;
   } finally {
     db.close();
   }

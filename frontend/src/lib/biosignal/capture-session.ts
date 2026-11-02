@@ -42,8 +42,18 @@ export interface SampleWindow {
   anchorUtcUs: string; anchorRelUs: string;
 }
 export interface SealedRange { signal: Signal; streamId: string; segmentId: string; alias: string; sha256: string; first: number; end: number }
+/** SDD-277: 원시 journal/봉인 쓰기 재시도 간격(ms). 전체 약 1.75초 — 그동안 패킷은 메모리 사본(unpersisted)으로 보존된다. */
+export const JOURNAL_RETRY_DELAYS_MS: readonly number[] = [250, 500, 1000];
+const sleep = (ms: number): Promise<void> => (ms > 0 ? new Promise(resolve => setTimeout(resolve, ms)) : Promise.resolve());
+const describeError = (error: unknown): string => {
+  const e = error as { name?: unknown; message?: unknown } | null;
+  return `${typeof e?.name === 'string' ? e.name : 'Error'}: ${String(e?.message ?? error).slice(0, 160)}`;
+};
+const isLeaseError = (error: unknown): boolean => error instanceof Error && error.message.startsWith('lease');
 export interface CaptureOptions {
   queue: BiosignalQueue; createId?: () => string; now?: () => number;
+  /** SDD-277: journal/봉인 재시도 간격(시험 주입) */
+  journalRetryDelaysMs?: readonly number[];
   quota?: () => Promise<{ usage: number; quota: number } | null>;
   onStatus?: (status: CaptureStatus, reason: StopReason | null) => void;
 }
@@ -59,6 +69,8 @@ export class BiosignalCaptureSession {
   status: CaptureStatus = 'idle';
   stopReason: StopReason | null = null;
   quotaWarning = false;
+  /** SDD-277: 중단 사유의 오류 이름·메시지(진단용, 화면에는 노출하지 않음) */
+  stopDetail: string | null = null;
   droppedWhileStopped = 0;
   private readonly queue: BiosignalQueue;
   private readonly createId: () => string;
@@ -178,8 +190,10 @@ export class BiosignalCaptureSession {
     if (this.inflightBytes > MAX_UNPERSISTED_BYTES) { this.stop('memory_cap', signal, s, packet.receivedUtcUs); return; }
     const size = packet.bytes.length;
     this.enqueue(async () => {
-      try { await this.queue.journalPacket(record); } catch (error) {
-        this.stop(error instanceof Error && error.message.startsWith('lease') ? 'lease_lost' : 'journal_failed', signal, s, packet.receivedUtcUs);
+      try { await this.withStorageRetry(() => this.queue.journalPacket(record)); } catch (error) {
+        this.stopDetail = describeError(error);
+        console.error('[biosignal] 원시 journal 쓰기 실패', this.stopDetail);
+        this.stop(isLeaseError(error) ? 'lease_lost' : 'journal_failed', signal, s, packet.receivedUtcUs);
         return;
       }
       this.unpersisted.delete(record.id);
@@ -187,7 +201,7 @@ export class BiosignalCaptureSession {
     });
     if (s.unsealedSamples >= CHUNK_SECONDS * RATES[signal] || s.unsealedBytes >= CHUNK_SOFT_BYTES) {
       s.unsealedSamples = 0; s.unsealedBytes = 0;
-      this.enqueue(() => this.sealPackets(signal, streamId, segmentId));
+      this.enqueue(() => this.withStorageRetry(() => this.sealPackets(signal, streamId, segmentId)));
     }
   }
 
@@ -195,18 +209,35 @@ export class BiosignalCaptureSession {
   private rollSegment(signal: Signal, s: SignalState, reason: string | null, utcUs: string): void {
     const oldSegment = s.segmentId, streamId = s.streamId;
     const gapStart = s.anchor ? sampleTimeUs(s.nextSample, { numerator: RATES[signal], denominator: 1 }, 0, s.anchor.utcUs) : utcUs;
-    this.enqueue(() => this.sealPackets(signal, streamId, oldSegment));
+    this.enqueue(() => this.withStorageRetry(() => this.sealPackets(signal, streamId, oldSegment)));
     this.enqueue(async () => {
       try {
-        await this.queue.addGap({ event_id: this.createId(), discovered_at_us: this.nowUs(), signal, stream_id: streamId, segment_id: oldSegment, start_us: BigInt(gapStart) <= BigInt(utcUs) ? gapStart : utcUs, end_us: BigInt(gapStart) <= BigInt(utcUs) ? utcUs : gapStart,
-          reason: BigInt(utcUs) < BigInt(gapStart) ? 'clock_reset' : (reason ?? 'reanchor') as GapEvent['reason'], observed_or_estimated: 'observed', expected_samples: null, received_samples: null, reconnect_count: this.reconnects });
-      } catch { this.stop('journal_failed', signal, s, utcUs); }
+        await this.withStorageRetry(() => this.queue.addGap({ event_id: this.createId(), discovered_at_us: this.nowUs(), signal, stream_id: streamId, segment_id: oldSegment, start_us: BigInt(gapStart) <= BigInt(utcUs) ? gapStart : utcUs, end_us: BigInt(gapStart) <= BigInt(utcUs) ? utcUs : gapStart,
+          reason: BigInt(utcUs) < BigInt(gapStart) ? 'clock_reset' : (reason ?? 'reanchor') as GapEvent['reason'], observed_or_estimated: 'observed', expected_samples: null, received_samples: null, reconnect_count: this.reconnects }));
+      } catch (error) { this.stopDetail = describeError(error); this.stop('journal_failed', signal, s, utcUs); }
     });
+  }
+
+  /**
+   * SDD-277: 저장소 쓰기를 일시 오류에 견디게 한다. lease 오류는 즉시 던진다(다른 창이 가져간 것이라 재시도 무의미).
+   * 그 밖의 오류는 공유 연결을 버려 다시 열고 간격을 두어 재시도한다. 소진하면 마지막 오류를 던진다.
+   */
+  private async withStorageRetry<T>(task: () => Promise<T>): Promise<T> {
+    const delays = this.options.journalRetryDelaysMs ?? JOURNAL_RETRY_DELAYS_MS;
+    for (let attempt = 0; ; attempt += 1) {
+      try { return await task(); } catch (error) {
+        if (isLeaseError(error) || attempt >= delays.length) throw error;
+        this.queue.reconnect();
+        await sleep(delays[attempt]!);
+      }
+    }
   }
 
   private enqueue(task: () => Promise<void>): void {
     this.chain = this.chain.then(task).catch(error => {
-      this.stop(error instanceof Error && error.message.startsWith('lease') ? 'lease_lost' : 'seal_failed', null, null, this.nowUs());
+      this.stopDetail = describeError(error);
+      console.error('[biosignal] 원시 봉인 실패', this.stopDetail);
+      this.stop(isLeaseError(error) ? 'lease_lost' : 'seal_failed', null, null, this.nowUs());
     });
   }
 
@@ -284,7 +315,7 @@ export class BiosignalCaptureSession {
   async pause(): Promise<void> {
     await this.flush();
     if (this.status === 'running') {
-      for (const [signal, s] of this.states) if (s.segmentId) this.enqueue(() => this.sealPackets(signal, s.streamId, s.segmentId));
+      for (const [signal, s] of this.states) if (s.segmentId) this.enqueue(() => this.withStorageRetry(() => this.sealPackets(signal, s.streamId, s.segmentId)));
       await this.flush();
       this.setStatus('stopped', 'closed');
     }
@@ -357,7 +388,7 @@ export class BiosignalCaptureSession {
         for (const [signal, s] of this.states) if (s.segmentId) await this.queue.addGap({ event_id: this.createId(), discovered_at_us: this.nowUs(), signal, stream_id: s.streamId, segment_id: s.segmentId,
           start_us: this.disconnectedAtUs, end_us: null, reason: 'ble_disconnect', observed_or_estimated: 'observed', expected_samples: null, received_samples: null, reconnect_count: this.reconnects });
       }
-      for (const [signal, s] of this.states) if (s.segmentId) this.enqueue(() => this.sealPackets(signal, s.streamId, s.segmentId));
+      for (const [signal, s] of this.states) if (s.segmentId) this.enqueue(() => this.withStorageRetry(() => this.sealPackets(signal, s.streamId, s.segmentId)));
       await this.flush();
     }
     const streams: StreamClose[] = [];
