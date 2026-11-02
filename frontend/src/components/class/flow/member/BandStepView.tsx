@@ -25,6 +25,8 @@ export interface BandStepViewProps {
   backdropSrc?: string;
   /** 시작 후 시트 — 남은 준비 이름들 */
   startedRemaining?: readonly string[] | null;
+  /** SDD-272 — 화면 틀 안에 띄울 시트(예: 리포트 반영 재확인). 틀 밖에 두면 고정 전체화면 틀에 가려 보이지 않는다 */
+  overlaySheet?: ReactNode;
   onConnect: () => void;
   onDisconnect: () => void;
   /** 연결된 채(또는 접촉을 확인하며) 다음 단계로 */
@@ -53,7 +55,7 @@ function batteryView(battery: number | null): { word: string; segs: number; warn
 }
 
 export function BandStepView({
-  state, bandMode, leadOff, battery, steps, place = 'online', backdropSrc, startedRemaining = null,
+  state, bandMode, leadOff, battery, steps, place = 'online', backdropSrc, startedRemaining = null, overlaySheet = null,
   onConnect, onDisconnect, onNext, onSkip, onStartedEnterNow, onStartedContinue, onBack, onExit,
 }: BandStepViewProps) {
   const req = bandMode === 'req';
@@ -156,9 +158,9 @@ export function BandStepView({
     );
   }
 
-  const sheet = startedRemaining ? (
+  const sheet = overlaySheet ?? (startedRemaining ? (
     <StartedSheet open remaining={startedRemaining} onEnterNow={onStartedEnterNow ?? onNext} onContinue={onStartedContinue ?? onNext} />
-  ) : null;
+  ) : null);
 
   return (
     <MemberFlowFrame
@@ -169,7 +171,7 @@ export function BandStepView({
       onBack={onBack}
       onExit={onExit}
       sheet={sheet}
-      sheetOpen={startedRemaining !== null}
+      sheetOpen={overlaySheet !== null || startedRemaining !== null}
       foot={foot}
     >
       <div className="fm-head">
