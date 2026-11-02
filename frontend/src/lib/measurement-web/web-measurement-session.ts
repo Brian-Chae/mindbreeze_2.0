@@ -8,6 +8,7 @@ import type { DeviceData } from '../session-live/live-types';
 import { WebCaptureAdapter, type WorkerLike } from './capture-adapter';
 import { CaptureController, type BandReport, type CaptureClientLike } from './capture-controller';
 import type { FeatureAuth } from '../api/feature-batch';
+import { countPpgArrival, resetPpgDiag, setPpgStatusTotals } from './ppg-diag';
 import { WEB_CORE_CONFIG } from './core-config';
 import { buildWebModelPin, fetchActiveModelForStart, resolveWebCore } from './model-pin';
 
@@ -73,6 +74,7 @@ export class WebMeasurementSession {
 
   private async doStart({ eegConsent, bandConnected }: { eegConsent: boolean; bandConnected: boolean }): Promise<WebMeasurementStatus> {
     if (!eegConsent || !bandConnected) return this.set('not_allowed');
+    resetPpgDiag();
     // SDD-273: 시작 전에 활성 표준 모델을 1회 조회해 코어에 pin(네이티브 ModelPin 과 같은 규칙). 못 받으면 legacy_cohort 로 시작하고 세션 중 교체하지 않는다.
     // 조회·검증·해시 어느 단계가 실패해도 시작을 막지 않는다(→ legacy_cohort).
     const pin = await (async () => buildWebModelPin(await (this.d.fetchModel ?? fetchActiveModelForStart)()))().catch(() => null);
@@ -96,6 +98,7 @@ export class WebMeasurementSession {
       createWorker: this.d.createWorker,
       onEnvelope: (env) => { controller.pushEnvelope(env); },
       onCaptureRequest: () => undefined,
+      onPpgDiag: setPpgStatusTotals,
     });
     try {
       // 신원 필드는 자리표시 — 실제 값은 CaptureController 가 ACK result 로 덮는다.
@@ -129,6 +132,7 @@ export class WebMeasurementSession {
     if (p.signal === 'eeg' && p.tickRaw !== null) this.lastEegTick = String(p.tickRaw);
     // 원본 버퍼는 다른 수신자(T09 journal)가 소유한다 — 복사본만 워커로 transfer 한다.
     const arrivalUs = Number(p.receivedMonotonicUs);
+    if (p.signal === 'ppg') countPpgArrival(arrivalUs);
     a.pushPacket({
       sensor: p.signal,
       bytes: p.bytes.slice(),
