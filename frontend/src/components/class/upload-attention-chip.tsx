@@ -5,16 +5,28 @@ import { Link } from 'react-router-dom';
 import { getSession } from '../../lib/api/session';
 import { useUploadStatus } from '../../hooks/use-upload-status';
 import { uploadStatusScreenPath } from '../../lib/upload-status/view';
+import { ABNORMAL_EXIT_LABEL, ABNORMAL_EXIT_NOTE } from '../../lib/upload-status/board';
 
 export function UploadAttentionChip({ classId, sessionId, live = true }: { classId: string | null | undefined; sessionId: string | null | undefined; live?: boolean }) {
   const { data, error } = useUploadStatus(classId, sessionId, { live });
   const count = error ? 0 : data?.progress?.participants.needs_attention ?? data?.summary.needs_attention ?? 0;
-  if (!classId || !sessionId || count <= 0) return null;
+  // SDD-278: 비정상 종료 의심은 '확인할 사람' 수에 섞지 않고 별도 칩으로만 보여 준다.
+  const abnormal = error ? 0 : data?.progress?.participants.abnormal_exit_suspected ?? 0;
+  if (!classId || !sessionId || (count <= 0 && abnormal <= 0)) return null;
+  const to = uploadStatusScreenPath(classId, sessionId);
   return (
-    <Link data-testid="upload-attention-chip" to={uploadStatusScreenPath(classId, sessionId)}
+    <>
+    {count > 0 && <Link data-testid="upload-attention-chip" to={to}
       className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-amber-50 px-3 text-[13px] font-semibold text-amber-900 hover:bg-amber-100">
       <span aria-hidden="true">!</span>확인할 사람 {count}명
-    </Link>
+    </Link>}
+    {abnormal > 0 && (
+      <Link data-testid="upload-abnormal-chip" to={to} title={ABNORMAL_EXIT_NOTE}
+        className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-[#F2EFF5] px-3 text-[13px] font-semibold text-[#655173] hover:bg-[#E8E2ED]">
+        <span aria-hidden="true">−</span>{ABNORMAL_EXIT_LABEL} {abnormal}명
+      </Link>
+    )}
+    </>
   );
 }
 

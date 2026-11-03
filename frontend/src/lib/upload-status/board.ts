@@ -5,22 +5,23 @@ import type { PersonProgress, ProgressRatio, SessionMetrics, SessionProgress } f
 import { overviewStatus, isLiveSession } from './overview-view';
 
 /** 상황판 상태 4종 + 집계 대기. 오프라인은 서버가 알 수 없어 상태가 아니라 배너로만 다룬다. */
-export type BoardState = 'warn' | 'live' | 'sending' | 'ok' | 'pending';
-export const BOARD_ORDER: readonly BoardState[] = ['warn', 'live', 'sending', 'pending', 'ok'];
+export type BoardState = 'warn' | 'live' | 'sending' | 'ok' | 'pending' | 'suspect';
+export const BOARD_ORDER: readonly BoardState[] = ['warn', 'live', 'sending', 'pending', 'suspect', 'ok'];
 export const BOARD_LABEL: Record<BoardState, string> = {
-  warn: '확인할 사람', live: '측정 중', sending: '전송 중', ok: '모두 도착', pending: '집계 대기',
+  warn: '확인할 사람', live: '측정 중', sending: '전송 중', ok: '모두 도착', pending: '집계 대기', suspect: '비정상 종료 의심',
 };
 /** 회원 화면 라벨(주어가 본인). */
-export const MEMBER_LABEL: Record<BoardState, string> = {
+export const MEMBER_LABEL: Record<Exclude<BoardState, 'suspect'>, string> = {
   warn: '확인 필요', live: '전송 중', sending: '전송 중', ok: '모두 도착', pending: '집계 대기',
 };
-export const BOARD_ICON: Record<BoardState, string> = { warn: '!', live: '●', sending: '◷', ok: '✓', pending: '−' };
+export const BOARD_ICON: Record<BoardState, string> = { warn: '!', live: '●', sending: '◷', ok: '✓', pending: '−', suspect: '−' };
 export const BOARD_TONE: Record<BoardState, string> = {
   warn: 'bg-[#FFF2DD] text-[#805000]',
   live: 'bg-[#F4EDF8] text-[#5F0080]',
   sending: 'bg-[#F4EDF8] text-[#5F0080]',
   ok: 'bg-[#E8F3ED] text-[#226146]',
   pending: 'bg-[#F2EFF5] text-[#655173]',
+  suspect: 'bg-[#F2EFF5] text-[#655173]',
 };
 
 /** 회차 상태 판정. 서버 progress 가 없으면 '모두 도착'을 만들지 않고 집계 대기로 둔다. */
@@ -31,9 +32,18 @@ export function boardState(i: Pick<UploadOverviewItem, 'progress' | 'summary' | 
   if (isLiveSession(i.session_status)) return 'live';
   if (!p) return i.summary.uploading > 0 ? 'sending' : 'pending';
   if (p.counted > 0 && p.all_received === p.counted) return 'ok';
-  if (p.counted === 0 || p.expected_unknown === p.counted) return 'pending';
+  if (p.counted === 0) return 'pending';
+  // SDD-278: 남은 사람이 전부 비정상 종료 의심이면 '전송 중/집계 대기'로 두지 않고 따로 보여 준다(정상 도착과 섞지 않음).
+  const sus = p.abnormal_exit_suspected ?? 0;
+  if (sus > 0 && p.all_received + sus === p.counted) return 'suspect';
+  if (p.expected_unknown === p.counted) return 'pending';
   return 'sending';
 }
+
+/** SDD-278: 비정상 종료 의심 인원(회차 기준). 구 서버는 0. 확인할 사람·진행 막대 분모에 들어가지 않는다. */
+export const abnormalCount = (i: { progress?: SessionProgress | null }): number => i.progress?.participants.abnormal_exit_suspected ?? 0;
+export const ABNORMAL_EXIT_LABEL = '비정상 종료 의심';
+export const ABNORMAL_EXIT_NOTE = '앱이 정상 종료되지 않아 총량 보고가 없어요. 도착한 데이터는 확인돼요.';
 
 /** SDD-267: 최종 확인 대기 인원(회차 기준). 판정(boardState)은 바꾸지 않는 보조 표기. */
 export const finalPendingCount = (i: Pick<UploadOverviewItem, 'progress'>): number => i.progress?.participants.final_pending ?? 0;
@@ -99,6 +109,7 @@ export const formatArrived = (arrived: number, counted: number): string => `${ar
 
 // ── 조치 한 줄(실제 가능한 것만, 알림·메일 발송 없음) ──
 export function coachAction(state: BoardState, n: number): string | null {
+  if (state === 'suspect') return null; // 코치가 할 수 있는 조치가 없다 — 안내 줄(ABNORMAL_EXIT_NOTE)만 보인다.
   if (state === 'warn') return `${n}명이 앱을 다시 켜고 와이파이에 연결하면 이어서 도착해요`;
   if (state === 'live') return '앱을 켠 채 측정을 이어가 주세요';
   if (state === 'sending') return '전송이 이어지고 있어요. 잠시 뒤 새로고침해 주세요';
@@ -109,7 +120,7 @@ export const COACH_OK_NOTE = '추가 조치는 없어요';
 export function memberAction(state: BoardState): string {
   if (state === 'warn') return '앱을 켠 채 와이파이에 연결하거나 앱을 다시 실행해 주세요';
   if (state === 'live' || state === 'sending') return '앱을 켠 채 와이파이에 연결해 두면 이어서 도착해요';
-  if (state === 'pending') return '예상 크기를 확인하고 있어요. 잠시 뒤 다시 확인해 주세요';
+  if (state === 'pending' || state === 'suspect') return '예상 크기를 확인하고 있어요. 잠시 뒤 다시 확인해 주세요';
   return '모두 도착했어요';
 }
 
@@ -119,7 +130,7 @@ export function personAction(p: { failed: boolean; stalled: boolean }): string {
 }
 
 // ── 참여자 분류 ──
-export type PersonBucket = 'attention' | 'arrived' | 'final_pending' | 'waiting' | 'excluded';
+export type PersonBucket = 'attention' | 'arrived' | 'final_pending' | 'abnormal' | 'waiting' | 'excluded';
 export function personBucket(p: { progress?: PersonProgress | null; status?: string; collection_state?: string; participation_status?: string }): PersonBucket {
   const excluded = p.collection_state === 'excluded' || p.participation_status === 'waitlisted';
   const prog = p.progress;
@@ -128,14 +139,16 @@ export function personBucket(p: { progress?: PersonProgress | null; status?: str
     case 'needs_attention': return 'attention';
     case 'all_received': return 'arrived';
     case 'not_collected': return 'excluded';
-    case 'in_progress': case 'expected_unknown': return prog.final_pending ? 'final_pending' : 'waiting';
+    case 'in_progress': case 'expected_unknown':
+      if (prog.abnormal_exit_suspected) return 'abnormal'; // SDD-278
+      return prog.final_pending ? 'final_pending' : 'waiting';
     default: return 'waiting'; // in_progress·expected_unknown
   }
 }
 
 /** 측정 중·도착 중 참여자는 '대기' 접힘에 들어간다. 라벨은 상태에 맞게. */
 export const BUCKET_LABEL: Record<PersonBucket, string> = {
-  attention: '확인할 사람', arrived: '모두 도착', final_pending: '최종 확인 대기', waiting: '집계 대기·전송 중', excluded: '수집 제외',
+  attention: '확인할 사람', arrived: '모두 도착', final_pending: '최종 확인 대기', abnormal: '비정상 종료 의심', waiting: '집계 대기·전송 중', excluded: '수집 제외',
 };
 
 export const PAGE_SIZE = 10;
@@ -148,8 +161,9 @@ export function basisNote(p: SessionProgress | null, state: BoardState): string 
   if (!p) return '전체 예상 크기 확인 전';
   const { counted, expected_unknown: unknown, not_collected: excluded, all_received: arrived } = p.participants;
   if (state === 'ok') return `${arrived.toLocaleString('ko-KR')}명 모두 도착`;
+  const abnormal = Math.min(p.participants.abnormal_exit_suspected ?? 0, unknown);
   const parts: string[] = [`확인된 ${(counted - unknown).toLocaleString('ko-KR')}명 기준`];
-  if (unknown > 0) parts.push(`${unknown}명 집계 대기`);
+  if (unknown - abnormal > 0) parts.push(`${unknown - abnormal}명 집계 대기`);
   if (excluded > 0) parts.push(`${excluded}명 수집 제외`);
   return parts.join(' · ');
 }
