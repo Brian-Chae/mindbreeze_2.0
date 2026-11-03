@@ -1,4 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { searchClassMemberCandidates, type ClassMemberCandidates } from '../../../lib/api/class-member-candidates';
 import { useAuthStore } from '../../../stores/authStore';
 
@@ -11,9 +12,11 @@ interface Props {
   excludeUserIds?: string[];
   className?: string;
   disabled?: boolean;
+  /** 지정하면 선택한 회원 칩을 이 요소 안에 그린다(레이아웃 슬롯). null 은 슬롯 준비 전이라 그리지 않는다. 미지정이면 기존처럼 인라인. */
+  selectedContainer?: HTMLElement | null;
 }
 /** 클래스 초대 전용. 상담 정보나 원문 이메일을 보관하지 않는다. */
-export function ClassMemberPicker({ classId, selected, onChange, maxParticipants, excludeUserIds = [], className = '', disabled = false }: Props) {
+export function ClassMemberPicker({ classId, selected, onChange, maxParticipants, excludeUserIds = [], className = '', disabled = false, selectedContainer }: Props) {
   const user = useAuthStore(state => state.user);
   const [query, setQuery] = useState('');
   const [result, setResult] = useState<{ scope: string; data: ClassMemberCandidates } | null>(null);
@@ -47,9 +50,13 @@ export function ClassMemberPicker({ classId, selected, onChange, maxParticipants
   const rows = current?.members.filter(member => !excludeUserIds.includes(member.id)) ?? [];
   const atLimit = currentSelection.length >= Math.max(0, maxParticipants);
   const remove = (id: string) => onChange(currentSelection.filter(member => member.userId !== id));
+  const selectedChips = currentSelection.length > 0 && selectedContainer !== null && (() => {
+    const chips = <div className="class-member-picker__selected flex flex-wrap gap-2">{currentSelection.map(member => <span key={member.userId} className="inline-flex items-center gap-2 rounded-full bg-purple-50 px-3 py-1 text-sm text-purple-900">{member.name}<button type="button" disabled={disabled} aria-label={`${member.name} 선택 취소`} onClick={() => remove(member.userId)}>×</button></span>)}</div>;
+    return selectedContainer ? createPortal(chips, selectedContainer) : chips;
+  })();
   return <section className={`class-member-picker space-y-3 ${className}`} data-class-member-picker>
     <label htmlFor={labelId} className="block text-sm font-medium">회원 검색 <span className="text-gray-500">{currentSelection.length}/{Math.max(0, maxParticipants)}명 선택</span></label>
-    {currentSelection.length > 0 && <div className="class-member-picker__selected flex flex-wrap gap-2">{currentSelection.map(member => <span key={member.userId} className="inline-flex items-center gap-2 rounded-full bg-purple-50 px-3 py-1 text-sm text-purple-900">{member.name}<button type="button" disabled={disabled} aria-label={`${member.name} 선택 취소`} onClick={() => remove(member.userId)}>×</button></span>)}</div>}
+    {selectedChips}
     <input id={labelId} className="class-member-picker__search w-full rounded-xl border border-[#e5dfd6] bg-white px-3 py-2 text-sm" type="search" value={query} maxLength={254} disabled={disabled} onChange={event => setQuery(event.target.value)} placeholder="이름이나 정확한 이메일로 찾아요" />
     <p className="class-member-picker__hint text-xs text-gray-500">이름으로 찾을 수 없는 회원은 정확한 이메일을 입력해 주세요.</p>
     {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
