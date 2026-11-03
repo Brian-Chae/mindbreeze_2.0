@@ -35,12 +35,34 @@
 .pz-root .fh-tog[disabled] {opacity: 0.4;}
 .pz-root .fh-static {min-height: 64px; border-style: dashed;}
 .pz-root .fh-static .tx {flex: 1; font-size: var(--fs-13); color: var(--tx-mid); line-height: 1.5;}
-.pz-root .fh-when3 {display: grid; grid-template-columns: 1fr 1fr; gap: 16px;}
-.pz-root .fh-when3 > .fh-group:first-child {grid-column: 1 / -1;}
-@media (min-width: 700px) {
-.pz-root .fh-when3 {grid-template-columns: 1.8fr 1fr 1fr;}
-.pz-root .fh-when3 > .fh-group:first-child {grid-column: auto;}
+/* SDD-279 첫 행: 시작 날짜 | 시작 시각 | 소요 시간 — 세 열 같은 폭, 컨트롤 높이 --fh-ctl 통일(데스크톱 88px) */
+.pz-root .fh-when3 {--fh-ctl: 56px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px;}
+.pz-root .fh-when3 > .fh-group {min-width: 0;}
+@media (min-width: 768px) {
+.pz-root .fh-when3 {--fh-ctl: 88px; grid-template-columns: repeat(3, minmax(0, 1fr));}
 }
+@media (min-width: 768px) and (max-height: 760px) {
+.pz-root.fh-wiz .fh-when3 {--fh-ctl: 56px;}
+}
+.pz-root .fh-when3 .fh-stepper {min-height: var(--fh-ctl); height: var(--fh-ctl);}
+.pz-root .fh-when3 .fh-stepper {gap: 0; padding: 0 4px;}
+.pz-root .fh-when3 .fh-stepper b {font-size: var(--fs-15); line-height: 20px; min-width: 0; white-space: normal; overflow-wrap: anywhere; word-break: keep-all; padding: 0 4px;}
+.pz-root .fh-timefield {position: relative; min-width: 0;}
+.pz-root .fh-timebtn {display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: var(--fh-ctl, 56px); padding: 0 12px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); font-size: var(--fs-15); font-weight: 700; color: var(--tx-hi); white-space: nowrap;}
+.pz-root .fh-timebtn[aria-expanded="true"] {border-color: var(--mb-lavender);}
+.pz-root .fh-timepop {position: absolute; z-index: 20; top: calc(100% + 8px); left: 0; width: 100%; box-sizing: border-box; padding: 8px; border-radius: var(--r-card); background: #24132f; border: 1px solid var(--mb-lavender); box-shadow: 0 16px 48px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 8px;}
+.pz-root .fh-timepop-tabs {display: grid; grid-template-columns: 1fr 1fr; gap: 8px;}
+.pz-root .fh-timetab {min-height: 44px; border-radius: 12px; border: 1px solid var(--sheet-border); background: transparent; font-size: var(--fs-15); font-weight: 600; color: var(--tx-mid);}
+.pz-root .fh-timetab[aria-pressed="true"] {border-color: var(--mb-pale); color: var(--tx-hi); background: rgba(210,174,252,0.14);}
+.pz-root .fh-timepop-cols {display: grid; grid-template-columns: 1fr 1fr; gap: 8px;}
+.pz-root .fh-timelist {max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; border-radius: 12px; background: rgba(255,255,255,0.04); scrollbar-width: thin;}
+.pz-root .fh-timeopt {flex: none; min-height: 44px; width: 100%; border-radius: 10px; border: 1px solid transparent; background: transparent; font-size: var(--fs-18); font-weight: 600; color: var(--tx-hi);}
+.pz-root .fh-timeopt[aria-selected="true"] {background: var(--mb-purple); border-color: var(--mb-purple);}
+.pz-root .fh-timeopt[aria-disabled="true"] {opacity: 0.35; cursor: not-allowed;}
+.pz-root .fh-timeopt:focus-visible, .pz-root .fh-timetab:focus-visible, .pz-root .fh-timebtn:focus-visible {outline: 2px solid var(--mb-pale); outline-offset: 2px;}
+.pz-root .fh-timesel {display: grid; grid-template-columns: 1fr 1fr; gap: 8px;}
+.pz-root .fh-timesel-s {width: 100%; min-width: 0; height: var(--fh-ctl, 56px); padding: 0 12px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); font: inherit; font-size: var(--fs-15); font-weight: 700; color: var(--tx-hi);}
+.pz-root .fh-timesel-s option {background: #24132f; color: #fff;}
 .pz-root .fh-stepper.sm {grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 0; padding: 0;}
 .pz-root .fh-durrow {display: grid; grid-template-columns: 1fr; gap: 8px;}
 @media (min-width: 700px) {

@@ -6,11 +6,12 @@ import {
 } from 'lucide-react';
 import type { LinkbandMode } from '../../../../lib/api/session';
 import {
-  BAND_LABEL, MAX_DAY_OFFSET, MAX_DURATION_MIN, MAX_TIME_MIN, MIN_CAPACITY, MIN_DURATION_MIN, MIN_TIME_MIN, wizardTypeOptions, isSoloAllowed,
-  capacityMax, fmtDay, fmtDuration, fmtHour, fmtMinute, fmtWhen, memberLimit, typeLabel,
+  BAND_LABEL, MAX_DAY_OFFSET, MAX_DURATION_MIN, MIN_CAPACITY, MIN_DURATION_MIN, wizardTypeOptions, isSoloAllowed,
+  capacityMax, fmtDay, fmtDuration, fmtWhen, memberLimit, typeLabel,
   type WizardAction, type WizardDraft, type WizardMember, type WizardStep, type WizardType, type WizardUi,
 } from '../../../../lib/class/class-wizard';
 import { FlowButton, FlowH1 } from '../shared/flow-primitives';
+import { StartTimePicker } from './start-time-picker';
 import { FhCard, FhForm, FhGroup, FhInfo, FhSeg, FhStaticRow, FhStepper, FhToggleRow, type SegOption } from './host-flow-atoms';
 import { isAiEnabled } from '../../../../lib/feature-flags';
 
@@ -191,21 +192,32 @@ export interface ScheduleStepProps extends WizardStepProps {
   conflictTitle: string | null;
 }
 
-function DurationGroup({ draft, dispatch }: WizardStepProps) {
+function DurationStepper({ draft, dispatch }: WizardStepProps) {
+  return (
+    <FhStepper
+      label="소요 시간"
+      text={fmtDuration(draft.durationMin)}
+      decreaseLabel="소요 시간 줄이기"
+      increaseLabel="소요 시간 늘리기"
+      decreaseDisabled={draft.durationMin <= MIN_DURATION_MIN}
+      increaseDisabled={draft.durationMin >= MAX_DURATION_MIN}
+      onDecrease={() => dispatch({ type: 'stepDuration', delta: -5 })}
+      onIncrease={() => dispatch({ type: 'stepDuration', delta: 5 })}
+    />
+  );
+}
+
+function DurationChips({ draft, dispatch }: WizardStepProps) {
+  return <FhSeg label="소요 시간 바로 선택" variant="fh-c5" value={draft.durationMin} options={DURATION_CHIPS} onChange={(durationMin) => dispatch({ type: 'patch', patch: { durationMin } })} />;
+}
+
+/** 지금 바로: 소요 시간 스테퍼 + 바로 선택 칩 한 묶음 */
+function DurationGroup({ draft, ui, dispatch }: WizardStepProps) {
   return (
     <FhGroup label="소요 시간 · 5분 단위">
       <div className="fh-durrow">
-        <FhStepper
-          label="소요 시간"
-          text={fmtDuration(draft.durationMin)}
-          decreaseLabel="소요 시간 줄이기"
-          increaseLabel="소요 시간 늘리기"
-          decreaseDisabled={draft.durationMin <= MIN_DURATION_MIN}
-          increaseDisabled={draft.durationMin >= MAX_DURATION_MIN}
-          onDecrease={() => dispatch({ type: 'stepDuration', delta: -5 })}
-          onIncrease={() => dispatch({ type: 'stepDuration', delta: 5 })}
-        />
-        <FhSeg label="소요 시간 바로 선택" variant="fh-c5" value={draft.durationMin} options={DURATION_CHIPS} onChange={(durationMin) => dispatch({ type: 'patch', patch: { durationMin } })} />
+        <DurationStepper draft={draft} ui={ui} dispatch={dispatch} />
+        <DurationChips draft={draft} ui={ui} dispatch={dispatch} />
       </div>
     </FhGroup>
   );
@@ -229,9 +241,9 @@ export function StepSchedule({ draft, ui, dispatch, base, conflictTitle }: Sched
         {later ? (
           <>
             <div className="fh-when3">
-              <FhGroup label="날짜">
+              <FhGroup label="시작 날짜">
                 <FhStepper
-                  label="날짜"
+                  label="시작 날짜"
                   text={fmtDay(base, draft.dayOffset)}
                   decreaseLabel="이전 날짜"
                   increaseLabel="다음 날짜"
@@ -243,29 +255,11 @@ export function StepSchedule({ draft, ui, dispatch, base, conflictTitle }: Sched
                   onIncrease={() => dispatch({ type: 'stepDay', delta: 1 })}
                 />
               </FhGroup>
-              <FhGroup label="시">
-                <FhStepper
-                  small
-                  label="시"
-                  text={fmtHour(draft.timeMin)}
-                  decreaseLabel="시 줄이기"
-                  increaseLabel="시 늘리기"
-                  decreaseDisabled={draft.timeMin < MIN_TIME_MIN + 60}
-                  increaseDisabled={draft.timeMin >= MAX_TIME_MIN}
-                  onDecrease={() => dispatch({ type: 'stepTime', delta: -60 })}
-                  onIncrease={() => dispatch({ type: 'stepTime', delta: 60 })}
-                />
+              <FhGroup label="시작 시각 · 5분">
+                <StartTimePicker timeMin={draft.timeMin} onChange={(timeMin) => dispatch({ type: 'setTime', timeMin })} />
               </FhGroup>
-              <FhGroup label="분 · 5분 단위">
-                <FhStepper
-                  small
-                  label="분"
-                  text={fmtMinute(draft.timeMin)}
-                  decreaseLabel="분 줄이기"
-                  increaseLabel="분 늘리기"
-                  onDecrease={() => dispatch({ type: 'stepMinute', delta: -5 })}
-                  onIncrease={() => dispatch({ type: 'stepMinute', delta: 5 })}
-                />
+              <FhGroup label="소요 시간 · 5분 단위">
+                <DurationStepper draft={draft} ui={ui} dispatch={dispatch} />
               </FhGroup>
             </div>
             {conflictTitle ? (
@@ -279,7 +273,7 @@ export function StepSchedule({ draft, ui, dispatch, base, conflictTitle }: Sched
                 <span>이 시간에는 다른 클래스가 없어요.</span>
               </div>
             )}
-            <DurationGroup draft={draft} ui={ui} dispatch={dispatch} />
+            <DurationChips draft={draft} ui={ui} dispatch={dispatch} />
             <FhGroup label="예약 알림">
               <FhSeg
                 label="예약 알림"

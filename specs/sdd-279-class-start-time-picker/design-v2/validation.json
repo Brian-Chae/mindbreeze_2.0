@@ -1,0 +1,1291 @@
+{
+  "generatedAt": "2026-11-03T03:30:14.814Z",
+  "method": "Chrome headless + Playwright / file URL / getBoundingClientRect",
+  "results": [
+    {
+      "labels": [
+        {
+          "x": 240,
+          "y": 270,
+          "width": 309.328125,
+          "height": 20,
+          "bottom": 290
+        },
+        {
+          "x": 565.328125,
+          "y": 270,
+          "width": 309.328125,
+          "height": 20,
+          "bottom": 290
+        },
+        {
+          "x": 890.65625,
+          "y": 270,
+          "width": 309.34375,
+          "height": 20,
+          "bottom": 290
+        }
+      ],
+      "controls": [
+        {
+          "x": 240,
+          "y": 298,
+          "width": 309.328125,
+          "height": 88,
+          "bottom": 386
+        },
+        {
+          "x": 565.328125,
+          "y": 298,
+          "width": 309.328125,
+          "height": 88,
+          "bottom": 386
+        },
+        {
+          "x": 890.65625,
+          "y": 298,
+          "width": 309.34375,
+          "height": 88,
+          "bottom": 386
+        }
+      ],
+      "labelYDelta": 0,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "timeWidths": [
+        150.65625,
+        150.671875
+      ],
+      "hourMinuteRatio": 0.9998962978326247,
+      "helperLabel": {
+        "present": false,
+        "alignment": "보조 라벨 없음; 접근성 이름에 5분 단위 명시"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "allTargets": 25,
+      "timeMin": "1140",
+      "labelBaselineApplicable": true,
+      "errors": [],
+      "option": 1,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "pass": true
+    },
+    {
+      "labels": [
+        {
+          "x": 160,
+          "y": 270,
+          "width": 309.328125,
+          "height": 20,
+          "bottom": 290
+        },
+        {
+          "x": 485.328125,
+          "y": 270,
+          "width": 309.328125,
+          "height": 20,
+          "bottom": 290
+        },
+        {
+          "x": 810.65625,
+          "y": 270,
+          "width": 309.34375,
+          "height": 20,
+          "bottom": 290
+        }
+      ],
+      "controls": [
+        {
+          "x": 160,
+          "y": 298,
+          "width": 309.328125,
+          "height": 88,
+          "bottom": 386
+        },
+        {
+          "x": 485.328125,
+          "y": 298,
+          "width": 309.328125,
+          "height": 88,
+          "bottom": 386
+        },
+        {
+          "x": 810.65625,
+          "y": 298,
+          "width": 309.34375,
+          "height": 88,
+          "bottom": 386
+        }
+      ],
+      "labelYDelta": 0,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "timeWidths": [
+        150.65625,
+        150.671875
+      ],
+      "hourMinuteRatio": 0.9998962978326247,
+      "helperLabel": {
+        "present": false,
+        "alignment": "보조 라벨 없음; 접근성 이름에 5분 단위 명시"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "allTargets": 25,
+      "timeMin": "1140",
+      "labelBaselineApplicable": true,
+      "errors": [],
+      "option": 1,
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "pass": true
+    },
+    {
+      "labels": [
+        {
+          "x": 49,
+          "y": 270,
+          "width": 298,
+          "height": 20,
+          "bottom": 290
+        },
+        {
+          "x": 363,
+          "y": 270,
+          "width": 298,
+          "height": 20,
+          "bottom": 290
+        },
+        {
+          "x": 677,
+          "y": 270,
+          "width": 298,
+          "height": 20,
+          "bottom": 290
+        }
+      ],
+      "controls": [
+        {
+          "x": 49,
+          "y": 298,
+          "width": 298,
+          "height": 88,
+          "bottom": 386
+        },
+        {
+          "x": 363,
+          "y": 298,
+          "width": 298,
+          "height": 88,
+          "bottom": 386
+        },
+        {
+          "x": 677,
+          "y": 298,
+          "width": 298,
+          "height": 88,
+          "bottom": 386
+        }
+      ],
+      "labelYDelta": 0,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "timeWidths": [
+        145,
+        145
+      ],
+      "hourMinuteRatio": 1,
+      "helperLabel": {
+        "present": false,
+        "alignment": "보조 라벨 없음; 접근성 이름에 5분 단위 명시"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "allTargets": 25,
+      "timeMin": "1140",
+      "labelBaselineApplicable": true,
+      "errors": [],
+      "option": 1,
+      "viewport": {
+        "width": 1024,
+        "height": 900
+      },
+      "pass": true
+    },
+    {
+      "labels": [
+        {
+          "x": 33,
+          "y": 248,
+          "width": 324,
+          "height": 20,
+          "bottom": 268
+        },
+        {
+          "x": 33,
+          "y": 380,
+          "width": 324,
+          "height": 20,
+          "bottom": 400
+        },
+        {
+          "x": 33,
+          "y": 512,
+          "width": 324,
+          "height": 20,
+          "bottom": 532
+        }
+      ],
+      "controls": [
+        {
+          "x": 33,
+          "y": 276,
+          "width": 324,
+          "height": 88,
+          "bottom": 364
+        },
+        {
+          "x": 33,
+          "y": 408,
+          "width": 324,
+          "height": 88,
+          "bottom": 496
+        },
+        {
+          "x": 33,
+          "y": 540,
+          "width": 324,
+          "height": 88,
+          "bottom": 628
+        }
+      ],
+      "labelYDelta": 264,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "timeWidths": [
+        158,
+        158
+      ],
+      "hourMinuteRatio": 1,
+      "helperLabel": {
+        "present": false,
+        "alignment": "보조 라벨 없음; 접근성 이름에 5분 단위 명시"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "allTargets": 25,
+      "timeMin": "1140",
+      "labelBaselineApplicable": false,
+      "errors": [],
+      "option": 1,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pass": true
+    },
+    {
+      "labels": [
+        {
+          "x": 33,
+          "y": 248,
+          "width": 324,
+          "height": 20,
+          "bottom": 268
+        },
+        {
+          "x": 33,
+          "y": 380,
+          "width": 324,
+          "height": 20,
+          "bottom": 400
+        },
+        {
+          "x": 33,
+          "y": 512,
+          "width": 324,
+          "height": 20,
+          "bottom": 532
+        }
+      ],
+      "controls": [
+        {
+          "x": 33,
+          "y": 276,
+          "width": 324,
+          "height": 88,
+          "bottom": 364
+        },
+        {
+          "x": 33,
+          "y": 408,
+          "width": 324,
+          "height": 88,
+          "bottom": 496
+        },
+        {
+          "x": 33,
+          "y": 540,
+          "width": 324,
+          "height": 88,
+          "bottom": 628
+        }
+      ],
+      "labelYDelta": 264,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "timeWidths": [
+        158,
+        158
+      ],
+      "hourMinuteRatio": 1,
+      "helperLabel": {
+        "present": false,
+        "alignment": "보조 라벨 없음; 접근성 이름에 5분 단위 명시"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "allTargets": 25,
+      "timeMin": "1140",
+      "labelBaselineApplicable": false,
+      "errors": [],
+      "option": 1,
+      "viewport": {
+        "width": 390,
+        "height": 600
+      },
+      "pass": true
+    },
+    {
+      "labels": [
+        {
+          "x": 240,
+          "y": 270,
+          "width": 272.9375,
+          "height": 20,
+          "bottom": 290
+        },
+        {
+          "x": 528.9375,
+          "y": 270,
+          "width": 382.109375,
+          "height": 20,
+          "bottom": 290
+        },
+        {
+          "x": 927.046875,
+          "y": 270,
+          "width": 272.9375,
+          "height": 20,
+          "bottom": 290
+        }
+      ],
+      "controls": [
+        {
+          "x": 240,
+          "y": 298,
+          "width": 272.9375,
+          "height": 88,
+          "bottom": 386
+        },
+        {
+          "x": 528.9375,
+          "y": 298,
+          "width": 382.109375,
+          "height": 88,
+          "bottom": 386
+        },
+        {
+          "x": 927.046875,
+          "y": 298,
+          "width": 272.9375,
+          "height": 88,
+          "bottom": 386
+        }
+      ],
+      "labelYDelta": 0,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "timeWidths": [
+        110.9375,
+        110.953125
+      ],
+      "hourMinuteRatio": 0.9998591747641177,
+      "helperLabel": {
+        "present": false,
+        "alignment": "보조 라벨 없음; 접근성 이름에 5분 단위 명시"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "allTargets": 27,
+      "timeMin": "1140",
+      "labelBaselineApplicable": true,
+      "errors": [],
+      "option": 2,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "pass": true
+    },
+    {
+      "labels": [
+        {
+          "x": 160,
+          "y": 270,
+          "width": 272.9375,
+          "height": 20,
+          "bottom": 290
+        },
+        {
+          "x": 448.9375,
+          "y": 270,
+          "width": 382.109375,
+          "height": 20,
+          "bottom": 290
+        },
+        {
+          "x": 847.046875,
+          "y": 270,
+          "width": 272.9375,
+          "height": 20,
+          "bottom": 290
+        }
+      ],
+      "controls": [
+        {
+          "x": 160,
+          "y": 298,
+          "width": 272.9375,
+          "height": 88,
+          "bottom": 386
+        },
+        {
+          "x": 448.9375,
+          "y": 298,
+          "width": 382.109375,
+          "height": 88,
+          "bottom": 386
+        },
+        {
+          "x": 847.046875,
+          "y": 298,
+          "width": 272.9375,
+          "height": 88,
+          "bottom": 386
+        }
+      ],
+      "labelYDelta": 0,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "timeWidths": [
+        110.9375,
+        110.953125
+      ],
+      "hourMinuteRatio": 0.9998591747641177,
+      "helperLabel": {
+        "present": false,
+        "alignment": "보조 라벨 없음; 접근성 이름에 5분 단위 명시"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "allTargets": 27,
+      "timeMin": "1140",
+      "labelBaselineApplicable": true,
+      "errors": [],
+      "option": 2,
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "pass": true
+    },
+    {
+      "labels": [
+        {
+          "x": 49,
+          "y": 270,
+          "width": 262.9375,
+          "height": 20,
+          "bottom": 290
+        },
+        {
+          "x": 327.9375,
+          "y": 270,
+          "width": 368.109375,
+          "height": 20,
+          "bottom": 290
+        },
+        {
+          "x": 712.046875,
+          "y": 270,
+          "width": 262.9375,
+          "height": 20,
+          "bottom": 290
+        }
+      ],
+      "controls": [
+        {
+          "x": 49,
+          "y": 298,
+          "width": 262.9375,
+          "height": 88,
+          "bottom": 386
+        },
+        {
+          "x": 327.9375,
+          "y": 298,
+          "width": 368.109375,
+          "height": 88,
+          "bottom": 386
+        },
+        {
+          "x": 712.046875,
+          "y": 298,
+          "width": 262.9375,
+          "height": 88,
+          "bottom": 386
+        }
+      ],
+      "labelYDelta": 0,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "timeWidths": [
+        106.703125,
+        106.703125
+      ],
+      "hourMinuteRatio": 1,
+      "helperLabel": {
+        "present": false,
+        "alignment": "보조 라벨 없음; 접근성 이름에 5분 단위 명시"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "allTargets": 27,
+      "timeMin": "1140",
+      "labelBaselineApplicable": true,
+      "errors": [],
+      "option": 2,
+      "viewport": {
+        "width": 1024,
+        "height": 900
+      },
+      "pass": true
+    },
+    {
+      "labels": [
+        {
+          "x": 33,
+          "y": 248,
+          "width": 324,
+          "height": 20,
+          "bottom": 268
+        },
+        {
+          "x": 33,
+          "y": 380,
+          "width": 324,
+          "height": 20,
+          "bottom": 400
+        },
+        {
+          "x": 33,
+          "y": 512,
+          "width": 324,
+          "height": 20,
+          "bottom": 532
+        }
+      ],
+      "controls": [
+        {
+          "x": 33,
+          "y": 276,
+          "width": 324,
+          "height": 88,
+          "bottom": 364
+        },
+        {
+          "x": 33,
+          "y": 408,
+          "width": 324,
+          "height": 88,
+          "bottom": 496
+        },
+        {
+          "x": 33,
+          "y": 540,
+          "width": 324,
+          "height": 88,
+          "bottom": 628
+        }
+      ],
+      "labelYDelta": 264,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "timeWidths": [
+        158,
+        158
+      ],
+      "hourMinuteRatio": 1,
+      "helperLabel": {
+        "present": false,
+        "alignment": "보조 라벨 없음; 접근성 이름에 5분 단위 명시"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "allTargets": 25,
+      "timeMin": "1140",
+      "labelBaselineApplicable": false,
+      "errors": [],
+      "option": 2,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pass": true
+    },
+    {
+      "labels": [
+        {
+          "x": 33,
+          "y": 248,
+          "width": 324,
+          "height": 20,
+          "bottom": 268
+        },
+        {
+          "x": 33,
+          "y": 380,
+          "width": 324,
+          "height": 20,
+          "bottom": 400
+        },
+        {
+          "x": 33,
+          "y": 512,
+          "width": 324,
+          "height": 20,
+          "bottom": 532
+        }
+      ],
+      "controls": [
+        {
+          "x": 33,
+          "y": 276,
+          "width": 324,
+          "height": 88,
+          "bottom": 364
+        },
+        {
+          "x": 33,
+          "y": 408,
+          "width": 324,
+          "height": 88,
+          "bottom": 496
+        },
+        {
+          "x": 33,
+          "y": 540,
+          "width": 324,
+          "height": 88,
+          "bottom": 628
+        }
+      ],
+      "labelYDelta": 264,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "timeWidths": [
+        158,
+        158
+      ],
+      "hourMinuteRatio": 1,
+      "helperLabel": {
+        "present": false,
+        "alignment": "보조 라벨 없음; 접근성 이름에 5분 단위 명시"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "allTargets": 25,
+      "timeMin": "1140",
+      "labelBaselineApplicable": false,
+      "errors": [],
+      "option": 2,
+      "viewport": {
+        "width": 390,
+        "height": 600
+      },
+      "pass": true
+    },
+    {
+      "labels": [
+        {
+          "x": 240,
+          "y": 270,
+          "width": 309.328125,
+          "height": 20,
+          "bottom": 290
+        },
+        {
+          "x": 565.328125,
+          "y": 270,
+          "width": 309.328125,
+          "height": 20,
+          "bottom": 290
+        },
+        {
+          "x": 890.65625,
+          "y": 270,
+          "width": 309.34375,
+          "height": 20,
+          "bottom": 290
+        }
+      ],
+      "controls": [
+        {
+          "x": 240,
+          "y": 298,
+          "width": 309.328125,
+          "height": 88,
+          "bottom": 386
+        },
+        {
+          "x": 565.328125,
+          "y": 298,
+          "width": 309.328125,
+          "height": 88,
+          "bottom": 386
+        },
+        {
+          "x": 890.65625,
+          "y": 298,
+          "width": 309.34375,
+          "height": 88,
+          "bottom": 386
+        }
+      ],
+      "labelYDelta": 0,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "timeWidths": [],
+      "hourMinuteRatio": null,
+      "helperLabel": {
+        "present": false,
+        "alignment": "보조 라벨 없음; 접근성 이름에 5분 단위 명시"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "allTargets": 24,
+      "timeMin": "1140",
+      "popover": {
+        "columns": [
+          {
+            "width": 137.65625,
+            "x": 578.328125
+          },
+          {
+            "width": 137.671875,
+            "x": 723.984375
+          }
+        ],
+        "hourMinuteRatio": 0.999886505504483,
+        "overflow": 0
+      },
+      "labelBaselineApplicable": true,
+      "errors": [],
+      "option": 3,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "pass": true
+    },
+    {
+      "labels": [
+        {
+          "x": 160,
+          "y": 270,
+          "width": 309.328125,
+          "height": 20,
+          "bottom": 290
+        },
+        {
+          "x": 485.328125,
+          "y": 270,
+          "width": 309.328125,
+          "height": 20,
+          "bottom": 290
+        },
+        {
+          "x": 810.65625,
+          "y": 270,
+          "width": 309.34375,
+          "height": 20,
+          "bottom": 290
+        }
+      ],
+      "controls": [
+        {
+          "x": 160,
+          "y": 298,
+          "width": 309.328125,
+          "height": 88,
+          "bottom": 386
+        },
+        {
+          "x": 485.328125,
+          "y": 298,
+          "width": 309.328125,
+          "height": 88,
+          "bottom": 386
+        },
+        {
+          "x": 810.65625,
+          "y": 298,
+          "width": 309.34375,
+          "height": 88,
+          "bottom": 386
+        }
+      ],
+      "labelYDelta": 0,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "timeWidths": [],
+      "hourMinuteRatio": null,
+      "helperLabel": {
+        "present": false,
+        "alignment": "보조 라벨 없음; 접근성 이름에 5분 단위 명시"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "allTargets": 24,
+      "timeMin": "1140",
+      "popover": {
+        "columns": [
+          {
+            "width": 137.65625,
+            "x": 498.328125
+          },
+          {
+            "width": 137.671875,
+            "x": 643.984375
+          }
+        ],
+        "hourMinuteRatio": 0.999886505504483,
+        "overflow": 0
+      },
+      "labelBaselineApplicable": true,
+      "errors": [],
+      "option": 3,
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "pass": true
+    },
+    {
+      "labels": [
+        {
+          "x": 49,
+          "y": 270,
+          "width": 298,
+          "height": 20,
+          "bottom": 290
+        },
+        {
+          "x": 363,
+          "y": 270,
+          "width": 298,
+          "height": 20,
+          "bottom": 290
+        },
+        {
+          "x": 677,
+          "y": 270,
+          "width": 298,
+          "height": 20,
+          "bottom": 290
+        }
+      ],
+      "controls": [
+        {
+          "x": 49,
+          "y": 298,
+          "width": 298,
+          "height": 88,
+          "bottom": 386
+        },
+        {
+          "x": 363,
+          "y": 298,
+          "width": 298,
+          "height": 88,
+          "bottom": 386
+        },
+        {
+          "x": 677,
+          "y": 298,
+          "width": 298,
+          "height": 88,
+          "bottom": 386
+        }
+      ],
+      "labelYDelta": 0,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "timeWidths": [],
+      "hourMinuteRatio": null,
+      "helperLabel": {
+        "present": false,
+        "alignment": "보조 라벨 없음; 접근성 이름에 5분 단위 명시"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "allTargets": 24,
+      "timeMin": "1140",
+      "popover": {
+        "columns": [
+          {
+            "width": 132,
+            "x": 376
+          },
+          {
+            "width": 132,
+            "x": 516
+          }
+        ],
+        "hourMinuteRatio": 1,
+        "overflow": 0
+      },
+      "labelBaselineApplicable": true,
+      "errors": [],
+      "option": 3,
+      "viewport": {
+        "width": 1024,
+        "height": 900
+      },
+      "pass": true
+    },
+    {
+      "labels": [
+        {
+          "x": 33,
+          "y": 248,
+          "width": 324,
+          "height": 20,
+          "bottom": 268
+        },
+        {
+          "x": 33,
+          "y": 380,
+          "width": 324,
+          "height": 20,
+          "bottom": 400
+        },
+        {
+          "x": 33,
+          "y": 512,
+          "width": 324,
+          "height": 20,
+          "bottom": 532
+        }
+      ],
+      "controls": [
+        {
+          "x": 33,
+          "y": 276,
+          "width": 324,
+          "height": 88,
+          "bottom": 364
+        },
+        {
+          "x": 33,
+          "y": 408,
+          "width": 324,
+          "height": 88,
+          "bottom": 496
+        },
+        {
+          "x": 33,
+          "y": 540,
+          "width": 324,
+          "height": 88,
+          "bottom": 628
+        }
+      ],
+      "labelYDelta": 264,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "timeWidths": [
+        158,
+        158
+      ],
+      "hourMinuteRatio": 1,
+      "helperLabel": {
+        "present": false,
+        "alignment": "보조 라벨 없음; 접근성 이름에 5분 단위 명시"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "allTargets": 25,
+      "timeMin": "1140",
+      "labelBaselineApplicable": false,
+      "errors": [],
+      "option": 3,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pass": true
+    },
+    {
+      "labels": [
+        {
+          "x": 33,
+          "y": 248,
+          "width": 324,
+          "height": 20,
+          "bottom": 268
+        },
+        {
+          "x": 33,
+          "y": 380,
+          "width": 324,
+          "height": 20,
+          "bottom": 400
+        },
+        {
+          "x": 33,
+          "y": 512,
+          "width": 324,
+          "height": 20,
+          "bottom": 532
+        }
+      ],
+      "controls": [
+        {
+          "x": 33,
+          "y": 276,
+          "width": 324,
+          "height": 88,
+          "bottom": 364
+        },
+        {
+          "x": 33,
+          "y": 408,
+          "width": 324,
+          "height": 88,
+          "bottom": 496
+        },
+        {
+          "x": 33,
+          "y": 540,
+          "width": 324,
+          "height": 88,
+          "bottom": 628
+        }
+      ],
+      "labelYDelta": 264,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "timeWidths": [
+        158,
+        158
+      ],
+      "hourMinuteRatio": 1,
+      "helperLabel": {
+        "present": false,
+        "alignment": "보조 라벨 없음; 접근성 이름에 5분 단위 명시"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "allTargets": 25,
+      "timeMin": "1140",
+      "labelBaselineApplicable": false,
+      "errors": [],
+      "option": 3,
+      "viewport": {
+        "width": 390,
+        "height": 600
+      },
+      "pass": true
+    }
+  ],
+  "interactions": [
+    {
+      "option": 1,
+      "to0900": true,
+      "max": true,
+      "maxMinuteDisabled": true,
+      "min": true,
+      "minutes": true
+    },
+    {
+      "option": 1,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "to0900": true,
+      "max": true,
+      "maxMinuteDisabled": true,
+      "min": true
+    },
+    {
+      "option": 1,
+      "viewport": {
+        "width": 390,
+        "height": 600
+      },
+      "to0900": true,
+      "max": true,
+      "maxMinuteDisabled": true,
+      "min": true
+    },
+    {
+      "option": 2,
+      "to0900": true,
+      "min": true,
+      "max": true,
+      "minutes": true
+    },
+    {
+      "option": 2,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "to0900": true,
+      "max": true,
+      "maxMinuteDisabled": true,
+      "min": true
+    },
+    {
+      "option": 2,
+      "viewport": {
+        "width": 390,
+        "height": 600
+      },
+      "to0900": true,
+      "max": true,
+      "maxMinuteDisabled": true,
+      "min": true
+    },
+    {
+      "option": 3,
+      "to0900": true,
+      "clickFocusReturn": true,
+      "arrowDown": true,
+      "arrowUp": true,
+      "enterCloses": true,
+      "enterFocusReturn": true,
+      "escape": true,
+      "min": true,
+      "max": true,
+      "minutes": true
+    },
+    {
+      "option": 3,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "to0900": true,
+      "max": true,
+      "maxMinuteDisabled": true,
+      "min": true
+    },
+    {
+      "option": 3,
+      "viewport": {
+        "width": 390,
+        "height": 600
+      },
+      "to0900": true,
+      "max": true,
+      "maxMinuteDisabled": true,
+      "min": true
+    }
+  ],
+  "index": {
+    "gallery": true,
+    "tabs": true
+  },
+  "clickCount": {
+    "c1": 2,
+    "c2": 3,
+    "c3": 3,
+    "mobile": 2,
+    "method": "네이티브 select의 열기와 옵션 선택을 각각 1회로 계산; selectOption은 값 반영 검증으로 OS 목록의 실제 포인터 클릭을 증명하지 않음. C3은 필드 열기, 오전, 9시 실제 3클릭."
+  },
+  "failures": [],
+  "limitations": [
+    "모바일 동일 y 기준선은 세로 배치라 N/A; 각 라벨-컨트롤 8px 간격 검사",
+    "실기기 OS 선택기, 화면낭독기, 제품 API와 서버 계약 미검증"
+  ]
+}

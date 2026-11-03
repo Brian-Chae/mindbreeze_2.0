@@ -168,8 +168,13 @@ describe('FH02c 일정', () => {
   it('시간 예약: 날짜·시·분과 예약 알림, 충돌 없음 안내', async () => {
     await mount(3, { timeMin: 915 }, undefined, null);
     expect(text()).toContain('내일 · 10월 18일 일');
-    expect(text()).toContain('오후 3시');
-    expect(text()).toContain('15분');
+    // SDD-279: 시작 시각은 단일 필드(데스크톱)·시/분 select(모바일 — 이 시험의 matchMedia 목은 모바일)
+    expect(text()).toContain('시작 날짜');
+    expect(text()).toContain('시작 시각 · 5분');
+    expect(text()).toContain('소요 시간 · 5분 단위');
+    expect(container.querySelectorAll('.fh-when3 > .fh-group').length).toBe(3);
+    expect((container.querySelector('select[aria-label="시작 시각 시"]') as HTMLSelectElement).value).toBe('15');
+    expect((container.querySelector('select[aria-label^="시작 시각 분"]') as HTMLSelectElement).value).toBe('15');
     expect(text()).toContain('이 시간에는 다른 클래스가 없어요.');
     for (const label of ['끄기', '하루 전', '1시간 전']) expect(text()).toContain(label);
   });

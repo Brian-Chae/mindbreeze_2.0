@@ -224,6 +224,7 @@ export type WizardAction =
   | { type: 'stepDuration'; delta: number }
   | { type: 'stepDay'; delta: number }
   | { type: 'stepTime'; delta: number }
+  | { type: 'setTime'; timeMin: number }
   | { type: 'stepMinute'; delta: number }
   | { type: 'toggleMember'; member: WizardMember }
   | { type: 'pickMembers'; members: readonly WizardMember[] }
@@ -301,6 +302,8 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
       return withDraft(state, { dayOffset: clamp(draft.dayOffset + action.delta, 0, MAX_DAY_OFFSET) });
     case 'stepTime':
       return withDraft(state, { timeMin: clamp(draft.timeMin + action.delta, MIN_TIME_MIN, MAX_TIME_MIN) });
+    case 'setTime':
+      return withDraft(state, { timeMin: clamp(action.timeMin, MIN_TIME_MIN, MAX_TIME_MIN) });
     case 'stepMinute': {
       const hour = Math.floor(draft.timeMin / 60);
       const minute = (((draft.timeMin % 60) + action.delta) % 60 + 60) % 60;
