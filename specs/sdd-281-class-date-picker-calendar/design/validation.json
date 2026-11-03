@@ -1,0 +1,1692 @@
+{
+  "generatedAt": "2026-11-03T07:27:46.487Z",
+  "method": "Chrome headless + Playwright; file URL; getBoundingClientRect; 실제 클릭·키보드",
+  "results": [
+    {
+      "n": 1,
+      "w": 1440,
+      "h": 900,
+      "labels": [
+        {
+          "x": 425,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 611,
+          "bottom": 359.59375
+        },
+        {
+          "x": 627,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 813,
+          "bottom": 359.59375
+        },
+        {
+          "x": 829,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 1015,
+          "bottom": 359.59375
+        }
+      ],
+      "controls": [
+        {
+          "x": 425,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 611,
+          "bottom": 423.59375
+        },
+        {
+          "x": 627,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 813,
+          "bottom": 423.59375
+        },
+        {
+          "x": 829,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 1015,
+          "bottom": 423.59375
+        }
+      ],
+      "labelYDelta": 0,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "dateStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "timeStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "popup": {
+        "width": 326,
+        "fieldWidth": 186,
+        "ratio": 1.7526881720430108,
+        "x": 425,
+        "y": 431.59375,
+        "bottom": 779.59375,
+        "contained": true,
+        "touchMinWidth": 44,
+        "touchMinHeight": 44,
+        "pastDisabled": true
+      },
+      "errors": []
+    },
+    {
+      "n": 1,
+      "w": 1280,
+      "h": 900,
+      "labels": [
+        {
+          "x": 345,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 531,
+          "bottom": 359.59375
+        },
+        {
+          "x": 547,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 733,
+          "bottom": 359.59375
+        },
+        {
+          "x": 749,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 935,
+          "bottom": 359.59375
+        }
+      ],
+      "controls": [
+        {
+          "x": 345,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 531,
+          "bottom": 423.59375
+        },
+        {
+          "x": 547,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 733,
+          "bottom": 423.59375
+        },
+        {
+          "x": 749,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 935,
+          "bottom": 423.59375
+        }
+      ],
+      "labelYDelta": 0,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "dateStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "timeStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "popup": {
+        "width": 326,
+        "fieldWidth": 186,
+        "ratio": 1.7526881720430108,
+        "x": 345,
+        "y": 431.59375,
+        "bottom": 779.59375,
+        "contained": true,
+        "touchMinWidth": 44,
+        "touchMinHeight": 44,
+        "pastDisabled": true
+      },
+      "errors": []
+    },
+    {
+      "n": 1,
+      "w": 1024,
+      "h": 900,
+      "labels": [
+        {
+          "x": 217,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 403,
+          "bottom": 359.59375
+        },
+        {
+          "x": 419,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 605,
+          "bottom": 359.59375
+        },
+        {
+          "x": 621,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 807,
+          "bottom": 359.59375
+        }
+      ],
+      "controls": [
+        {
+          "x": 217,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 403,
+          "bottom": 423.59375
+        },
+        {
+          "x": 419,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 605,
+          "bottom": 423.59375
+        },
+        {
+          "x": 621,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 807,
+          "bottom": 423.59375
+        }
+      ],
+      "labelYDelta": 0,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "dateStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "timeStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "popup": {
+        "width": 326,
+        "fieldWidth": 186,
+        "ratio": 1.7526881720430108,
+        "x": 217,
+        "y": 431.59375,
+        "bottom": 779.59375,
+        "contained": true,
+        "touchMinWidth": 44,
+        "touchMinHeight": 44,
+        "pastDisabled": true
+      },
+      "errors": []
+    },
+    {
+      "n": 1,
+      "w": 390,
+      "h": 844,
+      "labels": [
+        {
+          "x": 33,
+          "y": 297.59375,
+          "width": 156,
+          "height": 20,
+          "right": 189,
+          "bottom": 317.59375
+        },
+        {
+          "x": 201,
+          "y": 297.59375,
+          "width": 156,
+          "height": 20,
+          "right": 357,
+          "bottom": 317.59375
+        },
+        {
+          "x": 33,
+          "y": 393.59375,
+          "width": 156,
+          "height": 20,
+          "right": 189,
+          "bottom": 413.59375
+        }
+      ],
+      "controls": [
+        {
+          "x": 33,
+          "y": 325.59375,
+          "width": 156,
+          "height": 56,
+          "right": 189,
+          "bottom": 381.59375
+        },
+        {
+          "x": 201,
+          "y": 325.59375,
+          "width": 74,
+          "height": 56,
+          "right": 275,
+          "bottom": 381.59375
+        },
+        {
+          "x": 33,
+          "y": 421.59375,
+          "width": 156,
+          "height": 56,
+          "right": 189,
+          "bottom": 477.59375
+        }
+      ],
+      "labelYDelta": null,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "dateStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "timeStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "popup": {
+        "width": 390,
+        "fieldWidth": 156,
+        "ratio": 2.5,
+        "x": 0,
+        "y": 428,
+        "bottom": 844,
+        "contained": true,
+        "touchMinWidth": 44,
+        "touchMinHeight": 44,
+        "pastDisabled": true
+      },
+      "errors": []
+    },
+    {
+      "n": 1,
+      "w": 390,
+      "h": 600,
+      "labels": [
+        {
+          "x": 33,
+          "y": 288.1875,
+          "width": 156,
+          "height": 20,
+          "right": 189,
+          "bottom": 308.1875
+        },
+        {
+          "x": 201,
+          "y": 288.1875,
+          "width": 156,
+          "height": 20,
+          "right": 357,
+          "bottom": 308.1875
+        },
+        {
+          "x": 33,
+          "y": 384.1875,
+          "width": 156,
+          "height": 20,
+          "right": 189,
+          "bottom": 404.1875
+        }
+      ],
+      "controls": [
+        {
+          "x": 33,
+          "y": 316.1875,
+          "width": 156,
+          "height": 56,
+          "right": 189,
+          "bottom": 372.1875
+        },
+        {
+          "x": 201,
+          "y": 316.1875,
+          "width": 74,
+          "height": 56,
+          "right": 275,
+          "bottom": 372.1875
+        },
+        {
+          "x": 33,
+          "y": 412.1875,
+          "width": 156,
+          "height": 56,
+          "right": 189,
+          "bottom": 468.1875
+        }
+      ],
+      "labelYDelta": null,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "dateStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "timeStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "popup": {
+        "width": 390,
+        "fieldWidth": 156,
+        "ratio": 2.5,
+        "x": 0,
+        "y": 184,
+        "bottom": 600,
+        "contained": true,
+        "touchMinWidth": 44,
+        "touchMinHeight": 44,
+        "pastDisabled": true
+      },
+      "errors": []
+    },
+    {
+      "n": 2,
+      "w": 1440,
+      "h": 900,
+      "labels": [
+        {
+          "x": 425,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 611,
+          "bottom": 359.59375
+        },
+        {
+          "x": 627,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 813,
+          "bottom": 359.59375
+        },
+        {
+          "x": 829,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 1015,
+          "bottom": 359.59375
+        }
+      ],
+      "controls": [
+        {
+          "x": 425,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 611,
+          "bottom": 423.59375
+        },
+        {
+          "x": 627,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 813,
+          "bottom": 423.59375
+        },
+        {
+          "x": 829,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 1015,
+          "bottom": 423.59375
+        }
+      ],
+      "labelYDelta": 0,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "dateStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "timeStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "popup": {
+        "width": 326,
+        "fieldWidth": 186,
+        "ratio": 1.7526881720430108,
+        "x": 425,
+        "y": 431.59375,
+        "bottom": 831.59375,
+        "contained": true,
+        "touchMinWidth": 44,
+        "touchMinHeight": 44,
+        "pastDisabled": true
+      },
+      "errors": []
+    },
+    {
+      "n": 2,
+      "w": 1280,
+      "h": 900,
+      "labels": [
+        {
+          "x": 345,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 531,
+          "bottom": 359.59375
+        },
+        {
+          "x": 547,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 733,
+          "bottom": 359.59375
+        },
+        {
+          "x": 749,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 935,
+          "bottom": 359.59375
+        }
+      ],
+      "controls": [
+        {
+          "x": 345,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 531,
+          "bottom": 423.59375
+        },
+        {
+          "x": 547,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 733,
+          "bottom": 423.59375
+        },
+        {
+          "x": 749,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 935,
+          "bottom": 423.59375
+        }
+      ],
+      "labelYDelta": 0,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "dateStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "timeStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "popup": {
+        "width": 326,
+        "fieldWidth": 186,
+        "ratio": 1.7526881720430108,
+        "x": 345,
+        "y": 431.59375,
+        "bottom": 831.59375,
+        "contained": true,
+        "touchMinWidth": 44,
+        "touchMinHeight": 44,
+        "pastDisabled": true
+      },
+      "errors": []
+    },
+    {
+      "n": 2,
+      "w": 1024,
+      "h": 900,
+      "labels": [
+        {
+          "x": 217,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 403,
+          "bottom": 359.59375
+        },
+        {
+          "x": 419,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 605,
+          "bottom": 359.59375
+        },
+        {
+          "x": 621,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 807,
+          "bottom": 359.59375
+        }
+      ],
+      "controls": [
+        {
+          "x": 217,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 403,
+          "bottom": 423.59375
+        },
+        {
+          "x": 419,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 605,
+          "bottom": 423.59375
+        },
+        {
+          "x": 621,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 807,
+          "bottom": 423.59375
+        }
+      ],
+      "labelYDelta": 0,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "dateStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "timeStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "popup": {
+        "width": 326,
+        "fieldWidth": 186,
+        "ratio": 1.7526881720430108,
+        "x": 217,
+        "y": 431.59375,
+        "bottom": 831.59375,
+        "contained": true,
+        "touchMinWidth": 44,
+        "touchMinHeight": 44,
+        "pastDisabled": true
+      },
+      "errors": []
+    },
+    {
+      "n": 2,
+      "w": 390,
+      "h": 844,
+      "labels": [
+        {
+          "x": 33,
+          "y": 297.59375,
+          "width": 156,
+          "height": 20,
+          "right": 189,
+          "bottom": 317.59375
+        },
+        {
+          "x": 201,
+          "y": 297.59375,
+          "width": 156,
+          "height": 20,
+          "right": 357,
+          "bottom": 317.59375
+        },
+        {
+          "x": 33,
+          "y": 393.59375,
+          "width": 156,
+          "height": 20,
+          "right": 189,
+          "bottom": 413.59375
+        }
+      ],
+      "controls": [
+        {
+          "x": 33,
+          "y": 325.59375,
+          "width": 156,
+          "height": 56,
+          "right": 189,
+          "bottom": 381.59375
+        },
+        {
+          "x": 201,
+          "y": 325.59375,
+          "width": 74,
+          "height": 56,
+          "right": 275,
+          "bottom": 381.59375
+        },
+        {
+          "x": 33,
+          "y": 421.59375,
+          "width": 156,
+          "height": 56,
+          "right": 189,
+          "bottom": 477.59375
+        }
+      ],
+      "labelYDelta": null,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "dateStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "timeStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "popup": {
+        "width": 390,
+        "fieldWidth": 156,
+        "ratio": 2.5,
+        "x": 0,
+        "y": 376,
+        "bottom": 844,
+        "contained": true,
+        "touchMinWidth": 44,
+        "touchMinHeight": 44,
+        "pastDisabled": true
+      },
+      "errors": []
+    },
+    {
+      "n": 2,
+      "w": 390,
+      "h": 600,
+      "labels": [
+        {
+          "x": 33,
+          "y": 288.1875,
+          "width": 156,
+          "height": 20,
+          "right": 189,
+          "bottom": 308.1875
+        },
+        {
+          "x": 201,
+          "y": 288.1875,
+          "width": 156,
+          "height": 20,
+          "right": 357,
+          "bottom": 308.1875
+        },
+        {
+          "x": 33,
+          "y": 384.1875,
+          "width": 156,
+          "height": 20,
+          "right": 189,
+          "bottom": 404.1875
+        }
+      ],
+      "controls": [
+        {
+          "x": 33,
+          "y": 316.1875,
+          "width": 156,
+          "height": 56,
+          "right": 189,
+          "bottom": 372.1875
+        },
+        {
+          "x": 201,
+          "y": 316.1875,
+          "width": 74,
+          "height": 56,
+          "right": 275,
+          "bottom": 372.1875
+        },
+        {
+          "x": 33,
+          "y": 412.1875,
+          "width": 156,
+          "height": 56,
+          "right": 189,
+          "bottom": 468.1875
+        }
+      ],
+      "labelYDelta": null,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "dateStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "timeStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "popup": {
+        "width": 390,
+        "fieldWidth": 156,
+        "ratio": 2.5,
+        "x": 0,
+        "y": 132,
+        "bottom": 600,
+        "contained": true,
+        "touchMinWidth": 44,
+        "touchMinHeight": 44,
+        "pastDisabled": true
+      },
+      "errors": []
+    },
+    {
+      "n": 3,
+      "w": 1440,
+      "h": 900,
+      "labels": [
+        {
+          "x": 425,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 611,
+          "bottom": 359.59375
+        },
+        {
+          "x": 627,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 813,
+          "bottom": 359.59375
+        },
+        {
+          "x": 829,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 1015,
+          "bottom": 359.59375
+        }
+      ],
+      "controls": [
+        {
+          "x": 425,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 611,
+          "bottom": 423.59375
+        },
+        {
+          "x": 627,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 813,
+          "bottom": 423.59375
+        },
+        {
+          "x": 829,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 1015,
+          "bottom": 423.59375
+        }
+      ],
+      "labelYDelta": 0,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "dateStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "timeStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "popup": {
+        "width": 326,
+        "fieldWidth": 186,
+        "ratio": 1.7526881720430108,
+        "x": 425,
+        "y": 431.59375,
+        "bottom": 779.59375,
+        "contained": true,
+        "touchMinWidth": 44,
+        "touchMinHeight": 44,
+        "pastDisabled": true
+      },
+      "errors": []
+    },
+    {
+      "n": 3,
+      "w": 1280,
+      "h": 900,
+      "labels": [
+        {
+          "x": 345,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 531,
+          "bottom": 359.59375
+        },
+        {
+          "x": 547,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 733,
+          "bottom": 359.59375
+        },
+        {
+          "x": 749,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 935,
+          "bottom": 359.59375
+        }
+      ],
+      "controls": [
+        {
+          "x": 345,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 531,
+          "bottom": 423.59375
+        },
+        {
+          "x": 547,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 733,
+          "bottom": 423.59375
+        },
+        {
+          "x": 749,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 935,
+          "bottom": 423.59375
+        }
+      ],
+      "labelYDelta": 0,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "dateStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "timeStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "popup": {
+        "width": 326,
+        "fieldWidth": 186,
+        "ratio": 1.7526881720430108,
+        "x": 345,
+        "y": 431.59375,
+        "bottom": 779.59375,
+        "contained": true,
+        "touchMinWidth": 44,
+        "touchMinHeight": 44,
+        "pastDisabled": true
+      },
+      "errors": []
+    },
+    {
+      "n": 3,
+      "w": 1024,
+      "h": 900,
+      "labels": [
+        {
+          "x": 217,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 403,
+          "bottom": 359.59375
+        },
+        {
+          "x": 419,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 605,
+          "bottom": 359.59375
+        },
+        {
+          "x": 621,
+          "y": 339.59375,
+          "width": 186,
+          "height": 20,
+          "right": 807,
+          "bottom": 359.59375
+        }
+      ],
+      "controls": [
+        {
+          "x": 217,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 403,
+          "bottom": 423.59375
+        },
+        {
+          "x": 419,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 605,
+          "bottom": 423.59375
+        },
+        {
+          "x": 621,
+          "y": 367.59375,
+          "width": 186,
+          "height": 56,
+          "right": 807,
+          "bottom": 423.59375
+        }
+      ],
+      "labelYDelta": 0,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "dateStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "timeStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "popup": {
+        "width": 326,
+        "fieldWidth": 186,
+        "ratio": 1.7526881720430108,
+        "x": 217,
+        "y": 431.59375,
+        "bottom": 779.59375,
+        "contained": true,
+        "touchMinWidth": 44,
+        "touchMinHeight": 44,
+        "pastDisabled": true
+      },
+      "errors": []
+    },
+    {
+      "n": 3,
+      "w": 390,
+      "h": 844,
+      "labels": [
+        {
+          "x": 33,
+          "y": 297.59375,
+          "width": 156,
+          "height": 20,
+          "right": 189,
+          "bottom": 317.59375
+        },
+        {
+          "x": 201,
+          "y": 297.59375,
+          "width": 156,
+          "height": 20,
+          "right": 357,
+          "bottom": 317.59375
+        },
+        {
+          "x": 33,
+          "y": 393.59375,
+          "width": 156,
+          "height": 20,
+          "right": 189,
+          "bottom": 413.59375
+        }
+      ],
+      "controls": [
+        {
+          "x": 33,
+          "y": 325.59375,
+          "width": 156,
+          "height": 56,
+          "right": 189,
+          "bottom": 381.59375
+        },
+        {
+          "x": 201,
+          "y": 325.59375,
+          "width": 74,
+          "height": 56,
+          "right": 275,
+          "bottom": 381.59375
+        },
+        {
+          "x": 33,
+          "y": 421.59375,
+          "width": 156,
+          "height": 56,
+          "right": 189,
+          "bottom": 477.59375
+        }
+      ],
+      "labelYDelta": null,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "dateStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "timeStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "popup": null,
+      "errors": []
+    },
+    {
+      "n": 3,
+      "w": 390,
+      "h": 600,
+      "labels": [
+        {
+          "x": 33,
+          "y": 288.1875,
+          "width": 156,
+          "height": 20,
+          "right": 189,
+          "bottom": 308.1875
+        },
+        {
+          "x": 201,
+          "y": 288.1875,
+          "width": 156,
+          "height": 20,
+          "right": 357,
+          "bottom": 308.1875
+        },
+        {
+          "x": 33,
+          "y": 384.1875,
+          "width": 156,
+          "height": 20,
+          "right": 189,
+          "bottom": 404.1875
+        }
+      ],
+      "controls": [
+        {
+          "x": 33,
+          "y": 316.1875,
+          "width": 156,
+          "height": 56,
+          "right": 189,
+          "bottom": 372.1875
+        },
+        {
+          "x": 201,
+          "y": 316.1875,
+          "width": 74,
+          "height": 56,
+          "right": 275,
+          "bottom": 372.1875
+        },
+        {
+          "x": 33,
+          "y": 412.1875,
+          "width": 156,
+          "height": 56,
+          "right": 189,
+          "bottom": 468.1875
+        }
+      ],
+      "labelYDelta": null,
+      "labelControlGaps": [
+        8,
+        8,
+        8
+      ],
+      "controlHeightDelta": 0,
+      "dateStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "timeStyle": {
+        "height": "56px",
+        "fontSize": "15px",
+        "borderRadius": "16px"
+      },
+      "overflow": 0,
+      "smallTargets": [],
+      "popup": null,
+      "errors": []
+    }
+  ],
+  "interactions": [
+    {
+      "n": 1,
+      "w": 1440,
+      "h": 900,
+      "picked": true,
+      "closed": true,
+      "focus": true,
+      "keyboard": true,
+      "monthDown": true,
+      "monthUp": true,
+      "escape": true
+    },
+    {
+      "n": 1,
+      "w": 1440,
+      "h": 900,
+      "crossMonth": true,
+      "yearBoundary": true,
+      "febClamp": true,
+      "leapMonth": true
+    },
+    {
+      "n": 1,
+      "w": 1440,
+      "h": 900,
+      "edge": true
+    },
+    {
+      "n": 1,
+      "w": 1280,
+      "h": 900,
+      "picked": true,
+      "closed": true,
+      "focus": true,
+      "keyboard": true,
+      "monthDown": true,
+      "monthUp": true,
+      "escape": true
+    },
+    {
+      "n": 1,
+      "w": 1280,
+      "h": 900,
+      "crossMonth": true,
+      "yearBoundary": true,
+      "febClamp": true,
+      "leapMonth": true
+    },
+    {
+      "n": 1,
+      "w": 1280,
+      "h": 900,
+      "edge": true
+    },
+    {
+      "n": 1,
+      "w": 1024,
+      "h": 900,
+      "picked": true,
+      "closed": true,
+      "focus": true,
+      "keyboard": true,
+      "monthDown": true,
+      "monthUp": true,
+      "escape": true
+    },
+    {
+      "n": 1,
+      "w": 1024,
+      "h": 900,
+      "crossMonth": true,
+      "yearBoundary": true,
+      "febClamp": true,
+      "leapMonth": true
+    },
+    {
+      "n": 1,
+      "w": 1024,
+      "h": 900,
+      "edge": true
+    },
+    {
+      "n": 1,
+      "w": 390,
+      "h": 844,
+      "picked": true,
+      "closed": true,
+      "focus": true,
+      "keyboard": true,
+      "monthDown": true,
+      "monthUp": true,
+      "escape": true
+    },
+    {
+      "n": 1,
+      "w": 390,
+      "h": 844,
+      "crossMonth": true,
+      "yearBoundary": true,
+      "febClamp": true,
+      "leapMonth": true
+    },
+    {
+      "n": 1,
+      "w": 390,
+      "h": 844,
+      "edge": true
+    },
+    {
+      "n": 1,
+      "w": 390,
+      "h": 600,
+      "picked": true,
+      "closed": true,
+      "focus": true,
+      "keyboard": true,
+      "monthDown": true,
+      "monthUp": true,
+      "escape": true
+    },
+    {
+      "n": 1,
+      "w": 390,
+      "h": 600,
+      "crossMonth": true,
+      "yearBoundary": true,
+      "febClamp": true,
+      "leapMonth": true
+    },
+    {
+      "n": 1,
+      "w": 390,
+      "h": 600,
+      "edge": true
+    },
+    {
+      "n": 2,
+      "w": 1440,
+      "h": 900,
+      "picked": true,
+      "closed": true,
+      "focus": true,
+      "keyboard": true,
+      "monthDown": true,
+      "monthUp": true,
+      "escape": true
+    },
+    {
+      "n": 2,
+      "w": 1440,
+      "h": 900,
+      "crossMonth": true,
+      "yearBoundary": true,
+      "febClamp": true,
+      "leapMonth": true
+    },
+    {
+      "n": 2,
+      "w": 1440,
+      "h": 900,
+      "edge": true
+    },
+    {
+      "n": 2,
+      "w": 1280,
+      "h": 900,
+      "picked": true,
+      "closed": true,
+      "focus": true,
+      "keyboard": true,
+      "monthDown": true,
+      "monthUp": true,
+      "escape": true
+    },
+    {
+      "n": 2,
+      "w": 1280,
+      "h": 900,
+      "crossMonth": true,
+      "yearBoundary": true,
+      "febClamp": true,
+      "leapMonth": true
+    },
+    {
+      "n": 2,
+      "w": 1280,
+      "h": 900,
+      "edge": true
+    },
+    {
+      "n": 2,
+      "w": 1024,
+      "h": 900,
+      "picked": true,
+      "closed": true,
+      "focus": true,
+      "keyboard": true,
+      "monthDown": true,
+      "monthUp": true,
+      "escape": true
+    },
+    {
+      "n": 2,
+      "w": 1024,
+      "h": 900,
+      "crossMonth": true,
+      "yearBoundary": true,
+      "febClamp": true,
+      "leapMonth": true
+    },
+    {
+      "n": 2,
+      "w": 1024,
+      "h": 900,
+      "edge": true
+    },
+    {
+      "n": 2,
+      "w": 390,
+      "h": 844,
+      "picked": true,
+      "closed": true,
+      "focus": true,
+      "keyboard": true,
+      "monthDown": true,
+      "monthUp": true,
+      "escape": true
+    },
+    {
+      "n": 2,
+      "w": 390,
+      "h": 844,
+      "crossMonth": true,
+      "yearBoundary": true,
+      "febClamp": true,
+      "leapMonth": true
+    },
+    {
+      "n": 2,
+      "w": 390,
+      "h": 844,
+      "edge": true
+    },
+    {
+      "n": 2,
+      "w": 390,
+      "h": 600,
+      "picked": true,
+      "closed": true,
+      "focus": true,
+      "keyboard": true,
+      "monthDown": true,
+      "monthUp": true,
+      "escape": true
+    },
+    {
+      "n": 2,
+      "w": 390,
+      "h": 600,
+      "crossMonth": true,
+      "yearBoundary": true,
+      "febClamp": true,
+      "leapMonth": true
+    },
+    {
+      "n": 2,
+      "w": 390,
+      "h": 600,
+      "edge": true
+    },
+    {
+      "n": 3,
+      "w": 1440,
+      "h": 900,
+      "picked": true,
+      "closed": true,
+      "focus": true,
+      "keyboard": true,
+      "monthDown": true,
+      "monthUp": true,
+      "escape": true
+    },
+    {
+      "n": 3,
+      "w": 1440,
+      "h": 900,
+      "crossMonth": true,
+      "yearBoundary": true,
+      "febClamp": true,
+      "leapMonth": true
+    },
+    {
+      "n": 3,
+      "w": 1440,
+      "h": 900,
+      "edge": true
+    },
+    {
+      "n": 3,
+      "w": 1280,
+      "h": 900,
+      "picked": true,
+      "closed": true,
+      "focus": true,
+      "keyboard": true,
+      "monthDown": true,
+      "monthUp": true,
+      "escape": true
+    },
+    {
+      "n": 3,
+      "w": 1280,
+      "h": 900,
+      "crossMonth": true,
+      "yearBoundary": true,
+      "febClamp": true,
+      "leapMonth": true
+    },
+    {
+      "n": 3,
+      "w": 1280,
+      "h": 900,
+      "edge": true
+    },
+    {
+      "n": 3,
+      "w": 1024,
+      "h": 900,
+      "picked": true,
+      "closed": true,
+      "focus": true,
+      "keyboard": true,
+      "monthDown": true,
+      "monthUp": true,
+      "escape": true
+    },
+    {
+      "n": 3,
+      "w": 1024,
+      "h": 900,
+      "crossMonth": true,
+      "yearBoundary": true,
+      "febClamp": true,
+      "leapMonth": true
+    },
+    {
+      "n": 3,
+      "w": 1024,
+      "h": 900,
+      "edge": true
+    },
+    {
+      "n": 3,
+      "w": 390,
+      "h": 844,
+      "nativeValue": "2026-11-24",
+      "osPopup": "실기기 미검증"
+    },
+    {
+      "n": 3,
+      "w": 390,
+      "h": 600,
+      "nativeValue": "2026-11-24",
+      "osPopup": "실기기 미검증"
+    }
+  ],
+  "failures": [],
+  "exceptions": [
+    "640px 카드와 3열 원형 유지: 필드 약186px보다 달력을326px로 확장. 7열44px 타깃과 필드동일폭 양립 불가.",
+    "모바일은 현행2열이므로 세 라벨 동일 y는 N/A; 라벨과 컨트롤8px 간격, 동일56px 높이 측정.",
+    "D3 모바일 네이티브 달력 내부는 OS 소유; fill/change는 값 반영만 확인."
+  ]
+}

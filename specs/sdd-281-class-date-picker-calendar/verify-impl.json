@@ -1,0 +1,755 @@
+{
+  "today": "2026-11-03",
+  "target": "2026-11-24",
+  "viewports": [
+    {
+      "w": 1440,
+      "h": 900,
+      "closed": {
+        "info": [
+          {
+            "label": "시작 날짜",
+            "w": 186,
+            "x": 425,
+            "y": 378,
+            "labelY": 350,
+            "ctlH": 56
+          },
+          {
+            "label": "시작 시각 · 5분",
+            "w": 186,
+            "x": 627,
+            "y": 378,
+            "labelY": 350,
+            "ctlH": 56
+          },
+          {
+            "label": "소요 시간",
+            "w": 186,
+            "x": 829,
+            "y": 378,
+            "labelY": 350,
+            "ctlH": 56
+          }
+        ],
+        "hScroll": false,
+        "oldStepper": false,
+        "nativeDate": false,
+        "dateBtn": true
+      },
+      "open": {
+        "kind": "pop",
+        "inView": true,
+        "w": 326,
+        "h": 370,
+        "bottomGap": 88,
+        "minCellH": 44,
+        "minCellW": 44,
+        "rows": 5,
+        "cellsInside": true,
+        "footInside": true,
+        "innerScroll": false,
+        "sheetMax": 765,
+        "hScroll": false,
+        "cardRight": 1040,
+        "popRight": 611
+      },
+      "pick": {
+        "trigger": "11/24(화)",
+        "panelClosed": true,
+        "taps": 2
+      },
+      "flow": {
+        "previewStartDates": [
+          "\"start_date\":\"2026-11-24\""
+        ],
+        "nextStepMentionsDate": true,
+        "nextStepSample": "클래스 만들기 초안 저장 1. 기본 정보 2. 일정 형태 3. 강사 배정 4. 초대·확인 누가 진행할까요? 강사 구성 지도사 · 주강사 강사 추가 배정 방식 모두 한 분이 맡아요 번갈아 맡아요 요일마다 달라요 회차마다 직접 정해요 모든 회차 한 명이 처음부터 끝까지 맡아요 미정 지도사 회차 목록 · 1개 일정 확인 1회차 · 11. 24. (화) 오전 9:00 · 60분 미정 지도사 이전 다음"
+      },
+      "close": {
+        "esc": true,
+        "outside": true,
+        "popCoversTrigger": false,
+        "triggerToggle": true,
+        "pick": true,
+        "valueKept": true,
+        "focusBack": true
+      },
+      "six": {
+        "month": "2027년 1월",
+        "kind": "pop",
+        "inView": true,
+        "w": 326,
+        "h": 416,
+        "bottomGap": 42,
+        "minCellH": 44,
+        "minCellW": 44,
+        "rows": 6,
+        "cellsInside": true,
+        "footInside": true,
+        "innerScroll": false,
+        "sheetMax": 765,
+        "hScroll": false,
+        "cardRight": 1040,
+        "popRight": 611
+      },
+      "closedAfter": {
+        "info": [
+          {
+            "label": "시작 날짜",
+            "w": 186,
+            "x": 425,
+            "y": 378,
+            "labelY": 350,
+            "ctlH": 56
+          },
+          {
+            "label": "시작 시각 · 5분",
+            "w": 186,
+            "x": 627,
+            "y": 378,
+            "labelY": 350,
+            "ctlH": 56
+          },
+          {
+            "label": "소요 시간",
+            "w": 186,
+            "x": 829,
+            "y": 378,
+            "labelY": 350,
+            "ctlH": 56
+          }
+        ],
+        "hScroll": false,
+        "oldStepper": false,
+        "nativeDate": false,
+        "dateBtn": true
+      }
+    },
+    {
+      "w": 1280,
+      "h": 720,
+      "closed": {
+        "info": [
+          {
+            "label": "시작 날짜",
+            "w": 191,
+            "x": 337,
+            "y": 288,
+            "labelY": 260,
+            "ctlH": 56
+          },
+          {
+            "label": "시작 시각 · 5분",
+            "w": 191,
+            "x": 544,
+            "y": 288,
+            "labelY": 260,
+            "ctlH": 56
+          },
+          {
+            "label": "소요 시간",
+            "w": 191,
+            "x": 752,
+            "y": 288,
+            "labelY": 260,
+            "ctlH": 56
+          }
+        ],
+        "hScroll": false,
+        "oldStepper": false,
+        "nativeDate": false,
+        "dateBtn": true
+      },
+      "open": {
+        "kind": "pop",
+        "inView": true,
+        "w": 326,
+        "h": 370,
+        "bottomGap": 8,
+        "minCellH": 44,
+        "minCellW": 44,
+        "rows": 5,
+        "cellsInside": true,
+        "footInside": true,
+        "innerScroll": false,
+        "sheetMax": 612,
+        "hScroll": false,
+        "cardRight": 960,
+        "popRight": 528
+      },
+      "pick": {
+        "trigger": "11/24(화)",
+        "panelClosed": true,
+        "taps": 2
+      },
+      "flow": {
+        "previewStartDates": [
+          "\"start_date\":\"2026-11-24\""
+        ],
+        "nextStepMentionsDate": true,
+        "nextStepSample": "클래스 만들기 초안 저장 1. 기본 정보 2. 일정 형태 3. 강사 배정 4. 초대·확인 누가 진행할까요? 강사 구성 지도사 · 주강사 강사 추가 배정 방식 모두 한 분이 맡아요 번갈아 맡아요 요일마다 달라요 회차마다 직접 정해요 모든 회차 한 명이 처음부터 끝까지 맡아요 미정 지도사 회차 목록 · 1개 일정 확인 1회차 · 11. 24. (화) 오전 9:00 · 60분 미정 지도사 이전 다음"
+      },
+      "close": {
+        "esc": true,
+        "outside": true,
+        "popCoversTrigger": true,
+        "pick": true,
+        "valueKept": true,
+        "focusBack": true
+      },
+      "six": {
+        "month": "2027년 1월",
+        "kind": "pop",
+        "inView": true,
+        "w": 326,
+        "h": 416,
+        "bottomGap": 8,
+        "minCellH": 44,
+        "minCellW": 44,
+        "rows": 6,
+        "cellsInside": true,
+        "footInside": true,
+        "innerScroll": false,
+        "sheetMax": 612,
+        "hScroll": false,
+        "cardRight": 960,
+        "popRight": 528
+      },
+      "closedAfter": {
+        "info": [
+          {
+            "label": "시작 날짜",
+            "w": 191,
+            "x": 337,
+            "y": 288,
+            "labelY": 260,
+            "ctlH": 56
+          },
+          {
+            "label": "시작 시각 · 5분",
+            "w": 191,
+            "x": 544,
+            "y": 288,
+            "labelY": 260,
+            "ctlH": 56
+          },
+          {
+            "label": "소요 시간",
+            "w": 191,
+            "x": 752,
+            "y": 288,
+            "labelY": 260,
+            "ctlH": 56
+          }
+        ],
+        "hScroll": false,
+        "oldStepper": false,
+        "nativeDate": false,
+        "dateBtn": true
+      }
+    },
+    {
+      "w": 1024,
+      "h": 768,
+      "closed": {
+        "info": [
+          {
+            "label": "시작 날짜",
+            "w": 186,
+            "x": 217,
+            "y": 312,
+            "labelY": 284,
+            "ctlH": 56
+          },
+          {
+            "label": "시작 시각 · 5분",
+            "w": 186,
+            "x": 419,
+            "y": 312,
+            "labelY": 284,
+            "ctlH": 56
+          },
+          {
+            "label": "소요 시간",
+            "w": 186,
+            "x": 621,
+            "y": 312,
+            "labelY": 284,
+            "ctlH": 56
+          }
+        ],
+        "hScroll": false,
+        "oldStepper": false,
+        "nativeDate": false,
+        "dateBtn": true
+      },
+      "open": {
+        "kind": "pop",
+        "inView": true,
+        "w": 326,
+        "h": 370,
+        "bottomGap": 22,
+        "minCellH": 44,
+        "minCellW": 44,
+        "rows": 5,
+        "cellsInside": true,
+        "footInside": true,
+        "innerScroll": false,
+        "sheetMax": 653,
+        "hScroll": false,
+        "cardRight": 832,
+        "popRight": 403
+      },
+      "pick": {
+        "trigger": "11/24(화)",
+        "panelClosed": true,
+        "taps": 2
+      },
+      "flow": {
+        "previewStartDates": [
+          "\"start_date\":\"2026-11-24\""
+        ],
+        "nextStepMentionsDate": true,
+        "nextStepSample": "클래스 만들기 초안 저장 1. 기본 정보 2. 일정 형태 3. 강사 배정 4. 초대·확인 누가 진행할까요? 강사 구성 지도사 · 주강사 강사 추가 배정 방식 모두 한 분이 맡아요 번갈아 맡아요 요일마다 달라요 회차마다 직접 정해요 모든 회차 한 명이 처음부터 끝까지 맡아요 미정 지도사 회차 목록 · 1개 일정 확인 1회차 · 11. 24. (화) 오전 9:00 · 60분 미정 지도사 이전 다음"
+      },
+      "close": {
+        "esc": true,
+        "outside": true,
+        "popCoversTrigger": false,
+        "triggerToggle": true,
+        "pick": true,
+        "valueKept": true,
+        "focusBack": true
+      },
+      "six": {
+        "month": "2027년 1월",
+        "kind": "pop",
+        "inView": true,
+        "w": 326,
+        "h": 416,
+        "bottomGap": 8,
+        "minCellH": 44,
+        "minCellW": 44,
+        "rows": 6,
+        "cellsInside": true,
+        "footInside": true,
+        "innerScroll": false,
+        "sheetMax": 653,
+        "hScroll": false,
+        "cardRight": 832,
+        "popRight": 403
+      },
+      "closedAfter": {
+        "info": [
+          {
+            "label": "시작 날짜",
+            "w": 186,
+            "x": 217,
+            "y": 312,
+            "labelY": 284,
+            "ctlH": 56
+          },
+          {
+            "label": "시작 시각 · 5분",
+            "w": 186,
+            "x": 419,
+            "y": 312,
+            "labelY": 284,
+            "ctlH": 56
+          },
+          {
+            "label": "소요 시간",
+            "w": 186,
+            "x": 621,
+            "y": 312,
+            "labelY": 284,
+            "ctlH": 56
+          }
+        ],
+        "hScroll": false,
+        "oldStepper": false,
+        "nativeDate": false,
+        "dateBtn": true
+      }
+    },
+    {
+      "w": 390,
+      "h": 844,
+      "closed": {
+        "info": [
+          {
+            "label": "시작 날짜",
+            "w": 156,
+            "x": 33,
+            "y": 328,
+            "labelY": 300,
+            "ctlH": 56
+          },
+          {
+            "label": "시작 시각 · 5분",
+            "w": 156,
+            "x": 201,
+            "y": 328,
+            "labelY": 300,
+            "ctlH": 56
+          },
+          {
+            "label": "소요 시간",
+            "w": 156,
+            "x": 33,
+            "y": 424,
+            "labelY": 396,
+            "ctlH": 56
+          }
+        ],
+        "hScroll": false,
+        "oldStepper": false,
+        "nativeDate": false,
+        "dateBtn": true
+      },
+      "open": {
+        "kind": "sheet",
+        "inView": true,
+        "w": 390,
+        "h": 444,
+        "bottomGap": 0,
+        "minCellH": 44,
+        "minCellW": 50.8,
+        "rows": 5,
+        "cellsInside": true,
+        "footInside": true,
+        "innerScroll": false,
+        "sheetMax": 717,
+        "hScroll": false,
+        "cardRight": 374,
+        "popRight": 390
+      },
+      "pick": {
+        "trigger": "11/24(화)",
+        "panelClosed": true,
+        "taps": 2
+      },
+      "close": {
+        "esc": true,
+        "scrim": true,
+        "closeBtn": true,
+        "handleDrag": true,
+        "back": true,
+        "backStayedOnWizard": true,
+        "pick": true,
+        "valueKept": true,
+        "focusBack": true
+      },
+      "six": {
+        "month": "2027년 1월",
+        "kind": "sheet",
+        "inView": true,
+        "w": 390,
+        "h": 490,
+        "bottomGap": 0,
+        "minCellH": 44,
+        "minCellW": 50.8,
+        "rows": 6,
+        "cellsInside": true,
+        "footInside": true,
+        "innerScroll": false,
+        "sheetMax": 717,
+        "hScroll": false,
+        "cardRight": 374,
+        "popRight": 390
+      },
+      "closedAfter": {
+        "info": [
+          {
+            "label": "시작 날짜",
+            "w": 156,
+            "x": 33,
+            "y": 328,
+            "labelY": 300,
+            "ctlH": 56
+          },
+          {
+            "label": "시작 시각 · 5분",
+            "w": 156,
+            "x": 201,
+            "y": 328,
+            "labelY": 300,
+            "ctlH": 56
+          },
+          {
+            "label": "소요 시간",
+            "w": 156,
+            "x": 33,
+            "y": 424,
+            "labelY": 396,
+            "ctlH": 56
+          }
+        ],
+        "hScroll": false,
+        "oldStepper": false,
+        "nativeDate": false,
+        "dateBtn": true
+      }
+    },
+    {
+      "w": 360,
+      "h": 740,
+      "closed": {
+        "info": [
+          {
+            "label": "시작 날짜",
+            "w": 141,
+            "x": 33,
+            "y": 316,
+            "labelY": 288,
+            "ctlH": 56
+          },
+          {
+            "label": "시작 시각 · 5분",
+            "w": 141,
+            "x": 186,
+            "y": 316,
+            "labelY": 288,
+            "ctlH": 56
+          },
+          {
+            "label": "소요 시간",
+            "w": 141,
+            "x": 33,
+            "y": 412,
+            "labelY": 384,
+            "ctlH": 56
+          }
+        ],
+        "hScroll": false,
+        "oldStepper": false,
+        "nativeDate": false,
+        "dateBtn": true
+      },
+      "open": {
+        "kind": "sheet",
+        "inView": true,
+        "w": 360,
+        "h": 444,
+        "bottomGap": 0,
+        "minCellH": 44,
+        "minCellW": 46.6,
+        "rows": 5,
+        "cellsInside": true,
+        "footInside": true,
+        "innerScroll": false,
+        "sheetMax": 629,
+        "hScroll": false,
+        "cardRight": 344,
+        "popRight": 360
+      },
+      "pick": {
+        "trigger": "11/24(화)",
+        "panelClosed": true,
+        "taps": 2
+      },
+      "close": {
+        "esc": true,
+        "scrim": true,
+        "closeBtn": true,
+        "handleDrag": true,
+        "back": true,
+        "backStayedOnWizard": true,
+        "pick": true,
+        "valueKept": true,
+        "focusBack": true
+      },
+      "six": {
+        "month": "2027년 1월",
+        "kind": "sheet",
+        "inView": true,
+        "w": 360,
+        "h": 490,
+        "bottomGap": 0,
+        "minCellH": 44,
+        "minCellW": 46.6,
+        "rows": 6,
+        "cellsInside": true,
+        "footInside": true,
+        "innerScroll": false,
+        "sheetMax": 629,
+        "hScroll": false,
+        "cardRight": 344,
+        "popRight": 360
+      },
+      "closedAfter": {
+        "info": [
+          {
+            "label": "시작 날짜",
+            "w": 141,
+            "x": 33,
+            "y": 316,
+            "labelY": 288,
+            "ctlH": 56
+          },
+          {
+            "label": "시작 시각 · 5분",
+            "w": 141,
+            "x": 186,
+            "y": 316,
+            "labelY": 288,
+            "ctlH": 56
+          },
+          {
+            "label": "소요 시간",
+            "w": 141,
+            "x": 33,
+            "y": 412,
+            "labelY": 384,
+            "ctlH": 56
+          }
+        ],
+        "hScroll": false,
+        "oldStepper": false,
+        "nativeDate": false,
+        "dateBtn": true
+      }
+    },
+    {
+      "w": 390,
+      "h": 600,
+      "closed": {
+        "info": [
+          {
+            "label": "시작 날짜",
+            "w": 156,
+            "x": 33,
+            "y": 316,
+            "labelY": 288,
+            "ctlH": 56
+          },
+          {
+            "label": "시작 시각 · 5분",
+            "w": 156,
+            "x": 201,
+            "y": 316,
+            "labelY": 288,
+            "ctlH": 56
+          },
+          {
+            "label": "소요 시간",
+            "w": 156,
+            "x": 33,
+            "y": 412,
+            "labelY": 384,
+            "ctlH": 56
+          }
+        ],
+        "hScroll": false,
+        "oldStepper": false,
+        "nativeDate": false,
+        "dateBtn": true
+      },
+      "open": {
+        "kind": "sheet",
+        "inView": true,
+        "w": 390,
+        "h": 426,
+        "bottomGap": 0,
+        "minCellH": 44,
+        "minCellW": 50.8,
+        "rows": 5,
+        "cellsInside": true,
+        "footInside": true,
+        "innerScroll": false,
+        "sheetMax": 510,
+        "hScroll": false,
+        "cardRight": 374,
+        "popRight": 390
+      },
+      "pick": {
+        "trigger": "11/24(화)",
+        "panelClosed": true,
+        "taps": 2
+      },
+      "close": {
+        "esc": true,
+        "scrim": true,
+        "closeBtn": true,
+        "handleDrag": true,
+        "back": true,
+        "backStayedOnWizard": true,
+        "pick": true,
+        "valueKept": true,
+        "focusBack": true
+      },
+      "six": {
+        "month": "2027년 1월",
+        "kind": "sheet",
+        "inView": true,
+        "w": 390,
+        "h": 470,
+        "bottomGap": 0,
+        "minCellH": 44,
+        "minCellW": 50.8,
+        "rows": 6,
+        "cellsInside": true,
+        "footInside": true,
+        "innerScroll": false,
+        "sheetMax": 510,
+        "hScroll": false,
+        "cardRight": 374,
+        "popRight": 390
+      },
+      "closedAfter": {
+        "info": [
+          {
+            "label": "시작 날짜",
+            "w": 156,
+            "x": 33,
+            "y": 316,
+            "labelY": 288,
+            "ctlH": 56
+          },
+          {
+            "label": "시작 시각 · 5분",
+            "w": 156,
+            "x": 201,
+            "y": 316,
+            "labelY": 288,
+            "ctlH": 56
+          },
+          {
+            "label": "소요 시간",
+            "w": 156,
+            "x": 33,
+            "y": 412,
+            "labelY": 384,
+            "ctlH": 56
+          }
+        ],
+        "hScroll": false,
+        "oldStepper": false,
+        "nativeDate": false,
+        "dateBtn": true
+      }
+    }
+  ],
+  "copySetup": {
+    "hasPicker": 1,
+    "noOldStepper": true,
+    "open": {
+      "kind": "pop",
+      "inView": true,
+      "w": 326,
+      "h": 370,
+      "bottomGap": 8,
+      "minCellH": 44,
+      "minCellW": 44,
+      "rows": 5,
+      "cellsInside": true,
+      "footInside": true,
+      "innerScroll": false,
+      "sheetMax": 612,
+      "hScroll": false,
+      "cardRight": 960,
+      "popRight": 943
+    }
+  }
+}
