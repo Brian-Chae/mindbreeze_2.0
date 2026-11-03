@@ -1,0 +1,189 @@
+{
+  "viewports": [
+    {
+      "w": 1440,
+      "h": 900,
+      "info": [
+        {
+          "label": "시작 날짜",
+          "w": 186,
+          "x": 425,
+          "y": 378,
+          "labelY": 350,
+          "ctlH": 56
+        },
+        {
+          "label": "시작 시각 · 5분",
+          "w": 186,
+          "x": 627,
+          "y": 378,
+          "labelY": 350,
+          "ctlH": 56
+        },
+        {
+          "label": "소요 시간",
+          "w": 186,
+          "x": 829,
+          "y": 378,
+          "labelY": 350,
+          "ctlH": 56
+        }
+      ],
+      "hScroll": false,
+      "oldStepperOnTime": false,
+      "timeBtn": true,
+      "selects": 0,
+      "pop": {
+        "ratio": 1,
+        "inView": true,
+        "minTarget": 44,
+        "selTab": "rgba(210, 174, 252, 0.14)",
+        "unTab": "rgba(0, 0, 0, 0)",
+        "selOpt": "rgb(95, 0, 128)",
+        "fontOpt": "18px",
+        "fontBtn": "15px",
+        "hScroll": false
+      },
+      "flow": {
+        "startLabel": "오후 7:00",
+        "after": "오전 9:00",
+        "clicks": 3,
+        "previewBodies": [
+          "\"time\":\"09:00\""
+        ],
+        "nextStepHas0900": true,
+        "nextStepSample": "클래스 만들기 초안 저장 1. 기본 정보 2. 일정 형태 3. 강사 배정 4. 초대·확인 누가 진행할까요? 강사 구성 지도사 · 주강사 강사 추가 배정 방식 모두 한 분이 맡아요 번갈아 맡아요 요일마다 달라요 회차마다 직접 정해요 모든 회차 한 명이 처음부터 끝까지 맡아요 미정 지도사 회차 목록 · 1개 일정 확인 1회차 · 12. 21. (월) 오전 9:00 · 60분 미정 지도사 이전 다음"
+      }
+    },
+    {
+      "w": 1280,
+      "h": 720,
+      "info": [
+        {
+          "label": "시작 날짜",
+          "w": 191,
+          "x": 337,
+          "y": 288,
+          "labelY": 260,
+          "ctlH": 56
+        },
+        {
+          "label": "시작 시각 · 5분",
+          "w": 191,
+          "x": 544,
+          "y": 288,
+          "labelY": 260,
+          "ctlH": 56
+        },
+        {
+          "label": "소요 시간",
+          "w": 191,
+          "x": 752,
+          "y": 288,
+          "labelY": 260,
+          "ctlH": 56
+        }
+      ],
+      "hScroll": false,
+      "oldStepperOnTime": false,
+      "timeBtn": true,
+      "selects": 0,
+      "pop": {
+        "ratio": 1,
+        "inView": true,
+        "minTarget": 44,
+        "selTab": "rgba(210, 174, 252, 0.14)",
+        "unTab": "rgba(0, 0, 0, 0)",
+        "selOpt": "rgb(95, 0, 128)",
+        "fontOpt": "18px",
+        "fontBtn": "15px",
+        "hScroll": false
+      }
+    },
+    {
+      "w": 1024,
+      "h": 768,
+      "info": [
+        {
+          "label": "시작 날짜",
+          "w": 186,
+          "x": 217,
+          "y": 312,
+          "labelY": 284,
+          "ctlH": 56
+        },
+        {
+          "label": "시작 시각 · 5분",
+          "w": 186,
+          "x": 419,
+          "y": 312,
+          "labelY": 284,
+          "ctlH": 56
+        },
+        {
+          "label": "소요 시간",
+          "w": 186,
+          "x": 621,
+          "y": 312,
+          "labelY": 284,
+          "ctlH": 56
+        }
+      ],
+      "hScroll": false,
+      "oldStepperOnTime": false,
+      "timeBtn": true,
+      "selects": 0,
+      "pop": {
+        "ratio": 1,
+        "inView": true,
+        "minTarget": 44,
+        "selTab": "rgba(210, 174, 252, 0.14)",
+        "unTab": "rgba(0, 0, 0, 0)",
+        "selOpt": "rgb(95, 0, 128)",
+        "fontOpt": "18px",
+        "fontBtn": "15px",
+        "hScroll": false
+      }
+    },
+    {
+      "w": 390,
+      "h": 844,
+      "info": [
+        {
+          "label": "시작 날짜",
+          "w": 156,
+          "x": 33,
+          "y": 328,
+          "labelY": 300,
+          "ctlH": 56
+        },
+        {
+          "label": "시작 시각 · 5분",
+          "w": 156,
+          "x": 201,
+          "y": 328,
+          "labelY": 300,
+          "ctlH": 56
+        },
+        {
+          "label": "소요 시간",
+          "w": 156,
+          "x": 33,
+          "y": 424,
+          "labelY": 396,
+          "ctlH": 56
+        }
+      ],
+      "hScroll": false,
+      "oldStepperOnTime": false,
+      "timeBtn": false,
+      "selects": 2,
+      "mobile": {
+        "before": "19",
+        "afterHour": "9",
+        "minute": "30",
+        "label": true
+      }
+    }
+  ]
+}

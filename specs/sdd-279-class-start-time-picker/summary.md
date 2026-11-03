@@ -53,3 +53,11 @@
 - 모바일 판정은 기존 `useIsDesktop()`(768px)을 재사용. 시험 하니스의 `matchMedia` 목이 항상 false 라 기존 위저드 뷰 시험은 모바일(select) 경로로 돈다.
 - 시험 실행 중 `specs/sdd-234-*/screens/*.png` 두 장이 부산물로 바뀌어 `git checkout` 으로 되돌렸다(커밋 제외).
 - 푸시·PR·배포는 하지 않았다(감독 재검증 후 진행).
+
+## 보정(실제 화면 연결)
+
+- **원인**: PR #240 이 `/counseling/new`(`CreateWizardContainer`, `host/wizard-steps.tsx`)만 고쳤다. 대표가 보는 실제 화면은 `/classes/new`(`pages/classes/class-scheduling-wizard.tsx` 2단계)이고, 시작 시각은 `WizardDateTime type="time"` 의 −/+(±5분) 스테퍼였다. 컴포넌트 단위 시험만 통과시키고 라우트 기준 확인을 빠뜨렸다.
+- **해결**: `WizardDateTime` 의 time 분기를 `StartTimePicker`(데스크톱 ≥768px 팝오버 / 모바일 시·분 select)로 교체. 날짜 분기는 그대로. 값은 "HH:MM" 문자열 유지(`parseClock`/`formatClock` 추가), 호출부 `min`/`max`(07:00/22:00)를 `minMin`/`maxMin` props 로 연결(`allowedHours`/`minuteOptions`/`setX` 에 `TimeBounds` 인자, 기본값은 기존과 동일). 범위 밖·5분 단위 아닌 값은 draft 를 바꾸지 않고 표시만.
+- **스타일**: `host-flow-create.css` 는 `/classes/new` 에서 로드되지 않으므로 `fh-time*` 규칙을 `class-scheduling.css` 에 `.cs-wizard` 하위로 복제(`.cw-timepick`, 컨트롤 높이 56px = 옆 칸과 동일).
+- **검증(실제 `/classes/new` 2단계)**: `verify-fix.mjs`/`verify-fix.json`, 캡처 `shots-fix/`. 시험 `tests/sdd279/classes-new-time.test.tsx`.
+- **교훈**: 검증은 컴포넌트가 아니라 **사용자가 보는 라우트**에서 한다. 고치기 전에 대표가 보는 URL → 파일을 먼저 확정한다.

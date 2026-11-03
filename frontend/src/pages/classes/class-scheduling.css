@@ -395,3 +395,22 @@
   .cs-wizard .cw-split { width: min(100%, var(--col-w)); }
   .cs-wizard .cw-split .cw-member-picker > p { padding: 0 var(--sp-2); }
 }
+
+/* SDD-279 보정 — /classes/new 시작 시각 C-3 팝업(host-flow-create.css 의 fh-time* 를 .cs-wizard 체계로 적응) */
+.cs-wizard .cw-timepick { --fh-ctl: 56px; min-width: 0; }
+.cs-wizard .fh-timefield { position: relative; min-width: 0; }
+.cs-wizard .fh-timebtn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: var(--fh-ctl, 56px); padding: 0 12px; box-sizing: border-box; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); font-size: var(--fs-15); font-weight: 700; color: var(--tx-hi); white-space: nowrap; }
+.cs-wizard .fh-timebtn[aria-expanded="true"] { border-color: var(--mb-lavender); }
+.cs-wizard .fh-timepop { position: absolute; z-index: 30; top: calc(100% + 8px); left: 0; width: 100%; box-sizing: border-box; padding: 8px; border-radius: var(--r-card); background: #24132f; border: 1px solid var(--mb-lavender); box-shadow: 0 16px 48px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 8px; }
+.cs-wizard .fh-timepop-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cs-wizard .fh-timetab { min-height: 44px; border-radius: 12px; border: 1px solid var(--sheet-border); background: transparent; font-size: var(--fs-15); font-weight: 600; color: var(--tx-mid); }
+.cs-wizard .fh-timetab[aria-pressed="true"] { border-color: var(--mb-pale); color: var(--tx-hi); background: rgba(210,174,252,0.14); }
+.cs-wizard .fh-timepop-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cs-wizard .fh-timelist { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; border-radius: 12px; background: rgba(255,255,255,0.04); scrollbar-width: thin; }
+.cs-wizard .fh-timeopt { flex: none; min-height: 44px; width: 100%; border-radius: 10px; border: 1px solid transparent; background: transparent; font-size: var(--fs-18); font-weight: 600; color: var(--tx-hi); }
+.cs-wizard .fh-timeopt[aria-selected="true"] { background: var(--mb-purple); border-color: var(--mb-purple); }
+.cs-wizard .fh-timeopt[aria-disabled="true"] { opacity: 0.35; cursor: not-allowed; }
+.cs-wizard .fh-timeopt:focus-visible, .cs-wizard .fh-timetab:focus-visible, .cs-wizard .fh-timebtn:focus-visible { outline: 2px solid var(--mb-pale); outline-offset: 2px; }
+.cs-wizard .fh-timesel { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cs-wizard .fh-timesel-s { width: 100%; min-width: 0; height: var(--fh-ctl, 56px); padding: 0 12px; box-sizing: border-box; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); font: inherit; font-size: var(--fs-15); font-weight: 700; color: var(--tx-hi); }
+.cs-wizard .fh-timesel-s option { background: #24132f; color: #fff; }
