@@ -1,0 +1,188 @@
+{
+  "generatedAt": "2026-11-03T03:56:35.389Z",
+  "url": "http://localhost:5279/design/class-flow?screen=FH02c&case=later",
+  "method": "Chrome headless + Playwright / vite dev 하니스 / getBoundingClientRect",
+  "results": [
+    {
+      "labelTexts": [
+        "시작 날짜",
+        "시작 시각 · 5분",
+        "소요 시간 · 5분 단위"
+      ],
+      "columnWidths": [
+        186,
+        186,
+        186
+      ],
+      "labelYDelta": 0,
+      "controlHeights": [
+        88,
+        88,
+        88
+      ],
+      "controlHeightDelta": 0,
+      "overflowX": 0,
+      "smallTargets": [],
+      "clipped": [],
+      "triggerFontPx": 15,
+      "mode": "popover",
+      "viewport": {
+        "w": 1440,
+        "h": 900
+      },
+      "errors": [],
+      "popover": {
+        "triggerWidth": 186,
+        "popoverWidth": 186,
+        "widthRatio": 1,
+        "leftAligned": 0,
+        "withinViewport": true,
+        "viewportRightGap": 627,
+        "optionFontPx": 18,
+        "tabFontPx": 15,
+        "selectedTab": {
+          "bg": "rgba(210, 174, 252, 0.14)",
+          "border": "rgb(210, 174, 252)"
+        },
+        "selectedItem": {
+          "bg": "rgb(95, 0, 128)",
+          "border": "rgb(95, 0, 128)"
+        },
+        "minTargetPx": 44,
+        "overflowX": 0
+      },
+      "pass": true
+    },
+    {
+      "labelTexts": [
+        "시작 날짜",
+        "시작 시각 · 5분",
+        "소요 시간 · 5분 단위"
+      ],
+      "columnWidths": [
+        186,
+        186,
+        186
+      ],
+      "labelYDelta": 0,
+      "controlHeights": [
+        88,
+        88,
+        88
+      ],
+      "controlHeightDelta": 0,
+      "overflowX": 0,
+      "smallTargets": [],
+      "clipped": [],
+      "triggerFontPx": 15,
+      "mode": "popover",
+      "viewport": {
+        "w": 1280,
+        "h": 900
+      },
+      "errors": [],
+      "popover": {
+        "triggerWidth": 186,
+        "popoverWidth": 186,
+        "widthRatio": 1,
+        "leftAligned": 0,
+        "withinViewport": true,
+        "viewportRightGap": 547,
+        "optionFontPx": 18,
+        "tabFontPx": 15,
+        "selectedTab": {
+          "bg": "rgba(210, 174, 252, 0.14)",
+          "border": "rgb(210, 174, 252)"
+        },
+        "selectedItem": {
+          "bg": "rgb(95, 0, 128)",
+          "border": "rgb(95, 0, 128)"
+        },
+        "minTargetPx": 44,
+        "overflowX": 0
+      },
+      "pass": true
+    },
+    {
+      "labelTexts": [
+        "시작 날짜",
+        "시작 시각 · 5분",
+        "소요 시간 · 5분 단위"
+      ],
+      "columnWidths": [
+        186,
+        186,
+        186
+      ],
+      "labelYDelta": 0,
+      "controlHeights": [
+        88,
+        88,
+        88
+      ],
+      "controlHeightDelta": 0,
+      "overflowX": 0,
+      "smallTargets": [],
+      "clipped": [],
+      "triggerFontPx": 15,
+      "mode": "popover",
+      "viewport": {
+        "w": 1024,
+        "h": 900
+      },
+      "errors": [],
+      "popover": {
+        "triggerWidth": 186,
+        "popoverWidth": 186,
+        "widthRatio": 1,
+        "leftAligned": 0,
+        "withinViewport": true,
+        "viewportRightGap": 419,
+        "optionFontPx": 18,
+        "tabFontPx": 15,
+        "selectedTab": {
+          "bg": "rgba(210, 174, 252, 0.14)",
+          "border": "rgb(210, 174, 252)"
+        },
+        "selectedItem": {
+          "bg": "rgb(95, 0, 128)",
+          "border": "rgb(95, 0, 128)"
+        },
+        "minTargetPx": 44,
+        "overflowX": 0
+      },
+      "pass": true
+    },
+    {
+      "labelTexts": [
+        "시작 날짜",
+        "시작 시각 · 5분",
+        "소요 시간 · 5분 단위"
+      ],
+      "columnWidths": [
+        324,
+        324,
+        324
+      ],
+      "labelYDelta": 200,
+      "controlHeights": [
+        56,
+        56,
+        56
+      ],
+      "controlHeightDelta": 0,
+      "overflowX": 0,
+      "smallTargets": [],
+      "clipped": [],
+      "triggerFontPx": null,
+      "mode": "select",
+      "viewport": {
+        "w": 390,
+        "h": 844
+      },
+      "errors": [],
+      "pass": true
+    }
+  ],
+  "failures": []
+}
