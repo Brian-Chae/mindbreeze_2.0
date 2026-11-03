@@ -414,3 +414,45 @@
 .cs-wizard .fh-timesel { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .cs-wizard .fh-timesel-s { width: 100%; min-width: 0; height: var(--fh-ctl, 56px); padding: 0 12px; box-sizing: border-box; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); font: inherit; font-size: var(--fs-15); font-weight: 700; color: var(--tx-hi); }
 .cs-wizard .fh-timesel-s option { background: #24132f; color: #fff; }
+
+/* SDD-281 — /classes/new 시작 날짜 캘린더 D-1 (데스크톱 326px 팝오버 / 모바일 Bottom Sheet). 필드는 시작 시각(fh-timebtn)과 같은 톤 */
+.cs-wizard .cw-datepick { --fh-ctl: 56px; min-width: 0; }
+.cs-wizard .cw-datefield { position: relative; min-width: 0; }
+.cs-wizard .cw-datebtn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: var(--fh-ctl, 56px); padding: 0 12px; box-sizing: border-box; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); font-size: var(--fs-15); font-weight: 700; color: var(--tx-hi); white-space: nowrap; }
+.cs-wizard .cw-datebtn[aria-expanded="true"] { border-color: var(--mb-lavender); }
+.cs-wizard .cw-datebtn:focus-visible, .cw-date-pop.cs-wizard button:focus-visible, .cs-wizard .cw-date-pop button:focus-visible, .cs-wizard .cw-date-sheet button:focus-visible { outline: 2px solid var(--mb-pale); outline-offset: 2px; }
+.cw-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+/* 팝오버/시트는 body 포털이라 .cs-wizard 토큰이 필요 → 포털 루트에 cs-wizard 클래스를 함께 붙이고 아래에서 위치를 덮어쓴다 */
+.cw-date-pop.cs-wizard, .cw-date-scrim.cs-wizard { position: fixed; width: auto; height: auto; overflow: visible; background: transparent; }
+.cw-date-pop.cs-wizard, .cs-wizard .cw-date-sheet { color: var(--tx-hi); font-family: inherit; display: flex; flex-direction: column; }
+.cs-wizard .cw-date-pop button, .cs-wizard .cw-date-sheet button { font: inherit; color: inherit; cursor: pointer; }
+.cs-wizard .cw-date-pop button:disabled, .cs-wizard .cw-date-sheet button:disabled { cursor: default; }
+.cw-date-pop.cs-wizard { display: flex; flex-direction: column; z-index: 60; width: 326px; box-sizing: border-box; padding: 8px; gap: 4px; border-radius: var(--r-card); background: #24132f; border: 1px solid var(--mb-lavender); box-shadow: 0 16px 48px rgba(0,0,0,0.5); }
+.cs-wizard .cw-datemonth { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; min-height: 44px; }
+.cs-wizard .cw-datemonth b { text-align: center; font-size: var(--fs-15); font-weight: 700; }
+.cs-wizard .cw-datenav { width: 44px; height: 44px; border-radius: var(--r-pill); display: grid; place-items: center; background: rgba(255,255,255,0.1); border: 1px solid var(--sheet-border); }
+.cs-wizard .cw-datenav:disabled { opacity: 0.35; }
+.cs-wizard .cw-dateweek, .cs-wizard .cw-daterow { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.cs-wizard .cw-dateweek span { text-align: center; font-size: var(--fs-13); line-height: 24px; font-weight: 600; color: var(--tx-mid); }
+.cs-wizard .cw-dategrid { display: flex; flex-direction: column; gap: 2px; touch-action: pan-y; }
+.cs-wizard .cw-datecell { min-width: 0; height: 44px; border-radius: 12px; border: 2px solid transparent; background: transparent; font-size: var(--fs-15); font-weight: 600; color: var(--tx-hi); display: grid; place-items: center; position: relative; }
+.cs-wizard .cw-datecell.empty { visibility: hidden; }
+.cs-wizard .cw-datecell.today { border-color: var(--mb-pale); background: rgba(210,174,252,0.12); }
+.cs-wizard .cw-datecell.today::after { content: ''; position: absolute; bottom: 5px; width: 4px; height: 4px; border-radius: 50%; background: var(--mb-pale); }
+.cs-wizard .cw-datecell.sel { background: var(--mb-purple); border-color: var(--mb-purple); }
+.cs-wizard .cw-datecell.sel.today { border-color: var(--mb-pale); }
+.cs-wizard .cw-datecell[aria-disabled="true"] { opacity: 0.35; cursor: not-allowed; }
+.cs-wizard .cw-datefoot { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; font-size: var(--fs-13); color: var(--tx-mid); }
+.cs-wizard .cw-datefoot:has(> .cw-datetoday:only-child) { justify-content: center; }
+.cs-wizard .cw-datetoday { min-height: 44px; padding: 0 12px; border-radius: var(--r-card); background: transparent; border: 0; color: var(--mb-pale); font-size: var(--fs-13); font-weight: 600; }
+/* 모바일 Bottom Sheet (<768px) — WizardSheet 톤: 딤 rgba(12,6,20,.55), 시트 rgba(24,12,36,.97), 상단 24px 라운드 */
+.cw-date-scrim.cs-wizard { inset: 0; z-index: 70; background: rgba(12, 6, 20, 0.55); display: flex; align-items: flex-end; justify-content: center; }
+.cs-wizard .cw-date-sheet { width: min(100%, 640px); max-height: 85dvh; box-sizing: border-box; padding: 0 16px max(12px, env(safe-area-inset-bottom, 0px)); gap: 6px; overflow-y: auto; background: rgba(24, 12, 36, 0.97); border: 1px solid var(--sheet-border); border-radius: 24px 24px 0 0; animation: cw-date-rise 0.18s ease-out; }
+.cs-wizard .cw-date-handle { flex: none; height: 16px; position: relative; touch-action: none; margin: 0 -16px; }
+.cs-wizard .cw-date-handle::after { content: ''; position: absolute; left: calc(50% - 20px); top: 6px; width: 40px; height: 4px; border-radius: 4px; background: rgba(207,198,214,0.47); }
+.cs-wizard .cw-datehead { display: flex; align-items: center; justify-content: space-between; min-height: 44px; flex: none; }
+.cs-wizard .cw-datehead h2 { margin: 0; font-size: var(--fs-18); font-weight: 700; }
+.cs-wizard .cw-date-sheet .cw-datecell { height: 44px; }
+@media (max-height: 700px) { .cs-wizard .cw-date-sheet { gap: 4px; } .cs-wizard .cw-dategrid { gap: 0; } }
+@keyframes cw-date-rise { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .cs-wizard .cw-date-sheet { animation: none; } }

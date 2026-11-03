@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Minus, Plus, X } from 'lucide-react';
+import { StartDatePicker } from '../../components/class/flow/host/start-date-picker';
 import { StartTimePicker } from '../../components/class/flow/host/start-time-picker';
 import { formatClock, parseClock } from '../../lib/class/start-time';
 
@@ -33,12 +34,8 @@ export function WizardDateTime({ label, value, type, min, max, onChange }: { lab
     const minMin = parseClock(min) ?? undefined; const maxMin = max ? parseClock(max) ?? undefined : undefined;
     return <div className="cw-timepick"><StartTimePicker timeMin={parseClock(value) ?? minMin ?? 420} minMin={minMin} maxMin={maxMin} onChange={timeMin => onChange(formatClock(timeMin))} /></div>;
   }
-  function move(direction: number) {
-    const date = new Date(`${value}T12:00:00Z`); if (Number.isNaN(date.getTime())) return; date.setUTCDate(date.getUTCDate() + direction); onChange(date.toISOString().slice(0, 10));
-  }
-  const date = new Date(`${value}T12:00:00Z`);
-  const display = !Number.isNaN(date.getTime()) ? `${date.getUTCMonth() + 1}/${date.getUTCDate()}(${'일월화수목금토'[date.getUTCDay()]})` : '날짜 선택';
-  return <div className="w-stepper sm"><button type="button" aria-label={`${label} 이전`} disabled={value <= min} onClick={() => move(-1)}><Minus size={20} /></button><label className="cw-datetime"><span aria-hidden="true">{display}</span><input aria-label={label} type="date" min={min} max={max} value={value} onChange={event => onChange(event.target.value)} /></label><button type="button" aria-label={`${label} 다음`} disabled={Boolean(max && value >= max)} onClick={() => move(1)}><Plus size={20} /></button></div>;
+  // SDD-281: 시작 날짜는 −/+ 스테퍼 대신 단일 필드 + 캘린더(데스크톱 팝오버 / 모바일 Bottom Sheet). 값은 "YYYY-MM-DD" 그대로.
+  return <div className="cw-datepick"><StartDatePicker label={label} value={value} min={min} max={max} onChange={onChange} /></div>;
 }
 export function WizardToggle({ title, checked, onChange, children }: { title: string; checked: boolean; onChange: () => void; children: ReactNode }) {
   return <button type="button" className="fl-row w-tog" role="switch" aria-checked={checked} onClick={onChange}>{children}<span className="tx"><b>{title}</b></span><span className="sw" /></button>;

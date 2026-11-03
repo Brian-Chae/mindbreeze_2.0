@@ -63,9 +63,10 @@ describe('SDD-279 보정 WizardDateTime time', () => {
     const hours = [...container.querySelectorAll('[aria-label="시"] [role="option"]')].map((e) => e.textContent);
     expect(hours).toEqual(['9시', '10시', '11시']);
   });
-  it('날짜는 기존 ± 유지', async () => {
+  it('날짜는 SDD-281 이후 − / + 없이 단일 캘린더 필드', async () => {
     mm(true);
     await act(async () => root.render(createElement(WizardDateTime, { label: '시작 날짜', type: 'date', min: '2020-01-01', value: '2026-12-21', onChange: () => undefined })));
-    expect(container.querySelector('button[aria-label="시작 날짜 이전"]')).not.toBeNull();
+    expect(container.querySelector('button[aria-label="시작 날짜 이전"]')).toBeNull();
+    expect(container.querySelector('button[aria-haspopup="dialog"]')).not.toBeNull();
   });
 });
