@@ -3,7 +3,7 @@
 import type { MySessionRow } from '../api/my-upload-status';
 import { FINAL_PENDING_MEMBER, MEMBER_LABEL, memberAction, type BoardState } from './board';
 
-export type MemberKind = BoardState | 'excluded';
+export type MemberKind = Exclude<BoardState, 'suspect'> | 'excluded';  // SDD-278: 회원 화면은 의심 상태를 따로 쓰지 않는다(구버전 호환)
 export const MEMBER_KIND_LABEL: Record<MemberKind, string> = { ...MEMBER_LABEL, excluded: '수집 제외' };
 export const MEMBER_KIND_ICON: Record<MemberKind, string> = { warn: '!', live: '●', sending: '◷', ok: '✓', pending: '−', excluded: '−' };
 export const MEMBER_KIND_TONE: Record<MemberKind, string> = {

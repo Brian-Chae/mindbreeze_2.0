@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import type { UploadParticipantDto, UploadStatusResponse } from '../../lib/api/upload-status';
 import {
-  BOARD_LABEL, COACH_OK_NOTE, DASH, FINAL_PENDING_COACH, FINAL_PENDING_PERSON_NOTE, showFinalPending, finalPendingAll, PAGE_SIZE, percentText, arrivedText, basisNote, boardState, coachAction, formatBytes, formatMinutes, formatTotalHours,
+  ABNORMAL_EXIT_NOTE, BOARD_LABEL, COACH_OK_NOTE, DASH, FINAL_PENDING_COACH, FINAL_PENDING_PERSON_NOTE, showFinalPending, finalPendingAll, PAGE_SIZE, percentText, arrivedText, basisNote, boardState, coachAction, formatBytes, formatMinutes, formatTotalHours,
   pageCount, personAction, personBucket, slicePage, transferPercent, type BoardState, type PersonBucket,
 } from '../../lib/upload-status/board';
 import { displayName, formatClock, formatCount, latestReceived, rawTotals } from '../../lib/upload-status/view';
@@ -94,11 +94,13 @@ export function UploadStatusTable({ data }: UploadStatusTableProps) {
   const m = data.metrics;
   const prog = data.progress ?? null;
   const attentionN = prog ? prog.participants.needs_attention : data.summary.needs_attention;
-  const percent = transferPercent(m, prog?.overall, state === 'ok');
+  const abnormalN = prog?.participants.abnormal_exit_suspected ?? 0;
+  // SDD-278: 의심 참여자는 진행 막대 분모에서 뺀다 → 크기 기반 추정 대신 서버 진행 합계(의심 제외)를 쓴다.
+  const percent = transferPercent(abnormalN > 0 ? undefined : m, prog?.overall, state === 'ok');
   const uncertain = state === 'pending';
   const buckets = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const b: Record<PersonBucket, UploadParticipantDto[]> = { attention: [], arrived: [], final_pending: [], waiting: [], excluded: [] };
+    const b: Record<PersonBucket, UploadParticipantDto[]> = { attention: [], arrived: [], final_pending: [], abnormal: [], waiting: [], excluded: [] };
     for (const p of data.participants) {
       if (q && !displayName(p).toLowerCase().includes(q)) continue;
       b[personBucket(p)].push(p);
@@ -110,6 +112,7 @@ export function UploadStatusTable({ data }: UploadStatusTableProps) {
   const finalPendingN = prog?.participants.final_pending ?? buckets.final_pending.length;
   const showFinal = showFinalPending(state, finalPendingN);
   const pendingN = buckets.final_pending.length;
+  const abnormalRows = buckets.abnormal.length;
   const waitingN = buckets.waiting.length;
   const excludedN = buckets.excluded.length;
 
@@ -128,6 +131,7 @@ export function UploadStatusTable({ data }: UploadStatusTableProps) {
         <TransferBar percent={percent} />
         {showFinal && finalPendingAll(prog) && <p data-testid="final-pending-line" className="text-[12px] text-[#655173]">{FINAL_PENDING_COACH}</p>}
         <p className="text-[12px] text-[#776D7B]">{basisNote(prog, state)}</p>
+        {abnormalN > 0 && <p data-testid="abnormal-exit-line" className="mt-1 text-[12px] text-[#655173]"><b>비정상 종료 의심 {formatCount(abnormalN)}명</b> · {ABNORMAL_EXIT_NOTE}</p>}
         {(action || state === 'ok') && <p data-testid="action-line" className="mt-2 text-[12px] text-[#805000]">{action ?? COACH_OK_NOTE}</p>}
         <details className="mt-3 rounded-[10px] bg-[#F8F5FA] p-2.5 text-[12px]">
           <summary className="min-h-11 cursor-pointer py-2 text-[#5F0080]">전송 세부 보기</summary>
@@ -143,7 +147,7 @@ export function UploadStatusTable({ data }: UploadStatusTableProps) {
 
       {data.participants.length === 0 ? (
         <p role="status" className={`${cardClass} text-center text-[#776D7B]`}>등록된 참여자가 없어요</p>
-      ) : buckets.attention.length + buckets.arrived.length + pendingN + waitingN + excludedN === 0 ? (
+      ) : buckets.attention.length + buckets.arrived.length + pendingN + abnormalRows + waitingN + excludedN === 0 ? (
         <p role="status" className={`${cardClass} text-center text-[#776D7B]`}>조건에 맞는 참여자가 없어요</p>
       ) : (
         <section className={cardClass} aria-label="참여자">
@@ -161,6 +165,13 @@ export function UploadStatusTable({ data }: UploadStatusTableProps) {
               <summary className="min-h-11 cursor-pointer py-2 font-medium text-[#5F0080]">최종 확인 대기 {formatCount(pendingN)}명</summary>
               <p className="text-[12px] text-[#776D7B]">{FINAL_PENDING_PERSON_NOTE}</p>
               <Paged rows={buckets.final_pending} label="final-pending" />
+            </details>
+          )}
+          {abnormalRows > 0 && (
+            <details data-testid="group-abnormal" className="mt-2">
+              <summary className="min-h-11 cursor-pointer py-2 font-medium text-[#5F0080]">비정상 종료 의심 {formatCount(abnormalRows)}명</summary>
+              <p className="text-[12px] text-[#776D7B]">{ABNORMAL_EXIT_NOTE}</p>
+              <Paged rows={buckets.abnormal} label="abnormal" />
             </details>
           )}
           {waitingN + excludedN > 0 && (

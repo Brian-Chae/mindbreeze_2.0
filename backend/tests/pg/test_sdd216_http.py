@@ -10,6 +10,14 @@ from app.models.session import Session
 from tests.pg.sdd216_helpers import world, user
 from tests.pg.test_sdd216_write import command
 
+
+def _future_monday_iso() -> str:
+    """실제 서버 시각을 쓰는 HTTP 시험용: 오늘 이후의 월요일(시한 의존 제거). weekdays=[1] 과 맞춘다."""
+    from datetime import datetime, timedelta, timezone
+
+    today = datetime.now(timezone(timedelta(hours=9))).date()
+    return (today + timedelta(days=(7 - today.weekday()) % 7 + 7)).isoformat()
+
 pytestmark = pytest.mark.pg
 
 
@@ -27,6 +35,7 @@ def test_create_preview_draft_visibility_and_uncertain_host(pg_session, monkeypa
     monkeypatch.setattr(settings, "class_scheduling_enabled", True)
     client = TestClient(app)
     data = command(a).model_dump(mode="json")
+    data["schedule"]["recurrence_rule"]["start_date"] = _future_monday_iso()
     preview = client.post("/api/v1/classes/preview-schedule", json=data["schedule"])
     assert preview.status_code == 200, preview.text
     assert len(preview.json()["rows"]) == 8
@@ -71,6 +80,7 @@ def test_draft_edit_preview_instructor_and_email_routes(pg_session, monkeypatch)
     monkeypatch.setattr(settings, "class_scheduling_enabled", True)
     client = TestClient(app)
     data = command(a, status="draft").model_dump(mode="json")
+    data["schedule"]["recurrence_rule"]["start_date"] = _future_monday_iso()
     created = client.post("/api/v1/classes", json=data).json()
     cid = created["class_id"]
     schedule = data["schedule"]

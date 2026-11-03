@@ -17,6 +17,7 @@ from pydantic import BaseModel
 STALL_SEC = 120
 FINAL_GRACE_SEC = 30 * 60
 FINAL_PENDING_AFTER_END_SEC = 180   # SDD-267: 종료 후 N분(3분) 경과해야 '최종 확인 대기' 표기
+ABNORMAL_EXIT_AFTER_END_SEC = 24 * 3600   # SDD-278: 종료 후 N시간(24h) 폰 보고가 없으면 '비정상 종료 의심'(단정 아님)
 SIGNALS = ("eeg", "ppg", "acc")
 
 ProgressState = Literal["all_received", "in_progress", "needs_attention", "expected_unknown", "not_collected"]
@@ -52,6 +53,7 @@ class ProgressInput:
     session_status: str
     ended_at: datetime | None
     as_of: datetime
+    abnormal_after_sec: int = ABNORMAL_EXIT_AFTER_END_SEC   # SDD-278: dev 시험용 오버라이드(설정). 기본 24h
 
 
 # ---------------------------------------------------------------------------
@@ -76,6 +78,7 @@ class ParticipantProgress(BaseModel):
     raw: RawComponents
     total: Component
     final_pending: bool = False   # SDD-267: 보조 표기(판정 불변). 모두 도착했으나 폰의 final 확인만 없는 상태
+    abnormal_exit_suspected: bool = False   # SDD-278: 가산 필드. state 는 expected_unknown 그대로(구버전 앱 호환)
 
 
 class ParticipantCounts(BaseModel):
@@ -87,6 +90,7 @@ class ParticipantCounts(BaseModel):
     expected_unknown: int
     not_collected: int
     final_pending: int = 0        # SDD-267: 다른 state 와 겹치는 부분집합(합 불변식에 불포함)
+    abnormal_exit_suspected: int = 0   # SDD-278: expected_unknown 의 부분집합(합 불변식에 불포함)
 
 
 class AggregateProgress(BaseModel):
@@ -146,6 +150,22 @@ def _final_pending(inp: ProgressInput, comps: tuple[Component, ...]) -> bool:
     return _stalled(inp)
 
 
+def abnormal_exit_suspected(inp: ProgressInput, state: ProgressState) -> bool:
+    """SDD-278: 종료 후 기한(24h) 이상 지났는데 폰의 총량 보고가 끝내 없는 참여자 (순수 함수, 읽기 시 계산).
+
+    - 회차가 completed 이고 종료 시각이 있어야 한다. 서버에 도착한 데이터가 없으면(has_data False) 기존 규칙이 우선.
+    - 보고 자체가 없거나, 보고는 있으나 final 에 이르지 못한 채 expected_unknown 인 경우만 해당.
+    - 데이터가 빠졌다는 단정이 아니다(구버전 앱·정상 종료 실패 포함).
+    """
+    if state != "expected_unknown" or not inp.has_data or inp.session_status != "completed":
+        return False
+    e = inp.expected
+    if e is not None and e.final:
+        return False
+    ended = _aware(inp.ended_at)
+    return ended is not None and (inp.as_of - ended).total_seconds() >= inp.abnormal_after_sec
+
+
 def build_participant_progress(inp: ProgressInput) -> ParticipantProgress:
     e = inp.expected
     feature = _component(e.feature if e else None, inp.feature_received)
@@ -172,7 +192,8 @@ def build_participant_progress(inp: ProgressInput) -> ParticipantProgress:
             else:
                 state = "in_progress"
     pending = state != "not_collected" and _final_pending(inp, (feature, raw.eeg, raw.ppg, raw.acc))
-    return ParticipantProgress(state=state, feature=feature, raw=raw, total=total, final_pending=pending)
+    return ParticipantProgress(state=state, feature=feature, raw=raw, total=total, final_pending=pending,
+                               abnormal_exit_suspected=abnormal_exit_suspected(inp, state))
 
 
 # ---------------------------------------------------------------------------
@@ -208,12 +229,16 @@ def _count_states(plist: list[ParticipantProgress]) -> ParticipantCounts:
     for p in plist:
         n[p.state] += 1
     return ParticipantCounts(total=len(plist), counted=len(plist) - n["not_collected"], **n,
-                             final_pending=sum(1 for p in plist if p.final_pending))
+                             final_pending=sum(1 for p in plist if p.final_pending),
+                             abnormal_exit_suspected=sum(1 for p in plist if p.abnormal_exit_suspected))
 
 
 def aggregate(plist: list[ParticipantProgress]) -> AggregateProgress:
-    """수집 제외 참여자는 모든 합계에서 뺀다. 기대량 미확인은 사람 수엔 남고 보고된 컴포넌트만 수치에 들어간다."""
-    active = [p for p in plist if p.state != "not_collected"]
+    """수집 제외 참여자는 모든 합계에서 뺀다. 기대량 미확인은 사람 수엔 남고 보고된 컴포넌트만 수치에 들어간다.
+
+    SDD-278: 비정상 종료 의심 참여자는 사람 수(counted·expected_unknown)엔 남되 수치 합(진행 막대 분모)에서 뺀다.
+    """
+    active = [p for p in plist if p.state != "not_collected" and not p.abnormal_exit_suspected]
     feature = _sum_components([p.feature for p in active])
     raw = RawComponents(**{name: _sum_components([getattr(p.raw, name) for p in active]) for name in SIGNALS})
     overall = _sum_components([feature, raw.eeg, raw.ppg, raw.acc])

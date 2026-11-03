@@ -84,6 +84,7 @@ class MemberSessionItem(BaseModel):
     collection_state: Literal["eligible", "excluded", "unknown"]
     progress_state: Literal["all_received", "in_progress", "needs_attention", "expected_unknown", "not_collected"]
     final_pending: bool = False   # SDD-267
+    abnormal_exit_suspected: bool = False   # SDD-278: 가산 필드(progress_state 는 expected_unknown 그대로)
     percent: float | None
     bytes_arrived: int
     bytes_expected: int | None

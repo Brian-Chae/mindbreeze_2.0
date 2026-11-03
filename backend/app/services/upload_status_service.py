@@ -21,6 +21,7 @@ from sqlalchemy import and_, case, exists, func, or_, select
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import Session as DBSession
 
+from app.config import settings
 from app.models.biosignal import BiosignalArtifact
 from app.models.class_program import Class
 from app.models.eeg_feature import EEGFeatureWindow
@@ -218,11 +219,19 @@ def _progress_time_key(rev: dict, scope: _Scope, as_of: datetime) -> str | None:
     return f"{bucket}:{int(grace_over)}:{int(pending_after)}"
 
 
+def _abnormal_over(scope: _Scope, as_of: datetime) -> int:
+    """SDD-278: 종료 후 기한(24h) 경과 여부. 폰 보고가 없는 회차도 기한 시점에 ETag 가 바뀌어야 304 로 고착되지 않는다."""
+    ended = _aware(scope.ended_at)
+    return int(scope.status == "completed" and ended is not None
+               and (as_of - ended).total_seconds() >= settings.upload_abnormal_exit_after_sec)
+
+
 def _etag(rev: dict, scope: _Scope, as_of: datetime | None = None) -> str:
     parts = [rev["f_count"], _iso(rev["f_max"]), rev["r_count"], rev["r_up"], rev["r_fail"], _iso(rev["r_created_max"]),
              _iso(rev["r_up_max"]), rev["r_pending"], rev["r_stale"], rev["p_count"], rev["p_band"], rev["p_report"],
              rev["p_wait"], rev["p_consent"], rev["e_count"], _iso(rev["e_max"]), rev["e_sum"], rev["e_final"], rev["r_bytes"], rev["a_bytes"],
-             scope.status, _iso(scope.ended_at), _progress_time_key(rev, scope, as_of) if as_of else None]
+             scope.status, _iso(scope.ended_at), _progress_time_key(rev, scope, as_of) if as_of else None,
+             _abnormal_over(scope, as_of) if as_of else None]
     digest = hashlib.sha256("|".join("" if v is None else str(v) for v in parts).encode()).hexdigest()[:32]
     return f'W/"{digest}"'
 
@@ -389,7 +398,7 @@ def _build_participant(prow, fstat, rstats: dict, as_of: datetime, expected_row=
         raw_received={s.signal_type: s.uploaded for s in signals}, raw_failed=failed,
         last_received_at=last_any,
         session_status=scope.status if scope else "in_progress", ended_at=scope.ended_at if scope else None,
-        as_of=as_of))
+        as_of=as_of, abnormal_after_sec=settings.upload_abnormal_exit_after_sec))
     phone_report = None
     if snap is not None:
         feature.expected = snap.feature
