@@ -1,5 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { Minus, Plus, X } from 'lucide-react';
+import { StartTimePicker } from '../../components/class/flow/host/start-time-picker';
+import { formatClock, parseClock } from '../../lib/class/start-time';
 
 export function WizardField({ title, children, className = '' }: { title: string; children: ReactNode; className?: string }) {
   return <div className={`w-group ${className}`}><span className="fl-label">{title}</span>{children}</div>;
@@ -8,14 +10,17 @@ export function WizardStepper({ label, value, onChange, min, max, step = 1, unit
   return <div className="w-stepper"><button type="button" aria-label={`${label} 줄이기`} disabled={value <= min} onClick={() => onChange(Math.max(min, value - step))}><Minus size={20} /></button><label className="cw-number">{prefix && <span>{prefix}</span>}<input aria-label={label} name={name} type="number" min={min} max={max} step={step} value={value} onChange={event => onChange(Number(event.target.value))} /><span>{unit}</span></label><button type="button" aria-label={`${label} 늘리기`} disabled={value >= max} onClick={() => onChange(Math.min(max, value + step))}><Plus size={20} /></button></div>;
 }
 export function WizardDateTime({ label, value, type, min, max, onChange }: { label: string; value: string; type: 'date' | 'time'; min: string; max?: string; onChange: (value: string) => void }) {
-  function move(direction: number) {
-    if (type === 'date') { const date = new Date(`${value}T12:00:00Z`); if (Number.isNaN(date.getTime())) return; date.setUTCDate(date.getUTCDate() + direction); onChange(date.toISOString().slice(0, 10)); }
-    else { const [hour, minute] = value.split(':').map(Number); const total = hour * 60 + minute + direction * 5; onChange(`${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`); }
+  // SDD-279 보정: 시작 시각은 ± 스테퍼 대신 C-3 팝업(데스크톱) / 시·분 select(모바일). 값은 "HH:MM" 문자열 그대로.
+  if (type === 'time') {
+    const minMin = parseClock(min) ?? undefined; const maxMin = max ? parseClock(max) ?? undefined : undefined;
+    return <div className="cw-timepick"><StartTimePicker timeMin={parseClock(value) ?? minMin ?? 420} minMin={minMin} maxMin={maxMin} onChange={timeMin => onChange(formatClock(timeMin))} /></div>;
   }
-  const date = type === 'date' ? new Date(`${value}T12:00:00Z`) : null;
-  const [hour, minute] = value.split(':').map(Number);
-  const display = type === 'date' ? date && !Number.isNaN(date.getTime()) ? `${date.getUTCMonth() + 1}/${date.getUTCDate()}(${'일월화수목금토'[date.getUTCDay()]})` : '날짜 선택' : `${hour < 12 ? '오전' : '오후'} ${hour % 12 || 12}:${String(minute).padStart(2, '0')}`;
-  return <div className="w-stepper sm"><button type="button" aria-label={`${label} 이전`} disabled={value <= min} onClick={() => move(-1)}><Minus size={20} /></button><label className="cw-datetime"><span aria-hidden="true">{display}</span><input aria-label={label} type={type} min={min} max={max} step={type === 'time' ? 300 : undefined} value={value} onChange={event => onChange(event.target.value)} /></label><button type="button" aria-label={`${label} 다음`} disabled={Boolean(max && value >= max)} onClick={() => move(1)}><Plus size={20} /></button></div>;
+  function move(direction: number) {
+    const date = new Date(`${value}T12:00:00Z`); if (Number.isNaN(date.getTime())) return; date.setUTCDate(date.getUTCDate() + direction); onChange(date.toISOString().slice(0, 10));
+  }
+  const date = new Date(`${value}T12:00:00Z`);
+  const display = !Number.isNaN(date.getTime()) ? `${date.getUTCMonth() + 1}/${date.getUTCDate()}(${'일월화수목금토'[date.getUTCDay()]})` : '날짜 선택';
+  return <div className="w-stepper sm"><button type="button" aria-label={`${label} 이전`} disabled={value <= min} onClick={() => move(-1)}><Minus size={20} /></button><label className="cw-datetime"><span aria-hidden="true">{display}</span><input aria-label={label} type="date" min={min} max={max} value={value} onChange={event => onChange(event.target.value)} /></label><button type="button" aria-label={`${label} 다음`} disabled={Boolean(max && value >= max)} onClick={() => move(1)}><Plus size={20} /></button></div>;
 }
 export function WizardToggle({ title, checked, onChange, children }: { title: string; checked: boolean; onChange: () => void; children: ReactNode }) {
   return <button type="button" className="fl-row w-tog" role="switch" aria-checked={checked} onClick={onChange}>{children}<span className="tx"><b>{title}</b></span><span className="sw" /></button>;

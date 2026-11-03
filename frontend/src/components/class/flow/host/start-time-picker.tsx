@@ -4,7 +4,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type 
 import { ChevronDown } from 'lucide-react';
 import { fmtClock, fmtHour } from '../../../../lib/class/class-wizard';
 import {
-  allowedHours, hour24Of, minuteOptions, setHour, setMeridiem, setMinute, snapMinute, splitTime, type Meridiem,
+  allowedHours, hour24Of, minuteOptions, setHour, setMeridiem, setMinute, snapMinute, splitTime, type Meridiem, type TimeBounds,
 } from '../../../../lib/class/start-time';
 import { useIsDesktop } from '../../../../hooks/use-is-desktop';
 
@@ -13,20 +13,26 @@ export interface StartTimePickerProps {
   onChange: (timeMin: number) => void;
   /** 테스트·하니스용: 지정하면 화면 폭 판정(useIsDesktop) 대신 쓴다 */
   desktop?: boolean;
+  /** 허용 범위(자정부터 분). 생략하면 class-wizard 의 MIN_TIME_MIN~MAX_TIME_MIN */
+  minMin?: number;
+  maxMin?: number;
 }
 
 const EDGE_GAP = 8;
 
-export function StartTimePicker({ timeMin, onChange, desktop }: StartTimePickerProps) {
+export function StartTimePicker({ timeMin, onChange, desktop, minMin, maxMin }: StartTimePickerProps) {
   const isDesktop = useIsDesktop();
-  return (desktop ?? isDesktop) ? <TimePopover timeMin={timeMin} onChange={onChange} /> : <TimeSelects timeMin={timeMin} onChange={onChange} />;
+  const bounds: TimeBounds = { minMin, maxMin };
+  return (desktop ?? isDesktop) ? <TimePopover timeMin={timeMin} onChange={onChange} bounds={bounds} /> : <TimeSelects timeMin={timeMin} onChange={onChange} bounds={bounds} />;
 }
 
-function TimeSelects({ timeMin, onChange }: Omit<StartTimePickerProps, 'desktop'>) {
+type InnerProps = Pick<StartTimePickerProps, 'timeMin' | 'onChange'> & { bounds: TimeBounds };
+
+function TimeSelects({ timeMin, onChange, bounds }: InnerProps) {
   const { minute } = splitTime(timeMin);
   const hour24 = Math.floor(timeMin / 60);
-  const hours = [...allowedHours('am').map((h) => hour24Of('am', h)), ...allowedHours('pm').map((h) => hour24Of('pm', h))];
-  const minutes = minuteOptions(hour24);
+  const hours = [...allowedHours('am', bounds).map((h) => hour24Of('am', h)), ...allowedHours('pm', bounds).map((h) => hour24Of('pm', h))];
+  const minutes = minuteOptions(hour24, bounds);
   return (
     <div className="fh-timesel">
       <select
@@ -35,7 +41,7 @@ function TimeSelects({ timeMin, onChange }: Omit<StartTimePickerProps, 'desktop'
         value={String(hour24)}
         onChange={(e) => {
           const h = Number(e.target.value);
-          onChange(setHour(timeMin, h < 12 ? 'am' : 'pm', h % 12 === 0 ? 12 : h % 12));
+          onChange(setHour(timeMin, h < 12 ? 'am' : 'pm', h % 12 === 0 ? 12 : h % 12, bounds));
         }}
       >
         {hours.map((h) => <option key={h} value={String(h)}>{fmtHour(h * 60)}</option>)}
@@ -44,7 +50,7 @@ function TimeSelects({ timeMin, onChange }: Omit<StartTimePickerProps, 'desktop'
         className="fh-timesel-s"
         aria-label="시작 시각 분, 5분 단위"
         value={String(snapMinute(minute))}
-        onChange={(e) => onChange(setMinute(timeMin, Number(e.target.value)))}
+        onChange={(e) => onChange(setMinute(timeMin, Number(e.target.value), bounds))}
       >
         {minutes.map((m) => <option key={m.value} value={String(m.value)} disabled={m.disabled}>{String(m.value).padStart(2, '0')}분</option>)}
       </select>
@@ -52,7 +58,7 @@ function TimeSelects({ timeMin, onChange }: Omit<StartTimePickerProps, 'desktop'
   );
 }
 
-function TimePopover({ timeMin, onChange }: Omit<StartTimePickerProps, 'desktop'>) {
+function TimePopover({ timeMin, onChange, bounds }: InnerProps) {
   const [open, setOpen] = useState(false);
   const [shift, setShift] = useState(0);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -61,8 +67,8 @@ function TimePopover({ timeMin, onChange }: Omit<StartTimePickerProps, 'desktop'
   const dialogId = useId();
   const { meridiem, hour12, minute } = splitTime(timeMin);
   const hour24 = Math.floor(timeMin / 60);
-  const hours = allowedHours(meridiem);
-  const minutes = minuteOptions(hour24);
+  const hours = allowedHours(meridiem, bounds);
+  const minutes = minuteOptions(hour24, bounds);
   const snapped = snapMinute(minute);
 
   const close = useCallback((returnFocus: boolean) => {
@@ -97,11 +103,11 @@ function TimePopover({ timeMin, onChange }: Omit<StartTimePickerProps, 'desktop'
     return () => document.removeEventListener('pointerdown', onPointerDown);
   }, [open]);
 
-  const pickMeridiem = (m: Meridiem): void => onChange(setMeridiem(timeMin, m));
-  const pickHour = (h: number): void => onChange(setHour(timeMin, meridiem, h));
+  const pickMeridiem = (m: Meridiem): void => onChange(setMeridiem(timeMin, m, bounds));
+  const pickHour = (h: number): void => onChange(setHour(timeMin, meridiem, h, bounds));
   const pickMinute = (m: number, disabled: boolean): void => {
     if (disabled) return;
-    onChange(setMinute(timeMin, m));
+    onChange(setMinute(timeMin, m, bounds));
     close(true);
   };
 
