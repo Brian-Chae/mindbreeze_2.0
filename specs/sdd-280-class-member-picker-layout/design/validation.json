@@ -1,0 +1,322 @@
+[
+  {
+    "option": "before",
+    "viewport": [
+      1440,
+      1000
+    ],
+    "admin": true,
+    "result": {
+      "width": 1440,
+      "horizontal": false,
+      "listScroll": 100,
+      "bodyScroll": 0,
+      "overlap": true,
+      "listPastCard": true,
+      "listPastFooter": true,
+      "visibleListPastFooter": true,
+      "selected": 1,
+      "filtered": 1
+    }
+  },
+  {
+    "option": "before",
+    "viewport": [
+      1440,
+      1000
+    ],
+    "admin": false,
+    "result": {
+      "width": 1440,
+      "horizontal": false,
+      "listScroll": 100,
+      "bodyScroll": 0,
+      "overlap": false,
+      "listPastCard": true,
+      "listPastFooter": true,
+      "visibleListPastFooter": true,
+      "selected": 1,
+      "filtered": 1
+    }
+  },
+  {
+    "option": "before",
+    "viewport": [
+      390,
+      844
+    ],
+    "admin": true,
+    "result": {
+      "width": 390,
+      "horizontal": false,
+      "listScroll": 100,
+      "bodyScroll": 0,
+      "overlap": true,
+      "listPastCard": true,
+      "listPastFooter": true,
+      "visibleListPastFooter": true,
+      "selected": 1,
+      "filtered": 1
+    }
+  },
+  {
+    "option": "before",
+    "viewport": [
+      390,
+      844
+    ],
+    "admin": false,
+    "result": {
+      "width": 390,
+      "horizontal": false,
+      "listScroll": 100,
+      "bodyScroll": 0,
+      "overlap": false,
+      "listPastCard": true,
+      "listPastFooter": true,
+      "visibleListPastFooter": true,
+      "selected": 1,
+      "filtered": 1
+    }
+  },
+  {
+    "option": "a",
+    "viewport": [
+      1440,
+      1000
+    ],
+    "admin": true,
+    "result": {
+      "width": 1440,
+      "horizontal": false,
+      "listScroll": 100,
+      "bodyScroll": 0,
+      "overlap": false,
+      "listPastCard": false,
+      "listPastFooter": false,
+      "visibleListPastFooter": false,
+      "selected": 1,
+      "filtered": 1
+    }
+  },
+  {
+    "option": "a",
+    "viewport": [
+      1440,
+      1000
+    ],
+    "admin": false,
+    "result": {
+      "width": 1440,
+      "horizontal": false,
+      "listScroll": 100,
+      "bodyScroll": 0,
+      "overlap": false,
+      "listPastCard": false,
+      "listPastFooter": false,
+      "visibleListPastFooter": false,
+      "selected": 1,
+      "filtered": 1
+    }
+  },
+  {
+    "option": "a",
+    "viewport": [
+      390,
+      844
+    ],
+    "admin": true,
+    "result": {
+      "width": 390,
+      "horizontal": false,
+      "listScroll": 100,
+      "bodyScroll": 0,
+      "overlap": false,
+      "listPastCard": false,
+      "listPastFooter": false,
+      "visibleListPastFooter": false,
+      "selected": 1,
+      "filtered": 1
+    }
+  },
+  {
+    "option": "a",
+    "viewport": [
+      390,
+      844
+    ],
+    "admin": false,
+    "result": {
+      "width": 390,
+      "horizontal": false,
+      "listScroll": 100,
+      "bodyScroll": 0,
+      "overlap": false,
+      "listPastCard": false,
+      "listPastFooter": false,
+      "visibleListPastFooter": false,
+      "selected": 1,
+      "filtered": 1
+    }
+  },
+  {
+    "option": "b",
+    "viewport": [
+      1440,
+      1000
+    ],
+    "admin": true,
+    "result": {
+      "width": 1440,
+      "horizontal": false,
+      "listScroll": 0,
+      "bodyScroll": 100,
+      "overlap": false,
+      "listPastCard": false,
+      "listPastFooter": true,
+      "visibleListPastFooter": false,
+      "selected": 1,
+      "filtered": 1
+    }
+  },
+  {
+    "option": "b",
+    "viewport": [
+      1440,
+      1000
+    ],
+    "admin": false,
+    "result": {
+      "width": 1440,
+      "horizontal": false,
+      "listScroll": 0,
+      "bodyScroll": 100,
+      "overlap": false,
+      "listPastCard": false,
+      "listPastFooter": true,
+      "visibleListPastFooter": false,
+      "selected": 1,
+      "filtered": 1
+    }
+  },
+  {
+    "option": "b",
+    "viewport": [
+      390,
+      844
+    ],
+    "admin": true,
+    "result": {
+      "width": 390,
+      "horizontal": false,
+      "listScroll": 0,
+      "bodyScroll": 100,
+      "overlap": false,
+      "listPastCard": false,
+      "listPastFooter": true,
+      "visibleListPastFooter": false,
+      "selected": 1,
+      "filtered": 1
+    }
+  },
+  {
+    "option": "b",
+    "viewport": [
+      390,
+      844
+    ],
+    "admin": false,
+    "result": {
+      "width": 390,
+      "horizontal": false,
+      "listScroll": 0,
+      "bodyScroll": 100,
+      "overlap": false,
+      "listPastCard": false,
+      "listPastFooter": true,
+      "visibleListPastFooter": false,
+      "selected": 1,
+      "filtered": 1
+    }
+  },
+  {
+    "option": "c",
+    "viewport": [
+      1440,
+      1000
+    ],
+    "admin": true,
+    "result": {
+      "width": 1440,
+      "horizontal": false,
+      "listScroll": 100,
+      "bodyScroll": 0,
+      "overlap": false,
+      "listPastCard": false,
+      "listPastFooter": false,
+      "visibleListPastFooter": false,
+      "selected": 1,
+      "filtered": 1
+    }
+  },
+  {
+    "option": "c",
+    "viewport": [
+      1440,
+      1000
+    ],
+    "admin": false,
+    "result": {
+      "width": 1440,
+      "horizontal": false,
+      "listScroll": 100,
+      "bodyScroll": 0,
+      "overlap": false,
+      "listPastCard": false,
+      "listPastFooter": false,
+      "visibleListPastFooter": false,
+      "selected": 1,
+      "filtered": 1
+    }
+  },
+  {
+    "option": "c",
+    "viewport": [
+      390,
+      844
+    ],
+    "admin": true,
+    "result": {
+      "width": 390,
+      "horizontal": false,
+      "listScroll": 100,
+      "bodyScroll": 0,
+      "overlap": false,
+      "listPastCard": false,
+      "listPastFooter": false,
+      "visibleListPastFooter": false,
+      "selected": 1,
+      "filtered": 1
+    }
+  },
+  {
+    "option": "c",
+    "viewport": [
+      390,
+      844
+    ],
+    "admin": false,
+    "result": {
+      "width": 390,
+      "horizontal": false,
+      "listScroll": 100,
+      "bodyScroll": 0,
+      "overlap": false,
+      "listPastCard": false,
+      "listPastFooter": false,
+      "visibleListPastFooter": false,
+      "selected": 1,
+      "filtered": 1
+    }
+  }
+]

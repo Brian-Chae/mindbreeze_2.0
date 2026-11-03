@@ -215,6 +215,9 @@ class Settings(BaseSettings):
     # SDD-019: 실행 환경 식별자 — 기본값 production (fail-safe).
     # dev 전용 기능은 이 값이 "production" 이 아닐 때만 켤 수 있다. debug 는 dev 판별에 쓰지 않는다.
     environment: str = "production"
+    # SDD-278: 종료 후 이 시간(초)이 지나도 폰 보고가 없으면 '비정상 종료 의심'. 기본 24h — prod 는 설정하지 않는다.
+    # dev 시험에서만 UPLOAD_ABNORMAL_EXIT_AFTER_SEC=300 처럼 짧게 둘 수 있다.
+    upload_abnormal_exit_after_sec: int = 24 * 3600
     # SDD-019: dev 역할 시뮬레이션 로그인 기능 게이트 — 기본 False (명시적 opt-in).
     enable_dev_role_simulation: bool = False
 

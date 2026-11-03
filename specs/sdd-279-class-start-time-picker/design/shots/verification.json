@@ -1,0 +1,50 @@
+[
+  {
+    "name": "a",
+    "device": "desktop",
+    "overflow": false,
+    "targets": true,
+    "errors": [],
+    "scenario": true
+  },
+  {
+    "name": "a",
+    "device": "mobile",
+    "overflow": false,
+    "targets": true,
+    "errors": [],
+    "scenario": true
+  },
+  {
+    "name": "b",
+    "device": "desktop",
+    "overflow": false,
+    "targets": true,
+    "errors": [],
+    "scenario": true
+  },
+  {
+    "name": "b",
+    "device": "mobile",
+    "overflow": false,
+    "targets": true,
+    "errors": [],
+    "scenario": true
+  },
+  {
+    "name": "c",
+    "device": "desktop",
+    "overflow": false,
+    "targets": true,
+    "errors": [],
+    "scenario": true
+  },
+  {
+    "name": "c",
+    "device": "mobile",
+    "overflow": false,
+    "targets": true,
+    "errors": [],
+    "scenario": true
+  }
+]

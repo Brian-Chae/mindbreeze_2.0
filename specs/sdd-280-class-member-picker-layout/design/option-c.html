@@ -1,0 +1,39 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>C · 선택 칩과 검색 결과 시트</title><style>:root{
+
+  --mb-purple: #5F0080;
+  --mb-purple-90: #6E1A8C;
+  --mb-lavender: #B373EF;
+  --mb-pale: #D2AEFC;
+  --mb-purple-cream: #F5EDFC;
+  --mb-mint: #01F0C8;
+  --mb-coral: #E8B4A0;
+
+
+  --tx-hi: #F7F4F0;
+  --tx-mid: #CFC6D6;
+  --tx-lo: #9A90A6;
+
+
+  --sheet-bg: rgba(24, 12, 36, 0.58);
+  --sheet-bg-strong: rgba(24, 12, 36, 0.78);
+  --sheet-border: rgba(255, 255, 255, 0.14);
+  --scrim-top: rgba(18, 8, 28, 0.35);
+  --scrim-bottom: rgba(18, 8, 28, 0.72);
+
+
+  --r-sheet: 24px;
+  --r-card: 16px;
+  --r-pill: 9999px;
+  --tap: 44px;
+
+
+  --fs-12: 12px;
+  --fs-13: 13px;
+  --fs-15: 15px;
+  --fs-18: 18px;
+  --fs-24: 24px;
+  --fs-36: 36px;
+  --fs-56: 56px;
+
+  --font: "Pretendard Variable", Pretendard, "Noto Sans KR", -apple-system, "Apple SD Gothic Neo", system-ui, sans-serif;
+}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#573462,#20102e);color:var(--tx-hi);font-family:var(--font);font-size:15px}button,input,textarea{font:inherit;color:inherit}button,a{cursor:pointer}button,input,textarea{border:1px solid var(--sheet-border);border-radius:16px;background:rgba(255,255,255,.1)}button{min-height:44px;padding:8px 16px}button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid var(--mb-pale);outline-offset:2px}input[type=checkbox]{accent-color:var(--mb-purple);width:24px;height:24px;flex:none}header,main,footer{width:min(640px,calc(100% - 32px));margin:20px auto}header small,p,small{color:var(--tx-mid)}h1{font-size:24px;margin:12px 0}p{margin:0;line-height:1.5}.controls{display:flex;gap:8px;flex-wrap:wrap}.controls label{display:flex;align-items:center;min-height:44px;gap:8px}.card{background:var(--sheet-bg);border:1px solid var(--sheet-border);border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:16px;backdrop-filter:blur(12px)}.tabs{display:flex;gap:8px}.tabs button{flex:1}.on,.primary{background:var(--mb-purple);border-color:var(--mb-lavender)}.search{min-height:52px;width:100%;padding:0 16px;flex:none}.summary{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;flex:none}.list{display:flex;flex-direction:column;gap:8px;overflow:auto;min-height:0;max-height:320px;scrollbar-color:var(--mb-lavender) transparent}.row{display:flex;align-items:center;gap:16px;min-height:64px;padding:8px 16px;background:rgba(255,255,255,.08);border:1px solid var(--sheet-border);border-radius:16px;flex:none;cursor:pointer}.row:has(:checked){border-color:var(--mb-lavender)}.avatar{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.14);display:grid;place-items:center;flex:none}.identity{flex:1;min-width:0}.identity small{display:block;margin-top:8px}.reason{display:flex;flex-direction:column;gap:8px;flex:none}.reason textarea{height:64px;min-height:56px;width:100%;padding:8px 16px;resize:vertical}.nav{display:grid;grid-template-columns:1fr 2fr;gap:8px}.chips{display:flex;gap:8px;flex-wrap:wrap;max-height:104px;overflow:auto}.chips:empty{display:none}[hidden]{display:none!important}footer{padding-bottom:env(safe-area-inset-bottom,16px)}.b main{height:calc(100dvh - 270px);min-height:200px;overflow:auto;border-radius:24px}.b .list{max-height:none;overflow:visible;flex:none}.b footer{position:sticky;bottom:0;background:#24112f;padding:12px;border-radius:16px}.c .list{max-height: min(408px,40dvh)}.before main{height:300px}.before .card{height:100%;min-height:0}.before .picker{display:flex;flex:1;min-height:0;flex-direction:column;gap:16px}.before .list{flex:1;min-height:320px;max-height:none}.before footer{position:relative}.note{font-size:13px;margin-top:8px}@media(max-width:599px){.card{padding:16px}.a .list{max-height:40dvh}.summary{flex-wrap:wrap}header,main,footer{margin:16px auto}.b main{height:calc(100dvh - 300px)}}</style><body class="c"><header><small>MIND BREEZE · 디자인 검토용 · 가상 데이터</small><h1>C · 선택 칩과 검색 결과 시트</h1><div class="controls"><label><input id="many" type="checkbox" checked>회원 20명 목록</label><label><input id="admin" type="checkbox" checked>대행 사유 표시</label></div><p class="note">4 / 4 · 회원을 초대해요 · 검색어를 입력하면 결과가 열려요</p></header><main><section class="card"><div class="tabs"><button class="on" aria-pressed="true">회원</button><button disabled>비회원 이메일</button></div><div class="picker" style="display:contents"><label for="search">회원 검색</label><div class="chips" aria-label="선택한 회원"></div><input id="search" class="search" type="search" placeholder="이름이나 정확한 이메일로 찾아요"><p>이름으로 찾을 수 없는 회원은 정확한 이메일을 입력해 주세요.</p><div class="summary"><span class="count" role="status" aria-live="polite"></span><button type="button" disabled title="디자인 시안에서는 파일을 전송하지 않아요">CSV 추가</button></div><div class="list" tabindex="0" role="group" aria-label="회원 검색 결과"></div></div><label class="reason">센터 관리자 대행 사유<textarea placeholder="초안 수정·공개·초대 사유를 입력해 주세요"></textarea></label></section></main><footer><div class="nav"><button>이전</button><button class="primary">클래스 만들기</button></div><p class="note">정적 시안 · 생성·CSV·이메일·서버 연결 없음</p></footer><script>const names=Array.from({length:20},(_,i)=>`가상 회원 ${String(i+1).padStart(2,'0')}`);const picked=new Set();const list=document.querySelector('.list'),search=document.querySelector('.search'),chips=document.querySelector('.chips');let long=true;function draw(){const q=search.value.trim();const data=names.slice(0,long?20:4).filter(n=>n.includes(q));list.hidden=document.body.classList.contains('c')&&!q;list.innerHTML=data.map(n=>`<label class="row"><span class="avatar" aria-hidden="true">가</span><span class="identity">${n}<small>user••@example.test</small></span><input type="checkbox" aria-label="${n} 선택" data-name="${n}" ${picked.has(n)?'checked':''}></label>`).join('')||'<p>검색 결과가 없어요.</p>';document.querySelector('.count').textContent=picked.size?`${picked.size}/20명 선택`:'선택 없음 · 나중에 초대해도 돼요';chips.innerHTML=[...picked].map(n=>`<button data-remove="${n}" aria-label="${n} 선택 취소">${n} ×</button>`).join('')}list.addEventListener('change',e=>{const n=e.target.dataset.name;e.target.checked?picked.add(n):picked.delete(n);draw()});chips.addEventListener('click',e=>{if(e.target.dataset.remove){picked.delete(e.target.dataset.remove);draw()}});search.oninput=draw;document.querySelector('#many').onchange=e=>{long=e.target.checked;draw()};document.querySelector('#admin').onchange=e=>document.querySelector('.reason').hidden=!e.target.checked;draw();</script></body></html>

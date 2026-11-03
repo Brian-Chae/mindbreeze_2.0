@@ -160,7 +160,7 @@
 .cs-wizard .w-count span { font-size: var(--fs-13); color: var(--tx-mid); }
 .cs-wizard .w-count b { color: var(--tx-hi); font-size: var(--fs-15); }
 .cs-wizard .w-count .fl-btn { min-height: 44px; padding: 0 16px; font-size: var(--fs-13); }
-.cs-wizard .w-plist { flex: 1; min-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.cs-wizard .w-plist { flex: none; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
 .cs-wizard .w-prow { display: grid; grid-template-columns: 40px minmax(0, 1fr) 32px; gap: 16px; align-items: center; min-height: 64px; padding: 8px 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); width: 100%; text-align: left; flex: none; }
 .cs-wizard .w-prow[disabled] { opacity: 0.4; }
 .cs-wizard .w-prow .av { width: 40px; height: 40px; border-radius: var(--r-pill); background: rgba(255,255,255,0.14); font-weight: 700; display: grid; place-items: center; }
@@ -307,46 +307,39 @@
 .cs-wizard svg{flex:none}.cs-wizard .cw-span2{grid-column:1/-1}
 .cs-wizard .cw-assignment-list{max-height:128px;overflow:auto;flex:none}
 .cs-wizard .fl-banner span{flex:1}.cs-wizard .fl-banner>button{display:grid;place-items:center;min-width:44px;min-height:44px}
-.cs-wizard .cw-member-picker{display:flex;flex-direction:column;gap:16px;flex:1;min-height:0;color:var(--tx-hi)}
+.cs-wizard .cw-member-picker{display:flex;flex-direction:column;gap:16px;flex:none;min-height:0;color:var(--tx-hi)}
 .cs-wizard .class-member-picker__search{min-height:52px;border-radius:16px;background:rgba(255,255,255,.1);border:1px solid var(--sheet-border);color:var(--tx-hi);padding:0 16px;font-size:15px;width:100%}
-.cs-wizard .class-member-picker__list{flex:1;min-height:320px;overflow:auto;display:flex;flex-direction:column;gap:8px}
-.cs-wizard .class-member-picker__row{min-height:64px;padding:8px 16px;border-radius:16px;background:rgba(255,255,255,.08);border:1px solid var(--sheet-border);display:flex;gap:16px;align-items:center;text-align:left;width:100%;flex:none}
+.cs-wizard .class-member-picker__list{flex:none;min-height:0;max-height:none;overflow:visible;display:flex;flex-direction:column;gap:8px}
+.cs-wizard .class-member-picker__row{min-height:72px;padding:8px 16px;border-radius:16px;background:rgba(255,255,255,.08);border:1px solid var(--sheet-border);display:flex;gap:16px;align-items:center;text-align:left;width:100%;flex:none}
 .cs-wizard .class-member-picker__row[aria-pressed=true]{border-color:var(--mb-lavender)}
 .cs-wizard .class-member-picker__avatar{width:40px;height:40px;display:grid;place-items:center;border-radius:9999px;background:rgba(255,255,255,.14);font-weight:700;flex:none}
 .cs-wizard .class-member-picker__name{font-size:15px;font-weight:700}.cs-wizard .class-member-picker__email{font-size:13px;color:var(--tx-mid);margin-top:8px}
 .cs-wizard .w-inwrap>.ic{width:20px;height:20px}
 @media (min-width:1194px) and (orientation:landscape){.cs-wizard .w-scrim{align-items:stretch;justify-content:flex-end}.cs-wizard .w-sheet{width:480px;max-height:100dvh;border-radius:24px 0 0 24px}.cs-wizard .w-sbody.sc{flex:1}.cs-wizard .w-sfoot{flex:none}}
 /* 작은 높이에서도 입력과 하단 이동을 유지한다. 정상 높이에서는 목록만 스크롤한다. */
-@media (max-height:640px){.cs-wizard .fl-body{justify-content:flex-start;overflow:auto}.cs-wizard .fl-body>.fl-col{flex:none;min-height:min-content}.cs-wizard .w-wlist{max-height:220px;flex:none}.cs-wizard.w-wiz .fl-body.w-fill .fl-col{flex:none;min-height:min-content;max-height:none}.cs-wizard.w-wiz .w-plist,.cs-wizard.w-wiz .class-member-picker__list{flex:1 0 320px;max-height:320px}.cs-wizard .fl-foot{padding-top:8px}.cs-wizard .w-card{padding:16px}}
+@media (max-height:640px){.cs-wizard .fl-body{justify-content:flex-start;overflow:auto}.cs-wizard .fl-body>.fl-col{flex:none;min-height:min-content}.cs-wizard .w-wlist{max-height:220px;flex:none}.cs-wizard.w-wiz .fl-body.w-fill .fl-col{flex:none;min-height:min-content;max-height:none}.cs-wizard .fl-foot{padding-top:8px}.cs-wizard .w-card{padding:16px}}
 @media (max-width:599px){.cs-wizard .w-codebig{font-size:32px;letter-spacing:4px}.cs-wizard .w-coderow{gap:8px}.cs-wizard .w-stepper{gap:0;padding:0}.cs-wizard .w-sched{gap:12px}.cs-wizard .w-days button span{width:36px;height:36px}.cs-wizard .w-wrow{gap:8px}.cs-wizard .w-2col{gap:16px}}
 .cs-wizard .cw-member-picker.space-y-3>*+*{margin-top:0}
 .cs-wizard .cw-member-picker>label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
 .cs-wizard .class-member-picker__hint,.cs-wizard .cw-member-picker>p{color:var(--tx-mid);font-size:13px;line-height:20px}
-.cs-wizard .class-member-picker__list{max-height:none;border:0;border-radius:0}
+.cs-wizard .class-member-picker__list{border:0;border-radius:0}
 .cs-wizard .class-member-picker__row{cursor:pointer}
 .cs-wizard .class-member-picker__row:has(input:checked){border-color:var(--mb-lavender)}
 .cs-wizard .class-member-picker__row input{width:24px;height:24px;accent-color:var(--mb-purple);flex:none}
 .cs-wizard .class-member-picker__avatar{color:var(--tx-hi)}
 .cs-wizard .class-member-picker__selected{gap:8px;flex:none}
 .cs-wizard .class-member-picker__selected>span{background:var(--mb-purple);color:var(--tx-hi);border:1px solid var(--mb-lavender);border-radius:9999px;padding:4px 12px}
-.cs-wizard .class-member-picker__selected button{min-width:32px;min-height:32px}
+.cs-wizard .class-member-picker__selected button{min-width:44px;min-height:44px;margin:-6px -12px -6px -4px}
 .cs-wizard .cw-datetime{position:relative;display:flex;align-items:center;justify-content:center;height:44px;font-size:13px;font-weight:700;white-space:nowrap;min-width:0}
 .cs-wizard .w-stepper .cw-datetime input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
 .cs-wizard .cw-datetime:focus-within{outline:2px solid var(--mb-pale);outline-offset:2px;border-radius:8px}
-.cs-wizard .fl-body:not(.w-fill)>.fl-col{max-height:100%;overflow-y:auto;scrollbar-width:thin}
+.cs-wizard .fl-body:not(.w-fill):not(.cw-scroll)>.fl-col{max-height:100%;overflow-y:auto;scrollbar-width:thin}
 .cs-wizard .class-member-picker__selected{max-height:88px;overflow:auto}
 .cs-wizard .class-member-picker__list>p{color:var(--tx-mid)}
 .cs-wizard h1,.cs-wizard h2{color:var(--tx-hi)}
 .cs-wizard .w-sumrow .tx{text-align:left}
 .cs-wizard .w-sumrow>svg{color:var(--mb-pale)}
 .cs-wizard .fl-seg>button.on{border-color:var(--mb-lavender)}
-.cs-wizard .cw-invite-members{gap:16px}
-.cs-wizard .cw-invite-members .cw-member-picker{display:contents}
-.cs-wizard .cw-invite-members .class-member-picker__search{order:1}
-.cs-wizard .cw-invite-members .class-member-picker__hint{order:2}
-.cs-wizard .cw-invite-members .w-count{order:3}
-.cs-wizard .cw-invite-members .class-member-picker__selected{order:4}
-.cs-wizard .cw-invite-members .class-member-picker__list{order:5}
 
 .cs-wizard .w-resrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;min-height:56px;padding:8px 16px;border-radius:var(--r-card);background:rgba(255,255,255,.08);border:1px solid var(--sheet-border);flex:none}
 .cs-wizard .w-resrow .tx{display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--tx-mid);line-height:20px}
@@ -364,3 +357,102 @@
 .cs-wizard .cw-invite-status { display: grid; gap: 12px; }
 .cs-wizard .cw-invite-status-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 0; }
 .cs-wizard .cw-invite-status-row > span:first-child { flex: 1 1 12rem; overflow-wrap: anywhere; min-width: 0; }
+
+/* SDD-280 — 4단계 회원 초대: 본문만 스크롤하고 하단 바는 별도 행. 목록은 높이를 강제하지 않는다(min-height 의존 제거).
+   모바일/태블릿(<1024)은 1열(요약 → 탭 → 검색 → 선택 요약 → 목록 → 대행 사유), 데스크톱은 좌 폼 / 우 목록 1:1. */
+.cs-wizard .fl-body.cw-scroll { justify-content: flex-start; overflow-y: auto; overflow-x: hidden; padding-bottom: var(--sp-4); scroll-padding-bottom: var(--sp-3); scroll-padding-top: var(--sp-2); overscroll-behavior: contain; }
+.cs-wizard .fl-body.cw-scroll > .fl-col { flex: none; min-height: min-content; }
+.cs-wizard .cw-split .cw-split-left,.cs-wizard .cw-split .cw-split-form,.cs-wizard .cw-split .cw-member-picker { display: contents; }
+.cs-wizard .cw-split .w-sum { order: 0; }
+.cs-wizard .cw-split .cw-sec { order: 4; border: 0; margin: 0; padding: 0; min-width: 0; }
+.cs-wizard .cw-split .cw-sec-tabs { order: 1; }
+.cs-wizard .cw-split .cw-sec-reason { order: 7; }
+.cs-wizard .cw-split .cw-member-picker > .class-member-picker__search { order: 2; }
+.cs-wizard .cw-split .cw-member-picker > .class-member-picker__hint,.cs-wizard .cw-split .cw-member-picker > [role="alert"] { order: 3; }
+.cs-wizard .cw-split .cw-member-picker > .class-member-picker__list { order: 5; }
+.cs-wizard .cw-split .cw-member-picker > p:not(.class-member-picker__hint):not([role="alert"]) { order: 6; }
+.cs-wizard .cw-split .cw-split-panel { order: 5; }
+.cs-wizard .cw-split .cw-sec-tabs,.cs-wizard .cw-split .cw-sec-select,.cs-wizard .cw-split .cw-sec-reason,.cs-wizard .cw-split .cw-split-panel,.cs-wizard .cw-split .class-member-picker__list { padding: var(--sp-2); border: 1px solid var(--sheet-border); border-radius: var(--r-sheet); background: var(--sheet-bg-strong); }
+.cs-wizard .cw-split .cw-sec-tabs,.cs-wizard .cw-split .cw-sec-select,.cs-wizard .cw-split .cw-sec-reason { margin: 0; }
+.cs-wizard .cw-chip-slot:empty { display: none; }
+/* 본문이 유일한 세로 스크롤이다. 선택 칩 영역에 별도 스크롤(max-height 88px)을 두지 않는다. */
+.cs-wizard .cw-split .class-member-picker__selected { max-height: none; overflow: visible; }
+.cs-wizard .cw-split-title { font-size: var(--fs-15); font-weight: 700; margin: 0 0 var(--sp-2); text-align: left; }
+.cs-wizard .cw-split-panel { display: flex; flex-direction: column; gap: var(--sp-1); }
+@media (min-width: 1024px) {
+  .cs-wizard .fl-body.cw-scroll { padding-top: var(--sp-2); padding-left: var(--sp-4); padding-right: var(--sp-4); }
+  .cs-wizard .cw-split { width: min(100%, 1120px); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: var(--sp-3); align-items: start; }
+  .cs-wizard .cw-split .cw-split-left { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+  .cs-wizard .cw-split .cw-split-left[data-fit="true"] { position: sticky; top: var(--sp-2); }
+  .cs-wizard .cw-split .cw-split-form { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-3); border: 1px solid var(--sheet-border); border-radius: var(--r-sheet); background: var(--sheet-bg-strong); }
+  .cs-wizard .cw-split .cw-sec-tabs,.cs-wizard .cw-split .cw-sec-select,.cs-wizard .cw-split .cw-sec-reason { padding: 0; border: 0; border-radius: 0; background: none; }
+  .cs-wizard .cw-split .cw-member-picker,.cs-wizard .cw-split .cw-split-panel { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; padding: var(--sp-3); border: 1px solid var(--sheet-border); border-radius: var(--r-sheet); background: var(--sheet-bg-strong); }
+  .cs-wizard .cw-split .cw-split-panel { gap: var(--sp-1); }
+  .cs-wizard .cw-split .cw-member-picker > * { order: 0; }
+  .cs-wizard .cw-split .class-member-picker__list { padding: 0; border: 0; border-radius: 0; background: none; }
+}
+@media (max-width: 1023px) {
+  .cs-wizard .cw-split { width: min(100%, var(--col-w)); }
+  .cs-wizard .cw-split .cw-member-picker > p { padding: 0 var(--sp-2); }
+}
+
+/* SDD-279 보정 — /classes/new 시작 시각 C-3 팝업(host-flow-create.css 의 fh-time* 를 .cs-wizard 체계로 적응) */
+.cs-wizard .cw-timepick { --fh-ctl: 56px; min-width: 0; }
+.cs-wizard .fh-timefield { position: relative; min-width: 0; }
+.cs-wizard .fh-timebtn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: var(--fh-ctl, 56px); padding: 0 12px; box-sizing: border-box; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); font-size: var(--fs-15); font-weight: 700; color: var(--tx-hi); white-space: nowrap; }
+.cs-wizard .fh-timebtn[aria-expanded="true"] { border-color: var(--mb-lavender); }
+.cs-wizard .fh-timepop { position: absolute; z-index: 30; top: calc(100% + 8px); left: 0; width: 100%; box-sizing: border-box; padding: 8px; border-radius: var(--r-card); background: #24132f; border: 1px solid var(--mb-lavender); box-shadow: 0 16px 48px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 8px; }
+.cs-wizard .fh-timepop-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cs-wizard .fh-timetab { min-height: 44px; border-radius: 12px; border: 1px solid var(--sheet-border); background: transparent; font-size: var(--fs-15); font-weight: 600; color: var(--tx-mid); }
+.cs-wizard .fh-timetab[aria-pressed="true"] { border-color: var(--mb-pale); color: var(--tx-hi); background: rgba(210,174,252,0.14); }
+.cs-wizard .fh-timepop-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cs-wizard .fh-timelist { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; border-radius: 12px; background: rgba(255,255,255,0.04); scrollbar-width: thin; }
+.cs-wizard .fh-timeopt { flex: none; min-height: 44px; width: 100%; border-radius: 10px; border: 1px solid transparent; background: transparent; font-size: var(--fs-18); font-weight: 600; color: var(--tx-hi); }
+.cs-wizard .fh-timeopt[aria-selected="true"] { background: var(--mb-purple); border-color: var(--mb-purple); }
+.cs-wizard .fh-timeopt[aria-disabled="true"] { opacity: 0.35; cursor: not-allowed; }
+.cs-wizard .fh-timeopt:focus-visible, .cs-wizard .fh-timetab:focus-visible, .cs-wizard .fh-timebtn:focus-visible { outline: 2px solid var(--mb-pale); outline-offset: 2px; }
+.cs-wizard .fh-timesel { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cs-wizard .fh-timesel-s { width: 100%; min-width: 0; height: var(--fh-ctl, 56px); padding: 0 12px; box-sizing: border-box; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); font: inherit; font-size: var(--fs-15); font-weight: 700; color: var(--tx-hi); }
+.cs-wizard .fh-timesel-s option { background: #24132f; color: #fff; }
+
+/* SDD-281 — /classes/new 시작 날짜 캘린더 D-1 (데스크톱 326px 팝오버 / 모바일 Bottom Sheet). 필드는 시작 시각(fh-timebtn)과 같은 톤 */
+.cs-wizard .cw-datepick { --fh-ctl: 56px; min-width: 0; }
+.cs-wizard .cw-datefield { position: relative; min-width: 0; }
+.cs-wizard .cw-datebtn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: var(--fh-ctl, 56px); padding: 0 12px; box-sizing: border-box; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); font-size: var(--fs-15); font-weight: 700; color: var(--tx-hi); white-space: nowrap; }
+.cs-wizard .cw-datebtn[aria-expanded="true"] { border-color: var(--mb-lavender); }
+.cs-wizard .cw-datebtn:focus-visible, .cw-date-pop.cs-wizard button:focus-visible, .cs-wizard .cw-date-pop button:focus-visible, .cs-wizard .cw-date-sheet button:focus-visible { outline: 2px solid var(--mb-pale); outline-offset: 2px; }
+.cw-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+/* 팝오버/시트는 body 포털이라 .cs-wizard 토큰이 필요 → 포털 루트에 cs-wizard 클래스를 함께 붙이고 아래에서 위치를 덮어쓴다 */
+.cw-date-pop.cs-wizard, .cw-date-scrim.cs-wizard { position: fixed; width: auto; height: auto; overflow: visible; background: transparent; }
+.cw-date-pop.cs-wizard, .cs-wizard .cw-date-sheet { color: var(--tx-hi); font-family: inherit; display: flex; flex-direction: column; }
+.cs-wizard .cw-date-pop button, .cs-wizard .cw-date-sheet button { font: inherit; color: inherit; cursor: pointer; }
+.cs-wizard .cw-date-pop button:disabled, .cs-wizard .cw-date-sheet button:disabled { cursor: default; }
+.cw-date-pop.cs-wizard { display: flex; flex-direction: column; z-index: 60; width: 326px; box-sizing: border-box; padding: 8px; gap: 4px; border-radius: var(--r-card); background: #24132f; border: 1px solid var(--mb-lavender); box-shadow: 0 16px 48px rgba(0,0,0,0.5); }
+.cs-wizard .cw-datemonth { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; min-height: 44px; }
+.cs-wizard .cw-datemonth b { text-align: center; font-size: var(--fs-15); font-weight: 700; }
+.cs-wizard .cw-datenav { width: 44px; height: 44px; border-radius: var(--r-pill); display: grid; place-items: center; background: rgba(255,255,255,0.1); border: 1px solid var(--sheet-border); }
+.cs-wizard .cw-datenav:disabled { opacity: 0.35; }
+.cs-wizard .cw-dateweek, .cs-wizard .cw-daterow { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.cs-wizard .cw-dateweek span { text-align: center; font-size: var(--fs-13); line-height: 24px; font-weight: 600; color: var(--tx-mid); }
+.cs-wizard .cw-dategrid { display: flex; flex-direction: column; gap: 2px; touch-action: pan-y; }
+.cs-wizard .cw-datecell { min-width: 0; height: 44px; border-radius: 12px; border: 2px solid transparent; background: transparent; font-size: var(--fs-15); font-weight: 600; color: var(--tx-hi); display: grid; place-items: center; position: relative; }
+.cs-wizard .cw-datecell.empty { visibility: hidden; }
+.cs-wizard .cw-datecell.today { border-color: var(--mb-pale); background: rgba(210,174,252,0.12); }
+.cs-wizard .cw-datecell.today::after { content: ''; position: absolute; bottom: 5px; width: 4px; height: 4px; border-radius: 50%; background: var(--mb-pale); }
+.cs-wizard .cw-datecell.sel { background: var(--mb-purple); border-color: var(--mb-purple); }
+.cs-wizard .cw-datecell.sel.today { border-color: var(--mb-pale); }
+.cs-wizard .cw-datecell[aria-disabled="true"] { opacity: 0.35; cursor: not-allowed; }
+.cs-wizard .cw-datefoot { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; font-size: var(--fs-13); color: var(--tx-mid); }
+.cs-wizard .cw-datefoot:has(> .cw-datetoday:only-child) { justify-content: center; }
+.cs-wizard .cw-datetoday { min-height: 44px; padding: 0 12px; border-radius: var(--r-card); background: transparent; border: 0; color: var(--mb-pale); font-size: var(--fs-13); font-weight: 600; }
+/* 모바일 Bottom Sheet (<768px) — WizardSheet 톤: 딤 rgba(12,6,20,.55), 시트 rgba(24,12,36,.97), 상단 24px 라운드 */
+.cw-date-scrim.cs-wizard { inset: 0; z-index: 70; background: rgba(12, 6, 20, 0.55); display: flex; align-items: flex-end; justify-content: center; }
+.cs-wizard .cw-date-sheet { width: min(100%, 640px); max-height: 85dvh; box-sizing: border-box; padding: 0 16px max(12px, env(safe-area-inset-bottom, 0px)); gap: 6px; overflow-y: auto; background: rgba(24, 12, 36, 0.97); border: 1px solid var(--sheet-border); border-radius: 24px 24px 0 0; animation: cw-date-rise 0.18s ease-out; }
+.cs-wizard .cw-date-handle { flex: none; height: 16px; position: relative; touch-action: none; margin: 0 -16px; }
+.cs-wizard .cw-date-handle::after { content: ''; position: absolute; left: calc(50% - 20px); top: 6px; width: 40px; height: 4px; border-radius: 4px; background: rgba(207,198,214,0.47); }
+.cs-wizard .cw-datehead { display: flex; align-items: center; justify-content: space-between; min-height: 44px; flex: none; }
+.cs-wizard .cw-datehead h2 { margin: 0; font-size: var(--fs-18); font-weight: 700; }
+.cs-wizard .cw-date-sheet .cw-datecell { height: 44px; }
+@media (max-height: 700px) { .cs-wizard .cw-date-sheet { gap: 4px; } .cs-wizard .cw-dategrid { gap: 0; } }
+@keyframes cw-date-rise { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .cs-wizard .cw-date-sheet { animation: none; } }
