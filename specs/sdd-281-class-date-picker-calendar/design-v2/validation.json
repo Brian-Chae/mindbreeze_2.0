@@ -1,0 +1,342 @@
+{
+  "generatedAt": "2026-11-03T07:49:15.813Z",
+  "method": "Chrome headless + Playwright; file URL; DOM 측정 및 실제 mouse/keyboard 조작",
+  "measurements": [
+    {
+      "month": "2026-11",
+      "width": 390,
+      "height": 844,
+      "sheet": {
+        "x": 0,
+        "y": 400,
+        "width": 390,
+        "height": 444,
+        "bottom": 844,
+        "right": 390
+      },
+      "maxHeight": "717.4px",
+      "paddingBottom": "12px",
+      "safeAreaRule": true,
+      "bottomAttached": true,
+      "within85dvh": true,
+      "contained": true,
+      "minCellWidth": 50.84375,
+      "minCellHeight": 44,
+      "clippedCells": 0,
+      "internalScroll": 0,
+      "horizontalOverflow": 0,
+      "backgroundInert": true,
+      "bodyLocked": true,
+      "rows": 5,
+      "errors": []
+    },
+    {
+      "month": "2027-05",
+      "width": 390,
+      "height": 844,
+      "sheet": {
+        "x": 0,
+        "y": 356,
+        "width": 390,
+        "height": 488,
+        "bottom": 844,
+        "right": 390
+      },
+      "maxHeight": "717.4px",
+      "paddingBottom": "12px",
+      "safeAreaRule": true,
+      "bottomAttached": true,
+      "within85dvh": true,
+      "contained": true,
+      "minCellWidth": 50.84375,
+      "minCellHeight": 44,
+      "clippedCells": 0,
+      "internalScroll": 0,
+      "horizontalOverflow": 0,
+      "backgroundInert": true,
+      "bodyLocked": true,
+      "rows": 6,
+      "errors": []
+    },
+    {
+      "month": "2026-11",
+      "width": 390,
+      "height": 600,
+      "sheet": {
+        "x": 0,
+        "y": 156,
+        "width": 390,
+        "height": 444,
+        "bottom": 600,
+        "right": 390
+      },
+      "maxHeight": "510px",
+      "paddingBottom": "12px",
+      "safeAreaRule": true,
+      "bottomAttached": true,
+      "within85dvh": true,
+      "contained": true,
+      "minCellWidth": 50.84375,
+      "minCellHeight": 44,
+      "clippedCells": 0,
+      "internalScroll": 0,
+      "horizontalOverflow": 0,
+      "backgroundInert": true,
+      "bodyLocked": true,
+      "rows": 5,
+      "errors": []
+    },
+    {
+      "month": "2027-05",
+      "width": 390,
+      "height": 600,
+      "sheet": {
+        "x": 0,
+        "y": 112,
+        "width": 390,
+        "height": 488,
+        "bottom": 600,
+        "right": 390
+      },
+      "maxHeight": "510px",
+      "paddingBottom": "12px",
+      "safeAreaRule": true,
+      "bottomAttached": true,
+      "within85dvh": true,
+      "contained": true,
+      "minCellWidth": 50.84375,
+      "minCellHeight": 44,
+      "clippedCells": 0,
+      "internalScroll": 0,
+      "horizontalOverflow": 0,
+      "backgroundInert": true,
+      "bodyLocked": true,
+      "rows": 6,
+      "errors": []
+    },
+    {
+      "month": "2026-11",
+      "width": 360,
+      "height": 740,
+      "sheet": {
+        "x": 0,
+        "y": 296,
+        "width": 360,
+        "height": 444,
+        "bottom": 740,
+        "right": 360
+      },
+      "maxHeight": "629px",
+      "paddingBottom": "12px",
+      "safeAreaRule": true,
+      "bottomAttached": true,
+      "within85dvh": true,
+      "contained": true,
+      "minCellWidth": 46.5625,
+      "minCellHeight": 44,
+      "clippedCells": 0,
+      "internalScroll": 0,
+      "horizontalOverflow": 0,
+      "backgroundInert": true,
+      "bodyLocked": true,
+      "rows": 5,
+      "errors": []
+    },
+    {
+      "month": "2027-05",
+      "width": 360,
+      "height": 740,
+      "sheet": {
+        "x": 0,
+        "y": 252,
+        "width": 360,
+        "height": 488,
+        "bottom": 740,
+        "right": 360
+      },
+      "maxHeight": "629px",
+      "paddingBottom": "12px",
+      "safeAreaRule": true,
+      "bottomAttached": true,
+      "within85dvh": true,
+      "contained": true,
+      "minCellWidth": 46.5625,
+      "minCellHeight": 44,
+      "clippedCells": 0,
+      "internalScroll": 0,
+      "horizontalOverflow": 0,
+      "backgroundInert": true,
+      "bodyLocked": true,
+      "rows": 6,
+      "errors": []
+    },
+    {
+      "desktop": {
+        "date": {
+          "height": "56px",
+          "fontSize": "15px",
+          "fontWeight": "700",
+          "borderRadius": "16px",
+          "fontFamily": "\"Pretendard Variable\", Pretendard, \"Noto Sans KR\", -apple-system, \"Apple SD Gothic Neo\", system-ui, sans-serif"
+        },
+        "time": {
+          "height": "56px",
+          "fontSize": "15px",
+          "fontWeight": "700",
+          "borderRadius": "16px",
+          "fontFamily": "\"Pretendard Variable\", Pretendard, \"Noto Sans KR\", -apple-system, \"Apple SD Gothic Neo\", system-ui, sans-serif"
+        },
+        "width": 326,
+        "rightAligned": true,
+        "contained": true
+      }
+    }
+  ],
+  "interactions": [
+    {
+      "name": "close-date",
+      "passed": true,
+      "closed": true,
+      "focus": true,
+      "unlocked": true
+    },
+    {
+      "name": "close-backdrop",
+      "passed": true,
+      "closed": true,
+      "focus": true,
+      "unlocked": true
+    },
+    {
+      "name": "close-drag",
+      "passed": true,
+      "closed": true,
+      "focus": true,
+      "unlocked": true
+    },
+    {
+      "name": "close-escape",
+      "passed": true,
+      "closed": true,
+      "focus": true,
+      "unlocked": true
+    },
+    {
+      "name": "close-close",
+      "passed": true,
+      "closed": true,
+      "focus": true,
+      "unlocked": true
+    },
+    {
+      "name": "history-back",
+      "passed": true,
+      "closed": true,
+      "focus": true,
+      "unlocked": true
+    },
+    {
+      "name": "swipe-next",
+      "passed": true,
+      "before": "2026년 11월",
+      "after": "2026년 12월"
+    },
+    {
+      "name": "swipe-prev",
+      "passed": true
+    },
+    {
+      "name": "selected-query-cell",
+      "passed": true
+    },
+    {
+      "name": "three-cell-styles",
+      "passed": true,
+      "today": {
+        "background": "rgba(210, 174, 252, 0.12)",
+        "border": "rgb(210, 174, 252)",
+        "borderWidth": "2px",
+        "opacity": "1",
+        "label": "2026년 11월 3일 화요일, 오늘"
+      },
+      "selected": {
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(247, 244, 240)",
+        "borderWidth": "0px",
+        "opacity": "1",
+        "label": null
+      },
+      "disabled": {
+        "background": "rgba(255, 255, 255, 0.024)",
+        "border": "rgba(255, 255, 255, 0.04)",
+        "borderWidth": "1px",
+        "opacity": "0.35",
+        "label": "2026년 11월 2일 월요일, 선택 불가"
+      }
+    },
+    {
+      "name": "today-korean-label",
+      "passed": true,
+      "background": "rgba(210, 174, 252, 0.12)",
+      "border": "rgb(210, 174, 252)",
+      "borderWidth": "2px",
+      "opacity": "1",
+      "label": "2026년 11월 3일 화요일, 오늘"
+    },
+    {
+      "name": "initial-selected-focus",
+      "passed": true
+    },
+    {
+      "name": "focus-enters-dialog",
+      "passed": true
+    },
+    {
+      "name": "desktop-field-match",
+      "passed": true,
+      "date": {
+        "height": "56px",
+        "fontSize": "15px",
+        "fontWeight": "700",
+        "borderRadius": "16px",
+        "fontFamily": "\"Pretendard Variable\", Pretendard, \"Noto Sans KR\", -apple-system, \"Apple SD Gothic Neo\", system-ui, sans-serif"
+      },
+      "time": {
+        "height": "56px",
+        "fontSize": "15px",
+        "fontWeight": "700",
+        "borderRadius": "16px",
+        "fontFamily": "\"Pretendard Variable\", Pretendard, \"Noto Sans KR\", -apple-system, \"Apple SD Gothic Neo\", system-ui, sans-serif"
+      },
+      "width": 326,
+      "rightAligned": true,
+      "contained": true
+    },
+    {
+      "name": "desktop-popup",
+      "passed": true,
+      "date": {
+        "height": "56px",
+        "fontSize": "15px",
+        "fontWeight": "700",
+        "borderRadius": "16px",
+        "fontFamily": "\"Pretendard Variable\", Pretendard, \"Noto Sans KR\", -apple-system, \"Apple SD Gothic Neo\", system-ui, sans-serif"
+      },
+      "time": {
+        "height": "56px",
+        "fontSize": "15px",
+        "fontWeight": "700",
+        "borderRadius": "16px",
+        "fontFamily": "\"Pretendard Variable\", Pretendard, \"Noto Sans KR\", -apple-system, \"Apple SD Gothic Neo\", system-ui, sans-serif"
+      },
+      "width": 326,
+      "rightAligned": true,
+      "contained": true
+    }
+  ],
+  "failures": [],
+  "unverified": [
+    "실기기 iOS/Android 네이티브 select 팝업 외형 및 화면낭독기 실제 발화",
+    "env(safe-area-inset-bottom)는 headless desktop에서 0px; CSS 반영만 확인, 실기기 inset 미측정"
+  ]
+}
