@@ -15,6 +15,7 @@ vi.mock('../src/lib/native-measurement', () => ({
   isNativeMeasurementAvailable: () => true,
   buildNativeModelPayload: () => null,
   getNativeMeasurement: () => ({
+    getSnapshot: async () => ({ state: 'CAPTURING', streamId: 'abcdef12-0000-4000-8000-000000000000' }), reclaimJsBand: async () => true,
     attach: async () => undefined, detach: async () => undefined, onMeasurement: () => () => undefined, onUploadProgress: () => () => undefined,
     reconnectBand: async () => { h.calls.push(['reconnect']); return true; },
     stop: async (r: { reason: string }) => { h.calls.push(['stop', r.reason]); return { accepted: true }; },

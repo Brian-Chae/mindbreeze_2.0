@@ -22,6 +22,7 @@ vi.mock('../../src/lib/native-measurement', () => ({
   isNativeMeasurementAvailable: () => true,
   buildNativeModelPayload: () => null,
   getNativeMeasurement: () => ({
+    getSnapshot: async () => ({ state: 'CAPTURING', streamId: 'abcdef12-0000-4000-8000-000000000000' }), reclaimJsBand: async () => true,
     attach: async () => { h.attach(); }, detach: async () => { h.detach(); }, onMeasurement: () => () => undefined, onUploadProgress: () => () => undefined, stop: async (r: unknown) => { h.stop(r); return { accepted: true }; },
     startForSession: async (a: { releaseJsBand?: () => Promise<unknown> }) => {
       h.start();

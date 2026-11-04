@@ -15,6 +15,37 @@ import type { MeasurementSnapshot } from '../native-measurement/types';
 import { toNativeDevice, type NativeDeviceState } from '../native-measurement/device-status';
 import type { MetricSnapshot } from '../../components/class/player/member/member-metrics';
 
+/** SDD-284: 스트림 확정 감시 임계값(현장 로그 후 조정 가능) */
+export const NATIVE_POLL_MS = 2000;
+export const NATIVE_CONFIRM_MS = 20_000;
+export const NATIVE_HEALTH_MS = 10_000;
+/** 스트림 확정 실패·건강 점검 실패가 이 횟수에 이르면 web_wasm 으로 하강한다 */
+export const NATIVE_STREAM_FAIL_DESCEND_AT = 3;
+
+/** snapshot 이 "스트림 확정" 상태인가(순수) */
+export function isStreamConfirmed(s: Pick<MeasurementSnapshot, 'state' | 'streamId'> | null): boolean {
+  return Boolean(s) && s!.streamId != null && (s!.state === 'CAPTURING' || s!.state === 'RECONNECTING');
+}
+/** running 중 건강 이상인가(순수): BLOCKED/CLOSED/IDLE 이거나 streamId 가 null 로 돌아감. snapshot 을 못 읽으면(null) 판단 보류 */
+export function isStreamUnhealthy(s: Pick<MeasurementSnapshot, 'state' | 'streamId'> | null): boolean {
+  if (!s) return false;
+  if (s.state === 'SEALING' || s.state === 'DRAINING') return false; // 종료 처리 중은 이상이 아니다
+  return s.state === 'BLOCKED' || s.state === 'CLOSED' || s.state === 'IDLE' || s.streamId == null;
+}
+
+export interface NativeDiagnostics {
+  path: MeasurementPath;
+  status: NativeMeasurementStatus;
+  code: string | null;
+  nativeState: string | null;
+  /** streamId 앞 8자리 */
+  streamIdHead: string | null;
+  restartCount: number;
+  /** 마지막 확정 시도가 시작된 뒤 경과 ms(확정되면 확정까지 걸린 시간). 시도 전 null */
+  lastConfirmElapsedMs: number | null;
+  upload: { featurePending: number; featureAcked: number; rawPending: number; rawVerified: number } | null;
+}
+
 export type NativeMeasurementStatus = 'idle' | 'starting' | 'running' | 'failed';
 
 export interface UseNativeMeasurementOptions {
@@ -35,6 +66,10 @@ export interface UseNativeMeasurementResult {
   metrics: MetricSnapshot | null;
   /** native 소유 동안 기기 메뉴용 신호·접촉·연결(JS BLE 는 놓았으므로 native snapshot 에서). 아니면 null */
   device: NativeDeviceState | null;
+  /** SDD-284: 스트림 확정 실패가 반복돼 웹 경로(web_wasm)로 하강했는가(회차 내 되돌아가지 않음) */
+  nativeFailed: boolean;
+  /** SDD-284: 연결 진단 패널(T4)용 데이터 */
+  diagnostics: NativeDiagnostics;
 }
 
 /** sessionId+participantId 로 결정되는 UUID 형식 requestId(멱등) */
@@ -93,15 +128,21 @@ const RETRY_MAX = 5;
 const RETRY_BASE_MS = 3000;
 
 export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativeMeasurementResult {
+  const [nativeFailed, setNativeFailed] = useState(false);
   const path = decideMeasurementPath({
     v2: o.v2 && o.enabled && isLiveProtocolV2Enabled(), native: isNativeMeasurementAvailable(),
     webBluetooth: false, bandConnected: o.bandConnected, eegConsent: o.eegConsent, bandOptIn: o.bandOptIn,
     guest: !o.accountId, // 게스트는 네이티브를 시작하지 않는다(웹 훅이 web_wasm 으로 측정)
+    nativeFailed,
   });
   const [status, setStatus] = useState<NativeMeasurementStatus>('idle');
   const [code, setCode] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<MetricSnapshot | null>(null);
   const [device, setDevice] = useState<NativeDeviceState | null>(null);
+  const [diag, setDiag] = useState<{ nativeState: string | null; streamIdHead: string | null; restartCount: number; lastConfirmElapsedMs: number | null }>({ nativeState: null, streamIdHead: null, restartCount: 0, lastConfirmElapsedMs: null });
+  // 스트림 확정 실패·건강 점검 실패 누적(하강 판단)과 재시작마다 새 requestId 를 쓰기 위한 시도 번호
+  const streamFailRef = useRef(0);
+  const attemptRef = useRef(0);
   const instanceRef = useRef<string>(crypto.randomUUID());
   const startedRef = useRef(false);
   // 시도 시작 시점부터 래치한다: startForSession 이 JS 연결을 놓으면 useBand 의 connectionState 가 풀려
@@ -147,7 +188,7 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
     const facade = getNativeMeasurement();
     let cancelled = false;
     let off: (() => void) | null = null;
-    const requestId = deterministicRequestId(o.sessionId, o.participantId);
+    const requestId = attemptRef.current === 0 ? deterministicRequestId(o.sessionId, o.participantId) : crypto.randomUUID(); // 재시작은 새 requestId(같은 id 는 native 가 replay 로 막는다)
     if (!access || !refresh || (platform !== 'ios' && platform !== 'android')) {
       setStatus('failed'); setCode(!access || !refresh ? 'credentials_unavailable' : 'platform_unsupported');
       return undefined;
@@ -169,11 +210,86 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
     // 시작 비동기 흐름의 각 await 뒤에 확인한다: 이 시도가 잡은 소유권이 아직 유효하고 동의가 유지되는가
     const myToken = ownerRef.current?.token ?? null;
     const stillOwned = () => myToken !== null && ownerRef.current?.token === myToken && optionsRef.current.eegConsent;
+    const timers = new Set<ReturnType<typeof setTimeout>>();
+    const wait = (ms: number) => new Promise<void>((res) => { const t = setTimeout(() => { timers.delete(t); res(); }, ms); timers.add(t); });
+    const noteSnap = (snap: MeasurementSnapshot | null, elapsed?: number) => {
+      if (cancelled || !snap) return;
+      setDiag((d) => ({ ...d, nativeState: snap.state, streamIdHead: snap.streamId ? snap.streamId.slice(0, 8) : null, ...(elapsed !== undefined ? { lastConfirmElapsedMs: elapsed } : {}) }));
+    };
+    /** native stop 을 완료까지 기다린다. 이미 수집 중이 아니면(not_active) 정지된 것으로 본다. 그 밖의 실패는 false. */
+    const stopNativeAndWait = async (reason: string): Promise<boolean> => {
+      try {
+        const r = await facade.stop({ reason, requestId: crypto.randomUUID() });
+        return r?.accepted !== false;
+      } catch (err) {
+        const c = (err as { code?: unknown; message?: unknown } | null)?.code ?? (err as { message?: unknown } | null)?.message;
+        return c === 'not_active';
+      }
+    };
+    const releaseOwnership = () => {
+      const owned = ownerRef.current;
+      ownerRef.current = null; startedRef.current = false; lastStopReasonRef.current = 'user_left';
+      if (owned && activeOwner === owned.token) activeOwner = null;
+    };
+    /** 재시도 소진·확정 실패 반복 → 네이티브를 완전히 멈춘 뒤 web_wasm 으로 단방향 하강. 멈춤·소유권 회수가 확인되지 않으면 하강하지 않고 오류만 남긴다. */
+    const descendToWeb = async (why: string) => {
+      const stopped = await stopNativeAndWait('user_left');
+      if (cancelled) return;
+      if (!stopped) { setStatus('failed'); setCode('native_stop_failed'); latchedRef.current = false; return; }
+      const reclaimed = await facade.reclaimJsBand(platform);
+      if (cancelled) return;
+      if (!reclaimed) { setStatus('failed'); setCode('js_band_reclaim_failed'); latchedRef.current = false; return; }
+      releaseOwnership();
+      latchedRef.current = false;
+      console.warn('[native-measurement] 웹 경로로 하강', why);
+      setStatus('failed'); setCode(why);
+      setNativeFailed(true);
+    };
+    /** 스트림 확정 실패·건강 이상 → stop 후 지수 백오프로 새 requestId 재시작. 소진되면 하강. */
+    const restartOrDescend = async (why: string) => {
+      streamFailRef.current += 1;
+      setStatus('starting'); setCode(why);
+      if (streamFailRef.current >= NATIVE_STREAM_FAIL_DESCEND_AT || retryRef.current >= RETRY_MAX) { await descendToWeb(why); return; }
+      const stopped = await stopNativeAndWait('user_left');
+      if (cancelled || !stillOwned()) return;
+      if (!stopped) { setStatus('failed'); setCode('native_stop_failed'); return; }
+      releaseOwnership(); // 새 시도가 새 소유 토큰을 잡는다
+      const delay = RETRY_BASE_MS * 2 ** retryRef.current;
+      retryRef.current += 1; attemptRef.current += 1;
+      setDiag((d) => ({ ...d, restartCount: d.restartCount + 1, streamIdHead: null }));
+      retryTimer = setTimeout(() => setRetryTick((n) => n + 1), delay);
+    };
+    /** running 중 10초 간격 건강 점검 */
+    const monitorHealth = async () => {
+      while (!cancelled) {
+        await wait(NATIVE_HEALTH_MS);
+        if (cancelled || !stillOwned()) return;
+        const snap = await facade.getSnapshot(o.sessionId);
+        if (cancelled || !stillOwned()) return;
+        noteSnap(snap);
+        if (isStreamUnhealthy(snap)) { await restartOrDescend('native_stream_lost'); return; }
+      }
+    };
+    /** startForSession 직후 2초 폴링으로 streamId 확정을 기다린다. 20초 안에 확정 안 되면 false */
+    const awaitConfirm = async (): Promise<boolean> => {
+      const t0 = Date.now();
+      setDiag((d) => ({ ...d, lastConfirmElapsedMs: 0 }));
+      for (;;) {
+        const snap = await facade.getSnapshot(o.sessionId);
+        if (cancelled || !stillOwned()) return true; // 취소는 실패가 아니다(호출자가 cancelled 로 빠진다)
+        const elapsed = Date.now() - t0;
+        noteSnap(snap, elapsed);
+        if (isStreamConfirmed(snap)) return true;
+        if (elapsed >= NATIVE_CONFIRM_MS) return false;
+        await wait(NATIVE_POLL_MS);
+        if (cancelled) return true;
+      }
+    };
     void (async () => {
       try {
         await facade.attach(o.sessionId);
         if (cancelled) return;
-        off = facade.onMeasurement((snap) => { if (!cancelled) { setMetrics(toMetricSnapshot(snap)); setDevice(toNativeDevice(snap)); } });
+        off = facade.onMeasurement((snap) => { if (!cancelled) { setMetrics(toMetricSnapshot(snap)); setDevice(toNativeDevice(snap)); noteSnap(snap); } });
         // SDD-260: 저장 진행(feature.counts·archive.counts·reconcile.state) → 전역 스토어. 화면을 떠나도 네이티브가 계속 올리므로 detach 후에도 마지막 값을 남긴다.
         const offUpload = facade.onUploadProgress((patch) => { if (!cancelled) uploadProgressStore.update(o.sessionId, patch); });
         const offMeasurement = off;
@@ -185,6 +301,7 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
           startedRef.current = true;
           setStatus('running');
           console.info('[native-measurement] 제자리 재연결(stop→start 생략)', platform);
+          void monitorHealth();
           return;
         }
         const deviceId = bluetoothService.getDeviceId() || bluetoothService.getCachedDeviceId() || lastGoodDeviceIdRef.current;
@@ -208,9 +325,15 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
         if (cancelled) return;
         startedRef.current = true;
         if (deviceId) lastGoodDeviceIdRef.current = deviceId;
-        retryRef.current = 0;
+        console.info('[native-measurement] startForSession 반환 — 스트림 확정 대기', platform);
+        // SDD-284: 반환만으로 running 이 아니다. streamId 확정(CAPTURING/RECONNECTING)을 확인한 뒤에만 running.
+        const confirmed = await awaitConfirm();
+        if (cancelled || !stillOwned()) return;
+        if (!confirmed) { await restartOrDescend('native_stream_unconfirmed'); return; }
+        retryRef.current = 0; streamFailRef.current = 0;
         setStatus('running');
-        console.info('[native-measurement] startForSession 성공', platform);
+        console.info('[native-measurement] 스트림 확정', platform);
+        void monitorHealth();
       } catch (err) {
         console.warn('[native-measurement] 시작 실패', platform, err instanceof Error ? err.message : String(err));
         if (cancelled || !stillOwned()) return;
@@ -222,12 +345,15 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
           retryTimer = setTimeout(() => setRetryTick((n) => n + 1), delay);
         } else {
           latchedRef.current = false;
+          // SDD-284: 재시도 소진 — 네이티브를 멈추고 웹 경로로 단방향 하강(실패 시 오류 상태만)
+          await descendToWeb(err instanceof Error ? err.message : 'native_start_failed');
         }
       }
     })();
     return () => {
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
+      for (const t of timers) clearTimeout(t);
       off?.();
       void facade.detach();
       latchedRef.current = ownerRef.current !== null; // 소유 세션이 있으면 JS 연결이 풀려도(ready) 유지
@@ -235,6 +361,11 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
     };
   }, [ready, retryTick, o.sessionId, o.participantId, o.accountId]);
 
+  const up = uploadProgressStore.get(o.sessionId);
+  const diagnostics: NativeDiagnostics = {
+    path, status, code, nativeState: diag.nativeState, streamIdHead: diag.streamIdHead, restartCount: diag.restartCount, lastConfirmElapsedMs: diag.lastConfirmElapsedMs,
+    upload: up ? { featurePending: up.featurePending, featureAcked: up.featureAcked, rawPending: up.rawPending + up.rawUploading, rawVerified: up.rawVerified } : null,
+  };
   return { path, status: path === 'native' ? status : 'idle', code: path === 'native' ? code : null, metrics: path === 'native' && status === 'running' ? metrics : null,
-    device: path === 'native' && status === 'running' ? device : null };
+    device: path === 'native' && status === 'running' ? device : null, nativeFailed, diagnostics };
 }

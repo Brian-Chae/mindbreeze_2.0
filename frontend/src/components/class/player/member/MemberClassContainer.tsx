@@ -244,6 +244,11 @@ export function MemberClassContainer({
     () => toBandReport({ connectionState: band.connectionState, leadOff: band.leadOff, signalQuality: band.signalQuality, battery: band.battery }),
     [band.connectionState, band.leadOff?.ch1, band.leadOff?.ch2, band.signalQuality, band.battery], // eslint-disable-line react-hooks/exhaustive-deps -- leadOff 는 값으로 비교
   );
+  // SDD-284: 네이티브 훅을 먼저 호출해 스트림 확정 실패(nativeFailed)를 웹 훅에 넘긴다(회차 내 web_wasm 단방향 하강)
+  const nativeM = useNativeMeasurementV2({
+    v2: v2On, sessionId, participantId, accountId: user?.id ?? null, bandOptIn: bandAuto, eegConsent,
+    bandConnected: band.connectionState === 'connected', enabled: connectionsActive,
+  });
   useWebMeasurementV2({
     liveV2: v2On ? liveV2 : null,
     sessionId,
@@ -258,10 +263,7 @@ export function MemberClassContainer({
     featureAuth: { entryCredential, skipAuth: !isAuthenticated },
     // 코드 입장 게스트는 앱에서도 JS BLE + WASM 로 측정한다(네이티브는 계정 JWT 가 필요)
     guest: !user?.id,
-  });
-  const nativeM = useNativeMeasurementV2({
-    v2: v2On, sessionId, participantId, accountId: user?.id ?? null, bandOptIn: bandAuto, eegConsent,
-    bandConnected: band.connectionState === 'connected', enabled: connectionsActive,
+    nativeFailed: nativeM.nativeFailed,
   });
 
   // native 소유 동안 JS BLE 는 놓였으므로 신호·접촉·연결은 native snapshot 값을 쓴다(없으면 기존 useBand).
