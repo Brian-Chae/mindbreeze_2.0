@@ -6,6 +6,7 @@ export async function checkReleaseBundle(root, { requireLiveProtocolV2 = false }
   const problems = [];
   let bytes = 0;
   let liveV2Flag = false;
+  let guestEntryFlag = false;
   async function walk(dir) {
     for (const entry of await readdir(dir, { withFileTypes: true })) {
       const file = resolve(dir, entry.name);
@@ -15,6 +16,7 @@ export async function checkReleaseBundle(root, { requireLiveProtocolV2 = false }
       if (/\.(js|json|html|css)$/.test(name)) {
         const content = await readFile(file, 'utf8');
         if (/VITE_LIVE_PROTOCOL_V2:[`"']true[`"']/.test(content)) liveV2Flag = true;
+        if (/VITE_GUEST_ENTRY_ENABLED:[`"']true[`"']/.test(content)) guestEntryFlag = true;
         if (/dev-api\.|mindbreeze-dev|(?:localhost|127\.0\.0\.1):8000/.test(content)) problems.push(`${name}: 개발 서버 주소`);
       }
       if (name === 'chat-test.html' || /(^|\/)mb-design\/.*\.html$/.test(name) || /assets\/(DesignIndexPage|HomepagePage|OperatorAppPage|UserAppPage|ReportPage|DocsPage|ClassPlayerCasesPage|ClassFlowCasesPage)-/.test(name)) {
@@ -24,6 +26,7 @@ export async function checkReleaseBundle(root, { requireLiveProtocolV2 = false }
   }
   await walk(root);
   if (requireLiveProtocolV2 && !liveV2Flag) problems.push('번들에 VITE_LIVE_PROTOCOL_V2=true 가 없음 (앱·웹이 v1 클라이언트로 빌드됨)');
+  if (guestEntryFlag) problems.push('번들에 VITE_GUEST_ENTRY_ENABLED=true 가 있음 (운영 번들은 비회원 코드 입장 버튼이 숨겨져야 함)');
   if (problems.length) throw new Error(problems.join('\n'));
   return { bytes };
 }
