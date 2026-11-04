@@ -131,6 +131,8 @@ NULLIFY: dict[str, tuple[str, ...]] = {
 # 필수(NOT NULL) FK 로 다른 사람의 기록이 탈퇴자를 가리키는 곳 — 행을 지우면 타인 데이터가 사라지므로 보존하고,
 # 이 경우 users 행은 식별 정보가 모두 제거된 자리표시(tombstone)로 남는다. FK dangling 은 0 이다.
 RETAIN_REFERENCE: dict[str, tuple[str, ...]] = {
+    # SDD-289: 정원 늘리기 감사 기록(행위자 NOT NULL FK). 타인(회원) 정원에 영향을 준 기록이라 보존한다.
+    "class_capacity_events": ("actor_id",),
     "class_email_invites": ("invited_by",),
     "class_guest_recoveries": ("issued_by",),
     "class_instructors": ("user_id",),
