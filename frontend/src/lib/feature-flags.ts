@@ -29,3 +29,11 @@ export function isLiveProtocolV2Enabled(
 ): boolean {
   return env.VITE_LIVE_PROTOCOL_V2 === 'true';
 }
+
+/**
+ * SDD-286 — 로그인 화면의 「로그인 없이 코드로 입장」 버튼 노출. VITE_GUEST_ENTRY_ENABLED === 'true' 일 때만(기본 숨김).
+ * 운영 빌드는 vite.config.ts 가 'false' 로 고정하고, dev 는 deploy-dev.yml 이 'true' 를 주입한다.
+ */
+export function isGuestEntryEnabled(): boolean {
+  return import.meta.env.VITE_GUEST_ENTRY_ENABLED === 'true';
+}
