@@ -848,6 +848,9 @@ def ingest_features_batch(
     logger.info("[ingest-batch] session=%s participant=%s windows=%d accepted=%d duplicate=%d rejected=%d ms=%.0f codes=%s",
                 sid, participant.id, len(results), counts["accepted"], counts["duplicate"], counts["rejected"], elapsed_ms,
                 sorted({r["code"] for r in results if r.get("code")}))
+    from app.services import ingest_signal_log  # SDD-285 S3: stream 없는 참가자의 업로드 경고(60초 억제)
+
+    ingest_signal_log.warn_if_no_stream(db, sid, participant.id, "features-batch")
     return {"session_id": str(sid), "participant_id": str(participant.id), "results": results, "counts": counts}
 
 
@@ -1026,11 +1029,18 @@ def ack_biosignal_raw(
     db: DBSession = Depends(get_db),
 ):
     """SDD-244: raw v2 검증 ACK — 저장소 존재·크기·SHA-256 확인 항목만 uploaded."""
-    return biosignal_service.ack_raw(
+    t0 = time.perf_counter()
+    resp = biosignal_service.ack_raw(
         session_id, payload, db,
         current_user_id=current_user["id"] if current_user else None,
         entry_credential=x_entry_credential,
     )
+    # SDD-285 S3: 신호 로그(동작 변경 없음). 응답 형태(모델/딕셔너리)와 무관하게 건수를 읽는다.
+    from app.services import ingest_signal_log
+
+    ingest_signal_log.log_raw_ack(db, session_id, payload.participant_id, resp, chunks=len(payload.chunks),
+                                  ms=(time.perf_counter() - t0) * 1000)
+    return resp
 
 
 @router.post("/{session_id}/biosignal-artifacts/presign", response_model=biosignal_schema.ArtifactPresignResponse, dependencies=[Depends(archive_upload_slot)])
