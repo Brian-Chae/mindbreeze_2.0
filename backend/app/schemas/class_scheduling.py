@@ -198,6 +198,12 @@ class AddSessionCommand(WriteCommand):
         return self
 
 
+class CapacityCommand(WriteCommand):
+    """SDD-289: 정원 늘리기. 상한 100(오프라인), 온라인 50은 서비스에서 검증."""
+
+    capacity: int = Field(ge=2, le=100)
+
+
 class TransitionCommand(WriteCommand):
     action: Literal["complete", "cancel", "archive", "restore", "hide"]
 

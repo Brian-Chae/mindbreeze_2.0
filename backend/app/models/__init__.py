@@ -161,7 +161,7 @@ from app.models.research_export import ResearchExportBatch, ResearchExportItem, 
 __all__ += ["ResearchExportBatch", "ResearchExportItem", "ResearchSignalReceipt", "ObjectDeletionOutbox"]
 
 # SDD-216: 편성 트랜잭션과 진행자 요청
-from app.models.class_scheduling import ClassOperation, ClassEffect, ClassEmailInvite, SessionHostRequest, SessionHostNote
+from app.models.class_scheduling import ClassCapacityEvent, ClassOperation, ClassEffect, ClassEmailInvite, SessionHostRequest, SessionHostNote
 __all__ += ["ClassOperation", "ClassEffect", "ClassEmailInvite", "SessionHostRequest", "SessionHostNote"]
 
 # SDD-217: 클래스 멤버십·보강·guest 자격·동의·현재 참여
