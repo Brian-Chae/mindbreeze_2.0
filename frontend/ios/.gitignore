@@ -22,3 +22,7 @@ GoogleService-Info.plist
 *.mobileprovision
 .build/
 .swiftpm/
+
+# SDD-292 dev 앱 로컬 값
+dev.local.xcconfig
+GoogleService-Info.dev.plist
