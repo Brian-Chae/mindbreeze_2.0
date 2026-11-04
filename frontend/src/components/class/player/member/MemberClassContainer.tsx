@@ -32,7 +32,8 @@ import type { UseLiveV2Result } from '../../../../lib/session-live/use-live-v2';
 import type { LiveClient } from '../../../../lib/session-live/live-client';
 import { useMetricBars } from '../../../../lib/session-live/metric-bars';
 import { useWebMeasurementV2 } from '../../../../lib/measurement-web/use-web-measurement';
-import { useNativeMeasurementV2 } from '../../../../lib/measurement-web/use-native-measurement';
+import { deriveConnectionDiagnostics, useBacklogSince, type DiagSocketState } from './connection-diagnostics-model';
+import { useNativeMeasurementV2, type NativeDiagnostics } from '../../../../lib/measurement-web/use-native-measurement';
 import { getNativeMeasurement, isNativeMeasurementAvailable } from '../../../../lib/native-measurement';
 import { Capacitor } from '@capacitor/core';
 import { describeNativeStartFailure, isNativeBandOwned } from '../../../../lib/native-measurement/device-status';
@@ -249,7 +250,7 @@ export function MemberClassContainer({
     v2: v2On, sessionId, participantId, accountId: user?.id ?? null, bandOptIn: bandAuto, eegConsent,
     bandConnected: band.connectionState === 'connected', enabled: connectionsActive,
   });
-  useWebMeasurementV2({
+  const webM = useWebMeasurementV2({
     liveV2: v2On ? liveV2 : null,
     sessionId,
     selfParticipantId: participantId,
@@ -553,6 +554,7 @@ export function MemberClassContainer({
     },
     waitlist: { title: title ?? '클래스', counselorName, startLabel: startedAt ? formatStartLabel(startedAt) : null, notifyByPush: isAuthenticated },
     socketConnected: v2On ? liveV2?.state?.phase === 'READY' : liveSocket.isConnected,
+    diag: { native: nativeM.diagnostics, nativeFailed: nativeM.nativeFailed, webPath: webM.path, webStatus: webM.status, webCode: webM.code },
     onboarding: { locationType, participantMode, maxParticipants },
   };
 
@@ -638,6 +640,8 @@ interface SharedScreenProps {
   chat: MemberClassViewProps['chat'];
   waitlist: NonNullable<MemberClassViewProps['waitlist']>;
   socketConnected: boolean;
+  /** SDD-284 T4: 연결 진단 원천(훅 반환값) */
+  diag: { native: NativeDiagnostics; nativeFailed: boolean; webPath: string; webStatus: string; webCode: string | null };
   onboarding: { locationType?: 'online' | 'offline'; participantMode?: 'one_on_one' | 'group'; maxParticipants?: number };
 }
 
@@ -693,6 +697,26 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
   const rtcBad = media.roomConnection === ConnectionState.Reconnecting || media.roomConnection === ConnectionState.SignalReconnecting;
   const socketBad = everSocketConnected && !shared.socketConnected;
   const bad = !online || socketBad || rtcBad;
+  // SDD-284 T4: 연결 진단. 측정 경로(native / web_wasm)가 있을 때만 만든다 — 밴드 없는 회원은 null.
+  const dg = shared.diag;
+  const diagPath = dg.nativeFailed || dg.native.path === 'web_wasm' || dg.webPath === 'web_wasm' ? 'web_wasm' : dg.native.path === 'native' ? 'native' : 'off';
+  const diagSocket: DiagSocketState = !everSocketConnected && !shared.socketConnected ? 'unknown' : socketBad ? 'disconnected' : 'connected';
+  const diagUpload = diagPath === 'native' ? dg.native.upload : null; // 웹 경로는 업로드 집계 출처가 달라 섞지 않는다(확인 전)
+  const backlogSince = useBacklogSince(diagUpload, shared.nowMs);
+  const diagnostics = diagPath === 'off' ? null : deriveConnectionDiagnostics({
+    path: diagPath,
+    status: diagPath === 'web_wasm' ? (dg.webStatus === 'idle' ? dg.native.status : dg.webStatus) : dg.native.status,
+    code: diagPath === 'web_wasm' && !dg.nativeFailed ? dg.webCode : dg.native.code,
+    nativeState: dg.native.nativeState,
+    streamIdHead: dg.native.streamIdHead,
+    restartCount: dg.native.restartCount,
+    lastConfirmElapsedMs: dg.native.lastConfirmElapsedMs,
+    nativeFailed: dg.nativeFailed,
+    socket: diagSocket,
+    upload: diagUpload,
+    backlogSinceMs: backlogSince,
+    nowMs: shared.nowMs,
+  });
   const [downSince, setDownSince] = useState<number | null>(null);
   useEffect(() => {
     setDownSince((prev) => (bad ? (prev ?? Date.now()) : null));
@@ -809,6 +833,7 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
           snapshot={shared.snapshot}
           series={shared.series}
           device={shared.device}
+          diagnostics={diagnostics}
           sound={shared.sound}
           chat={shared.chat}
           hostVideo={media.hostVideo}

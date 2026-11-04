@@ -6,6 +6,7 @@ import type { MemberCaseInput } from '../../../../lib/class/member-player-case';
 import type { PlayerMetricKey } from '../../../../lib/class/player-case';
 import type { ClassSignalType } from '../../../../lib/class/quiet-signal';
 import type { MetricSeries, MetricSnapshot } from './member-metrics';
+import type { ConnectionDiagnosticsView } from './connection-diagnostics-model';
 
 export type MemberSheetKey = 'status' | 'chat' | 'signal' | 'sound' | 'device';
 
@@ -122,6 +123,8 @@ export interface MemberClassViewProps {
   end?: MemberEndModel;
   /** 대기열 화면(M20) 정보 */
   waitlist?: MemberWaitlistModel;
+  /** SDD-284 T4: 기기 시트 하단 "연결 진단". 측정 경로가 없으면(밴드 없는 회원 등) null → 패널·토글을 그리지 않는다 */
+  diagnostics?: ConnectionDiagnosticsView | null;
   /** SDD-268: 연결 아이콘을 업로드 안내 토글 버튼으로 쓴다 */
   connToggle?: { expanded: boolean; onToggle: () => void };
   actions: MemberViewActions;

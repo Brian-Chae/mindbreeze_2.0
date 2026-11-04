@@ -364,3 +364,23 @@
   .mp-info__tx p, .mp-info__tx ol, .mp-empty p, .mp-chat__note,
   .mp-note, .mp-band-error { font-size: var(--mobile-type-compact-size); line-height: var(--mobile-type-compact-leading); }
 }
+
+/* ───────── SDD-284 T4 연결 진단(기기 시트 하단 접이식) ───────── */
+.mp-diag-frame { position: relative; }
+.mp-diag-toggle { position: absolute; top: -52px; right: 52px; width: var(--tap, 44px); height: var(--tap, 44px); border-radius: 50%; display: grid; place-items: center; color: var(--mb-mint); background: rgba(1, 240, 200, 0.08); border: 1px solid rgba(1, 240, 200, 0.33); }
+.mp-diag-toggle[data-abnormal="true"] { color: var(--caution); background: rgba(240, 208, 138, 0.1); border-color: rgba(240, 208, 138, 0.4); }
+.mp-diag { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--sheet-border); display: flex; flex-direction: column; gap: 4px; }
+.mp-diag h3 { margin: 0 0 4px; font-size: var(--fs-15); font-weight: 600; }
+.mp-diag small { font-size: var(--fs-12); color: var(--tx-mid); }
+.mp-diag__alert { padding: 10px 12px; border-radius: 12px; font-size: var(--fs-13); line-height: 18px; border: 1px solid; }
+.mp-diag__alert[data-tone="good"] { color: var(--mb-mint); background: rgba(1, 240, 200, 0.06); border-color: rgba(1, 240, 200, 0.27); }
+.mp-diag__alert[data-tone="caution"] { color: var(--caution); background: rgba(240, 208, 138, 0.09); border-color: rgba(240, 208, 138, 0.27); }
+.mp-diag__alert[data-tone="info"] { color: var(--mb-pale); background: rgba(179, 115, 239, 0.08); border-color: rgba(179, 115, 239, 0.33); }
+.mp-diag__rows { margin: 4px 0 0; }
+.mp-diag__row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); font-size: var(--fs-13); }
+.mp-diag__row dt { color: var(--tx-mid); }
+.mp-diag__row dd { margin: 0; text-align: right; font-weight: 500; overflow-wrap: anywhere; }
+.mp-diag__counts { width: 100%; border-collapse: collapse; font-size: var(--fs-13); margin: 8px 0 4px; }
+.mp-diag__counts th, .mp-diag__counts td { padding: 7px 3px; text-align: right; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.mp-diag__counts th:first-child, .mp-diag__counts td:first-child { text-align: left; }
+.mp-diag__counts th { color: var(--tx-mid); font-weight: 400; }

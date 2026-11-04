@@ -125,6 +125,8 @@ export function shouldStartNative(i: {
 let activeOwner: symbol | null = null;
 
 const RETRY_MAX = 5;
+/** SDD-284 T4: 연결 진단 패널의 "재시작 n/5" 표기용 */
+export const NATIVE_RESTART_MAX = RETRY_MAX;
 const RETRY_BASE_MS = 3000;
 
 export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativeMeasurementResult {
