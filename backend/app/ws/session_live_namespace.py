@@ -1884,6 +1884,7 @@ class V2Conn:
     hb_task: Any = None
     degraded_notified: bool = False
     auth_expired_notified: bool = False
+    anchor_watch: Any = None  # SDD-285 S9: capture.start 후 미고정 감시(로그 전용)
 
     def expired(self) -> bool:
         return self.token_exp is not None and _now_ms() >= int(self.token_exp) * 1000
@@ -2214,6 +2215,12 @@ def register_v2_handlers(sio, ns):
             outcome = cps.run_live_command(db, conn.actor, cmd, auth_revision=conn.auth_revision)
             if outcome.auth_revision is not None:  # 호스트 자기 명령(session.end 등)이 올린 revision 을 연결에 반영
                 conn.auth_revision = outcome.auth_revision
+            if cmd.kind.startswith("capture."):  # SDD-285 S9: 미고정 감시용 기록(로그 전용)
+                from app.services import capture_anchor_watch as caw
+
+                if conn.anchor_watch is None:
+                    conn.anchor_watch = caw.AnchorWatch()
+                caw.note_result(conn.anchor_watch, cmd.kind, outcome.ack)
             if outcome.committed and not outcome.degraded:
                 try:
                     publish_session_sync(cmd.session_id)
@@ -2222,6 +2229,14 @@ def register_v2_handlers(sio, ns):
             return outcome
         finally:
             db.close()
+
+    def _gate_reject(conn: V2Conn, cmd, cid, code: str, **extra):
+        """SDD-285 S9: 입구 검사 거절 ACK. capture.* 면 사유를 로그로 남긴다(원장에는 남지 않는 거절)."""
+        from app.services import capture_anchor_watch as caw
+
+        participant = getattr(conn.actor, "participant_id", None)
+        caw.log_gate_reject(participant, cmd.kind, code, conn.state)
+        return w.error_ack(cid, code, **extra)  # cid = 클라이언트가 보낸 원문(ACK 매칭 보존)
 
     @sio.on("live:command", namespace=ns)
     async def live_command(sid, data):
@@ -2237,15 +2252,15 @@ def register_v2_handlers(sio, ns):
         except w.WireError as exc:
             return w.error_ack(cid, exc.code)
         if cmd.session_id != conn.session_id:
-            return w.error_ack(cid, "session_mismatch")
+            return _gate_reject(conn, cmd, cid, "session_mismatch")
         if conn.state in ("REVOKED", "TERMINAL"):
-            return w.error_ack(cid, "access_revoked")
+            return _gate_reject(conn, cmd, cid, "access_revoked")
         if conn.state == "RESYNCING" and cmd.kind != "entry.enter":
-            return w.error_ack(cid, "not_ready", status="retryable", retry_after_ms=300)
+            return _gate_reject(conn, cmd, cid, "not_ready", status="retryable", retry_after_ms=300)
         if conn.expired():
-            return w.error_ack(cid, "token_expired")
+            return _gate_reject(conn, cmd, cid, "token_expired")
         if not await _ensure_scope(conn):
-            return w.error_ack(cid, "access_revoked")
+            return _gate_reject(conn, cmd, cid, "access_revoked")
         outcome = await asyncio.to_thread(_run_command_sync, conn, cmd)
         if outcome.degraded:
             conn.state = "DEGRADED"
@@ -2327,6 +2342,10 @@ def register_v2_handlers(sio, ns):
                 if conn.expired() and not conn.auth_expired_notified:
                     conn.auth_expired_notified = True
                     await sio.emit("live:auth_expired", {"refresh": True}, to=conn.sid, namespace=ns)
+                if conn.anchor_watch is not None:  # SDD-285 S9: 기존 heartbeat 주기로 미고정 점검(로그 전용)
+                    from app.services import capture_anchor_watch as caw
+
+                    caw.check(conn.anchor_watch, getattr(conn.actor, "participant_id", None))
                 try:
                     hb = await asyncio.to_thread(_hb_sync, conn)
                 except ScopeStale:
