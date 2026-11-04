@@ -1,4 +1,70 @@
-# SDD-286 Plan — 비회원 코드 입장 차단 (스위치형)
+# SDD-286 Plan — 로그인 화면 비회원 코드 입장 버튼 숨김 (개정 3판)
+
+- 상태: Stage ② Plan (대표 승인 전 구현 금지). 근거: `spec.md`, `analysis.md` §10.
+- 워커 규칙: 구현=Claude sonnet-5-5, 검증=Gemini(antigravity) 별도 워커. 푸시·배포·메일·운영 쓰기·앱 빌드 금지, 감독이 diff·테스트로 재검증.
+
+## 1. 결정 사항
+
+| # | 결정 | 내용 |
+|---|------|------|
+| D1 | 방식 | 서버 변경 없이 프론트 화면 플래그 1개 |
+| D2 | 플래그 이름 | `VITE_GUEST_ENTRY_ENABLED` / `isGuestEntryEnabled()` (기본 false=숨김) |
+| D3 | 범위 | 로그인 화면 버튼 1곳(`LoginPage.tsx:286~298`)만. 다른 입구는 §4 확장 여지 |
+
+## 2. 플래그 주입 방식 (기존 관례 확인 결과)
+
+| 환경 | 관례(코드 확인) | 이번 적용 |
+|------|----------------|-----------|
+| 플래그 함수 | `lib/feature-flags.ts`: `import.meta.env.VITE_X === 'true'` (`isCounselingEnabled`, `isAiEnabled`, `isArchiveV3Enabled`) | `isGuestEntryEnabled()` 추가, 기본 false |
+| 타입 | `src/vite-env.d.ts` `ImportMetaEnv`에 `VITE_LIVE_PROTOCOL_V2?` 선언 | `VITE_GUEST_ENTRY_ENABLED?: string` 추가 |
+| dev 빌드 | `deploy-dev.yml:42~45`가 `.env`에 `echo "VITE_…" >> .env` 후 `vite build --mode dev` | `echo "VITE_GUEST_ENTRY_ENABLED=true" >> .env` 추가. `ci-feature.yml:96~97`도 같은 방식이면 동일 추가(테스트 빌드) |
+| 로컬 개발 | `npm run dev`는 `frontend/.env`(gitignore, `.env.example`에 안내) | `.env.example`에 `VITE_GUEST_ENTRY_ENABLED=true` 예시 주석 |
+| dev 앱 빌드 | `package.json:19,21,23` `cap:ios:dev`·`cap:android:dev`·`android:build:dev`는 `vite build --mode dev` | `.env`가 없으면 꺼지므로 해당 스크립트 앞에 `VITE_GUEST_ENTRY_ENABLED=true` 접두(또는 `.env.dev` 파일 도입). 구현 때 `.env.dev` 방식이 `vite --mode dev`에 자동 적용되므로 **`frontend/.env.dev`(커밋 가능, 공개 값만)** 를 권장 |
+| 운영 빌드 | `vite.config.ts:25~36` 운영 분기 `define`이 `VITE_API_BASE_URL`·`VITE_LIVE_PROTOCOL_V2`를 **고정** 주입. `release-build.yml:131~151`, `build:prod`(`package.json:26`)는 이 분기를 탐 | `define`에 `'import.meta.env.VITE_GUEST_ENTRY_ENABLED': JSON.stringify('false')` 추가 → 환경변수로 켤 수 없음 |
+| 운영 번들 검사 | `scripts/check-release-bundle.mjs`가 번들 문자열로 dev 흔적·`VITE_LIVE_PROTOCOL_V2:true` 검사 | `VITE_GUEST_ENTRY_ENABLED:"true"`가 번들에 있으면 실패하도록 검사 1줄 추가 |
+
+## 3. 작업 분할 (담당 경로 겹침 없음, 전부 `frontend/`와 워크플로)
+
+**T1. 플래그 함수·타입** — `src/lib/feature-flags.ts`, `src/vite-env.d.ts`
+- `isGuestEntryEnabled()` 추가. 단위 테스트(`'true'`만 true).
+
+**T2. 로그인 화면 적용** — `src/pages/LoginPage.tsx`
+- `LoginPage.tsx:286~298` 카드 블록을 `isClient && !typing && isGuestEntryEnabled()`로 감싼다(블록 삭제 금지).
+- `:253`의 하단 여백 `pb-[calc(8.5rem+env(safe-area-inset-bottom))]`도 `isGuestEntryEnabled()`일 때만 적용(꺼지면 카드가 없으므로 빈 공간 방지).
+- 회원 로그인 폼·가입 링크 등은 변경 없음.
+
+**T3. 환경 주입** — `vite.config.ts`, `.github/workflows/deploy-dev.yml`(필요 시 `ci-feature.yml`), `frontend/.env.dev` 또는 `package.json` dev 스크립트, `scripts/check-release-bundle.mjs`, `.env.example`
+- §2 표대로. **`release-build.yml`·`deploy-prod.yml`은 건드리지 않는다**(vite 운영 분기 고정이 단일 방어선).
+
+**T4. 테스트(구현자와 다른 워커)** — verify.md 시나리오를 vitest로. 기존 `LoginPage` 관련 테스트가 `login-code-entry`를 기대하면 플래그 on 환경(`vi.stubEnv('VITE_GUEST_ENTRY_ENABLED','true')`)으로 옮기고, off 기본 시 부재를 검사하는 테스트를 추가.
+
+**T5. dev 실측** — 승인 후 dev 배포에서 로그인 화면 카드 표시(플래그 on)를 확인. 운영 번들 숨김은 로컬 `build:prod` 산출물 문자열 검사로 확인(배포 아님).
+
+## 4. 확장 여지 (이번 구현 안 함)
+
+- 같은 플래그로 웹 입구도 숨길 수 있다: `Nav.tsx:33`, `LandingV6Chrome.tsx:17`, `Hero.tsx:49`, `OrgPublicPage.tsx:257`, `/join` 비로그인 접근(`App.tsx:177`). 위치는 `analysis.md` §10-2.
+- 서버 스위치(L2)는 아래 폐기 절의 설계 그대로 나중에 추가 가능.
+
+## 5. 위험과 대응
+
+| 위험 | 대응 |
+|------|------|
+| 운영 빌드에 플래그가 켜진 채 나감 | `vite.config.ts` 운영 분기 `define` 고정 + 번들 검사 스크립트 실패 처리 |
+| dev 빌드에서 플래그가 빠져 개발 중인 비회원 기능을 못 봄 | `.env.dev` 또는 워크플로 주입 + dev 실측(T5) |
+| 카드 제거 후 하단 빈 공간 | T2에서 여백도 함께 조건화, verify로 390px 화면 확인 |
+| 서버 API는 열려 있음 | 한계 L1로 문서화, 읽기 조회로 감시 |
+
+## 6. 후속 SDD-287 스코프 메모 (번호·워크스페이스 발급 안 함)
+
+- 목적: 같은 이름+생년월일+성별+이메일의 기존 참여자가 있으면 새 행을 만들지 않고 **기존 참여자의 연장**으로 처리(dev 개발).
+- 재입장 로직 위치: `session_service.py:2229~2262` 부근(`_enter_resolved` 비회원 분기, 입장 자격 헤더 있을 때만 같은 행 복귀 → 자격이 없으면 새 행).
+- 동일인 판정은 4개 필드를 정규화(이름 공백·대소문자, 이메일 소문자, 생년월일 형식 통일)해 비교. 이메일은 PII라 해시 비교 또는 기존 컬럼 재사용 검토.
+- 정원 계산: 현재 행 수 기준이라 연장이 되면 정원 점유가 사람 수와 일치(SDD-282 F4 해소). 대기열 순번·`left` 상태 복귀 처리 확인 필요.
+- 후속 테스트: 기존 `test_sdd209_b5a_entry.py`·`test_sdd062_guest_gender_birth.py` 회귀.
+
+---
+
+# (폐기됨) 서버 스위치안 Plan — 대표 지시 11/4로 채택하지 않음
 
 - 상태: Stage ② Plan (초안, 대표 승인 전 구현 금지)
 - 근거: `analysis.md` (경로 지도·비교·추천). 이 문서는 추천안(전역 스위치, 새 입장만 차단)을 기준으로 한다.

@@ -1,4 +1,65 @@
-# SDD-286 Verify — 구현 전 QA 게이트
+# SDD-286 Verify — 구현 전 QA 게이트 (개정 3판: 로그인 화면 버튼 숨김)
+
+- 상태: Stage ③ (구현 전 작성. 변경은 말미 "변경 이력"에 추가)
+- 대상 플래그: `VITE_GUEST_ENTRY_ENABLED` (운영 빌드는 `vite.config.ts`에서 `false` 고정, dev는 `true`)
+- 통과 기준: 모든 항목 통과 + 기존 테스트 회귀 없음.
+
+## A. 버튼 숨김 (운영 설정)
+
+| ID | 시나리오 | 기대 | 방법 |
+|----|----------|------|------|
+| V-1 | 플래그 off(기본)로 `LoginPage` 회원 탭 렌더 | `data-testid="login-code-entry"` 없음, "로그인 없이 바로 들어가요" 문구 없음 | vitest |
+| V-2 | 같은 상태에서 하단 여백 | 카드용 `pb-[calc(8.5rem…)]` 클래스가 적용되지 않음 | vitest |
+| V-3 | 코치/관리자 탭 | 변경 전과 동일(원래 카드 없음) | vitest |
+| V-4 | `local build:prod` 산출물 번들 문자열 | `VITE_GUEST_ENTRY_ENABLED:"false"` 포함, `"true"` 없음. `check-release-bundle.mjs`가 `"true"` 주입 시 실패하는지도 확인 | 스크립트 실측 |
+| V-5 | 환경변수로 운영 빌드에 `VITE_GUEST_ENTRY_ENABLED=true`를 줘도 | 번들은 여전히 `false`(고정) | 스크립트 실측 |
+| V-6 | 390px 모바일 뷰포트 로그인 화면 | 카드가 없고 하단 빈 공간 없음, 로그인 버튼·가입 링크 정상 | 실측(브라우저, 운영 모드 빌드 로컬) |
+
+## B. dev 유지
+
+| ID | 시나리오 | 기대 | 방법 |
+|----|----------|------|------|
+| V-7 | 플래그 on(`vi.stubEnv`)로 회원 탭 렌더 | 카드 표시, 클릭 시 `/join` 이동 | vitest |
+| V-8 | dev 모드 빌드 번들 | `VITE_GUEST_ENTRY_ENABLED:"true"` | 스크립트 실측 |
+| V-9 | dev 배포 후 로그인 화면(승인 후) | 카드 표시, `/join` 비회원 입장 기존대로 동작 | 실측(dev) |
+
+## C. 회원 정상 (회귀)
+
+| ID | 시나리오 | 기대 | 방법 |
+|----|----------|------|------|
+| V-10 | 로그인 client가 홈의 `CodeEntryButton`으로 `/join` → 코드 입장 | 정상 입장(플래그 off 상태에서) | vitest(`member-code-entry-button.test.tsx`) + 실측(dev, 플래그 off 빌드 가능 시) |
+| V-11 | 회원 이메일 로그인·구글 로그인·가입 링크 | 변경 없음 | vitest(기존 LoginPage 테스트) |
+| V-12 | `/join` 직접 접근(플래그 off) | **기존과 동일하게 열림**(이번 범위에서 처리 안 함 → 변경 없음을 고정) | vitest |
+
+## D. 버튼 외 입구 없음 확인 (정적, 구현 후 재실행)
+
+| ID | 시나리오 | 기대 | 방법 |
+|----|----------|------|------|
+| V-13 | `grep` 네이티브 설정 | `AndroidManifest.xml`에 `autoVerify`·`android:scheme` 없음, `App.entitlements`에 `associated-domains` 없음, 코드에 `appUrlOpen` 없음 | 명령 실행 |
+| V-14 | 앱 라우트: 비로그인 `/`(네이티브 모드 mock) | `/login`으로 이동(랜딩 아님) | vitest(`isNativeApp` mock) |
+| V-15 | `/join`을 가리키는 `Link/navigate` 목록 | `analysis.md` §10-1 표와 일치(새 입구가 생기지 않았는지) | grep 비교 |
+
+## E. 빌드·회귀
+
+- `tsc -b` 통과.
+- vitest 전체: **기준선 실패 23건과 동일**(신규 실패 0). 기준선 목록은 구현 시작 전에 `develop` 현재 상태로 먼저 저장해 비교.
+- 생성 CSS에 `LoginPage`가 쓰는 Tailwind 클래스가 정상 포함(카드 제거로 누락 클래스가 없는지 확인).
+
+## F. 알려진 한계 확인(문서)
+
+| ID | 확인 |
+|----|------|
+| V-16 | 서버 API는 열려 있음(L1)을 문서화했는가 |
+| V-17 | 운영 읽기 조회로 비회원 입장 건수 확인 방법(`analysis.md` §10-4)이 있는가 |
+| V-18 | 서버 스위치 확장 여지(L2)와 웹 입구 확장 여지(L3)가 기록되었는가 |
+
+## 변경 이력
+
+- 2026-11-04 개정 3판 작성(구현 전). 이전 서버 스위치안 검증표는 아래에 보존.
+
+---
+
+# (폐기됨, 서버 스위치안 Verify — 대표 지시 11/4) 참고용 보존
 
 - 상태: Stage ③ (구현 전 작성, 사후 수정 금지 — 변경은 "변경 이력"에 추가)
 - 대상 스위치: `GUEST_ENTRY_CLOSED`(기본 false), `GUEST_ENTRY_CLOSED_MODE`(`entry`|`hard`)

@@ -1,5 +1,7 @@
 # SDD-286 분석 — 비회원 코드 입장 경로 지도와 차단 방식 비교
 
+> **개정(대표 지시 11/4)**: 채택안이 "서버 스위치"에서 "운영 화면 입구 숨김"으로 바뀌었다. §0~9는 **서버 스위치안 분석으로 보존**(L3 확장 시 재사용). 채택안의 입구 전수 조사는 **§10**.
+
 - 작성일: 2026-11-04 / 브랜치 `sdd/286-close-guest-code-entry` / 구현 없음(분석만)
 - 분류: **확정** = 코드·운영 읽기 조회로 직접 확인 / **추정** = 정황 / **미확인** = 확인 못함
 - 운영 조회는 읽기 전용(SSM). 개인정보·비밀값은 출력하지 않았고 건수만 기록했다.
@@ -164,3 +166,50 @@
 4. 만료 토큰으로 `/enter`를 호출한 회원이 비회원 분기에 빠지는지의 실측.
 5. vc47·TestFlight 최신 빌드가 내장한 번들 시점.
 6. B 계열(`guest-memberships` 등)이 앞으로도 쓰이지 않을지(운영 0행이지만 제품 의도는 대표 확인).
+
+
+## 10. 앱 흐름 전수 확인 — 로그인 화면 버튼 외에 비회원 코드 입장으로 가는 길이 있는가 (11/4 코드 확인)
+
+- 질문: 회원가입 → 로그인 전후로 앱 안에서 **로그인 없이** 코드 입장(`/join`, 비회원 `enterByCode`)으로 갈 수 있는 경로가 버튼 외에 실제로 있는가.
+- 방법: `frontend/src` 전체에서 `/join`·`navigate('/…')`·`<Navigate>`·`window.location`·`Link to` grep + `App.tsx` 라우트 표 + 네이티브 설정(`AndroidManifest.xml`, `Info.plist`, `App.entitlements`) 확인.
+- **결론: 버튼 외 경로 없음 (네이티브 앱 기준).** 대표 가정을 깨는 경로는 발견되지 않았다.
+
+### 10-1. 화면 흐름별 확인표
+
+| # | 화면/흐름 | 비회원 코드 입장 경로 | 위치(파일:줄) | 근거 |
+|---|-----------|----------------------|----------------|------|
+| 1 | **설치 직후·앱 첫 화면** | **없음** | `App.tsx:136~139` `EntryRoute` → 네이티브면 `RoleRouter`; `App.tsx:120~122` 비로그인 → `/login` | 네이티브는 랜딩 페이지를 건너뛰고 로그인으로 직행(웹만 `LandingPage`) |
+| 2 | **로그인 화면(회원 탭)** | **있음 = 대상 버튼** | `LoginPage.tsx:286~298` `data-testid="login-code-entry"` → `/join`; 표시 조건 `:205` `isClient`(회원 탭, 입력 중 `!typing`) | 이번에 숨길 유일한 입구. 코치/관리자 탭에는 없음(`isClient` 조건) |
+| 3 | 회원가입 화면 | 없음 | `register/RegisterClientPage.tsx:568` 로그인 링크만; `RegisterPage.tsx:61,105` `/`·`/login` | `/join` 링크 0건 |
+| 4 | 가입 직후 | 없음 | `RegisterClientPage.tsx:259` → `/onboarding/client`(RoleGuard client, `App.tsx:216`); `SignupConfirmPage.tsx:61,63,83,95` → 온보딩/홈/`/login?role=client` | 가입 직후는 로그인 상태 또는 `/login` |
+| 5 | 로그아웃 후 | 없음 | `hooks/useAuth.ts:51` `navigate('/')` → 네이티브는 #1과 같이 `/login`; 계정 삭제 `account-deletion.tsx:90` → `/login?role=client` | 웹은 `/`가 랜딩이지만 앱은 로그인 |
+| 6 | 세션 만료(401) | 없음 | `lib/api/client.ts:103~115` 역할별 로그인 경로로 `location.href` | `/login` 이동뿐 |
+| 7 | 딥링크 | **없음** | `AndroidManifest.xml:22~25` 런처 `MAIN`만(`autoVerify`·`android:scheme` 0건); `Info.plist:53` 스킴은 Google 로그인 용 1개; `App.entitlements` `associated-domains` 0건; 코드에 `appUrlOpen` 0건 | 외부 링크로 `/join`을 여는 설정 없음 |
+| 8 | 푸시 알림 탭 | 없음(회원 전용) | `lib/api/notifications.ts:164` → `/class/{sid}/enter`(로그인 회원, `class_invited`) | 비회원은 알림을 받지 않음 |
+| 9 | 입장 대기·입장 화면 | 로그인 회원만 | `pages/class/EntryPage.tsx:351` "코드 입력하기"→`/join`, 이 분기는 `isAuthenticated`(초대받은 로그인 회원)일 때만(`:126`, `:333~354`) | 비로그인은 `entry` 없이 도달 못함 |
+| 10 | 오류·만료 화면 | 비회원이 **이미 코드 입장한 뒤**에만 | `EntryPage.tsx:294`(대기 취소), `:361`(입장 자격 만료) → `/join`; `lib/class/entry-back.ts:16` 뒤로가기 | 입장 자격(`sessionStorage`, `class-flow.ts:307~331`)이 있어야 도달. 신규 입구가 아님 |
+| 11 | 뒤로가기 | 없음 | `EntryPage.tsx:600~606` `resolveEntryBack`: 로그인 회원은 history/`/app`, **비로그인·게스트만 `/join`**(= 이미 `/join`으로 들어온 사람) | 로그인 화면에서 뒤로가기로 `/join`에 가지 않음 |
+| 12 | 404·역할 불일치 화면 | 없음 | `NotFoundPage.tsx:16`, `RoleGuard.tsx:49` → `/` → 앱은 `/login`(#1) | 웹에서만 랜딩 |
+| 13 | 회원 홈(로그인 후) | 로그인 회원의 코드 입장(**유지**) | `components/client/code-entry-button.tsx:10` (`ClientHomePage`, `member-structure-home-page`, `member-classes-page`), `ClientSessionDetailPage.tsx:170` | 모두 `RoleGuard client` 안. 회원이 `/join`을 쓰는 것이라 비회원 입구 아님 |
+| 14 | 장기 비회원 `/class-members/:classId` | 직접 주소만 | `App.tsx:197` (`RoleGuard` 없음); 이 주소로 가는 링크 코드/서버 URL 생성 **0건** | 앱 안에서 이동 수단 없음(주소창 없는 앱). 웹에서 주소를 아는 사람만 |
+
+### 10-2. 이번 범위 밖 (웹 브라우저, 기록만)
+
+| 위치 | 내용 |
+|------|------|
+| `landing/Nav.tsx:33`, `landing/v6/LandingV6Chrome.tsx:17`, `landing/Hero.tsx:49`(어디서도 import 안 됨), `OrgPublicPage.tsx:257` | 웹 랜딩·기관 페이지의 "코드로 입장" |
+| `App.tsx:177` `/join` | 비로그인 접근은 지금도 열려 있음 |
+| 서버 메일 `session_email_invite_service.py:206,220`, `class_effect_service.py:214`, `reminder_service.py:140` | 메일 속 `/join` 안내(앱 사용자가 메일 링크를 누르면 브라우저/기본 동작) |
+| 직접 API | `POST /sessions/enter` 등 (한계 L1) |
+
+### 10-3. 확인 못 한 것
+
+1. 앱 안에서 외부 링크(메일 속 `/join` 주소)를 누르면 OS가 앱을 여는지: 딥링크 설정이 없어(#7) 브라우저로 열릴 가능성이 높으나 **기기 실측은 안 함**.
+2. `/class-members/:classId`를 만드는 서버 쪽 문자열(공유 링크·QR)은 `backend/app` grep 0건. 다른 저장소·운영 콘텐츠에 있는지는 미확인.
+3. 이 확인은 코드 정적 분석이다. 앱 실행 화면 캡처는 하지 않았다.
+
+### 10-4. 운영 읽기 조회로 비회원 입장 건수 확인 (L1 모니터링)
+
+- 가능(분석 단계에서 SSM 읽기 전용 SQL 사용, 건수만). 이번 개정에서는 실행하지 않았다.
+  - 비회원 입장 건수: `SELECT count(*) FROM session_participants WHERE user_id IS NULL AND joined_at >= '2026-11-05 00:00+09'`
+  - 특정 회차는 `session_id` 한정, 장기 비회원은 `class_members(kind='guest')`·`class_guest_credentials` 신규 건수.
