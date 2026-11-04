@@ -1,0 +1,49 @@
+== 스키마 단서
+ingest_path 길이: 8
+제약: [('eeg_feature_windows_pkey', 'p'), ('eeg_feature_windows_session_id_fkey', 'f'), ('eeg_feature_windows_user_id_fkey', 'f'), ('fk_eeg_feature_windows_participant_id', 'f'), ('uq_eeg_feature_window', 'u')]
+트리거: 0
+eeg_feature_windows 전체/이 회차: 34334 27416
+ingest_path 분포: [('legacy', 1719), ('rest', 32615)]
+이 회차 late 분포: [(False, 27317), (True, 99)]
+== 대상별 사전 계산
+[de8312] 밴드연결=False 뇌파동의=True capture_stream=1개 (generation=[1] cutoff=['completed'] status=['ended'])
+      파일: 업로드완료 49개/행 2940, 고유seq 2940 범위(1,2940) 파일내중복 0 seq당 hash2개이상 0 / 미완료 0개(행 0) / 업로드시각분포 {'11-04 10': 33, '11-04 11': 13, '11-04 15': 1, '11-04 18': 2}
+      변환통과 2940/2940 (실패 0) quality분포 {'unknown': 1, 'valid': 2928, 'invalid': 11} focus값있는 행 2928 관측구간(UTC) 01:12:48~02:01:47
+      DB 기존 행(참가자 전체) 0 / 같은 play_group(=capture_stream.id) 기존 0 / 겹치는 sequence 0 / 삽입 예정 2940
+[6a2172] 밴드연결=False 뇌파동의=True capture_stream=1개 (generation=[1] cutoff=['completed'] status=['ended'])
+      파일: 업로드완료 70개/행 4200, 고유seq 4200 범위(1,4200) 파일내중복 0 seq당 hash2개이상 0 / 미완료 0개(행 0) / 업로드시각분포 {'11-04 10': 32, '11-04 11': 20, '11-04 15': 12, '11-04 16': 6}
+      변환통과 4200/4200 (실패 0) quality분포 {'unknown': 1, 'valid': 4185, 'invalid': 14} focus값있는 행 4185 관측구간(UTC) 01:12:48~02:22:47
+      DB 기존 행(참가자 전체) 0 / 같은 play_group(=capture_stream.id) 기존 0 / 겹치는 sequence 0 / 삽입 예정 4200
+[518675] 밴드연결=False 뇌파동의=True capture_stream=1개 (generation=[1] cutoff=['completed'] status=['ended'])
+      파일: 업로드완료 43개/행 2580, 고유seq 2580 범위(1,2580) 파일내중복 0 seq당 hash2개이상 0 / 미완료 1개(행 60) / 업로드시각분포 {'11-04 10': 32, '11-04 11': 11}
+      변환통과 2580/2580 (실패 0) quality분포 {'unknown': 2, 'valid': 2504, 'invalid': 74} focus값있는 행 2504 관측구간(UTC) 01:12:46~01:55:45
+      DB 기존 행(참가자 전체) 0 / 같은 play_group(=capture_stream.id) 기존 0 / 겹치는 sequence 0 / 삽입 예정 2580
+[ac1a78] 밴드연결=False 뇌파동의=True capture_stream=1개 (generation=[1] cutoff=['completed'] status=['ended'])
+      파일: 업로드완료 70개/행 4200, 고유seq 4200 범위(1,4200) 파일내중복 0 seq당 hash2개이상 0 / 미완료 0개(행 0) / 업로드시각분포 {'11-04 10': 33, '11-04 11': 16, '11-04 18': 21}
+      변환통과 4200/4200 (실패 0) quality분포 {'unknown': 1, 'valid': 4095, 'invalid': 103, 'degraded': 1} focus값있는 행 4096 관측구간(UTC) 01:12:47~02:22:46
+      DB 기존 행(참가자 전체) 0 / 같은 play_group(=capture_stream.id) 기존 0 / 겹치는 sequence 0 / 삽입 예정 4200
+[14b252 대조] 밴드연결=True 뇌파동의=True capture_stream=2개 (generation=[1, 2] cutoff=['completed', 'completed'] status=['superseded', 'ended'])
+      파일: 업로드완료 55개/행 3300, 고유seq 3300 범위(1,3300) 파일내중복 0 seq당 hash2개이상 0 / 미완료 1개(행 60) / 업로드시각분포 {'11-04 10': 32, '11-04 11': 9, '11-04 16': 14}
+      변환기 검증: 파일 3300행 중 (sequence,hash) DB와 일치 3300 → 변환 컬럼값 30개 전부 동일 3300/3300 불일치 컬럼 {}
+      DB play_group별 행 수 [('bd8efc6e', 48), ('1dd1c170', 4463)] / DB quality·ingest_path [('degraded', 'rest', False, 11), ('invalid', 'rest', False, 460), ('unknown', 'rest', False, 2), ('invalid', 'rest', True, 3), ('valid', 'rest', False, 4035)]
+4명 합계: {'file_rows': 13920, 'insert': 13920, 'already': 0, 'conv_fail': 0, 'dup_in_file': 0, 'pending_rows': 60}
+== 518675 업로드 대기 artifact — 원본 객체·무결성·변환 가능 여부(읽기만)
+   {'상태': 'pending', 'verified': False, '기록행': 60, 'seq(기록)': (2581, 2640), '실제행': 60, 'seq(실제)': (2581, 2640), '크기일치': True, '저장바이트 sha256==checksum': True, '변환통과': 60, '회차구간내': 60, '기존 업로드분과 seq 겹침 없음': True}
+== 리포트·발송 상태 (건수·상태값만)
+[de8312] report_included=True override=True 이메일등록=True sent_at있음=False email_status=None attendance=attended removed=False waitlisted=False
+      client 리포트(유형,상태,생성상태,신뢰도,본문길이,sent_at,approved_at,승인경로,발송상태,발송시도,읽음,pdf): ('client', 'pending_review', 'ready', None, 343, False, False, None, None, 0, False, False)
+[6a2172] report_included=True override=True 이메일등록=True sent_at있음=False email_status=None attendance=attended removed=False waitlisted=False
+      client 리포트(유형,상태,생성상태,신뢰도,본문길이,sent_at,approved_at,승인경로,발송상태,발송시도,읽음,pdf): ('client', 'pending_review', 'ready', None, 343, False, False, None, None, 0, False, False)
+[518675] report_included=True override=True 이메일등록=True sent_at있음=False email_status=None attendance=attended removed=False waitlisted=False
+      client 리포트(유형,상태,생성상태,신뢰도,본문길이,sent_at,approved_at,승인경로,발송상태,발송시도,읽음,pdf): ('client', 'pending_review', 'ready', None, 343, False, False, None, None, 0, False, False)
+[ac1a78] report_included=True override=True 이메일등록=True sent_at있음=False email_status=None attendance=attended removed=False waitlisted=False
+      client 리포트(유형,상태,생성상태,신뢰도,본문길이,sent_at,approved_at,승인경로,발송상태,발송시도,읽음,pdf): ('client', 'pending_review', 'ready', None, 343, False, False, None, None, 0, False, False)
+회차 reports 분포: [('client', 'completed', 'ready', 9), ('client', 'pending_review', 'ready', 22), ('counselor', 'completed', 'partial', 1)]
+counselor 리포트(상태,생성상태,본문길이,approved_at,sent_at,class_report있음,counselor_comment있음): [('completed', 'partial', 112274, True, True, True, False)]
+회차 report_email_sent_at 있는 참가자: 9
+호스트 auto_approve_report / class_id 있음: (True, True)
+대상 4명 report_choice_events: [('518675', 1), ('6a2172', 1), ('ac1a78', 1), ('de8312', 1)]
+회차 notification_outbox 중 report_ready 건수(대상 4명 user): 48
+끝 — 쓰기 없음(READ ONLY 트랜잭션 rollback)
+
+
