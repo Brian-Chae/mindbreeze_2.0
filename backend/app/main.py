@@ -27,6 +27,11 @@ from app.core.log_redaction import install_log_redaction  # noqa: E402
 
 install_log_redaction()
 
+# SDD-285 S5: app.* INFO(`[ingest-batch]` 등)가 uvicorn 아래에서 출력되게 한다.
+from app.core.logging_setup import configure_app_logging  # noqa: E402
+
+configure_app_logging()
+
 
 async def _outbox_ws_poll_loop() -> None:
     """WS 서버 이벤트 루프에서 outbox(ws 채널)를 주기적으로 처리."""
