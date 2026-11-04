@@ -362,7 +362,9 @@ export interface HostCase {
   /** 오프라인은 셀프뷰를 두지 않고 요약 패널로 채운다(CS3) */
   headSlot: 'selfview' | 'summary';
   /** 도크 세 번째 항목 라벨 — 오프라인은 "녹음" */
-  mediaDockLabel: '미디어' | '녹음';
+  /** 독·시트 제목은 온라인/오프라인 모두 '설정'. 미디어/녹음은 시트 안 구역 제목 */
+  settingsDockLabel: '설정';
+  mediaSectionLabel: '미디어 설정' | '녹음 설정';
   banner: HostBanner | null;
   chips: HostChip[];
   stats: { joined: number; total: number };
@@ -477,7 +479,8 @@ export function deriveHostCase(input: HostCaseInput): HostCase {
     solo: input.solo,
     allOff,
     headSlot: online ? 'selfview' : 'summary',
-    mediaDockLabel: online ? '미디어' : '녹음',
+    settingsDockLabel: '설정',
+    mediaSectionLabel: online ? '미디어 설정' : '녹음 설정',
     banner: deriveBanner(input),
     chips,
     stats: { joined: joinedList.length, total: list.length },

@@ -2,7 +2,7 @@ import type { LocalVideoTrack } from 'livekit-client';
 // SDD-208 H1·H2 — 상담사 진행 중 화면(뷰). props 만 받는 순수 컴포넌트라 서버·BLE·LiveKit 없이 픽스처로 렌더·측정할 수 있다.
 // 구성: 상단 바 → (배너) → 헤드 행(지표 띠 + 셀프뷰/요약 패널) → 칩 줄 → 세로 스크롤 그리드 → 도크, 시트는 도크·칩·타일에서 연다.
 import { useRef, useState, type ReactNode } from 'react';
-import { Activity, MessageCircle, Hand, ArrowUpRight, Mic, SlidersHorizontal, Video } from 'lucide-react';
+import { Activity, MessageCircle, Hand, ArrowUpRight, Settings, SlidersHorizontal } from 'lucide-react';
 import {
   filterHostParticipants,
   HOST_BAND_TEXT,
@@ -28,7 +28,8 @@ import { HostBanner, HostErrorBanners, type HostErrorBannerModel } from './HostB
 import { NoticeOverlay } from '../shared/NoticeOverlay';
 import { HostChipLine } from './HostChipLine';
 import { HostSelfView, HostSummaryPanel } from './HostHeadSlot';
-import { HostMediaSheet, HostPermissionSheet, type HostMediaProps } from './HostMediaSheet';
+import { HostPermissionSheet, type HostMediaProps } from './HostMediaSheet';
+import { HostSettingsSheet, type HostCapacityProps } from './HostSettingsSheet';
 import { HostMetricStrip } from './HostMetricStrip';
 import { HostParticipantGrid } from './HostParticipantGrid';
 import { HostSoloCard } from './HostSoloCard';
@@ -93,8 +94,10 @@ export interface HostLiveViewProps {
   quietSignalEntries?: SignalMap;
   selfBand: HostSelfBand;
   chat: HostChatProps;
-  /** 미디어(온라인)/녹음(오프라인) 시트 내용 */
+  /** 설정 시트의 미디어(온라인)/녹음(오프라인) 구역 내용 */
   media: HostMediaProps;
+  /** SDD-289: 정원 설정 구역. 클래스 정보를 모르면 생략(null) */
+  capacity?: HostCapacityProps | null;
   /** 서버·화상 오류(종료 실패 재시도 포함) — 본 배너와 별개로 위에 쌓는다 */
   errorBanners?: readonly HostErrorBannerModel[];
   codeCopied: boolean;
@@ -122,7 +125,7 @@ function selfBandText(band: HostSelfBand): string {
 }
 
 export function HostLiveView(props: HostLiveViewProps) {
-  const { hostCase, participants, ui, uiActions, meta, queue, speakingPanel, readinessPanel, preCheckins, quietSignals, selfBand, chat, media, errorBanners, codeCopied, selfStream, selfTrack, memberStream, trendOf, actions, backdropSrc } = props;
+  const { hostCase, participants, ui, uiActions, meta, queue, speakingPanel, readinessPanel, preCheckins, quietSignals, selfBand, chat, media, errorBanners, codeCopied, selfStream, selfTrack, memberStream, trendOf, actions, backdropSrc, capacity } = props;
   const sheetMode = useSheetMode();
   const signalOpener = useRef<HTMLElement | null>(null);
   const [range, setRange] = useState<string | null>(null);
@@ -153,7 +156,7 @@ export function HostLiveView(props: HostLiveViewProps) {
   const dockItems: DockItem[] = [
     { key: 'metric', label: '지표 기준', icon: icon(Activity) },
     { key: 'chat', label: '채팅', icon: icon(MessageCircle), badge: ui.sheet === 'chat' ? 0 : chat.unread },
-    { key: 'media', label: hostCase.mediaDockLabel, icon: icon(online ? Video : Mic) },
+    { key: 'media', label: hostCase.settingsDockLabel, icon: icon(Settings) },
     { key: 'tools', label: '도구', icon: icon(SlidersHorizontal) },
   ];
 
@@ -194,11 +197,12 @@ export function HostLiveView(props: HostLiveViewProps) {
         return { title: '내 밴드', body: <MybandSheet band={selfBand} onConnect={actions.connectSelfBand} onDisconnect={actions.disconnectSelfBand} /> };
       case 'media':
         return {
-          title: hostCase.mediaDockLabel,
+          title: hostCase.settingsDockLabel,
           body: (
-            <HostMediaSheet
+            <HostSettingsSheet
               online={online} cam={hostCase.cam} mic={hostCase.mic} media={media}
               onToggleCam={actions.toggleCam} onToggleMic={actions.toggleMic} onOpenPermission={uiActions.openSheet}
+              capacity={capacity ?? null} joined={participants.length} waiting={queue.length}
             />
           ),
         };
