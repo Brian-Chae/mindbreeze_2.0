@@ -25,15 +25,37 @@ test('기본 회원 탭은 이메일 로그인을 위에, 간편 로그인을 �
   expect(html).toMatch(/register\?role=client/);
 });
 
-test('회원 탭에만 하단 코드 입장 카드가 있고 링크에 코드가 없다 (SDD-227 V01·V02·V05)', () => {
-  for (const url of ['/login', '/login?role=client']) {
-    const html = render(url);
-    expect(html).toMatch(/입장 코드가 있나요\?/);
-    expect(html).toMatch(/href="\/join"/);
+test('플래그 on: 회원 탭에만 하단 코드 입장 카드가 있고 링크에 코드가 없다 (SDD-227 V01·V02·V05, SDD-286 V-7)', () => {
+  vi.stubEnv('VITE_GUEST_ENTRY_ENABLED', 'true');
+  try {
+    for (const url of ['/login', '/login?role=client']) {
+      const html = render(url);
+      expect(html).toMatch(/입장 코드가 있나요\?/);
+      expect(html).toMatch(/href="\/join"/);
+      expect(html).toContain('pb-[calc(8.5rem');
+    }
+    for (const url of ['/login?role=counselor', '/login?role=org_admin', '/login?role=platform_admin']) {
+      const html = render(url);
+      expect(html).not.toMatch(/입장 코드가 있나요|href="\/join/);
+    }
+  } finally {
+    vi.unstubAllEnvs();
   }
-  for (const url of ['/login?role=counselor', '/login?role=org_admin', '/login?role=platform_admin']) {
-    const html = render(url);
-    expect(html).not.toMatch(/입장 코드가 있나요|href="\/join/);
+});
+
+test('플래그 off(기본·운영): 코드 입장 카드·문구·하단 여백이 없고 로그인 폼은 그대로 (SDD-286 V-1·V-2·V-3·V-11)', () => {
+  vi.stubEnv('VITE_GUEST_ENTRY_ENABLED', '');
+  try {
+    for (const url of ['/login', '/login?role=client', '/login?role=counselor', '/login?role=org_admin', '/login?role=platform_admin']) {
+      const html = render(url);
+      expect(html).not.toMatch(/login-code-entry|입장 코드가 있나요|로그인 없이 바로 들어가요|href="\/join"/);
+      expect(html).not.toContain('pb-[calc(8.5rem');
+    }
+    const client = render('/login');
+    expect(client).toMatch(/type="email"/);
+    expect(client).toMatch(/register\?role=client/);
+  } finally {
+    vi.unstubAllEnvs();
   }
 });
 

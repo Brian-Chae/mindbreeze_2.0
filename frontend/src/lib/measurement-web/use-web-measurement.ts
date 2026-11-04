@@ -28,6 +28,8 @@ export interface UseWebMeasurementOptions {
   featureAuth?: FeatureAuth;
   /** 코드 입장 게스트 — 앱에서도 web_wasm 경로로 측정한다 */
   guest?: boolean;
+  /** SDD-284: 네이티브 스트림 확정 실패로 웹 경로로 하강한 회차(use-native-measurement 의 nativeFailed) */
+  nativeFailed?: boolean;
 }
 
 export interface UseWebMeasurementResult {
@@ -49,6 +51,7 @@ export function useWebMeasurementV2(o: UseWebMeasurementOptions): UseWebMeasurem
     eegConsent: o.eegConsent,
     bandOptIn: o.bandOptIn,
     guest: o.guest,
+    nativeFailed: o.nativeFailed,
   });
   const client = o.liveV2?.client ?? null;
   const ready = o.liveV2?.ready ?? false;

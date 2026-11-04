@@ -875,9 +875,32 @@ def scope_of(actor, auth_revision: int | None = None):
     return Scope("host", None, auth_revision)
 
 
+REPLAY_WARN_INTERVAL_S = 60.0
+_replay_warned: dict[tuple[str, str, str], float] = {}
+
+
+def _warn_replay_unavailable(session_id, aud, dom, exc, *, now: float | None = None) -> bool:
+    """같은 (session, aud, dom) 의 되감기 불가 경고는 60초에 1회만 남긴다. 남겼으면 True."""
+    import logging as _logging
+    import time as _t
+
+    t = _t.monotonic() if now is None else now
+    key = (str(session_id), str(aud), str(dom))
+    last = _replay_warned.get(key)
+    if last is not None and t - last < REPLAY_WARN_INTERVAL_S:
+        return False
+    if len(_replay_warned) >= 5000:
+        _replay_warned.clear()
+    _replay_warned[key] = t
+    _logging.getLogger(__name__).warning(
+        "[live-v2] 방송 되감기 불가 — snapshot 경로로 위임 session=%s aud=%s dom=%s reason=%s (60초 내 반복 억제)",
+        str(session_id)[:8], str(aud)[:15], dom, exc)
+    return True
+
+
 def events_for_rows(live, session_id, rows) -> list[dict]:
     """outbox row 들에 대응하는 wire LiveEvent(seq 포함, audience 별)를 Redis stream 에서 읽어 revision 순으로 돌려준다."""
-    from app.services.session_live_state import Cursor, LiveStateService, Scope
+    from app.services.session_live_state import Cursor, LiveStateService, ReplayUnavailable, Scope
 
     want = {str(r.event_id): int(r.revision) for r in rows}
     pairs: dict[tuple[str, str], int] = {}
@@ -890,7 +913,14 @@ def events_for_rows(live, session_id, rows) -> list[dict]:
         seq = int(live.snapshot_raw(session_id, [aud], (dom,), False)[5][0][2])
         # 방송 대상 행은 projection 된 가장 최근 event 들이라 (aud,dom) 의 마지막 n_rows 개 seq 와 일치한다.
         # 고정 폭(512)으로 거슬러 가면 재구축 직후(복원된 seq 만 있고 stream 이력이 없을 때) log_truncated 가 난다.
-        rep = svc.replay(session_id, scope, [Cursor(aud, dom, max(0, seq - n_rows))])
+        try:
+            rep = svc.replay(session_id, scope, [Cursor(aud, dom, max(0, seq - n_rows))])
+        except ReplayUnavailable as exc:
+            # SDD-285 S4: 되감기 불가(log_truncated 등)면 이 (aud,dom) 의 재방송만 건너뛴다. 예외를 올리면 워터마크가 전진하지 않아
+            # 5초 heartbeat 마다 같은 실패가 반복된다(11/4 1,561회). 건너뛴 쪽은 클라이언트가 heartbeat `through` 가 자기 cursor 보다
+            # 앞선 것을 보고 resync(snapshot) 로 따라잡는다(frontend live-state.ts applyHeartbeat → 'heartbeat_ahead').
+            _warn_replay_unavailable(session_id, aud, dom, exc)
+            continue
         out += [e for e in rep.events if e["event_id"] in want]
     out.sort(key=lambda e: (want[e["event_id"]], e["audience"]))
     return out
@@ -948,7 +978,7 @@ def run_live_command(db, actor, command, *, live=None, auth_revision: int | None
     from app.schemas.session_live_v2 import ack_from_result, error_ack
     from app.services import session_live_outbox as ob
     from app.services.live_redis.client import LiveNotReady, LiveRedisUnavailable
-    from app.services.session_live_commands import apply_command
+    from app.services.session_live_commands import apply_command_with_retry
     from app.services.session_live_state import ScopeStale
     from app.models.session import Session as SessionModel
 
@@ -958,11 +988,14 @@ def run_live_command(db, actor, command, *, live=None, auth_revision: int | None
         return RunOutcome(error_ack(str(command.command_id), "session_not_found"))
     seed_live_state(db, sid)
     try:
-        result = apply_command(db, actor, command, clock_probe_resolver=make_probe_resolver(live, actor.actor_id))
+        result = apply_command_with_retry(db, actor, command, clock_probe_resolver=make_probe_resolver(live, actor.actor_id))
     finally:
         callbacks = pop_after_commit(command.command_id)
     if result.transient or not result.committed:  # 일시 거절·충돌: 부작용 0
-        return RunOutcome(ack_from_result(result), result)
+        ack = ack_from_result(result)
+        if result.transient and result.code == "db_busy":  # SDD-285 S2: DB 교착 재시도 소진 → 앱이 같은 ID 로 다시 보내게 한다
+            ack.update(status="retryable", committed=False, code="db_busy", retry_after_ms=500)
+        return RunOutcome(ack, result)
     # commit 된 명령의 부수효과(종료 후 STT/리포트 등)는 projection/권한 상태와 무관하게 정확히 한 번 실행한다.
     def _run_callbacks() -> None:
         if result.status == "applied" and not result.duplicate:

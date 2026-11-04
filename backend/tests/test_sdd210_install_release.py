@@ -85,7 +85,7 @@ def test_첫_설치는_current_venv_링크를_만들고_앱_유닛과_timer_20�
     assert os.readlink(env["prefix"] / "venv").endswith("/venvs/h1")
     units = env["etc"] / "systemd" / "system"
     assert (units / "mindbreeze-backend.service").is_file()
-    assert len(list(units.glob("mindbreeze-job-*.timer"))) == 20  # 기존 18 + SDD-238 retention_sweep(dry-run) + 고아 산출물 스윕(sweep_biosignal_orphans, PR #171)
+    assert len(list(units.glob("mindbreeze-job-*.timer"))) == 21  # 기존 18 + SDD-238 retention_sweep(dry-run) + 고아 산출물 스윕(sweep_biosignal_orphans, PR #171) + SDD-285 S1 정산 스윕(feature_reconcile_sweep)
     log = env["calls"].read_text()
     assert "restart mindbreeze-backend" in log and "restart mindbreeze-worker" in log
     # 컷오버 전(timer 비활성) 상태에서는 timer 를 enable 하지 않는다

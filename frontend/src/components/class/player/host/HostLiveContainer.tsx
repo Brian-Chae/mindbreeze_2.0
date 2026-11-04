@@ -30,6 +30,11 @@ import { EndSessionModal } from '../../../player/EndSessionModal';
 import type { HostErrorBannerModel } from './HostBanner';
 import { HostLiveKitBridge } from './HostLiveKitBridge';
 import { HostLiveView, type HostLiveActions } from './HostLiveView';
+import type { HostCapacityProps } from './HostSettingsSheet';
+import { getClass, type ClassDetailDto } from '../../../../lib/api/class-structure';
+import { asClassId } from '../../../../lib/class-structure/read-model';
+import { invalidateClassReads } from '../../../../lib/class-structure/invalidation';
+import { useAuthStore } from '../../../../stores/authStore';
 import type { HostMediaProps } from './HostMediaSheet';
 import { holdLastValues, toHostParticipant, toHostQueue, type HeldValues, type HostMetricExtra } from './host-live-model';
 import {
@@ -72,7 +77,7 @@ export interface ContainerBand {
 
 export interface HostLiveContainerProps {
   session: Pick<SessionDto, 'id' | 'title' | 'location_type' | 'participant_mode' | 'duration_min' | 'access_code' | 'participants'>
-    & Partial<Pick<SessionDto, 'chat_room_id' | 'max_participants' | 'record_video'>>;
+    & Partial<Pick<SessionDto, 'chat_room_id' | 'max_participants' | 'record_video' | 'class_id'>>;
   hostUserId: string | null;
   hostParticipantId: string | null;
   /** 폴링·소켓·밴드 병합이 끝난 라이브 지표 행(호스트 본인 행 포함) */
@@ -182,6 +187,29 @@ export function HostLiveContainer(props: HostLiveContainerProps) {
   );
 
   const queue = useMemo<readonly HostQueueEntry[]>(() => toHostQueue(session.participants), [session.participants]);
+
+  // SDD-289: 정원 설정 구역 — 클래스 상세(정원·revision)를 한 번 읽고, 정원을 늘린 뒤 다시 읽는다.
+  const classId = session.class_id ?? null;
+  const admin = useAuthStore((s) => s.user?.role === 'org_admin');
+  const [classDetail, setClassDetail] = useState<ClassDetailDto | null>(null);
+  const [classReload, setClassReload] = useState(0);
+  useEffect(() => {
+    if (!classId) return undefined;
+    const controller = new AbortController();
+    void getClass(asClassId(classId), controller.signal).then(setClassDetail).catch(() => undefined);
+    return () => controller.abort();
+  }, [classId, classReload]);
+  const capacityProps = useMemo<HostCapacityProps | null>(() => {
+    if (!classId || !classDetail) return null;
+    return {
+      classId, capacity: classDetail.capacity, revision: classDetail.revision, admin,
+      onChanged: (next) => {
+        setClassDetail((prev) => (prev ? { ...prev, capacity: next } : prev));
+        invalidateClassReads();
+        setClassReload((n) => n + 1);
+      },
+    };
+  }, [classId, classDetail, admin]);
 
   const preCheckins = useMemo<readonly HostPreCheckin[]>(
     () => checkins.flatMap((e) => (e.checkin ? [{
@@ -444,6 +472,7 @@ export function HostLiveContainer(props: HostLiveContainerProps) {
           ),
         }}
         media={mediaProps}
+        capacity={capacityProps}
         errorBanners={errorBanners}
         codeCopied={codeCopy.copied}
         selfStream={selfStream}

@@ -88,7 +88,7 @@ describe('상담사 뷰 — C01 기본', () => {
   it('도크 4개: 지표 기준·채팅(안읽음)·미디어·도구', async () => {
     await renderCase('C01');
     const labels = all('[data-pz="dk"]').map((d) => text(d.querySelector('.pz-dk__label')));
-    expect(labels).toEqual(['지표 기준', '채팅', '미디어', '도구']);
+    expect(labels).toEqual(['지표 기준', '채팅', '설정', '도구']);
   });
 
   it('신호는 모든 폭에서 도크 위 한 곳에 있고 체크인은 상태에서 펼친다', async () => {

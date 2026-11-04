@@ -165,12 +165,12 @@ describe('HostLiveContainer — 뷰 모델 조립', () => {
     expect(one('[data-pz="member-video"]')).toBeNull();
   });
 
-  it('오프라인 수업은 셀프뷰·카메라 토글 없이 요약 패널과 "녹음" 도크', async () => {
+  it('오프라인 수업은 셀프뷰·카메라 토글 없이 요약 패널과 "설정" 도크', async () => {
     const props = baseProps({ session: { ...baseProps().session, location_type: 'offline' } });
     await render(<HostLiveContainer {...props} />);
     expect(one('[data-pz="selfview"]')).toBeNull();
     expect(one('[data-pz="sumpanel"]')).not.toBeNull();
-    expect(text(all('[data-pz="dk"]')[2])).toContain('녹음');
+    expect(text(all('[data-pz="dk"]')[2])).toContain('설정');
     await click(all('[data-pz="dk"]')[2]);
     expect(one('[role="switch"][aria-label="카메라"]')).toBeNull();
     expect(one('[role="switch"][aria-label="마이크"]')).toBeNull();

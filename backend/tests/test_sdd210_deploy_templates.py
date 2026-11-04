@@ -151,12 +151,14 @@ ACCOUNT_DELETION_JOB = {"account_deletion_sweep"}
 RETENTION_JOB = {"retention_sweep"}
 # 생체 신호 고아 산출물 정리(fix manifest pending 고착)
 BIOSIGNAL_ORPHAN_JOB = {"sweep_biosignal_orphans"}
+# SDD-285 S1: 종료 회차 feature 정산 스윕(기본 쓰기 없음)
+FEATURE_RECONCILE_JOB = {"feature_reconcile_sweep"}
 
 
 def test_jobs_tsv_는_retention_dry_run을_포함하고_연구_내보내기만_비활성이다():
     jobs = render.load_jobs(DEPLOY / "jobs.tsv")
     enabled = {j["name"] for j in jobs if j["enabled"] == "1"}
-    assert enabled == DEV_CRON_14 | PROD_ONLY_JOBS | CLASS_JOBS | ACCOUNT_DELETION_JOB | RETENTION_JOB | BIOSIGNAL_ORPHAN_JOB
+    assert enabled == DEV_CRON_14 | PROD_ONLY_JOBS | CLASS_JOBS | ACCOUNT_DELETION_JOB | RETENTION_JOB | BIOSIGNAL_ORPHAN_JOB | FEATURE_RECONCILE_JOB
     disabled = {j["name"] for j in jobs if j["enabled"] == "0"}
     # 연구 내보내기는 승인 전 비활성이다. 삭제는 별도 환경 스위치로 잠긴다.
     assert disabled == {"research_export"}
@@ -179,7 +181,7 @@ def test_jobs_tsv_주기가_dev_cron_과_같다():
 
 def test_활성_작업_수만큼_timer_와_타임아웃_드롭인이_생성된다(rendered):
     timers = sorted(p.name for p in (rendered / "etc/systemd/system").glob("mindbreeze-job-*.timer"))
-    assert len(timers) == 14 + len(PROD_ONLY_JOBS) + len(CLASS_JOBS) + len(ACCOUNT_DELETION_JOB) + len(RETENTION_JOB) + len(BIOSIGNAL_ORPHAN_JOB)
+    assert len(timers) == 14 + len(PROD_ONLY_JOBS) + len(CLASS_JOBS) + len(ACCOUNT_DELETION_JOB) + len(RETENTION_JOB) + len(BIOSIGNAL_ORPHAN_JOB) + len(FEATURE_RECONCILE_JOB)
     retention = (rendered / "etc/systemd/system/mindbreeze-job-retention_sweep.timer").read_text()
     assert "OnCalendar=*-*-* 03:00:00 UTC" in retention
     assert "Unit=mindbreeze-job@retention_sweep.service" in retention
