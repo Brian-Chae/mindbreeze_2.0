@@ -24,6 +24,7 @@ from app.schemas.class_scheduling import (
     DuplicateCommand,
     AddSessionCommand,
     TransitionCommand,
+    CapacityCommand,
     InstructorCommand,
     MembersCommand,
     HostRequestCommand,
@@ -421,6 +422,22 @@ def add_session(
     return writes.add_session(
         db, current_user["id"], class_id, payload.model_dump(mode="json")
     )
+
+
+@router.post("/{class_id}/capacity", dependencies=[Depends(scheduling_enabled)])
+def increase_capacity(
+    class_id: UUID,
+    payload: CapacityCommand,
+    background_tasks: BackgroundTasks,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    from app.services import class_capacity_service
+
+    result = class_capacity_service.increase_capacity(
+        db, current_user["id"], class_id, payload
+    )
+    return queue_class_effects(result, background_tasks, db)
 
 
 @router.post("/{class_id}/transition", dependencies=[Depends(scheduling_enabled)])
