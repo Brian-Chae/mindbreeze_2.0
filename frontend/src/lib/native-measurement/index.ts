@@ -321,6 +321,17 @@ export class NativeMeasurementFacade {
     } catch { return null; }
   }
 
+  /** SDD-284: 현재 snapshot 을 한 번 읽는다(스트림 확정 감시용). 측정 전·오류는 null. */
+  async getSnapshot(sessionId: string): Promise<MeasurementSnapshot | null> {
+    try { return normalizeSnapshot(await this.plugin.getMeasurementSnapshot({ sessionId })); } catch { return null; }
+  }
+
+  /** SDD-284: 웹 경로 하강 전 JS 밴드 소유권 회수(iOS setJSBandOwnership). 안드로이드·미지원은 true(회수할 소유권 없음). 거절·오류는 false. */
+  async reclaimJsBand(platform: string): Promise<boolean> {
+    if (platform !== 'ios' || !this.plugin.setJSBandOwnership) return true;
+    try { return (await this.plugin.setJSBandOwnership({ owning: true })).accepted === true; } catch { return false; }
+  }
+
   /** 네이티브 소유 밴드 재연결(iOS). 미지원 플랫폼·수집 전·실패는 false — 호출자가 JS BLE 로 폴백하지 않는다. */
   async reconnectBand(platform: string): Promise<boolean> {
     if (platform !== 'ios' || !this.plugin.reconnectBand) return false;

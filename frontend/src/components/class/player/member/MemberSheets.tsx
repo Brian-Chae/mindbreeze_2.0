@@ -13,6 +13,7 @@ import { MemberIcon } from './MemberIcon';
 import { metricFraction } from './member-metrics';
 import type { MemberClassViewProps, MemberSheetKey } from './member-view-types';
 import { MetricBars } from './MetricBars';
+import { ConnectionDiagnosticsFrame } from './ConnectionDiagnosticsPanel';
 import './member-player.css';
 
 const BAND_LIVE: readonly BandUi[] = ['on', 'weak', 'low'];
@@ -353,6 +354,8 @@ export function MemberSheetBody({ sheetKey, props, c }: MemberSheetBodyProps) {
     case 'chat': return <ChatSheet chat={props.chat} />;
     case 'signal': return <div className="mp-signal"><QuietSignalButtons onSend={props.actions.onSignal} /></div>;
     case 'sound': return <SoundSheet props={props} c={c} />;
-    case 'device': return <DeviceSheet props={props} />;
+    case 'device': return props.diagnostics
+      ? <ConnectionDiagnosticsFrame view={props.diagnostics}><DeviceSheet props={props} /></ConnectionDiagnosticsFrame>
+      : <DeviceSheet props={props} />;
   }
 }
