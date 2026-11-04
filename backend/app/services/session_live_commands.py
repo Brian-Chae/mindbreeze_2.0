@@ -17,7 +17,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
 from sqlalchemy import func, select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
 from app.models.live_state import CaptureStream, LiveOutbox, LiveSessionEpoch
@@ -146,6 +146,48 @@ def _authorized(actor: Actor, kind: str) -> bool:
     return False
 
 
+def is_retryable_db_error(exc: BaseException) -> bool:
+    """교착·직렬화 실패·락 타임아웃처럼 같은 요청을 다시 하면 풀릴 수 있는 DB 오류인가(SQLSTATE 40P01/40001/55P03, 또는 문구)."""
+    if not isinstance(exc, DBAPIError):
+        return False
+    code = getattr(getattr(exc, "orig", None), "pgcode", None)
+    if code in ("40P01", "40001", "55P03"):
+        return True
+    text = str(exc).lower()
+    return "deadlock detected" in text or "could not serialize" in text or "lock timeout" in text
+
+
+DB_RETRY_ATTEMPTS = 2  # 첫 시도 + 재시도 2회
+DB_RETRY_BACKOFF_S = 0.05
+
+
+def apply_command_with_retry(db: DBSession, actor: Actor, command: LiveCommand, **kw) -> DurableResult:
+    """SDD-285 S2: apply_command 가 교착 등 재시도 가능한 DB 오류로 실패하면(롤백됨 — ledger·stream 흔적 없음) 최대 2회 다시 시도한다.
+
+    command_id 멱등이므로 재시도가 이중 적용되지 않는다. 끝까지 실패하면 예외를 올리지 않고 일시 거절(`db_busy`, transient)로 돌려
+    호출자가 `retryable`(committed:false, retry_after_ms) ACK 을 보낼 수 있게 한다.
+    """
+    import logging
+    import time
+
+    log = logging.getLogger(__name__)
+    last: BaseException | None = None
+    for attempt in range(DB_RETRY_ATTEMPTS + 1):
+        try:
+            return apply_command(db, actor, command, **kw)
+        except DBAPIError as exc:
+            if not is_retryable_db_error(exc):
+                raise
+            db.rollback()
+            last = exc
+            log.warning("[live-v2] 명령 DB 충돌(%s) command=%s kind=%s 시도=%d/%d", getattr(getattr(exc, "orig", None), "pgcode", "?"),
+                        str(command.command_id)[:8], command.kind, attempt + 1, DB_RETRY_ATTEMPTS + 1)
+            if attempt < DB_RETRY_ATTEMPTS:
+                time.sleep(DB_RETRY_BACKOFF_S * (attempt + 1))
+    assert last is not None
+    return _transient(command, "db_busy", 0, 0)
+
+
 def apply_command(db: DBSession, actor: Actor, command: LiveCommand, *, now: datetime | None = None,
                   clock_probe_resolver: Callable[[uuid.UUID], int | None] | None = None,
                   commit: bool = True) -> DurableResult:
@@ -154,6 +196,11 @@ def apply_command(db: DBSession, actor: Actor, command: LiveCommand, *, now: dat
     body_hash = command.body_hash()
     if command.kind not in ALL_KINDS:
         return _transient(command, "unknown_kind", 0, 0)
+    if command.kind in CAPTURE_KINDS:
+        # SDD-285 S2: 락 순서를 sessions → epoch 로 고정한다. 호스트/REST 경로는 sessions 행을 먼저 잠그고 epoch 를 잠그는데,
+        # 여기서 epoch → (capture_stream INSERT 의 FK) sessions KEY SHARE 순으로 잡으면 입장 폭주 때 교착이 난다(11/4 11건).
+        # KEY SHARE 는 FOR UPDATE 와만 충돌하므로 capture 끼리는 서로 막지 않는다.
+        db.execute(select(SessionModel.id).where(SessionModel.id == command.session_id).with_for_update(key_share=True))
     try:
         epoch_row = lock_epoch(db, command.session_id)
     except IntegrityError:  # 존재하지 않는 session_id (FK)

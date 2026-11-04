@@ -978,7 +978,7 @@ def run_live_command(db, actor, command, *, live=None, auth_revision: int | None
     from app.schemas.session_live_v2 import ack_from_result, error_ack
     from app.services import session_live_outbox as ob
     from app.services.live_redis.client import LiveNotReady, LiveRedisUnavailable
-    from app.services.session_live_commands import apply_command
+    from app.services.session_live_commands import apply_command_with_retry
     from app.services.session_live_state import ScopeStale
     from app.models.session import Session as SessionModel
 
@@ -988,11 +988,14 @@ def run_live_command(db, actor, command, *, live=None, auth_revision: int | None
         return RunOutcome(error_ack(str(command.command_id), "session_not_found"))
     seed_live_state(db, sid)
     try:
-        result = apply_command(db, actor, command, clock_probe_resolver=make_probe_resolver(live, actor.actor_id))
+        result = apply_command_with_retry(db, actor, command, clock_probe_resolver=make_probe_resolver(live, actor.actor_id))
     finally:
         callbacks = pop_after_commit(command.command_id)
     if result.transient or not result.committed:  # 일시 거절·충돌: 부작용 0
-        return RunOutcome(ack_from_result(result), result)
+        ack = ack_from_result(result)
+        if result.transient and result.code == "db_busy":  # SDD-285 S2: DB 교착 재시도 소진 → 앱이 같은 ID 로 다시 보내게 한다
+            ack.update(status="retryable", committed=False, code="db_busy", retry_after_ms=500)
+        return RunOutcome(ack, result)
     # commit 된 명령의 부수효과(종료 후 STT/리포트 등)는 projection/권한 상태와 무관하게 정확히 한 번 실행한다.
     def _run_callbacks() -> None:
         if result.status == "applied" and not result.duplicate:

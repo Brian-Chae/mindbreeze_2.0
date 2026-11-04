@@ -4,7 +4,7 @@
  R1 ACK 가 앱에 못 가도(서버는 commit 완료) 같은 command_id 재전송은 duplicate 로 같은 stream 을 돌려준다.
  R2 handler 예외/교착이면 ledger·stream 이 남지 않고(롤백) 같은 ID 재시도가 정상 적용된다.
  R3 새 command_id 재시작은 이전 stream 을 superseded 로 만들고 generation 을 올린다(운영 4명은 generation 1 뿐 → 앱이 새 ID 를 보내지 않았다).
- R4 회차 행(sessions) 락을 먼저 쥔 다른 트랜잭션과 capture.start 가 엇갈리면 실제 교착이 난다(락 순서: epoch→sessions KEY SHARE vs sessions→epoch).
+ R4 회차 행(sessions) 락을 먼저 쥔 다른 트랜잭션과 엇갈려도 교착이 없다(S2 이전엔 epoch→sessions KEY SHARE vs sessions→epoch 로 교착).
  R5 capture.start 만 40명 동시에 와도 epoch 락 직렬화로 교착은 없다.
 """
 from __future__ import annotations
@@ -88,7 +88,7 @@ def test_R3_새ID_재시작은_이전_stream을_superseded로_만든다(maker, w
     assert [(int(g), st) for g, st in rows] == [(1, "superseded"), (2, "active")]
 
 
-def test_R4_sessions행락과_엇갈리면_capture_start가_교착에_걸린다(maker, world):
+def test_R4_sessions행락과_엇갈려도_락순서_고정으로_교착이_없다(maker, world):
     _warm(maker, world)
     outcome: dict[str, object] = {}
     a_locked, b_started = threading.Event(), threading.Event()
@@ -120,9 +120,8 @@ def test_R4_sessions행락과_엇갈리면_capture_start가_교착에_걸린다(
 
     ta, tb = threading.Thread(target=contender), threading.Thread(target=start)
     ta.start(); tb.start(); ta.join(30); tb.join(30)
-    assert "deadlock" in (outcome.get("A"), outcome.get("B")), outcome
-    if outcome.get("B") == "deadlock":  # ACK 없이 끝난 케이스: 같은 ID 재시도는 적용된다
-        pass
+    # 수정 전(S2 이전)에는 여기서 교착이 났다(epoch→sessions KEY SHARE vs sessions→epoch). S2 로 capture 명령도 sessions→epoch 순서를 지킨다.
+    assert outcome.get("A") == "ok" and outcome.get("B") == "ok", outcome
 
 
 def test_R5_capture_start_40명_동시는_교착없이_모두_적용(maker):
