@@ -31,6 +31,8 @@ celery_app = Celery(
         "app.tasks.pipeline_outbox_task",
         # EEG-RAW-03 / EEG-RET-01: 스테일·보관기간 경과 raw 청크 정리 스윕.
         "app.tasks.eeg_raw_task",
+        # SDD-285 S1: 종료 회차 feature 정산(기본 쓰기 없음, FEATURE_RECONCILE_APPLY=true 일 때만 적재).
+        "app.tasks.feature_reconcile_task",
     ],
 )
 # INFRA-08: 주기 작업의 단일 소스는 OS cron(배포 시 등록)이다.
