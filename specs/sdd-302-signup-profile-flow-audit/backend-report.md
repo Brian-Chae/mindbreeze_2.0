@@ -28,3 +28,10 @@
 - 공용 `get_progress`에서 기존 User 부모행을 `SELECT FOR UPDATE`로 잠가 단계·완료·보류 쓰기를 사용자별 직렬화한다. 진행행이 아직 없어도 최초 INSERT가 경합하지 않는다. 잠금 획득 후 `populate_existing`으로 오래 열린 세션의 JSON 캐시를 갱신한다.
 - 로컬 전용 임시 PostgreSQL + Alembic 하네스로 실제 2스레드 race 검증: 최초 보류 동시요청은 중복 키 예외, 기존 단계/보류 동시저장은 키 소실로 **RED 2 failed** 재현 → 수정 후 **2 passed**. 기존 step1/새 step3/보류키/current_step/완료=true 보존을 확인했다.
 - 전화번호·동시성 변경 후 신규/PG/회원·코치 온보딩/초대/가입/Apple 회귀 **86 passed**, 48.63초. PG 검증은 SQLite 대체가 아닌 실제 로컬 PostgreSQL이며 외부 DB에 접속하지 않았다.
+
+## 전체 검증 환경과 CI 보완
+- 로컬 ingest 4건은 `jsonschema` 미설치로 실패했다. 기준선 `13bff196`의 backend를 임시 디렉터리에 격리하여 같은 파일 재실행: 동일 **4 failed / 17 passed**(20.03초), 모두 `ModuleNotFoundError: jsonschema`.
+- `requirements.txt`에는 이미 `jsonschema==4.26.0`가 있으며 CI도 requirements를 설치한다. 공유 venv를 수정하지 않고 `/tmp/sdd302-test-deps`에 설치 후 현재 코드 ingest 재실행: **21 passed**(9.74초). 제품 의존성 파일 변경 없음.
+- PR PostgreSQL smoke의 보강 HTTP 3건 실패 원인은 합성 NOW=2026-11-02와 실제 2026-11-05의 불일치였다. 대상 회차 NOW+2일(11/4)을 HTTP 실시간 검사가 과거 회차로 거부했다. 가입/성별 변경과 무관하며 해당 테스트·서비스는 기준선과 동일했다.
+- 기준선 `13bff196` 격리 실제PG에서도 동일 HTTP 3건 **3 failed / 39 deselected**(17.72초). 제품 로직은 보존하고 `test_sdd217_makeup.py` fixture에서 보강 서비스 시각만 합성 NOW로 고정했다.
+- 수정 후 해당 파일 전체 실제 PostgreSQL 검증 **42 passed**(29.03초). 권한·멱등성·동시성·회차상태 검증 단언을 유지했다.
