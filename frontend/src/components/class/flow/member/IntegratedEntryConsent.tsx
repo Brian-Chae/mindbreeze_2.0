@@ -40,6 +40,8 @@ export function IntegratedEntryConsent({ entry, acquireEntry, initialValues, ini
   const busy = useRef(false);
   const terminal = useRef(onTerminal);
   terminal.current = onTerminal;
+  const autoSkipRef = useRef(autoSkip);
+  autoSkipRef.current = autoSkip;
   const savedRef = useRef(onSaved);
   savedRef.current = onSaved;
   const checkpoint = useRef<EntryConsentCheckpoint | null>(null);
@@ -59,7 +61,7 @@ export function IntegratedEntryConsent({ entry, acquireEntry, initialValues, ini
       const info = resolvedEntry.classInfo;
       const cp = result.checkpoint;
       const decided = cp.required && (info?.linkbandMode === 'none' || cp.eeg !== null) && (resolvedEntry.isGuest || cp.research !== null);
-      if (autoSkip && decided && (result.values.report || readDecided(resolvedEntry)) && info && resolvedEntry.participantId && resolvedEntry.credential) {
+      if (autoSkipRef.current && decided && (result.values.report || readDecided(resolvedEntry)) && info && resolvedEntry.participantId && resolvedEntry.credential) {
         savedRef.current(resolvedEntry, { ...restored, eeg: info.linkbandMode === 'none' ? false : restored.eeg, research: !resolvedEntry.isGuest && restored.research });
       }
     }).catch((error: unknown) => {
