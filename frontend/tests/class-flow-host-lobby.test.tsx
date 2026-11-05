@@ -136,88 +136,92 @@ const text = (): string => container.textContent ?? '';
 const show = async (caseKey: string, n?: number): Promise<void> => { await act(async () => root.render(createElement(LobbyFixture, { caseKey, n, backdropSrc: '' }))); };
 const startButton = (): HTMLButtonElement => container.querySelector('[data-pz="flow-cta"]') as HTMLButtonElement;
 
-describe('FH06 화면', () => {
-  it('대기 3명: 초대 현황·행 칩·상태줄·시작하기 활성, 코드는 본문에 없다', async () => {
+const clickText = async (label: string): Promise<void> => {
+  const button = [...container.querySelectorAll('button')].find(b => b.textContent?.includes(label));
+  expect(button).toBeTruthy();
+  await act(async () => button?.click());
+};
+
+describe('FH06 v6 화면', () => {
+  it('코드를 상시 표시하고 준비 중 회원을 앞세운 표와 상태 집계를 보여 준다', async () => {
     await show('g-on-3');
-    expect(text()).toContain('로비 · 온라인 · 그룹');
-    expect(text()).toContain('초대 6명 · 대기실 3명');
-    expect(text()).toContain('3명이 아직 입장하지 않았어요');
+    expect(text()).toContain('대기실 · 온라인');
+    expect(text()).toContain('4829');
     expect(text()).toContain('1명 준비 완료 · 2명 준비 중');
-    expect(text()).toContain('대기실 3명');
-    expect(container.querySelectorAll('.fhb-mrow')).toHaveLength(3);
+    expect(container.querySelectorAll('[data-member-row]')).toHaveLength(6);
+    expect(container.querySelector('tbody tr')?.textContent).toContain('준비 중');
     expect(startButton().disabled).toBe(false);
-    expect(text()).toContain('시작하기');
-    expect(text()).not.toContain('4829');
-    expect(text()).not.toContain('입장 코드');
+    await clickText('도구');
     for (const label of ['BGM', '내 밴드', '발언권', '채팅']) expect(text()).toContain(label);
   });
 
-  it('대기 0명: 비어 있음 안내, 그래도 시작하기 활성', async () => {
+  it('입장 0명도 시작을 막지 않고 미입장 명부를 유지한다', async () => {
     await show('g-on-0');
-    expect(text()).toContain('아직 대기 중인 회원이 없어요');
-    expect(text()).toContain('초대한 회원이 입장하면 여기에 나타나요');
-    expect(text()).toContain('대기실이 비어 있어요 · 초대한 회원은 시작 후에도 입장할 수 있어요');
+    expect(text()).toContain('아직 입장한 회원이 없어요');
+    expect(container.querySelectorAll('[data-member-row]')).toHaveLength(6);
     expect(startButton().disabled).toBe(false);
   });
 
-  it('초대 0명: 안내와 다시 알림 비활성', async () => {
+  it('초대 0명에서도 회원 초대에 접근한다', async () => {
     await show('g-on-0-inv0');
-    expect(text()).toContain('초대 0명 · 대기실 0명');
-    expect(text()).toContain('아직 초대한 회원이 없어요');
-    expect(text()).toContain('초대 추가로 회원을 초대할 수 있어요');
-    expect((container.querySelectorAll('.fhb-invite button')[0] as HTMLButtonElement).disabled).toBe(true);
+    expect(container.querySelectorAll('[data-member-row]')).toHaveLength(0);
+    await clickText('회원 초대');
+    expect(container.querySelector('[role="dialog"]')?.textContent).toContain('기존 회원 선택');
   });
 
-  it('전원 입장: 모두 입장했어요, 다시 알림 비활성', async () => {
+  it('전원 입장하면 미입장 필터에 빈 상태를 보여 준다', async () => {
     await show('g-on-8');
-    expect(text()).toContain('초대한 회원이 모두 입장했어요');
     expect(text()).toContain('8명 모두 준비 완료');
+    await clickText('미입장');
+    expect(container.querySelectorAll('[data-member-row]')).toHaveLength(0);
+    expect(text()).toContain('모든 회원이 입장했어요');
   });
 
-  it('오프라인: 장소 줄, 도크는 내 밴드·채팅, 오프라인 문구', async () => {
+  it('오프라인은 장소와 현장 녹음 안내, 내 밴드·채팅 도구만 제공한다', async () => {
     await show('g-off-0');
     expect(text()).toContain('서울 강남구 테헤란로 123 · 4층 명상실');
-    expect(text()).toContain('오늘 오후 3:00 시작 예정');
-    expect(text()).toContain('초대한 회원이 도착해 입장하면 여기에 나타나요');
-    expect([...container.querySelectorAll('.fhb-dk')].map((b) => b.textContent)).toEqual(['내 밴드', '채팅']);
+    expect(text()).toContain('오늘 오후 3:00');
+    expect(text()).toContain('현장 녹음');
+    expect(container.querySelector('video')).toBeNull();
+    expect([...container.querySelectorAll('th')].map(th => th.textContent)).toEqual(['회원', '설문', '밴드', '상태']);
+    await clickText('도구');
+    expect([...container.querySelectorAll('.fhb-dk')].map(b => b.textContent)).toEqual(['내 밴드', '채팅']);
   });
 
-  it('오프라인 행은 기기 칩이 없고, 밴드 사용 안 함은 밴드 칩과 내 밴드 도크가 없다', async () => {
+  it('밴드 사용 안 함은 미사용으로 표시하고 내 밴드 도구를 숨긴다', async () => {
     await show('g-off-3-none');
-    const row = container.querySelector('.fhb-mrow') as HTMLElement;
-    expect(row.textContent).toContain('설문');
-    expect(row.textContent).not.toContain('기기');
-    expect(row.textContent).not.toContain('밴드');
+    expect(container.querySelector('.fhb-mrow')?.textContent).toContain('미사용');
     expect(text()).toContain('LINK BAND 사용 안 함');
-    expect([...container.querySelectorAll('.fhb-dk')].map((b) => b.textContent)).toEqual(['채팅']);
+    await clickText('도구');
+    expect([...container.querySelectorAll('.fhb-dk')].map(b => b.textContent)).toEqual(['채팅']);
   });
 
-  it('필수 모드 헤더 칩, 참가 조건 아님', async () => {
+  it('필수 밴드 모드에서도 호스트 시작은 막지 않는다', async () => {
     await show('g-on-3-req');
     expect(text()).toContain('LINK BAND 필수');
     expect(startButton().disabled).toBe(false);
   });
 
-  it('접촉 불량 행: 전극 LED 3개 + 라벨(색 + 글자), 체크·엑스 글리프 없음', async () => {
+  it('접촉 불량을 문자로 표시하고 전극 상세를 보존한다', async () => {
     await show('g-on-3-contact');
-    const leads = container.querySelectorAll('[data-pz="flow-lead-row"]');
-    expect(leads).toHaveLength(3);
-    expect(leads[0].textContent).toBe('왼쪽 실패기준 실패오른쪽 양호');
-    expect(leads[2].textContent).toBe('왼쪽 실패기준 실패오른쪽 실패');
-    expect(leads[0].querySelectorAll('.fhb-led')).toHaveLength(3);
-    expect(text()).not.toMatch(/[✓✕✗×]/u);
+    expect([...container.querySelectorAll('td[title]')].map(cell => cell.getAttribute('title'))).toEqual(expect.arrayContaining(['L 전극', 'R 전극', 'L·R 전극']));
+    expect(container.querySelectorAll('td.pending')).toHaveLength(3);
+    expect(text()).toContain('접촉 불량');
   });
 
-  it('12명도 행이 모두 렌더되고(목록 내부 스크롤), n 쿼리로 20명 변형', async () => {
-    await show('g-on-12-many');
-    expect(container.querySelectorAll('.fhb-mrow')).toHaveLength(12);
-    await show('g-on-12-many', 20);
-    expect(container.querySelectorAll('.fhb-mrow')).toHaveLength(20);
-    expect(text()).toContain('대기실 20명');
+  it('모바일은 8명씩 펼치고 필터 변경 시 다시 8명부터 보인다', async () => {
+    await show('g-on-12-many', 40);
+    expect(container.querySelectorAll('[data-member-row]')).toHaveLength(8);
+    await clickText('8명 더 보기');
+    expect(container.querySelectorAll('[data-member-row]')).toHaveLength(16);
+    await clickText('준비 중');
+    expect(container.querySelectorAll('[data-member-row]').length).toBeLessThanOrEqual(8);
   });
 
-  it('초대 알림은 요청이라고만 말한다', async () => {
-    await show('g-on-3');
-    expect(text()).not.toMatch(/전달됐|받았|수신/);
+  it('큰 화면은 40명 전체를 렌더하고 더 보기를 생략한다', async () => {
+    Object.assign(window, { matchMedia: () => ({ matches: true, addEventListener: () => undefined, removeEventListener: () => undefined }) });
+    await show('g-on-12-many', 40);
+    expect(container.querySelectorAll('.fhb-mrow')).toHaveLength(40);
+    expect(container.querySelector('.load-more')).toBeNull();
   });
 });

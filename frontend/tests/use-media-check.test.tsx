@@ -165,6 +165,18 @@ describe('useMediaCheck', () => {
     root = createRoot(container); // afterEach 의 unmount 대비
   });
 
+  it('AudioContext.resume 대기 중 정지하면 늦은 레벨 미터 타이머를 만들지 않는다', async () => {
+    let resume: () => void = () => undefined;
+    resumeSpy.mockImplementationOnce(() => new Promise<void>(resolve => { resume = resolve; }));
+    await mount();
+    let pending: Promise<void>;
+    await act(async () => { pending = latest.startMic(); await Promise.resolve(); });
+    await act(async () => { latest.stopMic(); });
+    await act(async () => { resume(); await pending; });
+    expect(vi.getTimerCount()).toBe(0);
+    expect(latest.mic).toBe('off');
+  });
+
   it('스피커 테스트음: 재생 중 → 끝나면 false (사용자 탭 안에서 resume)', async () => {
     await mount();
     await act(async () => { await latest.playTestTone(); });
