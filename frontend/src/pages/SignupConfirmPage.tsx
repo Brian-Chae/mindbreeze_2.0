@@ -1,3 +1,5 @@
+import AuthShell from '../components/auth/AuthShell';
+import '../components/auth/signup-flow.css';
 // 소셜 가입 정보 확인 — 인증 직후 생년월일·약관 동의를 한 화면에서 받는다(오류가 난 뒤 입력란이 나타나는 방식 폐기).
 // 인증 자격은 메모리 스토어에서만 읽는다. 새로고침으로 사라졌다면 로그인 화면으로 안내한다.
 
@@ -21,7 +23,7 @@ export default function SignupConfirmPage() {
   const clear = useSocialSignupStore((s) => s.clear);
   const loginGoogle = useAuthStore((s) => s.loginGoogle);
   const loginApple = useAuthStore((s) => s.loginApple);
-  const [info, setInfo] = useState<SignupInfoValue>(EMPTY_SIGNUP_INFO);
+  const [info, setInfo] = useState<SignupInfoValue>({ ...EMPTY_SIGNUP_INFO, name: pending?.credential.provider === 'apple' ? pending.credential.name ?? '' : '' });
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [birthError, setBirthError] = useState<string | null>(null);
@@ -40,13 +42,14 @@ export default function SignupConfirmPage() {
     try {
       const cred = pending.credential;
       const user = cred.provider === 'google'
-        ? await loginGoogle(cred.token, pending.inviteToken, pending.role, pending.rememberMe, consents, cred.tokenKind, info.birthDate)
+        ? await loginGoogle(cred.token, pending.inviteToken, pending.role, pending.rememberMe, consents, cred.tokenKind, info.birthDate, info.gender || undefined, info.name.trim())
         : await loginApple(
             {
               id_token: cred.idToken,
               nonce: cred.nonce,
               authorization_code: cred.authorizationCode,
-              name: cred.name,
+              name: info.name.trim(),
+              gender: info.gender || undefined,
               invite_token: pending.inviteToken,
               role: pending.role,
               consents,
@@ -54,14 +57,8 @@ export default function SignupConfirmPage() {
             },
             pending.rememberMe,
           );
-      const inviteCode = pending.inviteCode;
-      const invited = Boolean(pending.inviteToken);
       clear();
-      if (invited && user.role === 'client' && !user.onboarding_completed) {
-        navigate(`/onboarding/client?source=invite${inviteCode ? `&code=${inviteCode}` : ''}`);
-      } else {
-        navigate(resolvePostLoginPath(user));
-      }
+      navigate(resolvePostLoginPath(user));
     } catch (err) {
       const code = apiErrorCode(err);
       if (code === 'AGE_RESTRICTED') setBirthError(BIRTH_DATE_MESSAGES.underage);
@@ -76,11 +73,7 @@ export default function SignupConfirmPage() {
   };
 
   return (
-    <div className="relative min-h-screen font-sans">
-      <img src="/mb-design/assets/images/background3.jpg" alt="" className="absolute inset-0 h-full w-full object-cover" />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/60" />
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[440px] flex-col justify-center px-5 py-10">
-        <Link to="/login?role=client" onClick={clear} className="mb-4 text-sm text-white/90 underline">← 시작으로</Link>
+    <AuthShell variant="member" title="소셜 가입 · 정보 확인">
         <main className="rounded-3xl bg-white p-6 shadow-xl">
           <p className="text-xs font-semibold text-[#5F0080]">계정 만들기</p>
           <h1 className="mt-1 text-[22px] font-bold text-[#1F1F1F]">가입 정보 확인</h1>
@@ -105,7 +98,6 @@ export default function SignupConfirmPage() {
             {busy ? '가입 중…' : '가입하기'}
           </button>
         </main>
-      </div>
-    </div>
+    </AuthShell>
   );
 }

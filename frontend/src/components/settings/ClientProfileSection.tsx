@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 // 내담자 프로필정보 섹션 (성별/생년월일/고민분야/관심분야)
 
 import { useId, useState } from 'react';
@@ -87,6 +88,7 @@ export default function ClientProfileSection({ profile, onSave }: Props) {
 
   return (
     <div className="bg-white border border-[#EFEFEF] rounded-2xl p-6">
+      <Link to="/settings/optional-profile" className="mb-4 block text-sm text-[#5F0080] underline">선택 프로필 · 전화번호 입력하기</Link>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[15px] font-bold text-[#1F1F1F] flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-[#5F0080]" />

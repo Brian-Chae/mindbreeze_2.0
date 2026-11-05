@@ -1,3 +1,4 @@
+import '../components/auth/signup-flow.css';
 import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
@@ -232,8 +233,8 @@ export default function LoginPage() {
   );
 
   return (
-    <div className="relative min-h-screen font-sans">
-      <img src="/mb-design/assets/images/background3.jpg" alt="" className="absolute inset-0 h-full w-full object-cover" />
+    <div className="signup-flow relative min-h-screen font-sans">
+      <img src="/images/background8.webp" alt="" className="absolute inset-0 h-full w-full object-cover" />
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/60" />
       <div className="relative z-10 min-h-screen text-white">
         <header className="sticky top-0 z-30 border-b border-white/[0.08] bg-[rgba(20,0,30,0.55)] pt-[env(safe-area-inset-top)] backdrop-blur-[18px]">
@@ -252,7 +253,7 @@ export default function LoginPage() {
             </div>
           </div>}
         </header>
-        <div className="mx-auto w-full max-w-[408px] px-6 pb-10 pt-[26px]">
+        <div className="mx-auto w-full max-w-[520px] px-4 sm:px-6 pb-10 pt-[26px]">
           <section role={isAdmin ? undefined : 'tabpanel'} id={`login-panel-${loginRole}`} aria-labelledby={isAdmin ? undefined : `login-tab-${loginRole}`} aria-busy={busy} className={`flex flex-col gap-4 ${isClient && guestEntry ? 'pb-[calc(8.5rem+env(safe-area-inset-bottom))]' : ''}`}>
             {/* SDD-227: 회원 탭은 이메일 로그인을 위에, 간편 로그인(Google·Apple)을 아래에 둔다. */}
             {isClient && <>{emailForm}
