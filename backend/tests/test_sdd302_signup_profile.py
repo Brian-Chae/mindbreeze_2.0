@@ -159,3 +159,18 @@ def test_과거_상세프로필에서_수정한_생일을_본인응답에_반영
     response = client.get("/api/v1/auth/users/me", headers=headers)
     assert response.status_code == 200
     assert response.json()["birth_date"] == "1992-07-03"
+
+
+@pytest.mark.parametrize("empty_phone", ["", "  ", None])
+def test_선택전화는_미전달시_보존하고_명시빈값은_삭제(client, empty_phone):
+    headers = seed_user()
+    response = client.patch("/api/v1/auth/users/me", headers=headers, json={"phone": " 010-1234-5678 "})
+    assert response.status_code == 200
+    assert response.json()["phone"] == "010-1234-5678"
+    response = client.patch("/api/v1/auth/users/me", headers=headers, json={"gender": "male"})
+    assert response.status_code == 200
+    assert response.json()["phone"] == "010-1234-5678"
+    response = client.patch("/api/v1/auth/users/me", headers=headers, json={"phone": empty_phone})
+    assert response.status_code == 200
+    assert response.json()["phone"] is None
+    assert client.get("/api/v1/auth/users/me", headers=headers).json()["phone"] is None

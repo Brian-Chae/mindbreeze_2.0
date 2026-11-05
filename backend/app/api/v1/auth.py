@@ -1175,8 +1175,8 @@ async def update_user_me(
         if user.name != req.name:
             name_changed = True
         user.name = req.name
-    if req.phone is not None:
-        user.phone = req.phone
+    if "phone" in req.model_fields_set:
+        user.phone = (req.phone or "").strip() or None
 
     # ClientProfile 필드 업데이트 (gender, birth_date) — client 역할만 도달한다
     if req.gender is not None or req.birth_date is not None:

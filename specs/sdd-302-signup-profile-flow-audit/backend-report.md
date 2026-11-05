@@ -22,3 +22,9 @@
 
 ## 한계
 합성 HTTP API + SQLite/fakeredis 검증이다. 실 OAuth·네이티브 앱·운영 DB·메일 발송은 수행하지 않았다. PR/배포는 감독 담당이다.
+
+## 독립 리뷰 보완
+- 선택 전화번호 PATCH는 미전달이면 보존, 명시 `""`/공백/`null`이면 삭제(None). 값은 양끝 공백을 제거한다. RED 3개 → GREEN.
+- 공용 `get_progress`에서 기존 User 부모행을 `SELECT FOR UPDATE`로 잠가 단계·완료·보류 쓰기를 사용자별 직렬화한다. 진행행이 아직 없어도 최초 INSERT가 경합하지 않는다. 잠금 획득 후 `populate_existing`으로 오래 열린 세션의 JSON 캐시를 갱신한다.
+- 로컬 전용 임시 PostgreSQL + Alembic 하네스로 실제 2스레드 race 검증: 최초 보류 동시요청은 중복 키 예외, 기존 단계/보류 동시저장은 키 소실로 **RED 2 failed** 재현 → 수정 후 **2 passed**. 기존 step1/새 step3/보류키/current_step/완료=true 보존을 확인했다.
+- 전화번호·동시성 변경 후 신규/PG/회원·코치 온보딩/초대/가입/Apple 회귀 **86 passed**, 48.63초. PG 검증은 SQLite 대체가 아닌 실제 로컬 PostgreSQL이며 외부 DB에 접속하지 않았다.

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.models.counselor_profile import CounselorProfile
 from app.models.onboarding_progress import OnboardingProgress
+from app.models.user import User
 from app.services import code_service
 
 
@@ -22,8 +23,12 @@ def get_progress(user_id: str, db: Session) -> OnboardingProgress:
     DATA-03: 서비스 계층은 flush 만 수행한다. commit 은 요청(트랜잭션) 단위로
     API 계층에서 1회만 호출해 가입 전체가 원자적으로 묶이도록 한다.
     """
+    # 진행행이 아직 없어도 사용자 부모행은 존재한다. 모든 단계/완료/보류 작성자가
+    # 같은 잠금을 커밋까지 유지해 최초 INSERT 충돌과 JSON 키의 갱신 소실을 막는다.
+    db.query(User.id).filter(User.id == user_id).with_for_update().one()
     progress = (
         db.query(OnboardingProgress)
+        .populate_existing()
         .filter(OnboardingProgress.user_id == user_id)
         .first()
     )
