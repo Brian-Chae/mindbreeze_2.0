@@ -26,7 +26,7 @@ export function EegConsentChoiceView({ steps, place = 'online', saving, error, o
       onExit={onExit}
       foot={
         <>
-          <FlowButton kind="primary" disabled={saving} onClick={onAgree}>동의하고 LINK BAND 연결하기</FlowButton>
+          <FlowButton kind="primary" disabled={saving} onClick={onAgree}>선택 저장하고 계속</FlowButton>
           <FlowButton kind="ghost" disabled={saving} onClick={onDecline}>동의하지 않고 계속하기</FlowButton>
           {error ? <p className="fm-err" role="alert">{error}</p> : null}
         </>

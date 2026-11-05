@@ -165,7 +165,8 @@ test('뇌파 수집 선택 화면: 동의/미동의 둘 다 계속할 수 있고
       steps: { total: 5, current: 2 }, saving: false, error: null, onAgree: () => {}, onDecline: () => {}, onBack: () => {}, onExit: () => {},
     }),
   );
-  expect(html).toContain('동의하고 LINK BAND 연결하기');
+  expect(html).toContain('선택 저장하고 계속');
+  expect(html).not.toContain('동의하고 LINK BAND 연결하기');
   expect(html).toContain('동의하지 않고 계속하기');
   expect(html).toContain('리포트 반영, 연구 활용 선택과는 별개예요');
 });

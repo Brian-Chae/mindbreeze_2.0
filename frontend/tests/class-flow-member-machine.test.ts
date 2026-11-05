@@ -11,12 +11,12 @@ function run(actions: EntryAction[], from: EntryMachineState = initialEntryState
 }
 
 describe('buildSteps — 단계 구성', () => {
-  it('온라인 5 · 오프라인 4(기기 점검 없음) · 밴드 사용 안 함이면 밴드 단계 없음', () => {
-    expect(buildSteps('online', 'opt')).toEqual(['a', 'b', 'c', 'd', 'e']);
-    expect(buildSteps('online', 'req')).toEqual(['a', 'b', 'c', 'd', 'e']);
-    expect(buildSteps('offline', 'opt')).toEqual(['a', 'b', 'c', 'e']);
-    expect(buildSteps('online', 'none')).toEqual(['a', 'b', 'd', 'e']);
-    expect(buildSteps('offline', 'none')).toEqual(['a', 'b', 'e']);
+  it('SDD-303 A안: 동의 → (밴드 사용 회차만) LINK BAND, 상태 질문·기기·요약은 단계에 없다', () => {
+    expect(buildSteps('online', 'opt')).toEqual(['a', 'c']);
+    expect(buildSteps('online', 'req')).toEqual(['a', 'c']);
+    expect(buildSteps('offline', 'opt')).toEqual(['a', 'c']);
+    expect(buildSteps('online', 'none')).toEqual(['a']);
+    expect(buildSteps('offline', 'none')).toEqual(['a']);
   });
 });
 
@@ -65,29 +65,32 @@ describe('entryReducer — 입장 상태 머신', () => {
     s = entryReducer(s, { type: 'sync', stage: 'open' });
     expect(s).toMatchObject({ phase: 'wizard', step: 'a' });
   });
-  it('열려 있으면 입장하기로 a 단계, 다음/이전/바로가기', () => {
+  it('열려 있으면 입장으로 a 단계, 다음/이전, 마지막 단계의 다음은 곧바로 대기실', () => {
     const steps = buildSteps('online', 'opt');
     let s = run([{ type: 'sync', stage: 'open' }, { type: 'enter' }]);
     expect(s).toMatchObject({ phase: 'wizard', step: 'a' });
     s = entryReducer(s, { type: 'next', steps });
-    expect(s.step).toBe('b');
+    expect(s.step).toBe('c');
     s = entryReducer(s, { type: 'back', steps });
     expect(s.step).toBe('a');
-    s = entryReducer(s, { type: 'goto', step: 'd' });
-    expect(s.step).toBe('d');
     s = entryReducer(s, { type: 'next', steps });
-    expect(s.step).toBe('e');
     s = entryReducer(s, { type: 'next', steps });
-    expect(s.phase).toBe('wait'); // 마지막 단계에서 다음 = 입장 대기
+    expect(s.phase).toBe('wait');
   });
   it('a 단계에서 이전은 입장 확인으로 돌아간다', () => {
     const steps = buildSteps('online', 'opt');
     const s = run([{ type: 'sync', stage: 'open' }, { type: 'enter' }, { type: 'back', steps }]);
     expect(s.phase).toBe('confirm');
   });
-  it('시작 대기에서 준비 다시 확인하기는 요약 단계(e)로 초안을 보존한 채 돌아간다', () => {
-    const s = run([{ type: 'sync', stage: 'open' }, { type: 'enter' }, { type: 'finishPrep' }, { type: 'recheck' }]);
-    expect(s).toMatchObject({ phase: 'wizard', step: 'e' });
+  it('대기실에서 선택 항목을 열면 완료·이전 모두 대기실로 돌아오고 시작 신호는 어느 쪽에서도 live 로 간다', () => {
+    const steps = buildSteps('online', 'opt');
+    let s = run([{ type: 'sync', stage: 'open' }, { type: 'enter' }, { type: 'finishPrep' }, { type: 'openStep', step: 'b' }]);
+    expect(s).toMatchObject({ phase: 'wizard', step: 'b', fromWait: true });
+    expect(entryReducer(s, { type: 'next', steps }).phase).toBe('wait');
+    expect(entryReducer(s, { type: 'back', steps }).phase).toBe('wait');
+    s = entryReducer(s, { type: 'sync', stage: 'started' });
+    expect(s).toMatchObject({ phase: 'wizard', stage: 'started' });
+    expect(entryReducer(s, { type: 'finishPrep' }).phase).toBe('live');
   });
   it('시작 대기 중 상담사가 시작하면 자동으로 진행 화면(시트 없음)', () => {
     const s = run([{ type: 'sync', stage: 'open' }, { type: 'enter' }, { type: 'finishPrep' }, { type: 'sync', stage: 'started' }]);
@@ -130,18 +133,6 @@ describe('entryReducer — 입장 상태 머신', () => {
   it('진행 화면에서는 같은 단계 동기화에 흔들리지 않는다', () => {
     const live = { ...initialEntryState(), phase: 'live' as const, stage: 'started' as const };
     expect(entryReducer(live, { type: 'sync', stage: 'started' })).toEqual(live);
-  });
-  it('요약에서 행을 눌러 고친 단계는 다음/이전 모두 요약(e)으로 바로 돌아온다', () => {
-    const steps = buildSteps('online', 'opt');
-    let s = run([{ type: 'sync', stage: 'open' }, { type: 'enter' }, { type: 'goto', step: 'e' }, { type: 'goto', step: 'c', fromSummary: true }]);
-    expect(s).toMatchObject({ phase: 'wizard', step: 'c' });
-    s = entryReducer(s, { type: 'next', steps });
-    expect(s).toMatchObject({ phase: 'wizard', step: 'e' });
-    s = run([{ type: 'goto', step: 'b', fromSummary: true }, { type: 'back', steps }], s);
-    expect(s).toMatchObject({ phase: 'wizard', step: 'e' });
-    // 요약에 돌아온 뒤에는 보통의 이동으로 복귀
-    s = entryReducer(s, { type: 'back', steps });
-    expect(s.step).toBe('d');
   });
   it('상태 화면에서 다시 시도하면 확인 화면으로 돌아가 동기화를 이어 간다', () => {
     const s = run([{ type: 'showState', kind: 'error' }, { type: 'resume' }]);

@@ -4,7 +4,7 @@ import { act, useEffect, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiError } from '../src/lib/api/client';
+import { ApiError, apiClient } from '../src/lib/api/client';
 import type { EntryStateDto } from '../src/lib/api/class-flow';
 
 const post = vi.fn();
@@ -33,6 +33,7 @@ beforeEach(() => {
   document.body.append(container);
   root = createRoot(container);
   post.mockReset();
+  vi.mocked(apiClient.get).mockResolvedValue({ participant_id: 'p1', recording_consented: true, recording_notice_version: 'rec-1', eeg_collection_consented: false, eeg_notice_version: 'eeg-1' });
   emit.mockReset();
   window.sessionStorage.clear();
 });
@@ -151,7 +152,7 @@ describe('EntryPage — 진행 화면 연결 (M9)', () => {
     // 준비 마법사를 모두 건너뛰고 대기 → 시작 상태이므로 곧바로 진행 화면
     const find = (label: string): HTMLButtonElement | undefined => [...document.querySelectorAll<HTMLButtonElement>('button')].find((b) => (b.textContent ?? '').trim() === label);
     await act(async () => { find('입장하기')?.click(); });
-    await act(async () => { find('확인하고 계속하기')?.click(); });
+    await act(async () => { find('동의하고 계속하기')?.click(); });
     await act(async () => { find('지금 입장하기')?.click(); });
     expect(text()).toContain('진행 화면');
     const props = containerProps.mock.calls.at(-1)![0] as Record<string, unknown>;
@@ -169,7 +170,7 @@ describe('EntryPage — 진행 화면 연결 (M9)', () => {
     await renderPage();
     const find = (label: string): HTMLButtonElement | undefined => [...document.querySelectorAll<HTMLButtonElement>('button')].find((b) => (b.textContent ?? '').trim() === label);
     await act(async () => { find('입장하기')?.click(); });
-    await act(async () => { find('확인하고 계속하기')?.click(); });
+    await act(async () => { find('동의하고 계속하기')?.click(); });
     await act(async () => { find('지금 입장하기')?.click(); });
     expect(text()).toContain('진행 화면');
     getEntryState.mockResolvedValue(stateDto({ status: 'completed', ended: true }));
@@ -183,7 +184,7 @@ describe('EntryPage — 진행 화면 연결 (M9)', () => {
     await renderPage();
     const find = (label: string): HTMLButtonElement | undefined => [...document.querySelectorAll<HTMLButtonElement>('button')].find((b) => (b.textContent ?? '').trim() === label);
     await act(async () => { find('입장하기')?.click(); });
-    await act(async () => { find('확인하고 계속하기')?.click(); });
+    await act(async () => { find('동의하고 계속하기')?.click(); });
     await act(async () => { find('지금 입장하기')?.click(); });
     getEntryState.mockResolvedValue(stateDto({ status: 'completed', ended: true, started_at: '2026-10-17T01:00:00Z', ended_at: '2026-10-17T01:37:00Z' }));
     await act(async () => { window.dispatchEvent(new Event('online')); });
