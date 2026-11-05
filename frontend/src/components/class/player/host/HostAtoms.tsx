@@ -40,10 +40,11 @@ export function HostRow({ lead, title, sub, subTone, trailing }: HostRowProps) {
   );
 }
 
-export function HostSection({ label, children }: { label?: string; children: ReactNode }) {
+/** title=true 면 설정 시트 형식(15px/600/22px). aside 는 제목 옆 보조 표기(예: 최대 50명) */
+export function HostSection({ label, children, title, aside }: { label?: string; children: ReactNode; title?: boolean; aside?: ReactNode }) {
   return (
     <div className="hp-sec">
-      {label ? <p className="hp-lbl">{label}</p> : null}
+      {label ? <p className="hp-lbl" data-title={title ? 'true' : undefined}>{label}{aside ? <small className="hp-lbl__aside">{aside}</small> : null}</p> : null}
       {children}
     </div>
   );

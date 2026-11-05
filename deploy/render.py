@@ -33,6 +33,8 @@ DEFAULTS: dict[str, str] = {
     "LIVEKIT_UDP_PORT_END": "50200",
     "TURN_MIN_PORT": "49152",
     "TURN_MAX_PORT": "49200",
+    # SDD-306: REST 분산 인스턴스 포트(쉼표 구분). 기본 8000 하나 = 현행 단일 프로세스와 동일.
+    "REST_PORTS": "8000",
 }
 SECRET_VARS = {"LIVEKIT_API_KEY", "LIVEKIT_API_SECRET", "TURN_STATIC_AUTH_SECRET"}
 
@@ -45,6 +47,7 @@ STATIC_OUTPUTS: dict[str, str] = {
     "livekit/livekit.yaml.tpl": "etc/livekit/livekit.yaml",
     "coturn/turnserver.conf.tpl": "etc/turnserver.conf",
     "systemd/mindbreeze-backend.service.tpl": "etc/systemd/system/mindbreeze-backend.service",
+    "systemd/mindbreeze-backend-rest@.service.tpl": "etc/systemd/system/mindbreeze-backend-rest@.service",
     "systemd/mindbreeze-worker.service.tpl": "etc/systemd/system/mindbreeze-worker.service",
     "systemd/mindbreeze-stt-worker.service.tpl": "etc/systemd/system/mindbreeze-stt-worker.service",
     "systemd/mindbreeze-report-worker.service.tpl": "etc/systemd/system/mindbreeze-report-worker.service",
@@ -140,6 +143,20 @@ def render_text(text: str, values: dict[str, str], source: str) -> str:
     return TOKEN_RE.sub(lambda m: values[m.group(1)], text)
 
 
+def rest_upstream_servers(ports: str) -> str:
+    """REST_PORTS(`8001,8002`) → nginx upstream 의 server 줄들. 포트는 1024~65535 정수만 허용."""
+    items = [p.strip() for p in ports.split(",") if p.strip()]
+    if not items:
+        raise RenderError("REST_PORTS 가 비어 있음")
+    seen: list[int] = []
+    for item in items:
+        if not item.isdigit() or not 1024 <= int(item) <= 65535:
+            raise RenderError("REST_PORTS 는 1024~65535 정수의 쉼표 목록이어야 함")
+        if int(item) not in seen:
+            seen.append(int(item))
+    return "\n".join(f"    server 127.0.0.1:{port};" for port in seen)
+
+
 def validate_values(values: dict[str, str], *, app_only: bool = False) -> None:
     for name in ("PUBLIC_IP", "PRIVATE_IP"):
         v = values.get(name, "")
@@ -175,6 +192,7 @@ def render_all(out: Path, values: dict[str, str], templates: Path = HERE / "temp
                allow_dev_markers: bool = False, only: str | None = None) -> list[str]:
     """only=None: 전체 / "app": 앱 유닛·job timer 만(install-release.sh 가 릴리스마다 사용) / "infra": 나머지."""
     validate_values(values, app_only=only == "app")
+    values = {**values, "REST_UPSTREAM_SERVERS": rest_upstream_servers(values.get("REST_PORTS") or DEFAULTS["REST_PORTS"])}
     written: list[str] = []
     for tpl_rel, out_rel in STATIC_OUTPUTS.items():
         if only == "app" and tpl_rel not in APP_OUTPUTS:
