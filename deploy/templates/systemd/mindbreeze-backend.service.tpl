@@ -10,8 +10,10 @@ User=@@SERVICE_USER@@
 Group=@@SERVICE_USER@@
 WorkingDirectory=@@PREFIX@@/current/backend
 EnvironmentFile=@@ENV_FILE@@
-ExecStart="@@PREFIX@@/venv/bin/uvicorn" app.main:asgi_app --host 127.0.0.1 --port 8000
+ExecStart="@@PREFIX@@/venv/bin/uvicorn" app.main:asgi_app --host 127.0.0.1 --port 8000 --backlog 2048 --timeout-keep-alive 30
 Restart=always
+# SDD-306: 100명 소켓·REST 동시 연결 대비(기본 1024 → 65535)
+LimitNOFILE=65535
 RestartSec=5
 UMask=0077
 NoNewPrivileges=true
