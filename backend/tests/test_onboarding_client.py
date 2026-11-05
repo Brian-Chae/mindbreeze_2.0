@@ -103,7 +103,7 @@ def test_내담자_온보딩_플로우_및_매칭(client):
     client.put("/api/v1/onboarding/client/step1", json={"name": "내담자", "phone": None}, headers=h)
     client.put(
         "/api/v1/onboarding/client/step2",
-        json={"gender": None, "birth_date": None, "concerns": ["우울"], "interests": ["명상"]},
+        json={"gender": "female", "birth_date": "1990-01-01", "concerns": ["우울"], "interests": ["명상"]},
         headers=h,
     )
     client.put(

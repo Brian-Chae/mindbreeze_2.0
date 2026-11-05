@@ -142,7 +142,7 @@ def _drop_fixture_profile(response) -> None:
     """보정으로 채운 생년월일 때문에 새로 생긴 빈 ClientProfile 을 지운다.
 
     SDD-220 이전 fixture 는 성별·생년월일 없이 가입해 ClientProfile 이 없는 상태에서 시작했고, 일부 테스트가 그 뒤에
-    자기 프로필 행을 직접 넣는다. 보정이 만든 프로필(성별 없음 + 기본 생년월일)만 지워 그 출발 상태를 되살린다.
+    자기 프로필 행을 직접 넣는다. 보정이 만든 프로필(기본 성별 + 기본 생년월일)만 지워 그 출발 상태를 되살린다.
     """
     try:
         from datetime import date as _date
@@ -156,7 +156,7 @@ def _drop_fixture_profile(response) -> None:
         try:
             db.query(ClientProfile).filter(
                 ClientProfile.user_id == user_id,
-                ClientProfile.gender.is_(None),
+                ClientProfile.gender == "female",
                 ClientProfile.birth_date == _date(1990, 1, 1),
             ).delete(synchronize_session=False)
             db.commit()
@@ -171,6 +171,17 @@ def _request_with_signup_defaults(self, method, url, **kwargs):
     body = kwargs.get("json")
     path = str(url).split("?")[0]
     injected_birth = False
+    injected_gender = False
+    # SDD-302: 과거 정상 가입 fixture 에 새 필수 성별을 제공한다.
+    # 신규 필수 검사 테스트는 X-Test-Strict-Signup 으로 모든 기본값 보정을 끈다.
+    if (
+        str(method).upper() == "POST" and isinstance(body, dict)
+        and "x-test-strict-signup" not in headers and "gender" not in body
+        and any(path.endswith(p) for p in _SIGNUP_BIRTH_DATE_PATHS[:4])
+    ):
+        injected_gender = True
+        body = {**body, "gender": "female"}
+        kwargs["json"] = body
     if (
         str(method).upper() == "POST"
         and isinstance(body, dict)
@@ -195,7 +206,7 @@ def _request_with_signup_defaults(self, method, url, **kwargs):
         elif isinstance(body, dict) and "recording_consent" not in body:
             kwargs["json"] = {**body, **consent}
     response = _original_testclient_request(self, method, url, **kwargs)
-    if injected_birth and response.status_code == 201:
+    if injected_birth and injected_gender and response.status_code == 201:
         _drop_fixture_profile(response)
     return response
 

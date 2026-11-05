@@ -13,6 +13,8 @@ from app.core.database import get_db
 from app.models.client_profile import ClientProfile
 from app.models.counselor_profile import CounselorProfile
 from app.models.user import User
+from app.schemas.auth import UserResponse
+from app.services.auth_profile_service import to_user_response
 from app.schemas.onboarding import (
     ClientMatchResponse,
     ClientStep1Request,
@@ -368,20 +370,33 @@ def client_complete(
     """내담자 온보딩 완료."""
     user_id = _uid(current_user)
     user = db.query(User).filter(User.id == user_id).first()
-    progress = onboarding_service.get_progress(user_id, db)
-    steps = progress.steps or {}
-    # MB2-ONB-GOOGLE-ESSENTIALS: Google 가입 내담자는 4단계 온보딩 대신 필수정보(essentials)만
-    #   입력한다(프론트 /onboarding/client/essentials → PATCH /auth/users/me 로 저장되고
-    #   step 은 기록되지 않는다). 따라서 Google 가입자는 step1~4 강제를 면제한다.
-    #   이메일 가입자는 가입 시 step1·2·4 가 마킹되므로 기존 step1~4 강제를 그대로 유지한다.
-    if user is None or user.auth_provider != "google":
-        for required in ("step1", "step2", "step3", "step4"):
-            if required not in steps:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"{required} 단계를 완료해야 합니다",
-                )
+    if user is None or user.role != "client":
+        raise HTTPException(status_code=403, detail="회원만 이용할 수 있습니다")
+    required_fields = to_user_response(user).client_required_fields
+    if required_fields:
+        raise HTTPException(status_code=400, detail={
+            "code": "CLIENT_REQUIRED_FIELDS",
+            "message": "필수 회원정보를 입력해 주세요",
+            "required_fields": required_fields,
+        })
     progress = onboarding_service.complete_onboarding(user_id, db)
     # DATA-03: 요청 단위 단일 커밋
     db.commit()
     return _progress_response(progress)
+
+
+@router.post("/client/profile-dismiss", response_model=UserResponse)
+def client_profile_dismiss(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """선택 전화번호 안내만 보류한다. 필수정보·동의·완료 상태는 변경하지 않는다."""
+    user_id = _uid(current_user)
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None or user.role != "client":
+        raise HTTPException(status_code=403, detail="회원만 이용할 수 있습니다")
+    progress = onboarding_service.get_progress(user_id, db)
+    progress.steps = {**(progress.steps or {}), "profile_prompt_dismissed": True}
+    db.commit()
+    db.refresh(user)
+    return to_user_response(user)

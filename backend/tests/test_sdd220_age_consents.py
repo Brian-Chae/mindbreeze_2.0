@@ -136,17 +136,17 @@ def test_ts12_레거시_register도_같은_규칙(client):
 
 def test_ts12_구글_신규_14세_200_미달_422(client):
     with _google("g1@x.com"):
-        under = client.post(GOOGLE, json={"access_token": "t", "consents": consents(), "birth_date": "2012-10-21"})
+        under = client.post(GOOGLE, json={"access_token": "t", "consents": consents(), "gender": "female", "birth_date": "2012-10-21"})
     assert under.status_code == 422 and under.json()["detail"]["code"] == "AGE_RESTRICTED"
     _assert_no_rows()
     with _google("g1@x.com"):
-        ok = client.post(GOOGLE, json={"access_token": "t", "consents": consents(), "birth_date": "2012-10-20"})
+        ok = client.post(GOOGLE, json={"access_token": "t", "consents": consents(), "gender": "female", "birth_date": "2012-10-20"})
     assert ok.status_code == 200, ok.text
 
 
 def test_ts12_구글_기존_사용자_재로그인은_생일없이_200(client):
     with _google("g2@x.com"):
-        assert client.post(GOOGLE, json={"access_token": "t", "consents": consents(), "birth_date": "1990-01-01"}).status_code == 200
+        assert client.post(GOOGLE, json={"access_token": "t", "consents": consents(), "gender": "female", "birth_date": "1990-01-01"}).status_code == 200
         again = client.post(GOOGLE, json={"access_token": "t"})
     assert again.status_code == 200, again.text
 
@@ -179,7 +179,7 @@ def test_ts13_탈퇴처리중_이메일은_이메일_가입_409(client):
 def test_ts13_탈퇴처리중_이메일은_구글로도_복구_불가(client):
     _make_deleted(client, "gone2@x.com")
     with _google("gone2@x.com"):
-        res = client.post(GOOGLE, json={"access_token": "t", "consents": consents(), "birth_date": "1990-01-01"})
+        res = client.post(GOOGLE, json={"access_token": "t", "consents": consents(), "gender": "female", "birth_date": "1990-01-01"})
     assert res.status_code == 409 and res.json()["detail"]["code"] == "ACCOUNT_DELETION_PENDING"
     assert _db().query(User).filter(User.email == "gone2@x.com").first().status == "deleted"
 

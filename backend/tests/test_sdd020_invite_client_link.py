@@ -186,7 +186,7 @@ def test_초대가입_후_온보딩_step4없이_완료_가능(client):
     client.put("/api/v1/onboarding/client/step1", json={"name": "내담자", "phone": None}, headers=h)
     client.put(
         "/api/v1/onboarding/client/step2",
-        json={"gender": None, "birth_date": None, "concerns": [], "interests": []},
+        json={"gender": "female", "birth_date": "1990-01-01", "concerns": [], "interests": []},
         headers=h,
     )
     client.put("/api/v1/onboarding/client/step3", json={"profile_image_url": None, "bio": None}, headers=h)
