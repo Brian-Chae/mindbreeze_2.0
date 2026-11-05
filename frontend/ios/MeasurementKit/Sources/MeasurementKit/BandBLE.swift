@@ -1,5 +1,6 @@
 import Foundation
 import CoreBluetooth
+import os
 
 public enum BandUUIDs {
     // frontend/src/lib/eeg/bluetoothService.ts · 공식 SDK device.py 와 동일
@@ -73,6 +74,15 @@ public final class ScanRecheck {
     public func cancel() { timer?.cancel(); timer = nil }
 }
 
+/// 종료 시 연결을 끊을 기기 집합(순수). 보유한 peripheral 이 없거나 복원/인계로 반영되지 않았어도 이미 연결된 밴드를 놓치지 않는다. 중복 제거, 순서 유지.
+public enum BandReleasePlan {
+    public static func targets(current: UUID?, connected: [UUID]) -> [UUID] {
+        var out: [UUID] = []
+        for id in ([current].compactMap { $0 } + connected) where !out.contains(id) { out.append(id) }
+        return out
+    }
+}
+
 public enum BandLinkState: String { case idle, scanning, connecting, discovering, subscribed, reconnecting, blocked }
 
 public protocol BandLinkDelegate: AnyObject {
@@ -85,6 +95,7 @@ public protocol BandLinkDelegate: AnyObject {
 /// CoreBluetooth 전용 serial queue + restoration identifier. 모든 delegate 콜백은 `queue` 위에서 호출된다.
 /// BLE notify 콜백은 시각 기록 후 곧바로 delegate 로 넘기고, journal/DSP 는 delegate(Manager)가 같은 queue 에서 짧게 처리한다.
 public final class BandLink: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
+    private static let log = Logger(subsystem: "com.looxidlabs.mindbreeze2", category: "BandLink")
     public static let restoreIdentifier = "com.looxidlabs.mindbreeze2.band.central"
     public let queue: DispatchQueue
     public weak var delegate: BandLinkDelegate?
@@ -120,7 +131,17 @@ public final class BandLink: NSObject, CBCentralManagerDelegate, CBPeripheralDel
         queue.async { [self] in
             wantConnected = false; retry?.cancel(); retry = nil; scanRecheck.cancel()
             if central.isScanning { central.stopScan() }
-            if let p = peripheral { central.cancelPeripheralConnection(p) }
+            // peripheral 이 nil 이거나 인계/복원으로 반영되지 않았어도 연결된 밴드를 찾아 끊는다(SDD-298).
+            let connected = central.state == .poweredOn ? central.retrieveConnectedPeripherals(withServices: [BandUUIDs.eegService]) : []
+            let ids = BandReleasePlan.targets(current: peripheral?.identifier, connected: connected.map { $0.identifier })
+            var cancelled = 0
+            for id in ids {
+                if let p = (peripheral?.identifier == id ? peripheral : nil) ?? connected.first(where: { $0.identifier == id }) {
+                    central.cancelPeripheralConnection(p); cancelled += 1
+                }
+            }
+            Self.log.info("밴드 해제 요청 targets=\(ids.count, privacy: .public) cancelled=\(cancelled, privacy: .public) hadPeripheral=\(self.peripheral != nil, privacy: .public)")
+            peripheral = nil
             set(.idle)
         }
     }

@@ -24,3 +24,29 @@ describe('회차 종료 시 biosignal close', () => {
     expect(() => act(() => root.render(<Probe ended />))).not.toThrow();
   });
 });
+
+describe('회차 종료 시 밴드 해제(release)', () => {
+  const release = vi.fn(async () => undefined);
+  function P2({ ended }: { ended: boolean }) { useCloseBiosignalOnEnd(ended, close, release); return null; }
+  beforeEach(() => release.mockClear());
+  const flush = async (): Promise<void> => { await act(async () => { await Promise.resolve(); await Promise.resolve(); }); };
+  it('종료 시 close 뒤 release 를 한 번만 호출한다', async () => {
+    act(() => root.render(<P2 ended={false} />));
+    expect(release).not.toHaveBeenCalled();
+    act(() => root.render(<P2 ended />)); await flush();
+    act(() => root.render(<P2 ended />)); await flush();
+    expect(close).toHaveBeenCalledTimes(1);
+    expect(release).toHaveBeenCalledTimes(1);
+  });
+  it('close 가 실패해도 release 는 호출된다', async () => {
+    close.mockRejectedValueOnce(new Error('boom'));
+    act(() => root.render(<P2 ended />)); await flush();
+    expect(release).toHaveBeenCalledTimes(1);
+  });
+  it('종료가 취소됐다 재진입하면 다시 호출된다', async () => {
+    act(() => root.render(<P2 ended />)); await flush();
+    act(() => root.render(<P2 ended={false} />));
+    act(() => root.render(<P2 ended />)); await flush();
+    expect(release).toHaveBeenCalledTimes(2);
+  });
+});
