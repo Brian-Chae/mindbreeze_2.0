@@ -1,5 +1,6 @@
 import { isNativeApp } from '../../../../lib/native/platform';
-import { PermissionGuide, permissionGuideText } from '../../../native/permission-guide';
+import { PermissionGuide } from '../../../native/permission-guide';
+import { permissionGuideText } from '../../../native/permission-guide-text';
 // SDD-209 M4 — FM06c LINK BAND 단계. 어떤 모드·상태에서도 참가를 막지 않는다(`LINK BAND 없이 계속하기`는 항상 있다).
 // 전극 LED 카드는 접촉 불량일 때만 띄운다. 연결 중은 회전 스피너 대신 3점 순차 페이드.
 import { Activity, Battery, Bluetooth, CircleAlert, Globe, Info, Power, RefreshCw, User } from 'lucide-react';

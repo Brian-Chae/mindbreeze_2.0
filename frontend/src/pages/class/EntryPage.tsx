@@ -109,6 +109,7 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
   const [handoff] = useState(() => takeEntryHandoff(sessionId));
   const handoffName = handoff?.displayName ?? '';
   const prep = useEntryPrep({ sessionId, sessionType: entry?.classInfo?.sessionType, credential: entry?.credential ?? null, participantId: entry?.participantId ?? null });
+  const patchPrep = prep.patch;
   const survey = useEntrySurvey({ sessionId, credential: entry?.credential ?? null, participantId: entry?.participantId ?? null });
   // 시작 후 시트에서 `준비 이어서 하기`를 누르면 이후 단계에서는 다시 띄우지 않는다
   const [startedDismissed, setStartedDismissed] = useState(false);
@@ -375,9 +376,9 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     if (!integratedConsentSaved || eegChoice !== false || machine.phase !== 'wizard' || machine.step !== 'c' || !info) return;
     writeBandSkip(sessionId, true);
-    prep.patch({ bandOutcome: 'skipped' });
+    patchPrep({ bandOutcome: 'skipped' });
     dispatch({ type: 'next', steps: buildSteps(info.locationType, bandModeOf(info.linkbandMode)) });
-  }, [integratedConsentSaved, eegChoice, machine.phase, machine.step, info, sessionId, prep.patch]);
+  }, [integratedConsentSaved, eegChoice, machine.phase, machine.step, info, sessionId, patchPrep]);
 
   const retry = useCallback(() => {
     dispatch({ type: 'resume' });
