@@ -33,7 +33,7 @@ def build_scene(maker, n: int = 10, *, status: str = "in_progress", enrolled: bo
         s.flush()
         s.add(UserOrgMembership(user_id=host.id, org_id=org.id, role="counselor", status="active", is_primary=True))
         cls = Class(created_by=host.id, organization_id=org.id, organization_attribution_known=True, title="합성 명상",
-                    default_duration_min=30, status="active", recurrence_rule={"start_now": True})
+                    default_duration_min=30, status="active", recurrence_rule={"start_now": True}, capacity=max(n + 5, 20))
         s.add(cls)
         s.flush()
         s.add(ClassInstructor(class_id=cls.id, user_id=host.id, role="lead"))

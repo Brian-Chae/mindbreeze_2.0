@@ -315,6 +315,12 @@ def _session_event(ctx) -> None:
 def _h_entry_enter(ctx):
     from app.services.class_attendance_service import mark_entered
 
+    # SDD-308: 잠금 순서를 REST 입장(enter_session_as_invited)과 같게 맞춘다 — 클래스·회차 행 → 참가자 행.
+    # 예전에는 참가자 행을 먼저 잡고 mark_entered 안에서 sessions UPDATE 로 회차 행을 잡아, 입장 폭주 때 REST 입장과 교착이 났다.
+    if ctx.session.class_id:
+        from app.services.class_write_service import lock_class_session
+
+        _, ctx.session = lock_class_session(ctx.db, ctx.session, ctx.actor.actor_id)
     p = _own(ctx)
     s = ctx.session
     if _closed(s):
@@ -758,6 +764,18 @@ def seed_live_state(db, session_id) -> bool:
                       audience=aud, payload=speaking_payload(p.id, p.raise_hand, session_service._compute_can_publish(s, p), 1),
                       command_id=None)
     db.commit()
+    return True
+
+
+def lock_epoch_if_v2(db, session_id) -> bool:
+    """SDD-308: v2 회차면 epoch 행을 먼저 잠근다(잠금 순서 epoch → 클래스/회차 → 참가자). 반환 True=잠금함."""
+    from app.services.session_live_ledger import lock_epoch
+    from app.services.session_live_legacy import PROTOCOL_V2, get_session_protocol
+
+    pin = get_session_protocol(db, session_id)
+    if pin is None or pin.protocol != PROTOCOL_V2:
+        return False
+    lock_epoch(db, session_id)
     return True
 
 

@@ -1796,6 +1796,10 @@ def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
 def remove_participant(session_id: str, host_id: str, user_id: str, db: DBSession) -> dict:
     s = get_session_authorized(db, session_id, host_id, SessionAction.PARTICIPANT_REMOVE)
     target_uuid = _to_uuid(user_id)
+    # SDD-308: 잠금 순서 통일 — v2 회차는 live 명령과 같이 epoch 행을 먼저 잡은 뒤 참가자 행을 갱신한다.
+    # (예전: 참가자 UPDATE → emit_participant_removed 의 epoch 잠금. 명령은 epoch → 참가자라 서로 기다리다 교착.)
+    from app.services.class_participation_service import lock_epoch_if_v2
+    lock_epoch_if_v2(db, s.id)
     participant = (
         db.query(SessionParticipant)
         .filter(
