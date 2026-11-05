@@ -9,6 +9,7 @@ import type {
   NativeMeasurementPlugin, QueueCounts, BlockedReason, RawPreview, StartMeasurementRequest, StartMeasurementResult,
 } from './types';
 import type { UploadProgress } from '../measurement-web/upload-progress';
+import { clearBandHold, setBandHold } from './band-hold';
 import { parseModelParams } from '../eeg/eegPersonalScore';
 import type { CalibrationMetricKey } from '../eeg/eegSigmoidScore';
 import type { NormalizationModelDto } from '../api/normalization-api';
@@ -276,6 +277,8 @@ export class NativeMeasurementFacade {
     releaseJsBand?: () => Promise<unknown>;
     /** false 를 돌려주면(동의 철회·소유권 상실) 각 await 뒤 시작을 중단한다 */
     isValid?: () => boolean;
+    /** SDD-293: 네이티브가 이미 밴드를 보류로 쥐고 있다 — JS 해제·소유권 이전을 건너뛰고 재연결 없이 시작한다 */
+    alreadyHeld?: boolean;
   }): Promise<StartMeasurementResult> {
     const inflight = this.startFlights.get(a.requestId);
     if (inflight) return inflight;
@@ -285,14 +288,14 @@ export class NativeMeasurementFacade {
       // 해제가 돌려준 연결 ID 는 저장된 ID 가 비어 있을 때의 대체값이다(네이티브가 스캔만 하면 이미 연결된 밴드를 못 찾는다).
       let releasedId: string | null = null;
       if (a.isValid && !a.isValid()) throw new Error('start_cancelled');
-      if (a.platform === 'ios' && a.releaseJsBand) {
+      if (!a.alreadyHeld && a.platform === 'ios' && a.releaseJsBand) {
         try { const r = await a.releaseJsBand(); if (typeof r === 'string' && r) releasedId = r; } catch { /* 계속 */ }
       }
-      if (a.platform === 'ios' && this.plugin.setJSBandOwnership) {
+      if (!a.alreadyHeld && a.platform === 'ios' && this.plugin.setJSBandOwnership) {
         const r = await this.plugin.setJSBandOwnership({ owning: false });
         if (!r.accepted) throw new Error('js_band_release_failed');
       }
-      if (a.platform === 'android' && a.releaseJsBand) {
+      if (!a.alreadyHeld && a.platform === 'android' && a.releaseJsBand) {
         // 해제 실패는 시작을 막지 않는다(수신 여부는 snapshot 의 ppgPackets 로 진단).
         try { await a.releaseJsBand(); } catch { /* 계속 */ }
       }
@@ -336,6 +339,38 @@ export class NativeMeasurementFacade {
   async reconnectBand(platform: string): Promise<boolean> {
     if (platform !== 'ios' || !this.plugin.reconnectBand) return false;
     try { return (await this.plugin.reconnectBand()).accepted === true; } catch { return false; }
+  }
+
+  /**
+   * SDD-293: 밴드 단계 완료 직후 네이티브가 밴드를 보류로 인계받는다(클래스 시작을 기다리지 않음).
+   * 순서: 네이티브 보류 연결 확인 → (확인되면) JS 연결 해제. 네이티브가 못 쥐면 JS 연결은 그대로 둔다(현행 경로 폴백).
+   * 미구현 앱(UNIMPLEMENTED)·거절·오류는 held=false.
+   */
+  async adoptBand(a: { platform: string; deviceId: string | null; releaseJsBand: () => Promise<unknown> }): Promise<{ held: boolean; deviceId: string | null }> {
+    const none = { held: false, deviceId: null };
+    if ((a.platform !== 'ios' && a.platform !== 'android') || !a.deviceId || !this.plugin.adoptBand) return none;
+    try {
+      if (this.plugin.setNativeOwnership) await this.plugin.setNativeOwnership({ enabled: true });
+      const r = await this.plugin.adoptBand(a.platform === 'android' ? { address: a.deviceId } : { peripheralId: a.deviceId });
+      if (r?.accepted !== true) return none;
+      if (a.platform === 'ios' && this.plugin.setJSBandOwnership) {
+        const o = await this.plugin.setJSBandOwnership({ owning: false });
+        if (!o.accepted) throw new Error('js_band_release_failed');
+      }
+      await a.releaseJsBand();
+    } catch {
+      await this.plugin.releaseBand?.().catch(() => undefined);
+      clearBandHold();
+      return none;
+    }
+    setBandHold({ held: true, deviceId: a.deviceId });
+    return { held: true, deviceId: a.deviceId };
+  }
+
+  /** SDD-293: 보류 중인 밴드를 놓는다(멱등). 수집이 시작됐다면 네이티브가 무시한다. */
+  async releaseHeldBand(): Promise<void> {
+    clearBandHold();
+    try { await this.plugin.releaseBand?.(); } catch { /* 미구현·이미 해제 */ }
   }
 
   /** 토큰 모양 필드를 실어 버린 bridge 이벤트 수(진단용) */

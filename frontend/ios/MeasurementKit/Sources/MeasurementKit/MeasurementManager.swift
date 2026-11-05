@@ -8,6 +8,9 @@ public protocol BandControlling: AnyObject {
     var delegate: BandLinkDelegate? { get set }
     func connect(expectedPeripheral: UUID?)
     func disconnect()
+    /// SDD-293: 보류 연결(구독 없음). 준비되면 onHoldReady.
+    func hold(expectedPeripheral: UUID?)
+    var onHoldReady: (() -> Void)? { get set }
 }
 extension BandLink: BandControlling {}
 
@@ -111,6 +114,10 @@ public final class MeasurementManager: BandLinkDelegate {
     public static let clockRetryDelays: [TimeInterval] = [2, 4, 8, 15, 15, 15, 15, 15]
     private var clockRetryIndex = 0
     private var clockRetryTimer: Cancellable?
+    // SDD-300: 저장 진행 3종 주기 송출(Android SyncEventGate 와 같은 2초). SessionSync 스냅샷이 있으면 그 값, 없으면 manager 집계.
+    public static let syncHeartbeatInterval: TimeInterval = 2
+    private var syncHeartbeat: Cancellable?
+    private var lastSyncSnapshot: SyncSnapshot?
     private var reanchorPending: (commandId: String, probe: ClockProbeResult)?
     private var clockAnchorId = UUID().uuidString.lowercased()
     private var clockUncertaintyMs = MeasurementManager.unknownClockUncertaintyMs
@@ -130,6 +137,51 @@ public final class MeasurementManager: BandLinkDelegate {
         self.scheduler = scheduler; self.profile = profile; self.nowMs = nowMs; self.monoUs = monoUs
         band.delegate = self
         try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    }
+
+    // MARK: 밴드 보류 인계 (SDD-293)
+
+    private var holdDone: ((Bool) -> Void)?
+    private var holdTimer: Cancellable?
+    private var holdActive = false
+    public static let holdTimeout: TimeInterval = 8
+
+    /// 밴드 단계 완료 직후: 밴드를 연결·발견까지만 하고 쥔다(capture.start·구독·업로드 없음). 준비되면 done(true), 시간 초과·수집 중이면 done(false).
+    public func holdBand(peripheralId: UUID?, done: @escaping (Bool) -> Void) {
+        lock.lock(); defer { lock.unlock() }
+        guard state == .idle || state == .closed else { done(false); return }      // 수집 중이면 무시
+        if holdActive, bandHeldReady { done(true); return }
+        holdDone?(false); holdTimer?.cancel()
+        holdActive = true; holdDone = done
+        if let p = peripheralId { self.peripheralId = p }
+        band.onHoldReady = { [weak self] in self?.holdReady() }
+        holdTimer = scheduler.schedule(after: Self.holdTimeout) { [weak self] in self?.holdTimedOut() }
+        band.hold(expectedPeripheral: self.peripheralId)
+    }
+    private var bandHeldReady = false
+    private func holdReady() {
+        lock.lock(); defer { lock.unlock() }
+        guard holdActive else { return }
+        bandHeldReady = true; holdTimer?.cancel(); holdTimer = nil
+        let d = holdDone; holdDone = nil; d?(true)
+    }
+    private func holdTimedOut() {
+        lock.lock(); defer { lock.unlock() }
+        guard holdActive, !bandHeldReady else { return }
+        endHold(); band.disconnect()
+    }
+    private func endHold() {
+        holdActive = false; bandHeldReady = false; holdTimer?.cancel(); holdTimer = nil
+        let d = holdDone; holdDone = nil; d?(false)
+    }
+    /// 클래스 시작 없이 떠남: 보류 중인 밴드를 확실히 놓는다(cancelPeripheralConnection). 수집 중이면 무시(정지는 stopMeasurement).
+    @discardableResult
+    public func releaseHeldBand() -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        guard state == .idle || state == .closed else { return false }
+        guard holdActive else { return true }
+        endHold(); band.disconnect()
+        return true
     }
 
     // MARK: 시작·정지 (브리지 API)
@@ -152,6 +204,8 @@ public final class MeasurementManager: BandLinkDelegate {
             state = .closed
             persistActive()
         }
+        // 보류는 수집으로 넘어간다 — 대기 중인 응답만 정리하고 band.connect 가 보류 링크를 재연결 없이 이어받는다
+        if holdActive { holdActive = false; bandHeldReady = false; holdTimer?.cancel(); holdTimer = nil; let d = holdDone; holdDone = nil; d?(true) }
         switch ownership.tryAcquireNative() {
         case .rejected(.nativeDisabled): throw ManagerError.nativeDisabled
         case .rejected(.jsOwnsBand): throw ManagerError.jsOwnsBand
@@ -169,6 +223,7 @@ public final class MeasurementManager: BandLinkDelegate {
         pin = ModelPin.loadOrCreate(file: sessionDir(sessionId).appendingPathComponent("model-pin.json"), rawParams: modelParams, version: modelVersion)
         archive = openArchive(sessionId)
         state = .arming
+        lastSyncSnapshot = nil
         let l = makeLive(sessionId); live = l; wire(l)
         l.start()
         persistActive()
@@ -180,6 +235,7 @@ public final class MeasurementManager: BandLinkDelegate {
         l.dispatch(command: cmd)
         band.connect(expectedPeripheral: self.peripheralId)
         emitMeasurementUpdated()
+        startSyncHeartbeat()
         return startResult(replay: false)
     }
 
@@ -246,6 +302,8 @@ public final class MeasurementManager: BandLinkDelegate {
         if !started { finishClosed() }
         persistActive()
         emitMeasurementUpdated()
+        stopSyncHeartbeat()
+        emitSyncHeartbeatOnce()       // 종료 직후 마지막 값 1회(이후는 SessionSync onProgress 가 이어받는다)
         if started, let sid = sessionId { onSealed?(sid, credentialHandle) }
         return started
     }
@@ -396,6 +454,8 @@ public final class MeasurementManager: BandLinkDelegate {
         band.connect(expectedPeripheral: peripheralId)
         armStreamTimers()
         onSessionReady?(sid, credentialHandle, pid)
+        lastSyncSnapshot = nil
+        startSyncHeartbeat()
         return true
     }
 
@@ -770,6 +830,47 @@ public final class MeasurementManager: BandLinkDelegate {
     /// SDD-260: 저장 진행(plan §5.1 UI). 이벤트명은 `feature.counts` · `archive.counts` · `reconcile.state`(docs/sdd-260-native-js-events.md).
     public func emitSyncStatus(sessionId sid: String, _ s: SyncSnapshot) {
         lock.lock(); defer { lock.unlock() }
+        if sid == sessionId { lastSyncSnapshot = s }
+        emitSyncEvents(sessionId: sid, s)
+    }
+
+    /// SDD-300: SessionSync 가 아직 없을 때의 대체 값 — 이 세션의 outbox/archive 카운트(0 이어도 숫자). reconcile 은 idle. 순수(상태 읽기만).
+    func fallbackSyncSnapshot() -> SyncSnapshot {
+        let oc = engine?.outbox.counts(), ac = archive?.counts ?? ArchiveCounts()
+        var s = SyncSnapshot()
+        s.featurePending = oc?.livePending ?? 0; s.featureAcked = oc?.liveAcked ?? 0; s.featureRejected = oc?.rejected ?? 0
+        s.archivePending = ac.pending; s.archiveUploading = ac.uploading; s.archiveVerified = ac.verified
+        s.archiveQuarantined = ac.quarantined + ac.pendingAuthorization + ac.pendingTimeReview
+        s.featureState = "idle"; s.rawState = "idle"; s.complete = false
+        s.signals = archive?.signalCounts()
+        return s
+    }
+
+    private func emitSyncHeartbeatOnce() {
+        lock.lock(); defer { lock.unlock() }
+        guard let sid = sessionId else { return }
+        emitSyncEvents(sessionId: sid, lastSyncSnapshot ?? fallbackSyncSnapshot())
+    }
+
+    /// 즉시 1회 + 이후 2초마다. 이미 돌고 있으면 취소 후 다시 건다(세션 교체·재시작에도 타이머는 1개).
+    private func startSyncHeartbeat() {
+        syncHeartbeat?.cancel(); syncHeartbeat = nil
+        emitSyncHeartbeatOnce()
+        scheduleSyncHeartbeat()
+    }
+    private func scheduleSyncHeartbeat() {
+        syncHeartbeat = scheduler.schedule(after: Self.syncHeartbeatInterval) { [weak self] in
+            guard let self = self else { return }
+            self.lock.lock(); defer { self.lock.unlock() }
+            guard self.state == .arming || self.state == .capturing || self.state == .reconnecting else { self.syncHeartbeat = nil; return }
+            self.emitSyncHeartbeatOnce()
+            self.scheduleSyncHeartbeat()
+        }
+    }
+    private func stopSyncHeartbeat() { syncHeartbeat?.cancel(); syncHeartbeat = nil }
+
+    private func emitSyncEvents(sessionId sid: String, _ s: SyncSnapshot) {
+        lock.lock(); defer { lock.unlock() }
         emit(event: "feature.counts", payload: ["sessionId": sid, "pending": s.featurePending, "acked": s.featureAcked, "rejected": s.featureRejected])
         var archivePayload: [String: Any] = ["sessionId": sid, "pending": s.archivePending, "uploading": s.archiveUploading, "verified": s.archiveVerified, "quarantined": s.archiveQuarantined]
         if let sig = s.signals { archivePayload["signals"] = ArchiveQueue.signalsPayload(sig) }   // SDD-264 additive
@@ -863,7 +964,7 @@ public final class MeasurementManager: BandLinkDelegate {
         if let g = (o?["managerGeneration"] as? NSNumber)?.uint64Value { o?["managerGeneration"] = g }
         return o
     }
-    private func finishClosed() { stopStreamTimers(); live?.stop(); ownership.releaseNative(); state = .closed; persistActive() }
+    private func finishClosed() { stopStreamTimers(); stopSyncHeartbeat(); live?.stop(); ownership.releaseNative(); state = .closed; persistActive() }
 
     /// 봉인 후 archive 가 모두 끝나면 호출(DRAINING → CLOSED). 완료 판단은 큐 카운트 기준(서버 verify ACK 만 완료).
     public func archiveProgressed() {

@@ -136,6 +136,10 @@ export interface NativeMeasurementPlugin {
   setJSBandOwnership?(req: { owning: boolean }): Promise<{ accepted: boolean }>;
   /** iOS: 네이티브가 소유한 밴드 링크를 재연결한다(수집 중이 아니면 not_active 거절) */
   reconnectBand?(): Promise<{ accepted: boolean }>;
+  /** SDD-293: 밴드 단계 완료 직후 네이티브가 밴드를 보류(연결·서비스 발견까지, 구독·스트림 없음)로 인계받는다. 미구현 앱은 UNIMPLEMENTED. */
+  adoptBand?(req: { address?: string; peripheralId?: string }): Promise<{ accepted: boolean; band_state?: string }>;
+  /** SDD-293: 보류 중인 밴드를 해제한다(수집 중이면 무시 — 정지는 stopMeasurement). */
+  releaseBand?(): Promise<{ accepted: boolean }>;
   registerCredential?(req: RegisterCredentialRequest): Promise<RegisterCredentialResult>;
   handoffCredentials?(req: HandoffCredentialsRequest): Promise<HandoffCredentialsResult>;
   getMeasurementSnapshot(req: { sessionId: string }): Promise<MeasurementSnapshot>;

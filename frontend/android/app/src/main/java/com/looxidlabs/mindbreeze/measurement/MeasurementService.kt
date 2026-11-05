@@ -105,7 +105,11 @@ class MeasurementService : Service() {
         else {
             if (cfg.bandAddress == null) { MeasurementManager.setState(MeasurementState.BLOCKED, "no_address"); teardown(); return START_NOT_STICKY }
             if (!MeasurementManager.ownership.claim(BandOwnership.Owner.NATIVE)) { MeasurementManager.setState(MeasurementState.BLOCKED, "band_owned_by_js"); teardown(); return START_NOT_STICKY }
-            gatt = BandGattClient(applicationContext, rt.engine, cfg.bandAddress, { MeasurementManager.setState(it); rt.bandState = if (it == MeasurementState.CAPTURING) "connected" else "reconnecting"; updateNotification(it) }).also { it.start() }
+            val onBand: (MeasurementState) -> Unit = { MeasurementManager.setState(it); rt.bandState = if (it == MeasurementState.CAPTURING) "connected" else "reconnecting"; updateNotification(it) }
+            // SDD-293: 대기실에서 보류로 쥔 같은 주소 링크가 있으면 재연결 없이 구독만 시작한다(시작 순간 연결 해제·재연결 0회).
+            val held = MeasurementManager.takeHeld(cfg.bandAddress)
+            gatt = if (held != null) { rt.bandState = "connected"; held.also { it.attach(rt.engine, onBand) } }
+                   else BandGattClient(applicationContext, rt.engine, cfg.bandAddress, onBand).also { it.start() }
         }
         rt.live.visibility = "locked"
         rt.onCaptureEnded = { status, cutoff ->
@@ -124,6 +128,7 @@ class MeasurementService : Service() {
         nativeRt?.let { it.stop("user_stop"); nativeRt = null }
         logHandler.removeCallbacks(logTask)
         gatt?.stop(); gatt = null
+        MeasurementManager.releaseHeldBand()
         synth?.stop(); synth = null
         MeasurementManager.ownership.release(BandOwnership.Owner.NATIVE)
         MeasurementManager.end()

@@ -23,6 +23,7 @@ import { WaitlistView } from '../../components/class/flow/member/WaitlistView';
 import { WaitStartContainer } from '../../components/class/flow/member/WaitStartContainer';
 import { resolveEntryBack } from '../../lib/class/entry-back';
 import { useBackgroundSession } from '../../hooks/useBackgroundSession';
+import { holdEnvironment, useNativeBandHold } from '../../lib/measurement-web/use-native-band-hold';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { useEntryPrep } from '../../hooks/useEntryPrep';
 import { useWaitingRoomPresence } from '../../hooks/useWaitingRoomPresence';
@@ -279,6 +280,18 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
     enabled: !v2Flag && entry !== null && (machine.phase === 'wizard' || machine.phase === 'wait' || (machine.phase === 'confirm' && machine.stage === 'unopened')),
     skipAuth: !isAuthenticated,
     entryCredential: entry?.credential ?? null,
+  });
+
+  // SDD-293: 밴드 단계를 연결로 마친 로그인 회원은 대기실에서 곧바로 네이티브가 밴드를 보류로 인계받는다(시작 때 재연결 0회).
+  // 단계 c 에 머무는 동안은 JS 가 접촉 상태를 보여 주므로 인계하지 않는다. 클래스 시작 없이 떠나면 훅이 해제한다.
+  const holdEnv = holdEnvironment();
+  useNativeBandHold({
+    want: {
+      ...holdEnv, guest: !entry || entry.isGuest || !user?.id, bandOptIn: info ? bandModeOf(info.linkbandMode) !== 'none' : false,
+      eegConsent: eegChoice === true,
+      bandDone: prep.draft.bandOutcome === 'connected' && !(machine.phase === 'wizard' && machine.step === 'c') && (machine.phase === 'wizard' || machine.phase === 'wait' || machine.phase === 'live'),
+    },
+    live: machine.phase === 'live',
   });
 
   const [cancelOpen, setCancelOpen] = useState(false);

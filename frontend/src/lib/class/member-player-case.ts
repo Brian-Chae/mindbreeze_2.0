@@ -29,6 +29,11 @@ export interface MemberCaseInput {
   bandEnabled: boolean;
   /** 온라인 그룹 정원 20명 초과 — 서버가 발행 권한을 주지 않는 수신 전용 수업(마이크·카메라·손들기 UI 없음) */
   viewerOnly: boolean;
+  /**
+   * SDD-295: 서버가 이 회원의 측정 값을 받았는가(live v2 metrics 행 존재). undefined 면 서버 확정 개념이 없는 구 경로 —
+   * 기존 문구를 유지한다. false 면 로컬 값만 있는 상태라 "측정하는 중" 단정 문구를 쓰지 않는다.
+   */
+  serverConfirmed?: boolean;
 }
 
 export const MEMBER_CASE_DEFAULT: MemberCaseInput = {
@@ -91,6 +96,8 @@ export interface MemberRingModel {
   subtitle?: string;
   icon?: 'alert';
   dots?: boolean;
+  /** 게이지에 값이 아직 없을 때 링 아래에 보이는 문구(gauge 전용) */
+  waitingText?: string;
 }
 
 export type DockKey = 'status' | 'chat' | 'signal' | 'sound' | 'device';
@@ -213,7 +220,8 @@ function deriveRing(input: MemberCaseInput): MemberRingModel {
     case 'lost':
       return { core: 'dim', tone: 'idle', showValue: true, subtitle: '다시 연결하는\n중이에요' };
     default:
-      return { core: 'gauge', tone: 'live', showValue: true };
+      // SDD-295: 서버 확정 전(false)에는 "측정하는 중"이라 단정하지 않는다 — 상담사 화면과 같은 사실(서버 도착 여부)을 기준으로 말한다
+      return { core: 'gauge', tone: 'live', showValue: true, waitingText: input.serverConfirmed === false ? '연결 확인 중이에요' : '측정하는 중이에요' };
   }
 }
 

@@ -2,9 +2,11 @@ import XCTest
 @testable import MeasurementKit
 
 final class FakeBand: BandControlling {
-    var connects = 0, disconnects = 0
+    var connects = 0, disconnects = 0, holds = 0
     var lastExpected: UUID?
     weak var delegate: BandLinkDelegate?
+    var onHoldReady: (() -> Void)?
+    func hold(expectedPeripheral: UUID?) { holds += 1; lastExpected = expectedPeripheral }
     func connect(expectedPeripheral: UUID?) { connects += 1; lastExpected = expectedPeripheral }
     func disconnect() { disconnects += 1 }
 }

@@ -36,6 +36,7 @@ import { deriveConnectionDiagnostics, useBacklogSince, type DiagSocketState } fr
 import { useNativeMeasurementV2, type NativeDiagnostics } from '../../../../lib/measurement-web/use-native-measurement';
 import { getNativeMeasurement, isNativeMeasurementAvailable } from '../../../../lib/native-measurement';
 import { Capacitor } from '@capacitor/core';
+import { useBandHold } from '../../../../lib/native-measurement/band-hold';
 import { describeNativeStartFailure, isNativeBandOwned } from '../../../../lib/native-measurement/device-status';
 import { applyBandSkipUi, readBandSkip, shouldAutoConnectBand, writeBandSkip } from '../../../../lib/class/flow/band-skip';
 import { toBandReport } from '../../../../lib/measurement-web/band-report';
@@ -234,7 +235,8 @@ export function MemberClassContainer({
   const band = useBand({ sessionId, participantId, enabled: connectionsActive, skipAuth: !isAuthenticated, entryCredential, v1FeatureUpload: false, autoResume: bandAuto });
   bandConnectedRef.current = band.connectionState === 'connected';
   // 호스트가 회차를 종료하면 회원은 밴드 해제 없이 떠난다 → 종료 phase 에서 close intent 를 한 번 기록한다.
-  useCloseBiosignalOnEnd(v2On && liveV2?.state?.session?.data.phase === 'ended', band.closeBiosignal);
+  // 네이티브가 밴드를 소유 중이면 네이티브 autoSeal 이 해제하므로(JS 해제 시도 = no-op) 웹 연결이 남은 경우만 끊는다. disconnect 는 close intent 를 한 번 더 기록하지만 멱등이다.
+  useCloseBiosignalOnEnd(v2On && liveV2?.state?.session?.data.phase === 'ended', band.closeBiosignal, band.disconnect);
   const bandRef = useRef(band);
   useEffect(() => {
     bandRef.current = band;
@@ -478,10 +480,12 @@ export function MemberClassContainer({
   const bandEnabled = linkbandMode !== 'none';
   // 네이티브가 밴드를 소유한 동안(시작 직후 첫 snapshot 전 포함) JS BLE 상태는 보지 않는다 — 놓인 JS 연결을 '끊김'으로 오판하던 문제.
   const nativeOwnsBand = isNativeBandOwned(nativeM.path, nativeM.status, nd);
+  // SDD-293: 네이티브가 밴드를 보류로 쥔 동안(인계 직후~첫 snapshot 전)은 연결 상태가 이어져 보인다 — '연결 중/다시 연결' 억제
+  const bandHeld = useBandHold().held && nativeM.path === 'native';
   const derivedBandUi = deriveBandUi(
     {
-      connectionState: nd ? (nd.connected ? 'connected' : 'connecting') : nativeOwnsBand ? 'connecting' : band.connectionState,
-      everConnected: nd ? everConnected : nativeOwnsBand ? false : everConnected,
+      connectionState: nd ? (nd.connected ? 'connected' : 'connecting') : bandHeld ? 'connected' : nativeOwnsBand ? 'connecting' : band.connectionState,
+      everConnected: nd ? everConnected : bandHeld ? true : nativeOwnsBand ? false : everConnected,
       deviceStatus,
       signalQualityLevel: signalLevel,
       battery: nativeOwnsBand ? null : band.battery,
@@ -511,7 +515,7 @@ export function MemberClassContainer({
 
   const shared: SharedScreenProps = {
     sessionId,
-    place, mode, viewerOnly, bandVisible, bandUi, nativeOwnsBand, nativeAuto: isNativeMeasurementAvailable() && Boolean(user?.id) && eegConsent && linkbandMode !== 'none' && v2On, waitlisted, nowMs, hostVideoIssue,
+    place, mode, viewerOnly, bandVisible, bandUi, nativeOwnsBand, serverConfirmed: v2On && participantId ? Boolean(liveV2?.state?.metrics[participantId]) : undefined, nativeAuto: isNativeMeasurementAvailable() && Boolean(user?.id) && eegConsent && linkbandMode !== 'none' && v2On, waitlisted, nowMs, hostVideoIssue,
     header: { title: title ?? '클래스', elapsedSec, totalSec, counselorName, myInitial: user?.name?.trim().charAt(0) || '나' },
     hero, snapshot, series, sheet, screenOff, confirmLeave,
     v2Bars: v2On ? { label: '이완', current: v2Current, bars: v2Bars } : null,
@@ -622,6 +626,8 @@ interface SharedScreenProps {
   bandUi: MemberCaseInput['band'];
   /** 앱 네이티브가 밴드를 소유 중 — 재연결 버튼은 JS BLE 가 아니라 네이티브로 */
   nativeOwnsBand: boolean;
+  /** SDD-295: 서버가 내 측정 값을 받았는가(v2 만 판정, 구 경로는 undefined) */
+  serverConfirmed: boolean | undefined;
   /** 앱 네이티브 측정 경로(동의+밴드 사용) — 선택 해제만으로 측정이 자동 시작되는 환경 */
   nativeAuto: boolean;
   waitlisted: boolean;
@@ -758,6 +764,7 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
     battery: shared.device.battery,
     bandEnabled: shared.bandVisible,
     viewerOnly: shared.viewerOnly,
+    serverConfirmed: shared.serverConfirmed,
   };
 
   const renderedRef = useRef<RenderedMetrics | null>(null);
