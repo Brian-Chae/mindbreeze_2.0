@@ -10,7 +10,7 @@ export default function RegisterStartPage() {
   const begin = useSocialSignupStore((s) => s.begin);
   const token = params.get('token') ?? undefined;
   function confirm(credential: SocialCredential) { begin({ credential, inviteToken: token, role: 'client', rememberMe: true }); navigate('/signup/confirm'); }
-  return <AuthShell variant="member" title="회원 가입"><main className="space-y-5">
+  return <AuthShell variant="member" title="회원 가입" backTo="/login?role=client"><main className="space-y-5">
     <h2 className="text-2xl font-semibold">나를 위한 시간,<br />여기서 시작해요</h2>
     <p className="text-sm text-white/80">사용할 계정을 선택해 주세요.</p>
     <GoogleLoginButton inviteToken={token} onNeedsSignupInfo={confirm} onSuccess={(user) => user && navigate(resolvePostLoginPath(user))} />
