@@ -1,0 +1,7 @@
+// SDD-292 — iOS dev 앱(Debug-Dev/Release-Dev) 공통 값. 운영 구성(Debug/Release)에는 적용되지 않는다.
+PRODUCT_BUNDLE_IDENTIFIER = com.looxidlabs.mindbreeze2.dev
+APP_DISPLAY_NAME = MB Dev
+ASSETCATALOG_COMPILER_APPICON_NAME = AppIconDev
+// dev 번들용 Google iOS OAuth 클라이언트의 REVERSED_CLIENT_ID. 아래 local 파일이 있으면 덮어쓴다(값 커밋 금지).
+GOOGLE_REVERSED_CLIENT_ID = com.googleusercontent.apps.1087454235919-r2r01n0q2o4s1qmjcoirghvjc24jknn2
+#include? "dev.local.xcconfig"
