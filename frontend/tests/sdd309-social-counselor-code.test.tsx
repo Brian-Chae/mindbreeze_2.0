@@ -38,11 +38,9 @@ import { ApiError } from '../src/lib/api/client';
 import LoginPage from '../src/pages/LoginPage';
 import SignupConfirmPage from '../src/pages/SignupConfirmPage';
 import { useSocialSignupStore } from '../src/stores/social-signup-store';
-import InviteLandingPage from '../src/pages/clients/InviteLandingPage';
 
 const okUser = { id: 'u1', email: 'a@b.c', name: 'A', role: 'client', client_required_fields: [] };
 const okRes = { access_token: 't', token_type: 'bearer', user: okUser };
-const birthError = () => new ApiError(422, '생년월일을 입력해 주세요', { detail: '생년월일을 입력해 주세요' });
 
 let container: HTMLDivElement;
 let root: Root;
