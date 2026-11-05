@@ -30,3 +30,6 @@
 
 /* 코치 연결 확인은 CTA가 아닌 안내 표면이다. */
 .signup-flow [class~='bg-[#5F0080]/5']{background:rgba(24,12,36,.58);border-color:#ffffff36}
+
+/* dev 비회원 입장 카드는 밝은 표면이므로 제목의 어두운 색을 유지한다. */
+.signup-flow .guest-code-entry{color:#1f1f1f}

@@ -291,7 +291,7 @@ export default function LoginPage() {
       {isClient && guestEntry && !typing && (
         <div className="fixed inset-x-0 bottom-0 z-20 bg-gradient-to-t from-[#14001E]/85 from-60% to-transparent px-4 pt-7 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <Link to="/join" data-testid="login-code-entry"
-            className="mx-auto flex w-full max-w-[400px] items-center gap-3 rounded-[20px] bg-white/95 p-4 text-[#1F1F1F] shadow-[0_10px_28px_rgba(0,0,0,0.35)] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
+            className="guest-code-entry mx-auto flex w-full max-w-[400px] items-center gap-3 rounded-[20px] bg-white/95 p-4 text-[#1F1F1F] shadow-[0_10px_28px_rgba(0,0,0,0.35)] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
             <span className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-xl bg-[#F3E9F8]">
               <KeyRound size={22} color="#5F0080" aria-hidden="true" />
             </span>
