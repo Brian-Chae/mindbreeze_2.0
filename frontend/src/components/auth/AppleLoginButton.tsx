@@ -33,7 +33,7 @@ function messageFor(err: unknown): string {
   return 'Apple 로그인이 취소되었거나 실패했어요. 다시 시도해 주세요.';
 }
 
-const SIGNUP_INFO_CODES = new Set(['GENDER_REQUIRED', 'NAME_REQUIRED', 'BIRTH_DATE_REQUIRED', 'CONSENT_REQUIRED', 'AGE_RESTRICTED', 'INVALID_BIRTH_DATE']);
+const SIGNUP_INFO_CODES = new Set(['GENDER_REQUIRED', 'NAME_REQUIRED', 'BIRTH_DATE_REQUIRED', 'CONSENT_REQUIRED', 'AGE_RESTRICTED', 'INVALID_BIRTH_DATE', 'COUNSELOR_CODE_REQUIRED']);
 
 export default function AppleLoginButton({
   role,
