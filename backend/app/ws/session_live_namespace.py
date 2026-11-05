@@ -1931,6 +1931,27 @@ def _err(code: str, *, retry: bool = False, **extra) -> dict:
     return {"ok": False, "code": code, "retryable": retry, **extra}
 
 
+# SDD-306: committed 상태에서 projection 만 늦은 일시 지연은 연결을 DEGRADED 로 만들지 않는다.
+# 11/5 40명 시험에서 capture.renew 의 projection_pending 35건이 연결을 DEGRADED 로 밀었고,
+# 서버에 DEGRADED→READY 복귀 경로가 없어 이후 metric 의 52% 가 not_ready 로 거절됐다.
+_TRANSIENT_DEGRADED_CODES = frozenset({"projection_pending"})
+
+
+def state_after_command(state: str, outcome) -> str:
+    """명령 결과에 따른 연결 상태. 일시 지연(projection_pending)은 READY 를 유지하고, 그 밖의 degraded(Redis 불가 등)만 DEGRADED."""
+    if not getattr(outcome, "degraded", False):
+        return state
+    code = (getattr(outcome, "ack", None) or {}).get("code")
+    if code in _TRANSIENT_DEGRADED_CODES:
+        return state
+    return "DEGRADED"
+
+
+def heartbeat_needs_resync(state: str) -> bool:
+    """heartbeat 가 성공했는데 연결이 DEGRADED 면 재동기화를 요청한다(클라이언트가 snapshot 으로 READY 복귀)."""
+    return state == "DEGRADED"
+
+
 def emit_sync_factory(session_id):
     """publish_pending 의 emit_fn: 스레드에서 이벤트 루프로 발행하고 완료를 기다린다(워터마크는 모두 성공한 뒤에만 전진)."""
     sio = _get_sio()
@@ -2262,8 +2283,7 @@ def register_v2_handlers(sio, ns):
         if not await _ensure_scope(conn):
             return _gate_reject(conn, cmd, cid, "access_revoked")
         outcome = await asyncio.to_thread(_run_command_sync, conn, cmd)
-        if outcome.degraded:
-            conn.state = "DEGRADED"
+        conn.state = state_after_command(conn.state, outcome)
         return outcome.ack
 
     # ---------------- clock probe / presence / metric / device ----------------
@@ -2363,6 +2383,10 @@ def register_v2_handlers(sio, ns):
                     logger.warning("[live-v2] heartbeat 오류", exc_info=True)
                     continue
                 conn.degraded_notified = False
+                if heartbeat_needs_resync(conn.state):
+                    # SDD-306: Redis/DB 가 돌아왔다 — 서버가 DEGRADED 를 붙들지 않게 클라이언트에게 snapshot 재동기화를 요청한다.
+                    await sio.emit("live:resync_required", {"session_id": str(conn.session_id), "reason": "recovered"},
+                                   to=conn.sid, namespace=ns)
                 await sio.emit("live:heartbeat", hb, to=conn.sid, namespace=ns)
         except asyncio.CancelledError:
             pass

@@ -15,6 +15,36 @@ map $http_upgrade $mb_connection_upgrade {
     ''      close;
 }
 
+# SDD-306: 100명 대응 — 소켓(상태 보유)은 단일 프로세스(8000), 상태 변경 없는 핫 REST 만 REST_PORTS 로 분산.
+# REST_PORTS 미지정이면 mb_rest 도 8000 하나라 현행 단일 프로세스와 동일하게 동작한다.
+upstream mb_socket {
+    server 127.0.0.1:8000;
+    keepalive 16;
+}
+upstream mb_rest {
+    least_conn;
+@@REST_UPSTREAM_SERVERS@@
+    keepalive 64;
+}
+
+# 허용목록: 소켓 프로세스의 메모리 상태를 읽거나 방송을 일으키지 않는 엔드포인트만 mb_rest 로 보낸다(그 외 전부 mb_socket).
+map "$request_method:$uri" $mb_backend {
+    default mb_socket;
+    "~^GET:/api/v1/sessions/[0-9a-fA-F-]{36}$" mb_rest;
+    "~^POST:/api/v1/sessions/[0-9a-fA-F-]{36}/features/batch$" mb_rest;
+    "~^POST:/api/v1/sessions/[0-9a-fA-F-]{36}/biosignal-(raw|artifacts)/(presign|ack)$" mb_rest;
+    "~^GET:/api/v1/sessions/[0-9a-fA-F-]{36}/biosignal-raw/summary$" mb_rest;
+    "~^GET:/api/v1/classes/[0-9a-fA-F-]{36}$" mb_rest;
+    "~^GET:/api/v1/classes/[0-9a-fA-F-]{36}/members$" mb_rest;
+    "~^POST:/api/v1/auth/(login|refresh)$" mb_rest;
+}
+
+# upstream keepalive 는 Connection 헤더를 비워야 유지된다(WebSocket 업그레이드 요청만 upgrade).
+map $http_upgrade $mb_upstream_connection {
+    default upgrade;
+    ''      '';
+}
+
 # HTTP -> HTTPS (ACME 챌린지는 예외)
 server {
     listen 80;
@@ -109,10 +139,10 @@ server {
     }
 
     location / {
-        proxy_pass http://127.0.0.1:8000;
+        proxy_pass http://$mb_backend;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $mb_connection_upgrade;
+        proxy_set_header Connection $mb_upstream_connection;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
