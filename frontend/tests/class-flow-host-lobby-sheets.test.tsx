@@ -213,6 +213,6 @@ describe('채팅 시트', () => {
 describe('로비에서 시트 열기', () => {
   it('도크 버튼이 해당 시트를 열고, 시트가 열리면 시작하기는 막힌다(inert)', async () => {
     await show({ kind: 'chat', lobby: 'g-on-3' });
-    expect(container.querySelector('.pz-shell__dock')?.hasAttribute('inert')).toBe(true);
+    expect(container.querySelector('[data-floating-start]')?.hasAttribute('inert')).toBe(true);
   });
 });

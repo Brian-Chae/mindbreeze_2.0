@@ -18,6 +18,8 @@ export function LobbyFixture({ caseKey, n, backdropSrc }: LobbyFixtureProps) {
       address={LOBBY_ADDRESS}
       startText={LOBBY_START_TEXT}
       model={fixture.model}
+      accessCode="4829"
+      capacity={40}
       backdropSrc={backdropSrc}
       onBack={() => undefined}
       onStart={() => undefined}
