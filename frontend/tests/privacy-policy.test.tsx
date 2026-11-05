@@ -134,7 +134,8 @@ describe('방침 링크·화면 문구 정합', () => {
     const notice = src('src/components/class/flow/member/NoticeStepView.tsx');
     expect(notice).toContain('생년·월');
     expect(notice).not.toContain('성별·생년월일이');
-    for (const rel of ['src/pages/class/EntryPage.tsx', 'src/pages/sessions/ClassPlayerPage.tsx']) {
+    // SDD-303: 입장 고지는 통합 동의 화면이 표시한다(EntryPage 는 표시하지 않음)
+    for (const rel of ['src/components/class/flow/member/IntegratedEntryConsentView.tsx', 'src/pages/sessions/ClassPlayerPage.tsx']) {
       expect(src(rel), rel).toContain('RAW_RETENTION_DAYS');
       expect(src(rel), rel).not.toContain('VITE_RETENTION_RAW_DAYS');
     }

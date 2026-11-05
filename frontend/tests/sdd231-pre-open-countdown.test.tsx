@@ -106,7 +106,7 @@ describe('EntryPage — 열리기 전 대기실', () => {
     await act(async () => { vi.advanceTimersByTime(30_000); });
     await act(async () => { await Promise.resolve(); });
     expect(text()).not.toContain('열리면 자동으로 입장해요');
-    expect(text()).toContain('시작 전에 확인해 주세요'); // 머신이 unopened→open 으로 준비 마법사 a 단계로 자동 진행
+    expect(text()).toContain('동의를 확인해 주세요'); // 머신이 unopened→open 으로 준비 마법사 a 단계(동의 화면)로 자동 진행
   });
   it('허용 구간 밖 409 는 아직 열리지 않았어요 카드에 남은 시간을 보여 준다', async () => {
     useAuth(true);
