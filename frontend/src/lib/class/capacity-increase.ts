@@ -23,7 +23,7 @@ export function capacityInputMessage(error: Exclude<CapacityInputError, null>, c
   switch (error) {
     case 'not_integer': return '정원은 숫자로 입력해 주세요.';
     case 'below_occupied': return `현재 입장 인원(${ctx.occupied}명)보다 적게 정할 수 없어요.`;
-    case 'not_increase': return `현재 정원(${ctx.current}명)보다 큰 숫자를 입력해 주세요. 정원은 늘리기만 할 수 있어요.`;
+    case 'not_increase': return `현재 정원(${ctx.current}명)보다 큰 숫자를 입력해 주세요. 같은 값은 변경되지 않고, 정원은 늘리기만 할 수 있어요.`;
     case 'over_max': return `${ctx.online ? '온라인' : '오프라인'} 클래스는 최대 ${capacityMax(ctx.online)}명까지 정할 수 있어요.`;
   }
 }

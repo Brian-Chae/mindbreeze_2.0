@@ -77,4 +77,46 @@ describe('CapacityIncreaseForm', () => {
     expect(submit().disabled).toBe(true);
     expect(host.textContent).toContain('최대 정원');
   });
+  it('V1·V2 성공 후 current 가 갱신돼도 오류 없이 새 정원+1 기준으로 다시 늘릴 수 있다', async () => {
+    increaseCapacity.mockResolvedValueOnce({ capacity: 20, promoted_count: 0, revision: 8 });
+    mount({ current: 10, occupied: 1, waiting: 0, online: true });
+    type(input('새 정원'), '20');
+    await act(async () => { submit().click(); }); await flush();
+    expect(onChanged).toHaveBeenCalledWith(20);
+    mount({ current: 20, occupied: 1, waiting: 0, online: true, revision: 8 });
+    expect(host.querySelector('[role="alert"]')?.textContent ?? '').not.toContain('보다 큰 숫자');
+    expect(input('새 정원').value).toBe('21');
+    expect(host.textContent).toContain('20명으로 늘렸어요');
+    increaseCapacity.mockResolvedValueOnce({ capacity: 30, promoted_count: 0, revision: 9 });
+    type(input('새 정원'), '30');
+    expect(submit().disabled).toBe(false);
+    await act(async () => { submit().click(); }); await flush();
+    expect(increaseCapacity).toHaveBeenCalledTimes(2);
+    expect((increaseCapacity.mock.calls[1] as [string, Record<string, unknown>])[1]).toMatchObject({ capacity: 30, expected_revision: 8 });
+  });
+  it('V3 외부에서 current 가 바뀌면 낡은 입력을 새 정원+1 로 재동기화한다', () => {
+    mount({ current: 10, occupied: 1, waiting: 0, online: true });
+    expect(input('새 정원').value).toBe('11');
+    mount({ current: 20, occupied: 1, waiting: 0, online: true });
+    expect(input('새 정원').value).toBe('21');
+    expect(host.querySelector('[role="alert"]')?.textContent ?? '').toBe('');
+  });
+  it('V4 current 가 그대로면 편집 중인 입력을 보존한다', () => {
+    mount({ current: 10, occupied: 1, waiting: 0, online: true });
+    type(input('새 정원'), '35');
+    mount({ current: 10, occupied: 1, waiting: 0, online: true, revision: 7 });
+    expect(input('새 정원').value).toBe('35');
+  });
+  it('V4b current 가 바뀌어도 새 정원보다 큰 편집 입력은 보존한다', () => {
+    mount({ current: 10, occupied: 1, waiting: 0, online: true });
+    type(input('새 정원'), '35');
+    mount({ current: 20, occupied: 1, waiting: 0, online: true });
+    expect(input('새 정원').value).toBe('35');
+  });
+  it('V5 같은 값은 제출 불가이며 문구에 변경 없음을 알린다', () => {
+    mount({ current: 10, occupied: 1, waiting: 0, online: true });
+    type(input('새 정원'), '10');
+    expect(submit().disabled).toBe(true);
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('같은 값은 변경');
+  });
 });

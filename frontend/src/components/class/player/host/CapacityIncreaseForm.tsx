@@ -25,6 +25,13 @@ export interface CapacityFormProps {
 export function CapacityIncreaseForm({ classId, current, occupied, waiting, online, revision, admin, onChanged }: CapacityFormProps) {
   const max = capacityMax(online);
   const [raw, setRaw] = useState(String(Math.min(current + 1, max)));
+  // 외부에서 현재 정원이 바뀌면(성공 후 갱신·다른 기기 변경) 낡아진 입력만 새 정원+1 로 맞춘다. 더 큰 값을 편집 중이면 보존한다.
+  const [seenCurrent, setSeenCurrent] = useState(current);
+  if (seenCurrent !== current) {
+    setSeenCurrent(current);
+    const typed = raw.trim();
+    if (!/^\d+$/.test(typed) || Number(typed) <= current) setRaw(String(Math.min(current + 1, max)));
+  }
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [serverError, setServerError] = useState('');
@@ -60,6 +67,7 @@ export function CapacityIncreaseForm({ classId, current, occupied, waiting, onli
       pending.current = null;
       const next = res.capacity ?? check.value;
       setDone(capacitySuccessMessage(next, res.promoted_count ?? 0));
+      setRaw(String(Math.min(next + 1, capacityMax(online))));
       onChanged(next);
     } catch (e) {
       setServerError(capacityServerMessage(e));
