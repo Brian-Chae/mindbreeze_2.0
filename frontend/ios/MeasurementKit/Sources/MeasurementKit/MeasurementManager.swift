@@ -8,6 +8,9 @@ public protocol BandControlling: AnyObject {
     var delegate: BandLinkDelegate? { get set }
     func connect(expectedPeripheral: UUID?)
     func disconnect()
+    /// SDD-293: 보류 연결(구독 없음). 준비되면 onHoldReady.
+    func hold(expectedPeripheral: UUID?)
+    var onHoldReady: (() -> Void)? { get set }
 }
 extension BandLink: BandControlling {}
 
@@ -132,6 +135,51 @@ public final class MeasurementManager: BandLinkDelegate {
         try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
     }
 
+    // MARK: 밴드 보류 인계 (SDD-293)
+
+    private var holdDone: ((Bool) -> Void)?
+    private var holdTimer: Cancellable?
+    private var holdActive = false
+    public static let holdTimeout: TimeInterval = 8
+
+    /// 밴드 단계 완료 직후: 밴드를 연결·발견까지만 하고 쥔다(capture.start·구독·업로드 없음). 준비되면 done(true), 시간 초과·수집 중이면 done(false).
+    public func holdBand(peripheralId: UUID?, done: @escaping (Bool) -> Void) {
+        lock.lock(); defer { lock.unlock() }
+        guard state == .idle || state == .closed else { done(false); return }      // 수집 중이면 무시
+        if holdActive, bandHeldReady { done(true); return }
+        holdDone?(false); holdTimer?.cancel()
+        holdActive = true; holdDone = done
+        if let p = peripheralId { self.peripheralId = p }
+        band.onHoldReady = { [weak self] in self?.holdReady() }
+        holdTimer = scheduler.schedule(after: Self.holdTimeout) { [weak self] in self?.holdTimedOut() }
+        band.hold(expectedPeripheral: self.peripheralId)
+    }
+    private var bandHeldReady = false
+    private func holdReady() {
+        lock.lock(); defer { lock.unlock() }
+        guard holdActive else { return }
+        bandHeldReady = true; holdTimer?.cancel(); holdTimer = nil
+        let d = holdDone; holdDone = nil; d?(true)
+    }
+    private func holdTimedOut() {
+        lock.lock(); defer { lock.unlock() }
+        guard holdActive, !bandHeldReady else { return }
+        endHold(); band.disconnect()
+    }
+    private func endHold() {
+        holdActive = false; bandHeldReady = false; holdTimer?.cancel(); holdTimer = nil
+        let d = holdDone; holdDone = nil; d?(false)
+    }
+    /// 클래스 시작 없이 떠남: 보류 중인 밴드를 확실히 놓는다(cancelPeripheralConnection). 수집 중이면 무시(정지는 stopMeasurement).
+    @discardableResult
+    public func releaseHeldBand() -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        guard state == .idle || state == .closed else { return false }
+        guard holdActive else { return true }
+        endHold(); band.disconnect()
+        return true
+    }
+
     // MARK: 시작·정지 (브리지 API)
 
     @discardableResult
@@ -152,6 +200,8 @@ public final class MeasurementManager: BandLinkDelegate {
             state = .closed
             persistActive()
         }
+        // 보류는 수집으로 넘어간다 — 대기 중인 응답만 정리하고 band.connect 가 보류 링크를 재연결 없이 이어받는다
+        if holdActive { holdActive = false; bandHeldReady = false; holdTimer?.cancel(); holdTimer = nil; let d = holdDone; holdDone = nil; d?(true) }
         switch ownership.tryAcquireNative() {
         case .rejected(.nativeDisabled): throw ManagerError.nativeDisabled
         case .rejected(.jsOwnsBand): throw ManagerError.jsOwnsBand

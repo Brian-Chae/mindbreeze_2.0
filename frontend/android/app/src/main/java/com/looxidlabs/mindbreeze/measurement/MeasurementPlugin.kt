@@ -107,6 +107,26 @@ class MeasurementPlugin : Plugin() {
         call.resolve(json(BridgeModel.handoffResult(saved = true)))
     }
 
+    /**
+     * SDD-293: 밴드 단계 완료 직후 보류 인계. 연결·서비스 발견까지 확인되면 accepted=true(구독·스트림 없음).
+     * JS 는 이 응답 뒤에 자기 연결을 놓는다 — 같은 링크를 네이티브가 이미 쥐고 있어 끊김이 없다.
+     */
+    @PluginMethod
+    fun adoptBand(call: PluginCall) {
+        val address = call.getString("address")
+        if (address.isNullOrEmpty()) { call.reject("address_required"); return }
+        if (!MeasurementManager.ownership.nativeEnabled) { call.reject("native_ownership_disabled"); return }
+        MeasurementManager.holdBand(context, address) { ok -> call.resolve(JSObject().put("accepted", ok).put("band_state", if (ok) "connected" else "connecting")) }
+    }
+
+    /** SDD-293: 보류 해제(클래스 시작 없이 대기실을 떠남). 수집 중이면 무시하고 정지는 stopMeasurement 가 한다. */
+    @PluginMethod
+    fun releaseBand(call: PluginCall) {
+        val collecting = MeasurementManager.engine != null
+        if (!collecting) MeasurementManager.releaseHeldBand()
+        call.resolve(JSObject().put("accepted", !collecting))
+    }
+
     @PluginMethod
     fun startMeasurement(call: PluginCall) {
         val synthetic = call.getBoolean("synthetic", false) == true

@@ -36,6 +36,7 @@ import { deriveConnectionDiagnostics, useBacklogSince, type DiagSocketState } fr
 import { useNativeMeasurementV2, type NativeDiagnostics } from '../../../../lib/measurement-web/use-native-measurement';
 import { getNativeMeasurement, isNativeMeasurementAvailable } from '../../../../lib/native-measurement';
 import { Capacitor } from '@capacitor/core';
+import { useBandHold } from '../../../../lib/native-measurement/band-hold';
 import { describeNativeStartFailure, isNativeBandOwned } from '../../../../lib/native-measurement/device-status';
 import { applyBandSkipUi, readBandSkip, shouldAutoConnectBand, writeBandSkip } from '../../../../lib/class/flow/band-skip';
 import { toBandReport } from '../../../../lib/measurement-web/band-report';
@@ -479,10 +480,12 @@ export function MemberClassContainer({
   const bandEnabled = linkbandMode !== 'none';
   // 네이티브가 밴드를 소유한 동안(시작 직후 첫 snapshot 전 포함) JS BLE 상태는 보지 않는다 — 놓인 JS 연결을 '끊김'으로 오판하던 문제.
   const nativeOwnsBand = isNativeBandOwned(nativeM.path, nativeM.status, nd);
+  // SDD-293: 네이티브가 밴드를 보류로 쥔 동안(인계 직후~첫 snapshot 전)은 연결 상태가 이어져 보인다 — '연결 중/다시 연결' 억제
+  const bandHeld = useBandHold().held && nativeM.path === 'native';
   const derivedBandUi = deriveBandUi(
     {
-      connectionState: nd ? (nd.connected ? 'connected' : 'connecting') : nativeOwnsBand ? 'connecting' : band.connectionState,
-      everConnected: nd ? everConnected : nativeOwnsBand ? false : everConnected,
+      connectionState: nd ? (nd.connected ? 'connected' : 'connecting') : bandHeld ? 'connected' : nativeOwnsBand ? 'connecting' : band.connectionState,
+      everConnected: nd ? everConnected : bandHeld ? true : nativeOwnsBand ? false : everConnected,
       deviceStatus,
       signalQualityLevel: signalLevel,
       battery: nativeOwnsBand ? null : band.battery,
