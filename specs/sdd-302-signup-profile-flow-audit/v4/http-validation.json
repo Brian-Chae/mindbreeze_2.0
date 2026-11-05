@@ -1,0 +1,30 @@
+[
+  {
+    "file": "302-v4-logo.svg",
+    "status": 200
+  },
+  {
+    "file": "302-v4.html",
+    "status": 200
+  },
+  {
+    "file": "302-v4-board.html",
+    "status": 200
+  },
+  {
+    "file": "302-v4.css",
+    "status": 200
+  },
+  {
+    "file": "302-v4-google.svg",
+    "status": 200
+  },
+  {
+    "file": "302-v4-background.webp",
+    "status": 200
+  },
+  {
+    "file": "302-v4-apple.svg",
+    "status": 200
+  }
+]

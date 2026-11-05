@@ -14,6 +14,7 @@ from app.models.class_program import Class, ClassInstructor
 from app.models.organization import Organization
 from app.models.session import Session, SessionParticipant
 from app.services import upload_status_overview_service as svc
+from app.services import upload_status_service as detail_svc
 from tests.sdd237_helpers import auth_for, build_class_world, make_user
 from tests.test_upload_status import add_features, add_raw
 
@@ -37,12 +38,17 @@ def db(app_client):
 @pytest.fixture(autouse=True)
 def _clock(monkeypatch):
     svc.clear_cache()
+    detail_svc.clear_cache()
+    # 상세 API와 목록 API의 경과시간 판정 기준을 일치시킨다.
+    monkeypatch.setattr(detail_svc, "_utcnow", lambda: NOW)
+    monkeypatch.setattr(detail_svc, "CACHE_TTL_SEC", 0.0)
     monkeypatch.setattr(svc, "_utcnow", lambda: NOW)
     monkeypatch.setattr(svc, "TTL_LIVE_SEC", 0.0)
     monkeypatch.setattr(svc, "TTL_RECENT_SEC", 0.0)
     monkeypatch.setattr(svc, "TTL_OLD_SEC", 0.0)
     yield
     svc.clear_cache()
+    detail_svc.clear_cache()
 
 
 @pytest.fixture

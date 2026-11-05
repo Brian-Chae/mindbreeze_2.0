@@ -1,3 +1,4 @@
+import OptionalProfilePage from './pages/settings/optional-profile-page';
 import { MemberStructureHomePage, MemberClassesPage } from './route-pages';
 import { lazy, Suspense, useEffect, type ReactElement } from 'react';
 import { CounselingGate } from './components/routing/counseling-gate';
@@ -344,6 +345,7 @@ const router = createBrowserRouter(
           )}
         />
         <Route path="/notifications" element={<RoleGuard><NotificationCenterPage /></RoleGuard>} />
+        <Route path="/settings/optional-profile" element={<RoleGuard role="client"><OptionalProfilePage /></RoleGuard>} />
         <Route path="/settings" element={<RoleGuard><SettingsPage /></RoleGuard>} />
         {/* SDD-261: 데이터 저장·업로드 현황(서버 수신 기준). 권한은 서버가 최종 판정한다. */}
         {/* SDD-263: 데이터 현황 전체 회차 목록(정식 메뉴). SDD-261 의 설정 하위 picker 화면은 목록으로 대체한다. */}

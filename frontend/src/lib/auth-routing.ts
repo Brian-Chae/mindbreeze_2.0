@@ -11,6 +11,7 @@ export function resolvePostLoginPath(user: User, next: string | null = null): st
   if (user.role === 'org_admin') return '/dashboard/org';
   if (user.role === 'counselor') return user.onboarding_completed ? '/dashboard' : '/onboarding/counselor';
   if (user.role === 'client') {
+    if (Array.isArray(user.client_required_fields)) return user.client_required_fields.length ? '/onboarding/client/essentials' : '/app';
     if (user.onboarding_completed) return '/app';
     // FUNC-03: Google OAuth 가입자는 4단계 온보딩 대신 필수 정보 1페이지로 보낸다.
     // 이메일 가입자는 Step 1~2에서 필수 정보를 수집하는 4단계 온보딩을 유지한다.

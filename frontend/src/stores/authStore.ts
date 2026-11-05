@@ -17,6 +17,7 @@ import {
   disconnectSessionLiveSocket,
 } from '../lib/socket';
 import {
+  getUserMe,
   login as apiLogin,
   registerClient as apiRegisterClient,
   logout as apiLogout,
@@ -32,6 +33,7 @@ import {
 } from '../lib/api/auth';
 
 const USER_KEY = 'mb_user';
+let authEpoch = 0;
 
 /**
  * API7-01: 세션 복구 실패 안내. network/server 는 세션 만료가 아니므로
@@ -62,7 +64,7 @@ interface AuthState {
   /** 세션 복구 재시도 — initialize() 를 다시 실행한다. */
   retryInitialize: () => void;
   login: (email: string, password: string, role?: UserRole, rememberMe?: boolean) => Promise<User>;
-  loginGoogle: (idToken: string, inviteToken?: string, role?: string, rememberMe?: boolean, consents?: ConsentPayload, tokenKind?: 'access_token' | 'id_token', birthDate?: string) => Promise<User>;
+  loginGoogle: (idToken: string, inviteToken?: string, role?: string, rememberMe?: boolean, consents?: ConsentPayload, tokenKind?: 'access_token' | 'id_token', birthDate?: string, gender?: 'male' | 'female' | 'other', name?: string) => Promise<User>;
   loginApple: (payload: Omit<AppleLoginPayload, 'remember_me'>, rememberMe?: boolean) => Promise<User>;
   devLogin: (userId: string) => Promise<User>;
   registerClient: (data: ClientRegisterPayload, rememberMe?: boolean) => Promise<User>;
@@ -91,6 +93,7 @@ const applyLogin = (res: LoginResponse, requestedRole?: string): User => {
   if (requestedRole && res.user.role !== requestedRole) {
     throw new ApiError(403, '선택한 로그인 유형과 계정 유형이 다릅니다. 올바른 탭에서 다시 로그인해 주세요.', null);
   }
+  authEpoch += 1;
   tokenStorage.set(res.access_token); // refresh는 httpOnly cookie로 백엔드가 설정
   persistUser(res.user);
   return res.user;
@@ -111,6 +114,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   sessionError: null,
 
   initialize: (): void => {
+    const epoch = ++authEpoch;
     const user = loadUser();
     // SDD-139: localStorage(mb_user) 존재만으로 인증을 확정하지 않는다.
     // 서버 refresh 검증 성공 전까지 isInitialized=false 로 두어 UI 게이트가
@@ -129,9 +133,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // access token 복구 — refresh(httpOnly cookie)로 메모리 재적재.
     // API7-01: 실패 원인을 구분한다. 네트워크/서버 문제로 null 이 왔다고
     // 세션을 폐기(persistUser(null))하면, 일시적 장애에 사용자가 강제 로그아웃된다.
-    void refreshAccessTokenResult().then((result) => {
+    void refreshAccessTokenResult().then(async (result) => {
+      if (epoch !== authEpoch) return;
       if (result.ok) {
-        set({ accessToken: result.token, isAuthenticated: true, isInitialized: true, sessionError: null });
+        try {
+          const freshUser = await getUserMe();
+          if (epoch !== authEpoch) return;
+          persistUser(freshUser);
+          set({ user: freshUser, accessToken: result.token, isAuthenticated: true, isInitialized: true, sessionError: null });
+        } catch {
+          if (epoch !== authEpoch) return;
+          set({ accessToken: result.token, isAuthenticated: true, isInitialized: true, sessionError: recoveryNotice('network') });
+        }
         return;
       }
       if (result.reason === 'invalid') {
@@ -165,24 +178,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   login: async (email, password, role, rememberMe = true): Promise<User> => {
     const res = await apiLogin(email, password, role, rememberMe);
     const user = applyLogin(res, role);
-    set({ user, accessToken: res.access_token, isAuthenticated: true, sessionError: null });
+    set({ user, accessToken: res.access_token, isAuthenticated: true, isInitialized: true, sessionError: null });
     return user;
   },
 
-  loginGoogle: async (idToken, inviteToken, role, rememberMe = true, consents, tokenKind = 'access_token', birthDate): Promise<User> => {
+  loginGoogle: async (idToken, inviteToken, role, rememberMe = true, consents, tokenKind = 'access_token', birthDate, gender, name): Promise<User> => {
     const res = await apiLoginGoogle(
-      { [tokenKind]: idToken, invite_token: inviteToken, role, consents, birth_date: birthDate },
+      { [tokenKind]: idToken, invite_token: inviteToken, role, consents, birth_date: birthDate, gender, name },
       rememberMe,
     );
     const user = applyLogin(res, role);
-    set({ user, accessToken: res.access_token, isAuthenticated: true, sessionError: null });
+    set({ user, accessToken: res.access_token, isAuthenticated: true, isInitialized: true, sessionError: null });
     return user;
   },
 
   loginApple: async (payload, rememberMe = true): Promise<User> => {
     const res = await apiLoginApple(payload, rememberMe);
     const user = applyLogin(res, payload.role);
-    set({ user, accessToken: res.access_token, isAuthenticated: true, sessionError: null });
+    set({ user, accessToken: res.access_token, isAuthenticated: true, isInitialized: true, sessionError: null });
     return user;
   },
 
@@ -195,14 +208,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { loginDevUser } = await import('../lib/api/devAuth');
     const res = await loginDevUser(userId);
     const user = applyLogin(res);
-    set({ user, accessToken: res.access_token, isAuthenticated: true, sessionError: null });
+    set({ user, accessToken: res.access_token, isAuthenticated: true, isInitialized: true, sessionError: null });
     return user;
   },
 
   registerClient: async (data, rememberMe = true): Promise<User> => {
     const res = await apiRegisterClient(data, rememberMe);
     const user = applyLogin(res);
-    set({ user, accessToken: res.access_token, isAuthenticated: true, sessionError: null });
+    set({ user, accessToken: res.access_token, isAuthenticated: true, isInitialized: true, sessionError: null });
     return user;
   },
 
@@ -218,6 +231,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async (): Promise<void> => {
+    authEpoch += 1;
     try {
       const { revokePushRegistration } = await import('../lib/native/push');
       await revokePushRegistration();
@@ -288,9 +302,10 @@ tokenStorage.subscribe((token) => {
 
 /** 세션 만료(API7-05) — client.ts 의 terminateSession 이 발행한다. */
 function handleSessionExpired(): void {
+  authEpoch += 1;
   tokenStorage.clear();
   disconnectAllSockets();
-  useAuthStore.setState({ user: null, isAuthenticated: false, sessionError: null });
+  useAuthStore.setState({ user: null, isAuthenticated: false, isInitialized: true, sessionError: null });
 }
 
 /** 다른 탭의 로그아웃/로그인(API7-06) — storage 이벤트는 다른 탭에서만 발생한다. */
@@ -306,8 +321,9 @@ function handleAuthStorageEvent(event: StorageEvent): void {
   // 다음 요청에서 새 사용자로 refresh 되게 한다(이전 사용자 토큰 오사용 방지).
   try {
     const nextUser = JSON.parse(event.newValue) as User;
+    authEpoch += 1;
     tokenStorage.clear();
-    useAuthStore.setState({ user: nextUser, isAuthenticated: true, sessionError: null });
+    useAuthStore.setState({ user: nextUser, isAuthenticated: true, isInitialized: true, sessionError: null });
   } catch {
     // 손상된 저장값은 무시한다.
   }

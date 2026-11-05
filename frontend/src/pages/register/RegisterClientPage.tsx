@@ -9,6 +9,7 @@ import { BirthDateInput } from '../../components/auth/BirthDateInput';
 import { ConsentCheckList, type Consents } from '../../components/auth/ConsentCheckList';
 import { BIRTH_DATE_MESSAGES, checkBirthDate } from '../../lib/auth/age';
 import { hasRequiredConsents, toConsentPayload } from '../../lib/auth/consents';
+import { resolvePostLoginPath } from '../../lib/auth-routing';
 import { apiErrorCode } from '../../lib/api/auth';
 import { requestOtp, verifyOtp } from '../../lib/api/auth';
 import { checkCounselorCode, type CounselorCodeCheckResponse } from '../../lib/api/signup';
@@ -17,15 +18,6 @@ import { ApiError } from '../../lib/api/client';
 
 // 비밀번호 정책: 영문 + 숫자 + 특수문자, 8자 이상
 const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
-
-// FORM-02: 휴대전화 형식(010-XXXX-XXXX) — 온보딩(ClientOnboardingPage)과 동일 규칙으로 검증한다.
-const PHONE_REGEX = /^010-\d{4}-\d{4}$/;
-const formatPhone = (value: string): string => {
-  const digits = value.replace(/\D/g, '').slice(0, 11);
-  if (digits.length <= 3) return digits;
-  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
-};
 
 const GENDER_OPTIONS = [
   { value: 'male', label: '남성' },
@@ -36,14 +28,13 @@ const GENDER_OPTIONS = [
 type Gender = (typeof GENDER_OPTIONS)[number]['value'];
 
 interface StepIndicatorProps {
-  current: 1 | 2 | 3;
+  current: 1 | 2;
 }
 
 function StepIndicator({ current }: StepIndicatorProps) {
   const steps = [
     { n: 1 as const, label: '이메일 인증' },
-    { n: 2 as const, label: '약관 동의' },
-    { n: 3 as const, label: '정보 입력' },
+    { n: 2 as const, label: '정보 입력·동의' },
   ];
   return (
     <div className="flex items-center justify-center gap-2 mb-6">
@@ -83,7 +74,7 @@ export default function RegisterClientPage() {
 
   const registerClient = useAuthStore((s) => s.registerClient);
 
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2>(1);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -101,7 +92,6 @@ export default function RegisterClientPage() {
   const [name, setName] = useState('');
   const [gender, setGender] = useState<Gender | ''>('');
   const [birthDate, setBirthDate] = useState('');
-  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [counselorCode, setCounselorCode] = useState('');
@@ -165,15 +155,6 @@ export default function RegisterClientPage() {
     }
   };
 
-  const handleConsentNext = (): void => {
-    setError(null);
-    if (!hasRequiredConsents(consents)) {
-      setError('필수 약관에 모두 동의해야 가입할 수 있습니다');
-      return;
-    }
-    setStep(3);
-  };
-
   const handleCheckCode = async (): Promise<void> => {
     setError(null);
     setMatchedCounselor(null);
@@ -205,6 +186,10 @@ export default function RegisterClientPage() {
     e.preventDefault();
     setError(null);
 
+    if (!hasRequiredConsents(consents)) {
+      setError('필수 약관에 모두 동의해야 가입할 수 있습니다');
+      return;
+    }
     if (!name.trim()) {
       setError('이름을 입력해주세요');
       return;
@@ -217,10 +202,6 @@ export default function RegisterClientPage() {
     const birthCheck = checkBirthDate(birthDate);
     if (birthCheck !== 'ok') {
       setError(BIRTH_DATE_MESSAGES[birthCheck]);
-      return;
-    }
-    if (phone.trim() && !PHONE_REGEX.test(phone.trim())) {
-      setError('연락처를 010-0000-0000 형식으로 입력해주세요');
       return;
     }
     if (!PASSWORD_REGEX.test(password)) {
@@ -242,7 +223,7 @@ export default function RegisterClientPage() {
 
     setLoading(true);
     try {
-      await registerClient({
+      const user = await registerClient({
         email,
         password,
         name: name.trim(),
@@ -251,16 +232,9 @@ export default function RegisterClientPage() {
         invite_token: inviteToken || undefined,
         gender,
         birth_date: birthDate,
-        phone: phone.trim() || undefined,
         counselor_code: isInviteRegistration ? undefined : counselorCode.trim(),
       });
-      // 초대 가입: 온보딩 Step 4에서 코드 입력 없이 연결 확인 화면으로 진입.
-      // 코드 가입: ?code= 로 Step 4 자동 매칭(재입력 없이 연결 확인)을 유도한다.
-      navigate(
-        isInviteRegistration
-          ? '/onboarding/client?source=invite'
-          : `/onboarding/client?code=${counselorCode.trim()}`,
-      );
+      navigate(resolvePostLoginPath(user));
     } catch (err) {
       if (err instanceof ApiError) {
         if (apiErrorCode(err) === 'ACCOUNT_DELETION_PENDING') {
@@ -280,7 +254,7 @@ export default function RegisterClientPage() {
   };
 
   return (
-    <AuthShell title={isInviteRegistration ? '초대받은 회원 가입' : '회원 가입'} maxWidthClass="max-w-[480px]">
+    <AuthShell variant="member" title={isInviteRegistration ? '초대받은 회원 가입' : '회원 가입'} maxWidthClass="max-w-[480px]">
       <div className="space-y-5">
 
         {isInviteRegistration && (
@@ -299,8 +273,7 @@ export default function RegisterClientPage() {
 
           <h2 className="text-2xl font-bold text-[#1F1F1F] text-center">
             {step === 1 && '이메일 인증'}
-            {step === 2 && '약관 동의'}
-            {step === 3 && '정보 입력'}
+            {step === 2 && '가입 정보를 확인해요'}
           </h2>
 
           {/* Step 1: 이메일 + OTP */}
@@ -369,32 +342,8 @@ export default function RegisterClientPage() {
             </div>
           )}
 
-          {/* Step 2: 약관 동의 */}
-          {step === 2 && (
-            <div className="space-y-4">
-              <ConsentCheckList consents={consents} onChange={setConsents} />
-              {error && <p role="alert" className="text-red-500 text-sm text-center">{error}</p>}
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="flex-1 h-[52px] rounded-full border border-[#D4D4D4] text-[#4A4A4A] font-semibold hover:bg-[#F3E9F8]"
-                >
-                  이전
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConsentNext}
-                  className="flex-1 h-[52px] rounded-full bg-[#5F0080] text-white font-semibold hover:opacity-90"
-                >
-                  다음
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Step 3: 개인정보 + 비밀번호 + 상담사 코드 */}
-          {step === 3 && (
+          {step === 2 && (
             <form onSubmit={handleRegister} className="space-y-4">
               <div className="space-y-2">
                 <label htmlFor="name" className="block text-sm font-medium text-[#4A4A4A]">
@@ -439,23 +388,6 @@ export default function RegisterClientPage() {
                   disabled={loading}
                   labelClassName="block text-sm font-medium text-[#4A4A4A]"
                   inputClassName={inputClass}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="phone" className="block text-sm font-medium text-[#4A4A4A]">
-                  전화번호 <span className="font-normal text-[#6F6F6F]">(선택)</span>
-                </label>
-                <input
-                  id="phone"
-                  type="tel"
-                  inputMode="numeric"
-                  value={phone}
-                  onChange={(e) => setPhone(formatPhone(e.target.value))}
-                  placeholder="010-0000-0000"
-                  maxLength={13}
-                  disabled={loading}
-                  className={inputClass}
                 />
               </div>
 
@@ -542,10 +474,12 @@ export default function RegisterClientPage() {
 
               {error && <p role="alert" className="text-red-500 text-sm text-center">{error}</p>}
 
+              <ConsentCheckList consents={consents} onChange={setConsents} />
+
               <div className="flex gap-3">
                 <button
                   type="button"
-                  onClick={() => setStep(2)}
+                  onClick={() => setStep(1)}
                   disabled={loading}
                   className="flex-1 h-[52px] rounded-full border border-[#D4D4D4] text-[#4A4A4A] font-semibold hover:bg-[#F3E9F8]"
                 >
@@ -553,10 +487,10 @@ export default function RegisterClientPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || !name.trim() || !gender || checkBirthDate(birthDate) !== 'ok' || !hasRequiredConsents(consents)}
                   className="flex-1 h-[52px] rounded-full bg-[#5F0080] text-white font-semibold hover:opacity-90 disabled:opacity-50"
                 >
-                  {loading ? '가입 중...' : '가입 완료'}
+                  {loading ? '가입 중...' : '동의하고 가입하기'}
                 </button>
               </div>
             </form>

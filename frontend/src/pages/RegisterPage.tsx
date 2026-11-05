@@ -1,3 +1,4 @@
+import RegisterStartPage from './register/RegisterStartPage';
 import { isNativeApp } from '../lib/native/platform';
 // 회원가입 진입: 역할 선택 (회원 / 상담사 / 기관) — SDD-073
 // 기존 ?role=client|counselor, ?type=client&token=... 주소는 역할별 페이지로 연결한다.
@@ -44,7 +45,7 @@ export default function RegisterPage() {
 
   // 기존 주소 호환 — invite_token(code 포함) 등 쿼리를 보존한 채 역할별 페이지로 연결
   if (roleParam === 'client' || typeParam === 'client') {
-    return <Navigate to={`/register/client${search}`} replace />;
+    return <RegisterStartPage />;
   }
   if (roleParam === 'counselor') {
     return <Navigate to={`/register/counselor${search}`} replace />;
@@ -68,7 +69,7 @@ export default function RegisterPage() {
 
         <div className="space-y-4">
           <RoleCard
-            to="/register/client"
+            to="/register?role=client"
             title="회원 가입"
             description="코치와 연결해 상담·명상 서비스를 이용해요."
             cta="가입하기"

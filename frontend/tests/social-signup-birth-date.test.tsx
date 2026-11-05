@@ -40,7 +40,7 @@ import SignupConfirmPage from '../src/pages/SignupConfirmPage';
 import { useSocialSignupStore } from '../src/stores/social-signup-store';
 import InviteLandingPage from '../src/pages/clients/InviteLandingPage';
 
-const okUser = { id: 'u1', email: 'a@b.c', name: 'A', role: 'client' };
+const okUser = { id: 'u1', email: 'a@b.c', name: 'A', role: 'client', client_required_fields: [] };
 const okRes = { access_token: 't', token_type: 'bearer', user: okUser };
 const birthError = () => new ApiError(422, '생년월일을 입력해 주세요', { detail: '생년월일을 입력해 주세요' });
 
@@ -91,6 +91,9 @@ async function check(el: HTMLInputElement) {
 
 const typeBirth = async (value: string) => setInput(container.querySelector('#signup-birth-date') as HTMLInputElement, value);
 const checkAllRequired = async () => {
+  await setInput(container.querySelector('[aria-label="이름"]') as HTMLInputElement, '가입 회원');
+  const gender = container.querySelector('[aria-label="성별"]') as HTMLSelectElement;
+  await act(async () => { Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!.call(gender, 'female'); gender.dispatchEvent(new Event('change', { bubbles: true })); });
   for (const cb of container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')) {
     if (cb.parentElement?.textContent?.includes('필수 항목 전체 동의')) await check(cb);
   }
@@ -143,7 +146,7 @@ test('웹 Google: 신규(422)면 access_token 으로 확인 화면 후 재요청
   await checkAllRequired();
   await click(submitBtn());
   expect(h.loginGoogleApi).toHaveBeenCalledTimes(2);
-  expect(h.loginGoogleApi.mock.calls[1][0]).toMatchObject({ access_token: 'web-access', birth_date: '1990-05-17' });
+  expect(h.loginGoogleApi.mock.calls[1][0]).toMatchObject({ name: '가입 회원', gender: 'female', access_token: 'web-access', birth_date: '1990-05-17' });
   vi.unstubAllEnvs();
 });
 
@@ -159,7 +162,7 @@ test('Apple: 신규(422)면 확인 화면 후 같은 nonce·id_token 으로 birt
   await checkAllRequired();
   await click(submitBtn());
   expect(h.loginAppleApi).toHaveBeenCalledTimes(2);
-  expect(h.loginAppleApi.mock.calls[1][0]).toMatchObject({ birth_date: '1990-05-17', id_token: 'apple-id-token-1234', nonce: 'nonce-12345678' });
+  expect(h.loginAppleApi.mock.calls[1][0]).toMatchObject({ name: '가입 회원', gender: 'female', birth_date: '1990-05-17', id_token: 'apple-id-token-1234', nonce: 'nonce-12345678' });
 });
 
 test('422 가 아닌 오류(401·409 등)는 확인 화면으로 보내지 않고 오류 문구를 보인다', async () => {
@@ -222,7 +225,7 @@ test('초대 페이지: 신규 Google 가입은 확인 화면으로 가고, invi
   await checkAllRequired();
   await click(submitBtn());
   expect(h.loginGoogleApi).toHaveBeenCalledTimes(2);
-  expect(h.loginGoogleApi.mock.calls[1][0]).toMatchObject({ birth_date: '1990-05-17', invite_token: 'tok123' });
+  expect(h.loginGoogleApi.mock.calls[1][0]).toMatchObject({ name: '가입 회원', gender: 'female', birth_date: '1990-05-17', invite_token: 'tok123' });
   vi.unstubAllGlobals();
 });
 

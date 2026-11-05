@@ -1,209 +1,51 @@
-// Google OAuth 회원가입 직후 필수 정보 입력 페이지
-// 내담자 온보딩의 마지막 단계
-
+// 기존 회원의 누락 필수정보만 보완한다. 선택 전화는 설정에서 관리한다.
 import { useState, type FormEvent } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { BirthDateInput } from '../../components/auth/BirthDateInput';
-import { useNavigate } from 'react-router-dom';
+import AuthShell from '../../components/auth/AuthShell';
 import { useAuthStore } from '../../stores/authStore';
-import { useRequireAuth } from '../../hooks/useAuth';
-import { apiClient, ApiError } from '../../lib/api/client';
+import { updateUserMe, type UpdateUserMePayload } from '../../lib/api/auth';
 import { completeClientOnboarding } from '../../lib/api/onboarding';
-import type { VerifiedTier } from '../../lib/api/auth';
-import { buttonClass } from '../../components/ui';
-
-interface EssentialsForm {
-  name: string;
-  gender: string;
-  birthDate: string;
-  phone: string;
-}
-
-// FORM-02: 휴대전화 형식(010-XXXX-XXXX) — 온보딩과 동일 규칙으로 검증한다.
-const PHONE_REGEX = /^010-\d{4}-\d{4}$/;
-const formatPhone = (value: string): string => {
-  const digits = value.replace(/\D/g, '').slice(0, 11);
-  if (digits.length <= 3) return digits;
-  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
-};
+import { checkBirthDate } from '../../lib/auth/age';
 
 export default function ClientEssentialsPage() {
-  useRequireAuth();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
-
-  const [form, setForm] = useState<EssentialsForm>({
-    name: user?.name ?? '',
-    gender: '',
-    birthDate: '',
-    phone: '',
-  });
+  const [form, setForm] = useState({ name: user?.name ?? '', gender: user?.gender ?? '', birthDate: user?.birth_date ?? '' });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // 이름, 성별, 생년월일 모두 입력 + 전화번호 선택
-  const isFormValid = form.name.trim() !== '' && form.gender !== '' && form.birthDate !== '';
-
-  const handleSubmit = async (e: FormEvent) => {
+  const [error, setError] = useState('');
+  if (!user) return null;
+  if (user.client_required_fields?.length === 0) return <Navigate to="/app" replace />;
+  const missing = user.client_required_fields ?? ['name', 'gender', 'birth_date'];
+  const valid = (!missing.includes('name') || Boolean(form.name.trim())) && (!missing.includes('gender') || Boolean(form.gender)) && (!missing.includes('birth_date') || checkBirthDate(form.birthDate) === 'ok');
+  async function submit(e: FormEvent) {
     e.preventDefault();
-    if (!isFormValid) return;
-    if (form.phone.trim() && !PHONE_REGEX.test(form.phone.trim())) {
-      setError('연락처를 010-0000-0000 형식으로 입력해주세요');
-      return;
-    }
-
-    setError(null);
-    setLoading(true);
+    if (!valid || loading) return;
+    setLoading(true); setError('');
     try {
-      // PATCH /api/v1/auth/users/me — 필수 정보만 저장한다.
-      // API-01: onboarding_completed 는 백엔드 UpdateUserMeRequest 에 없는 필드이며
-      // 온보딩 완료는 전용 엔드포인트(/onboarding/client/complete)로만 처리한다.
-      const updatedUser = await apiClient.patch<{
-        id: string;
-        email: string;
-        name: string;
-        role: string;
-        verified_tier: string;
-        onboarding_completed: boolean;
-        auth_provider: string;
-        counselors: Array<{ id: string; name: string; profile_image: string | null }>;
-      }>('/auth/users/me', {
-        name: form.name.trim(),
-        gender: form.gender,
-        birth_date: form.birthDate,
-        phone: form.phone || undefined,
-      });
-
-      // FUNC-03: 필수 정보 저장 후 전용 완료 엔드포인트를 호출해야
-      // onboarding_completed 가 true 로 전환된다(PATCH 로는 갱신되지 않음).
-      //
-      // MB2-ONB-GOOGLE-ESSENTIALS: 백엔드 client_complete 는 auth_provider=google
-      //   내담자에 대해 step1~4 강제를 면제하므로, 이 페이지는 step 을 기록하지 않고
-      //   PATCH 로 저장한 필수 정보만으로 바로 완료 처리한다(에러 시 재시도 가능).
+      const payload: UpdateUserMePayload = {};
+      if (missing.includes('name')) payload.name = form.name.trim();
+      if (missing.includes('gender')) payload.gender = form.gender as UpdateUserMePayload['gender'];
+      if (missing.includes('birth_date')) payload.birth_date = form.birthDate;
+      const updated = await updateUserMe(payload);
       await completeClientOnboarding();
-
-      // authStore 사용자 정보 갱신 (완료 상태 반영)
-      setUser({
-        id: updatedUser.id,
-        email: updatedUser.email,
-        name: updatedUser.name,
-        role: updatedUser.role as 'counselor' | 'client' | 'admin' | 'org_admin' | 'platform_admin',
-        verified_tier: updatedUser.verified_tier as VerifiedTier,
-        onboarding_completed: true,
-        auth_provider: updatedUser.auth_provider,
-        counselors: updatedUser.counselors,
-      });
-
-      navigate('/app');
-    } catch (err) {
-      const message =
-        err instanceof ApiError
-          ? err.message
-          : '저장에 실패했습니다. 다시 시도해주세요.';
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center p-4">
-      <div className="w-full max-w-md mx-auto">
-        {/* 카드 */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 space-y-6">
-          {/* 헤더 */}
-          <div className="text-center space-y-2">
-            <h1 className="text-2xl font-bold text-[#1F1F1F]">마지막 단계예요!</h1>
-            <p className="text-[15px] text-[#6F6F6F] leading-relaxed">
-              원활한 서비스 이용을 위해
-              <br />
-              아래 정보를 입력해주세요
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* 이름 (Google에서 받은 값 pre-fill, 수정 가능) */}
-            <div className="space-y-1.5">
-              <label htmlFor="essentials-name" className="block text-sm font-medium text-[#1F1F1F]">
-                이름
-              </label>
-              <input
-                id="essentials-name"
-                type="text"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                disabled={loading}
-                maxLength={100}
-                placeholder="이름을 입력해주세요"
-                className="w-full px-4 py-3 border border-[#D4D4D4] rounded-xl text-[#1F1F1F] bg-white placeholder:text-[#9A9BA8] focus:ring-2 focus:ring-[#5F0080] focus:border-transparent outline-none disabled:opacity-50"
-              />
-            </div>
-
-            {/* 성별 */}
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-[#1F1F1F]">
-                성별
-              </label>
-              <select
-                value={form.gender}
-                onChange={(e) => setForm({ ...form, gender: e.target.value })}
-                disabled={loading}
-                className="w-full px-4 py-3 border border-[#D4D4D4] rounded-xl text-[#1F1F1F] bg-white focus:ring-2 focus:ring-[#5F0080] focus:border-transparent outline-none disabled:opacity-50"
-              >
-                <option value="">선택해주세요</option>
-                <option value="male">남성</option>
-                <option value="female">여성</option>
-                <option value="other">기타</option>
-              </select>
-            </div>
-
-            {/* 생년월일 */}
-            <div className="space-y-1.5">
-              <BirthDateInput
-                value={form.birthDate}
-                onChange={(iso) => setForm((prev) => ({ ...prev, birthDate: iso }))}
-                disabled={loading}
-                labelClassName="block text-sm font-medium text-[#1F1F1F]"
-                inputClassName="w-full px-4 py-3 border border-[#D4D4D4] rounded-xl text-[#1F1F1F] bg-white focus:ring-2 focus:ring-[#5F0080] focus:border-transparent outline-none disabled:opacity-50"
-              />
-            </div>
-
-            {/* 휴대전화번호 (선택) */}
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-[#1F1F1F]">
-                휴대전화번호 <span className="text-[#6F6F6F] font-normal">(선택)</span>
-              </label>
-              <input
-                type="tel"
-                inputMode="numeric"
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })}
-                placeholder="010-0000-0000"
-                maxLength={13}
-                disabled={loading}
-                className="w-full px-4 py-3 border border-[#D4D4D4] rounded-xl text-[#1F1F1F] bg-white placeholder:text-[#9A9BA8] focus:ring-2 focus:ring-[#5F0080] focus:border-transparent outline-none disabled:opacity-50"
-              />
-            </div>
-
-            {/* 에러 메시지 */}
-            {error && (
-              <p className="text-[13px] text-red-500 text-center" role="alert">
-                {error}
-              </p>
-            )}
-
-            {/* 제출 버튼 */}
-            <button
-              type="submit"
-              disabled={!isFormValid || loading}
-              className={buttonClass({ variant: 'primary', className: 'w-full' })}
-            >
-              {loading ? '저장 중...' : '시작하기'}
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
+      setUser({ ...updated, onboarding_completed: true });
+      navigate('/app', { replace: true });
+    } catch (e) { setError(e instanceof Error ? e.message : '저장하지 못했어요. 다시 시도해 주세요.'); }
+    finally { setLoading(false); }
+  }
+  return <AuthShell variant="member" title="필수 정보 확인">
+    <main className="space-y-5">
+      <h2 className="text-2xl font-semibold">이 정보만 확인할게요</h2>
+      <p className="text-sm text-white/80">서비스 이용에 필요한 정보를 채워 주세요. 이미 저장한 정보는 그대로 사용해요.</p>
+      <form onSubmit={submit} className="space-y-5">
+        {missing.includes('name') && <label className="block text-sm">이름<input aria-label="이름" className="mt-2 w-full" required maxLength={100} value={form.name} disabled={loading} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>}
+        {missing.includes('gender') && <label className="block text-sm">성별<select aria-label="성별" className="mt-2 w-full" required value={form.gender} disabled={loading} onChange={(e) => setForm({ ...form, gender: e.target.value })}><option value="">선택해 주세요</option><option value="male">남성</option><option value="female">여성</option><option value="other">기타</option></select></label>}
+        {missing.includes('birth_date') && <BirthDateInput value={form.birthDate} onChange={(birthDate) => setForm({ ...form, birthDate })} disabled={loading} />}
+        {error && <p role="alert" className="text-red-300">{error}</p>}
+        <button type="submit" disabled={!valid || loading} className="h-[52px] w-full rounded-full bg-[#5F0080] font-semibold disabled:opacity-50">{loading ? '저장 중…' : '저장하고 시작하기'}</button>
+      </form>
+    </main>
+  </AuthShell>;
 }

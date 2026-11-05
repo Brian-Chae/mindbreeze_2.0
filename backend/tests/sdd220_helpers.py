@@ -62,6 +62,7 @@ def email_register_payload(email: str, **overrides):
         "email_verify_token": email_verify_service.generate_email_verify_token(email),
         "consents": consents(),
         "birth_date": "1990-05-01",
+        "gender": "female",
     }
     payload.update(overrides)
     return payload

@@ -170,14 +170,9 @@ def _ensure_account_active(user: User) -> None:
 
 
 def _to_user_response(user: User) -> UserResponse:
-    """User ORM 객체 → UserResponse 변환.
+    from app.services.auth_profile_service import to_user_response
 
-    Pydantic ``from_attributes=True`` 는 SQLAlchemy ``@property`` 를
-    건너뛸 수 있으므로 ``counselor_code`` 는 수동으로 주입한다.
-    """
-    resp = UserResponse.model_validate(user)
-    resp.counselor_code = user.counselor_code
-    return resp
+    return to_user_response(user)
 
 
 # ---------------------------------------------------------------------------
@@ -215,6 +210,8 @@ async def register(req: RegisterRequest, db: Session = Depends(get_db)):
             detail="서비스 이용약관/개인정보 처리방침 동의는 필수입니다",
         )
 
+    if req.gender is None:
+        raise signup_policy_service.api_error(422, "GENDER_REQUIRED", "성별을 선택해 주세요")
     user, _access_token, _refresh_token = _create_user_with_role(
         role="client",
         email_verify_token=req.email_verify_token,
@@ -225,8 +222,12 @@ async def register(req: RegisterRequest, db: Session = Depends(get_db)):
         db=db,
         remember_me=req.remember_me,
         birth_date=req.birth_date,
+        commit=False,
     )
-    return user
+    db.add(ClientProfile(user_id=user.id, gender=req.gender, birth_date=user.birth_date))
+    db.commit()
+    db.refresh(user)
+    return _to_user_response(user)
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -427,6 +428,8 @@ async def register_client(
     """
     from app.services import client_service, onboarding_service, signup_application_service
 
+    if req.gender is None:
+        raise signup_policy_service.api_error(422, "GENDER_REQUIRED", "성별을 선택해 주세요")
     # 사용자 생성 전에 실패 가능한 입력을 먼저 검증한다 (불완전 가입 방지)
     matched_counselor = None
     if not req.invite_token and req.counselor_code:
@@ -884,12 +887,14 @@ async def google_auth(
         birth = signup_policy_service.validate_new_account(
             db, email=email, birth_date=req.birth_date, consents=req.consents
         )
+        if req.gender is None:
+            raise signup_policy_service.api_error(422, "GENDER_REQUIRED", "성별을 선택해 주세요")
         # 신규 Google 사용자 생성 (내담자)
         rand_pw = secrets.token_urlsafe(32)
         user = User(
             email=email,
             password_hash=hash_password(rand_pw),
-            name=name,
+            name=(req.name or "").strip() or name,
             role=role,
             auth_provider="google",
             verified_tier="email",
@@ -898,6 +903,7 @@ async def google_auth(
         db.add(user)
         db.flush()
 
+        db.add(ClientProfile(user_id=user.id, gender=req.gender, birth_date=birth))
         # 약관 동의 — 사용자가 명시적으로 동의한 항목만 기록한다(선택 동의는 제출값 그대로).
         signup_policy_service.record_consents(db, user.id, req.consents)
         db.commit()
@@ -1029,6 +1035,8 @@ async def apple_auth(
         birth = signup_policy_service.validate_new_account(
             db, email=raw_email, birth_date=req.birth_date, consents=req.consents
         )
+        if req.gender is None:
+            raise signup_policy_service.api_error(422, "GENDER_REQUIRED", "성별을 선택해 주세요")
         new_account = True
 
     # 검증을 모두 통과한 뒤에만 nonce 를 소비한다(원자적 1회) — 병렬 replay 도 성공은 최대 1건.
@@ -1061,6 +1069,7 @@ async def apple_auth(
                     encrypted_refresh_token=apple_auth_service.encrypt_token(refresh_plain),
                 )
             )
+            db.add(ClientProfile(user_id=user.id, gender=req.gender, birth_date=birth))
             signup_policy_service.record_consents(db, user.id, req.consents)
             db.commit()
         except IntegrityError:
@@ -1119,6 +1128,18 @@ def _apply_invite_token(invite_token: str, user: User, db: Session) -> None:
 # PATCH /users/me — 사용자 기본정보 업데이트
 # ---------------------------------------------------------------------------
 
+@router.get("/users/me", response_model=UserResponse)
+def get_user_me(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """세션 복구 시 최신 본인 필수정보와 선택 프로필 보류 상태를 반환한다."""
+    user = db.query(User).filter(User.id == uuid.UUID(current_user["id"])).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
+    return _to_user_response(user)
+
+
 @router.patch("/users/me", response_model=UserResponse)
 async def update_user_me(
     req: UpdateUserMeRequest,
@@ -1154,8 +1175,8 @@ async def update_user_me(
         if user.name != req.name:
             name_changed = True
         user.name = req.name
-    if req.phone is not None:
-        user.phone = req.phone
+    if "phone" in req.model_fields_set:
+        user.phone = (req.phone or "").strip() or None
 
     # ClientProfile 필드 업데이트 (gender, birth_date) — client 역할만 도달한다
     if req.gender is not None or req.birth_date is not None:

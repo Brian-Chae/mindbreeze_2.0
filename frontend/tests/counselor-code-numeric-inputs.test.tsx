@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-// 코치(상담사) 코드 입력 화면(ClientOnboardingPage, RegisterClientPage)의 숫자 키패드 속성 및 숫자 외 문자 제거 단언
+// 코치(상담사) 코드 입력 화면(RegisterClientPage)의 숫자 키패드 속성 및 숫자 외 문자 제거 단언
 import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -64,47 +64,31 @@ afterEach(async () => {
   host = null;
 });
 
-describe('ClientOnboardingPage 코치 코드 숫자 입력', () => {
-  it('Step 4에서 inputMode="numeric", pattern="[0-9]*", autoComplete="off" 및 6자리 숫자 안내 문구를 단언한다', async () => {
+describe('ClientOnboardingPage 이전 주소 호환', () => {
+  it.each([
+    { required: [] as string[], target: '회원 홈' },
+    { required: ['gender'], target: '필수 정보 보완' },
+  ])('필수정보 누락 $required에 따라 $target으로 이동한다', async ({ required, target }) => {
     useAuthStore.setState({
-      user: { id: 'u1', name: '회원', role: 'client', counselors: [] } as never,
-      isAuthenticated: true,
-      isInitialized: true,
+      user: { id: 'u1', name: '회원', role: 'client', counselors: [], onboarding_completed: true, client_required_fields: required } as never,
+      isAuthenticated: true, isInitialized: true,
     });
-    // Step 4로 바로 진입
-    getOnboardingProgress.mockResolvedValueOnce({
-      current_step: 4,
-      step_data: {},
-    });
-
     await act(async () => {
-      root!.render(
-        createElement(MemoryRouter, { initialEntries: ['/onboarding/client'] }, createElement(ClientOnboardingPage)),
-      );
+      root!.render(createElement(MemoryRouter, { initialEntries: ['/onboarding/client'] }, createElement(Routes, null,
+        createElement(Route, { path: '/onboarding/client', element: createElement(ClientOnboardingPage) }),
+        createElement(Route, { path: '/app', element: createElement('p', null, '회원 홈') }),
+        createElement(Route, { path: '/onboarding/client/essentials', element: createElement('p', null, '필수 정보 보완') }),
+      )));
     });
     await flush();
-
-    const input = host!.querySelector('#onboarding-counselor-code') as HTMLInputElement;
-    expect(input).not.toBeNull();
-    expect(input.getAttribute('inputmode')).toBe('numeric');
-    expect(input.getAttribute('pattern')).toBe('[0-9]*');
-    expect(input.getAttribute('autocomplete')).toBe('off');
-    expect(host!.textContent).toContain('6자리 숫자');
-
-    // 숫자 외 문자(영문, 기호) 입력 시 제거되고 숫자만 최대 6자리 남는지 검증
-    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-    await act(async () => {
-      setter.call(input, 'ABC123!@#456789');
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-    await flush();
-
-    expect(input.value).toBe('123456');
+    expect(host!.textContent).toBe(target);
+    expect(host!.querySelector('#onboarding-counselor-code')).toBeNull();
+    expect(getOnboardingProgress).not.toHaveBeenCalled();
   });
 });
 
 describe('RegisterClientPage 코치 코드 숫자 입력', () => {
-  it('Step 3 진입 시 inputMode="numeric", pattern="[0-9]*", autoComplete="off" 및 숫자 외 문자 필터링을 단언한다', async () => {
+  it('Step 2 진입 시 inputMode="numeric", pattern="[0-9]*", autoComplete="off" 및 숫자 외 문자 필터링을 단언한다', async () => {
     await act(async () => {
       root!.render(
         createElement(MemoryRouter, { initialEntries: ['/register/client'] }, createElement(RegisterClientPage)),
@@ -144,22 +128,7 @@ describe('RegisterClientPage 코치 코드 숫자 입력', () => {
     });
     await flush();
 
-    // Step 2: 약관 전체 동의
-    const allAgree = host!.querySelector('input[type="checkbox"]') as HTMLInputElement;
-    if (allAgree) {
-      await act(async () => {
-        allAgree.click();
-      });
-      await flush();
-    }
-
-    const nextBtn2 = Array.from(host!.querySelectorAll('button')).find((b) => b.textContent?.includes('다음'));
-    await act(async () => {
-      nextBtn2?.click();
-    });
-    await flush();
-
-    // Step 3 진입 확인
+    // Step 2 진입 확인
     const codeInput = host!.querySelector('#counselorCode') as HTMLInputElement;
     expect(codeInput).not.toBeNull();
     expect(codeInput.getAttribute('inputmode')).toBe('numeric');
