@@ -61,7 +61,7 @@ async function refreshViaNative(): Promise<RefreshResult | null> {
   let r = await nativeEnsureAccess({ apiBase: BASE_URL, forceRefresh: gen !== null, observedGeneration: gen });
   if (r?.status === 'no_credentials') {
     // 구 빌드가 JS 에 남긴 refresh 를 native 에 1회 이관한다(native 가 비어 있을 때만 — 최신 쌍을 되돌리지 않는다).
-    let legacy: string | null = null;
+    let legacy: string | null;
     try { legacy = localStorage.getItem(NATIVE_REFRESH_KEY); } catch { legacy = null; }
     if (!legacy) return { ok: false, token: null, reason: 'invalid' };
     if (!(await nativeAdopt(tokenStorage.getAccess(), legacy))) return null;
