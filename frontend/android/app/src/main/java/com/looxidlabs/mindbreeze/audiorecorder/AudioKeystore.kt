@@ -22,6 +22,11 @@ object AudioKeystore {
         return g.generateKey()
     }
 
-    fun tokenStore(ctx: Context) = SealedTokenStore(File(ctx.filesDir, "audiorecorder/cred.bin"), { key() }, "audio")
+    /**
+     * SDD-305: 녹음도 측정과 **같은 저장소**(KeystoreFactory)를 써서 단일 인증 조정자를 공유한다.
+     * 예전 별도 저장소(audiorecorder/cred.bin)는 refresh 복사본을 따로 회전시켜 충돌을 만들었으므로 더는 쓰지 않는다(파일은 삭제하지 않음).
+     */
+    fun tokenStore(ctx: Context) = com.looxidlabs.mindbreeze.measurement.runtime.KeystoreFactory.tokenStore(ctx)
+    @Suppress("unused") private fun legacyTokenStore(ctx: Context) = SealedTokenStore(File(ctx.filesDir, "audiorecorder/cred.bin"), { key() }, "audio")
     fun queueDir(ctx: Context) = File(ctx.filesDir, "audiorecorder/queue")
 }

@@ -9,6 +9,8 @@ export type BackgroundSupport = 'supported' | 'unsupported' | 'needs_permission'
 
 export interface Capabilities {
   bridge_version: 1;
+  /** SDD-305: 1 이상이면 native 인증 조정자(ensureAccess/handoffCredentials/signOutNative) 지원. 없으면 구 APK. */
+  authCoordinator?: number;
   platform: 'ios' | 'android' | 'web';
   os_version: string;
   native_runtime_version: string | null;

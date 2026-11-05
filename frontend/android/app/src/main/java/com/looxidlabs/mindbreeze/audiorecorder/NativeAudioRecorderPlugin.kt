@@ -9,6 +9,7 @@ import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
+import com.looxidlabs.mindbreeze.auth.NativeAuthCoordinator
 import com.looxidlabs.mindbreeze.measurement.live.HttpTokenSource
 import com.looxidlabs.mindbreeze.measurement.live.TokenStore
 
@@ -54,13 +55,15 @@ class NativeAudioRecorderPlugin : Plugin(), EngineListener, UploadListener {
     fun start(call: PluginCall) {
         val sid = call.getString("sessionId"); val api = call.getString("apiBase")
         val at = call.getString("accessToken"); val rt = call.getString("refreshToken")
-        if (sid.isNullOrEmpty() || api.isNullOrEmpty() || at.isNullOrEmpty() || rt.isNullOrEmpty()) { call.reject("invalid arguments", "unsupported"); return }
+        // SDD-305: 토큰 쌍이 없어도(웹이 refresh 복사본을 들고 있지 않음) native 조정자에 자격증명이 있으면 시작한다.
+        val hasStored = !store.accessToken().isNullOrEmpty() || !store.refreshToken().isNullOrEmpty()
+        if (sid.isNullOrEmpty() || api.isNullOrEmpty() || (!hasStored && (at.isNullOrEmpty() || rt.isNullOrEmpty()))) { call.reject("invalid arguments", "unsupported"); return }
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             call.reject("microphone permission denied", "permission_denied"); return
         }
         if (sid.contains('/') || sid.contains("..")) { call.reject("invalid sessionId", "unsupported"); return }
         try {
-            store.save(at, rt)
+            if (!at.isNullOrEmpty() || !rt.isNullOrEmpty()) NativeAuthCoordinator.forStore(store).adoptIfNewer(at, rt)
             val src = AudioRecordSource()
             engine.start(sid, api.trimEnd('/'), call.getInt("startChunkIndex", 0) ?: 0, src)
             uploader.ensureStarted()
@@ -88,8 +91,8 @@ class NativeAudioRecorderPlugin : Plugin(), EngineListener, UploadListener {
     @PluginMethod
     fun updateCredentials(call: PluginCall) {
         val at = call.getString("accessToken"); val rt = call.getString("refreshToken")
-        if (at.isNullOrEmpty() || rt.isNullOrEmpty()) { call.reject("invalid arguments", "unsupported"); return }
-        store.save(at, rt); uploader.wake(); call.resolve()
+        if (at.isNullOrEmpty() && rt.isNullOrEmpty()) { call.reject("invalid arguments", "unsupported"); return }
+        NativeAuthCoordinator.forStore(store).adoptIfNewer(at, rt); uploader.wake(); call.resolve()
     }
 
     // --- 이벤트(토큰 없음) ---
