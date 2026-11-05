@@ -166,6 +166,8 @@ class GoogleAuthRequest(BaseModel):
     access_token: str | None = None
     id_token: str | None = None
     invite_token: str | None = None
+    # SDD-309: 신규 소셜 가입 시 초대 코치 코드(6자리). invite_token 이 있으면 면제.
+    counselor_code: str | None = Field(None, max_length=12)
     role: str | None = Field(None, pattern="^(client|counselor|org_admin|platform_admin)$")
     # SEC-04: 신규 Google 가입 시 약관·민감정보 동의. 기존 사용자 로그인은 불필요.
     # 신규 계정 생성 경로에서는 필수(누락/미동의 시 422).
@@ -201,6 +203,8 @@ class AppleAuthRequest(BaseModel):
     authorization_code: str | None = None
     name: str | None = Field(None, max_length=100)
     invite_token: str | None = Field(None, max_length=128)
+    # SDD-309: 신규 소셜 가입 시 초대 코치 코드(6자리). invite_token 이 있으면 면제.
+    counselor_code: str | None = Field(None, max_length=12)
     role: str | None = Field(None, pattern="^(client|counselor|org_admin|platform_admin)$")
     consents: ConsentRequest | None = None
     birth_date: str | None = Field(None, description="YYYY-MM-DD 형식")

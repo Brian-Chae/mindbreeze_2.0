@@ -774,6 +774,60 @@ async def set_password(
     return response
 
 
+def _require_social_counselor(invite_token: str | None, counselor_code: str | None, db: Session):
+    """SDD-309 — 소셜 신규 가입의 초대 코치 확인. 사용자 생성 전에 호출한다.
+
+    - 초대 토큰이 있으면 면제(None 반환): 연결은 기존 초대 경로가 처리한다.
+    - 코드가 없으면 422 COUNSELOR_CODE_REQUIRED (이메일 가입과 같은 문구).
+    - 코드가 있으면 이메일 가입과 같은 validate_counselor_code 로 검증하고 (상담사, 프로필)을 돌려준다.
+    """
+    from app.services import signup_application_service
+
+    if invite_token:
+        return None
+    code = (counselor_code or "").strip()
+    if not code:
+        if not settings.social_signup_requires_counselor_code:
+            return None
+        raise signup_policy_service.api_error(
+            422,
+            "COUNSELOR_CODE_REQUIRED",
+            "코치 코드를 확인해주세요. 코드가 없다면 초대한 코치에게 요청해 주세요.",
+        )
+    counselor, profile, _ = signup_application_service.validate_counselor_code(code, db)
+    return counselor, profile
+
+
+def _link_social_counselor(user: User, matched, db: Session) -> None:
+    """SDD-309 — 소셜 신규 가입 직후 코치 연결(이메일 가입 코드 경로와 같은 규칙).
+
+    링크 + 온보딩 step4 마킹 후 커밋하고, 커밋 이후 1:1 채팅방을 만든다(실패해도 가입은 유지).
+    """
+    from app.services import client_service
+
+    counselor, profile = matched
+    client_service.assign_counselor(user.id, counselor.id, db, create_room=False)
+    onboarding_service.save_step(
+        str(user.id),
+        4,
+        {"counselor_code": profile.counselor_code, "counselor_id": str(counselor.id)},
+        db,
+    )
+    progress = onboarding_service.get_progress(str(user.id), db)
+    saved_steps = progress.steps or {}
+    for n in (1, 2, 3, 4):
+        if f"step{n}" not in saved_steps:
+            progress.current_step = n
+            break
+    db.commit()
+    try:
+        from app.services.chat_service import get_or_create_direct_room
+
+        get_or_create_direct_room(counselor.id, user.id, db)
+    except Exception:  # noqa: BLE001 — 채팅방 생성 실패는 가입을 되돌리지 않는다
+        logger.exception("[auth] 소셜 가입 코치 채팅방 생성 실패 user=%s", user.id)
+
+
 # ---------------------------------------------------------------------------
 # Google OAuth
 # ---------------------------------------------------------------------------
@@ -878,6 +932,7 @@ async def google_auth(
 
     # 2. User find-or-create
     user = db.query(User).filter(func.lower(User.email) == email).first()
+    social_counselor = None
 
     # platform_admin 은 명시적 지정만 허용 — Google OAuth 로는 자동 승격·신규 생성 금지.
     # 룩시드랩스 소속이라도 상담을 받을 수 있으므로 도메인 기반 승격은 부적절하다.
@@ -930,6 +985,8 @@ async def google_auth(
         )
         if req.gender is None:
             raise signup_policy_service.api_error(422, "GENDER_REQUIRED", "성별을 선택해 주세요")
+        # SDD-309: 코치 코드는 사용자 생성 전에 검증한다(잘못된 코드로 불완전한 가입을 남기지 않음).
+        social_counselor = _require_social_counselor(req.invite_token, req.counselor_code, db)
         # 신규 Google 사용자 생성 (내담자)
         rand_pw = secrets.token_urlsafe(32)
         user = User(
@@ -949,6 +1006,9 @@ async def google_auth(
         signup_policy_service.record_consents(db, user.id, req.consents)
         db.commit()
         db.refresh(user)
+        if social_counselor is not None:
+            _link_social_counselor(user, social_counselor, db)
+            db.refresh(user)
 
     # 3. 초대 토큰 처리 → ClientCounselorLink 자동 생성 (공통 헬퍼 사용)
     #    이메일 일치 검증 + single-use(accepted 전환) + 만료 처리는
@@ -1046,6 +1106,7 @@ async def apple_auth(
     )
     user: User | None = None
     new_account = False
+    social_counselor = None
 
     if identity is not None:
         user = db.query(User).filter(User.id == identity.user_id).first()
@@ -1078,6 +1139,8 @@ async def apple_auth(
         )
         if req.gender is None:
             raise signup_policy_service.api_error(422, "GENDER_REQUIRED", "성별을 선택해 주세요")
+        # SDD-309: nonce 소비 전에 코치 코드를 검증한다 — 실패해도 같은 토큰으로 재제출할 수 있다.
+        social_counselor = _require_social_counselor(req.invite_token, req.counselor_code, db)
         new_account = True
 
     # 검증을 모두 통과한 뒤에만 nonce 를 소비한다(원자적 1회) — 병렬 replay 도 성공은 최대 1건.
@@ -1133,6 +1196,9 @@ async def apple_auth(
     assert user is not None
     if new_account and req.invite_token:
         _apply_invite_token(req.invite_token, user, db)
+    elif new_account and social_counselor is not None:
+        _link_social_counselor(user, social_counselor, db)
+        db.refresh(user)
 
     access_token = create_access_token(subject=str(user.id))
     refresh_token_str = refresh_token_service.issue_refresh_token(
