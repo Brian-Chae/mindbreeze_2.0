@@ -107,7 +107,7 @@ export function SetupScreen(props: SetupScreenProps) {
       foot={
         <>
           <FlowButton kind="primary" disabled={opening} onClick={props.onOpen}>
-            <DoorOpen size={20} aria-hidden="true" />{opening ? '여는 중이에요' : '클래스 열기'}
+            <DoorOpen size={20} aria-hidden="true" />{opening ? '여는 중이에요' : (!offline && media.mic !== 'on' ? '음성 없이 클래스 열기' : '클래스 열기')}
           </FlowButton>
           <p className="fhb-fnote">{setupFootNote(place, media.mic, media.cam, media.quiet)}</p>
         </>

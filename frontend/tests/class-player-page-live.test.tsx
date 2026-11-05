@@ -341,6 +341,24 @@ describe('시작 전·닫힘 호스트: HostPrepContainer 로 교체 (SDD-209 I2
     expect(h.calls).not.toContain('video/start');
   });
 
+  it('다른 탭에서 이미 시작한 상태면 재조회 후 라이브로 이동하고 start를 보내지 않는다', async () => {
+    h.session = makeSession('open');
+    await renderPage();
+    h.getSession.mockResolvedValue(makeSession('in_progress'));
+    await fire(() => lastPrep().onStart('record'));
+    expect(h.calls).not.toContain('transition:start');
+    expect(q('[data-testid="host-live-container"]')).not.toBeNull();
+  });
+
+  it('직접 로비 진입도 실제 미디어를 쓰고 토글은 장비 훅에 전달한다', async () => {
+    h.session = makeSession('open');
+    await renderPage();
+    expect(lastPrep().media.videoRef).toBe(h.media.videoRef);
+    expect(h.media.startCamera).toHaveBeenCalled();
+    await fire(() => lastPrep().onToggleCamera());
+    expect(h.media.toggleCamera).toHaveBeenCalled();
+  });
+
   it('클래스 닫기: cancel 전이 후 같은 화면에서 FH10(closed, 대기 인원 포함)을 보여 준다', async () => {
     h.session = makeSession('open');
     h.transitionSession.mockResolvedValue(makeSession('cancelled'));

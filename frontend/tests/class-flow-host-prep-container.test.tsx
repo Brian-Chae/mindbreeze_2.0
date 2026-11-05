@@ -33,6 +33,7 @@ function props(patch: Partial<HostPrepContainerProps> = {}): HostPrepContainerPr
 let root: Root;
 let container: HTMLDivElement;
 beforeEach(() => {
+  vi.useFakeTimers();
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   Object.assign(window, { matchMedia: () => ({ matches: false, addEventListener: () => undefined, removeEventListener: () => undefined, addListener: () => undefined, removeListener: () => undefined }) });
   container = document.createElement('div');
@@ -42,10 +43,11 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
+  vi.useRealTimers();
 });
 const mount = async (p: HostPrepContainerProps): Promise<void> => { await act(async () => root.render(createElement(HostPrepContainer, p))); };
 const btn = (t: string): HTMLButtonElement | undefined => [...container.querySelectorAll('button')].find((b) => b.textContent?.includes(t));
-const click = async (el: Element | null | undefined): Promise<void> => { await act(async () => { (el as HTMLElement).click(); }); };
+const click = async (el: Element | null | undefined): Promise<void> => { expect(el, '클릭할 행동이 표시되어야 함').toBeTruthy(); await act(async () => { (el as HTMLElement).click(); }); };
 const dialog = (): string => container.querySelector('[role="dialog"]')?.textContent ?? '';
 
 describe('HostPrepContainer', () => {
@@ -60,44 +62,88 @@ describe('HostPrepContainer', () => {
     expect(onOpen).toHaveBeenCalledWith({ cameraOn: false, micOn: true });
   });
 
-  it('세팅: 마이크가 꺼져 있으면 경고 시트가 먼저 뜨고, 꺼진 채로 열면 micOn=false 로 확정한다', async () => {
+  it('세팅: 마이크 꺼짐 안내를 인라인으로 읽고 한 번에 음성 없이 연다', async () => {
     const onOpen = vi.fn();
     await mount(props({ phase: 'setup', onOpen, media: { mic: 'off', cam: 'on', level: 0, steps: 0, quiet: false, speakerPlaying: false } }));
-    await click(btn('클래스 열기'));
-    expect(onOpen).not.toHaveBeenCalled();
-    expect(container.querySelector('[role="dialog"]')).not.toBeNull();
-    const manual = [...container.querySelectorAll('button')].find((b) => /꺼진 채로|수동/.test(b.textContent ?? ''));
-    await click(manual);
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
+    await click(btn('음성 없이 클래스 열기'));
     expect(onOpen).toHaveBeenCalledWith({ cameraOn: true, micOn: false });
   });
 
-  it('로비: 초대 N·대기실 M, 입장 코드는 초대 시트에서 4자리로만 보인다', async () => {
+  it('로비: 코드가 상시 보이고 첫 화면에서 회원 초대에 접근한다', async () => {
     await mount(props());
-    expect(container.textContent).toContain('초대 2명 · 대기실 1명');
-    expect(container.textContent).not.toContain('4829');
-    await click(btn('다시 알림'));
-    expect(dialog()).toContain('입장 코드 4829');
+    expect(container.textContent).toContain('4829');
+    await click(btn('회원 초대'));
+    expect(dialog()).toContain('기존 회원');
   });
 
-  it('시작: 녹음 체크 + 마이크 켜짐 → record, 체크 해제 → manual 을 선언해 넘긴다. 시작은 시트 확인 뒤에만', async () => {
+  it('시작: 요청 전 2초 동안 취소하면 서버 시작 0회, 다시 시작 연타는 1회', async () => {
     const onStart = vi.fn();
     await mount(props({ onStart }));
-    await click(btn('시작하기'));
+    await click(btn('클래스 시작'));
     expect(onStart).not.toHaveBeenCalled();
-    expect(dialog()).toContain('시작 전에 확인해요');
-    await click([...container.querySelectorAll('[role="dialog"] button')].find((b) => /시작하기/.test(b.textContent ?? '')));
-    expect(onStart).toHaveBeenLastCalledWith('record');
-    await click(container.querySelector('[role="checkbox"]'));
-    await click([...container.querySelectorAll('[role="dialog"] button')].find((b) => /시작하기/.test(b.textContent ?? '')));
+    await act(async () => { vi.advanceTimersByTime(1999); });
+    await click(btn('취소'));
+    await act(async () => { vi.advanceTimersByTime(2000); });
+    expect(onStart).not.toHaveBeenCalled();
+    await click(btn('클래스 시작'));
+    await click(btn('시작 준비 중'));
+    await act(async () => { vi.advanceTimersByTime(2000); });
+    expect(onStart).toHaveBeenCalledTimes(1);
+    expect(onStart).toHaveBeenCalledWith('record');
+  });
+
+  it('시작: 녹음 선택 해제와 마이크 꺼짐은 manual, 고지는 항상 보인다', async () => {
+    const onStart = vi.fn();
+    await mount(props({ onStart }));
+    await click(container.querySelector('input[type="checkbox"]'));
+    expect(container.textContent).toContain('90일');
+    expect(container.textContent).toContain('영상 녹화');
+    await click(btn('클래스 시작'));
+    await act(async () => { vi.advanceTimersByTime(2000); });
     expect(onStart).toHaveBeenLastCalledWith('manual');
   });
 
-  it('시작: 마이크가 꺼져 있으면 체크 상태와 무관하게 manual', async () => {
+  it('대기 중 이탈은 시작 타이머를 취소하고 익명 조회 실패는 미확인이다', async () => {
     const onStart = vi.fn();
-    await mount(props({ onStart, media: { mic: 'off', cam: 'on', level: 0, steps: 0, quiet: false, speakerPlaying: false } }));
-    await click(btn('시작하기'));
-    await click([...container.querySelectorAll('[role="dialog"] button')].find((b) => /시작하기/.test(b.textContent ?? '')));
-    expect(onStart).toHaveBeenCalledWith('manual');
+    await mount(props({ onStart, excluded: null, research: null }));
+    expect(container.textContent).toContain('미확인');
+    await click(btn('클래스 시작'));
+    await mount(props({ phase: 'closed', onStart }));
+    await act(async () => { vi.advanceTimersByTime(2000); });
+    expect(onStart).not.toHaveBeenCalled();
+  });
+
+  it('시작 거절은 화면에 표시하고 재시도할 수 있다', async () => {
+    const onStart = vi.fn().mockRejectedValueOnce(new Error('network')).mockResolvedValue(undefined);
+    await mount(props({ onStart }));
+    await click(btn('클래스 시작'));
+    await act(async () => { vi.advanceTimersByTime(2000); });
+    expect(container.textContent).toContain('다시 시도');
+    await click(btn('클래스 시작'));
+    await act(async () => { vi.advanceTimersByTime(2000); });
+    expect(onStart).toHaveBeenCalledTimes(2);
+  });
+
+  it('나가기 시트를 여는 즉시 타이머를 취소하고 phase 재진입도 시작 가능하다', async () => {
+    const onStart = vi.fn();
+    await mount(props({ onStart }));
+    await click(btn('클래스 시작'));
+    await click(container.querySelector('[data-pz="flow-back"]'));
+    await act(async () => { vi.advanceTimersByTime(2000); });
+    expect(onStart).not.toHaveBeenCalled();
+    await mount(props({ phase: 'closed', onStart }));
+    await mount(props({ onStart }));
+    expect(btn('클래스 시작')?.disabled).toBe(false);
+  });
+
+  it('시작 대기 중 코드 확대를 열면 취소 행동이 가려지기 전에 타이머를 취소한다', async () => {
+    const onStart = vi.fn();
+    await mount(props({ onStart }));
+    await click(btn('클래스 시작'));
+    await click(btn('크게 보기'));
+    await act(async () => { vi.advanceTimersByTime(3000); });
+    expect(onStart).not.toHaveBeenCalled();
   });
 
   it('뒤로 → 클래스 닫기는 재확인을 거친 뒤에만 closeClass 를 부른다', async () => {

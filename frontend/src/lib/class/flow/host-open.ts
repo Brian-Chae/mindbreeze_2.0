@@ -40,7 +40,7 @@ export function setupFootNote(place: FlowPlace, mic: MediaDeviceUi, cam: MediaDe
   if (mic === 'unsupported' || cam === 'unsupported') return 'Chrome이나 Edge를 권장해요';
   if (mic === 'nodevice' && cam === 'nodevice') return '장비 없이 열면 수동 기록이에요';
   if (mic === 'denied') return '마이크 없이 열면 수동 기록이에요';
-  if (mic === 'off' || mic === 'nodevice' || mic === 'inuse') return '열 때 마이크를 한 번 더 확인해요';
+  if (mic === 'off' || mic === 'nodevice' || mic === 'inuse') return '음성 없이 열면 수동 기록으로 진행해요';
   if (cam === 'denied' || cam === 'nodevice' || cam === 'inuse') return '카메라 없이도 열 수 있어요';
   if (quiet) return '소리가 작아요. 조금 더 크게 말해 보세요';
   if (cam === 'off') return '카메라 없이 소리만 열어요';

@@ -38,7 +38,7 @@ describe('setupFootNote', () => {
     expect(setupFootNote('online', 'on', 'on', false)).toBe('열면 초대한 회원이 입장할 수 있어요');
     expect(setupFootNote('online', 'on', 'on', true)).toBe('소리가 작아요. 조금 더 크게 말해 보세요');
     expect(setupFootNote('online', 'on', 'off', false)).toBe('카메라 없이 소리만 열어요');
-    expect(setupFootNote('online', 'off', 'on', false)).toBe('열 때 마이크를 한 번 더 확인해요');
+    expect(setupFootNote('online', 'off', 'on', false)).toBe('음성 없이 열면 수동 기록으로 진행해요');
     expect(setupFootNote('online', 'denied', 'on', false)).toBe('마이크 없이 열면 수동 기록이에요');
     expect(setupFootNote('online', 'on', 'denied', false)).toBe('카메라 없이도 열 수 있어요');
     expect(setupFootNote('online', 'nodevice', 'nodevice', false)).toBe('장비 없이 열면 수동 기록이에요');
