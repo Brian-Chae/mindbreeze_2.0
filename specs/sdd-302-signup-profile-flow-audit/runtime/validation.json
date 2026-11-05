@@ -1,0 +1,266 @@
+{
+  "scope": "제품 소스+합성API, 실서버/실OAuth 아님",
+  "results": [
+    {
+      "name": "start",
+      "width": 390,
+      "overflow": false,
+      "bodyText": "‹\nMIND BREEZE\n\n회원 가입\n\n나를 위한 시간,\n여기서 시작해요\n\n사용할 계정을 선택해 주세요.\n\nGoogle로 시작하기\n\nApple은 iOS 앱에서 이용할 수 있어요.\n\n또는\n이메일로 가입하기\n\n이미 계정이 있나요? 로그인\n\n다른 유형으로 가입하기",
+      "cards": [
+        {
+          "background": "rgba(24, 12, 36, 0.78)",
+          "radius": "24px"
+        }
+      ],
+      "inputs": []
+    },
+    {
+      "name": "email",
+      "width": 390,
+      "overflow": false,
+      "bodyText": "‹\nMIND BREEZE\n\n회원 가입\n\n1\n이메일 인증\n2\n정보 입력·동의\n이메일 인증\n이메일\n인증 요청\n다음\n\n이미 계정이 있으신가요? 로그인\n\n다른 유형으로 가입하기",
+      "cards": [
+        {
+          "background": "rgba(24, 12, 36, 0.78)",
+          "radius": "24px"
+        }
+      ],
+      "inputs": [
+        {
+          "height": 48,
+          "color": "rgb(247, 244, 240)"
+        }
+      ]
+    },
+    {
+      "name": "email-details",
+      "width": 390,
+      "overflow": false,
+      "bodyText": "‹\nMIND BREEZE\n\n회원 가입\n\n1\n이메일 인증\n2\n정보 입력·동의\n가입 정보를 확인해요\n이름\n성별\n남성\n여성\n기타\n생년월일\n비밀번호\n비밀번호 확인\n초대 코치 코드\n코드 확인\n\n예시 코치 코치와 연결하여 가입합니다\n\n필수 항목 전체 동의\n[필수]서비스 이용약관 동의\n\n이용약관 전문 보기\n\n[필수]개인정보 처리방침 ",
+      "cards": [
+        {
+          "background": "rgba(24, 12, 36, 0.78)",
+          "radius": "24px"
+        }
+      ],
+      "inputs": [
+        {
+          "height": 48,
+          "color": "rgb(247, 244, 240)"
+        },
+        {
+          "height": 48,
+          "color": "rgb(247, 244, 240)"
+        },
+        {
+          "height": 48,
+          "color": "rgb(247, 244, 240)"
+        },
+        {
+          "height": 48,
+          "color": "rgb(247, 244, 240)"
+        },
+        {
+          "height": 48,
+          "color": "rgb(247, 244, 240)"
+        }
+      ]
+    },
+    {
+      "name": "social",
+      "width": 390,
+      "overflow": false,
+      "bodyText": "‹\nMIND BREEZE\n\n소셜 가입 · 정보 확인\n\n계정 만들기\n\n가입 정보 확인\n\nGoogle 인증이 끝났어요. 생년월일과 동의 항목을 확인해 주세요.\n\n이름 *\n성별 *\n선택해 주세요\n남성\n여성\n기타\n생년월일\n\nYYYY.MM.DD · 만 14세 이상만 가입할 수 있어요.\n\n필수 항목 전체 동의\n[필수]서비스 이용약관",
+      "cards": [
+        {
+          "background": "rgba(24, 12, 36, 0.78)",
+          "radius": "24px"
+        }
+      ],
+      "inputs": [
+        {
+          "height": 48,
+          "color": "rgb(247, 244, 240)"
+        },
+        {
+          "height": 48,
+          "color": "rgb(247, 244, 240)"
+        },
+        {
+          "height": 48,
+          "color": "rgb(247, 244, 240)"
+        }
+      ]
+    },
+    {
+      "name": "required-gender",
+      "width": 390,
+      "overflow": false,
+      "bodyText": "‹\nMIND BREEZE\n\n필수 정보 확인\n\n이 정보만 확인할게요\n\n서비스 이용에 필요한 정보를 채워 주세요. 이미 저장한 정보는 그대로 사용해요.\n\n성별\n선택해 주세요\n남성\n여성\n기타\n저장하고 시작하기\n\n다른 유형으로 가입하기",
+      "cards": [
+        {
+          "background": "rgba(24, 12, 36, 0.78)",
+          "radius": "24px"
+        }
+      ],
+      "inputs": [
+        {
+          "height": 48,
+          "color": "rgb(247, 244, 240)"
+        }
+      ]
+    },
+    {
+      "name": "optional-phone",
+      "width": 390,
+      "overflow": false,
+      "bodyText": "‹\nMIND BREEZE\n\n선택 프로필\n\n지금 입력하지 않아도 돼요\n\n원할 때 설정에서 추가해 주세요.\n\n전화번호 · 선택\n\n나중에 하기를 누르면 다음 로그인부터 다시 묻지 않아요.\n\n입력한 정보 저장나중에 하기\n\n다른 유형으로 가입하기",
+      "cards": [
+        {
+          "background": "rgba(24, 12, 36, 0.78)",
+          "radius": "24px"
+        }
+      ],
+      "inputs": [
+        {
+          "height": 48,
+          "color": "rgb(247, 244, 240)"
+        }
+      ]
+    },
+    {
+      "name": "start",
+      "width": 768,
+      "overflow": false,
+      "bodyText": "‹\nMIND BREEZE\n\n회원 가입\n\n나를 위한 시간,\n여기서 시작해요\n\n사용할 계정을 선택해 주세요.\n\nGoogle로 시작하기\n\nApple은 iOS 앱에서 이용할 수 있어요.\n\n또는\n이메일로 가입하기\n\n이미 계정이 있나요? 로그인\n\n다른 유형으로 가입하기",
+      "cards": [
+        {
+          "background": "rgba(24, 12, 36, 0.78)",
+          "radius": "24px"
+        }
+      ],
+      "inputs": []
+    },
+    {
+      "name": "email",
+      "width": 768,
+      "overflow": false,
+      "bodyText": "‹\nMIND BREEZE\n\n회원 가입\n\n1\n이메일 인증\n2\n정보 입력·동의\n이메일 인증\n이메일\n인증 요청\n다음\n\n이미 계정이 있으신가요? 로그인\n\n다른 유형으로 가입하기",
+      "cards": [
+        {
+          "background": "rgba(24, 12, 36, 0.78)",
+          "radius": "24px"
+        }
+      ],
+      "inputs": [
+        {
+          "height": 48,
+          "color": "rgb(247, 244, 240)"
+        }
+      ]
+    },
+    {
+      "name": "email-details",
+      "width": 768,
+      "overflow": false,
+      "bodyText": "‹\nMIND BREEZE\n\n회원 가입\n\n1\n이메일 인증\n2\n정보 입력·동의\n가입 정보를 확인해요\n이름\n성별\n남성\n여성\n기타\n생년월일\n비밀번호\n비밀번호 확인\n초대 코치 코드\n코드 확인\n\n예시 코치 코치와 연결하여 가입합니다\n\n필수 항목 전체 동의\n[필수]서비스 이용약관 동의\n\n이용약관 전문 보기\n\n[필수]개인정보 처리방침 ",
+      "cards": [
+        {
+          "background": "rgba(24, 12, 36, 0.78)",
+          "radius": "24px"
+        }
+      ],
+      "inputs": [
+        {
+          "height": 48,
+          "color": "rgb(247, 244, 240)"
+        },
+        {
+          "height": 48,
+          "color": "rgb(247, 244, 240)"
+        },
+        {
+          "height": 48,
+          "color": "rgb(247, 244, 240)"
+        },
+        {
+          "height": 48,
+          "color": "rgb(247, 244, 240)"
+        },
+        {
+          "height": 48,
+          "color": "rgb(247, 244, 240)"
+        }
+      ]
+    },
+    {
+      "name": "social",
+      "width": 768,
+      "overflow": false,
+      "bodyText": "‹\nMIND BREEZE\n\n소셜 가입 · 정보 확인\n\n계정 만들기\n\n가입 정보 확인\n\nGoogle 인증이 끝났어요. 생년월일과 동의 항목을 확인해 주세요.\n\n이름 *\n성별 *\n선택해 주세요\n남성\n여성\n기타\n생년월일\n\nYYYY.MM.DD · 만 14세 이상만 가입할 수 있어요.\n\n필수 항목 전체 동의\n[필수]서비스 이용약관",
+      "cards": [
+        {
+          "background": "rgba(24, 12, 36, 0.78)",
+          "radius": "24px"
+        }
+      ],
+      "inputs": [
+        {
+          "height": 48,
+          "color": "rgb(247, 244, 240)"
+        },
+        {
+          "height": 48,
+          "color": "rgb(247, 244, 240)"
+        },
+        {
+          "height": 48,
+          "color": "rgb(247, 244, 240)"
+        }
+      ]
+    },
+    {
+      "name": "required-gender",
+      "width": 768,
+      "overflow": false,
+      "bodyText": "‹\nMIND BREEZE\n\n필수 정보 확인\n\n이 정보만 확인할게요\n\n서비스 이용에 필요한 정보를 채워 주세요. 이미 저장한 정보는 그대로 사용해요.\n\n성별\n선택해 주세요\n남성\n여성\n기타\n저장하고 시작하기\n\n다른 유형으로 가입하기",
+      "cards": [
+        {
+          "background": "rgba(24, 12, 36, 0.78)",
+          "radius": "24px"
+        }
+      ],
+      "inputs": [
+        {
+          "height": 48,
+          "color": "rgb(247, 244, 240)"
+        }
+      ]
+    },
+    {
+      "name": "optional-phone",
+      "width": 768,
+      "overflow": false,
+      "bodyText": "‹\nMIND BREEZE\n\n선택 프로필\n\n지금 입력하지 않아도 돼요\n\n원할 때 설정에서 추가해 주세요.\n\n전화번호 · 선택\n\n나중에 하기를 누르면 다음 로그인부터 다시 묻지 않아요.\n\n입력한 정보 저장나중에 하기\n\n다른 유형으로 가입하기",
+      "cards": [
+        {
+          "background": "rgba(24, 12, 36, 0.78)",
+          "radius": "24px"
+        }
+      ],
+      "inputs": [
+        {
+          "height": 48,
+          "color": "rgb(247, 244, 240)"
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "flows": [
+    "이메일 OTP→정보동의→홈",
+    "소셜 정보동의→홈",
+    "성별만 보완 PATCH→홈",
+    "선택전화 보류→홈→재진입 홈"
+  ]
+}
