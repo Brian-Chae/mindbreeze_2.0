@@ -1,19 +1,33 @@
 // SDD-246 T12 — 앱(iOS/Android) 회원 측정 자동 시작 훅. path==='native' 일 때만 동작한다(웹/legacy/off 는 아무 것도 안 함).
 // 밴드가 연결되면 JS 소유를 놓고 native manager 에 인계해 startMeasurement. 화면을 떠날 때만 stopMeasurement.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { BASE_URL, getNativeRefreshBody, tokenStorage } from '../api/client';
 import { bluetoothService } from '../eeg/bluetoothService';
 import { SOCKET_URL } from '../socket';
 import { buildNativeModelPayload, getNativeMeasurement } from '../native-measurement';
 import { getActiveModelCache, refreshActiveModel } from '../eeg/eegPersonalScore';
-import { uploadProgressStore } from './upload-progress';
+import { uploadProgressStore, type UploadProgress } from './upload-progress';
 import { decideMeasurementPath, type MeasurementPath } from './measurement-path';
 import { isLiveProtocolV2Enabled } from '../session-live/live-flag';
 import { isNativeMeasurementAvailable } from '../native-measurement';
 import type { MeasurementSnapshot } from '../native-measurement/types';
 import { toNativeDevice, type NativeDeviceState } from '../native-measurement/device-status';
 import type { MetricSnapshot } from '../../components/class/player/member/member-metrics';
+
+/**
+ * SDD-297: snapshot 의 `archive.queue`(Android·iOS 모두 매 measurementUpdated 에 싣는다)에서 저장 진행 값을 뽑는다.
+ * iOS 는 저장 진행 이벤트(feature.counts·archive.counts)가 SessionSync 변화 때만 나가서 한 번도 안 올 수 있다 — 그때 진단이 영원히 "확인 전"이 되지 않게 하는 대체 원천.
+ * 4개 값이 모두 유한한 수일 때만 돌려주고, 아니면 null(값이 정말 없을 때만 확인 전).
+ */
+export function uploadPatchFromSnapshot(snap: MeasurementSnapshot | null): Partial<UploadProgress> | null {
+  const q = (snap as { archive?: { queue?: unknown } } | null)?.archive?.queue;
+  if (typeof q !== 'object' || q === null) return null;
+  const r = q as Record<string, unknown>;
+  const ok = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+  if (!ok(r.live_pending) || !ok(r.live_acked) || !ok(r.archive_pending) || !ok(r.archive_verified)) return null;
+  return { featurePending: r.live_pending, featureAcked: r.live_acked, rawPending: r.archive_pending, rawUploading: 0, rawVerified: r.archive_verified };
+}
 
 /** SDD-284: 스트림 확정 감시 임계값(현장 로그 후 조정 가능) */
 export const NATIVE_POLL_MS = 2000;
@@ -143,6 +157,8 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
   const [device, setDevice] = useState<NativeDeviceState | null>(null);
   const [diag, setDiag] = useState<{ nativeState: string | null; streamIdHead: string | null; restartCount: number; lastConfirmElapsedMs: number | null }>({ nativeState: null, streamIdHead: null, restartCount: 0, lastConfirmElapsedMs: null });
   // 스트림 확정 실패·건강 점검 실패 누적(하강 판단)과 재시작마다 새 requestId 를 쓰기 위한 시도 번호
+  // SDD-297: 저장 진행 이벤트를 받은 세션 — 받은 뒤에는 이벤트 값이 우선이고 snapshot 으로 되돌리지 않는다
+  const uploadEventSeenRef = useRef<Set<string>>(new Set());
   const streamFailRef = useRef(0);
   const attemptRef = useRef(0);
   const instanceRef = useRef<string>(crypto.randomUUID());
@@ -291,9 +307,14 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
       try {
         await facade.attach(o.sessionId);
         if (cancelled) return;
-        off = facade.onMeasurement((snap) => { if (!cancelled) { setMetrics(toMetricSnapshot(snap)); setDevice(toNativeDevice(snap)); noteSnap(snap); } });
+        off = facade.onMeasurement((snap) => {
+          if (cancelled) return;
+          setMetrics(toMetricSnapshot(snap)); setDevice(toNativeDevice(snap)); noteSnap(snap);
+          // SDD-297: 저장 진행 이벤트가 아직 없으면 snapshot 의 archive.queue 로 채운다(iOS)
+          if (!uploadEventSeenRef.current.has(o.sessionId)) { const seed = uploadPatchFromSnapshot(snap); if (seed) uploadProgressStore.update(o.sessionId, seed); }
+        });
         // SDD-260: 저장 진행(feature.counts·archive.counts·reconcile.state) → 전역 스토어. 화면을 떠나도 네이티브가 계속 올리므로 detach 후에도 마지막 값을 남긴다.
-        const offUpload = facade.onUploadProgress((patch) => { if (!cancelled) uploadProgressStore.update(o.sessionId, patch); });
+        const offUpload = facade.onUploadProgress((patch) => { if (!cancelled) { uploadEventSeenRef.current.add(o.sessionId); uploadProgressStore.update(o.sessionId, patch); } });
         const offMeasurement = off;
         off = () => { offMeasurement(); offUpload(); };
         if (resumeInPlace) {
@@ -363,7 +384,8 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
     };
   }, [ready, retryTick, o.sessionId, o.participantId, o.accountId]);
 
-  const up = uploadProgressStore.get(o.sessionId);
+  // SDD-297: 스토어 변경에 맞춰 재렌더(이벤트만 오고 다른 상태가 안 바뀌어도 진단이 갱신된다)
+  const up = useSyncExternalStore(uploadProgressStore.subscribe, () => uploadProgressStore.get(o.sessionId));
   const diagnostics: NativeDiagnostics = {
     path, status, code, nativeState: diag.nativeState, streamIdHead: diag.streamIdHead, restartCount: diag.restartCount, lastConfirmElapsedMs: diag.lastConfirmElapsedMs,
     upload: up ? { featurePending: up.featurePending, featureAcked: up.featureAcked, rawPending: up.rawPending + up.rawUploading, rawVerified: up.rawVerified } : null,
