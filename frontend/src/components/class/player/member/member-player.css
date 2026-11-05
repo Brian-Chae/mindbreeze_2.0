@@ -366,8 +366,10 @@
 }
 
 /* ───────── SDD-284 T4 연결 진단(기기 시트 하단 접이식) ───────── */
-.mp-diag-frame { position: relative; }
-.mp-diag-toggle { position: absolute; top: -52px; right: 52px; width: var(--tap, 44px); height: var(--tap, 44px); border-radius: 50%; display: grid; place-items: center; color: var(--mb-mint); background: rgba(1, 240, 200, 0.08); border: 1px solid rgba(1, 240, 200, 0.33); }
+.mp-diag-frame { display: flex; flex-direction: column; gap: 8px; }
+.mp-diag-bar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.mp-diag-bar__label { font-size: var(--fs-12); color: var(--tx-mid); }
+.mp-diag-toggle { flex: none; width: var(--tap, 44px); height: var(--tap, 44px); border-radius: 50%; display: grid; place-items: center; color: var(--mb-mint); background: rgba(1, 240, 200, 0.08); border: 1px solid rgba(1, 240, 200, 0.33); }
 .mp-diag-toggle[data-abnormal="true"] { color: var(--caution); background: rgba(240, 208, 138, 0.1); border-color: rgba(240, 208, 138, 0.4); }
 .mp-diag { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--sheet-border); display: flex; flex-direction: column; gap: 4px; }
 .mp-diag h3 { margin: 0 0 4px; font-size: var(--fs-15); font-weight: 600; }

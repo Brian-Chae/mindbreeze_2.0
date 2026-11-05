@@ -7,25 +7,28 @@ import './member-player.css';
 
 interface ConnectionDiagnosticsProps { view: ConnectionDiagnosticsView }
 
-/** 시트 우상단 상태 아이콘 + 하단 진단 영역. 시트 본문을 children 으로 받아 사이에 끼운다. */
+/** 시트 안쪽 맨 위 줄(우측)의 상태 아이콘 + 하단 진단 영역. 시트 본문을 children 으로 받아 사이에 끼운다. */
 export function ConnectionDiagnosticsFrame({ view, children }: ConnectionDiagnosticsProps & { children: React.ReactNode }) {
   const [override, setOverride] = useState<DiagOverride | null>(null);
   const open = resolveDiagOpen(view, override);
   const Icon = view.abnormal ? TriangleAlert : CircleDot;
   return (
     <div className="mp-diag-frame">
-      <button
-        type="button"
-        className="mp-diag-toggle"
-        data-abnormal={view.abnormal ? 'true' : undefined}
-        aria-label="연결 진단 표시 또는 숨기기"
-        aria-expanded={open}
-        aria-controls="mp-diag-panel"
-        data-pz="diag-toggle"
-        onClick={() => setOverride({ open: !open, forKind: view.kind })}
-      >
-        <Icon size={22} strokeWidth={2} aria-hidden="true" />
-      </button>
+      <div className="mp-diag-bar">
+        <span className="mp-diag-bar__label">연결 진단</span>
+        <button
+          type="button"
+          className="mp-diag-toggle"
+          data-abnormal={view.abnormal ? 'true' : undefined}
+          aria-label="연결 진단 표시 또는 숨기기"
+          aria-expanded={open}
+          aria-controls="mp-diag-panel"
+          data-pz="diag-toggle"
+          onClick={() => setOverride({ open: !open, forKind: view.kind })}
+        >
+          <Icon size={22} strokeWidth={2} aria-hidden="true" />
+        </button>
+      </div>
       {children}
       {open ? <ConnectionDiagnosticsPanel view={view} /> : null}
     </div>
