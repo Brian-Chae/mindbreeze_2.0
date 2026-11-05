@@ -324,6 +324,17 @@ def _reset_entry_credentials():
 
 
 @pytest.fixture(autouse=True)
+def _social_counselor_code_off_for_legacy_tests(monkeypatch):
+    """SDD-309: 소셜 신규 가입 코치 코드 필수화 이전에 작성된 fixture 를 보호한다.
+
+    필수화 자체를 검증하는 tests/test_sdd309_social_coach_code.py 는 이 설정을 다시 켠다.
+    """
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "social_signup_requires_counselor_code", False)
+
+
+@pytest.fixture(autouse=True)
 def _ai_features_enabled_for_legacy_tests(monkeypatch):
     """SDD-220: AI 기능 기본값이 off 로 바뀌었으므로 기존(AI on 계약) 테스트는 on 으로 실행한다.
 

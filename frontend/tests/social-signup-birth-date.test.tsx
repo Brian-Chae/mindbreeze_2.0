@@ -97,6 +97,9 @@ const checkAllRequired = async () => {
   for (const cb of container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')) {
     if (cb.parentElement?.textContent?.includes('필수 항목 전체 동의')) await check(cb);
   }
+  // SDD-309: 초대 링크가 아니면 코치 코드 6자리가 필수다.
+  const code = container.querySelector('#social-counselor-code') as HTMLInputElement | null;
+  if (code) await setInput(code, '123456');
 };
 const submitBtn = () => buttonByText('가입하기');
 

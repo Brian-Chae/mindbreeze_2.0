@@ -243,6 +243,9 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     # 네이티브 앱 id_token 의 추가 허용 aud(쉼표 구분) — Firebase 웹 클라이언트 ID 등
     google_extra_client_ids: str = ""
+    # SDD-309: 소셜(Google·Apple) 신규 가입은 초대 코치 코드(또는 초대 토큰)가 필수다.
+    # 시험 환경에서 기존 가입 fixture 를 보호할 때만 끈다.
+    social_signup_requires_counselor_code: bool = True
 
     # SDD-087: Gemini — 상담사 코멘트 AI 초안 생성 (키 부재 시 규칙 템플릿 폴백)
     gemini_api_key: str = ""

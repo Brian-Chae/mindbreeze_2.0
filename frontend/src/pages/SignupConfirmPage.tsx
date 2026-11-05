@@ -13,6 +13,9 @@ import { toConsentPayload } from '../lib/auth/consents';
 import { resolvePostLoginPath } from '../lib/auth-routing';
 import { BIRTH_DATE_MESSAGES } from '../lib/auth/age';
 import { SignupInfoForm } from '../components/auth/SignupInfoForm';
+import {
+  counselorCodeErrorMessage, isCounselorCodeReady, isCounselorCodeRequired, sanitizeCounselorCode, SOCIAL_COUNSELOR_CODE_LENGTH,
+} from '../lib/auth/social-counselor-code';
 import { EMPTY_SIGNUP_INFO, isSignupInfoReady, type SignupInfoValue } from '../lib/auth/signup-info';
 
 type Notice = { kind: 'link' | 'withdrawal' | 'error'; message: string };
@@ -27,10 +30,14 @@ export default function SignupConfirmPage() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [birthError, setBirthError] = useState<string | null>(null);
+  // SDD-309: 소셜 신규 가입도 이메일 가입처럼 초대 코치 코드(6자리)가 필수. 초대 링크로 들어오면 면제.
+  const [counselorCode, setCounselorCode] = useState('');
+  const [codeError, setCodeError] = useState<string | null>(null);
 
   if (!pending) return <Navigate to="/login?role=client" replace />;
 
-  const ready = isSignupInfoReady(info) && !busy;
+  const needsCode = isCounselorCodeRequired(pending.inviteToken);
+  const ready = isSignupInfoReady(info) && isCounselorCodeReady(pending.inviteToken, counselorCode) && !busy;
   const providerLabel = pending.credential.provider === 'google' ? 'Google' : 'Apple';
 
   const submit = async (): Promise<void> => {
@@ -38,11 +45,13 @@ export default function SignupConfirmPage() {
     setBusy(true);
     setNotice(null);
     setBirthError(null);
+    setCodeError(null);
+    const counselorCodeValue = needsCode ? counselorCode : undefined;
     const consents = toConsentPayload(info.consents);
     try {
       const cred = pending.credential;
       const user = cred.provider === 'google'
-        ? await loginGoogle(cred.token, pending.inviteToken, pending.role, pending.rememberMe, consents, cred.tokenKind, info.birthDate, info.gender || undefined, info.name.trim())
+        ? await loginGoogle(cred.token, pending.inviteToken, pending.role, pending.rememberMe, consents, cred.tokenKind, info.birthDate, info.gender || undefined, info.name.trim(), counselorCodeValue)
         : await loginApple(
             {
               id_token: cred.idToken,
@@ -51,6 +60,7 @@ export default function SignupConfirmPage() {
               name: info.name.trim(),
               gender: info.gender || undefined,
               invite_token: pending.inviteToken,
+              counselor_code: counselorCodeValue,
               role: pending.role,
               consents,
               birth_date: info.birthDate,
@@ -61,7 +71,9 @@ export default function SignupConfirmPage() {
       navigate(resolvePostLoginPath(user));
     } catch (err) {
       const code = apiErrorCode(err);
-      if (code === 'AGE_RESTRICTED') setBirthError(BIRTH_DATE_MESSAGES.underage);
+      const codeMessage = needsCode && err instanceof ApiError ? counselorCodeErrorMessage(code, err.status, err.message) : null;
+      if (codeMessage) setCodeError(codeMessage);
+      else if (code === 'AGE_RESTRICTED') setBirthError(BIRTH_DATE_MESSAGES.underage);
       else if (code === 'INVALID_BIRTH_DATE' || code === 'BIRTH_DATE_REQUIRED') setBirthError(BIRTH_DATE_MESSAGES.invalid);
       else if (code === 'ACCOUNT_LINK_REQUIRED') setNotice({ kind: 'link', message: '이미 같은 이메일로 가입한 계정이 있어요. 기존 방법으로 로그인한 뒤 연결해 주세요.' });
       else if (code === 'ACCOUNT_DELETION_PENDING') setNotice({ kind: 'withdrawal', message: '탈퇴 처리 중인 이메일이에요. 영구 삭제가 끝난 뒤 다시 가입할 수 있어요.' });
@@ -81,6 +93,33 @@ export default function SignupConfirmPage() {
           <div className="mt-5">
             <SignupInfoForm value={info} onChange={setInfo} disabled={busy} birthError={birthError} />
           </div>
+          {needsCode && (
+            <div className="mt-5 space-y-2 text-left">
+              <label htmlFor="social-counselor-code" className="block text-sm font-semibold text-[#1F1F1F]">
+                초대 코치 코드 <span aria-hidden="true">*</span>
+              </label>
+              <input
+                id="social-counselor-code"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete="off"
+                maxLength={SOCIAL_COUNSELOR_CODE_LENGTH}
+                value={counselorCode}
+                disabled={busy}
+                placeholder="6자리 숫자"
+                aria-invalid={codeError ? true : undefined}
+                aria-describedby={codeError ? 'social-counselor-code-error' : 'social-counselor-code-help'}
+                onChange={(e) => { setCounselorCode(sanitizeCounselorCode(e.target.value)); setCodeError(null); }}
+                className="h-12 w-full rounded-xl border px-4 font-mono tracking-widest"
+              />
+              {codeError ? (
+                <p id="social-counselor-code-error" role="alert" className="text-xs font-semibold text-[#B42318]">{codeError}</p>
+              ) : (
+                <p id="social-counselor-code-help" className="text-xs text-[#6F6F6F]">코드가 없다면 초대한 코치에게 코드를 요청해 주세요. (6자리 숫자)</p>
+              )}
+            </div>
+          )}
           {notice && (
             <div role="alert" className="mt-4 rounded-2xl bg-[#FDECEC] px-4 py-3 text-sm text-[#B42318]">
               <p>{notice.message}</p>

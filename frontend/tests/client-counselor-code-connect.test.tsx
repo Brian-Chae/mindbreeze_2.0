@@ -57,6 +57,10 @@ async function typeCode(code: string) {
 }
 
 beforeEach(() => {
+  // SDD-309: 코치 코드 화면이 클래스 화면 틀(PlayerShell)을 쓰므로 jsdom 에 없는 matchMedia 를 채운다.
+  if (!window.matchMedia) {
+    window.matchMedia = ((query: string) => ({ matches: false, media: query, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false, onchange: null })) as unknown as typeof window.matchMedia;
+  }
   post.mockReset();
   get.mockReset();
   useAuthStore.setState({ user: { id: 'u1', name: '회원', role: 'client', counselors: [] } as never });
