@@ -1,17 +1,24 @@
 import { useState, type ReactNode } from 'react';
+export type PermissionGuideKind = 'bluetooth' | 'notifications' | 'media';
 interface PermissionGuideProps {
-  kind: 'bluetooth' | 'notifications' | 'media';
+  kind: PermissionGuideKind;
+  /** SDD-303: 설명은 화면에 직접 두고 시트 없이 버튼 1탭으로 곧바로 계속한다(OS 권한은 이 탭의 제스처에서 요청) */
+  inline?: boolean;
   onContinue: () => void;
   children: (request: () => void) => ReactNode;
 }
-/** 기능을 선택한 뒤 안내하고, 확인 전에는 OS 권한을 요청하지 않는다. */
-export function PermissionGuide({ kind, onContinue, children }: PermissionGuideProps) {
-  const [open, setOpen] = useState(false);
-  const text = kind === 'bluetooth'
+export function permissionGuideText(kind: PermissionGuideKind): string {
+  return kind === 'bluetooth'
     ? 'LINK BAND 연결과 뇌파 수신에 Bluetooth 권한을 사용해요. 허용하지 않아도 밴드 없이 클래스와 리포트를 이용할 수 있어요. 거부했다면 기기 설정에서 Bluetooth 권한을 허용해 주세요.'
     : kind === 'notifications'
       ? '새 메시지와 클래스 초대를 알려드리려면 알림 권한이 필요해요. 허용하지 않아도 서비스를 이용할 수 있어요. 거부했다면 기기 설정에서 알림을 허용해 주세요.'
       : '화상 클래스와 동의한 녹음·녹화에 카메라와 마이크를 사용해요. 카메라와 마이크를 끈 채로도 참여할 수 있어요. 거부했다면 기기 설정에서 권한을 허용해 주세요.';
+}
+/** 기능을 선택한 뒤 안내하고, 확인 전에는 OS 권한을 요청하지 않는다. inline 이면 설명을 호출부가 화면에 두고 시트를 거치지 않는다. */
+export function PermissionGuide({ kind, inline = false, onContinue, children }: PermissionGuideProps) {
+  const [open, setOpen] = useState(false);
+  const text = permissionGuideText(kind);
+  if (inline) return <>{children(onContinue)}</>;
   return <>
     {children(() => setOpen(true))}
     {open && <div role="dialog" aria-modal="true" aria-label="권한 사용 안내" className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">

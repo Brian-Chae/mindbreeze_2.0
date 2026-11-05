@@ -14,8 +14,6 @@ import { DeviceStepContainer } from '../../components/class/flow/member/DeviceSt
 import { MemberStateScreen } from '../../components/class/flow/member/MemberStateScreen';
 import { IntegratedEntryConsent } from '../../components/class/flow/member/IntegratedEntryConsent';
 import type { EntryConsentValues } from '../../lib/class/flow/integrated-entry-consent';
-import { ReadySummaryView } from '../../components/class/flow/member/ReadySummaryView';
-import { FlowButton, FlowSheet } from '../../components/class/flow/shared/flow-primitives';
 import { StartedSheet } from '../../components/class/flow/member/StartedSheet';
 import { SurveyStepView } from '../../components/class/flow/member/SurveyStepView';
 import { EndContainer } from '../../components/class/flow/member/EndContainer';
@@ -25,6 +23,7 @@ import { WaitStartContainer } from '../../components/class/flow/member/WaitStart
 import { resolveEntryBack } from '../../lib/class/entry-back';
 import { useBackgroundSession } from '../../hooks/useBackgroundSession';
 import { holdEnvironment, useNativeBandHold } from '../../lib/measurement-web/use-native-band-hold';
+import { useBandHold } from '../../lib/native-measurement/band-hold';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { useEntryPrep } from '../../hooks/useEntryPrep';
 import { useWaitingRoomPresence } from '../../hooks/useWaitingRoomPresence';
@@ -42,7 +41,7 @@ import {
   buildSteps, deriveEnterStage, deriveFlowStateKind, entryReducer, initialEntryState, notYetScheduledAt, startedSheetApplies, type FlowStateKind,
 } from '../../lib/class/flow/member-machine';
 import { writeBandSkip } from '../../lib/class/flow/band-skip';
-import { buildSummaryRows, remainingPrepLabels, type BandOutcome, type SurveyOutcome } from '../../lib/class/flow/member-prep';
+import { remainingPrepLabels, type SurveyOutcome } from '../../lib/class/flow/member-prep';
 import { buildMemberReadiness, type BandSnapshot } from '../../lib/class/flow/member-presence';
 import type { FlowBandMode } from '../../lib/class/flow/types';
 import { useAuthStore } from '../../stores/authStore';
@@ -115,9 +114,12 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
   const [startedDismissed, setStartedDismissed] = useState(false);
   /** 밴드 단계에서 본 마지막 상태 — 준비 현황(presence)으로 상담사 로비에 중계된다(서버 저장 없음) */
   const [bandSnapshot, setBandSnapshot] = useState<BandSnapshot | null>(null);
-  // 밴드를 착용하고 측정을 시작하는데 리포트 반영이 '제외'면 측정 전에 한 번만 다시 묻는다(같은 회차 1회, 미착용이면 묻지 않음)
-  const [reportReconfirm, setReportReconfirm] = useState<{ outcome: BandOutcome } | null>(null);
-  const reportReconfirmedRef = useRef(false);
+  // SDD-303: 입장 확인은 열린 회차면 한 번만 자동 통과한다(이전으로 돌아와도 다시 넘기지 않아 취소 수단 유지).
+  const autoEnteredRef = useRef(false);
+  // 동의 화면에서 이전으로 돌아온 뒤에는 자동 건너뜀을 끈다(루프 방지).
+  const consentBackedRef = useRef(false);
+  const bandHold = useBandHold();
+  const [handoffSlow, setHandoffSlow] = useState(false);
 
   // 초대받은 로그인 회원의 편의 입장: 저장된 자격이 없으면 초대 행으로 같은 자격을 받는다(자격이 없으면 코드 입장 안내)
   useEffect(() => {
@@ -247,6 +249,7 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
   const batteryGuide = batteryGuideOpen ? <BatteryGuideDialog onClose={dismissBatteryGuide} /> : null;
 
   // 준비 중(마법사·시작 대기)인 동안 상담사 로비에 내 준비 현황을 알린다. 대기열·진행·종료·상태 화면에서는 보내지 않는다.
+  const prepFinished = machine.phase === 'wait' || machine.phase === 'live' || (machine.phase === 'wizard' && machine.fromWait);
   const presenceReadiness = useMemo(
     () => buildMemberReadiness({
       place: info?.locationType ?? 'online',
@@ -255,11 +258,13 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
       bandOutcome: prep.draft.bandOutcome,
       mic: prep.draft.mic,
       band: bandSnapshot,
+      optionalStepsSkippable: prepFinished,
     }),
-    [info, prep.draft.survey, prep.draft.bandOutcome, prep.draft.mic, bandSnapshot],
+    [info, prep.draft.survey, prep.draft.bandOutcome, prep.draft.mic, bandSnapshot, prepFinished],
   );
   // v2: 준비 현황은 waiting.set_ready 명령(단조 checkin_revision) — v1 presence 소켓 이벤트는 쓰지 않는다.
-  const readyDone = presenceReadiness.surveyDone && presenceReadiness.bandDone && presenceReadiness.deviceDone;
+  // 상태 질문·기기 점검은 대기실의 선택 항목이라 하지 않으면 건너뜀으로 본다(SDD-303).
+  const readyDone = prepFinished && presenceReadiness.surveyDone && presenceReadiness.bandDone && presenceReadiness.deviceDone;
   const lastReadyRef = useRef<boolean | null>(null);
   useEffect(() => {
     if (!v2Flag || !v2Ready || !liveV2.client) return;
@@ -282,14 +287,27 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
   // SDD-293: 밴드 단계를 연결로 마친 로그인 회원은 대기실에서 곧바로 네이티브가 밴드를 보류로 인계받는다(시작 때 재연결 0회).
   // 단계 c 에 머무는 동안은 JS 가 접촉 상태를 보여 주므로 인계하지 않는다. 클래스 시작 없이 떠나면 훅이 해제한다.
   const holdEnv = holdEnvironment();
-  useNativeBandHold({
-    want: {
-      ...holdEnv, guest: !entry || entry.isGuest || !user?.id, bandOptIn: info ? bandModeOf(info.linkbandMode) !== 'none' : false,
-      eegConsent: eegChoice === true,
-      bandDone: prep.draft.bandOutcome === 'connected' && !(machine.phase === 'wizard' && machine.step === 'c') && (machine.phase === 'wizard' || machine.phase === 'wait' || machine.phase === 'live'),
-    },
-    live: machine.phase === 'live',
-  });
+  const holdWant = {
+    ...holdEnv, guest: !entry || entry.isGuest || !user?.id, bandOptIn: info ? bandModeOf(info.linkbandMode) !== 'none' : false,
+    eegConsent: eegChoice === true,
+    bandDone: prep.draft.bandOutcome === 'connected' && !(machine.phase === 'wizard' && machine.step === 'c') && (machine.phase === 'wizard' || machine.phase === 'wait' || machine.phase === 'live'),
+  };
+  useNativeBandHold({ want: holdWant, live: machine.phase === 'live' });
+  // SDD-303: 대기실에서 네이티브 인계가 10초 넘게 확정되지 않으면 한 줄 안내와 다시 연결 진입점을 보인다(인계 확정 전 JS 연결은 그대로 유지).
+  const handoffPending = machine.phase === 'wait' && holdWant.native && holdWant.v2 && !holdWant.guest && holdWant.bandOptIn && holdWant.eegConsent && holdWant.bandDone && !bandHold.held;
+  useEffect(() => {
+    if (!handoffPending) { setHandoffSlow(false); return undefined; }
+    const timer = window.setTimeout(() => setHandoffSlow(true), 10_000);
+    return () => window.clearTimeout(timer);
+  }, [handoffPending]);
+  // SDD-303: 열린 회차는 입장하기 탭 없이 동의 화면으로 바로 간다.
+  useEffect(() => {
+    if (autoEnteredRef.current || machine.phase !== 'confirm' || !entry) return;
+    if (machine.stage === 'open' || machine.stage === 'started') {
+      autoEnteredRef.current = true;
+      dispatch({ type: 'enter' });
+    }
+  }, [machine.phase, machine.stage, entry]);
 
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -343,7 +361,6 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
       // c를 열지 않고 거절했던 경우에만 다시 연결을 준비할 수 있다. 실제 연결/스킵 결과는 건드리지 않는다.
       ...(prep.draft.bandOutcome === 'skipped' && eegChoice === false && values.eeg ? { bandOutcome: 'none' as const } : {}),
     });
-    reportReconfirmedRef.current = true;
     setIntegratedConsentSaved(true);
     setPendingConsentValues(null);
     setPendingConsentTouched([]);
@@ -413,7 +430,7 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
   const size = info.participantMode === 'group' ? 'group' : 'solo';
   const bandMode = bandModeOf(info.linkbandMode);
   const steps = buildSteps(place, bandMode);
-  const stepsView = { total: steps.length, current: Math.max(0, steps.indexOf(machine.step)) };
+  const stepsView = machine.fromWait ? { total: 1, current: 0 } : { total: steps.length, current: Math.max(0, steps.indexOf(machine.step)) };
   const exit = (): void => {
     navigate(homePath);
   };
@@ -489,7 +506,11 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
         <WaitStartContainer
           place={place} size={size} bandMode={bandMode} title={title} hostName={info.hostName} scheduledAt={info.scheduledAt}
           address={info.locationType === 'offline' ? info.locationAddress : null}
-          onRecheck={() => dispatch({ type: 'recheck' })}
+          onRecheck={() => dispatch({ type: 'openStep', step: 'a' })}
+          onOpenSurvey={() => dispatch({ type: 'openStep', step: 'b' })}
+          onOpenDevice={place === 'online' ? () => dispatch({ type: 'openStep', step: 'd' }) : undefined}
+          onReconnectBand={bandMode !== 'none' && eegChoice !== false && (handoffSlow || prep.draft.bandOutcome !== 'connected') ? () => dispatch({ type: 'openStep', step: 'c' }) : undefined}
+          handoffSlow={handoffSlow}
           onExit={exit}
         />
       </>
@@ -498,9 +519,10 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
   if (machine.phase === 'wizard' && machine.step === 'a') {
     if (skipNoticeOnce.current) return <p role="status">다음 준비를 확인하고 있어요.</p>;
     return <IntegratedEntryConsent entry={entry} onTerminal={(kind) => dispatch({ type: 'showState', kind })} initialValues={pendingConsentValues} initialTouched={pendingConsentTouched} steps={stepsView}
+      autoSkip={!machine.fromWait && !consentBackedRef.current}
       eegLockedValue={prep.draft.bandOutcome === 'none' || eegChoice === false ? undefined : eegChoice === true}
       onSaved={(next, values) => { acceptIntegratedConsent(next, values); dispatch({ type: 'next', steps }); }}
-      onBack={() => dispatch({ type: 'back', steps })} onExit={exit} />;
+      onBack={() => { consentBackedRef.current = true; dispatch({ type: 'back', steps }); }} onExit={exit} />;
   }
   const startedOpen = machine.stage === 'started' && !startedDismissed && machine.phase === 'wizard' && startedSheetApplies(machine.step);
   const startedSheet = (
@@ -532,41 +554,12 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
   }
   if (machine.phase === 'wizard' && machine.step === 'c' && bandMode !== 'none') {
     if (integratedConsentSaved && eegChoice === false) return <p role="status">밴드 없이 참여할 준비를 하고 있어요.</p>;
-    const answerReconfirm = (include: boolean): void => {
-      const pending = reportReconfirm;
-      reportReconfirmedRef.current = true;
-      setReportReconfirm(null);
-      if (include) {
-        prep.chooseReport('included');
-        void prep.commitReportChoice('included');
-      }
-      if (pending) {
-        prep.patch({ bandOutcome: pending.outcome });
-        dispatch({ type: 'next', steps });
-      }
-    };
     return (
       <>
       <BandStepContainer
         bandMode={bandMode} place={place} steps={stepsView}
         startedRemaining={startedOpen ? remainingPrepLabels(steps, 'c') : null}
-        overlaySheet={reportReconfirm !== null ? (
-      <FlowSheet
-        open
-        title="이번 수업 리포트에 측정 결과를 반영할까요?"
-        sub="반영하지 않아도 측정 데이터는 보관되고, 수업에는 그대로 참여할 수 있어요."
-        onClose={() => answerReconfirm(false)}
-        dismissOnOutside={false}
-        footer={
-          <div className="fm-stack" style={{ gap: 8 }}>
-            <FlowButton kind="primary" onClick={() => answerReconfirm(true)}>반영하기</FlowButton>
-            <FlowButton kind="soft" onClick={() => answerReconfirm(false)}>이번엔 제외</FlowButton>
-          </div>
-        }
-      >
-        <p className="fm-sheet-sub">지금은 리포트 반영이 &lsquo;제외&rsquo;로 되어 있어요.</p>
-      </FlowSheet>
-        ) : null}
+        autoAdvanceMs={1500}
         onBandChange={setBandSnapshot}
         onEegChoice={eegChoice === undefined || eegChoice === true ? undefined : async (agree) => {
           await setEegCollectionConsent(sessionId, entry.credential, { consented: agree, noticeVersion: EEG_COLLECTION_NOTICE_VERSION });
@@ -574,10 +567,6 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
         }}
         onDone={(outcome) => {
           writeBandSkip(sessionId, outcome === 'skipped');
-          if (outcome === 'connected' && prep.draft.reportChoice !== 'included' && !reportReconfirmedRef.current) {
-            setReportReconfirm({ outcome });
-            return;
-          }
           prep.patch({ bandOutcome: outcome });
           dispatch({ type: 'next', steps });
         }}
@@ -600,18 +589,6 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
         }}
         onStartedEnterNow={() => dispatch({ type: 'enterNow' })}
         onStartedContinue={() => setStartedDismissed(true)}
-        onBack={backFromPrep}
-        onExit={exit}
-      />
-    );
-  }
-  if (machine.phase === 'wizard' && machine.step === 'e') {
-    return (
-      <ReadySummaryView
-        place={place} displayName={displayName} steps={stepsView}
-        rows={buildSummaryRows({ place, bandMode, draft: prep.draft }).filter((row) => !entry.isGuest || row.key !== 'research')}
-        onGoto={(step) => dispatch({ type: 'goto', step, fromSummary: true })}
-        onReady={() => dispatch({ type: 'finishPrep' })}
         onBack={backFromPrep}
         onExit={exit}
       />

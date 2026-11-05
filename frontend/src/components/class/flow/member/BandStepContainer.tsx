@@ -1,5 +1,5 @@
 // SDD-209 M4 — FM06c 연결 컨테이너. 이 단계에 있는 동안만 관찰용 useBand 를 쓰고, 떠나면 훅이 정리된다(BLE 연결은 전역이라 유지).
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useBandStep } from '../../../../hooks/useBandStep';
 import { bandOutcomeOf, type BandOutcome } from '../../../../lib/class/flow/member-prep';
 import type { BandSnapshot } from '../../../../lib/class/flow/member-presence';
@@ -22,13 +22,15 @@ interface BandStepContainerProps {
    * 저장에 실패하면 던져야 하며, 그때는 동의한 것으로 보지 않고 다시 고르게 한다.
    */
   onEegChoice?: (agree: boolean) => Promise<void>;
+  /** SDD-303 — 접촉 양호가 확인된 연결은 이 시간(ms) 뒤 자동으로 다음 단계로. 접촉 미확인·불량은 수동. 없으면 자동 진행 안 함 */
+  autoAdvanceMs?: number;
   onStartedEnterNow: () => void;
   onStartedContinue: () => void;
   onBack: () => void;
   onExit: () => void;
 }
 
-export function BandStepContainer({ onDone, onBandChange, onEegChoice, ...rest }: BandStepContainerProps) {
+export function BandStepContainer({ onDone, onBandChange, onEegChoice, autoAdvanceMs, ...rest }: BandStepContainerProps) {
   // 선택 저장 전(unset)에는 밴드 연결 UI 를 열지 않는다. onEegChoice 가 없으면 기존 동작(바로 연결 단계).
   const [eegChoice, setEegChoice] = useState<'unset' | 'agreed'>(onEegChoice ? 'unset' : 'agreed');
   const [eegSaving, setEegSaving] = useState(false);
@@ -45,6 +47,14 @@ export function BandStepContainer({ onDone, onBandChange, onEegChoice, ...rest }
     // onBandChange 는 부모가 매 렌더 새로 만들 수 있어 값이 바뀔 때만 보낸다
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [band.state, leadCh1, leadCh2, band.battery]);
+  // 접촉이 확인되어 양호(두 채널 모두 정상)일 때만 자동 진행한다. null(확인 전)·불량은 사용자가 직접 다음을 누른다.
+  const contactGood = band.state === 'connected' && leadCh1 === false && leadCh2 === false;
+  const onDoneRef = useRef(onDone); onDoneRef.current = onDone;
+  useEffect(() => {
+    if (autoAdvanceMs === undefined || eegChoice !== 'agreed' || !contactGood) return undefined;
+    const timer = window.setTimeout(() => onDoneRef.current(bandOutcomeOf('connected', 'next')), autoAdvanceMs);
+    return () => window.clearTimeout(timer);
+  }, [autoAdvanceMs, eegChoice, contactGood]);
   const choose = async (agree: boolean): Promise<void> => {
     if (!onEegChoice || eegSaving) return;
     setEegSaving(true);

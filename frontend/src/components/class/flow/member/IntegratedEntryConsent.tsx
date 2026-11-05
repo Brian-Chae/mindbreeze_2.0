@@ -11,6 +11,8 @@ interface Props {
   initialValues?: EntryConsentValues | null;
   initialTouched?: readonly (keyof EntryConsentValues)[];
   eegLockedValue?: boolean;
+  /** SDD-303: 서버에 필수·EEG·연구 선택이 현행 고지로 모두 확정돼 있으면 화면을 건너뛴다(저장 0, 서버 값 그대로 파생) */
+  autoSkip?: boolean;
   steps?: MemberFlowSteps;
   onSaved: (entry: StoredEntry, values: EntryConsentValues) => void;
   onTerminal: (kind: 'closed' | 'cancelled') => void;
@@ -18,7 +20,12 @@ interface Props {
   onBack: () => void;
   onExit?: () => void;
 }
-export function IntegratedEntryConsent({ entry, acquireEntry, initialValues, initialTouched, eegLockedValue, steps, onSaved, onTerminal, onEntryError, onBack, onExit }: Props) {
+/** 리포트 선택은 서버에 고지 확인 증빙이 없어, 이 회차·참여자로 통합 동의를 저장한 적이 있는지를 기기에 표시해 재입장 때 화면을 건너뛰는 근거로 쓴다(값은 서버가 정본). */
+const decidedKey = (entry: StoredEntry): string => `mb_consent_done_${entry.sessionId}_${entry.participantId ?? ''}`;
+const readDecided = (entry: StoredEntry): boolean => { try { return window.sessionStorage.getItem(decidedKey(entry)) === '1'; } catch { return false; } };
+const markDecided = (entry: StoredEntry): void => { try { window.sessionStorage.setItem(decidedKey(entry), '1'); } catch { /* 저장소 사용 불가면 다음 입장에서 화면을 다시 보인다 */ } };
+
+export function IntegratedEntryConsent({ entry, acquireEntry, initialValues, initialTouched, eegLockedValue, autoSkip, steps, onSaved, onTerminal, onEntryError, onBack, onExit }: Props) {
   const [resolvedEntry, setResolvedEntry] = useState(entry);
   const [values, setValues] = useState<EntryConsentValues>(initialValues ?? emptyEntryConsentValues);
   const valuesRef = useRef(values);
@@ -33,6 +40,8 @@ export function IntegratedEntryConsent({ entry, acquireEntry, initialValues, ini
   const busy = useRef(false);
   const terminal = useRef(onTerminal);
   terminal.current = onTerminal;
+  const savedRef = useRef(onSaved);
+  savedRef.current = onSaved;
   const checkpoint = useRef<EntryConsentCheckpoint | null>(null);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   useEffect(() => {
@@ -47,6 +56,12 @@ export function IntegratedEntryConsent({ entry, acquireEntry, initialValues, ini
       // 아직 조작하지 않은 선택은 서버 기록을 복원한다. 미조회 false를 거절로 저장하지 않는다.
       for (const key of touched.current) restored[key] = valuesRef.current[key];
       setValues(restored);
+      const info = resolvedEntry.classInfo;
+      const cp = result.checkpoint;
+      const decided = cp.required && (info?.linkbandMode === 'none' || cp.eeg !== null) && (resolvedEntry.isGuest || cp.research !== null);
+      if (autoSkip && decided && (result.values.report || readDecided(resolvedEntry)) && info && resolvedEntry.participantId && resolvedEntry.credential) {
+        savedRef.current(resolvedEntry, { ...restored, eeg: info.linkbandMode === 'none' ? false : restored.eeg, research: !resolvedEntry.isGuest && restored.research });
+      }
     }).catch((error: unknown) => {
       if (!cancelled && error instanceof EntryConsentTerminalError) { terminal.current(error.kind); return; }
       if (!cancelled) setLoadError(error instanceof Error && error.message.includes('다른 화면') ? error.message : '동의 정보를 확인하지 못했어요. 다시 확인해 주세요.');
@@ -73,7 +88,7 @@ export function IntegratedEntryConsent({ entry, acquireEntry, initialValues, ini
       if (!alive.current) return;
       const effective = { ...selected, eeg: resolvedEntry.classInfo.linkbandMode === 'none' ? false : selected.eeg, research: !resolvedEntry.isGuest && selected.research };
       const saved = await persistIntegratedEntryConsent(resolvedEntry, effective, checkpoint.current, () => alive.current, eegLockedValue !== undefined);
-      if (saved && alive.current) onSaved(resolvedEntry, effective);
+      if (saved && alive.current) { markDecided(resolvedEntry); onSaved(resolvedEntry, effective); }
     } catch (error: unknown) {
       if (alive.current && error instanceof EntryConsentTerminalError) { terminal.current(error.kind); return; }
       if (alive.current) setSaveError('선택을 모두 저장하지 못했어요. 일부 항목은 저장됐을 수 있어요. 선택을 확인한 뒤 다시 저장해 주세요.');

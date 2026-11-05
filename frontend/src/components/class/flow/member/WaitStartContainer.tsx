@@ -17,6 +17,10 @@ interface WaitStartContainerProps {
   scheduledAt: string | null;
   address: string | null;
   onRecheck: () => void;
+  onOpenSurvey?: () => void;
+  onOpenDevice?: () => void;
+  onReconnectBand?: () => void;
+  handoffSlow?: boolean;
   onExit: () => void;
 }
 

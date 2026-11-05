@@ -32,7 +32,8 @@ const box = (name: string) => { const el = container.querySelector<HTMLInputElem
 const button = (label: string) => { const el = [...container.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent?.trim() === label); expect(el, label).toBeDefined(); return el!; };
 const click = async (el: HTMLElement) => { await act(async () => { el.click(); }); };
 async function renderPage(seed = true, over: Partial<StoredEntry> = {}) { if (seed) saveEntry(entry(over)); await act(async () => root.render(<MemoryRouter initialEntries={['/class/s1/enter']}><Routes><Route path="/class/:sessionId/enter" element={<EntryPage />} /></Routes></MemoryRouter>)); }
-async function openConsent(over: Partial<StoredEntry> = {}) { await renderPage(true, over); await click(button('입장하기')); }
+// SDD-303: 열린 회차는 입장하기 탭 없이 동의 화면으로 자동 진입한다.
+async function openConsent(over: Partial<StoredEntry> = {}) { await renderPage(true, over); }
 
 beforeEach(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -60,22 +61,23 @@ describe('통합 동의와 실제 저장', () => {
     await click(box('research')); expect(box('all').indeterminate).toBe(true); expect(apiClient.put).not.toHaveBeenCalled();
     await click(box('required')); expect(button('동의하고 계속하기').disabled).toBe(true);
   });
-  it('필수만 제출하면 EEG false 저장 후 설문을 거쳐 밴드 없이 준비 요약으로 간다', async () => {
+  it('필수만 제출하면 EEG false 저장 후 설문 없이 밴드 없이 대기실로 간다', async () => {
     await openConsent(); await click(button('동의하고 계속하기'));
     expect(apiClient.put).toHaveBeenCalledWith('/sessions/s1/report-choice', { participant_id: 'p1', report_included: false, notice_acknowledged: true, notice_version: 'class-team-v1' }, expect.objectContaining({ headers: { 'X-Entry-Credential': 'cred' } }));
     expect(apiClient.put).toHaveBeenCalledWith('/sessions/s1/entry/eeg-consent', { consented: false, notice_version: 'eeg-1' }, expect.anything());
-    expect(container.textContent).toContain('지금 집중은 어떤가요?'); await click(button('건너뛰기'));
+    expect(container.textContent).not.toContain('지금 집중은 어떤가요?');
     expect(readBandSkip('s1')).toBe(true); expect(band.enabled).toEqual([]); expect(band.connect).not.toHaveBeenCalled();
-    expect(band.hold.at(-1)?.want).toMatchObject({ eegConsent: false, bandDone: false }); expect(container.textContent).toContain('LINK BAND 없이 참가해요');
+    expect(band.hold.at(-1)?.want).toMatchObject({ eegConsent: false, bandDone: false }); expect(container.textContent).toContain('코치가 시작하면 자동으로 입장해요');
   });
   it('EEG true 저장 후 기존 c 연결 화면이 사용자 제스처를 기다린다', async () => {
-    await openConsent(); await click(box('eeg')); await click(button('동의하고 계속하기')); await click(button('건너뛰기'));
+    await openConsent(); await click(box('eeg')); await click(button('동의하고 계속하기'));
     expect(band.enabled.at(-1)).toBe(true); expect(band.connect).not.toHaveBeenCalled(); expect(container.textContent).toContain('LINK BAND 연결하기'); expect(band.hold.at(-1)?.want.bandDone).toBe(false);
   });
   it('서버 기동의를 복원하고 유효한 녹음·EEG·연구를 다시 기록하지 않는다', async () => {
     consents.eeg_collection_consented = true; consents.eeg_notice_version = 'eeg-1'; research = { participant_id: 'p1', consented: true, notice_version: 'r5-2' }; report = true;
-    await openConsent(); expect(boxes().every(el => el.checked)).toBe(true); await click(button('동의하고 계속하기'));
-    expect(vi.mocked(apiClient.put).mock.calls.map(args => args[0])).toEqual(['/sessions/s1/report-choice']);
+    // 필수·EEG·연구가 현행 고지로 모두 확정이면 화면 없이 건너뛰고 서버 값을 그대로 파생한다(저장 0).
+    await openConsent(); expect(boxes()).toHaveLength(0); expect(apiClient.put).not.toHaveBeenCalled();
+    expect(band.enabled.at(-1)).toBe(true); expect(container.textContent).toContain('LINK BAND 연결하기');
   });
   it('조회 실패는 미동의로 덮어쓰지 않고 재시도한다', async () => {
     vi.mocked(apiClient.get).mockImplementationOnce(async () => state() as never).mockImplementationOnce(async () => { throw new Error('offline'); });
@@ -88,7 +90,7 @@ describe('통합 동의와 실제 저장', () => {
     expect(container.textContent).toContain('선택을 모두 저장하지 못했어요'); expect(document.activeElement?.getAttribute('role')).toBe('alert'); expect(box('eeg').checked).toBe(true); expect(band.enabled).toEqual([]);
     expect(vi.mocked(apiClient.put).mock.calls.map(args => args[0])).toEqual(['/sessions/s1/entry/eeg-consent', '/sessions/s1/report-choice']);
     await click(button('다시 저장하기'));
-    expect(vi.mocked(apiClient.put).mock.calls.filter(args => args[0].endsWith('/eeg-consent'))).toHaveLength(1); expect(container.textContent).toContain('지금 집중은 어떤가요?');
+    expect(vi.mocked(apiClient.put).mock.calls.filter(args => args[0].endsWith('/eeg-consent'))).toHaveLength(1); expect(boxes()).toHaveLength(0); expect(container.textContent).toContain('LINK BAND 연결하기');
   });
   it('연타는 같은 요청 1회, 언마운트 후 EEG 후속 저장은 없다', async () => {
     let finish!: (value: never) => void; vi.mocked(apiClient.put).mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
@@ -125,7 +127,7 @@ describe('통합 동의와 실제 저장', () => {
     await click(box('eeg')); vi.mocked(apiClient.put).mockResolvedValue({} as never); await click(button('다시 저장하기'));
     expect(apiClient.post).toHaveBeenCalledTimes(2); expect(loadEntry('s1')?.eegCollectionConsented).toBe(true);
     expect(vi.mocked(apiClient.put).mock.calls.filter(args => args[0].endsWith('/eeg-consent')).map(args => args[1])).toEqual([{ consented: false, notice_version: 'eeg-1' }, { consented: true, notice_version: 'eeg-1' }]);
-    await click(button('입장하기')); expect(container.textContent).toContain('지금 집중은 어떤가요?'); expect(boxes()).toHaveLength(0);
+    expect(boxes()).toHaveLength(0); expect(container.textContent).toContain('LINK BAND 연결하기');
   });
   it('저장된 false와 구 버전 true는 미선택이며 전체 동의가 저절로 활성화되지 않는다', async () => {
     consents.eeg_collection_consented = true; consents.eeg_notice_version = 'eeg-old'; research = { participant_id: 'p1', consented: true, notice_version: 'old' };
@@ -158,10 +160,10 @@ describe('통합 동의와 실제 저장', () => {
   });
   it('밴드 준비 후 외부 EEG 철회는 잠금 선택으로 덮어쓰거나 부모 hold 입력을 바꾸지 않는다', async () => {
     band.state = 'connected';
-    await openConsent(); await click(box('eeg')); await click(button('동의하고 계속하기')); await click(button('건너뛰기')); await click(button('다음'));
+    await openConsent(); await click(box('eeg')); await click(button('동의하고 계속하기')); await click(button('다음'));
     expect(band.hold.at(-1)?.want).toMatchObject({ eegConsent: true, bandDone: true });
     consents.eeg_collection_consented = false; consents.eeg_notice_version = 'eeg-1'; vi.mocked(apiClient.put).mockClear();
-    await click(button('리포트 반영하지 않아요'));
+    await click(button('선택 바꾸기'));
     expect(container.textContent).toContain('뇌파 동의가 다른 화면에서 변경됐어요'); expect(apiClient.put).not.toHaveBeenCalled();
     expect(band.hold.at(-1)?.want).toMatchObject({ eegConsent: true, bandDone: true });
   });
@@ -179,11 +181,11 @@ describe('통합 동의와 실제 저장', () => {
     await click(button('확인했어요')); await click(button('동의하고 계속하기')); expect(loadEntry('s1')).not.toBeNull();
     expect(vi.mocked(apiClient.put).mock.calls.map(args => args[0])).toEqual(['/sessions/s1/report-choice']);
   });
-  it('EEG 거절로 c를 생략한 뒤 이전은 c에서 제자리로 돌지 않고 설문으로 간다', async () => {
-    await openConsent(); await click(button('동의하고 계속하기')); await click(button('건너뛰기'));
-    expect(container.textContent).toContain('준비를 마쳤어요');
-    await click(container.querySelector<HTMLButtonElement>('button[aria-label="이전"]')!);
-    expect(container.textContent).toContain('지금 집중은 어떤가요?'); expect(band.enabled).toEqual([]);
+  it('EEG 거절로 c를 생략하면 대기실로 가고 선택 바꾸기는 동의 화면으로 돌아오며 완료 시 대기실로 복귀한다', async () => {
+    await openConsent(); await click(button('동의하고 계속하기'));
+    expect(container.textContent).toContain('코치가 시작하면 자동으로 입장해요'); expect(band.enabled).toEqual([]);
+    await click(button('선택 바꾸기')); expect(boxes()).toHaveLength(5);
+    await click(button('동의하고 계속하기')); expect(container.textContent).toContain('코치가 시작하면 자동으로 입장해요');
   });
 
   it('종료 상태와 동의 403이 동시에 있으면 종료 안내를 우선한다', async () => {
@@ -207,12 +209,11 @@ describe('통합 동의와 실제 저장', () => {
   });
 
   it('밴드 없이 준비한 뒤에는 EEG를 다시 선택하고 기존 c 연결 단계로 갈 수 있다', async () => {
-    await openConsent(); await click(button('동의하고 계속하기')); await click(button('건너뛰기'));
+    await openConsent(); await click(button('동의하고 계속하기'));
     consents.eeg_collection_consented = false; consents.eeg_notice_version = 'eeg-1';
-    await click(button('리포트 반영하지 않아요')); expect(box('eeg').disabled).toBe(false);
+    await click(button('선택 바꾸기')); expect(box('eeg').disabled).toBe(false);
     await click(box('eeg')); await click(button('동의하고 계속하기'));
-    const bandRow = [...container.querySelectorAll<HTMLButtonElement>('button')].find(el => el.textContent?.includes('LINK BAND 없이 참가해요'))!;
-    await click(bandRow); expect(container.textContent).toContain('LINK BAND 연결하기'); expect(band.connect).not.toHaveBeenCalled();
+    await click(button('LINK BAND 다시 연결하기')); expect(container.textContent).toContain('LINK BAND 연결하기'); expect(band.connect).not.toHaveBeenCalled();
   });
 
   it('미개방 대기 후 동의 완료하고 요약에서 재검토해도 이전 touched가 서버 true를 덮어쓰지 않는다', async () => {
@@ -224,9 +225,10 @@ describe('통합 동의와 실제 저장', () => {
         session: { id: 's1', type: 'meditation', title: '명상', host_name: '코치', scheduled_at: null, started_at: null, duration_min: 50, location_type: 'offline', location_address: null, participant_mode: 'group', linkband_mode: 'optional', max_participants: 10, record_audio: true, record_video: false },
       } as never);
     await renderPage(false); await click(box('all')); await click(button('클래스 정보 확인하기'));
-    expect(container.textContent).toContain('아직 열리지 않았어요'); await click(button('입장 대기하기')); await click(button('입장하기'));
-    expect(boxes().every(el => el.checked)).toBe(true); await click(button('동의하고 계속하기')); await click(button('건너뛰기')); await click(button('다음'));
-    await click(button('리포트 반영해요')); expect(box('required').checked).toBe(true); expect(box('eeg').checked).toBe(true); expect(box('research').checked).toBe(true); expect(box('report').checked).toBe(true);
+    expect(container.textContent).toContain('아직 열리지 않았어요'); await click(button('입장 대기하기'));
+    // 서버에 모두 확정이면 동의 화면 없이 밴드 단계로 간다. 대기실에서 선택 바꾸기로 다시 열어도 서버 값이 유지된다.
+    expect(boxes()).toHaveLength(0); await click(button('다음'));
+    await click(button('선택 바꾸기')); expect(box('required').checked).toBe(true); expect(box('eeg').checked).toBe(true); expect(box('research').checked).toBe(true); expect(box('report').checked).toBe(true);
   });
 
 });
