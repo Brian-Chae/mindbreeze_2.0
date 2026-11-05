@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { BASE_URL, getNativeRefreshBody, tokenStorage } from '../api/client';
+import { isNativeAuthReady } from '../native-auth';
 import { bluetoothService } from '../eeg/bluetoothService';
 import { SOCKET_URL } from '../socket';
 import { buildNativeModelPayload, getNativeMeasurement } from '../native-measurement';
@@ -203,14 +204,15 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
   useEffect(() => {
     if (!ready || !o.participantId || !o.accountId) return undefined;
     const access = tokenStorage.getAccess();
-    const refresh = getNativeRefreshBody()?.refresh_token ?? '';
+    // SDD-305: native 조정자 지원 앱은 refresh 를 native 가 이미 쥐고 있다 — JS 복사본이 없어도 시작한다.
+    const refresh = isNativeAuthReady() ? '' : (getNativeRefreshBody()?.refresh_token ?? '');
     const platform = Capacitor.getPlatform();
     const facade = getNativeMeasurement();
     let cancelled = false;
     let off: (() => void) | null = null;
     const requestId = attemptRef.current === 0 ? deterministicRequestId(o.sessionId, o.participantId) : crypto.randomUUID(); // 재시작은 새 requestId(같은 id 는 native 가 replay 로 막는다)
-    if (!access || !refresh || (platform !== 'ios' && platform !== 'android')) {
-      setStatus('failed'); setCode(!access || !refresh ? 'credentials_unavailable' : 'platform_unsupported');
+    if (!access || (!refresh && !isNativeAuthReady()) || (platform !== 'ios' && platform !== 'android')) {
+      setStatus('failed'); setCode(!access || (!refresh && !isNativeAuthReady()) ? 'credentials_unavailable' : 'platform_unsupported');
       return undefined;
     }
     const key = `${o.sessionId}:${o.participantId}:${o.accountId}`;
