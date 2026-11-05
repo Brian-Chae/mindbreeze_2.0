@@ -19,3 +19,12 @@
 
 ## 범위와 한계
 실 OAuth 제공자 인증, 실기기 네이티브, 실제 메일 발송, EEG 장치, 운영 DB는 시험하지 않았다. 브라우저 가입은 합성 응답을 사용했으며 실계정을 만들지 않았다. Apple 버튼 노출은 iOS 조건에 따른다. 기존 전체 테스트의 실패는 관련 회귀 성공과 분리해서 기록한다. 운영 배포는 수행하지 않는다.
+
+## 감독 최종 로컬 확인
+- 신규 백엔드+실제 임시 PostgreSQL 35 passed(21.13초), FE 신규 4파일13 passed(4.10초).
+- 전체 소스 ESLint 오류 0/기존 경고6, 최종 빌드 성공. 캡처 스크립트는 긴 화면의 스크롤을 맨 위로 맞춰 고정 배경 캡처 편차를 제거했다.
+- 전체 FE 실행 4175 passed / 29 failed / 7 skipped, unhandled 1. 수정 도중 실행되어 최신 코드 최종 결과는 아니며, 새 동선으로 갱신할 단언과 기존 실패를 분리 확인했다.
+- 기존 기준선 13bff196 동일 실패: nav-labels5, nav-badge2, agent-counselor2, measure-guard1, chat-message-deeplink2, native-release2, raw-chunk1, font-scale1. org-management/report PDF 등 브라우저 테스트는 5175 서버 부재. EEG 종료 후크 unhandled는 관련 파일이 기준선과 동일하다.
+- 로컬 백엔드 초기4실패는 공유 venv jsonschema 누락. requirements의 명시 버전을 임시경로에 설치해 해당 ingest 21건 통과를 확인했다. 공유 venv는 변경하지 않았다.
+- sdd234 mobile suite 실패와 sdd293 후크 unhandled도 기준선에서 동일 재현했다. 전체 테스트가 생성한 기존 SDD234 캡처 변경은 실행 전 상태로 복원했다.
+- CI PG 실패 3건은 보강수업 테스트의 과거 날짜와 실제 시계 불일치. 기준선에서 동일 재현한 뒤 제품 로직 변경 없이 테스트 시계만 고정했다. 실제 PG 해당 파일 42 passed.
