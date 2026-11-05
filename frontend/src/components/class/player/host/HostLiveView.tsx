@@ -2,7 +2,7 @@ import type { LocalVideoTrack } from 'livekit-client';
 // SDD-208 H1·H2 — 상담사 진행 중 화면(뷰). props 만 받는 순수 컴포넌트라 서버·BLE·LiveKit 없이 픽스처로 렌더·측정할 수 있다.
 // 구성: 상단 바 → (배너) → 헤드 행(지표 띠 + 셀프뷰/요약 패널) → 칩 줄 → 세로 스크롤 그리드 → 도크, 시트는 도크·칩·타일에서 연다.
 import { useRef, useState, type ReactNode } from 'react';
-import { Activity, MessageCircle, Hand, ArrowUpRight, Settings, SlidersHorizontal } from 'lucide-react';
+import { Activity, MessageCircle, Hand, ArrowUpRight, Settings, Video, Mic } from 'lucide-react';
 import {
   filterHostParticipants,
   HOST_BAND_TEXT,
@@ -29,7 +29,8 @@ import { NoticeOverlay } from '../shared/NoticeOverlay';
 import { HostChipLine } from './HostChipLine';
 import { HostSelfView, HostSummaryPanel } from './HostHeadSlot';
 import { HostPermissionSheet, type HostMediaProps } from './HostMediaSheet';
-import { HostSettingsSheet, type HostCapacityProps } from './HostSettingsSheet';
+import { HostCapacitySection, type HostCapacityProps } from './HostSettingsSheet';
+import { HostMediaSheet } from './HostMediaSheet';
 import { HostMetricStrip } from './HostMetricStrip';
 import { HostParticipantGrid } from './HostParticipantGrid';
 import { HostSoloCard } from './HostSoloCard';
@@ -94,9 +95,9 @@ export interface HostLiveViewProps {
   quietSignalEntries?: SignalMap;
   selfBand: HostSelfBand;
   chat: HostChatProps;
-  /** 설정 시트의 미디어(온라인)/녹음(오프라인) 구역 내용 */
+  /** 미디어(온라인)/녹음(오프라인) 시트 내용 */
   media: HostMediaProps;
-  /** SDD-289: 정원 설정 구역. 클래스 정보를 모르면 생략(null) */
+  /** SDD-289/299: 설정 시트 첫 구역(정원 늘리기). 클래스 정보를 모르면 생략(null) */
   capacity?: HostCapacityProps | null;
   /** 서버·화상 오류(종료 실패 재시도 포함) — 본 배너와 별개로 위에 쌓는다 */
   errorBanners?: readonly HostErrorBannerModel[];
@@ -154,29 +155,38 @@ export function HostLiveView(props: HostLiveViewProps) {
   const secondaryChips = hostCase.chips.filter((chip) => !['hands', 'speak', 'signals', 'band', 'first', 'checkin'].includes(chip.key));
 
   const dockItems: DockItem[] = [
-    { key: 'metric', label: '지표 기준', icon: icon(Activity) },
-    { key: 'chat', label: '채팅', icon: icon(MessageCircle), badge: ui.sheet === 'chat' ? 0 : chat.unread },
-    { key: 'media', label: hostCase.settingsDockLabel, icon: icon(Settings) },
-    { key: 'tools', label: '도구', icon: icon(SlidersHorizontal) },
+    { key: 'metric', label: hostCase.dockLabels.metric, icon: icon(Activity) },
+    { key: 'chat', label: hostCase.dockLabels.chat, icon: icon(MessageCircle), badge: ui.sheet === 'chat' ? 0 : chat.unread },
+    { key: 'media', label: hostCase.dockLabels.media, icon: icon(online ? Video : Mic) },
+    { key: 'tools', label: hostCase.dockLabels.tools, icon: icon(Settings) },
   ];
 
   const sheetSpec = ((): { title: string; subtitle?: string; body: ReactNode; tall?: boolean } | null => {
     switch (ui.sheet) {
       case 'metric':
-        return { title: '지표 기준', body: <MetricSheet metric={ui.metric} rotate={ui.rotate} onMetric={uiActions.setMetric} onRotate={uiActions.setRotate} /> };
+        return {
+          title: hostCase.dockLabels.metric,
+          subtitle: '실시간 표시 방식',
+          body: (
+            <MetricSheet
+              metric={ui.metric} rotate={ui.rotate} onMetric={uiActions.setMetric} onRotate={uiActions.setRotate}
+              sort={ui.sort} onSort={uiActions.setSort}
+              showHandsFirst={online && !hostCase.solo} handsFirst={ui.handsFirst} onHandsFirst={uiActions.setHandsFirst}
+              table={ui.table} onTable={uiActions.setTable}
+            />
+          ),
+        };
       case 'chat':
-        return { title: '채팅', tall: true, body: <ChatSheet enabled={chat.enabled} busy={chat.busy} onToggleEnabled={chat.onToggleEnabled} room={chat.render(false)} /> };
+        return { title: hostCase.dockLabels.chat, tall: true, body: <ChatSheet enabled={chat.enabled} busy={chat.busy} onToggleEnabled={chat.onToggleEnabled} room={chat.render(false)} /> };
       case 'checkin':
         return { title: '체크인 요약', body: <CheckinSheet summary={summarizeCheckins(participants)} preCheckins={preCheckins} quietSignals={quietSignals} onDetail={uiActions.openDetail} /> };
       case 'tools':
         return {
-          title: '도구',
+          title: hostCase.dockLabels.tools,
           body: (
             <ToolsSheet
               onLeave={actions.close}
-              sort={ui.sort} onSort={uiActions.setSort}
-              showHandsFirst={online && !hostCase.solo} handsFirst={ui.handsFirst} onHandsFirst={uiActions.setHandsFirst}
-              table={ui.table} onTable={uiActions.setTable}
+              capacitySection={capacity ? <HostCapacitySection online={online} capacity={capacity} joined={participants.length} waiting={queue.length} /> : null}
               onInvite={actions.invite ? () => { uiActions.closeSheet(); actions.invite?.(); } : undefined}
               accessCode={meta.accessCode} codeCopied={codeCopied} onCopyCode={actions.copyCode}
               selfBandText={selfBandText(selfBand)} onOpenMyband={() => uiActions.openSheet('myband')}
@@ -197,12 +207,11 @@ export function HostLiveView(props: HostLiveViewProps) {
         return { title: '내 밴드', body: <MybandSheet band={selfBand} onConnect={actions.connectSelfBand} onDisconnect={actions.disconnectSelfBand} /> };
       case 'media':
         return {
-          title: hostCase.settingsDockLabel,
+          title: hostCase.mediaDockLabel,
           body: (
-            <HostSettingsSheet
+            <HostMediaSheet
               online={online} cam={hostCase.cam} mic={hostCase.mic} media={media}
               onToggleCam={actions.toggleCam} onToggleMic={actions.toggleMic} onOpenPermission={uiActions.openSheet}
-              capacity={capacity ?? null} joined={participants.length} waiting={queue.length}
             />
           ),
         };

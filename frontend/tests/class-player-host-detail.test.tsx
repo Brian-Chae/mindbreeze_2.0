@@ -128,9 +128,9 @@ describe('H3 오프라인 헤드(C04) — 셀프뷰·카메라 토글 DOM 없음
     expect(panel).toContain('5/8');
   });
 
-  it('C04: 도크 세 번째 항목은 "설정"이다', async () => {
+  it('C04: 도크 세 번째 항목은 "녹음"이다', async () => {
     await renderCase('C04');
-    expect(text(all('[data-pz="dk"]')[2])).toContain('설정');
+    expect(text(all('[data-pz="dk"]')[2])).toContain('녹음');
   });
 });
 

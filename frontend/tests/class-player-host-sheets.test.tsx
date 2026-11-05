@@ -198,7 +198,7 @@ describe('H2 배너 — 마이크·네트워크', () => {
   });
 });
 
-describe('H2 시트 — 체크인·도구·채팅·지표 기준', () => {
+describe('H2 시트 — 체크인·설정·채팅·분석', () => {
   it('체크인 시트: 응답 수·질문별 분포·살펴볼 응답, 입장 전 체크인은 CheckinSummary 재사용', async () => {
     await renderCase('C01', 'sheet=checkin');
     const s = sheet();
@@ -213,34 +213,34 @@ describe('H2 시트 — 체크인·도구·채팅·지표 기준', () => {
     expect(text(s)).toContain('집중 4');
   });
 
-  it('도구 시트: 정렬(낮은 순)을 고르면 그리드가 값 오름차순이 된다', async () => {
-    await renderCase('C01', 'sheet=tools');
+  it('분석 시트: 정렬(낮은 순)을 고르면 그리드가 값 오름차순이 된다', async () => {
+    await renderCase('C01', 'sheet=metric');
     await click(buttonByText('낮은 순', sheet() ?? document));
     const ids = all('[data-pz="tile"]').map((t) => t.dataset.participantId);
     expect(ids.slice(0, 5)).toEqual(['p5', 'p2', 'p1', 'p7', 'p3']);
   });
 
-  it('도구 시트: 표로 보기를 켜면 표가 나오고 타일은 사라진다', async () => {
-    await renderCase('C01', 'sheet=tools');
+  it('분석 시트: 표로 보기를 켜면 표가 나오고 타일은 사라진다', async () => {
+    await renderCase('C01', 'sheet=metric');
     await click(one('[role="switch"][aria-label="표로 보기"]'));
     expect(one('[data-pz="table"]')).not.toBeNull();
     expect(all('[data-pz="tile"]')).toHaveLength(0);
     expect(all('[data-pz="table"] tbody tr')).toHaveLength(8);
   });
 
-  it('도구 시트: 입장 코드(4자리)와 코드 복사', async () => {
+  it('설정 시트: 입장 코드(4자리)와 코드 복사', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
     await renderCase('C01', 'sheet=tools');
-    expect(text(sheet())).toContain('입장 코드');
+    expect(text(sheet())).toContain('참여 안내 (입장 코드)');
     expect(text(sheet())).toContain('4829');
     expect(text(sheet())).toContain('참가자에게 직접 알려 주세요');
     await click(buttonByText('코드 복사', sheet() ?? document));
     expect(writeText).toHaveBeenCalledWith('4829');
   });
 
-  it('도구 시트: 1:1·오프라인에서는 손든 회원 우선 스위치가 없다', async () => {
-    await renderCase('C04', 'sheet=tools');
+  it('분석 시트: 1:1·오프라인에서는 손든 회원 우선 스위치가 없다', async () => {
+    await renderCase('C04', 'sheet=metric');
     expect(one('[role="switch"][aria-label="손든 회원 우선"]')).toBeNull();
     expect(one('[role="switch"][aria-label="표로 보기"]')).not.toBeNull();
   });
@@ -261,7 +261,7 @@ describe('H2 시트 — 체크인·도구·채팅·지표 기준', () => {
     expect(text(all('[data-pz="dk"]')[1])).not.toContain('3');
   });
 
-  it('지표 기준 시트에서 지표를 바꾸면 띠 이름과 타일 라벨이 함께 바뀐다', async () => {
+  it('분석 시트에서 지표를 바꾸면 띠 이름과 타일 라벨이 함께 바뀐다', async () => {
     await renderCase('C01', 'sheet=metric');
     await click(buttonByText('집중도', sheet() ?? document));
     expect(one('[data-pz="mstrip"]')?.getAttribute('data-metric')).toBe('focus');

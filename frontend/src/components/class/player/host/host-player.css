@@ -246,6 +246,8 @@
 /* ───────── 시트 내용 공용 ───────── */
 .hp-sheet { display: flex; flex-direction: column; gap: 12px; }
 .hp-lbl { font-size: var(--fs-12); font-weight: 700; letter-spacing: 0.08em; color: var(--tx-mid); }
+.hp-lbl[data-title="true"] { font-size: var(--fs-15); font-weight: 600; line-height: 22px; letter-spacing: 0; color: inherit; display: flex; align-items: baseline; gap: 8px; }
+.hp-lbl__aside { font-size: var(--fs-13); font-weight: 500; color: var(--tx-mid); }
 .hp-sec { display: flex; flex-direction: column; gap: 8px; }
 .hp-opts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .hp-opt {

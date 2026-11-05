@@ -355,16 +355,28 @@ export interface HostSummary {
   bandTotal: number;
 }
 
+/** SDD-299: 상담사 하단 독 라벨(상수 한 곳). 내부 시트 키는 metric/chat/media/tools 유지 */
+export interface HostDockLabels {
+  metric: '분석';
+  chat: '채팅';
+  media: '미디어' | '녹음';
+  tools: '설정';
+}
+
+export function hostDockLabels(online: boolean): HostDockLabels {
+  return { metric: '분석', chat: '채팅', media: online ? '미디어' : '녹음', tools: '설정' };
+}
+
 export interface HostCase {
   loc: HostLoc;
   solo: boolean;
   allOff: boolean;
   /** 오프라인은 셀프뷰를 두지 않고 요약 패널로 채운다(CS3) */
   headSlot: 'selfview' | 'summary';
-  /** 도크 세 번째 항목 라벨 — 오프라인은 "녹음" */
-  /** 독·시트 제목은 온라인/오프라인 모두 '설정'. 미디어/녹음은 시트 안 구역 제목 */
-  settingsDockLabel: '설정';
-  mediaSectionLabel: '미디어 설정' | '녹음 설정';
+  /** SDD-299: 도크·시트 제목 — 분석 · 채팅 · 미디어(온라인)/녹음(오프라인) · 설정. 라벨은 HOST_DOCK_LABELS 한 곳에서 정의 */
+  dockLabels: HostDockLabels;
+  /** 미디어 시트 제목(온라인 '미디어', 오프라인 '녹음') */
+  mediaDockLabel: '미디어' | '녹음';
   banner: HostBanner | null;
   chips: HostChip[];
   stats: { joined: number; total: number };
@@ -479,8 +491,8 @@ export function deriveHostCase(input: HostCaseInput): HostCase {
     solo: input.solo,
     allOff,
     headSlot: online ? 'selfview' : 'summary',
-    settingsDockLabel: '설정',
-    mediaSectionLabel: online ? '미디어 설정' : '녹음 설정',
+    dockLabels: hostDockLabels(online),
+    mediaDockLabel: online ? '미디어' : '녹음',
     banner: deriveBanner(input),
     chips,
     stats: { joined: joinedList.length, total: list.length },
