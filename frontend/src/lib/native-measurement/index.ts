@@ -2,7 +2,8 @@
 // - foreground 복귀 = full snapshot → 그보다 새로운 event 만 반영.
 // - managerGeneration+seq 로 stale 이벤트 폐기. 새 세대면 snapshot 재조회.
 // - 웹뷰는 중복 수집 시작/소켓 writer 를 만들지 않는다: start 는 requestId 단위로 한 번만.
-import { Capacitor, registerPlugin } from '@capacitor/core';
+import { Capacitor } from '@capacitor/core';
+import { getMeasurementPlugin } from '../native-auth/plugin';
 import type { CommandAck, LiveCommand, LiveEvent } from '../session-live/live-types';
 import type {
   BridgeEvent, Capabilities, DispatchLiveCommandResult, ListenerHandle, MeasurementSnapshot,
@@ -232,7 +233,7 @@ export class NativeMeasurementFacade {
     const assertValid = () => { if (isValid && !isValid()) throw new Error('start_cancelled'); };
     assertValid();
     this.lastSessionId = req.sessionId;
-    const secrets = [req.tokens.accessToken, req.tokens.refreshToken];
+    const secrets = [req.tokens.accessToken, req.tokens.refreshToken].filter((v) => v.length > 0);
     const guard = <T>(v: T): T => {
       if (containsSecret(v, secrets)) throw new Error('credential_echo');
       return v;
@@ -435,13 +436,11 @@ export class NativeMeasurementFacade {
   }
 }
 
-const pluginProxy = registerPlugin<NativeMeasurementPlugin>('NativeMeasurement');
-
 /** 네이티브 앱에서만 true. 웹은 JS Socket.IO + WASM worker 경로를 쓴다. */
 export const isNativeMeasurementAvailable = (): boolean => Capacitor.isNativePlatform();
 
 let singleton: NativeMeasurementFacade | null = null;
 export function getNativeMeasurement(): NativeMeasurementFacade {
-  if (!singleton) singleton = new NativeMeasurementFacade(pluginProxy);
+  if (!singleton) singleton = new NativeMeasurementFacade(getMeasurementPlugin());
   return singleton;
 }

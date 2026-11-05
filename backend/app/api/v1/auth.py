@@ -576,6 +576,19 @@ def _decode_refresh(token: str) -> dict:
     return payload
 
 
+def _refresh_caller(request: Request) -> str:
+    """갱신 호출 경로 분류(비밀 아님). 기기·토큰 식별자는 쓰지 않는다."""
+    if request.headers.get("x-mb-native") == "capacitor":
+        src = (request.headers.get("x-mb-refresh-source") or "").strip().lower()
+        return f"native:{src}" if src in {"webview", "native", "audio", "sweeper"} else "native"
+    return "web"
+
+
+def _log_refresh_outcome(outcome: str, caller: str, reason: str) -> None:
+    """SDD-305: refresh_outcome(rotated/duplicate/reuse/invalid) 관측 로그 — 토큰·기기 값 없이 구분만."""
+    logger.info("[auth] refresh_outcome=%s caller=%s reason=%s", outcome, caller, reason)
+
+
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh(
     request: Request,
@@ -597,39 +610,67 @@ async def refresh(
     # 클레임이 없는 기존 토큰은 True(기존 동작 = 14일 지속)로 폴백한다.
     remember = bool(payload.get("remember", True))
 
+    caller = _refresh_caller(request)
     record = db.query(RefreshToken).filter(RefreshToken.jti == jti).first()
     if record is None:
+        _log_refresh_outcome("invalid", caller, "unknown_jti")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="알 수 없는 리프레시 토큰입니다",
         )
 
+    # SDD-020: 비활성화 실효성 — 발급 시점엔 active 였더라도 이후 suspended/pending 이
+    # 되면 토큰 회전을 차단한다. (탈취/정지 계정의 세션 연장 방지)
+    user = db.query(User).filter(User.id == uuid.UUID(user_id)).first()
+    if user is None:
+        _log_refresh_outcome("invalid", caller, "user_missing")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="사용자를 찾을 수 없습니다",
+        )
+
+    def _duplicate_response(dup: dict) -> JSONResponse:
+        # SDD-305: 유예 안의 중복 요청 → 첫 회전이 만든 같은 새 토큰 쌍을 그대로 돌려준다(추가 회전 없음).
+        _ensure_account_active(user)
+        _log_refresh_outcome("duplicate", caller, "idempotent")
+        resp = JSONResponse(content={"access_token": dup["access_token"], "token_type": "bearer"})
+        _set_refresh_cookie(resp, dup["refresh_token"], remember_me=dup["remember"], request=request)
+        return resp
+
     if record.revoked_at is not None:
-        # 회전 직후 유예 시간 내 동시 요청은 정상 경합으로 보고 후속 유효 토큰을 이어서 회전한다.
+        dup = refresh_token_service.load_duplicate_result(jti, db)
+        if dup is not None:
+            return _duplicate_response(dup)
+        # 결과 암호문이 없는 구(舊) 행: 기존 유예 후속 회전 경로를 유지한다.
         successor = refresh_token_service.find_grace_successor(record, db)
         if successor is None:
             # 재사용 감지 → 사용자 전체 토큰 폐기
             refresh_token_service.revoke_all_user_tokens(user_id, db)
+            _log_refresh_outcome("reuse", caller, "revoked_all")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="토큰이 재사용되었습니다. 모든 기기를 로그아웃합니다.",
             )
         jti = successor.jti
 
-    # SDD-020: 비활성화 실효성 — 발급 시점엔 active 였더라도 이후 suspended/pending 이
-    # 되면 토큰 회전을 차단한다. (탈취/정지 계정의 세션 연장 방지)
-    user = db.query(User).filter(User.id == uuid.UUID(user_id)).first()
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="사용자를 찾을 수 없습니다",
-        )
     _ensure_account_active(user)
 
-    new_refresh = refresh_token_service.rotate_refresh_token(
-        jti, user_id, db, remember=remember
-    )
     new_access = create_access_token(subject=user_id)
+    new_refresh = refresh_token_service.rotate_refresh_token_with_result(
+        jti, user_id, db, new_access, remember=remember
+    )
+    if new_refresh is None:
+        # 동시 요청 경쟁에서 졌다 — 승자가 커밋한 결과가 있으면 그것을 받는다.
+        dup = refresh_token_service.load_duplicate_result(jti, db)
+        if dup is not None:
+            return _duplicate_response(dup)
+        refresh_token_service.revoke_all_user_tokens(user_id, db)
+        _log_refresh_outcome("reuse", caller, "race_lost_no_result")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="토큰이 재사용되었습니다. 모든 기기를 로그아웃합니다.",
+        )
+    _log_refresh_outcome("rotated", caller, "ok")
     response = JSONResponse(content={"access_token": new_access, "token_type": "bearer"})
     # 회전 시에도 최초 로그인의 "로그인 상태 유지" 선택을 유지한다.
     _set_refresh_cookie(response, new_refresh, remember_me=remember, request=request)

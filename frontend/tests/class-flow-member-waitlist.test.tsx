@@ -182,13 +182,13 @@ describe('EntryPage — 대기열 (M7)', () => {
     expect(text()).not.toContain('서버 원문');
     expect(window.sessionStorage.getItem('mb_entry_s1')).not.toBeNull();
   });
-  it('승격(is_waitlisted true→false)을 감지하면 자동으로 준비 첫 단계로 진행한다', async () => {
+  it('승격(is_waitlisted true→false)을 감지하면 자동으로 동의 화면(준비 첫 단계)으로 진행한다', async () => {
     seed();
     getEntryState.mockResolvedValue(stateDto());
     await renderPage();
     expect(text()).toContain('지금은 자리가 가득 찼어요');
     getEntryState.mockResolvedValue(stateDto({ is_waitlisted: false }));
     await act(async () => { window.dispatchEvent(new Event('online')); });
-    expect(text()).toContain('시작 전에 확인해 주세요');
+    expect(text()).toContain('동의를 확인해 주세요');
   });
 });

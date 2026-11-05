@@ -38,6 +38,8 @@ public final class MeasurementHost {
         bootstrapped = true
         guard ownership.nativeEnabled else { return }
         queue.async { [self] in
+            // SDD-301: manager/BandLink 는 하나만. 이미 있으면 CBCentralManager 를 또 만들지 않는다.
+            guard ManagerBootstrapPolicy.shouldCreate(nativeEnabled: ownership.nativeEnabled, hasManager: manager != nil) else { return }
             let link = BandLink(queue: queue, expectedPeripheral: nil)
             band = link
             let m = MeasurementManager(
@@ -59,7 +61,9 @@ public final class MeasurementHost {
 
     /// 플래그를 켠 직후(현재 실행 중)에도 manager 를 만들 수 있게 한다.
     public func ensureManager() {
-        queue.sync { if manager == nil, ownership.nativeEnabled { bootstrapped = false } }
+        // SDD-301: 이미 만들어졌으면 아무것도 하지 않는다(예전엔 매 호출마다 bootstrapped=false 로 되돌려 BandLink 가 중복 생성됐다).
+        let needs = queue.sync { ManagerBootstrapPolicy.shouldCreate(nativeEnabled: ownership.nativeEnabled, hasManager: manager != nil) }
+        guard needs else { return }
         bootstrapped = false
         bootstrap()
         queue.sync {}

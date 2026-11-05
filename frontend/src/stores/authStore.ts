@@ -9,7 +9,9 @@ import {
   refreshAccessTokenResult,
   type RefreshFailureReason,
   clearNativeRefresh,
+  BASE_URL,
 } from '../lib/api/client';
+import { isNativeAuthReady, nativeSignOut } from '../lib/native-auth';
 // API7-07: 로그아웃 시 실시간 네임스페이스(/chat·/record·/session-live) 연결을 정리한다.
 import {
   disconnectChatSocket,
@@ -221,6 +223,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   refreshAuth: async (): Promise<boolean> => {
     try {
+      if (isNativeAuthReady()) {
+        // SDD-305: 앱은 native 인증 조정자를 거친다(쿠키/복사본 refresh 로 독립 회전하지 않는다).
+        const r = await refreshAccessTokenResult();
+        if (!r.ok) return false;
+        set({ accessToken: r.token, sessionError: null });
+        return true;
+      }
       const res = await apiRefresh();
       tokenStorage.set(res.access_token);
       set({ accessToken: res.access_token, sessionError: null });
@@ -257,6 +266,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {
       // 서버 에러는 무시하고 로컬 상태만 정리
     }
+    // SDD-305: native 조정자의 refresh 폐기(서버 best-effort) + 진행 중 갱신 응답 무효화 + 저장소 비움
+    await nativeSignOut(BASE_URL);
     tokenStorage.clear();
     clearNativeRefresh();
     persistUser(null);
@@ -303,6 +314,7 @@ tokenStorage.subscribe((token) => {
 /** 세션 만료(API7-05) — client.ts 의 terminateSession 이 발행한다. */
 function handleSessionExpired(): void {
   authEpoch += 1;
+  void nativeSignOut();
   tokenStorage.clear();
   disconnectAllSockets();
   useAuthStore.setState({ user: null, isAuthenticated: false, isInitialized: true, sessionError: null });

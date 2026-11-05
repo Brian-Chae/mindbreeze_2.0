@@ -5,15 +5,13 @@ import { apiErrorCode } from '../../api/auth';
 import type { SessionStatus } from '../../api/session';
 import type { FlowBandMode, FlowPlace } from './types';
 
-/** 준비 마법사 단계: a 고지·선택 · b 오늘의 상태 · c LINK BAND · d 기기(온라인만) · e 요약 */
+/** 준비 단계: a 동의 · c LINK BAND(선택). b 오늘의 상태 · d 기기 · e 요약은 대기실에서 여는 선택 항목(SDD-303) */
 export type WizardKey = 'a' | 'b' | 'c' | 'd' | 'e';
 
-/** 온라인 5 · 오프라인 4(기기 점검 없음) · 밴드 사용 안 함이면 −1 */
-export function buildSteps(place: FlowPlace, bandMode: FlowBandMode): WizardKey[] {
-  const steps: WizardKey[] = ['a', 'b'];
+/** SDD-303 A안: 동의 → (밴드 사용 회차만) LINK BAND → 대기실. 상태 질문·기기 점검·요약은 대기실에서 선택해 연다. */
+export function buildSteps(_place: FlowPlace, bandMode: FlowBandMode): WizardKey[] {
+  const steps: WizardKey[] = ['a'];
   if (bandMode !== 'none') steps.push('c');
-  if (place === 'online') steps.push('d');
-  steps.push('e');
   return steps;
 }
 
@@ -73,13 +71,15 @@ export interface EntryMachineState {
   stage: EnterStage | null;
   /** 요약(e)의 행을 눌러 들어온 단계 — 다음/이전이 요약으로 곧바로 돌아간다 */
   fromSummary: boolean;
+  /** 대기실에서 선택 항목(상태 질문·기기·밴드 다시 연결)을 열었다 — 다음/이전이 대기실로 돌아간다 */
+  fromWait: boolean;
   /** 준비를 다 마치지 않고 진행 화면으로 들어왔다 — 진행 화면이 건너뛴 준비를 안내한다 */
   prepSkipped: boolean;
   stateKind: FlowStateKind | null;
 }
 
 export function initialEntryState(): EntryMachineState {
-  return { phase: 'confirm', step: 'a', stage: null, fromSummary: false, prepSkipped: false, stateKind: null };
+  return { phase: 'confirm', step: 'a', stage: null, fromSummary: false, fromWait: false, prepSkipped: false, stateKind: null };
 }
 
 export type EntryAction =
@@ -88,6 +88,7 @@ export type EntryAction =
   | { type: 'next'; steps: readonly WizardKey[] }
   | { type: 'back'; steps: readonly WizardKey[] }
   | { type: 'goto'; step: WizardKey; fromSummary?: boolean }
+  | { type: 'openStep'; step: WizardKey }
   | { type: 'finishPrep' }
   | { type: 'recheck' }
   | { type: 'enterNow' }
@@ -121,6 +122,7 @@ export function entryReducer(state: EntryMachineState, action: EntryAction): Ent
       return { ...state, phase: 'wizard', step: 'a' };
     case 'next': {
       if (state.phase !== 'wizard') return state;
+      if (state.fromWait) return { ...state, phase: 'wait', fromWait: false };
       if (state.fromSummary) return { ...state, step: 'e', fromSummary: false };
       const index = action.steps.indexOf(state.step);
       if (index >= 0 && index < action.steps.length - 1) return { ...state, step: action.steps[index + 1]! };
@@ -128,6 +130,7 @@ export function entryReducer(state: EntryMachineState, action: EntryAction): Ent
     }
     case 'back': {
       if (state.phase !== 'wizard') return state;
+      if (state.fromWait) return { ...state, phase: 'wait', fromWait: false };
       if (state.fromSummary) return { ...state, step: 'e', fromSummary: false };
       const index = action.steps.indexOf(state.step);
       if (index <= 0) return { ...state, phase: 'confirm' };
@@ -135,8 +138,10 @@ export function entryReducer(state: EntryMachineState, action: EntryAction): Ent
     }
     case 'goto':
       return state.phase === 'wizard' ? { ...state, step: action.step, fromSummary: action.fromSummary === true } : state;
+    case 'openStep':
+      return state.phase === 'wait' ? { ...state, phase: 'wizard', step: action.step, fromWait: true, fromSummary: false } : state;
     case 'finishPrep':
-      return state.stage === 'started' ? { ...state, phase: 'live', prepSkipped: false } : { ...state, phase: 'wait' };
+      return state.stage === 'started' ? { ...state, phase: 'live', prepSkipped: false, fromWait: false } : { ...state, phase: 'wait', fromWait: false };
     case 'recheck':
       return state.phase === 'wait' ? { ...state, phase: 'wizard', step: 'e' } : state;
     case 'enterNow':

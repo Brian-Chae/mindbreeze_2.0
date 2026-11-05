@@ -17,6 +17,9 @@ class SealedTokenStore(
     private val keyProvider: () -> SecretKey,
     private val account: String = "default",
 ) : TokenStore {
+    /** 같은 파일을 쓰는 인스턴스는 하나의 인증 조정자를 공유한다(SDD-305). */
+    override val scopeKey: String get() = file.absolutePath
+
     private fun read(): JSONObject? = try {
         if (!file.exists()) null else {
             val raw = file.readBytes()

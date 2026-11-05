@@ -1,0 +1,36 @@
+/* SDD-303 통합 동의 화면에만 적용. 코드 입력·밴드·공용 화면 영향 없음. */
+.pz-root:has(.fm-integrated-consent) { --col-w: 480px; }
+.pz-root:has(.fm-integrated-consent) .fl-col { gap: 0; }
+.pz-root:has(.fm-integrated-consent) .fm-head { gap: 8px; margin-bottom: 24px; }
+.pz-root:has(.fm-integrated-consent) .fl-h1 { font-size: 24px; line-height: 1.4; letter-spacing: -.025em; }
+.pz-root:has(.fm-integrated-consent) .fl-sub { font-size: 14px; line-height: 1.6; color: #cfc6d6; }
+.pz-root .iec-card { border: 1px solid #ffffff29; border-radius: 24px; background: rgba(24,12,36,.78); overflow: hidden; text-align: left; }
+.pz-root .iec-item { display: flex; align-items: flex-start; gap: 12px; padding: 14px 20px; min-height: 76px; cursor: pointer; touch-action: manipulation; }
+.pz-root .iec-item input { flex: 0 0 24px; width: 24px; height: 24px; margin: 0; accent-color: #b373ef; color-scheme: light; cursor: pointer; }
+.pz-root .iec-item input:focus-visible { outline: 2px solid #d2aefc; outline-offset: 4px; }
+.pz-root .iec-item input:disabled { cursor: default; }
+.pz-root .iec-copy { display: block; min-width: 0; flex: 1; }
+.pz-root .iec-heading { display: flex; align-items: baseline; gap: 8px; min-height: 24px; font-size: 15px; line-height: 24px; font-weight: 600; letter-spacing: -.025em; color: #fff; }
+.pz-root .iec-type { font-size: 12px; line-height: 20px; font-weight: 500; white-space: nowrap; color: #cfc6d6; flex-shrink: 0; letter-spacing: 0; }
+.pz-root .iec-type.required { color: #d2aefc; }
+.pz-root .iec-copy small { display: block; font-size: 13px; line-height: 1.6; color: #cfc6d6; margin-top: 4px; word-break: keep-all; overflow-wrap: break-word; }
+.pz-root .iec-all { padding: 22px 20px; min-height: 92px; background: #ffffff09; border-bottom: 1px solid #ffffff2e; }
+.pz-root .iec-all .iec-heading { font-size: 18px; font-weight: 700; letter-spacing: 0; }
+.pz-root .iec-required { padding: 20px; border-bottom: 1px solid #ffffff1f; }
+.pz-root .iec-options { padding: 6px 0 8px; }
+.pz-root .iec-item:hover { background: #ffffff0b; }
+.pz-root .iec-item:focus-within { background: #b373ef19; }
+.pz-root .iec-detail-link { display: block; min-height: 44px; margin: 8px auto 0; padding: 8px 0; color: #d2aefc; font-size: 13px; line-height: 20px; text-decoration: underline; }
+.pz-root .iec-feedback { color: #f4d6e9; font-size: 14px; line-height: 22px; margin: 12px 4px; }
+.pz-root:has(.fm-integrated-consent) .fl-foot { max-width: 480px; margin-inline: auto; gap: 10px; }
+.pz-root:has(.fm-integrated-consent) .fl-foot .fl-btn { min-height: 52px; }
+.pz-root:has(.fm-integrated-consent) .fl-foot .fl-btn:disabled { opacity: 1; background: rgba(24,12,36,.78); border: 1px solid #ffffff2e; color: #cfc6d6; }
+.pz-root .iec-status { font-size: 13px; line-height: 21px; color: #cfc6d6; }
+.pz-root .iec-details { display: flex; flex-direction: column; gap: 24px; padding: 12px 4px; font-size: 16px; line-height: 26px; }
+.pz-root .iec-details section { display: flex; flex-direction: column; gap: 12px; }
+.pz-root .iec-details h3 { color: #ead4f4; font-size: 18px; line-height: 27px; }
+.pz-root:has(.fm-integrated-consent)[data-sheet-open="true"]::after { content: ''; position: absolute; inset: 0; z-index: 5; background: #08060ccc; }
+.pz-root:has(.fm-integrated-consent) .pz-sheet[data-pz="flow-sheet"][data-mode="bottom"] { position: absolute; grid-row: auto; grid-column: auto; left: 0; right: 0; bottom: 0; width: 100%; max-width: 640px; margin: 0 auto; z-index: 6; background: #241b2e; border-radius: 24px 24px 0 0; max-height: 85dvh; }
+@media (max-width: 360px) { .pz-root .iec-item { padding-left: 16px; padding-right: 16px; gap: 10px; } .pz-root .iec-heading { font-size: 14px; gap: 6px; } }
+
+.pz-root .iec-confirmation { margin: 0 4px 12px; color: #ead4f4; font-size: 13px; line-height: 21px; }
