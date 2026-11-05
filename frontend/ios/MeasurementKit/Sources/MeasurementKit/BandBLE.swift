@@ -95,6 +95,11 @@ public enum BandReleasePlan {
     }
 }
 
+/// SDD-301: BandLink(CBCentralManager)는 앱 전체에서 하나만 만든다. manager 가 이미 있으면 다시 만들지 않는다.
+public enum ManagerBootstrapPolicy {
+    public static func shouldCreate(nativeEnabled: Bool, hasManager: Bool) -> Bool { nativeEnabled && !hasManager }
+}
+
 public enum BandLinkState: String { case idle, scanning, connecting, discovering, subscribed, reconnecting, blocked }
 
 public protocol BandLinkDelegate: AnyObject {
@@ -133,6 +138,7 @@ public final class BandLink: NSObject, CBCentralManagerDelegate, CBPeripheralDel
         self.scheduler = DispatchScheduler(queue: queue)
         super.init()
         central = CBCentralManager(delegate: self, queue: queue, options: [CBCentralManagerOptionRestoreIdentifierKey: Self.restoreIdentifier, CBCentralManagerOptionShowPowerAlertKey: false])
+        Self.log.info("BandBLE 생성 id=\(UInt(bitPattern: ObjectIdentifier(self).hashValue) % 100000, privacy: .public) restoreId=\(Self.restoreIdentifier, privacy: .public)")
     }
 
     private func set(_ s: BandLinkState, _ reason: String? = nil) { state = s; delegate?.bandLink(didChange: s, reason: reason) }
@@ -219,6 +225,7 @@ public final class BandLink: NSObject, CBCentralManagerDelegate, CBPeripheralDel
     // MARK: CBCentralManagerDelegate
 
     public func centralManagerDidUpdateState(_ c: CBCentralManager) {
+        Self.log.info("central state=\(c.state.rawValue, privacy: .public) id=\(UInt(bitPattern: ObjectIdentifier(self).hashValue) % 100000, privacy: .public)")
         switch c.state {
         case .poweredOn: if wantConnected { attempt() }
         case .unauthorized, .unsupported: set(.blocked, "bluetooth_\(c.state == .unauthorized ? "unauthorized" : "unsupported")")
