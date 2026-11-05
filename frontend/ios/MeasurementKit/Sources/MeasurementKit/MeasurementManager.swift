@@ -762,10 +762,10 @@ public final class MeasurementManager: BandLinkDelegate {
         case .blocked:
             bandState = "lost"
             if reason?.contains("unauthorized") == true { blockedReason = "bluetooth_permission"; state = .blocked }
-            else if reason?.contains("unsupported") == true { blockedReason = "unsupported_background"; state = .blocked }
+            else if reason?.contains("unsupported") == true { blockedReason = "unsupported_background" }   // SDD-301: 일시 상태일 수 있어 BLOCKED 로 굳히지 않는다(이유만 기록, poweredOn 이 오면 재시도)
         case .idle: bandState = "not_worn"
         }
-        if s == .subscribed, blockedReason == "bluetooth_off" { blockedReason = nil }
+        if s == .subscribed, blockedReason == "bluetooth_off" || blockedReason == "unsupported_background" { blockedReason = nil }
         if bandState != before {
             Self.log.info("band_state \(before, privacy: .public) -> \(self.bandState, privacy: .public) reason=\(reason ?? "-", privacy: .public) manager=\(self.state.rawValue, privacy: .public)")
             reportDevice()

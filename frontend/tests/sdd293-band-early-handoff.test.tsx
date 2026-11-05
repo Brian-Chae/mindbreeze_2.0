@@ -156,3 +156,19 @@ describe('V8 JS 경로 종료 시 해제', () => {
     act(() => root.unmount());
   });
 });
+
+describe('SDD-301 V7·V8 JS 해제는 네이티브 인계 확정 뒤에만', () => {
+  it('V7 adoptBand 예외/accepted=false → releaseJsBand 0회, held=false', async () => {
+    for (const p of [mkPlugin({ adoptBand: vi.fn(async () => { throw new Error('boom'); }) }), mkPlugin({ adoptBand: vi.fn(async () => ({ accepted: false })) })]) {
+      const release = vi.fn(async () => null);
+      const r = await facadeOf(p).adoptBand({ platform: 'ios', deviceId: 'U1', releaseJsBand: release });
+      expect(r.held).toBe(false); expect(release).not.toHaveBeenCalled(); expect(getBandHold().held).toBe(false);
+    }
+  });
+  it('V8 accepted=true → releaseJsBand 1회, adopt 이후', async () => {
+    const p = mkPlugin(); const release = vi.fn(async () => { h.order.push('js_disconnect'); return null; });
+    const r = await facadeOf(p).adoptBand({ platform: 'ios', deviceId: 'U1', releaseJsBand: release });
+    expect(r.held).toBe(true); expect(release).toHaveBeenCalledTimes(1);
+    expect(h.order.indexOf('adopt')).toBeLessThan(h.order.indexOf('js_disconnect'));
+  });
+});
