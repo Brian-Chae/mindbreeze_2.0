@@ -22,3 +22,10 @@ test('늦게 도착한 GET은 새 로그인 사용자를 덮어쓰지 않는다'
   mocks.login.mockResolvedValue({ access_token: 'new-fixture', user: { ...oldUser, id: 'new' } }); await useAuthStore.getState().login('fixture@example.test', 'test');
   resolve(oldUser); await flush(); expect(useAuthStore.getState().user?.id).toBe('new'); expect(useAuthStore.getState().isInitialized).toBe(true);
 });
+test('본인 GET 대기 중 다른 탭 로그아웃은 초기화를 끝내며 늦은 응답을 무시한다', async () => {
+  let resolve!: (user: User) => void; mocks.me.mockReturnValue(new Promise<User>((done) => { resolve = done; }));
+  useAuthStore.getState().initialize(); await flush();
+  window.dispatchEvent(new StorageEvent('storage', { key: 'mb_user', oldValue: JSON.stringify(oldUser), newValue: null }));
+  expect(useAuthStore.getState().isInitialized).toBe(true); expect(useAuthStore.getState().user).toBeNull();
+  resolve(oldUser); await flush(); expect(useAuthStore.getState().isAuthenticated).toBe(false); expect(useAuthStore.getState().user).toBeNull();
+});

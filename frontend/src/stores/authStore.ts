@@ -305,7 +305,7 @@ function handleSessionExpired(): void {
   authEpoch += 1;
   tokenStorage.clear();
   disconnectAllSockets();
-  useAuthStore.setState({ user: null, isAuthenticated: false, sessionError: null });
+  useAuthStore.setState({ user: null, isAuthenticated: false, isInitialized: true, sessionError: null });
 }
 
 /** 다른 탭의 로그아웃/로그인(API7-06) — storage 이벤트는 다른 탭에서만 발생한다. */

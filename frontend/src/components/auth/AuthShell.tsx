@@ -1,23 +1,28 @@
 // 인증·가입 화면 공용 셸 — 자연 배경 이미지 + 보라 + 흰 카드 (SDD-249 가입 개편 화면과 동일 스타일)
 import './signup-flow.css';
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 interface AuthShellProps {
   title: string;
+  backTo?: string;
   variant?: 'member';
   subtitle?: string;
   maxWidthClass?: string;
   children: ReactNode;
 }
 
-export default function AuthShell({ title, subtitle, variant, maxWidthClass = 'max-w-[480px]', children }: AuthShellProps) {
+export default function AuthShell({ title, subtitle, variant, backTo, maxWidthClass = 'max-w-[480px]', children }: AuthShellProps) {
+  const [searchParams] = useSearchParams();
+  const memberParams = new URLSearchParams(searchParams);
+  memberParams.set('role', 'client');
+  const memberBackTo = backTo ?? `/register?${memberParams}`;
   if (variant === 'member') return (
     <div className="signup-flow relative min-h-screen font-sans">
       <img src="/images/background8.webp" alt="" className="fixed inset-0 h-full w-full object-cover" />
       <div className="fixed inset-0" />
       <header className="signup-header relative z-10">
-        <Link to="/register?role=client" className="signup-back" aria-label="가입 시작으로">‹</Link>
+        <Link to={memberBackTo} className="signup-back" aria-label="가입 시작으로">‹</Link>
         <Link to="/" className="signup-brand"><img src="/mb-design/assets/logo_symbol_dark.svg" alt="" width={24} className="brightness-0 invert" />MIND BREEZE</Link>
       </header>
       <div className="signup-content relative z-10">

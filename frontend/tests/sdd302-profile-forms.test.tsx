@@ -43,3 +43,11 @@ test('선택 전화 기존 값을 비우면 빈값 삭제 요청 후 홈으로 �
   await act(async () => container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
   expect(mocks.update).toHaveBeenCalledWith({ phone: '' }); expect(useAuthStore.getState().user?.phone).toBeNull(); expect(container.textContent).toContain('회원 홈');
 });
+test('전화 저장 실패의 재시도는 같은 PATCH를 반복하며 보류 요청을 보내지 않는다', async () => {
+  useAuthStore.setState({ user: { ...user, phone: '010-1234-5678', client_required_fields: [] } });
+  mocks.update.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ ...user, phone: '010-1234-5678', client_required_fields: [] });
+  await mount(Optional);
+  await act(async () => container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  await click('다시 시도하기');
+  expect(mocks.update).toHaveBeenCalledTimes(2); expect(mocks.update).toHaveBeenNthCalledWith(2, { phone: '010-1234-5678' }); expect(mocks.dismiss).not.toHaveBeenCalled(); expect(container.textContent).toContain('회원 홈');
+});

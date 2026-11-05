@@ -76,7 +76,7 @@ export default function InviteLandingPage() {
   };
 
   return (
-    <AuthShell variant="member" title="초대받은 회원 가입">
+    <AuthShell variant="member" title="초대받은 회원 가입" backTo={`/register?${new URLSearchParams({ role: 'client', ...(token ? { token } : {}) })}`}>
         <main className="rounded-3xl bg-white p-6 text-center shadow-xl">
           {loading && (
             <div className="py-8" role="status">

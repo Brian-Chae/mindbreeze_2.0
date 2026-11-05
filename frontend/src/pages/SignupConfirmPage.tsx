@@ -73,7 +73,7 @@ export default function SignupConfirmPage() {
   };
 
   return (
-    <AuthShell variant="member" title="소셜 가입 · 정보 확인">
+    <AuthShell variant="member" title="소셜 가입 · 정보 확인" backTo={`/register?${new URLSearchParams({ role: 'client', ...(pending.inviteToken ? { token: pending.inviteToken } : {}), ...(pending.inviteCode ? { code: pending.inviteCode } : {}) })}`}>
         <main className="rounded-3xl bg-white p-6 shadow-xl">
           <p className="text-xs font-semibold text-[#5F0080]">계정 만들기</p>
           <h1 className="mt-1 text-[22px] font-bold text-[#1F1F1F]">가입 정보 확인</h1>
