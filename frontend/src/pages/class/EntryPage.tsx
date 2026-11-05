@@ -12,7 +12,8 @@ import { EntryConfirmView } from '../../components/class/flow/member/EntryConfir
 import { BandStepContainer } from '../../components/class/flow/member/BandStepContainer';
 import { DeviceStepContainer } from '../../components/class/flow/member/DeviceStepContainer';
 import { MemberStateScreen } from '../../components/class/flow/member/MemberStateScreen';
-import { NoticeStepView } from '../../components/class/flow/member/NoticeStepView';
+import { IntegratedEntryConsent } from '../../components/class/flow/member/IntegratedEntryConsent';
+import type { EntryConsentValues } from '../../lib/class/flow/integrated-entry-consent';
 import { ReadySummaryView } from '../../components/class/flow/member/ReadySummaryView';
 import { FlowButton, FlowSheet } from '../../components/class/flow/shared/flow-primitives';
 import { StartedSheet } from '../../components/class/flow/member/StartedSheet';
@@ -34,24 +35,18 @@ import { useNow } from '../../hooks/useNow';
 import { useEntryState } from '../../hooks/useEntryState';
 import { useEntrySurvey } from '../../hooks/useEntrySurvey';
 import { cancelWaitlist, clearEntry, enterInvitedSession, entryFromResult, loadEntry, saveEntry, setEegCollectionConsent, type StoredEntry } from '../../lib/api/class-flow';
-import { RecordingConsentGateView } from '../../components/class/flow/member/RecordingConsentGateView';
 import { EEG_COLLECTION_NOTICE_VERSION, RECORDING_NOTICE_VERSION, isRecordingConsentRequired } from '../../lib/class/flow/recording-consent';
-import { isAiEnabled } from '../../lib/feature-flags';
 import { durationMinutes, formatStartLabel, formatWhen, maskEmail, preOpenCountdown } from '../../lib/class/flow/member-format';
 import { takeEntryHandoff } from '../../lib/class/flow/member-handoff';
 import {
   buildSteps, deriveEnterStage, deriveFlowStateKind, entryReducer, initialEntryState, notYetScheduledAt, startedSheetApplies, type FlowStateKind,
 } from '../../lib/class/flow/member-machine';
-import { RAW_RETENTION_DAYS } from '../../lib/privacy-policy';
 import { writeBandSkip } from '../../lib/class/flow/band-skip';
 import { buildSummaryRows, remainingPrepLabels, type BandOutcome, type SurveyOutcome } from '../../lib/class/flow/member-prep';
 import { buildMemberReadiness, type BandSnapshot } from '../../lib/class/flow/member-presence';
 import type { FlowBandMode } from '../../lib/class/flow/types';
 import { useAuthStore } from '../../stores/authStore';
 import { GuestSignupPrompt } from '../../components/auth/GuestSignupPrompt';
-
-/** 방침(/privacy)과 같은 보관 기간 — 환경 변수로 달리 표시하지 않는다 */
-const RETENTION_DAYS = RAW_RETENTION_DAYS;
 
 /** Android 첫 수업 입장 시 1회 — 제조사 절전 기능이 백그라운드 서비스를 멈출 수 있어 설정 안내를 한다(SDD-222 R4). */
 function BatteryGuideDialog({ onClose }: { onClose: () => void }) {
@@ -107,8 +102,10 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
   const [recordingChecked, setRecordingChecked] = useState(false);
   const recordingCheckedRef = useRef(false);
   recordingCheckedRef.current = recordingChecked;
-  const [recordingSubmitting, setRecordingSubmitting] = useState(false);
-  const [recordingError, setRecordingError] = useState<string | null>(null);
+  const [pendingConsentValues, setPendingConsentValues] = useState<EntryConsentValues | null>(null);
+  const [pendingConsentTouched, setPendingConsentTouched] = useState<(keyof EntryConsentValues)[]>([]);
+  const [integratedConsentSaved, setIntegratedConsentSaved] = useState(false);
+  const skipNoticeOnce = useRef(false);
   const [machine, dispatch] = useReducer(entryReducer, undefined, initialEntryState);
   const [handoff] = useState(() => takeEntryHandoff(sessionId));
   const handoffName = handoff?.displayName ?? '';
@@ -312,33 +309,58 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
     }
   }, [cancelling, sessionId, entry, navigate]);
 
-  const confirmRecordingConsent = useCallback(async (): Promise<void> => {
-    if (recordingSubmitting || !recordingChecked) return;
-    setRecordingSubmitting(true);
-    setRecordingError(null);
-    try {
-      const result = await enterInvitedSession(sessionId, { recordingConsent: true, recordingNoticeVersion: RECORDING_NOTICE_VERSION });
-      const next = entryFromResult(result);
-      if (next?.sessionId === sessionId) {
-        saveEntry(next);
-        setEntry(next);
-        setRecordingGate(false);
-      }
-    } catch (error: unknown) {
-      // 회차가 아직 열리지 않았으면 동의 저장 실패가 아니다 — '아직 열리지 않았어요' 화면으로 보낸다.
-      const kind = deriveFlowStateKind({ error, online: navigator.onLine });
-      if (kind === 'notyet' || kind === 'closed' || kind === 'cancelled') {
-        setRecordingGate(false);
-        if (kind === 'notyet') setNotYetAt(notYetScheduledAt(error));
-        setInvitationError(kind);
-        return;
-      }
-      // 저장에 실패하면 동의한 것으로 보지 않는다 — 입장도 열리지 않는다.
-      setRecordingError('동의를 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
-    } finally {
-      setRecordingSubmitting(false);
+  const acquireRecordingEntry = async (): Promise<StoredEntry> => {
+    setRecordingChecked(true);
+    recordingCheckedRef.current = true;
+    const result = await enterInvitedSession(sessionId, { recordingConsent: true, recordingNoticeVersion: RECORDING_NOTICE_VERSION });
+    const next = entryFromResult(result);
+    if (!next || next.sessionId !== sessionId || !next.credential) throw new Error('입장 정보를 확인할 수 없어요.');
+    return next;
+  };
+  const handleConsentEntryError = (error: unknown, values: EntryConsentValues, touched: (keyof EntryConsentValues)[]): void => {
+    // 녹음 선검사는 초대 권한 검사보다 먼저 실행될 수 있다. 비초대 사용자는 기존 코드 입장 안내로 복구한다.
+    if (error instanceof ApiError && (error.status === 401 || error.status === 403) && !isRecordingConsentRequired(error)) {
+      setRecordingGate(false);
+      setInvitationError(null);
+      return;
     }
-  }, [recordingSubmitting, recordingChecked, sessionId]);
+    const kind = deriveFlowStateKind({ error, online: navigator.onLine });
+    if (kind === 'notyet' || kind === 'closed' || kind === 'cancelled') {
+      setPendingConsentValues(values);
+      setPendingConsentTouched(touched);
+      setRecordingGate(false);
+      if (kind === 'notyet') setNotYetAt(notYetScheduledAt(error));
+      setInvitationError(kind);
+    }
+  };
+  const acceptIntegratedConsent = (next: StoredEntry, values: EntryConsentValues): void => {
+    const confirmed = { ...next, eegCollectionConsented: values.eeg };
+    saveEntry(confirmed);
+    setEntry(confirmed);
+    setEegChoiceOverride(values.eeg);
+    prep.patch({
+      reportChoice: values.report ? 'included' : 'excluded', researchConsent: values.research, reportSaveFailed: false, researchSaveFailed: false,
+      // c를 열지 않고 거절했던 경우에만 다시 연결을 준비할 수 있다. 실제 연결/스킵 결과는 건드리지 않는다.
+      ...(prep.draft.bandOutcome === 'skipped' && eegChoice === false && values.eeg ? { bandOutcome: 'none' as const } : {}),
+    });
+    reportReconfirmedRef.current = true;
+    setIntegratedConsentSaved(true);
+    setPendingConsentValues(null);
+    setPendingConsentTouched([]);
+  };
+  // 녹음 gate에서 이미 통합 저장했으면 a의 중복 표시만 한 번 생략한다.
+  useEffect(() => {
+    if (!skipNoticeOnce.current || machine.phase !== 'wizard' || machine.step !== 'a' || !info) return;
+    skipNoticeOnce.current = false;
+    dispatch({ type: 'next', steps: buildSteps(info.locationType, bandModeOf(info.linkbandMode)) });
+  }, [machine.phase, machine.step, info]);
+  // 동의 거절은 연결 컴포넌트를 열지 않고 기존 onDone('skipped')와 같은 결과를 기록한다.
+  useEffect(() => {
+    if (!integratedConsentSaved || eegChoice !== false || machine.phase !== 'wizard' || machine.step !== 'c' || !info) return;
+    writeBandSkip(sessionId, true);
+    prep.patch({ bandOutcome: 'skipped' });
+    dispatch({ type: 'next', steps: buildSteps(info.locationType, bandModeOf(info.linkbandMode)) });
+  }, [integratedConsentSaved, eegChoice, machine.phase, machine.step, info, sessionId, prep.patch]);
 
   const retry = useCallback(() => {
     dispatch({ type: 'resume' });
@@ -348,8 +370,9 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
   if (!entry) {
     if (!entryChecked) return <p role="status">입장 정보를 확인하고 있어요.</p>;
     if (recordingGate) {
-      return <RecordingConsentGateView title="클래스" checked={recordingChecked} submitting={recordingSubmitting} error={recordingError}
-        onChange={setRecordingChecked} onConfirm={() => void confirmRecordingConsent()} onBack={() => navigate(homePath)} />;
+      return <IntegratedEntryConsent entry={null} onTerminal={(kind) => { setRecordingGate(false); setInvitationError(kind); }} initialValues={pendingConsentValues} initialTouched={pendingConsentTouched} acquireEntry={acquireRecordingEntry} onEntryError={handleConsentEntryError}
+        onSaved={(next, values) => { skipNoticeOnce.current = true; acceptIntegratedConsent(next, values); setRecordingGate(false); }}
+        onBack={() => navigate(homePath)} onExit={() => navigate('/join')} />;
     }
     if (invitationError) {
       return <MemberStateScreen kind={invitationError} classTitle="클래스" whenLabel={formatWhen(notYetAt, now)} countdown={invitationError === 'notyet' ? countdown : null}
@@ -393,6 +416,13 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
   const stepsView = { total: steps.length, current: Math.max(0, steps.indexOf(machine.step)) };
   const exit = (): void => {
     navigate(homePath);
+  };
+
+  const backFromPrep = (): void => {
+    const previous = steps[steps.indexOf(machine.step) - 1];
+    if (!machine.fromSummary && integratedConsentSaved && eegChoice === false && previous === 'c') {
+      dispatch({ type: 'goto', step: 'b' });
+    } else dispatch({ type: 'back', steps });
   };
 
   if (machine.phase === 'live') {
@@ -466,22 +496,11 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
     );
   }
   if (machine.phase === 'wizard' && machine.step === 'a') {
-    return (
-      <NoticeStepView researchAllowed={!entry.isGuest}
-        sessionType={info.sessionType} place={place} size={size} bandMode={bandMode} title={title} hostName={info.hostName} retentionDays={RETENTION_DAYS}
-        aiEnabled={isAiEnabled()}
-        reportChoice={prep.draft.reportChoice} researchConsent={prep.draft.researchConsent} researchSaveFailed={prep.draft.researchSaveFailed}
-        steps={stepsView}
-        onReportChoice={prep.chooseReport}
-        onResearchChange={(next) => void prep.changeResearch(next)}
-        onNext={() => {
-          void prep.commitReportChoice();
-          dispatch({ type: 'next', steps });
-        }}
-        onBack={() => dispatch({ type: 'back', steps })}
-        onExit={exit}
-      />
-    );
+    if (skipNoticeOnce.current) return <p role="status">다음 준비를 확인하고 있어요.</p>;
+    return <IntegratedEntryConsent entry={entry} onTerminal={(kind) => dispatch({ type: 'showState', kind })} initialValues={pendingConsentValues} initialTouched={pendingConsentTouched} steps={stepsView}
+      eegLockedValue={prep.draft.bandOutcome === 'none' || eegChoice === false ? undefined : eegChoice === true}
+      onSaved={(next, values) => { acceptIntegratedConsent(next, values); dispatch({ type: 'next', steps }); }}
+      onBack={() => dispatch({ type: 'back', steps })} onExit={exit} />;
   }
   const startedOpen = machine.stage === 'started' && !startedDismissed && machine.phase === 'wizard' && startedSheetApplies(machine.step);
   const startedSheet = (
@@ -512,6 +531,7 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
     );
   }
   if (machine.phase === 'wizard' && machine.step === 'c' && bandMode !== 'none') {
+    if (integratedConsentSaved && eegChoice === false) return <p role="status">밴드 없이 참여할 준비를 하고 있어요.</p>;
     const answerReconfirm = (include: boolean): void => {
       const pending = reportReconfirm;
       reportReconfirmedRef.current = true;
@@ -580,7 +600,7 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
         }}
         onStartedEnterNow={() => dispatch({ type: 'enterNow' })}
         onStartedContinue={() => setStartedDismissed(true)}
-        onBack={() => dispatch({ type: 'back', steps })}
+        onBack={backFromPrep}
         onExit={exit}
       />
     );
@@ -592,7 +612,7 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
         rows={buildSummaryRows({ place, bandMode, draft: prep.draft }).filter((row) => !entry.isGuest || row.key !== 'research')}
         onGoto={(step) => dispatch({ type: 'goto', step, fromSummary: true })}
         onReady={() => dispatch({ type: 'finishPrep' })}
-        onBack={() => dispatch({ type: 'back', steps })}
+        onBack={backFromPrep}
         onExit={exit}
       />
     );

@@ -6,7 +6,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EntryConfirmView } from '../src/components/class/flow/member/EntryConfirmView';
 import { MemberStateScreen } from '../src/components/class/flow/member/MemberStateScreen';
-import { ApiError } from '../src/lib/api/client';
+import { ApiError, apiClient } from '../src/lib/api/client';
 import { saveEntry } from '../src/lib/api/class-flow';
 import type { EntryStateDto } from '../src/lib/api/class-flow';
 
@@ -67,6 +67,11 @@ beforeEach(() => {
   setResearchConsent.mockReset();
   submitEntryCheckin.mockReset();
   window.sessionStorage.clear();
+  vi.spyOn(apiClient, 'get').mockImplementation(async (path) => {
+    if (path.endsWith('/entry/consents')) return { participant_id: 'p1', recording_consented: true, recording_notice_version: 'rec-1', eeg_collection_consented: true, eeg_notice_version: 'eeg-1' } as never;
+    if (path.endsWith('/research-consent')) return { participant_id: 'p1', consented: false, notice_version: null } as never;
+    throw new Error(`예상하지 않은 GET ${path}`);
+  });
   Object.defineProperty(window, 'matchMedia', {
     configurable: true,
     value: (query: string) => ({ matches: false, media: query, addEventListener: () => undefined, removeEventListener: () => undefined, addListener: () => undefined, removeListener: () => undefined }),
@@ -75,6 +80,7 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
+  vi.restoreAllMocks();
 });
 
 const confirmProps = {
@@ -235,11 +241,11 @@ describe('EntryPage — 고지·리포트 반영 선택·연구 동의 (M2)', ()
   }
   const find = (label: string): HTMLButtonElement | undefined => qa<HTMLButtonElement>('button').find((b) => (b.textContent ?? '').trim() === label);
 
-  it('입장하기 → FM06a, 확인하고 계속하기로 리포트 선택을 고지 확인 증빙과 함께 1회 보낸다(기본 제외)', async () => {
+  it('입장하기 → FM06a, 동의하고 계속하기로 리포트 선택을 고지 확인 증빙과 함께 1회 보낸다(기본 제외)', async () => {
     setReportChoice.mockResolvedValue({ participant_id: 'p1', report_included: false, changed: false });
     await toNotice();
-    expect(text()).toContain('시작 전에 확인해 주세요');
-    await act(async () => { find('확인하고 계속하기')?.click(); });
+    expect(text()).toContain('동의를 확인해 주세요');
+    await act(async () => { find('동의하고 계속하기')?.click(); });
     expect(setReportChoice).toHaveBeenCalledTimes(1);
     expect(setReportChoice).toHaveBeenCalledWith('s1', 'cred', { participantId: 'p1', reportIncluded: false, noticeAcknowledged: true, noticeVersion: 'r5-1' });
     expect(setResearchConsent).not.toHaveBeenCalled(); // 연구 동의는 체크할 때만, 리포트 선택과 독립
@@ -247,34 +253,33 @@ describe('EntryPage — 고지·리포트 반영 선택·연구 동의 (M2)', ()
   it('`반영해요`를 고르면 reportIncluded=true 로 보낸다', async () => {
     setReportChoice.mockResolvedValue({ participant_id: 'p1', report_included: true, changed: true });
     await toNotice();
-    await act(async () => { find('반영해요')?.click(); });
-    await act(async () => { find('확인하고 계속하기')?.click(); });
+    await act(async () => { document.querySelector<HTMLInputElement>('[data-consent=report]')?.click(); });
+    await act(async () => { find('동의하고 계속하기')?.click(); });
     expect(setReportChoice).toHaveBeenCalledWith('s1', 'cred', expect.objectContaining({ reportIncluded: true }));
   });
-  it('리포트 선택 저장이 실패해도 다음 단계로 진행한다', async () => {
+  it('통합 리포트 저장 실패 시 선택 화면에 머물고 재시도를 제공한다', async () => {
     setReportChoice.mockRejectedValue(new ApiError(500, 'x', null));
     await toNotice();
-    await act(async () => { find('확인하고 계속하기')?.click(); });
-    expect(text()).not.toContain('시작 전에 확인해 주세요');
+    await act(async () => { find('동의하고 계속하기')?.click(); });
+    expect(text()).toContain('동의를 확인해 주세요');
+    expect(text()).toContain('선택을 모두 저장하지 못했어요');
   });
   it('비회원은 고지 화면에서 연구 동의 UI와 저장 요청이 없다', async () => {
     await toNotice();
     expect(qa('[aria-label="연구 동의"]')).toHaveLength(0);
     expect(setResearchConsent).not.toHaveBeenCalled();
   });
-  it('연구 동의 체크는 즉시 저장하고, 실패하면 미동의로 두며 안내한다(계속하기는 막지 않음)', async () => {
-    setResearchConsent.mockResolvedValueOnce({ participant_id: 'p1', consented: true, changed: true });
+  it('통합 연구 선택은 제출할 때 저장하고 실패하면 선택 유지·재시도를 제공한다', async () => {
+    setResearchConsent.mockRejectedValueOnce(new ApiError(409, 'x', null)).mockResolvedValue({ participant_id: 'p1', consented: true, changed: true });
     await toNotice(false);
-    await act(async () => { qa('[role="checkbox"]')[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    await act(async () => { document.querySelector<HTMLInputElement>('[data-consent=research]')!.click(); });
+    expect(setResearchConsent).not.toHaveBeenCalled();
+    await act(async () => { find('동의하고 계속하기')!.click(); });
     expect(setResearchConsent).toHaveBeenCalledWith('s1', 'cred', { participantId: 'p1', consented: true, noticeVersion: 'r5-2' });
-    expect(qa('[role="checkbox"]')[0]!.getAttribute('aria-checked')).toBe('true');
-
-    setResearchConsent.mockRejectedValueOnce(new ApiError(409, 'x', null));
-    await act(async () => { qa('[role="checkbox"]')[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
-    expect(text()).toContain('연구 동의를 저장하지 못했어요. 미동의로 진행해요.');
-    // 해제 시도가 실패했으므로 서버에 남아 있는 동의 상태(true)를 거짓으로 보이지 않는다
-    expect(qa('[role="checkbox"]')[0]!.getAttribute('aria-checked')).toBe('true');
-    expect(find('확인하고 계속하기')!.disabled).toBe(false);
+    expect(text()).toContain('선택을 모두 저장하지 못했어요');
+    expect(document.querySelector<HTMLInputElement>('[data-consent=research]')!.checked).toBe(true);
+    await act(async () => { find('다시 저장하기')!.click(); });
+    expect(text()).toContain('지금 집중은 어떤가요?');
   });
 });
 
@@ -287,7 +292,7 @@ describe('EntryPage — 오늘의 상태 (M3)', () => {
     getEntryState.mockResolvedValue(stateDto({ status }));
     await renderPage();
     await act(async () => { find('입장하기')?.click(); });
-    await act(async () => { find('확인하고 계속하기')?.click(); });
+    await act(async () => { find('동의하고 계속하기')?.click(); });
   }
 
   it('3축 선택 → 전할 말 → 남기고 계속하기: 입장 자격으로 phase=before 체크인을 1회 저장하고 다음 단계로', async () => {
@@ -354,7 +359,7 @@ describe('EntryPage — LINK BAND 단계 (M4)', () => {
     getEntryState.mockResolvedValue(stateDto({ status: 'open' }));
     await renderPage();
     await act(async () => { find('입장하기')?.click(); });
-    await act(async () => { find('확인하고 계속하기')?.click(); });
+    await act(async () => { find('동의하고 계속하기')?.click(); });
     await act(async () => { find('건너뛰기')?.click(); });
   }
   it('밴드 없이 계속하기로 다음(기기) 단계로 가며 차단하지 않는다', async () => {
@@ -369,38 +374,22 @@ describe('EntryPage — LINK BAND 단계 (M4)', () => {
     await toBand();
     expect(text()).toContain('접촉 불량');
     await act(async () => { find('다음')?.click(); });
-    // 리포트 반영이 제외 상태로 밴드를 착용했으므로 측정 전 재확인 시트가 먼저 뜬다
-    await act(async () => { find('이번엔 제외')?.click(); });
+    // 통합 동의에서 제외를 명시했으므로 재질문 없이 기존 다음 단계로 진행한다.
     expect(text()).not.toContain('LINK BAND를 연결해요');
   });
-  it('밴드 착용 + 리포트 제외 상태면 측정 전에 한 번 재확인하고, 반영하기는 true 로 저장한다', async () => {
+  it('통합 화면에서 명시한 리포트 제외를 c에서 다시 묻지 않고 기기 단계로 진행한다', async () => {
+    bandStepState.state = 'connected';
+    await toBand(); setReportChoice.mockClear();
+    await act(async () => { find('다음')?.click(); });
+    expect(text()).not.toContain('이번 수업 리포트에 측정 결과를 반영할까요?');
+    expect(text()).toContain('내 영상과 소리를 확인해요');
+    expect(setReportChoice).not.toHaveBeenCalled();
+  });
+  it('통합 화면에서 리포트를 제외한 경우 밴드 완료에서 추가 저장이나 재질문이 없다', async () => {
     bandStepState.state = 'connected';
     await toBand();
     setReportChoice.mockClear();
     await act(async () => { find('다음')?.click(); });
-    expect(text()).toContain('이번 수업 리포트에 측정 결과를 반영할까요?');
-    expect(text()).toContain('LINK BAND를 연결해요'); // 아직 다음 단계로 넘어가지 않았다
-    await act(async () => { find('반영하기')?.click(); });
-    expect(setReportChoice).toHaveBeenCalledWith('s1', 'cred', expect.objectContaining({ reportIncluded: true }));
-    expect(text()).not.toContain('LINK BAND를 연결해요');
-  });
-  it('SDD-272 재확인 시트는 화면 틀(PlayerShell) 안에 열려 실제로 보이고 뒤 화면은 막힌다(비회원 다음 무반응 방지)', async () => {
-    bandStepState.state = 'connected';
-    await toBand();
-    await act(async () => { find('다음')?.click(); });
-    const sheet = document.querySelector('[data-pz="flow-sheet"]');
-    expect(sheet).not.toBeNull();
-    const shell = sheet!.closest('.pz-shell');
-    expect(shell, '시트가 고정 전체화면 틀 밖에 있으면 틀에 가려 안 보인다').not.toBeNull();
-    expect(shell!.getAttribute('data-sheet-open')).toBe('true');
-    expect(shell!.querySelector('[data-pz="flow-stage"]')!.hasAttribute('inert')).toBe(true);
-  });
-  it('이번엔 제외를 고르면 저장 호출 없이 진행하고, 같은 회차에서 다시 묻지 않는다', async () => {
-    bandStepState.state = 'connected';
-    await toBand();
-    setReportChoice.mockClear();
-    await act(async () => { find('다음')?.click(); });
-    await act(async () => { find('이번엔 제외')?.click(); });
     expect(setReportChoice).not.toHaveBeenCalled();
     expect(text()).not.toContain('이번 수업 리포트에 측정 결과를 반영할까요?');
   });
@@ -421,7 +410,7 @@ describe('EntryPage — 기기 점검 (M5)', () => {
     bandStepState.state = 'idle';
     await renderPage();
     await act(async () => { find('입장하기')?.click(); });
-    await act(async () => { find('확인하고 계속하기')?.click(); });
+    await act(async () => { find('동의하고 계속하기')?.click(); });
     await act(async () => { find('건너뛰기')?.click(); });
     await act(async () => { find('LINK BAND 없이 계속하기')?.click(); });
   }
@@ -460,7 +449,7 @@ describe('EntryPage — 시작 대기 (M6)', () => {
     mediaState.mic = 'on';
     await renderPage();
     await act(async () => { find('입장하기')?.click(); });
-    await act(async () => { find('확인하고 계속하기')?.click(); });
+    await act(async () => { find('동의하고 계속하기')?.click(); });
     await act(async () => { find('건너뛰기')?.click(); });
     await act(async () => { find('LINK BAND 없이 계속하기')?.click(); });
     await act(async () => { find('다음')?.click(); });

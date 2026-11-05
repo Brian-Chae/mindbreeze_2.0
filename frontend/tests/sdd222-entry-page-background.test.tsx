@@ -4,6 +4,7 @@ import { act, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { apiClient } from '../src/lib/api/client';
 import { saveEntry } from '../src/lib/api/class-flow';
 import type { EntryStateDto } from '../src/lib/api/class-flow';
 
@@ -55,6 +56,7 @@ beforeEach(() => {
   h.bgArgs.length = 0; h.wakeArgs.length = 0; h.guideOpen = false; h.dismiss.mockClear();
   getEntryState.mockReset().mockResolvedValue(stateDto());
   window.sessionStorage.clear();
+  vi.spyOn(apiClient, 'get').mockResolvedValue({ participant_id: 'p1', recording_consented: true, recording_notice_version: 'rec-1', eeg_collection_consented: false, eeg_notice_version: 'eeg-1' });
   saveEntry({
     sessionId: 's1', credential: 'cred', expiresAt: null, participantId: 'p1', isGuest: true,
     classInfo: {
@@ -67,7 +69,7 @@ beforeEach(() => {
     value: (q: string) => ({ matches: false, media: q, addEventListener: () => undefined, removeEventListener: () => undefined, addListener: () => undefined, removeListener: () => undefined }),
   });
 });
-afterEach(async () => { await act(async () => root.unmount()); container.remove(); });
+afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.restoreAllMocks(); });
 
 const renderPage = () => render(
   <MemoryRouter initialEntries={['/class/s1/enter']}>
@@ -86,7 +88,7 @@ describe('EntryPage 백그라운드 세션', () => {
     expect(h.bgArgs.at(-1)).toBe(false);
     await act(async () => { find('입장하기')?.click(); });
     expect(h.bgArgs.at(-1)).toBe(false);
-    await act(async () => { find('확인하고 계속하기')?.click(); });
+    await act(async () => { find('동의하고 계속하기')?.click(); });
     await act(async () => { find('지금 입장하기')?.click(); });
     expect(text()).toContain('진행 화면');
     expect(h.bgArgs.at(-1)).toBe(true);
@@ -99,7 +101,7 @@ describe('EntryPage 백그라운드 세션', () => {
     h.guideOpen = true;
     await renderPage();
     await act(async () => { find('입장하기')?.click(); });
-    await act(async () => { find('확인하고 계속하기')?.click(); });
+    await act(async () => { find('동의하고 계속하기')?.click(); });
     await act(async () => { find('지금 입장하기')?.click(); });
     expect(text()).toContain('진행 화면');
     const dialog = document.querySelector('[role="dialog"][aria-label="배터리 최적화 안내"]');
@@ -113,7 +115,7 @@ describe('EntryPage 백그라운드 세션', () => {
     h.guideOpen = true;
     await renderPage();
     await act(async () => { find('입장하기')?.click(); });
-    await act(async () => { find('확인하고 계속하기')?.click(); });
+    await act(async () => { find('동의하고 계속하기')?.click(); });
     await act(async () => { find('지금 입장하기')?.click(); });
     await act(async () => { find('건너뛰기')?.click(); });
     expect(h.dismiss).toHaveBeenCalledTimes(1);

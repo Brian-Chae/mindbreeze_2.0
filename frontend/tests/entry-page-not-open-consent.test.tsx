@@ -39,9 +39,9 @@ it('동의 후 409 session_not_open 이면 동의 저장 실패가 아니라 아
     <Routes><Route path="/class/:sessionId/enter" element={<EntryPage />} /></Routes>
   </MemoryRouter>));
   expect(text()).toContain('입장 전 확인');
-  const box = container.querySelector<HTMLElement>('[role="checkbox"]');
+  const box = container.querySelector<HTMLElement>('input[data-consent="required"]');
   await act(async () => box!.click());
-  const confirm = [...container.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === '동의하고 입장하기');
+  const confirm = [...container.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === '클래스 정보 확인하기');
   await act(async () => confirm!.click());
   expect(text()).not.toContain('동의를 저장하지 못했어요');
   expect(text()).toContain('아직 열리지 않았어요');
