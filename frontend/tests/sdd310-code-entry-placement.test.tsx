@@ -28,7 +28,7 @@ async function render(node: React.ReactNode) {
 const empty = { status: 'success', data: { classes: [], total: 0 } };
 const buttons = (el: HTMLElement) => Array.from(el.querySelectorAll<HTMLAnchorElement>('[data-testid="enter-with-code"]'));
 
-it('홈(구조): 헤더 슬롯 버튼은 모바일 숨김, 본문 버튼은 히어로 아래 모바일 전용 48px 외곽선', async () => {
+it('홈(구조): 헤더 슬롯 버튼은 모바일 숨김, 본문 버튼은 히어로 아래 모바일 전용 48px 진한 배경+흰 글씨', async () => {
   mocks.home.mockReturnValue({ classes: empty, counseling: { status: 'success', data: { relationships: [], total: 0 } }, retry: vi.fn() });
   const el = await render(<MemberStructureHomePage />);
   const [header, body] = [buttons(el).find(b => b.closest('.mb-page-header-actions')), buttons(el).find(b => !b.closest('.mb-page-header-actions'))];
@@ -37,7 +37,9 @@ it('홈(구조): 헤더 슬롯 버튼은 모바일 숨김, 본문 버튼은 히�
   expect(body!.className).toMatch(/\bmd:hidden\b/);
   expect(body!.className).toMatch(/\bh-12\b/);
   expect(body!.className).toMatch(/\bw-full\b/);
-  expect(body!.className).toContain('border-[#5F0080]');
+  expect(body!.className).toContain('bg-[#5F0080]');
+  expect(body!.className).toContain('text-white');
+  expect(body!.className).not.toContain('bg-white');
   expect(body!.className).not.toMatch(/\b(sticky|fixed)\b/);
   expect(body!.closest('[class*="sticky"],[class*="fixed"]')).toBeNull();
   expect(el.querySelector('[data-testid="class-hero"]')!.nextElementSibling).toBe(body!.parentElement === el.querySelector('.mh-home') ? body : body!.parentElement);
