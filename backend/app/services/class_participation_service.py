@@ -729,6 +729,13 @@ def seed_live_state(db, session_id) -> bool:
     from app.services import session_service
     from app.services.session_live_ledger import append_outbox, lock_epoch
 
+    # SDD-308: 이미 시드됐으면 epoch 행 잠금 없이 즉시 반환한다(100명 입장 폭주 때 모든 입장이 같은 행을 줄 서는 병목 제거).
+    # 시드 event 는 한 번 쓰이면 지워지지 않으므로 잠금 없는 선확인이 안전하다.
+    if db.execute(_select(LiveOutbox.id).where(
+            LiveOutbox.session_id == session_id, LiveOutbox.domain == "session").limit(1)).first() is not None:
+        db.rollback()
+        return False
+    # 동시 첫 접촉은 기존처럼 잠금 안에서 재확인한다(멱등).
     epoch_row = lock_epoch(db, session_id)
     exists = db.execute(_select(_func.count()).select_from(LiveOutbox).where(
         LiveOutbox.session_id == session_id, LiveOutbox.domain == "session")).scalar_one()
