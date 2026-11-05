@@ -11,3 +11,6 @@
 .mb-page-header-title{position:relative}
 .mb-page-header-overline{position:absolute;bottom:100%;left:0;white-space:nowrap}
 .mb-page-header-with-overline{padding-top:18px}
+
+/* SDD-310: 모바일에서 코드 입장 버튼만 있던 액션 줄은 비워 헤더 간격을 만들지 않는다(버튼은 본문에 따로 있다). */
+@media(max-width:767px){.mb-page-header-actions:not(:has(> :not([data-code-entry="header"]))){display:none}}
