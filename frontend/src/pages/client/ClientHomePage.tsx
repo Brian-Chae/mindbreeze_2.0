@@ -360,12 +360,12 @@ export default function ClientHomePage({ hideHero = false, classSections }: { hi
       {/* ── 좌측 컬럼 ── */}
       <div className="mh-main flex min-w-0 flex-col gap-6">
         {/* 다음 클래스 히어로 (항상 표시) — 참여코드 값·복사 UI 는 두지 않는다 */}
-        {hideHero ? null : <div className="flex justify-end"><CodeEntryButton /></div>}
         {hideHero ? null : heroData ? (
           <ClassHero data={heroData} action={heroAction} onAction={openHeroClass} busy={enteringId !== null} />
         ) : (
           <ClassHeroEmpty backdropSrc={heroBackdrop('empty')} onApply={() => navigate('/app/sessions', { state: { openApply: true } })} />
         )}
+        {hideHero ? null : <CodeEntryButton placement="inline" />}
 
         {/* 초대된 클래스 (조건부) */}
         {invitedSessions.length > 0 && (

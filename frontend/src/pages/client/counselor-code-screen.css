@@ -1,0 +1,5 @@
+/* SDD-309 — 코치 코드 6칸(클래스 입장 코드 4칸 스타일을 6칸으로 확장). 숨김 input 이 칸 전체를 덮는다. */
+.pz-root .fm-codebox.cc-six { position: relative; grid-template-columns: repeat(6, minmax(0, 48px)); gap: 8px; cursor: text; }
+.pz-root .fm-codebox.cc-six > span { display: flex; align-items: center; justify-content: center; aspect-ratio: 48 / 60; }
+.pz-root .fm-codebox.cc-six > span > b { font-size: var(--fs-28, 28px); font-weight: 800; color: var(--tx-hi); }
+.pz-root .fm-codebox.cc-six > .cc-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: text; z-index: 1; font-size: 16px !important; }

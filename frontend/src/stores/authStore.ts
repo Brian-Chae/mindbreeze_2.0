@@ -66,7 +66,7 @@ interface AuthState {
   /** 세션 복구 재시도 — initialize() 를 다시 실행한다. */
   retryInitialize: () => void;
   login: (email: string, password: string, role?: UserRole, rememberMe?: boolean) => Promise<User>;
-  loginGoogle: (idToken: string, inviteToken?: string, role?: string, rememberMe?: boolean, consents?: ConsentPayload, tokenKind?: 'access_token' | 'id_token', birthDate?: string, gender?: 'male' | 'female' | 'other', name?: string) => Promise<User>;
+  loginGoogle: (idToken: string, inviteToken?: string, role?: string, rememberMe?: boolean, consents?: ConsentPayload, tokenKind?: 'access_token' | 'id_token', birthDate?: string, gender?: 'male' | 'female' | 'other', name?: string, counselorCode?: string) => Promise<User>;
   loginApple: (payload: Omit<AppleLoginPayload, 'remember_me'>, rememberMe?: boolean) => Promise<User>;
   devLogin: (userId: string) => Promise<User>;
   registerClient: (data: ClientRegisterPayload, rememberMe?: boolean) => Promise<User>;
@@ -184,9 +184,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     return user;
   },
 
-  loginGoogle: async (idToken, inviteToken, role, rememberMe = true, consents, tokenKind = 'access_token', birthDate, gender, name): Promise<User> => {
+  loginGoogle: async (idToken, inviteToken, role, rememberMe = true, consents, tokenKind = 'access_token', birthDate, gender, name, counselorCode): Promise<User> => {
     const res = await apiLoginGoogle(
-      { [tokenKind]: idToken, invite_token: inviteToken, role, consents, birth_date: birthDate, gender, name },
+      { [tokenKind]: idToken, invite_token: inviteToken, role, consents, birth_date: birthDate, gender, name, counselor_code: counselorCode },
       rememberMe,
     );
     const user = applyLogin(res, role);

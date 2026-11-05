@@ -108,6 +108,8 @@ export interface GoogleLoginPayload {
   access_token?: string;
   id_token?: string;
   invite_token?: string;
+  /** SDD-309: 신규 소셜 가입 시 초대 코치 코드(6자리). invite_token 이 있으면 불필요 */
+  counselor_code?: string;
   role?: string;
   /** SEC-04: 신규 가입 시 약관·민감정보 동의 (기존 사용자 로그인은 불필요) */
   consents?: ConsentPayload;
@@ -128,6 +130,8 @@ export interface AppleLoginPayload {
   authorization_code?: string;
   name?: string;
   invite_token?: string;
+  /** SDD-309: 신규 소셜 가입 시 초대 코치 코드(6자리). invite_token 이 있으면 불필요 */
+  counselor_code?: string;
   role?: string;
   consents?: ConsentPayload;
   birth_date?: string;

@@ -120,7 +120,7 @@ describe('MC02 내 클래스', () => {
     hooks.classes.mockReturnValue({ state: status === 'empty' ? { status: 'success', data: { classes: [], total: 0 } } : { status }, retry: hooks.retry });
     const view = render(<MemberClassesPage />);
     expect(view.textContent).toContain({ loading: '불러오는 중이에요', error: '목록을 불러오지 못했어요', not_found: '내용을 찾을 수 없어요', empty: '아직 클래스가 없어요' }[status]);
-    if (status === 'not_found') expect(view.querySelector('a')?.getAttribute('href')).toBe('/app/classes');
+    if (status === 'not_found') expect(view.querySelector('.cs-read-state a')?.getAttribute('href')).toBe('/app/classes');
     if (status === 'error') { flushSync(() => view.querySelector('button')?.click()); expect(hooks.retry).toHaveBeenCalledTimes(1); }
   });
 });
@@ -174,7 +174,7 @@ describe('MC03 내 클래스 상세', () => {
     hooks.detail.mockReturnValue({ state: { status: 'not_found' }, retry: hooks.retry });
     const view = detailPage();
     expect(view.textContent).toContain('내용을 찾을 수 없어요');
-    expect(view.querySelector('a')?.getAttribute('href')).toBe('/app/classes');
+    expect(view.querySelector('.cs-read-state a')?.getAttribute('href')).toBe('/app/classes');
   });
 });
 
