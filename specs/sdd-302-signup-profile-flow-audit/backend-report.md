@@ -15,7 +15,7 @@
 - 관련 13파일 회귀: **165 passed**, 60.23초. 인증·가입·코치/회원 온보딩·초대·역할·연령/동의·Apple nonce/연결 포함.
 - 생일 호환 최종 수정 후 신규+Apple 재검증: **51 passed**, 25.14초.
 - `git diff --check` 통과. crypt/argon2 및 기존 HTTP 422 상수 DeprecationWarning 존재.
-- 전체 `pytest -q --tb=short --maxfail=10`는 SQLite 강제 환경에서 실행 중이다. 전체 통과로 보고하지 않는다. 최종 결과와 실패 분류는 후속 기록한다.
+- 전체 `pytest -q --tb=short --maxfail=10` 실행 결과와 후속 실패 분류는 아래 최종 검증 절에 기록한다. 전체 재실행 통과로 보고하지 않는다.
 
 ## 테스트 입력 호환
 기존 공통 fixture의 생일 기본값 보정에 성별을 추가했다. `X-Test-Strict-Signup: 1`은 모든 가입 기본값 보정을 끄며 신규 실패 테스트는 이를 사용한다. 기존 프로필 없는 출발 상태 복원은 생일과 성별 둘 다 자동 주입했을 때에만 수행한다. 기존 연령·동의·nonce 테스트 단언은 유지하고 정상 payload에 성별을 추가했다.
@@ -35,3 +35,15 @@
 - PR PostgreSQL smoke의 보강 HTTP 3건 실패 원인은 합성 NOW=2026-11-02와 실제 2026-11-05의 불일치였다. 대상 회차 NOW+2일(11/4)을 HTTP 실시간 검사가 과거 회차로 거부했다. 가입/성별 변경과 무관하며 해당 테스트·서비스는 기준선과 동일했다.
 - 기준선 `13bff196` 격리 실제PG에서도 동일 HTTP 3건 **3 failed / 39 deselected**(17.72초). 제품 로직은 보존하고 `test_sdd217_makeup.py` fixture에서 보강 서비스 시각만 합성 NOW로 고정했다.
 - 수정 후 해당 파일 전체 실제 PostgreSQL 검증 **42 passed**(29.03초). 권한·멱등성·동시성·회차상태 검증 단언을 유지했다.
+
+
+## 최종 전체 실행과 실패 해소
+- 전체 실행: **10 failed / 5148 passed / 545 skipped**, 1795.76초. `--maxfail=10`에 도달해 끝부분 일부가 미실행되었으며, 실행 중 수정 전 모듈/fixture를 이미 로드한 프로세스였다. 전체 최종 재실행 GREEN으로 주장하지 않는다.
+- 실패 10건 분류:
+  1. `tests/sdd246/ingest/test_live_ingest_pg.py`: `test_capture_start_ACK에_stream_owner_generation_lease_participant가_계약대로_들어간다`, `test_stream_수명_event_payload는_DeviceEntity_스키마와_일치한다`, `test_밴드_보고_payload도_DeviceEntity이고_이후_stream_event가_밴드_필드를_보존한다`, `test_metric_소켓은_저장하지_않고_최신값_metrics_event만_만들고_REST가_feature를_저장한다` — 모두 `jsonschema` 누락. 기준선에서도 동일, 임시 의존성 적용 후 해당 파일 21 passed.
+  2. `tests/test_sdd244_contracts.py::test_frozen_schema_matches_dto_and_golden`의 `raw-v2-RawHeader`, `manifest-v1-ManifestRevision`, `feature-v1-FeatureRecord`, `indices-v1-DisplaySnapshot` — 동일 `jsonschema` 누락. 임시 의존성 적용 후 최종 회귀 통과.
+  3. `tests/test_sdd220_apple_auth.py::test_ts11_nonce_누락_불일치_재사용` — 전체 실행이 수정 전 정상 payload(성별 없음)를 로드한 상태. 초기 구현 커밋에서 성별을 넣어 nonce 단언은 유지했으며 최종 Apple 회귀 통과.
+  4. `tests/test_upload_status_overview.py::test_V_O09_상세_API_요약과_교차_일치` — 목록 서비스 시각만 합성 NOW로 고정하고 상세 서비스 시각은 실제 현재인 fixture 결함. 같은 pending 청크가 10초/하루 경과로 다르게 분류됐다. 기준선 `13bff196` 격리 실행에서도 **1 failed / 29 passed**. 제품 로직 변경 없이 상세 서비스 시각·캐시를 목록 fixture와 함께 고정했다.
+- 마지막 시각 fixture 수정 후 상세/목록 업로드 현황 + SDD244 계약 + Apple 전체: **160 passed**, 56.80초.
+- 중단 지점 다음 정렬 파일(`test_upload_status_overview_pg`, `test_upload_status_pg`, `test_video_record`, `test_web_push`, `test_ws_chat_multitab`, `test_ws_null_data_guard`) 별도 실행: **38 passed / 9 skipped**, 27.46초. PG opt-in 파일 9개는 이 명령에서는 skip이며 실제 PG 검증을 대체하지 않는다.
+- 전체 실행에서 발견한 실패 10건은 각 영향 범위 재검증으로 모두 해소했다. 최종 CI 전체 결과는 감독이 별도로 확인한다.
