@@ -87,6 +87,23 @@ public final class AppendOnlyJournal {
         }
     }
 
+    /// SDD-315: 증분 읽기 — `offset` 바이트부터 **완결 레코드만** 읽고 다음 읽기 시작 오프셋을 돌려준다.
+    /// 끝의 찢긴 꼬리(쓰는 중인 레코드)는 읽지 않고 오프셋을 그 앞에 둔다(다음 호출에서 이어 읽음). 손상(corrupt)이면 거기서 멈추고 `corrupt` 를 알린다.
+    /// 파일을 수정하지 않는다. 오프셋은 이전 호출이 돌려준 값만 쓴다(레코드 경계).
+    public static func scan(url: URL, fromOffset offset: UInt64) -> (records: [Record], nextOffset: UInt64, corrupt: Bool) {
+        guard let h = try? FileHandle(forReadingFrom: url) else { return ([], offset, false) }
+        defer { try? h.close() }
+        do { try h.seek(toOffset: offset) } catch { return ([], offset, false) }
+        guard let data = try? h.readToEnd(), !data.isEmpty else { return ([], offset, false) }
+        var recs: [Record] = []
+        let end = walk(data) { recs.append(Record(sequence: $0, payload: $1)) }
+        switch end {
+        case .clean: return (recs, offset + UInt64(data.count), false)
+        case .torn(let at): return (recs, offset + UInt64(at), false)
+        case .corrupt(let at): return (recs, offset + UInt64(at), true)
+        }
+    }
+
     // MARK: 복구·쓰기
 
     private func recover() throws {
