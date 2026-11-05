@@ -511,7 +511,7 @@ export function MemberClassContainer({
 
   const shared: SharedScreenProps = {
     sessionId,
-    place, mode, viewerOnly, bandVisible, bandUi, nativeOwnsBand, nativeAuto: isNativeMeasurementAvailable() && Boolean(user?.id) && eegConsent && linkbandMode !== 'none' && v2On, waitlisted, nowMs, hostVideoIssue,
+    place, mode, viewerOnly, bandVisible, bandUi, nativeOwnsBand, serverConfirmed: v2On && participantId ? Boolean(liveV2?.state?.metrics[participantId]) : undefined, nativeAuto: isNativeMeasurementAvailable() && Boolean(user?.id) && eegConsent && linkbandMode !== 'none' && v2On, waitlisted, nowMs, hostVideoIssue,
     header: { title: title ?? '클래스', elapsedSec, totalSec, counselorName, myInitial: user?.name?.trim().charAt(0) || '나' },
     hero, snapshot, series, sheet, screenOff, confirmLeave,
     v2Bars: v2On ? { label: '이완', current: v2Current, bars: v2Bars } : null,
@@ -622,6 +622,8 @@ interface SharedScreenProps {
   bandUi: MemberCaseInput['band'];
   /** 앱 네이티브가 밴드를 소유 중 — 재연결 버튼은 JS BLE 가 아니라 네이티브로 */
   nativeOwnsBand: boolean;
+  /** SDD-295: 서버가 내 측정 값을 받았는가(v2 만 판정, 구 경로는 undefined) */
+  serverConfirmed: boolean | undefined;
   /** 앱 네이티브 측정 경로(동의+밴드 사용) — 선택 해제만으로 측정이 자동 시작되는 환경 */
   nativeAuto: boolean;
   waitlisted: boolean;
@@ -758,6 +760,7 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
     battery: shared.device.battery,
     bandEnabled: shared.bandVisible,
     viewerOnly: shared.viewerOnly,
+    serverConfirmed: shared.serverConfirmed,
   };
 
   const renderedRef = useRef<RenderedMetrics | null>(null);

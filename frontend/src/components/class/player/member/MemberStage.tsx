@@ -71,7 +71,7 @@ function HeroRing({ c, hero, snapshot }: Pick<MemberStageProps, 'c' | 'hero' | '
       value={ring.showValue ? value : undefined}
       unit={def.unit}
       title={ring.title}
-      subtitle={waiting ? '측정하는 중이에요' : ring.subtitle}
+      subtitle={waiting ? ring.waitingText ?? '측정하는 중이에요' : ring.subtitle}
       icon={ring.icon === 'alert' ? <TriangleAlert size={24} strokeWidth={2} /> : undefined}
       dots={ring.dots}
       ariaLabel={ringAriaLabel(c, def.label, value === null ? null : `${value}${def.unit}`)}
