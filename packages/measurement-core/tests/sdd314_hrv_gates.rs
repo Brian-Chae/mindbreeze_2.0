@@ -72,3 +72,37 @@ fn gap_and_clock_jump_recover_without_zero_fill() {
         assert!(v > 0.0, "호흡 0 치환 금지");
     }
 }
+
+/// [성질 검사] 수정 전 값(62s)에서도 통과한다 — 이 합성 입력으로는 실데이터의 연쇄 탈락이 재현되지 않는다. 회귀 검출은 실데이터 replay 로 한다.
+/// 실데이터형: Android 실측 RR 분포(300~1300ms 에 넓게 퍼짐, 히스토그램 100ms 단위)에서 독립 추출하면 중앙값 ±25% 정리가
+/// 박동의 절반 이상을 걷어낸다. 호흡 버퍼 목표가 게이트(60s) 직상이면 버퍼 합이 게이트 밑으로 내려가 호흡이 꺼졌다.
+#[test]
+fn resp_stays_open_with_wide_rr_distribution() {
+    // (구간 시작 ms, 가중치) — 62c5fe4b 실측 히스토그램 일부
+    let hist: [(f64, u64); 11] = [(300.0, 1081), (400.0, 745), (500.0, 593), (600.0, 379), (700.0, 255), (800.0, 138), (900.0, 106), (1000.0, 135), (1100.0, 17), (1200.0, 128), (1300.0, 50)];
+    let total_w: u64 = hist.iter().map(|h| h.1).sum();
+    let mut s = HrvState::default();
+    let (mut t, mut seed) = (0.0f64, 7u64);
+    let (mut valid, mut total) = (0usize, 0usize);
+    while t < 900_000.0 {
+        seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        let mut pick = (seed >> 33) % total_w;
+        let mut rr = 300.0;
+        for (lo, w) in hist {
+            if pick < w {
+                rr = lo + ((seed >> 20) % 100) as f64;
+                break;
+            }
+            pick -= w;
+        }
+        t += rr;
+        s.process_ppg(90.0, &[rr], &[T0 + t], T0 + t);
+        if t > 300_000.0 {
+            total += 1;
+            if s.snapshot().respiratory_rate.is_some() {
+                valid += 1;
+            }
+        }
+    }
+    assert!(valid as f64 / total as f64 >= 0.9, "호흡 유효 비율 {valid}/{total}");
+}

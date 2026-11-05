@@ -21,8 +21,10 @@ const MAX_HISTORY: usize = 120;
 /// (SDNN 30s / 호흡 60s)을 못 채우면 시간조건을 채울 때까지 개수 상한을 늘린다. 안전 상한은 아래.
 const RR_BUFFER_HARD_CAP: usize = 400;
 const TIME_DOMAIN_MIN_MS: f64 = 30000.0;
-/// 호흡 게이트(합 ≥60s, 첫~끝 박동 시각차 ≥60s)가 열리도록 여유를 둔 버퍼 목표 시간.
-const RESP_BUFFER_TARGET_MS: f64 = 62000.0;
+/// 호흡 게이트(합 ≥60s, 첫~끝 박동 시각차 ≥60s)가 열리도록 둔 버퍼 목표 시간. 중앙값 ±25% 소급 정리가 새 박동 도착 때마다
+/// 이미 쌓인 RR 을 걷어내므로(실데이터 Android 에서 박동의 약 60% 가 탈락) 게이트 직상(62s)이면 합이 58~60s 로 내려가 호흡이 꺼진다.
+/// 70s 로 여유를 둔다(SDD-314 추가 라운드). 게이트 값(60s)·알고리즘은 불변.
+const RESP_BUFFER_TARGET_MS: f64 = 70000.0;
 
 /// 끝에서부터 합이 `target_ms` 이상이 되는 최소 개수(못 채우면 전체 길이).
 fn beats_covering(rr: &[f64], target_ms: f64) -> usize {
