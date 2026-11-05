@@ -165,12 +165,12 @@ describe('HostLiveContainer — 뷰 모델 조립', () => {
     expect(one('[data-pz="member-video"]')).toBeNull();
   });
 
-  it('오프라인 수업은 셀프뷰·카메라 토글 없이 요약 패널과 "설정" 도크', async () => {
+  it('오프라인 수업은 셀프뷰·카메라 토글 없이 요약 패널과 "녹음" 도크', async () => {
     const props = baseProps({ session: { ...baseProps().session, location_type: 'offline' } });
     await render(<HostLiveContainer {...props} />);
     expect(one('[data-pz="selfview"]')).toBeNull();
     expect(one('[data-pz="sumpanel"]')).not.toBeNull();
-    expect(text(all('[data-pz="dk"]')[2])).toContain('설정');
+    expect(text(all('[data-pz="dk"]')[2])).toContain('녹음');
     await click(all('[data-pz="dk"]')[2]);
     expect(one('[role="switch"][aria-label="카메라"]')).toBeNull();
     expect(one('[role="switch"][aria-label="마이크"]')).toBeNull();
@@ -392,11 +392,11 @@ describe('발언권·채팅·녹음 연결', () => {
     expect(props.videoRecorder.pause).toHaveBeenCalledTimes(1);
   });
 
-  it('내 밴드: 미착용은 칩이 없고 도구 시트에서 연결하면 band.connect 를 부른다', async () => {
+  it('내 밴드: 미착용은 칩이 없고 설정 시트에서 연결하면 band.connect 를 부른다', async () => {
     const props = baseProps();
     await render(<HostLiveContainer {...props} />);
     expect(text(one('[data-pz="chipline"]'))).not.toContain('내 밴드');
-    await click(buttonByText('도구', one('[data-pz="dock"]') ?? document));
+    await click(buttonByText('설정', one('[data-pz="dock"]') ?? document));
     await click(all('button', sheet() ?? document).find((b) => text(b) === '보기') ?? null);
     await click(buttonByText('밴드 연결', sheet() ?? document));
     // SDD-220 TS26: OS 권한 요청 전 사전 안내를 거친다(확인 전에는 연결하지 않는다).
@@ -414,15 +414,15 @@ describe('발언권·채팅·녹음 연결', () => {
   it('코드 복사는 페이지 핸들러를 부른다', async () => {
     const props = baseProps();
     await render(<HostLiveContainer {...props} />);
-    await click(buttonByText('도구', one('[data-pz="dock"]') ?? document));
+    await click(buttonByText('설정', one('[data-pz="dock"]') ?? document));
     await click(buttonByText('코드 복사', sheet() ?? document));
     expect(props.codeCopy.onCopy).toHaveBeenCalledTimes(1);
   });
 
-  it('도구의 화면 나가기는 페이지 onClose를 호출하고 수업 종료는 하지 않는다', async () => {
+  it('설정의 화면 나가기는 페이지 onClose를 호출하고 수업 종료는 하지 않는다', async () => {
     const props = baseProps();
     await render(<HostLiveContainer {...props} />);
-    await click(buttonByText('도구', one('[data-pz="dock"]') ?? document));
+    await click(buttonByText('설정', one('[data-pz="dock"]') ?? document));
     await click(buttonByText('클래스 화면 나가기', sheet() ?? document));
     expect(props.onClose).toHaveBeenCalledTimes(1);
     expect(props.end.onRequest).not.toHaveBeenCalled();
