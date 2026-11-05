@@ -5,14 +5,16 @@ import { useEffect, useRef } from 'react';
  * 호스트가 회차를 끝내면 회원은 밴드 해제 없이 떠나 close intent 가 생기지 않았고,
  * 그 결과 manifest 가 unknown 에 머물렀다. 종료가 취소되거나(ended→다른 phase) 재진입하면 다시 허용한다.
  */
-export function useCloseBiosignalOnEnd(ended: boolean, close: (reason: string) => Promise<unknown>): void {
+export function useCloseBiosignalOnEnd(ended: boolean, close: (reason: string) => Promise<unknown>, after?: () => void): void {
   const doneRef = useRef(false);
   const closeRef = useRef(close);
   closeRef.current = close;
+  const afterRef = useRef(after);
+  afterRef.current = after;
   useEffect(() => {
     if (!ended) { doneRef.current = false; return; }
     if (doneRef.current) return;
     doneRef.current = true;
-    void closeRef.current('session_ended').catch(() => undefined);
+    void closeRef.current('session_ended').catch(() => undefined).finally(() => { try { afterRef.current?.(); } catch { /* 해제 실패가 종료를 막지 않는다 */ } });
   }, [ended]);
 }

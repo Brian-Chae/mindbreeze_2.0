@@ -7,6 +7,7 @@ import { bluetoothService } from '../eeg/bluetoothService';
 import { SOCKET_URL } from '../socket';
 import { buildNativeModelPayload, getNativeMeasurement } from '../native-measurement';
 import { getActiveModelCache, refreshActiveModel } from '../eeg/eegPersonalScore';
+import { clearBandHold, getBandHold } from '../native-measurement/band-hold';
 import { uploadProgressStore } from './upload-progress';
 import { decideMeasurementPath, type MeasurementPath } from './measurement-path';
 import { isLiveProtocolV2Enabled } from '../session-live/live-flag';
@@ -167,6 +168,7 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
     lastStopReasonRef.current = reason;
     if (activeOwner !== owned.token) return;
     activeOwner = null;
+    clearBandHold();
     void getNativeMeasurement().stop({ reason, requestId: crypto.randomUUID() }).catch(() => undefined);
   };
   // 실제 이탈(언마운트)·회차/참가자/계정 변경 → 즉시 stop. 화면이 유지되는 입력 흔들림(bandOptIn·연결 상태·재시도)은 여기 오지 않는다.
@@ -179,7 +181,7 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
   const [retryTick, setRetryTick] = useState(0);
   const ready = shouldStartNative({
     path, hasIds: Boolean(o.participantId && o.accountId), platform: Capacitor.getPlatform(), bandConnected: o.bandConnected,
-    latched: latchedRef.current, knownDeviceId: bluetoothService.getDeviceId() || bluetoothService.getCachedDeviceId() || null,
+    latched: latchedRef.current, knownDeviceId: bluetoothService.getDeviceId() || bluetoothService.getCachedDeviceId() || getBandHold().deviceId || null,
   });
 
   useEffect(() => {
@@ -306,7 +308,8 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
           void monitorHealth();
           return;
         }
-        const deviceId = bluetoothService.getDeviceId() || bluetoothService.getCachedDeviceId() || lastGoodDeviceIdRef.current;
+        const hold = getBandHold();
+        const deviceId = bluetoothService.getDeviceId() || bluetoothService.getCachedDeviceId() || hold.deviceId || lastGoodDeviceIdRef.current;
         // 웹과 같은 규칙: 서버 활성 표준 모델 > 코호트. 시작 시 1회 조회해 넘기고, 이후 교체는 네이티브가 막는다(pin).
         const model = buildNativeModelPayload(getActiveModelCache() ?? (await refreshActiveModel().catch(() => null)));
         if (cancelled || !stillOwned()) return;
@@ -314,7 +317,7 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
           platform, sessionId: o.sessionId, requestId, accountId: o.accountId as string, apiBase: BASE_URL, socketBase: SOCKET_URL,
           instanceId: instanceRef.current, deviceId: deviceId || null, tokens: { accessToken: access, refreshToken: refresh }, model,
           releaseJsBand: () => bluetoothService.releaseForNative(),
-          isValid: stillOwned,
+          isValid: stillOwned, alreadyHeld: hold.held,
         });
         if (!stillOwned()) {
           // 시작 요청이 이미 나간 뒤 철회됐다 — 완료 직후 정지를 보내 최종 상태가 정지가 되게 한다(새 소유자가 있으면 건드리지 않음)
