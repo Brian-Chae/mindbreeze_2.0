@@ -89,6 +89,10 @@ export class AnalysisMetricsService {
   /** 마지막으로 받아들인 박동의 시각 — 중첩 창이 같은 박동을 다시 보내도 한 번만 센다. */
   private lastRrEndTimestamp = -Infinity;
   private static readonly RR_CLOCK_RESET_MS = 5000;
+  /** SDD-316: 새 박동이 연속 이 횟수의 창에서 전부 중앙값 ±25% 게이트에 탈락하면 기준 중앙값 락인으로 보고 버퍼를 비우고 재시드한다. Rust hrv.rs RR_GATE_RESEED_STREAK 와 같은 값. */
+  static readonly RR_GATE_RESEED_STREAK = 12;
+  private gateRejectStreak = 0;
+  private gateRejected: Array<{ rr: number; ts: number }> = [];
   private lastLfHfCalculation = 0;
 
   private currentLfPower = 0;
@@ -410,11 +414,30 @@ export class AnalysisMetricsService {
     // 하루명상 SDD-052 filterArtifactRr: 버퍼 중앙값 ±25% 이탈 RR 은 박동 누락/가짜 피크로 보고 제외한다.
     // (시각 커서는 아래에서 유효 박동 기준으로 갱신하므로 제외된 박동이 재유입되지는 않는다.)
     // 버퍼가 5개 미만인 초기에는 들어온 윈도우 자체의 중앙값을 기준으로 삼는다(윈도우에 RR 3개 이상일 때).
+    const inRange = valid;
     const refPool = this.rrIntervalBuffer.length >= 5 ? this.rrIntervalBuffer : valid.map(c => c.rr);
     if (refPool.length >= 3) {
       const sortedRef = [...refPool].sort((a, b) => a - b);
       const median = sortedRef[sortedRef.length >> 1];
       if (median > 0) valid = valid.filter(c => Math.abs(c.rr - median) <= median * 0.25);
+    }
+    if (valid.length === 0 && inRange.length > 0) {
+      this.gateRejectStreak += 1;
+      this.gateRejected.push(...inRange);
+      if (this.gateRejectStreak >= AnalysisMetricsService.RR_GATE_RESEED_STREAK) {
+        // 기준 중앙값 락인: 버퍼와 파생값을 비우고, 탈락 박동 풀에서 자체 중앙값 ±25% 박동만 새 기준으로 쓴다.
+        const pool = this.gateRejected.map(c => c.rr).sort((a, b) => a - b);
+        const med = pool[pool.length >> 1];
+        valid = this.gateRejected.filter(c => Math.abs(c.rr - med) <= med * 0.25);
+        this.rrIntervalBuffer = []; this.rrTimestampBuffer = [];
+        this.respiratoryRateHistory = []; this.currentRespiratoryRate = null;
+        this.respiratoryNullReason = 'insufficient_rr_buffer';
+        this.hasTimeDomainMetrics = false; this.hasFrequencyDomainMetrics = false; this.hasHeartRateStatistics = false;
+        this.lastLfHfCalculation = 0;
+        this.gateRejectStreak = 0; this.gateRejected = [];
+      }
+    } else if (valid.length > 0) {
+      this.gateRejectStreak = 0; this.gateRejected = [];
     }
     if (valid.length === 0) {
       if (stamped) {

@@ -16,6 +16,9 @@ const RESP_MEDIAN_WINDOW: usize = 5;
 const EMA_HR: f64 = 0.3;
 const EMA_FREQ: f64 = 0.3;
 const RR_CLOCK_RESET_MS: f64 = 5000.0;
+/// SDD-316: 새 박동이 연속 이 횟수의 창에서 전부 중앙값 ±25% 게이트에 탈락하면 기준 중앙값이 오염(락인)된 것으로 보고
+/// RR 버퍼를 비운 뒤 그 박동으로 재시드한다. 웹 TS(AnalysisMetricsService.RR_GATE_RESEED_STREAK)와 같은 값으로 유지한다.
+pub const RR_GATE_RESEED_STREAK: u32 = 12;
 const MAX_HISTORY: usize = 120;
 /// SDD-314: 개수 상한(120/60)은 평소 심박 기준값이다. RR 이 짧아(<~510ms) 개수만으로는 시간조건
 /// (SDNN 30s / 호흡 60s)을 못 채우면 시간조건을 채울 때까지 개수 상한을 늘린다. 안전 상한은 아래.
@@ -85,6 +88,12 @@ pub struct HrvState {
     has_time: bool,
     has_freq: bool,
     has_hr_stats: bool,
+    /// SDD-316: 연속 게이트 전부 탈락 창 수. 구 체크포인트는 0.
+    #[serde(default)]
+    gate_reject_streak: u32,
+    /// 연속 탈락 동안 모은 (rr, 종료시각). 재시드 시 이 풀의 자체 중앙값 ±25% 박동만 새 기준으로 쓴다.
+    #[serde(default)]
+    gate_rejected: Vec<(f64, f64)>,
 }
 
 impl Default for HrvState {
@@ -116,6 +125,8 @@ impl Default for HrvState {
             has_time: false,
             has_freq: false,
             has_hr_stats: false,
+            gate_reject_streak: 0,
+            gate_rejected: vec![],
         }
     }
 }
@@ -321,6 +332,14 @@ impl HrvState {
     pub fn rr_buffer_len(&self) -> usize {
         self.rr.len()
     }
+    /// SDD-316: 미착용 진입 시 PPG 파생 상태를 모두 비운다(공기값 RR·호흡 이력이 착용 후 계산을 오염시키지 않게).
+    /// ACC 에서 오는 motion 은 PPG 와 무관하므로 유지한다. 호흡 사유는 `not_worn`.
+    pub fn reset_for_not_worn(&mut self) {
+        let motion = self.motion;
+        *self = HrvState::default();
+        self.motion = motion;
+        self.resp_null_reason = Some("not_worn".into());
+    }
     pub fn resp_null_reason(&self) -> Option<&str> {
         if self.resp.is_none() {
             self.resp_null_reason.as_deref()
@@ -413,6 +432,7 @@ impl HrvState {
         let mut valid: Vec<(f64, f64)> = cand.iter().cloned().filter(|c| c.0 >= 200.0 && c.0 <= 2000.0).collect();
         // 하루명상 SDD-052 filterArtifactRr: 중앙값 ±25% 이탈 RR(박동 누락/가짜 피크) 제외.
         // 버퍼가 5개 미만이면 들어온 윈도우 자체(3개 이상)를 기준으로 한다.
+        let in_range = valid.clone();
         let ref_pool: Vec<f64> = if self.rr.len() >= 5 { self.rr.clone() } else { valid.iter().map(|c| c.0).collect() };
         if ref_pool.len() >= 3 {
             let mut sr = ref_pool;
@@ -421,6 +441,32 @@ impl HrvState {
             if med > 0.0 {
                 valid.retain(|c| (c.0 - med).abs() <= med * 0.25);
             }
+        }
+        if valid.is_empty() && !in_range.is_empty() {
+            self.gate_reject_streak += 1;
+            self.gate_rejected.extend(in_range.iter().cloned());
+            if self.gate_reject_streak >= RR_GATE_RESEED_STREAK {
+                // 기준 중앙값 락인: 버퍼(와 파생값)를 비우고, 탈락했던 박동 풀에서 자체 중앙값 ±25% 박동만 새 기준으로 쓴다.
+                let mut pool: Vec<f64> = self.gate_rejected.iter().map(|c| c.0).collect();
+                js_sort_numeric(&mut pool);
+                let med = pool[pool.len() >> 1];
+                let seed: Vec<(f64, f64)> = self.gate_rejected.iter().cloned().filter(|c| (c.0 - med).abs() <= med * 0.25).collect();
+                self.rr.clear();
+                self.rr_ts.clear();
+                self.resp_history.clear();
+                self.resp = None;
+                self.resp_null_reason = Some("insufficient_rr_buffer".into());
+                self.has_time = false;
+                self.has_freq = false;
+                self.has_hr_stats = false;
+                self.last_lfhf_calc = 0.0;
+                valid = seed;
+                self.gate_reject_streak = 0;
+                self.gate_rejected.clear();
+            }
+        } else if !valid.is_empty() {
+            self.gate_reject_streak = 0;
+            self.gate_rejected.clear();
         }
         if valid.is_empty() {
             if stamped {

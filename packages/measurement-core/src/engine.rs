@@ -360,6 +360,56 @@ struct LatestPpg {
     observed_ms: u64,
     hrv: HrvSnapshot,
     resp_reason: Option<String>,
+    /// SDD-316: 미착용 구간의 PPG 지표는 모두 invalid(null)+`not_worn`. 구 체크포인트는 false.
+    #[serde(default)]
+    not_worn: bool,
+}
+
+/// SDD-316 착용 판정 — PPG IR 직류 레벨 히스테리시스(밴드 프로토콜에 PPG 전용 접촉 신호가 없다).
+/// 실측(dev 83a39b18·1df2153e, 50Hz): 미착용 IR 2,641~41,248 / 착용 IR ≥ 1,134,896 / 중간(전환 과도기) 소수.
+/// 진입 100k = 미착용 최대의 2.4배 여유, 복귀 500k = 착용 최소의 절반 미만이면서 과도기 잡음 복귀 오판 방지.
+pub(crate) const WEAR_OFF_IR: f64 = 100_000.0;
+pub(crate) const WEAR_ON_IR: f64 = 500_000.0;
+/// 연속 150샘플 = 3초(50Hz). 샘플 단위 판정이라 패킷 크기·cadence 와 무관하다.
+pub(crate) const WEAR_HOLD_SAMPLES: u32 = 150;
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+struct WearState {
+    worn: bool,
+    low_run: u32,
+    high_run: u32,
+}
+impl Default for WearState {
+    fn default() -> Self {
+        WearState { worn: true, low_run: 0, high_run: 0 }
+    }
+}
+impl WearState {
+    /// 샘플 1개 반영. 상태가 바뀌면 Some(새 worn).
+    fn update(&mut self, ir: f64) -> Option<bool> {
+        if ir < WEAR_OFF_IR {
+            self.low_run = self.low_run.saturating_add(1);
+            self.high_run = 0;
+        } else if ir >= WEAR_ON_IR {
+            self.high_run = self.high_run.saturating_add(1);
+            self.low_run = 0;
+        } else {
+            // 중간 구간: 직전 상태 유지, 연속 카운터는 끊는다.
+            self.low_run = 0;
+            self.high_run = 0;
+        }
+        if self.worn && self.low_run >= WEAR_HOLD_SAMPLES {
+            self.worn = false;
+            self.low_run = 0;
+            return Some(false);
+        }
+        if !self.worn && self.high_run >= WEAR_HOLD_SAMPLES {
+            self.worn = true;
+            self.high_run = 0;
+            return Some(true);
+        }
+        None
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -389,6 +439,8 @@ struct CoreState {
     feature_chain: [u8; 32],
     segments_seen: u32,
     guard_stats: GuardStats,
+    #[serde(default)]
+    wear: WearState,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -459,6 +511,7 @@ impl Core {
             feature_chain: [0; 32],
             segments_seen: 1,
             guard_stats: GuardStats::default(),
+            wear: WearState::default(),
         };
         Ok(Core { cfg, tuning, s })
     }
@@ -606,9 +659,16 @@ impl Core {
             }
             Parsed::Ppg(p) => {
                 for (k, s) in p.samples.iter().enumerate() {
-                    self.s.ppg.push_back(PpgPoint { ts: times[k], red: s.red as f64, ir: s.ir as f64 });
-                    if self.s.ppg.len() > PPG_RING {
-                        self.s.ppg.pop_front();
+                    // SDD-316: 착용 상태 전환 시 PPG 링과 HRV 상태를 비운다(진입=공기값 제거, 복귀=전환 과도기 제거).
+                    if self.s.wear.update(s.ir as f64).is_some() {
+                        self.s.ppg.clear();
+                        self.s.hrv.reset_for_not_worn();
+                    }
+                    if self.s.wear.worn {
+                        self.s.ppg.push_back(PpgPoint { ts: times[k], red: s.red as f64, ir: s.ir as f64 });
+                        if self.s.ppg.len() > PPG_RING {
+                            self.s.ppg.pop_front();
+                        }
                     }
                     self.s.totals[1] += 1;
                     self.s.wm_us[1] = Some(ts_us(times[k]));
@@ -617,7 +677,7 @@ impl Core {
                         self.run_ppg(t, t.floor(), &mut out);
                     }
                 }
-                if legacy && self.s.ppg.len() >= 50 {
+                if legacy && (self.s.ppg.len() >= 50 || !self.s.wear.worn) {
                     self.run_ppg(*times.last().unwrap(), now_ms, &mut out);
                 }
             }
@@ -726,13 +786,23 @@ impl Core {
     }
 
     fn run_ppg(&mut self, last_ts: f64, now_ms: f64, out: &mut PushOutput) {
+        if !self.s.wear.worn {
+            // 미착용: 분석하지 않고 not_worn 이력만 남긴다(emission 없음 — 웹 TS 처리기도 낼 값이 없다).
+            let end_us = ts_us(last_ts);
+            self.s.ppg_hist.push_back(LatestPpg { end_us, observed_ms: last_ts.max(0.0).floor() as u64, hrv: self.s.hrv.snapshot(), resp_reason: Some("not_worn".into()), not_worn: true });
+            if self.s.ppg_hist.len() > 8 {
+                self.s.ppg_hist.pop_front();
+            }
+            self.anchor_grid(end_us);
+            return;
+        }
         let win: Vec<PpgPoint> = self.s.ppg.iter().copied().collect();
         let res = ppg::analyze(&win, self.tuning.filter);
         self.s.hrv.process_ppg(res.heart_rate_raw, &res.rr, &res.rr_end_ts, now_ms);
         let hrv = self.s.hrv.snapshot();
         let reason = self.s.hrv.resp_null_reason().map(|s| s.to_string());
         let end_us = ts_us(last_ts);
-        self.s.ppg_hist.push_back(LatestPpg { end_us, observed_ms: last_ts.max(0.0).floor() as u64, hrv: hrv.clone(), resp_reason: reason.clone() });
+        self.s.ppg_hist.push_back(LatestPpg { end_us, observed_ms: last_ts.max(0.0).floor() as u64, hrv: hrv.clone(), resp_reason: reason.clone(), not_worn: false });
         if self.s.ppg_hist.len() > 8 {
             self.s.ppg_hist.pop_front();
         }
@@ -896,6 +966,7 @@ impl Core {
 
         let ppg_gate = |p: Option<&LatestPpg>, have_any: bool| -> Result<(), (&'static str, &'static str)> {
             match p {
+                Some(l) if l.not_worn => Err(("invalid", "not_worn")),
                 Some(_) => Ok(()),
                 None if have_any => Err(("gap", "no_recent_ppg")),
                 None => Err(("warming_up", "no_ppg_data")),

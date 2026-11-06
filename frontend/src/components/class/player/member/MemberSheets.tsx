@@ -1,3 +1,4 @@
+import { NOT_WORN_TEXT } from '../../../../lib/session-live/live-metric-snapshot';
 import { displayedInteger } from '../../../../lib/biosignal/display-snapshot';
 import { isNativeApp } from '../../../../lib/native/platform';
 import { PermissionGuide } from '../../../native/permission-guide';
@@ -60,7 +61,7 @@ function StatusSheet({ props }: { props: MemberClassViewProps }) {
       {props.v2Bars ? <MetricBars mode={typeof window !== 'undefined' && window.innerWidth >= 768 ? 'desktop' : 'mobile'} label={props.v2Bars.label} current={props.v2Bars.current} bars={props.v2Bars.bars} /> : null}
       <div className="mp-status-grid">
         {GROUPS.map((group) => (
-          <GroupRow key={group.key} group={group} props={{ hero, snapshot, onHeroChange: actions.onHeroChange }} />
+          <GroupRow key={group.key} group={group} props={{ hero, snapshot, notWorn: props.notWorn === true, onHeroChange: actions.onHeroChange }} />
         ))}
       </div>
       <p className="mp-status-note">눌러서 가운데 링에 보여 드려요</p>
@@ -70,7 +71,7 @@ function StatusSheet({ props }: { props: MemberClassViewProps }) {
 
 interface GroupRowProps {
   group: (typeof GROUPS)[number];
-  props: { hero: MemberClassViewProps['hero']; snapshot: MemberClassViewProps['snapshot']; onHeroChange: MemberClassViewProps['actions']['onHeroChange'] };
+  props: { hero: MemberClassViewProps['hero']; snapshot: MemberClassViewProps['snapshot']; notWorn: boolean; onHeroChange: MemberClassViewProps['actions']['onHeroChange'] };
 }
 
 function GroupRow({ group, props }: GroupRowProps) {
@@ -97,7 +98,7 @@ function GroupRow({ group, props }: GroupRowProps) {
                   <circle className="mp-mring__val" cx="32" cy="32" r="28" pathLength={100} strokeDasharray={`${Math.round(fraction * 1000) / 10} 100`} transform="rotate(-90 32 32)" />
                 )}
               </svg>
-              <span className="mp-mring__mv"><b>{value === null ? (metric.key === 'respiration' || metric.key === 'hrv' ? '측정 중' : '—') : value}</b><i>{value === null ? '' : metric.unit}</i></span>
+              <span className="mp-mring__mv"><b>{value === null ? (props.notWorn && (metric.key === 'bpm' || metric.key === 'respiration' || metric.key === 'hrv') ? NOT_WORN_TEXT : metric.key === 'respiration' || metric.key === 'hrv' ? '측정 중' : '—') : value}</b><i>{value === null ? '' : metric.unit}</i></span>
             </span>
             <span className="mp-mcell__label">{metric.label}</span>
           </button>
