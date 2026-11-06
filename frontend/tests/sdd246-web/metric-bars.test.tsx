@@ -34,16 +34,22 @@ describe('MetricBars 표시 정책', () => {
   it('데스크톱은 5분 막대 + 현재값', () => {
     const html = renderToStaticMarkup(<MetricBars mode="desktop" label="집중" current={62} bars={bars} />);
     expect(html).toContain('data-testid="metric-bars"');
-    expect(html).toContain('62');
   });
-  it('모바일은 현재값만(막대 없음)', () => {
-    const html = renderToStaticMarkup(<MetricBars mode="mobile" label="집중" current={62} bars={bars} />);
-    expect(html).not.toContain('data-testid="metric-bars"');
-    expect(html).toContain('62');
+  it('상단 "이완/집중 + 숫자" 줄은 어떤 모드에서도 그리지 않는다(11/6 대표 지시)', () => {
+    for (const mode of ['desktop', 'mobile'] as const) {
+      const html = renderToStaticMarkup(<MetricBars mode={mode} label="이완" current={62} bars={bars} />);
+      expect(html).not.toContain('text-[28px]');
+      expect(html).not.toContain('>이완<');
+      expect(html).not.toContain('>62<');
+    }
   });
-  it('값 없음은 0 이 아니라 대시, 종합점수 문구 없음', () => {
-    const html = renderToStaticMarkup(<MetricBars mode="desktop" label="집중" current={null} bars={bars} />);
-    expect(html).toContain('—');
+  it('모바일은 아무것도 그리지 않는다(막대 없음)', () => {
+    const html = renderToStaticMarkup(<MetricBars mode="mobile" label="이완" current={62} bars={bars} />);
+    expect(html).toBe('');
+  });
+  it('값 없음에도 대시·종합점수 문구가 없다', () => {
+    const html = renderToStaticMarkup(<MetricBars mode="desktop" label="이완" current={null} bars={bars} />);
+    expect(html).not.toContain('—');
     expect(html).not.toContain('종합');
   });
 });

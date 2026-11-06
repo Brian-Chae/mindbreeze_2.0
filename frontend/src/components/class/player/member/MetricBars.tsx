@@ -9,14 +9,13 @@ interface MetricBarsProps {
   bars: readonly Bar[];
 }
 
-export function MetricBars({ mode, label, current, bars }: MetricBarsProps) {
+// 11/6 대표 지시: 상단 "이완 + 숫자" 줄은 보여 주지 않는다(앱·웹 공통). 숫자는 가운데 링이 이미 보여 준다.
+// 데스크톱(≥768px)의 5분 막대만 유지하고, 모바일은 아무것도 그리지 않는다.
+export function MetricBars({ mode, label, bars }: MetricBarsProps) {
   const policy = metricPresentation(mode);
+  if (!policy.showBars) return null;
   return (
     <div className="flex flex-col gap-2" data-testid="metric-current">
-      <div className="flex items-baseline justify-between">
-        <span className="text-[13px] opacity-70">{label}</span>
-        <span className="text-[28px] font-semibold tabular-nums" aria-live="off">{current == null ? '—' : Math.round(current)}</span>
-      </div>
       {policy.showBars ? (
         <div className="flex h-16 items-end gap-1" data-testid="metric-bars" role="img" aria-label={`${label} 5분 평균 막대`}>
           {bars.map((b) => (
