@@ -20,15 +20,17 @@ export async function checkUiV2Off(root) {
         if (/VITE_UI_V2:[`"']true[`"']/.test(content)) problems.push(`${name}: VITE_UI_V2=true 가 번들에 있음`);
         // ② D안 컴포넌트 식별자·청크가 JS 에 없어야 한다(분기 제거)
         if (/UiV2[A-Z][A-Za-z]+/.test(content)) problems.push(`${name}: UiV2* 컴포넌트가 번들에 포함됨`);
-        if (/ui-v2-(home|classes|class-detail|reports)-page/.test(content)) problems.push(`${name}: D안 화면 청크 참조`);
+        if (/ui-v2-(home|classes|class-detail|reports|chat|settings|participation-profile|optional-profile)-page/.test(content)) problems.push(`${name}: D안 화면 청크 참조`);
         // ③ 루트 클래스 부여 코드
         if (/className:`[^`]*ui-v2|className:"[^"]*ui-v2/.test(content)) problems.push(`${name}: ui-v2 루트 클래스 부여 코드`);
       }
       if (name.endsWith('.css') && /\.ui-v2\b|\.u2-/.test(content)) info.v2CssFiles.push(name);
+      // 폰트: 운영 번들에는 Pretendard 자체 호스팅 파일/@font-face 가 없어야 한다(addendum-2 H8).
+      if (/\.(css|js)$/.test(name) && /Pretendard\s*MB|PretendardVariable-KS/.test(content)) problems.push(`${name}: 자체 호스팅 Pretendard 참조가 운영 번들에 포함됨`);
     }
   }
   await walk(root);
-  const names = (await readdir(resolve(root, 'assets')).catch(() => [])).filter((n) => /ui-v2/.test(n));
+  const names = (await readdir(resolve(root, 'assets')).catch(() => [])).filter((n) => /ui-v2|PretendardVariable|\.woff2?$/i.test(n));
   if (names.length) problems.push(`assets: ui-v2 청크 파일 ${names.join(', ')}`);
   if (problems.length) { const e = new Error(problems.join('\n')); e.info = info; throw e; }
   return info;

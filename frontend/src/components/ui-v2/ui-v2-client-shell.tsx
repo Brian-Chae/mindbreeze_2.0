@@ -16,7 +16,9 @@ import SidebarNav from '../layout/SidebarNav';
 import NotificationToastHost from '../notifications/notification-toast-host';
 import AppUpdateBanner from '../update/AppUpdateBanner';
 import { UiV2BottomNav } from './ui-v2-bottom-nav';
+import { UiV2Logo } from './ui-v2-logo';
 import '../../styles/ui-v2.css';
+import '../../styles/ui-v2-brand.css';
 
 export interface UiV2ClientShellProps {
   title: string;
@@ -26,9 +28,17 @@ export interface UiV2ClientShellProps {
   /** 상세 화면: 큰 제목 대신 뒤로가기 줄을 쓴다. */
   back?: { to: string; label: string };
   hideBottomNav?: boolean;
+  /** 뒤로가기 화면에서도 큰 제목(h1)을 보일지. 기본은 뒤로가기가 없을 때만 보인다. */
+  heading?: boolean;
+  /** 채팅처럼 본문이 스스로 스크롤하는 화면: 본문을 남은 높이에 맞추고 하단 여백을 뺀다. */
+  fill?: boolean;
+  /** 본문 폭 제한(640px)을 풀고 데스크톱 2단을 허용한다. */
+  wide?: boolean;
+  /** 상단 바 오른쪽 자리를 알림 대신 쓴다(예: 채팅방 메뉴). */
+  trailing?: ReactNode;
 }
 
-export function UiV2ClientShell({ title, subtitle, children, back, hideBottomNav = false }: UiV2ClientShellProps) {
+export function UiV2ClientShell({ title, subtitle, children, back, hideBottomNav = false, heading, fill = false, wide = false, trailing }: UiV2ClientShellProps) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const userId = useAuthStore((s) => s.user?.id);
@@ -69,6 +79,7 @@ export function UiV2ClientShell({ title, subtitle, children, back, hideBottomNav
     return () => observer.disconnect();
   }, [title]);
 
+  const showHeading = heading ?? !back;
   const bellBadge = unread > 0 ? (unread > 9 ? '9+' : String(unread)) : null;
   return (
     <div className="h-full w-full md:grid md:grid-cols-[240px_1fr] flex flex-col" data-shell-variant="ui-v2">
@@ -81,23 +92,25 @@ export function UiV2ClientShell({ title, subtitle, children, back, hideBottomNav
             <button type="button" className="u2-icon-btn" aria-label={back.label} onClick={() => navigate(back.to)}>
               <svg className="u2-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m14 5-7 7 7 7" /></svg>
             </button>
-          ) : <span className="u2-brand">MIND BREEZE</span>}
+          ) : <UiV2Logo compact={collapsed} />}
           <span className="u2-compact-title" data-shown={collapsed || !!back} aria-hidden="true">{title}</span>
-          <button type="button" className="u2-icon-btn" aria-label={bellBadge ? `알림 ${bellBadge}건` : '알림'} onClick={() => navigate('/app/notifications')}>
-            <svg className="u2-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 16V10a6 6 0 0 1 12 0v6l2 2H4zM10 21h4" /></svg>
-            {bellBadge && <span className="u2-dot" aria-hidden="true">{bellBadge}</span>}
-          </button>
+          {trailing ?? (
+            <button type="button" className="u2-icon-btn" aria-label={bellBadge ? `알림 ${bellBadge}건` : '알림'} onClick={() => navigate('/app/notifications')}>
+              <svg className="u2-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 16V10a6 6 0 0 1 12 0v6l2 2H4zM10 21h4" /></svg>
+              {bellBadge && <span className="u2-dot" aria-hidden="true">{bellBadge}</span>}
+            </button>
+          )}
         </div>
         <div ref={swipe.containerRef} data-mobile-menu-swipe className="mobile-menu-swipe-viewport flex-1 min-h-0">
-          <div data-mobile-swipe-page className="mobile-menu-swipe-page u2-scroll">
-            {!back && (
+          <div data-mobile-swipe-page className={`mobile-menu-swipe-page u2-scroll${fill ? ' u2-scroll--fill' : ''}`}>
+            {showHeading && (
               <header className="u2-heading" data-mobile-swipe-title>
                 <h1>{title}</h1>
                 {subtitle && <p>{subtitle}</p>}
               </header>
             )}
             <div ref={sentinel} aria-hidden="true" style={{ height: 1, marginTop: -1 }} />
-            <main className="u2-main">{children}</main>
+            <main className={`u2-main${wide ? ' u2-main--wide' : ''}${fill ? ' u2-main--fill' : ''}`}>{children}</main>
           </div>
           <p className="sr-only" role="status" aria-live="polite">{swipe.message}</p>
         </div>

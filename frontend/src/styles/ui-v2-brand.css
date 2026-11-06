@@ -1,0 +1,26 @@
+/* SDD-318 — 폰트(Pretendard Variable 자체 호스팅)와 로고 락업. UI_V2 쉘에서만 import 된다(운영 번들에는 포함되지 않는다).
+   폰트: Pretendard Variable, SIL OFL 1.1 (src/assets/fonts/Pretendard-OFL-1.1.txt). KS X 1001 한글 2,350자 + 라틴·기호 서브셋(가변 wght 45–930).
+   패밀리 이름을 'Pretendard MB' 로 따로 둔 이유: 전역 mb-tokens.css 의 CDN 'Pretendard Variable' 선언과 합쳐져 어느 파일이 쓰일지 모호해지는 것을 막는다. */
+@font-face{
+  font-family:'Pretendard MB';
+  font-style:normal;
+  font-weight:45 930;
+  font-display:swap;
+  src:url('../assets/fonts/PretendardVariable-KS.woff2') format('woff2-variations'),url('../assets/fonts/PretendardVariable-KS.woff2') format('woff2');
+}
+
+/* 락업 규칙(brand-logo.html): 워드마크 대문자 높이 ≈ 심볼 높이, 심볼-워드마크 간격 ≈ 심볼 높이의 ½,
+   Pretendard 700 · letter-spacing +0.04em · line-height .85. Pretendard 대문자 높이 = 0.707em → 심볼 12px 일 때 글자 17px. */
+.ui-v2 .u2-logo{display:inline-flex;align-items:center;gap:6px;min-height:44px;min-width:44px;color:#111111;border-radius:8px}
+.ui-v2 .u2-logo-symbol{display:block;height:12px;width:auto;flex:none}
+.ui-v2 .u2-logo-word{font-family:'Pretendard MB','Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif;font-weight:700;font-size:17px;line-height:.85;letter-spacing:.04em;white-space:nowrap;text-transform:uppercase}
+/* 큰 제목이 접혀 작은 제목이 나타나면 워드마크는 숨기고 심볼만 남겨 겹침을 막는다. */
+@media(max-width:767px){.ui-v2 .u2-logo[data-compact] .u2-logo-word{display:none}}
+/* 데스크톱은 사이드바에 같은 락업이 있으므로 상단 바의 로고는 숨긴다. */
+@media(min-width:768px){.ui-v2 .u2-logo{display:none}.ui-v2 .u2-compact-title{margin-right:auto}}
+
+/* 데스크톱 사이드바 브랜드 블록(SidebarNav 는 상담사 쉘과 공유라 수정하지 않고, ui-v2 쉘에서만 덮어쓴다). */
+[data-shell-variant="ui-v2"] [data-sidebar-brand]>div:first-child{gap:6px}
+[data-shell-variant="ui-v2"] [data-sidebar-brand]>div:first-child>img{height:12px;width:auto}
+[data-shell-variant="ui-v2"] [data-sidebar-brand]>div:first-child>span{font-family:'Pretendard MB','Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif;font-weight:700;font-size:17px;line-height:.85;letter-spacing:.04em;text-transform:uppercase;color:#111111;white-space:nowrap}
+[data-shell-variant="ui-v2"] aside{font-family:'Pretendard MB','Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif}

@@ -1,0 +1,707 @@
+{
+  "contrast": [
+    {
+      "fg": "#FFFFFF",
+      "bg": "#5F0080",
+      "label": "내 말풍선 글자/배경",
+      "ratio": 11.68
+    },
+    {
+      "fg": "#25212C",
+      "bg": "#FFFFFF",
+      "label": "본문/표면",
+      "ratio": 15.76
+    },
+    {
+      "fg": "#25212C",
+      "bg": "#F4F4F7",
+      "label": "본문/캔버스(상대 말풍선)",
+      "ratio": 14.36
+    },
+    {
+      "fg": "#68616F",
+      "bg": "#FFFFFF",
+      "label": "보조/표면",
+      "ratio": 5.95
+    },
+    {
+      "fg": "#68616F",
+      "bg": "#F4F4F7",
+      "label": "보조/캔버스",
+      "ratio": 5.42
+    },
+    {
+      "fg": "#5F0080",
+      "bg": "#EEE5F5",
+      "label": "액센트/틴트",
+      "ratio": 9.54
+    },
+    {
+      "fg": "#B3264B",
+      "bg": "#FFFFFF",
+      "label": "위험 동작/표면",
+      "ratio": 6.37
+    },
+    {
+      "fg": "#111111",
+      "bg": "#F4F4F7",
+      "label": "워드마크/캔버스",
+      "ratio": 17.2
+    }
+  ],
+  "fonts": [
+    {
+      "label": "전(현행 dev 번들)",
+      "width": 390,
+      "target": "상단 로고(모바일 상단 바)",
+      "declared": "-apple-system, \"system-ui\", Pretendard, \"Apple SD Gothic Neo\", sans-serif",
+      "weight": "600",
+      "size": "13px",
+      "letterSpacing": "2px",
+      "sample": "MIND BREEZE",
+      "rendered": ".SF NS (시스템) ×11"
+    },
+    {
+      "label": "전(현행 dev 번들)",
+      "width": 390,
+      "target": "큰 제목 h1",
+      "declared": "\"Pretendard Variable\", Pretendard, \"Noto Sans KR\", -apple-system, \"system-ui\", s",
+      "weight": "600",
+      "size": "31px",
+      "letterSpacing": "-1.35px",
+      "sample": "내 클래스",
+      "rendered": "Pretendard SemiBold (시스템) ×5"
+    },
+    {
+      "label": "전(현행 dev 번들)",
+      "width": 390,
+      "target": "본문/목록 제목",
+      "result": "요소 없음/측정 불가"
+    },
+    {
+      "label": "전(현행 dev 번들)",
+      "width": 390,
+      "target": "보조 문구",
+      "declared": "\"Noto Sans KR\", \"Pretendard Variable\", Pretendard, -apple-system, \"system-ui\", s",
+      "weight": "400",
+      "size": "14px",
+      "letterSpacing": "0.203px",
+      "sample": "한 번의 호흡에서, 다음 ",
+      "rendered": "Pretendard (시스템) ×19"
+    },
+    {
+      "label": "전(현행 dev 번들)",
+      "width": 390,
+      "target": "하단 내비 라벨",
+      "declared": "-apple-system, \"system-ui\", Pretendard, \"Apple SD Gothic Neo\", sans-serif",
+      "weight": "400",
+      "size": "11px",
+      "letterSpacing": "normal",
+      "sample": "홈",
+      "rendered": "Pretendard (시스템) ×1"
+    },
+    {
+      "label": "전(현행 dev 번들)",
+      "width": 390,
+      "target": "데스크톱 사이드바 브랜드",
+      "declared": "\"Pretendard Variable\", Pretendard, \"Noto Sans KR\", -apple-system, \"system-ui\", s",
+      "weight": "800",
+      "size": "18px",
+      "letterSpacing": "-0.45px",
+      "sample": "Mind Breeze",
+      "rendered": "글리프 없음"
+    },
+    {
+      "label": "전(현행 dev 번들)",
+      "width": 1024,
+      "target": "상단 로고(모바일 상단 바)",
+      "declared": "-apple-system, \"system-ui\", Pretendard, \"Apple SD Gothic Neo\", sans-serif",
+      "weight": "600",
+      "size": "13px",
+      "letterSpacing": "2px",
+      "sample": "MIND BREEZE",
+      "rendered": ".SF NS (시스템) ×11"
+    },
+    {
+      "label": "전(현행 dev 번들)",
+      "width": 1024,
+      "target": "큰 제목 h1",
+      "declared": "\"Pretendard Variable\", Pretendard, \"Noto Sans KR\", -apple-system, \"system-ui\", s",
+      "weight": "600",
+      "size": "31px",
+      "letterSpacing": "-1.35px",
+      "sample": "내 클래스",
+      "rendered": "Pretendard SemiBold (시스템) ×5"
+    },
+    {
+      "label": "전(현행 dev 번들)",
+      "width": 1024,
+      "target": "본문/목록 제목",
+      "result": "요소 없음/측정 불가"
+    },
+    {
+      "label": "전(현행 dev 번들)",
+      "width": 1024,
+      "target": "보조 문구",
+      "declared": "\"Noto Sans KR\", \"Pretendard Variable\", Pretendard, -apple-system, \"system-ui\", s",
+      "weight": "400",
+      "size": "14px",
+      "letterSpacing": "0.203px",
+      "sample": "한 번의 호흡에서, 다음 ",
+      "rendered": "Pretendard (시스템) ×19"
+    },
+    {
+      "label": "전(현행 dev 번들)",
+      "width": 1024,
+      "target": "하단 내비 라벨",
+      "declared": "-apple-system, \"system-ui\", Pretendard, \"Apple SD Gothic Neo\", sans-serif",
+      "weight": "400",
+      "size": "11px",
+      "letterSpacing": "normal",
+      "sample": "홈",
+      "rendered": "글리프 없음"
+    },
+    {
+      "label": "전(현행 dev 번들)",
+      "width": 1024,
+      "target": "데스크톱 사이드바 브랜드",
+      "declared": "\"Pretendard Variable\", Pretendard, \"Noto Sans KR\", -apple-system, \"system-ui\", s",
+      "weight": "800",
+      "size": "18px",
+      "letterSpacing": "-0.45px",
+      "sample": "Mind Breeze",
+      "rendered": "Pretendard ExtraBold (시스템) ×11"
+    },
+    {
+      "label": "후(이번 변경)",
+      "width": 390,
+      "target": "상단 로고(모바일 상단 바)",
+      "declared": "\"Pretendard MB\", \"Pretendard Variable\", Pretendard, -apple-system, \"system-ui\", ",
+      "weight": "700",
+      "size": "17px",
+      "letterSpacing": "0.68px",
+      "sample": "MIND BREEZE",
+      "rendered": "Pretendard Variable (웹폰트) ×11"
+    },
+    {
+      "label": "후(이번 변경)",
+      "width": 390,
+      "target": "큰 제목 h1",
+      "declared": "\"Pretendard MB\", \"Pretendard Variable\", Pretendard, -apple-system, \"system-ui\", ",
+      "weight": "600",
+      "size": "31px",
+      "letterSpacing": "-1.35px",
+      "sample": "내 클래스",
+      "rendered": "Pretendard Variable (웹폰트) ×5"
+    },
+    {
+      "label": "후(이번 변경)",
+      "width": 390,
+      "target": "본문/목록 제목",
+      "result": "요소 없음/측정 불가"
+    },
+    {
+      "label": "후(이번 변경)",
+      "width": 390,
+      "target": "보조 문구",
+      "declared": "\"Pretendard MB\", \"Pretendard Variable\", Pretendard, -apple-system, \"system-ui\", ",
+      "weight": "400",
+      "size": "14px",
+      "letterSpacing": "0.203px",
+      "sample": "한 번의 호흡에서, 다음 ",
+      "rendered": "Pretendard Variable (웹폰트) ×19"
+    },
+    {
+      "label": "후(이번 변경)",
+      "width": 390,
+      "target": "하단 내비 라벨",
+      "declared": "\"Pretendard MB\", \"Pretendard Variable\", Pretendard, -apple-system, \"system-ui\", ",
+      "weight": "400",
+      "size": "11px",
+      "letterSpacing": "normal",
+      "sample": "홈",
+      "rendered": "Pretendard Variable (웹폰트) ×1"
+    },
+    {
+      "label": "후(이번 변경)",
+      "width": 390,
+      "target": "데스크톱 사이드바 브랜드",
+      "declared": "\"Pretendard MB\", \"Pretendard Variable\", Pretendard, -apple-system, \"system-ui\", ",
+      "weight": "700",
+      "size": "17px",
+      "letterSpacing": "0.68px",
+      "sample": "Mind Breeze",
+      "rendered": "글리프 없음"
+    },
+    {
+      "label": "후(이번 변경)",
+      "width": 390,
+      "target": "락업 비율 실측",
+      "geo": {
+        "symbolH": 12,
+        "symbolW": 26.33,
+        "capHeight": 12.02,
+        "gap": 6,
+        "capVsSymbol": 1,
+        "gapVsHalfSymbol": 1,
+        "fontSize": 17,
+        "wordText": "MIND BREEZE"
+      }
+    },
+    {
+      "label": "후(이번 변경)",
+      "width": 1024,
+      "target": "상단 로고(모바일 상단 바)",
+      "declared": "\"Pretendard MB\", \"Pretendard Variable\", Pretendard, -apple-system, \"system-ui\", ",
+      "weight": "700",
+      "size": "17px",
+      "letterSpacing": "0.68px",
+      "sample": "MIND BREEZE",
+      "rendered": "글리프 없음"
+    },
+    {
+      "label": "후(이번 변경)",
+      "width": 1024,
+      "target": "큰 제목 h1",
+      "declared": "\"Pretendard MB\", \"Pretendard Variable\", Pretendard, -apple-system, \"system-ui\", ",
+      "weight": "600",
+      "size": "31px",
+      "letterSpacing": "-1.35px",
+      "sample": "내 클래스",
+      "rendered": "Pretendard Variable (웹폰트) ×5"
+    },
+    {
+      "label": "후(이번 변경)",
+      "width": 1024,
+      "target": "본문/목록 제목",
+      "result": "요소 없음/측정 불가"
+    },
+    {
+      "label": "후(이번 변경)",
+      "width": 1024,
+      "target": "보조 문구",
+      "declared": "\"Pretendard MB\", \"Pretendard Variable\", Pretendard, -apple-system, \"system-ui\", ",
+      "weight": "400",
+      "size": "14px",
+      "letterSpacing": "0.203px",
+      "sample": "한 번의 호흡에서, 다음 ",
+      "rendered": "Pretendard Variable (웹폰트) ×19"
+    },
+    {
+      "label": "후(이번 변경)",
+      "width": 1024,
+      "target": "하단 내비 라벨",
+      "declared": "\"Pretendard MB\", \"Pretendard Variable\", Pretendard, -apple-system, \"system-ui\", ",
+      "weight": "400",
+      "size": "11px",
+      "letterSpacing": "normal",
+      "sample": "홈",
+      "rendered": "글리프 없음"
+    },
+    {
+      "label": "후(이번 변경)",
+      "width": 1024,
+      "target": "데스크톱 사이드바 브랜드",
+      "declared": "\"Pretendard MB\", \"Pretendard Variable\", Pretendard, -apple-system, \"system-ui\", ",
+      "weight": "700",
+      "size": "17px",
+      "letterSpacing": "0.68px",
+      "sample": "Mind Breeze",
+      "rendered": "Pretendard Variable (웹폰트) ×11"
+    },
+    {
+      "label": "후(이번 변경)",
+      "width": 1024,
+      "target": "락업 비율 실측",
+      "geo": {
+        "symbolH": 12,
+        "symbolW": 26.33,
+        "capHeight": 12.02,
+        "gap": 6,
+        "capVsSymbol": 1,
+        "gapVsHalfSymbol": 1,
+        "fontSize": 17,
+        "wordText": "Mind Breeze"
+      }
+    }
+  ],
+  "results": [
+    {
+      "width": 390,
+      "screen": "chat-list",
+      "hiddenBy": null,
+      "isUi": true,
+      "overflow": false,
+      "off": [],
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": 94,
+      "navShown": true,
+      "composer": null,
+      "logoBox": {
+        "w": 150,
+        "h": 44,
+        "overlapBell": false,
+        "label": "MIND BREEZE 홈"
+      }
+    },
+    {
+      "width": 390,
+      "screen": "chat-room",
+      "hiddenBy": null,
+      "isUi": true,
+      "overflow": false,
+      "off": [],
+      "small": [],
+      "h1Clipped": null,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navShown": false,
+      "composer": {
+        "bottom": 844,
+        "viewportH": 844,
+        "navPresent": false,
+        "padBottom": "12px"
+      },
+      "logoBox": null
+    },
+    {
+      "width": 390,
+      "screen": "chat-lucy",
+      "hiddenBy": null,
+      "isUi": true,
+      "overflow": false,
+      "off": [],
+      "small": [],
+      "h1Clipped": null,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navShown": false,
+      "composer": {
+        "bottom": 844,
+        "viewportH": 844,
+        "navPresent": false,
+        "padBottom": "0px"
+      },
+      "logoBox": null
+    },
+    {
+      "width": 390,
+      "screen": "settings",
+      "hiddenBy": null,
+      "isUi": true,
+      "overflow": false,
+      "off": [],
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": 46,
+      "navShown": true,
+      "composer": null,
+      "logoBox": {
+        "w": 150,
+        "h": 44,
+        "overlapBell": false,
+        "label": "MIND BREEZE 홈"
+      }
+    },
+    {
+      "width": 390,
+      "screen": "settings-participation",
+      "hiddenBy": null,
+      "isUi": true,
+      "overflow": false,
+      "off": [],
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navShown": false,
+      "composer": null,
+      "logoBox": null
+    },
+    {
+      "width": 390,
+      "screen": "settings-optional",
+      "hiddenBy": null,
+      "isUi": true,
+      "overflow": false,
+      "off": [],
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navShown": false,
+      "composer": null,
+      "logoBox": null
+    },
+    {
+      "width": 393,
+      "screen": "chat-list",
+      "hiddenBy": null,
+      "isUi": true,
+      "overflow": false,
+      "off": [],
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": 94,
+      "navShown": true,
+      "composer": null,
+      "logoBox": {
+        "w": 150,
+        "h": 44,
+        "overlapBell": false,
+        "label": "MIND BREEZE 홈"
+      }
+    },
+    {
+      "width": 393,
+      "screen": "chat-room",
+      "hiddenBy": null,
+      "isUi": true,
+      "overflow": false,
+      "off": [],
+      "small": [],
+      "h1Clipped": null,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navShown": false,
+      "composer": {
+        "bottom": 844,
+        "viewportH": 844,
+        "navPresent": false,
+        "padBottom": "12px"
+      },
+      "logoBox": null
+    },
+    {
+      "width": 393,
+      "screen": "chat-lucy",
+      "hiddenBy": null,
+      "isUi": true,
+      "overflow": false,
+      "off": [],
+      "small": [],
+      "h1Clipped": null,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navShown": false,
+      "composer": {
+        "bottom": 844,
+        "viewportH": 844,
+        "navPresent": false,
+        "padBottom": "0px"
+      },
+      "logoBox": null
+    },
+    {
+      "width": 393,
+      "screen": "settings",
+      "hiddenBy": null,
+      "isUi": true,
+      "overflow": false,
+      "off": [],
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": 46,
+      "navShown": true,
+      "composer": null,
+      "logoBox": {
+        "w": 150,
+        "h": 44,
+        "overlapBell": false,
+        "label": "MIND BREEZE 홈"
+      }
+    },
+    {
+      "width": 393,
+      "screen": "settings-participation",
+      "hiddenBy": null,
+      "isUi": true,
+      "overflow": false,
+      "off": [],
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navShown": false,
+      "composer": null,
+      "logoBox": null
+    },
+    {
+      "width": 393,
+      "screen": "settings-optional",
+      "hiddenBy": null,
+      "isUi": true,
+      "overflow": false,
+      "off": [],
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navShown": false,
+      "composer": null,
+      "logoBox": null
+    },
+    {
+      "width": 768,
+      "screen": "chat-list",
+      "hiddenBy": null,
+      "isUi": true,
+      "overflow": false,
+      "off": [],
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navShown": false,
+      "composer": null,
+      "logoBox": null
+    },
+    {
+      "width": 768,
+      "screen": "chat-room",
+      "hiddenBy": null,
+      "isUi": true,
+      "overflow": false,
+      "off": [],
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navShown": false,
+      "composer": {
+        "bottom": 1000,
+        "viewportH": 1024,
+        "navPresent": false,
+        "padBottom": "12px"
+      },
+      "logoBox": null
+    },
+    {
+      "width": 768,
+      "screen": "chat-lucy",
+      "hiddenBy": null,
+      "isUi": true,
+      "overflow": false,
+      "off": [],
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navShown": false,
+      "composer": {
+        "bottom": 1000,
+        "viewportH": 1024,
+        "navPresent": false,
+        "padBottom": "0px"
+      },
+      "logoBox": null
+    },
+    {
+      "width": 768,
+      "screen": "settings",
+      "hiddenBy": null,
+      "isUi": true,
+      "overflow": false,
+      "off": [],
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navShown": false,
+      "composer": null,
+      "logoBox": null
+    },
+    {
+      "width": 768,
+      "screen": "settings-participation",
+      "hiddenBy": null,
+      "isUi": true,
+      "overflow": false,
+      "off": [],
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navShown": false,
+      "composer": null,
+      "logoBox": null
+    },
+    {
+      "width": 768,
+      "screen": "settings-optional",
+      "hiddenBy": null,
+      "isUi": true,
+      "overflow": false,
+      "off": [],
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navShown": false,
+      "composer": null,
+      "logoBox": null
+    },
+    {
+      "screen": "room-probe",
+      "animated": 0,
+      "bubbles": [
+        {
+          "bg": "rgb(244, 244, 247)",
+          "color": "rgb(37, 33, 44)",
+          "mine": false
+        },
+        {
+          "bg": "rgb(95, 0, 128)",
+          "color": "rgb(255, 255, 255)",
+          "mine": true
+        },
+        {
+          "bg": "rgb(244, 244, 247)",
+          "color": "rgb(37, 33, 44)",
+          "mine": false
+        },
+        {
+          "bg": "rgb(95, 0, 128)",
+          "color": "rgb(255, 255, 255)",
+          "mine": true
+        }
+      ],
+      "bottomNavInRoom": false
+    },
+    {
+      "screen": "collapse-transition",
+      "compactShown": "true",
+      "wordDisplay": "none",
+      "logoRight": 64,
+      "compactLeft": 181,
+      "compactRight": 209,
+      "bellLeft": 326,
+      "overlapLogoCompact": false,
+      "overlapCompactBell": false
+    }
+  ],
+  "errors": []
+}
