@@ -44,6 +44,9 @@
 .ui-v2 .u2-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .ui-v2 .u2-row>*{min-width:0}
 .ui-v2 .u2-gap{margin-top:22px}
+/* 코드로 바로 입장: .ui-v2 a{color:inherit} 가 버튼 흰 글씨를 덮으므로 이 링크만 흰색으로 고정한다. */
+.ui-v2 a[data-testid="enter-with-code"]{color:#FFFFFF}
+.ui-v2 a[data-testid="enter-with-code"] svg{color:#FFFFFF}
 .ui-v2 .u2-chip{display:inline-flex;align-items:center;min-height:28px;border-radius:var(--u2-r-chip);padding:3px 9px;background:var(--u2-tint);font-size:12px;font-weight:600;color:var(--u2-accent)}
 .ui-v2 .u2-eyebrow{color:var(--u2-accent);font-size:11px;letter-spacing:2px;font-weight:600}
 .ui-v2 .u2-num{font-variant-numeric:tabular-nums;font-size:46px;font-weight:500;letter-spacing:-2px;line-height:1.2}
