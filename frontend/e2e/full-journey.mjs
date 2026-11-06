@@ -234,7 +234,8 @@ async function checkRecordingConsent(p) {
 
 async function walkToLive(p, { includeReport }) {
   // 시작 후 시트(`지금 입장하기`)가 뜨면 뒤의 단계 버튼이 가려지므로 가장 먼저 누른다
-  const steps = ['지금 입장하기', '동의하고 계속하기', '입장하기', '확인하고 계속하기', '건너뛰기', 'LINK BAND 없이 계속하기', '다음'];
+  // 초대 회원은 입장 자격(entry)을 아직 못 받은 상태라 통합 동의 화면 CTA 가 먼저 '클래스 정보 확인하기'(metadataPending) 이고, 이후 '동의하고 계속하기' 로 바뀐다.
+  const steps = ['지금 입장하기', '클래스 정보 확인하기', '동의하고 계속하기', '입장하기', '확인하고 계속하기', '건너뛰기', 'LINK BAND 없이 계속하기', '다음'];
   const seen = [];
   let chose = false;
   for (let round = 0; round < 14; round += 1) {
