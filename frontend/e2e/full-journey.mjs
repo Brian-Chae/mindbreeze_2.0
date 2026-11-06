@@ -86,7 +86,8 @@ await scenario('[기업] 기관 관리자 로그인 → 대시보드(기관명·
 
 await scenario('[기업] 소속 코치 목록 노출', async (p) => {
   await uiLogin(p, 'org_admin', HOME.org_admin);
-  await expectText(p, '/org/counselors', '코치 관리', 'E2E-코치', 'E2E0C1');
+  const code = (await apiLoginFull('counselor')).user.counselor_code; // 숫자 6자리(SDD-312) — 고정 문자열 대신 실제 값
+  await expectText(p, '/org/counselors', '코치 관리', 'E2E-코치', code);
 });
 
 // ════════════════════════════════════════════════════════════════════════
@@ -130,7 +131,7 @@ await scenario('[회원가입] 잘못된 OTP 거부(400)', async () => {
 await scenario('[회원가입] 이메일 검증 토큰 없이 가입 시도 → 401', async () => {
   const r = await fetch(`${API}/auth/register/client`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: NEW_EMAIL, email_verify_token: '', password: 'Test-pass-1!', name: 'E2E-신규내담자', consents: { tos: true, privacy: true, sensitive: true } }),
+    body: JSON.stringify({ email: NEW_EMAIL, email_verify_token: '', password: 'Test-pass-1!', name: 'E2E-신규내담자', gender: 'female', birth_date: '1990-03-15', consents: { tos: true, privacy: true, sensitive: true } }),
   });
   if (r.status !== 401) throw new Error(`토큰 없는 가입이 ${r.status}`);
 });
@@ -223,25 +224,30 @@ async function createStartedClass(title, participantIds) {
 /** 입장 마법사의 보이는 CTA 를 순서대로 눌러 진행 화면까지 간다. 본 단계(h1) 순서를 기록해 돌려준다. */
 // SDD-220 F1: 회차 입장 전 녹음·녹화 필수 동의 체크(미체크 시 입장 버튼 비활성)
 async function checkRecordingConsent(p) {
-  const box = p.getByRole('checkbox', { name: '녹음·녹화에 동의해요 (필수)' });
-  if (await box.count() && (await box.first().getAttribute('aria-checked')) !== 'true') await box.first().click();
+  // SDD-303/313: 입장 중 통합 동의 화면 — 필수 '개인정보·녹음 동의'만 체크한다(선택 항목은 기본 미선택).
+  const box = p.locator('input[data-consent="required"]');
+  if (await box.count() && !(await box.first().isChecked())) await box.first().check({ force: true });
+  // 비회원 /join 개인정보 화면(ProfileEntryView)의 녹음·녹화 체크는 아직 role=checkbox(aria-checked) 이다.
+  const legacy = p.getByRole('checkbox', { name: '녹음·녹화에 동의해요 (필수)' });
+  if (await legacy.count() && (await legacy.first().getAttribute('aria-checked')) !== 'true') await legacy.first().click();
 }
 
 async function walkToLive(p, { includeReport }) {
   // 시작 후 시트(`지금 입장하기`)가 뜨면 뒤의 단계 버튼이 가려지므로 가장 먼저 누른다
-  const steps = ['지금 입장하기', '동의하고 입장하기', '입장하기', '확인하고 계속하기', '건너뛰기', 'LINK BAND 없이 계속하기', '다음'];
+  const steps = ['지금 입장하기', '동의하고 계속하기', '입장하기', '확인하고 계속하기', '건너뛰기', 'LINK BAND 없이 계속하기', '다음'];
   const seen = [];
   let chose = false;
   for (let round = 0; round < 14; round += 1) {
     if (await p.locator('[data-pz="app"] [data-pz="dock"]').count()) break;
     const h1 = (await p.locator('h1').first().innerText().catch(() => '')).trim();
     if (h1 && seen[seen.length - 1] !== h1) seen.push(h1);
-    // FM06a: 리포트 반영 선택(기본 "반영하지 않아요"). 포함 케이스만 "반영해요" 를 명시 선택한다.
+    // SDD-303/313: 리포트 반영은 통합 동의 화면의 선택 항목('리포트에 측정 결과 반영', 기본 미선택).
+    // 반영 케이스만 명시 체크한다.
     if (includeReport && !chose) {
-      const radio = p.getByRole('radio', { name: '반영해요', exact: true });
-      if (await radio.count()) {
-        await radio.first().click();
-        await p.getByRole('radio', { name: '반영해요', exact: true }).and(p.locator('[aria-checked="true"]')).waitFor({ timeout: 5000 });
+      const report = p.locator('input[data-consent="report"]');
+      if (await report.count()) {
+        await report.first().check({ force: true });
+        if (!(await report.first().isChecked())) throw new Error('리포트 반영 체크 실패');
         chose = true;
       }
     }
@@ -263,7 +269,7 @@ async function walkToLive(p, { includeReport }) {
   if (!(await p.locator('[data-pz="ring"]').count()) || !live.includes('조용한 신호') || !live.includes('채팅')) {
     throw new Error('진행 화면 진입 실패');
   }
-  if (includeReport && !chose) throw new Error('FM06a 리포트 반영 선택 화면을 만나지 못함');
+  if (includeReport && !chose) throw new Error('통합 동의 화면의 리포트 반영 선택을 만나지 못함');
   return seen;
 }
 
@@ -299,8 +305,8 @@ await scenario('[클래스] (A) 비회원 입장: 4자리 코드 → 개인정�
   await p.waitForURL((u) => u.pathname === `/class/${classes.A.id}/enter`, { timeout: 15000 });
   const seen = await walkToLive(p, { includeReport: true });
   console.log(`      /class/{id}/enter 단계 순서: ${seen.join(' → ')} → 진행 화면`);
-  const iNotice = seen.findIndex((x) => x.includes('시작 전에 확인'));
-  if (iNotice < 0) throw new Error(`고지·리포트 반영 단계 없음 (${seen.join(' → ')})`);
+  const iNotice = seen.findIndex((x) => x.includes('동의를 확인해 주세요'));
+  if (iNotice < 0) throw new Error(`통합 동의(리포트 반영 선택) 단계 없음 (${seen.join(' → ')})`);
 });
 
 async function endClass(key) {

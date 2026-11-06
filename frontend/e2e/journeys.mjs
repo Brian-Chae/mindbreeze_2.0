@@ -107,7 +107,10 @@ await cou('리포트: 목록·샘플 리포트 열기', async (p) => {
 });
 await cou('설정: 코드·카드 제목 중복 없음', async (p) => {
   await expectText(p, '/settings', '내 계정');
-  await expectText(p, '/clients/invite', 'E2E0C1'); // 상담사 코드는 회원 초대 화면에 표시된다
+  // 상담사 코드는 회원 초대 화면에 표시된다. 코드는 숫자 6자리 정책(SDD-312)이라 고정 문자열 대신 로그인 응답의 실제 값을 기대한다.
+  const code = (await apiLoginFull('counselor')).user.counselor_code;
+  if (!/^\d{6}$/.test(String(code))) throw new Error(`코치 코드가 숫자 6자리가 아님: ${code}`);
+  await expectText(p, '/clients/invite', code);
   await go(p, '/settings');
   const heads = (await p.locator('h2,h3').allInnerTexts()).map((h) => h.trim()).filter(Boolean);
   const dup = heads.filter((h, i, a) => a.indexOf(h) !== i);
@@ -120,7 +123,10 @@ await cou('인증 등급 페이지', async (p) => { await expectText(p, '/creden
 // ── 기관 관리자 (5) ────────────────────────────────────
 const org = (name, fn, o) => scenario(`[기관] ${name}`, async (p) => { await uiLogin(p, 'org_admin', HOME.org_admin); await fn(p); }, o);
 await org('대시보드: 기관명·기관 코드', async (p) => { await expectText(p, '/dashboard/org', 'E2E-테스트기관', 'E2E001', '소속 코치 실적'); });
-await org('코치 관리: 소속 코치 목록', async (p) => { await expectText(p, '/org/counselors', '코치 관리', 'E2E-코치', 'E2E0C1'); });
+await org('코치 관리: 소속 코치 목록', async (p) => {
+  const code = (await apiLoginFull('counselor')).user.counselor_code; // 숫자 6자리(SDD-312) — 고정 문자열 대신 실제 값
+  await expectText(p, '/org/counselors', '코치 관리', 'E2E-코치', code);
+});
 await org('코치 초대 폼 노출 (제출 안 함)', async (p) => { await expectText(p, '/dashboard/org', '코치 초대', '초대 발송'); });
 await org('내담자·세션·리포트 메뉴 로딩', async (p) => { for (const x of ['/clients', '/sessions', '/reports']) await expectText(p, x); });
 await org('설정: 계정 정보·카드 제목 중복 없음', async (p) => {
