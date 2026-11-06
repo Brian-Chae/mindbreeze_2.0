@@ -17,6 +17,26 @@ const EMA_HR: f64 = 0.3;
 const EMA_FREQ: f64 = 0.3;
 const RR_CLOCK_RESET_MS: f64 = 5000.0;
 const MAX_HISTORY: usize = 120;
+/// SDD-314: 개수 상한(120/60)은 평소 심박 기준값이다. RR 이 짧아(<~510ms) 개수만으로는 시간조건
+/// (SDNN 30s / 호흡 60s)을 못 채우면 시간조건을 채울 때까지 개수 상한을 늘린다. 안전 상한은 아래.
+const RR_BUFFER_HARD_CAP: usize = 400;
+const TIME_DOMAIN_MIN_MS: f64 = 30000.0;
+/// 호흡 게이트(합 ≥60s, 첫~끝 박동 시각차 ≥60s)가 열리도록 둔 버퍼 목표 시간. 중앙값 ±25% 소급 정리가 새 박동 도착 때마다
+/// 이미 쌓인 RR 을 걷어내므로(실데이터 Android 에서 박동의 약 60% 가 탈락) 게이트 직상(62s)이면 합이 58~60s 로 내려가 호흡이 꺼진다.
+/// 70s 로 여유를 둔다(SDD-314 추가 라운드). 게이트 값(60s)·알고리즘은 불변.
+const RESP_BUFFER_TARGET_MS: f64 = 70000.0;
+
+/// 끝에서부터 합이 `target_ms` 이상이 되는 최소 개수(못 채우면 전체 길이).
+fn beats_covering(rr: &[f64], target_ms: f64) -> usize {
+    let mut acc = 0.0;
+    for (i, r) in rr.iter().rev().enumerate() {
+        acc += r;
+        if acc >= target_ms {
+            return i + 1;
+        }
+    }
+    rr.len()
+}
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct HrvSnapshot {
@@ -438,8 +458,9 @@ impl HrvState {
                 }
             }
         }
-        if self.rr.len() > LF_HF_BUFFER_SIZE {
-            let cut = self.rr.len() - LF_HF_BUFFER_SIZE;
+        let keep = LF_HF_BUFFER_SIZE.max(beats_covering(&self.rr, RESP_BUFFER_TARGET_MS)).min(RR_BUFFER_HARD_CAP);
+        if self.rr.len() > keep {
+            let cut = self.rr.len() - keep;
             self.rr.drain(..cut);
             self.rr_ts.drain(..cut);
         }
@@ -510,9 +531,11 @@ impl HrvState {
     }
 
     fn time_domain(&mut self, all: &[f64]) {
-        let rr: &[f64] = if all.len() > TIME_DOMAIN_WINDOW_RR { &all[all.len() - TIME_DOMAIN_WINDOW_RR..] } else { all };
+        // 최근 60개가 기본. 짧은 RR 로 30초를 못 채우면 채울 때까지 창을 넓힌다(SDD-314).
+        let win = TIME_DOMAIN_WINDOW_RR.max(beats_covering(all, TIME_DOMAIN_MIN_MS + 500.0)).min(all.len());
+        let rr: &[f64] = &all[all.len() - win..];
         let total = sum(rr);
-        if rr.len() < 10 || total < 30000.0 {
+        if rr.len() < 10 || total < TIME_DOMAIN_MIN_MS {
             self.has_time = false;
             return;
         }

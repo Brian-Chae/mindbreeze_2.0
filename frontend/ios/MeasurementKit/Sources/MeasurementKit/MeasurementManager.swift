@@ -109,6 +109,10 @@ public final class MeasurementManager: BandLinkDelegate {
     private var leaseExpiresAtMs: UInt64?
     private var renewCommandId: String?
     private var renewTimer: Cancellable?, clockTimer: Cancellable?
+    // SDD-315: 수업 중 원시 청크 증분 변환(30초). 봉인 때 남은 구간만 마저 처리한다.
+    public static let rawArchiveInterval: TimeInterval = 30
+    private var archiveTimer: Cancellable?
+    private var rawArchiverInstance: RawArchiver?
     private var probing = false
     // SDD-272: 시각 보정 실패(probe 실패·reanchor 거절·clock_uncertain=true) 시 짧은 간격 재시도. 소진하면 5분 주기만 남는다.
     public static let clockRetryDelays: [TimeInterval] = [2, 4, 8, 15, 15, 15, 15, 15]
@@ -329,33 +333,9 @@ public final class MeasurementManager: BandLinkDelegate {
             item.meta = meta
             try? q.enqueue(item)
         }
-        // 1) 원시 EEG/PPG/ACC 청크 — raw.journal 을 도착 순서대로 센서별 RawChunker 에 먹인다.
-        let packets = MeasurementEngine.rawPackets(in: dir)
-        let origin: Int64 = packets.first.map { Int64($0.wall) * 1000 + Int64(bitPattern: $0.arrival &- $0.anchor) } ?? 0
-        var chunkers: [BandSensor: RawChunker] = [:]
-        // SDD-270: 구멍 저장소 — event_id 가 결정적이라 복구로 enqueueArchive 가 다시 돌아도 중복되지 않는다.
-        let gapStore = GapEventStore(file: dir.appendingPathComponent(GapEventStore.fileName), sessionId: sid)
-        let linkLog = LinkDropLog(file: dir.appendingPathComponent(LinkDropLog.fileName))
-        let reconnectCount = Int64(bleGaps.count + (openBleGapStart != nil ? 1 : 0))
-        func chunker(_ s: BandSensor) -> RawChunker {
-            if let c = chunkers[s] { return c }
-            let c = RawChunker(sensor: s, session: sid, originUs: origin, onGap: { g in
-                let reason = g.reason == "clock_reset" ? "clock_reset" : (linkLog.kind(startUs: g.startUs, endUs: g.endUs) ?? "packet_gap")
-                let est = reason == "process_terminated" ? "estimated" : "observed"
-                gapStore.append(signal: g.signal, streamId: RawIds.streamId(session: sid, sensor: s), segmentId: g.segmentId, startUs: g.startUs, endUs: g.endUs, reason: reason, observedOrEstimated: est, reconnectCount: reconnectCount)
-            }) { chunk in
-                let h = chunk.meta["header"] as? [String: Any]
-                let a = h?["anchor"] as? [String: Any]
-                let from = (a?["monotonic_us"] as? String) ?? "0"
-                put(chunk.alias, .raw, chunk.payload, chunk.meta, range: (from, from)) // raw 는 header 가 창을 정의 — range 는 큐 표시용
-            }
-            chunkers[s] = c; return c
-        }
-        for p in packets {
-            let us = Int64(p.wall) * 1000 + Int64(bitPattern: p.arrival &- p.anchor)   // 코어 창과 같은 시간축
-            chunker(p.sensor).onPacket(p.bytes, arrivalUs: us)
-        }
-        for c in chunkers.values { c.flush() }
+        // 1) 원시 EEG/PPG/ACC 청크 — 수업 중 증분으로 이미 만든 구간은 건너뛰고(SDD-315), 남은 구간만 마저 변환해 flush 한다.
+        //    앱 재시작 후에는 커서 0 에서 같은 변환을 재생하며, alias 가 결정적이라 이미 큐에 있는 청크는 멱등으로 무시된다.
+        rawArchiver()?.catchUp(final: true)
         // 2) feature — feature.journal 의 프레임(envelope JSON)을 60개씩 ndjson 으로 묶는다.
         let frames: [[String: Any]] = AppendOnlyJournal.scan(url: dir.appendingPathComponent("feature.journal")).records
             .compactMap { try? JSONSerialization.jsonObject(with: $0.payload) as? [String: Any] }
@@ -634,6 +614,7 @@ public final class MeasurementManager: BandLinkDelegate {
 
     private func resetStreamRuntime() {
         stopStreamTimers()
+        rawArchiverInstance = nil
         leaseExpiresAtMs = nil; renewCommandId = nil; probing = false; reanchorPending = nil
         clockRetryTimer?.cancel(); clockRetryTimer = nil; clockRetryIndex = 0
         clockAnchorId = UUID().uuidString.lowercased(); clockUncertaintyMs = Self.unknownClockUncertaintyMs
@@ -642,7 +623,26 @@ public final class MeasurementManager: BandLinkDelegate {
 
     private func armStreamTimers() {
         stopStreamTimers()
-        armRenew(); armClock()
+        armRenew(); armClock(); armArchive()
+    }
+    /// 세션·스트림이 정해진 뒤 한 세션에 하나. 새 세션 시작·복구 때 `resetStreamRuntime` 이 비운다(복구 시 커서 0 재생).
+    private func rawArchiver() -> RawArchiver? {
+        if let a = rawArchiverInstance { return a }
+        guard let sid = sessionId, let stream = streamId, let q = archive else { return nil }
+        let a = RawArchiver(dir: sessionDir(sid), sessionId: sid, streamId: stream, queue: q,
+                            reconnectCount: { [weak self] in
+                                guard let self = self else { return 0 }
+                                return Int64(self.bleGaps.count + (self.openBleGapStart != nil ? 1 : 0))
+                            })
+        rawArchiverInstance = a; return a
+    }
+    private func armArchive() {
+        archiveTimer = scheduler.schedule(after: Self.rawArchiveInterval) { [weak self] in
+            guard let self = self else { return }
+            self.lock.lock(); defer { self.lock.unlock() }
+            if self.collecting, let e = self.engine, !e.isSealed { self.rawArchiver()?.catchUp(final: false) }
+            if self.collecting { self.armArchive() } else { self.archiveTimer = nil }
+        }
     }
     private func armRenew() {
         renewTimer = scheduler.schedule(after: Self.renewInterval) { [weak self] in
@@ -672,7 +672,7 @@ public final class MeasurementManager: BandLinkDelegate {
             self.syncClock()
         }
     }
-    private func stopStreamTimers() { renewTimer?.cancel(); renewTimer = nil; clockTimer?.cancel(); clockTimer = nil; clockRetryTimer?.cancel(); clockRetryTimer = nil }
+    private func stopStreamTimers() { archiveTimer?.cancel(); archiveTimer = nil; renewTimer?.cancel(); renewTimer = nil; clockTimer?.cancel(); clockTimer = nil; clockRetryTimer?.cancel(); clockRetryTimer = nil }
 
     private var collecting: Bool { state == .capturing || state == .reconnecting }
 

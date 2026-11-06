@@ -168,18 +168,24 @@ describe('통합 동의와 실제 저장', () => {
     expect(band.hold.at(-1)?.want).toMatchObject({ eegConsent: true, bandDone: true });
   });
 
-  it('자격이 없으면 실제 회차 정보와 기존 선택을 먼저 보여 주고 재확인 전에는 선택 동의를 쓰지 않는다', async () => {
+  it('SDD-313: 자격이 없어도 필수 동의 후 서버 선택을 불러와 한 번에 저장하고 같은 화면을 다시 보이지 않는다', async () => {
     consents.eeg_collection_consented = true; consents.eeg_notice_version = 'eeg-1'; research = { participant_id: 'p1', consented: true, notice_version: 'r5-2' }; report = true;
     vi.mocked(apiClient.post).mockRejectedValueOnce(new ApiError(403, 'required', { detail: { code: 'RECORDING_CONSENT_REQUIRED' } })).mockResolvedValue({
       entry_credential: 'new-cred', participant_id: 'p1', expires_at: null, is_guest: false, is_waitlisted: false, eeg_collection_consented: true,
       session: { id: 's1', type: 'meditation', title: '실제 오프라인 명상', host_name: '코치', scheduled_at: null, started_at: null, duration_min: 50, location_type: 'offline', location_address: null, participant_mode: 'group', linkband_mode: 'optional', max_participants: 10, record_audio: true, record_video: false },
     } as never);
     await renderPage(false); await click(box('required')); await click(button('클래스 정보 확인하기'));
-    expect(container.textContent).toContain('실제 오프라인 명상'); expect(container.textContent).toContain('기존 선택을 확인');
-    expect(box('research').checked).toBe(true); expect(box('report').checked).toBe(true); expect(apiClient.put).not.toHaveBeenCalled(); expect(loadEntry('s1')).toBeNull();
-    await click(button('개인정보·기록과 선택 동의 자세히 보기')); expect(container.textContent).toContain('현장 대화를'); expect(container.textContent).toContain('센터 관리자는');
-    await click(button('확인했어요')); await click(button('동의하고 계속하기')); expect(loadEntry('s1')).not.toBeNull();
+    expect(boxes()).toHaveLength(0); expect(loadEntry('s1')).not.toBeNull();
     expect(vi.mocked(apiClient.put).mock.calls.map(args => args[0])).toEqual(['/sessions/s1/report-choice']);
+  });
+  it('SDD-313: 전체 동의로 처음 제출하면 자격 획득 뒤 같은 화면이 한 번 더 뜨지 않고 선택이 저장된다', async () => {
+    vi.mocked(apiClient.post).mockRejectedValueOnce(new ApiError(403, 'required', { detail: { code: 'RECORDING_CONSENT_REQUIRED' } })).mockResolvedValue({
+      entry_credential: 'new-cred', participant_id: 'p1', expires_at: null, is_guest: false, is_waitlisted: false, eeg_collection_consented: null,
+      session: { id: 's1', type: 'meditation', title: '명상', host_name: '코치', scheduled_at: null, started_at: null, duration_min: 50, location_type: 'offline', location_address: null, participant_mode: 'group', linkband_mode: 'optional', max_participants: 10, record_audio: true, record_video: false },
+    } as never);
+    await renderPage(false); await click(box('all')); await click(button('클래스 정보 확인하기'));
+    expect(boxes()).toHaveLength(0); expect(loadEntry('s1')).not.toBeNull();
+    expect(vi.mocked(apiClient.put).mock.calls.map(args => args[0]).sort()).toEqual(['/sessions/s1/entry/eeg-consent', '/sessions/s1/report-choice', '/sessions/s1/research-consent']);
   });
   it('EEG 거절로 c를 생략하면 대기실로 가고 선택 바꾸기는 동의 화면으로 돌아오며 완료 시 대기실로 복귀한다', async () => {
     await openConsent(); await click(button('동의하고 계속하기'));

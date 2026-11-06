@@ -39,7 +39,9 @@ export function IntegratedEntryConsentView({ values, onChange, onSubmit, onBack,
     errorRef.current?.focus({ preventScroll: true });
     errorRef.current?.scrollIntoView?.({ block: 'nearest' });
   }, [saveError]);
-  const fields: (keyof EntryConsentValues)[] = ['required', ...(eegAllowed && !eegLocked ? ['eeg' as const] : []), ...(researchAllowed ? ['research' as const] : []), 'report'];
+  // SDD-313: 전체 동의 상태는 화면에 보이는 모든 항목(잠긴 뇌파 포함)에서 파생한다. 잠긴 항목은 전체 토글로 바꾸지 않는다.
+  const fields: (keyof EntryConsentValues)[] = ['required', ...(eegAllowed ? ['eeg' as const] : []), ...(researchAllowed ? ['research' as const] : []), 'report'];
+  const toggleable = fields.filter(field => !(field === 'eeg' && eegLocked));
   const all = fields.every(field => values[field]);
   const partial = !all && fields.some(field => values[field]);
   useEffect(() => { if (allRef.current) allRef.current.indeterminate = partial; }, [partial, loading, loadError]);
@@ -81,7 +83,7 @@ export function IntegratedEntryConsentView({ values, onChange, onSubmit, onBack,
         <>{metadataAcquired && <p className="iec-confirmation" role="status">클래스 안내와 기존 선택을 확인한 뒤 동의를 저장해 주세요.</p>}</>
         <section className="iec-card" aria-label="클래스 참여 동의">
           <label className="iec-item iec-all"><input ref={allRef} data-consent="all" type="checkbox" checked={all} disabled={saving}
-            onChange={event => { const next = { ...values }; for (const field of fields) next[field] = event.target.checked; onChange(next); }} />
+            onChange={event => { const next = { ...values }; for (const field of toggleable) next[field] = event.target.checked; onChange(next); }} />
             <span className="iec-copy"><span className="iec-heading">전체 동의</span><small>필수 1개 · 선택 {fields.length - 1}개를 모두 선택해요.</small></span>
           </label>
           {row('required', '개인정보·녹음 동의', '개인정보·녹음 안내를 확인하고 동의해요.', true)}

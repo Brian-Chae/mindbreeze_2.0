@@ -96,10 +96,10 @@ def seed_synthetic_content(db, host, member_user, *, dry_run: bool = False) -> d
         created += 1
         if not dry_run:
             # 서비스와 같은 6자리 발급기(컬럼 String(6)·unique — PG가 길이를 강제한다).
-            from app.services.code_service import generate_unique_code
+            from app.services.onboarding_service import generate_counselor_code
 
             add(CounselorProfile(user_id=host.id, specialties=[],
-                                 counselor_code=generate_unique_code(db, CounselorProfile, 'counselor_code')))
+                                 counselor_code=generate_counselor_code(db)))
     # 클래스 권한은 "클래스 기관의 활성 상담사 소속 + 진행자"일 때만 진행자로 인정한다(class_access_service.class_role).
     # 실제 가입처럼 개인 상담소를 보장하고 클래스를 그 기관에 둔다. ensure_personal_office 는 flush 만 하고 알림을 보내지 않는다.
     from app.services.personal_office_service import ensure_personal_office, get_personal_office

@@ -38,6 +38,9 @@ export function IntegratedEntryConsent({ entry, acquireEntry, initialValues, ini
   const [attempt, setAttempt] = useState(0);
   const alive = useRef(true);
   const busy = useRef(false);
+  // SDD-313: 자격을 막 받은 제출이면, 서버 선택을 불러온 직후 같은 제출을 이어서 저장한다(같은 화면을 두 번 보이지 않는다).
+  const continueSave = useRef(false);
+  const saveWithRef = useRef<(target: StoredEntry, selected: EntryConsentValues) => Promise<void>>(async () => undefined);
   const terminal = useRef(onTerminal);
   terminal.current = onTerminal;
   const autoSkipRef = useRef(autoSkip);
@@ -58,6 +61,12 @@ export function IntegratedEntryConsent({ entry, acquireEntry, initialValues, ini
       // 아직 조작하지 않은 선택은 서버 기록을 복원한다. 미조회 false를 거절로 저장하지 않는다.
       for (const key of touched.current) restored[key] = valuesRef.current[key];
       setValues(restored);
+      if (continueSave.current) {
+        continueSave.current = false;
+        // 서버에 이미 켜져 있는 선택을 사용자가 못 본 채 끄게 되는 경우(충돌)에만 한 번 더 확인받는다.
+        const overridesServer = (['eeg', 'research', 'report'] as const).some(key => result.values[key] && !restored[key]);
+        if (restored.required && !overridesServer) { void saveWithRef.current(resolvedEntry, restored); return; }
+      }
       const info = resolvedEntry.classInfo;
       const cp = result.checkpoint;
       const decided = cp.required && (info?.linkbandMode === 'none' || cp.eeg !== null) && (resolvedEntry.isGuest || cp.research !== null);
@@ -71,26 +80,38 @@ export function IntegratedEntryConsent({ entry, acquireEntry, initialValues, ini
     return () => { cancelled = true; };
   }, [resolvedEntry, attempt, eegLockedValue]);
 
+  const saveWith = async (target: StoredEntry, selected: EntryConsentValues): Promise<void> => {
+    if (busy.current) return;
+    busy.current = true; setSaving(true); setSaveError(null);
+    try {
+      if (!target.classInfo || !target.participantId || !target.credential || !checkpoint.current) throw new Error('입장 정보를 확인할 수 없어요.');
+      await checkIntegratedEntryActive(target);
+      if (!alive.current) return;
+      const effective = { ...selected, eeg: target.classInfo.linkbandMode === 'none' ? false : selected.eeg, research: !target.isGuest && selected.research };
+      const saved = await persistIntegratedEntryConsent(target, effective, checkpoint.current, () => alive.current, eegLockedValue !== undefined);
+      if (saved && alive.current) { markDecided(target); onSaved(target, effective); }
+    } catch (error: unknown) {
+      if (alive.current && error instanceof EntryConsentTerminalError) { terminal.current(error.kind); return; }
+      if (alive.current) setSaveError('선택을 모두 저장하지 못했어요. 일부 항목은 저장됐을 수 있어요. 선택을 확인한 뒤 다시 저장해 주세요.');
+    } finally {
+      busy.current = false;
+      if (alive.current) setSaving(false);
+    }
+  };
+  saveWithRef.current = saveWith;
   const submit = async (): Promise<void> => {
     if (busy.current || loading || loadError || !values.required) return;
-    busy.current = true; setSaving(true); setSaveError(null);
+    if (resolvedEntry) { await saveWith(resolvedEntry, { ...values }); return; }
     const selected = { ...values };
+    busy.current = true; setSaving(true); setSaveError(null);
     try {
-      if (!resolvedEntry) {
-        if (!acquireEntry) throw new Error('입장 자격을 확인할 수 없어요.');
-        let acquired: StoredEntry;
-        try { acquired = await acquireEntry(); } catch (error: unknown) { if (alive.current) onEntryError?.(error, selected, [...touched.current]); throw error; }
-        if (!alive.current) return;
-        // 부모에 자격을 공개하지 않는다. 실제 회차 고지와 서버 선택을 보여 준 뒤 다시 확인받는다.
-        setResolvedEntry(acquired);
-        return;
-      }
-      if (!resolvedEntry.classInfo || !resolvedEntry.participantId || !resolvedEntry.credential || !checkpoint.current) throw new Error('입장 정보를 확인할 수 없어요.');
-      await checkIntegratedEntryActive(resolvedEntry);
+      if (!acquireEntry) throw new Error('입장 자격을 확인할 수 없어요.');
+      let acquired: StoredEntry;
+      try { acquired = await acquireEntry(); } catch (error: unknown) { if (alive.current) onEntryError?.(error, selected, [...touched.current]); throw error; }
       if (!alive.current) return;
-      const effective = { ...selected, eeg: resolvedEntry.classInfo.linkbandMode === 'none' ? false : selected.eeg, research: !resolvedEntry.isGuest && selected.research };
-      const saved = await persistIntegratedEntryConsent(resolvedEntry, effective, checkpoint.current, () => alive.current, eegLockedValue !== undefined);
-      if (saved && alive.current) { markDecided(resolvedEntry); onSaved(resolvedEntry, effective); }
+      // 부모에 자격을 공개하지 않는다. 서버 선택을 불러온 직후(load 효과) 사용자가 고른 값과 합쳐 한 번에 저장한다.
+      continueSave.current = true;
+      setResolvedEntry(acquired);
     } catch (error: unknown) {
       if (alive.current && error instanceof EntryConsentTerminalError) { terminal.current(error.kind); return; }
       if (alive.current) setSaveError('선택을 모두 저장하지 못했어요. 일부 항목은 저장됐을 수 있어요. 선택을 확인한 뒤 다시 저장해 주세요.');
