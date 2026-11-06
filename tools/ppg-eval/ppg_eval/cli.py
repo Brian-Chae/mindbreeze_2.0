@@ -163,6 +163,7 @@ def main(argv=None) -> int:
     r = sub.add_parser("run-dev")
     r.add_argument("--out", default=os.path.join(RESULTS, "dev"))
     sub.add_parser("run-ablation")
+    sub.add_parser("run-ablation2")
     h = sub.add_parser("run-holdout")
     h.add_argument("--unlock-token")
     h.add_argument("--confirm-single-run", action="store_true")
@@ -174,6 +175,12 @@ def main(argv=None) -> int:
         from .ablation import run_ablation
 
         res = run_ablation()
+        print(json.dumps(res, ensure_ascii=False, sort_keys=True))
+        return 0 if res.get("pass", True) else 1
+    if a.cmd == "run-ablation2":
+        from .ablation2 import run_ablation2
+
+        res = run_ablation2()
         print(json.dumps(res, ensure_ascii=False, sort_keys=True))
         return 0 if res.get("pass", True) else 1
     if a.cmd == "run-holdout":
