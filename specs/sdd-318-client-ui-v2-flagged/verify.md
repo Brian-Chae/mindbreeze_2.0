@@ -37,3 +37,54 @@
 - 실기기 노치·키보드·스크린리더는 검증 불가(캡처는 headless Chromium).
 - 로그인·서버 데이터가 필요한 화면은 API 모킹으로 캡처한다. dev/운영 서버·DB 접근 안 함.
 - 앱 빌드·배포는 하지 않는다.
+
+---
+
+# Addendum-2 — 채팅·설정 D안 + 상단 로고·폰트 정비 (2026-11-07, 구현 착수 전 작성)
+
+대표 지시: "318 채팅, 설정 페이지도 같은 디자인으로. 왼쪽 상단 로고 수정. 로고와 텍스트 폰트 확인." 위 A~D 는 그대로 유효하며 아래를 추가한다. 이 절은 구현 전에만 작성하고 사후 수정하지 않는다.
+
+## E. 플래그 off 불변 (추가)
+| ID | 검증 | 방법 | 통과 기준 |
+|---|---|---|---|
+| E1 | 기존 vitest | `cd frontend && npx vitest run` | 변경 전 실패 24건과 동일 목록, 신규 실패 0, 통과 수 ≥ 기준선 |
+| E2 | 운영 빌드 | `vite build --mode prod`(`VITE_UI_V2=true` 강제 포함) 후 `node scripts/check-ui-v2-off.mjs dist` | `ui-v2`/`UiV2`/Pretendard woff2/`@font-face` 0건, 통과 |
+| E3 | 검사 스크립트 확장 | `check-ui-v2-off.mjs` 에 Pretendard·woff2 파일·`@font-face`·신규 청크명(chat/settings) 검사 추가 | 운영 dist 에 대해 위반 0, 스크립트 단위 테스트(위반 샘플 → exit 1) |
+| E4 | 공유 파일 무수정 | `git diff --stat` | `SidebarNav.tsx`·`AppShell.tsx`·`ClientShell.tsx`·`floating-bottom-nav.tsx`·`index.css`·tailwind 설정·프리셋 토큰 0건 |
+| E5 | 직전 수정 유지 | `ui-v2.css` 의 `a[data-testid="enter-with-code"]` 글자 흰색 | 규칙 존재, 캡처에서 흰 글자 |
+| E6 | 기존 테스트 파일 | `git diff --name-status` | 기존 테스트 파일 수정 0 (신규만 추가) |
+
+## F. 플래그 on 화면 (채팅 목록·대화방·AI 루시·설정 홈·설정 하위 1~2개 × 390/393/768px)
+| ID | 항목 | 통과 기준 |
+|---|---|---|
+| F1 | 가로 넘침 | 모든 조합 `scrollWidth <= clientWidth` |
+| F2 | 하단 가림 | 목록·설정 홈: 마지막 콘텐츠 ≤ 내비 상단. 대화방: 입력창이 하단 안전영역(`env(safe-area-inset-bottom)`) 위에 위치, 내비 숨김 |
+| F3 | 터치 영역 | a·button·input·[role=tab] ≥ 44px, 예외는 summary 에 명시 |
+| F4 | 대비 | 내 말풍선(#FFFFFF on #5F0080) 포함 모든 조합 ≥ 4.5:1, 계산 출력 첨부 |
+| F5 | 금지 표현 | 화면 본문 + 신규 소스 문구 `점수|종합점수|좋음|나쁨|완료율|보증|100%` 0건 (위험 동작에도 적용) |
+| F6 | 키보드·안전영역 | 설계 기술(visualViewport/`env()`/`dvh` 사용 근거). **실기기 키보드는 미검증이면 그렇게 명시** |
+| F7 | 모션 | `prefers-reduced-motion: reduce` 에서 transition/animation 0 |
+| F8 | 밴드 미착용·AI 플래그 | `isAiEnabled` false 일 때 AI 진입 비노출, true 일 때 노출 — vitest |
+| F9 | 메시지 로직 불변 | 전송/읽음/실시간 훅·서비스 파일 diff 0, 마크업 래퍼·className 만 변경 |
+
+## G. 기능 보존표 (누락 0)
+- 채팅: 대화 목록 행(미읽음 배지·마지막 메시지 미리보기·시간), 정렬 토글, 방 메뉴(RoomActionsMenu 전 항목), 방 진입/뒤로가기, 말풍선(내/상대/시스템), 입력·전송, AI 에이전트 진입.
+- 설정: 현행 `settings-content.tsx` 와 하위 페이지(participation-profile, optional-profile, account-deletion, 로그아웃 등)의 **전 항목을 코드 근거와 함께 표로 열거**하고 시안 위치에 1:1 매핑. 누락 0, 폼 검증·저장 로직 diff 0.
+- 증빙: vitest(설정 항목 보존 — 항목 목록 단언), 매핑 표를 summary.md 에 수록.
+
+## H. 로고·폰트
+| ID | 항목 | 통과 기준 |
+|---|---|---|
+| H1 | 전 측정 | 현행 dev 번들 기준 상단 로고·제목·본문의 **실제 렌더 폰트**를 CDP `CSS.getPlatformFontsForNode` 로 측정해 표로 남김. 측정 불가 항목은 못 했다고 기재 |
+| H2 | 락업 | 심볼(`/mb-design/assets/logo_symbol_dark.svg` 재사용, 복제 금지) + 워드마크 `MIND BREEZE` 대문자, Pretendard 700, letter-spacing .04em, line-height .85. 캡처에서 **워드마크 대문자 높이 ≈ 심볼 높이, 간격 ≈ ½ 심볼 높이**를 수치로 측정(허용 ±15%) |
+| H3 | 링크·접근성 | 홈 링크 `aria-label="MIND BREEZE 홈"`, 터치 영역 ≥ 44px, 알림 아이콘과 겹침 0, 큰 제목 접힘 전환과 충돌 0, 뒤로가기 화면은 뒤로가기 버튼 유지 — vitest + 캡처 |
+| H4 | 데스크톱 사이드바 | ≥768px 에서 `[data-shell-variant="ui-v2"] [data-sidebar-brand]` 스코프 CSS 로만 오버라이드, `SidebarNav.tsx` 무수정, 상담사 쉘 렌더 불변 |
+| H5 | 폰트 자체 호스팅 | Pretendard Variable 자체 호스팅(외부 CDN 0), `.ui-v2` 스코프에서만 `font-family`, `font-display: swap`. 서브셋 vs dynamic-subset 비교(번들·Capacitor 증가량 측정) 후 선택 근거 기록 |
+| H6 | 후 측정 | 적용 후 같은 방식으로 재측정, 로고·제목·본문이 Pretendard 로 렌더됨을 표로 증명 |
+| H7 | 라이선스 | SIL OFL 1.1 고지 파일을 저장소 규칙에 맞게 추가 |
+| H8 | 운영 번들 | 운영 빌드에 폰트 파일·`@font-face` 0건 (E2/E3 와 동일 검사, `VITE_UI_V2=true` 강제 포함) |
+| H9 | 비교 캡처 | 폰트 적용 전/후 로고·제목 비교 이미지 `specs/.../captures/` 에 저장 |
+
+## I. 정적 검사·한계
+- `npx tsc -b` 0, 변경 파일 eslint 0, `any` 0, 파일명 kebab-case.
+- 한계: 실기기 노치·키보드·스크린리더 미검증, 캡처는 headless Chromium + 합성 API(서버/DB 접근 없음), 앱 빌드·푸시·PR·배포 안 함.
