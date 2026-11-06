@@ -8,7 +8,6 @@ import { NoticeBanner } from '../shared/NoticeBanner';
 import { NoticeOverlay } from '../shared/NoticeOverlay';
 import { StatusRing } from '../shared/StatusRing';
 import { MemberIcon } from './MemberIcon';
-import { NOT_WORN_TEXT } from '../../../../lib/session-live/live-metric-snapshot';
 import { displayedInteger } from '../../../../lib/biosignal/display-snapshot';
 import { METRIC_GUIDE, formatTrendChange, hasTrendData, metricDef, metricFraction, sparkGeometry, type MetricSeries, type MetricSnapshot } from './member-metrics';
 import './member-player.css';
@@ -17,7 +16,6 @@ interface MemberStageProps {
   c: MemberCase;
   hero: PlayerMetricKey;
   snapshot: MetricSnapshot;
-  notWorn?: boolean;
   series: MetricSeries;
   /** 상담사·내 PiP 또는 오프라인 현장 카드 */
   slotTop: ReactNode;
@@ -56,7 +54,7 @@ function ringAriaLabel(c: MemberCase, label: string, valueText: string | null): 
   return `지표 게이지 — ${flat(c.ring.title)} ${flat(c.ring.subtitle)}`.trim();
 }
 
-function HeroRing({ c, hero, snapshot, notWorn }: Pick<MemberStageProps, 'c' | 'hero' | 'snapshot'> & { notWorn?: boolean }) {
+function HeroRing({ c, hero, snapshot }: Pick<MemberStageProps, 'c' | 'hero' | 'snapshot'>) {
   const def = metricDef(hero);
   const raw = snapshot[hero];
   // SDD-244: 저장되는 DisplaySnapshot과 같은 표시 규칙(displayedInteger)을 쓴다
@@ -73,7 +71,7 @@ function HeroRing({ c, hero, snapshot, notWorn }: Pick<MemberStageProps, 'c' | '
       value={ring.showValue ? value : undefined}
       unit={def.unit}
       title={ring.title}
-      subtitle={waiting ? (notWorn && (hero === 'bpm' || hero === 'respiration' || hero === 'hrv') ? NOT_WORN_TEXT : ring.waitingText ?? '측정하는 중이에요') : ring.subtitle}
+      subtitle={waiting ? (ring.waitingText ?? '측정하는 중이에요') : ring.subtitle}
       icon={ring.icon === 'alert' ? <TriangleAlert size={24} strokeWidth={2} /> : undefined}
       dots={ring.dots}
       ariaLabel={ringAriaLabel(c, def.label, value === null ? null : `${value}${def.unit}`)}
@@ -144,7 +142,7 @@ function SlotCard({ card, onAction }: { card: NonNullable<MemberCase['slot']>; o
   );
 }
 
-export function MemberStage({ c, hero, snapshot, notWorn, series, slotTop, sideCard, sheetOpen, onSlotAction, netDownCard }: MemberStageProps) {
+export function MemberStage({ c, hero, snapshot, series, slotTop, sideCard, sheetOpen, onSlotAction, netDownCard }: MemberStageProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -168,7 +166,7 @@ export function MemberStage({ c, hero, snapshot, notWorn, series, slotTop, sideC
             {slotTop}
             {sideCard ? <div className="mp-hero-side">{sideCard}</div> : null}
           </div>
-          <HeroRing c={c} hero={hero} snapshot={snapshot} notWorn={notWorn} />
+          <HeroRing c={c} hero={hero} snapshot={snapshot} />
           <div className="mp-slot-bottom" ref={bottomRef}>
             <div className="mp-stack">
               <GuideChip c={c} hero={hero} snapshot={snapshot} series={series} />
