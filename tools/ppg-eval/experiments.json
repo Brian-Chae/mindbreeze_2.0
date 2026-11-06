@@ -1,0 +1,122 @@
+{
+  "registry_version": 1,
+  "preregistered": "specs/sdd-317-ppg-accuracy-harness/verify-addendum-8.md",
+  "frozen_before_any_variant_run": true,
+  "scope": {
+    "datasets": ["bidmc", "marsh"],
+    "split": "dev",
+    "records": 68,
+    "window_L_s": 60,
+    "score_hop_s": 10,
+    "holdout_access": "forbidden"
+  },
+  "statistics": {
+    "bootstrap": "record-level cluster, percentile 95%",
+    "B": 2000,
+    "seed": 317,
+    "paired": true
+  },
+  "equivalence_gate": {
+    "reference": "core C0 per-frame respiratory_rate (replay_eval)",
+    "frame_match": "both null, or both finite with |diff| <= 1e-6",
+    "max_mismatch_frame_fraction_total": 0.001,
+    "max_mismatch_frame_fraction_per_record": 0.01,
+    "on_fail": "stop; no variant results are produced or reported"
+  },
+  "baseline": {
+    "id": "V0",
+    "name": "mirror baseline",
+    "change": "none (core hrv.rs respiratory(): cumulative-RR time axis, 4Hz linear interp with last-interval NaN, Welch no detrend, band [0.15,0.4], rate gate [6,40], median of 5)",
+    "params": {"band_lo": 0.15, "band_hi": 0.4, "end_nan": "keep", "time_axis": "cumulative", "detrend": "none", "peak": "max"}
+  },
+  "judgement": {
+    "applies_to": "variants with judged=true",
+    "a_mae": "paired diff (variant - V0) pooled MAE over 68 records: CI upper < 0, or independent CIs non-overlapping with variant lower",
+    "b_coverage": "pooled coverage drop <= 5 percentage points, also within each dataset",
+    "c_strata": "per (dataset, stratum) with n_rec >= 10: MAE point diff <= 0; n_rec < 10 cells reported as uninterpretable and excluded",
+    "d_mae_pen": "report paired CI of MAE_pen; if lower bound > 0 (significantly worse) label is 'not improved (MAE_pen worse)'",
+    "labels": ["improved", "not improved"],
+    "multiplicity_note": "6 judged variants; report 'improved n of 6'",
+    "forbidden": ["constant calibration to 10 breaths/min", "tuning with truth access", "post-hoc parameter changes", "dropping nulls to lower MAE"]
+  },
+  "variants": [
+    {
+      "id": "V1",
+      "name": "interp-end-hold",
+      "judged": true,
+      "hypothesis": "Last Welch segment is zeroed by the NaN tail (hrv.rs:176, :283-285); holding the last RR value removes the NaN and lets the newest ~18-35 s contribute to the spectrum.",
+      "change": "last interval y2 undefined -> use y1 (hold last value)",
+      "params": {"end_nan": "hold"},
+      "literature_ref": "result-319-literature.md R4 / A1"
+    },
+    {
+      "id": "V1b",
+      "name": "interp-end-truncate",
+      "judged": false,
+      "hypothesis": "Same defect, handled by excluding the last interval instead of extrapolating.",
+      "change": "drop 4Hz points after t[n-1] (start of last RR)",
+      "params": {"end_nan": "truncate"},
+      "literature_ref": "result-319-literature.md R4"
+    },
+    {
+      "id": "V2",
+      "name": "band-lo-0.10",
+      "judged": true,
+      "hypothesis": "Slow breathing (6-9/min) is outside [0.15,0.4]; BIDMC/MARSH 6-12 stratum shows bias +1.7~+1.8.",
+      "change": "band_lo 0.15 -> 0.10 Hz (rate gate [6,40] unchanged)",
+      "params": {"band_lo": 0.10},
+      "literature_ref": "result-319-literature.md A3"
+    },
+    {
+      "id": "V2a",
+      "name": "band-lo-0.12",
+      "judged": false,
+      "hypothesis": "Intermediate lower bound, observation only.",
+      "change": "band_lo 0.12 Hz",
+      "params": {"band_lo": 0.12}
+    },
+    {
+      "id": "V2b",
+      "name": "band-lo-0.08",
+      "judged": false,
+      "hypothesis": "Wider lower bound, observation only; peaks below 0.1 Hz fail the unchanged rate>=6 gate and become null.",
+      "change": "band_lo 0.08 Hz",
+      "params": {"band_lo": 0.08}
+    },
+    {
+      "id": "V3",
+      "name": "time-axis-real-beat-start",
+      "judged": true,
+      "hypothesis": "Cumulative-RR axis compresses time where beats were removed by refinement (rate inflated ~1/(1-p)); the real beat start time removes that compression.",
+      "change": "value i at (ts[i]-rr[i])-(ts[0]-rr[0]); end at ts[n-1]-(ts[0]-rr[0]); non-monotone frames fall back to cumulative and are counted",
+      "params": {"time_axis": "real"},
+      "literature_ref": "result-319-literature.md R2 / A2"
+    },
+    {
+      "id": "V4",
+      "name": "detrend-mean-linear",
+      "judged": true,
+      "hypothesis": "No mean/trend removal before Welch lets LF drift leak into the 0.15 Hz band edge.",
+      "change": "least-squares mean + linear trend removal on finite 4Hz points before Welch",
+      "params": {"detrend": "linear"},
+      "literature_ref": "result-319-literature.md A4"
+    },
+    {
+      "id": "V5",
+      "name": "band-hi-0.5",
+      "judged": true,
+      "hypothesis": "Rates above 24/min cannot be detected with hi=0.4; >20 stratum bias is about -8~-9.",
+      "change": "band_hi 0.4 -> 0.5 Hz (rate gate [6,40] unchanged)",
+      "params": {"band_hi": 0.5}
+    },
+    {
+      "id": "V6",
+      "name": "peak-continuity",
+      "judged": true,
+      "hypothesis": "Single max-bin pick jumps between competing peaks; a continuity prior stabilises it.",
+      "change": "prefer the max bin within +-0.04 Hz of previous dominant frequency if its PSD >= 0.5 x global band max; reset on failure/reset",
+      "params": {"peak": "continuity", "cont_hz": 0.04, "cont_ratio": 0.5},
+      "literature_ref": "result-319-literature.md A5"
+    }
+  ]
+}
