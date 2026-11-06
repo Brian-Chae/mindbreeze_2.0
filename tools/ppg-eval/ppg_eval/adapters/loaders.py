@@ -29,7 +29,21 @@ def load_bidmc(rid: str) -> Record:
         col = br[:, k]
         col = col[np.isfinite(col)]
         ev[name] = col.astype(np.float64) / fs
-    return Record(ds="bidmc", rid=rid, fs=fs, ppg=ppg, resp_events=ev, beats_truth=None, ecg=ecg, ecg_fs=fs, meta={"n_samples": int(len(ppg))})
+    num = np.genfromtxt(os.path.join(BIDMC_DIR, f"bidmc_{rid}_Numerics.csv"), delimiter=",", skip_header=1)
+    mon_hr = float(np.nanmedian(num[:, 1]))  # 열: Time, HR, PULSE, RESP, SpO2 (헤더로 확인)
+    return Record(ds="bidmc", rid=rid, fs=fs, ppg=ppg, resp_events=ev, beats_truth=None, ecg=ecg, ecg_fs=fs, meta={"n_samples": int(len(ppg)), "mon_hr": mon_hr})
+
+
+def fill_nan(x: np.ndarray):
+    """addendum-6 A6-1: NaN 선형 보간(양끝 최근접). 반환 (채운 배열, NaN 개수)."""
+    bad = ~np.isfinite(x)
+    n = int(bad.sum())
+    if n == 0:
+        return x, 0
+    idx = np.arange(len(x))
+    y = x.copy()
+    y[bad] = np.interp(idx[bad], idx[~bad], x[~bad])
+    return y, n
 
 
 def _mat(path: str, key: str) -> np.ndarray:
@@ -71,7 +85,9 @@ def load_mimic(kind: str, rid: str) -> Record:
     p = os.path.join(DATA_ROOT, "mimic-perform", f"mimic_perform_{kind}_csv", f"mimic_perform_{kind}_{rid}_data.csv")
     a = np.genfromtxt(p, delimiter=",", skip_header=1)
     fs = 125.0
-    return Record(ds=ds, rid=rid, fs=fs, ppg=a[:, 1].astype(np.float64), ecg=a[:, 2].astype(np.float64), ecg_fs=fs, meta={"n_samples": int(len(a))})
+    ppg, n_ppg = fill_nan(a[:, 1].astype(np.float64))
+    ecg, n_ecg = fill_nan(a[:, 2].astype(np.float64))
+    return Record(ds=ds, rid=rid, fs=fs, ppg=ppg, ecg=ecg, ecg_fs=fs, meta={"n_samples": int(len(a)), "ppg_nan": n_ppg, "ecg_nan": n_ecg})
 
 
 class _SafeUnpickler(pickle.Unpickler):

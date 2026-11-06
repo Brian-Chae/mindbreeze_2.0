@@ -84,8 +84,8 @@ def md_resp_table(rows, title) -> str:
     return out + "\n"
 
 
-def hrv_agg(hrv_rows, ds):
-    d = [r for r in hrv_rows if r[0] == ds]
+def hrv_agg(hrv_rows, ds, rids=None):
+    d = [r for r in hrv_rows if r[0] == ds and (rids is None or r[1] in rids)]
     res = {}
     if not d:
         return res

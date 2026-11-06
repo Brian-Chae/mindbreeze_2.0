@@ -7,6 +7,21 @@ from .adapters.loaders import load_marsh
 from .truth import beat_match, detect_r_peaks
 
 
+def record_quality(rec):
+    """MARSH 기록의 수기 ECG 주석 vs 검출기 (기록별 중앙 오프셋 보정, ±50ms). 반환 (f1, offset_s)."""
+    det = detect_r_peaks(rec.ecg, rec.ecg_fs)
+    ann = rec.beats_truth
+    j = np.clip(np.searchsorted(det, ann), 1, len(det) - 1)
+    near = np.where(np.abs(det[j] - ann) < np.abs(det[j - 1] - ann), det[j], det[j - 1])
+    off = float(np.median(ann - near))
+    tp, _ = beat_match(ann, det + off, 0.050)
+    p, rc = tp / len(det), tp / len(ann)
+    return (2 * p * rc / (p + rc) if (p + rc) else 0.0), off
+
+
+RELIABLE_F1 = 0.98
+
+
 def marsh_detector_quality(rids):
     f1s, offs, tps, nts, ncs = [], [], 0, 0, 0
     below = 0

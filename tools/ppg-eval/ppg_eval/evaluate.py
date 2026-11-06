@@ -70,6 +70,10 @@ def block_beat_eval(core: np.ndarray, truth: np.ndarray, dur: float):
 
 
 def process_record(rec, keep_pkts: bool = True):
+    from .rpeak_quality import RELIABLE_F1, record_quality
+
+    rp_f1, rp_off = (record_quality(rec) if rec.ds == "marsh" else (NAN, NAN))
+    ecg_reliable = (rp_f1 >= RELIABLE_F1) if rec.ds == "marsh" else True
     os.makedirs(WORK, exist_ok=True)
     pkts, info, ir, x50 = prepare(rec.ppg, rec.fs)
     path = os.path.join(WORK, f"{rec.ds}_{rec.rid}.pkts")
@@ -127,6 +131,9 @@ def process_record(rec, keep_pkts: bool = True):
         tb = detect_r_peaks(rec.ecg, rec.ecg_fs) if rec.ecg is not None else np.array([])
         ref_src = "detected_ecg"
     tb = tb[tb < dur]
+    if rec.ds == "bidmc":  # addendum-7 A7-1
+        hr_det = 60.0 * len(tb) / max(dur, 1)
+        ecg_reliable = abs(hr_det - rec.meta["mon_hr"]) / rec.meta["mon_hr"] <= 0.10
     be = block_beat_eval(cb, tb, float(dur))
     p, rcl, f1 = prf(be["tp"], be["n_truth"], be["n_core"])
     ppi_err = be["ppi"]
@@ -182,6 +189,9 @@ def process_record(rec, keep_pkts: bool = True):
         "h2_nan_seg_frame_frac": (nan_seg_frames / resp_frames) if resp_frames else NAN,
         "h2_nan_seg_frac": (sh.seg_nan / sh.seg_total) if sh.seg_total else NAN,
         "reseeds": sh.reseeds,
+        "ecg_truth_reliable": ecg_reliable,
+        "rpeak_f1": rp_f1,
+        "nan_frac": ((rec.meta.get("ppg_nan", 0)) / max(1, len(rec.ppg))),
         "meta": rec.meta,
     }
     return summary, resp_rows, hrv_rows
