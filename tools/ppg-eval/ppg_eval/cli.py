@@ -67,8 +67,9 @@ def run_dev(out: str) -> dict:
     files["rpeak-detector-quality.json"] = canon_json(q) + "\n"
     md = build_baseline_md(summaries, agg, q, prov, s)
     files["baseline-c0.md"] = md
-    meta = {"core": prov, "splits_sha256": sha256_file(SPLITS_PATH), "convert": "resample_poly-kaiser5.0-v1", "n_records": len(summaries), "holdout_opened": False}
+    meta = {"core": {"core_src_tree": prov["core_src_tree"], "core_clean": True}, "splits_sha256": sha256_file(SPLITS_PATH), "convert": "resample_poly-kaiser5.0-v1", "n_records": len(summaries), "holdout_opened": False}
     files["run-meta.json"] = canon_json(meta) + "\n"
+    files["provenance.json"] = canon_json({"repo_head": prov["repo_head"]}) + "\n"  # 커밋마다 달라지므로 재현성 해시 비교 대상 제외
     for name, txt in files.items():
         with open(os.path.join(out, name), "w", encoding="utf-8", newline="\n") as f:
             f.write(txt)

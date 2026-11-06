@@ -1,4 +1,4 @@
-tools/ppg-eval/.venv/
-tools/ppg-eval/.cargo-target/
-tools/ppg-eval/work/
+.venv/
+.cargo-target/
+work/
 __pycache__/
