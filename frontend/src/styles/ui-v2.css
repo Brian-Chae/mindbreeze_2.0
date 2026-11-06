@@ -1,0 +1,129 @@
+/* SDD-318 — 내담자 화면 D안. 모든 규칙은 .ui-v2 하위로 한정한다(전역·프리셋 토큰 수정 없음). */
+.ui-v2{
+  --u2-canvas:#F4F4F7;--u2-surface:#FFFFFF;--u2-tint:#EEE5F5;--u2-text:#25212C;--u2-muted:#68616F;--u2-accent:#5F0080;
+  --u2-line:#EAE7ED;--u2-ring:#D4BDE2;--u2-ring-strong:#B78CCA;
+  --u2-r-chip:8px;--u2-r-note:12px;--u2-r-btn:14px;--u2-r-card:24px;--u2-r-nav:26px;--u2-r-sheet:28px;
+  --u2-bottom:calc(140px + env(safe-area-inset-bottom,0px));
+  box-sizing:border-box;background:var(--u2-canvas);color:var(--u2-text);
+  font:15px/1.6 -apple-system,BlinkMacSystemFont,Pretendard,"Apple SD Gothic Neo",sans-serif;
+}
+.ui-v2 *,.ui-v2 *::before,.ui-v2 *::after{box-sizing:border-box}
+.ui-v2 h1,.ui-v2 h2,.ui-v2 h3,.ui-v2 p{margin:0}
+.ui-v2 h1,.ui-v2 h2,.ui-v2 h3{word-break:keep-all;overflow-wrap:anywhere}
+.ui-v2 h1{font-size:31px;line-height:1.25;letter-spacing:-1.35px;font-weight:600}
+.ui-v2 h2{font-size:23px;line-height:1.4;letter-spacing:-.6px;font-weight:600}
+.ui-v2 h3{font-size:17px;font-weight:600}
+.ui-v2 a{color:inherit;text-decoration:none}
+.ui-v2 button{font:inherit;border:0;background:none;color:inherit;cursor:pointer}
+.ui-v2 a,.ui-v2 button,.ui-v2 input,.ui-v2 select{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.ui-v2 button:focus-visible,.ui-v2 a:focus-visible,.ui-v2 input:focus-visible,.ui-v2 select:focus-visible,.ui-v2 [tabindex]:focus-visible{outline:2px solid var(--u2-accent);outline-offset:3px}
+.ui-v2 .u2-muted,.ui-v2 small{color:var(--u2-muted)}
+.ui-v2 small{font-size:12px}
+
+/* 쉘 */
+.ui-v2.u2-shell{display:flex;flex-direction:column;height:100%;width:100%;min-height:0}
+.ui-v2 .u2-toolbar{flex:none;height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;max-width:640px;width:100%;margin:0 auto}
+.ui-v2 .u2-brand{font-size:13px;letter-spacing:2px;font-weight:600;color:var(--u2-accent)}
+.ui-v2 .u2-compact-title{font-size:16px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:0;transition:opacity 160ms ease-out}
+.ui-v2 .u2-compact-title[data-shown="true"]{opacity:1}
+.ui-v2 .u2-icon-btn{position:relative;width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:var(--u2-surface);flex-shrink:0}
+.ui-v2 .u2-icon-btn .u2-dot{position:absolute;top:2px;right:2px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:#B3264B;color:#fff;font-size:10px;font-weight:700;line-height:18px;text-align:center}
+.ui-v2 svg.u2-icon{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.ui-v2 .u2-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
+.ui-v2 .u2-heading{max-width:640px;margin:0 auto;padding:18px 24px 26px}
+.ui-v2 .u2-heading p{margin-top:8px;color:var(--u2-muted)}
+.ui-v2 .u2-main{max-width:640px;margin:0 auto;padding:0 20px var(--u2-bottom)}
+@media(min-width:600px){.ui-v2 .u2-heading{padding-top:28px}.ui-v2 .u2-main{padding-bottom:calc(148px + env(safe-area-inset-bottom,0px))}}
+
+/* 카드·칩·버튼 */
+.ui-v2 .u2-card{display:block;position:relative;overflow:hidden;background:var(--u2-surface);border-radius:var(--u2-r-card);padding:24px;margin-bottom:14px;min-width:0}
+.ui-v2 .u2-card p{margin-top:10px}
+.ui-v2 .u2-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ui-v2 .u2-row>*{min-width:0}
+.ui-v2 .u2-gap{margin-top:22px}
+.ui-v2 .u2-chip{display:inline-flex;align-items:center;min-height:28px;border-radius:var(--u2-r-chip);padding:3px 9px;background:var(--u2-tint);font-size:12px;font-weight:600;color:var(--u2-accent)}
+.ui-v2 .u2-eyebrow{color:var(--u2-accent);font-size:11px;letter-spacing:2px;font-weight:600}
+.ui-v2 .u2-num{font-variant-numeric:tabular-nums;font-size:46px;font-weight:500;letter-spacing:-2px;line-height:1.2}
+.ui-v2 .u2-num span{font-size:16px;letter-spacing:0;color:var(--u2-muted)}
+.ui-v2 .u2-num--small{font-size:32px;letter-spacing:-1px}
+.ui-v2 .u2-hero{min-height:260px;background:linear-gradient(125deg,#EEE5F5 0%,#FFFFFF 76%);isolation:isolate}
+.ui-v2 .u2-hero .u2-num{margin:22px 0 3px;color:var(--u2-accent)}
+.ui-v2 .u2-hero h2{margin-top:16px}
+.ui-v2 .u2-hero>*:not(svg){position:relative}
+.ui-v2 .u2-primary,.ui-v2 .u2-secondary{display:flex;justify-content:center;align-items:center;min-height:50px;border-radius:var(--u2-r-btn);padding:10px 18px;font-weight:600;width:100%}
+.ui-v2 .u2-primary{background:var(--u2-accent);color:#FFFFFF}
+.ui-v2 .u2-secondary{background:var(--u2-tint);color:var(--u2-accent)}
+.ui-v2 .u2-primary:disabled,.ui-v2 .u2-secondary:disabled{opacity:.55;cursor:default}
+.ui-v2 .u2-hero .u2-primary{margin-top:22px}
+.ui-v2 .u2-section-head{margin:26px 4px 12px}
+.ui-v2 .u2-section-head h2{font-size:19px}
+.ui-v2 .u2-textlink{min-height:44px;min-width:44px;display:inline-flex;align-items:center;color:var(--u2-accent);font-size:13px;font-weight:600}
+.ui-v2 .u2-split{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px}
+.ui-v2 .u2-split .u2-secondary,.ui-v2 .u2-split .u2-primary{padding:10px;font-size:14px}
+.ui-v2 .u2-listrow{display:flex;gap:18px;align-items:center;padding:19px 4px;border-bottom:1px solid var(--u2-line);min-height:80px;width:100%;text-align:left}
+.ui-v2 .u2-date{font-size:26px;font-variant-numeric:tabular-nums;line-height:1.1;min-width:40px}
+.ui-v2 .u2-date small{display:block;font-size:11px;margin-top:6px}
+.ui-v2 .u2-listrow .u2-body{flex:1;min-width:0}
+.ui-v2 .u2-listrow p{font-size:13px;color:var(--u2-muted);margin-top:4px}
+.ui-v2 .u2-chev{font-size:23px;color:var(--u2-accent)}
+.ui-v2 .u2-notice{background:var(--u2-tint);border-radius:var(--u2-r-note);padding:16px;font-size:14px;color:var(--u2-muted)}
+.ui-v2 .u2-footnote{font-size:12px;color:var(--u2-muted);margin-top:14px}
+.ui-v2 .u2-empty{padding:28px 8px;text-align:center;color:var(--u2-muted)}
+.ui-v2 .u2-alert{background:var(--u2-surface);border-radius:var(--u2-r-card);padding:24px;text-align:center;margin-bottom:14px}
+
+/* 아크 링(고정 장식) */
+.ui-v2 .u2-arc{position:absolute;pointer-events:none;z-index:-1}
+.ui-v2 .u2-arc path{fill:none;stroke:var(--u2-ring);stroke-width:1.5}
+.ui-v2 .u2-arc path:nth-child(2){stroke:var(--u2-ring-strong);stroke-width:2}
+.ui-v2 .u2-arc--hero{width:154px;height:154px;right:-28px;top:28px}
+.ui-v2 .u2-arc--cover{width:148px;height:148px;right:-28px;top:2px}
+.ui-v2 .u2-arc--card{width:120px;height:120px;right:-60px;top:72px;opacity:.65}
+
+/* 탭·검색·도구 */
+.ui-v2 .u2-tabs{display:flex;gap:8px;margin:6px 0 20px}
+.ui-v2 .u2-tabs button{min-height:44px;flex:1;background:var(--u2-surface);border-radius:12px;color:var(--u2-muted)}
+.ui-v2 .u2-tabs button[aria-selected="true"]{background:var(--u2-tint);color:var(--u2-accent);box-shadow:inset 0 -2px var(--u2-accent)}
+.ui-v2 .u2-search{display:flex;align-items:center;gap:10px;background:var(--u2-surface);padding:0 16px;border-radius:var(--u2-r-btn);margin-bottom:12px}
+.ui-v2 .u2-search svg{flex-shrink:0}
+.ui-v2 .u2-search input{background:none;border:0;color:var(--u2-text);height:50px;width:100%;min-width:0;font:inherit;outline-offset:0}
+.ui-v2 .u2-search input::placeholder{color:var(--u2-muted)}
+.ui-v2 .u2-tools{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:16px}
+.ui-v2 .u2-tools button,.ui-v2 .u2-tools select{font-size:12px;min-height:44px;padding:0 10px;color:var(--u2-accent);background:var(--u2-surface);border-radius:10px;border:0;font-family:inherit}
+.ui-v2 .u2-pager{display:flex;align-items:center;justify-content:center;gap:12px;padding:8px 0}
+.ui-v2 .u2-pager button{min-height:44px;min-width:64px;border-radius:12px;background:var(--u2-surface);color:var(--u2-accent);font-weight:600}
+.ui-v2 .u2-pager button:disabled{opacity:.45}
+
+/* 타임라인 */
+.ui-v2 .u2-timeline{list-style:none;padding:0 0 0 22px;margin:0 0 0 12px;border-left:1px solid var(--u2-ring)}
+.ui-v2 .u2-timeline>li{position:relative}
+.ui-v2 .u2-timeline>li::before{content:'';position:absolute;left:-29px;top:28px;width:10px;height:10px;border:2px solid var(--u2-accent);border-radius:50%;background:var(--u2-canvas)}
+.ui-v2 .u2-timeline>li .u2-card{overflow:visible}
+.ui-v2 .u2-timeline>li[data-selected="true"] .u2-card{box-shadow:0 0 0 2px var(--u2-accent)}
+.ui-v2 .u2-cover{position:relative;isolation:isolate;padding:18px 4px 28px}
+.ui-v2 .u2-cover h1{margin:22px 0 16px;font-size:33px;line-height:1.4}
+.ui-v2 .u2-facts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0 0}
+.ui-v2 .u2-facts dt{font-size:12px;color:var(--u2-muted);margin-bottom:4px}
+.ui-v2 .u2-facts dd{margin:0;font-size:14px}
+
+/* 하단 내비 */
+.ui-v2 .u2-nav-wrap{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:12px 16px calc(28px + env(safe-area-inset-bottom,0px));background:linear-gradient(#F4F4F700,#F4F4F7 35%);pointer-events:none}
+.ui-v2 .u2-nav{pointer-events:auto;display:flex;height:66px;max-width:520px;margin:0 auto;background:var(--u2-surface);border:1px solid var(--u2-line);border-radius:var(--u2-r-nav);box-shadow:0 8px 28px #25103812}
+.ui-v2 .u2-nav a{flex:1;min-width:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;color:var(--u2-muted)}
+.ui-v2 .u2-nav a[aria-current="page"]{color:var(--u2-accent);font-weight:650}
+.ui-v2 .u2-nav a[aria-current="page"] svg{background:var(--u2-tint);box-shadow:0 0 0 5px var(--u2-tint);border-radius:7px}
+.ui-v2 .u2-nav .u2-nav-ico{position:relative;display:grid;place-items:center}
+.ui-v2 .u2-nav .u2-dot{position:absolute;top:-6px;right:-10px;min-width:16px;height:16px;padding:0 3px;border-radius:8px;background:#B3264B;color:#fff;font-size:10px;line-height:16px;text-align:center}
+
+/* 리포트 시트(dialog) */
+.ui-v2.u2-sheet-dialog{position:fixed;inset:0;margin:auto 0 0;width:100%;max-width:none;height:calc(100dvh - 24px);max-height:none;padding:0;border:0;border-radius:var(--u2-r-sheet) var(--u2-r-sheet) 0 0;background:var(--u2-canvas);overflow:hidden;box-shadow:0 -8px 35px #25103808;animation:u2-sheet-in 250ms ease-out}
+.ui-v2.u2-sheet-dialog[open]{display:flex;flex-direction:column}
+.ui-v2.u2-sheet-dialog::backdrop{background:#25212C66}
+.ui-v2 .u2-handle{width:36px;height:4px;background:#B9AEBF;border-radius:5px;margin:8px auto 0;flex:none}
+.ui-v2 .u2-sheet-scroll{flex:1;min-height:0;overflow-y:auto;padding:0 20px calc(40px + env(safe-area-inset-bottom,0px));max-width:640px;width:100%;margin:0 auto}
+.ui-v2 .u2-sheet{background:var(--u2-surface);border-radius:var(--u2-r-sheet) var(--u2-r-sheet) 0 0;padding:26px 24px;margin:0 -20px;box-shadow:0 -8px 35px #25103808;min-width:0}
+.ui-v2 .u2-subheading{font-size:12px;color:var(--u2-accent);letter-spacing:1px}
+@keyframes u2-sheet-in{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+@media(prefers-reduced-motion:reduce){
+  .ui-v2,.ui-v2 *,.ui-v2 *::before,.ui-v2 *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+  .ui-v2.u2-sheet-dialog{animation:none!important}
+}

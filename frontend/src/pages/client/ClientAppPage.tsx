@@ -5,7 +5,7 @@ import ParticipationProfilePage from '../settings/participation-profile-page';
 // 상담사 연결 됨 → ClientShell + 탭별 페이지
 
 import ClientNotificationPage from './ClientNotificationPage';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { apiClient } from '../../lib/api/client';
@@ -34,6 +34,11 @@ function formatKoreanSub(): string {
   const label = WEEK_LABELS[Math.min(weekNum - 1, 4)];
   return `${y}년 ${m}월 · ${m}월 ${label} 주`;
 }
+
+// SDD-318: UI_V2 는 빌드 시 상수 — 운영 빌드에서는 D안 분기가 제거된다.
+const UiV2ReportsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./ui-v2/ui-v2-reports-page').then((module) => ({ default: module.UiV2ReportsPage }))
+  : Promise.resolve({ default: () => <></> }));
 
 export default function ClientAppPage() {
   const user = useAuthStore((s) => s.user);
@@ -136,6 +141,11 @@ export default function ClientAppPage() {
   const sessionDetailMatch = pathname.match(/^\/app\/sessions\/([^/]+)$/);
   if (sessionDetailMatch) {
     return <ClientSessionDetailPage />;
+  }
+
+  // SDD-318: 리포트 탭 D안 (자체 쉘 사용)
+  if (import.meta.env.VITE_UI_V2 === 'true' && pathname.startsWith('/app/reports')) {
+    return <Suspense fallback={null}><UiV2ReportsPage /></Suspense>;
   }
 
   // 탭별 콘텐츠 + ClientShell (AppShell과 동일 구조)
