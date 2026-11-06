@@ -106,3 +106,82 @@ fn resp_stays_open_with_wide_rr_distribution() {
     }
     assert!(valid as f64 / total as f64 >= 0.9, "호흡 유효 비율 {valid}/{total}");
 }
+
+// ---- SDD-316: 중앙값 ±25% 게이트 락인 재시드 ----
+
+/// 앞 `fake_n` 개 가짜 짧은 RR(380ms) 뒤 진짜 700ms 박동. 재시드로 정상 RR 로 전환되고 SDNN 이 나오는지.
+#[test]
+fn sdd316_reseed_recovers_from_poisoned_buffer() {
+    let mut s = HrvState::default();
+    let mut t = 0.0f64;
+    for _ in 0..13 {
+        t += 380.0;
+        s.process_ppg(80.0, &[380.0], &[T0 + t], T0 + t);
+    }
+    for _ in 0..200 {
+        t += 700.0;
+        s.process_ppg(85.0, &[700.0], &[T0 + t], T0 + t);
+    }
+    let snap = s.snapshot();
+    let avnn = snap.avnn.expect("재시드 후 avnn");
+    assert!((avnn - 700.0).abs() < 30.0, "avnn {avnn}");
+    assert!(snap.sdnn.is_some());
+}
+
+/// 재시드까지 걸리는 연속 탈락 창 수는 RR_GATE_RESEED_STREAK(12) 근처.
+#[test]
+fn sdd316_reseed_not_before_streak() {
+    use measurement_core::dsp::hrv::RR_GATE_RESEED_STREAK;
+    let mut s = HrvState::default();
+    let mut t = 0.0f64;
+    for _ in 0..13 {
+        t += 380.0;
+        s.process_ppg(80.0, &[380.0], &[T0 + t], T0 + t);
+    }
+    let before = s.rr_buffer_len();
+    for _ in 0..(RR_GATE_RESEED_STREAK - 1) {
+        t += 700.0;
+        s.process_ppg(85.0, &[700.0], &[T0 + t], T0 + t);
+    }
+    assert!(s.rr_buffer_len() >= before.min(5), "스트릭 미달인데 비워짐");
+}
+
+/// 부정맥형: 정상 800ms 사이에 불규칙 RR(±25% 밖)이 섞여도(연속 12창 전부 탈락하지 않음) 재시드·버퍼 비움이 없다.
+#[test]
+fn sdd316_arrhythmia_does_not_trigger_reseed() {
+    let mut s = HrvState::default();
+    let mut t = 0.0f64;
+    let mut state = 12345u64;
+    let mut rnd = || {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        (state >> 33) as f64 / (1u64 << 31) as f64
+    };
+    let mut min_len_after_warm = usize::MAX;
+    for i in 0..400 {
+        // 4박 중 1박 꼴로 크게 벗어난 RR(500 또는 1100ms), 나머지는 800±40
+        let rr = if rnd() < 0.25 { if rnd() < 0.5 { 500.0 } else { 1100.0 } } else { 800.0 + (rnd() - 0.5) * 80.0 };
+        t += rr;
+        s.process_ppg(75.0, &[rr], &[T0 + t], T0 + t);
+        if i > 60 {
+            min_len_after_warm = min_len_after_warm.min(s.rr_buffer_len());
+        }
+    }
+    assert!(min_len_after_warm >= 30, "부정맥 입력에서 버퍼가 비워짐: {min_len_after_warm}");
+    assert!(s.snapshot().sdnn.is_some());
+}
+
+/// 지속적으로 완전 불규칙(균등 300~1500ms)인 경우: 재시드가 끊임없이 일어나도 panic/0 치환 없음.
+#[test]
+fn sdd316_fully_random_rr_is_safe() {
+    let mut s = HrvState::default();
+    let (mut t, mut state) = (0.0f64, 99u64);
+    for _ in 0..600 {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        let rr = 300.0 + ((state >> 33) as f64 / (1u64 << 31) as f64) * 1200.0;
+        t += rr;
+        s.process_ppg(75.0, &[rr], &[T0 + t], T0 + t);
+        if let Some(v) = s.snapshot().sdnn {
+            assert!(v.is_finite() && v > 0.0);
+        }
+    }
+}

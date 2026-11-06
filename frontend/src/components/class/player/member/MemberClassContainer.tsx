@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { freshnessOf } from '../../../../lib/session-live/live-view';
 import { holdMindMetrics, type HeldMind } from '../../../../lib/session-live/hold-last-snapshot';
 import { getPlatform } from '../../../../lib/native/platform';
-import { liveMetricSnapshot } from '../../../../lib/session-live/live-metric-snapshot';
+import { liveMetricSnapshot, liveNotWorn } from '../../../../lib/session-live/live-metric-snapshot';
 import { ConnectionState } from 'livekit-client';
 import { useBand, type UseBandResult } from '../../../../hooks/useBand';
 import { useCloseBiosignalOnEnd } from '../../../../hooks/useCloseBiosignalOnEnd';
@@ -284,6 +284,7 @@ export function MemberClassContainer({
   // native 소유 동안 6지표는 native snapshot.metrics(null 보존)로 표시한다.
   // 상담사 타일과 같은 출처(LiveState)·같은 규칙을 우선한다 — 두 화면 숫자 불일치 방지. LiveState 에 내 지표가 없을 때만 앱/웹 자체값.
   const liveSnap = v2On ? liveMetricSnapshot(liveV2?.state, participantId, liveV2?.nowMs ?? nowMs) : null;
+  const notWorn = v2On ? liveNotWorn(liveV2?.state, participantId) : false;
   const rawSnapshot = liveSnap ?? nativeM.metrics ?? buildSnapshot(band, metricsBlocked, remoteEfficiency);
   // SDD-274: 코드 입장 비회원 + Android(JS BLE) 는 EEG 알림 유실로 지표가 2~7초씩 무효가 된다 — 집중·이완·감정균형만 직전 유효값을 15초 유지.
   // 회원(네이티브)·iOS·상담사 화면은 적용하지 않는다. 접촉 불량·연결 해제·링크 stale 이면 즉시 "-".
@@ -517,7 +518,7 @@ export function MemberClassContainer({
     sessionId,
     place, mode, viewerOnly, bandVisible, bandUi, nativeOwnsBand, serverConfirmed: v2On && participantId ? Boolean(liveV2?.state?.metrics[participantId]) : undefined, nativeAuto: isNativeMeasurementAvailable() && Boolean(user?.id) && eegConsent && linkbandMode !== 'none' && v2On, waitlisted, nowMs, hostVideoIssue,
     header: { title: title ?? '클래스', elapsedSec, totalSec, counselorName, myInitial: user?.name?.trim().charAt(0) || '나' },
-    hero, snapshot, series, sheet, screenOff, confirmLeave,
+    hero, snapshot, notWorn, series, sheet, screenOff, confirmLeave,
     v2Bars: v2On ? { label: '이완', current: v2Current, bars: v2Bars } : null,
     device: {
       // 네이티브가 밴드를 잡으면 JS 는 연결을 놓아 배터리를 알 수 없다(스냅샷에도 필드 없음) → 0% 대신 '—'(null).
@@ -636,6 +637,7 @@ interface SharedScreenProps {
   header: MemberClassViewProps['header'];
   hero: PlayerMetricKey;
   snapshot: MetricSnapshot;
+  notWorn: boolean;
   series: MetricSeries;
   sheet: MemberSheetKey | null;
   v2Bars: MemberClassViewProps['v2Bars'];
@@ -838,6 +840,7 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
           header={shared.header}
           hero={shared.hero}
           snapshot={shared.snapshot}
+          notWorn={shared.notWorn}
           series={shared.series}
           device={shared.device}
           diagnostics={diagnostics}

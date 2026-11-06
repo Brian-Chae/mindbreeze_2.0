@@ -102,6 +102,8 @@ export interface MemberClassViewProps {
   header: MemberHeaderModel;
   hero: PlayerMetricKey;
   snapshot: MetricSnapshot;
+  /** SDD-316: 코어가 미착용(not_worn)으로 보낸 상태 — BPM·HRV·호흡 칸에 착용 안내 문구 */
+  notWorn?: boolean;
   series: MetricSeries;
   device: MemberDeviceModel;
   sound: MemberSoundModel;
