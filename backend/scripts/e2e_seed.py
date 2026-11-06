@@ -12,7 +12,7 @@ dev 서버에서만 실행한다. 모든 데이터 이름 앞에 'E2E-'(이메�
 import os
 import sys
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -20,16 +20,22 @@ from sqlalchemy import text  # noqa: E402
 from app.core.database import SessionLocal  # noqa: E402
 from app.core.security import hash_password  # noqa: E402
 from app.models.client_counselor_link import ClientCounselorLink  # noqa: E402
+from app.models.client_profile import ClientProfile  # noqa: E402
 from app.models.counselor_profile import CounselorProfile  # noqa: E402
 from app.models.onboarding_progress import OnboardingProgress  # noqa: E402
 from app.models.organization import Organization  # noqa: E402
 from app.models.user import User  # noqa: E402
 from app.models.user_org_membership import UserOrgMembership  # noqa: E402
+from app.services import onboarding_service  # noqa: E402
 
 DOMAIN = "e2e.looxidlabs.com"
 ORG_NAME = "E2E-테스트기관"
 ORG_CODE = "E2E001"
-COUNSELOR_CODE = "E2E0C1"
+# SDD-312: 코치 코드는 숫자 6자리 정책이다. 고정 문자열을 시드하지 않고 신규 발급 값(generate_counselor_code)을 쓴다.
+# 시험은 로그인 응답(user.counselor_code)으로 실제 코드를 읽는다 — 이미 계정이 있으면 기존 코드를 그대로 둔다.
+# SDD-302: 내담자 필수정보(이름·성별·생년월일)가 비면 /onboarding/client/essentials 로 보낸다 → e2e 내담자에 채워 둔다.
+CLIENT_GENDER = "female"
+CLIENT_BIRTH_DATE = date(1990, 3, 15)
 
 # (역할, 이메일, 이름)
 ACCOUNTS = [
@@ -83,7 +89,7 @@ def seed() -> None:
             if role == "org_admin":
                 org.primary_admin_id = user.id
             if role == "counselor" and not user.counselor_profile:
-                db.add(CounselorProfile(user_id=user.id, counselor_code=COUNSELOR_CODE, specialties=[]))
+                db.add(CounselorProfile(user_id=user.id, counselor_code=onboarding_service.generate_counselor_code(db), specialties=[]))
             if role in ("client", "counselor", "org_admin") and not user.onboarding_progress:
                 db.add(
                     OnboardingProgress(
@@ -91,6 +97,16 @@ def seed() -> None:
                         completed_at=datetime.now(timezone.utc), steps={},
                     )
                 )
+        # 내담자 필수정보(성별·생년월일) — 계정이 이미 있어도 upsert 로 반영한다(SDD-302 필수정보 게이트 통과).
+        e2e_client = db.query(User).filter(User.email == f"e2e-client@{DOMAIN}").first()
+        profile = db.query(ClientProfile).filter(ClientProfile.user_id == e2e_client.id).first()
+        if profile is None:
+            db.add(ClientProfile(user_id=e2e_client.id, gender=CLIENT_GENDER, birth_date=CLIENT_BIRTH_DATE,
+                                 concerns=[], interests=[]))
+        else:
+            profile.gender = CLIENT_GENDER
+            profile.birth_date = CLIENT_BIRTH_DATE
+        e2e_client.birth_date = CLIENT_BIRTH_DATE
         # 기관 소속(membership): 상담사·기관관리자
         for role, email, _ in ACCOUNTS:
             if role not in ("counselor", "org_admin"):
