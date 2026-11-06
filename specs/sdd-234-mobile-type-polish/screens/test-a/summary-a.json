@@ -8,7 +8,6 @@
     "failure": null,
     "errors": [],
     "unknown": [
-      "/api/v1/auth/users/me",
       "/api/v1/reports/counts"
     ],
     "shell": "default",
@@ -100,7 +99,6 @@
     "failure": null,
     "errors": [],
     "unknown": [
-      "/api/v1/auth/users/me",
       "/api/v1/reports/counts"
     ],
     "shell": "default",
@@ -187,7 +185,6 @@
     "failure": null,
     "errors": [],
     "unknown": [
-      "/api/v1/auth/users/me",
       "/api/v1/reports/counts"
     ],
     "shell": "default",
@@ -279,7 +276,6 @@
     "failure": null,
     "errors": [],
     "unknown": [
-      "/api/v1/auth/users/me",
       "/api/v1/reports/counts"
     ],
     "shell": "structure",
@@ -375,17 +371,11 @@
     "failure": null,
     "errors": [],
     "unknown": [
-      "/api/v1/auth/users/me",
       "/api/v1/reports/counts"
     ],
     "shell": "structure",
     "scrollWidth": 390,
     "sectionGaps": [
-      {
-        "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1)",
-        "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(1)",
-        "verticalGap": 24
-      },
       {
         "from": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1)",
         "to": "body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2)",
@@ -426,8 +416,8 @@
       "fontSize": {
         "12": 1,
         "13": 26,
-        "14": 10,
-        "15": 17,
+        "14": 11,
+        "15": 16,
         "16": 2,
         "18": 11,
         "22": 1,
@@ -438,7 +428,8 @@
         "18px": 1,
         "19.5px": 6,
         "20px": 22,
-        "22.5px": 6,
+        "21px": 1,
+        "22.5px": 5,
         "24px": 21,
         "27px": 7,
         "30px": 1,
@@ -471,7 +462,6 @@
     "failure": null,
     "errors": [],
     "unknown": [
-      "/api/v1/auth/users/me",
       "/api/v1/reports/counts"
     ],
     "shell": "structure",
