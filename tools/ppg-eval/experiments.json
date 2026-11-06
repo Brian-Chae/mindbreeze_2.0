@@ -3,7 +3,10 @@
   "preregistered": "specs/sdd-317-ppg-accuracy-harness/verify-addendum-8.md",
   "frozen_before_any_variant_run": true,
   "scope": {
-    "datasets": ["bidmc", "marsh"],
+    "datasets": [
+      "bidmc",
+      "marsh"
+    ],
     "split": "dev",
     "records": 68,
     "window_L_s": 60,
@@ -27,7 +30,14 @@
     "id": "V0",
     "name": "mirror baseline",
     "change": "none (core hrv.rs respiratory(): cumulative-RR time axis, 4Hz linear interp with last-interval NaN, Welch no detrend, band [0.15,0.4], rate gate [6,40], median of 5)",
-    "params": {"band_lo": 0.15, "band_hi": 0.4, "end_nan": "keep", "time_axis": "cumulative", "detrend": "none", "peak": "max"}
+    "params": {
+      "band_lo": 0.15,
+      "band_hi": 0.4,
+      "end_nan": "keep",
+      "time_axis": "cumulative",
+      "detrend": "none",
+      "peak": "max"
+    }
   },
   "judgement": {
     "applies_to": "variants with judged=true",
@@ -35,9 +45,17 @@
     "b_coverage": "pooled coverage drop <= 5 percentage points, also within each dataset",
     "c_strata": "per (dataset, stratum) with n_rec >= 10: MAE point diff <= 0; n_rec < 10 cells reported as uninterpretable and excluded",
     "d_mae_pen": "report paired CI of MAE_pen; if lower bound > 0 (significantly worse) label is 'not improved (MAE_pen worse)'",
-    "labels": ["improved", "not improved"],
+    "labels": [
+      "improved",
+      "not improved"
+    ],
     "multiplicity_note": "6 judged variants; report 'improved n of 6'",
-    "forbidden": ["constant calibration to 10 breaths/min", "tuning with truth access", "post-hoc parameter changes", "dropping nulls to lower MAE"]
+    "forbidden": [
+      "constant calibration to 10 breaths/min",
+      "tuning with truth access",
+      "post-hoc parameter changes",
+      "dropping nulls to lower MAE"
+    ]
   },
   "variants": [
     {
@@ -46,7 +64,9 @@
       "judged": true,
       "hypothesis": "Last Welch segment is zeroed by the NaN tail (hrv.rs:176, :283-285); holding the last RR value removes the NaN and lets the newest ~18-35 s contribute to the spectrum.",
       "change": "last interval y2 undefined -> use y1 (hold last value)",
-      "params": {"end_nan": "hold"},
+      "params": {
+        "end_nan": "hold"
+      },
       "literature_ref": "result-319-literature.md R4 / A1"
     },
     {
@@ -55,7 +75,9 @@
       "judged": false,
       "hypothesis": "Same defect, handled by excluding the last interval instead of extrapolating.",
       "change": "drop 4Hz points after t[n-1] (start of last RR)",
-      "params": {"end_nan": "truncate"},
+      "params": {
+        "end_nan": "truncate"
+      },
       "literature_ref": "result-319-literature.md R4"
     },
     {
@@ -64,7 +86,9 @@
       "judged": true,
       "hypothesis": "Slow breathing (6-9/min) is outside [0.15,0.4]; BIDMC/MARSH 6-12 stratum shows bias +1.7~+1.8.",
       "change": "band_lo 0.15 -> 0.10 Hz (rate gate [6,40] unchanged)",
-      "params": {"band_lo": 0.10},
+      "params": {
+        "band_lo": 0.1
+      },
       "literature_ref": "result-319-literature.md A3"
     },
     {
@@ -73,7 +97,9 @@
       "judged": false,
       "hypothesis": "Intermediate lower bound, observation only.",
       "change": "band_lo 0.12 Hz",
-      "params": {"band_lo": 0.12}
+      "params": {
+        "band_lo": 0.12
+      }
     },
     {
       "id": "V2b",
@@ -81,7 +107,9 @@
       "judged": false,
       "hypothesis": "Wider lower bound, observation only; peaks below 0.1 Hz fail the unchanged rate>=6 gate and become null.",
       "change": "band_lo 0.08 Hz",
-      "params": {"band_lo": 0.08}
+      "params": {
+        "band_lo": 0.08
+      }
     },
     {
       "id": "V3",
@@ -89,7 +117,9 @@
       "judged": true,
       "hypothesis": "Cumulative-RR axis compresses time where beats were removed by refinement (rate inflated ~1/(1-p)); the real beat start time removes that compression.",
       "change": "value i at (ts[i]-rr[i])-(ts[0]-rr[0]); end at ts[n-1]-(ts[0]-rr[0]); non-monotone frames fall back to cumulative and are counted",
-      "params": {"time_axis": "real"},
+      "params": {
+        "time_axis": "real"
+      },
       "literature_ref": "result-319-literature.md R2 / A2"
     },
     {
@@ -98,7 +128,9 @@
       "judged": true,
       "hypothesis": "No mean/trend removal before Welch lets LF drift leak into the 0.15 Hz band edge.",
       "change": "least-squares mean + linear trend removal on finite 4Hz points before Welch",
-      "params": {"detrend": "linear"},
+      "params": {
+        "detrend": "linear"
+      },
       "literature_ref": "result-319-literature.md A4"
     },
     {
@@ -107,7 +139,9 @@
       "judged": true,
       "hypothesis": "Rates above 24/min cannot be detected with hi=0.4; >20 stratum bias is about -8~-9.",
       "change": "band_hi 0.4 -> 0.5 Hz (rate gate [6,40] unchanged)",
-      "params": {"band_hi": 0.5}
+      "params": {
+        "band_hi": 0.5
+      }
     },
     {
       "id": "V6",
@@ -115,8 +149,140 @@
       "judged": true,
       "hypothesis": "Single max-bin pick jumps between competing peaks; a continuity prior stabilises it.",
       "change": "prefer the max bin within +-0.04 Hz of previous dominant frequency if its PSD >= 0.5 x global band max; reset on failure/reset",
-      "params": {"peak": "continuity", "cont_hz": 0.04, "cont_ratio": 0.5},
+      "params": {
+        "peak": "continuity",
+        "cont_hz": 0.04,
+        "cont_ratio": 0.5
+      },
       "literature_ref": "result-319-literature.md A5"
     }
-  ]
+  ],
+  "phase3": {
+    "preregistered": "specs/sdd-317-ppg-accuracy-harness/verify-addendum-9.md",
+    "frozen_before_any_variant_run": true,
+    "inherits": "addendum-8 scope/statistics/judgement unchanged",
+    "gates": {
+      "G_resp": "V0 mirror resp == core C0 resp (A8-2)",
+      "G_front": "PPG front-end mirror RR/ts == core rr_list/rr_end_ts (rr tol 1e-6 ms, ts tol 1e-3 ms; total<=0.1%, per-record<=1%); required for W1,W1b,W3,W5",
+      "G_hrv": "V0 pipeline SDNN/RMSSD == core (|d|<=1e-6)"
+    },
+    "multiplicity": {
+      "family": "all phase3 variants incl. observation-only",
+      "holm_adjusted_p": true,
+      "bonferroni_ci_level": "1-0.05/m",
+      "note": "reference only; judgement uses addendum-8 rules"
+    },
+    "judged_count": 6,
+    "variants": [
+      {
+        "id": "W1",
+        "name": "sqi-gate-70",
+        "judged": true,
+        "change": "core ppg_sqi mean over analysis window <70 -> do not buffer RR candidates; output null for resp/HR_rr/SDNN/RMSSD that frame",
+        "params": {
+          "sqi_gate": 70.0,
+          "sqi_scope": "window_mean"
+        },
+        "threshold_source": "frontend live-legacy-adapter sqi>=0.7 'ok'"
+      },
+      {
+        "id": "W1b",
+        "name": "sqi-gate-40",
+        "judged": false,
+        "change": "same as W1 with threshold 40",
+        "params": {
+          "sqi_gate": 40.0,
+          "sqi_scope": "window_mean"
+        },
+        "threshold_source": "frontend live-legacy-adapter sqi>=0.4 'degraded'"
+      },
+      {
+        "id": "W2a",
+        "name": "refine-pm30",
+        "judged": true,
+        "change": "median gate width 0.25 -> 0.30 (candidate gate, retro cleanup, reseed seed)",
+        "params": {
+          "refine": "pm30"
+        }
+      },
+      {
+        "id": "W2b",
+        "name": "refine-malik20",
+        "judged": true,
+        "change": "candidate vs previous accepted RR >20% -> reject; no retro cleanup; reseed streak unchanged",
+        "params": {
+          "refine": "malik20"
+        }
+      },
+      {
+        "id": "W2c",
+        "name": "refine-local-median11",
+        "judged": true,
+        "change": "candidate gate vs median of last 11 buffered RR when buffer>=5",
+        "params": {
+          "refine": "local11"
+        }
+      },
+      {
+        "id": "W3",
+        "name": "peak-parabolic",
+        "judged": true,
+        "change": "3-point parabolic sub-sample peak refinement; RR and ts from refined peak positions; candidate set unchanged",
+        "params": {
+          "peak_interp": "parabolic"
+        }
+      },
+      {
+        "id": "W4a",
+        "name": "detrend-mean-only",
+        "judged": false,
+        "change": "Welch pre-step mean removal only",
+        "params": {
+          "detrend": "mean"
+        }
+      },
+      {
+        "id": "W4b",
+        "name": "detrend-slope-only",
+        "judged": false,
+        "change": "Welch pre-step linear-slope removal only (mean kept)",
+        "params": {
+          "detrend": "slope"
+        }
+      },
+      {
+        "id": "V4",
+        "name": "detrend-mean-linear (phase2 recompute)",
+        "judged": false,
+        "change": "mean + linear trend removal",
+        "params": {
+          "detrend": "linear"
+        }
+      },
+      {
+        "id": "W5",
+        "name": "V4+W3 combination (only combination in this phase)",
+        "judged": true,
+        "change": "parabolic peak interpolation + mean/linear detrend",
+        "params": {
+          "peak_interp": "parabolic",
+          "detrend": "linear"
+        }
+      }
+    ],
+    "w4_observation_stats": [
+      "record_length",
+      "truth_resp_distribution",
+      "resample_slope_abs_median",
+      "lf_to_band_power_ratio",
+      "dominant_freq_at_band_floor_fraction",
+      "refine_removed_ratio"
+    ],
+    "hrv_report": {
+      "hr": "HR_rr=60000/AVNN time-domain window",
+      "sdnn_rmssd": "bias vs ECG truth (truth_hrv_at)",
+      "beat_f1": "aged-buffer beats (<=T-20s), block_beat_eval",
+      "reliable_records_only": true
+    }
+  }
 }
