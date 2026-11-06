@@ -1,0 +1,35 @@
+/* SDD-302: 회원 가입 v4 전용. 코치·기관 AuthShell은 기존 스타일을 유지한다. */
+.signup-flow{color:#f7f4f0;background:#0d0814;min-height:100dvh}
+.signup-flow>img{position:fixed;object-position:42% 50%}
+.signup-flow>img+div{background:linear-gradient(180deg,rgba(18,8,28,.35),rgba(18,8,28,.1) 42%,rgba(18,8,28,.72));position:fixed}
+.signup-flow main,.signup-flow .bg-white.rounded-3xl,.signup-flow section[role=tabpanel]{background:rgba(24,12,36,.78);border:1px solid #ffffff24;border-radius:24px;padding:28px 24px;box-shadow:none}
+.signup-flow [class*='text-[#1F1F1F]'],.signup-flow [class*='text-[#4A4A4A]']{color:#f7f4f0}
+.signup-flow [class*='text-[#6F6F6F]']{color:#cfc6d6}
+.signup-flow input:not([type=checkbox]),.signup-flow select{min-width:0;height:48px;border:1px solid #a89aaf;border-radius:12px;background:rgba(24,12,36,.58);color:#f7f4f0;padding:0 14px}
+.signup-flow input::placeholder{color:#b9adc4}
+.signup-flow option{background:#180c24}
+.signup-flow [class~='bg-[#5F0080]']:not([role=tab]){background:#d2aefc;color:#241332;border-color:#d2aefc}
+.signup-flow [class*='text-[#5F0080]']{color:#d2aefc}
+.signup-flow button.bg-white,.signup-flow button.bg-white span{color:#5f0080}
+.signup-flow button:has(svg[width='20']){border-radius:999px;background:white;color:#5f0080}
+.signup-flow button:has(svg[width='20']) span{color:#5f0080}
+.signup-flow :focus-visible{outline:2px solid #d2aefc;outline-offset:3px}
+.signup-flow input[type=checkbox]{accent-color:#d2aefc}
+.signup-flow [class*='text-red-']{color:#ffbdc3}
+@media(min-width:768px){.signup-flow main,.signup-flow .bg-white.rounded-3xl{padding:32px}}
+.signup-flow{--mb-fg:#f7f4f0;--mb-fg-muted:#cfc6d6;--mb-bg:rgba(24,12,36,.58);--mb-bg-soft:rgba(255,255,255,.08);--mb-border:#ffffff36;--mb-primary:#d2aefc;--mb-danger:#ffbdc3}
+.signup-flow [class*='text-[#B42318]']{color:#ffbdc3}
+.signup-flow [class*='bg-[#FDECEC]']{background:rgba(100,20,40,.5)}
+.signup-header{max-width:720px;margin:auto;padding:calc(20px + env(safe-area-inset-top)) 16px 20px;display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:12px}
+.signup-back{display:grid;place-items:center;width:44px;height:44px;border:1px solid #ffffff24;border-radius:50%;background:#180c2494;color:white;font-size:24px;text-decoration:none}
+.signup-brand{justify-self:center;padding:9px 24px;background:#180c2494;border:1px solid #ffffff24;border-radius:999px;display:flex;align-items:center;gap:10px;font-size:13px;letter-spacing:1px;font-weight:600;white-space:nowrap}
+.signup-content{max-width:488px;margin:18px auto 0;padding:0 16px calc(32px + env(safe-area-inset-bottom))}
+.signup-flow h1,.signup-flow h2{font-size:24px;font-weight:600;line-height:1.5;letter-spacing:-.03em}
+@media(min-width:768px){.signup-header{padding:calc(32px + env(safe-area-inset-top)) 32px 32px}.signup-content{margin-top:32px;max-width:520px;padding-left:24px;padding-right:24px}}
+.signup-flow [class~='bg-[#5F0080]'][class*='text-[#5F0080]']{color:#241332}
+
+/* 코치 연결 확인은 CTA가 아닌 안내 표면이다. */
+.signup-flow [class~='bg-[#5F0080]/5']{background:rgba(24,12,36,.58);border-color:#ffffff36}
+
+/* dev 비회원 입장 카드는 밝은 표면이므로 제목의 어두운 색을 유지한다. */
+.signup-flow .guest-code-entry{color:#1f1f1f}

@@ -170,14 +170,9 @@ def _ensure_account_active(user: User) -> None:
 
 
 def _to_user_response(user: User) -> UserResponse:
-    """User ORM 객체 → UserResponse 변환.
+    from app.services.auth_profile_service import to_user_response
 
-    Pydantic ``from_attributes=True`` 는 SQLAlchemy ``@property`` 를
-    건너뛸 수 있으므로 ``counselor_code`` 는 수동으로 주입한다.
-    """
-    resp = UserResponse.model_validate(user)
-    resp.counselor_code = user.counselor_code
-    return resp
+    return to_user_response(user)
 
 
 # ---------------------------------------------------------------------------
@@ -215,6 +210,8 @@ async def register(req: RegisterRequest, db: Session = Depends(get_db)):
             detail="서비스 이용약관/개인정보 처리방침 동의는 필수입니다",
         )
 
+    if req.gender is None:
+        raise signup_policy_service.api_error(422, "GENDER_REQUIRED", "성별을 선택해 주세요")
     user, _access_token, _refresh_token = _create_user_with_role(
         role="client",
         email_verify_token=req.email_verify_token,
@@ -225,8 +222,12 @@ async def register(req: RegisterRequest, db: Session = Depends(get_db)):
         db=db,
         remember_me=req.remember_me,
         birth_date=req.birth_date,
+        commit=False,
     )
-    return user
+    db.add(ClientProfile(user_id=user.id, gender=req.gender, birth_date=user.birth_date))
+    db.commit()
+    db.refresh(user)
+    return _to_user_response(user)
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -427,6 +428,8 @@ async def register_client(
     """
     from app.services import client_service, onboarding_service, signup_application_service
 
+    if req.gender is None:
+        raise signup_policy_service.api_error(422, "GENDER_REQUIRED", "성별을 선택해 주세요")
     # 사용자 생성 전에 실패 가능한 입력을 먼저 검증한다 (불완전 가입 방지)
     matched_counselor = None
     if not req.invite_token and req.counselor_code:
@@ -573,6 +576,19 @@ def _decode_refresh(token: str) -> dict:
     return payload
 
 
+def _refresh_caller(request: Request) -> str:
+    """갱신 호출 경로 분류(비밀 아님). 기기·토큰 식별자는 쓰지 않는다."""
+    if request.headers.get("x-mb-native") == "capacitor":
+        src = (request.headers.get("x-mb-refresh-source") or "").strip().lower()
+        return f"native:{src}" if src in {"webview", "native", "audio", "sweeper"} else "native"
+    return "web"
+
+
+def _log_refresh_outcome(outcome: str, caller: str, reason: str) -> None:
+    """SDD-305: refresh_outcome(rotated/duplicate/reuse/invalid) 관측 로그 — 토큰·기기 값 없이 구분만."""
+    logger.info("[auth] refresh_outcome=%s caller=%s reason=%s", outcome, caller, reason)
+
+
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh(
     request: Request,
@@ -594,39 +610,67 @@ async def refresh(
     # 클레임이 없는 기존 토큰은 True(기존 동작 = 14일 지속)로 폴백한다.
     remember = bool(payload.get("remember", True))
 
+    caller = _refresh_caller(request)
     record = db.query(RefreshToken).filter(RefreshToken.jti == jti).first()
     if record is None:
+        _log_refresh_outcome("invalid", caller, "unknown_jti")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="알 수 없는 리프레시 토큰입니다",
         )
 
+    # SDD-020: 비활성화 실효성 — 발급 시점엔 active 였더라도 이후 suspended/pending 이
+    # 되면 토큰 회전을 차단한다. (탈취/정지 계정의 세션 연장 방지)
+    user = db.query(User).filter(User.id == uuid.UUID(user_id)).first()
+    if user is None:
+        _log_refresh_outcome("invalid", caller, "user_missing")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="사용자를 찾을 수 없습니다",
+        )
+
+    def _duplicate_response(dup: dict) -> JSONResponse:
+        # SDD-305: 유예 안의 중복 요청 → 첫 회전이 만든 같은 새 토큰 쌍을 그대로 돌려준다(추가 회전 없음).
+        _ensure_account_active(user)
+        _log_refresh_outcome("duplicate", caller, "idempotent")
+        resp = JSONResponse(content={"access_token": dup["access_token"], "token_type": "bearer"})
+        _set_refresh_cookie(resp, dup["refresh_token"], remember_me=dup["remember"], request=request)
+        return resp
+
     if record.revoked_at is not None:
-        # 회전 직후 유예 시간 내 동시 요청은 정상 경합으로 보고 후속 유효 토큰을 이어서 회전한다.
+        dup = refresh_token_service.load_duplicate_result(jti, db)
+        if dup is not None:
+            return _duplicate_response(dup)
+        # 결과 암호문이 없는 구(舊) 행: 기존 유예 후속 회전 경로를 유지한다.
         successor = refresh_token_service.find_grace_successor(record, db)
         if successor is None:
             # 재사용 감지 → 사용자 전체 토큰 폐기
             refresh_token_service.revoke_all_user_tokens(user_id, db)
+            _log_refresh_outcome("reuse", caller, "revoked_all")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="토큰이 재사용되었습니다. 모든 기기를 로그아웃합니다.",
             )
         jti = successor.jti
 
-    # SDD-020: 비활성화 실효성 — 발급 시점엔 active 였더라도 이후 suspended/pending 이
-    # 되면 토큰 회전을 차단한다. (탈취/정지 계정의 세션 연장 방지)
-    user = db.query(User).filter(User.id == uuid.UUID(user_id)).first()
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="사용자를 찾을 수 없습니다",
-        )
     _ensure_account_active(user)
 
-    new_refresh = refresh_token_service.rotate_refresh_token(
-        jti, user_id, db, remember=remember
-    )
     new_access = create_access_token(subject=user_id)
+    new_refresh = refresh_token_service.rotate_refresh_token_with_result(
+        jti, user_id, db, new_access, remember=remember
+    )
+    if new_refresh is None:
+        # 동시 요청 경쟁에서 졌다 — 승자가 커밋한 결과가 있으면 그것을 받는다.
+        dup = refresh_token_service.load_duplicate_result(jti, db)
+        if dup is not None:
+            return _duplicate_response(dup)
+        refresh_token_service.revoke_all_user_tokens(user_id, db)
+        _log_refresh_outcome("reuse", caller, "race_lost_no_result")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="토큰이 재사용되었습니다. 모든 기기를 로그아웃합니다.",
+        )
+    _log_refresh_outcome("rotated", caller, "ok")
     response = JSONResponse(content={"access_token": new_access, "token_type": "bearer"})
     # 회전 시에도 최초 로그인의 "로그인 상태 유지" 선택을 유지한다.
     _set_refresh_cookie(response, new_refresh, remember_me=remember, request=request)
@@ -728,6 +772,60 @@ async def set_password(
     )
     _set_refresh_cookie(response, refresh_token, request=request)
     return response
+
+
+def _require_social_counselor(invite_token: str | None, counselor_code: str | None, db: Session):
+    """SDD-309 — 소셜 신규 가입의 초대 코치 확인. 사용자 생성 전에 호출한다.
+
+    - 초대 토큰이 있으면 면제(None 반환): 연결은 기존 초대 경로가 처리한다.
+    - 코드가 없으면 422 COUNSELOR_CODE_REQUIRED (이메일 가입과 같은 문구).
+    - 코드가 있으면 이메일 가입과 같은 validate_counselor_code 로 검증하고 (상담사, 프로필)을 돌려준다.
+    """
+    from app.services import signup_application_service
+
+    if invite_token:
+        return None
+    code = (counselor_code or "").strip()
+    if not code:
+        if not settings.social_signup_requires_counselor_code:
+            return None
+        raise signup_policy_service.api_error(
+            422,
+            "COUNSELOR_CODE_REQUIRED",
+            "코치 코드를 확인해주세요. 코드가 없다면 초대한 코치에게 요청해 주세요.",
+        )
+    counselor, profile, _ = signup_application_service.validate_counselor_code(code, db)
+    return counselor, profile
+
+
+def _link_social_counselor(user: User, matched, db: Session) -> None:
+    """SDD-309 — 소셜 신규 가입 직후 코치 연결(이메일 가입 코드 경로와 같은 규칙).
+
+    링크 + 온보딩 step4 마킹 후 커밋하고, 커밋 이후 1:1 채팅방을 만든다(실패해도 가입은 유지).
+    """
+    from app.services import client_service
+
+    counselor, profile = matched
+    client_service.assign_counselor(user.id, counselor.id, db, create_room=False)
+    onboarding_service.save_step(
+        str(user.id),
+        4,
+        {"counselor_code": profile.counselor_code, "counselor_id": str(counselor.id)},
+        db,
+    )
+    progress = onboarding_service.get_progress(str(user.id), db)
+    saved_steps = progress.steps or {}
+    for n in (1, 2, 3, 4):
+        if f"step{n}" not in saved_steps:
+            progress.current_step = n
+            break
+    db.commit()
+    try:
+        from app.services.chat_service import get_or_create_direct_room
+
+        get_or_create_direct_room(counselor.id, user.id, db)
+    except Exception:  # noqa: BLE001 — 채팅방 생성 실패는 가입을 되돌리지 않는다
+        logger.exception("[auth] 소셜 가입 코치 채팅방 생성 실패 user=%s", user.id)
 
 
 # ---------------------------------------------------------------------------
@@ -834,6 +932,7 @@ async def google_auth(
 
     # 2. User find-or-create
     user = db.query(User).filter(func.lower(User.email) == email).first()
+    social_counselor = None
 
     # platform_admin 은 명시적 지정만 허용 — Google OAuth 로는 자동 승격·신규 생성 금지.
     # 룩시드랩스 소속이라도 상담을 받을 수 있으므로 도메인 기반 승격은 부적절하다.
@@ -884,12 +983,16 @@ async def google_auth(
         birth = signup_policy_service.validate_new_account(
             db, email=email, birth_date=req.birth_date, consents=req.consents
         )
+        if req.gender is None:
+            raise signup_policy_service.api_error(422, "GENDER_REQUIRED", "성별을 선택해 주세요")
+        # SDD-309: 코치 코드는 사용자 생성 전에 검증한다(잘못된 코드로 불완전한 가입을 남기지 않음).
+        social_counselor = _require_social_counselor(req.invite_token, req.counselor_code, db)
         # 신규 Google 사용자 생성 (내담자)
         rand_pw = secrets.token_urlsafe(32)
         user = User(
             email=email,
             password_hash=hash_password(rand_pw),
-            name=name,
+            name=(req.name or "").strip() or name,
             role=role,
             auth_provider="google",
             verified_tier="email",
@@ -898,10 +1001,14 @@ async def google_auth(
         db.add(user)
         db.flush()
 
+        db.add(ClientProfile(user_id=user.id, gender=req.gender, birth_date=birth))
         # 약관 동의 — 사용자가 명시적으로 동의한 항목만 기록한다(선택 동의는 제출값 그대로).
         signup_policy_service.record_consents(db, user.id, req.consents)
         db.commit()
         db.refresh(user)
+        if social_counselor is not None:
+            _link_social_counselor(user, social_counselor, db)
+            db.refresh(user)
 
     # 3. 초대 토큰 처리 → ClientCounselorLink 자동 생성 (공통 헬퍼 사용)
     #    이메일 일치 검증 + single-use(accepted 전환) + 만료 처리는
@@ -999,6 +1106,7 @@ async def apple_auth(
     )
     user: User | None = None
     new_account = False
+    social_counselor = None
 
     if identity is not None:
         user = db.query(User).filter(User.id == identity.user_id).first()
@@ -1029,6 +1137,10 @@ async def apple_auth(
         birth = signup_policy_service.validate_new_account(
             db, email=raw_email, birth_date=req.birth_date, consents=req.consents
         )
+        if req.gender is None:
+            raise signup_policy_service.api_error(422, "GENDER_REQUIRED", "성별을 선택해 주세요")
+        # SDD-309: nonce 소비 전에 코치 코드를 검증한다 — 실패해도 같은 토큰으로 재제출할 수 있다.
+        social_counselor = _require_social_counselor(req.invite_token, req.counselor_code, db)
         new_account = True
 
     # 검증을 모두 통과한 뒤에만 nonce 를 소비한다(원자적 1회) — 병렬 replay 도 성공은 최대 1건.
@@ -1061,6 +1173,7 @@ async def apple_auth(
                     encrypted_refresh_token=apple_auth_service.encrypt_token(refresh_plain),
                 )
             )
+            db.add(ClientProfile(user_id=user.id, gender=req.gender, birth_date=birth))
             signup_policy_service.record_consents(db, user.id, req.consents)
             db.commit()
         except IntegrityError:
@@ -1083,6 +1196,9 @@ async def apple_auth(
     assert user is not None
     if new_account and req.invite_token:
         _apply_invite_token(req.invite_token, user, db)
+    elif new_account and social_counselor is not None:
+        _link_social_counselor(user, social_counselor, db)
+        db.refresh(user)
 
     access_token = create_access_token(subject=str(user.id))
     refresh_token_str = refresh_token_service.issue_refresh_token(
@@ -1119,6 +1235,18 @@ def _apply_invite_token(invite_token: str, user: User, db: Session) -> None:
 # PATCH /users/me — 사용자 기본정보 업데이트
 # ---------------------------------------------------------------------------
 
+@router.get("/users/me", response_model=UserResponse)
+def get_user_me(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """세션 복구 시 최신 본인 필수정보와 선택 프로필 보류 상태를 반환한다."""
+    user = db.query(User).filter(User.id == uuid.UUID(current_user["id"])).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
+    return _to_user_response(user)
+
+
 @router.patch("/users/me", response_model=UserResponse)
 async def update_user_me(
     req: UpdateUserMeRequest,
@@ -1154,8 +1282,8 @@ async def update_user_me(
         if user.name != req.name:
             name_changed = True
         user.name = req.name
-    if req.phone is not None:
-        user.phone = req.phone
+    if "phone" in req.model_fields_set:
+        user.phone = (req.phone or "").strip() or None
 
     # ClientProfile 필드 업데이트 (gender, birth_date) — client 역할만 도달한다
     if req.gender is not None or req.birth_date is not None:

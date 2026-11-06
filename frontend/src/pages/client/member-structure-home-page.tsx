@@ -47,6 +47,7 @@ export function MemberStructureHomePage() {
         : <h2 className="sh-hero__title">{model.nextIsComplete ? '예정된 일정이 없어요' : read.classes.status === 'loading' || read.counseling.status === 'loading' ? '일정을 확인하고 있어요' : '확인된 예정 일정이 없어요'}</h2>}
       </div>
     </section>
+    <CodeEntryButton placement="body" />
     {upcoming.length > 0 && <section className="mh-upcoming" data-testid="home-upcoming" aria-label="이어서 예정된 일정"><h2 className="mh-upcoming__title">이어서 예정된 일정 {model.upcoming.length}건</h2>
       {upcoming.map((item) => <Link key={item.sessionId} className="mh-upcoming__row" to={item.area === 'meditation' ? `/app/classes/${encodeURIComponent(item.parentId)}` : counselingPath('member', item.parentId as RelationshipId)}><span><b><ReadField value={memberValue(item.title)} /></b><small><ReadField value={memberDate(displayField(item.scheduledAt))} /></small></span><em>보기</em></Link>)}
       {model.upcoming.length > upcoming.length && <Link className="mh-upcoming__more" to="/app/classes">전체 클래스 보기</Link>}

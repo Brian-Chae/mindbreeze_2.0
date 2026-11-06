@@ -78,9 +78,9 @@ it('발송 실패 상태의 이메일은 성공이나 즉시 입장으로 안내
   expect(el.textContent).toContain('발송에 실패한 이메일 초대가 있어요');
   expect(el.textContent).not.toContain('지금 바로 입장할 수 있어요');
 });
-it('진행 중 도구에서 초대 콜백이 있을 때 44px 회원 초대 버튼을 제공한다', async () => {
+it('진행 중 설정에서 초대 콜백이 있을 때 44px 회원 초대 버튼을 제공한다', async () => {
   const invite = vi.fn();
-  const props = { sort: 'join' as const, onSort: vi.fn(), showHandsFirst: false, handsFirst: false, onHandsFirst: vi.fn(), table: false, onTable: vi.fn(), accessCode: '1234', codeCopied: false, onCopyCode: vi.fn(), selfBandText: '미착용', onOpenMyband: vi.fn() };
+  const props = { accessCode: '1234', codeCopied: false, onCopyCode: vi.fn(), selfBandText: '미착용', onOpenMyband: vi.fn() };
   await act(async () => root.render(<ToolsSheet {...props} onInvite={invite} />));
   const button = [...el.querySelectorAll('button')].find(node => node.textContent === '회원 초대')!;
   expect(button.className).toContain('min-h-[44px]');

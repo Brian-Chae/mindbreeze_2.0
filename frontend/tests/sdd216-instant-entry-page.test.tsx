@@ -82,14 +82,14 @@ describe('즉시 초대 링크 참가 자격 안내', () => {
     expect(sessionStorage.getItem(`mb_entry_${first}`)).toBeNull();
     await click('코드 입력하기'); expect(container.querySelector('output')?.textContent).toBe('/join');
   });
-  it('선택된 회원은 서버가 발급한 자격으로 기존 입장 확인을 연다', async () => {
+  it('선택된 회원은 서버가 발급한 자격으로 입장 확인 없이 동의 화면을 연다', async () => {
     useAuthStore.setState({ isAuthenticated: true }); api.invited.mockResolvedValue(result()); await render();
-    expect(text()).toContain(`클래스 ${first}`); expect(text()).toContain('입장하기');
+    expect(text()).toContain('동의를 확인해 주세요'); expect(text()).not.toContain('입장하기');
     expect(api.state).toHaveBeenCalledWith(first, `credential-${first}`);
   });
   it('저장 자격이 있으면 편의 입장을 반복하지 않고 기존 동의 준비 화면을 연다', async () => {
-    seed(); await render(); await click('입장하기');
-    expect(text()).toContain('시작 전에 확인해 주세요'); expect(api.invited).not.toHaveBeenCalled();
+    seed(); await render();
+    expect(text()).toContain('동의를 확인해 주세요'); expect(api.invited).not.toHaveBeenCalled();
   });
   it('기존 자격의 401은 실제 만료 안내와 저장 자격 삭제를 유지한다', async () => {
     seed(); api.state.mockRejectedValue(new ApiError(401, '비공개', null)); await render();
@@ -106,8 +106,8 @@ describe('즉시 초대 링크 참가 자격 안내', () => {
     expect(text()).toContain(`클래스 ${first}`);
   });
   it('다른 회차로 이동하면 이전 자격·준비 단계·클래스 정보를 전달하지 않는다', async () => {
-    seed(); await render(); await click('입장하기'); await click('다른 회차');
-    expect(text()).not.toContain(`클래스 ${first}`); expect(text()).not.toContain('시작 전에 확인해 주세요');
+    seed(); await render(); expect(text()).toContain('동의를 확인해 주세요'); await click('다른 회차');
+    expect(text()).not.toContain(`클래스 ${first}`); expect(text()).not.toContain('동의를 확인해 주세요');
     expect(api.state).not.toHaveBeenCalledWith(second, `credential-${first}`);
     expect(text()).toContain('초대 이메일의 참여 코드');
   });

@@ -1,3 +1,5 @@
+import { isNativeApp } from '../../lib/native/platform';
+import { nativeGoogleIdToken } from '../../lib/native/google';
 // Google OAuth 로그인 버튼 (내담자용)
 // @react-oauth/google의 useGoogleLogin 훅 사용
 
@@ -58,8 +60,17 @@ export default function GoogleLoginButton({
   const handleClick = useCallback(() => {
     if (loading) return;
     setError(null);
-    googleLogin();
-  }, [loading, googleLogin]);
+    if (isNativeApp()) {
+      setLoading(true);
+      void nativeGoogleIdToken().then(async (token) => {
+        try { onSuccess?.(await loginGoogle(token, inviteToken, 'client', true, undefined, 'id_token')); }
+        catch (err) {
+          if (err instanceof ApiError && err.status === 422 && onNeedsSignupInfo) { onNeedsSignupInfo({ provider: 'google', tokenKind: 'id_token', token }); return; }
+          throw err;
+        }
+      }).catch((err: unknown) => { const message = err instanceof Error ? err.message : 'Google 로그인에 실패했어요.'; setError(message); onError?.(new Error(message)); }).finally(() => setLoading(false));
+    } else googleLogin();
+  }, [loading, googleLogin, inviteToken, loginGoogle, onSuccess, onNeedsSignupInfo, onError]);
 
   return (
     <div className="flex flex-col items-center gap-2">

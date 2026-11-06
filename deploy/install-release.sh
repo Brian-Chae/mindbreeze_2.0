@@ -54,6 +54,10 @@ wait_healthy() {
 restart_services() {
   "$SYSTEMCTL" daemon-reload
   for s in "${SERVICES[@]}"; do "$SYSTEMCTL" restart "$s" || return 1; done
+  # SDD-306: 활성 상태인 REST 전용 인스턴스(mindbreeze-backend-rest@PORT)도 같은 릴리스로 재시작한다(없으면 건너뜀).
+  local rest_units u
+  rest_units="$("$SYSTEMCTL" list-units 'mindbreeze-backend-rest@*.service' --state=active --no-legend 2>/dev/null | awk '{print $1}' || true)"
+  for u in $rest_units; do "$SYSTEMCTL" restart "$u" || return 1; done
 }
 
 manifest_get() { # <manifest.json> <key>

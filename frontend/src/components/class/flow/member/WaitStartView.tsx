@@ -32,14 +32,21 @@ export interface WaitStartViewProps {
   /** 온라인에서만. 오프라인은 null */
   bgm: WaitBgm | null;
   backdropSrc?: string;
+  /** 선택 바꾸기(동의 화면 다시 열기) */
   onRecheck: () => void;
+  /** 오늘의 상태 남기기 / 기기 확인 / 밴드 다시 연결 — 대기실에서 여는 선택 항목(SDD-303). 없으면 숨김 */
+  onOpenSurvey?: () => void;
+  onOpenDevice?: () => void;
+  onReconnectBand?: () => void;
+  /** 네이티브 인계가 늦을 때 한 줄 안내 */
+  handoffSlow?: boolean;
   onExit: () => void;
   onBgmToggle: () => void;
   onBgmVolume: (volume: number) => void;
 }
 
 export function WaitStartView({
-  place, size, bandMode, title, hostName, whenLabel, startsIn, readyCount, address, bgm, backdropSrc, onRecheck, onExit, onBgmToggle, onBgmVolume,
+  place, size, bandMode, title, hostName, whenLabel, startsIn, readyCount, address, bgm, backdropSrc, onRecheck, onOpenSurvey, onOpenDevice, onReconnectBand, handoffSlow = false, onExit, onBgmToggle, onBgmVolume,
 }: WaitStartViewProps) {
   const solo = size === 'solo';
   const ratio = readyCount && readyCount.total > 0 ? Math.min(100, Math.round((readyCount.ready / readyCount.total) * 1000) / 10) : 100;
@@ -85,7 +92,11 @@ export function WaitStartView({
       onExit={onExit}
       foot={
         <>
-          <FlowButton kind="soft" onClick={onRecheck}><RefreshCw size={20} aria-hidden="true" />준비 다시 확인하기</FlowButton>
+          {onOpenSurvey ? <FlowButton kind="soft" onClick={onOpenSurvey}>오늘의 상태 남기기 (선택)</FlowButton> : null}
+          {onOpenDevice ? <FlowButton kind="soft" onClick={onOpenDevice}>마이크·카메라 확인하기 (선택)</FlowButton> : null}
+          {onReconnectBand ? <FlowButton kind="soft" onClick={onReconnectBand}>LINK BAND 다시 연결하기</FlowButton> : null}
+          <FlowButton kind="soft" onClick={onRecheck}><RefreshCw size={20} aria-hidden="true" />선택 바꾸기</FlowButton>
+          {handoffSlow ? <p className="fl-note fm-slot" role="status">밴드 연결을 확인하고 있어요. 계속 안 되면 LINK BAND를 다시 연결해 주세요.</p> : null}
           <p className="fl-note fm-slot">코치가 시작하면 자동으로 입장해요.</p>
         </>
       }

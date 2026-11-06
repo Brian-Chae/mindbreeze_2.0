@@ -17,6 +17,11 @@ export interface User {
   auth_provider: string;
   counselors: Array<{ id: string; name: string; profile_image: string | null; org_name?: string | null; status?: string }>;
   counselor_code?: string | null;
+  client_required_fields?: string[];
+  profile_prompt_dismissed?: boolean;
+  gender?: string | null;
+  birth_date?: string | null;
+  phone?: string | null;
 }
 
 export interface TokenResponse {
@@ -103,11 +108,15 @@ export interface GoogleLoginPayload {
   access_token?: string;
   id_token?: string;
   invite_token?: string;
+  /** SDD-309: 신규 소셜 가입 시 초대 코치 코드(6자리). invite_token 이 있으면 불필요 */
+  counselor_code?: string;
   role?: string;
   /** SEC-04: 신규 가입 시 약관·민감정보 동의 (기존 사용자 로그인은 불필요) */
   consents?: ConsentPayload;
   /** SDD-220: 신규 가입 시 생년월일(만 14세 확인). 기존 사용자 로그인에는 불필요 */
   birth_date?: string;
+  name?: string;
+  gender?: 'male' | 'female' | 'other';
   /** 로그인 상태 유지 — true면 14일 영속 세션, false면 브라우저 종료 시 소멸 */
   remember_me?: boolean;
 }
@@ -121,9 +130,12 @@ export interface AppleLoginPayload {
   authorization_code?: string;
   name?: string;
   invite_token?: string;
+  /** SDD-309: 신규 소셜 가입 시 초대 코치 코드(6자리). invite_token 이 있으면 불필요 */
+  counselor_code?: string;
   role?: string;
   consents?: ConsentPayload;
   birth_date?: string;
+  gender?: 'male' | 'female' | 'other';
   remember_me?: boolean;
 }
 
@@ -144,3 +156,6 @@ export interface UpdateUserMePayload {
 
 export const updateUserMe = (data: UpdateUserMePayload): Promise<User> =>
   apiClient.patch<User>('/auth/users/me', data);
+
+export const getUserMe = (): Promise<User> => apiClient.get<User>('/auth/users/me');
+export const dismissClientProfile = (): Promise<User> => apiClient.post<User>('/onboarding/client/profile-dismiss');

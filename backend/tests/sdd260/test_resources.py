@@ -9,10 +9,10 @@ from fastapi import HTTPException
 from app.config import Settings
 
 
-def test_S5_기본값_DB풀_20_20_archive_슬롯_16_대기_0_5초():
+def test_S5_기본값_DB풀_20_20_archive_슬롯_32_대기_1_0초():
     f = Settings.model_fields
     assert f["db_pool_size"].default == 20 and f["db_max_overflow"].default == 20
-    assert f["archive_max_concurrent"].default == 16 and f["archive_slot_wait_sec"].default == 0.5
+    assert f["archive_max_concurrent"].default == 32 and f["archive_slot_wait_sec"].default == 1.0  # SDD-290 상향
 
 
 def test_S5_슬롯_초과_429_Retry_After는_2에서_6_사이_정수(monkeypatch):

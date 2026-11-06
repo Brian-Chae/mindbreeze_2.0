@@ -55,6 +55,49 @@ object MeasurementManager {
         startedAtMonoMs = SystemClock.elapsedRealtime()
     }
 
+    /** SDD-293: 밴드 단계 완료 직후 네이티브가 쥔 보류 링크(구독·스트림 없음). startNative 가 같은 주소면 재연결 없이 이어받는다. */
+    @Volatile var heldBand: BandGattClient? = null
+        private set
+
+    @Synchronized
+    fun holdBand(ctx: Context, address: String, onReady: (Boolean) -> Unit) {
+        val collecting = engine != null
+        when (BandHoldPolicy.onAdopt(heldBand?.address, address, collecting)) {
+            BandHoldPolicy.Action.IGNORE -> { onReady(false); return }
+            BandHoldPolicy.Action.REUSE -> { val h = heldBand!!; if (h.holdReady) onReady(true) else h.onHoldReady = { onReady(true) }; return }
+            BandHoldPolicy.Action.REPLACE -> releaseHeldBand()
+            BandHoldPolicy.Action.NEW -> Unit
+        }
+        if (!ownership.claim(BandOwnership.Owner.NATIVE)) { onReady(false); return }
+        val c = BandGattClient(ctx.applicationContext, null, address) { }
+        var done = false
+        val finish: (Boolean) -> Unit = { ok -> synchronized(this) { if (!done) { done = true; onReady(ok) } } }
+        c.onHoldReady = { finish(true) }
+        heldBand = c
+        c.start()
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ if (!done) { finish(false); synchronized(this) { if (heldBand === c) releaseHeldBand() } } }, HOLD_TIMEOUT_MS)
+    }
+
+    /** 보류 링크를 이어받는다(같은 주소). 소유권은 호출자(서비스)가 이어서 갖는다. */
+    @Synchronized
+    fun takeHeld(address: String?): BandGattClient? {
+        val h = heldBand ?: return null
+        return when (BandHoldPolicy.onStart(h.address, address)) {
+            BandHoldPolicy.Action.REUSE -> { heldBand = null; h }
+            else -> { releaseHeldBand(); null }
+        }
+    }
+
+    @Synchronized
+    fun releaseHeldBand() {
+        val h = heldBand ?: return
+        heldBand = null
+        h.stop()
+        if (engine == null) ownership.release(BandOwnership.Owner.NATIVE)
+    }
+
+    private const val HOLD_TIMEOUT_MS = 8_000L
+
     @Volatile var runtime: com.looxidlabs.mindbreeze.measurement.runtime.NativeRuntime? = null
         private set
 

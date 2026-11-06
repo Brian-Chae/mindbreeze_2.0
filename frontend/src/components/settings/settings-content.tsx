@@ -46,6 +46,7 @@ export default function SettingsContent() {
     </section>
     <div className="overflow-hidden rounded-[18px] border border-[#E9E2EB] bg-white">
       <Group title="내 계정" description={user?.role === 'platform_admin' ? '계정 정보 확인' : '기본 정보 · 프로필 관리'} icon={<UserRound size={24} />}><AccountSettings /></Group>
+      {user?.role === 'client' && <Group title="선택 프로필" description="전화번호" icon={<UserRound size={24} />}><p className="text-[13px] text-[#776D7B]">원할 때 입력하고 수정할 수 있어요. 로그인할 때 자동으로 입력을 요청하지 않아요.</p><Link className={linkClass} to="/settings/optional-profile">프로필 입력하기 <span aria-hidden="true">↗</span></Link></Group>}
       {user?.role === 'client' && <Group title={COUNSELOR_COPY.settingsTitle} description={COUNSELOR_COPY.settingsDescription} icon={<UserPlus size={24} />}><CounselorManagementPanel /></Group>}
       {uploadStatusTo && <Group title="데이터 현황" description="회차별 데이터 도착 현황" icon={<Database size={24} />}><Link className={linkClass} to={uploadStatusTo} data-upload-status-link>전체 회차 데이터 현황 보기 <span aria-hidden="true">↗</span></Link><p className="text-[13px] text-[#776D7B]">서버에 도착한 데이터를 숫자로 보여 줘요. 밴드 미착용은 문제로 보지 않아요.</p></Group>}
       <Group title="알림" description="일정·참여, 대화, 리포트·운영" icon={<Bell size={24} />}><NotificationGroups /><WebPushCard /></Group>

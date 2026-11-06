@@ -20,6 +20,7 @@ export interface WriteCommand { operation_key: string; expected_revision?: numbe
 export interface ConflictItem { candidate_key: string; kind: 'host' | 'place' | 'member'; starts_at: string; ends_at: string; parent_title: string | null; seq: number | null; visible: boolean }
 export interface SchedulePreview { rows: ScheduleRow[]; conflicts: ConflictItem[]; warnings?: string[]; input_hash?: string; conflict_fingerprint: string; class_revision: number | null }
 export interface WriteResult { class_id: string; revision: number; session_ids?: string[]; effects_pending?: number }
+export interface CapacityResult extends WriteResult { capacity?: number; changed?: boolean; promoted_count?: number; previous_capacity?: number }
 export interface CreateCommand extends WriteCommand { schedule: ScheduleInput; status: 'draft' | 'active' }
 export interface BulkCommand extends WriteCommand { action: 'shift_week' | 'replace' | 'cancel'; session_ids: string[]; expected_state_versions: Record<string, number>; rows: ScheduleRow[] }
 export interface InstructorCandidate { id: string; name: string | null }
@@ -31,6 +32,7 @@ export const schedulingApi = {
   preview: (schedule: ScheduleInput, signal?: AbortSignal) => apiClient.post<SchedulePreview>('/classes/preview-schedule', schedule, { signal }),
   create: (command: CreateCommand) => apiClient.post<WriteResult>('/classes', command),
   update: (id: string, command: WriteCommand & { schedule: ScheduleInput }) => apiClient.patch<WriteResult>(path(id), command),
+  increaseCapacity: (id: string, command: WriteCommand & { capacity: number }) => apiClient.post<CapacityResult>(`${path(id)}/capacity`, command),
   publish: (id: string, command: WriteCommand) => apiClient.post<WriteResult>(`${path(id)}/publish`, command),
   duplicate: (id: string, command: WriteCommand & { start_date: string; invite_members: boolean }) => apiClient.post<WriteResult>(`${path(id)}/duplicate`, command),
   previewBulk: (id: string, command: BulkCommand, signal?: AbortSignal) => apiClient.post<SchedulePreview>(`${path(id)}/schedule/preview`, command, { signal }),

@@ -76,6 +76,7 @@ def _body(key, client, **kw):
         "name": "김애플",
         "consents": consents(),
         "birth_date": "1990-05-01",
+        "gender": "female",
     }
     body.update(kw)
     return body
@@ -182,7 +183,7 @@ def _assert_invalid(client, res):
 def test_ts11_서명_위조(client, key):
     other = AppleKey(kid=key.kid)  # 같은 kid, 다른 개인키
     nonce = _challenge(client)
-    body = {"id_token": other.token(nonce=nonce), "nonce": nonce, "consents": consents(), "birth_date": "1990-01-01"}
+    body = {"id_token": other.token(nonce=nonce), "nonce": nonce, "consents": consents(), "gender": "female", "birth_date": "1990-01-01"}
     _assert_invalid(client, client.post(URL, json=body))
 
 
@@ -203,23 +204,23 @@ def test_ts11_alg_none과_HS256_거부(client, key):
     hs = jwt.encode({"iss": "https://appleid.apple.com", "aud": APPLE_AUD, "sub": "x", "exp": 9999999999, "nonce": nonce},
                     "secret", algorithm="HS256", headers={"kid": key.kid})
     for t in (none_tok, hs):
-        res = client.post(URL, json={"id_token": t, "nonce": nonce, "consents": consents(), "birth_date": "1990-01-01"})
+        res = client.post(URL, json={"id_token": t, "nonce": nonce, "consents": consents(), "gender": "female", "birth_date": "1990-01-01"})
         _assert_invalid(client, res)
 
 
 def test_ts11_nonce_누락_불일치_재사용(client, key):
     nonce = _challenge(client)
     # 누락: id_token 에 nonce claim 없음
-    no_claim = {"id_token": key.token(nonce=None), "nonce": nonce, "consents": consents(), "birth_date": "1990-01-01"}
+    no_claim = {"id_token": key.token(nonce=None), "nonce": nonce, "consents": consents(), "gender": "female", "birth_date": "1990-01-01"}
     _assert_invalid(client, client.post(URL, json=no_claim))
     # 불일치
     other = _challenge(client)
-    mismatch = {"id_token": key.token(nonce=other), "nonce": nonce, "consents": consents(), "birth_date": "1990-01-01"}
+    mismatch = {"id_token": key.token(nonce=other), "nonce": nonce, "consents": consents(), "gender": "female", "birth_date": "1990-01-01"}
     _assert_invalid(client, client.post(URL, json=mismatch))
     # 서버가 발급하지 않은 임의 nonce
     forged = "client-made-nonce-123456"
     res = client.post(URL, json={"id_token": key.token(nonce=forged), "nonce": forged,
-                                 "consents": consents(), "birth_date": "1990-01-01"})
+                                 "consents": consents(), "gender": "female", "birth_date": "1990-01-01"})
     _assert_invalid(client, res)
     # 성공 1회 후 재사용
     ok = _body(key, client, token={"sub": "sub-once"})
@@ -270,3 +271,16 @@ def test_ts11_JWKS_장애는_503_우회없음(client, key):
 def test_ts11_허용_aud_목록이_비면_모두_거부(client, key, monkeypatch):
     monkeypatch.setattr(settings, "apple_client_ids", "")
     _assert_invalid(client, client.post(URL, json=_body(key, client)))
+
+
+def test_sdd302_성별누락은_nonce소비없이_재시도_가능(client, key):
+    body = _body(key, client)
+    body.pop("gender")
+    response = client.post(URL, json=body)
+    assert response.status_code == 422
+    assert response.json()["detail"]["code"] == "GENDER_REQUIRED"
+    assert _db().query(User).count() == 0
+    response = client.post(URL, json={**body, "gender": "other"})
+    assert response.status_code == 200
+    assert response.json()["user"]["gender"] == "other"
+    assert response.json()["user"]["client_required_fields"] == []

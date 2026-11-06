@@ -14,6 +14,14 @@ interface SignupInfoFormProps {
 export function SignupInfoForm({ value, onChange, disabled, birthError }: SignupInfoFormProps) {
   return (
     <div className="flex flex-col gap-5 text-left text-[#1F1F1F]">
+      <label className="text-sm font-semibold">이름 <span aria-hidden="true">*</span>
+        <input aria-label="이름" required value={value.name} maxLength={100} disabled={disabled} onChange={(e) => onChange({ ...value, name: e.target.value })} className="mt-2 h-12 w-full rounded-xl border px-4" />
+      </label>
+      <label className="text-sm font-semibold">성별 <span aria-hidden="true">*</span>
+        <select aria-label="성별" required value={value.gender} disabled={disabled} onChange={(e) => onChange({ ...value, gender: e.target.value as SignupInfoValue['gender'] })} className="mt-2 h-12 w-full rounded-xl border px-4">
+          <option value="">선택해 주세요</option><option value="male">남성</option><option value="female">여성</option><option value="other">기타</option>
+        </select>
+      </label>
       <BirthDateInput
         id="signup-birth-date"
         value={value.birthDate}

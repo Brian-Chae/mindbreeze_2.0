@@ -64,7 +64,7 @@ describe('SDD-220 공개 정책', () => {
   it('역할 선택은 native에서 기관 선택을 숨기고 회원과 진행자는 유지한다', () => {
     const native = show(<RegisterPage />);
     expect(document.querySelector('a[href="/register/organization"]')).toBeNull();
-    expect(document.querySelector('a[href="/register/client"]')).not.toBeNull();
+    expect(document.querySelector('a[href="/register?role=client"]')).not.toBeNull();
     expect(document.querySelector('a[href="/register/counselor"]')).not.toBeNull();
     native.unmount();
     platform.native = false;

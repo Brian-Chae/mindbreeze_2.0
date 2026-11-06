@@ -54,13 +54,20 @@ describe('SDD-245 호스트 화면 스타일', () => {
       'components/clients/InviteModal.tsx',
       'components/chat/CreateRoomModal.tsx',
       'components/settings/ConfirmDialog.tsx',
-      'pages/onboarding/ClientEssentialsPage.tsx',
       'pages/account-deletion-page.tsx',
     ]) {
       const src = read(file);
       expect(src, file).toContain("buttonClass({ variant: 'primary'");
       expect(src, file).not.toMatch(/className="[^"]*bg-\[#5F0080\][^"]*text-white[^"]*rounded-(xl|lg|md)/);
     }
+  });
+
+  it('회원 필수보완은 승인된 v4 셸과 높이52 pill CTA를 쓴다', () => {
+    const src = read('pages/onboarding/ClientEssentialsPage.tsx');
+    expect(src).toContain('<AuthShell variant="member"');
+    expect(src).toMatch(/<button type="submit"[^>]*className="h-\[52px\] w-full rounded-full/);
+    expect(read('components/auth/AuthShell.tsx')).toContain('signup-flow relative');
+    expect(read('components/auth/signup-flow.css')).toContain('background:#d2aefc;color:#241332');
   });
 
   it('상담사 홈(DashboardPage)은 이번 이관에서 건드리지 않는다', () => {

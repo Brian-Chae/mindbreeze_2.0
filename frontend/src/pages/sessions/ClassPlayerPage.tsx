@@ -87,7 +87,8 @@ import {
 // SDD-209 H9: 시작 전(세팅·로비)·닫힘·오류 구간 컨테이너
 import { HostPrepContainer } from '../../components/class/flow/host/HostPrepContainer';
 import { HostStateScreen } from '../../components/class/flow/host/HostStateScreen';
-import { useMediaCheck } from '../../hooks/useMediaCheck';
+import { useHostPrepMedia } from '../../hooks/useHostPrepMedia';
+import { isAiEnabled } from '../../lib/feature-flags';
 import { leadOffFromBand } from '../../lib/class/flow/member-presence';
 import { completedClassDestination, endedDurationMin } from '../../lib/class/flow/host-ending-model';
 import { deriveHostStateKind, type HostStateAction, type HostStateKind } from '../../lib/class/flow/host-state-model';
@@ -342,14 +343,18 @@ export default function ClassPlayerPage() {
   const [remindResults, setRemindResults] = useState<ReadonlyMap<string, string>>(new Map());
   const [reminding, setReminding] = useState(false);
   /** 시작 확인 시트의 익명 집계 */
-  const [choiceCounts, setChoiceCounts] = useState({ excluded: 0, research: 0 });
-  const mediaCheck = useMediaCheck();
-  const mediaCheckRef = useRef(mediaCheck);
-  mediaCheckRef.current = mediaCheck;
-
+  const [choiceCounts, setChoiceCounts] = useState<{ excluded: number | null; research: number | null }>({ excluded: null, research: null });
   const liveKit = useLiveKit(id);
   const currentUserId = useAuthStore((s) => s.user?.id ?? null);
   const isHost = Boolean(session && currentUserId && session.host_id === currentUserId);
+  const prepMediaActive = Boolean(isHost && session?.location_type === 'online' && ['ready', 'scheduled', 'open'].includes(session.status));
+  const mediaCheck = useHostPrepMedia(prepMediaActive, id);
+  const startInFlight = useRef(false);
+  // 라이브에 넘길 장비 선택은 미리보기의 실제 상태를 따른다. 라이브 정리 때 off로 덮어쓰지 않는다.
+  useEffect(() => {
+    if (!prepMediaActive) return;
+    setMediaPrefs({ micOn: mediaCheck.mic === 'on', cameraOn: mediaCheck.cam === 'on' });
+  }, [prepMediaActive, mediaCheck.mic, mediaCheck.cam]);
 
   const inviteClassId = isHost && (session?.status === 'open' || session?.status === 'in_progress') ? session.class_id : null;
   useEffect(() => {
@@ -871,19 +876,6 @@ export default function ClassPlayerPage() {
     return { ...waitingRoomV1, entries, count: entries.length, nicknames: entries.map((e) => e.nickname ?? '참가자') };
   }, [v2Flag, liveV2.state, waitingRoomV1, participation.participants]);
 
-  // FH05 세팅: 온라인일 때만 마이크·카메라를 켜서 점검한다(오프라인은 getUserMedia 호출 0회). 세팅을 벗어나면 끈다.
-  const setupMediaActive = Boolean(isHost && isSetup && session?.location_type === 'online');
-  useEffect(() => {
-    if (!setupMediaActive) return undefined;
-    const check = mediaCheckRef.current;
-    void check.startMic();
-    void check.startCamera();
-    return () => {
-      mediaCheckRef.current.stopMic();
-      mediaCheckRef.current.stopCamera();
-    };
-  }, [setupMediaActive]);
-
   // FH07 시작 확인 시트: 리포트 제외·연구 동의 익명 집계 — 대기실 인원이 바뀔 때 다시 받는다(실패해도 시작을 막지 않는다)
   const lobbyCount = waitingRoom.count;
   useEffect(() => {
@@ -892,8 +884,8 @@ export default function ClassPlayerPage() {
     void Promise.allSettled([getReportChoiceSummary(id), getResearchConsentSummary(id)]).then(([choice, research]) => {
       if (cancelled) return;
       setChoiceCounts({
-        excluded: choice.status === 'fulfilled' ? choice.value.excluded : 0,
-        research: research.status === 'fulfilled' ? research.value.consented : 0,
+        excluded: choice.status === 'fulfilled' ? choice.value.excluded : null,
+        research: research.status === 'fulfilled' ? research.value.consented : null,
       });
     });
     return () => {
@@ -955,15 +947,25 @@ export default function ClassPlayerPage() {
   };
 
   /**
-   * 시작하기 — 시작 확인 시트(FH07)에서 녹음 선언을 받아 수행한다.
+   * 시작하기 — 대기실 인라인 녹음 선택과 요청 전 취소 구간을 거쳐 수행한다.
    * 순서: start 전이 → (온라인) 화상 연결 → 녹음이면 audio/start(true)+녹음기, 아니면 audio/start(false)(수동 기록 선언) → 영상.
-   * 시작 직후 동의 모달은 띄우지 않는다(녹음 동의는 시트의 체크로 받는다).
+   * 시작 직후 동의 모달은 띄우지 않는다(녹음 선택은 대기실에서 확인한다).
    */
   const startClass = async (audio: StartAudioPlan): Promise<void> => {
-    if (!id) return;
+    if (!id || startInFlight.current) return;
+    startInFlight.current = true;
+    const cameraOn = mediaCheck.cam === 'on';
     setTransitioning(true);
     setError(null);
     try {
+      // 응답 유실·다른 탭의 시작 이후에는 중복 전이 없이 현재 상태로 이동한다.
+      const current = await getSession(id);
+      if (!isCurrentRoute(id)) return;
+      if (current.status !== 'open') {
+        setSession(current);
+        if (current.status !== 'in_progress') setError('현재 상태에서는 시작할 수 없어요. 클래스 상태를 확인해 주세요.');
+        return;
+      }
       let updated: SessionDto;
       try {
         updated = await transition(id, 'start');
@@ -979,14 +981,19 @@ export default function ClassPlayerPage() {
       }
       setSession(updated);
       const online = updated.location_type === 'online';
-      if (online) liveKit.connect();
+      if (online) {
+        // 방송 트랙이 카메라를 잡기 전에 점검 스트림을 해제한다.
+        mediaCheck.stopMic();
+        mediaCheck.stopCamera();
+        liveKit.connect();
+      }
       if (audio === 'record') {
         try {
           await startAudio(id, true);
           await recorder.start();
           setRecordingStartedAt(Date.now());
         } catch (e) {
-          setError((e as Error).message);
+          setError(`수업 진행 중 · 녹음 연결 확인 필요: ${(e as Error).message}`);
         }
       } else {
         try {
@@ -996,7 +1003,7 @@ export default function ClassPlayerPage() {
         }
       }
       await refreshMetrics();
-      if (online && updated.record_video !== false && mediaPrefs.cameraOn) {
+      if (online && updated.record_video !== false && cameraOn) {
         try {
           await startVideo(id, true);
           await videoRecorder.start();
@@ -1006,8 +1013,20 @@ export default function ClassPlayerPage() {
         }
       }
     } catch (e) {
-      { const text = userErrorMessage(e, '클래스 시작에 실패했습니다'); if (text) setError(text); }
+      try {
+        const latest = await getSession(id);
+        if (isCurrentRoute(id)) setSession(latest);
+        if (latest.status === 'in_progress') {
+          setError('수업이 진행 중이에요. 녹음 연결 상태를 확인해 주세요.');
+        } else {
+          const text = userErrorMessage(e, '클래스 시작에 실패했습니다. 다시 시도해 주세요.');
+          if (text) setError(text);
+        }
+      } catch {
+        setError('시작 상태를 확인하지 못했어요. 연결을 확인한 뒤 다시 시도해 주세요.');
+      }
     } finally {
+      startInFlight.current = false;
       setTransitioning(false);
     }
   };
@@ -1537,11 +1556,6 @@ export default function ClassPlayerPage() {
     const personOf = (row: SessionLiveMetric) => ({ id: row.participant_id, name: row.display_name });
     const audio = audioPlayer.state;
     const clock = (sec: number): string => `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
-    const lobbyMedia = {
-      mic: mediaPrefs.micOn ? 'on' : 'off',
-      cam: mediaPrefs.cameraOn ? 'on' : 'off',
-      level: 0, steps: 0, quiet: false, speakerPlaying: false,
-    } as const;
     return (
       <>
         <BiosignalRecordingStatus state={band.recordingStatus} />
@@ -1553,19 +1567,16 @@ export default function ClassPlayerPage() {
           address={ctx.place === 'offline' ? session.location_address : null}
           ctx={ctx}
           accessCode={session.access_code}
-          media={isSetup
-            ? { mic: mediaCheck.mic, cam: mediaCheck.cam, level: mediaCheck.level, steps: mediaCheck.steps, quiet: mediaCheck.quiet, speakerPlaying: mediaCheck.speakerPlaying, videoRef: mediaCheck.videoRef }
-            : lobbyMedia}
+          media={mediaCheck}
+          capacity={inviteDetail?.capacity ?? session.max_participants}
+          joinUrl={id ? `${window.location.origin}/class/${id}/enter` : undefined}
+          aiEnabled={isAiEnabled()}
+          startError={error}
+          connectionStale={metricsPollFailing || (v2Flag ? !v2Ready : !liveSocket.isReady)}
           opening={transitioning}
           onOpen={(prefs) => void openClass(prefs)}
-          onToggleMic={() => {
-            if (isSetup) void mediaCheck.toggleMic();
-            else setMediaPrefs((prev) => ({ ...prev, micOn: !prev.micOn }));
-          }}
-          onToggleCamera={() => {
-            if (isSetup) void mediaCheck.toggleCamera();
-            else setMediaPrefs((prev) => ({ ...prev, cameraOn: !prev.cameraOn }));
-          }}
+          onToggleMic={() => void mediaCheck.toggleMic()}
+          onToggleCamera={() => void mediaCheck.toggleCamera()}
           onRecheck={() => void mediaCheck.recheck()}
           onPlayTone={() => void mediaCheck.playTestTone()}
           roster={roster}
@@ -1632,7 +1643,7 @@ export default function ClassPlayerPage() {
               onSend: () => undefined,
             },
           }}
-          onStart={(audioPlan) => void startClass(audioPlan)}
+          onStart={startClass}
           onLeave={() => {
             bypassGuardRef.current = true;
             navigate('/sessions');
@@ -1647,7 +1658,7 @@ export default function ClassPlayerPage() {
             manual: !mediaPrefs.micOn,
             durationMin: endedDurationMin(session.started_at, session.ended_at),
             headcount: roster.length > 0 ? roster.length : null,
-            excluded: choiceCounts.excluded,
+            excluded: choiceCounts.excluded ?? 0,
           }}
           headcount={null}
           onEnd={() => undefined}

@@ -13,6 +13,7 @@ import { MemberIcon } from './MemberIcon';
 import { metricFraction } from './member-metrics';
 import type { MemberClassViewProps, MemberSheetKey } from './member-view-types';
 import { MetricBars } from './MetricBars';
+import { ConnectionDiagnosticsFrame } from './ConnectionDiagnosticsPanel';
 import './member-player.css';
 
 const BAND_LIVE: readonly BandUi[] = ['on', 'weak', 'low'];
@@ -59,7 +60,7 @@ function StatusSheet({ props }: { props: MemberClassViewProps }) {
       {props.v2Bars ? <MetricBars mode={typeof window !== 'undefined' && window.innerWidth >= 768 ? 'desktop' : 'mobile'} label={props.v2Bars.label} current={props.v2Bars.current} bars={props.v2Bars.bars} /> : null}
       <div className="mp-status-grid">
         {GROUPS.map((group) => (
-          <GroupRow key={group.key} group={group} props={{ hero, snapshot, onHeroChange: actions.onHeroChange }} />
+          <GroupRow key={group.key} group={group} props={{ hero, snapshot, notWorn: props.notWorn === true, onHeroChange: actions.onHeroChange }} />
         ))}
       </div>
       <p className="mp-status-note">눌러서 가운데 링에 보여 드려요</p>
@@ -69,7 +70,7 @@ function StatusSheet({ props }: { props: MemberClassViewProps }) {
 
 interface GroupRowProps {
   group: (typeof GROUPS)[number];
-  props: { hero: MemberClassViewProps['hero']; snapshot: MemberClassViewProps['snapshot']; onHeroChange: MemberClassViewProps['actions']['onHeroChange'] };
+  props: { hero: MemberClassViewProps['hero']; snapshot: MemberClassViewProps['snapshot']; notWorn: boolean; onHeroChange: MemberClassViewProps['actions']['onHeroChange'] };
 }
 
 function GroupRow({ group, props }: GroupRowProps) {
@@ -353,6 +354,8 @@ export function MemberSheetBody({ sheetKey, props, c }: MemberSheetBodyProps) {
     case 'chat': return <ChatSheet chat={props.chat} />;
     case 'signal': return <div className="mp-signal"><QuietSignalButtons onSend={props.actions.onSignal} /></div>;
     case 'sound': return <SoundSheet props={props} c={c} />;
-    case 'device': return <DeviceSheet props={props} />;
+    case 'device': return props.diagnostics
+      ? <ConnectionDiagnosticsFrame view={props.diagnostics}><DeviceSheet props={props} /></ConnectionDiagnosticsFrame>
+      : <DeviceSheet props={props} />;
   }
 }

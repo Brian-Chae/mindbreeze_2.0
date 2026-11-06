@@ -1,3 +1,4 @@
+import '../components/auth/signup-flow.css';
 import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
@@ -9,6 +10,7 @@ import { ApiError } from '../lib/api/client';
 import { apiErrorCode } from '../lib/api/auth';
 import { PrivacyPolicyLink } from '../components/legal/PrivacyPolicyLink';
 import { resolvePostLoginPath } from '../lib/auth-routing';
+import { isGuestEntryEnabled } from '../lib/feature-flags';
 import AppleLoginButton from '../components/auth/AppleLoginButton';
 import { useSocialSignupStore, type SocialCredential } from '../stores/social-signup-store';
 
@@ -203,6 +205,8 @@ export default function LoginPage() {
   const dividerWith = (label: string) => <div className="flex items-center gap-3 text-[13px] text-white/80"><span className="h-px flex-1 bg-white/30" />{label}<span className="h-px flex-1 bg-white/30" /></div>;
   const divider = dividerWith('또는');
   const isClient = !isAdmin && loginRole === 'client';
+  // SDD-286: 비회원 코드 입장 버튼은 플래그가 켜진 빌드(dev)에서만 보인다.
+  const guestEntry = isGuestEntryEnabled();
   const inputClass = 'h-[52px] w-full rounded-full border border-[#DDDEE7] bg-white px-5 text-[15px] text-[#1F1F1F] outline-none focus:ring-2 focus:ring-[#5F0080] disabled:opacity-50';
   const rememberMeField = (
     <div className="flex flex-col gap-1">
@@ -229,8 +233,8 @@ export default function LoginPage() {
   );
 
   return (
-    <div className="relative min-h-screen font-sans">
-      <img src="/mb-design/assets/images/background3.jpg" alt="" className="absolute inset-0 h-full w-full object-cover" />
+    <div className="signup-flow relative min-h-screen font-sans">
+      <img src="/images/background8.webp" alt="" className="absolute inset-0 h-full w-full object-cover" />
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/60" />
       <div className="relative z-10 min-h-screen text-white">
         <header className="sticky top-0 z-30 border-b border-white/[0.08] bg-[rgba(20,0,30,0.55)] pt-[env(safe-area-inset-top)] backdrop-blur-[18px]">
@@ -249,8 +253,8 @@ export default function LoginPage() {
             </div>
           </div>}
         </header>
-        <div className="mx-auto w-full max-w-[408px] px-6 pb-10 pt-[26px]">
-          <section role={isAdmin ? undefined : 'tabpanel'} id={`login-panel-${loginRole}`} aria-labelledby={isAdmin ? undefined : `login-tab-${loginRole}`} aria-busy={busy} className={`flex flex-col gap-4 ${isClient ? 'pb-[calc(8.5rem+env(safe-area-inset-bottom))]' : ''}`}>
+        <div className="mx-auto w-full max-w-[520px] px-4 sm:px-6 pb-10 pt-[26px]">
+          <section role={isAdmin ? undefined : 'tabpanel'} id={`login-panel-${loginRole}`} aria-labelledby={isAdmin ? undefined : `login-tab-${loginRole}`} aria-busy={busy} className={`flex flex-col gap-4 ${isClient && guestEntry ? 'pb-[calc(8.5rem+env(safe-area-inset-bottom))]' : ''}`}>
             {/* SDD-227: 회원 탭은 이메일 로그인을 위에, 간편 로그인(Google·Apple)을 아래에 둔다. */}
             {isClient && <>{emailForm}
               <p className="text-center text-sm text-white"><Link to="/forgot-password" className="text-white underline">비밀번호 찾기</Link><span aria-hidden="true" className="mx-2 text-white/60">·</span><Link to="/register?role=client" className="font-semibold text-white underline">회원가입</Link></p>
@@ -284,10 +288,10 @@ export default function LoginPage() {
         </div>
       </div>
       {/* SDD-227: 회원 탭 전용 — 로그인 없이 코드로 클래스 입장(앱은 랜딩이 없어 유일한 진입점). 코드는 URL에 싣지 않는다. */}
-      {isClient && !typing && (
+      {isClient && guestEntry && !typing && (
         <div className="fixed inset-x-0 bottom-0 z-20 bg-gradient-to-t from-[#14001E]/85 from-60% to-transparent px-4 pt-7 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <Link to="/join" data-testid="login-code-entry"
-            className="mx-auto flex w-full max-w-[400px] items-center gap-3 rounded-[20px] bg-white/95 p-4 text-[#1F1F1F] shadow-[0_10px_28px_rgba(0,0,0,0.35)] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
+            className="guest-code-entry mx-auto flex w-full max-w-[400px] items-center gap-3 rounded-[20px] bg-white/95 p-4 text-[#1F1F1F] shadow-[0_10px_28px_rgba(0,0,0,0.35)] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
             <span className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-xl bg-[#F3E9F8]">
               <KeyRound size={22} color="#5F0080" aria-hidden="true" />
             </span>

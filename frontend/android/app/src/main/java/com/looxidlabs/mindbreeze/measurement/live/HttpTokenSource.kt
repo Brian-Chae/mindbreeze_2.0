@@ -1,10 +1,8 @@
 package com.looxidlabs.mindbreeze.measurement.live
 
-import okhttp3.MediaType.Companion.toMediaType
+import com.looxidlabs.mindbreeze.auth.AccessResult
+import com.looxidlabs.mindbreeze.auth.NativeAuthCoordinator
 import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
 /** 토큰 영속 저장소. 실제 구현은 Keystore 암호화 파일(SecureTokenStore), 시험은 메모리. */
@@ -13,56 +11,34 @@ interface TokenStore {
     fun refreshToken(): String?
     fun save(access: String?, refresh: String?)
     fun clear()
+    /** 같은 키를 가진 저장소는 하나의 인증 조정자를 공유한다(SDD-305). 기본값은 객체 단위. */
+    val scopeKey: String get() = "obj@" + System.identityHashCode(this)
 }
 
 /**
- * `/auth/refresh` single-flight 갱신. 동시 호출은 하나로 병합(백엔드 refresh 회전·재사용 감지가 탈취로 오판하지 않게).
- * refresh 토큰 회전: 응답 헤더 X-MB-Refresh-Token 을 저장소에 반영. 4xx=Invalid(재로그인), 5xx/네트워크=Transient.
- * 토큰 값은 로그·bridge 어디에도 내보내지 않는다.
+ * `/auth/refresh` 갱신 창구. 실제 갱신·저장·락은 저장소별 단일 [NativeAuthCoordinator] 가 소유한다(SDD-305):
+ * Runtime·Sweeper·ArchiveWorker·오디오가 각자 이 클래스를 만들어도 같은 조정자를 거치므로 refresh HTTP 는 한 번만 나간다.
+ * 4xx(400/401/403)=Invalid(재로그인), 408/429/5xx/네트워크=Transient. 토큰 값은 로그·bridge 어디에도 내보내지 않는다.
  */
 class HttpTokenSource(
     private val apiBase: String,
     private val store: TokenStore,
     private val http: OkHttpClient = OkHttpClient.Builder().callTimeout(15, TimeUnit.SECONDS).build(),
 ) : TokenSource {
-    private val lock = Object()
-    private var inflight: RefreshOutcome? = null
-    private var refreshing = false
-    @Volatile var refreshCount = 0
-        private set
+    private val coordinator = NativeAuthCoordinator.forStore(store)
+    @Volatile private var seenGeneration: Long? = null
+    val refreshCount: Int get() = coordinator.refreshCount
 
-    override fun current(): String? = store.accessToken()
-
-    override fun refresh(): RefreshOutcome {
-        synchronized(lock) {
-            if (refreshing) { // 이미 진행 중이면 그 결과를 기다려 공유
-                while (refreshing) lock.wait()
-                return inflight ?: RefreshOutcome.Transient
-            }
-            refreshing = true; inflight = null
-        }
-        val result = try { doRefresh() } catch (_: Exception) { RefreshOutcome.Transient }
-        synchronized(lock) { inflight = result; refreshing = false; lock.notifyAll() }
-        return result
+    override fun current(): String? {
+        val (token, gen) = coordinator.currentWithGeneration()
+        seenGeneration = gen
+        return token
     }
 
-    private fun doRefresh(): RefreshOutcome {
-        val rt = store.refreshToken() ?: return RefreshOutcome.Invalid
-        refreshCount++
-        val body = JSONObject().put("refresh_token", rt).toString().toRequestBody("application/json".toMediaType())
-        val req = Request.Builder().url(apiBase.trimEnd('/') + "/auth/refresh").post(body)
-            .header("X-MB-Native", "capacitor").build()
-        http.newCall(req).execute().use { res ->
-            val code = res.code
-            if (code in 200..299) {
-                val at = try { JSONObject(res.body?.string() ?: "").optString("access_token") } catch (_: Exception) { "" }
-                if (at.isEmpty()) return RefreshOutcome.Transient // 200 이지만 토큰 없음 → 세션 폐기 대상 아님
-                val next = res.header("X-MB-Refresh-Token")
-                store.save(at, next ?: rt)
-                return RefreshOutcome.Ok(at)
-            }
-            if (code in 400..499) { store.clear(); return RefreshOutcome.Invalid }
-            return RefreshOutcome.Transient
+    override fun refresh(): RefreshOutcome =
+        when (val r = coordinator.ensureAccess(apiBase, http, null, true, seenGeneration)) {
+            is AccessResult.Ok -> { seenGeneration = r.generation; RefreshOutcome.Ok(r.token) }
+            AccessResult.Invalid, AccessResult.NoCredentials, AccessResult.AccountMismatch -> RefreshOutcome.Invalid
+            AccessResult.Transient -> RefreshOutcome.Transient
         }
-    }
 }

@@ -1,6 +1,7 @@
 """Auth Schemas — Pydantic Models for Request/Response"""
 
 import re
+from datetime import date
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_serializer, field_validator, model_validator
@@ -33,6 +34,7 @@ class RegisterRequest(BaseModel):
     consents: ConsentRequest | None = None
     # SDD-220: 신규 계정은 만 14세 이상 확인용 생년월일 필수(서버 검증).
     birth_date: str | None = Field(None, description="YYYY-MM-DD 형식")
+    gender: str | None = Field(None, pattern="^(male|female|other)$")
     # 자동 로그인(로그인 상태 유지) — True면 refresh 쿠키를 14일 지속 쿠키로,
     # False면 브라우저 세션 쿠키로 발급한다. 미지정 시 기존 동작(지속)을 유지한다.
     remember_me: bool = True
@@ -141,6 +143,11 @@ class UserResponse(BaseModel):
     role: str
     verified_tier: str
     onboarding_completed: bool = False
+    gender: str | None = None
+    birth_date: date | None = None
+    phone: str | None = None
+    client_required_fields: list[str] = Field(default_factory=list)
+    profile_prompt_dismissed: bool = False
     auth_provider: str = "email"
     counselors: list[dict] = []
     counselor_code: str | None = None
@@ -153,11 +160,14 @@ class UserResponse(BaseModel):
 
 
 class GoogleAuthRequest(BaseModel):
+    name: str | None = Field(None, min_length=1, max_length=100)
     # 웹: access_token(userinfo+tokeninfo aud 검증) / 네이티브 앱(Capacitor): id_token(tokeninfo aud·email_verified 검증).
     # 둘 중 정확히 하나가 필요하다.
     access_token: str | None = None
     id_token: str | None = None
     invite_token: str | None = None
+    # SDD-309: 신규 소셜 가입 시 초대 코치 코드(6자리). invite_token 이 있으면 면제.
+    counselor_code: str | None = Field(None, max_length=12)
     role: str | None = Field(None, pattern="^(client|counselor|org_admin|platform_admin)$")
     # SEC-04: 신규 Google 가입 시 약관·민감정보 동의. 기존 사용자 로그인은 불필요.
     # 신규 계정 생성 경로에서는 필수(누락/미동의 시 422).
@@ -165,6 +175,7 @@ class GoogleAuthRequest(BaseModel):
     # SDD-220: 신규 Google 가입 시 생년월일(만 14세 확인). 기존 사용자 재로그인에는 요구하지 않는다.
     birth_date: str | None = Field(None, description="YYYY-MM-DD 형식")
     # 자동 로그인(로그인 상태 유지) — 이메일 로그인과 동일한 refresh 쿠키 분기.
+    gender: str | None = Field(None, pattern="^(male|female|other)$")
     remember_me: bool = True
 
     @model_validator(mode="after")
@@ -192,16 +203,19 @@ class AppleAuthRequest(BaseModel):
     authorization_code: str | None = None
     name: str | None = Field(None, max_length=100)
     invite_token: str | None = Field(None, max_length=128)
+    # SDD-309: 신규 소셜 가입 시 초대 코치 코드(6자리). invite_token 이 있으면 면제.
+    counselor_code: str | None = Field(None, max_length=12)
     role: str | None = Field(None, pattern="^(client|counselor|org_admin|platform_admin)$")
     consents: ConsentRequest | None = None
     birth_date: str | None = Field(None, description="YYYY-MM-DD 형식")
+    gender: str | None = Field(None, pattern="^(male|female|other)$")
     remember_me: bool = True
 
 
 class UpdateUserMeRequest(BaseModel):
     """PATCH /users/me 요청 — 업데이트 가능 필드만 선택적으로 전달"""
     name: str | None = Field(None, min_length=1, max_length=100)
-    phone: str | None = Field(None, min_length=1, max_length=20)
+    phone: str | None = Field(None, max_length=20)
     gender: str | None = Field(None, pattern="^(male|female|other)$")
     birth_date: str | None = Field(None, description="YYYY-MM-DD 형식")
 

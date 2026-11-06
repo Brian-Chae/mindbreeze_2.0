@@ -22,6 +22,8 @@ export interface MemberReadinessInput {
   bandOutcome: BandOutcome;
   mic: MicOutcome;
   band: BandSnapshot | null;
+  /** SDD-303: 상태 질문·기기 점검이 대기실 선택 항목이 된 뒤 — 하지 않은 항목은 건너뜀으로 중계한다 */
+  optionalStepsSkippable?: boolean;
 }
 
 export function toWaitingRoomBand(snapshot: BandSnapshot | null): WaitingRoomBand | null {
@@ -40,13 +42,14 @@ export function toWaitingRoomBand(snapshot: BandSnapshot | null): WaitingRoomBan
 export function buildMemberReadiness(input: MemberReadinessInput): WaitingRoomReadiness {
   const bandApplies = input.bandMode !== 'none';
   const deviceApplies = input.place === 'online';
+  const skippable = input.optionalStepsSkippable === true;
   return {
-    surveyDone: input.survey !== 'none',
-    surveySkipped: input.survey === 'skipped',
+    surveyDone: input.survey !== 'none' || skippable,
+    surveySkipped: input.survey === 'skipped' || (skippable && input.survey === 'none'),
     bandDone: bandApplies ? input.bandOutcome !== 'none' : true,
     bandSkipped: bandApplies && input.bandOutcome === 'skipped',
-    deviceDone: deviceApplies ? input.mic !== 'unknown' : true,
-    deviceSkipped: false,
+    deviceDone: deviceApplies ? input.mic !== 'unknown' || skippable : true,
+    deviceSkipped: deviceApplies && skippable && input.mic === 'unknown',
     band: bandApplies ? toWaitingRoomBand(input.band) : null,
   };
 }

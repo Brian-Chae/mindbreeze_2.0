@@ -5,6 +5,7 @@ import { loginPathForRole } from '../auth-routing';
 import type { UserRole } from './auth';
 import { Capacitor } from '@capacitor/core';
 import { isLiveProtocolV2Enabled } from '../feature-flags';
+import { detectNativeAuth, getNativeAuthGeneration, isNativeAuthReady, nativeAdopt, nativeEnsureAccess, nativeSignOut } from '../native-auth';
 
 // 네이티브 앱(Capacitor)은 앱 오리진(https://localhost)이 API와 달라 SameSite=Lax 쿠키가 전송되지 않는다.
 // 그래서 앱에서만 서버가 응답 헤더로 주는 refresh token 을 로컬에 보관하고, refresh/logout 때 본문으로 보낸다.
@@ -26,12 +27,20 @@ const nativeHeaders = (): Record<string, string> => (isNativeClient() ? { [NATIV
 function captureNativeRefresh(res: Response): void {
   if (!isNativeClient()) return;
   const next = res.headers.get(NATIVE_REFRESH_RESPONSE_HEADER);
+  if (next && isNativeAuthReady()) {
+    // SDD-305: 인증 조정자 지원 앱 — 새 로그인이 준 refresh 는 native 조정자가 소유한다. JS 에는 복사본을 남기지 않는다.
+    // (이 헤더는 로그인류 응답에만 온다. 갱신은 native 가 직접 하므로 오래된 복사본이 되돌아올 길이 없다.)
+    void res.clone().json().then((d: { access_token?: string }) => nativeAdopt(d?.access_token ?? null, next)).catch(() => undefined);
+    try { localStorage.removeItem(NATIVE_REFRESH_KEY); } catch { /* 무시 */ }
+    return;
+  }
   if (next) {
     try { localStorage.setItem(NATIVE_REFRESH_KEY, next); } catch { /* 저장 실패는 무시 */ }
   }
 }
 export function getNativeRefreshBody(): { refresh_token: string } | undefined {
   if (!isNativeClient()) return undefined;
+  if (isNativeAuthReady()) return undefined; // SDD-305: refresh 는 native 조정자만 쥔다
   try {
     const t = localStorage.getItem(NATIVE_REFRESH_KEY);
     return t ? { refresh_token: t } : undefined;
@@ -39,6 +48,34 @@ export function getNativeRefreshBody(): { refresh_token: string } | undefined {
 }
 export function clearNativeRefresh(): void {
   try { localStorage.removeItem(NATIVE_REFRESH_KEY); } catch { /* 무시 */ }
+}
+
+// SDD-305: 앱 시작 즉시 기능 탐지를 시작해 첫 갱신 전에 판정이 끝나게 한다(구 APK 는 false → 기존 경로).
+if (isNativeClient()) void detectNativeAuth();
+
+/** native 조정자로 갱신한다. 조정자를 못 쓰면 null(호출자는 기존 쿠키/localStorage 경로). */
+async function refreshViaNative(): Promise<RefreshResult | null> {
+  if (!(await detectNativeAuth())) return null;
+  const gen = getNativeAuthGeneration();
+  // 세대를 아는 호출(401 재시도)만 강제 갱신. 콜드 스타트는 native 가 만료 임박일 때만 갱신한다.
+  let r = await nativeEnsureAccess({ apiBase: BASE_URL, forceRefresh: gen !== null, observedGeneration: gen });
+  if (r?.status === 'no_credentials') {
+    // 구 빌드가 JS 에 남긴 refresh 를 native 에 1회 이관한다(native 가 비어 있을 때만 — 최신 쌍을 되돌리지 않는다).
+    let legacy: string | null;
+    try { legacy = localStorage.getItem(NATIVE_REFRESH_KEY); } catch { legacy = null; }
+    if (!legacy) return { ok: false, token: null, reason: 'invalid' };
+    if (!(await nativeAdopt(tokenStorage.getAccess(), legacy))) return null;
+    clearNativeRefresh();
+    r = await nativeEnsureAccess({ apiBase: BASE_URL, forceRefresh: true, observedGeneration: null });
+  }
+  if (!r) return null;
+  if (r.status === 'ok') {
+    tokenStorage.set(r.accessToken);
+    return { ok: true, token: r.accessToken, reason: null };
+  }
+  if (r.status === 'transient') return { ok: false, token: null, reason: 'network' };
+  clearNativeRefresh();
+  return { ok: false, token: null, reason: 'invalid' };
 }
 
 export const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8000/api/v1';
@@ -103,6 +140,7 @@ function terminateSession(): void {
   const redirectPath = loginRedirectPath();
   tokenStorage.clear();
   clearNativeRefresh();
+  void nativeSignOut(); // SDD-305: native 의 진행 중 갱신 무효화 + 저장소 비움(서버 폐기는 이미 끝난 세션)
   try {
     if (typeof localStorage !== 'undefined') localStorage.removeItem(PERSISTED_USER_KEY);
   } catch {
@@ -193,6 +231,16 @@ let refreshPromise: Promise<RefreshResult> | null = null;
 export function refreshAccessTokenResult(): Promise<RefreshResult> {
   if (refreshPromise) return refreshPromise;
   refreshPromise = (async (): Promise<RefreshResult> => {
+    // SDD-305: 앱(Android 조정자 지원)은 모든 갱신이 native 단일 조정자를 거친다.
+    if (isNativeClient()) {
+      try {
+        const viaNative = await refreshViaNative();
+        if (viaNative) {
+          refreshPromise = null; // single-flight 해제(아래 기존 경로의 finally 를 거치지 않으므로 여기서 비운다)
+          return viaNative;
+        }
+      } catch { /* 조정자 오류는 기존 경로로 폴백 */ }
+    }
     // refresh token은 httpOnly cookie로 자동 전송된다 (credentials: include)
     const { signal, clear } = createTimeoutSignal(REQUEST_TIMEOUT_MS);
     try {

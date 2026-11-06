@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { uploadChunk } from '../lib/api/audio';
 import { RESUME_ORDER, subscribeAppResume } from '../lib/native/app-lifecycle';
 import { BASE_URL, getNativeRefreshBody, tokenStorage } from '../lib/api/client';
+import { isNativeAuthReady } from '../lib/native-auth';
 import {
   NATIVE_AUDIO_CHUNK_MS,
   resolveNativeAudioRecorder,
@@ -37,11 +38,16 @@ function mapNativeState(s: NativeRecorderState): RecorderState | null {
   }
 }
 
-/** 현재 토큰 쌍 — 하나라도 없으면 null (토큰 값은 로그로 남기지 않는다) */
-function currentCredentials(): { accessToken: string; refreshToken: string } | null {
+/**
+ * 현재 토큰 — 하나라도 없으면 null (토큰 값은 로그로 남기지 않는다).
+ * SDD-305: native 인증 조정자 지원 앱은 refresh 를 native 가 쥐므로 access 만 넘긴다(refreshToken 없음 → native 가 저장된 쌍을 유지).
+ */
+function currentCredentials(): { accessToken: string; refreshToken?: string } | null {
   const accessToken = tokenStorage.getAccess();
+  if (!accessToken) return null;
+  if (isNativeAuthReady()) return { accessToken };
   const refreshToken = getNativeRefreshBody()?.refresh_token;
-  return accessToken && refreshToken ? { accessToken, refreshToken } : null;
+  return refreshToken ? { accessToken, refreshToken } : null;
 }
 
 export function useAudioRecorder({ sessionId, onError }: UseAudioRecorderOptions) {

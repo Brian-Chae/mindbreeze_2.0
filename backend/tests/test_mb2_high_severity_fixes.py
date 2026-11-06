@@ -111,8 +111,8 @@ def test_mb2_onb_google_essentials_완료(client):
     assert done.json()["completed"] is True
 
 
-def test_mb2_onb_이메일_가입은_step_강제_유지(client):
-    """이메일 가입 내담자는 기존대로 step1~4 미완료 시 400."""
+def test_mb2_onb_이메일_기존회원은_필수정보_누락시_거부(client):
+    """SDD-302: 이전 회원의 실제 성별 누락이면 단계와 무관하게 400."""
     email = "email-gate@test.com"
     _register_client(client, email)
     res = client.post(
@@ -122,7 +122,7 @@ def test_mb2_onb_이메일_가입은_step_강제_유지(client):
     assert res.status_code == 200, res.text
     h = {"Authorization": f"Bearer {res.json()['access_token']}"}
 
-    # gender/birth 미입력 가입 → step1 만 저장 → step2 결손으로 400
+    # 레거시 fixture는 자동 생성 프로필을 제거하므로 실제 gender 누락으로 400
     done = client.post("/api/v1/onboarding/client/complete", headers=h)
     assert done.status_code == 400, done.text
 

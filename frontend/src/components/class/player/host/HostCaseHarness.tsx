@@ -213,6 +213,7 @@ export function HostCaseHarness({ spec, ctx }: HostCaseHarnessProps) {
         )),
       }}
       media={media}
+      capacity={{ classId: 'harness', capacity: 40, revision: 1, admin: false, onChanged: () => undefined }}
       codeCopied={codeCopied}
       selfStream={null}
       memberStream={memberStream}

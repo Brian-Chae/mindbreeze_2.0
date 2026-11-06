@@ -77,6 +77,11 @@ export function useMediaCheck(): MediaCheck {
       meterCtxRef.current = ctx;
       // 사용자 동작(탭) 안에서 호출되므로 suspended 상태를 풀 수 있다
       await ctx.resume();
+      // 권한/오디오 활성화가 늦게 끝나도 이탈·장비 종료 뒤 미터를 다시 만들지 않는다.
+      if (!aliveRef.current || meterCtxRef.current !== ctx || micStreamRef.current !== stream) {
+        void ctx.close().catch(() => undefined);
+        return;
+      }
       const source = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 512;

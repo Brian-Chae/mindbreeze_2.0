@@ -21,6 +21,8 @@ public class NativeMeasurementPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "registerCredential", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setJSBandOwnership", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "reconnectBand", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "adoptBand", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "releaseBand", returnType: CAPPluginReturnPromise),
     ]
 
     private var observers: [NSObjectProtocol] = []
@@ -124,6 +126,24 @@ public class NativeMeasurementPlugin: CAPPlugin, CAPBridgedPlugin {
         host.queue.async { [host, weak self] in
             guard let m = host.manager else { call.reject("not_active", "not_active"); return }
             do { call.resolve(try m.reconnectBand()) } catch { self?.fail(call, error) }
+        }
+    }
+
+    /// SDD-293: 밴드 단계 완료 직후 보류 인계. 연결·발견까지 확인되면 accepted=true. JS 는 이 응답 뒤에 자기 연결을 놓는다.
+    @objc func adoptBand(_ call: CAPPluginCall) {
+        let pid = call.getString("peripheralId").flatMap(UUID.init(uuidString:))
+        host.ensureManager()
+        host.queue.async { [host] in
+            guard let m = host.manager else { call.reject("native_ownership_disabled", "native_ownership_disabled"); return }
+            m.holdBand(peripheralId: pid) { ok in call.resolve(["accepted": ok, "band_state": ok ? "connected" : "connecting"]) }
+        }
+    }
+
+    /// SDD-293: 보류 해제(클래스 시작 없이 대기실을 떠남).
+    @objc func releaseBand(_ call: CAPPluginCall) {
+        host.queue.async { [host] in
+            guard let m = host.manager else { call.resolve(["accepted": true]); return }
+            call.resolve(["accepted": m.releaseHeldBand()])
         }
     }
 

@@ -16,7 +16,8 @@ export interface NativeAudioStartOptions {
   /** 인계 시점 access 토큰 — 네이티브가 자체 저장소(Keystore/Keychain)에 봉인한다 */
   accessToken: string;
   /** refresh 토큰(앱 로컬 보관분). 네이티브가 백그라운드에서 `POST {apiBase}/auth/refresh` 로 직접 갱신(회전 헤더 X-MB-Refresh-Token 반영) */
-  refreshToken: string;
+  /** SDD-305: 인증 조정자 지원 앱에서는 생략 — native 조정자가 보관한 쌍을 쓴다. 구 APK 는 필수. */
+  refreshToken?: string;
   /** 5000 고정(검증용으로 노출) */
   chunkMs: number;
   /** 첫 청크 인덱스(새 녹음=0, 같은 세션 이어 녹음=서버 total_chunks 이상) */
@@ -65,6 +66,6 @@ export interface NativeAudioRecorderPlugin {
   setMicEnabled(opts: { enabled: boolean }): Promise<NativeAudioStatus>;
   getStatus(): Promise<NativeAudioStatus>;
   /** JS 가 토큰을 새로 받았을 때(포그라운드) 네이티브 저장소를 동기화 — 회전 충돌 방지 */
-  updateCredentials(opts: { accessToken: string; refreshToken: string }): Promise<void>;
+  updateCredentials(opts: { accessToken: string; refreshToken?: string }): Promise<void>;
   addListener(eventName: 'chunkUploaded' | 'stateChanged' | 'error', cb: (ev: NativeAudioEvent) => void): Promise<NativeAudioListenerHandle>;
 }

@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { freshnessOf } from '../../../../lib/session-live/live-view';
 import { holdMindMetrics, type HeldMind } from '../../../../lib/session-live/hold-last-snapshot';
 import { getPlatform } from '../../../../lib/native/platform';
-import { liveMetricSnapshot } from '../../../../lib/session-live/live-metric-snapshot';
+import { liveMetricSnapshot, liveNotWorn } from '../../../../lib/session-live/live-metric-snapshot';
 import { ConnectionState } from 'livekit-client';
 import { useBand, type UseBandResult } from '../../../../hooks/useBand';
 import { useCloseBiosignalOnEnd } from '../../../../hooks/useCloseBiosignalOnEnd';
@@ -32,9 +32,11 @@ import type { UseLiveV2Result } from '../../../../lib/session-live/use-live-v2';
 import type { LiveClient } from '../../../../lib/session-live/live-client';
 import { useMetricBars } from '../../../../lib/session-live/metric-bars';
 import { useWebMeasurementV2 } from '../../../../lib/measurement-web/use-web-measurement';
-import { useNativeMeasurementV2 } from '../../../../lib/measurement-web/use-native-measurement';
+import { deriveConnectionDiagnostics, useBacklogSince, type DiagSocketState } from './connection-diagnostics-model';
+import { useNativeMeasurementV2, type NativeDiagnostics } from '../../../../lib/measurement-web/use-native-measurement';
 import { getNativeMeasurement, isNativeMeasurementAvailable } from '../../../../lib/native-measurement';
 import { Capacitor } from '@capacitor/core';
+import { useBandHold } from '../../../../lib/native-measurement/band-hold';
 import { describeNativeStartFailure, isNativeBandOwned } from '../../../../lib/native-measurement/device-status';
 import { applyBandSkipUi, readBandSkip, shouldAutoConnectBand, writeBandSkip } from '../../../../lib/class/flow/band-skip';
 import { toBandReport } from '../../../../lib/measurement-web/band-report';
@@ -233,7 +235,8 @@ export function MemberClassContainer({
   const band = useBand({ sessionId, participantId, enabled: connectionsActive, skipAuth: !isAuthenticated, entryCredential, v1FeatureUpload: false, autoResume: bandAuto });
   bandConnectedRef.current = band.connectionState === 'connected';
   // 호스트가 회차를 종료하면 회원은 밴드 해제 없이 떠난다 → 종료 phase 에서 close intent 를 한 번 기록한다.
-  useCloseBiosignalOnEnd(v2On && liveV2?.state?.session?.data.phase === 'ended', band.closeBiosignal);
+  // 네이티브가 밴드를 소유 중이면 네이티브 autoSeal 이 해제하므로(JS 해제 시도 = no-op) 웹 연결이 남은 경우만 끊는다. disconnect 는 close intent 를 한 번 더 기록하지만 멱등이다.
+  useCloseBiosignalOnEnd(v2On && liveV2?.state?.session?.data.phase === 'ended', band.closeBiosignal, band.disconnect);
   const bandRef = useRef(band);
   useEffect(() => {
     bandRef.current = band;
@@ -244,7 +247,12 @@ export function MemberClassContainer({
     () => toBandReport({ connectionState: band.connectionState, leadOff: band.leadOff, signalQuality: band.signalQuality, battery: band.battery }),
     [band.connectionState, band.leadOff?.ch1, band.leadOff?.ch2, band.signalQuality, band.battery], // eslint-disable-line react-hooks/exhaustive-deps -- leadOff 는 값으로 비교
   );
-  useWebMeasurementV2({
+  // SDD-284: 네이티브 훅을 먼저 호출해 스트림 확정 실패(nativeFailed)를 웹 훅에 넘긴다(회차 내 web_wasm 단방향 하강)
+  const nativeM = useNativeMeasurementV2({
+    v2: v2On, sessionId, participantId, accountId: user?.id ?? null, bandOptIn: bandAuto, eegConsent,
+    bandConnected: band.connectionState === 'connected', enabled: connectionsActive,
+  });
+  const webM = useWebMeasurementV2({
     liveV2: v2On ? liveV2 : null,
     sessionId,
     selfParticipantId: participantId,
@@ -258,10 +266,7 @@ export function MemberClassContainer({
     featureAuth: { entryCredential, skipAuth: !isAuthenticated },
     // 코드 입장 게스트는 앱에서도 JS BLE + WASM 로 측정한다(네이티브는 계정 JWT 가 필요)
     guest: !user?.id,
-  });
-  const nativeM = useNativeMeasurementV2({
-    v2: v2On, sessionId, participantId, accountId: user?.id ?? null, bandOptIn: bandAuto, eegConsent,
-    bandConnected: band.connectionState === 'connected', enabled: connectionsActive,
+    nativeFailed: nativeM.nativeFailed,
   });
 
   // native 소유 동안 JS BLE 는 놓였으므로 신호·접촉·연결은 native snapshot 값을 쓴다(없으면 기존 useBand).
@@ -279,6 +284,7 @@ export function MemberClassContainer({
   // native 소유 동안 6지표는 native snapshot.metrics(null 보존)로 표시한다.
   // 상담사 타일과 같은 출처(LiveState)·같은 규칙을 우선한다 — 두 화면 숫자 불일치 방지. LiveState 에 내 지표가 없을 때만 앱/웹 자체값.
   const liveSnap = v2On ? liveMetricSnapshot(liveV2?.state, participantId, liveV2?.nowMs ?? nowMs) : null;
+  const notWorn = v2On ? liveNotWorn(liveV2?.state, participantId) : false;
   const rawSnapshot = liveSnap ?? nativeM.metrics ?? buildSnapshot(band, metricsBlocked, remoteEfficiency);
   // SDD-274: 코드 입장 비회원 + Android(JS BLE) 는 EEG 알림 유실로 지표가 2~7초씩 무효가 된다 — 집중·이완·감정균형만 직전 유효값을 15초 유지.
   // 회원(네이티브)·iOS·상담사 화면은 적용하지 않는다. 접촉 불량·연결 해제·링크 stale 이면 즉시 "-".
@@ -475,10 +481,12 @@ export function MemberClassContainer({
   const bandEnabled = linkbandMode !== 'none';
   // 네이티브가 밴드를 소유한 동안(시작 직후 첫 snapshot 전 포함) JS BLE 상태는 보지 않는다 — 놓인 JS 연결을 '끊김'으로 오판하던 문제.
   const nativeOwnsBand = isNativeBandOwned(nativeM.path, nativeM.status, nd);
+  // SDD-293: 네이티브가 밴드를 보류로 쥔 동안(인계 직후~첫 snapshot 전)은 연결 상태가 이어져 보인다 — '연결 중/다시 연결' 억제
+  const bandHeld = useBandHold().held && nativeM.path === 'native';
   const derivedBandUi = deriveBandUi(
     {
-      connectionState: nd ? (nd.connected ? 'connected' : 'connecting') : nativeOwnsBand ? 'connecting' : band.connectionState,
-      everConnected: nd ? everConnected : nativeOwnsBand ? false : everConnected,
+      connectionState: nd ? (nd.connected ? 'connected' : 'connecting') : bandHeld ? 'connected' : nativeOwnsBand ? 'connecting' : band.connectionState,
+      everConnected: nd ? everConnected : bandHeld ? true : nativeOwnsBand ? false : everConnected,
       deviceStatus,
       signalQualityLevel: signalLevel,
       battery: nativeOwnsBand ? null : band.battery,
@@ -508,9 +516,9 @@ export function MemberClassContainer({
 
   const shared: SharedScreenProps = {
     sessionId,
-    place, mode, viewerOnly, bandVisible, bandUi, nativeOwnsBand, nativeAuto: isNativeMeasurementAvailable() && Boolean(user?.id) && eegConsent && linkbandMode !== 'none' && v2On, waitlisted, nowMs, hostVideoIssue,
+    place, mode, viewerOnly, bandVisible, bandUi, nativeOwnsBand, serverConfirmed: v2On && participantId ? Boolean(liveV2?.state?.metrics[participantId]) : undefined, nativeAuto: isNativeMeasurementAvailable() && Boolean(user?.id) && eegConsent && linkbandMode !== 'none' && v2On, waitlisted, nowMs, hostVideoIssue,
     header: { title: title ?? '클래스', elapsedSec, totalSec, counselorName, myInitial: user?.name?.trim().charAt(0) || '나' },
-    hero, snapshot, series, sheet, screenOff, confirmLeave,
+    hero, snapshot, notWorn, series, sheet, screenOff, confirmLeave,
     v2Bars: v2On ? { label: '이완', current: v2Current, bars: v2Bars } : null,
     device: {
       // 네이티브가 밴드를 잡으면 JS 는 연결을 놓아 배터리를 알 수 없다(스냅샷에도 필드 없음) → 0% 대신 '—'(null).
@@ -551,6 +559,7 @@ export function MemberClassContainer({
     },
     waitlist: { title: title ?? '클래스', counselorName, startLabel: startedAt ? formatStartLabel(startedAt) : null, notifyByPush: isAuthenticated },
     socketConnected: v2On ? liveV2?.state?.phase === 'READY' : liveSocket.isConnected,
+    diag: { native: nativeM.diagnostics, nativeFailed: nativeM.nativeFailed, webPath: webM.path, webStatus: webM.status, webCode: webM.code },
     onboarding: { locationType, participantMode, maxParticipants },
   };
 
@@ -618,6 +627,8 @@ interface SharedScreenProps {
   bandUi: MemberCaseInput['band'];
   /** 앱 네이티브가 밴드를 소유 중 — 재연결 버튼은 JS BLE 가 아니라 네이티브로 */
   nativeOwnsBand: boolean;
+  /** SDD-295: 서버가 내 측정 값을 받았는가(v2 만 판정, 구 경로는 undefined) */
+  serverConfirmed: boolean | undefined;
   /** 앱 네이티브 측정 경로(동의+밴드 사용) — 선택 해제만으로 측정이 자동 시작되는 환경 */
   nativeAuto: boolean;
   waitlisted: boolean;
@@ -626,6 +637,7 @@ interface SharedScreenProps {
   header: MemberClassViewProps['header'];
   hero: PlayerMetricKey;
   snapshot: MetricSnapshot;
+  notWorn: boolean;
   series: MetricSeries;
   sheet: MemberSheetKey | null;
   v2Bars: MemberClassViewProps['v2Bars'];
@@ -636,6 +648,8 @@ interface SharedScreenProps {
   chat: MemberClassViewProps['chat'];
   waitlist: NonNullable<MemberClassViewProps['waitlist']>;
   socketConnected: boolean;
+  /** SDD-284 T4: 연결 진단 원천(훅 반환값) */
+  diag: { native: NativeDiagnostics; nativeFailed: boolean; webPath: string; webStatus: string; webCode: string | null };
   onboarding: { locationType?: 'online' | 'offline'; participantMode?: 'one_on_one' | 'group'; maxParticipants?: number };
 }
 
@@ -691,6 +705,26 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
   const rtcBad = media.roomConnection === ConnectionState.Reconnecting || media.roomConnection === ConnectionState.SignalReconnecting;
   const socketBad = everSocketConnected && !shared.socketConnected;
   const bad = !online || socketBad || rtcBad;
+  // SDD-284 T4: 연결 진단. 측정 경로(native / web_wasm)가 있을 때만 만든다 — 밴드 없는 회원은 null.
+  const dg = shared.diag;
+  const diagPath = dg.nativeFailed || dg.native.path === 'web_wasm' || dg.webPath === 'web_wasm' ? 'web_wasm' : dg.native.path === 'native' ? 'native' : 'off';
+  const diagSocket: DiagSocketState = !everSocketConnected && !shared.socketConnected ? 'unknown' : socketBad ? 'disconnected' : 'connected';
+  const diagUpload = diagPath === 'native' ? dg.native.upload : null; // 웹 경로는 업로드 집계 출처가 달라 섞지 않는다(확인 전)
+  const backlogSince = useBacklogSince(diagUpload, shared.nowMs);
+  const diagnostics = diagPath === 'off' ? null : deriveConnectionDiagnostics({
+    path: diagPath,
+    status: diagPath === 'web_wasm' ? (dg.webStatus === 'idle' ? dg.native.status : dg.webStatus) : dg.native.status,
+    code: diagPath === 'web_wasm' && !dg.nativeFailed ? dg.webCode : dg.native.code,
+    nativeState: dg.native.nativeState,
+    streamIdHead: dg.native.streamIdHead,
+    restartCount: dg.native.restartCount,
+    lastConfirmElapsedMs: dg.native.lastConfirmElapsedMs,
+    nativeFailed: dg.nativeFailed,
+    socket: diagSocket,
+    upload: diagUpload,
+    backlogSinceMs: backlogSince,
+    nowMs: shared.nowMs,
+  });
   const [downSince, setDownSince] = useState<number | null>(null);
   useEffect(() => {
     setDownSince((prev) => (bad ? (prev ?? Date.now()) : null));
@@ -732,6 +766,7 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
     battery: shared.device.battery,
     bandEnabled: shared.bandVisible,
     viewerOnly: shared.viewerOnly,
+    serverConfirmed: shared.serverConfirmed,
   };
 
   const renderedRef = useRef<RenderedMetrics | null>(null);
@@ -805,8 +840,10 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
           header={shared.header}
           hero={shared.hero}
           snapshot={shared.snapshot}
+          notWorn={shared.notWorn}
           series={shared.series}
           device={shared.device}
+          diagnostics={diagnostics}
           sound={shared.sound}
           chat={shared.chat}
           hostVideo={media.hostVideo}

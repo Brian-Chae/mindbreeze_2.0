@@ -42,7 +42,7 @@ afterEach(async () => {
 });
 
 describe('상담사 뷰 — C01 기본', () => {
-  it('상단 바는 X 없이 제목·함께한 시간/계획 시간·접속 인원·종료를 두고 나가기는 도구에 있다', async () => {
+  it('상단 바는 X 없이 제목·함께한 시간/계획 시간·접속 인원·종료를 두고 나가기는 설정에 있다', async () => {
     await renderCase('C01');
     expect(one('[data-pz="top"]')).not.toBeNull();
     expect(one('[data-pz="btn-close"]')).toBeNull();
@@ -85,10 +85,10 @@ describe('상담사 뷰 — C01 기본', () => {
     expect(visible).not.toContain('›');
   });
 
-  it('도크 4개: 지표 기준·채팅(안읽음)·미디어·도구', async () => {
+  it('도크 4개: 분석·채팅(안읽음)·미디어·설정', async () => {
     await renderCase('C01');
     const labels = all('[data-pz="dk"]').map((d) => text(d.querySelector('.pz-dk__label')));
-    expect(labels).toEqual(['지표 기준', '채팅', '미디어', '도구']);
+    expect(labels).toEqual(['분석', '채팅', '미디어', '설정']);
   });
 
   it('신호는 모든 폭에서 도크 위 한 곳에 있고 체크인은 상태에서 펼친다', async () => {

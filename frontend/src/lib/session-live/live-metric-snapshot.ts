@@ -16,3 +16,11 @@ export function liveMetricSnapshot(state: LiveState | null | undefined, particip
   const v = hostMetricValues(row, undefined, nowMs);
   return { focus: v.focus, relaxation: v.relaxation, emotional: v.emotional, bpm: v.bpm, respiration: v.respiration, hrv: v.hrv };
 }
+
+/** SDD-316: 코어가 BPM·SDNN·호흡을 reason=not_worn(미착용)으로 보냈는가. 값이 아니라 사유만 본다. */
+export function liveNotWorn(state: LiveState | null | undefined, participantId: string | null | undefined): boolean {
+  if (!state || !participantId) return false;
+  const m = state.metrics[participantId]?.data.metrics;
+  if (!m) return false;
+  return ['bpm', 'sdnn', 'respiration'].some((k) => m[k]?.reason === 'not_worn');
+}

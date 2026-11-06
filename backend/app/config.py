@@ -91,8 +91,10 @@ class Settings(BaseSettings):
     # 한 프로세스에서 동시에 처리하는 raw/산출물 presign·ack 요청 수. 복귀 직후 한 참가자의 폭주가
     # DB 풀(10+10)·스레드풀을 독점해 로그인 등 다른 요청이 멈추는 것을 막는다. 초과분은 429(Retry-After).
     # SDD-260: 슬롯 16 / 대기 0.5s — 40기기 종료 직후 presign/ack 폭주를 흡수하되 풀을 독점하지 않는다.
-    archive_max_concurrent: int = 16
-    archive_slot_wait_sec: float = 0.5
+    # SDD-290: 11/4 행사에서 슬롯 포화로 429 약 506건 → 슬롯 32 / 대기 1.0s. 슬롯(32)+대기 스레드가 anyio(64) 안에 머물고,
+    #          ack 는 S3 검증 동안 DB 연결을 반납하므로 연결 동시 사용은 풀 한도(40) 아래다(specs/sdd-290-upload-slot-tuning/analysis.md).
+    archive_max_concurrent: int = 32
+    archive_slot_wait_sec: float = 1.0
     # SDD-260: 소켓 방송·REST 공용 기본 executor 와 anyio 스레드풀 상한.
     default_executor_workers: int = 32
     anyio_thread_tokens: int = 64
@@ -241,6 +243,9 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     # 네이티브 앱 id_token 의 추가 허용 aud(쉼표 구분) — Firebase 웹 클라이언트 ID 등
     google_extra_client_ids: str = ""
+    # SDD-309: 소셜(Google·Apple) 신규 가입은 초대 코치 코드(또는 초대 토큰)가 필수다.
+    # 시험 환경에서 기존 가입 fixture 를 보호할 때만 끈다.
+    social_signup_requires_counselor_code: bool = True
 
     # SDD-087: Gemini — 상담사 코멘트 AI 초안 생성 (키 부재 시 규칙 템플릿 폴백)
     gemini_api_key: str = ""

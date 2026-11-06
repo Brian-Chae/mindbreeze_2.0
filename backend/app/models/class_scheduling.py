@@ -158,3 +158,26 @@ def _forbid_host_note_update(mapper, connection, target):
 @event.listens_for(SessionHostNote, "before_delete")
 def _forbid_host_note_delete(mapper, connection, target):
     raise ValueError("진행자 표시 메모는 삭제할 수 없습니다")
+
+
+class ClassCapacityEvent(Base):
+    """SDD-289: 정원 늘리기 감사 기록(전후 값·승격 수·행위자·사유)."""
+
+    __tablename__ = "class_capacity_events"
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    class_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("classes.id"), index=True
+    )
+    actor_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id")
+    )
+    old_capacity: Mapped[int] = mapped_column(Integer)
+    new_capacity: Mapped[int] = mapped_column(Integer)
+    promoted_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    operation_key: Mapped[str] = mapped_column(String(100))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

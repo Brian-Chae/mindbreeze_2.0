@@ -37,6 +37,8 @@ SESSIONS_SCOPE_DELETE = frozenset({
     "session_reminder_logs", "sessions", "video_chunks",
     # SDD-220: 채팅 신고·차단(chat_rooms/messages FK 에 종속)도 채팅과 함께 정리한다.
     "chat_reports", "chat_blocks",
+    # SDD-289: 정원 늘리기 감사 기록. classes/users FK 에 종속되므로 클래스와 함께 정리한다.
+    "class_capacity_events",
 })
 # SDD-244 M1: 생체신호 수집 원장(sessions/참가자 FK 종속)도 세션 초기화 범위에 포함한다.
 SESSIONS_SCOPE_DELETE = SESSIONS_SCOPE_DELETE | frozenset({

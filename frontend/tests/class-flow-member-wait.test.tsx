@@ -63,7 +63,7 @@ describe('FM07 시작 대기', () => {
     expect(text()).toContain('오늘 오후 3:00');
     expect(text()).toContain('약 5분 뒤에 시작해요');
     expect(text()).toContain('대기실 BGM · 재생 중');
-    expect(btn('준비 다시 확인하기')).toBeDefined();
+    expect(btn('선택 바꾸기')).toBeDefined();
     expect(text()).toContain('코치가 시작하면 자동으로 입장해요.');
   });
   it('준비 인원은 데이터가 올 때만 `N명 중 M명`, 아니면 내 준비 문구(숫자를 지어내지 않는다)', async () => {
@@ -107,7 +107,7 @@ describe('FM07 시작 대기', () => {
     const onRecheck = vi.fn();
     const onExit = vi.fn();
     await render(<WaitStartView {...props({ onRecheck, onExit })} />);
-    await act(async () => { btn('준비 다시 확인하기')!.click(); });
+    await act(async () => { btn('선택 바꾸기')!.click(); });
     expect(onRecheck).toHaveBeenCalledTimes(1);
     await act(async () => { qa<HTMLButtonElement>('button').find((b) => b.getAttribute('aria-label') === '나가기')!.click(); });
     expect(onExit).toHaveBeenCalledTimes(1);

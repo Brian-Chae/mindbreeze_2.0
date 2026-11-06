@@ -1,5 +1,6 @@
 import { isNativeApp } from '../../../../lib/native/platform';
 import { PermissionGuide } from '../../../native/permission-guide';
+import { permissionGuideText } from '../../../native/permission-guide-text';
 // SDD-209 M4 — FM06c LINK BAND 단계. 어떤 모드·상태에서도 참가를 막지 않는다(`LINK BAND 없이 계속하기`는 항상 있다).
 // 전극 LED 카드는 접촉 불량일 때만 띄운다. 연결 중은 회전 스피너 대신 3점 순차 페이드.
 import { Activity, Battery, Bluetooth, CircleAlert, Globe, Info, Power, RefreshCw, User } from 'lucide-react';
@@ -82,6 +83,7 @@ export function BandStepView({
         <Li icon={<Power size={20} aria-hidden="true" />}>LINK BAND의 전원을 켜요</Li>
         <Li icon={<User size={20} aria-hidden="true" />}>이마 중앙에 밴드를 맞춰요</Li>
         <Li icon={<Bluetooth size={20} aria-hidden="true" />}>아래 버튼으로 연결해요</Li>
+        <Li small icon={<Info size={20} aria-hidden="true" />}>{permissionGuideText('bluetooth')}</Li>
       </ul>
     );
   } else if (state === 'connecting') {
@@ -137,7 +139,7 @@ export function BandStepView({
   const noBand = <FlowButton kind="ghost" onClick={onSkip}>LINK BAND 없이 계속하기</FlowButton>;
   let foot: ReactNode;
   if (state === 'idle') {
-    foot = <><PermissionGuide kind="bluetooth" onContinue={onConnect}>{request => <FlowButton kind="primary" onClick={request}><Bluetooth size={20} aria-hidden="true" />LINK BAND 연결하기</FlowButton>}</PermissionGuide>{noBand}</>;
+    foot = <><PermissionGuide kind="bluetooth" inline onContinue={onConnect}>{request => <FlowButton kind="primary" onClick={request}><Bluetooth size={20} aria-hidden="true" />LINK BAND 연결하기</FlowButton>}</PermissionGuide>{noBand}</>;
   } else if (state === 'connecting') {
     foot = <><FlowButton kind="primary" disabled>연결하고 있어요</FlowButton>{noBand}</>;
   } else if (state === 'connected') {

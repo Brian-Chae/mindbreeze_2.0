@@ -1,6 +1,6 @@
 """SDD-217 보강 매칭: 실제 PG 제약·HTTP·동시 예약 검증."""
 from app.api.deps import get_current_user_optional
-from datetime import timedelta
+from datetime import datetime, timedelta
 from uuid import uuid4, UUID
 import importlib.util
 import threading
@@ -18,6 +18,19 @@ from app.models.session import Session, SessionParticipant
 from tests.pg.test_sdd217_membership import setup, NOW, command
 
 pytestmark = pytest.mark.pg
+
+
+@pytest.fixture(autouse=True)
+def _fixed_makeup_clock(monkeypatch):
+    """HTTP 경로도 합성 회차와 같은 기준시각을 사용해 실제 날짜에 종속되지 않는다."""
+    from app.services import class_makeup_service
+
+    class FixedDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return NOW.astimezone(tz) if tz is not None else NOW.replace(tzinfo=None)
+
+    monkeypatch.setattr(class_makeup_service, "datetime", FixedDatetime)
 
 
 def service():

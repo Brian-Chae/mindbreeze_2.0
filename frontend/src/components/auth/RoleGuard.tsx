@@ -2,7 +2,7 @@ import { loginPathForRole } from '../../lib/auth-routing';
 // 역할 + 인증 단계 기반 라우트 가드
 
 import type { ReactNode } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { resolvePostLoginPath } from '../../lib/auth-routing';
 import { useAuthStore } from '../../stores/authStore';
 import type { UserRole } from '../../lib/api/auth';
@@ -16,6 +16,7 @@ interface RoleGuardProps {
 }
 
 export function RoleGuard({ role, requireFullyVerified = false, onMismatch = 'redirect', children }: RoleGuardProps) {
+  const location = useLocation();
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isInitialized = useAuthStore((s) => s.isInitialized);
@@ -48,6 +49,10 @@ export function RoleGuard({ role, requireFullyVerified = false, onMismatch = 're
       }
       return <Navigate to="/" replace />;
     }
+  }
+
+  if (user.role === 'client' && user.client_required_fields?.length && location.pathname !== '/onboarding/client/essentials') {
+    return <Navigate to="/onboarding/client/essentials" replace />;
   }
 
   // 미인증 상담사는 온보딩으로 강제 이동

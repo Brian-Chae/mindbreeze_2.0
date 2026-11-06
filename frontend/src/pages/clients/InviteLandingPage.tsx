@@ -1,3 +1,6 @@
+import AuthShell from '../../components/auth/AuthShell';
+import { resolvePostLoginPath } from '../../lib/auth-routing';
+import '../../components/auth/signup-flow.css';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getInviteInfo, type InviteInfoResponse } from '../../lib/api/clients';
@@ -63,15 +66,7 @@ export default function InviteLandingPage() {
       navigate('/');
       return;
     }
-    if (user.onboarding_completed) {
-      navigate(user.role === 'client' ? '/app' : '/dashboard');
-    } else if (user.role === 'client') {
-      // 초대 경로: source=invite로 Step 4 연결 확인 UI 진입 (code는 fallback용)
-      const codeQuery = info?.counselor_code ? `&code=${info.counselor_code}` : '';
-      navigate(`/onboarding/client?source=invite${codeQuery}`);
-    } else {
-      navigate('/onboarding/counselor');
-    }
+    navigate(resolvePostLoginPath(user));
   };
 
   // 신규 가입이면 인증 직후 공통 "가입 정보 확인" 화면에서 생년월일·동의를 받는다. 초대 토큰은 그대로 유지된다.
@@ -81,10 +76,7 @@ export default function InviteLandingPage() {
   };
 
   return (
-    <div className="relative min-h-screen font-sans">
-      <img src="/mb-design/assets/images/background3.jpg" alt="" className="absolute inset-0 h-full w-full object-cover" />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/60" />
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[440px] flex-col justify-center px-5 py-10">
+    <AuthShell variant="member" title="초대받은 회원 가입" backTo={`/register?${new URLSearchParams({ role: 'client', ...(token ? { token } : {}) })}`}>
         <main className="rounded-3xl bg-white p-6 text-center shadow-xl">
           {loading && (
             <div className="py-8" role="status">
@@ -139,7 +131,6 @@ export default function InviteLandingPage() {
             </>
           )}
         </main>
-      </div>
-    </div>
+    </AuthShell>
   );
 }

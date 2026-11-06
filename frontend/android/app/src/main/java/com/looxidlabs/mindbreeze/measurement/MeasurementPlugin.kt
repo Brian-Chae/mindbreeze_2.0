@@ -12,6 +12,8 @@ import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
+import com.looxidlabs.mindbreeze.auth.AccessResult
+import com.looxidlabs.mindbreeze.auth.NativeAuthCoordinator
 import com.looxidlabs.mindbreeze.measurement.bridge.BridgeModel
 import com.looxidlabs.mindbreeze.measurement.runtime.BatteryPolicy
 import com.looxidlabs.mindbreeze.measurement.runtime.KeystoreFactory
@@ -85,6 +87,7 @@ class MeasurementPlugin : Plugin() {
             put("background", JSObject().put("capture", "supported").put("live_socket", "supported").put("archive_upload", "supported"))
             put("permissions", JSObject().put("bluetooth", "granted").put("notifications", "granted").put("microphone", "not_required"))
             put("nativeMeasurement", true); put("spike", false)
+            put("authCoordinator", 1) // SDD-305: ensureAccess/signOutNative 지원(구 앱엔 없음 → 웹이 기능 탐지로 분기)
             put("rustCore", MeasurementCore.available()); put("nativeEnabled", MeasurementManager.ownership.nativeEnabled)
             put("platform_detail", "android")
             put("foregroundServiceType", "connectedDevice"); put("microphoneRequired", false)
@@ -98,13 +101,69 @@ class MeasurementPlugin : Plugin() {
         call.resolve(JSObject().put("enabled", MeasurementManager.ownership.nativeEnabled))
     }
 
-    /** 인증 인계: 웹이 가진 access/refresh 를 native Keystore 저장소로 1회 옮긴다. 이후 갱신은 native 가 소유하며 값은 어떤 이벤트로도 돌려보내지 않는다. */
+    /**
+     * 인증 인계: 웹이 가진 access/refresh 를 native Keystore 저장소로 옮긴다. 이후 갱신은 native 단일 조정자가 소유하며 값은 어떤 이벤트로도 돌려보내지 않는다.
+     * SDD-305: 저장된 쪽이 같은 계정이고 같거나 더 새로우면 무시한다(오래된 JS 복사본이 native 가 회전한 최신 refresh 를 덮어쓰지 못하게).
+     * refresh 없이 access 만 와도 받는다(웹이 refresh 복사본을 더는 들고 있지 않을 때).
+     */
     @PluginMethod
     fun handoffCredentials(call: PluginCall) {
         val at = call.getString("accessToken"); val rt = call.getString("refreshToken")
         if (at.isNullOrEmpty() && rt.isNullOrEmpty()) { call.reject("credential_missing"); return }
-        KeystoreFactory.tokenStore(context).save(at, rt)
-        call.resolve(json(BridgeModel.handoffResult(saved = true)))
+        val r = NativeAuthCoordinator.forStore(KeystoreFactory.tokenStore(context)).adoptIfNewer(at, rt)
+        call.resolve(json(BridgeModel.handoffResult(saved = true)).put("adopted", r.adopted).put("generation", r.generation))
+    }
+
+    /**
+     * SDD-305: WebView 의 모든 refresh 진입점이 거치는 단일 창구. 반환은 access 와 세대뿐 — refresh 토큰은 돌려주지 않는다.
+     * status: ok | no_credentials | invalid | transient | account_mismatch.
+     */
+    @PluginMethod
+    fun ensureAccess(call: PluginCall) {
+        val apiBase = call.getString("apiBase")
+        if (apiBase.isNullOrEmpty()) { call.reject("bad_config"); return }
+        val force = call.getBoolean("forceRefresh", false) == true
+        val observed = call.getDouble("observedGeneration")?.toLong()
+        val account = call.getString("accountId")
+        Thread {
+            val r = NativeAuthCoordinator.forStore(KeystoreFactory.tokenStore(context)).ensureAccess(apiBase, AUTH_HTTP, account, force, observed)
+            call.resolve(when (r) {
+                is AccessResult.Ok -> JSObject().put("status", "ok").put("accessToken", r.token).put("generation", r.generation)
+                AccessResult.NoCredentials -> JSObject().put("status", "no_credentials")
+                AccessResult.Invalid -> JSObject().put("status", "invalid")
+                AccessResult.Transient -> JSObject().put("status", "transient")
+                AccessResult.AccountMismatch -> JSObject().put("status", "account_mismatch")
+            })
+        }.start()
+    }
+
+    /** SDD-305: 로그아웃·계정 전환. 진행 중이던 갱신 응답은 버려지고 저장소가 비워진다. 서버 폐기는 best-effort. */
+    @PluginMethod
+    fun signOutNative(call: PluginCall) {
+        val apiBase = call.getString("apiBase")
+        val coordinator = NativeAuthCoordinator.forStore(KeystoreFactory.tokenStore(context))
+        if (apiBase.isNullOrEmpty()) coordinator.signOut() else coordinator.signOutAndRevoke(apiBase, AUTH_HTTP)
+        call.resolve(JSObject().put("signedOut", true))
+    }
+
+    /**
+     * SDD-293: 밴드 단계 완료 직후 보류 인계. 연결·서비스 발견까지 확인되면 accepted=true(구독·스트림 없음).
+     * JS 는 이 응답 뒤에 자기 연결을 놓는다 — 같은 링크를 네이티브가 이미 쥐고 있어 끊김이 없다.
+     */
+    @PluginMethod
+    fun adoptBand(call: PluginCall) {
+        val address = call.getString("address")
+        if (address.isNullOrEmpty()) { call.reject("address_required"); return }
+        if (!MeasurementManager.ownership.nativeEnabled) { call.reject("native_ownership_disabled"); return }
+        MeasurementManager.holdBand(context, address) { ok -> call.resolve(JSObject().put("accepted", ok).put("band_state", if (ok) "connected" else "connecting")) }
+    }
+
+    /** SDD-293: 보류 해제(클래스 시작 없이 대기실을 떠남). 수집 중이면 무시하고 정지는 stopMeasurement 가 한다. */
+    @PluginMethod
+    fun releaseBand(call: PluginCall) {
+        val collecting = MeasurementManager.engine != null
+        if (!collecting) MeasurementManager.releaseHeldBand()
+        call.resolve(JSObject().put("accepted", !collecting))
     }
 
     @PluginMethod
@@ -250,5 +309,9 @@ class MeasurementPlugin : Plugin() {
         send("measurementUpdated", BridgeModel.snapshot(inputs))
         send("archiveStatus", BridgeModel.archiveStatusPayload(rt.cfg.sessionId, BridgeModel.queue(inputs), null,
             rt.lastArchiveStage?.takeIf { it in setOf("presign", "put", "verify") }, rt.lastArchiveCode))
+    }
+
+    private companion object {
+        val AUTH_HTTP: okhttp3.OkHttpClient = okhttp3.OkHttpClient.Builder().callTimeout(15, java.util.concurrent.TimeUnit.SECONDS).build()
     }
 }

@@ -183,6 +183,15 @@ public final class MeasurementEngine {
         }
     }
 
+    /// SDD-315: `offset`(이전 호출이 돌려준 값, 처음은 0) 이후의 완결 패킷만. 수업 중 증분 변환용.
+    public static func rawPackets(in dir: URL, fromOffset offset: UInt64) -> (packets: [(sensor: BandSensor, bytes: Data, arrival: UInt64, wall: UInt64, anchor: UInt64)], nextOffset: UInt64) {
+        let r = AppendOnlyJournal.scan(url: dir.appendingPathComponent("raw.journal"), fromOffset: offset)
+        let packets = r.records.compactMap { rec in
+            Self.decodeRaw(rec.payload).map { (sensor: $0.sensor, bytes: $0.bytes, arrival: $0.arrival, wall: $0.wall, anchor: $0.anchor) }
+        }
+        return (packets, r.nextOffset)
+    }
+
     private static func name(_ s: BandSensor) -> String { s == .eeg ? "eeg" : s == .ppg ? "ppg" : "acc" }
 
     private static func finalFrom(_ o: [String: Any]) -> CoreFinal? {
