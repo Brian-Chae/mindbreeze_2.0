@@ -96,7 +96,10 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const ClientAppPage = lazy(() => import('./pages/client/ClientAppPage'));
 const HostClassDetailPage = lazy(() => import('./pages/classes/host-class-detail-page').then((module) => ({ default: module.HostClassDetailPage })));
 const GuestClassMembershipPage = lazy(() => import('./pages/client/guest-class-membership-page').then(module => ({ default: module.GuestClassMembershipPage })));
-const MemberClassDetailPage = lazy(() => import('./pages/client/member-class-detail-page').then((module) => ({ default: module.MemberClassDetailPage })));
+// SDD-318: UI_V2 는 빌드 시 상수 — 운영 빌드에서는 D안 분기가 제거된다.
+const MemberClassDetailPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/client/ui-v2/ui-v2-class-detail-page').then((module) => ({ default: module.UiV2ClassDetailPage }))
+  : import('./pages/client/member-class-detail-page').then((module) => ({ default: module.MemberClassDetailPage })));
 const CounselingListPage = lazy(() => import('./pages/counseling/counseling-list-page').then((module) => ({ default: module.CounselingListPage })));
 const CounselingDetailPage = lazy(() => import('./pages/counseling/counseling-detail-page').then((module) => ({ default: module.CounselingDetailPage })));
 const CodeEntryPage = lazy(() => import('./pages/class/CodeEntryPage'));

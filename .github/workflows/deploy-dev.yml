@@ -45,6 +45,8 @@ jobs:
           echo "VITE_LIVE_PROTOCOL_V2=true" >> .env
           # SDD-286: dev 는 로그인 화면의 비회원 코드 입장 버튼 표시 (운영은 vite.config.ts 가 false 고정)
           echo "VITE_GUEST_ENTRY_ENABLED=true" >> .env
+          # SDD-318: dev 는 내담자 화면 D안(UI_V2) 표시 (운영은 vite.config.ts 가 false 고정)
+          echo "VITE_UI_V2=true" >> .env
           # SDD-197: 개발용 역할 시뮬레이션(무인증 계정 생성·무비번 로그인)은 실사용자가 있는 환경에서 끈다.
           npm install --legacy-peer-deps
           npx tsc -b --clean 2>/dev/null; true
