@@ -59,7 +59,7 @@ export function UiV2ReportSheet({ reportId, onClose, onReportChange }: { reportI
         <span style={{ width: 44 }} />
       </div>
       <div className="u2-sheet-scroll">
-        <section className="u2-cover" style={{ overflow: 'visible' }}>
+        <section className="u2-cover">
           <UiV2ArcRing variant="cover" />
           <span className="u2-eyebrow">{report?.session_type === 'meditation' ? '명상수업' : '리포트'}</span>
           <h1 id={titleId}>{report?.session_title || '리포트 상세'}</h1>
@@ -76,7 +76,6 @@ export function UiV2ReportSheet({ reportId, onClose, onReportChange }: { reportI
         )}
         {!loading && report && !inReview && <div className="u2-sheet"><ClientReportViewer report={report} onClose={onClose} /></div>}
         {!loading && report && !inReview && <div className="u2-gap"><PastReportsCompare current={report} /></div>}
-        <button type="button" className="u2-secondary u2-gap" onClick={onClose}>리포트 닫기</button>
       </div>
     </dialog>,
     document.body,
