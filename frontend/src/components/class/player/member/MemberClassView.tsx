@@ -96,7 +96,6 @@ export function MemberClassView(props: MemberClassViewProps) {
         c={c}
         hero={hero}
         snapshot={snapshot}
-        notWorn={props.notWorn}
         series={series}
         slotTop={
           <div className="mp-pips">

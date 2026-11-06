@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { PID, SID, event, metricsData, snapshot } from './sdd246-web/fixtures';
 import { applyEvent, applySnapshot, createLiveState } from '../src/lib/session-live/live-state';
-import { liveMetricSnapshot, liveNotWorn, NOT_WORN_TEXT } from '../src/lib/session-live/live-metric-snapshot';
+import { liveMetricSnapshot, liveNotWorn } from '../src/lib/session-live/live-metric-snapshot';
 
 const NOW = 1_760_000_002_000;
 
@@ -19,10 +19,6 @@ function stateWith(notWorn: boolean) {
 }
 
 describe('not_worn 표시', () => {
-  it('문구는 금지 표현 없이 착용 안내', () => {
-    expect(NOT_WORN_TEXT).toBe('밴드를 착용해 주세요');
-    for (const bad of ['점수', '좋음', '나쁨', '완료', '보증', '100%']) expect(NOT_WORN_TEXT).not.toContain(bad);
-  });
   it('liveNotWorn: 사유가 not_worn 이면 true, 아니면 false', () => {
     expect(liveNotWorn(stateWith(true) as never, PID)).toBe(true);
     expect(liveNotWorn(stateWith(false) as never, PID)).toBe(false);
@@ -34,9 +30,11 @@ describe('not_worn 표시', () => {
     expect(snap?.respiration ?? null).toBeNull();
     expect(snap?.hrv ?? null).toBeNull();
   });
-  it('MemberSheets 소스가 not_worn 일 때 착용 안내를 BPM·호흡·HRV 칸에만 쓴다', () => {
-    const src = readFileSync('src/components/class/player/member/MemberSheets.tsx', 'utf8');
-    expect(src).toContain('NOT_WORN_TEXT');
-    expect(src).toMatch(/props\.notWorn && \(metric\.key === 'bpm' \|\| metric\.key === 'respiration' \|\| metric\.key === 'hrv'\)/);
+  it('11/6 대표 지시: 미착용 안내 문구를 화면에 쓰지 않는다', () => {
+    for (const f of ['MemberSheets.tsx', 'MemberStage.tsx']) {
+      const src = readFileSync('src/components/class/player/member/' + f, 'utf8');
+      expect(src).not.toContain('NOT_WORN_TEXT');
+      expect(src).not.toContain('밴드를 착용해 주세요');
+    }
   });
 });
