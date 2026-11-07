@@ -298,22 +298,34 @@ def _drain_locked(db: DBSession, live: LiveRedis, session_id: uuid.UUID, fence: 
             return
         auth_rev = int(_epoch_row(db, session_id).auth_revision)
         db.rollback()
-        for row in rows:
-            if time.monotonic() - last_renew > 3.0:  # renew 3초
-                if not live.renew_projector(session_id, fence):
-                    raise ProjectionFenceLost("projector fence 를 잃었다")
-                last_renew = time.monotonic()
-            if hooks.before_redis:
-                hooks.before_redis(row)
-            res = _project_row(live, session_id, row, epoch, fence, auth_rev)
-            if res[0] == "dup":
-                out.duplicates += 1
-            else:
-                out.projected += 1
-            out.applied_revision = max(out.applied_revision, int(row.revision))
-            if hooks.after_redis:
-                hooks.after_redis(row)
-            out.marked += _mark_processed(db, session_id, int(row.revision))
+        completed = applied
+        marked_through = applied
+        try:
+            for row in rows:
+                if time.monotonic() - last_renew > 3.0:  # renew 3초
+                    if not live.renew_projector(session_id, fence):
+                        raise ProjectionFenceLost("projector fence 를 잃었다")
+                    last_renew = time.monotonic()
+                if hooks.before_redis:
+                    hooks.before_redis(row)
+                res = _project_row(live, session_id, row, epoch, fence, auth_rev)
+                if res[0] == "dup":
+                    out.duplicates += 1
+                else:
+                    out.projected += 1
+                out.applied_revision = max(out.applied_revision, int(row.revision))
+                if hooks.after_redis:
+                    hooks.after_redis(row)
+                completed = int(row.revision)
+                if marked_through == 0:
+                    # 최초 성공 흔적은 즉시 남겨 Redis 소실 후 rebuild의 epoch 판정을 보존한다.
+                    out.marked += _mark_processed(db, session_id, completed)
+                    marked_through = completed
+        finally:
+            # Redis applied가 재생 기준이다. DB 표기는 성공 prefix를 배치당 한 번만 커밋한다.
+            # hook/중간 오류 이후도 이미 완료한 행까지만 표기하고 다음 drain이 나머지를 복구한다.
+            if completed > marked_through:
+                out.marked += _mark_processed(db, session_id, completed)
 
 
 def _project_row(live: LiveRedis, session_id: uuid.UUID, row: LiveOutbox, epoch: int, fence: Fence,

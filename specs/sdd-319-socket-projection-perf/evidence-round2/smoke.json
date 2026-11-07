@@ -1,0 +1,88 @@
+{
+  "n": 3,
+  "ticks": 2,
+  "burst": 3,
+  "burn_ms": 2.0,
+  "period_ms": 25,
+  "elapsed_s": 2.824813625004026,
+  "counts": {
+    "entry_status:applied:none": 3,
+    "entered": 3,
+    "started": 3,
+    "renew": 3,
+    "metric_projected": 6,
+    "metric_status:projected:none": 6,
+    "stored_ack": 6,
+    "completed": 3,
+    "snapshot_completed": 3,
+    "close_calls": 3,
+    "close_status:applied:none": 3,
+    "close_committed": 3
+  },
+  "errors": {},
+  "p95_s": {
+    "entry": 0.10853920900262892,
+    "start": 0.023193500004708767,
+    "renew": 0.022102957998868078,
+    "metric": 0.03875625001091976,
+    "store": 0.018655917010619305,
+    "snapshot": 0.0604805830080295,
+    "close": 0.05192704198998399
+  },
+  "cpu_process_mean_pct": 12.008265439118158,
+  "cpu_process_max_pct": 12.978343186188324,
+  "loop_lag_p95_s": 0.0012173330032965168,
+  "stored_count": 6,
+  "expected_windows": 6,
+  "broadcast_expected_pairs": 44,
+  "broadcast_missing_pairs": 0,
+  "client_missing_pairs": 0,
+  "revision": 23,
+  "applied_revision": 23,
+  "emitted_revision": 23,
+  "closed_streams": 3,
+  "startup": {
+    "elapsed_s": 0.13138370799424592,
+    "cpu_process_mean_pct": 72.24944511701351
+  },
+  "final_settle": {
+    "before": [
+      23,
+      23,
+      23,
+      false
+    ],
+    "after": [
+      23,
+      23,
+      23,
+      false
+    ],
+    "duration_s": 0.004475292007555254
+  },
+  "source_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-round2-baseline-izpnt61m/app/services/class_participation_service.py",
+  "cps_sha256": "c96750b02cbb57cedb2df4f1b738d9c856e0807fdd491a8654213d29f68d3f36",
+  "namespace_sha256": "65637af3ae939877911945d624e05462ec08cff3ceac101ecc64ecbb3dd59f00",
+  "outbox_source_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-round2-baseline-izpnt61m/app/services/session_live_outbox.py",
+  "outbox_sha256": "35c335c2d267847c18ef6c6021c7135be56fd79063ce74b6c3851a58683423ab",
+  "single_flight_stats": {
+    "publish_runs": 13,
+    "publish_coalesced": 10,
+    "drain_runs": 19,
+    "drain_shared": 2,
+    "drain_fallback": 0,
+    "drain_handoff": 0,
+    "drain_timeout": 0,
+    "drain_skipped": 1
+  },
+  "timing_logs": [],
+  "limitations": [
+    "합성 V2Conn 인증/REST입장 주입, WS entry.enter는 실제호출",
+    "저장은 REST 서비스이나 test socket으로 전송",
+    "client도 같은 process 별도 loop",
+    "고정 CPU busy slice 합성 압박",
+    "fixed ticks 밀리면 종료 연장",
+    "합성 연결당5초 heartbeat는 실제 publish/heartbeat/emit 경로, auth_expired·resync lifecycle 미재현",
+    "client coverage는 event_id×audience 합집합이며 클라이언트별 전송보장 아님"
+  ]
+}

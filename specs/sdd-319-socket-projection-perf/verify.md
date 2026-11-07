@@ -165,3 +165,60 @@ backend 및 specs만 수정. 푸시·PR·배포·서버 변경·운영/dev 부�
 DB 직렬화와 threadpool/CPU 병목은 남는다. renew 경량화만으로 모든 dev ACK≤2초를 보장하지 않는다.
 Redis 장애 시 lease commit 이후 retryable 응답이라는 기존 동작을 유지한다. 마이그레이션 없음,
 승인 후 이번 구현 커밋 revert가 롤백 경로이며 직접 실행하지 않는다.
+
+## Addendum 5 (2026-11-07) — round-2 큐 진입·projection DB 표기 경량화 (구현 전)
+
+브랜치 `sdd/319-renew-light-2`, 기준 develop `b6f165ec`. X100에서 renew pending은0으로
+개선됐으나 renew p95 3.38초, close pending100이 남았다. 저장20000/20000, 교착/500/방송오류0.
+로그 renew service 최대~605ms, WS queue+service 최대~1977ms, scope gate 최대~1285ms.
+윈도우별 최대값은 서로 다른 요청일 수 있어 단순 차감/합산으로 p95를 확정하지 않는다.
+
+### 확정 사실과 가설
+
+- WS 정상 경로는 `_ensure_scope`의 `to_thread`와 `_run_command_sync`의 `to_thread`로
+  공용 스레드풀 큐에2회 진입한다. scope_gate에는 실제 Redis 검사뿐 아니라 큐 대기도 섞여 있다.
+- projector `_drain_locked`는 이벤트마다 `_mark_processed` UPDATE+commit을 호출한다.
+  500행 batch에서 최소500commit. DB 표기용 processed_at은 재생 조회 조건이 아니다.
+  `_pending_rows`는 Redis applied_revision만 기준으로 하며 재구축도 outbox 전체를 읽는다.
+- close는 device.changed outbox를 만들므로 renew처럼 projection 대기를 생략할 수 없다.
+  제공 x100-devlog는11줄 집계/renew 발췌이며 close 원인 로그가 없다. 전원100건의 timeout
+  세부 원인을 확정하지 않고, 정상적인 projection 완료를 빠르게 하여 해소하는 설계다.
+
+### 선택
+
+1. **pre-scope 검사와 명령을 같은 worker에서 수행**한다. 정상 경로 큐 진입2→1.
+   DB쓰기 전 scope 검사는 유지하고 ScopeStale이면 async로 기존 DB 재인가/resync를 수행한 뒤
+   다시 검사하고 실행한다. 재차 권한 변경되면 bounded retryable이며 쓰기는 수행하지 않는다.
+   post-commit scope 검사와 Redis 장애 응답은 그대로 유지한다. 제출→worker 시작 queue_ms를
+   따로 기록해 실제 scope_ms와 큐 대기를 분리한다. TTL 권한 캐시는 사용하지 않는다.
+2. **성공 prefix의 processed_at 표기를 batch finally에서1회 수행**한다. Redis projection은
+   기존 fence/epoch/revision 순서로 각 행에 원자 적용하고, after_redis hook까지 통과한 마지막
+   revision만 표기한다. 중간 실패시 앞선 성공 행 표기와 다음 drain의 applied-prefix 복구를 유지한다.
+   crash로 표기가 없어도 Redis applied 기준으로 재생하며 전체 Redis 소실은 기존 rebuild가 복구한다.
+3. DB epoch 잠금 제거, 스레드풀 확장/전용 풀, close 성공 ACK 위장/timeout 확대는 제외한다.
+   현재 부하를 줄인 결과를 먼저 검증하고 권한/동시성/연결 수 변경을 피한다.
+
+### 구현 전 검증 체크리스트
+
+- [x] batch500행에서 표기 호출은 batch+복구/빈 확인의 소수회(≤4), 모든 이벤트 순서 유지.
+- [x] 중간 after_redis 예외는 성공 prefix만 표기; 기존 crash 시험 [True,False,False] 유지.
+- [x] 정상 WS command의 scope 검사→업무 처리가 같은 worker의1회 제출, 선인가 유지.
+- [x] ScopeStale 재인가 성공/실패·재변경, Redis 오류 기존 경로, renew/start/close ACK 형식 유지.
+- [x] 실제 Socket.IO100/40명: snapshot120+CPU 압박+5초 합성 heartbeat, 마지막 동시close 포함.
+  renew≤2초/pending≤49(close0 목표), 실제 closed100%, 저장100%, 교착0·outbox방송누락0.
+  시작 p95/renew/CPU를40명 전후 비교하고 단일표본 악화/실패도 공개.
+- [x] 기존12묶음 및 새단위/실제PG crash·fence 회귀, PG부재skip, 증거DB/Redis 보존.
+- [x] 설계 선커밋→구현→독립 리뷰/검산→summary와 로컬 fix(sdd-319) 커밋.
+
+로컬 heartbeat는 실서비스와 같은 publish/heartbeat 읽기·emit을5초마다 실행하는 합성 스케줄러이며
+실제 로그인/입장/권한 갱신 이벤트 전체를 대체하지 않는다. dev close100건과 동일 원인을 재현했다고
+단정하지 않는다. 실패/미확정은 round-3 감독 관측으로 넘긴다. 서버접속/변경·푸시·PR·배포·
+dev/운영부하·메일·삭제·시크릿 출력 금지 유지. 마이그레이션 없으며 승인 후 구현커밋 revert로 롤백.
+
+### Addendum 5 보완 — 최초 projection 흔적 보존 (구현 전 독립 리뷰)
+
+`rebuild`는 processed_at 존재를 과거 projection의 흔적으로 사용해 Redis 소실시 epoch를 올린다.
+배치 표기가 최초 성공 흔적을 늦추면 epoch 판정의 기존 crash 창을 넓힐 수 있다. 따라서 applied=0의
+첫 성공 행(after_redis hook 통과)은 즉시1회 표기하고, 나머지 성공 prefix를 batch finally로 표기한다.
+500행의 호출 상한은4회(복구0/첫1/배치500/종료복구500)이며 이후 배치는 추가비용 없다.
+첫 행 직후부터 흔적이 존재함과 기존 crash 복구를 단위/PG 회귀로 확인한다.

@@ -1,0 +1,257 @@
+{
+  "primary_pairs": [
+    [
+      "socket-before-100-r2",
+      "socket-after-100"
+    ],
+    [
+      "socket-before-40",
+      "socket-after-40"
+    ]
+  ],
+  "runs": {
+    "socket-before-100": {
+      "n": 100,
+      "counts": {
+        "entry_status:applied:none": 100,
+        "entered": 100,
+        "started": 100,
+        "renew": 400,
+        "metric_projected": 3195,
+        "metric_status:projected:none": 3195,
+        "stored_ack": 3200,
+        "heartbeat": 808,
+        "snapshot_completed": 120,
+        "metric_failed": 5,
+        "metric_status:missing:none": 1,
+        "metric_status:ignored:not_live": 4,
+        "completed": 100,
+        "close_calls": 100,
+        "close_status:applied:none": 100,
+        "close_committed": 100
+      },
+      "errors": {
+        "live:metric:metric:TimeoutError": 1
+      },
+      "p95_s": {
+        "entry": 2.481461125003989,
+        "start": 1.438836083994829,
+        "renew": 1.7515479589928873,
+        "metric": 1.5480464580032276,
+        "store": 1.173954625002807,
+        "snapshot": 4.880028458006564,
+        "close": 2.103888540994376
+      },
+      "cpu_process_mean_pct": 104.26644109568225,
+      "startup": {
+        "elapsed_s": 2.801251915996545,
+        "cpu_process_mean_pct": 94.45905185784311
+      },
+      "closed_streams": 100,
+      "stored_count": 3200,
+      "expected_windows": 3200,
+      "broadcast_missing_pairs": 0,
+      "client_missing_pairs": 0,
+      "cps_sha256": "c96750b02cbb57cedb2df4f1b738d9c856e0807fdd491a8654213d29f68d3f36",
+      "namespace_sha256": "65637af3ae939877911945d624e05462ec08cff3ceac101ecc64ecbb3dd59f00",
+      "outbox_sha256": "35c335c2d267847c18ef6c6021c7135be56fd79063ce74b6c3851a58683423ab"
+    },
+    "socket-before-100-r2": {
+      "n": 100,
+      "counts": {
+        "entry_status:applied:none": 100,
+        "entered": 100,
+        "started": 100,
+        "renew": 400,
+        "metric_projected": 3190,
+        "metric_status:projected:none": 3190,
+        "stored_ack": 3200,
+        "heartbeat": 808,
+        "snapshot_completed": 120,
+        "metric_failed": 10,
+        "metric_status:missing:none": 1,
+        "metric_status:ignored:not_live": 9,
+        "completed": 100,
+        "close_calls": 100,
+        "close_status:applied:none": 100,
+        "close_committed": 100
+      },
+      "errors": {
+        "live:metric:metric:TimeoutError": 1
+      },
+      "p95_s": {
+        "entry": 2.5567948749958305,
+        "start": 1.3825795829907293,
+        "renew": 1.6270729999960167,
+        "metric": 1.387369749994832,
+        "store": 1.146753584005637,
+        "snapshot": 4.924418458002037,
+        "close": 1.8762713339965558
+      },
+      "cpu_process_mean_pct": 104.06119296314554,
+      "startup": {
+        "elapsed_s": 2.8658670829900075,
+        "cpu_process_mean_pct": 95.5658765982466
+      },
+      "closed_streams": 100,
+      "stored_count": 3200,
+      "expected_windows": 3200,
+      "broadcast_missing_pairs": 0,
+      "client_missing_pairs": 0,
+      "cps_sha256": "c96750b02cbb57cedb2df4f1b738d9c856e0807fdd491a8654213d29f68d3f36",
+      "namespace_sha256": "65637af3ae939877911945d624e05462ec08cff3ceac101ecc64ecbb3dd59f00",
+      "outbox_sha256": "35c335c2d267847c18ef6c6021c7135be56fd79063ce74b6c3851a58683423ab"
+    },
+    "socket-before-40": {
+      "n": 40,
+      "counts": {
+        "entry_status:applied:none": 40,
+        "entered": 40,
+        "started": 40,
+        "renew": 160,
+        "metric_projected": 1280,
+        "metric_status:projected:none": 1280,
+        "stored_ack": 1280,
+        "heartbeat": 246,
+        "snapshot_completed": 120,
+        "completed": 40,
+        "close_calls": 40,
+        "close_status:applied:none": 40,
+        "close_committed": 40
+      },
+      "errors": {},
+      "p95_s": {
+        "entry": 0.8468561249901541,
+        "start": 0.15537137500359677,
+        "renew": 0.553761332994327,
+        "metric": 0.5479047920089215,
+        "store": 0.3650966670102207,
+        "snapshot": 2.7050924579962157,
+        "close": 0.8439994159998605
+      },
+      "cpu_process_mean_pct": 85.75844996388375,
+      "startup": {
+        "elapsed_s": 0.9690054170059739,
+        "cpu_process_mean_pct": 100.07993587862694
+      },
+      "closed_streams": 40,
+      "stored_count": 1280,
+      "expected_windows": 1280,
+      "broadcast_missing_pairs": 0,
+      "client_missing_pairs": 0,
+      "cps_sha256": "c96750b02cbb57cedb2df4f1b738d9c856e0807fdd491a8654213d29f68d3f36",
+      "namespace_sha256": "65637af3ae939877911945d624e05462ec08cff3ceac101ecc64ecbb3dd59f00",
+      "outbox_sha256": "35c335c2d267847c18ef6c6021c7135be56fd79063ce74b6c3851a58683423ab"
+    },
+    "socket-after-100": {
+      "n": 100,
+      "counts": {
+        "entry_status:applied:none": 100,
+        "entered": 100,
+        "started": 100,
+        "renew": 400,
+        "metric_projected": 3200,
+        "metric_status:projected:none": 3200,
+        "stored_ack": 3200,
+        "heartbeat": 808,
+        "snapshot_completed": 120,
+        "completed": 100,
+        "close_calls": 100,
+        "close_status:applied:none": 100,
+        "close_committed": 100
+      },
+      "errors": {},
+      "p95_s": {
+        "entry": 2.4567538340052124,
+        "start": 1.38987308301148,
+        "renew": 1.1877020000101766,
+        "metric": 1.3998972080007661,
+        "store": 1.150388459005626,
+        "snapshot": 5.111116750005749,
+        "close": 1.7988387919904198
+      },
+      "cpu_process_mean_pct": 104.46016297203045,
+      "startup": {
+        "elapsed_s": 2.790385458007222,
+        "cpu_process_mean_pct": 94.10914870074568
+      },
+      "closed_streams": 100,
+      "stored_count": 3200,
+      "expected_windows": 3200,
+      "broadcast_missing_pairs": 0,
+      "client_missing_pairs": 0,
+      "cps_sha256": "c96750b02cbb57cedb2df4f1b738d9c856e0807fdd491a8654213d29f68d3f36",
+      "namespace_sha256": "802c2d843cea1e1c51ee938e5eb7d9d271f1fd8481f778f2c9dad5acd8f6b191",
+      "outbox_sha256": "4cee4cf99ee4162a4fb171b0934a284b3ec346fc374822dcce9ef964d8f738c2"
+    },
+    "socket-after-40": {
+      "n": 40,
+      "counts": {
+        "entry_status:applied:none": 40,
+        "entered": 40,
+        "started": 40,
+        "renew": 160,
+        "metric_projected": 1280,
+        "metric_status:projected:none": 1280,
+        "stored_ack": 1280,
+        "heartbeat": 246,
+        "snapshot_completed": 120,
+        "completed": 40,
+        "close_calls": 40,
+        "close_status:applied:none": 40,
+        "close_committed": 40
+      },
+      "errors": {},
+      "p95_s": {
+        "entry": 0.8357757079938892,
+        "start": 0.16066037501150277,
+        "renew": 0.5378035839967197,
+        "metric": 0.5236722909903619,
+        "store": 0.32799087499734014,
+        "snapshot": 2.6494280000042636,
+        "close": 0.7179980000073556
+      },
+      "cpu_process_mean_pct": 83.97211888228836,
+      "startup": {
+        "elapsed_s": 1.0005075830122223,
+        "cpu_process_mean_pct": 98.24243380951891
+      },
+      "closed_streams": 40,
+      "stored_count": 1280,
+      "expected_windows": 1280,
+      "broadcast_missing_pairs": 0,
+      "client_missing_pairs": 0,
+      "cps_sha256": "c96750b02cbb57cedb2df4f1b738d9c856e0807fdd491a8654213d29f68d3f36",
+      "namespace_sha256": "802c2d843cea1e1c51ee938e5eb7d9d271f1fd8481f778f2c9dad5acd8f6b191",
+      "outbox_sha256": "4cee4cf99ee4162a4fb171b0934a284b3ec346fc374822dcce9ef964d8f738c2"
+    }
+  },
+  "baseline_source_sha256": {
+    "cps_sha256": "c96750b02cbb57cedb2df4f1b738d9c856e0807fdd491a8654213d29f68d3f36",
+    "namespace_sha256": "65637af3ae939877911945d624e05462ec08cff3ceac101ecc64ecbb3dd59f00",
+    "outbox_sha256": "35c335c2d267847c18ef6c6021c7135be56fd79063ce74b6c3851a58683423ab"
+  },
+  "after_source_sha256": {
+    "cps_sha256": "c96750b02cbb57cedb2df4f1b738d9c856e0807fdd491a8654213d29f68d3f36",
+    "namespace_sha256": "802c2d843cea1e1c51ee938e5eb7d9d271f1fd8481f778f2c9dad5acd8f6b191",
+    "outbox_sha256": "4cee4cf99ee4162a4fb171b0934a284b3ec346fc374822dcce9ef964d8f738c2"
+  },
+  "verification": {
+    "source_match": true,
+    "stored_all": true,
+    "closed_all": true,
+    "outbox_callback_and_client_union_coverage_all": true,
+    "after_renew_p95_le2_close_pending0": true
+  },
+  "limits": [
+    "첫before100은부모단위시험수초중첩,유효실패그대로보존하고비교용before100-r2단독추가",
+    "before100두표본모두metricACK TimeoutError1,primary기준선도완전통과아님",
+    "p95는ACK성공표본,timeout은errors별도",
+    "인증/REST입장주입,WS entry.enter실제호출",
+    "client+server같은프로세스CPU",
+    "5초heartbeat합성스케줄이나실제publish/heartbeat/emit호출;auth_expired/resync lifecycle미재현",
+    "32tick+snapshot120+CPU15/25합성부하이며dev200초완전재현아님",
+    "dev close100전원projection_pending은로컬전후모두0으로미재현",
+    "수신coverage는event_id×audience합집합으로클라이언트별수신증명아님"
+  ]
+}

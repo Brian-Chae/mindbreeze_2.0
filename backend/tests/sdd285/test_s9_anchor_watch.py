@@ -85,4 +85,6 @@ def test_S9_소켓_핸들러가_감시를_연결했다():
 
     src = (Path(__file__).parents[2] / "app/ws/session_live_namespace.py").read_text()
     assert src.count("caw.log_gate_reject") == 1 and src.count("caw.note_result") == 1 and src.count("caw.check(") == 1
-    assert src.count("_gate_reject(conn, cmd, cid,") == 5
+
+    # 재인가 후 scope가 다시 바뀐 경우에도 감시를 거쳐 거절한다.
+    assert src.count("_gate_reject(conn, cmd, cid,") == 6
