@@ -1,0 +1,10 @@
+PRESERVED_PG_DATABASE=sdd308c_b9623bb9f27c48f3
+S308_MEASUREMENT {"session_id": "7d8494ea-6ddc-4b49-8734-043f7167103f", "ledger_source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd319b/backend/app/services/session_live_ledger.py", "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8", "lock_epoch_has_session_lock": true, "n": 100, "measurement_s": 32.0, "elapsed_s": 43.212, "counts": {"entered": 100, "projection_pending": 36, "started": 100, "renew": 400, "presence": 400, "device_accepted": 400, "metric_projected": 3200, "completed": 100}, "failures": {}, "renew_p95_s": 0.6685661250012345, "entry_p95_s": 9.938018249995366, "outbox_count": 4102, "revision": 4102, "applied_revision": 4102, "emitted_revision": 4102, "broadcast_expected_pairs": 8202, "broadcast_actual_pairs": 8202, "broadcast_missing_pairs": 0, "broadcast_missing_sample": [], "broadcast_missing_causes": {"seq_shift": 0, "replay_unavailable": 0, "emit_failure": 0, "other": 0}, "broadcast_source_sha256": "9f4f58bc35c932ab9e1a8c6cc6a85ba9e846adaad4fb4cc0e0d9eb87c792ef55", "pg_deadlock_diagnostics": []}
+.
+=============================== warnings summary ===============================
+tests/sdd308/test_s5_measurement.py::test_S5_동시_입장과_측정_renew_metric_device_publish
+  /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+1 passed, 4 deselected, 1 warning in 45.97s

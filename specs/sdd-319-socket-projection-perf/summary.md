@@ -118,3 +118,78 @@ handoff 대기자가 예외 시 leader 가 그대로 전파, 대기자는 시한
 - 직렬 처리 시간 x 100 이 대기 시간이 됨(로컬 15.7s=0.15s x 100). 실제 join 처리가 느리면(운영 수백 ms) 45초 초과 → 503 재시도. 상한은 환경변수로 조정.
 - 롤백: `ENTRY_QUEUE_CONCURRENCY=0` (서버 환경변수 + 재시작, 코드 롤백 불필요).
 - 못 한 것: dev/운영 부하 시험(금지), 실제 join_class_code·enter 서비스 전체를 PG 에서 100 동시로 돌린 전/후(합성 잠금 모사로 대체).
+
+## SDD-319b (2026-11-07) — 방송 누락 수정 및 감독 dev 피드백 대기
+
+### 결론·원인
+
+로컬 서비스 통합 시험에서 100명 62/8202, 40명 10/3282였던 callback 누락이 모두 0으로 감소했다.
+전후 실제 PG/Redis를 사용했고 각 실행은 단독 수행했다. 누락 72건 전부 실제 replay cursor와
+stream seq를 대응하여 seq 밀림으로 확정했다. watermark 일치만으로 판정하지 않았다.
+
+| 누락 원인 | 수정 전 100명 | 수정 전 40명 | 수정 후 100명/40명 |
+|---|---:|---:|---:|
+| seq 밀림 | 62 | 10 | 0 / 0 |
+| replay 불가 | 0 | 0 | 0 / 0 |
+| emit callback 실패 | 0 | 0 | 0 / 0 |
+| 기타 | 0 | 0 | 0 / 0 |
+
+### 설계와 코드
+
+설계 선커밋 `0ca7365f` 뒤 production을 수정했다. 후보 b를 채택하여 같은 원자 snapshot의
+seq와 applied_revision으로 보수적인 cursor 하한을 계산한다. DB 스키마·outbox 저장·프로토콜·
+응답 형식·앱·프론트는 변경하지 않았다. projector 공통 락은 추가하지 않는다.
+
+- `events_for_rows`: 대상 이후 revision 수를 seq 증가 상한으로 반영, event_id/audience/domain
+  정확 필터, 동일 epoch 고정. 오래된 하한의 log_truncated는 첫 보존 seq부터 1회 재조회.
+- `publish_pending`: 모든 audience callback을 성공한 연속 revision prefix만 전진.
+  최초 gap에서 후속 방송 중단. emit 실패는 전파하여 재시도하며 중복 허용.
+- Lua checkpoint: 락 token·epoch·status 확인, TTL 갱신, watermark 단조 쓰기를 원자 실행.
+  시작/종료 및 방송 중 1초 간격으로 확인한다. payload·인증값을 로그에 쓰지 않는다.
+
+### 로컬 전후 수치
+
+| 항목 | 전 100명 | 후 100명 | 전 40명 | 후 40명 |
+|---|---:|---:|---:|---:|
+| callback 누락 / 기대 쌍 | 62 / 8202 | **0 / 8202** | 10 / 3282 | **0 / 3282** |
+| 교착(내부 retry 포함) | 0 | 0 | 0 | 0 |
+| projection_pending | 29 | 36 | 0 | 0 |
+| renew p95(초) | 0.758849 | 0.668566 | 0.028857 | 0.029316 |
+| 서비스 enter p95(초) | 7.698264 | 9.938 | 1.654897 | 1.710751 |
+| metric 성공/실패 | 3200/0 | 3200/0 | 1280/0 | 1280/0 |
+| 입장/시작/종료 | 100/100/100 | 100/100/100 | 40/40/40 | 40/40/40 |
+| 서비스 HTTPException 500 | 0 | 0 | 0 | 0 |
+
+40명 renew +0.459ms/enter +55.854ms, 100명 enter 약 +2.240초 및 pending +7의 단일 표본
+변동을 숨기지 않는다. 100명 pending≤49/renew≤2초 기준은 통과하나 모든 지표의 무악화를
+증명한 것은 아니다. 실제 소켓 CPU·HTTP/WS 네트워크 지연·클라이언트 수신·화면은 감독 dev 시험 범위다.
+
+### 검증
+
+- 구현 전 핵심 단위시험 2실패/1통과. 보존한 baseline app 재실행에서도 seq 밀림·watermark
+  2개 회귀시험 실패를 재확인했다(`unit-red.log`). 수정 후 13통과(`unit-green.log`).
+- 실제 Redis checkpoint 5종: 전진·후퇴 방지·락 상실·epoch 교체·building 상태.
+  독립 검증자도 13통과/생략0 재확인, production diff Critical 없음.
+- PG 연결 불가 포트로 `S308_MEASURE=1` 명시 실행: 5 skipped, exit0. CI PG 부재 시 실패하지 않음.
+- 100/40명 각각 측정 및 실제 상태전이/멱등 4개 포함 5통과. 동일 production SHA 확인.
+- 기존 회귀 12묶음: 전후 각각 **365 통과·4 실패·4 생략**, 오류/시간초과 0. 실패 node ID 동일.
+  evidence-broadcast JSON 및 독립 검산 스크립트에 보존한다.
+  기존 jsonschema 모듈 미설치 실패는 환경을 수정하거나 숨기지 않는다.
+- SDD-285 'replay 불가에도 watermark 전진' 시험 1개는 요구에 따라 '유지' 계약으로 변경했다.
+  기존 동작을 그대로 통과했다는 의미가 아니다.
+
+### 위험·롤백·감독 관측
+
+`broadcast_progress`의 applied/emitted/expected/sent와 첫 미완료 행의 missing,
+`broadcast_gap`·`broadcast_emit_failed`·`broadcast_lease_lost`를 함께 확인한다.
+기대=전송 및 실패0, 종료 revision 일치는 서버 callback 단계 증거다. 실제 클라이언트 coverage는
+별도 소켓 수신 집합 검증이 필요하다. [재현·로그 판정 설명](evidence-broadcast/README.md) 참조.
+
+실제 stream 영구 절단은 후속 방송도 막으며 heartbeat snapshot resync가 복구 경로다.
+느린 단일 callback이 5초 lease를 넘는 경우 이미 시작한 외부 전송은 취소할 수 없다.
+checkpoint는 stale watermark 쓰기를 막지만 엄격한 네트워크 수신 순서는 보장하지 않는다.
+마이그레이션이 없어 승인 후 구현 커밋 revert로 롤백 가능하며 이번 작업에서 실행하지 않았다.
+
+푸시·PR·배포·서버 접속/설정 변경·재시작·dev 부하·운영 접근·메일·삭제는 수행하지 않았다.
+메인 체크아웃은 기존 venv 실행파일만 사용했다. 감독이 dev 결과를
+`~/.hermes/share/loadtest-40/feedback-319b/round-N.md`로 전달하면 같은 브랜치에 개선 커밋을 쌓는다.

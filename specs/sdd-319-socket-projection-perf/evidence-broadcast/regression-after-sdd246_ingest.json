@@ -1,0 +1,22 @@
+{
+  "exitstatus": 1,
+  "ledger_source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd319b/backend/app/services/session_live_ledger.py",
+  "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+  "counts": {
+    "warnings": 1,
+    "passed": 19,
+    "failed": 4
+  },
+  "failed": [
+    "tests/sdd246/ingest/test_live_ingest_pg.py::test_capture_start_ACK에_stream_owner_generation_lease_participant가_계약대로_들어간다",
+    "tests/sdd246/ingest/test_live_ingest_pg.py::test_stream_수명_event_payload는_DeviceEntity_스키마와_일치한다",
+    "tests/sdd246/ingest/test_live_ingest_pg.py::test_밴드_보고_payload도_DeviceEntity이고_이후_stream_event가_밴드_필드를_보존한다",
+    "tests/sdd246/ingest/test_live_ingest_pg.py::test_metric_소켓은_저장하지_않고_최신값_metrics_event만_만들고_REST가_feature를_저장한다"
+  ],
+  "errors": [],
+  "targets": [
+    "tests/sdd246/ingest"
+  ],
+  "process_exitstatus": 1,
+  "log_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319b-regression-after-mgm5rdnf/sdd246_ingest.log"
+}
