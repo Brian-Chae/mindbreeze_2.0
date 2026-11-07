@@ -1,0 +1,44 @@
+BASELINE_APP=/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t/app/__init__.py
+.F                                                                       [100%]
+=================================== FAILURES ===================================
+_______________ test_실제_projector_락이_busy여도_renew는_DB_리스_ACK를_반환 _______________
+
+maker = sessionmaker(class_='Session', bind=Engine(postgresql://localhost/sdd308c_83ecc270b1e3402d), autoflush=False, expire_on_commit=True)
+world = <tests.sdd246.commands.conftest.World object at 0x10fab23d0>
+live = <app.services.live_redis.client.LiveRedis object at 0x10ff85c90>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d66c790>
+
+    def test_실제_projector_락이_busy여도_renew는_DB_리스_ACK를_반환(maker, world, live, monkeypatch):
+        monkeypatch.setattr(slc, '_utcnow', lambda: T0)
+        with maker() as db:
+            started = cps.run_live_command(db, world.member(), _c(world, 'capture.start', {
+                'device_profile': 'linkband2-v1', 'algorithm_version': 'web-ts-1', 'model_version': 'b0'}), live=live)
+        assert started.ack['status'] == 'applied'
+        stream_id = started.ack['result']['stream_id']
+        before = _revision_and_outbox(maker, world.session_id)
+        before_stream = _stream(maker, stream_id)
+        fence = live.acquire_projector(world.session_id, ttl_ms=5000)
+        assert fence is not None
+        # 별도 발행자 락은 TTL로 끝난다. 시험이 직접 키/데이터를 삭제하지 않는다.
+        renewed_at = T0 + timedelta(seconds=25)
+        monkeypatch.setattr(slc, '_utcnow', lambda: renewed_at)
+        cmd = _c(world, 'capture.renew', {
+            'stream_id': stream_id, 'owner_generation': '1', 'clock_anchor_id': str(uuid.uuid4())})
+        with maker() as db:
+            outcome = cps.run_live_command(db, world.member(), cmd, live=live, drain_wait_s=0.02)
+>       assert outcome.ack['status'] == 'applied'
+E       AssertionError: assert 'retryable' == 'applied'
+E         
+E         - applied
+E         + retryable
+
+tests/sdd319/test_renew_lease_pg.py:93: AssertionError
+=============================== warnings summary ===============================
+../../mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854
+  /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/sdd319/test_renew_lease_pg.py::test_실제_projector_락이_busy여도_renew는_DB_리스_ACK를_반환
+1 failed, 1 passed, 1 warning in 1.41s

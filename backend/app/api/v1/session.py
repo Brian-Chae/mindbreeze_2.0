@@ -1287,7 +1287,7 @@ def live_v2_command(
     if cmd.session_id != sid:
         return _JSONResponse(status_code=400, content=w.error_ack(cid, "session_mismatch"))
     outcome = cps.run_live_command(db, actor, cmd)
-    if outcome.committed and not outcome.degraded:
+    if cmd.kind != "capture.renew" and outcome.committed and not outcome.degraded:
         try:
             from app.ws import session_live_namespace as ns
 

@@ -1,0 +1,61 @@
+{
+  "n": 100,
+  "ticks": 32,
+  "burst": 120,
+  "burn_ms": 15.0,
+  "period_ms": 25,
+  "elapsed_s": 53.05394995799725,
+  "counts": {
+    "started": 100,
+    "renew": 400,
+    "metric_projected": 3197,
+    "metric_status:projected:none": 3197,
+    "stored_ack": 3200,
+    "snapshot_completed": 120,
+    "projection_pending": 4,
+    "metric_failed": 3,
+    "metric_status:ignored:not_live": 3,
+    "completed": 100
+  },
+  "errors": {},
+  "p95_s": {
+    "renew": 3.0104833750010584,
+    "metric": 2.748861375002889,
+    "store": 2.273201957999845,
+    "snapshot": 5.539869666004961
+  },
+  "cpu_process_mean_pct": 103.94949938317188,
+  "cpu_process_max_pct": 107.11692636780434,
+  "loop_lag_p95_s": 0.0036662919956143014,
+  "stored_count": 3200,
+  "expected_windows": 3200,
+  "broadcast_expected_pairs": 6996,
+  "broadcast_missing_pairs": 0,
+  "client_missing_pairs": 0,
+  "revision": 3499,
+  "applied_revision": 3499,
+  "emitted_revision": 3499,
+  "source_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t/app/services/class_participation_service.py",
+  "cps_sha256": "9f4f58bc35c932ab9e1a8c6cc6a85ba9e846adaad4fb4cc0e0d9eb87c792ef55",
+  "namespace_sha256": "86a3bce31f8490a1f865c54287dca8f9033986abb43104844e6cfc3c4c5c6dc1",
+  "single_flight_stats": {
+    "publish_runs": 71,
+    "publish_coalesced": 3674,
+    "drain_runs": 315,
+    "drain_shared": 214,
+    "drain_fallback": 0,
+    "drain_handoff": 3,
+    "drain_timeout": 4,
+    "drain_skipped": 38
+  },
+  "timing_logs": [],
+  "limitations": [
+    "합성 V2Conn 인증/입장 주입",
+    "저장은 REST 서비스이나 test socket으로 전송",
+    "client도 같은 process 별도 loop",
+    "고정 CPU busy slice 합성 압박",
+    "fixed ticks 밀리면 종료 연장",
+    "직접 READY 주입으로 연결당 heartbeat 스케줄러 미실행",
+    "client coverage는 event_id×audience 합집합이며 클라이언트별 전송보장 아님"
+  ]
+}

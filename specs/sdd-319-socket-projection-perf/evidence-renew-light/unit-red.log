@@ -1,0 +1,130 @@
+FF....F.F.                                                               [100%]
+=================================== FAILURES ===================================
+________ test_renew는_다른_revision의_busy_projector를_기다리지_않고_리스_ACK[False] ________
+
+command_case = namespace(db=namespace(get=<function command_case.<locals>.<lambda> at 0x10e1b6e80>, rollback=<function command_case.<..., duplicate=False, committed=True, transient=False), cursors=[{'audience': 'public', 'domain': 'session', 'seq': '2'}])
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10dd7cc90>
+duplicate = False
+
+    @pytest.mark.parametrize('duplicate', [False, True])
+    def test_renew는_다른_revision의_busy_projector를_기다리지_않고_리스_ACK(command_case, monkeypatch, duplicate):
+        case = command_case
+        from dataclasses import replace
+        result = replace(case.result, duplicate=duplicate)
+        monkeypatch.setattr(commands, 'apply_command_with_retry', lambda *a, **kw: result)
+        monkeypatch.setattr(sf, 'coalesced_drain', lambda *a, **kw: SimpleNamespace(busy=True, applied_revision=0))
+        out = cps.run_live_command(case.db, case.actor, case.cmd, live=case.live)
+>       assert out.ack['status'] == ('duplicate' if duplicate else 'applied')
+E       AssertionError: assert 'retryable' == 'applied'
+E         
+E         - applied
+E         + retryable
+
+tests/sdd319/test_renew_light.py:50: AssertionError
+________ test_renew는_다른_revision의_busy_projector를_기다리지_않고_리스_ACK[True] _________
+
+command_case = namespace(db=namespace(get=<function command_case.<locals>.<lambda> at 0x10dd5cd60>, rollback=<function command_case.<..., duplicate=False, committed=True, transient=False), cursors=[{'audience': 'public', 'domain': 'session', 'seq': '2'}])
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10dd66d50>
+duplicate = True
+
+    @pytest.mark.parametrize('duplicate', [False, True])
+    def test_renew는_다른_revision의_busy_projector를_기다리지_않고_리스_ACK(command_case, monkeypatch, duplicate):
+        case = command_case
+        from dataclasses import replace
+        result = replace(case.result, duplicate=duplicate)
+        monkeypatch.setattr(commands, 'apply_command_with_retry', lambda *a, **kw: result)
+        monkeypatch.setattr(sf, 'coalesced_drain', lambda *a, **kw: SimpleNamespace(busy=True, applied_revision=0))
+        out = cps.run_live_command(case.db, case.actor, case.cmd, live=case.live)
+>       assert out.ack['status'] == ('duplicate' if duplicate else 'applied')
+E       AssertionError: assert 'retryable' == 'duplicate'
+E         
+E         - duplicate
+E         + retryable
+
+tests/sdd319/test_renew_light.py:50: AssertionError
+_______ test_실제_WS_handler에서_renew만_ACK전_동기_방송을_생략[capture.renew-False] ________
+
+command_case = namespace(db=namespace(get=<function command_case.<locals>.<lambda> at 0x10e2645e0>, rollback=<function command_case.<..., duplicate=False, committed=True, transient=False), cursors=[{'audience': 'public', 'domain': 'session', 'seq': '2'}])
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10e291310>
+kind = 'capture.renew', publish_expected = False
+
+    @pytest.mark.parametrize('kind,publish_expected', [('capture.renew', False), ('capture.start', True)])
+    def test_실제_WS_handler에서_renew만_ACK전_동기_방송을_생략(command_case, monkeypatch, kind, publish_expected):
+        from app.ws import session_live_namespace as ns
+        from app.services import capture_anchor_watch as caw
+        case = command_case
+        calls = []
+        monkeypatch.setenv('LIVE_PROTOCOL_V2', '1')
+        monkeypatch.setattr(ns, 'install_default_ingest_sinks', lambda: None)
+        monkeypatch.setattr(cps, 'register_live_handlers', lambda: None)
+        monkeypatch.setattr(ns, '_open_db', lambda: case.db)
+        monkeypatch.setattr(cps, 'get_live_redis', lambda: case.live)
+        monkeypatch.setattr(LiveStateService, 'heartbeat', lambda *a, **kw: {'through': case.cursors})
+        monkeypatch.setattr(caw, 'note_result', lambda *a: None)
+        ack = {'command_id': str(case.cmd.command_id), 'status': 'applied', 'epoch': '1', 'committed': True,
+               'cursors': case.cursors}
+        monkeypatch.setattr(cps, 'run_live_command', lambda *a, **kw: cps.RunOutcome(ack, committed=True))
+        monkeypatch.setattr(ns, 'publish_session_sync', lambda *a: calls.append('publish'))
+        conn = ns.V2Conn(sid='synthetic', session_id=case.cmd.session_id, actor=case.actor, state='READY')
+        monkeypatch.setattr(ns, '_v2_conns', {'synthetic': conn})
+        sock = HandlerSocket()
+        ns.register_v2_handlers(sock, ns._NAMESPACE)
+        payload = case.cmd.payload if kind == 'capture.renew' else {
+            'device_profile': 'lb2', 'algorithm_version': 'a1', 'model_version': 'm1'}
+        wire = {'protocol_version': 2, 'schema_version': 1, 'command_id': str(case.cmd.command_id),
+                'session_id': str(case.cmd.session_id), 'kind': kind, 'payload': payload,
+                'client_generation': '1', 'expected_epoch': '1'}
+        got = asyncio.run(sock.handlers['live:command']('synthetic', wire))
+        assert got == ack
+>       assert calls == (['publish'] if publish_expected else [])
+E       AssertionError: assert ['publish'] == []
+E         
+E         Left contains one more item: 'publish'
+E         Use -v to get more diff
+
+tests/sdd319/test_renew_light.py:121: AssertionError
+________ test_REST_fallback도_renew만_불필요한_방송_예약을_생략[capture.renew-False] ________
+
+command_case = namespace(db=namespace(get=<function command_case.<locals>.<lambda> at 0x10e2649a0>, rollback=<function command_case.<..., duplicate=False, committed=True, transient=False), cursors=[{'audience': 'public', 'domain': 'session', 'seq': '2'}])
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10e291550>
+kind = 'capture.renew', publish_expected = False
+
+    @pytest.mark.parametrize('kind,publish_expected', [('capture.renew', False), ('capture.start', True)])
+    def test_REST_fallback도_renew만_불필요한_방송_예약을_생략(command_case, monkeypatch, kind, publish_expected):
+        import json
+        from app.api.v1 import session as api
+        from app.ws import session_live_namespace as ns
+        case = command_case
+        calls = []
+        monkeypatch.setattr(api, '_v2_or_404', lambda: None)
+        monkeypatch.setattr(api, '_live_actor', lambda *a: (case.cmd.session_id, case.actor))
+        ack = {'command_id': str(case.cmd.command_id), 'status': 'applied', 'epoch': '1', 'committed': True,
+               'cursors': case.cursors}
+        monkeypatch.setattr(cps, 'run_live_command', lambda *a, **kw: cps.RunOutcome(ack, committed=True))
+        monkeypatch.setattr(ns, 'schedule_publish', lambda *a: calls.append('publish'))
+        payload = case.cmd.payload if kind == 'capture.renew' else {
+            'device_profile': 'lb2', 'algorithm_version': 'a1', 'model_version': 'm1'}
+        wire = {'protocol_version': 2, 'schema_version': 1, 'command_id': str(case.cmd.command_id),
+                'session_id': str(case.cmd.session_id), 'kind': kind, 'payload': payload,
+                'client_generation': '1', 'expected_epoch': '1'}
+        response = api.live_v2_command(str(case.cmd.session_id), wire, current_user={}, db=case.db)
+        assert response.status_code == 200 and json.loads(response.body) == ack
+>       assert calls == (['publish'] if publish_expected else [])
+E       AssertionError: assert ['publish'] == []
+E         
+E         Left contains one more item: 'publish'
+E         Use -v to get more diff
+
+tests/sdd319/test_renew_light.py:144: AssertionError
+=============================== warnings summary ===============================
+../../mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854
+  /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/sdd319/test_renew_light.py::test_renew는_다른_revision의_busy_projector를_기다리지_않고_리스_ACK[False]
+FAILED tests/sdd319/test_renew_light.py::test_renew는_다른_revision의_busy_projector를_기다리지_않고_리스_ACK[True]
+FAILED tests/sdd319/test_renew_light.py::test_실제_WS_handler에서_renew만_ACK전_동기_방송을_생략[capture.renew-False]
+FAILED tests/sdd319/test_renew_light.py::test_REST_fallback도_renew만_불필요한_방송_예약을_생략[capture.renew-False]
+4 failed, 6 passed, 1 warning in 4.14s

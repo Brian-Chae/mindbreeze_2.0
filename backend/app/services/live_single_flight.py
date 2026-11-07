@@ -83,7 +83,7 @@ def coalesced_drain(key: Any, do_drain: Callable[[], Any], need_revision: int, *
         if _drain_running.get(key):
             if need_revision <= 0:
                 stats["drain_skipped"] += 1
-                return _busy_result()
+                return _busy_result("publish_skip")
             _drain_waiters.setdefault(key, []).append(me)
             leader = False
         else:
@@ -112,14 +112,14 @@ def coalesced_drain(key: Any, do_drain: Callable[[], Any], need_revision: int, *
                 if ws is not None and me in ws:
                     ws.remove(me)
                 stats["drain_timeout"] += 1
-            return _busy_result()
+            return _busy_result("single_flight_wait")
     return _lead(key, do_drain, me)
 
 
-def _busy_result() -> Any:
+def _busy_result(reason: str = "unknown") -> Any:
     from app.services import session_live_outbox as ob
 
-    return ob.DrainResult(busy=True)
+    return ob.DrainResult(busy=True, wait_reason=reason)
 
 
 def _lead(key: Any, do_drain: Callable[[], Any], me: _Waiter) -> Any:

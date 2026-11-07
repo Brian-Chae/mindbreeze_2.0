@@ -1,0 +1,293 @@
+{
+  "counts": {
+    "before": {
+      "passed": 378,
+      "failed": 4,
+      "skipped": 4,
+      "error": 0
+    },
+    "after": {
+      "passed": 378,
+      "failed": 4,
+      "skipped": 4,
+      "error": 0
+    }
+  },
+  "new_failures": 0,
+  "timeouts": 0,
+  "errors": 0,
+  "same_counts_failed_nodes_and_targets": true,
+  "partitions": [
+    {
+      "partition": "sdd308",
+      "counts_before": {
+        "passed": 11,
+        "failed": 0,
+        "skipped": 0,
+        "error": 0
+      },
+      "counts_after": {
+        "passed": 11,
+        "failed": 0,
+        "skipped": 0,
+        "error": 0
+      },
+      "failed_nodes": [],
+      "same_failed_nodes": true,
+      "same_targets": true
+    },
+    {
+      "partition": "sdd319",
+      "counts_before": {
+        "passed": 31,
+        "failed": 0,
+        "skipped": 3,
+        "error": 0
+      },
+      "counts_after": {
+        "passed": 31,
+        "failed": 0,
+        "skipped": 3,
+        "error": 0
+      },
+      "failed_nodes": [],
+      "same_failed_nodes": true,
+      "same_targets": true
+    },
+    {
+      "partition": "sdd306",
+      "counts_before": {
+        "passed": 21,
+        "failed": 0,
+        "skipped": 1,
+        "error": 0
+      },
+      "counts_after": {
+        "passed": 21,
+        "failed": 0,
+        "skipped": 1,
+        "error": 0
+      },
+      "failed_nodes": [],
+      "same_failed_nodes": true,
+      "same_targets": true
+    },
+    {
+      "partition": "sdd285",
+      "counts_before": {
+        "passed": 31,
+        "failed": 0,
+        "skipped": 0,
+        "error": 0
+      },
+      "counts_after": {
+        "passed": 31,
+        "failed": 0,
+        "skipped": 0,
+        "error": 0
+      },
+      "failed_nodes": [],
+      "same_failed_nodes": true,
+      "same_targets": true
+    },
+    {
+      "partition": "sdd246_archive",
+      "counts_before": {
+        "passed": 29,
+        "failed": 0,
+        "skipped": 0,
+        "error": 0
+      },
+      "counts_after": {
+        "passed": 29,
+        "failed": 0,
+        "skipped": 0,
+        "error": 0
+      },
+      "failed_nodes": [],
+      "same_failed_nodes": true,
+      "same_targets": true
+    },
+    {
+      "partition": "sdd246_commands",
+      "counts_before": {
+        "passed": 33,
+        "failed": 0,
+        "skipped": 0,
+        "error": 0
+      },
+      "counts_after": {
+        "passed": 33,
+        "failed": 0,
+        "skipped": 0,
+        "error": 0
+      },
+      "failed_nodes": [],
+      "same_failed_nodes": true,
+      "same_targets": true
+    },
+    {
+      "partition": "sdd246_ingest",
+      "counts_before": {
+        "passed": 19,
+        "failed": 4,
+        "skipped": 0,
+        "error": 0
+      },
+      "counts_after": {
+        "passed": 19,
+        "failed": 4,
+        "skipped": 0,
+        "error": 0
+      },
+      "failed_nodes": [
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_capture_start_ACK에_stream_owner_generation_lease_participant가_계약대로_들어간다",
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_stream_수명_event_payload는_DeviceEntity_스키마와_일치한다",
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_밴드_보고_payload도_DeviceEntity이고_이후_stream_event가_밴드_필드를_보존한다",
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_metric_소켓은_저장하지_않고_최신값_metrics_event만_만들고_REST가_feature를_저장한다"
+      ],
+      "same_failed_nodes": true,
+      "same_targets": true
+    },
+    {
+      "partition": "sdd246_legacy",
+      "counts_before": {
+        "passed": 50,
+        "failed": 0,
+        "skipped": 0,
+        "error": 0
+      },
+      "counts_after": {
+        "passed": 50,
+        "failed": 0,
+        "skipped": 0,
+        "error": 0
+      },
+      "failed_nodes": [],
+      "same_failed_nodes": true,
+      "same_targets": true
+    },
+    {
+      "partition": "sdd246_state",
+      "counts_before": {
+        "passed": 22,
+        "failed": 0,
+        "skipped": 0,
+        "error": 0
+      },
+      "counts_after": {
+        "passed": 22,
+        "failed": 0,
+        "skipped": 0,
+        "error": 0
+      },
+      "failed_nodes": [],
+      "same_failed_nodes": true,
+      "same_targets": true
+    },
+    {
+      "partition": "sdd246_t12b",
+      "counts_before": {
+        "passed": 11,
+        "failed": 0,
+        "skipped": 0,
+        "error": 0
+      },
+      "counts_after": {
+        "passed": 11,
+        "failed": 0,
+        "skipped": 0,
+        "error": 0
+      },
+      "failed_nodes": [],
+      "same_failed_nodes": true,
+      "same_targets": true
+    },
+    {
+      "partition": "sdd246_transport",
+      "counts_before": {
+        "passed": 84,
+        "failed": 0,
+        "skipped": 0,
+        "error": 0
+      },
+      "counts_after": {
+        "passed": 84,
+        "failed": 0,
+        "skipped": 0,
+        "error": 0
+      },
+      "failed_nodes": [],
+      "same_failed_nodes": true,
+      "same_targets": true
+    },
+    {
+      "partition": "ws_live_v2",
+      "counts_before": {
+        "passed": 36,
+        "failed": 0,
+        "skipped": 0,
+        "error": 0
+      },
+      "counts_after": {
+        "passed": 36,
+        "failed": 0,
+        "skipped": 0,
+        "error": 0
+      },
+      "failed_nodes": [],
+      "same_failed_nodes": true,
+      "same_targets": true
+    }
+  ],
+  "known_environment_failures": [
+    {
+      "stage": "before",
+      "jsonschema_missing_occurrences": 4,
+      "failed_nodes": [
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_capture_start_ACK에_stream_owner_generation_lease_participant가_계약대로_들어간다",
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_stream_수명_event_payload는_DeviceEntity_스키마와_일치한다",
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_밴드_보고_payload도_DeviceEntity이고_이후_stream_event가_밴드_필드를_보존한다",
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_metric_소켓은_저장하지_않고_최신값_metrics_event만_만들고_REST가_feature를_저장한다"
+      ]
+    },
+    {
+      "stage": "after",
+      "jsonschema_missing_occurrences": 4,
+      "failed_nodes": [
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_capture_start_ACK에_stream_owner_generation_lease_participant가_계약대로_들어간다",
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_stream_수명_event_payload는_DeviceEntity_스키마와_일치한다",
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_밴드_보고_payload도_DeviceEntity이고_이후_stream_event가_밴드_필드를_보존한다",
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_metric_소켓은_저장하지_않고_최신값_metrics_event만_만들고_REST가_feature를_저장한다"
+      ]
+    }
+  ],
+  "source_manifest": {
+    "before": {
+      "app/services/class_participation_service.py": "9f4f58bc35c932ab9e1a8c6cc6a85ba9e846adaad4fb4cc0e0d9eb87c792ef55",
+      "app/services/session_live_commands.py": "45705cb9ba73be96f17acce8665105b8097837f1a02291185eda33f8873814b9",
+      "app/services/live_single_flight.py": "5758522ec0d9283ca6d5af78abf8263538157e52c1f3d595e29c97f4dce37cb1",
+      "app/services/session_live_outbox.py": "05667aec6a35bc1a6b44db01c4798274c79763753418ca9fb931436f23a59801",
+      "app/services/live_command_timing.py": null,
+      "app/ws/session_live_namespace.py": "86a3bce31f8490a1f865c54287dca8f9033986abb43104844e6cfc3c4c5c6dc1",
+      "app/api/v1/session.py": "ecef1080547aada7b1145dfee0d9ecf4640989c1f0d5d9320fcd6d498f2909d9",
+      "app/schemas/session_live_v2.py": "c7885b727768a5d34fdcf2eb7cba3d9d9af3ecd629218e1ec4107a1b281f1a50"
+    },
+    "after": {
+      "app/services/class_participation_service.py": "c96750b02cbb57cedb2df4f1b738d9c856e0807fdd491a8654213d29f68d3f36",
+      "app/services/session_live_commands.py": "279ae85b4053f74a127af73a9469425446d0571168e68d3731c2dfce66bcc5b6",
+      "app/services/live_single_flight.py": "277de85cb163d3e5e3ab54ee2e547c1b8585630ec821f4b120fd5f86d32207c2",
+      "app/services/session_live_outbox.py": "35c335c2d267847c18ef6c6021c7135be56fd79063ce74b6c3851a58683423ab",
+      "app/services/live_command_timing.py": "b9a1add713fa2e9950c44a0a0895181b7b25586a50ad641ba11c3bcb1c2cc510",
+      "app/ws/session_live_namespace.py": "65637af3ae939877911945d624e05462ec08cff3ceac101ecc64ecbb3dd59f00",
+      "app/api/v1/session.py": "6d16caaf28c30e27e336f5166498594be7678a31e28f0c5229e28b13464d52b1",
+      "app/schemas/session_live_v2.py": "f9106bf59633b28188dfa4bbc49645e596a9a10d798ec6624fac9aa793d8e24b"
+    }
+  },
+  "source_manifest_note": "각 실행 JSON의6개source SHA를 실제 보존baseline/현재source와 대조. 신규timing/기존schemas는 최종freeze source에 추가 기록.",
+  "notes": [
+    "기존 방송13개 포함, 신규 renew_light/socket_load/command_timing/renew_lease_pg 제외",
+    "전후 동일 현재 테스트 계약을 사용하며 이번 round에는 기존 시험 기대 변경 없음",
+    "합성 PG/Redis 증거 보존, 삭제 teardown 없음"
+  ]
+}
