@@ -1,0 +1,38 @@
+{
+  "session_id": "d2e26263-6623-4798-beb3-17b8f904aea0",
+  "ledger_source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd319b/backend/app/services/session_live_ledger.py",
+  "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+  "lock_epoch_has_session_lock": true,
+  "n": 40,
+  "measurement_s": 32.0,
+  "elapsed_s": 35.071,
+  "counts": {
+    "entered": 40,
+    "started": 40,
+    "renew": 160,
+    "presence": 160,
+    "device_accepted": 160,
+    "metric_projected": 1280,
+    "completed": 40
+  },
+  "failures": {},
+  "renew_p95_s": 0.029316000000108033,
+  "entry_p95_s": 1.7107506250031292,
+  "outbox_count": 1642,
+  "revision": 1642,
+  "applied_revision": 1642,
+  "emitted_revision": 1642,
+  "broadcast_expected_pairs": 3282,
+  "broadcast_actual_pairs": 3282,
+  "broadcast_missing_pairs": 0,
+  "broadcast_missing_sample": [],
+  "broadcast_missing_causes": {
+    "seq_shift": 0,
+    "replay_unavailable": 0,
+    "emit_failure": 0,
+    "other": 0
+  },
+  "broadcast_missing_details": [],
+  "broadcast_source_sha256": "9f4f58bc35c932ab9e1a8c6cc6a85ba9e846adaad4fb4cc0e0d9eb87c792ef55",
+  "pg_deadlock_diagnostics": []
+}

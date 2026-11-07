@@ -83,16 +83,16 @@ seq_shift로 확정. replay 불가/emit 실패/기타 0. 결정적 단위시험�
 
 ### 구현 계획 및 검증
 
-- [ ] `class_participation_service.events_for_rows`: 원자 snapshot 하한, 최초 epoch 고정,
+- [x] `class_participation_service.events_for_rows`: 원자 snapshot 하한, 최초 epoch 고정,
   trim 재조회, 정확한 pair 필터. 결정적 seq 선행·절단·epoch 변경 시험.
-- [ ] `publish_pending`: contiguous revision/all-audience coverage, emit 실패 시 재시도,
+- [x] `publish_pending`: contiguous revision/all-audience coverage, emit 실패 시 재시도,
   lock token/epoch 검사 및 갱신, 단조 watermark 원자 쓰기. 누락·실패 로그에는 payload/개인정보 제외.
-- [ ] 단위시험: audience 일부 누락, revision hole, callback 실패, lock 상실, epoch 교체.
-- [ ] 실제 로컬 PG/Redis 100명·40명 순차 재시험: callback 누락0, 교착0, pending≤49,
+- [x] 단위시험: audience 일부 누락, revision hole, callback 실패, lock 상실, epoch 교체.
+- [x] 실제 로컬 PG/Redis 100명·40명 순차 재시험: callback 누락0, 교착0, pending≤49,
   renew p95≤2초. 실제 네트워크/화면/소켓 CPU는 감독 dev 시험 범위.
-- [ ] 기존 회귀 12묶음 전후 독립 프로세스 실행, 실패 nodeid 비교. PG 불가 skip,
+- [x] 기존 회귀 12묶음 전후 독립 프로세스 실행, 실패 nodeid 비교. PG 불가 skip,
   UUID DB/Redis 증거 보존, 삭제 teardown 차단.
-- [ ] summary·재현 명령·전후 수치·위험·dev 로그 관측법 기록, 독립 검토 후 로컬 커밋.
+- [x] summary·재현 명령·전후 수치·위험·dev 로그 관측법 기록, 독립 검토 후 로컬 커밋.
 
 ### 위험과 관측
 

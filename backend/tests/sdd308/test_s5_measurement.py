@@ -145,6 +145,55 @@ def test_S5_동시_입장과_측정_renew_metric_device_publish(maker, pg_engine
     diagnostics = []
     mutex = threading.Lock()
     emitted = []
+    # SDD-319b: 방송 조회 범위와 최종 누락을 event_id×audience 단위로 연결한다.
+    # Redis 추가 읽기는 부하 종료 후에만 수행하여 경합 타이밍에 주는 영향을 줄인다.
+    from app.services.session_live_state import LiveStateService, ReplayUnavailable
+    from app.services.live_redis import keys as redis_keys
+
+    broadcast_attempts = {}
+    broadcast_context = threading.local()
+    original_events_for_rows = cps.events_for_rows
+    original_replay = LiveStateService.replay
+
+    def traced_replay(service, session_id, scope, cursors, **kwargs):
+        record = {"cursors": [(c.audience, c.domain, c.seq) for c in cursors],
+                  "returned": set(), "error": None}
+        context = getattr(broadcast_context, "calls", None)
+        if context is not None:
+            context.append(record)
+        try:
+            result = original_replay(service, session_id, scope, cursors, **kwargs)
+            record["returned"] = {(event["event_id"], event["audience"]) for event in result.events}
+            return result
+        except ReplayUnavailable as exc:
+            record["error"] = exc.reason
+            raise
+
+    def traced_events_for_rows(live_instance, session_id, rows, **kwargs):
+        calls = []
+        broadcast_context.calls = calls
+        returned = set()
+        try:
+            events = original_events_for_rows(live_instance, session_id, rows, **kwargs)
+            returned = {(event["event_id"], event["audience"]) for event in events}
+            return events
+        finally:
+            broadcast_context.calls = None
+            with mutex:
+                for row in rows:
+                    for audience in dict.fromkeys(row.audience_policy or []):
+                        pair = (str(row.event_id), audience)
+                        attempts = broadcast_attempts.setdefault(pair, [])
+                        relevant = [(call, cursor) for call in calls for cursor in call["cursors"]
+                                    if cursor[:2] == (audience, row.domain)]
+                        attempts.append({"revision": int(row.revision), "domain": row.domain,
+                                         "selected_for_emit": pair in returned,
+                                         "replays": [{"cursor": cursor[2], "error": call["error"],
+                                                      "returned": pair in call["returned"]}
+                                                     for call, cursor in relevant]})
+
+    monkeypatch.setattr(LiveStateService, "replay", traced_replay)
+    monkeypatch.setattr(cps, "events_for_rows", traced_events_for_rows)
 
     def record(key, value=1):
         with mutex:
@@ -270,6 +319,30 @@ def test_S5_동시_입장과_측정_renew_metric_device_publish(maker, pg_engine
             for audience in row.audience_policy}
     actual_broadcast = {(event["event_id"], event["audience"]) for event in emitted}
     missing_broadcast = expected_broadcast - actual_broadcast
+    missing_details = []
+    stream_seqs = {}
+    for pair in sorted(missing_broadcast):
+        attempts = broadcast_attempts.get(pair, [])
+        domain = attempts[0]["domain"] if attempts else None
+        stream_key = (pair[1], domain)
+        if domain and stream_key not in stream_seqs:
+            stream_seqs[stream_key] = {fields["event_id"]: int(entry_id.split("-")[0])
+                                       for entry_id, fields in live.r.xrange(
+                                           redis_keys.events(live.prefix, scene.session_id, *stream_key))}
+        seq = stream_seqs.get(stream_key, {}).get(pair[0])
+        replays = [replay for attempt in attempts for replay in attempt["replays"]]
+        if any(attempt["selected_for_emit"] for attempt in attempts):
+            cause = "emit_failure"
+        elif any(replay["error"] for replay in replays):
+            cause = "replay_unavailable"
+        elif seq is not None and replays and all(seq <= replay["cursor"] for replay in replays):
+            cause = "seq_shift"
+        else:
+            cause = "other"
+        missing_details.append({"event_id": pair[0], "audience": pair[1], "stream_seq": seq,
+                                "cause": cause, "attempts": attempts})
+    missing_causes = {cause: sum(item["cause"] == cause for item in missing_details)
+                      for cause in ("seq_shift", "replay_unavailable", "emit_failure", "other")}
     meta = live.read_meta(scene.session_id)
     from app.services import session_live_ledger as ledger_module
     ledger_source = Path(ledger_module.__file__).read_bytes()
@@ -283,8 +356,12 @@ def test_S5_동시_입장과_측정_renew_metric_device_publish(maker, pg_engine
                "broadcast_expected_pairs": len(expected_broadcast), "broadcast_actual_pairs": len(actual_broadcast),
                "broadcast_missing_pairs": len(missing_broadcast),
                "broadcast_missing_sample": sorted(missing_broadcast)[:10],
+               "broadcast_missing_causes": missing_causes,
+               "broadcast_missing_details": missing_details,
+               "broadcast_source_sha256": hashlib.sha256(Path(cps.__file__).read_bytes()).hexdigest(),
                "pg_deadlock_diagnostics": diagnostics}
-    print("S308_MEASUREMENT " + json.dumps(summary, ensure_ascii=False), flush=True)
+    print("S308_MEASUREMENT " + json.dumps({key: value for key, value in summary.items()
+                                             if key != "broadcast_missing_details"}, ensure_ascii=False), flush=True)
     output = os.environ.get("S308_RESULT")
     if output:
         Path(output).write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -298,7 +375,10 @@ def test_S5_동시_입장과_측정_renew_metric_device_publish(maker, pg_engine
     assert counts["renew"] >= n * 3 and counts["metric_projected"] >= n * 20, summary
     assert counts["metric_failed"] == counts["device_failed"] == counts["presence_failed"] == 0, summary
     assert counts["presence"] >= n * 3, summary
-    # 방송 callback coverage는 기존 replay 경합의 별도 수치다. 워터마크 일치를 누락 0으로 간주하지 않는다.
+    # 수정본 검증에서는 callback coverage 자체를 합격 기준으로 삼는다. 기준선은 누락 계측을 허용한다.
+    if os.environ.get("S319_REQUIRE_BROADCAST") == "1":
+        assert summary["broadcast_missing_pairs"] == 0, summary
+    # 워터마크 일치를 누락 0으로 간주하지 않는다.
     assert revisions == list(range(1, revision + 1)), summary
     assert summary["applied_revision"] == summary["emitted_revision"] == revision, summary
 

@@ -1,0 +1,206 @@
+{
+  "checks": {
+    "counts_equal": true,
+    "failed_nodeids_equal": true,
+    "targets_equal": true,
+    "timeouts": 0,
+    "errors": 0,
+    "existing_jsonschema_failures_confirmed": 4
+  },
+  "totals": {
+    "before": {
+      "warnings": 15,
+      "passed": 365,
+      "skipped": 4,
+      "failed": 4
+    },
+    "after": {
+      "warnings": 15,
+      "passed": 365,
+      "skipped": 4,
+      "failed": 4
+    }
+  },
+  "partitions": [
+    {
+      "partition": "sdd308",
+      "counts_before": {
+        "warnings": 1,
+        "passed": 11
+      },
+      "counts_after": {
+        "warnings": 1,
+        "passed": 11
+      },
+      "targets_equal": true,
+      "failed_nodeids_equal": true,
+      "failed_nodeids": []
+    },
+    {
+      "partition": "sdd319",
+      "counts_before": {
+        "warnings": 2,
+        "skipped": 3,
+        "passed": 18
+      },
+      "counts_after": {
+        "warnings": 2,
+        "skipped": 3,
+        "passed": 18
+      },
+      "targets_equal": true,
+      "failed_nodeids_equal": true,
+      "failed_nodeids": []
+    },
+    {
+      "partition": "sdd306",
+      "counts_before": {
+        "warnings": 1,
+        "passed": 21,
+        "skipped": 1
+      },
+      "counts_after": {
+        "warnings": 1,
+        "passed": 21,
+        "skipped": 1
+      },
+      "targets_equal": true,
+      "failed_nodeids_equal": true,
+      "failed_nodeids": []
+    },
+    {
+      "partition": "sdd285",
+      "counts_before": {
+        "warnings": 1,
+        "passed": 31
+      },
+      "counts_after": {
+        "warnings": 1,
+        "passed": 31
+      },
+      "targets_equal": true,
+      "failed_nodeids_equal": true,
+      "failed_nodeids": []
+    },
+    {
+      "partition": "sdd246_archive",
+      "counts_before": {
+        "warnings": 1,
+        "passed": 29
+      },
+      "counts_after": {
+        "warnings": 1,
+        "passed": 29
+      },
+      "targets_equal": true,
+      "failed_nodeids_equal": true,
+      "failed_nodeids": []
+    },
+    {
+      "partition": "sdd246_commands",
+      "counts_before": {
+        "warnings": 1,
+        "passed": 33
+      },
+      "counts_after": {
+        "warnings": 1,
+        "passed": 33
+      },
+      "targets_equal": true,
+      "failed_nodeids_equal": true,
+      "failed_nodeids": []
+    },
+    {
+      "partition": "sdd246_ingest",
+      "counts_before": {
+        "warnings": 1,
+        "passed": 19,
+        "failed": 4
+      },
+      "counts_after": {
+        "warnings": 1,
+        "passed": 19,
+        "failed": 4
+      },
+      "targets_equal": true,
+      "failed_nodeids_equal": true,
+      "failed_nodeids": [
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_capture_start_ACK에_stream_owner_generation_lease_participant가_계약대로_들어간다",
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_stream_수명_event_payload는_DeviceEntity_스키마와_일치한다",
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_밴드_보고_payload도_DeviceEntity이고_이후_stream_event가_밴드_필드를_보존한다",
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_metric_소켓은_저장하지_않고_최신값_metrics_event만_만들고_REST가_feature를_저장한다"
+      ]
+    },
+    {
+      "partition": "sdd246_legacy",
+      "counts_before": {
+        "warnings": 1,
+        "passed": 50
+      },
+      "counts_after": {
+        "warnings": 1,
+        "passed": 50
+      },
+      "targets_equal": true,
+      "failed_nodeids_equal": true,
+      "failed_nodeids": []
+    },
+    {
+      "partition": "sdd246_state",
+      "counts_before": {
+        "warnings": 1,
+        "passed": 22
+      },
+      "counts_after": {
+        "warnings": 1,
+        "passed": 22
+      },
+      "targets_equal": true,
+      "failed_nodeids_equal": true,
+      "failed_nodeids": []
+    },
+    {
+      "partition": "sdd246_t12b",
+      "counts_before": {
+        "warnings": 1,
+        "passed": 11
+      },
+      "counts_after": {
+        "warnings": 1,
+        "passed": 11
+      },
+      "targets_equal": true,
+      "failed_nodeids_equal": true,
+      "failed_nodeids": []
+    },
+    {
+      "partition": "sdd246_transport",
+      "counts_before": {
+        "warnings": 2,
+        "passed": 84
+      },
+      "counts_after": {
+        "warnings": 2,
+        "passed": 84
+      },
+      "targets_equal": true,
+      "failed_nodeids_equal": true,
+      "failed_nodeids": []
+    },
+    {
+      "partition": "ws_live_v2",
+      "counts_before": {
+        "warnings": 2,
+        "passed": 36
+      },
+      "counts_after": {
+        "warnings": 2,
+        "passed": 36
+      },
+      "targets_equal": true,
+      "failed_nodeids_equal": true,
+      "failed_nodeids": []
+    }
+  ],
+  "intentional_contract_change": "sdd285/test_s4_replay_unavailable.py의 누락 시 watermark 전진 기대를 watermark 유지로 변경한 1개 시험은 새 요구에 맞춘 기대 변경이며 통과 수 동일"
+}

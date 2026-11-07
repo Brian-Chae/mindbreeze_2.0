@@ -18,10 +18,11 @@ def _hand(maker, world, raised):
         return cps.run_live_command(s, world.member(0), make_cmd(world, "hand.set", {"raised": raised}))
 
 
-def test_S4_되감기_불가여도_예외없이_워터마크가_전진한다(maker, world, live, monkeypatch, caplog):
+def test_S4_되감기_불가면_예외없이_워터마크를_유지한다(maker, world, live, monkeypatch, caplog):
     with maker() as s:
         cps.seed_live_state(s, world.session_id)
         cps.publish_pending(s, live, world.session_id, lambda e: None)  # seed 소진
+    before = int(live.r.get(live.emitted_key(world.session_id)))
     cps._replay_warned.clear()
 
     def boom(self, *a, **k):
@@ -34,7 +35,7 @@ def test_S4_되감기_불가여도_예외없이_워터마크가_전진한다(mak
     with maker() as s:
         cps.publish_pending(s, live, world.session_id, got.append)  # 예외가 전파되면 시험 실패
     meta = live.read_meta(world.session_id)
-    assert int(live.r.get(live.emitted_key(world.session_id))) == int(meta["applied_revision"])  # 반복 재시도 방지
+    assert int(live.r.get(live.emitted_key(world.session_id))) == before < int(meta["applied_revision"])  # SDD-319b: 미방송 watermark 전진 금지
     assert got == []  # 재방송 생략(snapshot 경로 위임)
     assert len(_warns(caplog)) >= 1
 

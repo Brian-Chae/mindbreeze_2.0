@@ -923,11 +923,17 @@ def _warn_replay_unavailable(session_id, aud, dom, exc, *, now: float | None = N
     return True
 
 
-def events_for_rows(live, session_id, rows) -> list[dict]:
-    """outbox row 들에 대응하는 wire LiveEvent(seq 포함, audience 별)를 Redis stream 에서 읽어 revision 순으로 돌려준다."""
+def events_for_rows(live, session_id, rows, *, expected_epoch: int | None = None) -> list[dict]:
+    """연속 outbox 구간의 이벤트를 보수적인 seq 하한에서 읽는다. 누락 판단은 발행자가 한다."""
+    from app.services.live_redis import keys
     from app.services.session_live_state import Cursor, LiveStateService, ReplayUnavailable, Scope
+    from app.services.live_redis.client import LiveNotReady
 
-    want = {str(r.event_id): int(r.revision) for r in rows}
+    if not rows:
+        return []
+    want = {(str(r.event_id), aud, r.domain): int(r.revision)
+            for r in rows for aud in dict.fromkeys(r.audience_policy or [])}
+    applied = max(int(r.revision) for r in rows)
     pairs: dict[tuple[str, str], int] = {}
     for r in rows:
         for aud in dict.fromkeys(r.audience_policy or []):
@@ -935,23 +941,48 @@ def events_for_rows(live, session_id, rows) -> list[dict]:
     svc, out = LiveStateService(live), []
     for (aud, dom), n_rows in pairs.items():
         scope = Scope("host") if aud in ("host", "public") else Scope("member", _uuid.UUID(aud.split(":", 1)[1]))
-        seq = int(live.snapshot_raw(session_id, [aud], (dom,), False)[5][0][2])
-        # 방송 대상 행은 projection 된 가장 최근 event 들이라 (aud,dom) 의 마지막 n_rows 개 seq 와 일치한다.
-        # 고정 폭(512)으로 거슬러 가면 재구축 직후(복원된 seq 만 있고 stream 이력이 없을 때) log_truncated 가 난다.
+        snap = svc._check_ok(live.snapshot_raw(session_id, [aud], (dom,), False))
+        epoch, projected = int(snap[1]), int(snap[4])
+        if expected_epoch is None:
+            expected_epoch = epoch
+        if epoch != expected_epoch:
+            raise LiveNotReady("broadcast_epoch_changed")
+        seq = int(snap[5][0][2])
+        # 같은 원자 snapshot의 revision 차이는 이 pair에서 늘어난 seq 수의 상한이다.
+        cursor = max(0, seq - n_rows - max(0, projected - applied))
         try:
-            rep = svc.replay(session_id, scope, [Cursor(aud, dom, max(0, seq - n_rows))])
+            rep = svc.replay(session_id, scope, [Cursor(aud, dom, cursor)], expected_epoch=expected_epoch)
         except ReplayUnavailable as exc:
-            # SDD-285 S4: 되감기 불가(log_truncated 등)면 이 (aud,dom) 의 재방송만 건너뛴다. 예외를 올리면 워터마크가 전진하지 않아
-            # 5초 heartbeat 마다 같은 실패가 반복된다(11/4 1,561회). 건너뛴 쪽은 클라이언트가 heartbeat `through` 가 자기 cursor 보다
-            # 앞선 것을 보고 resync(snapshot) 로 따라잡는다(frontend live-state.ts applyHeartbeat → 'heartbeat_ahead').
-            _warn_replay_unavailable(session_id, aud, dom, exc)
-            continue
-        out += [e for e in rep.events if e["event_id"] in want]
-    out.sort(key=lambda e: (want[e["event_id"]], e["audience"]))
+            if str(exc) == "log_truncated":
+                first = live._wrap(live.r.xrange, keys.events(live.prefix, session_id, aud, dom), count=1)
+                floor = int(first[0][0].split("-")[0]) - 1 if first else cursor
+                try:
+                    rep = svc.replay(session_id, scope, [Cursor(aud, dom, max(cursor, floor))],
+                                     expected_epoch=expected_epoch)
+                except ReplayUnavailable as retry_exc:
+                    _warn_replay_unavailable(session_id, aud, dom, retry_exc)
+                    continue
+            else:
+                _warn_replay_unavailable(session_id, aud, dom, exc)
+                continue
+        out += [e for e in rep.events if (e["event_id"], e["audience"], e["domain"]) in want]
+    out.sort(key=lambda e: (want[(e["event_id"], e["audience"], e["domain"])], e["audience"]))
     return out
 
 
 EMIT_LOCK_TTL_MS = 5_000
+
+
+_BROADCAST_CHECKPOINT = """
+if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end
+if redis.call('HGET', KEYS[2], 'epoch') ~= ARGV[2] then return 0 end
+local status = redis.call('HGET', KEYS[2], 'status')
+if status ~= 'active' and status ~= 'terminal' then return 0 end
+redis.call('PEXPIRE', KEYS[1], ARGV[3])
+local done = tonumber(redis.call('GET', KEYS[3]) or '0')
+if tonumber(ARGV[4]) > done then redis.call('SET', KEYS[3], ARGV[4]) end
+return 1
+"""
 
 
 def _emitted_key(live, session_id) -> str:
@@ -989,12 +1020,50 @@ def publish_pending(db, live, session_id, emit_fn: Callable[[dict], None], *, wa
             return 0
         rows = db.execute(_select(LiveOutbox).where(LiveOutbox.session_id == session_id, LiveOutbox.revision > done,
                                                     LiveOutbox.revision <= applied).order_by(LiveOutbox.revision)).scalars().all()
-        for ev in events_for_rows(live, session_id, rows):
-            emit_fn(ev)
-        live._wrap(live.r.set, _emitted_key(live, session_id), applied)
-        db.rollback()
-        return len(rows)
+        epoch = int(meta["epoch"])
+        events = events_for_rows(live, session_id, rows, expected_epoch=epoch)
+        by_pair = {(e["event_id"], e["audience"], e["domain"]): e for e in events}
+        completed, sent, missing = done, 0, 0
+        expected = sum(len(set(r.audience_policy or [])) for r in rows)
+        renewed_at = 0.0
+
+        def checkpoint(revision):
+            # 소유권·epoch 검증과 TTL 갱신/단조 watermark 쓰기를 한 번에 수행한다.
+            ok = live._wrap(live.r.eval, _BROADCAST_CHECKPOINT, 3, lock_key,
+                            live.meta_key(session_id), _emitted_key(live, session_id),
+                            token, epoch, EMIT_LOCK_TTL_MS, revision)
+            if not ok:
+                _live_log.warning("[live-v2] broadcast_lease_lost session=%s applied=%s emitted=%s",
+                                  str(session_id)[:8], applied, completed)
+                from app.services.live_redis.client import LiveNotReady
+                raise LiveNotReady("broadcast_lease_lost")
+
+        for row in rows:
+            audiences = sorted(set(row.audience_policy or []))
+            keys = [(str(row.event_id), aud, row.domain) for aud in audiences]
+            missing = sum(key not in by_pair for key in keys)
+            if int(row.revision) != completed + 1 or missing:
+                _live_log.warning("[live-v2] broadcast_gap session=%s applied=%s emitted=%s revision=%s missing=%s",
+                                  str(session_id)[:8], applied, completed, row.revision, missing)
+                break
+            for key in keys:
+                if _time.monotonic() - renewed_at >= 1.0:
+                    checkpoint(completed)
+                    renewed_at = _time.monotonic()
+                try:
+                    emit_fn(by_pair[key])
+                except Exception:
+                    _live_log.warning("[live-v2] broadcast_emit_failed session=%s revision=%s sent=%s",
+                                      str(session_id)[:8], row.revision, sent)
+                    raise
+                sent += 1
+            completed = int(row.revision)
+        checkpoint(completed)
+        _live_log.info("[live-v2] broadcast_progress session=%s applied=%s emitted=%s expected=%s sent=%s missing=%s",
+                       str(session_id)[:8], applied, completed, expected, sent, missing)
+        return completed - done
     finally:
+        db.rollback()
         live._wrap(live._str_unlock, keys=[lock_key], args=[token])
 
 
