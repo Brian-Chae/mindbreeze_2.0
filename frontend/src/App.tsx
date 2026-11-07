@@ -43,11 +43,19 @@ const ClientEssentialsPage = lazy(() => import('./pages/onboarding/ClientEssenti
 const ClientProfilePage = lazy(() => import('./pages/clients/ClientProfilePage'));
 const ClientInvitePage = lazy(() => import('./pages/clients/ClientInvitePage'));
 const InviteLandingPage = lazy(() => import('./pages/clients/InviteLandingPage'));
-const OrgSearchPage = lazy(() => import('./pages/org/OrgSearchPage'));
-const OrgManagementPage = lazy(() => import('./pages/org/OrgManagementPage'));
+const OrgSearchPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/org/ui-v2/ui-v2-org-search-page').then((module) => ({ default: module.UiV2OrgSearchPage }))
+  : import('./pages/org/OrgSearchPage'));
+const OrgManagementPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/org/ui-v2/ui-v2-org-management-page').then((module) => ({ default: module.UiV2OrgManagementPage }))
+  : import('./pages/org/OrgManagementPage'));
 // SDD-082: 기관 관리자 상담사 관리 페이지
-const OrgCounselorsPage = lazy(() => import('./pages/org/OrgCounselorsPage'));
-const MyRequestsPage = lazy(() => import('./pages/org/MyRequestsPage'));
+const OrgCounselorsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/org/ui-v2/ui-v2-org-counselors-page').then((module) => ({ default: module.UiV2OrgCounselorsPage }))
+  : import('./pages/org/OrgCounselorsPage'));
+const MyRequestsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/org/ui-v2/ui-v2-org-requests-page').then((module) => ({ default: module.UiV2OrgRequestsPage }))
+  : import('./pages/org/MyRequestsPage'));
 const CredentialDashboardPage = lazy(() => import('./pages/credentials/CredentialDashboardPage'));
 const InstantClassPage = lazy(() => import('./pages/classes/instant-class-page').then((m) => ({ default: m.InstantClassPage })));
 const ClassSchedulingWizard = lazy(() => import('./pages/classes/class-scheduling-wizard').then((m) => ({ default: m.ClassSchedulingWizard })));
@@ -108,7 +116,9 @@ const CounselingDetailPage = lazy(() => import('./pages/counseling/counseling-de
 const CodeEntryPage = lazy(() => import('./pages/class/CodeEntryPage'));
 const ClassEntryPage = lazy(() => import('./pages/class/EntryPage'));
 const OrgPublicPage = lazy(() => import('./pages/OrgPublicPage'));
-const OrgDashboardPage = lazy(() => import('./pages/OrgDashboardPage'));
+const OrgDashboardPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/org/ui-v2/ui-v2-org-dashboard-page').then((module) => ({ default: module.UiV2OrgDashboardPage }))
+  : import('./pages/OrgDashboardPage'));
 const PlaygroundPage = lazy(() => import('./pages/playground/PlaygroundPage'));
 
 function buildLoginRedirect(pathname: string, search: string): string {
