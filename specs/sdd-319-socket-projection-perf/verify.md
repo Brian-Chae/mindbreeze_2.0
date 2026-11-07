@@ -302,3 +302,33 @@ rollback으로 stream/ledger 전체를 되돌린다. custom handler 및 commit=F
 
 Addendum6 수행결과: 전용풀실험실패로철회, 최종40명개선/100명end-to-end개선미입증.
 체크표시는시험수행완료이며실패한실험이나dev목표달성을통과로표시하는것이아니다. 상세summary참조.
+
+## Addendum 7 (2026-11-08) — round-5 capture.close 비차단 ACK (구현 전)
+
+기준 develop `ab1a2c42`, 브랜치 `sdd/319-close-pending-5`. Z2(dev100): close projection_pending 62,
+renew p95 2.14초(기준 2초), entry.enter 3.64초, 소켓 프로세스 CPU 평균104%/최대120%(단일 프로세스 포화).
+로컬 기준선(evidence-close-5/before-100.json)은 close pending 0이라 dev 62건은 로컬에서 재현되지 않는다.
+
+### 설계
+
+- `capture.close`는 DB commit·멱등·종료 직렬화를 그대로 두고, ACK 전에 `coalesced_drain` 대기(최대 2초)를
+  하지 않는다. commit 후 scope(Redis cursor) 검사만 한 뒤 즉시 applied ACK(`committed:true`)를 돌려준다.
+  outbox(device.changed)는 이미 commit 됐으므로 유실되지 않는다.
+- 반영·방송은 회차별 백그라운드 투영기가 맡는다: 회차마다 목표 revision을 기록하고(최대값 병합) 러너 1개가
+  `coalesced_drain(need=목표)` → `publish_session_sync`를 목표 도달까지 반복(재시도·백오프, 상한 60초).
+  100개 close가 와도 스레드/DB 연결은 회차당 1개. 상한을 넘기면 기존 heartbeat self-heal이 방송한다.
+- 변하지 않는 것: 다른 명령(start/reanchor/session.end 등)의 projection 동기 대기, renew/metric 경로,
+  잠금 순서, Redis fence·epoch·revision 순서, wire 형식. iOS/Android의 pending→0.8초 재전송과 웹의
+  close 비차단 계약은 유지(오히려 close가 pending을 더 이상 돌려주지 않음).
+- 단점/경계: ACK 시점에 코치 화면 반영이 아직 안 됐을 수 있다(수십~수백 ms 지연). 방송 누락은 불가.
+
+### 합격 기준
+
+- [ ] 단위: close ACK가 drain 대기 없이(drain 이 막혀 있어도) applied/committed 로 반환, 목표 revision 이 등록됨
+- [ ] 단위: 러너가 drain·publish 를 목표까지 수행, 중복 요청 병합(러너 1개), drain busy 시 재시도, 예외 후 계속
+- [ ] 단위: 다른 명령(reanchor 등)은 여전히 projection_pending 을 반환할 수 있음(회귀 없음)
+- [ ] 로컬 Socket.IO 100/40명 전후: close pending 0 유지, **최종 settle 후 outbox applied=emitted=revision,
+  broadcast_missing_pairs 0, client_missing_pairs 0**(코치 종료 반영 방송 누락 0), 저장 100%, closed stream 전원, 교착 0
+- [ ] 40명 renew/entry/CPU 악화 없음(전후 표 공개), 기존 회귀 12묶음 전후 동일
+- [ ] CPU 소비원: 로컬 샘플링 프로파일(py-spy 불가 시 sys._current_frames 샘플러) 근거로 개선 또는 한계 기록
+- 변경 범위 backend+specs. 푸시·PR·배포·서버/DB접근·메일·삭제·시크릿 출력 금지. 롤백=구현 커밋 revert.
