@@ -31,6 +31,7 @@ from app.schemas.class_scheduling import (
     ResolveHostCommand,
 )
 from app.services import class_write_service as writes
+from app.services import entry_queue
 from app.services.class_access_service import authorize_class_action
 from sqlalchemy.orm import Session as DBSession
 
@@ -353,7 +354,8 @@ async def resolve_code(
     )
 
 
-@router.post("/{class_id}/join", dependencies=[Depends(scheduling_enabled)])
+# SDD-319: join_slot 은 데코레이터 의존성이라 get_current_user/get_db 보다 먼저 평가된다 — 대기 중 DB 연결 0
+@router.post("/{class_id}/join", dependencies=[Depends(entry_queue.join_slot), Depends(scheduling_enabled)])
 async def join_class(
     class_id: UUID,
     payload: ClassCodeInput,
