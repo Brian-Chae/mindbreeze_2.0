@@ -1,0 +1,96 @@
+{
+  "n": 40,
+  "ticks": 32,
+  "burst": 120,
+  "burn_ms": 15.0,
+  "period_ms": 25,
+  "elapsed_s": 34.265137791997404,
+  "counts": {
+    "entry_status:applied:none": 40,
+    "entered": 40,
+    "started": 40,
+    "renew": 160,
+    "metric_projected": 1280,
+    "metric_status:projected:none": 1280,
+    "stored_ack": 1280,
+    "heartbeat": 246,
+    "snapshot_completed": 120,
+    "completed": 40,
+    "close_calls": 40,
+    "close_status:applied:none": 40,
+    "close_committed": 40
+  },
+  "errors": {},
+  "p95_s": {
+    "entry": 1.0324989169894252,
+    "start": 0.18996570799208712,
+    "renew": 4.126477291996707,
+    "metric": 1.1297648340114392,
+    "store": 0.8215047499979846,
+    "snapshot": 3.7426397090021055,
+    "close": 0.8572339999955148
+  },
+  "cpu_process_mean_pct": 90.25548667357576,
+  "cpu_process_max_pct": 107.34871522607425,
+  "loop_lag_p95_s": 0.006609250005567446,
+  "stored_count": 1280,
+  "expected_windows": 1280,
+  "broadcast_expected_pairs": 2962,
+  "broadcast_missing_pairs": 0,
+  "client_missing_pairs": 0,
+  "revision": 1482,
+  "applied_revision": 1482,
+  "emitted_revision": 1482,
+  "closed_streams": 40,
+  "startup": {
+    "elapsed_s": 1.1333706250006799,
+    "cpu_process_mean_pct": 96.30071363454876
+  },
+  "final_settle": {
+    "before": [
+      1482,
+      1482,
+      1482,
+      false
+    ],
+    "after": [
+      1482,
+      1482,
+      1482,
+      false
+    ],
+    "duration_s": 0.0077377499983413145
+  },
+  "source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd319b/backend/app/services/class_participation_service.py",
+  "cps_sha256": "c96750b02cbb57cedb2df4f1b738d9c856e0807fdd491a8654213d29f68d3f36",
+  "namespace_sha256": "ffe52b261e4bd8d76fa75970daee637debfff53cd273902b2227043b94a4d98f",
+  "outbox_source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd319b/backend/app/services/session_live_outbox.py",
+  "outbox_sha256": "4cee4cf99ee4162a4fb171b0934a284b3ec346fc374822dcce9ef964d8f738c2",
+  "single_flight_stats": {
+    "publish_runs": 152,
+    "publish_coalesced": 1596,
+    "drain_runs": 193,
+    "drain_shared": 44,
+    "drain_fallback": 0,
+    "drain_handoff": 2,
+    "drain_timeout": 0,
+    "drain_skipped": 35
+  },
+  "timing_logs": [
+    "[live-v2] live_command_timing session=6ac04a00 kind=capture.renew count=41 reasons={'lease_only': 41} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 130.776, 'apply_ms': 155.757, 'scope_ms': 19.458, 'service_ms': 160.745}",
+    "[live-v2] live_command_timing session=6ac04a00 kind=capture.renew.ws count=45 reasons={'applied': 45} max_ms={'thread_queue_ms': 650.62, 'scope_gate_ms': 17.0, 'worker_ms': 180.211, 'thread_queue_service_publish_ms': 707.573}",
+    "[live-v2] live_command_timing session=6ac04a00 kind=capture.renew count=40 reasons={'lease_only': 40} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 277.214, 'apply_ms': 297.086, 'scope_ms': 18.448, 'service_ms': 323.193}",
+    "[live-v2] live_command_timing session=6ac04a00 kind=capture.renew.ws count=36 reasons={'applied': 36} max_ms={'thread_queue_ms': 940.484, 'scope_gate_ms': 15.489, 'worker_ms': 326.832, 'thread_queue_service_publish_ms': 1107.388}",
+    "[live-v2] live_command_timing session=6ac04a00 kind=capture.renew count=52 reasons={'lease_only': 52} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 1972.233, 'apply_ms': 2020.366, 'scope_ms': 29.677, 'service_ms': 2119.319}",
+    "[live-v2] live_command_timing session=6ac04a00 kind=capture.renew.ws count=52 reasons={'applied': 52} max_ms={'thread_queue_ms': 4450.223, 'scope_gate_ms': 57.164, 'worker_ms': 2124.394, 'thread_queue_service_publish_ms': 4854.189}"
+  ],
+  "limitations": [
+    "합성 V2Conn 인증/REST입장 주입, WS entry.enter는 실제호출",
+    "저장은 REST 서비스이나 test socket으로 전송",
+    "client도 같은 process 별도 loop",
+    "고정 CPU busy slice 합성 압박",
+    "fixed ticks 밀리면 종료 연장",
+    "합성 연결당5초 heartbeat는 실제 publish/heartbeat/emit 경로, auth_expired·resync lifecycle 미재현",
+    "client coverage는 event_id×audience 합집합이며 클라이언트별 전송보장 아님"
+  ]
+}

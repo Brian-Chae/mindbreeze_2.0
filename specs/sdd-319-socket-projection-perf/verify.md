@@ -222,3 +222,83 @@ dev/운영부하·메일·삭제·시크릿 출력 금지 유지. 마이그레�
 첫 성공 행(after_redis hook 통과)은 즉시1회 표기하고, 나머지 성공 prefix를 batch finally로 표기한다.
 500행의 호출 상한은4회(복구0/첫1/배치500/종료복구500)이며 이후 배치는 추가비용 없다.
 첫 행 직후부터 흔적이 존재함과 기존 crash 복구를 단위/PG 회귀로 확인한다.
+
+## Addendum 6 (2026-11-07) — round-3 renew 공유 잠금 (구현 전)
+
+기준 develop `4854d33c`, 브랜치 `sdd/319-renew-light-3`. Y100은 실제 참가99/저장19800전량,
+renew p95 2.05초, close pending0, reanchor pending5/metric timeout4다. renew max queue1349~1672ms,
+session_epoch_lock413~611ms가 남았다. 집계 최대값은 서로 다른 요청이므로 합산하여 p95로 해석하지 않는다.
+
+### 설계·정합성
+
+- built-in capture.renew 및 commit=True일 때만 session FOR SHARE → epoch FOR SHARE를 사용한다.
+  기존 다른 명령의 session NO KEY UPDATE 및 epoch UPDATE와 충돌하여 종료/추방/재구축/권한 변경,
+  revision 경계는 유지하면서 서로 다른 stream의 renew만 병렬화한다. 완전 무잠금 경로가 아니다.
+- epoch가 없으면 session SHARE 아래 INSERT ON CONFLICT DO NOTHING 뒤 epoch SHARE로 읽는다.
+  공유→배타 잠금 승격을 하지 않는다. session 부재 FK 오류는 기존 session_not_found 처리를 따른다.
+- epoch 뒤 (session, actor, command_id)의 안정된 SHA256 앞64비트로 transaction advisory lock을 잡고
+  ledger를 읽는다. 동일 ID·다른 stream/body·거절 요청도 멱등/충돌을 보장한다. 해시 충돌은 추가 직렬화뿐이다.
+- 기존 stream FOR UPDATE, 소유자/generation/entity_version 검사, ledger와 stream의 동일 commit,
+  epoch 비교 및 ACK를 유지한다. lease 만료값 계산/활성 stream 재연장 정책은 변경하지 않는다.
+  renew는 outbox/revision을 변경하지 않는다. 등록 handler 교체 및 commit=False는 기존 배타 경로를 쓴다.
+- 전용 executor/풀 크기/DB설정/timeout 변경은 제외한다. 잠금을 기다리며 점유하던 worker 비용부터 줄인다.
+- 제공 로그에는 reanchor/metric 실패 개별 trace가 없어 직접 원인을 확정할 수 없다. pending5는 기준49이하;
+  기존 로컬 Socket.IO 하네스의 metric 실패·projection/방송 누락도 비교해 기록한다.
+
+### 구현·검증 계획
+
+1. ledger 공유 잠금 helper 및 built-in renew 선택만 수정한다. 신규 PG 회귀를 먼저 작성하고 baseline RED 확인.
+2. 서로 다른 stream 동시 진행, 동일 ID 중복/다른 body, 같은 stream version 단조를 실제 PG로 검증한다.
+3. 종료/close/revoke/rebuild 배타 잠금 경계, epoch 초기화, handler교체/commitFalse fallback을 검증한다.
+4. 동일 localhost Socket.IO100/40명·32tick·snapshot120·CPU압박·5초 합성heartbeat로 전후 비교한다.
+   renew≤2초, close pending0, 저장100%, 교착/방송누락0 및40명 입장/renew/CPU 악화 여부를 공개한다.
+5. 기존 회귀12묶음 전후 비교, 독립 리뷰/검산, PG연결불가skip, summary 및 구현 커밋.
+
+### 검증 체크리스트
+
+- [x] 새 PG 동시성 회귀 RED→GREEN 및 기존 멱등/epoch/fence 회귀
+- [x] 100/40명 전후 소켓 수치·실패 모두 공개, 소스 SHA 고정
+- [x] 기존 회귀 전후 비교·독립 리뷰·PG불가skip
+- [x] summary·로컬 구현 커밋 및 round-4 대기
+
+backend와 specs만 변경한다. 푸시·PR·배포·서버설정/재시작·운영접근·dev부하시험·메일·삭제·시크릿출력 금지.
+합성 DB/Redis 증거는 보존한다. 로컬 합성 heartbeat/입장주입 및 프로세스CPU의 기존 하네스 한계가 그대로
+적용되며 dev 성공을 대체하지 않는다. 마이그레이션 없음, 승인 후 구현커밋 revert가 롤백 경로다.
+
+### Addendum 6 보완 (구현 전) — renew 전용 소형 풀 실험
+
+공유 잠금 단독100명 전후2표본에서 renew p95가1.165→1.549초,1.203→1.387초로 악화됐다.
+첫 묶음 epoch 대기는 줄었지만 후반 queue/worker가 다시 늘었다. 같은 소스의40명 반복까지 원본을
+보존하고, 공유 잠금만으로 개선됐다고 결론내리지 않는다. 감독이 요청한 전용 소형 풀 안을 이어 검증한다.
+
+WS capture.renew만 프로세스당4worker ThreadPoolExecutor로 제출한다. pre-scope와 command는 같은
+worker이며 contextvars는 copy_context로 전달한다. 다른 명령/heartbeat/snapshot은 기존 executor다.
+4worker는 default32와 별개지만 renew끼리32개 DB작업을 동시에 만들지 않도록 제한한다. queue 대기는
+기존 thread_queue_ms가 그대로 측정한다. scope 재인가·예외·취소의 DB commit 의미는 기존 to_thread와
+같다. executor는 모듈에1개, 첫 제출 때 thread가 시작되며 표준 interpreter 종료 정리를 따른다.
+서버설정·DB풀·프로세스수는 바꾸지 않는다. 정상 종료 경로에서 별도 shutdown이 필요한지는 독립 리뷰한다.
+
+- [x] default executor 포화 중 renew 진행, 동시worker≤4, context 전달 및 예외 전파를 RED→GREEN 검증
+- [x] 기존 scope stale/retry/권한/단일worker 시험이 전용풀에서도 같은 의미인지 확인
+- [x] 잠금단독 소스/실패 표본 보존 후 최종 variant100/40 측정, baseline 및 중간 variant 모두 공개
+- [x] 최종 소스SHA 기준 회귀·독립리뷰·검산 후 채택 여부와 미확정 사항을 summary에 기록
+
+### Addendum 6 재보완 (구현 전) — 전용 풀 철회 및 renew SQL 왕복 축소
+
+4worker 풀은100/40명 renew p95 4.355/4.126초로 실패했다. 원본/소스SHA/시험을 보존하고
+namespace의 전용 풀 변경을 철회한다. 풀 크기를 반복 튜닝하지 않고 기본 executor를 유지한다.
+
+내장 renew의 결정적 CommandRejected는 stream 조회·version/status/session/generation 검사에서
+모두 필드 변경 전에 발생한다. 첫 필드 변경 이후는 값 대입/version증가/flush뿐이다. 따라서
+built-in+commit=True의 동일 guard 아래 SAVEPOINT/RELEASE를 생략한다. 예상밖 예외는 기존 outer
+rollback으로 stream/ledger 전체를 되돌린다. custom handler 및 commit=False는 기존 SAVEPOINT를 유지한다.
+공유 잠금 helper의 session SHARE 조회에서 Session 객체를 가져와 뒤의 중복 session SELECT도 생략한다.
+같은 잠금 강도·인가·epoch/lease/revision 경계를 유지하면서 정상 renew SQL 왕복3개를 줄이는 설계다.
+
+- [x] 실제 PG SQL에서 SAVEPOINT/RELEASE 없음 및 Session 조회1회, custom/commitFalse 기존동작 확인
+- [x] 거절시 lease 불변, stream flush 이후 예상밖 예외에서 stream/ledger 전체 rollback 확인
+- [x] 전용 풀 실험을 미채택 기록하고 최종 SQL축소 변형의100/40 전후 성능·회귀 검증
+- [x] 여전히 성능이 미달이면 성공으로 보고하지 않고 한계와 다음 관측 필요를 기록
+
+Addendum6 수행결과: 전용풀실험실패로철회, 최종40명개선/100명end-to-end개선미입증.
+체크표시는시험수행완료이며실패한실험이나dev목표달성을통과로표시하는것이아니다. 상세summary참조.

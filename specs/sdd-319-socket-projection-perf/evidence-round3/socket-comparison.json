@@ -1,0 +1,683 @@
+{
+  "100": {
+    "p95_s": {
+      "entry": {
+        "before": 2.3821551669971086,
+        "after": 2.682051916999626,
+        "delta": 0.29989675000251736
+      },
+      "start": {
+        "before": 1.3095966660039267,
+        "after": 1.503155667000101,
+        "delta": 0.1935590009961743
+      },
+      "renew": {
+        "before": 1.1651459999993676,
+        "after": 1.5485839159955503,
+        "delta": 0.3834379159961827
+      },
+      "metric": {
+        "before": 1.473285207990557,
+        "after": 1.6502037089958321,
+        "delta": 0.17691850100527517
+      },
+      "store": {
+        "before": 1.140023250001832,
+        "after": 1.3845363330037799,
+        "delta": 0.24451308300194796
+      },
+      "snapshot": {
+        "before": 4.83737479201227,
+        "after": 5.094187624999904,
+        "delta": 0.25681283298763447
+      },
+      "close": {
+        "before": 1.6640203749993816,
+        "after": 2.0846174170001177,
+        "delta": 0.4205970420007361
+      }
+    },
+    "cpu_process_mean_pct": {
+      "before": 104.48057291265492,
+      "after": 103.97677756384302,
+      "delta_pp": -0.5037953488119058
+    },
+    "counts": {
+      "before": {
+        "entry_status:applied:none": 100,
+        "entered": 100,
+        "started": 100,
+        "renew": 400,
+        "metric_projected": 3190,
+        "metric_status:projected:none": 3190,
+        "stored_ack": 3200,
+        "heartbeat": 808,
+        "snapshot_completed": 120,
+        "metric_failed": 10,
+        "metric_status:missing:none": 1,
+        "metric_status:ignored:not_live": 9,
+        "completed": 100,
+        "close_calls": 100,
+        "close_status:applied:none": 100,
+        "close_committed": 100
+      },
+      "after": {
+        "entry_status:applied:none": 100,
+        "entered": 100,
+        "started": 100,
+        "renew": 400,
+        "metric_projected": 3190,
+        "metric_status:projected:none": 3190,
+        "stored_ack": 3200,
+        "heartbeat": 808,
+        "snapshot_completed": 120,
+        "metric_failed": 10,
+        "metric_status:missing:none": 1,
+        "metric_status:ignored:not_live": 9,
+        "completed": 100,
+        "close_calls": 100,
+        "close_status:applied:none": 100,
+        "close_committed": 100
+      }
+    },
+    "errors": {
+      "before": {
+        "live:metric:metric:TimeoutError": 1
+      },
+      "after": {
+        "live:metric:metric:TimeoutError": 1
+      }
+    },
+    "exitstatus": {
+      "before": 1,
+      "after": 1
+    },
+    "changed_sources": [
+      "app/services/session_live_ledger.py",
+      "app/services/session_live_commands.py"
+    ],
+    "invariants": {
+      "stored_count": {
+        "before": 3200,
+        "after": 3200
+      },
+      "expected_windows": {
+        "before": 3200,
+        "after": 3200
+      },
+      "closed_streams": {
+        "before": 100,
+        "after": 100
+      },
+      "broadcast_missing_pairs": {
+        "before": 0,
+        "after": 0
+      },
+      "client_missing_pairs": {
+        "before": 0,
+        "after": 0
+      },
+      "revision": {
+        "before": 3693,
+        "after": 3693
+      },
+      "applied_revision": {
+        "before": 3693,
+        "after": 3693
+      },
+      "emitted_revision": {
+        "before": 3693,
+        "after": 3693
+      }
+    }
+  },
+  "40": {
+    "p95_s": {
+      "entry": {
+        "before": 1.149668500002008,
+        "after": 1.0043260419915896,
+        "delta": -0.14534245801041834
+      },
+      "start": {
+        "before": 0.17992745799710974,
+        "after": 0.1607609170023352,
+        "delta": -0.01916654099477455
+      },
+      "renew": {
+        "before": 0.6457187500054715,
+        "after": 0.48192508300417103,
+        "delta": -0.1637936670013005
+      },
+      "metric": {
+        "before": 0.601782583995373,
+        "after": 1.5612466250022408,
+        "delta": 0.9594640410068678
+      },
+      "store": {
+        "before": 0.4081045409984654,
+        "after": 0.8927064169984078,
+        "delta": 0.4846018759999424
+      },
+      "snapshot": {
+        "before": 2.7888351250003325,
+        "after": 2.852663500001654,
+        "delta": 0.06382837500132155
+      },
+      "close": {
+        "before": 0.8030490829987684,
+        "after": 0.8563739999954123,
+        "delta": 0.05332491699664388
+      }
+    },
+    "cpu_process_mean_pct": {
+      "before": 86.04106886499333,
+      "after": 86.11570115170848,
+      "delta_pp": 0.07463228671514344
+    },
+    "counts": {
+      "before": {
+        "entry_status:applied:none": 40,
+        "entered": 40,
+        "started": 40,
+        "renew": 160,
+        "metric_projected": 1280,
+        "metric_status:projected:none": 1280,
+        "stored_ack": 1280,
+        "heartbeat": 246,
+        "snapshot_completed": 120,
+        "completed": 40,
+        "close_calls": 40,
+        "close_status:applied:none": 40,
+        "close_committed": 40
+      },
+      "after": {
+        "entry_status:applied:none": 40,
+        "entered": 40,
+        "started": 40,
+        "renew": 160,
+        "metric_projected": 1280,
+        "metric_status:projected:none": 1280,
+        "stored_ack": 1280,
+        "heartbeat": 246,
+        "snapshot_completed": 120,
+        "completed": 40,
+        "close_calls": 40,
+        "close_status:applied:none": 40,
+        "close_committed": 40
+      }
+    },
+    "errors": {
+      "before": {},
+      "after": {}
+    },
+    "exitstatus": {
+      "before": 0,
+      "after": 0
+    },
+    "changed_sources": [
+      "app/services/session_live_ledger.py",
+      "app/services/session_live_commands.py"
+    ],
+    "invariants": {
+      "stored_count": {
+        "before": 1280,
+        "after": 1280
+      },
+      "expected_windows": {
+        "before": 1280,
+        "after": 1280
+      },
+      "closed_streams": {
+        "before": 40,
+        "after": 40
+      },
+      "broadcast_missing_pairs": {
+        "before": 0,
+        "after": 0
+      },
+      "client_missing_pairs": {
+        "before": 0,
+        "after": 0
+      },
+      "revision": {
+        "before": 1482,
+        "after": 1482
+      },
+      "applied_revision": {
+        "before": 1482,
+        "after": 1482
+      },
+      "emitted_revision": {
+        "before": 1482,
+        "after": 1482
+      }
+    }
+  },
+  "100-r2": {
+    "p95_s": {
+      "entry": {
+        "before": 2.7675977499893634,
+        "after": 2.6971939579962054,
+        "delta": -0.07040379199315794
+      },
+      "start": {
+        "before": 1.663827583004604,
+        "after": 1.4666253749892348,
+        "delta": -0.19720220801536925
+      },
+      "renew": {
+        "before": 1.203168125008233,
+        "after": 1.3865446249983506,
+        "delta": 0.18337649999011774
+      },
+      "metric": {
+        "before": 1.5286435000016354,
+        "after": 1.439147375000175,
+        "delta": -0.08949612500146031
+      },
+      "store": {
+        "before": 1.1976277089997893,
+        "after": 1.1552727920061443,
+        "delta": -0.04235491699364502
+      },
+      "snapshot": {
+        "before": 4.778649959000177,
+        "after": 4.89208829200652,
+        "delta": 0.11343833300634287
+      },
+      "close": {
+        "before": 1.7810692500061123,
+        "after": 1.8878297499904875,
+        "delta": 0.1067604999843752
+      }
+    },
+    "cpu_process_mean_pct": {
+      "before": 104.06106431702297,
+      "after": 104.92015077361113,
+      "delta_pp": 0.8590864565881589
+    },
+    "counts": {
+      "before": {
+        "entry_status:applied:none": 100,
+        "entered": 100,
+        "started": 100,
+        "renew": 400,
+        "metric_projected": 3200,
+        "metric_status:projected:none": 3200,
+        "stored_ack": 3200,
+        "heartbeat": 864,
+        "snapshot_completed": 120,
+        "completed": 100,
+        "close_calls": 100,
+        "close_status:applied:none": 100,
+        "close_committed": 100
+      },
+      "after": {
+        "entry_status:applied:none": 100,
+        "entered": 100,
+        "started": 100,
+        "renew": 400,
+        "metric_projected": 3190,
+        "metric_status:projected:none": 3190,
+        "stored_ack": 3200,
+        "heartbeat": 808,
+        "snapshot_completed": 120,
+        "metric_failed": 10,
+        "metric_status:missing:none": 1,
+        "metric_status:ignored:not_live": 9,
+        "completed": 100,
+        "close_calls": 100,
+        "close_status:applied:none": 100,
+        "close_committed": 100
+      }
+    },
+    "errors": {
+      "before": {},
+      "after": {
+        "live:metric:metric:TimeoutError": 1
+      }
+    },
+    "exitstatus": {
+      "before": 0,
+      "after": 1
+    },
+    "changed_sources": [
+      "app/services/session_live_ledger.py",
+      "app/services/session_live_commands.py"
+    ],
+    "invariants": {
+      "stored_count": {
+        "before": 3200,
+        "after": 3200
+      },
+      "expected_windows": {
+        "before": 3200,
+        "after": 3200
+      },
+      "closed_streams": {
+        "before": 100,
+        "after": 100
+      },
+      "broadcast_missing_pairs": {
+        "before": 0,
+        "after": 0
+      },
+      "client_missing_pairs": {
+        "before": 0,
+        "after": 0
+      },
+      "revision": {
+        "before": 3702,
+        "after": 3693
+      },
+      "applied_revision": {
+        "before": 3702,
+        "after": 3693
+      },
+      "emitted_revision": {
+        "before": 3702,
+        "after": 3693
+      }
+    }
+  },
+  "40-r2": {
+    "p95_s": {
+      "entry": {
+        "before": 1.3404751250054687,
+        "after": 0.9408109170035459,
+        "delta": -0.3996642080019228
+      },
+      "start": {
+        "before": 0.21515941599500366,
+        "after": 0.16157716599991545,
+        "delta": -0.053582249995088205
+      },
+      "renew": {
+        "before": 0.6453054579906166,
+        "after": 0.34543504199245945,
+        "delta": -0.2998704159981571
+      },
+      "metric": {
+        "before": 0.6302765840082429,
+        "after": 0.6309727909974754,
+        "delta": 0.0006962069892324507
+      },
+      "store": {
+        "before": 0.3513956670067273,
+        "after": 0.4452276669908315,
+        "delta": 0.09383199998410419
+      },
+      "snapshot": {
+        "before": 2.730450375005603,
+        "after": 2.7850411659892416,
+        "delta": 0.054590790983638726
+      },
+      "close": {
+        "before": 0.7991309170029126,
+        "after": 0.6114357500046026,
+        "delta": -0.18769516699831001
+      }
+    },
+    "cpu_process_mean_pct": {
+      "before": 85.19616027617452,
+      "after": 85.23691306571132,
+      "delta_pp": 0.040752789536796286
+    },
+    "counts": {
+      "before": {
+        "entry_status:applied:none": 40,
+        "entered": 40,
+        "started": 40,
+        "renew": 160,
+        "metric_projected": 1280,
+        "metric_status:projected:none": 1280,
+        "stored_ack": 1280,
+        "heartbeat": 246,
+        "snapshot_completed": 120,
+        "completed": 40,
+        "close_calls": 40,
+        "close_status:applied:none": 40,
+        "close_committed": 40
+      },
+      "after": {
+        "entry_status:applied:none": 40,
+        "entered": 40,
+        "started": 40,
+        "renew": 160,
+        "metric_projected": 1280,
+        "metric_status:projected:none": 1280,
+        "stored_ack": 1280,
+        "heartbeat": 246,
+        "snapshot_completed": 120,
+        "completed": 40,
+        "close_calls": 40,
+        "close_status:applied:none": 40,
+        "close_committed": 40
+      }
+    },
+    "errors": {
+      "before": {},
+      "after": {}
+    },
+    "exitstatus": {
+      "before": 0,
+      "after": 0
+    },
+    "changed_sources": [
+      "app/services/session_live_ledger.py",
+      "app/services/session_live_commands.py"
+    ],
+    "invariants": {
+      "stored_count": {
+        "before": 1280,
+        "after": 1280
+      },
+      "expected_windows": {
+        "before": 1280,
+        "after": 1280
+      },
+      "closed_streams": {
+        "before": 40,
+        "after": 40
+      },
+      "broadcast_missing_pairs": {
+        "before": 0,
+        "after": 0
+      },
+      "client_missing_pairs": {
+        "before": 0,
+        "after": 0
+      },
+      "revision": {
+        "before": 1482,
+        "after": 1482
+      },
+      "applied_revision": {
+        "before": 1482,
+        "after": 1482
+      },
+      "emitted_revision": {
+        "before": 1482,
+        "after": 1482
+      }
+    }
+  },
+  "aggregates": {
+    "100": {
+      "before": {
+        "samples": 2,
+        "entry": {
+          "min": 2.3821551669971086,
+          "max": 2.7675977499893634,
+          "mean": 2.574876458493236
+        },
+        "start": {
+          "min": 1.3095966660039267,
+          "max": 1.663827583004604,
+          "mean": 1.4867121245042654
+        },
+        "renew": {
+          "min": 1.1651459999993676,
+          "max": 1.203168125008233,
+          "mean": 1.1841570625038003
+        },
+        "metric": {
+          "min": 1.473285207990557,
+          "max": 1.5286435000016354,
+          "mean": 1.5009643539960962
+        },
+        "store": {
+          "min": 1.140023250001832,
+          "max": 1.1976277089997893,
+          "mean": 1.1688254795008106
+        },
+        "snapshot": {
+          "min": 4.778649959000177,
+          "max": 4.83737479201227,
+          "mean": 4.808012375506223
+        },
+        "close": {
+          "min": 1.6640203749993816,
+          "max": 1.7810692500061123,
+          "mean": 1.722544812502747
+        },
+        "cpu_process_mean_pct": {
+          "min": 104.06106431702297,
+          "max": 104.48057291265492,
+          "mean": 104.27081861483894
+        }
+      },
+      "after": {
+        "samples": 2,
+        "entry": {
+          "min": 2.682051916999626,
+          "max": 2.6971939579962054,
+          "mean": 2.6896229374979157
+        },
+        "start": {
+          "min": 1.4666253749892348,
+          "max": 1.503155667000101,
+          "mean": 1.484890520994668
+        },
+        "renew": {
+          "min": 1.3865446249983506,
+          "max": 1.5485839159955503,
+          "mean": 1.4675642704969505
+        },
+        "metric": {
+          "min": 1.439147375000175,
+          "max": 1.6502037089958321,
+          "mean": 1.5446755419980036
+        },
+        "store": {
+          "min": 1.1552727920061443,
+          "max": 1.3845363330037799,
+          "mean": 1.269904562504962
+        },
+        "snapshot": {
+          "min": 4.89208829200652,
+          "max": 5.094187624999904,
+          "mean": 4.993137958503212
+        },
+        "close": {
+          "min": 1.8878297499904875,
+          "max": 2.0846174170001177,
+          "mean": 1.9862235834953026
+        },
+        "cpu_process_mean_pct": {
+          "min": 103.97677756384302,
+          "max": 104.92015077361113,
+          "mean": 104.44846416872707
+        }
+      }
+    },
+    "40": {
+      "before": {
+        "samples": 2,
+        "entry": {
+          "min": 1.149668500002008,
+          "max": 1.3404751250054687,
+          "mean": 1.2450718125037383
+        },
+        "start": {
+          "min": 0.17992745799710974,
+          "max": 0.21515941599500366,
+          "mean": 0.1975434369960567
+        },
+        "renew": {
+          "min": 0.6453054579906166,
+          "max": 0.6457187500054715,
+          "mean": 0.645512103998044
+        },
+        "metric": {
+          "min": 0.601782583995373,
+          "max": 0.6302765840082429,
+          "mean": 0.616029584001808
+        },
+        "store": {
+          "min": 0.3513956670067273,
+          "max": 0.4081045409984654,
+          "mean": 0.37975010400259634
+        },
+        "snapshot": {
+          "min": 2.730450375005603,
+          "max": 2.7888351250003325,
+          "mean": 2.7596427500029677
+        },
+        "close": {
+          "min": 0.7991309170029126,
+          "max": 0.8030490829987684,
+          "mean": 0.8010900000008405
+        },
+        "cpu_process_mean_pct": {
+          "min": 85.19616027617452,
+          "max": 86.04106886499333,
+          "mean": 85.61861457058393
+        }
+      },
+      "after": {
+        "samples": 2,
+        "entry": {
+          "min": 0.9408109170035459,
+          "max": 1.0043260419915896,
+          "mean": 0.9725684794975678
+        },
+        "start": {
+          "min": 0.1607609170023352,
+          "max": 0.16157716599991545,
+          "mean": 0.16116904150112532
+        },
+        "renew": {
+          "min": 0.34543504199245945,
+          "max": 0.48192508300417103,
+          "mean": 0.41368006249831524
+        },
+        "metric": {
+          "min": 0.6309727909974754,
+          "max": 1.5612466250022408,
+          "mean": 1.096109707999858
+        },
+        "store": {
+          "min": 0.4452276669908315,
+          "max": 0.8927064169984078,
+          "mean": 0.6689670419946196
+        },
+        "snapshot": {
+          "min": 2.7850411659892416,
+          "max": 2.852663500001654,
+          "mean": 2.818852332995448
+        },
+        "close": {
+          "min": 0.6114357500046026,
+          "max": 0.8563739999954123,
+          "mean": 0.7339048750000075
+        },
+        "cpu_process_mean_pct": {
+          "min": 85.23691306571132,
+          "max": 86.11570115170848,
+          "mean": 85.67630710870989
+        }
+      }
+    }
+  }
+}

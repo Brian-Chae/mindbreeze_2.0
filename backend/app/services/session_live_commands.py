@@ -2,7 +2,8 @@
 
 `apply_command(db, actor, command)` 는 한 트랜잭션 안에서
   (필요 시 users·클래스 선잠금) → 회차 행 락 → epoch 행 락 → ledger 조회(멱등/충돌) → 인가 → handler(업무 전이) → outbox append → ledger 기록 → commit
-을 수행한다. 업무 전이·ledger·outbox 는 같은 commit 이므로 "commit 직후 crash" 에서도 재시도가 원 결과를 받고,
+을 수행한다. 내장 renew의 단독 commit은 회차/epoch 공유 잠금과 원장 키별 잠금을 사용한다.
+업무 전이·ledger·outbox 는 같은 commit 이므로 "commit 직후 crash" 에서도 재시도가 원 결과를 받고,
 commit 전 crash 면 아무것도 남지 않아 같은 command_id 로 안전하게 재실행된다.
 
 업무 handler 는 레지스트리에 등록한다. T03 은 capture.* 와 종료 cutoff 를 제공하고, 입장·대기·발언 등
@@ -13,6 +14,7 @@ from __future__ import annotations
 
 import uuid
 import time
+from contextlib import nullcontext
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
@@ -32,6 +34,7 @@ from app.services.session_live_ledger import (
     find_entry,
     insert_entry,
     lock_epoch,
+    lock_renew_epoch,
     lookup_result,  # noqa: F401  (재노출)
     replay_or_conflict,
 )
@@ -215,9 +218,16 @@ def apply_command(db: DBSession, actor: Actor, command: LiveCommand, *, now: dat
         # SDD-308 후속: 전역 잠금 순서 users → 클래스 → 회차 → epoch. 이 명령의 handler 는 lock_class_session 을 잡는데,
         # epoch 를 먼저 쥐고 users/클래스를 기다리면 REST 입장(users→회차)·capture(회차 NO KEY UPDATE→epoch)와 3자 교착이 난다(11/7 dev 100명).
         _lock_class_before_epoch(db, command.session_id, actor.actor_id)
+    lease_only = (commit and command.kind == "capture.renew"
+                  and _HANDLERS.get(command.kind) is _handle_capture_renew)
+    session = None
     lock_started = time.monotonic()
     try:
-        epoch_row = lock_epoch(db, command.session_id)
+        # renew는 revision/outbox를 쓰지 않는다. 교체 handler와 복합 트랜잭션은 배타 경로를 유지한다.
+        if lease_only:
+            epoch_row, session = lock_renew_epoch(db, command.session_id, actor.actor_id, command.command_id)
+        else:
+            epoch_row = lock_epoch(db, command.session_id)
     except IntegrityError:  # 존재하지 않는 session_id (FK)
         db.rollback()
         return _transient(command, "session_not_found", 0, 0)
@@ -239,9 +249,10 @@ def apply_command(db: DBSession, actor: Actor, command: LiveCommand, *, now: dat
             db.rollback()
         return _transient(command, "epoch_mismatch", epoch, revision)
 
-    session = db.execute(
-        select(SessionModel).where(SessionModel.id == command.session_id).execution_options(populate_existing=True)
-    ).scalar_one_or_none()
+    if session is None:
+        session = db.execute(
+            select(SessionModel).where(SessionModel.id == command.session_id).execution_options(populate_existing=True)
+        ).scalar_one_or_none()
     if session is None:
         if commit:
             db.rollback()
@@ -259,7 +270,9 @@ def apply_command(db: DBSession, actor: Actor, command: LiveCommand, *, now: dat
                 db.rollback()
             return _transient(command, "handler_not_registered", epoch, revision)
         try:
-            with db.begin_nested():  # 거절 시 handler 가 쓴 부분 변경을 되돌린다
+            # 내장 renew의 결정적 거절은 모두 필드 변경 전이다. 예상밖 오류는 아래에서 전체 rollback한다.
+            # 다른 handler/복합 트랜잭션은 부분 변경을 되돌릴 savepoint가 필요하다.
+            with (nullcontext() if lease_only else db.begin_nested()):
                 handler(ctx)
             entity_version, result = ctx.entity_version, ctx.result
         except CommandRejected as rej:

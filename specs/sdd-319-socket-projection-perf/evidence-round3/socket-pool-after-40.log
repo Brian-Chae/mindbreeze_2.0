@@ -1,0 +1,400 @@
+PRESERVED_PG_DATABASE=sdd308c_97e8fad17c2f4fe9
+S319_SOCKET_LOAD {"n": 40, "ticks": 32, "burst": 120, "burn_ms": 15.0, "period_ms": 25, "elapsed_s": 34.265137791997404, "counts": {"entry_status:applied:none": 40, "entered": 40, "started": 40, "renew": 160, "metric_projected": 1280, "metric_status:projected:none": 1280, "stored_ack": 1280, "heartbeat": 246, "snapshot_completed": 120, "completed": 40, "close_calls": 40, "close_status:applied:none": 40, "close_committed": 40}, "errors": {}, "p95_s": {"entry": 1.0324989169894252, "start": 0.18996570799208712, "renew": 4.126477291996707, "metric": 1.1297648340114392, "store": 0.8215047499979846, "snapshot": 3.7426397090021055, "close": 0.8572339999955148}, "cpu_process_mean_pct": 90.25548667357576, "cpu_process_max_pct": 107.34871522607425, "loop_lag_p95_s": 0.006609250005567446, "stored_count": 1280, "expected_windows": 1280, "broadcast_expected_pairs": 2962, "broadcast_missing_pairs": 0, "client_missing_pairs": 0, "revision": 1482, "applied_revision": 1482, "emitted_revision": 1482, "closed_streams": 40, "startup": {"elapsed_s": 1.1333706250006799, "cpu_process_mean_pct": 96.30071363454876}, "final_settle": {"before": [1482, 1482, 1482, false], "after": [1482, 1482, 1482, false], "duration_s": 0.0077377499983413145}, "source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd319b/backend/app/services/class_participation_service.py", "cps_sha256": "c96750b02cbb57cedb2df4f1b738d9c856e0807fdd491a8654213d29f68d3f36", "namespace_sha256": "ffe52b261e4bd8d76fa75970daee637debfff53cd273902b2227043b94a4d98f", "outbox_source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd319b/backend/app/services/session_live_outbox.py", "outbox_sha256": "4cee4cf99ee4162a4fb171b0934a284b3ec346fc374822dcce9ef964d8f738c2", "single_flight_stats": {"publish_runs": 152, "publish_coalesced": 1596, "drain_runs": 193, "drain_shared": 44, "drain_fallback": 0, "drain_handoff": 2, "drain_timeout": 0, "drain_skipped": 35}, "timing_logs": ["[live-v2] live_command_timing session=6ac04a00 kind=capture.renew count=41 reasons={'lease_only': 41} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 130.776, 'apply_ms': 155.757, 'scope_ms': 19.458, 'service_ms': 160.745}", "[live-v2] live_command_timing session=6ac04a00 kind=capture.renew.ws count=45 reasons={'applied': 45} max_ms={'thread_queue_ms': 650.62, 'scope_gate_ms': 17.0, 'worker_ms': 180.211, 'thread_queue_service_publish_ms': 707.573}", "[live-v2] live_command_timing session=6ac04a00 kind=capture.renew count=40 reasons={'lease_only': 40} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 277.214, 'apply_ms': 297.086, 'scope_ms': 18.448, 'service_ms': 323.193}", "[live-v2] live_command_timing session=6ac04a00 kind=capture.renew.ws count=36 reasons={'applied': 36} max_ms={'thread_queue_ms': 940.484, 'scope_gate_ms': 15.489, 'worker_ms': 326.832, 'thread_queue_service_publish_ms': 1107.388}", "[live-v2] live_command_timing session=6ac04a00 kind=capture.renew count=52 reasons={'lease_only': 52} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 1972.233, 'apply_ms': 2020.366, 'scope_ms': 29.677, 'service_ms': 2119.319}", "[live-v2] live_command_timing session=6ac04a00 kind=capture.renew.ws count=52 reasons={'applied': 52} max_ms={'thread_queue_ms': 4450.223, 'scope_gate_ms': 57.164, 'worker_ms': 2124.394, 'thread_queue_service_publish_ms': 4854.189}"], "limitations": ["합성 V2Conn 인증/REST입장 주입, WS entry.enter는 실제호출", "저장은 REST 서비스이나 test socket으로 전송", "client도 같은 process 별도 loop", "고정 CPU busy slice 합성 압박", "fixed ticks 밀리면 종료 연장", "합성 연결당5초 heartbeat는 실제 publish/heartbeat/emit 경로, auth_expired·resync lifecycle 미재현", "client coverage는 event_id×audience 합집합이며 클라이언트별 전송보장 아님"]}
+F
+=================================== FAILURES ===================================
+___________________ test_round2_socket_renew_close_heartbeat ___________________
+
+maker = sessionmaker(class_='Session', bind=Engine(postgresql://localhost/sdd308c_97e8fad17c2f4fe9), autoflush=False, expire_on_commit=True)
+pg_engine = Engine(postgresql://localhost/sdd308c_97e8fad17c2f4fe9)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10df0f1d0>
+caplog = <_pytest.logging.LogCaptureFixture object at 0x11515f510>
+
+    @pytest.mark.skipif(os.environ.get('S319_SOCKET_LOAD') != '1', reason='명시 실행하는 소켓 부하')
+    def test_round2_socket_renew_close_heartbeat(maker, pg_engine, monkeypatch, caplog):
+        import socketio
+        from aiohttp import web
+        from app.models.eeg_feature import EEGFeatureWindow
+        from app.models.live_state import CaptureStream, LiveOutbox, LiveSessionEpoch
+        from app.models.session import SessionParticipant
+        from app.schemas.session_live_ingest import parse_metric_batch
+        from app.services import class_participation_service as cps, live_ingest_service as ingest, session_live_outbox as ob
+        from app.services.live_redis.client import LiveRedis
+        from app.services.session_live_commands import Actor
+        from app.services.session_live_state import LiveStateService, Scope
+        from app.ws import session_live_namespace as ns
+        from tests.sdd308.helpers import build_scene
+        n, ticks = int(os.environ.get('S319_SOCKET_N','100')), int(os.environ.get('S319_SOCKET_TICKS','32'))
+        burst, burn = int(os.environ.get('S319_SOCKET_BURST','120')), float(os.environ.get('S319_SOCKET_BURN_MS','15'))
+        assert 0 <= burn < 25
+        live = LiveRedis.from_url('redis://localhost:6379/11', prefix='sdd319-round2:'+uuid.uuid4().hex)
+        try:
+            live.r.ping()
+        except Exception:
+            live.r.close()
+            pytest.skip('로컬 Redis 없음')
+        caplog.set_level(logging.INFO, logger=cps.__name__)
+        caplog.set_level(logging.INFO, logger="app.services.live_command_timing")
+        from app.services import live_single_flight as sf
+        before_stats = dict(sf.stats)
+        scene = build_scene(maker,n)
+        cps.register_live_handlers(); cps.set_live_redis(live)
+        monkeypatch.setenv('LIVE_PROTOCOL_V2','1')
+        monkeypatch.setattr(ns,'_open_db',maker); monkeypatch.setattr(ns,'_v2_conns',{})
+        monkeypatch.setattr(ns,'_METRIC_SINK',None); monkeypatch.setattr(ns,'_DEVICE_SINK',None)
+        with maker() as db:
+            cps.seed_live_state(db,scene.session_id)
+            ob.drain(db,live,scene.session_id)
+        counts, errors = Counter(), Counter()
+        timings = {k: [] for k in ('entry','start','renew','metric','store','snapshot','close')}
+        emitted, received, cpu_samples, lags = set(), set(), [], []
+        settle, startup = {}, {}
+        mutex = threading.Lock()
+        def count(k, v=1):
+            with mutex: counts[k] += v
+        def db_error(ctx):
+            if getattr(ctx.original_exception,'pgcode',None)=='40P01': count('deadlock')
+        sa.event.listen(pg_engine,'handle_error',db_error)
+    
+        async def run():
+            loop = asyncio.get_running_loop()
+            loop.set_default_executor(ThreadPoolExecutor(max_workers=32))
+            sio = socketio.AsyncServer(async_mode='aiohttp',logger=False,engineio_logger=False,ping_timeout=60)
+            app = web.Application(); sio.attach(app)
+            monkeypatch.setattr(ns,'_get_sio',lambda:sio); monkeypatch.setattr(ns,'_loop',loop)
+            ns.register_v2_handlers(sio,ns._NAMESPACE)
+            heartbeat_tasks = []
+            async def synthetic_heartbeat(conn):
+                # 실제 hb_sync와 같은 public 서비스 경로. 인증/복구 UI lifecycle은 합성 범위 밖이다.
+                try:
+                    while conn.sid in ns._v2_conns:
+                        await asyncio.sleep(5)
+                        def read():
+                            ns.publish_session_sync(conn.session_id)
+                            return LiveStateService(live).heartbeat(conn.session_id, cps.scope_of(conn.actor, conn.auth_revision))
+                        try:
+                            hb = await asyncio.to_thread(read)
+                            await sio.emit('live:heartbeat', hb, to=conn.sid, namespace=ns._NAMESPACE)
+                            count('heartbeat')
+                        except Exception as exc:
+                            count('heartbeat_error:' + type(exc).__name__)
+                except asyncio.CancelledError:
+                    pass
+            original_emit=sio.emit
+            async def traced_emit(name,data=None,**kw):
+                out=await original_emit(name,data,**kw)
+                if name=='live:event': emitted.add((data['event_id'],data['audience']))
+                return out
+            sio.emit=traced_emit
+            @sio.on('connect',namespace=ns._NAMESPACE)
+            async def connect(sid,environ,auth):
+                i=int(auth['index'])
+                if i<n:
+                    uid,pid=scene.members[i]; actor=Actor(actor_id=uid,role='member',participant_id=pid); aud=f'member:{pid}'
+                else:
+                    uid=scene.host_id; actor=Actor(actor_id=uid,role='host'); aud='host'
+                conn=ns.V2Conn(sid=sid,user_id=uid,session_id=scene.session_id,actor=actor,state='READY')
+                ns._v2_conns[sid]=conn
+                for audience in ('public',aud):
+                    room=ns.room_audience(scene.session_id,audience)
+                    await sio.enter_room(sid,room,namespace=ns._NAMESPACE); conn.rooms.append(room)
+                task = asyncio.create_task(synthetic_heartbeat(conn))
+                heartbeat_tasks.append(task)
+                conn.hb_task = task
+            @sio.on('disconnect',namespace=ns._NAMESPACE)
+            async def disconnect(sid,reason=None): ns._v2_drop(sid)
+            @sio.on('test:snapshot',namespace=ns._NAMESPACE)
+            async def snapshot(sid,data):
+                def read():
+                    with maker() as db: return ob.snapshot_ready(db,live,scene.session_id,Scope('host'))
+                return await asyncio.to_thread(read)
+            @sio.on('test:store',namespace=ns._NAMESPACE)
+            async def store(sid,data):
+                actor=ns._v2_conns[sid].actor
+                def save():
+                    with maker() as db:
+                        return ingest.store_batch(db,db.get(SessionParticipant,actor.participant_id),scene.session_id,parse_metric_batch(data))
+                return await asyncio.to_thread(save)
+            runner=web.AppRunner(app,access_log=None); await runner.setup()
+            bound=socket.socket(); bound.bind(('127.0.0.1',0)); bound.listen(256); bound.setblocking(False)
+            port=bound.getsockname()[1]; await web.SockSite(runner,bound).start()
+            finish,pressure_on=threading.Event(),threading.Event()
+            async def pressure():
+                wall0,cpu0,expected=time.monotonic(),time.process_time(),time.monotonic()
+                while not finish.is_set():
+                    if pressure_on.is_set():
+                        now=time.monotonic(); lags.append(max(0,now-expected)); until=now+burn/1000
+                        while time.monotonic()<until: pass
+                        expected=time.monotonic()+(25-burn)/1000
+                        await asyncio.sleep((25-burn)/1000)
+                        wall,cpu=time.monotonic(),time.process_time()
+                        if wall-wall0>=1:
+                            cpu_samples.append((cpu-cpu0)/(wall-wall0)*100); wall0,cpu0=wall,cpu
+                    else:
+                        wall0,cpu0=time.monotonic(),time.process_time(); await asyncio.sleep(.01)
+            async def clients():
+                clients_list,captures=[],{}
+                async def call(client,name,data,timing=None):
+                    start=time.monotonic()
+                    try: result=await client.call(name,data,namespace=ns._NAMESPACE,timeout=30)
+                    except Exception as exc:
+                        with mutex: errors[f'{name}:{timing or "untimed"}:{type(exc).__name__}']+=1
+                        return {}
+                    if timing:
+                        with mutex: timings[timing].append(time.monotonic()-start)
+                    return result
+                def cmd(kind,payload):
+                    return {'protocol_version':2,'schema_version':1,'command_id':str(uuid.uuid4()),'session_id':str(scene.session_id),'expected_epoch':str(live.read_meta(scene.session_id)['epoch']),'client_generation':'0','kind':kind,'payload':payload}
+                async def init(i):
+                    client=socketio.AsyncClient(logger=False,engineio_logger=False,reconnection=False); clients_list.append(client)
+                    @client.on('live:event',namespace=ns._NAMESPACE)
+                    async def receive(data):
+                        with mutex: received.add((data['event_id'],data['audience']))
+                    await client.connect(f'http://127.0.0.1:{port}',auth={'index':i},namespaces=[ns._NAMESPACE],transports=['websocket'],wait_timeout=30)
+                    if i<n:
+                        entry=await call(client,'live:command',cmd('entry.enter',{}),'entry')
+                        count('entry_status:' + str(entry.get('status', 'missing')) + ':' + str(entry.get('code', 'none')))
+                        if entry.get('committed'): count('entered')
+                        assert entry.get('committed'), entry.get('code')
+                        ack=await call(client,'live:command',cmd('capture.start',{'device_profile':'linkband2-v1','algorithm_version':'web-ts-1','model_version':'b0'}),'start')
+                        assert ack.get('committed'),ack.get('code')
+                        captures[i]=(client,ack['result']); count('started')
+                    return client
+                try:
+                    init_wall, init_cpu = time.monotonic(), time.process_time()
+                    host=await init(n)
+                    await asyncio.gather(*(init(i) for i in range(n)))
+                    startup['elapsed_s'] = time.monotonic() - init_wall
+                    startup['cpu_process_mean_pct'] = (time.process_time() - init_cpu) / startup['elapsed_s'] * 100
+                    started=time.monotonic(); pressure_on.set()
+                    async def member(i):
+                        client,stream=captures[i]; pid=scene.members[i][1]
+                        for tick in range(ticks):
+                            await asyncio.sleep(max(0,started+tick-time.monotonic()))
+                            if tick%10==0:
+                                ack=await call(client,'live:command',cmd('capture.renew',{'stream_id':stream['stream_id'],'owner_generation':str(stream['generation']),'clock_anchor_id':str(uuid.uuid4())}),'renew')
+                                count('renew')
+                                if ack.get('code')=='projection_pending': count('projection_pending')
+                                if not ack.get('committed'): count('renew_failed')
+                            payload={'protocol_version':2,'schema_version':1,'windows':[metric_window(scene.session_id,pid,stream,tick+1)]}
+                            metric,stored=await asyncio.gather(call(client,'live:metric',payload,'metric'),call(client,'test:store',payload,'store'))
+                            metric_ack=metric.get('acks',[{}])[0]
+                            count('metric_projected' if metric_ack.get('status')=='projected' else 'metric_failed')
+                            count('metric_status:'+str(metric_ack.get('status',metric.get('code','missing')))+':'+str(metric_ack.get('code','none')))
+                            count('stored_ack' if stored and stored[0].get('durable') else 'store_failed')
+                        count('completed')
+                    async def refresh():
+                        await asyncio.sleep(2)
+                        await asyncio.gather(*(call(host,'test:snapshot',{},'snapshot') for _ in range(burst)))
+                        count('snapshot_completed',len(timings['snapshot']))
+                    await asyncio.gather(refresh(),*(member(i) for i in range(n)))
+                    async def close_member(i):
+                        client, stream = captures[i]
+                        ack = await call(client, 'live:command', cmd('capture.close', {
+                            'stream_id': stream['stream_id'], 'reason': 'completed',
+                            'final_sequences': {'metric': str(ticks)}}), 'close')
+                        count('close_calls')
+                        count('close_status:' + str(ack.get('status', 'missing')) + ':' + str(ack.get('code', 'none')))
+                        if ack.get('committed'): count('close_committed')
+                        if ack.get('code') == 'projection_pending': count('close_projection_pending')
+                    await asyncio.gather(*(close_member(i) for i in range(n)))
+                    pressure_on.clear()
+                    settle_started=time.monotonic()
+                    def settled():
+                        with maker() as db:
+                            target=int(db.get(LiveSessionEpoch,scene.session_id).revision)
+                        applied=int(live.read_meta(scene.session_id)['applied_revision'])
+                        done=int(live.r.get(live.emitted_key(scene.session_id)) or 0)
+                        with sf._lock:
+                            active=bool(sf._pub_running.get(('publish',str(scene.session_id))))
+                        return target,applied,done,active
+                    settle['before']=await asyncio.to_thread(settled)
+                    while True:
+                        future=asyncio.run_coroutine_threadsafe(asyncio.to_thread(ns.publish_session_sync,scene.session_id),loop)
+                        await asyncio.wrap_future(future)
+                        state=await asyncio.to_thread(settled)
+                        if state[0]==state[1]==state[2] and not state[3]:
+                            break
+                        if time.monotonic()-settle_started>60:
+                            raise AssertionError('최종 projection/publish 안정화 제한 초과')
+                        await asyncio.sleep(.1)
+                    settle['after']=state
+                    settle['duration_s']=time.monotonic()-settle_started
+                    await asyncio.sleep(.5)
+                finally:
+                    pressure_on.clear()
+                    await asyncio.gather(*(c.disconnect() for c in clients_list if c.connected),return_exceptions=True)
+                    finish.set()
+            pressure_task=asyncio.create_task(pressure()); failure=[]
+            def client_thread():
+                try: asyncio.run(clients())
+                except BaseException as exc: failure.append(exc); finish.set()
+            worker=threading.Thread(target=client_thread,daemon=True); start=time.monotonic(); worker.start()
+            try:
+                while not finish.is_set(): await asyncio.sleep(.1)
+                await asyncio.to_thread(worker.join,10)
+                if failure: raise failure[0]
+                return time.monotonic()-start
+            finally:
+                finish.set()
+                for task in heartbeat_tasks: task.cancel()
+                await asyncio.gather(*heartbeat_tasks, return_exceptions=True)
+                await pressure_task; await sio.shutdown(); await runner.cleanup()
+        try:
+            elapsed=asyncio.run(run())
+            with maker() as db:
+                expected={(str(r.event_id),aud) for r in db.scalars(sa.select(LiveOutbox).where(LiveOutbox.session_id==scene.session_id)) for aud in r.audience_policy}
+                stored=db.scalar(sa.select(sa.func.count()).select_from(EEGFeatureWindow).where(EEGFeatureWindow.session_id==scene.session_id))
+                revision=db.get(LiveSessionEpoch,scene.session_id).revision
+                closed=db.scalar(sa.select(sa.func.count()).select_from(CaptureStream).where(
+                    CaptureStream.session_id==scene.session_id, CaptureStream.status=='closed'))
+            summary={'n':n,'ticks':ticks,'burst':burst,'burn_ms':burn,'period_ms':25,'elapsed_s':elapsed,'counts':dict(counts),'errors':dict(errors),
+                     'p95_s':{k:_p95(v) for k,v in timings.items()},'cpu_process_mean_pct':sum(cpu_samples)/len(cpu_samples) if cpu_samples else None,
+                     'cpu_process_max_pct':max(cpu_samples) if cpu_samples else None,'loop_lag_p95_s':_p95(lags),'stored_count':stored,'expected_windows':n*ticks,
+                     'broadcast_expected_pairs':len(expected),'broadcast_missing_pairs':len(expected-emitted),'client_missing_pairs':len(expected-received),
+                     'revision':revision,'applied_revision':int(live.read_meta(scene.session_id)['applied_revision']),'emitted_revision':int(live.r.get(live.emitted_key(scene.session_id)) or 0),
+                     'closed_streams':closed,'startup':startup,'final_settle':settle,'source_path':cps.__file__,'cps_sha256':hashlib.sha256(Path(cps.__file__).read_bytes()).hexdigest(),'namespace_sha256':hashlib.sha256(Path(ns.__file__).read_bytes()).hexdigest(),
+                     'outbox_source_path':ob.__file__,'outbox_sha256':hashlib.sha256(Path(ob.__file__).read_bytes()).hexdigest(),
+                     'single_flight_stats':{k: v-before_stats.get(k,0) for k,v in sf.stats.items()},
+                     'timing_logs':[r.getMessage() for r in caplog.records if 'live_command_timing' in r.getMessage()],
+                     'limitations':['합성 V2Conn 인증/REST입장 주입, WS entry.enter는 실제호출','저장은 REST 서비스이나 test socket으로 전송','client도 같은 process 별도 loop','고정 CPU busy slice 합성 압박','fixed ticks 밀리면 종료 연장','합성 연결당5초 heartbeat는 실제 publish/heartbeat/emit 경로, auth_expired·resync lifecycle 미재현','client coverage는 event_id×audience 합집합이며 클라이언트별 전송보장 아님']}
+            if os.environ.get('S319_SOCKET_RESULT'): Path(os.environ['S319_SOCKET_RESULT']).write_text(json.dumps(summary,ensure_ascii=False,indent=2))
+            print('S319_SOCKET_LOAD '+json.dumps(summary,ensure_ascii=False),flush=True)
+            assert counts['entered']==counts['started']==counts['completed']==n,summary
+            assert not errors and counts.get('deadlock',0)==0,summary
+            assert stored==n*ticks and counts.get('store_failed',0)==0,summary
+            assert not expected-emitted,summary
+            assert counts['close_committed'] == closed == n,summary
+            if os.environ.get('S319_ROUND2_REQUIRE') == '1':
+                assert counts.get('close_projection_pending',0) == 0,summary
+>               assert summary['p95_s']['renew'] <= 2,summary
+E               AssertionError: {'applied_revision': 1482, 'broadcast_expected_pairs': 2962, 'broadcast_missing_pairs': 0, 'burn_ms': 15.0, ...}
+E               assert 4.126477291996707 <= 2
+
+tests/sdd319/test_round2_socket_load.py:307: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=84 emitted=84 expected=166 sent=166 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=95 emitted=95 expected=22 sent=22 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=98 emitted=98 expected=6 sent=6 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=101 emitted=101 expected=6 sent=6 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=102 emitted=102 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=104 emitted=104 expected=4 sent=4 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=106 emitted=106 expected=4 sent=4 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=107 emitted=107 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=109 emitted=109 expected=4 sent=4 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=110 emitted=110 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=112 emitted=112 expected=4 sent=4 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=114 emitted=114 expected=4 sent=4 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=115 emitted=115 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=116 emitted=116 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=117 emitted=117 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=118 emitted=118 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=119 emitted=119 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=121 emitted=121 expected=4 sent=4 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=122 emitted=122 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=124 emitted=124 expected=4 sent=4 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=126 emitted=126 expected=4 sent=4 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=127 emitted=127 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=128 emitted=128 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=129 emitted=129 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=130 emitted=130 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=132 emitted=132 expected=4 sent=4 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=134 emitted=134 expected=4 sent=4 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=136 emitted=136 expected=4 sent=4 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=138 emitted=138 expected=4 sent=4 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=140 emitted=140 expected=4 sent=4 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=141 emitted=141 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=142 emitted=142 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=143 emitted=143 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=145 emitted=145 expected=4 sent=4 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=148 emitted=148 expected=6 sent=6 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=150 emitted=150 expected=4 sent=4 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=151 emitted=151 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=152 emitted=152 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=154 emitted=154 expected=4 sent=4 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=156 emitted=156 expected=4 sent=4 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=157 emitted=157 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=159 emitted=159 expected=4 sent=4 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=160 emitted=160 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=162 emitted=162 expected=4 sent=4 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=163 emitted=163 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=181 emitted=181 expected=36 sent=36 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=202 emitted=202 expected=42 sent=42 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=221 emitted=221 expected=38 sent=38 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=242 emitted=242 expected=42 sent=42 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=282 emitted=282 expected=80 sent=80 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=344 emitted=344 expected=124 sent=124 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=438 emitted=438 expected=188 sent=188 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=439 emitted=439 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=440 emitted=440 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=441 emitted=441 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=442 emitted=442 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=465 emitted=465 expected=46 sent=46 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=482 emitted=482 expected=34 sent=34 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=504 emitted=504 expected=44 sent=44 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=522 emitted=522 expected=36 sent=36 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=562 emitted=562 expected=80 sent=80 missing=0
+INFO     app.services.live_command_timing:live_command_timing.py:41 [live-v2] live_command_timing session=6ac04a00 kind=capture.renew count=41 reasons={'lease_only': 41} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 130.776, 'apply_ms': 155.757, 'scope_ms': 19.458, 'service_ms': 160.745}
+INFO     app.services.live_command_timing:live_command_timing.py:41 [live-v2] live_command_timing session=6ac04a00 kind=capture.renew.ws count=45 reasons={'applied': 45} max_ms={'thread_queue_ms': 650.62, 'scope_gate_ms': 17.0, 'worker_ms': 180.211, 'thread_queue_service_publish_ms': 707.573}
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=566 emitted=566 expected=8 sent=8 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=576 emitted=576 expected=20 sent=20 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=592 emitted=592 expected=32 sent=32 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=641 emitted=641 expected=98 sent=98 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=642 emitted=642 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=682 emitted=682 expected=80 sent=80 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=705 emitted=705 expected=46 sent=46 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=722 emitted=722 expected=34 sent=34 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=740 emitted=740 expected=36 sent=36 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=762 emitted=762 expected=44 sent=44 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=781 emitted=781 expected=38 sent=38 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=802 emitted=802 expected=42 sent=42 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=920 emitted=920 expected=236 sent=236 missing=0
+INFO     app.services.live_command_timing:live_command_timing.py:41 [live-v2] live_command_timing session=6ac04a00 kind=capture.renew count=40 reasons={'lease_only': 40} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 277.214, 'apply_ms': 297.086, 'scope_ms': 18.448, 'service_ms': 323.193}
+INFO     app.services.live_command_timing:live_command_timing.py:41 [live-v2] live_command_timing session=6ac04a00 kind=capture.renew.ws count=36 reasons={'applied': 36} max_ms={'thread_queue_ms': 940.484, 'scope_gate_ms': 15.489, 'worker_ms': 326.832, 'thread_queue_service_publish_ms': 1107.388}
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=959 emitted=959 expected=78 sent=78 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=976 emitted=976 expected=34 sent=34 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1002 emitted=1002 expected=52 sent=52 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1076 emitted=1076 expected=148 sent=148 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1228 emitted=1228 expected=304 sent=304 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1238 emitted=1238 expected=20 sent=20 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1258 emitted=1258 expected=40 sent=40 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1277 emitted=1277 expected=38 sent=38 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1278 emitted=1278 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1279 emitted=1279 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1280 emitted=1280 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1281 emitted=1281 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1282 emitted=1282 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1305 emitted=1305 expected=46 sent=46 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1322 emitted=1322 expected=34 sent=34 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1342 emitted=1342 expected=40 sent=40 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1362 emitted=1362 expected=40 sent=40 missing=0
+INFO     app.services.live_command_timing:live_command_timing.py:41 [live-v2] live_command_timing session=6ac04a00 kind=capture.renew count=52 reasons={'lease_only': 52} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 1972.233, 'apply_ms': 2020.366, 'scope_ms': 29.677, 'service_ms': 2119.319}
+INFO     app.services.live_command_timing:live_command_timing.py:41 [live-v2] live_command_timing session=6ac04a00 kind=capture.renew.ws count=52 reasons={'applied': 52} max_ms={'thread_queue_ms': 4450.223, 'scope_gate_ms': 57.164, 'worker_ms': 2124.394, 'thread_queue_service_publish_ms': 4854.189}
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1374 emitted=1374 expected=24 sent=24 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1402 emitted=1402 expected=56 sent=56 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1419 emitted=1419 expected=34 sent=34 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1442 emitted=1442 expected=46 sent=46 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1446 emitted=1446 expected=8 sent=8 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1448 emitted=1448 expected=4 sent=4 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1450 emitted=1450 expected=4 sent=4 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1452 emitted=1452 expected=4 sent=4 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1454 emitted=1454 expected=4 sent=4 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1460 emitted=1460 expected=12 sent=12 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1463 emitted=1463 expected=6 sent=6 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1466 emitted=1466 expected=6 sent=6 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1467 emitted=1467 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1469 emitted=1469 expected=4 sent=4 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1470 emitted=1470 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1471 emitted=1471 expected=2 sent=2 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1474 emitted=1474 expected=6 sent=6 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1477 emitted=1477 expected=6 sent=6 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1481 emitted=1481 expected=8 sent=8 missing=0
+INFO     app.services.class_participation_service:class_participation_service.py:1062 [live-v2] broadcast_progress session=6ac04a00 applied=1482 emitted=1482 expected=2 sent=2 missing=0
+=============================== warnings summary ===============================
+tests/sdd319/test_round2_socket_load.py::test_round2_socket_renew_close_heartbeat
+  /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/sdd319/test_round2_socket_load.py::test_round2_socket_renew_close_heartbeat
+1 failed, 1 warning in 38.66s

@@ -1,0 +1,488 @@
+{
+  "100": {
+    "entry": {
+      "before": {
+        "samples": [
+          2.3821551669971086,
+          2.7675977499893634
+        ],
+        "mean": 2.574876458493236,
+        "min": 2.3821551669971086,
+        "max": 2.7675977499893634
+      },
+      "sql-after": {
+        "samples": [
+          2.6086119579995284,
+          2.5961669579992304
+        ],
+        "mean": 2.6023894579993794,
+        "min": 2.5961669579992304,
+        "max": 2.6086119579995284
+      },
+      "mean_delta": 0.027512999506143387
+    },
+    "start": {
+      "before": {
+        "samples": [
+          1.3095966660039267,
+          1.663827583004604
+        ],
+        "mean": 1.4867121245042654,
+        "min": 1.3095966660039267,
+        "max": 1.663827583004604
+      },
+      "sql-after": {
+        "samples": [
+          1.4098869580047904,
+          1.4765028330002679
+        ],
+        "mean": 1.443194895502529,
+        "min": 1.4098869580047904,
+        "max": 1.4765028330002679
+      },
+      "mean_delta": -0.04351722900173627
+    },
+    "renew": {
+      "before": {
+        "samples": [
+          1.1651459999993676,
+          1.203168125008233
+        ],
+        "mean": 1.1841570625038003,
+        "min": 1.1651459999993676,
+        "max": 1.203168125008233
+      },
+      "sql-after": {
+        "samples": [
+          1.2936814580025384,
+          1.2233690830034902
+        ],
+        "mean": 1.2585252705030143,
+        "min": 1.2233690830034902,
+        "max": 1.2936814580025384
+      },
+      "mean_delta": 0.07436820799921406
+    },
+    "metric": {
+      "before": {
+        "samples": [
+          1.473285207990557,
+          1.5286435000016354
+        ],
+        "mean": 1.5009643539960962,
+        "min": 1.473285207990557,
+        "max": 1.5286435000016354
+      },
+      "sql-after": {
+        "samples": [
+          1.5500850840035127,
+          1.3764079999964451
+        ],
+        "mean": 1.463246541999979,
+        "min": 1.3764079999964451,
+        "max": 1.5500850840035127
+      },
+      "mean_delta": -0.037717811996117234
+    },
+    "store": {
+      "before": {
+        "samples": [
+          1.140023250001832,
+          1.1976277089997893
+        ],
+        "mean": 1.1688254795008106,
+        "min": 1.140023250001832,
+        "max": 1.1976277089997893
+      },
+      "sql-after": {
+        "samples": [
+          1.2552780409896513,
+          1.1564371669956017
+        ],
+        "mean": 1.2058576039926265,
+        "min": 1.1564371669956017,
+        "max": 1.2552780409896513
+      },
+      "mean_delta": 0.03703212449181592
+    },
+    "snapshot": {
+      "before": {
+        "samples": [
+          4.83737479201227,
+          4.778649959000177
+        ],
+        "mean": 4.808012375506223,
+        "min": 4.778649959000177,
+        "max": 4.83737479201227
+      },
+      "sql-after": {
+        "samples": [
+          4.706205167007283,
+          4.704640666008345
+        ],
+        "mean": 4.705422916507814,
+        "min": 4.704640666008345,
+        "max": 4.706205167007283
+      },
+      "mean_delta": -0.1025894589984091
+    },
+    "close": {
+      "before": {
+        "samples": [
+          1.6640203749993816,
+          1.7810692500061123
+        ],
+        "mean": 1.722544812502747,
+        "min": 1.6640203749993816,
+        "max": 1.7810692500061123
+      },
+      "sql-after": {
+        "samples": [
+          1.940723416992114,
+          1.83536208300211
+        ],
+        "mean": 1.888042749997112,
+        "min": 1.83536208300211,
+        "max": 1.940723416992114
+      },
+      "mean_delta": 0.16549793749436503
+    },
+    "cpu_process_mean_pct": {
+      "before": {
+        "samples": [
+          104.48057291265492,
+          104.06106431702297
+        ],
+        "mean": 104.27081861483894,
+        "min": 104.06106431702297,
+        "max": 104.48057291265492
+      },
+      "sql-after": {
+        "samples": [
+          104.43635853671564,
+          104.84320728982814
+        ],
+        "mean": 104.63978291327189,
+        "min": 104.43635853671564,
+        "max": 104.84320728982814
+      },
+      "mean_delta": 0.36896429843294243
+    },
+    "after_counts": [
+      {
+        "entry_status:applied:none": 100,
+        "entered": 100,
+        "started": 100,
+        "renew": 400,
+        "metric_projected": 3190,
+        "metric_status:projected:none": 3190,
+        "stored_ack": 3200,
+        "heartbeat": 808,
+        "snapshot_completed": 120,
+        "metric_failed": 10,
+        "metric_status:missing:none": 1,
+        "metric_status:ignored:not_live": 9,
+        "completed": 100,
+        "close_calls": 100,
+        "close_status:applied:none": 100,
+        "close_committed": 100
+      },
+      {
+        "entry_status:applied:none": 100,
+        "entered": 100,
+        "started": 100,
+        "renew": 400,
+        "metric_projected": 3190,
+        "metric_status:projected:none": 3190,
+        "stored_ack": 3200,
+        "heartbeat": 708,
+        "snapshot_completed": 120,
+        "metric_failed": 10,
+        "metric_status:missing:none": 1,
+        "metric_status:ignored:not_live": 9,
+        "completed": 100,
+        "close_calls": 100,
+        "close_status:applied:none": 100,
+        "close_committed": 100
+      }
+    ],
+    "after_errors": [
+      {
+        "live:metric:metric:TimeoutError": 1
+      },
+      {
+        "live:metric:metric:TimeoutError": 1
+      }
+    ],
+    "after_exitstatus": [
+      1,
+      1
+    ],
+    "after_invariants": [
+      {
+        "stored_count": 3200,
+        "expected_windows": 3200,
+        "closed_streams": 100,
+        "broadcast_missing_pairs": 0,
+        "client_missing_pairs": 0,
+        "revision": 3693,
+        "applied_revision": 3693,
+        "emitted_revision": 3693
+      },
+      {
+        "stored_count": 3200,
+        "expected_windows": 3200,
+        "closed_streams": 100,
+        "broadcast_missing_pairs": 0,
+        "client_missing_pairs": 0,
+        "revision": 3693,
+        "applied_revision": 3693,
+        "emitted_revision": 3693
+      }
+    ],
+    "source_sha256": {
+      "app/services/session_live_ledger.py": "1e89531fa2e18b45b9e5dddc23115f5e78d79d76ad54024fa34c9226950a66cf",
+      "app/services/session_live_commands.py": "ad5a9ef812e8322d4d8599a85103cc068564a1792dde7b2d97af385898cd3839",
+      "app/services/session_live_outbox.py": "4cee4cf99ee4162a4fb171b0934a284b3ec346fc374822dcce9ef964d8f738c2",
+      "app/ws/session_live_namespace.py": "802c2d843cea1e1c51ee938e5eb7d9d271f1fd8481f778f2c9dad5acd8f6b191"
+    }
+  },
+  "40": {
+    "entry": {
+      "before": {
+        "samples": [
+          1.149668500002008,
+          1.3404751250054687
+        ],
+        "mean": 1.2450718125037383,
+        "min": 1.149668500002008,
+        "max": 1.3404751250054687
+      },
+      "sql-after": {
+        "samples": [
+          0.8372700000036275,
+          0.848143583003548
+        ],
+        "mean": 0.8427067915035877,
+        "min": 0.8372700000036275,
+        "max": 0.848143583003548
+      },
+      "mean_delta": -0.4023650210001506
+    },
+    "start": {
+      "before": {
+        "samples": [
+          0.17992745799710974,
+          0.21515941599500366
+        ],
+        "mean": 0.1975434369960567,
+        "min": 0.17992745799710974,
+        "max": 0.21515941599500366
+      },
+      "sql-after": {
+        "samples": [
+          0.15248529199743643,
+          0.1539180420077173
+        ],
+        "mean": 0.15320166700257687,
+        "min": 0.15248529199743643,
+        "max": 0.1539180420077173
+      },
+      "mean_delta": -0.04434176999347983
+    },
+    "renew": {
+      "before": {
+        "samples": [
+          0.6457187500054715,
+          0.6453054579906166
+        ],
+        "mean": 0.645512103998044,
+        "min": 0.6453054579906166,
+        "max": 0.6457187500054715
+      },
+      "sql-after": {
+        "samples": [
+          0.2728520840028068,
+          0.25143391599704046
+        ],
+        "mean": 0.26214299999992363,
+        "min": 0.25143391599704046,
+        "max": 0.2728520840028068
+      },
+      "mean_delta": -0.3833691039981204
+    },
+    "metric": {
+      "before": {
+        "samples": [
+          0.601782583995373,
+          0.6302765840082429
+        ],
+        "mean": 0.616029584001808,
+        "min": 0.601782583995373,
+        "max": 0.6302765840082429
+      },
+      "sql-after": {
+        "samples": [
+          0.5086307500023395,
+          0.5121409169951221
+        ],
+        "mean": 0.5103858334987308,
+        "min": 0.5086307500023395,
+        "max": 0.5121409169951221
+      },
+      "mean_delta": -0.10564375050307717
+    },
+    "store": {
+      "before": {
+        "samples": [
+          0.4081045409984654,
+          0.3513956670067273
+        ],
+        "mean": 0.37975010400259634,
+        "min": 0.3513956670067273,
+        "max": 0.4081045409984654
+      },
+      "sql-after": {
+        "samples": [
+          0.32937441700778436,
+          0.29337124999437947
+        ],
+        "mean": 0.3113728335010819,
+        "min": 0.29337124999437947,
+        "max": 0.32937441700778436
+      },
+      "mean_delta": -0.06837727050151443
+    },
+    "snapshot": {
+      "before": {
+        "samples": [
+          2.7888351250003325,
+          2.730450375005603
+        ],
+        "mean": 2.7596427500029677,
+        "min": 2.730450375005603,
+        "max": 2.7888351250003325
+      },
+      "sql-after": {
+        "samples": [
+          2.550354334001895,
+          2.585570666997228
+        ],
+        "mean": 2.5679625004995614,
+        "min": 2.550354334001895,
+        "max": 2.585570666997228
+      },
+      "mean_delta": -0.19168024950340623
+    },
+    "close": {
+      "before": {
+        "samples": [
+          0.8030490829987684,
+          0.7991309170029126
+        ],
+        "mean": 0.8010900000008405,
+        "min": 0.7991309170029126,
+        "max": 0.8030490829987684
+      },
+      "sql-after": {
+        "samples": [
+          0.7178439999988768,
+          0.7122952499921666
+        ],
+        "mean": 0.7150696249955217,
+        "min": 0.7122952499921666,
+        "max": 0.7178439999988768
+      },
+      "mean_delta": -0.08602037500531878
+    },
+    "cpu_process_mean_pct": {
+      "before": {
+        "samples": [
+          86.04106886499333,
+          85.19616027617452
+        ],
+        "mean": 85.61861457058393,
+        "min": 85.19616027617452,
+        "max": 86.04106886499333
+      },
+      "sql-after": {
+        "samples": [
+          82.34629446120161,
+          82.38303668118438
+        ],
+        "mean": 82.364665571193,
+        "min": 82.34629446120161,
+        "max": 82.38303668118438
+      },
+      "mean_delta": -3.2539489993909285
+    },
+    "after_counts": [
+      {
+        "entry_status:applied:none": 40,
+        "entered": 40,
+        "started": 40,
+        "renew": 160,
+        "metric_projected": 1280,
+        "metric_status:projected:none": 1280,
+        "stored_ack": 1280,
+        "heartbeat": 246,
+        "snapshot_completed": 120,
+        "completed": 40,
+        "close_calls": 40,
+        "close_status:applied:none": 40,
+        "close_committed": 40
+      },
+      {
+        "entry_status:applied:none": 40,
+        "entered": 40,
+        "started": 40,
+        "renew": 160,
+        "metric_projected": 1280,
+        "metric_status:projected:none": 1280,
+        "stored_ack": 1280,
+        "heartbeat": 246,
+        "snapshot_completed": 120,
+        "completed": 40,
+        "close_calls": 40,
+        "close_status:applied:none": 40,
+        "close_committed": 40
+      }
+    ],
+    "after_errors": [
+      {},
+      {}
+    ],
+    "after_exitstatus": [
+      0,
+      0
+    ],
+    "after_invariants": [
+      {
+        "stored_count": 1280,
+        "expected_windows": 1280,
+        "closed_streams": 40,
+        "broadcast_missing_pairs": 0,
+        "client_missing_pairs": 0,
+        "revision": 1482,
+        "applied_revision": 1482,
+        "emitted_revision": 1482
+      },
+      {
+        "stored_count": 1280,
+        "expected_windows": 1280,
+        "closed_streams": 40,
+        "broadcast_missing_pairs": 0,
+        "client_missing_pairs": 0,
+        "revision": 1482,
+        "applied_revision": 1482,
+        "emitted_revision": 1482
+      }
+    ],
+    "source_sha256": {
+      "app/services/session_live_ledger.py": "1e89531fa2e18b45b9e5dddc23115f5e78d79d76ad54024fa34c9226950a66cf",
+      "app/services/session_live_commands.py": "ad5a9ef812e8322d4d8599a85103cc068564a1792dde7b2d97af385898cd3839",
+      "app/services/session_live_outbox.py": "4cee4cf99ee4162a4fb171b0934a284b3ec346fc374822dcce9ef964d8f738c2",
+      "app/ws/session_live_namespace.py": "802c2d843cea1e1c51ee938e5eb7d9d271f1fd8481f778f2c9dad5acd8f6b191"
+    }
+  }
+}

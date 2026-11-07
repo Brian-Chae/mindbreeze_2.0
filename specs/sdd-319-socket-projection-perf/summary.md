@@ -371,3 +371,72 @@ round-3은 loadtester close ACK 오류·p95, 최종 applied/emitted/outbox, 방�
 실패 baseline 보존, 저장·close·방송·renew/40명 지표 및 전후 회귀를 독립 검산한다.
 마이그레이션/설정 변경 없이 승인 후 구현 커밋 revert로 롤백 가능하다. 이번 작업에서 푸시·PR·배포·
 서버접속/변경·dev/운영부하·메일·삭제·시크릿 출력은 하지 않았다. 감독 round-3 결과를 기다린다.
+
+## round-3 (2026-11-07) — 내장 renew 공유 잠금
+
+기준 `4854d33c`, 작업 브랜치 `sdd/319-renew-light-3`, 구현 전 설계 `c00e0ed5`.
+Y100(dev99명)의 renew2.05초, close pending0, reanchor pending5, metric timeout4를 인계받았다.
+남은 queue/epoch 잠금을 줄이기 위해 내장 renew 단독 commit만 회차·epoch SHARE 잠금으로 바꿨다.
+다른 명령의 배타 잠금과는 충돌하므로 종료·추방·재구축 경계는 유지한다. ledger 조회 전 원장 키별
+transaction advisory lock을 잡아 동일 ID100회/다른 body/거절 요청도 멱등을 유지한다.
+stream FOR UPDATE, generation/entity_version/epoch, lease 계산, revision/outbox 계약은 그대로다.
+등록 handler 교체/commit=False는 배타 경로다. 최종 namespace는 기준선과 동일하며 DB/서버 설정 및 마이그레이션은 없다.
+
+### 검증과 한계
+
+- 실제 PG 타 stream 병렬 시험 baseline1실패 → 신규전체17통과. PG 연결불가17skip/정상종료.
+- 독립 코드 리뷰 Critical/High 없음. cold epoch 생성, 양방향 공유/배타 경계, 동일 ID100회,
+  version 단조, 만료 active lease 및 closed 부활 금지, handler/commit fallback을 확인했다.
+- 로컬 Socket.IO100/40 전후 각2표본을 보존한다. 첫100표본은 p95가 악화돼 반복한 것이며,
+  유리한 표본만 선택하지 않는다. 표본 평균은 두 p95의 산술평균으로 합산 요청의 p95가 아니다.
+- 전후공통 metric timeout1+ignored9 패턴이 있다. 하네스 ACK timeout30초 중 해당회원의
+  다음 renew도 멈추며 lease30초/매10tick renew와 맞물려 최대9창이 만료될 수 있다.
+  조기 close는 코드순서상 배제되지만 최초 ACK timeout 및 동일회원 여부는 개별trace 부재로 미확정이다.
+- dev reanchor pending5/metric timeout4의 직접 원인은 발췌 집계로 확정할 수 없다.
+  이 결과를 dev 실패가 해결됐다는 근거로 사용하지 않는다. round-4 감독 확인이 필요하다.
+- WS entry는 REST join/enter를 대체하지 않는다. 합성 heartbeat 및 client 포함 프로세스CPU,
+  ACK대기형tick/최종settle/방송 합집합 검산의 한계는 [재현 문서](evidence-round3/README.md)에 기록했다.
+
+### 중간 실험과 최종 선택
+
+공유 잠금 단독100명 두 p95 평균은1.184→1.468초로 악화했다. 이에 전용4worker 풀을 실험했으나
+100/40명 renew4.355/4.126초로 악화하여 철회했다. 각 원본과 pool 소스 사본은 보존했다.
+최종 설계90341fed는 기본 executor를 유지하고 내장 renew의 SAVEPOINT/RELEASE 및 중복session
+SELECT를 생략하여 정상 경로3SQL왕복을 줄인다. 같은 lease_only guard로 공유잠금과savepoint생략을
+제한한다. 예상밖오류 전체rollback, custom/commitFalse의기존savepoint는 유지한다.
+신규PG19+기존pipeline/renew/timing20=39통과, 미채택executor실험4생략. PG부재19생략 확인.
+
+### 최종 로컬 전후 수치
+
+동일하네스 각2표본. 아래값은 **각시험 p95의 산술평균**이며 통합요청 p95가 아니다. CPU는각시험평균의평균이다.
+
+| 항목 | 100명 기준선→최종 | 40명 기준선→최종 |
+|---|---:|---:|
+| WS 입장 p95 | 2.575→2.602초 | 1.245→0.843초 |
+| renew p95 | 1.184→1.259초 | 0.646→0.262초 |
+| close p95 | 1.723→1.888초 | 0.801→0.715초 |
+| metric p95 | 1.501→1.463초 | 0.616→0.510초 |
+| store p95 | 1.169→1.206초 | 0.380→0.311초 |
+| 평균 CPU | 104.271→104.640% | 85.619→82.365% |
+| 저장 | 모든표본3200/3200 | 모든표본1280/1280 |
+| DB closed | 모든표본100 | 모든표본40 |
+| close pending·방송/client 쌍누락·교착 | 모든표본0 | 모든표본0 |
+
+100명 최종renew1.223~1.294초는2초기준이내지만 기준선1.165~1.203초보다평균약75ms느리다.
+따라서100명 end-to-end성능개선/안정화는입증하지못했다. 40명은두최종표본의입장·renew·CPU가
+모두두기준표본보다개선됐다. 100명기준첫표본timeout1/두번째0, 최종두표본각timeout1로
+100명부하시험전체통과가아니다. 40명최종두표본은통과했다. 원본실패와중간실험을함께보존한다.
+
+정합성검증이통과한후속dev평가용후보이며, Y100의2.05초를안정적으로2초이하로낮췄다는확인은
+감독round-4결과가필요하다. DB잠금독립성·SQL3왕복축소와전체응답지연의효과를구분한다.
+
+### 최종 회귀·인계
+
+기존12묶음은전후 **400통과·기존4실패·6생략**으로동일하다. 실패node ID/시험대상동일,
+새실패/오류/시간초과0. 기존4실패는jsonschema미설치다. 신규PG19통과및기존20통과와별도집계한다.
+최종소켓4표본·회귀·현재production SHA와저장/close/방송/revision검산을독립확인했다.
+100명metric timeout이있으므로부하시험전체성공이라고표현하지않는다.
+
+최종코드변경은session_live_commands.py와session_live_ledger.py뿐이다. namespace는기준선그대로다.
+푸시·PR·배포·서버접속/설정/재시작·운영/dev부하·메일·삭제·시크릿출력은수행하지않았다.
+모든실패표본/중간실험/합성DB·Redis증거를보존했다. 감독round-4결과를기다린다.

@@ -1,0 +1,195 @@
+{
+  "before": {
+    "passed": 400,
+    "failed": 4,
+    "skipped": 6
+  },
+  "after": {
+    "passed": 400,
+    "failed": 4,
+    "skipped": 6
+  },
+  "new_failed_nodes": [],
+  "errors": 0,
+  "timeouts": 0,
+  "known_failure_reason": "jsonschema 미설치",
+  "all_targets_equal": true,
+  "all_failed_nodes_equal": true,
+  "current_and_final_socket_four_sources_equal": true,
+  "partitions": [
+    {
+      "partition": "sdd308",
+      "before": {
+        "warnings": 1,
+        "passed": 11
+      },
+      "after": {
+        "warnings": 1,
+        "passed": 11
+      },
+      "targets_equal": true,
+      "failed_nodes_equal": true,
+      "errors_equal": true
+    },
+    {
+      "partition": "sdd319",
+      "before": {
+        "warnings": 2,
+        "skipped": 5,
+        "passed": 53
+      },
+      "after": {
+        "warnings": 1,
+        "skipped": 5,
+        "passed": 53
+      },
+      "targets_equal": true,
+      "failed_nodes_equal": true,
+      "errors_equal": true
+    },
+    {
+      "partition": "sdd306",
+      "before": {
+        "warnings": 1,
+        "passed": 21,
+        "skipped": 1
+      },
+      "after": {
+        "warnings": 1,
+        "passed": 21,
+        "skipped": 1
+      },
+      "targets_equal": true,
+      "failed_nodes_equal": true,
+      "errors_equal": true
+    },
+    {
+      "partition": "sdd285",
+      "before": {
+        "warnings": 1,
+        "passed": 31
+      },
+      "after": {
+        "warnings": 1,
+        "passed": 31
+      },
+      "targets_equal": true,
+      "failed_nodes_equal": true,
+      "errors_equal": true
+    },
+    {
+      "partition": "sdd246_archive",
+      "before": {
+        "warnings": 1,
+        "passed": 29
+      },
+      "after": {
+        "warnings": 1,
+        "passed": 29
+      },
+      "targets_equal": true,
+      "failed_nodes_equal": true,
+      "errors_equal": true
+    },
+    {
+      "partition": "sdd246_commands",
+      "before": {
+        "warnings": 1,
+        "passed": 33
+      },
+      "after": {
+        "warnings": 1,
+        "passed": 33
+      },
+      "targets_equal": true,
+      "failed_nodes_equal": true,
+      "errors_equal": true
+    },
+    {
+      "partition": "sdd246_ingest",
+      "before": {
+        "warnings": 1,
+        "passed": 19,
+        "failed": 4
+      },
+      "after": {
+        "warnings": 1,
+        "passed": 19,
+        "failed": 4
+      },
+      "targets_equal": true,
+      "failed_nodes_equal": true,
+      "errors_equal": true
+    },
+    {
+      "partition": "sdd246_legacy",
+      "before": {
+        "warnings": 1,
+        "passed": 50
+      },
+      "after": {
+        "warnings": 1,
+        "passed": 50
+      },
+      "targets_equal": true,
+      "failed_nodes_equal": true,
+      "errors_equal": true
+    },
+    {
+      "partition": "sdd246_state",
+      "before": {
+        "warnings": 1,
+        "passed": 22
+      },
+      "after": {
+        "warnings": 1,
+        "passed": 22
+      },
+      "targets_equal": true,
+      "failed_nodes_equal": true,
+      "errors_equal": true
+    },
+    {
+      "partition": "sdd246_t12b",
+      "before": {
+        "warnings": 1,
+        "passed": 11
+      },
+      "after": {
+        "warnings": 1,
+        "passed": 11
+      },
+      "targets_equal": true,
+      "failed_nodes_equal": true,
+      "errors_equal": true
+    },
+    {
+      "partition": "sdd246_transport",
+      "before": {
+        "warnings": 2,
+        "passed": 84
+      },
+      "after": {
+        "warnings": 2,
+        "passed": 84
+      },
+      "targets_equal": true,
+      "failed_nodes_equal": true,
+      "errors_equal": true
+    },
+    {
+      "partition": "ws_live_v2",
+      "before": {
+        "warnings": 2,
+        "passed": 36
+      },
+      "after": {
+        "warnings": 2,
+        "passed": 36
+      },
+      "targets_equal": true,
+      "failed_nodes_equal": true,
+      "errors_equal": true
+    }
+  ]
+}
