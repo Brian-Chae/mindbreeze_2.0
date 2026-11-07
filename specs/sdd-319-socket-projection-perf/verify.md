@@ -214,3 +214,11 @@ Redis 장애 시 lease commit 이후 retryable 응답이라는 기존 동작을 
 실제 로그인/입장/권한 갱신 이벤트 전체를 대체하지 않는다. dev close100건과 동일 원인을 재현했다고
 단정하지 않는다. 실패/미확정은 round-3 감독 관측으로 넘긴다. 서버접속/변경·푸시·PR·배포·
 dev/운영부하·메일·삭제·시크릿 출력 금지 유지. 마이그레이션 없으며 승인 후 구현커밋 revert로 롤백.
+
+### Addendum 5 보완 — 최초 projection 흔적 보존 (구현 전 독립 리뷰)
+
+`rebuild`는 processed_at 존재를 과거 projection의 흔적으로 사용해 Redis 소실시 epoch를 올린다.
+배치 표기가 최초 성공 흔적을 늦추면 epoch 판정의 기존 crash 창을 넓힐 수 있다. 따라서 applied=0의
+첫 성공 행(after_redis hook 통과)은 즉시1회 표기하고, 나머지 성공 prefix를 batch finally로 표기한다.
+500행의 호출 상한은4회(복구0/첫1/배치500/종료복구500)이며 이후 배치는 추가비용 없다.
+첫 행 직후부터 흔적이 존재함과 기존 crash 복구를 단위/PG 회귀로 확인한다.
