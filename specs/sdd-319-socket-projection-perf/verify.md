@@ -256,10 +256,10 @@ session_epoch_lock413~611ms가 남았다. 집계 최대값은 서로 다른 요�
 
 ### 검증 체크리스트
 
-- [ ] 새 PG 동시성 회귀 RED→GREEN 및 기존 멱등/epoch/fence 회귀
-- [ ] 100/40명 전후 소켓 수치·실패 모두 공개, 소스 SHA 고정
-- [ ] 기존 회귀 전후 비교·독립 리뷰·PG불가skip
-- [ ] summary·로컬 구현 커밋 및 round-4 대기
+- [x] 새 PG 동시성 회귀 RED→GREEN 및 기존 멱등/epoch/fence 회귀
+- [x] 100/40명 전후 소켓 수치·실패 모두 공개, 소스 SHA 고정
+- [x] 기존 회귀 전후 비교·독립 리뷰·PG불가skip
+- [x] summary·로컬 구현 커밋 및 round-4 대기
 
 backend와 specs만 변경한다. 푸시·PR·배포·서버설정/재시작·운영접근·dev부하시험·메일·삭제·시크릿출력 금지.
 합성 DB/Redis 증거는 보존한다. 로컬 합성 heartbeat/입장주입 및 프로세스CPU의 기존 하네스 한계가 그대로
@@ -278,10 +278,10 @@ worker이며 contextvars는 copy_context로 전달한다. 다른 명령/heartbea
 같다. executor는 모듈에1개, 첫 제출 때 thread가 시작되며 표준 interpreter 종료 정리를 따른다.
 서버설정·DB풀·프로세스수는 바꾸지 않는다. 정상 종료 경로에서 별도 shutdown이 필요한지는 독립 리뷰한다.
 
-- [ ] default executor 포화 중 renew 진행, 동시worker≤4, context 전달 및 예외 전파를 RED→GREEN 검증
-- [ ] 기존 scope stale/retry/권한/단일worker 시험이 전용풀에서도 같은 의미인지 확인
-- [ ] 잠금단독 소스/실패 표본 보존 후 최종 variant100/40 측정, baseline 및 중간 variant 모두 공개
-- [ ] 최종 소스SHA 기준 회귀·독립리뷰·검산 후 채택 여부와 미확정 사항을 summary에 기록
+- [x] default executor 포화 중 renew 진행, 동시worker≤4, context 전달 및 예외 전파를 RED→GREEN 검증
+- [x] 기존 scope stale/retry/권한/단일worker 시험이 전용풀에서도 같은 의미인지 확인
+- [x] 잠금단독 소스/실패 표본 보존 후 최종 variant100/40 측정, baseline 및 중간 variant 모두 공개
+- [x] 최종 소스SHA 기준 회귀·독립리뷰·검산 후 채택 여부와 미확정 사항을 summary에 기록
 
 ### Addendum 6 재보완 (구현 전) — 전용 풀 철회 및 renew SQL 왕복 축소
 
@@ -295,7 +295,10 @@ rollback으로 stream/ledger 전체를 되돌린다. custom handler 및 commit=F
 공유 잠금 helper의 session SHARE 조회에서 Session 객체를 가져와 뒤의 중복 session SELECT도 생략한다.
 같은 잠금 강도·인가·epoch/lease/revision 경계를 유지하면서 정상 renew SQL 왕복3개를 줄이는 설계다.
 
-- [ ] 실제 PG SQL에서 SAVEPOINT/RELEASE 없음 및 Session 조회1회, custom/commitFalse 기존동작 확인
-- [ ] 거절시 lease 불변, stream flush 이후 예상밖 예외에서 stream/ledger 전체 rollback 확인
-- [ ] 전용 풀 실험을 미채택 기록하고 최종 SQL축소 변형의100/40 전후 성능·회귀 검증
-- [ ] 여전히 성능이 미달이면 성공으로 보고하지 않고 한계와 다음 관측 필요를 기록
+- [x] 실제 PG SQL에서 SAVEPOINT/RELEASE 없음 및 Session 조회1회, custom/commitFalse 기존동작 확인
+- [x] 거절시 lease 불변, stream flush 이후 예상밖 예외에서 stream/ledger 전체 rollback 확인
+- [x] 전용 풀 실험을 미채택 기록하고 최종 SQL축소 변형의100/40 전후 성능·회귀 검증
+- [x] 여전히 성능이 미달이면 성공으로 보고하지 않고 한계와 다음 관측 필요를 기록
+
+Addendum6 수행결과: 전용풀실험실패로철회, 최종40명개선/100명end-to-end개선미입증.
+체크표시는시험수행완료이며실패한실험이나dev목표달성을통과로표시하는것이아니다. 상세summary참조.

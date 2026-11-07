@@ -1,0 +1,193 @@
+FFFF                                                                     [100%]
+=================================== FAILURES ===================================
+___________________ test_default_executor가_포화여도_renew는_진행한다 ____________________
+
+    def test_default_executor가_포화여도_renew는_진행한다():
+        async def run():
+            loop = asyncio.get_running_loop()
+            loop.set_default_executor(ThreadPoolExecutor(max_workers=1))
+            started = asyncio.Event()
+            release = threading.Event()
+            def occupy():
+                loop.call_soon_threadsafe(started.set)
+                assert release.wait(3), '시험 blocker 해제 누락'
+            pending = asyncio.create_task(asyncio.to_thread(occupy))
+            try:
+                await asyncio.wait_for(started.wait(), 1)
+                result = await asyncio.wait_for(ns._renew_to_thread(lambda: 'renew-ok'), 1)
+                assert result == 'renew-ok'
+            finally:
+                release.set()
+                await pending
+>       asyncio.run(run())
+
+tests/sdd319/test_round3_renew_executor.py:30: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/Users/brianyongwookchae/.local/share/uv/python/cpython-3.11.14-macos-aarch64-none/lib/python3.11/asyncio/runners.py:190: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/Users/brianyongwookchae/.local/share/uv/python/cpython-3.11.14-macos-aarch64-none/lib/python3.11/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/brianyongwookchae/.local/share/uv/python/cpython-3.11.14-macos-aarch64-none/lib/python3.11/asyncio/base_events.py:654: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def run():
+        loop = asyncio.get_running_loop()
+        loop.set_default_executor(ThreadPoolExecutor(max_workers=1))
+        started = asyncio.Event()
+        release = threading.Event()
+        def occupy():
+            loop.call_soon_threadsafe(started.set)
+            assert release.wait(3), '시험 blocker 해제 누락'
+        pending = asyncio.create_task(asyncio.to_thread(occupy))
+        try:
+            await asyncio.wait_for(started.wait(), 1)
+>           result = await asyncio.wait_for(ns._renew_to_thread(lambda: 'renew-ok'), 1)
+                                            ^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'app.ws.session_live_namespace' has no attribute '_renew_to_thread'
+
+tests/sdd319/test_round3_renew_executor.py:25: AttributeError
+____________________ test_renew는_4개_worker를_넘어_동시에_실행하지_않는다 ____________________
+
+    def test_renew는_4개_worker를_넘어_동시에_실행하지_않는다():
+        async def run():
+            loop = asyncio.get_running_loop()
+            first_four = asyncio.Event()
+            release = threading.Event()
+            lock = threading.Lock()
+            state = {'active': 0, 'peak': 0}
+            threads = set()
+            def work(i):
+                with lock:
+                    threads.add(threading.get_ident())
+                    state['active'] += 1
+                    state['peak'] = max(state['peak'], state['active'])
+                    if state['active'] >= 4:
+                        loop.call_soon_threadsafe(first_four.set)
+                try:
+                    assert release.wait(3), '시험 blocker 해제 누락'
+                    return i
+                finally:
+                    with lock:
+                        state['active'] -= 1
+            pending = [asyncio.create_task(ns._renew_to_thread(work, i)) for i in range(12)]
+            try:
+                await asyncio.wait_for(first_four.wait(), 1)
+                # 모든 제출이 끝난 상태에서 초과 worker가 생기는지 확인한다.
+                await asyncio.sleep(0.1)
+                assert state['peak'] == 4
+            finally:
+                release.set()
+                results = await asyncio.gather(*pending)
+            assert results == list(range(12))
+            assert len(threads) == 4
+>       asyncio.run(run())
+
+tests/sdd319/test_round3_renew_executor.py:65: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/Users/brianyongwookchae/.local/share/uv/python/cpython-3.11.14-macos-aarch64-none/lib/python3.11/asyncio/runners.py:190: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/Users/brianyongwookchae/.local/share/uv/python/cpython-3.11.14-macos-aarch64-none/lib/python3.11/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/brianyongwookchae/.local/share/uv/python/cpython-3.11.14-macos-aarch64-none/lib/python3.11/asyncio/base_events.py:654: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/sdd319/test_round3_renew_executor.py:54: in run
+    pending = [asyncio.create_task(ns._renew_to_thread(work, i)) for i in range(12)]
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+.0 = <range_iterator object at 0x10f2a7c90>
+
+>   pending = [asyncio.create_task(ns._renew_to_thread(work, i)) for i in range(12)]
+                                   ^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'app.ws.session_live_namespace' has no attribute '_renew_to_thread'
+
+tests/sdd319/test_round3_renew_executor.py:54: AttributeError
+______________ test_renew_worker에_context를_전달하고_호출자_context는_보존한다 ______________
+
+    def test_renew_worker에_context를_전달하고_호출자_context는_보존한다():
+        trace = contextvars.ContextVar('round3_trace', default='unset')
+        async def run():
+            trace.set('request-context')
+            def work():
+                original = trace.get()
+                trace.set('worker-context')
+                return original
+            assert await ns._renew_to_thread(work) == 'request-context'
+            assert trace.get() == 'request-context'
+>       asyncio.run(run())
+
+tests/sdd319/test_round3_renew_executor.py:78: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/Users/brianyongwookchae/.local/share/uv/python/cpython-3.11.14-macos-aarch64-none/lib/python3.11/asyncio/runners.py:190: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/Users/brianyongwookchae/.local/share/uv/python/cpython-3.11.14-macos-aarch64-none/lib/python3.11/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/brianyongwookchae/.local/share/uv/python/cpython-3.11.14-macos-aarch64-none/lib/python3.11/asyncio/base_events.py:654: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def run():
+        trace.set('request-context')
+        def work():
+            original = trace.get()
+            trace.set('worker-context')
+            return original
+>       assert await ns._renew_to_thread(work) == 'request-context'
+                     ^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'app.ws.session_live_namespace' has no attribute '_renew_to_thread'
+
+tests/sdd319/test_round3_renew_executor.py:76: AttributeError
+_____________________ test_renew_worker_예외는_호출자에게_그대로_전달한다 _____________________
+
+    def test_renew_worker_예외는_호출자에게_그대로_전달한다():
+        error = ValueError('합성 renew 오류')
+        def fail():
+            raise error
+        async def run():
+            with pytest.raises(ValueError) as caught:
+                await ns._renew_to_thread(fail)
+            assert caught.value is error
+>       asyncio.run(run())
+
+tests/sdd319/test_round3_renew_executor.py:89: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/Users/brianyongwookchae/.local/share/uv/python/cpython-3.11.14-macos-aarch64-none/lib/python3.11/asyncio/runners.py:190: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/Users/brianyongwookchae/.local/share/uv/python/cpython-3.11.14-macos-aarch64-none/lib/python3.11/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/brianyongwookchae/.local/share/uv/python/cpython-3.11.14-macos-aarch64-none/lib/python3.11/asyncio/base_events.py:654: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def run():
+        with pytest.raises(ValueError) as caught:
+>           await ns._renew_to_thread(fail)
+                  ^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'app.ws.session_live_namespace' has no attribute '_renew_to_thread'
+
+tests/sdd319/test_round3_renew_executor.py:87: AttributeError
+=============================== warnings summary ===============================
+../../mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854
+  /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/sdd319/test_round3_renew_executor.py::test_default_executor가_포화여도_renew는_진행한다
+FAILED tests/sdd319/test_round3_renew_executor.py::test_renew는_4개_worker를_넘어_동시에_실행하지_않는다
+FAILED tests/sdd319/test_round3_renew_executor.py::test_renew_worker에_context를_전달하고_호출자_context는_보존한다
+FAILED tests/sdd319/test_round3_renew_executor.py::test_renew_worker_예외는_호출자에게_그대로_전달한다
+4 failed, 1 warning in 2.09s

@@ -1,0 +1,46 @@
+............F............                                                [100%]
+=================================== FAILURES ===================================
+_____________ test_renew만_전용_executor를_사용하고_close는_기본_executor를_사용 _____________
+
+command_flow = namespace(state=namespace(job=0, jobs=[], steps=[('scope', 0), ('command', 0)], db_calls=1, scope_calls=1), conn=V2Con...mand_id': '4aa6914d-b077-43d3-be84-13dd292cf1a2', 'status': 'applied', 'epoch': '1', 'committed': True, 'cursors': []})
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10e7afed0>
+
+    def test_renew만_전용_executor를_사용하고_close는_기본_executor를_사용(command_flow, monkeypatch):
+        from app.ws import session_live_namespace as ns
+        c = command_flow
+        routes = []
+        async def default(fn, *args):
+            routes.append('default')
+            return fn(*args)
+        async def renew(fn, *args):
+            routes.append('renew')
+            return fn(*args)
+        monkeypatch.setattr(asyncio, 'to_thread', default)
+        monkeypatch.setattr(ns, '_renew_to_thread', renew, raising=False)
+        assert invoke(c) == c.ack
+        assert routes == ['renew']
+        routes.clear()
+        c.wire['kind'] = 'capture.close'
+        c.wire['payload'] = {'stream_id': str(uuid4()), 'reason': 'user', 'final_sequences': {}}
+>       assert invoke(c) == c.ack
+E       AssertionError: assert {'code': 'inv...ors': [], ...} == {'command_id'...ch': '1', ...}
+E         
+E         Omitting 2 identical items, use -vv to show
+E         Differing items:
+E         {'epoch': '0'} != {'epoch': '1'}
+E         {'status': 'rejected'} != {'status': 'applied'}
+E         {'committed': False} != {'committed': True}
+E         Left contains 1 more item:
+E         {'code': 'invalid_payload'}
+E         Use -v to get more diff
+
+tests/sdd319/test_round2_pipeline.py:200: AssertionError
+=============================== warnings summary ===============================
+../../mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854
+  /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/sdd319/test_round2_pipeline.py::test_renew만_전용_executor를_사용하고_close는_기본_executor를_사용
+1 failed, 24 passed, 1 warning in 3.88s

@@ -1,0 +1,78 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_________________ test_다른_stream_renew는_한_stream_락대기와_독립적으로_완료 _________________
+
+maker = sessionmaker(class_='Session', bind=Engine(postgresql://localhost/sdd308c_53dd38eaeca54e09), autoflush=False, expire_on_commit=True)
+world = <tests.sdd246.commands.conftest.World object at 0x10fe08610>
+pg_engine = Engine(postgresql://localhost/sdd308c_53dd38eaeca54e09)
+
+    def test_다른_stream_renew는_한_stream_락대기와_독립적으로_완료(maker, world, pg_engine):
+        first, second = start(maker, world), start(maker, world, 1)
+        reached = threading.Event()
+        def before(conn, cursor, statement, params, context, many):
+            if threading.current_thread().name.startswith('blocked-renew') and 'FROM capture_stream' in statement and 'FOR UPDATE' in statement:
+                reached.set()
+        sa.event.listen(pg_engine, 'before_cursor_execute', before)
+        blocker = maker()
+        blocker.execute(sa.select(CaptureStream).where(CaptureStream.id == uuid.UUID(first.result['stream_id'])).with_for_update())
+        try:
+            with ThreadPoolExecutor(1, thread_name_prefix='blocked-renew') as pool:
+                pending = pool.submit(apply, maker, world.member(), renew(world, first))
+                try:
+                    assert reached.wait(3), '첫 renew가 stream 잠금에 도달하지 못함'
+                    with ThreadPoolExecutor(1) as independent:
+                        fast = independent.submit(apply, maker, world.member(1), renew(world, second))
+                        try:
+>                           result = fast.result(timeout=1)
+                                     ^^^^^^^^^^^^^^^^^^^^^^
+
+tests/sdd319/test_round3_renew_lock.py:101: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = None, timeout = 1
+
+    def result(self, timeout=None):
+        """Return the result of the call that the future represents.
+    
+        Args:
+            timeout: The number of seconds to wait for the result if the future
+                isn't done. If None, then there is no limit on the wait time.
+    
+        Returns:
+            The result of the call that the future represents.
+    
+        Raises:
+            CancelledError: If the future was cancelled.
+            TimeoutError: If the future didn't finish executing before the given
+                timeout.
+            Exception: If the call raised then that exception will be raised.
+        """
+        try:
+            with self._condition:
+                if self._state in [CANCELLED, CANCELLED_AND_NOTIFIED]:
+                    raise CancelledError()
+                elif self._state == FINISHED:
+                    return self.__get_result()
+    
+                self._condition.wait(timeout)
+    
+                if self._state in [CANCELLED, CANCELLED_AND_NOTIFIED]:
+                    raise CancelledError()
+                elif self._state == FINISHED:
+                    return self.__get_result()
+                else:
+>                   raise TimeoutError()
+E                   TimeoutError
+
+/Users/brianyongwookchae/.local/share/uv/python/cpython-3.11.14-macos-aarch64-none/lib/python3.11/concurrent/futures/_base.py:458: TimeoutError
+---------------------------- Captured stdout setup -----------------------------
+PRESERVED_PG_DATABASE=sdd308c_53dd38eaeca54e09
+=============================== warnings summary ===============================
+../../mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854
+  /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/sdd319/test_round3_renew_lock.py::test_다른_stream_renew는_한_stream_락대기와_독립적으로_완료
+1 failed, 12 deselected, 1 warning in 3.50s

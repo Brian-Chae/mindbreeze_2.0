@@ -1,0 +1,26 @@
+{
+  "exitstatus": 0,
+  "ledger_source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd319b/backend/app/services/session_live_ledger.py",
+  "ledger_sha256": "1e89531fa2e18b45b9e5dddc23115f5e78d79d76ad54024fa34c9226950a66cf",
+  "counts": {
+    "warnings": 1,
+    "passed": 29
+  },
+  "failed": [],
+  "errors": [],
+  "targets": [
+    "tests/sdd246/archive"
+  ],
+  "process_exitstatus": 0,
+  "log_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-round3-regression-after-vqv_5lrd/sdd246_archive.log",
+  "source_root": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd319b/backend",
+  "source_sha256": {
+    "app/services/class_participation_service.py": "c96750b02cbb57cedb2df4f1b738d9c856e0807fdd491a8654213d29f68d3f36",
+    "app/services/session_live_commands.py": "ad5a9ef812e8322d4d8599a85103cc068564a1792dde7b2d97af385898cd3839",
+    "app/services/live_single_flight.py": "277de85cb163d3e5e3ab54ee2e547c1b8585630ec821f4b120fd5f86d32207c2",
+    "app/services/session_live_outbox.py": "4cee4cf99ee4162a4fb171b0934a284b3ec346fc374822dcce9ef964d8f738c2",
+    "app/services/session_live_ledger.py": "1e89531fa2e18b45b9e5dddc23115f5e78d79d76ad54024fa34c9226950a66cf",
+    "app/ws/session_live_namespace.py": "802c2d843cea1e1c51ee938e5eb7d9d271f1fd8481f778f2c9dad5acd8f6b191",
+    "app/api/v1/session.py": "6d16caaf28c30e27e336f5166498594be7678a31e28f0c5229e28b13464d52b1"
+  }
+}
