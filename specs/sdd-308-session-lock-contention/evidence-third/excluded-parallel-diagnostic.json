@@ -1,0 +1,28 @@
+{
+  "n": 100,
+  "measurement_s": 32.0,
+  "elapsed_s": 116.149,
+  "counts": {
+    "entered": 100,
+    "projection_pending": 104,
+    "started": 94,
+    "renew": 262,
+    "device_accepted": 245,
+    "metric_projected": 827,
+    "deadlock": 149,
+    "metric_failed": 105,
+    "device_failed": 17,
+    "completed": 94
+  },
+  "failures": {
+    "member:ProjectionFenceLost": 1,
+    "member:AssertionError": 5
+  },
+  "renew_p95_s": 6.950280542005203,
+  "entry_p95_s": 16.727603499995894,
+  "outbox_count": 1557,
+  "revision": 1557,
+  "applied_revision": 1557,
+  "emitted_revision": 1557,
+  "excluded_from_comparison": "측정과 회귀를 병렬 실행하여 로컬 PG 접속 한도 초과; 진단용으로만 보존"
+}

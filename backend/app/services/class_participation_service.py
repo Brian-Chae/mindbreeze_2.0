@@ -768,7 +768,7 @@ def seed_live_state(db, session_id) -> bool:
 
 
 def lock_epoch_if_v2(db, session_id) -> bool:
-    """SDD-308: v2 회차면 epoch 행을 먼저 잠근다(잠금 순서 epoch → 클래스/회차 → 참가자). 반환 True=잠금함."""
+    """SDD-308: v2 회차면 회차 → epoch를 잠근다. 필요한 users/클래스 잠금은 호출자가 먼저 획득한다."""
     from app.services.session_live_ledger import lock_epoch
     from app.services.session_live_legacy import PROTOCOL_V2, get_session_protocol
 
