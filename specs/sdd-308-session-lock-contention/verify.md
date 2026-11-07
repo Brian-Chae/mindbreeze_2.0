@@ -61,17 +61,21 @@
 
 ## 3차 구현 전 Verify addendum (2026-11-07)
 
-- [ ] PG 실행 SQL로 sessions NO KEY UPDATE → epoch UPDATE 순서 확인. 클래스 상태 전이는 users/class 선행.
-- [ ] 구 코드에서 epoch 보유 + REST sessions 보유 + outbox FK 대기 고리를 재현하고 PG DETAIL 기록.
-- [ ] 같은 재현이 수정 후 교착 없이 완료. 잠금 승격에 의한 새 고리가 없는지 독립 감사.
-- [ ] 100명 REST enter→entry.enter→capture.start 입장 100/100, 500 0.
-- [ ] 실제 PG/Redis에서 30초 이상 renew·metric/device·presence·drain/publish를 섞어 DeadlockDetected 0,
+- [x] PG 실행 SQL로 sessions NO KEY UPDATE → epoch UPDATE 순서 확인. 클래스 상태 전이는 users/class 선행.
+- [x] 구 코드에서 epoch 보유 + REST sessions 보유 + outbox FK 대기 고리를 재현하고 PG DETAIL 기록.
+- [x] 같은 재현이 수정 후 교착 없이 완료. 잠금 승격에 의한 새 고리가 없는지 독립 감사.
+- [x] 100명 REST enter→entry.enter→capture.start 입장 100/100, 500 0.
+- [x] 실제 PG/Redis에서 30초 이상 renew·metric/device·presence·drain/publish를 섞어 DeadlockDetected 0,
       projection_pending ≤49, renew p95 ≤2초. 40명도 동일 조건 검증.
-- [ ] revision 연속·중복 command 부수효과 1회·outbox drain 최종 revision 일치 확인.
-- [ ] tests/sdd308, sdd319, sdd306, sdd246, sdd285, test_mb2_ws_mid_fixes,
+- [x] revision 연속·중복 command 부수효과 1회·outbox drain 최종 revision 일치 확인.
+- [x] tests/sdd308, sdd319, sdd306, sdd246, sdd285, test_mb2_ws_mid_fixes,
       test_sdd024_session_live_ws, live_v2 관련 회귀 전후 비교. 기존 실패/새 실패/미실행을 분리.
-- [ ] 로컬 테스트 DB·Redis namespace 보존. 외부 연결/발송 차단. 서비스 코드와 문서만 커밋.
-- [ ] 독립 검증자가 diff/테스트를 검토한 후 summary에 커밋·전후 수치·제약 기록.
+- [x] 로컬 테스트 DB·Redis namespace 보존. 외부 연결/발송 차단. 서비스 코드와 문서만 커밋.
+- [x] 독립 검증자가 diff/테스트를 검토한 후 summary에 커밋·전후 수치·제약 기록.
 
 plan.md의 A안을 선택한다. 기존 명령 ledger·epoch 직렬화·outbox 원자 commit을 유지하고
 공통 선행 sessions 잠금으로 FK 대기 역전을 제거한다. 측정 결과가 기준에 미달하면 완료로 보고하지 않는다.
+
+검증 주의: 방송 watermark 일치와 실제 emit callback coverage는 다르다. 100명 수정 후 79개,
+40명 원본 10개/수정 후 11개의 event_id×audience 조합이 미수집됐다. 기존 방송 경계 race가
+확인되어 **방송 누락 0은 미충족**이다. 40명 REST enter p95는 1.667→1.763초로 소폭 증가했다.
