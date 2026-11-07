@@ -21,8 +21,17 @@ pytestmark = pytest.mark.skipif(not os.environ.get("SDD319_BENCH"), reason="벤�
 
 
 @pytest.fixture
+def maker(pg_url):  # 벤치 전용: 스레드 수 대비 연결이 모자라 생기는 대기(벤치 인공물)를 제거
+    import sqlalchemy as sa
+    from sqlalchemy.orm import sessionmaker
+    eng = sa.create_engine(pg_url, pool_size=int(os.environ.get("SDD319_POOL", "20")), max_overflow=int(os.environ.get("SDD319_POOL", "20")))
+    yield sessionmaker(bind=eng, autoflush=False)
+    eng.dispose()
+
+
+@pytest.fixture
 def world(maker):
-    return World(maker, n_participants=40)
+    return World(maker, n_participants=int(os.environ.get('SDD319_N','40')))
 
 
 def _scenario(maker, world, live, coalesce: bool):
@@ -31,20 +40,29 @@ def _scenario(maker, world, live, coalesce: bool):
         sf.coalesced_drain = lambda key, do, need, wait_s=2.0: do()  # type: ignore[assignment]
     with maker() as s:
         cps.seed_live_state(s, world.session_id)
+    sf.stats.update({k: 0 for k in sf.stats})
     lat, pend, drains = [], [], []
     real = ob.drain
 
+    dur = []
+
     def counting(*a, **k):
         drains.append(1)
-        return real(*a, **k)
+        t0 = time.monotonic()
+        try:
+            return real(*a, **k)
+        finally:
+            dur.append((time.monotonic() - t0) * 1000)
 
     ob.drain = counting
     stop = time.monotonic() + 8
 
     def publisher():  # metric 경로 모사: 건별 방송
         while time.monotonic() < stop:
-            with maker() as s:
-                cps.publish_pending(s, live, world.session_id, lambda ev: None, wait_s=2.0)
+            def _pub():  # publish_session_sync 와 동일: run_coalesced 로 감싼다
+                with maker() as s:
+                    return cps.publish_pending(s, live, world.session_id, lambda ev: None, wait_s=2.0)
+            sf.run_coalesced(("publish", str(world.session_id)), _pub)
             time.sleep(0.005)
 
     def commander(i):
@@ -56,13 +74,14 @@ def _scenario(maker, world, live, coalesce: bool):
             pend.append(o.ack.get("code") == "projection_pending")
             time.sleep(0.05)
 
-    ts = [threading.Thread(target=publisher) for _ in range(30)] + [threading.Thread(target=commander, args=(i,)) for i in range(20)]
+    N = int(os.environ.get('SDD319_N', '40'))
+    ts = [threading.Thread(target=publisher) for _ in range(int(N * .75))] + [threading.Thread(target=commander, args=(i,)) for i in range(N // 2)]
     [t.start() for t in ts]
     [t.join(60) for t in ts]
     ob.drain = real
     lat.sort()
     return {"commands": len(lat), "p50_ms": round(statistics.median(lat)), "p95_ms": round(lat[int(len(lat) * .95)]),
-            "projection_pending": sum(pend), "drain_calls": len(drains)}
+            "projection_pending": sum(pend), "drain_calls": len(drains), "sf": dict(sf.stats), "drain_ms_p50": round(statistics.median(dur)) if dur else 0, "drain_ms_max": round(max(dur)) if dur else 0}
 
 
 @pytest.mark.parametrize("mode", ["before", "after"])
