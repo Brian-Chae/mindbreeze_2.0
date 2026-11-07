@@ -284,5 +284,82 @@
       "beat_f1": "aged-buffer beats (<=T-20s), block_beat_eval",
       "reliable_records_only": true
     }
+  },
+  "phase4_holdout": {
+    "preregistered": "specs/sdd-317-ppg-accuracy-harness/verify-addendum-10.md",
+    "approval": "Brian Chae 11/7 대화 승인",
+    "inherits": "addendum-8 judgement/statistics unchanged; addendum-9 A9-4 HRV report",
+    "candidates": [
+      {
+        "id": "C0",
+        "name": "current core (V0 mirror)",
+        "judged": false,
+        "params": {}
+      },
+      {
+        "id": "W4a",
+        "name": "detrend-mean-only",
+        "judged": true,
+        "params": {
+          "detrend": "mean"
+        }
+      },
+      {
+        "id": "W2a",
+        "name": "refine-pm30",
+        "judged": true,
+        "params": {
+          "refine": "pm30"
+        }
+      }
+    ],
+    "no_other_candidates": true,
+    "datasets": {
+      "marsh_holdout": "splits.json holdout.marsh (14)",
+      "capnobase": "42 recordings, 300Hz, CSV"
+    },
+    "capnobase_truth": {
+      "resp_events": "labels.co2_startinsp_x / 300 (CO2 inspiration start)",
+      "beats": "labels.ecg_peak_x / 300",
+      "age_groups": "age>=18 adult, <18 pediatric, missing unknown"
+    },
+    "windows": {
+      "primary_L_s": 60,
+      "sensitivity_L_s": [
+        30,
+        120
+      ],
+      "score_hop_s": 10
+    },
+    "judged_strata": [
+      "lt6",
+      "6_12",
+      "12_20",
+      "gt20"
+    ],
+    "report_strata": [
+      "<6",
+      "6-8",
+      "8-10",
+      "10-12",
+      "12-20",
+      ">20"
+    ],
+    "judged_count": 2,
+    "holm": {
+      "m": 2
+    },
+    "gates": {
+      "G_resp": "A8-2",
+      "G_hrv": "A9-1",
+      "G_front": "reference only"
+    },
+    "lock": {
+      "one_shot": true,
+      "run_record": "results/holdout/run-record.json",
+      "access_log": "results/holdout/access-log-holdout.jsonl",
+      "approval_file": "tools/ppg-eval/holdout-approval.json"
+    },
+    "freeze_note": "freeze.sha/tree hashes are recorded in the approval commit that follows the freeze commit (cannot self-reference)"
   }
 }

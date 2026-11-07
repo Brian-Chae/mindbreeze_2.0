@@ -1,4 +1,4 @@
-"""CLI: `python -m ppg_eval.cli run-dev [--out DIR]`, `run-holdout` (잠금 — 이번 SDD 에서는 항상 거부)."""
+"""CLI: `python -m ppg_eval.cli run-dev [--out DIR]`, `run-holdout --unlock-token T --confirm-single-run` (addendum-10 조건 충족 시 1회만)."""
 from __future__ import annotations
 
 import argparse
@@ -184,10 +184,16 @@ def main(argv=None) -> int:
         print(json.dumps(res, ensure_ascii=False, sort_keys=True))
         return 0 if res.get("pass", True) else 1
     if a.cmd == "run-holdout":
-        from .guard import HoldoutLocked, require_open
+        from .guard import HoldoutLocked
 
+        if not a.confirm_single_run or not a.unlock_token:
+            print("거부: --unlock-token 과 --confirm-single-run 이 모두 필요", file=sys.stderr)
+            return 2
         try:
-            require_open("capnobase", "*")
+            from .holdout import run_holdout
+
+            print(json.dumps(run_holdout(a.unlock_token), ensure_ascii=False, sort_keys=True))
+            return 0
         except HoldoutLocked as e:
             print(f"거부: {e}", file=sys.stderr)
             return 2

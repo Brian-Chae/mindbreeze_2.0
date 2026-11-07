@@ -1,6 +1,7 @@
 """데이터셋 어댑터 (읽기 전용). 모든 로더는 guard.require_open 을 먼저 거친다 — 홀드아웃은 열리지 않는다."""
 from __future__ import annotations
 
+import csv
 import importlib
 import os
 import pickle
@@ -118,6 +119,67 @@ def load_dalia(rid: str) -> Record:
     return Record(ds="dalia", rid=rid, fs=64.0, ppg=bvp, beats_truth=np.sort(rp), meta={"n_samples": int(len(bvp)), "activity_available": True})
 
 
+CAPNO_DIR = os.path.join(DATA_ROOT, "capnobase", "extracted", "data", "csv")
+CAPNO_FS = 300.0
+CAPNO_ADULT_MIN_AGE = 18.0  # 열기 전 고정(addendum-10): 나이 >=18 성인, <18 소아, 미기재 미상
+
+
+def capnobase_ids(csv_dir: str = CAPNO_DIR) -> list:
+    """메타 파일 이름으로 기록 ID 목록 (파일 이름만 읽는다)."""
+    return sorted(f[: -len("_meta.csv")] for f in os.listdir(csv_dir) if f.endswith("_8min_meta.csv"))
+
+
+def _tokens(cell: str) -> np.ndarray:
+    t = cell.split()
+    a = np.asarray([float(x) for x in t], dtype=np.float64) if t else np.zeros(0)
+    return a[a > 0]  # MATLAB 1-기반 인덱스: 0 은 빈칸 패딩(무효). 기록 0133 에서 확인됨
+
+
+def parse_capnobase(rid: str, csv_dir: str = CAPNO_DIR) -> Record:
+    """CapnoBase CSV → Record (잠금 검사 없음 — 스키마 시험·guard 경유 로더 공용).
+
+    참값(1단계 MARSH 와 같은 형식의 이벤트열): `co2_startinsp_x`(CO₂ 흡기 시작 샘플) / 300Hz = 호흡 이벤트 시각(초).
+    참 박동: `ecg_peak_x`(사람 평가자 R-peak) / 300Hz. PPG: `pleth_y`.
+    """
+    base = os.path.join(csv_dir, f"{rid}")
+    sig = np.loadtxt(base + "_signal.csv", delimiter=",", skiprows=1)
+    with open(base + "_labels.csv", newline="", encoding="utf-8") as f:
+        rows = list(csv.reader(f))
+    lab = dict(zip(rows[0], rows[1]))
+    with open(base + "_param.csv", newline="", encoding="utf-8") as f:
+        pr = list(csv.DictReader(f))[0]
+    with open(base + "_meta.csv", newline="", encoding="utf-8") as f:
+        me = list(csv.DictReader(f))[0]
+    fs = float(pr["samplingrate_pleth"])
+    if fs != CAPNO_FS or float(pr["samplingrate_co2"]) != CAPNO_FS or float(pr["samplingrate_ecg"]) != CAPNO_FS:
+        raise ValueError(f"CapnoBase {rid}: 샘플률 300Hz 아님")
+    if sig.ndim != 2 or sig.shape[1] != 3:
+        raise ValueError(f"CapnoBase {rid}: 신호 열 3개(co2,pleth,ecg) 아님")
+    ppg, n_nan = fill_nan(sig[:, 1].astype(np.float64))
+    ecg, _ = fill_nan(sig[:, 2].astype(np.float64))
+    insp = _tokens(lab["co2_startinsp_x"]) / fs
+    ecg_pk = _tokens(lab["ecg_peak_x"]) / fs
+    age_txt = (me.get("subject_age") or "").strip()
+    age = float(age_txt) if age_txt else float("nan")
+    group = "unknown" if age != age else ("adult" if age >= CAPNO_ADULT_MIN_AGE else "pediatric")
+    return Record(
+        ds="capnobase",
+        rid=rid,
+        fs=fs,
+        ppg=ppg,
+        resp_events={"co2_startinsp": np.sort(insp)},
+        beats_truth=np.sort(ecg_pk),
+        ecg=ecg,
+        ecg_fs=fs,
+        meta={"n_samples": int(len(ppg)), "ppg_nan": n_nan, "age": age, "age_group": group, "ventilation": pr.get("case_ventilation", ""), "co2_artif": lab["co2_artif_x"].strip() != "", "n_breaths": int(len(insp)), "n_ecg_peaks": int(len(ecg_pk))},
+    )
+
+
+def load_capnobase(rid: str) -> Record:
+    require_open("capnobase", rid)
+    return parse_capnobase(rid)
+
+
 def load_record(ds: str, rid: str) -> Record:
     if ds == "bidmc":
         return load_bidmc(rid)
@@ -129,4 +191,6 @@ def load_record(ds: str, rid: str) -> Record:
         return load_mimic("af", rid)
     if ds == "dalia":
         return load_dalia(rid)
+    if ds == "capnobase":
+        return load_capnobase(rid)
     raise PermissionError(f"데이터셋 {ds} 는 개발 중 열 수 없음 (홀드아웃 전용 또는 미지원)")
