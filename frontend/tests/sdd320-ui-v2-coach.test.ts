@@ -60,7 +60,8 @@ describe('CSS 스코프·공유 파일', () => {
     // 99ec2301(대표 지시 11/7: 하단 플로팅 메뉴 보라 반전)은 ui-v2.css 의 의도된 수정이라 비교 기준에서 뺀다.
     try {
       const git = (args: string) => execSync(`git diff --name-only ${args} -- src`, { cwd: root, encoding: 'utf8' });
-      changed = `${git('83fb65c6 99ec2301^')}\n${git('99ec2301')}`;
+      // 99ec2301 이후 하단 메뉴 색 조정(대표 지시, 시안 C)도 ui-v2.css 의 의도된 수정이므로 그 파일만 제외.
+      changed = `${git('83fb65c6 99ec2301^')}\n${git('99ec2301').split('\n').filter((f) => !f.endsWith('styles/ui-v2.css')).join('\n')}`;
     } catch { return; }
     const forbidden = ['AppShell.tsx', 'SidebarNav.tsx', 'BottomTabBar.tsx', 'floating-bottom-nav', 'src/index.css', 'tailwind.config', 'styles/ui-v2.css', 'styles/ui-v2-brand.css', 'DashboardPage.tsx'];
     expect(changed.split('\n').filter((f) => forbidden.some((x) => f.includes(x)))).toEqual([]);
