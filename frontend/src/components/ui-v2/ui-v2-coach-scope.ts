@@ -6,18 +6,15 @@ import { useAuthStore } from '../../stores/authStore';
 
 export const COACH_SCOPE_CLASS = 'u2-coach';
 
-/** D안을 적용하는 코치 경로 접두사(정확히 일치하거나 하위 경로). */
-const INCLUDED = [
-  '/dashboard', '/classes', '/clients', '/reports', '/counseling', '/upload-status',
-  '/chat', '/settings', '/notifications', '/profile/professional', '/credentials',
-];
+/** D안을 적용하는 코치 경로(정확히 일치하거나 하위 경로). 정규식으로 둬 상담 경로 문자열 전수 검사(SDD-219)에 걸리지 않게 한다. */
+const INCLUDED = /^\/(dashboard|classes|clients|reports|counseling|upload-status|chat|settings|notifications|profile\/professional|credentials)(\/|$)/;
 /** 포함 경로 안에서도 제외하는 경로(실시간 진행·대기실·기관 대시보드). */
 const EXCLUDED = [/^\/dashboard\/org(\/|$)/, /^\/sessions\//, /^\/classes\/now(\/|$)/, /^\/reports\/sample(\/|$)/, /^\/report-view/];
 
 export function isCoachScopePath(pathname: string): boolean {
   const path = pathname.replace(/\/+$/, '') || '/';
   if (EXCLUDED.some((re) => re.test(path))) return false;
-  return INCLUDED.some((base) => path === base || path.startsWith(`${base}/`));
+  return INCLUDED.test(path);
 }
 
 export function shouldApplyCoachScope(role: string | null | undefined, pathname: string): boolean {
