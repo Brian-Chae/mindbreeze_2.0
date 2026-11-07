@@ -239,3 +239,8 @@
 .ui-v2 .u2-hero--nature>.u2-eyebrow{align-self:flex-start}
 .ui-v2 .u2-hero--nature>.u2-primary{margin-top:auto}
 .ui-v2 .u2-hero--nature>p,.ui-v2 .u2-hero--nature>h2.u2-gap{margin-bottom:24px}
+/* SDD-320 후속 4: 회원 내 클래스 대표 카드(칩·텍스트 링크)도 같은 자연 배경 규칙. 배경색은 이미지 실패 시 흰 글자 대비 폴백 */
+.ui-v2 .u2-hero--nature{background-color:#251038}
+.ui-v2 .u2-hero--nature>.u2-chip{align-self:flex-start}
+.ui-v2 .u2-hero--nature .u2-num span{color:#E5D3EE}
+.ui-v2 .u2-hero--nature>.u2-textlink{margin-top:auto;color:#FFFFFF;text-shadow:0 1px 8px #25103899}
