@@ -188,6 +188,19 @@ def apply_command_with_retry(db: DBSession, actor: Actor, command: LiveCommand, 
     return _transient(command, "db_busy", 0, 0)
 
 
+# handler 가 lock_class_session 을 잡는 명령 — epoch 보다 먼저 클래스 잠금을 잡아야 한다.
+CLASS_LOCK_FIRST_KINDS = frozenset({"entry.enter"})
+
+
+def _lock_class_before_epoch(db: DBSession, session_id: uuid.UUID, actor_id: uuid.UUID) -> None:
+    from app.services.class_write_service import lock_class_session
+
+    row = db.execute(select(SessionModel).where(SessionModel.id == session_id)).scalar_one_or_none()
+    if row is None or row.class_id is None:
+        return
+    lock_class_session(db, row, actor_id)
+
+
 def apply_command(db: DBSession, actor: Actor, command: LiveCommand, *, now: datetime | None = None,
                   clock_probe_resolver: Callable[[uuid.UUID], int | None] | None = None,
                   commit: bool = True) -> DurableResult:
@@ -201,6 +214,10 @@ def apply_command(db: DBSession, actor: Actor, command: LiveCommand, *, now: dat
         # 여기서 epoch → (capture_stream INSERT 의 FK) sessions KEY SHARE 순으로 잡으면 입장 폭주 때 교착이 난다(11/4 11건).
         # KEY SHARE 는 FOR UPDATE 와만 충돌하므로 capture 끼리는 서로 막지 않는다.
         db.execute(select(SessionModel.id).where(SessionModel.id == command.session_id).with_for_update(key_share=True))
+    if command.kind in CLASS_LOCK_FIRST_KINDS:
+        # SDD-308 후속: 전역 잠금 순서 users → 클래스 → 회차 → epoch. 이 명령의 handler 는 lock_class_session 을 잡는데,
+        # epoch 를 먼저 쥐고 users/클래스를 기다리면 REST 입장(users→회차)·capture(회차 KEY SHARE→epoch)와 3자 교착이 난다(11/7 dev 100명).
+        _lock_class_before_epoch(db, command.session_id, actor.actor_id)
     try:
         epoch_row = lock_epoch(db, command.session_id)
     except IntegrityError:  # 존재하지 않는 session_id (FK)

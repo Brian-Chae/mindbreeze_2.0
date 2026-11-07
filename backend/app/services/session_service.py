@@ -1841,6 +1841,10 @@ def remove_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
     target_uuid = _to_uuid(user_id)
     # SDD-308: 잠금 순서 통일 — v2 회차는 live 명령과 같이 epoch 행을 먼저 잡은 뒤 참가자 행을 갱신한다.
     # (예전: 참가자 UPDATE → emit_participant_removed 의 epoch 잠금. 명령은 epoch → 참가자라 서로 기다리다 교착.)
+    # SDD-308 후속: 전역 순서 users → 클래스 → 회차 → epoch. 클래스 회차는 epoch 보다 먼저 lock_class_session 을 잡는다.
+    if s.class_id:
+        from app.services.class_write_service import lock_class_session
+        _, s = lock_class_session(db, s, host_id)
     from app.services.class_participation_service import lock_epoch_if_v2
     lock_epoch_if_v2(db, s.id)
     participant = (
