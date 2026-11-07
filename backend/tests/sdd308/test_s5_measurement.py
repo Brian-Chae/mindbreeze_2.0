@@ -32,6 +32,12 @@ def preserved_pg_url():
     url = make_url(os.environ.get("SDD246_PG_ADMIN_URL", "postgresql://localhost/postgres"))
     assert url.host in {"localhost", "127.0.0.1", "::1", None}
     admin = sa.create_engine(url, isolation_level="AUTOCOMMIT")
+    try:
+        with admin.connect() as conn:
+            conn.execute(sa.text("select 1"))
+    except Exception as exc:  # noqa: BLE001 — CI 등 로컬 PG 없는 환경은 sdd246 fixture 와 같이 skip
+        admin.dispose()
+        pytest.skip(f"로컬 PostgreSQL 에 연결할 수 없다: {exc.__class__.__name__}")
     name = f"sdd308c_{uuid.uuid4().hex[:16]}"
     with admin.connect() as conn:
         conn.execute(sa.text(f'CREATE DATABASE "{name}"'))
