@@ -1,0 +1,642 @@
+{
+  "contrast": [
+    {
+      "fg": "#25212C",
+      "bg": "#F4F4F7",
+      "ratio": 14.36
+    },
+    {
+      "fg": "#25212C",
+      "bg": "#FFFFFF",
+      "ratio": 15.76
+    },
+    {
+      "fg": "#68616F",
+      "bg": "#FFFFFF",
+      "ratio": 5.95
+    },
+    {
+      "fg": "#68616F",
+      "bg": "#F4F4F7",
+      "ratio": 5.42
+    },
+    {
+      "fg": "#5F0080",
+      "bg": "#FFFFFF",
+      "ratio": 11.68
+    },
+    {
+      "fg": "#5F0080",
+      "bg": "#EEE5F5",
+      "ratio": 9.54
+    },
+    {
+      "fg": "#FFFFFF",
+      "bg": "#5F0080",
+      "ratio": 11.68
+    },
+    {
+      "fg": "#FFFFFF",
+      "bg": "#B3264B",
+      "ratio": 6.37
+    },
+    {
+      "fg": "#FFFFFF",
+      "bg": "#14593B",
+      "ratio": 8.33
+    },
+    {
+      "fg": "#14593B",
+      "bg": "#DDF3E8",
+      "ratio": 7.16
+    },
+    {
+      "fg": "#6E4300",
+      "bg": "#FFF0CF",
+      "ratio": 7.55
+    },
+    {
+      "fg": "#8F1F3D",
+      "bg": "#FBE3E8",
+      "ratio": 7.1
+    },
+    {
+      "fg": "#1B467F",
+      "bg": "#E3EDFB",
+      "ratio": 7.97
+    },
+    {
+      "fg": "#68616F",
+      "bg": "#F4F4F7",
+      "ratio": 5.42
+    },
+    {
+      "fg": "#8F1F3D",
+      "bg": "#FFFFFF",
+      "ratio": 8.64
+    }
+  ],
+  "results": [
+    {
+      "width": 390,
+      "screen": "dashboard",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": 56,
+      "navPresent": true,
+      "h1Text": "마음숲 상담센터"
+    },
+    {
+      "width": 390,
+      "screen": "counselors",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": 56,
+      "navPresent": true,
+      "h1Text": "코치 관리"
+    },
+    {
+      "width": 390,
+      "screen": "counselors-history",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": 46,
+      "navPresent": true,
+      "h1Text": "코치 관리"
+    },
+    {
+      "width": 390,
+      "screen": "counselors-edit",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": 56,
+      "navPresent": true,
+      "h1Text": "코치 관리"
+    },
+    {
+      "width": 390,
+      "screen": "counselors-invite",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": 56,
+      "navPresent": true,
+      "h1Text": "코치 관리"
+    },
+    {
+      "width": 390,
+      "screen": "counselors-suspend",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": 56,
+      "navPresent": true,
+      "h1Text": "코치 관리"
+    },
+    {
+      "width": 390,
+      "screen": "management",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": false,
+      "h1Text": "상담센터 관리"
+    },
+    {
+      "width": 390,
+      "screen": "search",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": false,
+      "h1Text": "상담센터 검색"
+    },
+    {
+      "width": 390,
+      "screen": "requests",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": false,
+      "h1Text": "내 가입 신청 내역"
+    },
+    {
+      "width": 393,
+      "screen": "dashboard",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": 56,
+      "navPresent": true,
+      "h1Text": "마음숲 상담센터"
+    },
+    {
+      "width": 393,
+      "screen": "counselors",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": 56,
+      "navPresent": true,
+      "h1Text": "코치 관리"
+    },
+    {
+      "width": 393,
+      "screen": "counselors-history",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": 46,
+      "navPresent": true,
+      "h1Text": "코치 관리"
+    },
+    {
+      "width": 393,
+      "screen": "counselors-edit",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": 56,
+      "navPresent": true,
+      "h1Text": "코치 관리"
+    },
+    {
+      "width": 393,
+      "screen": "counselors-invite",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": 56,
+      "navPresent": true,
+      "h1Text": "코치 관리"
+    },
+    {
+      "width": 393,
+      "screen": "counselors-suspend",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": 56,
+      "navPresent": true,
+      "h1Text": "코치 관리"
+    },
+    {
+      "width": 393,
+      "screen": "management",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": false,
+      "h1Text": "상담센터 관리"
+    },
+    {
+      "width": 393,
+      "screen": "search",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": false,
+      "h1Text": "상담센터 검색"
+    },
+    {
+      "width": 393,
+      "screen": "requests",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": false,
+      "h1Text": "내 가입 신청 내역"
+    },
+    {
+      "width": 768,
+      "screen": "dashboard",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": true,
+      "h1Text": "마음숲 상담센터"
+    },
+    {
+      "width": 768,
+      "screen": "counselors",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": true,
+      "h1Text": "코치 관리"
+    },
+    {
+      "width": 768,
+      "screen": "counselors-history",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": true,
+      "h1Text": "코치 관리"
+    },
+    {
+      "width": 768,
+      "screen": "counselors-edit",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": true,
+      "h1Text": "코치 관리"
+    },
+    {
+      "width": 768,
+      "screen": "counselors-invite",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": true,
+      "h1Text": "코치 관리"
+    },
+    {
+      "width": 768,
+      "screen": "counselors-suspend",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": true,
+      "h1Text": "코치 관리"
+    },
+    {
+      "width": 768,
+      "screen": "management",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": false,
+      "h1Text": "상담센터 관리"
+    },
+    {
+      "width": 768,
+      "screen": "search",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": false,
+      "h1Text": "상담센터 검색"
+    },
+    {
+      "width": 768,
+      "screen": "requests",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": false,
+      "h1Text": "내 가입 신청 내역"
+    },
+    {
+      "width": 768,
+      "screen": "sidebar-lockup",
+      "lock": {
+        "symbolH": 12,
+        "font": "\"Pretendard MB\", \"Pretendard Variable\", ",
+        "size": "17px",
+        "weight": "700",
+        "gap": "6px"
+      }
+    },
+    {
+      "width": 1440,
+      "screen": "dashboard",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": true,
+      "h1Text": "마음숲 상담센터"
+    },
+    {
+      "width": 1440,
+      "screen": "counselors",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": true,
+      "h1Text": "코치 관리"
+    },
+    {
+      "width": 1440,
+      "screen": "counselors-history",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": true,
+      "h1Text": "코치 관리"
+    },
+    {
+      "width": 1440,
+      "screen": "counselors-edit",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": true,
+      "h1Text": "코치 관리"
+    },
+    {
+      "width": 1440,
+      "screen": "counselors-invite",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": true,
+      "h1Text": "코치 관리"
+    },
+    {
+      "width": 1440,
+      "screen": "counselors-suspend",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": true,
+      "h1Text": "코치 관리"
+    },
+    {
+      "width": 1440,
+      "screen": "management",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": false,
+      "h1Text": "상담센터 관리"
+    },
+    {
+      "width": 1440,
+      "screen": "search",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": false,
+      "h1Text": "상담센터 검색"
+    },
+    {
+      "width": 1440,
+      "screen": "requests",
+      "isUi": true,
+      "docOverflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": false,
+      "h1Text": "내 가입 신청 내역"
+    },
+    {
+      "width": 1440,
+      "screen": "sidebar-lockup",
+      "lock": {
+        "symbolH": 12,
+        "font": "\"Pretendard MB\", \"Pretendard Variable\", ",
+        "size": "17px",
+        "weight": "700",
+        "gap": "6px"
+      }
+    },
+    {
+      "screen": "reduced-motion",
+      "animatedElements": 0
+    }
+  ],
+  "fonts": [
+    {
+      "width": 390,
+      "screen": "dashboard",
+      "h1": "Pretendard Variable (웹폰트) ×8",
+      "thead": "Pretendard Variable (웹폰트) ×2",
+      "cell": "Pretendard Variable (웹폰트) ×5",
+      "logo": ""
+    },
+    {
+      "width": 390,
+      "screen": "counselors",
+      "h1": "Pretendard Variable (웹폰트) ×5",
+      "thead": "Pretendard Variable (웹폰트) ×2",
+      "cell": "Pretendard Variable (웹폰트) ×5",
+      "logo": ""
+    },
+    {
+      "width": 393,
+      "screen": "dashboard",
+      "h1": "Pretendard Variable (웹폰트) ×8",
+      "thead": "Pretendard Variable (웹폰트) ×2",
+      "cell": "Pretendard Variable (웹폰트) ×5",
+      "logo": ""
+    },
+    {
+      "width": 393,
+      "screen": "counselors",
+      "h1": "Pretendard Variable (웹폰트) ×5",
+      "thead": "Pretendard Variable (웹폰트) ×2",
+      "cell": "Pretendard Variable (웹폰트) ×5",
+      "logo": ""
+    },
+    {
+      "width": 768,
+      "screen": "dashboard",
+      "h1": "Pretendard Variable (웹폰트) ×8",
+      "thead": "Pretendard Variable (웹폰트) ×2",
+      "cell": "Pretendard Variable (웹폰트) ×3",
+      "logo": "Pretendard Variable (웹폰트) ×11"
+    },
+    {
+      "width": 768,
+      "screen": "counselors",
+      "h1": "Pretendard Variable (웹폰트) ×5",
+      "thead": "Pretendard Variable (웹폰트) ×2",
+      "cell": "Pretendard Variable (웹폰트) ×4",
+      "logo": "Pretendard Variable (웹폰트) ×11"
+    },
+    {
+      "width": 1440,
+      "screen": "dashboard",
+      "h1": "Pretendard Variable (웹폰트) ×8",
+      "thead": "Pretendard Variable (웹폰트) ×2",
+      "cell": "Pretendard Variable (웹폰트) ×3",
+      "logo": "Pretendard Variable (웹폰트) ×11"
+    },
+    {
+      "width": 1440,
+      "screen": "counselors",
+      "h1": "Pretendard Variable (웹폰트) ×5",
+      "thead": "Pretendard Variable (웹폰트) ×2",
+      "cell": "Pretendard Variable (웹폰트) ×4",
+      "logo": "Pretendard Variable (웹폰트) ×11"
+    }
+  ],
+  "errors": []
+}

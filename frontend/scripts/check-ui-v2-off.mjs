@@ -21,12 +21,15 @@ export async function checkUiV2Off(root) {
         // ② D안 컴포넌트 식별자·청크가 JS 에 없어야 한다(분기 제거)
         if (/UiV2[A-Z][A-Za-z]+/.test(content)) problems.push(`${name}: UiV2* 컴포넌트가 번들에 포함됨`);
         if (/ui-v2-(home|classes|class-detail|reports|chat|settings|participation-profile|optional-profile)-page/.test(content)) problems.push(`${name}: D안 화면 청크 참조`);
+        // SDD-321: 기관 관리자 D안 화면 청크
+        if (/ui-v2-org-(dashboard|counselors|management|search|requests|shell|nav|parts)/.test(content)) problems.push(`${name}: 기관 D안 청크 참조`);
         // SDD-320: 코치 스코프 식별자
         if (/attachCoachScope|ui-v2-coach-scope|u2-coach/.test(content)) problems.push(`${name}: 코치 D안 스코프(u2-coach)가 번들에 포함됨`);
         // ③ 루트 클래스 부여 코드
         if (/className:`[^`]*ui-v2|className:"[^"]*ui-v2/.test(content)) problems.push(`${name}: ui-v2 루트 클래스 부여 코드`);
       }
       if (name.endsWith('.css') && /\.ui-v2\b|\.u2-/.test(content)) info.v2CssFiles.push(name);
+      if (name.endsWith('.css') && /u2-org-|u2-table/.test(content)) problems.push(`${name}: 기관 D안 CSS(u2-org-/u2-table)가 운영 번들에 포함됨`);
       // 폰트: 운영 번들에는 Pretendard 자체 호스팅 파일/@font-face 가 없어야 한다(addendum-2 H8).
       if (/\.(css|js)$/.test(name) && /Pretendard\s*MB|PretendardVariable-KS/.test(content)) problems.push(`${name}: 자체 호스팅 Pretendard 참조가 운영 번들에 포함됨`);
     }
