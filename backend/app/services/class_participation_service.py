@@ -315,6 +315,12 @@ def _session_event(ctx) -> None:
 def _h_entry_enter(ctx):
     from app.services.class_attendance_service import mark_entered
 
+    # SDD-308: 잠금 순서를 REST 입장(enter_session_as_invited)과 같게 맞춘다 — 클래스·회차 행 → 참가자 행.
+    # 예전에는 참가자 행을 먼저 잡고 mark_entered 안에서 sessions UPDATE 로 회차 행을 잡아, 입장 폭주 때 REST 입장과 교착이 났다.
+    if ctx.session.class_id:
+        from app.services.class_write_service import lock_class_session
+
+        _, ctx.session = lock_class_session(ctx.db, ctx.session, ctx.actor.actor_id)
     p = _own(ctx)
     s = ctx.session
     if _closed(s):
@@ -729,6 +735,13 @@ def seed_live_state(db, session_id) -> bool:
     from app.services import session_service
     from app.services.session_live_ledger import append_outbox, lock_epoch
 
+    # SDD-308: 이미 시드됐으면 epoch 행 잠금 없이 즉시 반환한다(100명 입장 폭주 때 모든 입장이 같은 행을 줄 서는 병목 제거).
+    # 시드 event 는 한 번 쓰이면 지워지지 않으므로 잠금 없는 선확인이 안전하다.
+    if db.execute(_select(LiveOutbox.id).where(
+            LiveOutbox.session_id == session_id, LiveOutbox.domain == "session").limit(1)).first() is not None:
+        db.rollback()
+        return False
+    # 동시 첫 접촉은 기존처럼 잠금 안에서 재확인한다(멱등).
     epoch_row = lock_epoch(db, session_id)
     exists = db.execute(_select(_func.count()).select_from(LiveOutbox).where(
         LiveOutbox.session_id == session_id, LiveOutbox.domain == "session")).scalar_one()
@@ -751,6 +764,18 @@ def seed_live_state(db, session_id) -> bool:
                       audience=aud, payload=speaking_payload(p.id, p.raise_hand, session_service._compute_can_publish(s, p), 1),
                       command_id=None)
     db.commit()
+    return True
+
+
+def lock_epoch_if_v2(db, session_id) -> bool:
+    """SDD-308: v2 회차면 epoch 행을 먼저 잠근다(잠금 순서 epoch → 클래스/회차 → 참가자). 반환 True=잠금함."""
+    from app.services.session_live_ledger import lock_epoch
+    from app.services.session_live_legacy import PROTOCOL_V2, get_session_protocol
+
+    pin = get_session_protocol(db, session_id)
+    if pin is None or pin.protocol != PROTOCOL_V2:
+        return False
+    lock_epoch(db, session_id)
     return True
 
 
