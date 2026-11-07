@@ -264,3 +264,21 @@ session_epoch_lock413~611ms가 남았다. 집계 최대값은 서로 다른 요�
 backend와 specs만 변경한다. 푸시·PR·배포·서버설정/재시작·운영접근·dev부하시험·메일·삭제·시크릿출력 금지.
 합성 DB/Redis 증거는 보존한다. 로컬 합성 heartbeat/입장주입 및 프로세스CPU의 기존 하네스 한계가 그대로
 적용되며 dev 성공을 대체하지 않는다. 마이그레이션 없음, 승인 후 구현커밋 revert가 롤백 경로다.
+
+### Addendum 6 보완 (구현 전) — renew 전용 소형 풀 실험
+
+공유 잠금 단독100명 전후2표본에서 renew p95가1.165→1.549초,1.203→1.387초로 악화됐다.
+첫 묶음 epoch 대기는 줄었지만 후반 queue/worker가 다시 늘었다. 같은 소스의40명 반복까지 원본을
+보존하고, 공유 잠금만으로 개선됐다고 결론내리지 않는다. 감독이 요청한 전용 소형 풀 안을 이어 검증한다.
+
+WS capture.renew만 프로세스당4worker ThreadPoolExecutor로 제출한다. pre-scope와 command는 같은
+worker이며 contextvars는 copy_context로 전달한다. 다른 명령/heartbeat/snapshot은 기존 executor다.
+4worker는 default32와 별개지만 renew끼리32개 DB작업을 동시에 만들지 않도록 제한한다. queue 대기는
+기존 thread_queue_ms가 그대로 측정한다. scope 재인가·예외·취소의 DB commit 의미는 기존 to_thread와
+같다. executor는 모듈에1개, 첫 제출 때 thread가 시작되며 표준 interpreter 종료 정리를 따른다.
+서버설정·DB풀·프로세스수는 바꾸지 않는다. 정상 종료 경로에서 별도 shutdown이 필요한지는 독립 리뷰한다.
+
+- [ ] default executor 포화 중 renew 진행, 동시worker≤4, context 전달 및 예외 전파를 RED→GREEN 검증
+- [ ] 기존 scope stale/retry/권한/단일worker 시험이 전용풀에서도 같은 의미인지 확인
+- [ ] 잠금단독 소스/실패 표본 보존 후 최종 variant100/40 측정, baseline 및 중간 variant 모두 공개
+- [ ] 최종 소스SHA 기준 회귀·독립리뷰·검산 후 채택 여부와 미확정 사항을 summary에 기록
