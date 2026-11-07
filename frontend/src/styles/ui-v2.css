@@ -244,3 +244,7 @@
 .ui-v2 .u2-hero--nature>.u2-chip{align-self:flex-start}
 .ui-v2 .u2-hero--nature .u2-num span{color:#E5D3EE}
 .ui-v2 .u2-hero--nature>.u2-textlink{margin-top:auto;color:#FFFFFF;text-shadow:0 1px 8px #25103899}
+/* 대표 지시(11/8): 자연 배경 카드 본문 좌측 정렬(아래 일반 카드와 동일), 숫자 행도 좌측 */
+.ui-v2 .u2-hero--nature{text-align:left;align-items:stretch}
+.ui-v2 .u2-hero--nature>*{align-self:stretch;text-align:left}
+.ui-v2 .u2-hero--nature>.u2-chip,.ui-v2 .u2-hero--nature>.u2-eyebrow{align-self:flex-start}
