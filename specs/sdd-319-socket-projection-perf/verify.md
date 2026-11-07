@@ -55,3 +55,50 @@
 - Q4: 대기 중 DB 연결 미점유(풀 크기 2 로 20 요청이 전부 성공, checkedout ≤ 상한).
 - Q5: 예외·취소 시 슬롯 반환. 상한 0 이면 비활성(기존 동작).
 - Q6: 로컬 실 PG 로 100 동시 join/enter 전/후(풀 20+20).
+
+## Addendum 3 (2026-11-07) — SDD-319b 방송 누락 수정 (구현 전)
+
+브리프의 설계 선커밋 → backend 구현·로컬 검증 지시를 수행한다. 작업 브랜치는
+`sdd/319-broadcast-gap`, 기준 `68229ab6`. 프로토콜·응답·프론트·서버 설정은 변경하지 않는다.
+
+### 원인 및 후보 선택
+
+100명 기준선 계측: 기대 8202쌍 중 62쌍 누락, 모두 실제 stream seq가 replay cursor 이하인
+seq_shift로 확정. replay 불가/emit 실패/기타 0. 결정적 단위시험도 seq101~110 대상에 최신115를
+주면 cursor105로 앞 5개 누락, 일부 audience 누락에도 emitted가 3까지 진행함을 재현(2 실패·1 통과).
+
+| 후보 | 판단 |
+|---|---|
+| a. outbox에 projection seq 저장 | 정확하나 DB/Redis 이중 기록·스키마 변경이 필요하여 보류 |
+| b. 보수적 replay + 완전성 검사 | 채택. 기존 snapshot Lua가 원자적으로 반환하는 applied_revision 활용, 추가 정상 경로 Redis 왕복 없음 |
+| c. projector/방송 공통 lock | 느린 emit이 명령 projection을 막아 renew 성능 위험, 제외 |
+
+`A=max(rows.revision)`, snapshot의 seq=S/applied=B에 대해 `cursor=max(0,S-n-max(0,B-A))`.
+동일 epoch에서 revision당 해당 pair의 seq는 최대 1 증가하므로 B-A는 대상 이후 증가량 상한이다.
+대상은 (done,A]의 연속 outbox 행이며 정확한 event_id/audience/domain으로 걸러 revision 순 정렬한다.
+과도하게 오래된 하한으로 log_truncated면 stream 첫 seq-1까지 clamp하여 1회 재조회한다.
+실제 기대 pair가 사라졌으면 복원했다고 간주하지 않는다. 최초 누락 행 이전의 완전한 prefix만
+방송·watermark 처리한다. 기존 SDD-285의 '미방송 상태에서도 watermark 전진' 시험은 이 요구와
+충돌하므로 의도된 변경으로 별도 표시한다. heartbeat snapshot 복구는 유지된다.
+
+### 구현 계획 및 검증
+
+- [ ] `class_participation_service.events_for_rows`: 원자 snapshot 하한, 최초 epoch 고정,
+  trim 재조회, 정확한 pair 필터. 결정적 seq 선행·절단·epoch 변경 시험.
+- [ ] `publish_pending`: contiguous revision/all-audience coverage, emit 실패 시 재시도,
+  lock token/epoch 검사 및 갱신, 단조 watermark 원자 쓰기. 누락·실패 로그에는 payload/개인정보 제외.
+- [ ] 단위시험: audience 일부 누락, revision hole, callback 실패, lock 상실, epoch 교체.
+- [ ] 실제 로컬 PG/Redis 100명·40명 순차 재시험: callback 누락0, 교착0, pending≤49,
+  renew p95≤2초. 실제 네트워크/화면/소켓 CPU는 감독 dev 시험 범위.
+- [ ] 기존 회귀 12묶음 전후 독립 프로세스 실행, 실패 nodeid 비교. PG 불가 skip,
+  UUID DB/Redis 증거 보존, 삭제 teardown 차단.
+- [ ] summary·재현 명령·전후 수치·위험·dev 로그 관측법 기록, 독립 검토 후 로컬 커밋.
+
+### 위험과 관측
+
+stream retention 초과로 실제 이벤트가 사라지면 gap을 숨기지 않고 정지한다. 중복은 허용한다.
+배치 중 lock 갱신 및 최종 CAS로 stale broadcaster의 watermark 쓰기를 막는다. callback 자체가
+락 TTL보다 오래 정지하는 경우 이미 진행 중인 외부 전송까지 취소할 수는 없으므로 엄격한 네트워크
+수신 순서는 보장하지 않는다. 일반 경로에서 projector 락은 추가하지 않는다.
+`broadcast_gap`, `broadcast_emit_failed`, `broadcast_progress`, `broadcast_lease_lost` 로그로
+applied/emitted/expected/sent/missing을 확인한다. callback 성공은 클라이언트 전달 ACK가 아니다.
