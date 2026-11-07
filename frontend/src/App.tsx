@@ -179,6 +179,14 @@ function RootLayout() {
   useStatusBar();
   useBiosignalResumeSweeper(); // SDD-260 W2: 미완료 feature 이어올림(시작·online·복귀·60초)
   useEffect(() => { void initNativeKeyboard(); }, []);
+  // SDD-320: 코치 화면 D안 스코프 — 운영 빌드(define 'false')에서는 이 분기와 import 가 제거된다.
+  useEffect(() => {
+    if (import.meta.env.VITE_UI_V2 !== 'true') return;
+    let detach: (() => void) | undefined;
+    let cancelled = false;
+    void import('./components/ui-v2/ui-v2-coach-scope').then((m) => { if (!cancelled) detach = m.attachCoachScope(router); });
+    return () => { cancelled = true; detach?.(); };
+  }, []);
 
   return (
     <Suspense fallback={<div role="status" className="flex min-h-screen items-center justify-center bg-[#FAF8FB] text-sm text-[#5F0080]">화면을 불러오는 중이에요.</div>}>

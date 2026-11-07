@@ -23,6 +23,8 @@ export async function checkUiV2Off(root) {
         if (/ui-v2-(home|classes|class-detail|reports|chat|settings|participation-profile|optional-profile)-page/.test(content)) problems.push(`${name}: D안 화면 청크 참조`);
         // SDD-321: 기관 관리자 D안 화면 청크
         if (/ui-v2-org-(dashboard|counselors|management|search|requests|shell|nav|parts)/.test(content)) problems.push(`${name}: 기관 D안 청크 참조`);
+        // SDD-320: 코치 스코프 식별자
+        if (/attachCoachScope|ui-v2-coach-scope|u2-coach/.test(content)) problems.push(`${name}: 코치 D안 스코프(u2-coach)가 번들에 포함됨`);
         // ③ 루트 클래스 부여 코드
         if (/className:`[^`]*ui-v2|className:"[^"]*ui-v2/.test(content)) problems.push(`${name}: ui-v2 루트 클래스 부여 코드`);
       }
