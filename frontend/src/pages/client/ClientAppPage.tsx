@@ -46,6 +46,9 @@ const UiV2ChatPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
 const UiV2SettingsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
   ? import('./ui-v2/ui-v2-settings-page').then((module) => ({ default: module.UiV2SettingsPage }))
   : Promise.resolve({ default: () => <></> }));
+const UiV2NotificationsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./ui-v2/ui-v2-notifications-page').then((module) => ({ default: module.UiV2NotificationsPage }))
+  : Promise.resolve({ default: () => <></> }));
 const UiV2ParticipationProfilePage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
   ? import('./ui-v2/ui-v2-participation-profile-page').then((module) => ({ default: module.UiV2ParticipationProfilePage }))
   : Promise.resolve({ default: () => <></> }));
@@ -115,6 +118,11 @@ export default function ClientAppPage() {
     // SDD-318: 채팅 D안
     if (import.meta.env.VITE_UI_V2 === 'true') return <Suspense fallback={null}><UiV2ChatPage /></Suspense>;
     return <ClientChatPage />;
+  }
+
+  // SDD-322: 알림 D안 (상담사 연결 전에도 열린다 — 아래 코드 입력 게이트보다 먼저 처리)
+  if (import.meta.env.VITE_UI_V2 === 'true' && pathname.startsWith('/app/notifications')) {
+    return <Suspense fallback={null}><UiV2NotificationsPage /></Suspense>;
   }
 
   // 본인 설정은 상담사 연결 여부와 무관하게 열 수 있다.
