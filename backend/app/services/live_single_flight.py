@@ -8,25 +8,32 @@ projector 락 대기(20ms 폴링)와 DB/Redis 왕복이 CPU·지연의 대부분
 from __future__ import annotations
 
 import threading
+import time
 from typing import Any, Callable
 
-_MAX_RERUN = 20  # dirty 재실행 상한(입력이 계속 들어와도 한 호출자가 무한히 붙들리지 않게)
+_MAX_RERUN = 5  # dirty 재실행 상한(입력이 계속 들어와도 한 호출자가 무한히 붙들리지 않게 — 누락분은 다음 호출/heartbeat self-heal 이 방송)
+_RERUN_YIELD_S = 0.005  # 재실행 사이 양보(스레드풀·DB 연결 독점 방지)
 
 
-class _Flight:
-    __slots__ = ("done", "result", "error")
+class _Waiter:
+    """drain 대기자. ``lead`` 가 True 로 깨워지면 다음 leader 가 되어 직접 실행한다(handoff)."""
+    __slots__ = ("need", "event", "result", "error", "lead")
 
-    def __init__(self) -> None:
-        self.done = threading.Event()
+    def __init__(self, need: int) -> None:
+        self.need = need
+        self.event = threading.Event()
         self.result: Any = None
         self.error: BaseException | None = None
+        self.lead = False
 
 
 _lock = threading.Lock()
 _pub_running: dict[Any, bool] = {}
 _pub_dirty: dict[Any, bool] = {}
-_drain_flight: dict[Any, _Flight] = {}
-stats = {"publish_runs": 0, "publish_coalesced": 0, "drain_runs": 0, "drain_shared": 0, "drain_fallback": 0}
+_drain_running: dict[Any, bool] = {}
+_drain_waiters: dict[Any, list[_Waiter]] = {}
+stats = {"publish_runs": 0, "publish_coalesced": 0, "drain_runs": 0, "drain_shared": 0, "drain_fallback": 0,
+         "drain_handoff": 0, "drain_timeout": 0, "drain_skipped": 0}
 
 
 def run_coalesced(key: Any, fn: Callable[[], Any]) -> Any:
@@ -50,6 +57,7 @@ def run_coalesced(key: Any, fn: Callable[[], Any]) -> Any:
                 if not _pub_dirty.get(key):
                     break
                 _pub_dirty[key] = False
+            time.sleep(_RERUN_YIELD_S)
         else:  # 상한 도달: dirty 가 남았어도 다음 호출/heartbeat 가 이어서 방송한다
             pass
     finally:
@@ -59,57 +67,94 @@ def run_coalesced(key: Any, fn: Callable[[], Any]) -> Any:
     return result
 
 
-def coalesced_drain(key: Any, do_drain: Callable[[], Any], need_revision: int, *, wait_s: float = 2.0) -> Any:
-    """진행 중인 drain 이 있으면 끝날 때까지 기다려 결과를 공유한다.
+def coalesced_drain(key: Any, do_drain: Callable[[], Any], need_revision: int, *, wait_s: float = 2.0,
+                    before_wait: Callable[[], None] | None = None) -> Any:
+    """회차당 drain 을 하나만 돌리고, 나머지는 대기열에 등록해 결과를 공유하거나 leader 를 이어받는다(handoff).
 
-    공유 조건: leader 가 예외 없이 끝났고, busy 가 아니며, ``applied_revision >= need_revision``.
-    아니면 직접 ``do_drain`` 을 실행한다(폴백 — 새 leader). 결과 객체는 ``ob.DrainResult`` 모양
-    (``busy``, ``applied_revision``)을 가정한다.
+    - ``need_revision > 0``(명령): 자기 revision 까지 반영된 결과를 받을 때까지 대기. leader 가 끝났는데 자기 revision 에
+      못 미쳤으면(leader 시작 뒤에 commit) **폴백 직접 실행이 아니라 다음 leader 로 지명**되어 한 번 더 돈다 → 이중 대기·락 경합 없음.
+    - ``need_revision == 0``(방송 경로): 이미 drain 이 돌고 있으면 기다리지 않고 건너뛴다(그 drain 과 다음 방송이 반영).
+    - 대기가 ``wait_s`` 를 넘으면 ``busy`` 결과를 돌려준다(호출자가 projection_pending 으로 처리, 클라이언트 재시도).
+    - ``before_wait``: 대기 전에 호출(DB 연결 반납 — 대기자가 풀을 쥐고 leader 의 연결 획득을 막는 것을 방지).
+    결과 객체는 ``ob.DrainResult`` 모양(``busy``, ``applied_revision``)을 가정한다.
     """
+    me = _Waiter(need_revision)
     with _lock:
-        flight = _drain_flight.get(key)
-        leader = flight is None
-        if leader:
-            flight = _Flight()
-            _drain_flight[key] = flight
-    if not leader:
-        if flight.done.wait(timeout=wait_s) and flight.error is None:
-            res = flight.result
-            if res is not None and not getattr(res, "busy", False) and int(getattr(res, "applied_revision", 0)) >= need_revision:
-                stats["drain_shared"] += 1
-                return res
-        # leader 가 이 revision 까지 못 갔거나 실패/지연 — 직접 실행(잇따라 새 leader 가 될 수 있다)
-        stats["drain_fallback"] += 1
-        return coalesced_drain_direct(key, do_drain)
-    return _lead(key, flight, do_drain)
-
-
-def coalesced_drain_direct(key: Any, do_drain: Callable[[], Any]) -> Any:
-    """폴백: leader 슬롯이 비어 있으면 leader 가 되고, 아니면 슬롯 없이 그냥 실행(락 경합은 ob.drain 이 처리)."""
-    with _lock:
-        flight = _drain_flight.get(key)
-        if flight is None:
-            flight = _Flight()
-            _drain_flight[key] = flight
-            lead = True
+        if _drain_running.get(key):
+            if need_revision <= 0:
+                stats["drain_skipped"] += 1
+                return _busy_result()
+            _drain_waiters.setdefault(key, []).append(me)
+            leader = False
         else:
-            lead = False
-    if lead:
-        return _lead(key, flight, do_drain)
-    stats["drain_runs"] += 1
-    return do_drain()
+            _drain_running[key] = True
+            leader = True
+    if not leader:
+        if before_wait is not None:
+            try:
+                before_wait()
+            except Exception:  # noqa: BLE001 — 반납 실패는 대기에 영향 없음
+                pass
+        deadline = time.monotonic() + wait_s
+        while True:
+            if me.event.wait(timeout=max(0.0, deadline - time.monotonic())):
+                if me.lead:
+                    stats["drain_handoff"] += 1
+                    break  # 이어받음 — 아래에서 leader 로 실행
+                if me.error is not None:
+                    raise me.error
+                stats["drain_shared"] += 1
+                return me.result
+            with _lock:  # 대기 시한 초과
+                if me.event.is_set():
+                    continue
+                ws = _drain_waiters.get(key)
+                if ws is not None and me in ws:
+                    ws.remove(me)
+                stats["drain_timeout"] += 1
+            return _busy_result()
+    return _lead(key, do_drain, me)
 
 
-def _lead(key: Any, flight: _Flight, do_drain: Callable[[], Any]) -> Any:
+def _busy_result() -> Any:
+    from app.services import session_live_outbox as ob
+
+    return ob.DrainResult(busy=True)
+
+
+def _lead(key: Any, do_drain: Callable[[], Any], me: _Waiter) -> Any:
+    res: Any = None
+    err: BaseException | None = None
     try:
         stats["drain_runs"] += 1
-        flight.result = do_drain()
-        return flight.result
-    except BaseException as exc:  # noqa: BLE001 — follower 에 실패를 알리고 호출자에게 그대로 전파
-        flight.error = exc
-        raise
+        res = do_drain()
+    except BaseException as exc:  # noqa: BLE001 — 호출자에게 그대로 전파(대기자는 다음 leader 가 처리)
+        err = exc
     finally:
         with _lock:
-            if _drain_flight.get(key) is flight:
-                _drain_flight.pop(key, None)
-        flight.done.set()
+            ws = _drain_waiters.get(key) or []
+            ok = err is None and not getattr(res, "busy", False)
+            applied = int(getattr(res, "applied_revision", 0)) if ok else -1
+            # 이번 drain 으로 충분한 대기자는 결과 공유, 나머지는 남겨 다음 leader 가 처리
+            rest: list[_Waiter] = []
+            for w in ws:
+                if ok and w.need <= applied:
+                    w.result = res
+                    w.event.set()
+                else:
+                    rest.append(w)
+            nxt = None
+            if rest:
+                rest.sort(key=lambda w: -w.need)  # revision 이 큰(최신 commit) 명령을 먼저 — 한 번에 나머지도 덮는다
+                nxt = rest.pop(0)
+                nxt.lead = True
+                _drain_waiters[key] = rest
+                # _drain_running 은 True 유지(leader 자리를 넘김)
+            else:
+                _drain_waiters.pop(key, None)
+                _drain_running.pop(key, None)
+        if nxt is not None:
+            nxt.event.set()
+    if err is not None:
+        raise err
+    return res

@@ -95,6 +95,10 @@ class Settings(BaseSettings):
     #          ack 는 S3 검증 동안 DB 연결을 반납하므로 연결 동시 사용은 풀 한도(40) 아래다(specs/sdd-290-upload-slot-tuning/analysis.md).
     archive_max_concurrent: int = 32
     archive_slot_wait_sec: float = 1.0
+    # SDD-319 3차: 클래스(join)·회차(enter)별 동시 처리 상한과 대기 시한(초). 0 이하면 대기줄 비활성.
+    #   대기 시한은 앱 타임아웃(60초) 미만이어야 503(재시도 가능)으로 먼저 응답한다.
+    entry_queue_concurrency: int = 5
+    entry_queue_wait_sec: float = 45.0
     # SDD-260: 소켓 방송·REST 공용 기본 executor 와 anyio 스레드풀 상한.
     default_executor_workers: int = 32
     anyio_thread_tokens: int = 64

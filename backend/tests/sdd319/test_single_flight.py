@@ -144,3 +144,89 @@ def test_leader가_busy를_돌려주면_공유하지_않는다():
     t1.join(3)
     t2.join(3)
     assert got[0].busy is False
+
+
+# ---- 100명 회귀(11/7) 보강 ----
+
+def test_R1_대기자는_wait_s를_넘기지_않고_busy로_돌아온다_이중대기_없음():
+    gate = threading.Event()
+    t1 = threading.Thread(target=lambda: sf.coalesced_drain(("d", "r1"), lambda: (gate.wait(3), _res(1))[1], 1))
+    t1.start()
+    time.sleep(0.1)
+    t0 = time.monotonic()
+    out = sf.coalesced_drain(("d", "r1"), lambda: _res(9), 9, wait_s=0.3)
+    dt = time.monotonic() - t0
+    gate.set()
+    t1.join(3)
+    assert out.busy is True and dt < 0.6  # 폴백 직접 drain(추가 대기)로 번지지 않는다
+
+
+def test_R2_leader가_못미치면_대기자가_leader를_이어받아_1회만_더_돈다():
+    gate = threading.Event()
+    calls = []
+
+    def leader():
+        calls.append("L")
+        gate.wait(1)
+        return _res(3)
+
+    def nxt():
+        calls.append("N")
+        return _res(9)
+
+    t1 = threading.Thread(target=lambda: sf.coalesced_drain(("d", "r2"), leader, 1))
+    t1.start()
+    time.sleep(0.1)
+    got = []
+    ts = [threading.Thread(target=lambda: got.append(sf.coalesced_drain(("d", "r2"), nxt, 9, wait_s=2))) for _ in range(5)]
+    [t.start() for t in ts]
+    time.sleep(0.1)
+    gate.set()
+    [t.join(3) for t in [t1, *ts]]
+    assert calls == ["L", "N"] and len(got) == 5 and all(g.applied_revision == 9 and not g.busy for g in got)
+
+
+def test_R3_방송경로_need0는_진행중_drain이_있으면_기다리지_않고_건너뛴다():
+    gate = threading.Event()
+    t1 = threading.Thread(target=lambda: sf.coalesced_drain(("d", "r3"), lambda: (gate.wait(2), _res(1))[1], 1))
+    t1.start()
+    time.sleep(0.1)
+    t0 = time.monotonic()
+    sf.coalesced_drain(("d", "r3"), lambda: _res(1), 0, wait_s=2)
+    assert time.monotonic() - t0 < 0.3  # 명령 leader 뒤에서 방송이 대기하지 않는다
+    gate.set()
+    t1.join(3)
+
+
+def test_R4_대기_전에_before_wait로_DB연결을_반납한다():
+    gate = threading.Event()
+    t1 = threading.Thread(target=lambda: sf.coalesced_drain(("d", "r4"), lambda: (gate.wait(2), _res(5))[1], 5))
+    t1.start()
+    time.sleep(0.1)
+    rel = []
+    t2 = threading.Thread(target=lambda: sf.coalesced_drain(("d", "r4"), lambda: _res(5), 5, wait_s=2, before_wait=lambda: rel.append(1)))
+    t2.start()
+    time.sleep(0.2)
+    assert rel == [1]  # leader 가 끝나기 전에 이미 반납
+    gate.set()
+    [t.join(3) for t in (t1, t2)]
+
+
+def test_R5_publish_재실행은_상한을_넘지_않는다():
+    n = []
+    stop = threading.Event()
+
+    def fn():
+        n.append(1)
+        time.sleep(0.01)
+
+    def spam():
+        while not stop.is_set():
+            sf.run_coalesced(("p", "r5"), fn)
+
+    ts = [threading.Thread(target=spam) for _ in range(8)]
+    [t.start() for t in ts]
+    time.sleep(0.3)
+    stop.set()
+    [t.join(3) for t in ts]
+    assert sf._MAX_RERUN <= 5
