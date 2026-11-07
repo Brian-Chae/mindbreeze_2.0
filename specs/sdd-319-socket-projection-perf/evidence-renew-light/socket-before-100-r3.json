@@ -1,0 +1,76 @@
+{
+  "n": 100,
+  "ticks": 32,
+  "burst": 120,
+  "burn_ms": 15.0,
+  "period_ms": 25,
+  "elapsed_s": 44.93760687499889,
+  "counts": {
+    "started": 100,
+    "renew": 400,
+    "metric_projected": 3198,
+    "metric_status:projected:none": 3198,
+    "stored_ack": 3200,
+    "snapshot_completed": 120,
+    "projection_pending": 2,
+    "metric_failed": 2,
+    "metric_status:ignored:not_live": 2,
+    "completed": 100
+  },
+  "errors": {},
+  "p95_s": {
+    "renew": 1.6571928749981453,
+    "metric": 1.5495715420038323,
+    "store": 1.2969974579973496,
+    "snapshot": 4.597322124995117
+  },
+  "cpu_process_mean_pct": 105.76750550054471,
+  "cpu_process_max_pct": 107.70405779789046,
+  "loop_lag_p95_s": 0.0020761249979841523,
+  "stored_count": 3200,
+  "expected_windows": 3200,
+  "broadcast_expected_pairs": 6998,
+  "broadcast_missing_pairs": 0,
+  "client_missing_pairs": 0,
+  "revision": 3500,
+  "applied_revision": 3500,
+  "emitted_revision": 3500,
+  "final_settle": {
+    "before": [
+      3500,
+      3500,
+      3500,
+      false
+    ],
+    "after": [
+      3500,
+      3500,
+      3500,
+      false
+    ],
+    "duration_s": 0.0044967499998165295
+  },
+  "source_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t/app/services/class_participation_service.py",
+  "cps_sha256": "9f4f58bc35c932ab9e1a8c6cc6a85ba9e846adaad4fb4cc0e0d9eb87c792ef55",
+  "namespace_sha256": "86a3bce31f8490a1f865c54287dca8f9033986abb43104844e6cfc3c4c5c6dc1",
+  "single_flight_stats": {
+    "publish_runs": 77,
+    "publish_coalesced": 3674,
+    "drain_runs": 341,
+    "drain_shared": 197,
+    "drain_fallback": 0,
+    "drain_handoff": 2,
+    "drain_timeout": 2,
+    "drain_skipped": 37
+  },
+  "timing_logs": [],
+  "limitations": [
+    "합성 V2Conn 인증/입장 주입",
+    "저장은 REST 서비스이나 test socket으로 전송",
+    "client도 같은 process 별도 loop",
+    "고정 CPU busy slice 합성 압박",
+    "fixed ticks 밀리면 종료 연장",
+    "직접 READY 주입으로 연결당 heartbeat 스케줄러 미실행",
+    "client coverage는 event_id×audience 합집합이며 클라이언트별 전송보장 아님"
+  ]
+}

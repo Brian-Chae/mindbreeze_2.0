@@ -1,0 +1,10 @@
+PRESERVED_PG_DATABASE=sdd308c_2c0c87ee6fed4a25
+S319_SOCKET_LOAD {"n": 3, "ticks": 2, "burst": 2, "burn_ms": 15.0, "period_ms": 25, "elapsed_s": 2.6703065839974442, "counts": {"started": 3, "renew": 3, "metric_projected": 6, "stored_ack": 6, "completed": 3, "snapshot_completed": 2}, "errors": {}, "p95_s": {"renew": 0.05253587499464629, "metric": 0.08235087499633664, "store": 0.04915391699614702, "snapshot": 0.029449417001160327}, "cpu_process_mean_pct": 61.0248149343592, "cpu_process_max_pct": 62.448819402211754, "loop_lag_p95_s": 0.002029999996011611, "stored_count": 6, "expected_windows": 6, "broadcast_expected_pairs": 32, "broadcast_missing_pairs": 0, "client_missing_pairs": 0, "revision": 17, "applied_revision": 17, "emitted_revision": 17, "source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd319b/backend/app/services/class_participation_service.py", "cps_sha256": "c96750b02cbb57cedb2df4f1b738d9c856e0807fdd491a8654213d29f68d3f36", "namespace_sha256": "65637af3ae939877911945d624e05462ec08cff3ceac101ecc64ecbb3dd59f00", "single_flight_stats": {"publish_runs": 7, "publish_coalesced": 6, "drain_runs": 9, "drain_shared": 1, "drain_fallback": 0, "drain_handoff": 0, "drain_timeout": 0, "drain_skipped": 0}, "timing_logs": [], "limitations": ["합성 V2Conn 인증/입장 주입", "저장은 REST 서비스이나 test socket으로 전송", "client도 같은 process 별도 loop", "고정 CPU busy slice 합성 압박", "fixed ticks 밀리면 종료 연장"]}
+.
+=============================== warnings summary ===============================
+tests/sdd319/test_renew_socket_load.py::test_renew_socket_snapshot_burst_cpu
+  /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+1 passed, 1 warning in 4.08s

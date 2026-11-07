@@ -149,15 +149,15 @@ baseline app 사본의 import/SHA를 고정하고 단일 표본 변동과 end-to
 
 ### 구현·검증 체크리스트
 
-- [ ] 결정적 단위 RED: busy projector 상황에서 renew는 applied/duplicate, 일반 명령은 기존 retryable.
-- [ ] `class_participation_service` renew drain 생략, 기존 Redis/scope/ACK fail-closed 유지.
-- [ ] `session_live_namespace` 및 REST command route의 renew publish 생략; 다른 명령은 유지.
-- [ ] 대기 원인·소요 계측: DB transaction/session+epoch lock/projection/scope 시간, follower timeout과
+- [x] 결정적 단위 RED: busy projector 상황에서 renew는 applied/duplicate, 일반 명령은 기존 retryable.
+- [x] `class_participation_service` renew drain 생략, 기존 Redis/scope/ACK fail-closed 유지.
+- [x] `session_live_namespace` 및 REST command route의 renew publish 생략; 다른 명령은 유지.
+- [x] 대기 원인·소요 계측: DB transaction/session+epoch lock/projection/scope 시간, follower timeout과
   projector lock busy 구분. 세션 단위 주기 제한 로그로 payload/토큰 출력·로그 폭주 방지.
-- [ ] renew lease/generation/중복/종료 경쟁 기존 실제 PG 회귀 및 새 단위시험. PG 없으면 skip.
-- [ ] 로컬 Socket.IO 전후 100/40명 + burst/CPU 압박: ACK p95, pending, metric 저장, 교착,
+- [x] renew lease/generation/중복/종료 경쟁 기존 실제 PG 회귀 및 새 단위시험. PG 없으면 skip.
+- [x] 로컬 Socket.IO 전후 100/40명 + burst/CPU 압박: ACK p95, pending, metric 저장, 교착,
   방송 callback coverage·source SHA·CPU 기록. 실제 성능이 기준 미달이면 숨기지 않고 다음 원인 분리.
-- [ ] 기존 12묶음 회귀 전후 비교, 독립 검토·검산 후 summary 및 로컬 fix(sdd-319) 커밋.
+- [x] 기존 12묶음 회귀 전후 비교, 독립 검토·검산 후 summary 및 로컬 fix(sdd-319) 커밋.
 
 ### 범위·위험
 

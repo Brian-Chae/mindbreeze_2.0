@@ -2248,7 +2248,8 @@ def register_v2_handlers(sio, ns):
                 if conn.anchor_watch is None:
                     conn.anchor_watch = caw.AnchorWatch()
                 caw.note_result(conn.anchor_watch, cmd.kind, outcome.ack)
-            if outcome.committed and not outcome.degraded:
+            # renew는 새 outbox가 없어 ACK 앞에서 방송 leader 작업을 맡지 않는다.
+            if cmd.kind != "capture.renew" and outcome.committed and not outcome.degraded:
                 try:
                     publish_session_sync(cmd.session_id)
                 except Exception:  # noqa: BLE001 — 방송은 ACK 를 막지 않는다(heartbeat self-heal)
@@ -2286,9 +2287,16 @@ def register_v2_handlers(sio, ns):
             return _gate_reject(conn, cmd, cid, "not_ready", status="retryable", retry_after_ms=300)
         if conn.expired():
             return _gate_reject(conn, cmd, cid, "token_expired")
+        scope_started = time.monotonic()
         if not await _ensure_scope(conn):
             return _gate_reject(conn, cmd, cid, "access_revoked")
+        scope_ms = (time.monotonic() - scope_started) * 1000
+        ack_started = time.monotonic()
         outcome = await asyncio.to_thread(_run_command_sync, conn, cmd)
+        from app.services.live_command_timing import observe
+
+        observe(cmd.session_id, cmd.kind + ".ws", str(outcome.ack.get("code") or outcome.ack["status"]),
+                {"thread_queue_service_publish_ms": (time.monotonic() - ack_started) * 1000, "scope_gate_ms": scope_ms})
         conn.state = state_after_command(conn.state, outcome)
         return outcome.ack
 

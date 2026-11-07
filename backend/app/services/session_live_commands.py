@@ -12,6 +12,7 @@ commit 전 crash 면 아무것도 남지 않아 같은 command_id 로 안전하�
 from __future__ import annotations
 
 import uuid
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
@@ -204,7 +205,7 @@ def _lock_class_before_epoch(db: DBSession, session_id: uuid.UUID, actor_id: uui
 
 def apply_command(db: DBSession, actor: Actor, command: LiveCommand, *, now: datetime | None = None,
                   clock_probe_resolver: Callable[[uuid.UUID], int | None] | None = None,
-                  commit: bool = True) -> DurableResult:
+                  commit: bool = True, phase_timings: dict[str, float] | None = None) -> DurableResult:
     """명령을 정확히 한 번 적용한다. 같은 (session, actor, command_id) 는 원 결과, body 가 다르면 idempotency_conflict."""
     now = now or _utcnow()
     body_hash = command.body_hash()
@@ -214,11 +215,15 @@ def apply_command(db: DBSession, actor: Actor, command: LiveCommand, *, now: dat
         # SDD-308 후속: 전역 잠금 순서 users → 클래스 → 회차 → epoch. 이 명령의 handler 는 lock_class_session 을 잡는데,
         # epoch 를 먼저 쥐고 users/클래스를 기다리면 REST 입장(users→회차)·capture(회차 NO KEY UPDATE→epoch)와 3자 교착이 난다(11/7 dev 100명).
         _lock_class_before_epoch(db, command.session_id, actor.actor_id)
+    lock_started = time.monotonic()
     try:
         epoch_row = lock_epoch(db, command.session_id)
     except IntegrityError:  # 존재하지 않는 session_id (FK)
         db.rollback()
         return _transient(command, "session_not_found", 0, 0)
+    finally:
+        if phase_timings is not None:
+            phase_timings["session_epoch_lock_ms"] = phase_timings.get("session_epoch_lock_ms", 0.0) + (time.monotonic() - lock_started) * 1000
 
     # 1) 멱등/충돌: 락을 쥔 뒤 읽으므로 동시 중복 요청은 먼저 commit 한 하나만 남는다.
     existing = find_entry(db, command.session_id, actor.actor_id, command.command_id)

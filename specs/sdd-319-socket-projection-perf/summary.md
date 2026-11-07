@@ -193,3 +193,100 @@ checkpoint는 stale watermark 쓰기를 막지만 엄격한 네트워크 수신 
 푸시·PR·배포·서버 접속/설정 변경·재시작·dev 부하·운영 접근·메일·삭제는 수행하지 않았다.
 메인 체크아웃은 기존 venv 실행파일만 사용했다. 감독이 dev 결과를
 `~/.hermes/share/loadtest-40/feedback-319b/round-N.md`로 전달하면 같은 브랜치에 개선 커밋을 쌓는다.
+
+## round-1 (2026-11-07) — renew의 불필요한 projection·방송 대기 제거
+
+### 결론과 범위
+
+브랜치 `sdd/319-renew-light`, 기준 develop `bb78a4d9`. 설계는 구현 전에 `7e8f3b04`로 커밋했다.
+renew는 원래 outbox를 만들지 않는데도 다른 명령의 revision까지 기다리고, WS ACK 직전 동기 방송까지
+수행하고 있었다. 이 두 대기를 renew에서 제거했다. DB 잠금·리스·멱등·인가·응답 형식은 유지했다.
+최종 로컬 Socket.IO 100/40명에서 renew p95≤2초·pending0, 저장100%·outbox 방송 누락0을 확인했다.
+다만 100명 실시간 metric의 `ignored:not_live`가2→9로 증가했으며 이를 미해결 관측으로 남긴다.
+**dev round-2 합격 또는 전체 화면 갱신100%를 선언하는 결과가 아니다.**
+
+### dev 원인 확정 범위와 로컬 차이
+
+- 감독 W100: renew p95 5.18초, pending557 중 renew553. 교착/500/QueuePool/방송 실패 로그0,
+  저장20000/20000. 제공 로그는7줄 집계로 요청별 대기 세부 원인은 없다.
+- 코드상 pending 직접 경로는 DB commit 이후 `coalesced_drain` 합류 시한, Redis projector lock
+  획득 실패, 적용 revision 부족, 기타 LiveNotReady다. epoch DB 잠금/emit-lock 자체가 이 code를
+  반환하는 것은 아니다. emit-lock/동기 publish는 ACK p95/timeout에는 영향을 줄 수 있다.
+- 기존 S5는 서비스 직접 호출·메모리 callback이고 실제 WS ACK 전 publish, snapshot120,
+  단일 이벤트루프 CPU 포화를 포함하지 않았다. 새 하네스는 실제 localhost Socket.IO v2 handler와
+  PG/Redis, snapshot120 동시 요청, CPU15ms/25ms 압박을 사용한다.
+- 새 하네스도 로그인/입장·V2Conn을 주입하며 연결별5초 heartbeat는 실행하지 않는다.
+  client도 같은 프로세스의 별도 이벤트루프이므로 CPU 수치는 서버 단독 CPU가 아니다.
+  회원별 ACK 대기 뒤 다음 tick에 진입하는 순차 구조이며 dev 부하 발생기와 동일한지는 미검증이다.
+
+### 설계·정합성
+
+| 수정 | 유지 근거 |
+|---|---|
+| renew에서 service drain 생략 | handler는 lease/anchor/entity_version만 UPDATE, outbox·회차 revision 불변 |
+| renew에서 WS 동기 publish·REST 예약 생략 | 새 이벤트가 없고 일반 명령/metric/device/heartbeat가 기존 publish를 지속 |
+| DB session→epoch→stream 잠금 유지 | 동일 command 멱등·generation fencing·종료/추방/인계 경쟁 안전성 유지 |
+| Redis/scope 검사 유지 | 장애·권한 변경을 성공 처리하지 않음, 기존 ACK/lease·duplicate 형식 유지 |
+| 10초 단위 지연 집계 | DB transaction·session/epoch 잠금·projection·scope·WS threadpool 구간 분리, wire 변경 없음 |
+
+DB 직렬화를 제거하는 lease-only SQL fast path는 별도 동시성 설계가 필요해 이번 제외했다.
+metric/device의 동기 publish를 비동기화하는 후보도 검토했으나, 하네스 순차 스케줄 영향과 실제 dev
+인과가 미확정이고 예약 부하·화면 지연 재검증이 필요하므로 이번 renew-only 범위를 유지한다.
+
+### 로컬 실제 Socket.IO 전후 (32tick, snapshot120, CPU 압박)
+
+100명은 같은 보강 barrier의 before100-r3/after100-r2, 40명은 before40/after40 비교.
+40명 기준선도 종료 시 revision과 전체 coverage가 일치함을 확인했다. 부하/회귀는 모두 순차 실행했다.
+
+| 지표 | 전100명 | 후100명 | 전40명 | 후40명 |
+|---|---:|---:|---:|---:|
+| renew p95(초) | 1.657193 | 1.591183 | 0.585226 | 0.489991 |
+| projection_pending | 2 | 0 | 0 | 0 |
+| 프로세스 CPU 평균(%) | 105.768 | 105.175 | 85.379 | 82.073 |
+| 실제 분석창 저장 | 3200/3200 | 3200/3200 | 1280/1280 | 1280/1280 |
+| outbox callback 쌍 누락 | 0 | 0 | 0 | 0 |
+| client 수신 쌍 누락 | 0 | 0 | 0 | 0 |
+| 실시간 metric ignored:not_live | 2 | **9** | 0 | 0 |
+| 교착 / 최종 실행 timeout | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+
+100명 baseline3표본 renew p95는1.657~3.010초, pending1~4로 변동하며 모두 보존했다.
+각 baseline pending 수와 single-flight drain_timeout 카운터가 일치한다. 이는 로컬 분류 증거이며
+W100 dev renew553건을 전부 동일 원인이라고 확정한 것은 아니다.
+수정 후 계측의 renew projection_ms는0이다. 100명 CPU는 여전히 약105%로 포화되어 있다.
+수신 coverage는 `(event_id,audience)` 합집합이고 연결별 전달·화면 렌더링100%를 뜻하지 않는다.
+
+### 실패 표본·미해결 관측
+
+첫 after100에서 metric ACK TimeoutError1과 방송 미수집438쌍을 관측했다. 후자는 DBrevision3493−
+applied/emitted3274=219행×2audience와 일치하고 방송 gap/emit_failed/lease_lost는0이었다.
+final publish는 single-flight 실행중이면 즉시 반환하여 완료 barrier가 아니었다. 하네스를 고쳐
+측정 부하 종료 후 DB/applied/emitted 일치와 publisher idle까지 기다리고 대기시간을 별도 기록했다.
+첫 표본을 삭제하거나 통과로 바꾸지 않았다.
+
+metric timeout1은 실제 측정중 오류이며 재실행에서 재현되지 않았다는 사실만 확인했다.
+`ignored:not_live`9건은 두 after100에서 반복됐다. 하네스가 metric ACK를 기다리느라 다음 renew를
+늦추면 lease가 만료될 수 있다. close/end/remove 없는 합성 run이라 lease 만료로 추론되지만
+요청 시점 DB lease를 직접 캡처하지 않아 인과를 확정하지 않는다. 저장은100%이며, 이9건은
+outbox로 채택되지 않은 입력이라 outbox callback 누락0과 구분한다. round-2에서 metric timeout/
+ignored 코드·lease 갱신 간격 및 실제 클라이언트 타이머 동작을 함께 확인해야 한다.
+
+### 검증과 감독 관측
+
+- renew 신규/중복 ACK·WS/REST publish 생략: 구현 전4실패·6통과 → 수정 후10통과.
+- 집계/원인 분류 단위2통과, 기존 single-flight11개를 더해23통과. 독립 검증자 신규12개 재확인.
+- 로컬 PG 불가 포트에서 새 부하/리스3개 시험은3 skipped, exit0. CI에 PG가 없어도 실패하지 않는다.
+- 실제 PG 새2개: baseline **1실패·1통과 → 수정2통과**. 동시12중복 ledger1/entity_version+1/
+  outbox·revision불변 및 projector busy 상태 renew lease ACK/DB 정본 검증.
+  evidence-renew-light/pg-renew.log 및 pg-renew-red.log에 보존한다. 독립 리뷰 Critical 없음.
+- 기존12묶음은 신규4시험 파일을 제외하고 이전 방송13개를 포함한다. 전후 **378통과·4실패·4생략**,
+  오류/시간초과0, 신규실패0. 기존 실패4개는 jsonschema 미설치로 node ID까지 동일하다. 전후 비교를
+  `evidence-renew-light/verify_evidence.py`로 독립 검산한다. jsonschema 미설치 기존 실패는 별도 표기한다.
+
+`live_command_timing`: 회차/명령별10초 집계의 count·reasons·max_ms를 본다. `capture.renew`의
+`lease_only`, projection_ms=0, apply_ms/session_epoch_lock_ms 및 `capture.renew.ws`의
+thread_queue_service_publish_ms/scope_gate_ms로 남은 지연을 좁힌다. 윈도우별 최대값이므로
+서로 차감해 특정 요청의 시간을 산출하거나 p95로 해석하지 않는다. 기존 방송 로그도 유지한다.
+자세한 재현·한계·필드 설명은 [evidence-renew-light/README.md](evidence-renew-light/README.md).
+
+마이그레이션 없음. 승인 후 구현 커밋 revert가 롤백 경로다. 푸시·PR·배포·서버접속/변경·운영/dev
+부하시험·메일·삭제·패키지 설치 없이 지정 워크트리에서만 수행했다. 감독 round-2 결과를 기다린다.

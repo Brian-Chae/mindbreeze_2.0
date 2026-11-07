@@ -1,0 +1,25 @@
+{
+  "exitstatus": 0,
+  "ledger_source_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t/app/services/session_live_ledger.py",
+  "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+  "counts": {
+    "warnings": 1,
+    "passed": 50
+  },
+  "failed": [],
+  "errors": [],
+  "targets": [
+    "tests/sdd246/legacy"
+  ],
+  "process_exitstatus": 0,
+  "log_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-regression-before-qv0h2j06/sdd246_legacy.log",
+  "source_root": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t",
+  "source_sha256": {
+    "app/services/class_participation_service.py": "9f4f58bc35c932ab9e1a8c6cc6a85ba9e846adaad4fb4cc0e0d9eb87c792ef55",
+    "app/services/session_live_commands.py": "45705cb9ba73be96f17acce8665105b8097837f1a02291185eda33f8873814b9",
+    "app/services/live_single_flight.py": "5758522ec0d9283ca6d5af78abf8263538157e52c1f3d595e29c97f4dce37cb1",
+    "app/services/session_live_outbox.py": "05667aec6a35bc1a6b44db01c4798274c79763753418ca9fb931436f23a59801",
+    "app/ws/session_live_namespace.py": "86a3bce31f8490a1f865c54287dca8f9033986abb43104844e6cfc3c4c5c6dc1",
+    "app/api/v1/session.py": "ecef1080547aada7b1145dfee0d9ecf4640989c1f0d5d9320fcd6d498f2909d9"
+  }
+}

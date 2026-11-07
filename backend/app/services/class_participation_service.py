@@ -1073,6 +1073,8 @@ def run_live_command(db, actor, command, *, live=None, auth_revision: int | None
     - Redis 장애: commit 이후면 `retryable, committed:true`(같은 ID 재시도 = ledger 결과 재생), commit 이전이면 retryable committed:false.
     - 일시 거절(epoch 불일치 등)은 ledger 에 없으므로 committed:false.
     """
+    import time as _time
+    from app.services.live_command_timing import observe
     from app.schemas.session_live_v2 import ack_from_result, error_ack
     from app.services import session_live_outbox as ob
     from app.services.live_redis.client import LiveNotReady, LiveRedisUnavailable
@@ -1081,20 +1083,33 @@ def run_live_command(db, actor, command, *, live=None, auth_revision: int | None
     from app.services.session_live_state import ScopeStale
     from app.models.session import Session as SessionModel
 
+    started = _time.monotonic()
+    timings: dict[str, float] = {"projection_ms": 0.0}
+    reason = "lease_only" if command.kind == "capture.renew" else "projected"
+
+    def finish(outcome: RunOutcome) -> RunOutcome:
+        timings["service_ms"] = (_time.monotonic() - started) * 1000
+        cause = reason if reason not in ("lease_only", "projected") else str(outcome.ack.get("code") or reason)
+        observe(command.session_id, command.kind, cause, timings)
+        return outcome
+
     live = live or get_live_redis()
     sid = command.session_id
     if db.get(SessionModel, sid) is None:
-        return RunOutcome(error_ack(str(command.command_id), "session_not_found"))
+        return finish(RunOutcome(error_ack(str(command.command_id), "session_not_found")))
     seed_live_state(db, sid)
+    apply_started = _time.monotonic()
     try:
-        result = apply_command_with_retry(db, actor, command, clock_probe_resolver=make_probe_resolver(live, actor.actor_id))
+        result = apply_command_with_retry(db, actor, command, clock_probe_resolver=make_probe_resolver(live, actor.actor_id),
+                                          phase_timings=timings)
     finally:
+        timings["apply_ms"] = (_time.monotonic() - apply_started) * 1000
         callbacks = pop_after_commit(command.command_id)
     if result.transient or not result.committed:  # 일시 거절·충돌: 부작용 0
         ack = ack_from_result(result)
         if result.transient and result.code == "db_busy":  # SDD-285 S2: DB 교착 재시도 소진 → 앱이 같은 ID 로 다시 보내게 한다
             ack.update(status="retryable", committed=False, code="db_busy", retry_after_ms=500)
-        return RunOutcome(ack, result)
+        return finish(RunOutcome(ack, result))
     # commit 된 명령의 부수효과(종료 후 STT/리포트 등)는 projection/권한 상태와 무관하게 정확히 한 번 실행한다.
     def _run_callbacks() -> None:
         if result.status == "applied" and not result.duplicate:
@@ -1106,18 +1121,31 @@ def run_live_command(db, actor, command, *, live=None, auth_revision: int | None
 
     new_auth_rev: int | None = None
     try:
-        # SDD-319: 같은 회차에서 진행 중인 drain 이 있으면 합류해 결과를 공유(회차당 직렬 drain 제거)
-        res = coalesced_drain(("drain", sid), lambda: ob.drain(db, live, sid, wait_s=drain_wait_s), int(result.revision),
-                              wait_s=drain_wait_s, before_wait=db.rollback)
-        if res.busy or res.applied_revision < int(result.revision):
-            raise LiveNotReady("projection_pending")
-        cursors = _cursors_for(live, sid, scope_of(actor, auth_revision))
+        # renew는 outbox를 만들지 않는다. 타 명령/metric의 revision을 기다릴 필요가 없다.
+        # DB lease·멱등·종료 직렬화와 아래 Redis/scope 검사는 기존대로 유지한다.
+        if command.kind != "capture.renew":
+            projection_started = _time.monotonic()
+            try:
+                res = coalesced_drain(("drain", sid), lambda: ob.drain(db, live, sid, wait_s=drain_wait_s), int(result.revision),
+                                      wait_s=drain_wait_s, before_wait=db.rollback)
+            finally:
+                timings["projection_ms"] = (_time.monotonic() - projection_started) * 1000
+            if res.busy or res.applied_revision < int(result.revision):
+                reason = getattr(res, "wait_reason", None) or "revision_behind"
+                raise LiveNotReady("projection_pending")
+        scope_started = _time.monotonic()
+        try:
+            cursors = _cursors_for(live, sid, scope_of(actor, auth_revision))
+        finally:
+            timings["scope_ms"] = (_time.monotonic() - scope_started) * 1000
     except (LiveRedisUnavailable, LiveNotReady) as exc:
+        if reason in ("lease_only", "projected"):
+            reason = "redis_unavailable" if isinstance(exc, LiveRedisUnavailable) else "live_not_ready"
         _run_callbacks()
         ack = ack_from_result(result)
         ack.update(status="retryable", committed=True, code="live_unavailable" if isinstance(exc, LiveRedisUnavailable) else "projection_pending",
                    retry_after_ms=1000)
-        return RunOutcome(ack, result, degraded=True, committed=True)
+        return finish(RunOutcome(ack, result, degraded=True, committed=True))
     except ScopeStale as stale:  # 권한이 회수/변경됐다: 업무는 commit 됐으므로 결과 조회 + 재인가(완전 snapshot)
         _run_callbacks()
         if result.status == "applied" and actor.role in ("host", "system"):
@@ -1125,14 +1153,14 @@ def run_live_command(db, actor, command, *, live=None, auth_revision: int | None
             # 현재 revision 으로 cursor 를 다시 읽어 committed ACK 를 즉시 돌려준다(retryable 로 늦추지 않는다).
             try:
                 cursors = _cursors_for(live, sid, scope_of(actor, stale.current))
-                return RunOutcome(ack_from_result(result, cursors), result, committed=True, auth_revision=stale.current)
+                return finish(RunOutcome(ack_from_result(result, cursors), result, committed=True, auth_revision=stale.current))
             except (LiveRedisUnavailable, LiveNotReady, ScopeStale):
                 pass
         ack = ack_from_result(result)
         ack.update(status="retryable", committed=True, code="scope_stale", retry_after_ms=0)
-        return RunOutcome(ack, result, committed=True)
+        return finish(RunOutcome(ack, result, committed=True))
     _run_callbacks()
-    return RunOutcome(ack_from_result(result, cursors), result, committed=True)
+    return finish(RunOutcome(ack_from_result(result, cursors), result, committed=True))
 
 
 def resolve_live_actor(db, session_id, user_id, entry_credential=None):

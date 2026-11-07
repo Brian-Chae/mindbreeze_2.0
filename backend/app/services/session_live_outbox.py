@@ -60,6 +60,7 @@ class DrainResult:
     busy: bool = False  # 다른 projector 가 fence 를 쥐고 있어 이번엔 쓰지 않음
     epoch: int = 0
     rebuilt: bool = False
+    wait_reason: str | None = None  # 내부 계측 전용, wire 응답에는 포함하지 않는다.
 
 
 @dataclass
@@ -266,6 +267,7 @@ def drain(db: DBSession, live: LiveRedis, session_id: uuid.UUID, *, wait_s: floa
             fence = _acquire(live, session_id, token, wait_s)
             if fence is None:
                 out.busy = True
+                out.wait_reason = "projector_lock"
                 return out
             try:
                 _drain_locked(db, live, session_id, fence, epoch, out, hooks, batch)
