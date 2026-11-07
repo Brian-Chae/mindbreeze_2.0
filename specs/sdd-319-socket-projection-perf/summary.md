@@ -440,3 +440,49 @@ SELECT를 생략하여 정상 경로3SQL왕복을 줄인다. 같은 lease_only g
 최종코드변경은session_live_commands.py와session_live_ledger.py뿐이다. namespace는기준선그대로다.
 푸시·PR·배포·서버접속/설정/재시작·운영/dev부하·메일·삭제·시크릿출력은수행하지않았다.
 모든실패표본/중간실험/합성DB·Redis증거를보존했다. 감독round-4결과를기다린다.
+
+## round-5 (2026-11-08) — capture.close 비차단 ACK
+
+기준 develop `ab1a2c42`, 브랜치 `sdd/319-close-pending-5`, verify addendum 7 `dd6f25fd`(구현 전).
+Z2(dev100)의 close projection_pending 62건 원인은 100건 동시 close 가 ACK 앞 single-flight 대기(2초)를 넘긴 것이다.
+**변경**: `capture.close`(WS 경로 한정)는 commit 후 drain 대기 없이 즉시 applied ACK 를 돌려주고
+(`run_live_command(defer_close_projection=True)`, `RunOutcome.deferred_revision`), 반영·방송은
+`live_projection_follower`(회차당 러너 1개, 목표 revision 최대값 병합, 백오프 재시도, 상한 60초)가
+`coalesced_drain(need=목표)`→`publish_session_sync` 로 따라잡는다. 상한 초과분은 heartbeat self-heal.
+REST 경로·다른 명령·renew·metric·잠금 순서·wire 형식은 변경 없음.
+
+### 로컬 전후 (localhost Socket.IO, 동일 하네스 test_round2_socket_load, 100/40명)
+
+| 항목 | 전100 | 후100 | 전40 | 후40 |
+|---|---:|---:|---:|---:|
+| WS entry p95(초) | 2.573 (r2 2.378, r3 2.375) | 2.556 / 2.477 | 0.892 | 1.028 |
+| renew p95 | 1.300 (1.218, 1.141) | 1.235 / 1.196 | 0.255 | 0.256 |
+| close p95 | 1.783 (1.783, 1.860) | 1.887 / 1.779 | 0.681 | 0.684 |
+| close projection_pending | 0 | 0 | 0 | 0 |
+| 저장 | 3200/3200 | 3200/3200 | 1280/1280 | 1280/1280 |
+| closed stream | 100 | 100 | 40 | 40 |
+| 방송 누락 / client 누락 쌍 | 0/0 | 0/0 | 0/0 | 0/0 |
+| 최종 settle(target=applied=emitted) | 3693 일치 | 3693 일치 | 1482 일치 | 1482 일치 |
+| CPU 평균 % | 104.0 (105.1, 104.7) | 104.8 / 104.5 | 82.9 | 82.4 |
+| 교착 | 0 | 0 | 0 | 0 |
+
+- 100명은 전 3회·후 3회 모두 `metric` ACK TimeoutError 1건(회원 1명, ignored:not_live 9)이 있어 하네스
+  assert 가 실패한다(전/후 동일 패턴, 변경과 무관한 기존 문제). 후 첫 표본과 run4 포함 원본 보존.
+- **로컬은 기준선에서도 close pending 0이라 pending 62 감소를 로컬로 입증하지 못한다.** 로컬이 보여주는 것은
+  (1) close ACK 가 정상 applied, (2) 따라잡기 러너가 방송을 누락 없이 완결(settle 후 일치·누락 0),
+  (3) 40/100명 지표 악화 없음(차이는 표본 변동 범위). dev 효과는 round-6 감독 시험이 필요하다.
+- ACK 가 방송보다 먼저 나가므로 코치 "측정 종료" 화면 반영이 수십~수백 ms 늦을 수 있다(누락 아님).
+
+### CPU 프로파일 (과제 2)
+
+`evidence-close-5/profile_run.py`(py-spy 미설치 → sys._current_frames 10ms 샘플러, 대기성 프레임 제외).
+비대기 샘플 101,297 중 `session_live_ledger.lock_epoch` 73%(리프 `sqlalchemy do_execute` 87%, 즉 PG 잠금/쿼리 대기),
+`class_write_service.lock_users` 5.5%, `outbox._acquire` 5.3%, redis `_wrap` 3%. do_execute 는 GIL 을 놓는 DB 대기라
+**프로세스 CPU 포화(104%)의 직접 원인이 아니다**(샘플러는 대기와 CPU 를 구분 못 함). 순수 파이썬 CPU 소비원은
+합성 CPU 압박(15ms/25ms)이 대부분이라 로컬로 dev 의 CPU 소비원을 확정할 수 없다. renew/entry.enter 개선은
+이번 라운드에서 코드 변경하지 않았다(로컬 renew 1.2초 ≤2초, 개선 근거 없음). 다음 단서: epoch 배타 잠금(`lock_epoch`)
+대기가 지배적이므로 entry.enter 의 epoch 직렬화 범위 축소가 후보(별도 설계 필요).
+
+### 검증
+- 신규 단위 5통과(러너 병합·반복·예외·상한·시그니처). tests/sdd319+308+285 = 129통과·10생략·실패0.
+- 푸시·PR·배포·서버/DB 접근·메일·삭제·시크릿 출력 없음. 롤백=구현 커밋 revert.

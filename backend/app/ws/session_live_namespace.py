@@ -1995,6 +1995,28 @@ def publish_session_sync(session_id) -> int:
     return run_coalesced(("publish", str(session_id)), _publish) or 0
 
 
+def _follow_projection(session_id, revision: int) -> None:
+    """commit 은 됐지만 ACK 앞 drain 을 건너뛴 명령(capture.close)의 projection·방송을 회차당 1개 러너가 따라잡는다."""
+    from app.services import class_participation_service as cps
+    from app.services import live_projection_follower as lpf
+    from app.services import session_live_outbox as ob
+    from app.services.live_single_flight import coalesced_drain
+
+    def _step(target: int) -> bool:
+        db = _open_db()
+        try:
+            res = coalesced_drain(("drain", session_id), lambda: ob.drain(db, cps.get_live_redis(), session_id, wait_s=2.0),
+                                  target, wait_s=2.0, before_wait=db.rollback)
+            if res.busy or res.applied_revision < target:
+                return False
+        finally:
+            db.close()
+        publish_session_sync(session_id)
+        return True
+
+    lpf.request(session_id, revision, _step)
+
+
 def schedule_publish(session_id) -> None:
     """REST/서비스(동기)에서 commit 직후 호출: 스레드에서 방송을 예약한다. WS 루프가 없으면 heartbeat 의 self-heal 에 맡긴다."""
     async def _go():
@@ -2226,7 +2248,9 @@ def register_v2_handlers(sio, ns):
     def _run_command_sync(conn: V2Conn, cmd):
         db = _open_db()
         try:
-            outcome = cps.run_live_command(db, conn.actor, cmd, auth_revision=conn.auth_revision)
+            outcome = cps.run_live_command(db, conn.actor, cmd, auth_revision=conn.auth_revision, defer_close_projection=True)
+            if outcome.deferred_revision is not None:  # SDD-319 round-5: close 는 ACK 후 따라잡기(반영·방송 누락 0)
+                _follow_projection(cmd.session_id, outcome.deferred_revision)
             if outcome.auth_revision is not None:  # 호스트 자기 명령(session.end 등)이 올린 revision 을 연결에 반영
                 conn.auth_revision = outcome.auth_revision
             if cmd.kind.startswith("capture."):  # SDD-285 S9: 미고정 감시용 기록(로그 전용)
@@ -2236,7 +2260,7 @@ def register_v2_handlers(sio, ns):
                     conn.anchor_watch = caw.AnchorWatch()
                 caw.note_result(conn.anchor_watch, cmd.kind, outcome.ack)
             # renew는 새 outbox가 없어 ACK 앞에서 방송 leader 작업을 맡지 않는다.
-            if cmd.kind != "capture.renew" and outcome.committed and not outcome.degraded:
+            if cmd.kind != "capture.renew" and outcome.deferred_revision is None and outcome.committed and not outcome.degraded:
                 try:
                     publish_session_sync(cmd.session_id)
                 except Exception:  # noqa: BLE001 — 방송은 ACK 를 막지 않는다(heartbeat self-heal)

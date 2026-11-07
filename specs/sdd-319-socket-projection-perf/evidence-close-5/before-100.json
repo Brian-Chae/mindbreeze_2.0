@@ -1,0 +1,98 @@
+{
+  "n": 100,
+  "ticks": 32,
+  "burst": 120,
+  "burn_ms": 15.0,
+  "period_ms": 25,
+  "elapsed_s": 47.124610667000525,
+  "counts": {
+    "entry_status:applied:none": 100,
+    "entered": 100,
+    "started": 100,
+    "renew": 400,
+    "metric_projected": 3191,
+    "metric_status:projected:none": 3191,
+    "stored_ack": 3200,
+    "heartbeat": 808,
+    "snapshot_completed": 120,
+    "metric_failed": 9,
+    "metric_status:ignored:not_live": 9,
+    "completed": 100,
+    "close_calls": 100,
+    "close_status:applied:none": 100,
+    "close_committed": 100
+  },
+  "errors": {},
+  "p95_s": {
+    "entry": 2.573202541010687,
+    "start": 1.44692008299171,
+    "renew": 1.3002549580123741,
+    "metric": 1.47160345800512,
+    "store": 1.253706167000928,
+    "snapshot": 4.96384433300409,
+    "close": 1.7833319580095122
+  },
+  "cpu_process_mean_pct": 104.00767970529284,
+  "cpu_process_max_pct": 109.69648618290213,
+  "loop_lag_p95_s": 0.0027536660054465756,
+  "stored_count": 3200,
+  "expected_windows": 3200,
+  "broadcast_expected_pairs": 7384,
+  "broadcast_missing_pairs": 0,
+  "client_missing_pairs": 0,
+  "revision": 3693,
+  "applied_revision": 3693,
+  "emitted_revision": 3693,
+  "closed_streams": 100,
+  "startup": {
+    "elapsed_s": 2.9280171249993145,
+    "cpu_process_mean_pct": 92.97787150068793
+  },
+  "final_settle": {
+    "before": [
+      3693,
+      3693,
+      3693,
+      false
+    ],
+    "after": [
+      3693,
+      3693,
+      3693,
+      false
+    ],
+    "duration_s": 0.010954457990010269
+  },
+  "source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd319b/backend/app/services/class_participation_service.py",
+  "cps_sha256": "c96750b02cbb57cedb2df4f1b738d9c856e0807fdd491a8654213d29f68d3f36",
+  "namespace_sha256": "802c2d843cea1e1c51ee938e5eb7d9d271f1fd8481f778f2c9dad5acd8f6b191",
+  "outbox_source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd319b/backend/app/services/session_live_outbox.py",
+  "outbox_sha256": "4cee4cf99ee4162a4fb171b0934a284b3ec346fc374822dcce9ef964d8f738c2",
+  "single_flight_stats": {
+    "publish_runs": 207,
+    "publish_coalesced": 4193,
+    "drain_runs": 358,
+    "drain_shared": 82,
+    "drain_fallback": 0,
+    "drain_handoff": 10,
+    "drain_timeout": 0,
+    "drain_skipped": 67
+  },
+  "timing_logs": [
+    "[live-v2] live_command_timing session=981cd310 kind=capture.renew count=101 reasons={'lease_only': 101} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 275.084, 'apply_ms': 278.714, 'scope_ms': 196.852, 'service_ms': 280.463}",
+    "[live-v2] live_command_timing session=981cd310 kind=capture.renew.ws count=101 reasons={'applied': 101} max_ms={'thread_queue_ms': 878.22, 'scope_gate_ms': 138.784, 'worker_ms': 281.905, 'thread_queue_service_publish_ms': 1160.188}",
+    "[live-v2] live_command_timing session=981cd310 kind=capture.renew count=99 reasons={'lease_only': 99} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 345.724, 'apply_ms': 349.5, 'scope_ms': 32.655, 'service_ms': 352.654}",
+    "[live-v2] live_command_timing session=981cd310 kind=capture.renew.ws count=99 reasons={'applied': 99} max_ms={'thread_queue_ms': 879.951, 'scope_gate_ms': 52.353, 'worker_ms': 373.414, 'thread_queue_service_publish_ms': 1206.033}",
+    "[live-v2] live_command_timing session=981cd310 kind=capture.renew count=99 reasons={'lease_only': 99} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 425.349, 'apply_ms': 454.254, 'scope_ms': 39.099, 'service_ms': 470.85}",
+    "[live-v2] live_command_timing session=981cd310 kind=capture.renew.ws count=99 reasons={'applied': 99} max_ms={'thread_queue_ms': 840.947, 'scope_gate_ms': 23.5, 'worker_ms': 483.162, 'thread_queue_service_publish_ms': 1291.639}"
+  ],
+  "limitations": [
+    "합성 V2Conn 인증/REST입장 주입, WS entry.enter는 실제호출",
+    "저장은 REST 서비스이나 test socket으로 전송",
+    "client도 같은 process 별도 loop",
+    "고정 CPU busy slice 합성 압박",
+    "fixed ticks 밀리면 종료 연장",
+    "합성 연결당5초 heartbeat는 실제 publish/heartbeat/emit 경로, auth_expired·resync lifecycle 미재현",
+    "client coverage는 event_id×audience 합집합이며 클라이언트별 전송보장 아님"
+  ]
+}

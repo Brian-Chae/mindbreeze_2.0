@@ -884,6 +884,7 @@ class RunOutcome:
     degraded: bool = False
     committed: bool = False
     auth_revision: int | None = None  # 명령이 올린 auth_revision(호스트 자기 명령 후 연결 상태 갱신용)
+    deferred_revision: int | None = None  # SDD-319 round-5: ACK 앞 drain 을 건너뛴 commit revision(호출자가 따라잡기 등록)
 
 
 def _cursors_for(live, session_id, scope) -> list[dict]:
@@ -1067,7 +1068,8 @@ def publish_pending(db, live, session_id, emit_fn: Callable[[dict], None], *, wa
         live._wrap(live._str_unlock, keys=[lock_key], args=[token])
 
 
-def run_live_command(db, actor, command, *, live=None, auth_revision: int | None = None, drain_wait_s: float = 2.0) -> RunOutcome:
+def run_live_command(db, actor, command, *, live=None, auth_revision: int | None = None, drain_wait_s: float = 2.0,
+                     defer_close_projection: bool = False) -> RunOutcome:
     """WS/REST 가 공유하는 단일 경로. 업무 부작용은 apply_command 한 번뿐이다.
 
     - Redis 장애: commit 이후면 `retryable, committed:true`(같은 ID 재시도 = ledger 결과 재생), commit 이전이면 retryable committed:false.
@@ -1123,7 +1125,9 @@ def run_live_command(db, actor, command, *, live=None, auth_revision: int | None
     try:
         # renew는 outbox를 만들지 않는다. 타 명령/metric의 revision을 기다릴 필요가 없다.
         # DB lease·멱등·종료 직렬화와 아래 Redis/scope 검사는 기존대로 유지한다.
-        if command.kind != "capture.renew":
+        # round-5: defer_close_projection 이면 capture.close 도 drain 대기를 건너뛴다(outbox 는 commit 됨 → 호출자가 따라잡기 등록).
+        defer = defer_close_projection and command.kind == "capture.close" and result.status == "applied" and int(result.revision) > 0
+        if command.kind != "capture.renew" and not defer:
             projection_started = _time.monotonic()
             try:
                 res = coalesced_drain(("drain", sid), lambda: ob.drain(db, live, sid, wait_s=drain_wait_s), int(result.revision),
@@ -1160,7 +1164,8 @@ def run_live_command(db, actor, command, *, live=None, auth_revision: int | None
         ack.update(status="retryable", committed=True, code="scope_stale", retry_after_ms=0)
         return finish(RunOutcome(ack, result, committed=True))
     _run_callbacks()
-    return finish(RunOutcome(ack_from_result(result, cursors), result, committed=True))
+    return finish(RunOutcome(ack_from_result(result, cursors), result, committed=True,
+                             deferred_revision=int(result.revision) if defer else None))
 
 
 def resolve_live_actor(db, session_id, user_id, entry_credential=None):
