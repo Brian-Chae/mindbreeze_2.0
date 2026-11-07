@@ -290,3 +290,84 @@ thread_queue_service_publish_ms/scope_gate_ms로 남은 지연을 좁힌다. 윈
 
 마이그레이션 없음. 승인 후 구현 커밋 revert가 롤백 경로다. 푸시·PR·배포·서버접속/변경·운영/dev
 부하시험·메일·삭제·패키지 설치 없이 지정 워크트리에서만 수행했다. 감독 round-2 결과를 기다린다.
+
+## round-2 (2026-11-07) — scope·명령 단일 worker 및 projection 표기 배치화
+
+### 결과와 한계
+
+작업 브랜치 `sdd/319-renew-light-2`, 기준 `b6f165ec`. 설계 `de940485`와 독립 리뷰 보완
+`5d239fa3`를 구현 전에 커밋했다. production 변경은 outbox projector와 WS namespace 두 파일이다.
+최종 로컬 실제 Socket.IO100/40명에서 renew≤2초, close pending0, 저장100%, 실제 stream 종료100%,
+outbox 방송 누락0·교착0을 확인했다. 40명 WS 입장/renew/CPU는 기준선보다 소폭 개선됐다.
+**dev close100명 전원 pending은 로컬 기준선에서도 재현되지 않아, 그 원인이 확정되거나
+실제 dev 문제가 해결됐다고 선언하지 않는다. round-3 확인이 필요하다.**
+
+### 원인 근거·설계
+
+X100 renew DB service 최대~605ms에 비해 WS queue+service~1977ms, scope gate~1285ms가
+관측됐다. 이는 윈도우 최대값이므로 서로 더하거나 빼서 개별 요청의 지연으로 해석하지 않는다.
+코드상 정상 명령이 scope 검사와 명령 처리에 각각 스레드풀 큐를 거치는 사실을 확인해 같은 worker로
+합쳤다. pre-scope 검사는 그대로 DB쓰기 전에 수행하고 ScopeStale이면 재인가/resync 후 재검사한다.
+재변경되면 DB쓰기 없이 retryable. post-commit scope 검사도 유지하며 권한 캐시는 추가하지 않았다.
+
+close는 device.changed outbox를 생성해 projection 완료가 필요하다. 이를 건너뛰지 않고 projector의
+행별 DB 표기 UPDATE+commit을 성공 prefix 단위로 줄였다. 500행에서 표기 호출502→최대4회.
+processed_at은 replay 필터가 아니지만 rebuild의 과거 projection 흔적 판정에 사용되므로
+최초 성공행은 즉시 표기한다. 독립 리뷰가 이 경계를 찾아 설계 보완 후 구현했다.
+중간 hook 예외는 완료 prefix만 표기하고 다음 drain의 Redis applied-prefix 복구를 유지한다.
+
+DB session/epoch 잠금, executor 수/설정, Redis fence·epoch·revision 순서는 바꾸지 않았다.
+close100건의 세부 대기 분포는 제공11줄 로그에 없어 미확정이며, batch commit 비용이 기여할 수
+있다는 코드 근거와 로컬 개선을 구분한다.
+
+### 전후 실제 소켓 측정
+
+100명은 단독 before100-r2와 after100, 40명은 before40/after40 비교. localhost actual Socket.IO,
+32tick, snapshot120, CPU15ms/25ms, 합성5초 heartbeat, 실제 WS entry.enter 및 동시close 포함.
+
+| 지표 | 전100명 | 후100명 | 전40명 | 후40명 |
+|---|---:|---:|---:|---:|
+| WS entry.enter p95(초) | 2.556795 | 2.456754 | 0.846856 | 0.835776 |
+| renew p95(초) | 1.627073 | **1.187702** | 0.553761 | **0.537804** |
+| close p95(초) | 1.876271 | 1.798839 | 0.843999 | 0.717998 |
+| close projection_pending | 0 | 0 | 0 | 0 |
+| CPU 평균(프로세스 %) | 104.061 | 104.460 | 85.758 | 83.972 |
+| 분석창 실제 저장 | 3200/3200 | 3200/3200 | 1280/1280 | 1280/1280 |
+| 실제 DB closed stream | 100 | 100 | 40 | 40 |
+| outbox callback/client 쌍 누락 | 0/0 | 0/0 | 0/0 | 0/0 |
+| 교착 | 0 | 0 | 0 | 0 |
+| metric ACK timeout / ignored:not_live | 1/9 | **0/0** | 0/0 | 0/0 |
+
+100명 CPU는 약0.399pp 증가한 단일 표본이고 여전히 한 코어 수준으로 포화된다. 40명 capture.start는
+0.155→0.161초로 약5.3ms 증가했다. 개선된 지표만으로 모든 성능 무악화를 주장하지 않는다.
+최초 before100은 초기 안전성 보완 단위시험과 잠시 겹쳐 그대로 보존하고, 단독 before100-r2를 추가했다.
+두 baseline100 모두 metric timeout1이 있어 완전 통과가 아니며 수정100·40은 부하시험 통과다.
+
+로그인/REST join·enter는 주입되어 실제 REST 입장 p95는 미검증이다. heartbeat는 동일한 공개
+publish/heartbeat/emit 호출을5초마다 실행하는 합성 스케줄러로 실제 join의 전체 수명주기와는 다르다.
+CPU는 서버+같은 프로세스의 client 스레드를 포함하고, ACK를 기다리는 순차 tick은 밀리면 종료가 늦어진다.
+저장은 REST store_batch 서비스를 시험 소켓으로 호출해 DB 개수로 확인했다. callback/client coverage는
+(event_id,audience) 합집합으로 각 연결의 전달100%나 실제 화면 렌더링의 증거가 아니다.
+
+### 검증·관측
+
+- 구현 전 신규 단위3실패·4통과 → 최초 성공 흔적 보완 포함 **8통과**. 기존 renew/timing과 합쳐20통과.
+- 최초 성공 흔적 보완 시험은 중간 구현에서1실패를 확인하고 수정 후 통과했다.
+- 독립 최종 diff 리뷰 Critical 없음: pre-scope·재인가·반복변경 거절, crash prefix·epoch 흔적 보존 확인.
+- PG 없는 포트로 소켓 부하를 명시 실행해1 skipped/exit0 확인. 증거 DB/Redis는 보존한다.
+- 기존12묶음은 이전 renew/timing/PG/broadcast 시험까지 포함하며 이번 pipeline/socket만 별도 집계한다.
+  최초 수정 후 391통과·5실패·5생략 중 새 실패1건은 scope 거절 경로 추가에 따른 SDD-285 정적 기대 수(5→6)였다.
+  해당 기대를 갱신한 묶음은31통과. 최종 전후 모두 **392통과·기존4실패·5생략**이며 신규 실패/오류/시간초과0이다.
+  기존4실패는 jsonschema 미설치이며 실패 node ID는 전후 동일하다. 최초 실패 증거도 보존했다.
+  최종 전후 수치와 실패 node ID는 evidence-round2/regression-comparison.json 및 독립 검산 스크립트에 기록한다.
+
+`live_command_timing`에 정확한 제출→worker 시작 `thread_queue_ms`, 내부처리 `worker_ms`가 추가됐다.
+`scope_gate_ms`는 이제 worker 안의 실제 Redis 검사만 포함하므로 이전(큐 대기 포함) 값과 직접 비교하지
+않는다. `thread_queue_service_publish_ms`는 pre-scope까지 포함한 전체 dispatch 시간이다.
+종류별10초 집계라 close burst가 짧고 후속 요청이 없으면 해당 구간 로그가 남지 않을 수 있다.
+round-3은 loadtester close ACK 오류·p95, 최종 applied/emitted/outbox, 방송 오류 로그를 함께 확인한다.
+
+[하네스·제약·재현법](evidence-round2/README.md), `verify_evidence.py`는 네트워크/DB 없이 현재 소스 SHA,
+실패 baseline 보존, 저장·close·방송·renew/40명 지표 및 전후 회귀를 독립 검산한다.
+마이그레이션/설정 변경 없이 승인 후 구현 커밋 revert로 롤백 가능하다. 이번 작업에서 푸시·PR·배포·
+서버접속/변경·dev/운영부하·메일·삭제·시크릿 출력은 하지 않았다. 감독 round-3 결과를 기다린다.

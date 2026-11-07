@@ -200,15 +200,15 @@ Redis 장애 시 lease commit 이후 retryable 응답이라는 기존 동작을 
 
 ### 구현 전 검증 체크리스트
 
-- [ ] batch500행에서 표기 호출은 batch+복구/빈 확인의 소수회(≤4), 모든 이벤트 순서 유지.
-- [ ] 중간 after_redis 예외는 성공 prefix만 표기; 기존 crash 시험 [True,False,False] 유지.
-- [ ] 정상 WS command의 scope 검사→업무 처리가 같은 worker의1회 제출, 선인가 유지.
-- [ ] ScopeStale 재인가 성공/실패·재변경, Redis 오류 기존 경로, renew/start/close ACK 형식 유지.
-- [ ] 실제 Socket.IO100/40명: snapshot120+CPU 압박+5초 합성 heartbeat, 마지막 동시close 포함.
+- [x] batch500행에서 표기 호출은 batch+복구/빈 확인의 소수회(≤4), 모든 이벤트 순서 유지.
+- [x] 중간 after_redis 예외는 성공 prefix만 표기; 기존 crash 시험 [True,False,False] 유지.
+- [x] 정상 WS command의 scope 검사→업무 처리가 같은 worker의1회 제출, 선인가 유지.
+- [x] ScopeStale 재인가 성공/실패·재변경, Redis 오류 기존 경로, renew/start/close ACK 형식 유지.
+- [x] 실제 Socket.IO100/40명: snapshot120+CPU 압박+5초 합성 heartbeat, 마지막 동시close 포함.
   renew≤2초/pending≤49(close0 목표), 실제 closed100%, 저장100%, 교착0·outbox방송누락0.
   시작 p95/renew/CPU를40명 전후 비교하고 단일표본 악화/실패도 공개.
-- [ ] 기존12묶음 및 새단위/실제PG crash·fence 회귀, PG부재skip, 증거DB/Redis 보존.
-- [ ] 설계 선커밋→구현→독립 리뷰/검산→summary와 로컬 fix(sdd-319) 커밋.
+- [x] 기존12묶음 및 새단위/실제PG crash·fence 회귀, PG부재skip, 증거DB/Redis 보존.
+- [x] 설계 선커밋→구현→독립 리뷰/검산→summary와 로컬 fix(sdd-319) 커밋.
 
 로컬 heartbeat는 실서비스와 같은 publish/heartbeat 읽기·emit을5초마다 실행하는 합성 스케줄러이며
 실제 로그인/입장/권한 갱신 이벤트 전체를 대체하지 않는다. dev close100건과 동일 원인을 재현했다고

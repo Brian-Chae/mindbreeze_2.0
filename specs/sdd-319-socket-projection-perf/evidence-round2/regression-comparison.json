@@ -1,0 +1,211 @@
+{
+  "before_totals": {
+    "passed": 392,
+    "failed": 4,
+    "skipped": 5,
+    "error": 0
+  },
+  "after_final_totals": {
+    "passed": 392,
+    "failed": 4,
+    "skipped": 5,
+    "error": 0
+  },
+  "partitions": [
+    {
+      "partition": "sdd308",
+      "before": {
+        "warnings": 1,
+        "passed": 11
+      },
+      "after": {
+        "warnings": 1,
+        "passed": 11
+      },
+      "failed_node_ids_identical": true,
+      "errors_identical": true,
+      "targets_identical": true
+    },
+    {
+      "partition": "sdd319",
+      "before": {
+        "warnings": 2,
+        "skipped": 4,
+        "passed": 45
+      },
+      "after": {
+        "warnings": 1,
+        "skipped": 4,
+        "passed": 45
+      },
+      "failed_node_ids_identical": true,
+      "errors_identical": true,
+      "targets_identical": true
+    },
+    {
+      "partition": "sdd306",
+      "before": {
+        "warnings": 1,
+        "passed": 21,
+        "skipped": 1
+      },
+      "after": {
+        "warnings": 1,
+        "passed": 21,
+        "skipped": 1
+      },
+      "failed_node_ids_identical": true,
+      "errors_identical": true,
+      "targets_identical": true
+    },
+    {
+      "partition": "sdd285",
+      "before": {
+        "warnings": 1,
+        "passed": 31
+      },
+      "after": {
+        "warnings": 1,
+        "passed": 31
+      },
+      "failed_node_ids_identical": true,
+      "errors_identical": true,
+      "targets_identical": true
+    },
+    {
+      "partition": "sdd246_archive",
+      "before": {
+        "warnings": 1,
+        "passed": 29
+      },
+      "after": {
+        "warnings": 1,
+        "passed": 29
+      },
+      "failed_node_ids_identical": true,
+      "errors_identical": true,
+      "targets_identical": true
+    },
+    {
+      "partition": "sdd246_commands",
+      "before": {
+        "warnings": 1,
+        "passed": 33
+      },
+      "after": {
+        "warnings": 1,
+        "passed": 33
+      },
+      "failed_node_ids_identical": true,
+      "errors_identical": true,
+      "targets_identical": true
+    },
+    {
+      "partition": "sdd246_ingest",
+      "before": {
+        "warnings": 1,
+        "passed": 19,
+        "failed": 4
+      },
+      "after": {
+        "warnings": 1,
+        "passed": 19,
+        "failed": 4
+      },
+      "failed_node_ids_identical": true,
+      "errors_identical": true,
+      "targets_identical": true
+    },
+    {
+      "partition": "sdd246_legacy",
+      "before": {
+        "warnings": 1,
+        "passed": 50
+      },
+      "after": {
+        "warnings": 1,
+        "passed": 50
+      },
+      "failed_node_ids_identical": true,
+      "errors_identical": true,
+      "targets_identical": true
+    },
+    {
+      "partition": "sdd246_state",
+      "before": {
+        "warnings": 1,
+        "passed": 22
+      },
+      "after": {
+        "warnings": 1,
+        "passed": 22
+      },
+      "failed_node_ids_identical": true,
+      "errors_identical": true,
+      "targets_identical": true
+    },
+    {
+      "partition": "sdd246_t12b",
+      "before": {
+        "warnings": 1,
+        "passed": 11
+      },
+      "after": {
+        "warnings": 1,
+        "passed": 11
+      },
+      "failed_node_ids_identical": true,
+      "errors_identical": true,
+      "targets_identical": true
+    },
+    {
+      "partition": "sdd246_transport",
+      "before": {
+        "warnings": 2,
+        "passed": 84
+      },
+      "after": {
+        "warnings": 2,
+        "passed": 84
+      },
+      "failed_node_ids_identical": true,
+      "errors_identical": true,
+      "targets_identical": true
+    },
+    {
+      "partition": "ws_live_v2",
+      "before": {
+        "warnings": 2,
+        "passed": 36
+      },
+      "after": {
+        "warnings": 2,
+        "passed": 36
+      },
+      "failed_node_ids_identical": true,
+      "errors_identical": true,
+      "targets_identical": true
+    }
+  ],
+  "new_failures": 0,
+  "timeouts": 0,
+  "source_sha256": {
+    "app/services/class_participation_service.py": "c96750b02cbb57cedb2df4f1b738d9c856e0807fdd491a8654213d29f68d3f36",
+    "app/services/session_live_commands.py": "279ae85b4053f74a127af73a9469425446d0571168e68d3731c2dfce66bcc5b6",
+    "app/services/live_single_flight.py": "277de85cb163d3e5e3ab54ee2e547c1b8585630ec821f4b120fd5f86d32207c2",
+    "app/services/session_live_outbox.py": "4cee4cf99ee4162a4fb171b0934a284b3ec346fc374822dcce9ef964d8f738c2",
+    "app/ws/session_live_namespace.py": "802c2d843cea1e1c51ee938e5eb7d9d271f1fd8481f778f2c9dad5acd8f6b191",
+    "app/api/v1/session.py": "6d16caaf28c30e27e336f5166498594be7678a31e28f0c5229e28b13464d52b1"
+  },
+  "socket_namespace_outbox_sha_match": true,
+  "preserved_initial_failure": {
+    "file": "regression-after-sdd285.json",
+    "failed": [
+      "tests/sdd285/test_s9_anchor_watch.py::test_S9_소켓_핸들러가_감시를_연결했다"
+    ],
+    "reason": "추가 scope_stale 거절 경로로 정적 호출수 기대5→6 갱신, production 추가변경 없음",
+    "rerun": "regression-after-sdd285-r2.json"
+  },
+  "final_after_file": "regression-after-final-all.json",
+  "known_failures": "기존 jsonschema 미설치4건, 전후 node ID 동일"
+}

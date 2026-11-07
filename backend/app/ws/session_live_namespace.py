@@ -2055,19 +2055,6 @@ def register_v2_handlers(sio, ns):
         live = cps.get_live_redis()
         LiveStateService(live).heartbeat(conn.session_id, cps.scope_of(conn.actor, conn.auth_revision))
 
-    async def _ensure_scope(conn: V2Conn) -> bool:
-        """모든 command/emit 직전 scope 검사. ScopeStale 이면 재인가."""
-        try:
-            await asyncio.to_thread(_scope_check_sync, conn)
-        except ScopeStale:
-            if not await _reauthorize(conn):
-                return False
-            await sio.emit("live:resync_required", {"session_id": str(conn.session_id), "reason": "scope_changed"},
-                           to=conn.sid, namespace=ns)
-        except (LiveRedisUnavailable, LiveNotReady):
-            pass  # 명령 실행기가 retryable/503 로 처리한다
-        return True
-
     # ---------------- hello / reauth ----------------
     @sio.on("live:hello", namespace=ns)
     async def live_hello(sid, data):
@@ -2258,6 +2245,22 @@ def register_v2_handlers(sio, ns):
         finally:
             db.close()
 
+    def _checked_command_sync(conn: V2Conn, cmd, timings: dict[str, float], submitted: float):
+        # scope 검사를 없애거나 캐시하지 않고 DB 명령과 같은 worker에서 실행한다.
+        begun = time.monotonic()
+        timings["thread_queue_ms"] += (begun - submitted) * 1000
+        try:
+            scope_started = time.monotonic()
+            try:
+                _scope_check_sync(conn)
+            except (LiveRedisUnavailable, LiveNotReady):
+                pass  # 기존처럼 명령 서비스가 retryable/503을 결정한다.
+            finally:
+                timings["scope_gate_ms"] += (time.monotonic() - scope_started) * 1000
+            return _run_command_sync(conn, cmd)
+        finally:
+            timings["worker_ms"] += (time.monotonic() - begun) * 1000
+
     def _gate_reject(conn: V2Conn, cmd, cid, code: str, **extra):
         """SDD-285 S9: 입구 검사 거절 ACK. capture.* 면 사유를 로그로 남긴다(원장에는 남지 않는 거절)."""
         from app.services import capture_anchor_watch as caw
@@ -2287,16 +2290,24 @@ def register_v2_handlers(sio, ns):
             return _gate_reject(conn, cmd, cid, "not_ready", status="retryable", retry_after_ms=300)
         if conn.expired():
             return _gate_reject(conn, cmd, cid, "token_expired")
-        scope_started = time.monotonic()
-        if not await _ensure_scope(conn):
-            return _gate_reject(conn, cmd, cid, "access_revoked")
-        scope_ms = (time.monotonic() - scope_started) * 1000
         ack_started = time.monotonic()
-        outcome = await asyncio.to_thread(_run_command_sync, conn, cmd)
+        timings = {"thread_queue_ms": 0.0, "scope_gate_ms": 0.0, "worker_ms": 0.0}
+        for attempt in range(2):
+            try:
+                outcome = await asyncio.to_thread(_checked_command_sync, conn, cmd, timings, time.monotonic())
+                break
+            except ScopeStale:
+                # 검사 실패는 DB 쓰기 이전이다. 재인가 후에도 바뀌면 쓰지 않고 재시도시킨다.
+                if attempt == 1:
+                    return _gate_reject(conn, cmd, cid, "scope_stale", status="retryable", retry_after_ms=0)
+                if not await _reauthorize(conn):
+                    return _gate_reject(conn, cmd, cid, "access_revoked")
+                await sio.emit("live:resync_required", {"session_id": str(conn.session_id), "reason": "scope_changed"},
+                               to=conn.sid, namespace=ns)
         from app.services.live_command_timing import observe
 
-        observe(cmd.session_id, cmd.kind + ".ws", str(outcome.ack.get("code") or outcome.ack["status"]),
-                {"thread_queue_service_publish_ms": (time.monotonic() - ack_started) * 1000, "scope_gate_ms": scope_ms})
+        timings["thread_queue_service_publish_ms"] = (time.monotonic() - ack_started) * 1000
+        observe(cmd.session_id, cmd.kind + ".ws", str(outcome.ack.get("code") or outcome.ack["status"]), timings)
         conn.state = state_after_command(conn.state, outcome)
         return outcome.ack
 
