@@ -82,3 +82,18 @@ html.u2-coach .chat-room .chat-room__send{background:var(--u2-accent);color:#FFF
 html.u2-coach dialog,html.u2-coach [role="dialog"]{border-radius:var(--u2-r-card)}
 
 @media(prefers-reduced-motion:reduce){html.u2-coach *,html.u2-coach *::before,html.u2-coach *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* SDD-322 — 코치 알림 화면(/notifications). 기존 NotificationCard·설정 패널 마크업은 그대로 두고 D 토큰으로 색·반경·간격만 맞춘다.
+   u2-notif-legacy 표식 규칙: 알림 센터 본문(.max-w-2xl) 안의 카드·패널·스위치만 대상으로 한다. */
+html.u2-coach [data-mobile-swipe-page] .max-w-2xl > .space-y-2{display:flex;flex-direction:column;gap:10px}
+html.u2-coach [data-mobile-swipe-page] .max-w-2xl > .space-y-2 > button{border:0;border-radius:var(--u2-r-card);background:var(--u2-surface);padding:16px 18px;min-height:72px;box-shadow:none}
+html.u2-coach [data-mobile-swipe-page] .max-w-2xl > .space-y-2 > button:hover{box-shadow:0 0 0 2px var(--u2-ring)}
+html.u2-coach [data-mobile-swipe-page] .max-w-2xl > .space-y-2 > button[class*="border-l-"]{box-shadow:inset 3px 0 var(--u2-accent)}
+html.u2-coach [data-mobile-swipe-page] .max-w-2xl > .space-y-2 > button:focus-visible{outline:2px solid var(--u2-accent);outline-offset:-3px}
+html.u2-coach [data-mobile-swipe-page] .max-w-2xl > .space-y-2 > button [class*="bg-[#F5EDFC]"]{background:var(--u2-tint);color:var(--u2-accent);border-radius:8px}
+html.u2-coach [data-mobile-swipe-page] .max-w-2xl > .space-y-2 > button .text-\[\#9B9B9B\]{color:var(--u2-muted)}
+html.u2-coach [data-mobile-swipe-page] .max-w-2xl > [class*="rounded-2xl"][class*="bg-[#F8FAFC]"]{background:var(--u2-surface);border:0;border-radius:var(--u2-r-card);padding:24px}
+html.u2-coach [data-mobile-swipe-page] .max-w-2xl > [class*="rounded-2xl"][class*="bg-[#F8FAFC]"] label{border:0;border-radius:var(--u2-r-btn);background:var(--u2-canvas);min-height:56px}
+html.u2-coach [data-mobile-swipe-page] .max-w-2xl > [class*="border-dashed"]{border:0;border-radius:var(--u2-r-card);background:var(--u2-surface);padding:40px 24px}
+html.u2-coach [data-mobile-swipe-page] .max-w-2xl > .flex button{min-height:44px;min-width:44px}
+html.u2-coach [data-mobile-swipe-page] .max-w-2xl [role="switch"][aria-checked="false"]{background:#6B6472}

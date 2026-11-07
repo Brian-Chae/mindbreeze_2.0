@@ -94,7 +94,9 @@ const MeasurementGuidePage = lazy(() => import('./pages/measurement-guide-page')
 const AccountDeletionPage = lazy(() => import('./pages/account-deletion-page'));
 const SupportPage = lazy(() => import('./pages/support-page'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
-const NotificationCenterPage = lazy(() => import('./pages/notifications/NotificationCenterPage'));
+const NotificationCenterPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/notifications/ui-v2/ui-v2-notification-center-page').then((module) => ({ default: module.UiV2NotificationCenterPage }))
+  : import('./pages/notifications/NotificationCenterPage'));
 const ProfessionalProfilePage = lazy(() => import('./pages/settings/professional-profile-page'));
 const UploadOverviewPage = lazy(() => import('./pages/upload-status/overview-page'));
 const AdminUploadStatusDetailPage = lazy(() => import('./pages/admin/upload-status-detail-page'));
