@@ -222,3 +222,45 @@ dev/운영부하·메일·삭제·시크릿 출력 금지 유지. 마이그레�
 첫 성공 행(after_redis hook 통과)은 즉시1회 표기하고, 나머지 성공 prefix를 batch finally로 표기한다.
 500행의 호출 상한은4회(복구0/첫1/배치500/종료복구500)이며 이후 배치는 추가비용 없다.
 첫 행 직후부터 흔적이 존재함과 기존 crash 복구를 단위/PG 회귀로 확인한다.
+
+## Addendum 6 (2026-11-07) — round-3 renew 공유 잠금 (구현 전)
+
+기준 develop `4854d33c`, 브랜치 `sdd/319-renew-light-3`. Y100은 실제 참가99/저장19800전량,
+renew p95 2.05초, close pending0, reanchor pending5/metric timeout4다. renew max queue1349~1672ms,
+session_epoch_lock413~611ms가 남았다. 집계 최대값은 서로 다른 요청이므로 합산하여 p95로 해석하지 않는다.
+
+### 설계·정합성
+
+- built-in capture.renew 및 commit=True일 때만 session FOR SHARE → epoch FOR SHARE를 사용한다.
+  기존 다른 명령의 session NO KEY UPDATE 및 epoch UPDATE와 충돌하여 종료/추방/재구축/권한 변경,
+  revision 경계는 유지하면서 서로 다른 stream의 renew만 병렬화한다. 완전 무잠금 경로가 아니다.
+- epoch가 없으면 session SHARE 아래 INSERT ON CONFLICT DO NOTHING 뒤 epoch SHARE로 읽는다.
+  공유→배타 잠금 승격을 하지 않는다. session 부재 FK 오류는 기존 session_not_found 처리를 따른다.
+- epoch 뒤 (session, actor, command_id)의 안정된 SHA256 앞64비트로 transaction advisory lock을 잡고
+  ledger를 읽는다. 동일 ID·다른 stream/body·거절 요청도 멱등/충돌을 보장한다. 해시 충돌은 추가 직렬화뿐이다.
+- 기존 stream FOR UPDATE, 소유자/generation/entity_version 검사, ledger와 stream의 동일 commit,
+  epoch 비교 및 ACK를 유지한다. lease 만료값 계산/활성 stream 재연장 정책은 변경하지 않는다.
+  renew는 outbox/revision을 변경하지 않는다. 등록 handler 교체 및 commit=False는 기존 배타 경로를 쓴다.
+- 전용 executor/풀 크기/DB설정/timeout 변경은 제외한다. 잠금을 기다리며 점유하던 worker 비용부터 줄인다.
+- 제공 로그에는 reanchor/metric 실패 개별 trace가 없어 직접 원인을 확정할 수 없다. pending5는 기준49이하;
+  기존 로컬 Socket.IO 하네스의 metric 실패·projection/방송 누락도 비교해 기록한다.
+
+### 구현·검증 계획
+
+1. ledger 공유 잠금 helper 및 built-in renew 선택만 수정한다. 신규 PG 회귀를 먼저 작성하고 baseline RED 확인.
+2. 서로 다른 stream 동시 진행, 동일 ID 중복/다른 body, 같은 stream version 단조를 실제 PG로 검증한다.
+3. 종료/close/revoke/rebuild 배타 잠금 경계, epoch 초기화, handler교체/commitFalse fallback을 검증한다.
+4. 동일 localhost Socket.IO100/40명·32tick·snapshot120·CPU압박·5초 합성heartbeat로 전후 비교한다.
+   renew≤2초, close pending0, 저장100%, 교착/방송누락0 및40명 입장/renew/CPU 악화 여부를 공개한다.
+5. 기존 회귀12묶음 전후 비교, 독립 리뷰/검산, PG연결불가skip, summary 및 구현 커밋.
+
+### 검증 체크리스트
+
+- [ ] 새 PG 동시성 회귀 RED→GREEN 및 기존 멱등/epoch/fence 회귀
+- [ ] 100/40명 전후 소켓 수치·실패 모두 공개, 소스 SHA 고정
+- [ ] 기존 회귀 전후 비교·독립 리뷰·PG불가skip
+- [ ] summary·로컬 구현 커밋 및 round-4 대기
+
+backend와 specs만 변경한다. 푸시·PR·배포·서버설정/재시작·운영접근·dev부하시험·메일·삭제·시크릿출력 금지.
+합성 DB/Redis 증거는 보존한다. 로컬 합성 heartbeat/입장주입 및 프로세스CPU의 기존 하네스 한계가 그대로
+적용되며 dev 성공을 대체하지 않는다. 마이그레이션 없음, 승인 후 구현커밋 revert가 롤백 경로다.
