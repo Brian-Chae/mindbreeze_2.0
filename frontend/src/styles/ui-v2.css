@@ -234,3 +234,8 @@
 .ui-v2 .u2-hero--nature .u2-muted{color:#E5D3EE}
 .ui-v2 .u2-hero--nature .u2-primary{background:#FFFFFF;color:#5F0080}
 .ui-v2 .u2-hero--nature .u2-arc path{stroke:#ffffff40}.ui-v2 .u2-hero--nature .u2-arc path:nth-child(2){stroke:#ffffff80}
+/* 대표 지시(11/7): 홈 메인 카드 버튼을 카드 하단에 고정 */
+.ui-v2 .u2-hero--nature{display:flex;flex-direction:column;min-height:320px}
+.ui-v2 .u2-hero--nature>.u2-eyebrow{align-self:flex-start}
+.ui-v2 .u2-hero--nature>.u2-primary{margin-top:auto}
+.ui-v2 .u2-hero--nature>p,.ui-v2 .u2-hero--nature>h2.u2-gap{margin-bottom:24px}
