@@ -119,6 +119,13 @@
 .ui-v2 .u2-nav a[aria-current="page"]{color:var(--u2-accent);font-weight:650}
 .ui-v2 .u2-nav a[aria-current="page"] svg{background:var(--u2-tint);box-shadow:0 0 0 5px var(--u2-tint);border-radius:7px}
 .ui-v2 .u2-nav .u2-nav-ico{position:relative;display:grid;place-items:center}
+/* 대표 지시(11/7): 하단 플로팅 메뉴가 밝아 눈에 안 띔 → 보라 배경 + 흰 글자 반전(회원·기관 공통). 비활성 #E5D3EE 8.3:1, 활성 흰색 11.7:1 */
+.ui-v2 .u2-nav{background:var(--u2-accent);border-color:var(--u2-accent);box-shadow:0 10px 30px #5F008040}
+.ui-v2 .u2-nav a{color:#E5D3EE}
+.ui-v2 .u2-nav a[aria-current="page"]{color:#FFFFFF;font-weight:700}
+.ui-v2 .u2-nav a[aria-current="page"] svg{background:#7A2E99;box-shadow:0 0 0 5px #7A2E99}
+.ui-v2 .u2-nav a:focus-visible{outline:3px solid #FFFFFF;outline-offset:-3px;border-radius:var(--u2-r-nav)}
+.ui-v2 .u2-nav .u2-dot{box-shadow:0 0 0 2px var(--u2-accent)}
 .ui-v2 .u2-nav .u2-dot{position:absolute;top:-6px;right:-10px;min-width:16px;height:16px;padding:0 3px;border-radius:8px;background:#B3264B;color:#fff;font-size:10px;line-height:16px;text-align:center}
 
 /* 리포트 시트(dialog) */
