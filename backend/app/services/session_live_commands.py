@@ -1,7 +1,7 @@
 """SDD-246 T03 — 영속 command service.
 
 `apply_command(db, actor, command)` 는 한 트랜잭션 안에서
-  회차 epoch 행 락 → ledger 조회(멱등/충돌) → 인가 → handler(업무 전이) → outbox append → ledger 기록 → commit
+  (필요 시 users·클래스 선잠금) → 회차 행 락 → epoch 행 락 → ledger 조회(멱등/충돌) → 인가 → handler(업무 전이) → outbox append → ledger 기록 → commit
 을 수행한다. 업무 전이·ledger·outbox 는 같은 commit 이므로 "commit 직후 crash" 에서도 재시도가 원 결과를 받고,
 commit 전 crash 면 아무것도 남지 않아 같은 command_id 로 안전하게 재실행된다.
 
@@ -189,7 +189,7 @@ def apply_command_with_retry(db: DBSession, actor: Actor, command: LiveCommand, 
 
 
 # handler 가 lock_class_session 을 잡는 명령 — epoch 보다 먼저 클래스 잠금을 잡아야 한다.
-CLASS_LOCK_FIRST_KINDS = frozenset({"entry.enter"})
+CLASS_LOCK_FIRST_KINDS = frozenset({"entry.enter", "session.open", "session.start", "session.end", "session.cancel"})
 
 
 def _lock_class_before_epoch(db: DBSession, session_id: uuid.UUID, actor_id: uuid.UUID) -> None:
@@ -198,7 +198,8 @@ def _lock_class_before_epoch(db: DBSession, session_id: uuid.UUID, actor_id: uui
     row = db.execute(select(SessionModel).where(SessionModel.id == session_id)).scalar_one_or_none()
     if row is None or row.class_id is None:
         return
-    lock_class_session(db, row, actor_id)
+    # system 상태 전이 handler도 실제 호스트로 실행하므로 같은 사용자 집합을 먼저 잠근다.
+    lock_class_session(db, row, row.host_id if actor_id == SYSTEM_ACTOR_ID else actor_id)
 
 
 def apply_command(db: DBSession, actor: Actor, command: LiveCommand, *, now: datetime | None = None,
@@ -209,14 +210,9 @@ def apply_command(db: DBSession, actor: Actor, command: LiveCommand, *, now: dat
     body_hash = command.body_hash()
     if command.kind not in ALL_KINDS:
         return _transient(command, "unknown_kind", 0, 0)
-    if command.kind in CAPTURE_KINDS:
-        # SDD-285 S2: 락 순서를 sessions → epoch 로 고정한다. 호스트/REST 경로는 sessions 행을 먼저 잠그고 epoch 를 잠그는데,
-        # 여기서 epoch → (capture_stream INSERT 의 FK) sessions KEY SHARE 순으로 잡으면 입장 폭주 때 교착이 난다(11/4 11건).
-        # KEY SHARE 는 FOR UPDATE 와만 충돌하므로 capture 끼리는 서로 막지 않는다.
-        db.execute(select(SessionModel.id).where(SessionModel.id == command.session_id).with_for_update(key_share=True))
     if command.kind in CLASS_LOCK_FIRST_KINDS:
         # SDD-308 후속: 전역 잠금 순서 users → 클래스 → 회차 → epoch. 이 명령의 handler 는 lock_class_session 을 잡는데,
-        # epoch 를 먼저 쥐고 users/클래스를 기다리면 REST 입장(users→회차)·capture(회차 KEY SHARE→epoch)와 3자 교착이 난다(11/7 dev 100명).
+        # epoch 를 먼저 쥐고 users/클래스를 기다리면 REST 입장(users→회차)·capture(회차 NO KEY UPDATE→epoch)와 3자 교착이 난다(11/7 dev 100명).
         _lock_class_before_epoch(db, command.session_id, actor.actor_id)
     try:
         epoch_row = lock_epoch(db, command.session_id)

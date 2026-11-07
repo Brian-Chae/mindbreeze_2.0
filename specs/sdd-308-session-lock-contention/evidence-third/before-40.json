@@ -1,0 +1,78 @@
+{
+  "session_id": "accc3923-09a3-4461-90ae-d3efb30aae5d",
+  "ledger_source_path": "/tmp/sdd308c-baseline-src/app/services/session_live_ledger.py",
+  "ledger_sha256": "4b265fe65b33d3da8ed6068f38c1fe1bec572f69a10bf2e4fb7ae994800c436e",
+  "lock_epoch_has_session_lock": false,
+  "n": 40,
+  "measurement_s": 32.0,
+  "elapsed_s": 83.094,
+  "counts": {
+    "entered": 40,
+    "started": 40,
+    "renew": 148,
+    "presence": 148,
+    "device_accepted": 143,
+    "metric_projected": 977,
+    "deadlock": 86,
+    "metric_failed": 56,
+    "device_failed": 5,
+    "completed": 40,
+    "projection_pending": 0,
+    "http500": 0,
+    "presence_failed": 0
+  },
+  "failures": {},
+  "renew_p95_s": 1.253476457997749,
+  "entry_p95_s": 1.6672553750031511,
+  "outbox_count": 1322,
+  "revision": 1322,
+  "applied_revision": 1322,
+  "emitted_revision": 1322,
+  "broadcast_expected_pairs": 2642,
+  "broadcast_actual_pairs": 2632,
+  "broadcast_missing_pairs": 10,
+  "broadcast_missing_sample": [
+    [
+      "09ce8d86-fda2-4b41-872f-7935df270130",
+      "host"
+    ],
+    [
+      "18fd2be0-f162-4c4c-a2b8-78ff62a55743",
+      "host"
+    ],
+    [
+      "371e7854-6e6d-4109-aa39-eddccd775700",
+      "member:6b2c5858-49ee-4643-b505-9bf48580b78f"
+    ],
+    [
+      "8df1167a-6785-4a7f-b31f-0dc24cd13ab0",
+      "member:e81f8016-14f3-419d-a0af-7eaffe3e3be1"
+    ],
+    [
+      "93f9b2e7-78d5-4bfb-8bf7-e095f5cad10f",
+      "host"
+    ],
+    [
+      "93f9b2e7-78d5-4bfb-8bf7-e095f5cad10f",
+      "member:5c89cedd-3cd9-4bf1-82b7-c1f95028fb63"
+    ],
+    [
+      "d5b2d9ca-0e1a-474c-b008-88a1b14adb32",
+      "host"
+    ],
+    [
+      "e1202b5c-e19f-4467-838b-7b728a5776f0",
+      "host"
+    ],
+    [
+      "f68f0455-5b33-4ef4-9039-d1433d0a56dc",
+      "host"
+    ],
+    [
+      "f9f8e3b2-a54e-4c3c-814c-3c7bc01c0756",
+      "host"
+    ]
+  ],
+  "pg_deadlock_diagnostic_count": 86,
+  "test_scope": "REST/WS 서비스 직접 호출 및 실제 PG/Redis. HTTP/socket network·장치·UI 미검증."
+}
