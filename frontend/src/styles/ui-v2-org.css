@@ -64,7 +64,7 @@
 .ui-v2 .u2-table .u2-cell-code{color:var(--u2-accent);font-weight:600;letter-spacing:.14em}
 .ui-v2 .u2-table-wide{min-width:880px}
 .ui-v2 .u2-row-actions{display:flex;flex-wrap:wrap;gap:6px}
-.ui-v2 .u2-link{display:inline-flex;align-items:center;min-height:44px;color:var(--u2-accent);font-weight:600}
+.ui-v2 .u2-link{display:inline-flex;align-items:center;min-height:44px;min-width:44px;color:var(--u2-accent);font-weight:600}
 .ui-v2 .u2-link:hover{text-decoration:underline}
 /* 좁은 화면: 가로 스크롤 대신 라벨 붙은 카드 행 */
 @media(max-width:767px){
