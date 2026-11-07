@@ -90,6 +90,14 @@ for (const width of widths) {
     await page.waitForSelector(s.waitFor, { timeout: 15000, state: 'attached' }).catch(() => errors.push(`${width}/${s.key}: ${s.waitFor} 없음`));
     await page.waitForTimeout(1100);
     await page.screenshot({ path: path.join(out, `${s.key}-${width}.png`) });
+    const gap = width < 768 ? await page.evaluate(async () => {
+      const nav = document.querySelector('.floating-bottom-nav, .u2-nav'); const sc = document.querySelector('[data-mobile-swipe-page]');
+      if (!nav || !sc) return null;
+      const all = [sc, ...sc.querySelectorAll('*')]; all.forEach((e) => { if (e.scrollHeight > e.clientHeight + 2 && /(auto|scroll)/.test(getComputedStyle(e).overflowY)) e.scrollTop = e.scrollHeight; });
+      await new Promise((r) => setTimeout(r, 200));
+      let max = 0; sc.querySelectorAll('*').forEach((e) => { const r = e.getBoundingClientRect(); const cs = getComputedStyle(e); if (r.height > 0 && cs.position !== 'fixed' && cs.visibility !== 'hidden' && r.bottom < innerHeight + 4000) max = Math.max(max, r.bottom); });
+      return Math.round(nav.getBoundingClientRect().top - Math.min(max, sc.getBoundingClientRect().bottom));
+    }) : null;
     const m = await page.evaluate(() => {
       const html = document.documentElement;
       const scoped = html.classList.contains('u2-coach');
@@ -109,7 +117,7 @@ for (const width of widths) {
       if (nav) { const a = nav.querySelector('a[aria-current="page"]') || nav.querySelector('a'); navCss = { bg: getComputedStyle(nav).backgroundColor, color: a ? getComputedStyle(a).color : null }; }
       return { scoped, overflow, small: small.slice(0, 8), forbidden, font, mark, d, grp, navCss };
     });
-    results.push({ width, screen: s.key, ...m });
+    results.push({ width, screen: s.key, navGap: gap, ...m });
   }
   await context.close();
 }

@@ -55,6 +55,7 @@
     {
       "width": 390,
       "screen": "dashboard",
+      "navGap": 23,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -78,6 +79,7 @@
     {
       "width": 390,
       "screen": "classes",
+      "navGap": -62,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -97,6 +99,7 @@
     {
       "width": 390,
       "screen": "class-detail",
+      "navGap": -62,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -115,6 +118,7 @@
     {
       "width": 390,
       "screen": "clients",
+      "navGap": 22,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -133,6 +137,7 @@
     {
       "width": 390,
       "screen": "reports",
+      "navGap": 364,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -151,6 +156,7 @@
     {
       "width": 390,
       "screen": "upload-status",
+      "navGap": 252,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -169,6 +175,7 @@
     {
       "width": 390,
       "screen": "chat",
+      "navGap": 22,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -187,6 +194,7 @@
     {
       "width": 390,
       "screen": "chat-room",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -202,6 +210,7 @@
     {
       "width": 390,
       "screen": "chat-lucy",
+      "navGap": 22,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -220,6 +229,7 @@
     {
       "width": 390,
       "screen": "counseling",
+      "navGap": -62,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -239,6 +249,7 @@
     {
       "width": 390,
       "screen": "profile-professional",
+      "navGap": 22,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -257,6 +268,7 @@
     {
       "width": 390,
       "screen": "credentials",
+      "navGap": null,
       "scoped": false,
       "overflow": true,
       "small": [],
@@ -270,6 +282,7 @@
     {
       "width": 390,
       "screen": "settings",
+      "navGap": -78,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -288,6 +301,7 @@
     {
       "width": 390,
       "screen": "notifications",
+      "navGap": 468,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -306,6 +320,7 @@
     {
       "width": 390,
       "screen": "player-excluded",
+      "navGap": null,
       "scoped": false,
       "overflow": false,
       "small": [],
@@ -319,6 +334,7 @@
     {
       "width": 768,
       "screen": "dashboard",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -342,6 +358,7 @@
     {
       "width": 768,
       "screen": "classes",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -361,6 +378,7 @@
     {
       "width": 768,
       "screen": "class-detail",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -379,6 +397,7 @@
     {
       "width": 768,
       "screen": "clients",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -397,6 +416,7 @@
     {
       "width": 768,
       "screen": "reports",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -415,6 +435,7 @@
     {
       "width": 768,
       "screen": "upload-status",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -433,6 +454,7 @@
     {
       "width": 768,
       "screen": "chat",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -451,6 +473,7 @@
     {
       "width": 768,
       "screen": "chat-room",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -466,6 +489,7 @@
     {
       "width": 768,
       "screen": "chat-lucy",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -484,6 +508,7 @@
     {
       "width": 768,
       "screen": "counseling",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -503,6 +528,7 @@
     {
       "width": 768,
       "screen": "profile-professional",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -521,6 +547,7 @@
     {
       "width": 768,
       "screen": "credentials",
+      "navGap": null,
       "scoped": false,
       "overflow": true,
       "small": [],
@@ -534,6 +561,7 @@
     {
       "width": 768,
       "screen": "settings",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -552,6 +580,7 @@
     {
       "width": 768,
       "screen": "notifications",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -570,6 +599,7 @@
     {
       "width": 768,
       "screen": "player-excluded",
+      "navGap": null,
       "scoped": false,
       "overflow": false,
       "small": [],
@@ -583,6 +613,7 @@
     {
       "width": 1440,
       "screen": "dashboard",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -606,6 +637,7 @@
     {
       "width": 1440,
       "screen": "classes",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -625,6 +657,7 @@
     {
       "width": 1440,
       "screen": "class-detail",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -643,6 +676,7 @@
     {
       "width": 1440,
       "screen": "clients",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -661,6 +695,7 @@
     {
       "width": 1440,
       "screen": "reports",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -679,6 +714,7 @@
     {
       "width": 1440,
       "screen": "upload-status",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -697,6 +733,7 @@
     {
       "width": 1440,
       "screen": "chat",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -715,6 +752,7 @@
     {
       "width": 1440,
       "screen": "chat-room",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -730,6 +768,7 @@
     {
       "width": 1440,
       "screen": "chat-lucy",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -748,6 +787,7 @@
     {
       "width": 1440,
       "screen": "counseling",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -767,6 +807,7 @@
     {
       "width": 1440,
       "screen": "profile-professional",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -785,6 +826,7 @@
     {
       "width": 1440,
       "screen": "credentials",
+      "navGap": null,
       "scoped": false,
       "overflow": false,
       "small": [],
@@ -798,6 +840,7 @@
     {
       "width": 1440,
       "screen": "settings",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -816,6 +859,7 @@
     {
       "width": 1440,
       "screen": "notifications",
+      "navGap": null,
       "scoped": true,
       "overflow": false,
       "small": [],
@@ -834,6 +878,7 @@
     {
       "width": 1440,
       "screen": "player-excluded",
+      "navGap": null,
       "scoped": false,
       "overflow": false,
       "small": [],

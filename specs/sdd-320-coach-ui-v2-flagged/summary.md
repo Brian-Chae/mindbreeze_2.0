@@ -50,3 +50,60 @@
 ## 대표 결정 필요
 - 클래스 목록의 사진 배경 카드를 D안(틴트 카드)으로 바꿀지(기존 페이지 1파일 수정 필요).
 - 기관관리자(org_admin)가 같은 경로를 쓰므로 현재 코치에서만 켬 — SDD-321 병합 시 역할 조건(`shouldApplyCoachScope`) 합의 필요.
+
+---
+
+# 후속 — 코치 채팅·설정 D안 재구성 + 하단 메뉴 반전 확인 (2026-11-07)
+
+## 결과
+TestFlight 코치 로그인에서 설정·채팅이 구버전처럼 보이던 문제는 SDD-320 이 **스킨만** 입혔기 때문. 두 화면을 내담자 D안(318)과 같은 부품(`u2-chatrow`, `u2-setgroup` 등)으로 **새 화면**으로 만들었다. 플래그 `VITE_UI_V2` ∧ 역할 `counselor` 일 때만 렌더하고, 그 밖(운영 빌드·기관·플랫폼 관리자)은 기존 화면 그대로.
+
+| 화면 | 처리 | 파일 |
+|---|---|---|
+| 채팅 `/chat`, `/chat/:roomId`, `/chat/lucy` | 재구성(D안 목록·방 헤더·루시 행) | `src/pages/coach/ui-v2/ui-v2-coach-chat-page.tsx` |
+| 설정 `/settings` | 재구성(인셋 그룹 리스트·플레이그라운드 카드·위험 액션 분리) | `src/pages/coach/ui-v2/ui-v2-coach-settings-page.tsx` |
+| 보조 CSS | `.ui-v2.u2c` 래퍼 한정 | `src/styles/ui-v2-coach-screens.css` |
+| 분기 | `CoachAwareSettings`/`CoachAwareChat` (App.tsx) | `src/App.tsx` |
+| 전문 프로필 `/profile/professional` | 스킨 유지(캡처 확인, 문제 없음) | — |
+| 자격 `/credentials` | **캡처 미확인**(합성 API 부족으로 h1 미렌더) — 스킨 비적용 경로 | — |
+| 대시보드·상담·리포트·알림·데이터 현황 | 스킨 유지(캡처 확인) | — |
+
+## 보존표
+- 설정: 내 계정(AccountSettings, 코치 프로필 관리 링크 포함)·데이터 현황·알림(NotificationGroups+WebPushCard)·차단한 사용자·기기·LINK BAND·개인정보·약관(동의·처리방침·계정 삭제)·앱 정보·리포트 운영 설정 링크·플레이그라운드 카드·로그아웃 → 전부 유지(vitest 라벨 대조). 내담자 전용 그룹은 코치에게 원래 없음.
+- 채팅: `+ 새 채팅방`(CreateRoomModal), 초대(InviteMemberModal·`canInviteToRoom`), 방 설정(RoomSettingsModal), 정렬 토글, 방 메뉴, 루시(AI 비공개 시 숨김·리다이렉트), `?message=` 딥링크, 상태 토스트, 그룹 포크 이동 → 유지. 전송·읽음·실시간·첨부는 `ChatRoom`/`CounselorAgentPage` 그대로(새 로직 없음).
+
+## 하단 메뉴 반전(대표 지시) 확인 — 390px 실캡처·계산 스타일
+| 역할 | 요소 | 배경 | 활성 글자 | 비활성 글자 | 하단 여백 |
+|---|---|---|---|---|---|
+| 회원 | `.u2-nav` | #5F0080 | #FFFFFF | #E5D3EE | 28px(+safe-area) |
+| 기관 | `.u2-nav` (ui-v2-org-nav) | #5F0080 | #FFFFFF | #E5D3EE | 28px(+safe-area) |
+| 코치 | `.floating-bottom-nav` + `html.u2-coach` | #5F0080 | #FFFFFF | #E5D3EE | 12px(+safe-area) |
+뱃지(빨강 #B3264B) 식별, 스크롤 끝에서 마지막 콘텐츠가 메뉴에 안 가림(설정·클래스 하단 스크롤 캡처 확인; 스크롤 컨테이너 하단 패딩 100~120px). Android 실기기 확인은 못 함(safe-area 값만 확인).
+
+## 시험
+| 항목 | 결과 |
+|---|---|
+| tsc -b | 0 |
+| eslint(변경 파일) | 0 |
+| 신규 vitest `sdd320b-ui-v2-coach-screens.test.ts` | 34건 통과 |
+| 전체 vitest | 기준선 25 failed → 변경 후 25 failed, 실패 목록 동일(신규 실패 0). `sdd320-ui-v2-coach.test.ts` 의 '공유 파일 무수정' 1건은 감독 커밋 `99ec2301`(ui-v2.css 반전)로 인한 기존 실패라 기준선에 포함 |
+| 운영 강제 빌드(`VITE_UI_V2=true --mode prod`) | `check-ui-v2-off.mjs` 통과(255개, 코치 D안 청크/`u2c-` CSS 규칙 추가 후), `check-release-bundle.mjs` 통과 |
+| 캡처·측정(390/768/1440 × 14화면) | 가로 넘침 0, 모바일 44px 미만 0, 금지 표현 0, 최소 대비 4.86:1, reduced-motion 모션 0, 폰트 Pretendard MB (credentials 제외) |
+캡처: `specs/sdd-320-coach-ui-v2-flagged/captures-b/`, 측정 `measure.json`, 스크립트 `e2e/sdd320b-capture.mjs`, `e2e/sdd320b-nav-probe.mjs`.
+
+## 수정 중 잡은 문제
+- 모바일 채팅 목록에 빈 오른쪽 패널("왼쪽에서 대화를 선택하세요")이 같이 보임 → 모바일에서 숨김(`u2c-pane--idle`).
+- 설정 제목이 "SETTINGS"+"설정"으로 중복 → 영문 부제 제거.
+
+## 구조 변경이 필요해 남긴 것 (전반 점검 결과)
+| 화면 | 구버전처럼 보이는 곳 | 비고 |
+|---|---|---|
+| 클래스 목록 `/classes` | 즉석 시작·다음 회차 카드의 사진/어두운 배경(인라인 style) | `host-classes-page.tsx` 수정 필요(기존 한계 재확인) |
+| 클래스 상세 | 다크 회차 카드·탭 | 마크업 재구성 필요 |
+| 회원 `/clients` | 모바일에서 표 가로 스크롤 | 카드 보기 토글은 있음; 기본을 카드로 바꿀지 결정 필요 |
+| 리포트 `/reports` 빈 상태 | 점선 테두리 박스 | 스킨으로 가능하나 이번 범위 제외(저위험이라 보류) |
+| 전문 프로필 | 정상(D 카드) | — |
+실시간 진행(`/sessions/*`, `/classes/now`)은 손대지 않음.
+
+## 못 한 것
+`/credentials` 합성 API 캡처·실기기(iOS/Android)·스크린리더·실서버 데이터 검증, 푸시·PR·배포·앱 빌드.
