@@ -2,6 +2,7 @@
 import { Link } from 'react-router-dom';
 import { UiV2ClientShell } from '../../../components/ui-v2/ui-v2-client-shell';
 import { UiV2ArcRing } from '../../../components/ui-v2/ui-v2-arc-ring';
+import { natureHeroStyle } from '../../../components/ui-v2/nature-hero';
 import { ReadStateView } from '../../../components/class/structure/read-state';
 import { membershipLabels, memberDate, memberStatus, memberValue } from '../../../components/class/structure/member-class-views';
 import { CodeEntryButton } from '../../../components/client/code-entry-button';
@@ -21,7 +22,7 @@ function ClassCard({ model, membership, featured }: { model: ClassReadModel; mem
   const status = memberStatus(model.status);
   const memberLabel = membership ? `${membershipLabels[membership.status] ?? membership.status}${membership.waitlist_position != null ? ` · ${membership.waitlist_position}번` : ''}` : null;
   return (
-    <Link className={`u2-card${featured ? ' u2-hero' : ''}`} to={classPath('member', model.id)}>
+    <Link className={`u2-card${featured ? ' u2-hero u2-hero--nature' : ''}`} style={featured ? natureHeroStyle(model.id) : undefined} to={classPath('member', model.id)}>
       {featured && <UiV2ArcRing variant="hero" />}
       <span className="u2-chip">{[status, memberLabel].filter(Boolean).join(' · ') || '클래스'}</span>
       <h2 style={{ marginTop: 14 }}>{copy.title}</h2>

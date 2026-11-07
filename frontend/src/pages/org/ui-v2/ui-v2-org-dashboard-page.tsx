@@ -5,6 +5,7 @@ import OrgRemovedNoticeDialog from '../../../components/org/OrgRemovedNoticeDial
 import CounselorInviteSection from '../../../components/org/counselor-invite-section';
 import { UiV2OrgShell } from '../../../components/ui-v2/ui-v2-org-shell';
 import { UiV2ArcRing } from '../../../components/ui-v2/ui-v2-arc-ring';
+import { natureHeroStyle } from '../../../components/ui-v2/nature-hero';
 import {
   getOrgDashboard,
   type ClassSummary,
@@ -54,7 +55,7 @@ function OrgCodeCard({ orgCode }: { orgCode: string | null }) {
     }
   };
   return (
-    <section className="u2-card u2-hero" style={{ minHeight: 0 }} aria-labelledby="u2-org-code-title">
+    <section className="u2-card u2-hero u2-hero--nature u2-org-hero" style={natureHeroStyle('home')} aria-labelledby="u2-org-code-title">
       <UiV2ArcRing variant="card" />
       <div className="u2-org-code">
         <div>

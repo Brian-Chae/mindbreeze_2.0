@@ -157,3 +157,10 @@
 @media(prefers-reduced-motion:reduce){
   .ui-v2 .u2-org-heading,.ui-v2.u2-overlay,.ui-v2 .u2-dialog{animation:none!important;transition:none!important}
 }
+
+/* SDD-320 후속 4: 기관 코드 카드 = 자연 배경(.u2-hero--nature). 코드·안내·복사 버튼을 어두운 배경 위 흰색 계열로 */
+.ui-v2 .u2-hero--nature.u2-org-hero{min-height:220px;justify-content:flex-end}
+.ui-v2 .u2-hero--nature .u2-org-code h2{margin-top:0}
+.ui-v2 .u2-hero--nature .u2-org-code strong{color:#FFFFFF;text-shadow:0 1px 8px #25103899}
+.ui-v2 .u2-hero--nature .u2-org-code p,.ui-v2 .u2-hero--nature .u2-org-msg{color:#E5D3EE}
+.ui-v2 .u2-hero--nature .u2-btn-sm{background:#FFFFFF;color:#5F0080}

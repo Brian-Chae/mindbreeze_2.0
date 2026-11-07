@@ -36,7 +36,7 @@ describe('코치 클래스 CSS 스코프', () => {
     for (const sel of bodies) for (const part of sel.split(',')) expect(part.trim().startsWith('html.u2-coach')).toBe(true);
     expect(rules.length).toBeGreaterThan(0);
   });
-  it('사진 배경을 덮는다(인라인 style 대응)', () => expect(css).toMatch(/background-image:none!important/));
+  it('메인 카드는 사진을 덮지 않고 어두운 폴백 배경색을 둔다(SDD-320 후속 4)', () => { expect(css).not.toMatch(/background-image:none!important/); expect(css).toMatch(/background-color:#251038/); });
   it('금지 표현 없음', () => expect(css).not.toMatch(/점수|종합점수|좋음|나쁨|보증|100%/));
 });
 
