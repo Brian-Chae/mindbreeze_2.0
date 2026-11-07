@@ -282,3 +282,20 @@ worker이며 contextvars는 copy_context로 전달한다. 다른 명령/heartbea
 - [ ] 기존 scope stale/retry/권한/단일worker 시험이 전용풀에서도 같은 의미인지 확인
 - [ ] 잠금단독 소스/실패 표본 보존 후 최종 variant100/40 측정, baseline 및 중간 variant 모두 공개
 - [ ] 최종 소스SHA 기준 회귀·독립리뷰·검산 후 채택 여부와 미확정 사항을 summary에 기록
+
+### Addendum 6 재보완 (구현 전) — 전용 풀 철회 및 renew SQL 왕복 축소
+
+4worker 풀은100/40명 renew p95 4.355/4.126초로 실패했다. 원본/소스SHA/시험을 보존하고
+namespace의 전용 풀 변경을 철회한다. 풀 크기를 반복 튜닝하지 않고 기본 executor를 유지한다.
+
+내장 renew의 결정적 CommandRejected는 stream 조회·version/status/session/generation 검사에서
+모두 필드 변경 전에 발생한다. 첫 필드 변경 이후는 값 대입/version증가/flush뿐이다. 따라서
+built-in+commit=True의 동일 guard 아래 SAVEPOINT/RELEASE를 생략한다. 예상밖 예외는 기존 outer
+rollback으로 stream/ledger 전체를 되돌린다. custom handler 및 commit=False는 기존 SAVEPOINT를 유지한다.
+공유 잠금 helper의 session SHARE 조회에서 Session 객체를 가져와 뒤의 중복 session SELECT도 생략한다.
+같은 잠금 강도·인가·epoch/lease/revision 경계를 유지하면서 정상 renew SQL 왕복3개를 줄이는 설계다.
+
+- [ ] 실제 PG SQL에서 SAVEPOINT/RELEASE 없음 및 Session 조회1회, custom/commitFalse 기존동작 확인
+- [ ] 거절시 lease 불변, stream flush 이후 예상밖 예외에서 stream/ledger 전체 rollback 확인
+- [ ] 전용 풀 실험을 미채택 기록하고 최종 SQL축소 변형의100/40 전후 성능·회귀 검증
+- [ ] 여전히 성능이 미달이면 성공으로 보고하지 않고 한계와 다음 관측 필요를 기록
