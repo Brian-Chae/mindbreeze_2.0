@@ -14,7 +14,8 @@ import {
   formatKst,
   genderLabel,
   groupClients,
-  readViewMode,
+  defaultClientViewMode,
+  readStoredViewMode,
   saveViewMode,
   uniqueClientCount,
   type GroupMode,
@@ -152,7 +153,14 @@ export default function ClientListPage() {
   const page = Math.max(1, Number(params.get('page')) || 1);
   const size = group === 'class' ? GROUP_PAGE_SIZE : PAGE_SIZE;
 
-  const [view, setView] = useState<ViewMode>(readViewMode);
+  const [view, setView] = useState<ViewMode>(() =>
+    defaultClientViewMode({
+      stored: readStoredViewMode(),
+      isCoach: useAuthStore.getState().user?.role === 'counselor',
+      flag: import.meta.env.VITE_UI_V2 === 'true',
+      width: typeof window === 'undefined' ? 1024 : window.innerWidth,
+    }),
+  );
   const [query, setQuery] = useState(searchTerm);
   const [clients, setClients] = useState<ClientListItem[]>([]);
   const [classOptions, setClassOptions] = useState<ClientClassRef[]>([]);

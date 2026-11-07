@@ -107,3 +107,44 @@ TestFlight 코치 로그인에서 설정·채팅이 구버전처럼 보이던 �
 
 ## 못 한 것
 `/credentials` 합성 API 캡처·실기기(iOS/Android)·스크린리더·실서버 데이터 검증, 푸시·PR·배포·앱 빌드.
+
+---
+
+# 후속 3 — 코치 클래스 목록·상세, 회원 목록 모바일 카드, 리포트 빈 상태 (2026-11-07)
+
+## 화면별 처리
+| 화면 | 처리 | 방식·파일 |
+|---|---|---|
+| 클래스 목록: 즉석 시작 배너 | 사진+어두운 그라디언트 → 연보라 틴트 카드(#EEE5F5), 버튼 보라 | CSS 스코프 `html.u2-coach` (`src/styles/ui-v2-coach-classes.css`), 인라인 style은 `!important` 로 덮음 |
+| 클래스 목록: 열린 회차·다음 회차 | 사진·오버레이 제거 → 틴트 카드, 칩·버튼 D안 색 | 동일 |
+| 클래스 상세 | 다음 회차 히어로 틴트화, 탭·회차 보기 전환·카드 D안 색 | 동일 |
+| 회원 목록 | 모바일(<768) 기본 보기 표 → 카드. 데스크톱은 표 유지 | `defaultClientViewMode` (`lib/clients/overview.ts`) + `ClientListPage.tsx` 초기값 |
+| 리포트 빈 상태 | 점선 박스 → 흰 카드 | CSS 스코프 |
+| `/credentials` | 합성 API(`/credentials`) 보강해 캡처 확인(렌더 정상, 스킨 비적용 경로라 구버전 톤) | 캡처 `captures-c/credentials-*` |
+
+## 보존표
+- 클래스 목록·상세 TSX 3개(`host-classes-page`, `host-class-detail-page`, `host-class-views`) 무수정 → 링크·필터 6종·검색·더 보기·바로 입장·다시 열기·ClassCreateAction 불변.
+- 회원 목록: 검색·필터(클래스/코치/유형/기간)·그룹·페이지·보기 토글·초대 불변. 기본값 변경 조건 = `VITE_UI_V2==='true'` ∧ 코치 ∧ 저장된 선택(`mb_clients_view`) 없음 ∧ 폭<768. 그 외는 이전과 동일.
+- 실시간 진행(`/sessions/*`, `/classes/now`) 관련 파일·`structure-shell.css`·`ui-v2.css`·`ui-v2-coach.css`·하단 메뉴 CSS diff 0 (시험으로 고정).
+
+## 플래그 off 검증
+- 운영 강제 빌드(`VITE_UI_V2=true --mode prod`): `check-ui-v2-off.mjs` 통과(255개, `html.u2-coach` CSS 포함 시 실패하는 규칙 추가), `check-release-bundle.mjs` 통과, 산출물에서 `u2-coach` 포함 파일 0개.
+
+## 시험
+| 항목 | 결과 |
+|---|---|
+| tsc -b / eslint(변경 파일) | 0 / 0 |
+| 신규 vitest `sdd320c-coach-classes-clients.test.ts` | 21건 통과 |
+| 전체 vitest | 기준선 14파일/24건 실패 → 변경 후 14파일/24건, 실패 목록 동일(신규 실패 0) |
+| 캡처·측정(390/768/1440 × 7화면, 열린 회차 있음/없음 2세트) | 가로 넘침 0, 모바일 44px 미만 0, 금지 표현 0, 최소 대비 4.86:1, reduced-motion 모션 0, 스코프 제외 화면(player) 미적용 |
+캡처: `captures-c/`(열린 회차 있음), `captures-c-next/`(없음 → 다음 회차 히어로), 측정 `measure.json`, 스크립트 `frontend/e2e/sdd320c-capture.mjs`.
+
+## 수정 중 잡은 문제
+- 첫 CSS는 `main` 조상을 가정했으나 실제 DOM에 `main` 이 없어 즉석 배너·점선 박스가 안 바뀜 → 선택자에서 `main` 제거 후 캡처로 재확인.
+- 캡처 빌드에 `VITE_API_BASE_URL` 을 합성 호스트로 안 줘 목록이 비던 문제 → 지정해 재캡처.
+- vitest 실행이 SDD-234 캡처를 덮어씀 → `git checkout` 으로 원복(커밋 제외).
+
+## 못 한 것 / 한계
+1. `/credentials` 는 스킨 비적용 경로(코치 스코프 CSS 밖, 별도 래퍼)라 구버전 톤 유지 — D안화는 별도 작업.
+2. 클래스 상세의 아크 커버·타임라인 등 마크업 재구성 요소는 미구현(색만 D안).
+3. 클래스 상세 '멤버/설정' 탭, 합성 데이터로 개별 캡처하지 않음. 실기기·스크린리더·실서버 데이터 미검증. 푸시·PR·배포·앱 빌드 안 함.
