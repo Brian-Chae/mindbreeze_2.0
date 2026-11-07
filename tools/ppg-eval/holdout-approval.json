@@ -1,0 +1,11 @@
+{
+  "approver": "Brian Chae 11/7 대화 승인",
+  "candidates": [
+    "C0",
+    "W4a",
+    "W2a"
+  ],
+  "frozen_sha": "df79a9d7a13af5ec2d0d055cc11378d14fe8682c",
+  "scope": "홀드아웃(MARSH 14 + CapnoBase 42) 1회 평가",
+  "note": "결과 확인 후 수정·재실행 금지"
+}

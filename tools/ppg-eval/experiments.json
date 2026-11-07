@@ -360,6 +360,15 @@
       "access_log": "results/holdout/access-log-holdout.jsonl",
       "approval_file": "tools/ppg-eval/holdout-approval.json"
     },
-    "freeze_note": "freeze.sha/tree hashes are recorded in the approval commit that follows the freeze commit (cannot self-reference)"
+    "freeze_note": "freeze.sha/tree hashes are recorded in the approval commit that follows the freeze commit (cannot self-reference)",
+    "freeze": {
+      "sha": "df79a9d7a13af5ec2d0d055cc11378d14fe8682c",
+      "commit_time": "2026-11-07T09:02:45+09:00",
+      "tree_tools_ppg_eval": "667c87f32b610f1e3c6244871966ec18c578edc2",
+      "tree_ppg_eval_pkg": "72debc746b9d4111dcc2b5f08171f35226e1d7d8",
+      "tree_tests": "92b3ff8c0e659be3f81b523cd6818a5848f00193",
+      "tree_core_src": "4d5ced0ff300f005308e785f2a67b060ac642528",
+      "tree_splits_sha": "fc4cb73cb192bd7f80c93c7c0b6ae18d5d700774"
+    }
   }
 }
