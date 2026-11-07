@@ -32,3 +32,26 @@
 | A6 | 정합성 | revision 단조, 부수효과 정확히 1회, 방송 누락 0 (heartbeat self-heal 근거) | 동일 |
 
 로컬 시나리오(tests/sdd319 보강): 100명 상당 동시성에서 (a) projection_pending 비율, (b) follower 총 대기 ≤ drain_wait_s(이중 대기 제거), (c) publish 재실행 횟수 상한·양보, (d) 기존 S1~S7 유지.
+
+## Addendum 2 (11/7) — 3차: 동시 입장 대기줄(클래스별 동시 처리 상한) 합격 기준 (구현 전 작성)
+운영 100명 동시 입장 시험(11/7 11:22): login 100/100, join 60/100·enter 40/40 이 60초 ReadTimeout, 소켓 프로세스 로그에 `QueuePool limit of size 20 overflow 20 reached` 약 120건, CPU≈0.
+가설(코드 근거): `get_current_user`(deps.py:24)가 요청 시작에 DB 연결을 잡아 응답까지 쥔 채, join(`class_code_service.py:167` 클래스 행 FOR UPDATE)·enter(`lock_class_session`, `_lock_session_for_capacity`) 의 같은 행 잠금을 기다린다 → 100 요청이 연결 40개를 전부 점유해 풀 고갈.
+대책: 클래스(회차)별 동시 처리 상한 대기줄을 인증·DB 의존성보다 **앞**에 둬서 대기 중 연결 0개. 대기 시한 초과 시 503 + Retry-After(재시도 가능 오류).
+
+| # | 기준 | 값 |
+|---|---|---|
+| E1 | 100명 동시 입장(5초 내 login→join→enter) join/enter 성공 | 100/100 |
+| E2 | 500 응답 | 0건 |
+| E3 | 입장(join+enter) p95 / 최대 | ≤ 20초 / ≤ 45초 |
+| E4 | QueuePool timeout 로그 | 0건 |
+| E5 | 40명 입장 p95 | ≤ 5초 |
+| E6 | 측정 단계 저장 | 100% |
+| E7 | 기존 시험 회귀(tests/sdd319·sdd306·sdd285·sdd246, class join/enter 관련) | 0 |
+
+자동 시험(tests/sdd319/test_entry_queue.py):
+- Q1: 같은 키 동시 N 요청 → 동시 실행 ≤ 상한, 전부 결국 처리(순서 FIFO 근사).
+- Q2: 다른 키(클래스)는 서로 막지 않는다.
+- Q3: 대기 시한 초과 → 503 `entry_busy` + Retry-After, 슬롯·대기 카운터 누수 0.
+- Q4: 대기 중 DB 연결 미점유(풀 크기 2 로 20 요청이 전부 성공, checkedout ≤ 상한).
+- Q5: 예외·취소 시 슬롯 반환. 상한 0 이면 비활성(기존 동작).
+- Q6: 로컬 실 PG 로 100 동시 join/enter 전/후(풀 20+20).
