@@ -100,6 +100,9 @@ const GuestClassMembershipPage = lazy(() => import('./pages/client/guest-class-m
 const MemberClassDetailPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
   ? import('./pages/client/ui-v2/ui-v2-class-detail-page').then((module) => ({ default: module.UiV2ClassDetailPage }))
   : import('./pages/client/member-class-detail-page').then((module) => ({ default: module.MemberClassDetailPage })));
+const UiV2OptionalProfilePage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/client/ui-v2/ui-v2-optional-profile-page').then((module) => ({ default: module.UiV2OptionalProfilePage }))
+  : Promise.resolve({ default: () => <></> }));
 const CounselingListPage = lazy(() => import('./pages/counseling/counseling-list-page').then((module) => ({ default: module.CounselingListPage })));
 const CounselingDetailPage = lazy(() => import('./pages/counseling/counseling-detail-page').then((module) => ({ default: module.CounselingDetailPage })));
 const CodeEntryPage = lazy(() => import('./pages/class/CodeEntryPage'));
@@ -348,7 +351,7 @@ const router = createBrowserRouter(
           )}
         />
         <Route path="/notifications" element={<RoleGuard><NotificationCenterPage /></RoleGuard>} />
-        <Route path="/settings/optional-profile" element={<RoleGuard role="client"><OptionalProfilePage /></RoleGuard>} />
+        <Route path="/settings/optional-profile" element={<RoleGuard role="client">{import.meta.env.VITE_UI_V2 === 'true' ? <Suspense fallback={null}><UiV2OptionalProfilePage /></Suspense> : <OptionalProfilePage />}</RoleGuard>} />
         <Route path="/settings" element={<RoleGuard><SettingsPage /></RoleGuard>} />
         {/* SDD-261: 데이터 저장·업로드 현황(서버 수신 기준). 권한은 서버가 최종 판정한다. */}
         {/* SDD-263: 데이터 현황 전체 회차 목록(정식 메뉴). SDD-261 의 설정 하위 picker 화면은 목록으로 대체한다. */}
