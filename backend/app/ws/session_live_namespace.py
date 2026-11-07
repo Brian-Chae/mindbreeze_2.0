@@ -1982,11 +1982,17 @@ def publish_session_sync(session_id) -> int:
     """projection 된 미방송 event 를 방송한다(어느 프로세스에서 호출해도 클러스터 단일 발행자 락으로 직렬화)."""
     from app.services import class_participation_service as cps
 
-    db = _open_db()
-    try:
-        return cps.publish_pending(db, cps.get_live_redis(), session_id, emit_sync_factory(session_id))
-    finally:
-        db.close()
+    from app.services.live_single_flight import run_coalesced
+
+    def _publish() -> int:
+        db = _open_db()
+        try:
+            return cps.publish_pending(db, cps.get_live_redis(), session_id, emit_sync_factory(session_id))
+        finally:
+            db.close()
+
+    # SDD-319: 같은 회차의 방송은 프로세스 안에서 하나만 돌린다(합류한 호출은 실행자가 재실행해 반영 → 누락 없음).
+    return run_coalesced(("publish", str(session_id)), _publish) or 0
 
 
 def schedule_publish(session_id) -> None:

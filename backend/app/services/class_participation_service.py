@@ -944,7 +944,9 @@ def publish_pending(db, live, session_id, emit_fn: Callable[[dict], None], *, wa
     from app.models.live_state import LiveOutbox
     from app.services import session_live_outbox as ob
 
-    ob.drain(db, live, session_id, wait_s=wait_s)
+    from app.services.live_single_flight import coalesced_drain
+
+    coalesced_drain(("drain", session_id), lambda: ob.drain(db, live, session_id, wait_s=wait_s), 0, wait_s=wait_s)
     token = _uuid.uuid4().hex
     lock_key = f"{live.base(session_id)}:emit-lock"
     deadline = _time.monotonic() + wait_s
@@ -978,6 +980,7 @@ def run_live_command(db, actor, command, *, live=None, auth_revision: int | None
     from app.schemas.session_live_v2 import ack_from_result, error_ack
     from app.services import session_live_outbox as ob
     from app.services.live_redis.client import LiveNotReady, LiveRedisUnavailable
+    from app.services.live_single_flight import coalesced_drain
     from app.services.session_live_commands import apply_command_with_retry
     from app.services.session_live_state import ScopeStale
     from app.models.session import Session as SessionModel
@@ -1007,7 +1010,9 @@ def run_live_command(db, actor, command, *, live=None, auth_revision: int | None
 
     new_auth_rev: int | None = None
     try:
-        res = ob.drain(db, live, sid, wait_s=drain_wait_s)
+        # SDD-319: 같은 회차에서 진행 중인 drain 이 있으면 합류해 결과를 공유(회차당 직렬 drain 제거)
+        res = coalesced_drain(("drain", sid), lambda: ob.drain(db, live, sid, wait_s=drain_wait_s), int(result.revision),
+                              wait_s=drain_wait_s)
         if res.busy or res.applied_revision < int(result.revision):
             raise LiveNotReady("projection_pending")
         cursors = _cursors_for(live, sid, scope_of(actor, auth_revision))
