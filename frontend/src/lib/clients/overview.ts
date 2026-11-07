@@ -97,6 +97,24 @@ export function readViewMode(): ViewMode {
   }
 }
 
+/**
+ * SDD-320 후속 — 회원 목록 기본 보기. 코치 D안(플래그 on) 모바일(<768px)에서 저장된 선택이 없을 때만 카드.
+ * 그 밖(데스크톱·기관관리자·플래그 off·저장된 선택 있음)은 기존 동작(저장값, 없으면 표) 그대로.
+ */
+export function defaultClientViewMode(input: { stored: string | null; isCoach: boolean; flag: boolean; width: number }): ViewMode {
+  if (input.stored === 'cards') return 'cards';
+  if (input.stored === 'table') return 'table';
+  return input.flag && input.isCoach && input.width < 768 ? 'cards' : 'table';
+}
+
+export function readStoredViewMode(): string | null {
+  try {
+    return localStorage.getItem(VIEW_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
 export function saveViewMode(mode: ViewMode): void {
   try {
     localStorage.setItem(VIEW_STORAGE_KEY, mode);

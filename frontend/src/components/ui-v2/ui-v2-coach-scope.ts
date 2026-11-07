@@ -1,6 +1,7 @@
 // SDD-320 — 코치 화면 D안 스코프. 코치(counselor) 업무 경로에서만 <html class="u2-coach"> 를 붙여 ui-v2-coach.css 스킨을 켠다.
 // 기존 페이지 마크업·상태는 건드리지 않는다. 실시간 클래스 진행(플레이어·라이브)·기관/플랫폼 관리자·내담자·공개 화면은 제외한다.
 import '../../styles/ui-v2-coach.css';
+import '../../styles/ui-v2-coach-classes.css';
 import '../../styles/ui-v2-brand.css';
 import { useAuthStore } from '../../stores/authStore';
 
