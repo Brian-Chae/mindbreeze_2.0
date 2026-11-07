@@ -102,3 +102,66 @@ stream retention 초과로 실제 이벤트가 사라지면 gap을 숨기지 않
 수신 순서는 보장하지 않는다. 일반 경로에서 projector 락은 추가하지 않는다.
 `broadcast_gap`, `broadcast_emit_failed`, `broadcast_progress`, `broadcast_lease_lost` 로그로
 applied/emitted/expected/sent/missing을 확인한다. callback 성공은 클라이언트 전달 ACK가 아니다.
+
+## Addendum 4 (2026-11-07) — round-1 renew ACK 경량화 (구현 전)
+
+작업 브랜치 `sdd/319-renew-light`, 기준 develop `bb78a4d9`. 감독 round-1 W100:
+저장20000/20000·측정100/100·교착0·500 0·방송 gap/emit 실패/lease 상실0,
+projection_pending557(renew553), renew p95 5.18초. 개선 목표 pending≤49, renew≤2초.
+
+### 확정 원인과 미확정 영역
+
+- `session_live_commands._handle_capture_renew`는 이미 lease/anchor/entity_version만 갱신하고
+  outbox를 생성하지 않는다. revision은 다른 명령/metric이 올린 현재 회차 revision이다.
+- `run_live_command`는 renew도 이 무관한 revision까지 `coalesced_drain`(2초 합류) 완료를
+  기다린다. 이 post-commit 단계의 busy/미반영/LiveNotReady가 projection_pending을 만든다.
+- WS `_run_command_sync`는 성공 뒤 `publish_session_sync`까지 동기 실행하므로 renew drain만
+  생략해도 publish leader의 drain/emit이 ACK를 지연시킬 수 있다. REST도 불필요한 publish 예약을 한다.
+- DB session/epoch 잠금은 projection_pending의 직접 반환 경로가 아니다. 다만 DB·스레드풀·CPU
+  경합은 전체 ACK 지연에 기여할 수 있다. emit-lock도 pending의 직접 반환 경로가 아니다.
+- 제공 `w100-devlog.txt`는 집계 7줄뿐이다. follower handoff/timeout, projector lock timeout,
+  revision 미도달의 553건별 분포를 확정할 수 없다. 코드 경로와 dev 관측을 구분한다.
+
+### 설계 선택
+
+| 후보 | 결정·이유 |
+|---|---|
+| renew의 불필요한 projection·동기 publish 대기 제거 | 채택. 자신이 만든 outbox가 없으므로 기다릴 일이 없음 |
+| DB session/epoch 잠금을 없애고 lease UPDATE만 수행 | 이번 제외. 종료/추방/capture.start 인계·멱등 ledger 동시성 설계 변경이 필요 |
+| timeout 확대/성공으로 위장 | 제외. 지연 원인을 남기거나 projection이 필요한 명령의 보장을 훼손 |
+
+`capture.renew`만 기존 DB apply/ledger commit 뒤 drain을 생략한다. 기존 scope/auth_revision 및
+Redis 상태 검사는 유지하며 Redis 장애/권한 변경을 성공 처리하지 않는다. 성공 ACK의 기존
+형식과 lease 값·duplicate 재생을 보존한다. 새 outbox/seq/revision을 만들지 않으며 타 명령의
+projection 조건은 유지한다. WS 동기 publish와 REST publish 예약도 renew만 생략한다.
+metric/device/일반 명령/heartbeat의 기존 drain·publish 및 지난 방송 누락 수정은 유지한다.
+lease 만료/수집 허용 판정은 CaptureStream DB 값으로 하므로 projection과 독립이다.
+ACK epoch가 달라진 경우 클라이언트의 기존 resync 경로를 유지한다.
+
+### 로컬과 dev 차이·재현 계획
+
+기존 S5는 서비스 직접 호출과 메모리 emit callback, 별도 publish 루프였다. 실제 Socket.IO
+전송·ACK 직전 동기 publish·코치 snapshot burst120·단일 이벤트루프 CPU 압박을 포함하지 않았다.
+새 하네스는 localhost 실제 Socket.IO server/client와 기존 v2 handler, PG/Redis,
+100/40명 renew/metric 및 snapshot burst120, 고정 CPU busy slice를 사용한다. 로그인/REST 입장
+인증은 합성 fixture로 주입하며 동일 장비 dev 완전 재현으로 주장하지 않는다. 전후 부하는 순차 실행,
+baseline app 사본의 import/SHA를 고정하고 단일 표본 변동과 end-to-end/server CPU를 함께 기록한다.
+
+### 구현·검증 체크리스트
+
+- [ ] 결정적 단위 RED: busy projector 상황에서 renew는 applied/duplicate, 일반 명령은 기존 retryable.
+- [ ] `class_participation_service` renew drain 생략, 기존 Redis/scope/ACK fail-closed 유지.
+- [ ] `session_live_namespace` 및 REST command route의 renew publish 생략; 다른 명령은 유지.
+- [ ] 대기 원인·소요 계측: DB transaction/session+epoch lock/projection/scope 시간, follower timeout과
+  projector lock busy 구분. 세션 단위 주기 제한 로그로 payload/토큰 출력·로그 폭주 방지.
+- [ ] renew lease/generation/중복/종료 경쟁 기존 실제 PG 회귀 및 새 단위시험. PG 없으면 skip.
+- [ ] 로컬 Socket.IO 전후 100/40명 + burst/CPU 압박: ACK p95, pending, metric 저장, 교착,
+  방송 callback coverage·source SHA·CPU 기록. 실제 성능이 기준 미달이면 숨기지 않고 다음 원인 분리.
+- [ ] 기존 12묶음 회귀 전후 비교, 독립 검토·검산 후 summary 및 로컬 fix(sdd-319) 커밋.
+
+### 범위·위험
+
+backend 및 specs만 수정. 푸시·PR·배포·서버 변경·운영/dev 부하시험·메일·삭제·시크릿 출력 금지.
+DB 직렬화와 threadpool/CPU 병목은 남는다. renew 경량화만으로 모든 dev ACK≤2초를 보장하지 않는다.
+Redis 장애 시 lease commit 이후 retryable 응답이라는 기존 동작을 유지한다. 마이그레이션 없음,
+승인 후 이번 구현 커밋 revert가 롤백 경로이며 직접 실행하지 않는다.
