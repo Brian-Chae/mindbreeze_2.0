@@ -38,3 +38,23 @@
 
 ## 3. 확인 불가(감독 몫)
 - 실부하 100명 재측정(p95 <3초, 교착 0)은 dev 서버 배포 후 감독이 수행한다.
+
+---
+
+## 후속 Addendum (11/7) — 100명 동시 입장 교착 근본 원인 (구현 전 확정)
+
+**원인(로컬 실 PG 100 동시 재현 + dev 로그 대조)**: 고리는 3자다.
+- R(REST `enter_session_as_invited`): `lock_class_session` = users(호스트·강사, FOR NO KEY UPDATE) → 클래스 → ClassMember → 회차 FOR UPDATE.
+- C(소켓 `capture.start`, `apply_command`): 회차 KEY SHARE(`session_live_commands.py:203`) → `lock_epoch`.
+- E(소켓 `entry.enter`, `apply_command`): `lock_epoch` → handler 안에서 `lock_class_session`(`class_participation_service.py:323`) = users → 클래스 → 회차.
+- 고리: E 가 epoch 보유·users 대기 ← R 이 users 보유·회차 FOR UPDATE 대기 ← C 가 회차 KEY SHARE 보유·epoch 대기 ← E.
+- 기존 308 은 REST 쪽 순서만 통일했고, `apply_command` 가 epoch 를 먼저 잡은 뒤 handler 가 클래스 잠금을 잡는 역순이 남았다. 시험 `_quiet` 가 `_notify_participant_changed` 를 무력화해 이 경로가 시험에 안 잡혔다.
+
+**수정 방침**: 전역 순서 users → 클래스 → ClassMember → 회차 행 → epoch. `entry.enter`(클래스 잠금이 필요한 명령)는 epoch 보다 먼저 `lock_class_session` 을 잡는다.
+
+**검증 항목 (구현 전 합의)**
+| ID | 시나리오 | 기대 |
+|---|---|---|
+| V30 | 로컬 PG, 풀 20+20, 100명 동시: REST 입장 → entry.enter → capture.start (participant_changed 발행 포함) | DeadlockDetected 0, 입장 성공 100/100, 500·기타 오류 0 |
+| V31 | 회귀 묶음 tests/sdd308, sdd319, sdd306, sdd246, sdd285, test_mb2_ws_mid_fixes, test_sdd024_session_live_ws, class join/enter 관련 | 수정 전후 동일(기존 실패 test_live_ingest_pg 4건은 기준선) |
+| V32 | 수정 전 같은 시험이 실패(교착 재현)함을 확인 | 전 47건 교착·성공 1/100 |
