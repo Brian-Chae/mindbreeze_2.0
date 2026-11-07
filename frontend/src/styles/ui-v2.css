@@ -226,3 +226,16 @@
 .ui-v2 .u2-form{display:flex;flex-direction:column;gap:14px}
 .ui-v2 .u2-form.u2-card{margin-top:14px}
 .ui-v2 .u2-setbody .text-red-700,.ui-v2 .u2-form .text-red-700{color:#B3264B}
+
+/* 대표 지시(11/7): 홈 클래스 메인 카드 = 자연 배경 + 어두운 보라 그라데이션(투명도). 흰 글자 ≥ 7:1(가장 밝은 상단 기준 스크림 .35 + 텍스트 그림자) */
+.ui-v2 .u2-hero--nature{background-size:cover;background-position:center;border-color:transparent;color:#FFFFFF;box-shadow:0 14px 34px #25103840}
+.ui-v2 .u2-hero--nature h2,.ui-v2 .u2-hero--nature small,.ui-v2 .u2-hero--nature .u2-num{color:#FFFFFF;text-shadow:0 1px 8px #25103899}
+.ui-v2 .u2-hero--nature .u2-eyebrow{color:#E5D3EE}
+.ui-v2 .u2-hero--nature .u2-muted{color:#E5D3EE}
+.ui-v2 .u2-hero--nature .u2-primary{background:#FFFFFF;color:#5F0080}
+.ui-v2 .u2-hero--nature .u2-arc path{stroke:#ffffff40}.ui-v2 .u2-hero--nature .u2-arc path:nth-child(2){stroke:#ffffff80}
+/* 대표 지시(11/7): 홈 메인 카드 버튼을 카드 하단에 고정 */
+.ui-v2 .u2-hero--nature{display:flex;flex-direction:column;min-height:320px}
+.ui-v2 .u2-hero--nature>.u2-eyebrow{align-self:flex-start}
+.ui-v2 .u2-hero--nature>.u2-primary{margin-top:auto}
+.ui-v2 .u2-hero--nature>p,.ui-v2 .u2-hero--nature>h2.u2-gap{margin-bottom:24px}

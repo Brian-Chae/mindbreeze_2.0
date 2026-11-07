@@ -1,4 +1,5 @@
 // SDD-318 — 홈(D안). 데이터는 기존 읽기 훅/API 를 그대로 쓰고 표현만 새로 만든다.
+import { heroBackdrop } from '../../../components/class/flow/shell/shell-data';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UiV2ClientShell } from '../../../components/ui-v2/ui-v2-client-shell';
@@ -100,7 +101,7 @@ export function UiV2HomePage() {
 
   return (
     <UiV2ClientShell title="나에게 돌아오는 시간" subtitle={`${name ?? '내담자'}님, 오늘의 클래스와 기록을 만나보세요.`}>
-      <section className="u2-card u2-hero" data-testid="class-hero" aria-label="다음 일정">
+      <section className="u2-card u2-hero u2-hero--nature" data-testid="class-hero" aria-label="다음 일정" style={{ backgroundImage: `linear-gradient(160deg,rgba(37,16,56,.35),rgba(37,16,56,.72) 55%,rgba(37,16,56,.92)),url(${heroBackdrop(next?.parentId ?? 'home')})` }}>
         <UiV2ArcRing variant="hero" />
         <span className="u2-eyebrow">{isOpen ? '지금 입장 가능' : '다음 클래스'}</span>
         {next && nextTime ? <>
