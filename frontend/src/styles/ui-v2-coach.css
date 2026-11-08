@@ -105,3 +105,5 @@ html.u2-coach [data-mobile-swipe-page] .max-w-2xl > [class*="rounded-2xl"][class
 html.u2-coach [data-mobile-swipe-page] .max-w-2xl > [class*="border-dashed"]{border:0;border-radius:var(--u2-r-card);background:var(--u2-surface);padding:40px 24px}
 html.u2-coach [data-mobile-swipe-page] .max-w-2xl > .flex button{min-height:44px;min-width:44px}
 html.u2-coach [data-mobile-swipe-page] .max-w-2xl [role="switch"][aria-checked="false"]{background:#6B6472}
+/* 11/9 대표 지시: 클래스 상세 상단 탭(개요·회차·멤버·설정) 선택 시 보라 배경 위 흰 글자 */
+html.u2-coach main nav[aria-label="클래스 메뉴"] a[aria-current="page"],html.u2-coach [data-shell-variant] nav[aria-label="클래스 메뉴"] a[aria-current="page"]{color:#FFFFFF}
