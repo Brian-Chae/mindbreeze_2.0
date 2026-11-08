@@ -69,12 +69,19 @@ export function UiV2ClassesPage() {
       </div>
       <ReadStateView status={state.status === 'success' && items.length === 0 ? 'empty' : state.status} backTo="/app/classes" onRetry={retry}>
         <p className="u2-footnote">클래스 상태와 진행을 확인해 보세요. 진행은 개인 출석을 의미하지 않아요.</p>
-        {groups.map((group) => (
-          <section key={group.label} aria-label={group.label}>
-            <div className="u2-section-head u2-row"><h2>{group.label}</h2>{group.label !== '완료' && <small>{group.items.length}개</small>}</div>
-            {group.items.map((item, index) => <ClassCard key={item.id} model={item} membership={memberships.get(item.id)} featured={group.label === '참여 중' && index === 0} />)}
-          </section>
-        ))}
+        {/* PC: 좌 = 참여 중, 우 = 완료·대기 중·그 밖의 상태(시안 member-pc/classes). 모바일은 위아래로 쌓인다. */}
+        <div className="u2-pc-cols u2-pc-cols--classes">
+          {[groups.filter((g) => g.label === '참여 중'), groups.filter((g) => g.label !== '참여 중')].map((column, columnIndex) => (
+            column.length > 0 && <div key={columnIndex} className={columnIndex === 0 ? 'u2-pc-main' : 'u2-pc-side'}>
+              {column.map((group) => (
+                <section key={group.label} aria-label={group.label}>
+                  <div className="u2-section-head u2-row"><h2>{group.label}</h2>{group.label !== '완료' && <small>{group.items.length}개</small>}</div>
+                  {group.items.map((item, index) => <ClassCard key={item.id} model={item} membership={memberships.get(item.id)} featured={group.label === '참여 중' && index === 0} />)}
+                </section>
+              ))}
+            </div>
+          ))}
+        </div>
       </ReadStateView>
       <CodeJoinCard />
       {overlay}

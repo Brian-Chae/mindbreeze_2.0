@@ -135,3 +135,13 @@ html.u2-coach [data-shell-variant] button[aria-expanded][aria-label$="펼치기"
 html.u2-coach [data-shell-variant] button[aria-pressed] { min-height: 44px; }
 html.u2-coach [data-shell-variant] button.rounded-full[class*="bg-[#F5EDFC]"][class*="py-1.5"] { min-height: 44px; min-width: 44px; }
 html.u2-coach [data-shell-variant] input[type="checkbox"] { width: 22px; height: 22px; accent-color: #5F0080; }
+
+/* ───────── F-3: 회원 PC 잔여 — 내 클래스 목록 2열, 대화 목록+방 ───────── */
+@media (min-width: 1024px) {
+  .ui-v2.u2-shell .u2-pc-cols--classes { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+  .ui-v2.u2-shell .u2-pc-cols--classes > .u2-pc-main:only-child { grid-column: 1 / -1; }
+  .ui-v2.u2-shell .u2-pc-cols--classes .u2-section-head:first-child { margin-top: 0; }
+  /* 대화: 목록 320 + 대화창, 본문 전체 폭 */
+  [data-shell-variant="ui-v2"] .ui-v2 .u2-chat { padding: 0 48px 32px; max-width: none; }
+  [data-shell-variant="ui-v2"] .ui-v2 .u2-chat-list { width: 320px; }
+}
