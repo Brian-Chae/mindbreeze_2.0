@@ -53,7 +53,7 @@ describe('코치 홈(ui-v2)', () => {
   const app = read('src/App.tsx');
   it('시안 제목과 기존 진입점 유지', () => {
     expect(home).toContain('오늘의 흐름을 준비해요');
-    for (const keep of ['/classes/now', '/classes/new', '/upload-status', '/clients', '/chat/lucy', 'counselorCode']) expect(home).toContain(keep);
+    for (const keep of ['/classes/now', '/classes/new', '/upload-status', '/clients', '/chat/lucy', 'UiV2CoachCodeCard']) expect(home).toContain(keep);
   });
   it('플래그 ∧ counselor 일 때만 분기, 청크는 플래그 삼항 안', () => {
     expect(app).toMatch(/useV2 = import\.meta\.env\.VITE_UI_V2 === 'true' && role === 'counselor'/);

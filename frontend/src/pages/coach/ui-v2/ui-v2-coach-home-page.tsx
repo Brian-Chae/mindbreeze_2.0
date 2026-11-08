@@ -1,6 +1,7 @@
 // SDD-320 F-0 — 코치 홈(시안 home.html 1440 구성). 데이터는 기존 DashboardPage 와 같은 API·모델 함수를 쓰고 표현만 새로 만든다.
 // 즉석 시작·새 클래스·데이터 현황·루시·코치 코드·프로필 안내 등 기존 기능 진입점은 시안의 카드/링크로 옮겨 모두 유지한다.
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { UiV2CoachCodeCard } from '../../../components/ui-v2/ui-v2-coach-code-card';
 import { Link, useNavigate } from 'react-router-dom';
 import AppShell from '../../../components/layout/AppShell';
 import OrgRemovedNoticeDialog from '../../../components/org/OrgRemovedNoticeDialog';
@@ -56,8 +57,6 @@ export function UiV2CoachHomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
-  const [codeOpen, setCodeOpen] = useState(false);
-  const [codeCopied, setCodeCopied] = useState(false);
 
   const fetchDashboard = useCallback(async (): Promise<void> => {
     setLoading(true);
@@ -90,12 +89,7 @@ export function UiV2CoachHomePage() {
   const unreadNotifs = useMemo(() => notifications.filter((n) => !n.is_read).slice(0, 3), [notifications]);
 
   const displayName = (data?.counselor_name ?? user?.name ?? '코치').replace(/\s*\([^)]*\)\s*$/, '') || '코치';
-  const counselorCode = user?.counselor_code ?? null;
   const showBanner = !bannerDismissed && user?.role === 'counselor' && !user.onboarding_completed;
-  const copyCode = async (): Promise<void> => {
-    if (!counselorCode) return;
-    try { await navigator.clipboard.writeText(counselorCode); setCodeCopied(true); window.setTimeout(() => setCodeCopied(false), 2000); } catch { /* 클립보드 실패 무시 */ }
-  };
   const heroSession: ClassSummary | null = hero?.session ?? null;
   const totalMembers = data ? (data.total_members ?? data.total_participants) : 0;
 
@@ -103,6 +97,7 @@ export function UiV2CoachHomePage() {
     <AppShell title="오늘의 흐름을 준비해요">
       <div className="ui-v2 u2f u2f-home">
         <OrgRemovedNoticeDialog />
+        <UiV2CoachCodeCard />
         <p className="u2f-lead">{displayName}님, 함께할 시간을 살펴보세요.</p>
         {error && <div className="u2-alert" role="alert"><p>{error}</p><button type="button" className="u2-secondary u2-gap" onClick={() => void fetchDashboard()}>다시 시도</button></div>}
         {showBanner && <div className="u2-card u2f-banner">
@@ -166,10 +161,6 @@ export function UiV2CoachHomePage() {
                   <Link className="u2-secondary" to="/upload-status" data-upload-status-shortcut>데이터 현황</Link>
                   <AiOnly><Link className="u2-secondary" to="/chat/lucy">루시 (AI) 브리핑</Link></AiOnly>
                 </div>
-                {counselorCode && <div className="u2f-code">
-                  <button type="button" className="u2-secondary" onClick={() => setCodeOpen((v) => !v)} aria-expanded={codeOpen}>내 코치 코드 {codeOpen ? counselorCode : `${counselorCode.slice(0, 2)}••••`}</button>
-                  {codeOpen && <><button type="button" className="u2-secondary" onClick={() => void copyCode()}>{codeCopied ? '복사됨' : '복사'}</button><small>내담자에게 이 코드를 공유하면 상담 관계가 연결돼요.</small></>}
-                </div>}
               </div>
             </section>
           </div>

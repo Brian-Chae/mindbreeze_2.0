@@ -1,5 +1,6 @@
 // SDD-320 F-1 — 코치 클래스 목록(시안 classes.html). PC 표 / 모바일 카드. 데이터는 기존 HostClassesPage 와 같은 useClasses 훅·어댑터를 쓴다.
 import { useEffect, useMemo, useState } from 'react';
+import { UiV2CoachCodeCard } from '../../../components/ui-v2/ui-v2-coach-code-card';
 import { Link } from 'react-router-dom';
 import AppShell from '../../../components/layout/AppShell';
 import { ClassCreateAction } from '../../../components/class/structure/class-create-action';
@@ -61,6 +62,7 @@ export function UiV2CoachClassesPage() {
   return (
     <AppShell title="함께 만드는 시간" rightSlot={<ClassCreateAction />}>
       <div className="ui-v2 u2f u2f-classes">
+        <UiV2CoachCodeCard />
         <p className="u2f-lead">함께할 클래스를 한눈에 살펴보고 바로 시작해요.</p>
         <div className="u2f-filters">
           <label className="u2-search"><span className="sr-only">클래스 검색</span><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="클래스 이름 검색" aria-label="클래스 검색" /></label>

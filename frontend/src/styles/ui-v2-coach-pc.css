@@ -52,3 +52,12 @@
   .ui-v2 .u2f-sheet { padding: 40px; }
   .ui-v2 .u2f-split > .u2f-sheet { margin-bottom: 0; }
 }
+
+/* 11/9 대표 지시: 코치 코드 카드(홈·클래스 최상단, 전체 숫자 노출) */
+.ui-v2 .u2-coach-code{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 16px;padding:18px 20px;background:linear-gradient(120deg,#3A1650,#251038);border:0;color:#FFFFFF}
+.ui-v2 .u2-coach-code__text{display:flex;flex-direction:column;gap:4px;min-width:0}
+.ui-v2 .u2-coach-code .u2-eyebrow{color:#E5D3EE}
+.ui-v2 .u2-coach-code__num{font-size:34px;line-height:1.1;font-weight:700;letter-spacing:6px;font-variant-numeric:tabular-nums;color:#FFFFFF}
+.ui-v2 .u2-coach-code small{color:#E5D3EE;font-size:13px}
+.ui-v2 .u2-coach-code__copy{flex:none;min-height:44px;min-width:72px;padding:0 18px;border-radius:999px;background:#FFFFFF;color:#5F0080;font-weight:650}
+@media (max-width:420px){.ui-v2 .u2-coach-code__num{font-size:30px;letter-spacing:4px}}
