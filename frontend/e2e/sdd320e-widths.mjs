@@ -13,7 +13,7 @@ if (/login/.test(p.url())) {
     await p.goto(`http://127.0.0.1:5181/login${role === 'coach' ? '' : '?role=client'}`); await p.waitForTimeout(1800);
     if (role === 'coach') await p.locator('button', { hasText: /^코치$/ }).first().click();
     await p.fill('input[type=email]', creds[0]); await p.fill('input[type=password]', creds[1]);
-    await p.locator('input[type=password]').press('Enter'); await p.waitForTimeout(5000);
+    await p.locator('button[type=submit]').filter({ hasText: /로그인/ }).first().click(); await p.waitForTimeout(5500);
   }
 }
 if (!/login/.test(p.url())) await c.storageState({ path: stateFile });
