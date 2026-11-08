@@ -88,3 +88,24 @@
 ## I. 정적 검사·한계
 - `npx tsc -b` 0, 변경 파일 eslint 0, `any` 0, 파일명 kebab-case.
 - 한계: 실기기 노치·키보드·스크린리더 미검증, 캡처는 headless Chromium + 합성 API(서버/DB 접근 없음), 앱 빌드·푸시·PR·배포 안 함.
+
+---
+
+## Addendum-F-B — 회원 리포트 상세 시트 D안 재구성 (구현 전)
+
+범위: `components/ui-v2/ui-v2-report-sheet.tsx` + 신규 `ui-v2-report-body.tsx`, `styles/ui-v2.css` 파일 끝 `.u2-rp-*` 규칙만. 레거시 `ClientReportViewer`·`ReportCoverSection` 수정 0, 백엔드 0.
+
+| ID | 항목 | 통과 기준 |
+|---|---|---|
+| FB1 | 커버 반복 제거 | 시트 안에서 `session_title`(회차 제목)은 최대 1회. eyebrow=`session_title`(클래스명·N회차), h1=`content.headline`. headline 없으면 eyebrow=한글 유형 라벨, h1=`session_title` |
+| FB2 | 영문 내부값 | `meditation/clinical/hypnosis/custom` 등 영문 값 화면 노출 0 → 한글 라벨 매핑(명상수업/임상심리상담/최면심리상담/수업) |
+| FB3 | 내부 상태 비노출 | "승인 완료", "PDF 생성", "준비 중", "MIND BREEZE · 몸·마음 리포트", "내담자용/코치용" 칩 0 |
+| FB4 | 밴드 미착용 | EEG 없음/`not_measured` 이면 `.notice` "이번 시간에는 밴드를 착용하지 않았어요…" 노출, 측정 서사 비노출 |
+| FB5 | 밴드 착용 | `displayNarrative` 가 있으면 기존 측정 서사(NarrativeSections, 변화량 중심) 노출, 종합점수 대형 노출 0 |
+| FB6 | 섹션 | "함께 돌아보는 시간", "코치 코멘트"(있을 때), "AI 요약"(있을 때·AI 플래그 가드) |
+| FB7 | 닫기 | 하단 전체 폭 보조 버튼 "리포트 닫기"(onClick=onClose), 글자 링크 "닫기" 없음 |
+| FB8 | 의료 고지 | `WELLNESS_DISCLAIMER` 작게 유지 |
+| FB9 | 없는 필드 | 인용문(quote)에 해당하는 서버 필드 없음 → 가짜로 만들지 않고 숨김, summary 에 명시 |
+| FB10 | 검토 중·과거 비교 | 기존 `in_review` 분기와 `PastReportsCompare` 유지 |
+| FB11 | 운영 격리 | `check-ui-v2-off.mjs`·`check-release-bundle.mjs` 통과, 신규 금지 표현(점수|종합점수|좋음|나쁨|완료율|보증|100%) 0 |
+| FB12 | 검사 | `tsc -b` 0, vitest `sdd318g-report-sheet` + 기존 `sdd318*`·`sdd322*` 통과, 390px 캡처(착용/미착용) |
