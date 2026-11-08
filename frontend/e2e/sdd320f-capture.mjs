@@ -41,6 +41,9 @@ await page.route('**/*', (route) => {
 for (const p of paths) {
   await page.goto(`${BASE}${p}`);
   await page.waitForTimeout(2800);
+  // 선택 옵션: TAB=탭 이름 정규식(클릭), LINKS=접두사(해당 링크 출력). 조회용 클릭만 한다.
+  if (process.env.TAB) { await page.getByRole('tab', { name: new RegExp(process.env.TAB) }).first().click(); await page.waitForTimeout(1800); }
+  if (process.env.LINKS) console.log('LINKS', JSON.stringify(await page.$$eval(`a[href^="${process.env.LINKS}"]`, (a) => [...new Set(a.map((x) => `${x.getAttribute('href')} ${(x.getAttribute('aria-label') || '').slice(0, 20)}`))].slice(0, 40))));
   const name = p.replace(/[\/?=&]/g, '_') || 'root';
   const data = await page.evaluate(() => {
     const vis = (el) => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none'; };

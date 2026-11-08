@@ -37,3 +37,18 @@
   .ui-v2 .u2f-table { display: block; }
   .ui-v2 .u2f-cards { display: none; }
 }
+
+/* F-2 리포트 상세: 읽기 + 코치의 기록 2열. 레거시 카드(코멘트·승인 상태)는 u2f-legacy 안에서 폭만 맞춘다. */
+.ui-v2 .u2f-sheet { padding: 28px 24px; }
+.ui-v2 .u2f-editor { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.ui-v2 .u2f-editor > .u2-card { margin-bottom: 0; }
+.ui-v2 .u2f-legacy { min-width: 0; }
+.ui-v2 .u2f-legacy > * { max-width: none; }
+.ui-v2 .u2f-legacy textarea { width: -webkit-fill-available; width: stretch; min-height: 160px; border-radius: 12px; }
+.ui-v2 .u2f-input { flex: 1 1 200px; min-width: 0; height: 50px; border-radius: var(--u2-r-btn); border: 1px solid var(--u2-line); background: var(--u2-canvas); padding: 0 14px; font: inherit; }
+.ui-v2 .u2f-split > .u2f-sheet { margin-bottom: 14px; }
+@media (min-width: 1024px) {
+  .ui-v2 .u2f-editor { position: sticky; top: 16px; }
+  .ui-v2 .u2f-sheet { padding: 40px; }
+  .ui-v2 .u2f-split > .u2f-sheet { margin-bottom: 0; }
+}

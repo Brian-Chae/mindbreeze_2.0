@@ -9,7 +9,7 @@ import { NO_BAND_NOTICE, readReportQuote } from './ui-v2-report-copy';
 import { UiV2ReportMeasure } from './ui-v2-report-measure';
 import { adaptReportContent, relaxationTrendFromTimeline, type ReportDto } from '../../lib/api/reports';
 
-export function UiV2ReportBody({ report, onClose }: { report: ReportDto; onClose: () => void }) {
+export function UiV2ReportBody({ report, onClose, hideCounselorComment = false }: { report: ReportDto; onClose?: () => void; hideCounselorComment?: boolean }) {
   const adapted = adaptReportContent(report.content, 'client');
   const { summary, insights, displayNarrative } = adapted;
   const eeg = adapted.eeg;
@@ -17,7 +17,7 @@ export function UiV2ReportBody({ report, onClose }: { report: ReportDto; onClose
   const aiRecordUnavailable = adapted.aiRecord?.status === 'not_available';
   const aiVisible = !aiRecordUnavailable && isSttAiRecordVisible();
   const subjective = parseSubjectiveState(report.subjective_state);
-  const counselorComment = (report.content?.counselor_comment as string | undefined)?.trim() || null;
+  const counselorComment = hideCounselorComment ? null : (report.content?.counselor_comment as string | undefined)?.trim() || null;
   const quote = readReportQuote(report.content);
   const noBandNotice = adapted.eegExcluded ? REPORT_EXCLUDED_NOTICE : NO_BAND_NOTICE;
   // 착용 시 서사(journey)는 아래 측정 본문이 이미 보여 주므로 여기서 반복하지 않는다. 인용문이 있으면 항상 첫머리에 둔다.
@@ -54,7 +54,7 @@ export function UiV2ReportBody({ report, onClose }: { report: ReportDto; onClose
       {eegMeasured && displayNarrative && (
         <div className="u2-rp-block"><UiV2ReportMeasure narrative={displayNarrative} /></div>
       )}
-      <button type="button" className="u2-secondary u2-gap" onClick={onClose}>리포트 닫기</button>
+      {onClose && <button type="button" className="u2-secondary u2-gap" onClick={onClose}>리포트 닫기</button>}
       <p className="u2-footnote" style={{ textAlign: 'center' }}>{WELLNESS_DISCLAIMER}</p>
     </div>
   );

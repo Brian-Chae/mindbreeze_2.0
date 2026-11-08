@@ -119,6 +119,9 @@ const CoachUiV2ClientsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
 const CoachUiV2ReportsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
   ? import('./pages/coach/ui-v2/ui-v2-coach-reports-page').then((module) => ({ default: module.UiV2CoachReportsPage }))
   : Promise.resolve({ default: () => <></> }));
+const CoachUiV2ReportDetailPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/coach/ui-v2/ui-v2-coach-report-detail-page').then((module) => ({ default: module.UiV2CoachReportDetailPage }))
+  : Promise.resolve({ default: () => <></> }));
 const LegacyClassesPage = lazy(() => import('./pages/classes/host-classes-page').then((module) => ({ default: module.HostClassesPage })));
 const LegacyClientsPage = lazy(() => import('./pages/clients/ClientListPage'));
 const LegacyReportsPage = lazy(() => import('./pages/reports/ReportListPage'));
@@ -346,7 +349,7 @@ const router = createBrowserRouter(
         <Route path="/admin" element={<PlatformAdminRoute><Navigate to="/admin/orgs" replace /></PlatformAdminRoute>} />
         <Route path="/reports" element={<RoleGuard role={['counselor', 'org_admin']}><CoachAwareList V2={CoachUiV2ReportsPage} Legacy={LegacyReportsPage} /></RoleGuard>} />
         <Route path="/reports/sample" element={<ReportSamplePage />} />
-        <Route path="/reports/:id" element={<RoleGuard role={['counselor', 'org_admin']}><ReportDetailPage /></RoleGuard>} />
+        <Route path="/reports/:id" element={<RoleGuard role={['counselor', 'org_admin']}><CoachAwareList V2={CoachUiV2ReportDetailPage} Legacy={ReportDetailPage} /></RoleGuard>} />
         <Route
           path="/admin/reviews"
           element={(
