@@ -117,6 +117,9 @@ def normalize_report_content(content, report_type: str = "counselor") -> dict:
     # SDD-087: 상담사 코멘트 패스스루 — 문자열만 인정, 없으면 None (빈 문자열 치환 금지)
     comment = content.get("counselor_comment")
     out["counselor_comment"] = comment if isinstance(comment, str) and comment.strip() else None
+    # SDD-318 F-C: 인용 한 줄 — 문자열만 인정, 없으면 None (기존 리포트 하위호환)
+    quote = content.get("quote")
+    out["quote"] = quote.strip() if isinstance(quote, str) and quote.strip() else None
     out["insights"] = out["insights"] if isinstance(out.get("insights"), list) else []
     out["markers"] = out["markers"] if isinstance(out.get("markers"), list) else []
 

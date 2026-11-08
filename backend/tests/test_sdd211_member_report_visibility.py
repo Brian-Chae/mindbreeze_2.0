@@ -96,6 +96,7 @@ META_KEYS: tuple[str, ...] = (
 EMPTY_CONTENT: JsonDict = {
     "summary": None,
     "counselor_comment": None,
+    "quote": None,  # SDD-318 F-C: 인용 한 줄 계약 필드(항상 존재, 없으면 null)
     "insights": [],
     "markers": [],
 }
