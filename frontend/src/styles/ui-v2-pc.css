@@ -129,13 +129,6 @@ html.u2-coach body { font-size: 15px; line-height: 1.6; }
   [data-shell-variant="ui-v2"] > aside .u2-side-conn i[data-on] { background: #01F0C8; }
 }
 
-/* ───────── 코치 터치 영역 44px 보정(마크업 불변, 대상만 한정. 코치 쉘에는 <main> 이 없어 [data-shell-variant] 하위로 건다) ───────── */
-html.u2-coach [data-shell-variant] button[aria-expanded][aria-label$="접기"],
-html.u2-coach [data-shell-variant] button[aria-expanded][aria-label$="펼치기"] { min-width: 44px; min-height: 44px; width: 44px; height: 44px; }
-html.u2-coach [data-shell-variant] button[aria-pressed] { min-height: 44px; }
-html.u2-coach [data-shell-variant] button.rounded-full[class*="bg-[#F5EDFC]"][class*="py-1.5"] { min-height: 44px; min-width: 44px; }
-html.u2-coach [data-shell-variant] input[type="checkbox"] { width: 22px; height: 22px; accent-color: #5F0080; }
-
 /* ───────── F-3: 회원 PC 잔여 — 내 클래스 목록 2열, 대화 목록+방 ───────── */
 @media (min-width: 1024px) {
   .ui-v2.u2-shell .u2-pc-cols--classes { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
@@ -145,3 +138,28 @@ html.u2-coach [data-shell-variant] input[type="checkbox"] { width: 22px; height:
   [data-shell-variant="ui-v2"] .ui-v2 .u2-chat { padding: 0 48px 32px; max-width: none; }
   [data-shell-variant="ui-v2"] .ui-v2 .u2-chat-list { width: 320px; }
 }
+
+/* F-4: 쉘 밖에서 그려지는 코치 화면(회원 초대·자격 대시보드)의 제목을 시안 크기로. 코치 스코프 안에서만 적용한다. */
+html.u2-coach h1[class*="text-[22px]"] { font-size: 31px; line-height: 1.25; font-weight: 600; letter-spacing: -1.35px; }
+
+/* F-0: 코치 메뉴 순서 = 시안(홈·클래스·회원·리포트·채팅·상담·설정). 항목은 하나도 빼지 않고 CSS order 로만 정렬하며,
+   시안에 없는 항목(데이터 현황·플레이그라운드·알림)은 설정 뒤 하단 그룹으로 둔다. */
+@media (min-width: 1024px) {
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] { display: flex; flex-direction: column; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a { order: 50; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/dashboard"] { order: 1; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/classes"] { order: 2; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/clients"] { order: 3; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/reports"] { order: 4; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/chat"] { order: 5; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/counseling"] { order: 6; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/settings"] { order: 7; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/upload-status"] { order: 60; margin-top: 12px; border-top: 1px solid #FFFFFF1F; border-radius: 0 0 14px 14px; padding-top: 14px; }
+}
+
+/* ───────── 코치 터치 영역 44px 보정(마크업 불변, 대상만 한정. 코치 쉘에는 <main> 이 없어 [data-shell-variant] 하위로 건다) ───────── */
+html.u2-coach [data-shell-variant] button[aria-expanded][aria-label$="접기"],
+html.u2-coach [data-shell-variant] button[aria-expanded][aria-label$="펼치기"] { min-width: 44px; min-height: 44px; width: 44px; height: 44px; }
+html.u2-coach [data-shell-variant] button[aria-pressed] { min-height: 44px; }
+html.u2-coach [data-shell-variant] button.rounded-full[class*="bg-[#F5EDFC]"][class*="py-1.5"] { min-height: 44px; min-width: 44px; }
+html.u2-coach [data-shell-variant] input[type="checkbox"] { width: 22px; height: 22px; accent-color: #5F0080; }

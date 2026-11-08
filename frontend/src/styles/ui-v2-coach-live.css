@@ -1,0 +1,14 @@
+/* SDD-320 F-5 — 라이브(대기실·진행·종료) 화면 스킨. CSS 만 쓰고 HostLiveView·소켓·명령 흐름은 건드리지 않는다.
+   범위: html.u2-live (코치 + /sessions/:id/player|live, /classes/now). 글꼴을 시안(Pretendard MB)으로 맞추고 터치 영역을 44px 로 보정한다.
+   업로드 상태 표시 규칙(기본 숨김·우상단 초록 아이콘 토글·이상 시 자동 노출)은 마크업·상태에 있어 그대로 유지된다. */
+html.u2-live .pz-root {
+  --font: 'Pretendard MB', 'Pretendard Variable', Pretendard, "Noto Sans KR", -apple-system, "Apple SD Gothic Neo", system-ui, sans-serif;
+  font-family: var(--font);
+}
+html.u2-live .pz-root button, html.u2-live .pz-root input, html.u2-live .pz-root select, html.u2-live .pz-root textarea { font-family: inherit; }
+html.u2-live .pz-root button:not([data-compact]), html.u2-live .pz-root [role="button"] { min-height: 44px; min-width: 44px; }
+/* 즉석 시작·대기실: 제목(.fl-h1)을 시안 크기(31px)로. 기존 규칙(.ic-root .ic-form .fl-h1 등 3클래스)보다 특이도를 높여 덮는다. */
+html.u2-live .pz-root .fl-h1, html.u2-live .ic-root .ic-form .fl-h1, html.u2-live .ic-root .fl-h1 {
+  font-size: 31px; line-height: 1.25; letter-spacing: -1.35px; font-weight: 600;
+  font-family: 'Pretendard MB', 'Pretendard Variable', Pretendard, "Noto Sans KR", -apple-system, "Apple SD Gothic Neo", system-ui, sans-serif;
+}
