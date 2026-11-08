@@ -128,3 +128,23 @@
 | FB10 | 검토 중·과거 비교 | 기존 `in_review` 분기와 `PastReportsCompare` 유지 |
 | FB11 | 운영 격리 | `check-ui-v2-off.mjs`·`check-release-bundle.mjs` 통과, 신규 금지 표현(점수|종합점수|좋음|나쁨|완료율|보증|100%) 0 |
 | FB12 | 검사 | `tsc -b` 0, vitest `sdd318g-report-sheet` + 기존 `sdd318*`·`sdd322*` 통과, 390px 캡처(착용/미착용) |
+
+---
+
+## Addendum-F-D — 리포트 상세: 인용문 + 측정 본문 새 디자인 전용 재작성 (구현 전)
+
+범위: `ui-v2-report-body.tsx`, `ui-v2-report-copy.ts`, 신규 `ui-v2-report-measure.tsx`, `styles/ui-v2.css` 끝의 `.u2-rp-*` 블록만. 레거시 `NarrativeSections`·`narrative.ts` 수정 0, 백엔드 0(별도 워커가 `content.quote` 추가 중). PDF 링크는 넣지 않는다(대표 결정).
+
+| ID | 항목 | 통과 기준 |
+|---|---|---|
+| FD1 | 인용문 | `content.quote`(string\|null)가 비어 있지 않으면 "함께 돌아보는 시간" 첫머리에 `.u2-rp-quote`(보라 세로선 2px, 18px) 표시. null·빈 문자열·비문자열이면 숨김. 밴드 착용/미착용 모두 동일 |
+| FD2 | 레거시 미사용 | 시트 본문에서 `NarrativeSections` import·렌더 0. `.u2-rp-measure .narrative-report` 숨김 CSS 제거 |
+| FD3 | 측정 본문 | `displayNarrative`·`eeg_timeline`을 신규 컴포넌트가 렌더: 흐름(journey) → 몸의 변화 → 마음의 변화 → 마무리. h3 17px, 본문 15px/1.85, 얇은 선, 흰 시트 |
+| FD4 | 변화량 | 지표별 전반→후반 평균과 방향+사실 문장("전반보다 후반에 …올라갔어요/내려갔어요/비슷했어요"). 평가어 없음. 단위: 회/분·밀리초(마음 지표는 단위 없이 숫자만) |
+| FD5 | 금지 표현 | 측정 본문 전체 텍스트에 /점수\|종합점수\|좋음\|나쁨\|좋아졌\|나빠졌\|주의가 필요\|완료\|보증\|100%/ 0건. 밴드 착용 시험으로 단언 |
+| FD6 | 종합점수 | 종합점수·퍼센트 환원 노출 0 |
+| FD7 | 그래프 | 지표별 얇은 추이선(SVG, role=img+title). 데이터 2점 미만이면 그래프 숨김(빈 안내 문구 없음) |
+| FD8 | 밴드 미착용 | 측정 본문 비노출, 안내 박스 유지(FB4) |
+| FD9 | 고지 | `WELLNESS_DISCLAIMER` 1회만 노출 |
+| FD10 | 회귀 | `tsc -b` 0, `tests/sdd318* sdd320* sdd321* sdd322*` 통과, `check-ui-v2-off`·`check-release-bundle` 통과 |
+| FD11 | 캡처 | 390px 착용(인용문 포함)/미착용, `captures-fd/` + 시안 비교 |

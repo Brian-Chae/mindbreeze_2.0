@@ -206,3 +206,41 @@ verify addendum-F-B(커밋 65636178)를 구현 전에 작성했다. 푸시·PR·
 ### 한계
 - 착용 캡처의 측정 본문(NarrativeSections)은 기존 컴포넌트 스타일 그대로라 시안만큼 얇은 위계는 아니다(레거시 수정 금지 범위).
 - 실기기·스크린리더 미검증.
+
+## F-D — 인용문 표시 + 측정 본문 새 디자인 전용 재작성
+
+대표 결정(11/8): ① 인용문 `content.quote` 표시 ② 측정 본문과 "좋아졌어요" 문구는 새 디자인 전용으로 재작성 ③ PDF 링크는 뺀 채 유지. verify addendum-F-D 커밋 `68f51f22`(구현 전).
+
+### 구현
+| 파일 | 내용 |
+|---|---|
+| `lib/api/report.ts` | `AdaptedReportContent.quote?: string \| null` 선택 필드 추가(읽기만, 기존 소비자 영향 0) |
+| `ui-v2-report-body.tsx` | `NarrativeSections` 제거 → `UiV2ReportMeasure`. 인용문은 "함께 돌아보는 시간" 첫머리(`.u2-rp-quote`). 의료 고지는 항상 1회 |
+| `ui-v2-report-measure.tsx` (신규) | 이번 시간의 흐름 → 몸의 변화 → 마음의 변화 → 마무리. 지표 행 = 이름 · 변화량 · 방향 문장 · 전반→후반 값 · 얇은 추이선(SVG) · 한 줄 설명 |
+| `ui-v2-report-copy.ts` | 지표 라벨·단위·설명, 방향 문장, 변화량 라벨, `readReportQuote` |
+| `styles/ui-v2.css` | `.u2-rp-*` 블록만: 인용문·지표 행·추이선 추가, 레거시 `.narrative-report` 숨김 규칙 제거 |
+
+### 측정 본문 데이터 매핑
+| 화면 요소 | 필드 (레거시 컴포넌트가 읽던 것과 동일) |
+|---|---|
+| 이번 시간의 흐름 | `displayNarrative.journey` |
+| 몸/마음 도입 문단 | `displayNarrative.bodyText` / `mindText` (있을 때만) |
+| 지표 행(호흡수·심박수·심박변이 / 집중도·이완도·감정안정도) | `displayNarrative.body[]` / `mind[]` — `id`, `direction`, `early`, `late`, `delta` |
+| 추이선 | `displayNarrative.timeline[]` (`min`, `respiratory_rate`, `heart_rate`, `sdnn/hrv`, `concentration`, `relaxation`, `emotional_stability` ← stress 역산 폴백 동일), 유효 2점 미만이면 숨김 |
+| 마무리 | `displayNarrative.closing` |
+| 인용문 | `content.quote` (비문자열·빈값이면 숨김) |
+| 미사용(의도) | `MetricNarrative.sentence`(규칙 문장에 "산만/불안정/안정적으로" 등 상태 판단 포함), `metricChangeInterpretation`, `metricDirectionGuide`, 분포 예시·범례·사이드바·다음 제안 카드 |
+
+### 제거한 평가어
+`좋아졌어요`, `주의가 필요해요`(레거시 `metricChangeInterpretation`), `증가/감소/유지` 배지, 레거시 규칙 문장 속 `대체로 산만했지만`·`불안정하게`·`안정적으로`·`긴장이 남아 있었지만`, `명상 중에는 낮아지는(↓) 쪽이 차분해지는 신호예요` 류의 방향 가치 안내, 권장(정상) 범위 띠. 대신 "OO는 전반보다 후반에 올라갔어요/내려갔어요/전반과 후반이 비슷했어요" + "전반 X → 후반 Y".
+
+### 시험
+- `tsc -b` 0, eslint(변경 파일) 0.
+- `tests/sdd318g-report-sheet` 10건(신규 6: quote 있음/없음/비문자열, 착용 시 새 본문·레거시 클래스 0·금지어 0·지표 ≥3·추이선 ≥3·고지 1회, 미착용, 방향 문장, 레거시 상태 판단어 0). `sdd318* sdd320* sdd321* sdd322*` 합계 180건 통과.
+- 운영 번들(`--mode prod`): `check-ui-v2-off` 통과(255파일), `check-release-bundle` 통과, 운영 CSS 에 `u2-rp` 0건.
+- 390px 캡처(합성 API, `VITE_UI_V2=true`): 본문 `forbidden` 0건, 가로 넘침·겹침 없음, 페이지 오류 0. `captures-fd/{worn,unworn}-report-detail-{390,full}.png`, 시안 비교 `compare-{worn,unworn}.png`, `meta-*.json`.
+
+### 한계
+- 백엔드 `content.quote` 는 다른 워커가 추가 중 — 이 커밋은 값이 없으면 숨김으로 안전하게 동작.
+- 캡처 픽스처의 감정안정도는 stress 0~1 역산 폴백을 타서 0.5→0.6 으로 보인다(실데이터는 0~100). 로직 변경 없음.
+- 실기기·스크린리더 미검증. 푸시·PR·배포 안 함.
