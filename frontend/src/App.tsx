@@ -1,6 +1,6 @@
 import OptionalProfilePage from './pages/settings/optional-profile-page';
 import { MemberStructureHomePage, MemberClassesPage } from './route-pages';
-import { lazy, Suspense, useEffect, type ReactElement } from 'react';
+import { lazy, Suspense, useEffect, type ComponentType, type ReactElement } from 'react';
 import { CounselingGate } from './components/routing/counseling-gate';
 import { isAiEnabled, isDesignRoutesEnabled } from './lib/feature-flags';
 import { useStatusBar } from './lib/native/use-status-bar';
@@ -110,6 +110,18 @@ const CoachUiV2SettingsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
 const CoachUiV2HomePage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
   ? import('./pages/coach/ui-v2/ui-v2-coach-home-page').then((module) => ({ default: module.UiV2CoachHomePage }))
   : Promise.resolve({ default: () => <></> }));
+const CoachUiV2ClassesPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/coach/ui-v2/ui-v2-coach-classes-page').then((module) => ({ default: module.UiV2CoachClassesPage }))
+  : Promise.resolve({ default: () => <></> }));
+const CoachUiV2ClientsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/coach/ui-v2/ui-v2-coach-clients-page').then((module) => ({ default: module.UiV2CoachClientsPage }))
+  : Promise.resolve({ default: () => <></> }));
+const CoachUiV2ReportsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/coach/ui-v2/ui-v2-coach-reports-page').then((module) => ({ default: module.UiV2CoachReportsPage }))
+  : Promise.resolve({ default: () => <></> }));
+const LegacyClassesPage = lazy(() => import('./pages/classes/host-classes-page').then((module) => ({ default: module.HostClassesPage })));
+const LegacyClientsPage = lazy(() => import('./pages/clients/ClientListPage'));
+const LegacyReportsPage = lazy(() => import('./pages/reports/ReportListPage'));
 const LegacyDashboardPage = lazy(() => import('./pages/DashboardPage'));
 const CoachUiV2ChatPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
   ? import('./pages/coach/ui-v2/ui-v2-coach-chat-page').then((module) => ({ default: module.UiV2CoachChatPage }))
@@ -149,6 +161,11 @@ function CoachAwareDashboard() {
   const role = useAuthStore((s) => s.user?.role);
   const useV2 = import.meta.env.VITE_UI_V2 === 'true' && role === 'counselor';
   return useV2 ? <Suspense fallback={null}><CoachUiV2HomePage /></Suspense> : <LegacyDashboardPage />;
+}
+function CoachAwareList({ V2, Legacy }: { V2: ComponentType; Legacy: ComponentType }) {
+  const role = useAuthStore((s) => s.user?.role);
+  const useV2 = import.meta.env.VITE_UI_V2 === 'true' && role === 'counselor';
+  return useV2 ? <Suspense fallback={null}><V2 /></Suspense> : <Suspense fallback={null}><Legacy /></Suspense>;
 }
 function CoachAwareChat({ Legacy }: { Legacy: () => ReactElement }) {
   const role = useAuthStore((s) => s.user?.role);
@@ -267,10 +284,7 @@ const router = createBrowserRouter(
         <Route path="/onboarding/counselor" element={<RoleGuard role="counselor" onMismatch="notice"><CounselorOnboardingPage /></RoleGuard>} />
         <Route path="/onboarding/client" element={<RoleGuard role="client" onMismatch="notice"><ClientOnboardingPage /></RoleGuard>} />
         <Route path="/onboarding/client/essentials" element={<RoleGuard role="client" onMismatch="notice"><ClientEssentialsPage /></RoleGuard>} />
-        <Route path="/clients" lazy={async () => {
-          const module = await import('./pages/clients/ClientListPage');
-          return { element: <RoleGuard role={['counselor', 'org_admin']}><module.default /></RoleGuard> };
-        }} />
+        <Route path="/clients" element={<RoleGuard role={['counselor', 'org_admin']}><CoachAwareList V2={CoachUiV2ClientsPage} Legacy={LegacyClientsPage} /></RoleGuard>} />
         <Route path="/clients/invite" element={<RoleGuard role={['counselor', 'org_admin']}><ClientInvitePage /></RoleGuard>} />
         <Route path="/clients/:id" element={<RoleGuard role={['counselor', 'org_admin']}><ClientProfilePage /></RoleGuard>} />
         <Route path="/invite/:token" element={<InviteLandingPage />} />
@@ -288,10 +302,7 @@ const router = createBrowserRouter(
         <Route path="/sessions" element={<RoleGuard role={['counselor', 'org_admin']}><Navigate to="/classes" replace /></RoleGuard>} />
         <Route path="/sessions/new" element={<RoleGuard role={['counselor', 'org_admin']}><Navigate to="/classes/new" replace /></RoleGuard>} />
         <Route path="/sessions/:id" element={<RoleGuard role={['counselor', 'org_admin']}><LegacySessionRedirect /></RoleGuard>} />
-        <Route path="/classes" lazy={async () => {
-          const module = await import('./pages/classes/host-classes-page');
-          return { element: <RoleGuard role={['counselor', 'org_admin']}><module.HostClassesPage /></RoleGuard> };
-        }} />
+        <Route path="/classes" element={<RoleGuard role={['counselor', 'org_admin']}><CoachAwareList V2={CoachUiV2ClassesPage} Legacy={LegacyClassesPage} /></RoleGuard>} />
         <Route path="/classes/now" element={<RoleGuard role={['counselor', 'org_admin']}><InstantClassPage /></RoleGuard>} />
         <Route path="/classes/new" element={<RoleGuard role={['counselor', 'org_admin']}><ClassSchedulingWizard /></RoleGuard>} />
         <Route path="/classes/:classId" element={<RoleGuard role={['counselor', 'org_admin']}><HostClassDetailPage /></RoleGuard>} />
@@ -333,10 +344,7 @@ const router = createBrowserRouter(
           </>
         )}
         <Route path="/admin" element={<PlatformAdminRoute><Navigate to="/admin/orgs" replace /></PlatformAdminRoute>} />
-        <Route path="/reports" lazy={async () => {
-          const module = await import('./pages/reports/ReportListPage');
-          return { element: <RoleGuard role={['counselor', 'org_admin']}><module.default /></RoleGuard> };
-        }} />
+        <Route path="/reports" element={<RoleGuard role={['counselor', 'org_admin']}><CoachAwareList V2={CoachUiV2ReportsPage} Legacy={LegacyReportsPage} /></RoleGuard>} />
         <Route path="/reports/sample" element={<ReportSamplePage />} />
         <Route path="/reports/:id" element={<RoleGuard role={['counselor', 'org_admin']}><ReportDetailPage /></RoleGuard>} />
         <Route

@@ -25,6 +25,7 @@
 .ui-v2 .u2f-badge--warn { background: #FBE9EE; color: #8E1F3B; }
 .ui-v2 .u2f-tr { display: grid; grid-template-columns: 1.4fr 1fr 1fr 110px; align-items: center; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--u2-line); font-size: 14px; }
 .ui-v2 .u2f-tr > * { min-width: 0; overflow-wrap: anywhere; }
+.ui-v2 .u2f-tr small { display: block; }
 .ui-v2 .u2f-th { font-size: 12px; color: var(--u2-muted); background: #EEE5F580; }
 .ui-v2 .u2f-table-box { background: var(--u2-surface); border-radius: 20px; overflow: hidden; }
 @media (min-width: 1024px) {
