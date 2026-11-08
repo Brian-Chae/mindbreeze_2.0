@@ -84,3 +84,13 @@ html.u2-coach body { font-size: 15px; line-height: 1.6; }
   html.u2-coach [data-shell-variant] > section > header { height: auto; min-height: 88px; padding: 10px 48px; background: #F4F4F7; border-bottom: 0; }
   html.u2-coach [data-shell-variant] .mobile-menu-swipe-page { padding-left: 24px; padding-right: 24px; }
 }
+
+/* ───────── 코치 홈 PC: 좌(히어로·타일·클래스·진행) / 우(레일) 2열 ───────── */
+@media (min-width: 1024px) {
+  html.u2-coach .ch-home.ch-home.ch-home { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); column-gap: 28px; row-gap: 20px; align-items: start; }
+  html.u2-coach .ch-home > * { grid-column: 1; min-width: 0; }
+  html.u2-coach .ch-home > .ch-work { display: contents; }
+  html.u2-coach .ch-home .ch-work > .ch-main { grid-column: 1; min-width: 0; }
+  html.u2-coach .ch-home .ch-work > .ch-rail { grid-column: 2; grid-row: 1 / span 5; min-width: 0; }
+  html.u2-coach .ch-home .ch-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

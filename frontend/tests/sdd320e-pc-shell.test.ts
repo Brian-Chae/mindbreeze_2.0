@@ -93,3 +93,14 @@ describe('코치 공통 제목 31px', () => {
     }
   });
 });
+
+describe('코치 홈 PC 2열', () => {
+  const css = read('src/styles/ui-v2-pc.css');
+  it('좌 1.5fr / 우 1fr, 1024px 이상, html.u2-coach 하위, 특이도 보강', () => {
+    expect(css).toMatch(/@media \(min-width: 1024px\)[\s\S]*html\.u2-coach \.ch-home\.ch-home\.ch-home \{ display: grid; grid-template-columns: minmax\(0, 1\.5fr\) minmax\(0, 1fr\)/);
+    expect(css).toContain('.ch-work > .ch-rail { grid-column: 2');
+  });
+  it('레거시 counselor-home.css 는 수정하지 않았다(DOM 클래스 의존만)', () => {
+    expect(read('src/components/dashboard/counselor-home.css')).not.toContain('u2-coach');
+  });
+});
