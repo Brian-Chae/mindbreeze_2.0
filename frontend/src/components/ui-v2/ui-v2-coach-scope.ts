@@ -6,6 +6,7 @@ import '../../styles/ui-v2-brand.css';
 import '../../styles/ui-v2-pc.css';
 import '../../styles/ui-v2-coach-live.css';
 import { useAuthStore } from '../../stores/authStore';
+import { attachCoachCompactTitle, resetCoachCompactTitle } from './ui-v2-coach-compact-title';
 
 export const COACH_SCOPE_CLASS = 'u2-coach';
 /** SDD-320 F-5: 라이브(대기실·진행·종료) 화면 전용 스킨 클래스. 코치 D안 스코프(u2-coach)와 배타적이다. */
@@ -47,7 +48,12 @@ export function attachCoachScope(router: RouterLike, root: HTMLElement = documen
     root.classList.toggle(LIVE_SCOPE_CLASS, shouldApplyLiveScope(useAuthStore.getState().user?.role, pathname));
   };
   apply(router.state.location.pathname);
-  const offRouter = router.subscribe((state) => apply(state.location.pathname));
+  const offTitle = attachCoachCompactTitle(root);
+  let lastPath = router.state.location.pathname;
+  const offRouter = router.subscribe((state) => {
+    apply(state.location.pathname);
+    if (state.location.pathname !== lastPath) { lastPath = state.location.pathname; resetCoachCompactTitle(root); }
+  });
   const offAuth = useAuthStore.subscribe(() => apply(router.state.location.pathname));
-  return () => { offRouter(); offAuth(); root.classList.remove(COACH_SCOPE_CLASS, LIVE_SCOPE_CLASS); };
+  return () => { offRouter(); offAuth(); offTitle(); root.classList.remove(COACH_SCOPE_CLASS, LIVE_SCOPE_CLASS); };
 }

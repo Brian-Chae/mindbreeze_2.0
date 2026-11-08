@@ -107,3 +107,14 @@ html.u2-coach [data-mobile-swipe-page] .max-w-2xl > .flex button{min-height:44px
 html.u2-coach [data-mobile-swipe-page] .max-w-2xl [role="switch"][aria-checked="false"]{background:#6B6472}
 /* 11/9 대표 지시: 클래스 상세 상단 탭(개요·회차·멤버·설정) 선택 시 보라 배경 위 흰 글자 */
 html.u2-coach main nav[aria-label="클래스 메뉴"] a[aria-current="page"],html.u2-coach [data-shell-variant] nav[aria-label="클래스 메뉴"] a[aria-current="page"]{color:#FFFFFF}
+
+/* SDD-320 H — 모바일 스크롤 시 상단 바에 현재 메뉴 제목(회원 앱 .u2-compact-title 과 같은 16px/600·말줄임·160ms 페이드).
+   워드마크는 숨겨 겹침을 막는다큰 제목 블록은 스크롤 영역 밖에 고정돼 있어 접힐 때 함께 숨겨 중복을 막는다. PC(≥768px)는 헤더에 제목이 항상 있으므로 적용하지 않는다. */
+html.u2-coach .u2-coach-compact-title{display:none}
+@media(max-width:767px){
+  html.u2-coach .u2-coach-compact-title[data-shown="true"]{display:block;flex:1;min-width:0;margin:0 8px;font-size:16px;font-weight:600;color:var(--u2-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;animation:u2-coach-title-in 160ms ease-out}
+  html.u2-coach.u2-coach-collapsed .mb-shell-topbar span.font-extrabold{display:none}
+  html.u2-coach.u2-coach-collapsed [data-ui="page-header"].mb-page-header-mobile{display:none}
+}
+@keyframes u2-coach-title-in{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){html.u2-coach .u2-coach-compact-title{animation:none!important}}

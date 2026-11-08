@@ -31,6 +31,8 @@ export async function checkUiV2Off(root) {
         if (/ui-v2-coach-(home|classes|clients|reports|report-detail)-page|UiV2CoachHomePage|UiV2MemberSidebar/.test(content)) problems.push(`${name}: 코치 홈·목록 D안 청크 참조`);
         // SDD-320: 코치 스코프 식별자
         if (/attachCoachScope|ui-v2-coach-scope|u2-coach|u2-live/.test(content)) problems.push(`${name}: 코치 D안 스코프(u2-coach)가 번들에 포함됨`);
+        // SDD-320 H: 코치 모바일 스크롤 제목
+        if (/ui-v2-coach-compact-title|attachCoachCompactTitle|u2-coach-collapsed|u2-coach-compact-title/.test(content)) problems.push(`${name}: 코치 스크롤 제목(compact-title)이 번들에 포함됨`);
         // SDD-320 G: 코치 알림·플레이그라운드 D안 청크
         if (/ui-v2-coach-notifications-page|ui-v2-coach-playground-page|ui-v2-playground-entry|UiV2CoachNotificationsPage|UiV2CoachPlaygroundPage|UiV2PlaygroundEntry/.test(content)) problems.push(`${name}: 코치 알림·플레이그라운드 D안 청크 참조`);
         // ③ 루트 클래스 부여 코드
@@ -42,6 +44,7 @@ export async function checkUiV2Off(root) {
       if (name.endsWith('.css') && /u2-org-|u2-table/.test(content)) problems.push(`${name}: 기관 D안 CSS(u2-org-/u2-table)가 운영 번들에 포함됨`);
       if (name.endsWith('.css') && /\.u2f-(cols|table|cards|filters|tr)|\.u2-side-(item|menu|foot)/.test(content)) problems.push(`${name}: 코치 목록·회원 사이드바 D안 CSS(u2f-/u2-side-)가 운영 번들에 포함됨`);
       if (name.endsWith('.css') && /\.u2g-(noti|pg|stack|bar|notice)/.test(content)) problems.push(`${name}: 코치 알림·플레이그라운드 D안 CSS(u2g-)가 운영 번들에 포함됨`);
+      if (name.endsWith('.css') && /u2-coach-(compact-title|collapsed)/.test(content)) problems.push(`${name}: 코치 스크롤 제목 CSS가 운영 번들에 포함됨`);
       if (name.endsWith('.css') && /html\.u2-live/.test(content)) problems.push(`${name}: 라이브 D안 스코프 CSS(html.u2-live)가 운영 번들에 포함됨`);
       if (name.endsWith('.css') && /html\.u2-coach/.test(content)) problems.push(`${name}: 코치 D안 스코프 CSS(html.u2-coach)가 운영 번들에 포함됨`);
       if (name.endsWith('.css') && /@media \(min-width:\s*1024px\)[^{]*\{[^}]*data-shell-variant="ui-v2"|data-shell-variant="ui-v2"\]\s*>\s*aside/.test(content)) problems.push(`${name}: PC 셸 D안 CSS(ui-v2-pc)가 운영 번들에 포함됨`);
