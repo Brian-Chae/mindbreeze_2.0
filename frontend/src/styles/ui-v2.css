@@ -12,6 +12,7 @@
 /* 전역 mb-tokens.css 가 h1~h3·p 에 CDN 폰트를 지정하므로, D안에서는 쉘 폰트(자체 호스팅 Pretendard)를 상속한다. */
 .ui-v2 h1,.ui-v2 h2,.ui-v2 h3,.ui-v2 p,.ui-v2 li,.ui-v2 button,.ui-v2 input,.ui-v2 textarea,.ui-v2 select,.ui-v2 summary{font-family:inherit}
 .ui-v2 h1,.ui-v2 h2,.ui-v2 h3{word-break:keep-all;overflow-wrap:anywhere}
+.ui-v2 h1,.ui-v2 h2,.ui-v2 h3{color:var(--u2-text)}
 .ui-v2 h1{font-size:31px;line-height:1.25;letter-spacing:-1.35px;font-weight:600}
 .ui-v2 h2{font-size:23px;line-height:1.4;letter-spacing:-.6px;font-weight:600}
 .ui-v2 h3{font-size:17px;font-weight:600}
@@ -19,7 +20,8 @@
 .ui-v2 label:has(input[type=checkbox]),.ui-v2 label:has(input[type=radio]){display:flex;align-items:center;gap:10px;min-height:44px}
 .ui-v2 input[type=checkbox],.ui-v2 input[type=radio]{width:22px;height:22px;flex-shrink:0;accent-color:var(--u2-accent)}
 .ui-v2 button,.ui-v2 input:not([type=checkbox]):not([type=radio]),.ui-v2 select{min-height:44px}
-.ui-v2 button{font:inherit;border:0;background:none;color:inherit;cursor:pointer}
+/* B2: 리셋 특이도를 0 으로 낮춰 레거시 Tailwind 버튼(테두리·배경)을 덮지 않게 한다. */
+:where(.ui-v2) button{font:inherit;border:0 solid;background:none;color:inherit;cursor:pointer}
 .ui-v2 a,.ui-v2 button,.ui-v2 input,.ui-v2 select{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .ui-v2 button:focus-visible,.ui-v2 a:focus-visible,.ui-v2 input:focus-visible,.ui-v2 select:focus-visible,.ui-v2 [tabindex]:focus-visible{outline:2px solid var(--u2-accent);outline-offset:3px}
 .ui-v2 .u2-muted,.ui-v2 small{color:var(--u2-muted)}
@@ -40,7 +42,7 @@
 @media(min-width:600px){.ui-v2 .u2-heading{padding-top:28px}.ui-v2 .u2-main{padding-bottom:calc(148px + env(safe-area-inset-bottom,0px))}}
 
 /* 카드·칩·버튼 */
-.ui-v2 .u2-card{display:block;position:relative;overflow:hidden;background:var(--u2-surface);border-radius:var(--u2-r-card);padding:24px;margin-bottom:14px;min-width:0}
+.ui-v2 .u2-card{display:block;position:relative;isolation:isolate;overflow:hidden;background:var(--u2-surface);border-radius:var(--u2-r-card);padding:24px;margin-bottom:14px;min-width:0}
 .ui-v2 .u2-card p{margin-top:10px}
 .ui-v2 .u2-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .ui-v2 .u2-row>*{min-width:0}
@@ -248,3 +250,28 @@
 .ui-v2 .u2-hero--nature{text-align:left;align-items:stretch}
 .ui-v2 .u2-hero--nature>*{align-self:stretch;text-align:left}
 .ui-v2 .u2-hero--nature>.u2-chip,.ui-v2 .u2-hero--nature>.u2-eyebrow{align-self:flex-start}
+
+/* ───────── F-A (SDD-318 후속) ───────── */
+/* B1: 클래스 상세 하단 "내 참여와 동의" 접기 섹션 + 나가기 보조 버튼 */
+.ui-v2 .u2-ops{background:var(--u2-surface);border-radius:var(--u2-r-card);margin:22px 0 14px;overflow:hidden}
+.ui-v2 .u2-ops>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;padding:12px 20px;cursor:pointer;list-style:none;font-weight:600}
+.ui-v2 .u2-ops>summary::-webkit-details-marker{display:none}
+.ui-v2 .u2-ops[open]>summary .u2-setchev{transform:rotate(90deg)}
+.ui-v2 .u2-ops .u2-ops-body{padding:0 12px 16px}
+.ui-v2 .u2-ops .mc-card{background:none;border:0;box-shadow:none;padding:8px}
+.ui-v2 .u2-leave{margin-bottom:14px}
+/* B6: 코드 참여 카드 */
+.ui-v2 .u2-codejoin{display:block}
+.ui-v2 .u2-codejoin .mc-card{background:var(--u2-surface);border:0;box-shadow:none;border-radius:var(--u2-r-card);padding:24px}
+.ui-v2 .u2-codejoin h2{font-size:19px}
+.ui-v2 .u2-codejoin form{display:flex;flex-direction:column;gap:12px;align-items:stretch}
+.ui-v2 .u2-codejoin label{display:flex;flex-direction:column;gap:8px;font-size:14px;font-weight:600;margin-top:12px}
+.ui-v2 .u2-codejoin input{height:50px;border-radius:var(--u2-r-btn);border:0;background:var(--u2-canvas);color:var(--u2-text);padding:0 14px;font:inherit;align-self:stretch}
+.ui-v2 .u2-codejoin input::placeholder{color:var(--u2-muted)}
+.ui-v2 .u2-codejoin button{min-height:50px;align-self:stretch;border-radius:var(--u2-r-btn);background:var(--u2-tint);color:var(--u2-accent);font-weight:600;border:0}
+.ui-v2 .u2-codejoin button:disabled{opacity:.55;cursor:default}
+/* B10: 담당 코치 카드 */
+.ui-v2 .u2-coachcard .mh-counselors{background:none;padding:0;border:0}
+.ui-v2 .u2-coachcard .mc-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+.ui-v2 .u2-coachcard .mc-heading{font-size:19px;font-weight:600;color:var(--u2-text)}
+.ui-v2 .u2-coachcard .mc-row button{color:var(--u2-accent);font-size:13px;font-weight:600}

@@ -7,14 +7,16 @@ import { UiV2ReportSheet } from '../../../components/ui-v2/ui-v2-report-sheet';
 import { useMobileSwipeProtection } from '../../../hooks/use-mobile-swipe-protection';
 import { listReports, markAllReportsRead, type ReportDto } from '../../../lib/api/reports';
 import { useReportStore } from '../../../stores/reportStore';
-import { MEMBER_UNREAD_LABEL } from '../../../lib/report-ops-labels';
 import { isReportDelayed, isReportInReview, REPORT_IN_REVIEW_BADGE, REPORT_IN_REVIEW_DELAYED_NOTICE } from '../../../lib/report-review-copy';
 
 type SortKey = 'newest' | 'oldest' | 'title';
 const PAGE_LIMIT = 20;
 const SORT_LABEL: Record<SortKey, string> = { newest: '최신순', oldest: '오래된순', title: '제목순' };
 
-const title = (r: ReportDto) => r.session_title || (typeof r.content?.headline === 'string' ? r.content.headline : '리포트');
+const sessionTitle = (r: ReportDto) => r.session_title || (typeof r.content?.headline === 'string' ? r.content.headline : '리포트');
+/** B8: 서사 제목(content.headline)이 있으면 제목, 회차 제목은 부제. 없으면 기존 제목 유지. */
+const narrative = (r: ReportDto) => (typeof r.content?.headline === 'string' && r.content.headline.trim() && !isReportInReview(r) ? r.content.headline.trim() : '');
+const title = (r: ReportDto) => narrative(r) || sessionTitle(r);
 const coach = (r: ReportDto) => r.counselor_name || '코치';
 const keyOf = (r: ReportDto) => r.id ?? `${r.session_id}-${r.type}-${r.participant_id ?? r.user_id ?? 'unknown'}`;
 function summary(r: ReportDto): string {
@@ -29,7 +31,7 @@ function shortDate(iso: string | null): string {
 }
 function filterSort(reports: ReportDto[], search: string, sort: SortKey): ReportDto[] {
   const q = search.trim().toLowerCase();
-  return reports.filter((r) => !q || [title(r), r.session_title ?? '', summary(r)].some((t) => t.toLowerCase().includes(q))).sort((a, b) => {
+  return reports.filter((r) => !q || [title(r), sessionTitle(r), summary(r)].some((t) => t.toLowerCase().includes(q))).sort((a, b) => {
     if (sort === 'title') return title(a).localeCompare(title(b), 'ko');
     const at = new Date(a.scheduled_at ?? a.created_at ?? 0).getTime();
     const bt = new Date(b.scheduled_at ?? b.created_at ?? 0).getTime();
@@ -112,8 +114,9 @@ export function UiV2ReportsPage() {
     return (
       <button key={keyOf(r)} type="button" aria-haspopup="dialog" disabled={!r.id} onClick={() => setSelectedId(r.id)} className="u2-card" style={{ width: '100%', textAlign: 'left' }}>
         {first && <UiV2ArcRing variant="card" />}
-        <div className="u2-row"><span className="u2-chip">{inReview ? REPORT_IN_REVIEW_BADGE : unread ? MEMBER_UNREAD_LABEL : r.sent_at ? '확인 가능' : '대기'}</span><small>{shortDate(r.scheduled_at ?? r.created_at)}</small></div>
+        <div className="u2-row"><span className="u2-chip">{inReview ? REPORT_IN_REVIEW_BADGE : unread ? '안 읽음' : r.sent_at ? '읽음' : '대기'}</span><small>{shortDate(r.scheduled_at ?? r.created_at)}</small></div>
         <h2 style={{ marginTop: 12, fontSize: 21 }}>{title(r)}</h2>
+        {narrative(r) && sessionTitle(r) !== narrative(r) && <p className="u2-muted" style={{ fontSize: 13, marginTop: 4 }}>{sessionTitle(r)}</p>}
         {inReview ? <p className="u2-muted" style={{ fontSize: 14 }}>코치가 리포트를 확인하고 있어요.</p> : summary(r) && <p className="u2-muted" style={{ fontSize: 14, lineHeight: 1.75 }}>{summary(r)}</p>}
         {isReportDelayed(r) && <p className="u2-muted" style={{ fontSize: 12 }}>{REPORT_IN_REVIEW_DELAYED_NOTICE}</p>}
         {!inReview && <div className="u2-textlink" aria-hidden="true">{unread ? '리포트 읽기 ↗' : '다시 읽기 ↗'}</div>}
@@ -139,7 +142,7 @@ export function UiV2ReportsPage() {
         : filtered.length === 0 ? <div className="u2-empty"><p>조건에 맞는 리포트가 없어요.</p><button type="button" className="u2-textlink" onClick={() => { setSearch(''); setPage(1); }}>필터 초기화</button></div>
         : grouped ? grouped.map(([name, items], gi) => (
           <section key={name} aria-label={name}>
-            <div className="u2-section-head u2-row"><h2>{name}</h2><small>{items.length}개</small></div>
+            <div className="u2-section-head u2-row"><h2>지도사 {name}</h2><small>{items.length}개</small></div>
             {items.map((r, i) => card(r, gi === 0 && i === 0))}
           </section>
         )) : filtered.map((r, i) => card(r, i === 0))}

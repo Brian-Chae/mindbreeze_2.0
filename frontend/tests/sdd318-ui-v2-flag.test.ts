@@ -63,7 +63,8 @@ describe('CSS 스코프', () => {
     expect(selectors.length).toBeGreaterThan(20);
     for (const group of selectors) {
       for (const sel of group.split(',').map((x) => x.trim())) {
-        expect(sel.startsWith('.ui-v2'), `전역으로 새는 선택자: ${sel}`).toBe(true);
+        // F-A(B2): 버튼 리셋은 :where(.ui-v2) 로 특이도 0 이어야 레거시 Tailwind 버튼을 덮지 않는다(여전히 .ui-v2 하위로 한정).
+        expect(sel.startsWith('.ui-v2') || sel.startsWith(':where(.ui-v2)'), `전역으로 새는 선택자: ${sel}`).toBe(true);
       }
     }
   });
