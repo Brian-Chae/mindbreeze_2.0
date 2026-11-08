@@ -107,6 +107,10 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const CoachUiV2SettingsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
   ? import('./pages/coach/ui-v2/ui-v2-coach-settings-page').then((module) => ({ default: module.UiV2CoachSettingsPage }))
   : Promise.resolve({ default: () => <></> }));
+const CoachUiV2HomePage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/coach/ui-v2/ui-v2-coach-home-page').then((module) => ({ default: module.UiV2CoachHomePage }))
+  : Promise.resolve({ default: () => <></> }));
+const LegacyDashboardPage = lazy(() => import('./pages/DashboardPage'));
 const CoachUiV2ChatPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
   ? import('./pages/coach/ui-v2/ui-v2-coach-chat-page').then((module) => ({ default: module.UiV2CoachChatPage }))
   : Promise.resolve({ default: () => <></> }));
@@ -140,6 +144,11 @@ function CoachAwareSettings() {
   const role = useAuthStore((s) => s.user?.role);
   if (import.meta.env.VITE_UI_V2 === 'true' && role === 'counselor') return <Suspense fallback={null}><CoachUiV2SettingsPage /></Suspense>;
   return <SettingsPage />;
+}
+function CoachAwareDashboard() {
+  const role = useAuthStore((s) => s.user?.role);
+  const useV2 = import.meta.env.VITE_UI_V2 === 'true' && role === 'counselor';
+  return useV2 ? <Suspense fallback={null}><CoachUiV2HomePage /></Suspense> : <LegacyDashboardPage />;
 }
 function CoachAwareChat({ Legacy }: { Legacy: () => ReactElement }) {
   const role = useAuthStore((s) => s.user?.role);
@@ -253,10 +262,7 @@ const router = createBrowserRouter(
         <Route path="/set-password" element={<SetPasswordPage />} />
         <Route path="/membership-invite" element={<MembershipInvitePage />} />
         <Route path="/agent" element={<RoleGuard role="counselor"><LegacyAgentRedirect /></RoleGuard>} />
-        <Route path="/dashboard" lazy={async () => {
-          const module = await import('./pages/DashboardPage');
-          return { element: <RoleGuard role="counselor"><module.default /></RoleGuard> };
-        }} />
+        <Route path="/dashboard" element={<RoleGuard role="counselor"><Suspense fallback={null}><CoachAwareDashboard /></Suspense></RoleGuard>} />
         <Route path="/dashboard/org" element={<RoleGuard role="org_admin"><OrgDashboardPage /></RoleGuard>} />
         <Route path="/onboarding/counselor" element={<RoleGuard role="counselor" onMismatch="notice"><CounselorOnboardingPage /></RoleGuard>} />
         <Route path="/onboarding/client" element={<RoleGuard role="client" onMismatch="notice"><ClientOnboardingPage /></RoleGuard>} />

@@ -1,0 +1,38 @@
+/* SDD-320 F — 코치 화면 시안 정합(홈·목록·상세). 규칙은 .u2f(코치 ui-v2 화면 래퍼) 하위로 한정한다. 토큰은 ui-v2.css 의 .ui-v2 변수를 그대로 쓴다. */
+.ui-v2.u2f { padding: 8px 16px calc(120px + env(safe-area-inset-bottom, 0px)); background: transparent; font-family: 'Pretendard MB', 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif; }
+.ui-v2 .u2f-lead { color: var(--u2-muted); margin: 0 0 18px; padding: 0 4px; }
+.ui-v2 .u2f-cols, .ui-v2 .u2f-split { display: block; }
+.ui-v2 .u2f-cols > * { min-width: 0; }
+.ui-v2 .u2f-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.ui-v2 .u2f-actions > * { width: auto; flex: 1 1 auto; }
+.ui-v2 .u2f-btn { margin-top: 18px; width: auto; align-self: stretch; }
+.ui-v2 .u2f-banner { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; }
+.ui-v2 .u2f-code { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; }
+.ui-v2 .u2f-code .u2-secondary { width: auto; }
+.ui-v2 .u2f-wide { margin-top: 12px; }
+.ui-v2 .u2-hero--nature .u2-num small { display: inline; color: #FFFFFF; font-size: 16px; letter-spacing: 0; }
+/* 표(PC) / 카드(모바일) */
+.ui-v2 .u2f-table { display: none; }
+.ui-v2 .u2f-cards { display: block; }
+.ui-v2 .u2f-filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+.ui-v2 .u2f-filters .u2-search { flex: 1 1 220px; margin-bottom: 0; }
+.ui-v2 .u2f-filters select { min-height: 48px; border: 1px solid var(--u2-line); background: var(--u2-surface); color: var(--u2-text); border-radius: 12px; padding: 0 14px; font: inherit; min-width: 130px; }
+.ui-v2 .u2f-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+.ui-v2 .u2f-chips button { min-height: 44px; min-width: 44px; padding: 0 16px; border-radius: 12px; background: var(--u2-surface); color: var(--u2-muted); font-weight: 600; font-size: 14px; }
+.ui-v2 .u2f-chips button[aria-pressed="true"], .ui-v2 .u2f-chips button[aria-selected="true"] { background: var(--u2-tint); color: var(--u2-accent); box-shadow: inset 0 -2px var(--u2-accent); }
+.ui-v2 .u2f-group { margin: 20px 4px 8px; font-size: 14px; color: var(--u2-muted); font-weight: 600; }
+.ui-v2 .u2f-badge { display: inline-flex; align-items: center; min-height: 26px; padding: 2px 10px; border-radius: 8px; background: var(--u2-tint); color: var(--u2-accent); font-size: 12px; font-weight: 600; }
+.ui-v2 .u2f-badge--warn { background: #FBE9EE; color: #8E1F3B; }
+.ui-v2 .u2f-tr { display: grid; grid-template-columns: 1.4fr 1fr 1fr 110px; align-items: center; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--u2-line); font-size: 14px; }
+.ui-v2 .u2f-tr > * { min-width: 0; overflow-wrap: anywhere; }
+.ui-v2 .u2f-th { font-size: 12px; color: var(--u2-muted); background: #EEE5F580; }
+.ui-v2 .u2f-table-box { background: var(--u2-surface); border-radius: 20px; overflow: hidden; }
+@media (min-width: 1024px) {
+  .ui-v2.u2f { padding: 0 48px 72px; max-width: 1600px; }
+  .ui-v2 .u2f-cols { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); column-gap: 28px; align-items: start; }
+  .ui-v2 .u2f-split { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+  .ui-v2 .u2f-wide { grid-column: 1 / -1; }
+  .ui-v2 .u2f-rail > .u2-card:first-child { margin-top: 0; }
+  .ui-v2 .u2f-table { display: block; }
+  .ui-v2 .u2f-cards { display: none; }
+}

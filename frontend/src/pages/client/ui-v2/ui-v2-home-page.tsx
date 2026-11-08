@@ -135,6 +135,8 @@ export function UiV2HomePage() {
       {!next && upcoming.length === 0 && <p className="u2-empty">이번 주 예정된 클래스가 없어요. 코치에게 클래스를 신청해 보세요.</p>}
       {classes.length > 0 && <p className="u2-footnote">참여 중인 클래스 {classes.length}개</p>}
 
+      <div className="u2-card u2-coachcard"><CounselorSection /></div>
+
       </div><div className="u2-pc-side">
       <div className="u2-section-head u2-row"><h2>최근 리포트</h2><Link className="u2-textlink" to="/app/reports">전체 보기 ›</Link></div>
       {clientReports.length > 0 ? clientReports.map((r) => {
@@ -155,7 +157,6 @@ export function UiV2HomePage() {
 
       <div className="u2-section-head"><h2>새 알림</h2></div>
       {unreadNotifications.length > 0 ? unreadNotifications.map((n) => <Link key={n.id} className="u2-card" to="/app/notifications"><h3>{n.title}</h3>{n.body && <p className="u2-muted">{n.body}</p>}<small>{relative(n.created_at)}</small>{n.type === 'report' && <span className="u2-textlink" aria-hidden="true">리포트 확인 ›</span>}</Link>) : <p className="u2-empty">새로운 알림이 없어요</p>}
-      <div className="u2-card u2-coachcard"><CounselorSection /></div>
       <div className="u2-section-head u2-row"><h2>최근 대화</h2><Link className="u2-textlink" to="/app/chat">전체 ›</Link></div>
       {recentRooms.length > 0 ? recentRooms.map((room) => <Link key={room.id} className="u2-listrow" to={`/app/chat/${room.id}`}>
         <div className="u2-body"><h3>{room.display_name || room.peer_name || '코치'}{(room.unread_count ?? 0) > 0 ? ` · ${room.unread_count}` : ''}</h3><p>{room.last_message?.content || '새로운 대화가 없어요'}</p></div><small>{relative(room.last_message_at ?? null)}</small>

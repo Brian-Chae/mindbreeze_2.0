@@ -12,7 +12,7 @@ import { listChatRooms } from '../../lib/api/chat';
 import { isAiEnabled } from '../../lib/feature-flags';
 import { useNotificationSocket } from '../../hooks/useNotificationSocket';
 import { useMobileMenuSwipe } from '../../hooks/use-mobile-menu-swipe';
-import SidebarNav from '../layout/SidebarNav';
+import { UiV2MemberSidebar } from './ui-v2-member-sidebar';
 import NotificationToastHost from '../notifications/notification-toast-host';
 import AppUpdateBanner from '../update/AppUpdateBanner';
 import { UiV2BottomNav } from './ui-v2-bottom-nav';
@@ -85,7 +85,7 @@ export function UiV2ClientShell({ title, subtitle, children, back, hideBottomNav
   return (
     <div className="h-full w-full md:grid md:grid-cols-[240px_1fr] flex flex-col" data-shell-variant="ui-v2">
       <aside className="hidden md:flex bg-[#F5EDFC] border-r border-[#EFEFEF] flex-col">
-        <SidebarNav role="client" notificationBadge={unread} agentBadge={agentUnread} reportBadge={reportUnread} chatBadge={chatUnread} sessionBadge={sessionInvites.length} />
+        <UiV2MemberSidebar notificationBadge={unread} chatBadge={chatUnread + agentUnread} reportBadge={reportUnread} sessionBadge={sessionInvites.length} />
       </aside>
       <div className="ui-v2 u2-shell min-w-0">
         <div className="u2-toolbar">
