@@ -20,7 +20,7 @@ export function shouldApplyLiveScope(role: string | null | undefined, pathname: 
 }
 
 /** D안을 적용하는 코치 경로(정확히 일치하거나 하위 경로). 정규식으로 둬 상담 경로 문자열 전수 검사(SDD-219)에 걸리지 않게 한다. */
-const INCLUDED = /^\/(dashboard|classes|clients|reports|counseling|upload-status|chat|settings|notifications|profile\/professional|credentials)(\/|$)/;
+const INCLUDED = /^\/(dashboard|classes|clients|reports|counseling|upload-status|chat|settings|notifications|playground|profile\/professional|credentials)(\/|$)/;
 /** 포함 경로 안에서도 제외하는 경로(실시간 진행·대기실·기관 대시보드). */
 const EXCLUDED = [/^\/dashboard\/org(\/|$)/, /^\/sessions\//, /^\/classes\/now(\/|$)/, /^\/reports\/sample(\/|$)/, /^\/report-view/];
 

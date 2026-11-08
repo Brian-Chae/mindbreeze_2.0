@@ -147,7 +147,10 @@ const OrgPublicPage = lazy(() => import('./pages/OrgPublicPage'));
 const OrgDashboardPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
   ? import('./pages/org/ui-v2/ui-v2-org-dashboard-page').then((module) => ({ default: module.UiV2OrgDashboardPage }))
   : import('./pages/OrgDashboardPage'));
-const PlaygroundPage = lazy(() => import('./pages/playground/PlaygroundPage'));
+// SDD-320 G: 코치 플레이그라운드 D안. UI_V2 는 빌드 시 상수 — 운영 빌드에서는 분기와 청크가 제거된다.
+const PlaygroundPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/playground/ui-v2/ui-v2-playground-entry').then((module) => ({ default: module.UiV2PlaygroundEntry }))
+  : import('./pages/playground/PlaygroundPage'));
 
 function buildLoginRedirect(pathname: string, search: string): string {
   const next = `${pathname}${search}`;
