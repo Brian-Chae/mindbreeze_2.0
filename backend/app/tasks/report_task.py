@@ -648,14 +648,17 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
     if report.type != "client" and isinstance(prev_class_report, dict) and "class_report" not in content:
         content["class_report"] = prev_class_report
 
-    # SDD-318 F-C: 인용 한 줄(quote) — 항상 문자열 또는 None. 제외 참가자·그룹·실패 스텁은 None.
-    scope_info = content.get("report_scope") if isinstance(content.get("report_scope"), dict) else {}
-    quote_excluded = bool(scope_info.get("excluded")) or bool(scope_info.get("excluded_participants"))
-    try:
-        report_quote.attach_quote(content, session, record, prev, excluded=quote_excluded)
-    except Exception:  # noqa: BLE001 — 인용 실패가 리포트 저장을 막지 않는다.
-        logger.exception("[report_task] quote 생성 실패: report_id=%s", report.id)
-        content["quote"] = None
+    # SDD-318 F-C: 인용 한 줄(quote) — 회원(client) 리포트 전용. 항상 문자열 또는 None.
+    # 코치(counselor) 리포트 content 는 종전 생성기 결과와 같아야 하므로(SDD-237 회귀) 건드리지 않는다.
+    # 제외 참가자·그룹·실패 스텁은 None.
+    if report.type == "client":
+        scope_info = content.get("report_scope") if isinstance(content.get("report_scope"), dict) else {}
+        quote_excluded = bool(scope_info.get("excluded")) or bool(scope_info.get("excluded_participants"))
+        try:
+            report_quote.attach_quote(content, session, record, prev, excluded=quote_excluded)
+        except Exception:  # noqa: BLE001 — 인용 실패가 리포트 저장을 막지 않는다.
+            logger.exception("[report_task] quote 생성 실패: report_id=%s", report.id)
+            content["quote"] = None
 
     report.content = content
     # SDD-095: 최종 생성 상태 — ai_record 가용(전사+요약)이면 ready, 아니면 partial.
