@@ -104,3 +104,14 @@ describe('코치 홈 PC 2열', () => {
     expect(read('src/components/dashboard/counselor-home.css')).not.toContain('u2-coach');
   });
 });
+
+describe('코치 터치 영역 보정', () => {
+  const css = read('src/styles/ui-v2-pc.css');
+  it('대상 선택자는 html.u2-coach [data-shell-variant] 하위로 한정', () => {
+    const block = css.split('코치 터치 영역 44px 보정')[1] ?? '';
+    const selectors = block.split('\n').filter((l) => /\{/.test(l)).map((l) => l.trim());
+    expect(selectors.length).toBeGreaterThan(0);
+    for (const s of selectors) expect(s.startsWith('html.u2-coach [data-shell-variant]')).toBe(true);
+    expect(block).toContain('min-height: 44px');
+  });
+});
