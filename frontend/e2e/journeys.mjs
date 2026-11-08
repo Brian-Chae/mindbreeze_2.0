@@ -7,7 +7,13 @@ const TITLE = `E2E-여정-${Date.now()}`;
 
 // ── 내담자 (7) ─────────────────────────────────────────
 const client = (name, fn, o) => scenario(`[내담자] ${name}`, async (p) => { await uiLogin(p, 'client', HOME.client); await fn(p); }, o);
-await client('홈: 인사·담당 코치·이번 주 클래스 영역', async (p) => { await expectText(p, '/app', '안녕하세요, E2E-내담자님', '담당 코치', '이번 주 클래스'); });
+// dev 는 VITE_UI_V2=true(D안 홈), 운영 번들은 기존 홈 — 대상 서버의 화면에 맞춰 확인한다.
+await client('홈: 인사·담당 코치·이번 주 클래스 영역', async (p) => {
+  await go(p, '/app');
+  const v2 = (await bodyText(p)).includes('나에게 돌아오는 시간');
+  if (v2) await expectText(p, '/app', 'E2E-내담자님, 오늘의 클래스와 기록을 만나보세요', '예정된 클래스');
+  else await expectText(p, '/app', '안녕하세요, E2E-내담자님', '담당 코치', '이번 주 클래스');
+});
 // SDD-209: 달력 제거(D-5②) — 목록(예정/지난 클래스 섹션)이 보이는지 확인한다.
 await client('클래스: 목록 표시(달력 없음)', async (p) => {
   const t = await expectText(p, '/app/classes', '내 클래스', '클래스 신청하기');
