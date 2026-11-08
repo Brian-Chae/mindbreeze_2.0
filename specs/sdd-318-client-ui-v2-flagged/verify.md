@@ -88,3 +88,21 @@
 ## I. 정적 검사·한계
 - `npx tsc -b` 0, 변경 파일 eslint 0, `any` 0, 파일명 kebab-case.
 - 한계: 실기기 노치·키보드·스크린리더 미검증, 캡처는 headless Chromium + 합성 API(서버/DB 접근 없음), 앱 빌드·푸시·PR·배포 안 함.
+
+## F-C. 리포트 인용 한 줄(quote) 백엔드 (구현 전 체크리스트)
+> 대표 결정(11/8): D안 리포트 상세 `.quote` 를 실제 데이터로 채운다. 계약: `content.quote: string|null` (DB 컬럼·마이그레이션 없음).
+
+| ID | 항목 | 통과 기준 |
+|---|---|---|
+| C1 | 파서 | LLM JSON `{"quote": "..."}` 에서 문자열을 읽는다. 키 없음·null·빈 문자열·비문자열 → None |
+| C2 | 형식 | 40자 내외(최대 60자 초과 시 None), 한 문장, 해요체(`요`/`요.` 종결), 따옴표 제거 |
+| C3 | 금지어 | `점수·종합점수·좋음·나쁨·완료·보증·100%` + 의료 단정(`진단·치료·완치·우울증` 등) 포함 시 None (후처리 필터) |
+| C4 | 마이크 오프 | `record.status=="manual"` 이면 STT 전사를 프롬프트에 쓰지 않고 LLM 도 부르지 않음(근거 없음 → None) |
+| C5 | 저신뢰·STT off | `transcript_confidence=="low"` 또는 `is_stt_enabled()` false 면 전사 미사용 |
+| C6 | 격리 | 그룹 세션·리포트 반영 제외 참가자·생성 실패 스텁에는 quote 없음(None) |
+| C7 | 근거 부족 | 전사·코치 코멘트 둘 다 없으면 LLM 호출 0건, None |
+| C8 | 실패 내성 | LLM 오류/AI off → None, 리포트 생성은 정상 완료 |
+| C9 | API 노출 | `normalize_report_content` 가 항상 `quote` 키(문자열 or None)를 내려보냄, client·counselor 동일, 기존 키 불변 |
+| C10 | 하위호환 | 기존 리포트(quote 없음)는 `quote: null`, 마이그레이션·백필 없음 |
+| C11 | 프롬프트 | 원문 왜곡·새 사실 창작 금지, 1인칭 해요체, 근거 부족 시 null 지시 포함 |
+| C12 | 회귀 | 기존 리포트 관련 pytest 회귀 0, 외부 LLM 호출은 전부 mock |
