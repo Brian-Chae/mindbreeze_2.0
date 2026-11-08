@@ -1,0 +1,45 @@
+{
+ "meta": {
+  "report-detail": {
+   "text": "리포트\n저녁의 호흡 · 2회차\n호흡에 다시 머문 시간\n\n2026년 11월 4일 · 가\n\n함께 돌아보는 시간\n이번 시간에는 밴드를 착용하지 않았어요. 측정 기록 없이도 함께 나눈 이야기와 코치의 기록을 볼 수 있어요.\n코치 코멘트\n\n생각을 없애려 하기보다, 떠오른 생각을 알아차리고 다시 돌아오는 시간을 함께 가졌어요.\n\n리포트 닫기\n\n본 서비스와 LINK BAND는 의료기기가 아니며, 의학적 진단·치료·처방을 대신하지 않습니다.\n\n지난 리포트와 함께 보기",
+   "h1": {
+    "fs": "31px",
+    "fw": "600",
+    "color": "rgb(31, 31, 31)",
+    "bg": "rgba(0, 0, 0, 0)",
+    "bgi": "none",
+    "ff": "\"Pretendard MB\", \"Pretendard Variable\", Pretendard",
+    "r": "0px"
+   },
+   "h2": {
+    "fs": "19px",
+    "fw": "600",
+    "color": "rgb(31, 31, 31)",
+    "bg": "rgba(0, 0, 0, 0)",
+    "bgi": "none",
+    "ff": "\"Pretendard MB\", \"Pretendard Variable\", Pretendard",
+    "r": "0px"
+   },
+   "card": {
+    "fs": "15px",
+    "fw": "400",
+    "color": "rgb(37, 33, 44)",
+    "bg": "rgb(255, 255, 255)",
+    "bgi": "none",
+    "ff": "\"Pretendard MB\", \"Pretendard Variable\", Pretendard",
+    "r": "24px"
+   },
+   "nav": {
+    "fs": "15px",
+    "fw": "400",
+    "color": "rgb(37, 33, 44)",
+    "bg": "rgba(0, 0, 0, 0)",
+    "bgi": "linear-gradient(120deg, rgb(58, 22, 80), rgb(37, 16, 56))",
+    "ff": "\"Pretendard MB\", \"Pretendard Variable\", Pretendard",
+    "r": "26px"
+   },
+   "forbidden": []
+  }
+ },
+ "errors": []
+}

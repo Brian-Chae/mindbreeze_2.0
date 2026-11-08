@@ -166,3 +166,43 @@ verify addendum-2(커밋 ec3a7ca8)를 구현 전에 작성한 뒤 구현했다. 
 
 ### 한계
 - 합성 데이터 캡처(실 dev 미접속). 실기기 미검증. 푸시·PR·배포 안 함.
+## F-B — 회원 리포트 상세 시트 D안 재구성 (B3·B4)
+
+verify addendum-F-B(커밋 65636178)를 구현 전에 작성했다. 푸시·PR·배포 안 함(로컬 커밋).
+
+### 구현
+| 파일 | 내용 |
+|---|---|
+| `components/ui-v2/ui-v2-report-body.tsx` (신규) | 시트 본문: 함께 돌아보는 시간 → 코치 코멘트 → AI 요약 → 셀프 체크인 → 측정 서사 → "리포트 닫기" → 의료 고지 |
+| `components/ui-v2/ui-v2-report-copy.ts` (신규) | 세션 유형 한글 매핑, 커버(eyebrow/h1) 계산, 밴드 미착용 안내 문구 |
+| `components/ui-v2/ui-v2-report-sheet.tsx` | 레거시 `ClientReportViewer` 제거 → `UiV2ReportBody`, 커버 중복 제거 |
+| `styles/ui-v2.css` | 파일 끝 `.u2-rp-*` 규칙만 추가(기존 규칙 수정 0) |
+| `tests/sdd318g-report-sheet.test.tsx` (신규) | 4건 |
+
+### 데이터 필드 매핑
+| 화면 요소 | 필드 |
+|---|---|
+| eyebrow | `session_title`(클래스명·N회차). headline 이 없으면 한글 유형 라벨(`session_type` 매핑) |
+| h1(서사 제목) | `content.headline` (없으면 `session_title` 1회만) |
+| 날짜 · 지도사 | `scheduled_at ?? created_at` · `counselor_name` |
+| 함께 돌아보는 시간 | 밴드 미착용/제외 → 안내 박스(`eegExcluded` 면 기존 제외 문구). 착용 → 측정 서사(`eeg.narrative.journey` 등)는 측정 본문이 담당 |
+| 코치 코멘트 | `content.counselor_comment` |
+| AI 요약 | `content.summary`, `insights` (`isSttAiRecordVisible()` 가드, 마이크 오프 시 기존 사유 문구) |
+| 셀프 체크인 | `subjective_state` (기존 카드 재사용) |
+| 측정 | `adaptReportContent().displayNarrative` → 기존 `NarrativeSections`(서사·변화량, 종합점수 없음) |
+
+### 숨긴 블록
+- **인용문(`.quote`)**: 서버 리포트에 인용문에 해당하는 필드가 없다 → 가짜로 만들지 않고 숨김. 서버가 필드를 주면 붙일 자리만 코드 주석으로 남겼다.
+- 승인 완료 배지, "MIND BREEZE · 몸·마음 리포트" 띠, 내담자용/코치용 칩, 영문 `meditation`, "PDF 생성(준비 중)", 글자 링크 "닫기": 새 본문에서 제거(레거시 컴포넌트는 무수정).
+- `pdf_url` 이 있을 때의 "PDF 다운로드" 링크: 목록 밖 기능 요구가 없어 이번 시트에서는 뺐다(확인 필요 — 필요하면 링크로 추가).
+- 측정 본문 안의 사이드바·상단 띠·푸터(`.topbar/.sidebar/.footer`)는 시트 안에서 CSS로 숨김.
+
+### 시험
+- `tsc -b` 0, eslint(변경 파일) 0, 신규 vitest 4건 + 기존 `sdd318*`·`sdd322*` 합계 44건 통과.
+- 운영 번들(`--mode prod`): `check-ui-v2-off` 통과(255파일), `check-release-bundle` 통과, 운영 CSS 에 `u2-rp` 0건.
+- 신규 소스 금지 표현(점수|종합점수|좋음|나쁨|완료율|보증|100%) 0건. 캡처 본문 `forbidden` 0건(밴드 착용 측정 서사의 기존 "좋아졌어요" 문구는 레거시 `NarrativeSections` 소관).
+- 390px 캡처(합성 API, headless Chrome): `captures-fb/{worn,unworn}-report-detail-{390,full}.png`, 시안 비교 `compare-{worn,unworn}.png`.
+
+### 한계
+- 착용 캡처의 측정 본문(NarrativeSections)은 기존 컴포넌트 스타일 그대로라 시안만큼 얇은 위계는 아니다(레거시 수정 금지 범위).
+- 실기기·스크린리더 미검증.
