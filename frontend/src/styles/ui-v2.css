@@ -248,3 +248,15 @@
 .ui-v2 .u2-hero--nature{text-align:left;align-items:stretch}
 .ui-v2 .u2-hero--nature>*{align-self:stretch;text-align:left}
 .ui-v2 .u2-hero--nature>.u2-chip,.ui-v2 .u2-hero--nature>.u2-eyebrow{align-self:flex-start}
+
+/* SDD-318 F-B — 리포트 상세 시트 본문(D안 report-detail). 이 블록은 리포트 시트 전용이다. */
+.ui-v2 .u2-rp{display:block;min-width:0}
+.ui-v2 .u2-rp-sub{display:block;font-size:12px;color:var(--u2-accent);letter-spacing:1px;font-weight:600}
+.ui-v2 .u2-rp-h{margin-top:30px;font-size:17px;font-weight:600;color:var(--u2-text)}
+.ui-v2 .u2-rp-text{margin-top:14px;line-height:1.85;color:var(--u2-text);white-space:pre-wrap;overflow-wrap:anywhere}
+.ui-v2 .u2-rp-list{margin:12px 0 0;padding-left:20px;line-height:1.8;color:var(--u2-muted);overflow-wrap:anywhere}
+.ui-v2 .u2-rp-notice{margin-top:20px;background:var(--u2-tint);border-radius:var(--u2-r-note);padding:16px;font-size:14px;color:var(--u2-muted);line-height:1.7}
+.ui-v2 .u2-rp-block{margin-top:28px}
+.ui-v2 .u2-rp-measure{overflow-x:hidden}
+.ui-v2 .u2-rp-measure .narrative-report>.topbar,.ui-v2 .u2-rp-measure .narrative-report .sidebar,.ui-v2 .u2-rp-measure .narrative-report .footer{display:none}
+.ui-v2 .u2-rp-measure .narrative-report .layout{display:block}
