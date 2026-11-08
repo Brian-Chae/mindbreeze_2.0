@@ -140,12 +140,12 @@ export function UiV2ReportsPage() {
         : error ? <div className="u2-alert" role="alert"><p>{error}</p><button type="button" className="u2-secondary u2-gap" onClick={() => setReloadKey((k) => k + 1)}>다시 시도</button></div>
         : total === 0 ? <div className="u2-empty"><p>아직 리포트가 없어요</p><p className="u2-footnote">클래스를 마치면 리포트를 확인할 수 있어요</p></div>
         : filtered.length === 0 ? <div className="u2-empty"><p>조건에 맞는 리포트가 없어요.</p><button type="button" className="u2-textlink" onClick={() => { setSearch(''); setPage(1); }}>필터 초기화</button></div>
-        : grouped ? grouped.map(([name, items], gi) => (
+        : grouped ? <div className="u2-pc-grid">{grouped.map(([name, items], gi) => (
           <section key={name} aria-label={name}>
             <div className="u2-section-head u2-row"><h2>지도사 {name}</h2><small>{items.length}개</small></div>
             {items.map((r, i) => card(r, gi === 0 && i === 0))}
           </section>
-        )) : filtered.map((r, i) => card(r, i === 0))}
+        ))}</div> : <div className="u2-pc-grid">{filtered.map((r, i) => card(r, i === 0))}</div>}
       {totalPages > 1 && (
         <nav aria-label="리포트 페이지" className="u2-pager">
           <button type="button" aria-label="이전" disabled={page <= 1 || loading} onClick={() => setPage((v) => Math.max(1, v - 1))}>이전</button>

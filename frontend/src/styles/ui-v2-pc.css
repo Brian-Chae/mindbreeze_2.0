@@ -41,3 +41,31 @@
   :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside > div > button { color: #E5D3EE; min-height: 44px; border-radius: 14px; }
   :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside > div > button:hover { background: #FFFFFF14; }
 }
+
+/* ───────── 회원 PC 본문(전체 폭 + 2열) ───────── */
+@media (min-width: 1024px) {
+  .ui-v2.u2-shell { background: #F4F4F7; }
+  .ui-v2.u2-shell .u2-toolbar { max-width: none; height: 88px; padding: 0 48px; justify-content: flex-end; }
+  .ui-v2.u2-shell .u2-toolbar .u2-compact-title { display: none; }
+  .ui-v2.u2-shell .u2-heading { max-width: none; margin: 0; padding: 10px 48px 28px; }
+  .ui-v2.u2-shell .u2-main, .ui-v2 .u2-main--wide { max-width: 1600px; margin: 0; padding: 0 48px 72px; }
+  .ui-v2.u2-shell .u2-main--fill { padding-bottom: 0; }
+  .ui-v2.u2-shell .u2-pc-cols { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+  .ui-v2.u2-shell .u2-pc-cols > * { min-width: 0; }
+  .ui-v2.u2-shell .u2-pc-side > .u2-section-head:first-child { margin-top: 0; }
+  .ui-v2.u2-shell .u2-pc-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
+  .ui-v2.u2-shell .u2-pc-grid > .u2-card, .ui-v2 .u2-pc-grid > section { margin-bottom: 0; min-width: 0; }
+  .ui-v2.u2-shell .u2-pc-grid > section { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .ui-v2.u2-shell .u2-pc-grid > section > .u2-section-head { grid-column: 1 / -1; }
+  .ui-v2.u2-shell .u2-pc-grid > section > .u2-card { margin-bottom: 0; }
+}
+
+/* 회원 설정: 좌(플레이그라운드·안내) / 우(항목 목록) 2열 */
+@media (min-width: 1024px) {
+  .ui-v2.u2-shell .u2-pc-cols--settings { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); }
+  /* 회원 알림 목록은 PC 에서 2열 카드 */
+  [data-shell-variant="ui-v2"] .ui-v2 .u2-notif-wrap { max-width: none; }
+  [data-shell-variant="ui-v2"] .ui-v2 .u2-notif-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+  /* 클래스 상세 표지는 좌열 안에서 카드처럼 */
+  .ui-v2.u2-shell .u2-pc-main > .u2-cover { padding-top: 0; }
+}

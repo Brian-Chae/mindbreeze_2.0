@@ -54,3 +54,29 @@ describe('E 신규 파일 금지 표현', () => {
     }
   });
 });
+
+describe('회원 PC 2열 배치(마크업 래퍼 + CSS)', () => {
+  const css = read('src/styles/ui-v2-pc.css');
+  it('2열·그리드 규칙은 1024px 이상 미디어쿼리 안에만 있다', () => {
+    const outside = css.replace(/@media \(min-width: 1024px\) \{[\s\S]*?\n\}\n/g, '');
+    expect(outside).not.toContain('u2-pc-cols');
+    expect(outside).not.toContain('u2-pc-grid');
+  });
+  it.each([
+    ['src/pages/client/ui-v2/ui-v2-home-page.tsx', ['u2-pc-main', 'u2-pc-side']],
+    ['src/pages/client/ui-v2/ui-v2-class-detail-page.tsx', ['u2-pc-main', 'u2-pc-side']],
+    ['src/pages/client/ui-v2/ui-v2-settings-page.tsx', ['u2-pc-cols--settings', 'u2-pc-side']],
+    ['src/pages/client/ui-v2/ui-v2-reports-page.tsx', ['u2-pc-grid']],
+  ])('%s 가 PC 래퍼를 가진다', (file, tokens) => {
+    const s = read(file);
+    for (const t of tokens) expect(s).toContain(t);
+  });
+  it('기존 핸들러·데이터 훅 호출이 그대로 남아 있다', () => {
+    const home = read('src/pages/client/ui-v2/ui-v2-home-page.tsx');
+    for (const t of ['confirmInvite', 'useMixedHome', 'listReports', 'CodeEntryButton']) expect(home).toContain(t);
+    const rep = read('src/pages/client/ui-v2/ui-v2-reports-page.tsx');
+    for (const t of ['setSelectedId', 'handleMarkAll', 'UiV2ReportSheet']) expect(rep).toContain(t);
+    const set = read('src/pages/client/ui-v2/ui-v2-settings-page.tsx');
+    for (const t of ['handleLogout', 'AccountSettings', 'NotificationGroups', 'AccountDeletionSection']) expect(set).toContain(t);
+  });
+});

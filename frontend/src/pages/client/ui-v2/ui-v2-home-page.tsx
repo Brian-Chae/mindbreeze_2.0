@@ -101,6 +101,7 @@ export function UiV2HomePage() {
 
   return (
     <UiV2ClientShell title="나에게 돌아오는 시간" subtitle={`${name ?? '내담자'}님, 오늘의 클래스와 기록을 만나보세요.`}>
+      <div className="u2-pc-cols"><div className="u2-pc-main">
       <section className="u2-card u2-hero u2-hero--nature" data-testid="class-hero" aria-label="다음 일정" style={{ backgroundImage: `linear-gradient(160deg,rgba(37,16,56,.35),rgba(37,16,56,.72) 55%,rgba(37,16,56,.92)),url(${heroBackdrop(next?.parentId ?? 'home')})` }}>
         <UiV2ArcRing variant="hero" />
         <span className="u2-eyebrow">{isOpen ? '지금 입장 가능' : '다음 클래스'}</span>
@@ -134,6 +135,7 @@ export function UiV2HomePage() {
       {!next && upcoming.length === 0 && <p className="u2-empty">이번 주 예정된 클래스가 없어요. 코치에게 클래스를 신청해 보세요.</p>}
       {classes.length > 0 && <p className="u2-footnote">참여 중인 클래스 {classes.length}개</p>}
 
+      </div><div className="u2-pc-side">
       <div className="u2-section-head u2-row"><h2>최근 리포트</h2><Link className="u2-textlink" to="/app/reports">전체 보기 ›</Link></div>
       {clientReports.length > 0 ? clientReports.map((r) => {
         const inReview = isReportInReview(r);
@@ -158,6 +160,7 @@ export function UiV2HomePage() {
       {recentRooms.length > 0 ? recentRooms.map((room) => <Link key={room.id} className="u2-listrow" to={`/app/chat/${room.id}`}>
         <div className="u2-body"><h3>{room.display_name || room.peer_name || '코치'}{(room.unread_count ?? 0) > 0 ? ` · ${room.unread_count}` : ''}</h3><p>{room.last_message?.content || '새로운 대화가 없어요'}</p></div><small>{relative(room.last_message_at ?? null)}</small>
       </Link>) : <p className="u2-empty">새로운 대화가 없어요</p>}
+      </div></div>
       {(extraError || read.classes.status === 'error') && <div className="u2-alert" role="alert"><p>일부 정보를 불러오지 못했어요.</p><button type="button" className="u2-secondary u2-gap" onClick={read.retry}>다시 시도</button></div>}
     </UiV2ClientShell>
   );

@@ -70,6 +70,7 @@ function Detail({ classId }: { classId: string }) {
             {progress && <div className="u2-num">{String(progress.completed).padStart(2, '0')} <span>/ {String(progress.total).padStart(2, '0')}회</span></div>}
             <p className="u2-footnote">클래스 전체 진행이며<br />개인 출석을 의미하지 않아요.</p>
           </section>
+          <div className="u2-pc-cols"><div className="u2-pc-main">
           <div role="tablist" aria-label="클래스 정보" className="u2-tabs">
             {(['overview', 'sessions'] as const).map((key) => (
               <button key={key} id={`u2-${key}-tab`} type="button" role="tab" aria-selected={tab === key} aria-controls="u2-class-panel" tabIndex={tab === key ? 0 : -1} onKeyDown={onKey(key)} onClick={() => setTab(key)}>{key === 'overview' ? '개요' : '회차'}</button>
@@ -117,6 +118,7 @@ function Detail({ classId }: { classId: string }) {
               </section>
             )}
           </div>
+          </div><div className="u2-pc-side">
           {hasMembership && <>
             <details className="u2-ops">
               <summary><span>내 참여와 동의</span><span className="u2-setchev" aria-hidden="true">›</span></summary>
@@ -124,6 +126,7 @@ function Detail({ classId }: { classId: string }) {
             </details>
             <LeaveButton classId={classId} />
           </>}
+          </div></div>
         </>}
       </ReadStateView>
     </UiV2ClientShell>
