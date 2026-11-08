@@ -9,6 +9,7 @@ import { classPath, classSessionPath } from '../../../lib/class-structure/naviga
 import { CLASS_FILTERS, filterClassRows, groupClassRows, toClassRow, type ClassGroupMode, type ClassRowV2 } from '../../../lib/coach-lists-v2';
 import type { ClassSummaryDto } from '../../../lib/api/class-structure';
 import { useAuthStore } from '../../../stores/authStore';
+import { natureHeroStyle } from '../../../components/ui-v2/nature-hero';
 import '../../../styles/ui-v2.css';
 import '../../../styles/ui-v2-brand.css';
 import '../../../styles/ui-v2-coach-pc.css';
@@ -68,7 +69,7 @@ export function UiV2CoachClassesPage() {
         <div className="u2f-chips" role="group" aria-label="클래스 상태 필터">
           {CLASS_FILTERS.map(([value, label]) => <button type="button" key={value} aria-pressed={filter === value} onClick={() => changeFilter(value)}>{label}</button>)}
         </div>
-        {opened.length > 0 && <section aria-label="열려 있는 회차" className="u2-card u2-hero u2-hero--nature">
+        {opened.length > 0 && <section aria-label="열려 있는 회차" className="u2-card u2-hero u2-hero--nature" style={natureHeroStyle(opened[0].id)}>
           <span className="u2-eyebrow">지금 함께할 시간</span><h2>열려 있는 회차가 있어요</h2>
           <div className="u2f-actions">{opened.map((r) => <Link key={r.id} className="u2-primary" to={r.openSessionId ? classSessionPath('host', r.id as never, r.openSessionId as never) : classPath('host', r.id as never)}>{r.title} · {r.openSessionId ? '회차 보기' : '클래스 보기'}</Link>)}</div>
         </section>}
