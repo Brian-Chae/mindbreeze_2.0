@@ -37,6 +37,7 @@ export async function checkUiV2Off(root) {
       if (name.endsWith('.css') && /u2c-(new|roombar|list--room|pane--idle|lead)/.test(content)) problems.push(`${name}: 코치 D안 화면 CSS(u2c-)가 운영 번들에 포함됨`);
       if (name.endsWith('.css') && /u2-org-|u2-table/.test(content)) problems.push(`${name}: 기관 D안 CSS(u2-org-/u2-table)가 운영 번들에 포함됨`);
       if (name.endsWith('.css') && /html\.u2-coach/.test(content)) problems.push(`${name}: 코치 D안 스코프 CSS(html.u2-coach)가 운영 번들에 포함됨`);
+      if (name.endsWith('.css') && /@media \(min-width:\s*1024px\)[^{]*\{[^}]*data-shell-variant="ui-v2"|data-shell-variant="ui-v2"\]\s*>\s*aside/.test(content)) problems.push(`${name}: PC 셸 D안 CSS(ui-v2-pc)가 운영 번들에 포함됨`);
       // 폰트: 운영 번들에는 Pretendard 자체 호스팅 파일/@font-face 가 없어야 한다(addendum-2 H8).
       if (/\.(css|js)$/.test(name) && /Pretendard\s*MB|PretendardVariable-KS/.test(content)) problems.push(`${name}: 자체 호스팅 Pretendard 참조가 운영 번들에 포함됨`);
     }

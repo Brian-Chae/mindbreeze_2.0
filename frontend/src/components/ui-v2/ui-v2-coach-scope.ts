@@ -3,6 +3,7 @@
 import '../../styles/ui-v2-coach.css';
 import '../../styles/ui-v2-coach-classes.css';
 import '../../styles/ui-v2-brand.css';
+import '../../styles/ui-v2-pc.css';
 import { useAuthStore } from '../../stores/authStore';
 
 export const COACH_SCOPE_CLASS = 'u2-coach';

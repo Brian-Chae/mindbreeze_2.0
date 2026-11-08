@@ -19,6 +19,7 @@ import { UiV2BottomNav } from './ui-v2-bottom-nav';
 import { UiV2Logo } from './ui-v2-logo';
 import '../../styles/ui-v2.css';
 import '../../styles/ui-v2-brand.css';
+import '../../styles/ui-v2-pc.css';
 
 export interface UiV2ClientShellProps {
   title: string;

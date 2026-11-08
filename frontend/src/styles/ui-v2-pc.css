@@ -1,0 +1,43 @@
+/* SDD-320 E — PC(≥1024px) 공통 셸. 코치(html.u2-coach)·회원(ui-v2 쉘) 공용: 좌측 216px 짙은 보라 그라데이션 메뉴 + 전체 폭 본문.
+   기존 SidebarNav·AppShell·UiV2ClientShell 마크업은 바꾸지 않고 CSS 로만 덮는다. UI_V2 쉘/코치 스코프에서만 import 된다(운영 번들 미포함). */
+@media (min-width: 1024px) {
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) {
+    grid-template-columns: 216px minmax(0, 1fr);
+    background: #F4F4F7;
+  }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside {
+    background: linear-gradient(120deg, #3A1650, #251038);
+    border-right: 0;
+    color: #C9B8D6;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100dvh;
+    overflow-y: auto;
+    font-family: 'Pretendard MB', 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+  }
+  /* 브랜드 블록: 흰색 락업(심볼은 반전) */
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-root] { padding: 32px 16px; gap: 28px; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-brand] > div:first-child { padding: 0 8px; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-brand] > div:first-child > img { filter: brightness(0) invert(1); height: 12px; width: auto; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-brand] > div:first-child > span { color: #FFFFFF; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-brand] > div:last-child { padding-left: 8px; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-brand] > div:last-child > span:first-child { background: #E5D3EE; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-brand] > div:last-child > span:last-child { color: #C9B8D6; font-weight: 600; font-size: 13px; }
+  /* 메뉴 항목 */
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-menu] a {
+    min-height: 54px; padding: 12px 18px; gap: 14px; border-radius: 14px;
+    background: transparent; color: #C9B8D6; font-size: 14px; font-weight: 500; box-shadow: none;
+  }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-menu] a:hover { background: #FFFFFF14; color: #FFFFFF; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-menu] a[aria-current="page"] {
+    background: #FFFFFF26; color: #FFFFFF; font-weight: 700; position: relative;
+  }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-menu] a:focus-visible { outline: 3px solid #FFFFFF; outline-offset: -3px; }
+  /* 하단 사용자 블록·로그아웃 */
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-profile] { background: transparent; border-radius: 0; padding: 16px 8px; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-profile] > div { color: #C9B8D6; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-profile] > div:nth-child(2) { color: #FFFFFF; font-size: 14px; font-weight: 600; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside > div > button { color: #E5D3EE; min-height: 44px; border-radius: 14px; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside > div > button:hover { background: #FFFFFF14; }
+}
