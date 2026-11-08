@@ -80,3 +80,16 @@ describe('회원 PC 2열 배치(마크업 래퍼 + CSS)', () => {
     for (const t of ['handleLogout', 'AccountSettings', 'NotificationGroups', 'AccountDeletionSection']) expect(set).toContain(t);
   });
 });
+
+describe('코치 공통 제목 31px', () => {
+  const css = read('src/styles/ui-v2-pc.css');
+  it('코치 스코프 h1 = 31px/600/-1.35px', () => {
+    expect(css).toMatch(/html\.u2-coach \[data-ui="page-header"\] h1[\s\S]*?font-size: 31px;[\s\S]*?font-weight: 600;[\s\S]*?letter-spacing: -1\.35px/);
+  });
+  it('코치 규칙은 전부 html.u2-coach 하위(전역 h1 덮어쓰기 없음)', () => {
+    const coachBlock = css.split('코치 PC/모바일 공통 제목')[1] ?? '';
+    for (const line of coachBlock.split('\n').filter((l) => /\{\s*$|^\s*html\./.test(l) && l.includes('h1'))) {
+      expect(line).toContain('html.u2-coach');
+    }
+  });
+});
