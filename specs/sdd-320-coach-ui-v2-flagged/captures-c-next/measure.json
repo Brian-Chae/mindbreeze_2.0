@@ -1,0 +1,433 @@
+{
+  "contrast": [
+    {
+      "fg": "#25212C",
+      "bg": "#F4F4F7",
+      "ratio": 14.36
+    },
+    {
+      "fg": "#25212C",
+      "bg": "#FFFFFF",
+      "ratio": 15.76
+    },
+    {
+      "fg": "#25212C",
+      "bg": "#EEE5F5",
+      "ratio": 12.88
+    },
+    {
+      "fg": "#68616F",
+      "bg": "#F4F4F7",
+      "ratio": 5.42
+    },
+    {
+      "fg": "#68616F",
+      "bg": "#FFFFFF",
+      "ratio": 5.95
+    },
+    {
+      "fg": "#68616F",
+      "bg": "#EEE5F5",
+      "ratio": 4.86
+    },
+    {
+      "fg": "#5F0080",
+      "bg": "#F4F4F7",
+      "ratio": 10.64
+    },
+    {
+      "fg": "#5F0080",
+      "bg": "#FFFFFF",
+      "ratio": 11.68
+    },
+    {
+      "fg": "#5F0080",
+      "bg": "#EEE5F5",
+      "ratio": 9.54
+    },
+    {
+      "fg": "#FFFFFF",
+      "bg": "#5F0080",
+      "ratio": 11.68
+    }
+  ],
+  "results": [
+    {
+      "width": 390,
+      "screen": "classes",
+      "navGap": -62,
+      "scoped": true,
+      "overflow": false,
+      "small": [],
+      "forbidden": [],
+      "font": "\"Pretendard MB\"",
+      "mark": [
+        "지금 바로 시작",
+        "데이터 현황"
+      ],
+      "d": false,
+      "grp": 0,
+      "navCss": {
+        "bg": "rgb(95, 0, 128)",
+        "color": "rgb(255, 255, 255)"
+      }
+    },
+    {
+      "width": 390,
+      "screen": "class-detail",
+      "navGap": -62,
+      "scoped": true,
+      "overflow": false,
+      "small": [],
+      "forbidden": [],
+      "font": "\"Pretendard MB\"",
+      "mark": [
+        "데이터 현황"
+      ],
+      "d": false,
+      "grp": 0,
+      "navCss": {
+        "bg": "rgb(95, 0, 128)",
+        "color": "rgb(255, 255, 255)"
+      }
+    },
+    {
+      "width": 390,
+      "screen": "class-sessions",
+      "navGap": -62,
+      "scoped": true,
+      "overflow": false,
+      "small": [],
+      "forbidden": [],
+      "font": "\"Pretendard MB\"",
+      "mark": [
+        "데이터 현황"
+      ],
+      "d": false,
+      "grp": 0,
+      "navCss": {
+        "bg": "rgb(95, 0, 128)",
+        "color": "rgb(255, 255, 255)"
+      }
+    },
+    {
+      "width": 390,
+      "screen": "clients",
+      "navGap": 22,
+      "scoped": true,
+      "overflow": false,
+      "small": [],
+      "forbidden": [],
+      "font": "\"Pretendard MB\"",
+      "mark": [
+        "데이터 현황"
+      ],
+      "d": false,
+      "grp": 0,
+      "navCss": {
+        "bg": "rgb(95, 0, 128)",
+        "color": "rgb(229, 211, 238)"
+      }
+    },
+    {
+      "width": 390,
+      "screen": "reports",
+      "navGap": 382,
+      "scoped": true,
+      "overflow": false,
+      "small": [],
+      "forbidden": [],
+      "font": "\"Pretendard MB\"",
+      "mark": [
+        "데이터 현황"
+      ],
+      "d": false,
+      "grp": 0,
+      "navCss": {
+        "bg": "rgb(95, 0, 128)",
+        "color": "rgb(255, 255, 255)"
+      }
+    },
+    {
+      "width": 390,
+      "screen": "credentials",
+      "navGap": null,
+      "scoped": true,
+      "overflow": false,
+      "small": [],
+      "forbidden": [],
+      "font": "\"Pretendard MB\"",
+      "mark": [],
+      "d": false,
+      "grp": 0,
+      "navCss": null
+    },
+    {
+      "width": 390,
+      "screen": "player-excluded",
+      "navGap": null,
+      "scoped": false,
+      "overflow": false,
+      "small": [],
+      "forbidden": [],
+      "font": "\"Pretendard Variable\"",
+      "mark": [],
+      "d": false,
+      "grp": 0,
+      "navCss": null
+    },
+    {
+      "width": 768,
+      "screen": "classes",
+      "navGap": null,
+      "scoped": true,
+      "overflow": false,
+      "small": [],
+      "forbidden": [],
+      "font": "\"Pretendard MB\"",
+      "mark": [
+        "지금 바로 시작",
+        "데이터 현황"
+      ],
+      "d": false,
+      "grp": 0,
+      "navCss": {
+        "bg": "rgb(95, 0, 128)",
+        "color": "rgb(255, 255, 255)"
+      }
+    },
+    {
+      "width": 768,
+      "screen": "class-detail",
+      "navGap": null,
+      "scoped": true,
+      "overflow": false,
+      "small": [],
+      "forbidden": [],
+      "font": "\"Pretendard MB\"",
+      "mark": [
+        "데이터 현황"
+      ],
+      "d": false,
+      "grp": 0,
+      "navCss": {
+        "bg": "rgb(95, 0, 128)",
+        "color": "rgb(255, 255, 255)"
+      }
+    },
+    {
+      "width": 768,
+      "screen": "class-sessions",
+      "navGap": null,
+      "scoped": true,
+      "overflow": false,
+      "small": [],
+      "forbidden": [],
+      "font": "\"Pretendard MB\"",
+      "mark": [
+        "데이터 현황"
+      ],
+      "d": false,
+      "grp": 0,
+      "navCss": {
+        "bg": "rgb(95, 0, 128)",
+        "color": "rgb(255, 255, 255)"
+      }
+    },
+    {
+      "width": 768,
+      "screen": "clients",
+      "navGap": null,
+      "scoped": true,
+      "overflow": false,
+      "small": [],
+      "forbidden": [],
+      "font": "\"Pretendard MB\"",
+      "mark": [
+        "데이터 현황"
+      ],
+      "d": false,
+      "grp": 0,
+      "navCss": {
+        "bg": "rgb(95, 0, 128)",
+        "color": "rgb(229, 211, 238)"
+      }
+    },
+    {
+      "width": 768,
+      "screen": "reports",
+      "navGap": null,
+      "scoped": true,
+      "overflow": false,
+      "small": [],
+      "forbidden": [],
+      "font": "\"Pretendard MB\"",
+      "mark": [
+        "데이터 현황"
+      ],
+      "d": false,
+      "grp": 0,
+      "navCss": {
+        "bg": "rgb(95, 0, 128)",
+        "color": "rgb(255, 255, 255)"
+      }
+    },
+    {
+      "width": 768,
+      "screen": "credentials",
+      "navGap": null,
+      "scoped": true,
+      "overflow": false,
+      "small": [],
+      "forbidden": [],
+      "font": "\"Pretendard MB\"",
+      "mark": [],
+      "d": false,
+      "grp": 0,
+      "navCss": null
+    },
+    {
+      "width": 768,
+      "screen": "player-excluded",
+      "navGap": null,
+      "scoped": false,
+      "overflow": false,
+      "small": [],
+      "forbidden": [],
+      "font": "\"Pretendard Variable\"",
+      "mark": [],
+      "d": false,
+      "grp": 0,
+      "navCss": null
+    },
+    {
+      "width": 1440,
+      "screen": "classes",
+      "navGap": null,
+      "scoped": true,
+      "overflow": false,
+      "small": [],
+      "forbidden": [],
+      "font": "\"Pretendard MB\"",
+      "mark": [
+        "지금 바로 시작",
+        "데이터 현황"
+      ],
+      "d": false,
+      "grp": 0,
+      "navCss": {
+        "bg": "rgb(95, 0, 128)",
+        "color": "rgb(255, 255, 255)"
+      }
+    },
+    {
+      "width": 1440,
+      "screen": "class-detail",
+      "navGap": null,
+      "scoped": true,
+      "overflow": false,
+      "small": [],
+      "forbidden": [],
+      "font": "\"Pretendard MB\"",
+      "mark": [
+        "데이터 현황"
+      ],
+      "d": false,
+      "grp": 0,
+      "navCss": {
+        "bg": "rgb(95, 0, 128)",
+        "color": "rgb(255, 255, 255)"
+      }
+    },
+    {
+      "width": 1440,
+      "screen": "class-sessions",
+      "navGap": null,
+      "scoped": true,
+      "overflow": false,
+      "small": [],
+      "forbidden": [],
+      "font": "\"Pretendard MB\"",
+      "mark": [
+        "데이터 현황"
+      ],
+      "d": false,
+      "grp": 0,
+      "navCss": {
+        "bg": "rgb(95, 0, 128)",
+        "color": "rgb(255, 255, 255)"
+      }
+    },
+    {
+      "width": 1440,
+      "screen": "clients",
+      "navGap": null,
+      "scoped": true,
+      "overflow": false,
+      "small": [],
+      "forbidden": [],
+      "font": "\"Pretendard MB\"",
+      "mark": [
+        "데이터 현황"
+      ],
+      "d": false,
+      "grp": 0,
+      "navCss": {
+        "bg": "rgb(95, 0, 128)",
+        "color": "rgb(229, 211, 238)"
+      }
+    },
+    {
+      "width": 1440,
+      "screen": "reports",
+      "navGap": null,
+      "scoped": true,
+      "overflow": false,
+      "small": [],
+      "forbidden": [],
+      "font": "\"Pretendard MB\"",
+      "mark": [
+        "데이터 현황"
+      ],
+      "d": false,
+      "grp": 0,
+      "navCss": {
+        "bg": "rgb(95, 0, 128)",
+        "color": "rgb(255, 255, 255)"
+      }
+    },
+    {
+      "width": 1440,
+      "screen": "credentials",
+      "navGap": null,
+      "scoped": true,
+      "overflow": false,
+      "small": [],
+      "forbidden": [],
+      "font": "\"Pretendard MB\"",
+      "mark": [],
+      "d": false,
+      "grp": 0,
+      "navCss": null
+    },
+    {
+      "width": 1440,
+      "screen": "player-excluded",
+      "navGap": null,
+      "scoped": false,
+      "overflow": false,
+      "small": [],
+      "forbidden": [],
+      "font": "\"Pretendard Variable\"",
+      "mark": [],
+      "d": false,
+      "grp": 0,
+      "navCss": null
+    },
+    {
+      "screen": "reduced-motion",
+      "animatedElements": 0
+    }
+  ],
+  "errors": []
+}

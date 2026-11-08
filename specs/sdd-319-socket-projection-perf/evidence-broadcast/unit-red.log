@@ -1,0 +1,49 @@
+BASELINE_APP=/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319b-baseline-ovoc2lxr/app/__init__.py
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+______________________ test_projector가_앞서가도_대상_이벤트_전부_반환 _______________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10e2f3e50>
+
+    def test_projector가_앞서가도_대상_이벤트_전부_반환(monkeypatch):
+        rows = [row(i) for i in range(101, 111)]
+        wire = [event(r) for r in rows] + [event(row(i)) for i in range(111, 116)]
+        live = FakeLive(115)
+    
+        def replay(self, sid, scope, cursors, **kw):
+            return NS(events=[e for e in wire if int(e['seq']) > cursors[0].seq])
+    
+        monkeypatch.setattr(LiveStateService, 'replay', replay)
+>       assert cps.events_for_rows(live, uuid4(), rows) == [event(r) for r in rows]
+E       AssertionError: assert [{'audience':...'seq': '110'}] == [{'audience':...: '106'}, ...]
+E         
+E         At index 0 diff: {'event_id': 'e3f344ae-f335-4a33-9632-e00aea071df2', 'audience': 'host', 'domain': 'speaking', 'seq': '106'} != {'event_id': 'e4fc9244-cd3a-4aaa-ae95-bc96b3f6be98', 'audience': 'host', 'domain': 'speaking', 'seq': '101'}
+E         Right contains 5 more items, first extra item: {'audience': 'host', 'domain': 'speaking', 'event_id': 'e3f344ae-f335-4a33-9632-e00aea071df2', 'seq': '106'}
+E         Use -v to get more diff
+
+tests/sdd319/test_broadcast_gap.py:66: AssertionError
+____________ test_일부_audience_누락은_해당_revision_전에서_방송과_watermark_중단 _____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10e2f1ed0>
+
+    def test_일부_audience_누락은_해당_revision_전에서_방송과_watermark_중단(monkeypatch):
+        rows = [row(1), row(2, ('host', 'public')), row(3)]
+        db, live, sid = publisher(monkeypatch, rows, [event(r) for r in rows])
+        got = []
+>       assert cps.publish_pending(db, live, sid, got.append) == 1
+E       AssertionError: assert 3 == 1
+E        +  where 3 = <function publish_pending at 0x10e2c5ee0>(namespace(rollback=<function publisher.<locals>.<lambda> at 0x10e7fbf60>, execute=<function publisher.<locals>.<lambda> at 0x10e82c040>), <tests.sdd319.test_broadcast_gap.FakeLive object at 0x10e862c50>, UUID('52b77dd6-33ec-42d5-b1d8-3d4d5b91d634'), <built-in method append of list object at 0x10e86e100>)
+E        +    where <function publish_pending at 0x10e2c5ee0> = cps.publish_pending
+E        +    and   <built-in method append of list object at 0x10e86e100> = [{'audience': 'host', 'domain': 'speaking', 'event_id': 'e5fb8aa7-292c-4abd-b57a-91e203717362', 'seq': '1'}, {'audienc...seq': '2'}, {'audience': 'host', 'domain': 'speaking', 'event_id': 'dfb989ca-14c7-4e81-bf88-007e088a9326', 'seq': '3'}].append
+
+tests/sdd319/test_broadcast_gap.py:82: AssertionError
+=============================== warnings summary ===============================
+../../mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854
+  /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/sdd319/test_broadcast_gap.py::test_projector가_앞서가도_대상_이벤트_전부_반환
+FAILED tests/sdd319/test_broadcast_gap.py::test_일부_audience_누락은_해당_revision_전에서_방송과_watermark_중단
+2 failed, 11 deselected, 1 warning in 0.68s

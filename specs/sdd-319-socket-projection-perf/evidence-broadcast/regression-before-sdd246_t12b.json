@@ -1,0 +1,16 @@
+{
+  "exitstatus": 0,
+  "ledger_source_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319b-baseline-ovoc2lxr/app/services/session_live_ledger.py",
+  "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+  "counts": {
+    "warnings": 1,
+    "passed": 11
+  },
+  "failed": [],
+  "errors": [],
+  "targets": [
+    "tests/sdd246/t12b"
+  ],
+  "process_exitstatus": 0,
+  "log_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319b-regression-before-yzga2q8g/sdd246_t12b.log"
+}

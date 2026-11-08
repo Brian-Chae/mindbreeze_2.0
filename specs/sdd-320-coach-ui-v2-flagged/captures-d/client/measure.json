@@ -1,0 +1,291 @@
+{
+  "contrast": [
+    {
+      "fg": "#25212C",
+      "bg": "#F4F4F7",
+      "ratio": 14.36
+    },
+    {
+      "fg": "#25212C",
+      "bg": "#FFFFFF",
+      "ratio": 15.76
+    },
+    {
+      "fg": "#25212C",
+      "bg": "#EEE5F5",
+      "ratio": 12.88
+    },
+    {
+      "fg": "#68616F",
+      "bg": "#F4F4F7",
+      "ratio": 5.42
+    },
+    {
+      "fg": "#68616F",
+      "bg": "#FFFFFF",
+      "ratio": 5.95
+    },
+    {
+      "fg": "#68616F",
+      "bg": "#EEE5F5",
+      "ratio": 4.86
+    },
+    {
+      "fg": "#5F0080",
+      "bg": "#F4F4F7",
+      "ratio": 10.64
+    },
+    {
+      "fg": "#5F0080",
+      "bg": "#FFFFFF",
+      "ratio": 11.68
+    },
+    {
+      "fg": "#5F0080",
+      "bg": "#EEE5F5",
+      "ratio": 9.54
+    },
+    {
+      "fg": "#FFFFFF",
+      "bg": "#5F0080",
+      "ratio": 11.68
+    }
+  ],
+  "results": [
+    {
+      "width": 390,
+      "screen": "home",
+      "offenders": [],
+      "isUi": true,
+      "overflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": 46,
+      "navPresent": true
+    },
+    {
+      "width": 390,
+      "screen": "classes",
+      "offenders": [],
+      "isUi": true,
+      "overflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": 46,
+      "navPresent": true
+    },
+    {
+      "width": 390,
+      "screen": "class-detail",
+      "offenders": [],
+      "isUi": true,
+      "overflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": 60,
+      "navPresent": true
+    },
+    {
+      "width": 390,
+      "screen": "reports",
+      "offenders": [],
+      "isUi": true,
+      "overflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": 60,
+      "navPresent": true
+    },
+    {
+      "width": 390,
+      "screen": "report-detail",
+      "offenders": [],
+      "isUi": true,
+      "overflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": true
+    },
+    {
+      "width": 393,
+      "screen": "home",
+      "offenders": [],
+      "isUi": true,
+      "overflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": 46,
+      "navPresent": true
+    },
+    {
+      "width": 393,
+      "screen": "classes",
+      "offenders": [],
+      "isUi": true,
+      "overflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": 46,
+      "navPresent": true
+    },
+    {
+      "width": 393,
+      "screen": "class-detail",
+      "offenders": [],
+      "isUi": true,
+      "overflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": 60,
+      "navPresent": true
+    },
+    {
+      "width": 393,
+      "screen": "reports",
+      "offenders": [],
+      "isUi": true,
+      "overflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": 60,
+      "navPresent": true
+    },
+    {
+      "width": 393,
+      "screen": "report-detail",
+      "offenders": [],
+      "isUi": true,
+      "overflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": true
+    },
+    {
+      "width": 768,
+      "screen": "home",
+      "offenders": [
+        "div.u2-toolbar:768>528",
+        "button.u2-icon-btn:748>528",
+        "span.u2-dot:746>528",
+        "div.mobile-menu-swipe-viewport fle:768>528",
+        "div.mobile-menu-swipe-page u2-scro:768>528",
+        "header.u2-heading:768>528"
+      ],
+      "isUi": true,
+      "overflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": true
+    },
+    {
+      "width": 768,
+      "screen": "classes",
+      "offenders": [
+        "div.u2-toolbar:768>528",
+        "button.u2-icon-btn:748>528",
+        "span.u2-dot:746>528",
+        "div.mobile-menu-swipe-viewport fle:768>528",
+        "div.mobile-menu-swipe-page u2-scro:768>528",
+        "header.u2-heading:768>528"
+      ],
+      "isUi": true,
+      "overflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": true
+    },
+    {
+      "width": 768,
+      "screen": "class-detail",
+      "offenders": [
+        "div.u2-toolbar:768>528",
+        "button.u2-icon-btn:748>528",
+        "span.u2-dot:746>528",
+        "div.mobile-menu-swipe-viewport fle:768>528",
+        "div.mobile-menu-swipe-page u2-scro:768>528",
+        "div.:768>528"
+      ],
+      "isUi": true,
+      "overflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": true
+    },
+    {
+      "width": 768,
+      "screen": "reports",
+      "offenders": [
+        "div.u2-toolbar:768>528",
+        "button.u2-icon-btn:748>528",
+        "span.u2-dot:746>528",
+        "div.mobile-menu-swipe-viewport fle:768>528",
+        "div.mobile-menu-swipe-page u2-scro:768>528",
+        "header.u2-heading:768>528"
+      ],
+      "isUi": true,
+      "overflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": true
+    },
+    {
+      "width": 768,
+      "screen": "report-detail",
+      "offenders": [
+        "div.u2-toolbar:704>640",
+        "span.:684>640",
+        "div.u2-sheet-scroll:704>640",
+        "section.u2-cover:684>640",
+        "h1.:680>640",
+        "p.u2-muted:680>640"
+      ],
+      "isUi": true,
+      "overflow": false,
+      "small": [],
+      "h1Clipped": false,
+      "forbidden": [],
+      "hidden": false,
+      "gap": null,
+      "navPresent": true
+    },
+    {
+      "screen": "reduced-motion",
+      "animatedElements": 0
+    }
+  ],
+  "errors": []
+}

@@ -1,0 +1,31 @@
+{
+  "exitstatus": 1,
+  "ledger_source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd319b/backend/app/services/session_live_ledger.py",
+  "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+  "counts": {
+    "warnings": 1,
+    "passed": 19,
+    "failed": 4
+  },
+  "failed": [
+    "tests/sdd246/ingest/test_live_ingest_pg.py::test_capture_start_ACK에_stream_owner_generation_lease_participant가_계약대로_들어간다",
+    "tests/sdd246/ingest/test_live_ingest_pg.py::test_stream_수명_event_payload는_DeviceEntity_스키마와_일치한다",
+    "tests/sdd246/ingest/test_live_ingest_pg.py::test_밴드_보고_payload도_DeviceEntity이고_이후_stream_event가_밴드_필드를_보존한다",
+    "tests/sdd246/ingest/test_live_ingest_pg.py::test_metric_소켓은_저장하지_않고_최신값_metrics_event만_만들고_REST가_feature를_저장한다"
+  ],
+  "errors": [],
+  "targets": [
+    "tests/sdd246/ingest"
+  ],
+  "process_exitstatus": 1,
+  "log_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-round2-regression-after-9nbypegh/sdd246_ingest.log",
+  "source_root": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd319b/backend",
+  "source_sha256": {
+    "app/services/class_participation_service.py": "c96750b02cbb57cedb2df4f1b738d9c856e0807fdd491a8654213d29f68d3f36",
+    "app/services/session_live_commands.py": "279ae85b4053f74a127af73a9469425446d0571168e68d3731c2dfce66bcc5b6",
+    "app/services/live_single_flight.py": "277de85cb163d3e5e3ab54ee2e547c1b8585630ec821f4b120fd5f86d32207c2",
+    "app/services/session_live_outbox.py": "4cee4cf99ee4162a4fb171b0934a284b3ec346fc374822dcce9ef964d8f738c2",
+    "app/ws/session_live_namespace.py": "802c2d843cea1e1c51ee938e5eb7d9d271f1fd8481f778f2c9dad5acd8f6b191",
+    "app/api/v1/session.py": "6d16caaf28c30e27e336f5166498594be7678a31e28f0c5229e28b13464d52b1"
+  }
+}

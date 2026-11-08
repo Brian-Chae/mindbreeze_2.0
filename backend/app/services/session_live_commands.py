@@ -1,8 +1,9 @@
 """SDD-246 T03 — 영속 command service.
 
 `apply_command(db, actor, command)` 는 한 트랜잭션 안에서
-  회차 epoch 행 락 → ledger 조회(멱등/충돌) → 인가 → handler(업무 전이) → outbox append → ledger 기록 → commit
-을 수행한다. 업무 전이·ledger·outbox 는 같은 commit 이므로 "commit 직후 crash" 에서도 재시도가 원 결과를 받고,
+  (필요 시 users·클래스 선잠금) → 회차 행 락 → epoch 행 락 → ledger 조회(멱등/충돌) → 인가 → handler(업무 전이) → outbox append → ledger 기록 → commit
+을 수행한다. 내장 renew의 단독 commit은 회차/epoch 공유 잠금과 원장 키별 잠금을 사용한다.
+업무 전이·ledger·outbox 는 같은 commit 이므로 "commit 직후 crash" 에서도 재시도가 원 결과를 받고,
 commit 전 crash 면 아무것도 남지 않아 같은 command_id 로 안전하게 재실행된다.
 
 업무 handler 는 레지스트리에 등록한다. T03 은 capture.* 와 종료 cutoff 를 제공하고, 입장·대기·발언 등
@@ -12,6 +13,8 @@ commit 전 crash 면 아무것도 남지 않아 같은 command_id 로 안전하�
 from __future__ import annotations
 
 import uuid
+import time
+from contextlib import nullcontext
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
@@ -31,6 +34,7 @@ from app.services.session_live_ledger import (
     find_entry,
     insert_entry,
     lock_epoch,
+    lock_renew_epoch,
     lookup_result,  # noqa: F401  (재노출)
     replay_or_conflict,
 )
@@ -188,24 +192,48 @@ def apply_command_with_retry(db: DBSession, actor: Actor, command: LiveCommand, 
     return _transient(command, "db_busy", 0, 0)
 
 
+# handler 가 lock_class_session 을 잡는 명령 — epoch 보다 먼저 클래스 잠금을 잡아야 한다.
+CLASS_LOCK_FIRST_KINDS = frozenset({"entry.enter", "session.open", "session.start", "session.end", "session.cancel"})
+
+
+def _lock_class_before_epoch(db: DBSession, session_id: uuid.UUID, actor_id: uuid.UUID) -> None:
+    from app.services.class_write_service import lock_class_session
+
+    row = db.execute(select(SessionModel).where(SessionModel.id == session_id)).scalar_one_or_none()
+    if row is None or row.class_id is None:
+        return
+    # system 상태 전이 handler도 실제 호스트로 실행하므로 같은 사용자 집합을 먼저 잠근다.
+    lock_class_session(db, row, row.host_id if actor_id == SYSTEM_ACTOR_ID else actor_id)
+
+
 def apply_command(db: DBSession, actor: Actor, command: LiveCommand, *, now: datetime | None = None,
                   clock_probe_resolver: Callable[[uuid.UUID], int | None] | None = None,
-                  commit: bool = True) -> DurableResult:
+                  commit: bool = True, phase_timings: dict[str, float] | None = None) -> DurableResult:
     """명령을 정확히 한 번 적용한다. 같은 (session, actor, command_id) 는 원 결과, body 가 다르면 idempotency_conflict."""
     now = now or _utcnow()
     body_hash = command.body_hash()
     if command.kind not in ALL_KINDS:
         return _transient(command, "unknown_kind", 0, 0)
-    if command.kind in CAPTURE_KINDS:
-        # SDD-285 S2: 락 순서를 sessions → epoch 로 고정한다. 호스트/REST 경로는 sessions 행을 먼저 잠그고 epoch 를 잠그는데,
-        # 여기서 epoch → (capture_stream INSERT 의 FK) sessions KEY SHARE 순으로 잡으면 입장 폭주 때 교착이 난다(11/4 11건).
-        # KEY SHARE 는 FOR UPDATE 와만 충돌하므로 capture 끼리는 서로 막지 않는다.
-        db.execute(select(SessionModel.id).where(SessionModel.id == command.session_id).with_for_update(key_share=True))
+    if command.kind in CLASS_LOCK_FIRST_KINDS:
+        # SDD-308 후속: 전역 잠금 순서 users → 클래스 → 회차 → epoch. 이 명령의 handler 는 lock_class_session 을 잡는데,
+        # epoch 를 먼저 쥐고 users/클래스를 기다리면 REST 입장(users→회차)·capture(회차 NO KEY UPDATE→epoch)와 3자 교착이 난다(11/7 dev 100명).
+        _lock_class_before_epoch(db, command.session_id, actor.actor_id)
+    lease_only = (commit and command.kind == "capture.renew"
+                  and _HANDLERS.get(command.kind) is _handle_capture_renew)
+    session = None
+    lock_started = time.monotonic()
     try:
-        epoch_row = lock_epoch(db, command.session_id)
+        # renew는 revision/outbox를 쓰지 않는다. 교체 handler와 복합 트랜잭션은 배타 경로를 유지한다.
+        if lease_only:
+            epoch_row, session = lock_renew_epoch(db, command.session_id, actor.actor_id, command.command_id)
+        else:
+            epoch_row = lock_epoch(db, command.session_id)
     except IntegrityError:  # 존재하지 않는 session_id (FK)
         db.rollback()
         return _transient(command, "session_not_found", 0, 0)
+    finally:
+        if phase_timings is not None:
+            phase_timings["session_epoch_lock_ms"] = phase_timings.get("session_epoch_lock_ms", 0.0) + (time.monotonic() - lock_started) * 1000
 
     # 1) 멱등/충돌: 락을 쥔 뒤 읽으므로 동시 중복 요청은 먼저 commit 한 하나만 남는다.
     existing = find_entry(db, command.session_id, actor.actor_id, command.command_id)
@@ -221,9 +249,10 @@ def apply_command(db: DBSession, actor: Actor, command: LiveCommand, *, now: dat
             db.rollback()
         return _transient(command, "epoch_mismatch", epoch, revision)
 
-    session = db.execute(
-        select(SessionModel).where(SessionModel.id == command.session_id).execution_options(populate_existing=True)
-    ).scalar_one_or_none()
+    if session is None:
+        session = db.execute(
+            select(SessionModel).where(SessionModel.id == command.session_id).execution_options(populate_existing=True)
+        ).scalar_one_or_none()
     if session is None:
         if commit:
             db.rollback()
@@ -241,7 +270,9 @@ def apply_command(db: DBSession, actor: Actor, command: LiveCommand, *, now: dat
                 db.rollback()
             return _transient(command, "handler_not_registered", epoch, revision)
         try:
-            with db.begin_nested():  # 거절 시 handler 가 쓴 부분 변경을 되돌린다
+            # 내장 renew의 결정적 거절은 모두 필드 변경 전이다. 예상밖 오류는 아래에서 전체 rollback한다.
+            # 다른 handler/복합 트랜잭션은 부분 변경을 되돌릴 savepoint가 필요하다.
+            with (nullcontext() if lease_only else db.begin_nested()):
                 handler(ctx)
             entity_version, result = ctx.entity_version, ctx.result
         except CommandRejected as rej:

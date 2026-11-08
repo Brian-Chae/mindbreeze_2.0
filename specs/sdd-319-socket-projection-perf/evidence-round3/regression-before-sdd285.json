@@ -1,0 +1,26 @@
+{
+  "exitstatus": 0,
+  "ledger_source_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-round3-baseline-r4zxw3uz/app/services/session_live_ledger.py",
+  "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+  "counts": {
+    "warnings": 1,
+    "passed": 31
+  },
+  "failed": [],
+  "errors": [],
+  "targets": [
+    "tests/sdd285"
+  ],
+  "process_exitstatus": 0,
+  "log_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-round3-regression-before-ip_7ds4p/sdd285.log",
+  "source_root": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-round3-baseline-r4zxw3uz",
+  "source_sha256": {
+    "app/services/class_participation_service.py": "c96750b02cbb57cedb2df4f1b738d9c856e0807fdd491a8654213d29f68d3f36",
+    "app/services/session_live_commands.py": "279ae85b4053f74a127af73a9469425446d0571168e68d3731c2dfce66bcc5b6",
+    "app/services/live_single_flight.py": "277de85cb163d3e5e3ab54ee2e547c1b8585630ec821f4b120fd5f86d32207c2",
+    "app/services/session_live_outbox.py": "4cee4cf99ee4162a4fb171b0934a284b3ec346fc374822dcce9ef964d8f738c2",
+    "app/services/session_live_ledger.py": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+    "app/ws/session_live_namespace.py": "802c2d843cea1e1c51ee938e5eb7d9d271f1fd8481f778f2c9dad5acd8f6b191",
+    "app/api/v1/session.py": "6d16caaf28c30e27e336f5166498594be7678a31e28f0c5229e28b13464d52b1"
+  }
+}

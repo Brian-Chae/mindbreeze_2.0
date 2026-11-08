@@ -1,0 +1,519 @@
+{
+  "primary_comparison": {
+    "100": [
+      "socket-before-100-r3.json",
+      "socket-after-100-r2.json"
+    ],
+    "40": [
+      "socket-before-40.json",
+      "socket-after-40.json"
+    ]
+  },
+  "current_source_sha": {
+    "cps_sha256": "c96750b02cbb57cedb2df4f1b738d9c856e0807fdd491a8654213d29f68d3f36",
+    "namespace_sha256": "65637af3ae939877911945d624e05462ec08cff3ceac101ecc64ecbb3dd59f00"
+  },
+  "runs": [
+    {
+      "file": "socket-before-100.json",
+      "n": 100,
+      "ticks": 32,
+      "burst": 120,
+      "burn_ms": 15.0,
+      "period_ms": 25,
+      "elapsed_s": 44.895265667000785,
+      "counts": {
+        "started": 100,
+        "renew": 400,
+        "metric_projected": 3198,
+        "stored_ack": 3200,
+        "snapshot_completed": 120,
+        "projection_pending": 1,
+        "metric_failed": 2,
+        "completed": 100
+      },
+      "errors": {},
+      "p95_s": {
+        "renew": 1.964318792000995,
+        "metric": 1.350254833996587,
+        "store": 1.2048282500036294,
+        "snapshot": 4.523909208997793
+      },
+      "cpu_process_mean_pct": 105.68224064969573,
+      "cpu_process_max_pct": 109.00042722147607,
+      "loop_lag_p95_s": 0.001971208992472384,
+      "stored_count": 3200,
+      "expected_windows": 3200,
+      "broadcast_expected_pairs": 6998,
+      "broadcast_missing_pairs": 0,
+      "client_missing_pairs": 0,
+      "revision": 3500,
+      "applied_revision": 3500,
+      "emitted_revision": 3500,
+      "source_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t/app/services/class_participation_service.py",
+      "cps_sha256": "9f4f58bc35c932ab9e1a8c6cc6a85ba9e846adaad4fb4cc0e0d9eb87c792ef55",
+      "namespace_sha256": "86a3bce31f8490a1f865c54287dca8f9033986abb43104844e6cfc3c4c5c6dc1",
+      "single_flight_stats": {
+        "publish_runs": 92,
+        "publish_coalesced": 3665,
+        "drain_runs": 352,
+        "drain_shared": 189,
+        "drain_fallback": 0,
+        "drain_handoff": 2,
+        "drain_timeout": 1,
+        "drain_skipped": 50
+      },
+      "timing_logs": [],
+      "limitations": [
+        "합성 V2Conn 인증/입장 주입",
+        "저장은 REST 서비스이나 test socket으로 전송",
+        "client도 같은 process 별도 loop",
+        "고정 CPU busy slice 합성 압박",
+        "fixed ticks 밀리면 종료 연장"
+      ]
+    },
+    {
+      "file": "socket-before-100-r2.json",
+      "n": 100,
+      "ticks": 32,
+      "burst": 120,
+      "burn_ms": 15.0,
+      "period_ms": 25,
+      "elapsed_s": 53.05394995799725,
+      "counts": {
+        "started": 100,
+        "renew": 400,
+        "metric_projected": 3197,
+        "metric_status:projected:none": 3197,
+        "stored_ack": 3200,
+        "snapshot_completed": 120,
+        "projection_pending": 4,
+        "metric_failed": 3,
+        "metric_status:ignored:not_live": 3,
+        "completed": 100
+      },
+      "errors": {},
+      "p95_s": {
+        "renew": 3.0104833750010584,
+        "metric": 2.748861375002889,
+        "store": 2.273201957999845,
+        "snapshot": 5.539869666004961
+      },
+      "cpu_process_mean_pct": 103.94949938317188,
+      "cpu_process_max_pct": 107.11692636780434,
+      "loop_lag_p95_s": 0.0036662919956143014,
+      "stored_count": 3200,
+      "expected_windows": 3200,
+      "broadcast_expected_pairs": 6996,
+      "broadcast_missing_pairs": 0,
+      "client_missing_pairs": 0,
+      "revision": 3499,
+      "applied_revision": 3499,
+      "emitted_revision": 3499,
+      "source_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t/app/services/class_participation_service.py",
+      "cps_sha256": "9f4f58bc35c932ab9e1a8c6cc6a85ba9e846adaad4fb4cc0e0d9eb87c792ef55",
+      "namespace_sha256": "86a3bce31f8490a1f865c54287dca8f9033986abb43104844e6cfc3c4c5c6dc1",
+      "single_flight_stats": {
+        "publish_runs": 71,
+        "publish_coalesced": 3674,
+        "drain_runs": 315,
+        "drain_shared": 214,
+        "drain_fallback": 0,
+        "drain_handoff": 3,
+        "drain_timeout": 4,
+        "drain_skipped": 38
+      },
+      "timing_logs": [],
+      "limitations": [
+        "합성 V2Conn 인증/입장 주입",
+        "저장은 REST 서비스이나 test socket으로 전송",
+        "client도 같은 process 별도 loop",
+        "고정 CPU busy slice 합성 압박",
+        "fixed ticks 밀리면 종료 연장",
+        "직접 READY 주입으로 연결당 heartbeat 스케줄러 미실행",
+        "client coverage는 event_id×audience 합집합이며 클라이언트별 전송보장 아님"
+      ]
+    },
+    {
+      "file": "socket-before-100-r3.json",
+      "n": 100,
+      "ticks": 32,
+      "burst": 120,
+      "burn_ms": 15.0,
+      "period_ms": 25,
+      "elapsed_s": 44.93760687499889,
+      "counts": {
+        "started": 100,
+        "renew": 400,
+        "metric_projected": 3198,
+        "metric_status:projected:none": 3198,
+        "stored_ack": 3200,
+        "snapshot_completed": 120,
+        "projection_pending": 2,
+        "metric_failed": 2,
+        "metric_status:ignored:not_live": 2,
+        "completed": 100
+      },
+      "errors": {},
+      "p95_s": {
+        "renew": 1.6571928749981453,
+        "metric": 1.5495715420038323,
+        "store": 1.2969974579973496,
+        "snapshot": 4.597322124995117
+      },
+      "cpu_process_mean_pct": 105.76750550054471,
+      "cpu_process_max_pct": 107.70405779789046,
+      "loop_lag_p95_s": 0.0020761249979841523,
+      "stored_count": 3200,
+      "expected_windows": 3200,
+      "broadcast_expected_pairs": 6998,
+      "broadcast_missing_pairs": 0,
+      "client_missing_pairs": 0,
+      "revision": 3500,
+      "applied_revision": 3500,
+      "emitted_revision": 3500,
+      "final_settle": {
+        "before": [
+          3500,
+          3500,
+          3500,
+          false
+        ],
+        "after": [
+          3500,
+          3500,
+          3500,
+          false
+        ],
+        "duration_s": 0.0044967499998165295
+      },
+      "source_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t/app/services/class_participation_service.py",
+      "cps_sha256": "9f4f58bc35c932ab9e1a8c6cc6a85ba9e846adaad4fb4cc0e0d9eb87c792ef55",
+      "namespace_sha256": "86a3bce31f8490a1f865c54287dca8f9033986abb43104844e6cfc3c4c5c6dc1",
+      "single_flight_stats": {
+        "publish_runs": 77,
+        "publish_coalesced": 3674,
+        "drain_runs": 341,
+        "drain_shared": 197,
+        "drain_fallback": 0,
+        "drain_handoff": 2,
+        "drain_timeout": 2,
+        "drain_skipped": 37
+      },
+      "timing_logs": [],
+      "limitations": [
+        "합성 V2Conn 인증/입장 주입",
+        "저장은 REST 서비스이나 test socket으로 전송",
+        "client도 같은 process 별도 loop",
+        "고정 CPU busy slice 합성 압박",
+        "fixed ticks 밀리면 종료 연장",
+        "직접 READY 주입으로 연결당 heartbeat 스케줄러 미실행",
+        "client coverage는 event_id×audience 합집합이며 클라이언트별 전송보장 아님"
+      ]
+    },
+    {
+      "file": "socket-before-40.json",
+      "n": 40,
+      "ticks": 32,
+      "burst": 120,
+      "burn_ms": 15.0,
+      "period_ms": 25,
+      "elapsed_s": 32.524255707998236,
+      "counts": {
+        "started": 40,
+        "renew": 160,
+        "metric_projected": 1280,
+        "metric_status:projected:none": 1280,
+        "stored_ack": 1280,
+        "snapshot_completed": 120,
+        "completed": 40
+      },
+      "errors": {},
+      "p95_s": {
+        "renew": 0.5852261670006556,
+        "metric": 0.7013892910035793,
+        "store": 0.5346331250038929,
+        "snapshot": 2.4365955000030226
+      },
+      "cpu_process_mean_pct": 85.37908092944522,
+      "cpu_process_max_pct": 105.70029656316726,
+      "loop_lag_p95_s": 0.0044383749991538934,
+      "stored_count": 1280,
+      "expected_windows": 1280,
+      "broadcast_expected_pairs": 2802,
+      "broadcast_missing_pairs": 0,
+      "client_missing_pairs": 0,
+      "revision": 1402,
+      "applied_revision": 1402,
+      "emitted_revision": 1402,
+      "source_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t/app/services/class_participation_service.py",
+      "cps_sha256": "9f4f58bc35c932ab9e1a8c6cc6a85ba9e846adaad4fb4cc0e0d9eb87c792ef55",
+      "namespace_sha256": "86a3bce31f8490a1f865c54287dca8f9033986abb43104844e6cfc3c4c5c6dc1",
+      "single_flight_stats": {
+        "publish_runs": 183,
+        "publish_coalesced": 1415,
+        "drain_runs": 253,
+        "drain_shared": 73,
+        "drain_fallback": 0,
+        "drain_handoff": 0,
+        "drain_timeout": 0,
+        "drain_skipped": 57
+      },
+      "timing_logs": [],
+      "limitations": [
+        "합성 V2Conn 인증/입장 주입",
+        "저장은 REST 서비스이나 test socket으로 전송",
+        "client도 같은 process 별도 loop",
+        "고정 CPU busy slice 합성 압박",
+        "fixed ticks 밀리면 종료 연장"
+      ]
+    },
+    {
+      "file": "socket-after-100.json",
+      "n": 100,
+      "ticks": 32,
+      "burst": 120,
+      "burn_ms": 15.0,
+      "period_ms": 25,
+      "elapsed_s": 41.81535295800131,
+      "counts": {
+        "started": 100,
+        "renew": 400,
+        "metric_projected": 3190,
+        "metric_status:projected:none": 3190,
+        "stored_ack": 3200,
+        "snapshot_completed": 120,
+        "metric_failed": 10,
+        "metric_status:missing:none": 1,
+        "metric_status:ignored:not_live": 9,
+        "completed": 100
+      },
+      "errors": {
+        "live:metric:TimeoutError": 1
+      },
+      "p95_s": {
+        "renew": 1.6334666250040755,
+        "metric": 1.3086817919975147,
+        "store": 1.1341370840018499,
+        "snapshot": 4.444355916995846
+      },
+      "cpu_process_mean_pct": 105.56803228490405,
+      "cpu_process_max_pct": 109.39059523692069,
+      "loop_lag_p95_s": 0.0017000829975586385,
+      "stored_count": 3200,
+      "expected_windows": 3200,
+      "broadcast_expected_pairs": 6984,
+      "broadcast_missing_pairs": 438,
+      "client_missing_pairs": 438,
+      "revision": 3493,
+      "applied_revision": 3274,
+      "emitted_revision": 3274,
+      "source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd319b/backend/app/services/class_participation_service.py",
+      "cps_sha256": "c96750b02cbb57cedb2df4f1b738d9c856e0807fdd491a8654213d29f68d3f36",
+      "namespace_sha256": "65637af3ae939877911945d624e05462ec08cff3ceac101ecc64ecbb3dd59f00",
+      "single_flight_stats": {
+        "publish_runs": 11,
+        "publish_coalesced": 3288,
+        "drain_runs": 64,
+        "drain_shared": 45,
+        "drain_fallback": 0,
+        "drain_handoff": 2,
+        "drain_timeout": 0,
+        "drain_skipped": 2
+      },
+      "timing_logs": [
+        "[live-v2] live_command_timing session=a7e1914a kind=capture.renew count=101 reasons={'lease_only': 101} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 356.983, 'apply_ms': 374.334, 'scope_ms': 16.072, 'service_ms': 376.453}",
+        "[live-v2] live_command_timing session=a7e1914a kind=capture.renew.ws count=101 reasons={'applied': 101} max_ms={'thread_queue_service_publish_ms': 982.761, 'scope_gate_ms': 691.053}",
+        "[live-v2] live_command_timing session=a7e1914a kind=capture.renew count=99 reasons={'lease_only': 99} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 337.489, 'apply_ms': 352.045, 'scope_ms': 15.281, 'service_ms': 354.152}",
+        "[live-v2] live_command_timing session=a7e1914a kind=capture.renew.ws count=99 reasons={'applied': 99} max_ms={'thread_queue_service_publish_ms': 963.608, 'scope_gate_ms': 720.138}",
+        "[live-v2] live_command_timing session=a7e1914a kind=capture.renew count=99 reasons={'lease_only': 99} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 347.145, 'apply_ms': 355.14, 'scope_ms': 15.788, 'service_ms': 359.54}",
+        "[live-v2] live_command_timing session=a7e1914a kind=capture.renew.ws count=99 reasons={'applied': 99} max_ms={'thread_queue_service_publish_ms': 1010.012, 'scope_gate_ms': 819.072}"
+      ],
+      "limitations": [
+        "합성 V2Conn 인증/입장 주입",
+        "저장은 REST 서비스이나 test socket으로 전송",
+        "client도 같은 process 별도 loop",
+        "고정 CPU busy slice 합성 압박",
+        "fixed ticks 밀리면 종료 연장",
+        "직접 READY 주입으로 연결당 heartbeat 스케줄러 미실행",
+        "client coverage는 event_id×audience 합집합이며 클라이언트별 전송보장 아님"
+      ]
+    },
+    {
+      "file": "socket-after-100-r2.json",
+      "n": 100,
+      "ticks": 32,
+      "burst": 120,
+      "burn_ms": 15.0,
+      "period_ms": 25,
+      "elapsed_s": 42.88571083300485,
+      "counts": {
+        "started": 100,
+        "renew": 400,
+        "metric_projected": 3191,
+        "metric_status:projected:none": 3191,
+        "stored_ack": 3200,
+        "snapshot_completed": 120,
+        "metric_failed": 9,
+        "metric_status:ignored:not_live": 9,
+        "completed": 100
+      },
+      "errors": {},
+      "p95_s": {
+        "renew": 1.5911826669980655,
+        "metric": 1.290867250005249,
+        "store": 1.1063741670004674,
+        "snapshot": 4.472359999999753
+      },
+      "cpu_process_mean_pct": 105.17533898989313,
+      "cpu_process_max_pct": 109.10884592658915,
+      "loop_lag_p95_s": 0.0017166249963338487,
+      "stored_count": 3200,
+      "expected_windows": 3200,
+      "broadcast_expected_pairs": 6984,
+      "broadcast_missing_pairs": 0,
+      "client_missing_pairs": 0,
+      "revision": 3493,
+      "applied_revision": 3493,
+      "emitted_revision": 3493,
+      "final_settle": {
+        "before": [
+          3493,
+          3493,
+          3493,
+          false
+        ],
+        "after": [
+          3493,
+          3493,
+          3493,
+          false
+        ],
+        "duration_s": 0.004704916995251551
+      },
+      "source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd319b/backend/app/services/class_participation_service.py",
+      "cps_sha256": "c96750b02cbb57cedb2df4f1b738d9c856e0807fdd491a8654213d29f68d3f36",
+      "namespace_sha256": "65637af3ae939877911945d624e05462ec08cff3ceac101ecc64ecbb3dd59f00",
+      "single_flight_stats": {
+        "publish_runs": 23,
+        "publish_coalesced": 3277,
+        "drain_runs": 84,
+        "drain_shared": 37,
+        "drain_fallback": 0,
+        "drain_handoff": 2,
+        "drain_timeout": 0,
+        "drain_skipped": 2
+      },
+      "timing_logs": [
+        "[live-v2] live_command_timing session=13c129a5 kind=capture.renew count=101 reasons={'lease_only': 101} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 380.939, 'apply_ms': 400.185, 'scope_ms': 15.652, 'service_ms': 402.339}",
+        "[live-v2] live_command_timing session=13c129a5 kind=capture.renew.ws count=101 reasons={'applied': 101} max_ms={'thread_queue_service_publish_ms': 1016.559, 'scope_gate_ms': 769.74}",
+        "[live-v2] live_command_timing session=13c129a5 kind=capture.renew count=99 reasons={'lease_only': 99} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 382.54, 'apply_ms': 395.573, 'scope_ms': 15.585, 'service_ms': 402.871}",
+        "[live-v2] live_command_timing session=13c129a5 kind=capture.renew.ws count=99 reasons={'applied': 99} max_ms={'thread_queue_service_publish_ms': 1035.081, 'scope_gate_ms': 719.613}",
+        "[live-v2] live_command_timing session=13c129a5 kind=capture.renew count=99 reasons={'lease_only': 99} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 368.096, 'apply_ms': 381.238, 'scope_ms': 15.852, 'service_ms': 383.456}",
+        "[live-v2] live_command_timing session=13c129a5 kind=capture.renew.ws count=99 reasons={'applied': 99} max_ms={'thread_queue_service_publish_ms': 1016.656, 'scope_gate_ms': 759.087}"
+      ],
+      "limitations": [
+        "합성 V2Conn 인증/입장 주입",
+        "저장은 REST 서비스이나 test socket으로 전송",
+        "client도 같은 process 별도 loop",
+        "고정 CPU busy slice 합성 압박",
+        "fixed ticks 밀리면 종료 연장",
+        "직접 READY 주입으로 연결당 heartbeat 스케줄러 미실행",
+        "client coverage는 event_id×audience 합집합이며 클라이언트별 전송보장 아님"
+      ]
+    },
+    {
+      "file": "socket-after-40.json",
+      "n": 40,
+      "ticks": 32,
+      "burst": 120,
+      "burn_ms": 15.0,
+      "period_ms": 25,
+      "elapsed_s": 32.490870916997665,
+      "counts": {
+        "started": 40,
+        "renew": 160,
+        "metric_projected": 1280,
+        "metric_status:projected:none": 1280,
+        "stored_ack": 1280,
+        "snapshot_completed": 120,
+        "completed": 40
+      },
+      "errors": {},
+      "p95_s": {
+        "renew": 0.48999087500124006,
+        "metric": 0.47580741699493956,
+        "store": 0.2619702079973649,
+        "snapshot": 2.2756857909989776
+      },
+      "cpu_process_mean_pct": 82.07272094282358,
+      "cpu_process_max_pct": 105.18793105698923,
+      "loop_lag_p95_s": 0.0032781249974505045,
+      "stored_count": 1280,
+      "expected_windows": 1280,
+      "broadcast_expected_pairs": 2802,
+      "broadcast_missing_pairs": 0,
+      "client_missing_pairs": 0,
+      "revision": 1402,
+      "applied_revision": 1402,
+      "emitted_revision": 1402,
+      "final_settle": {
+        "before": [
+          1402,
+          1402,
+          1402,
+          false
+        ],
+        "after": [
+          1402,
+          1402,
+          1402,
+          false
+        ],
+        "duration_s": 0.005015666007238906
+      },
+      "source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd319b/backend/app/services/class_participation_service.py",
+      "cps_sha256": "c96750b02cbb57cedb2df4f1b738d9c856e0807fdd491a8654213d29f68d3f36",
+      "namespace_sha256": "65637af3ae939877911945d624e05462ec08cff3ceac101ecc64ecbb3dd59f00",
+      "single_flight_stats": {
+        "publish_runs": 93,
+        "publish_coalesced": 1287,
+        "drain_runs": 125,
+        "drain_shared": 6,
+        "drain_fallback": 0,
+        "drain_handoff": 0,
+        "drain_timeout": 0,
+        "drain_skipped": 2
+      },
+      "timing_logs": [
+        "[live-v2] live_command_timing session=b9521d5c kind=capture.renew count=43 reasons={'lease_only': 43} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 379.895, 'apply_ms': 399.637, 'scope_ms': 15.274, 'service_ms': 401.575}",
+        "[live-v2] live_command_timing session=b9521d5c kind=capture.renew.ws count=43 reasons={'applied': 43} max_ms={'thread_queue_service_publish_ms': 476.731, 'scope_gate_ms': 33.542}",
+        "[live-v2] live_command_timing session=b9521d5c kind=capture.renew count=39 reasons={'lease_only': 39} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 372.321, 'apply_ms': 376.492, 'scope_ms': 15.727, 'service_ms': 378.233}",
+        "[live-v2] live_command_timing session=b9521d5c kind=capture.renew.ws count=39 reasons={'applied': 39} max_ms={'thread_queue_service_publish_ms': 430.313, 'scope_gate_ms': 31.941}",
+        "[live-v2] live_command_timing session=b9521d5c kind=capture.renew count=41 reasons={'lease_only': 41} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 379.436, 'apply_ms': 398.338, 'scope_ms': 15.816, 'service_ms': 400.069}",
+        "[live-v2] live_command_timing session=b9521d5c kind=capture.renew.ws count=41 reasons={'applied': 41} max_ms={'thread_queue_service_publish_ms': 483.499, 'scope_gate_ms': 26.046}"
+      ],
+      "limitations": [
+        "합성 V2Conn 인증/입장 주입",
+        "저장은 REST 서비스이나 test socket으로 전송",
+        "client도 같은 process 별도 loop",
+        "고정 CPU busy slice 합성 압박",
+        "fixed ticks 밀리면 종료 연장",
+        "직접 READY 주입으로 연결당 heartbeat 스케줄러 미실행",
+        "client coverage는 event_id×audience 합집합이며 클라이언트별 전송보장 아님"
+      ]
+    }
+  ],
+  "initial_after_failure": {
+    "file": "socket-after-100.json",
+    "explanation": "최종 publish가 coalesced 즉시 반환하여 revision3493/applied3274 상태에서 수집 종료. 차이219×2=누락438. 측정중 metric30초timeout1은 별도 실제실패로 보존."
+  },
+  "limits": [
+    "소켓 연결은 실제 localhost이나 인증/REST입장은 합성V2Conn",
+    "heartbeat loop 미실행",
+    "CPU는server+client 같은process 합계와 고정15ms/25ms busy loop",
+    "회원별 metric ACK를 기다리므로 renew는독립타이머가아님",
+    "metric ignored:not_live는 별도실패이며 durable 저장성공과구분",
+    "callback/client coverage는 event_id×audience 합집합이며 클라이언트개별보장아님"
+  ]
+}

@@ -1,6 +1,7 @@
 """SDD-246 T03 — command ledger 저수준 연산 (해시·epoch 락·outbox append·결과 변환).
 
-동시성 모델: 회차당 `live_session_epoch` 행을 `SELECT ... FOR UPDATE` 로 잠가 그 회차의 모든 명령을 직렬화한다.
+동시성 모델: 먼저 `sessions` 행을 FOR NO KEY UPDATE로 잠근 뒤 회차당 `live_session_epoch` 행을 `SELECT ... FOR UPDATE` 로 잠가 그 회차의 모든 명령을 직렬화한다.
+내장 renew의 단독 commit은 공유 session/epoch 잠금과 원장 키별 advisory 잠금으로 renew 사이만 병렬 처리한다.
 같은 command_id 가 100번 동시에 들어와도 락 대기 후 ledger 를 다시 읽어 하나만 실행되고 나머지는 원 결과를 받는다.
 PostgreSQL 전용이다(SQLite 로 동시성 증거를 대체하지 않는다).
 """
@@ -14,11 +15,12 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session as DBSession
 
 from app.models.live_state import LiveCommandLedger, LiveOutbox, LiveSessionEpoch
+from app.models.session import Session as SessionModel
 
 # 시스템 actor(자동 승격 등). 계정/참가자 UUID 와 충돌하지 않는 고정값.
 SYSTEM_ACTOR_ID = uuid.UUID(int=0)
@@ -74,14 +76,44 @@ def require_postgres(db: DBSession) -> None:
 
 
 def lock_epoch(db: DBSession, session_id: uuid.UUID) -> LiveSessionEpoch:
-    """epoch 행을 (없으면 만들고) FOR UPDATE 로 잠근다. 같은 회차 명령은 여기서 직렬화된다."""
+    """sessions → epoch 순서로 잠근다. 클래스 잠금이 필요한 호출자는 이를 먼저 획득해야 한다.
+
+    sessions NO KEY UPDATE는 handler의 비키 UPDATE와 같은 강도이며 INSERT FK의 KEY SHARE와 호환된다.
+    epoch를 먼저 쥐면 outbox/ledger FK 검사에서 sessions를 가진 입장·상태 전이와 교착할 수 있다.
+    존재하지 않는 회차는 아래 epoch INSERT의 FK 오류로 기존 호출자에게 전달한다.
+    """
     require_postgres(db)
+    db.execute(select(SessionModel.id).where(SessionModel.id == session_id).with_for_update(key_share=True))
     db.execute(pg_insert(LiveSessionEpoch).values(session_id=session_id).on_conflict_do_nothing(
         index_elements=[LiveSessionEpoch.session_id]))
     return db.execute(
         select(LiveSessionEpoch).where(LiveSessionEpoch.session_id == session_id)
         .with_for_update().execution_options(populate_existing=True)
     ).scalar_one()
+
+
+def lock_renew_epoch(db: DBSession, session_id: uuid.UUID, actor_id: uuid.UUID,
+                     command_id: uuid.UUID) -> tuple[LiveSessionEpoch, SessionModel | None]:
+    """리스만 갱신할 때 renew끼리는 공유하고 다른 명령/재구축과의 경계는 유지한다.
+
+    호출자는 outbox를 만들지 않고 이 트랜잭션을 끝내야 한다. 잠금 승격은 허용하지 않는다.
+    동일 원장 키는 stream 유효성 검사보다 먼저 직렬화하여 거절/다른 body도 멱등 처리한다.
+    """
+    require_postgres(db)
+    session = db.execute(select(SessionModel).where(SessionModel.id == session_id)
+                         .with_for_update(read=True).execution_options(populate_existing=True)).scalar_one_or_none()
+    query = (select(LiveSessionEpoch).where(LiveSessionEpoch.session_id == session_id)
+             .with_for_update(read=True).execution_options(populate_existing=True))
+    row = db.execute(query).scalar_one_or_none()
+    if row is None:
+        # 첫 요청도 공유→배타 승격 없이 초기화한다. 경쟁 INSERT는 최초 생성 commit을 기다린다.
+        db.execute(pg_insert(LiveSessionEpoch).values(session_id=session_id).on_conflict_do_nothing(
+            index_elements=[LiveSessionEpoch.session_id]))
+        row = db.execute(query).scalar_one()
+    digest = hashlib.sha256(session_id.bytes + actor_id.bytes + command_id.bytes).digest()
+    lock_key = int.from_bytes(digest[:8], byteorder="big", signed=True)
+    db.execute(select(func.pg_advisory_xact_lock(lock_key)))
+    return row, session
 
 
 def find_entry(db: DBSession, session_id: uuid.UUID, actor_id: uuid.UUID, command_id: uuid.UUID) -> LiveCommandLedger | None:

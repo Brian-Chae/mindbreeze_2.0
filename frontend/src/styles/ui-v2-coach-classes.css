@@ -1,0 +1,58 @@
+/* SDD-320 후속 3 — 코치 클래스 목록·상세·리포트 빈 상태 D안. 모든 규칙은 html.u2-coach 하위(코치 업무 경로에서만 클래스가 붙는다).
+   마크업·링크·동작은 그대로 둔다(후속 4에서 메인 카드는 틴트 → 자연 배경으로 되돌림). */
+
+/* SDD-320 후속 4 — 메인 카드(즉석 시작·열린 회차·다음 회차) = 자연 배경 + 어두운 보라 그라데이션. 글자 흰색/보조 #E5D3EE, 버튼 흰 바탕+보라 글자.
+   배경색 #251038 은 이미지 실패 시 흰 글자 대비 폴백. 인라인 사진은 그대로 두고 inset 그림자로 한 단계 더 어둡게 눌러 대비를 지킨다. */
+
+/* 1) 즉석 시작 배너 */
+html.u2-coach a[href="/classes/now"][class*="bg-purple-900"]{background-color:#251038;color:#FFFFFF;border-radius:var(--u2-r-card);box-shadow:inset 0 0 0 999px #25103859,0 14px 34px #25103840}
+html.u2-coach a[href="/classes/now"][class*="bg-purple-900"] strong{color:#FFFFFF;font-weight:600;letter-spacing:-.04em;text-shadow:0 1px 8px #25103899}
+html.u2-coach a[href="/classes/now"][class*="bg-purple-900"] > span:first-child span{color:#E5D3EE}
+html.u2-coach a[href="/classes/now"][class*="bg-purple-900"] > span:last-child{background:#FFFFFF;color:var(--u2-accent);border-radius:var(--u2-r-btn);min-height:48px;display:inline-flex;align-items:center;font-weight:600}
+
+/* 2) 열린 회차 · 다음 회차 히어로 */
+html.u2-coach .cs-structure .cs-open-hero{background-color:#251038;color:#FFFFFF;border-radius:var(--u2-r-card);box-shadow:inset 0 0 0 999px #25103859,0 14px 34px #25103840}
+html.u2-coach .cs-structure .cs-open-hero h2{color:#FFFFFF;font-weight:600;letter-spacing:-.04em;text-shadow:0 1px 8px #25103899}
+html.u2-coach .cs-structure .cs-open-hero > p{color:#E5D3EE}
+html.u2-coach .cs-structure .cs-open-hero a{background:#FFFFFF;color:var(--u2-accent);border-radius:var(--u2-r-btn);font-weight:600}
+html.u2-coach .cs-structure .cs-class-hero{background-color:#251038;color:#FFFFFF;border-radius:var(--u2-r-card);box-shadow:0 14px 34px #25103840}
+html.u2-coach .cs-structure .cs-class-hero::before{background:linear-gradient(160deg,rgba(37,16,56,.35),rgba(37,16,56,.72) 55%,rgba(37,16,56,.92))}
+html.u2-coach .cs-structure .cs-class-hero h2{color:#FFFFFF;font-weight:600;letter-spacing:-.04em;text-shadow:0 1px 8px #25103899}
+html.u2-coach .cs-structure .cs-class-hero .cs-hero-when,html.u2-coach .cs-structure .cs-hero-top > span:last-child{color:#E5D3EE}
+html.u2-coach .cs-structure .cs-hero-chip{background:#FFFFFF26;border:0;color:#FFFFFF;font-weight:600}
+html.u2-coach .cs-structure .cs-hero-guide{background:#2510388c;border-radius:var(--u2-r-btn)}
+html.u2-coach .cs-structure .cs-hero-guide strong{color:#FFFFFF}
+html.u2-coach .cs-structure .cs-hero-guide p,html.u2-coach .cs-structure .cs-hero-actions p{color:#E5D3EE}
+html.u2-coach .cs-structure .cs-hero-actions a{background:#FFFFFF;color:var(--u2-accent);border-radius:var(--u2-r-btn);font-weight:600}
+html.u2-coach .cs-structure .cs-class-hero{min-height:320px;align-content:space-between}
+html.u2-coach .cs-structure .cs-hero-actions{margin-top:auto}
+
+/* 2-1) 코치 홈 대시보드 메인 카드(ch-hero) */
+html.u2-coach .ch-home .ch-hero{background:#251038;color:#FFFFFF;border:0;box-shadow:0 14px 34px #25103840;display:flex;flex-direction:column;min-height:320px;--tx-hi:#FFFFFF;--tx-mid:#E5D3EE;--mb-purple:var(--u2-accent);--mb-pale:#E5D3EE;--sheet-bg:transparent;--sheet-border:transparent}
+html.u2-coach .ch-home .ch-hero::before{display:block;background:linear-gradient(160deg,rgba(37,16,56,.35),rgba(37,16,56,.72) 55%,rgba(37,16,56,.92))}
+html.u2-coach .ch-home .ch-hero .sh-hero__bg{display:block}
+html.u2-coach .ch-home .ch-hero .sh-hero__in{flex:1;min-height:0}
+html.u2-coach .ch-home .ch-hero .ch-hero__title,html.u2-coach .ch-home .ch-hero .sh-hero__title{color:#FFFFFF;font-weight:600;letter-spacing:-.04em;text-shadow:0 1px 8px #25103899}
+html.u2-coach .ch-home .ch-hero .ch-hero__sub,html.u2-coach .ch-home .ch-hero .sh-hbox__tx,html.u2-coach .ch-home .ch-hero .sh-hbox__tx span,html.u2-coach .ch-home .ch-hero .sh-hbox__tx b{color:#E5D3EE}
+html.u2-coach .ch-home .ch-hero .sh-hchip{background:#FFFFFF26;color:#FFFFFF}
+html.u2-coach .ch-home .ch-hero .sh-hchip.live{background:#FFFFFF;color:var(--u2-accent)}
+html.u2-coach .ch-home .ch-hero .sh-hcta{background:#FFFFFF;color:var(--u2-accent);margin-top:auto}
+
+/* 3) 목록 행·칩·진행 */
+html.u2-coach .cs-structure .cs-class-icon{background:var(--u2-tint);color:var(--u2-accent);border-radius:14px}
+html.u2-coach .cs-structure .cs-state-chip{background:var(--u2-tint);color:var(--u2-accent);border:0;border-radius:8px;font-weight:600}
+html.u2-coach .cs-structure .cs-state-chip.cs-muted-chip{background:var(--u2-canvas);color:var(--u2-muted)}
+html.u2-coach .cs-structure .cs-progress-line progress{accent-color:var(--u2-accent)}
+html.u2-coach .cs-structure .cs-enter-link{background:var(--u2-accent);color:#FFFFFF;border-radius:var(--u2-r-btn)}
+
+/* 4) 클래스 상세: 탭·카드·회차 보기 전환 */
+html.u2-coach nav[aria-label="클래스 메뉴"]{border-bottom:1px solid var(--u2-line)}
+html.u2-coach nav[aria-label="클래스 메뉴"] a[aria-current="page"]{color:var(--u2-accent);border-color:var(--u2-accent);font-weight:650}
+html.u2-coach section[class*="rounded"],html.u2-coach div[role="table"]{border-color:var(--u2-line);border-radius:var(--u2-r-card)}
+html.u2-coach [role="group"][aria-label="회차 보기 방식"] button{border-color:var(--u2-line);border-radius:var(--u2-r-btn);min-height:44px}
+html.u2-coach [role="group"][aria-label="회차 보기 방식"] button[aria-pressed="true"]{background:var(--u2-accent);color:#FFFFFF;border-color:var(--u2-accent)}
+html.u2-coach ol > li[class*="rounded-2xl"]{border-color:var(--u2-line);border-radius:var(--u2-r-card)}
+
+/* 5) 빈 상태(점선 박스) → 틴트 카드. 리포트 목록 등 코치 본문 공통 */
+html.u2-coach div[class*="border-dashed"][class*="text-center"]{border-style:solid;border-width:0;background:var(--u2-surface);border-radius:var(--u2-r-card);padding-top:40px;padding-bottom:40px}
+html.u2-coach div[class*="border-dashed"][class*="text-center"] [class*="text-[#9B9B9B]"]{color:var(--u2-muted)}

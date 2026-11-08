@@ -1,0 +1,330 @@
+[
+  {
+    "partition": "sdd308",
+    "exitstatus": 0,
+    "ledger_source_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t/app/services/session_live_ledger.py",
+    "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+    "counts": {
+      "warnings": 1,
+      "passed": 11
+    },
+    "failed": [],
+    "errors": [],
+    "targets": [
+      "tests/sdd308",
+      "--ignore=tests/sdd308/test_s5_measurement.py",
+      "--ignore=tests/sdd308/test_s6_epoch_lock_sql.py"
+    ],
+    "process_exitstatus": 0,
+    "log_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-regression-before-qv0h2j06/sdd308.log",
+    "source_root": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t",
+    "source_sha256": {
+      "app/services/class_participation_service.py": "9f4f58bc35c932ab9e1a8c6cc6a85ba9e846adaad4fb4cc0e0d9eb87c792ef55",
+      "app/services/session_live_commands.py": "45705cb9ba73be96f17acce8665105b8097837f1a02291185eda33f8873814b9",
+      "app/services/live_single_flight.py": "5758522ec0d9283ca6d5af78abf8263538157e52c1f3d595e29c97f4dce37cb1",
+      "app/services/session_live_outbox.py": "05667aec6a35bc1a6b44db01c4798274c79763753418ca9fb931436f23a59801",
+      "app/ws/session_live_namespace.py": "86a3bce31f8490a1f865c54287dca8f9033986abb43104844e6cfc3c4c5c6dc1",
+      "app/api/v1/session.py": "ecef1080547aada7b1145dfee0d9ecf4640989c1f0d5d9320fcd6d498f2909d9"
+    }
+  },
+  {
+    "partition": "sdd319",
+    "exitstatus": 0,
+    "ledger_source_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t/app/services/session_live_ledger.py",
+    "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+    "counts": {
+      "warnings": 2,
+      "skipped": 3,
+      "passed": 31
+    },
+    "failed": [],
+    "errors": [],
+    "targets": [
+      "tests/sdd319",
+      "--ignore=tests/sdd319/test_renew_light.py",
+      "--ignore=tests/sdd319/test_renew_socket_load.py",
+      "--ignore=tests/sdd319/test_command_timing.py",
+      "--ignore=tests/sdd319/test_renew_lease_pg.py"
+    ],
+    "process_exitstatus": 0,
+    "log_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-regression-before-qv0h2j06/sdd319.log",
+    "source_root": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t",
+    "source_sha256": {
+      "app/services/class_participation_service.py": "9f4f58bc35c932ab9e1a8c6cc6a85ba9e846adaad4fb4cc0e0d9eb87c792ef55",
+      "app/services/session_live_commands.py": "45705cb9ba73be96f17acce8665105b8097837f1a02291185eda33f8873814b9",
+      "app/services/live_single_flight.py": "5758522ec0d9283ca6d5af78abf8263538157e52c1f3d595e29c97f4dce37cb1",
+      "app/services/session_live_outbox.py": "05667aec6a35bc1a6b44db01c4798274c79763753418ca9fb931436f23a59801",
+      "app/ws/session_live_namespace.py": "86a3bce31f8490a1f865c54287dca8f9033986abb43104844e6cfc3c4c5c6dc1",
+      "app/api/v1/session.py": "ecef1080547aada7b1145dfee0d9ecf4640989c1f0d5d9320fcd6d498f2909d9"
+    }
+  },
+  {
+    "partition": "sdd306",
+    "exitstatus": 0,
+    "ledger_source_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t/app/services/session_live_ledger.py",
+    "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+    "counts": {
+      "warnings": 1,
+      "passed": 21,
+      "skipped": 1
+    },
+    "failed": [],
+    "errors": [],
+    "targets": [
+      "tests/sdd306"
+    ],
+    "process_exitstatus": 0,
+    "log_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-regression-before-qv0h2j06/sdd306.log",
+    "source_root": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t",
+    "source_sha256": {
+      "app/services/class_participation_service.py": "9f4f58bc35c932ab9e1a8c6cc6a85ba9e846adaad4fb4cc0e0d9eb87c792ef55",
+      "app/services/session_live_commands.py": "45705cb9ba73be96f17acce8665105b8097837f1a02291185eda33f8873814b9",
+      "app/services/live_single_flight.py": "5758522ec0d9283ca6d5af78abf8263538157e52c1f3d595e29c97f4dce37cb1",
+      "app/services/session_live_outbox.py": "05667aec6a35bc1a6b44db01c4798274c79763753418ca9fb931436f23a59801",
+      "app/ws/session_live_namespace.py": "86a3bce31f8490a1f865c54287dca8f9033986abb43104844e6cfc3c4c5c6dc1",
+      "app/api/v1/session.py": "ecef1080547aada7b1145dfee0d9ecf4640989c1f0d5d9320fcd6d498f2909d9"
+    }
+  },
+  {
+    "partition": "sdd285",
+    "exitstatus": 0,
+    "ledger_source_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t/app/services/session_live_ledger.py",
+    "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+    "counts": {
+      "warnings": 1,
+      "passed": 31
+    },
+    "failed": [],
+    "errors": [],
+    "targets": [
+      "tests/sdd285"
+    ],
+    "process_exitstatus": 0,
+    "log_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-regression-before-qv0h2j06/sdd285.log",
+    "source_root": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t",
+    "source_sha256": {
+      "app/services/class_participation_service.py": "9f4f58bc35c932ab9e1a8c6cc6a85ba9e846adaad4fb4cc0e0d9eb87c792ef55",
+      "app/services/session_live_commands.py": "45705cb9ba73be96f17acce8665105b8097837f1a02291185eda33f8873814b9",
+      "app/services/live_single_flight.py": "5758522ec0d9283ca6d5af78abf8263538157e52c1f3d595e29c97f4dce37cb1",
+      "app/services/session_live_outbox.py": "05667aec6a35bc1a6b44db01c4798274c79763753418ca9fb931436f23a59801",
+      "app/ws/session_live_namespace.py": "86a3bce31f8490a1f865c54287dca8f9033986abb43104844e6cfc3c4c5c6dc1",
+      "app/api/v1/session.py": "ecef1080547aada7b1145dfee0d9ecf4640989c1f0d5d9320fcd6d498f2909d9"
+    }
+  },
+  {
+    "partition": "sdd246_archive",
+    "exitstatus": 0,
+    "ledger_source_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t/app/services/session_live_ledger.py",
+    "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+    "counts": {
+      "warnings": 1,
+      "passed": 29
+    },
+    "failed": [],
+    "errors": [],
+    "targets": [
+      "tests/sdd246/archive"
+    ],
+    "process_exitstatus": 0,
+    "log_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-regression-before-qv0h2j06/sdd246_archive.log",
+    "source_root": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t",
+    "source_sha256": {
+      "app/services/class_participation_service.py": "9f4f58bc35c932ab9e1a8c6cc6a85ba9e846adaad4fb4cc0e0d9eb87c792ef55",
+      "app/services/session_live_commands.py": "45705cb9ba73be96f17acce8665105b8097837f1a02291185eda33f8873814b9",
+      "app/services/live_single_flight.py": "5758522ec0d9283ca6d5af78abf8263538157e52c1f3d595e29c97f4dce37cb1",
+      "app/services/session_live_outbox.py": "05667aec6a35bc1a6b44db01c4798274c79763753418ca9fb931436f23a59801",
+      "app/ws/session_live_namespace.py": "86a3bce31f8490a1f865c54287dca8f9033986abb43104844e6cfc3c4c5c6dc1",
+      "app/api/v1/session.py": "ecef1080547aada7b1145dfee0d9ecf4640989c1f0d5d9320fcd6d498f2909d9"
+    }
+  },
+  {
+    "partition": "sdd246_commands",
+    "exitstatus": 0,
+    "ledger_source_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t/app/services/session_live_ledger.py",
+    "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+    "counts": {
+      "warnings": 1,
+      "passed": 33
+    },
+    "failed": [],
+    "errors": [],
+    "targets": [
+      "tests/sdd246/commands"
+    ],
+    "process_exitstatus": 0,
+    "log_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-regression-before-qv0h2j06/sdd246_commands.log",
+    "source_root": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t",
+    "source_sha256": {
+      "app/services/class_participation_service.py": "9f4f58bc35c932ab9e1a8c6cc6a85ba9e846adaad4fb4cc0e0d9eb87c792ef55",
+      "app/services/session_live_commands.py": "45705cb9ba73be96f17acce8665105b8097837f1a02291185eda33f8873814b9",
+      "app/services/live_single_flight.py": "5758522ec0d9283ca6d5af78abf8263538157e52c1f3d595e29c97f4dce37cb1",
+      "app/services/session_live_outbox.py": "05667aec6a35bc1a6b44db01c4798274c79763753418ca9fb931436f23a59801",
+      "app/ws/session_live_namespace.py": "86a3bce31f8490a1f865c54287dca8f9033986abb43104844e6cfc3c4c5c6dc1",
+      "app/api/v1/session.py": "ecef1080547aada7b1145dfee0d9ecf4640989c1f0d5d9320fcd6d498f2909d9"
+    }
+  },
+  {
+    "partition": "sdd246_ingest",
+    "exitstatus": 1,
+    "ledger_source_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t/app/services/session_live_ledger.py",
+    "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+    "counts": {
+      "warnings": 1,
+      "passed": 19,
+      "failed": 4
+    },
+    "failed": [
+      "tests/sdd246/ingest/test_live_ingest_pg.py::test_capture_start_ACK에_stream_owner_generation_lease_participant가_계약대로_들어간다",
+      "tests/sdd246/ingest/test_live_ingest_pg.py::test_stream_수명_event_payload는_DeviceEntity_스키마와_일치한다",
+      "tests/sdd246/ingest/test_live_ingest_pg.py::test_밴드_보고_payload도_DeviceEntity이고_이후_stream_event가_밴드_필드를_보존한다",
+      "tests/sdd246/ingest/test_live_ingest_pg.py::test_metric_소켓은_저장하지_않고_최신값_metrics_event만_만들고_REST가_feature를_저장한다"
+    ],
+    "errors": [],
+    "targets": [
+      "tests/sdd246/ingest"
+    ],
+    "process_exitstatus": 1,
+    "log_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-regression-before-qv0h2j06/sdd246_ingest.log",
+    "source_root": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t",
+    "source_sha256": {
+      "app/services/class_participation_service.py": "9f4f58bc35c932ab9e1a8c6cc6a85ba9e846adaad4fb4cc0e0d9eb87c792ef55",
+      "app/services/session_live_commands.py": "45705cb9ba73be96f17acce8665105b8097837f1a02291185eda33f8873814b9",
+      "app/services/live_single_flight.py": "5758522ec0d9283ca6d5af78abf8263538157e52c1f3d595e29c97f4dce37cb1",
+      "app/services/session_live_outbox.py": "05667aec6a35bc1a6b44db01c4798274c79763753418ca9fb931436f23a59801",
+      "app/ws/session_live_namespace.py": "86a3bce31f8490a1f865c54287dca8f9033986abb43104844e6cfc3c4c5c6dc1",
+      "app/api/v1/session.py": "ecef1080547aada7b1145dfee0d9ecf4640989c1f0d5d9320fcd6d498f2909d9"
+    }
+  },
+  {
+    "partition": "sdd246_legacy",
+    "exitstatus": 0,
+    "ledger_source_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t/app/services/session_live_ledger.py",
+    "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+    "counts": {
+      "warnings": 1,
+      "passed": 50
+    },
+    "failed": [],
+    "errors": [],
+    "targets": [
+      "tests/sdd246/legacy"
+    ],
+    "process_exitstatus": 0,
+    "log_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-regression-before-qv0h2j06/sdd246_legacy.log",
+    "source_root": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t",
+    "source_sha256": {
+      "app/services/class_participation_service.py": "9f4f58bc35c932ab9e1a8c6cc6a85ba9e846adaad4fb4cc0e0d9eb87c792ef55",
+      "app/services/session_live_commands.py": "45705cb9ba73be96f17acce8665105b8097837f1a02291185eda33f8873814b9",
+      "app/services/live_single_flight.py": "5758522ec0d9283ca6d5af78abf8263538157e52c1f3d595e29c97f4dce37cb1",
+      "app/services/session_live_outbox.py": "05667aec6a35bc1a6b44db01c4798274c79763753418ca9fb931436f23a59801",
+      "app/ws/session_live_namespace.py": "86a3bce31f8490a1f865c54287dca8f9033986abb43104844e6cfc3c4c5c6dc1",
+      "app/api/v1/session.py": "ecef1080547aada7b1145dfee0d9ecf4640989c1f0d5d9320fcd6d498f2909d9"
+    }
+  },
+  {
+    "partition": "sdd246_state",
+    "exitstatus": 0,
+    "ledger_source_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t/app/services/session_live_ledger.py",
+    "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+    "counts": {
+      "warnings": 1,
+      "passed": 22
+    },
+    "failed": [],
+    "errors": [],
+    "targets": [
+      "tests/sdd246/state"
+    ],
+    "process_exitstatus": 0,
+    "log_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-regression-before-qv0h2j06/sdd246_state.log",
+    "source_root": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t",
+    "source_sha256": {
+      "app/services/class_participation_service.py": "9f4f58bc35c932ab9e1a8c6cc6a85ba9e846adaad4fb4cc0e0d9eb87c792ef55",
+      "app/services/session_live_commands.py": "45705cb9ba73be96f17acce8665105b8097837f1a02291185eda33f8873814b9",
+      "app/services/live_single_flight.py": "5758522ec0d9283ca6d5af78abf8263538157e52c1f3d595e29c97f4dce37cb1",
+      "app/services/session_live_outbox.py": "05667aec6a35bc1a6b44db01c4798274c79763753418ca9fb931436f23a59801",
+      "app/ws/session_live_namespace.py": "86a3bce31f8490a1f865c54287dca8f9033986abb43104844e6cfc3c4c5c6dc1",
+      "app/api/v1/session.py": "ecef1080547aada7b1145dfee0d9ecf4640989c1f0d5d9320fcd6d498f2909d9"
+    }
+  },
+  {
+    "partition": "sdd246_t12b",
+    "exitstatus": 0,
+    "ledger_source_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t/app/services/session_live_ledger.py",
+    "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+    "counts": {
+      "warnings": 1,
+      "passed": 11
+    },
+    "failed": [],
+    "errors": [],
+    "targets": [
+      "tests/sdd246/t12b"
+    ],
+    "process_exitstatus": 0,
+    "log_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-regression-before-qv0h2j06/sdd246_t12b.log",
+    "source_root": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t",
+    "source_sha256": {
+      "app/services/class_participation_service.py": "9f4f58bc35c932ab9e1a8c6cc6a85ba9e846adaad4fb4cc0e0d9eb87c792ef55",
+      "app/services/session_live_commands.py": "45705cb9ba73be96f17acce8665105b8097837f1a02291185eda33f8873814b9",
+      "app/services/live_single_flight.py": "5758522ec0d9283ca6d5af78abf8263538157e52c1f3d595e29c97f4dce37cb1",
+      "app/services/session_live_outbox.py": "05667aec6a35bc1a6b44db01c4798274c79763753418ca9fb931436f23a59801",
+      "app/ws/session_live_namespace.py": "86a3bce31f8490a1f865c54287dca8f9033986abb43104844e6cfc3c4c5c6dc1",
+      "app/api/v1/session.py": "ecef1080547aada7b1145dfee0d9ecf4640989c1f0d5d9320fcd6d498f2909d9"
+    }
+  },
+  {
+    "partition": "sdd246_transport",
+    "exitstatus": 0,
+    "ledger_source_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t/app/services/session_live_ledger.py",
+    "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+    "counts": {
+      "warnings": 2,
+      "passed": 84
+    },
+    "failed": [],
+    "errors": [],
+    "targets": [
+      "tests/sdd246/transport"
+    ],
+    "process_exitstatus": 0,
+    "log_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-regression-before-qv0h2j06/sdd246_transport.log",
+    "source_root": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t",
+    "source_sha256": {
+      "app/services/class_participation_service.py": "9f4f58bc35c932ab9e1a8c6cc6a85ba9e846adaad4fb4cc0e0d9eb87c792ef55",
+      "app/services/session_live_commands.py": "45705cb9ba73be96f17acce8665105b8097837f1a02291185eda33f8873814b9",
+      "app/services/live_single_flight.py": "5758522ec0d9283ca6d5af78abf8263538157e52c1f3d595e29c97f4dce37cb1",
+      "app/services/session_live_outbox.py": "05667aec6a35bc1a6b44db01c4798274c79763753418ca9fb931436f23a59801",
+      "app/ws/session_live_namespace.py": "86a3bce31f8490a1f865c54287dca8f9033986abb43104844e6cfc3c4c5c6dc1",
+      "app/api/v1/session.py": "ecef1080547aada7b1145dfee0d9ecf4640989c1f0d5d9320fcd6d498f2909d9"
+    }
+  },
+  {
+    "partition": "ws_live_v2",
+    "exitstatus": 0,
+    "ledger_source_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t/app/services/session_live_ledger.py",
+    "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+    "counts": {
+      "warnings": 2,
+      "passed": 36
+    },
+    "failed": [],
+    "errors": [],
+    "targets": [
+      "tests/test_mb2_ws_mid_fixes.py",
+      "tests/test_sdd024_session_live_ws.py",
+      "tests/test_fix_live_v2_feature_fields.py"
+    ],
+    "process_exitstatus": 0,
+    "log_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-regression-before-qv0h2j06/ws_live_v2.log",
+    "source_root": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-renew-baseline-od89kb_t",
+    "source_sha256": {
+      "app/services/class_participation_service.py": "9f4f58bc35c932ab9e1a8c6cc6a85ba9e846adaad4fb4cc0e0d9eb87c792ef55",
+      "app/services/session_live_commands.py": "45705cb9ba73be96f17acce8665105b8097837f1a02291185eda33f8873814b9",
+      "app/services/live_single_flight.py": "5758522ec0d9283ca6d5af78abf8263538157e52c1f3d595e29c97f4dce37cb1",
+      "app/services/session_live_outbox.py": "05667aec6a35bc1a6b44db01c4798274c79763753418ca9fb931436f23a59801",
+      "app/ws/session_live_namespace.py": "86a3bce31f8490a1f865c54287dca8f9033986abb43104844e6cfc3c4c5c6dc1",
+      "app/api/v1/session.py": "ecef1080547aada7b1145dfee0d9ecf4640989c1f0d5d9320fcd6d498f2909d9"
+    }
+  }
+]

@@ -68,6 +68,7 @@ from app.schemas.eeg import (
     RawPresignResponse,
 )
 from app.schemas import biosignal as biosignal_schema
+from app.services import entry_queue
 from app.services import (
     biosignal_artifact_service,
     biosignal_manifest_service,
@@ -596,7 +597,8 @@ def get_participant_livekit_token(
     )
 
 
-@router.post("/{session_id}/enter", response_model=EnterResponse)
+# SDD-319: enter_slot 은 데코레이터 의존성이라 get_current_user/get_db 보다 먼저 평가된다 — 대기 중 DB 연결 0
+@router.post("/{session_id}/enter", response_model=EnterResponse, dependencies=[Depends(entry_queue.enter_slot)])
 def enter_invited_session(
     session_id: str,
     body: EntryConsentBody | None = None,
@@ -1285,7 +1287,7 @@ def live_v2_command(
     if cmd.session_id != sid:
         return _JSONResponse(status_code=400, content=w.error_ack(cid, "session_mismatch"))
     outcome = cps.run_live_command(db, actor, cmd)
-    if outcome.committed and not outcome.degraded:
+    if cmd.kind != "capture.renew" and outcome.committed and not outcome.degraded:
         try:
             from app.ws import session_live_namespace as ns
 

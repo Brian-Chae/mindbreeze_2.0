@@ -1,0 +1,1321 @@
+{
+  "session_id": "28646d3d-d265-4008-9988-64c0e2c6b1a1",
+  "ledger_source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd319b/backend/app/services/session_live_ledger.py",
+  "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+  "lock_epoch_has_session_lock": true,
+  "n": 100,
+  "measurement_s": 32.0,
+  "elapsed_s": 43.047,
+  "counts": {
+    "entered": 100,
+    "projection_pending": 29,
+    "started": 100,
+    "renew": 400,
+    "presence": 400,
+    "device_accepted": 400,
+    "metric_projected": 3200,
+    "completed": 100
+  },
+  "failures": {},
+  "renew_p95_s": 0.7588494579977123,
+  "entry_p95_s": 7.698263708000013,
+  "outbox_count": 4102,
+  "revision": 4102,
+  "applied_revision": 4102,
+  "emitted_revision": 4102,
+  "broadcast_expected_pairs": 8202,
+  "broadcast_actual_pairs": 8140,
+  "broadcast_missing_pairs": 62,
+  "broadcast_missing_sample": [
+    [
+      "038ad352-8bc1-4bb9-a742-1fc5dd80ae48",
+      "host"
+    ],
+    [
+      "062c4c46-8d44-415e-82a2-747bd2815064",
+      "host"
+    ],
+    [
+      "063d4dd5-ac46-4d0e-8af4-5be9330a33b3",
+      "host"
+    ],
+    [
+      "06679511-bcad-419c-8728-3edd8c6d5ec3",
+      "host"
+    ],
+    [
+      "0b8f1a88-79dc-41ee-a343-ffc22dd70a90",
+      "host"
+    ],
+    [
+      "13ea4227-b1df-41da-8c9e-63503a0fdf06",
+      "host"
+    ],
+    [
+      "1584f9cb-87b7-48da-8208-9139b9cc3151",
+      "host"
+    ],
+    [
+      "1a5605cf-6655-479c-bd81-67ffa0af52d0",
+      "host"
+    ],
+    [
+      "1b71ad7b-dd7c-439e-871c-595dc7f4741d",
+      "member:426d72b8-bc7e-422e-aa26-e565be5d79c7"
+    ],
+    [
+      "23f296ab-42b5-4650-b214-e7dd72148ee8",
+      "host"
+    ]
+  ],
+  "broadcast_missing_causes": {
+    "seq_shift": 62,
+    "replay_unavailable": 0,
+    "emit_failure": 0,
+    "other": 0
+  },
+  "broadcast_missing_details": [
+    {
+      "event_id": "038ad352-8bc1-4bb9-a742-1fc5dd80ae48",
+      "audience": "host",
+      "stream_seq": 53,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 338,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 75,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "062c4c46-8d44-415e-82a2-747bd2815064",
+      "audience": "host",
+      "stream_seq": 22,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 448,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 23,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "063d4dd5-ac46-4d0e-8af4-5be9330a33b3",
+      "audience": "host",
+      "stream_seq": 56,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 342,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 75,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "06679511-bcad-419c-8728-3edd8c6d5ec3",
+      "audience": "host",
+      "stream_seq": 2,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 237,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 9,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "0b8f1a88-79dc-41ee-a343-ffc22dd70a90",
+      "audience": "host",
+      "stream_seq": 61,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 347,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 75,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "13ea4227-b1df-41da-8c9e-63503a0fdf06",
+      "audience": "host",
+      "stream_seq": 1053,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 1622,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 1054,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "1584f9cb-87b7-48da-8208-9139b9cc3151",
+      "audience": "host",
+      "stream_seq": 60,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 346,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 75,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "1a5605cf-6655-479c-bd81-67ffa0af52d0",
+      "audience": "host",
+      "stream_seq": 114,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 596,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 121,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "1b71ad7b-dd7c-439e-871c-595dc7f4741d",
+      "audience": "member:426d72b8-bc7e-422e-aa26-e565be5d79c7",
+      "stream_seq": 1,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 474,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 1,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "23f296ab-42b5-4650-b214-e7dd72148ee8",
+      "audience": "host",
+      "stream_seq": 327,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 2638,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 327,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "24c56226-126e-4042-aadd-18a1e3f0c424",
+      "audience": "host",
+      "stream_seq": 429,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 3742,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 429,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "2cff9377-280b-499e-9651-3f7810791840",
+      "audience": "host",
+      "stream_seq": 126,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 436,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 126,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "2e2008c0-b1c0-45e8-816d-0d4716e4e132",
+      "audience": "host",
+      "stream_seq": 119,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 601,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 121,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "32c4bb3b-117a-4446-a3ae-97c657e601ad",
+      "audience": "host",
+      "stream_seq": 1052,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 1620,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 1054,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "398e6d65-9b37-4d84-8c8f-06ba0010a114",
+      "audience": "host",
+      "stream_seq": 3,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 253,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 9,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "3aaafc09-4288-4eda-9e4a-c0ffef77031e",
+      "audience": "host",
+      "stream_seq": 4,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 255,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 9,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "3c69b686-1a91-4fe8-8797-dbff6074f20b",
+      "audience": "host",
+      "stream_seq": 497,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 3975,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 497,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "3d4ca619-1180-490f-b9c3-0ef509905f0d",
+      "audience": "host",
+      "stream_seq": 284,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 1724,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 284,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "3fb8ecd6-bcef-4372-8737-49a2518ae4a4",
+      "audience": "member:ead398e2-175d-4c22-b301-f57227a93f6c",
+      "stream_seq": 1,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 702,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 1,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "4aca3b41-713a-4278-8338-fa8fdc1d447d",
+      "audience": "host",
+      "stream_seq": 6,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 262,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 9,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "54ca76f2-b94f-41a8-8f7e-fbb61c0ec36d",
+      "audience": "host",
+      "stream_seq": 58,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 344,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 75,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "56d40dc9-0ece-4235-9e3a-c4b55c25ca88",
+      "audience": "host",
+      "stream_seq": 20,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 442,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 23,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "575ae585-0fb6-4de7-a58e-20e57de36eac",
+      "audience": "host",
+      "stream_seq": 9,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 270,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 9,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "5b5fbc1b-f656-46f3-a1b9-cdb3dd4df54c",
+      "audience": "member:375d33f8-5c6b-4b38-9038-ee67dca8bc45",
+      "stream_seq": 1,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 39,
+          "domain": "participation",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 1,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "5ffc0efa-efd9-4317-87f5-aea7f476375f",
+      "audience": "host",
+      "stream_seq": 121,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 603,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 121,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "63f09641-59d9-47a9-929d-faf1ff651d40",
+      "audience": "host",
+      "stream_seq": 52,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 337,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 75,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "6429565c-f4f5-4528-8471-49ba9f904058",
+      "audience": "host",
+      "stream_seq": 8,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 268,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 9,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "6573a55f-a076-480c-ae8a-6762eb798d25",
+      "audience": "host",
+      "stream_seq": 3112,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 3897,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 3112,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "6aa74a32-1534-4f1f-8335-4d78b54b379d",
+      "audience": "host",
+      "stream_seq": 57,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 343,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 75,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "713c8c1b-eca6-45fd-a464-5ce8e3bf41b5",
+      "audience": "host",
+      "stream_seq": 64,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 350,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 75,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "751c5072-4f74-4da4-9121-0a39ca633dec",
+      "audience": "member:996e70bb-f007-47d6-9b2e-2580e7e62126",
+      "stream_seq": 1,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 476,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 1,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "79191ab7-f010-4d38-9aec-d68ad61bcdb1",
+      "audience": "host",
+      "stream_seq": 118,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 600,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 121,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "7c7e8f09-8ea8-48cc-bf57-755cdb045c4b",
+      "audience": "host",
+      "stream_seq": 23,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 449,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 23,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "7cd8ddd2-d064-4272-b221-3d04bb55d542",
+      "audience": "host",
+      "stream_seq": 55,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 341,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 75,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "7e002172-3d32-4b1a-be02-632b001769e1",
+      "audience": "host",
+      "stream_seq": 54,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 339,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 75,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "7ff59175-c94e-45fb-8e41-add4f642c03a",
+      "audience": "host",
+      "stream_seq": 1,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 229,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 9,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "90030b8c-663b-4e4d-bdec-a7d8e96c7c94",
+      "audience": "host",
+      "stream_seq": 63,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 349,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 75,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "95dbc7c2-edba-4ab1-91b9-a5f06aeb37d2",
+      "audience": "host",
+      "stream_seq": 115,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 597,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 121,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "95dc0f8e-5a43-4c47-96d0-e1e5547a4fde",
+      "audience": "host",
+      "stream_seq": 190,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 682,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 191,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "9c0f8c7c-8199-418b-8933-8052bde97e0c",
+      "audience": "host",
+      "stream_seq": 994,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 1514,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 994,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "9f939ebb-bf4a-480b-b2c8-d553b728745d",
+      "audience": "host",
+      "stream_seq": 59,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 345,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 75,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "a537da27-e6ab-4710-9c14-51872d560e6d",
+      "audience": "host",
+      "stream_seq": 5,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 260,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 9,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "abb42b85-5972-435c-856e-6c3a76980135",
+      "audience": "host",
+      "stream_seq": 62,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 348,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 75,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "b136f266-ea76-4adc-8c02-97cb5787c0b2",
+      "audience": "member:baeeac3b-f70d-4cd8-8ea1-7c84af042dcc",
+      "stream_seq": 1,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 492,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 1,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "b1733012-8c30-44a0-b760-50fdb735cf0e",
+      "audience": "host",
+      "stream_seq": 191,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 683,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 191,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "b898440d-be51-452c-9243-2870ba27b0b2",
+      "audience": "host",
+      "stream_seq": 1054,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 1623,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 1054,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "ca35b3c1-397f-43a4-b94e-1bb5aef7dd5f",
+      "audience": "host",
+      "stream_seq": 7,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 264,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 9,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "cc493936-2cd1-40eb-9c01-141eb1ca7dbd",
+      "audience": "host",
+      "stream_seq": 117,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 599,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 121,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "ce3e88bd-6c6f-4110-870b-77fc9e4e41c8",
+      "audience": "host",
+      "stream_seq": 190,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 457,
+          "domain": "participation",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 190,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "ceb08fbf-b2d3-4506-bb04-00b76557b956",
+      "audience": "host",
+      "stream_seq": 2997,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 3717,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 2997,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "d1adb1a3-f01d-427b-9989-a970f305446f",
+      "audience": "host",
+      "stream_seq": 1139,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 1727,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 1139,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "d5f2bed7-2073-46b2-89cc-8ad45c7c51af",
+      "audience": "host",
+      "stream_seq": 111,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 593,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 121,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "dbec1ee9-c604-4f21-9f6e-2e8c934a3f20",
+      "audience": "host",
+      "stream_seq": 1,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 3,
+          "domain": "participation",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 1,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "dd1f4980-e7eb-44c5-89aa-357db504d647",
+      "audience": "host",
+      "stream_seq": 101,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 404,
+          "domain": "device",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 101,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "e498997a-5d8c-4dea-b1b3-e7022d32a607",
+      "audience": "host",
+      "stream_seq": 116,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 598,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 121,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "e952b8d7-b533-4a15-9b16-f3c8c03417a9",
+      "audience": "host",
+      "stream_seq": 21,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 446,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 23,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "f072273a-605c-4f66-bbe2-81bc3ad6194c",
+      "audience": "member:dd34ea8c-0a5e-4ff8-8196-d6a12e8668a3",
+      "stream_seq": 1,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 499,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 1,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "f1bb2734-cee0-4dc6-b888-ba5d953f7b49",
+      "audience": "host",
+      "stream_seq": 113,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 595,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 121,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "f457ad28-d5e3-4165-84db-2e00760b2ad5",
+      "audience": "host",
+      "stream_seq": 112,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 594,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 121,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "f84f6d01-dc43-46e9-b833-d381df0363bd",
+      "audience": "host",
+      "stream_seq": 184,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 340,
+          "domain": "participation",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 185,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "f8ff8cf9-3be3-45fe-a927-ca58d6b44855",
+      "audience": "host",
+      "stream_seq": 120,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 602,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 121,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "ffbbf941-714f-425f-a69a-b3e59519aa76",
+      "audience": "host",
+      "stream_seq": 1946,
+      "cause": "seq_shift",
+      "attempts": [
+        {
+          "revision": 2548,
+          "domain": "metrics",
+          "selected_for_emit": false,
+          "replays": [
+            {
+              "cursor": 1946,
+              "error": null,
+              "returned": false
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "broadcast_source_sha256": "67a3673c8cc65b5ac85b87f01a077b89894f583285e65d1364938deb75067b9e",
+  "pg_deadlock_diagnostics": []
+}

@@ -1,0 +1,101 @@
+{
+  "n": 100,
+  "ticks": 32,
+  "burst": 120,
+  "burn_ms": 15.0,
+  "period_ms": 25,
+  "elapsed_s": 46.34346670800005,
+  "counts": {
+    "entry_status:applied:none": 100,
+    "entered": 100,
+    "started": 100,
+    "renew": 400,
+    "metric_projected": 3190,
+    "metric_status:projected:none": 3190,
+    "stored_ack": 3200,
+    "heartbeat": 808,
+    "snapshot_completed": 120,
+    "metric_failed": 10,
+    "metric_status:missing:none": 1,
+    "metric_status:ignored:not_live": 9,
+    "completed": 100,
+    "close_calls": 100,
+    "close_status:applied:none": 100,
+    "close_committed": 100
+  },
+  "errors": {
+    "live:metric:metric:TimeoutError": 1
+  },
+  "p95_s": {
+    "entry": 2.6086119579995284,
+    "start": 1.4098869580047904,
+    "renew": 1.2936814580025384,
+    "metric": 1.5500850840035127,
+    "store": 1.2552780409896513,
+    "snapshot": 4.706205167007283,
+    "close": 1.940723416992114
+  },
+  "cpu_process_mean_pct": 104.43635853671564,
+  "cpu_process_max_pct": 108.0339387742117,
+  "loop_lag_p95_s": 0.0035938329965574667,
+  "stored_count": 3200,
+  "expected_windows": 3200,
+  "broadcast_expected_pairs": 7384,
+  "broadcast_missing_pairs": 0,
+  "client_missing_pairs": 0,
+  "revision": 3693,
+  "applied_revision": 3693,
+  "emitted_revision": 3693,
+  "closed_streams": 100,
+  "startup": {
+    "elapsed_s": 2.9515367499989225,
+    "cpu_process_mean_pct": 94.83906985068108
+  },
+  "final_settle": {
+    "before": [
+      3693,
+      3693,
+      3692,
+      true
+    ],
+    "after": [
+      3693,
+      3693,
+      3693,
+      false
+    ],
+    "duration_s": 0.10872987500624731
+  },
+  "source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd319b/backend/app/services/class_participation_service.py",
+  "cps_sha256": "c96750b02cbb57cedb2df4f1b738d9c856e0807fdd491a8654213d29f68d3f36",
+  "namespace_sha256": "802c2d843cea1e1c51ee938e5eb7d9d271f1fd8481f778f2c9dad5acd8f6b191",
+  "outbox_source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd319b/backend/app/services/session_live_outbox.py",
+  "outbox_sha256": "4cee4cf99ee4162a4fb171b0934a284b3ec346fc374822dcce9ef964d8f738c2",
+  "single_flight_stats": {
+    "publish_runs": 202,
+    "publish_coalesced": 4198,
+    "drain_runs": 352,
+    "drain_shared": 83,
+    "drain_fallback": 0,
+    "drain_handoff": 9,
+    "drain_timeout": 0,
+    "drain_skipped": 67
+  },
+  "timing_logs": [
+    "[live-v2] live_command_timing session=05c8cf0a kind=capture.renew count=101 reasons={'lease_only': 101} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 255.887, 'apply_ms': 274.775, 'scope_ms': 60.443, 'service_ms': 277.615}",
+    "[live-v2] live_command_timing session=05c8cf0a kind=capture.renew.ws count=101 reasons={'applied': 101} max_ms={'thread_queue_ms': 743.831, 'scope_gate_ms': 68.6, 'worker_ms': 279.107, 'thread_queue_service_publish_ms': 1023.226}",
+    "[live-v2] live_command_timing session=05c8cf0a kind=capture.renew count=99 reasons={'lease_only': 99} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 316.504, 'apply_ms': 348.71, 'scope_ms': 31.947, 'service_ms': 359.516}",
+    "[live-v2] live_command_timing session=05c8cf0a kind=capture.renew.ws count=99 reasons={'applied': 99} max_ms={'thread_queue_ms': 741.093, 'scope_gate_ms': 39.507, 'worker_ms': 384.362, 'thread_queue_service_publish_ms': 1153.811}",
+    "[live-v2] live_command_timing session=05c8cf0a kind=capture.renew count=99 reasons={'lease_only': 99} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 341.213, 'apply_ms': 400.473, 'scope_ms': 40.416, 'service_ms': 408.173}",
+    "[live-v2] live_command_timing session=05c8cf0a kind=capture.renew.ws count=99 reasons={'applied': 99} max_ms={'thread_queue_ms': 811.319, 'scope_gate_ms': 38.935, 'worker_ms': 414.995, 'thread_queue_service_publish_ms': 1143.944}"
+  ],
+  "limitations": [
+    "합성 V2Conn 인증/REST입장 주입, WS entry.enter는 실제호출",
+    "저장은 REST 서비스이나 test socket으로 전송",
+    "client도 같은 process 별도 loop",
+    "고정 CPU busy slice 합성 압박",
+    "fixed ticks 밀리면 종료 연장",
+    "합성 연결당5초 heartbeat는 실제 publish/heartbeat/emit 경로, auth_expired·resync lifecycle 미재현",
+    "client coverage는 event_id×audience 합집합이며 클라이언트별 전송보장 아님"
+  ]
+}

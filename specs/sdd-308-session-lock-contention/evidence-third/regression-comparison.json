@@ -1,0 +1,339 @@
+{
+  "summary": {
+    "before": {
+      "counts": {
+        "passed": 365,
+        "skipped": 4,
+        "failed": 4
+      },
+      "failed": [
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_capture_start_ACK에_stream_owner_generation_lease_participant가_계약대로_들어간다",
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_stream_수명_event_payload는_DeviceEntity_스키마와_일치한다",
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_밴드_보고_payload도_DeviceEntity이고_이후_stream_event가_밴드_필드를_보존한다",
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_metric_소켓은_저장하지_않고_최신값_metrics_event만_만들고_REST가_feature를_저장한다"
+      ]
+    },
+    "after": {
+      "counts": {
+        "passed": 365,
+        "skipped": 4,
+        "failed": 4
+      },
+      "failed": [
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_capture_start_ACK에_stream_owner_generation_lease_participant가_계약대로_들어간다",
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_stream_수명_event_payload는_DeviceEntity_스키마와_일치한다",
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_밴드_보고_payload도_DeviceEntity이고_이후_stream_event가_밴드_필드를_보존한다",
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_metric_소켓은_저장하지_않고_최신값_metrics_event만_만들고_REST가_feature를_저장한다"
+      ]
+    },
+    "baseline_failure_reason": "전후 동일 4건 ModuleNotFoundError: jsonschema (허용 venv 의존성 누락)",
+    "partition_count": 12,
+    "new_tests_separate": "s5 실제 상태전이 4개 PASS, 측정 시나리오 100명/40명 각각 PASS; s6 SQL 순서 6개는 부모 검증 결과로 별도 기록"
+  },
+  "partitions": {
+    "before-sdd308": {
+      "exitstatus": 0,
+      "ledger_source_path": "/tmp/sdd308c-baseline-src/app/services/session_live_ledger.py",
+      "ledger_sha256": "4b265fe65b33d3da8ed6068f38c1fe1bec572f69a10bf2e4fb7ae994800c436e",
+      "counts": {
+        "warnings": 1,
+        "passed": 11
+      },
+      "failed": [],
+      "errors": [],
+      "elapsed_s": 12.86
+    },
+    "after-sdd308": {
+      "exitstatus": 0,
+      "ledger_source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd308b/backend/app/services/session_live_ledger.py",
+      "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+      "counts": {
+        "warnings": 1,
+        "passed": 11
+      },
+      "failed": [],
+      "errors": [],
+      "elapsed_s": 13.3
+    },
+    "before-sdd319": {
+      "exitstatus": 0,
+      "ledger_source_path": "/tmp/sdd308c-baseline-src/app/services/session_live_ledger.py",
+      "ledger_sha256": "4b265fe65b33d3da8ed6068f38c1fe1bec572f69a10bf2e4fb7ae994800c436e",
+      "counts": {
+        "warnings": 2,
+        "skipped": 3,
+        "passed": 18
+      },
+      "failed": [],
+      "errors": [],
+      "elapsed_s": 8.36
+    },
+    "after-sdd319": {
+      "exitstatus": 0,
+      "ledger_source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd308b/backend/app/services/session_live_ledger.py",
+      "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+      "counts": {
+        "warnings": 1,
+        "skipped": 3,
+        "passed": 18
+      },
+      "failed": [],
+      "errors": [],
+      "elapsed_s": 6.86
+    },
+    "before-sdd306": {
+      "exitstatus": 0,
+      "ledger_source_path": "/tmp/sdd308c-baseline-src/app/services/session_live_ledger.py",
+      "ledger_sha256": "4b265fe65b33d3da8ed6068f38c1fe1bec572f69a10bf2e4fb7ae994800c436e",
+      "counts": {
+        "warnings": 1,
+        "passed": 21,
+        "skipped": 1
+      },
+      "failed": [],
+      "errors": [],
+      "elapsed_s": 2.41
+    },
+    "after-sdd306": {
+      "exitstatus": 0,
+      "ledger_source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd308b/backend/app/services/session_live_ledger.py",
+      "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+      "counts": {
+        "warnings": 1,
+        "passed": 21,
+        "skipped": 1
+      },
+      "failed": [],
+      "errors": [],
+      "elapsed_s": 2.22
+    },
+    "before-sdd285": {
+      "exitstatus": 0,
+      "ledger_source_path": "/tmp/sdd308c-baseline-src/app/services/session_live_ledger.py",
+      "ledger_sha256": "4b265fe65b33d3da8ed6068f38c1fe1bec572f69a10bf2e4fb7ae994800c436e",
+      "counts": {
+        "warnings": 1,
+        "passed": 31
+      },
+      "failed": [],
+      "errors": [],
+      "elapsed_s": 15.26
+    },
+    "after-sdd285": {
+      "exitstatus": 0,
+      "ledger_source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd308b/backend/app/services/session_live_ledger.py",
+      "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+      "counts": {
+        "warnings": 1,
+        "passed": 31
+      },
+      "failed": [],
+      "errors": [],
+      "elapsed_s": 15.03
+    },
+    "before-sdd246_archive": {
+      "exitstatus": 0,
+      "ledger_source_path": "/tmp/sdd308c-baseline-src/app/services/session_live_ledger.py",
+      "ledger_sha256": "4b265fe65b33d3da8ed6068f38c1fe1bec572f69a10bf2e4fb7ae994800c436e",
+      "counts": {
+        "warnings": 1,
+        "passed": 29
+      },
+      "failed": [],
+      "errors": [],
+      "elapsed_s": 2.84
+    },
+    "after-sdd246_archive": {
+      "exitstatus": 0,
+      "ledger_source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd308b/backend/app/services/session_live_ledger.py",
+      "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+      "counts": {
+        "warnings": 1,
+        "passed": 29
+      },
+      "failed": [],
+      "errors": [],
+      "elapsed_s": 2.88
+    },
+    "before-sdd246_commands": {
+      "exitstatus": 0,
+      "ledger_source_path": "/tmp/sdd308c-baseline-src/app/services/session_live_ledger.py",
+      "ledger_sha256": "4b265fe65b33d3da8ed6068f38c1fe1bec572f69a10bf2e4fb7ae994800c436e",
+      "counts": {
+        "warnings": 1,
+        "passed": 33
+      },
+      "failed": [],
+      "errors": [],
+      "elapsed_s": 2.93
+    },
+    "after-sdd246_commands": {
+      "exitstatus": 0,
+      "ledger_source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd308b/backend/app/services/session_live_ledger.py",
+      "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+      "counts": {
+        "warnings": 1,
+        "passed": 33
+      },
+      "failed": [],
+      "errors": [],
+      "elapsed_s": 2.95
+    },
+    "before-sdd246_ingest": {
+      "exitstatus": 1,
+      "ledger_source_path": "/tmp/sdd308c-baseline-src/app/services/session_live_ledger.py",
+      "ledger_sha256": "4b265fe65b33d3da8ed6068f38c1fe1bec572f69a10bf2e4fb7ae994800c436e",
+      "counts": {
+        "warnings": 1,
+        "passed": 19,
+        "failed": 4
+      },
+      "failed": [
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_capture_start_ACK에_stream_owner_generation_lease_participant가_계약대로_들어간다",
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_stream_수명_event_payload는_DeviceEntity_스키마와_일치한다",
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_밴드_보고_payload도_DeviceEntity이고_이후_stream_event가_밴드_필드를_보존한다",
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_metric_소켓은_저장하지_않고_최신값_metrics_event만_만들고_REST가_feature를_저장한다"
+      ],
+      "errors": [],
+      "elapsed_s": 3.35
+    },
+    "after-sdd246_ingest": {
+      "exitstatus": 1,
+      "ledger_source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd308b/backend/app/services/session_live_ledger.py",
+      "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+      "counts": {
+        "warnings": 1,
+        "passed": 19,
+        "failed": 4
+      },
+      "failed": [
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_capture_start_ACK에_stream_owner_generation_lease_participant가_계약대로_들어간다",
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_stream_수명_event_payload는_DeviceEntity_스키마와_일치한다",
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_밴드_보고_payload도_DeviceEntity이고_이후_stream_event가_밴드_필드를_보존한다",
+        "tests/sdd246/ingest/test_live_ingest_pg.py::test_metric_소켓은_저장하지_않고_최신값_metrics_event만_만들고_REST가_feature를_저장한다"
+      ],
+      "errors": [],
+      "elapsed_s": 2.54
+    },
+    "before-sdd246_legacy": {
+      "exitstatus": 0,
+      "ledger_source_path": "/tmp/sdd308c-baseline-src/app/services/session_live_ledger.py",
+      "ledger_sha256": "4b265fe65b33d3da8ed6068f38c1fe1bec572f69a10bf2e4fb7ae994800c436e",
+      "counts": {
+        "warnings": 1,
+        "passed": 50
+      },
+      "failed": [],
+      "errors": [],
+      "elapsed_s": 2.17
+    },
+    "after-sdd246_legacy": {
+      "exitstatus": 0,
+      "ledger_source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd308b/backend/app/services/session_live_ledger.py",
+      "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+      "counts": {
+        "warnings": 1,
+        "passed": 50
+      },
+      "failed": [],
+      "errors": [],
+      "elapsed_s": 2.21
+    },
+    "before-sdd246_state": {
+      "exitstatus": 0,
+      "ledger_source_path": "/tmp/sdd308c-baseline-src/app/services/session_live_ledger.py",
+      "ledger_sha256": "4b265fe65b33d3da8ed6068f38c1fe1bec572f69a10bf2e4fb7ae994800c436e",
+      "counts": {
+        "warnings": 1,
+        "passed": 22
+      },
+      "failed": [],
+      "errors": [],
+      "elapsed_s": 7.33
+    },
+    "after-sdd246_state": {
+      "exitstatus": 0,
+      "ledger_source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd308b/backend/app/services/session_live_ledger.py",
+      "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+      "counts": {
+        "warnings": 1,
+        "passed": 22
+      },
+      "failed": [],
+      "errors": [],
+      "elapsed_s": 7.12
+    },
+    "before-sdd246_t12b": {
+      "exitstatus": 0,
+      "ledger_source_path": "/tmp/sdd308c-baseline-src/app/services/session_live_ledger.py",
+      "ledger_sha256": "4b265fe65b33d3da8ed6068f38c1fe1bec572f69a10bf2e4fb7ae994800c436e",
+      "counts": {
+        "warnings": 1,
+        "passed": 11
+      },
+      "failed": [],
+      "errors": [],
+      "elapsed_s": 2.12
+    },
+    "after-sdd246_t12b": {
+      "exitstatus": 0,
+      "ledger_source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd308b/backend/app/services/session_live_ledger.py",
+      "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+      "counts": {
+        "warnings": 1,
+        "passed": 11
+      },
+      "failed": [],
+      "errors": [],
+      "elapsed_s": 2.26
+    },
+    "before-sdd246_transport": {
+      "exitstatus": 0,
+      "ledger_source_path": "/tmp/sdd308c-baseline-src/app/services/session_live_ledger.py",
+      "ledger_sha256": "4b265fe65b33d3da8ed6068f38c1fe1bec572f69a10bf2e4fb7ae994800c436e",
+      "counts": {
+        "warnings": 2,
+        "passed": 84
+      },
+      "failed": [],
+      "errors": [],
+      "elapsed_s": 19.53
+    },
+    "after-sdd246_transport": {
+      "exitstatus": 0,
+      "ledger_source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd308b/backend/app/services/session_live_ledger.py",
+      "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+      "counts": {
+        "warnings": 2,
+        "passed": 84
+      },
+      "failed": [],
+      "errors": [],
+      "elapsed_s": 19.05
+    },
+    "before-ws_live_v2": {
+      "exitstatus": 0,
+      "ledger_source_path": "/tmp/sdd308c-baseline-src/app/services/session_live_ledger.py",
+      "ledger_sha256": "4b265fe65b33d3da8ed6068f38c1fe1bec572f69a10bf2e4fb7ae994800c436e",
+      "counts": {
+        "warnings": 2,
+        "passed": 36
+      },
+      "failed": [],
+      "errors": [],
+      "elapsed_s": 5.29
+    },
+    "after-ws_live_v2": {
+      "exitstatus": 0,
+      "ledger_source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd308b/backend/app/services/session_live_ledger.py",
+      "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+      "counts": {
+        "warnings": 2,
+        "passed": 36
+      },
+      "failed": [],
+      "errors": [],
+      "elapsed_s": 5.18
+    }
+  }
+}

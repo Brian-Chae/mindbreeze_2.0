@@ -315,6 +315,12 @@ def _session_event(ctx) -> None:
 def _h_entry_enter(ctx):
     from app.services.class_attendance_service import mark_entered
 
+    # SDD-308: 잠금 순서를 REST 입장(enter_session_as_invited)과 같게 맞춘다 — 클래스·회차 행 → 참가자 행.
+    # 예전에는 참가자 행을 먼저 잡고 mark_entered 안에서 sessions UPDATE 로 회차 행을 잡아, 입장 폭주 때 REST 입장과 교착이 났다.
+    if ctx.session.class_id:
+        from app.services.class_write_service import lock_class_session
+
+        _, ctx.session = lock_class_session(ctx.db, ctx.session, ctx.actor.actor_id)
     p = _own(ctx)
     s = ctx.session
     if _closed(s):
@@ -729,6 +735,13 @@ def seed_live_state(db, session_id) -> bool:
     from app.services import session_service
     from app.services.session_live_ledger import append_outbox, lock_epoch
 
+    # SDD-308: 이미 시드됐으면 epoch 행 잠금 없이 즉시 반환한다(100명 입장 폭주 때 모든 입장이 같은 행을 줄 서는 병목 제거).
+    # 시드 event 는 한 번 쓰이면 지워지지 않으므로 잠금 없는 선확인이 안전하다.
+    if db.execute(_select(LiveOutbox.id).where(
+            LiveOutbox.session_id == session_id, LiveOutbox.domain == "session").limit(1)).first() is not None:
+        db.rollback()
+        return False
+    # 동시 첫 접촉은 기존처럼 잠금 안에서 재확인한다(멱등).
     epoch_row = lock_epoch(db, session_id)
     exists = db.execute(_select(_func.count()).select_from(LiveOutbox).where(
         LiveOutbox.session_id == session_id, LiveOutbox.domain == "session")).scalar_one()
@@ -751,6 +764,18 @@ def seed_live_state(db, session_id) -> bool:
                       audience=aud, payload=speaking_payload(p.id, p.raise_hand, session_service._compute_can_publish(s, p), 1),
                       command_id=None)
     db.commit()
+    return True
+
+
+def lock_epoch_if_v2(db, session_id) -> bool:
+    """SDD-308: v2 회차면 회차 → epoch를 잠근다. 필요한 users/클래스 잠금은 호출자가 먼저 획득한다."""
+    from app.services.session_live_ledger import lock_epoch
+    from app.services.session_live_legacy import PROTOCOL_V2, get_session_protocol
+
+    pin = get_session_protocol(db, session_id)
+    if pin is None or pin.protocol != PROTOCOL_V2:
+        return False
+    lock_epoch(db, session_id)
     return True
 
 
@@ -859,6 +884,7 @@ class RunOutcome:
     degraded: bool = False
     committed: bool = False
     auth_revision: int | None = None  # 명령이 올린 auth_revision(호스트 자기 명령 후 연결 상태 갱신용)
+    deferred_revision: int | None = None  # SDD-319 round-5: ACK 앞 drain 을 건너뛴 commit revision(호출자가 따라잡기 등록)
 
 
 def _cursors_for(live, session_id, scope) -> list[dict]:
@@ -898,11 +924,17 @@ def _warn_replay_unavailable(session_id, aud, dom, exc, *, now: float | None = N
     return True
 
 
-def events_for_rows(live, session_id, rows) -> list[dict]:
-    """outbox row 들에 대응하는 wire LiveEvent(seq 포함, audience 별)를 Redis stream 에서 읽어 revision 순으로 돌려준다."""
+def events_for_rows(live, session_id, rows, *, expected_epoch: int | None = None) -> list[dict]:
+    """연속 outbox 구간의 이벤트를 보수적인 seq 하한에서 읽는다. 누락 판단은 발행자가 한다."""
+    from app.services.live_redis import keys
     from app.services.session_live_state import Cursor, LiveStateService, ReplayUnavailable, Scope
+    from app.services.live_redis.client import LiveNotReady
 
-    want = {str(r.event_id): int(r.revision) for r in rows}
+    if not rows:
+        return []
+    want = {(str(r.event_id), aud, r.domain): int(r.revision)
+            for r in rows for aud in dict.fromkeys(r.audience_policy or [])}
+    applied = max(int(r.revision) for r in rows)
     pairs: dict[tuple[str, str], int] = {}
     for r in rows:
         for aud in dict.fromkeys(r.audience_policy or []):
@@ -910,23 +942,48 @@ def events_for_rows(live, session_id, rows) -> list[dict]:
     svc, out = LiveStateService(live), []
     for (aud, dom), n_rows in pairs.items():
         scope = Scope("host") if aud in ("host", "public") else Scope("member", _uuid.UUID(aud.split(":", 1)[1]))
-        seq = int(live.snapshot_raw(session_id, [aud], (dom,), False)[5][0][2])
-        # 방송 대상 행은 projection 된 가장 최근 event 들이라 (aud,dom) 의 마지막 n_rows 개 seq 와 일치한다.
-        # 고정 폭(512)으로 거슬러 가면 재구축 직후(복원된 seq 만 있고 stream 이력이 없을 때) log_truncated 가 난다.
+        snap = svc._check_ok(live.snapshot_raw(session_id, [aud], (dom,), False))
+        epoch, projected = int(snap[1]), int(snap[4])
+        if expected_epoch is None:
+            expected_epoch = epoch
+        if epoch != expected_epoch:
+            raise LiveNotReady("broadcast_epoch_changed")
+        seq = int(snap[5][0][2])
+        # 같은 원자 snapshot의 revision 차이는 이 pair에서 늘어난 seq 수의 상한이다.
+        cursor = max(0, seq - n_rows - max(0, projected - applied))
         try:
-            rep = svc.replay(session_id, scope, [Cursor(aud, dom, max(0, seq - n_rows))])
+            rep = svc.replay(session_id, scope, [Cursor(aud, dom, cursor)], expected_epoch=expected_epoch)
         except ReplayUnavailable as exc:
-            # SDD-285 S4: 되감기 불가(log_truncated 등)면 이 (aud,dom) 의 재방송만 건너뛴다. 예외를 올리면 워터마크가 전진하지 않아
-            # 5초 heartbeat 마다 같은 실패가 반복된다(11/4 1,561회). 건너뛴 쪽은 클라이언트가 heartbeat `through` 가 자기 cursor 보다
-            # 앞선 것을 보고 resync(snapshot) 로 따라잡는다(frontend live-state.ts applyHeartbeat → 'heartbeat_ahead').
-            _warn_replay_unavailable(session_id, aud, dom, exc)
-            continue
-        out += [e for e in rep.events if e["event_id"] in want]
-    out.sort(key=lambda e: (want[e["event_id"]], e["audience"]))
+            if str(exc) == "log_truncated":
+                first = live._wrap(live.r.xrange, keys.events(live.prefix, session_id, aud, dom), count=1)
+                floor = int(first[0][0].split("-")[0]) - 1 if first else cursor
+                try:
+                    rep = svc.replay(session_id, scope, [Cursor(aud, dom, max(cursor, floor))],
+                                     expected_epoch=expected_epoch)
+                except ReplayUnavailable as retry_exc:
+                    _warn_replay_unavailable(session_id, aud, dom, retry_exc)
+                    continue
+            else:
+                _warn_replay_unavailable(session_id, aud, dom, exc)
+                continue
+        out += [e for e in rep.events if (e["event_id"], e["audience"], e["domain"]) in want]
+    out.sort(key=lambda e: (want[(e["event_id"], e["audience"], e["domain"])], e["audience"]))
     return out
 
 
 EMIT_LOCK_TTL_MS = 5_000
+
+
+_BROADCAST_CHECKPOINT = """
+if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end
+if redis.call('HGET', KEYS[2], 'epoch') ~= ARGV[2] then return 0 end
+local status = redis.call('HGET', KEYS[2], 'status')
+if status ~= 'active' and status ~= 'terminal' then return 0 end
+redis.call('PEXPIRE', KEYS[1], ARGV[3])
+local done = tonumber(redis.call('GET', KEYS[3]) or '0')
+if tonumber(ARGV[4]) > done then redis.call('SET', KEYS[3], ARGV[4]) end
+return 1
+"""
 
 
 def _emitted_key(live, session_id) -> str:
@@ -944,7 +1001,11 @@ def publish_pending(db, live, session_id, emit_fn: Callable[[dict], None], *, wa
     from app.models.live_state import LiveOutbox
     from app.services import session_live_outbox as ob
 
-    ob.drain(db, live, session_id, wait_s=wait_s)
+    from app.services.live_single_flight import coalesced_drain
+
+    coalesced_drain(("drain", session_id), lambda: ob.drain(db, live, session_id, wait_s=wait_s), 0, wait_s=wait_s,
+                    before_wait=db.rollback)
+    db.rollback()  # SDD-319: emit-lock 대기(최대 wait_s) 동안 DB 연결을 풀에 돌려준다(풀 고갈 방지)
     token = _uuid.uuid4().hex
     lock_key = f"{live.base(session_id)}:emit-lock"
     deadline = _time.monotonic() + wait_s
@@ -960,42 +1021,97 @@ def publish_pending(db, live, session_id, emit_fn: Callable[[dict], None], *, wa
             return 0
         rows = db.execute(_select(LiveOutbox).where(LiveOutbox.session_id == session_id, LiveOutbox.revision > done,
                                                     LiveOutbox.revision <= applied).order_by(LiveOutbox.revision)).scalars().all()
-        for ev in events_for_rows(live, session_id, rows):
-            emit_fn(ev)
-        live._wrap(live.r.set, _emitted_key(live, session_id), applied)
-        db.rollback()
-        return len(rows)
+        epoch = int(meta["epoch"])
+        events = events_for_rows(live, session_id, rows, expected_epoch=epoch)
+        by_pair = {(e["event_id"], e["audience"], e["domain"]): e for e in events}
+        completed, sent, missing = done, 0, 0
+        expected = sum(len(set(r.audience_policy or [])) for r in rows)
+        renewed_at = 0.0
+
+        def checkpoint(revision):
+            # 소유권·epoch 검증과 TTL 갱신/단조 watermark 쓰기를 한 번에 수행한다.
+            ok = live._wrap(live.r.eval, _BROADCAST_CHECKPOINT, 3, lock_key,
+                            live.meta_key(session_id), _emitted_key(live, session_id),
+                            token, epoch, EMIT_LOCK_TTL_MS, revision)
+            if not ok:
+                _live_log.warning("[live-v2] broadcast_lease_lost session=%s applied=%s emitted=%s",
+                                  str(session_id)[:8], applied, completed)
+                from app.services.live_redis.client import LiveNotReady
+                raise LiveNotReady("broadcast_lease_lost")
+
+        for row in rows:
+            audiences = sorted(set(row.audience_policy or []))
+            keys = [(str(row.event_id), aud, row.domain) for aud in audiences]
+            missing = sum(key not in by_pair for key in keys)
+            if int(row.revision) != completed + 1 or missing:
+                _live_log.warning("[live-v2] broadcast_gap session=%s applied=%s emitted=%s revision=%s missing=%s",
+                                  str(session_id)[:8], applied, completed, row.revision, missing)
+                break
+            for key in keys:
+                if _time.monotonic() - renewed_at >= 1.0:
+                    checkpoint(completed)
+                    renewed_at = _time.monotonic()
+                try:
+                    emit_fn(by_pair[key])
+                except Exception:
+                    _live_log.warning("[live-v2] broadcast_emit_failed session=%s revision=%s sent=%s",
+                                      str(session_id)[:8], row.revision, sent)
+                    raise
+                sent += 1
+            completed = int(row.revision)
+        checkpoint(completed)
+        _live_log.info("[live-v2] broadcast_progress session=%s applied=%s emitted=%s expected=%s sent=%s missing=%s",
+                       str(session_id)[:8], applied, completed, expected, sent, missing)
+        return completed - done
     finally:
+        db.rollback()
         live._wrap(live._str_unlock, keys=[lock_key], args=[token])
 
 
-def run_live_command(db, actor, command, *, live=None, auth_revision: int | None = None, drain_wait_s: float = 2.0) -> RunOutcome:
+def run_live_command(db, actor, command, *, live=None, auth_revision: int | None = None, drain_wait_s: float = 2.0,
+                     defer_close_projection: bool = False) -> RunOutcome:
     """WS/REST 가 공유하는 단일 경로. 업무 부작용은 apply_command 한 번뿐이다.
 
     - Redis 장애: commit 이후면 `retryable, committed:true`(같은 ID 재시도 = ledger 결과 재생), commit 이전이면 retryable committed:false.
     - 일시 거절(epoch 불일치 등)은 ledger 에 없으므로 committed:false.
     """
+    import time as _time
+    from app.services.live_command_timing import observe
     from app.schemas.session_live_v2 import ack_from_result, error_ack
     from app.services import session_live_outbox as ob
     from app.services.live_redis.client import LiveNotReady, LiveRedisUnavailable
+    from app.services.live_single_flight import coalesced_drain
     from app.services.session_live_commands import apply_command_with_retry
     from app.services.session_live_state import ScopeStale
     from app.models.session import Session as SessionModel
 
+    started = _time.monotonic()
+    timings: dict[str, float] = {"projection_ms": 0.0}
+    reason = "lease_only" if command.kind == "capture.renew" else "projected"
+
+    def finish(outcome: RunOutcome) -> RunOutcome:
+        timings["service_ms"] = (_time.monotonic() - started) * 1000
+        cause = reason if reason not in ("lease_only", "projected") else str(outcome.ack.get("code") or reason)
+        observe(command.session_id, command.kind, cause, timings)
+        return outcome
+
     live = live or get_live_redis()
     sid = command.session_id
     if db.get(SessionModel, sid) is None:
-        return RunOutcome(error_ack(str(command.command_id), "session_not_found"))
+        return finish(RunOutcome(error_ack(str(command.command_id), "session_not_found")))
     seed_live_state(db, sid)
+    apply_started = _time.monotonic()
     try:
-        result = apply_command_with_retry(db, actor, command, clock_probe_resolver=make_probe_resolver(live, actor.actor_id))
+        result = apply_command_with_retry(db, actor, command, clock_probe_resolver=make_probe_resolver(live, actor.actor_id),
+                                          phase_timings=timings)
     finally:
+        timings["apply_ms"] = (_time.monotonic() - apply_started) * 1000
         callbacks = pop_after_commit(command.command_id)
     if result.transient or not result.committed:  # 일시 거절·충돌: 부작용 0
         ack = ack_from_result(result)
         if result.transient and result.code == "db_busy":  # SDD-285 S2: DB 교착 재시도 소진 → 앱이 같은 ID 로 다시 보내게 한다
             ack.update(status="retryable", committed=False, code="db_busy", retry_after_ms=500)
-        return RunOutcome(ack, result)
+        return finish(RunOutcome(ack, result))
     # commit 된 명령의 부수효과(종료 후 STT/리포트 등)는 projection/권한 상태와 무관하게 정확히 한 번 실행한다.
     def _run_callbacks() -> None:
         if result.status == "applied" and not result.duplicate:
@@ -1007,16 +1123,33 @@ def run_live_command(db, actor, command, *, live=None, auth_revision: int | None
 
     new_auth_rev: int | None = None
     try:
-        res = ob.drain(db, live, sid, wait_s=drain_wait_s)
-        if res.busy or res.applied_revision < int(result.revision):
-            raise LiveNotReady("projection_pending")
-        cursors = _cursors_for(live, sid, scope_of(actor, auth_revision))
+        # renew는 outbox를 만들지 않는다. 타 명령/metric의 revision을 기다릴 필요가 없다.
+        # DB lease·멱등·종료 직렬화와 아래 Redis/scope 검사는 기존대로 유지한다.
+        # round-5: defer_close_projection 이면 capture.close 도 drain 대기를 건너뛴다(outbox 는 commit 됨 → 호출자가 따라잡기 등록).
+        defer = defer_close_projection and command.kind == "capture.close" and result.status == "applied" and int(result.revision) > 0
+        if command.kind != "capture.renew" and not defer:
+            projection_started = _time.monotonic()
+            try:
+                res = coalesced_drain(("drain", sid), lambda: ob.drain(db, live, sid, wait_s=drain_wait_s), int(result.revision),
+                                      wait_s=drain_wait_s, before_wait=db.rollback)
+            finally:
+                timings["projection_ms"] = (_time.monotonic() - projection_started) * 1000
+            if res.busy or res.applied_revision < int(result.revision):
+                reason = getattr(res, "wait_reason", None) or "revision_behind"
+                raise LiveNotReady("projection_pending")
+        scope_started = _time.monotonic()
+        try:
+            cursors = _cursors_for(live, sid, scope_of(actor, auth_revision))
+        finally:
+            timings["scope_ms"] = (_time.monotonic() - scope_started) * 1000
     except (LiveRedisUnavailable, LiveNotReady) as exc:
+        if reason in ("lease_only", "projected"):
+            reason = "redis_unavailable" if isinstance(exc, LiveRedisUnavailable) else "live_not_ready"
         _run_callbacks()
         ack = ack_from_result(result)
         ack.update(status="retryable", committed=True, code="live_unavailable" if isinstance(exc, LiveRedisUnavailable) else "projection_pending",
                    retry_after_ms=1000)
-        return RunOutcome(ack, result, degraded=True, committed=True)
+        return finish(RunOutcome(ack, result, degraded=True, committed=True))
     except ScopeStale as stale:  # 권한이 회수/변경됐다: 업무는 commit 됐으므로 결과 조회 + 재인가(완전 snapshot)
         _run_callbacks()
         if result.status == "applied" and actor.role in ("host", "system"):
@@ -1024,14 +1157,15 @@ def run_live_command(db, actor, command, *, live=None, auth_revision: int | None
             # 현재 revision 으로 cursor 를 다시 읽어 committed ACK 를 즉시 돌려준다(retryable 로 늦추지 않는다).
             try:
                 cursors = _cursors_for(live, sid, scope_of(actor, stale.current))
-                return RunOutcome(ack_from_result(result, cursors), result, committed=True, auth_revision=stale.current)
+                return finish(RunOutcome(ack_from_result(result, cursors), result, committed=True, auth_revision=stale.current))
             except (LiveRedisUnavailable, LiveNotReady, ScopeStale):
                 pass
         ack = ack_from_result(result)
         ack.update(status="retryable", committed=True, code="scope_stale", retry_after_ms=0)
-        return RunOutcome(ack, result, committed=True)
+        return finish(RunOutcome(ack, result, committed=True))
     _run_callbacks()
-    return RunOutcome(ack_from_result(result, cursors), result, committed=True)
+    return finish(RunOutcome(ack_from_result(result, cursors), result, committed=True,
+                             deferred_revision=int(result.revision) if defer else None))
 
 
 def resolve_live_actor(db, session_id, user_id, entry_credential=None):

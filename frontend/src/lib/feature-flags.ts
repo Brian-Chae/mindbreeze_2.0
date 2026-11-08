@@ -37,3 +37,11 @@ export function isLiveProtocolV2Enabled(
 export function isGuestEntryEnabled(): boolean {
   return import.meta.env.VITE_GUEST_ENTRY_ENABLED === 'true';
 }
+
+/**
+ * SDD-318 — 내담자 앱 화면 D안(UI_V2). VITE_UI_V2 === 'true' 일 때만 켠다(기본 꺼짐).
+ * 운영 빌드는 vite.config.ts 가 'false' 로 고정하고, dev 는 deploy-dev.yml 이 'true' 를 주입한다.
+ */
+export function isUiV2Enabled(): boolean {
+  return import.meta.env.VITE_UI_V2 === 'true';
+}

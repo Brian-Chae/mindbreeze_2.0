@@ -5,7 +5,7 @@ import ParticipationProfilePage from '../settings/participation-profile-page';
 // 상담사 연결 됨 → ClientShell + 탭별 페이지
 
 import ClientNotificationPage from './ClientNotificationPage';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { apiClient } from '../../lib/api/client';
@@ -34,6 +34,24 @@ function formatKoreanSub(): string {
   const label = WEEK_LABELS[Math.min(weekNum - 1, 4)];
   return `${y}년 ${m}월 · ${m}월 ${label} 주`;
 }
+
+// SDD-318: UI_V2 는 빌드 시 상수 — 운영 빌드에서는 D안 분기가 제거된다.
+const UiV2ReportsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./ui-v2/ui-v2-reports-page').then((module) => ({ default: module.UiV2ReportsPage }))
+  : Promise.resolve({ default: () => <></> }));
+
+const UiV2ChatPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./ui-v2/ui-v2-chat-page').then((module) => ({ default: module.UiV2ChatPage }))
+  : Promise.resolve({ default: () => <></> }));
+const UiV2SettingsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./ui-v2/ui-v2-settings-page').then((module) => ({ default: module.UiV2SettingsPage }))
+  : Promise.resolve({ default: () => <></> }));
+const UiV2NotificationsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./ui-v2/ui-v2-notifications-page').then((module) => ({ default: module.UiV2NotificationsPage }))
+  : Promise.resolve({ default: () => <></> }));
+const UiV2ParticipationProfilePage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./ui-v2/ui-v2-participation-profile-page').then((module) => ({ default: module.UiV2ParticipationProfilePage }))
+  : Promise.resolve({ default: () => <></> }));
 
 export default function ClientAppPage() {
   const user = useAuthStore((s) => s.user);
@@ -96,13 +114,25 @@ export default function ClientAppPage() {
   // AI 대화는 채팅 목록의 루시(AI) 채널로 통합 — 구 경로·푸시 딥링크는 리다이렉트
   if (pathname === '/app/ai' || pathname === '/app/ai/') return <Navigate to="/app/chat/lucy" replace />;
   // 채팅(루시 채널 포함)은 상담사 연결 전에도 접근 가능 — 코드 입력 게이트보다 먼저 처리
-  if (pathname.startsWith('/app/chat')) return <ClientChatPage />;
+  if (pathname.startsWith('/app/chat')) {
+    // SDD-318: 채팅 D안
+    if (import.meta.env.VITE_UI_V2 === 'true') return <Suspense fallback={null}><UiV2ChatPage /></Suspense>;
+    return <ClientChatPage />;
+  }
+
+  // SDD-322: 알림 D안 (상담사 연결 전에도 열린다 — 아래 코드 입력 게이트보다 먼저 처리)
+  if (import.meta.env.VITE_UI_V2 === 'true' && pathname.startsWith('/app/notifications')) {
+    return <Suspense fallback={null}><UiV2NotificationsPage /></Suspense>;
+  }
 
   // 본인 설정은 상담사 연결 여부와 무관하게 열 수 있다.
   if (pathname === '/app/profile' || pathname === '/app/profile/') {
+    // SDD-318: 설정 D안
+    if (import.meta.env.VITE_UI_V2 === 'true') return <Suspense fallback={null}><UiV2SettingsPage /></Suspense>;
     return <ClientShell title="설정" sub="SETTINGS"><ClientSettingsPage /></ClientShell>;
   }
   if (pathname === '/app/participation-profile' || pathname === '/app/participation-profile/') {
+    if (import.meta.env.VITE_UI_V2 === 'true') return <Suspense fallback={null}><UiV2ParticipationProfilePage /></Suspense>;
     return <ClientShell title="참여 프로필 관리" sub="PARTICIPATION PROFILE"><ParticipationProfilePage /></ClientShell>;
   }
 
@@ -136,6 +166,11 @@ export default function ClientAppPage() {
   const sessionDetailMatch = pathname.match(/^\/app\/sessions\/([^/]+)$/);
   if (sessionDetailMatch) {
     return <ClientSessionDetailPage />;
+  }
+
+  // SDD-318: 리포트 탭 D안 (자체 쉘 사용)
+  if (import.meta.env.VITE_UI_V2 === 'true' && pathname.startsWith('/app/reports')) {
+    return <Suspense fallback={null}><UiV2ReportsPage /></Suspense>;
   }
 
   // 탭별 콘텐츠 + ClientShell (AppShell과 동일 구조)

@@ -1,0 +1,23 @@
+{
+  "n": 100,
+  "measurement_s": 32.0,
+  "elapsed_s": 42.552,
+  "counts": {
+    "entered": 100,
+    "projection_pending": 31,
+    "started": 100,
+    "renew": 400,
+    "presence": 400,
+    "device_accepted": 400,
+    "metric_projected": 3200,
+    "completed": 100
+  },
+  "failures": {},
+  "renew_p95_s": 0.6532430840015877,
+  "entry_p95_s": 9.665245457996207,
+  "outbox_count": 4102,
+  "revision": 4102,
+  "applied_revision": 4102,
+  "emitted_revision": 4102,
+  "excluded_from_comparison": "pytest collection 중 sys.path 변경으로 baseline package 선고정이 없던 run. 기준선 소스 경로 미증명."
+}

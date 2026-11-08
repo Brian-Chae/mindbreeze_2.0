@@ -1,0 +1,70 @@
+{
+  "n": 100,
+  "ticks": 32,
+  "burst": 120,
+  "burn_ms": 15.0,
+  "period_ms": 25,
+  "elapsed_s": 41.81535295800131,
+  "counts": {
+    "started": 100,
+    "renew": 400,
+    "metric_projected": 3190,
+    "metric_status:projected:none": 3190,
+    "stored_ack": 3200,
+    "snapshot_completed": 120,
+    "metric_failed": 10,
+    "metric_status:missing:none": 1,
+    "metric_status:ignored:not_live": 9,
+    "completed": 100
+  },
+  "errors": {
+    "live:metric:TimeoutError": 1
+  },
+  "p95_s": {
+    "renew": 1.6334666250040755,
+    "metric": 1.3086817919975147,
+    "store": 1.1341370840018499,
+    "snapshot": 4.444355916995846
+  },
+  "cpu_process_mean_pct": 105.56803228490405,
+  "cpu_process_max_pct": 109.39059523692069,
+  "loop_lag_p95_s": 0.0017000829975586385,
+  "stored_count": 3200,
+  "expected_windows": 3200,
+  "broadcast_expected_pairs": 6984,
+  "broadcast_missing_pairs": 438,
+  "client_missing_pairs": 438,
+  "revision": 3493,
+  "applied_revision": 3274,
+  "emitted_revision": 3274,
+  "source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd319b/backend/app/services/class_participation_service.py",
+  "cps_sha256": "c96750b02cbb57cedb2df4f1b738d9c856e0807fdd491a8654213d29f68d3f36",
+  "namespace_sha256": "65637af3ae939877911945d624e05462ec08cff3ceac101ecc64ecbb3dd59f00",
+  "single_flight_stats": {
+    "publish_runs": 11,
+    "publish_coalesced": 3288,
+    "drain_runs": 64,
+    "drain_shared": 45,
+    "drain_fallback": 0,
+    "drain_handoff": 2,
+    "drain_timeout": 0,
+    "drain_skipped": 2
+  },
+  "timing_logs": [
+    "[live-v2] live_command_timing session=a7e1914a kind=capture.renew count=101 reasons={'lease_only': 101} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 356.983, 'apply_ms': 374.334, 'scope_ms': 16.072, 'service_ms': 376.453}",
+    "[live-v2] live_command_timing session=a7e1914a kind=capture.renew.ws count=101 reasons={'applied': 101} max_ms={'thread_queue_service_publish_ms': 982.761, 'scope_gate_ms': 691.053}",
+    "[live-v2] live_command_timing session=a7e1914a kind=capture.renew count=99 reasons={'lease_only': 99} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 337.489, 'apply_ms': 352.045, 'scope_ms': 15.281, 'service_ms': 354.152}",
+    "[live-v2] live_command_timing session=a7e1914a kind=capture.renew.ws count=99 reasons={'applied': 99} max_ms={'thread_queue_service_publish_ms': 963.608, 'scope_gate_ms': 720.138}",
+    "[live-v2] live_command_timing session=a7e1914a kind=capture.renew count=99 reasons={'lease_only': 99} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 347.145, 'apply_ms': 355.14, 'scope_ms': 15.788, 'service_ms': 359.54}",
+    "[live-v2] live_command_timing session=a7e1914a kind=capture.renew.ws count=99 reasons={'applied': 99} max_ms={'thread_queue_service_publish_ms': 1010.012, 'scope_gate_ms': 819.072}"
+  ],
+  "limitations": [
+    "합성 V2Conn 인증/입장 주입",
+    "저장은 REST 서비스이나 test socket으로 전송",
+    "client도 같은 process 별도 loop",
+    "고정 CPU busy slice 합성 압박",
+    "fixed ticks 밀리면 종료 연장",
+    "직접 READY 주입으로 연결당 heartbeat 스케줄러 미실행",
+    "client coverage는 event_id×audience 합집합이며 클라이언트별 전송보장 아님"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "source": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd319b/backend",
+  "sha256": {
+    "app/services/session_live_ledger.py": "6f75c4aca1e577ad27dcb3bcfbf33cb44b2ff9b21d3e46028311043e2ee5dae9",
+    "app/services/session_live_commands.py": "afef039950b20887b0730826dd6aca3e8cac6b7670ba95efbad3553719ab1049",
+    "app/services/session_live_outbox.py": "4cee4cf99ee4162a4fb171b0934a284b3ec346fc374822dcce9ef964d8f738c2",
+    "app/ws/session_live_namespace.py": "802c2d843cea1e1c51ee938e5eb7d9d271f1fd8481f778f2c9dad5acd8f6b191"
+  },
+  "exitstatus": 0
+}

@@ -1,0 +1,78 @@
+{
+  "session_id": "080dc0db-1cfa-42d6-8529-e3ba931ba7f8",
+  "ledger_source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd308b/backend/app/services/session_live_ledger.py",
+  "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+  "lock_epoch_has_session_lock": true,
+  "n": 100,
+  "measurement_s": 32.0,
+  "elapsed_s": 42.327,
+  "counts": {
+    "entered": 100,
+    "projection_pending": 22,
+    "started": 100,
+    "renew": 400,
+    "presence": 400,
+    "device_accepted": 400,
+    "metric_projected": 3200,
+    "completed": 100,
+    "deadlock": 0,
+    "http500": 0,
+    "metric_failed": 0,
+    "device_failed": 0,
+    "presence_failed": 0
+  },
+  "failures": {},
+  "renew_p95_s": 0.700195707999228,
+  "entry_p95_s": 9.15341466699465,
+  "outbox_count": 4102,
+  "revision": 4102,
+  "applied_revision": 4102,
+  "emitted_revision": 4102,
+  "broadcast_expected_pairs": 8202,
+  "broadcast_actual_pairs": 8123,
+  "broadcast_missing_pairs": 79,
+  "broadcast_missing_sample": [
+    [
+      "0174c48e-e785-44af-aaaf-4b0d3f985536",
+      "host"
+    ],
+    [
+      "02216c84-9d2b-4527-b1b2-3ba9b4d5ee9a",
+      "host"
+    ],
+    [
+      "0aaddbd3-1c84-48a6-bb28-60a9018d36b7",
+      "host"
+    ],
+    [
+      "196844dd-ef98-4a61-95a9-2ab75c3e6c32",
+      "host"
+    ],
+    [
+      "1b4afc22-3e66-4831-b0bb-f391707cb322",
+      "host"
+    ],
+    [
+      "1c83c7e2-8aa6-4801-be8b-b76a15c03b0c",
+      "host"
+    ],
+    [
+      "1c83c7e2-8aa6-4801-be8b-b76a15c03b0c",
+      "member:25b569b7-8c30-461d-861d-8b3b43deae5e"
+    ],
+    [
+      "1cbdca0f-da79-4c96-836e-a9e8d79b7640",
+      "host"
+    ],
+    [
+      "1d661205-bde9-4544-9a2d-d548807e5708",
+      "host"
+    ],
+    [
+      "1dbd8c29-5c05-4db0-a2be-f117ae263a19",
+      "host"
+    ]
+  ],
+  "pg_deadlock_diagnostic_count": 0,
+  "test_scope": "REST/WS 서비스 직접 호출 및 실제 PG/Redis. HTTP/socket network·장치·UI 미검증."
+}

@@ -1,0 +1,77 @@
+{
+  "session_id": "7038cc81-48ea-438d-b988-860502ca42b5",
+  "ledger_source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd308b/backend/app/services/session_live_ledger.py",
+  "ledger_sha256": "d0ee7a82d03e3bab27be1727d6ab05c5e078a39aa3797595bd97d7387596eee8",
+  "lock_epoch_has_session_lock": true,
+  "n": 40,
+  "measurement_s": 32.0,
+  "elapsed_s": 35.074,
+  "counts": {
+    "entered": 40,
+    "started": 40,
+    "renew": 160,
+    "presence": 160,
+    "device_accepted": 160,
+    "metric_projected": 1280,
+    "completed": 40,
+    "deadlock": 0,
+    "projection_pending": 0,
+    "http500": 0,
+    "metric_failed": 0,
+    "device_failed": 0,
+    "presence_failed": 0
+  },
+  "failures": {},
+  "renew_p95_s": 0.02687862500170013,
+  "entry_p95_s": 1.7630148750031367,
+  "outbox_count": 1642,
+  "revision": 1642,
+  "applied_revision": 1642,
+  "emitted_revision": 1642,
+  "broadcast_expected_pairs": 3282,
+  "broadcast_actual_pairs": 3271,
+  "broadcast_missing_pairs": 11,
+  "broadcast_missing_sample": [
+    [
+      "19ca15fb-c805-45b3-b86a-a2aadcf6962e",
+      "host"
+    ],
+    [
+      "2661b11d-2310-4811-a365-522d86b1c7a7",
+      "host"
+    ],
+    [
+      "2f808059-2a3c-4b0f-be6b-29ae9efeb2b3",
+      "member:339f46d5-d6bb-44ca-820a-90ab74378bdb"
+    ],
+    [
+      "5f47e81d-8841-423b-b5c4-3b78e3141164",
+      "member:fbf1d165-a848-4ff6-9b3d-53cc45d57129"
+    ],
+    [
+      "645f454b-c757-4e00-8fee-d38add606352",
+      "host"
+    ],
+    [
+      "71579ade-1113-432b-8f71-982d1b2152a5",
+      "host"
+    ],
+    [
+      "8bd13a10-5159-46b9-9acf-4450ada225aa",
+      "host"
+    ],
+    [
+      "a68bcc5a-1244-49e4-b9a7-c263ebfded5e",
+      "member:691880ad-33cb-4c29-aba1-1250b6ae7acd"
+    ],
+    [
+      "ac80a503-390b-4e0a-847c-53948b1ae7f4",
+      "host"
+    ],
+    [
+      "d6ec8e91-46cf-483a-bab7-b159678e6d74",
+      "member:4d090936-4d1c-400b-ae7f-88c06edef23b"
+    ]
+  ],
+  "pg_deadlock_diagnostic_count": 0
+}

@@ -1,0 +1,103 @@
+{
+  "n": 100,
+  "ticks": 32,
+  "burst": 120,
+  "burn_ms": 15.0,
+  "period_ms": 25,
+  "elapsed_s": 51.2397372090054,
+  "counts": {
+    "entry_status:applied:none": 100,
+    "entered": 100,
+    "started": 100,
+    "renew": 400,
+    "metric_projected": 3193,
+    "metric_status:projected:none": 3193,
+    "stored_ack": 3200,
+    "heartbeat": 909,
+    "snapshot_completed": 120,
+    "metric_failed": 7,
+    "metric_status:missing:none": 1,
+    "metric_status:ignored:not_live": 6,
+    "completed": 100,
+    "close_calls": 100,
+    "close_status:applied:none": 100,
+    "close_committed": 100
+  },
+  "errors": {
+    "live:metric:metric:TimeoutError": 1
+  },
+  "p95_s": {
+    "entry": 2.78379537499859,
+    "start": 1.4507628330029547,
+    "renew": 4.35527254200133,
+    "metric": 1.5032735830027377,
+    "store": 1.1702442089881515,
+    "snapshot": 4.723055958005716,
+    "close": 2.1951516249973793
+  },
+  "cpu_process_mean_pct": 105.23987144539832,
+  "cpu_process_max_pct": 109.37046945979661,
+  "loop_lag_p95_s": 0.0030610410030931234,
+  "stored_count": 3200,
+  "expected_windows": 3200,
+  "broadcast_expected_pairs": 7390,
+  "broadcast_missing_pairs": 0,
+  "client_missing_pairs": 0,
+  "revision": 3696,
+  "applied_revision": 3696,
+  "emitted_revision": 3696,
+  "closed_streams": 100,
+  "startup": {
+    "elapsed_s": 3.161145750011201,
+    "cpu_process_mean_pct": 99.2911193667321
+  },
+  "final_settle": {
+    "before": [
+      3696,
+      3696,
+      3696,
+      false
+    ],
+    "after": [
+      3696,
+      3696,
+      3696,
+      false
+    ],
+    "duration_s": 0.004256000000168569
+  },
+  "source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd319b/backend/app/services/class_participation_service.py",
+  "cps_sha256": "c96750b02cbb57cedb2df4f1b738d9c856e0807fdd491a8654213d29f68d3f36",
+  "namespace_sha256": "ffe52b261e4bd8d76fa75970daee637debfff53cd273902b2227043b94a4d98f",
+  "outbox_source_path": "/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd319b/backend/app/services/session_live_outbox.py",
+  "outbox_sha256": "4cee4cf99ee4162a4fb171b0934a284b3ec346fc374822dcce9ef964d8f738c2",
+  "single_flight_stats": {
+    "publish_runs": 139,
+    "publish_coalesced": 4331,
+    "drain_runs": 288,
+    "drain_shared": 110,
+    "drain_fallback": 0,
+    "drain_handoff": 7,
+    "drain_timeout": 0,
+    "drain_skipped": 41
+  },
+  "timing_logs": [
+    "[live-v2] live_command_timing session=c7690d8b kind=capture.renew count=101 reasons={'lease_only': 101} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 388.095, 'apply_ms': 391.391, 'scope_ms': 20.18, 'service_ms': 413.668}",
+    "[live-v2] live_command_timing session=c7690d8b kind=capture.renew.ws count=101 reasons={'applied': 101} max_ms={'thread_queue_ms': 3181.538, 'scope_gate_ms': 19.992, 'worker_ms': 415.304, 'thread_queue_service_publish_ms': 3296.535}",
+    "[live-v2] live_command_timing session=c7690d8b kind=capture.renew count=104 reasons={'lease_only': 104} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 562.823, 'apply_ms': 581.82, 'scope_ms': 18.339, 'service_ms': 585.835}",
+    "[live-v2] live_command_timing session=c7690d8b kind=capture.renew.ws count=104 reasons={'applied': 104} max_ms={'thread_queue_ms': 5445.107, 'scope_gate_ms': 17.9, 'worker_ms': 588.019, 'thread_queue_service_publish_ms': 5939.925}",
+    "[live-v2] live_command_timing session=c7690d8b kind=capture.renew count=71 reasons={'lease_only': 71} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 479.564, 'apply_ms': 501.392, 'scope_ms': 16.695, 'service_ms': 519.51}",
+    "[live-v2] live_command_timing session=c7690d8b kind=capture.renew.ws count=71 reasons={'applied': 71} max_ms={'thread_queue_ms': 750.472, 'scope_gate_ms': 16.231, 'worker_ms': 520.826, 'thread_queue_service_publish_ms': 1109.565}",
+    "[live-v2] live_command_timing session=c7690d8b kind=capture.renew count=98 reasons={'lease_only': 98} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 434.866, 'apply_ms': 454.18, 'scope_ms': 17.88, 'service_ms': 456.253}",
+    "[live-v2] live_command_timing session=c7690d8b kind=capture.renew.ws count=99 reasons={'applied': 99} max_ms={'thread_queue_ms': 436.514, 'scope_gate_ms': 16.466, 'worker_ms': 457.448, 'thread_queue_service_publish_ms': 710.222}"
+  ],
+  "limitations": [
+    "합성 V2Conn 인증/REST입장 주입, WS entry.enter는 실제호출",
+    "저장은 REST 서비스이나 test socket으로 전송",
+    "client도 같은 process 별도 loop",
+    "고정 CPU busy slice 합성 압박",
+    "fixed ticks 밀리면 종료 연장",
+    "합성 연결당5초 heartbeat는 실제 publish/heartbeat/emit 경로, auth_expired·resync lifecycle 미재현",
+    "client coverage는 event_id×audience 합집합이며 클라이언트별 전송보장 아님"
+  ]
+}

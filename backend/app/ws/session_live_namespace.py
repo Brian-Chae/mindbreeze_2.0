@@ -1982,11 +1982,39 @@ def publish_session_sync(session_id) -> int:
     """projection 된 미방송 event 를 방송한다(어느 프로세스에서 호출해도 클러스터 단일 발행자 락으로 직렬화)."""
     from app.services import class_participation_service as cps
 
-    db = _open_db()
-    try:
-        return cps.publish_pending(db, cps.get_live_redis(), session_id, emit_sync_factory(session_id))
-    finally:
-        db.close()
+    from app.services.live_single_flight import run_coalesced
+
+    def _publish() -> int:
+        db = _open_db()
+        try:
+            return cps.publish_pending(db, cps.get_live_redis(), session_id, emit_sync_factory(session_id))
+        finally:
+            db.close()
+
+    # SDD-319: 같은 회차의 방송은 프로세스 안에서 하나만 돌린다(합류한 호출은 실행자가 재실행해 반영 → 누락 없음).
+    return run_coalesced(("publish", str(session_id)), _publish) or 0
+
+
+def _follow_projection(session_id, revision: int) -> None:
+    """commit 은 됐지만 ACK 앞 drain 을 건너뛴 명령(capture.close)의 projection·방송을 회차당 1개 러너가 따라잡는다."""
+    from app.services import class_participation_service as cps
+    from app.services import live_projection_follower as lpf
+    from app.services import session_live_outbox as ob
+    from app.services.live_single_flight import coalesced_drain
+
+    def _step(target: int) -> bool:
+        db = _open_db()
+        try:
+            res = coalesced_drain(("drain", session_id), lambda: ob.drain(db, cps.get_live_redis(), session_id, wait_s=2.0),
+                                  target, wait_s=2.0, before_wait=db.rollback)
+            if res.busy or res.applied_revision < target:
+                return False
+        finally:
+            db.close()
+        publish_session_sync(session_id)
+        return True
+
+    lpf.request(session_id, revision, _step)
 
 
 def schedule_publish(session_id) -> None:
@@ -2048,19 +2076,6 @@ def register_v2_handlers(sio, ns):
     def _scope_check_sync(conn: V2Conn):
         live = cps.get_live_redis()
         LiveStateService(live).heartbeat(conn.session_id, cps.scope_of(conn.actor, conn.auth_revision))
-
-    async def _ensure_scope(conn: V2Conn) -> bool:
-        """모든 command/emit 직전 scope 검사. ScopeStale 이면 재인가."""
-        try:
-            await asyncio.to_thread(_scope_check_sync, conn)
-        except ScopeStale:
-            if not await _reauthorize(conn):
-                return False
-            await sio.emit("live:resync_required", {"session_id": str(conn.session_id), "reason": "scope_changed"},
-                           to=conn.sid, namespace=ns)
-        except (LiveRedisUnavailable, LiveNotReady):
-            pass  # 명령 실행기가 retryable/503 로 처리한다
-        return True
 
     # ---------------- hello / reauth ----------------
     @sio.on("live:hello", namespace=ns)
@@ -2233,7 +2248,9 @@ def register_v2_handlers(sio, ns):
     def _run_command_sync(conn: V2Conn, cmd):
         db = _open_db()
         try:
-            outcome = cps.run_live_command(db, conn.actor, cmd, auth_revision=conn.auth_revision)
+            outcome = cps.run_live_command(db, conn.actor, cmd, auth_revision=conn.auth_revision, defer_close_projection=True)
+            if outcome.deferred_revision is not None:  # SDD-319 round-5: close 는 ACK 후 따라잡기(반영·방송 누락 0)
+                _follow_projection(cmd.session_id, outcome.deferred_revision)
             if outcome.auth_revision is not None:  # 호스트 자기 명령(session.end 등)이 올린 revision 을 연결에 반영
                 conn.auth_revision = outcome.auth_revision
             if cmd.kind.startswith("capture."):  # SDD-285 S9: 미고정 감시용 기록(로그 전용)
@@ -2242,7 +2259,8 @@ def register_v2_handlers(sio, ns):
                 if conn.anchor_watch is None:
                     conn.anchor_watch = caw.AnchorWatch()
                 caw.note_result(conn.anchor_watch, cmd.kind, outcome.ack)
-            if outcome.committed and not outcome.degraded:
+            # renew는 새 outbox가 없어 ACK 앞에서 방송 leader 작업을 맡지 않는다.
+            if cmd.kind != "capture.renew" and outcome.deferred_revision is None and outcome.committed and not outcome.degraded:
                 try:
                     publish_session_sync(cmd.session_id)
                 except Exception:  # noqa: BLE001 — 방송은 ACK 를 막지 않는다(heartbeat self-heal)
@@ -2250,6 +2268,22 @@ def register_v2_handlers(sio, ns):
             return outcome
         finally:
             db.close()
+
+    def _checked_command_sync(conn: V2Conn, cmd, timings: dict[str, float], submitted: float):
+        # scope 검사를 없애거나 캐시하지 않고 DB 명령과 같은 worker에서 실행한다.
+        begun = time.monotonic()
+        timings["thread_queue_ms"] += (begun - submitted) * 1000
+        try:
+            scope_started = time.monotonic()
+            try:
+                _scope_check_sync(conn)
+            except (LiveRedisUnavailable, LiveNotReady):
+                pass  # 기존처럼 명령 서비스가 retryable/503을 결정한다.
+            finally:
+                timings["scope_gate_ms"] += (time.monotonic() - scope_started) * 1000
+            return _run_command_sync(conn, cmd)
+        finally:
+            timings["worker_ms"] += (time.monotonic() - begun) * 1000
 
     def _gate_reject(conn: V2Conn, cmd, cid, code: str, **extra):
         """SDD-285 S9: 입구 검사 거절 ACK. capture.* 면 사유를 로그로 남긴다(원장에는 남지 않는 거절)."""
@@ -2280,9 +2314,24 @@ def register_v2_handlers(sio, ns):
             return _gate_reject(conn, cmd, cid, "not_ready", status="retryable", retry_after_ms=300)
         if conn.expired():
             return _gate_reject(conn, cmd, cid, "token_expired")
-        if not await _ensure_scope(conn):
-            return _gate_reject(conn, cmd, cid, "access_revoked")
-        outcome = await asyncio.to_thread(_run_command_sync, conn, cmd)
+        ack_started = time.monotonic()
+        timings = {"thread_queue_ms": 0.0, "scope_gate_ms": 0.0, "worker_ms": 0.0}
+        for attempt in range(2):
+            try:
+                outcome = await asyncio.to_thread(_checked_command_sync, conn, cmd, timings, time.monotonic())
+                break
+            except ScopeStale:
+                # 검사 실패는 DB 쓰기 이전이다. 재인가 후에도 바뀌면 쓰지 않고 재시도시킨다.
+                if attempt == 1:
+                    return _gate_reject(conn, cmd, cid, "scope_stale", status="retryable", retry_after_ms=0)
+                if not await _reauthorize(conn):
+                    return _gate_reject(conn, cmd, cid, "access_revoked")
+                await sio.emit("live:resync_required", {"session_id": str(conn.session_id), "reason": "scope_changed"},
+                               to=conn.sid, namespace=ns)
+        from app.services.live_command_timing import observe
+
+        timings["thread_queue_service_publish_ms"] = (time.monotonic() - ack_started) * 1000
+        observe(cmd.session_id, cmd.kind + ".ws", str(outcome.ack.get("code") or outcome.ack["status"]), timings)
         conn.state = state_after_command(conn.state, outcome)
         return outcome.ack
 

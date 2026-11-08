@@ -1,0 +1,107 @@
+/* SDD-320 — 코치 화면 D안 스킨. 모든 규칙은 html.u2-coach 하위로 한정한다(코치 업무 경로에서만 클래스가 붙는다).
+   기존 마크업은 바꾸지 않고 색·반경·타이포·간격만 D 토큰으로 덮는다. 폰트 'Pretendard MB' 는 ui-v2-brand.css 가 정의한다. */
+html.u2-coach{
+  --u2-canvas:#F4F4F7;--u2-surface:#FFFFFF;--u2-tint:#EEE5F5;--u2-text:#25212C;--u2-muted:#68616F;--u2-accent:#5F0080;
+  --u2-line:#EAE7ED;--u2-ring:#D4BDE2;--u2-r-card:24px;--u2-r-btn:14px;--u2-r-nav:26px;
+  --u2-font:'Pretendard MB','Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
+}
+html.u2-coach body,html.u2-coach #root{font-family:var(--u2-font);color:var(--u2-text)}
+html.u2-coach h1,html.u2-coach h2,html.u2-coach h3,html.u2-coach h4,html.u2-coach p,html.u2-coach button,html.u2-coach input,html.u2-coach select,html.u2-coach textarea,html.u2-coach summary,html.u2-coach table{font-family:var(--u2-font)}
+html.u2-coach h1,html.u2-coach h2,html.u2-coach h3{letter-spacing:-.02em;word-break:keep-all;overflow-wrap:anywhere}
+
+/* 쉘 배경·사이드바 */
+html.u2-coach [data-shell-variant]{background:var(--u2-canvas);color:var(--u2-text)}
+html.u2-coach [data-shell-variant] > aside{background:var(--u2-surface);border-right:1px solid var(--u2-line)}
+html.u2-coach [data-shell-variant] [data-mobile-swipe-page],html.u2-coach [data-shell-variant] .cs-structure-content,html.u2-coach [data-shell-variant] .cs-structure-scroll{background:var(--u2-canvas)}
+html.u2-coach .cs-structure{--cs-surface:var(--u2-canvas);--cs-line:var(--u2-line);--cs-cream:var(--u2-tint);--cs-brand:var(--u2-accent);--cs-muted:var(--u2-muted)}
+html.u2-coach [data-sidebar-brand]>div:first-child{gap:6px}
+html.u2-coach [data-sidebar-brand]>div:first-child>img{height:12px;width:auto}
+html.u2-coach [data-sidebar-brand]>div:first-child>span{font-family:var(--u2-font);font-weight:700;font-size:17px;line-height:.85;letter-spacing:.04em;text-transform:uppercase;color:#111;white-space:nowrap}
+html.u2-coach [data-sidebar-menu] a{border-radius:14px}
+html.u2-coach [data-sidebar-menu] a[aria-current="page"]{background:var(--u2-tint);color:var(--u2-accent);font-weight:650}
+html.u2-coach [data-sidebar-profile]{background:var(--u2-canvas);border-radius:var(--u2-r-btn)}
+
+/* 모바일 상단 바·페이지 헤더 */
+html.u2-coach .mb-shell-topbar{background:var(--u2-canvas);border-bottom:0}
+html.u2-coach .mb-shell-topbar span.font-extrabold{font-family:var(--u2-font);font-weight:700;font-size:17px;letter-spacing:.04em;text-transform:uppercase;color:#111}
+html.u2-coach [data-shell-variant] > section > header{background:var(--u2-canvas);border-bottom:1px solid var(--u2-line)}
+html.u2-coach [data-ui="page-header"] h1{font-size:28px;line-height:1.3;font-weight:600;letter-spacing:-.04em;color:var(--u2-text)}
+html.u2-coach [data-ui="page-header"] .mb-page-header-overline{color:var(--u2-accent);letter-spacing:.12em;font-weight:600}
+@media(max-width:767px){html.u2-coach [data-ui="page-header"] h1{font-size:26px}}
+
+/* 하단 내비(라이트 필) */
+html.u2-coach .floating-bottom-nav{background:var(--u2-surface);border:1px solid var(--u2-line);border-radius:var(--u2-r-nav);box-shadow:0 8px 28px #25103812;left:16px;right:16px;padding:0}
+html.u2-coach .floating-bottom-nav>a,html.u2-coach .floating-bottom-nav>button{color:var(--u2-muted);border-radius:var(--u2-r-nav)}
+html.u2-coach .floating-bottom-nav [aria-current="page"]{background:transparent;color:var(--u2-accent);font-weight:650}
+html.u2-coach .floating-bottom-nav [aria-current="page"] svg{background:var(--u2-tint);box-shadow:0 0 0 5px var(--u2-tint);border-radius:7px}
+html.u2-coach .floating-bottom-nav__badge{border-color:var(--u2-surface)}
+/* 대표 지시(11/7): 하단 플로팅 메뉴 어두운 보라 그라데이션(시안 C, 코치). 비활성 #C9B8D6 ≥8:1, 활성 흰색 ≥14:1 */
+html.u2-coach .floating-bottom-nav{background:linear-gradient(120deg,#3A1650,#251038);border-color:#251038;box-shadow:0 10px 28px #25103866,inset 0 1px 0 #ffffff1f}
+html.u2-coach .floating-bottom-nav>a,html.u2-coach .floating-bottom-nav>button{position:relative;color:#C9B8D6}
+html.u2-coach .floating-bottom-nav [aria-current="page"]{color:#FFFFFF;font-weight:700}
+html.u2-coach .floating-bottom-nav [aria-current="page"] svg{background:#ffffff26;box-shadow:0 0 0 5px #ffffff26}
+html.u2-coach .floating-bottom-nav [aria-current="page"]::after{content:"";position:absolute;bottom:5px;left:50%;width:18px;height:3px;margin-left:-9px;border-radius:3px;background:#E5D3EE}
+html.u2-coach .floating-bottom-nav>a:focus-visible,html.u2-coach .floating-bottom-nav>button:focus-visible{outline-color:#FFFFFF}
+html.u2-coach .floating-bottom-nav__badge{border-color:#2C123F}
+
+/* 카드·패널(Tailwind 흰 카드 계열) */
+html.u2-coach .ch-home{--ch-radius:var(--u2-r-card);--ch-line:var(--u2-line)}
+html.u2-coach .ch-home .ch-panel,html.u2-coach .ch-home .ch-tiles>a,html.u2-coach .ch-home .mh-track>.mc-card{border:0;background:var(--u2-surface);border-radius:var(--u2-r-card);box-shadow:none}
+html.u2-coach .ch-home .ch-tiles>a .text-\[30px\],html.u2-coach .ch-home .ch-tiles>a [class*="font-extrabold"]{font-weight:500;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+html.u2-coach .ch-home .ch-heading h2,html.u2-coach .ch-home .ch-panel h2{font-size:19px;font-weight:600;color:var(--u2-text)}
+html.u2-coach .ch-home .ch-heading a,html.u2-coach .ch-home .home-rail-link{color:var(--u2-accent)}
+html.u2-coach .ch-home .ch-review{background:var(--u2-tint);border:0;border-radius:var(--u2-r-card)}
+html.u2-coach .ch-home .ch-review a{background:var(--u2-accent);border-radius:var(--u2-r-btn)}
+html.u2-coach .ch-home .ch-hero{background:linear-gradient(125deg,#EEE5F5 0%,#FFFFFF 76%);border-radius:var(--u2-r-card);color:var(--u2-text);border:0;overflow:hidden}
+html.u2-coach .ch-home .ch-hero{--tx-hi:var(--u2-text);--tx-mid:var(--u2-muted);--mb-purple:var(--u2-accent);--mb-pale:var(--u2-accent);--sheet-bg:transparent;--sheet-border:transparent;background-color:#FFFFFF}
+html.u2-coach .ch-home .ch-hero::before{display:none}
+html.u2-coach .ch-home .ch-hero .sh-hero__bg{display:none}
+html.u2-coach .ch-home .ch-hero .sh-hbox__tx b{font-weight:600}
+html.u2-coach .ch-home .ch-hero .sh-hchip.live{background:var(--u2-accent);color:#FFFFFF}
+html.u2-coach .ch-home .ch-hero .ch-hero__title,html.u2-coach .ch-home .ch-hero .sh-hero__title{color:var(--u2-text);font-weight:600;letter-spacing:-.04em}
+html.u2-coach .ch-home .ch-hero .ch-hero__sub,html.u2-coach .ch-home .ch-hero .sh-hbox__tx,html.u2-coach .ch-home .ch-hero .sh-hbox__tx span,html.u2-coach .ch-home .ch-hero .sh-hbox__tx b{color:var(--u2-muted)}
+html.u2-coach .ch-home .ch-hero .sh-hbox{background:transparent;border:0;padding:0;min-height:0}
+html.u2-coach .ch-home .ch-hero .sh-hchip{background:var(--u2-tint);color:var(--u2-accent);border:0;border-radius:8px;font-weight:600}
+html.u2-coach .ch-home .ch-hero .sh-hcta{background:var(--u2-accent);color:#FFFFFF;border-radius:var(--u2-r-btn);font-weight:600}
+html.u2-coach .ch-home .ch-row:hover{background:transparent}
+
+/* 본문 카드·표·입력(공통, 기존 Tailwind 요소) */
+html.u2-coach .cs-structure .cs-class-row,html.u2-coach .cs-structure .cs-class-list>a,html.u2-coach .cs-structure .cs-read-state{border:0;border-radius:var(--u2-r-card);background:var(--u2-surface)}
+html.u2-coach .cs-structure .cs-class-row:hover{box-shadow:0 0 0 2px var(--u2-ring)}
+html.u2-coach .cs-structure .cs-instant-chip{background:var(--u2-tint);color:var(--u2-accent);border-radius:8px}
+html.u2-coach main [class*="rounded-2xl"],html.u2-coach main [class*="rounded-3xl"],html.u2-coach main [class*="rounded-[24px]"]{border-radius:var(--u2-r-card)}
+html.u2-coach main [class*="border-[#E8E3EC]"],html.u2-coach main [class*="border-[#EFEFEF]"],html.u2-coach main [class*="border-[#ECE6F0]"]{border-color:var(--u2-line)}
+html.u2-coach table{border-collapse:separate;border-spacing:0}
+html.u2-coach thead th{color:var(--u2-muted);font-weight:600;font-size:12px;letter-spacing:.04em;background:transparent}
+html.u2-coach tbody tr{border-color:var(--u2-line)}
+html.u2-coach input:not([type=checkbox]):not([type=radio]),html.u2-coach select,html.u2-coach textarea{border-radius:var(--u2-r-btn);border-color:var(--u2-line);color:var(--u2-text)}
+html.u2-coach input:focus-visible,html.u2-coach select:focus-visible,html.u2-coach textarea:focus-visible,html.u2-coach button:focus-visible,html.u2-coach a:focus-visible{outline:2px solid var(--u2-accent);outline-offset:3px}
+/* 주 버튼·보조 버튼(공용 buttonClass 계열 색 토큰 그대로, 반경만 D) */
+html.u2-coach main button[class*="bg-[#5F0080]"],html.u2-coach main a[class*="bg-[#5F0080]"],html.u2-coach main button[class*="bg-purple-800"]{border-radius:var(--u2-r-btn)}
+html.u2-coach main [class*="bg-[#F5EDFC]"],html.u2-coach main [class*="bg-[#F4EDF8]"]{background-color:var(--u2-tint)}
+
+/* 채팅(318 규칙 재사용: 기존 ChatRoom 변수만 교체) */
+html.u2-coach .chat-room{--chat-mine:#5F0080;--chat-surface:#F4F4F7;--chat-text:#25212C;--chat-muted:#68616F;--chat-accent:#5F0080;background:var(--u2-surface)}
+html.u2-coach .chat-room .chat-msg__bubble{border-radius:18px}
+html.u2-coach .chat-room .chat-room__composer{background:var(--u2-surface);border-top:1px solid var(--u2-line)}
+html.u2-coach .chat-room .chat-room__send{background:var(--u2-accent);color:#FFFFFF;border-radius:14px;font-weight:600}
+
+/* 다이얼로그·토스트 모서리 */
+html.u2-coach dialog,html.u2-coach [role="dialog"]{border-radius:var(--u2-r-card)}
+
+@media(prefers-reduced-motion:reduce){html.u2-coach *,html.u2-coach *::before,html.u2-coach *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* SDD-322 — 코치 알림 화면(/notifications). 기존 NotificationCard·설정 패널 마크업은 그대로 두고 D 토큰으로 색·반경·간격만 맞춘다.
+   u2-notif-legacy 표식 규칙: 알림 센터 본문(.max-w-2xl) 안의 카드·패널·스위치만 대상으로 한다. */
+html.u2-coach [data-mobile-swipe-page] .max-w-2xl > .space-y-2{display:flex;flex-direction:column;gap:10px}
+html.u2-coach [data-mobile-swipe-page] .max-w-2xl > .space-y-2 > button{border:0;border-radius:var(--u2-r-card);background:var(--u2-surface);padding:16px 18px;min-height:72px;box-shadow:none}
+html.u2-coach [data-mobile-swipe-page] .max-w-2xl > .space-y-2 > button:hover{box-shadow:0 0 0 2px var(--u2-ring)}
+html.u2-coach [data-mobile-swipe-page] .max-w-2xl > .space-y-2 > button[class*="border-l-"]{box-shadow:inset 3px 0 var(--u2-accent)}
+html.u2-coach [data-mobile-swipe-page] .max-w-2xl > .space-y-2 > button:focus-visible{outline:2px solid var(--u2-accent);outline-offset:-3px}
+html.u2-coach [data-mobile-swipe-page] .max-w-2xl > .space-y-2 > button [class*="bg-[#F5EDFC]"]{background:var(--u2-tint);color:var(--u2-accent);border-radius:8px}
+html.u2-coach [data-mobile-swipe-page] .max-w-2xl > .space-y-2 > button .text-\[\#9B9B9B\]{color:var(--u2-muted)}
+html.u2-coach [data-mobile-swipe-page] .max-w-2xl > [class*="rounded-2xl"][class*="bg-[#F8FAFC]"]{background:var(--u2-surface);border:0;border-radius:var(--u2-r-card);padding:24px}
+html.u2-coach [data-mobile-swipe-page] .max-w-2xl > [class*="rounded-2xl"][class*="bg-[#F8FAFC]"] label{border:0;border-radius:var(--u2-r-btn);background:var(--u2-canvas);min-height:56px}
+html.u2-coach [data-mobile-swipe-page] .max-w-2xl > [class*="border-dashed"]{border:0;border-radius:var(--u2-r-card);background:var(--u2-surface);padding:40px 24px}
+html.u2-coach [data-mobile-swipe-page] .max-w-2xl > .flex button{min-height:44px;min-width:44px}
+html.u2-coach [data-mobile-swipe-page] .max-w-2xl [role="switch"][aria-checked="false"]{background:#6B6472}

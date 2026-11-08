@@ -307,7 +307,7 @@ def parse_command(raw: Any) -> LiveCommand:
 # ---------------------------------------------------------------------------
 
 def ack_from_result(result: DurableResult, cursors: list[dict[str, str]] | None = None) -> dict[str, Any]:
-    """`applied`=DB commit(+projection 은 호출자가 drain 한 뒤에만 이 함수를 쓴다). 일시 거절은 ledger 에 없으므로 committed=False."""
+    """`applied`=DB commit(자신의 outbox가 있는 명령은 projection 뒤 ACK, outbox 없는 renew는 DB commit으로 충분). 일시 거절은 ledger 에 없으므로 committed=False."""
     cur = list(cursors or [])
     if result.status == "applied":
         ack: dict[str, Any] = {"command_id": str(result.command_id), "status": "duplicate" if result.duplicate else "applied",

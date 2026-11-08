@@ -43,11 +43,19 @@ const ClientEssentialsPage = lazy(() => import('./pages/onboarding/ClientEssenti
 const ClientProfilePage = lazy(() => import('./pages/clients/ClientProfilePage'));
 const ClientInvitePage = lazy(() => import('./pages/clients/ClientInvitePage'));
 const InviteLandingPage = lazy(() => import('./pages/clients/InviteLandingPage'));
-const OrgSearchPage = lazy(() => import('./pages/org/OrgSearchPage'));
-const OrgManagementPage = lazy(() => import('./pages/org/OrgManagementPage'));
+const OrgSearchPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/org/ui-v2/ui-v2-org-search-page').then((module) => ({ default: module.UiV2OrgSearchPage }))
+  : import('./pages/org/OrgSearchPage'));
+const OrgManagementPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/org/ui-v2/ui-v2-org-management-page').then((module) => ({ default: module.UiV2OrgManagementPage }))
+  : import('./pages/org/OrgManagementPage'));
 // SDD-082: 기관 관리자 상담사 관리 페이지
-const OrgCounselorsPage = lazy(() => import('./pages/org/OrgCounselorsPage'));
-const MyRequestsPage = lazy(() => import('./pages/org/MyRequestsPage'));
+const OrgCounselorsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/org/ui-v2/ui-v2-org-counselors-page').then((module) => ({ default: module.UiV2OrgCounselorsPage }))
+  : import('./pages/org/OrgCounselorsPage'));
+const MyRequestsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/org/ui-v2/ui-v2-org-requests-page').then((module) => ({ default: module.UiV2OrgRequestsPage }))
+  : import('./pages/org/MyRequestsPage'));
 const CredentialDashboardPage = lazy(() => import('./pages/credentials/CredentialDashboardPage'));
 const InstantClassPage = lazy(() => import('./pages/classes/instant-class-page').then((m) => ({ default: m.InstantClassPage })));
 const ClassSchedulingWizard = lazy(() => import('./pages/classes/class-scheduling-wizard').then((m) => ({ default: m.ClassSchedulingWizard })));
@@ -86,28 +94,57 @@ const MeasurementGuidePage = lazy(() => import('./pages/measurement-guide-page')
 const AccountDeletionPage = lazy(() => import('./pages/account-deletion-page'));
 const SupportPage = lazy(() => import('./pages/support-page'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
-const NotificationCenterPage = lazy(() => import('./pages/notifications/NotificationCenterPage'));
+const NotificationCenterPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/notifications/ui-v2/ui-v2-notification-center-page').then((module) => ({ default: module.UiV2NotificationCenterPage }))
+  : import('./pages/notifications/NotificationCenterPage'));
 const ProfessionalProfilePage = lazy(() => import('./pages/settings/professional-profile-page'));
 const UploadOverviewPage = lazy(() => import('./pages/upload-status/overview-page'));
 const AdminUploadStatusDetailPage = lazy(() => import('./pages/admin/upload-status-detail-page'));
 const MyUploadStatusPage = lazy(() => import('./pages/client/my-upload-status-page'));
 const ClassUploadStatusPage = lazy(() => import('./pages/classes/class-upload-status-page'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+// SDD-320 후속: 코치 채팅·설정 D안. UI_V2 는 빌드 시 상수 — 운영 빌드에서는 분기와 청크가 제거된다.
+const CoachUiV2SettingsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/coach/ui-v2/ui-v2-coach-settings-page').then((module) => ({ default: module.UiV2CoachSettingsPage }))
+  : Promise.resolve({ default: () => <></> }));
+const CoachUiV2ChatPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/coach/ui-v2/ui-v2-coach-chat-page').then((module) => ({ default: module.UiV2CoachChatPage }))
+  : Promise.resolve({ default: () => <></> }));
 const ClientAppPage = lazy(() => import('./pages/client/ClientAppPage'));
 const HostClassDetailPage = lazy(() => import('./pages/classes/host-class-detail-page').then((module) => ({ default: module.HostClassDetailPage })));
 const GuestClassMembershipPage = lazy(() => import('./pages/client/guest-class-membership-page').then(module => ({ default: module.GuestClassMembershipPage })));
-const MemberClassDetailPage = lazy(() => import('./pages/client/member-class-detail-page').then((module) => ({ default: module.MemberClassDetailPage })));
+// SDD-318: UI_V2 는 빌드 시 상수 — 운영 빌드에서는 D안 분기가 제거된다.
+const MemberClassDetailPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/client/ui-v2/ui-v2-class-detail-page').then((module) => ({ default: module.UiV2ClassDetailPage }))
+  : import('./pages/client/member-class-detail-page').then((module) => ({ default: module.MemberClassDetailPage })));
+const UiV2OptionalProfilePage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/client/ui-v2/ui-v2-optional-profile-page').then((module) => ({ default: module.UiV2OptionalProfilePage }))
+  : Promise.resolve({ default: () => <></> }));
 const CounselingListPage = lazy(() => import('./pages/counseling/counseling-list-page').then((module) => ({ default: module.CounselingListPage })));
 const CounselingDetailPage = lazy(() => import('./pages/counseling/counseling-detail-page').then((module) => ({ default: module.CounselingDetailPage })));
 const CodeEntryPage = lazy(() => import('./pages/class/CodeEntryPage'));
 const ClassEntryPage = lazy(() => import('./pages/class/EntryPage'));
 const OrgPublicPage = lazy(() => import('./pages/OrgPublicPage'));
-const OrgDashboardPage = lazy(() => import('./pages/OrgDashboardPage'));
+const OrgDashboardPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/org/ui-v2/ui-v2-org-dashboard-page').then((module) => ({ default: module.UiV2OrgDashboardPage }))
+  : import('./pages/OrgDashboardPage'));
 const PlaygroundPage = lazy(() => import('./pages/playground/PlaygroundPage'));
 
 function buildLoginRedirect(pathname: string, search: string): string {
   const next = `${pathname}${search}`;
   return `/login?role=platform_admin&next=${encodeURIComponent(next)}`;
+}
+
+/** SDD-320 후속: 플래그 on + 코치(counselor)일 때만 D안 화면. 그 밖의 역할·운영 빌드는 기존 화면. */
+function CoachAwareSettings() {
+  const role = useAuthStore((s) => s.user?.role);
+  if (import.meta.env.VITE_UI_V2 === 'true' && role === 'counselor') return <Suspense fallback={null}><CoachUiV2SettingsPage /></Suspense>;
+  return <SettingsPage />;
+}
+function CoachAwareChat({ Legacy }: { Legacy: () => ReactElement }) {
+  const role = useAuthStore((s) => s.user?.role);
+  if (import.meta.env.VITE_UI_V2 === 'true' && role === 'counselor') return <Suspense fallback={null}><CoachUiV2ChatPage /></Suspense>;
+  return <Legacy />;
 }
 
 /** 로그인 후 역할에 따라 라우팅 */
@@ -163,6 +200,14 @@ function RootLayout() {
   useStatusBar();
   useBiosignalResumeSweeper(); // SDD-260 W2: 미완료 feature 이어올림(시작·online·복귀·60초)
   useEffect(() => { void initNativeKeyboard(); }, []);
+  // SDD-320: 코치 화면 D안 스코프 — 운영 빌드(define 'false')에서는 이 분기와 import 가 제거된다.
+  useEffect(() => {
+    if (import.meta.env.VITE_UI_V2 !== 'true') return;
+    let detach: (() => void) | undefined;
+    let cancelled = false;
+    void import('./components/ui-v2/ui-v2-coach-scope').then((m) => { if (!cancelled) detach = m.attachCoachScope(router); });
+    return () => { cancelled = true; detach?.(); };
+  }, []);
 
   return (
     <Suspense fallback={<div role="status" className="flex min-h-screen items-center justify-center bg-[#FAF8FB] text-sm text-[#5F0080]">화면을 불러오는 중이에요.</div>}>
@@ -262,11 +307,11 @@ const router = createBrowserRouter(
         <Route path="/sessions/:id/record" element={<SessionRecordPage />} />
         <Route path="/chat" lazy={async () => {
           const module = await import('./pages/chat/ChatPage');
-          return { element: <RoleGuard><module.default /></RoleGuard> };
+          return { element: <RoleGuard><CoachAwareChat Legacy={module.default} /></RoleGuard> };
         }} />
         <Route path="/chat/:roomId" lazy={async () => {
           const module = await import('./pages/chat/ChatPage');
-          return { element: <RoleGuard><module.default /></RoleGuard> };
+          return { element: <RoleGuard><CoachAwareChat Legacy={module.default} /></RoleGuard> };
         }} />
         {/* SDD-220: 디자인 시안 경로는 운영 빌드에서 등록하지 않는다(심사 노출 방지). */}
         {isDesignRoutesEnabled() && (
@@ -345,8 +390,8 @@ const router = createBrowserRouter(
           )}
         />
         <Route path="/notifications" element={<RoleGuard><NotificationCenterPage /></RoleGuard>} />
-        <Route path="/settings/optional-profile" element={<RoleGuard role="client"><OptionalProfilePage /></RoleGuard>} />
-        <Route path="/settings" element={<RoleGuard><SettingsPage /></RoleGuard>} />
+        <Route path="/settings/optional-profile" element={<RoleGuard role="client">{import.meta.env.VITE_UI_V2 === 'true' ? <Suspense fallback={null}><UiV2OptionalProfilePage /></Suspense> : <OptionalProfilePage />}</RoleGuard>} />
+        <Route path="/settings" element={<RoleGuard><CoachAwareSettings /></RoleGuard>} />
         {/* SDD-261: 데이터 저장·업로드 현황(서버 수신 기준). 권한은 서버가 최종 판정한다. */}
         {/* SDD-263: 데이터 현황 전체 회차 목록(정식 메뉴). SDD-261 의 설정 하위 picker 화면은 목록으로 대체한다. */}
         <Route path="/upload-status" element={<RoleGuard role={['counselor', 'org_admin']}><UploadOverviewPage /></RoleGuard>} />

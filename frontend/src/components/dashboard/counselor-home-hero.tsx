@@ -20,7 +20,7 @@ export function CounselorHomeHero({ session, live, detailPath }: CounselorHomeHe
   const area = session?.area === 'counseling' ? '상담' : session?.area === 'meditation' ? '명상' : null;
   return (
     <section className="sh-scope sh-hero ch-hero" data-testid="counselor-home-hero" aria-label="다음 회차">
-      {session && <div className="sh-hero__bg" style={{ backgroundImage: `url(${heroBackdrop(session.id)})` }} aria-hidden="true" />}
+      <div className="sh-hero__bg" style={{ backgroundImage: `url(${heroBackdrop(session?.id ?? 'home')})` }} aria-hidden="true" />
       <div className="sh-hero__in">
         <div className="sh-hero__row">
           <span className={`sh-hchip${live ? ' live' : ''}`}>{session ? (live ? sessionStatusLabel(session.status) : '다음 회차') : '다음 회차'}</span>

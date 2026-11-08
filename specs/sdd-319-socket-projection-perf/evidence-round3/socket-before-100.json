@@ -1,0 +1,101 @@
+{
+  "n": 100,
+  "ticks": 32,
+  "burst": 120,
+  "burn_ms": 15.0,
+  "period_ms": 25,
+  "elapsed_s": 49.87620612500177,
+  "counts": {
+    "entry_status:applied:none": 100,
+    "entered": 100,
+    "started": 100,
+    "renew": 400,
+    "metric_projected": 3190,
+    "metric_status:projected:none": 3190,
+    "stored_ack": 3200,
+    "heartbeat": 808,
+    "snapshot_completed": 120,
+    "metric_failed": 10,
+    "metric_status:missing:none": 1,
+    "metric_status:ignored:not_live": 9,
+    "completed": 100,
+    "close_calls": 100,
+    "close_status:applied:none": 100,
+    "close_committed": 100
+  },
+  "errors": {
+    "live:metric:metric:TimeoutError": 1
+  },
+  "p95_s": {
+    "entry": 2.3821551669971086,
+    "start": 1.3095966660039267,
+    "renew": 1.1651459999993676,
+    "metric": 1.473285207990557,
+    "store": 1.140023250001832,
+    "snapshot": 4.83737479201227,
+    "close": 1.6640203749993816
+  },
+  "cpu_process_mean_pct": 104.48057291265492,
+  "cpu_process_max_pct": 108.49025002701926,
+  "loop_lag_p95_s": 0.0022843750048195943,
+  "stored_count": 3200,
+  "expected_windows": 3200,
+  "broadcast_expected_pairs": 7384,
+  "broadcast_missing_pairs": 0,
+  "client_missing_pairs": 0,
+  "revision": 3693,
+  "applied_revision": 3693,
+  "emitted_revision": 3693,
+  "closed_streams": 100,
+  "startup": {
+    "elapsed_s": 2.6877697909949347,
+    "cpu_process_mean_pct": 97.99194889473937
+  },
+  "final_settle": {
+    "before": [
+      3693,
+      3693,
+      3693,
+      false
+    ],
+    "after": [
+      3693,
+      3693,
+      3693,
+      false
+    ],
+    "duration_s": 0.004865666996920481
+  },
+  "source_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-round3-baseline-r4zxw3uz/app/services/class_participation_service.py",
+  "cps_sha256": "c96750b02cbb57cedb2df4f1b738d9c856e0807fdd491a8654213d29f68d3f36",
+  "namespace_sha256": "802c2d843cea1e1c51ee938e5eb7d9d271f1fd8481f778f2c9dad5acd8f6b191",
+  "outbox_source_path": "/var/folders/2c/k8lt4vk51dn5rwzwn1p9124c0000gn/T/sdd319-round3-baseline-r4zxw3uz/app/services/session_live_outbox.py",
+  "outbox_sha256": "4cee4cf99ee4162a4fb171b0934a284b3ec346fc374822dcce9ef964d8f738c2",
+  "single_flight_stats": {
+    "publish_runs": 184,
+    "publish_coalesced": 4215,
+    "drain_runs": 320,
+    "drain_shared": 96,
+    "drain_fallback": 0,
+    "drain_handoff": 5,
+    "drain_timeout": 0,
+    "drain_skipped": 68
+  },
+  "timing_logs": [
+    "[live-v2] live_command_timing session=6d6147a1 kind=capture.renew count=101 reasons={'lease_only': 101} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 461.439, 'apply_ms': 481.087, 'scope_ms': 15.717, 'service_ms': 483.355}",
+    "[live-v2] live_command_timing session=6d6147a1 kind=capture.renew.ws count=101 reasons={'applied': 101} max_ms={'thread_queue_ms': 800.578, 'scope_gate_ms': 15.649, 'worker_ms': 484.472, 'thread_queue_service_publish_ms': 1211.55}",
+    "[live-v2] live_command_timing session=6d6147a1 kind=capture.renew count=99 reasons={'lease_only': 99} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 383.816, 'apply_ms': 403.53, 'scope_ms': 17.067, 'service_ms': 405.718}",
+    "[live-v2] live_command_timing session=6d6147a1 kind=capture.renew.ws count=99 reasons={'applied': 99} max_ms={'thread_queue_ms': 822.585, 'scope_gate_ms': 15.782, 'worker_ms': 406.454, 'thread_queue_service_publish_ms': 1196.737}",
+    "[live-v2] live_command_timing session=6d6147a1 kind=capture.renew count=100 reasons={'lease_only': 100} max_ms={'projection_ms': 0.0, 'session_epoch_lock_ms': 405.653, 'apply_ms': 419.59, 'scope_ms': 15.758, 'service_ms': 426.22}",
+    "[live-v2] live_command_timing session=6d6147a1 kind=capture.renew.ws count=100 reasons={'applied': 100} max_ms={'thread_queue_ms': 814.951, 'scope_gate_ms': 16.655, 'worker_ms': 427.36, 'thread_queue_service_publish_ms': 1181.235}"
+  ],
+  "limitations": [
+    "합성 V2Conn 인증/REST입장 주입, WS entry.enter는 실제호출",
+    "저장은 REST 서비스이나 test socket으로 전송",
+    "client도 같은 process 별도 loop",
+    "고정 CPU busy slice 합성 압박",
+    "fixed ticks 밀리면 종료 연장",
+    "합성 연결당5초 heartbeat는 실제 publish/heartbeat/emit 경로, auth_expired·resync lifecycle 미재현",
+    "client coverage는 event_id×audience 합집합이며 클라이언트별 전송보장 아님"
+  ]
+}

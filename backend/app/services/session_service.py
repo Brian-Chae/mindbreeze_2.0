@@ -1,6 +1,9 @@
 """세션 관리 비즈니스 로직"""
 
+import functools
 import logging
+import random
+import time
 import uuid
 from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
@@ -32,6 +35,46 @@ from app.services.session_classifier import (
 )
 
 logger = logging.getLogger(__name__)
+
+# SDD-308: 입장·join 교착 재시도 — 100명 동시 입장 때 PG 교착(40P01)·직렬화 실패(40001)를 사용자 5xx 로 보이지 않게 한다.
+LOCK_RETRY_MAX = 3  # 최초 시도 외 재시도 상한
+LOCK_RETRY_JITTER_S = (0.05, 0.15)
+
+
+def _retry_on_lock_conflict(fn):
+    """교착·직렬화 실패 시 트랜잭션을 롤백하고 같은 호출을 최대 3회 다시 실행한다(50~150ms 지터).
+
+    입장·join 은 커밋 전에 교착이 나면 아무 변경도 남지 않으므로 재실행해도 부작용이 중복되지 않는다(참가자 행은 unique, 출석은 최초 1회).
+    재시도 횟수만 `lock_retry=n` 으로 남기고 토큰·개인정보는 로그에 쓰지 않는다. 끝까지 실패하면 500 이 아니라 503(`lock_busy`).
+    """
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        from sqlalchemy.exc import DBAPIError
+
+        from app.services.session_live_commands import is_retryable_db_error
+
+        db = kwargs.get("db")
+        if db is None:
+            db = next((a for a in args if isinstance(a, DBSession)), None)
+        for attempt in range(LOCK_RETRY_MAX + 1):
+            try:
+                result = fn(*args, **kwargs)
+            except DBAPIError as exc:
+                if not is_retryable_db_error(exc):
+                    raise
+                if db is not None:
+                    db.rollback()
+                if attempt >= LOCK_RETRY_MAX:
+                    logger.warning("[session] %s 잠금 충돌 재시도 소진 lock_retry=%d", fn.__name__, attempt)
+                    raise HTTPException(status_code=503, detail={"code": "lock_busy", "retryable": True}) from exc
+                time.sleep(random.uniform(*LOCK_RETRY_JITTER_S))
+                continue
+            if attempt:
+                logger.info("[session] %s 잠금 충돌 후 성공 lock_retry=%d", fn.__name__, attempt)
+            return result
+        raise AssertionError("unreachable")  # pragma: no cover
+
+    return wrapper
 
 
 # SDD-015: 일정 없는 즉석 클래스는 "ready" 상태로 생성된다.
@@ -1796,6 +1839,14 @@ def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
 def remove_participant(session_id: str, host_id: str, user_id: str, db: DBSession) -> dict:
     s = get_session_authorized(db, session_id, host_id, SessionAction.PARTICIPANT_REMOVE)
     target_uuid = _to_uuid(user_id)
+    # SDD-308: 잠금 순서 통일 — v2 회차는 live 명령과 같이 epoch 행을 먼저 잡은 뒤 참가자 행을 갱신한다.
+    # (예전: 참가자 UPDATE → emit_participant_removed 의 epoch 잠금. 명령은 epoch → 참가자라 서로 기다리다 교착.)
+    # SDD-308 후속: 전역 순서 users → 클래스 → 회차 → epoch. 클래스 회차는 epoch 보다 먼저 lock_class_session 을 잡는다.
+    if s.class_id:
+        from app.services.class_write_service import lock_class_session
+        _, s = lock_class_session(db, s, host_id)
+    from app.services.class_participation_service import lock_epoch_if_v2
+    lock_epoch_if_v2(db, s.id)
     participant = (
         db.query(SessionParticipant)
         .filter(
@@ -1904,6 +1955,7 @@ def _session_not_open_detail(s: Session) -> dict:
     return detail
 
 
+@_retry_on_lock_conflict
 def join_session(session_id: str, user_id: str, user_name: str, db: DBSession) -> dict:
     """세션 참여자 입장 처리 — 상태 전이 + WebRTC 룸 ID 생성 + LiveKit 토큰 발급"""
     s = get_session_authorized(db, session_id, user_id, SessionAction.SESSION_JOIN)
@@ -2283,6 +2335,7 @@ def _enter_resolved(
     return _enter_response(s, participant, db, is_guest=participant.user_id is None)
 
 
+@_retry_on_lock_conflict
 def enter_session(
     code: str,
     db: DBSession,
@@ -2308,6 +2361,7 @@ def enter_session(
     )
 
 
+@_retry_on_lock_conflict
 def enter_session_as_invited(
     session_id: str,
     user_id: str,
