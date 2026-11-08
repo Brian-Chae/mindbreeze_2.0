@@ -154,7 +154,10 @@ html.u2-coach h1[class*="text-[22px]"] { font-size: 31px; line-height: 1.25; fon
   html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/chat"] { order: 5; }
   html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/counseling"] { order: 6; }
   html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/settings"] { order: 7; }
-  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/upload-status"] { order: 60; margin-top: 12px; border-top: 1px solid #FFFFFF1F; border-radius: 0 0 14px 14px; padding-top: 14px; }
+  /* 대표 지시(11/9): 설정 아래 가로선 → 플레이그라운드 · 데이터 현황 · 알림 순서(데스크톱 전용 그룹). */
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/playground"] { order: 60; margin-top: 12px; border-top: 1px solid #FFFFFF1F; border-radius: 0 0 14px 14px; padding-top: 14px; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/upload-status"] { order: 61; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/notifications"] { order: 62; }
 }
 
 /* ───────── 코치 터치 영역 44px 보정(마크업 불변, 대상만 한정. 코치 쉘에는 <main> 이 없어 [data-shell-variant] 하위로 건다) ───────── */
