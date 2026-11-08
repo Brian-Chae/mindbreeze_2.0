@@ -61,3 +61,10 @@
 .ui-v2 .u2-coach-code small{color:#E5D3EE;font-size:13px}
 .ui-v2 .u2-coach-code__copy{flex:none;min-height:44px;min-width:72px;padding:0 18px;border-radius:999px;background:#FFFFFF;color:#5F0080;font-weight:650}
 @media (max-width:420px){.ui-v2 .u2-coach-code__num{font-size:30px;letter-spacing:4px}}
+
+/* 11/9 대표 지시: 상태 칩은 모바일에서도 한 줄. 좁으면 줄바꿈 대신 가로 스크롤 */
+@media (max-width: 640px) {
+  .ui-v2 .u2f-chips { flex-wrap: nowrap; gap: 5px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .ui-v2 .u2f-chips::-webkit-scrollbar { display: none; }
+  .ui-v2 .u2f-chips button { flex: none; padding: 0 9px; font-size: 13px; white-space: nowrap; }
+}
