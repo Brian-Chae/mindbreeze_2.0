@@ -46,7 +46,10 @@ describe('F-0/F-4 코치 메뉴 순서 매핑(항목 삭제 0)', () => {
   it('시안 순서 7항목에 order 부여, 그 외 항목은 하단 그룹', () => {
     const order: Record<string, number> = { '/dashboard': 1, '/classes': 2, '/clients': 3, '/reports': 4, '/chat': 5, '/counseling': 6, '/settings': 7 };
     for (const [href, n] of Object.entries(order)) expect(pc).toContain(`a[href="${href}"] { order: ${n}; }`);
-    expect(pc).toContain('a[href="/upload-status"] { order: 60;');
+    // 11/9 대표 지시: 설정 아래 가로선 → 플레이그라운드 · 데이터 현황 · 알림
+    expect(pc).toContain('a[href="/playground"] { order: 60;');
+    expect(pc).toContain('a[href="/upload-status"] { order: 61;');
+    expect(pc).toContain('a[href="/notifications"] { order: 62;');
     expect(pc).toMatch(/a \{ order: 50; \}/);
   });
   it('코치 메뉴 항목은 CSS 로만 정렬(레거시 SidebarNav 항목 목록 그대로)', () => {
