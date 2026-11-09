@@ -97,7 +97,6 @@ export function UiV2CoachHomePage() {
   const recentChats = useMemo(() => [...chatRooms].sort((a, b) => new Date(b.last_message_at ?? 0).getTime() - new Date(a.last_message_at ?? 0).getTime()).slice(0, 3), [chatRooms]);
   const unreadNotifs = useMemo(() => notifications.filter((n) => !n.is_read).slice(0, 3), [notifications]);
 
-  const displayName = (data?.counselor_name ?? user?.name ?? '코치').replace(/\s*\([^)]*\)\s*$/, '') || '코치';
   const showBanner = !bannerDismissed && user?.role === 'counselor' && !user.onboarding_completed;
   const heroSession: ClassSummary | null = hero?.session ?? null;
   const totalMembers = data ? (data.total_members ?? data.total_participants) : 0;
@@ -107,7 +106,6 @@ export function UiV2CoachHomePage() {
       <div className="ui-v2 u2f u2f-home">
         <OrgRemovedNoticeDialog />
         <UiV2CoachCodeCard />
-        <p className="u2f-lead">{displayName}님, 함께할 시간을 살펴보세요.</p>
         {error && <div className="u2-alert" role="alert"><p>{error}</p><button type="button" className="u2-secondary u2-gap" onClick={() => void fetchDashboard()}>다시 시도</button></div>}
         {showBanner && <div className="u2-card u2f-banner">
           <div><h3>프로필을 완성해 보세요</h3><p className="u2-muted">자격·경력은 원할 때 설정에서 입력할 수 있어요.</p></div>
