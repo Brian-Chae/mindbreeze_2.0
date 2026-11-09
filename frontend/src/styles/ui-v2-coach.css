@@ -1,7 +1,7 @@
 /* SDD-320 — 코치 화면 D안 스킨. 모든 규칙은 html.u2-coach 하위로 한정한다(코치 업무 경로에서만 클래스가 붙는다).
    기존 마크업은 바꾸지 않고 색·반경·타이포·간격만 D 토큰으로 덮는다. 폰트 'Pretendard MB' 는 ui-v2-brand.css 가 정의한다. */
 html.u2-coach{
-  --u2-canvas:#F6F3F8;--u2-surface:#FFFFFF;--u2-tint:#EEE5F5;--u2-text:#25212C;--u2-muted:#68616F;--u2-accent:#5F0080;
+  --u2-canvas:#FAF9FC;--u2-surface:#FFFFFF;--u2-tint:#EEE5F5;--u2-text:#25212C;--u2-muted:#68616F;--u2-accent:#5F0080;
   --u2-line:#EAE7ED;--u2-ring:#D4BDE2;--u2-r-card:24px;--u2-r-btn:14px;--u2-r-nav:26px;
   --u2-font:'Pretendard MB','Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
 }
@@ -81,7 +81,7 @@ html.u2-coach main button[class*="bg-[#5F0080]"],html.u2-coach main a[class*="bg
 html.u2-coach main [class*="bg-[#F5EDFC]"],html.u2-coach main [class*="bg-[#F4EDF8]"]{background-color:var(--u2-tint)}
 
 /* 채팅(318 규칙 재사용: 기존 ChatRoom 변수만 교체) */
-html.u2-coach .chat-room{--chat-mine:#5F0080;--chat-surface:#F6F3F8;--chat-text:#25212C;--chat-muted:#68616F;--chat-accent:#5F0080;background:var(--u2-surface)}
+html.u2-coach .chat-room{--chat-mine:#5F0080;--chat-surface:#FAF9FC;--chat-text:#25212C;--chat-muted:#68616F;--chat-accent:#5F0080;background:var(--u2-surface)}
 html.u2-coach .chat-room .chat-msg__bubble{border-radius:18px}
 html.u2-coach .chat-room .chat-room__composer{background:var(--u2-surface);border-top:1px solid var(--u2-line)}
 html.u2-coach .chat-room .chat-room__send{background:var(--u2-accent);color:#FFFFFF;border-radius:14px;font-weight:600}

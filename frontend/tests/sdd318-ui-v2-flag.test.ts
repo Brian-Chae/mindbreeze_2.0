@@ -70,7 +70,7 @@ describe('CSS 스코프', () => {
   });
   it('토큰 값이 시안 D 와 같다', () => {
     const css = read('src/styles/ui-v2.css');
-    for (const v of ['#F6F3F8', '#FFFFFF', '#EEE5F5', '#25212C', '#68616F', '#5F0080', '#EAE7ED']) expect(css).toContain(v);
+    for (const v of ['#FAF9FC', '#FFFFFF', '#EEE5F5', '#25212C', '#68616F', '#5F0080', '#EAE7ED']) expect(css).toContain(v);
     expect(css).toContain('140px + env(safe-area-inset-bottom');
     expect(css).toContain('prefers-reduced-motion');
   });

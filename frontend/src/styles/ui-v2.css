@@ -1,6 +1,6 @@
 /* SDD-318 — 내담자 화면 D안. 모든 규칙은 .ui-v2 하위로 한정한다(전역·프리셋 토큰 수정 없음). */
 .ui-v2{
-  --u2-canvas:#F6F3F8;--u2-surface:#FFFFFF;--u2-tint:#EEE5F5;--u2-text:#25212C;--u2-muted:#68616F;--u2-accent:#5F0080;
+  --u2-canvas:#FAF9FC;--u2-surface:#FFFFFF;--u2-tint:#EEE5F5;--u2-text:#25212C;--u2-muted:#68616F;--u2-accent:#5F0080;
   --u2-line:#EAE7ED;--u2-ring:#D4BDE2;--u2-ring-strong:#B78CCA;
   --u2-r-chip:8px;--u2-r-note:12px;--u2-r-btn:14px;--u2-r-card:24px;--u2-r-nav:26px;--u2-r-sheet:28px;
   --u2-bottom:calc(140px + env(safe-area-inset-bottom,0px));
@@ -115,7 +115,7 @@
 .ui-v2 .u2-facts dd{margin:0;font-size:14px}
 
 /* 하단 내비 */
-.ui-v2 .u2-nav-wrap{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:12px 16px calc(28px + env(safe-area-inset-bottom,0px));background:linear-gradient(#F6F3F800,#F6F3F8 35%);pointer-events:none}
+.ui-v2 .u2-nav-wrap{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:12px 16px calc(28px + env(safe-area-inset-bottom,0px));background:linear-gradient(#FAF9FC00,#FAF9FC 35%);pointer-events:none}
 .ui-v2 .u2-nav{pointer-events:auto;display:flex;height:66px;max-width:520px;margin:0 auto;background:var(--u2-surface);border:1px solid var(--u2-line);border-radius:var(--u2-r-nav);box-shadow:0 8px 28px #25103812}
 .ui-v2 .u2-nav a{flex:1;min-width:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;color:var(--u2-muted)}
 .ui-v2 .u2-nav a[aria-current="page"]{color:var(--u2-accent);font-weight:650}
@@ -190,7 +190,7 @@
   .ui-v2 .u2-chat-pane{border-radius:var(--u2-r-card)}
 }
 /* 말풍선·입력창: 기존 ChatRoom 이 쓰는 CSS 변수만 D 토큰으로 바꾼다(전송/읽음 로직·마크업 불변). */
-.ui-v2 .chat-room{--chat-mine:#5F0080;--chat-surface:#F6F3F8;--chat-text:#25212C;--chat-muted:#68616F;--chat-accent:#5F0080;background:var(--u2-surface)}
+.ui-v2 .chat-room{--chat-mine:#5F0080;--chat-surface:#FAF9FC;--chat-text:#25212C;--chat-muted:#68616F;--chat-accent:#5F0080;background:var(--u2-surface)}
 .ui-v2 .chat-room .chat-msg__bubble{border-radius:18px}
 .ui-v2 .chat-room .chat-room__composer{background:var(--u2-surface);border-top:1px solid var(--u2-line)}
 /* 입력창 하단 안전영역: ChatRoom 이 composer 에 키보드 높이를 인라인으로 주므로(로직 불변) 바깥 창에서 홈 인디케이터 높이만큼 비운다. */

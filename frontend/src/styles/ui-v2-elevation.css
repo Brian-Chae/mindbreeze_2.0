@@ -7,7 +7,7 @@ html {
   --u2-elev-shadow-hover: 0 1px 2px #25103812, 0 8px 22px #2510381A, 0 18px 40px #2510380F;
 }
 
-html :is(.ui-v2, .u2-coach) :is(
+:is(html.u2-coach, .ui-v2) :is(
   .u2-card:not(.u2-hero--nature),
   .u2-table-card,
   .u2-org-card,
@@ -31,11 +31,45 @@ html.u2-coach :is(
 }
 
 /* 눌러서 이동하는 카드만 호버 시 살짝 더 뜬다 */
-html :is(.ui-v2, .u2-coach) :is(a.u2-card, a.u2-org-card, a.u2-org-shortcut, .ch-home .ch-tiles > a, .cs-structure .cs-class-list > a):hover {
+:is(html.u2-coach, .ui-v2) :is(a.u2-card, a.u2-org-card, a.u2-org-shortcut, .ch-home .ch-tiles > a, .cs-structure .cs-class-list > a):hover {
   box-shadow: var(--u2-elev-shadow-hover);
 }
 
 /* 카드 안에 다시 들어간 카드는 그림자 없이 선만(이중 그림자 방지) */
-html :is(.ui-v2, .u2-coach) :is(.u2-card, .u2-table-card, .u2-org-card, .u2-org-panel) :is(.u2-card, .u2-org-card, .u2-table-card) {
+:is(html.u2-coach, .ui-v2) :is(.u2-card, .u2-table-card, .u2-org-card, .u2-org-panel) :is(.u2-card, .u2-org-card, .u2-table-card) {
+  box-shadow: none;
+}
+
+/* 11/9 수정: 휴대폰에서 표(.u2-table-card)는 바깥 상자가 투명해지고 각 행이 카드가 된다.
+   바깥 상자에 선·그림자를 주면 행 카드들을 감싼 이상한 틀이 생기므로, 바깥은 비우고 행 카드에만 준다. */
+@media (max-width: 767px) {
+  :is(html.u2-coach, .ui-v2) .u2-table-card.u2-table-card.u2-table-card {
+    border: 0;
+    box-shadow: none;
+  }
+  :is(html.u2-coach, .ui-v2) .u2-table-card .u2-table tbody tr {
+    border: 1px solid var(--u2-elev-line);
+    box-shadow: var(--u2-elev-shadow);
+  }
+}
+
+/* 11/9 수정: 설정·데이터 센터·데이터 현황·회원(/clients)·기관 홈 레거시 블록도 같은 입체감.
+   (이 화면들은 <main> 이 없어 html.u2-coach 기준으로 잡는다.) 실측으로 그림자 없던 큰 흰 블록만 지정:
+   설정 목록(.u2-setlist)·설정 카드, 데이터 센터 패널(.dc-panel)·요약 카드, 데이터 현황 회차 카드(section/details),
+   회원 필터·목록(section), 기관 홈 소속 코치 실적(.u2-org-legacy). 버튼·입력·작은 토글은 제외. */
+:is(html.u2-coach, .ui-v2) :is(
+  .u2-setlist,
+  .dc-panel,
+  .u2-org-legacy,
+  :is(section, details, article):is([class*="rounded-[20px]"], [class*="rounded-2xl"], [class*="rounded-3xl"])[class*="bg-white"],
+  div[class*="bg-white"][class*="rounded-2xl"][class*="border"]
+) {
+  border: 1px solid var(--u2-elev-line);
+  box-shadow: var(--u2-elev-shadow);
+}
+/* 데이터 센터 요약 카드(article)는 패널 안이라 선만 */
+:is(html.u2-coach, .ui-v2) .dc-panel article { border: 1px solid var(--u2-elev-line); box-shadow: none; }
+/* 블록 안에 다시 들어간 흰 블록은 그림자 없이 */
+:is(html.u2-coach, .ui-v2) :is(.u2-setlist, .dc-panel, .u2-org-legacy, section[class*="bg-white"], details[class*="bg-white"]) :is(section, details, div)[class*="bg-white"][class*="rounded"] {
   box-shadow: none;
 }
