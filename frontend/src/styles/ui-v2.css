@@ -296,3 +296,5 @@
 .ui-v2 .u2-rp-trend-line{stroke:var(--u2-accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .ui-v2 .u2-rp-trend-mid{stroke:#D4BDE2;stroke-width:1;stroke-dasharray:3 4}
 .ui-v2 .u2-rp-note{margin-top:28px}
+/* 11/9 대표 지시: 채팅 목록은 세로 스크롤 영역이라 선택 테두리(바깥으로 튀는 2px)가 좌우에서 잘림 → 좌우 3px 여유 */
+.ui-v2 .u2-chat-list{padding-left:3px;padding-right:3px}
