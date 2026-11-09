@@ -36,15 +36,13 @@ describe('좌측 메뉴 CSS', () => {
   it('금지 표현 없음', () => expect(css).not.toMatch(FORBIDDEN));
 });
 
-describe('회원 홈 2열', () => {
+describe('회원 홈 — 운영 웹 구조(11/9)', () => {
   const src = read('src/pages/client/ui-v2/ui-v2-home-page.tsx');
-  it('담당 코치는 좌열(일정 뒤)에 있다', () => {
-    const left = src.indexOf('u2-pc-main');
-    const side = src.indexOf('u2-pc-side');
-    const coach = src.indexOf('<CounselorSection />');
-    expect(left).toBeGreaterThan(-1);
-    expect(coach).toBeGreaterThan(left);
-    expect(coach).toBeLessThan(side);
+  it('운영 홈과 같은 그리드·컴포넌트를 쓴다', () => {
+    for (const t of ['mh-home', 'ClientHomePage hideHero', 'MemberClassStrip', 'mh-upcoming', 'CodeEntryButton placement="body"', '<CounselorSection />']) expect(src).toContain(t);
+  });
+  it('담당 코치는 내 클래스 뒤에 있다', () => {
+    expect(src.indexOf('<CounselorSection />')).toBeGreaterThan(src.indexOf('MemberClassStrip'));
   });
 });
 
