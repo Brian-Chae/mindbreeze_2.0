@@ -1,7 +1,10 @@
 // SDD-324 — 리포트 상단 요약 카드. 값 + 단위 + 기준 문구 + 클릭 동작.
 // 서버 응답에 없는 신규 집계는 0 으로 그리지 않고 카드를 숨긴다.
+// 11/9: 회원 화면과 같은 공용 카드(UiV2SummaryCards)로 그려 화면 너비에 맞게 채운다(고정 6열 → auto-fit).
 import type { HierarchyTab } from '../../lib/api/report-hierarchy';
 import { buildReportSummaryCards, type ReportSummary } from '../../lib/report-summary-cards';
+import { UiV2SummaryCards } from '../ui-v2/ui-v2-summary-cards';
+import '../../styles/ui-v2-coach-pc.css';
 
 interface Props {
   summary: ReportSummary | null | undefined;
@@ -16,23 +19,18 @@ export default function ReportSummaryStrip({ summary, unavailable = false, activ
   if (unavailable) return <p data-testid="report-summary-pending" className="m-0 rounded-xl bg-[#F6F2F8] px-4 py-3 text-[13px] text-[#786780]">요약 집계 준비 중이에요.</p>;
   if (cards.length === 0) return null;
   return (
-    <div data-testid="report-summary" className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-      {cards.map((c) => {
-        const body = (
-          <>
-            <span className="text-[13px] font-semibold text-[#7A6F82]">{c.label}</span>
-            <span className="text-[26px] font-bold leading-tight text-[#29272D]">{c.value.toLocaleString('ko-KR')}<span className="ml-1 text-[14px] font-semibold text-[#7A6F82]">{c.unit}</span></span>
-            <span className="text-[12px] leading-snug text-[#8B8191]">{c.basis}</span>
-          </>
-        );
-        const base = 'flex min-h-[44px] flex-col gap-1 rounded-2xl border p-4 text-left';
-        if (!c.tab) return <div key={c.key} data-card={c.key} className={`${base} border-[#EEE9F1] bg-white`}>{body}</div>;
-        const tab = c.tab;
-        const active = activeTab === tab;
-        return (
-          <button key={c.key} type="button" data-card={c.key} aria-pressed={active} onClick={() => onSelectTab(tab)} className={`${base} ${active ? 'border-[#5F0080] bg-[#F5EDFC]' : 'border-[#EEE9F1] bg-white hover:border-[#C9B2D6]'}`}>{body}</button>
-        );
-      })}
+    <div data-testid="report-summary" className="ui-v2 u2f-report-summary">
+      <UiV2SummaryCards
+        label="리포트 요약"
+        items={cards.map((c) => {
+          const tab = c.tab;
+          return {
+            key: c.key, label: c.label, value: c.value, unit: c.unit, basis: c.basis,
+            active: tab ? activeTab === tab : undefined,
+            onClick: tab ? () => onSelectTab(tab) : undefined,
+          };
+        })}
+      />
     </div>
   );
 }

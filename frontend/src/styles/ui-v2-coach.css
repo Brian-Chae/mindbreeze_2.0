@@ -11,7 +11,8 @@ html.u2-coach h1,html.u2-coach h2,html.u2-coach h3{letter-spacing:-.02em;word-br
 
 /* 쉘 배경·사이드바 */
 html.u2-coach [data-shell-variant]{background:var(--u2-canvas);color:var(--u2-text)}
-html.u2-coach [data-shell-variant] > aside{background:var(--u2-surface);border-right:1px solid var(--u2-line)}
+/* 11/9: PC(≥1024)는 ui-v2-pc.css 짙은 보라 메뉴가 정본. 빌드 번들에서 이 규칙이 뒤에 붙어 흰 배경으로 덮던 문제 → 1024 미만에만 적용 */
+@media (max-width:1023px){html.u2-coach [data-shell-variant] > aside{background:var(--u2-surface);border-right:1px solid var(--u2-line)}}
 html.u2-coach [data-shell-variant] [data-mobile-swipe-page],html.u2-coach [data-shell-variant] .cs-structure-content,html.u2-coach [data-shell-variant] .cs-structure-scroll{background:var(--u2-canvas)}
 html.u2-coach .cs-structure{--cs-surface:var(--u2-canvas);--cs-line:var(--u2-line);--cs-cream:var(--u2-tint);--cs-brand:var(--u2-accent);--cs-muted:var(--u2-muted)}
 html.u2-coach [data-sidebar-brand]>div:first-child{gap:6px}
