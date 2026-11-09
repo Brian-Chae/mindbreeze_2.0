@@ -8,7 +8,9 @@ export const SIDEBAR_CODE_CLASS = 'u2-coach-sidebar-code';
 export function syncCoachSidebarCode(root: HTMLElement): void {
   const doc = root.ownerDocument;
   const user = useAuthStore.getState().user;
-  const code = root.classList.contains('u2-coach') && user?.role === 'counselor' ? user.counselor_code ?? null : null;
+  const scoped = root.classList.contains('u2-coach');
+  const code = !scoped ? null : user?.role === 'counselor' ? user.counselor_code ?? null : user?.role === 'org_admin' ? user.org_code ?? null : null;
+  const label = user?.role === 'org_admin' ? '기관 코드' : '코치 코드';
   doc.querySelectorAll<HTMLElement>('[data-sidebar-profile]').forEach((profile) => {
     let line = profile.querySelector<HTMLElement>(`.${SIDEBAR_CODE_CLASS}`);
     if (!code) { line?.remove(); return; }
@@ -17,7 +19,7 @@ export function syncCoachSidebarCode(root: HTMLElement): void {
       line.className = SIDEBAR_CODE_CLASS;
       profile.appendChild(line);
     }
-    const text = `코치 코드 ${code}`;
+    const text = `${label} ${code}`;
     if (line.textContent !== text) line.textContent = text;
   });
 }

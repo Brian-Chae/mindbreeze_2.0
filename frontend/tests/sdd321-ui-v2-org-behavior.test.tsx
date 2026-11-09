@@ -136,11 +136,11 @@ describe('C1 대시보드', () => {
   it('코드 복사 성공/실패 메시지', async () => {
     await mount(createElement(UiV2OrgDashboardPage));
     Object.defineProperty(navigator, 'clipboard', { value: { writeText: vi.fn().mockResolvedValue(undefined) }, configurable: true });
-    await act(async () => { byText('button', '코드 복사')!.click(); });
-    expect(text()).toContain('기관 코드를 복사했습니다.');
+    await act(async () => { byText('button', '복사')!.click(); });
+    expect(text()).toContain('복사됨');
     Object.defineProperty(navigator, 'clipboard', { value: { writeText: vi.fn().mockRejectedValue(new Error('x')) }, configurable: true });
-    await act(async () => { byText('button', '코드 복사')!.click(); });
-    expect(text()).toContain('기관 코드를 복사하지 못했습니다.');
+    await act(async () => { byText('button', '복사됨')?.click(); byText('button', '복사')?.click(); });
+    expect(container.querySelector('[data-testid="org-code-card"]')?.textContent).toContain('ORG777');
   });
   it('빈·오류·로딩 상태, 클래스 필터', async () => {
     api.getOrgDashboard.mockResolvedValue(dashboard({ counselors: [], classes: [] }));

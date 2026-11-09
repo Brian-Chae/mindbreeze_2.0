@@ -12,3 +12,13 @@
 
 /* 부제(overline)가 숨겨진 상태에서도 18px 상단 여백이 남아 제목이 y=34 로 내려가던 문제 — 코치 스코프에서는 제목 y=25 로 통일 */
 html.u2-coach .mb-page-header-with-overline { padding-top: 0; }
+
+/* SDD-321 C(11/9) — 레거시 본문(회원·데이터 센터) 래퍼를 다른 기관 화면과 같은 x범위로: 1200 상한·가운데 정렬 해제 */
+@media (min-width: 1024px) {
+  html.u2-coach .mobile-menu-swipe-page > .mx-auto.max-w-mb-content { max-width: none; margin-left: 0; margin-right: 0; }
+  html.u2-coach main.dc { max-width: none; margin: 0; background: transparent; }
+}
+/* 데이터 센터: 상단 제목과 중복되는 내부 제목 블록(기관 관리자 · DATA CENTER / OO 데이터 센터)은 숨기고 설명 한 줄+권한 배지만 남긴다 */
+html.u2-coach main.dc .dc-heading { margin-bottom: 4px; }
+html.u2-coach main.dc .dc-heading .dc-eyebrow,
+html.u2-coach main.dc .dc-heading h1 { display: none; }

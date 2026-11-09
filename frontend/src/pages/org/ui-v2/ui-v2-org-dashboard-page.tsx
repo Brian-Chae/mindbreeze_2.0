@@ -4,8 +4,7 @@ import { Link } from 'react-router-dom';
 import OrgRemovedNoticeDialog from '../../../components/org/OrgRemovedNoticeDialog';
 import CounselorInviteSection from '../../../components/org/counselor-invite-section';
 import { UiV2OrgShell } from '../../../components/ui-v2/ui-v2-org-shell';
-import { UiV2ArcRing } from '../../../components/ui-v2/ui-v2-arc-ring';
-import { natureHeroStyle } from '../../../components/ui-v2/nature-hero';
+import { UiV2OrgCodeCard } from '../../../components/ui-v2/ui-v2-org-code-card';
 import {
   getOrgDashboard,
   type ClassSummary,
@@ -41,39 +40,6 @@ function isActiveForStats(counselorId: string, inviteList: CounselorItem[]): boo
 function TypePill({ cls }: { cls: ClassSummary }) {
   const label = cls.type === 'custom' && cls.custom_type_name ? cls.custom_type_name : TYPE_LABELS[cls.type];
   return <Pill tone={TYPE_TONES[cls.type]}>{label}</Pill>;
-}
-
-function OrgCodeCard({ orgCode }: { orgCode: string | null }) {
-  const [copyMessage, setCopyMessage] = useState<string | null>(null);
-  const handleCopy = async (): Promise<void> => {
-    if (!orgCode) return;
-    try {
-      await navigator.clipboard.writeText(orgCode);
-      setCopyMessage('기관 코드를 복사했습니다.');
-    } catch {
-      setCopyMessage('기관 코드를 복사하지 못했습니다.');
-    }
-  };
-  return (
-    <section className="u2-card u2-hero u2-hero--nature u2-org-hero" style={natureHeroStyle('home')} aria-labelledby="u2-org-code-title">
-      <UiV2ArcRing variant="card" />
-      <div className="u2-org-code">
-        <div>
-          <h2 id="u2-org-code-title">기관 코드</h2>
-          <p>코치는 기관 담당자의 초대로 가입합니다. 아래 코드는 기관 식별용이며, 직접 회원가입 시 더 이상 사용하지 않습니다.</p>
-        </div>
-        <div className="u2-row" style={{ flexWrap: 'wrap' }}>
-          <strong>{orgCode ?? '-'}</strong>
-          {orgCode && (
-            <button type="button" className="u2-btn-sm" onClick={() => void handleCopy()}>
-              코드 복사
-            </button>
-          )}
-        </div>
-      </div>
-      {copyMessage && <p className="u2-org-msg" role="status">{copyMessage}</p>}
-    </section>
-  );
 }
 
 export function UiV2OrgDashboardPage() {
@@ -149,6 +115,8 @@ export function UiV2OrgDashboardPage() {
     <UiV2OrgShell title={data?.org_name ?? '기관 대시보드'} subtitle="기관 전체 코치와 클래스를 한눈에 확인합니다.">
       <OrgRemovedNoticeDialog />
 
+      {data && <div className="u2-org-stack"><UiV2OrgCodeCard orgCode={data.org_code} /></div>}
+
       <Link to="/upload-status" data-upload-status-shortcut className="u2-org-shortcut">
         <span><strong>데이터 현황</strong><small className="u2-muted">회차별 데이터 도착 확인</small></span>
         <span aria-hidden="true">→</span>
@@ -160,8 +128,6 @@ export function UiV2OrgDashboardPage() {
         <div className="u2-org-loading" role="status">불러오는 중...</div>
       ) : data ? (
         <div className="u2-org-stack">
-          <OrgCodeCard orgCode={data.org_code} />
-
           <div className="u2-legacy u2-org-legacy">
             <CounselorInviteSection
               orgId={data.org_id}
