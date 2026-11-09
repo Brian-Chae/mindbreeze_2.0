@@ -79,6 +79,24 @@ def require_active_org(org_id: uuid.UUID | str, db: Session) -> Organization:
     return org
 
 
+def get_active_org_readonly(org_id: uuid.UUID | str, db: Session) -> Organization:
+    """읽기 전용(GET) 경로용 — 행 잠금(FOR UPDATE) 없이 기관 활성 여부만 확인한다.
+
+    병렬 조회가 서로 배타 잠금을 기다리다 lock_timeout 으로 500 이 되는 것을 막는다.
+    404/409 판정은 require_active_org 와 동일하다. 쓰기 경로는 require_active_org 를 계속 쓴다.
+    """
+    try:
+        org_uuid = uuid.UUID(str(org_id))
+    except (TypeError, ValueError):
+        raise HTTPException(400, "잘못된 기관 ID 형식입니다")
+    org = db.query(Organization).filter(Organization.id == org_uuid).first()
+    if org is None:
+        raise HTTPException(404, "기관을 찾을 수 없습니다")
+    if org.deactivated_at is not None:
+        raise HTTPException(409, "비활성화된 기관에서는 이 작업을 수행할 수 없습니다")
+    return org
+
+
 def require_active_user_org(user: User, db: Session) -> Organization | None:
     previous_org_id = user.org_id
     org = require_active_org(previous_org_id, db) if previous_org_id else None
