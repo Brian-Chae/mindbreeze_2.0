@@ -63,8 +63,9 @@ describe('분기·격리', () => {
   it('금지 표현 0', () => {
     for (const src of [settings, chat]) expect(src).not.toMatch(/종합점수|좋음|나쁨|보증|100\s*%|점수/);
   });
+  // SDD-323: SidebarNav.tsx 는 기관 '구성원' 메뉴 경로 변경(의도) 때문에 비교 목록에서 제외.
   it('공유·실시간 진행 파일 무수정(HEAD~2 기준 develop 이후 변경 없음)', () => {
     const changed = execSync('git diff --name-only 97a047cf -- .', { cwd: root }).toString();
-    for (const f of ['AppShell.tsx', 'ChatRoom.tsx', 'settings-content.tsx', 'ui-v2-brand.css', 'ClassPlayerPage', 'SessionLivePage', 'InstantClassPage', 'SidebarNav.tsx']) expect(changed).not.toContain(f);
+    for (const f of ['AppShell.tsx', 'ChatRoom.tsx', 'settings-content.tsx', 'ui-v2-brand.css', 'ClassPlayerPage', 'SessionLivePage', 'InstantClassPage']) expect(changed).not.toContain(f);
   });
 });

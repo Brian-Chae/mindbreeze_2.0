@@ -22,7 +22,7 @@ export async function checkUiV2Off(root) {
         if (/UiV2[A-Z][A-Za-z]+/.test(content)) problems.push(`${name}: UiV2* 컴포넌트가 번들에 포함됨`);
         if (/ui-v2-(home|classes|class-detail|reports|chat|settings|participation-profile|optional-profile)-page/.test(content)) problems.push(`${name}: D안 화면 청크 참조`);
         // SDD-321: 기관 관리자 D안 화면 청크
-        if (/ui-v2-org-(dashboard|counselors|management|search|requests|shell|nav|parts)/.test(content)) problems.push(`${name}: 기관 D안 청크 참조`);
+        if (/ui-v2-org-(dashboard|counselors|members|management|search|requests|shell|nav|parts)/.test(content)) problems.push(`${name}: 기관 D안 청크 참조`);
         // SDD-322: 알림 D안 화면 청크
         if (/ui-v2-(notifications-page|org-notifications-page|notification-center-page|notification-parts)|use-ui-v2-notifications/.test(content)) problems.push(`${name}: 알림 D안 청크 참조`);
         // SDD-320 후속: 코치 채팅·설정 D안 청크
@@ -45,7 +45,7 @@ export async function checkUiV2Off(root) {
       if (name.endsWith('.css') && /u2r3-/.test(content)) problems.push(`${name}: 리포트 v3e CSS(u2r3-)가 운영 번들에 포함됨`);
       if (name.endsWith('.css') && /u2-notif-/.test(content)) problems.push(`${name}: 알림 D안 CSS(u2-notif-)가 운영 번들에 포함됨`);
       if (name.endsWith('.css') && /u2c-(new|roombar|list--room|pane--idle|lead)/.test(content)) problems.push(`${name}: 코치 D안 화면 CSS(u2c-)가 운영 번들에 포함됨`);
-      if (name.endsWith('.css') && /u2-org-|u2-table/.test(content)) problems.push(`${name}: 기관 D안 CSS(u2-org-/u2-table)가 운영 번들에 포함됨`);
+      if (name.endsWith('.css') && /u2-org-|u2-table|u2m-/.test(content)) problems.push(`${name}: 기관 D안 CSS(u2-org-/u2-table)가 운영 번들에 포함됨`);
       if (name.endsWith('.css') && /\.u2f-(cols|table|cards|filters|tr)|\.u2-side-(item|menu|foot)/.test(content)) problems.push(`${name}: 코치 목록·회원 사이드바 D안 CSS(u2f-/u2-side-)가 운영 번들에 포함됨`);
       if (name.endsWith('.css') && /\.u2g-(noti|pg|stack|bar|notice)/.test(content)) problems.push(`${name}: 코치 알림·플레이그라운드 D안 CSS(u2g-)가 운영 번들에 포함됨`);
       if (name.endsWith('.css') && /u2-coach-(compact-title|collapsed)/.test(content)) problems.push(`${name}: 코치 스크롤 제목 CSS가 운영 번들에 포함됨`);

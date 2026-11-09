@@ -127,7 +127,7 @@ describe('FE-NAV-01 사이드바 라벨·경로 골든(역할 4종)', () => {
     await renderSidebar();
     expect(sidebarEntries()).toEqual([
       ['/dashboard/org', '기관 대시보드'], ['/classes', '명상 클래스'], ['/clients', '회원'], ['/counseling', '상담'], ['/chat', '채팅'],
-      ['/org/counselors', '구성원'], ['/reports', '리포트'], ['/org/data-center', '데이터 센터'], ['/notifications', '알림'], ['/settings', '설정'],
+      ['/counselors', '구성원'], ['/reports', '리포트'], ['/org/data-center', '데이터 센터'], ['/notifications', '알림'], ['/settings', '설정'],
     ]);
   });
   it('회원', async () => {

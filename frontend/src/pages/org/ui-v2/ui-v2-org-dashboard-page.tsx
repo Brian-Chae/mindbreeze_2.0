@@ -3,7 +3,6 @@ import { useAuthStore } from '../../../stores/authStore';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import OrgRemovedNoticeDialog from '../../../components/org/OrgRemovedNoticeDialog';
-import CounselorInviteSection from '../../../components/org/counselor-invite-section';
 import { UiV2OrgShell } from '../../../components/ui-v2/ui-v2-org-shell';
 import { UiV2OrgCodeCard } from '../../../components/ui-v2/ui-v2-org-code-card';
 import {
@@ -12,11 +11,13 @@ import {
   type OrgCounselorStat,
   type OrgDashboardResponse,
 } from '../../../lib/api/dashboard';
-import { listCounselors, type CounselorItem } from '../../../lib/api/org';
+import { listCounselors, listOrgJoinRequests, type CounselorItem, type OrgJoinRequest } from '../../../lib/api/org';
+import { summaryOf } from './members/members-model';
 import { sessionStatusLabel } from '../../../lib/session-status';
 import type { SessionStatus, SessionType } from '../../../lib/api/session';
 import { Pill, SessionStatusPill, StatCell, type PillTone } from './ui-v2-org-parts';
 import { formatDateTime } from './ui-v2-org-format';
+import '../../../styles/ui-v2-org-members.css';
 
 const TYPE_LABELS: Record<SessionType, string> = {
   clinical: '임상심리상담',
@@ -46,7 +47,8 @@ function TypePill({ cls }: { cls: ClassSummary }) {
 export function UiV2OrgDashboardPage() {
   const [data, setData] = useState<OrgDashboardResponse | null>(null);
   const [inviteList, setInviteList] = useState<CounselorItem[]>([]);
-  const [inviteListError, setInviteListError] = useState<string | null>(null);
+  const [joinRequests, setJoinRequests] = useState<OrgJoinRequest[]>([]);
+  const [allMembers, setAllMembers] = useState<CounselorItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -54,14 +56,16 @@ export function UiV2OrgDashboardPage() {
   const [typeFilter, setTypeFilter] = useState('');
 
   const fetchCounselors = useCallback(async (orgId: string): Promise<void> => {
-    setInviteListError(null);
     try {
       const counselors = await listCounselors(orgId);
+      setAllMembers(counselors);
       setInviteList(counselors.filter((item) => item.role === 'counselor'));
-    } catch (err) {
+    } catch {
+      setAllMembers([]);
       setInviteList([]);
-      setInviteListError(err instanceof Error ? err.message : '코치 목록을 불러오지 못했습니다.');
     }
+    // 가입 요청 대기 건수만 필요하다 — 홈 표시를 막지 않고, 실패해도 그대로 보여 준다.
+    void Promise.resolve(listOrgJoinRequests(orgId)).then(setJoinRequests).catch(() => setJoinRequests([]));
   }, []);
 
   const fetchDashboard = useCallback(async (): Promise<void> => {
@@ -78,28 +82,14 @@ export function UiV2OrgDashboardPage() {
     }
   }, [fetchCounselors]);
 
-  const refreshInviteData = useCallback(async (): Promise<void> => {
-    if (!data?.org_id) return;
-    try {
-      const [dashboardRes, counselors] = await Promise.all([getOrgDashboard(), listCounselors(data.org_id)]);
-      setData(dashboardRes);
-      setInviteList(counselors.filter((item) => item.role === 'counselor'));
-      setInviteListError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '목록을 새로고침하지 못했습니다');
-      setInviteListError(err instanceof Error ? err.message : '코치 목록을 불러오지 못했습니다.');
-    }
-  }, [data?.org_id]);
-
   useEffect(() => {
     void fetchDashboard();
   }, [fetchDashboard]);
 
   const activeCounselors: OrgCounselorStat[] =
     data?.counselors.filter((counselor) => isActiveForStats(counselor.id, inviteList)) ?? [];
-  const activeCounselorCount = inviteList.length
-    ? inviteList.filter((item) => item.status === 'active').length
-    : data?.total_counselors ?? 0;
+  const summary = summaryOf(allMembers, joinRequests);
+  const hasSummary = allMembers.length > 0;
 
   const classes = data?.classes;
   const filteredClasses = useMemo(() => {
@@ -137,17 +127,27 @@ export function UiV2OrgDashboardPage() {
         <div className="u2-org-loading" role="status">불러오는 중...</div>
       ) : data ? (
         <div className="u2-org-stack">
-          <div className="u2-legacy u2-org-legacy">
-            <CounselorInviteSection
-              orgId={data.org_id}
-              inviteList={inviteList}
-              inviteListError={inviteListError}
-              onRefresh={refreshInviteData}
-            />
-          </div>
+          <section aria-labelledby="u2-org-members-summary-title">
+            <div className="u2-org-section-head" style={{ marginTop: 0 }}>
+              <h2 id="u2-org-members-summary-title">구성원 현황</h2>
+              <Link to="/counselors" className="u2-link" data-members-shortcut>구성원에서 관리 →</Link>
+            </div>
+            <div className="u2m-summary" role="group" aria-label="구성원 요약">
+              {([
+                ['활성 코치', hasSummary ? summary.coaches : data.total_counselors, 'coaches'],
+                ['활성 관리자', summary.admins, 'admins'],
+                ['초대 대기', summary.invitesPending, 'invites'],
+                ['가입 요청', summary.requestsPending, 'requests'],
+              ] as const).map(([label, value, tab]) => (
+                <Link key={tab} to={tab === 'coaches' ? '/counselors' : `/counselors?tab=${tab}`} data-summary-tab={tab}>
+                  <span className="u2m-summary-label">{label}</span>
+                  <strong className="u2m-summary-value">{value}<small>명</small></strong>
+                </Link>
+              ))}
+            </div>
+          </section>
 
           <dl className="u2-org-stats" aria-label="기관 현황">
-            <StatCell label="활성 코치" value={activeCounselorCount} />
             <StatCell label="총 클래스" value={data.total_classes} accent />
             <StatCell label="총 회원" value={data.total_members ?? data.total_participants} />
             <StatCell label="종료한 클래스" value={data.completed_classes} />

@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const api = vi.hoisted(() => ({
   getOrgDashboard: vi.fn(),
   listCounselors: vi.fn(),
+  listOrgJoinRequests: vi.fn(),
   getCounselorActivity: vi.fn(),
   suspendCounselor: vi.fn(),
   unsuspendCounselor: vi.fn(),
@@ -32,6 +33,7 @@ vi.mock('../src/lib/api/dashboard', () => ({ getOrgDashboard: api.getOrgDashboar
 vi.mock('../src/lib/api/org', async (orig) => ({
   ...(await orig<object>()),
   listCounselors: api.listCounselors,
+  listOrgJoinRequests: api.listOrgJoinRequests,
   getCounselorActivity: api.getCounselorActivity,
   suspendCounselor: api.suspendCounselor,
   unsuspendCounselor: api.unsuspendCounselor,
@@ -109,6 +111,7 @@ beforeEach(() => {
   api.getOrgDashboard.mockResolvedValue(dashboard());
   api.listCounselors.mockResolvedValue([item(), item({ id: 'k2', name: '대기코치', email: 'k2@x.com', status: 'pending', invite_type: 'new_account', counselor_code: null }), item({ id: 'a1', name: '관리자', email: 'a@x.com', role: 'org_admin', counselor_code: null })]);
   api.listNotifications.mockResolvedValue({ notifications: [], total: 0, unread: 0 });
+  api.listOrgJoinRequests.mockResolvedValue([]);
   api.getOrgCounselorProfile.mockResolvedValue(profile);
   api.getCounselorActivity.mockResolvedValue({ sessions: [{ id: 's1', title: '아침 명상', type: 'meditation', status: 'scheduled', scheduled_at: '2026-11-08T01:00:00Z', started_at: null, participant_count: 4 }], reports: [{ id: 'r1', session_id: 's1', title: '리포트 1', type: 'counselor', status: 'pending_review', created_at: '2026-11-02T00:00:00Z' }] });
   setAuth('org_admin');
@@ -131,7 +134,8 @@ describe('C1 대시보드', () => {
     expect(container.querySelector('a[href="/sessions/c1/record"]')?.textContent).toBe('기록 보기');
     expect(container.querySelector('a[href="/sessions/c2/record"]')).toBeNull(); // 기록·요약 없음
     expect(text()).toContain('(게스트 2)');
-    expect(text()).toContain('초대·가입 현황'); // 기존 CounselorInviteSection 재사용
+    expect(text()).toContain('구성원 현황'); // SDD-323: 초대 폼·현황 대신 요약 4종 + 구성원 바로가기
+    expect(container.querySelector('a[data-members-shortcut]')?.getAttribute('href')).toBe('/counselors');
   });
   it('코드 복사 성공/실패 메시지', async () => {
     await mount(createElement(UiV2OrgDashboardPage));
@@ -283,53 +287,22 @@ describe('C4 센터 관리', () => {
     api.getOrg.mockResolvedValue({ id: 'org-1', name: '마음기관', ceo_name: '대표', biz_number: '123-45-67890', address: '대전', phone: '042', verified: true, verified_at: '2026-01-01', created_at: '2025-12-01' });
   });
   const open = () => mount(createElement(UiV2OrgManagementPage), '/org/org-1', '/org/:org_id');
-  it('가입 요청 준비 중 안내, 센터 정보 7항목, 소속 코치 N명', async () => {
+  it('가입 요청 준비 중 안내, 센터 정보 7항목, 구성원은 구성원 화면 링크로 대체(SDD-323)', async () => {
     await open();
     expect(text()).toContain('가입 요청 관리');
     expect(text()).toContain('준비 중');
     expect(text()).toContain('가입 요청 관리 기능은 준비 중입니다.');
     for (const l of ['센터명', '대표자명', '사업자등록번호', '주소', '전화번호', '인증 여부', '등록일']) expect(text()).toContain(l);
     expect(text()).toContain('인증 완료 (2026-01-01)');
-    expect(text()).toContain('소속 코치 (3명)');
+    expect(container.querySelector('a[data-members-link]')?.getAttribute('href')).toBe('/counselors');
+    expect(container.querySelector('table')).toBeNull(); // 중복 구성원 표 없음
+    expect(container.querySelector('select[aria-label$="역할"]')).toBeNull();
   });
   it('비관리자 안내', async () => {
     setAuth('counselor');
     await open();
     expect(text()).toContain('관리자 권한이 없습니다. 일부 기능이 제한될 수 있습니다.');
-  });
-  it('역할 변경은 confirm 문구 후 updateCounselor, 취소하면 호출 없음', async () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
-    api.updateCounselor.mockResolvedValue(item({ role: 'org_admin' }));
-    await open();
-    const select = byLabel('가코치 역할') as HTMLSelectElement;
-    await setValue(select, 'org_admin');
-    expect(confirmSpy).toHaveBeenCalledWith("역할을 '관리자'(으)로 변경하시겠습니까?");
-    expect(api.updateCounselor).not.toHaveBeenCalled();
-    await setValue(byLabel('가코치 역할') as HTMLSelectElement, 'org_admin');
-    await flush();
-    expect(api.updateCounselor).toHaveBeenCalledWith('org-1', 'k1', { role: 'org_admin' });
-  });
-  it('소속 해제는 confirm 후 removeCounselor, 행 제거', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-    api.removeCounselor.mockResolvedValue(undefined);
-    await open();
-    const row = [...container.querySelectorAll('tbody tr')].find((r) => r.textContent?.includes('가코치'))!;
-    await act(async () => { [...row.querySelectorAll('button')].find((b) => b.textContent === '소속 해제')!.click(); });
-    await flush();
-    expect(window.confirm).toHaveBeenCalledWith('소속을 해제하시겠습니까?');
-    expect(api.removeCounselor).toHaveBeenCalledWith('org-1', 'k1');
-    expect(text()).toContain('소속 코치 (2명)');
-  });
-  it('검색·상태 필터, 정보 수정 편집기 연결', async () => {
-    await open();
-    await setValue(byLabel('코치 검색') as HTMLInputElement, '대기');
-    expect(container.querySelector('tbody')?.textContent).toContain('대기코치');
-    expect(container.querySelector('tbody')?.textContent).not.toContain('가코치');
-    await setValue(byLabel('코치 검색') as HTMLInputElement, '');
-    const row = [...container.querySelectorAll('tbody tr')].find((r) => r.textContent?.includes('가코치'))!;
-    await act(async () => { [...row.querySelectorAll('button')].find((b) => b.textContent === '정보 수정')!.click(); });
-    await flush();
-    expect(api.getOrgCounselorProfile).toHaveBeenCalledWith('org-1', 'k1');
+    expect(container.querySelector('a[data-members-link]')).toBeNull();
   });
 });
 

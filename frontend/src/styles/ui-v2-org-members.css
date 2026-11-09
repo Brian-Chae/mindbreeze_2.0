@@ -1,0 +1,70 @@
+/* SDD-323 F10 — 기관 구성원 화면. 토큰·그림자는 ui-v2-elevation.css·ui-v2-org.css 를 재사용하고, 여기서는 구성원 전용 배치만 정의한다. */
+.ui-v2 .u2m-page{min-width:0}
+.ui-v2 .u2m-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* 탭 — 4칸 알약 */
+.ui-v2 .u2m-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:6px;background:var(--u2-surface);border:1px solid var(--u2-elev-line,#E2DCE8);box-shadow:var(--u2-elev-shadow);border-radius:20px}
+.ui-v2 .u2m-tabs button{min-height:44px;display:flex;align-items:center;justify-content:center;gap:8px;padding:8px 6px;border-radius:14px;color:var(--u2-muted);font-size:14px;font-weight:600;white-space:nowrap}
+.ui-v2 .u2m-tabs button b{font-size:12px;font-variant-numeric:tabular-nums}
+.ui-v2 .u2m-tabs button.is-active{background:var(--u2-tint);color:var(--u2-accent);box-shadow:inset 0 -2px var(--u2-accent)}
+.ui-v2 .u2m-tabs button:focus-visible{outline:3px solid var(--u2-accent);outline-offset:2px}
+
+.ui-v2 .u2m-sectionhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 4px 14px;flex-wrap:wrap}
+.ui-v2 .u2m-sectionhead h2{font-size:21px}
+.ui-v2 .u2m-sectionhead p{margin-top:4px;color:var(--u2-muted);font-size:14px}
+.ui-v2 .u2m-inline{width:auto;min-width:44px}
+.ui-v2 .u2m-note{background:var(--u2-tint);color:var(--u2-accent);border-radius:14px;padding:14px 16px;font-size:14px;margin-bottom:14px}
+.ui-v2 .u2m-feedback{background:var(--u2-tint);color:var(--u2-accent);border-radius:14px;padding:14px 16px;font-size:14px;margin-bottom:14px}
+.ui-v2 .u2m-grouphead{margin:18px 4px 10px;font-size:15px}
+.ui-v2 .u2m-reason{display:block;margin-top:4px;color:var(--u2-muted)}
+
+/* 이름 · 이메일 */
+.ui-v2 .u2m-identity{display:flex;align-items:center;gap:12px;min-width:0}
+.ui-v2 .u2m-identity>div{min-width:0}
+.ui-v2 .u2m-identity strong{display:block;font-weight:600;overflow-wrap:anywhere}
+.ui-v2 .u2m-identity small{display:block;color:var(--u2-muted);font-size:12px;overflow-wrap:anywhere}
+.ui-v2 .u2m-avatar{flex:none;display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--u2-tint);color:var(--u2-accent);font-size:13px;font-weight:600}
+
+/* PC(≥1024) = 표, 그 아래 = 카드. 기관 표는 기존 767 카드 변환을 쓰지 않고 별도 마크업으로 분기한다. */
+.ui-v2 .u2m-table{display:block}
+.ui-v2 .u2m-table .u2-table{min-width:0}
+.ui-v2 .u2m-table .u2-table td,.ui-v2 .u2m-table .u2-table th{padding-left:16px;padding-right:16px}
+.ui-v2 .u2m-cards{display:none}
+@media(max-width:1023px){
+  .ui-v2 .u2m-table{display:none}
+  .ui-v2 .u2m-cards{display:grid;gap:12px}
+  .ui-v2 .u2m-card{background:var(--u2-surface);border:1px solid var(--u2-elev-line,#E2DCE8);box-shadow:var(--u2-elev-shadow);border-radius:20px;padding:18px 20px;min-width:0}
+  .ui-v2 .u2m-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .ui-v2 .u2m-card-head .u2-pill{flex:none}
+  .ui-v2 .u2m-meta{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0 0}
+  .ui-v2 .u2m-meta dt{font-size:12px;color:var(--u2-muted)}
+  .ui-v2 .u2m-meta dd{margin:2px 0 0;font-size:14px}
+  .ui-v2 .u2m-role{margin-top:12px;font-size:14px}
+  .ui-v2 .u2m-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--u2-line);flex-wrap:wrap}
+  .ui-v2 .u2m-tabs{grid-template-columns:1fr 1fr}
+  .ui-v2 .u2m-tabs button{font-size:13px}
+}
+/* 휴대폰: 상세/모달은 가로 꽉 차게 */
+@media(max-width:600px){
+  .ui-v2 .u2-org-filter select{flex:1 1 calc(50% - 4px);min-width:0}
+}
+
+/* 상세 패널(모달) */
+.ui-v2 .u2m-detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.ui-v2 .u2m-detail-head p{margin-top:4px;color:var(--u2-muted);font-size:13px;overflow-wrap:anywhere}
+.ui-v2 .u2m-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.ui-v2 .u2m-detail-actions{margin-top:16px}
+.ui-v2 .u2m-subhead{margin:22px 0 8px;font-size:15px;font-weight:600}
+.ui-v2 .u2m-list{list-style:none;margin:0;padding:0}
+.ui-v2 .u2m-list li{display:flex;flex-direction:column;gap:2px;padding:12px 0;border-bottom:1px solid var(--u2-line)}
+.ui-v2 .u2m-list li:last-child{border-bottom:0}
+.ui-v2 .u2m-list small,.ui-v2 .u2m-footnote{color:var(--u2-muted);font-size:12px}
+.ui-v2 .u2m-list .u2m-footnote{border-bottom:0}
+
+/* 대시보드 구성원 요약 */
+.ui-v2 .u2m-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.ui-v2 .u2m-summary a{display:block;background:var(--u2-surface);border-radius:var(--u2-r-card);padding:18px 20px;min-height:44px;min-width:0;border:1px solid var(--u2-elev-line,#E2DCE8);box-shadow:var(--u2-elev-shadow)}
+.ui-v2 .u2m-summary-label{display:block;font-size:13px;color:var(--u2-muted)}
+.ui-v2 .u2m-summary-value{display:block;margin-top:6px;font-size:30px;font-weight:500;letter-spacing:-1px;font-variant-numeric:tabular-nums;line-height:1.2}
+.ui-v2 .u2m-summary-value small{font-size:13px;color:var(--u2-muted);margin-left:2px}
+@media(max-width:767px){.ui-v2 .u2m-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ui-v2 .u2m-summary-value{font-size:26px}}

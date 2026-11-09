@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.v1 import router as v1_router
 from app.config import settings
+from app.core.api_error import ApiError
 from app.core.cors import http_cors_origins, parse_origins, cors_explicitly_configured
 from app.ws import sio, asgi_app as socketio_asgi  # noqa: F401
 from app.services import data_center_runtime  # SDD-243/244 통합: 측정 backend·raw 반출 어댑터 등록
@@ -213,6 +214,13 @@ async def _validation_exception_handler(
     )
     logger.warning("[422] %s %s — 요청 검증 실패 (%s)", request.method, request.url.path, fields)
     return JSONResponse(status_code=422, content={"detail": jsonable_encoder(exc.errors())})
+
+
+@app.exception_handler(ApiError)
+async def _api_error_handler(request: Request, exc: ApiError) -> JSONResponse:
+    """SDD-323: `code` 필드를 포함한 HTTPException 봉투."""
+    content = {"detail": exc.detail, "code": exc.code, **exc.extra}
+    return JSONResponse(status_code=exc.status_code, content=content, headers=exc.headers)
 
 
 @app.exception_handler(Exception)

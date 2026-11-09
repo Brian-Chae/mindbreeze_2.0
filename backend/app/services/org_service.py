@@ -6,8 +6,9 @@ from datetime import datetime, timezone
 from fastapi import HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
+from app.core.api_error import ApiError
 from app.models.organization import Organization
 from app.models.org_join_request import OrganizationJoinRequest
 from app.models.user import User
@@ -284,6 +285,8 @@ def handle_join_request(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="status는 approved 또는 rejected만 허용됩니다",
         )
+    if new_status == "rejected" and not (reason or "").strip():
+        raise ApiError(422, "REASON_REQUIRED", "거절 사유를 입력해야 합니다")
 
     from app.services import membership_service
 
@@ -292,10 +295,7 @@ def handle_join_request(
     if admin is None or not membership_service.is_member(
         db, admin.id, org_id, role="org_admin", status="active"
     ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="해당 센터의 관리자만 처리할 수 있습니다",
-        )
+        raise ApiError(403, "ORG_ADMIN_REQUIRED", "해당 센터의 관리자만 처리할 수 있습니다")
 
     req = (
         db.query(OrganizationJoinRequest)
@@ -347,7 +347,9 @@ def handle_join_request(
     return req
 
 
-def get_counselors(org_id: str, db: Session) -> list[tuple[User, "UserOrgMembership"]]:
+def get_counselors(
+    org_id: str, db: Session, *, role: str | None = None, status_filter: str | None = None
+) -> list[tuple[User, "UserOrgMembership"]]:
     """소속 상담사 목록 (counselor + org_admin) — membership 기반 (SDD-079).
 
     active(소속) + invited(신규 가입 초대·소속 추가 초대)를 함께 반환한다.
@@ -356,17 +358,65 @@ def get_counselors(org_id: str, db: Session) -> list[tuple[User, "UserOrgMembers
     from app.models.user_org_membership import UserOrgMembership
 
     get_active_org_readonly(org_id, db)
-    return (
+    query = (
         db.query(User, UserOrgMembership)
+        .options(selectinload(User.counselor_profile))  # N+1 방지: 상담사 코드 일괄 로딩
         .join(UserOrgMembership, UserOrgMembership.user_id == User.id)
         .filter(
             UserOrgMembership.org_id == uuid.UUID(org_id),
             UserOrgMembership.status.in_(["active", "invited"]),
             User.role.in_(["counselor", "org_admin"]),
         )
-        .order_by(User.created_at.asc())
+    )
+    if role in ("counselor", "org_admin"):
+        query = query.filter(UserOrgMembership.role == role)
+    if status_filter in ("active", "invited"):
+        query = query.filter(UserOrgMembership.status == status_filter)
+    elif status_filter in ("pending",):
+        query = query.filter(UserOrgMembership.status == "invited")
+    elif status_filter == "suspended":
+        query = query.filter(User.status == "suspended")
+    return query.order_by(User.created_at.asc()).all()
+
+
+def aggregate_member_stats(
+    org: Organization, user_ids: list[uuid.UUID], db: Session
+) -> tuple[dict, dict]:
+    """SDD-323 B6 — 이 기관 범위의 (class_count, last_activity_at) 일괄 집계(2쿼리, N+1 없음).
+
+    class_count: 이 기관 소속 클래스의 활성 담당 강사 수(ClassInstructor active) 기준.
+    last_activity_at: 이 기관 귀속 세션의 마지막 시작 시각.
+    """
+    from sqlalchemy import func as sa_func
+
+    from app.models.class_program import Class, ClassInstructor
+    from app.models.session import Session as SessionModel
+
+    if not user_ids:
+        return {}, {}
+    class_counts = dict(
+        db.query(ClassInstructor.user_id, sa_func.count(sa_func.distinct(ClassInstructor.class_id)))
+        .join(Class, Class.id == ClassInstructor.class_id)
+        .filter(
+            ClassInstructor.user_id.in_(user_ids),
+            ClassInstructor.status == "active",
+            Class.organization_id == org.id,
+            Class.status.notin_(["archived", "cancelled"]),
+        )
+        .group_by(ClassInstructor.user_id)
         .all()
     )
+    last_seen = dict(
+        db.query(SessionModel.host_id, sa_func.max(SessionModel.started_at))
+        .filter(
+            SessionModel.host_id.in_(user_ids),
+            SessionModel.organization_id == org.id,
+            SessionModel.started_at.isnot(None),
+        )
+        .group_by(SessionModel.host_id)
+        .all()
+    )
+    return class_counts, last_seen
 
 
 # ---------------------------------------------------------------------------
@@ -381,10 +431,10 @@ def _get_org_counselor(org_id: str, user_id: str, db: Session) -> User:
     try:
         target_uuid = uuid.UUID(str(user_id))
     except ValueError:
-        raise HTTPException(status_code=404, detail="대상 코치를 찾을 수 없습니다")
+        raise ApiError(404, "MEMBER_NOT_FOUND", "대상 코치를 찾을 수 없습니다")
     target = db.query(User).filter(User.id == target_uuid).first()
     if target is None or membership_service.get_membership(db, target.id, org_id) is None:
-        raise HTTPException(status_code=404, detail="대상 코치를 찾을 수 없습니다")
+        raise ApiError(404, "MEMBER_NOT_FOUND", "대상 코치를 찾을 수 없습니다")
     return target
 
 
@@ -478,23 +528,25 @@ def set_counselor_suspension(
 
 
 def get_counselor_activity(org_id: str, user_id: str, db: Session, *, limit: int = 10) -> dict:
-    """소속 상담사 최근 이력 — 주최 세션 + 해당 세션 리포트의 메타데이터만 반환한다.
+    """소속 상담사 최근 이력 — 이 기관 귀속 세션 + 해당 세션 리포트의 메타데이터만 반환한다.
 
-    기존 org_dashboard 와 동일하게 host_id 기준으로 조회한다. 상담 내용(기록/녹음/
-    리포트 본문)은 노출하지 않는다.
+    SDD-323: org_id 필터 필수(다른 기관 세션·회원·클래스 노출 0). 담당 클래스·회원 요약을 포함한다.
+    상담 내용(기록/녹음/리포트 본문)은 노출하지 않는다.
     """
     from sqlalchemy import func as sa_func
 
+    from app.models.class_program import Class, ClassInstructor, ClassMember
+    from app.models.client_counselor_link import ClientCounselorLink
     from app.models.record import Report
     from app.models.session import Session as SessionModel
     from app.models.session import SessionParticipant
 
-    get_active_org_readonly(org_id, db)
+    org = get_active_org_readonly(org_id, db)
     target = _get_org_counselor(org_id, user_id, db)
 
     sessions = (
         db.query(SessionModel)
-        .filter(SessionModel.host_id == target.id)
+        .filter(SessionModel.host_id == target.id, SessionModel.organization_id == org.id)
         .order_by(SessionModel.created_at.desc())
         .limit(limit)
         .all()
@@ -509,11 +561,38 @@ def get_counselor_activity(org_id: str, user_id: str, db: Session, *, limit: int
     reports = (
         db.query(Report, SessionModel)
         .join(SessionModel, Report.session_id == SessionModel.id)
-        .filter(SessionModel.host_id == target.id)
+        .filter(SessionModel.host_id == target.id, SessionModel.organization_id == org.id)
         .order_by(Report.created_at.desc())
         .limit(limit)
         .all()
     )
+
+    class_rows = (
+        db.query(Class.id, Class.title, Class.status)
+        .join(ClassInstructor, ClassInstructor.class_id == Class.id)
+        .filter(
+            ClassInstructor.user_id == target.id,
+            ClassInstructor.status == "active",
+            Class.organization_id == org.id,
+            Class.status.notin_(["archived", "cancelled"]),
+        )
+        .distinct()
+        .all()
+    )
+    member_counts = dict(
+        db.query(ClassMember.class_id, sa_func.count(ClassMember.id))
+        .filter(
+            ClassMember.class_id.in_([c.id for c in class_rows]),
+            ClassMember.status == "active",
+        )
+        .group_by(ClassMember.class_id)
+        .all()
+    ) if class_rows else {}
+    client_count = (
+        db.query(sa_func.count(ClientCounselorLink.id))
+        .filter(ClientCounselorLink.counselor_id == target.id, ClientCounselorLink.status == "active")
+        .scalar()
+    ) or 0
 
     return {
         "sessions": [
@@ -539,74 +618,72 @@ def get_counselor_activity(org_id: str, user_id: str, db: Session, *, limit: int
             }
             for r, sess in reports
         ],
+        "classes": [
+            {
+                "id": str(c.id),
+                "name": c.title,
+                "status": c.status,
+                "member_count": int(member_counts.get(c.id, 0)),
+            }
+            for c in class_rows
+        ],
+        "client_count": int(client_count),
     }
 
 
 def update_counselor_role(
     org_id: str, user_id: str, new_role: str, admin_user_id: str, db: Session,
-    *, reason: str | None = None,
+    *, reason: str | None = None, request_id: str | None = None,
 ) -> User:
-    """상담사 권한 조정 (counselor ↔ org_admin).
+    """상담사 권한 조정 (counselor ↔ org_admin) — 대표/플랫폼만 (SDD-323).
 
-    AUTHZ-03: 마지막 활성 기관 관리자 강등 방지 가드 + VerificationAudit 기록을 위해
-    org_management_service.change_counselor 로 통일한다. 기존의 org_admin 검증은 유지한다.
+    마지막 활성 기관 관리자 강등 방지·자기 자신/대표 보호·감사는 change_counselor 가 기관 행 잠금 안에서 처리한다.
     """
     if new_role not in ("counselor", "org_admin"):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="role은 counselor 또는 org_admin만 허용됩니다",
         )
-
-    admin = db.query(User).filter(User.id == uuid.UUID(admin_user_id)).first()
-    # MB2-ORG-03: User.org_id 미러가 아니라 membership(active org_admin) 으로 판정한다.
-    if admin is None or not membership_service.is_member(
-        db, admin.id, org_id, role="org_admin", status="active"
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="해당 센터의 관리자만 변경할 수 있습니다",
-        )
+    clean_reason = (reason or "").strip()
+    if not clean_reason:
+        raise ApiError(422, "REASON_REQUIRED", "사유를 입력해야 합니다")
 
     from app.services import org_management_service
 
-    # 마지막 활성 org_admin 강등 가드·감사(VerificationAudit)·역할 알림을 공용 로직에 위임한다.
     return org_management_service.change_counselor(
         uuid.UUID(str(org_id)),
         uuid.UUID(str(user_id)),
-        admin.id,
-        reason or "코치 권한 조정",
+        uuid.UUID(str(admin_user_id)),
+        clean_reason,
         db,
         role=new_role,
+        request_id=request_id,
     )
 
 
-def remove_counselor(org_id: str, user_id: str, admin_user_id: str, db: Session) -> None:
-    """상담사 소속 해제."""
-    admin = db.query(User).filter(User.id == uuid.UUID(admin_user_id)).first()
-    # MB2-ORG-03: User.org_id 미러가 아니라 membership(active org_admin) 으로 판정한다.
-    if admin is None or not membership_service.is_member(
-        db, admin.id, org_id, role="org_admin", status="active"
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="해당 센터의 관리자만 해제할 수 있습니다",
-        )
+def remove_counselor(
+    org_id: str, user_id: str, admin_user_id: str, db: Session,
+    *, reason: str | None = None, request_id: str | None = None,
+) -> None:
+    """상담사 소속 해지 — 사유 필수. 코치 대상=관리자 누구나, 관리자 대상=대표/플랫폼만 (SDD-323).
+
+    role=None 은 소속 해제를 뜻한다. 보호 가드(자기 자신·대표·마지막 관리자·진행 세션·활성 연결)는
+    change_counselor 가 공유한다.
+    """
+    clean_reason = (reason or "").strip()
+    if not clean_reason:
+        raise ApiError(422, "REASON_REQUIRED", "사유를 입력해야 합니다")
 
     from app.services import org_management_service
 
-    # MB2-ORG-01: 소속 해제도 역할 변경(change_counselor)과 동일한 보호 가드를 공유한다.
-    #  - 자기 자신(주 담당자) 제거 방지 → 409
-    #  - 마지막 활성 org_admin 제거 방지 → 409
-    #  - 진행/예정 세션·활성 내담자 연결 존재 시 해제 차단 → 409
-    #  - membership status='left' + User.org_id 미러 동기 + 감사(VerificationAudit) + 안내 알림
-    # role=None 은 소속 해제를 뜻한다.
     org_management_service.change_counselor(
         uuid.UUID(str(org_id)),
         uuid.UUID(str(user_id)),
-        admin.id,
-        "코치 소속 해제",
+        uuid.UUID(str(admin_user_id)),
+        clean_reason,
         db,
         role=None,
+        request_id=request_id,
     )
 
 

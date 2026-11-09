@@ -8,7 +8,7 @@ const read = (p: string): string => readFileSync(resolve(__dirname, '..', p), 'u
 
 describe('기관 스코프 판정', () => {
   it('기관관리자는 기관 업무 경로에서 코치 스코프(html.u2-coach)를 받는다', () => {
-    for (const path of ['/dashboard/org', '/classes', '/clients', '/org/counselors', '/org/data-center', '/reports', '/chat', '/settings', '/upload-status', '/notifications', '/playground']) {
+    for (const path of ['/dashboard/org', '/classes', '/clients', '/counselors', '/org/counselors', '/org/data-center', '/reports', '/chat', '/settings', '/upload-status', '/notifications', '/playground']) {
       expect(shouldApplyCoachScope('org_admin', path)).toBe(true);
     }
   });

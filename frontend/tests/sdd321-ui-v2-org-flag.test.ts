@@ -12,7 +12,7 @@ const read = (p: string) => readFileSync(resolve(root, p), 'utf8');
 const ORG_ROUTES: Array<[string, string, string]> = [
   ['OrgSearchPage', './pages/org/ui-v2/ui-v2-org-search-page', './pages/org/OrgSearchPage'],
   ['OrgManagementPage', './pages/org/ui-v2/ui-v2-org-management-page', './pages/org/OrgManagementPage'],
-  ['OrgCounselorsPage', './pages/org/ui-v2/ui-v2-org-counselors-page', './pages/org/OrgCounselorsPage'],
+  ['OrgCounselorsPage', './pages/org/ui-v2/ui-v2-org-members-page', './pages/org/OrgCounselorsPage'],
   ['MyRequestsPage', './pages/org/ui-v2/ui-v2-org-requests-page', './pages/org/MyRequestsPage'],
   ['OrgDashboardPage', './pages/org/ui-v2/ui-v2-org-dashboard-page', './pages/OrgDashboardPage'],
 ];
@@ -27,7 +27,7 @@ describe('D1 App.tsx 분기', () => {
   }
   it('D2 라우트·가드가 그대로다', () => {
     expect(app).toContain('<Route path="/dashboard/org" element={<RoleGuard role="org_admin"><OrgDashboardPage /></RoleGuard>} />');
-    expect(app).toContain('<Route path="/org/counselors" element={<RoleGuard role="org_admin"><OrgCounselorsPage /></RoleGuard>} />');
+    expect(app).toContain('<Route path="/counselors" element={<RoleGuard role="org_admin"><OrgCounselorsPage /></RoleGuard>} />');
     expect(app).toContain('<Route path="/org/requests" element={<RoleGuard><MyRequestsPage /></RoleGuard>} />');
     expect(app).toContain('<Route path="/org/:org_id" element={<OrgManagementPage />} />');
   });
@@ -77,13 +77,12 @@ describe('공유 파일 무수정 (A5/A6)', () => {
       expect(read(f), f).not.toMatch(/ui-v2|UiV2/);
     }
   });
-  it('재사용 컴포넌트(초대·정보 수정·퇴직 안내)는 그대로 쓴다', () => {
-    const counselors = read('src/pages/org/ui-v2/ui-v2-org-counselors-page.tsx');
-    expect(counselors).toContain("from '../../../components/counselor/counselor-info-editor'");
-    expect(counselors).toContain('patchOrgCounselorProfile(orgId, editing.id, payload)');
-    expect(counselors).toContain("from '../../../components/org/counselor-invite-section'");
+  it('재사용 컴포넌트(초대·정보 수정·퇴직 안내)는 그대로 쓴다 — SDD-323 으로 구성원 화면 쪽으로 이동', () => {
+    const members = read('src/pages/org/ui-v2/ui-v2-org-members-page.tsx');
+    expect(members).toContain("from '../../../components/org/counselor-invite-section'");
+    expect(read('src/pages/org/ui-v2/members/member-detail-panel.tsx')).toContain("components/counselor/counselor-info-editor");
+    expect(read('src/pages/org/ui-v2/members/member-detail-panel.tsx')).toContain('patchOrgCounselorProfile(orgId, member.id, payload)');
     expect(read('src/pages/org/ui-v2/ui-v2-org-dashboard-page.tsx')).toContain("components/org/OrgRemovedNoticeDialog");
-    expect(read('src/pages/org/ui-v2/ui-v2-org-management-page.tsx')).toContain("components/counselor/counselor-info-editor");
   });
 });
 

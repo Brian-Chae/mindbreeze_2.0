@@ -23,6 +23,7 @@ import { useAuthStore } from './stores/authStore';
 import { resolvePostLoginPath } from './lib/auth-routing';
 import { RoleGuard } from './components/auth/RoleGuard';
 import { LegacySessionRedirect } from './components/routing/legacy-session-redirect';
+import { LegacyOrgCounselorsRedirect } from './components/routing/legacy-org-counselors-redirect';
 
 // 랜딩에서 사용하지 않는 화면과 분석 라이브러리는 해당 경로를 열 때 불러온다.
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -50,8 +51,9 @@ const OrgManagementPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
   ? import('./pages/org/ui-v2/ui-v2-org-management-page').then((module) => ({ default: module.UiV2OrgManagementPage }))
   : import('./pages/org/OrgManagementPage'));
 // SDD-082: 기관 관리자 상담사 관리 페이지
+// SDD-323: 새 디자인에서는 4탭 구성원 화면(/counselors). 플래그 꺼진 기존 화면은 그대로.
 const OrgCounselorsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
-  ? import('./pages/org/ui-v2/ui-v2-org-counselors-page').then((module) => ({ default: module.UiV2OrgCounselorsPage }))
+  ? import('./pages/org/ui-v2/ui-v2-org-members-page').then((module) => ({ default: module.UiV2OrgMembersPage }))
   : import('./pages/org/OrgCounselorsPage'));
 const MyRequestsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
   ? import('./pages/org/ui-v2/ui-v2-org-requests-page').then((module) => ({ default: module.UiV2OrgRequestsPage }))
@@ -298,7 +300,9 @@ const router = createBrowserRouter(
         <Route path="/org/register" element={<Navigate to="/register/organization" replace />} />
         <Route path="/org/requests" element={<RoleGuard><MyRequestsPage /></RoleGuard>} />
         {/* SDD-082: static 세그먼트가 :org_id 보다 우선 매칭됨 */}
-        <Route path="/org/counselors" element={<RoleGuard role="org_admin"><OrgCounselorsPage /></RoleGuard>} />
+        <Route path="/counselors" element={<RoleGuard role="org_admin"><OrgCounselorsPage /></RoleGuard>} />
+        {/* SDD-323: 구 경로는 새 경로로 이동(쿼리 유지) */}
+        <Route path="/org/counselors" element={<RoleGuard role="org_admin"><LegacyOrgCounselorsRedirect /></RoleGuard>} />
         <Route path="/org/data-center" element={<RoleGuard role="org_admin"><DataCenterPage /></RoleGuard>} />
         <Route path="/admin/data-center" element={<PlatformAdminRoute><DataCenterPage /></PlatformAdminRoute>} />
         <Route path="/org/:org_id" element={<OrgManagementPage />} />
