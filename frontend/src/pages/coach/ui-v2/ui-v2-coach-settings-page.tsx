@@ -53,6 +53,13 @@ export function UiV2CoachSettingsPage() {
           <p>밴드를 연결하거나 예시 데이터로 가볍게 체험할 수 있어요.</p>
           <Link to="/playground" state={{ from: '/settings' }} className="u2-primary">플레이그라운드 열기 <span aria-hidden="true">↗</span></Link>
         </section>
+        {/* 11/9 대표 지시: 플레이그라운드 카드와 균형 — 데이터 현황 카드 */}
+        <section className="u2-card u2-hero u2-playground u2c-upload-card" aria-labelledby="u2c-up-title">
+          <p className="u2-eyebrow">DATA STATUS</p>
+          <h2 id="u2c-up-title">회차별 데이터 도착 현황</h2>
+          <p>측정한 데이터가 서버에 도착했는지 회차별로 확인할 수 있어요.</p>
+          <Link to="/upload-status" className="u2-primary" data-upload-status-card>데이터 현황 열기 <span aria-hidden="true">↗</span></Link>
+        </section>
         </div><div className="u2-pc-side">
         <div className="u2-setlist">
           <Group title="내 계정" description="기본 정보 · 프로필 관리" icon={<UserRound size={22} />}><AccountSettings /></Group>
