@@ -32,6 +32,7 @@ export async function checkUiV2Off(root) {
         // SDD-320: 코치 스코프 식별자
         if (/attachCoachScope|ui-v2-coach-scope|u2-coach|u2-live/.test(content)) problems.push(`${name}: 코치 D안 스코프(u2-coach)가 번들에 포함됨`);
         // SDD-320 H: 코치 모바일 스크롤 제목
+        if (/ui-v2-coach-sidebar-code|attachCoachSidebarCode|u2-coach-sidebar-code/.test(content)) problems.push(`${name}: 코치 사이드바 코드 줄이 번들에 포함됨`);
         if (/ui-v2-coach-compact-title|attachCoachCompactTitle|u2-coach-collapsed|u2-coach-compact-title/.test(content)) problems.push(`${name}: 코치 스크롤 제목(compact-title)이 번들에 포함됨`);
         // SDD-320 G: 코치 알림·플레이그라운드 D안 청크
         if (/ui-v2-coach-notifications-page|ui-v2-coach-playground-page|ui-v2-playground-entry|UiV2CoachNotificationsPage|UiV2CoachPlaygroundPage|UiV2PlaygroundEntry/.test(content)) problems.push(`${name}: 코치 알림·플레이그라운드 D안 청크 참조`);

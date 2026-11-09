@@ -23,7 +23,7 @@ html.u2-coach [data-sidebar-profile]{background:var(--u2-canvas);border-radius:v
 
 /* 모바일 상단 바·페이지 헤더 */
 html.u2-coach .mb-shell-topbar{background:var(--u2-canvas);border-bottom:0}
-html.u2-coach .mb-shell-topbar span.font-extrabold{font-family:var(--u2-font);font-weight:700;font-size:17px;letter-spacing:.04em;text-transform:uppercase;color:#111}
+html.u2-coach .mb-shell-topbar span.font-extrabold{font-family:var(--u2-font);font-weight:700;font-size:17px;letter-spacing:.04em;text-transform:uppercase;color:#5F0080}
 html.u2-coach [data-shell-variant] > section > header{background:var(--u2-canvas);border-bottom:1px solid var(--u2-line)}
 html.u2-coach [data-ui="page-header"] h1{font-size:28px;line-height:1.3;font-weight:600;letter-spacing:-.04em;color:var(--u2-text)}
 html.u2-coach [data-ui="page-header"] .mb-page-header-overline{color:var(--u2-accent);letter-spacing:.12em;font-weight:600}
@@ -113,8 +113,13 @@ html.u2-coach main nav[aria-label="클래스 메뉴"] a[aria-current="page"],htm
 html.u2-coach .u2-coach-compact-title{display:none}
 @media(max-width:767px){
   html.u2-coach .u2-coach-compact-title[data-shown="true"]{display:block;flex:1;min-width:0;margin:0 8px;font-size:16px;font-weight:600;color:var(--u2-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;animation:u2-coach-title-in 160ms ease-out}
-  html.u2-coach.u2-coach-collapsed .mb-shell-topbar span.font-extrabold{display:none}
+  /* 11/9 대표 지시: 접히면 로고(심볼+글자) 전체를 숨기고 제목만 가운데 정렬 */
+  html.u2-coach.u2-coach-collapsed .mb-shell-topbar button[aria-label="홈으로 이동"]{display:none}
+  html.u2-coach.u2-coach-collapsed .mb-shell-topbar .u2-coach-compact-title[data-shown="true"]{text-align:center}
   html.u2-coach.u2-coach-collapsed [data-ui="page-header"].mb-page-header-mobile{display:none}
 }
 @keyframes u2-coach-title-in{from{opacity:0}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){html.u2-coach .u2-coach-compact-title{animation:none!important}}
+/* 11/9 대표 지시: 데스크톱 좌측 하단 프로필에 코치 코드 전체 숫자(모바일 숨김) */
+html.u2-coach .u2-coach-sidebar-code{display:none}
+@media(min-width:1024px){html.u2-coach [data-shell-variant] > aside [data-sidebar-profile] > .u2-coach-sidebar-code{display:inline-block;margin-top:8px;padding:4px 10px;border-radius:999px;background:#FFFFFF1F;color:#FFFFFF;font-size:12px;font-weight:600;letter-spacing:1px;font-variant-numeric:tabular-nums}}
