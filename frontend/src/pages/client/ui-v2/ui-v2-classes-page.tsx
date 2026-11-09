@@ -6,7 +6,6 @@ import { UiV2ArcRing } from '../../../components/ui-v2/ui-v2-arc-ring';
 import { natureHeroStyle } from '../../../components/ui-v2/nature-hero';
 import { ReadStateView } from '../../../components/class/structure/read-state';
 import { membershipLabels, memberDate, memberStatus, memberValue } from '../../../components/class/structure/member-class-views';
-import { CodeEntryButton } from '../../../components/client/code-entry-button';
 import { useClassApply } from '../use-class-apply';
 import { MemberCodeJoin } from '../member-classes-page';
 import { useClientCounselors } from '../../../hooks/use-client-counselors';
@@ -64,7 +63,8 @@ export function UiV2ClassesPage() {
   return (
     <UiV2ClientShell title="내 클래스" subtitle="한 번의 호흡에서, 다음 만남으로.">
       <div className="u2-split">
-        <CodeEntryButton variant="secondary" placement="inline" />
+        {/* 11/9 대표 지시: 클래스 신청하기와 같은 모양 */}
+        <Link to="/join" data-testid="enter-with-code" data-code-entry="inline" className="u2-primary">코드로 바로 입장</Link>
         <button type="button" className="u2-primary" onClick={openApply}>클래스 신청하기</button>
       </div>
       <ReadStateView status={state.status === 'success' && items.length === 0 ? 'empty' : state.status} backTo="/app/classes" onRetry={retry}>
