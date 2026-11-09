@@ -107,3 +107,9 @@ html.u2-coach :is(
 }
 .ui-v2 .mh-home :is(.mh-summary > button, .mh-track > .mc-card):hover { box-shadow: var(--u2-elev-shadow-hover); }
 .ui-v2 .mh-home .mh-main > section :is(button, a) { box-shadow: none; }
+
+/* 11/9 알림(기관·코치) — 목록 폭 고정 시 가운데 정렬 + 카드 입체감 */
+:is(html.u2-coach, .ui-v2) .u2-notif-wrap { max-width: 880px; margin-left: auto; margin-right: auto; }
+:is(html.u2-coach, .ui-v2) :is(.u2-notif-item, .u2-notif-prefs, .u2-notif-empty, .u2-notif-error) { background: #fff; border: 1px solid var(--u2-elev-line); box-shadow: var(--u2-elev-shadow); border-radius: 18px; }
+:is(html.u2-coach, .ui-v2) .u2-notif-empty { padding: 32px 24px; max-width: 880px; margin-left: auto; margin-right: auto; }
+:is(html.u2-coach, .ui-v2) .u2-notif-item[data-unread] { box-shadow: inset 3px 0 #5F0080, var(--u2-elev-shadow); }
