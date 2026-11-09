@@ -86,3 +86,14 @@
 
 /* 11/9 대표 지시: 클래스 목록 '지금 함께할 시간' 카드 하단 여백 축소(홈 히어로 320px 최소 높이 해제) */
 .ui-v2 .u2-hero--nature.u2f-open-hero { min-height: 0; padding-bottom: 24px; }
+
+/* 11/9 대표 지시: 명상 클래스 상단 '지금 바로 시작'(자연 배경) + 다음 회차 안내 복원, 상태 필터는 운영 화면과 같은 알약형 */
+.ui-v2 .u2-hero--nature.u2f-now-hero { min-height: 0; flex-direction: row; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; padding: 26px 28px; text-decoration: none; }
+.ui-v2 .u2f-now-hero strong { display: block; font-size: 18px; font-weight: 700; color: #FFFFFF; }
+.ui-v2 .u2f-now-hero small { display: block; margin-top: 4px; font-size: 14px; color: #FFFFFFD9; }
+.ui-v2 .u2f-now-btn { display: inline-flex; align-items: center; min-height: 48px; padding: 0 24px; border-radius: 999px; background: #FFFFFF; color: var(--u2-accent); font-weight: 700; font-size: 15px; white-space: nowrap; }
+.ui-v2 .u2f-next-hero { margin-bottom: 14px; }
+.ui-v2 .u2f-next-hero .cs-class-hero { border-radius: var(--u2-r-card); box-shadow: 0 14px 34px #25103840; }
+.ui-v2 .u2f-chips button { border-radius: 999px; background: transparent; color: var(--u2-accent); box-shadow: none; padding: 0 18px; }
+.ui-v2 .u2f-chips button:hover { background: #F4EDF8; }
+.ui-v2 .u2f-chips button[aria-pressed="true"] { background: var(--u2-accent); color: #FFFFFF; box-shadow: none; }

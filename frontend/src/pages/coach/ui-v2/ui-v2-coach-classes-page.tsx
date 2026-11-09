@@ -11,6 +11,8 @@ import { CLASS_FILTERS, filterClassRows, groupClassRows, toClassRow, type ClassG
 import type { ClassSummaryDto } from '../../../lib/api/class-structure';
 import { useAuthStore } from '../../../stores/authStore';
 import { natureHeroStyle } from '../../../components/ui-v2/nature-hero';
+import { NextClassView } from '../../../components/class/structure/host-class-views';
+import type { DisplayField } from '../../../lib/class-structure/read-model';
 import '../../../styles/ui-v2.css';
 import '../../../styles/ui-v2-brand.css';
 import '../../../styles/ui-v2-coach-pc.css';
@@ -19,6 +21,7 @@ import '../../../styles/ui-v2-coach-pc.css';
 const PAGE_LIMIT = 30;
 const SERVER_STATUS_FILTERS = new Set(['draft', 'completed', 'cancelled']);
 const pageKey = (status: string | undefined, n: number): string => `${status ?? 'all'}:${n}`;
+const fieldValue = <T,>(field: DisplayField<T>): T | undefined => (field.kind === 'value' ? field.value : undefined);
 const when = (iso: string | null): string => (iso ? new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(iso)) : '일정 미정');
 
 function ClassActions({ row }: { row: ClassRowV2 }) {
@@ -58,6 +61,12 @@ export function UiV2CoachClassesPage() {
   const shown = useMemo(() => filterClassRows(classRows, filter, query), [classRows, filter, query]);
   const groups = useMemo(() => groupClassRows(shown, group), [shown, group]);
   const opened = classRows.filter((r) => r.hasOpen);
+  // 11/9 대표 지시: 운영 화면처럼 '지금 바로 시작' + '다음 회차' 안내를 상단에 (자연 배경)
+  const nextClass = useMemo(() => {
+    const models = state.status === 'success' ? rows.map(adaptHostClass) : [];
+    const at = (m: (typeof models)[number]): number => { const n = fieldValue(m.nextSession); return Date.parse((n && fieldValue(n.scheduledAt)) || ''); };
+    return models.filter((m) => at(m) >= Date.now()).sort((a, b) => at(a) - at(b))[0];
+  }, [state.status, rows]);
 
   return (
     <AppShell title="함께 만드는 시간" rightSlot={<ClassCreateAction />}>
@@ -67,6 +76,11 @@ export function UiV2CoachClassesPage() {
           <span className="u2-eyebrow">지금 함께할 시간</span><h2>열려 있는 회차가 있어요</h2>
           <div className="u2f-actions">{opened.map((r) => <Link key={r.id} className="u2-primary" to={r.openSessionId ? classSessionPath('host', r.id as never, r.openSessionId as never) : classPath('host', r.id as never)}>{r.title} · {r.openSessionId ? '회차 보기' : '클래스 보기'}</Link>)}</div>
         </section>}
+        <Link to="/classes/now" className="u2-card u2-hero u2-hero--nature u2f-now-hero" style={natureHeroStyle('now')}>
+          <span><strong>준비 없이 지금 수업을 열어야 하나요?</strong><small>이름·일정 입력 없이 바로 대기실을 열고 코드로 회원을 들여보내요.</small></span>
+          <span className="u2f-now-btn">지금 바로 시작 →</span>
+        </Link>
+        {opened.length === 0 && nextClass && <div className="u2f-next-hero cs-structure"><NextClassView model={nextClass} showClassTitle /></div>}
         <UiV2CoachCodeCard />
         <p className="u2f-lead">함께할 클래스를 한눈에 살펴보고 바로 시작해요.</p>
         <div className="u2f-filters">

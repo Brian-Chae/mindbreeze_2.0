@@ -73,3 +73,28 @@ html.u2-coach :is(
 :is(html.u2-coach, .ui-v2) :is(.u2-setlist, .dc-panel, .u2-org-legacy, section[class*="bg-white"], details[class*="bg-white"]) :is(section, details, div)[class*="bg-white"][class*="rounded"] {
   box-shadow: none;
 }
+
+/* 11/9 대표 지시: 화면이 넓어지면 본문(최대 1600)을 왼쪽에 붙이지 말고 가운데로.
+   1440 이하에서는 기존과 같다(본문이 남는 폭을 다 채움). 상단 제목 줄도 같은 폭·같은 중앙선에 맞춘다. */
+@media (min-width: 1024px) {
+  html .ui-v2.u2f,
+  html .ui-v2.u2c-settings,
+  html .ui-v2.u2-shell .u2-main,
+  html .ui-v2 .u2-main--wide,
+  html.u2-coach .mobile-menu-swipe-page .mx-auto.max-w-mb-content,
+  html.u2-coach main.dc,
+  html.u2-coach .max-w-6xl:has(> [data-testid="upload-overview"]) {
+    margin-left: auto;
+    margin-right: auto;
+  }
+  html.u2-coach .mobile-menu-swipe-page .max-w-mb-content .mx-auto.max-w-mb-content { margin-left: 0; margin-right: 0; }
+}
+
+/* 11/9 대표 지시: 채팅 목록 — 채팅방 아이템과 '+ 새 채팅방' 버튼도 떠 보이게(코치·기관·회원 공통). 선택된 방은 기존 보라 테두리 유지. */
+:is(html.u2-coach, .ui-v2) .u2-chatitem:not([data-active]) {
+  border: 1px solid var(--u2-elev-line);
+  box-shadow: var(--u2-elev-shadow);
+}
+:is(html.u2-coach, .ui-v2) .u2-chatitem[data-active] { box-shadow: var(--u2-elev-shadow); }
+:is(html.u2-coach, .ui-v2) .u2c-new { box-shadow: 0 2px 4px #5F008026, 0 8px 20px #5F008033; }
+:is(html.u2-coach, .ui-v2) .u2-chat-list { padding-bottom: 12px; }
