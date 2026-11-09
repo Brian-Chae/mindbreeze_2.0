@@ -148,3 +148,26 @@
 | FD9 | 고지 | `WELLNESS_DISCLAIMER` 1회만 노출 |
 | FD10 | 회귀 | `tsc -b` 0, `tests/sdd318* sdd320* sdd321* sdd322*` 통과, `check-ui-v2-off`·`check-release-bundle` 통과 |
 | FD11 | 캡처 | 390px 착용(인용문 포함)/미착용, `captures-fd/` + 시안 비교 |
+
+## Addendum-F-E — 회원 리포트 상세: 확정 시안 v3e 적용 (구현 전)
+
+범위: `ui-v2-report-sheet.tsx`·`ui-v2-report-body.tsx`·`ui-v2-report-measure.tsx` 재작성, `ui-v2-report-copy.ts` 보강, 신규 `ui-v2-report-v3-logic.ts`(순수 함수)·`styles/ui-v2-report-v3.css`(`u2r3-*`). 레거시 `NarrativeSections`·`ClientReportViewer`·`narrative.ts`·`resolve-narrative.ts` 무변경(읽어서 문구·로직만 재사용). 백엔드 0. 시안: `~/.hermes/share/design-report-v3/`(v3e).
+대표 결정: 변화 박스는 변화가 작아도 숫자 그대로(예 "+2.0"), "비슷해요"는 박스가 아니라 캡션 문장에만. 레거시 설명은 모두 살리되 평가어는 방향+변화량으로 치환.
+
+| ID | 항목 | 통과 기준 |
+|---|---|---|
+| FE1 | 섹션 순서 | 나의 명상(커버+`content.quote`) → 종합 여정 → 몸의 변화 → 마음의 변화(+그래프 읽는 법) → 마무리 → 코치 코멘트 → 셀프 체크인(있을 때) → AI 요약(+인사이트). AI 요약은 `isSttAiRecordVisible` 가드 유지 |
+| FE2 | 미착용 | 측정 본문(종합 여정~마무리) 없음, 커버·인용문·미착용 안내·코치·AI 요약만 시안 `unworn`대로. `report-no-band-notice` 유지 |
+| FE3 | 지표 카드 | 왼쪽: 지표명·전체 평균(큰 숫자+단위)·정의(`METRIC_DEFINITIONS`)·회차 서술·해석 / 오른쪽: 전후 비교 + 시간 그래프. 증가/감소 배지·색 평가·권장 범위 띠·"낮아지는 쪽이 좋다" 안내 0 |
+| FE4 | 전후 비교 | [라벨][막대][막대 오른쪽 숫자+단위] 두 줄, 오른쪽 두 줄 높이 변화 박스("변화" + 부호 포함 소수 1자리 + 단위). 감정안정도 +2.0 처럼 작은 변화도 숫자. 박스 안 "비슷해요" 0 |
+| FE5 | 캡션 | 숫자 반복 없는 한 줄. 변화/축범위 <5% "전반과 후반이 비슷했어요", 5%~<20% "후반에 …조금 올라갔어요/내려갔어요", ≥20% "뚜렷하게". 호흡만 "느려졌어요/빨라졌어요". 경계값(5%·20%)은 윗단계 |
+| FE6 | 시간 그래프 | 1분 고정 슬롯(`timeline[].min` 1분 버킷 평균), 막대 위 숫자 라벨 없음, 5분 눈금, 0 기준 축(호흡 0–24·심박 0–120·HRV 0–200·마음 0–100, 초과 시 확장), 보라 6단계 `floor(r*6)`(r=1 → 5단계), 빈 분은 점선 칸(0·보간 금지), 범례 "낮음→높음 / 빈 칸 = 측정 없음". 전부 비면 그래프 대신 안내 |
+| FE7 | 데이터 경로 | `displayNarrative`(resolve-narrative)·`seriesValue`(emotional_stability 우선, 없으면 기존 stress 역변환) 그대로. 마음 지표 단위 추정 코드 추가 0 |
+| FE8 | 레거시 설명 재배치 | `journey`+처음/중간/마지막 단계, `bodyText`/`mindText`, 지표 정의, `metric.sentence`, 변화 해석, `closing`+몸/마음 다음 제안 — 모두 새 디자인에 배치(매핑표는 summary에) |
+| FE9 | 평가어 치환 | 순수 함수. 규칙/LLM 문장의 좋아졌어요·주의가 필요해요·불안정하게·안정적으로·산만했지만·긴장이 남 등 → 방향+변화량 서술. 치환 후에도 평가어가 남으면 숫자 기반 문장으로 대체. 모든 규칙 템플릿(여정 9·마무리 9·지표 문장)에 대해 금지 표현 0 |
+| FE10 | 금지 | 종합점수·PDF 링크·증감 배지·초록/빨강 평가색 0. 고지문(`WELLNESS_DISCLAIMER`) 1회 |
+| FE11 | 레이아웃 | PC 1440: 섹션 탐색 레일+본문, 지표 카드 2열(설명/차트). 모바일 390: 단열, 가로 넘침 0 |
+| FE12 | 코치 상세 재사용 | `ui-v2-coach-report-detail-page` 왼쪽 읽기 영역이 같은 본문을 렌더, 깨지지 않음(좁은 컬럼에서 단열) |
+| FE13 | 격리 | `VITE_UI_V2` 안에서만. 운영 번들 `check-ui-v2-off`·`check-release-bundle` 통과(`u2r3-` 식별자 규칙 추가) |
+| FE14 | 회귀·시험 | `tsc -b` 0, `vitest run tests/sdd318 tests/sdd320 tests/sdd321 tests/sdd322` 통과 + 신규(1분 버킷·빈 구간 null, 색 단계 경계, 변화 박스 부호·소수, 캡션 3단계, 평가어 치환, 금지 표현 0, 미착용 분기, quote 유무) |
+| FE15 | 캡처 | 5181에서 회원 리포트 상세 390·1440 → `captures-fe/`, 시안과 나란히 `vs-*.png`. dev 리포트에 착용 데이터가 없으면 합성 API(GET 한정 route 가로채기)로 만들고 사실 명시 |
