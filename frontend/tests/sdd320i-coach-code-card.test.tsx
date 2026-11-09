@@ -38,7 +38,8 @@ describe('코치 코드 카드', () => {
     const home = read('src/pages/coach/ui-v2/ui-v2-coach-home-page.tsx');
     const cls = read('src/pages/coach/ui-v2/ui-v2-coach-classes-page.tsx');
     expect(home).toMatch(/<OrgRemovedNoticeDialog \/>\n\s*<UiV2CoachCodeCard \/>/);
-    expect(cls).toMatch(/u2f-classes">\n\s*<UiV2CoachCodeCard \/>/);
+    // 11/9: 클래스 화면은 '지금 함께할 시간'(열린 회차) 카드가 최상단, 코치 코드 카드는 그 바로 다음
+    expect(cls).toMatch(/u2f-classes">\n[\s\S]*?<section aria-label="열려 있는 회차"[\s\S]*?<\/section>}\n\s*<UiV2CoachCodeCard \/>/);
     expect(home).not.toContain('••••');
   });
 });

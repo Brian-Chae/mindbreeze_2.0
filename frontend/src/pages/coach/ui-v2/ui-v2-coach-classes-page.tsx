@@ -62,6 +62,11 @@ export function UiV2CoachClassesPage() {
   return (
     <AppShell title="함께 만드는 시간" rightSlot={<ClassCreateAction />}>
       <div className="ui-v2 u2f u2f-classes">
+        {/* 11/9 대표 지시: 지금 함께할 시간(열린 회차)을 최상단에 */}
+        {opened.length > 0 && <section aria-label="열려 있는 회차" className="u2-card u2-hero u2-hero--nature u2f-open-hero" style={natureHeroStyle(opened[0].id)}>
+          <span className="u2-eyebrow">지금 함께할 시간</span><h2>열려 있는 회차가 있어요</h2>
+          <div className="u2f-actions">{opened.map((r) => <Link key={r.id} className="u2-primary" to={r.openSessionId ? classSessionPath('host', r.id as never, r.openSessionId as never) : classPath('host', r.id as never)}>{r.title} · {r.openSessionId ? '회차 보기' : '클래스 보기'}</Link>)}</div>
+        </section>}
         <UiV2CoachCodeCard />
         <p className="u2f-lead">함께할 클래스를 한눈에 살펴보고 바로 시작해요.</p>
         <div className="u2f-filters">
@@ -71,10 +76,6 @@ export function UiV2CoachClassesPage() {
         <div className="u2f-chips" role="group" aria-label="클래스 상태 필터">
           {CLASS_FILTERS.map(([value, label]) => <button type="button" key={value} aria-pressed={filter === value} onClick={() => changeFilter(value)}>{label}</button>)}
         </div>
-        {opened.length > 0 && <section aria-label="열려 있는 회차" className="u2-card u2-hero u2-hero--nature u2f-open-hero" style={natureHeroStyle(opened[0].id)}>
-          <span className="u2-eyebrow">지금 함께할 시간</span><h2>열려 있는 회차가 있어요</h2>
-          <div className="u2f-actions">{opened.map((r) => <Link key={r.id} className="u2-primary" to={r.openSessionId ? classSessionPath('host', r.id as never, r.openSessionId as never) : classPath('host', r.id as never)}>{r.title} · {r.openSessionId ? '회차 보기' : '클래스 보기'}</Link>)}</div>
-        </section>}
         {state.status === 'loading' && <p className="u2-empty" role="status">불러오는 중이에요</p>}
         {state.status === 'error' && <div className="u2-alert" role="alert"><p>목록을 불러오지 못했어요.</p><button type="button" className="u2-secondary u2-gap" onClick={retry}>다시 시도</button></div>}
         {state.status === 'success' && <>
