@@ -151,6 +151,8 @@ class UserResponse(BaseModel):
     auth_provider: str = "email"
     counselors: list[dict] = []
     counselor_code: str | None = None
+    # SDD-321: 기관관리자 본인 기관 코드(읽기 전용). 그 외 역할은 None.
+    org_code: str | None = None
 
     model_config = {"from_attributes": True}
 

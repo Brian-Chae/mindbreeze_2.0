@@ -54,3 +54,33 @@ def test_readonly_active_check_404_409_400(org_data):
     with pytest.raises(HTTPException) as e:
         oms.get_active_org_readonly(org.id, db)
     assert e.value.status_code == 409
+
+
+def test_users_me_includes_org_code_for_org_admin(client, org_data):
+    db, org, _, users = org_data
+    _activate_admin(db, users[1])
+    r = client.get("/api/v1/auth/users/me", headers=headers(users[1]))
+    assert r.status_code == 200, r.text
+    assert r.json()["org_code"] == org.org_code
+    r2 = client.get("/api/v1/auth/users/me", headers=headers(users[3]))
+    assert r2.json().get("org_code") is None
+
+
+def test_org_dashboard_no_lock_and_409(client, org_data, monkeypatch):
+    from datetime import datetime, timezone
+    db, org, _, users = org_data
+    _activate_admin(db, users[1])
+    _forbid_lock(monkeypatch)
+    r = client.get("/api/v1/dashboard/org", headers=headers(users[1]))
+    assert r.status_code == 200, r.text
+    org.deactivated_at = datetime.now(timezone.utc)
+    db.commit()
+    assert client.get("/api/v1/dashboard/org", headers=headers(users[1])).status_code == 409
+
+
+def test_activity_no_lock(client, org_data, monkeypatch):
+    db, org, _, users = org_data
+    _activate_admin(db, users[1])
+    _forbid_lock(monkeypatch)
+    r = client.get(f"/api/v1/org/{org.id}/counselors/{users[2].id}/activity", headers=headers(users[1]))
+    assert r.status_code in (200, 404), r.text
