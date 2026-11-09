@@ -7,6 +7,7 @@ import '../../styles/ui-v2-pc.css';
 import '../../styles/ui-v2-mid.css';
 import '../../styles/ui-v2-coach-live.css';
 import '../../styles/ui-v2-org-side.css';
+import '../../styles/ui-v2-elevation.css';
 import { useAuthStore } from '../../stores/authStore';
 import { attachCoachCompactTitle, resetCoachCompactTitle } from './ui-v2-coach-compact-title';
 import { attachCoachSidebarCode, syncCoachSidebarCode } from './ui-v2-coach-sidebar-code';

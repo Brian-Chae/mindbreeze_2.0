@@ -18,6 +18,7 @@ import AppUpdateBanner from '../update/AppUpdateBanner';
 import { UiV2BottomNav } from './ui-v2-bottom-nav';
 import { UiV2Logo } from './ui-v2-logo';
 import '../../styles/ui-v2.css';
+import '../../styles/ui-v2-elevation.css';
 import '../../styles/ui-v2-brand.css';
 import '../../styles/ui-v2-pc.css';
 import '../../styles/ui-v2-mid.css';

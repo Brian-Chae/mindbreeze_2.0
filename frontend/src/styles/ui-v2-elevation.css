@@ -1,0 +1,41 @@
+/* 11/9 대표 지시: 운영 화면처럼 카드가 살짝 떠 보이게 — 외곽선 명확화 + 2겹 그림자.
+   회원(.ui-v2)·코치·기관(html.u2-coach) 새 디자인 카드 공통. 자연 배경 hero 는 자체 그림자 유지.
+   다른 ui-v2 스타일시트보다 늦게/강하게 적용되도록 html 접두 + :is 로 특이도를 올린다. */
+html {
+  --u2-elev-line: #E2DCE8;
+  --u2-elev-shadow: 0 1px 2px #2510380D, 0 4px 14px #25103812, 0 12px 32px #2510380A;
+  --u2-elev-shadow-hover: 0 1px 2px #25103812, 0 8px 22px #2510381A, 0 18px 40px #2510380F;
+}
+
+html :is(.ui-v2, .u2-coach) :is(
+  .u2-card:not(.u2-hero--nature),
+  .u2-table-card,
+  .u2-org-card,
+  .u2-org-stat,
+  .u2-org-panel,
+  .u2-org-shortcut,
+  .u2-notif-item,
+  .u2f-table-box
+),
+html.u2-coach :is(
+  .ch-home .ch-panel,
+  .ch-home .ch-tiles > a,
+  .ch-home .mh-track > .mc-card,
+  .cs-structure .cs-class-row,
+  .cs-structure .cs-class-list > a,
+  .u2f [class*="rounded-2xl"][class*="bg-white"],
+  .u2f [class*="rounded-xl"][class*="bg-white"][class*="border"]
+) {
+  border: 1px solid var(--u2-elev-line);
+  box-shadow: var(--u2-elev-shadow);
+}
+
+/* 눌러서 이동하는 카드만 호버 시 살짝 더 뜬다 */
+html :is(.ui-v2, .u2-coach) :is(a.u2-card, a.u2-org-card, a.u2-org-shortcut, .ch-home .ch-tiles > a, .cs-structure .cs-class-list > a):hover {
+  box-shadow: var(--u2-elev-shadow-hover);
+}
+
+/* 카드 안에 다시 들어간 카드는 그림자 없이 선만(이중 그림자 방지) */
+html :is(.ui-v2, .u2-coach) :is(.u2-card, .u2-table-card, .u2-org-card, .u2-org-panel) :is(.u2-card, .u2-org-card, .u2-table-card) {
+  box-shadow: none;
+}
