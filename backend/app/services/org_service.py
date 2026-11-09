@@ -1,5 +1,6 @@
 """상담센터(Organization) 비즈니스 로직 서비스"""
 
+import string
 import uuid
 from datetime import datetime, timezone
 
@@ -616,8 +617,11 @@ def remove_counselor(org_id: str, user_id: str, admin_user_id: str, db: Session)
 
 
 def generate_org_code(db: Session) -> str:
-    """6자리 기관 코드 발급 — Organization.org_code 에서 unique 보장."""
-    return code_service.generate_unique_code(db, Organization, "org_code", label="기관 코드")
+    """6자리 숫자 기관 코드 발급 (000000~999999) — Organization.org_code 에서 unique 보장.
+
+    11/9 대표 지시: 코치 코드와 같이 숫자 6자리로만 발급한다(공용 기본 알파벳은 유지, alphabet=string.digits 전달).
+    """
+    return code_service.generate_unique_code(db, Organization, "org_code", label="기관 코드", alphabet=string.digits)
 
 
 def admin_create_organization(name: str, db: Session, *, phone: str | None = None) -> Organization:
