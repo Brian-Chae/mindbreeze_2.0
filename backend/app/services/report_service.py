@@ -1000,7 +1000,10 @@ def get_report(report_id: str, user_id: str | None, db: DBSession, *, member_cre
     if report.type == "counselor":
         result["content"]["client_comments"] = _collect_client_comments(report.session_id, db)
     # 신규 리포트 배지용: 최초 열람 시 is_read=true 마킹
-    if not report.is_read and viewer and viewer.role != "org_admin" and (viewer.role=="client" or viewer.id==session.host_id):
+    #   SDD-324: 호스트 코치의 회원용(type=client) 리포트 열람은 '회원 미열람' 집계를 오염시키므로 읽음 처리하지 않는다.
+    if not report.is_read and viewer and viewer.role != "org_admin" and (
+        viewer.role == "client" or (viewer.id == session.host_id and report.type != "client")
+    ):
         report.is_read = True
         db.add(report)
         db.commit()
