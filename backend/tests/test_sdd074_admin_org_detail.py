@@ -92,7 +92,8 @@ def test_membership_codes_and_sorting(client, org_data):
     assert set(body[0]) == {"id", "name", "email", "counselor_code", "role", "status", "is_primary_admin", "is_owner"}
     owner = client.get(f"/api/v1/admin/orgs/{other.id}/counselors", headers=headers(users[0])).json()
     assert owner[0]["is_owner"] is True
-    assert client.get(f"/api/v1/org/{org.id}/counselors", headers=headers(users[0])).status_code == 403
+    # SDD-323(V14): 플랫폼 관리자는 기관 구성원 목록을 조회할 수 있다(변경은 불가)
+    assert client.get(f"/api/v1/org/{org.id}/counselors", headers=headers(users[0])).status_code == 200
 
 
 @pytest.mark.parametrize("suffix", ["", "/counselors"])

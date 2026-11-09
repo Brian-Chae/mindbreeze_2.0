@@ -21,6 +21,9 @@ def test_role_change_audit_and_existing_token_permissions(client, org_data):
     # 보호(409)에 걸리므로, 두 계정을 이 테스트에서만 active 로 전환한다 (공유 픽스처는 불변).
     target.status = "active"
     users[1].status = "active"
+    # SDD-323(E6): 초대 대기(invited) 관리자는 '활성 관리자'로 세지 않으므로 membership 도 active 로 맞춘다
+    from app.models.user_org_membership import UserOrgMembership
+    db.query(UserOrgMembership).filter_by(user_id=users[1].id, org_id=org.id).update({"status": "active"})
     db.commit()
     r = change(client, org, target, users[0], role="org_admin")
     assert r.status_code == 200, r.text
@@ -95,6 +98,9 @@ def test_last_active_admin(client, org_data, method, other_status):
     )
     membership.role = "org_admin"
     users[1].status = other_status
+    # SDD-323(E6): 초대 대기(invited) 관리자는 활성 관리자로 세지 않는다 → 다른 관리자 membership 은 active 로 둔다
+    membership_other = db.query(UserOrgMembership).filter_by(user_id=users[1].id, org_id=org.id).first()
+    membership_other.status = "active"
     db.commit()
     body = {"role": "counselor"} if method == "PATCH" else {}
     r = change(client, org, users[2], users[0], method, **body)
