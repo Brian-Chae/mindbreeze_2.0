@@ -155,7 +155,9 @@ html.u2-coach h1[class*="text-[22px]"] { font-size: 31px; line-height: 1.25; fon
   html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/counseling"] { order: 6; }
   html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/settings"] { order: 7; }
   /* 대표 지시(11/9): 설정 아래 가로선 → 플레이그라운드 · 데이터 현황 · 알림 순서(데스크톱 전용 그룹). */
-  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/playground"] { order: 60; margin-top: 12px; border-top: 1px solid #FFFFFF1F; border-radius: 0 0 14px 14px; padding-top: 14px; }
+  /* 가로선은 링크 바깥(::before)에 그려 선택 시에도 라운드 사각형이 유지되게 한다 */
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/playground"] { order: 60; position: relative; margin-top: 25px; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/playground"]::before { content: ""; position: absolute; left: 0; right: 0; top: -13px; height: 1px; background: #FFFFFF1F; pointer-events: none; }
   html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/upload-status"] { order: 61; }
   html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/notifications"] { order: 62; }
 }
