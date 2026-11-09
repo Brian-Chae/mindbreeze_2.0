@@ -189,3 +189,12 @@ html .ui-v2.u2f-home .u2f-home-class-empty { flex-direction: row; align-items: c
 .ui-v2 .u2f-summary__card small { font-size: 12px; line-height: 1.4; color: var(--u2-muted); }
 @media (min-width: 1024px) { .ui-v2 .u2f-summary { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); } }
 .ui-v2 .u2f-clients .u2f-person small, .ui-v2 .u2f-clients .u2f-sub { display: block; }
+
+/* 11/9: 코치 홈 '내 클래스' 카드 스트립·일정 행 서식(회원 홈과 같은 모양) */
+.ui-v2 .u2f-home-classstrip.ch-home { display: block; max-width: none; margin: 0; padding: 0; gap: 0; }
+html .ui-v2.u2f-home .u2f-sched-row { gap: 14px; }
+.ui-v2 .u2f-sched-date { flex: 0 0 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 52px; border-radius: 12px; background: #F5EDFC; color: #5F0080; }
+.ui-v2 .u2f-sched-date b { font-size: 15px; line-height: 1.1; font-weight: 800; }
+.ui-v2 .u2f-sched-date small { font-size: 12px; line-height: 1.2; }
+.ui-v2 .u2f-sched-row.is-past .u2f-sched-date { background: #F3F1F5; color: #6F6F6F; }
+.ui-v2 .u2f-sched-row > small { color: var(--u2-muted); font-size: 18px; }
