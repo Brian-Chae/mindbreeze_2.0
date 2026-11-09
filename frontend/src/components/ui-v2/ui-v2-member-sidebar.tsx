@@ -16,6 +16,7 @@ export interface UiV2MemberSidebarProps {
 
 interface MemberNavItem { to: string; label: string; icon: string[]; end?: boolean; badge: number }
 
+// eslint-disable-next-line react-refresh/only-export-components -- 순수 함수, 시험에서 직접 검증
 export function buildMemberNavItems(p: UiV2MemberSidebarProps, counselingOpen: boolean): MemberNavItem[] {
   const items: MemberNavItem[] = [
     { to: '/app', label: '홈', icon: ICONS.home, end: true, badge: 0 },

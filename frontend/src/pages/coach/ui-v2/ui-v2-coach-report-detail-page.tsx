@@ -34,6 +34,7 @@ function commentOf(content: Record<string, unknown> | null | undefined): string 
 }
 
 /** 승인 버튼 노출 판정 — ReportDetailView 와 같은 규칙(서버 capability 우선, 구 응답은 기존 규칙). */
+// eslint-disable-next-line react-refresh/only-export-components -- 순수 함수, 시험에서 직접 검증
 export function canShowApprove(report: ReportDto, isCounselorUser: boolean, isStaffUser: boolean, approvedLocally: boolean): boolean {
   if (approvedLocally || !isStaffUser) return false;
   return report.capabilities

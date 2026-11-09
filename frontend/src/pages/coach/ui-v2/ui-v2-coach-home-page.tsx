@@ -32,11 +32,13 @@ import '../../../styles/ui-v2-coach-pc.css';
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 const pad = (n: number) => String(n).padStart(2, '0');
 
+// eslint-disable-next-line react-refresh/only-export-components -- 순수 함수, 시험에서 직접 검증
 export function timeRange(iso: string | null): string {
   if (!iso) return '';
   const d = new Date(iso);
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
+// eslint-disable-next-line react-refresh/only-export-components -- 순수 함수, 시험에서 직접 검증
 export function shortDay(iso: string | null): string {
   if (!iso) return '일정 미정';
   const d = new Date(iso);
