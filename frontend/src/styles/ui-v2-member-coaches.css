@@ -1,0 +1,26 @@
+/* 11/9 회원 홈 '담당 코치' 카드 — 새 디자인(보라·흰 카드·외곽선+그림자) */
+.ui-v2 .u2-mcoach { box-sizing: border-box; background: #fff; border: 1px solid var(--u2-elev-line, #E2DCE8); border-radius: 20px; padding: 24px; box-shadow: var(--u2-elev-shadow, 0 4px 14px #25103812); }
+.ui-v2 .u2-mcoach__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.ui-v2 .u2-mcoach__head h2 { margin: 0; font-size: 18px; line-height: 1.5; font-weight: 800; color: #1F1F1F; }
+.ui-v2 .u2-mcoach__head p { margin: 2px 0 0; font-size: 13px; color: #6F6F6F; }
+.ui-v2 .u2-mcoach__add { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid #DDD0EA; background: #fff; color: #5F0080; font-size: 14px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.ui-v2 .u2-mcoach__add:hover { background: #F5EDFC; }
+.ui-v2 .u2-mcoach__list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.ui-v2 .u2-mcoach__item { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-radius: 16px; border: 1px solid #EEE7F3; background: linear-gradient(135deg, #FBF8FD, #F5EDFC); min-width: 0; }
+.ui-v2 .u2-mcoach__avatar { flex: 0 0 52px; width: 52px; height: 52px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; object-fit: cover; background: linear-gradient(135deg, #5F0080, #8A4FB8); color: #fff; font-size: 18px; font-weight: 800; box-shadow: 0 4px 12px #5F008033; }
+.ui-v2 .u2-mcoach__text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.ui-v2 .u2-mcoach__role { font-size: 11px; font-weight: 700; letter-spacing: .08em; color: #8A4FB8; }
+.ui-v2 .u2-mcoach__text strong { font-size: 17px; font-weight: 800; color: #1F1F1F; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ui-v2 .u2-mcoach__text small { font-size: 13px; color: #6F6F6F; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ui-v2 .u2-mcoach__chat { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 18px; border: 0; border-radius: 999px; background: #5F0080; color: #fff; font-size: 14px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.ui-v2 .u2-mcoach__chat:hover { background: #4B0066; }
+.ui-v2 .u2-mcoach__empty { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px; border-radius: 16px; border: 1px dashed #DDD0EA; background: #FBF8FD; }
+.ui-v2 .u2-mcoach__empty p { margin: 0; font-size: 14px; color: #6F6F6F; }
+.ui-v2 .u2-mcoach :is(button):focus-visible { outline: 2px solid #5F0080; outline-offset: 2px; }
+@media (max-width: 767px) {
+  .ui-v2 .u2-mcoach { padding: 18px; border-radius: 18px; }
+  .ui-v2 .u2-mcoach__list { grid-template-columns: 1fr; }
+  .ui-v2 .u2-mcoach__item { padding: 14px; }
+  .ui-v2 .u2-mcoach__avatar { flex-basis: 44px; width: 44px; height: 44px; font-size: 16px; }
+  .ui-v2 .u2-mcoach__empty { flex-direction: column; align-items: flex-start; }
+}

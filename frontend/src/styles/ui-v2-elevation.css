@@ -100,7 +100,7 @@ html.u2-coach :is(
 :is(html.u2-coach, .ui-v2) .u2-chat-list { padding-bottom: 12px; }
 
 /* 11/9 회원 홈(운영 구조) — 숫자 타일·내 클래스 카드·담당 코치·이번 주/리포트/대화/알림 카드에 같은 입체감 */
-.ui-v2 .mh-home :is(.mh-summary > button, .mh-upcoming, .mh-track > .mc-card, .mc-grid > .mc-card, .mh-counselors, .mh-main > section, .mh-rail > section, .cs-read-state, .mh-legacy-state) {
+.ui-v2 .mh-home :is(.mh-summary > button, .mh-upcoming, .mh-track > .mc-card, .mc-grid > .mc-card, .mh-counselors:not(.u2-mcoach), .mh-main > section, .mh-rail > section, .cs-read-state, .mh-legacy-state) {
   border: 1px solid var(--u2-elev-line);
   box-shadow: var(--u2-elev-shadow);
   background: #fff;

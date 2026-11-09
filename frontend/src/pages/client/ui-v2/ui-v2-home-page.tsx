@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom';
 import { UiV2ClientShell } from '../../../components/ui-v2/ui-v2-client-shell';
 import { UiV2ArcRing } from '../../../components/ui-v2/ui-v2-arc-ring';
 import { UiV2ToolbarCode } from '../../../components/ui-v2/ui-v2-toolbar-code';
-import { CounselorSection } from '../../../components/client/counselor-section';
+import { UiV2MemberCoaches } from '../../../components/ui-v2/ui-v2-member-coaches';
 import { MemberClassStrip } from '../../../components/client/home/member-class-strip';
 import { MemberClassStyles, memberDate, memberValue } from '../../../components/class/structure/member-class-views';
 import { ReadField, ReadStateView } from '../../../components/class/structure/read-state';
@@ -84,7 +84,7 @@ export function UiV2HomePage() {
               <div className="mc-grid">{counseling.map((item) => <article className="mc-card" key={item.id}><Link className="mc-card-link" to={counselingPath('member', item.id)}><h3>상담 일정</h3><p className="mc-muted">코치 · <ReadField value={memberValue(item.counselorName)} /></p><p className="mc-muted">다음 상담 · <ReadField value={item.nextSession.kind === 'value' ? memberDate(item.nextSession.value.scheduledAt) : undefined} /></p></Link></article>)}</div>
             </ReadStateView>
           </section>}
-          <CounselorSection />
+          <UiV2MemberCoaches />
         </>} />
       </div></div>
     </UiV2ClientShell>
