@@ -38,7 +38,7 @@
 | generation_failed | int | status=error + generation_status=partial 회원용 문서(전역) |
 | created_today | int | KST 오늘 `created_at`인 회원용 리포트 |
 | member_unread | int | completed·미열람·실회원(user_id 있음) 회원용 리포트 건수 |
-| avg_review_hours | float\|null | 최근 30일 승인(수동, approval_source≠auto) 회원용 리포트의 `approved_at − created_at` 평균(시간, 소수 1자리). **리포트 생성 시작~승인 대기 시간**이며 코치 작업 시간 아님. `created_at`은 생성 파이프라인 시작 시점이라 완료 시각 대비 수 분 과대. 표본 0이면 null |
+| avg_review_hours | float\|null | 최근 30일 승인(수동, approval_source≠auto) 회원용 리포트의 `approved_at − created_at` 평균(시간, 소수 1자리). **리포트 생성 시작~승인 대기 시간**이며 코치 작업 시간 아님(별도 '생성 완료 시각' 컬럼이 없어 `created_at` 사용 — 완료 시각 대비 수 분 과대). 표본 0이면 null |
 | review_sample | int | avg_review_hours 표본 수 |
 
 ### 4. GET /api/v1/reports/hierarchy
@@ -56,3 +56,7 @@
 
 ## Task
 1. 시험 작성(RED) 2. 읽음 버그 수정 3. 회원 요약·필터 4. 리포트 요약·hierarchy 확장 5. 회귀 6. summary.md
+
+## 구현 메모
+- hierarchy 문서(`client_report`)에 `created_at` 필드 추가. hierarchy summary의 needs_review/failed_delivery/total_members는 기존대로 검색 반영, 신규 5키(generation_failed·created_today·member_unread·avg_review_hours·review_sample)는 전역.
+- `/clients?filter=` 값에 `never_attended` 포함(summary와 동일 키).
