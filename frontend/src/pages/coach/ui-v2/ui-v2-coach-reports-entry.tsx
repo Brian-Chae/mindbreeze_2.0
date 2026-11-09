@@ -29,13 +29,9 @@ function MobileReports(): ReactElement {
     setParams(next, { replace: true });
   };
   return (
-    <>
-      <div className="ui-v2 u2f" style={{ padding: '12px 16px 0' }}>
-        <ReportSummaryStrip summary={summary} unavailable={failed} activeTab={tab} onSelectTab={select} />
-      </div>
-      {/* 목록은 시작 상태만 URL 에서 읽으므로 카드를 누를 때마다 새로 그린다 */}
-      <LegacyReportListPage key={status ?? 'all'} />
-    </>
+    // 11/10: 요약 카드를 페이지 맨 위(상단 바 위)가 아니라 제목·버튼 아래에 둔다.
+    // 목록은 시작 상태만 URL 에서 읽으므로 카드를 누를 때마다 새로 그린다.
+    <LegacyReportListPage key={status ?? 'all'} topSlot={<ReportSummaryStrip summary={summary} unavailable={failed} activeTab={tab} onSelectTab={select} />} />
   );
 }
 
