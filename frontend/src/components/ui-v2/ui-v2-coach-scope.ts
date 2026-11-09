@@ -36,7 +36,7 @@ export function isCoachScopePath(pathname: string): boolean {
 }
 
 /** SDD-321 기관 정합(11/9): 기관관리자(org_admin)에게도 코치와 같은 셸·스킨을 적용하는 경로. 기관 홈(/dashboard/org)·코치 관리·데이터 센터를 포함한다. */
-const ORG_INCLUDED = /^\/(dashboard\/org|classes|clients|reports|counseling|upload-status|chat|settings|notifications|playground|profile\/professional|credentials|org\/(counselors|data-center))(\/|$)/;
+const ORG_INCLUDED = /^\/(dashboard\/org|classes|clients|reports|counseling|upload-status|chat|settings|notifications|playground|profile\/professional|credentials|counselors|org\/(counselors|data-center))(\/|$)/;
 const ORG_EXCLUDED = [/^\/sessions\//, /^\/classes\/now(\/|$)/, /^\/reports\/sample(\/|$)/, /^\/report-view/];
 export function isOrgScopePath(pathname: string): boolean {
   const path = pathname.replace(/\/+$/, '') || '/';
