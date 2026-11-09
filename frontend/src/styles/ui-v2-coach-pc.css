@@ -75,16 +75,17 @@
    .u2f 와 같은 규칙(래퍼 좌우 48px, 최대 1600px)을 쓰며 모바일(<1024)은 건드리지 않는다. */
 @media (min-width: 1024px) {
   /* 설정: 배너 전체 폭 + 항목 2열 카드. 항목이 홀수면 마지막 카드는 2칸 전체 폭. */
-  .ui-v2.u2c-settings { padding: 0 48px 72px; max-width: 1600px; }
-  .ui-v2.u2c-settings > *,
-  .ui-v2.u2c-settings .u2-setlist,
-  .ui-v2.u2c-settings .u2-card { max-width: none; margin-left: 0; margin-right: 0; }
-  .ui-v2.u2c-settings .u2c-lead { margin-bottom: 18px; }
-  .ui-v2.u2c-settings .u2-playground { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 24px; align-items: center; }
-  .ui-v2.u2c-settings .u2-playground > :not(.u2-primary) { grid-column: 1; }
-  .ui-v2.u2c-settings .u2-playground .u2-primary { grid-column: 2; grid-row: 1 / span 3; width: auto; padding: 0 24px; white-space: nowrap; }
-  .ui-v2.u2c-settings .u2-setlist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; background: transparent; border-radius: 0; overflow: visible; }
-  .ui-v2.u2c-settings .u2-setgroup { background: var(--u2-surface); border: 0; border-radius: var(--u2-r-card); overflow: hidden; min-width: 0; }
-  .ui-v2.u2c-settings .u2-setgroup > summary { min-height: 104px; padding: 16px 20px; }
-  .ui-v2.u2c-settings .u2-setgroup:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  html .ui-v2.u2c-settings { padding: 0 48px 72px; max-width: 1600px; }
+  html .ui-v2.u2c-settings > *,
+  html .ui-v2.u2c-settings .u2-setlist,
+  html .ui-v2.u2c-settings .u2-card { max-width: none; margin-left: 0; margin-right: 0; }
+  html .ui-v2.u2c-settings .u2c-lead { margin-bottom: 18px; }
+  html .ui-v2.u2c-settings .u2-playground { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 24px; align-items: center; }
+  html .ui-v2.u2c-settings .u2-playground > :not(.u2-primary) { grid-column: 1; margin-top: 0; margin-bottom: 0; }
+  html .ui-v2.u2c-settings .u2-playground { row-gap: 8px; padding: 28px 32px; align-content: center; min-height: 0; height: auto; }
+  html .ui-v2.u2c-settings .u2-playground .u2-primary { grid-column: 2; grid-row: 1 / span 3; width: auto; padding: 0 24px; white-space: nowrap; }
+  html .ui-v2.u2c-settings .u2-setlist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; background: transparent; border-radius: 0; overflow: visible; }
+  html .ui-v2.u2c-settings .u2-setgroup { background: var(--u2-surface); border: 0; border-radius: var(--u2-r-card); overflow: hidden; min-width: 0; }
+  html .ui-v2.u2c-settings .u2-setgroup > summary { min-height: 104px; padding: 16px 20px; }
+  html .ui-v2.u2c-settings .u2-setgroup:last-child:nth-child(odd) { grid-column: 1 / -1; }
 }
