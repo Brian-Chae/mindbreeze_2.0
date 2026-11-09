@@ -24,18 +24,32 @@ def _open_transactions() -> int:
     return sum(1 for s in list(sa_session._sessions.values()) if s.in_transaction())
 
 
+def _baseline() -> int:
+    """시험 시작 시점에 이미 열려 있는 트랜잭션 수.
+
+    _sessions 는 프로세스 전역 레지스트리라, 앞선 시험이 남긴(아직 GC 안 된) 세션도 센다.
+    전체 스위트 순서·GC 시점에 따라 1 이 섞여 CI 에서만 실패했으므로, 절대값이 아니라
+    '이 요청이 S3 대기 중 새로 연 트랜잭션 수(증가분)'로 판정한다.
+    """
+    import gc
+
+    gc.collect()
+    return _open_transactions()
+
+
 # ── V1: ack 의 S3 검증은 DB 트랜잭션 밖에서 ─────────────────────────────────
 def test_v1_raw_ack는_S3_검증_중_DB_트랜잭션을_쥐지_않는다(ctx, monkeypatch):
     p = _presign(ctx, [_meta(s) for s in SIGNALS]).json()["chunks"]
     seen: list[int] = []
+    base = _baseline()
 
     def spy(*a, **k):
-        seen.append(_open_transactions())
+        seen.append(_open_transactions() - base)
         return True, "ver-1"
 
     monkeypatch.setattr(storage_service, "verify_object_sha256", spy)
     body = _ack(ctx, _ack_items(p)).json()
-    assert len(seen) == 3 and max(seen) == 0, f"검증 중 열린 트랜잭션: {seen}"
+    assert len(seen) == 3 and max(seen) <= 0, f"검증 중 새로 열린 트랜잭션: {seen} (기준 {base})"
     assert body["acked"] == 3 and body["failed"] == 0
     assert [c["upload_status"] for c in body["chunks"]] == ["uploaded"] * 3
     assert body["file_count"] == 1  # EEG 레코드만 집계(기존 동작)
@@ -118,9 +132,10 @@ def test_v6_느린_S3_ack_폭주에도_DB_풀이_고갈되지_않는다(ctx, mon
     p = _presign(ctx, [_meta("eeg")]).json()["chunks"]
     held: list[int] = []
     release = threading.Event()
+    base = _baseline()
 
     def slow_verify(*a, **k):
-        held.append(_open_transactions())  # 느린 검증 중 열린 트랜잭션(=점유 커넥션) 수
+        held.append(_open_transactions() - base)  # 느린 검증 중 새로 열린 트랜잭션(=점유 커넥션) 수
         release.wait(3)
         return True, "v"
 
@@ -145,12 +160,12 @@ def test_v6_느린_S3_ack_폭주에도_DB_풀이_고갈되지_않는다(ctx, mon
     time.sleep(0.8)
     # 느린 검증이 걸린 동안에도 일반 엔드포인트는 응답한다(풀 점유 없음)
     assert ctx["client"].get("/health").status_code in (200, 404)
-    blocked_open_tx = _open_transactions()  # 슬롯 3건이 모두 S3 대기 중인 시점의 열린 트랜잭션 수
+    blocked_open_tx = _open_transactions() - base  # 슬롯 3건이 모두 S3 대기 중인 시점에 새로 열린 트랜잭션 수
     release.set()
     for t in threads:
         t.join(15)
     assert len(held) == 3, f"슬롯 한도(3)만큼만 검증에 진입해야 함: {held}"
-    assert blocked_open_tx == 0, f"S3 대기 중 DB 트랜잭션(커넥션) 점유: {blocked_open_tx}"
+    assert blocked_open_tx <= 0, f"S3 대기 중 새 DB 트랜잭션(커넥션) 점유: {blocked_open_tx} (기준 {base})"
     assert codes.count(429) >= 1  # 한도 초과분은 429
     assert set(codes) <= {200, 429}
 
