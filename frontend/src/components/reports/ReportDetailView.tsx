@@ -3,7 +3,7 @@ import { buttonClass } from '../ui';
 // Cover → 서사 → 상담 본문 → EEG → 액션 → 재발송(client only)
 
 import { ClassReportLoader } from '../class-report/ClassNarrativeReport';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { downloadReportPdf } from '../../lib/report/print-report';
 import CounselorCommentCard from './CounselorCommentCard';
