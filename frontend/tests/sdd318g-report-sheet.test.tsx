@@ -63,7 +63,8 @@ const BANNED = /점수|종합점수|좋음|나쁨|좋아졌|나빠졌|주의가 
 it('인용문: 값이 있으면 첫머리에 표시, null·빈값·비문자열이면 숨김', () => {
   render({ ...base, content: { ...base.content, quote: '  함께 숨을 고른 시간이었어요.  ' } });
   expect(box.querySelector('[data-testid="report-quote"]')?.textContent).toBe('함께 숨을 고른 시간이었어요.');
-  expect(box.querySelector('.u2-rp-sub')?.nextElementSibling?.getAttribute('data-testid')).toBe('report-quote');
+  // F-E: 인용문은 커버(나의 명상) 섹션 안, 제목 줄 뒤 첫 블록
+  expect(box.querySelector('#u2r3-cover [data-testid="report-quote"]')).toBeTruthy();
   for (const q of [null, '', '   ', 3]) {
     act(() => root.render(<UiV2ReportBody report={{ ...base, content: { ...base.content, quote: q } }} onClose={() => {}} />));
     expect(box.querySelector('[data-testid="report-quote"]')).toBeNull();
@@ -82,7 +83,8 @@ it('밴드 착용: 새 측정 본문 렌더, 레거시 NarrativeSections 미사�
   expect(text).toContain('몸의 변화');
   expect(text).toContain('마음의 변화');
   expect(box.querySelectorAll('[data-metric]').length).toBeGreaterThanOrEqual(3);
-  expect(box.querySelectorAll('svg.u2-rp-trend').length).toBeGreaterThanOrEqual(3);
+  // F-E: 추이선 SVG 대신 1분 고정 막대(.u2r3-plot)
+  expect(box.querySelectorAll('.u2r3-plot').length).toBeGreaterThanOrEqual(3);
   expect(text.split('본 서비스와 LINK BAND는 의료기기가 아니며').length - 1).toBe(1);
   expect(text).toMatch(/올라갔어요|내려갔어요|비슷하게/);
 });

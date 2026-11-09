@@ -1,97 +1,170 @@
-// SDD-318 F-D — 측정 본문(D안 전용). 레거시 NarrativeSections 를 쓰지 않고 같은 데이터(DisplayNarrative·타임라인)를 새 위계로 렌더한다.
-// 레거시 규칙 문장(metric.sentence)은 상태 판단 표현이 섞여 있어 쓰지 않고, 방향+값만 새 문구로 만든다.
-// 방침: 수치 환원·종합 지표·평가어 없이 서사와 변화량(방향+사실)만 보여 준다.
-import { useId } from 'react';
-import type { MetricNarrative } from '../../lib/report/narrative';
+// SDD-318 F-E — 측정 본문(확정 시안 v3e). 종합 여정 → 몸의 변화 → 마음의 변화 → 마무리 섹션을 렌더한다.
+// 레거시 NarrativeSections 는 쓰지 않고, 같은 데이터(DisplayNarrative·타임라인)를 새 위계로 배치한다.
+// 평가어·증감 배지·권장 범위 띠·색 평가는 없다. 방향+변화량만 말한다.
+import { useEffect, useRef } from 'react';
+import { METRIC_DEFINITIONS, type MetricNarrative } from '../../lib/report/narrative';
 import type { DisplayNarrative, TimelineLikePoint } from '../../lib/report/resolve-narrative';
 import {
-  MEASURE_HINTS, MEASURE_LABELS, MEASURE_METHOD_NOTE, MEASURE_SECTION_TITLES,
-  metricChangeSentence, metricDeltaLabel, metricRangeLabel,
-} from './ui-v2-report-copy';
+  METRIC_UNIT, STEP_COLORS, bucketByMinute, changeBoxText, changeCaption, changeInterpretation, chipLine, colorStep,
+  fiveMinuteTicks, neutralMetricSentence, neutralizeNarrative, plotGap, resolveAxis, stepColor, timelineSeriesValue,
+} from './ui-v2-report-v3-logic';
+import { MEASURE_METHOD_NOTE, MEASURE_SECTION_TITLES } from './ui-v2-report-copy';
 
-type MetricKey = MetricNarrative['id'];
+function fmt(n: number): string { return String(Number(n.toFixed(1))); }
 
-function seriesValue(point: TimelineLikePoint, id: MetricKey): number | null {
-  let v: number | null | undefined;
-  if (id === 'emotional_stability') {
-    if (point.emotional_stability != null) v = point.emotional_stability;
-    else if (point.stress != null) v = point.stress <= 1 ? 1 - point.stress : 100 - point.stress;
-  } else if (id === 'hrv') v = point.sdnn ?? point.hrv;
-  else if (id === 'focus') v = point.concentration;
-  else v = point[id];
-  return v != null && Number.isFinite(v) ? v : null;
-}
-
-/** 얇은 추이선 — 축·눈금·권장범위 없이 흐름만. 유효 2점 미만이면 그리지 않는다. */
-function TrendLine({ metric, timeline }: { metric: MetricNarrative; timeline: TimelineLikePoint[] }) {
-  const titleId = useId();
-  const pts = timeline.map((p) => ({ x: p.min as number, y: seriesValue(p, metric.id) })).filter((p): p is { x: number; y: number } => p.y !== null);
-  if (pts.length < 2) return null;
-  const xs = pts.map((p) => p.x); const ys = pts.map((p) => p.y);
-  const x0 = Math.min(...xs); const x1 = Math.max(...xs);
-  const y0 = Math.min(...ys); const y1 = Math.max(...ys);
-  const W = 300; const H = 56; const PAD = 4;
-  const sx = (x: number) => PAD + (x1 === x0 ? 0 : ((x - x0) / (x1 - x0)) * (W - 2 * PAD));
-  const sy = (y: number) => (y1 === y0 ? H / 2 : H - PAD - ((y - y0) / (y1 - y0)) * (H - 2 * PAD));
-  // 표시 점 수를 줄여 가볍게 한다(최대 60점 균등 추출).
-  const step = Math.max(1, Math.ceil(pts.length / 60));
-  const shown = pts.filter((_, i) => i % step === 0 || i === pts.length - 1);
-  const d = shown.map((p, i) => `${i === 0 ? 'M' : 'L'}${sx(p.x).toFixed(1)} ${sy(p.y).toFixed(1)}`).join('');
+function Legend() {
   return (
-    <svg className="u2-rp-trend" viewBox={`0 0 ${W} ${H}`} role="img" aria-labelledby={titleId} preserveAspectRatio="none">
-      <title id={titleId}>{`${metric.label} 흐름`}</title>
-      <line x1={W / 2} y1={0} x2={W / 2} y2={H} className="u2-rp-trend-mid" />
-      <path d={d} fill="none" className="u2-rp-trend-line" vectorEffect="non-scaling-stroke" />
-    </svg>
+    <div className="u2r3-legend">
+      <div className="u2r3-legend-scale"><span>낮음</span>{STEP_COLORS.map((c) => <i key={c} className="u2r3-swatch" style={{ background: c }} />)}<span>높음</span></div>
+      <span className="u2r3-missing">빈 칸 = 측정 없음</span>
+    </div>
   );
 }
 
-function MetricRow({ metric, timeline }: { metric: MetricNarrative; timeline: TimelineLikePoint[] }) {
+/** 1분 고정 막대 그래프 — 숫자 라벨 없음, 0 기준 축, 보라 6단계, 빈 분은 점선 칸. */
+function MinutePlot({ metric, axis, values }: { metric: MetricNarrative; axis: [number, number]; values: Array<number | null> }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const slots = values.length;
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const apply = () => el.style.setProperty('--gap', `${plotGap(slots, el.clientWidth)}px`);
+    apply();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [slots]);
+  const unit = METRIC_UNIT[metric.id];
+  const [lo, hi] = axis;
   return (
-    <article className="u2-rp-metric" data-metric={metric.id}>
-      <div className="u2-rp-metric-head">
-        <h4>{MEASURE_LABELS[metric.id]}</h4>
-        <span className="u2-rp-delta">{metricDeltaLabel(metric.id, metric.direction, metric.delta)}</span>
+    <figure className="u2r3-graph">
+      <div className="u2r3-graph-meta"><span>{`축 ${lo}–${hi}${unit ? ` ${unit}` : ''}`}</span><span>1분 간격</span></div>
+      <div ref={ref} className="u2r3-plot" data-minutes={slots} role="img" aria-label={`${metric.label} 1분 간격 막대 그래프`}>
+        {values.map((v, i) => v === null
+          ? <div key={i} className="u2r3-slot"><i className="u2r3-empty" data-empty="true" /></div>
+          : <div key={i} className="u2r3-slot"><i className="u2r3-bar" data-step={colorStep(v, lo, hi)} style={{ height: `${Math.max(1, Math.min(100, ((v - lo) / (hi - lo)) * 100))}%`, background: stepColor(v, lo, hi) }} /></div>)}
       </div>
-      <p className="u2-rp-metric-text">{metricChangeSentence(metric.id, metric.direction)}</p>
-      <p className="u2-rp-metric-sub">{metricRangeLabel(metric.id, metric.early, metric.late)}</p>
-      <TrendLine metric={metric} timeline={timeline} />
-      <p className="u2-rp-hint">{MEASURE_HINTS[metric.id]}</p>
+      <div className="u2r3-ticks" aria-hidden="true">{fiveMinuteTicks(slots).map((t) => <span key={t.minute} style={{ left: `${t.leftPct}%` }}>{t.minute}분</span>)}</div>
+      <Legend />
+    </figure>
+  );
+}
+
+function Compare({ metric, axis }: { metric: MetricNarrative; axis: [number, number] }) {
+  const unit = METRIC_UNIT[metric.id];
+  const [lo, hi] = axis;
+  const span = hi - lo || 1;
+  const rows: Array<[string, number]> = [['전반', metric.early], ['후반', metric.late]];
+  return (
+    <div className="u2r3-compare">
+      <div className="u2r3-dual">
+        {rows.map(([label, value]) => (
+          <div className="u2r3-dual-row" key={label}>
+            <span>{label}</span>
+            <div className="u2r3-dual-measure">
+              <i className="u2r3-dual-bar" style={{ width: `calc((100% - 66px) * ${Math.max(0, Math.min(1, (value - lo) / span))})`, background: stepColor(value, lo, hi) }} />
+              <span className="u2r3-dual-value">{`${fmt(value)}${unit}`}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="u2r3-changebox" data-testid="change-box">
+        <span className="u2r3-change-label">변화</span>
+        <div className="u2r3-change-value">{changeBoxText(metric.delta)}{unit && <small>{unit}</small>}</div>
+      </div>
+      <p className="u2r3-caption">{changeCaption(metric.id, metric.label, metric.delta, lo, hi)}</p>
+    </div>
+  );
+}
+
+function MetricCard({ metric, timeline, durationMin }: { metric: MetricNarrative; timeline: TimelineLikePoint[]; durationMin: number }) {
+  const series = timeline.map((p) => timelineSeriesValue(p, metric.id));
+  const axis = resolveAxis(metric.id, [...series, metric.early, metric.late]);
+  const values = bucketByMinute(timeline, metric.id, durationMin);
+  const hasAny = values.some((v) => v !== null);
+  const unit = METRIC_UNIT[metric.id];
+  return (
+    <article className="u2r3-metric" data-metric={metric.id} data-testid={`metric-${metric.id}`}>
+      <div className="u2r3-metric-copy">
+        <h4>{metric.label}</h4>
+        <div className="u2r3-avg"><b>{fmt(metric.overall)}</b>{unit && <small>{unit}</small>}<small>전체 평균</small></div>
+        <p className="u2r3-def">{METRIC_DEFINITIONS[metric.id]}</p>
+        <p className="u2r3-sentence">{neutralMetricSentence(metric, axis)}</p>
+        <p className="u2r3-interp">{changeInterpretation(metric.id, metric.delta, axis[0], axis[1])}</p>
+        <p className="u2r3-def">명상 시작(전반) 평균 대비 마무리(후반) 평균이에요.</p>
+      </div>
+      <div className="u2r3-metric-chart">
+        <Compare metric={metric} axis={axis} />
+        {hasAny ? <MinutePlot metric={metric} axis={axis} values={values} /> : <p className="u2r3-nodata">시간별로 분석할 데이터가 부족해요.</p>}
+      </div>
     </article>
   );
 }
 
-export function UiV2ReportMeasure({ narrative }: { narrative: DisplayNarrative }) {
-  const timeline = (narrative.timeline ?? []).filter((p) => p.min != null && Number.isFinite(p.min) && p.min >= 0).sort((a, b) => (a.min as number) - (b.min as number));
+const STAGES = [
+  { label: '처음', title: '잠시 멈추기', sub: '자리에 몸을 맡기고' },
+  { label: '중간', title: '호흡에 머물기', sub: '지금의 감각을 따라' },
+  { label: '마지막', title: '나에게 돌아오기', sub: '몸과 마음을 살피며' },
+] as const;
+
+export function UiV2ReportMeasure({ narrative, durationMinutes }: { narrative: DisplayNarrative; durationMinutes?: number }) {
+  const timeline = (narrative.timeline ?? []).filter((p) => p.min != null && Number.isFinite(p.min) && (p.min as number) >= 0).sort((a, b) => (a.min as number) - (b.min as number));
+  const lastMin = timeline.length > 0 ? (timeline[timeline.length - 1].min as number) : 0;
+  const total = durationMinutes && durationMinutes > 0 ? durationMinutes : lastMin;
+  const durationMin = total > 0 ? Math.ceil(total) : 0;
+  const text = neutralizeNarrative(narrative);
+  const stageTime = (i: number) => (total > 0 ? ` · ${fmt(total * (i / 2))}분` : '');
   return (
-    <div className="u2-rp-measure" data-testid="ui-v2-report-measure">
-      {narrative.journey && (
-        <section>
-          <h3 className="u2-rp-h">{MEASURE_SECTION_TITLES.journey}</h3>
-          <p className="u2-rp-text">{narrative.journey}</p>
+    <div className="u2r3-measure" data-testid="ui-v2-report-measure">
+      <section id="u2r3-journey" className="u2r3-section" data-section="journey">
+        <div className="u2r3-eyebrow">02 · {MEASURE_SECTION_TITLES.journey}</div>
+        <h2>이번 시간의 몸과 마음 흐름</h2>
+        <p className="u2r3-journey-copy">{text.journey}</p>
+        {(narrative.body.length > 0 || narrative.mind.length > 0) && (
+          <div className="u2r3-chips" aria-label="명상 시작(전반) 대비 마무리(후반)의 몸과 마음 변화 요약">
+            {narrative.body.length > 0 && <div><strong>몸의 변화</strong>{narrative.body.map((m) => { const c = chipLine(m); return <p key={m.id}>{c.label} · 변화 {c.value}{c.unit && <small>{c.unit}</small>}</p>; })}</div>}
+            {narrative.mind.length > 0 && <div><strong>마음의 변화</strong>{narrative.mind.map((m) => { const c = chipLine(m); return <p key={m.id}>{c.label} · 변화 {c.value}</p>; })}</div>}
+          </div>
+        )}
+        <div className="u2r3-stages">{STAGES.map((s, i) => <div className="u2r3-stage" key={s.label}><small>{s.label}{i === 0 ? (total > 0 ? ' · 0분' : '') : stageTime(i)}</small><b>{s.title}</b><small>{s.sub}</small></div>)}</div>
+        <p className="u2r3-def">아래 변화량은 명상 시작(전반) 평균과 마무리(후반) 평균을 비교한 값이에요.</p>
+      </section>
+
+      {(narrative.body.length > 0 || text.bodyText) && (
+        <section id="u2r3-body" className="u2r3-section" data-section="body">
+          <div className="u2r3-eyebrow">03 · {MEASURE_SECTION_TITLES.body}</div>
+          <h2>호흡과 심장의 움직임</h2>
+          <p className="u2r3-muted">호흡과 심장의 움직임에서 이번 시간의 변화를 살펴보세요.</p>
+          {text.bodyText && <p className="u2r3-text">{text.bodyText}</p>}
+          {narrative.body.map((m) => <MetricCard key={m.id} metric={m} timeline={timeline} durationMin={durationMin} />)}
+          <p className="u2r3-def">{MEASURE_METHOD_NOTE}</p>
         </section>
       )}
-      {(narrative.body.length > 0 || narrative.bodyText) && (
-        <section>
-          <h3 className="u2-rp-h">{MEASURE_SECTION_TITLES.body}</h3>
-          {narrative.bodyText && <p className="u2-rp-text">{narrative.bodyText}</p>}
-          {narrative.body.map((m) => <MetricRow key={m.id} metric={m} timeline={timeline} />)}
+
+      {(narrative.mind.length > 0 || text.mindText) && (
+        <section id="u2r3-mind" className="u2r3-section" data-section="mind">
+          <div className="u2r3-eyebrow">04 · {MEASURE_SECTION_TITLES.mind}</div>
+          <h2>마음의 신호가 흐른 모양</h2>
+          <p className="u2r3-muted">마음의 신호를 나의 느낌과 함께 읽어보세요.</p>
+          {text.mindText && <p className="u2r3-text">{text.mindText}</p>}
+          {narrative.mind.map((m) => <MetricCard key={m.id} metric={m} timeline={timeline} durationMin={durationMin} />)}
+          <details className="u2r3-reading" open>
+            <summary>그래프와 색상은 이렇게 읽어요</summary>
+            <p className="u2r3-def">막대는 1분 동안의 평균이에요. 색이 짙을수록 해당 지표의 값이 커요. 지표마다 축이 다르므로 서로 다른 지표의 막대 높이를 비교하지 않아요. 측정이 없는 분은 옅은 점선 빈 칸으로 남기고 값을 채우지 않아요. 감정안정도는 스트레스 신호를 반대로 읽은 추정값이며, 실제로 느낀 감정을 직접 측정한 값은 아니에요.</p>
+            <Legend />
+          </details>
         </section>
       )}
-      {(narrative.mind.length > 0 || narrative.mindText) && (
-        <section>
-          <h3 className="u2-rp-h">{MEASURE_SECTION_TITLES.mind}</h3>
-          {narrative.mindText && <p className="u2-rp-text">{narrative.mindText}</p>}
-          {narrative.mind.map((m) => <MetricRow key={m.id} metric={m} timeline={timeline} />)}
-        </section>
-      )}
-      <p className="u2-footnote u2-rp-note">{MEASURE_METHOD_NOTE}</p>
-      {narrative.closing && (
-        <section>
-          <h3 className="u2-rp-h">{MEASURE_SECTION_TITLES.closing}</h3>
-          <p className="u2-rp-text">{narrative.closing}</p>
-        </section>
-      )}
+
+      <section id="u2r3-closing" className="u2r3-section u2r3-closing" data-section="closing">
+        <div className="u2r3-eyebrow">05 · {MEASURE_SECTION_TITLES.closing}</div>
+        <h2>오늘의 작은 쉼을, 내일의 나에게도</h2>
+        <p>명상마다 흐름은 달라질 수 있어요.<br />오늘 느꼈던 감각 하나를 기억해 두면 어떨까요?</p>
+        <div className="u2r3-practice"><small>몸을 위한 다음 제안</small><strong>시작할 때, 몸이 머무를 시간을 주세요</strong><p>다음에는 처음 1분을 편안히 자리 잡는 시간으로 가져보세요. 어깨의 힘을 내려놓고, 평소의 호흡이 오가는 감각을 느껴봐요.</p></div>
+        <div className="u2r3-practice"><small>마음을 위한 다음 제안</small><strong>알아차린 순간, 다시 호흡으로 돌아와요</strong><p>5분만 나에게 머물러보세요. 생각이 다른 곳으로 향해도 괜찮아요. 알아차렸다면, 지금의 호흡에 부드럽게 관심을 돌려봐요.</p></div>
+        <p className="u2r3-closing-msg">{text.closing}</p>
+      </section>
     </div>
   );
 }

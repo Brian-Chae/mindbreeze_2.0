@@ -9,6 +9,7 @@ import { getReport, adaptReportContent, type ReportDto } from '../../lib/api/rep
 import { isReportDelayed, isReportInReview, REPORT_IN_REVIEW_BADGE, REPORT_IN_REVIEW_DELAYED_NOTICE, REPORT_IN_REVIEW_NOTICE } from '../../lib/report-review-copy';
 import '../reports/narrative-sections.css';
 import '../../styles/ui-v2.css';
+import '../../styles/ui-v2-report-v3.css';
 
 export function UiV2ReportSheet({ reportId, onClose, onReportChange }: { reportId: string; onClose: () => void; onReportChange?: (report: ReportDto) => void }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -76,7 +77,7 @@ export function UiV2ReportSheet({ reportId, onClose, onReportChange }: { reportI
             {isReportDelayed(report) && <p className="u2-muted" style={{ fontSize: 13 }}>{REPORT_IN_REVIEW_DELAYED_NOTICE}</p>}
           </div>
         )}
-        {!loading && report && !inReview && <div className="u2-sheet"><UiV2ReportBody report={report} onClose={onClose} /></div>}
+        {!loading && report && !inReview && <div className="u2-sheet"><UiV2ReportBody report={report} onClose={onClose} showRail /></div>}
         {!loading && report && !inReview && <div className="u2-gap"><PastReportsCompare current={report} /></div>}
       </div>
     </dialog>,

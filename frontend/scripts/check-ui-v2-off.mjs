@@ -35,10 +35,13 @@ export async function checkUiV2Off(root) {
         if (/ui-v2-coach-compact-title|attachCoachCompactTitle|u2-coach-collapsed|u2-coach-compact-title/.test(content)) problems.push(`${name}: 코치 스크롤 제목(compact-title)이 번들에 포함됨`);
         // SDD-320 G: 코치 알림·플레이그라운드 D안 청크
         if (/ui-v2-coach-notifications-page|ui-v2-coach-playground-page|ui-v2-playground-entry|UiV2CoachNotificationsPage|UiV2CoachPlaygroundPage|UiV2PlaygroundEntry/.test(content)) problems.push(`${name}: 코치 알림·플레이그라운드 D안 청크 참조`);
+        // SDD-318 F-E: 리포트 상세 v3e 식별자
+        if (/ui-v2-report-(v3-logic|measure|body|sheet)|u2r3-/.test(content)) problems.push(`${name}: 리포트 v3e(u2r3) 식별자가 번들에 포함됨`);
         // ③ 루트 클래스 부여 코드
         if (/className:`[^`]*ui-v2|className:"[^"]*ui-v2/.test(content)) problems.push(`${name}: ui-v2 루트 클래스 부여 코드`);
       }
       if (name.endsWith('.css') && /\.ui-v2\b|\.u2-/.test(content)) info.v2CssFiles.push(name);
+      if (name.endsWith('.css') && /u2r3-/.test(content)) problems.push(`${name}: 리포트 v3e CSS(u2r3-)가 운영 번들에 포함됨`);
       if (name.endsWith('.css') && /u2-notif-/.test(content)) problems.push(`${name}: 알림 D안 CSS(u2-notif-)가 운영 번들에 포함됨`);
       if (name.endsWith('.css') && /u2c-(new|roombar|list--room|pane--idle|lead)/.test(content)) problems.push(`${name}: 코치 D안 화면 CSS(u2c-)가 운영 번들에 포함됨`);
       if (name.endsWith('.css') && /u2-org-|u2-table/.test(content)) problems.push(`${name}: 기관 D안 CSS(u2-org-/u2-table)가 운영 번들에 포함됨`);
