@@ -35,6 +35,10 @@ export interface ClientListItem {
 
 /** SDD-324 신규 집계(서버 계약 확정 전 가정 이름) — 없으면 화면에서 숨긴다. */
 export interface ClientSummaryExtra {
+  total?: number | null;
+  active_7d?: number | null;
+  active_30d?: number | null;
+  never_attended?: number | null;
   week_attended?: number | null;
   inactive_14d?: number | null;
   report_unread_members?: number | null;
@@ -146,7 +150,14 @@ export interface ListClientsParams {
   active_within_days?: number;
   counselor_id?: string;
   member_type?: MemberType;
+  /** SDD-324 관리 필터 */
+  filter?: ClientListFilter;
 }
+
+export type ClientListFilter = 'inactive_14d' | 'never_attended' | 'week_attended' | 'report_unread';
+
+/** SDD-324: 검색·필터와 무관한 전체 범위 회원 요약(코치·기관관리자). */
+export const getClientsSummary = (): Promise<ClientSummaryExtra> => apiClient.get<ClientSummaryExtra>('/clients/summary');
 
 export const listClients = (params: ListClientsParams = {}): Promise<ClientListResponse> => {
   const search = new URLSearchParams();
@@ -157,6 +168,7 @@ export const listClients = (params: ListClientsParams = {}): Promise<ClientListR
   if (params.active_within_days) search.set('active_within_days', String(params.active_within_days));
   if (params.counselor_id) search.set('counselor_id', params.counselor_id);
   if (params.member_type) search.set('member_type', params.member_type);
+  if (params.filter) search.set('filter', params.filter);
   const qs = search.toString();
   return apiClient.get<ClientListResponse>(`/clients${qs ? `?${qs}` : ''}`);
 };

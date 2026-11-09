@@ -1,7 +1,7 @@
 // SDD-253 — 클래스 > 회차 > 회원 > 리포트 계층 조회 API
 import { apiClient } from './client';
 
-export type HierarchyTab = 'all' | 'needs_review' | 'failed';
+export type HierarchyTab = 'all' | 'needs_review' | 'failed' | 'generation_failed' | 'created_today' | 'member_unread';
 
 export interface HierarchyDoc {
   report_id: string;

@@ -24,12 +24,12 @@ export function buildReportSummaryCards(summary: ReportSummary | null | undefine
   cards.push({ key: 'failed', label: '발송 실패', value: summary.failed_delivery, unit: '건', basis: '회원용 리포트 발송 실패', tab: 'failed' });
   // 새 집계 응답(created_today 가 내려올 때)에서만 아래 항목을 쓴다 — 구 응답의 생성 실패는 범위가 달라 전역 요약으로 쓰지 않는다.
   if (isNum(summary.created_today)) {
-    if (isNum(summary.generation_failed)) cards.push({ key: 'generation_failed', label: '생성 실패', value: summary.generation_failed, unit: '건', basis: '일부 생성 또는 오류 상태 문서' });
-    cards.push({ key: 'created_today', label: '오늘 생성', value: summary.created_today, unit: '건', basis: '오늘(한국시간) 생성된 문서' });
+    if (isNum(summary.generation_failed)) cards.push({ key: 'generation_failed', label: '생성 실패', value: summary.generation_failed, unit: '건', basis: '일부 생성 또는 오류 상태 문서', tab: 'generation_failed' });
+    cards.push({ key: 'created_today', label: '오늘 생성', value: summary.created_today, unit: '건', basis: '오늘(한국시간) 생성된 문서', tab: 'created_today' });
   }
-  if (isNum(summary.member_unread)) cards.push({ key: 'member_unread', label: '회원 미열람', value: summary.member_unread, unit: '건', basis: '공유된 회원용 리포트 중 아직 열지 않음' });
+  if (isNum(summary.member_unread)) cards.push({ key: 'member_unread', label: '회원 미열람', value: summary.member_unread, unit: '건', basis: '공유된 회원용 리포트 중 아직 열지 않음', tab: 'member_unread' });
   if (isNum(summary.avg_review_hours) && isNum(summary.review_sample) && summary.review_sample > 0) {
-    cards.push({ key: 'avg_review_hours', label: '평균 검토 소요', value: Math.round(summary.avg_review_hours * 10) / 10, unit: '시간', basis: `최근 승인 ${summary.review_sample}건 기준` });
+    cards.push({ key: 'avg_review_hours', label: '평균 승인 대기', value: Math.round(summary.avg_review_hours * 10) / 10, unit: '시간', basis: `최근 30일 직접 승인 ${summary.review_sample}건 · 생성부터 승인까지` });
   }
   return cards;
 }

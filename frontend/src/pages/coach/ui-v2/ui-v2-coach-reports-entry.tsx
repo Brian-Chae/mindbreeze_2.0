@@ -9,7 +9,7 @@ import { useIsDesktop } from '../../../hooks/use-is-desktop';
 import '../../../styles/ui-v2.css';
 import '../../../styles/ui-v2-coach-pc.css';
 
-const STATUS_OF: Record<HierarchyTab, string | null> = { all: null, needs_review: 'pending', failed: 'failed' };
+const STATUS_OF: Record<HierarchyTab, string | null> = { all: null, needs_review: 'pending', failed: 'failed', generation_failed: null, created_today: null, member_unread: null };
 
 function MobileReports(): ReactElement {
   const [params, setParams] = useSearchParams();

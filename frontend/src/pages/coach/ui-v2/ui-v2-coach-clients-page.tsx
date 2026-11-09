@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import AppShell from '../../../components/layout/AppShell';
 import InviteModal from '../../../components/clients/InviteModal';
-import { listClients, type ClientClassRef, type ClientListItem } from '../../../lib/api/clients';
+import { getClientsSummary, listClients, type ClientClassRef, type ClientListFilter, type ClientListItem } from '../../../lib/api/clients';
 import { UiV2SummaryCards } from '../../../components/ui-v2/ui-v2-summary-cards';
 import { buildClientSummaryCards, type ClientSummaryState } from '../../../lib/client-summary-cards';
 import { ApiError } from '../../../lib/api/client';
@@ -32,6 +32,9 @@ export function UiV2CoachClientsPage() {
   const searchTerm = params.get('q') ?? '';
   const classId = params.get('class') ?? '';
   const days = params.get('days') ? Number(params.get('days')) : null;
+  const FILTERS: ClientListFilter[] = ['inactive_14d', 'never_attended', 'week_attended', 'report_unread'];
+  const filterParam = params.get('filter') as ClientListFilter | null;
+  const filter: ClientListFilter | null = filterParam && FILTERS.includes(filterParam) ? filterParam : null;
   const group: GroupMode = params.get('group') === 'class' ? 'class' : 'none';
   const page = Math.max(1, Number(params.get('page')) || 1);
   const size = group === 'class' ? GROUP_PAGE_SIZE : PAGE_SIZE;
@@ -57,27 +60,31 @@ export function UiV2CoachClientsPage() {
     if (!isAuthenticated || user?.role !== 'counselor') return;
     let cancelled = false;
     setLoading(true); setError(null);
-    listClients({ q: searchTerm || undefined, page, size, class_id: classId || undefined, active_within_days: days ?? undefined })
+    listClients({ q: searchTerm || undefined, page, size, class_id: classId || undefined, active_within_days: days ?? undefined, filter: filter ?? undefined })
       .then((res) => { if (cancelled) return; setClients(res.clients); setTotal(res.total); setClassOptions(res.class_options ?? []); })
       .catch((err) => { if (!cancelled) setError(err instanceof ApiError ? err.message : '회원 목록을 불러오지 못했습니다'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [searchTerm, classId, days, page, size, reloadKey, isAuthenticated, user?.role]);
+  }, [searchTerm, classId, days, filter, page, size, reloadKey, isAuthenticated, user?.role]);
   useEffect(() => { if (!isAuthenticated) { setClients([]); setTotal(0); } }, [isAuthenticated]);
   useEffect(() => {
     if (!isAuthenticated || user?.role !== 'counselor') return;
     let cancelled = false;
-    // 목록 필터와 무관하게 전체 범위 total 만 따로 받는다(size=1).
-    Promise.allSettled([listClients({ size: 1 }), listClients({ size: 1, active_within_days: 7 }), listClients({ size: 1, active_within_days: 30 })]).then(([all, w, m]) => {
+    // SDD-324: 전체 범위 요약은 GET /clients/summary 한 번. 실패하면 기존 total 3회 조회로 대체(0 으로 숨기지 않는다).
+    getClientsSummary().then((x) => {
       if (cancelled) return;
-      setSum({ connected: all.status === 'fulfilled' ? all.value.total : null, d7: w.status === 'fulfilled' ? w.value.total : null, d30: m.status === 'fulfilled' ? m.value.total : null, extra: all.status === 'fulfilled' ? all.value.summary ?? null : null });
+      setSum({ connected: x.total ?? null, d7: x.active_7d ?? null, d30: x.active_30d ?? null, extra: x });
       setSumLoaded(true);
-    });
+    }).catch(() => Promise.allSettled([listClients({ size: 1 }), listClients({ size: 1, active_within_days: 7 }), listClients({ size: 1, active_within_days: 30 })]).then(([all, w, m]) => {
+      if (cancelled) return;
+      setSum({ connected: all.status === 'fulfilled' ? all.value.total : null, d7: w.status === 'fulfilled' ? w.value.total : null, d30: m.status === 'fulfilled' ? m.value.total : null, extra: null });
+      setSumLoaded(true);
+    }));
     return () => { cancelled = true; };
   }, [reloadKey, isAuthenticated, user?.role]);
 
   const groups = useMemo(() => groupClients(clients, group), [clients, group]);
-  const hasFilter = Boolean(searchTerm || classId || days || group !== 'none');
+  const hasFilter = Boolean(searchTerm || classId || days || filter || group !== 'none');
   const totalPages = Math.max(1, Math.ceil(total / size));
   const submit = (e: FormEvent): void => { e.preventDefault(); patchParams({ q: query.trim() || null }); };
   const reset = (): void => { setQuery(''); setParams(new URLSearchParams()); };
@@ -86,7 +93,7 @@ export function UiV2CoachClientsPage() {
   return (
     <AppShell title="한 사람씩 살펴요" rightSlot={<button data-header-action="primary" type="button" onClick={() => setShowInvite(true)} className="mb-btn">회원 초대</button>}>
       <div className="ui-v2 u2f u2f-clients">
-        {sumLoaded && <UiV2SummaryCards label="회원 요약" items={buildClientSummaryCards(sum, days, (d) => patchParams({ days: d ? String(d) : null }))} />}
+        {sumLoaded && <UiV2SummaryCards label="회원 요약" items={buildClientSummaryCards(sum, days, (d) => patchParams({ days: d ? String(d) : null, filter: null }), filter, (f) => patchParams({ filter: f, days: null }))} />}
         <p className="u2f-lead" aria-live="polite">{hasFilter ? '현재 조건' : '목록'} <b>{total}</b>명{group === 'class' && ` · 그룹 ${groups.length}개 (고유 ${uniqueClientCount(groups)}명)`}</p>
         <form onSubmit={submit} className="u2f-filters" aria-label="검색과 필터">
           <label className="u2-search"><span className="sr-only">회원 검색</span><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="이름 또는 이메일 검색" aria-label="회원 검색" /></label>
