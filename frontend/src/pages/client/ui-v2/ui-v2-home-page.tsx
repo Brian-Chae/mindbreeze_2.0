@@ -76,7 +76,7 @@ export function UiV2HomePage() {
           {model.upcoming.length > upcoming.length && <Link className="mh-upcoming__more" to="/app/classes">전체 클래스 보기</Link>}
         </section>}
         {/* 요약 숫자·초대된 클래스·이번 주 클래스·내 리포트·최근 대화·새 알림: 시안 표현 전용 컴포넌트 */}
-        <UiV2MemberHomePanels classSections={<>
+        <UiV2MemberHomePanels nextAt={next?.scheduledAt ?? null} nextHref={heroHref} classSections={<>
           <section className="mh-classes" aria-label="내 클래스" data-area="meditation"><div className="mc-row"><h2 className="mc-heading">내 클래스</h2><Link className="mc-link" to="/app/classes">전체 보기{totalClassCount > HOME_CLASS_LIMIT ? ` (${totalClassCount})` : ''}</Link></div>
             {model.classes.status === 'success' && classes.length === 0
               ? <div className="cs-read-state mh-classes-empty" role="status"><p>아직 참여 중인 클래스가 없어요.</p><Link className="mc-link" to="/app/classes">클래스 보기</Link></div>

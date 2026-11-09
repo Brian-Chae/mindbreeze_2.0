@@ -68,7 +68,8 @@ function SummaryTiles({ tiles, onOpen }: { tiles: Tile[]; onOpen: (to: string) =
   );
 }
 
-export function UiV2MemberHomePanels({ classSections }: { classSections?: ReactNode }) {
+/** nextAt/nextHref: 홈 상단 '다음 일정' 카드와 같은 출처(useMixedHome)의 다음 일정 — 있으면 타일도 이것을 쓴다. */
+export function UiV2MemberHomePanels({ classSections, nextAt, nextHref }: { classSections?: ReactNode; nextAt?: string | null; nextHref?: string }) {
   const navigate = useNavigate();
   const userCounselors = useAuthStore((s) => s.user?.counselors);
   const counselors = useMemo<Counselor[]>(() => userCounselors ?? [], [userCounselors]);
@@ -160,7 +161,11 @@ export function UiV2MemberHomePanels({ classSections }: { classSections?: ReactN
 
   let nextValue = '일정 없음';
   let nextNote = '예정된 클래스가 아직 없어요';
-  if (hero) {
+  if (nextAt) {
+    const days = Math.round((startOfDay(new Date(nextAt)).getTime() - startOfDay(now).getTime()) / DAY_MS);
+    nextValue = days > 0 ? `D-${days}` : days === 0 ? '오늘' : '지금';
+    nextNote = `${shortDate(nextAt)} ${clock(nextAt)} 시작`;
+  } else if (hero) {
     if (!hero.scheduled_at) { nextValue = '지금'; nextNote = '바로 입장할 수 있어요'; }
     else {
       const days = Math.round((startOfDay(new Date(hero.scheduled_at)).getTime() - startOfDay(now).getTime()) / DAY_MS);
@@ -169,7 +174,7 @@ export function UiV2MemberHomePanels({ classSections }: { classSections?: ReactN
     }
   }
   const tiles: Tile[] = [
-    { key: 'next', label: '다음 클래스', value: nextValue, note: nextNote, accent: !!hero, to: hero ? `/app/sessions/${hero.id}` : '/app/classes' },
+    { key: 'next', label: '다음 클래스', value: nextValue, note: nextNote, accent: !!(nextAt || hero), to: nextAt && nextHref ? nextHref : hero ? `/app/sessions/${hero.id}` : '/app/classes' },
     newReportCount > 0
       ? { key: 'report', label: '새 리포트', value: String(newReportCount), unit: '개', note: `${newReportCount}개 아직 읽지 않은 기록`, accent: true, to: '/app/reports' }
       : { key: 'report', label: '새 리포트', value: '없음', note: '아직 읽지 않은 기록이 없어요', to: '/app/reports' },
