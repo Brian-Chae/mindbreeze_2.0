@@ -65,6 +65,8 @@ export function attachCoachScope(router: RouterLike, root: HTMLElement = documen
     const on = shouldApplyCoachScope(useAuthStore.getState().user?.role, pathname);
     root.classList.toggle(COACH_SCOPE_CLASS, on);
     root.classList.toggle(LIVE_SCOPE_CLASS, shouldApplyLiveScope(useAuthStore.getState().user?.role, pathname));
+    // 11/9: 코치(상담사) 전용 표식 — 왼쪽 메뉴 플레이그라운드·데이터 현황·알림 숨김에 쓴다(기관관리자는 유지).
+    root.classList.toggle('u2-coach-counselor', on && useAuthStore.getState().user?.role === 'counselor');
   };
   apply(router.state.location.pathname);
   const offTitle = attachCoachCompactTitle(root);
@@ -76,5 +78,5 @@ export function attachCoachScope(router: RouterLike, root: HTMLElement = documen
     if (state.location.pathname !== lastPath) { lastPath = state.location.pathname; resetCoachCompactTitle(root); }
   });
   const offAuth = useAuthStore.subscribe(() => apply(router.state.location.pathname));
-  return () => { offRouter(); offAuth(); offTitle(); offCode(); root.classList.remove(COACH_SCOPE_CLASS, LIVE_SCOPE_CLASS); };
+  return () => { offRouter(); offAuth(); offTitle(); offCode(); root.classList.remove(COACH_SCOPE_CLASS, LIVE_SCOPE_CLASS, 'u2-coach-counselor'); };
 }

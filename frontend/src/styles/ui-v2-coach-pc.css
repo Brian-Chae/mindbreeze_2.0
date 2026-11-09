@@ -155,3 +155,6 @@ html .ui-v2.u2f-home .u2f-home-shortcuts .u2-secondary { display: inline-flex; j
   html .ui-v2.u2f-home .u2-card:not(.u2-hero--nature):not(.u2-coach-code) { padding: 18px; border-radius: 18px; }
   html .ui-v2.u2f-home .u2f-tiles { gap: 16px; }
 }
+
+/* 11/9 대표 지시: 코치 웹 왼쪽 메뉴에서 플레이그라운드·데이터 현황·알림 제거(설정 카드·상단 종 아이콘으로 접근). 기관관리자 메뉴는 유지. */
+html.u2-coach.u2-coach-counselor aside nav a:is([href="/playground"], [href="/upload-status"], [href="/notifications"]) { display: none !important; }
