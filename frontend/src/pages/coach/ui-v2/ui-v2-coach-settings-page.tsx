@@ -17,6 +17,7 @@ import { BlockedUsersList } from '../../../components/chat/blocked-users-list';
 import '../../../styles/ui-v2.css';
 import '../../../styles/ui-v2-brand.css';
 import '../../../styles/ui-v2-coach-screens.css';
+import '../../../styles/ui-v2-coach-pc.css';
 
 function Group({ title, description, icon, children }: { title: string; description: string; icon: ReactNode; children: ReactNode }) {
   return (

@@ -162,6 +162,11 @@ html.u2-coach h1[class*="text-[22px]"] { font-size: 31px; line-height: 1.25; fon
   html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/notifications"] { order: 62; }
 }
 
+/* SDD-320 J — 코치 PC 데이터 현황(레거시 마크업 유지): 본문 폭을 알림·리포트와 같은 프레임(288→1353)에 맞춘다(요약 카드 4열 균등은 기존 grid-cols-4) */
+@media (min-width: 1024px) {
+  html.u2-coach .max-w-6xl:has(> [data-testid="upload-overview"]) { max-width: 1600px; margin-left: 0; margin-right: 0; padding: 0 48px 72px; box-sizing: border-box; }
+}
+
 /* ───────── 코치 터치 영역 44px 보정(마크업 불변, 대상만 한정. 코치 쉘에는 <main> 이 없어 [data-shell-variant] 하위로 건다) ───────── */
 html.u2-coach [data-shell-variant] button[aria-expanded][aria-label$="접기"],
 html.u2-coach [data-shell-variant] button[aria-expanded][aria-label$="펼치기"] { min-width: 44px; min-height: 44px; width: 44px; height: 44px; }
