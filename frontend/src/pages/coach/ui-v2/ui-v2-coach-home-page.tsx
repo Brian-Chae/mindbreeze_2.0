@@ -141,12 +141,18 @@ export function UiV2CoachHomePage() {
               <Link className="u2-card u2f-tile" to={PARTICIPANTS_TILE_TARGET /* /clients */}><span>총 회원</span><b>{totalMembers.toLocaleString('ko-KR')}명</b><small>회원 관리 →</small></Link>
             </div>
 
-            <section aria-label="내 클래스">
+            <section className="u2-card u2f-home-classes" aria-label="내 클래스">
               <div className="u2-section-head u2-row"><h2>내 클래스</h2><Link className="u2-textlink" to="/classes">전체 보기{totalClassCount > HOME_CLASS_LIMIT ? ` (${totalClassCount})` : ''} ›</Link></div>
-              <ReadStateView status={classesRead.state.status === 'success' && homeClasses.length === 0 ? 'empty' : classesRead.state.status} backTo="/classes" onRetry={classesRead.retry}>
-                <MemberClassStrip classes={homeClasses} hrefFor={(model) => classPath('host', model.id)} />
-              </ReadStateView>
-              {classesRead.state.status === 'success' && homeClasses.length === 0 && <div className="u2f-actions"><Link className="u2-secondary" to="/classes/new" data-header-action="primary">클래스 만들기</Link></div>}
+              {classesRead.state.status === 'success' && homeClasses.length === 0 ? (
+                <div className="u2f-home-class-empty" role="status">
+                  <p>아직 클래스가 없어요</p>
+                  <Link className="u2-primary u2f-home-create" to="/classes/new" data-header-action="primary"><span aria-hidden="true">＋</span> 클래스 만들기</Link>
+                </div>
+              ) : (
+                <ReadStateView status={classesRead.state.status} backTo="/classes" onRetry={classesRead.retry}>
+                  <MemberClassStrip classes={homeClasses} hrefFor={(model) => classPath('host', model.id)} />
+                </ReadStateView>
+              )}
             </section>
 
             <div className="u2f-cols">
@@ -162,12 +168,12 @@ export function UiV2CoachHomePage() {
               </div>
               <div className="u2f-rail">
                 <section className="u2-card" aria-label="최근 대화"><div className="u2-section-head u2-row"><h2>최근 대화</h2><Link className="u2-textlink" to="/chat">전체 ›</Link></div>
-                  {recentChats.length > 0 ? recentChats.map((room) => <Link key={room.id} className="u2-listrow" to={`/chat/${room.id}`}><div className="u2-body"><h3>{room.display_name || room.peer_name || '내담자'}{(room.unread_count ?? 0) > 0 ? ` · ${room.unread_count}` : ''}</h3><p>{room.last_message?.content || '새로운 대화가 없어요'}</p></div><small>{relative(room.last_message_at ?? null)}</small></Link>) : <p className="u2-empty">대화가 없어요</p>}
+                  {recentChats.length > 0 ? recentChats.map((room) => <Link key={room.id} className="u2-listrow u2f-home-chat" to={`/chat/${room.id}`}><span className="u2f-home-avatar" aria-hidden="true">{(room.display_name || room.peer_name || '내담자').trim().charAt(0)}</span><div className="u2-body"><h3>{room.display_name || room.peer_name || '내담자'}{(room.unread_count ?? 0) > 0 ? ` · ${room.unread_count}` : ''}</h3><p>{room.last_message?.content || '새로운 대화가 없어요'}</p></div><small>{relative(room.last_message_at ?? null)}</small></Link>) : <p className="u2-empty">대화가 없어요</p>}
                 </section>
                 <section className="u2-card" aria-label="새 알림"><div className="u2-section-head u2-row"><h2>새 알림</h2><Link className="u2-textlink" to="/notifications">전체 ›</Link></div>
                   {unreadNotifs.length > 0 ? unreadNotifs.map((n) => <Link key={n.id} className="u2-listrow" to="/notifications"><div className="u2-body"><h3>{n.title}</h3>{n.body && <p>{n.body}</p>}</div><small>{relative(n.created_at)}</small></Link>) : <p className="u2-empty">새로운 알림이 없어요</p>}
                 </section>
-                <div className="u2f-actions"><Link className="u2-secondary" to="/upload-status" data-upload-status-shortcut>데이터 현황</Link><AiOnly><Link className="u2-secondary" to="/chat/lucy">루시 (AI) 브리핑</Link></AiOnly></div>
+                <div className="u2-card u2f-home-shortcuts"><Link className="u2-secondary" to="/upload-status" data-upload-status-shortcut>데이터 현황</Link><AiOnly><Link className="u2-secondary" to="/chat/lucy">루시 (AI) 브리핑</Link></AiOnly></div>
               </div>
             </div>
           </div>
