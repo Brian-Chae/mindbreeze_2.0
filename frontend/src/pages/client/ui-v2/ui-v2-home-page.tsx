@@ -1,6 +1,6 @@
 // SDD-318/320 — 회원 홈(D안). 11/9 대표 지시: 레이아웃·컴포넌트 구조와 내용은 운영 웹 회원 홈과 동일하게.
 // 운영 홈(member-structure-home-page)과 같은 순서·같은 컴포넌트를 쓰고, 셸·다음 일정 카드(자연 배경)만 새 디자인을 쓴다.
-//   다음 일정 → 코드로 입장 → 이어서 예정된 일정 → 요약 타일 4 → 내 클래스 → 내 상담 → 담당 코치
+//   다음 일정 → 이어서 예정된 일정 → 요약 타일 4 → 내 클래스 → 내 상담 → 담당 코치
 //   → (좌) 초대된 클래스 · 이번 주 클래스 · 내 리포트 | (우) 최근 대화 · 새 알림
 import { heroBackdrop } from '../../../components/class/flow/shell/shell-data';
 import { Link } from 'react-router-dom';
@@ -8,7 +8,6 @@ import { UiV2ClientShell } from '../../../components/ui-v2/ui-v2-client-shell';
 import { UiV2ArcRing } from '../../../components/ui-v2/ui-v2-arc-ring';
 import { UiV2ToolbarCode } from '../../../components/ui-v2/ui-v2-toolbar-code';
 import { CounselorSection } from '../../../components/client/counselor-section';
-import { CodeEntryButton } from '../../../components/client/code-entry-button';
 import { MemberClassStrip } from '../../../components/client/home/member-class-strip';
 import { MemberClassStyles, memberDate, memberValue } from '../../../components/class/structure/member-class-views';
 import { ReadField, ReadStateView } from '../../../components/class/structure/read-state';
@@ -69,7 +68,6 @@ export function UiV2HomePage() {
             <Link className="u2-primary" to={heroHref}>{isOpen ? '입장하기' : '클래스 보기'}<span aria-hidden="true" style={{ marginLeft: 'auto' }}>↗</span></Link>
           </> : <h2 className="u2-gap">{model.nextIsComplete ? '예정된 일정이 없어요' : loading ? '일정을 확인하고 있어요' : '확인된 예정 일정이 없어요'}</h2>}
         </section>
-        <CodeEntryButton placement="body" />
         {upcoming.length > 0 && <section className="mh-upcoming" data-testid="home-upcoming" aria-label="이어서 예정된 일정"><h2 className="mh-upcoming__title">이어서 예정된 일정 {model.upcoming.length}건</h2>
           {upcoming.map((item) => <Link key={item.sessionId} className="mh-upcoming__row" to={item.area === 'meditation' ? `/app/classes/${encodeURIComponent(item.parentId)}` : counselingPath('member', item.parentId as RelationshipId)}><span><b><ReadField value={memberValue(item.title)} /></b><small><ReadField value={memberDate(displayField(item.scheduledAt))} /></small></span><em>보기</em></Link>)}
           {model.upcoming.length > upcoming.length && <Link className="mh-upcoming__more" to="/app/classes">전체 클래스 보기</Link>}
