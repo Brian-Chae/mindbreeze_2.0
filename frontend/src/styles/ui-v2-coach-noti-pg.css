@@ -1,0 +1,14 @@
+/* SDD-320 G — 코치 알림·플레이그라운드 D안. 규칙은 .u2g(화면 래퍼) 하위로 한정한다. 토큰은 ui-v2.css 의 .ui-v2 변수를 그대로 쓴다. */
+.ui-v2.u2g-noti .u2g-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:0 0 6px}
+.ui-v2.u2g-noti .u2g-bar .u2f-lead{margin:0}
+.ui-v2.u2g-noti .u2g-actions{display:flex;gap:8px}
+.ui-v2.u2g-noti .u2g-actions .u2-secondary{width:auto;min-height:44px}
+.ui-v2.u2g-noti .u2g-wrap{max-width:none}
+.ui-v2 .u2g-back{display:inline-flex;align-items:center;min-height:44px;margin:0 0 8px;font-weight:600;color:var(--u2-accent)}
+.ui-v2 .u2g-notice{background:var(--u2-surface);border-radius:var(--u2-r-card);padding:14px 18px;margin:0 0 14px;font-size:13px;color:var(--u2-muted)}
+.ui-v2 .u2g-mock{position:sticky;top:0;z-index:10;background:var(--u2-tint);color:var(--u2-accent);border-radius:14px;padding:12px 16px;margin:0 0 14px;font-weight:600}
+.ui-v2 .u2g-stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+.ui-v2 .u2g-stack > *{min-width:0}
+.ui-v2 .u2g-stack section{border-radius:var(--u2-r-card)}
+.ui-v2 .u2g-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+@media (min-width:1280px){.ui-v2 .u2g-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}

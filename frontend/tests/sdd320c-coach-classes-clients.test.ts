@@ -40,11 +40,11 @@ describe('코치 클래스 CSS 스코프', () => {
   it('금지 표현 없음', () => expect(css).not.toMatch(/점수|종합점수|좋음|나쁨|보증|100%/));
 });
 
-// ui-v2.css 는 대표 지시(하단 메뉴 C안·홈/클래스 메인 카드 자연 배경)로 의도 수정 — 기준은 #278 머지(54900ce4).
+// ui-v2-coach.css 도 SDD-320 H(스크롤 제목)에서 의도 수정. ui-v2.css 는 대표 지시(하단 메뉴 C안·홈/클래스 메인 카드 자연 배경)로 의도 수정 — 기준은 #278 머지(54900ce4).
 describe('금지 영역 무수정', () => {
   const changed = execSync('git diff --name-only 54900ce4 HEAD -- . ; git diff --name-only HEAD -- .', { cwd: root }).toString();
   it('실시간 진행·하단 메뉴 관련 파일 diff 0', () => {
-    for (const f of ['frontend/src/pages/sessions', 'instant-class', 'structure-shell.css', 'ui-v2-coach.css', 'app-shell', 'AppShell']) expect(changed).not.toContain(f);
+    for (const f of ['frontend/src/pages/sessions', 'instant-class', 'structure-shell.css', 'app-shell', 'AppShell']) expect(changed).not.toContain(f);
   });
   it('클래스 목록·상세 TSX 무수정(마크업 불변)', () => {
     expect(changed).not.toContain('host-classes-page.tsx');

@@ -1,0 +1,128 @@
+{
+  "synthetic": true,
+  "note": "실제 dev 리포트가 아닌 합성 API(route 가로채기) 캡처. 백엔드 호출 없음.",
+  "results": [
+    {
+      "w": 390,
+      "kind": "worn",
+      "scrollH": 7160,
+      "overflow": 0,
+      "order": [
+        "cover",
+        "journey",
+        "body",
+        "mind",
+        "closing",
+        "coach"
+      ],
+      "bars": 114,
+      "empties": 6,
+      "boxes": [
+        "변화-1.7회/분",
+        "변화-3.6회/분",
+        "변화+10.3밀리초",
+        "변화+12.0",
+        "변화+15.0",
+        "변화+0.1"
+      ],
+      "captions": [
+        "후반에 호흡이 조금 느려졌어요",
+        "전반과 후반이 비슷했어요",
+        "후반에 심박변이가 조금 올라갔어요",
+        "후반에 집중도가 조금 올라갔어요",
+        "후반에 이완도가 조금 올라갔어요",
+        "전반과 후반이 비슷했어요"
+      ],
+      "slots": [
+        20,
+        20,
+        20,
+        20,
+        20,
+        20
+      ],
+      "errors": [],
+      "blocked": [],
+      "banned": []
+    },
+    {
+      "w": 1440,
+      "kind": "worn",
+      "scrollH": 5247,
+      "overflow": 0,
+      "order": [
+        "cover",
+        "journey",
+        "body",
+        "mind",
+        "closing",
+        "coach"
+      ],
+      "bars": 114,
+      "empties": 6,
+      "boxes": [
+        "변화-1.7회/분",
+        "변화-3.6회/분",
+        "변화+10.3밀리초",
+        "변화+12.0",
+        "변화+15.0",
+        "변화+0.1"
+      ],
+      "captions": [
+        "후반에 호흡이 조금 느려졌어요",
+        "전반과 후반이 비슷했어요",
+        "후반에 심박변이가 조금 올라갔어요",
+        "후반에 집중도가 조금 올라갔어요",
+        "후반에 이완도가 조금 올라갔어요",
+        "전반과 후반이 비슷했어요"
+      ],
+      "slots": [
+        20,
+        20,
+        20,
+        20,
+        20,
+        20
+      ],
+      "errors": [],
+      "blocked": [],
+      "banned": []
+    },
+    {
+      "w": 390,
+      "kind": "unworn",
+      "scrollH": 1021,
+      "overflow": 0,
+      "order": [
+        "cover",
+        "coach"
+      ],
+      "bars": 0,
+      "empties": 0,
+      "boxes": [],
+      "captions": [],
+      "slots": [],
+      "errors": [],
+      "blocked": [],
+      "banned": []
+    },
+    {
+      "w": 1440,
+      "kind": "unworn",
+      "scrollH": 881,
+      "overflow": 0,
+      "order": [
+        "cover",
+        "coach"
+      ],
+      "bars": 0,
+      "empties": 0,
+      "boxes": [],
+      "captions": [],
+      "slots": [],
+      "errors": [],
+      "blocked": [],
+      "banned": []
+    }
+  ]
+}

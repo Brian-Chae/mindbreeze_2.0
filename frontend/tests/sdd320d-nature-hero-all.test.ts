@@ -26,10 +26,10 @@ describe('적용 대상', () => {
     expect(s).toContain('u2-hero--nature');
     expect(s).toContain('natureHeroStyle(model.id)');
   });
-  it('기관 대시보드 기관 코드 카드', () => {
+  it('기관 대시보드 기관 코드 카드는 코치 코드 카드와 같은 모양(SDD-321 C)', () => {
     const s = read('src/pages/org/ui-v2/ui-v2-org-dashboard-page.tsx');
-    expect(s).toContain('u2-hero--nature');
-    expect(s).toContain("natureHeroStyle('home')");
+    expect(s).toContain('UiV2OrgCodeCard');
+    expect(read('src/components/ui-v2/ui-v2-org-code-card.tsx')).toContain('u2-coach-code');
   });
   it('코치 메인 카드: 어두운 폴백 배경색·흰 글자·흰 버튼, 틴트 제거', () => {
     expect(coach).toMatch(/\.ch-hero\{background:#251038/);

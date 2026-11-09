@@ -138,6 +138,112 @@ verify addendum-2(커밋 ec3a7ca8)를 구현 전에 작성한 뒤 구현했다. 
 - 한글 서브셋 밖 희귀 글리프 폴백 미시각 확인.
 - 스크린리더 미검증.
 
+---
+
+## F-A — 회원 새 디자인 시안 불일치 수정 (B2·B1·중간·낮음)
+
+기준: `~/.hermes/share/audit-318/REPORT.md`. 제외: B3·B4(리포트 상세 시트, 다른 워커), B13(코드 입장 pill 유지). 레거시 컴포넌트 파일(`member-operations.tsx` 등) diff 0.
+
+| 항목 | 처리 | 내용 |
+|---|---|---|
+| B2 | 완료 | `:where(.ui-v2) button{border:0 solid;…}` 로 특이도 0. 처음엔 `border:0` 만 낮췄더니 border-style 이 none 이 되어 Tailwind `.border`(1px)가 무효 → `0 solid` 로 보정. 측정: "클래스 나가기" bd 1px #DED8D0·bg 흰, "클래스 코드 확인" bg 보라틴트, 홈 "대화하기"/"+ 코치 추가" 보라 13px/600. `.u2-primary/.u2-secondary`·하단 메뉴·탭·도구 칩 측정값 불변 |
+| B1 | 완료 | `MemberOperations` 를 커버~탭 사이에서 제거 → 타임라인 아래 `<details>` "내 참여와 동의"(접기/펼치기)로 이동. 맨 아래 "클래스 나가기" 전체 폭 보조 버튼(`LeaveButton`, 동일 `membershipApi.transition('leave')`·`caps.leave`). 접힌 섹션 안에 참여 정보·선택 동의 저장·연구 동의 철회·새로고침·대기 취소·재가입 유지. 주의: 레거시 컴포넌트 안에도 "클래스 나가기" 버튼이 남아 있어 펼치면 2곳(동일 동작) |
+| B5 | 완료 | 일반 카드는 숫자·"클래스 전체 진행" 각주 제거(대표 카드만). 완료 카드: 칩 제거, 제목 + "완료한 회차 N회 · 지도사 X", 그룹 헤더 "완료" 개수 제거 |
+| B6 | 완료 | 코드 참여를 ui-v2 카드(흰 면·radius 24)·틴트 입력·전체 폭 보조 버튼으로 스코프 CSS 처리, placeholder "숫자 4자리". 코드 자릿수는 `member-classes-page.tsx` 의 `maxLength={4}`·`pattern=[0-9]{4}` 로 확인(브리프 예시 6자리는 실제와 다름). 레거시 파일 수정 금지라 ui-v2 래퍼가 DOM 으로 placeholder 주입 |
+| B7 | 완료 | 큰 시각은 예정 회차만, 날짜 "11월 4일 (수)" h3 + "19:30 · 지도사 가", "회차 상세 ›" |
+| B8 | 완료(조건부) | 제목 = `content.headline`(서사 제목) 우선, 회차 제목은 부제. **서사 제목이 없는 리포트는 기존 세션 제목 유지**(데이터 의존). 상태 문구 "안 읽음"/"읽음"/"대기"로 통일, "확인 가능" 칩 제거, 그룹 헤더 "지도사 가" |
+| B9 | 완료 | 홈 최근 리포트: 칩 + 서사 제목 + "회차 · 지도사 · 날짜" + 서사 한 줄 |
+| B10 | 완료 | 담당 코치를 ui-v2 카드로, 위치를 알림 뒤·최근 대화 앞으로(시안 순서에 맞춤). 대화하기·코치 추가 기능 보존 |
+| B11 | 완료 | `.u2-card{isolation:isolate}` |
+| B12 | 완료 | h1~h3 `color:var(--u2-text)`(#25212C) |
+| B14 | 완료(일부) | "지도사 가" 접두, "이번 주 클래스", 알림 "리포트 확인 ›"(report 유형만), 빈 상태 어미, 다음 회차 2줄(회차 / 날짜 · 지도사). 홈 히어로 "오늘 ·" 날짜 표기는 범위 밖이라 보류 |
+
+### 시험
+- `tsc -b` 0건, `vitest run tests/sdd318* sdd320* sdd321* sdd322*` 10파일 171/171 통과. 기준선 변경 1건: `sdd318-ui-v2-flag.test.ts` CSS 스코프 검사가 `:where(.ui-v2)` 선택자를 허용하도록 수정(여전히 `.ui-v2` 하위 한정).
+- 운영 빌드(`--mode prod`): `check-ui-v2-off` 통과(255파일, .ui-v2 CSS 0), `check-release-bundle` 통과.
+- 금지 표현(점수·종합점수·좋음·나쁨·보증·100%) 신규 0건.
+- 캡처: `captures-fa/before-*-390.png` / `after-*-390.png` (홈·클래스 목록·클래스 상세·리포트 목록, 합성 API, 390px 전체 길이).
+
+### 한계
+- 합성 데이터 캡처(실 dev 미접속). 실기기 미검증. 푸시·PR·배포 안 함.
+## F-B — 회원 리포트 상세 시트 D안 재구성 (B3·B4)
+
+verify addendum-F-B(커밋 65636178)를 구현 전에 작성했다. 푸시·PR·배포 안 함(로컬 커밋).
+
+### 구현
+| 파일 | 내용 |
+|---|---|
+| `components/ui-v2/ui-v2-report-body.tsx` (신규) | 시트 본문: 함께 돌아보는 시간 → 코치 코멘트 → AI 요약 → 셀프 체크인 → 측정 서사 → "리포트 닫기" → 의료 고지 |
+| `components/ui-v2/ui-v2-report-copy.ts` (신규) | 세션 유형 한글 매핑, 커버(eyebrow/h1) 계산, 밴드 미착용 안내 문구 |
+| `components/ui-v2/ui-v2-report-sheet.tsx` | 레거시 `ClientReportViewer` 제거 → `UiV2ReportBody`, 커버 중복 제거 |
+| `styles/ui-v2.css` | 파일 끝 `.u2-rp-*` 규칙만 추가(기존 규칙 수정 0) |
+| `tests/sdd318g-report-sheet.test.tsx` (신규) | 4건 |
+
+### 데이터 필드 매핑
+| 화면 요소 | 필드 |
+|---|---|
+| eyebrow | `session_title`(클래스명·N회차). headline 이 없으면 한글 유형 라벨(`session_type` 매핑) |
+| h1(서사 제목) | `content.headline` (없으면 `session_title` 1회만) |
+| 날짜 · 지도사 | `scheduled_at ?? created_at` · `counselor_name` |
+| 함께 돌아보는 시간 | 밴드 미착용/제외 → 안내 박스(`eegExcluded` 면 기존 제외 문구). 착용 → 측정 서사(`eeg.narrative.journey` 등)는 측정 본문이 담당 |
+| 코치 코멘트 | `content.counselor_comment` |
+| AI 요약 | `content.summary`, `insights` (`isSttAiRecordVisible()` 가드, 마이크 오프 시 기존 사유 문구) |
+| 셀프 체크인 | `subjective_state` (기존 카드 재사용) |
+| 측정 | `adaptReportContent().displayNarrative` → 기존 `NarrativeSections`(서사·변화량, 종합점수 없음) |
+
+### 숨긴 블록
+- **인용문(`.quote`)**: 서버 리포트에 인용문에 해당하는 필드가 없다 → 가짜로 만들지 않고 숨김. 서버가 필드를 주면 붙일 자리만 코드 주석으로 남겼다.
+- 승인 완료 배지, "MIND BREEZE · 몸·마음 리포트" 띠, 내담자용/코치용 칩, 영문 `meditation`, "PDF 생성(준비 중)", 글자 링크 "닫기": 새 본문에서 제거(레거시 컴포넌트는 무수정).
+- `pdf_url` 이 있을 때의 "PDF 다운로드" 링크: 목록 밖 기능 요구가 없어 이번 시트에서는 뺐다(확인 필요 — 필요하면 링크로 추가).
+- 측정 본문 안의 사이드바·상단 띠·푸터(`.topbar/.sidebar/.footer`)는 시트 안에서 CSS로 숨김.
+
+### 시험
+- `tsc -b` 0, eslint(변경 파일) 0, 신규 vitest 4건 + 기존 `sdd318*`·`sdd322*` 합계 44건 통과.
+- 운영 번들(`--mode prod`): `check-ui-v2-off` 통과(255파일), `check-release-bundle` 통과, 운영 CSS 에 `u2-rp` 0건.
+- 신규 소스 금지 표현(점수|종합점수|좋음|나쁨|완료율|보증|100%) 0건. 캡처 본문 `forbidden` 0건(밴드 착용 측정 서사의 기존 "좋아졌어요" 문구는 레거시 `NarrativeSections` 소관).
+- 390px 캡처(합성 API, headless Chrome): `captures-fb/{worn,unworn}-report-detail-{390,full}.png`, 시안 비교 `compare-{worn,unworn}.png`.
+
+### 한계
+- 착용 캡처의 측정 본문(NarrativeSections)은 기존 컴포넌트 스타일 그대로라 시안만큼 얇은 위계는 아니다(레거시 수정 금지 범위).
+- 실기기·스크린리더 미검증.
+
+## F-D — 인용문 표시 + 측정 본문 새 디자인 전용 재작성
+
+대표 결정(11/8): ① 인용문 `content.quote` 표시 ② 측정 본문과 "좋아졌어요" 문구는 새 디자인 전용으로 재작성 ③ PDF 링크는 뺀 채 유지. verify addendum-F-D 커밋 `68f51f22`(구현 전).
+
+### 구현
+| 파일 | 내용 |
+|---|---|
+| `lib/api/report.ts` | `AdaptedReportContent.quote?: string \| null` 선택 필드 추가(읽기만, 기존 소비자 영향 0) |
+| `ui-v2-report-body.tsx` | `NarrativeSections` 제거 → `UiV2ReportMeasure`. 인용문은 "함께 돌아보는 시간" 첫머리(`.u2-rp-quote`). 의료 고지는 항상 1회 |
+| `ui-v2-report-measure.tsx` (신규) | 이번 시간의 흐름 → 몸의 변화 → 마음의 변화 → 마무리. 지표 행 = 이름 · 변화량 · 방향 문장 · 전반→후반 값 · 얇은 추이선(SVG) · 한 줄 설명 |
+| `ui-v2-report-copy.ts` | 지표 라벨·단위·설명, 방향 문장, 변화량 라벨, `readReportQuote` |
+| `styles/ui-v2.css` | `.u2-rp-*` 블록만: 인용문·지표 행·추이선 추가, 레거시 `.narrative-report` 숨김 규칙 제거 |
+
+### 측정 본문 데이터 매핑
+| 화면 요소 | 필드 (레거시 컴포넌트가 읽던 것과 동일) |
+|---|---|
+| 이번 시간의 흐름 | `displayNarrative.journey` |
+| 몸/마음 도입 문단 | `displayNarrative.bodyText` / `mindText` (있을 때만) |
+| 지표 행(호흡수·심박수·심박변이 / 집중도·이완도·감정안정도) | `displayNarrative.body[]` / `mind[]` — `id`, `direction`, `early`, `late`, `delta` |
+| 추이선 | `displayNarrative.timeline[]` (`min`, `respiratory_rate`, `heart_rate`, `sdnn/hrv`, `concentration`, `relaxation`, `emotional_stability` ← stress 역산 폴백 동일), 유효 2점 미만이면 숨김 |
+| 마무리 | `displayNarrative.closing` |
+| 인용문 | `content.quote` (비문자열·빈값이면 숨김) |
+| 미사용(의도) | `MetricNarrative.sentence`(규칙 문장에 "산만/불안정/안정적으로" 등 상태 판단 포함), `metricChangeInterpretation`, `metricDirectionGuide`, 분포 예시·범례·사이드바·다음 제안 카드 |
+
+### 제거한 평가어
+`좋아졌어요`, `주의가 필요해요`(레거시 `metricChangeInterpretation`), `증가/감소/유지` 배지, 레거시 규칙 문장 속 `대체로 산만했지만`·`불안정하게`·`안정적으로`·`긴장이 남아 있었지만`, `명상 중에는 낮아지는(↓) 쪽이 차분해지는 신호예요` 류의 방향 가치 안내, 권장(정상) 범위 띠. 대신 "OO는 전반보다 후반에 올라갔어요/내려갔어요/전반과 후반이 비슷했어요" + "전반 X → 후반 Y".
+
+### 시험
+- `tsc -b` 0, eslint(변경 파일) 0.
+- `tests/sdd318g-report-sheet` 10건(신규 6: quote 있음/없음/비문자열, 착용 시 새 본문·레거시 클래스 0·금지어 0·지표 ≥3·추이선 ≥3·고지 1회, 미착용, 방향 문장, 레거시 상태 판단어 0). `sdd318* sdd320* sdd321* sdd322*` 합계 180건 통과.
+- 운영 번들(`--mode prod`): `check-ui-v2-off` 통과(255파일), `check-release-bundle` 통과, 운영 CSS 에 `u2-rp` 0건.
+- 390px 캡처(합성 API, `VITE_UI_V2=true`): 본문 `forbidden` 0건, 가로 넘침·겹침 없음, 페이지 오류 0. `captures-fd/{worn,unworn}-report-detail-{390,full}.png`, 시안 비교 `compare-{worn,unworn}.png`, `meta-*.json`.
+
+### 한계
+- 백엔드 `content.quote` 는 다른 워커가 추가 중 — 이 커밋은 값이 없으면 숨김으로 안전하게 동작.
+- 캡처 픽스처의 감정안정도는 stress 0~1 역산 폴백을 타서 0.5→0.6 으로 보인다(실데이터는 0~100). 로직 변경 없음.
+- 실기기·스크린리더 미검증. 푸시·PR·배포 안 함.
 ## F-C. 리포트 인용 한 줄(quote) 백엔드
 - 계약: `content.quote: string|null` (1인칭 해요체 한 문장, ≤60자, 목표 40자). DB 컬럼·마이그레이션 없음.
 - 구현: `backend/app/services/report_quote.py`(신규) — 근거 수집→Gemini JSON→`sanitize_quote` 후처리. `report_task.generate_report_inline` 이 저장 직전 `attach_quote` 호출(client·counselor 공통). `report_service.normalize_report_content` 가 항상 `quote` 키(없으면 null) 노출 → 기존 리포트도 `quote: null`.

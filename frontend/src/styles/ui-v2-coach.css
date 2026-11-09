@@ -1,7 +1,7 @@
 /* SDD-320 — 코치 화면 D안 스킨. 모든 규칙은 html.u2-coach 하위로 한정한다(코치 업무 경로에서만 클래스가 붙는다).
    기존 마크업은 바꾸지 않고 색·반경·타이포·간격만 D 토큰으로 덮는다. 폰트 'Pretendard MB' 는 ui-v2-brand.css 가 정의한다. */
 html.u2-coach{
-  --u2-canvas:#F4F4F7;--u2-surface:#FFFFFF;--u2-tint:#EEE5F5;--u2-text:#25212C;--u2-muted:#68616F;--u2-accent:#5F0080;
+  --u2-canvas:#FAF9FC;--u2-surface:#FFFFFF;--u2-tint:#EEE5F5;--u2-text:#25212C;--u2-muted:#68616F;--u2-accent:#5F0080;
   --u2-line:#EAE7ED;--u2-ring:#D4BDE2;--u2-r-card:24px;--u2-r-btn:14px;--u2-r-nav:26px;
   --u2-font:'Pretendard MB','Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
 }
@@ -23,7 +23,7 @@ html.u2-coach [data-sidebar-profile]{background:var(--u2-canvas);border-radius:v
 
 /* 모바일 상단 바·페이지 헤더 */
 html.u2-coach .mb-shell-topbar{background:var(--u2-canvas);border-bottom:0}
-html.u2-coach .mb-shell-topbar span.font-extrabold{font-family:var(--u2-font);font-weight:700;font-size:17px;letter-spacing:.04em;text-transform:uppercase;color:#111}
+html.u2-coach .mb-shell-topbar span.font-extrabold{font-family:var(--u2-font);font-weight:700;font-size:17px;letter-spacing:.04em;text-transform:uppercase;color:#5F0080}
 html.u2-coach [data-shell-variant] > section > header{background:var(--u2-canvas);border-bottom:1px solid var(--u2-line)}
 html.u2-coach [data-ui="page-header"] h1{font-size:28px;line-height:1.3;font-weight:600;letter-spacing:-.04em;color:var(--u2-text)}
 html.u2-coach [data-ui="page-header"] .mb-page-header-overline{color:var(--u2-accent);letter-spacing:.12em;font-weight:600}
@@ -81,7 +81,7 @@ html.u2-coach main button[class*="bg-[#5F0080]"],html.u2-coach main a[class*="bg
 html.u2-coach main [class*="bg-[#F5EDFC]"],html.u2-coach main [class*="bg-[#F4EDF8]"]{background-color:var(--u2-tint)}
 
 /* 채팅(318 규칙 재사용: 기존 ChatRoom 변수만 교체) */
-html.u2-coach .chat-room{--chat-mine:#5F0080;--chat-surface:#F4F4F7;--chat-text:#25212C;--chat-muted:#68616F;--chat-accent:#5F0080;background:var(--u2-surface)}
+html.u2-coach .chat-room{--chat-mine:#5F0080;--chat-surface:#FAF9FC;--chat-text:#25212C;--chat-muted:#68616F;--chat-accent:#5F0080;background:var(--u2-surface)}
 html.u2-coach .chat-room .chat-msg__bubble{border-radius:18px}
 html.u2-coach .chat-room .chat-room__composer{background:var(--u2-surface);border-top:1px solid var(--u2-line)}
 html.u2-coach .chat-room .chat-room__send{background:var(--u2-accent);color:#FFFFFF;border-radius:14px;font-weight:600}
@@ -105,3 +105,21 @@ html.u2-coach [data-mobile-swipe-page] .max-w-2xl > [class*="rounded-2xl"][class
 html.u2-coach [data-mobile-swipe-page] .max-w-2xl > [class*="border-dashed"]{border:0;border-radius:var(--u2-r-card);background:var(--u2-surface);padding:40px 24px}
 html.u2-coach [data-mobile-swipe-page] .max-w-2xl > .flex button{min-height:44px;min-width:44px}
 html.u2-coach [data-mobile-swipe-page] .max-w-2xl [role="switch"][aria-checked="false"]{background:#6B6472}
+/* 11/9 대표 지시: 클래스 상세 상단 탭(개요·회차·멤버·설정) 선택 시 보라 배경 위 흰 글자 */
+html.u2-coach main nav[aria-label="클래스 메뉴"] a[aria-current="page"],html.u2-coach [data-shell-variant] nav[aria-label="클래스 메뉴"] a[aria-current="page"]{color:#FFFFFF}
+
+/* SDD-320 H — 모바일 스크롤 시 상단 바에 현재 메뉴 제목(회원 앱 .u2-compact-title 과 같은 16px/600·말줄임·160ms 페이드).
+   워드마크는 숨겨 겹침을 막는다큰 제목 블록은 스크롤 영역 밖에 고정돼 있어 접힐 때 함께 숨겨 중복을 막는다. PC(≥768px)는 헤더에 제목이 항상 있으므로 적용하지 않는다. */
+html.u2-coach .u2-coach-compact-title{display:none}
+@media(max-width:767px){
+  html.u2-coach .u2-coach-compact-title[data-shown="true"]{display:block;flex:1;min-width:0;margin:0 8px;font-size:16px;font-weight:600;color:var(--u2-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;animation:u2-coach-title-in 160ms ease-out}
+  /* 11/9 대표 지시: 접히면 로고(심볼+글자) 전체를 숨기고 제목만 가운데 정렬 */
+  html.u2-coach.u2-coach-collapsed .mb-shell-topbar button[aria-label="홈으로 이동"]{display:none}
+  html.u2-coach.u2-coach-collapsed .mb-shell-topbar .u2-coach-compact-title[data-shown="true"]{text-align:center}
+  html.u2-coach.u2-coach-collapsed [data-ui="page-header"].mb-page-header-mobile{display:none}
+}
+@keyframes u2-coach-title-in{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){html.u2-coach .u2-coach-compact-title{animation:none!important}}
+/* 11/9 대표 지시: 데스크톱 좌측 하단 프로필에 코치 코드 전체 숫자(모바일 숨김) */
+html.u2-coach .u2-coach-sidebar-code{display:none}
+@media(min-width:1024px){html.u2-coach [data-shell-variant] > aside [data-sidebar-profile] > .u2-coach-sidebar-code{display:inline-block;margin-top:8px;padding:4px 10px;border-radius:999px;background:#FFFFFF1F;color:#FFFFFF;font-size:12px;font-weight:600;letter-spacing:1px;font-variant-numeric:tabular-nums}}
