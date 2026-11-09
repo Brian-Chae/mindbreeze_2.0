@@ -244,3 +244,11 @@ verify addendum-F-B(커밋 65636178)를 구현 전에 작성했다. 푸시·PR·
 - 백엔드 `content.quote` 는 다른 워커가 추가 중 — 이 커밋은 값이 없으면 숨김으로 안전하게 동작.
 - 캡처 픽스처의 감정안정도는 stress 0~1 역산 폴백을 타서 0.5→0.6 으로 보인다(실데이터는 0~100). 로직 변경 없음.
 - 실기기·스크린리더 미검증. 푸시·PR·배포 안 함.
+## F-C. 리포트 인용 한 줄(quote) 백엔드
+- 계약: `content.quote: string|null` (1인칭 해요체 한 문장, ≤60자, 목표 40자). DB 컬럼·마이그레이션 없음.
+- 구현: `backend/app/services/report_quote.py`(신규) — 근거 수집→Gemini JSON→`sanitize_quote` 후처리. `report_task.generate_report_inline` 이 저장 직전 `attach_quote` 호출(client·counselor 공통). `report_service.normalize_report_content` 가 항상 `quote` 키(없으면 null) 노출 → 기존 리포트도 `quote: null`.
+- 근거 규칙: 전사(STT) 우선, 없으면 코치 코멘트. 둘 다 없으면 LLM 호출 0건. 마이크 오프(`status=="manual"`)·저신뢰·STT off 는 전사 미사용(코멘트만). 그룹 세션·리포트 제외 참가자·생성 실패 스텁은 null.
+- 필터: 점수·종합점수·스코어·좋음·나쁨·완료·보증·100%·진단·치료·완치·처방·우울증 등 포함 시 null. 해요체 종결·단일 문장 아니면 null.
+- 시험: `tests/test_sdd318_report_quote.py` 33건(LLM mock) 통과. 리포트 관련 회귀 `-k "report or comment or summary or quote"` 921 passed / 28 skipped. 기존 `test_sdd211_member_report_visibility.py` 의 EMPTY_CONTENT 에 `quote: None` 반영(계약 필드 추가에 따른 기대값 갱신).
+- 한계: 실제 Gemini 호출은 하지 않음(품질 미검증, 첫 생성분 육안 확인 필요).
+- 백필(필요 시): 기존 `completed` 리포트는 `POST` 재생성 경로(report regenerate)로 다시 만들면 quote 가 채워진다. 스크립트는 만들지 않음.
