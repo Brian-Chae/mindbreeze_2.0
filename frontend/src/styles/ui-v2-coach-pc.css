@@ -97,3 +97,21 @@
 .ui-v2 .u2f-chips button { border-radius: 999px; background: transparent; color: var(--u2-accent); box-shadow: none; padding: 0 18px; }
 .ui-v2 .u2f-chips button:hover { background: #F4EDF8; }
 .ui-v2 .u2f-chips button[aria-pressed="true"] { background: var(--u2-accent); color: #FFFFFF; box-shadow: none; }
+
+/* 11/9 대표 지시: 코치 홈 구조 = 운영 웹(히어로 → 검토 배너 → 숫자 타일 4 → 내 클래스 → 일정 | 대화·알림) */
+.ui-v2 .u2f-home-ops > * + * { margin-top: 18px; }
+.ui-v2 .u2-hero--nature.u2f-home-hero { min-height: 240px; }
+.ui-v2 .u2f-review { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; margin-bottom: 0; }
+.ui-v2 .u2f-review h3 { font-size: 16px; font-weight: 700; }
+.ui-v2 .u2f-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ui-v2 .u2f-tile { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 18px 20px; text-decoration: none; color: var(--u2-text); }
+.ui-v2 .u2f-tile span { font-size: 13px; color: var(--u2-muted); font-weight: 600; }
+.ui-v2 .u2f-tile b { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
+.ui-v2 .u2f-tile small { font-size: 12px; color: var(--u2-accent); font-weight: 600; }
+.ui-v2 .u2f-past { margin-top: 10px; }
+.ui-v2 .u2f-past summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--u2-muted); font-size: 14px; font-weight: 600; }
+.ui-v2 .u2f-home-ops .u2f-rail > * + * { margin-top: 14px; }
+.ui-v2 .u2f-home-ops .u2f-cols .u2-card { margin-bottom: 0; }
+@media (min-width: 1024px) {
+  .ui-v2 .u2f-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}

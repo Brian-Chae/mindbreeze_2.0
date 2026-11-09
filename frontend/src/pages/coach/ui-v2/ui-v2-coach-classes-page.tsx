@@ -7,11 +7,12 @@ import { ClassCreateAction } from '../../../components/class/structure/class-cre
 import { useClasses } from '../../../hooks/use-class-structure';
 import { adaptHostClass } from '../../../lib/class-structure/adapters';
 import { classPath, classSessionPath } from '../../../lib/class-structure/navigation';
-import { CLASS_FILTERS, filterClassRows, groupClassRows, toClassRow, type ClassGroupMode, type ClassRowV2 } from '../../../lib/coach-lists-v2';
+import { CLASS_FILTERS, filterClassRows, groupClassRows, toClassRow, type ClassGroupMode } from '../../../lib/coach-lists-v2';
 import type { ClassSummaryDto } from '../../../lib/api/class-structure';
 import { useAuthStore } from '../../../stores/authStore';
 import { natureHeroStyle } from '../../../components/ui-v2/nature-hero';
-import { NextClassView } from '../../../components/class/structure/host-class-views';
+import { ClassCard, ClassListHeader, NextClassView } from '../../../components/class/structure/host-class-views';
+import '../../../components/class/structure/structure-shell.css';
 import type { DisplayField } from '../../../lib/class-structure/read-model';
 import '../../../styles/ui-v2.css';
 import '../../../styles/ui-v2-brand.css';
@@ -22,16 +23,6 @@ const PAGE_LIMIT = 30;
 const SERVER_STATUS_FILTERS = new Set(['draft', 'completed', 'cancelled']);
 const pageKey = (status: string | undefined, n: number): string => `${status ?? 'all'}:${n}`;
 const fieldValue = <T,>(field: DisplayField<T>): T | undefined => (field.kind === 'value' ? field.value : undefined);
-const when = (iso: string | null): string => (iso ? new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(iso)) : '일정 미정');
-
-function ClassActions({ row }: { row: ClassRowV2 }) {
-  return (
-    <div className="u2f-actions" style={{ marginTop: 0 }}>
-      <Link className="u2-secondary" to={classPath('host', row.id as never)} data-class-card>상세 보기</Link>
-      {row.canEnter && row.openSessionId && <Link className="u2-primary" data-enter-session to={`/sessions/${row.openSessionId}/player`}>바로 입장</Link>}
-    </div>
-  );
-}
 
 export function UiV2CoachClassesPage() {
   const user = useAuthStore((s) => s.user);
@@ -95,32 +86,17 @@ export function UiV2CoachClassesPage() {
         {state.status === 'success' && <>
           <p className="u2-muted" style={{ fontSize: 12, margin: '0 4px 8px' }}>현재 목록 {shown.length}개</p>
           {shown.length === 0 && <p className="u2-empty" role="status">{classRows.length === 0 ? '아직 클래스가 없어요' : '검색 결과가 없어요'}</p>}
-          {groups.map((g) => (
-            <section key={g.title || 'all'} aria-label={g.title || '클래스 목록'}>
-              {g.title && <h2 className="u2f-group">{g.title} · {g.rows.length}</h2>}
-              <div className="u2f-table"><div className="u2f-table-box">
-                <div className="u2f-tr u2f-th" aria-hidden="true"><span>클래스</span><span>다음 회차</span><span>진행 · 지도사</span><span>다음 행동</span></div>
-                {g.rows.map((r) => (
-                  <div className="u2f-tr" key={r.id}>
-                    <span><b>{r.title}</b>{r.instant && <span className="u2f-badge" style={{ marginLeft: 8 }}>즉석</span>}<small>{r.statusLabel}{r.hasOpen ? ' · 입장 중' : ''}</small></span>
-                    <span>{r.nextAt ? `${r.nextSeq != null ? `${r.nextSeq}회차 · ` : ''}${when(r.nextAt)}` : '예정 없음'}</span>
-                    <span>{r.progress}<small>{r.host}</small></span>
-                    <ClassActions row={r} />
-                  </div>
-                ))}
-              </div></div>
-              <div className="u2f-cards">
-                {g.rows.map((r) => (
-                  <article className="u2-card" key={r.id}>
-                    <h3>{r.title}</h3>
-                    <p className="u2-muted">{r.statusLabel}{r.instant ? ' · 즉석' : ''} · {r.progress} · {r.nextAt ? when(r.nextAt) : '예정 없음'}</p>
-                    <p className="u2-muted">진행 지도사 {r.host}</p>
-                    <div className="u2f-actions"><Link className="u2-primary" to={classPath('host', r.id as never)} data-class-card>상세 보기</Link>{r.canEnter && r.openSessionId && <Link className="u2-secondary" data-enter-session to={`/sessions/${r.openSessionId}/player`}>바로 입장</Link>}</div>
-                  </article>
-                ))}
-              </div>
-            </section>
-          ))}
+          {/* 11/9 대표 지시: 운영 웹처럼 클래스별 카드(아이콘·다음 회차·진행 막대·지도사·상태) */}
+          {groups.map((g) => {
+            const byId = new Map(rows.map((row) => [row.id, row]));
+            const models = g.rows.map((r) => byId.get(r.id)).filter((row): row is ClassSummaryDto => row != null).map(adaptHostClass);
+            return (
+              <section key={g.title || 'all'} aria-label={g.title || '클래스 목록'} className="cs-structure u2f-classcards">
+                {g.title && <h2 className="u2f-group">{g.title} · {g.rows.length}</h2>}
+                <div className="cs-class-list"><ClassListHeader />{models.map((model) => <ClassCard key={model.id} model={model} />)}</div>
+              </section>
+            );
+          })}
           {hasMore && <button className="u2-secondary" type="button" onClick={() => setPage((v) => v + 1)}>이전 클래스 더 보기</button>}
           {paged.state.status === 'error' && <p role="status" className="u2-muted">이전 클래스를 불러오지 못했어요. <button type="button" className="u2-textlink" onClick={paged.retry}>다시 시도</button></p>}
         </>}

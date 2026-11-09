@@ -9,11 +9,17 @@ import { AiOnly } from '../../../components/routing/ai-gate';
 import { getCounselorDashboard, type ClassSummary, type CounselorDashboardResponse } from '../../../lib/api/dashboard';
 import { listChatRooms, type ChatRoom } from '../../../lib/api/chat';
 import { listNotifications, type NotificationDto } from '../../../lib/api/notifications';
-import { listReports, type ReportDto } from '../../../lib/api/reports';
-import { resolveReportStatus } from '../../../lib/api/report-status';
 import { dashboardSessionArea, dashboardSessionPath } from '../../../lib/class-structure/dashboard-navigation';
-import { pickHeroSession, pickScheduleRows } from '../../../lib/dashboard/counselor-home-model';
-import { REVIEW_TILE_TARGET, liveTileHint, liveTileTarget } from '../../../lib/dashboard/home-links';
+import { HOME_CLASS_LIMIT, pickHeroSession, pickPastRows, pickScheduleRows, sortHomeClasses } from '../../../lib/dashboard/counselor-home-model';
+import { MemberClassStrip } from '../../../components/client/home/member-class-strip';
+import { MemberClassStyles } from '../../../components/class/structure/member-class-views';
+import { ReadStateView } from '../../../components/class/structure/read-state';
+import { useClasses } from '../../../hooks/use-class-structure';
+import { HOME_ACTIVE_CLASS_PARAMS } from '../../../lib/class-structure/home-params';
+import { adaptHostClass } from '../../../lib/class-structure/adapters';
+import { classPath } from '../../../lib/class-structure/navigation';
+import '../../../components/client/home/member-home-layout.css';
+import { PARTICIPANTS_TILE_TARGET, REVIEW_TILE_TARGET, TODAY_TILE_TARGET, liveTileHint, liveTileTarget } from '../../../lib/dashboard/home-links';
 import { liveClasses as pickLiveClasses, pendingReviewTotal, todayRemaining } from '../../../lib/dashboard/home-stats';
 import { isCounselingEnabled } from '../../../lib/feature-flags';
 import { heroBackdrop } from '../../../components/class/flow/shell/shell-data';
@@ -53,7 +59,6 @@ export function UiV2CoachHomePage() {
   const [data, setData] = useState<CounselorDashboardResponse | null>(null);
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
   const [notifications, setNotifications] = useState<NotificationDto[]>([]);
-  const [reports, setReports] = useState<ReportDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
@@ -62,13 +67,12 @@ export function UiV2CoachHomePage() {
     setLoading(true);
     setError(null);
     try {
-      const [res, chatRes, notifRes, reportRes] = await Promise.all([
+      const [res, chatRes, notifRes] = await Promise.all([
         getCounselorDashboard(),
         listChatRooms().catch(() => ({ rooms: [] as ChatRoom[] })),
         listNotifications(true, 5).catch(() => ({ notifications: [] as NotificationDto[], total: 0, unread: 0 })),
-        listReports({ page: 1, limit: 20 }).catch(() => ({ reports: [] as ReportDto[], total: 0 })),
       ]);
-      setData(res); setChatRooms(chatRes.rooms); setNotifications(notifRes.notifications); setReports(reportRes.reports);
+      setData(res); setChatRooms(chatRes.rooms); setNotifications(notifRes.notifications);
     } catch (err) {
       setError(err instanceof Error ? err.message : '대시보드를 불러오지 못했습니다');
     } finally {
@@ -83,8 +87,11 @@ export function UiV2CoachHomePage() {
   const today = useMemo(() => todayRemaining(rows, new Date()), [rows]);
   const upcoming = useMemo(() => pickScheduleRows(rows, new Date()), [rows]);
   const hero = useMemo(() => (data ? pickHeroSession(rows, new Date()) : null), [data, rows]);
-  const nextRows = upcoming.filter((c) => !live.some((l) => l.id === c.id) && c.id !== hero?.session.id).slice(0, 3);
-  const recentReports = useMemo(() => reports.filter((r) => r.type === 'counselor' || r.type === 'client').slice(0, 2), [reports]);
+  const past = useMemo(() => pickPastRows(rows), [rows]);
+  // 11/9 대표 지시: 홈 구조를 운영 웹과 같게 — 히어로 → 검토 배너 → 숫자 타일 4 → 내 클래스 → 일정 | 대화·알림
+  const classesRead = useClasses(HOME_ACTIVE_CLASS_PARAMS);
+  const homeClasses = useMemo(() => (classesRead.state.status === 'success' ? sortHomeClasses(classesRead.state.data.classes.map(adaptHostClass)).slice(0, HOME_CLASS_LIMIT) : []), [classesRead.state]);
+  const totalClassCount = classesRead.state.status === 'success' ? classesRead.state.data.classes.length : 0;
   const recentChats = useMemo(() => [...chatRooms].sort((a, b) => new Date(b.last_message_at ?? 0).getTime() - new Date(a.last_message_at ?? 0).getTime()).slice(0, 3), [chatRooms]);
   const unreadNotifs = useMemo(() => notifications.filter((n) => !n.is_read).slice(0, 3), [notifications]);
 
@@ -105,64 +112,62 @@ export function UiV2CoachHomePage() {
           <div className="u2f-actions"><button type="button" className="u2-primary" onClick={() => navigate('/onboarding/counselor')}>프로필 완성하기</button><button type="button" className="u2-secondary" onClick={() => setBannerDismissed(true)}>닫기</button></div>
         </div>}
         {loading ? <p className="u2-empty">불러오는 중...</p> : data ? (
-          <div className="u2f-cols">
-            <div className="u2f-main">
-              <section className="u2-card u2-hero u2-hero--nature" data-testid="counselor-home-hero" aria-label="오늘 회차" style={{ backgroundImage: `${NATURE_HERO_GRADIENT},url(${heroBackdrop(heroSession?.id ?? 'home')})` }}>
-                {heroSession ? <>
-                  <span className="u2-eyebrow">{hero?.live ? '진행 중' : '다음 회차'} · {timeRange(heroSession.scheduled_at)}</span>
-                  <div className="u2-num">{timeRange(heroSession.scheduled_at) || '--:--'} <small style={{ color: '#fff' }}>{shortDay(heroSession.scheduled_at)}</small></div>
-                  <h2>{heroSession.title?.trim() || '이름 없는 회차'}{heroSession.seq != null ? ` · ${heroSession.seq}회차` : ''}</h2>
-                  <p className="u2-muted">참여 {heroSession.participant_count}명</p>
-                  <Link className="u2-primary" to={dashboardSessionPath(heroSession)}>{hero?.live ? '입장 현황' : '회차 상세 보기'}<span aria-hidden="true" style={{ marginLeft: 'auto' }}>↗</span></Link>
-                </> : <>
-                  <h2 className="u2-gap">예정된 회차가 없어요</h2>
-                  <p className="u2-muted">클래스를 바로 열어 회원과 함께 시작할 수 있어요.</p>
-                  <Link className="u2-primary" to="/classes/now">지금 바로 시작</Link>
-                </>}
-              </section>
-
-              <section aria-label="열린 회차"><div className="u2-section-head"><h2>열린 회차</h2></div>
-                {live.length > 0 ? live.map((c) => <article key={c.id} className="u2-card"><h3>{c.title || '제목 없음'}</h3><p className="u2-muted">{timeRange(c.scheduled_at)} · 대기실 열림 · 참여 {c.participant_count}명</p><Link className="u2-primary u2f-btn" to={live.length === 1 ? liveTileTarget(live) : dashboardSessionPath(c)}>{live.length === 1 ? '입장 현황' : '회차 보기'}</Link></article>)
-                  : <p className="u2-empty">열려 있는 회차가 없어요 · <Link className="u2-textlink" to={liveTileTarget(live)}>{liveTileHint(0).replace(/\s*→$/, '')}</Link></p>}
-              </section>
-
-              <section aria-label="다음 일정"><div className="u2-section-head u2-row"><h2>다음 일정</h2><span className="u2-muted" style={{ fontSize: 12 }}>오늘 {today.length}건</span></div>
-                {nextRows.length > 0 ? nextRows.map((c) => <article key={c.id} className="u2-card"><h3>{shortDay(c.scheduled_at)} · {timeRange(c.scheduled_at)}</h3><p className="u2-muted">{c.title || '제목 없음'}{c.seq != null ? ` · ${c.seq}회차` : ''}</p><Link className="u2-primary u2f-btn" to={dashboardSessionPath(c)}>클래스 보기</Link></article>)
-                  : <p className="u2-empty">예정된 일정이 없어요</p>}
-                <Link className="u2-textlink" to="/classes">내 클래스 전체 보기 ›</Link>
-              </section>
-            </div>
-
-            <div className="u2f-rail">
-              <article className="u2-card"><h3>지금 함께 시작할까요?</h3><p className="u2-muted">일정 없이 새로운 회차를 준비할 수 있어요.</p>
-                <div className="u2f-actions"><Link className="u2-primary" to="/classes/now">즉석 시작</Link><Link className="u2-secondary" to="/classes/new" data-header-action="primary">+ 새 클래스</Link></div>
-              </article>
-              <section aria-label="검토할 기록"><div className="u2-section-head"><h2>검토할 기록 · {pendingReview}</h2></div>
-                <article className="u2-card"><h3>리포트 검토 대기 {pendingReview}건</h3><p className="u2-muted">기록이 끝난 회차의 리포트를 확인하고 승인해요.</p><Link className="u2-primary u2f-btn" to={REVIEW_TILE_TARGET}>검토하기</Link></article>
-              </section>
-              <section aria-label="최근 리포트"><div className="u2-section-head u2-row"><h2>최근 리포트</h2><Link className="u2-textlink" to="/reports">전체 ›</Link></div>
-                {recentReports.length > 0 ? recentReports.map((r) => { const approved = resolveReportStatus(r) === 'completed'; return <Link key={r.id ?? r.session_id} className="u2-card" to={r.id ? `/reports?report=${r.id}` : '/reports'}><h3>{r.session_title || '리포트'}</h3><p className="u2-muted">{shortDay(r.created_at)} · {approved ? '승인됨' : '검토 필요'}</p></Link>; })
-                  : <p className="u2-empty">아직 리포트가 없어요</p>}
-              </section>
-              <section aria-label="새 알림"><div className="u2-section-head u2-row"><h2>알림</h2><Link className="u2-textlink" to="/notifications">전체 ›</Link></div>
-                {unreadNotifs.length > 0 ? unreadNotifs.map((n) => <Link key={n.id} className="u2-card" to="/notifications"><h3>{n.title}</h3>{n.body && <p className="u2-muted">{n.body}</p>}<small>{relative(n.created_at)}</small></Link>) : <p className="u2-empty">새로운 알림이 없어요</p>}
-              </section>
-              <section aria-label="최근 대화"><div className="u2-section-head u2-row"><h2>최근 대화</h2><Link className="u2-textlink" to="/chat">전체 ›</Link></div>
-                {recentChats.length > 0 ? recentChats.map((room) => <Link key={room.id} className="u2-listrow" to={`/chat/${room.id}`}><div className="u2-body"><h3>{room.display_name || room.peer_name || '내담자'}{(room.unread_count ?? 0) > 0 ? ` · ${room.unread_count}` : ''}</h3><p>{room.last_message?.content || '새로운 대화가 없어요'}</p></div><small>{relative(room.last_message_at ?? null)}</small></Link>) : <p className="u2-empty">대화가 없어요</p>}
-              </section>
-            </div>
-
-            <section className="u2f-wide" aria-label="회원과 이어가는 이야기"><div className="u2-section-head"><h2>회원과 이어가는 이야기</h2></div>
-              <div className="u2-card">
-                <h3>회원 관리 · {totalMembers.toLocaleString('ko-KR')}명</h3><p className="u2-muted">클래스별 참여 기록과 코치 메모를 살펴요.</p>
-                <div className="u2f-actions">
-                  <Link className="u2-secondary" to="/clients">회원 목록</Link>
-                  {isCounselingEnabled() && <Link className="u2-secondary" to="/counseling">개인상담</Link>}
-                  <Link className="u2-secondary" to="/upload-status" data-upload-status-shortcut>데이터 현황</Link>
-                  <AiOnly><Link className="u2-secondary" to="/chat/lucy">루시 (AI) 브리핑</Link></AiOnly>
-                </div>
-              </div>
+          <div className="u2f-home-ops">
+            <MemberClassStyles />
+            <section className="u2-card u2-hero u2-hero--nature u2f-home-hero" data-testid="counselor-home-hero" aria-label="오늘 회차" style={{ backgroundImage: `${NATURE_HERO_GRADIENT},url(${heroBackdrop(heroSession?.id ?? 'home')})` }}>
+              {heroSession ? <>
+                <span className="u2-eyebrow">{hero?.live ? '진행 중' : '다음 회차'} · {shortDay(heroSession.scheduled_at)}</span>
+                <h2>{heroSession.title?.trim() || '이름 없는 회차'}{heroSession.seq != null ? ` · ${heroSession.seq}회차` : ''}</h2>
+                <p className="u2-muted">{timeRange(heroSession.scheduled_at) || '--:--'} · 참여 {heroSession.participant_count}명</p>
+                <Link className="u2-primary" to={dashboardSessionPath(heroSession)}>{hero?.live ? '입장 현황' : '회차 상세 보기'}<span aria-hidden="true" style={{ marginLeft: 'auto' }}>↗</span></Link>
+              </> : <>
+                <h2 className="u2-gap">예정된 회차가 없어요</h2>
+                <p className="u2-muted">클래스를 바로 열어 회원과 함께 시작할 수 있어요.</p>
+                <Link className="u2-primary" to="/classes/now">지금 바로 시작</Link>
+              </>}
             </section>
+
+            {pendingReview > 0 && <div className="u2-card u2f-review">
+              <div><h3>리포트 검토 대기 {pendingReview}건</h3><p className="u2-muted">기록이 끝난 회차의 리포트를 확인하고 승인해요.</p></div>
+              <Link className="u2-primary" to={REVIEW_TILE_TARGET}>리포트 검토</Link>
+            </div>}
+
+            <div className="u2f-tiles">
+              <Link className="u2-card u2f-tile" to={liveTileTarget(live)}><span>진행 중 회차</span><b style={{ color: '#1F8A5B' }}>{live.length}</b><small>{liveTileHint(live.length)}</small></Link>
+              <Link className="u2-card u2f-tile" to={REVIEW_TILE_TARGET}><span>검토 대기 리포트</span><b style={{ color: 'var(--u2-accent)' }}>{pendingReview}</b><small>리포트 검토 →</small></Link>
+              <Link className="u2-card u2f-tile" to={TODAY_TILE_TARGET}><span>오늘 예정 회차</span><b>{today.length}</b><small>일정 보기 →</small></Link>
+              <Link className="u2-card u2f-tile" to={PARTICIPANTS_TILE_TARGET /* /clients */}><span>총 회원</span><b>{totalMembers.toLocaleString('ko-KR')}명</b><small>회원 관리 →</small></Link>
+            </div>
+
+            <section aria-label="내 클래스">
+              <div className="u2-section-head u2-row"><h2>내 클래스</h2><Link className="u2-textlink" to="/classes">전체 보기{totalClassCount > HOME_CLASS_LIMIT ? ` (${totalClassCount})` : ''} ›</Link></div>
+              <ReadStateView status={classesRead.state.status === 'success' && homeClasses.length === 0 ? 'empty' : classesRead.state.status} backTo="/classes" onRetry={classesRead.retry}>
+                <MemberClassStrip classes={homeClasses} hrefFor={(model) => classPath('host', model.id)} />
+              </ReadStateView>
+              {classesRead.state.status === 'success' && homeClasses.length === 0 && <div className="u2f-actions"><Link className="u2-secondary" to="/classes/new" data-header-action="primary">클래스 만들기</Link></div>}
+            </section>
+
+            <div className="u2f-cols">
+              <div className="u2f-main">
+                <section className="u2-card" aria-label="오늘 · 다가오는 일정">
+                  <div className="u2-section-head u2-row"><h2>오늘 · 다가오는 일정</h2><span className="u2-muted" style={{ fontSize: 12 }}>오늘 {today.length}건</span></div>
+                  {upcoming.length > 0 ? upcoming.map((c) => <Link key={c.id} className="u2-listrow" to={dashboardSessionPath(c)}><div className="u2-body"><h3>{c.title || '제목 없음'}{c.seq != null ? ` · ${c.seq}회차` : ''}</h3><p>{shortDay(c.scheduled_at)} · {timeRange(c.scheduled_at)} · 참여 {c.participant_count}명</p></div><small>›</small></Link>)
+                    : <p className="u2-empty">예정된 일정이 없어요</p>}
+                  {past.length > 0 && <details className="u2f-past"><summary>지난 회차 {past.length}건</summary>
+                    {past.map((c) => <Link key={c.id} className="u2-listrow" to={dashboardSessionPath(c)}><div className="u2-body"><h3>{c.title || '제목 없음'}{c.seq != null ? ` · ${c.seq}회차` : ''}</h3><p>{shortDay(c.scheduled_at)}</p></div><small>›</small></Link>)}
+                  </details>}
+                </section>
+              </div>
+              <div className="u2f-rail">
+                <section className="u2-card" aria-label="최근 대화"><div className="u2-section-head u2-row"><h2>최근 대화</h2><Link className="u2-textlink" to="/chat">전체 ›</Link></div>
+                  {recentChats.length > 0 ? recentChats.map((room) => <Link key={room.id} className="u2-listrow" to={`/chat/${room.id}`}><div className="u2-body"><h3>{room.display_name || room.peer_name || '내담자'}{(room.unread_count ?? 0) > 0 ? ` · ${room.unread_count}` : ''}</h3><p>{room.last_message?.content || '새로운 대화가 없어요'}</p></div><small>{relative(room.last_message_at ?? null)}</small></Link>) : <p className="u2-empty">대화가 없어요</p>}
+                </section>
+                <section className="u2-card" aria-label="새 알림"><div className="u2-section-head u2-row"><h2>새 알림</h2><Link className="u2-textlink" to="/notifications">전체 ›</Link></div>
+                  {unreadNotifs.length > 0 ? unreadNotifs.map((n) => <Link key={n.id} className="u2-listrow" to="/notifications"><div className="u2-body"><h3>{n.title}</h3>{n.body && <p>{n.body}</p>}</div><small>{relative(n.created_at)}</small></Link>) : <p className="u2-empty">새로운 알림이 없어요</p>}
+                </section>
+                <div className="u2f-actions"><Link className="u2-secondary" to="/upload-status" data-upload-status-shortcut>데이터 현황</Link><AiOnly><Link className="u2-secondary" to="/chat/lucy">루시 (AI) 브리핑</Link></AiOnly></div>
+              </div>
+            </div>
           </div>
         ) : null}
       </div>
