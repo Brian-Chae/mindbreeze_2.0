@@ -239,10 +239,11 @@ export default function LoginPage() {
       <div className="relative z-10 min-h-screen text-white">
         <header className="sticky top-0 z-30 border-b border-white/[0.08] bg-[rgba(20,0,30,0.55)] pt-[env(safe-area-inset-top)] backdrop-blur-[18px]">
           <div className="grid h-[52px] grid-cols-[44px_1fr_44px] items-center px-3">
-            <Link to="/" aria-label="Mind Breeze 홈으로 이동" className="flex h-11 w-11 items-center justify-center">
-              <img src="/mb-design/assets/logo_symbol_dark.svg" width={24} height={16} alt="" className="brightness-0 invert" />
+            <span aria-hidden="true" />
+            {/* 11/9 대표 지시: 왼쪽 로고 제거, 헤더 가운데에 (로고) MIND BREEZE 브랜드, '로그인' 제목은 이메일 위로 */}
+            <Link to="/" aria-label="Mind Breeze 홈으로 이동" className="flex items-center justify-center gap-2 text-[17px] font-bold tracking-[0.04em] text-white">
+              <img src="/mb-design/assets/logo_symbol_dark.svg" width={24} height={16} alt="" className="brightness-0 invert" />MIND BREEZE
             </Link>
-            <h1 className="text-center text-[17px] font-bold tracking-[-0.02em] text-white">{isAdmin ? '플랫폼 관리자 로그인' : '로그인'}</h1>
           </div>
           {!isAdmin && <div className="mx-auto w-full max-w-[400px] px-5 pb-3.5 pt-1">
             <div role="tablist" aria-label="로그인 유형" className="grid grid-cols-3 rounded-full bg-black/25 p-1">
@@ -255,6 +256,7 @@ export default function LoginPage() {
         </header>
         <div className="mx-auto w-full max-w-[520px] px-4 sm:px-6 pb-10 pt-[26px]">
           <section role={isAdmin ? undefined : 'tabpanel'} id={`login-panel-${loginRole}`} aria-labelledby={isAdmin ? undefined : `login-tab-${loginRole}`} aria-busy={busy} className={`flex flex-col gap-4 ${isClient && guestEntry ? 'pb-[calc(8.5rem+env(safe-area-inset-bottom))]' : ''}`}>
+            <h1 className="text-[22px] font-bold tracking-[-0.02em] text-white">{isAdmin ? '플랫폼 관리자 로그인' : '로그인'}</h1>
             {/* SDD-227: 회원 탭은 이메일 로그인을 위에, 간편 로그인(Google·Apple)을 아래에 둔다. */}
             {isClient && <>{emailForm}
               <p className="text-center text-sm text-white"><Link to="/forgot-password" className="text-white underline">비밀번호 찾기</Link><span aria-hidden="true" className="mx-2 text-white/60">·</span><Link to="/register?role=client" className="font-semibold text-white underline">회원가입</Link></p>
