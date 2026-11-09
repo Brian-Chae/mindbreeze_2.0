@@ -25,9 +25,7 @@ export function buildMemberNavItems(p: UiV2MemberSidebarProps, counselingOpen: b
     { to: '/app/chat', label: '대화', icon: ICONS.message, badge: p.chatBadge },
     { to: '/app/reports', label: '리포트', icon: ICONS.report, badge: p.reportBadge },
     { to: '/app/profile', label: '설정', icon: ICONS.settings, badge: 0 },
-    // 11/9 대표 지시: 설정 아래 가로선 → 플레이그라운드 · 알림 (코치 메뉴와 같은 구성)
-    { to: '/playground', label: '플레이그라운드', icon: ICONS.activity, badge: 0 },
-    { to: '/app/notifications', label: '알림', icon: ICONS.bell, badge: Math.max(p.notificationBadge, p.sessionBadge) },
+    // 11/9 대표 지시: 플레이그라운드·알림은 왼쪽 메뉴에서 제거(설정 카드·상단 종 아이콘으로 접근)
   ];
   return counselingOpen ? items : items.filter((item) => item.to !== '/app/counseling');
 }

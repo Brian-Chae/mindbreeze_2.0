@@ -10,11 +10,11 @@ const badges = { notificationBadge: 0, chatBadge: 0, reportBadge: 0, sessionBadg
 describe('회원 PC 사이드바', () => {
   it('라벨은 시안과 같이 대화, 항목 링크는 기존 회원 메뉴와 같다', () => {
     const items = buildMemberNavItems(badges, true);
-    expect(items.map((i) => i.label)).toEqual(['홈', '내 클래스', '내 상담', '대화', '리포트', '설정', '플레이그라운드', '알림']);
-    expect(items.map((i) => i.to)).toEqual(['/app', '/app/classes', '/app/counseling', '/app/chat', '/app/reports', '/app/profile', '/playground', '/app/notifications']);
+    expect(items.map((i) => i.label)).toEqual(['홈', '내 클래스', '내 상담', '대화', '리포트', '설정']);
+    expect(items.map((i) => i.to)).toEqual(['/app', '/app/classes', '/app/counseling', '/app/chat', '/app/reports', '/app/profile']);
   });
   it('상담 비공개면 내 상담 항목을 숨긴다', () => expect(buildMemberNavItems(badges, false).some((i) => i.to === '/app/counseling')).toBe(false));
-  it('알림 배지는 알림·초대 중 큰 값', () => expect(buildMemberNavItems({ ...badges, notificationBadge: 2, sessionBadge: 5 }, true).find((i) => i.to === '/app/notifications')?.badge).toBe(5));
+  it('플레이그라운드·알림은 왼쪽 메뉴에 없다(11/9)', () => expect(buildMemberNavItems(badges, true).some((i) => i.to === '/playground' || i.to === '/app/notifications')).toBe(false));
   it('회원 쉘만 새 사이드바를 쓰고 레거시 SidebarNav 는 수정하지 않았다', () => {
     expect(read('src/components/ui-v2/ui-v2-client-shell.tsx')).toContain('UiV2MemberSidebar');
     expect(read('src/components/layout/SidebarNav.tsx')).not.toContain('UiV2');
