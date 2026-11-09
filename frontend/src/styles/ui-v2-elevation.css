@@ -113,3 +113,6 @@ html.u2-coach :is(
 :is(html.u2-coach, .ui-v2) :is(.u2-notif-item, .u2-notif-prefs, .u2-notif-empty, .u2-notif-error) { background: #fff; border: 1px solid var(--u2-elev-line); box-shadow: var(--u2-elev-shadow); border-radius: 18px; }
 :is(html.u2-coach, .ui-v2) .u2-notif-empty { padding: 32px 24px; max-width: 880px; margin-left: auto; margin-right: auto; }
 :is(html.u2-coach, .ui-v2) .u2-notif-item[data-unread] { box-shadow: inset 3px 0 #5F0080, var(--u2-elev-shadow); }
+/* 11/9 회원 홈 모바일 — 빈 상태·카드 라운드(데스크톱 미디어쿼리 밖에서도 유지) */
+.ui-v2 .mh-home :is(.cs-read-state, .mh-legacy-state, .mh-upcoming, .mh-summary > button, .mh-track > .mc-card, .mc-grid > .mc-card, .mh-main > section, .mh-rail > section) { border-radius: 20px; overflow: hidden; }
+@media (max-width: 767px) { .ui-v2 .mh-home :is(.cs-read-state, .mh-legacy-state, .mh-upcoming, .mh-summary > button, .mh-track > .mc-card, .mc-grid > .mc-card, .mh-main > section, .mh-rail > section) { border-radius: 18px; } }
