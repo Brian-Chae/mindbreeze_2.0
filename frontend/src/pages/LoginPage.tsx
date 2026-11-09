@@ -256,7 +256,7 @@ export default function LoginPage() {
         </header>
         <div className="mx-auto w-full max-w-[520px] px-4 sm:px-6 pb-10 pt-[26px]">
           <section role={isAdmin ? undefined : 'tabpanel'} id={`login-panel-${loginRole}`} aria-labelledby={isAdmin ? undefined : `login-tab-${loginRole}`} aria-busy={busy} className={`flex flex-col gap-4 ${isClient && guestEntry ? 'pb-[calc(8.5rem+env(safe-area-inset-bottom))]' : ''}`}>
-            <h1 className="text-[22px] font-bold tracking-[-0.02em] text-white">{isAdmin ? '플랫폼 관리자 로그인' : '로그인'}</h1>
+            <h1 className="text-center text-[22px] font-bold tracking-[-0.02em] text-white">{isAdmin ? '플랫폼 관리자 로그인' : '로그인'}</h1>
             {/* SDD-227: 회원 탭은 이메일 로그인을 위에, 간편 로그인(Google·Apple)을 아래에 둔다. */}
             {isClient && <>{emailForm}
               <p className="text-center text-sm text-white"><Link to="/forgot-password" className="text-white underline">비밀번호 찾기</Link><span aria-hidden="true" className="mx-2 text-white/60">·</span><Link to="/register?role=client" className="font-semibold text-white underline">회원가입</Link></p>
