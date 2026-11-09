@@ -15,8 +15,12 @@ html.u2-coach .mb-page-header-with-overline { padding-top: 0; }
 
 /* SDD-321 C(11/9) — 레거시 본문(회원·데이터 센터) 래퍼를 다른 기관 화면과 같은 x범위로: 1200 상한·가운데 정렬 해제 */
 @media (min-width: 1024px) {
-  html.u2-coach .mobile-menu-swipe-page > .mx-auto.max-w-mb-content { max-width: none; margin-left: 0; margin-right: 0; }
-  html.u2-coach main.dc { max-width: none; margin: 0; background: transparent; }
+  /* 11/9 재수정: '>' 직계 선택자가 wide 래퍼 때문에 안 맞아 1200 가운데 정렬이 남았음 → 하위 선택자.
+     코치 D안 본문(.u2f: 셸 24 + 좌우 48, 최대 1600)과 같은 시작선(1440 기준 288→1353)으로 맞춘다. */
+  html.u2-coach .mobile-menu-swipe-page .mx-auto.max-w-mb-content,
+  html.u2-coach main.dc { max-width: 1600px; margin-left: 0; margin-right: 0; padding-left: 48px; padding-right: 48px; background: transparent; }
+  /* 회원 화면은 max-w-mb-content 래퍼가 2중이라 안쪽 래퍼의 여백은 0 (이중 48px 방지) */
+  html.u2-coach .mobile-menu-swipe-page .max-w-mb-content .mx-auto.max-w-mb-content { padding-left: 0; padding-right: 0; }
 }
 /* 데이터 센터: 상단 제목과 중복되는 내부 제목 블록(기관 관리자 · DATA CENTER / OO 데이터 센터)은 숨기고 설명 한 줄+권한 배지만 남긴다 */
 html.u2-coach main.dc .dc-heading { margin-bottom: 4px; }
