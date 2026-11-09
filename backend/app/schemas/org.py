@@ -214,6 +214,15 @@ class CounselorResponse(BaseModel):
     # SDD-082: 상담사 코드 검색용 + 개인 상담소(kind=individual) 소속 구분 배지용
     counselor_code: str | None = None
     has_personal_office: bool = False
+    # SDD-323: 구성원 관리 보강 필드(추가만, 기존 필드 유지)
+    is_primary_admin: bool = False
+    membership_status: Literal["active", "invited"] | None = None
+    account_status: Literal["active", "pending", "suspended"] | None = None
+    is_self: bool = False
+    class_count: int = 0
+    last_activity_at: str | None = None
+    allowed_actions: list[str] = Field(default_factory=list)
+    blocked_reasons: dict[str, str] = Field(default_factory=dict)
 
 
 class CounselorInviteRequest(BaseModel):
@@ -327,9 +336,20 @@ class CounselorActivityReport(BaseModel):
     created_at: str | None = None
 
 
+class CounselorActivityClass(BaseModel):
+    """SDD-323 — 이 기관 한정 담당 클래스 요약."""
+
+    id: str
+    name: str | None = None
+    status: str
+    member_count: int = 0
+
+
 class CounselorActivityResponse(BaseModel):
     sessions: list[CounselorActivitySession]
     reports: list[CounselorActivityReport]
+    classes: list[CounselorActivityClass] = Field(default_factory=list)
+    client_count: int = 0
 
 
 class OrganizationCounselorPatch(BaseModel):
@@ -339,3 +359,33 @@ class OrganizationCounselorPatch(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     reason: str | None = Field(default=None, min_length=1, max_length=2000)
     role: Literal["counselor", "org_admin"]
+
+
+class OrgCounselorRolePatch(BaseModel):
+    """SDD-323 A2 — 기관 구성원 역할 변경. 사유 필수(공백 불가)."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    role: Literal["counselor", "org_admin"]
+    reason: str | None = Field(default=None, max_length=2000)
+
+
+class OrgCounselorRemoveRequest(BaseModel):
+    """SDD-323 A3 — 소속 해지. 사유 필수. body 누락도 REASON_REQUIRED 로 정규화한다."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    reason: str | None = Field(default=None, max_length=2000)
+
+
+class PrimaryAdminTransferRequest(BaseModel):
+    """SDD-323 A5 — 대표 관리자 넘기기. If-Match 헤더(기관 version)와 함께 보낸다."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    target_user_id: str = Field(min_length=1, max_length=64)
+    expected_primary_admin_id: str = Field(min_length=1, max_length=64)
+    reason: str | None = Field(default=None, max_length=2000)
+
+
+class PrimaryAdminTransferResponse(BaseModel):
+    org_id: str
+    primary_admin_id: str
+    version: int

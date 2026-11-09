@@ -3,11 +3,12 @@
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, Response, status
 from redis.asyncio import Redis
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
+from app.core.api_error import ApiError
 from app.core.database import get_db
 from app.core.redis import get_redis
 from app.models.organization import Organization
@@ -23,39 +24,54 @@ from app.schemas.org import (
     JoinRequestUpdate,
     MembershipInviteAcceptRequest,
     MembershipInviteAcceptResponse,
-    OrganizationCounselorPatch,
+    OrgCounselorRemoveRequest,
+    OrgCounselorRolePatch,
     OrganizationPublicResponse,
     OrganizationSearchResult,
     OrgJoinRequestDetail,
     PasswordResetIssueRequest,
     PasswordResetIssueResponse,
+    PrimaryAdminTransferRequest,
+    PrimaryAdminTransferResponse,
 )
 from app.services import (
     admin_password_reset_service,
     counselor_info_service,
     membership_service,
+    org_management_service,
+    org_permission_service,
     org_service,
 )
 
 router = APIRouter(prefix="/org", tags=["org"])
 
 
-def _require_org_admin(db: Session, current_user: dict, org_id: str) -> None:
-    """본인 기관의 org_admin 만 통과. 아니면 403.
+def _require_org_admin(db: Session, current_user: dict, org_id: str, *, allow_platform: bool = False) -> str:
+    """본인 기관의 org_admin 만 통과. 아니면 403 `ORG_ADMIN_REQUIRED`. 행위자 역할을 반환한다.
 
     AUTHZ-02: User.org_id 미러(주 소속 1개)가 아니라 membership 을 판정 기준으로 쓴다.
-    다중 기관 상담사가 주 소속이 아닌 기관의 org_admin 인 경우에도 통과한다.
+    SDD-323: allow_platform=True 면 플랫폼 관리자도 통과(조회·초대·재초대). 가입 요청 처리·개인정보 수정은
+    기관 소속 관리자(대표/일반)만 허용한다(권한표 '—').
     """
-    if not membership_service.is_member(
-        db, current_user["id"], org_id, role="org_admin", status="active"
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="센터 관리자만 접근할 수 있습니다",
-        )
+    role = org_permission_service.resolve_actor_role(db, current_user, org_id)
+    if allow_platform:
+        org_permission_service.require_manager(role)
+    else:
+        org_permission_service.require_org_manager_only(role)
+    return role
 
 
-def _counselor_to_response(u, membership=None, *, has_personal_office: bool = False) -> CounselorResponse:
+def _request_id() -> str:
+    return str(uuid.uuid4())
+
+
+def _counselor_to_response(
+    u,
+    membership=None,
+    *,
+    has_personal_office: bool = False,
+    extras: dict | None = None,
+) -> CounselorResponse:
     """SDD-079: membership 이 주어지면 목록 상태는 membership 기준으로 표시한다.
 
     membership invited → "pending" (기존 FE 상태값 유지).
@@ -89,6 +105,11 @@ def _counselor_to_response(u, membership=None, *, has_personal_office: bool = Fa
         invite_type=invite_type,
         counselor_code=profile.counselor_code if profile else None,
         has_personal_office=has_personal_office,
+        membership_status=(
+            membership.status if membership is not None and membership.status in ("active", "invited") else None
+        ),
+        account_status=u.status if u.status in ("active", "pending", "suspended") else None,
+        **(extras or {}),
     )
 
 
@@ -159,7 +180,7 @@ async def org_join_requests(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """센터의 가입 요청 목록 — OrgAdmin 전용. membership 기반 (AUTHZ-02)."""
+    """센터의 가입 요청 목록 — 기관 소속 관리자(대표/일반) 전용. membership 기반 (AUTHZ-02)."""
     _require_org_admin(db, current_user, org_id)
     rows = org_service.list_org_join_requests(org_id, db)
     return [OrgJoinRequestDetail(**r) for r in rows]
@@ -199,7 +220,8 @@ async def handle_request(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """가입 신청 승인/거절 — OrgAdmin 전용."""
+    """가입 신청 승인/거절 — 기관 소속 관리자 전용. 거절은 사유 필수, 처리 완료 요청은 409."""
+    _require_org_admin(db, current_user, org_id)
     req = org_service.handle_join_request(
         req_id, org_id, current_user["id"], body.status, body.reason, db
     )
@@ -217,34 +239,81 @@ async def handle_request(
 @router.get("/{org_id}/counselors", response_model=list[CounselorResponse])
 async def list_counselors(
     org_id: str,
+    role: str | None = Query(default=None, pattern="^(counselor|org_admin)$"),
+    status_filter: str | None = Query(default=None, alias="status", pattern="^(active|invited|pending|suspended)$"),
+    response: Response = None,  # type: ignore[assignment]
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """센터 소속 상담사 목록 — OrgAdmin 전용. membership 기반 (SDD-079)."""
-    _require_org_admin(db, current_user, org_id)
-    rows = org_service.get_counselors(org_id, db)
-    # SDD-082: 개인 상담소(kind=individual) 소속 여부를 1쿼리로 계산해 배지로 구분한다
-    personal_owner_ids: set = set()
-    if rows:
-        from app.models.user_org_membership import UserOrgMembership
+    """센터 소속 구성원 목록 — 관리자(대표/일반)·플랫폼 관리자. membership 기반 (SDD-079/323).
 
-        personal_owner_ids = {
-            row[0]
-            for row in (
-                db.query(UserOrgMembership.user_id)
-                .join(Organization, Organization.id == UserOrgMembership.org_id)
-                .filter(
-                    UserOrgMembership.user_id.in_([u.id for u, _ in rows]),
-                    UserOrgMembership.status == "active",
-                    Organization.kind == "individual",
-                )
-                .all()
+    SDD-323: 소속/계정 상태 분리, 대표·본인 표시, 기관 범위 class_count·last_activity_at(일괄 집계),
+    allowed_actions/blocked_reasons(서버 판정 단일 출처)를 함께 내려준다. 정지/재활성은 포함하지 않는다.
+    """
+    actor_role = _require_org_admin(db, current_user, org_id, allow_platform=True)
+    rows = org_service.get_counselors(org_id, db, role=role, status_filter=status_filter)
+    org = org_management_service.get_active_org_readonly(org_id, db)
+    # 대표 이전(If-Match)에 쓸 기관 버전 — FE 가 이 값을 그대로 If-Match 로 보낸다
+    response.headers["ETag"] = f'"{org.version}"'
+    if not rows:
+        return []
+    from app.models.user_org_membership import UserOrgMembership
+
+    user_ids = [u.id for u, _ in rows]
+    # SDD-082: 개인 상담소(kind=individual) 소속 여부를 1쿼리로 계산해 배지로 구분한다
+    personal_owner_ids = {
+        row[0]
+        for row in (
+            db.query(UserOrgMembership.user_id)
+            .join(Organization, Organization.id == UserOrgMembership.org_id)
+            .filter(
+                UserOrgMembership.user_id.in_(user_ids),
+                UserOrgMembership.status == "active",
+                Organization.kind == "individual",
             )
-        }
-    return [
-        _counselor_to_response(u, m, has_personal_office=u.id in personal_owner_ids)
-        for u, m in rows
-    ]
+            .all()
+        )
+    }
+    class_counts, last_seen = org_service.aggregate_member_stats(org, user_ids, db)
+    busy_ids = org_management_service.find_members_with_active_work(db, org, user_ids)
+    active_admin_count = sum(
+        1 for u, m in rows if m.role == "org_admin" and m.status == "active" and u.status == "active"
+    )
+    me = uuid.UUID(current_user["id"])
+    out = []
+    for u, m in rows:
+        is_admin_row = m.role == "org_admin"
+        allowed, blocked = org_permission_service.compute_row_actions(
+            actor_role,
+            target_role=m.role,
+            membership_status=m.status,
+            account_status=u.status,
+            is_self=u.id == me,
+            is_primary_target=u.id == org.primary_admin_id,
+            org_kind=org.kind,
+            is_individual_owner=org.kind == "individual" and org.owner_user_id == u.id,
+            is_last_active_admin=(
+                is_admin_row and m.status == "active" and u.status == "active" and active_admin_count <= 1
+            ),
+            has_active_work=u.id in busy_ids,
+        )
+        seen = last_seen.get(u.id)
+        out.append(
+            _counselor_to_response(
+                u,
+                m,
+                has_personal_office=u.id in personal_owner_ids,
+                extras={
+                    "is_primary_admin": u.id == org.primary_admin_id,
+                    "is_self": u.id == me,
+                    "class_count": int(class_counts.get(u.id, 0)),
+                    "last_activity_at": seen.isoformat() if seen else None,
+                    "allowed_actions": allowed,
+                    "blocked_reasons": blocked,
+                },
+            )
+        )
+    return out
 
 
 @router.post(
@@ -263,8 +332,9 @@ async def invite_counselor(
 
     신규 이메일은 pending 계정 + 초대 메일, 기존 상담사는 소속 추가 초대 메일.
     응답 형태는 두 경우 동일 — 계정 존재 여부를 문구로 노출하지 않는다.
+    SDD-323: 대표·일반 관리자·플랫폼 관리자 모두 코치/관리자 초대 가능.
     """
-    _require_org_admin(db, current_user, org_id)
+    _require_org_admin(db, current_user, org_id, allow_platform=True)
     user, invite_sent = await org_service.invite_counselor(
         org_id, req.name, str(req.email), redis, db, role=req.role
     )
@@ -285,8 +355,11 @@ async def resend_counselor_invite(
     db: Session = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
-    """상담사 초대 재발송 — OrgAdmin 전용. membership invited 상태만 허용 (SDD-079)."""
-    _require_org_admin(db, current_user, org_id)
+    """상담사 초대 재발송 — 관리자(대표/일반)·플랫폼. membership invited 상태만 허용 (SDD-079).
+
+    쿨다운 중이면 429 `INVITE_COOLDOWN` + `retry_after_sec`.
+    """
+    _require_org_admin(db, current_user, org_id, allow_platform=True)
     user, invite_sent = await org_service.resend_counselor_invite(
         org_id, user_id, redis, db
     )
@@ -300,21 +373,22 @@ async def resend_counselor_invite(
 async def update_counselor(
     org_id: str,
     user_id: str,
-    req: OrganizationCounselorPatch,
+    req: OrgCounselorRolePatch,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """상담사 권한 조정 — OrgAdmin 전용 (AUTHZ-03).
+    """구성원 역할 변경(승격·회수) — **대표 관리자(또는 플랫폼 관리자)만** (SDD-323).
 
-    body: {"role": "counselor"|"org_admin", "reason": "..."} — 사유 필수.
-    org_management_service.change_counselor 로 위임해 마지막 활성 기관 관리자
-    강등을 방지하고 VerificationAudit 를 기록한다.
+    body: {"role": "counselor"|"org_admin", "reason": "..."} — 사유 필수(422 REASON_REQUIRED).
+    일반 관리자는 403 `PRIMARY_ADMIN_REQUIRED`. 자기 자신 409, 대표 409, 마지막 관리자 409.
     """
-    _require_org_admin(db, current_user, org_id)
+    role = org_permission_service.resolve_actor_role(db, current_user, org_id)
+    org_permission_service.require_owner(role)
     user = org_service.update_counselor_role(
-        org_id, user_id, req.role, current_user["id"], db, reason=req.reason
+        org_id, user_id, req.role, current_user["id"], db, reason=req.reason, request_id=_request_id()
     )
-    return _counselor_to_response(user)
+    membership = membership_service.get_membership(db, user.id, org_id)
+    return _counselor_to_response(user, membership)
 
 
 # ---------------------------------------------------------------------------
@@ -431,40 +505,40 @@ async def reset_org_counselor_password(
 # ---------------------------------------------------------------------------
 
 
+def _status_platform_only() -> ApiError:
+    return ApiError(
+        status.HTTP_403_FORBIDDEN,
+        "ORG_STATUS_PLATFORM_ONLY",
+        "계정 정지·재활성은 본인 또는 플랫폼 관리자만 처리할 수 있습니다",
+    )
+
+
 @router.post("/{org_id}/counselors/{user_id}/suspend", response_model=CounselorStatusResponse)
 async def suspend_org_counselor(
     org_id: str,
     user_id: str,
-    req: CounselorStatusChangeRequest,
-    current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    req: CounselorStatusChangeRequest,  # noqa: ARG001 — 본문은 검증하지 않고 항상 거절한다
+    current_user: dict = Depends(get_current_user),  # noqa: ARG001
+    db: Session = Depends(get_db),  # noqa: ARG001
 ):
-    """소속 상담사 비활성화 — OrgAdmin 전용. 사유 필수 + 감사 + 대상자 알림.
+    """SDD-323: 기관 관리자(대표 포함)는 계정 정지 불가 — 항상 403 `ORG_STATUS_PLATFORM_ONLY`.
 
-    계정 상태만 suspended 로 변경한다 (데이터 삭제 아님). 정지된 계정은 기존
-    suspended 로직으로 로그인이 차단된다. counselor 만 대상 — 자기 자신·org_admin 은 403.
+    정지는 플랫폼 관리자(`/admin/users/{id}/suspend`)만 수행한다. 서비스 함수
+    (`org_service.set_counselor_suspension`)는 플랫폼 경로 재사용을 위해 남겨 두고 라우터 허용만 제거했다.
     """
-    _require_org_admin(db, current_user, org_id)
-    user = org_service.set_counselor_suspension(
-        org_id, user_id, req.reason, current_user["id"], suspend=True, db=db
-    )
-    return CounselorStatusResponse(id=str(user.id), status=user.status)
+    raise _status_platform_only()
 
 
 @router.post("/{org_id}/counselors/{user_id}/unsuspend", response_model=CounselorStatusResponse)
 async def unsuspend_org_counselor(
     org_id: str,
     user_id: str,
-    req: CounselorStatusChangeRequest,
-    current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    req: CounselorStatusChangeRequest,  # noqa: ARG001
+    current_user: dict = Depends(get_current_user),  # noqa: ARG001
+    db: Session = Depends(get_db),  # noqa: ARG001
 ):
-    """소속 상담사 활성화(정지 해제) — OrgAdmin 전용. 사유 필수 + 감사 + 대상자 알림."""
-    _require_org_admin(db, current_user, org_id)
-    user = org_service.set_counselor_suspension(
-        org_id, user_id, req.reason, current_user["id"], suspend=False, db=db
-    )
-    return CounselorStatusResponse(id=str(user.id), status=user.status)
+    """SDD-323: 재활성도 기관 관리자 전원 403 `ORG_STATUS_PLATFORM_ONLY`."""
+    raise _status_platform_only()
 
 
 @router.get("/{org_id}/counselors/{user_id}/activity", response_model=CounselorActivityResponse)
@@ -474,8 +548,8 @@ async def get_org_counselor_activity(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """소속 상담사 최근 이력 — OrgAdmin 전용. 세션/리포트 메타데이터만 (내용 미노출)."""
-    _require_org_admin(db, current_user, org_id)
+    """소속 상담사 최근 이력 — 관리자(대표/일반)·플랫폼. 이 기관 범위 세션/리포트 메타데이터 + 담당 클래스 요약(내용 미노출)."""
+    _require_org_admin(db, current_user, org_id, allow_platform=True)
     data = org_service.get_counselor_activity(org_id, user_id, db)
     return CounselorActivityResponse(**data)
 
@@ -501,9 +575,47 @@ async def accept_membership_invite(
 async def delete_counselor(
     org_id: str,
     user_id: str,
+    req: OrgCounselorRemoveRequest | None = Body(default=None),
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """상담사 소속 해제 — OrgAdmin 전용."""
-    org_service.remove_counselor(org_id, user_id, current_user["id"], db)
+    """구성원 소속 해지 — 사유(body `reason`) 필수 (SDD-323).
+
+    코치 대상=관리자 누구나, 관리자 대상=대표/플랫폼만. 자기 자신·대표는 항상 409.
+    계정 삭제가 아니라 소속 해제이며, 개인상담소 복귀·진행 세션/활성 연결 가드는 기존 로직을 공유한다.
+    """
+    role = org_permission_service.resolve_actor_role(db, current_user, org_id)
+    org_permission_service.require_manager(role)
+    org_service.remove_counselor(
+        org_id, user_id, current_user["id"], db,
+        reason=req.reason if req is not None else None, request_id=_request_id(),
+    )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.put("/{org_id}/primary-admin", response_model=PrimaryAdminTransferResponse)
+async def transfer_primary_admin(
+    org_id: str,
+    req: PrimaryAdminTransferRequest,
+    if_match: str | None = Header(default=None),
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """대표 관리자 넘기기 — **현 대표만** (SDD-323 A5).
+
+    헤더 `If-Match: <org.version>` 필수(428/412), `expected_primary_admin_id` 불일치 409 `PRIMARY_CHANGED`.
+    넘긴 뒤 이전 대표는 일반 관리자(org_admin)로 남는다. 플랫폼 관리자용 경로는 이번 범위에서 제외.
+    """
+    role = org_permission_service.resolve_actor_role(db, current_user, org_id)
+    org_permission_service.require_manager(role)
+    if role != org_permission_service.PRIMARY:
+        raise ApiError(403, "PRIMARY_ADMIN_REQUIRED", "대표 관리자만 수행할 수 있는 작업입니다")
+    org = org_management_service.transfer_primary_admin(
+        db, org_id, uuid.UUID(current_user["id"]),
+        target_user_id=req.target_user_id,
+        expected_primary_admin_id=req.expected_primary_admin_id,
+        reason=req.reason, if_match=if_match, request_id=_request_id(),
+    )
+    return PrimaryAdminTransferResponse(
+        org_id=str(org.id), primary_admin_id=str(org.primary_admin_id), version=org.version
+    )

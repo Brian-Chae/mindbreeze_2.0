@@ -56,8 +56,11 @@ def test_org_changes_only_notify_active_members(event_data):
 
 def test_role_change_and_noop(event_data):
     db, org, users, events = event_data
+    # SDD-323: 승격·회수는 대표 관리자만 가능 → users[1] 을 대표로 지정한다
+    org.primary_admin_id = users[1].id
+    db.commit()
     for _ in range(2):
-        org_service.update_counselor_role(str(org.id), str(users[2].id), "org_admin", str(users[1].id), db)
+        org_service.update_counselor_role(str(org.id), str(users[2].id), "org_admin", str(users[1].id), db, reason="운영 조정")
     assert [(e, uid) for e, uid, _ in events] == [("organization_role_changed", users[2].id)]
     assert events[0][2]["extra"]["target_type"] == "self_profile"
 

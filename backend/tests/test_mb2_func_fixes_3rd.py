@@ -113,7 +113,8 @@ def test_admin_verify_reject_recalculates_tier(client, monkeypatch):
 
 
 # ── MB2-ORG-ROLE-REASON: 역할 변경 사유 선택 ───────────────────────────────
-def test_org_role_change_without_reason_succeeds(client, monkeypatch, redis):
+def test_org_role_change_without_reason_is_rejected(client, monkeypatch, redis):
+    """SDD-323: 역할 변경은 사유 필수 — 누락 시 422 REASON_REQUIRED, 사유가 있으면 대표가 승격 가능."""
     from tests.test_sdd082_org_counselor_management import _invite_and_activate
     from tests.test_sdd017_counselor_invite import _make_org_admin
 
@@ -122,12 +123,10 @@ def test_org_role_change_without_reason_succeeds(client, monkeypatch, redis):
     )
     counselor = _invite_and_activate(client, monkeypatch, ctx, "role-nr-c@test.com", redis=redis)
 
-    # 프론트(updateCounselor)는 reason 없이 role 만 전송한다.
-    res = client.put(
-        f"/api/v1/org/{ctx['org_id']}/counselors/{counselor['id']}",
-        json={"role": "org_admin"},
-        headers=ctx["h"],
-    )
+    url = f"/api/v1/org/{ctx['org_id']}/counselors/{counselor['id']}"
+    res = client.put(url, json={"role": "org_admin"}, headers=ctx["h"])
+    assert res.status_code == 422 and res.json()["code"] == "REASON_REQUIRED"
+    res = client.put(url, json={"role": "org_admin", "reason": "운영 확대"}, headers=ctx["h"])
     assert res.status_code == 200, res.text
     assert res.json()["role"] == "org_admin"
 
