@@ -13,7 +13,7 @@ from app.models.org_join_request import OrganizationJoinRequest
 from app.models.user import User
 from app.schemas.org import OrganizationCreate
 from app.services import code_service, membership_service, onboarding_service
-from app.services.org_management_service import require_active_org
+from app.services.org_management_service import get_active_org_readonly, require_active_org
 
 
 def validate_biz_number(biz_number: str) -> bool:
@@ -245,7 +245,7 @@ def list_my_join_requests(user_id: str, db: Session) -> list[dict]:
 
 def list_org_join_requests(org_id: str, db: Session) -> list[dict]:
     """센터의 가입 신청 목록 — OrgAdmin 전용."""
-    require_active_org(org_id, db)
+    get_active_org_readonly(org_id, db)
     rows = (
         db.query(OrganizationJoinRequest, User, Organization)
         .join(User, User.id == OrganizationJoinRequest.user_id)
@@ -355,7 +355,7 @@ def get_counselors(org_id: str, db: Session) -> list[tuple[User, "UserOrgMembers
     """
     from app.models.user_org_membership import UserOrgMembership
 
-    require_active_org(org_id, db)
+    get_active_org_readonly(org_id, db)
     return (
         db.query(User, UserOrgMembership)
         .join(UserOrgMembership, UserOrgMembership.user_id == User.id)
@@ -489,7 +489,7 @@ def get_counselor_activity(org_id: str, user_id: str, db: Session, *, limit: int
     from app.models.session import Session as SessionModel
     from app.models.session import SessionParticipant
 
-    require_active_org(org_id, db)
+    get_active_org_readonly(org_id, db)
     target = _get_org_counselor(org_id, user_id, db)
 
     sessions = (

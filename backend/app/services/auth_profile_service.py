@@ -6,6 +6,14 @@ from app.schemas.auth import UserResponse
 def to_user_response(user: User) -> UserResponse:
     response = UserResponse.model_validate(user)
     response.counselor_code = user.counselor_code
+    if user.role == "org_admin" and user.org_id is not None:
+        from sqlalchemy.orm import object_session
+
+        from app.models.organization import Organization
+
+        db = object_session(user)
+        org = db.get(Organization, user.org_id) if db is not None else None
+        response.org_code = org.org_code if org else None
     if user.role == "client":
         profile = user.client_profile
         response.gender = profile.gender if profile else None
