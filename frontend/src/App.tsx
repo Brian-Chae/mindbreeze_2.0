@@ -160,7 +160,7 @@ function buildLoginRedirect(pathname: string, search: string): string {
 /** SDD-320 후속: 플래그 on + 코치(counselor)일 때만 D안 화면. 그 밖의 역할·운영 빌드는 기존 화면. */
 function CoachAwareSettings() {
   const role = useAuthStore((s) => s.user?.role);
-  if (import.meta.env.VITE_UI_V2 === 'true' && role === 'counselor') return <Suspense fallback={null}><CoachUiV2SettingsPage /></Suspense>;
+  if (import.meta.env.VITE_UI_V2 === 'true' && (role === 'counselor' || role === 'org_admin')) return <Suspense fallback={null}><CoachUiV2SettingsPage /></Suspense>;
   return <SettingsPage />;
 }
 function CoachAwareDashboard() {
@@ -168,14 +168,15 @@ function CoachAwareDashboard() {
   const useV2 = import.meta.env.VITE_UI_V2 === 'true' && role === 'counselor';
   return useV2 ? <Suspense fallback={null}><CoachUiV2HomePage /></Suspense> : <LegacyDashboardPage />;
 }
-function CoachAwareList({ V2, Legacy }: { V2: ComponentType; Legacy: ComponentType }) {
+function CoachAwareList({ V2, Legacy, orgLegacy = false }: { V2: ComponentType; Legacy: ComponentType; orgLegacy?: boolean }) {
   const role = useAuthStore((s) => s.user?.role);
-  const useV2 = import.meta.env.VITE_UI_V2 === 'true' && role === 'counselor';
+  // SDD-321 기관 정합: 기관관리자도 코치와 같은 목록·상세 화면 부품을 쓴다.
+  const useV2 = import.meta.env.VITE_UI_V2 === 'true' && (role === 'counselor' || (role === 'org_admin' && !orgLegacy));
   return useV2 ? <Suspense fallback={null}><V2 /></Suspense> : <Suspense fallback={null}><Legacy /></Suspense>;
 }
 function CoachAwareChat({ Legacy }: { Legacy: () => ReactElement }) {
   const role = useAuthStore((s) => s.user?.role);
-  if (import.meta.env.VITE_UI_V2 === 'true' && role === 'counselor') return <Suspense fallback={null}><CoachUiV2ChatPage /></Suspense>;
+  if (import.meta.env.VITE_UI_V2 === 'true' && (role === 'counselor' || role === 'org_admin')) return <Suspense fallback={null}><CoachUiV2ChatPage /></Suspense>;
   return <Legacy />;
 }
 
@@ -290,7 +291,7 @@ const router = createBrowserRouter(
         <Route path="/onboarding/counselor" element={<RoleGuard role="counselor" onMismatch="notice"><CounselorOnboardingPage /></RoleGuard>} />
         <Route path="/onboarding/client" element={<RoleGuard role="client" onMismatch="notice"><ClientOnboardingPage /></RoleGuard>} />
         <Route path="/onboarding/client/essentials" element={<RoleGuard role="client" onMismatch="notice"><ClientEssentialsPage /></RoleGuard>} />
-        <Route path="/clients" element={<RoleGuard role={['counselor', 'org_admin']}><CoachAwareList V2={CoachUiV2ClientsPage} Legacy={LegacyClientsPage} /></RoleGuard>} />
+        <Route path="/clients" element={<RoleGuard role={['counselor', 'org_admin']}><CoachAwareList V2={CoachUiV2ClientsPage} Legacy={LegacyClientsPage} orgLegacy /></RoleGuard>} />
         <Route path="/clients/invite" element={<RoleGuard role={['counselor', 'org_admin']}><ClientInvitePage /></RoleGuard>} />
         <Route path="/clients/:id" element={<RoleGuard role={['counselor', 'org_admin']}><ClientProfilePage /></RoleGuard>} />
         <Route path="/invite/:token" element={<InviteLandingPage />} />

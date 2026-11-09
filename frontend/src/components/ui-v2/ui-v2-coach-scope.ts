@@ -6,6 +6,7 @@ import '../../styles/ui-v2-brand.css';
 import '../../styles/ui-v2-pc.css';
 import '../../styles/ui-v2-mid.css';
 import '../../styles/ui-v2-coach-live.css';
+import '../../styles/ui-v2-org-side.css';
 import { useAuthStore } from '../../stores/authStore';
 import { attachCoachCompactTitle, resetCoachCompactTitle } from './ui-v2-coach-compact-title';
 import { attachCoachSidebarCode, syncCoachSidebarCode } from './ui-v2-coach-sidebar-code';
@@ -33,8 +34,23 @@ export function isCoachScopePath(pathname: string): boolean {
   return INCLUDED.test(path);
 }
 
+/** SDD-321 기관 정합(11/9): 기관관리자(org_admin)에게도 코치와 같은 셸·스킨을 적용하는 경로. 기관 홈(/dashboard/org)·코치 관리·데이터 센터를 포함한다. */
+const ORG_INCLUDED = /^\/(dashboard\/org|classes|clients|reports|counseling|upload-status|chat|settings|notifications|playground|profile\/professional|credentials|org\/(counselors|data-center))(\/|$)/;
+const ORG_EXCLUDED = [/^\/sessions\//, /^\/classes\/now(\/|$)/, /^\/reports\/sample(\/|$)/, /^\/report-view/];
+export function isOrgScopePath(pathname: string): boolean {
+  const path = pathname.replace(/\/+$/, '') || '/';
+  if (ORG_EXCLUDED.some((re) => re.test(path))) return false;
+  return ORG_INCLUDED.test(path);
+}
+
 export function shouldApplyCoachScope(role: string | null | undefined, pathname: string): boolean {
+  if (role === 'org_admin') return isOrgScopePath(pathname);
   return role === 'counselor' && isCoachScopePath(pathname);
+}
+
+/** 코치 D안 화면(홈 제외)을 그대로 쓰는 역할. 기관관리자도 같은 화면 부품을 쓴다. */
+export function isCoachUiRole(role: string | null | undefined): boolean {
+  return role === 'counselor' || role === 'org_admin';
 }
 
 interface RouterLike {

@@ -164,3 +164,7 @@
 .ui-v2 .u2-hero--nature .u2-org-code strong{color:#FFFFFF;text-shadow:0 1px 8px #25103899}
 .ui-v2 .u2-hero--nature .u2-org-code p,.ui-v2 .u2-hero--nature .u2-org-msg{color:#E5D3EE}
 .ui-v2 .u2-hero--nature .u2-btn-sm{background:#FFFFFF;color:#5F0080}
+
+/* 기관 화면 본문: 코치 래퍼(.u2f)를 그대로 쓰므로 별도 폭 규칙 없음. 표 카드는 래퍼 폭을 채운다. */
+.ui-v2.u2f-org .u2-org-stack>*+*{margin-top:22px}
+.ui-v2.u2f-org .u2-org-section-head:first-child{margin-top:0}

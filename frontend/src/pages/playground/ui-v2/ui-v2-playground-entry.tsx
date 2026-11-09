@@ -5,7 +5,7 @@ import { UiV2CoachPlaygroundPage } from './ui-v2-coach-playground-page';
 
 export function UiV2PlaygroundEntry() {
   const role = useAuthStore((s) => s.user?.role);
-  if (role === 'counselor') return <UiV2CoachPlaygroundPage />;
+  if (role === 'counselor' || role === 'org_admin') return <UiV2CoachPlaygroundPage />;
   // 11/9 대표 지시: 회원도 ui-v2 회원 셸로(내부 측정 패널은 동일)
   if (role === 'client') return <UiV2CoachPlaygroundPage member />;
   return <PlaygroundPage />;
