@@ -61,7 +61,9 @@ def test_pdf_requires_host_counselor_and_approval(client):
     other_counselor = User(id=uuid4(), email="pdf-other-sdd217@example.com", password_hash="unused",
                            name="다른 PDF 지도사", role="counselor", status="active")
     db.add(other_counselor)
-    db.flush()
+    # SDD-324: 상세 조회가 더 이상 읽음 커밋을 하지 않으므로, 시험이 만든 계정을 명시적으로 커밋한다
+    #   (이전에는 첫 조회의 is_read 커밋이 같은 연결의 미커밋 계정 행까지 함께 커밋해 줬다).
+    db.commit()
     try:
         path = f"/api/v1/reports/{report.id}/pdf"
         app.dependency_overrides[get_current_user] = lambda: {"id": str(session.host_id), "role": "counselor"}

@@ -496,6 +496,126 @@ def member_classes(db: DBSession, me: UUID, client_ids: list[UUID]) -> dict[UUID
     return out
 
 
+# ───────────────────────── 요약 집계 (SDD-324) ─────────────────────────
+
+# /clients?filter= 로 허용하는 값 — 같은 이름의 요약 집합과 1:1.
+SUMMARY_FILTERS = ("inactive_14d", "never_attended", "week_attended", "report_unread")
+
+
+def kst_week_start(now: datetime) -> datetime:
+    """이번 주 KST 월요일 00:00 (UTC aware)."""
+    local = now.astimezone(KST)
+    monday = (local - timedelta(days=local.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+    return monday.astimezone(timezone.utc)
+
+
+def _population_ids(db: DBSession, me: UUID) -> list[UUID]:
+    """목록과 같은 모집단(본인 active 연결 ∪ 기관관리자 기관 회원) 고유 id."""
+    orgs = admin_org_ids(db, me)
+    own_ids = db.query(ClientCounselorLink.client_id).filter(
+        ClientCounselorLink.counselor_id == me, ClientCounselorLink.status == "active"
+    )
+    _members, org_ids_set = org_scope_ids(db, orgs) if orgs else (set(), set())
+    population = User.id.in_(own_ids)
+    if org_ids_set:
+        population = or_(population, User.id.in_(org_ids_set))
+    return [uid for (uid,) in db.query(User.id).filter(population).all()]
+
+
+def _summary_sets(db: DBSession, me: UUID, ids: list[UUID], now: datetime | None = None) -> dict[str, set[UUID]]:
+    """요약 항목별 회원 id 집합. 쿼리 수는 회원 수와 무관하다(이벤트·연결·리포트 각 일정 횟수).
+
+    - week_attended: 이번 주(KST 월 00:00~now) session 이벤트(= 실제 참여: 취소·결석·예정 제외)가 있는 회원.
+    - inactive_14d: 연결 14일 이상 경과 + 최근 14일 session 이벤트 없음. never_attended 는 그중 참여 이력이 전혀 없는 회원.
+    - report_unread: 승인(completed)된 회원용 리포트 중 미열람 ≥1건.
+    - attended_30d / band_worn_30d: 최근 30일 참여 회원 / 그중 유효 측정 기록이 있는 회원.
+    """
+    now = _aware(now) or datetime.now(timezone.utc)
+    empty: dict[str, set[UUID]] = {
+        k: set() for k in (*SUMMARY_FILTERS, "active_7d", "active_30d", "attended_30d", "band_worn_30d")
+    }
+    if not ids:
+        return empty
+    id_set = set(ids)
+    events = collect_events(db, me, ids)
+    week_start = kst_week_start(now)
+    since7, since14, since30 = now - timedelta(days=7), now - timedelta(days=14), now - timedelta(days=30)
+    ever_session: set[UUID] = set()
+    recent14: set[UUID] = set()
+    for e in events:
+        cid, at = e["client_id"], e["_at"]
+        if cid not in id_set or at > now:
+            continue
+        if at >= since7:
+            empty["active_7d"].add(cid)
+        if at >= since30:
+            empty["active_30d"].add(cid)
+        if e["type"] == "session":
+            ever_session.add(cid)
+            if at >= week_start:
+                empty["week_attended"].add(cid)
+            if at >= since14:
+                recent14.add(cid)
+            if at >= since30:
+                empty["attended_30d"].add(cid)
+        elif e["type"] == "measurement" and at >= since30:
+            empty["band_worn_30d"].add(cid)
+    empty["band_worn_30d"] &= empty["attended_30d"]
+
+    starts: dict[UUID, datetime] = {}
+    for cid, matched in (
+        db.query(ClientCounselorLink.client_id, ClientCounselorLink.matched_at)
+        .filter(ClientCounselorLink.client_id.in_(ids), ClientCounselorLink.status == "active")
+        .all()
+    ):
+        at = _aware(matched)
+        if at is not None and (cid not in starts or at < starts[cid]):
+            starts[cid] = at
+    for cid, created in db.query(User.id, User.created_at).filter(User.id.in_(ids)).all():
+        if cid not in starts and _aware(created) is not None:
+            starts[cid] = _aware(created)
+    for cid in id_set:
+        began = starts.get(cid)
+        if began is not None and began <= since14 and cid not in recent14:
+            empty["inactive_14d"].add(cid)
+            if cid not in ever_session:
+                empty["never_attended"].add(cid)
+
+    parts, _sessions, _admin_only = _participant_rows(db, me, ids)
+    owner = {p.id: p.user_id for p in parts}
+    if owner:
+        unread = (
+            db.query(Report.participant_id)
+            .filter(
+                Report.participant_id.in_(list(owner.keys())),
+                Report.type == "client",
+                Report.status == "completed",
+                Report.is_read.is_(False),
+            )
+            .all()
+        )
+        empty["report_unread"] = {owner[pid] for (pid,) in unread if pid in owner}
+    return empty
+
+
+def client_summary(db: DBSession, counselor_id: str, now: datetime | None = None) -> dict:
+    """회원 관리 상단 요약. 검색·필터와 무관한 전체 조회 범위 집계(건수만, 비율·점수 없음)."""
+    me = _uuid(counselor_id)
+    ids = _population_ids(db, me)
+    sets = _summary_sets(db, me, ids, now)
+    return {
+        "total": len(ids),
+        "active_7d": len(sets["active_7d"]),
+        "active_30d": len(sets["active_30d"]),
+        "week_attended": len(sets["week_attended"]),
+        "inactive_14d": len(sets["inactive_14d"]),
+        "never_attended": len(sets["never_attended"]),
+        "report_unread_members": len(sets["report_unread"]),
+        "band_worn_members": len(sets["band_worn_30d"]),
+        "attended_members": len(sets["attended_30d"]),
+    }
+
+
 # ───────────────────────── 목록 ─────────────────────────
 
 def list_clients_overview(
@@ -508,7 +628,11 @@ def list_clients_overview(
     db: DBSession,
     counselor_filter_id: str | None = None,
     member_type: str | None = None,
+    summary_filter: str | None = None,
+    now: datetime | None = None,
 ) -> dict:
+    if summary_filter is not None and summary_filter not in SUMMARY_FILTERS:
+        raise HTTPException(status_code=422, detail="알 수 없는 필터입니다")
     me = _uuid(counselor_id)
     orgs = admin_org_ids(db, me)
     own_ids = db.query(ClientCounselorLink.client_id).filter(
@@ -569,6 +693,10 @@ def list_clients_overview(
 
     if class_id:
         rows = [(u, p) for u, p in rows if any(c["id"] == class_id for c in classes.get(u.id, []))]
+
+    if summary_filter:
+        wanted = _summary_sets(db, me, [u.id for u, _ in rows], now)[summary_filter]
+        rows = [(u, p) for u, p in rows if u.id in wanted]
 
     acts = last_activity_map(db, me, [u.id for u, _ in rows])
     if active_within_days:

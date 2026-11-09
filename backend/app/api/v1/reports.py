@@ -95,6 +95,15 @@ def badge_counts(
     return report_service.count_reports_badges(current_user["id"], db)
 
 
+@router.get("/summary")
+def report_summary(
+    current_user: dict = Depends(require_roles("counselor", "org_admin")),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-324: 리포트 관리 상단 요약(상태 탭·검색과 무관한 전역 건수)."""
+    return report_hierarchy_service.report_summary(current_user["id"], db)
+
+
 @router.get("/hierarchy")
 def hierarchy(
     q: str | None = Query(default=None, max_length=100),

@@ -1,7 +1,7 @@
 // SDD-253 — 클래스 > 회차 > 회원 > 리포트 계층 조회 API
 import { apiClient } from './client';
 
-export type HierarchyTab = 'all' | 'needs_review' | 'failed';
+export type HierarchyTab = 'all' | 'needs_review' | 'failed' | 'generation_failed' | 'created_today' | 'member_unread';
 
 export interface HierarchyDoc {
   report_id: string;
@@ -58,7 +58,11 @@ export interface HierarchyGroup {
 }
 
 export interface HierarchyResponse {
-  summary: { needs_review: number; failed_delivery: number; generation_failed: number; total_sessions: number; total_members?: number };
+  summary: {
+    needs_review: number; failed_delivery: number; generation_failed: number; total_sessions: number; total_members?: number;
+    /** SDD-324 신규 집계(서버 계약 확정 전 가정 이름) — 없으면 화면에서 숨긴다. */
+    created_today?: number | null; member_unread?: number | null; avg_review_hours?: number | null; review_sample?: number | null;
+  };
   groups: HierarchyGroup[];
   total_sessions: number;
   page: number;

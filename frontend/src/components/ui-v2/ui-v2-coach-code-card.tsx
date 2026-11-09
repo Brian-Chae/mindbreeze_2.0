@@ -3,7 +3,7 @@ import { useState, type ReactElement } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { natureHeroStyle } from './nature-hero';
 
-export function UiV2CoachCodeCard(): ReactElement | null {
+export function UiV2CoachCodeCard({ compact = false }: { compact?: boolean } = {}): ReactElement | null {
   const code = useAuthStore((s) => s.user?.counselor_code ?? null);
   const role = useAuthStore((s) => s.user?.role);
   const [copied, setCopied] = useState(false);
@@ -15,6 +15,14 @@ export function UiV2CoachCodeCard(): ReactElement | null {
       window.setTimeout(() => setCopied(false), 2000);
     } catch { /* 클립보드 실패 시 숫자를 직접 보고 전달 */ }
   };
+  // 홈: 코드·복사만 한 줄로 줄여 다음 회차에 시선을 양보한다(안내 문구는 title 로 유지).
+  if (compact) return (
+    <section className="u2-card u2-coach-code-line" aria-label="내 코치 코드" data-testid="coach-code-card" title="회원이 가입할 때 이 숫자를 입력하면 코치와 연결돼요.">
+      <span>내 코치 코드</span>
+      <strong aria-label={`코치 코드 ${code.split('').join(' ')}`}>{code}</strong>
+      <button type="button" className="u2-secondary" onClick={() => void copy()}>{copied ? '복사됨' : '복사'}</button>
+    </section>
+  );
   return (
     <section className="u2-card u2-coach-code u2-hero--nature u2-org-code-hero" style={natureHeroStyle('coach-code')} aria-label="내 코치 코드" data-testid="coach-code-card">
       <div className="u2-coach-code__text">

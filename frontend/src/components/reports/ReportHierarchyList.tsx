@@ -38,6 +38,10 @@ interface Props {
   reloadKey: number;
   /** 관리자 화면 보조 영역(운영 설정·샘플 등) */
   toolbarExtra?: React.ReactNode;
+  /** SDD-324(새 디자인 전용): 주면 기존 상단 배너 대신 요약 카드를 그리고, 카드 클릭은 상태 탭을 바꾼다. */
+  renderSummary?: (ctx: { summary: HierarchyResponse['summary'] | null; unavailable: boolean; tab: HierarchyTab; setTab: (t: HierarchyTab) => void }) => React.ReactNode;
+  /** SDD-324(새 디자인 전용): 목록이 바뀔 때 현재 보이는 리포트 ID 와 필터 적용 여부를 알린다(오른쪽 검토 창 선택 일치용). */
+  onVisibleReports?: (ids: string[], filtersActive: boolean) => void;
 }
 
 function Chip({ children }: { children: React.ReactNode }) {
@@ -157,7 +161,7 @@ function GroupBlock({ group, selectedId, compact, onOpen }: { group: HierarchyGr
   );
 }
 
-export default function ReportHierarchyList({ selectedReportId, onOpen, compact = false, reloadKey, toolbarExtra }: Props) {
+export default function ReportHierarchyList({ selectedReportId, onOpen, compact = false, reloadKey, toolbarExtra, renderSummary, onVisibleReports }: Props) {
   const [q, setQ] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
   const [tab, setTab] = useState<HierarchyTab>('all');
@@ -192,6 +196,11 @@ export default function ReportHierarchyList({ selectedReportId, onOpen, compact 
       .then((r) => {
         if (cancelled) return;
         setData(r);
+        if (onVisibleReports) {
+          const ids: string[] = [];
+          r.groups.forEach((g) => g.sessions.forEach((se) => se.members.forEach((m) => m.client_report && ids.push(m.client_report.report_id))));
+          onVisibleReports(ids, Boolean(debouncedQ || tab !== 'all' || activity || counselorId || dateFrom));
+        }
         setCounselors((prev) => {
           const next = new Map(prev);
           r.groups.forEach((g) => g.sessions.forEach((s) => s.counselor_name && next.set(s.counselor_id, s.counselor_name)));
@@ -203,6 +212,7 @@ export default function ReportHierarchyList({ selectedReportId, onOpen, compact 
     return () => {
       cancelled = true;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- onVisibleReports 는 부모 콜백(안정성 불요)
   }, [debouncedQ, tab, activity, counselorId, dateFrom, page, reloadKey, localReload]);
 
   const reset = useCallback(() => {
@@ -225,7 +235,8 @@ export default function ReportHierarchyList({ selectedReportId, onOpen, compact 
 
   return (
     <div className="space-y-4">
-      {!compact && summary && (
+      {!compact && renderSummary && renderSummary({ summary: summary ?? null, unavailable: Boolean(error) && !data, tab, setTab })}
+      {!compact && !renderSummary && summary && (
         <div className="flex items-center justify-between rounded-2xl border border-[#E5D8EC] bg-[#F2EAF6] px-7 py-5">
           <div>
             <h2 className="m-0 text-[21px] font-bold text-[#5F0080]">
