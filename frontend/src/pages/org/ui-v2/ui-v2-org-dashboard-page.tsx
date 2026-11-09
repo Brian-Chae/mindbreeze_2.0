@@ -1,3 +1,4 @@
+import { useAuthStore } from '../../../stores/authStore';
 // SDD-321 — 기관 대시보드 D안. 데이터·핸들러는 기존 OrgDashboardPage 와 같은 API 함수를 호출하고, 초대·퇴직 안내는 기존 컴포넌트를 그대로 쓴다.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -110,6 +111,14 @@ export function UiV2OrgDashboardPage() {
   }, [classes, query, statusFilter, typeFilter]);
 
   const statuses: SessionStatus[] = ['ready', 'scheduled', 'open', 'in_progress', 'completed', 'cancelled'];
+
+  // 11/9: 사이드바 '기관 코드' 줄은 auth user.org_code 를 읽는다. users/me 가 아직 org_code 를 주지 않는 서버에서도
+  // 대시보드 응답의 org_code 로 채워 둔다(값이 다를 때만 갱신).
+  useEffect(() => {
+    const code = data?.org_code ?? null;
+    const st = useAuthStore.getState();
+    if (code && st.user && st.user.org_code !== code) useAuthStore.setState({ user: { ...st.user, org_code: code } });
+  }, [data?.org_code]);
 
   return (
     <UiV2OrgShell title={data?.org_name ?? '기관 대시보드'} subtitle="기관 전체 코치와 클래스를 한눈에 확인합니다.">
