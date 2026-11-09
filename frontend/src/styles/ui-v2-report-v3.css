@@ -36,13 +36,13 @@
 .ui-v2 .u2r3-interp{font-size:13px;color:#49404F}
 .ui-v2 .u2r3-metric-chart{min-width:0}
 /* 전후 비교 */
-.ui-v2 .u2r3-compare{display:grid;grid-template-columns:minmax(0,1fr) 88px;gap:10px 10px;align-items:stretch;padding-bottom:16px;border-bottom:1px solid #EAE7ED;margin-bottom:16px}
+.ui-v2 .u2r3-compare{display:grid;grid-template-columns:minmax(0,1fr) 120px;gap:10px 12px;align-items:stretch;padding-bottom:16px;border-bottom:1px solid #EAE7ED;margin-bottom:16px}
 .ui-v2 .u2r3-dual{display:grid;align-content:center;gap:10px;min-width:0}
 .ui-v2 .u2r3-dual-row{display:grid;grid-template-columns:24px minmax(0,1fr);gap:4px;align-items:center;font-size:12px}
 .ui-v2 .u2r3-dual-measure{display:flex;align-items:center;gap:5px;min-width:0}
 .ui-v2 .u2r3-dual-bar{flex:none;height:16px;border-radius:4px}
 .ui-v2 .u2r3-dual-value{white-space:nowrap;font-size:11px;line-height:1.4;font-variant-numeric:tabular-nums}
-.ui-v2 .u2r3-changebox{background:#EEE5F5;border-radius:12px;padding:10px 6px;text-align:center;display:flex;flex-direction:column;justify-content:center;min-width:0}
+.ui-v2 .u2r3-changebox{background:#EEE5F5;border-radius:12px;padding:12px 14px;text-align:center;display:flex;flex-direction:column;justify-content:center;min-width:0}
 .ui-v2 .u2r3-change-label{font-size:11px;color:#49404F}
 .ui-v2 .u2r3-change-value{font-size:21px;line-height:1.4;font-weight:600;white-space:nowrap;color:#25212C;font-variant-numeric:tabular-nums}
 .ui-v2 .u2r3-change-value small{display:inline;margin-left:2px;font-size:10px;font-weight:400}
@@ -94,7 +94,7 @@
   .ui-v2 .u2r3-rail small{display:block;margin:28px 12px;font-size:12px;color:#514957}
   .ui-v2 .u2r3--rail .u2r3-metric{grid-template-columns:minmax(0,1fr) minmax(0,1.12fr);gap:24px;padding:24px;align-items:center}
   .ui-v2 .u2r3--rail .u2r3-chips{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .ui-v2 .u2r3--rail .u2r3-compare{grid-template-columns:minmax(0,1fr) 96px}
+  .ui-v2 .u2r3--rail .u2r3-compare{grid-template-columns:minmax(0,1fr) 136px}
   .ui-v2 .u2r3--rail .u2r3-section{padding:40px}
   .ui-v2 .u2r3--rail .u2r3-section h2{font-size:27px}
 }
