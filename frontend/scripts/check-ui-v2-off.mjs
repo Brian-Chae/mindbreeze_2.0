@@ -27,16 +27,31 @@ export async function checkUiV2Off(root) {
         if (/ui-v2-(notifications-page|org-notifications-page|notification-center-page|notification-parts)|use-ui-v2-notifications/.test(content)) problems.push(`${name}: 알림 D안 청크 참조`);
         // SDD-320 후속: 코치 채팅·설정 D안 청크
         if (/ui-v2-coach-(chat|settings)-page|ui-v2-coach-screens|UiV2Coach[A-Z]/.test(content)) problems.push(`${name}: 코치 D안 화면 청크 참조`);
+        // SDD-320 F: 코치 홈·목록 D안 청크, 회원 PC 사이드바
+        if (/ui-v2-coach-(home|classes|clients|reports|report-detail)-page|UiV2CoachHomePage|UiV2MemberSidebar/.test(content)) problems.push(`${name}: 코치 홈·목록 D안 청크 참조`);
         // SDD-320: 코치 스코프 식별자
-        if (/attachCoachScope|ui-v2-coach-scope|u2-coach/.test(content)) problems.push(`${name}: 코치 D안 스코프(u2-coach)가 번들에 포함됨`);
+        if (/attachCoachScope|ui-v2-coach-scope|u2-coach|u2-live/.test(content)) problems.push(`${name}: 코치 D안 스코프(u2-coach)가 번들에 포함됨`);
+        // SDD-320 H: 코치 모바일 스크롤 제목
+        if (/ui-v2-coach-sidebar-code|attachCoachSidebarCode|u2-coach-sidebar-code/.test(content)) problems.push(`${name}: 코치 사이드바 코드 줄이 번들에 포함됨`);
+        if (/ui-v2-coach-compact-title|attachCoachCompactTitle|u2-coach-collapsed|u2-coach-compact-title/.test(content)) problems.push(`${name}: 코치 스크롤 제목(compact-title)이 번들에 포함됨`);
+        // SDD-320 G: 코치 알림·플레이그라운드 D안 청크
+        if (/ui-v2-coach-notifications-page|ui-v2-coach-playground-page|ui-v2-playground-entry|UiV2CoachNotificationsPage|UiV2CoachPlaygroundPage|UiV2PlaygroundEntry/.test(content)) problems.push(`${name}: 코치 알림·플레이그라운드 D안 청크 참조`);
+        // SDD-318 F-E: 리포트 상세 v3e 식별자
+        if (/ui-v2-report-(v3-logic|measure|body|sheet)|u2r3-/.test(content)) problems.push(`${name}: 리포트 v3e(u2r3) 식별자가 번들에 포함됨`);
         // ③ 루트 클래스 부여 코드
         if (/className:`[^`]*ui-v2|className:"[^"]*ui-v2/.test(content)) problems.push(`${name}: ui-v2 루트 클래스 부여 코드`);
       }
       if (name.endsWith('.css') && /\.ui-v2\b|\.u2-/.test(content)) info.v2CssFiles.push(name);
+      if (name.endsWith('.css') && /u2r3-/.test(content)) problems.push(`${name}: 리포트 v3e CSS(u2r3-)가 운영 번들에 포함됨`);
       if (name.endsWith('.css') && /u2-notif-/.test(content)) problems.push(`${name}: 알림 D안 CSS(u2-notif-)가 운영 번들에 포함됨`);
       if (name.endsWith('.css') && /u2c-(new|roombar|list--room|pane--idle|lead)/.test(content)) problems.push(`${name}: 코치 D안 화면 CSS(u2c-)가 운영 번들에 포함됨`);
       if (name.endsWith('.css') && /u2-org-|u2-table/.test(content)) problems.push(`${name}: 기관 D안 CSS(u2-org-/u2-table)가 운영 번들에 포함됨`);
+      if (name.endsWith('.css') && /\.u2f-(cols|table|cards|filters|tr)|\.u2-side-(item|menu|foot)/.test(content)) problems.push(`${name}: 코치 목록·회원 사이드바 D안 CSS(u2f-/u2-side-)가 운영 번들에 포함됨`);
+      if (name.endsWith('.css') && /\.u2g-(noti|pg|stack|bar|notice)/.test(content)) problems.push(`${name}: 코치 알림·플레이그라운드 D안 CSS(u2g-)가 운영 번들에 포함됨`);
+      if (name.endsWith('.css') && /u2-coach-(compact-title|collapsed)/.test(content)) problems.push(`${name}: 코치 스크롤 제목 CSS가 운영 번들에 포함됨`);
+      if (name.endsWith('.css') && /html\.u2-live/.test(content)) problems.push(`${name}: 라이브 D안 스코프 CSS(html.u2-live)가 운영 번들에 포함됨`);
       if (name.endsWith('.css') && /html\.u2-coach/.test(content)) problems.push(`${name}: 코치 D안 스코프 CSS(html.u2-coach)가 운영 번들에 포함됨`);
+      if (name.endsWith('.css') && /@media \(min-width:\s*1024px\)[^{]*\{[^}]*data-shell-variant="ui-v2"|data-shell-variant="ui-v2"\]\s*>\s*aside/.test(content)) problems.push(`${name}: PC 셸 D안 CSS(ui-v2-pc)가 운영 번들에 포함됨`);
       // 폰트: 운영 번들에는 Pretendard 자체 호스팅 파일/@font-face 가 없어야 한다(addendum-2 H8).
       if (/\.(css|js)$/.test(name) && /Pretendard\s*MB|PretendardVariable-KS/.test(content)) problems.push(`${name}: 자체 호스팅 Pretendard 참조가 운영 번들에 포함됨`);
     }

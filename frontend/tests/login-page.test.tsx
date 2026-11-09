@@ -86,9 +86,10 @@ test('알 수 없는 role은 회원 화면이다', () => {
 });
 
 
-test('로그인 제목과 역할 스위치는 본문 앞의 헤더에 있고 브랜드 대형 제목은 없다', () => {
+test('헤더에는 (로고) MIND BREEZE 와 역할 스위치, 로그인 제목은 본문(이메일 위)에 있다', () => {
   const html = render('/login');
-  expect(html).toMatch(/<header[\s\S]*<h1[^>]*>로그인<\/h1>[\s\S]*role="tablist"[\s\S]*<\/header>/);
+  expect(html).toMatch(/<header[\s\S]*MIND BREEZE[\s\S]*role="tablist"[\s\S]*<\/header>/);
+  expect(html).toMatch(/<\/header>[\s\S]*<h1[^>]*>로그인<\/h1>[\s\S]*type="email"/);
   expect(html).not.toContain('MIND BREEZE 로그인');
   expect(html).toContain('aria-label="Mind Breeze 홈으로 이동"');
 });

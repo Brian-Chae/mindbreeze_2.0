@@ -1,0 +1,124 @@
+/* SDD-320 F — 코치 화면 시안 정합(홈·목록·상세). 규칙은 .u2f(코치 ui-v2 화면 래퍼) 하위로 한정한다. 토큰은 ui-v2.css 의 .ui-v2 변수를 그대로 쓴다. */
+.ui-v2.u2f { padding: 8px 16px calc(120px + env(safe-area-inset-bottom, 0px)); background: transparent; font-family: 'Pretendard MB', 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif; }
+.ui-v2 .u2f-lead { color: var(--u2-muted); margin: 0 0 18px; padding: 0 4px; }
+.ui-v2 .u2f-cols, .ui-v2 .u2f-split { display: block; }
+.ui-v2 .u2f-cols > * { min-width: 0; }
+.ui-v2 .u2f-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.ui-v2 .u2f-actions > * { width: auto; flex: 1 1 auto; }
+.ui-v2 .u2f-btn { margin-top: 18px; width: auto; align-self: stretch; }
+.ui-v2 .u2f-banner { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; }
+.ui-v2 .u2f-code { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; }
+.ui-v2 .u2f-code .u2-secondary { width: auto; }
+.ui-v2 .u2f-wide { margin-top: 12px; }
+.ui-v2 .u2-hero--nature .u2-num small { display: inline; color: #FFFFFF; font-size: 16px; letter-spacing: 0; }
+/* 표(PC) / 카드(모바일) */
+.ui-v2 .u2f-table { display: none; }
+.ui-v2 .u2f-cards { display: block; }
+.ui-v2 .u2f-filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+.ui-v2 .u2f-filters .u2-search { flex: 1 1 220px; margin-bottom: 0; }
+.ui-v2 .u2f-filters select { min-height: 48px; border: 1px solid var(--u2-line); background: var(--u2-surface); color: var(--u2-text); border-radius: 12px; padding: 0 14px; font: inherit; min-width: 130px; }
+.ui-v2 .u2f-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+.ui-v2 .u2f-chips button { min-height: 44px; min-width: 44px; padding: 0 16px; border-radius: 12px; background: var(--u2-surface); color: var(--u2-muted); font-weight: 600; font-size: 14px; }
+.ui-v2 .u2f-chips button[aria-pressed="true"], .ui-v2 .u2f-chips button[aria-selected="true"] { background: var(--u2-tint); color: var(--u2-accent); box-shadow: inset 0 -2px var(--u2-accent); }
+.ui-v2 .u2f-group { margin: 20px 4px 8px; font-size: 14px; color: var(--u2-muted); font-weight: 600; }
+.ui-v2 .u2f-badge { display: inline-flex; align-items: center; min-height: 26px; padding: 2px 10px; border-radius: 8px; background: var(--u2-tint); color: var(--u2-accent); font-size: 12px; font-weight: 600; }
+.ui-v2 .u2f-badge--warn { background: #FBE9EE; color: #8E1F3B; }
+.ui-v2 .u2f-tr { display: grid; grid-template-columns: 1.4fr 1fr 1fr 110px; align-items: center; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--u2-line); font-size: 14px; }
+.ui-v2 .u2f-tr > * { min-width: 0; overflow-wrap: anywhere; }
+.ui-v2 .u2f-tr small { display: block; }
+.ui-v2 .u2f-th { font-size: 12px; color: var(--u2-muted); background: #EEE5F580; }
+.ui-v2 .u2f-table-box { background: var(--u2-surface); border-radius: 20px; overflow: hidden; }
+@media (min-width: 1024px) {
+  .ui-v2.u2f { padding: 0 48px 72px; max-width: 1600px; }
+  .ui-v2 .u2f-cols { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); column-gap: 28px; align-items: start; }
+  .ui-v2 .u2f-split { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+  .ui-v2 .u2f-wide { grid-column: 1 / -1; }
+  .ui-v2 .u2f-rail > .u2-card:first-child { margin-top: 0; }
+  .ui-v2 .u2f-table { display: block; }
+  .ui-v2 .u2f-cards { display: none; }
+}
+
+/* F-2 리포트 상세: 읽기 + 코치의 기록 2열. 레거시 카드(코멘트·승인 상태)는 u2f-legacy 안에서 폭만 맞춘다. */
+.ui-v2 .u2f-sheet { padding: 28px 24px; }
+.ui-v2 .u2f-editor { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.ui-v2 .u2f-editor > .u2-card { margin-bottom: 0; }
+.ui-v2 .u2f-legacy { min-width: 0; }
+.ui-v2 .u2f-legacy > * { max-width: none; }
+.ui-v2 .u2f-legacy textarea { width: -webkit-fill-available; width: stretch; min-height: 160px; border-radius: 12px; }
+.ui-v2 .u2f-input { flex: 1 1 200px; min-width: 0; height: 50px; border-radius: var(--u2-r-btn); border: 1px solid var(--u2-line); background: var(--u2-canvas); padding: 0 14px; font: inherit; }
+.ui-v2 .u2f-split > .u2f-sheet { margin-bottom: 14px; }
+@media (min-width: 1024px) {
+  .ui-v2 .u2f-editor { position: sticky; top: 16px; }
+  .ui-v2 .u2f-sheet { padding: 40px; }
+  .ui-v2 .u2f-split > .u2f-sheet { margin-bottom: 0; }
+}
+
+/* 11/9 대표 지시: 코치 코드 카드(홈·클래스 최상단, 전체 숫자 노출) */
+.ui-v2 .u2-coach-code{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 16px;padding:18px 20px;background:linear-gradient(120deg,#3A1650,#251038);border:0;color:#FFFFFF}
+.ui-v2 .u2-coach-code__text{display:flex;flex-direction:column;gap:4px;min-width:0}
+.ui-v2 .u2-coach-code .u2-eyebrow{color:#E5D3EE}
+.ui-v2 .u2-coach-code__num{font-size:34px;line-height:1.1;font-weight:700;letter-spacing:6px;font-variant-numeric:tabular-nums;color:#FFFFFF}
+.ui-v2 .u2-coach-code small{color:#E5D3EE;font-size:13px}
+.ui-v2 .u2-coach-code__copy{flex:none;min-height:44px;min-width:72px;padding:0 18px;border-radius:999px;background:#FFFFFF;color:#5F0080;font-weight:650}
+@media (max-width:420px){.ui-v2 .u2-coach-code__num{font-size:30px;letter-spacing:4px}}
+
+/* 11/9 대표 지시: 상태 칩은 모바일에서 한 줄, 화면 폭을 6등분해 꽉 채운다(줄바꿈·가로 스크롤 없음) */
+@media (max-width: 640px) {
+  .ui-v2 .u2f-chips { flex-wrap: nowrap; gap: 4px; }
+  .ui-v2 .u2f-chips button { flex: 1 1 0; min-width: 0; padding: 0 2px; font-size: 13px; white-space: nowrap; letter-spacing: -0.3px; }
+}
+@media (max-width: 374px) {
+  .ui-v2 .u2f-chips button { font-size: 12px; letter-spacing: -0.5px; }
+}
+
+/* SDD-320 J (11/9) — 코치 PC(≥1024) 설정·데이터 현황 본문 폭을 알림·리포트·홈과 같은 프레임(288→1353, 폭 1065)에 맞춘다.
+   .u2f 와 같은 규칙(래퍼 좌우 48px, 최대 1600px)을 쓰며 모바일(<1024)은 건드리지 않는다. */
+@media (min-width: 1024px) {
+  /* 설정: 회원 설정과 같은 구성 — 좌(플레이그라운드) / 우(항목 목록) 2열 */
+  html .ui-v2.u2c-settings { padding: 0 48px 72px; max-width: 1600px; }
+  html .ui-v2.u2c-settings > *,
+  html .ui-v2.u2c-settings .u2-setlist,
+  html .ui-v2.u2c-settings .u2-card { max-width: none; margin-left: 0; margin-right: 0; }
+  html .ui-v2.u2c-settings .u2c-lead { margin-bottom: 18px; }
+  html .ui-v2.u2c-settings .u2-pc-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 28px; align-items: start; }
+  html .ui-v2.u2c-settings .u2-pc-cols > * { min-width: 0; }
+}
+
+/* 11/9 대표 지시: 클래스 목록 '지금 함께할 시간' 카드 하단 여백 축소(홈 히어로 320px 최소 높이 해제) */
+.ui-v2 .u2-hero--nature.u2f-open-hero { min-height: 0; padding-bottom: 24px; }
+
+/* 11/9 대표 지시: 명상 클래스 상단 '지금 바로 시작'(자연 배경) + 다음 회차 안내 복원, 상태 필터는 운영 화면과 같은 알약형 */
+.ui-v2 .u2-hero--nature.u2f-now-hero { min-height: 0; flex-direction: row; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; padding: 26px 28px; text-decoration: none; }
+.ui-v2 .u2f-now-hero strong { display: block; font-size: 18px; font-weight: 700; color: #FFFFFF; }
+.ui-v2 .u2f-now-hero small { display: block; margin-top: 4px; font-size: 14px; color: #FFFFFFD9; }
+.ui-v2 .u2f-now-btn { display: inline-flex; align-items: center; min-height: 48px; padding: 0 24px; border-radius: 999px; background: #FFFFFF; color: var(--u2-accent); font-weight: 700; font-size: 15px; white-space: nowrap; }
+.ui-v2 .u2f-next-hero { margin-bottom: 14px; }
+.ui-v2 .u2f-next-hero .cs-class-hero { border-radius: var(--u2-r-card); box-shadow: 0 14px 34px #25103840; }
+.ui-v2 .u2f-chips button { border-radius: 999px; background: transparent; color: var(--u2-accent); box-shadow: none; padding: 0 18px; }
+.ui-v2 .u2f-chips button:hover { background: #F4EDF8; }
+.ui-v2 .u2f-chips button[aria-pressed="true"] { background: var(--u2-accent); color: #FFFFFF; box-shadow: none; }
+
+/* 11/9 대표 지시: 코치 홈 구조 = 운영 웹(히어로 → 검토 배너 → 숫자 타일 4 → 내 클래스 → 일정 | 대화·알림) */
+.ui-v2 .u2f-home-ops > * + * { margin-top: 18px; }
+.ui-v2 .u2-hero--nature.u2f-home-hero { min-height: 240px; }
+.ui-v2 .u2f-review { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; margin-bottom: 0; }
+.ui-v2 .u2f-review h3 { font-size: 16px; font-weight: 700; }
+.ui-v2 .u2f-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ui-v2 .u2f-tile { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 18px 20px; text-decoration: none; color: var(--u2-text); }
+.ui-v2 .u2f-tile span { font-size: 13px; color: var(--u2-muted); font-weight: 600; }
+.ui-v2 .u2f-tile b { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
+.ui-v2 .u2f-tile small { font-size: 12px; color: var(--u2-accent); font-weight: 600; }
+.ui-v2 .u2f-past { margin-top: 10px; }
+.ui-v2 .u2f-past summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--u2-muted); font-size: 14px; font-weight: 600; }
+.ui-v2 .u2f-home-ops .u2f-rail > * + * { margin-top: 14px; }
+.ui-v2 .u2f-home-ops .u2f-cols .u2-card { margin-bottom: 0; }
+@media (min-width: 1024px) {
+  .ui-v2 .u2f-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* 11/9 대표 지시: 기관 홈 기관 코드 카드 — 자연 배경(짙은 그라데이션 + 풍경), 코치 코드 카드와 같은 배치 */
+.ui-v2 .u2-coach-code.u2-org-code-hero { flex-direction: row; min-height: 150px; padding: 28px 30px; background-size: cover; background-position: center; box-shadow: 0 14px 34px #25103840; }
+.ui-v2 .u2-org-code-hero .u2-eyebrow { color: #E5D3EE; }
+.ui-v2 .u2-org-code-hero .u2-coach-code__num { font-size: 40px; letter-spacing: 8px; text-shadow: 0 1px 10px #25103899; }
+.ui-v2 .u2-org-code-hero small { color: #FFFFFFD9; text-shadow: 0 1px 6px #25103880; }
+@media (max-width: 767px) { .ui-v2 .u2-coach-code.u2-org-code-hero { flex-direction: column; align-items: flex-start; padding: 22px; } .ui-v2 .u2-org-code-hero .u2-coach-code__num { font-size: 32px; letter-spacing: 5px; } }

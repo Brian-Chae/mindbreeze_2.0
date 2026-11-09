@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UiV2ClientShell } from '../../../components/ui-v2/ui-v2-client-shell';
 import { UiV2ArcRing } from '../../../components/ui-v2/ui-v2-arc-ring';
-import { CodeEntryButton } from '../../../components/client/code-entry-button';
+import { UiV2ToolbarCode } from '../../../components/ui-v2/ui-v2-toolbar-code';
 import { CounselorSection } from '../../../components/client/counselor-section';
 import { InvitedSessionCard } from '../../../components/client/InvitedSessionCard';
 import { memberDate, memberValue } from '../../../components/class/structure/member-class-views';
@@ -100,7 +100,8 @@ export function UiV2HomePage() {
   const heroHref = next ? (isOpen ? `/class/${encodeURIComponent(next.sessionId)}/enter` : next.area === 'meditation' ? `/app/classes/${encodeURIComponent(next.parentId)}` : counselingPath('member', next.parentId as RelationshipId)) : '/app/classes';
 
   return (
-    <UiV2ClientShell title="나에게 돌아오는 시간" subtitle={`${name ?? '내담자'}님, 오늘의 클래스와 기록을 만나보세요.`}>
+    <UiV2ClientShell toolbarExtra={<UiV2ToolbarCode />} title="나에게 돌아오는 시간" subtitle={`${name ?? '내담자'}님, 오늘의 클래스와 기록을 만나보세요.`}>
+      <div className="u2-pc-cols"><div className="u2-pc-main">
       <section className="u2-card u2-hero u2-hero--nature" data-testid="class-hero" aria-label="다음 일정" style={{ backgroundImage: `linear-gradient(160deg,rgba(37,16,56,.35),rgba(37,16,56,.72) 55%,rgba(37,16,56,.92)),url(${heroBackdrop(next?.parentId ?? 'home')})` }}>
         <UiV2ArcRing variant="hero" />
         <span className="u2-eyebrow">{isOpen ? '지금 입장 가능' : '다음 클래스'}</span>
@@ -115,14 +116,13 @@ export function UiV2HomePage() {
           <Link className="u2-primary" to="/app/classes">내 클래스 보기</Link>
         </>}
       </section>
-      <div className="u2-gap"><CodeEntryButton placement="inline" /></div>
 
       {invited.length > 0 && <section aria-label="초대된 클래스">
         <div className="u2-section-head u2-row"><h2>초대된 클래스</h2><small>{invited.length}건</small></div>
         {invited.map((s) => <div key={s.id} style={{ marginBottom: 12 }}><InvitedSessionCard session={s} counselorName={counselorName(s)} onConfirm={() => confirmInvite(s.id)} /></div>)}
       </section>}
 
-      <div className="u2-section-head u2-row"><h2>예정된 클래스</h2><Link className="u2-textlink" to="/app/classes">전체 보기 ›</Link></div>
+      <div className="u2-section-head u2-row"><h2>이번 주 클래스</h2><Link className="u2-textlink" to="/app/classes">전체 보기 ›</Link></div>
       {(next ? [{ ...next, key: next.sessionId }, ...upcoming.map((u) => ({ ...u, key: u.sessionId }))] : upcoming.map((u) => ({ ...u, key: u.sessionId }))).slice(0, 4).map((item) => {
         const t = parts(item.scheduledAt);
         return <Link key={item.key} className="u2-listrow" to={item.area === 'meditation' ? `/app/classes/${encodeURIComponent(item.parentId)}` : counselingPath('member', item.parentId as RelationshipId)}>
@@ -131,32 +131,36 @@ export function UiV2HomePage() {
           <span className="u2-chev" aria-hidden="true">›</span>
         </Link>;
       })}
-      {!next && upcoming.length === 0 && <p className="u2-empty">예정된 클래스가 없어요. 코치에게 클래스를 신청해 보세요.</p>}
+      {!next && upcoming.length === 0 && <p className="u2-empty">이번 주 예정된 클래스가 없어요. 코치에게 클래스를 신청해 보세요.</p>}
       {classes.length > 0 && <p className="u2-footnote">참여 중인 클래스 {classes.length}개</p>}
 
+      <div className="u2-card u2-coachcard"><CounselorSection /></div>
+
+      </div><div className="u2-pc-side">
       <div className="u2-section-head u2-row"><h2>최근 리포트</h2><Link className="u2-textlink" to="/app/reports">전체 보기 ›</Link></div>
       {clientReports.length > 0 ? clientReports.map((r) => {
         const inReview = isReportInReview(r);
         const unread = !r.is_read && !inReview;
         return <Link key={r.id ?? r.session_id} className="u2-card" to={r.id ? `/app/reports?report=${r.id}` : '/app/reports'}>
           <span className="u2-chip">{inReview ? REPORT_IN_REVIEW_BADGE : unread ? '안 읽음' : '읽음'}</span>
-          <h2 style={{ marginTop: 12, fontSize: 21 }}>{r.session_title || '리포트'}</h2>
-          <p className="u2-muted" style={{ fontSize: 14 }}>{r.created_at ? new Date(r.created_at).toLocaleDateString('ko-KR') : ''}</p>
+          <h2 style={{ marginTop: 12, fontSize: 21 }}>{(!inReview && typeof r.content?.headline === 'string' && r.content.headline.trim()) || r.session_title || '리포트'}</h2>
+          <p className="u2-muted" style={{ fontSize: 13 }}>{[(!inReview && r.session_title) || '', r.counselor_name ? `지도사 ${r.counselor_name}` : '', r.created_at ? new Date(r.created_at).toLocaleDateString('ko-KR') : ''].filter(Boolean).join(' · ')}</p>
+          {!inReview && typeof r.content?.summary === 'string' && r.content.summary.trim() && <p className="u2-muted" style={{ fontSize: 14, lineHeight: 1.75 }}>{r.content.summary}</p>}
         </Link>;
       }) : <p className="u2-empty">아직 리포트가 없어요</p>}
 
-      <div className="u2-gap"><CounselorSection /></div>
       {isCounselingEnabled() && <>
         <div className="u2-section-head u2-row"><h2>내 상담</h2><Link className="u2-textlink" to="/app/counseling">전체 보기 ›</Link></div>
         {counseling.map((item) => <Link key={item.id} className="u2-card" to={counselingPath('member', item.id)}><h3>상담 일정</h3><p className="u2-muted">코치 · {memberValue(item.counselorName) ?? '확인 중'}</p></Link>)}
       </>}
 
       <div className="u2-section-head"><h2>새 알림</h2></div>
-      {unreadNotifications.length > 0 ? unreadNotifications.map((n) => <Link key={n.id} className="u2-card" to="/app/notifications"><h3>{n.title}</h3>{n.body && <p className="u2-muted">{n.body}</p>}<small>{relative(n.created_at)}</small></Link>) : <p className="u2-empty">새로운 알림이 없어요</p>}
+      {unreadNotifications.length > 0 ? unreadNotifications.map((n) => <Link key={n.id} className="u2-card" to="/app/notifications"><h3>{n.title}</h3>{n.body && <p className="u2-muted">{n.body}</p>}<small>{relative(n.created_at)}</small>{n.type === 'report' && <span className="u2-textlink" aria-hidden="true">리포트 확인 ›</span>}</Link>) : <p className="u2-empty">새로운 알림이 없어요</p>}
       <div className="u2-section-head u2-row"><h2>최근 대화</h2><Link className="u2-textlink" to="/app/chat">전체 ›</Link></div>
       {recentRooms.length > 0 ? recentRooms.map((room) => <Link key={room.id} className="u2-listrow" to={`/app/chat/${room.id}`}>
         <div className="u2-body"><h3>{room.display_name || room.peer_name || '코치'}{(room.unread_count ?? 0) > 0 ? ` · ${room.unread_count}` : ''}</h3><p>{room.last_message?.content || '새로운 대화가 없어요'}</p></div><small>{relative(room.last_message_at ?? null)}</small>
       </Link>) : <p className="u2-empty">새로운 대화가 없어요</p>}
+      </div></div>
       {(extraError || read.classes.status === 'error') && <div className="u2-alert" role="alert"><p>일부 정보를 불러오지 못했어요.</p><button type="button" className="u2-secondary u2-gap" onClick={read.retry}>다시 시도</button></div>}
     </UiV2ClientShell>
   );

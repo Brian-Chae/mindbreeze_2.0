@@ -1,6 +1,6 @@
 /* SDD-318 — 내담자 화면 D안. 모든 규칙은 .ui-v2 하위로 한정한다(전역·프리셋 토큰 수정 없음). */
 .ui-v2{
-  --u2-canvas:#F4F4F7;--u2-surface:#FFFFFF;--u2-tint:#EEE5F5;--u2-text:#25212C;--u2-muted:#68616F;--u2-accent:#5F0080;
+  --u2-canvas:#FAF9FC;--u2-surface:#FFFFFF;--u2-tint:#EEE5F5;--u2-text:#25212C;--u2-muted:#68616F;--u2-accent:#5F0080;
   --u2-line:#EAE7ED;--u2-ring:#D4BDE2;--u2-ring-strong:#B78CCA;
   --u2-r-chip:8px;--u2-r-note:12px;--u2-r-btn:14px;--u2-r-card:24px;--u2-r-nav:26px;--u2-r-sheet:28px;
   --u2-bottom:calc(140px + env(safe-area-inset-bottom,0px));
@@ -12,6 +12,7 @@
 /* 전역 mb-tokens.css 가 h1~h3·p 에 CDN 폰트를 지정하므로, D안에서는 쉘 폰트(자체 호스팅 Pretendard)를 상속한다. */
 .ui-v2 h1,.ui-v2 h2,.ui-v2 h3,.ui-v2 p,.ui-v2 li,.ui-v2 button,.ui-v2 input,.ui-v2 textarea,.ui-v2 select,.ui-v2 summary{font-family:inherit}
 .ui-v2 h1,.ui-v2 h2,.ui-v2 h3{word-break:keep-all;overflow-wrap:anywhere}
+.ui-v2 h1,.ui-v2 h2,.ui-v2 h3{color:var(--u2-text)}
 .ui-v2 h1{font-size:31px;line-height:1.25;letter-spacing:-1.35px;font-weight:600}
 .ui-v2 h2{font-size:23px;line-height:1.4;letter-spacing:-.6px;font-weight:600}
 .ui-v2 h3{font-size:17px;font-weight:600}
@@ -19,7 +20,8 @@
 .ui-v2 label:has(input[type=checkbox]),.ui-v2 label:has(input[type=radio]){display:flex;align-items:center;gap:10px;min-height:44px}
 .ui-v2 input[type=checkbox],.ui-v2 input[type=radio]{width:22px;height:22px;flex-shrink:0;accent-color:var(--u2-accent)}
 .ui-v2 button,.ui-v2 input:not([type=checkbox]):not([type=radio]),.ui-v2 select{min-height:44px}
-.ui-v2 button{font:inherit;border:0;background:none;color:inherit;cursor:pointer}
+/* B2: 리셋 특이도를 0 으로 낮춰 레거시 Tailwind 버튼(테두리·배경)을 덮지 않게 한다. */
+:where(.ui-v2) button{font:inherit;border:0 solid;background:none;color:inherit;cursor:pointer}
 .ui-v2 a,.ui-v2 button,.ui-v2 input,.ui-v2 select{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .ui-v2 button:focus-visible,.ui-v2 a:focus-visible,.ui-v2 input:focus-visible,.ui-v2 select:focus-visible,.ui-v2 [tabindex]:focus-visible{outline:2px solid var(--u2-accent);outline-offset:3px}
 .ui-v2 .u2-muted,.ui-v2 small{color:var(--u2-muted)}
@@ -40,7 +42,7 @@
 @media(min-width:600px){.ui-v2 .u2-heading{padding-top:28px}.ui-v2 .u2-main{padding-bottom:calc(148px + env(safe-area-inset-bottom,0px))}}
 
 /* 카드·칩·버튼 */
-.ui-v2 .u2-card{display:block;position:relative;overflow:hidden;background:var(--u2-surface);border-radius:var(--u2-r-card);padding:24px;margin-bottom:14px;min-width:0}
+.ui-v2 .u2-card{display:block;position:relative;isolation:isolate;overflow:hidden;background:var(--u2-surface);border-radius:var(--u2-r-card);padding:24px;margin-bottom:14px;min-width:0}
 .ui-v2 .u2-card p{margin-top:10px}
 .ui-v2 .u2-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .ui-v2 .u2-row>*{min-width:0}
@@ -113,7 +115,7 @@
 .ui-v2 .u2-facts dd{margin:0;font-size:14px}
 
 /* 하단 내비 */
-.ui-v2 .u2-nav-wrap{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:12px 16px calc(28px + env(safe-area-inset-bottom,0px));background:linear-gradient(#F4F4F700,#F4F4F7 35%);pointer-events:none}
+.ui-v2 .u2-nav-wrap{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:12px 16px calc(28px + env(safe-area-inset-bottom,0px));background:linear-gradient(#FAF9FC00,#FAF9FC 35%);pointer-events:none}
 .ui-v2 .u2-nav{pointer-events:auto;display:flex;height:66px;max-width:520px;margin:0 auto;background:var(--u2-surface);border:1px solid var(--u2-line);border-radius:var(--u2-r-nav);box-shadow:0 8px 28px #25103812}
 .ui-v2 .u2-nav a{flex:1;min-width:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;color:var(--u2-muted)}
 .ui-v2 .u2-nav a[aria-current="page"]{color:var(--u2-accent);font-weight:650}
@@ -188,7 +190,7 @@
   .ui-v2 .u2-chat-pane{border-radius:var(--u2-r-card)}
 }
 /* 말풍선·입력창: 기존 ChatRoom 이 쓰는 CSS 변수만 D 토큰으로 바꾼다(전송/읽음 로직·마크업 불변). */
-.ui-v2 .chat-room{--chat-mine:#5F0080;--chat-surface:#F4F4F7;--chat-text:#25212C;--chat-muted:#68616F;--chat-accent:#5F0080;background:var(--u2-surface)}
+.ui-v2 .chat-room{--chat-mine:#5F0080;--chat-surface:#FAF9FC;--chat-text:#25212C;--chat-muted:#68616F;--chat-accent:#5F0080;background:var(--u2-surface)}
 .ui-v2 .chat-room .chat-msg__bubble{border-radius:18px}
 .ui-v2 .chat-room .chat-room__composer{background:var(--u2-surface);border-top:1px solid var(--u2-line)}
 /* 입력창 하단 안전영역: ChatRoom 이 composer 에 키보드 높이를 인라인으로 주므로(로직 불변) 바깥 창에서 홈 인디케이터 높이만큼 비운다. */
@@ -248,3 +250,51 @@
 .ui-v2 .u2-hero--nature{text-align:left;align-items:stretch}
 .ui-v2 .u2-hero--nature>*{align-self:stretch;text-align:left}
 .ui-v2 .u2-hero--nature>.u2-chip,.ui-v2 .u2-hero--nature>.u2-eyebrow{align-self:flex-start}
+
+/* ───────── F-A (SDD-318 후속) ───────── */
+/* B1: 클래스 상세 하단 "내 참여와 동의" 접기 섹션 + 나가기 보조 버튼 */
+.ui-v2 .u2-ops{background:var(--u2-surface);border-radius:var(--u2-r-card);margin:22px 0 14px;overflow:hidden}
+.ui-v2 .u2-ops>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;padding:12px 20px;cursor:pointer;list-style:none;font-weight:600}
+.ui-v2 .u2-ops>summary::-webkit-details-marker{display:none}
+.ui-v2 .u2-ops[open]>summary .u2-setchev{transform:rotate(90deg)}
+.ui-v2 .u2-ops .u2-ops-body{padding:0 12px 16px}
+.ui-v2 .u2-ops .mc-card{background:none;border:0;box-shadow:none;padding:8px}
+.ui-v2 .u2-leave{margin-bottom:14px}
+/* B6: 코드 참여 카드 */
+.ui-v2 .u2-codejoin{display:block}
+.ui-v2 .u2-codejoin .mc-card{background:var(--u2-surface);border:0;box-shadow:none;border-radius:var(--u2-r-card);padding:24px}
+.ui-v2 .u2-codejoin h2{font-size:19px}
+.ui-v2 .u2-codejoin form{display:flex;flex-direction:column;gap:12px;align-items:stretch}
+.ui-v2 .u2-codejoin label{display:flex;flex-direction:column;gap:8px;font-size:14px;font-weight:600;margin-top:12px}
+.ui-v2 .u2-codejoin input{height:50px;border-radius:var(--u2-r-btn);border:0;background:var(--u2-canvas);color:var(--u2-text);padding:0 14px;font:inherit;align-self:stretch}
+.ui-v2 .u2-codejoin input::placeholder{color:var(--u2-muted)}
+.ui-v2 .u2-codejoin button{min-height:50px;align-self:stretch;border-radius:var(--u2-r-btn);background:var(--u2-tint);color:var(--u2-accent);font-weight:600;border:0}
+.ui-v2 .u2-codejoin button:disabled{opacity:.55;cursor:default}
+/* B10: 담당 코치 카드 */
+.ui-v2 .u2-coachcard .mh-counselors{background:none;padding:0;border:0}
+.ui-v2 .u2-coachcard .mc-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+.ui-v2 .u2-coachcard .mc-heading{font-size:19px;font-weight:600;color:var(--u2-text)}
+.ui-v2 .u2-coachcard .mc-row button{color:var(--u2-accent);font-size:13px;font-weight:600}
+/* SDD-318 F-B — 리포트 상세 시트 본문(D안 report-detail). 이 블록은 리포트 시트 전용이다. */
+.ui-v2 .u2-rp{display:block;min-width:0}
+.ui-v2 .u2-rp-sub{display:block;font-size:12px;color:var(--u2-accent);letter-spacing:1px;font-weight:600}
+.ui-v2 .u2-rp-h{margin-top:30px;font-size:17px;font-weight:600;color:var(--u2-text)}
+.ui-v2 .u2-rp-text{margin-top:14px;line-height:1.85;color:var(--u2-text);white-space:pre-wrap;overflow-wrap:anywhere}
+.ui-v2 .u2-rp-list{margin:12px 0 0;padding-left:20px;line-height:1.8;color:var(--u2-muted);overflow-wrap:anywhere}
+.ui-v2 .u2-rp-notice{margin-top:20px;background:var(--u2-tint);border-radius:var(--u2-r-note);padding:16px;font-size:14px;color:var(--u2-muted);line-height:1.7}
+.ui-v2 .u2-rp-block{margin-top:28px}
+.ui-v2 .u2-rp-quote{margin:16px 0 0;border-left:2px solid var(--u2-accent);padding-left:18px;font-size:18px;line-height:1.85;color:var(--u2-text);overflow-wrap:anywhere}
+.ui-v2 .u2-rp-measure{display:block;min-width:0;overflow-x:hidden}
+.ui-v2 .u2-rp-metric{display:grid;grid-template-columns:minmax(0,1fr);margin-top:22px;padding-top:18px;border-top:1px solid var(--u2-line,#EAE7ED)}
+.ui-v2 .u2-rp-metric-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.ui-v2 .u2-rp-metric-head h4{margin:0;font-size:15px;font-weight:600;color:var(--u2-text)}
+.ui-v2 .u2-rp-delta{font-size:14px;font-variant-numeric:tabular-nums;color:var(--u2-accent);font-weight:600;white-space:nowrap}
+.ui-v2 .u2-rp-metric-text{margin:8px 0 0;font-size:15px;line-height:1.85;color:var(--u2-text);overflow-wrap:anywhere}
+.ui-v2 .u2-rp-metric-sub{margin:4px 0 0;font-size:14px;line-height:1.7;color:var(--u2-muted);overflow-wrap:anywhere}
+.ui-v2 .u2-rp-hint{margin:8px 0 0;font-size:12px;line-height:1.6;color:var(--u2-muted)}
+.ui-v2 .u2-rp-trend{display:block;justify-self:stretch;height:56px;margin-top:12px}
+.ui-v2 .u2-rp-trend-line{stroke:var(--u2-accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ui-v2 .u2-rp-trend-mid{stroke:#D4BDE2;stroke-width:1;stroke-dasharray:3 4}
+.ui-v2 .u2-rp-note{margin-top:28px}
+/* 11/9 대표 지시: 채팅 목록은 세로 스크롤 영역이라 선택 테두리(바깥으로 튀는 2px)가 좌우에서 잘림 → 좌우 3px 여유 */
+.ui-v2 .u2-chat-list{padding-left:3px;padding-right:3px}

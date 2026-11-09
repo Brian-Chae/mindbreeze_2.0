@@ -1,0 +1,100 @@
+/* 11/9 대표 지시: 운영 화면처럼 카드가 살짝 떠 보이게 — 외곽선 명확화 + 2겹 그림자.
+   회원(.ui-v2)·코치·기관(html.u2-coach) 새 디자인 카드 공통. 자연 배경 hero 는 자체 그림자 유지.
+   다른 ui-v2 스타일시트보다 늦게/강하게 적용되도록 html 접두 + :is 로 특이도를 올린다. */
+html {
+  --u2-elev-line: #E2DCE8;
+  --u2-elev-shadow: 0 1px 2px #2510380D, 0 4px 14px #25103812, 0 12px 32px #2510380A;
+  --u2-elev-shadow-hover: 0 1px 2px #25103812, 0 8px 22px #2510381A, 0 18px 40px #2510380F;
+}
+
+:is(html.u2-coach, .ui-v2) :is(
+  .u2-card:not(.u2-hero--nature),
+  .u2-table-card,
+  .u2-org-card,
+  .u2-org-stat,
+  .u2-org-panel,
+  .u2-org-shortcut,
+  .u2-notif-item,
+  .u2f-table-box
+),
+html.u2-coach :is(
+  .ch-home .ch-panel,
+  .ch-home .ch-tiles > a,
+  .ch-home .mh-track > .mc-card,
+  .cs-structure .cs-class-row,
+  .cs-structure .cs-class-list > a,
+  .u2f [class*="rounded-2xl"][class*="bg-white"],
+  .u2f [class*="rounded-xl"][class*="bg-white"][class*="border"]
+) {
+  border: 1px solid var(--u2-elev-line);
+  box-shadow: var(--u2-elev-shadow);
+}
+
+/* 눌러서 이동하는 카드만 호버 시 살짝 더 뜬다 */
+:is(html.u2-coach, .ui-v2) :is(a.u2-card, a.u2-org-card, a.u2-org-shortcut, .ch-home .ch-tiles > a, .cs-structure .cs-class-list > a):hover {
+  box-shadow: var(--u2-elev-shadow-hover);
+}
+
+/* 카드 안에 다시 들어간 카드는 그림자 없이 선만(이중 그림자 방지) */
+:is(html.u2-coach, .ui-v2) :is(.u2-card, .u2-table-card, .u2-org-card, .u2-org-panel) :is(.u2-card, .u2-org-card, .u2-table-card) {
+  box-shadow: none;
+}
+
+/* 11/9 수정: 휴대폰에서 표(.u2-table-card)는 바깥 상자가 투명해지고 각 행이 카드가 된다.
+   바깥 상자에 선·그림자를 주면 행 카드들을 감싼 이상한 틀이 생기므로, 바깥은 비우고 행 카드에만 준다. */
+@media (max-width: 767px) {
+  :is(html.u2-coach, .ui-v2) .u2-table-card.u2-table-card.u2-table-card {
+    border: 0;
+    box-shadow: none;
+  }
+  :is(html.u2-coach, .ui-v2) .u2-table-card .u2-table tbody tr {
+    border: 1px solid var(--u2-elev-line);
+    box-shadow: var(--u2-elev-shadow);
+  }
+}
+
+/* 11/9 수정: 설정·데이터 센터·데이터 현황·회원(/clients)·기관 홈 레거시 블록도 같은 입체감.
+   (이 화면들은 <main> 이 없어 html.u2-coach 기준으로 잡는다.) 실측으로 그림자 없던 큰 흰 블록만 지정:
+   설정 목록(.u2-setlist)·설정 카드, 데이터 센터 패널(.dc-panel)·요약 카드, 데이터 현황 회차 카드(section/details),
+   회원 필터·목록(section), 기관 홈 소속 코치 실적(.u2-org-legacy). 버튼·입력·작은 토글은 제외. */
+:is(html.u2-coach, .ui-v2) :is(
+  .u2-setlist,
+  .dc-panel,
+  .u2-org-legacy,
+  :is(section, details, article):is([class*="rounded-[20px]"], [class*="rounded-2xl"], [class*="rounded-3xl"])[class*="bg-white"],
+  div[class*="bg-white"][class*="rounded-2xl"][class*="border"]
+) {
+  border: 1px solid var(--u2-elev-line);
+  box-shadow: var(--u2-elev-shadow);
+}
+/* 데이터 센터 요약 카드(article)는 패널 안이라 선만 */
+:is(html.u2-coach, .ui-v2) .dc-panel article { border: 1px solid var(--u2-elev-line); box-shadow: none; }
+/* 블록 안에 다시 들어간 흰 블록은 그림자 없이 */
+:is(html.u2-coach, .ui-v2) :is(.u2-setlist, .dc-panel, .u2-org-legacy, section[class*="bg-white"], details[class*="bg-white"]) :is(section, details, div)[class*="bg-white"][class*="rounded"] {
+  box-shadow: none;
+}
+
+/* 11/9 대표 지시: 화면이 넓어지면 본문(최대 1600)을 왼쪽에 붙이지 말고 가운데로.
+   1440 이하에서는 기존과 같다(본문이 남는 폭을 다 채움). 상단 제목 줄도 같은 폭·같은 중앙선에 맞춘다. */
+@media (min-width: 1024px) {
+  html .ui-v2.u2f,
+  html .ui-v2.u2c-settings,
+  html .ui-v2.u2-shell .u2-main,
+  html .ui-v2 .u2-main--wide,
+  html.u2-coach .mobile-menu-swipe-page .mx-auto.max-w-mb-content,
+  html.u2-coach main.dc,
+  html.u2-coach .max-w-6xl:has(> [data-testid="upload-overview"]) {
+    margin-left: auto;
+    margin-right: auto;
+  }
+  html.u2-coach .mobile-menu-swipe-page .max-w-mb-content .mx-auto.max-w-mb-content { margin-left: 0; margin-right: 0; }
+}
+
+/* 11/9 대표 지시: 채팅 목록 — 채팅방 아이템과 '+ 새 채팅방' 버튼도 떠 보이게(코치·기관·회원 공통). 선택된 방은 기존 보라 테두리 유지. */
+:is(html.u2-coach, .ui-v2) .u2-chatitem:not([data-active]) {
+  border: 1px solid var(--u2-elev-line);
+  box-shadow: var(--u2-elev-shadow);
+}
+:is(html.u2-coach, .ui-v2) .u2-chatitem[data-active] { box-shadow: var(--u2-elev-shadow); }
+:is(html.u2-coach, .ui-v2) .u2c-new { box-shadow: 0 2px 4px #5F008026, 0 8px 20px #5F008033; }
+:is(html.u2-coach, .ui-v2) .u2-chat-list { padding-bottom: 12px; }

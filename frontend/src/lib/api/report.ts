@@ -150,6 +150,8 @@ export interface AdaptedReportContent {
   insights: string[];
   markers: ReportMarker[];
   headline: string | null;
+  /** SDD-318 F-D: 상담 중 인상 깊었던 한 문장(content.quote). 없으면 null/생략 */
+  quote?: string | null;
   /** Cover 종합점수 — valid/degraded만 노출, 그 외 null */
   coverScore: number | null;
   /** Cover 사유 칩 문구 (invalid/insufficient/degraded) */
@@ -442,6 +444,7 @@ export function adaptReportContent(
       insights: [],
       markers: [],
       headline: null,
+      quote: null,
       coverScore: null,
       coverReasonChip: null,
       eeg: null,
@@ -491,6 +494,7 @@ export function adaptReportContent(
     insights: parseInsights(content.insights),
     markers: parseMarkers(content.markers),
     headline: asString(content.headline),
+    quote: asString(content.quote)?.trim() || null,
     coverScore,
     coverReasonChip: eeg ? coverReasonForStatus(eeg.status) : null,
     eeg,

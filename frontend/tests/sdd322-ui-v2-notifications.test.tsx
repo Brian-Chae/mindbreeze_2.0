@@ -146,9 +146,9 @@ describe('기관 알림 (C5~C6)', () => {
 });
 
 describe('C7 /notifications 진입점', () => {
-  it('org_admin 은 D안 기관 화면, 코치는 기존 NotificationCenterPage', async () => {
+  it('org_admin 은 D안 기관 화면, 플랫폼 관리자는 기존 NotificationCenterPage(코치는 SDD-320 G 에서 D안)', async () => {
     api.listNotifications.mockResolvedValue({ notifications: [], total: 0, unread: 0 });
-    useAuthStore.setState({ user: { id: 'u', role: 'counselor', name: 'x', email: 'x@example.test' } } as never);
+    useAuthStore.setState({ user: { id: 'u', role: 'platform_admin', name: 'x', email: 'x@example.test' } } as never);
     await mount(createElement(UiV2NotificationCenterPage));
     expect(host.querySelector('[data-testid=legacy-center]')).toBeTruthy();
     act(() => mounted.unmount()); host.remove();

@@ -96,7 +96,11 @@ function MemberRow({ member, selected, compact, onOpen }: { member: HierarchyMem
 }
 
 function SessionBlock({ session, classId, selectedId, compact, onOpen }: { session: HierarchySession; classId: string | null; selectedId: string | null; compact: boolean; onOpen: (id: string) => void }) {
-  const [open, setOpen] = useState(true);
+  // 11/9 대표 지시: 처리할 일이 있는 회차(검토 필요·발송 실패·생성 실패)이거나 지금 선택한 리포트가 든 회차만 펼쳐서 시작한다.
+  const needsAttention = session.needs_review > 0 || session.delivery_failed > 0
+    || session.members.some((m) => { const t = rowState(m.client_report).tone; return t === 'pending' || t === 'failed'; })
+    || (!!selectedId && session.members.some((m) => m.client_report?.report_id === selectedId));
+  const [open, setOpen] = useState(needsAttention);
   const common: HierarchyDoc | null = session.common_report;
   return (
     <section aria-label={`${session.title ?? '회차'} 회차`} className="border-t border-[#E5E0E7]">

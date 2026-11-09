@@ -126,7 +126,8 @@ export default function ClientAppPage() {
   }
 
   // 본인 설정은 상담사 연결 여부와 무관하게 열 수 있다.
-  if (pathname === '/app/profile' || pathname === '/app/profile/') {
+  // SDD-320 K: ui-v2 에서 /app/settings 는 설정(/app/profile)과 같은 D안 쉘로 연다(레거시 셸로 새지 않게)
+  if (pathname === '/app/profile' || pathname === '/app/profile/' || (import.meta.env.VITE_UI_V2 === 'true' && (pathname === '/app/settings' || pathname === '/app/settings/'))) {
     // SDD-318: 설정 D안
     if (import.meta.env.VITE_UI_V2 === 'true') return <Suspense fallback={null}><UiV2SettingsPage /></Suspense>;
     return <ClientShell title="설정" sub="SETTINGS"><ClientSettingsPage /></ClientShell>;

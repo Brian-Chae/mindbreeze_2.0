@@ -1,0 +1,26 @@
+/* SDD-321 기관 정합(11/9) — 기관관리자 사이드바 항목 순서·가로선(코치 스코프 html.u2-coach). ui-v2-coach-scope.ts 가 불러와 기관 모든 경로에 공통 적용한다. 코치 화면에는 해당 href 가 없어 영향 없음. */
+@media (min-width: 1024px) {
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/dashboard/org"] { order: 1; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/org/counselors"] { order: 7; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/settings"] { order: 8; }
+  /* 설정 아래 가로선 → 데이터 센터 · 데이터 현황 · 알림 (데스크톱 전용 그룹, 코치와 같은 ::before 방식) */
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/org/data-center"] { order: 60; position: relative; margin-top: 25px; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/org/data-center"]::before { content: ""; position: absolute; left: 0; right: 0; top: -13px; height: 1px; background: #FFFFFF1F; pointer-events: none; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/upload-status"] { order: 61; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/notifications"] { order: 62; }
+}
+
+/* 부제(overline)가 숨겨진 상태에서도 18px 상단 여백이 남아 제목이 y=34 로 내려가던 문제 — 코치 스코프에서는 제목 y=25 로 통일 */
+html.u2-coach .mb-page-header-with-overline { padding-top: 0; }
+
+/* SDD-321 C(11/9) — 레거시 본문(회원·데이터 센터) 래퍼를 다른 기관 화면과 같은 x범위로: 1200 상한·가운데 정렬 해제 */
+@media (min-width: 1024px) {
+  /* 11/9 재수정: '>' 직계 선택자가 wide 래퍼 때문에 안 맞아 1200 가운데 정렬이 남았음 → 하위 선택자.
+     코치 D안 본문(.u2f: 셸 24 + 좌우 48, 최대 1600)과 같은 시작선(1440 기준 288→1353)으로 맞춘다. */
+  html.u2-coach .mobile-menu-swipe-page .mx-auto.max-w-mb-content,
+  html.u2-coach main.dc { max-width: 1600px; margin-left: 0; margin-right: 0; padding-left: 48px; padding-right: 48px; background: transparent; }
+  /* 회원 화면은 max-w-mb-content 래퍼가 2중이라 안쪽 래퍼의 여백은 0 (이중 48px 방지) */
+  html.u2-coach .mobile-menu-swipe-page .max-w-mb-content .mx-auto.max-w-mb-content { padding-left: 0; padding-right: 0; }
+}
+/* 11/9 대표 지시: 데이터 센터 내부 제목(기관 관리자 · DATA CENTER / OO 데이터 센터)을 운영 웹처럼 다시 보인다 */
+html.u2-coach main.dc .dc-heading { margin-bottom: 4px; }

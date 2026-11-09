@@ -1,13 +1,15 @@
 // SDD-318 — 리포트 상세 시트(D안). 기존 dialog 동작(포커스 제한·ESC·뒤로 포커스 복원·배경 스크롤 차단)을 유지한다.
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import ClientReportViewer from '../reports/ClientReportViewer';
+import { UiV2ReportBody } from './ui-v2-report-body';
+import { buildReportCover } from './ui-v2-report-copy';
 import PastReportsCompare from '../reports/PastReportsCompare';
 import { UiV2ArcRing } from './ui-v2-arc-ring';
-import { getReport, type ReportDto } from '../../lib/api/reports';
+import { getReport, adaptReportContent, type ReportDto } from '../../lib/api/reports';
 import { isReportDelayed, isReportInReview, REPORT_IN_REVIEW_BADGE, REPORT_IN_REVIEW_DELAYED_NOTICE, REPORT_IN_REVIEW_NOTICE } from '../../lib/report-review-copy';
 import '../reports/narrative-sections.css';
 import '../../styles/ui-v2.css';
+import '../../styles/ui-v2-report-v3.css';
 
 export function UiV2ReportSheet({ reportId, onClose, onReportChange }: { reportId: string; onClose: () => void; onReportChange?: (report: ReportDto) => void }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -46,6 +48,7 @@ export function UiV2ReportSheet({ reportId, onClose, onReportChange }: { reportI
 
   const inReview = report ? isReportInReview(report) : false;
   const when = report?.scheduled_at ?? report?.created_at;
+  const cover = report ? buildReportCover(report, adaptReportContent(report.content, 'client').headline) : null;
   return createPortal(
     <dialog ref={dialogRef} className="ui-v2 u2-sheet-dialog" aria-modal="true" aria-labelledby={titleId}
       onCancel={(event) => { event.preventDefault(); onClose(); }}
@@ -61,8 +64,8 @@ export function UiV2ReportSheet({ reportId, onClose, onReportChange }: { reportI
       <div className="u2-sheet-scroll">
         <section className="u2-cover">
           <UiV2ArcRing variant="cover" />
-          <span className="u2-eyebrow">{report?.session_type === 'meditation' ? '명상수업' : '리포트'}</span>
-          <h1 id={titleId}>{report?.session_title || '리포트 상세'}</h1>
+          <span className="u2-eyebrow">{cover?.eyebrow ?? '리포트'}</span>
+          <h1 id={titleId}>{cover?.title ?? '리포트 상세'}</h1>
           {when && <p className="u2-muted">{new Date(when).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}{report?.counselor_name ? ` · ${report.counselor_name}` : ''}</p>}
         </section>
         {loading && <p className="u2-empty" role="status">불러오는 중...</p>}
@@ -74,7 +77,7 @@ export function UiV2ReportSheet({ reportId, onClose, onReportChange }: { reportI
             {isReportDelayed(report) && <p className="u2-muted" style={{ fontSize: 13 }}>{REPORT_IN_REVIEW_DELAYED_NOTICE}</p>}
           </div>
         )}
-        {!loading && report && !inReview && <div className="u2-sheet"><ClientReportViewer report={report} onClose={onClose} /></div>}
+        {!loading && report && !inReview && <div className="u2-sheet"><UiV2ReportBody report={report} onClose={onClose} showRail /></div>}
         {!loading && report && !inReview && <div className="u2-gap"><PastReportsCompare current={report} /></div>}
       </div>
     </dialog>,

@@ -1,0 +1,201 @@
+/* SDD-320 E — PC(≥1024px) 공통 셸. 코치(html.u2-coach)·회원(ui-v2 쉘) 공용: 좌측 216px 짙은 보라 그라데이션 메뉴 + 전체 폭 본문.
+   기존 SidebarNav·AppShell·UiV2ClientShell 마크업은 바꾸지 않고 CSS 로만 덮는다. UI_V2 쉘/코치 스코프에서만 import 된다(운영 번들 미포함). */
+@media (min-width: 1024px) {
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) {
+    grid-template-columns: 216px minmax(0, 1fr);
+    background: #FAF9FC;
+  }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside {
+    background: linear-gradient(120deg, #3A1650, #251038);
+    border-right: 0;
+    color: #C9B8D6;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100dvh;
+    overflow-y: auto;
+    font-family: 'Pretendard MB', 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+  }
+  /* 브랜드 블록: 흰색 락업(심볼은 반전) */
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-root] { padding: 32px 16px; gap: 28px; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-brand] > div:first-child { padding: 0 8px; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-brand] > div:first-child > img { filter: brightness(0) invert(1); height: 12px; width: auto; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-brand] > div:first-child > span { color: #FFFFFF; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-brand] > div:last-child { padding-left: 8px; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-brand] > div:last-child > span:first-child { background: #E5D3EE; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-brand] > div:last-child > span:last-child { color: #C9B8D6; font-weight: 600; font-size: 13px; }
+  /* 메뉴 항목 */
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-menu] a {
+    min-height: 54px; padding: 12px 18px; gap: 14px; border-radius: 14px;
+    background: transparent; color: #C9B8D6; font-size: 14px; font-weight: 500; box-shadow: none;
+  }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-menu] a:hover { background: #FFFFFF14; color: #FFFFFF; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-menu] a[aria-current="page"] {
+    background: #FFFFFF26; color: #FFFFFF; font-weight: 700; position: relative;
+  }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-menu] a:focus-visible { outline: 3px solid #FFFFFF; outline-offset: -3px; }
+  /* 하단 사용자 블록·로그아웃 */
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-profile] { background: transparent; border-radius: 0; padding: 16px 8px; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-profile] > div { color: #C9B8D6; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-profile] > div:nth-child(2) { color: #FFFFFF; font-size: 14px; font-weight: 600; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside > div > button { color: #E5D3EE; min-height: 44px; border-radius: 14px; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside > div > button:hover { background: #FFFFFF14; }
+}
+
+/* ───────── 회원 PC 본문(전체 폭 + 2열) ───────── */
+@media (min-width: 1024px) {
+  .ui-v2.u2-shell { background: #FAF9FC; }
+  .ui-v2.u2-shell { position: relative; }
+  /* SDD-320 K(5-6): 코치처럼 별도 상단 바 없이 제목(h1)이 종 아이콘과 같은 줄(y≈25)에 오도록 상단 바를 본문 위에 겹친다 */
+  .ui-v2.u2-shell .u2-toolbar { position: absolute; top: 0; left: 0; right: 0; z-index: 5; max-width: none; height: 88px; padding: 0 48px; justify-content: flex-end; pointer-events: none; }
+  .ui-v2.u2-shell .u2-toolbar > * { pointer-events: auto; }
+  .ui-v2.u2-shell .u2-scroll:not(:has(> .u2-heading)) { padding-top: 88px; }
+  .ui-v2.u2-shell .u2-toolbar .u2-compact-title { display: none; }
+  .ui-v2.u2-shell .u2-heading { max-width: none; margin: 0; min-height: 88px; box-sizing: border-box; padding: 25px 120px 20px 48px; }
+  .ui-v2.u2-shell .u2-main, .ui-v2 .u2-main--wide { max-width: 1600px; margin: 0; padding: 0 48px 72px; }
+  .ui-v2.u2-shell .u2-main--fill { padding-bottom: 0; }
+  .ui-v2.u2-shell .u2-pc-cols { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+  .ui-v2.u2-shell .u2-pc-cols > * { min-width: 0; }
+  .ui-v2.u2-shell .u2-pc-side > .u2-section-head:first-child { margin-top: 0; }
+  .ui-v2.u2-shell .u2-pc-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
+  .ui-v2.u2-shell .u2-pc-grid > .u2-card, .ui-v2 .u2-pc-grid > section { margin-bottom: 0; min-width: 0; }
+  .ui-v2.u2-shell .u2-pc-grid > section { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .ui-v2.u2-shell .u2-pc-grid > section > .u2-section-head { grid-column: 1 / -1; }
+  .ui-v2.u2-shell .u2-pc-grid > section > .u2-card { margin-bottom: 0; }
+}
+
+/* 회원 설정: 좌(플레이그라운드·안내) / 우(항목 목록) 2열 */
+@media (min-width: 1024px) {
+  .ui-v2.u2-shell .u2-pc-cols--settings { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); }
+  /* 회원 알림 목록은 PC 에서 2열 카드 */
+  [data-shell-variant="ui-v2"] .ui-v2 .u2-notif-wrap { max-width: none; }
+  [data-shell-variant="ui-v2"] .ui-v2 .u2-notif-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+  /* 클래스 상세 표지는 좌열 안에서 카드처럼 */
+  .ui-v2.u2-shell .u2-pc-main > .u2-cover { padding-top: 0; }
+}
+
+/* ───────── 코치 PC/모바일 공통 제목·헤더 (시안: h1 31px/600/-1.35px, 본문 15px/24px) ───────── */
+html.u2-coach [data-ui="page-header"] h1,
+html.u2-coach [data-shell-variant] > section > header h1 {
+  font-size: 31px; line-height: 1.25; font-weight: 600; letter-spacing: -1.35px; color: #25212C;
+}
+html.u2-coach [data-ui="page-header"] .mb-page-header-overline { display: none; }
+html.u2-coach body { font-size: 15px; line-height: 1.6; }
+@media (max-width: 1023px) {
+  html.u2-coach [data-ui="page-header"] h1 { font-size: 31px; }
+}
+@media (min-width: 1024px) {
+  html.u2-coach [data-shell-variant] > section > header { height: auto; min-height: 88px; padding: 10px 48px; background: #FAF9FC; border-bottom: 0; }
+  html.u2-coach [data-shell-variant] .mobile-menu-swipe-page { padding-left: 24px; padding-right: 24px; }
+}
+
+/* ───────── 코치 홈 PC: 좌(히어로·타일·클래스·진행) / 우(레일) 2열 ───────── */
+@media (min-width: 1024px) {
+  html.u2-coach .ch-home.ch-home.ch-home { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); column-gap: 28px; row-gap: 20px; align-items: start; }
+  html.u2-coach .ch-home > * { grid-column: 1; min-width: 0; }
+  html.u2-coach .ch-home > .ch-work { display: contents; }
+  html.u2-coach .ch-home .ch-work > .ch-main { grid-column: 1; min-width: 0; }
+  html.u2-coach .ch-home .ch-work > .ch-rail { grid-column: 2; grid-row: 1 / span 5; min-width: 0; }
+  html.u2-coach .ch-home .ch-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ───────── F-0: 좌측 메뉴 시안 정합(활성=반투명 칩 + 밑줄, 하단 정보 영역 정리) ───────── */
+@media (min-width: 1024px) {
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-menu] a { position: relative; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-menu] a[aria-current="page"]::after {
+    content: ''; position: absolute; bottom: 6px; left: 56px; width: 18px; height: 2px; background: #FFFFFF; border-radius: 2px;
+  }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside [data-sidebar-menu] a svg { flex: none; width: 22px; height: 22px; stroke-width: 1.7; }
+  /* 코치: 'OO 전용' 문구 제거(시안에 없음). 기능 요소(서버연결·로그아웃)는 유지하고 작게 정리한다. */
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-brand] > div:last-child { display: none; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-profile] > div:first-child { display: none; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-profile] > div:nth-child(2) { margin-top: 0; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-root] > div:last-child:not([data-sidebar-profile]):not([data-sidebar-brand]) { padding: 0 8px 8px; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-root] > div:last-child:not([data-sidebar-profile]):not([data-sidebar-brand]) span:last-child { color: #C9B8D6; font-size: 12px; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-root] > button { margin-top: 0; padding: 0 18px; color: #E5D3EE; font-size: 14px; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-profile] > div:nth-child(3) { font-size: 12px; color: #C9B8D6; }
+  /* 회원 사이드바(ui-v2-member-sidebar) */
+  [data-shell-variant="ui-v2"] > aside .u2-side { display: flex; flex-direction: column; min-height: 100dvh; padding: 32px 16px 35px; gap: 0; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-logo { display: inline-flex; align-items: center; gap: 6px; height: 14px; margin: 0 8px; color: #FFFFFF; border-radius: 8px; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-logo img { height: 12px; width: auto; filter: brightness(0) invert(1); }
+  [data-shell-variant="ui-v2"] > aside .u2-side-logo b { font-size: 17px; line-height: .85; letter-spacing: .04em; font-weight: 700; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-menu { display: flex; flex-direction: column; gap: 4px; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-item { display: flex; align-items: center; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-item span { flex: 1; }
+  /* 설정 아래 가로선(::before — 링크 border 금지, 선택 배경은 라운드 사각형 유지) */
+  [data-shell-variant="ui-v2"] > aside .u2-side-item[href="/playground"] { position: relative; margin-top: 25px; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-item[href="/playground"]::before { content: ""; position: absolute; left: 0; right: 0; top: -13px; height: 1px; background: #FFFFFF1F; pointer-events: none; }
+  /* 11/9 지시 13: 하단 블록을 코치 사이드바(이름·이메일 → 아이콘 로그아웃 버튼 → 서버연결)와 같은 배치로 */
+  [data-shell-variant="ui-v2"] > aside .u2-side-foot { margin-top: auto; display: flex; flex-direction: column; gap: 28px; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-id { display: flex; flex-direction: column; padding: 16px 8px; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-id strong { color: #FFFFFF; font-size: 14px; font-weight: 600; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-id small { color: #C9B8D6; font-size: 12px; overflow-wrap: anywhere; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-foot button { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 18px; border-radius: 14px; color: #E5D3EE; font-size: 14px; text-align: left; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-foot button svg { flex: none; width: 22px; height: 22px; stroke-width: 1.7; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-foot button:hover { background: #FFFFFF26; color: #FFFFFF; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-conn { margin: 0; padding: 0 8px; display: flex; align-items: center; gap: 8px; color: #C9B8D6; font-size: 12px; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-conn i { width: 8px; height: 8px; border-radius: 50%; background: #E5A3B5; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-conn i[data-on] { background: #01F0C8; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-badge { font-style: normal; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #B3264B; color: #FFFFFF; font-size: 10px; font-weight: 700; line-height: 18px; text-align: center; }
+  /* 11/9: 코치 로그아웃도 메뉴 링크와 같은 라운드 호버(레거시 hover:bg-red-50 보다 우선) */
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-root] > button:hover { background: #FFFFFF26; color: #FFFFFF; }
+}
+
+/* ───────── F-3: 회원 PC 잔여 — 내 클래스 목록 2열, 대화 목록+방 ───────── */
+@media (min-width: 1024px) {
+  .ui-v2.u2-shell .u2-pc-cols--classes { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+  .ui-v2.u2-shell .u2-pc-cols--classes > .u2-pc-main:only-child { grid-column: 1 / -1; }
+  /* 11/9 대표 지시: 한쪽 열만 있으면(예: 완료만) 전체 폭 + 카드 2열 */
+  .ui-v2.u2-shell .u2-pc-cols--classes > .u2-pc-side:only-child { grid-column: 1 / -1; }
+  .ui-v2.u2-shell .u2-pc-cols--classes > :only-child > section { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; align-items: stretch; }
+  .ui-v2.u2-shell .u2-pc-cols--classes > :only-child > section > .u2-section-head { grid-column: 1 / -1; }
+  .ui-v2.u2-shell .u2-pc-cols--classes > :only-child > section > :not(.u2-section-head) { margin-top: 0; margin-bottom: 16px; }
+  .ui-v2.u2-shell .u2-pc-cols--classes .u2-section-head:first-child { margin-top: 0; }
+  /* 대화: 목록 320 + 대화창, 본문 전체 폭 */
+  /* SDD-320 K: 본문(u2-main)이 이미 좌우 48px 를 가지므로 대화 영역은 좌우 패딩 0 (다른 페이지와 같은 264→1392) */
+  [data-shell-variant="ui-v2"] .ui-v2 .u2-chat { padding: 0 0 32px; max-width: none; }
+  [data-shell-variant="ui-v2"] .ui-v2 .u2-chat-list { width: 320px; }
+}
+
+/* F-4: 쉘 밖에서 그려지는 코치 화면(회원 초대·자격 대시보드)의 제목을 시안 크기로. 코치 스코프 안에서만 적용한다. */
+html.u2-coach h1[class*="text-[22px]"] { font-size: 31px; line-height: 1.25; font-weight: 600; letter-spacing: -1.35px; }
+
+/* F-0: 코치 메뉴 순서 = 시안(홈·클래스·회원·리포트·채팅·상담·설정). 항목은 하나도 빼지 않고 CSS order 로만 정렬하며,
+   시안에 없는 항목(데이터 현황·플레이그라운드·알림)은 설정 뒤 하단 그룹으로 둔다. */
+@media (min-width: 1024px) {
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] { display: flex; flex-direction: column; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a { order: 50; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/dashboard"] { order: 1; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/classes"] { order: 2; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/clients"] { order: 3; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/reports"] { order: 4; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/chat"] { order: 5; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/counseling"] { order: 6; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/settings"] { order: 7; }
+  /* 대표 지시(11/9): 설정 아래 가로선 → 플레이그라운드 · 데이터 현황 · 알림 순서(데스크톱 전용 그룹). */
+  /* 가로선은 링크 바깥(::before)에 그려 선택 시에도 라운드 사각형이 유지되게 한다 */
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/playground"] { order: 60; position: relative; margin-top: 25px; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/playground"]::before { content: ""; position: absolute; left: 0; right: 0; top: -13px; height: 1px; background: #FFFFFF1F; pointer-events: none; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/upload-status"] { order: 61; }
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-menu] a[href="/notifications"] { order: 62; }
+}
+
+/* SDD-320 J — 코치 PC 데이터 현황(레거시 마크업 유지): 본문 폭을 알림·리포트와 같은 프레임(288→1353)에 맞춘다(요약 카드 4열 균등은 기존 grid-cols-4) */
+@media (min-width: 1024px) {
+  html.u2-coach .max-w-6xl:has(> [data-testid="upload-overview"]) { max-width: 1600px; margin-left: 0; margin-right: 0; padding: 0 48px 72px; box-sizing: border-box; }
+}
+
+/* 11/9 대표 지시: 회원 홈 상단 바 — 알림(종) 왼쪽 코드 입장 알약 버튼 */
+.ui-v2 .u2-toolbar-code { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; margin-left: auto; margin-right: 8px; border-radius: 999px; background: #5F0080; color: #FFFFFF; font-size: 14px; font-weight: 600; white-space: nowrap; flex: none; }
+.ui-v2 .u2-toolbar-code:focus-visible { outline: 3px solid #5F0080; outline-offset: 2px; }
+@media (max-width: 480px) { .ui-v2 .u2-toolbar-code { padding: 0 12px; font-size: 13px; } .ui-v2 .u2-toolbar-code span { font-size: 0; } .ui-v2 .u2-toolbar-code span::after { content: '코드 입장'; font-size: 13px; } }
+
+/* 11/9 대표 지시: 내 클래스 — 클래스 신청하기는 목록 아래·코드 참여 카드 위에 본문 전체 폭 */
+.ui-v2 .u2-apply-wide { display: flex; justify-content: center; margin: 16px 0; }
+
+/* ───────── 코치 터치 영역 44px 보정(마크업 불변, 대상만 한정. 코치 쉘에는 <main> 이 없어 [data-shell-variant] 하위로 건다) ───────── */
+html.u2-coach [data-shell-variant] button[aria-expanded][aria-label$="접기"],
+html.u2-coach [data-shell-variant] button[aria-expanded][aria-label$="펼치기"] { min-width: 44px; min-height: 44px; width: 44px; height: 44px; }
+html.u2-coach [data-shell-variant] button[aria-pressed] { min-height: 44px; }
+html.u2-coach [data-shell-variant] button.rounded-full[class*="bg-[#F5EDFC]"][class*="py-1.5"] { min-height: 44px; min-width: 44px; }
+html.u2-coach [data-shell-variant] input[type="checkbox"] { width: 22px; height: 22px; accent-color: #5F0080; }

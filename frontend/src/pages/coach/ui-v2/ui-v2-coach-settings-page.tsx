@@ -17,6 +17,7 @@ import { BlockedUsersList } from '../../../components/chat/blocked-users-list';
 import '../../../styles/ui-v2.css';
 import '../../../styles/ui-v2-brand.css';
 import '../../../styles/ui-v2-coach-screens.css';
+import '../../../styles/ui-v2-coach-pc.css';
 
 function Group({ title, description, icon, children }: { title: string; description: string; icon: ReactNode; children: ReactNode }) {
   return (
@@ -45,12 +46,21 @@ export function UiV2CoachSettingsPage() {
     <AppShell title="설정">
       <div className="ui-v2 u2c u2c-settings">
         <p className="u2c-lead">나에게 맞게, 필요한 만큼만.</p>
+        <div className="u2-pc-cols u2-pc-cols--settings"><div className="u2-pc-main">
         <section className="u2-card u2-hero u2-playground" aria-labelledby="u2c-pg-title">
           <p className="u2-eyebrow">LINK BAND PLAYGROUND</p>
           <h2 id="u2c-pg-title">내 마음의 신호를 만나보세요</h2>
           <p>밴드를 연결하거나 예시 데이터로 가볍게 체험할 수 있어요.</p>
           <Link to="/playground" state={{ from: '/settings' }} className="u2-primary">플레이그라운드 열기 <span aria-hidden="true">↗</span></Link>
         </section>
+        {/* 11/9 대표 지시: 플레이그라운드 카드와 균형 — 데이터 현황 카드 */}
+        <section className="u2-card u2-hero u2-playground u2c-upload-card" aria-labelledby="u2c-up-title">
+          <p className="u2-eyebrow">DATA STATUS</p>
+          <h2 id="u2c-up-title">회차별 데이터 도착 현황</h2>
+          <p>측정한 데이터가 서버에 도착했는지 회차별로 확인할 수 있어요.</p>
+          <Link to="/upload-status" className="u2-primary" data-upload-status-card>데이터 현황 열기 <span aria-hidden="true">↗</span></Link>
+        </section>
+        </div><div className="u2-pc-side">
         <div className="u2-setlist">
           <Group title="내 계정" description="기본 정보 · 프로필 관리" icon={<UserRound size={22} />}><AccountSettings /></Group>
           <Group title="데이터 현황" description="회차별 데이터 도착 현황" icon={<Database size={22} />}>
@@ -77,6 +87,7 @@ export function UiV2CoachSettingsPage() {
           <button type="button" onClick={() => void handleLogout()} className="u2-danger">로그아웃</button>
           <small>MIND BREEZE 2.0</small>
         </div>
+        </div></div>
       </div>
     </AppShell>
   );
