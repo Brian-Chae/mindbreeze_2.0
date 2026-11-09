@@ -67,12 +67,13 @@ export function UiV2CoachClassesPage() {
           <span className="u2-eyebrow">지금 함께할 시간</span><h2>열려 있는 회차가 있어요</h2>
           <div className="u2f-actions">{opened.map((r) => <Link key={r.id} className="u2-primary" to={r.openSessionId ? classSessionPath('host', r.id as never, r.openSessionId as never) : classPath('host', r.id as never)}>{r.title} · {r.openSessionId ? '회차 보기' : '클래스 보기'}</Link>)}</div>
         </section>}
+        {/* 11/9 대표 지시: 코치 코드를 '지금 바로 시작' 위로 */}
+        <UiV2CoachCodeCard />
         <Link to="/classes/now" className="u2-card u2-hero u2-hero--nature u2f-now-hero" style={natureHeroStyle('now')}>
           <span><strong>준비 없이 지금 수업을 열어야 하나요?</strong><small>이름·일정 입력 없이 바로 대기실을 열고 코드로 회원을 들여보내요.</small></span>
           <span className="u2f-now-btn">지금 바로 시작 →</span>
         </Link>
         {opened.length === 0 && nextClass && <div className="u2f-next-hero cs-structure"><NextClassView model={nextClass} showClassTitle /></div>}
-        <UiV2CoachCodeCard />
         <p className="u2f-lead">함께할 클래스를 한눈에 살펴보고 바로 시작해요.</p>
         <div className="u2f-filters">
           <label className="u2-search"><span className="sr-only">클래스 검색</span><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="클래스 이름 검색" aria-label="클래스 검색" /></label>

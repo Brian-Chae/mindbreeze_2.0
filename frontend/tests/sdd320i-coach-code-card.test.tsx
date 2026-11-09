@@ -38,8 +38,8 @@ describe('코치 코드 카드', () => {
     const home = read('src/pages/coach/ui-v2/ui-v2-coach-home-page.tsx');
     const cls = read('src/pages/coach/ui-v2/ui-v2-coach-classes-page.tsx');
     expect(home).toMatch(/<OrgRemovedNoticeDialog \/>\n\s*<UiV2CoachCodeCard \/>/);
-    // 11/9: 클래스 화면 순서 — 열린 회차 → 지금 바로 시작(자연 배경) → 다음 회차 안내 → 코치 코드
-    expect(cls).toMatch(/u2f-classes">\n[\s\S]*?<section aria-label="열려 있는 회차"[\s\S]*?u2f-now-hero[\s\S]*?u2f-next-hero[\s\S]*?<UiV2CoachCodeCard \/>/);
+    // 11/9: 클래스 화면 순서 — 열린 회차 → 코치 코드 → 지금 바로 시작(자연 배경) → 다음 회차 안내
+    expect(cls).toMatch(/u2f-classes">\n[\s\S]*?<section aria-label="열려 있는 회차"[\s\S]*?<UiV2CoachCodeCard \/>[\s\S]*?u2f-now-hero[\s\S]*?u2f-next-hero/);
     expect(home).not.toContain('••••');
   });
 });
