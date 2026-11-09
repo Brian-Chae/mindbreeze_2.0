@@ -4,8 +4,10 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import AppShell from '../../../components/layout/AppShell';
 import InviteModal from '../../../components/clients/InviteModal';
 import { listClients, type ClientClassRef, type ClientListItem } from '../../../lib/api/clients';
+import { UiV2SummaryCards } from '../../../components/ui-v2/ui-v2-summary-cards';
+import { buildClientSummaryCards, type ClientSummaryState } from '../../../lib/client-summary-cards';
 import { ApiError } from '../../../lib/api/client';
-import { ACTIVE_WITHIN_OPTIONS, ageLabel, formatKst, genderLabel, groupClients, uniqueClientCount, type GroupMode } from '../../../lib/clients/overview';
+import { ACTIVE_WITHIN_OPTIONS, formatKst, groupClients, uniqueClientCount, type GroupMode } from '../../../lib/clients/overview';
 import { useAuthStore } from '../../../stores/authStore';
 import '../../../styles/ui-v2.css';
 import '../../../styles/ui-v2-brand.css';
@@ -41,6 +43,8 @@ export function UiV2CoachClientsPage() {
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [showInvite, setShowInvite] = useState(false);
+  const [sum, setSum] = useState<ClientSummaryState>({ connected: null, d7: null, d30: null, extra: null });
+  const [sumLoaded, setSumLoaded] = useState(false);
 
   const patchParams = (patch: Record<string, string | null>, resetPage = true): void => {
     const next = new URLSearchParams(params);
@@ -60,6 +64,17 @@ export function UiV2CoachClientsPage() {
     return () => { cancelled = true; };
   }, [searchTerm, classId, days, page, size, reloadKey, isAuthenticated, user?.role]);
   useEffect(() => { if (!isAuthenticated) { setClients([]); setTotal(0); } }, [isAuthenticated]);
+  useEffect(() => {
+    if (!isAuthenticated || user?.role !== 'counselor') return;
+    let cancelled = false;
+    // 목록 필터와 무관하게 전체 범위 total 만 따로 받는다(size=1).
+    Promise.allSettled([listClients({ size: 1 }), listClients({ size: 1, active_within_days: 7 }), listClients({ size: 1, active_within_days: 30 })]).then(([all, w, m]) => {
+      if (cancelled) return;
+      setSum({ connected: all.status === 'fulfilled' ? all.value.total : null, d7: w.status === 'fulfilled' ? w.value.total : null, d30: m.status === 'fulfilled' ? m.value.total : null, extra: all.status === 'fulfilled' ? all.value.summary ?? null : null });
+      setSumLoaded(true);
+    });
+    return () => { cancelled = true; };
+  }, [reloadKey, isAuthenticated, user?.role]);
 
   const groups = useMemo(() => groupClients(clients, group), [clients, group]);
   const hasFilter = Boolean(searchTerm || classId || days || group !== 'none');
@@ -71,7 +86,8 @@ export function UiV2CoachClientsPage() {
   return (
     <AppShell title="한 사람씩 살펴요" rightSlot={<button data-header-action="primary" type="button" onClick={() => setShowInvite(true)} className="mb-btn">회원 초대</button>}>
       <div className="ui-v2 u2f u2f-clients">
-        <p className="u2f-lead" aria-live="polite">전체 <b>{total}</b>명{group === 'class' && ` · 그룹 ${groups.length}개 (고유 ${uniqueClientCount(groups)}명)`}</p>
+        {sumLoaded && <UiV2SummaryCards label="회원 요약" items={buildClientSummaryCards(sum, days, (d) => patchParams({ days: d ? String(d) : null }))} />}
+        <p className="u2f-lead" aria-live="polite">{hasFilter ? '현재 조건' : '목록'} <b>{total}</b>명{group === 'class' && ` · 그룹 ${groups.length}개 (고유 ${uniqueClientCount(groups)}명)`}</p>
         <form onSubmit={submit} className="u2f-filters" aria-label="검색과 필터">
           <label className="u2-search"><span className="sr-only">회원 검색</span><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="이름 또는 이메일 검색" aria-label="회원 검색" /></label>
           <select aria-label="소속 클래스" value={classId} onChange={(e) => patchParams({ class: e.target.value || null })}><option value="">전체 클래스</option>{classOptions.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}</select>
@@ -82,17 +98,17 @@ export function UiV2CoachClientsPage() {
         </form>
         {loading && <p className="u2-empty" role="status">불러오는 중...</p>}
         {error && <div className="u2-alert" role="alert"><p>{error}</p><button type="button" className="u2-secondary u2-gap" onClick={() => setReloadKey((k) => k + 1)}>다시 시도</button></div>}
-        {!loading && !error && clients.length === 0 && <p className="u2-empty">{hasFilter ? <>조건에 맞는 회원이 없어요. <button type="button" className="u2-textlink" onClick={reset}>필터 초기화</button></> : '등록된 회원이 없어요.'}</p>}
+        {!loading && !error && clients.length === 0 && <p className="u2-empty">{hasFilter ? <>조건에 맞는 회원이 없어요. <button type="button" className="u2-textlink" onClick={reset}>필터 초기화</button></> : '아직 연결된 회원이 없어요. 회원 초대로 코치 코드를 보내 보세요.'}</p>}
         {!error && clients.length > 0 && groups.map((g) => (
           <section key={g.id} aria-label={g.title}>
             {group === 'class' && <h2 className="u2f-group">{g.title} · {g.clients.length}명</h2>}
             <div className="u2f-table"><div className="u2f-table-box" data-testid="client-table-scroll">
-              <div className="u2f-tr u2f-th" aria-hidden="true"><span>회원</span><span>참여 클래스</span><span>최근 활동</span><span>다음 행동</span></div>
+              <div className="u2f-tr u2f-th" aria-hidden="true"><span>회원</span><span>참여 클래스</span><span>최근 활동</span><span>상세</span></div>
               {g.clients.map((c) => (
                 <div className="u2f-tr" key={c.id}>
-                  <span><b>{c.name}</b><small>{c.email} · {genderLabel(c.gender)} · {ageLabel(c.age)}</small></span>
+                  <span><b>{c.name}</b><small>{c.email}</small></span>
                   <span>{classText(c.classes)}</span>
-                  <span>{activityText(c)}<small>{c.phone_masked ?? '연락처 미입력'}</small></span>
+                  <span>{activityText(c)}</span>
                   <Link className="u2-secondary" to={`/clients/${c.id}`}>회원 보기</Link>
                 </div>
               ))}
@@ -102,7 +118,6 @@ export function UiV2CoachClientsPage() {
                 <article className="u2-card" key={c.id}>
                   <h3>{c.name}</h3>
                   <p className="u2-muted">{c.email}</p>
-                  <p className="u2-muted">{genderLabel(c.gender)} · {ageLabel(c.age)} · {c.phone_masked ?? '연락처 미입력'}</p>
                   <p className="u2-muted">{classText(c.classes)}</p>
                   <p className="u2-muted">최근 활동 {activityText(c)}</p>
                   <Link className="u2-primary u2f-btn" to={`/clients/${c.id}`}>회원 보기</Link>

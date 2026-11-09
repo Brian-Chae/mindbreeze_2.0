@@ -33,9 +33,19 @@ export interface ClientListItem {
   last_activity_source?: string | null;
 }
 
+/** SDD-324 신규 집계(서버 계약 확정 전 가정 이름) — 없으면 화면에서 숨긴다. */
+export interface ClientSummaryExtra {
+  week_attended?: number | null;
+  inactive_14d?: number | null;
+  report_unread_members?: number | null;
+  band_worn_members?: number | null;
+  attended_members?: number | null;
+}
+
 export interface ClientListResponse {
   clients: ClientListItem[];
   total: number;
+  summary?: ClientSummaryExtra | null;
   page: number;
   class_options?: ClientClassRef[];
   counselor_options?: ClientCounselorRef[];
