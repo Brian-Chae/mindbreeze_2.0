@@ -10,7 +10,7 @@ import type { TabFilters } from './coaches-tab';
 
 const LABEL = { pending: '대기', approved: '승인됨', rejected: '거절됨' } as const;
 const TONE: Record<OrgJoinRequest['status'], PillTone> = { pending: 'warn', approved: 'ok', rejected: 'danger' };
-const nameOf = (r: OrgJoinRequest): string => r.applicant_name || '신청자';
+const nameOf = (r: OrgJoinRequest): string => r.user_name || r.applicant_name || '신청자';
 
 export function RequestsTab({
   orgId,
@@ -81,7 +81,7 @@ export function RequestsTab({
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.id} data-request-id={r.id}>
-                    <td><div className="u2m-identity"><span className="u2m-avatar" aria-hidden="true">{nameOf(r).slice(-2)}</span><div><strong>{nameOf(r)}</strong><small>{r.applicant_email ?? ''}</small></div></div></td>
+                    <td><div className="u2m-identity"><span className="u2m-avatar" aria-hidden="true">{nameOf(r).slice(-2)}</span><div><strong>{nameOf(r)}</strong><small>{(r.user_email || r.applicant_email) ?? ''}</small></div></div></td>
                     <td><Pill tone={TONE[r.status]}>{LABEL[r.status]}</Pill>{r.status === 'rejected' && r.reason && <small className="u2m-reason">사유: {r.reason}</small>}</td>
                     <td className="u2-cell-muted">{formatDateTime(r.created_at)}</td>
                     <td>{buttons(r)}</td>
@@ -94,7 +94,7 @@ export function RequestsTab({
             {rows.map((r) => (
               <article key={r.id} className="u2m-card" data-request-id={r.id}>
                 <div className="u2m-card-head">
-                  <div className="u2m-identity"><span className="u2m-avatar" aria-hidden="true">{nameOf(r).slice(-2)}</span><div><strong>{nameOf(r)}</strong><small>{r.applicant_email ?? ''}</small></div></div>
+                  <div className="u2m-identity"><span className="u2m-avatar" aria-hidden="true">{nameOf(r).slice(-2)}</span><div><strong>{nameOf(r)}</strong><small>{(r.user_email || r.applicant_email) ?? ''}</small></div></div>
                   <Pill tone={TONE[r.status]}>{LABEL[r.status]}</Pill>
                 </div>
                 <p className="u2m-role">신청일 {formatDateTime(r.created_at)}</p>

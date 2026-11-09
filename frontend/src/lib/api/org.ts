@@ -97,6 +97,10 @@ export interface ResendCounselorInviteResponse {
 
 // SDD-323: 기관이 받은 가입 요청 한 건(plan A9). 신청자 정보 필드는 서버가 채우면 표시한다.
 export interface OrgJoinRequest extends JoinRequest {
+  /** 서버 OrgJoinRequestDetail 필드 */
+  user_id?: string;
+  user_name?: string | null;
+  user_email?: string | null;
   applicant_name?: string | null;
   applicant_email?: string | null;
   handled_at?: string | null;
