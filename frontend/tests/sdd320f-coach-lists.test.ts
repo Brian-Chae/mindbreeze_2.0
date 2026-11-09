@@ -64,7 +64,9 @@ describe('분기·격리', () => {
   const app = read('src/App.tsx');
   it('3개 목록은 플래그 ∧ counselor 에서만 ui-v2, 청크는 플래그 삼항 안', () => {
     expect(app).toMatch(/const useV2 = import\.meta\.env\.VITE_UI_V2 === 'true' && \(role === 'counselor' \|\| \(role === 'org_admin' && !orgLegacy\)\);\n  return useV2 \? <Suspense fallback=\{null\}><V2 \/>/);
-    for (const n of ['classes', 'clients', 'reports']) expect(app).toMatch(new RegExp(`VITE_UI_V2 === 'true'\\s*\\n?\\s*\\? import\\('\\./pages/coach/ui-v2/ui-v2-coach-${n}-page'\\)`));
+    // 11/9 대표 지시: 리포트 목록은 운영 웹 레이아웃(레거시 ReportListPage)을 그대로 쓴다
+    expect(app).toContain('<CoachAwareList V2={LegacyReportsPage} Legacy={LegacyReportsPage} />');
+    for (const n of ['classes', 'clients']) expect(app).toMatch(new RegExp(`VITE_UI_V2 === 'true'\\s*\\n?\\s*\\? import\\('\\./pages/coach/ui-v2/ui-v2-coach-${n}-page'\\)`));
   });
   it('기존 3개 레거시 목록 파일은 수정하지 않았다', () => {
     for (const f of ['src/pages/classes/host-classes-page.tsx', 'src/pages/clients/ClientListPage.tsx', 'src/pages/reports/ReportListPage.tsx']) expect(read(f)).not.toMatch(/u2f|ui-v2/);

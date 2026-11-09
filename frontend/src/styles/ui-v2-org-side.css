@@ -22,7 +22,5 @@ html.u2-coach .mb-page-header-with-overline { padding-top: 0; }
   /* 회원 화면은 max-w-mb-content 래퍼가 2중이라 안쪽 래퍼의 여백은 0 (이중 48px 방지) */
   html.u2-coach .mobile-menu-swipe-page .max-w-mb-content .mx-auto.max-w-mb-content { padding-left: 0; padding-right: 0; }
 }
-/* 데이터 센터: 상단 제목과 중복되는 내부 제목 블록(기관 관리자 · DATA CENTER / OO 데이터 센터)은 숨기고 설명 한 줄+권한 배지만 남긴다 */
+/* 11/9 대표 지시: 데이터 센터 내부 제목(기관 관리자 · DATA CENTER / OO 데이터 센터)을 운영 웹처럼 다시 보인다 */
 html.u2-coach main.dc .dc-heading { margin-bottom: 4px; }
-html.u2-coach main.dc .dc-heading .dc-eyebrow,
-html.u2-coach main.dc .dc-heading h1 { display: none; }

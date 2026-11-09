@@ -116,9 +116,6 @@ const CoachUiV2ClassesPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
 const CoachUiV2ClientsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
   ? import('./pages/coach/ui-v2/ui-v2-coach-clients-page').then((module) => ({ default: module.UiV2CoachClientsPage }))
   : Promise.resolve({ default: () => <></> }));
-const CoachUiV2ReportsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
-  ? import('./pages/coach/ui-v2/ui-v2-coach-reports-page').then((module) => ({ default: module.UiV2CoachReportsPage }))
-  : Promise.resolve({ default: () => <></> }));
 const CoachUiV2ReportDetailPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
   ? import('./pages/coach/ui-v2/ui-v2-coach-report-detail-page').then((module) => ({ default: module.UiV2CoachReportDetailPage }))
   : Promise.resolve({ default: () => <></> }));
@@ -351,7 +348,8 @@ const router = createBrowserRouter(
           </>
         )}
         <Route path="/admin" element={<PlatformAdminRoute><Navigate to="/admin/orgs" replace /></PlatformAdminRoute>} />
-        <Route path="/reports" element={<RoleGuard role={['counselor', 'org_admin']}><CoachAwareList V2={CoachUiV2ReportsPage} Legacy={LegacyReportsPage} /></RoleGuard>} />
+        {/* 11/9 대표 지시: 리포트 목록은 운영 웹 레이아웃(클래스 › 회차 › 회원 계층 + 오른쪽 검토 창)을 그대로 쓴다. 셸·사이드바는 새 디자인 유지. */}
+        <Route path="/reports" element={<RoleGuard role={['counselor', 'org_admin']}><CoachAwareList V2={LegacyReportsPage} Legacy={LegacyReportsPage} /></RoleGuard>} />
         <Route path="/reports/sample" element={<ReportSamplePage />} />
         <Route path="/reports/:id" element={<RoleGuard role={['counselor', 'org_admin']}><CoachAwareList V2={CoachUiV2ReportDetailPage} Legacy={ReportDetailPage} /></RoleGuard>} />
         <Route
