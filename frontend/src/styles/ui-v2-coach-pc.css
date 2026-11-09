@@ -120,5 +120,44 @@
 .ui-v2 .u2-coach-code.u2-org-code-hero { flex-direction: row; min-height: 150px; padding: 28px 30px; background-size: cover; background-position: center; box-shadow: 0 14px 34px #25103840; }
 .ui-v2 .u2-org-code-hero .u2-eyebrow { color: #E5D3EE; }
 .ui-v2 .u2-org-code-hero .u2-coach-code__num { font-size: 40px; letter-spacing: 8px; text-shadow: 0 1px 10px #25103899; }
+.ui-v2 .u2-org-code-hero { align-items: center; }
+.ui-v2 .u2-org-code-hero :is(.u2-coach-code__copy, button) { align-self: center; flex: 0 0 auto; height: 44px; min-height: 44px; width: auto; min-width: 84px; padding: 0 22px; border-radius: 999px; font-size: 15px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; text-align: center; white-space: nowrap; }
 .ui-v2 .u2-org-code-hero small { color: #FFFFFFD9; text-shadow: 0 1px 6px #25103880; }
-@media (max-width: 767px) { .ui-v2 .u2-coach-code.u2-org-code-hero { flex-direction: column; align-items: flex-start; padding: 22px; } .ui-v2 .u2-org-code-hero .u2-coach-code__num { font-size: 32px; letter-spacing: 5px; } }
+@media (max-width: 767px) { .ui-v2 .u2-coach-code.u2-org-code-hero { flex-direction: column; align-items: flex-start; padding: 22px; } .ui-v2 .u2-org-code-hero .u2-coach-code__num { font-size: 32px; letter-spacing: 5px; } .ui-v2 .u2-org-code-hero :is(.u2-coach-code__copy, button) { align-self: flex-start; } }
+
+/* 코치 홈 전용: 회원 홈과 같은 카드·행 밀도. 다른 코치/기관 화면에는 적용하지 않는다. */
+html .ui-v2.u2f-home .u2f-home-ops { display: flex; flex-direction: column; gap: 16px; }
+html .ui-v2.u2f-home .u2f-home-ops > * { margin: 0; }
+html .ui-v2.u2f-home .u2-card:not(.u2-hero--nature):not(.u2-coach-code) { padding: 24px; border-radius: 20px; background: #FFF; }
+html .ui-v2.u2f-home .u2-section-head { margin: 0 0 14px; gap: 12px; align-items: center; }
+html .ui-v2.u2f-home .u2-section-head h2 { font-size: 18px; font-weight: 800; line-height: 1.4; }
+html .ui-v2.u2f-home .u2-textlink { flex-shrink: 0; font-size: 13px; color: #5F0080; }
+html .ui-v2.u2f-home .u2f-home-class-empty { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 22px 16px; border: 1px dashed #D8CCE0; border-radius: 14px; background: #FBF9FD; }
+html .ui-v2.u2f-home .u2f-home-class-empty p { margin: 0; color: #6F6F6F; font-size: 13px; }
+html .ui-v2.u2f-home .u2f-home-create { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: auto; min-height: 44px; height: 44px; padding: 0 22px; margin: 0; border-radius: 999px; background: #5F0080; color: #FFF; font-size: 14px; }
+html .ui-v2.u2f-home .u2f-cols { gap: 16px; }
+html .ui-v2.u2f-home .u2f-rail { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+html .ui-v2.u2f-home .u2f-rail > * { margin: 0; }
+html .ui-v2.u2f-home .u2-listrow { min-height: 64px; padding: 9px 0; gap: 12px; align-items: center; }
+html .ui-v2.u2f-home .u2-listrow:last-child { border-bottom: 0; }
+html .ui-v2.u2f-home .u2-listrow h3 { font-size: 16px; font-weight: 600; line-height: 22px; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html .ui-v2.u2f-home .u2-listrow p { font-size: 13px; line-height: 20px; color: #6F6F6F; margin: 2px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html .ui-v2.u2f-home .u2-listrow > small { flex: 0 0 auto; align-self: flex-start; margin-top: 2px; font-size: 13px; line-height: 20px; color: #6F6F6F; white-space: nowrap; }
+html .ui-v2.u2f-home .u2f-home-avatar { display: grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #F1E4F6, #DFD6F4); color: #5F0080; font-size: 16px; font-weight: 600; }
+html .ui-v2.u2f-home .u2-empty { padding: 18px 0; margin: 0; font-size: 13px; color: #6F6F6F; }
+html .ui-v2.u2f-home .u2f-home-shortcuts { display: flex; flex-wrap: wrap; gap: 10px; }
+html .ui-v2.u2f-home .u2f-home-shortcuts .u2-secondary { display: inline-flex; justify-content: center; align-items: center; flex: 1 1 auto; width: auto; min-height: 44px; padding: 0 16px; border-radius: 999px; font-size: 14px; margin: 0; }
+@media (max-width: 1023px) {
+  html .ui-v2.u2f-home .u2f-cols { display: flex; flex-direction: column; }
+}
+@media (max-width: 767px) {
+  html .ui-v2.u2f-home { padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px)); }
+  html .ui-v2.u2f-home .u2-card:not(.u2-hero--nature):not(.u2-coach-code) { padding: 18px; border-radius: 18px; }
+  html .ui-v2.u2f-home .u2f-tiles { gap: 16px; }
+}
+
+/* 11/9 대표 지시: 코치 웹 왼쪽 메뉴에서 플레이그라운드·데이터 현황·알림 제거(설정 카드·상단 종 아이콘으로 접근). 기관관리자 메뉴는 유지. */
+html.u2-coach.u2-coach-counselor aside nav a:is([href="/playground"], [href="/upload-status"], [href="/notifications"]) { display: none !important; }
+
+/* 11/9 대표 지시: 상단 영역 높이 통일(명상 클래스·회원 기준) — 상단 바 아래 별도 안내 줄을 두지 않는다. */
+html.u2-coach .ui-v2.u2c-settings > .u2c-lead { display: none; }

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { UiV2CoachCodeCard } from '../../../components/ui-v2/ui-v2-coach-code-card';
 import { Link, useNavigate } from 'react-router-dom';
 import AppShell from '../../../components/layout/AppShell';
+import { ClassCreateAction } from '../../../components/class/structure/class-create-action';
 import OrgRemovedNoticeDialog from '../../../components/org/OrgRemovedNoticeDialog';
 import { AiOnly } from '../../../components/routing/ai-gate';
 import { getCounselorDashboard, type ClassSummary, type CounselorDashboardResponse } from '../../../lib/api/dashboard';
@@ -97,17 +98,15 @@ export function UiV2CoachHomePage() {
   const recentChats = useMemo(() => [...chatRooms].sort((a, b) => new Date(b.last_message_at ?? 0).getTime() - new Date(a.last_message_at ?? 0).getTime()).slice(0, 3), [chatRooms]);
   const unreadNotifs = useMemo(() => notifications.filter((n) => !n.is_read).slice(0, 3), [notifications]);
 
-  const displayName = (data?.counselor_name ?? user?.name ?? '코치').replace(/\s*\([^)]*\)\s*$/, '') || '코치';
   const showBanner = !bannerDismissed && user?.role === 'counselor' && !user.onboarding_completed;
   const heroSession: ClassSummary | null = hero?.session ?? null;
   const totalMembers = data ? (data.total_members ?? data.total_participants) : 0;
 
   return (
-    <AppShell title="오늘의 흐름을 준비해요">
+    <AppShell title="오늘의 흐름을 준비해요" rightSlot={<ClassCreateAction />}>
       <div className="ui-v2 u2f u2f-home">
         <OrgRemovedNoticeDialog />
         <UiV2CoachCodeCard />
-        <p className="u2f-lead">{displayName}님, 함께할 시간을 살펴보세요.</p>
         {error && <div className="u2-alert" role="alert"><p>{error}</p><button type="button" className="u2-secondary u2-gap" onClick={() => void fetchDashboard()}>다시 시도</button></div>}
         {showBanner && <div className="u2-card u2f-banner">
           <div><h3>프로필을 완성해 보세요</h3><p className="u2-muted">자격·경력은 원할 때 설정에서 입력할 수 있어요.</p></div>
@@ -141,12 +140,18 @@ export function UiV2CoachHomePage() {
               <Link className="u2-card u2f-tile" to={PARTICIPANTS_TILE_TARGET /* /clients */}><span>총 회원</span><b>{totalMembers.toLocaleString('ko-KR')}명</b><small>회원 관리 →</small></Link>
             </div>
 
-            <section aria-label="내 클래스">
+            <section className="u2-card u2f-home-classes" aria-label="내 클래스">
               <div className="u2-section-head u2-row"><h2>내 클래스</h2><Link className="u2-textlink" to="/classes">전체 보기{totalClassCount > HOME_CLASS_LIMIT ? ` (${totalClassCount})` : ''} ›</Link></div>
-              <ReadStateView status={classesRead.state.status === 'success' && homeClasses.length === 0 ? 'empty' : classesRead.state.status} backTo="/classes" onRetry={classesRead.retry}>
-                <MemberClassStrip classes={homeClasses} hrefFor={(model) => classPath('host', model.id)} />
-              </ReadStateView>
-              {classesRead.state.status === 'success' && homeClasses.length === 0 && <div className="u2f-actions"><Link className="u2-secondary" to="/classes/new" data-header-action="primary">클래스 만들기</Link></div>}
+              {classesRead.state.status === 'success' && homeClasses.length === 0 ? (
+                <div className="u2f-home-class-empty" role="status">
+                  <p>아직 클래스가 없어요</p>
+                  <Link className="u2-primary u2f-home-create" to="/classes/new" data-header-action="primary"><span aria-hidden="true">＋</span> 클래스 만들기</Link>
+                </div>
+              ) : (
+                <ReadStateView status={classesRead.state.status} backTo="/classes" onRetry={classesRead.retry}>
+                  <MemberClassStrip classes={homeClasses} hrefFor={(model) => classPath('host', model.id)} />
+                </ReadStateView>
+              )}
             </section>
 
             <div className="u2f-cols">
@@ -162,12 +167,12 @@ export function UiV2CoachHomePage() {
               </div>
               <div className="u2f-rail">
                 <section className="u2-card" aria-label="최근 대화"><div className="u2-section-head u2-row"><h2>최근 대화</h2><Link className="u2-textlink" to="/chat">전체 ›</Link></div>
-                  {recentChats.length > 0 ? recentChats.map((room) => <Link key={room.id} className="u2-listrow" to={`/chat/${room.id}`}><div className="u2-body"><h3>{room.display_name || room.peer_name || '내담자'}{(room.unread_count ?? 0) > 0 ? ` · ${room.unread_count}` : ''}</h3><p>{room.last_message?.content || '새로운 대화가 없어요'}</p></div><small>{relative(room.last_message_at ?? null)}</small></Link>) : <p className="u2-empty">대화가 없어요</p>}
+                  {recentChats.length > 0 ? recentChats.map((room) => <Link key={room.id} className="u2-listrow u2f-home-chat" to={`/chat/${room.id}`}><span className="u2f-home-avatar" aria-hidden="true">{(room.display_name || room.peer_name || '내담자').trim().charAt(0)}</span><div className="u2-body"><h3>{room.display_name || room.peer_name || '내담자'}{(room.unread_count ?? 0) > 0 ? ` · ${room.unread_count}` : ''}</h3><p>{room.last_message?.content || '새로운 대화가 없어요'}</p></div><small>{relative(room.last_message_at ?? null)}</small></Link>) : <p className="u2-empty">대화가 없어요</p>}
                 </section>
                 <section className="u2-card" aria-label="새 알림"><div className="u2-section-head u2-row"><h2>새 알림</h2><Link className="u2-textlink" to="/notifications">전체 ›</Link></div>
                   {unreadNotifs.length > 0 ? unreadNotifs.map((n) => <Link key={n.id} className="u2-listrow" to="/notifications"><div className="u2-body"><h3>{n.title}</h3>{n.body && <p>{n.body}</p>}</div><small>{relative(n.created_at)}</small></Link>) : <p className="u2-empty">새로운 알림이 없어요</p>}
                 </section>
-                <div className="u2f-actions"><Link className="u2-secondary" to="/upload-status" data-upload-status-shortcut>데이터 현황</Link><AiOnly><Link className="u2-secondary" to="/chat/lucy">루시 (AI) 브리핑</Link></AiOnly></div>
+                <div className="u2-card u2f-home-shortcuts"><Link className="u2-secondary" to="/upload-status" data-upload-status-shortcut>데이터 현황</Link><AiOnly><Link className="u2-secondary" to="/chat/lucy">루시 (AI) 브리핑</Link></AiOnly></div>
               </div>
             </div>
           </div>

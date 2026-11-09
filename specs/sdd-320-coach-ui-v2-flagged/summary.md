@@ -290,3 +290,14 @@ TestFlight 코치 로그인에서 설정·채팅이 구버전처럼 보이던 �
 - 플레이그라운드: `pages/playground/ui-v2/` 신규(래퍼+진입점), App.tsx 에서 `VITE_UI_V2` 상수 분기. 측정·패널 컴포넌트·`useBand` 로직은 기존과 동일, 바깥 레이아웃·제목만 교체. `/playground` 를 코치 스코프 경로(`ui-v2-coach-scope.ts`)에 추가해 보라 메뉴·31px 제목 적용.
 - 운영 번들 검사: `check-ui-v2-off.mjs` 에 신규 식별자·`u2g-` CSS 규칙 추가. 캡처: `captures-g/`.
 - 남은 차이: 플레이그라운드 내부 패널(연결·파형·지표)은 기존 Tailwind 스타일 그대로(로직 수정 금지 범위). 알림 시안의 행별 액션 버튼(대기실 확인 등)은 실제 알림이 단일 행 클릭 이동 구조라 행 전체 클릭으로 대체.
+
+## 11/9 코치 홈 카드 통일
+- 근거: `coach-home-unify-1109.md`의 즉시 구현 승인. 별도 시안 대신 실제 화면에 반영.
+- 내 클래스를 흰 카드·점선 빈 상태·44px 보라 알약 CTA로 정리. 빈 상태 접근성 status 유지.
+- 최근 대화에 40px 이니셜 추가. 일정·대화·알림 행 64px, 제목 18px/800, 카드 패딩 PC 24px/모바일 18px, 카드 간격 16px. 데이터 현황은 같은 카드 안 44px 버튼.
+- 훅·핸들러·경로·순서 유지, CSS `.ui-v2.u2f-home` 한정. 공용 컴포넌트·백엔드 수정 없음.
+- 실제 테스트 계정으로 기존 Vite 5181 화면 확인: 1440/390 가로 넘침 0px, console/page error 0. 모바일 최하단 카드 bottom 779.91px / 탭바 top 922px로 가림 없음. 기존 행 93~121px → 64px.
+- 산출물: `/Users/brianyongwookchae/.hermes/share/design-coach-home-1109/`의 before/after-1440.png, before/after-390.png, after-390-bottom.png, after-metrics.json, 재현 스크립트 capture.cjs. 캡처는 앱 내부 스크롤이 있어 대상 카드 위치와 최하단을 별도로 저장.
+- 독립 검토자는 diff에서 기능 보존과 CSS 스코프 확인. status 속성과 1px 행 높이 지적 반영. 독립 브라우저 로그인은 disabled 상태로 진입하지 못하여 화면 측정은 구현자가 직접 수행.
+- 한계: 실제 계정의 클래스·새 알림은 빈 상태. 생성·발송·DB 쓰기는 실행하지 않음. Vite 재시작, 푸시·PR·배포 없음.
+- 최종 검사: frontend에서 `npx tsc --noEmit -p .` exit 0, 변경 TSX ESLint exit 0, 지정 vitest 26파일/313시험 통과. `git diff --check` 통과. 중간 루트 경로의 tsc 호출은 실행 경로 오류였으며 frontend에서 재실행해 확인.

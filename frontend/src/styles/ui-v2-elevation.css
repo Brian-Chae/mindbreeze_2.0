@@ -98,3 +98,24 @@ html.u2-coach :is(
 :is(html.u2-coach, .ui-v2) .u2-chatitem[data-active] { box-shadow: var(--u2-elev-shadow); }
 :is(html.u2-coach, .ui-v2) .u2c-new { box-shadow: 0 2px 4px #5F008026, 0 8px 20px #5F008033; }
 :is(html.u2-coach, .ui-v2) .u2-chat-list { padding-bottom: 12px; }
+
+/* 11/9 회원 홈(운영 구조) — 숫자 타일·내 클래스 카드·담당 코치·이번 주/리포트/대화/알림 카드에 같은 입체감 */
+.ui-v2 .mh-home :is(.mh-summary > button, .mh-upcoming, .mh-track > .mc-card, .mc-grid > .mc-card, .mh-counselors:not(.u2-mcoach), .mh-main > section, .mh-rail > section, .cs-read-state, .mh-legacy-state) {
+  border: 1px solid var(--u2-elev-line);
+  box-shadow: var(--u2-elev-shadow);
+  background: #fff;
+}
+.ui-v2 .mh-home :is(.mh-summary > button, .mh-track > .mc-card):hover { box-shadow: var(--u2-elev-shadow-hover); }
+.ui-v2 .mh-home .mh-main > section :is(button, a) { box-shadow: none; }
+
+/* 11/9 알림(기관·코치) — 목록 폭 고정 시 가운데 정렬 + 카드 입체감 */
+:is(html.u2-coach, .ui-v2) .u2-notif-wrap { max-width: 880px; margin-left: auto; margin-right: auto; }
+:is(html.u2-coach, .ui-v2) :is(.u2-notif-item, .u2-notif-prefs, .u2-notif-empty, .u2-notif-error) { background: #fff; border: 1px solid var(--u2-elev-line); box-shadow: var(--u2-elev-shadow); border-radius: 18px; }
+:is(html.u2-coach, .ui-v2) .u2-notif-empty { padding: 32px 24px; max-width: 880px; margin-left: auto; margin-right: auto; }
+:is(html.u2-coach, .ui-v2) .u2-notif-item[data-unread] { box-shadow: inset 3px 0 #5F0080, var(--u2-elev-shadow); }
+/* 11/9 회원 홈 모바일 — 빈 상태·카드 라운드(데스크톱 미디어쿼리 밖에서도 유지) */
+.ui-v2 .mh-home :is(.cs-read-state, .mh-legacy-state, .mh-upcoming, .mh-summary > button, .mh-track > .mc-card, .mc-grid > .mc-card, .mh-main > section, .mh-rail > section) { border-radius: 20px; overflow: hidden; }
+@media (max-width: 767px) { .ui-v2 .mh-home :is(.cs-read-state, .mh-legacy-state, .mh-upcoming, .mh-summary > button, .mh-track > .mc-card, .mc-grid > .mc-card, .mh-main > section, .mh-rail > section) { border-radius: 18px; } }
+
+/* 11/9 상단 영역 높이 통일 — 데이터 현황 상단 안내 줄 숨김(명상 클래스·회원과 같은 시작 위치) */
+html.u2-coach .max-w-6xl.space-y-4 > p:first-child { display: none !important; }
