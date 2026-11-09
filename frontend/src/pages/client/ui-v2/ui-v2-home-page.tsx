@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UiV2ClientShell } from '../../../components/ui-v2/ui-v2-client-shell';
 import { UiV2ArcRing } from '../../../components/ui-v2/ui-v2-arc-ring';
-import { CodeEntryButton } from '../../../components/client/code-entry-button';
+import { UiV2ToolbarCode } from '../../../components/ui-v2/ui-v2-toolbar-code';
 import { CounselorSection } from '../../../components/client/counselor-section';
 import { InvitedSessionCard } from '../../../components/client/InvitedSessionCard';
 import { memberDate, memberValue } from '../../../components/class/structure/member-class-views';
@@ -100,7 +100,7 @@ export function UiV2HomePage() {
   const heroHref = next ? (isOpen ? `/class/${encodeURIComponent(next.sessionId)}/enter` : next.area === 'meditation' ? `/app/classes/${encodeURIComponent(next.parentId)}` : counselingPath('member', next.parentId as RelationshipId)) : '/app/classes';
 
   return (
-    <UiV2ClientShell title="나에게 돌아오는 시간" subtitle={`${name ?? '내담자'}님, 오늘의 클래스와 기록을 만나보세요.`}>
+    <UiV2ClientShell toolbarExtra={<UiV2ToolbarCode />} title="나에게 돌아오는 시간" subtitle={`${name ?? '내담자'}님, 오늘의 클래스와 기록을 만나보세요.`}>
       <div className="u2-pc-cols"><div className="u2-pc-main">
       <section className="u2-card u2-hero u2-hero--nature" data-testid="class-hero" aria-label="다음 일정" style={{ backgroundImage: `linear-gradient(160deg,rgba(37,16,56,.35),rgba(37,16,56,.72) 55%,rgba(37,16,56,.92)),url(${heroBackdrop(next?.parentId ?? 'home')})` }}>
         <UiV2ArcRing variant="hero" />
@@ -116,7 +116,6 @@ export function UiV2HomePage() {
           <Link className="u2-primary" to="/app/classes">내 클래스 보기</Link>
         </>}
       </section>
-      <div className="u2-gap"><CodeEntryButton placement="inline" /></div>
 
       {invited.length > 0 && <section aria-label="초대된 클래스">
         <div className="u2-section-head u2-row"><h2>초대된 클래스</h2><small>{invited.length}건</small></div>

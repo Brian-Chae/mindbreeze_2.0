@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AppShell from '../../../components/layout/AppShell';
+import { UiV2ClientShell } from '../../../components/ui-v2/ui-v2-client-shell';
 import { Link } from 'react-router-dom';
 import '../../../styles/ui-v2.css';
 import '../../../styles/ui-v2-brand.css';
@@ -36,14 +37,14 @@ import type { PlaygroundLogEntry } from '../../../types/playground';
 const DEFAULT_TREND_METRICS = ['focusIndex', 'relaxationIndex', 'stressIndex'];
 const MAX_LOGS = 500;
 
-export function UiV2CoachPlaygroundPage() {
+export function UiV2CoachPlaygroundPage({ member = false }: { member?: boolean } = {}) {
   const [useMock, setUseMock] = useState(false);
-  return <PlaygroundView key={String(useMock)} useMock={useMock} onToggleMock={() => setUseMock((value) => !value)} />;
+  return <PlaygroundView key={String(useMock)} member={member} useMock={useMock} onToggleMock={() => setUseMock((value) => !value)} />;
 }
 
-function PlaygroundView({ useMock, onToggleMock }: { useMock: boolean; onToggleMock: () => void }) {
+function PlaygroundView({ useMock, onToggleMock, member }: { useMock: boolean; onToggleMock: () => void; member: boolean }) {
   const user = useAuthStore((s) => s.user);
-  const settingsPath = '/settings';
+  const settingsPath = member ? '/app/profile' : '/settings';
   const isPlatformAdmin = import.meta.env.DEV && user?.role === 'platform_admin';
   const band = useBand({
     sessionId: 'playground-observation',
@@ -129,12 +130,14 @@ function PlaygroundView({ useMock, onToggleMock }: { useMock: boolean; onToggleM
         }
       : null;
 
-  return (
-    <AppShell title="내 마음의 신호를 만나보세요">
-      <div className="ui-v2 u2f u2g-pg">
+  const wrap = (children: React.ReactNode) => member
+    ? <UiV2ClientShell title="내 마음의 신호를 만나보세요" subtitle="밴드를 연결하거나 예시 데이터로 가볍게 체험할 수 있어요." back={{ to: settingsPath, label: '설정으로 돌아가기' }} heading wide hideBottomNav>{children}</UiV2ClientShell>
+    : <AppShell title="내 마음의 신호를 만나보세요">{children}</AppShell>;
+  return wrap(
+      <div className={member ? 'ui-v2 u2g-pg u2g-pg--member' : 'ui-v2 u2f u2g-pg'}>
         <div className="u2g-stack">
-          <Link to={settingsPath} className="u2g-back">← 설정으로 돌아가기</Link>
-          <p className="u2f-lead">밴드를 연결하거나 예시 데이터로 가볍게 체험할 수 있어요.</p>
+          {!member && <Link to={settingsPath} className="u2g-back">← 설정으로 돌아가기</Link>}
+          {!member && <p className="u2f-lead">밴드를 연결하거나 예시 데이터로 가볍게 체험할 수 있어요.</p>}
           {import.meta.env.DEV && !isPlatformAdmin && (
             <div className="u2g-notice">
               현재 적용된 표준 모델:{' '}
@@ -209,7 +212,6 @@ function PlaygroundView({ useMock, onToggleMock }: { useMock: boolean; onToggleM
             onTogglePause={() => setDebugPaused((v) => !v)}
           />}
         </div>
-      </div>
-    </AppShell>
+      </div>,
   );
 }

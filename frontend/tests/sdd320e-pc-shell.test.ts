@@ -73,7 +73,7 @@ describe('회원 PC 2열 배치(마크업 래퍼 + CSS)', () => {
   });
   it('기존 핸들러·데이터 훅 호출이 그대로 남아 있다', () => {
     const home = read('src/pages/client/ui-v2/ui-v2-home-page.tsx');
-    for (const t of ['confirmInvite', 'useMixedHome', 'listReports', 'CodeEntryButton']) expect(home).toContain(t);
+    for (const t of ['confirmInvite', 'useMixedHome', 'listReports', 'UiV2ToolbarCode']) expect(home).toContain(t);
     const rep = read('src/pages/client/ui-v2/ui-v2-reports-page.tsx');
     for (const t of ['setSelectedId', 'handleMarkAll', 'UiV2ReportSheet']) expect(rep).toContain(t);
     const set = read('src/pages/client/ui-v2/ui-v2-settings-page.tsx');

@@ -12,7 +12,7 @@ describe('회원 내 클래스 PC 2열', () => {
     expect(src).toContain('u2-pc-cols u2-pc-cols--classes');
   });
   it('기존 동작(신청·코드 입장·코드 가입·상태 그룹) 유지', () => {
-    for (const k of ['openApply', 'CodeEntryButton', 'CodeJoinCard', 'ReadStateView', 'classPath']) expect(src).toContain(k);
+    for (const k of ['openApply', 'UiV2ToolbarCode', 'CodeJoinCard', 'ReadStateView', 'classPath']) expect(src).toContain(k);
   });
   it('2열 CSS 는 1024 이상에서만, 우열이 없으면 전체 폭', () => {
     expect(css).toMatch(/@media \(min-width: 1024px\)[\s\S]*u2-pc-cols--classes \{ grid-template-columns/);

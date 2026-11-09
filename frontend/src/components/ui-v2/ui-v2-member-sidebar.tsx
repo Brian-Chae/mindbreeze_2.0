@@ -23,8 +23,10 @@ export function buildMemberNavItems(p: UiV2MemberSidebarProps, counselingOpen: b
     { to: '/app/counseling', label: '내 상담', icon: ICONS.users, badge: 0 },
     { to: '/app/chat', label: '대화', icon: ICONS.message, badge: p.chatBadge },
     { to: '/app/reports', label: '리포트', icon: ICONS.report, badge: p.reportBadge },
-    { to: '/app/notifications', label: '알림', icon: ICONS.bell, badge: Math.max(p.notificationBadge, p.sessionBadge) },
     { to: '/app/profile', label: '설정', icon: ICONS.settings, badge: 0 },
+    // 11/9 대표 지시: 설정 아래 가로선 → 플레이그라운드 · 알림 (코치 메뉴와 같은 구성)
+    { to: '/playground', label: '플레이그라운드', icon: ICONS.activity, badge: 0 },
+    { to: '/app/notifications', label: '알림', icon: ICONS.bell, badge: Math.max(p.notificationBadge, p.sessionBadge) },
   ];
   return counselingOpen ? items : items.filter((item) => item.to !== '/app/counseling');
 }
@@ -54,10 +56,12 @@ export function UiV2MemberSidebar(props: UiV2MemberSidebarProps) {
           </NavLink>
         ))}
       </nav>
-      <div data-sidebar-profile className="u2-side-foot">
-        <strong>{user?.name ?? '회원'}</strong>
-        <small>{user?.email ?? ''}</small>
-        <button type="button" onClick={() => void handleLogout()}>로그아웃</button>
+      <div className="u2-side-foot">
+        <div data-sidebar-profile className="u2-side-id">
+          <strong>{user?.name ?? '회원'}</strong>
+          <small>{user?.email ?? ''}</small>
+        </div>
+        <button type="button" onClick={() => void handleLogout()}><StrokeIcon d={ICONS.logout} />로그아웃</button>
         <p className="u2-side-conn"><i data-on={connected || undefined} aria-hidden="true" />서버연결: {connected ? '양호' : '끊김'}</p>
       </div>
     </div>

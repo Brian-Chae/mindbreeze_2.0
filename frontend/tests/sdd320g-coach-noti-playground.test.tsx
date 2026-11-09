@@ -57,10 +57,12 @@ describe('역할 분기', () => {
     act(() => mounted.unmount()); host.remove();
     setRole('platform_admin'); await mount(createElement(UiV2NotificationCenterPage)); expect(host.querySelector('[data-testid=legacy-center]')).toBeTruthy();
   });
-  it('플레이그라운드: counselor → D안, 그 외 → 레거시', async () => {
+  it('플레이그라운드: counselor → 코치 D안, client → 회원 D안(코치 화면 재사용), 그 외 → 레거시', async () => {
     setRole('counselor'); await mount(createElement(UiV2PlaygroundEntry)); expect(host.querySelector('[data-testid=coach-pg]')).toBeTruthy();
     act(() => mounted.unmount()); host.remove();
-    setRole('client'); await mount(createElement(UiV2PlaygroundEntry)); expect(host.querySelector('[data-testid=legacy-pg]')).toBeTruthy();
+    setRole('client'); await mount(createElement(UiV2PlaygroundEntry)); expect(host.querySelector('[data-testid=coach-pg]')).toBeTruthy();
+    act(() => mounted.unmount()); host.remove();
+    setRole('platform_admin'); await mount(createElement(UiV2PlaygroundEntry)); expect(host.querySelector('[data-testid=legacy-pg]')).toBeTruthy();
   });
 });
 

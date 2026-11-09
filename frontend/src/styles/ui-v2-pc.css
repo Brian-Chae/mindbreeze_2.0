@@ -115,28 +115,41 @@ html.u2-coach body { font-size: 15px; line-height: 1.6; }
   html.u2-coach [data-shell-variant] > aside [data-sidebar-root] > button { margin-top: 0; padding: 0 18px; color: #E5D3EE; font-size: 14px; }
   html.u2-coach [data-shell-variant] > aside [data-sidebar-profile] > div:nth-child(3) { font-size: 12px; color: #C9B8D6; }
   /* 회원 사이드바(ui-v2-member-sidebar) */
-  [data-shell-variant="ui-v2"] > aside .u2-side { display: flex; flex-direction: column; min-height: 100dvh; padding: 32px 16px; gap: 0; }
+  [data-shell-variant="ui-v2"] > aside .u2-side { display: flex; flex-direction: column; min-height: 100dvh; padding: 32px 16px 35px; gap: 0; }
   [data-shell-variant="ui-v2"] > aside .u2-side-logo { display: inline-flex; align-items: center; gap: 6px; height: 14px; margin: 0 8px; color: #FFFFFF; border-radius: 8px; }
   [data-shell-variant="ui-v2"] > aside .u2-side-logo img { height: 12px; width: auto; filter: brightness(0) invert(1); }
   [data-shell-variant="ui-v2"] > aside .u2-side-logo b { font-size: 17px; line-height: .85; letter-spacing: .04em; font-weight: 700; }
   [data-shell-variant="ui-v2"] > aside .u2-side-menu { display: flex; flex-direction: column; gap: 4px; }
   [data-shell-variant="ui-v2"] > aside .u2-side-item { display: flex; align-items: center; }
   [data-shell-variant="ui-v2"] > aside .u2-side-item span { flex: 1; }
-  [data-shell-variant="ui-v2"] > aside .u2-side-badge { font-style: normal; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #B3264B; color: #FFFFFF; font-size: 10px; font-weight: 700; line-height: 18px; text-align: center; }
-  [data-shell-variant="ui-v2"] > aside .u2-side-foot { margin-top: auto; padding: 16px 8px 0; display: flex; flex-direction: column; font-size: 14px; }
-  [data-shell-variant="ui-v2"] > aside .u2-side-foot strong { color: #FFFFFF; font-size: 14px; font-weight: 600; }
-  [data-shell-variant="ui-v2"] > aside .u2-side-foot small { color: #C9B8D6; font-size: 12px; overflow-wrap: anywhere; }
-  [data-shell-variant="ui-v2"] > aside .u2-side-foot button { display: flex; align-items: center; min-height: 44px; margin-top: 4px; color: #E5D3EE; font-size: 14px; text-align: left; }
-  [data-shell-variant="ui-v2"] > aside .u2-side-foot button:hover { background: #FFFFFF14; }
-  [data-shell-variant="ui-v2"] > aside .u2-side-conn { margin: 4px 0 0; display: flex; align-items: center; gap: 6px; color: #C9B8D6; font-size: 12px; }
-  [data-shell-variant="ui-v2"] > aside .u2-side-conn i { width: 6px; height: 6px; border-radius: 50%; background: #E5A3B5; }
+  /* 설정 아래 가로선(::before — 링크 border 금지, 선택 배경은 라운드 사각형 유지) */
+  [data-shell-variant="ui-v2"] > aside .u2-side-item[href="/playground"] { position: relative; margin-top: 25px; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-item[href="/playground"]::before { content: ""; position: absolute; left: 0; right: 0; top: -13px; height: 1px; background: #FFFFFF1F; pointer-events: none; }
+  /* 11/9 지시 13: 하단 블록을 코치 사이드바(이름·이메일 → 아이콘 로그아웃 버튼 → 서버연결)와 같은 배치로 */
+  [data-shell-variant="ui-v2"] > aside .u2-side-foot { margin-top: auto; display: flex; flex-direction: column; gap: 28px; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-id { display: flex; flex-direction: column; padding: 16px 8px; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-id strong { color: #FFFFFF; font-size: 14px; font-weight: 600; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-id small { color: #C9B8D6; font-size: 12px; overflow-wrap: anywhere; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-foot button { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 18px; border-radius: 14px; color: #E5D3EE; font-size: 14px; text-align: left; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-foot button svg { flex: none; width: 22px; height: 22px; stroke-width: 1.7; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-foot button:hover { background: #FFFFFF26; color: #FFFFFF; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-conn { margin: 0; padding: 0 8px; display: flex; align-items: center; gap: 8px; color: #C9B8D6; font-size: 12px; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-conn i { width: 8px; height: 8px; border-radius: 50%; background: #E5A3B5; }
   [data-shell-variant="ui-v2"] > aside .u2-side-conn i[data-on] { background: #01F0C8; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-badge { font-style: normal; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #B3264B; color: #FFFFFF; font-size: 10px; font-weight: 700; line-height: 18px; text-align: center; }
+  /* 11/9: 코치 로그아웃도 메뉴 링크와 같은 라운드 호버(레거시 hover:bg-red-50 보다 우선) */
+  html.u2-coach [data-shell-variant] > aside [data-sidebar-root] > button:hover { background: #FFFFFF26; color: #FFFFFF; }
 }
 
 /* ───────── F-3: 회원 PC 잔여 — 내 클래스 목록 2열, 대화 목록+방 ───────── */
 @media (min-width: 1024px) {
   .ui-v2.u2-shell .u2-pc-cols--classes { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
   .ui-v2.u2-shell .u2-pc-cols--classes > .u2-pc-main:only-child { grid-column: 1 / -1; }
+  /* 11/9 대표 지시: 한쪽 열만 있으면(예: 완료만) 전체 폭 + 카드 2열 */
+  .ui-v2.u2-shell .u2-pc-cols--classes > .u2-pc-side:only-child { grid-column: 1 / -1; }
+  .ui-v2.u2-shell .u2-pc-cols--classes > :only-child > section { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; align-items: stretch; }
+  .ui-v2.u2-shell .u2-pc-cols--classes > :only-child > section > .u2-section-head { grid-column: 1 / -1; }
+  .ui-v2.u2-shell .u2-pc-cols--classes > :only-child > section > :not(.u2-section-head) { margin-top: 0; margin-bottom: 16px; }
   .ui-v2.u2-shell .u2-pc-cols--classes .u2-section-head:first-child { margin-top: 0; }
   /* 대화: 목록 320 + 대화창, 본문 전체 폭 */
   /* SDD-320 K: 본문(u2-main)이 이미 좌우 48px 를 가지므로 대화 영역은 좌우 패딩 0 (다른 페이지와 같은 264→1392) */
@@ -171,6 +184,14 @@ html.u2-coach h1[class*="text-[22px]"] { font-size: 31px; line-height: 1.25; fon
 @media (min-width: 1024px) {
   html.u2-coach .max-w-6xl:has(> [data-testid="upload-overview"]) { max-width: 1600px; margin-left: 0; margin-right: 0; padding: 0 48px 72px; box-sizing: border-box; }
 }
+
+/* 11/9 대표 지시: 회원 홈 상단 바 — 알림(종) 왼쪽 코드 입장 알약 버튼 */
+.ui-v2 .u2-toolbar-code { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; margin-left: auto; margin-right: 8px; border-radius: 999px; background: #5F0080; color: #FFFFFF; font-size: 14px; font-weight: 600; white-space: nowrap; flex: none; }
+.ui-v2 .u2-toolbar-code:focus-visible { outline: 3px solid #5F0080; outline-offset: 2px; }
+@media (max-width: 480px) { .ui-v2 .u2-toolbar-code { padding: 0 12px; font-size: 13px; } .ui-v2 .u2-toolbar-code span { font-size: 0; } .ui-v2 .u2-toolbar-code span::after { content: '코드 입장'; font-size: 13px; } }
+
+/* 11/9 대표 지시: 내 클래스 — 클래스 신청하기는 목록 아래·코드 참여 카드 위에 본문 전체 폭 */
+.ui-v2 .u2-apply-wide { display: flex; justify-content: center; margin: 16px 0; }
 
 /* ───────── 코치 터치 영역 44px 보정(마크업 불변, 대상만 한정. 코치 쉘에는 <main> 이 없어 [data-shell-variant] 하위로 건다) ───────── */
 html.u2-coach [data-shell-variant] button[aria-expanded][aria-label$="접기"],

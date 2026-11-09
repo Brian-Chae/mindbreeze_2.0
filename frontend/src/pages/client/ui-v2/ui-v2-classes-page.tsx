@@ -1,6 +1,7 @@
 // SDD-318 — 클래스 목록(D안). 신청·코드 입장·코드 가입·상태별 그룹은 기존 로직을 그대로 쓴다.
 import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { UiV2ToolbarCode } from '../../../components/ui-v2/ui-v2-toolbar-code';
 import { UiV2ClientShell } from '../../../components/ui-v2/ui-v2-client-shell';
 import { UiV2ArcRing } from '../../../components/ui-v2/ui-v2-arc-ring';
 import { natureHeroStyle } from '../../../components/ui-v2/nature-hero';
@@ -61,12 +62,7 @@ export function UiV2ClassesPage() {
     { label: '기타 상태', items: items.filter((i) => !['active', 'completed', 'waitlisted', 'left', 'removed'].includes(status(i) ?? '')) },
   ].filter((g) => g.items.length > 0);
   return (
-    <UiV2ClientShell title="내 클래스" subtitle="한 번의 호흡에서, 다음 만남으로.">
-      <div className="u2-split">
-        {/* 11/9 대표 지시: 클래스 신청하기와 같은 모양 */}
-        <Link to="/join" data-testid="enter-with-code" data-code-entry="inline" className="u2-primary">코드로 바로 입장</Link>
-        <button type="button" className="u2-primary" onClick={openApply}>클래스 신청하기</button>
-      </div>
+    <UiV2ClientShell toolbarExtra={<UiV2ToolbarCode />} title="내 클래스" subtitle="한 번의 호흡에서, 다음 만남으로.">
       <ReadStateView status={state.status === 'success' && items.length === 0 ? 'empty' : state.status} backTo="/app/classes" onRetry={retry}>
         <p className="u2-footnote">클래스 상태와 진행을 확인해 보세요. 진행은 개인 출석을 의미하지 않아요.</p>
         {/* PC: 좌 = 참여 중, 우 = 완료·대기 중·그 밖의 상태(시안 member-pc/classes). 모바일은 위아래로 쌓인다. */}
@@ -83,6 +79,7 @@ export function UiV2ClassesPage() {
           ))}
         </div>
       </ReadStateView>
+      <button type="button" className="u2-primary u2-apply-wide" onClick={openApply}>클래스 신청하기</button>
       <CodeJoinCard />
       {overlay}
     </UiV2ClientShell>

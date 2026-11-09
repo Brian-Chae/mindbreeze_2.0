@@ -33,9 +33,8 @@ describe('설정 항목 유지', () => {
 
 describe('PC 전용 규칙', () => {
   const block = jBlock(pc);
-  it('설정 2열 그리드와 홀수 마지막 카드 전체 폭', () => {
-    expect(block).toMatch(/\.u2-setlist \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
-    expect(block).toMatch(/\.u2-setgroup:last-child:nth-child\(odd\) \{ grid-column: 1 \/ -1; \}/);
+  it('설정은 회원 설정과 같은 좌/우 2열(K 에서 카드 2열 A안 교체)', () => {
+    expect(block).toMatch(/\.u2-pc-cols \{ display: grid; grid-template-columns: minmax\(0, 1fr\) minmax\(0, 1\.2fr\)/);
   });
   it('래퍼 폭은 .u2f 와 같은 규칙(좌우 48px, 최대 1600px)', () => {
     expect(block).toMatch(/\.ui-v2\.u2c-settings \{ padding: 0 48px 72px; max-width: 1600px; \}/);
