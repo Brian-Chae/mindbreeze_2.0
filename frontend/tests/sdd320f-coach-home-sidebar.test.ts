@@ -38,8 +38,8 @@ describe('좌측 메뉴 CSS', () => {
 
 describe('회원 홈 — 운영 웹 구조(11/9)', () => {
   const src = read('src/pages/client/ui-v2/ui-v2-home-page.tsx');
-  it('운영 홈과 같은 그리드·컴포넌트를 쓴다', () => {
-    for (const t of ['mh-home', 'ClientHomePage hideHero', 'MemberClassStrip', 'mh-upcoming', '<UiV2MemberCoaches />']) expect(src).toContain(t);
+  it('운영 홈과 같은 그리드·순서를 쓰고 시안 표현 전용 패널을 쓴다', () => {
+    for (const t of ['mh-home', 'UiV2MemberHomePanels', 'MemberClassStrip', 'mh-upcoming', '<UiV2MemberCoaches />']) expect(src).toContain(t);
   });
   it('본문 코드 입장 버튼 없음(상단 툴바만)', () => expect(src).not.toContain('CodeEntryButton'));
   it('담당 코치는 내 클래스 뒤에 있다', () => {

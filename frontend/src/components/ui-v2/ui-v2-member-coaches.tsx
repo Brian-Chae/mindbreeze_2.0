@@ -1,5 +1,5 @@
 // 11/9 — 회원 홈(새 디자인) 전용 '담당 코치' 카드. 운영 공용 CounselorSection 은 건드리지 않는다.
-// 코치마다 작은 카드(이니셜·이름·소속·대화하기), 0명이면 안내 + 코치 추가.
+// 11/9 시안: 안쪽 카드 없이 한 줄(이니셜·이름·소속·대화하기), '+ 코치 추가'는 헤더. 0명이면 안내 + 코치 코드 입력.
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CounselorAddSheet } from '../client/counselor-add-sheet';
@@ -32,7 +32,6 @@ export function UiV2MemberCoaches() {
                 ? <img className="u2-mcoach__avatar" src={c.profile_image} alt="" />
                 : <span className="u2-mcoach__avatar" aria-hidden="true">{c.name?.charAt(0) ?? '코'}</span>}
               <div className="u2-mcoach__text">
-                <span className="u2-mcoach__role">담당 코치</span>
                 <strong>{c.name}</strong>
                 <small>{c.org_name || '개인 코치'}</small>
               </div>
