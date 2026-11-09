@@ -45,9 +45,13 @@
 /* ───────── 회원 PC 본문(전체 폭 + 2열) ───────── */
 @media (min-width: 1024px) {
   .ui-v2.u2-shell { background: #F4F4F7; }
-  .ui-v2.u2-shell .u2-toolbar { max-width: none; height: 88px; padding: 0 48px; justify-content: flex-end; }
+  .ui-v2.u2-shell { position: relative; }
+  /* SDD-320 K(5-6): 코치처럼 별도 상단 바 없이 제목(h1)이 종 아이콘과 같은 줄(y≈25)에 오도록 상단 바를 본문 위에 겹친다 */
+  .ui-v2.u2-shell .u2-toolbar { position: absolute; top: 0; left: 0; right: 0; z-index: 5; max-width: none; height: 88px; padding: 0 48px; justify-content: flex-end; pointer-events: none; }
+  .ui-v2.u2-shell .u2-toolbar > * { pointer-events: auto; }
+  .ui-v2.u2-shell .u2-scroll:not(:has(> .u2-heading)) { padding-top: 88px; }
   .ui-v2.u2-shell .u2-toolbar .u2-compact-title { display: none; }
-  .ui-v2.u2-shell .u2-heading { max-width: none; margin: 0; padding: 10px 48px 28px; }
+  .ui-v2.u2-shell .u2-heading { max-width: none; margin: 0; min-height: 88px; box-sizing: border-box; padding: 25px 120px 20px 48px; }
   .ui-v2.u2-shell .u2-main, .ui-v2 .u2-main--wide { max-width: 1600px; margin: 0; padding: 0 48px 72px; }
   .ui-v2.u2-shell .u2-main--fill { padding-bottom: 0; }
   .ui-v2.u2-shell .u2-pc-cols { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 28px; align-items: start; }
@@ -112,7 +116,7 @@ html.u2-coach body { font-size: 15px; line-height: 1.6; }
   html.u2-coach [data-shell-variant] > aside [data-sidebar-profile] > div:nth-child(3) { font-size: 12px; color: #C9B8D6; }
   /* 회원 사이드바(ui-v2-member-sidebar) */
   [data-shell-variant="ui-v2"] > aside .u2-side { display: flex; flex-direction: column; min-height: 100dvh; padding: 32px 16px; gap: 0; }
-  [data-shell-variant="ui-v2"] > aside .u2-side-logo { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin: 0 8px 32px; color: #FFFFFF; border-radius: 8px; }
+  [data-shell-variant="ui-v2"] > aside .u2-side-logo { display: inline-flex; align-items: center; gap: 6px; height: 14px; margin: 0 8px; color: #FFFFFF; border-radius: 8px; }
   [data-shell-variant="ui-v2"] > aside .u2-side-logo img { height: 12px; width: auto; filter: brightness(0) invert(1); }
   [data-shell-variant="ui-v2"] > aside .u2-side-logo b { font-size: 17px; line-height: .85; letter-spacing: .04em; font-weight: 700; }
   [data-shell-variant="ui-v2"] > aside .u2-side-menu { display: flex; flex-direction: column; gap: 4px; }
@@ -135,7 +139,8 @@ html.u2-coach body { font-size: 15px; line-height: 1.6; }
   .ui-v2.u2-shell .u2-pc-cols--classes > .u2-pc-main:only-child { grid-column: 1 / -1; }
   .ui-v2.u2-shell .u2-pc-cols--classes .u2-section-head:first-child { margin-top: 0; }
   /* 대화: 목록 320 + 대화창, 본문 전체 폭 */
-  [data-shell-variant="ui-v2"] .ui-v2 .u2-chat { padding: 0 48px 32px; max-width: none; }
+  /* SDD-320 K: 본문(u2-main)이 이미 좌우 48px 를 가지므로 대화 영역은 좌우 패딩 0 (다른 페이지와 같은 264→1392) */
+  [data-shell-variant="ui-v2"] .ui-v2 .u2-chat { padding: 0 0 32px; max-width: none; }
   [data-shell-variant="ui-v2"] .ui-v2 .u2-chat-list { width: 320px; }
 }
 
