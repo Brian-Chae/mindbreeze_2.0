@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { UiV2CoachCodeCard } from '../../../components/ui-v2/ui-v2-coach-code-card';
 import { Link, useNavigate } from 'react-router-dom';
 import AppShell from '../../../components/layout/AppShell';
+import { ClassCreateAction } from '../../../components/class/structure/class-create-action';
 import OrgRemovedNoticeDialog from '../../../components/org/OrgRemovedNoticeDialog';
 import { AiOnly } from '../../../components/routing/ai-gate';
 import { getCounselorDashboard, type ClassSummary, type CounselorDashboardResponse } from '../../../lib/api/dashboard';
@@ -102,7 +103,7 @@ export function UiV2CoachHomePage() {
   const totalMembers = data ? (data.total_members ?? data.total_participants) : 0;
 
   return (
-    <AppShell title="오늘의 흐름을 준비해요">
+    <AppShell title="오늘의 흐름을 준비해요" rightSlot={<ClassCreateAction />}>
       <div className="ui-v2 u2f u2f-home">
         <OrgRemovedNoticeDialog />
         <UiV2CoachCodeCard />
