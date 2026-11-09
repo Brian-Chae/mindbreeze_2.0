@@ -95,11 +95,14 @@ export interface ReportDetailViewProps {
   listActionLabel?: string;
   onListAction?: () => void;
   showListAction?: boolean;
+  /** 회원용 본문 교체 슬롯 — 새 디자인 검토 창이 v3 본문을 넣는다(승인·코멘트·발송은 그대로). */
+  renderMemberBody?: (report: ReportDto, hideCounselorComment: boolean) => ReactNode;
 }
 
 export default function ReportDetailView({
   report: initialReport,
   actionContainer,
+  renderMemberBody,
   onReportChange,
   error: externalError = null,
   listActionLabel = '목록으로',
@@ -339,7 +342,7 @@ export default function ReportDetailView({
       )}
 
       {/* 회원용: 회원이 실제로 보는 본문(ClientReportBody)을 그대로 렌더 — 코멘트 편집 카드가 보일 땐 같은 코멘트 중복 표시만 숨긴다. */}
-      {!isCounselor && <MemberReportViewer report={report} hideCounselorComment={showCommentEditor} />}
+      {!isCounselor && (renderMemberBody ? renderMemberBody(report, showCommentEditor) : <MemberReportViewer report={report} hideCounselorComment={showCommentEditor} />)}
 
       {isCounselor && displayNarrative && (
         <NarrativeSections narrative={displayNarrative} showCover={false} session={buildReportSessionInfo(report, adapted)} />
