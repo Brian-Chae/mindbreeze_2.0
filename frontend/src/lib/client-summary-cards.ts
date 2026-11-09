@@ -17,7 +17,6 @@ export function buildClientSummaryCards(sum: ClientSummaryState, days: number | 
   if (e && isNum(e.week_attended)) cards.push({ key: 'week_attended', label: '이번 주 참여', value: e.week_attended, unit: '명', basis: '월요일 이후 실제 참여한 회원', active: filter === 'week_attended', onClick: () => setFilter('week_attended') });
   if (e && isNum(e.inactive_14d)) cards.push({ key: 'inactive_14d', label: '최근 2주 참여 없음', value: e.inactive_14d, unit: '명', basis: isNum(e.never_attended) ? `14일간 참여 없음 · 그중 한 번도 참여 안 함 ${e.never_attended}명` : '14일간 수업 참여 기록 없음', active: filter === 'inactive_14d', onClick: () => setFilter('inactive_14d') });
   if (e && isNum(e.report_unread_members)) cards.push({ key: 'report_unread', label: '리포트 미열람', value: e.report_unread_members, unit: '명', basis: '공유된 리포트를 아직 열지 않은 회원', active: filter === 'report_unread', onClick: () => setFilter('report_unread') });
-  if (e && isNum(e.band_worn_members) && isNum(e.attended_members)) cards.push({ key: 'band', label: '밴드 사용', value: e.band_worn_members, unit: '명', basis: `참여 ${e.attended_members.toLocaleString('ko-KR')}명 중 착용한 회원 수` });
   return cards;
 }
 

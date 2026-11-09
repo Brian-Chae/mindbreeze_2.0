@@ -61,15 +61,14 @@ describe('회원 요약 카드', () => {
   it('신규 집계 필드가 없으면 숨기고, 있으면 단위·기준과 함께 표시. 조회 실패(null)는 집계 준비 중', () => {
     expect(buildClientSummaryCards(sum, null, vi.fn())).toHaveLength(3);
     const full = buildClientSummaryCards({ ...sum, extra: { week_attended: 4, inactive_14d: 0, report_unread_members: 2, band_worn_members: 3, attended_members: 5 } }, null, vi.fn());
-    expect(full.map((i) => i.key)).toEqual(['connected', 'd7', 'd30', 'week_attended', 'inactive_14d', 'report_unread', 'band']);
+    expect(full.map((i) => i.key)).toEqual(['connected', 'd7', 'd30', 'week_attended', 'inactive_14d', 'report_unread']);
     expect(full.find((i) => i.key === 'inactive_14d')?.value).toBe(0);
     act(() => root.render(createElement(UiV2SummaryCards, { items: buildClientSummaryCards({ ...sum, d7: null }, null, vi.fn()), label: '회원 요약' })));
     expect(host.querySelector('[data-card="d7"]')?.textContent).toContain('집계 준비 중');
     expect(host.querySelector('[data-card="d7"]')?.tagName).toBe('DIV');
   });
-  it('밴드 카드는 미착용을 문제로 표기하지 않는다', () => {
-    const band = buildClientSummaryCards({ ...sum, extra: { band_worn_members: 3, attended_members: 5 } }, null, vi.fn()).find((i) => i.key === 'band');
-    expect(band?.basis).not.toMatch(/미착용|문제|부족/);
+  it('밴드 사용 카드는 표시하지 않는다(11/10 대표 지시 — 카드 6개 한 줄)', () => {
+    expect(buildClientSummaryCards({ ...sum, extra: { band_worn_members: 3, attended_members: 5 } }, null, vi.fn()).some((i) => i.key === 'band')).toBe(false);
   });
 });
 
