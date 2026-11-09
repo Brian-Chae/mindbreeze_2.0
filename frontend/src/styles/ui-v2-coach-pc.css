@@ -158,3 +158,6 @@ html .ui-v2.u2f-home .u2f-home-shortcuts .u2-secondary { display: inline-flex; j
 
 /* 11/9 대표 지시: 코치 웹 왼쪽 메뉴에서 플레이그라운드·데이터 현황·알림 제거(설정 카드·상단 종 아이콘으로 접근). 기관관리자 메뉴는 유지. */
 html.u2-coach.u2-coach-counselor aside nav a:is([href="/playground"], [href="/upload-status"], [href="/notifications"]) { display: none !important; }
+
+/* 11/9 대표 지시: 상단 영역 높이 통일(명상 클래스·회원 기준) — 상단 바 아래 별도 안내 줄을 두지 않는다. */
+html.u2-coach .ui-v2.u2c-settings > .u2c-lead { display: none; }

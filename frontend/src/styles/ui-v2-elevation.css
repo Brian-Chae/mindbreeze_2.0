@@ -116,3 +116,6 @@ html.u2-coach :is(
 /* 11/9 회원 홈 모바일 — 빈 상태·카드 라운드(데스크톱 미디어쿼리 밖에서도 유지) */
 .ui-v2 .mh-home :is(.cs-read-state, .mh-legacy-state, .mh-upcoming, .mh-summary > button, .mh-track > .mc-card, .mc-grid > .mc-card, .mh-main > section, .mh-rail > section) { border-radius: 20px; overflow: hidden; }
 @media (max-width: 767px) { .ui-v2 .mh-home :is(.cs-read-state, .mh-legacy-state, .mh-upcoming, .mh-summary > button, .mh-track > .mc-card, .mc-grid > .mc-card, .mh-main > section, .mh-rail > section) { border-radius: 18px; } }
+
+/* 11/9 상단 영역 높이 통일 — 데이터 현황 상단 안내 줄 숨김(명상 클래스·회원과 같은 시작 위치) */
+html.u2-coach .max-w-6xl.space-y-4 > p:first-child { display: none !important; }
