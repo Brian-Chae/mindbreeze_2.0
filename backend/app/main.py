@@ -248,8 +248,13 @@ async def health_ready():
 
         from app.core.database import SessionLocal
 
-        with SessionLocal() as db:
-            db.execute(text("SELECT 1"))
+        def _db_ping() -> None:
+            with SessionLocal() as db:
+                db.execute(text("SELECT 1"))
+
+        # 동기 DB 호출을 이벤트 루프에서 직접 하면 풀 고갈 시 pool_timeout 동안
+        # 실시간 서버(소켓 포함) 전체가 멈춘다 → 스레드로 넘기고 5초 상한.
+        await asyncio.wait_for(asyncio.to_thread(_db_ping), timeout=5)
         checks["database"] = "ok"
     except Exception:  # noqa: BLE001
         logger.exception("[health/ready] DB 점검 실패")
