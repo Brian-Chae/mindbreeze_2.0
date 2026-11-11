@@ -148,12 +148,31 @@ def _user_names(db: DBSession, user_ids) -> dict[UUID, str | None]:
     return {row[0]: row[1] for row in db.query(User.id, User.name).filter(User.id.in_(ids)).all()}
 
 
+# 예정 시각이 지났어도 아직 열리지 않은 회차를 '다음 회차'로 유지하는 한도(시간).
+# 늦게 시작하는 현장 회차가 목록에서 사라져 다음 회차로 건너뛰던 문제(seq 건너뜀)를 막는다.
+_OVERDUE_NEXT_GRACE = timedelta(hours=12)
+
+
 def _next_session(rows: list, now: datetime):
-    """가장 가까운 미래의 미종료 회차. 일정 없는 회차는 후보가 아니다."""
-    candidates = [
-        r for r in rows
-        if r.status not in _FINISHED_STATUSES and r.scheduled_at is not None and _aware(r.scheduled_at) >= now
-    ]
+    """가장 가까운 미종료 회차. 일정 없는 회차는 후보가 아니다.
+
+    예정 시각이 지났어도 아직 시작·종료되지 않은 회차(ready/scheduled/open, started_at 없음)는
+    한도(12시간) 안에서 후보로 남긴다. 그렇지 않으면 늦게 열리는 회차가 '지난 회차'로 판정되어
+    코치 화면에서 다음 회차(seq+1)로 건너뛴다.
+    """
+    def candidate(r) -> bool:
+        if r.status in _FINISHED_STATUSES or r.scheduled_at is None:
+            return False
+        at = _aware(r.scheduled_at)
+        if at >= now:
+            return True
+        return (
+            r.status in ("ready", "scheduled", "open")
+            and getattr(r, "started_at", None) is None
+            and now - at <= _OVERDUE_NEXT_GRACE
+        )
+
+    candidates = [r for r in rows if candidate(r)]
     return min(candidates, key=lambda r: (_aware(r.scheduled_at), r.seq or 0), default=None)
 
 

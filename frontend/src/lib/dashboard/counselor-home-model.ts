@@ -5,13 +5,15 @@ import { liveClasses } from './home-stats';
 
 export const HOME_CLASS_LIMIT = 4;
 export const HOME_SCHEDULE_LIMIT = 5;
+/** 예정 시각이 지났어도 아직 열리지 않은(scheduled/ready) 회차를 일정에 남기는 한도. */
+const OVERDUE_GRACE_MS = 12 * 3600_000;
 
 /** 히어로: 진행 중(in_progress/open) 우선, 없으면 가장 가까운 미래 예정(취소·완료 제외). */
 export function pickHeroSession(rows: readonly ClassSummary[], now: Date): { session: ClassSummary; live: boolean } | null {
   const live = liveClasses(rows);
   if (live.length > 0) return { session: live[0], live: true };
   const upcoming = rows
-    .filter((c) => c.scheduled_at && new Date(c.scheduled_at).getTime() >= now.getTime() && c.status !== 'cancelled' && c.status !== 'completed')
+    .filter((c) => c.scheduled_at && new Date(c.scheduled_at).getTime() >= now.getTime() - OVERDUE_GRACE_MS && c.status !== 'cancelled' && c.status !== 'completed')
     .sort((a, b) => new Date(a.scheduled_at!).getTime() - new Date(b.scheduled_at!).getTime());
   return upcoming[0] ? { session: upcoming[0], live: false } : null;
 }
@@ -21,7 +23,7 @@ export function pickScheduleRows(rows: readonly ClassSummary[], now: Date): Clas
   const live = liveClasses(rows);
   const liveIds = new Set(live.map((c) => c.id));
   const upcoming = rows
-    .filter((c) => !liveIds.has(c.id) && c.scheduled_at && new Date(c.scheduled_at).getTime() >= now.getTime() && c.status !== 'cancelled' && c.status !== 'completed')
+    .filter((c) => !liveIds.has(c.id) && c.scheduled_at && new Date(c.scheduled_at).getTime() >= now.getTime() - OVERDUE_GRACE_MS && c.status !== 'cancelled' && c.status !== 'completed')
     .sort((a, b) => new Date(a.scheduled_at!).getTime() - new Date(b.scheduled_at!).getTime());
   return [...live, ...upcoming].slice(0, HOME_SCHEDULE_LIMIT);
 }
