@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { fetchBandDeviceUsage, type BandDeviceUsageResponse } from '../../lib/api/upload-status';
 import { useDialogA11y } from '../../hooks/useDialogA11y';
-import { splitBandSerial } from '../../lib/upload-status/view';
+import { gapCountText, gapReasonsText, splitBandSerial } from '../../lib/upload-status/view';
 
 type State = { kind: 'loading' } | { kind: 'error' } | { kind: 'ok'; data: BandDeviceUsageResponse };
 
@@ -47,6 +47,7 @@ export function BandUsageSheet({ serial, onClose }: { serial: string; onClose: (
                   <p className="font-semibold">{it.session_title ?? '제목 없는 회차'} · {dateText(it.session_started_at)}</p>
                   <p>{it.display_name?.trim() ? it.display_name : '이름 미확인'}{it.is_current ? '' : ' · 중간에 다른 밴드로 교체됨'}</p>
                   <p className="text-[#655173]">스트림 {it.stream_count}개 · 교체로 닫힌 스트림 {it.superseded_count}개{it.firmware ? ` · 펌웨어 ${it.firmware}` : ''}</p>
+                  {gapCountText(it.gap_count) && <p data-testid="band-usage-gap" className="text-[#655173]">{gapCountText(it.gap_count)}{gapReasonsText(it.gap_reasons) ? ` (${gapReasonsText(it.gap_reasons)})` : ''}</p>}
                 </li>
               ))}
             </ul>

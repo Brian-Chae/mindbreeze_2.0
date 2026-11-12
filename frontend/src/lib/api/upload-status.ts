@@ -50,6 +50,8 @@ export interface UploadParticipantDto {
   /** SDD-326: 연결한 밴드 시리얼(코치·기관관리자 화면 전용). 구 서버·미수집이면 없음/null. 회원 화면에는 쓰지 않는다. */
   band_serial?: string | null;
   band_firmware?: string | null;
+  /** SDD-326: 참가자 회차 전체 측정 끊김 횟수. 미집계/구 서버면 null·없음. */
+  band_gap_count?: number | null;
 }
 /** SDD-326 — GET /band-devices/{serial}/usage 계약(backend/app/schemas/band_device.py). 코치·기관관리자 전용. */
 export interface BandDeviceUsageItem {
@@ -65,6 +67,9 @@ export interface BandDeviceUsageItem {
   is_current: boolean;
   stream_count: number;
   superseded_count: number;
+  /** 이 시리얼 사용 구간의 측정 끊김 횟수와 사유별 횟수. 구 서버면 없음. */
+  gap_count?: number;
+  gap_reasons?: Record<string, number>;
 }
 export interface BandDeviceUsageResponse { serial: string; items: BandDeviceUsageItem[]; truncated: boolean }
 

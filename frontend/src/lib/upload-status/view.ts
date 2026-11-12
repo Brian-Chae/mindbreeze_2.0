@@ -127,3 +127,18 @@ export const matchesParticipantQuery = (p: UploadParticipantDto, query: string):
   const q = query.trim().toLowerCase();
   return !q || displayName(p).toLowerCase().includes(q) || (p.band_serial ?? '').toLowerCase().includes(q);
 };
+
+// ── SDD-326: 측정 끊김 표시(사실 횟수만, 점수·판정 없음) ──
+export const GAP_REASON_LABEL: Record<string, string> = {
+  packet_gap: '신호 끊김', ble_disconnect: '블루투스 끊김', process_terminated: '앱 종료', clock_reset: '기기 시계 초기화',
+};
+export const gapReasonLabel = (reason: string): string => GAP_REASON_LABEL[reason] ?? '기타';
+/** "끊김 N회". 값이 없으면(null·undefined·음수) null 이라 표시하지 않는다. 0회는 "끊김 0회". */
+export const gapCountText = (n: number | null | undefined): string | null => (typeof n === 'number' && Number.isFinite(n) && n >= 0 ? `끊김 ${n}회` : null);
+/** 사유별 횟수 → "신호 끊김 2회 · 기타 1회". 라벨이 같은 사유(기타)는 합산, 횟수 많은 순. */
+export function gapReasonsText(reasons: Record<string, number> | undefined): string | null {
+  const merged = new Map<string, number>();
+  for (const [k, v] of Object.entries(reasons ?? {})) if (v > 0) merged.set(gapReasonLabel(k), (merged.get(gapReasonLabel(k)) ?? 0) + v);
+  if (merged.size === 0) return null;
+  return [...merged].sort((a, b) => b[1] - a[1]).map(([l, n]) => `${l} ${n}회`).join(' · ');
+}

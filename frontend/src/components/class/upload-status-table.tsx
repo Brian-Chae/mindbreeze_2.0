@@ -6,7 +6,7 @@ import {
   ABNORMAL_EXIT_NOTE, BOARD_LABEL, COACH_OK_NOTE, DASH, FINAL_PENDING_COACH, FINAL_PENDING_PERSON_NOTE, showFinalPending, finalPendingAll, PAGE_SIZE, percentText, arrivedText, basisNote, boardState, coachAction, formatBytes, formatMinutes, formatTotalHours,
   pageCount, personAction, personBucket, slicePage, transferPercent, type BoardState, type PersonBucket,
 } from '../../lib/upload-status/board';
-import { BAND_SERIAL_EMPTY, displayName, formatClock, formatCount, latestReceived, matchesParticipantQuery, rawTotals, splitBandSerial } from '../../lib/upload-status/view';
+import { BAND_SERIAL_EMPTY, displayName, formatClock, formatCount, latestReceived, gapCountText, matchesParticipantQuery, rawTotals, splitBandSerial } from '../../lib/upload-status/view';
 import { BandUsageSheet } from './band-usage-sheet';
 import { FinalPendingChip, Metric, StateBadge, TransferBar, cardClass, fieldClass } from './upload-board-parts';
 
@@ -65,7 +65,7 @@ function PersonTable({ rows, attention, onOpenBand }: { rows: UploadParticipantD
           return (
             <tr key={p.participant_id} data-testid="upload-row" data-bucket={attention ? 'attention' : 'other'} className="grid grid-cols-2 border-t border-[#EEE8F1] md:table-row">
               <td className="p-2.5 font-semibold md:p-3">{displayName(p)}{p.is_guest && <small className="ml-1 font-normal text-[#776D7B]">게스트</small>}</td>
-              <td className="p-2.5 md:p-3"><span className="mr-1 text-[11px] text-[#776D7B] md:hidden">밴드</span><BandSerial p={p} onOpen={onOpenBand} /></td>
+              <td className="p-2.5 md:p-3"><span className="mr-1 text-[11px] text-[#776D7B] md:hidden">밴드</span><BandSerial p={p} onOpen={onOpenBand} />{gapCountText(p.band_gap_count) && <span data-testid="band-gap" className="block text-[11px] text-[#776D7B]">{gapCountText(p.band_gap_count)}</span>}</td>
               <td className="p-2.5 md:p-3">{formatClock(latestReceived(p))}</td>
               <td className="col-span-2 p-2.5 md:col-span-1 md:p-3">{attention ? personComponents(p) : `${formatBytes(p.metrics?.bytes_arrived)} · ${formatMinutes(p.metrics?.measured_min)}`}</td>
               <td className="col-span-2 p-2.5 md:col-span-1 md:p-3">{attention ? personAction({ failed, stalled }) : null}<Evidence p={p} /></td>
