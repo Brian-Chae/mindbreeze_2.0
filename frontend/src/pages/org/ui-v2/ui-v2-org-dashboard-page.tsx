@@ -17,6 +17,7 @@ import { sessionStatusLabel } from '../../../lib/session-status';
 import type { SessionStatus, SessionType } from '../../../lib/api/session';
 import { Pill, SessionStatusPill, StatCell, type PillTone } from './ui-v2-org-parts';
 import { formatDateTime } from './ui-v2-org-format';
+import { homeEntryAction } from '../../../lib/dashboard/counselor-home-model';
 import '../../../styles/ui-v2-org-members.css';
 
 const TYPE_LABELS: Record<SessionType, string> = {
@@ -244,6 +245,13 @@ export function UiV2OrgDashboardPage() {
                               <td data-label="시작" className="u2-mono">{formatDateTime(cls.started_at)}</td>
                               <td data-label="종료" className="u2-mono">{formatDateTime(cls.ended_at)}</td>
                               <td data-label="기록">
+                                {(() => {
+                                  // 11/12 대표 지시: 기관관리자는 열린 회차를 참관 입장하기로 바로 들어간다(꺼져 있으면 안내만).
+                                  const entry = homeEntryAction(cls, 'org_admin');
+                                  if (entry.kind === 'observe') return <Link to={entry.to} className="u2-link" data-testid="home-entry-cta">{entry.label}</Link>;
+                                  if (entry.kind === 'note') return <small className="u2-muted" data-testid="home-entry-note">{entry.text}</small>;
+                                  return null;
+                                })()}
                                 {showRecordLink ? (
                                   <Link to={`/sessions/${cls.id}/record`} className="u2-link">기록 보기</Link>
                                 ) : (

@@ -5,15 +5,58 @@ import { liveClasses } from './home-stats';
 
 export const HOME_CLASS_LIMIT = 4;
 export const HOME_SCHEDULE_LIMIT = 5;
+/** 예정 시각이 지났어도 아직 열리지 않은(scheduled/ready) 회차를 일정에 남기는 한도. */
+const OVERDUE_GRACE_MS = 12 * 3600_000;
 
 /** 히어로: 진행 중(in_progress/open) 우선, 없으면 가장 가까운 미래 예정(취소·완료 제외). */
 export function pickHeroSession(rows: readonly ClassSummary[], now: Date): { session: ClassSummary; live: boolean } | null {
   const live = liveClasses(rows);
   if (live.length > 0) return { session: live[0], live: true };
   const upcoming = rows
-    .filter((c) => c.scheduled_at && new Date(c.scheduled_at).getTime() >= now.getTime() && c.status !== 'cancelled' && c.status !== 'completed')
+    .filter((c) => c.scheduled_at && new Date(c.scheduled_at).getTime() >= now.getTime() - OVERDUE_GRACE_MS && c.status !== 'cancelled' && c.status !== 'completed')
     .sort((a, b) => new Date(a.scheduled_at!).getTime() - new Date(b.scheduled_at!).getTime());
   return upcoming[0] ? { session: upcoming[0], live: false } : null;
+}
+
+export type HomeEntryAction =
+  | { kind: 'enter'; label: string; to: string }
+  | { kind: 'observe'; label: string; to: string }
+  | { kind: 'note'; text: string }
+  | { kind: 'none' };
+
+const ENTRY_OPEN = ['ready', 'scheduled', 'open', 'in_progress'];
+const OBSERVE_BLOCKED_NOTE: Record<string, string> = {
+  team_read_disabled: '참관 기능이 꺼져 있어요',
+  no_members_yet: '회원이 입장하면 참관할 수 있어요',
+  notice_pending: '회원의 고지 확인이 끝나면 참관할 수 있어요',
+};
+
+/**
+ * 홈 카드 주 버튼 판정.
+ * 11/12 대표 지시로 SDD-232 의 '홈에서 열기·시작 안 함'을 변경: 배정된 진행자는 홈에서 바로 진행 화면으로 입장한다
+ * (회차 상세의 '진행 화면으로' 조건 isHost && host_state==='assigned' 와 동일). 보조 강사·기관관리자는 열린 회차를 참관 입장한다.
+ */
+export function homeEntryAction(session: ClassSummary, role: string | undefined): HomeEntryAction {
+  if (session.area === 'counseling' || !session.class_id) return { kind: 'none' };
+  if (session.viewer_is_host === true) {
+    return session.host_state === 'assigned' && ENTRY_OPEN.includes(session.status)
+      ? { kind: 'enter', label: '입장하기', to: `/sessions/${encodeURIComponent(session.id)}/player` }
+      : { kind: 'none' };
+  }
+  if (role !== 'counselor' && role !== 'org_admin') return { kind: 'none' };
+  const hostName = session.host_name?.trim();
+  if (session.status === 'open' || session.status === 'in_progress') {
+    if (session.can_observe === true) {
+      return { kind: 'observe', label: '참관 입장하기', to: `/classes/${encodeURIComponent(session.class_id)}/sessions/${encodeURIComponent(session.id)}?observe=1` };
+    }
+    const reason = session.observe_blocked_reason ? OBSERVE_BLOCKED_NOTE[session.observe_blocked_reason] : undefined;
+    if (reason) return { kind: 'note', text: reason };
+    return { kind: 'none' };
+  }
+  if (session.status === 'scheduled' || session.status === 'ready') {
+    return { kind: 'note', text: `진행: ${hostName ? `${hostName} 코치` : '진행 코치'} · 열리면 참관할 수 있어요` };
+  }
+  return { kind: 'none' };
 }
 
 /** 일정 목록: 진행 중 회차 → 다가오는 회차(시간순), 중복 없이 최대 5건. */
@@ -21,7 +64,7 @@ export function pickScheduleRows(rows: readonly ClassSummary[], now: Date): Clas
   const live = liveClasses(rows);
   const liveIds = new Set(live.map((c) => c.id));
   const upcoming = rows
-    .filter((c) => !liveIds.has(c.id) && c.scheduled_at && new Date(c.scheduled_at).getTime() >= now.getTime() && c.status !== 'cancelled' && c.status !== 'completed')
+    .filter((c) => !liveIds.has(c.id) && c.scheduled_at && new Date(c.scheduled_at).getTime() >= now.getTime() - OVERDUE_GRACE_MS && c.status !== 'cancelled' && c.status !== 'completed')
     .sort((a, b) => new Date(a.scheduled_at!).getTime() - new Date(b.scheduled_at!).getTime());
   return [...live, ...upcoming].slice(0, HOME_SCHEDULE_LIMIT);
 }

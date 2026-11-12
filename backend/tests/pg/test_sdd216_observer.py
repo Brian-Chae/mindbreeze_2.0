@@ -59,8 +59,19 @@ def test_observer_token_snapshot_and_notice_gate(pg_session, monkeypatch):
     }
     p.report_notice_version = "r5-1"
     pg_session.flush()
-    with pytest.raises(HTTPException):
+    with pytest.raises(HTTPException) as exc:
         access.observe_session(pg_session, b.id, cls.id, row.id)
+    assert exc.value.detail == {"code": "observation_notice_pending"}
+    # 사유 코드: 스위치 off → team_read_disabled, 진행자 본인/권한 없음 → 단일 코드(not_permitted)
+    assert access.observe_block_reason(pg_session, b.id, row) == "notice_pending"
+    monkeypatch.setattr(settings, "class_team_read_enabled", False)
+    assert access.observe_block_reason(pg_session, b.id, row) == "team_read_disabled"
+    monkeypatch.setattr(settings, "class_team_read_enabled", True)
+    assert access.observe_block_reason(pg_session, a.id, row) == "not_permitted"
+    outsider = user(pg_session, role="client")
+    with pytest.raises(HTTPException) as exc2:
+        access.observe_session(pg_session, outsider.id, cls.id, row.id)
+    assert exc2.value.detail == {"code": "observation_forbidden"}
 
 
 def test_same_socket_downgrade_drops_old_host_rooms(monkeypatch):

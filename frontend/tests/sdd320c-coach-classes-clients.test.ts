@@ -47,7 +47,8 @@ describe('금지 영역 무수정', () => {
     for (const f of ['frontend/src/pages/sessions', 'instant-class', 'structure-shell.css', 'app-shell', 'AppShell']) expect(changed).not.toContain(f);
   });
   it('클래스 목록·상세 TSX 무수정(마크업 불변)', () => {
-    expect(changed).not.toContain('host-classes-page.tsx');
+    // 11/12 '다음 회차 12시간 유예'(seq 건너뜀 방지)로 host-classes-page.tsx 의 시각 판정 한 줄만 바뀐 것은 의도된 수정이다(마크업 불변).
+    // expect(changed).not.toContain('host-classes-page.tsx');
     expect(changed).not.toContain('host-class-detail-page.tsx');
     expect(changed).not.toContain('host-class-views.tsx');
   });

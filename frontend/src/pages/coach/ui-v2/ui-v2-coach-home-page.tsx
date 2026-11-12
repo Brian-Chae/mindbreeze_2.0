@@ -11,7 +11,7 @@ import { getCounselorDashboard, type ClassSummary, type CounselorDashboardRespon
 import { listChatRooms, type ChatRoom } from '../../../lib/api/chat';
 import { listNotifications, type NotificationDto } from '../../../lib/api/notifications';
 import { dashboardSessionArea, dashboardSessionPath } from '../../../lib/class-structure/dashboard-navigation';
-import { HOME_CLASS_LIMIT, pickHeroSession, pickPastRows, pickScheduleRows, sortHomeClasses } from '../../../lib/dashboard/counselor-home-model';
+import { HOME_CLASS_LIMIT, homeEntryAction, pickHeroSession, pickPastRows, pickScheduleRows, sortHomeClasses } from '../../../lib/dashboard/counselor-home-model';
 import { MemberClassStrip } from '../../../components/client/home/member-class-strip';
 import { MemberClassStyles } from '../../../components/class/structure/member-class-views';
 import { ReadStateView } from '../../../components/class/structure/read-state';
@@ -110,6 +110,7 @@ export function UiV2CoachHomePage() {
 
   const showBanner = !bannerDismissed && user?.role === 'counselor' && !user.onboarding_completed;
   const heroSession: ClassSummary | null = hero?.session ?? null;
+  const heroEntry = heroSession ? homeEntryAction(heroSession, user?.role) : ({ kind: 'none' } as const);
   const totalMembers = data ? (data.total_members ?? data.total_participants) : 0;
 
   return (
@@ -130,7 +131,11 @@ export function UiV2CoachHomePage() {
                 <span className="u2-eyebrow">{hero?.live ? '진행 중' : '다음 회차'} · {shortDay(heroSession.scheduled_at)}</span>
                 <h2>{heroSession.title?.trim() || '이름 없는 회차'}{heroSession.seq != null ? ` · ${heroSession.seq}회차` : ''}</h2>
                 <p className="u2f-hero-meta"><b>{timeRange(heroSession.scheduled_at) || '--:--'}</b> · 참여 {heroSession.participant_count}명</p>
-                <Link className="u2-primary" to={dashboardSessionPath(heroSession)}>{hero?.live ? '입장 현황' : '회차 상세 보기'}<span aria-hidden="true" style={{ marginLeft: 'auto' }}>↗</span></Link>
+                {heroEntry.kind === 'note' && <p className="u2-muted" data-testid="home-entry-note">{heroEntry.text}</p>}
+                {heroEntry.kind === 'enter' || heroEntry.kind === 'observe' ? <>
+                  <Link className="u2-primary" data-testid="home-entry-cta" to={heroEntry.to}>{heroEntry.label}<span aria-hidden="true" style={{ marginLeft: 'auto' }}>↗</span></Link>
+                  <Link className="u2-textlink" to={dashboardSessionPath(heroSession)}>회차 상세 보기 ›</Link>
+                </> : <Link className="u2-primary" to={dashboardSessionPath(heroSession)}>{hero?.live ? '입장 현황' : '회차 상세 보기'}<span aria-hidden="true" style={{ marginLeft: 'auto' }}>↗</span></Link>}
               </> : <>
                 <h2 className="u2-gap">예정된 회차가 없어요</h2>
                 <p className="u2-muted">클래스를 바로 열어 회원과 함께 시작할 수 있어요.</p>

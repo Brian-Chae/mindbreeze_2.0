@@ -13,6 +13,11 @@ const errors: Record<string, string> = {
   host_correction_state: '완료 회차의 최신 상태를 확인한 뒤 정정해 주세요.',
   class_capacity: '클래스 정원을 초과했어요.',
   last_lead: '마지막 주강사는 제거할 수 없어요. 새 주강사를 먼저 지정해 주세요.',
+  observation_team_read_disabled: '참관 기능이 꺼져 있어요. 센터 관리자에게 문의해 주세요.',
+  observation_not_open: '아직 열리지 않았거나 이미 끝난 회차예요. 열리면 참관할 수 있어요.',
+  observation_no_members_yet: '회원이 입장하면 참관할 수 있어요.',
+  observation_notice_pending: '입장한 회원의 고지 확인이 끝나면 참관할 수 있어요.',
+  observation_forbidden: '이 회차를 참관할 권한이 없어요.',
   instructor_has_sessions: '아직 배정된 회차가 있어요. 회차의 진행자를 먼저 변경해 주세요.',
 };
 export function operationError(error: unknown): string {
