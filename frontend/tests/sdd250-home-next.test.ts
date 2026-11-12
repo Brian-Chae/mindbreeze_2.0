@@ -26,8 +26,9 @@ describe('SDD-250 홈 다음 일정 후보', () => {
     expect(nextId(m)).toBe('s-instant');
     expect(m.upcoming.map((c) => c.sessionId)).toEqual(['s-open', 's-plan']);
   });
-  it('TS7 열려 있지 않은 과거 회차는 후보가 아니다', () => {
-    expect(nextId(home([cls('과거', { next_session: sess('s-past', -10, 'scheduled') })]))).toBeUndefined();
+  it('TS7 열려 있지 않은 과거 회차는 12시간까지만 후보로 유지한다(11/12 seq 건너뜀 방지)', () => {
+    expect(nextId(home([cls('지연', { next_session: sess('s-late', -10, 'scheduled') })]))).toBe('s-late');
+    expect(nextId(home([cls('과거', { next_session: sess('s-past', -12 * 60 - 1, 'scheduled') })]))).toBeUndefined();
   });
   it('TS8 열린 회차도 6시간을 넘으면 제외한다', () => {
     expect(nextId(home([cls('오래', { open_session: sess('s-old', -361, 'open'), is_instant: true })]))).toBeUndefined();

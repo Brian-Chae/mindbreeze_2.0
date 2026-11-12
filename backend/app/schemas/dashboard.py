@@ -33,6 +33,12 @@ class ClassSummary(BaseModel):
     report_count: int = 0
     # SDD-221: 승인 대기(pending_review) 리포트 수. 스키마에 없어 응답에서 제거되던 필드.
     pending_review_count: int = 0
+    # 홈 카드 입장 버튼용(가산 필드). 진행자/참관자 구분과 참관 불가 사유.
+    host_name: str | None = None
+    host_state: str | None = None
+    viewer_is_host: bool = False
+    can_observe: bool = False
+    observe_blocked_reason: str | None = None
 
 
 class CounselorDashboardResponse(BaseModel):

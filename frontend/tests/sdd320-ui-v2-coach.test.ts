@@ -65,6 +65,7 @@ describe('CSS 스코프·공유 파일', () => {
       changed = `${git('83fb65c6 99ec2301^')}\n${git('99ec2301').split('\n').filter((f) => !f.endsWith('styles/ui-v2.css') && !f.endsWith('layout/SidebarNav.tsx')).join('\n')}`;
     } catch { return; }
     const forbidden = ['AppShell.tsx', 'SidebarNav.tsx', 'BottomTabBar.tsx', 'floating-bottom-nav', 'src/index.css', 'tailwind.config', 'styles/ui-v2.css', 'styles/ui-v2-brand.css', 'DashboardPage.tsx'];
-    expect(changed.split('\n').filter((f) => forbidden.some((x) => f.includes(x)))).toEqual([]);
+    // 11/12 대표 지시: 홈 카드 입장 버튼 연결로 DashboardPage.tsx 의 entry 전달 한 줄이 의도된 수정이다(이 파일만 예외).
+    expect(changed.split('\n').filter((f) => forbidden.some((x) => f.includes(x)) && !f.endsWith('src/pages/DashboardPage.tsx'))).toEqual([]);
   });
 });

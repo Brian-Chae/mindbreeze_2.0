@@ -229,30 +229,32 @@ def project_report_for_viewer(result, viewer, session):
     return result
 
 
-def can_observe(db, user_id, session):
-    if (
-        not settings.class_team_read_enabled
-        or not session.class_id
-        or session.status not in ("open", "in_progress")
-    ):
-        return False
+def observe_block_reason(db, user_id, session):
+    """참관 불가 사유 코드. 참관 가능하면 None.
+
+    클래스 역할이 참관 대상(lead/assistant/org_admin)이 아니면 사유를 구분하지 않고
+    not_permitted 하나로만 답한다(다른 클래스 존재 여부 비노출).
+    """
+    if not session.class_id:
+        return "not_permitted"
     cls = (
         db.query(Class)
         .filter(Class.id == session.class_id, Class.status == "active")
         .first()
     )
     actor = db.query(User).filter(User.id == UUID(str(user_id))).first()
-    if (
-        not cls
-        or class_role(db, actor, cls) not in ("lead", "assistant", "org_admin")
-        or session.host_id == actor.id
-    ):
-        return False
+    role = class_role(db, actor, cls) if cls and actor else None
+    if role not in ("lead", "assistant", "org_admin") or session.host_id == actor.id:
+        return "not_permitted"
     # 기관관리자는 자기 기관 명상 클래스 회차만 참관한다(상담 세션 제외, 기관 귀속 확인된 클래스).
-    if class_role(db, actor, cls) == "org_admin" and (
+    if role == "org_admin" and (
         session.type != "meditation" or not cls.organization_attribution_known
     ):
-        return False
+        return "not_permitted"
+    if not settings.class_team_read_enabled:
+        return "team_read_disabled"
+    if session.status not in ("open", "in_progress"):
+        return "not_open"
     # 라이브는 보고서 포함 여부와 무관하게 실제 입장한 모든 회원의 고지를 확인한다.
     present = (
         db.query(SessionParticipant)
@@ -263,10 +265,18 @@ def can_observe(db, user_id, session):
         )
         .all()
     )
-    return bool(present) and all(
+    if not present:
+        return "no_members_yet"
+    if not all(
         p.report_notice_version == "class-team-v1" and p.report_notice_ack_at
         for p in present
-    )
+    ):
+        return "notice_pending"
+    return None
+
+
+def can_observe(db, user_id, session):
+    return observe_block_reason(db, user_id, session) is None
 
 
 def observer_snapshot(session):
@@ -291,8 +301,11 @@ def observe_session(db, user_id, class_id, session_id):
         )
         .first()
     )
-    if not session or not can_observe(db, user_id, session):
-        raise HTTPException(403, detail={"code": "observation_forbidden"})
+    reason = observe_block_reason(db, user_id, session) if session else "not_permitted"
+    if reason is not None:
+        # 권한 없는 사용자는 기존처럼 단일 코드. 권한 있는 역할에게만 사유를 내려 안내한다.
+        code = "observation_forbidden" if reason == "not_permitted" else f"observation_{reason}"
+        raise HTTPException(403, detail={"code": code})
     if not session.webrtc_room_id:
         raise HTTPException(409, detail={"code": "room_not_ready"})
     token = (
