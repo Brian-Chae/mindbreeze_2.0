@@ -50,6 +50,8 @@ SESSIONS_SCOPE_DELETE = SESSIONS_SCOPE_DELETE | frozenset({
     "biosignal_artifacts", "biosignal_feature_aliases", "display_snapshots",
     # SDD-264: 폰 생성량(기대량) 보고. 세션·참가자 FK 종속이라 세션 초기화 범위에 포함한다.
     "session_ingest_expected",
+    # SDD-326: 밴드 시리얼 이력(세션·참가자 FK 종속)
+    "session_band_devices",
 })
 
 # scope=sessions 에서 보존하는 테이블(계정·기관·인증·에이전트·연구·감사).

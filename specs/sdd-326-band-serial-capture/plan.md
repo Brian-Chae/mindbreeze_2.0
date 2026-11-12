@@ -121,3 +121,27 @@
 | T10 | `lib/api/upload-status.ts`(`band_serial`·`band_firmware` 가산, `fetchBandDeviceUsage`), `lib/upload-status/view.ts`(`splitBandSerial`·`matchesParticipantQuery`), `components/class/upload-status-table.tsx`(시리얼 칼럼·검색), `components/class/band-usage-sheet.tsx`(기기 상세 시트, body 포털) | 코치·기관관리자 화면(`upload-status-table`)에만 노출. 회원용 `my-upload-status` 는 미변경(D1=A) |
 
 계약 대조(`origin/sdd/326-be-band-serial:backend/app/schemas/band_device.py`): 요청 `{serial, firmware?, platform: web|android|ios}`, 응답 `{ok}`, 역조회 `{serial, items[], truncated}` 와 필드명 일치. 서버 `FIRMWARE_PATTERN`(`[A-Za-z0-9._+-]{1,32}`) 에 맞춰 FE 도 형식 불일치 펌웨어는 보내지 않는다. 서버 시리얼 정규식은 `LXB` 접두 필수 — FE 도 `LXB` 접두만 보고.
+
+## 9. BE 구현 결과 (T2~T6, 11/12)
+
+| Task | 결과 | 파일 |
+|---|---|---|
+| T2 | 모델 `SessionBandDevice` + 마이그레이션 `e326a1band001`(down=`d305a1rot001`) + 계약 `schemas/band_device.py` | `models/session.py`, `alembic/versions/e326a1band001_*`, `schemas/band_device.py` |
+| T3 | service(UPSERT·교체·마스킹)+`PUT /sessions/{sid}/entry/band-device` | `services/band_device_service.py`, `api/v1/session.py` |
+| T4 | 업로드 현황 `band_serial`·`band_firmware` 가산(기존 `_participants` 쿼리에 outer join, 쿼리 수 증가 0) | `schemas/upload_status.py`, `services/upload_status_service.py` |
+| T5 | `GET /band-devices/{serial}/usage` (코치=담당 회차 / 기관관리자=자기 기관 / 플랫폼=전체, 최대 200건) | `api/v1/band_devices.py`, `api/v1/__init__.py` |
+| T6 | 탈퇴 sweep `PARTICIPANT_OWNED` + 개발 초기화 범위에 `session_band_devices` 등록 | `services/account_deletion_sweep_service.py`, `services/dev_data_reset.py` |
+
+- 422 응답은 이 두 경로에 한해 `input`·`ctx`(시리얼 원문 에코)를 제거(`app/main.py`).
+- T1(실기기 이름 형식)은 미확정 — 정규식 `^LXB-[0-9A-F]{8}$`(표준형)을 우선하되 그 외 `LXB` 접두(영숫자·`._:-`, 최대 64자)도 허용. **실기기 확인 필요**.
+- 회차 종료 후 늦은 보고는 `allow_completed=True` 로 허용(이력만 갱신).
+
+### 9-1. 표준형으로 조이는 위치 (후속, 실기기 확인 후)
+- `backend/app/schemas/band_device.py:17` `SERIAL_PATTERN` 을 `SERIAL_STANDARD_PATTERN`(`^LXB-[0-9A-F]{8}$`)으로 교체 (요청 검증 `:40`).
+- `backend/app/services/band_device_service.py:121` 역조회 serial 검증도 같은 패턴.
+- 시험 `tests/test_sdd326_band_serial.py` 의 '표준형 이외 LXB도 허용' 케이스를 거부 단언으로 뒤집는다. FE 정규식도 동일하게.
+
+### 9-2. gap_count (11/12 추가)
+- usage `items[]` 에 `gap_count`, `gap_reasons{reason:n}` 추가. 근거 `biosignal_gap_events`(참가자 단위, 서버 수신 `created_at` 기준 구간). 시리얼 1개면 회차 전체, 교체 이력이 있으면 `[first_seen_at, 다음 시리얼 first_seen_at)`. 집계 1쿼리(`_gap_breakdown`), 행 수와 무관한 쿼리 수 시험 포함.
+- 업로드 현황 참가자 행에 `band_gap_count`(참가자 회차 전체, 기존 쿼리 안 상관 서브쿼리라 쿼리 수 증가 0 — 시험으로 확인).
+- 한계: gap 이벤트의 `start_us/end_us` 는 기기 시계라 시각 비교에 쓰지 않고 수신 시각을 썼다.

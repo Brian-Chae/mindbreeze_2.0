@@ -213,7 +213,11 @@ async def _validation_exception_handler(
         f"{'.'.join(str(p) for p in e.get('loc', ()))}: {e.get('type')}" for e in exc.errors()[:5]
     )
     logger.warning("[422] %s %s — 요청 검증 실패 (%s)", request.method, request.url.path, fields)
-    return JSONResponse(status_code=422, content={"detail": jsonable_encoder(exc.errors())})
+    errors = exc.errors()
+    if request.url.path.endswith("/entry/band-device") or "/band-devices/" in request.url.path:
+        # SDD-326: 기기 시리얼은 식별자 — 오류 응답에 입력 원문(input/ctx)을 되돌려주지 않는다.
+        errors = [{k: v for k, v in e.items() if k not in ("input", "ctx")} for e in errors]
+    return JSONResponse(status_code=422, content={"detail": jsonable_encoder(errors)})
 
 
 @app.exception_handler(ApiError)
