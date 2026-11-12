@@ -12,11 +12,12 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
-from sqlalchemy import case, func, select
+from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session as DBSession
+from sqlalchemy.orm import Session as DBSession, aliased
 
 from app.models.class_program import Class
+from app.models.biosignal import BiosignalGapEvent
 from app.models.live_state import CaptureStream
 from app.models.session import Session, SessionBandDevice, SessionParticipant
 from app.models.user import User
@@ -150,6 +151,7 @@ def band_device_usage(db: DBSession, actor: dict, serial: str) -> BandDeviceUsag
         q = q.where(scope)
     rows = db.execute(q).all()
     truncated = len(rows) > USAGE_LIMIT
+    gaps = _gap_breakdown(db, [r[0] for r in rows[:USAGE_LIMIT]])
     items = []
     for r in rows[:USAGE_LIMIT]:
         dev = r[0]
@@ -162,5 +164,33 @@ def band_device_usage(db: DBSession, actor: dict, serial: str) -> BandDeviceUsag
             first_seen_at=_iso(dev.first_seen_at) or "", last_seen_at=_iso(dev.last_seen_at) or "",
             is_current=(r.linkband_device_id == dev.serial),
             stream_count=int(r.n or 0), superseded_count=int(r.sup or 0),
+            gap_count=sum(gaps.get(dev.id, {}).values()), gap_reasons=gaps.get(dev.id, {}),
         ))
     return BandDeviceUsageResponse(serial=normalized, items=items, truncated=truncated)
+
+
+def _gap_breakdown(db: DBSession, devs: list[SessionBandDevice]) -> dict[uuid.UUID, dict[str, int]]:
+    """이력 행별 측정 끊김 사유 집계 — 쿼리 1회(N+1 없음).
+
+    구간은 서버 수신 시각(created_at) 기준: 참가자 시리얼이 1개면 제한 없음(보고 전 끊김 포함),
+    여러 개면 [이 행 first_seen_at, 같은 참가자의 다음 시리얼 first_seen_at).
+    """
+    if not devs:
+        return {}
+    d, d2, g = SessionBandDevice, aliased(SessionBandDevice), BiosignalGapEvent
+    n_serials = select(func.count()).where(d2.participant_id == d.participant_id).correlate(d).scalar_subquery()
+    next_first = (select(func.min(d2.first_seen_at))
+                  .where(d2.participant_id == d.participant_id, d2.first_seen_at > d.first_seen_at)
+                  .correlate(d).scalar_subquery())
+    q = (
+        select(d.id, g.reason, func.count().label("n"))
+        .join(g, and_(g.participant_id == d.participant_id,
+                      or_(n_serials == 1, g.created_at >= d.first_seen_at),
+                      or_(next_first.is_(None), g.created_at < next_first)))
+        .where(d.id.in_([x.id for x in devs]))
+        .group_by(d.id, g.reason)
+    )
+    out: dict[uuid.UUID, dict[str, int]] = {}
+    for did, reason, n in db.execute(q).all():
+        out.setdefault(did, {})[reason] = int(n)
+    return out

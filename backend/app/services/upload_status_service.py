@@ -27,6 +27,7 @@ from app.models.class_program import Class
 from app.models.eeg_feature import EEGFeatureWindow
 from app.models.organization import Organization
 from app.models.record import EEGRawChunk
+from app.models.biosignal import BiosignalGapEvent
 from app.models.session import Session, SessionBandDevice, SessionParticipant
 from app.models.user import User
 from app.models.user_org_membership import UserOrgMembership
@@ -268,7 +269,9 @@ def _participants(db: DBSession, session_id: uuid.UUID) -> list:
     return db.execute(
         select(p.id, p.user_id, p.guest_name, User.name, p.is_waitlisted, p.band_connected, p.report_included,
                p.eeg_collection_consented, p.linkband_device_id.label("band_serial"),
-               SessionBandDevice.firmware.label("band_firmware"))
+               SessionBandDevice.firmware.label("band_firmware"),
+               select(func.count()).select_from(BiosignalGapEvent)
+               .where(BiosignalGapEvent.participant_id == p.id).correlate(p).scalar_subquery().label("band_gap_count"))
         .outerjoin(User, User.id == p.user_id)
         # SDD-326: 현재 기기의 펌웨어(참가자×시리얼 UNIQUE 라 행 중복 없음, 쿼리 수 증가 0)
         .outerjoin(SessionBandDevice, and_(SessionBandDevice.participant_id == p.id,
@@ -436,6 +439,7 @@ def _build_participant(prow, fstat, rstats: dict, as_of: datetime, expected_row=
         # 개요 목록(_participants_bulk)의 행에는 없는 열 — 없으면 None
         band_serial=getattr(prow, "band_serial", None),
         band_firmware=getattr(prow, "band_firmware", None),
+        band_gap_count=getattr(prow, "band_gap_count", None),
     )
 
 

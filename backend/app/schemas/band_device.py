@@ -75,6 +75,10 @@ class BandDeviceUsageItem(BaseModel):
     is_current: bool          # 이 시리얼이 참가자의 현재 기기(linkband_device_id)인가
     stream_count: int         # 해당 참가자의 capture_stream 세대 수(회차 전체)
     superseded_count: int     # 그중 status='superseded' 인 수
+    # 이 기기 사용 구간(서버 수신 시각 기준)의 측정 끊김. 참가자 시리얼이 1개면 회차 전체,
+    # 교체 이력이 있으면 [first_seen_at, 다음 시리얼 first_seen_at) 구간. 근거: biosignal_gap_events.
+    gap_count: int = 0
+    gap_reasons: dict[str, int] = {}   # reason(packet_gap, ble_disconnect, ...) → 횟수
 
 
 class BandDeviceUsageResponse(BaseModel):

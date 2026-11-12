@@ -353,3 +353,73 @@ def test_ts11_마이그레이션_단일_헤드_체인_포함_오프라인_SQL():
 def test_모델_UNIQUE_제약():
     uqs = {c.name for c in SessionBandDevice.__table__.constraints if isinstance(c, sa.UniqueConstraint)}
     assert "uq_session_band_devices_participant_serial" in uqs
+
+
+# ── gap_count (biosignal_gap_events) ────────────────────────────────
+def _gap(db, w, p, reason, when, n=[0]):
+    from app.models.biosignal import BiosignalGapEvent
+    n[0] += 1
+    db.add(BiosignalGapEvent(
+        id=uuid.uuid4(), session_id=w["session"].id, participant_id=p.id, event_id=f"e{uuid.uuid4().hex[:8]}",
+        sequence=n[0], signal="eeg", stream_id="s", segment_id="g", start_us=1, end_us=2, discovered_at_us=3,
+        reason=reason, observed_or_estimated="observed", payload_hash="h", created_at=when))
+
+
+def test_gap_단일_시리얼은_회차_전체_사유별_분해(client, world, db):
+    from datetime import timedelta
+    p0 = db.get(SessionParticipant, world["participants"][0].id)
+    t = datetime.now(timezone.utc)
+    _add_dev(db, world, p0, SERIAL, when=t)
+    p0.linkband_device_id = SERIAL
+    _gap(db, world, p0, "ble_disconnect", t - timedelta(minutes=5))  # 보고 이전도 포함
+    _gap(db, world, p0, "ble_disconnect", t + timedelta(minutes=1))
+    _gap(db, world, p0, "packet_gap", t + timedelta(minutes=2))
+    db.commit()
+    it = client.get(f"/api/v1/band-devices/{SERIAL}/usage", headers=world["auth"]).json()["items"][0]
+    assert it["gap_count"] == 3 and it["gap_reasons"] == {"ble_disconnect": 2, "packet_gap": 1}
+    assert next(r for r in _status(client, world)["participants"] if r["participant_id"] == str(p0.id))["band_gap_count"] == 3
+
+
+def test_gap_교체_이력은_구간별로_나뉜다(client, world, db):
+    from datetime import timedelta
+    p0 = db.get(SessionParticipant, world["participants"][0].id)
+    t = datetime.now(timezone.utc)
+    _add_dev(db, world, p0, "LXB-AAAAAAAA", when=t)
+    _add_dev(db, world, p0, "LXB-BBBBBBBB", when=t + timedelta(minutes=10))
+    p0.linkband_device_id = "LXB-BBBBBBBB"
+    _gap(db, world, p0, "packet_gap", t + timedelta(minutes=3))
+    _gap(db, world, p0, "packet_gap", t + timedelta(minutes=4))
+    _gap(db, world, p0, "clock_reset", t + timedelta(minutes=12))
+    db.commit()
+    a = client.get("/api/v1/band-devices/LXB-AAAAAAAA/usage", headers=world["auth"]).json()["items"][0]
+    b = client.get("/api/v1/band-devices/LXB-BBBBBBBB/usage", headers=world["auth"]).json()["items"][0]
+    assert (a["gap_count"], b["gap_count"]) == (2, 1) and b["gap_reasons"] == {"clock_reset": 1}
+
+
+def test_gap_없으면_0_빈_dict(client, world, db):
+    p0 = db.get(SessionParticipant, world["participants"][0].id)
+    _add_dev(db, world, p0, SERIAL)
+    db.commit()
+    it = client.get(f"/api/v1/band-devices/{SERIAL}/usage", headers=world["auth"]).json()["items"][0]
+    assert it["gap_count"] == 0 and it["gap_reasons"] == {}
+
+
+def test_usage_쿼리수는_행수와_무관(client, world, db):
+    from tests.test_upload_status import _Counter
+    actor = {"id": str(world["host"].id), "role": "counselor"}
+    t = datetime.now(timezone.utc)
+
+    def run(k):
+        for p in world["participants"][:k]:
+            pp = db.get(SessionParticipant, p.id)
+            if not db.query(SessionBandDevice).filter_by(participant_id=pp.id).first():
+                _add_dev(db, world, pp, SERIAL)
+            _gap(db, world, pp, "packet_gap", t)
+        db.commit()
+        with _Counter(db.get_bind()) as c:
+            res = svc.band_device_usage(db, actor, SERIAL)
+        return c.n, len(res.items)
+
+    n1, i1 = run(1)
+    n3, i3 = run(3)
+    assert (i1, i3) == (1, 3) and n1 == n3, (n1, n3)
