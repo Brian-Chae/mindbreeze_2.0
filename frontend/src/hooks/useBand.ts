@@ -19,7 +19,8 @@ import {
   type UploadStatus,
 } from '../lib/api/session';
 import { tokenStorage } from '../lib/api/client';
-import { postEntryFeatures } from '../lib/api/class-flow';
+import { postEntryFeatures, putBandDevice } from '../lib/api/class-flow';
+import { maskSerial, reportBandDevice } from '../lib/band/band-device-report';
 import { AnalysisMetricsService } from '../lib/eeg/AnalysisMetricsService';
 import { bluetoothService } from '../lib/eeg/bluetoothService';
 import { mockDataGenerator } from '../lib/eeg/mockDataGenerator';
@@ -30,7 +31,7 @@ import { createLogger } from '../lib/eeg/logger';
 import { bleGapLog } from '../lib/eeg/ble-gap-log';
 import { nextReconnectDelay } from '../lib/ble/reconnect-policy';
 import { RESUME_ORDER } from '../lib/native/app-lifecycle';
-import { isNativeApp } from '../lib/native/platform';
+import { getPlatform, isNativeApp } from '../lib/native/platform';
 import { PAUSE_ORDER, useAppLifecycle } from './useAppResume';
 import {
   enqueueFeature,
@@ -1601,6 +1602,25 @@ export function useBand({
   ]);
 
   const connect = useCallback(() => connectInternal(false), [connectInternal]);
+
+  // SDD-326: 연결된 밴드의 시리얼(+펌웨어)을 회차에 보고한다. 부가 기능 — 실패는 무시하고 측정 흐름을 막지 않으며,
+  // 같은 값 재연결은 band-device-report 가 중복 전송을 막는다. 밴드 없이 입장·플레이그라운드·예시 모드는 아무 것도 안 한다.
+  useEffect(() => {
+    if (connectionState !== 'connected' || isMock || observationOnly || !sessionId) return;
+    const report = (): void => {
+      const identity = bluetoothService.getBandIdentity();
+      if (!identity) return;
+      void reportBandDevice(
+        { sessionId, credential: entryCredentialRef.current, identity, platform: getPlatform() },
+        { put: putBandDevice },
+      ).then((sent) => { if (sent) logger.info('밴드 시리얼 보고', maskSerial(identity.serial)); });
+    };
+    report();
+    // 펌웨어는 연결 직후 비동기로 읽히므로 한 번 더 확인한다(같은 값이면 보내지 않는다).
+    const timer = setTimeout(report, 3000);
+    return () => clearTimeout(timer);
+  }, [connectionState, isMock, observationOnly, sessionId]);
+
   autoConnectRef.current = () => connectInternal(true);
 
   // SDD-222 G1: 앱 복귀 — BLE 연결 상태 확인.

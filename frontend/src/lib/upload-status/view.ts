@@ -113,3 +113,32 @@ export const formatCount = (n: number): string => n.toLocaleString('ko-KR');
 
 export const uploadStatusScreenPath = (classId: string, sessionId: string): string =>
   `/classes/${encodeURIComponent(classId)}/sessions/${encodeURIComponent(sessionId)}/upload-status`;
+
+// ── SDD-326: 밴드 시리얼 표시(코치·기관관리자 현황 표 전용) ──
+/** 시리얼을 (앞부분, 끝 4자) 로 나눈다 — 끝 4자를 강조해 기기를 눈으로 구분한다. 없으면 null. */
+export function splitBandSerial(p: Pick<UploadParticipantDto, 'band_serial'>): { head: string; tail: string } | null {
+  const serial = p.band_serial?.trim();
+  if (!serial) return null;
+  return serial.length <= 4 ? { head: '', tail: serial } : { head: serial.slice(0, -4), tail: serial.slice(-4) };
+}
+export const BAND_SERIAL_EMPTY = '미수집';
+/** 이름 또는 시리얼(대소문자 무시)로 검색에 맞는가. */
+export const matchesParticipantQuery = (p: UploadParticipantDto, query: string): boolean => {
+  const q = query.trim().toLowerCase();
+  return !q || displayName(p).toLowerCase().includes(q) || (p.band_serial ?? '').toLowerCase().includes(q);
+};
+
+// ── SDD-326: 측정 끊김 표시(사실 횟수만, 점수·판정 없음) ──
+export const GAP_REASON_LABEL: Record<string, string> = {
+  packet_gap: '신호 끊김', ble_disconnect: '블루투스 끊김', process_terminated: '앱 종료', clock_reset: '기기 시계 초기화',
+};
+export const gapReasonLabel = (reason: string): string => GAP_REASON_LABEL[reason] ?? '기타';
+/** "끊김 N회". 값이 없으면(null·undefined·음수) null 이라 표시하지 않는다. 0회는 "끊김 0회". */
+export const gapCountText = (n: number | null | undefined): string | null => (typeof n === 'number' && Number.isFinite(n) && n >= 0 ? `끊김 ${n}회` : null);
+/** 사유별 횟수 → "신호 끊김 2회 · 기타 1회". 라벨이 같은 사유(기타)는 합산, 횟수 많은 순. */
+export function gapReasonsText(reasons: Record<string, number> | undefined): string | null {
+  const merged = new Map<string, number>();
+  for (const [k, v] of Object.entries(reasons ?? {})) if (v > 0) merged.set(gapReasonLabel(k), (merged.get(gapReasonLabel(k)) ?? 0) + v);
+  if (merged.size === 0) return null;
+  return [...merged].sort((a, b) => b[1] - a[1]).map(([l, n]) => `${l} ${n}회`).join(' · ');
+}
