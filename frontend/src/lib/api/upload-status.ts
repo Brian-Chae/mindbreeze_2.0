@@ -1,6 +1,6 @@
 // SDD-261: 데이터 저장·업로드 현황 조회 API (계약: specs/sdd-261-upload-status-screens/contract.md)
 // apiClient 는 응답 헤더·304 를 노출하지 않아 전용 fetch 를 쓴다. ETag 는 메모리에서만 다룬다(영구 저장 금지).
-import { ApiError, BASE_URL, refreshAccessToken, tokenStorage } from './client';
+import { ApiError, apiClient, BASE_URL, refreshAccessToken, tokenStorage } from './client';
 import { normalizePersonProgress, normalizeSessionMetrics, normalizeSessionProgress, type PersonProgress, type SessionMetrics, type SessionProgress } from './upload-progress';
 
 export type UploadStatusKind = 'needs_attention' | 'excluded' | 'uploading' | 'received_unreconciled' | 'no_data';
@@ -47,7 +47,27 @@ export interface UploadParticipantDto {
   progress?: PersonProgress | null;
   /** SDD-265: 참여자 데이터 크기·측정 길이(참여자 기준). */
   metrics?: SessionMetrics;
+  /** SDD-326: 연결한 밴드 시리얼(코치·기관관리자 화면 전용). 구 서버·미수집이면 없음/null. 회원 화면에는 쓰지 않는다. */
+  band_serial?: string | null;
+  band_firmware?: string | null;
 }
+/** SDD-326 — GET /band-devices/{serial}/usage 계약(backend/app/schemas/band_device.py). 코치·기관관리자 전용. */
+export interface BandDeviceUsageItem {
+  session_id: string;
+  session_title: string | null;
+  session_started_at: string | null;
+  participant_id: string;
+  display_name: string | null;
+  firmware: string | null;
+  platform: string | null;
+  first_seen_at: string;
+  last_seen_at: string;
+  is_current: boolean;
+  stream_count: number;
+  superseded_count: number;
+}
+export interface BandDeviceUsageResponse { serial: string; items: BandDeviceUsageItem[]; truncated: boolean }
+
 export interface UploadStatusSummaryDto {
   participants: number;
   needs_attention: number;
@@ -144,4 +164,9 @@ export async function fetchUploadStatus(
     etag: nextEtag ?? data.etag ?? null,
     pollIntervalSec: pollIntervalSec ?? (typeof data.poll_interval_sec === 'number' ? data.poll_interval_sec : null),
   };
+}
+
+/** SDD-326 — 시리얼별 사용 회차 역조회(코치·기관관리자, 호출자 권한 범위만). */
+export function fetchBandDeviceUsage(serial: string): Promise<BandDeviceUsageResponse> {
+  return apiClient.get<BandDeviceUsageResponse>(`/band-devices/${encodeURIComponent(serial)}/usage`);
 }

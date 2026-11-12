@@ -113,3 +113,17 @@ export const formatCount = (n: number): string => n.toLocaleString('ko-KR');
 
 export const uploadStatusScreenPath = (classId: string, sessionId: string): string =>
   `/classes/${encodeURIComponent(classId)}/sessions/${encodeURIComponent(sessionId)}/upload-status`;
+
+// ── SDD-326: 밴드 시리얼 표시(코치·기관관리자 현황 표 전용) ──
+/** 시리얼을 (앞부분, 끝 4자) 로 나눈다 — 끝 4자를 강조해 기기를 눈으로 구분한다. 없으면 null. */
+export function splitBandSerial(p: Pick<UploadParticipantDto, 'band_serial'>): { head: string; tail: string } | null {
+  const serial = p.band_serial?.trim();
+  if (!serial) return null;
+  return serial.length <= 4 ? { head: '', tail: serial } : { head: serial.slice(0, -4), tail: serial.slice(-4) };
+}
+export const BAND_SERIAL_EMPTY = '미수집';
+/** 이름 또는 시리얼(대소문자 무시)로 검색에 맞는가. */
+export const matchesParticipantQuery = (p: UploadParticipantDto, query: string): boolean => {
+  const q = query.trim().toLowerCase();
+  return !q || displayName(p).toLowerCase().includes(q) || (p.band_serial ?? '').toLowerCase().includes(q);
+};

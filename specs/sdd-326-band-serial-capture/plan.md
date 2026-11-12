@@ -110,3 +110,14 @@
 - `cd frontend && npx tsc -b --noEmit && npx eslint src/ && npx vitest run <관련> && npm run build`
 - 빌드 CSS 에 신규 클래스 생성 여부 스크립트 확인(Tailwind)
 - 실기기 확인(웹 Chrome + Android + iPhone 각 1대) 후 dev 서브도메인에서 화면 확인
+
+## 9. FE 트랙 구현 결과 (T7~T10, 2026-11-12)
+
+| Task | 변경 | 비고 |
+|---|---|---|
+| T7 | `lib/eeg/bluetoothService.ts` — 0x180A 서비스 목록 추가, `connect()` 성공 직후 `captureIdentity()`(이름 스냅샷 동기 + 펌웨어 0x2A26 비동기·실패 무시), `getBandIdentity()` 공개 | `releaseForNative()`→`disconnect()` 가 `deviceName=null` 로 만들어도 `identity` 스냅샷은 유지(다른 밴드 연결 시 교체) |
+| T8 | `lib/band/band-device-report.ts`(정규화·중복 방지·재시도 3회·throw 없음), `hooks/use-band-serial-report.ts` | **배선 위치 변경**: 밴드 단계 `useBandStep` 은 `observationOnly`(sessionId 없음)라 `useBand` 가 아니라 **`EntryPage`** 에서 `bandOutcome==='connected'` 일 때 보고. `useBand`(진행 화면) 에도 같은 보고 이펙트를 두어 재연결·플레이그라운드 외 경로 커버(관찰 전용·예시 모드·sessionId 없음이면 무동작). 중복은 모듈 레벨 `sent` 집합으로 차단 |
+| T9 | `lib/api/class-flow.ts` `putBandDevice()` / `PutBandDeviceBody` | `entryRequestOptions(credential)` 재사용(eeg-consent 와 동일) |
+| T10 | `lib/api/upload-status.ts`(`band_serial`·`band_firmware` 가산, `fetchBandDeviceUsage`), `lib/upload-status/view.ts`(`splitBandSerial`·`matchesParticipantQuery`), `components/class/upload-status-table.tsx`(시리얼 칼럼·검색), `components/class/band-usage-sheet.tsx`(기기 상세 시트, body 포털) | 코치·기관관리자 화면(`upload-status-table`)에만 노출. 회원용 `my-upload-status` 는 미변경(D1=A) |
+
+계약 대조(`origin/sdd/326-be-band-serial:backend/app/schemas/band_device.py`): 요청 `{serial, firmware?, platform: web|android|ios}`, 응답 `{ok}`, 역조회 `{serial, items[], truncated}` 와 필드명 일치. 서버 `FIRMWARE_PATTERN`(`[A-Za-z0-9._+-]{1,32}`) 에 맞춰 FE 도 형식 불일치 펌웨어는 보내지 않는다. 서버 시리얼 정규식은 `LXB` 접두 필수 — FE 도 `LXB` 접두만 보고.

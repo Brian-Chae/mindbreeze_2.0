@@ -74,3 +74,10 @@
 - [ ] `live:device`·`capture.start` 계약 픽스처(`contracts/session-live-v2`, `measurement-bridge`) diff 0.
 - [ ] 보고 호출은 밴드 연결·측정 시작을 지연시키지 않는다(백그라운드, 실패 무시).
 - [ ] 운영 현장(회차 진행 중) 배포 금지 — 행사 종료 후 DEPLOY 창구 승인으로만.
+
+## FE 트랙 자동 검증 (T7~T10, 2026-11-12)
+- [x] `tests/sdd326-band-device-report.test.ts` 12건 — 정규화(이메일·65자·한글·스크립트 거부), 중복 방지, 펌웨어 갱신 재전송, 3회 재시도 후 포기·재호출 재시도, 경합 1회
+- [x] `tests/sdd326-bluetooth-identity.test.ts` 5건 — 연결 직후 대문자 스냅샷, `releaseForNative` 후 스냅샷 유지(TS2 인계 전 채취), 0x180A 실패가 연결을 막지 않음(TS9), 이름 null/비LXB 무식별(Edge), 밴드 교체(TS4)
+- [x] `tests/sdd326-band-serial-ui.test.tsx` 6건 — 시리얼 칼럼·끝 4자 강조·"미수집"(구 서버 TS5), 시리얼 검색, 사용 이력 시트(교체·스트림 수), 조회 실패 안내
+- [x] 계약: `live:device`·`capture.start`·네이티브 폴더 diff 0 (FE 는 `src/` 안 REST 호출만)
+- [ ] 실기기(웹 Chrome·Android·iPhone) 이름 형식·펌웨어 노출 확인은 구현 후 TS12 로 별도 수행

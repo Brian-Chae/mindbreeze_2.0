@@ -149,6 +149,27 @@ export async function setEegCollectionConsent(
   );
 }
 
+/** SDD-326 — 밴드 시리얼 보고 본문(계약: backend/app/schemas/band_device.py). firmware 는 읽기에 성공했을 때만 보낸다. */
+export interface PutBandDeviceBody {
+  serial: string;
+  firmware?: string;
+  platform: 'web' | 'android' | 'ios';
+}
+
+/** SDD-326 — 연결한 밴드의 시리얼(+펌웨어)을 저장한다. 호출부가 실패를 무시한다(측정 흐름 차단 금지). */
+export async function putBandDevice(
+  sessionId: string,
+  credential: string | null,
+  body: PutBandDeviceBody,
+): Promise<{ ok: boolean }> {
+  await prepareMemberToken();
+  return apiClient.put<{ ok: boolean }>(
+    `/sessions/${encodeURIComponent(sessionId)}/entry/band-device`,
+    body,
+    entryRequestOptions(credential),
+  );
+}
+
 export async function getEntryState(sessionId: string, credential: string | null): Promise<EntryStateDto> {
   await prepareMemberToken();
   // ld: 라이브 소켓 진단 코드(서버 접근 로그에서 게스트 소켓 미개설 사유 확정용, 서버는 무시한다)
