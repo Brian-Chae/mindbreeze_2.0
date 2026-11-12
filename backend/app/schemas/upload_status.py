@@ -65,6 +65,9 @@ class UploadStatusParticipant(BaseModel):
     # SDD-265
     bytes_arrived: int = 0
     measured_min: int = 0
+    # SDD-326: 연결한 밴드 시리얼·펌웨어(미보고 시 None = 미수집)
+    band_serial: str | None = None
+    band_firmware: str | None = None
 
 
 class UploadStatusSummary(BaseModel):

@@ -107,6 +107,8 @@ PARTICIPANT_OWNED: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "biosignal_artifacts": (("participant_id",), ()),
     "biosignal_feature_aliases": (("participant_id",), ()),
     "display_snapshots": (("participant_id",), ()),
+    # SDD-326: 밴드 시리얼 이력(기기 식별자 — 탈퇴 시 소거)
+    "session_band_devices": (("participant_id",), ()),
 }
 
 # 타인과 공유되는 행에서 탈퇴자 참조만 NULL 로 바꾼다(nullable FK).

@@ -21,6 +21,8 @@ from app.api.v1 import class_summary
 from app.api.v1 import data_center
 # SDD-263: 전체 회차 업로드 현황 목록
 from app.api.v1 import upload_status
+# SDD-326: 밴드 시리얼 역조회
+from app.api.v1 import band_devices
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(auth.router)
@@ -36,6 +38,7 @@ router.include_router(session.router)
 router.include_router(class_audio.router)
 router.include_router(classes.router)
 router.include_router(upload_status.router)
+router.include_router(band_devices.router)
 router.include_router(class_membership.router)
 router.include_router(class_guests.router)
 router.include_router(class_reports.router)

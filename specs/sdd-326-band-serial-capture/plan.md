@@ -110,3 +110,17 @@
 - `cd frontend && npx tsc -b --noEmit && npx eslint src/ && npx vitest run <관련> && npm run build`
 - 빌드 CSS 에 신규 클래스 생성 여부 스크립트 확인(Tailwind)
 - 실기기 확인(웹 Chrome + Android + iPhone 각 1대) 후 dev 서브도메인에서 화면 확인
+
+## 9. BE 구현 결과 (T2~T6, 11/12)
+
+| Task | 결과 | 파일 |
+|---|---|---|
+| T2 | 모델 `SessionBandDevice` + 마이그레이션 `e326a1band001`(down=`d305a1rot001`) + 계약 `schemas/band_device.py` | `models/session.py`, `alembic/versions/e326a1band001_*`, `schemas/band_device.py` |
+| T3 | service(UPSERT·교체·마스킹)+`PUT /sessions/{sid}/entry/band-device` | `services/band_device_service.py`, `api/v1/session.py` |
+| T4 | 업로드 현황 `band_serial`·`band_firmware` 가산(기존 `_participants` 쿼리에 outer join, 쿼리 수 증가 0) | `schemas/upload_status.py`, `services/upload_status_service.py` |
+| T5 | `GET /band-devices/{serial}/usage` (코치=담당 회차 / 기관관리자=자기 기관 / 플랫폼=전체, 최대 200건) | `api/v1/band_devices.py`, `api/v1/__init__.py` |
+| T6 | 탈퇴 sweep `PARTICIPANT_OWNED` + 개발 초기화 범위에 `session_band_devices` 등록 | `services/account_deletion_sweep_service.py`, `services/dev_data_reset.py` |
+
+- 422 응답은 이 두 경로에 한해 `input`·`ctx`(시리얼 원문 에코)를 제거(`app/main.py`).
+- T1(실기기 이름 형식)은 미확정 — 정규식 `^LXB-[0-9A-F]{8}$`(표준형)을 우선하되 그 외 `LXB` 접두(영숫자·`._:-`, 최대 64자)도 허용. **실기기 확인 필요**.
+- 회차 종료 후 늦은 보고는 `allow_completed=True` 로 허용(이력만 갱신).
