@@ -3,6 +3,9 @@
 // 앱 재배포 없이 사이트 파일만 바꿔 새 버전을 알린다.
 
 export const UPDATE_SITE_URL = 'https://download.mindbreeze.looxidlabs.com';
+/** 정식 스토어 링크 (랜딩 다운로드 섹션) */
+export const APP_STORE_URL = 'https://apps.apple.com/kr/app/id6825826445';
+export const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.looxidlabs.mindbreeze2';
 /** APK 를 내려받을 수 있는 호스트 허용 목록(네이티브에서도 재검증). */
 export const ALLOWED_APK_HOSTS: readonly string[] = ['download.mindbreeze.looxidlabs.com'];
 
