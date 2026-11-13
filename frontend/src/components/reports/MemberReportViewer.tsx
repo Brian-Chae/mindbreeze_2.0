@@ -55,12 +55,13 @@ function DesktopReportDialog({ report, hideCounselorComment, onClose }: Props & 
 
 export default function MemberReportViewer({ report, hideCounselorComment = false, ownerActions = false }: Props) {
   // SDD-327 — member_report 가 있으면 새 책 화면, 없으면 기존 화면(구 리포트 하위호환)
+  // 훅은 조건 분기보다 먼저 호출한다(rules-of-hooks).
+  const [desktopOpen, setDesktopOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const memberReport = extractMemberReport(report.content);
   if (memberReport) {
     return <MemberReportBookView report={memberReport} reportId={ownerActions ? report.id : null} />;
   }
-  const [desktopOpen, setDesktopOpen] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const close = () => {
     setDesktopOpen(false);

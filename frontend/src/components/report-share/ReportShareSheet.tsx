@@ -60,7 +60,7 @@ export default function ReportShareSheet({
   const [result, setResult] = useState<ReportShareResponse | null>(null);
   const [counselorFailMsg, setCounselorFailMsg] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
-  const native = useMemo(isNativeApp, []);
+  const native = useMemo(() => isNativeApp(), []);
 
   // Escape 닫기 + 열릴 때 포커스 이동 (발송 중에는 닫지 않음)
   useEffect(() => {
