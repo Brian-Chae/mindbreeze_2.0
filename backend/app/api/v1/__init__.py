@@ -23,6 +23,8 @@ from app.api.v1 import data_center
 from app.api.v1 import upload_status
 # SDD-326: 밴드 시리얼 역조회
 from app.api.v1 import band_devices
+# SDD-327: 회원 리포트 공유 메일
+from app.api.v1 import me_reports
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(auth.router)
@@ -48,6 +50,7 @@ router.include_router(audio.router)
 router.include_router(video.router)
 router.include_router(records.router)
 router.include_router(reports.router)
+router.include_router(me_reports.router)  # SDD-327
 router.include_router(admin.router)
 # [MB261026][FIX] D4: 채팅 신고 처리·금칙어 관리(플랫폼 관리자)
 router.include_router(admin_chat_reports.router)

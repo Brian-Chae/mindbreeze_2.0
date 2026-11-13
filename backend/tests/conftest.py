@@ -128,6 +128,19 @@ def _isolate_external_storage_credentials():
     settings.aws_access_key_id, settings.aws_secret_access_key = saved
 
 
+@pytest.fixture(autouse=True)
+def _isolate_report_share_redis(monkeypatch):
+    """SDD-327: 리포트 공유 발송 상한(일일·1분 간격)은 테스트마다 빈 인메모리 Redis 를 쓴다.
+
+    실제 로컬 Redis 의 간격 키가 남으면 같은 주소로 재발송하는 기존 테스트가 순서에 따라 실패한다.
+    """
+    import fakeredis
+
+    fake = fakeredis.FakeStrictRedis(decode_responses=True)
+    monkeypatch.setattr("app.services.report_share_service.get_sync_redis", lambda: fake)
+    yield fake
+
+
 # SDD-220: 신규 가입 경로는 생년월일(만 14세)이 필수가 됐다. SDD-220 이전에 작성된 가입 fixture 는
 #   birth_date 를 보내지 않으므로, 테스트 클라이언트가 프론트의 필수 입력을 흉내 내 기본값을 채운다.
 #   (EntryAwareClient 뿐 아니라 테스트가 직접 만든 TestClient 도 같은 규칙을 따르도록 기반 클래스에서 보정한다.)
