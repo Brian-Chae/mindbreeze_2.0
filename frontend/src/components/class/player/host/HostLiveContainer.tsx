@@ -53,6 +53,11 @@ export interface ContainerRecorder {
   state: RecorderState;
   pause: () => void;
   resume: () => void;
+  /** 녹음 정지 감지(30초 무증가) — 없으면 경고를 띄우지 않는다 */
+  stalled?: boolean;
+  /** 전화·Siri 등 인터럽션으로 멈춘 상태 */
+  pausedByInterruption?: boolean;
+  restartRecording?: () => Promise<void> | void;
 }
 
 export interface ContainerVideoRecorder {
@@ -427,6 +432,16 @@ export function HostLiveContainer(props: HostLiveContainerProps) {
       action: status.endFailed ? { label: '종료 재시도', onPress: status.onRetryEnd, disabled: status.ending } : null,
     }] : []),
     ...(liveKit.error ? [{ key: 'livekit', message: `화상 연결 오류: ${liveKit.error}`, action: null }] : []),
+    ...(recorder.stalled && recorder.restartRecording ? [{
+      key: 'recording-stalled',
+      message: '녹음이 멈춘 것 같아요. [녹음 다시 시작]을 눌러 주세요.',
+      action: { label: '녹음 다시 시작', onPress: () => void recorder.restartRecording?.() },
+    }] : []),
+    ...(recorder.pausedByInterruption && !recorder.stalled ? [{
+      key: 'recording-interrupted',
+      message: '전화 등으로 녹음이 잠시 멈췄어요. 자동으로 이어지지 않으면 [녹음 다시 시작]을 눌러 주세요.',
+      action: recorder.restartRecording ? { label: '녹음 다시 시작', onPress: () => void recorder.restartRecording?.() } : null,
+    }] : []),
   ];
 
   return (

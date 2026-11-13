@@ -1,4 +1,5 @@
 import { useMobileSwipeProtection } from './use-mobile-swipe-protection';
+import { useRecordingStallGuard } from './useRecordingStallGuard';
 // MediaRecorder API 래퍼 — 5초 청크로 분할해 서버에 업로드
 // SDD-137: useVideoRecorder 와 동일하게 종료 시 flush 대기 + 실패 청크 재전송
 
@@ -53,6 +54,8 @@ function currentCredentials(): { accessToken: string; refreshToken?: string } | 
 export function useAudioRecorder({ sessionId, onError }: UseAudioRecorderOptions) {
   const [state, setState] = useState<RecorderState>('idle');
   const [uploadedChunks, setUploadedChunks] = useState(0);
+  // 인터럽션(전화·Siri 등)으로 네이티브가 멈춘 상태 — 사용자 일시정지·마이크 꺼짐과 구분해 표시한다
+  const [pausedByInterruption, setPausedByInterruption] = useState(false);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const indexRef = useRef(0);
@@ -99,6 +102,7 @@ export function useAudioRecorder({ sessionId, onError }: UseAudioRecorderOptions
       } else if (ev.event === 'stateChanged') {
         const next = mapNativeState(ev.state);
         if (next) setState(next);
+        setPausedByInterruption(ev.state === 'paused' && ev.reason === 'interruption');
       } else if (ev.event === 'error') {
         if (ev.code === 'auth_expired') authExpiredRef.current = true;
         if (!ev.recoverable) setState('error');
@@ -290,6 +294,57 @@ export function useAudioRecorder({ sessionId, onError }: UseAudioRecorderOptions
     [pause, resume, onError],
   );
 
+  // 녹음 다시 시작 — 같은 세션에 청크 인덱스를 이어서 새 캡처를 연다(정지 감지 자동 복구·수동 버튼 공용)
+  const restartRecording = useCallback(async () => {
+    try {
+      const native = nativeRef.current;
+      if (native) {
+        try {
+          const res = await native.stop();
+          indexRef.current = res.lastChunkIndex + 1;
+        } catch {
+          // 이미 멈춘 네이티브여도 새로 시작을 시도한다
+        }
+        nativeRef.current = null;
+        removeNativeListeners();
+        if (!(await startNative())) throw new Error('녹음을 다시 시작할 수 없어요');
+      } else {
+        const rec = recorderRef.current;
+        if (rec && rec.state !== 'inactive') rec.stop();
+        cleanup();
+        await attachRecorder();
+      }
+      setPausedByInterruption(false);
+      setState('recording');
+    } catch (err) {
+      setState('error');
+      onError?.(err as Error);
+    }
+  }, [attachRecorder, cleanup, onError, removeNativeListeners, startNative]);
+
+  // 정지 감지: recording 인데 30초 동안 청크 인덱스·업로드 수가 늘지 않으면 경고 + 자동 복구 1회
+  const readProgress = useCallback(async (): Promise<number | null> => {
+    const native = nativeRef.current;
+    if (!native) return indexRef.current;
+    const status = await native.getStatus();
+    return status.nextChunkIndex + status.uploadedCount;
+  }, []);
+  const autoRecover = useCallback(async () => {
+    const native = nativeRef.current;
+    if (native) {
+      const status = await native.getStatus();
+      const next = mapNativeState(status.state);
+      // 네이티브가 일시정지로 멈춰 있으면 재개(iOS 는 엔진 재기동 포함), 아니면 캡처를 새로 연다
+      if (next === 'paused' && status.state === 'paused') {
+        await native.resume();
+        setState('recording');
+        return;
+      }
+    }
+    await restartRecording();
+  }, [restartRecording]);
+  const { stalled } = useRecordingStallGuard({ active: state === 'recording', readProgress, onStall: autoRecover });
+
   // SDD-137: recorder 를 멈추고 마지막 청크 flush 를 기다린다
   const stopRecorder = useCallback(
     () =>
@@ -347,5 +402,5 @@ export function useAudioRecorder({ sessionId, onError }: UseAudioRecorderOptions
     setState('stopped');
   }, [stopRecorder, cleanup, retryPendingChunks, removeNativeListeners, onError]);
 
-  return { state, start, pause, resume, setMicEnabled, stop, uploadedChunks };
+  return { state, start, pause, resume, setMicEnabled, stop, uploadedChunks, stalled, restartRecording, pausedByInterruption };
 }
