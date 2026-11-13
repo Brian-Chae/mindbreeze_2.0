@@ -52,6 +52,8 @@ SESSIONS_SCOPE_DELETE = SESSIONS_SCOPE_DELETE | frozenset({
     "session_ingest_expected",
     # SDD-326: 밴드 시리얼 이력(세션·참가자 FK 종속)
     "session_band_devices",
+    # SDD-327: 리포트 공유 발송 이력(reports FK CASCADE 종속이라 리포트와 함께 정리한다).
+    "report_share_events",
 })
 
 # scope=sessions 에서 보존하는 테이블(계정·기관·인증·에이전트·연구·감사).

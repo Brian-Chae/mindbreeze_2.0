@@ -139,6 +139,7 @@ export default function ReportShareSheet({
   };
 
   const sentCount = result?.accepted_count ?? recipients.length;
+  const rejectedCount = result?.rejected?.length ?? 0;
   const sendLabel = phase === 'sending' ? '보내는 중…'
     : `${Math.max(recipients.length, draft.trim() ? 1 : 0) || ''}${recipients.length || draft.trim() ? '곳에 ' : ''}보내기`;
 
@@ -147,7 +148,7 @@ export default function ReportShareSheet({
     if (phase === 'success') {
       const delayed = result?.delivery_delayed;
       return {
-        icon: '✓', title: `${sentCount}곳에 보냈어요`,
+        icon: '✓', title: rejectedCount > 0 ? `${sentCount}곳에 보냈어요 · ${rejectedCount}곳은 주소를 확인해 주세요` : `${sentCount}곳에 보냈어요`,
         lines: delayed ? ['메일 전달이 평소보다 조금 늦어질 수 있어요.', '결과는 리포트 아래 보낸 기록에서 확인해요.'] : ['함께 나누고 싶은 분께', '오늘의 기록을 보냈어요.'],
         tone: 'ok' as const,
       };
@@ -286,7 +287,7 @@ export default function ReportShareSheet({
                   <button type="button" onClick={onNativeShare} className={buttonClass({ variant: 'secondary' })}>다른 앱으로 공유</button>
                 )}
               </div>
-              <p className="mt-2 text-center text-[11px] text-[#6D547A]">링크는 7일 동안 열 수 있어요. 같은 주소로는 1분 뒤에 다시 보낼 수 있어요.</p>
+              <p className="mt-2 text-center text-[12px] text-[#6D547A]">링크는 7일 동안 열 수 있어요. 같은 주소로는 1분 뒤에 다시 보낼 수 있어요.</p>
             </div>
           </>
         )}

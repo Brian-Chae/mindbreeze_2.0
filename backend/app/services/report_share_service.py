@@ -138,19 +138,24 @@ def _to_uuid(value: str) -> UUID:
         raise HTTPException(400, "잘못된 리포트 ID 형식입니다")
 
 
-def _normalize_recipients(recipients: list[str]) -> list[str]:
-    out: list[str] = []
+def _normalize_recipients(recipients: list[str]) -> tuple[list[str], list[str]]:
+    """주소를 정규화해 (유효, 형식오류) 로 나눈다. 유효 주소가 하나도 없을 때만 422."""
+    valid: list[str] = []
+    invalid: list[str] = []
     for raw in recipients:
         addr = str(raw).strip().lower()
         if not _EMAIL_RE.match(addr) or len(addr) > 254:
-            raise HTTPException(422, "올바른 이메일 주소가 아닙니다")
-        if addr not in out:
-            out.append(addr)
-    if not out:
-        raise HTTPException(422, "받는 주소를 입력해 주세요")
-    if len(out) > MAX_RECIPIENTS:
+            if addr not in invalid:
+                invalid.append(addr)
+            continue
+        if addr not in valid:
+            valid.append(addr)
+    if not valid:
+        raise HTTPException(422, "올바른 이메일 주소가 아닙니다" if invalid else "받는 주소를 입력해 주세요")
+    # 상한은 실제 발송 대상(유효 주소) 수만 센다.
+    if len(valid) > MAX_RECIPIENTS:
         raise HTTPException(422, f"받는 주소는 최대 {MAX_RECIPIENTS}개입니다")
-    return out
+    return valid, invalid
 
 
 def load_shareable_report(report_id: str, db: DBSession) -> tuple[Report, Session, SessionParticipant]:
@@ -259,7 +264,7 @@ def share_report(
     반환: {accepted:[{masked,event_id,status}], rejected:[{masked,reason}], accepted_count,
            attached, daily_remaining, events:[ReportShareEvent], sent_ok(sync 전용)}
     """
-    addrs = _normalize_recipients(recipients)
+    addrs, invalid_addrs = _normalize_recipients(recipients)
     report, session, participant = load_shareable_report(report_id, db)
     clean_message = sanitize_message(message)
     hashes = {a: hash_recipient(a) for a in addrs}
@@ -271,7 +276,8 @@ def share_report(
         raise _unavailable()
     accepted, rejected, remaining = _reserve_rate_limit(r, actor, hashes)
 
-    rejected_out = [{"masked": mask_recipient(a), "reason": reason} for a, reason in rejected]
+    rejected_out = [{"masked": mask_recipient(a), "reason": "invalid"} for a in invalid_addrs]
+    rejected_out += [{"masked": mask_recipient(a), "reason": reason} for a, reason in rejected]
     if not accepted:
         return {"accepted": [], "rejected": rejected_out, "accepted_count": 0,
                 "attached": False, "daily_remaining": remaining, "events": [], "sent_ok": False}

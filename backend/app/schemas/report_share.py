@@ -43,8 +43,9 @@ class ReportShareRequest(BaseModel):
         out: list[str] = []
         for raw in v:
             addr = raw.strip().lower()
-            if not _EMAIL_RE.match(addr) or len(addr) > 254:
-                raise ValueError("올바른 이메일 주소가 아닙니다")
+            # 형식 오류는 여기서 거르지 않는다 — 서비스가 그 주소만 rejected(invalid)로 응답한다.
+            if not addr:
+                raise ValueError("빈 주소는 보낼 수 없습니다")
             if addr not in out:
                 out.append(addr)
         return out

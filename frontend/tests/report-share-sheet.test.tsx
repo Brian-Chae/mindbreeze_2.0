@@ -81,6 +81,17 @@ it('회원 성공 시 요청 본문에 PDF 첨부 기본 켬·메시지가 담�
   expect(document.body.textContent).toContain('1곳에 보냈어요');
 });
 
+it('일부 주소가 거절되면 부분 성공 문구를 보여 준다', async () => {
+  vi.mocked(shareApi.shareMyReportByEmail).mockResolvedValue({
+    accepted_count: 2, attached: true, delivery_delayed: false, daily_remaining: 8, events: [],
+    rejected: [{ masked: 'b***@x***.com', reason: 'invalid' }],
+  });
+  await render();
+  await addAddress('a@x.com'); await addAddress('c@x.com'); await check();
+  await act(async () => { sendBtn().click(); });
+  expect(document.body.textContent).toContain('2곳에 보냈어요 · 1곳은 주소를 확인해 주세요');
+});
+
 it('상담사 경로는 기존 resendReportEmail 을 호출한다', async () => {
   vi.mocked(reportsApi.resendReportEmail).mockResolvedValue({ success: true, sent: true, message: 'ok' });
   await render('counselor', 'c@x.com');

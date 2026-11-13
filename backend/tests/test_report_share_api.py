@@ -81,6 +81,15 @@ def test_recipient_count_and_validation(env):
     assert _post(client, r.id, member, message="가" * 201).status_code == 422
 
 
+def test_partial_invalid_address_202_with_rejected(env):
+    client, _, r, _, member, _, _, _ = env
+    res = _post(client, r.id, member, recipients=["a@x.com", "bad"])
+    assert res.status_code == 202
+    body = res.json()
+    assert body["accepted_count"] == 1
+    assert [x["reason"] for x in body["rejected"]] == ["invalid"]
+
+
 def test_unapproved_report_409(env):
     client, db, r, _, member, _, _, _ = env
     r.status = "pending_review"

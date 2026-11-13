@@ -88,6 +88,17 @@ def test_more_than_three_or_invalid_rejected(env):
     assert e.value.status_code == 422
 
 
+def test_partial_invalid_address_sends_valid_only(env):
+    db, report, fake, enq = env
+    actor = _member()
+    out = svc.share_report(db, str(report.id), actor, ["a@x.com", "nope", "NOPE"])
+    assert out["accepted_count"] == 1
+    assert [r["reason"] for r in out["rejected"]] == ["invalid"]
+    assert enq.call_count == 1
+    # 일일 상한은 실제 발송 주소 수(1)만 센다
+    assert int(fake.get(svc._day_key(actor.user_id))) == 1
+
+
 def test_member_daily_limit_boundary(env):
     db, report, fake, _ = env
     actor = _member()

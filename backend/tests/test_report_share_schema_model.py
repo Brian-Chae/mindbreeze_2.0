@@ -26,9 +26,11 @@ def test_recipients_max_3_and_min_1():
         ReportShareRequest(recipients=[])
 
 
-def test_invalid_address_rejected():
+def test_invalid_address_passes_schema_for_service_to_reject():
+    # 형식 오류 판정은 서비스가 주소별로 한다(부분 수락). 빈 주소만 스키마에서 거른다.
+    assert ReportShareRequest(recipients=["a@x.com", "not-an-email"]).recipients == ["a@x.com", "not-an-email"]
     with pytest.raises(ValidationError):
-        ReportShareRequest(recipients=["not-an-email"])
+        ReportShareRequest(recipients=["  "])
 
 
 def test_message_limit_200():

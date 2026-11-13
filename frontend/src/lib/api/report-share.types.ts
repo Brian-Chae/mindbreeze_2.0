@@ -21,8 +21,15 @@ export interface ReportShareHistoryItem {
   sent_at: string | null
 }
 
+export interface ReportShareRejectedItem {
+  masked: string
+  reason: 'invalid' | 'too_soon' | string
+}
+
 export interface ReportShareResponse {
   accepted_count: number
+  /** 형식 오류·1분 간격 등으로 보내지 않은 주소(부분 성공). 없으면 빈 배열. */
+  rejected?: ReportShareRejectedItem[]
   attached: boolean
   delivery_delayed: boolean
   daily_remaining: number | null

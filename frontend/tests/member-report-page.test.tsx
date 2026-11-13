@@ -17,6 +17,15 @@ const native = vi.hoisted(() => ({ value: false }));
 vi.mock('../src/lib/native/platform', () => ({ isNativeApp: () => native.value, getPlatform: () => 'web' }));
 vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => native.value } }));
 
+const plugins = vi.hoisted(() => ({
+  writeFile: vi.fn(), share: vi.fn(),
+}));
+vi.mock('@capacitor/filesystem', () => ({
+  Filesystem: { writeFile: plugins.writeFile },
+  Directory: { Cache: 'CACHE' },
+}));
+vi.mock('@capacitor/share', () => ({ Share: { share: plugins.share } }));
+
 import MemberReportViewer from '../src/components/reports/MemberReportViewer';
 import { extractMemberReport } from '../src/lib/api/member-report';
 import { buildNativeShareHandler, shareBookPdf } from '../src/lib/native/share-report';
@@ -85,6 +94,24 @@ describe('앱 공유(T16)', () => {
     expect(await shareBookPdf('r1')).toBe('shared');
     expect(share.mock.calls[0][0].files[0].type).toBe('application/pdf');
     share.mockRejectedValueOnce(new DOMException('c', 'AbortError'));
+    expect(await shareBookPdf('r1')).toBe('cancelled');
+  });
+
+  it('앱이면 PDF 를 캐시에 쓰고 Share 플러그인으로 연다', async () => {
+    native.value = true;
+    plugins.writeFile.mockReset().mockResolvedValue({ uri: 'file:///cache/mind-breeze-meditation-book.pdf' });
+    plugins.share.mockReset().mockResolvedValue({ activityType: 'x' });
+    getBlob.mockResolvedValue(new Blob(['%PDF'], { type: 'application/pdf' }));
+    expect(await shareBookPdf('r1')).toBe('shared');
+    expect(plugins.writeFile).toHaveBeenCalledWith(expect.objectContaining({ directory: 'CACHE', data: btoa('%PDF') }));
+    expect(plugins.share.mock.calls[0][0].files).toEqual(['file:///cache/mind-breeze-meditation-book.pdf']);
+  });
+
+  it('앱에서 공유 시트를 닫으면 cancelled', async () => {
+    native.value = true;
+    plugins.writeFile.mockReset().mockResolvedValue({ uri: 'file:///x.pdf' });
+    plugins.share.mockReset().mockRejectedValue(new Error('Share canceled'));
+    getBlob.mockResolvedValue(new Blob(['%PDF'], { type: 'application/pdf' }));
     expect(await shareBookPdf('r1')).toBe('cancelled');
   });
 });
