@@ -98,7 +98,7 @@
       },
       "hrv_sdnn_respiration": {
         "count": 1491,
-        "sha256": "4956e95ab347128fc3ebc3781b56e87c612cdaac9e48bec5c54ed10fcadf37ef"
+        "sha256": "2cfb89052a7cf83778a681686039072263566986cc08c49b1a8da6d8309dff4f"
       },
       "display": {
         "count": 140,
@@ -147,7 +147,7 @@
         },
         "hrv_sdnn_respiration": {
           "count": 1491,
-          "sha256": "d243a8e155b8da92281fe86062536c0e1516ce5ada17d13337c277000d010cc5"
+          "sha256": "c315c3af850cc8e5105c5fc4c87064c360494a48c130911b5f65283cb1e82d92"
         },
         "display": {
           "count": 140,
@@ -217,7 +217,7 @@
   "sources": {
     "oracle_ts_eeg": {
       "files": 31,
-      "tree_sha256": "cf7e4c2080a7db23dd4d9fbc0ee7452f52d63abf558723709a444ad7ce382a48"
+      "tree_sha256": "2096c9f87bf1dad066b4102b91880ff54bc54a15791afc9646aa2910d914e7c4"
     },
     "backend_scoring": {
       "backend/app/services/eeg_metrics.py": "05c2a6ee5ec0fe870c121d226062809d43174515bee22b2cd6ce2f65529281fd",
@@ -277,9 +277,9 @@
     "expected/legacy_fallback/divergences.json": "55de8bba70d698bf85d7a9800e6951edc8c8dd31aadf976f1640ff93fa51328a",
     "expected/legacy_fallback/eeg_psd_bandpower.json": "8675d404d3c753b5b31797aa2beb3e8c3fbb5c3a16fded55e1fb69c248d45489",
     "expected/legacy_fallback/eeg_raw_indices.json": "15527d87b83590f96293c1b25b46c0d6d5db139a5ac2ca48eda37ab24b57a02a",
-    "expected/legacy_fallback/hrv_sdnn_respiration.json": "3fc971a7833c66786ab697871a99624a5033954cf4f2ed1a7e0f9b0508b9edba",
+    "expected/legacy_fallback/hrv_sdnn_respiration.json": "301879b5077f6e55f607c6f0eeb7d2424ed90b87b2e76197f63428c921ab6ebe",
     "expected/legacy_fallback/ppg_peaks_rr.json": "ee550ca917acb526d947f669742beffab99ae75e286e2383e2e0a9bc8dacd459",
-    "expected/legacy_fallback/summary.json": "8d959ec288b06dfb952e340fa10bd020cc36555a2b483c75f2faf677836c603d",
+    "expected/legacy_fallback/summary.json": "149738f10b977a5f7a7443fa58b39eb8162b26ac9ee72f581aa16ac3c4d08385",
     "expected/oracle/acc.json": "06d44fdd4da5f5023c589a78ab983228263da956117bb08dd4ab146cd103eb7b",
     "expected/oracle/clock.json": "97f76fb441e6622548a6c9836e97a93563c8971c871b06cfbcbb213af910a122",
     "expected/oracle/decoded.json": "a524fcc4bdefc5ed88cfb7e0c5851aebe0368dc13d29380b7d471813907d99d9",
@@ -287,9 +287,9 @@
     "expected/oracle/divergences.json": "55de8bba70d698bf85d7a9800e6951edc8c8dd31aadf976f1640ff93fa51328a",
     "expected/oracle/eeg_psd_bandpower.json": "d67cdc8abede8c699033bb96a90169b2df5c4d9f70d734c415f56fce32c60f3b",
     "expected/oracle/eeg_raw_indices.json": "b01dc444445741a62a93b82f2fa2f6f3642f616544d66080051b0b50d980b939",
-    "expected/oracle/hrv_sdnn_respiration.json": "2d85535830c6b6d7b0032bc8e9b25de3e29252a731aa270dc814ac50bffbd8e7",
+    "expected/oracle/hrv_sdnn_respiration.json": "9ad1085eec0446dbecf007ca89050dfad0f023cc766ae71228969be96ae0bc9d",
     "expected/oracle/ppg_peaks_rr.json": "b6b2e2a4beb8ae82457d65da59e37756cd1457bb2590167c500f27616c30331f",
-    "expected/oracle/summary.json": "1f1a0c2d63ee277e7a47154c12569717731c7b714171807db9faf1bcfa2b8127",
+    "expected/oracle/summary.json": "86b6a90c153d061335e9c2168cec9036ea904281e8ec455768894fcc031733f2",
     "expected/scoring/gf05_scoring.json": "87724a8a05988553440220334e3f2230054a7d1913b090bfbcb007093ffc2d2d",
     "oracle/gf04.oracle.test.ts": "2ad0c10886701d6b930b9113230e906d602e32c43f72a6bcc078d662fb45c996",
     "oracle/oracle.oracle.test.ts": "015693ea41c5abfebac2b338e6e7af6aa0308b0fe75e38de439dbc66717a8bba",
