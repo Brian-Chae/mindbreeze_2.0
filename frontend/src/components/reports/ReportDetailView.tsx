@@ -18,9 +18,9 @@ import ReportApprovalStatus from './ReportApprovalStatus';
 import { useAuthStore } from '../../stores/authStore';
 import { UploadParticipantNotice } from '../class/upload-participant-notice';
 import { aiRecordUnavailableText } from '../../lib/features';
+import ReportShareEntry from '../report-share/ReportShareEntry';
 import {
   approveAndSendReport,
-  resendReportEmail,
   adaptReportContent,
   canApproveReport,
   getReport,
@@ -28,8 +28,6 @@ import {
   resolveReportStatus,
   type ReportDto,
 } from '../../lib/api/reports';
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // SDD-087 — content.counselor_comment 파싱 (문자열만 인정, 빈 값은 null)
 function commentOf(content: Record<string, unknown> | null | undefined): string | null {
@@ -117,20 +115,13 @@ export default function ReportDetailView({
   const [error, setError] = useState<string | null>(null);
   const [approving, setApproving] = useState(false);
   const [approved, setApproved] = useState(false);
-  const [resendEmail, setResendEmail] = useState(initialReport.report_email ?? '');
-  const [resending, setResending] = useState(false);
-  const [resendSuccess, setResendSuccess] = useState<string | null>(null);
-  const [resendError, setResendError] = useState<string | null>(null);
   // SDD-087 — 코멘트 카드 미저장 변경 여부 (승인 confirm 소프트 가드)
   const [commentDirty, setCommentDirty] = useState(false);
 
   useEffect(() => {
     setReport(initialReport);
-    setResendEmail(initialReport.report_email ?? '');
     setApproved(false);
     setError(null);
-    setResendSuccess(null);
-    setResendError(null);
   }, [initialReport]);
 
   const updateReport = useCallback(
@@ -186,31 +177,6 @@ export default function ReportDetailView({
       setPrinting(false);
     }
   }, [printing, report.id]);
-
-  const handleResendEmail = useCallback(async () => {
-    const email = resendEmail.trim();
-    setResendSuccess(null);
-    setResendError(null);
-    if (!email || !EMAIL_RE.test(email)) {
-      setResendError('올바른 이메일 주소를 입력해 주세요.');
-      return;
-    }
-    setResending(true);
-    try {
-      // RPT-EMAIL-CONTRACT-004: 서버는 실패 시에도 200 + success/sent=false 를 반환하므로
-      //   응답 계약 {success, sent, message}를 반드시 확인해 성공/실패를 구분한다.
-      const res = await resendReportEmail(report.id!, email);
-      if (!res.success || !res.sent) {
-        setResendError(res.message || '메일 발송에 실패했습니다.');
-        return;
-      }
-      setResendSuccess(res.message || `${email}로 리포트 메일을 발송했습니다.`);
-    } catch (e) {
-      setResendError(e instanceof Error ? e.message : '메일 발송에 실패했습니다.');
-    } finally {
-      setResending(false);
-    }
-  }, [report.id, resendEmail]);
 
   const adapted = adaptReportContent(report.content, report.type);
   const { markers, displayNarrative, transcriptSegments } = adapted;
@@ -373,48 +339,18 @@ export default function ReportDetailView({
 
       {actionContainer ? createPortal(actions, actionContainer) : actions}
 
-      {showResendEmail && (
-        <section data-print-exclude className="rounded-2xl border border-[#E8D9F5] bg-[#FDFAFF] p-5 md:p-6">
-          <h3 className="mobile:[overflow-wrap:anywhere] text-[15px] mobile:text-mb-subtitle font-bold text-[#5F0080] flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-sm bg-[#5F0080]" />
-            메일 발송
-          </h3>
-          <p className="mt-1.5 text-[13px] mobile:text-mb-caption text-[#6D547A]">
-            기본 주소는 저장된 리포트 수신 메일입니다. 주소를 확인하거나 수정한 후 발송해 주세요.
+      {showResendEmail && report.id && (
+        <section data-print-exclude className="rounded-2xl border border-[#E8D9F5] bg-[#FDFAFF] p-5 md:p-6 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-[13px] mobile:text-mb-caption text-[#6D547A]">
+            승인된 리포트를 받는 분의 메일로 보낼 수 있어요. 주소를 확인한 뒤 발송해 주세요.
           </p>
-          <div className="mt-4 flex flex-col sm:flex-row gap-3">
-            <input
-              type="email"
-              value={resendEmail}
-              onChange={(e) => {
-                setResendEmail(e.target.value);
-                setResendSuccess(null);
-                setResendError(null);
-              }}
-              placeholder="수신 이메일 주소"
-              disabled={resending}
-              className="mobile:min-h-12 mobile:text-mb-body flex-1 px-3.5 py-2.5 border border-[#DDDEE7] rounded-xl bg-white text-[#1F1F1F] text-sm mobile:text-mb-body placeholder:text-[#9B9B9B] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/15 focus:border-[#5F0080] disabled:opacity-50"
-              aria-label="발송 이메일"
-            />
-            <button
-              type="button"
-              onClick={handleResendEmail}
-              disabled={resending || !resendEmail.trim()}
-              className={buttonClass({ className: 'shrink-0' })}
-            >
-              {resending ? '발송 중...' : '발송'}
-            </button>
-          </div>
-          {resendSuccess && (
-            <div role="status" className="mt-3 p-3 rounded-xl bg-[#F0F9F5] text-[#26724B] text-sm mobile:text-mb-body border border-[#D8EFE3]">
-              {resendSuccess}
-            </div>
-          )}
-          {resendError && (
-            <div role="alert" className="mt-3 p-3 rounded-xl bg-red-50 text-red-700 text-sm mobile:text-mb-body">
-              {resendError}
-            </div>
-          )}
+          {/* SDD-327 T15: 기존 인라인 재발송 → 공통 보내기 시트 */}
+          <ReportShareEntry
+            reportId={report.id}
+            mode="counselor"
+            defaultRecipient={report.report_email}
+            subtitle={report.session_title ?? undefined}
+          />
         </section>
       )}
 

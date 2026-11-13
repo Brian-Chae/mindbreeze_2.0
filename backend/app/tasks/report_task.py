@@ -660,6 +660,11 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
             logger.exception("[report_task] quote 생성 실패: report_id=%s", report.id)
             content["quote"] = None
 
+    # SDD-327 T5: 명상 클래스 회차의 회원(client) 리포트에 v11 개인 리포트(member_report)를 병행 저장한다.
+    # 기존 4쪽 서사형 content 는 그대로 두고, 실패해도 리포트 상태·저장을 막지 않는다.
+    if report.type == "client":
+        _attach_member_report(content, prev, report, session, db)
+
     report.content = content
     # SDD-095: 최종 생성 상태 — ai_record 가용(전사+요약)이면 ready, 아니면 partial.
     # 승인 게이트(report.status)와는 독립 축이다.
@@ -671,6 +676,33 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
     # FUNC-04: 비동기 생성 완료 — 신청된 내담자(client) 리포트면 메일 발송을 예약한다.
     _maybe_enqueue_client_report_email(report, db)
     return report
+
+
+def _attach_member_report(content: dict, previous_content: dict, report: Report, session: Session, db: DBSession) -> None:
+    """SDD-327 T5: `content["member_report"]` 에 v11 회원 리포트를 저장한다(명상 클래스 회차·참여자 있는 client 리포트만).
+
+    제외 참가자·생성 실패 스텁에는 만들지 않는다. 계산 실패 시 이전 member_report 가 있으면 이월하고, 없으면 키를 두지 않는다
+    (구 화면은 member_report 없는 content 로 그대로 동작).
+    """
+    from app.services.report_service import report_domain
+
+    scope_info = content.get("report_scope") if isinstance(content.get("report_scope"), dict) else {}
+    if (
+        report_domain(session) != "meditation"
+        or report.participant_id is None
+        or content.get("fallback")
+        or scope_info.get("excluded")
+    ):
+        return
+    prev = previous_content.get("member_report") if isinstance(previous_content, dict) else None
+    try:
+        from app.services import member_report_builder
+
+        content["member_report"] = member_report_builder.build_member_report(db, session.id, report.participant_id)
+    except Exception:  # noqa: BLE001 — member_report 실패가 리포트 저장을 막지 않는다.
+        logger.exception("[report_task] member_report 생성 실패: report_id=%s", report.id)
+        if isinstance(prev, dict):
+            content["member_report"] = prev
 
 
 def _attach_class_report(content: dict, previous_content, session: Session, db: DBSession) -> None:

@@ -78,12 +78,20 @@ for (const savedEmail of ['saved@example.com', null]) test(`하단 액션과 본
   assert.equal(await page.evaluate(()=>window.__printed),undefined);
   assert.equal(await page.locator('iframe[data-report-print]').count(),0);
   assert.equal(deliveries,0);
-  const email=page.getByRole('textbox',{name:'발송 이메일'});
-  await email.waitFor();
-  assert.equal(await email.inputValue(),savedEmail ?? '');
+  // SDD-327 T15: 인라인 입력이 ReportShareEntry 시트로 교체되었다. 시트를 열어 같은 동작(주소 지정 → 발송)을 검증한다.
+  await page.getByRole('button',{name:/리포트 보내기/}).first().click();
+  const dialog=page.getByRole('dialog',{name:'리포트 보내기'});
+  await dialog.waitFor();
+  if(savedEmail){
+   // 저장된 수신 주소가 기본으로 채워져 있다 → 지우고 새 주소만 보낸다.
+   await dialog.getByRole('button',{name:`${savedEmail} 삭제`}).click();
+  }
+  const email=dialog.getByRole('textbox').first();
   await email.fill('new@example.com');
-  await page.getByRole('button',{name:'발송',exact:true}).click();
-  await page.getByRole('status').filter({hasText:'메일을 발송했습니다'}).waitFor();
+  await email.press('Enter');
+  await dialog.locator('#rs-confirm').check();
+  await dialog.getByRole('button',{name:/곳에 보내기/}).click();
+  await page.getByRole('status').filter({hasText:'보냈어요'}).waitFor();
   assert.equal(deliveries,1);
  }finally{await browser.close();}
 });
