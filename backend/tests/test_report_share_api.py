@@ -203,3 +203,32 @@ def test_member_sender_name_forbidden_word_400(env):
     client, _, r, _, member, _, _, enq = env
     assert _post(client, r.id, member, sender_name=FORBIDDEN_WORDS[0]).status_code == 400
     enq.assert_not_called()
+
+
+def test_public_view_pdf_with_share_token(env, monkeypatch):
+    """SDD-327: 공유 링크의 PDF 다운로드 — report_share 토큰도 받아야 한다(기존은 401)."""
+    import json
+    from pathlib import Path
+    from app.api.v1 import reports as reports_api
+
+    client, db, r, _, member, _, _, enq = env
+    _post(client, r.id, member)
+    token = enq.call_args.args[2].split("token=")[1]
+    old_pdf = Mock(return_value=reports_api.Response(content=b"%PDF-old", media_type="application/pdf"))
+    monkeypatch.setattr(reports_api, "pdf_response", old_pdf)
+    # member_report 없으면 기존 PDF
+    res = client.get("/api/v1/reports/view/pdf", params={"token": token})
+    assert res.status_code == 200, res.text
+    assert res.content == b"%PDF-old"
+    # member_report 있으면 명상 기록 책 PDF
+    sample = json.loads((Path(__file__).parent / "fixtures/member_report/member-report-sample.json").read_text())
+    r.content = {**(r.content or {}), "member_report": sample}
+    db.commit()
+    import app.services.member_report_book as book
+    monkeypatch.setattr(book, "render_member_report_book", lambda mr: b"%PDF-book")
+    res = client.get("/api/v1/reports/view/pdf", params={"token": token})
+    assert res.status_code == 200 and res.content == b"%PDF-book"
+    assert "meditation-record" in res.headers["content-disposition"]
+    # 위조 공유 토큰은 거부
+    forged = report_email_service._token("report_share", str(r.id), str(r.session_id), rcpt="a" * 32, jti="nope")
+    assert client.get("/api/v1/reports/view/pdf", params={"token": forged}).status_code == 403
