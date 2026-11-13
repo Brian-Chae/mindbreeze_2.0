@@ -778,20 +778,7 @@ export class AnalysisMetricsService {
     );
 
     const lfPower = lfPowerRaw * 1000000;
-    let hfPower = hfPowerRaw * 1000000;
-
-    if (hfPower < 1 && lfPower > 10) {
-      const extendedHfPower = this.integratePowerInBand(
-        frequencies,
-        powerSpectralDensity,
-        0.12,
-        0.5,
-      );
-      const extendedHfPowerScaled = extendedHfPower * 100;
-      if (extendedHfPowerScaled > hfPower * 1.5) {
-        hfPower = extendedHfPowerScaled;
-      }
-    }
+    const hfPower = hfPowerRaw * 1000000;
 
     const rawLfPower = this.getValidValue(lfPower, this.currentLfPower, 0.1);
     const rawHfPower = this.getValidValue(hfPower, this.currentHfPower, 0.1);
@@ -841,8 +828,62 @@ export class AnalysisMetricsService {
       return [];
     }
 
+    // 스펙트럼 입력: 박동 중점 시각 기준 자연 3차 스플라인 → 4Hz 재표본 → 선형 detrend(평균 포함 제거).
+    // 평균(DC≈0.9s)을 남기면 창 함수 누설로 LF가 과대 산출된다(fix-lfhf-overestimate).
+    const midTimes = rrIntervalsSeconds.map((rr, i) => timeAxis[i] + rr / 2);
     const resampledTime = Array.from({ length: numSamples }, (_, i) => i / targetFs);
-    return this.interpolateLinear(timeAxis, rrIntervalsSeconds, resampledTime);
+    const spline = this.interpolateCubicSpline(midTimes, rrIntervalsSeconds, resampledTime);
+    return this.detrendLinear(spline);
+  }
+
+  /** 자연 3차 스플라인 보간. 범위 밖은 양 끝 값 유지. */
+  private interpolateCubicSpline(x: number[], y: number[], xNew: number[]): number[] {
+    const n = x.length;
+    if (n < 3) return this.interpolateLinear(x, y, xNew);
+    const h: number[] = [];
+    for (let i = 0; i < n - 1; i++) h.push(x[i + 1] - x[i]);
+    // 삼중대각 시스템(자연 경계 m[0]=m[n-1]=0) — Thomas 알고리즘
+    const m = new Array(n).fill(0);
+    const cp = new Array(n).fill(0);
+    const dp = new Array(n).fill(0);
+    for (let i = 1; i < n - 1; i++) {
+      const lower = h[i - 1];
+      const diag = 2 * (h[i - 1] + h[i]);
+      const rhs = 6 * ((y[i + 1] - y[i]) / h[i] - (y[i] - y[i - 1]) / h[i - 1]);
+      const den = i === 1 ? diag : diag - lower * cp[i - 1];
+      cp[i] = h[i] / den;
+      dp[i] = (rhs - (i === 1 ? 0 : lower * dp[i - 1])) / den;
+    }
+    for (let i = n - 2; i >= 1; i--) {
+      m[i] = dp[i] - (i === n - 2 ? 0 : cp[i] * m[i + 1]);
+    }
+    const out: number[] = [];
+    let k = 0;
+    for (const xv of xNew) {
+      if (xv <= x[0]) { out.push(y[0]); continue; }
+      if (xv >= x[n - 1]) { out.push(y[n - 1]); continue; }
+      while (k < n - 2 && x[k + 1] < xv) k++;
+      const hk = h[k];
+      const A = (x[k + 1] - xv) / hk;
+      const B = (xv - x[k]) / hk;
+      out.push(
+        A * y[k] + B * y[k + 1] +
+          (((A * A * A - A) * m[k] + (B * B * B - B) * m[k + 1]) * hk * hk) / 6,
+      );
+    }
+    return out;
+  }
+
+  /** 선형 추세(평균 포함) 제거 — 최소제곱 직선을 뺀다. */
+  private detrendLinear(y: number[]): number[] {
+    const n = y.length;
+    if (n < 2) return y.slice();
+    let sx = 0, sy = 0, sxx = 0, sxy = 0;
+    for (let i = 0; i < n; i++) { sx += i; sy += y[i]; sxx += i * i; sxy += i * y[i]; }
+    const den = n * sxx - sx * sx;
+    const slope = den === 0 ? 0 : (n * sxy - sx * sy) / den;
+    const icpt = (sy - slope * sx) / n;
+    return y.map((v, i) => v - (icpt + slope * i));
   }
 
   private interpolateLinear(
