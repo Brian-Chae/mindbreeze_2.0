@@ -40,3 +40,5 @@
 ## E. 하네스 재현 절차 (원시 PPG는 ~/.hermes/private-backups/ 밖으로 복사 금지)
 1. `~/.hermes/private-backups/lfhf-audit-1113/abl.py`(서비스 포트 + 절제 옵션), `run8.py`(절제 표 재생성), `svc_once.ts`(서비스 TS 직접 호출 대조 → 포트 일치 확인).
 2. 수정 후: `rmssd-audit-1112/harnessFT.ts` 방식으로 서비스 전체 재생 → `cmp3.py`에 lfhf 열 추가해 A1~A6 산출.
+
+- 대표 승인 11/13: ρ 0.84 합격 처리, 리포트는 흐름 변화로만

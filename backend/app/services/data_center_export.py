@@ -801,7 +801,8 @@ def participant_artifacts(db: DBSession, request: dict, target: DataExportTarget
     import json as _json
     yield TextArtifact('meta.json', _json.dumps(meta, ensure_ascii=False, indent=2), kind='meta')
     yield TextArtifact('README_ko.md', f'# 참여자 {scope.participant_alias}\n\n이 폴더의 파일 구성과 단위는 상위 data_dictionary.json 과 manifest.json 을 따릅니다.\n'
-                                      '빈 칸은 미수집·산출 불가이며 0 이 아닙니다.\n', kind='readme')
+                                      '빈 칸은 미수집·산출 불가이며 0 이 아닙니다.\n'
+                                      'lf_power·hf_power·lf_hf_ratio 는 1~2분 창 추정이라 절대값 판정이 아닌 추이 참고용입니다.\n', kind='readme')
 
 
 def package_job(db: DBSession, job: DataExportJob, token: int) -> PackageOutcome:
