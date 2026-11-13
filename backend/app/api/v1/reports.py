@@ -54,8 +54,31 @@ def view(token: str, response: Response, db: DBSession = Depends(get_db)):
 
 @router.get("/view/pdf")
 def view_pdf(token: str, db: DBSession = Depends(get_db)):
-    """기존 report_view 검증을 통과한 메일 수신자에게 PDF를 제공한다."""
-    return pdf_response(report_email_service.get_report_view_content(token, db))
+    """메일 수신자에게 PDF를 제공한다.
+
+    SDD-327: 공유 토큰(report_share)도 수신자별 검증 경로로 받는다. 회원 리포트(member_report)가
+    있으면 명상 기록 책 PDF를, 없으면 기존 리포트 PDF를 돌려준다.
+    """
+    if _token_kind(token) == "report_share":
+        report = report_share_service.get_report_share_view_content(token, db)
+    else:
+        report = report_email_service.get_report_view_content(token, db)
+    content = report.get("content") if isinstance(report, dict) else None
+    if isinstance(content, dict) and content.get("member_report"):
+        from app.services.member_report_book import render_member_report_book
+
+        try:
+            pdf = render_member_report_book(content["member_report"])
+        except Exception:  # noqa: BLE001
+            pdf = None
+        if pdf:
+            return Response(content=pdf, media_type="application/pdf", headers={
+                "Content-Disposition": 'attachment; filename="meditation-record.pdf"',
+                "Cache-Control": "no-store",
+                "Referrer-Policy": "no-referrer",
+                "X-Content-Type-Options": "nosniff",
+            })
+    return pdf_response(report)
 
 
 @router.get("/auto-approve", response_model=ReportAutoApproveSetting)
