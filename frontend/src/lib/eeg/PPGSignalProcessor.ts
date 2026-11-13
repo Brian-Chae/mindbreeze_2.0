@@ -236,10 +236,19 @@ export class PPGSignalProcessor {
       // 🔧 RR 간격 추출 — 필터드 IR(1~5Hz 밴드패스) 사용 (하루명상 SDD-052 와 동일).
       // 원시 IR 은 호흡·기저선 드리프트(<1Hz)가 남아 박동 누락(RR≈2배)·가짜 피크(RR 300~500ms)가
       // 섞여 SDNN 이 3배 이상 부풀려졌다. RR 간격은 피크 시각 차이이므로 LF/HF 정보는 필터로 사라지지 않는다.
-      const peaks = this.detectPeaksForHRV(filteredIR);
+      // SDD-fix-rmssd: 단방향(causal) 필터는 주파수별 군지연이 달라 피크 시각이 박동마다 흔들려 RMSSD 가 3배 부풀었다.
+      // RR 검출 입력만 양방향(영위상) 필터로 만들고, 창 끝 ~1초 안의 닫는 피크는 확정을 보류(다음 창이 이어받음),
+      // 피크 시각은 포물선 보간으로 소수 샘플화한다. (HR·SQI·SpO2 입력은 기존 필터 유지)
+      const irZeroPhase = this.applyZeroPhaseFilter(irData);
+      const hrvMean = irZeroPhase.reduce((sum, val) => sum + val, 0) / irZeroPhase.length;
+      const hrvNorm = irZeroPhase.map(val => val - hrvMean);
+      const peaks = this.detectPeaksWithRefractory(hrvNorm, 0.5, 300);
+      const closeLimit = hrvNorm.length - PPGSignalProcessor.RR_TAIL_HOLD_SAMPLES;
       if (peaks.length >= 2) {
+        const refined = peaks.map(p => p + this.parabolicOffset(hrvNorm, p));
         for (let i = 1; i < peaks.length; i++) {
-          const interval = (peaks[i] - peaks[i-1]) * (1000 / this.ppgSamplingRate);
+          if (peaks[i] >= closeLimit) break; // 창 끝 불완전 박동 — 이번 창에서는 RR 로 확정하지 않는다.
+          const interval = (refined[i] - refined[i-1]) * (1000 / this.ppgSamplingRate);
           if (interval >= 200 && interval <= 2000) {
             rrIntervals.push(interval);
             rrEndTimestamps.push(processedData[peaks[i]]?.timestamp ?? NaN);
@@ -335,6 +344,54 @@ export class PPGSignalProcessor {
       return filtered;
     } catch (error) {
       console.warn('BiquadFilters PPG 밴드패스 필터 실패, fallback 사용:', error);
+      return this.fallbackPPGBandpassFilter(data);
+    }
+  }
+
+  /** 창 끝 이 샘플 수(1초@50Hz) 안에서 닫히는 피크는 RR 확정을 보류한다. */
+  private static readonly RR_TAIL_HOLD_SAMPLES = 50;
+  /** 양방향 필터 가장자리 패딩 길이(2초@50Hz). */
+  private static readonly ZERO_PHASE_PAD_SAMPLES = 100;
+
+  /**
+   * 포물선 보간 — 정수 샘플 피크 i 의 소수 오프셋(-0.5~0.5). 이웃이 없거나 곡률이 0 이면 0.
+   */
+  private parabolicOffset(y: number[], i: number): number {
+    if (i < 1 || i >= y.length - 1) return 0;
+    const denom = y[i - 1] - 2 * y[i] + y[i + 1];
+    if (!Number.isFinite(denom) || denom >= 0) return 0; // 극대점이면 denom < 0
+    const off = 0.5 * (y[i - 1] - y[i + 1]) / denom;
+    return Math.max(-0.5, Math.min(0.5, off));
+  }
+
+  /**
+   * 영위상 PPG 밴드패스(1.0-5.0Hz) — 정방향+역방향 2회 적용. 짧은 창의 가장자리 transient 는
+   * 홀대칭 연장(odd reflection) 패딩으로 억제한다. 필터 실패 시 대칭 이동평균 fallback(이미 영위상).
+   */
+  private applyZeroPhaseFilter(data: number[]): number[] {
+    if (data.length < 4) return this.fallbackPPGBandpassFilter(data);
+    try {
+      const mean = data.reduce((sum, val) => sum + val, 0) / data.length;
+      const dc = data.map(val => val - mean);
+      const pad = Math.min(PPGSignalProcessor.ZERO_PHASE_PAD_SAMPLES, dc.length - 1);
+      const n = dc.length;
+      const padded: number[] = new Array(n + 2 * pad);
+      for (let k = 0; k < pad; k++) {
+        padded[k] = 2 * dc[0] - dc[pad - k];
+        padded[pad + n + k] = 2 * dc[n - 1] - dc[n - 2 - k];
+      }
+      for (let k = 0; k < n; k++) padded[pad + k] = dc[k];
+      const run = (x: number[]): number[] => {
+        const f = makeBandpassFilter(1.0, 5.0, this.ppgSamplingRate);
+        const out = new Array(x.length);
+        for (let i = 0; i < x.length; i++) out[i] = f.applyFilter(x[i]);
+        return out;
+      };
+      const fwd = run(padded);
+      const back = run(fwd.reverse()).reverse();
+      return back.slice(pad, pad + n);
+    } catch (error) {
+      console.warn('BiquadFilters PPG 양방향 필터 실패, fallback 사용:', error);
       return this.fallbackPPGBandpassFilter(data);
     }
   }

@@ -15,11 +15,12 @@ import type { Signal } from './raw-types';
 export const PPG_ALGORITHM_HISTORY: Record<string, string> = {
   '1': 'rr-append-all: 중첩 창의 RR 전체를 매번 버퍼에 append, 호흡 게이트는 RR 합만 검사',
   '2': 'rr-beat-dedup: 닫는 피크 시각 커서로 중복 제거, 호흡 게이트에 실제 경과 60초 추가',
+  '3': 'rr-zero-phase: RR 검출 입력을 영위상(양방향) 필터로, 창 끝 1초 피크 보류, 포물선 보간(RMSSD 과대 산출 수정)',
 };
-export const ALGORITHM_VERSIONS: Record<Signal, string> = { eeg: '1', ppg: '2', acc: '1' };
+export const ALGORITHM_VERSIONS: Record<Signal, string> = { eeg: '1', ppg: '3', acc: '1' };
 const ALGORITHM_PARAMETERS: Record<Signal, Record<string, number | string | boolean | number[]>> = {
   eeg: { sample_rate_hz: 250, min_window_samples: 500, channels: 'fp1,fp2' },
-  ppg: { sample_rate_hz: 50, channels: 'red,ir', rr_dedup: 'end_timestamp_cursor', respiratory_min_elapsed_ms: 60000 },
+  ppg: { sample_rate_hz: 50, channels: 'red,ir', rr_dedup: 'end_timestamp_cursor', rr_filter: 'zero_phase', rr_tail_hold_ms: 1000, peak_interp: 'parabolic', respiratory_min_elapsed_ms: 60000 },
   acc: { sample_rate_hz: 30, channels: 'x,y,z' },
 };
 export const BUNDLE_MAX_AGE_MS = 10_000;

@@ -159,3 +159,28 @@ pub fn ppg_filter(data: &[f64], imp: FilterImpl) -> Vec<f64> {
             .collect(),
     }
 }
+
+/// PPG 영위상 필터(RR 검출 전용): DC 제거 → 홀대칭 연장 패딩 → 정방향+역방향 bandpass(1~5Hz) → 패딩 제거.
+/// TS `PPGSignalProcessor.applyZeroPhaseFilter` 와 동일. LegacyFallback(길이 3 이동평균)은 이미 대칭(영위상)이라 그대로 쓴다.
+const ZERO_PHASE_PAD: usize = 100;
+
+pub fn ppg_filter_zero_phase(data: &[f64], imp: FilterImpl) -> Vec<f64> {
+    if data.len() < 4 || imp == FilterImpl::LegacyFallback {
+        return ppg_filter(data, imp);
+    }
+    let n = data.len();
+    let mean = super::math::sum(data) / n as f64;
+    let dc: Vec<f64> = data.iter().map(|&v| v - mean).collect();
+    let pad = ZERO_PHASE_PAD.min(n - 1);
+    let mut padded = vec![0.0; n + 2 * pad];
+    for k in 0..pad {
+        padded[k] = 2.0 * dc[0] - dc[pad - k];
+        padded[pad + n + k] = 2.0 * dc[n - 1] - dc[n - 2 - k];
+    }
+    padded[pad..pad + n].copy_from_slice(&dc);
+    let mut fwd = Biquad::bandpass(1.0, 5.0, 50.0).run(&padded);
+    fwd.reverse();
+    let mut back = Biquad::bandpass(1.0, 5.0, 50.0).run(&fwd);
+    back.reverse();
+    back[pad..pad + n].to_vec()
+}

@@ -7,7 +7,7 @@
   },
   "meta": {
     "filter_mode": "legacy_fallback",
-    "fallback_warnings": 3542,
+    "fallback_warnings": 5033,
     "packets": 4500,
     "eeg_emissions": 140,
     "ppg_emissions": 1491,
@@ -32,11 +32,11 @@
     },
     "ppg_peaks_rr": {
       "count": 1491,
-      "sha256": "b79c7295b63deb97a17327bdbf54a0dd1cb8b1356fd6d914a8caaed9a0968b7c"
+      "sha256": "b808882f3815c80c1f680456960a3e6c0b59205e71762dbadec313f28764e857"
     },
     "hrv_sdnn_respiration": {
       "count": 1491,
-      "sha256": "ccfe7e5fae4a44447c9906ac8a709f87aaf3445a18d9a5a135532c7d565bf3be"
+      "sha256": "d243a8e155b8da92281fe86062536c0e1516ce5ada17d13337c277000d010cc5"
     },
     "display": {
       "count": 140,
