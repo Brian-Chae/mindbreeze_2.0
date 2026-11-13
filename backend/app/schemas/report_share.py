@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field, field_validator
 
 MAX_RECIPIENTS = 3
 MAX_MESSAGE_LEN = 200
+MAX_SENDER_NAME_LEN = 20
 
 ShareStatus = Literal["queued", "sent", "failed"]
 
@@ -36,6 +37,16 @@ class ReportShareRequest(BaseModel):
     recipients: list[str] = Field(min_length=1, max_length=MAX_RECIPIENTS)
     attach_pdf: bool = True
     message: str | None = Field(default=None, max_length=MAX_MESSAGE_LEN)
+    # 보내는 사람 표시 이름(선택, 20자). 비면 서비스가 대체 문구를 쓴다. 이력에는 저장하지 않는다.
+    sender_name: str | None = Field(default=None, max_length=MAX_SENDER_NAME_LEN)
+
+    @field_validator("sender_name")
+    @classmethod
+    def _strip_sender_name(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        v = v.strip()
+        return v or None
 
     @field_validator("recipients")
     @classmethod

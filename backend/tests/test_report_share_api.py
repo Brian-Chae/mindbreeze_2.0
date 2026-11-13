@@ -173,3 +173,33 @@ def test_resend_email_failure_reports_false_and_non_host_403(env, monkeypatch):
     assert db.query(ReportShareEvent).one().status == "failed"
     assert client.post(f"/api/v1/reports/{r.id}/resend-email", json={"email": "n@example.com"},
                        headers=other["auth"]).status_code == 403
+
+
+def test_member_sender_name_flows_to_mail(env):
+    client, db, r, _, member, _, _, enq = env
+    res = _post(client, r.id, member, sender_name="  지은 ")
+    assert res.status_code == 202, res.text
+    assert enq.call_args.args[5] == "지은"
+    ev = db.query(ReportShareEvent).one()
+    assert not hasattr(ev, "sender_name")  # 이력에는 저장하지 않는다
+
+
+def test_member_sender_name_21_chars_is_422(env):
+    client, _, r, _, member, _, _, enq = env
+    assert _post(client, r.id, member, sender_name="가" * 21).status_code == 422
+    assert _post(client, r.id, member, sender_name="가" * 20).status_code == 202
+
+
+def test_member_sender_name_tags_urls_stripped(env):
+    client, _, r, _, member, _, _, enq = env
+    res = _post(client, r.id, member, sender_name="<i>x</i>철수 www.a.com")
+    assert res.status_code == 202, res.text
+    assert enq.call_args.args[5] == "x철수"
+
+
+def test_member_sender_name_forbidden_word_400(env):
+    from app.services.member_report_wording import FORBIDDEN_WORDS
+
+    client, _, r, _, member, _, _, enq = env
+    assert _post(client, r.id, member, sender_name=FORBIDDEN_WORDS[0]).status_code == 400
+    enq.assert_not_called()

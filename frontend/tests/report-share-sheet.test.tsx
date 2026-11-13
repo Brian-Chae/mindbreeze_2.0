@@ -77,7 +77,7 @@ it('회원 성공 시 요청 본문에 PDF 첨부 기본 켬·메시지가 담�
   await addAddress('A@x.com'); await check();
   await setValue(document.getElementById('rs-message') as HTMLTextAreaElement, '안녕');
   await act(async () => { sendBtn().click(); });
-  expect(shareApi.shareMyReportByEmail).toHaveBeenCalledWith('r1', { recipients: ['a@x.com'], attach_pdf: true, message: '안녕' });
+  expect(shareApi.shareMyReportByEmail).toHaveBeenCalledWith('r1', { recipients: ['a@x.com'], attach_pdf: true, message: '안녕', sender_name: null });
   expect(document.body.textContent).toContain('1곳에 보냈어요');
 });
 
@@ -99,4 +99,21 @@ it('상담사 경로는 기존 resendReportEmail 을 호출한다', async () => 
   await act(async () => { sendBtn().click(); });
   expect(reportsApi.resendReportEmail).toHaveBeenCalledWith('r1', 'c@x.com');
   expect(shareApi.shareMyReportByEmail).not.toHaveBeenCalled();
+});
+
+it('보내는 사람 이름은 빈 칸 기본이고 입력하면 요청에 담긴다 (최대 20자)', async () => {
+  vi.mocked(shareApi.shareMyReportByEmail).mockResolvedValue({ accepted_count: 1, attached: true, delivery_delayed: false, daily_remaining: 9, events: [] });
+  await render();
+  const input = document.getElementById('rs-sender-name') as HTMLInputElement;
+  expect(input.value).toBe('');
+  expect(input.maxLength).toBe(20);
+  await addAddress('a@x.com'); await check();
+  await setValue(input, '  지은 ');
+  await act(async () => { sendBtn().click(); });
+  expect(shareApi.shareMyReportByEmail).toHaveBeenCalledWith('r1', expect.objectContaining({ sender_name: '지은' }));
+});
+
+it('상담사 경로에는 보내는 사람 이름 칸이 없다', async () => {
+  await render('counselor', 'a@x.com');
+  expect(document.getElementById('rs-sender-name')).toBeNull();
 });
