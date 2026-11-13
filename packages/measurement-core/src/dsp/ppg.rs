@@ -1,11 +1,25 @@
 //! PPGSignalProcessor.ts 포팅 (v1): DC 제거 + bandpass(1~5Hz), SQI, 심박(적응 임계 피크),
 //! 불응기 피크(IR 원신호)→RR+피크 시각, SpO2, 피크 정보. HRV 통계는 hrv.rs.
 
-use super::biquad::{ppg_filter, FilterImpl};
+use super::biquad::{ppg_filter, ppg_filter_zero_phase, FilterImpl};
 use super::math::*;
 use serde::{Deserialize, Serialize};
 
 pub const FS: f64 = 50.0;
+/// 창 끝 이 샘플 수(1초@50Hz) 안에서 닫히는 피크는 RR 확정을 보류한다(다음 창이 이어받음).
+const RR_TAIL_HOLD_SAMPLES: f64 = 50.0;
+
+/// 포물선 보간 — 정수 샘플 피크의 소수 오프셋(-0.5~0.5). 이웃이 없거나 곡률이 극대가 아니면 0.
+fn parabolic_offset(y: &[f64], i: usize) -> f64 {
+    if i < 1 || i + 1 >= y.len() {
+        return 0.0;
+    }
+    let denom = y[i - 1] - 2.0 * y[i] + y[i + 1];
+    if !denom.is_finite() || denom >= 0.0 {
+        return 0.0;
+    }
+    (0.5 * (y[i - 1] - y[i + 1]) / denom).clamp(-0.5, 0.5)
+}
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct PpgPoint {
@@ -362,16 +376,22 @@ pub fn analyze(data: &[PpgPoint], imp: FilterImpl) -> PpgResult {
     let hrv = simple_hrv(&f_ir);
     let sp = spo2(&red, &ir);
 
-    // RR: 필터드 IR(1~5Hz) 평균 제거 → 불응기 피크 (하루명상 SDD-052 / TS detectPeaksForHRV(filteredIR) 와 동일).
-    // 원신호 IR 은 호흡·드리프트로 박동 누락·가짜 피크가 생겨 SDNN 이 3배 이상 부풀려졌다.
-    let mean = sum(&f_ir) / f_ir.len() as f64;
-    let norm: Vec<f64> = f_ir.iter().map(|&v| v - mean).collect();
+    // RR: 영위상 필터드 IR(1~5Hz) 평균 제거 → 불응기 피크 → 포물선 보간 → 창 끝 1초 안 닫는 피크는 보류.
+    // (TS PPGSignalProcessor.processPPGSegment 와 동일. 단방향 필터의 위상 왜곡이 RMSSD 를 3배 부풀렸다.)
+    let ir_zp = ppg_filter_zero_phase(&ir, imp);
+    let mean = sum(&ir_zp) / ir_zp.len() as f64;
+    let norm: Vec<f64> = ir_zp.iter().map(|&v| v - mean).collect();
     let peaks = peaks_refractory(&norm, 0.5, 300.0);
+    let close_limit = norm.len() as f64 - RR_TAIL_HOLD_SAMPLES;
     let mut rr = Vec::new();
     let mut rr_ts = Vec::new();
     if peaks.len() >= 2 {
+        let refined: Vec<f64> = peaks.iter().map(|&p| p as f64 + parabolic_offset(&norm, p)).collect();
         for i in 1..peaks.len() {
-            let iv = (peaks[i] - peaks[i - 1]) as f64 * (1000.0 / FS);
+            if peaks[i] as f64 >= close_limit {
+                break;
+            }
+            let iv = (refined[i] - refined[i - 1]) * (1000.0 / FS);
             if (200.0..=2000.0).contains(&iv) {
                 rr.push(iv);
                 rr_ts.push(processed[peaks[i]].ts);

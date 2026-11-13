@@ -94,11 +94,11 @@
       },
       "ppg_peaks_rr": {
         "count": 1491,
-        "sha256": "44941ee2cd8c7c1e004f331b90cec8367686678a8a475870da995da421bdebcb"
+        "sha256": "26fdbc3f8bd47f92f48497d721998880bc1331ba95eaf70ec89c00c271cd65c4"
       },
       "hrv_sdnn_respiration": {
         "count": 1491,
-        "sha256": "9529f0991b6bb6717af2b64cb9fd450eee8337b86c0532b2973360046941dec0"
+        "sha256": "4956e95ab347128fc3ebc3781b56e87c612cdaac9e48bec5c54ed10fcadf37ef"
       },
       "display": {
         "count": 140,
@@ -143,11 +143,11 @@
         },
         "ppg_peaks_rr": {
           "count": 1491,
-          "sha256": "b79c7295b63deb97a17327bdbf54a0dd1cb8b1356fd6d914a8caaed9a0968b7c"
+          "sha256": "b808882f3815c80c1f680456960a3e6c0b59205e71762dbadec313f28764e857"
         },
         "hrv_sdnn_respiration": {
           "count": 1491,
-          "sha256": "ccfe7e5fae4a44447c9906ac8a709f87aaf3445a18d9a5a135532c7d565bf3be"
+          "sha256": "d243a8e155b8da92281fe86062536c0e1516ce5ada17d13337c277000d010cc5"
         },
         "display": {
           "count": 140,
@@ -160,7 +160,7 @@
       },
       "meta": {
         "filter_mode": "legacy_fallback",
-        "fallback_warnings": 3542,
+        "fallback_warnings": 5033,
         "packets": 4500,
         "eeg_emissions": 140,
         "ppg_emissions": 1491,
@@ -217,11 +217,11 @@
   "sources": {
     "oracle_ts_eeg": {
       "files": 31,
-      "tree_sha256": "7f2687510b399aa3af9b5e2ec775962dc7dd6c053143a0374440b012935280ad"
+      "tree_sha256": "cf7e4c2080a7db23dd4d9fbc0ee7452f52d63abf558723709a444ad7ce382a48"
     },
     "backend_scoring": {
       "backend/app/services/eeg_metrics.py": "05c2a6ee5ec0fe870c121d226062809d43174515bee22b2cd6ce2f65529281fd",
-      "backend/app/services/normalization_score.py": "71e402e4945780fe8ff2a39927a075cd1f217b10ef8efe4b1cb1044d9db20a74",
+      "backend/app/services/normalization_score.py": "e166c920541a325cf120e76c36c039a627995e4246483233df387b06ff3fc32d",
       "backend/app/services/normalization_constants.json": "bb600a2d1020c714a4cb0468e422ab27ea388377ad60812432d249f7da941051"
     },
     "source_commit_base": "60365fbaaf02954ba154631032bba9123cec7673",
@@ -269,7 +269,7 @@
     "expected/gf02_truncated.json": "40c9f8a0d56cc67e969d5ae5f00c678a99c7a9ffe30fc11bf4e630d00aa1745c",
     "expected/gf02_wrap32.json": "2b9336f0ffaac87b9b1ef4b0acdde142fd0cee47bcd9bd5939d9af71f6f18551",
     "expected/gf04/cases.json": "98c874e2dffa24e2b010bf4f410a74091ebdf66a94d9cb8fb72a86c43d0250a6",
-    "expected/gf04/ppg_degenerate.json": "9308160a19f483fb094de76eb3a9a65b4de335f3fcf59600361da240a15bb6af",
+    "expected/gf04/ppg_degenerate.json": "f72597691fbe473a61bc67599a0ec13899e566677aa4aea4f49f82c7ed688975",
     "expected/legacy_fallback/acc.json": "06d44fdd4da5f5023c589a78ab983228263da956117bb08dd4ab146cd103eb7b",
     "expected/legacy_fallback/clock.json": "97f76fb441e6622548a6c9836e97a93563c8971c871b06cfbcbb213af910a122",
     "expected/legacy_fallback/decoded.json": "a524fcc4bdefc5ed88cfb7e0c5851aebe0368dc13d29380b7d471813907d99d9",
@@ -277,9 +277,9 @@
     "expected/legacy_fallback/divergences.json": "55de8bba70d698bf85d7a9800e6951edc8c8dd31aadf976f1640ff93fa51328a",
     "expected/legacy_fallback/eeg_psd_bandpower.json": "8675d404d3c753b5b31797aa2beb3e8c3fbb5c3a16fded55e1fb69c248d45489",
     "expected/legacy_fallback/eeg_raw_indices.json": "15527d87b83590f96293c1b25b46c0d6d5db139a5ac2ca48eda37ab24b57a02a",
-    "expected/legacy_fallback/hrv_sdnn_respiration.json": "9f67c1f0af1f80cd0f7e131bb8d0ec249c5baee6bb72ab723cd7863c2d9f0f00",
-    "expected/legacy_fallback/ppg_peaks_rr.json": "b92acf0f16aaa5f9455b96ab3701909570afbe1e235e1a48c256545c6ff21132",
-    "expected/legacy_fallback/summary.json": "2cf62e8f894693795caa82f7dc2e9e07012efea85b2eeb56313c363eb7bb822c",
+    "expected/legacy_fallback/hrv_sdnn_respiration.json": "3fc971a7833c66786ab697871a99624a5033954cf4f2ed1a7e0f9b0508b9edba",
+    "expected/legacy_fallback/ppg_peaks_rr.json": "ee550ca917acb526d947f669742beffab99ae75e286e2383e2e0a9bc8dacd459",
+    "expected/legacy_fallback/summary.json": "8d959ec288b06dfb952e340fa10bd020cc36555a2b483c75f2faf677836c603d",
     "expected/oracle/acc.json": "06d44fdd4da5f5023c589a78ab983228263da956117bb08dd4ab146cd103eb7b",
     "expected/oracle/clock.json": "97f76fb441e6622548a6c9836e97a93563c8971c871b06cfbcbb213af910a122",
     "expected/oracle/decoded.json": "a524fcc4bdefc5ed88cfb7e0c5851aebe0368dc13d29380b7d471813907d99d9",
@@ -287,9 +287,9 @@
     "expected/oracle/divergences.json": "55de8bba70d698bf85d7a9800e6951edc8c8dd31aadf976f1640ff93fa51328a",
     "expected/oracle/eeg_psd_bandpower.json": "d67cdc8abede8c699033bb96a90169b2df5c4d9f70d734c415f56fce32c60f3b",
     "expected/oracle/eeg_raw_indices.json": "b01dc444445741a62a93b82f2fa2f6f3642f616544d66080051b0b50d980b939",
-    "expected/oracle/hrv_sdnn_respiration.json": "c50b3133b84a88ca955730e547d01588aca9c40d2954c1052fffd49e0a8d6bbd",
-    "expected/oracle/ppg_peaks_rr.json": "03dbaf6f025231e8e41e22d9cee847db4a6724ac741efe6840d70f41fab54c81",
-    "expected/oracle/summary.json": "2d1f721b0c2537c6b93ac05e1badebd450c9d2dac1f311648ba794a58b46d62d",
+    "expected/oracle/hrv_sdnn_respiration.json": "2d85535830c6b6d7b0032bc8e9b25de3e29252a731aa270dc814ac50bffbd8e7",
+    "expected/oracle/ppg_peaks_rr.json": "b6b2e2a4beb8ae82457d65da59e37756cd1457bb2590167c500f27616c30331f",
+    "expected/oracle/summary.json": "1f1a0c2d63ee277e7a47154c12569717731c7b714171807db9faf1bcfa2b8127",
     "expected/scoring/gf05_scoring.json": "87724a8a05988553440220334e3f2230054a7d1913b090bfbcb007093ffc2d2d",
     "oracle/gf04.oracle.test.ts": "2ad0c10886701d6b930b9113230e906d602e32c43f72a6bcc078d662fb45c996",
     "oracle/oracle.oracle.test.ts": "015693ea41c5abfebac2b338e6e7af6aa0308b0fe75e38de439dbc66717a8bba",

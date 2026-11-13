@@ -32,11 +32,11 @@
     },
     "ppg_peaks_rr": {
       "count": 1491,
-      "sha256": "44941ee2cd8c7c1e004f331b90cec8367686678a8a475870da995da421bdebcb"
+      "sha256": "26fdbc3f8bd47f92f48497d721998880bc1331ba95eaf70ec89c00c271cd65c4"
     },
     "hrv_sdnn_respiration": {
       "count": 1491,
-      "sha256": "9529f0991b6bb6717af2b64cb9fd450eee8337b86c0532b2973360046941dec0"
+      "sha256": "4956e95ab347128fc3ebc3781b56e87c612cdaac9e48bec5c54ed10fcadf37ef"
     },
     "display": {
       "count": 140,
