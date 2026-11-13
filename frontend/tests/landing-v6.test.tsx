@@ -88,3 +88,14 @@ it('모달 필수값 미입력 시 오류, 정상 제출 시 API 호출 후 완�
   await act(async () => ([...document.querySelectorAll('button')].find((b) => b.textContent === '닫고 서비스 둘러보기') as HTMLButtonElement).click());
   expect(dialog()).toBeNull();
 });
+
+it('앱 다운로드 링크가 내비·히어로·푸터 3곳에서 다운로드 사이트를 새 창으로 연다', async () => {
+  await render(<LandingPage />);
+  const links = [...container.querySelectorAll('a[data-download]')] as HTMLAnchorElement[];
+  expect(links.map((a) => a.dataset.download)).toEqual(['nav', 'hero', 'footer']);
+  for (const a of links) {
+    expect(a.getAttribute('href')).toBe('https://download.mindbreeze.looxidlabs.com');
+    expect(a.getAttribute('target')).toBe('_blank');
+    expect(a.getAttribute('rel')).toContain('noopener');
+  }
+});

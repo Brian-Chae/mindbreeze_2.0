@@ -1,5 +1,6 @@
 // 랜딩 v6 섹션 (SDD-248) — 승인 시안 design-v6/landing.html 의 카피·순서 그대로
 import { Link } from 'react-router-dom';
+import { UPDATE_SITE_URL } from '../../../lib/update/update-config';
 import { isAiEnabled } from '../../../lib/feature-flags';
 import { useInquiryModal, type InquiryCtaSource } from './use-inquiry-modal';
 
@@ -43,6 +44,7 @@ export function LandingV6Sections() {
             <p className="body">마인드브리즈는 기관과 진행자, 회원을 연결하는 명상·웰니스 플랫폼입니다. 클래스 일정과 소통, 수업 후 기록을 하나의 흐름으로 이어갑니다.</p>
             <div className="actions">
               <a className="btn btn-ghost" href="#roles">서비스 화면 살펴보기</a>
+              <a className="btn btn-ghost" href={UPDATE_SITE_URL} target="_blank" rel="noopener noreferrer" data-download="hero">앱 다운로드 ↗</a>
               <InquiryCta source="hero">기관 가입 문의</InquiryCta>
             </div>
           </div>
