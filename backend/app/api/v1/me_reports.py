@@ -61,7 +61,8 @@ def share_email(
         user_id=current_user["id"], kind="member", display_name=svc.resolve_display_name(user)
     )
     result = svc.share_report(
-        db, report_id, actor, payload.recipients, payload.attach_pdf, payload.message
+        db, report_id, actor, payload.recipients, payload.attach_pdf, payload.message,
+        sender_name=payload.sender_name,
     )
     response.headers["Cache-Control"] = "no-store"
     return result

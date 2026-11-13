@@ -140,6 +140,22 @@ def place_samples(
     return arr
 
 
+def chunk_utc_span_ms(header: object) -> Optional[tuple[float, float]]:
+    """청크 헤더(dict)의 UTC 앵커로 절대 [시작, 끝] ms 를 계산. 앵커 없거나 해석 불가면 None."""
+    if not isinstance(header, dict):
+        return None
+    try:
+        anchor = header["anchor"]
+        utc_us = anchor.get("utc_us")
+        if utc_us is None:
+            return None
+        n = int(header["sample_count"])
+        t0 = int(utc_us) / 1000.0 + (int(header["first_sample_index"]) - int(anchor["sample_index"])) * 1000.0 / FS
+        return t0, t0 + n * 1000.0 / FS
+    except (KeyError, TypeError, ValueError, AttributeError):
+        return None
+
+
 def load_eeg_array(chunks: list, reader: Reader, t_lo_ms: float, t_hi_ms: float) -> Optional[np.ndarray]:
     """EEGRawChunk 행들 → (2, n) 배열. 읽기·디코딩 실패 청크는 건너뛴다(해당 구간은 NaN).
 
@@ -156,10 +172,13 @@ def load_eeg_array(chunks: list, reader: Reader, t_lo_ms: float, t_hi_ms: float)
     for row in sorted(chunks, key=lambda c: (str(c.stream_id), str(c.segment_id), c.chunk_index)):
         if row.schema_version != "mb-biosignal-raw-v2" or not row.header:
             continue
-        # 구간 밖 청크는 내려받지 않는다 (start_ms/end_ms 는 청크 메타)
-        if row.end_ms is not None and row.end_ms < t_lo_ms - 5000:
+        # 구간 밖 청크는 내려받지 않는다. 주의: EEGRawChunk.start_ms/end_ms 는 세션 시작 기준
+        # 상대 ms(음수 가능)라 절대 UTC 구간과 비교하면 전부 걸러진다 → 헤더 UTC 앵커로 절대 구간을 계산한다.
+        # UTC 앵커가 없는 청크는 표본 시각을 알 수 없으므로(utc_us=None) 내려받지 않고 건너뛴다.
+        span = chunk_utc_span_ms(row.header)
+        if span is None:
             continue
-        if row.start_ms is not None and row.start_ms > t_hi_ms + 5000:
+        if span[1] < t_lo_ms - 5000 or span[0] > t_hi_ms + 5000:
             continue
         payload = reader(row.object_key)
         if payload is None:

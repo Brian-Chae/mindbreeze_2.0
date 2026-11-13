@@ -686,6 +686,7 @@ def build_member_report(
     first, last = segments[0].start_min, segments[-1].end_min
     logger.info("[member_report] 구간 원천=%s 분석=%s–%s분 session=%s", seg_source, first, last, sid)
 
+    # 착용 판정은 EEG 유효 창 기준 유지 — EEG 가 전부 포화·평탄(미착용)인 회차의 PPG 값(고정 HR 등)은 신뢰하지 않는다
     worn = any(r.quality != "invalid" for r in mine_rows)
     band_status = "worn" if worn else "not_worn"
 

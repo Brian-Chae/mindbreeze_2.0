@@ -234,3 +234,27 @@ def test_ineligible_reports_blocked(env):
     with pytest.raises(HTTPException) as e:
         svc.share_report(db, str(report.id), _member(), ["a@x.com"])
     assert e.value.status_code == 409
+
+
+def test_sender_name_input_overrides_and_is_sanitized(env):
+    db, report, _, enq = env
+    svc.share_report(db, str(report.id), _member(), ["a@x.com"], sender_name="  민수 <b>형</b> http://x.io ")
+    assert enq.call_args.args[5] == "민수 형"
+
+
+def test_sender_name_empty_falls_back_to_actor_name(env):
+    db, report, _, enq = env
+    svc.share_report(db, str(report.id), _member(), ["a@x.com"], sender_name="  ")
+    assert enq.call_args.args[5] == "별이"
+    svc.share_report(db, str(report.id), svc.ShareActor(str(uuid.uuid4()), "member", None), ["b@x.com"], sender_name=None)
+    assert enq.call_args.args[5] == "MIND BREEZE 회원"
+
+
+def test_sender_name_forbidden_word_is_400(env):
+    from app.services.member_report_wording import FORBIDDEN_WORDS
+
+    db, report, _, enq = env
+    with pytest.raises(HTTPException) as e:
+        svc.share_report(db, str(report.id), _member(), ["a@x.com"], sender_name=FORBIDDEN_WORDS[0])
+    assert e.value.status_code == 400
+    enq.assert_not_called()

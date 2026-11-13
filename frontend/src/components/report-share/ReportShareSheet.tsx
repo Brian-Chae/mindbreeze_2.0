@@ -7,6 +7,7 @@ import { buttonClass } from '../ui';
 import { resendReportEmail } from '../../lib/api/reports';
 import {
   REPORT_SHARE_MAX_MESSAGE_LEN,
+  REPORT_SHARE_MAX_SENDER_NAME_LEN,
   REPORT_SHARE_MAX_RECIPIENTS,
   shareMyReportByEmail,
   type ReportShareResponse,
@@ -54,6 +55,7 @@ export default function ReportShareSheet({
   const [draft, setDraft] = useState('');
   const [attachPdf, setAttachPdf] = useState(true);
   const [message, setMessage] = useState('');
+  const [senderName, setSenderName] = useState(''); // 실명·이메일 자동 채움 금지 — 빈 칸 기본
   const [confirmed, setConfirmed] = useState(false);
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>('form');
@@ -117,6 +119,7 @@ export default function ReportShareSheet({
           recipients: list,
           attach_pdf: attachPdf,
           message: message.trim() ? message.trim() : null,
+          sender_name: senderName.trim() ? senderName.trim() : null,
         });
         setResult(res);
       } else {
@@ -259,6 +262,23 @@ export default function ReportShareSheet({
                   <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${attachPdf ? 'left-[22px]' : 'left-0.5'}`} />
                 </button>
               </div>
+
+              {/* 상담사 경로(resend-email)는 필드 미지원 — 회원 경로 전용 */}
+              {mode === 'member' && (
+                <>
+              <label htmlFor="rs-sender-name" className="mt-3 block text-[14px] font-semibold text-[#282430]">보내는 사람 이름 (선택)</label>
+              <input
+                id="rs-sender-name"
+                type="text"
+                value={senderName}
+                maxLength={REPORT_SHARE_MAX_SENDER_NAME_LEN}
+                onChange={(e) => setSenderName(e.target.value)}
+                autoComplete="off"
+                placeholder="비우면 MIND BREEZE 회원"
+                className="mt-1.5 w-full rounded-xl border border-[#DDDEE7] px-3.5 py-2 text-[14px] text-[#282430] placeholder:text-[#9B9B9B] focus:border-[#5F0080] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/15"
+              />
+                </>
+              )}
 
               <label htmlFor="rs-message" className="mt-3 block text-[14px] font-semibold text-[#282430]">함께 보낼 메시지 (선택)</label>
               <textarea

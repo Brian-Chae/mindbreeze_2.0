@@ -28,7 +28,12 @@ from app.models.record import Report
 from app.models.report_share_event import ReportShareEvent
 from app.models.session import Session, SessionParticipant
 from app.models.user import User
-from app.schemas.report_share import MAX_MESSAGE_LEN, MAX_RECIPIENTS, mask_recipient
+from app.schemas.report_share import (
+    MAX_MESSAGE_LEN,
+    MAX_RECIPIENTS,
+    MAX_SENDER_NAME_LEN,
+    mask_recipient,
+)
 from app.services import record_service, report_email_service
 from app.services.report_service import _serialize
 
@@ -113,6 +118,31 @@ def sanitize_message(message: str | None) -> str | None:
     text = _URL_RE.sub("", text)
     text = re.sub(r"[ \t]{2,}", " ", text).strip()[:MAX_MESSAGE_LEN]
     return escape(text) if text else None
+
+
+def sanitize_sender_name(name: str | None) -> str | None:
+    """보내는 사람 이름에서 태그·URL·제어문자를 제거하고 20자로 자른다. 비면 None.
+
+    이스케이프는 메일 템플릿이 렌더 시 한 번만 한다(이중 이스케이프 방지).
+    금지어 검사는 호출측(`assert_sender_name_clean`)이 한다.
+    """
+    if not name:
+        return None
+    text = _TAG_RE.sub("", name)
+    text = _URL_RE.sub("", text)
+    text = re.sub(r"[\x00-\x1f\x7f]", " ", text)
+    text = re.sub(r"\s{2,}", " ", text).strip()[:MAX_SENDER_NAME_LEN]
+    return text or None
+
+
+def assert_sender_name_clean(name: str | None) -> None:
+    """금지어·인과 단정 표현이 있으면 400 (spec §10 결정 B)."""
+    if not name:
+        return
+    from app.services.member_report_wording import find_violations  # 지연 import(순환 방지)
+
+    if find_violations(name):
+        raise HTTPException(400, "보내는 사람 이름에 사용할 수 없는 표현이 있어요")
 
 
 def _now_kst() -> datetime:
@@ -257,6 +287,7 @@ def share_report(
     *,
     sync_send: bool = False,
     redis_client: "redis.Redis | None" = None,
+    sender_name: str | None = None,
 ) -> dict:
     """리포트를 수신자별 전용 링크로 공유한다. 권한 검사는 호출 전에 끝나 있어야 한다.
 
@@ -267,6 +298,10 @@ def share_report(
     addrs, invalid_addrs = _normalize_recipients(recipients)
     report, session, participant = load_shareable_report(report_id, db)
     clean_message = sanitize_message(message)
+    # 입력한 보내는 사람 이름이 있으면 앱 표시 이름보다 우선한다(검사 → 정제, 이력 저장 없음).
+    assert_sender_name_clean(sender_name)
+    clean_sender = sanitize_sender_name(sender_name)
+    display_sender = clean_sender or actor.sender_name
     hashes = {a: hash_recipient(a) for a in addrs}
 
     try:
@@ -316,7 +351,7 @@ def share_report(
                     event.sent_at = datetime.now(timezone.utc)
                 all_ok = all_ok and sent
             else:
-                _enqueue(str(event.id), addr, link, attached, clean_message, actor.sender_name)
+                _enqueue(str(event.id), addr, link, attached, clean_message, display_sender)
         except Exception:  # noqa: BLE001 — 큐잉/발송 실패는 이력에 남기고 계속
             logger.exception("[report_share] dispatch failure: event_id=%s", event.id)
             event.status = "failed"

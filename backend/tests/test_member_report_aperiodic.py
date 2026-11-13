@@ -130,3 +130,41 @@ def test_place_samples_격자_배치와_빈칸_NaN():
     arr = ap.place_samples([(0.0, 1.0, 2.0), (4.0, 3.0, 4.0), (12.0, 5.0, 6.0)], 0.0, 20.0)
     assert arr[0, 0] == 1.0 and arr[1, 1] == 4.0 and arr[0, 3] == 5.0
     assert np.isnan(arr[0, 2])
+
+
+def test_chunk_utc_span_ms_앵커로_절대구간을_계산():
+    h = {"anchor": {"utc_us": "1794302909649000", "sample_index": 0}, "first_sample_index": 250, "sample_count": 2500}
+    lo, hi = ap.chunk_utc_span_ms(h)
+    assert lo == pytest.approx(1794302909649 + 1000.0)
+    assert hi - lo == pytest.approx(10000.0)
+    assert ap.chunk_utc_span_ms({"anchor": {"utc_us": None, "sample_index": 0}, "first_sample_index": 0, "sample_count": 1}) is None
+    assert ap.chunk_utc_span_ms(None) is None
+
+
+def test_상대_start_ms_청크도_읽는다_UTC_앵커_기준_필터(monkeypatch):
+    """회귀: EEGRawChunk.start_ms/end_ms 는 세션 시작 기준 상대 ms(음수 가능). 절대 UTC 구간과 직접 비교하면 전부 걸러졌다."""
+    t_lo = 1_794_300_000_000.0
+    header = {"anchor": {"utc_us": str(int(t_lo * 1000)), "sample_index": 0}, "first_sample_index": 0, "sample_count": 2500}
+    read = []
+    row = SimpleNamespace(schema_version="mb-biosignal-raw-v2", header=header, object_key="k", stream_id="s", segment_id="g",
+                          chunk_index=0, start_ms=-96.0, end_ms=9_900.0, session_id=uuid.uuid4(), participant_id=uuid.uuid4(),
+                          id=uuid.uuid4(), checksum="0" * 64, size_bytes=1, object_version_id=None)
+
+    def reader(key):
+        read.append(key)
+        return None  # 다운로드 시도만 확인(디코딩은 다른 테스트가 다룬다)
+
+    ap.load_eeg_array([row], reader, t_lo, t_lo + 60_000)
+    assert read == ["k"]  # 상대 start_ms(-96) 때문에 건너뛰지 않고 내려받는다
+    read.clear()
+    ap.load_eeg_array([row], reader, t_lo + 3_600_000, t_lo + 3_660_000)
+    assert read == []  # 구간 밖(앵커 기준)이면 내려받지 않는다
+
+
+def test_UTC_앵커_없는_청크는_내려받지_않는다():
+    header = {"anchor": {"utc_us": None, "sample_index": 0}, "first_sample_index": 0, "sample_count": 2500}
+    row = SimpleNamespace(schema_version="mb-biosignal-raw-v2", header=header, object_key="k", stream_id="s", segment_id="g",
+                          chunk_index=0, start_ms=0.0, end_ms=1.0)
+    called = []
+    assert ap.load_eeg_array([row], lambda k: called.append(k), 0.0, 60_000.0) is None
+    assert called == []

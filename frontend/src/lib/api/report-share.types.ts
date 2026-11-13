@@ -3,6 +3,7 @@
 
 export const REPORT_SHARE_MAX_RECIPIENTS = 3
 export const REPORT_SHARE_MAX_MESSAGE_LEN = 200
+export const REPORT_SHARE_MAX_SENDER_NAME_LEN = 20
 
 export type ReportShareStatus = 'queued' | 'sent' | 'failed'
 
@@ -10,6 +11,8 @@ export interface ReportShareRequest {
   recipients: string[]
   attach_pdf: boolean
   message?: string | null
+  /** 보내는 사람 표시 이름(선택, 20자). 비우면 서버가 "MIND BREEZE 회원"을 쓴다. */
+  sender_name?: string | null
 }
 
 export interface ReportShareHistoryItem {

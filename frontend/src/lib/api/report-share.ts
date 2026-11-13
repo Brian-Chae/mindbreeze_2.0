@@ -15,7 +15,11 @@ export type {
   ReportShareResponse,
   ReportShareStatus,
 } from './report-share.types';
-export { REPORT_SHARE_MAX_MESSAGE_LEN, REPORT_SHARE_MAX_RECIPIENTS } from './report-share.types';
+export {
+  REPORT_SHARE_MAX_MESSAGE_LEN,
+  REPORT_SHARE_MAX_RECIPIENTS,
+  REPORT_SHARE_MAX_SENDER_NAME_LEN,
+} from './report-share.types';
 
 export const shareMyReportByEmail = (
   reportId: string,
