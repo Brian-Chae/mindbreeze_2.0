@@ -63,6 +63,7 @@ _ATTR_BY_KEY: dict[str, str] = {
     "emotional_balance": "emotional_stability",
 }
 MIND_KEYS = ("focus", "relaxation", "emotional_balance")
+BODY_ATTR_KEYS = ("motion", "heart_rate", "rmssd", "sdnn", "lf_hf")  # PPG/ACC 유래 — EEG quality 와 무관
 
 # 방향 임계(절대값). None 이면 변화율 5% (`direction_for_change` 공용 규칙)
 _DIRECTION_THRESHOLD: dict[str, Optional[float]] = {
@@ -96,7 +97,8 @@ def person_minutes_from_windows(
     """1초 윈도우 → 지표별 {경과 분: 평균값}.
 
     - 경과 초는 `rel_sec` 속성이 있으면 그것, 없으면 `window_index` (수업 시작 기준).
-    - 분 안에서 quality=='invalid' 가 아닌 윈도우 비율이 50% 미만이면 그 분은 통째로 제외.
+    - 마음 지표: 분 안에서 quality=='invalid' 가 아닌 윈도우 비율이 50% 미만이면 그 분 제외.
+      몸 지표(HR·RMSSD 등): EEG quality 와 무관하게 값이 있는 윈도우 비율 50% 미만이면 제외.
     - 마음 3지표는 `mind_normalizer(key, raw)`(0~100 정규화 훅)가 있으면 적용, None 반환 시 결측.
     """
     buckets: dict[int, list[object]] = {}
@@ -110,12 +112,19 @@ def person_minutes_from_windows(
 
     out: PersonMinutes = {k: {} for k in _ATTR_BY_KEY}
     for minute, ws in buckets.items():
-        valid = [w for w in ws if getattr(w, "quality", "valid") != "invalid"]
-        if not ws or len(valid) / len(ws) < MIN_MINUTE_VALID_RATIO:
+        if not ws:
             continue
+        # quality 는 EEG 판정(포화·lead-off) 전용이다. 몸 지표(HR·RMSSD·SDNN·LF/HF·움직임)는 PPG/ACC 에서 나오고
+        # PPG 무효 창은 업로드 단계에서 이미 null 이므로, EEG invalid 창이어도 값이 있으면 쓴다.
+        eeg_ok = [w for w in ws if getattr(w, "quality", "valid") != "invalid"]
         for key, attr in _ATTR_BY_KEY.items():
+            body = key in BODY_ATTR_KEYS
+            # 시안 nv/n ≥ 0.5 — nv: 몸 지표=그 지표 값이 있는 창, 마음 지표=EEG 유효 창
+            nv = sum(1 for w in ws if _is_num(getattr(w, attr, None))) if body else len(eeg_ok)
+            if nv / len(ws) < MIN_MINUTE_VALID_RATIO:
+                continue
             vals: list[float] = []
-            for w in valid:
+            for w in (ws if body else eeg_ok):
                 raw = getattr(w, attr, None)
                 if not _is_num(raw):
                     continue

@@ -42,13 +42,29 @@ def _fill(first: int, last: int, fn) -> dict[int, float]:
 
 
 # ── 분 집계 ───────────────────────────────────────────────────────
-def test_분_평균과_유효비율_50퍼센트_가드():
-    ws = [W(rel_sec=s, heart_rate=60.0 + (s % 2) * 2) for s in range(60)]  # 0분: 평균 61
-    ws += [W(rel_sec=60 + s, quality="invalid", heart_rate=99.0) for s in range(40)]  # 1분: 유효 20/60 → 제외
-    ws += [W(rel_sec=60 + 40 + s, heart_rate=70.0) for s in range(20)]
+def test_분_평균과_유효비율_50퍼센트_가드_마음지표():
+    # 마음 지표(EEG 유래)는 quality=='invalid' 창을 제외하고, 유효 비율 50% 미만인 분은 통째로 뺀다
+    ws = [W(rel_sec=s, focus_index=2.0 + (s % 2)) for s in range(60)]  # 0분: 평균 2.5
+    ws += [W(rel_sec=60 + s, quality="invalid", focus_index=9.0) for s in range(40)]  # 1분: 유효 20/60 → 제외
+    ws += [W(rel_sec=60 + 40 + s, focus_index=3.0) for s in range(20)]
     out = person_minutes_from_windows(ws)
-    assert out["heart_rate"][0] == pytest.approx(61.0)
-    assert 1 not in out["heart_rate"]  # 0으로 채우지 않고 통째로 빠진다
+    assert out["focus"][0] == pytest.approx(2.5)
+    assert 1 not in out["focus"]  # 0으로 채우지 않고 통째로 빠진다
+
+
+def test_몸지표는_EEG_invalid_창이어도_값이_있으면_쓴다():
+    # dev 실데이터: EEG 가 포화여도(quality=invalid) PPG 유래 HR·RMSSD 는 값이 있다 → 버리지 않는다
+    ws = [W(rel_sec=s, quality="invalid", heart_rate=70.0, rmssd=60.0, focus_index=None) for s in range(60)]
+    out = person_minutes_from_windows(ws)
+    assert out["heart_rate"][0] == pytest.approx(70.0)
+    assert out["rmssd"][0] == pytest.approx(60.0)
+    assert out["focus"] == {}  # 마음 지표는 EEG invalid 라 계속 제외
+
+
+def test_몸지표_값_있는_창_비율_50퍼센트_미만이면_그_분_제외():
+    ws = [W(rel_sec=s, quality="invalid", heart_rate=70.0) for s in range(20)]  # 20/60
+    ws += [W(rel_sec=20 + s, quality="invalid", heart_rate=None) for s in range(40)]
+    assert 0 not in person_minutes_from_windows(ws)["heart_rate"]
 
 
 def test_결측값은_0으로_채우지_않는다():
