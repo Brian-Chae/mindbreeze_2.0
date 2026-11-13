@@ -416,7 +416,7 @@ function deriveBanner(input: HostCaseInput): HostBanner | null {
   }
   if (input.loc === 'online' && input.mic === 'off') {
     return {
-      tone: 'info', icon: 'micoff', title: '마이크 꺼짐',
+      tone: 'info', icon: 'micoff', title: '마이크 꺼짐 · 녹음 일시정지',
       detail: '이 구간은 AI 기록에서 빠져요. 뇌파는 계속 기록돼요.',
       action: { kind: 'act', act: 'mic', label: '마이크 켜기' },
     };

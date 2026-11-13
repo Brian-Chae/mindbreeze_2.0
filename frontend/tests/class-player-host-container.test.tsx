@@ -299,6 +299,15 @@ describe('마이크 끄기 = LiveKit mute + AI 기록 일시정지 (P7)', () => 
     expect(text(one('[data-pz="banner"]'))).toContain('마이크를 쓸 수 없어요');
   });
 
+  it('V11 녹음 정지 감지 시 경고 배너와 [녹음 다시 시작] 버튼', async () => {
+    const restartRecording = vi.fn();
+    await render(<HostLiveContainer {...baseProps({ recorder: { state: 'recording', pause: vi.fn(), resume: vi.fn(), stalled: true, restartRecording } })} />);
+    const banner = one('[data-pz="error-banner"]');
+    expect(text(banner)).toContain('녹음이 멈춘 것 같아요');
+    await click(buttonByText('녹음 다시 시작'));
+    expect(restartRecording).toHaveBeenCalledTimes(1);
+  });
+
   it('토큰이 없으면 화상 브리지를 만들지 않는다', async () => {
     await render(<HostLiveContainer {...baseProps({ liveKit: { token: null, loading: true, error: null, serverUrl: 'wss://lk.test', onDisconnected: vi.fn() } })} />);
     expect(one('[data-testid="lk-room"]')).toBeNull();
