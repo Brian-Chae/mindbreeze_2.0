@@ -32,6 +32,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 
 from app.schemas.member_report import (
+    MIN_VALID_MINUTES,
     BackCover,
     Change,
     Cover,
@@ -207,13 +208,35 @@ def scale_segments(total_min: int) -> list[Segment]:
     return segs
 
 
-def resolve_segments(
-    db, session, last_window_min: Optional[int]
-) -> tuple[list[Segment], str]:
-    """(구간 4개, 원천 이름). 클래스 단계 기록이 DB 에 없어 세션 길이 비례 분할만 쓴다.
+def measured_extent(person: PersonMinutes) -> Optional[tuple[int, int]]:
+    """회원 본인의 실제 측정 범위(첫 유효 분, 마지막 유효 분).
 
-    길이 = 실제 시작~종료, 없으면 예정 시간(duration_min), 윈도우가 그보다 길면 윈도우 끝까지.
+    몸 지표(심박·움직임) 중 더 넓은 쪽을 쓰고, 둘 다 없으면 마음 지표를 쓴다. 중간 공백은 무시한다.
     """
+    def _extent(keys: tuple[str, ...]) -> Optional[tuple[int, int]]:
+        ms = [m for k in keys for m, v in person.get(k, {}).items() if isinstance(v, (int, float))]
+        return (min(ms), max(ms)) if ms else None
+
+    return _extent(("heart_rate", "motion")) or _extent(MIND_SECTION_KEYS)
+
+
+def resolve_segments(
+    db, session, last_window_min: Optional[int], extent: Optional[tuple[int, int]] = None
+) -> tuple[list[Segment], str]:
+    """(구간 4개, 원천 이름). 클래스 단계 기록이 DB 에 없어 비례 분할만 쓴다.
+
+    1순위: 회원의 실제 측정 범위(extent, 유효 분 ≥ MIN_VALID_MINUTES)를 64분 시안 비율로 나누고 시작 오프셋을 더한다.
+    2순위: 길이 = 실제 시작~종료, 없으면 예정 시간(duration_min), 윈도우가 그보다 길면 윈도우 끝까지.
+    """
+    if extent is not None:
+        lo, hi = extent
+        span = hi - lo + 1
+        if span >= MIN_VALID_MINUTES:
+            shifted = [
+                Segment(key=s.key, label=s.label, start_min=s.start_min + lo, end_min=s.end_min + lo)  # type: ignore[arg-type]
+                for s in scale_segments(span)
+            ]
+            return shifted, "proportional:measured_extent"
     started, ended = session.started_at, session.ended_at
     if started is not None and ended is not None:
         total = int((_utc(ended) - _utc(started)).total_seconds() // 60)
@@ -682,7 +705,7 @@ def build_member_report(
     mine_rows = by_pid.get(pid, [])
     person = _to_person_minutes(mine_rows, base_sec, normalizer)
     last_window_min = max((m for ms in person.values() for m in ms), default=None)
-    segments, seg_source = resolve_segments(db, session, last_window_min)
+    segments, seg_source = resolve_segments(db, session, last_window_min, measured_extent(person))
     first, last = segments[0].start_min, segments[-1].end_min
     logger.info("[member_report] 구간 원천=%s 분석=%s–%s분 session=%s", seg_source, first, last, sid)
 

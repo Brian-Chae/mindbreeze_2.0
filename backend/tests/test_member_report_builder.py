@@ -67,6 +67,48 @@ def test_구간_원천은_실제_길이_우선(db):
     assert segs[-1].end_min <= 44
 
 
+def _session91():
+    from datetime import datetime, timezone
+    from types import SimpleNamespace
+
+    t0 = datetime(2026, 11, 1, tzinfo=timezone.utc)
+    return SimpleNamespace(started_at=t0, ended_at=t0 + timedelta(minutes=91), duration_min=91)
+
+
+def test_구간_측정범위가_세션보다_짧으면_그_안에_들어간다():
+    person = {"heart_rate": {m: 70.0 for m in range(3, 57)}, "motion": {m: 0.1 for m in range(3, 57)}}
+    ext = builder.measured_extent(person)
+    assert ext == (3, 56)
+    segs, source = builder.resolve_segments(None, _session91(), 56, ext)
+    assert source == "proportional:measured_extent"
+    assert segs[0].start_min >= 3 and segs[-1].end_min <= 56
+    assert all(a.end_min < b.start_min for a, b in zip(segs, segs[1:]))
+
+
+def test_구간_측정범위_정상이면_64분_시안과_같다():
+    person = {"heart_rate": {m: 70.0 for m in range(0, 64)}}
+    segs, source = builder.resolve_segments(None, _session91(), 63, builder.measured_extent(person))
+    assert source == "proportional:measured_extent"
+    assert [(s.start_min, s.end_min) for s in segs] == [(2, 12), (13, 31), (33, 47), (48, 63)]
+
+
+def test_구간_측정범위_10분_미만이면_기존_방식():
+    person = {"heart_rate": {m: 70.0 for m in range(3, 9)}}
+    segs, source = builder.resolve_segments(None, _session91(), 8, builder.measured_extent(person))
+    assert source == "proportional:actual_duration"
+    assert segs == builder.scale_segments(91)
+    assert builder.resolve_segments(None, _session91(), None, None)[1] == "proportional:actual_duration"
+
+
+def test_구간_중간_공백이_있어도_범위는_첫_분부터_끝_분():
+    minutes = {m: 70.0 for m in list(range(3, 7)) + list(range(20, 57))}  # 7–19분 결측
+    person = {"heart_rate": minutes}
+    assert builder.measured_extent(person) == (3, 56)
+    # 몸 지표가 없으면 마음 지표로
+    assert builder.measured_extent({"heart_rate": {}, "focus": {5: 1.0, 40: 2.0}}) == (5, 40)
+    assert builder.measured_extent({}) is None
+
+
 # ── 조립 ──────────────────────────────────────────────────────────
 def test_착용_회원_리포트가_계약을_통과하고_지표가_채워진다(db):
     world = build_class_world(db, members=MIN_GROUP_N + 1, duration_min=64)
