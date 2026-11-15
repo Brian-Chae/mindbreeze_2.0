@@ -63,6 +63,7 @@ _ATTR_BY_KEY: dict[str, str] = {
     "emotional_balance": "emotional_stability",
 }
 MIND_KEYS = ("focus", "relaxation", "emotional_balance")
+HRV_KEYS = ("rmssd", "sdnn", "lf_hf")  # 0 이하·RMSSD 전부 0 이면 결측으로 취급(0ms 는 생리적으로 불가)
 BODY_ATTR_KEYS = ("motion", "heart_rate", "rmssd", "sdnn", "lf_hf")  # PPG/ACC 유래 — EEG quality 와 무관
 
 # 방향 임계(절대값). None 이면 변화율 5% (`direction_for_change` 공용 규칙)
@@ -111,6 +112,18 @@ def person_minutes_from_windows(
         buckets.setdefault(int(sec) // 60, []).append(w)
 
     out: PersonMinutes = {k: {} for k in _ATTR_BY_KEY}
+    # RMSSD 가 0 이하면 생리적으로 불가 → 값이 아니라 결측(SDD-1111 A10). RMSSD 가 전부 0 이면 같은 PPG 파생인
+    # SDNN·LF/HF 도 신뢰할 수 없어 함께 결측으로 둔다.
+    has_pos_rmssd = any(_is_num(getattr(w, "rmssd", None)) and getattr(w, "rmssd") > 0
+                        for ws_ in buckets.values() for w in ws_)
+
+    def _usable(key: str, raw: object) -> bool:
+        if not _is_num(raw):
+            return False
+        if key in HRV_KEYS:
+            return has_pos_rmssd and float(raw) > 0  # type: ignore[arg-type]
+        return True
+
     for minute, ws in buckets.items():
         if not ws:
             continue
@@ -120,13 +133,13 @@ def person_minutes_from_windows(
         for key, attr in _ATTR_BY_KEY.items():
             body = key in BODY_ATTR_KEYS
             # 시안 nv/n ≥ 0.5 — nv: 몸 지표=그 지표 값이 있는 창, 마음 지표=EEG 유효 창
-            nv = sum(1 for w in ws if _is_num(getattr(w, attr, None))) if body else len(eeg_ok)
+            nv = sum(1 for w in ws if _usable(key, getattr(w, attr, None))) if body else len(eeg_ok)
             if nv / len(ws) < MIN_MINUTE_VALID_RATIO:
                 continue
             vals: list[float] = []
             for w in (ws if body else eeg_ok):
                 raw = getattr(w, attr, None)
-                if not _is_num(raw):
+                if not _usable(key, raw):
                     continue
                 if key in MIND_KEYS and mind_normalizer is not None:
                     raw = mind_normalizer(key, float(raw))

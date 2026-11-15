@@ -1037,6 +1037,10 @@ def register_session_live_namespace(sio):
     logger.info("[WS /session-live] namespace registered")
 
 
+_LEAVE_RETRY_ATTEMPTS = 3
+_LEAVE_RETRY_BACKOFF_SEC = 0.3
+
+
 def _participation_socket(sid, context, action):
     """각 호출은 독립 DB 트랜잭션. 인증 문맥은 서버가 저장한 값만 쓴다."""
     from app.services import class_participation_service as participation
@@ -1047,16 +1051,25 @@ def _participation_socket(sid, context, action):
         return None
     db = _open_db()
     try:
-        try:
-            result = participation.socket_update(db, sid, context, action)
-        except Exception:
-            if action != "leave":
-                raise
-            # 접근 회수·룸 퇴장은 DB 장애에도 진행한다. 실패 lease는 TTL 재정리한다.
-            logger.exception("[session-live] lease 퇴장 저장 실패 sid=%s — TTL 재정리 필요", sid)
-            return None
-        # socket_update 커밋 뒤에만 발행한다.
-        _notify_participant_changed(db.get(Session, UUID(context["session_id"])), db)
+        result = None
+        attempts = _LEAVE_RETRY_ATTEMPTS if action == "leave" else 1
+        for attempt in range(1, attempts + 1):
+            try:
+                result = participation.socket_update(db, sid, context, action)
+                break
+            except Exception:
+                if action != "leave":
+                    raise
+                db.rollback()
+                if attempt < attempts:
+                    # lock_timeout 등 일시 경합: 종료·다른 퇴장과 겹친 것이므로 짧게 물러났다 다시 시도한다.
+                    time.sleep(_LEAVE_RETRY_BACKOFF_SEC * attempt)
+                    continue
+                # 접근 회수·룸 퇴장은 DB 장애에도 진행한다. 실패 lease는 TTL 재정리한다.
+                logger.exception("[session-live] lease 퇴장 저장 실패 sid=%s — TTL 재정리 필요", sid)
+                return None
+        # socket_update 커밋 뒤에만 발행한다. 퇴장 알림은 light 잠금(종료와 users 행 경합 방지).
+        _notify_participant_changed(db.get(Session, UUID(context["session_id"])), db, light=(action == "leave"))
         if context.get("role") == "participant" and result:
             result = {**result, "participants":[p for p in result["participants"] if p["participant_id"] == context.get("participant_id")]}
         return result
@@ -1072,7 +1085,7 @@ def _expire_participation():
     db = _open_db()
     try:
         for result in expire_due(db):
-            _notify_participant_changed(db.get(Session, UUID(result["session_id"])), db)
+            _notify_participant_changed(db.get(Session, UUID(result["session_id"])), db, light=True)
     finally:
         db.close()
 

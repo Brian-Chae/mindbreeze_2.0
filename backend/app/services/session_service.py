@@ -1278,7 +1278,8 @@ def transition_tx(session_id: str, host_id: str, action: str, db: DBSession,
 def transition_after_commit(s: Session, parent, action: str, db: DBSession) -> dict:
     """transition_tx commit 이후의 부수효과(알림·마감·채팅방)와 응답 직렬화. best-effort 이며 실패해도 전이는 유지된다."""
     if parent and action == "end":
-        _notify_participant_changed(s, db)
+        # 종료는 이미 커밋됨 — 알림 잠금 대기가 길어도 종료 응답을 깨지 않도록 light 잠금을 쓴다.
+        _notify_participant_changed(s, db, light=True)
 
     # 클래스 오픈 시점에 세션 채팅방을 보장한다(생성 시 개설이 기본 — 기존 세션 대상 멱등 보완).
     # 입장한 회원이 곧바로 room_id 를 받아 채팅에 참여할 수 있게 한다.
@@ -1296,12 +1297,17 @@ def transition_after_commit(s: Session, parent, action: str, db: DBSession) -> d
             # best-effort 이므로 종료 API 는 계속 진행하되, 실패 트랜잭션은 정리한다.
             logger.exception("[session] video finalize failed (best-effort): %s", exc)
             db.rollback()
-        try:
-            from app.services import audio_service
-            audio_service.finalize_on_session_end(s.id, db)
-        except Exception as exc:
-            # SDD-101: finalize는 best-effort(종료 API 500 방지)이나 예외를 삼키지 않고 로그로 남긴다.
-            logger.exception("[session] audio finalize failed (best-effort): %s", exc)
+        # A1: lock_timeout 등 일시 오류는 rollback 후 1회 재시도한다(outbox upsert 라 멱등).
+        # 리포트 enqueue(publish_pipeline)는 이 시점 = 종료 커밋 이후에만 일어난다.
+        for _attempt in (1, 2):
+            try:
+                from app.services import audio_service
+                audio_service.finalize_on_session_end(s.id, db)
+                break
+            except Exception as exc:
+                # SDD-101: finalize는 best-effort(종료 API 500 방지)이나 예외를 삼키지 않고 로그로 남긴다.
+                logger.exception("[session] audio finalize failed (attempt=%s, best-effort): %s", _attempt, exc)
+                db.rollback()
         # SDD-209(B13): 종료 후 연구 동의 건을 내보내기 큐에 올린다(번들 생성·업로드는 cron 이 이어받는다, best-effort).
         from app.services import research_export_service
 
@@ -1516,7 +1522,7 @@ def _notify_session_state(s: Session) -> None:
         logger.warning("[session] session_state_changed 발행 실패 session=%s: %s", s.id, exc)
 
 
-def _notify_participant_changed(s: Session, db: DBSession | None = None) -> None:
+def _notify_participant_changed(s: Session, db: DBSession | None = None, *, light: bool = False) -> None:
     """participant_changed 이벤트를 best-effort 로 발행한다(호스트 룸 전용).
 
     LIVE-05: 프론트(ClassPlayerPage/SessionDetailPage)가 event.participants 를 기대하므로
@@ -1529,7 +1535,7 @@ def _notify_participant_changed(s: Session, db: DBSession | None = None) -> None
         participation = None
         if db is not None:
             from app.services.class_participation_service import lock_context, _expire, _now, build_snapshot
-            s, locked_participants = lock_context(db, s.id)
+            s, locked_participants = lock_context(db, s.id, light=light)
             now = _now()
             _expire(db, s, now)
             participation = build_snapshot(db, s, locked_participants, now)

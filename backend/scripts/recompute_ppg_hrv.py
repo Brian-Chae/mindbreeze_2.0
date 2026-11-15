@@ -10,6 +10,8 @@
   # 되돌리기
   python scripts/recompute_ppg_hrv.py --rollback /var/lib/mindbreeze/hrv-backup/hrv_recompute_backup_<ts>.jsonl [--confirm-production]
 
+요약의 `participants_gated_out` = 착용·맥박 품질 게이트를 통과한 틱이 10% 미만이라 건드리지 않은 참가자 수(미착용·잡음).
+
 엔진: packages/measurement-core 의 example `recompute_ppg_hrv` (HRV_RECOMPUTE_BIN 으로 경로 지정 가능).
   cd packages/measurement-core && cargo build --release --example recompute_ppg_hrv
 """

@@ -7,6 +7,7 @@
   TS 처리기와 같은 입력에서 소수 6자리까지 일치함을 골든 테스트로 고정했다(웹과 동일 수치).
 - 롤업(`eeg_rollup_service`)은 이 윈도우에서 온디맨드로 파생되므로 별도 저장값이 없다 → 윈도우만 고치면 된다.
 - 원시(S3)가 없거나 디코딩 실패한 참가자의 윈도우는 건드리지 않고 건수만 집계한다.
+- 착용·맥박 품질 게이트(엔진 예제)로 값이 나온 틱이 전체의 10% 미만인 참가자는 미변경(`participants_gated_out`).
 - 새 알고리즘 값이 null(워밍업 등)이고 기존 값이 있는 칸은 덮어쓰지 않는다(건수만 집계, 0·null 치환 금지).
 """
 from __future__ import annotations
@@ -35,6 +36,9 @@ logger = logging.getLogger(__name__)
 HRV_COLS: tuple[str, ...] = ("rmssd", "sdnn", "lf_power", "hf_power", "lf_hf_ratio")
 ENGINE_COLS: tuple[str, ...] = HRV_COLS + ("heart_rate",)
 DEFAULT_TOLERANCE_MS = 750.0
+# 맥박 품질 게이트(엔진 예제)를 통과해 값이 나온 틱이 참가자 전체 틱의 이 비율 미만이면 그 참가자는 미변경.
+# 근거: 책상 위·미착용 잡음 참가자는 값 틱이 거의 없다(dev-recompute-findings.md). 맥박 참가자도 워밍업(10초)·전환으로 일부는 빈다.
+MIN_GATED_TICK_RATIO = 0.10
 SAMPLE_PERIOD_MS = 20.0
 _EPS = 1e-9
 
@@ -74,6 +78,7 @@ class Stats:
     sessions: int = 0
     participants: int = 0
     participants_no_raw: int = 0          # 원시 없음/디코딩 실패 → 미변경
+    participants_gated_out: int = 0       # 착용·맥박 품질 게이트 통과 틱 < 10% → 미변경
     windows_considered: int = 0           # HRV 값이 하나라도 있는 윈도우
     windows_unmatched: int = 0            # 대응하는 재산출 틱 없음 → 미변경
     windows_changed: int = 0
@@ -89,7 +94,7 @@ class Stats:
     def report(self) -> dict:
         return {
             "sessions": self.sessions, "participants": self.participants,
-            "participants_no_raw": self.participants_no_raw,
+            "participants_no_raw": self.participants_no_raw, "participants_gated_out": self.participants_gated_out,
             "windows_considered": self.windows_considered, "windows_unmatched": self.windows_unmatched,
             "windows_changed": self.windows_changed, "cells_changed": self.cells_changed,
             "cells_skipped_new_null": self.cells_skipped_new_null, "medians": self.medians(),
@@ -166,6 +171,12 @@ def plan_participant(db: DBSession, session_id: uuid.UUID, participant_id: uuid.
         if len(seg) >= 50:
             ticks.extend(engine(seg))
     ticks.sort(key=lambda t: t["ts_ms"])
+    if ticks:
+        passed = sum(1 for t in ticks if any(t.get(c) is not None for c in HRV_COLS))
+        if passed / len(ticks) < MIN_GATED_TICK_RATIO:
+            stats.participants_gated_out += 1
+            stats.windows_considered += len(windows)
+            return []
     keys = [t["ts_ms"] for t in ticks]
     plan: list[dict] = []
     for w in windows:

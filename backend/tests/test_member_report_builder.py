@@ -148,11 +148,33 @@ def test_밴드_미착용이면_모든_지표가_결측이고_0으로_채우지_
     assert out["hero"]["pairs"] == [] and out["journey"] is None and out["stable5"] is None
 
 
-def test_신호가_짧으면_poor_signal(db):
+def test_측정_10분_미만이면_미착용판_축약_리포트(db):
+    """SDD-1111 A10 — 유효 6분(< 10분)이면 band_status=not_worn, 전 지표 결측, 히어로 쌍 없음."""
     world = build_class_world(db, members=1, duration_min=64)
-    _fill(db, world, world["participants"][0], 6)  # 유효 6분 < 10분
+    _fill(db, world, world["participants"][0], 6)
     out = builder.build_member_report(db, world["session"].id, world["participants"][0].id)
-    assert out["metrics"]["heart_rate"]["missing_reason"] == "poor_signal"
+    MemberReport.model_validate(out)
+    assert out["meta"]["band_status"] == "not_worn"
+    assert all(s["state"] == "missing" for s in out["metrics"].values())
+    assert out["hero"]["pairs"] == [] and out["journey"] is None and out["stable5"] is None
+
+
+def test_RMSSD_전부_0이면_RMSSD_SDNN_LFHF_결측이고_다른_지표는_유지(db):
+    from app.models.eeg_feature import EEGFeatureWindow as W
+
+    world = build_class_world(db, members=1, duration_min=64)
+    pt = world["participants"][0]
+    _fill(db, world, pt, 60)
+    for w in db.query(W).filter(W.participant_id == pt.id).all():
+        w.rmssd, w.sdnn, w.lf_hf_ratio = 0.0, 0.0, 0.0
+    db.commit()
+    out = builder.build_member_report(db, world["session"].id, pt.id)
+    MemberReport.model_validate(out)
+    assert out["meta"]["band_status"] == "worn"
+    for k in ("rmssd", "lf_hf"):
+        assert out["metrics"][k]["state"] == "missing" and out["metrics"][k]["missing_reason"] == "poor_signal"
+    assert out["metrics"]["heart_rate"]["state"] == "ok"
+    assert all(p["key"] != "rmssd" for p in out["hero"]["pairs"])
 
 
 def test_다른_회원_값이_결과에_섞이지_않는다(db):
@@ -326,3 +348,4 @@ def test_생성_시간_실측_참고(db, monkeypatch, capsys):
     with capsys.disabled():
         print(f"\n[T5 실측] build_member_report(11명 그룹·1/f 포함·로컬 합성) = {elapsed:.1f}s, 1/f={out['metrics']['aperiodic']['state']}/{out['metrics']['aperiodic']['missing_reason']}")
     assert elapsed < 120
+
