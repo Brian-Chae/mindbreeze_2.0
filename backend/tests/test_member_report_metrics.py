@@ -252,3 +252,35 @@ def test_시안_샘플_lf_hf_norm은_값_범위_0에서_1():
     s = _fx()["metrics"]["lf_hf"]["body"]["series"]
     assert all(v is None or 0.0 <= v <= 1.0 for v in s["norm"])
     assert not math.isnan(sum(v for v in s["norm"] if v is not None))
+
+
+# ── SDD-1111 A10 결측 가드 ─────────────────────────────────────────
+def _wins(sec_from, sec_to, **kw):
+    return [W(rel_sec=s, **kw) for s in range(sec_from, sec_to)]
+
+
+def test_RMSSD_전부_0이면_RMSSD_SDNN_LFHF_결측_심박은_유지():
+    ws = _wins(0, 300, heart_rate=70.0, rmssd=0.0, sdnn=0.0, lf_hf_ratio=0.0)
+    out = person_minutes_from_windows(ws)
+    assert out["rmssd"] == {} and out["sdnn"] == {} and out["lf_hf"] == {}
+    assert len(out["heart_rate"]) == 5
+
+
+def test_RMSSD_일부만_0이면_그_창만_제외():
+    ws = _wins(0, 60, heart_rate=70.0, rmssd=30.0, sdnn=40.0, lf_hf_ratio=1.0)
+    ws += _wins(60, 120, heart_rate=70.0, rmssd=0.0, sdnn=40.0, lf_hf_ratio=1.0)
+    out = person_minutes_from_windows(ws)
+    assert 0 in out["rmssd"] and 1 not in out["rmssd"]
+
+
+def test_clock_reset_공백_분은_결측으로_남고_채우지_않는다():
+    ws = _wins(0, 120, heart_rate=70.0) + _wins(300, 420, heart_rate=72.0)  # 2~4분 공백
+    hr = person_minutes_from_windows(ws)["heart_rate"]
+    assert sorted(hr) == [0, 1, 5, 6]
+
+
+def test_구간_값이_없으면_변화량_None():
+    from app.services.member_report_metrics import compute_change
+    minutes = {m: 70.0 for m in range(40, 60)}  # prep 구간(2~12) 값 없음
+    assert compute_change("heart_rate", minutes, DEFAULT_SEGMENTS, 2, 63) is None
+

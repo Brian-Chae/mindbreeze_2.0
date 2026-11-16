@@ -66,11 +66,26 @@ def _decode_rows(blob: bytes) -> list[dict[str, Any]]:
     return [json.loads(line) for line in blob.splitlines() if line.strip()]
 
 
+def row_feature_hash(row: dict[str, Any]) -> tuple[str, bool]:
+    """파일 행의 feature_hash 와 '원래 있었는지' 를 돌려준다.
+
+    웹 생산 경로(feature-v1 레코드)는 feature_hash 를 넣지 않는다(SDD-1111 A2, 운영 KeyError 79회).
+    없으면 행 내용의 정규화 JSON sha256 으로 계산해 쓰되, 라이브 ingest 가 저장한 해시와 같은 값이 아니므로
+    호출부는 DB 비교에 쓰지 않는다(has_original=False).
+    """
+    h = row.get("feature_hash")
+    if isinstance(h, str) and h:
+        return h, True
+    canon = json.dumps({k: v for k, v in row.items() if k != "feature_hash"}, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(canon.encode()).hexdigest(), False
+
+
 def _envelope(row: dict[str, Any], session_id: str, participant_id: str, cs: CaptureStream) -> dict[str, Any]:
     """파일 행 + capture_stream → MetricWindow 원본 형태. 앵커가 없던 stream 은 검증 전용 필드를 영값으로 채운다
     (`_feature_item` 은 clock_anchor_id/clock_uncertainty_ms 를 쓰지 않는다)."""
     return {
         **row,
+        "feature_hash": row_feature_hash(row)[0],
         "session_id": session_id,
         "participant_id": participant_id,
         "stream_id": str(cs.id),
@@ -116,6 +131,7 @@ class ParticipantPlan:
     convert_fail: int = 0
     # 같은 키에 다른 feature_hash — DB(기존) 또는 파일 안 중복. 비어 있어야 적재해도 안전하다.
     conflicts: list[dict[str, Any]] = field(default_factory=list)
+    missing_hash_rows: int = 0  # feature_hash 없는 행(웹 생산 경로) — 해시 비교 없이 키 멱등으로만 처리
     to_insert: list[dict[str, Any]] = field(default_factory=list)  # 값 dict(_stream_id 포함)
     quality: dict[str, int] = field(default_factory=dict)
 
@@ -129,7 +145,7 @@ class ParticipantPlan:
             "files_uploaded": self.files_uploaded, "files_pending_included": self.files_pending_included,
             "files_pending_excluded": self.files_pending_excluded, "file_rows": self.file_rows,
             "unique_seqs": self.unique_seqs, "dup_in_file": self.dup_in_file, "already_in_db": self.already_in_db,
-            "convert_fail": self.convert_fail, "conflicts": len(self.conflicts), "to_insert": self.insert_count,
+            "convert_fail": self.convert_fail, "missing_hash_rows": self.missing_hash_rows, "conflicts": len(self.conflicts), "to_insert": self.insert_count,
             "quality": dict(self.quality),
         }
 
@@ -180,6 +196,7 @@ def plan_participant(db: DBSession, session_id: uuid.UUID, participant_id: uuid.
     # 키 → (stream, 파일 행)
     chosen: dict[tuple[str, int], tuple[CaptureStream, dict[str, Any]]] = {}
     hashes: dict[tuple[str, int], set[str]] = {}
+    no_hash_keys: set[tuple[str, int]] = set()  # 원본에 feature_hash 가 없던 키
     for a in arts:
         if a.stream_id and a.stream_id in by_id:
             cs = by_id[a.stream_id]
@@ -215,7 +232,12 @@ def plan_participant(db: DBSession, session_id: uuid.UUID, participant_id: uuid.
         for r in rows:
             plan.file_rows += 1
             key = (str(cs.id), int(r["sequence"]))
-            hashes.setdefault(key, set()).add(r["feature_hash"])
+            h, original = row_feature_hash(r)
+            if original:
+                hashes.setdefault(key, set()).add(h)
+            else:
+                no_hash_keys.add(key)
+                plan.missing_hash_rows += 1
             if key in chosen:
                 plan.dup_in_file += 1
                 continue
@@ -238,7 +260,7 @@ def plan_participant(db: DBSession, session_id: uuid.UUID, participant_id: uuid.
     for key in sorted(chosen, key=lambda k: (k[0], k[1])):
         cs, r = chosen[key]
         if key in existing:
-            if existing[key] == r["feature_hash"]:
+            if key in no_hash_keys or existing[key] == r.get("feature_hash"):
                 plan.already_in_db += 1
             else:
                 plan.conflicts.append({"kind": "hash_conflict_db", "stream": key[0][:6], "sequence": key[1]})

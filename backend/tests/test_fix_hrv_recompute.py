@@ -189,3 +189,55 @@ def test_cli_blocks_apply_in_production_without_confirm(monkeypatch, tmp_path):
             "sys.exit(m.main(['--apply','--backup-dir','%s']))" % tmp_path)
     r = subprocess.run([sys.executable, "-c", code], cwd=root, capture_output=True, text=True)
     assert r.returncode == 2 and "confirm-production" in r.stderr
+
+
+# ── 착용·맥박 품질 게이트 (specs/fix-rmssd-overestimate/verify-gate.md V7~V9) ──
+
+def _stats_with_noise_participant(db, sid, engine):
+    """잡음(맥박 없음) 참가자: 서비스 저장값이 있는 창 + 엔진이 값을 못 내는 입력."""
+    from app.models.eeg_feature import EEGFeatureWindow
+    pid = uuid.uuid4()
+    for w in range(40, 118):
+        db.add(EEGFeatureWindow(session_id=sid, participant_id=pid, play_group_id="pg1", window_index=w, quality="valid",
+                                device_timestamp_ms=BASE_UTC_US / 1000.0 + (w * 50 - 1) * 20.0,
+                                rmssd=65.0, sdnn=40.0, lf_power=1.0, hf_power=2.0, lf_hf_ratio=0.5, heart_rate=109.0))
+    db.commit()
+    return pid
+
+
+def test_gated_out_participant_untouched_and_counted(env, monkeypatch):
+    db, sid, p_raw, p_no, store = env
+    pid = _stats_with_noise_participant(db, sid, None)
+    seg = [(BASE_UTC_US / 1000.0 + i * 20.0, 5000.0, 6100.0 + (i % 7)) for i in range(6000)]  # 미착용 잡음
+    monkeypatch.setattr(svc, "_decode_segments", lambda chunks, reader: [seg])
+    stats = svc.Stats()
+    before = _vals(db, pid)
+    plan = svc.plan_participant(db, sid, pid, [], store.get, svc.run_rust_engine, stats, svc.DEFAULT_TOLERANCE_MS)
+    assert plan == [] and stats.participants_gated_out == 1 and stats.windows_changed == 0
+    assert _vals(db, pid) == before
+    assert stats.report()["participants_gated_out"] == 1
+
+
+def test_noise_engine_ticks_all_empty_from_desk_signal():
+    """DC 31만~88만·교류 1~3 잡음(착용 규칙은 통과)에서 엔진 출력이 전부 빈 값."""
+    import random
+    rnd = random.Random(3)
+    seg = [(1_800_000_000_000.0 + i * 20.0, 300000.0, 600000.0 + rnd.uniform(-2.5, 2.5)) for i in range(6000)]
+    ticks = svc.run_rust_engine(seg)
+    assert ticks and all(all(t[c] is None for c in svc.HRV_COLS) for t in ticks)
+
+
+def test_pulse_participant_not_gated_out(env):
+    db, sid, p_raw, p_no, store = env
+    stats = _run(db, sid, store, apply=False)
+    assert stats.participants_gated_out == 0 and stats.windows_changed > 20
+
+
+def test_new_null_window_keeps_existing_value(env, tmp_path):
+    """게이트로 새 값이 null 인 창(워밍업 구간 등)은 기존 값을 지우지 않는다."""
+    db, sid, p_raw, p_no, store = env
+    before = _vals(db, p_raw)
+    _run(db, sid, store, apply=True, backup=tmp_path / "b.jsonl")
+    after = _vals(db, p_raw)
+    assert all(v[0] is not None for v in after.values())
+    assert len(after) == len(before)

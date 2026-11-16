@@ -66,6 +66,7 @@ from app.services.member_report_metrics import (
     build_series,
     compute_change,
     is_valid_person,
+    valid_minutes,
     pick_stable_window,
     person_minutes_from_windows,
     segment_values,
@@ -711,9 +712,13 @@ def build_member_report(
 
     # 착용 판정은 EEG 유효 창 기준 유지 — EEG 가 전부 포화·평탄(미착용)인 회차의 PPG 값(고정 HR 등)은 신뢰하지 않는다
     worn = any(r.quality != "invalid" for r in mine_rows)
+    # 측정이 10분 미만이면(예: 58창) 착용했어도 지표 전부가 신뢰 불가 → 미착용판 축약 리포트, 사유는 poor_signal
+    too_short = worn and max((valid_minutes(person.get(k, {}), first, last) for k in (*BODY_KEYS, *MIND_SECTION_KEYS)),
+                             default=0) < MIN_VALID_MINUTES
     band_status = "worn" if worn else "not_worn"
 
-    if not worn:
+    if not worn or too_short:
+        band_status = "not_worn"  # 계약상 not_worn 이면 사유는 band_not_worn 으로 통일(스키마 검증)
         metrics = {k: _missing_section(k, "band_not_worn") for k in (*BODY_KEYS, *MIND_SECTION_KEYS, "aperiodic")}
         meta = _build_meta(db, roster, segments, band_status, None)
         parts = _empty_wording_parts(meta, _hero(meta, [], None), None, None, metrics, band_status)
