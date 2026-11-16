@@ -239,7 +239,34 @@ def _interpretation(key: str, body: Mapping[str, Any], rel: Optional[Mapping[str
     raise KeyError(key)
 
 
+_SHORT_LABEL = {"motion": "움직임", "heart_rate": "심박", "rmssd": "RMSSD", "lf_hf": "LF/HF", "focus": "집중도",
+                "relaxation": "이완도", "emotional_balance": "감정 균형도"}
+_SHORT_UNIT = {"motion": "(가속도 크기)", "heart_rate": "회/분", "rmssd": "ms"}
+
+
+def _apply_short_metric(key: str, body: dict[str, Any]) -> None:
+    """짧은 측정(change 없음): 전후 비교 문장 없이 평균과 시간 흐름만 알려 준다."""
+    body["bridge"] = _BRIDGE[key]
+    body["reading"] = _READING_STD
+    body["result_note"] = _RESULT_NOTE[key]
+    if key == "lf_hf":
+        body["conclusion"] = "LF/HF는 짧은 시간의 흐름만 살펴봐요"
+        body["interpretation"] = "측정 시간이 짧아 전후 비교는 하지 않고, 같은 사람 안의 오르내림만 살펴봐요."
+        body["reading"] = _LF_READING
+        body["source_note"] = _SERIES_NOTE_LF
+        return
+    mean, dec = body.get("overall_mean"), body.get("decimals") or 1
+    unit = _SHORT_UNIT.get(key, "")
+    val = f"{mean:.{dec}f}{unit}" if mean is not None else ""
+    body["conclusion"] = f"짧게 측정된 시간의 {_SHORT_LABEL[key]} 평균은 {val}이었어요."
+    body["interpretation"] = ("측정 시간이 짧아 준비·호흡과 명상 후반을 나눈 변화 비교는 어려웠어요. "
+                              "아래 그래프로 이 시간 동안의 흐름과 평균만 살펴봐요. 그때의 느낌과 함께 읽어 보세요.")
+
+
 def _apply_metric(key: str, body: dict[str, Any], rel: Optional[Mapping[str, Any]]) -> None:
+    if body.get("change") is None:
+        _apply_short_metric(key, body)
+        return
     ch = body["change"]
     body["eyebrow"] = body["eyebrow"]  # 쪽 머리말은 집계 단계(T5) 소관 — 그대로 둔다
     if key == "lf_hf":
@@ -279,6 +306,14 @@ def _dir_of(ch: Optional[Mapping[str, Any]]) -> Optional[str]:
 
 def _hero(report: dict[str, Any], changes: Mapping[str, Optional[Mapping[str, Any]]], worn: bool) -> None:
     hero = report["hero"]
+    if worn and (report.get("meta") or {}).get("short_measure"):
+        hero["headline"] = "측정 시간이 짧아\n변화 비교는 어려웠어요."
+        hero["lead"] = "그래도 이 시간 동안의 몸과 마음의 흐름은 기록해 두었어요."
+        hero["pairs"] = []
+        hero["pair_caption_before"] = hero["pair_caption_after"] = None
+        hero["caution"] = None
+        hero["other_directions"] = None
+        return
     if not worn:
         hero["headline"] = "이번 수업에\n함께해 주셨어요."
         hero["lead"] = "밴드 없이 수업에 머문 시간을 기록으로 남겨요."
@@ -323,7 +358,7 @@ def apply_wording(report: Mapping[str, Any], ai_text: Optional[str] = None) -> d
     changes: dict[str, Optional[dict[str, Any]]] = {}
     for key, sec in (out.get("metrics") or {}).items():
         body = sec.get("body") if sec.get("state") == "ok" else None
-        changes[key] = body["change"] if body else None
+        changes[key] = body.get("change") if body else None
 
     rel = changes.get("relaxation")
     for key, sec in (out.get("metrics") or {}).items():

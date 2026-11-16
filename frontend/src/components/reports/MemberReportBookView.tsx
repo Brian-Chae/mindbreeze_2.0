@@ -4,7 +4,8 @@ import { MemberReportView } from '../member-report';
 import { ReportShareEntry } from '../report-share';
 import { buttonClass } from '../ui';
 import type { MemberReport } from '../../lib/member-report/types';
-import { getMyBookPdf, BOOK_PDF_FILENAME, saveBlobAsFile } from '../../lib/api/member-report';
+import { getMyBookPdf, BOOK_PDF_FILENAME } from '../../lib/api/member-report';
+import { savePdfBlob } from '../../lib/native/save-pdf';
 import { buildNativeShareHandler } from '../../lib/native/share-report';
 
 interface Props {
@@ -22,7 +23,7 @@ export default function MemberReportBookView({ report, reportId }: Props) {
     setBusy(true);
     setError(null);
     try {
-      saveBlobAsFile(await getMyBookPdf(reportId), BOOK_PDF_FILENAME);
+      await savePdfBlob(await getMyBookPdf(reportId), BOOK_PDF_FILENAME, '명상 기록 책 저장');
     } catch {
       setError('책 PDF를 받지 못했습니다. 잠시 후 다시 시도해 주세요.');
     } finally {

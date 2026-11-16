@@ -220,7 +220,7 @@ def _series_svg(ctx: _Ctx, sec: MetricSection, bands: Optional[tuple[str, ...]] 
     mine = {s.segment_key: s.value for s in body.my_segments}
     kwargs = {"band_colors": bands} if bands else {}
     return time_series_svg(
-        body.series, m.segments, m.first_minute, m.last_minute, m.start_clock, body.change.decimals, mine,
+        body.series, m.segments, m.first_minute, m.last_minute, m.start_clock, _dec(body), mine,
         aria_label=label or "수업 네 구간의 그룹 중앙값과 나의 흐름", **kwargs,
     )
 
@@ -282,8 +282,14 @@ def _stable5(ctx: _Ctx) -> str:
     )
 
 
+def _dec(b: MetricBody) -> int:
+    return b.change.decimals if b.change is not None else (b.decimals or 1)
+
+
 def _delta_text(b: MetricBody) -> str:
     c = b.change
+    if c is None:
+        return f"평균 {_num(b.overall_mean, b.decimals or 1)} · 짧은 측정이라 전후 비교 없음"
     return (f"{_num(c.before, c.decimals)} → {_num(c.after, c.decimals)} · "
             f"{_ARROW[c.direction]}{_num(abs(c.delta), c.decimals)} {c.unit}")
 
@@ -310,15 +316,15 @@ def _metric(ctx: _Ctx, sec: MetricSection) -> str:
         d = g.distribution
         rows = "".join(
             f'<tr><th>{_e(ctx.segment_label.get(r.segment_key, r.segment_key))}</th>'
-            f'<td>{_e(_num(r.mine, b.change.decimals))}</td><td>{_e(_num(r.group, b.change.decimals))}</td>'
-            f'<td>{_e(_num(r.diff, b.change.decimals, signed=True))}</td><td>{r.compared_minutes}분</td></tr>'
+            f'<td>{_e(_num(r.mine, _dec(b)))}</td><td>{_e(_num(r.group, _dec(b)))}</td>'
+            f'<td>{_e(_num(r.diff, _dec(b), signed=True))}</td><td>{r.compared_minutes}분</td></tr>'
             for r in g.rows
         )
         dist_legend = _br(g.legend).replace("막대", "<br>막대", 1)
         group = (
             f'<div class="group-support"><b>{_e(g.title)}</b><p class="original-explain">{_e(g.explain)}</p>'
             f'<div class="gs-row"><div class="gs-left"><article class="plot"><h3>통계로 보기</h3>'
-            f'{distribution_svg(d, b.change.decimals, b.series.axis_unit)}<p class="legend">{dist_legend}</p></article></div>'
+            f'{distribution_svg(d, _dec(b), b.series.axis_unit)}<p class="legend">{dist_legend}</p></article></div>'
             f'<div class="gs-right"><table><thead><tr><th>구간</th><th>나의 중앙</th><th>그룹 중앙*</th><th>차이</th>'
             f'<th>비교한 분</th></tr></thead><tbody>{rows}</tbody></table>'
             f'<p class="note">{_br(g.table_note)}</p></div></div></div>'

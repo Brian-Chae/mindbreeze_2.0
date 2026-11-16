@@ -1,4 +1,4 @@
-"""SDD-327 T6 — 명상 기록 책 PDF 렌더 테스트 (픽스처 7종)."""
+"""SDD-327 T6 — 명상 기록 책 PDF 렌더 테스트 (픽스처 8종)."""
 import glob
 import json
 import os
@@ -32,7 +32,7 @@ def _id(p: str) -> str:
 
 
 def test_fixture_count():
-    assert len(FIXTURES) == 7
+    assert len(FIXTURES) == 8
 
 
 @pytest.mark.parametrize("path", FIXTURES, ids=_id)

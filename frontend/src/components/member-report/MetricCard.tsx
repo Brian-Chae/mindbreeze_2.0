@@ -8,6 +8,7 @@ export default function MetricCard({ section, meta }: { section: MetricSection; 
   const body = section.body;
   if (section.state !== 'ok' || !body) return null; // 결측 지표 카드는 생략
   const { change } = body;
+  const dec = change?.decimals ?? body.decimals ?? 1;
   const isFlow = section.key === 'lf_hf'; // LF/HF 는 흐름 전용 — 변화량 렌더 금지
   const segLabel = (key: string): string => meta.segments.find((s) => s.key === key)?.label ?? key;
   return (
@@ -18,7 +19,12 @@ export default function MetricCard({ section, meta }: { section: MetricSection; 
       <div className="mr-plot">
         <div className="mr-plot-head">
           <span>{section.title} · 나의 시간 흐름</span>
-          {!isFlow && (
+          {!isFlow && !change && body.overall_mean != null && (
+            <span className="mr-delta mr-num" data-testid="mr-delta">
+              평균 {fmt(body.overall_mean, dec)} · 짧은 측정이라 전후 비교 없음
+            </span>
+          )}
+          {!isFlow && change && (
             <span className="mr-delta mr-num" data-testid="mr-delta">
               {fmt(change.before, change.decimals)} → {fmt(change.after, change.decimals)} · {directionArrow(change.direction)}
               {fmt(Math.abs(change.delta), change.decimals)} {change.label}
@@ -43,9 +49,9 @@ export default function MetricCard({ section, meta }: { section: MetricSection; 
                 {body.group.rows.map((r) => (
                   <tr key={r.segment_key}>
                     <th>{segLabel(r.segment_key)}</th>
-                    <td className="mr-num">{fmt(r.mine, change.decimals)}</td>
-                    <td className="mr-num">{fmt(r.group, change.decimals)}</td>
-                    <td className="mr-num">{fmtSigned(r.diff, change.decimals)}</td>
+                    <td className="mr-num">{fmt(r.mine, dec)}</td>
+                    <td className="mr-num">{fmt(r.group, dec)}</td>
+                    <td className="mr-num">{fmtSigned(r.diff, dec)}</td>
                     <td className="mr-num">{r.compared_minutes}분</td>
                   </tr>
                 ))}

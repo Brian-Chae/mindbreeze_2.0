@@ -148,15 +148,29 @@ def test_밴드_미착용이면_모든_지표가_결측이고_0으로_채우지_
     assert out["hero"]["pairs"] == [] and out["journey"] is None and out["stable5"] is None
 
 
-def test_측정_10분_미만이면_미착용판_축약_리포트(db):
-    """SDD-1111 A10 — 유효 6분(< 10분)이면 band_status=not_worn, 전 지표 결측, 히어로 쌍 없음."""
+def test_측정_10분_미만이어도_값이_있으면_짧은_리포트로_보여_준다(db):
+    """11/17 — 유효 6분(< 10분)이어도 worn, 지표는 평균·흐름만(change 없음), 전후 쌍·그룹·1/f 없음."""
+    from app.services.member_report_wording import assert_report_clean
+
     world = build_class_world(db, members=1, duration_min=64)
     _fill(db, world, world["participants"][0], 6)
     out = builder.build_member_report(db, world["session"].id, world["participants"][0].id)
     MemberReport.model_validate(out)
+    assert out["meta"]["band_status"] == "worn" and out["meta"]["short_measure"] is True
+    oks = [k for k, s in out["metrics"].items() if s["state"] == "ok"]
+    assert len(oks) >= 3
+    hr = out["metrics"]["heart_rate"]["body"]
+    assert hr["change"] is None and hr["overall_mean"] is not None and hr["group"] is None
+    assert out["metrics"]["aperiodic"]["state"] == "missing"
+    assert out["hero"]["pairs"] == [] and "짧아" in out["hero"]["headline"]
+    assert out["stable5"] is None and out["journey"] is not None
+    assert_report_clean(out)
+
+
+def test_값이_하나도_없으면_미착용_유지(db):
+    world = build_class_world(db, members=1, duration_min=64)
+    out = builder.build_member_report(db, world["session"].id, world["participants"][0].id)
     assert out["meta"]["band_status"] == "not_worn"
-    assert all(s["state"] == "missing" for s in out["metrics"].values())
-    assert out["hero"]["pairs"] == [] and out["journey"] is None and out["stable5"] is None
 
 
 def test_RMSSD_전부_0이면_RMSSD_SDNN_LFHF_결측이고_다른_지표는_유지(db):
