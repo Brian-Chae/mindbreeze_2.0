@@ -349,3 +349,28 @@ def test_생성_시간_실측_참고(db, monkeypatch, capsys):
         print(f"\n[T5 실측] build_member_report(11명 그룹·1/f 포함·로컬 합성) = {elapsed:.1f}s, 1/f={out['metrics']['aperiodic']['state']}/{out['metrics']['aperiodic']['missing_reason']}")
     assert elapsed < 120
 
+
+
+def test_10월27일_이전_알고리즘버전_없는_HRV는_리포트에서_결측_심박은_유지():
+    """대표 결정 11/16 A: 10/27 이전(원시 없어 재산출 불가) 과대 HRV 는 리포트에서 '측정 안 됨'."""
+    from datetime import datetime, timedelta, timezone
+    from types import SimpleNamespace
+    from app.services import member_report_builder as b
+
+    t_old = datetime(2026, 10, 20, 5, 0, tzinfo=timezone.utc)
+    t_new = datetime(2026, 11, 5, 5, 0, tzinfo=timezone.utc)
+
+    def rows(t0, ver):
+        return [SimpleNamespace(device_timestamp_ms=None, created_at=t0 + timedelta(seconds=s), quality="valid",
+                                motion=0.0, heart_rate=70.0, rmssd=300.0, sdnn=250.0, lf_hf_ratio=2.0,
+                                focus_index=None, total_neural_activity=None, emotional_stability=None,
+                                algorithm_version=ver) for s in range(0, 600)]
+
+    old = b._to_person_minutes(rows(t_old, None), int(t_old.timestamp()), None)
+    assert old["rmssd"] == {} and old["sdnn"] == {} and old["lf_hf"] == {}
+    assert len(old["heart_rate"]) == 10
+    # 같은 시기라도 알고리즘 버전이 기록된 행, 그리고 기준 이후 행은 그대로 쓴다
+    tagged = b._to_person_minutes(rows(t_old, "web-ts-1"), int(t_old.timestamp()), None)
+    assert len(tagged["rmssd"]) == 10
+    new = b._to_person_minutes(rows(t_new, None), int(t_new.timestamp()), None)
+    assert len(new["rmssd"]) == 10
