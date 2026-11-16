@@ -10,10 +10,21 @@ import { NO_BAND_NOTICE, readReportQuote } from './ui-v2-report-copy';
 import { UiV2ReportMeasure } from './ui-v2-report-measure';
 import { adaptReportContent, relaxationTrendFromTimeline, type ReportDto } from '../../lib/api/reports';
 import '../../styles/ui-v2-report-v3.css';
+import MemberReportViewer from '../reports/MemberReportViewer';
+import { extractMemberReport } from '../../lib/api/member-report';
 
 interface RailItem { id: string; num: string; label: string }
 
-export function UiV2ReportBody({ report, onClose, hideCounselorComment = false, showRail = false }: { report: ReportDto; onClose?: () => void; hideCounselorComment?: boolean; showRail?: boolean }) {
+export function UiV2ReportBody({ report, onClose, hideCounselorComment = false, showRail = false, ownerActions = false }: { report: ReportDto; onClose?: () => void; hideCounselorComment?: boolean; showRail?: boolean; ownerActions?: boolean }) {
+  // SDD-327 v11 — member_report 가 있으면 앱과 같은 회원 리포트(화면 C1), 없을 때만 기존 v3e 본문(구 리포트 하위호환).
+  if (extractMemberReport(report.content)) {
+    return (
+      <div data-testid="ui-v2-report-body-member">
+        <MemberReportViewer report={report} hideCounselorComment={hideCounselorComment} ownerActions={ownerActions} />
+        {onClose && <div className="u2r3-foot"><button type="button" className="u2r3-back" onClick={onClose}>리포트 닫기</button></div>}
+      </div>
+    );
+  }
   const adapted = adaptReportContent(report.content, 'client');
   const { summary, insights, displayNarrative } = adapted;
   const eeg = adapted.eeg;
