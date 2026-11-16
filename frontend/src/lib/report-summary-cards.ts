@@ -28,9 +28,7 @@ export function buildReportSummaryCards(summary: ReportSummary | null | undefine
     cards.push({ key: 'created_today', label: '오늘 생성', value: summary.created_today, unit: '건', basis: '오늘(한국시간) 생성된 문서', tab: 'created_today' });
   }
   if (isNum(summary.member_unread)) cards.push({ key: 'member_unread', label: '회원 미열람', value: summary.member_unread, unit: '건', basis: '공유된 회원용 리포트 중 아직 열지 않음', tab: 'member_unread' });
-  if (isNum(summary.avg_review_hours) && isNum(summary.review_sample) && summary.review_sample > 0) {
-    cards.push({ key: 'avg_review_hours', label: '평균 승인 대기', value: Math.round(summary.avg_review_hours * 10) / 10, unit: '시간', basis: `최근 30일 직접 승인 ${summary.review_sample}건 · 생성부터 승인까지` });
-  }
+  // 평균 승인 대기 카드는 대표 요청(11/17)으로 노출하지 않는다.
   return cards;
 }
 
