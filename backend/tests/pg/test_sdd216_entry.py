@@ -12,8 +12,13 @@ from tests.pg.test_sdd216_write import NOW
 pytestmark = pytest.mark.pg
 
 
-def test_parent_code_selects_only_open_sessions_and_join_is_idempotent(pg_session):
+def test_parent_code_selects_only_open_sessions_and_join_is_idempotent(pg_session, monkeypatch):
     from app.services import class_code_service as codes
+
+    # 일정은 NOW(11/02) 기준으로 만들어지므로 대기실 입장 구간 판정도 NOW 로 고정한다
+    # (실제 현재 시각이 예정 회차 시간대에 걸리면 실패하던 시각 의존 제거).
+    _orig_pre_open = codes.pre_open_entry_allowed
+    monkeypatch.setattr(codes, "pre_open_entry_allowed", lambda session, now=None: _orig_pre_open(session, now=now or NOW))
 
     a, b, cls, rows = setup_class(pg_session)
     member = user(pg_session, role="client")

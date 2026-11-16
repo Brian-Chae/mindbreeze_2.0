@@ -324,11 +324,28 @@ def _load_windows(db, session_id: uuid.UUID, pids: list[uuid.UUID]) -> dict[uuid
         return {}
     cols = (W.participant_id, W.window_index, W.quality, W.device_timestamp_ms, W.created_at, W.motion,
             W.heart_rate, W.rmssd, W.sdnn, W.lf_hf_ratio, W.focus_index, W.total_neural_activity,
-            W.emotional_stability)
+            W.emotional_stability, W.algorithm_version)
     out: dict[uuid.UUID, list] = {}
     for r in db.query(*cols).filter(W.session_id == session_id, W.participant_id.in_(pids)).all():
         out.setdefault(r.participant_id, []).append(r)
     return out
+
+
+# 10/27(7297324e) 이전 앱 계산의 HRV 는 과대(RMSSD 190~440ms)이고 원시 맥파가 없어 재산출할 수 없다.
+# 그 시기 행(algorithm_version 미기록 + 기준 시각 이전)의 RMSSD·SDNN·LF/HF 는 리포트에서 결측으로 둔다
+# (대표 결정 11/16 A — 저장값은 그대로, 심박수·뇌파는 사용).
+LEGACY_HRV_CUTOFF = datetime(2026, 10, 26, 16, 39, tzinfo=timezone.utc)  # 2026-10-27 01:39 KST
+
+
+def _legacy_hrv(r) -> bool:
+    if getattr(r, "algorithm_version", None):
+        return False
+    created = getattr(r, "created_at", None)
+    if created is None:
+        return False
+    if created.tzinfo is None:
+        created = created.replace(tzinfo=timezone.utc)
+    return created < LEGACY_HRV_CUTOFF
 
 
 def _to_person_minutes(rows: list, base_sec: int, normalizer) -> PersonMinutes:
@@ -338,9 +355,12 @@ def _to_person_minutes(rows: list, base_sec: int, normalizer) -> PersonMinutes:
         ms = _ms_of(r)
         if ms is None:
             continue
+        legacy = _legacy_hrv(r)
         ws.append(SimpleNamespace(
             rel_sec=math.floor(ms / 1000) - base_sec, quality=r.quality, motion=r.motion,
-            heart_rate=r.heart_rate, rmssd=r.rmssd, sdnn=r.sdnn, lf_hf_ratio=r.lf_hf_ratio,
+            heart_rate=r.heart_rate,
+            rmssd=None if legacy else r.rmssd, sdnn=None if legacy else r.sdnn,
+            lf_hf_ratio=None if legacy else r.lf_hf_ratio,
             focus_index=r.focus_index, relaxation_index=r.total_neural_activity,
             emotional_stability=r.emotional_stability))
     return person_minutes_from_windows(ws, mind_normalizer=normalizer)
