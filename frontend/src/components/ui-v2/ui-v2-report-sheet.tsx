@@ -77,7 +77,7 @@ export function UiV2ReportSheet({ reportId, onClose, onReportChange }: { reportI
             {isReportDelayed(report) && <p className="u2-muted" style={{ fontSize: 13 }}>{REPORT_IN_REVIEW_DELAYED_NOTICE}</p>}
           </div>
         )}
-        {!loading && report && !inReview && <div className="u2-sheet"><UiV2ReportBody report={report} onClose={onClose} showRail /></div>}
+        {!loading && report && !inReview && <div className="u2-sheet"><UiV2ReportBody report={report} onClose={onClose} showRail ownerActions /></div>}
         {!loading && report && !inReview && <div className="u2-gap"><PastReportsCompare current={report} /></div>}
       </div>
     </dialog>,
