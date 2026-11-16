@@ -37,6 +37,8 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--rollback", metavar="BACKUP", help="백업 JSONL 로 원래 값 복원")
     ap.add_argument("--backup-dir", default="./hrv_recompute_backup", help="--apply 백업 폴더(기본 ./hrv_recompute_backup)")
     ap.add_argument("--confirm-production", action="store_true", help="ENVIRONMENT=production 에서 쓰기 허용")
+    ap.add_argument("--clear-gated", action="store_true",
+                    help="맥박 게이트 탈락 참가자(통과 틱 10%% 미만)의 남은 HRV 값을 비운다(잡음값 제거, 백업·롤백 가능)")
     ap.add_argument("--tolerance-ms", type=float, default=None, help="윈도우↔재산출 틱 시각 허용 오차(기본 750)")
     args = ap.parse_args(argv)
 
@@ -61,7 +63,8 @@ def main(argv: list[str] | None = None) -> int:
         backup = svc.new_backup_path(Path(args.backup_dir)) if args.apply else None
         stats = svc.run(db, session_ids=ids, reader=storage_service.download_bytes, engine=svc.run_rust_engine,
                         apply=bool(args.apply), backup_path=backup,
-                        tolerance_ms=args.tolerance_ms or svc.DEFAULT_TOLERANCE_MS, progress=progress)
+                        tolerance_ms=args.tolerance_ms or svc.DEFAULT_TOLERANCE_MS,
+                        clear_gated=bool(args.clear_gated), progress=progress)
         out = {"mode": "apply" if args.apply else "dry-run", **stats.report()}
         out["sessions_without_raw_untouched"] = svc.count_sessions_without_raw(db)
         if backup is not None:

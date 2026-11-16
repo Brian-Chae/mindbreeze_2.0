@@ -241,3 +241,38 @@ def test_new_null_window_keeps_existing_value(env, tmp_path):
     after = _vals(db, p_raw)
     assert all(v[0] is not None for v in after.values())
     assert len(after) == len(before)
+
+
+def test_clear_gated_empties_noise_values_with_backup_and_rollback(env, monkeypatch, tmp_path):
+    """--clear-gated: 게이트 탈락 참가자의 남은 HRV 잡음값을 비우고, 백업으로 정확히 되돌린다."""
+    db, sid, p_raw, p_no, store = env
+    pid = _stats_with_noise_participant(db, sid, None)
+    seg = [(BASE_UTC_US / 1000.0 + i * 20.0, 5000.0, 6100.0 + (i % 7)) for i in range(6000)]  # 미착용 잡음
+    monkeypatch.setattr(svc, "_decode_segments", lambda chunks, reader: [seg])
+    before = _vals(db, pid)
+    # 기본(옵션 없음)은 그대로
+    stats = svc.Stats()
+    assert svc.plan_participant(db, sid, pid, [], store.get, svc.run_rust_engine, stats, svc.DEFAULT_TOLERANCE_MS) == []
+    # clear_gated 계획: HRV 5컬럼만 None, heart_rate 등은 대상 아님
+    stats = svc.Stats()
+    plan = svc.plan_participant(db, sid, pid, [], store.get, svc.run_rust_engine, stats,
+                                svc.DEFAULT_TOLERANCE_MS, clear_gated=True)
+    assert plan and stats.windows_cleared == len(plan) == len(before)
+    assert all(set(p["new"]) <= set(svc.HRV_COLS) and all(v is None for v in p["new"].values()) for p in plan)
+    from app.models.record import EEGRawChunk
+    # run() 은 원시 청크가 있는 참가자만 계산하므로 잡음 참가자에게 청크 행 1개를 붙인다(디코딩은 위에서 대체)
+    db.add(EEGRawChunk(session_id=sid, participant_id=pid, stream_id=STREAM_ID, chunk_index=0, signal_type="ppg",
+                       segment_id=SEG_ID, sample_rate=50, channel_count=2, unit="ADC_count",
+                       schema_version="mb-biosignal-raw-v2", checksum="0" * 64, size_bytes=0,
+                       object_key="noise/0.bin", upload_status="uploaded", header={}, first_sample_index=0,
+                       sample_count=0))
+    db.commit()
+    # 적용 → 비워짐, 롤백 → 원래 값
+    backup = tmp_path / "clear.jsonl"
+    svc.run(db, session_ids=[sid], reader=store.get, engine=svc.run_rust_engine, apply=True,
+            backup_path=backup, clear_gated=True)
+    after = _vals(db, pid)
+    assert all(all(x is None for x in v[:5]) for v in after.values())  # HRV 5컬럼 비움
+    assert all(v[5:] == before[k][5:] for k, v in after.items())        # 심박·뇌파 지표는 그대로
+    svc.rollback(db, backup)
+    assert _vals(db, pid) == before
