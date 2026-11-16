@@ -4,27 +4,9 @@ import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { getMyBookPdf, BOOK_PDF_FILENAME, saveBlobAsFile } from '../api/member-report';
 import { isNativeApp } from './platform';
+import { blobToBase64, isShareCancelled } from './save-pdf';
 
 export type NativeShareResult = 'shared' | 'downloaded' | 'cancelled';
-
-/** Blob → base64 본문(데이터 URL 접두 제거). */
-function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(reader.error ?? new Error('PDF 를 읽지 못했습니다'));
-    reader.onload = () => {
-      const text = String(reader.result ?? '');
-      resolve(text.slice(text.indexOf(',') + 1));
-    };
-    reader.readAsDataURL(blob);
-  });
-}
-
-/** 사용자가 공유 시트를 닫은 경우(플러그인 취소 오류)인지 판별한다. */
-function isShareCancelled(err: unknown): boolean {
-  const message = err instanceof Error ? err.message : String(err);
-  return /cancel/i.test(message);
-}
 
 async function shareViaNativePlugin(blob: Blob): Promise<NativeShareResult> {
   const written = await Filesystem.writeFile({

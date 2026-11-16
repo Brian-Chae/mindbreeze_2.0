@@ -57,6 +57,13 @@ def build_opinion_narrative(
 ) -> dict[str, str]:
     """종합 소견. `directions` = 지표키 → up/down/stable (noticeable 판정이 반영된 방향, 결측은 None)."""
     worn = (report.get("meta") or {}).get("band_status") != "not_worn"
+    if worn and (report.get("meta") or {}).get("short_measure"):
+        return {
+            "eyebrow": NARRATIVE_EYEBROW, "title": "짧은 시간의 흐름을 담았어요",
+            "body": ("이번에는 측정 시간이 짧아 준비·호흡과 명상 후반을 나눈 변화 비교는 어려웠어요. 대신 측정된 시간 동안의 "
+                     "평균과 흐름을 각 쪽에 담았어요. " + _CLOSING),
+            "source": "rule",
+        }
     hr = _body(report, "heart_rate")
     hr_dir = directions.get("heart_rate")
     foc_dir, rel_dir = directions.get("focus"), directions.get("relaxation")
@@ -104,7 +111,8 @@ def build_opinion_narrative(
 # ── 다음 걸음 ─────────────────────────────────────────────────────
 def build_next_steps(report: Mapping[str, Any]) -> dict[str, Any]:
     worn = (report.get("meta") or {}).get("band_status") != "not_worn"
-    hr = _body(report, "heart_rate") if worn else None
+    short = (report.get("meta") or {}).get("short_measure")
+    hr = _body(report, "heart_rate") if worn and not short else None
     stable5 = report.get("stable5") if worn else None
 
     if hr is not None:
@@ -153,7 +161,7 @@ def _facts(report: Mapping[str, Any]) -> dict[str, Any]:
     facts: dict[str, Any] = {}
     for key, sec in (report.get("metrics") or {}).items():
         body = sec.get("body") if sec.get("state") == "ok" else None
-        if body:
+        if body and body.get("change"):
             ch = body["change"]
             facts[key] = {"before": ch["before"], "after": ch["after"], "delta": ch["delta"],
                           "unit": ch["unit"], "direction": ch["direction"]}

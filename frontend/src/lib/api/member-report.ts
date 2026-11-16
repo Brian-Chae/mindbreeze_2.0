@@ -18,7 +18,7 @@ export function extractMemberReport(content: Record<string, unknown> | null | un
 
 export const BOOK_PDF_FILENAME = 'mind-breeze-meditation-book.pdf';
 
-/** 브라우저 다운로드 */
+/** 브라우저 다운로드(웹 전용). 앱에서는 a.download 가 동작하지 않으므로 lib/native/save-pdf 의 savePdfBlob 을 쓴다. */
 export function saveBlobAsFile(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');

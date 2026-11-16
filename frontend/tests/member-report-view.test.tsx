@@ -11,6 +11,7 @@ import notWorn from '../src/lib/member-report/__fixtures__/member-report-not-wor
 import partial from '../src/lib/member-report/__fixtures__/member-report-partial-missing-rmssd.json';
 import noRaw from '../src/lib/member-report/__fixtures__/member-report-no-aperiodic-no_raw.json';
 import insufficient from '../src/lib/member-report/__fixtures__/member-report-no-aperiodic-insufficient_window.json';
+import shortFx from '../src/lib/member-report/__fixtures__/member-report-short.json';
 import poorFit from '../src/lib/member-report/__fixtures__/member-report-no-aperiodic-poor_fit.json';
 
 const FORBIDDEN = ['B5', '건강 수준', '점수', '등급', '스트레스', '우울', '진단합니다', '위험'];
@@ -22,6 +23,7 @@ const fixtures: [string, MemberReport][] = [
   ['no-aperiodic-no_raw', noRaw as unknown as MemberReport],
   ['no-aperiodic-insufficient_window', insufficient as unknown as MemberReport],
   ['no-aperiodic-poor_fit', poorFit as unknown as MemberReport],
+  ['short', shortFx as unknown as MemberReport],
 ];
 
 /** 요소 경계를 공백으로 구분한 화면 텍스트(textContent 는 인접 요소가 붙어 오탐 발생) */

@@ -79,6 +79,7 @@ class MemberMeta(_Strict):
     segments: list[Segment]
     first_minute: int  # 분석 시작 분 (시안 2)
     last_minute: int  # 분석 종료 분 (시안 63)
+    short_measure: bool = False  # 유효 측정 < MIN_VALID_MINUTES — 전후 비교 없이 평균·흐름만 보여 준다(11/17)
 
 
 # ── 요약(3쪽) ──────────────────────────────────────────────────────
@@ -259,7 +260,9 @@ class MetricBody(_Strict):
     eyebrow: str
     conclusion: str
     bridge: Optional[str] = None
-    change: Change
+    change: Optional[Change] = None  # 짧은 측정(meta.short_measure)이면 None — 전후 비교 불가
+    overall_mean: Optional[float] = None  # 짧은 측정일 때 측정 전체 평균
+    decimals: Optional[int] = None  # change 가 없을 때 표시 자릿수
     series: MetricSeries
     series_legend: str
     my_segments: list[SegmentValue]

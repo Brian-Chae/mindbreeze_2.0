@@ -48,6 +48,7 @@ export interface MemberMeta {
   segments: Segment[];
   first_minute: number;
   last_minute: number;
+  short_measure?: boolean; // 유효 측정 10분 미만 — 전후 비교 없음
 }
 
 export interface EffectPair {
@@ -110,7 +111,8 @@ export interface GroupBlock {
   title: string; explain: string; distribution: Distribution; rows: SegmentCompareRow[]; table_note: string; legend: string;
 }
 export interface MetricBody {
-  eyebrow: string; conclusion: string; bridge: string | null; change: Change; series: MetricSeries;
+  eyebrow: string; conclusion: string; bridge: string | null; change: Change | null; // 짧은 측정이면 null
+  overall_mean?: number | null; decimals?: number | null; series: MetricSeries;
   series_legend: string; my_segments: SegmentValue[]; interpretation: string; reading: string | null;
   result_note: string | null; source_note: string | null; group: GroupBlock | null; group_hidden_reason: 'min_n' | null;
 }

@@ -483,6 +483,26 @@ def _metric_section(
     return MetricSection(key=key, title=title, chapter=chapter, state="ok", body=body), change  # type: ignore[arg-type]
 
 
+_SHORT_UNIT_LABEL = {"motion": "움직임", "heart_rate": "심박", "rmssd": "RMSSD", "lf_hf": "LF/HF", "focus": "집중도",
+                     "relaxation": "이완도", "emotional_balance": "감정 균형도"}
+
+
+def _short_section(key: str, mine: Minutes, first: int, last: int) -> MetricSection:
+    """짧은 측정(유효 < MIN_VALID_MINUTES) 지표 섹션 — 전후 변화·그룹 없이 평균과 시간 흐름만. 유효 분 0이면 poor_signal."""
+    title, chapter = _TITLES[key]
+    vals = [v for m, v in mine.items() if first <= m <= last and isinstance(v, (int, float))]
+    if not vals:
+        return _missing_section(key, "poor_signal")
+    dec = METRIC_DECIMALS[key]
+    body = MetricBody(
+        eyebrow=_EYEBROW[key], conclusion="", bridge=None, change=None, overall_mean=round(sum(vals) / len(vals), dec),
+        decimals=dec, series=build_series(key, mine, first, last),
+        series_legend=_LF_HF_LEGEND if key == "lf_hf" else _SERIES_LEGEND_NO_GROUP, my_segments=[],
+        interpretation="", reading=None, result_note=None, source_note=_LF_HF_SOURCE if key == "lf_hf" else None,
+        group=None, group_hidden_reason=None if key == "lf_hf" else "min_n")
+    return MetricSection(key=key, title=title, chapter=chapter, state="ok", body=body)  # type: ignore[arg-type]
+
+
 def _aperiodic_section(ap: _ApResult, segments: list[Segment], first: int, last: int) -> MetricSection:
     """1/f 섹션. 준비·호흡/명상 후반 값이 모두 있어야 전후 변화를 낸다. 그룹은 만들지 않는다(group=None)."""
     prep = ap.by_segment.get("prep")
@@ -732,18 +752,23 @@ def build_member_report(
 
     # 착용 판정은 EEG 유효 창 기준 유지 — EEG 가 전부 포화·평탄(미착용)인 회차의 PPG 값(고정 HR 등)은 신뢰하지 않는다
     worn = any(r.quality != "invalid" for r in mine_rows)
-    # 측정이 10분 미만이면(예: 58창) 착용했어도 지표 전부가 신뢰 불가 → 미착용판 축약 리포트, 사유는 poor_signal
-    too_short = worn and max((valid_minutes(person.get(k, {}), first, last) for k in (*BODY_KEYS, *MIND_SECTION_KEYS)),
-                             default=0) < MIN_VALID_MINUTES
+    # 11/17 대표 결정: 10분 미만이어도 값이 있으면 보여 준다. 값이 하나도 없을 때만 미착용으로 본다.
+    keys_all = (*BODY_KEYS, *MIND_SECTION_KEYS)
+    has_values = any(valid_minutes(person.get(k, {}), -10**9, 10**9) > 0 for k in keys_all)
+    worn = worn and has_values
+    short = worn and max((valid_minutes(person.get(k, {}), first, last) for k in keys_all),
+                         default=0) < MIN_VALID_MINUTES
     band_status = "worn" if worn else "not_worn"
 
-    if not worn or too_short:
-        band_status = "not_worn"  # 계약상 not_worn 이면 사유는 band_not_worn 으로 통일(스키마 검증)
-        metrics = {k: _missing_section(k, "band_not_worn") for k in (*BODY_KEYS, *MIND_SECTION_KEYS, "aperiodic")}
+    if not worn:
+        metrics = {k: _missing_section(k, "band_not_worn") for k in (*keys_all, "aperiodic")}
         meta = _build_meta(db, roster, segments, band_status, None)
         parts = _empty_wording_parts(meta, _hero(meta, [], None), None, None, metrics, band_status)
         parts["hero"] = parts["hero"].model_copy(update={"stable_summary": None})
         return _finish(_apply_wording(_dump(parts)))
+
+    if short:
+        return _build_short_report(db, roster, person, segments, first, last)
 
     others_minutes: dict[str, PersonMinutes] = {
         str(r.id): _to_person_minutes(by_pid.get(r.id, []), base_sec, normalizer) for r in roster.others}
@@ -779,6 +804,32 @@ def build_member_report(
         if win is not None else "이번 수업에서는 안정된 5분을 고를 만큼 움직임·심박 신호가 충분하지 않았어요.",
         footer_note="심박·이완도·움직임은 서비스 1분 지표예요. 이완도에는 임상 표준 척도를 적용하지 않아요.")
     parts = _empty_wording_parts(meta, _hero(meta, pairs, stable), journey, stable, metrics, band_status)
+    return _finish(_apply_wording(_dump(parts)))
+
+
+def _build_short_report(db, roster: _Roster, person: PersonMinutes, segments: list[Segment], first: int, last: int) -> dict:
+    """유효 측정 < 10분: 구간 전후 비교·그룹·1/f 없이 평균·시간 흐름만. 분석 범위는 실제 측정 범위(첫~끝 유효 분)."""
+    ext = measured_extent(person)
+    if ext is not None:
+        first, last = ext
+    span = last - first + 1
+    shifted = [Segment(key=sg.key, label=sg.label, start_min=sg.start_min + first, end_min=sg.end_min + first)  # type: ignore[arg-type]
+               for sg in scale_segments(span)]
+    last = max(last, shifted[-1].end_min)
+    metrics: dict = {k: _short_section(k, person.get(k, {}), first, last) for k in (*BODY_KEYS, *MIND_SECTION_KEYS)}
+    metrics["aperiodic"] = _missing_section("aperiodic", "insufficient_window")
+    meta = _build_meta(db, roster, shifted, "worn", None).model_copy(
+        update={"short_measure": True, "first_minute": first, "last_minute": last,
+                "basis_text": f"측정 {first}–{last}분 · 측정 시간이 짧아 전후 비교 없음"})
+    ok_keys = {k for k, sec in metrics.items() if sec.state == "ok"}
+    journey = Journey(
+        eyebrow="02 / 수업 여정", title="짧은 시간의 몸과 마음을 담았어요",
+        body="측정 시간이 짧아 구간별 이야기는 담지 않았어요. 아래 그림은 같은 시간에 몸의 움직임과 심박, 이완도 지표가 어떻게 "
+             "오르내렸는지 보여 줘요.",
+        chart_keys=[k for k in ("motion", "heart_rate", "relaxation") if k in ok_keys],  # type: ignore[misc]
+        stable_basis_note="측정 시간이 짧아 안정된 5분은 고르지 않았어요.",
+        footer_note="심박·이완도·움직임은 서비스 1분 지표예요. 이완도에는 임상 표준 척도를 적용하지 않아요.")
+    parts = _empty_wording_parts(meta, _hero(meta, [], None), journey, None, metrics, "worn")
     return _finish(_apply_wording(_dump(parts)))
 
 
