@@ -84,6 +84,7 @@ class Stats:
     windows_changed: int = 0
     cells_changed: int = 0
     cells_skipped_new_null: int = 0
+    windows_cleared: int = 0              # --clear-gated: 게이트 탈락 참가자의 잡음 HRV 값을 비운 윈도우
     before: dict[str, list[float]] = field(default_factory=lambda: {c: [] for c in HRV_COLS})
     after: dict[str, list[float]] = field(default_factory=lambda: {c: [] for c in HRV_COLS})
 
@@ -97,7 +98,8 @@ class Stats:
             "participants_no_raw": self.participants_no_raw, "participants_gated_out": self.participants_gated_out,
             "windows_considered": self.windows_considered, "windows_unmatched": self.windows_unmatched,
             "windows_changed": self.windows_changed, "cells_changed": self.cells_changed,
-            "cells_skipped_new_null": self.cells_skipped_new_null, "medians": self.medians(),
+            "cells_skipped_new_null": self.cells_skipped_new_null, "windows_cleared": self.windows_cleared,
+            "medians": self.medians(),
         }
 
 
@@ -154,7 +156,8 @@ def _changed(old: float | None, new: float | None) -> bool:
 
 
 def plan_participant(db: DBSession, session_id: uuid.UUID, participant_id: uuid.UUID, chunks: list[EEGRawChunk],
-                     reader: Reader, engine: Engine, stats: Stats, tolerance_ms: float) -> list[dict] | None:
+                     reader: Reader, engine: Engine, stats: Stats, tolerance_ms: float,
+                     clear_gated: bool = False) -> list[dict] | None:
     """변경 계획: [{id, old:{col:val}, new:{col:val}}]. 원시를 못 쓰면 None."""
     segments = _decode_segments(chunks, reader)
     windows = list(db.execute(select(EEGFeatureWindow).where(
@@ -176,7 +179,19 @@ def plan_participant(db: DBSession, session_id: uuid.UUID, participant_id: uuid.
         if passed / len(ticks) < MIN_GATED_TICK_RATIO:
             stats.participants_gated_out += 1
             stats.windows_considered += len(windows)
-            return []
+            if not clear_gated:
+                return []
+            # 맥박이 확인되지 않은 참가자 — 남은 HRV 값은 잡음에서 나온 것이므로 비운다(백업·롤백 대상).
+            plan = []
+            for w in windows:
+                old = {c: getattr(w, c) for c in HRV_COLS if getattr(w, c) is not None}
+                if old:
+                    plan.append({"id": str(w.id), "session_id": str(session_id), "old": old,
+                                 "new": {c: None for c in old}})
+            stats.windows_cleared += len(plan)
+            stats.windows_changed += len(plan)
+            stats.cells_changed += sum(len(p["new"]) for p in plan)
+            return plan
     keys = [t["ts_ms"] for t in ticks]
     plan: list[dict] = []
     for w in windows:
@@ -224,7 +239,7 @@ def count_sessions_without_raw(db: DBSession) -> int:
 
 
 def run(db: DBSession, *, session_ids: list[uuid.UUID], reader: Reader, engine: Engine, apply: bool,
-        backup_path: Path | None, tolerance_ms: float = DEFAULT_TOLERANCE_MS,
+        backup_path: Path | None, tolerance_ms: float = DEFAULT_TOLERANCE_MS, clear_gated: bool = False,
         progress: Callable[[str], None] = lambda m: None) -> Stats:
     """회차 단위 트랜잭션. apply=False 면 DB 를 전혀 쓰지 않는다. apply=True 면 회차별로 백업 기록 → UPDATE → commit."""
     stats = Stats()
@@ -249,7 +264,7 @@ def run(db: DBSession, *, session_ids: list[uuid.UUID], reader: Reader, engine: 
             stats.windows_unmatched += count_hrv_windows(db, sid, pid)
         for pid, chunks in by_participant.items():
             stats.participants += 1
-            plan = plan_participant(db, sid, pid, chunks, reader, engine, stats, tolerance_ms)
+            plan = plan_participant(db, sid, pid, chunks, reader, engine, stats, tolerance_ms, clear_gated)
             if plan:
                 session_plan.extend(plan)
         if apply and session_plan:
@@ -263,7 +278,7 @@ def run(db: DBSession, *, session_ids: list[uuid.UUID], reader: Reader, engine: 
                 for p in session_plan:
                     row = db.get(EEGFeatureWindow, uuid.UUID(p["id"]))
                     for c, v in p["new"].items():
-                        setattr(row, c, round(v, 6))
+                        setattr(row, c, None if v is None else round(v, 6))
                 db.commit()
             except Exception:
                 db.rollback()
