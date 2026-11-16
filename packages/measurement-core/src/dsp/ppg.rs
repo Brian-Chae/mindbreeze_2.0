@@ -355,6 +355,45 @@ fn analyze_peaks(red: &[f64]) -> PeakInfo {
     PeakInfo { peak_count: peaks.len(), avg_peak_interval: avg, peak_quality: quality }
 }
 
+// ── 맥박 품질 게이트(라이브·재산출 공유). 근거: dev 조사 — 잡음 구간 교류 SD 0.8~3.0, 실제 맥박 ≥ 9.6 → 사이 6.0.
+/// 1~5Hz 영위상 필터 IR 의 표준편차(카운트) 하한. 이 미만이면 맥박이 없는 신호로 본다.
+pub const PULSE_AC_MIN_SD: f64 = 6.0;
+/// 유효 RR(창 RR 중앙값 ±25% 이내) 비율 하한.
+pub const VALID_RR_MIN_RATIO: f64 = 0.5;
+/// 유효 RR 판정 허용폭(중앙값 대비).
+pub const RR_MEDIAN_TOLERANCE: f64 = 0.25;
+/// 비율을 믿으려면 필요한 최소 RR 개수.
+pub const MIN_RR_FOR_RATIO: usize = 3;
+
+/// IR 1~5Hz 영위상 필터 후 표준편차(카운트).
+pub fn ac_sd(ring: &[PpgPoint], imp: FilterImpl) -> f64 {
+    let ir: Vec<f64> = ring.iter().map(|p| p.ir).collect();
+    let f = ppg_filter_zero_phase(&ir, imp);
+    let n = f.len() as f64;
+    if n < 2.0 {
+        return 0.0;
+    }
+    let mean = f.iter().sum::<f64>() / n;
+    (f.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / n).sqrt()
+}
+
+/// 창 RR 중 중앙값 ±25% 이내 비율. RR 이 너무 적으면 0.
+pub fn valid_rr_ratio(rr: &[f64]) -> f64 {
+    if rr.len() < MIN_RR_FOR_RATIO {
+        return 0.0;
+    }
+    let mut s = rr.to_vec();
+    s.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    let med = s[s.len() / 2];
+    let ok = rr.iter().filter(|&&v| (v - med).abs() <= med * RR_MEDIAN_TOLERANCE).count();
+    ok as f64 / rr.len() as f64
+}
+
+/// 맥박 품질 게이트: 교류 SD ≥ PULSE_AC_MIN_SD 그리고 유효 RR 비율 ≥ VALID_RR_MIN_RATIO.
+pub fn pulse_gate_pass(ac_sd: f64, rr: &[f64]) -> bool {
+    ac_sd >= PULSE_AC_MIN_SD && valid_rr_ratio(rr) >= VALID_RR_MIN_RATIO
+}
+
 /// 윈도 1개 분석(`data.len() >= 50` 는 호출자 책임).
 pub fn analyze(data: &[PpgPoint], imp: FilterImpl) -> PpgResult {
     let processed: &[PpgPoint] = if data.len() >= 500 {

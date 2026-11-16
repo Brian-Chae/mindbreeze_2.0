@@ -363,6 +363,9 @@ struct LatestPpg {
     /// SDD-316: 미착용 구간의 PPG 지표는 모두 invalid(null)+`not_worn`. 구 체크포인트는 false.
     #[serde(default)]
     not_worn: bool,
+    /// 착용 판정은 통과했으나 맥박 품질 게이트(교류 SD·유효 RR)에서 탈락 — PPG 파생 지표만 invalid(null)+`no_pulse`.
+    #[serde(default)]
+    no_pulse: bool,
 }
 
 /// SDD-316 착용 판정 — PPG IR 직류 레벨 히스테리시스(밴드 프로토콜에 PPG 전용 접촉 신호가 없다).
@@ -789,7 +792,7 @@ impl Core {
         if !self.s.wear.worn {
             // 미착용: 분석하지 않고 not_worn 이력만 남긴다(emission 없음 — 웹 TS 처리기도 낼 값이 없다).
             let end_us = ts_us(last_ts);
-            self.s.ppg_hist.push_back(LatestPpg { end_us, observed_ms: last_ts.max(0.0).floor() as u64, hrv: self.s.hrv.snapshot(), resp_reason: Some("not_worn".into()), not_worn: true });
+            self.s.ppg_hist.push_back(LatestPpg { end_us, observed_ms: last_ts.max(0.0).floor() as u64, hrv: self.s.hrv.snapshot(), resp_reason: Some("not_worn".into()), not_worn: true, no_pulse: false });
             if self.s.ppg_hist.len() > 8 {
                 self.s.ppg_hist.pop_front();
             }
@@ -802,7 +805,9 @@ impl Core {
         let hrv = self.s.hrv.snapshot();
         let reason = self.s.hrv.resp_null_reason().map(|s| s.to_string());
         let end_us = ts_us(last_ts);
-        self.s.ppg_hist.push_back(LatestPpg { end_us, observed_ms: last_ts.max(0.0).floor() as u64, hrv: hrv.clone(), resp_reason: reason.clone(), not_worn: false });
+        // 맥박 품질 게이트: 링이 가득 찬 뒤에만 판단. 탈락 시 지표만 null — 창·emission·프레임 송신은 그대로.
+        let no_pulse = win.len() >= PPG_RING && !ppg::pulse_gate_pass(ppg::ac_sd(&win, self.tuning.filter), &res.rr);
+        self.s.ppg_hist.push_back(LatestPpg { end_us, observed_ms: last_ts.max(0.0).floor() as u64, hrv: hrv.clone(), resp_reason: reason.clone(), not_worn: false, no_pulse });
         if self.s.ppg_hist.len() > 8 {
             self.s.ppg_hist.pop_front();
         }
@@ -967,6 +972,7 @@ impl Core {
         let ppg_gate = |p: Option<&LatestPpg>, have_any: bool| -> Result<(), (&'static str, &'static str)> {
             match p {
                 Some(l) if l.not_worn => Err(("invalid", "not_worn")),
+                Some(l) if l.no_pulse => Err(("invalid", "no_pulse")),
                 Some(_) => Ok(()),
                 None if have_any => Err(("gap", "no_recent_ppg")),
                 None => Err(("warming_up", "no_ppg_data")),

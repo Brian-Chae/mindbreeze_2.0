@@ -6,6 +6,22 @@
 #include <stdint.h>
 #include <stddef.h>
 
+// SDD-316: 새 박동이 연속 이 횟수의 창에서 전부 중앙값 ±25% 게이트에 탈락하면 기준 중앙값이 오염(락인)된 것으로 보고
+// RR 버퍼를 비운 뒤 그 박동으로 재시드한다. 웹 TS(AnalysisMetricsService.RR_GATE_RESEED_STREAK)와 같은 값으로 유지한다.
+#define RR_GATE_RESEED_STREAK 12
+
+// 1~5Hz 영위상 필터 IR 의 표준편차(카운트) 하한. 이 미만이면 맥박이 없는 신호로 본다.
+#define PULSE_AC_MIN_SD 6.0
+
+// 유효 RR(창 RR 중앙값 ±25% 이내) 비율 하한.
+#define VALID_RR_MIN_RATIO 0.5
+
+// 유효 RR 판정 허용폭(중앙값 대비).
+#define RR_MEDIAN_TOLERANCE 0.25
+
+// 비율을 믿으려면 필요한 최소 RR 개수.
+#define MIN_RR_FOR_RATIO 3
+
 // 가드 강제 여부. false(기록만) = 판정 사유는 프레임 지표의 `reason` 과 GuardStats 에 남기되
 // 정상 산출한 지표값을 null 로 지우지 않는다(2026-10-28 대표 결정). true 로 되돌리면 무효 창 지표를 invalid(null)로 낸다.
 // 단 갭(Gap)은 분석 자체가 없어 값이 존재하지 않으므로 이 플래그와 무관하게 invalid 다.
