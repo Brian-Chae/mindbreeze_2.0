@@ -31,8 +31,8 @@ describe('리포트 요약 카드', () => {
   it('신규 집계는 값이 있을 때만 카드가 생기고, 표본 0 이면 평균 검토 숨김', () => {
     const keys = buildReportSummaryCards({ ...base, total_members: 2, created_today: 4, member_unread: 2, avg_review_hours: 3.14, review_sample: 0 }).map((c) => c.key);
     expect(keys).toContain('created_today'); expect(keys).toContain('member_unread'); expect(keys).not.toContain('avg_review_hours');
-    const avg = buildReportSummaryCards({ ...base, created_today: 0, avg_review_hours: 3.14, review_sample: 8 }).find((c) => c.key === 'avg_review_hours');
-    expect(avg?.value).toBe(3.1); expect(avg?.basis).toContain('8건');
+    // 평균 승인 대기 카드는 표본이 있어도 노출하지 않는다(11/17 대표 요청)
+    expect(buildReportSummaryCards({ ...base, created_today: 0, avg_review_hours: 3.14, review_sample: 8 }).map((c) => c.key)).not.toContain('avg_review_hours');
   });
   it('카드 클릭이 탭을 바꾸고, 조회 실패는 0 이 아니라 집계 준비 중', () => {
     const onSelect = vi.fn();

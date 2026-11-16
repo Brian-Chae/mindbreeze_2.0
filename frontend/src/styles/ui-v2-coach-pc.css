@@ -188,6 +188,8 @@ html .ui-v2.u2f-home .u2f-home-class-empty { flex-direction: row; align-items: c
 .ui-v2 .u2f-summary__card b.u2f-summary__pending { font-size: 14px; font-weight: 600; color: var(--u2-muted); }
 .ui-v2 .u2f-summary__card small { font-size: 12px; line-height: 1.4; color: var(--u2-muted); }
 @media (min-width: 1024px) { .ui-v2 .u2f-summary { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); } }
+/* 모바일(1024px 미만)에서는 회원·리포트 요약 카드를 숨긴다 (대표 요청 11/17) */
+@media (max-width: 1023px) { .ui-v2 .u2f-summary, .u2f-report-summary, [data-testid="report-summary-pending"] { display: none !important; } }
 .ui-v2 .u2f-clients .u2f-person small, .ui-v2 .u2f-clients .u2f-sub { display: block; }
 
 /* 11/9: 코치 홈 '내 클래스' 카드 스트립·일정 행 서식(회원 홈과 같은 모양) */
