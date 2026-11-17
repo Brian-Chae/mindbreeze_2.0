@@ -131,9 +131,16 @@ const org = (name, fn, o) => scenario(`[기관] ${name}`, async (p) => { await u
 await org('대시보드: 기관명·기관 코드', async (p) => { await expectText(p, '/dashboard/org', 'E2E-테스트기관', 'E2E001', '소속 코치 실적'); });
 await org('코치 관리: 소속 코치 목록', async (p) => {
   const code = (await apiLoginFull('counselor')).user.counselor_code; // 숫자 6자리(SDD-312) — 고정 문자열 대신 실제 값
-  await expectText(p, '/org/counselors', '코치 관리', 'E2E-코치', code);
+  // dev(UI_V2)는 '구성원' 화면, 운영 번들은 기존 '코치 관리' — 대상 화면에 맞춰 확인
+  await go(p, '/org/counselors');
+  const head = await bodyText(p);
+  await expectText(p, '/org/counselors', head.includes('구성원 초대') ? '구성원' : '코치 관리', 'E2E-코치', code);
 });
-await org('코치 초대 폼 노출 (제출 안 함)', async (p) => { await expectText(p, '/dashboard/org', '코치 초대', '초대 발송'); });
+await org('코치 초대 폼 노출 (제출 안 함)', async (p) => {
+  await go(p, '/dashboard/org');
+  if ((await bodyText(p)).includes('구성원')) await expectText(p, '/org/counselors', '구성원 초대'); // UI_V2: 초대는 구성원 화면 버튼
+  else await expectText(p, '/dashboard/org', '코치 초대', '초대 발송');
+});
 await org('내담자·세션·리포트 메뉴 로딩', async (p) => { for (const x of ['/clients', '/sessions', '/reports']) await expectText(p, x); });
 await org('설정: 계정 정보·카드 제목 중복 없음', async (p) => {
   await expectText(p, '/settings', 'E2E-기관관리자', '내 계정');
