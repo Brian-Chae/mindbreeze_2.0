@@ -1522,6 +1522,38 @@ def _notify_session_state(s: Session) -> None:
         logger.warning("[session] session_state_changed 발행 실패 session=%s: %s", s.id, exc)
 
 
+_BAND_RECENT_SECONDS = 15
+
+
+def _recent_feature_participants(db, session_id, participant_ids, now=None) -> set:
+    """최근 _BAND_RECENT_SECONDS 초 안에 feature 가 수신된 참가자 id 집합(코치 화면 band_connected 자가복구용, 읽기 전용).
+
+    몰림 때 band 상태 갱신이 실패해 DB 에 False 로 고착돼도, 실제 데이터가 들어오면 연결로 투영한다.
+    """
+    if not participant_ids:
+        return set()
+    try:
+        from datetime import timedelta as _td
+        from sqlalchemy import func as _f
+
+        cutoff = (now or _now()) - _td(seconds=_BAND_RECENT_SECONDS)
+        rows = (
+            db.query(EEGFeatureWindow.participant_id)
+            .filter(EEGFeatureWindow.session_id == session_id, EEGFeatureWindow.participant_id.in_(list(participant_ids)),
+                    EEGFeatureWindow.created_at >= cutoff)
+            .group_by(EEGFeatureWindow.participant_id)
+            .all()
+        )
+        return {r[0] for r in rows}
+    except Exception:  # noqa: BLE001 — 보정은 best-effort, 실패 시 저장값 그대로
+        logger.warning("[session] 최근 feature 조회 실패(band 보정 생략) session=%s", session_id, exc_info=True)
+        return set()
+
+
+def _effective_band_connected(p, recent: set) -> bool:
+    return bool(p.band_connected) or p.id in recent
+
+
 def _notify_participant_changed(s: Session, db: DBSession | None = None, *, light: bool = False) -> None:
     """participant_changed 이벤트를 best-effort 로 발행한다(호스트 룸 전용).
 
@@ -1549,6 +1581,7 @@ def _notify_participant_changed(s: Session, db: DBSession | None = None, *, ligh
                 for u in db.query(User).filter(User.id.in_(uids)).all():
                     names[u.id] = u.name
 
+        recent = _recent_feature_participants(db, s.id, [p.id for p in active], _now()) if db is not None else set()
         participants = []
         for p in active:
             if p.user_id:
@@ -1564,7 +1597,7 @@ def _notify_participant_changed(s: Session, db: DBSession | None = None, *, ligh
                     "user_id": str(p.user_id) if p.user_id else None,
                     "display_name": display_name,
                     "is_guest": p.user_id is None,
-                    "band_connected": p.band_connected,
+                    "band_connected": _effective_band_connected(p, recent),
                     "device_status": None,
                     "band_battery": p.band_battery,
                     "avg_efficiency": None,
@@ -3114,6 +3147,7 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
     log_state = _participant_log_state(s.status)
     # 참가자별 EEG feature 집계(최신 윈도우 + 평균 두뇌휴식도)
     stats = _aggregate_window_stats(s.id, [p.id for p in active], db)
+    recent = {pid for pid, st in stats.items() if st.get("last_eeg_at") is not None and not _is_stale(st["last_eeg_at"], _now())}
 
     metrics = []
     contact_fail = 0
@@ -3174,7 +3208,7 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
                 "seat_number": None,  # Phase 2: 좌석 배정
                 "consent_eeg": p.consent_eeg,
                 "session_log_state": log_state,
-                "band_connected": p.band_connected,
+                "band_connected": _effective_band_connected(p, recent),
                 "device_status": device_status,
                 "band_battery": p.band_battery,
                 "signal_quality": signal_quality,
