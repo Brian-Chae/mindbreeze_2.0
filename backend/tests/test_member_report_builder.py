@@ -33,6 +33,8 @@ def _no_side_effects(monkeypatch):
     monkeypatch.setattr(report_task, "_maybe_enqueue_class_narrative", lambda *a, **k: None)
     # 원시 EEG(S3) 접근 금지 — 기본은 원시 없음
     monkeypatch.setattr(builder, "_raw_array", lambda *a, **k: None)
+    # SDD-328: 기본 생성은 v2 로 바뀌었다. 이 파일은 v1 회귀 테스트이므로 롤백 플래그로 v1 에 고정한다.
+    monkeypatch.setenv("MEMBER_REPORT_SCHEMA", "v1")
 
 
 def _fill(db, world, participant, minutes, *, hr=lambda i: 75 - i / 60 * 0.3, seed=1):
