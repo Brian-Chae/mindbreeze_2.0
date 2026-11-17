@@ -110,3 +110,80 @@ def test_05_derive_reason_타임아웃_노출(client):
         assert result["reason"] == rps.REASON_TIMEOUT
     finally:
         db.close()
+
+
+# ── 종료 후 회원 리포트 누락 안전망(재큐잉 대상 탐지) ───────────────────────
+def _mk_ended_session(db, host_id: str, minutes_ago: int):
+    from app.models.session import Session
+
+    s = db.query(Session).filter(Session.host_id == host_id).first()
+    s.status = "completed"
+    s.ended_at = datetime.now(timezone.utc) - timedelta(minutes=minutes_ago)
+    db.commit()
+    return s
+
+
+def _mk_participant(db, sid: str, *, included: bool = True):
+    from app.models.session import SessionParticipant
+
+    p = SessionParticipant(session_id=sid, guest_name="테스트 회원", report_included=included)
+    db.add(p)
+    db.flush()
+    return p
+
+
+def test_06_종료후_리포트행_없는_회원은_재큐잉_대상(client):
+    host = _register(client, "wd06c@test.com")
+    sid = _create_session(client, host)
+    db = _db()
+    try:
+        _mk_ended_session(db, host["id"], 60)
+        _mk_participant(db, sid)
+        db.commit()
+        assert sid in rps.find_sessions_needing_report_requeue(db)
+    finally:
+        db.close()
+
+
+def test_07_종료직후_제외참가자는_대상_아님(client):
+    host = _register(client, "wd07c@test.com")
+    sid = _create_session(client, host)
+    db = _db()
+    try:
+        _mk_ended_session(db, host["id"], 10)  # 유예(45분) 전
+        _mk_participant(db, sid)
+        db.commit()
+        assert sid not in rps.find_sessions_needing_report_requeue(db)
+
+        _mk_ended_session(db, host["id"], 60)
+        p = db.query(__import__("app.models.session", fromlist=["SessionParticipant"]).SessionParticipant).filter_by(session_id=sid).first()
+        p.report_included = False  # 제외 참가자 → 대상 아님
+        db.commit()
+        assert sid not in rps.find_sessions_needing_report_requeue(db)
+    finally:
+        db.close()
+
+
+def test_08_pending_analysis_멈춤은_대상_생성중은_보존(client):
+    host = _register(client, "wd08c@test.com")
+    sid = _create_session(client, host)
+    db = _db()
+    try:
+        _mk_ended_session(db, host["id"], 60)
+        p = _mk_participant(db, sid)
+        rep = _mk_report(db, sid, generation_status="processing", rtype="client")
+        rep.participant_id = p.id
+        rep.generation_started_at = _recent()
+        db.commit()
+        assert sid not in rps.find_sessions_needing_report_requeue(db)  # 정상 생성 중
+
+        rep.generation_started_at = _old()
+        db.commit()
+        assert sid in rps.find_sessions_needing_report_requeue(db)  # 30분 초과 정지
+
+        rep.status = "completed"
+        rep.generation_status = "ready"
+        db.commit()
+        assert sid not in rps.find_sessions_needing_report_requeue(db)  # 완료
+    finally:
+        db.close()

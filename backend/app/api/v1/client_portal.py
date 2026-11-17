@@ -257,6 +257,8 @@ def get_client_home(
     latest_report = (
         db.query(Report)
         .filter(Report.user_id == user_id)
+        # 대표 요청(11/17): 생성·승인이 끝난 리포트만 홈에 노출(생성 중 빈 창 방지).
+        .filter(Report.status == "completed")
         .order_by(Report.created_at.desc())
         .first()
     )

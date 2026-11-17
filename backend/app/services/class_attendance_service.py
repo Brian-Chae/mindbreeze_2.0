@@ -16,8 +16,9 @@ def participant_dto(db, participant):
     return {'id':str(participant.id),'session_id':str(participant.session_id),'member_id':str(participant.member_id) if participant.member_id else None,'canonical_member_id':str(member.canonical_member_id or member.id) if member else None,'attendance_status':participant.attendance_status,'attendance_kind':participant.attendance_kind,'entered_at':participant.entered_at.isoformat() if participant.entered_at else None,'makeup_for_session_id':str(participant.makeup_for_session_id) if participant.makeup_for_session_id else None,'makeup_assignment_id':str(assignment.id) if assignment else None}
 
 
-def lock_participants(db, session):
-    return db.query(SessionParticipant).filter_by(session_id=session.id).order_by(SessionParticipant.id).populate_existing().with_for_update().all()
+def lock_participants(db, session, *, key_share=False):
+    """key_share=True 는 FOR NO KEY UPDATE — FK 참조 삽입(feature 윈도우 등)의 KEY SHARE 와 충돌하지 않는다."""
+    return db.query(SessionParticipant).filter_by(session_id=session.id).order_by(SessionParticipant.id).populate_existing().with_for_update(key_share=key_share).all()
 
 
 def eligible_participant(db, participant, *, allow_excused=True, allow_completed=False):

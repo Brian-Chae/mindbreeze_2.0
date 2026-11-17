@@ -709,6 +709,8 @@ def _list_reports_base(uid: UUID, db: DBSession):
             .select_from(Report)
             .join(Session, Session.id == Report.session_id)
             .filter(Report.user_id == uid)
+            # 대표 요청(11/17): 회원 목록에는 생성·승인이 끝난 리포트만 노출(생성 중 빈 창 방지).
+            .filter(Report.status == "completed")
         )
 
     if user and user.role == "org_admin":

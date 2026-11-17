@@ -14,7 +14,10 @@ def _now():
     return datetime.now(timezone.utc)
 
 def lock_context(db, session_id, actor_id=None, *, light=False):
-    """회차·참가행 잠금. light=True 는 퇴장·만료·종료 후 알림처럼 강사 users·클래스·멤버를 바꾸지 않는 경로용이다.
+    """회차·참가행 잠금. 잠금 순서(전 경로 공통, 교착 방지): users → classes → class_members → sessions → session_participants.
+    light 경로는 그 뒤쪽 부분집합(sessions → session_participants)만 같은 순서로 잡고, 행 잠금을 FOR NO KEY UPDATE 로 낮춰
+    feature 저장·lease 삽입의 FK 검사(KEY SHARE)와 충돌하지 않게 한다(11/17 입장 몰림 교착).
+    light=True 는 퇴장·만료·종료 후 알림처럼 강사 users·클래스·멤버를 바꾸지 않는 경로용이다.
 
     종료 트랜잭션의 잠금 순서(users→classes→class_members→sessions→session_participants)의 뒤쪽 부분집합
     (sessions→session_participants)만 같은 순서로 잠가 교착은 없고, 39명 동시 퇴장이 users 행 대기열을
@@ -24,13 +27,13 @@ def lock_context(db, session_id, actor_id=None, *, light=False):
     if row is None:
         raise HTTPException(404, detail={'code':'session_not_found'})
     if light:
-        row = db.query(Session).filter_by(id=row.id).populate_existing().with_for_update().one()
+        row = db.query(Session).filter_by(id=row.id).populate_existing().with_for_update(key_share=True).one()
     elif row.class_id:
         from app.services.class_write_service import lock_class_session
         _, row = lock_class_session(db, row, actor_id)
     else:
         row = db.query(Session).filter_by(id=row.id).populate_existing().with_for_update().one()
-    participants = lock_participants(db, row)
+    participants = lock_participants(db, row, key_share=light)
     return row, participants
 
 def _expire(db, row, now):
@@ -83,7 +86,7 @@ def _authorize(db, row, user_id, credential=None, participant_id=None):
 def snapshot(db, class_id, session_id, user_id, *, entry_credential=None, member_credential=None, now=None):
     now = now or _now()
     try:
-        row, participants = lock_context(db, session_id, user_id)
+        row, participants = lock_context(db, session_id, user_id, light=True)
         if str(row.class_id) != str(class_id):
             raise HTTPException(404, detail={'code':'session_not_found'})
         if member_credential and not user_id:
@@ -111,7 +114,7 @@ def socket_update(db, socket_id, context, action, *, now=None):
     """sid와 인증된 서버 문맥만 사용한다. 클라이언트 heartbeat 본문은 사용하지 않는다."""
     now = now or _now()
     try:
-        row, participants = lock_context(db, context['session_id'], context.get('user_id'), light=(action == 'leave'))
+        row, participants = lock_context(db, context['session_id'], context.get('user_id'), light=True)
         _expire(db, row, now)
         if action == 'leave':
             lease = db.query(SessionPresenceLease).filter_by(id=socket_id, session_id=row.id).first()
