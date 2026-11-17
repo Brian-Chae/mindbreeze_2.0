@@ -134,7 +134,8 @@ await org('코치 관리: 소속 코치 목록', async (p) => {
   // dev(UI_V2)는 '구성원' 화면, 운영 번들은 기존 '코치 관리' — 대상 화면에 맞춰 확인
   await go(p, '/org/counselors');
   const head = await bodyText(p);
-  await expectText(p, '/org/counselors', head.includes('구성원 초대') ? '구성원' : '코치 관리', 'E2E-코치', code);
+  const v2m = head.includes('구성원 초대'); // UI_V2 구성원 화면은 코치 코드 열이 없어 코드 확인은 기존 화면에서만
+  await expectText(p, '/org/counselors', ...(v2m ? ['구성원', 'E2E-코치'] : ['코치 관리', 'E2E-코치', code]));
 });
 await org('코치 초대 폼 노출 (제출 안 함)', async (p) => {
   await go(p, '/dashboard/org');
