@@ -107,6 +107,8 @@ PARTICIPANT_OWNED: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "biosignal_artifacts": (("participant_id",), ()),
     "biosignal_feature_aliases": (("participant_id",), ()),
     "display_snapshots": (("participant_id",), ()),
+    # SDD-326: 밴드 시리얼 이력(기기 식별자 — 탈퇴 시 소거)
+    "session_band_devices": (("participant_id",), ()),
 }
 
 # 타인과 공유되는 행에서 탈퇴자 참조만 NULL 로 바꾼다(nullable FK).
@@ -123,6 +125,8 @@ NULLIFY: dict[str, tuple[str, ...]] = {
     "class_members": ("user_id",),
     "organizations": ("deactivated_by", "primary_admin_id", "owner_user_id"),
     "reports": ("approved_by_user_id",),
+    # SDD-327: 공유 이력 행은 남기고 보낸 사람 연결만 끊는다(FK 도 SET NULL).
+    "report_share_events": ("sender_user_id",),
     "session_participants": ("user_id",),
     "signup_applications": ("reviewed_by",),
     "verification_audits": ("admin_id",),

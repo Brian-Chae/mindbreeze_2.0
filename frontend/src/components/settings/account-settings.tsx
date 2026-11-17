@@ -48,6 +48,6 @@ export default function AccountSettings() {
     {role === 'client' && <Link className="flex min-h-12 items-center text-[15px] text-[#5B1A8A] underline underline-offset-4" to="/app/participation-profile">참여 프로필 관리 ↗</Link>}
     {(role === 'counselor' || (role === 'org_admin' && counselor?.counselor_code)) && <Link className="flex min-h-12 items-center text-[15px] text-[#5B1A8A] underline underline-offset-4" to="/profile/professional">코치 프로필 관리 ↗</Link>}
     {role === 'counselor' && <Link className="flex min-h-12 items-center text-[15px] text-[#5B1A8A] underline underline-offset-4" to="/clients/invite">회원 초대 · 초대 코드 복사 ↗</Link>}
-    {role === 'org_admin' && <Link className="flex min-h-12 items-center text-[15px] text-[#5B1A8A] underline underline-offset-4" to="/org/counselors">기관 구성원 관리 ↗</Link>}
+    {role === 'org_admin' && <Link className="flex min-h-12 items-center text-[15px] text-[#5B1A8A] underline underline-offset-4" to="/counselors">기관 구성원 관리 ↗</Link>}
   </div>;
 }

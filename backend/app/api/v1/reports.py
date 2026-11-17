@@ -22,10 +22,21 @@ from app.schemas.report import (
 from app.services import report_comment_service
 from app.services import report_service
 from app.services import report_email_service
+from app.services import report_share_service
 from app.services.report_pdf_service import pdf_response
 from app.services import report_hierarchy_service
 
 router = APIRouter(prefix="/reports", tags=["reports"])
+
+
+def _token_kind(token: str) -> str | None:
+    """서명 검증 전 토큰 종류만 엿본다(실제 검증은 각 서비스가 수행)."""
+    from jose import jwt as _jwt
+
+    try:
+        return _jwt.get_unverified_claims(token).get("type")
+    except Exception:  # noqa: BLE001
+        return None
 
 
 @router.get("/view", response_model=ReportResponse)
@@ -35,13 +46,39 @@ def view(token: str, response: Response, db: DBSession = Depends(get_db)):
     response.headers["Cache-Control"] = "no-store"
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["X-Content-Type-Options"] = "nosniff"
+    # SDD-327 T14: 공유 토큰(report_share)은 수신자별 jti 검증 경로로 분기한다.
+    if _token_kind(token) == "report_share":
+        return report_share_service.get_report_share_view_content(token, db)
     return report_email_service.get_report_view_content(token, db)
 
 
 @router.get("/view/pdf")
 def view_pdf(token: str, db: DBSession = Depends(get_db)):
-    """기존 report_view 검증을 통과한 메일 수신자에게 PDF를 제공한다."""
-    return pdf_response(report_email_service.get_report_view_content(token, db))
+    """메일 수신자에게 PDF를 제공한다.
+
+    SDD-327: 공유 토큰(report_share)도 수신자별 검증 경로로 받는다. 회원 리포트(member_report)가
+    있으면 명상 기록 책 PDF를, 없으면 기존 리포트 PDF를 돌려준다.
+    """
+    if _token_kind(token) == "report_share":
+        report = report_share_service.get_report_share_view_content(token, db)
+    else:
+        report = report_email_service.get_report_view_content(token, db)
+    content = report.get("content") if isinstance(report, dict) else None
+    if isinstance(content, dict) and content.get("member_report"):
+        from app.services.member_report_book import render_member_report_book
+
+        try:
+            pdf = render_member_report_book(content["member_report"])
+        except Exception:  # noqa: BLE001
+            pdf = None
+        if pdf:
+            return Response(content=pdf, media_type="application/pdf", headers={
+                "Content-Disposition": 'attachment; filename="meditation-record.pdf"',
+                "Cache-Control": "no-store",
+                "Referrer-Policy": "no-referrer",
+                "X-Content-Type-Options": "nosniff",
+            })
+    return pdf_response(report)
 
 
 @router.get("/auto-approve", response_model=ReportAutoApproveSetting)
@@ -93,6 +130,15 @@ def badge_counts(
 ):
     """배지용 경량 집계(unread, pending_review) — 목록 본문을 내려받지 않는다."""
     return report_service.count_reports_badges(current_user["id"], db)
+
+
+@router.get("/summary")
+def report_summary(
+    current_user: dict = Depends(require_roles("counselor", "org_admin")),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-324: 리포트 관리 상단 요약(상태 탭·검색과 무관한 전역 건수)."""
+    return report_hierarchy_service.report_summary(current_user["id"], db)
 
 
 @router.get("/hierarchy")
@@ -239,11 +285,19 @@ def resend_email(
     db: DBSession = Depends(get_db),
 ):
     report_service.require_report_host(report_id, current_user["id"], db)
-    success = report_email_service.resend_report_email(
-        report_id,
-        str(payload.email),
-        db,
+    # SDD-327: 검증·상한·이력은 공유 서비스로 위임한다(응답 계약은 그대로).
+    # 기존 계약 보존을 위해 큐 없이 동기 발송(sync_send)한다. 상담사·기관관리자 300통/일.
+    actor = report_share_service.ShareActor(
+        user_id=current_user["id"],
+        kind="org_admin" if current_user.get("role") == "org_admin" else "counselor",
     )
+    result = report_share_service.share_report(
+        db, report_id, actor, [str(payload.email)], attach_pdf=False, sync_send=True
+    )
+    if result["rejected"]:
+        # 같은 주소 1분 간격 — 실패(success=false)로 오인하지 않게 429 로 알린다.
+        raise HTTPException(429, "같은 주소로는 1분 뒤에 다시 보낼 수 있어요")
+    success = bool(result["sent_ok"])
     # RPT-EMAIL-CONTRACT-004: {success, sent, message} 계약 — 프론트가 성공/실패를 구분할 수 있게 한다.
     return {
         "success": success,

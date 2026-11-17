@@ -799,15 +799,18 @@ def test_RD10_다음_회차는_취소_완료_회차와_과거_일정을_건너�
         db.close()
 
 
-def test_RD10_다음_회차_시각_경계는_현재_시각을_포함하고_1초_전은_제외(client, world):
+def test_RD10_다음_회차_시각_경계는_미시작_회차를_12시간_유예_후_제외(client, world):
     db = _db()
     try:
         host = world["users"]["host_a"]["id"]
         boundary = datetime(2030, 1, 1, 9, 0, 0, tzinfo=timezone.utc)
         _make_class(db, host, "경계 정각", None, [("scheduled", boundary)])
         _make_class(db, host, "경계 1초 전", None, [("scheduled", boundary - timedelta(seconds=1))])
+        _make_class(db, host, "경계 유예 초과", None, [("scheduled", boundary - timedelta(hours=12, seconds=1))])
         assert _summary(db, host, "경계 정각", boundary)["next_session"]["seq"] == 1
-        assert _summary(db, host, "경계 1초 전", boundary)["next_session"] is None
+        # 예정 시각이 지났어도 안 열린 회차는 12시간 유예 안에서 다음 회차로 유지(11/11 seq 건너뜀 수정)
+        assert _summary(db, host, "경계 1초 전", boundary)["next_session"]["seq"] == 1
+        assert _summary(db, host, "경계 유예 초과", boundary)["next_session"] is None
     finally:
         db.close()
 
@@ -850,3 +853,21 @@ def test_클래스_목록_대표_진행자는_다음_회차가_없어도_채워�
     assert items[0]["host"]["id"] == world["users"]["host_a"]["id"]
     item = client.get(f"{API}/classes", headers=_h(world, "host_b")).json()["classes"][0]
     assert item["host"] is not None and item["host"]["id"] == world["users"]["host_b"]["id"]
+
+
+def test_클래스_목록_예정시각이_지났어도_안_열린_회차는_다음_회차로_유지(client, world):
+    """11/11 몸돌봄: 2회차(10:00 예정)가 10:26에도 열리지 않았는데 3회차로 건너뛰던 회귀."""
+    db = _db()
+    try:
+        host = world["users"]["host_a"]["id"]
+        cls = seed_class(db, host_id=host, title="지연 클래스", status="active", access_code=None)
+        late = seed_session(db, host_id=host, class_id=cls.id, seq=2, status="scheduled", scheduled_at=NOW - timedelta(minutes=30))
+        seed_session(db, host_id=host, class_id=cls.id, seq=3, status="scheduled", scheduled_at=NOW + timedelta(days=7))
+        old = seed_session(db, host_id=host, class_id=cls.id, seq=1, status="scheduled", scheduled_at=NOW - timedelta(hours=13))
+        late_id, old_id = str(late.id), str(old.id)
+    finally:
+        db.close()
+    items = {c["title"]: c for c in client.get(f"{API}/classes", headers=_h(world, "host_a")).json()["classes"]}
+    nxt = items["지연 클래스"]["next_session"]
+    # 13시간 넘게 지난 1회차는 제외, 30분 지난 2회차는 유지, 3회차로 건너뛰지 않는다.
+    assert nxt["id"] == late_id and nxt["seq"] == 2 and nxt["id"] != old_id

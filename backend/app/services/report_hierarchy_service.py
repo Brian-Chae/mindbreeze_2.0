@@ -21,7 +21,8 @@ from app.models.user import User
 
 _KST = timezone(timedelta(hours=9))
 _RELEVANT = ("in_progress", "completed")
-_TABS = ("all", "needs_review", "failed")
+_TABS = ("all", "needs_review", "failed", "generation_failed", "created_today", "member_unread")
+_REVIEW_WINDOW_DAYS = 30
 
 
 def age_in_years(birth: date | None, today: date | None = None) -> int | None:
@@ -55,6 +56,7 @@ def _doc_state(report: Report | None, *, session: Session) -> dict | None:
         "delivery_status": report.delivery_status,
         "delivery_attempted_at": report.delivery_attempted_at,
         "is_read": bool(report.is_read),
+        "created_at": report.created_at,
     }
 
 
@@ -64,6 +66,82 @@ def _needs_review(doc: dict | None) -> bool:
 
 def _failed(doc: dict | None) -> bool:
     return bool(doc and doc["status"] == "completed" and doc["delivery_status"] == "failed")
+
+
+def _generation_failed(doc: dict | None) -> bool:
+    return bool(doc and doc["generation_status"] == "partial" and doc["status"] == "error")
+
+
+def _aware(dt: datetime | None) -> datetime | None:
+    if dt is None:
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def _created_today_doc(doc: dict, now: datetime) -> bool:
+    created = _aware(doc.get("created_at"))
+    return bool(created and created.astimezone(_KST).date() == now.astimezone(_KST).date())
+
+
+def _unread_member(m: dict) -> bool:
+    """승인·공유(completed)된 실회원용 리포트 중 미열람. 게스트는 열람 주체가 없어 제외."""
+    doc = m["client_report"]
+    return bool(doc and not m["is_guest"] and doc["status"] == "completed" and not doc["is_read"])
+
+
+def global_report_counts(db: DBSession, session_ids: list, now: datetime | None = None) -> dict:
+    """상태 탭·검색과 무관한 회원용 리포트 전역 집계(세션 범위만 반영). 쿼리 수 상수.
+
+    avg_review_hours 는 '리포트 생성 → 수동 승인' 대기 시간이다(코치 작업 시간 아님). 자동 승인·미승인은 제외하고
+    최근 30일 승인분만 센다. 표본이 없으면 None(0으로 숨기지 않는다).
+    """
+    now = _aware(now) or datetime.now(timezone.utc)
+    out = {
+        "needs_review": 0, "failed_delivery": 0, "generation_failed": 0, "created_today": 0,
+        "member_unread": 0, "total_members": 0, "avg_review_hours": None, "review_sample": 0,
+    }
+    if not session_ids:
+        return out
+    since = now - timedelta(days=_REVIEW_WINDOW_DAYS)
+    hours: list[float] = []
+    cols = (
+        Report.id, Report.participant_id, Report.user_id, Report.status, Report.generation_status,
+        Report.delivery_status, Report.is_read, Report.created_at, Report.approved_at,
+        Report.approval_source, Report.session_id,
+    )
+    rows = db.query(*cols).filter(Report.session_id.in_(session_ids), Report.type == "client").all()
+    parts = db.query(SessionParticipant.id, SessionParticipant.session_id).filter(
+        SessionParticipant.session_id.in_(session_ids), SessionParticipant.is_waitlisted.is_(False)
+    ).all()
+    part_ids = {pid for pid, _ in parts}
+    out["total_members"] = len(parts) + sum(1 for r in rows if r.participant_id and r.participant_id not in part_ids)
+    for r in rows:
+        if r.status == "pending_review":
+            out["needs_review"] += 1
+        if r.status == "completed" and r.delivery_status == "failed":
+            out["failed_delivery"] += 1
+        if r.status == "error" and (r.generation_status or "pending") == "partial":
+            out["generation_failed"] += 1
+        created = _aware(r.created_at)
+        if created and created.astimezone(_KST).date() == now.astimezone(_KST).date():
+            out["created_today"] += 1
+        if r.status == "completed" and not r.is_read and r.user_id is not None:
+            out["member_unread"] += 1
+        approved = _aware(r.approved_at)
+        if r.status == "completed" and approved and created and r.approval_source != "auto" and since <= approved <= now:
+            hours.append(max((approved - created).total_seconds(), 0) / 3600)
+    out["review_sample"] = len(hours)
+    out["avg_review_hours"] = round(sum(hours) / len(hours), 1) if hours else None
+    return out
+
+
+def report_summary(user_id: str, db: DBSession, *, now: datetime | None = None) -> dict:
+    """SDD-324: GET /reports/summary — 계층 조회 무필터와 같은 세션 범위의 전역 요약."""
+    user = db.query(User).filter(User.id == UUID(str(user_id))).first()
+    if user is None or user.status != "active" or user.role not in ("counselor", "org_admin"):
+        raise HTTPException(status_code=403, detail="이 작업을 수행할 권한이 없습니다")
+    sids = [s.id for s in _scoped_sessions(db, user).distinct().all()]
+    return global_report_counts(db, sids, now)
 
 
 def _scoped_sessions(db: DBSession, user: User):
@@ -104,6 +182,7 @@ def build_hierarchy(
     page: int = 1,
     limit: int = 10,
     today: date | None = None,
+    now: datetime | None = None,
 ) -> dict:
     if tab not in _TABS:
         raise HTTPException(status_code=422, detail="알 수 없는 탭입니다")
@@ -122,6 +201,7 @@ def build_hierarchy(
     if date_to:
         session_rows = [s for s in session_rows if stamp(s) and stamp(s).astimezone(_KST).date() <= date_to]
 
+    now = _aware(now) or datetime.now(timezone.utc)
     sids = [s.id for s in session_rows]
     reports = db.query(Report).filter(Report.session_id.in_(sids)).all() if sids else []
     by_session: dict = {}
@@ -213,6 +293,12 @@ def build_hierarchy(
             matched = {m["participant_id"] for m in members if _needs_review(m["client_report"])}
         elif tab == "failed":
             matched = {m["participant_id"] for m in members if _failed(m["client_report"])}
+        elif tab == "generation_failed":
+            matched = {m["participant_id"] for m in members if _generation_failed(m["client_report"])}
+        elif tab == "created_today":
+            matched = {m["participant_id"] for m in members if m["client_report"] and _created_today_doc(m["client_report"], now)}
+        elif tab == "member_unread":
+            matched = {m["participant_id"] for m in members if _unread_member(m)}
         else:
             matched = {m["participant_id"] for m in members}
         if matched_ids is not None:
@@ -222,9 +308,6 @@ def build_hierarchy(
         shown = [m for m in members if m["participant_id"] in matched]
         pending = sum(1 for m in members if _needs_review(m["client_report"]))
         failed_n = sum(1 for m in members if _failed(m["client_report"]))
-        gen_failed = sum(1 for m in members if m["client_report"] and m["client_report"]["generation_status"] == "partial"
-                         and m["client_report"]["status"] == "error")
-        summary["generation_failed"] += gen_failed
         summary["total_sessions"] += 1
         key = f"class:{s.class_id}" if s.class_id else "solo"
         cls = classes.get(s.class_id)
@@ -271,6 +354,10 @@ def build_hierarchy(
     for slot in out.values():
         slot["needs_review"] = sum(x["needs_review"] for x in slot["sessions"])
         slot["session_total"] = len(next(g for g in groups.values() if g["key"] == slot["key"])["sessions"])
+    # 전역 보정(SDD-324): 상태 탭·검색과 무관한 건수. 기존 needs_review/failed_delivery/total_members(검색 반영)는 유지.
+    overall = global_report_counts(db, sids, now)
+    for key in ("generation_failed", "created_today", "member_unread", "avg_review_hours", "review_sample"):
+        summary[key] = overall[key]
     return {
         "summary": summary,
         "groups": list(out.values()),

@@ -234,7 +234,7 @@ describe('역할 경계 회귀', () => {
     const previous = useAuthStore.getState().user;
     useAuthStore.setState({ user: { id: 'org', role: 'org_admin', name: '관리자' } as NonNullable<typeof previous> });
     const html = render(createElement(SidebarNav));
-    expect(html).toContain('href="/org/counselors"');
+    expect(html).toContain('href="/counselors"');
     expect(html).toContain('구성원');
     expect(html).toContain('기관 대시보드');
     expect(html).not.toContain('플레이그라운드');

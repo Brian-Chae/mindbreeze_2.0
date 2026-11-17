@@ -300,3 +300,32 @@ def test_롤백은_recover_표식_행만_지운다(maker, world2, loader, tmp_pa
     rb.REQUIRED_TARGETS = tuple(PREFIXES(world2))
     assert rb.main(["--session", str(world2.session_id), "--targets", *PREFIXES(world2), "--apply"], session_factory=maker) == 0
     assert _cnt(maker, world2, 0) == 3 and _cnt(maker, world2, 0, "rest") == 3
+
+
+def test_feature_hash_없는_행은_KeyError_없이_계획된다(maker, world2):
+    """SDD-1111 A2 — 웹 생산 경로 행엔 feature_hash 가 없다. 태스크가 죽지 않고 해시를 계산해 적재한다."""
+    store = FakeStore()
+    st = start_stream(maker, world2, 0)
+    wins = [window(world2, st, q, 0) for q in range(1, 5)]
+    rows = [{k: v for k, v in file_row(w).items() if k != "feature_hash"} for w in wins]
+    put_artifact(maker, store, world2, 0, rows, seq_no=1)
+    plan = _plan(maker, world2, 0, store)
+    assert plan.missing_hash_rows == 4 and plan.insert_count == 4 and plan.conflicts == []
+    assert plan.summary()["missing_hash_rows"] == 4
+    _, n1 = _apply(maker, world2, 0, store)
+    plan2 = _plan(maker, world2, 0, store)
+    assert n1 == 4 and plan2.insert_count == 0 and plan2.already_in_db == 4 and plan2.conflicts == []
+
+
+def test_row_feature_hash_결정적이고_원본_해시를_우선한다():
+    h, orig = far.row_feature_hash({"sequence": 1, "a": 2})
+    assert orig is False and len(h) == 64 and h == far.row_feature_hash({"a": 2, "sequence": 1})[0]
+    assert far.row_feature_hash({"sequence": 1, "feature_hash": "ab" * 32}) == ("ab" * 32, True)
+
+
+def test_A2_feature_hash_없는_행도_KeyError_없이_계획된다():
+    row = {"sequence": 1, "observed_at_ms": 1}
+    h, original = far.row_feature_hash(row)
+    assert original is False and len(h) == 64
+    assert far.row_feature_hash({**row, "feature_hash": "ab" * 32}) == ("ab" * 32, True)
+    assert far.row_feature_hash(row)[0] == far.row_feature_hash(dict(row))[0]  # 결정적

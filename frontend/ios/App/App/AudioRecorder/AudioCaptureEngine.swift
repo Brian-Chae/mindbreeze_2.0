@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import UIKit
 import AudioRecorderKit
 
 /// AVAudioEngine 입력 탭 → 44.1kHz mono Int16 PCM 으로 변환해 콜백. 인터럽션·라우트 변경 알림을 상태 입력으로 전달한다.
@@ -11,6 +12,10 @@ final class AudioCaptureEngine {
     private let outFormat = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: AudioCaptureEngine.sampleRate, channels: 1, interleaved: true)!
     private var observers: [NSObjectProtocol] = []
     private var running = false
+    // 인터럽션 began 후 ended 미수신 대비 — 10초 넘으면 엔진 재기동 + interruptionEnded 합성
+    private var watchdog = InterruptionWatchdog(timeout: 10)
+    private var watchdogTimer: Timer?
+    private let watchdogLock = NSLock()
 
     var onSamples: (([Int16]) -> Void)?
     var onInput: ((RecorderInput) -> Void)?
@@ -41,12 +46,48 @@ final class AudioCaptureEngine {
         engine.stop()
         observers.forEach(NotificationCenter.default.removeObserver)
         observers.removeAll()
+        watchdogLock.lock(); watchdog.ended(); watchdogLock.unlock()
+        stopWatchdogTimer()
     }
 
     /// 인터럽션 종료·라우트 변경 후 엔진 재기동
-    func restartIfNeeded() {
-        guard running, !engine.isRunning else { return }
-        do { try AudioSessionConfig.apply(); try engine.start() } catch { onFailure?("엔진 재시작 실패") }
+    /// 엔진이 가동 중이면 true. 멈춰 있으면 재기동을 시도하고 성공 여부를 돌려준다.
+    @discardableResult
+    func restartIfNeeded() -> Bool {
+        guard running else { return false }
+        if engine.isRunning { return true }
+        do { try AudioSessionConfig.apply(); try engine.start(); return true } catch { onFailure?("엔진 재시작 실패"); return false }
+    }
+
+    /// 인터럽션 복귀 시도. 엔진 기동에 성공한 경우에만 interruptionEnded 를 합성한다(통화 중 등 정당한 인터럽션은 유지).
+    /// - force: 포그라운드 복귀처럼 타임아웃을 기다리지 않고 즉시 시도
+    private func recheck(force: Bool) {
+        guard running else { return }
+        watchdogLock.lock()
+        let interrupted = watchdog.isInterrupted
+        let due = interrupted && (force || watchdog.shouldAttempt(at: Date().timeIntervalSince1970))
+        if due { watchdog.attempted(at: Date().timeIntervalSince1970) }
+        watchdogLock.unlock()
+        guard interrupted else { restartIfNeeded(); return }
+        guard due else { return }
+        if restartIfNeeded() {
+            watchdogLock.lock(); watchdog.ended(); watchdogLock.unlock()
+            stopWatchdogTimer()
+            onInput?(.interruptionEnded)
+        }
+    }
+
+    private func startWatchdogTimer() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self, self.watchdogTimer == nil else { return }
+            self.watchdogTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in self?.recheck(force: false) }
+        }
+    }
+
+    private func stopWatchdogTimer() {
+        DispatchQueue.main.async { [weak self] in
+            self?.watchdogTimer?.invalidate(); self?.watchdogTimer = nil
+        }
     }
 
     private func handle(_ buf: AVAudioPCMBuffer) {
@@ -68,14 +109,24 @@ final class AudioCaptureEngine {
         let nc = NotificationCenter.default
         observers.append(nc.addObserver(forName: AVAudioSession.interruptionNotification, object: nil, queue: nil) { [weak self] n in
             guard let self = self, let raw = n.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt, let t = AVAudioSession.InterruptionType(rawValue: raw) else { return }
-            if t == .began { self.onInput?(.interruptionBegan) }
-            else {
+            if t == .began {
+                self.watchdogLock.lock(); self.watchdog.began(at: Date().timeIntervalSince1970); self.watchdogLock.unlock()
+                self.startWatchdogTimer()
+                self.onInput?(.interruptionBegan)
+            } else {
+                self.watchdogLock.lock(); self.watchdog.ended(); self.watchdogLock.unlock()
+                self.stopWatchdogTimer()
                 self.restartIfNeeded()
                 self.onInput?(.interruptionEnded)
             }
         })
         observers.append(nc.addObserver(forName: AVAudioSession.routeChangeNotification, object: nil, queue: nil) { [weak self] _ in
             self?.onRouteChange?()
+            self?.recheck(force: false)
+        })
+        // 앱 포그라운드 복귀: 인터럽션이 남아 있으면 즉시 복귀를 시도하고, 엔진이 멈췄으면 재기동한다.
+        observers.append(nc.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: nil) { [weak self] _ in
+            self?.recheck(force: true)
         })
         observers.append(nc.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine, queue: nil) { [weak self] _ in
             guard let self = self else { return }

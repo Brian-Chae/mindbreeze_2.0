@@ -7,6 +7,8 @@ import ReportReviewPane from '../../components/reports/ReportReviewPane';
 import { SettingsSwitch } from '../../components/settings/settings-switch';
 import { ReportSampleModal } from './ReportSamplePage';
 import { getAutoApprove, setAutoApprove } from '../../lib/api/reports';
+import ReportSummaryStrip from '../../components/reports/report-summary-strip';
+import { isUiV2Enabled } from '../../lib/feature-flags';
 import { useAuthStore } from '../../stores/authStore';
 
 export default function ReportsDesktopPage() {
@@ -40,6 +42,14 @@ export default function ReportsDesktopPage() {
       .catch((e) => setNotice(e instanceof Error ? e.message : '자동 승인 설정 조회 실패'))
       .finally(() => setAutoLoaded(true));
   }, [role]);
+
+  // SDD-324: 새 디자인(플래그)에서만 요약 카드 + 선택 회원·검토 창 일치. 운영 웹 동작은 그대로.
+  const v2 = isUiV2Enabled();
+  const onVisibleReports = useCallback((ids: string[], filtersActive: boolean) => {
+    // 조건을 바꿔 선택 항목이 결과 밖으로 나가면 첫 일치 항목으로 옮기고, 결과가 없으면 검토 창을 닫는다.
+    if (!filtersActive) return;
+    setSelectedId((cur) => (cur && !ids.includes(cur) ? ids[0] ?? null : cur));
+  }, []);
 
   const toggleAuto = useCallback(async () => {
     if (autoSaving || !autoLoaded) return;
@@ -85,6 +95,8 @@ export default function ReportsDesktopPage() {
           compact={!!selectedId}
           reloadKey={reloadKey}
           toolbarExtra={selectedId ? undefined : menu}
+          renderSummary={v2 ? ({ summary, unavailable, tab, setTab }) => <ReportSummaryStrip summary={summary} unavailable={unavailable} activeTab={tab} onSelectTab={setTab} /> : undefined}
+          onVisibleReports={v2 ? onVisibleReports : undefined}
         />
         {selectedId && (
           <ReportReviewPane

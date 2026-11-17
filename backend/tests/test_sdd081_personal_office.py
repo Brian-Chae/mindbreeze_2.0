@@ -185,8 +185,9 @@ def test_ts3_기관해제시_개인상담소_복귀_알림_메일(client, monkey
     ctx_a, email, user_id = _setup_active_counselor(client, monkeypatch, redis, "ts81c")
     mail_queue = _capture_removed_mail_queue(monkeypatch)
 
-    res = client.delete(
-        f"/api/v1/org/{ctx_a['org_id']}/counselors/{user_id}", headers=ctx_a["h"]
+    res = client.request(
+        "DELETE", f"/api/v1/org/{ctx_a['org_id']}/counselors/{user_id}",
+        json={"reason": "소속 정리"}, headers=ctx_a["h"],  # SDD-323: 해지 사유 필수
     )
     assert res.status_code == 204, res.text
 
@@ -228,8 +229,9 @@ def test_ts4_다중소속_한기관해제는_남은기관_승격_알림없음(cl
     assert res.status_code == 200, res.text
 
     mail_queue = _capture_removed_mail_queue(monkeypatch)
-    res = client.delete(
-        f"/api/v1/org/{ctx_a['org_id']}/counselors/{user_id}", headers=ctx_a["h"]
+    res = client.request(
+        "DELETE", f"/api/v1/org/{ctx_a['org_id']}/counselors/{user_id}",
+        json={"reason": "소속 정리"}, headers=ctx_a["h"],  # SDD-323: 해지 사유 필수
     )
     assert res.status_code == 204, res.text
 
@@ -305,8 +307,9 @@ def test_ts8_대시보드_org_kind_노출(client, monkeypatch, redis):
     assert res.json()["org_kind"] == "institution"
 
     _capture_removed_mail_queue(monkeypatch)
-    res = client.delete(
-        f"/api/v1/org/{ctx_a['org_id']}/counselors/{user_id}", headers=ctx_a["h"]
+    res = client.request(
+        "DELETE", f"/api/v1/org/{ctx_a['org_id']}/counselors/{user_id}",
+        json={"reason": "소속 정리"}, headers=ctx_a["h"],  # SDD-323: 해지 사유 필수
     )
     assert res.status_code == 204
 
@@ -343,8 +346,9 @@ def test_ts9_org_admin은_개인상담소_미생성(client, monkeypatch):
 def test_ts10_해제알림_1회노출_확인후_재노출없음(client, monkeypatch, redis):
     ctx_a, email, user_id = _setup_active_counselor(client, monkeypatch, redis, "ts81i")
     _capture_removed_mail_queue(monkeypatch)
-    res = client.delete(
-        f"/api/v1/org/{ctx_a['org_id']}/counselors/{user_id}", headers=ctx_a["h"]
+    res = client.request(
+        "DELETE", f"/api/v1/org/{ctx_a['org_id']}/counselors/{user_id}",
+        json={"reason": "소속 정리"}, headers=ctx_a["h"],  # SDD-323: 해지 사유 필수
     )
     assert res.status_code == 204
 

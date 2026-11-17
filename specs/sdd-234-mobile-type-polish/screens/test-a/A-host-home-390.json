@@ -7,6 +7,7 @@
   "failure": null,
   "errors": [],
   "unknown": [
+    "/api/v1/auth/users/me",
     "/api/v1/reports/counts"
   ],
   "shell": "default",
@@ -141,7 +142,7 @@
     {
       "tag": "span",
       "inputType": null,
-      "selector": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > span:nth-of-type(1)",
+      "selector": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > span:nth-of-type(1)",
       "class": "sh-hchip",
       "text": "다음 회차",
       "fontSize": 13,
@@ -159,7 +160,7 @@
     {
       "tag": "h2",
       "inputType": null,
-      "selector": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > h2:nth-of-type(1)",
+      "selector": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > h2:nth-of-type(1)",
       "class": "sh-hero__title ch-hero__title",
       "text": "예정된 회차가 없어요",
       "fontSize": 24,
@@ -177,7 +178,7 @@
     {
       "tag": "p",
       "inputType": null,
-      "selector": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(1)",
+      "selector": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > p:nth-of-type(1)",
       "class": "ch-hero__sub",
       "text": "클래스를 바로 열어 회원과 함께 시작할 수 있어요.",
       "fontSize": 15,
@@ -195,7 +196,7 @@
     {
       "tag": "a",
       "inputType": null,
-      "selector": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(1)",
+      "selector": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > a:nth-of-type(1)",
       "class": "sh-hcta ch-hero__cta",
       "text": "지금 바로 시작",
       "fontSize": 14,
@@ -1421,7 +1422,7 @@
     {
       "tag": "a",
       "inputType": null,
-      "selector": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(1)",
+      "selector": "body > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > a:nth-of-type(1)",
       "class": "sh-hcta ch-hero__cta",
       "text": "지금 바로 시작",
       "fontSize": 14,

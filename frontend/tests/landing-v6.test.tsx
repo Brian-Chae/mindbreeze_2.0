@@ -27,13 +27,18 @@ it('섹션이 시안 순서대로 렌더링된다', async () => {
   expect(ids).toEqual(['hero', '', 'roles', 'apps', 'multidevice', 'pause', 'signals', 'reports', 'inquiry', 'band', 'journey', 'download', 'trust', 'faq', 'contact']);
 });
 
-it('로그인·코드 입장·웹 시작 링크와 스토어 배지·곧 출시 문구를 유지한다', async () => {
+it('로그인·코드 입장·웹 시작 링크와 스토어 배지를 정식 스토어 링크로 연결한다', async () => {
   await render(<LandingPage />);
   const hrefs = [...container.querySelectorAll('a')].map((a) => a.getAttribute('href'));
   expect(hrefs).toContain('/login');
   expect(hrefs).toContain('/join');
   expect(container.querySelectorAll('.badge img').length).toBe(2);
-  expect(container.querySelectorAll('.badge-item small').length).toBe(2);
+  const store = (k: string) => container.querySelector(`a[data-store="${k}"]`) as HTMLAnchorElement;
+  expect(store('appstore').getAttribute('href')).toBe('https://apps.apple.com/kr/app/id6825826445');
+  expect(store('play').getAttribute('href')).toBe('https://play.google.com/store/apps/details?id=com.looxidlabs.mindbreeze2');
+  for (const k of ['appstore', 'play']) { expect(store(k).getAttribute('target')).toBe('_blank'); expect(store(k).getAttribute('rel')).toContain('noopener'); }
+  expect(container.textContent).not.toContain('곧 출시');
+  expect(container.textContent).not.toContain('출시 후');
   expect(container.textContent).toContain('웹에서 바로 시작하기');
   expect(container.textContent).not.toContain('시안 미리보기');
 });
@@ -87,4 +92,15 @@ it('모달 필수값 미입력 시 오류, 정상 제출 시 API 호출 후 완�
   expect(dialog()!.textContent).toContain('기관 가입 문의가 접수되었습니다.');
   await act(async () => ([...document.querySelectorAll('button')].find((b) => b.textContent === '닫고 서비스 둘러보기') as HTMLButtonElement).click());
   expect(dialog()).toBeNull();
+});
+
+it('앱 다운로드 링크가 내비·히어로·푸터 3곳에서 다운로드 사이트를 새 창으로 연다', async () => {
+  await render(<LandingPage />);
+  const links = [...container.querySelectorAll('a[data-download]')] as HTMLAnchorElement[];
+  expect(links.map((a) => a.dataset.download)).toEqual(['nav', 'hero', 'footer']);
+  for (const a of links) {
+    expect(a.getAttribute('href')).toBe('https://download.mindbreeze.looxidlabs.com');
+    expect(a.getAttribute('target')).toBe('_blank');
+    expect(a.getAttribute('rel')).toContain('noopener');
+  }
 });

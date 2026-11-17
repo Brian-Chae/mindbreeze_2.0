@@ -122,6 +122,7 @@ def list_clients(
     active_within_days: int | None = None,
     counselor_filter_id: str | None = None,
     member_type: str | None = None,
+    summary_filter: str | None = None,
 ) -> tuple[list[dict], int, list[dict], list[dict]]:
     """내담자 목록 + 서버 검색·필터 + 페이징 (SDD-230 개요 집계).
 
@@ -132,6 +133,7 @@ def list_clients(
     data = client_overview_service.list_clients_overview(
         counselor_id, q, page, size, class_id, active_within_days, db,
         counselor_filter_id=counselor_filter_id, member_type=member_type,
+        summary_filter=summary_filter,
     )
     return data["clients"], data["total"], data["class_options"], data["counselor_options"]
 

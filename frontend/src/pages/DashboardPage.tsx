@@ -18,6 +18,7 @@ import { classPath } from '../lib/class-structure/navigation';
 import {
   HOME_CLASS_LIMIT,
   pickHeroSession,
+  homeEntryAction,
   pickPastRows,
   pickScheduleRows,
   sortHomeClasses,
@@ -336,6 +337,7 @@ export default function DashboardPage() {
             session={hero?.session ?? null}
             live={hero?.live ?? false}
             detailPath={hero ? dashboardSessionPath(hero.session) : '/classes'}
+            entry={hero ? homeEntryAction(hero.session, user?.role) : undefined}
           />
 
           {pendingReviewCount > 0 && (

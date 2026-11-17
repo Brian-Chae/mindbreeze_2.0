@@ -56,7 +56,7 @@ async function runSynthetic(seconds: number) {
 
 describe('합성 PPG — RR 피크 검출·SDNN', () => {
   it('드리프트·호흡 성분이 있어도 RR 이 박동 누락/가짜 피크 없이 정상 범위이고 SDNN 이 참값 근처다', async () => {
-    const { svc, buf, trueSdnn } = await runSynthetic(110);
+    const { svc, buf, trueSdnn } = await runSynthetic(125) // 창 끝 1초 보류로 첫 HRV 산출이 수 초 늦어져 110→125초로 늘림;
     process.stdout.write('\nSDNN_REPORT '+svc.getCurrentSDNN()+' true='+trueSdnn+' bad='+buf.filter(r=>r<500||r>1300).length+'/'+buf.length+'\n');
     expect(buf.length).toBeGreaterThanOrEqual(30);
     expect(buf.filter(r => r < 500 || r > 1300)).toEqual([]);

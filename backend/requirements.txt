@@ -28,6 +28,11 @@ google-auth==2.53.0
 boto3==1.43.9
 pyarrow==26.0.0  # SDD-209 B13: 연구 DB 내보내기 번들(Parquet)
 
+# 신호 처리 — SDD-327 T3 뇌파 1/f 기울기 (시안 분석과 동일 버전 고정)
+numpy==2.4.6
+scipy==1.17.1
+specparam==2.0.0rc7  # 프리릴리스(rc). 시안 산출과 수치 일치를 위해 동일 버전 고정
+
 # Validation
 pydantic==2.13.4
 pydantic-settings==2.14.1

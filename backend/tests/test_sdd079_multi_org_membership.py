@@ -318,8 +318,9 @@ def test_ts5_구성원목록_유형구분과_격리(client, monkeypatch, redis):
 def test_ts6_소속해제_left_이력보존_재초대가능(client, monkeypatch, redis):
     ctx_a, email, user_id = _setup_active_counselor(client, monkeypatch, redis, "ts6")
 
-    res = client.delete(
-        f"/api/v1/org/{ctx_a['org_id']}/counselors/{user_id}", headers=ctx_a["h"]
+    res = client.request(
+        "DELETE", f"/api/v1/org/{ctx_a['org_id']}/counselors/{user_id}",
+        json={"reason": "소속 정리"}, headers=ctx_a["h"],
     )
     assert res.status_code == 204, res.text
 
@@ -359,8 +360,9 @@ def test_ts6_주소속해제시_남은소속_승격(client, monkeypatch, redis):
     ).status_code == 200
 
     # 주 소속(A) 해제 → B 가 주 소속으로 승격
-    res = client.delete(
-        f"/api/v1/org/{ctx_a['org_id']}/counselors/{user_id}", headers=ctx_a["h"]
+    res = client.request(
+        "DELETE", f"/api/v1/org/{ctx_a['org_id']}/counselors/{user_id}",
+        json={"reason": "소속 정리"}, headers=ctx_a["h"],
     )
     assert res.status_code == 204, res.text
 

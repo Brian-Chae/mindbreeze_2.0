@@ -1,5 +1,6 @@
 // 랜딩 v6 섹션 (SDD-248) — 승인 시안 design-v6/landing.html 의 카피·순서 그대로
 import { Link } from 'react-router-dom';
+import { APP_STORE_URL, PLAY_STORE_URL, UPDATE_SITE_URL } from '../../../lib/update/update-config';
 import { isAiEnabled } from '../../../lib/feature-flags';
 import { useInquiryModal, type InquiryCtaSource } from './use-inquiry-modal';
 
@@ -20,7 +21,7 @@ const ROLES: RoleCard[] = [
 const FAQS: ReadonlyArray<{ q: string; a: string }> = [
   { q: 'LINK BAND가 반드시 있어야 하나요?', a: '아니요. 밴드 없이도 클래스 참여, 기록, 제공된 리포트를 이용할 수 있습니다. 생체신호 항목은 측정 데이터가 있을 때만 표시됩니다.' },
   { q: '기관은 어떻게 시작하나요?', a: '기관 가입 문의에 운영 형태와 필요한 기능을 남겨 주세요. 회원은 기관이나 진행자의 초대 또는 입장 코드로 참여할 수 있습니다.' },
-  { q: '앱 설치와 밴드 연결은 어떻게 하나요?', a: '웹에서도 이용할 수 있습니다. 웹 밴드 연결은 Web Bluetooth를 지원하는 Chrome·Edge를 이용하며 Safari·Firefox는 지원하지 않습니다. 운영체제와 기기의 Bluetooth 지원 여부도 확인해 주세요. 앱 다운로드는 각 스토어 공개 출시 후 안내합니다.' },
+  { q: '앱 설치와 밴드 연결은 어떻게 하나요?', a: '웹에서도 이용할 수 있습니다. 웹 밴드 연결은 Web Bluetooth를 지원하는 Chrome·Edge를 이용하며 Safari·Firefox는 지원하지 않습니다. 운영체제와 기기의 Bluetooth 지원 여부도 확인해 주세요. iPhone·iPad는 App Store, Android는 Google Play에서 앱을 설치할 수 있습니다.' },
   { q: '내 정보의 보관·삭제 기준은 어디서 확인하나요?', a: '기록 종류와 이용 목적에 따라 기준이 다릅니다. 개인정보 처리방침과 계정 삭제 안내에서 상세 내용을 확인할 수 있습니다. 기관 문의로 제출한 개인정보의 보관 기간은 접수일로부터 1년입니다.' },
 ];
 
@@ -43,6 +44,7 @@ export function LandingV6Sections() {
             <p className="body">마인드브리즈는 기관과 진행자, 회원을 연결하는 명상·웰니스 플랫폼입니다. 클래스 일정과 소통, 수업 후 기록을 하나의 흐름으로 이어갑니다.</p>
             <div className="actions">
               <a className="btn btn-ghost" href="#roles">서비스 화면 살펴보기</a>
+              <a className="btn btn-ghost" href={UPDATE_SITE_URL} target="_blank" rel="noopener noreferrer" data-download="hero">앱 다운로드 ↗</a>
               <InquiryCta source="hero">기관 가입 문의</InquiryCta>
             </div>
           </div>
@@ -236,8 +238,8 @@ export function LandingV6Sections() {
             <div className="dl-card">
               <span className="role-label">앱 다운로드</span><h3>iPhone · iPad · Android</h3><p>알림을 받고 클래스에 바로 참여하세요.</p>
               <div className="badges">
-                <div className="badge-item"><span className="badge" role="img" aria-label="App Store에서 다운로드 (곧 출시)"><img src={`${IMG}/badge-appstore-ko.svg`} alt="App Store에서 다운로드" height={48} /></span><small>곧 출시</small></div>
-                <div className="badge-item"><span className="badge" role="img" aria-label="Google Play에서 다운로드 (곧 출시)"><img src={`${IMG}/badge-googleplay-ko.png`} alt="Google Play에서 다운로드" height={48} /></span><small>곧 출시</small></div>
+                <div className="badge-item"><a className="badge" href={APP_STORE_URL} target="_blank" rel="noopener noreferrer" data-store="appstore" aria-label="App Store에서 다운로드 (새 창)"><img src={`${IMG}/badge-appstore-ko.svg`} alt="App Store에서 다운로드" height={48} /></a></div>
+                <div className="badge-item"><a className="badge" href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" data-store="play" aria-label="Google Play에서 다운로드 (새 창)"><img src={`${IMG}/badge-googleplay-ko.png`} alt="Google Play에서 다운로드" height={48} /></a></div>
               </div>
             </div>
             <div className="dl-card">
@@ -245,7 +247,7 @@ export function LandingV6Sections() {
               <div className="web-act"><Link className="btn btn-cta" to="/login">웹에서 바로 시작하기 →</Link></div>
             </div>
           </div>
-          <p className="dev-note">웹 밴드 연결은 Chrome·Edge에서 지원합니다. iPhone·iPad·Android 앱의 공개 다운로드는 스토어 출시 후 안내합니다.</p>
+          <p className="dev-note">웹 밴드 연결은 Chrome·Edge에서 지원합니다. iPhone·iPad·Android 앱은 각 스토어에서 받을 수 있습니다.</p>
         </div>
       </section>
 

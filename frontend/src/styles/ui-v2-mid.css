@@ -1,0 +1,27 @@
+/* SDD-320 K — 중간 폭(768~1023px) 정합.
+   레거시 셸(AppShell·ClientShell·UiV2ClientShell·UiV2OrgShell)은 Tailwind md(768px)에서 240px 레거시 aside 를 켜지만,
+   ui-v2 PC 셸 규칙(ui-v2-pc.css)은 1024px 부터라 그 사이 폭에서 무스타일 사이드바가 노출됐다.
+   ui-v2 플래그 스코프(회원 ui-v2 쉘·코치 u2-coach)에서는 1023px 이하를 모바일 레이아웃 그대로 쓰고 사이드바 기준을 1024 로 통일한다.
+   레거시(플래그 off)는 이 파일을 불러오지 않으므로 동작이 바뀌지 않는다. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) {
+    display: flex !important;
+    flex-direction: column;
+    grid-template-columns: none;
+  }
+  /* 레거시 데스크톱 사이드바 숨김 */
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside.md\:flex { display: none !important; }
+  /* 모바일 서랍(코치/기관 AppShell)·상단 바·모바일 제목은 다시 노출 */
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > div.md\:hidden,
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > aside.md\:hidden { display: block !important; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > header.md\:hidden { display: flex !important; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > section > header.md\:flex { display: none !important; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) > section > [data-ui="page-header"].md\:hidden { display: flex !important; }
+  /* 하단 플로팅 메뉴 노출 */
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) nav.floating-bottom-nav.md\:hidden { display: flex !important; }
+  :is([data-shell-variant="ui-v2"], html.u2-coach [data-shell-variant]) .u2-nav-wrap.md\:hidden { display: block !important; }
+  /* 코치 본문: 하단 메뉴에 가리지 않게 모바일과 같은 바닥 여백 */
+  html.u2-coach [data-shell-variant] .mobile-menu-swipe-page { padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important; }
+  /* 회원 상단 로고(모바일에서만 보이던 락업)를 사이드바가 없는 동안 유지 */
+  [data-shell-variant="ui-v2"] .ui-v2 .u2-logo { display: inline-flex; }
+}

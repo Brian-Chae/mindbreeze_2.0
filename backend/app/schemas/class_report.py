@@ -237,6 +237,7 @@ class ClassSummaryResponse(_Strict):
 # ── 클래스 리포트 ───────────────────────────────────────────────────
 class ReportSession(_Strict):
     id: str
+    class_id: str | None = None
     class_name: str | None
     seq: int | None
     ended_at: datetime | None

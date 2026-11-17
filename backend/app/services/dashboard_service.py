@@ -107,6 +107,30 @@ def _build_summaries(sessions: list[Session], db: DBSession) -> list[dict]:
     ]
 
 
+def _attach_viewer_fields(
+    summaries: list[dict], sessions: list[Session], viewer: User, db: DBSession
+) -> None:
+    """홈 카드용: 진행자 이름·내가 진행자인지·참관 가능 여부/불가 사유를 행에 덧붙인다."""
+    from app.services.class_access_service import observe_block_reason
+
+    host_ids = {s.host_id for s in sessions if s.host_id}
+    names = (
+        {u.id: u.name for u in db.query(User).filter(User.id.in_(host_ids)).all()}
+        if host_ids
+        else {}
+    )
+    for row, s in zip(summaries, sessions):
+        row["host_name"] = names.get(s.host_id) if s.host_id else None
+        row["host_state"] = s.host_state
+        row["viewer_is_host"] = s.host_id == viewer.id
+        if row["viewer_is_host"] or s.class_id is None or s.status not in ("open", "in_progress"):
+            continue
+        reason = observe_block_reason(db, viewer.id, s)
+        row["can_observe"] = reason is None
+        # 참관 대상 역할이 아니면(not_permitted) 사유를 노출하지 않는다.
+        row["observe_blocked_reason"] = None if reason in (None, "not_permitted") else reason
+
+
 def _participant_key(p: SessionParticipant) -> str:
     """같은 사람을 한 번만 세기 위한 키. 회원=계정, 비회원(게스트)=멤버십·상담 비회원·참여 행 순."""
     if p.user_id:
@@ -226,12 +250,14 @@ def counselor_dashboard(user_id: str, db: DBSession) -> dict:
         )
     )
     summaries = _build_summaries(sessions, db)
+    _attach_viewer_fields(summaries, sessions, user, db)
     all_sessions = list(sessions)
 
     # SDD-221: 팀 강사(lead/assistant)로만 속한 클래스의 타인 진행 회차도 목록·집계에 합친다.
     team_sessions = _team_instructor_sessions(uid, user, {s.id for s in sessions}, db)
     if team_sessions:
         team_summaries = _build_summaries(team_sessions, db)
+        _attach_viewer_fields(team_summaries, team_sessions, user, db)
         for row in team_summaries:
             # 리포트는 진행 강사 몫이다(팀 열람은 별도 동의 경로) — 건수·검토 대기를 노출하지 않는다.
             row["report_count"] = 0
@@ -294,6 +320,7 @@ def org_dashboard(user_id: str, db: DBSession) -> dict:
         else []
     )
     summaries = _build_summaries(sessions, db)
+    _attach_viewer_fields(summaries, sessions, user, db)
 
     by_host: dict[str, list[dict]] = {}
     sessions_by_host: dict[str, list[Session]] = {}

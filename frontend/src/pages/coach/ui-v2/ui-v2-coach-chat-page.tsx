@@ -128,11 +128,15 @@ export function UiV2CoachChatPage() {
     ? <RoomActionsMenu room={selectedRoom} onSettings={() => setSettingsRoom(selectedRoom)} onInvite={() => openInvite(selectedRoom)} onLeave={() => navigate('/chat')} />
     : null;
 
+  // 11/9 대표 지시: '새 채팅방'은 상단 오른쪽(알림 버튼 옆)으로. 방 안에서는 방 메뉴를 그대로 쓴다.
+  const newRoomButton = (
+    <button type="button" className="u2-primary u2c-new" onClick={() => setShowCreate(true)}>
+      <Plus size={18} aria-hidden="true" /> 새 채팅방
+    </button>
+  );
+
   const list = (
     <section className={`u2-chat-list${inRoom ? ' u2c-list--room' : ''}`} aria-label="대화 목록">
-      <button type="button" className="u2-primary u2c-new" onClick={() => setShowCreate(true)}>
-        <Plus size={18} aria-hidden="true" /> 새 채팅방
-      </button>
       <div className="u2-legacy"><ChatSortToggle {...sortPreference} /></div>
       {aiEnabled && (
         <button type="button" onClick={() => navigate(`/chat/${LUCY_ROOM_ID}`)} aria-current={isLucy ? 'page' : undefined} className="u2-chatrow u2-chatrow--lucy" data-active={isLucy || undefined}>
@@ -208,7 +212,7 @@ export function UiV2CoachChatPage() {
   );
 
   return (
-    <AppShell title={headerTitle} sub={headerSub} rightSlot={inRoom ? roomMenu ?? undefined : undefined} contentPad="" noScroll hideBottomTab={inRoom} noBottomPad={inRoom} hideMobileTitle={inRoom}>
+    <AppShell title={headerTitle} sub={headerSub} rightSlot={inRoom ? roomMenu ?? undefined : newRoomButton} contentPad="" noScroll hideBottomTab={inRoom} noBottomPad={inRoom} hideMobileTitle={inRoom}>
       <div className={`ui-v2 u2c h-full${inRoom ? ' u2c--room' : ''}`}>
         <div className={`u2-chat${inRoom ? ' u2-chat--room' : ''}`}>
           {list}

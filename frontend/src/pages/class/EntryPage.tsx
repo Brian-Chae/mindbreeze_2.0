@@ -23,6 +23,7 @@ import { WaitStartContainer } from '../../components/class/flow/member/WaitStart
 import { resolveEntryBack } from '../../lib/class/entry-back';
 import { useBackgroundSession } from '../../hooks/useBackgroundSession';
 import { holdEnvironment, useNativeBandHold } from '../../lib/measurement-web/use-native-band-hold';
+import { useBandSerialReport } from '../../hooks/use-band-serial-report';
 import { useBandHold } from '../../lib/native-measurement/band-hold';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { useEntryPrep } from '../../hooks/useEntryPrep';
@@ -294,6 +295,8 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
     bandDone: prep.draft.bandOutcome === 'connected' && !(machine.phase === 'wizard' && machine.step === 'c') && (machine.phase === 'wizard' || machine.phase === 'wait' || machine.phase === 'live'),
   };
   useNativeBandHold({ want: holdWant, live: machine.phase === 'live' });
+  // SDD-326: 연결한 밴드의 시리얼(+펌웨어)을 회차에 보고한다(인계 전 스냅샷 사용, 실패 무시, 밴드 없으면 무동작).
+  useBandSerialReport({ sessionId, credential: entry?.credential ?? null, bandConnected: prep.draft.bandOutcome === 'connected' });
   // SDD-303: 대기실에서 네이티브 인계가 10초 넘게 확정되지 않으면 한 줄 안내와 다시 연결 진입점을 보인다(인계 확정 전 JS 연결은 그대로 유지).
   const handoffPending = machine.phase === 'wait' && holdWant.native && holdWant.v2 && !holdWant.guest && holdWant.bandOptIn && holdWant.eegConsent && holdWant.bandDone && !bandHold.held;
   useEffect(() => {

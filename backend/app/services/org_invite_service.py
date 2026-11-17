@@ -20,6 +20,7 @@ from redis.asyncio import Redis
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.core.api_error import ApiError
 from app.core.security import hash_password
 from app.models.password_history import PasswordHistory
 from app.models.user import User
@@ -298,9 +299,18 @@ async def mark_counselor_sent(org_id: str, redis: Redis) -> None:
 async def check_counselor_resend_cooldown(org_id: str, redis: Redis) -> None:
     """상담사 초대 재발송 레이트 리밋 — 쿨다운 중이면 429."""
     if await redis.get(_counselor_resend_key(org_id)):
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"초대 메일은 {RESEND_COOLDOWN_SECONDS}초에 한 번만 재발송할 수 있습니다",
+        # SDD-323: 기계 판독용 code + 남은 시간(retry_after_sec) 제공
+        try:
+            ttl = int(await redis.ttl(_counselor_resend_key(org_id)))
+        except Exception:  # noqa: BLE001
+            ttl = RESEND_COOLDOWN_SECONDS
+        retry_after = ttl if ttl > 0 else RESEND_COOLDOWN_SECONDS
+        raise ApiError(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            "INVITE_COOLDOWN",
+            f"초대 메일은 {RESEND_COOLDOWN_SECONDS}초에 한 번만 재발송할 수 있습니다",
+            headers={"Retry-After": str(retry_after)},
+            retry_after_sec=retry_after,
         )
 
 

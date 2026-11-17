@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import ReportDetailView from './ReportDetailView';
 import { getReport, type ReportDto } from '../../lib/api/reports';
+import { isUiV2Enabled } from '../../lib/feature-flags';
+import { UiV2ReportBody } from '../ui-v2/ui-v2-report-body';
 import '../reports/narrative-sections.css';
 import './report-review-pane.css';
 
@@ -55,6 +57,7 @@ export default function ReportReviewPane({ reportId, onClose, onReportChange }: 
             }}
             showListAction={false}
             actionContainer={actionContainer}
+            renderMemberBody={isUiV2Enabled() ? (r, hide) => <div className="ui-v2 u2f-review-body"><UiV2ReportBody report={r} hideCounselorComment={hide} /></div> : undefined}
           />
         )}
       </div>

@@ -1,0 +1,100 @@
+/* SDD-318 F-E — 회원 리포트 상세 확정 시안 v3e. VITE_UI_V2 안에서만 로드(ui-v2-report-body 가 import).
+   색: 페이지 #FAF9FC / 카드 #FFF / 강조면 #EEE5F5 / 본문 #25212C / 보조 #514957 / 강조면 보조 #49404F / 강조 #5F0080 */
+.ui-v2 .u2r3{display:block;min-width:0;color:#25212C}
+.ui-v2 .u2r3 h2,.ui-v2 .u2r3 h3,.ui-v2 .u2r3 h4,.ui-v2 .u2r3 p{margin:0}
+.ui-v2 .u2r3 p{margin-top:12px}
+.ui-v2 .u2r3-main{min-width:0}
+.ui-v2 .u2r3-rail{display:none}
+.ui-v2 .u2r3-section{padding:32px 4px;border-bottom:1px solid #EAE7ED;min-width:0}
+.ui-v2 .u2r3-section:last-of-type{border-bottom:0}
+.ui-v2 .u2r3-section h2{font-size:23px;line-height:1.45;letter-spacing:-.5px;font-weight:600;margin-top:2px}
+.ui-v2 .u2r3-eyebrow{color:#5F0080;font-size:12px;letter-spacing:1px;font-weight:600;margin-bottom:10px}
+.ui-v2 .u2r3-muted,.ui-v2 .u2r3-def{color:#514957}
+.ui-v2 .u2r3-def{font-size:12px;line-height:1.7}
+.ui-v2 .u2r3-text{line-height:1.85;white-space:pre-wrap;overflow-wrap:anywhere}
+.ui-v2 .u2r3-cover{background:#EEE5F5;border-radius:20px;padding:24px 20px;border-bottom:0;margin-bottom:8px}
+.ui-v2 .u2r3-meta{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:#49404F}
+.ui-v2 .u2r3-quote{margin:20px 0 0;border-left:2px solid #5F0080;padding-left:18px;font-size:18px;line-height:1.85;overflow-wrap:anywhere}
+.ui-v2 .u2r3-notice{margin-top:20px;background:#fff;border-radius:12px;padding:16px;font-size:14px;line-height:1.7;color:#49404F}
+.ui-v2 .u2r3-journey-copy{background:#EEE5F5;border-radius:12px;padding:20px;margin-top:20px;line-height:1.85;overflow-wrap:anywhere}
+.ui-v2 .u2r3-chips{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin-top:20px}
+.ui-v2 .u2r3-chips>div{background:#EEE5F5;border-radius:12px;padding:14px}
+.ui-v2 .u2r3-chips strong{display:block;font-size:13px;color:#5F0080}
+.ui-v2 .u2r3-chips p{font-size:14px;margin-top:6px;color:#25212C}
+.ui-v2 .u2r3-chips small{font-size:11px;margin-left:2px;color:#25212C}
+.ui-v2 .u2r3-stages{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:24px}
+.ui-v2 .u2r3-stage{border-top:1px solid #D4BDE2;padding-top:10px;font-size:12px}
+.ui-v2 .u2r3-stage b{display:block;font-weight:600;font-size:13px;margin:2px 0}
+.ui-v2 .u2r3-stage small{display:block;font-size:11px;color:#514957;line-height:1.5}
+/* 지표 카드 */
+.ui-v2 .u2r3-metric{display:grid;grid-template-columns:minmax(0,1fr);gap:22px;background:#fff;border:1px solid #EAE7ED;border-radius:24px;padding:20px;margin-top:20px;min-width:0}
+.ui-v2 .u2r3-metric-copy h4{font-size:17px;font-weight:600}
+.ui-v2 .u2r3-avg{display:flex;align-items:baseline;flex-wrap:wrap;gap:0 6px;margin-top:14px;font-size:28px;font-weight:600;line-height:1.4}
+.ui-v2 .u2r3-avg b{font-weight:600}
+.ui-v2 .u2r3-avg small{font-size:12px;font-weight:400;color:#514957}
+.ui-v2 .u2r3-sentence{font-size:14px;line-height:1.75;overflow-wrap:anywhere}
+.ui-v2 .u2r3-interp{font-size:13px;color:#49404F}
+.ui-v2 .u2r3-metric-chart{min-width:0}
+/* 전후 비교 */
+.ui-v2 .u2r3-compare{display:grid;grid-template-columns:minmax(0,1fr) 120px;gap:10px 12px;align-items:stretch;padding-bottom:16px;border-bottom:1px solid #EAE7ED;margin-bottom:16px}
+.ui-v2 .u2r3-dual{display:grid;align-content:center;gap:10px;min-width:0}
+.ui-v2 .u2r3-dual-row{display:grid;grid-template-columns:24px minmax(0,1fr);gap:4px;align-items:center;font-size:12px}
+.ui-v2 .u2r3-dual-measure{display:flex;align-items:center;gap:5px;min-width:0}
+.ui-v2 .u2r3-dual-bar{flex:none;height:16px;border-radius:4px}
+.ui-v2 .u2r3-dual-value{white-space:nowrap;font-size:11px;line-height:1.4;font-variant-numeric:tabular-nums}
+.ui-v2 .u2r3-changebox{background:#EEE5F5;border-radius:12px;padding:12px 14px;text-align:center;display:flex;flex-direction:column;justify-content:center;min-width:0}
+.ui-v2 .u2r3-change-label{font-size:11px;color:#49404F}
+.ui-v2 .u2r3-change-value{font-size:21px;line-height:1.4;font-weight:600;white-space:nowrap;color:#25212C;font-variant-numeric:tabular-nums}
+.ui-v2 .u2r3-change-value small{display:inline;margin-left:2px;font-size:10px;font-weight:400}
+.ui-v2 .u2r3-caption{grid-column:1/-1;margin:0!important;font-size:11px;color:#514957;line-height:1.6}
+/* 시간 그래프 */
+.ui-v2 .u2r3-graph{margin:0;min-width:0}
+.ui-v2 .u2r3-graph-meta{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:#514957;margin-bottom:12px}
+.ui-v2 .u2r3-plot{--gap:1px;height:144px;position:relative;border-bottom:1px solid #D4BDE2;display:flex;gap:var(--gap);align-items:flex-end;background:repeating-linear-gradient(to top,transparent 0,transparent 47px,#EAE7ED 47px,#EAE7ED 48px)}
+.ui-v2 .u2r3-slot{flex:1;height:100%;display:flex;align-items:flex-end;min-width:0}
+.ui-v2 .u2r3-bar{display:block;width:100%;border-radius:2px 2px 0 0;min-height:1px}
+.ui-v2 .u2r3-empty{display:block;width:100%;height:100%;border:1px dashed #D4BDE2;border-radius:2px;background:transparent}
+.ui-v2 .u2r3-ticks{display:block;position:relative;height:20px;margin-top:6px;font-size:10px;color:#514957}
+.ui-v2 .u2r3-ticks span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+.ui-v2 .u2r3-ticks span:first-child{transform:none}
+.ui-v2 .u2r3-ticks span:last-child{transform:translateX(-100%)}
+.ui-v2 .u2r3-legend{margin-top:10px;font-size:11px;color:#25212C}
+.ui-v2 .u2r3-legend-scale{display:flex;align-items:center;gap:5px}
+.ui-v2 .u2r3-swatch{display:block;height:8px;flex:1;border-radius:2px}
+.ui-v2 .u2r3-missing{display:block;margin-top:6px;font-size:11px;color:#514957}
+.ui-v2 .u2r3-nodata{font-size:13px;color:#514957}
+.ui-v2 .u2r3-reading{margin-top:24px;background:#EEE5F5;border-radius:12px;padding:12px 18px}
+.ui-v2 .u2r3-reading summary{min-height:44px;cursor:pointer;display:flex;align-items:center;font-size:14px}
+.ui-v2 .u2r3-reading summary:focus-visible{outline:2px solid #5F0080;outline-offset:3px}
+/* 마무리 */
+.ui-v2 .u2r3-closing{background:#EEE5F5;border-radius:20px;border-bottom:0;text-align:center;margin-top:24px;padding:32px 20px}
+.ui-v2 .u2r3-closing>p{color:#49404F}
+.ui-v2 .u2r3-practice{text-align:left;background:#fff;padding:20px;border-radius:24px;margin-top:16px}
+.ui-v2 .u2r3-practice small{color:#5F0080;font-size:12px}
+.ui-v2 .u2r3-practice strong{display:block}
+.ui-v2 .u2r3-practice p{font-size:14px;line-height:1.75;color:#49404F}
+.ui-v2 .u2r3-closing-msg{font-weight:500;color:#25212C!important}
+/* 인사이트 */
+.ui-v2 .u2r3-insights{background:#EEE5F5;border-radius:12px;padding:16px 20px;margin-top:20px}
+.ui-v2 .u2r3-insights h3{font-size:15px;font-weight:600}
+.ui-v2 .u2r3-insights ul{margin:8px 0 0;padding-left:20px;line-height:1.8;color:#49404F;overflow-wrap:anywhere}
+.ui-v2 .u2r3-foot{padding-top:24px}
+.ui-v2 .u2r3-back{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;border:0;border-radius:14px;background:#EEE5F5;color:#5F0080;font:inherit;font-weight:600;cursor:pointer;margin-bottom:16px}
+/* 전체 폭이 넓을 때(회원 PC 시트·코치 상세 왼쪽 영역 제외) — 레일+본문, 지표 설명/차트 2열 */
+@media (min-width:1024px){
+  .ui-v2 .u2-sheet-scroll:has(.u2r3--rail){max-width:1220px;padding-left:28px;padding-right:28px}
+  .ui-v2 .u2-sheet:has(.u2r3--rail){margin:0;border-radius:28px;padding:12px 28px 28px}
+  .ui-v2 .u2r3--rail{display:grid;grid-template-columns:180px minmax(0,1fr);gap:36px;align-items:start}
+  .ui-v2 .u2r3--rail .u2r3-rail{display:block;position:sticky;top:12px;padding-top:28px}
+  .ui-v2 .u2r3-rail nav{display:grid;gap:4px}
+  .ui-v2 .u2r3-rail a{display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 12px;border-radius:12px;font-size:14px;color:#514957;text-decoration:none}
+  .ui-v2 .u2r3-rail a span{font-variant-numeric:tabular-nums}
+  .ui-v2 .u2r3-rail a:first-child{background:#EEE5F5;color:#5F0080}
+  .ui-v2 .u2r3-rail a:focus-visible{outline:2px solid #5F0080;outline-offset:2px}
+  .ui-v2 .u2r3-rail small{display:block;margin:28px 12px;font-size:12px;color:#514957}
+  .ui-v2 .u2r3--rail .u2r3-metric{grid-template-columns:minmax(0,1fr) minmax(0,1.12fr);gap:24px;padding:24px;align-items:center}
+  .ui-v2 .u2r3--rail .u2r3-chips{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ui-v2 .u2r3--rail .u2r3-compare{grid-template-columns:minmax(0,1fr) 136px}
+  .ui-v2 .u2r3--rail .u2r3-section{padding:40px}
+  .ui-v2 .u2r3--rail .u2r3-section h2{font-size:27px}
+}

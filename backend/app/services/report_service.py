@@ -117,6 +117,9 @@ def normalize_report_content(content, report_type: str = "counselor") -> dict:
     # SDD-087: 상담사 코멘트 패스스루 — 문자열만 인정, 없으면 None (빈 문자열 치환 금지)
     comment = content.get("counselor_comment")
     out["counselor_comment"] = comment if isinstance(comment, str) and comment.strip() else None
+    # SDD-318 F-C: 인용 한 줄 — 문자열만 인정, 없으면 None (기존 리포트 하위호환)
+    quote = content.get("quote")
+    out["quote"] = quote.strip() if isinstance(quote, str) and quote.strip() else None
     out["insights"] = out["insights"] if isinstance(out.get("insights"), list) else []
     out["markers"] = out["markers"] if isinstance(out.get("markers"), list) else []
 
@@ -997,7 +1000,10 @@ def get_report(report_id: str, user_id: str | None, db: DBSession, *, member_cre
     if report.type == "counselor":
         result["content"]["client_comments"] = _collect_client_comments(report.session_id, db)
     # 신규 리포트 배지용: 최초 열람 시 is_read=true 마킹
-    if not report.is_read and viewer and viewer.role != "org_admin" and (viewer.role=="client" or viewer.id==session.host_id):
+    #   SDD-324: 호스트 코치의 회원용(type=client) 리포트 열람은 '회원 미열람' 집계를 오염시키므로 읽음 처리하지 않는다.
+    if not report.is_read and viewer and viewer.role != "org_admin" and (
+        viewer.role == "client" or (viewer.id == session.host_id and report.type != "client")
+    ):
         report.is_read = True
         db.add(report)
         db.commit()

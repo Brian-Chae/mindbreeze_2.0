@@ -13,11 +13,19 @@ TTL_SECONDS = 90
 def _now():
     return datetime.now(timezone.utc)
 
-def lock_context(db, session_id, actor_id=None):
+def lock_context(db, session_id, actor_id=None, *, light=False):
+    """회차·참가행 잠금. light=True 는 퇴장·만료·종료 후 알림처럼 강사 users·클래스·멤버를 바꾸지 않는 경로용이다.
+
+    종료 트랜잭션의 잠금 순서(users→classes→class_members→sessions→session_participants)의 뒤쪽 부분집합
+    (sessions→session_participants)만 같은 순서로 잠가 교착은 없고, 39명 동시 퇴장이 users 행 대기열을
+    만들어 종료가 lock_timeout 으로 500 이 되는 일(11/11 운영)을 막는다.
+    """
     row = db.get(Session, UUID(str(session_id)))
     if row is None:
         raise HTTPException(404, detail={'code':'session_not_found'})
-    if row.class_id:
+    if light:
+        row = db.query(Session).filter_by(id=row.id).populate_existing().with_for_update().one()
+    elif row.class_id:
         from app.services.class_write_service import lock_class_session
         _, row = lock_class_session(db, row, actor_id)
     else:
@@ -103,7 +111,7 @@ def socket_update(db, socket_id, context, action, *, now=None):
     """sid와 인증된 서버 문맥만 사용한다. 클라이언트 heartbeat 본문은 사용하지 않는다."""
     now = now or _now()
     try:
-        row, participants = lock_context(db, context['session_id'], context.get('user_id'))
+        row, participants = lock_context(db, context['session_id'], context.get('user_id'), light=(action == 'leave'))
         _expire(db, row, now)
         if action == 'leave':
             lease = db.query(SessionPresenceLease).filter_by(id=socket_id, session_id=row.id).first()
@@ -141,7 +149,7 @@ def expire_due(db, *, now=None):
     results = []
     for sid in sorted(ids, key=str):
         try:
-            row, participants = lock_context(db, sid)
+            row, participants = lock_context(db, sid, light=True)
             _expire(db, row, now)
             results.append(build_snapshot(db, row, participants, now))
             db.commit()

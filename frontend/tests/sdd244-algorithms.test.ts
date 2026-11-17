@@ -104,11 +104,11 @@ describe('SDD244 T10 처리기 RR 시각과 알고리즘 버전', () => {
     const stamps = processor.getRrEndTimestamps(result);
     expect(result.rrIntervals.length).toBeGreaterThan(5);
     expect(stamps).toHaveLength(result.rrIntervals.length);
-    for (let i = 1; i < stamps.length; i++) expect(stamps[i] - stamps[i - 1]).toBeCloseTo(result.rrIntervals[i], -1);
+    for (let i = 1; i < stamps.length; i++) expect(Math.abs((stamps[i] - stamps[i - 1]) - result.rrIntervals[i])).toBeLessThanOrEqual(20); // RR 은 포물선 보간 소수 샘플, 시각은 정수 샘플(20ms) 격자
   });
   it('수정은 새 algorithm version이고 이전 버전 기록은 유지한다', () => {
-    expect(ALGORITHM_VERSIONS.ppg).toBe('2');
-    expect(Object.keys(PPG_ALGORITHM_HISTORY)).toEqual(['1', '2']);
+    expect(ALGORITHM_VERSIONS.ppg).toBe('3');
+    expect(Object.keys(PPG_ALGORITHM_HISTORY)).toEqual(['1', '2', '3']);
     expect(PPG_ALGORITHM_HISTORY['1']).toMatch(/append/);
   });
 });

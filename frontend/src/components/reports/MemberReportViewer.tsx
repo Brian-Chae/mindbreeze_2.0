@@ -6,11 +6,15 @@ import { ClientReportBody } from './ClientReportViewer';
 import type { ReportDto } from '../../lib/api/reports';
 import './narrative-sections.css';
 import './member-report-frame.css';
+import MemberReportBookView from './MemberReportBookView';
+import { extractMemberReport } from '../../lib/api/member-report';
 
 interface Props {
   report: ReportDto;
   /** 검토 화면에서 코멘트 편집 카드가 같은 내용을 이미 보여줄 때 중복 표시를 막는다. */
   hideCounselorComment?: boolean;
+  /** 본인(회원)이 /me 경로로 여는 화면에서만 true — 보내기·책 PDF 버튼 노출. 토큰 열람·상담사 검토는 false */
+  ownerActions?: boolean;
 }
 
 function DesktopReportDialog({ report, hideCounselorComment, onClose }: Props & { onClose: () => void }) {
@@ -49,9 +53,15 @@ function DesktopReportDialog({ report, hideCounselorComment, onClose }: Props & 
   );
 }
 
-export default function MemberReportViewer({ report, hideCounselorComment = false }: Props) {
+export default function MemberReportViewer({ report, hideCounselorComment = false, ownerActions = false }: Props) {
+  // SDD-327 — member_report 가 있으면 새 책 화면, 없으면 기존 화면(구 리포트 하위호환)
+  // 훅은 조건 분기보다 먼저 호출한다(rules-of-hooks).
   const [desktopOpen, setDesktopOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const memberReport = extractMemberReport(report.content);
+  if (memberReport) {
+    return <MemberReportBookView report={memberReport} reportId={ownerActions ? report.id : null} />;
+  }
 
   const close = () => {
     setDesktopOpen(false);

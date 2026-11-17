@@ -271,7 +271,7 @@ describe('deriveHostCase — 배너(C09·C10·C16)', () => {
   it('C09 마이크 꺼짐: info 배너 + 마이크 켜기', () => {
     const b = banner('C09');
     expect(b?.tone).toBe('info');
-    expect(b?.title).toBe('마이크 꺼짐');
+    expect(b?.title).toBe('마이크 꺼짐 · 녹음 일시정지');
     expect(b?.detail).toBe('이 구간은 AI 기록에서 빠져요. 뇌파는 계속 기록돼요.');
     expect(b?.action).toEqual({ kind: 'act', act: 'mic', label: '마이크 켜기' });
   });

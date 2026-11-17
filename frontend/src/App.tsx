@@ -1,6 +1,6 @@
 import OptionalProfilePage from './pages/settings/optional-profile-page';
 import { MemberStructureHomePage, MemberClassesPage } from './route-pages';
-import { lazy, Suspense, useEffect, type ReactElement } from 'react';
+import { lazy, Suspense, useEffect, type ComponentType, type ReactElement } from 'react';
 import { CounselingGate } from './components/routing/counseling-gate';
 import { isAiEnabled, isDesignRoutesEnabled } from './lib/feature-flags';
 import { useStatusBar } from './lib/native/use-status-bar';
@@ -23,6 +23,7 @@ import { useAuthStore } from './stores/authStore';
 import { resolvePostLoginPath } from './lib/auth-routing';
 import { RoleGuard } from './components/auth/RoleGuard';
 import { LegacySessionRedirect } from './components/routing/legacy-session-redirect';
+import { LegacyOrgCounselorsRedirect } from './components/routing/legacy-org-counselors-redirect';
 
 // 랜딩에서 사용하지 않는 화면과 분석 라이브러리는 해당 경로를 열 때 불러온다.
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -50,8 +51,9 @@ const OrgManagementPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
   ? import('./pages/org/ui-v2/ui-v2-org-management-page').then((module) => ({ default: module.UiV2OrgManagementPage }))
   : import('./pages/org/OrgManagementPage'));
 // SDD-082: 기관 관리자 상담사 관리 페이지
+// SDD-323: 새 디자인에서는 4탭 구성원 화면(/counselors). 플래그 꺼진 기존 화면은 그대로.
 const OrgCounselorsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
-  ? import('./pages/org/ui-v2/ui-v2-org-counselors-page').then((module) => ({ default: module.UiV2OrgCounselorsPage }))
+  ? import('./pages/org/ui-v2/ui-v2-org-members-page').then((module) => ({ default: module.UiV2OrgMembersPage }))
   : import('./pages/org/OrgCounselorsPage'));
 const MyRequestsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
   ? import('./pages/org/ui-v2/ui-v2-org-requests-page').then((module) => ({ default: module.UiV2OrgRequestsPage }))
@@ -107,6 +109,25 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const CoachUiV2SettingsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
   ? import('./pages/coach/ui-v2/ui-v2-coach-settings-page').then((module) => ({ default: module.UiV2CoachSettingsPage }))
   : Promise.resolve({ default: () => <></> }));
+const CoachUiV2HomePage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/coach/ui-v2/ui-v2-coach-home-page').then((module) => ({ default: module.UiV2CoachHomePage }))
+  : Promise.resolve({ default: () => <></> }));
+const CoachUiV2ClassesPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/coach/ui-v2/ui-v2-coach-classes-page').then((module) => ({ default: module.UiV2CoachClassesPage }))
+  : Promise.resolve({ default: () => <></> }));
+const CoachUiV2ClientsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/coach/ui-v2/ui-v2-coach-clients-page').then((module) => ({ default: module.UiV2CoachClientsPage }))
+  : Promise.resolve({ default: () => <></> }));
+const CoachUiV2ReportDetailPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/coach/ui-v2/ui-v2-coach-report-detail-page').then((module) => ({ default: module.UiV2CoachReportDetailPage }))
+  : Promise.resolve({ default: () => <></> }));
+const LegacyClassesPage = lazy(() => import('./pages/classes/host-classes-page').then((module) => ({ default: module.HostClassesPage })));
+const LegacyClientsPage = lazy(() => import('./pages/clients/ClientListPage'));
+const LegacyReportsPage = lazy(() => import('./pages/reports/ReportListPage'));
+const CoachUiV2ReportsPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/coach/ui-v2/ui-v2-coach-reports-entry').then((module) => ({ default: module.UiV2CoachReportsEntry }))
+  : Promise.resolve({ default: () => <></> }));
+const LegacyDashboardPage = lazy(() => import('./pages/DashboardPage'));
 const CoachUiV2ChatPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
   ? import('./pages/coach/ui-v2/ui-v2-coach-chat-page').then((module) => ({ default: module.UiV2CoachChatPage }))
   : Promise.resolve({ default: () => <></> }));
@@ -128,7 +149,10 @@ const OrgPublicPage = lazy(() => import('./pages/OrgPublicPage'));
 const OrgDashboardPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
   ? import('./pages/org/ui-v2/ui-v2-org-dashboard-page').then((module) => ({ default: module.UiV2OrgDashboardPage }))
   : import('./pages/OrgDashboardPage'));
-const PlaygroundPage = lazy(() => import('./pages/playground/PlaygroundPage'));
+// SDD-320 G: 코치 플레이그라운드 D안. UI_V2 는 빌드 시 상수 — 운영 빌드에서는 분기와 청크가 제거된다.
+const PlaygroundPage = lazy(() => import.meta.env.VITE_UI_V2 === 'true'
+  ? import('./pages/playground/ui-v2/ui-v2-playground-entry').then((module) => ({ default: module.UiV2PlaygroundEntry }))
+  : import('./pages/playground/PlaygroundPage'));
 
 function buildLoginRedirect(pathname: string, search: string): string {
   const next = `${pathname}${search}`;
@@ -138,12 +162,23 @@ function buildLoginRedirect(pathname: string, search: string): string {
 /** SDD-320 후속: 플래그 on + 코치(counselor)일 때만 D안 화면. 그 밖의 역할·운영 빌드는 기존 화면. */
 function CoachAwareSettings() {
   const role = useAuthStore((s) => s.user?.role);
-  if (import.meta.env.VITE_UI_V2 === 'true' && role === 'counselor') return <Suspense fallback={null}><CoachUiV2SettingsPage /></Suspense>;
+  if (import.meta.env.VITE_UI_V2 === 'true' && (role === 'counselor' || role === 'org_admin')) return <Suspense fallback={null}><CoachUiV2SettingsPage /></Suspense>;
   return <SettingsPage />;
+}
+function CoachAwareDashboard() {
+  const role = useAuthStore((s) => s.user?.role);
+  const useV2 = import.meta.env.VITE_UI_V2 === 'true' && role === 'counselor';
+  return useV2 ? <Suspense fallback={null}><CoachUiV2HomePage /></Suspense> : <LegacyDashboardPage />;
+}
+function CoachAwareList({ V2, Legacy, orgLegacy = false }: { V2: ComponentType; Legacy: ComponentType; orgLegacy?: boolean }) {
+  const role = useAuthStore((s) => s.user?.role);
+  // SDD-321 기관 정합: 기관관리자도 코치와 같은 목록·상세 화면 부품을 쓴다.
+  const useV2 = import.meta.env.VITE_UI_V2 === 'true' && (role === 'counselor' || (role === 'org_admin' && !orgLegacy));
+  return useV2 ? <Suspense fallback={null}><V2 /></Suspense> : <Suspense fallback={null}><Legacy /></Suspense>;
 }
 function CoachAwareChat({ Legacy }: { Legacy: () => ReactElement }) {
   const role = useAuthStore((s) => s.user?.role);
-  if (import.meta.env.VITE_UI_V2 === 'true' && role === 'counselor') return <Suspense fallback={null}><CoachUiV2ChatPage /></Suspense>;
+  if (import.meta.env.VITE_UI_V2 === 'true' && (role === 'counselor' || role === 'org_admin')) return <Suspense fallback={null}><CoachUiV2ChatPage /></Suspense>;
   return <Legacy />;
 }
 
@@ -253,18 +288,12 @@ const router = createBrowserRouter(
         <Route path="/set-password" element={<SetPasswordPage />} />
         <Route path="/membership-invite" element={<MembershipInvitePage />} />
         <Route path="/agent" element={<RoleGuard role="counselor"><LegacyAgentRedirect /></RoleGuard>} />
-        <Route path="/dashboard" lazy={async () => {
-          const module = await import('./pages/DashboardPage');
-          return { element: <RoleGuard role="counselor"><module.default /></RoleGuard> };
-        }} />
+        <Route path="/dashboard" element={<RoleGuard role="counselor"><Suspense fallback={null}><CoachAwareDashboard /></Suspense></RoleGuard>} />
         <Route path="/dashboard/org" element={<RoleGuard role="org_admin"><OrgDashboardPage /></RoleGuard>} />
         <Route path="/onboarding/counselor" element={<RoleGuard role="counselor" onMismatch="notice"><CounselorOnboardingPage /></RoleGuard>} />
         <Route path="/onboarding/client" element={<RoleGuard role="client" onMismatch="notice"><ClientOnboardingPage /></RoleGuard>} />
         <Route path="/onboarding/client/essentials" element={<RoleGuard role="client" onMismatch="notice"><ClientEssentialsPage /></RoleGuard>} />
-        <Route path="/clients" lazy={async () => {
-          const module = await import('./pages/clients/ClientListPage');
-          return { element: <RoleGuard role={['counselor', 'org_admin']}><module.default /></RoleGuard> };
-        }} />
+        <Route path="/clients" element={<RoleGuard role={['counselor', 'org_admin']}><CoachAwareList V2={CoachUiV2ClientsPage} Legacy={LegacyClientsPage} orgLegacy /></RoleGuard>} />
         <Route path="/clients/invite" element={<RoleGuard role={['counselor', 'org_admin']}><ClientInvitePage /></RoleGuard>} />
         <Route path="/clients/:id" element={<RoleGuard role={['counselor', 'org_admin']}><ClientProfilePage /></RoleGuard>} />
         <Route path="/invite/:token" element={<InviteLandingPage />} />
@@ -274,7 +303,9 @@ const router = createBrowserRouter(
         <Route path="/org/register" element={<Navigate to="/register/organization" replace />} />
         <Route path="/org/requests" element={<RoleGuard><MyRequestsPage /></RoleGuard>} />
         {/* SDD-082: static 세그먼트가 :org_id 보다 우선 매칭됨 */}
-        <Route path="/org/counselors" element={<RoleGuard role="org_admin"><OrgCounselorsPage /></RoleGuard>} />
+        <Route path="/counselors" element={<RoleGuard role="org_admin"><OrgCounselorsPage /></RoleGuard>} />
+        {/* SDD-323: 구 경로는 새 경로로 이동(쿼리 유지) */}
+        <Route path="/org/counselors" element={<RoleGuard role="org_admin"><LegacyOrgCounselorsRedirect /></RoleGuard>} />
         <Route path="/org/data-center" element={<RoleGuard role="org_admin"><DataCenterPage /></RoleGuard>} />
         <Route path="/admin/data-center" element={<PlatformAdminRoute><DataCenterPage /></PlatformAdminRoute>} />
         <Route path="/org/:org_id" element={<OrgManagementPage />} />
@@ -282,10 +313,7 @@ const router = createBrowserRouter(
         <Route path="/sessions" element={<RoleGuard role={['counselor', 'org_admin']}><Navigate to="/classes" replace /></RoleGuard>} />
         <Route path="/sessions/new" element={<RoleGuard role={['counselor', 'org_admin']}><Navigate to="/classes/new" replace /></RoleGuard>} />
         <Route path="/sessions/:id" element={<RoleGuard role={['counselor', 'org_admin']}><LegacySessionRedirect /></RoleGuard>} />
-        <Route path="/classes" lazy={async () => {
-          const module = await import('./pages/classes/host-classes-page');
-          return { element: <RoleGuard role={['counselor', 'org_admin']}><module.HostClassesPage /></RoleGuard> };
-        }} />
+        <Route path="/classes" element={<RoleGuard role={['counselor', 'org_admin']}><CoachAwareList V2={CoachUiV2ClassesPage} Legacy={LegacyClassesPage} /></RoleGuard>} />
         <Route path="/classes/now" element={<RoleGuard role={['counselor', 'org_admin']}><InstantClassPage /></RoleGuard>} />
         <Route path="/classes/new" element={<RoleGuard role={['counselor', 'org_admin']}><ClassSchedulingWizard /></RoleGuard>} />
         <Route path="/classes/:classId" element={<RoleGuard role={['counselor', 'org_admin']}><HostClassDetailPage /></RoleGuard>} />
@@ -327,12 +355,10 @@ const router = createBrowserRouter(
           </>
         )}
         <Route path="/admin" element={<PlatformAdminRoute><Navigate to="/admin/orgs" replace /></PlatformAdminRoute>} />
-        <Route path="/reports" lazy={async () => {
-          const module = await import('./pages/reports/ReportListPage');
-          return { element: <RoleGuard role={['counselor', 'org_admin']}><module.default /></RoleGuard> };
-        }} />
+        {/* 11/9 대표 지시: 리포트 목록은 운영 웹 레이아웃(클래스 › 회차 › 회원 계층 + 오른쪽 검토 창)을 그대로 쓴다. 셸·사이드바는 새 디자인 유지. */}
+        <Route path="/reports" element={<RoleGuard role={['counselor', 'org_admin']}><CoachAwareList V2={CoachUiV2ReportsPage} Legacy={LegacyReportsPage} /></RoleGuard>} />
         <Route path="/reports/sample" element={<ReportSamplePage />} />
-        <Route path="/reports/:id" element={<RoleGuard role={['counselor', 'org_admin']}><ReportDetailPage /></RoleGuard>} />
+        <Route path="/reports/:id" element={<RoleGuard role={['counselor', 'org_admin']}><CoachAwareList V2={CoachUiV2ReportDetailPage} Legacy={ReportDetailPage} /></RoleGuard>} />
         <Route
           path="/admin/reviews"
           element={(

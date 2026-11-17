@@ -2,6 +2,7 @@
 
 from app.models.user import User
 from app.models.session import Session, SessionParticipant, SessionReminderLog, ReportChoiceEvent
+from app.models.report_share_event import ReportShareEvent
 from app.models.record import SessionRecord, EEGRecord, EEGRawChunk, Report, AudioChunk, VideoChunk
 from app.models.eeg_feature import EEGFeatureWindow
 from app.models.session_ingest_expected import SessionIngestExpected
@@ -81,6 +82,7 @@ __all__ = [
     "GuestClaimEvent",
     "SessionHostHistory",
     "ReportChoiceEvent",
+    "ReportShareEvent",
     "OriginalDeletionAudit",
     "NormalizationBaseline",
     "NormalizationModel",

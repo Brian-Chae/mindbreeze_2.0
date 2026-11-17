@@ -31,6 +31,7 @@ def list_clients(
     active_within_days: int | None = Query(None, ge=1, le=365),
     counselor_id: str | None = Query(None),
     member_type: str | None = Query(None, pattern="^(member|non_member)$"),
+    filter: str | None = Query(None, pattern="^(inactive_14d|never_attended|week_attended|report_unread)$"),
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -40,11 +41,23 @@ def list_clients(
         current_user["id"], q, page, size, db,
         class_id=class_id, active_within_days=active_within_days,
         counselor_filter_id=counselor_id, member_type=member_type,
+        summary_filter=filter,
     )
     return ClientListResponse(
         clients=clients, total=total, page=page, class_options=class_options,
         counselor_options=counselor_options,
     )
+
+
+@router.get("/summary")
+def client_summary(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """SDD-324: 회원 관리 상단 요약(건수만) — 검색·필터와 무관한 전체 조회 범위."""
+    if current_user.get("role") not in ("counselor", "org_admin"):
+        raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
+    return client_overview_service.client_summary(db, current_user["id"])
 
 
 @router.get("/{client_id}", response_model=ClientProfileResponse)

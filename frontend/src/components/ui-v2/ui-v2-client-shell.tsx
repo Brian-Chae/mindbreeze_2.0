@@ -12,13 +12,16 @@ import { listChatRooms } from '../../lib/api/chat';
 import { isAiEnabled } from '../../lib/feature-flags';
 import { useNotificationSocket } from '../../hooks/useNotificationSocket';
 import { useMobileMenuSwipe } from '../../hooks/use-mobile-menu-swipe';
-import SidebarNav from '../layout/SidebarNav';
+import { UiV2MemberSidebar } from './ui-v2-member-sidebar';
 import NotificationToastHost from '../notifications/notification-toast-host';
 import AppUpdateBanner from '../update/AppUpdateBanner';
 import { UiV2BottomNav } from './ui-v2-bottom-nav';
 import { UiV2Logo } from './ui-v2-logo';
 import '../../styles/ui-v2.css';
+import '../../styles/ui-v2-elevation.css';
 import '../../styles/ui-v2-brand.css';
+import '../../styles/ui-v2-pc.css';
+import '../../styles/ui-v2-mid.css';
 
 export interface UiV2ClientShellProps {
   title: string;
@@ -36,9 +39,11 @@ export interface UiV2ClientShellProps {
   wide?: boolean;
   /** 상단 바 오른쪽 자리를 알림 대신 쓴다(예: 채팅방 메뉴). */
   trailing?: ReactNode;
+  /** 상단 바 알림(종) 버튼 바로 왼쪽에 놓는 보조 행동(홈의 코드 입장). */
+  toolbarExtra?: ReactNode;
 }
 
-export function UiV2ClientShell({ title, subtitle, children, back, hideBottomNav = false, heading, fill = false, wide = false, trailing }: UiV2ClientShellProps) {
+export function UiV2ClientShell({ title, subtitle, children, back, hideBottomNav = false, heading, fill = false, wide = false, trailing, toolbarExtra }: UiV2ClientShellProps) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const userId = useAuthStore((s) => s.user?.id);
@@ -84,7 +89,7 @@ export function UiV2ClientShell({ title, subtitle, children, back, hideBottomNav
   return (
     <div className="h-full w-full md:grid md:grid-cols-[240px_1fr] flex flex-col" data-shell-variant="ui-v2">
       <aside className="hidden md:flex bg-[#F5EDFC] border-r border-[#EFEFEF] flex-col">
-        <SidebarNav role="client" notificationBadge={unread} agentBadge={agentUnread} reportBadge={reportUnread} chatBadge={chatUnread} sessionBadge={sessionInvites.length} />
+        <UiV2MemberSidebar notificationBadge={unread} chatBadge={chatUnread + agentUnread} reportBadge={reportUnread} sessionBadge={sessionInvites.length} />
       </aside>
       <div className="ui-v2 u2-shell min-w-0">
         <div className="u2-toolbar">
@@ -94,6 +99,7 @@ export function UiV2ClientShell({ title, subtitle, children, back, hideBottomNav
             </button>
           ) : <UiV2Logo compact={collapsed} />}
           <span className="u2-compact-title" data-shown={collapsed || !!back} aria-hidden="true">{title}</span>
+          {toolbarExtra}
           {trailing ?? (
             <button type="button" className="u2-icon-btn" aria-label={bellBadge ? `알림 ${bellBadge}건` : '알림'} onClick={() => navigate('/app/notifications')}>
               <svg className="u2-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 16V10a6 6 0 0 1 12 0v6l2 2H4zM10 21h4" /></svg>

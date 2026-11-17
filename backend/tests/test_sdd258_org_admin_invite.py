@@ -160,23 +160,19 @@ def test_ts7_ts8_재발송과_목록_역할(client, monkeypatch, redis):
     assert row["role"] == "org_admin" and row["status"] == "pending"
 
 
-def test_ts9_기관관리자_정지_최소1명_가드(client, monkeypatch, redis):
+def test_ts9_기관관리자_정지는_기관경로에서_전원_403(client, monkeypatch, redis):
+    # SDD-323: 기관 관리자(대표 포함)의 정지·재활성은 제거 — 어떤 대상이든 403 ORG_STATUS_PLATFORM_ONLY
     ctx = _ctx(client, monkeypatch, "258g")
     res = _invite(client, ctx, "second258@test.com")
     uid = res.json()["counselor"]["id"]
     h2 = _activate_new(client, ctx["captured"]["org"][-1])
-    # 주 담당자 본인 정지 → 403 (자기 자신)
     me = client.get(f"/api/v1/org/{ctx['org_id']}/counselors", headers=ctx["h"]).json()
     admin_id = next(x["id"] for x in me if x["email"] == "adm-258g@test.com")
     url = f"/api/v1/org/{ctx['org_id']}/counselors"
-    assert client.post(f"{url}/{admin_id}/suspend", json={"reason": "t"}, headers=ctx["h"]).status_code == 403
-    # 두 번째 관리자가 주 담당자(첫 관리자)를 정지 → 주 담당자 보호 403
-    assert client.post(f"{url}/{admin_id}/suspend", json={"reason": "t"}, headers=h2).status_code == 403
-    # 첫 관리자가 두 번째 관리자 정지 → 주 담당자(활성) 남으므로 200, 해제 200
-    r = client.post(f"{url}/{uid}/suspend", json={"reason": "t"}, headers=ctx["h"])
-    assert r.status_code == 200, r.text
-    r = client.post(f"{url}/{uid}/unsuspend", json={"reason": "t"}, headers=ctx["h"])
-    assert r.status_code == 200, r.text
+    for headers, target in ((ctx["h"], admin_id), (h2, admin_id), (ctx["h"], uid)):
+        for path in ("suspend", "unsuspend"):
+            r = client.post(f"{url}/{target}/{path}", json={"reason": "t"}, headers=headers)
+            assert r.status_code == 403 and r.json()["code"] == "ORG_STATUS_PLATFORM_ONLY", r.text
 
 
 def test_ts9b_다른_활성관리자_없으면_정지_409(client, monkeypatch, redis):

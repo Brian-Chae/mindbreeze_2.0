@@ -84,6 +84,8 @@ from app.services import (
     session_service,
 )
 from app.services.session_authz import SessionAction, get_session_authorized
+from app.schemas.band_device import BandDeviceReportRequest, BandDeviceReportResponse
+from app.services import band_device_service
 
 logger = logging.getLogger(__name__)
 
@@ -662,6 +664,22 @@ def put_eeg_collection_consent(
     """SDD-220: 밴드 연결 전 뇌파 수집 선택. 리포트 반영/연구 선택과 별개로 저장한다."""
     return recording_consent_service.set_eeg_collection_consent(
         session_id, payload.consented, payload.notice_version, db,
+        entry_credential=x_entry_credential,
+        current_user_id=current_user["id"] if current_user else None,
+    )
+
+
+@router.put("/{session_id}/entry/band-device", response_model=BandDeviceReportResponse)
+def put_band_device(
+    session_id: str,
+    payload: BandDeviceReportRequest,
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-326: 연결한 LINK BAND 시리얼(+펌웨어) 보고 — 본인 참가자만, 멱등. 구 클라이언트는 호출하지 않는다."""
+    return band_device_service.report_band_device(
+        session_id, payload, db,
         entry_credential=x_entry_credential,
         current_user_id=current_user["id"] if current_user else None,
     )

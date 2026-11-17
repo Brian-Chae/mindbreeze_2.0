@@ -146,8 +146,8 @@ export function adaptMixedHome(
     if (!row?.scheduled_at || ['completed', 'cancelled'].includes(row.status) || seen.has(row.id)) return;
     const at = Date.parse(row.scheduled_at);
     if (!Number.isFinite(at)) return;
-    // 열린 회차는 시작 후 6시간 이내면 과거여도 후보(D4), 그 외는 미래 회차만.
-    if (candidate.open ? !withinOpenWindow(row.scheduled_at, now) : at < now) return;
+    // 열린 회차는 시작 후 6시간 이내면 과거여도 후보(D4). 아직 열리지 않은 회차는 예정 시각이 지나도 12시간 유예(서버 _next_session 과 동일).
+    if (candidate.open ? !withinOpenWindow(row.scheduled_at, now) : at < now - 12 * 3600_000) return;
     seen.add(row.id);
     candidates.push({ ...candidate, status: row.status, sessionId: asSessionId(row.id), scheduledAt: row.scheduled_at, seq: displayField(row.seq) });
   };

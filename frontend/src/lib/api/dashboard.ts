@@ -26,6 +26,12 @@ export interface ClassSummary {
   has_summary: boolean;
   report_count: number;
   pending_review_count: number;
+  /** 홈 카드 입장 버튼용(가산 필드, 구 응답에는 없을 수 있음). */
+  host_name?: string | null;
+  host_state?: string | null;
+  viewer_is_host?: boolean;
+  can_observe?: boolean;
+  observe_blocked_reason?: string | null;
 }
 
 export interface CounselorDashboardResponse {

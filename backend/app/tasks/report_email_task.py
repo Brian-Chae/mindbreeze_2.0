@@ -109,3 +109,8 @@ def session_invite_email_task(invite_id: str) -> None:
     with SessionLocal() as db:
         if deliver_invite_email(invite_id, db) == "failed":
             raise RuntimeError("초대 메일 발송 실패")
+
+
+# SDD-327 T13: 리포트 공유 메일 태스크. 별도 모듈에 정의되므로 mindbreeze-email-worker 가 이 모듈만
+# 로드해도 등록되도록 여기서 import 한다(순환 방지를 위해 email_app 정의 이후 맨 끝에 둔다).
+import app.tasks.report_share_email_task  # noqa: E402,F401

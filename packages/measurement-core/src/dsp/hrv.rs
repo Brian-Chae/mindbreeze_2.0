@@ -196,8 +196,72 @@ fn resample(rr: &[f64], fs: f64) -> Vec<f64> {
     if n < 4.0 {
         return vec![];
     }
+    // 스펙트럼 입력: 박동 중점 기준 자연 3차 스플라인 → 재표본 → 선형 detrend (TS resampleRRIntervals 와 동일)
+    let mid: Vec<f64> = secs.iter().enumerate().map(|(i, &s)| t[i] + s / 2.0).collect();
     let xn: Vec<f64> = (0..n as usize).map(|i| i as f64 / fs).collect();
-    interpolate_linear(&t, &secs, &xn)
+    detrend_linear(&interpolate_cubic_spline(&mid, &secs, &xn))
+}
+
+fn interpolate_cubic_spline(x: &[f64], y: &[f64], xn: &[f64]) -> Vec<f64> {
+    let n = x.len();
+    if n < 3 {
+        return interpolate_linear(x, y, xn);
+    }
+    let h: Vec<f64> = (0..n - 1).map(|i| x[i + 1] - x[i]).collect();
+    let mut m = vec![0.0; n];
+    let mut cp = vec![0.0; n];
+    let mut dp = vec![0.0; n];
+    for i in 1..n - 1 {
+        let lower = h[i - 1];
+        let diag = 2.0 * (h[i - 1] + h[i]);
+        let rhs = 6.0 * ((y[i + 1] - y[i]) / h[i] - (y[i] - y[i - 1]) / h[i - 1]);
+        let den = if i == 1 { diag } else { diag - lower * cp[i - 1] };
+        cp[i] = h[i] / den;
+        dp[i] = (rhs - if i == 1 { 0.0 } else { lower * dp[i - 1] }) / den;
+    }
+    for i in (1..n - 1).rev() {
+        m[i] = dp[i] - if i == n - 2 { 0.0 } else { cp[i] * m[i + 1] };
+    }
+    let mut out = Vec::with_capacity(xn.len());
+    let mut k = 0usize;
+    for &xv in xn {
+        if xv <= x[0] {
+            out.push(y[0]);
+            continue;
+        }
+        if xv >= x[n - 1] {
+            out.push(y[n - 1]);
+            continue;
+        }
+        while k < n - 2 && x[k + 1] < xv {
+            k += 1;
+        }
+        let hk = h[k];
+        let a = (x[k + 1] - xv) / hk;
+        let b = (xv - x[k]) / hk;
+        out.push(a * y[k] + b * y[k + 1] + (((a * a * a - a) * m[k] + (b * b * b - b) * m[k + 1]) * hk * hk) / 6.0);
+    }
+    out
+}
+
+fn detrend_linear(y: &[f64]) -> Vec<f64> {
+    let n = y.len();
+    if n < 2 {
+        return y.to_vec();
+    }
+    let (mut sx, mut sy, mut sxx, mut sxy) = (0.0, 0.0, 0.0, 0.0);
+    for (i, &v) in y.iter().enumerate() {
+        let i = i as f64;
+        sx += i;
+        sy += v;
+        sxx += i * i;
+        sxy += i * v;
+    }
+    let nf = n as f64;
+    let den = nf * sxx - sx * sx;
+    let slope = if den == 0.0 { 0.0 } else { (nf * sxy - sx * sy) / den };
+    let icpt = (sy - slope * sx) / nf;
+    y.iter().enumerate().map(|(i, &v)| v - (icpt + slope * i as f64)).collect()
 }
 
 fn hamming(size: usize) -> Vec<f64> {
@@ -669,13 +733,7 @@ impl HrvState {
         }
         let (freqs, psd) = welch(&rs, fs);
         let lf = integrate(&freqs, &psd, 0.04, 0.15) * 1_000_000.0;
-        let mut hf = integrate(&freqs, &psd, 0.15, 0.4) * 1_000_000.0;
-        if hf < 1.0 && lf > 10.0 {
-            let ext = integrate(&freqs, &psd, 0.12, 0.5) * 100.0;
-            if ext > hf * 1.5 {
-                hf = ext;
-            }
-        }
+        let hf = integrate(&freqs, &psd, 0.15, 0.4) * 1_000_000.0;
         let raw_lf = valid_value(lf, self.lf, 0.1);
         let raw_hf = valid_value(hf, self.hf, 0.1);
         let nlf = smooth_freq(raw_lf, self.lf);

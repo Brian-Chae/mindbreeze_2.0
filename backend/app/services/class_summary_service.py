@@ -482,7 +482,8 @@ def build_class_report(db: DBSession, session_id, viewer_id) -> dict:
     if block is not None:
         presented = {**block, "narrative": _present_narrative(block, names)}
     return {
-        "session": {"id": str(session.id), "class_name": cls.title if cls else None, "seq": session.seq,
+        "session": {"id": str(session.id), "class_id": str(session.class_id) if session.class_id else None,
+                    "class_name": cls.title if cls else None, "seq": session.seq,
                     "ended_at": session.ended_at, "duration_min": _duration_min(session)},
         "report": _report_info(report, block),
         "block": presented,

@@ -27,7 +27,7 @@ export interface ClassReportBlock {
   participants: { participant_id: string; state: ParticipantMeasurement; metrics: Partial<Record<MetricKey, ParticipantMetric>> }[];
 }
 export interface ReportGeneration { id: string | null; generation_status: 'pending' | 'processing' | 'ready' | 'failed' | 'none'; state: string; narrative_pending: boolean }
-export interface ClassReportSession { id: string; class_name: string; seq: number | null; ended_at: string | null; duration_min: number }
+export interface ClassReportSession { id: string; class_id?: string | null; class_name: string; seq: number | null; ended_at: string | null; duration_min: number }
 export interface ParticipantRow {
   participant_id: string; display_name: string; kind: 'member' | 'guest'; order: number; included: boolean;
   exclusion: 'not_included' | 'absent' | null; measurement: ParticipantMeasurement;

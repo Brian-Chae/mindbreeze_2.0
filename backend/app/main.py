@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.v1 import router as v1_router
 from app.config import settings
+from app.core.api_error import ApiError
 from app.core.cors import http_cors_origins, parse_origins, cors_explicitly_configured
 from app.ws import sio, asgi_app as socketio_asgi  # noqa: F401
 from app.services import data_center_runtime  # SDD-243/244 통합: 측정 backend·raw 반출 어댑터 등록
@@ -212,7 +213,18 @@ async def _validation_exception_handler(
         f"{'.'.join(str(p) for p in e.get('loc', ()))}: {e.get('type')}" for e in exc.errors()[:5]
     )
     logger.warning("[422] %s %s — 요청 검증 실패 (%s)", request.method, request.url.path, fields)
-    return JSONResponse(status_code=422, content={"detail": jsonable_encoder(exc.errors())})
+    errors = exc.errors()
+    if request.url.path.endswith("/entry/band-device") or "/band-devices/" in request.url.path:
+        # SDD-326: 기기 시리얼은 식별자 — 오류 응답에 입력 원문(input/ctx)을 되돌려주지 않는다.
+        errors = [{k: v for k, v in e.items() if k not in ("input", "ctx")} for e in errors]
+    return JSONResponse(status_code=422, content={"detail": jsonable_encoder(errors)})
+
+
+@app.exception_handler(ApiError)
+async def _api_error_handler(request: Request, exc: ApiError) -> JSONResponse:
+    """SDD-323: `code` 필드를 포함한 HTTPException 봉투."""
+    content = {"detail": exc.detail, "code": exc.code, **exc.extra}
+    return JSONResponse(status_code=exc.status_code, content=content, headers=exc.headers)
 
 
 @app.exception_handler(Exception)
@@ -248,8 +260,13 @@ async def health_ready():
 
         from app.core.database import SessionLocal
 
-        with SessionLocal() as db:
-            db.execute(text("SELECT 1"))
+        def _db_ping() -> None:
+            with SessionLocal() as db:
+                db.execute(text("SELECT 1"))
+
+        # 동기 DB 호출을 이벤트 루프에서 직접 하면 풀 고갈 시 pool_timeout 동안
+        # 실시간 서버(소켓 포함) 전체가 멈춘다 → 스레드로 넘기고 5초 상한.
+        await asyncio.wait_for(asyncio.to_thread(_db_ping), timeout=5)
         checks["database"] = "ok"
     except Exception:  # noqa: BLE001
         logger.exception("[health/ready] DB 점검 실패")

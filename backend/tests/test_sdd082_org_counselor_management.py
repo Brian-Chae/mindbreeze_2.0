@@ -85,63 +85,32 @@ def _audits(user_id: str, action: str) -> list:
 # ---------------------------------------------------------------------------
 
 
-def test_ts1_suspend_상태변경_감사_알림_생성(client, monkeypatch, redis):
+# SDD-323 정책 변경(대표 확정 11/9): 기관 관리자(대표 포함)의 계정 정지·재활성은 제거되었다.
+# 아래 시나리오는 라우터가 항상 403 `ORG_STATUS_PLATFORM_ONLY` 로 거절하고 데이터가 변하지 않음을 고정한다.
+# 정지 상태 전이 자체(서비스 함수)와 플랫폼 경로(/admin/users/{id}/suspend)는 test_sdd323 및 admin 테스트가 검증한다.
+def test_ts1_suspend는_기관관리자에게_403(client, monkeypatch, redis):
     ctx = _make_org_admin(client, monkeypatch, sys_email="s82a@test.com", admin_email="a82a@test.com")
     counselor = _invite_and_activate(client, monkeypatch, ctx, "c82a@test.com")
 
     res = _suspend(client, ctx, counselor["id"], reason="근태 문제")
-    assert res.status_code == 200, res.text
-    assert res.json()["status"] == "suspended"
-
-    audits = _audits(counselor["id"], "org_counselor_suspend")
-    assert len(audits) == 1
-    assert audits[0].reason == "근태 문제"
-    assert audits[0].extra["org_id"] == ctx["org_id"]
-
-    # 대상자 인앱 알림 생성
-    from app.models.notification import Notification
-
-    db = _db()
-    try:
-        notif = (
-            db.query(Notification)
-            .filter(Notification.user_id == uuid.UUID(counselor["id"]), Notification.type == "system")
-            .order_by(Notification.created_at.desc())
-            .first()
-        )
-        assert notif is not None
-        assert "비활성화" in notif.title
-        assert "근태 문제" in (notif.body or "")
-    finally:
-        db.close()
-
-    # TS13: 목록에서 suspended 우선 표기 (membership 은 여전히 active)
+    assert res.status_code == 403, res.text
+    assert res.json()["code"] == "ORG_STATUS_PLATFORM_ONLY"
+    assert _audits(counselor["id"], "org_counselor_suspend") == []
     listing = client.get(f"/api/v1/org/{ctx['org_id']}/counselors", headers=ctx["h"])
-    assert listing.status_code == 200
     row = next(r for r in listing.json() if r["id"] == counselor["id"])
-    assert row["status"] == "suspended"
+    assert row["status"] == "active" and "suspend" not in row["allowed_actions"]
 
 
-def test_ts3_ts4_정지시_로그인차단_해제시_복구(client, monkeypatch, redis):
+def test_ts3_ts4_unsuspend도_기관관리자에게_403(client, monkeypatch, redis):
     ctx = _make_org_admin(client, monkeypatch, sys_email="s82b@test.com", admin_email="a82b@test.com")
     counselor = _invite_and_activate(client, monkeypatch, ctx, "c82b@test.com")
 
-    assert _suspend(client, ctx, counselor["id"]).status_code == 200
-
-    login = client.post(
-        "/api/v1/auth/login", json={"email": "c82b@test.com", "password": NEW_PASSWORD}
-    )
-    assert login.status_code == 403
-
+    assert _suspend(client, ctx, counselor["id"]).status_code == 403
+    login = client.post("/api/v1/auth/login", json={"email": "c82b@test.com", "password": NEW_PASSWORD})
+    assert login.status_code == 200, login.text  # 정지되지 않았으므로 로그인 정상
     res = _unsuspend(client, ctx, counselor["id"])
-    assert res.status_code == 200, res.text
-    assert res.json()["status"] == "active"
-    assert len(_audits(counselor["id"], "org_counselor_unsuspend")) == 1
-
-    login = client.post(
-        "/api/v1/auth/login", json={"email": "c82b@test.com", "password": NEW_PASSWORD}
-    )
-    assert login.status_code == 200, login.text
+    assert res.status_code == 403 and res.json()["code"] == "ORG_STATUS_PLATFORM_ONLY"
+    assert _audits(counselor["id"], "org_counselor_unsuspend") == []
 
 
 # ---------------------------------------------------------------------------
@@ -172,16 +141,15 @@ def test_ts5_자기자신과_org_admin은_정지불가(client, monkeypatch, redi
     assert _suspend(client, ctx, admin_id).status_code == 403
 
 
-def test_ts6_미소속_상담사는_404(client, monkeypatch, redis):
+def test_ts6_타기관_상담사_정지는_403_정보비노출(client, monkeypatch, redis):
     ctx_a = _make_org_admin(client, monkeypatch, sys_email="s82e@test.com", admin_email="a82e@test.com")
     ctx_b = _make_org_admin(client, monkeypatch, sys_email="s82f@test.com", admin_email="a82f@test.com")
     counselor_b = _invite_and_activate(client, monkeypatch, ctx_b, "c82f@test.com")
 
-    # A 기관 관리자가 B 기관 상담사를 정지 시도 → 404
-    assert _suspend(client, ctx_a, counselor_b["id"]).status_code == 404
-    # 존재하지 않는 id / 잘못된 uuid → 404
-    assert _suspend(client, ctx_a, str(uuid.uuid4())).status_code == 404
-    assert _suspend(client, ctx_a, "not-a-uuid").status_code == 404
+    # SDD-323: 정지는 대상 존재 여부와 무관하게 먼저 403 (존재 비노출)
+    assert _suspend(client, ctx_a, counselor_b["id"]).status_code == 403
+    assert _suspend(client, ctx_a, str(uuid.uuid4())).status_code == 403
+    assert _suspend(client, ctx_a, "not-a-uuid").status_code == 403
 
 
 def test_ts7_counselor_토큰은_403(client, monkeypatch, redis):
@@ -202,7 +170,7 @@ def test_ts7_counselor_토큰은_403(client, monkeypatch, redis):
     assert res.status_code == 403
 
 
-def test_ts8_pending_상담사_정지불가_409(client, monkeypatch, redis):
+def test_ts8_pending_상담사_정지도_403(client, monkeypatch, redis):
     ctx = _make_org_admin(client, monkeypatch, sys_email="s82h@test.com", admin_email="a82h@test.com")
     res = client.post(
         f"/api/v1/org/{ctx['org_id']}/counselors/invite",
@@ -210,20 +178,15 @@ def test_ts8_pending_상담사_정지불가_409(client, monkeypatch, redis):
         headers=ctx["h"],
     )
     assert res.status_code == 201, res.text
-    pending_id = res.json()["counselor"]["id"]
-
-    assert _suspend(client, ctx, pending_id).status_code == 409
+    assert _suspend(client, ctx, res.json()["counselor"]["id"]).status_code == 403
 
 
-def test_ts9_중복_전이는_409(client, monkeypatch, redis):
+def test_ts9_중복_전이_요청도_403(client, monkeypatch, redis):
     ctx = _make_org_admin(client, monkeypatch, sys_email="s82i@test.com", admin_email="a82i@test.com")
     counselor = _invite_and_activate(client, monkeypatch, ctx, "c82i@test.com")
-
-    # active 계정 unsuspend → 409
-    assert _unsuspend(client, ctx, counselor["id"]).status_code == 409
-    assert _suspend(client, ctx, counselor["id"]).status_code == 200
-    # 이미 suspended → 재-suspend 409
-    assert _suspend(client, ctx, counselor["id"]).status_code == 409
+    assert _unsuspend(client, ctx, counselor["id"]).status_code == 403
+    assert _suspend(client, ctx, counselor["id"]).status_code == 403
+    assert _suspend(client, ctx, counselor["id"]).status_code == 403
 
 
 # ---------------------------------------------------------------------------
@@ -248,6 +211,8 @@ def test_ts10_activity_세션과_리포트_메타데이터(client, monkeypatch, 
             host_id=uuid.UUID(counselor["id"]),
             duration_min=60,
             title="저녁 명상 클래스",
+            organization_id=uuid.UUID(ctx["org_id"]),
+            organization_attribution_known=True,
         )
         db.add(session)
         db.flush()
@@ -353,8 +318,8 @@ def test_mb2_org01_주담당자_자기소속해제_409(client, monkeypatch, redi
     finally:
         db.close()
 
-    res = client.delete(
-        f"/api/v1/org/{org_id}/counselors/{admin_id}", headers=ctx["h"]
+    res = client.request(
+        "DELETE", f"/api/v1/org/{org_id}/counselors/{admin_id}", json={"reason": "시도"}, headers=ctx["h"]
     )
     assert res.status_code == 409, res.text
 
@@ -399,7 +364,8 @@ def test_mb2_org01_주담당자를_다른관리자가_해제_409(client, monkeyp
     finally:
         db.close()
 
-    res = client.delete(
-        f"/api/v1/org/{ctx['org_id']}/counselors/{primary_id}", headers=counselor["h"]
+    res = client.request(
+        "DELETE", f"/api/v1/org/{ctx['org_id']}/counselors/{primary_id}",
+        json={"reason": "시도"}, headers=counselor["h"],
     )
     assert res.status_code == 409, res.text

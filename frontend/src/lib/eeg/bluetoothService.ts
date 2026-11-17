@@ -14,6 +14,7 @@ import {
   type AccDataSample,
 } from './blePacketParser';
 import { getBluetoothProvider } from './bluetooth';
+import { normalizeBandSerial, normalizeFirmware } from '../band/band-device-report';
 import type {
   BluetoothProvider,
   BluetoothDeviceInfo,
@@ -43,7 +44,11 @@ const LINK_BAND_UUIDs = {
   
   // 배터리 서비스 (표준 BLE)
   BATTERY_SERVICE: '0000180f-0000-1000-8000-00805f9b34fb',
-  BATTERY_CHARACTERISTIC: '00002a19-0000-1000-8000-00805f9b34fb'
+  BATTERY_CHARACTERISTIC: '00002a19-0000-1000-8000-00805f9b34fb',
+
+  // Device Information 서비스(표준 BLE) — SDD-326: 펌웨어 버전은 읽히면 보고하고 안 읽혀도 무시한다.
+  DEVICE_INFO_SERVICE: '0000180a-0000-1000-8000-00805f9b34fb',
+  FIRMWARE_REVISION_CHARACTERISTIC: '00002a26-0000-1000-8000-00805f9b34fb'
 };
 
 // GATT 접근 허용을 위해 requestDevice()의 optionalServices에 전달할 서비스 UUID 목록.
@@ -53,6 +58,7 @@ const LINK_BAND_SERVICE_UUIDS = [
   LINK_BAND_UUIDs.PPG_SERVICE,
   LINK_BAND_UUIDs.ACCELEROMETER_SERVICE,
   LINK_BAND_UUIDs.BATTERY_SERVICE,
+  LINK_BAND_UUIDs.DEVICE_INFO_SERVICE,
 ];
 
 // SAMPLING_RATES / TIMESTAMP_CLOCK은 src/utils/blePacketParser.ts에 정의 (BLE 프로토콜 상수).
@@ -92,6 +98,12 @@ export interface BluetoothEEGService {
   getBatteryLevel(): Promise<number | null>;
   getDeviceName(): string;
   getDeviceId(): string;
+  /**
+   * SDD-326 — 마지막으로 연결된 밴드의 시리얼(광고 이름)·펌웨어 스냅샷.
+   * releaseForNative()/disconnect() 가 deviceName 을 지워도 남는다(네이티브 인계 뒤에도 보고 가능).
+   * 연결한 적이 없거나 이름을 못 얻었으면 null.
+   */
+  getBandIdentity(): { serial: string; firmware: string | null } | null;
   /** 재연결용 — 예기치 않은 끊김 후 같은 디바이스로 재연결하기 위한 캐시 ID */
   getCachedDeviceId(): string | null;
   clearDeviceCache(): void;
@@ -110,6 +122,8 @@ class LinkBandBluetoothService implements BluetoothEEGService {
   private deviceId: string | null = null;
   private deviceName: string | null = null;
   private connected: boolean = false;
+  // SDD-326: 시리얼 스냅샷 — disconnect/releaseForNative 가 deviceName 을 지워도 유지한다. 다른 밴드에 연결하면 교체된다.
+  private identity: { deviceId: string; serial: string; firmware: string | null } | null = null;
   // 재연결용 — 예기치 않은 끊김(cleanup)에서는 유지, 수동 해제(forceCleanup)에서만 초기화.
   private lastDeviceId: string | null = null;
 
@@ -515,6 +529,9 @@ class LinkBandBluetoothService implements BluetoothEEGService {
 
       this.connected = true;
 
+      // SDD-326: 인계(releaseForNative)로 이름이 지워지기 전에 시리얼을 스냅샷하고, 펌웨어는 베스트에포트로 읽는다.
+      this.captureIdentity(targetId);
+
     } catch (error) {
       await this.cleanup();
 
@@ -530,6 +547,27 @@ class LinkBandBluetoothService implements BluetoothEEGService {
   }
 
 
+
+  /** SDD-326: 연결 직후 이름 스냅샷(동기) + 펌웨어 읽기(비동기·실패 무시). 연결 흐름을 기다리게 하지 않는다. */
+  private captureIdentity(deviceId: string): void {
+    const serial = normalizeBandSerial(this.deviceName);
+    if (!serial) { this.identity = null; return; }
+    const kept = this.identity && this.identity.deviceId === deviceId && this.identity.serial === serial ? this.identity.firmware : null;
+    this.identity = { deviceId, serial, firmware: kept };
+    const provider = this.provider;
+    if (!provider || kept) return;
+    void provider
+      .readCharacteristic(deviceId, LINK_BAND_UUIDs.DEVICE_INFO_SERVICE, LINK_BAND_UUIDs.FIRMWARE_REVISION_CHARACTERISTIC)
+      .then((view) => {
+        const firmware = normalizeFirmware(new TextDecoder().decode(view));
+        if (firmware && this.identity && this.identity.deviceId === deviceId) this.identity = { ...this.identity, firmware };
+      })
+      .catch(() => undefined); // 0x180A 미노출·권한 차단은 정상 — 시리얼만 보고한다
+  }
+
+  getBandIdentity(): { serial: string; firmware: string | null } | null {
+    return this.identity ? { serial: this.identity.serial, firmware: this.identity.firmware } : null;
+  }
 
   private async connectServices(): Promise<void> {
     if (!this.provider || !this.deviceId) {

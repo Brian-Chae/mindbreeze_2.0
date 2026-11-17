@@ -149,11 +149,17 @@ def test_auth402_sub_org_role_change_does_not_pollute_global_role(client):
         db.flush()
         membership_service.add_membership(db, user, org_a.id, status_="active")  # primary
         membership_service.add_membership(db, user, org_b.id, status_="active")
+        # SDD-323: 행위자 권한을 서버가 판정하므로 실제 플랫폼 관리자를 행위자로 둔다
+        actor = User(
+            email="auth402-actor@test.com", password_hash=hash_password(VALID_PASSWORD),
+            name="플랫폼", role="platform_admin", status="active", verified_tier="email",
+        )
+        db.add(actor)
         db.commit()
 
         # 부 소속 B 에서 org_admin 으로 승격 → 전역 role(주 소속 A 미러)은 counselor 유지
         org_management_service.change_counselor(
-            org_b.id, user.id, uuid.uuid4(), "부소속 승격", db, role="org_admin"
+            org_b.id, user.id, actor.id, "부소속 승격", db, role="org_admin"
         )
         db.refresh(user)
         assert user.role == "counselor", "부 소속 역할 변경이 전역 role 을 오염시켰다"
@@ -163,7 +169,7 @@ def test_auth402_sub_org_role_change_does_not_pollute_global_role(client):
         # 멤버십 role 기준 멱등 단락 — 같은 role 재요청은 no-op(전역 role 비교 아님)
         before_version = db.query(Organization).filter(Organization.id == org_b.id).first().version
         org_management_service.change_counselor(
-            org_b.id, user.id, uuid.uuid4(), "동일 role", db, role="org_admin"
+            org_b.id, user.id, actor.id, "동일 role", db, role="org_admin"
         )
         after_version = db.query(Organization).filter(Organization.id == org_b.id).first().version
         assert before_version == after_version, "동일 멤버십 role 재요청이 실제 변경을 일으켰다"

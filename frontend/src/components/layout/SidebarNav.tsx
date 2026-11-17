@@ -116,7 +116,7 @@ const ORG_ADMIN_NAV_ITEMS: NavItem[] = [
   { to: '/counseling', key: 'counseling', icon: ICONS.users },
   { to: '/chat', key: 'chat', icon: ICONS.message },
   // SDD-082: 기관 관리자 전용 상담사 관리 페이지
-  { to: '/org/counselors', key: 'members', icon: ICONS.users },
+  { to: '/counselors', key: 'members', icon: ICONS.users },
   { to: '/reports', key: 'report', icon: ICONS.report },
   { to: "/org/data-center", label: "데이터 센터", icon: ICONS.activity },
   { to: '/upload-status', label: '데이터 현황', icon: ICONS.activity },

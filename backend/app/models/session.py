@@ -245,6 +245,31 @@ class SessionParticipant(Base):
     session = relationship("Session", back_populates="participants", foreign_keys=[session_id])
 
 
+class SessionBandDevice(Base):
+    """SDD-326: 참가자가 회차에서 연결한 LINK BAND 시리얼 이력.
+
+    현재 기기는 ``session_participants.linkband_device_id``, 교체·재연결 이력은 이 테이블(참가자×시리얼 1행, last_seen 갱신).
+    시리얼은 기기 식별자 — 로그에는 마스킹, 탈퇴 시 소거.
+    """
+
+    __tablename__ = "session_band_devices"
+    __table_args__ = (
+        UniqueConstraint("participant_id", "serial", name="uq_session_band_devices_participant_serial"),
+        Index("ix_session_band_devices_serial", "serial"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False, index=True)
+    participant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("session_participants.id", ondelete="CASCADE"), nullable=False, index=True)
+    serial: Mapped[str] = mapped_column(String(64), nullable=False)
+    firmware: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    platform: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
 class SessionReminderLog(Base):
     """SDD-097: 리마인더 발송 로그 — (세션, 시점, 수신자, 채널) 단위로 중복 발송을 막는다.
 
