@@ -87,7 +87,10 @@ await scenario('[기업] 기관 관리자 로그인 → 대시보드(기관명·
 await scenario('[기업] 소속 코치 목록 노출', async (p) => {
   await uiLogin(p, 'org_admin', HOME.org_admin);
   const code = (await apiLoginFull('counselor')).user.counselor_code; // 숫자 6자리(SDD-312) — 고정 문자열 대신 실제 값
-  await expectText(p, '/org/counselors', '코치 관리', 'E2E-코치', code);
+  // dev(UI_V2)는 '구성원' 화면, 운영 번들은 기존 '코치 관리' — 대상 화면에 맞춰 확인
+  await go(p, '/org/counselors');
+  const head = await bodyText(p);
+  await expectText(p, '/org/counselors', head.includes('구성원 초대') ? '구성원' : '코치 관리', 'E2E-코치', code);
 });
 
 // ════════════════════════════════════════════════════════════════════════
