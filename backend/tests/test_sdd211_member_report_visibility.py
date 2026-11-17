@@ -541,21 +541,24 @@ def _approve(client, host: JsonDict, report_id: str):
 # ═════════════════════════════════════════════════════════════════════════
 # RX-1 ~ RX-2: 회원 목록
 # ═════════════════════════════════════════════════════════════════════════
-def test_RX1_회원_목록_4상태_모두_반환_비승인_마스킹(client):
+def test_RX1_회원_목록은_completed만_노출_비승인은_목록_제외_상세_마스킹(client):
+    # 대표 요청(11/17): 생성 중 빈 리포트 창 방지 — 목록에는 완료된 리포트만, 비승인은 상세 직접 접근 시 마스킹.
     env = _scenario(client, ("pending_analysis", "pending_review", "error", "completed"))
     body = _list(client, env["member"])
 
-    assert body["total"] == 4
-    assert len(body["reports"]) == 4
+    assert body["total"] == 1
+    assert len(body["reports"]) == 1
     by_id = {row["id"]: row for row in body["reports"]}
-    assert set(by_id) == set(env["ids"].values())
+    assert set(by_id) == {env["ids"]["completed"]}
 
     problems: list[str] = []
     for status in ("pending_analysis", "pending_review", "error"):
+        detail = _detail(client, env["member"], env["ids"][status])
+        assert detail.status_code == 200, detail.text
         problems += [
             f"[{status}] {p}"
             for p in _masking_violations(
-                by_id[env["ids"][status]],
+                detail.json(),
                 expected=_expected_preserved(env, status),
                 leak_tokens=LEAK_FOREVER,
             )
@@ -574,7 +577,7 @@ def test_RX2_총계_페이지_정렬_불변_limit2(client):
     statuses = ("pending_review", "completed", "completed", "pending_analysis", "completed")
     host = _make_host()
     member = _make_member(client, "x1-page@test.com")
-    expected_order: list[str] = []
+    expected_order: list[str] = []  # 목록 노출 대상(completed)만
     unapproved_ids: set[str] = set()
     for index, status in enumerate(statuses):
         sid = _create_session(client, host, minutes=900 - index * 60, title=f"X1 RX2 {index}")
@@ -588,18 +591,19 @@ def test_RX2_총계_페이지_정렬_불변_limit2(client):
             created_at=BASE_TIME + timedelta(hours=index),
             with_subjective=False,
         )
-        expected_order.append(rid)
-        if status != "completed":
+        if status == "completed":
+            expected_order.append(rid)
+        else:
             unapproved_ids.add(rid)
 
     unpaged = _list(client, member)
-    assert unpaged["total"] == 5
+    assert unpaged["total"] == 3, "대표 요청(11/17): 목록은 completed 만"
     assert [r["id"] for r in unpaged["reports"]] == expected_order, "정렬 순서(세션 시각 desc) 불변"
 
     pages: list[JsonDict] = []
-    for page, expected_len in ((1, 2), (2, 2), (3, 1)):
+    for page, expected_len in ((1, 2), (2, 1)):
         chunk = _list(client, member, page=page, limit=2)
-        assert chunk["total"] == 5, "마스킹과 무관하게 페이지마다 total 불변"
+        assert chunk["total"] == 3, "페이지마다 total 불변"
         assert (chunk["page"], chunk["limit"]) == (page, 2)
         assert len(chunk["reports"]) == expected_len
         pages.extend(chunk["reports"])
@@ -706,14 +710,10 @@ def test_RX7_호스트_approve_전후_마스킹_해제_알림1건_is_read_유지
     problems: list[str] = []
 
     # 승인 전: 목록·상세 모두 마스킹 (이 열람이 is_read 를 올리면 승인 후 NEW 가 사라진다)
-    before_list = _list(client, member)["reports"]
+    assert _list(client, member)["reports"] == [], "승인 전 리포트는 목록에 노출되지 않는다"
     before_detail = _detail(client, member, rid)
     assert before_detail.status_code == 200, before_detail.text
     expected = _expected_preserved(env, "pending_review")
-    problems += [
-        f"[승인 전 목록] {p}"
-        for p in _masking_violations(before_list[0], expected=expected, leak_tokens=LEAK_UNTIL_APPROVED)
-    ]
     problems += [
         f"[승인 전 상세] {p}"
         for p in _masking_violations(
@@ -817,17 +817,10 @@ def test_RX9_자동승인_호스트_세션종료_파이프라인_생성직후_�
         for row in snap["reports"]
         if row["type"] == "client" and row["status"] == "pending_review"
     ]
-    if not window:
-        problems.append("승인 직전 pending_review 구간을 포착하지 못함(테스트 전제 실패)")
-    for row in window:
-        problems += [
-            f"[생성 직후] {p}"
-            for p in _masking_violations(
-                row,
-                expected={"status": "pending_review", "type": "client", "is_read": False},
-                leak_tokens=(),
-            )
-        ]
+    if not snapshots:
+        problems.append("승인 직전 구간을 포착하지 못함(테스트 전제 실패)")
+    if window:
+        problems.append("생성 직후(승인 전) 리포트가 회원 목록에 노출됨 — completed 만 노출해야 함")
 
     rows = _list(client, member)["reports"]
     client_rows = [r for r in rows if r["type"] == "client"]
@@ -860,17 +853,8 @@ def test_RX10_client_home_recent_report_in_review(client):
 
     res = client.get("/api/v1/client/home", headers=member["auth"])
     assert res.status_code == 200, res.text
-    recent = res.json()["recent_report"]
-    assert recent is not None, "행 유지: 승인 전 리포트도 recent_report 로 내려간다"
-    if recent["id"] != pending_id:
-        problems.append("recent_report.id 불일치")
-    if recent["title"] != BASE_TIME.strftime("%m월 %d일") + " 리포트":
-        problems.append(f"제목 변경됨: {recent['title']!r}")
-    if recent.get("in_review") is not True:
-        problems.append(f"in_review != True ({recent.get('in_review', '<키 없음>')!r})")
-    if set(recent) != {"id", "title", "created_at", "in_review"}:
-        problems.append(f"내용 필드 노출/열거되지 않은 키: {sorted(recent)}")
-    problems += _leak_violations(recent, LEAK_FOREVER)
+    # 대표 요청(11/17): 승인 전 리포트는 홈 recent_report 로 내려가지 않는다.
+    assert res.json()["recent_report"] is None, pending_id
 
     # completed 가 더 최신으로 생기면 그 건이 recent_report, in_review false
     sid2 = _create_session(client, host, minutes=180, title="X1 홈 승인")
@@ -1107,18 +1091,11 @@ def test_RX16_미승인_재생성_중_후_계속_마스킹(client, monkeypatch):
     assert res.status_code == 200, res.text
 
     problems: list[str] = []
-    in_flight = [r for snap in snapshots for r in snap["reports"] if r["id"] == rid]
-    if not in_flight:
+    if not snapshots:
         problems.append("재생성 진행 중 스냅샷을 포착하지 못함(테스트 전제 실패)")
-    for row in in_flight:
-        if row["status"] != "pending_analysis":
-            problems.append(f"진행 중 status={row['status']!r} (pending_analysis 기대)")
-        problems += [
-            f"[재생성 중] {p}"
-            for p in _masking_violations(
-                row, expected={"id": rid, "type": "client"}, leak_tokens=LEAK_FOREVER
-            )
-        ]
+    # 대표 요청(11/17): 재생성 중·후 미승인 리포트는 회원 목록에 노출되지 않는다.
+    if [r for snap in snapshots for r in snap["reports"] if r["id"] == rid]:
+        problems.append("재생성 진행 중 미승인 리포트가 회원 목록에 노출됨")
     # 재생성 후: 새 content 가 만들어졌지만 아직 미승인 → 마스킹. 이월된 상담사 코멘트(SECRET_COMMENT)도 새면 안 된다.
     after = _detail(client, member, rid)
     assert after.status_code == 200, after.text
@@ -1177,11 +1154,13 @@ def test_RX16_승인본_재생성은_completed_유지_전체_content(client, mon
 # ═════════════════════════════════════════════════════════════════════════
 def test_RX22_마스킹_응답_키집합_승인응답과_동일_타입_불변(client):
     env = _scenario(client, ("pending_analysis", "pending_review", "error", "completed"))
+    # 대표 요청(11/17): 목록은 completed 만 — 비승인 행은 상세 직접 접근 응답으로 검증한다.
     rows = {r["id"]: r for r in _list(client, env["member"])["reports"]}
+    assert set(rows) == {env["ids"]["completed"]}
     problems: list[str] = []
 
     for status, rid in env["ids"].items():
-        row = rows[rid]
+        row = rows[rid] if status == "completed" else _detail(client, env["member"], rid).json()
         keys = set(row)
         if keys != ALL_KEYS:
             problems.append(
@@ -1217,8 +1196,8 @@ def test_CS11_목록_상세_미승인_승인_키집합_동일_타입태그(clien
     env = _scenario(client, ("pending_review", "completed"))
     member = env["member"]
     list_rows = {r["id"]: r for r in _list(client, member)["reports"]}
+    assert env["ids"]["pending_review"] not in list_rows, "대표 요청(11/17): 목록은 completed 만"
     shapes: dict[str, JsonDict] = {
-        "list/pending_review": list_rows[env["ids"]["pending_review"]],
         "list/completed": list_rows[env["ids"]["completed"]],
         "detail/pending_review": _detail(client, member, env["ids"]["pending_review"]).json(),
         "detail/completed": _detail(client, member, env["ids"]["completed"]).json(),
