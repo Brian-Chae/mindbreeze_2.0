@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session as DBSession
 from app.config import settings
 from app.core.ai_features import is_stt_enabled
 from app.models.record import Report, SessionRecord
+from app.models.session import Session, SessionParticipant
 
 logger = logging.getLogger(__name__)
 
@@ -422,3 +423,62 @@ def emit_report_progress(session_id: str | UUID, db: DBSession) -> dict:
     except Exception:  # noqa: BLE001 — WS 실패가 파이프라인을 막지 않는다.
         logger.warning("[report_progress] 브로드캐스트 실패: %s", sid, exc_info=True)
     return payload
+
+
+# 종료 후 회원 리포트 누락 안전망 — 종료 뒤 이 시간이 지나도 리포트가 없거나 멈춘 회원이 있으면 재큐잉한다.
+REPORT_REQUEUE_GRACE_SECONDS = 45 * 60
+# 너무 오래된 회차는 대상에서 제외한다(수동 처리 영역).
+REPORT_REQUEUE_LOOKBACK_SECONDS = 6 * 60 * 60
+_REQUEUE_STUCK_STATUSES = ("pending_analysis", "error")
+
+
+def find_sessions_needing_report_requeue(db: DBSession) -> list[str]:
+    """종료 후 리포트 대상인데 회원 리포트 행이 없거나 미완료(pending_analysis/error)로 멈춘 회차 id.
+
+    - 종료(completed) 후 REPORT_REQUEUE_GRACE_SECONDS 경과 ~ LOOKBACK 이내 회차만 본다.
+    - 대기열·리포트 반영 제외 참가자는 대상이 아니다.
+    - 같은 회차에 생성 중(generation_started_at 이 최근 TIMEOUT 이내인 processing) 리포트가 있으면
+      정상 진행 중으로 보고 건너뛴다.
+    """
+    now = datetime.now(timezone.utc)
+    sessions = (
+        db.query(Session)
+        .filter(
+            Session.status == "completed",
+            Session.ended_at.isnot(None),
+            Session.ended_at < now - timedelta(seconds=REPORT_REQUEUE_GRACE_SECONDS),
+            Session.ended_at > now - timedelta(seconds=REPORT_REQUEUE_LOOKBACK_SECONDS),
+        )
+        .all()
+    )
+    result: list[str] = []
+    for s in sessions:
+        reports = db.query(Report).filter(Report.session_id == s.id, Report.type == "client").all()
+        in_flight_cutoff = now - timedelta(seconds=REPORT_GENERATION_TIMEOUT_SECONDS)
+
+        def _aware(dt):
+            return dt.replace(tzinfo=timezone.utc) if dt is not None and dt.tzinfo is None else dt
+
+        if any(
+            r.generation_status == GENERATION_PROCESSING
+            and r.generation_started_at is not None
+            and _aware(r.generation_started_at) >= in_flight_cutoff
+            for r in reports
+        ):
+            continue
+        by_participant = {r.participant_id: r for r in reports}
+        participants = (
+            db.query(SessionParticipant)
+            .filter(
+                SessionParticipant.session_id == s.id,
+                SessionParticipant.is_waitlisted.is_(False),
+                SessionParticipant.report_included.is_(True),
+            )
+            .all()
+        )
+        for p in participants:
+            r = by_participant.get(p.id)
+            if r is None or r.status in _REQUEUE_STUCK_STATUSES:
+                result.append(str(s.id))
+                break
+    return result

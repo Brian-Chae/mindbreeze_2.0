@@ -777,6 +777,39 @@ def _mark_pipeline_failure(session_id: str, db: DBSession, exc: Exception) -> No
         logger.exception("[report_task] 실패 상태 마킹 실패: session_id=%s", session_id)
 
 
+REPORT_REQUEUE_MAX_ATTEMPTS = 3
+
+
+def _requeue_missing_reports(db: DBSession) -> list[str]:
+    """종료 후 회원 리포트 누락·정지 회차를 report 큐에 다시 넣는다(best-effort, 회차당 최대 3회).
+
+    횟수는 Redis 카운터(6시간 TTL)로 제한해 영구 실패 회차가 알림을 반복 발화하지 않게 한다.
+    Redis 장애 시에는 재큐잉하지 않는다(안전망이 본 흐름을 흔들지 않도록).
+    """
+    enqueued: list[str] = []
+    try:
+        session_ids = report_progress_service.find_sessions_needing_report_requeue(db)
+        if not session_ids:
+            return enqueued
+        from app.services.pipeline_backlog_service import get_redis_client
+
+        redis_client = get_redis_client()
+        for sid in session_ids:
+            key = f"report_requeue:{sid}"
+            attempts = int(redis_client.incr(key))
+            if attempts == 1:
+                redis_client.expire(key, 6 * 60 * 60)
+            if attempts > REPORT_REQUEUE_MAX_ATTEMPTS:
+                logger.warning("[report_task] 재큐잉 한도 초과: session_id=%s", sid)
+                continue
+            generate_reports_for_session.apply_async(args=[sid])
+            logger.warning("[report_task] 누락 리포트 재큐잉: session_id=%s attempt=%s", sid, attempts)
+            enqueued.append(sid)
+    except Exception:  # noqa: BLE001
+        logger.exception("[report_task] 누락 리포트 재큐잉 실패")
+    return enqueued
+
+
 try:
     from app.core.celery_app import celery_app
 
@@ -801,6 +834,8 @@ try:
             affected = report_progress_service.sweep_stale_reports(db)
             for session_id in affected:
                 report_progress_service.emit_report_progress(session_id, db)
+            # 안전망: 종료 후 회원 리포트가 없거나 멈춘 회차를 재큐잉한다(멱등 — 완료분은 건너뜀).
+            _requeue_missing_reports(db)
             return len(affected)
         finally:
             db.close()
