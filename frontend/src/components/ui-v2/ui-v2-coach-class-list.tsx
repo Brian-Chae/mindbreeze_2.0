@@ -34,7 +34,7 @@ interface Props {
 
 export function UiV2CoachClassList({ classes, totalCount, loading, selectedId, onDateIds, hoverIds, notice, createTo = '/classes/new', onSelect, onHover }: Props): ReactElement {
   return (
-    <section className="u2-card u2f-class-card" aria-label="내 클래스" data-testid="coach-class-list">
+    <section className={`u2-card u2f-class-card${!loading && classes.length > 0 && classes.length <= 3 ? ' is-few' : ''}`} aria-label="내 클래스" data-testid="coach-class-list">
       <div className="u2-section-head u2-row"><h2>내 클래스</h2><Link className="u2-textlink" to="/classes">전체 보기{totalCount > classes.length ? ` (${totalCount})` : ''} ›</Link></div>
       {loading ? <p className="u2-empty">불러오는 중...</p> : classes.length === 0 ? (
         <div className="u2f-class-empty" role="status">
@@ -73,6 +73,7 @@ export function UiV2CoachClassList({ classes, totalCount, loading, selectedId, o
         </ul>
       )}
       {notice && <p className="u2f-class-notice" role="status">{notice}</p>}
+      {!loading && classes.length > 0 && classes.length <= 3 && <p className="u2f-class-hint">클래스를 누르면 달력에서 그 클래스의 회차만 진하게 보여요. 날짜를 누르면 그날 수업이 있는 클래스가 표시돼요.</p>}
       {classes.length > 0 && <div className="u2f-class-foot"><Link className="u2-textlink" to="/classes">전체 클래스 보기 ›</Link></div>}
     </section>
   );

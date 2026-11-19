@@ -262,6 +262,8 @@ html .ui-v2.u2f-home .u2f-sched-row { gap: 14px; }
 .ui-v2 .u2f-class-match { display: block; margin: 6px 0 0 18px; font-size: 11px; color: #5F0080; font-weight: 600; }
 .ui-v2 .u2f-class-notice { margin: 8px 0 0; font-size: 12px; color: #7F6D89; }
 .ui-v2 .u2f-class-foot { margin-top: auto; padding-top: 12px; border-top: 1px solid #EEE7F2; }
+.ui-v2 .u2f-class-hint { margin: 16px 0 0; padding: 14px 16px; border-radius: 12px; background: #F8F4FB; color: #6E5A7A; font-size: 13px; line-height: 1.6; }
+.ui-v2 .u2f-class-hint + .u2f-class-foot { margin-top: auto; }
 .ui-v2 .u2f-class-empty { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px 12px; }
 .ui-v2 .u2f-class-empty p { margin: 0; color: #6F6F6F; font-size: 13px; }
 .ui-v2 .u2f-class-card { display: flex; flex-direction: column; min-width: 0; }
@@ -272,6 +274,8 @@ html .ui-v2.u2f-home .u2f-sched-row { gap: 14px; }
   html .ui-v2.u2f-home .u2f-cols--cal > .u2f-class-card { position: relative; }
   html .ui-v2.u2f-home .u2f-cols--cal > .u2f-class-card > * { position: relative; }
   html .ui-v2.u2f-home .u2f-cols--cal > .u2f-class-card .u2f-class-list { contain: size; }
+  /* 클래스가 적으면 목록을 내용 높이로 두고 안내 상자를 바로 아래에 붙인다(빈 공간 방지). */
+  html .ui-v2.u2f-home .u2f-cols--cal > .u2f-class-card.is-few .u2f-class-list { flex: 0 0 auto; contain: none; overflow: visible; }
 }
 @media (max-width: 1023px) {
   html .ui-v2.u2f-home .u2f-cols--cal, html .ui-v2.u2f-home .u2f-cols--lower { display: flex; flex-direction: column; gap: 16px; margin-top: 0; }
