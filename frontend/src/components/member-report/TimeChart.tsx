@@ -33,7 +33,8 @@ function linePath(xs: number[], vals: (number | null)[], y: (v: number) => numbe
   }).join('');
 }
 
-export default function TimeChart({ series, segments, mySegments, title }: Props) {
+export default function TimeChart({ series, segments: segmentsIn, mySegments, title }: Props) {
+  const segments = segmentsIn ?? [];
   const mins = series.minutes;
   const useNorm = series.values === null;
   const mine = (useNorm ? series.norm : series.values) ?? [];
