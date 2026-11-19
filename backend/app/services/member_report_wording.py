@@ -315,8 +315,8 @@ def _hero(report: dict[str, Any], changes: Mapping[str, Optional[Mapping[str, An
         hero["other_directions"] = None
         return
     if not worn:
-        hero["headline"] = "이번 수업에\n함께해 주셨어요."
-        hero["lead"] = "밴드 없이 수업에 머문 시간을 기록으로 남겨요."
+        hero["headline"] = "그룹 기록으로\n함께 돌아봐요."
+        hero["lead"] = "회원님의 측정 기록은 아니지만, 이번 수업에서 우리는 이런 과정을 함께 경험했어요."
         hero["caution"] = None
         hero["other_directions"] = None
         return

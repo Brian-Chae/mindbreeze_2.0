@@ -3,7 +3,8 @@ import type { ClassSummary } from '../api/dashboard';
 import type { ClassReadModel } from '../class-structure/adapters';
 import { liveClasses } from './home-stats';
 
-export const HOME_CLASS_LIMIT = 4;
+/** 홈 내 클래스 표시 한도. 목록이 카드 안에서 스크롤되므로 넉넉히 둔다(전체는 '전체 보기'). */
+export const HOME_CLASS_LIMIT = 8;
 export const HOME_SCHEDULE_LIMIT = 5;
 /** 예정 시각이 지났어도 아직 열리지 않은(scheduled/ready) 회차를 일정에 남기는 한도. */
 const OVERDUE_GRACE_MS = 12 * 3600_000;

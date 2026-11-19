@@ -200,6 +200,14 @@ def _opinion(ctx: _Ctx) -> str:
         table = (f'<table class="overview"><thead><tr><th>영역 / 안정 5분 값</th><th>결과 위치</th>'
                  f'<th>한 줄 소견</th></tr></thead><tbody>{rows}</tbody></table>')
     method_page = ctx.pos["method"]
+    if r.group_story is not None:
+        # SDD-329 D: 본인 측정이 없으면 참고 범위 표·해석(본인 수치용)을 담지 않고 소개 서사만 둔다.
+        return (
+            f'<section class="page opinion" data-key="opinion">{ctx.chapter_head(None)}'
+            f'<div class="intro"><div class="eyebrow">{_e(o.narrative.eyebrow)}</div>'
+            f'<h2 class="chapter-title">{_e(o.narrative.title)}</h2>'
+            f'<p class="narrative">{_e(o.narrative.body)}</p></div>{ctx.foot("opinion")}</section>'
+        )
     footnote = o.footnote.replace("14쪽", f"{method_page}쪽")
     return (
         f'<section class="page opinion" data-key="opinion">{ctx.chapter_head(None)}'
@@ -346,6 +354,52 @@ def _metric(ctx: _Ctx, sec: MetricSection) -> str:
     )
 
 
+def _group_chart_svg(c) -> str:
+    """그룹 가운데 값 매분 선 그래프(개인 값 없음). 인원 부족 분(None)에서는 선을 끊는다."""
+    w, h, x0, x1, y0, y1 = 620, 200, 48, 600, 20, 160
+    vals = c.values
+    span = max(len(vals) - 1, 1)
+    rng = (c.axis_max - c.axis_min) or 1.0
+
+    def px(i: int) -> float:
+        return x0 + i / span * (x1 - x0)
+
+    def py(v: float) -> float:
+        return y1 - (v - c.axis_min) / rng * (y1 - y0)
+
+    runs: list[list[str]] = [[]]
+    for i, v in enumerate(vals):
+        if v is None:
+            if runs[-1]:
+                runs.append([])
+        else:
+            runs[-1].append(f"{px(i):.1f},{py(v):.1f}")
+    lines = "".join(f'<polyline fill="none" stroke="#5B8C7A" stroke-width="2" points="{" ".join(r)}"/>'
+                    for r in runs if len(r) > 1)
+    ticks = "".join(
+        f'<text x="{px(i):.1f}" y="182" font-size="10" text-anchor="middle" fill="#4D5F57">{c.minutes[i]}분</text>'
+        for i in sorted({0, len(vals) // 2, len(vals) - 1}))
+    axis = (f'<text x="44" y="{y0 + 4}" font-size="10" text-anchor="end" fill="#4D5F57">{c.axis_max:.0f}</text>'
+            f'<text x="44" y="{y1 + 4}" font-size="10" text-anchor="end" fill="#4D5F57">{c.axis_min:.0f}</text>'
+            f'<line x1="{x0}" y1="{y1}" x2="{x1}" y2="{y1}" stroke="#BAC6B9"/>')
+    return (f'<svg aria-label="{_e(c.title)}" role="img" viewBox="0 0 {w} {h}" '
+            f'xmlns="http://www.w3.org/2000/svg">{axis}{lines}{ticks}</svg>')
+
+
+def _group_story(ctx: _Ctx) -> str:
+    g = ctx.report.group_story
+    assert g is not None
+    paras = "".join(f'<p class="narrative">{_e(t)}</p>' for t in g.paragraphs)
+    plots = "".join(f'<article class="plot"><h3>{_e(c.title)} ({_e(c.unit_label)})</h3>{_group_chart_svg(c)}</article>'
+                    for c in g.charts)
+    note = f'<p class="note">{_e(g.chart_note)}</p>' if g.chart_note else ""
+    return (
+        f'<section class="page" data-key="group_story">{ctx.chapter_head(None)}'
+        f'<div class="intro"><div class="eyebrow">{_e(g.label)}</div>'
+        f'<h2 class="chapter-title">{_e(g.title)}</h2>{paras}</div>{plots}{note}{ctx.foot("group_story")}</section>'
+    )
+
+
 def _next_steps(ctx: _Ctx) -> str:
     n = ctx.report.next_steps
     items = "".join(f'<article class="next"><b>{_e(i.title)}</b><p>{_e(i.body)}</p></article>' for i in n.items)
@@ -401,7 +455,7 @@ def build_book_html(report: Union[MemberReport, dict]) -> str:
         "cover": lambda: _cover(ctx), "toc": lambda: _toc(ctx), "summary": lambda: _summary(ctx),
         "opinion": lambda: _opinion(ctx), "journey": lambda: _journey(ctx), "stable5": lambda: _stable5(ctx),
         "next_steps": lambda: _next_steps(ctx), "memo": lambda: _memo(ctx), "method": lambda: _method(ctx),
-        "back": lambda: _back(ctx),
+        "back": lambda: _back(ctx), "group_story": lambda: _group_story(ctx),
     }
     pages: list[str] = []
     for p in page_map.pages:

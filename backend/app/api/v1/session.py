@@ -6,7 +6,7 @@ from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi.responses import HTMLResponse
-from fastapi import APIRouter, Body, Depends, Header, Query, Request, Response, status
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, Request, Response, status
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session as DBSession
 
@@ -351,6 +351,36 @@ def set_session_chat_enabled(
     )
 
 
+def _completed_end_response(db, session_id: str, current_user) -> dict | None:
+    """SDD-329 A: 이미 종료(completed)된 회차의 end 재호출은 잠금 없이 현재 상태를 그대로 응답한다.
+
+    권한은 기존 전이와 같은 정책으로 먼저 확인한다(권한 완화 없음). 종료 전이거나 조회 불가면 None(기존 경로).
+    """
+    from app.services.session_authz import SessionAction, get_session_authorized
+
+    s = get_session_authorized(db, session_id, current_user["id"], SessionAction.SESSION_TRANSITION)
+    if s.status != "completed":
+        return None
+    return class_read_service.add_parent_fields(db, session_service.get_session(session_id, current_user["id"], db))
+
+
+def _is_lock_unavailable(exc: BaseException) -> bool:
+    """lock_timeout(LockNotAvailable, 55P03)·교착·직렬화 실패 같은 일시 경합인지."""
+    from sqlalchemy.exc import DBAPIError
+
+    cur: BaseException | None = exc
+    while cur is not None:
+        if type(cur).__name__ in ("LockNotAvailable", "DeadlockDetected", "SerializationFailure"):
+            return True
+        if isinstance(cur, DBAPIError) and getattr(getattr(cur, "orig", None), "pgcode", None) in ("55P03", "40P01", "40001"):
+            return True
+        orig = getattr(cur, "orig", None)
+        if orig is not None and type(orig).__name__ in ("LockNotAvailable", "DeadlockDetected", "SerializationFailure"):
+            return True
+        cur = cur.__cause__ or cur.__context__
+    return False
+
+
 def _make_transition_endpoint(action: str):
     def endpoint(
         session_id: str,
@@ -359,15 +389,38 @@ def _make_transition_endpoint(action: str):
         db: DBSession = Depends(get_db),
         x_live_protocol: LiveProtocolHeader = None,
     ):
-        # SDD-246: v2 회차의 전이는 live command 한 경로로 처리하고 응답만 기존 직렬화로 돌려준다.
-        # 겹침 확인 후 재요청(force+지문)도 같은 경로로 보내야 회원 화면이 outbox event 로 시작을 받는다.
-        params = {"action": action, **(payload.model_dump() if payload else {})}
-        if _v1_via_live(db, session_id, "transition", params, current_user, live_protocol=x_live_protocol) is not None:
-            return class_read_service.add_parent_fields(db, session_service.get_session(session_id, current_user["id"], db))
-        return class_read_service.add_parent_fields(
-            db, session_service.transition_status(session_id, current_user["id"], action, db, **(payload.model_dump() if payload else {}))
-        )
+        # SDD-329 A: 종료 재호출(응답 유실 재시도·동시 2회)은 이미 completed 면 잠금 없이 200 으로 끝낸다.
+        if action == "end":
+            done = _completed_end_response(db, session_id, current_user)
+            if done is not None:
+                return done
+        try:
+            return _run_transition(db, session_id, action, payload, current_user, x_live_protocol)
+        except Exception as exc:  # noqa: BLE001 — 종료 경합의 일시 잠금 실패만 상태 재조회로 흡수한다
+            lost_race = isinstance(exc, HTTPException) and exc.status_code == 409  # 동시 종료의 CAS 패자
+            if action != "end" or not (lost_race or _is_lock_unavailable(exc)):
+                raise
+            logger.warning("[session-end] 잠금 경합 — 상태 재조회 session=%s", session_id, exc_info=True)
+            for attempt in range(4):  # 승자의 커밋이 보일 때까지 짧게 재조회(최대 ~0.6초)
+                db.rollback()
+                done = _completed_end_response(db, session_id, current_user)
+                if done is not None:
+                    return done
+                time.sleep(0.2)
+            raise
+
     return endpoint
+
+
+def _run_transition(db, session_id: str, action: str, payload, current_user, x_live_protocol):
+    # SDD-246: v2 회차의 전이는 live command 한 경로로 처리하고 응답만 기존 직렬화로 돌려준다.
+    # 겹침 확인 후 재요청(force+지문)도 같은 경로로 보내야 회원 화면이 outbox event 로 시작을 받는다.
+    params = {"action": action, **(payload.model_dump() if payload else {})}
+    if _v1_via_live(db, session_id, "transition", params, current_user, live_protocol=x_live_protocol) is not None:
+        return class_read_service.add_parent_fields(db, session_service.get_session(session_id, current_user["id"], db))
+    return class_read_service.add_parent_fields(
+        db, session_service.transition_status(session_id, current_user["id"], action, db, **(payload.model_dump() if payload else {}))
+    )
 
 
 # SDD-088: "open"(클래스 오픈) 액션 추가 — ready/scheduled → open

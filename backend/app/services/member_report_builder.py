@@ -37,6 +37,7 @@ from app.schemas.member_report import (
     Change,
     Cover,
     GroupBlock,
+    GroupStory,
     Hero,
     Journey,
     MemberMeta,
@@ -621,7 +622,7 @@ def _build_meta(db, roster: _Roster, segments: list[Segment], band_status: str, 
     local = _utc(ref).astimezone(KST) if ref is not None else datetime.now(KST)
     first, last = segments[0].start_min, segments[-1].end_min
     basis = (f"수업 {first}–{last}분" + (f" · 안정 상태 5분 {stable.window_label}" if stable is not None else "")
-             if band_status == "worn" else "수업 참여 기록")
+             if band_status == "worn" else "수업 참여 기록 · 그룹 기록 기반")
     return MemberMeta(
         member_code=f"B{seq or 1}-{roster.me_ordinal}", program_label=program_label,
         chapter_label=f"章 1 · {program_label} · {local:%m/%d}", session_date=f"{local:%Y-%m-%d}",
@@ -761,10 +762,21 @@ def build_member_report(
     band_status = "worn" if worn else "not_worn"
 
     if not worn:
+        # SDD-329 D: 본인 측정이 없으면 같은 회차 그룹 기록을 바탕으로 수업 경험을 들려준다(본인 수치 아님).
+        from app.services import member_report_group_story as gstory
+
+        others_minutes_nw = {str(r.id): _to_person_minutes(by_pid.get(r.id, []), base_sec, normalizer)
+                             for r in roster.others}
+        g_ext = gstory.group_extent(others_minutes_nw)
+        if g_ext is not None and g_ext[1] - g_ext[0] + 1 >= MIN_VALID_MINUTES:
+            segments, _src = resolve_segments(db, session, last_window_min, g_ext)
+            first, last = segments[0].start_min, segments[-1].end_min
         metrics = {k: _missing_section(k, "band_not_worn") for k in (*keys_all, "aperiodic")}
         meta = _build_meta(db, roster, segments, band_status, None)
         parts = _empty_wording_parts(meta, _hero(meta, [], None), None, None, metrics, band_status)
         parts["hero"] = parts["hero"].model_copy(update={"stable_summary": None})
+        parts["group_story"] = GroupStory.model_validate(
+            gstory.build_group_story(others_minutes_nw, segments, first, last))
         return _finish(_apply_wording(_dump(parts)))
 
     if short:

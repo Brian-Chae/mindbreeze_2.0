@@ -1143,6 +1143,11 @@ def _skip_auto_approve_no_data(session, report: Report) -> bool:
     eeg = content.get("eeg")
     if isinstance(eeg, dict) and eeg.get("excluded"):
         return False
+    # SDD-329 D: 본인 측정이 없어도 그룹 기록 기반 리포트(member_report.group_story)가 있으면 다른 리포트와 같이
+    #   자동 승인·발송한다(리포트 반영 대상으로 입장한 회원만 행이 있음 — 미입장·제외자는 위에서 이미 제외).
+    mr = content.get("member_report")
+    if isinstance(mr, dict) and isinstance(mr.get("group_story"), dict):
+        return False
     status = eeg.get("status") if isinstance(eeg, dict) else None
     return status in (None, "not_measured")
 

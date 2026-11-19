@@ -79,7 +79,26 @@ def presign_upload(
     current_user_id: str | None = None,
     entry_credential: str | None = None,
 ) -> dict:
-    """raw chunk presigned PUT URL 발급 + manifest(EEGRawChunk) 멱등 생성."""
+    """raw chunk presigned PUT URL 발급 + manifest(EEGRawChunk) 멱등 생성.
+
+    SDD-329 C: 권한 거절(403)은 사유 로그 + 같은 (사용자, 회차) 60초 반복 거절 단축(권한 판정·응답 코드는 그대로).
+    """
+    from app.services import raw_presign_guard
+
+    return raw_presign_guard.run_guarded(
+        "eeg", session_id, current_user_id, entry_credential,
+        lambda: _presign_upload(session_id, payload, db, current_user_id=current_user_id, entry_credential=entry_credential),
+    )
+
+
+def _presign_upload(
+    session_id: str,
+    payload,
+    db: DBSession,
+    *,
+    current_user_id: str | None = None,
+    entry_credential: str | None = None,
+) -> dict:
     sid, _ = _get_session(session_id, db)
     participant = session_service.resolve_upload_participant(
         sid, payload.participant_id, current_user_id, db, entry_credential=entry_credential,

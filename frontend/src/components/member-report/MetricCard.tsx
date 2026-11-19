@@ -10,7 +10,8 @@ export default function MetricCard({ section, meta }: { section: MetricSection; 
   const { change } = body;
   const dec = change?.decimals ?? body.decimals ?? 1;
   const isFlow = section.key === 'lf_hf'; // LF/HF 는 흐름 전용 — 변화량 렌더 금지
-  const segLabel = (key: string): string => meta.segments.find((s) => s.key === key)?.label ?? key;
+  const segments = meta.segments ?? []; // 투영으로 빠진 응답에서도 화면이 깨지지 않게
+  const segLabel = (key: string): string => segments.find((s) => s.key === key)?.label ?? key;
   return (
     <article className="mr-card mr-metric" id={`mr-${section.key}`} data-metric={section.key}>
       <div className="mr-eyebrow">{body.eyebrow}</div>
@@ -31,7 +32,7 @@ export default function MetricCard({ section, meta }: { section: MetricSection; 
             </span>
           )}
         </div>
-        <TimeChart series={body.series} segments={meta.segments} mySegments={body.my_segments} title={section.title} />
+        <TimeChart series={body.series} segments={segments} mySegments={body.my_segments} title={section.title} />
         <p className="mr-legend">{body.series_legend}</p>
       </div>
       <div className="mr-interpret"><b>이게 무슨 뜻이에요</b>{body.interpretation}</div>

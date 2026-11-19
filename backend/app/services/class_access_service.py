@@ -199,16 +199,24 @@ _RAW_FIELDS = frozenset(
 )
 
 
-def without_raw_material(value):
+# 회원 리포트(member_report) 안의 "segments"는 수업 구간 정의(key·label·분)라 원문이 아니다.
+# 그대로 지우면 기관관리자·보조 코치 화면에서 meta.segments 가 사라져 뷰어가 깨진다(11/19 운영 오류).
+_MEMBER_REPORT_KEEP = frozenset({"segments"})
+
+
+def without_raw_material(value, _in_member_report: bool = False):
     """팀/관리자 읽기의 원문·미디어·편집 이력 투영. 입력 스냅샷은 바꾸지 않는다."""
     if isinstance(value, dict):
-        return {
-            key: without_raw_material(item)
-            for key, item in value.items()
-            if key not in _RAW_FIELDS and not key.endswith(("_url", "_s3_key"))
-        }
+        out = {}
+        for key, item in value.items():
+            if key.endswith(("_url", "_s3_key")):
+                continue
+            if key in _RAW_FIELDS and not (_in_member_report and key in _MEMBER_REPORT_KEEP):
+                continue
+            out[key] = without_raw_material(item, _in_member_report or key == "member_report")
+        return out
     if isinstance(value, list):
-        return [without_raw_material(item) for item in value]
+        return [without_raw_material(item, _in_member_report) for item in value]
     return value
 
 
