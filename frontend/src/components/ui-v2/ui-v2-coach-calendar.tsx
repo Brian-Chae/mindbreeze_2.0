@@ -89,16 +89,16 @@ export function UiV2CoachCalendar({ sessions, now, emptyAction }: Props): ReactE
         </div>
         <button type="button" className="u2f-cal-today" onClick={goToday}>오늘</button>
       </div>
-      <div className="u2f-cal-grid" role="grid" aria-label={`${view.y}년 ${view.m}월`}>
-        {WEEKDAYS.map((w) => <span key={w} className="u2f-cal-wd" role="columnheader">{w}</span>)}
+      <div className="u2f-cal-grid" role="group" aria-label={`${view.y}년 ${view.m}월`}>
+        {WEEKDAYS.map((w) => <span key={w} className="u2f-cal-wd" aria-hidden="true">{w}</span>)}
         {cells.map((cell, i) => {
-          if (!cell) return <span key={`e${i}`} className="u2f-cal-cell is-empty" role="gridcell" aria-hidden="true" />;
+          if (!cell) return <span key={`e${i}`} className="u2f-cal-cell is-empty" aria-hidden="true" />;
           const key = dayKey(cell);
           const items = byDay.get(key) ?? [];
           const upcoming = items.some((c) => !isPast(c));
           const cls = ['u2f-cal-cell', key === todayKey ? 'is-today' : '', key === selected ? 'is-selected' : '', items.length ? 'has-items' : ''].filter(Boolean).join(' ');
           return (
-            <button key={key} type="button" role="gridcell" className={cls} aria-pressed={key === selected} aria-current={key === todayKey ? 'date' : undefined}
+            <button key={key} type="button" className={cls} aria-pressed={key === selected} aria-current={key === todayKey ? 'date' : undefined}
               aria-label={`${cell.m}월 ${cell.d}일${items.length ? `, 회차 ${items.length}건` : ''}`} onClick={() => setSelected(key)}>
               <span className="u2f-cal-num">{cell.d}</span>
               <span className="u2f-cal-dots" aria-hidden="true">
