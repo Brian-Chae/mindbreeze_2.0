@@ -1,5 +1,5 @@
 // SDD-320 F-0 — 코치 홈(시안 home.html 1440 구성). 데이터는 기존 DashboardPage 와 같은 API·모델 함수를 쓰고 표현만 새로 만든다.
-// 즉석 시작·새 클래스·데이터 현황·루시·코치 코드·프로필 안내 등 기존 기능 진입점은 시안의 카드/링크로 옮겨 모두 유지한다.
+// 즉석 시작·새 클래스·루시·코치 코드·프로필 안내 등 기존 기능 진입점은 시안의 카드/링크로 옮겨 모두 유지한다.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { UiV2CoachCalendar } from '../../../components/ui-v2/ui-v2-coach-calendar';
 import { UiV2CoachCodeCard } from '../../../components/ui-v2/ui-v2-coach-code-card';
@@ -174,7 +174,7 @@ export function UiV2CoachHomePage() {
                 <section className="u2-card" aria-label="새 알림"><div className="u2-section-head u2-row"><h2>새 알림</h2><Link className="u2-textlink" to="/notifications">전체 ›</Link></div>
                   {unreadNotifs.length > 0 ? unreadNotifs.map((n) => <Link key={n.id} className="u2-listrow" to="/notifications"><div className="u2-body"><h3>{n.title}</h3>{n.body && <p>{n.body}</p>}</div><small>{relative(n.created_at)}</small></Link>) : <p className="u2-empty">새로운 알림이 없어요</p>}
                 </section>
-                <div className="u2-card u2f-home-shortcuts"><Link className="u2-secondary" to="/upload-status" data-upload-status-shortcut>데이터 현황</Link><AiOnly><Link className="u2-secondary" to="/chat/lucy">루시 (AI) 브리핑</Link></AiOnly></div>
+                <AiOnly><div className="u2-card u2f-home-shortcuts"><Link className="u2-secondary" to="/chat/lucy">루시 (AI) 브리핑</Link></div></AiOnly>
               </div>
             </div>
           </div>
