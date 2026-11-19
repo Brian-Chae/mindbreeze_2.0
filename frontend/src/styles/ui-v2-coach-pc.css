@@ -203,7 +203,9 @@ html .ui-v2.u2f-home .u2f-sched-row { gap: 14px; }
 
 /* 코치 홈 '오늘 · 다가오는 일정' 월간 달력(기본형). 주변 카드와 같은 패딩·라운드를 따른다. */
 .ui-v2 .u2f-cal { min-width: 0; }
-.ui-v2 .u2f-cal-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.ui-v2 .u2f-cal-bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; margin-bottom: 10px; }
+.ui-v2 .u2f-cal-bar .u2f-cal-nav { grid-column: 2; justify-self: center; }
+.ui-v2 .u2f-cal-bar .u2f-cal-today { grid-column: 3; justify-self: end; }
 .ui-v2 .u2f-cal-nav { display: flex; align-items: center; gap: 4px; }
 .ui-v2 .u2f-cal-title { min-width: 108px; text-align: center; font-size: 16px; font-weight: 800; color: var(--u2-text); }
 .ui-v2 .u2f-cal-arrow, .ui-v2 .u2f-cal-today { min-height: 36px; border: 1px solid #E6DDEC; background: #FFF; color: #5F0080; border-radius: 999px; cursor: pointer; font-weight: 700; }
