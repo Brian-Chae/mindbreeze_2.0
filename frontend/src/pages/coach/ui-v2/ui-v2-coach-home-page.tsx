@@ -117,7 +117,7 @@ export function UiV2CoachHomePage() {
     <AppShell title="오늘의 흐름을 준비해요" rightSlot={<ClassCreateAction />}>
       <div className="ui-v2 u2f u2f-home">
         <OrgRemovedNoticeDialog />
-        <UiV2CoachCodeCard compact />
+        <UiV2CoachCodeCard />
         {error && <div className="u2-alert" role="alert"><p>{error}</p><button type="button" className="u2-secondary u2-gap" onClick={() => void fetchDashboard()}>다시 시도</button></div>}
         {showBanner && <div className="u2-card u2f-banner">
           <div><h3>프로필을 완성해 보세요</h3><p className="u2-muted">자격·경력은 원할 때 설정에서 입력할 수 있어요.</p></div>
