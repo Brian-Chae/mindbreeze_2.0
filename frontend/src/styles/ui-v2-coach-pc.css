@@ -232,7 +232,7 @@ html .ui-v2.u2f-home .u2f-sched-row { gap: 14px; }
 @media (max-width: 767px) {
   .ui-v2 .u2f-cal-title { min-width: 96px; font-size: 15px; }
   .ui-v2 .u2f-cal-grid { row-gap: 2px; }
-  .ui-v2 .u2f-cal-cell { height: 48px; gap: 3px; }
-  .ui-v2 .u2f-cal-num { font-size: 13px; }
+  .ui-v2 .u2f-cal-cell { height: 48px; gap: 5px; }
+  .ui-v2 .u2f-cal-num { width: 28px; height: 28px; font-size: 13px; }
   .ui-v2 .u2f-cal-dots i { width: 5px; height: 5px; }
 }
