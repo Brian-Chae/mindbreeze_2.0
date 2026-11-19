@@ -1,6 +1,7 @@
 // SDD-320 F-0 — 코치 홈(시안 home.html 1440 구성). 데이터는 기존 DashboardPage 와 같은 API·모델 함수를 쓰고 표현만 새로 만든다.
 // 즉석 시작·새 클래스·데이터 현황·루시·코치 코드·프로필 안내 등 기존 기능 진입점은 시안의 카드/링크로 옮겨 모두 유지한다.
-import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { UiV2CoachCalendar } from '../../../components/ui-v2/ui-v2-coach-calendar';
 import { UiV2CoachCodeCard } from '../../../components/ui-v2/ui-v2-coach-code-card';
 import { Link, useNavigate } from 'react-router-dom';
 import AppShell from '../../../components/layout/AppShell';
@@ -11,7 +12,7 @@ import { getCounselorDashboard, type ClassSummary, type CounselorDashboardRespon
 import { listChatRooms, type ChatRoom } from '../../../lib/api/chat';
 import { listNotifications, type NotificationDto } from '../../../lib/api/notifications';
 import { dashboardSessionArea, dashboardSessionPath } from '../../../lib/class-structure/dashboard-navigation';
-import { HOME_CLASS_LIMIT, homeEntryAction, pickHeroSession, pickPastRows, pickScheduleRows, sortHomeClasses } from '../../../lib/dashboard/counselor-home-model';
+import { HOME_CLASS_LIMIT, homeEntryAction, pickHeroSession, sortHomeClasses } from '../../../lib/dashboard/counselor-home-model';
 import { MemberClassStrip } from '../../../components/client/home/member-class-strip';
 import { MemberClassStyles } from '../../../components/class/structure/member-class-views';
 import { ReadStateView } from '../../../components/class/structure/read-state';
@@ -41,14 +42,6 @@ export function timeRange(iso: string | null): string {
   const d = new Date(iso);
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
-const SCHED_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
-/** 일정 행 왼쪽 날짜 블록(회원 홈 '이번 주' 행과 같은 모양). */
-function SchedDate({ iso }: { iso: string | null }): ReactElement {
-  const d = iso ? new Date(iso) : null;
-  const ok = d && !Number.isNaN(d.getTime());
-  return <span className="u2f-sched-date" aria-hidden="true"><b>{ok ? `${d.getMonth() + 1}.${d.getDate()}` : '--'}</b><small>{ok ? SCHED_WEEKDAYS[d.getDay()] : ''}</small></span>;
-}
-
 // eslint-disable-next-line react-refresh/only-export-components -- 순수 함수, 시험에서 직접 검증
 export function shortDay(iso: string | null): string {
   if (!iso) return '일정 미정';
@@ -98,9 +91,7 @@ export function UiV2CoachHomePage() {
   const live = useMemo(() => pickLiveClasses(rows), [rows]);
   const pendingReview = useMemo(() => pendingReviewTotal(rows), [rows]);
   const today = useMemo(() => todayRemaining(rows, new Date()), [rows]);
-  const upcoming = useMemo(() => pickScheduleRows(rows, new Date()), [rows]);
   const hero = useMemo(() => (data ? pickHeroSession(rows, new Date()) : null), [data, rows]);
-  const past = useMemo(() => pickPastRows(rows), [rows]);
   // 11/9 대표 지시: 홈 구조를 운영 웹과 같게 — 히어로 → 검토 배너 → 숫자 타일 4 → 내 클래스 → 일정 | 대화·알림
   const classesRead = useClasses(HOME_ACTIVE_CLASS_PARAMS);
   const homeClasses = useMemo(() => (classesRead.state.status === 'success' ? sortHomeClasses(classesRead.state.data.classes.map(adaptHostClass)).slice(0, HOME_CLASS_LIMIT) : []), [classesRead.state]);
@@ -173,11 +164,7 @@ export function UiV2CoachHomePage() {
               <div className="u2f-main">
                 <section className="u2-card" aria-label="오늘 · 다가오는 일정">
                   <div className="u2-section-head u2-row"><h2>오늘 · 다가오는 일정</h2><span className="u2-muted" style={{ fontSize: 12 }}>오늘 {today.length}건</span></div>
-                  {upcoming.length > 0 ? upcoming.map((c) => <Link key={c.id} className="u2-listrow u2f-sched-row" to={dashboardSessionPath(c)}><SchedDate iso={c.scheduled_at} /><div className="u2-body"><h3>{c.title || '제목 없음'}{c.seq != null ? ` · ${c.seq}회차` : ''}</h3><p>{timeRange(c.scheduled_at) || '--:--'} · 참여 {c.participant_count}명</p></div><small aria-hidden="true">›</small></Link>)
-                    : <p className="u2-empty">예정된 일정이 없어요</p>}
-                  {past.length > 0 && <details className="u2f-past"><summary>지난 회차 {past.length}건</summary>
-                    {past.map((c) => <Link key={c.id} className="u2-listrow u2f-sched-row is-past" to={dashboardSessionPath(c)}><SchedDate iso={c.scheduled_at} /><div className="u2-body"><h3>{c.title || '제목 없음'}{c.seq != null ? ` · ${c.seq}회차` : ''}</h3><p>{timeRange(c.scheduled_at) || '--:--'}</p></div><small aria-hidden="true">›</small></Link>)}
-                  </details>}
+                  <UiV2CoachCalendar sessions={rows} emptyAction={<Link className="u2-textlink" to="/classes/now">지금 바로 시작 ›</Link>} />
                 </section>
               </div>
               <div className="u2f-rail">
