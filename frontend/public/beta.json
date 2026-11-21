@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-10-29",
+  "landingEnabled": true,
+  "updateBannerEnabled": false,
+  "android": {
+    "versionName": "",
+    "versionCode": 0,
+    "apkUrl": "",
+    "sha256": "",
+    "sizeBytes": 0,
+    "publishedAt": ""
+  },
+  "ios": {
+    "testflightUrl": "",
+    "latestBuild": 0,
+    "expiresAt": ""
+  },
+  "support": {
+    "email": "admin-mindbreeze@looxidlabs.com"
+  }
+}
