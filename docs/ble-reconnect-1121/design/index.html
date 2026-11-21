@@ -1,0 +1,56 @@
+<!doctype html><html lang='ko'><head><meta charset='utf-8'><title>밴드 끊김·재연결·교체 시안</title><style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard',sans-serif;background:#F1ECF6;color:#25212C;padding:24px;-webkit-font-smoothing:antialiased}
+h1{font-size:18px;margin-bottom:4px}.sub{font-size:13px;color:#68616F;margin-bottom:18px}
+.row{display:flex;gap:24px;align-items:flex-start;flex-wrap:nowrap}
+.cap{font-size:12px;color:#68616F;margin:0 0 8px 4px;font-weight:600}
+.phone{width:390px;height:780px;background:#FAF9FC;border-radius:28px;border:1px solid #D9CFE3;overflow:hidden;position:relative;display:flex;flex-direction:column;flex:none}
+.bg{position:absolute;inset:0;background:linear-gradient(180deg,#2B1640 0%,#3A1D55 38%,#1F3A33 100%);opacity:.96}
+.bg:after{content:'';position:absolute;inset:0;background:radial-gradient(120% 50% at 50% 0%,#7A3FA040,transparent 70%),radial-gradient(90% 40% at 50% 100%,#4C8B6A55,transparent 70%)}
+.top{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:center;padding:16px 20px;color:#E5D3EE;font-size:13px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:#ffffff1f;font-size:12px;color:#fff}
+.dot{width:8px;height:8px;border-radius:50%;background:#7BD9A3;display:inline-block}
+.dot.amber{background:#F5C26B}.dot.coral{background:#FF8F86}.dot.gray{background:#B5ADBF}
+.center{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 24px;color:#fff;text-align:center}
+.ring{width:190px;height:190px;border-radius:50%;border:2px solid #ffffff40;display:flex;align-items:center;justify-content:center;font-size:15px;color:#E5D3EE;margin-bottom:12px}
+.ring.dim{border-style:dashed;opacity:.75}
+.stats{display:flex;gap:10px;margin-top:10px}.stat{background:#ffffff14;border-radius:14px;padding:10px 12px;min-width:84px}.stat b{display:block;font-size:20px}.stat i{font-style:normal;font-size:11px;color:#E5D3EE}
+.sheet{position:relative;z-index:3;background:#fff;border-radius:24px 24px 0 0;padding:20px 20px 24px;box-shadow:0 -8px 30px #0003}
+.grab{width:40px;height:4px;background:#D9CFE3;border-radius:2px;margin:0 auto 14px}
+.sh-head{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px}
+.ic{width:40px;height:40px;border-radius:12px;background:#EEE5F5;color:#5F0080;display:flex;align-items:center;justify-content:center;font-size:18px;flex:none}
+.ic.coral{background:#FFE9E6;color:#C0392B}.ic.amber{background:#FFF1D6;color:#9A6200}.ic.green{background:#DFF5E8;color:#1E7A46}
+.sh-t{font-size:17px;font-weight:700;line-height:1.35}.sh-s{font-size:13px;color:#68616F;margin-top:3px;line-height:1.45}
+.note{font-size:13px;color:#49424F;background:#F6F2FA;border-radius:12px;padding:11px 13px;margin:8px 0;line-height:1.5}
+.steps{list-style:none;margin:8px 0}.steps li{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.45;padding:7px 0;border-bottom:1px solid #F0EAF5}
+.steps li:last-child{border:0}.n{width:22px;height:22px;border-radius:50%;background:#5F0080;color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px}
+.btn{display:block;width:100%;border:0;border-radius:999px;padding:14px;font-size:15px;font-weight:700;margin-top:10px;font-family:inherit;text-align:center}
+.btn.p{background:#5F0080;color:#fff}.btn.s{background:#EEE5F5;color:#5F0080}.btn.g{background:transparent;color:#68616F;font-weight:600;padding:10px}
+.bar{height:6px;background:#EEE5F5;border-radius:3px;overflow:hidden;margin:8px 0}.bar i{display:block;height:100%;background:#5F0080;border-radius:3px}
+.dots i{display:inline-block;width:6px;height:6px;border-radius:50%;background:#5F0080;margin:0 2px;opacity:.5}
+.tag{display:inline-block;font-size:11px;background:#EEE5F5;color:#5F0080;border-radius:6px;padding:2px 7px;font-weight:600}
+.list{margin:6px 0}.li{display:flex;justify-content:space-between;align-items:center;padding:12px 4px;border-bottom:1px solid #F0EAF5;font-size:14px}
+.li small{display:block;color:#68616F;font-size:12px;margin-top:2px}
+.pill{font-size:12px;font-weight:700;border-radius:999px;padding:4px 10px}.pill.g{background:#DFF5E8;color:#1E7A46}.pill.a{background:#FFF1D6;color:#9A6200}.pill.c{background:#FFE9E6;color:#C0392B}.pill.n{background:#EEE5F5;color:#5F0080}
+a.back{font-size:13px;color:#5F0080}
+/* coach */
+.wide{width:1440px;background:#FAF9FC;border:1px solid #D9CFE3;border-radius:16px;overflow:hidden}
+.ch-top{display:flex;justify-content:space-between;align-items:center;padding:18px 28px;background:#251038;color:#fff}
+.ch-top h2{font-size:18px}.sum{display:flex;gap:10px;align-items:center;font-size:14px}.sum b{font-size:16px}
+.cols{display:flex}.main{flex:1;padding:22px 28px;min-width:0}.side{width:420px;border-left:1px solid #E8DFF0;background:#fff;padding:22px 24px}
+table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;color:#68616F;font-weight:600;font-size:12px;padding:8px 10px;border-bottom:1px solid #E8DFF0}td{padding:12px 10px;border-bottom:1px solid #F0EAF5;vertical-align:middle}
+tr.hl td{background:#FFF8EC}tr.hl2 td{background:#FFF1EF}
+.toolbar{display:flex;gap:8px;margin-bottom:14px;align-items:center}.seg{padding:7px 14px;border-radius:999px;background:#EEE5F5;color:#5F0080;font-size:13px;font-weight:600}.seg.on{background:#5F0080;color:#fff}
+.field{border:1px solid #D9CFE3;border-radius:999px;padding:8px 14px;font-size:13px;color:#68616F;flex:1;max-width:300px}
+.btn-s{display:inline-block;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700;background:#EEE5F5;color:#5F0080}
+.side h3{font-size:16px;margin-bottom:4px}.side .note{margin:10px 0}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0}.cmp div{border:1px solid #E8DFF0;border-radius:12px;padding:12px;font-size:13px;line-height:1.5}
+
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;max-width:1100px}.card{background:#fff;border:1px solid #D9CFE3;border-radius:16px;padding:16px}.card img{width:100%;border-radius:10px;border:1px solid #E8DFF0}.card a{font-weight:700;color:#5F0080;text-decoration:none}</style></head><body>
+<h1>밴드 끊김·재연결·교체 — 디자인 시안 비교</h1><p class='sub'>2026-11-21 · 회원 앱 390 / 코치 1440 · 점수·등급 없음 · 기존 UI v2(보라·자연 배경) 톤</p>
+<div class='grid'>
+<div class='card'><a href='01-member-connection.html'>① 연결 상태 표시 (연결됨 / 다시 연결 중 / 밴드 찾는 중)</a><img src='01-member-connection.png'></div>
+<div class='card'><a href='02-member-wake.html'>② 밴드 깨우기 안내 · 찾음 · 계속 실패</a><img src='02-member-wake.png'></div>
+<div class='card'><a href='03-band-swap.html'>③ 다른 밴드로 바꾸기 3단계</a><img src='03-band-swap.png'></div>
+<div class='card'><a href='04-coach-support.html'>④ 코치 화면 끊김 지원 (1440)</a><img src='04-coach-support.png'></div>
+</div></body></html>
