@@ -76,6 +76,8 @@ html.u2-coach table{border-collapse:separate;border-spacing:0}
 html.u2-coach thead th{color:var(--u2-muted);font-weight:600;font-size:12px;letter-spacing:.04em;background:transparent}
 html.u2-coach tbody tr{border-color:var(--u2-line)}
 html.u2-coach input:not([type=checkbox]):not([type=radio]),html.u2-coach select,html.u2-coach textarea{border-radius:var(--u2-r-btn);border-color:var(--u2-line);color:var(--u2-text)}
+/* 11/21: 어두운 시트(클래스 만들기 마법사·호스트 흐름) 안 입력칸은 밝은 글자를 유지 — 위 코치 공통 규칙이 덮어써 글자가 안 보였다 */
+html.u2-coach :is(.cs-wizard,.pz-root) :is(input,select,textarea):not([type=checkbox]):not([type=radio]){color:var(--tx-hi)}
 html.u2-coach input:focus-visible,html.u2-coach select:focus-visible,html.u2-coach textarea:focus-visible,html.u2-coach button:focus-visible,html.u2-coach a:focus-visible{outline:2px solid var(--u2-accent);outline-offset:3px}
 /* 주 버튼·보조 버튼(공용 buttonClass 계열 색 토큰 그대로, 반경만 D) */
 html.u2-coach main button[class*="bg-[#5F0080]"],html.u2-coach main a[class*="bg-[#5F0080]"],html.u2-coach main button[class*="bg-purple-800"]{border-radius:var(--u2-r-btn)}
