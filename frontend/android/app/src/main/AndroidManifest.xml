@@ -72,6 +72,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- SDD-330: 실시간 생체신호(BLE) 측정이 백그라운드에서 끊기지 않도록 배터리 최적화 예외를 사용자에게 요청한다(설정 화면 바로가기). -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!-- BLE 플러그인이 병합하는 위치 권한 제거: neverForLocation 스캔이므로 불필요(Android 11 이하 FINE만 위 선언으로 유지) -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" tools:node="remove" />

@@ -42,7 +42,6 @@ import { applyBandSkipUi, readBandSkip, shouldAutoConnectBand, writeBandSkip } f
 import { toBandReport } from '../../../../lib/measurement-web/band-report';
 import { ClassChatPanel } from '../../../chat/ClassChatPanel';
 import { LeaveConfirmModal } from '../../../player/LeaveConfirmModal';
-import { ClassOnboardingCoachmarks } from '../../ClassOnboardingCoachmarks';
 import { MemberClassView } from './MemberClassView';
 import { MemberMediaControls, type MemberMediaBinding } from './MemberMediaControls';
 import { filterEegPreview, filterPpgPreview, minMaxDecimate, smoothAutoScale } from '../../../../lib/eeg/raw-preview-filter';
@@ -560,7 +559,6 @@ export function MemberClassContainer({
     waitlist: { title: title ?? '클래스', counselorName, startLabel: startedAt ? formatStartLabel(startedAt) : null, notifyByPush: isAuthenticated },
     socketConnected: v2On ? liveV2?.state?.phase === 'READY' : liveSocket.isConnected,
     diag: { native: nativeM.diagnostics, nativeFailed: nativeM.nativeFailed, webPath: webM.path, webStatus: webM.status, webCode: webM.code },
-    onboarding: { locationType, participantMode, maxParticipants },
   };
 
   const controls: ScreenControls = {
@@ -650,7 +648,6 @@ interface SharedScreenProps {
   socketConnected: boolean;
   /** SDD-284 T4: 연결 진단 원천(훅 반환값) */
   diag: { native: NativeDiagnostics; nativeFailed: boolean; webPath: string; webStatus: string; webCode: string | null };
-  onboarding: { locationType?: 'online' | 'offline'; participantMode?: 'one_on_one' | 'group'; maxParticipants?: number };
 }
 
 interface ScreenControls {
@@ -861,11 +858,6 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
             controls.onLeave();
           }}
           onCancel={() => controls.setConfirmLeave(false)}
-        />
-        <ClassOnboardingCoachmarks
-          locationType={shared.onboarding.locationType}
-          participantMode={shared.onboarding.participantMode}
-          maxParticipants={shared.onboarding.maxParticipants}
         />
       </div>
 

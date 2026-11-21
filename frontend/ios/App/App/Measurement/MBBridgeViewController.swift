@@ -6,5 +6,6 @@ class MBBridgeViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(NativeMeasurementPlugin())
         bridge?.registerPluginInstance(NativeAudioRecorderPlugin())
+        bridge?.registerPluginInstance(AppSettingsPlugin())
     }
 }

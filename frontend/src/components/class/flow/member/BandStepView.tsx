@@ -1,5 +1,6 @@
 import { isNativeApp } from '../../../../lib/native/platform';
 import { PermissionGuide } from '../../../native/permission-guide';
+import { PermissionShortcuts } from '../../../native/permission-shortcuts';
 import { permissionGuideText } from '../../../native/permission-guide-text';
 // SDD-209 M4 — FM06c LINK BAND 단계. 어떤 모드·상태에서도 참가를 막지 않는다(`LINK BAND 없이 계속하기`는 항상 있다).
 // 전극 LED 카드는 접촉 불량일 때만 띄운다. 연결 중은 회전 스피너 대신 3점 순차 페이드.
@@ -154,6 +155,7 @@ export function BandStepView({
   } else {
     foot = (
       <>
+        {native ? <PermissionShortcuts onRequested={onConnect} renderButton={({ label, onClick, testId }) => <FlowButton kind="ghost" onClick={onClick} data-testid={testId}>{label}</FlowButton>} /> : null}
         <FlowButton kind="primary" onClick={onSkip}>LINK BAND 없이 계속하기</FlowButton>
         <p className="fl-note fm-slot">{native ? '기기 설정에서 Bluetooth를 허용한 뒤 다시 시도해 주세요.' : 'Chrome 또는 Edge에서 열면 연결할 수 있어요.'}</p>
       </>

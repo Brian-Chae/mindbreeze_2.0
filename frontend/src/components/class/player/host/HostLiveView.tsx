@@ -8,7 +8,9 @@ import {
   HOST_BAND_TEXT,
   groupAverage,
   metricByKey,
+  scopeHostParticipants,
   sortHostParticipants,
+  summarizeHostEntry,
   summarizeCheckins,
   type HostCase,
   type HostParticipant,
@@ -131,7 +133,10 @@ export function HostLiveView(props: HostLiveViewProps) {
   const signalOpener = useRef<HTMLElement | null>(null);
   const [range, setRange] = useState<string | null>(null);
   const metric = metricByKey(ui.metric);
-  const visible = filterHostParticipants(participants, ui.filter);
+  // SDD-330: 기본은 이번 회차에 한 번이라도 입장한 회원만. 1:1(solo)은 상대 한 명뿐이라 그대로 둔다.
+  const entry = summarizeHostEntry(participants);
+  const scoped = hostCase.solo ? participants : scopeHostParticipants(participants, { showAll: ui.showAll, abnormalOnly: ui.abnormalOnly });
+  const visible = filterHostParticipants(scoped, ui.filter);
   const sorted = sortHostParticipants(visible, { metric: ui.metric, sort: ui.sort, handsFirst: ui.handsFirst });
   const netBad = hostCase.net !== 'ok';
   const online = hostCase.loc === 'online';
@@ -292,7 +297,16 @@ export function HostLiveView(props: HostLiveViewProps) {
             <HostSummaryPanel summary={hostCase.summary} />
           ) : null}
         </div>
-        <div className="hp-statusline"><span className="hp-participant-heading">참가자 {participants.length}명</span><HostChipLine
+        <div className="hp-statusline">{hostCase.solo ? <span className="hp-participant-heading">참가자 {participants.length}명</span> : (
+          <div className="hp-entry" data-pz="entry-summary" role="group" aria-label="입장 현황">
+            <button type="button" className="hp-entry__btn" data-kind="entered" aria-pressed={!ui.abnormalOnly} onClick={() => uiActions.setAbnormalOnly(false)}>입장 <b>{entry.entered}</b>명</button>
+            <span aria-hidden="true">·</span>
+            <button type="button" className="hp-entry__btn" data-kind="abnormal" data-alert={entry.abnormal > 0 ? 'true' : undefined} aria-pressed={ui.abnormalOnly} onClick={() => uiActions.setAbnormalOnly(!ui.abnormalOnly)}>이상 <b>{entry.abnormal}</b>명</button>
+            {entry.total > entry.entered ? (
+              <button type="button" className="hp-entry__all" aria-pressed={ui.showAll} onClick={() => uiActions.setShowAll(!ui.showAll)}>{ui.showAll ? '입장한 회원만' : `전체 보기 (${entry.total}명)`}</button>
+            ) : null}
+          </div>
+        )}<HostChipLine
           chips={secondaryChips}
           range={range}
           handlers={{

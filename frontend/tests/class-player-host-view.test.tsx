@@ -197,3 +197,29 @@ describe('정적 단언 — 신규 상담사 소스', () => {
     }
   });
 });
+
+describe('SDD-330 — 입장자 기본 보기 · 입장/이상 요약', () => {
+  it('미입장 회원은 기본에서 빠지고 요약에 입장·이상 인원이 나온다', async () => {
+    await renderCase('C01', 'notentered=2');
+    expect(all('[data-pz="tile"]')).toHaveLength(6);
+    const summary = text(one('[data-pz="entry-summary"]'));
+    expect(summary).toContain('입장 6명');
+    expect(summary).toContain('이상 1명');
+    expect(summary).toContain('전체 보기 (8명)');
+  });
+
+  it('전체 보기를 누르면 미입장 회원도 보이고, 이상 숫자를 누르면 이상 회원만 남는다', async () => {
+    await renderCase('C01', 'notentered=2');
+    await act(async () => { one('.hp-entry__all')!.click(); });
+    expect(all('[data-pz="tile"]')).toHaveLength(8);
+    await act(async () => { one('[data-kind="abnormal"]')!.click(); });
+    expect(all('[data-pz="tile"]')).toHaveLength(1);
+    await act(async () => { one('[data-kind="abnormal"]')!.click(); });
+    expect(all('[data-pz="tile"]').length).toBeGreaterThan(1);
+  });
+
+  it('모두 입장했으면 전체 보기 버튼을 두지 않는다', async () => {
+    await renderCase('C01');
+    expect(one('.hp-entry__all')).toBeNull();
+  });
+});

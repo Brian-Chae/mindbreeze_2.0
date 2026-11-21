@@ -15,6 +15,10 @@ export interface HostUiState {
   detailId: string | null;
   camBig: boolean;
   filter: HostFilter | null;
+  /** SDD-330: 미입장 회원까지 보기(기본 false = 입장자만) */
+  showAll: boolean;
+  /** SDD-330: 이상 회원만 보기 */
+  abnormalOnly: boolean;
 }
 
 export interface HostUiActions {
@@ -32,10 +36,12 @@ export interface HostUiActions {
   /** 같은 필터를 다시 고르면 해제한다 */
   toggleFilter: (filter: HostFilter) => void;
   clearFilter: () => void;
+  setShowAll: (on: boolean) => void;
+  setAbnormalOnly: (on: boolean) => void;
 }
 
 export function useHostUi(initial: HostUiInitial): { ui: HostUiState; actions: HostUiActions } {
-  const [ui, setUi] = useState<HostUiState>(() => ({ filter: null, ...initial }));
+  const [ui, setUi] = useState<HostUiState>(() => ({ filter: null, showAll: false, abnormalOnly: false, ...initial }));
 
   // 10초 순환 — 표 보기·참가자 상세가 열려 있으면 멈춘다(기존 동작 계승)
   const rotating = ui.rotate && !ui.table && ui.sheet !== 'detail';
@@ -63,9 +69,12 @@ export function useHostUi(initial: HostUiInitial): { ui: HostUiState; actions: H
   const toggleFilter = useCallback((filter: HostFilter) => setUi((prev) => ({ ...prev, filter: prev.filter === filter ? null : filter })), []);
   const clearFilter = useCallback(() => setUi((prev) => ({ ...prev, filter: null })), []);
 
+  const setShowAll = useCallback((showAll: boolean) => setUi((prev) => ({ ...prev, showAll, abnormalOnly: false })), []);
+  const setAbnormalOnly = useCallback((abnormalOnly: boolean) => setUi((prev) => ({ ...prev, abnormalOnly })), []);
+
   const actions = useMemo<HostUiActions>(
-    () => ({ setMetric, setRotate, setSort, setHandsFirst, setTable, toggleSheet, openSheet, openDetail, closeSheet, toggleCamBig, toggleFilter, clearFilter }),
-    [setMetric, setRotate, setSort, setHandsFirst, setTable, toggleSheet, openSheet, openDetail, closeSheet, toggleCamBig, toggleFilter, clearFilter],
+    () => ({ setMetric, setRotate, setSort, setHandsFirst, setTable, toggleSheet, openSheet, openDetail, closeSheet, toggleCamBig, toggleFilter, clearFilter, setShowAll, setAbnormalOnly }),
+    [setMetric, setRotate, setSort, setHandsFirst, setTable, toggleSheet, openSheet, openDetail, closeSheet, toggleCamBig, toggleFilter, clearFilter, setShowAll, setAbnormalOnly],
   );
   return { ui, actions };
 }
