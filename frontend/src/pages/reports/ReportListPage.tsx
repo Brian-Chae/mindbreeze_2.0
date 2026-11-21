@@ -7,7 +7,7 @@ import ReportsDesktopPage from './ReportsDesktopPage';
 import { useMobileSwipeProtection } from '../../hooks/use-mobile-swipe-protection';
 // AI 리포트 목록 페이지 — 테이블 + 검색/필터/정렬/세션 그룹핑 (SDD-053)
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ReportSampleModal } from './ReportSamplePage';
 import { ReportDetailModal } from './ReportDetailModal';
@@ -173,7 +173,8 @@ function groupBySession(reports: ReportDto[]): { sessionId: string; label: strin
 }
 
 // SDD-253: 모바일은 기존 카드 목록·전체화면 상세를 그대로 쓴다(데스크톱은 ReportsDesktopPage).
-export function LegacyReportListPage() {
+/** topSlot: 새 디자인 모바일에서 요약 카드를 제목·버튼 아래(목록 위)에 끼운다. 지정하지 않으면 기존 동작 그대로. */
+export function LegacyReportListPage({ topSlot }: { topSlot?: ReactNode } = {}) {
   const [sampleOpen, setSampleOpen] = useState(false);
   /** SDD-064 — 목록에서 팝업으로 상세 보기 */
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
@@ -520,6 +521,7 @@ export function LegacyReportListPage() {
 
   return (
     <AppShell title="리포트" rightSlot={!loading ? rightSlot : undefined} wide>
+      {topSlot && <div className="mb-4">{topSlot}</div>}
       {operationsOpen && <section id="report-operations-settings" aria-label="리포트 운영 설정" className="mb-6 space-y-4 rounded-2xl border border-[#E9E2EB] bg-[#F8F5EF] p-4">
         <h2 className="text-[18px] font-bold">운영 설정</h2>
         <SessionNotePromptToggle />
