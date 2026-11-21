@@ -48,6 +48,9 @@ export function deriveBandUi(input: BandInput, nowMs: number): BandUi {
 /** 소켓이 끊긴 채 이 시간(ms)이 지나면 reconnecting 에서 down 으로 본다. plan D9 미확정 — 잠정값 */
 export const NET_DOWN_AFTER_MS = 15_000;
 
+/** 마지막 live-metrics 폴링 성공 후 이 시간(ms)을 넘기면 폴링이 정체된 것으로 본다(폴링 주기 4초의 3배) */
+export const METRICS_FRESH_MS = 12_000;
+
 export interface NetInput {
   socketConnected: boolean;
   browserOnline: boolean;

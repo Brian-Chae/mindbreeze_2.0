@@ -4,7 +4,7 @@ import { act, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SessionLiveMetric } from '../src/lib/api/session';
-import { NET_DOWN_AFTER_MS } from '../src/lib/class/player-case';
+import { METRICS_FRESH_MS, NET_DOWN_AFTER_MS } from '../src/lib/class/player-case';
 
 const livekit = vi.hoisted(() => ({
   local: null as unknown,
@@ -74,7 +74,7 @@ function baseProps(over: Partial<HostLiveContainerProps> = {}): HostLiveContaine
     checkins: [],
     waitingEntries: [],
     quietSignals: {},
-    live: { socketConnected: true, metricsPollFailing: false, onRetry: vi.fn() },
+    live: { socketConnected: true, metricsPollFailing: false, metricsLastOkAt: NOW, onRetry: vi.fn() },
     speaking: { busyId: null, onSet: vi.fn() },
     chat: { enabled: true, busy: false, onToggleEnabled: vi.fn() },
     recorder: { state: 'recording', pause: vi.fn(), resume: vi.fn() },
@@ -188,22 +188,41 @@ describe('HostLiveContainer — 뷰 모델 조립', () => {
   });
 });
 
-describe('네트워크 배너(C16) — 소켓 끊김·복구', () => {
-  it('소켓이 끊기면 재연결 배너, 값 흐림, "데이터 수신 일시 중단" → 복구되면 사라진다', async () => {
-    await render(<HostLiveContainer {...baseProps({ live: { socketConnected: false, metricsPollFailing: false, onRetry: vi.fn() } })} />);
+describe('네트워크 배너(C16) — A안: 폴링이 살아 있으면 소켓 끊김만으로 배너를 띄우지 않는다', () => {
+  const live = (o: Partial<HostLiveContainerProps['live']>): HostLiveContainerProps['live'] => ({
+    socketConnected: false, metricsPollFailing: false, metricsLastOkAt: Date.now(), onRetry: vi.fn(), ...o,
+  });
+
+  it('소켓 끊김 + 폴링 정상(최근 성공) → 배너·흐림 없음', async () => {
+    await render(<HostLiveContainer {...baseProps({ live: live({}) })} />);
+    expect(one('[data-pz="banner"]')).toBeNull();
+    expect(one('.hp-grid')?.getAttribute('data-net-bad')).not.toBe('true');
+  });
+
+  it('소켓 끊김 + 폴링 실패 → 불안정 배너·흐림·수신 일시 중단, 폴링 복구되면 사라진다', async () => {
+    await render(<HostLiveContainer {...baseProps({ live: live({ metricsPollFailing: true }) })} />);
     expect(text(one('[data-pz="banner"]'))).toContain('연결이 불안정해요');
     expect(text(one('[data-pz="banner"]'))).toContain('데이터 수신이 잠시 중단됐어요');
     expect(one('.hp-grid')?.getAttribute('data-net-bad')).toBe('true');
     expect(text(all('[data-pz="tile"]')[0])).toContain('수신 일시 중단');
-    await render(<HostLiveContainer {...baseProps({ live: { socketConnected: true, metricsPollFailing: false, onRetry: vi.fn() } })} />);
+    await render(<HostLiveContainer {...baseProps({ live: live({}) })} />);
     expect(one('[data-pz="banner"]')).toBeNull();
   });
 
-  it('끊김이 NET_DOWN_AFTER_MS 를 넘고 4초 폴링도 실패 중이면 끊김 배너 + 다시 연결', async () => {
+  it('소켓 끊김 + 폴링 정체(마지막 성공 후 METRICS_FRESH_MS 초과) → 불안정 배너', async () => {
+    await render(<HostLiveContainer {...baseProps({ live: live({ metricsLastOkAt: Date.now() - METRICS_FRESH_MS - 1_000 }) })} />);
+    expect(text(one('[data-pz="banner"]'))).toContain('연결이 불안정해요');
+  });
+
+  it('소켓 끊김 + 폴링 성공 이력 없음 → 불안정 배너', async () => {
+    await render(<HostLiveContainer {...baseProps({ live: live({ metricsLastOkAt: null }) })} />);
+    expect(text(one('[data-pz="banner"]'))).toContain('연결이 불안정해요');
+  });
+
+  it('끊김이 NET_DOWN_AFTER_MS 를 넘고 폴링도 실패 중이면 끊김 배너 + 다시 연결', async () => {
     vi.useFakeTimers();
     const onRetry = vi.fn();
-    const props = baseProps({ live: { socketConnected: false, metricsPollFailing: true, onRetry } });
-    await render(<HostLiveContainer {...props} />);
+    await render(<HostLiveContainer {...baseProps({ live: live({ metricsPollFailing: true, metricsLastOkAt: null, onRetry }) })} />);
     expect(text(one('[data-pz="banner"]'))).toContain('연결이 불안정해요');
     await act(async () => { vi.advanceTimersByTime(NET_DOWN_AFTER_MS + 1_000); });
     expect(text(one('[data-pz="banner"]'))).toContain('연결이 끊겼어요');
@@ -211,11 +230,16 @@ describe('네트워크 배너(C16) — 소켓 끊김·복구', () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
-  it('폴링이 살아 있으면 소켓이 오래 끊겨도 끊김이 아니라 불안정으로 둔다', async () => {
+  it('폴링이 계속 정상이면 소켓이 오래 끊겨도 배너가 없다', async () => {
     vi.useFakeTimers();
-    await render(<HostLiveContainer {...baseProps({ live: { socketConnected: false, metricsPollFailing: false, onRetry: vi.fn() } })} />);
-    await act(async () => { vi.advanceTimersByTime(NET_DOWN_AFTER_MS * 3); });
-    expect(text(one('[data-pz="banner"]'))).toContain('연결이 불안정해요');
+    vi.setSystemTime(NOW);
+    const l = live({ metricsLastOkAt: NOW });
+    await render(<HostLiveContainer {...baseProps({ live: l })} />);
+    for (let i = 0; i < 6; i += 1) {
+      await act(async () => { vi.advanceTimersByTime(4_000); });
+      await render(<HostLiveContainer {...baseProps({ live: { ...l, metricsLastOkAt: Date.now() } })} />);
+    }
+    expect(one('[data-pz="banner"]')).toBeNull();
   });
 });
 

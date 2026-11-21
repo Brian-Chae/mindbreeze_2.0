@@ -293,6 +293,7 @@ export default function ClassPlayerPage() {
   const [metrics, setMetrics] = useState<SessionLiveMetric[]>([]);
   /** SDD-208: 라이브 지표 폴링이 실패 중인가 — 새 진행 화면이 "연결이 끊겼어요" 판정에 쓴다 */
   const [metricsPollFailing, setMetricsPollFailing] = useState(false);
+  const [metricsLastOkAt, setMetricsLastOkAt] = useState<number | null>(null);
   const [hostExtras, setHostExtras] = useState<Record<string, HostExtra>>({});
   const lastFeaturePatchAtRef = useRef(0);
   const featureBufferRef = useRef<Map<string, FeatureSampleBuffer>>(new Map());
@@ -699,6 +700,7 @@ export default function ClassPlayerPage() {
     // 같은 페이지 인스턴스의 회차 전환에서 이전 EEG·체크인 캐시는 재사용하지 않는다.
     setMetrics([]);
     setMetricsPollFailing(false);
+    setMetricsLastOkAt(null);
     setError(null);
     setLoadErrorKind(null);
     setHostExtras({});
@@ -748,6 +750,7 @@ export default function ClassPlayerPage() {
       if (!isCurrentRoute(id)) return;
       setMetrics(scoreServerRows(res.metrics ?? res.participants ?? []));
       setMetricsPollFailing(false);
+      setMetricsLastOkAt(Date.now());
     } catch {
       if (!isCurrentRoute(id)) return;
       setMetricsPollFailing(true);
@@ -1494,6 +1497,7 @@ export default function ClassPlayerPage() {
           live={{
             socketConnected: v2Flag ? liveV2.state?.phase === 'READY' : liveSocket.isConnected,
             metricsPollFailing,
+            metricsLastOkAt,
             onRetry: () => {
               void refreshMetrics();
               const socket = getActiveSessionLiveSocket();
