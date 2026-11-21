@@ -1,0 +1,1741 @@
+{
+  "$defs": {
+    "BackCover": {
+      "additionalProperties": false,
+      "properties": {
+        "kicker": {
+          "title": "Kicker",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "subtitle": {
+          "title": "Subtitle",
+          "type": "string"
+        },
+        "brand": {
+          "title": "Brand",
+          "type": "string"
+        },
+        "note": {
+          "title": "Note",
+          "type": "string"
+        },
+        "contact": {
+          "title": "Contact",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kicker",
+        "title",
+        "subtitle",
+        "brand",
+        "note",
+        "contact"
+      ],
+      "title": "BackCover",
+      "type": "object"
+    },
+    "ChangeV2": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "abs",
+            "pct",
+            "flow"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "direction": {
+          "enum": [
+            "up",
+            "down",
+            "stable"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "decimals": {
+          "title": "Decimals",
+          "type": "integer"
+        },
+        "before": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Before"
+        },
+        "after": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "After"
+        },
+        "delta": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delta"
+        },
+        "pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pct"
+        }
+      },
+      "required": [
+        "kind",
+        "direction",
+        "label",
+        "unit",
+        "decimals"
+      ],
+      "title": "ChangeV2",
+      "type": "object"
+    },
+    "Companion": {
+      "additionalProperties": false,
+      "description": "lf_hf 처럼 그룹 비교 대신 다른 신호와 함께 읽는 보조 블록.",
+      "properties": {
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "body": {
+          "title": "Body",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "body"
+      ],
+      "title": "Companion",
+      "type": "object"
+    },
+    "Cover": {
+      "additionalProperties": false,
+      "properties": {
+        "kicker": {
+          "title": "Kicker",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "tagline": {
+          "title": "Tagline",
+          "type": "string"
+        },
+        "rows": {
+          "items": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "type": "array"
+          },
+          "title": "Rows",
+          "type": "array"
+        },
+        "brand": {
+          "title": "Brand",
+          "type": "string"
+        },
+        "footer": {
+          "title": "Footer",
+          "type": "string"
+        },
+        "issued_note": {
+          "title": "Issued Note",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kicker",
+        "title",
+        "tagline",
+        "rows",
+        "brand",
+        "footer",
+        "issued_note"
+      ],
+      "title": "Cover",
+      "type": "object"
+    },
+    "DistributionV2": {
+      "additionalProperties": false,
+      "description": "개인 분 값 히스토그램 + 그룹 분 값 가우시안 KDE + 평균선 + ±1SD 음영(집계만).",
+      "properties": {
+        "lo": {
+          "title": "Lo",
+          "type": "number"
+        },
+        "hi": {
+          "title": "Hi",
+          "type": "number"
+        },
+        "axis_ticks": {
+          "items": {
+            "type": "number"
+          },
+          "title": "Axis Ticks",
+          "type": "array"
+        },
+        "mean_me": {
+          "title": "Mean Me",
+          "type": "number"
+        },
+        "mean_group": {
+          "title": "Mean Group",
+          "type": "number"
+        },
+        "sd_group": {
+          "title": "Sd Group",
+          "type": "number"
+        },
+        "n_people": {
+          "title": "N People",
+          "type": "integer"
+        },
+        "n_person_minutes": {
+          "title": "N Person Minutes",
+          "type": "integer"
+        },
+        "my_minutes": {
+          "title": "My Minutes",
+          "type": "integer"
+        },
+        "density": {
+          "items": {
+            "type": "number"
+          },
+          "title": "Density",
+          "type": "array"
+        },
+        "my_bars": {
+          "items": {
+            "type": "number"
+          },
+          "title": "My Bars",
+          "type": "array"
+        }
+      },
+      "required": [
+        "lo",
+        "hi",
+        "axis_ticks",
+        "mean_me",
+        "mean_group",
+        "sd_group",
+        "n_people",
+        "n_person_minutes",
+        "my_minutes",
+        "density",
+        "my_bars"
+      ],
+      "title": "DistributionV2",
+      "type": "object"
+    },
+    "EffectPair": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "enum": [
+            "heart_rate",
+            "relaxation",
+            "motion",
+            "focus"
+          ],
+          "title": "Key",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "before": {
+          "title": "Before",
+          "type": "string"
+        },
+        "after": {
+          "title": "After",
+          "type": "string"
+        },
+        "change_text": {
+          "title": "Change Text",
+          "type": "string"
+        },
+        "direction": {
+          "enum": [
+            "up",
+            "down",
+            "stable"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "tone": {
+          "enum": [
+            "calm",
+            "neutral"
+          ],
+          "title": "Tone",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "name",
+        "unit",
+        "before",
+        "after",
+        "change_text",
+        "direction",
+        "tone"
+      ],
+      "title": "EffectPair",
+      "type": "object"
+    },
+    "GroupBandV2": {
+      "additionalProperties": false,
+      "description": "분별 그룹 평균 ± 1 표준편차(모집단 SD). 유효 인원 < MIN_GROUP_N 인 분은 mean·sd = None.",
+      "properties": {
+        "mean": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Mean",
+          "type": "array"
+        },
+        "sd": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Sd",
+          "type": "array"
+        },
+        "n": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "N",
+          "type": "array"
+        }
+      },
+      "required": [
+        "mean",
+        "sd",
+        "n"
+      ],
+      "title": "GroupBandV2",
+      "type": "object"
+    },
+    "GroupBlockV2": {
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "paragraphs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Paragraphs",
+          "type": "array"
+        },
+        "distribution": {
+          "$ref": "#/$defs/DistributionV2"
+        },
+        "legend": {
+          "title": "Legend",
+          "type": "string"
+        },
+        "footnote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Footnote"
+        }
+      },
+      "required": [
+        "title",
+        "paragraphs",
+        "distribution",
+        "legend"
+      ],
+      "title": "GroupBlockV2",
+      "type": "object"
+    },
+    "HeroV2": {
+      "additionalProperties": false,
+      "properties": {
+        "kicker": {
+          "title": "Kicker",
+          "type": "string"
+        },
+        "headline": {
+          "title": "Headline",
+          "type": "string"
+        },
+        "lead": {
+          "title": "Lead",
+          "type": "string"
+        },
+        "pair_caption_before": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pair Caption Before"
+        },
+        "pair_caption_after": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pair Caption After"
+        },
+        "pairs": {
+          "items": {
+            "$ref": "#/$defs/EffectPair"
+          },
+          "title": "Pairs",
+          "type": "array"
+        },
+        "caution": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Caution"
+        },
+        "other_directions": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Other Directions"
+        },
+        "quiet_highlight": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/QuietHighlight"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "kicker",
+        "headline",
+        "lead",
+        "pairs"
+      ],
+      "title": "HeroV2",
+      "type": "object"
+    },
+    "JourneyV2": {
+      "additionalProperties": false,
+      "properties": {
+        "eyebrow": {
+          "title": "Eyebrow",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "timeline": {
+          "items": {
+            "$ref": "#/$defs/TimelineItem"
+          },
+          "title": "Timeline",
+          "type": "array"
+        },
+        "chart_keys": {
+          "items": {
+            "enum": [
+              "motion",
+              "heart_rate",
+              "rmssd",
+              "lf_hf",
+              "focus",
+              "relaxation",
+              "emotional_balance",
+              "aperiodic"
+            ],
+            "type": "string"
+          },
+          "title": "Chart Keys",
+          "type": "array"
+        },
+        "legend_note": {
+          "title": "Legend Note",
+          "type": "string"
+        },
+        "interpret_title": {
+          "title": "Interpret Title",
+          "type": "string"
+        },
+        "interpret_body": {
+          "title": "Interpret Body",
+          "type": "string"
+        }
+      },
+      "required": [
+        "eyebrow",
+        "title",
+        "timeline",
+        "chart_keys",
+        "legend_note",
+        "interpret_title",
+        "interpret_body"
+      ],
+      "title": "JourneyV2",
+      "type": "object"
+    },
+    "MemberMetaV2": {
+      "additionalProperties": false,
+      "properties": {
+        "member_code": {
+          "title": "Member Code",
+          "type": "string"
+        },
+        "program_label": {
+          "title": "Program Label",
+          "type": "string"
+        },
+        "chapter_label": {
+          "title": "Chapter Label",
+          "type": "string"
+        },
+        "session_date": {
+          "title": "Session Date",
+          "type": "string"
+        },
+        "start_clock": {
+          "title": "Start Clock",
+          "type": "string"
+        },
+        "device_text": {
+          "title": "Device Text",
+          "type": "string"
+        },
+        "basis_text": {
+          "title": "Basis Text",
+          "type": "string"
+        },
+        "reference_group_text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reference Group Text"
+        },
+        "issued_on": {
+          "title": "Issued On",
+          "type": "string"
+        },
+        "volume_label": {
+          "title": "Volume Label",
+          "type": "string"
+        },
+        "band_status": {
+          "enum": [
+            "worn",
+            "not_worn"
+          ],
+          "title": "Band Status",
+          "type": "string"
+        },
+        "settle_minutes": {
+          "default": 2,
+          "title": "Settle Minutes",
+          "type": "integer"
+        },
+        "first_minute": {
+          "default": 1,
+          "title": "First Minute",
+          "type": "integer"
+        },
+        "last_minute": {
+          "title": "Last Minute",
+          "type": "integer"
+        },
+        "valid_minutes": {
+          "title": "Valid Minutes",
+          "type": "integer"
+        },
+        "first_window": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Window"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "last_window": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Window"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "short_measure": {
+          "default": false,
+          "title": "Short Measure",
+          "type": "boolean"
+        },
+        "group_n": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Group N"
+        }
+      },
+      "required": [
+        "member_code",
+        "program_label",
+        "chapter_label",
+        "session_date",
+        "start_clock",
+        "device_text",
+        "basis_text",
+        "issued_on",
+        "volume_label",
+        "band_status",
+        "last_minute",
+        "valid_minutes"
+      ],
+      "title": "MemberMetaV2",
+      "type": "object"
+    },
+    "MemoPage": {
+      "additionalProperties": false,
+      "properties": {
+        "eyebrow": {
+          "title": "Eyebrow",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "prompt": {
+          "title": "Prompt",
+          "type": "string"
+        },
+        "labels": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Labels",
+          "type": "array"
+        }
+      },
+      "required": [
+        "eyebrow",
+        "title",
+        "prompt",
+        "labels"
+      ],
+      "title": "MemoPage",
+      "type": "object"
+    },
+    "Method": {
+      "additionalProperties": false,
+      "properties": {
+        "eyebrow": {
+          "title": "Eyebrow",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "body": {
+          "title": "Body",
+          "type": "string"
+        },
+        "reading_title": {
+          "title": "Reading Title",
+          "type": "string"
+        },
+        "paragraphs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Paragraphs",
+          "type": "array"
+        },
+        "footnote": {
+          "title": "Footnote",
+          "type": "string"
+        },
+        "references_title": {
+          "title": "References Title",
+          "type": "string"
+        },
+        "references": {
+          "items": {
+            "$ref": "#/$defs/Reference"
+          },
+          "title": "References",
+          "type": "array"
+        },
+        "references_checked": {
+          "title": "References Checked",
+          "type": "string"
+        },
+        "contact_title": {
+          "title": "Contact Title",
+          "type": "string"
+        },
+        "contact_body": {
+          "title": "Contact Body",
+          "type": "string"
+        }
+      },
+      "required": [
+        "eyebrow",
+        "title",
+        "body",
+        "reading_title",
+        "paragraphs",
+        "footnote",
+        "references_title",
+        "references",
+        "references_checked",
+        "contact_title",
+        "contact_body"
+      ],
+      "title": "Method",
+      "type": "object"
+    },
+    "MetricBodyV2": {
+      "additionalProperties": false,
+      "properties": {
+        "eyebrow": {
+          "title": "Eyebrow",
+          "type": "string"
+        },
+        "conclusion": {
+          "title": "Conclusion",
+          "type": "string"
+        },
+        "bridge": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bridge"
+        },
+        "comparison_text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Comparison Text"
+        },
+        "first": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "First"
+        },
+        "last": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last"
+        },
+        "quiet": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quiet"
+        },
+        "change": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChangeV2"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "overall_mean": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Overall Mean"
+        },
+        "decimals": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Decimals"
+        },
+        "series": {
+          "$ref": "#/$defs/SeriesV2"
+        },
+        "series_legend": {
+          "title": "Series Legend",
+          "type": "string"
+        },
+        "interpret": {
+          "title": "Interpret",
+          "type": "string"
+        },
+        "reading": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reading"
+        },
+        "group": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GroupBlockV2"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "group_hidden_reason": {
+          "anyOf": [
+            {
+              "const": "min_n",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Group Hidden Reason"
+        },
+        "companion": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Companion"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "footnote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Footnote"
+        }
+      },
+      "required": [
+        "eyebrow",
+        "conclusion",
+        "series",
+        "series_legend",
+        "interpret"
+      ],
+      "title": "MetricBodyV2",
+      "type": "object"
+    },
+    "MetricSectionV2": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "enum": [
+            "motion",
+            "heart_rate",
+            "rmssd",
+            "lf_hf",
+            "focus",
+            "relaxation",
+            "emotional_balance",
+            "aperiodic"
+          ],
+          "title": "Key",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "chapter": {
+          "enum": [
+            "body",
+            "mind"
+          ],
+          "title": "Chapter",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "ok",
+            "missing"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "missing_reason": {
+          "anyOf": [
+            {
+              "enum": [
+                "band_not_worn",
+                "poor_signal",
+                "no_raw",
+                "insufficient_window",
+                "poor_fit"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Missing Reason"
+        },
+        "body": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MetricBodyV2"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "key",
+        "title",
+        "chapter",
+        "state"
+      ],
+      "title": "MetricSectionV2",
+      "type": "object"
+    },
+    "Narrative": {
+      "additionalProperties": false,
+      "properties": {
+        "eyebrow": {
+          "title": "Eyebrow",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "body": {
+          "title": "Body",
+          "type": "string"
+        },
+        "source": {
+          "default": "rule",
+          "enum": [
+            "rule",
+            "ai"
+          ],
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "eyebrow",
+        "title",
+        "body"
+      ],
+      "title": "Narrative",
+      "type": "object"
+    },
+    "NextStep": {
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "body": {
+          "title": "Body",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "body"
+      ],
+      "title": "NextStep",
+      "type": "object"
+    },
+    "NextSteps": {
+      "additionalProperties": false,
+      "properties": {
+        "eyebrow": {
+          "title": "Eyebrow",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "body": {
+          "title": "Body",
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/NextStep"
+          },
+          "title": "Items",
+          "type": "array"
+        }
+      },
+      "required": [
+        "eyebrow",
+        "title",
+        "body",
+        "items"
+      ],
+      "title": "NextSteps",
+      "type": "object"
+    },
+    "Observation": {
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "body": {
+          "title": "Body",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "body"
+      ],
+      "title": "Observation",
+      "type": "object"
+    },
+    "OpinionV2": {
+      "additionalProperties": false,
+      "properties": {
+        "narrative": {
+          "$ref": "#/$defs/Narrative"
+        },
+        "observations": {
+          "items": {
+            "$ref": "#/$defs/Observation"
+          },
+          "title": "Observations",
+          "type": "array"
+        },
+        "interpret_title": {
+          "title": "Interpret Title",
+          "type": "string"
+        },
+        "interpret_body": {
+          "title": "Interpret Body",
+          "type": "string"
+        },
+        "chart_keys": {
+          "items": {
+            "enum": [
+              "motion",
+              "heart_rate",
+              "rmssd",
+              "lf_hf",
+              "focus",
+              "relaxation",
+              "emotional_balance",
+              "aperiodic"
+            ],
+            "type": "string"
+          },
+          "title": "Chart Keys",
+          "type": "array"
+        },
+        "legend_note": {
+          "title": "Legend Note",
+          "type": "string"
+        },
+        "footnote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Footnote"
+        }
+      },
+      "required": [
+        "narrative",
+        "observations",
+        "interpret_title",
+        "interpret_body",
+        "chart_keys",
+        "legend_note"
+      ],
+      "title": "OpinionV2",
+      "type": "object"
+    },
+    "Quiet5": {
+      "additionalProperties": false,
+      "properties": {
+        "start_min": {
+          "title": "Start Min",
+          "type": "integer"
+        },
+        "end_min": {
+          "title": "End Min",
+          "type": "integer"
+        },
+        "when_label": {
+          "enum": [
+            "수업 초반에",
+            "수업 중간에",
+            "수업이 끝나갈 무렵"
+          ],
+          "title": "When Label",
+          "type": "string"
+        },
+        "eyebrow": {
+          "title": "Eyebrow",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "note": {
+          "title": "Note",
+          "type": "string"
+        },
+        "hr_median": {
+          "title": "Hr Median",
+          "type": "number"
+        },
+        "deltas": {
+          "$ref": "#/$defs/QuietDeltas"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/QuietItem"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "reading_title": {
+          "title": "Reading Title",
+          "type": "string"
+        },
+        "reading_body": {
+          "title": "Reading Body",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start_min",
+        "end_min",
+        "when_label",
+        "eyebrow",
+        "title",
+        "note",
+        "hr_median",
+        "deltas",
+        "items",
+        "reading_title",
+        "reading_body"
+      ],
+      "title": "Quiet5",
+      "type": "object"
+    },
+    "QuietDeltas": {
+      "additionalProperties": false,
+      "properties": {
+        "heart_rate": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Heart Rate"
+        },
+        "rmssd_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rmssd Pct"
+        },
+        "sdnn_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sdnn Pct"
+        }
+      },
+      "title": "QuietDeltas",
+      "type": "object"
+    },
+    "QuietHighlight": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "note": {
+          "title": "Note",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "note"
+      ],
+      "title": "QuietHighlight",
+      "type": "object"
+    },
+    "QuietItem": {
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "value_text": {
+          "title": "Value Text",
+          "type": "string"
+        },
+        "body": {
+          "title": "Body",
+          "type": "string"
+        },
+        "footnote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Footnote"
+        }
+      },
+      "required": [
+        "title",
+        "value_text",
+        "body"
+      ],
+      "title": "QuietItem",
+      "type": "object"
+    },
+    "Reference": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "title": "Reference",
+      "type": "object"
+    },
+    "SeriesV2": {
+      "additionalProperties": false,
+      "properties": {
+        "minutes": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Minutes",
+          "type": "array"
+        },
+        "values": {
+          "anyOf": [
+            {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Values"
+        },
+        "norm": {
+          "anyOf": [
+            {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Norm"
+        },
+        "value_transform": {
+          "default": "linear",
+          "enum": [
+            "linear",
+            "log1p",
+            "pct_vs_first5"
+          ],
+          "title": "Value Transform",
+          "type": "string"
+        },
+        "axis_min": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Axis Min"
+        },
+        "axis_max": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Axis Max"
+        },
+        "axis_unit": {
+          "title": "Axis Unit",
+          "type": "string"
+        },
+        "settle_shade": {
+          "default": true,
+          "title": "Settle Shade",
+          "type": "boolean"
+        },
+        "group_band": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GroupBandV2"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "minutes",
+        "axis_unit"
+      ],
+      "title": "SeriesV2",
+      "type": "object"
+    },
+    "TimelineItem": {
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "label",
+        "value"
+      ],
+      "title": "TimelineItem",
+      "type": "object"
+    },
+    "Toc": {
+      "additionalProperties": false,
+      "properties": {
+        "heading": {
+          "title": "Heading",
+          "type": "string"
+        },
+        "chapter_title": {
+          "title": "Chapter Title",
+          "type": "string"
+        },
+        "chapter_subtitle": {
+          "title": "Chapter Subtitle",
+          "type": "string"
+        },
+        "next_chapter_note": {
+          "title": "Next Chapter Note",
+          "type": "string"
+        },
+        "guide": {
+          "title": "Guide",
+          "type": "string"
+        }
+      },
+      "required": [
+        "heading",
+        "chapter_title",
+        "chapter_subtitle",
+        "next_chapter_note",
+        "guide"
+      ],
+      "title": "Toc",
+      "type": "object"
+    },
+    "Window": {
+      "additionalProperties": false,
+      "description": "표기 분(1부터), 양끝 포함. 길이는 항상 WINDOW_MINUTES.",
+      "properties": {
+        "start": {
+          "title": "Start",
+          "type": "integer"
+        },
+        "end": {
+          "title": "End",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "title": "Window",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "member_report.v2",
+      "default": "member_report.v2",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "meta": {
+      "$ref": "#/$defs/MemberMetaV2"
+    },
+    "cover": {
+      "$ref": "#/$defs/Cover"
+    },
+    "toc": {
+      "$ref": "#/$defs/Toc"
+    },
+    "hero": {
+      "$ref": "#/$defs/HeroV2"
+    },
+    "opinion": {
+      "$ref": "#/$defs/OpinionV2"
+    },
+    "journey": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JourneyV2"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "quiet5": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Quiet5"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "metrics": {
+      "additionalProperties": {
+        "$ref": "#/$defs/MetricSectionV2"
+      },
+      "propertyNames": {
+        "enum": [
+          "motion",
+          "heart_rate",
+          "rmssd",
+          "lf_hf",
+          "focus",
+          "relaxation",
+          "emotional_balance",
+          "aperiodic"
+        ]
+      },
+      "title": "Metrics",
+      "type": "object"
+    },
+    "next_steps": {
+      "$ref": "#/$defs/NextSteps"
+    },
+    "memo": {
+      "$ref": "#/$defs/MemoPage"
+    },
+    "method": {
+      "$ref": "#/$defs/Method"
+    },
+    "back": {
+      "$ref": "#/$defs/BackCover"
+    },
+    "forbidden_words_checked": {
+      "default": true,
+      "title": "Forbidden Words Checked",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "meta",
+    "cover",
+    "toc",
+    "hero",
+    "opinion",
+    "metrics",
+    "next_steps",
+    "memo",
+    "method",
+    "back"
+  ],
+  "title": "MemberReportV2",
+  "type": "object"
+}

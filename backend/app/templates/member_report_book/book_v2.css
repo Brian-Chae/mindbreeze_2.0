@@ -1,0 +1,24 @@
+/* SDD-328 B4 — v2 책 추가 스타일. book.css(v1) 위에 덧붙인다. 글자 하한: 본문 9.5pt · 라벨 8.5pt · 각주 7.5pt. */
+.v2 .footnote{color:#777;font-size:7.5pt;line-height:1.5;margin:2mm 0 0}
+.v2 .effect-grid{grid-template-columns:1fr 1fr}
+.v2 .quiet-highlight{margin:4mm 0;padding:3mm;background:#fff;border-left:3px solid #24564f;font-size:9.5pt}
+.v2 .quiet-highlight strong{display:block;margin-bottom:1mm}
+.v2 .hero-note{margin:3mm 0 0;color:#605969;font-size:7.5pt;line-height:1.4}
+.v2 .observations{display:flex;flex-direction:column;gap:3mm;margin:3mm 0}
+.v2 .observation{padding:3mm;background:#fff;border:1px solid #cbd6cc}
+.v2 .observation b{display:block;color:#24564f;margin-bottom:1mm}
+.v2 .observation p{margin:0;font-size:9.5pt}
+.v2 .mini-charts{display:flex;gap:4mm;margin-top:3mm}
+.v2 .mini-charts>.plot{flex:1;min-width:0}
+.v2 .mini-charts svg{height:140px}
+.v2 .timeline{margin:3mm 0}
+.v2 .quiet-item{padding:3mm;margin:3mm 0;background:#fff;border:1px solid #cbd6cc}
+.v2 .quiet-item strong{display:block;font-size:15pt;color:#24564f;margin:1mm 0}
+.v2 .quiet-item h3{font-size:10pt;margin:0}
+.v2 .quiet-item p{margin:1mm 0 0;font-size:9.5pt}
+.v2 .gs-row{display:block}
+.v2 .gs-left{width:100%}
+.v2 .gs-left svg{height:130px}
+.v2 .metric .time-main svg{height:165px}
+.v2 .metric.lfhf .time-main svg{height:200px}
+.v2 .metric h2.chapter-title{font-size:14pt}
