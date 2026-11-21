@@ -8,6 +8,8 @@ public protocol BandControlling: AnyObject {
     var delegate: BandLinkDelegate? { get set }
     func connect(expectedPeripheral: UUID?)
     func disconnect()
+    /// SDD-331: 빠른 재시도 창을 다시 열고 즉시 재연결.
+    func restartFastWindow()
     /// SDD-293: 보류 연결(구독 없음). 준비되면 onHoldReady.
     func hold(expectedPeripheral: UUID?)
     var onHoldReady: (() -> Void)? { get set }
