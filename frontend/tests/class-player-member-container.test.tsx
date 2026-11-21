@@ -105,7 +105,6 @@ vi.mock('../src/components/chat/ClassChatPanel', async () => {
     },
   };
 });
-vi.mock('../src/components/class/ClassOnboardingCoachmarks', () => ({ ClassOnboardingCoachmarks: () => null }));
 vi.mock('@livekit/components-react', async () => {
   const React = await import('react');
   return {

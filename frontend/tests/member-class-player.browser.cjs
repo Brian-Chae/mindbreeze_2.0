@@ -48,7 +48,6 @@ const readCss = (...parts) => fs.readFileSync(path.join(frontend, ...parts), 'ut
 /** 새 회원 컨테이너를 실제 번들로 띄운다. place: online | offline */
 async function mount(page, place = 'online') {
   page.setDefaultTimeout(10000);
-  await page.addInitScript(() => localStorage.setItem('mb_class_onboarding_seen', '1'));
   await page.route('**/api/v1/**', (route) => route.fulfill({ status: 404, json: {} }));
   const { build } = require('esbuild');
   const bundle = await build({
