@@ -336,9 +336,9 @@ export class NativeMeasurementFacade {
     try { return (await this.plugin.setJSBandOwnership({ owning: true })).accepted === true; } catch { return false; }
   }
 
-  /** 네이티브 소유 밴드 재연결(iOS). 미지원 플랫폼·수집 전·실패는 false — 호출자가 JS BLE 로 폴백하지 않는다. */
+  /** 네이티브 소유 밴드 재연결(iOS·Android, SDD-331). 미지원 플랫폼·수집 전·실패는 false — 호출자가 JS BLE 로 폴백하지 않는다. */
   async reconnectBand(platform: string): Promise<boolean> {
-    if (platform !== 'ios' || !this.plugin.reconnectBand) return false;
+    if ((platform !== 'ios' && platform !== 'android') || !this.plugin.reconnectBand) return false;
     try { return (await this.plugin.reconnectBand()).accepted === true; } catch { return false; }
   }
 

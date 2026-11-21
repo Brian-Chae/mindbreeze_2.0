@@ -307,6 +307,17 @@ function DeviceSheet({ props }: { props: MemberClassViewProps }) {
     );
   }
 
+  if (input.band === 'lost' && device.wakeHint) {
+    return (
+      <>
+        <DevTop icon="wifiOff" title="밴드가 잠들었을 수 있어요" sub="밴드 버튼을 한 번 눌러 깨워 주세요" coral />
+        {note('깨운 뒤 아래 버튼을 누르면 바로 다시 찾아볼게요. 끊긴 동안 측정된 값은 이 기기에 보관돼요.')}
+        {errorLine}
+        <button type="button" className="mp-pill mp-pill--primary mp-pill--block" onClick={actions.onBandWake ?? actions.onBandRetry}>깨웠어요</button>
+      </>
+    );
+  }
+
   if (input.band === 'lost') {
     return (
       <>
