@@ -1,6 +1,7 @@
 import { displayedInteger } from '../../../../lib/biosignal/display-snapshot';
 import { isNativeApp } from '../../../../lib/native/platform';
 import { PermissionGuide } from '../../../native/permission-guide';
+import { PermissionShortcuts } from '../../../native/permission-shortcuts';
 // SDD-208 M3 — 회원 시트 본문 5종: 내 상태 · 채팅 · 조용한 신호 · 소리 · 기기. 시트 틀(PlayerSheet)은 공용이고 여기는 안쪽만 그린다.
 // 모든 문구는 시안 member.html 원문. D3: 소리 시트에 BGM 행을 두지 않는다(진행 중 BGM 무재생 정책).
 import type { CSSProperties, ReactNode } from 'react';
@@ -321,8 +322,9 @@ function DeviceSheet({ props }: { props: MemberClassViewProps }) {
   if (input.band === 'unsupported') {
     return (
       <>
-        <DevTop icon="info" title={isNativeApp() ? "Bluetooth 권한을 확인해 주세요" : "이 브라우저에서는 연결이 안 돼요"} sub={isNativeApp() ? "기기 설정에서 Bluetooth와 앱 권한을 허용해 주세요" : "Safari·Firefox는 밴드 연결을 지원하지 않아요"} />
-        {note(isNativeApp() ? '기기 설정에서 권한을 확인해 주세요. 밴드 없이도 수업에 참여할 수 있어요.' : 'Chrome 또는 Edge로 열면 연결할 수 있어요. 지금은 밴드 없이도 수업에 참여할 수 있어요.')}
+        <DevTop icon="info" title={isNativeApp() ? "Bluetooth 권한을 확인해 주세요" : "이 브라우저에서는 연결이 안 돼요"} sub={isNativeApp() ? "Bluetooth와 앱 권한을 허용해 주세요" : "Safari·Firefox는 밴드 연결을 지원하지 않아요"} />
+        {note(isNativeApp() ? '아래 버튼으로 바로 허용하거나 설정을 열 수 있어요. 밴드 없이도 수업에 참여할 수 있어요.' : 'Chrome 또는 Edge로 열면 연결할 수 있어요. 지금은 밴드 없이도 수업에 참여할 수 있어요.')}
+        <PermissionShortcuts onRequested={actions.onBandConnect} />
         <button type="button" className="mp-pill mp-pill--block" onClick={actions.onBandContinue}>밴드 없이 계속</button>
       </>
     );
