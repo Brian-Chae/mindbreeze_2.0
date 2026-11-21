@@ -56,6 +56,9 @@ object MeasurementManager {
     }
 
     /** SDD-293: 밴드 단계 완료 직후 네이티브가 쥔 보류 링크(구독·스트림 없음). startNative 가 같은 주소면 재연결 없이 이어받는다. */
+    /** SDD-331: 수집 중인 밴드 링크 — '다시 연결'(reconnectBand)이 빠른 재시도 창을 다시 열 때 쓴다. 서비스가 설정·해제한다. */
+    @Volatile var activeBand: BandGattClient? = null
+
     @Volatile var heldBand: BandGattClient? = null
         private set
 

@@ -28,10 +28,23 @@ final class BandBLETests: XCTestCase {
         let p = RestorationPlan.make(restored: [RestoredPeripheral(id: known, connected: false, discoveredCharacteristics: [], notifying: [])], expectedPeripheral: known)
         XCTAssertEqual(p.action, .reconnect(known))
     }
-    func testReconnectBackoffIsBoundedAndResets() {
-        var b = ReconnectBackoff()
-        XCTAssertEqual((0..<8).map { _ in b.next() }, [1, 2, 4, 8, 15, 15, 15, 15])
-        b.reset(); XCTAssertEqual(b.next(), 1)
+    func testReconnectFastWindowRetriesEvery2to3SecondsAtLeast40Times() {
+        var b = ReconnectBackoff(random: { 0.5 }); b.startWindow(now: 0)
+        var t: TimeInterval = 0; var n = 0
+        while b.isFast(now: t) { n += 1; t += b.next(now: t) }
+        XCTAssertGreaterThanOrEqual(n, 40); XCTAssertEqual(n, 48)
+        var lo = ReconnectBackoff(random: { 0 }), hi = ReconnectBackoff(random: { 1 })
+        XCTAssertEqual(lo.next(now: 0), 2.0, accuracy: 0.001)
+        XCTAssertEqual(hi.next(now: 0), 3.0, accuracy: 0.001)
+        XCTAssertEqual(ReconnectBackoff.attemptTimeout, 10)
+    }
+    func testReconnectSlowBackoffAfter120sThenScanFallbackAndReset() {
+        var b = ReconnectBackoff(random: { 0.5 }); b.startWindow(now: 0)
+        XCTAssertEqual((0..<7).map { _ in b.next(now: 120) }, [1, 2, 4, 8, 15, 30, 30])
+        b.noteFailure(); XCTAssertFalse(b.shouldScan(now: 120)); b.noteFailure()
+        XCTAssertFalse(b.shouldScan(now: 60), "빠른 창 동안은 스캔 전환 없음"); XCTAssertTrue(b.shouldScan(now: 120))
+        b.startWindow(now: 200); XCTAssertFalse(b.shouldScan(now: 200), "깨웠어요 — 창 재시작")
+        b.reset(); XCTAssertFalse(b.windowOpen); XCTAssertEqual(b.directFailures, 0)
     }
 
     func testPeripheralPickPrefersKnownThenConnectedThenScan() {

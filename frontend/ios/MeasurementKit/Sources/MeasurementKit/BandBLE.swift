@@ -43,12 +43,37 @@ public struct RestorationPlan: Equatable {
     }
 }
 
+/// SDD-331 재연결 정책(순수 — 시계는 호출부가 넘긴다). JS reconnect-policy.ts · Android BandReconnectPolicy 와 같은 값.
+/// 밴드 펌웨어는 끊긴 뒤 0~2분 안에 sleep 하므로 끊긴 직후 120초는 2~3초 고정 간격으로 붙이고(시도당 10초 제한),
+/// 이후 느린 백오프(1·2·4·8·15·30초)로 낮춘다. 직접 연결이 연속 실패하면 스캔으로 같은 밴드를 다시 찾는다.
 public struct ReconnectBackoff {
-    private var n = 0
-    static let steps: [TimeInterval] = [1, 2, 4, 8, 15]
-    public init() {}
-    public mutating func next() -> TimeInterval { defer { n += 1 }; return Self.steps[min(n, Self.steps.count - 1)] }
-    public mutating func reset() { n = 0 }
+    public static let fastWindow: TimeInterval = 120
+    public static let fastInterval: TimeInterval = 2.5
+    public static let fastJitter: TimeInterval = 0.5
+    public static let attemptTimeout: TimeInterval = 10
+    public static let scanAfterFailures = 2
+    static let slowSteps: [TimeInterval] = [1, 2, 4, 8, 15, 30]
+
+    private var gapStart: TimeInterval?
+    private var slowAttempt = 0
+    public private(set) var directFailures = 0
+    private let random: () -> Double
+    public init(random: @escaping () -> Double = { Double.random(in: 0..<1) }) { self.random = random }
+
+    public var windowOpen: Bool { gapStart != nil }
+    /// 끊김 시작(또는 '다시 연결'/'깨웠어요') — 빠른 창을 다시 연다.
+    public mutating func startWindow(now: TimeInterval) { gapStart = now; slowAttempt = 0; directFailures = 0 }
+    public mutating func noteFailure() { directFailures += 1 }
+    public func isFast(now: TimeInterval) -> Bool { gapStart.map { now - $0 < Self.fastWindow } ?? true }
+    public func shouldScan(now: TimeInterval) -> Bool { !isFast(now: now) && directFailures >= Self.scanAfterFailures }
+    public mutating func next(now: TimeInterval) -> TimeInterval {
+        if isFast(now: now) { return Self.fastInterval + (random() * 2 - 1) * Self.fastJitter }
+        let base = Self.slowSteps[min(slowAttempt, Self.slowSteps.count - 1)]
+        slowAttempt += 1
+        return base * (1 + (random() * 2 - 1) * 0.2)
+    }
+    /// 연결 성공 — 전부 초기화.
+    public mutating func reset() { gapStart = nil; slowAttempt = 0; directFailures = 0 }
 }
 
 /// 연결할 기기 선택(순수). 저장 ID → 이미 연결된 같은 ID → (ID 없음) 이미 연결된 첫 밴드. 없으면 nil = 스캔.
@@ -126,6 +151,7 @@ public final class BandLink: NSObject, CBCentralManagerDelegate, CBPeripheralDel
     private var backoff = ReconnectBackoff()
     private var scheduler: Scheduler
     private var retry: Cancellable?
+    private var retryAttemptTimeout: Cancellable?
     private lazy var scanRecheck = ScanRecheck(scheduler: scheduler)
     // SDD-293: 보류 모드 — 연결·서비스/특성 발견까지만 하고 notify 구독은 하지 않는다(connect 가 오면 재연결 없이 구독).
     private var holding = false
@@ -193,7 +219,9 @@ public final class BandLink: NSObject, CBCentralManagerDelegate, CBPeripheralDel
         guard wantConnected, central.state == .poweredOn else { return }
         // 저장된 ID 가 없어도(JS 연결 해제 직후 캐시가 비는 경우) 이미 연결돼 있는 밴드를 먼저 집는다.
         // 연결된 기기는 광고하지 않아 스캔으로는 영영 안 보인다 — 스캔만 하면 '연결하는 중' 에서 멈춘다.
-        let known = expected.flatMap { central.retrievePeripherals(withIdentifiers: [$0]).first }
+        // SDD-331: 느린 단계에서 저장 ID 직접 연결이 연속 실패하면 저장 ID 를 건너뛰고 서비스 UUID 스캔으로 같은 밴드를 다시 찾는다.
+        let scanFallback = backoff.shouldScan(now: nowSec())
+        let known = scanFallback ? nil : expected.flatMap { central.retrievePeripherals(withIdentifiers: [$0]).first }
         let connected = central.retrieveConnectedPeripherals(withServices: [BandUUIDs.eegService])
         if let pick = PeripheralPick.choose(expected: expected, known: known?.identifier, connected: connected.map { $0.identifier }),
            let p = known ?? connected.first(where: { $0.identifier == pick }) {
@@ -201,7 +229,8 @@ public final class BandLink: NSObject, CBCentralManagerDelegate, CBPeripheralDel
             if central.isScanning { central.stopScan() }
             peripheral = p; p.delegate = self
             set(.connecting)
-            central.connect(p, options: nil)       // 타임아웃 없는 pending connect — 범위 안에 들어오면 OS 가 깨워 준다
+            central.connect(p, options: nil)       // 타임아웃 없는 pending connect — 빠른 창 동안은 아래 10초 제한으로 끊고 다시 시도한다
+            armAttemptTimeout(p)
         } else {
             set(.scanning)
             central.scanForPeripherals(withServices: [BandUUIDs.eegService], options: nil)
@@ -219,7 +248,36 @@ public final class BandLink: NSObject, CBCentralManagerDelegate, CBPeripheralDel
         holdReady = false
         set(.reconnecting, reason)
         retry?.cancel()
-        retry = scheduler.schedule(after: backoff.next()) { [weak self] in self?.attempt() }
+        let now = nowSec()
+        if !backoff.windowOpen { backoff.startWindow(now: now) }
+        backoff.noteFailure()
+        retryAttemptTimeout?.cancel(); retryAttemptTimeout = nil
+        retry = scheduler.schedule(after: backoff.next(now: now)) { [weak self] in self?.attempt() }
+    }
+
+    private func nowSec() -> TimeInterval { scheduler.nowSeconds }
+
+    /// SDD-331: '다시 연결'/'깨웠어요' — 빠른 재시도 창을 다시 열고 지금 바로 새로 연결한다(수집 중 재연결 버튼용).
+    public func restartFastWindow() {
+        queue.async { [self] in
+            guard wantConnected else { return }
+            retry?.cancel(); retry = nil
+            retryAttemptTimeout?.cancel(); retryAttemptTimeout = nil
+            if let p = peripheral { central.cancelPeripheralConnection(p) }
+            backoff.startWindow(now: nowSec())
+            attempt()
+        }
+    }
+
+    /// SDD-331: 시도당 10초 제한(빠른 창). 넘으면 멈춘 연결을 취소하고 다음 재시도를 예약한다. 직접 연결이 연속 실패한 느린 단계는 스캔으로 전환한다.
+    private func armAttemptTimeout(_ p: CBPeripheral) {
+        retryAttemptTimeout?.cancel()
+        guard backoff.isFast(now: nowSec()) else { retryAttemptTimeout = nil; return }
+        retryAttemptTimeout = scheduler.schedule(after: ReconnectBackoff.attemptTimeout) { [weak self] in
+            guard let self, self.wantConnected, self.state == .connecting else { return }
+            self.central.cancelPeripheralConnection(p)
+            self.scheduleRetry("attempt_timeout")
+        }
     }
 
     // MARK: CBCentralManagerDelegate
@@ -259,8 +317,10 @@ public final class BandLink: NSObject, CBCentralManagerDelegate, CBPeripheralDel
     public func centralManager(_ c: CBCentralManager, didDiscover p: CBPeripheral, advertisementData: [String: Any], rssi: NSNumber) {
         if let id = expected, p.identifier != id { return }
         scanRecheck.cancel(); c.stopScan(); peripheral = p; p.delegate = self; set(.connecting); c.connect(p, options: nil)
+        armAttemptTimeout(p)
     }
     public func centralManager(_ c: CBCentralManager, didConnect p: CBPeripheral) {
+        retryAttemptTimeout?.cancel(); retryAttemptTimeout = nil
         backoff.reset(); expected = p.identifier; delegate?.bandLink(didSelect: p.identifier)
         set(.discovering); p.discoverServices(BandUUIDs.services)
     }

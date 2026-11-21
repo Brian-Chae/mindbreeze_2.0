@@ -80,6 +80,7 @@ export function MemberCaseDemo({ initial }: MemberCaseDemoProps) {
     onBandCancel: () => patch({ band: 'off' }),
     onBandContinue: () => patch({ band: 'off' }),
     onBandRetry: () => patch({ band: 'on' }),
+    onBandWake: () => patch({ band: 'pending' }),
     onBandRecheck: () => patch({ band: 'on' }),
     onNetRetry: () => patch({ net: 'ok' }),
     onSpeakerChange: (on) => setSound((prev) => ({ ...prev, speakerOn: on })),

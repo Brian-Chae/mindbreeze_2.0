@@ -158,6 +158,18 @@ class MeasurementPlugin : Plugin() {
         MeasurementManager.holdBand(context, address) { ok -> call.resolve(JSObject().put("accepted", ok).put("band_state", if (ok) "connected" else "connecting")) }
     }
 
+    /**
+     * SDD-331: 화면의 '다시 연결'/'깨웠어요'. 수집 중일 때만 — 밴드 링크의 빠른 재시도 창(120초·2~3초 간격)을 다시 열고 즉시 새로 연결한다.
+     * iOS `reconnectBand` 와 같은 응답({accepted, band_state}). 수집 전·밴드 없음은 not_active.
+     */
+    @PluginMethod
+    fun reconnectBand(call: PluginCall) {
+        val band = MeasurementManager.activeBand
+        if (MeasurementManager.engine == null || band == null) { call.reject("not_active", "not_active"); return }
+        band.reconnectNow()
+        call.resolve(JSObject().put("accepted", true).put("band_state", "reconnecting"))
+    }
+
     /** SDD-293: 보류 해제(클래스 시작 없이 대기실을 떠남). 수집 중이면 무시하고 정지는 stopMeasurement 가 한다. */
     @PluginMethod
     fun releaseBand(call: PluginCall) {

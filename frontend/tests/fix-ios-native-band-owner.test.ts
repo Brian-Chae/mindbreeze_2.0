@@ -27,6 +27,13 @@ describe('facade.reconnectBand', () => {
     expect(await f.reconnectBand('ios')).toBe(true);
     expect(reconnectBand).toHaveBeenCalledTimes(1);
   });
+  it('SDD-331 android: 네이티브 reconnectBand 호출, accepted 반환(웹은 호출 안 함)', async () => {
+    const reconnectBand = vi.fn(async () => ({ accepted: true }));
+    const f = new NativeMeasurementFacade({ reconnectBand } as unknown as NativeMeasurementPlugin);
+    expect(await f.reconnectBand('android')).toBe(true);
+    expect(await f.reconnectBand('web')).toBe(false);
+    expect(reconnectBand).toHaveBeenCalledTimes(1);
+  });
   it('android·웹·메서드 없음·거절(not_active)은 false, 예외를 던지지 않는다', async () => {
     const reconnectBand = vi.fn(async () => { throw new Error('not_active'); });
     const f = new NativeMeasurementFacade({ reconnectBand } as unknown as NativeMeasurementPlugin);
