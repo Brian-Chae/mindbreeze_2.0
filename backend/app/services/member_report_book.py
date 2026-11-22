@@ -472,7 +472,11 @@ def build_book_html(report: Union[MemberReport, dict]) -> str:
 
 
 def render_member_report_book(report: Union[MemberReport, dict]) -> bytes:
-    """회원 명상 기록 책 PDF 바이트."""
+    """회원 명상 기록 책 PDF 바이트. 저장 JSON 의 schema_version 이 v2 면 v2 렌더러로 분기한다(SDD-328)."""
+    if isinstance(report, dict) and report.get("schema_version") == "member_report.v2":
+        from app.services.member_report_v2_book import render_member_report_book_v2
+
+        return render_member_report_book_v2(report)
     return HTML(string=build_book_html(report), url_fetcher=_font_fetcher).write_pdf()
 
 
