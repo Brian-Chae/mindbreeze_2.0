@@ -194,6 +194,16 @@ def _identity_view(identity: tuple) -> dict:
 
 
 def presign_raw(session_id: str, payload: PresignRequest, db: DBSession, *, current_user_id=None, entry_credential=None) -> dict:
+    # SDD-329 C: 권한 거절(403) 사유 로그 + 같은 (사용자, 회차) 60초 반복 거절 단축(판정·응답 코드 불변).
+    from app.services import raw_presign_guard
+
+    return raw_presign_guard.run_guarded(
+        "biosignal", session_id, current_user_id, entry_credential,
+        lambda: _presign_raw(session_id, payload, db, current_user_id=current_user_id, entry_credential=entry_credential),
+    )
+
+
+def _presign_raw(session_id: str, payload: PresignRequest, db: DBSession, *, current_user_id=None, entry_credential=None) -> dict:
     sid, _ = eeg_raw_service._get_session(session_id, db)
     participant = resolve_participant(sid, payload.participant_id, db, current_user_id=current_user_id, entry_credential=entry_credential)
     for meta in payload.chunks:

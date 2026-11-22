@@ -437,6 +437,142 @@
       "title": "GroupBlockV2",
       "type": "object"
     },
+    "GroupStory": {
+      "additionalProperties": false,
+      "description": "본인 측정이 없는 회원(밴드 미착용·연결 실패)에게 그룹 흐름 기반으로 수업 경험을 들려주는 서사.\n\n- 첫머리는 항상 `label`(\"그룹 기록\") — 본인 수치처럼 보이는 표현·개인 비교 금지.\n- 그룹 유효 인원 < MIN_GROUP_N 이면 charts=[]·chart_hidden_reason=\"min_n\"(숫자·방향도 문장에 넣지 않는다).",
+      "properties": {
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "paragraphs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Paragraphs",
+          "type": "array"
+        },
+        "n_people": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "N People"
+        },
+        "charts": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/GroupStoryChart"
+          },
+          "title": "Charts",
+          "type": "array"
+        },
+        "chart_hidden_reason": {
+          "anyOf": [
+            {
+              "const": "min_n",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chart Hidden Reason"
+        },
+        "chart_note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chart Note"
+        }
+      },
+      "required": [
+        "label",
+        "title",
+        "paragraphs"
+      ],
+      "title": "GroupStory",
+      "type": "object"
+    },
+    "GroupStoryChart": {
+      "additionalProperties": false,
+      "description": "그룹(같은 회차 측정 참여자)의 매분 가운데 값 흐름. 개인 값·ID 없음, 집계만.",
+      "properties": {
+        "key": {
+          "enum": [
+            "heart_rate",
+            "relaxation",
+            "focus"
+          ],
+          "title": "Key",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "unit_label": {
+          "title": "Unit Label",
+          "type": "string"
+        },
+        "minutes": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Minutes",
+          "type": "array"
+        },
+        "values": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Values",
+          "type": "array"
+        },
+        "axis_min": {
+          "title": "Axis Min",
+          "type": "number"
+        },
+        "axis_max": {
+          "title": "Axis Max",
+          "type": "number"
+        }
+      },
+      "required": [
+        "key",
+        "title",
+        "unit_label",
+        "minutes",
+        "values",
+        "axis_min",
+        "axis_max"
+      ],
+      "title": "GroupStoryChart",
+      "type": "object"
+    },
     "HeroV2": {
       "additionalProperties": false,
       "properties": {
@@ -1717,6 +1853,17 @@
     },
     "back": {
       "$ref": "#/$defs/BackCover"
+    },
+    "group_story": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/GroupStory"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "forbidden_words_checked": {
       "default": true,

@@ -5,6 +5,7 @@ import com.getcapacitor.BridgeActivity;
 import com.looxidlabs.mindbreeze.chrome.SystemChromePlugin;
 import com.looxidlabs.mindbreeze.audiorecorder.NativeAudioRecorderPlugin;
 import com.looxidlabs.mindbreeze.measurement.MeasurementPlugin;
+import com.looxidlabs.mindbreeze.settings.AppSettingsPlugin;
 import com.looxidlabs.mindbreeze.update.ApkUpdaterPlugin;
 
 public class MainActivity extends BridgeActivity {
@@ -18,6 +19,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(SystemChromePlugin.class);
         // SDD-259: 다운로드 사이트 APK 앱 내 업데이트(권한은 sideload 빌드에만 포함).
         registerPlugin(ApkUpdaterPlugin.class);
+        // SDD-330: 권한·배터리 설정 화면 바로가기.
+        registerPlugin(AppSettingsPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

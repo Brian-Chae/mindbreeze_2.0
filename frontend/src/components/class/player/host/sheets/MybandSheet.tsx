@@ -1,5 +1,6 @@
 import { isNativeApp } from '../../../../../lib/native/platform';
 import { PermissionGuide } from '../../../../native/permission-guide';
+import { PermissionShortcuts } from '../../../../native/permission-shortcuts';
 // SDD-208 H2 — "내 밴드" 시트(상담사 본인 LINK BAND). 선택 사항이라 미착용·미지원도 오류가 아니라 정상 안내다.
 import { Battery, BatteryLow } from 'lucide-react';
 import { isLowBattery } from '../../../../../lib/session-live/signal-status';
@@ -40,7 +41,8 @@ export function MybandSheet({ band, onConnect, onDisconnect }: MybandSheetProps)
     return (
       <div className="hp-sheet">
         <HostRow lead={<span className="hp-row__lead"><i className="hp-dot" data-state="off" /></span>} title={isNativeApp() ? "Bluetooth 권한을 확인해 주세요" : "이 브라우저에서는 밴드 연결이 안 돼요"} sub="선택 사항이에요" />
-        <p className="hp-note">{isNativeApp() ? '기기 설정에서 Bluetooth를 켜고 앱 권한을 허용해 주세요. 밴드 없이도 수업을 진행할 수 있어요.' : 'Chrome 또는 Edge로 열면 내 밴드를 연결할 수 있어요. 밴드 없이도 수업은 그대로 진행돼요.'}</p>
+        <p className="hp-note">{isNativeApp() ? 'Bluetooth를 켜고 앱 권한을 허용해 주세요. 아래 버튼으로 바로 갈 수 있어요. 밴드 없이도 수업을 진행할 수 있어요.' : 'Chrome 또는 Edge로 열면 내 밴드를 연결할 수 있어요. 밴드 없이도 수업은 그대로 진행돼요.'}</p>
+        <PermissionShortcuts onRequested={onConnect} renderButton={({ label, onClick, testId }) => <button type="button" className="hp-btn" data-testid={testId} onClick={onClick}>{label}</button>} />
       </div>
     );
   }

@@ -709,6 +709,8 @@ def _list_reports_base(uid: UUID, db: DBSession):
             .select_from(Report)
             .join(Session, Session.id == Report.session_id)
             .filter(Report.user_id == uid)
+            # 대표 요청(11/17): 회원 목록에는 생성·승인이 끝난 리포트만 노출(생성 중 빈 창 방지).
+            .filter(Report.status == "completed")
         )
 
     if user and user.role == "org_admin":
@@ -1140,6 +1142,11 @@ def _skip_auto_approve_no_data(session, report: Report) -> bool:
     content = report.content if isinstance(report.content, dict) else {}
     eeg = content.get("eeg")
     if isinstance(eeg, dict) and eeg.get("excluded"):
+        return False
+    # SDD-329 D: 본인 측정이 없어도 그룹 기록 기반 리포트(member_report.group_story)가 있으면 다른 리포트와 같이
+    #   자동 승인·발송한다(리포트 반영 대상으로 입장한 회원만 행이 있음 — 미입장·제외자는 위에서 이미 제외).
+    mr = content.get("member_report")
+    if isinstance(mr, dict) and isinstance(mr.get("group_story"), dict):
         return False
     status = eeg.get("status") if isinstance(eeg, dict) else None
     return status in (None, "not_measured")

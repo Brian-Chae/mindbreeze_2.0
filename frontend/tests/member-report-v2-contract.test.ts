@@ -80,7 +80,9 @@ describe('member_report.v2 계약 픽스처', () => {
     const defs = (schema as { $defs: Record<string, { properties?: Record<string, unknown> }> }).$defs;
     const top = (schema as { properties: Record<string, unknown> }).properties;
     const r = load('bodycare.json');
-    expect(Object.keys(top).sort()).toEqual(Object.keys(r).sort());
+    // group_story 는 미측정 리포트에만 붙는 선택 키(골든 픽스처는 측정자라 없음)
+    expect(Object.keys(top).filter((k) => k !== 'group_story').sort()).toEqual(Object.keys(r).sort());
+    expect(Object.keys(top)).toContain('group_story');
     expect(Object.keys(defs.MemberMetaV2.properties!).sort()).toEqual(Object.keys(r.meta).sort());
     expect(Object.keys(defs.HeroV2.properties!).sort()).toEqual(Object.keys(r.hero).sort());
     expect(Object.keys(defs.Quiet5.properties!).sort()).toEqual(Object.keys(r.quiet5!).sort());

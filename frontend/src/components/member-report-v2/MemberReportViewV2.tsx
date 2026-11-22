@@ -4,6 +4,7 @@ import type { MemberReportV2, MetricKeyV2, MetricSectionV2 } from '../../lib/mem
 import MetricCardV2 from './MetricCardV2';
 import QuietFiveV2 from './QuietFiveV2';
 import { TimeChartV2 } from './charts-v2';
+import GroupStoryV2 from './GroupStoryV2';
 import './member-report-v2.css';
 
 export interface MemberReportViewV2Props {
@@ -41,6 +42,7 @@ export default function MemberReportViewV2({ report, shareSlot, headerActionSlot
   const nav: { id: string; label: string }[] = [
     { id: 'mr2-summary', label: '요약' },
     { id: 'mr2-opinion', label: '종합 의견' },
+    ...(report.group_story ? [{ id: 'mr2-group-story', label: '그룹 기록' }] : []),
     ...(worn && (bodySections.length > 0 || journey || quiet5) ? [{ id: 'mr2-body', label: '몸의 변화' }] : []),
     ...(worn && mindSections.length > 0 ? [{ id: 'mr2-mind', label: '마음의 변화' }] : []),
     { id: 'mr2-next', label: '다음 걸음' },
@@ -115,6 +117,8 @@ export default function MemberReportViewV2({ report, shareSlot, headerActionSlot
             {opinionCharts.length > 0 && <p className="mr2-legend">{opinion.legend_note}</p>}
             {opinion.footnote && <p className="mr2-footnote">{opinion.footnote}</p>}
           </section>
+
+          {report.group_story && <GroupStoryV2 story={report.group_story} />}
 
           {worn && (bodySections.length > 0 || journey || quiet5) && (
             <section className="mr2-section" id="mr2-body">

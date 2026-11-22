@@ -61,6 +61,7 @@ class ReportInputs:
     others: list[PersonMinutes]  # 본인 제외 그룹(같은 수만큼 옮겨진 상태)
     worn: bool = True
     ap: Optional[ApInput] = None
+    group_story: Optional[dict] = None  # SDD-329 D: 미측정 회원용 그룹 기록 서사(GroupStory 계약 dict)
 
 
 def rebase(person: PersonMinutes, shift: int) -> PersonMinutes:
@@ -482,6 +483,8 @@ def assemble_member_report_v2(inp: ReportInputs) -> dict:
     report = {"schema_version": "member_report.v2", "meta": meta, "cover": cover, "toc": toc, "hero": hero,
               "opinion": opinion, "journey": journey, "quiet5": quiet5, "metrics": metrics, "next_steps": next_steps,
               "memo": memo, "method": method, "back": back, "forbidden_words_checked": True}
+    if inp.group_story is not None and not worn:
+        report["group_story"] = inp.group_story
     model = MemberReportV2.model_validate(report)
     out = model.model_dump(mode="json")
     W.clean_check(out)
@@ -546,10 +549,22 @@ def build_member_report_v2(db, session_id: uuid.UUID | str, participant_id: uuid
     n = core.measured_length(person)
     if worn and n - 0 >= MIN_VALID_MINUTES + SETTLE_MINUTES:
         ap = _ap_input(db, sid, pid, base_sec * 1000.0, shift, n, raw_reader)
+    group_story = None
+    if not worn:
+        # SDD-329 D: 본인 측정이 없으면 같은 회차 그룹 기록으로 수업 경험 서사를 만든다(본인 수치 아님).
+        from app.services import member_report_group_story as gstory
+
+        others_abs = {str(r.id): v1._to_person_minutes(by_pid.get(r.id, []), base_sec, normalizer)
+                      for r in roster.others}
+        last_win = max((m for ms in others_abs.values() for mm in ms.values() for m in mm), default=None)
+        g_ext = gstory.group_extent(others_abs)
+        segs, _src = v1.resolve_segments(db, session, last_win, g_ext)
+        group_story = gstory.build_group_story(others_abs, segs, segs[0].start_min, segs[-1].end_min)
     inp = ReportInputs(
         program=program, program_label=f"{program} {seq}회차" if seq else program,
         member_code=f"B{seq or 1}-{roster.me_ordinal}", session_date=f"{local:%Y-%m-%d}", start_clock=f"{local:%H:%M}",
-        issued_on=f"{datetime.now(v1.KST):%Y-%m-%d}", person=person, others=others, worn=worn, ap=ap)
+        issued_on=f"{datetime.now(v1.KST):%Y-%m-%d}", person=person, others=others, worn=worn, ap=ap,
+        group_story=group_story)
     logger.info("[member_report_v2] session=%s 시작 보정=%s분 길이=%s분 그룹=%s명", sid, shift, n, len(others))
     return assemble_member_report_v2(inp)
 

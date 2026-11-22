@@ -267,3 +267,45 @@ def test_미착용_PDF_8쪽():
     r = assemble_member_report_v2(inputs(worn=False, person_={}, others=[]))
     assert len(_pages(book.render_member_report_book_v2(r))) == 8
 
+
+
+# ── SDD-329 D 그룹 기록(미측정 회원) v2 반영 ─────────────────────────
+def _group_story_dict(n_charts: int = 1) -> dict:
+    charts = [dict(key="heart_rate", title="그룹이 1분 동안 뛴 횟수 · 가운데 값", unit_label="회/분",
+                   minutes=list(range(10)), values=[70.0 - i for i in range(10)], axis_min=55.0, axis_max=75.0)
+              ][:n_charts]
+    return dict(label="그룹 기록", title="그룹 기록으로 돌아보는 수업",
+                paragraphs=["이 쪽은 회원님의 측정 기록이 아니라, 이번 수업에 함께한 그룹의 기록이에요."],
+                n_people=12 if charts else None, charts=charts,
+                chart_hidden_reason=None if charts else "min_n",
+                chart_note="그룹 가운데 값만 보여 줘요." if charts else None)
+
+
+def test_미측정_v2에_group_story가_책과_목차에_반영된다():
+    from dataclasses import replace
+
+    inp = replace(inputs(worn=False, person_={}, others=[]), group_story=_group_story_dict())
+    r = assemble_member_report_v2(inp)
+    model = MemberReportV2.model_validate(r)
+    assert model.group_story is not None
+    m = expected_book_pages_v2(model)
+    assert m.total == 9 and any(p.key == "group_story" for p in m.pages)
+    assert any(t.label == "그룹 기록으로 돌아보는 수업" for t in m.toc)
+    assert len(_pages(book.render_member_report_book_v2(r))) == 9
+
+
+def test_미측정_v2_group_story_인원부족이면_서사만():
+    from dataclasses import replace
+
+    inp = replace(inputs(worn=False, person_={}, others=[]), group_story=_group_story_dict(0))
+    r = assemble_member_report_v2(inp)
+    assert r["group_story"]["charts"] == [] and r["group_story"]["chart_hidden_reason"] == "min_n"
+    assert len(_pages(book.render_member_report_book_v2(r))) == 9
+
+
+def test_측정자_v2에는_group_story가_붙지_않는다():
+    from dataclasses import replace
+
+    inp = replace(inputs(), group_story=_group_story_dict())
+    r = assemble_member_report_v2(inp)
+    assert r.get("group_story") is None

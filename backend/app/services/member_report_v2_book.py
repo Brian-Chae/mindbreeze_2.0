@@ -17,7 +17,7 @@ from app.schemas.member_report_v2 import (
     MetricSectionV2,
     expected_book_pages_v2,
 )
-from app.services.member_report_book import TEMPLATE_DIR, _br, _e, _font_fetcher, _page_range
+from app.services.member_report_book import TEMPLATE_DIR, _br, _e, _font_fetcher, _group_story, _page_range
 from app.services.member_report_v2_svg import distribution_svg_v2, time_series_svg_v2
 
 _METRIC_CLASS = {"lf_hf": "lfhf"}
@@ -258,7 +258,7 @@ def build_book_html_v2(report: Union[MemberReportV2, dict]) -> str:
         "cover": lambda: _cover(ctx), "toc": lambda: _toc(ctx), "summary": lambda: _summary(ctx),
         "opinion": lambda: _opinion(ctx), "journey": lambda: _journey(ctx), "quiet5": lambda: _quiet5(ctx),
         "next_steps": lambda: _next_steps(ctx), "memo": lambda: _memo(ctx), "method": lambda: _method(ctx),
-        "back": lambda: _back(ctx),
+        "back": lambda: _back(ctx), "group_story": lambda: _group_story(ctx),
     }
     pages = [renderers[p.key]() if p.key in renderers else _metric(ctx, rep.metrics[p.key])  # type: ignore[index]
              for p in page_map.pages]

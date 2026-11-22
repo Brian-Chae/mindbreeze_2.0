@@ -33,7 +33,7 @@ export type ChangeKind = 'abs' | 'pct' | 'flow';
 export type WhenLabel = '수업 초반에' | '수업 중간에' | '수업이 끝나갈 무렵';
 export type PageKeyV2 =
   | 'cover' | 'toc' | 'summary' | 'opinion' | 'journey' | 'motion' | 'quiet5' | 'heart_rate' | 'rmssd'
-  | 'lf_hf' | 'focus' | 'relaxation' | 'emotional_balance' | 'aperiodic' | 'next_steps' | 'memo' | 'method' | 'back';
+  | 'lf_hf' | 'focus' | 'relaxation' | 'emotional_balance' | 'aperiodic' | 'next_steps' | 'memo' | 'method' | 'back' | 'group_story';
 
 /** 표기 분(1부터), 양끝 포함, 길이 5 */
 export interface WindowV2 { start: number; end: number }
@@ -146,6 +146,16 @@ export interface CoverV2 {
 }
 export interface TocV2 { heading: string; chapter_title: string; chapter_subtitle: string; next_chapter_note: string; guide: string }
 
+/** SDD-329 D — 미측정 회원용 그룹 기록 서사(집계만, 개인 값 없음) */
+export interface GroupStoryChartV2 {
+  key: 'heart_rate' | 'relaxation' | 'focus'; title: string; unit_label: string;
+  minutes: number[]; values: (number | null)[]; axis_min: number; axis_max: number;
+}
+export interface GroupStoryV2 {
+  label: string; title: string; paragraphs: string[]; n_people: number | null;
+  charts: GroupStoryChartV2[]; chart_hidden_reason: 'min_n' | null; chart_note: string | null;
+}
+
 export interface MemberReportV2 {
   schema_version: typeof MEMBER_REPORT_V2_SCHEMA_VERSION;
   meta: MemberMetaV2; cover: CoverV2; toc: TocV2; hero: HeroV2; opinion: OpinionV2;
@@ -153,6 +163,7 @@ export interface MemberReportV2 {
   quiet5: Quiet5 | null; // 후보 없음·결측이면 null → 쪽 생략
   metrics: Partial<Record<MetricKeyV2, MetricSectionV2>>; // aperiodic 키 없음 허용
   next_steps: NextStepsV2; memo: MemoPageV2; method: MethodV2; back: BackCoverV2;
+  group_story?: GroupStoryV2 | null; // 본인 측정이 없는 리포트에만
   forbidden_words_checked: boolean;
 }
 
@@ -188,12 +199,14 @@ export function expectedBookPagesV2(report: MemberReportV2): BookPageMapV2 {
   const tail: [PageKeyV2, string][] = [
     ['next_steps', '다음 걸음'], ['memo', '손글씨 메모'], ['method', '방법 · 참고문헌 · 문의'], ['back', '뒷표지'],
   ];
-  const pages: BookPageV2[] = [...head, ...body, ...mind, ...tail].map(([key, title], i) => ({ page: i + 1, key, title }));
+  const gs: [PageKeyV2, string][] = report.group_story ? [['group_story', '그룹 기록으로 돌아보는 수업']] : [];
+  const pages: BookPageV2[] = [...head, ...gs, ...body, ...mind, ...tail].map(([key, title], i) => ({ page: i + 1, key, title }));
   const pos = (k: PageKeyV2): number => pages.find((p) => p.key === k)?.page ?? 0;
   const toc: TocEntryV2[] = [
     { label: '요약 카드 · 지금 나의 변화', start: pos('summary'), end: pos('summary') },
     { label: '종합 의견', start: pos('opinion'), end: pos('opinion') },
   ];
+  if (report.group_story) toc.push({ label: '그룹 기록으로 돌아보는 수업', start: pos('group_story'), end: pos('group_story') });
   if (body.length > 0) {
     const n = body.filter(([k]) => k !== 'journey').length;
     toc.push({

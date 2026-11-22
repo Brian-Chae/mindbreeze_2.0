@@ -2,13 +2,14 @@ import XCTest
 @testable import MeasurementKit
 
 final class FakeBand: BandControlling {
-    var connects = 0, disconnects = 0, holds = 0
+    var connects = 0, disconnects = 0, holds = 0, fastRestarts = 0
     var lastExpected: UUID?
     weak var delegate: BandLinkDelegate?
     var onHoldReady: (() -> Void)?
     func hold(expectedPeripheral: UUID?) { holds += 1; lastExpected = expectedPeripheral }
     func connect(expectedPeripheral: UUID?) { connects += 1; lastExpected = expectedPeripheral }
     func disconnect() { disconnects += 1 }
+    func restartFastWindow() { fastRestarts += 1 }
 }
 final class FakeLive: LiveControlling {
     var started = 0, stopped = 0
@@ -82,7 +83,7 @@ final class ManagerTests: XCTestCase {
         XCTAssertEqual(band.connects, 1, "같은 requestId 는 새 수집을 시작하지 않는다")
         XCTAssertThrowsError(try start("0000001f-0000-4000-8000-00000000001f")) { XCTAssertEqual($0 as? ManagerError, .alreadyActive) }
     }
-    /// 재연결 버튼: 수집 중이면 밴드 링크를 끊었다 다시 붙인다(백오프 초기화). 수집 중이 아니면 거절.
+    /// 재연결 버튼: 수집 중이면 빠른 재시도 창을 다시 열고 즉시 재연결한다(SDD-331). 수집 중이 아니면 거절.
     func testReconnectBandRestartsLinkOnlyWhileCollecting() throws {
         own.nativeEnabled = true
         XCTAssertThrowsError(try m.reconnectBand()) { XCTAssertEqual($0 as? ManagerError, .notActive) }
@@ -90,7 +91,7 @@ final class ManagerTests: XCTestCase {
         let before = (band.connects, band.disconnects)
         let r = try m.reconnectBand()
         XCTAssertEqual(r["accepted"] as? Bool, true)
-        XCTAssertEqual(band.disconnects, before.1 + 1); XCTAssertEqual(band.connects, before.0 + 1)
+        XCTAssertEqual(band.fastRestarts, 1); XCTAssertEqual(band.disconnects, before.1); XCTAssertEqual(band.connects, before.0)
     }
     /// 재시작(stop→start) 때 JS 가 밴드 ID 를 못 주어도 직전 ID 를 유지한다(스캔만 하다 실패 방지). 새 ID 가 오면 교체.
     func testRestartWithoutPeripheralIdKeepsPreviousId() throws {

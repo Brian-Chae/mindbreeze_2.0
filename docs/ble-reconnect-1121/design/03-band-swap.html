@@ -1,0 +1,68 @@
+<!doctype html><html lang='ko'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width'><title>③ 회원 앱 — 다른 밴드로 바꾸기 (3단계)</title><style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard',sans-serif;background:#F1ECF6;color:#25212C;padding:24px;-webkit-font-smoothing:antialiased}
+h1{font-size:18px;margin-bottom:4px}.sub{font-size:13px;color:#68616F;margin-bottom:18px}
+.row{display:flex;gap:24px;align-items:flex-start;flex-wrap:nowrap}
+.cap{font-size:12px;color:#68616F;margin:0 0 8px 4px;font-weight:600}
+.phone{width:390px;height:780px;background:#FAF9FC;border-radius:28px;border:1px solid #D9CFE3;overflow:hidden;position:relative;display:flex;flex-direction:column;flex:none}
+.bg{position:absolute;inset:0;background:linear-gradient(180deg,#2B1640 0%,#3A1D55 38%,#1F3A33 100%);opacity:.96}
+.bg:after{content:'';position:absolute;inset:0;background:radial-gradient(120% 50% at 50% 0%,#7A3FA040,transparent 70%),radial-gradient(90% 40% at 50% 100%,#4C8B6A55,transparent 70%)}
+.top{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:center;padding:16px 20px;color:#E5D3EE;font-size:13px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:#ffffff1f;font-size:12px;color:#fff}
+.dot{width:8px;height:8px;border-radius:50%;background:#7BD9A3;display:inline-block}
+.dot.amber{background:#F5C26B}.dot.coral{background:#FF8F86}.dot.gray{background:#B5ADBF}
+.center{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 24px;color:#fff;text-align:center}
+.ring{width:190px;height:190px;border-radius:50%;border:2px solid #ffffff40;display:flex;align-items:center;justify-content:center;font-size:15px;color:#E5D3EE;margin-bottom:12px}
+.ring.dim{border-style:dashed;opacity:.75}
+.stats{display:flex;gap:10px;margin-top:10px}.stat{background:#ffffff14;border-radius:14px;padding:10px 12px;min-width:84px}.stat b{display:block;font-size:20px}.stat i{font-style:normal;font-size:11px;color:#E5D3EE}
+.sheet{position:relative;z-index:3;background:#fff;border-radius:24px 24px 0 0;padding:20px 20px 24px;box-shadow:0 -8px 30px #0003}
+.grab{width:40px;height:4px;background:#D9CFE3;border-radius:2px;margin:0 auto 14px}
+.sh-head{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px}
+.ic{width:40px;height:40px;border-radius:12px;background:#EEE5F5;color:#5F0080;display:flex;align-items:center;justify-content:center;font-size:18px;flex:none}
+.ic.coral{background:#FFE9E6;color:#C0392B}.ic.amber{background:#FFF1D6;color:#9A6200}.ic.green{background:#DFF5E8;color:#1E7A46}
+.sh-t{font-size:17px;font-weight:700;line-height:1.35}.sh-s{font-size:13px;color:#68616F;margin-top:3px;line-height:1.45}
+.note{font-size:13px;color:#49424F;background:#F6F2FA;border-radius:12px;padding:11px 13px;margin:8px 0;line-height:1.5}
+.steps{list-style:none;margin:8px 0}.steps li{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.45;padding:7px 0;border-bottom:1px solid #F0EAF5}
+.steps li:last-child{border:0}.n{width:22px;height:22px;border-radius:50%;background:#5F0080;color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px}
+.btn{display:block;width:100%;border:0;border-radius:999px;padding:14px;font-size:15px;font-weight:700;margin-top:10px;font-family:inherit;text-align:center}
+.btn.p{background:#5F0080;color:#fff}.btn.s{background:#EEE5F5;color:#5F0080}.btn.g{background:transparent;color:#68616F;font-weight:600;padding:10px}
+.bar{height:6px;background:#EEE5F5;border-radius:3px;overflow:hidden;margin:8px 0}.bar i{display:block;height:100%;background:#5F0080;border-radius:3px}
+.dots i{display:inline-block;width:6px;height:6px;border-radius:50%;background:#5F0080;margin:0 2px;opacity:.5}
+.tag{display:inline-block;font-size:11px;background:#EEE5F5;color:#5F0080;border-radius:6px;padding:2px 7px;font-weight:600}
+.list{margin:6px 0}.li{display:flex;justify-content:space-between;align-items:center;padding:12px 4px;border-bottom:1px solid #F0EAF5;font-size:14px}
+.li small{display:block;color:#68616F;font-size:12px;margin-top:2px}
+.pill{font-size:12px;font-weight:700;border-radius:999px;padding:4px 10px}.pill.g{background:#DFF5E8;color:#1E7A46}.pill.a{background:#FFF1D6;color:#9A6200}.pill.c{background:#FFE9E6;color:#C0392B}.pill.n{background:#EEE5F5;color:#5F0080}
+a.back{font-size:13px;color:#5F0080}
+/* coach */
+.wide{width:1440px;background:#FAF9FC;border:1px solid #D9CFE3;border-radius:16px;overflow:hidden}
+.ch-top{display:flex;justify-content:space-between;align-items:center;padding:18px 28px;background:#251038;color:#fff}
+.ch-top h2{font-size:18px}.sum{display:flex;gap:10px;align-items:center;font-size:14px}.sum b{font-size:16px}
+.cols{display:flex}.main{flex:1;padding:22px 28px;min-width:0}.side{width:420px;border-left:1px solid #E8DFF0;background:#fff;padding:22px 24px}
+table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;color:#68616F;font-weight:600;font-size:12px;padding:8px 10px;border-bottom:1px solid #E8DFF0}td{padding:12px 10px;border-bottom:1px solid #F0EAF5;vertical-align:middle}
+tr.hl td{background:#FFF8EC}tr.hl2 td{background:#FFF1EF}
+.toolbar{display:flex;gap:8px;margin-bottom:14px;align-items:center}.seg{padding:7px 14px;border-radius:999px;background:#EEE5F5;color:#5F0080;font-size:13px;font-weight:600}.seg.on{background:#5F0080;color:#fff}
+.field{border:1px solid #D9CFE3;border-radius:999px;padding:8px 14px;font-size:13px;color:#68616F;flex:1;max-width:300px}
+.btn-s{display:inline-block;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700;background:#EEE5F5;color:#5F0080}
+.side h3{font-size:16px;margin-bottom:4px}.side .note{margin:10px 0}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0}.cmp div{border:1px solid #E8DFF0;border-radius:12px;padding:12px;font-size:13px;line-height:1.5}
+</style></head><body><h1>③ 회원 앱 — 다른 밴드로 바꾸기 (3단계)</h1><p class='sub'>현재는 수업 중 교체 경로가 없음(앱 소유 밴드는 해제 불가). 아래는 제안 흐름.</p><div class='row'><div><div class='cap'>1. 확인</div><div class='phone'><div class='bg'></div>
+<div class='top'><span>수업 진행 중</span><span class='chip'><i class='dot coral'></i>밴드 연결 안 됨</span></div>
+<div class='center'><div class='ring dim'>숨 고르기</div><div style='font-size:13px;color:#E5D3EE'>밴드 값은 연결되면 이어서 보여 드려요</div></div><div class='sheet'><div class='grab'></div><div class='sh-head'><div class='ic'>⇄</div><div><div class='sh-t'>다른 밴드로 바꿀까요?</div><div class='sh-s'>배터리가 다했거나 고장났을 때 쓰세요</div></div></div>
+<div class='note'>지금까지 쌓인 내 기록은 그대로 이어져요. 새 밴드를 연결하면 같은 수업·같은 기록에 이어서 저장돼요.</div>
+<a class='btn p'>바꾸기 시작</a><a class='btn g'>취소</a></div></div></div><div><div class='cap'>2. 새 밴드 선택</div><div class='phone'><div class='bg'></div>
+<div class='top'><span>수업 진행 중</span><span class='chip'><i class='dot amber'></i>밴드 찾는 중</span></div>
+<div class='center'><div class='ring dim'>숨 고르기</div><div style='font-size:13px;color:#E5D3EE'>밴드 값은 연결되면 이어서 보여 드려요</div></div><div class='sheet'><div class='grab'></div><div class='sh-head'><div class='ic'>⌕</div><div><div class='sh-t'>새 밴드를 켜 주세요</div><div class='sh-s'>찾은 밴드 중에서 고르세요</div></div></div>
+<div class='list'><div class='li'><div>LINK BAND · LB2-****A41F<small>가까움 · 배터리 92%</small></div><span class='pill n'>선택</span></div><div class='li'><div>LINK BAND · LB2-****77C0<small>멀리 있음</small></div><span class='pill n'>선택</span></div></div>
+<div class='note'>방금 쓰던 밴드(****2D90)는 자동으로 해제돼요.</div><a class='btn g'>다시 찾기</a></div></div></div><div><div class='cap'>3. 완료</div><div class='phone'><div class='bg'></div>
+<div class='top'><span>수업 진행 중</span><span class='chip'><i class='dot '></i>밴드 연결됨</span></div>
+<div class='center'><div class='ring'>숨 고르기</div><div class='stats'><div class='stat'><b>64</b><i>심박</i></div><div class='stat'><b>14</b><i>호흡</i></div><div class='stat'><b>안정</b><i>이완 흐름</i></div></div></div><div class='sheet'><div class='grab'></div><div class='sh-head'><div class='ic green'>✓</div><div><div class='sh-t'>새 밴드로 바꿨어요</div><div class='sh-s'>LB2-****A41F · 배터리 92%</div></div></div>
+<div class='note'>이전 밴드 기록(****2D90, ~14:32)과 새 밴드 기록(14:36~)이 한 회원 기록으로 이어져 보여요. 그 사이 4분은 "쉬었던 구간"이에요.</div>
+<a class='btn p'>수업으로 돌아가기</a></div></div></div></div><script>
+window.addEventListener('load',function(){var bad=[];document.querySelectorAll('.phone,.wide').forEach(function(p){
+ var pr=p.getBoundingClientRect();p.querySelectorAll('*').forEach(function(e){
+  var r=e.getBoundingClientRect();if(!r.width)return;
+  if(r.right>pr.right+1||r.left<pr.left-1||r.bottom>pr.bottom+1){bad.push((e.className||e.tagName)+':'+Math.round(r.right-pr.right)+','+Math.round(r.bottom-pr.bottom));}
+  if(e.scrollWidth>e.clientWidth+1&&getComputedStyle(e).display!=='inline'&&e.children.length===0&&getComputedStyle(e).overflow!=='visible'){bad.push('clip:'+(e.className||e.tagName));}
+ });});
+ document.body.setAttribute('data-overflow',bad.length?bad.slice(0,8).join('|'):'none');});
+</script></body></html>

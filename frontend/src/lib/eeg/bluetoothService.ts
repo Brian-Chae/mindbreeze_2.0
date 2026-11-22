@@ -109,6 +109,10 @@ export interface BluetoothEEGService {
   clearDeviceCache(): void;
   /** 네이티브 측정이 밴드를 잡기 전에 JS 연결을 놓는다. 해제 전 연결 ID(MAC)를 돌려준다(연결 없으면 null). */
   releaseForNative(): Promise<string | null>;
+  /** SDD-331: 진행 중인(멈춘) 연결 시도를 끊는다. 재연결용 캐시 ID 는 지우지 않는다. */
+  abortConnectAttempt(): Promise<void>;
+  /** SDD-331: 저장 ID 직접 연결이 계속 실패할 때, 서비스 UUID 로 조용히 스캔해 같은 밴드(이름/ID)를 다시 찾는다. 못 찾으면 null. */
+  rediscoverBand(): Promise<string | null>;
   /** releaseForNative 로 JS 연결을 네이티브에 넘긴 상태인가. true 인 동안 JS 자동 재연결은 밴드를 다시 잡지 않는다. */
   isReleasedForNative(): boolean;
 }
@@ -1027,6 +1031,39 @@ class LinkBandBluetoothService implements BluetoothEEGService {
    */
   getCachedDeviceId(): string | null {
     return this.lastDeviceId;
+  }
+
+  /** SDD-331: 시도 제한(10초) 초과 시 멈춘 연결을 끊는다. disconnect() 와 달리 캐시 ID·수동 해제 플래그를 건드리지 않는다. */
+  async abortConnectAttempt(): Promise<void> {
+    const provider = this.provider;
+    const id = this.deviceId ?? this.lastDeviceId;
+    if (!provider || !id) return;
+    try {
+      await provider.disconnect(id);
+    } catch (error) {
+      logger.warn('연결 시도 취소 중 오류(무시):', error);
+    }
+  }
+
+  /**
+   * SDD-331: 스캔 복귀. 연결 팝업 없이 서비스 UUID 로 스캔해 저장된 밴드와 같은 이름(없으면 같은 ID)을 찾는다.
+   * 어댑터가 지원하지 않거나(웹) 못 찾으면 null — 호출부는 기존 저장 ID 로 계속 시도한다.
+   */
+  async rediscoverBand(): Promise<string | null> {
+    try {
+      const provider = await this.ensureProvider();
+      if (!provider.rediscoverDevice) return null;
+      const knownId = this.lastDeviceId;
+      const knownName = knownId ? this.scannedDevices.get(knownId)?.name ?? this.deviceName : this.deviceName;
+      const found = await provider.rediscoverDevice({ name: knownName, deviceId: knownId, services: LINK_BAND_SERVICE_UUIDS });
+      if (!found) return null;
+      this.scannedDevices.set(found.deviceId, found);
+      this.lastDeviceId = found.deviceId;
+      return found.deviceId;
+    } catch (error) {
+      logger.warn('밴드 재발견(스캔) 실패 — 저장 ID 로 계속 시도:', error);
+      return null;
+    }
   }
 
   /**

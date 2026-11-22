@@ -129,6 +129,7 @@ export function memberCaseViewProps(id: string, ctx?: Partial<Pick<PlayerCaseCon
       ppg: { red: demoWave(0.9, 3, 4), ir: demoWave(1.7, 3, 5) },
       isMock: false,
       pendingCount: input.net === 'down' ? 12 : 0,
+      wakeHint: ctx?.params?.get('wake') === '1',
     },
     sound: { speakerOn: input.place !== 'offline', trackTitle: '고요한 숲의 아침', volume: 0.6, blocked: false, onsiteLabel: '고요한 숲의 아침' },
     chat: { enabled: true, authenticated: true, unread: 2, node: createElement(MemberChatDemo) },
@@ -144,7 +145,7 @@ export function memberCaseViewProps(id: string, ctx?: Partial<Pick<PlayerCaseCon
     waitlist: { title: '마음챙김 명상수업 · 4회차', counselorName: '채용욱', startLabel: '14:00', notifyByPush: true },
     actions: {
       onLeave: noop, onHeroChange: noop, onSheetChange: noop, onToggleMic: noop, onToggleCam: noop, onRaiseHand: noop, onEndSpeaking: noop,
-      onBandConnect: noop, onBandDisconnect: noop, onBandCancel: noop, onBandRetry: noop, onBandContinue: noop, onBandRecheck: noop,
+      onBandConnect: noop, onBandDisconnect: noop, onBandCancel: noop, onBandRetry: noop, onBandWake: noop, onBandContinue: noop, onBandRecheck: noop,
       onNetRetry: noop, onHostVideoRetry: noop, onSignal: () => 'sent', onSpeakerChange: noop, onVolumeChange: noop, onResumeAudio: noop, onScreenOff: noop,
       onCheckin: noop, onEndAction: noop, onWaitlistLeave: noop,
     },

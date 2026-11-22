@@ -43,6 +43,7 @@ from app.schemas.member_report import (  # noqa: F401  (재노출)
     Cover,
     Direction,
     EffectPair,
+    GroupStory,
     MemoPage,
     Method,
     MetricState,
@@ -65,6 +66,7 @@ WhenLabel = Literal["수업 초반에", "수업 중간에", "수업이 끝나갈
 PageKey = Literal[
     "cover", "toc", "summary", "opinion", "journey", "motion", "quiet5", "heart_rate", "rmssd",
     "lf_hf", "focus", "relaxation", "emotional_balance", "aperiodic", "next_steps", "memo", "method", "back",
+    "group_story",
 ]
 
 
@@ -371,6 +373,7 @@ class MemberReportV2(_Strict):
     memo: MemoPage
     method: Method
     back: BackCover
+    group_story: Optional[GroupStory] = None  # SDD-329 D: 미측정 회원의 그룹 기록 서사(없으면 기존과 동일)
     forbidden_words_checked: bool = True
 
     @model_validator(mode="after")
@@ -379,6 +382,8 @@ class MemberReportV2(_Strict):
             for sec in self.metrics.values():
                 if sec.state != "missing" or sec.missing_reason != "band_not_worn":
                     raise ValueError("미착용 회원의 지표는 band_not_worn 결측이어야 함")
+        if self.group_story is not None and self.meta.band_status != "not_worn":
+            raise ValueError("group_story 는 본인 측정이 없는 리포트에만 둘 수 있음")
         for k, sec in self.metrics.items():
             if sec.key != k:
                 raise ValueError("metrics 키와 섹션 key 불일치")
@@ -439,6 +444,8 @@ def expected_book_pages_v2(report: MemberReportV2) -> BookPageMap:
     ]
     body = [p for p in _BODY_ORDER if _page_present(report, p[0])]
     mind = [p for p in _MIND_ORDER if _page_present(report, p[0])]
+    if report.group_story is not None:
+        pages.append(("group_story", "그룹 기록으로 돌아보는 수업"))
     pages += body + mind
     pages += [("next_steps", "다음 걸음"), ("memo", "손글씨 메모"), ("method", "방법 · 참고문헌 · 문의"),
               ("back", "뒷표지")]
@@ -449,6 +456,8 @@ def expected_book_pages_v2(report: MemberReportV2) -> BookPageMap:
         TocEntry(label="요약 카드 · 지금 나의 변화", start=pos["summary"], end=pos["summary"]),
         TocEntry(label="종합 의견", start=pos["opinion"], end=pos["opinion"]),
     ]
+    if "group_story" in pos:
+        toc.append(TocEntry(label="그룹 기록으로 돌아보는 수업", start=pos["group_story"], end=pos["group_story"]))
     if body:
         n = len([p for p in body if p[0] != "journey"])
         label = "몸의 변화 · 수업 여정" + (f"과 {_NUM_KO[n]} 지표" if n else "")

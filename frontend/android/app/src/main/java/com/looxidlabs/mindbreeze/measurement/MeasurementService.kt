@@ -110,6 +110,7 @@ class MeasurementService : Service() {
             val held = MeasurementManager.takeHeld(cfg.bandAddress)
             gatt = if (held != null) { rt.bandState = "connected"; held.also { it.attach(rt.engine, onBand) } }
                    else BandGattClient(applicationContext, rt.engine, cfg.bandAddress, onBand).also { it.start() }
+            MeasurementManager.activeBand = gatt
         }
         rt.live.visibility = "locked"
         rt.onCaptureEnded = { status, cutoff ->
@@ -127,6 +128,7 @@ class MeasurementService : Service() {
     private fun releaseResources() {
         nativeRt?.let { it.stop("user_stop"); nativeRt = null }
         logHandler.removeCallbacks(logTask)
+        MeasurementManager.activeBand = null
         gatt?.stop(); gatt = null
         MeasurementManager.releaseHeldBand()
         synth?.stop(); synth = null

@@ -46,11 +46,16 @@ def _set_generation(report_id: str, generation_status: str) -> None:
 
 
 def _rows(client, env: dict, status: str) -> list[dict]:
+    """대표 요청(11/17): 회원 목록에는 completed 만 노출 — 비승인은 목록에 없고 상세 직접 접근(마스킹)만 검증한다."""
     rid = env["ids"][status]
-    list_row = next(r for r in _list(client, env["member"])["reports"] if r["id"] == rid)
+    listed = [r for r in _list(client, env["member"])["reports"] if r["id"] == rid]
     detail = _detail(client, env["member"], rid)
     assert detail.status_code == 200, detail.text
-    return [list_row, detail.json()]
+    if status == "completed":
+        assert len(listed) == 1
+        return [listed[0], detail.json()]
+    assert listed == [], "비승인 리포트는 회원 목록에 노출되지 않는다"
+    return [detail.json()]
 
 
 def test_스키마_가산_필드_기본값은_false():

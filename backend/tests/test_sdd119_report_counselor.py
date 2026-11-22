@@ -51,7 +51,7 @@ def test_client_list_batches_counselor_names(client):
             session = Session(host_id=host.id, type="clinical", title=name, duration_min=50)
             db.add(session)
             db.flush()
-            db.add(Report(session_id=session.id, user_id=member.id, type="client", content={}))
+            db.add(Report(session_id=session.id, user_id=member.id, type="client", content={}, status="completed"))
         db.commit()
         db.expunge_all()
         event.listen(db.bind, "before_cursor_execute", capture)

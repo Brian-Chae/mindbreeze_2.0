@@ -3,6 +3,7 @@
 // useWakeLock 은 호출부(class-join-page: step waiting|meditation)가 이미 걸고 있어 여기서 다시 걸지 않는다(센티널 중복 방지).
 // 이 파일만 useBand 를 호출한다(plan R4: BLE 연결·업로드 인스턴스는 화면당 1개).
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { shouldShowWakeHint } from '../../../../lib/ble/reconnect-policy';
 import { freshnessOf } from '../../../../lib/session-live/live-view';
 import { holdMindMetrics, type HeldMind } from '../../../../lib/session-live/hold-last-snapshot';
 import { getPlatform } from '../../../../lib/native/platform';
@@ -42,7 +43,6 @@ import { applyBandSkipUi, readBandSkip, shouldAutoConnectBand, writeBandSkip } f
 import { toBandReport } from '../../../../lib/measurement-web/band-report';
 import { ClassChatPanel } from '../../../chat/ClassChatPanel';
 import { LeaveConfirmModal } from '../../../player/LeaveConfirmModal';
-import { ClassOnboardingCoachmarks } from '../../ClassOnboardingCoachmarks';
 import { MemberClassView } from './MemberClassView';
 import { MemberMediaControls, type MemberMediaBinding } from './MemberMediaControls';
 import { filterEegPreview, filterPpgPreview, minMaxDecimate, smoothAutoScale } from '../../../../lib/eeg/raw-preview-filter';
@@ -496,6 +496,10 @@ export function MemberClassContainer({
   );
   // '밴드 없이 입장'이면 '연결하는 중' 표시·대기 카드를 만들지 않는다(사용자가 직접 연결을 누르면 해제됨)
   const bandUi = applyBandSkipUi(derivedBandUi, bandSkipped, everConnected);
+  // SDD-331: 끊긴(lost) 상태가 120초 넘게 이어지면 깨우기 안내를 띄운다. '깨웠어요'를 누르면 시각을 다시 잡아 안내를 접는다.
+  const lostSinceRef = useRef<number | null>(null);
+  if (bandUi === 'lost') { if (lostSinceRef.current === null) lostSinceRef.current = nowMs; } else lostSinceRef.current = null;
+  const wakeHint = bandUi === 'lost' && lostSinceRef.current !== null && shouldShowWakeHint(nowMs - lostSinceRef.current);
   // 미지원 브라우저에서 "밴드 없이 계속"을 고르면 밴드 UI 를 접는다
   const bandVisible = bandEnabled && !(bandContinued && bandUi === 'unsupported');
 
@@ -532,6 +536,7 @@ export function MemberClassContainer({
       ppg,
       isMock: band.isMock,
       pendingCount: band.pendingCount,
+      wakeHint,
     },
     sound: {
       speakerOn,
@@ -560,7 +565,6 @@ export function MemberClassContainer({
     waitlist: { title: title ?? '클래스', counselorName, startLabel: startedAt ? formatStartLabel(startedAt) : null, notifyByPush: isAuthenticated },
     socketConnected: v2On ? liveV2?.state?.phase === 'READY' : liveSocket.isConnected,
     diag: { native: nativeM.diagnostics, nativeFailed: nativeM.nativeFailed, webPath: webM.path, webStatus: webM.status, webCode: webM.code },
-    onboarding: { locationType, participantMode, maxParticipants },
   };
 
   const controls: ScreenControls = {
@@ -572,6 +576,7 @@ export function MemberClassContainer({
     setBandContinued,
     setBandSkipped,
     bandSkipped,
+    restartWakeClock: () => { lostSinceRef.current = Date.now(); },
     setLeadOffDismissed,
     band,
     retryNetwork,
@@ -650,7 +655,6 @@ interface SharedScreenProps {
   socketConnected: boolean;
   /** SDD-284 T4: 연결 진단 원천(훅 반환값) */
   diag: { native: NativeDiagnostics; nativeFailed: boolean; webPath: string; webStatus: string; webCode: string | null };
-  onboarding: { locationType?: 'online' | 'offline'; participantMode?: 'one_on_one' | 'group'; maxParticipants?: number };
 }
 
 interface ScreenControls {
@@ -661,6 +665,8 @@ interface ScreenControls {
   setConfirmLeave: (open: boolean) => void;
   setBandContinued: (on: boolean) => void;
   setBandSkipped: (skipped: boolean) => void;
+  /** SDD-331: '깨웠어요' — 깨우기 안내 기준 시각을 지금으로 다시 잡는다 */
+  restartWakeClock: () => void;
   bandSkipped: boolean;
   setLeadOffDismissed: (dismissed: boolean) => void;
   band: UseBandResult;
@@ -812,6 +818,10 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
       if (wasSkipped && shared.nativeAuto) return;
       void (shared.nativeOwnsBand ? getNativeMeasurement().reconnectBand(Capacitor.getPlatform()) : band.connect());
     },
+    onBandWake: () => {
+      controls.restartWakeClock();
+      void (shared.nativeOwnsBand ? getNativeMeasurement().reconnectBand(Capacitor.getPlatform()) : band.wakeBand());
+    },
     onBandContinue: () => controls.setBandContinued(true),
     onBandRecheck: () => {
       controls.setLeadOffDismissed(true);
@@ -861,11 +871,6 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
             controls.onLeave();
           }}
           onCancel={() => controls.setConfirmLeave(false)}
-        />
-        <ClassOnboardingCoachmarks
-          locationType={shared.onboarding.locationType}
-          participantMode={shared.onboarding.participantMode}
-          maxParticipants={shared.onboarding.maxParticipants}
         />
       </div>
 

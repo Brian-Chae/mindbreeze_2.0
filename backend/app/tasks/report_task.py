@@ -481,7 +481,75 @@ def _maybe_enqueue_client_report_email(report: Report, db: DBSession) -> None:
         )
 
 
+REPORT_GENERATION_LOCK_TTL_SEC = 600  # 태스크 time_limit(360s)보다 길게 — 죽은 워커의 락은 TTL 로 풀린다
+
+
+def _acquire_generation_lock(report_id: str) -> tuple[bool, object | None]:
+    """SDD-329 B: 같은 리포트의 동시 생성을 막는 Redis 락(SET NX EX). (획득 여부, 해제용 토큰).
+
+    Redis 장애·미설정이면 (True, None) — 락 없이 기존 동작으로 진행한다(안전망이 본 흐름을 막지 않는다).
+    """
+    try:
+        import uuid as _uuid
+
+        from app.services.pipeline_backlog_service import get_redis_client
+
+        token = _uuid.uuid4().hex
+        ok = get_redis_client().set(f"report_gen_lock:{report_id}", token, nx=True, ex=REPORT_GENERATION_LOCK_TTL_SEC)
+        return (True, token) if ok else (False, None)
+    except Exception:  # noqa: BLE001
+        logger.warning("[report_task] 생성 락 사용 불가 — 락 없이 진행: report_id=%s", report_id, exc_info=True)
+        return True, None
+
+
+def _release_generation_lock(report_id: str, token: object | None) -> None:
+    if token is None:
+        return
+    try:
+        from app.services.pipeline_backlog_service import get_redis_client
+
+        client = get_redis_client()
+        key = f"report_gen_lock:{report_id}"
+        if client.get(key) in (token, str(token).encode()):  # 내 락일 때만 해제
+            client.delete(key)
+    except Exception:  # noqa: BLE001 — 해제 실패는 TTL 로 풀린다
+        logger.warning("[report_task] 생성 락 해제 실패: report_id=%s", report_id, exc_info=True)
+
+
+def _latest_approval(report: Report, db: DBSession) -> tuple[bool, dict | None]:
+    """SDD-329 B: DB 의 최신 승인 상태를 행 잠금(FOR UPDATE)으로 다시 읽는다. (승인됨 여부, 최신 content).
+
+    생성 시작 시 스냅샷한 was_approved 는 생성 중에 일어난 승인(자동 승인 포함)을 모른다.
+    아직 flush 되지 않은 변경을 읽기가 밀어내지 않도록 autoflush 를 끈다.
+    """
+    with db.no_autoflush:
+        row = (
+            db.query(Report.status, Report.content)
+            .filter(Report.id == report.id)
+            .with_for_update()
+            .first()
+        )
+    if row is None:
+        return False, None
+    return row[0] == "completed", row[1] if isinstance(row[1], dict) else None
+
+
 def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
+    """리포트 생성. 같은 리포트의 동시 생성은 Redis 락으로 하나만 진행한다(SDD-329 B)."""
+    acquired, token = _acquire_generation_lock(report_id)
+    if not acquired:
+        logger.warning("[report_task] 이미 생성 중 — 중복 생성 건너뜀: report_id=%s", report_id)
+        report = db.query(Report).filter(Report.id == UUID(report_id)).first()
+        if report is not None:
+            db.refresh(report)
+        return report
+    try:
+        return _generate_report_inline(report_id, db)
+    finally:
+        _release_generation_lock(report_id, token)
+
+
+def _generate_report_inline(report_id: str, db: DBSession) -> Report | None:
     rid = UUID(report_id)
     report = db.query(Report).filter(Report.id == rid).first()
     if not report:
@@ -520,6 +588,7 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
     report.generation_started_at = datetime.now(timezone.utc)
     db.commit()
 
+    failed = False
     try:
         scope = report_scope.scope_for_session(session.id, db)
         if report.type == "client" and scope.is_excluded(report.participant_id):
@@ -587,6 +656,7 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
             report.participant_id,
             exc,
         )
+        failed = True
         error_message = str(exc)
         # SDD-101: 실패 사유를 generation_error 에 기록(50자) — /reports 목록에서 로그로 노출.
         report.generation_error = (f"{type(exc).__name__}: {exc}")[:50]
@@ -665,6 +735,21 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
     # 기존 4쪽 서사형 content 는 그대로 두고, 실패해도 리포트 상태·저장을 막지 않는다.
     if report.type == "client":
         _attach_member_report(content, prev, report, session, db)
+
+    # SDD-329 B: 생성 중에 승인(자동 포함)이 끝났다면 오래된 was_approved 로 승인을 되돌리지 않는다.
+    #   저장 직전에 최신 DB 상태를 행 잠금으로 다시 읽고, 승인 완료면 status·content.approved 를 유지한다.
+    latest_approved, latest_content = _latest_approval(report, db)
+    if latest_approved and not was_approved:
+        logger.warning(
+            "[report_task] 승인 역행 차단: report_id=%s 생성 중 승인됨 — completed 유지 (생성 결과 status=%s)",
+            report.id, report.status,
+        )
+        if failed:
+            content = dict(latest_content or {})  # 실패 스텁이 승인된 본문을 덮지 않게 한다
+            report.data_credibility = previous_credibility
+        report.status = "completed"
+    if report.status == "completed":
+        content["approved"] = True  # 승인 상태와 본문 플래그를 항상 일치시킨다(승인=completed ⇔ approved=true)
 
     report.content = content
     # SDD-095: 최종 생성 상태 — ai_record 가용(전사+요약)이면 ready, 아니면 partial.
@@ -785,6 +870,39 @@ def _mark_pipeline_failure(session_id: str, db: DBSession, exc: Exception) -> No
         logger.exception("[report_task] 실패 상태 마킹 실패: session_id=%s", session_id)
 
 
+REPORT_REQUEUE_MAX_ATTEMPTS = 3
+
+
+def _requeue_missing_reports(db: DBSession) -> list[str]:
+    """종료 후 회원 리포트 누락·정지 회차를 report 큐에 다시 넣는다(best-effort, 회차당 최대 3회).
+
+    횟수는 Redis 카운터(6시간 TTL)로 제한해 영구 실패 회차가 알림을 반복 발화하지 않게 한다.
+    Redis 장애 시에는 재큐잉하지 않는다(안전망이 본 흐름을 흔들지 않도록).
+    """
+    enqueued: list[str] = []
+    try:
+        session_ids = report_progress_service.find_sessions_needing_report_requeue(db)
+        if not session_ids:
+            return enqueued
+        from app.services.pipeline_backlog_service import get_redis_client
+
+        redis_client = get_redis_client()
+        for sid in session_ids:
+            key = f"report_requeue:{sid}"
+            attempts = int(redis_client.incr(key))
+            if attempts == 1:
+                redis_client.expire(key, 6 * 60 * 60)
+            if attempts > REPORT_REQUEUE_MAX_ATTEMPTS:
+                logger.warning("[report_task] 재큐잉 한도 초과: session_id=%s", sid)
+                continue
+            generate_reports_for_session.apply_async(args=[sid])
+            logger.warning("[report_task] 누락 리포트 재큐잉: session_id=%s attempt=%s", sid, attempts)
+            enqueued.append(sid)
+    except Exception:  # noqa: BLE001
+        logger.exception("[report_task] 누락 리포트 재큐잉 실패")
+    return enqueued
+
+
 try:
     from app.core.celery_app import celery_app
 
@@ -809,6 +927,8 @@ try:
             affected = report_progress_service.sweep_stale_reports(db)
             for session_id in affected:
                 report_progress_service.emit_report_progress(session_id, db)
+            # 안전망: 종료 후 회원 리포트가 없거나 멈춘 회차를 재큐잉한다(멱등 — 완료분은 건너뜀).
+            _requeue_missing_reports(db)
             return len(affected)
         finally:
             db.close()

@@ -24,13 +24,13 @@ def test_lock_context_light_skips_class_and_user_locks(monkeypatch):
     import app.services.class_write_service as cws
 
     monkeypatch.setattr(cws, "lock_class_session", lambda *a, **k: called.__setitem__("class_lock", 1) or (None, row))
-    monkeypatch.setattr(cps, "lock_participants", lambda d, r: called.__setitem__("participants", 1) or [])
+    monkeypatch.setattr(cps, "lock_participants", lambda d, r, key_share=False: called.__setitem__("participants", 1) or [])
     q = db.query.return_value.filter_by.return_value.populate_existing.return_value.with_for_update.return_value
     q.one.return_value = row
 
     cps.lock_context(db, row.id, light=True)
     assert called == {"class_lock": 0, "participants": 1}
-    db.query.return_value.filter_by.return_value.populate_existing.return_value.with_for_update.assert_called_once()
+    db.query.return_value.filter_by.return_value.populate_existing.return_value.with_for_update.assert_called_once_with(key_share=True)
 
 
 def test_lock_context_default_uses_class_lock(monkeypatch):
@@ -40,7 +40,7 @@ def test_lock_context_default_uses_class_lock(monkeypatch):
 
     seen = []
     monkeypatch.setattr(cws, "lock_class_session", lambda d, r, a: seen.append(1) or (None, r))
-    monkeypatch.setattr(cps, "lock_participants", lambda d, r: [])
+    monkeypatch.setattr(cps, "lock_participants", lambda d, r, key_share=False: [])
     cps.lock_context(db, row.id)
     assert seen == [1]
 

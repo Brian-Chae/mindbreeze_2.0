@@ -132,6 +132,8 @@ html .ui-v2.u2f-home .u2-card:not(.u2-hero--nature):not(.u2-coach-code) { paddin
 html .ui-v2.u2f-home .u2-section-head { margin: 0 0 14px; gap: 12px; align-items: center; }
 html .ui-v2.u2f-home .u2-section-head h2 { font-size: 18px; font-weight: 800; line-height: 1.4; }
 html .ui-v2.u2f-home .u2-textlink { flex-shrink: 0; font-size: 13px; color: #5F0080; }
+/* 11/21: 자연배경 히어로 안 '회차 상세 보기'는 흰 글자(홈 공통 보라 링크 규칙이 덮어써 안 보였다) */
+html .ui-v2.u2f-home .u2-hero--nature .u2-textlink { color: #FFFFFF; text-shadow: 0 1px 8px #25103899; }
 html .ui-v2.u2f-home .u2f-home-class-empty { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 22px 16px; border: 1px dashed #D8CCE0; border-radius: 14px; background: #FBF9FD; }
 html .ui-v2.u2f-home .u2f-home-class-empty p { margin: 0; color: #6F6F6F; font-size: 13px; }
 html .ui-v2.u2f-home .u2f-home-create { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: auto; min-height: 44px; height: 44px; padding: 0 22px; margin: 0; border-radius: 999px; background: #5F0080; color: #FFF; font-size: 14px; }
@@ -200,3 +202,85 @@ html .ui-v2.u2f-home .u2f-sched-row { gap: 14px; }
 .ui-v2 .u2f-sched-date small { font-size: 12px; line-height: 1.2; }
 .ui-v2 .u2f-sched-row.is-past .u2f-sched-date { background: #F3F1F5; color: #6F6F6F; }
 .ui-v2 .u2f-sched-row > small { color: var(--u2-muted); font-size: 18px; }
+
+/* 코치 홈 '오늘 · 다가오는 일정' 월간 달력(기본형). 주변 카드와 같은 패딩·라운드를 따른다. */
+.ui-v2 .u2f-cal { min-width: 0; }
+.ui-v2 .u2f-cal-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 4px; margin-bottom: 12px; }
+.ui-v2 .u2f-cal-bar .u2f-cal-nav { grid-column: 2; justify-self: center; }
+.ui-v2 .u2f-cal-bar .u2f-cal-today { grid-column: 3; justify-self: end; }
+.ui-v2 .u2f-cal-nav { display: flex; align-items: center; gap: 4px; }
+.ui-v2 .u2f-cal-title { min-width: 108px; text-align: center; font-size: 16px; font-weight: 800; color: var(--u2-text); }
+.ui-v2 .u2f-cal-arrow, .ui-v2 .u2f-cal-today { min-height: 44px; border: 1px solid #E6DDEC; background: #FFF; color: #5F0080; border-radius: 999px; cursor: pointer; font-weight: 700; }
+.ui-v2 .u2f-cal-arrow { width: 44px; font-size: 20px; line-height: 1; padding: 0; }
+.ui-v2 .u2f-cal-today { min-width: 44px; white-space: nowrap; padding: 0 8px; font-size: 13px; }
+.ui-v2 .u2f-cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); column-gap: 0; row-gap: 4px; }
+.ui-v2 .u2f-cal-wd { text-align: center; font-size: 12px; font-weight: 700; color: #6F6F6F; padding: 4px 0; }
+.ui-v2 .u2f-cal-wd:first-child, .ui-v2 .u2f-cal-cell:nth-child(7n + 8) { color: #A94642; }
+.ui-v2 .u2f-cal-wd:nth-child(7), .ui-v2 .u2f-cal-cell:nth-child(7n + 14) { color: #446593; }
+.ui-v2 .u2f-cal-cell { justify-self: stretch; height: 56px; min-height: 44px; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 0; border-radius: 8px; background: transparent; color: var(--u2-text); font: inherit; padding: 0; cursor: pointer; }
+.ui-v2 .u2f-cal-cell.is-empty { cursor: default; }
+.ui-v2 .u2f-cal-cell:not(.is-today):hover .u2f-cal-num { background: #F5EDFC; }
+.ui-v2 .u2f-cal-cell:focus-visible, .ui-v2 .u2f-cal-arrow:focus-visible, .ui-v2 .u2f-cal-today:focus-visible { outline: 2px solid #5F0080; outline-offset: 2px; }
+.ui-v2 .u2f-cal-num { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; font-size: 14px; font-weight: 600; line-height: 1; }
+.ui-v2 .u2f-cal-cell.is-today .u2f-cal-num { background: #5F0080; color: #FFF; font-weight: 800; }
+.ui-v2 .u2f-cal-cell.is-selected .u2f-cal-num { box-shadow: inset 0 0 0 2px #5F0080; }
+.ui-v2 .u2f-cal-cell.is-today.is-selected .u2f-cal-num { box-shadow: 0 0 0 2px #FFF, 0 0 0 3px #5F0080; }
+.ui-v2 .u2f-cal-dots { display: flex; gap: 3px; height: 6px; align-items: center; }
+.ui-v2 .u2f-cal-dots i { width: 6px; height: 6px; border-radius: 50%; background: #5F0080; }
+.ui-v2 .u2f-cal-dots i.is-past { background: #9C82AC; }
+.ui-v2 .u2f-cal-list { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--u2-line); }
+.ui-v2 .u2f-cal-day { font-size: 14px; font-weight: 800; color: #5F0080; margin: 0 0 4px; }
+.ui-v2 .u2f-cal-empty { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+@media (max-width: 767px) {
+  .ui-v2 .u2f-cal-title { min-width: 96px; font-size: 15px; }
+  .ui-v2 .u2f-cal-grid { row-gap: 2px; }
+  .ui-v2 .u2f-cal-cell { height: 48px; gap: 5px; }
+  .ui-v2 .u2f-cal-num { width: 28px; height: 28px; font-size: 13px; }
+  .ui-v2 .u2f-cal-dots i { width: 5px; height: 5px; }
+}
+
+/* 코치 홈: 달력 ↔ 내 클래스(구분선 목록) 연동 + 좌우 높이 균형 */
+.ui-v2 .u2f-cal-dots i.is-dim { opacity: .18; }
+.ui-v2 .u2f-cal-dots i.is-past { opacity: .4; }
+.ui-v2 .u2f-cal-cell.is-filtered { background: #F5EDFC; }
+.ui-v2 .u2f-cal-cell.is-related { background: #F7F1FA; box-shadow: inset 0 0 0 1px #B29BC0; }
+.ui-v2 .u2f-cal-list { min-height: 132px; }
+.ui-v2 .u2f-class-list { list-style: none; margin: 0; padding: 0; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.ui-v2 .u2f-class-list > li { margin: 0; }
+.ui-v2 .u2f-class-row { display: block; width: -webkit-fill-available; width: stretch; text-align: left; padding: 14px 8px; border: 0; border-bottom: 1px solid #EEE7F3; border-radius: 0; background: transparent; color: var(--u2-text); font: inherit; cursor: pointer; min-height: 44px; }
+.ui-v2 .u2f-class-list > li:last-child .u2f-class-row { border-bottom: 0; }
+.ui-v2 .u2f-class-row:focus-visible { outline: 2px solid #5F0080; outline-offset: -2px; }
+.ui-v2 .u2f-class-row.is-active { background: #F6EEFB; border-radius: 12px; box-shadow: inset 0 0 0 1.5px #8F60A8; border-bottom-color: transparent; }
+.ui-v2 .u2f-class-row.is-on-date { background: #FAF6FC; border-radius: 12px; }
+.ui-v2 .u2f-class-row.is-hover:not(.is-active) { background: #FAF5FD; box-shadow: inset 0 0 0 1px #C1A8CE; border-radius: 12px; }
+.ui-v2 .u2f-class-head { display: flex; align-items: center; gap: 9px; }
+.ui-v2 .u2f-class-dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
+.ui-v2 .u2f-class-head b { font-size: 15px; font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.ui-v2 .u2f-class-head em { margin-left: auto; flex: 0 0 auto; font-style: normal; font-size: 11px; padding: 2px 8px; border-radius: 6px; background: #F4EFF7; color: #7A6089; }
+.ui-v2 .u2f-class-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 8px; margin: 8px 0 0 18px; font-size: 12px; color: #7F6D89; }
+.ui-v2 .u2f-class-prog { display: inline-flex; align-items: center; gap: 7px; }
+.ui-v2 .u2f-class-track { display: block; width: 45px; height: 4px; border-radius: 4px; background: #EEE7F3; overflow: hidden; }
+.ui-v2 .u2f-class-track i { display: block; height: 4px; border-radius: 4px; }
+.ui-v2 .u2f-class-match { display: block; margin: 6px 0 0 18px; font-size: 11px; color: #5F0080; font-weight: 600; }
+.ui-v2 .u2f-class-notice { margin: 8px 0 0; font-size: 12px; color: #7F6D89; }
+.ui-v2 .u2f-class-foot { margin-top: auto; padding-top: 12px; border-top: 1px solid #EEE7F2; }
+.ui-v2 .u2f-class-hint { margin: 16px 0 0; padding: 14px 16px; border-radius: 12px; background: #F8F4FB; color: #6E5A7A; font-size: 13px; line-height: 1.6; }
+.ui-v2 .u2f-class-hint + .u2f-class-foot { margin-top: auto; }
+.ui-v2 .u2f-class-empty { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px 12px; }
+.ui-v2 .u2f-class-empty p { margin: 0; color: #6F6F6F; font-size: 13px; }
+.ui-v2 .u2f-class-card { display: flex; flex-direction: column; min-width: 0; }
+@media (min-width: 1024px) {
+  html .ui-v2.u2f-home .u2f-cols--cal { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); gap: 20px; align-items: stretch; }
+  html .ui-v2.u2f-home .u2f-cols--lower { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: stretch; margin-top: 16px; }
+  /* 오른쪽 카드는 달력 높이를 따라가고(콘텐츠로 행 높이를 키우지 않음), 목록은 내부 스크롤 */
+  html .ui-v2.u2f-home .u2f-cols--cal > .u2f-class-card { position: relative; }
+  html .ui-v2.u2f-home .u2f-cols--cal > .u2f-class-card > * { position: relative; }
+  html .ui-v2.u2f-home .u2f-cols--cal > .u2f-class-card .u2f-class-list { contain: size; }
+  /* 클래스가 적으면 목록을 내용 높이로 두고 안내 상자를 바로 아래에 붙인다(빈 공간 방지). */
+  html .ui-v2.u2f-home .u2f-cols--cal > .u2f-class-card.is-few .u2f-class-list { flex: 0 0 auto; contain: none; overflow: visible; }
+}
+@media (max-width: 1023px) {
+  html .ui-v2.u2f-home .u2f-cols--cal, html .ui-v2.u2f-home .u2f-cols--lower { display: flex; flex-direction: column; gap: 16px; margin-top: 0; }
+}
+html .ui-v2.u2f-home .u2f-cols--lower { margin-top: 16px; }
+html .ui-v2.u2f-home .u2f-cols--cal { margin-top: 0; }

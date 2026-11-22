@@ -98,6 +98,21 @@ describe('결측·짧은 측정', () => {
     expect(container.querySelector('#mr2-mind')).toBeNull();
     expect(container.querySelector('#mr2-method')).not.toBeNull();
   });
+  it('미측정 + 그룹 기록: 그룹 기록 섹션·그래프, 그래프 없으면 서사만', () => {
+    const r = fx('bodycare');
+    const base: MemberReportV2 = { ...r, meta: { ...r.meta, band_status: 'not_worn' }, journey: null, quiet5: null, hero: { ...r.hero, pairs: [], quiet_highlight: null }, metrics: {} };
+    const story = {
+      label: '그룹 기록', title: '그룹 기록으로 돌아보는 수업', paragraphs: ['이 쪽은 그룹의 기록이에요.'], n_people: 12,
+      charts: [{ key: 'heart_rate' as const, title: '그룹 가운데 값', unit_label: '회/분', minutes: [0, 1, 2], values: [70, null, 68], axis_min: 60, axis_max: 75 }],
+      chart_hidden_reason: null, chart_note: '그룹 가운데 값만 보여 줘요.',
+    };
+    act(() => root.render(<MemberReportViewV2 report={{ ...base, group_story: story }} />));
+    expect(container.querySelector('#mr2-group-story')).not.toBeNull();
+    expect(container.querySelectorAll('#mr2-group-story svg').length).toBe(1);
+    act(() => root.render(<MemberReportViewV2 report={{ ...base, group_story: { ...story, charts: [], n_people: null, chart_hidden_reason: 'min_n', chart_note: null } }} />));
+    expect(container.querySelectorAll('#mr2-group-story svg').length).toBe(0);
+    expect(container.querySelector('#mr2-group-story')?.textContent).toContain('그룹의 기록');
+  });
   it('1/f 결측(mindcare)은 쪽 생략', () => {
     act(() => root.render(<MemberReportViewV2 report={fx('mindcare')} />));
     expect(container.querySelector('article[data-metric="aperiodic"]')).toBeNull();

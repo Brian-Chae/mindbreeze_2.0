@@ -113,7 +113,6 @@ async function installStub(ctx, role) {
 
 async function newContext(browser, [width, height], role) {
   const ctx = await browser.newContext({ viewport: { width, height }, permissions: ['camera', 'microphone'] });
-  await ctx.addInitScript(() => localStorage.setItem('mb_class_onboarding_seen', '1'));
   await ctx.addInitScript(COUNT_MEDIA);
   if (STUB && role) await installStub(ctx, role);
   return ctx;

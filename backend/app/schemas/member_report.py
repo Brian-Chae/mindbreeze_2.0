@@ -47,6 +47,7 @@ NarrativeSource = Literal["rule", "ai"]
 PageKey = Literal[
     "cover", "toc", "summary", "opinion", "journey", "motion", "stable5", "heart_rate", "rmssd",
     "lf_hf", "focus", "relaxation", "emotional_balance", "aperiodic", "next_steps", "memo", "method", "back",
+    "group_story",
 ]
 
 
@@ -366,6 +367,35 @@ class Toc(_Strict):
     guide: str
 
 
+# ── 그룹 기록 기반 서사(SDD-329 D) ────────────────────────────────
+class GroupStoryChart(_Strict):
+    """그룹(같은 회차 측정 참여자)의 매분 가운데 값 흐름. 개인 값·ID 없음, 집계만."""
+
+    key: Literal["heart_rate", "relaxation", "focus"]
+    title: str
+    unit_label: str
+    minutes: list[int]
+    values: list[Optional[float]]  # 해당 분 인원 < MIN_BAND_N 이면 None
+    axis_min: float
+    axis_max: float
+
+
+class GroupStory(_Strict):
+    """본인 측정이 없는 회원(밴드 미착용·연결 실패)에게 그룹 흐름 기반으로 수업 경험을 들려주는 서사.
+
+    - 첫머리는 항상 `label`(\"그룹 기록\") — 본인 수치처럼 보이는 표현·개인 비교 금지.
+    - 그룹 유효 인원 < MIN_GROUP_N 이면 charts=[]·chart_hidden_reason=\"min_n\"(숫자·방향도 문장에 넣지 않는다).
+    """
+
+    label: str
+    title: str
+    paragraphs: list[str]
+    n_people: Optional[int] = None  # 그룹 유효 인원(MIN_GROUP_N 이상일 때만)
+    charts: list[GroupStoryChart] = []
+    chart_hidden_reason: Optional[Literal["min_n"]] = None
+    chart_note: Optional[str] = None
+
+
 class MemberReport(_Strict):
     schema_version: Literal["member_report.v1"] = SCHEMA_VERSION
     meta: MemberMeta
@@ -381,9 +411,12 @@ class MemberReport(_Strict):
     method: Method
     back: BackCover
     forbidden_words_checked: bool = True
+    group_story: Optional[GroupStory] = None  # 미측정 회원의 그룹 기반 서사(없으면 기존 리포트와 동일)
 
     @model_validator(mode="after")
     def _check(self) -> "MemberReport":
+        if self.group_story is not None and self.meta.band_status != "not_worn":
+            raise ValueError("group_story 는 본인 측정이 없는 리포트에만 둘 수 있음")
         if self.meta.band_status == "not_worn":
             for sec in self.metrics.values():
                 if sec.state != "missing" or sec.missing_reason != "band_not_worn":
@@ -444,6 +477,8 @@ def expected_book_pages(report: MemberReport) -> BookPageMap:
     ]
     body = [p for p in _BODY_ORDER if _page_present(report, p[0])]
     mind = [p for p in _MIND_ORDER if _page_present(report, p[0])]
+    if report.group_story is not None:
+        pages.append(("group_story", "그룹 기록으로 돌아보는 수업"))
     pages += body + mind
     pages += [("next_steps", "다음 걸음"), ("memo", "손글씨 메모"), ("method", "방법 · 참고문헌 · 문의"),
               ("back", "뒷표지")]
@@ -454,6 +489,8 @@ def expected_book_pages(report: MemberReport) -> BookPageMap:
         TocEntry(label="요약 카드 · 지금 나의 상태", start=pos["summary"], end=pos["summary"]),
         TocEntry(label="종합 의견", start=pos["opinion"], end=pos["opinion"]),
     ]
+    if "group_story" in pos:
+        toc.append(TocEntry(label="그룹 기록으로 돌아보는 수업", start=pos["group_story"], end=pos["group_story"]))
     if body:
         n = len([p for p in body if p[0] != "journey"])
         label = "몸의 변화 · 수업 여정" + (f"과 {_NUM_KO[n]} 지표" if n else "")
