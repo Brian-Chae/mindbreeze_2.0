@@ -270,6 +270,11 @@ def _participants(db: DBSession, session_id: uuid.UUID) -> list:
         select(p.id, p.user_id, p.guest_name, User.name, p.is_waitlisted, p.band_connected, p.report_included,
                p.eeg_collection_consented, p.linkband_device_id.label("band_serial"),
                SessionBandDevice.firmware.label("band_firmware"),
+               SessionBandDevice.app_version.label("band_app_version"),
+               SessionBandDevice.app_build.label("band_app_build"),
+               SessionBandDevice.os_name.label("band_os_name"),
+               SessionBandDevice.os_version.label("band_os_version"),
+               SessionBandDevice.device_model.label("band_device_model"),
                select(func.count()).select_from(BiosignalGapEvent)
                .where(BiosignalGapEvent.participant_id == p.id).correlate(p).scalar_subquery().label("band_gap_count"))
         .outerjoin(User, User.id == p.user_id)
@@ -439,6 +444,11 @@ def _build_participant(prow, fstat, rstats: dict, as_of: datetime, expected_row=
         # 개요 목록(_participants_bulk)의 행에는 없는 열 — 없으면 None
         band_serial=getattr(prow, "band_serial", None),
         band_firmware=getattr(prow, "band_firmware", None),
+        band_app_version=getattr(prow, "band_app_version", None),
+        band_app_build=getattr(prow, "band_app_build", None),
+        band_os_name=getattr(prow, "band_os_name", None),
+        band_os_version=getattr(prow, "band_os_version", None),
+        band_device_model=getattr(prow, "band_device_model", None),
         band_gap_count=getattr(prow, "band_gap_count", None),
     )
 

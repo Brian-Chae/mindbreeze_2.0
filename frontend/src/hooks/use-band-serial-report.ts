@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { putBandDevice } from '../lib/api/class-flow';
 import { reportBandDevice } from '../lib/band/band-device-report';
 import { bluetoothService } from '../lib/eeg/bluetoothService';
+import { getAppBuildInfo } from '../lib/native/app-build-info';
 import { getPlatform } from '../lib/native/platform';
 
 /** 펌웨어는 연결 직후 비동기로 읽히므로 뒤늦게 한 번 더 확인한다(같은 값이면 보내지 않는다). */
@@ -16,10 +17,10 @@ export function useBandSerialReport(o: { sessionId: string | null; credential: s
   useEffect(() => {
     if (!bandConnected || !sessionId) return undefined;
     const report = (): void => {
-      void reportBandDevice(
-        { sessionId, credential, identity: bluetoothService.getBandIdentity(), platform: getPlatform() },
+      void getAppBuildInfo().then((appInfo) => reportBandDevice(
+        { sessionId, credential, identity: bluetoothService.getBandIdentity(), platform: getPlatform(), appInfo },
         { put: putBandDevice },
-      );
+      ));
     };
     report();
     const timer = window.setTimeout(report, FIRMWARE_RECHECK_MS);

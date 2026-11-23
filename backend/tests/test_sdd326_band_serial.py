@@ -423,3 +423,42 @@ def test_usage_쿼리수는_행수와_무관(client, world, db):
     n1, i1 = run(1)
     n3, i3 = run(3)
     assert (i1, i3) == (1, 3) and n1 == n3, (n1, n3)
+
+
+# ── SDD-332: 앱 빌드·OS·기기 모델 ─────────────────────────────────────
+APP = {"app_version": "1.0.0-dev", "app_build": "56", "os_name": "Android", "os_version": "15", "device_model": "SM-S921N"}
+
+
+def test_sdd332_앱정보_저장_및_구버전_재보고가_값을_지우지_않음(client, cls):
+    who = _enter(client, cls)
+    assert _put(client, cls, who, {"serial": SERIAL, "platform": "android", **APP}).status_code == 200
+    assert _put(client, cls, who, {"serial": SERIAL, "platform": "android"}).status_code == 200  # 구버전 앱
+    (r,) = _rows(uuid.UUID(who["pid"]))
+    assert (r.app_version, r.app_build, r.os_name, r.os_version, r.device_model) == tuple(APP.values())
+
+
+def test_sdd332_구버전_본문은_앱정보_None(client, cls):
+    who = _enter(client, cls)
+    assert _put(client, cls, who, {"serial": SERIAL, "platform": "web"}).status_code == 200
+    (r,) = _rows(uuid.UUID(who["pid"]))
+    assert r.app_build is None and r.device_model is None
+
+
+def test_sdd332_형식이_이상한_앱정보는_버리고_시리얼_보고는_성공():
+    req = BandDeviceReportRequest(serial=SERIAL, platform="ios", app_build="<script>", device_model="x" * 100, os_version="18.1", app_version=" 1.0.0 ")
+    assert req.app_build is None and req.device_model is None and req.os_version == "18.1" and req.app_version == "1.0.0"
+    assert BandDeviceReportRequest(serial=SERIAL, platform="android", app_build=56).app_build == "56"
+
+
+def test_sdd332_업로드현황과_역조회에_앱정보_노출(client, world, db):
+    p0 = db.get(SessionParticipant, world["participants"][0].id)
+    p0.linkband_device_id = SERIAL
+    now = datetime.now(timezone.utc)
+    db.add(SessionBandDevice(id=uuid.uuid4(), session_id=world["session"].id, participant_id=p0.id, serial=SERIAL,
+                             firmware="1.2.3", platform="android", first_seen_at=now, last_seen_at=now,
+                             app_build="56", os_name="Android", os_version="15", device_model="SM-S921N"))
+    db.commit()
+    rows = {r["participant_id"]: r for r in _status(client, world)["participants"]}
+    assert (rows[str(p0.id)]["band_app_build"], rows[str(p0.id)]["band_os_version"], rows[str(p0.id)]["band_device_model"]) == ("56", "15", "SM-S921N")
+    other = rows[str(world["participants"][1].id)]
+    assert other["band_app_build"] is None and other["band_device_model"] is None

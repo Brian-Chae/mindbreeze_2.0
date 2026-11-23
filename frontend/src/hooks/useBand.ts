@@ -21,6 +21,7 @@ import {
 import { tokenStorage } from '../lib/api/client';
 import { postEntryFeatures, putBandDevice } from '../lib/api/class-flow';
 import { maskSerial, reportBandDevice } from '../lib/band/band-device-report';
+import { getAppBuildInfo } from '../lib/native/app-build-info';
 import { AnalysisMetricsService } from '../lib/eeg/AnalysisMetricsService';
 import { bluetoothService } from '../lib/eeg/bluetoothService';
 import { mockDataGenerator } from '../lib/eeg/mockDataGenerator';
@@ -1662,10 +1663,10 @@ export function useBand({
     const report = (): void => {
       const identity = bluetoothService.getBandIdentity();
       if (!identity) return;
-      void reportBandDevice(
-        { sessionId, credential: entryCredentialRef.current, identity, platform: getPlatform() },
+      void getAppBuildInfo().then((appInfo) => reportBandDevice(
+        { sessionId, credential: entryCredentialRef.current, identity, platform: getPlatform(), appInfo },
         { put: putBandDevice },
-      ).then((sent) => { if (sent) logger.info('밴드 시리얼 보고', maskSerial(identity.serial)); });
+      )).then((sent) => { if (sent) logger.info('밴드 시리얼 보고', maskSerial(identity.serial)); });
     };
     report();
     // 펌웨어는 연결 직후 비동기로 읽히므로 한 번 더 확인한다(같은 값이면 보내지 않는다).

@@ -50,6 +50,12 @@ export interface UploadParticipantDto {
   /** SDD-326: 연결한 밴드 시리얼(코치·기관관리자 화면 전용). 구 서버·미수집이면 없음/null. 회원 화면에는 쓰지 않는다. */
   band_serial?: string | null;
   band_firmware?: string | null;
+  /** SDD-332: 측정에 쓴 앱 빌드·기기. 구 서버·미보고면 없음/null. */
+  band_app_version?: string | null;
+  band_app_build?: string | null;
+  band_os_name?: string | null;
+  band_os_version?: string | null;
+  band_device_model?: string | null;
   /** SDD-326: 참가자 회차 전체 측정 끊김 횟수. 미집계/구 서버면 null·없음. */
   band_gap_count?: number | null;
 }
@@ -62,6 +68,11 @@ export interface BandDeviceUsageItem {
   display_name: string | null;
   firmware: string | null;
   platform: string | null;
+  app_version?: string | null;
+  app_build?: string | null;
+  os_name?: string | null;
+  os_version?: string | null;
+  device_model?: string | null;
   first_seen_at: string;
   last_seen_at: string;
   is_current: boolean;
