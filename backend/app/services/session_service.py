@@ -1550,6 +1550,43 @@ def _recent_feature_participants(db, session_id, participant_ids, now=None) -> s
         return set()
 
 
+# SDD-334: 입장 후 이 시간(초)이 지나도록 측정 데이터가 한 번도 없으면 '측정 시작 안 됨'.
+MEASURE_NOT_STARTED_AFTER_SECONDS = 90
+
+
+def compute_measure_not_started(
+    *, session_status, entered_at, started_at, has_data: bool, eeg_consented, now: datetime,
+    threshold_s: int = MEASURE_NOT_STARTED_AFTER_SECONDS,
+):
+    """입장했는데 측정이 시작되지 않은 회원이면 그 시작 기준 시각(entered/started 중 늦은 쪽)을, 아니면 None.
+
+    - 회차 진행 중이고 입장 기록이 있으며, 기준 시각 + threshold_s 를 넘긴 경우에만 대상(정확히 90초는 아직 아님).
+    - feature·raw 가 한 건이라도 있으면(측정 중 끊김 포함) 대상이 아니다 — 그건 기존 '연결 끊김'.
+    - 밴드 미사용을 명시(eeg_collection_consented False)한 회원은 제외.
+    """
+    if session_status != "in_progress" or entered_at is None or has_data or eeg_consented is False:
+        return None
+    since = _ensure_aware(entered_at)
+    if started_at is not None:
+        since = max(since, _ensure_aware(started_at))
+    return since if (now - since).total_seconds() > threshold_s else None
+
+
+def _participants_with_measure_data(db: DBSession, session_id, participant_ids: list, feature_pids: set) -> set:
+    """feature 또는 raw 청크가 한 건이라도 있는 참가자 id 집합(raw 는 1쿼리)."""
+    remaining = [pid for pid in participant_ids if pid not in feature_pids]
+    have = set(feature_pids)
+    if remaining:
+        from app.models.record import EEGRawChunk
+
+        have.update(
+            pid for (pid,) in db.query(EEGRawChunk.participant_id)
+            .filter(EEGRawChunk.session_id == session_id, EEGRawChunk.participant_id.in_(remaining))
+            .distinct().all()
+        )
+    return have
+
+
 def _effective_band_connected(p, recent: set) -> bool:
     return bool(p.band_connected) or p.id in recent
 
@@ -3149,11 +3186,18 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
     stats = _aggregate_window_stats(s.id, [p.id for p in active], db)
     recent = {pid for pid, st in stats.items() if st.get("last_eeg_at") is not None and not _is_stale(st["last_eeg_at"], _now())}
 
+    now_ts = _now()
+    with_data = _participants_with_measure_data(db, s.id, [p.id for p in active], set(stats))
+
     metrics = []
     contact_fail = 0
     device_fail = 0
     band_low = 0
     for p in active:
+        mns_since = compute_measure_not_started(
+            session_status=s.status, entered_at=p.entered_at, started_at=s.started_at,
+            has_data=p.id in with_data, eeg_consented=p.eeg_collection_consented, now=now_ts,
+        )
         display_name = names.get(p.user_id) if p.user_id else p.guest_name
         profile = profiles.get(p.user_id) if p.user_id else None
         gender = p.gender or (profile.gender if profile else None)
@@ -3225,6 +3269,9 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
                 # SDD-094: 발언권 상태 — 상담사 모니터 초기 로드/새로고침 시 손들기·발언 표시용
                 "raise_hand": p.raise_hand,
                 "speaking": p.speaking,
+                # SDD-334: 입장 후 측정 미시작(필드 추가만 — 구 클라이언트는 무시)
+                "measure_not_started": mns_since is not None,
+                "measure_not_started_since": mns_since,
             }
         )
 

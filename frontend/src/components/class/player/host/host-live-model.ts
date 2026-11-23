@@ -11,6 +11,7 @@ import {
   type HostMetricValues,
   type HostParticipant,
   type HostQueueEntry,
+  measureNotStartedMinutes,
 } from '../../../../lib/class/host-player-case';
 import { isEegStale, isLowBattery } from '../../../../lib/session-live/signal-status';
 import type { WaitingRoomCheckin } from '../../../../lib/socket';
@@ -100,6 +101,11 @@ interface ToHostParticipantOptions {
   nowMs: number;
 }
 
+export function measureNotStartedOf(row: SessionLiveMetric, nowMs: number): { measureNotStartedSince: string | null; measureNotStartedMin: number | null } {
+  const since = row.measure_not_started === true && row.last_eeg_at == null ? row.measure_not_started_since ?? row.entered_at ?? null : null;
+  return { measureNotStartedSince: since, measureNotStartedMin: measureNotStartedMinutes(since, nowMs) };
+}
+
 export function toHostParticipant(row: SessionLiveMetric, { extra, entry, nowMs }: ToHostParticipantOptions): HostParticipant {
   const band = hostBandOf(row, nowMs);
   const checkin = entry?.checkin ?? null;
@@ -116,6 +122,8 @@ export function toHostParticipant(row: SessionLiveMetric, { extra, entry, nowMs 
     checkinState: row.checkin_state,
     presenceState: row.presence_state,
     enteredAt: row.entered_at,
+    // SDD-334: 서버 판정 + 실시간 지표가 한 번이라도 들어오면(last_eeg_at) 즉시 해제
+    ...measureNotStartedOf(row, nowMs),
     attention: checkinAttention(checkin),
   };
 }

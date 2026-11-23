@@ -1,7 +1,7 @@
 // SDD-208 H3 — 1:1 상담(C05·C06): 그리드 대신 큰 회원 카드 1장(6지표 3×2) + 5분 추이 + 체크인 응답.
 // 회원 영상은 기본 비공개다 — 회원이 카메라를 켜서 영상 트랙이 있을 때만 영상 자리가 생기고, 상담사 쪽에는 회원 카메라를 켜는 UI 가 없다(확정 결정 #1).
 import { useEffect, useRef } from 'react';
-import { HOST_BAND_DOT, HOST_BAND_TEXT, type HostParticipant } from '../../../../lib/class/host-player-case';
+import { HOST_BAND_DOT, HOST_BAND_TEXT, MEASURE_NOT_STARTED_TITLE, isMeasureNotStarted, type HostParticipant } from '../../../../lib/class/host-player-case';
 import type { PlayerMetric } from '../../../../lib/class/player-case';
 import { HostMinis, HostQaCard, HostTrendCard } from './HostPersonParts';
 import './host-player.css';
@@ -34,7 +34,7 @@ export function HostSoloCard({ participant, metric, trend, memberStream }: HostS
           <header className="hp-solo__h">
             <span className="hp-av" aria-hidden="true">{participant.name.slice(0, 1)}</span>
             <b>{participant.name}</b>
-            <span className="hp-chip"><i className="hp-dot" data-state={HOST_BAND_DOT[participant.band]} />{HOST_BAND_TEXT[participant.band]}</span>
+            <span className="hp-chip"><i className="hp-dot" data-state={isMeasureNotStarted(participant) ? 'lost' : HOST_BAND_DOT[participant.band]} />{isMeasureNotStarted(participant) ? MEASURE_NOT_STARTED_TITLE : HOST_BAND_TEXT[participant.band]}</span>
           </header>
           {memberStream ? <MemberVideo stream={memberStream} name={participant.name} /> : null}
           <HostMinis participant={participant} selected={metric.key} />

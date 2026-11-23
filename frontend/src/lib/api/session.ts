@@ -182,6 +182,10 @@ export interface SessionLiveMetric extends Partial<ParticipationRow> {
   sdnn?: number | null;
   /** 몸 지표 — HRV RMSSD ms (산출 불가 시 null) */
   rmssd?: number | null;
+  /** SDD-334: 입장 후 90초가 지나도록 측정 데이터가 한 번도 없음(서버 판정). 구 서버는 없음 */
+  measure_not_started?: boolean;
+  /** SDD-334: 측정 미시작 기준 시각(입장·회차 시작 중 늦은 쪽) */
+  measure_not_started_since?: string | null;
   /** v2 LiveState focus_display(0~100). 구 경로는 없음 → extras 폴백 */
   focus_score?: number | null;
   /** v2 LiveState emotion_display(0~100). 구 경로는 없음 → extras 폴백 */

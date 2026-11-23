@@ -43,6 +43,10 @@ export interface HostParticipant {
   checkinState?: "completed" | "not_completed" | "unknown";
   presenceState?: "connected" | "disconnected" | "unknown";
   enteredAt?: string | null;
+  /** SDD-334: 입장 후 측정이 시작되지 않은 기준 시각(서버 판정, 데이터 수신 시 null). 없으면 해당 없음 */
+  measureNotStartedSince?: string | null;
+  /** SDD-334: "N분째" (최소 1) — 측정 미시작이 아니면 null */
+  measureNotStartedMin?: number | null;
   /** 체크인 응답 중 상담사가 살펴볼 만한 한 줄(없으면 null) */
   attention: string | null;
 }
@@ -144,14 +148,34 @@ export function hasEntered(p: HostParticipant): boolean {
   return Boolean(p.enteredAt) || p.presenceState === 'connected';
 }
 
+/** SDD-334: 입장했는데 측정이 시작되지 않은 회원(끊김이 아니다 — 측정 데이터가 한 번도 없음) */
+export function isMeasureNotStarted(p: HostParticipant): boolean {
+  return hasEntered(p) && Boolean(p.measureNotStartedSince) && p.band !== 'on';
+}
+
+/** 측정 미시작 카드 문구(점수·등급 없음) */
+export const MEASURE_NOT_STARTED_TITLE = '측정 시작 안 됨';
+export const MEASURE_NOT_STARTED_GUIDE = '앱에서 밴드 다시 연결을 눌러 주세요';
+export function measureNotStartedLabel(p: HostParticipant): string {
+  return `${MEASURE_NOT_STARTED_TITLE} · ${p.measureNotStartedMin ?? 1}분째`;
+}
+
+/** "N분째" 경과(분, 최소 1) — 시각을 못 읽으면 null */
+export function measureNotStartedMinutes(since: string | null | undefined, nowMs: number): number | null {
+  if (!since) return null;
+  const ts = new Date(since).getTime();
+  if (Number.isNaN(ts)) return null;
+  return Math.max(1, Math.floor((nowMs - ts) / 60_000));
+}
+
 /**
  * 이상 회원 — 입장자 중 코치가 살펴봐야 하는 상태 하나라도 있으면 센다.
- * 연결 끊김(lost) · 접촉 불량(leadoff) · 밴드 배터리 부족 · 입장 후 현재 미접속.
+ * 연결 끊김(lost) · 접촉 불량(leadoff) · 밴드 배터리 부족 · 입장 후 현재 미접속 · 측정 시작 안 됨(SDD-334).
  * 밴드 미착용(off)은 선택 사항이라 이상으로 세지 않는다.
  */
 export function isAbnormal(p: HostParticipant): boolean {
   if (!hasEntered(p)) return false;
-  return p.band === 'lost' || p.band === 'leadoff' || p.lowBattery || p.presenceState === 'disconnected';
+  return p.band === 'lost' || p.band === 'leadoff' || p.lowBattery || p.presenceState === 'disconnected' || isMeasureNotStarted(p);
 }
 
 export interface HostEntrySummary {
@@ -466,7 +490,7 @@ function deriveBanner(input: HostCaseInput): HostBanner | null {
 export function deriveHostCase(input: HostCaseInput): HostCase {
   const list = input.participants;
   const online = input.loc === 'online';
-  const allOff = list.length > 0 && list.every((p) => p.band === 'off');
+  const allOff = list.length > 0 && list.every((p) => p.band === 'off' && !isMeasureNotStarted(p));
   const joinedList = list.filter((p) => p.presenceState === 'connected');
   const chips: HostChip[] = [];
 

@@ -23,7 +23,12 @@ function deviceStatusOf(row: MemberRow): DeviceStatus {
 const num = (m: { value: number | null; validity: string } | undefined): number | null =>
   m && m.validity === 'valid' && m.value != null ? m.value : null;
 
-type PresenceFields = { entered_at?: string | null; checkin_state?: 'completed' | 'not_completed' | 'unknown' };
+type PresenceFields = {
+  entered_at?: string | null;
+  checkin_state?: 'completed' | 'not_completed' | 'unknown';
+  measure_not_started?: boolean;
+  measure_not_started_since?: string | null;
+};
 
 /** 접속은 v2 participation.connected 가 출처. 체크인은 신원 행(REST)값 → 없으면 v2 waiting.ready. 입장 시각은 신원 행. */
 function presenceOf(state: LiveState, pid: string, legacy: PresenceFields | undefined) {
@@ -36,7 +41,14 @@ function presenceOf(state: LiveState, pid: string, legacy: PresenceFields | unde
   const checkin_state = legacy?.checkin_state && legacy.checkin_state !== 'unknown'
     ? legacy.checkin_state
     : waitingReady === true ? 'completed' : waitingReady === false ? 'not_completed' : 'unknown';
-  return { presence_state, checkin_state, entered_at: legacy?.entered_at ?? null } as const;
+  // SDD-334: 측정 미시작은 서버 판정(REST 행)을 그대로 전달한다. 데이터 수신 여부는 화면 모델이 last_eeg_at 으로 즉시 덮는다.
+  return {
+    presence_state,
+    checkin_state,
+    entered_at: legacy?.entered_at ?? null,
+    measure_not_started: legacy?.measure_not_started === true,
+    measure_not_started_since: legacy?.measure_not_started_since ?? null,
+  } as const;
 }
 
 export function toSessionLiveMetrics(state: LiveState, opts: LegacyAdapterOptions): SessionLiveMetric[] {
