@@ -39,6 +39,8 @@ export interface MemberDeviceModel {
   pendingCount: number;
   /** SDD-331: 끊긴 지 120초가 넘도록 못 붙었다 — 기기 시트·빈 카드에 "밴드 버튼을 한 번 눌러 깨워 주세요"를 보인다 */
   wakeHint?: boolean;
+  /** SDD-333: 기기 블루투스가 꺼져 있다 — 깨우기 안내보다 우선해 "블루투스가 꺼져 있어요" + 켜기 버튼을 보인다 */
+  bluetoothOff?: boolean;
 }
 
 export interface MemberSoundModel {
