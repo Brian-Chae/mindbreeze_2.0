@@ -1,6 +1,6 @@
 // SDD-208 H3 — 1:1 큰 회원 카드와 참가자 상세 시트가 함께 쓰는 조각: 6지표 격자 · 5분 추이 · 체크인 응답 · 밴드 안내.
 import type { CSSProperties } from 'react';
-import { hostValueOf, metricFraction, trendDelta, type HostParticipant } from '../../../../lib/class/host-player-case';
+import { MEASURE_NOT_STARTED_GUIDE, hostValueOf, isMeasureNotStarted, measureNotStartedLabel, metricFraction, trendDelta, type HostParticipant } from '../../../../lib/class/host-player-case';
 import { PLAYER_METRICS, type PlayerMetric } from '../../../../lib/class/player-case';
 import { StatusRing } from '../shared/StatusRing';
 import './host-player.css';
@@ -13,7 +13,7 @@ export function HostMinis({ participant, selected }: { participant: HostParticip
       {PLAYER_METRICS.map((m) => {
         const value = hostValueOf(participant, m.key);
         const live = value !== null;
-        const tone = participant.band === 'off' ? 'idle' : 'lost';
+        const tone = participant.band === 'off' && !isMeasureNotStarted(participant) ? 'idle' : 'lost';
         return (
           <div key={m.key} className="hp-mini" data-pz="mini" data-sel={m.key === selected ? 'true' : undefined} style={mcol(m)}>
             <StatusRing
@@ -62,7 +62,9 @@ export function HostTrendCard({ participant, metric, points }: { participant: Ho
       </div>
     );
   }
-  const message = participant.band === 'lost'
+  const message = isMeasureNotStarted(participant)
+    ? `${measureNotStartedLabel(participant)}. ${MEASURE_NOT_STARTED_GUIDE}.`
+    : participant.band === 'lost'
     ? `LINK BAND 연결이 ${participant.agoLabel ?? '방금 전'}부터 끊겼어요. 다시 연결되면 지표가 이어서 표시돼요.`
     : participant.band === 'leadoff'
       ? '접촉이 불안정해요. 밴드를 이마에 밀착하도록 안내해 주세요.'
