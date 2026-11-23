@@ -130,6 +130,7 @@ export function memberCaseViewProps(id: string, ctx?: Partial<Pick<PlayerCaseCon
       isMock: false,
       pendingCount: input.net === 'down' ? 12 : 0,
       wakeHint: ctx?.params?.get('wake') === '1',
+      bluetoothOff: ctx?.params?.get('btoff') === '1',
     },
     sound: { speakerOn: input.place !== 'offline', trackTitle: '고요한 숲의 아침', volume: 0.6, blocked: false, onsiteLabel: '고요한 숲의 아침' },
     chat: { enabled: true, authenticated: true, unread: 2, node: createElement(MemberChatDemo) },

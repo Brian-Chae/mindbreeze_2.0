@@ -8,6 +8,10 @@ interface AppSettingsPlugin {
   isIgnoringBatteryOptimizations(): Promise<{ ignoring: boolean }>;
   requestIgnoreBatteryOptimizations(): Promise<void>;
   openBatterySettings(): Promise<void>;
+  /** SDD-333: enabled=null 이면 알 수 없음(권한 전 iOS·어댑터 없음) */
+  isBluetoothEnabled(): Promise<{ enabled: boolean | null }>;
+  requestEnableBluetooth(): Promise<{ mode: 'already_on' | 'system_dialog' | 'settings' | 'power_alert' }>;
+  openBluetoothSettings(): Promise<{ mode: 'settings' }>;
 }
 
 let plugin: AppSettingsPlugin | null = null;
@@ -68,4 +72,51 @@ export async function requestBluetoothPermission(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * SDD-333: 블루투스 전원이 켜져 있는지. 꺼짐 false / 켜짐 true / 알 수 없음(웹·구버전 앱·iOS 권한 전) null.
+ * 알 수 없으면 꺼짐 안내를 띄우지 않는다 — 거짓 경고 금지.
+ */
+export async function isBluetoothEnabled(): Promise<boolean | null> {
+  const p = native();
+  if (!p) return null;
+  try {
+    const r = await p.isBluetoothEnabled();
+    return typeof r.enabled === 'boolean' ? r.enabled : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 블루투스 켜기 요청 결과. unavailable = 구버전 앱·웹(버튼을 숨긴다). */
+export type EnableBluetoothResult = 'already_on' | 'system_dialog' | 'settings' | 'power_alert' | 'unavailable';
+
+/**
+ * 블루투스 켜기 바로가기.
+ * Android: 시스템 "블루투스 켜기" 창 → 거부·실패 시 블루투스 설정 화면. Android 12+ 권한이 없으면 권한 요청 뒤 한 번 더 시도한다.
+ * iOS: 시스템 "Bluetooth 켜기" 알림(CBCentralManagerOptionShowPowerAlertKey). 비공개 URL(App-Prefs:)은 쓰지 않는다.
+ */
+export async function requestEnableBluetooth(): Promise<EnableBluetoothResult> {
+  const p = native();
+  if (!p) return 'unavailable';
+  const run = async (): Promise<EnableBluetoothResult> => (await p.requestEnableBluetooth()).mode;
+  try {
+    return await run();
+  } catch (e) {
+    const code = (e as { code?: string; message?: string } | null);
+    if (getPlatform() === 'android' && (code?.code === 'permission' || code?.message === 'permission')) {
+      if (await requestBluetoothPermission()) {
+        try { return await run(); } catch { /* 아래 설정 화면 폴백 */ }
+      }
+      try { await p.openBluetoothSettings(); return 'settings'; } catch { return 'unavailable'; }
+    }
+    return 'unavailable';
+  }
+}
+
+/** Android 블루투스 설정 화면을 연다. Android 외·구버전은 false. */
+export function openBluetoothSettings(): Promise<boolean> {
+  if (getPlatform() !== 'android') return Promise.resolve(false);
+  return attempt((p) => p.openBluetoothSettings());
 }

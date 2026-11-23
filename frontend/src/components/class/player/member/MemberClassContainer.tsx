@@ -4,6 +4,8 @@
 // 이 파일만 useBand 를 호출한다(plan R4: BLE 연결·업로드 인스턴스는 화면당 1개).
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { shouldShowWakeHint } from '../../../../lib/ble/reconnect-policy';
+import { pickBandNotice } from '../../../../lib/native/bluetooth-notice';
+import { useBluetoothPower } from '../../../../hooks/useBluetoothPower';
 import { freshnessOf } from '../../../../lib/session-live/live-view';
 import { holdMindMetrics, type HeldMind } from '../../../../lib/session-live/hold-last-snapshot';
 import { getPlatform } from '../../../../lib/native/platform';
@@ -499,7 +501,19 @@ export function MemberClassContainer({
   // SDD-331: 끊긴(lost) 상태가 120초 넘게 이어지면 깨우기 안내를 띄운다. '깨웠어요'를 누르면 시각을 다시 잡아 안내를 접는다.
   const lostSinceRef = useRef<number | null>(null);
   if (bandUi === 'lost') { if (lostSinceRef.current === null) lostSinceRef.current = nowMs; } else lostSinceRef.current = null;
-  const wakeHint = bandUi === 'lost' && lostSinceRef.current !== null && shouldShowWakeHint(nowMs - lostSinceRef.current);
+  // SDD-333: 블루투스가 꺼져 있으면 깨우기 안내 대신 꺼짐 안내를 보인다. 켜지면 빠른 재연결 창(SDD-331)을 바로 연다.
+  const bluetoothOff = useBluetoothPower({
+    enabled: bandEnabled && !bandSkipped,
+    nativeBlocked: nd?.bluetoothOff === true,
+    onTurnedOn: () => {
+      lostSinceRef.current = Date.now();
+      void (nativeOwnsBand ? getNativeMeasurement().reconnectBand(Capacitor.getPlatform()) : band.wakeBand());
+    },
+  }) === true;
+  const wakeHint = pickBandNotice({
+    bluetoothOff,
+    wakeHint: bandUi === 'lost' && lostSinceRef.current !== null && shouldShowWakeHint(nowMs - lostSinceRef.current),
+  }) === 'wake';
   // 미지원 브라우저에서 "밴드 없이 계속"을 고르면 밴드 UI 를 접는다
   const bandVisible = bandEnabled && !(bandContinued && bandUi === 'unsupported');
 
@@ -537,6 +551,7 @@ export function MemberClassContainer({
       isMock: band.isMock,
       pendingCount: band.pendingCount,
       wakeHint,
+      bluetoothOff,
     },
     sound: {
       speakerOn,
