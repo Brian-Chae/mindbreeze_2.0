@@ -37,6 +37,7 @@ for (const key of REFS) {
         bandMode: c.bandMode === 'req' ? 'req' : 'opt',
         leadOff: stateUi in LEAD_OFF ? LEAD_OFF[stateUi as keyof typeof LEAD_OFF] : null,
         battery: 82,
+        bluetoothOff: ctx.params.get('btoff') === '1',
         steps: { total: steps.length, current: steps.indexOf('c') },
         place: c.place,
         backdropSrc: ctx.backdropSrc,

@@ -130,6 +130,8 @@ export function buildHostParticipants(count: number, def: CaseDef = {}): HostPar
       checkin: seed.ci,
       // 하니스는 실제 접속·저장 체크인 상태도 명시적으로 합성한다.
       presenceState: seed.presence ?? 'connected',
+      // 픽스처 회원은 모두 이번 회차에 입장한 상태(SDD-330 기본 보기가 입장자만 보여준다)
+      enteredAt: '2026-11-21T10:00:00+09:00',
       checkinState: seed.ci.length ? 'completed' : 'not_completed',
       attention: seed.attention ?? null,
     };
@@ -198,6 +200,13 @@ export function buildHostCaseInput(id: string, params: URLSearchParams = new URL
       ? { ...p, band: soloBandParam, values: EMPTY_HOST_VALUES, agoLabel: soloBandParam === 'lost' ? '2분 전' : null }
       : p));
   const sheetParam = params.get('sheet');
+  // 하니스 전용(SDD-330): ?notentered=N — 뒤에서 N명을 이번 회차에 입장하지 않은 회원으로 만든다.
+  const notEntered = Number.parseInt(params.get('notentered') ?? '0', 10) || 0;
+  if (!solo && notEntered > 0) {
+    participants.forEach((p, i) => {
+      if (i >= participants.length - notEntered) participants[i] = { ...p, band: 'off', values: EMPTY_HOST_VALUES, presenceState: 'unknown', enteredAt: null, agoLabel: null };
+    });
+  }
   const detailId = parseDetail(params.get('detail'));
 
   const input: HostCaseInput = {

@@ -266,6 +266,12 @@ class SessionBandDevice(Base):
     serial: Mapped[str] = mapped_column(String(64), nullable=False)
     firmware: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     platform: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    # SDD-332: 측정에 쓴 앱 빌드·기기 정보(구버전 앱은 미보고 → NULL)
+    app_version: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    app_build: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    os_name: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    os_version: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    device_model: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 

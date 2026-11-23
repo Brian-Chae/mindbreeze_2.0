@@ -1,6 +1,7 @@
 // SDD-209 M4 — FM06c 연결 컨테이너. 이 단계에 있는 동안만 관찰용 useBand 를 쓰고, 떠나면 훅이 정리된다(BLE 연결은 전역이라 유지).
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useBandStep } from '../../../../hooks/useBandStep';
+import { useBluetoothPower } from '../../../../hooks/useBluetoothPower';
 import { bandOutcomeOf, type BandOutcome } from '../../../../lib/class/flow/member-prep';
 import type { BandSnapshot } from '../../../../lib/class/flow/member-presence';
 import type { MemberFlowSteps } from './MemberFlowFrame';
@@ -36,6 +37,8 @@ export function BandStepContainer({ onDone, onBandChange, onEegChoice, autoAdvan
   const [eegSaving, setEegSaving] = useState(false);
   const [eegError, setEegError] = useState<string | null>(null);
   const band = useBandStep(eegChoice === 'agreed');
+  // SDD-333: 블루투스가 꺼졌다 켜지면 연결을 바로 다시 시도한다
+  const bluetoothOff = useBluetoothPower({ enabled: eegChoice === 'agreed', onTurnedOn: () => { if (band.state !== 'connected') void band.connect(); } });
   const leadCh1 = band.leadOff?.ch1;
   const leadCh2 = band.leadOff?.ch2;
   useEffect(() => {
@@ -81,6 +84,7 @@ export function BandStepContainer({ onDone, onBandChange, onEegChoice, autoAdvan
     <BandStepView
       {...rest}
       state={band.state}
+      bluetoothOff={bluetoothOff}
       leadOff={band.leadOff}
       battery={band.battery}
       onConnect={() => void band.connect()}

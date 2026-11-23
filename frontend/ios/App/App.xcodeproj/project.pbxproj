@@ -24,6 +24,7 @@
         A23000000000000000000012 /* NativeMeasurementPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A23000000000000000000002; };
         A23000000000000000000013 /* MBBridgeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A23000000000000000000003; };
 		A25000000000000000000011 /* AudioCaptureEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A25000000000000000000001; };
+		A33000000000000000000012 /* AppSettingsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A33000000000000000000002; };
 		A25000000000000000000012 /* NativeAudioRecorderPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A25000000000000000000002; };
 		A25000000000000000000032 /* AudioRecorderKit in Frameworks */ = {isa = PBXBuildFile; productRef = A25000000000000000000031 /* AudioRecorderKit */; };
         A23000000000000000000032 /* MeasurementKit in Frameworks */ = {isa = PBXBuildFile; productRef = A23000000000000000000031 /* MeasurementKit */; };
@@ -45,6 +46,7 @@
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		A25000000000000000000001 /* AudioCaptureEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCaptureEngine.swift; sourceTree = "<group>"; };
+		A33000000000000000000002 /* AppSettingsPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettingsPlugin.swift; sourceTree = "<group>"; };
 		A25000000000000000000002 /* NativeAudioRecorderPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAudioRecorderPlugin.swift; sourceTree = "<group>"; };
         A23000000000000000000001 /* MeasurementHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeasurementHost.swift; sourceTree = "<group>"; };
         A23000000000000000000002 /* NativeMeasurementPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMeasurementPlugin.swift; sourceTree = "<group>"; };
@@ -68,6 +70,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		A33000000000000000000020 /* AppSettings */ = {
+			isa = PBXGroup;
+			children = (
+				A33000000000000000000002 /* AppSettingsPlugin.swift */,
+			);
+			path = AppSettings;
+			sourceTree = "<group>";
+		};
 		A25000000000000000000020 /* AudioRecorder */ = {
 			isa = PBXGroup;
 			children = (
@@ -114,6 +124,7 @@
 				A24000000000000000000001 /* AudioSessionConfig.swift */,
 				A23000000000000000000020 /* Measurement */,
 			A25000000000000000000020 /* AudioRecorder */,
+				A33000000000000000000020 /* AppSettings */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				A1B2C3D4E5F60718293A4B5C /* GoogleService-Info.plist */,
@@ -225,6 +236,7 @@
 				A23000000000000000000013 /* MBBridgeViewController.swift in Sources */,
 			A25000000000000000000011 /* AudioCaptureEngine.swift in Sources */,
 			A25000000000000000000012 /* NativeAudioRecorderPlugin.swift in Sources */,
+				A33000000000000000000012 /* AppSettingsPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

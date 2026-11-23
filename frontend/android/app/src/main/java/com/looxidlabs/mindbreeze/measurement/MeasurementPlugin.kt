@@ -74,6 +74,18 @@ class MeasurementPlugin : Plugin() {
         netCb?.let { try { (context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager).unregisterNetworkCallback(it) } catch (_: Exception) { } }
     }
 
+    /**
+     * SDD-333: 블루투스 어댑터가 꺼져 있으면 snapshot 의 blocked_reason 을 'bluetooth_off' 로 알린다(회원 화면이 꺼짐 안내를 우선 보이도록).
+     * 다른 이유가 이미 있으면 그대로 둔다. 어댑터를 읽지 못하면 원래 값.
+     */
+    private fun effectiveBlockedReason(current: String?): String? {
+        if (current != null) return current
+        return try {
+            val adapter = (context.getSystemService(android.content.Context.BLUETOOTH_SERVICE) as? android.bluetooth.BluetoothManager)?.adapter
+            if (adapter != null && !adapter.isEnabled) "bluetooth_off" else null
+        } catch (_: Exception) { null }
+    }
+
     private fun startEmit() { if (!emitting) { emitting = true; ui.postDelayed(emitTask, 1000) } }
 
     private fun json(o: JSONObject): JSObject = JSObject(o.toString())
@@ -158,6 +170,18 @@ class MeasurementPlugin : Plugin() {
         MeasurementManager.holdBand(context, address) { ok -> call.resolve(JSObject().put("accepted", ok).put("band_state", if (ok) "connected" else "connecting")) }
     }
 
+    /**
+     * SDD-331: 화면의 '다시 연결'/'깨웠어요'. 수집 중일 때만 — 밴드 링크의 빠른 재시도 창(120초·2~3초 간격)을 다시 열고 즉시 새로 연결한다.
+     * iOS `reconnectBand` 와 같은 응답({accepted, band_state}). 수집 전·밴드 없음은 not_active.
+     */
+    @PluginMethod
+    fun reconnectBand(call: PluginCall) {
+        val band = MeasurementManager.activeBand
+        if (MeasurementManager.engine == null || band == null) { call.reject("not_active", "not_active"); return }
+        band.reconnectNow()
+        call.resolve(JSObject().put("accepted", true).put("band_state", "reconnecting"))
+    }
+
     /** SDD-293: 보류 해제(클래스 시작 없이 대기실을 떠남). 수집 중이면 무시하고 정지는 stopMeasurement 가 한다. */
     @PluginMethod
     fun releaseBand(call: PluginCall) {
@@ -232,7 +256,7 @@ class MeasurementPlugin : Plugin() {
         o.put("batteryOptimization", json(BatteryPolicy.read(context)))
         if (rt != null) o.put("liveQuarantined", rt.box.quarantined())
         if (rt != null) o.put("uploadCounts", json(rt.uploadCounts()))
-        if (rt != null) o.put("bridge", json(BridgeModel.snapshot(rt.inputs(MeasurementManager.state.name, MeasurementManager.blockedReason))))
+        if (rt != null) o.put("bridge", json(BridgeModel.snapshot(rt.inputs(MeasurementManager.state.name, effectiveBlockedReason(MeasurementManager.blockedReason)))))
         call.resolve(o)
     }
 
@@ -300,7 +324,7 @@ class MeasurementPlugin : Plugin() {
         fun send(name: String, payload: JSONObject) {
             notifyListeners(name, JSObject(BridgeModel.event(name, gen, rt.sequencer.next(), now, payload).toString()))
         }
-        val st = MeasurementManager.state.name; val br = MeasurementManager.blockedReason
+        val st = MeasurementManager.state.name; val br = effectiveBlockedReason(MeasurementManager.blockedReason)
         val acks = ArrayList<JSONObject>(); rt.live.acks.drainTo(acks)
         for (a in acks) send("commandAck", a)
         val evs = ArrayList<JSONObject>(); rt.live.events.drainTo(evs)

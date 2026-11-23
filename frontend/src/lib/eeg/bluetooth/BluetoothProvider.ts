@@ -39,6 +39,12 @@ export interface BluetoothProvider {
   /** 디바이스 검색 및 선택 */
   requestDevice(options?: RequestDeviceOptions): Promise<BluetoothDeviceInfo>;
 
+  /**
+   * SDD-331: 연결 팝업 없이 스캔해 저장된 밴드(이름 우선, 없으면 ID)를 다시 찾는다. 네이티브 전용 — 웹은 구현하지 않는다.
+   * 제한 시간 안에 못 찾으면 null.
+   */
+  rediscoverDevice?(options: { name: string | null; deviceId: string | null; services: string[]; timeoutMs?: number }): Promise<BluetoothDeviceInfo | null>;
+
   /** 디바이스 연결 */
   connect(deviceId: string): Promise<void>;
 

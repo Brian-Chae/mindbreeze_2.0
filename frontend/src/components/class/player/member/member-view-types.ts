@@ -37,6 +37,10 @@ export interface MemberDeviceModel {
   isMock: boolean;
   /** 서버로 아직 못 보낸 밴드 데이터 수 — 0보다 크면 네트워크 끊김 카드에 "보관 중" 문구를 보여 준다 */
   pendingCount: number;
+  /** SDD-331: 끊긴 지 120초가 넘도록 못 붙었다 — 기기 시트·빈 카드에 "밴드 버튼을 한 번 눌러 깨워 주세요"를 보인다 */
+  wakeHint?: boolean;
+  /** SDD-333: 기기 블루투스가 꺼져 있다 — 깨우기 안내보다 우선해 "블루투스가 꺼져 있어요" + 켜기 버튼을 보인다 */
+  bluetoothOff?: boolean;
 }
 
 export interface MemberSoundModel {
@@ -79,6 +83,8 @@ export interface MemberViewActions {
   onBandDisconnect: () => void;
   onBandCancel: () => void;
   onBandRetry: () => void;
+  /** SDD-331: 깨우기 안내의 [깨웠어요] — 빠른 재시도 창을 다시 열고 스캔으로 같은 밴드를 다시 찾는다. 없으면 [수동으로 다시 연결]과 같다 */
+  onBandWake?: () => void;
   onBandContinue: () => void;
   /** 접촉 불량 시트의 [접촉 다시 확인] — 안내를 접고 측정이 이어지길 기다린다 */
   onBandRecheck: () => void;

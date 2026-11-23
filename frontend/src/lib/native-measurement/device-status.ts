@@ -8,6 +8,8 @@ export interface NativeDeviceState {
   deviceStatus: DeviceStatus;
   /** band_state==='connected' */
   connected: boolean;
+  /** SDD-333: 네이티브가 블루투스 꺼짐을 알렸다(blocked_reason === 'bluetooth_off') */
+  bluetoothOff: boolean;
 }
 
 /** 접촉: 한쪽이라도 leadoff → lead_off, 둘 다 contact → ok, 그 외(미보고 포함)는 unknown — ok 로 승격하지 않는다. */
@@ -23,6 +25,7 @@ export function toNativeDevice(s: MeasurementSnapshot): NativeDeviceState {
     signalQualityLevel: signalQualityLevel(m?.sqi ?? null),
     deviceStatus,
     connected: s.collection?.band_state === 'connected',
+    bluetoothOff: s.blocked_reason === 'bluetooth_off',
   };
 }
 

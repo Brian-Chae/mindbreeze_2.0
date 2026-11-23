@@ -8,6 +8,8 @@ public protocol BandControlling: AnyObject {
     var delegate: BandLinkDelegate? { get set }
     func connect(expectedPeripheral: UUID?)
     func disconnect()
+    /// SDD-331: 빠른 재시도 창을 다시 열고 즉시 재연결.
+    func restartFastWindow()
     /// SDD-293: 보류 연결(구독 없음). 준비되면 onHoldReady.
     func hold(expectedPeripheral: UUID?)
     var onHoldReady: (() -> Void)? { get set }
@@ -255,8 +257,8 @@ public final class MeasurementManager: BandLinkDelegate {
         lock.lock(); defer { lock.unlock() }
         guard state == .arming || state == .capturing || state == .reconnecting else { throw ManagerError.notActive }
         Self.log.info("밴드 재연결 요청 band_state=\(self.bandState, privacy: .public) state=\(self.state.rawValue, privacy: .public)")
-        band.disconnect()
-        band.connect(expectedPeripheral: peripheralId)
+        // SDD-331: 끊었다 붙이지 않고 빠른 재시도 창(120초·2~3초 간격)을 다시 열어 즉시 새로 연결한다.
+        band.restartFastWindow()
         return ["accepted": true, "band_state": bandState, "state": state.rawValue]
     }
 

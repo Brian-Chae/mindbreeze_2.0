@@ -8,6 +8,7 @@
 """
 
 import logging
+import os
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -781,9 +782,16 @@ def _attach_member_report(content: dict, previous_content: dict, report: Report,
         return
     prev = previous_content.get("member_report") if isinstance(previous_content, dict) else None
     try:
-        from app.services import member_report_builder
+        # SDD-328: 기본은 v2(범용·실측 기반·AI 없음). 환경 변수 MEMBER_REPORT_SCHEMA=v1 이면 v1 로 되돌린다(롤백용).
+        if os.environ.get("MEMBER_REPORT_SCHEMA", "v2").strip().lower() == "v1":
+            from app.services import member_report_builder
 
-        content["member_report"] = member_report_builder.build_member_report(db, session.id, report.participant_id)
+            content["member_report"] = member_report_builder.build_member_report(db, session.id, report.participant_id)
+        else:
+            from app.services import member_report_v2_builder
+
+            content["member_report"] = member_report_v2_builder.build_member_report_v2(
+                db, session.id, report.participant_id)
     except Exception:  # noqa: BLE001 — member_report 실패가 리포트 저장을 막지 않는다.
         logger.exception("[report_task] member_report 생성 실패: report_id=%s", report.id)
         if isinstance(prev, dict):

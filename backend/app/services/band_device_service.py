@@ -52,6 +52,14 @@ def _iso(dt: datetime | None) -> str | None:
     return dt.isoformat() if dt else None
 
 
+def _app_info(payload: BandDeviceReportRequest) -> dict[str, str | None]:
+    """SDD-332: 앱 빌드·OS·기기 모델 필드(없으면 None)."""
+    return {
+        "app_version": payload.app_version, "app_build": payload.app_build,
+        "os_name": payload.os_name, "os_version": payload.os_version, "device_model": payload.device_model,
+    }
+
+
 def report_band_device(
     session_id: str, payload: BandDeviceReportRequest, db: DBSession,
     *, entry_credential: str | None, current_user_id: str | None,
@@ -78,6 +86,7 @@ def report_band_device(
                 db.add(SessionBandDevice(
                     id=uuid.uuid4(), session_id=sid, participant_id=participant.id, serial=serial,
                     firmware=payload.firmware, platform=payload.platform, first_seen_at=now, last_seen_at=now,
+                    **_app_info(payload),
                 ))
         except IntegrityError:  # 동시 보고 경합 — UNIQUE 가 1행을 보장, 상대 행을 갱신
             row = (
@@ -90,6 +99,9 @@ def report_band_device(
         row.platform = payload.platform
         if payload.firmware:
             row.firmware = payload.firmware
+        for k, v in _app_info(payload).items():  # 값이 있을 때만 갱신(구버전 앱 재보고가 기존 값을 지우지 않는다)
+            if v:
+                setattr(row, k, v)
     participant.linkband_device_id = serial
     db.commit()
     logger.info("[band-device] session=%s participant=%s serial=%s platform=%s",
@@ -161,6 +173,8 @@ def band_device_usage(db: DBSession, actor: dict, serial: str) -> BandDeviceUsag
             participant_id=str(dev.participant_id),
             display_name=(r.uname or r.guest_name or None) if r.user_id else (r.guest_name or None),
             firmware=dev.firmware, platform=dev.platform,
+            app_version=dev.app_version, app_build=dev.app_build, os_name=dev.os_name,
+            os_version=dev.os_version, device_model=dev.device_model,
             first_seen_at=_iso(dev.first_seen_at) or "", last_seen_at=_iso(dev.last_seen_at) or "",
             is_current=(r.linkband_device_id == dev.serial),
             stream_count=int(r.n or 0), superseded_count=int(r.sup or 0),

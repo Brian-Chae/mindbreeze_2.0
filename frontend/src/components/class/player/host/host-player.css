@@ -541,3 +541,10 @@
 .hp-cap__msg { margin: 0; min-height: 1.2em; font-size: var(--fs-12); color: var(--tx-mid); }
 .hp-cap__msg[data-tone="coral"] { color: var(--mb-coral); }
 .hp-cap .hp-btn[type="submit"] { align-self: stretch; }
+
+/* SDD-330: 입장 N명 · 이상 M명 요약 */
+.hp-entry { flex: none; display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; font-size: 15px; font-weight: 600; }
+.hp-entry__btn, .hp-entry__all { min-height: 44px; padding: 0 10px; border-radius: 999px; font: inherit; color: inherit; background: transparent; }
+.hp-entry__btn[aria-pressed="true"], .hp-entry__all[aria-pressed="true"] { background: rgba(255, 255, 255, 0.16); }
+.hp-entry__btn[data-alert="true"] b { color: var(--mb-coral, #ff8a7a); }
+.hp-entry__all { font-size: 14px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }

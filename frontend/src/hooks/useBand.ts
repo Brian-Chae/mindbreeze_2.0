@@ -21,6 +21,7 @@ import {
 import { tokenStorage } from '../lib/api/client';
 import { postEntryFeatures, putBandDevice } from '../lib/api/class-flow';
 import { maskSerial, reportBandDevice } from '../lib/band/band-device-report';
+import { getAppBuildInfo } from '../lib/native/app-build-info';
 import { AnalysisMetricsService } from '../lib/eeg/AnalysisMetricsService';
 import { bluetoothService } from '../lib/eeg/bluetoothService';
 import { mockDataGenerator } from '../lib/eeg/mockDataGenerator';
@@ -29,7 +30,7 @@ import type { BandPowers, LeadOffStatus } from '../lib/eeg/types/eeg';
 import type { EEGAnalysisMetrics } from '../lib/eeg/types/processed-data';
 import { createLogger } from '../lib/eeg/logger';
 import { bleGapLog } from '../lib/eeg/ble-gap-log';
-import { nextReconnectDelay } from '../lib/ble/reconnect-policy';
+import { ATTEMPT_TIMEOUT_MS, nextRetryDelay, reconnectPhase, shouldScanFallback, withAttemptTimeout } from '../lib/ble/reconnect-policy';
 import { RESUME_ORDER } from '../lib/native/app-lifecycle';
 import { getPlatform, isNativeApp } from '../lib/native/platform';
 import { PAUSE_ORDER, useAppLifecycle } from './useAppResume';
@@ -217,6 +218,8 @@ export interface UseBandResult {
   connectionState: BandConnectionState;
   /** 예기치 않은 끊김 후 자동 재연결 루프가 돌고 있는지 — true 면 UI 가 '연결 취소'를 노출한다 */
   isReconnecting: boolean;
+  /** SDD-331: 밴드를 깨운 뒤 누르는 '깨웠어요' — 빠른 재시도 창을 다시 열고 스캔으로 같은 밴드를 다시 찾는다 */
+  wakeBand: () => void;
   battery: number | null;
   /** SDK 스케일 0~100 */
   signalQuality: number | null;
@@ -472,6 +475,11 @@ export function useBand({
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** SDD-222: 자동 재연결 시도 횟수(백오프 단계). 연결 성공 시 0 으로 리셋 */
   const reconnectAttemptRef = useRef(0);
+  // SDD-331: 끊긴 시각(빠른 재시도 창 기준)·느린 단계 시도 횟수·직접 연결 연속 실패 수·스캔 강제 플래그
+  const gapStartRef = useRef<number | null>(null);
+  const slowAttemptRef = useRef(0);
+  const directFailRef = useRef(0);
+  const forceScanRef = useRef(false);
   /** SDD-222: 끊김 구간 로그가 열려 있는지 — 밴드를 쓰지 않는 회원은 로그 코드가 호출되지 않는다 */
   const gapOpenRef = useRef(false);
   /** 재시도 타이머가 최신 connect 를 호출하도록 하는 ref (stale closure 방지) */
@@ -1241,6 +1249,10 @@ export function useBand({
     // 수동 해제 시 자동 재연결 중단 — 예기치 않은 끊김(gattserverdisconnected)만 자동 재연결한다.
     autoReconnectRef.current = false;
     reconnectAttemptRef.current = 0;
+    gapStartRef.current = null;
+    slowAttemptRef.current = 0;
+    directFailRef.current = 0;
+    forceScanRef.current = false;
     // 취소·해제 시 진행 중이던(멈춘) 연결 시도가 새 연결을 막지 않게 플래그를 즉시 푼다.
     bandConnectInFlight = false;
     bandConnectToken = null;
@@ -1311,7 +1323,10 @@ export function useBand({
     // 네이티브 측정에 밴드를 넘긴 동안에는 JS 가 같은 밴드를 다시 잡지 않는다(끊었다 붙이는 반복·중복 연결 방지).
     if (bluetoothService.isReleasedForNative()) return;
     if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-    const delay = nextReconnectDelay(reconnectAttemptRef.current);
+    // SDD-331: 끊긴 뒤 120초는 2~3초 고정 간격(밴드 sleep 전에 붙기), 이후 느린 백오프
+    const elapsed = gapStartRef.current === null ? 0 : Date.now() - gapStartRef.current;
+    const delay = nextRetryDelay(elapsed, slowAttemptRef.current);
+    if (reconnectPhase(elapsed) === 'slow') slowAttemptRef.current += 1;
     reconnectAttemptRef.current += 1;
     reconnectTimerRef.current = setTimeout(() => {
       reconnectTimerRef.current = null;
@@ -1373,6 +1388,13 @@ export function useBand({
         const cachedId = bluetoothService.getCachedDeviceId();
         if (cachedId) {
           selectedDeviceId = cachedId;
+          // SDD-331: 느린 단계에서 직접 연결이 연속 실패하거나 '깨웠어요'를 누르면 서비스 UUID 스캔으로 같은 밴드를 다시 찾는다.
+          const elapsed = gapStartRef.current === null ? 0 : Date.now() - gapStartRef.current;
+          if (isAuto && !isMock && (forceScanRef.current || shouldScanFallback(elapsed, directFailRef.current))) {
+            forceScanRef.current = false;
+            const rediscovered = await bluetoothService.rediscoverBand();
+            if (rediscovered) selectedDeviceId = rediscovered;
+          }
         } else {
           const devices = await bluetoothService.scan();
           if (devices.length === 0) {
@@ -1385,7 +1407,12 @@ export function useBand({
       // 사용자가 시작한 기기 선택은 화면 전환 뒤 완료될 수 있다. 물리 연결만 완료해
       // 다음 소유자가 이어받게 하고, 이전 훅의 스트림·타이머는 만들지 않는다.
       if (!autoReconnectRef.current) return;
-      if (!isMock && !alreadyConnected) await bluetoothService.connect(selectedDeviceId!);
+      if (!isMock && !alreadyConnected) {
+        const connecting = bluetoothService.connect(selectedDeviceId!);
+        // SDD-331: 자동 재시도는 시도당 10초 — 넘으면 멈춘 연결을 끊고 실패로 처리해 진행 중 플래그를 풀고 다음 시도로 넘어간다.
+        if (isAuto) await withAttemptTimeout(connecting, ATTEMPT_TIMEOUT_MS, () => { void bluetoothService.abortConnectAttempt(); });
+        else await connecting;
+      }
       if (!ownsAttempt()) return;
 
       if (observationOnly) {
@@ -1525,12 +1552,19 @@ export function useBand({
             bleGapLog.open('connection-lost');
           }
           reconnectAttemptRef.current = 0;
+          gapStartRef.current = Date.now();
+          slowAttemptRef.current = 0;
+          directFailRef.current = 0;
           setIsReconnecting(true);
           scheduleReconnect();
         }
       });
 
       reconnectAttemptRef.current = 0;
+      gapStartRef.current = null;
+      slowAttemptRef.current = 0;
+      directFailRef.current = 0;
+      forceScanRef.current = false;
       if (gapOpenRef.current) {
         gapOpenRef.current = false;
         bleGapLog.close();
@@ -1551,6 +1585,7 @@ export function useBand({
           streamRef.current = null;
         }
         if (!observationOnlyRef.current) flushRawChunk();
+        directFailRef.current += 1;
         setConnectionState('disconnected');
         setError('LINK BAND 연결이 끊어졌습니다 — 자동 재연결 시도 중');
         setIsReconnecting(true);
@@ -1603,6 +1638,24 @@ export function useBand({
 
   const connect = useCallback(() => connectInternal(false), [connectInternal]);
 
+  /**
+   * SDD-331: '깨웠어요' — 밴드 버튼을 눌러 깨운 뒤 호출. 빠른 재시도 창을 다시 열고 첫 시도는 스캔으로 같은 밴드를 다시 찾는다.
+   * 저장된 밴드가 없으면(연결한 적 없음) 일반 연결로 대신한다.
+   */
+  const wakeBand = useCallback(() => {
+    if (!mountedRef.current) return;
+    if (!bluetoothService.getCachedDeviceId()) { void connectInternal(false); return; }
+    autoReconnectRef.current = true;
+    if (reconnectTimerRef.current) { clearTimeout(reconnectTimerRef.current); reconnectTimerRef.current = null; }
+    gapStartRef.current = Date.now();
+    slowAttemptRef.current = 0;
+    directFailRef.current = 0;
+    reconnectAttemptRef.current = 0;
+    forceScanRef.current = true;
+    setIsReconnecting(true);
+    void autoConnectRef.current();
+  }, [connectInternal]);
+
   // SDD-326: 연결된 밴드의 시리얼(+펌웨어)을 회차에 보고한다. 부가 기능 — 실패는 무시하고 측정 흐름을 막지 않으며,
   // 같은 값 재연결은 band-device-report 가 중복 전송을 막는다. 밴드 없이 입장·플레이그라운드·예시 모드는 아무 것도 안 한다.
   useEffect(() => {
@@ -1610,10 +1663,10 @@ export function useBand({
     const report = (): void => {
       const identity = bluetoothService.getBandIdentity();
       if (!identity) return;
-      void reportBandDevice(
-        { sessionId, credential: entryCredentialRef.current, identity, platform: getPlatform() },
+      void getAppBuildInfo().then((appInfo) => reportBandDevice(
+        { sessionId, credential: entryCredentialRef.current, identity, platform: getPlatform(), appInfo },
         { put: putBandDevice },
-      ).then((sent) => { if (sent) logger.info('밴드 시리얼 보고', maskSerial(identity.serial)); });
+      )).then((sent) => { if (sent) logger.info('밴드 시리얼 보고', maskSerial(identity.serial)); });
     };
     report();
     // 펌웨어는 연결 직후 비동기로 읽히므로 한 번 더 확인한다(같은 값이면 보내지 않는다).
@@ -1919,6 +1972,7 @@ export function useBand({
     isMock,
     connectionState,
     isReconnecting,
+    wakeBand,
     battery,
     signalQuality,
     signalQualityLevel: sqLevel,

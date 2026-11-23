@@ -1,6 +1,8 @@
 import { displayedInteger } from '../../../../lib/biosignal/display-snapshot';
 import { isNativeApp } from '../../../../lib/native/platform';
 import { PermissionGuide } from '../../../native/permission-guide';
+import { PermissionShortcuts } from '../../../native/permission-shortcuts';
+import { BluetoothOffShortcuts } from '../../../native/bluetooth-off-shortcuts';
 // SDD-208 M3 — 회원 시트 본문 5종: 내 상태 · 채팅 · 조용한 신호 · 소리 · 기기. 시트 틀(PlayerSheet)은 공용이고 여기는 안쪽만 그린다.
 // 모든 문구는 시안 member.html 원문. D3: 소리 시트에 BGM 행을 두지 않는다(진행 중 BGM 무재생 정책).
 import type { CSSProperties, ReactNode } from 'react';
@@ -231,6 +233,18 @@ function DeviceSheet({ props }: { props: MemberClassViewProps }) {
   const note = (message: string): ReactNode => <p className="mp-note">{message}</p>;
   const errorLine = device.error ? <p className="mp-band-error" role="alert">{device.error}</p> : null;
 
+  // SDD-333: 블루투스가 꺼져 있으면(연결이 살아 있지 않을 때) 깨우기·끊김 안내보다 먼저 꺼짐 안내
+  if (device.bluetoothOff && input.band !== 'on' && input.band !== 'weak' && input.band !== 'low') {
+    return (
+      <>
+        <DevTop icon="bluetooth" title="블루투스가 꺼져 있어요" sub="블루투스를 켜면 밴드를 다시 찾아요" coral />
+        {note('끊긴 동안 측정된 값은 이 기기에 보관돼요. 켜면 이어서 기록해요.')}
+        <BluetoothOffShortcuts />
+        <button type="button" className="mp-pill mp-pill--block" onClick={actions.onBandContinue}>밴드 없이 계속</button>
+      </>
+    );
+  }
+
   if (input.band === 'on' || input.band === 'weak' || input.band === 'low') {
     const sub =
       input.band === 'on'
@@ -307,6 +321,17 @@ function DeviceSheet({ props }: { props: MemberClassViewProps }) {
     );
   }
 
+  if (input.band === 'lost' && device.wakeHint) {
+    return (
+      <>
+        <DevTop icon="wifiOff" title="밴드가 잠들었을 수 있어요" sub="밴드 버튼을 한 번 눌러 깨워 주세요" coral />
+        {note('깨운 뒤 아래 버튼을 누르면 바로 다시 찾아볼게요. 끊긴 동안 측정된 값은 이 기기에 보관돼요.')}
+        {errorLine}
+        <button type="button" className="mp-pill mp-pill--primary mp-pill--block" onClick={actions.onBandWake ?? actions.onBandRetry}>깨웠어요</button>
+      </>
+    );
+  }
+
   if (input.band === 'lost') {
     return (
       <>
@@ -321,8 +346,9 @@ function DeviceSheet({ props }: { props: MemberClassViewProps }) {
   if (input.band === 'unsupported') {
     return (
       <>
-        <DevTop icon="info" title={isNativeApp() ? "Bluetooth 권한을 확인해 주세요" : "이 브라우저에서는 연결이 안 돼요"} sub={isNativeApp() ? "기기 설정에서 Bluetooth와 앱 권한을 허용해 주세요" : "Safari·Firefox는 밴드 연결을 지원하지 않아요"} />
-        {note(isNativeApp() ? '기기 설정에서 권한을 확인해 주세요. 밴드 없이도 수업에 참여할 수 있어요.' : 'Chrome 또는 Edge로 열면 연결할 수 있어요. 지금은 밴드 없이도 수업에 참여할 수 있어요.')}
+        <DevTop icon="info" title={isNativeApp() ? "Bluetooth 권한을 확인해 주세요" : "이 브라우저에서는 연결이 안 돼요"} sub={isNativeApp() ? "Bluetooth와 앱 권한을 허용해 주세요" : "Safari·Firefox는 밴드 연결을 지원하지 않아요"} />
+        {note(isNativeApp() ? '아래 버튼으로 바로 허용하거나 설정을 열 수 있어요. 밴드 없이도 수업에 참여할 수 있어요.' : 'Chrome 또는 Edge로 열면 연결할 수 있어요. 지금은 밴드 없이도 수업에 참여할 수 있어요.')}
+        <PermissionShortcuts onRequested={actions.onBandConnect} />
         <button type="button" className="mp-pill mp-pill--block" onClick={actions.onBandContinue}>밴드 없이 계속</button>
       </>
     );

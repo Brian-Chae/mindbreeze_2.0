@@ -1,5 +1,7 @@
 import { isNativeApp } from '../../../../lib/native/platform';
 import { PermissionGuide } from '../../../native/permission-guide';
+import { PermissionShortcuts } from '../../../native/permission-shortcuts';
+import { BluetoothOffShortcuts } from '../../../native/bluetooth-off-shortcuts';
 import { permissionGuideText } from '../../../native/permission-guide-text';
 // SDD-209 M4 — FM06c LINK BAND 단계. 어떤 모드·상태에서도 참가를 막지 않는다(`LINK BAND 없이 계속하기`는 항상 있다).
 // 전극 LED 카드는 접촉 불량일 때만 띄운다. 연결 중은 회전 스피너 대신 3점 순차 페이드.
@@ -22,6 +24,8 @@ export interface BandStepViewProps {
   /** 0~100. 모르면 null */
   battery: number | null;
   steps: MemberFlowSteps;
+  /** SDD-333: 기기 블루투스가 꺼져 있다(true). 권한 문제와 구분해 "블루투스가 꺼져 있어요"를 먼저 보인다. null=알 수 없음 */
+  bluetoothOff?: boolean | null;
   place?: 'online' | 'offline';
   backdropSrc?: string;
   /** 시작 후 시트 — 남은 준비 이름들 */
@@ -56,13 +60,15 @@ function batteryView(battery: number | null): { word: string; segs: number; warn
 }
 
 export function BandStepView({
-  state, bandMode, leadOff, battery, steps, place = 'online', backdropSrc, startedRemaining = null, overlaySheet = null,
+  state, bandMode, leadOff, battery, steps, bluetoothOff = null, place = 'online', backdropSrc, startedRemaining = null, overlaySheet = null,
   onConnect, onDisconnect, onNext, onSkip, onStartedEnterNow, onStartedContinue, onBack, onExit,
 }: BandStepViewProps) {
   const req = bandMode === 'req';
   const native = isNativeApp();
   const lead = state === 'leadoffl' || state === 'leadoffr' || state === 'leadoff';
   const bat = batteryView(battery);
+  // SDD-333: 앱에서 블루투스가 꺼져 있으면 연결 전 단계(idle·unsupported·connecting)에서 꺼짐 안내가 우선한다
+  const btOff = native && bluetoothOff === true && (state === 'idle' || state === 'unsupported' || state === 'connecting');
 
   // 선택 모드의 미지원은 조치가 필요한 상태가 아니다 — 경고색(코랄)을 쓰지 않는다(verify P10)
   const unsupportedTone = req ? ('warn' as const) : undefined;
@@ -77,7 +83,15 @@ export function BandStepView({
           : { icon: <Bluetooth size={28} />, tone: undefined, chip: <FlowChip icon={<Bluetooth size={16} />}>연결 안 됨</FlowChip> };
 
   let body: ReactNode;
-  if (state === 'idle') {
+  if (btOff) {
+    body = (
+      <ul className="fm-bb">
+        <Li tone="warn" icon={<Bluetooth size={20} aria-hidden="true" />}>블루투스가 꺼져 있어요</Li>
+        <Li icon={<Info size={20} aria-hidden="true" />}>블루투스를 켜면 LINK BAND를 연결할 수 있어요</Li>
+        <Li icon={<Globe size={20} aria-hidden="true" />}>밴드 없이도 클래스에 함께할 수 있어요</Li>
+      </ul>
+    );
+  } else if (state === 'idle') {
     body = (
       <ul className="fm-bb">
         <Li icon={<Power size={20} aria-hidden="true" />}>LINK BAND의 전원을 켜요</Li>
@@ -138,7 +152,14 @@ export function BandStepView({
 
   const noBand = <FlowButton kind="ghost" onClick={onSkip}>LINK BAND 없이 계속하기</FlowButton>;
   let foot: ReactNode;
-  if (state === 'idle') {
+  if (btOff) {
+    foot = (
+      <>
+        <BluetoothOffShortcuts renderButton={({ label, onClick, testId }) => <FlowButton kind="primary" onClick={onClick} data-testid={testId}>{label}</FlowButton>} />
+        {noBand}
+      </>
+    );
+  } else if (state === 'idle') {
     foot = <><PermissionGuide kind="bluetooth" inline onContinue={onConnect}>{request => <FlowButton kind="primary" onClick={request}><Bluetooth size={20} aria-hidden="true" />LINK BAND 연결하기</FlowButton>}</PermissionGuide>{noBand}</>;
   } else if (state === 'connecting') {
     foot = <><FlowButton kind="primary" disabled>연결하고 있어요</FlowButton>{noBand}</>;
@@ -154,6 +175,7 @@ export function BandStepView({
   } else {
     foot = (
       <>
+        {native ? <PermissionShortcuts onRequested={onConnect} renderButton={({ label, onClick, testId }) => <FlowButton kind="ghost" onClick={onClick} data-testid={testId}>{label}</FlowButton>} /> : null}
         <FlowButton kind="primary" onClick={onSkip}>LINK BAND 없이 계속하기</FlowButton>
         <p className="fl-note fm-slot">{native ? '기기 설정에서 Bluetooth를 허용한 뒤 다시 시도해 주세요.' : 'Chrome 또는 Edge에서 열면 연결할 수 있어요.'}</p>
       </>

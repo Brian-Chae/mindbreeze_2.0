@@ -35,7 +35,9 @@ class BandGattClient(
     private var gatt: BluetoothGatt? = null
     private var gen = 0L
     @Volatile private var linkGen = 0L
-    private var backoffMs = 1000L
+    // SDD-331: 끊긴 직후 120초 빠른 재시도(2~3초·시도당 10초) → 느린 백오프 + 스캔 복귀
+    private val policy = BandReconnectPolicy()
+    @Volatile private var scanning = false
     private var stopped = false
     private val pending = ArrayList<BluetoothGattCharacteristic>()
     private var sequencer: SubscribeSequencer? = null
@@ -53,6 +55,20 @@ class BandGattClient(
     )
 
     fun start() { stopped = false; connect() }
+
+    /** SDD-331: '다시 연결'/'깨웠어요' — 빠른 재시도 창을 다시 열고 지금 바로 새로 연결한다(보류 중·정지 상태는 무시). */
+    fun reconnectNow() {
+        handler.post {
+            if (stopped) return@post
+            handler.removeCallbacksAndMessages(null)
+            watchdog.stop(); sequencer?.stop(); sequencer = null
+            gatt?.let { it.disconnect(); it.close() }
+            gatt = null
+            policy.startWindow(android.os.SystemClock.elapsedRealtime())
+            onState(MeasurementState.RECONNECTING)
+            connect()
+        }
+    }
 
     /** SDD-293: 보류 링크에 측정 엔진을 붙인다. 이미 서비스 발견이 끝났으면 재연결 없이 곧바로 구독한다. */
     fun attach(engine: MeasurementEngine, state: (MeasurementState) -> Unit) {
@@ -89,7 +105,7 @@ class BandGattClient(
         eng?.let { engGen = it.fence.acquire() }
         val myGen = gen
         watchdogGen = myGen
-        watchdog.armStage("connect", LinkWatchdog.CONNECT_TIMEOUT_MS)
+        watchdog.armStage("connect", policy.connectTimeoutMs(android.os.SystemClock.elapsedRealtime()))
         val adapter = (ctx.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
         val dev = adapter.getRemoteDevice(address)
         gatt = dev.connectGatt(ctx, false, callback(myGen), BluetoothDevice.TRANSPORT_LE)
@@ -110,8 +126,36 @@ class BandGattClient(
         if (stopped) return
         onState(MeasurementState.RECONNECTING)
         eng?.counters?.reconnected()
-        handler.postDelayed({ connect() }, backoffMs)
-        backoffMs = (backoffMs * 2).coerceAtMost(30_000L)
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (!policy.windowOpen) policy.startWindow(now) // 첫 끊김 — 창 시작
+        policy.noteFailure()
+        val delay = policy.nextDelayMs(now)
+        handler.postDelayed({ if (!stopped) { if (policy.shouldScan(android.os.SystemClock.elapsedRealtime())) scanThenConnect() else connect() } }, delay)
+    }
+
+    /** SDD-331: 직접 연결이 연속 실패하면 서비스 UUID 로 스캔해 같은 밴드(같은 주소)가 광고하는지 본다. 보이든 말든 6초 뒤 연결을 시도한다. */
+    private fun scanThenConnect() {
+        val scanner = (ctx.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter?.bluetoothLeScanner
+        if (scanner == null || scanning) { connect(); return }
+        scanning = true
+        var finished = false
+        val finish: () -> Unit = {
+            if (!finished) { finished = true; scanning = false; if (!stopped) connect() }
+        }
+        val cb = object : android.bluetooth.le.ScanCallback() {
+            override fun onScanResult(callbackType: Int, result: android.bluetooth.le.ScanResult) {
+                if (result.device.address.equals(address, ignoreCase = true)) {
+                    Log.i(TAG, "scan: band re-discovered $address")
+                    try { scanner.stopScan(this) } catch (_: Exception) {}
+                    handler.post(finish)
+                }
+            }
+            override fun onScanFailed(errorCode: Int) { handler.post(finish) }
+        }
+        val filter = android.bluetooth.le.ScanFilter.Builder().setServiceUuid(android.os.ParcelUuid(UUID.fromString(BandUuids.EEG_SERVICE))).build()
+        val settings = android.bluetooth.le.ScanSettings.Builder().setScanMode(android.bluetooth.le.ScanSettings.SCAN_MODE_LOW_LATENCY).build()
+        try { scanner.startScan(listOf(filter), settings, cb) } catch (e: Exception) { scanning = false; connect(); return }
+        handler.postDelayed({ try { scanner.stopScan(cb) } catch (_: Exception) {}; finish() }, 6_000L)
     }
 
     private fun callback(myGen: Long) = object : BluetoothGattCallback() {
@@ -152,7 +196,7 @@ class BandGattClient(
             if (pending.size < targets.size) { onLinkTimeout(myGen, "missing_characteristics"); return }
             if (eng == null) {
                 // SDD-293: 보류 — 서비스 발견까지 마쳤다. 구독은 attach 때. 워치독은 끈다(수신이 없어도 정상).
-                watchdog.stageDone(); holdReady = true; backoffMs = 1000L
+                watchdog.stageDone(); holdReady = true; policy.reset()
                 Log.i(TAG, "hold ready (구독 대기)")
                 onHoldReady?.invoke()
                 return
@@ -188,7 +232,7 @@ class BandGattClient(
             count = chars.size,
             write = { i -> writeCccd(g, chars[i]) },
             post = { delay, fn -> val r = Runnable { if (linkFence.isCurrent(myGen)) fn() }; handler.postDelayed(r, delay); { handler.removeCallbacks(r) } },
-            onDone = { Log.i(TAG, "all subscribed"); backoffMs = 1000L; watchdog.stageDone(); watchdog.startSilence(); onState(MeasurementState.CAPTURING) },
+            onDone = { Log.i(TAG, "all subscribed"); policy.reset(); watchdog.stageDone(); watchdog.startSilence(); onState(MeasurementState.CAPTURING) },
             onFail = { reason -> Log.w(TAG, "subscribe failed: $reason"); if (linkFence.isCurrent(myGen)) g.disconnect() },
         ).also { it.start() }
     }

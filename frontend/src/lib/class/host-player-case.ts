@@ -137,6 +137,45 @@ export function filterHostParticipants(list: readonly HostParticipant[], filter:
   }
 }
 
+/* ───────── 입장자 기본 보기 · 이상 요약(SDD-330) ───────── */
+
+/** 이번 회차에 한 번이라도 입장한 회원 — 입장 시각이 있거나 지금 접속 중이면 입장자다. */
+export function hasEntered(p: HostParticipant): boolean {
+  return Boolean(p.enteredAt) || p.presenceState === 'connected';
+}
+
+/**
+ * 이상 회원 — 입장자 중 코치가 살펴봐야 하는 상태 하나라도 있으면 센다.
+ * 연결 끊김(lost) · 접촉 불량(leadoff) · 밴드 배터리 부족 · 입장 후 현재 미접속.
+ * 밴드 미착용(off)은 선택 사항이라 이상으로 세지 않는다.
+ */
+export function isAbnormal(p: HostParticipant): boolean {
+  if (!hasEntered(p)) return false;
+  return p.band === 'lost' || p.band === 'leadoff' || p.lowBattery || p.presenceState === 'disconnected';
+}
+
+export interface HostEntrySummary {
+  total: number;
+  entered: number;
+  abnormal: number;
+}
+
+export function summarizeHostEntry(list: readonly HostParticipant[]): HostEntrySummary {
+  return { total: list.length, entered: list.filter(hasEntered).length, abnormal: list.filter(isAbnormal).length };
+}
+
+export interface HostViewScope {
+  /** true 면 미입장 회원도 보인다 */
+  showAll: boolean;
+  /** true 면 이상 회원만 보인다 */
+  abnormalOnly: boolean;
+}
+
+export function scopeHostParticipants(list: readonly HostParticipant[], scope: HostViewScope): HostParticipant[] {
+  if (scope.abnormalOnly) return list.filter(isAbnormal);
+  return scope.showAll ? [...list] : list.filter(hasEntered);
+}
+
 export function summarizeMonitorCounts(list: readonly HostParticipant[]): MonitorSummaryCounts {
   return {
     participants: list.length,

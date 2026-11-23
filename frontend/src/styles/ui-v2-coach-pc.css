@@ -132,6 +132,8 @@ html .ui-v2.u2f-home .u2-card:not(.u2-hero--nature):not(.u2-coach-code) { paddin
 html .ui-v2.u2f-home .u2-section-head { margin: 0 0 14px; gap: 12px; align-items: center; }
 html .ui-v2.u2f-home .u2-section-head h2 { font-size: 18px; font-weight: 800; line-height: 1.4; }
 html .ui-v2.u2f-home .u2-textlink { flex-shrink: 0; font-size: 13px; color: #5F0080; }
+/* 11/21: 자연배경 히어로 안 '회차 상세 보기'는 흰 글자(홈 공통 보라 링크 규칙이 덮어써 안 보였다) */
+html .ui-v2.u2f-home .u2-hero--nature .u2-textlink { color: #FFFFFF; text-shadow: 0 1px 8px #25103899; }
 html .ui-v2.u2f-home .u2f-home-class-empty { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 22px 16px; border: 1px dashed #D8CCE0; border-radius: 14px; background: #FBF9FD; }
 html .ui-v2.u2f-home .u2f-home-class-empty p { margin: 0; color: #6F6F6F; font-size: 13px; }
 html .ui-v2.u2f-home .u2f-home-create { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: auto; min-height: 44px; height: 44px; padding: 0 22px; margin: 0; border-radius: 999px; background: #5F0080; color: #FFF; font-size: 14px; }

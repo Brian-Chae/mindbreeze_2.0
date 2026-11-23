@@ -46,6 +46,26 @@ export class CapacitorBleAdapter implements BluetoothProvider {
     };
   }
 
+  /** SDD-331: 팝업 없는 스캔(requestLEScan)으로 같은 밴드를 다시 찾는다. 이름이 같거나 ID 가 같으면 같은 밴드로 본다. */
+  async rediscoverDevice(options: { name: string | null; deviceId: string | null; services: string[]; timeoutMs?: number }): Promise<BluetoothDeviceInfo | null> {
+    const timeoutMs = options.timeoutMs ?? 6000;
+    let found: BluetoothDeviceInfo | null = null;
+    try {
+      await BleClient.requestLEScan({ services: options.services }, (result) => {
+        if (found) return;
+        const name = result.device.name ?? result.localName ?? null;
+        const sameName = options.name !== null && name !== null && name === options.name;
+        const sameId = options.deviceId !== null && result.device.deviceId === options.deviceId;
+        if (sameName || sameId) found = { deviceId: result.device.deviceId, name };
+      });
+      const deadline = Date.now() + timeoutMs;
+      while (!found && Date.now() < deadline) await new Promise((r) => setTimeout(r, 250));
+    } finally {
+      try { await BleClient.stopLEScan(); } catch { /* 이미 멈춤 */ }
+    }
+    return found;
+  }
+
   async connect(deviceId: string): Promise<void> {
     const attempt = Symbol();
     this.connectionAttempts.set(deviceId, attempt);

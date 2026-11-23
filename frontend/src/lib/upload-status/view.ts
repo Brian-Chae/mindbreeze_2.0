@@ -121,6 +121,12 @@ export function splitBandSerial(p: Pick<UploadParticipantDto, 'band_serial'>): {
   if (!serial) return null;
   return serial.length <= 4 ? { head: '', tail: serial } : { head: serial.slice(0, -4), tail: serial.slice(-4) };
 }
+/** SDD-332: "앱 55 · Android 15 · SM-S921N" 한 줄. 보고된 항목만, 하나도 없으면 null. */
+export function appBuildText(i: { app_build?: string | null; os_name?: string | null; os_version?: string | null; device_model?: string | null }): string | null {
+  const os = [i.os_name?.trim(), i.os_version?.trim()].filter(Boolean).join(' ');
+  const parts = [i.app_build?.trim() ? `앱 ${i.app_build.trim()}` : '', os, i.device_model?.trim() ?? ''].filter(Boolean);
+  return parts.length ? parts.join(' · ') : null;
+}
 export const BAND_SERIAL_EMPTY = '미수집';
 /** 이름 또는 시리얼(대소문자 무시)로 검색에 맞는가. */
 export const matchesParticipantQuery = (p: UploadParticipantDto, query: string): boolean => {
