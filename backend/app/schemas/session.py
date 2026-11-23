@@ -566,6 +566,9 @@ class SessionLiveMetric(BaseModel):
     respiratory_rate: float | None = None
     rmssd: float | None = None
     sdnn: float | None = None
+    # SDD-334: 입장 후 90초가 지나도록 측정 데이터(feature·raw)가 한 번도 없는 회원. 데이터가 들어오면 즉시 false.
+    measure_not_started: bool = False
+    measure_not_started_since: datetime | None = None
 
 
 class SessionLiveMetricsSummary(BaseModel):
