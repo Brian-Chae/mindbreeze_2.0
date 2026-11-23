@@ -453,9 +453,10 @@ def test_sdd332_형식이_이상한_앱정보는_버리고_시리얼_보고는_�
 def test_sdd332_업로드현황과_역조회에_앱정보_노출(client, world, db):
     p0 = db.get(SessionParticipant, world["participants"][0].id)
     p0.linkband_device_id = SERIAL
-    _add_dev(db, world, p0, SERIAL, "1.2.3")
-    d = db.query(SessionBandDevice).filter(SessionBandDevice.participant_id == p0.id).one()
-    d.app_build, d.os_name, d.os_version, d.device_model = "56", "Android", "15", "SM-S921N"
+    now = datetime.now(timezone.utc)
+    db.add(SessionBandDevice(id=uuid.uuid4(), session_id=world["session"].id, participant_id=p0.id, serial=SERIAL,
+                             firmware="1.2.3", platform="android", first_seen_at=now, last_seen_at=now,
+                             app_build="56", os_name="Android", os_version="15", device_model="SM-S921N"))
     db.commit()
     rows = {r["participant_id"]: r for r in _status(client, world)["participants"]}
     assert (rows[str(p0.id)]["band_app_build"], rows[str(p0.id)]["band_os_version"], rows[str(p0.id)]["band_device_model"]) == ("56", "15", "SM-S921N")
