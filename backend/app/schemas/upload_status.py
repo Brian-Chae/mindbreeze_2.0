@@ -68,6 +68,12 @@ class UploadStatusParticipant(BaseModel):
     # SDD-326: 연결한 밴드 시리얼·펌웨어(미보고 시 None = 미수집)
     band_serial: str | None = None
     band_firmware: str | None = None
+    # SDD-332: 측정에 쓴 앱 빌드·기기(미보고 None)
+    band_app_version: str | None = None
+    band_app_build: str | None = None
+    band_os_name: str | None = None
+    band_os_version: str | None = None
+    band_device_model: str | None = None
     band_gap_count: int | None = None   # 참가자 회차 전체 측정 끊김 횟수(biosignal_gap_events). 미집계 None
 
 

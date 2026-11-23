@@ -1,6 +1,7 @@
 // SDD-326 — 연결된 LINK BAND 의 시리얼(광고 이름)·펌웨어를 서버에 보고하는 순수 로직.
 // 보고는 부가 기능이다: 실패해도 밴드 연결·측정 흐름을 막지 않고, 같은 값은 한 번만 보낸다.
 import type { PutBandDeviceBody } from '../api/class-flow';
+import type { AppBuildInfo } from '../native/app-build-info';
 
 /** 광고 이름 접두사(LXB). 서버 검증 정규식과 같은 문자 집합. */
 export const BAND_SERIAL_PATTERN = /^[A-Za-z0-9._:-]{1,64}$/; // 서버: ^LXB[A-Za-z0-9._:-]{0,61}$ (LXB 접두 + 합 64자)
@@ -38,6 +39,17 @@ export interface BandReportDeps {
   sent?: Set<string>;
 }
 
+/** SDD-332: 값이 있는 앱 정보 필드만 본문에 넣는다(없으면 기존 본문과 동일). */
+function definedOnly(info: AppBuildInfo | null | undefined): AppBuildInfo {
+  const out: AppBuildInfo = {};
+  if (!info) return out;
+  for (const k of ['app_version', 'app_build', 'os_name', 'os_version', 'device_model'] as const) {
+    const v = info[k];
+    if (typeof v === 'string' && v) out[k] = v;
+  }
+  return out;
+}
+
 const defaultSent = new Set<string>();
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 const inflight = new Set<string>();
@@ -47,17 +59,17 @@ const inflight = new Set<string>();
  * 던지지 않는다 — 호출부는 결과를 기다릴 필요 없이 `void` 로 부른다.
  */
 export async function reportBandDevice(
-  input: { sessionId: string; credential: string | null; identity: BandIdentity | null; platform: BandPlatform },
+  input: { sessionId: string; credential: string | null; identity: BandIdentity | null; platform: BandPlatform; appInfo?: AppBuildInfo | null },
   deps: BandReportDeps,
 ): Promise<boolean> {
-  const { sessionId, credential, identity, platform } = input;
+  const { sessionId, credential, identity, platform, appInfo } = input;
   if (!sessionId || !identity || !normalizeBandSerial(identity.serial)) return false;
   const sent = deps.sent ?? defaultSent;
   const key = reportKey(sessionId, identity);
   if (sent.has(key) || inflight.has(key)) return false;
   inflight.add(key);
   const wait = deps.wait ?? sleep;
-  const body: PutBandDeviceBody = { serial: identity.serial, platform, ...(identity.firmware ? { firmware: identity.firmware } : {}) };
+  const body: PutBandDeviceBody = { serial: identity.serial, platform, ...(identity.firmware ? { firmware: identity.firmware } : {}), ...definedOnly(appInfo) };
   try {
     for (let attempt = 0; attempt <= REPORT_RETRY_DELAYS_MS.length; attempt += 1) {
       try {

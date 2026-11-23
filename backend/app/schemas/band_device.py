@@ -17,6 +17,21 @@ BandPlatform = Literal["web", "android", "ios"]
 SERIAL_PATTERN = re.compile(r"^LXB[A-Za-z0-9._:-]{0,61}$", re.IGNORECASE)
 SERIAL_STANDARD_PATTERN = re.compile(r"^LXB-[0-9A-F]{8}$")  # 대표 형식(정규화 후 대문자 기준)
 FIRMWARE_PATTERN = re.compile(r"^[A-Za-z0-9._+-]{1,32}$")
+# SDD-332: 앱 빌드·OS 정보는 부가 정보 — 형식이 안 맞으면 422 대신 버리고(None) 시리얼 보고는 살린다.
+APP_VERSION_PATTERN = re.compile(r"^[A-Za-z0-9._+-]{1,32}$")
+APP_BUILD_PATTERN = re.compile(r"^[0-9A-Za-z._-]{1,16}$")
+OS_NAME_PATTERN = re.compile(r"^[A-Za-z0-9 ._-]{1,16}$")
+OS_VERSION_PATTERN = re.compile(r"^[A-Za-z0-9._+-]{1,32}$")
+DEVICE_MODEL_PATTERN = re.compile(r"^[A-Za-z0-9 ._,+/()-]{1,64}$")
+
+
+def _clean_optional(v: str | None, pattern: re.Pattern[str]) -> str | None:
+    if v is None:
+        return None
+    n = v.strip()
+    if not n or not pattern.fullmatch(n):
+        return None
+    return n
 
 
 def normalize_serial(value: str) -> str:
@@ -32,6 +47,36 @@ class BandDeviceReportRequest(BaseModel):
     serial: str
     firmware: str | None = None
     platform: BandPlatform
+    app_version: str | None = None
+    app_build: str | None = None
+    os_name: str | None = None
+    os_version: str | None = None
+    device_model: str | None = None
+
+    @field_validator("app_version", mode="before")
+    @classmethod
+    def _app_version(cls, v):
+        return _clean_optional(v if isinstance(v, str) else None, APP_VERSION_PATTERN)
+
+    @field_validator("app_build", mode="before")
+    @classmethod
+    def _app_build(cls, v):
+        return _clean_optional(str(v) if isinstance(v, (str, int)) else None, APP_BUILD_PATTERN)
+
+    @field_validator("os_name", mode="before")
+    @classmethod
+    def _os_name(cls, v):
+        return _clean_optional(v if isinstance(v, str) else None, OS_NAME_PATTERN)
+
+    @field_validator("os_version", mode="before")
+    @classmethod
+    def _os_version(cls, v):
+        return _clean_optional(v if isinstance(v, str) else None, OS_VERSION_PATTERN)
+
+    @field_validator("device_model", mode="before")
+    @classmethod
+    def _device_model(cls, v):
+        return _clean_optional(v if isinstance(v, str) else None, DEVICE_MODEL_PATTERN)
 
     @field_validator("serial")
     @classmethod
@@ -70,6 +115,11 @@ class BandDeviceUsageItem(BaseModel):
     display_name: str | None
     firmware: str | None
     platform: str | None
+    app_version: str | None = None
+    app_build: str | None = None
+    os_name: str | None = None
+    os_version: str | None = None
+    device_model: str | None = None
     first_seen_at: str
     last_seen_at: str
     is_current: bool          # 이 시리얼이 참가자의 현재 기기(linkband_device_id)인가

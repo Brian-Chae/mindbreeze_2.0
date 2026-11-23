@@ -154,6 +154,12 @@ export interface PutBandDeviceBody {
   serial: string;
   firmware?: string;
   platform: 'web' | 'android' | 'ios';
+  /** SDD-332: 측정에 쓴 앱 빌드·기기 정보(선택, 구 서버는 무시). */
+  app_version?: string;
+  app_build?: string;
+  os_name?: string;
+  os_version?: string;
+  device_model?: string;
 }
 
 /** SDD-326 — 연결한 밴드의 시리얼(+펌웨어)을 저장한다. 호출부가 실패를 무시한다(측정 흐름 차단 금지). */
