@@ -24,14 +24,16 @@ describe('isUiV2Enabled', () => {
 });
 
 describe('운영 고정·dev 주입', () => {
-  it("vite 운영 define 이 환경변수와 무관하게 'false' 로 고정한다", () => {
-    expect(read('vite.config.ts')).toContain("'import.meta.env.VITE_UI_V2': JSON.stringify('false')");
+  it("vite 운영 define 은 명시 주입('true')일 때만 켜고 기본은 'false'", () => {
+    expect(read('vite.config.ts')).toContain("'import.meta.env.VITE_UI_V2': JSON.stringify(process.env.VITE_UI_V2 === 'true' ? 'true' : 'false')");
   });
-  it('deploy-dev.yml 만 true 를 주입하고 운영 워크플로는 건드리지 않는다', () => {
+  it('dev 배포와 운영 웹 빌드만 true 를 주입하고, 스토어 앱 빌드(build:prod)는 주입하지 않는다', () => {
     const wf = (n: string) => readFileSync(resolve(root, '../.github/workflows', n), 'utf8');
     expect(wf('deploy-dev.yml')).toContain('VITE_UI_V2=true');
     expect(wf('deploy-prod.yml')).not.toContain('VITE_UI_V2');
-    expect(wf('release-build.yml')).not.toContain('VITE_UI_V2=true');
+    expect(wf('release-build.yml')).toContain("VITE_UI_V2: 'true'");
+    const pkg = JSON.parse(read('package.json')) as { scripts: Record<string, string> };
+    expect(pkg.scripts['build:prod']).not.toContain('VITE_UI_V2');
   });
   it('진입점 분기는 빌드 상수(import.meta.env.VITE_UI_V2 === "true")만 쓴다', () => {
     for (const f of ['src/App.tsx', 'src/route-pages.ts', 'src/pages/client/ClientAppPage.tsx']) {

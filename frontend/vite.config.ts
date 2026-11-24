@@ -34,8 +34,9 @@ export default defineConfig({
             'import.meta.env.VITE_LIVE_PROTOCOL_V2': JSON.stringify(process.env.VITE_LIVE_PROTOCOL_V2 === 'false' ? 'false' : 'true'),
             // SDD-286: 운영 번들은 비회원 코드 입장 버튼을 항상 숨긴다(환경변수로 켤 수 없다).
             'import.meta.env.VITE_GUEST_ENTRY_ENABLED': JSON.stringify('false'),
-            // SDD-318: 내담자 화면 D안(UI_V2)은 운영 번들에서 항상 꺼진다(환경변수로 켤 수 없다).
-            'import.meta.env.VITE_UI_V2': JSON.stringify('false'),
+            // SDD-318: D안(UI_V2)은 운영 번들에서 기본 꺼짐. 11/24 대표 지시로 운영 웹(release-build.yml)만
+            // VITE_UI_V2=true 를 명시 주입해 켠다. 스토어 앱(build:prod)은 주입하지 않으므로 계속 꺼진다.
+            'import.meta.env.VITE_UI_V2': JSON.stringify(process.env.VITE_UI_V2 === 'true' ? 'true' : 'false'),
           },
         };
       }
