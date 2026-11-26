@@ -39,3 +39,9 @@
 - 마이그레이션 없음. 푸시는 운영 FCM 설정이 켜져 있어야 실제 발송(미설정이면 outbox 행 유지).
 - 푸시 대상 판정은 서버 기준이라 구 앱(1.0.0)도 푸시는 받는다(알림 탭 → 앱 열림). 구 앱 회원은 코치 화면에 "앱 업데이트 필요"로 표시.
 - 12/2 수업 전 확인: 운영 push cron(process_push_outbox) 활성, session_started 푸시 알림 기본값 켬.
+
+## dev 실측 (Deploy Dev success, 머지 d9359891, 11/26 임시 회차·시험 계정 — 모두 종료)
+- `live-metrics.measure_issue_reason`: 입장 직후 null → 100초 후 앱 버전 기록 없음 = `app_update_required` → 기기 토큰 1.0.1 등록 후 `app_not_in_class`(presence 없음). 코치 카드 렌더 캡처 = `~/.hermes/share/sdd-coach-cause/coach-card-app-not-in-class-desktop.png` (카드 "미시작 · 김하늘 · 앱이 수업 화면에 없음 · 1분째", 입장 1명·이상 1명, 점수·등급 없음).
+- 푸시: 입장 후 150초 초과 시 dev cron 이 `session_reminder_logs(push_nudge, -1)` + outbox 1건("수업이 시작됐어요. 앱을 열어 측정을 시작해 주세요", 딥링크 `/class/{id}/enter`) 적재. 기기 토큰이 없을 때는 0건(정상 제외). 시험 토큰은 가짜라 실제 FCM 수신은 확인하지 못했고(발송기가 '활성 토큰 없음'으로 skipped), 적재·조건·중복 제한까지만 실측.
+- 미실측: 앱 업데이트 필요·측정 거절 라벨의 실화면 캡처(단위 시험으로만 검증), 모바일 폭 캡처.
+- 시험 회차 5개(SDD336-*)는 종료 상태로 dev 에 남음(완료 클래스는 삭제 불가).
