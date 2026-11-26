@@ -483,6 +483,10 @@ def register_session_live_namespace(sio):
         _join_in_progress[str(sid)] = done
         try:
             await _on_join_impl(sid, data)
+        except KeyError:
+            # SDD-336: 수업 시작 순간 입장 폭주로 join 처리 중 소켓이 이미 끊긴 경우(engineio 'Session not found').
+            #   다시 접속하면 새 sid 로 join 하므로 무해하다 — 트레이스 대신 한 줄만 남긴다.
+            logger.info("[WS /session-live] join 처리 중 소켓이 끊겨 건너뜀 (sid=%s)", sid)
         finally:
             _join_in_progress.pop(str(sid), None)
             done.set()

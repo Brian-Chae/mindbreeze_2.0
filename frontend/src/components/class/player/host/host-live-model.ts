@@ -124,6 +124,8 @@ export function toHostParticipant(row: SessionLiveMetric, { extra, entry, nowMs 
     enteredAt: row.entered_at,
     // SDD-334: 서버 판정 + 실시간 지표가 한 번이라도 들어오면(last_eeg_at) 즉시 해제
     ...measureNotStartedOf(row, nowMs),
+    // SDD-336: 원인 라벨(서버 판정, 구 서버는 없음)
+    measureIssueReason: row.measure_issue_reason ?? null,
     attention: checkinAttention(checkin),
   };
 }

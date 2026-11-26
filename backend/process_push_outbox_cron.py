@@ -8,8 +8,24 @@ FCM 발송한다. FCM 자격증명(FCM_PROJECT_ID/FCM_SERVICE_ACCOUNT_JSON) 미�
 from app.tasks.push_task import process_push_outbox
 
 
+def _enqueue_measure_nudges() -> None:
+    """SDD-336: 측정 미시작 회원 재진입 푸시 적재(실패해도 기존 outbox 발송을 막지 않는다)."""
+    from app.core.database import SessionLocal
+    from app.services.measure_cause_service import enqueue_measure_nudges
+
+    db = SessionLocal()
+    try:
+        print(f"[measure_nudge] {enqueue_measure_nudges(db)}")
+    except Exception as exc:  # noqa: BLE001
+        db.rollback()
+        print(f"[measure_nudge] failed: {exc}")
+    finally:
+        db.close()
+
+
 def main() -> int:
     try:
+        _enqueue_measure_nudges()
         result = process_push_outbox()
         print(f"[process_push_outbox] {result}")
         return 0

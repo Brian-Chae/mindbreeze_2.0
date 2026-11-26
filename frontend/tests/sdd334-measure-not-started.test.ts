@@ -67,3 +67,43 @@ describe('측정 미시작 화면 모델', () => {
     expect(out[0].measure_not_started_since).toBe('2026-11-23T06:05:00Z');
   });
 });
+
+// SDD-336 — 측정 미시작 원인 라벨
+import { isMeasureDeclined, measureIssueGuide, measureIssueTitle } from '../src/lib/class/host-player-case';
+
+describe('SDD-336 원인 라벨', () => {
+  const cases: Array<[NonNullable<SessionLiveMetric['measure_issue_reason']>, string, string]> = [
+    ['app_update_required', '앱 업데이트 필요', '스토어에서 앱 업데이트 후 다시 입장해 주세요'],
+    ['app_not_in_class', '앱이 수업 화면에 없음', '앱을 열어 수업 화면으로 돌아오도록 안내해 주세요'],
+    ['not_started', '측정 시작 안 됨', '앱에서 밴드 다시 연결을 눌러 주세요'],
+  ];
+  it.each(cases)('%s → 제목·안내 1줄', (reason, title, guide) => {
+    const p = toHostParticipant(row({ measure_issue_reason: reason }), { nowMs: NOW });
+    expect(isMeasureNotStarted(p)).toBe(true);
+    expect(measureIssueTitle(p)).toBe(title);
+    expect(measureIssueGuide(p)).toBe(guide);
+    expect(measureNotStartedLabel(p)).toBe(`${title} · 5분째`);
+  });
+
+  it('원인 필드가 없는 구 서버는 기존 문구', () => {
+    const p = toHostParticipant(row(), { nowMs: NOW });
+    expect(measureIssueTitle(p)).toBe('측정 시작 안 됨');
+    expect(measureIssueGuide(p)).toBe(MEASURE_NOT_STARTED_GUIDE);
+  });
+
+  it('측정 거절은 라벨만 보이고 이상 집계에는 세지 않는다', () => {
+    const p = toHostParticipant(row({ measure_not_started: false, measure_not_started_since: null, measure_issue_reason: 'consent_declined' }), { nowMs: NOW });
+    expect(isMeasureDeclined(p)).toBe(true);
+    expect(isMeasureNotStarted(p)).toBe(false);
+    expect(isAbnormal(p)).toBe(false);
+  });
+
+  it('어댑터가 원인을 전달한다', () => {
+    const state = {
+      participation: { p1: { data: { connected: true, attendance: 'attending' } } },
+      speaking: {}, metrics: {}, devices: {}, intents: {}, removed: {}, waiting: {}, session: { phase: 'LIVE' },
+    } as unknown as Parameters<typeof toSessionLiveMetrics>[0];
+    const out = toSessionLiveMetrics(state, { nowMs: NOW, legacy: [row({ measure_issue_reason: 'app_update_required' })] });
+    expect(out[0].measure_issue_reason).toBe('app_update_required');
+  });
+});

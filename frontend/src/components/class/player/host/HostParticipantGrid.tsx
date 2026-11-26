@@ -9,7 +9,8 @@ import {
   type HostBand,
   isMeasureNotStarted,
   measureNotStartedLabel,
-  MEASURE_NOT_STARTED_GUIDE,
+  isMeasureDeclined,
+  measureIssueGuide,
   type HostParticipant,
 } from '../../../../lib/class/host-player-case';
 import { PLAYER_METRICS, type PlayerMetric } from '../../../../lib/class/player-case';
@@ -101,10 +102,11 @@ function HostTile({ p, metric, allOff, netBad, pressed, onSelect }: {
   const leadoff = p.band === 'leadoff';
   const lost = p.band === 'lost';
   const notStarted = isMeasureNotStarted(p);
+  const declined = isMeasureDeclined(p);
   const ringTone = p.band === 'off' && !notStarted ? 'idle' : 'lost';
-  const nb = notStarted ? '미시작' : leadoff ? '접촉' : lost ? '끊김' : '미착용';
-  const statusText = notStarted ? measureNotStartedLabel(p) : p.presenceState !== 'connected' ? presenceLabel(p) : leadoff ? '접촉 불량 · 확인' : lost ? `연결 끊김 · ${p.agoLabel ?? '방금 전'}` : '밴드 없이 참여';
-  const label = notStarted ? `${p.name} ${measureNotStartedLabel(p)}. ${MEASURE_NOT_STARTED_GUIDE}` : leadoff ? `${p.name} 접촉 불량` : lost ? `${p.name} 연결 끊김` : `${p.name} 밴드 미착용`;
+  const nb = notStarted ? '미시작' : declined ? '거절' : leadoff ? '접촉' : lost ? '끊김' : '미착용';
+  const statusText = notStarted ? measureNotStartedLabel(p) : declined ? '측정 거절 · 밴드 없이 참여' : p.presenceState !== 'connected' ? presenceLabel(p) : leadoff ? '접촉 불량 · 확인' : lost ? `연결 끊김 · ${p.agoLabel ?? '방금 전'}` : '밴드 없이 참여';
+  const label = notStarted ? `${p.name} ${measureNotStartedLabel(p)}. ${measureIssueGuide(p)}` : declined ? `${p.name} 측정 거절. ${measureIssueGuide(p)}` : leadoff ? `${p.name} 접촉 불량` : lost ? `${p.name} 연결 끊김` : `${p.name} 밴드 미착용`;
   return (
     <button type="button" className="hp-tile" data-pz="tile" data-band={p.band} data-participant-id={p.id}
       data-hand={p.hand ? 'true' : undefined} data-speaking={p.speaking ? 'true' : undefined}
@@ -114,7 +116,7 @@ function HostTile({ p, metric, allOff, netBad, pressed, onSelect }: {
         <span className="hp-ring-nb" data-warn={leadoff || lost || notStarted ? 'true' : undefined}>{nb}</span>
       </StatusRing>
       <span className="hp-tile__nm">{p.name}</span>
-      <span className="hp-tile__st" data-tone={leadoff || notStarted ? 'warn' : undefined} title={notStarted ? MEASURE_NOT_STARTED_GUIDE : undefined}>
+      <span className="hp-tile__st" data-tone={leadoff || notStarted ? 'warn' : undefined} title={notStarted || declined ? measureIssueGuide(p) : undefined}>
         <i className="hp-dot" data-state={DOT_STATE[p.band]} />{p.speaking ? '말하는 중' : p.hand ? '손듦 · 대기 중' : statusText}
       </span>
     </button>

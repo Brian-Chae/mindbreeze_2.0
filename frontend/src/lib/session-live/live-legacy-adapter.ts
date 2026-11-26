@@ -28,6 +28,7 @@ type PresenceFields = {
   checkin_state?: 'completed' | 'not_completed' | 'unknown';
   measure_not_started?: boolean;
   measure_not_started_since?: string | null;
+  measure_issue_reason?: SessionLiveMetric['measure_issue_reason'];
 };
 
 /** 접속은 v2 participation.connected 가 출처. 체크인은 신원 행(REST)값 → 없으면 v2 waiting.ready. 입장 시각은 신원 행. */
@@ -48,6 +49,7 @@ function presenceOf(state: LiveState, pid: string, legacy: PresenceFields | unde
     entered_at: legacy?.entered_at ?? null,
     measure_not_started: legacy?.measure_not_started === true,
     measure_not_started_since: legacy?.measure_not_started_since ?? null,
+    measure_issue_reason: legacy?.measure_issue_reason ?? null,
   } as const;
 }
 
