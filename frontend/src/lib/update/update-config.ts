@@ -30,6 +30,8 @@ export interface UpdateManifest {
   updateBannerEnabled: boolean;
   /** 설치본이 이 값 미만이면 닫을 수 없는 강제 업데이트. 0 이면 꺼짐. */
   minSupportedVersionCode: number;
+  /** SDD-335: 수업 입장에 필요한 최소 앱 버전(x.y.z). 빈 문자열이면 차단 없음. */
+  minAppVersion: string;
   android: UpdateAndroidInfo;
   ios: UpdateIosInfo;
 }
@@ -74,6 +76,21 @@ export function safeApkUrl(v: unknown): string {
   return ALLOWED_APK_HOSTS.includes(new URL(url).hostname) ? url : '';
 }
 
+/** `1.0.2`·`1.0.2-dev` 같은 앱 버전을 숫자 3칸으로. 형식이 다르면 null. */
+export function parseVersion(v: unknown): [number, number, number] | null {
+  if (typeof v !== 'string') return null;
+  const m = /^(\d+)\.(\d+)(?:\.(\d+))?(?:[-+].*)?$/.exec(v.trim());
+  return m ? [Number(m[1]), Number(m[2]), Number(m[3] ?? 0)] : null;
+}
+
+/** 설치 버전이 최소 버전 미만이면 true. 어느 쪽이든 읽을 수 없으면 false(막지 않는다). */
+export function isBelowMinVersion(installed: unknown, min: unknown): boolean {
+  const a = parseVersion(installed); const b = parseVersion(min);
+  if (!a || !b) return false;
+  for (let i = 0; i < 3; i += 1) { if (a[i] !== b[i]) return a[i] < b[i]; }
+  return false;
+}
+
 /** 외부 JSON 을 검증·정규화한다. 잘못된 입력이면 null. */
 export function parseUpdateManifest(raw: unknown): UpdateManifest | null {
   if (!isObj(raw) || raw.schemaVersion !== 1) return null;
@@ -85,6 +102,7 @@ export function parseUpdateManifest(raw: unknown): UpdateManifest | null {
     updatedAt: str(raw.updatedAt),
     updateBannerEnabled: raw.updateBannerEnabled === true,
     minSupportedVersionCode: num(raw.minSupportedVersionCode),
+    minAppVersion: parseVersion(raw.minAppVersion) ? str(raw.minAppVersion).trim() : '',
     android: {
       versionName: str(a.versionName),
       versionCode: num(a.versionCode),

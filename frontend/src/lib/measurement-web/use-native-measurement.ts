@@ -11,6 +11,7 @@ import { getActiveModelCache, refreshActiveModel } from '../eeg/eegPersonalScore
 import { clearBandHold, getBandHold } from '../native-measurement/band-hold';
 import { uploadProgressStore, type UploadProgress } from './upload-progress';
 import { decideMeasurementPath, type MeasurementPath } from './measurement-path';
+import { subscribeAppResume, RESUME_ORDER } from '../native/app-lifecycle';
 import { isLiveProtocolV2Enabled } from '../session-live/live-flag';
 import { isNativeMeasurementAvailable } from '../native-measurement';
 import type { MeasurementSnapshot } from '../native-measurement/types';
@@ -47,6 +48,18 @@ export function isStreamUnhealthy(s: Pick<MeasurementSnapshot, 'state' | 'stream
   if (!s) return false;
   if (s.state === 'SEALING' || s.state === 'DRAINING') return false; // 종료 처리 중은 이상이 아니다
   return s.state === 'BLOCKED' || s.state === 'CLOSED' || s.state === 'IDLE' || s.streamId == null;
+}
+
+/**
+ * SDD-335: 앱이 포그라운드로 돌아왔을 때 측정을 새로 시작해야 하는가(순수).
+ * - 시작 실패 상태(failed)면 true.
+ * - 실행 중이라도 snapshot 이 unhealthy(BLOCKED/CLOSED/IDLE/stream 없음)면 true — 백그라운드에서 멈춘 엔진.
+ * - snapshot 을 못 읽으면(null) 판단 보류(false). 시작 중(starting)·종료 처리 중은 건드리지 않는다.
+ */
+export function shouldRestartOnResume(status: NativeMeasurementStatus, snap: Pick<MeasurementSnapshot, 'state' | 'streamId'> | null): boolean {
+  if (status === 'failed') return true;
+  if (status !== 'running') return false;
+  return isStreamUnhealthy(snap);
 }
 
 export interface NativeDiagnostics {
@@ -89,8 +102,9 @@ export interface UseNativeMeasurementResult {
 }
 
 /** sessionId+participantId 로 결정되는 UUID 형식 requestId(멱등) */
-export function deterministicRequestId(sessionId: string, participantId: string): string {
-  const src = `native-start:${sessionId}:${participantId}`;
+export function deterministicRequestId(sessionId: string, participantId: string, generation = 0): string {
+  // SDD-335: 세대 0 은 기존 값과 같다. 실제 stop(이탈) 뒤 재진입은 세대가 올라 새 requestId 로 시작한다(native replay 방지).
+  const src = generation > 0 ? `native-start:${sessionId}:${participantId}:g${generation}` : `native-start:${sessionId}:${participantId}`;
   const parts: number[] = [];
   for (let seed = 0; seed < 4; seed += 1) {
     let h1 = 0xdeadbeef ^ seed; let h2 = 0x41c6ce57 ^ seed;
@@ -139,6 +153,9 @@ export function shouldStartNative(i: {
  * 이전 화면(A)의 늦은 정리가 새 화면(B)이 시작한 회차를 끊지 못하게 한다.
  */
 let activeOwner: symbol | null = null;
+/** SDD-335: 회차·참가자별 실제 stop 횟수. 재진입 시작의 requestId 를 새로 만든다. */
+const startGenerations = new Map<string, number>();
+const generationOf = (key: string): number => startGenerations.get(key) ?? 0;
 
 const RETRY_MAX = 5;
 /** SDD-284 T4: 연결 진단 패널의 "재시작 n/5" 표기용 */
@@ -183,6 +200,7 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
     if (!owned) return;
     ownerRef.current = null; startedRef.current = false;
     lastStopReasonRef.current = reason;
+    startGenerations.set(owned.key, generationOf(owned.key) + 1);
     if (activeOwner !== owned.token) return;
     activeOwner = null;
     clearBandHold();
@@ -210,7 +228,7 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
     const facade = getNativeMeasurement();
     let cancelled = false;
     let off: (() => void) | null = null;
-    const requestId = attemptRef.current === 0 ? deterministicRequestId(o.sessionId, o.participantId) : crypto.randomUUID(); // 재시작은 새 requestId(같은 id 는 native 가 replay 로 막는다)
+    const requestId = attemptRef.current === 0 ? deterministicRequestId(o.sessionId, o.participantId, generationOf(`${o.sessionId}:${o.participantId}:${o.accountId}`)) : crypto.randomUUID(); // 재시작은 새 requestId(같은 id 는 native 가 replay 로 막는다)
     if (!access || (!refresh && !isNativeAuthReady()) || (platform !== 'ios' && platform !== 'android')) {
       setStatus('failed'); setCode(!access || (!refresh && !isNativeAuthReady()) ? 'credentials_unavailable' : 'platform_unsupported');
       return undefined;
@@ -388,6 +406,30 @@ export function useNativeMeasurementV2(o: UseNativeMeasurementOptions): UseNativ
       setMetrics(null); setDevice(null);
     };
   }, [ready, retryTick, o.sessionId, o.participantId, o.accountId]);
+
+  // SDD-335: 백그라운드에서 돌아오면 멈춘 엔진·시작 실패 상태를 새 requestId 로 다시 시작한다(수업 시작 때 앱이 꺼져 있던 회원 구제).
+  const statusRef = useRef<NativeMeasurementStatus>('idle');
+  statusRef.current = status;
+  useEffect(() => {
+    if (path !== 'native' || !o.participantId || !o.accountId) return undefined;
+    return subscribeAppResume(async () => {
+      if (!optionsRef.current.eegConsent || !optionsRef.current.enabled) return;
+      const st = statusRef.current;
+      if (st === 'starting') return;
+      const snap = st === 'running' ? await getNativeMeasurement().getSnapshot(optionsRef.current.sessionId).catch(() => null) : null;
+      if (!shouldRestartOnResume(st, snap)) return;
+      console.info('[native-measurement] 포그라운드 복귀 — 측정 재시작', { status: st, state: snap?.state ?? null });
+      // 이전 시도는 stop 으로 정리하고(소유권 해제), 새 시도가 새 requestId·소유 토큰을 잡는다
+      const owned = ownerRef.current;
+      ownerRef.current = null; startedRef.current = false;
+      if (owned && activeOwner === owned.token) activeOwner = null;
+      await getNativeMeasurement().stop({ reason: 'user_left', requestId: crypto.randomUUID() }).catch(() => undefined);
+      streamFailRef.current = 0; retryRef.current = 0; attemptRef.current += 1;
+      latchedRef.current = true;
+      setStatus('starting'); setCode(null);
+      setRetryTick((n) => n + 1);
+    }, RESUME_ORDER.ble);
+  }, [path, o.participantId, o.accountId]); // eslint-disable-line react-hooks/exhaustive-deps -- 최신 값은 ref 로 읽는다
 
   // SDD-297: 스토어 변경에 맞춰 재렌더(이벤트만 오고 다른 상태가 안 바뀌어도 진단이 갱신된다)
   const up = useSyncExternalStore(uploadProgressStore.subscribe, () => uploadProgressStore.get(o.sessionId));

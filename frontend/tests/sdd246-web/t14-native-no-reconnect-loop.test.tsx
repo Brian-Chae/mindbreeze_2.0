@@ -8,6 +8,7 @@ const h = vi.hoisted(() => ({
   platform: 'ios', start: vi.fn(), stop: vi.fn(), release: vi.fn(), attach: vi.fn(), detach: vi.fn(),
   deviceId: 'DEV-1', cached: 'DEV-1' as string | null, startFails: 0,
 }));
+vi.mock('../../src/lib/native/app-lifecycle', () => ({ subscribeAppResume: () => () => undefined, subscribeAppPause: () => () => undefined, RESUME_ORDER: { socket: 10, rawFlush: 20, ble: 30, screen: 40, liveKit: 50, audio: 60 } })); // SDD-335: 복귀 재시작 구독은 별도 테스트(sdd335)에서 검증
 vi.mock('@capacitor/core', () => ({ Capacitor: { getPlatform: () => h.platform } }));
 vi.mock('../../src/lib/session-live/live-flag', () => ({ isLiveProtocolV2Enabled: () => true }));
 vi.mock('../../src/lib/api/client', () => ({

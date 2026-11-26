@@ -5,6 +5,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const h = vi.hoisted(() => ({ calls: [] as unknown[][], stopDelay: 0, releaseGate: null as null | Promise<string>, startGate: null as null | Promise<unknown> }));
+vi.mock('../src/lib/native/app-lifecycle', () => ({ subscribeAppResume: () => () => undefined, subscribeAppPause: () => () => undefined, RESUME_ORDER: { socket: 10, rawFlush: 20, ble: 30, screen: 40, liveKit: 50, audio: 60 } })); // SDD-335: 복귀 재시작 구독은 별도 테스트(sdd335)에서 검증
 vi.mock('@capacitor/core', () => ({ Capacitor: { getPlatform: () => 'ios' } }));
 vi.mock('../src/lib/session-live/live-flag', () => ({ isLiveProtocolV2Enabled: () => true }));
 vi.mock('../src/lib/api/client', () => ({ BASE_URL: 'https://api/api/v1', getNativeRefreshBody: () => ({ refresh_token: 'rt' }), tokenStorage: { getAccess: () => 'at' } }));

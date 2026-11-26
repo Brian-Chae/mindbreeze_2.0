@@ -14,7 +14,7 @@ export function parseRawPacket(signal: Signal, source: DataView,
   const view = new DataView(bytes.buffer);
   const stride = signal === 'eeg' ? 7 : 6;
   const malformed = bytes.length < 4 + stride || (bytes.length - 4) % stride !== 0;
-  const tickRaw = bytes.length >= 4 ? view.getUint32(0, signal !== 'ppg') : null;
+  const tickRaw = bytes.length >= 4 ? view.getUint32(0, true) : null;
   const rows: number[][] = [];
   const u24 = (offset: number) => view.getUint8(offset) * 65536 + view.getUint8(offset + 1) * 256 + view.getUint8(offset + 2);
   const i24 = (offset: number) => { const n = u24(offset); return n >= 0x800000 ? n - 0x1000000 : n; };

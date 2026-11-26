@@ -93,6 +93,9 @@ export function IntegratedEntryConsentView({ values, onChange, onSubmit, onBack,
             {row('report', '리포트에 측정 결과 반영', '선택하지 않으면 리포트에 반영하지 않아요.')}
           </div>
         </section>
+        {eegAllowed && !values.eeg && !eegLocked && (
+          <p className="iec-feedback" role="note" data-testid="eeg-decline-notice">뇌파 수집에 동의하지 않으면 이번 수업의 측정과 리포트 지표가 없어요. 동의는 위에서 다시 선택할 수 있어요.</p>
+        )}
         <button className="iec-detail-link" type="button" onClick={() => setDetails(true)}>개인정보·기록과 선택 동의 자세히 보기</button>
         {saveError && <p ref={errorRef} role="alert" tabIndex={-1} className="iec-feedback">{saveError}</p>}
       </>}

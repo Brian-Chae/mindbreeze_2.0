@@ -18,7 +18,7 @@ function packetFactory(signal: Signal, rows: number) {
   return () => {
     const bytes = new Uint8Array(4 + rows * STRIDE[signal]);
     const tick = Math.round(n * rows / RATE[signal] * 32768);
-    new DataView(bytes.buffer).setUint32(0, tick, signal !== 'ppg');
+    new DataView(bytes.buffer).setUint32(0, tick, true);
     for (let i = 4; i < bytes.length; i++) bytes[i] = (n + i) & 0x3f;
     const mono = String(Math.round(1_000_000 + n * rows / RATE[signal] * 1e6));
     n += 1;
@@ -143,7 +143,7 @@ describe('SDD252 PPG/ACC segment 분할 과다·꼬리 봉인', () => {
     let n = 0, tick = 1000;
     return () => {
       const bytes = new Uint8Array(4 + rows * STRIDE[signal]);
-      new DataView(bytes.buffer).setUint32(0, tick, signal !== 'ppg');
+      new DataView(bytes.buffer).setUint32(0, tick, true);
       for (let i = 4; i < bytes.length; i++) bytes[i] = (n + i) & 0x3f;
       const mono = String(Math.round(1_000_000 + n * rows / RATE[signal] * 1e6));
       tick += Math.round(rows / RATE[signal] * 32768) + (n % 2 === 0 ? jitterTicks : -jitterTicks);

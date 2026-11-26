@@ -14,14 +14,16 @@ const ppgBytes = (tick: number, n: number): Uint8Array => {
 };
 
 describe('SDD-273 PPG 엔디언: raw-capture 의 tickRaw 와 코어 입력 bytes 는 별개', () => {
-  it('parseRawPacket 은 bytes 를 가공하지 않는다(복사본만). ppg tickRaw 는 big-endian 해석이라 Rust(LE)와 다르다', () => {
+  it('parseRawPacket 은 bytes 를 가공하지 않는다(복사본만). ppg tickRaw 도 Rust(LE)와 같은 little endian 해석이다(SDD-335)', () => {
     const src = ppgBytes(0x00012345, 5);
     const p = parseRawPacket('ppg', new DataView(src.buffer.slice(0)));
     expect(Array.from(p.bytes)).toEqual(Array.from(src)); // 코어로 가는 입력은 원문 그대로
     const le = new DataView(src.buffer).getUint32(0, true);
     expect(le).toBe(0x00012345); // Rust PacketParser 가 읽는 값
-    expect(p.tickRaw).toBe(new DataView(src.buffer).getUint32(0, false)); // raw-capture 는 BE
-    expect(p.tickRaw).not.toBe(le); // → 저장 경로(raw-clock) 쪽 PPG tick 만 다르다. 코어 지표와 무관
+    expect(p.tickRaw).toBe(le); // SDD-335: 저장 경로도 LE — 코어와 같은 tick
+    // 실측 헤더(11/23 P05): fd 03 cd 00 → LE 13,435,901
+    const real = new Uint8Array([0xfd, 0x03, 0xcd, 0x00, ...new Array(6).fill(0)]);
+    expect(parseRawPacket('ppg', new DataView(real.buffer)).tickRaw).toBe(13_435_901);
   });
 
   it('web-measurement-session.onRaw 는 p.bytes 를 그대로 워커에 넘긴다(ppg 포함)', async () => {

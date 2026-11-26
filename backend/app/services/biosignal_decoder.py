@@ -195,7 +195,9 @@ def _validate_known_wire(
             continue
         if len(wire) != 4 + stride * packet.sample_count:
             raise DecodeError('정상 wire packet 길이 불일치')
-        endian = 'big' if header.signal_type == 'ppg' else 'little'
+        # SDD-335: 앱 1.0.2 부터 PPG 헤더도 장치/Rust 파서와 같은 little endian 으로 해석해 packet_endian='little' 로 보낸다.
+        # 구앱(1.0.0·1.0.1)은 'mixed' 로 보내며 PPG 만 big endian 이므로 기존 검증을 유지한다.
+        endian = 'big' if header.signal_type == 'ppg' and profile.packet_endian != 'little' else 'little'
         if packet.tick_raw is None or int.from_bytes(wire[:4], endian) != int(packet.tick_raw):
             raise DecodeError('wire device tick 불일치')
         for offset in range(packet.sample_count):

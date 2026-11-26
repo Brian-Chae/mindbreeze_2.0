@@ -47,6 +47,7 @@ export function EegConsentChoiceView({ steps, place = 'online', saving, error, o
           </div>
         </section>
       </FlowCard>
+      <p className="fm-ft" role="note" data-testid="eeg-decline-notice">동의하지 않으면 이번 수업의 측정과 리포트 지표가 없어요. 마음이 바뀌면 위 버튼으로 다시 선택할 수 있어요.</p>
     </MemberFlowFrame>
   );
 }

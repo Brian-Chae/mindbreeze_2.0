@@ -101,7 +101,7 @@ export class BiosignalCaptureSession {
 
   async start(collecting = true): Promise<void> {
     await this.queue.acquire();
-    this.profileHash = await sha256(new TextEncoder().encode(JSON.stringify({ profile: 'mb-web-clock-v1', rates: RATES, tick_hz: 32768, tick_bits: 32, anchor: 'last_sample' })).buffer as ArrayBuffer);
+    this.profileHash = await sha256(new TextEncoder().encode(JSON.stringify({ profile: 'mb-web-clock-v1', endian: 'le', rates: RATES, tick_hz: 32768, tick_bits: 32, anchor: 'last_sample' })).buffer as ArrayBuffer);
     await this.recover();
     this.setStatus(collecting ? 'running' : 'stopped', collecting ? null : 'closed');
   }
@@ -272,7 +272,7 @@ export class BiosignalCaptureSession {
     const body: Omit<RawHeader, 'sections'> = {
       schema_version: 'mb-biosignal-raw-v2', signal_type: signal, stream_id: streamId, segment_id: segmentId, chunk_index: index,
       parser_profile: { firmware: 'unknown', device_model: 'LINK-BAND-2.0', profile_id: 'mb-web-clock-v1', version: '1', parameters_hash: this.profileHash,
-        platform: 'mb-web', verification: 'unverified', packet_endian: 'mixed', tick_hz: 32768, tick_bits: 32, header_anchor: 'last_sample' },
+        platform: 'mb-web', verification: 'unverified', packet_endian: 'little', tick_hz: 32768, tick_bits: 32, header_anchor: 'last_sample' },
       rate: { numerator: RATES[signal], denominator: 1 }, observed_rate: null, observed_rate_window_us: null, observed_rate_reason: 'not_measured',
       channels: CHANNELS[signal].channels, units: CHANNELS[signal].units, scale: SCALES[signal],
       sample_count: samples, packet_count: packets.length, first_sample_index: packets[0].firstSampleIndex, end_sample_index_exclusive: packets[0].firstSampleIndex + samples,
