@@ -20,6 +20,8 @@ describe('SDD244 T07 원문 수집과 G1 인코딩', () => {
       const mapSection = header.sections[2];
       const maps: PacketMap[] = expected.subarray(bodyAt + mapSection.offset).toString().trim().split('\n').map(v => JSON.parse(v));
       const bytes = Buffer.from(golden[signal].packet_hex, 'hex');
+      // SDD-335: 고정 픽스처의 PPG 헤더는 구앱 규격(big endian). 새 파서는 little endian 이므로 헤더 4바이트를 뒤집은 같은 tick(65536) 패킷으로 맞춘다.
+      if (signal === 'ppg') { bytes.subarray(0, 4).reverse(); expected.subarray(bodyAt + header.sections[1].offset, bodyAt + header.sections[1].offset + 4).reverse(); }
       const packets = maps.map(map => ({ bytes: bytes.subarray(map.byte_offset, map.byte_offset + map.byte_length), map }));
       expect(parseRawPacket(signal, view(packets[0].bytes)).rows).toEqual(golden[signal].rows);
       expect(Buffer.from(encodeRawV2(header, packets))).toEqual(expected);

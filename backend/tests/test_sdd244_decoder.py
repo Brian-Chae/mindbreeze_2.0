@@ -249,3 +249,17 @@ def test_sample_keeps_header_time_and_stream_provenance(decoder):
     sample = next(decoder.decode_raw_chunk(payload, metadata))
     assert sample.header == metadata.header
     assert sample.utc_us == int(metadata.header.anchor.utc_us)
+
+
+def test_ppg_little_endian_profile_matches_le_wire_header(decoder):
+    """SDD-335: 앱 1.0.2 는 PPG 헤더를 little endian 으로 저장하고 packet_endian='little' 로 보낸다. 구앱('mixed')은 big endian 유지."""
+    header, body = parts('ppg')
+    offset = header['sections'][1]['offset']
+    body[offset:offset + 4] = bytes(reversed(body[offset:offset + 4]))  # 같은 tick(65536) 을 LE 로 다시 쓴다
+    header['parser_profile']['packet_endian'] = 'little'
+    payload = pack(header, body)
+    assert list(decoder.decode_raw_chunk(payload, meta(payload)))  # 통과
+    # 'mixed' 프로필에 LE 헤더를 보내면(= 구앱 규격 위반) 여전히 거부
+    header['parser_profile']['packet_endian'] = 'mixed'
+    payload = pack(header, body)
+    with pytest.raises(decoder.DecodeError): decoder.decode_raw_chunk(payload, meta(payload))

@@ -26,6 +26,9 @@ import { holdEnvironment, useNativeBandHold } from '../../lib/measurement-web/us
 import { useBandSerialReport } from '../../hooks/use-band-serial-report';
 import { useBandHold } from '../../lib/native-measurement/band-hold';
 import { useWakeLock } from '../../hooks/useWakeLock';
+import { MeasuringLeaveGuard } from '../../components/class/flow/member/MeasuringLeaveGuard';
+import { useMinAppVersion } from '../../lib/update/use-min-app-version';
+import { AppUpdateRequiredScreen } from '../../components/update/AppUpdateRequiredScreen';
 import { useEntryPrep } from '../../hooks/useEntryPrep';
 import { useWaitingRoomPresence } from '../../hooks/useWaitingRoomPresence';
 import { isLiveProtocolV2Enabled } from '../../lib/session-live/live-flag';
@@ -73,6 +76,14 @@ function bandModeOf(mode: string | undefined): FlowBandMode {
 
 export default function EntryPage() {
   const { sessionId = '' } = useParams<{ sessionId: string }>();
+  const navigate = useNavigate();
+  const isAuthenticated = useAuthStore((st) => st.isAuthenticated);
+  // SDD-335: 최소 앱 버전 미만(구앱)은 수업 입장 대신 스토어 업데이트 화면. 웹·확인 실패는 통과.
+  const minVersion = useMinAppVersion();
+  if (minVersion.blocked) {
+    return <AppUpdateRequiredScreen installed={minVersion.installed} required={minVersion.required} storeUrl={minVersion.storeUrl}
+      onHome={() => navigate(isAuthenticated ? '/app' : '/')} />;
+  }
   // 회차를 바꾸면 자격·준비 초안·폴링·늦은 응답까지 이전 회차와 분리한다.
   return <SessionEntryPage key={sessionId} sessionId={sessionId} />;
 }
@@ -246,6 +257,11 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
   // 대기·진행 중에는 화면이 꺼지지 않게 한다(class-join-page 와 같은 기준)
   const classActive = machine.phase === 'wait' || machine.phase === 'live';
   useWakeLock(classActive);
+  // SDD-335: 측정 중(진행 화면 + 뇌파 동의 + 밴드 수업) 뒤로가기·화면 이동은 확인 후에만. 확정 이탈(onLeave·종료)은 bypass.
+  const leaveBypassRef = useRef(false);
+  const measuringRef = useRef(false);
+  measuringRef.current = machine.phase === 'live' && eegChoice === true && entry?.classInfo?.linkbandMode !== 'none';
+  const shouldGuardLeave = useCallback(() => !leaveBypassRef.current && measuringRef.current, []);
   // SDD-222: 같은 구간에서 앱 백그라운드 유지(Android Foreground Service). 종료·이탈·언마운트 시 훅이 반드시 종료한다.
   const { batteryGuideOpen, dismissBatteryGuide } = useBackgroundSession(classActive);
   const batteryGuide = batteryGuideOpen ? <BatteryGuideDialog onClose={dismissBatteryGuide} /> : null;
@@ -451,11 +467,12 @@ function SessionEntryPage({ sessionId }: { sessionId: string }) {
     return (
       <div className="min-h-screen bg-black">
         {batteryGuide}
+        <MeasuringLeaveGuard shouldGuard={shouldGuardLeave} />
         <MemberClassContainer
           title={info.title}
           startedAt={serverState?.started_at ?? info.startedAt}
           durationMin={info.durationMin}
-          onLeave={() => navigate(homePath, { replace: true })}
+          onLeave={() => { leaveBypassRef.current = true; navigate(homePath, { replace: true }); }}
           sessionId={sessionId}
           participantId={entry.participantId}
           entryCredential={entry.credential}
