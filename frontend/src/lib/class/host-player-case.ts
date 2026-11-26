@@ -28,6 +28,9 @@ export function isHostSheetKey(value: string | null | undefined): value is HostS
 export type HostCheckinAnswer = readonly [question: string, answer: string];
 export type HostMetricValues = Readonly<Record<PlayerMetricKey, number | null>>;
 
+/** SDD-336: 서버 `measure_issue_reason` 값 */
+export type MeasureIssueReason = 'app_update_required' | 'consent_declined' | 'app_not_in_class' | 'not_started';
+
 export interface HostParticipant {
   id: string;
   name: string;
@@ -47,6 +50,8 @@ export interface HostParticipant {
   measureNotStartedSince?: string | null;
   /** SDD-334: "N분째" (최소 1) — 측정 미시작이 아니면 null */
   measureNotStartedMin?: number | null;
+  /** SDD-336: 측정이 안 되는 원인(서버 판정). 구 서버·해당 없음이면 없음 */
+  measureIssueReason?: MeasureIssueReason | null;
   /** 체크인 응답 중 상담사가 살펴볼 만한 한 줄(없으면 null) */
   attention: string | null;
 }
@@ -156,8 +161,43 @@ export function isMeasureNotStarted(p: HostParticipant): boolean {
 /** 측정 미시작 카드 문구(점수·등급 없음) */
 export const MEASURE_NOT_STARTED_TITLE = '측정 시작 안 됨';
 export const MEASURE_NOT_STARTED_GUIDE = '앱에서 밴드 다시 연결을 눌러 주세요';
+
+/** SDD-336: 원인별 카드 문구(점수·등급 없음) */
+export const MEASURE_ISSUE_TITLE: Record<MeasureIssueReason, string> = {
+  app_update_required: '앱 업데이트 필요',
+  consent_declined: '측정 거절',
+  app_not_in_class: '앱이 수업 화면에 없음',
+  not_started: MEASURE_NOT_STARTED_TITLE,
+};
+export const MEASURE_ISSUE_GUIDE: Record<MeasureIssueReason, string> = {
+  app_update_required: '스토어에서 앱 업데이트 후 다시 입장해 주세요',
+  consent_declined: '본인이 측정을 원하지 않아요. 밴드 없이 참여해요',
+  app_not_in_class: '앱을 열어 수업 화면으로 돌아오도록 안내해 주세요',
+  not_started: MEASURE_NOT_STARTED_GUIDE,
+};
+
+function issueOf(p: HostParticipant): MeasureIssueReason {
+  const r = p.measureIssueReason;
+  return r && r in MEASURE_ISSUE_TITLE ? r : 'not_started';
+}
+
+/** 측정 미시작 카드 제목 — 원인을 알면 원인 문구, 모르면 기존 문구 */
+export function measureIssueTitle(p: HostParticipant): string {
+  return MEASURE_ISSUE_TITLE[issueOf(p)];
+}
+
+/** 행동 안내 1줄 */
+export function measureIssueGuide(p: HostParticipant): string {
+  return MEASURE_ISSUE_GUIDE[issueOf(p)];
+}
+
+/** 측정 거절 회원(밴드 미사용 — 이상 집계에는 세지 않고 라벨만 보여 준다) */
+export function isMeasureDeclined(p: HostParticipant): boolean {
+  return hasEntered(p) && p.measureIssueReason === 'consent_declined' && p.band !== 'on' && !isMeasureNotStarted(p);
+}
+
 export function measureNotStartedLabel(p: HostParticipant): string {
-  return `${MEASURE_NOT_STARTED_TITLE} · ${p.measureNotStartedMin ?? 1}분째`;
+  return `${measureIssueTitle(p)} · ${p.measureNotStartedMin ?? 1}분째`;
 }
 
 /** "N분째" 경과(분, 최소 1) — 시각을 못 읽으면 null */

@@ -442,6 +442,9 @@ def make_sinks(open_db: Callable[[], DBSession], publish: Callable[[uuid.UUID], 
         if out.projected:
             try:
                 publish(session_id)
+            except TimeoutError:
+                # SDD-336: 수업 시작 직후 이벤트 루프 지연 — 트레이스 없이 한 줄(heartbeat 가 이어서 방송)
+                logger.warning("[live-ingest] 투영 방송 대기 초과 — heartbeat self-heal")
             except Exception:  # noqa: BLE001 — 방송은 heartbeat 가 이어서 한다
                 logger.warning("[live-ingest] 투영 방송 실패 — heartbeat self-heal", exc_info=True)
         return out.response

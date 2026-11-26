@@ -78,6 +78,8 @@ REASON_LOW_CONFIDENCE = "low_confidence"
 REASON_NO_TRANSCRIPT = "no_transcript"
 REASON_STT_DISABLED = "stt_disabled"  # SDD-228: STT 미제공 빌드 — 녹음만 저장, 전사 없음(정상)
 REASON_STT_FAILED = "stt_failed"
+# SDD-336: 리포트 제외 참가자가 있어 공통 녹음 파생 항목을 뺀 것 — 결함이 아니라 설계된 생략(partial 아님).
+REASON_EXCLUDED = "excluded"
 REASON_SUMMARY_FAILED = "summary_failed"
 REASON_REPORT_FAILED = "report_failed"
 REASON_TIMEOUT = "timeout"
@@ -335,6 +337,12 @@ def generation_status_for_content(content: dict, record: SessionRecord | None) -
     ai_record = content.get("ai_record") if isinstance(content, dict) else None
     # SDD-228: STT 미제공 빌드의 '전사 없음'은 결함이 아니므로 ready 로 마감한다(마이크 오프 등은 기존대로 partial).
     if isinstance(ai_record, dict) and ai_record.get("reason") == REASON_STT_DISABLED:
+        return GENERATION_READY
+    # SDD-336: 상담사 리포트에서 제외 참가자 때문에 공통 녹음 파생 항목을 뺀 경우는 설계된 생략이라 결함(partial)이 아니다.
+    #   제외한 내담자 본인 리포트 스텁(report_scope.excluded)은 기존 판정을 유지한다.
+    scope = content.get("report_scope") if isinstance(content, dict) else None
+    client_stub = isinstance(scope, dict) and scope.get("excluded") is True
+    if isinstance(ai_record, dict) and ai_record.get("reason") == REASON_EXCLUDED and not client_stub:
         return GENERATION_READY
     if not isinstance(ai_record, dict) or ai_record.get("status") != "available":
         return GENERATION_PARTIAL

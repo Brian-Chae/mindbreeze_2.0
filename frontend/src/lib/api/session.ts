@@ -186,6 +186,8 @@ export interface SessionLiveMetric extends Partial<ParticipationRow> {
   measure_not_started?: boolean;
   /** SDD-334: 측정 미시작 기준 시각(입장·회차 시작 중 늦은 쪽) */
   measure_not_started_since?: string | null;
+  /** SDD-336: 측정이 안 되는 원인(서버 판정). 구 서버는 없음 */
+  measure_issue_reason?: 'app_update_required' | 'consent_declined' | 'app_not_in_class' | 'not_started' | null;
   /** v2 LiveState focus_display(0~100). 구 경로는 없음 → extras 폴백 */
   focus_score?: number | null;
   /** v2 LiveState emotion_display(0~100). 구 경로는 없음 → extras 폴백 */

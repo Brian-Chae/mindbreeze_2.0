@@ -3188,6 +3188,7 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
 
     now_ts = _now()
     with_data = _participants_with_measure_data(db, s.id, [p.id for p in active], set(stats))
+    cause_ctx = None  # SDD-336: 원인 판정은 후보(측정 미시작·거절 표시)가 있을 때만 배치 조회
 
     metrics = []
     contact_fail = 0
@@ -3198,6 +3199,19 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
             session_status=s.status, entered_at=p.entered_at, started_at=s.started_at,
             has_data=p.id in with_data, eeg_consented=p.eeg_collection_consented, now=now_ts,
         )
+        issue_reason = None
+        if s.status == "in_progress" and p.entered_at is not None and p.id not in with_data and (
+            mns_since is not None or p.eeg_collection_consented is False
+        ):
+            from app.services import measure_cause_service as _mcs
+
+            if cause_ctx is None:
+                cause_ctx = _mcs.load_cause_context(db, s.id, active, now_ts)
+            c = cause_ctx.get(p.id) or {}
+            issue_reason = _mcs.classify_reason(
+                app_version=c.get("app_version"), consent_declined=bool(c.get("declined")),
+                has_presence=bool(c.get("has_presence")),
+            )
         display_name = names.get(p.user_id) if p.user_id else p.guest_name
         profile = profiles.get(p.user_id) if p.user_id else None
         gender = p.gender or (profile.gender if profile else None)
@@ -3272,6 +3286,8 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
                 # SDD-334: 입장 후 측정 미시작(필드 추가만 — 구 클라이언트는 무시)
                 "measure_not_started": mns_since is not None,
                 "measure_not_started_since": mns_since,
+                # SDD-336: 원인 라벨(없으면 None — 구 클라이언트는 무시)
+                "measure_issue_reason": issue_reason,
             }
         )
 
